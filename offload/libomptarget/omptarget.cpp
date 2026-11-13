@@ -712,9 +712,10 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     if (INFO_VERBOSITY(OMP_INFOTYPE_EMPTY_MAPPING) && ArgTypes[I] != 0 &&
         !IsStructMember && !IsImplicit && !TPR.isPresent() &&
         !TPR.isContained() && !TPR.isHostPointer())
-      INFO(1, OMP_INFOTYPE_EMPTY_MAPPING, Device.DeviceID,
-           "variable %s does not have a valid device counterpart\n",
-           (HstPtrName) ? getNameFromMapping(HstPtrName).c_str() : "unknown");
+      INFO(OMP_INFOTYPE_EMPTY_MAPPING, Device.DeviceID)
+          << "variable "
+          << (HstPtrName ? getNameFromMapping(HstPtrName) : "unknown")
+          << " does not have a valid device counterpart";
   }
 
   return OFFLOAD_SUCCESS;

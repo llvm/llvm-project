@@ -45,7 +45,6 @@
 #endif
 
 #include <atomic>
-#include <cstdio>
 #include <mutex>
 #include <string>
 
@@ -134,50 +133,6 @@ inline uint32_t getInfoLevel() { return getInfoLevelInternal().load(); }
     fprintf(stderr, GETNAME(TARGET_NAME) " error: ");                          \
     fprintf(stderr, __VA_ARGS__);                                              \
   } while (0)
-
-/// Print a generic information string used if LIBOMPTARGET_INFO=1
-#define INFO_MESSAGE(_num, ...) INFO_MESSAGE_TO(stderr, _num, __VA_ARGS__)
-
-#define INFO_MESSAGE_TO(_stdDst, _num, ...)                                    \
-  do {                                                                         \
-    fprintf(_stdDst, GETNAME(TARGET_NAME) " device %d info: ", (int)_num);     \
-    fprintf(_stdDst, __VA_ARGS__);                                             \
-  } while (0)
-
-#define INFO_VERBOSITY(_flags)                                                 \
-  ::llvm::offload::debug::infoVerbosity(GETNAME(TARGET_NAME), (_flags))
-
-/// Emit a message giving the user extra information about the runtime.
-/// In OMPTARGET_DEBUG builds, messages selected by LIBOMPTARGET_DEBUG go to the
-/// debug stream instead of the "info:" output.
-#ifdef OMPTARGET_DEBUG
-#define INFO(_level, _flags, _id, ...)                                         \
-  do {                                                                         \
-    const char *_infoType = ::llvm::offload::debug::infoTypeName(_flags);      \
-    uint32_t _infoLevel = (_level);                                            \
-    if (::llvm::offload::debug::shouldPrintDebug(GETNAME(TARGET_NAME),         \
-                                                 _infoType, _infoLevel))       \
-      ODBG_STREAM(::llvm::offload::debug::dbgs(), _infoType, (_level))         \
-          << ::llvm::offload::debug::formatInfoMessage(__VA_ARGS__);           \
-    else if (::getInfoLevel() & (_flags))                                      \
-      INFO_MESSAGE(_id, __VA_ARGS__);                                          \
-  } while (false)
-#else
-#define INFO(_level, _flags, _id, ...)                                         \
-  do {                                                                         \
-    if (INFO_VERBOSITY(_flags) >= (_level))                                    \
-      INFO_MESSAGE(_id, __VA_ARGS__);                                          \
-  } while (false)
-#endif
-
-#define DUMP_INFO(toStdOut, _flags, _id, ...)                                  \
-  do {                                                                         \
-    if (toStdOut) {                                                            \
-      INFO_MESSAGE_TO(stdout, _id, __VA_ARGS__);                               \
-    } else {                                                                   \
-      INFO(1, _flags, _id, __VA_ARGS__);                                       \
-    }                                                                          \
-  } while (false)
 
 namespace llvm::offload::debug {
 
@@ -282,6 +237,119 @@ public:
 
 /// dbgs - Return the debug stream for offload debugging (just llvm::errs()).
 [[maybe_unused]] static llvm::raw_ostream &dbgs() { return llvm::errs(); }
+
+// helper templates to support lambdas with different number of arguments
+template <typename LambdaTy> struct LambdaHelper {
+  template <typename FuncTy, typename RetTy, typename... Args>
+  static constexpr size_t CountArgs(RetTy (FuncTy::*)(Args...)) {
+    return sizeof...(Args);
+  }
+  template <typename FuncTy, typename RetTy, typename... Args>
+  static constexpr size_t CountArgs(RetTy (FuncTy::*)(Args...) const) {
+    return sizeof...(Args);
+  }
+
+  static constexpr size_t NArgs = CountArgs(&LambdaTy::operator());
+};
+
+template <typename LambdaTy> struct LambdaOs : public LambdaHelper<LambdaTy> {
+  static void dispatch(LambdaTy func, llvm::raw_ostream &Os, uint32_t Level) {
+    if constexpr (LambdaHelper<LambdaTy>::NArgs == 2)
+      func(Os, Level);
+    else
+      func(Os);
+  }
+};
+
+// helper templates to support lambdas with different number of arguments
+template <typename LambdaTy> struct LambdaIf : public LambdaHelper<LambdaTy> {
+  static void dispatch(LambdaTy func, uint32_t Level) {
+    if constexpr (LambdaHelper<LambdaTy>::NArgs == 1)
+      func(Level);
+    else
+      func();
+  }
+};
+
+// Shared by ODBG and INFO. Prefix is the prefix of every line, and Type is a
+// debug type or, for INFO, an OpenMPInfoType.
+#define ODBG_BASE(Stream, Component, Prefix, Type, Level)                      \
+  for (uint32_t RealLevel = (Level),                                           \
+                _c = llvm::offload::debug::shouldPrintDebug(                   \
+                    (Component), (Type), RealLevel);                           \
+       _c; _c = 0)                                                             \
+  ::llvm::offload::debug::odbg_ostream{                                        \
+      (Prefix), (Stream), RealLevel, /*ShouldPrefixNextString=*/true,          \
+      /*ShouldEmitNewLineOnDestruction=*/true}                                 \
+      .asLvalue()
+
+#define ODBG_OS_BASE(Stream, Component, Prefix, Type, Level, Callback)         \
+  if (uint32_t RealLevel = (Level); ::llvm::offload::debug::shouldPrintDebug(  \
+          (Component), (Type), RealLevel)) {                                   \
+    ::llvm::offload::debug::odbg_ostream OS{                                   \
+        (Prefix), (Stream), RealLevel, /*ShouldPrefixNextString=*/true,        \
+        /*ShouldEmitNewLineOnDestruction=*/true};                              \
+    auto F = Callback;                                                         \
+    ::llvm::offload::debug::LambdaOs<decltype(F)>::dispatch(F, OS, RealLevel); \
+  }
+
+#define ODBG_IF_BASE(Type, Level, Callback)                                    \
+  if (uint32_t RealLevel = (Level); ::llvm::offload::debug::shouldPrintDebug(  \
+          GETNAME(TARGET_NAME), (Type), RealLevel)) {                          \
+    auto F = Callback;                                                         \
+    ::llvm::offload::debug::LambdaIf<decltype(F)>::dispatch(F, RealLevel);     \
+  }
+
+// Print an information message of an OpenMPInfoType category about a device.
+// Unlike ODBG it is also printed in release builds. Usage examples:
+// INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId) << "Launching kernel " << Name;
+// INFO(OMP_INFOTYPE_DATA_TRANSFER, DeviceId, 2) << "Copying " << Size;
+#define INFO_2(Flag, Id) INFO_3(Flag, Id, 1)
+#define INFO_3(Flag, Id, Level)                                                \
+  ODBG_BASE(::llvm::offload::debug::dbgs(), GETNAME(TARGET_NAME),              \
+            ::llvm::offload::debug::infoPrefix(                                \
+                DEBUG_PREFIX, GETNAME(TARGET_NAME), (Flag), (Id)),             \
+            (Flag), Level)
+#define INFO_SELECT(Flag, Id, Level, NArgs, ...) INFO_##NArgs
+#define INFO(...) INFO_SELECT(__VA_ARGS__, 3, 2)(__VA_ARGS__)
+
+#define INFO_OS_3(Flag, Id, Callback) INFO_OS_4(Flag, Id, 1, Callback)
+#define INFO_OS_4(Flag, Id, Level, Callback)                                   \
+  ODBG_OS_BASE(::llvm::offload::debug::dbgs(), GETNAME(TARGET_NAME),           \
+               ::llvm::offload::debug::infoPrefix(                             \
+                   DEBUG_PREFIX, GETNAME(TARGET_NAME), (Flag), (Id)),          \
+               (Flag), Level, Callback)
+#define INFO_OS_SELECT(Flag, Id, Level, Callback, NArgs, ...) INFO_OS_##NArgs
+#define INFO_OS(...) INFO_OS_SELECT(__VA_ARGS__, 4, 3)(__VA_ARGS__)
+
+// Like INFO_OS, but with ToStdOut always printed to stdout, in order with the
+// program's own output.
+#define DUMP_INFO_OS(ToStdOut, Flag, Id, Callback)                             \
+  do {                                                                         \
+    if (!(ToStdOut)) {                                                         \
+      INFO_OS(Flag, Id, Callback);                                             \
+      break;                                                                   \
+    }                                                                          \
+    fflush(stdout);                                                            \
+    {                                                                          \
+      ::llvm::offload::debug::odbg_ostream OS{                                 \
+          ::llvm::offload::debug::computeInfoPrefix(GETNAME(TARGET_NAME),      \
+                                                    (Id)),                     \
+          ::llvm::outs(), ::llvm::offload::debug::IL_Full};                    \
+      auto F = Callback;                                                       \
+      ::llvm::offload::debug::LambdaOs<decltype(F)>::dispatch(                 \
+          F, OS, ::llvm::offload::debug::IL_Full);                             \
+    }                                                                          \
+    ::llvm::outs().flush();                                                    \
+  } while (false)
+
+#define INFO_IF_2(Flag, Callback) INFO_IF_3(Flag, 1, Callback)
+#define INFO_IF_3(Flag, Level, Callback) ODBG_IF_BASE(Flag, Level, Callback)
+#define INFO_IF_SELECT(Flag, Level, Callback, NArgs, ...) INFO_IF_##NArgs
+#define INFO_IF(...) INFO_IF_SELECT(__VA_ARGS__, 3, 2)(__VA_ARGS__)
+
+#define INFO_VERBOSITY(Flag)                                                   \
+  ::llvm::offload::debug::infoVerbosity(GETNAME(TARGET_NAME), (Flag))
 
 struct DebugFilter {
   StringRef Type;
@@ -413,20 +481,7 @@ shouldPrintDebug(const char *Component, const char *Type, uint32_t &Level) {
   return OsPrefix.str();
 }
 
-static inline raw_ostream &operator<<(raw_ostream &Os,
-                                      const odbg_ostream::IfLevel Filter) {
-  odbg_ostream &Dbg = static_cast<odbg_ostream &>(Os);
-  Dbg.shouldMute(Filter);
-  return Dbg;
-}
-
-static inline raw_ostream &operator<<(raw_ostream &Os,
-                                      const odbg_ostream::OnlyLevel Filter) {
-  odbg_ostream &Dbg = static_cast<odbg_ostream &>(Os);
-  Dbg.shouldMute(Filter);
-  return Dbg;
-}
-
+/// Name of an OpenMPInfoType category for LIBOMPTARGET_DEBUG.
 [[maybe_unused]] static const char *infoTypeName(uint32_t Flag) {
   switch (Flag) {
   case OMP_INFOTYPE_KERNEL_ARGS:
@@ -448,45 +503,26 @@ static inline raw_ostream &operator<<(raw_ostream &Os,
   }
 }
 
-enum InfoLevel : uint32_t { IL_Summary = 1, IL_Detailed = 2, IL_Full = 3 };
-
-/// Highest verbosity any matching filter grants; 0 if not selected.
-[[maybe_unused]] static uint32_t infoVerbosity(const char *Component,
-                                               uint32_t Flags) {
-  if (::getInfoLevel() & Flags)
-    return IL_Full;
-  if (!isDebugEnabled())
-    return 0;
-  uint32_t Level = IL_Summary;
-  return shouldPrintDebug(Component, infoTypeName(Flags), Level) ? Level : 0;
-}
-
 #ifdef OMPTARGET_DEBUG
 
-// Without arguments the message is printed as-is: llvm::format would trip
-// -Wformat-security.
-[[maybe_unused]] static StringRef formatInfoMessage(const char *Msg) {
-  return Msg;
-}
-template <typename... Ts>
-static auto formatInfoMessage(const char *Fmt, const Ts &...Vals) {
-  return ::llvm::format(Fmt, Vals...);
+static inline raw_ostream &operator<<(raw_ostream &Os,
+                                      const odbg_ostream::IfLevel Filter) {
+  odbg_ostream &Dbg = static_cast<odbg_ostream &>(Os);
+  Dbg.shouldMute(Filter);
+  return Dbg;
 }
 
-#define ODBG_BASE(Stream, Component, Prefix, Type, Level)                      \
-  for (uint32_t RealLevel = (Level),                                           \
-                _c = llvm::offload::debug::isDebugEnabled() &&                 \
-                     llvm::offload::debug::shouldPrintDebug(                   \
-                         (Component), (Type), RealLevel);                      \
-       _c; _c = 0)                                                             \
-  ::llvm::offload::debug::odbg_ostream{                                        \
-      ::llvm::offload::debug::computePrefix((Prefix), (Type)), (Stream),       \
-      RealLevel, /*ShouldPrefixNextString=*/true,                              \
-      /*ShouldEmitNewLineOnDestruction=*/true}                                 \
-      .asLvalue()
+static inline raw_ostream &operator<<(raw_ostream &Os,
+                                      const odbg_ostream::OnlyLevel Filter) {
+  odbg_ostream &Dbg = static_cast<odbg_ostream &>(Os);
+  Dbg.shouldMute(Filter);
+  return Dbg;
+}
 
 #define ODBG_STREAM(Stream, Type, Level)                                       \
-  ODBG_BASE(Stream, GETNAME(TARGET_NAME), DEBUG_PREFIX, Type, Level)
+  ODBG_BASE(Stream, GETNAME(TARGET_NAME),                                      \
+            ::llvm::offload::debug::computePrefix(DEBUG_PREFIX, (Type)), Type, \
+            Level)
 
 #define ODBG_0() ODBG_2("default", 1)
 #define ODBG_1(Type) ODBG_2(Type, 1)
@@ -527,47 +563,10 @@ static auto formatInfoMessage(const char *Fmt, const Ts &...Vals) {
 #define ODBG_RESET_LEVEL()                                                     \
   static_cast<llvm::offload::debug::odbg_ostream::IfLevel>(0)
 
-// helper templates to support lambdas with different number of arguments
-template <typename LambdaTy> struct LambdaHelper {
-  template <typename FuncTy, typename RetTy, typename... Args>
-  static constexpr size_t CountArgs(RetTy (FuncTy::*)(Args...)) {
-    return sizeof...(Args);
-  }
-  template <typename FuncTy, typename RetTy, typename... Args>
-  static constexpr size_t CountArgs(RetTy (FuncTy::*)(Args...) const) {
-    return sizeof...(Args);
-  }
-
-  static constexpr size_t NArgs = CountArgs(&LambdaTy::operator());
-};
-
-template <typename LambdaTy> struct LambdaOs : public LambdaHelper<LambdaTy> {
-  static void dispatch(LambdaTy func, llvm::raw_ostream &Os, uint32_t Level) {
-    if constexpr (LambdaHelper<LambdaTy>::NArgs == 2)
-      func(Os, Level);
-    else
-      func(Os);
-  }
-};
-
-#define ODBG_OS_BASE(Stream, Component, Prefix, Type, Level, Callback)         \
-  if (::llvm::offload::debug::isDebugEnabled()) {                              \
-    uint32_t RealLevel = (Level);                                              \
-    if (::llvm::offload::debug::shouldPrintDebug((Component), (Type),          \
-                                                 RealLevel)) {                 \
-      ::llvm::offload::debug::odbg_ostream OS{                                 \
-          ::llvm::offload::debug::computePrefix((Prefix), (Type)), (Stream),   \
-          RealLevel, /*ShouldPrefixNextString=*/true,                          \
-          /*ShouldEmitNewLineOnDestruction=*/true};                            \
-      auto F = Callback;                                                       \
-      ::llvm::offload::debug::LambdaOs<decltype(F)>::dispatch(F, OS,           \
-                                                              RealLevel);      \
-    }                                                                          \
-  }
-
 #define ODBG_OS_STREAM(Stream, Type, Level, Callback)                          \
-  ODBG_OS_BASE(Stream, GETNAME(TARGET_NAME), DEBUG_PREFIX, Type, Level,        \
-               Callback)
+  ODBG_OS_BASE(Stream, GETNAME(TARGET_NAME),                                   \
+               ::llvm::offload::debug::computePrefix(DEBUG_PREFIX, (Type)),    \
+               Type, Level, Callback)
 #define ODBG_OS_3(Type, Level, Callback)                                       \
   ODBG_OS_STREAM(llvm::offload::debug::dbgs(), Type, Level, Callback)
 #define ODBG_OS_2(Type, Callback) ODBG_OS_3(Type, 1, Callback)
@@ -578,26 +577,6 @@ template <typename LambdaTy> struct LambdaOs : public LambdaHelper<LambdaTy> {
 // assumed respectively.
 #define ODBG_OS(...)                                                           \
   ODBG_OS_SELECT(__VA_ARGS__ __VA_OPT__(, ) 3, 2, 1)(__VA_ARGS__)
-
-// helper templates to support lambdas with different number of arguments
-template <typename LambdaTy> struct LambdaIf : public LambdaHelper<LambdaTy> {
-  static void dispatch(LambdaTy func, uint32_t Level) {
-    if constexpr (LambdaHelper<LambdaTy>::NArgs == 1)
-      func(Level);
-    else
-      func();
-  }
-};
-
-#define ODBG_IF_BASE(Type, Level, Callback)                                    \
-  if (::llvm::offload::debug::isDebugEnabled()) {                              \
-    uint32_t RealLevel = (Level);                                              \
-    if (::llvm::offload::debug::shouldPrintDebug(GETNAME(TARGET_NAME), (Type), \
-                                                 RealLevel)) {                 \
-      auto F = Callback;                                                       \
-      ::llvm::offload::debug::LambdaIf<decltype(F)>::dispatch(F, RealLevel);   \
-    }                                                                          \
-  }
 
 #define ODBG_IF_3(Type, Level, Callback) ODBG_IF_BASE(Type, Level, Callback)
 #define ODBG_IF_2(Type, Callback) ODBG_IF_3(Type, 1, Callback)
@@ -613,21 +592,62 @@ template <typename LambdaTy> struct LambdaIf : public LambdaHelper<LambdaTy> {
   ::llvm::nulls()
 
 // Don't print anything if debugging is disabled
-#define ODBG_BASE(Stream, Component, Prefix, Type, Level) ODBG_NULL
 #define ODBG_STREAM(Stream, Type, Level) ODBG_NULL
 #define ODBG_IF_LEVEL(Level) 0
 #define ODBG_ONLY_LEVEL(Level) 0
 #define ODBG_RESET_LEVEL() 0
 #define ODBG(...) ODBG_NULL
 
-#define ODBG_OS_BASE(Stream, Component, Prefix, Type, Level, Callback)
 #define ODBG_OS_STREAM(Stream, Type, Level, Callback)
 #define ODBG_OS(...)
 
-#define ODBG_IF_BASE(Type, Level, Callback)
 #define ODBG_IF(...)
 
 #endif
+
+enum InfoLevel : uint32_t { IL_Summary = 1, IL_Detailed = 2, IL_Full = 3 };
+
+/// INFO messages are selected by LIBOMPTARGET_INFO up to IL_Full and by
+/// LIBOMPTARGET_DEBUG like debug messages of their category.
+[[maybe_unused]] static bool
+shouldPrintDebug(const char *Component, OpenMPInfoType Flag, uint32_t &Level) {
+  uint32_t Selected = 0;
+  if ((::getInfoLevel() & Flag) && Level <= IL_Full)
+    Selected = IL_Full;
+  uint32_t DebugLevel = Level;
+  if (shouldPrintDebug(Component, infoTypeName(Flag), DebugLevel) &&
+      DebugLevel > Selected)
+    Selected = DebugLevel;
+  if (!Selected)
+    return false;
+  Level = Selected;
+  return true;
+}
+
+/// Highest level at which an information category is selected; 0 if not.
+[[maybe_unused]] static uint32_t infoVerbosity(const char *Component,
+                                               OpenMPInfoType Flag) {
+  uint32_t Level = IL_Summary;
+  return shouldPrintDebug(Component, Flag, Level) ? Level : 0;
+}
+
+/// Prefix of the information messages printed for LIBOMPTARGET_INFO.
+[[maybe_unused]] static std::string computeInfoPrefix(StringRef Component,
+                                                      int32_t DeviceId) {
+  return (Component + " device " + Twine(DeviceId) + " info: ").str();
+}
+
+/// In OMPTARGET_DEBUG builds, INFO messages use the debug prefix while
+/// LIBOMPTARGET_DEBUG is enabled.
+[[maybe_unused]] static std::string
+infoPrefix([[maybe_unused]] StringRef DebugPrefix, StringRef Component,
+           [[maybe_unused]] OpenMPInfoType Flag, int32_t DeviceId) {
+#ifdef OMPTARGET_DEBUG
+  if (isDebugEnabled())
+    return computePrefix(DebugPrefix, infoTypeName(Flag));
+#endif
+  return computeInfoPrefix(Component, DeviceId);
+}
 
 // Common debug types in offload.
 constexpr const char *OLDT_Init = "Init";
@@ -694,13 +714,11 @@ static inline odbg_ostream reportErrorStream() {
                       ::llvm::offload::debug::dbgs(), ODL_Error};
 }
 
-#ifdef OMPTARGET_DEBUG
 // Define default format for pointers
 static inline raw_ostream &operator<<(raw_ostream &Os, void *Ptr) {
   Os << ::llvm::format(DPxMOD, DPxPTR(Ptr));
   return Os;
 }
-#endif // OMPTARGET_DEBUG
 
 // New REPORT macro in the same style as ODBG
 #define REPORT() ::llvm::omp::target::debug::reportErrorStream()

@@ -310,16 +310,16 @@ struct CUDADeviceTy : public GenericDeviceTy {
       return Err;
 
     if (FormerPrimaryCtxIsActive) {
-      INFO(1, OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-           "The primary context is active, no change to its flags\n");
+      INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId)
+          << "The primary context is active, no change to its flags";
       if ((FormerPrimaryCtxFlags & CU_CTX_SCHED_MASK) !=
           CU_CTX_SCHED_BLOCKING_SYNC)
-        INFO(1, OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-             "Warning: The current flags are not CU_CTX_SCHED_BLOCKING_SYNC\n");
+        INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId)
+            << "Warning: The current flags are not CU_CTX_SCHED_BLOCKING_SYNC";
     } else {
-      INFO(1, OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-           "The primary context is inactive, set its flags to "
-           "CU_CTX_SCHED_BLOCKING_SYNC\n");
+      INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId)
+          << "The primary context is inactive, set its flags to "
+             "CU_CTX_SCHED_BLOCKING_SYNC";
       Res = cuDevicePrimaryCtxSetFlags(Device, CU_CTX_SCHED_BLOCKING_SYNC);
       if (auto Err =
               Plugin::check(Res, "error in cuDevicePrimaryCtxSetFlags: %s"))
