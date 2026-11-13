@@ -8722,6 +8722,54 @@ static bool handleLValueToRValueBitCast(EvalInfo &Info, APValue &DestValue,
   return handleRValueToRValueBitCast(Info, DestValue, SourceRValue, BCE);
 }
 
+static bool handleVectorConditionalOperator(EvalInfo &Info, APValue &DestVal,
+                                            const Expr *Cond,
+                                            const Expr *TrueExpr,
+                                            const Expr *FalseExpr) {
+  // GNU extension: In C++, the ternary operator ?: is available. a?b:c, where b
+  // and c are vectors of the same type and a is an integer vector with the same
+  // number of elements of the same size as b and c, computes all three
+  // arguments and creates a vector {a[0]?b[0]:c[0], a[1]?b[1]:c[1], ...}.
+  APValue CondVal, TrueVal, FalseVal;
+  if (!Evaluate(CondVal, Info, Cond))
+    return false;
+  if (!Evaluate(TrueVal, Info, TrueExpr))
+    return false;
+  if (!Evaluate(FalseVal, Info, FalseExpr))
+    return false;
+
+  auto NumElts = TrueVal.getVectorLength();
+  assert(NumElts == CondVal.getVectorLength() && "different vector lengths");
+
+  QualType CondT = Cond->getType();
+  SmallVector<APValue, 4> ResultElements;
+  ResultElements.reserve(NumElts);
+  if (CondT->isExtVectorType() && !CondT->isExtVectorBoolType()) {
+    for (unsigned EltNum = 0; EltNum < NumElts; ++EltNum) {
+      const auto &Elem = CondVal.getVectorElt(EltNum);
+      auto V = Elem.getInt().getExtValue();
+      // Ext vector condition is true when the MSB is set.
+      if (V >= 0) {
+        ResultElements.push_back(FalseVal.getVectorElt(EltNum));
+      } else {
+        ResultElements.push_back(TrueVal.getVectorElt(EltNum));
+      }
+    }
+  } else {
+    for (unsigned EltNum = 0; EltNum < NumElts; ++EltNum) {
+      const auto &Elem = CondVal.getVectorElt(EltNum);
+      auto V = Elem.getInt().getExtValue();
+      if (V == 0) {
+        ResultElements.push_back(FalseVal.getVectorElt(EltNum));
+      } else {
+        ResultElements.push_back(TrueVal.getVectorElt(EltNum));
+      }
+    }
+  }
+  DestVal = APValue(ResultElements.data(), ResultElements.size());
+  return true;
+}
+
 template <class Derived>
 class ExprEvaluatorBase
   : public ConstStmtVisitor<Derived, bool> {
@@ -8762,11 +8810,13 @@ private:
     Error(E, diag::note_constexpr_conditional_never_const);
   }
 
-
   template<typename ConditionalOperator>
   bool HandleConditionalOperator(const ConditionalOperator *E) {
-    bool BoolResult;
-    if (!EvaluateAsBooleanCondition(E->getCond(), BoolResult, Info)) {
+    const Expr *Cond = E->getCond();
+    Expr *TrueExpr = E->getTrueExpr();
+    Expr *FalseExpr = E->getFalseExpr();
+
+    auto OnFail = [this, E] {
       if (Info.checkingPotentialConstantExpression() && Info.noteFailure()) {
         CheckPotentialConstantConditional(E);
         return false;
@@ -8776,9 +8826,26 @@ private:
         StmtVisitorTy::Visit(E->getFalseExpr());
       }
       return false;
+    };
+
+    if (Info.Ctx.getLangOpts().CPlusPlus && Cond->getType()->isVectorType() &&
+        TrueExpr->getType()->isVectorType() &&
+        Info.getASTContext().hasSameType(TrueExpr->getType(),
+                                         FalseExpr->getType())) {
+      APValue Val;
+      if (!handleVectorConditionalOperator(Info, Val, Cond, TrueExpr,
+                                           FalseExpr)) {
+        return OnFail();
+      }
+      return DerivedSuccess(Val, E);
     }
 
-    Expr *EvalExpr = BoolResult ? E->getTrueExpr() : E->getFalseExpr();
+    bool BoolResult;
+    if (!EvaluateAsBooleanCondition(Cond, BoolResult, Info)) {
+      return OnFail();
+    }
+
+    Expr *EvalExpr = BoolResult ? TrueExpr : FalseExpr;
     return StmtVisitorTy::Visit(EvalExpr);
   }
 

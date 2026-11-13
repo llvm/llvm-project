@@ -14,6 +14,7 @@ using FourLongLongsExtVec __attribute__((ext_vector_type(4))) = long long;
 using FourFloatsExtVec __attribute__((ext_vector_type(4))) = float;
 using FourDoublesExtVec __attribute__((ext_vector_type(4))) = double;
 using FourI128ExtVec __attribute__((ext_vector_type(4))) = __int128;
+using FourBoolsExtVec __attribute__((ext_vector_type(4))) = bool;
 
 // Next a series of tests to make sure these operations are usable in
 // constexpr functions. Template instantiations don't emit Winvalid-constexpr,
@@ -101,6 +102,79 @@ MathShiftOpsInts(FourCharsExtVec);
 MathShiftOpsInts(FourIntsExtVec);
 MathShiftOpsInts(FourLongLongsExtVec);
 MathShiftOpsInts(FourI128ExtVec);
+
+#define VectorConditionalOps(TypeVec, TypeLeft, TypeRight) \
+  constexpr auto                                           \
+  VectorConditionalOps##TypeVec ##TypeLeft ##TypeRight(    \
+    TypeVec a, TypeVec b, TypeLeft c, TypeRight d) {       \
+    auto e = a < b ? c : d;                                \
+    e = a <= b ? c : d;                                    \
+    e = a > b ? c : d;                                     \
+    e = a >= b ? c : d;                                    \
+    e = a == b ? c : d;                                    \
+    e = a != b ? c : d;                                    \
+    return e;                                              \
+  }
+
+#define VectorConditionalOpsInts(TypeVec, TypeLeft, TypeRight) \
+  constexpr auto                                               \
+  VectorConditionalOpsInts##TypeVec ##TypeLeft ##TypeRight(    \
+    TypeVec a, TypeVec b, TypeLeft c, TypeRight d) {           \
+    auto e = a + b ? c : d;                                    \
+    e = a - b ? c : d;                                         \
+    e = a / b ? c : d;                                         \
+    e = a % b ? c : d;                                         \
+    e = a * b ? c : d;                                         \
+    e = a & b ? c : d;                                         \
+    e = a ^ b ? c : d;                                         \
+    e = a | b ? c : d;                                         \
+    e = a && b ? c : d;                                        \
+    e = a || b ? c : d;                                        \
+    e = a >> b ? c : d;                                        \
+    e = a << b ? c : d;                                        \
+    e = b ? c : d;                                             \
+    e = ~b ? c : d;                                            \
+    e = !b ? c : d;                                            \
+    e = -b ? c : d;                                            \
+    return e;                                                  \
+  }
+
+#define VectorConditionalOpsVariant(TypeVec, TypeScalar) \
+  VectorConditionalOps(TypeVec, TypeVec, TypeVec)        \
+  VectorConditionalOps(TypeVec, TypeScalar, TypeVec)     \
+  VectorConditionalOps(TypeVec, TypeScalar, TypeScalar)  \
+  VectorConditionalOps(TypeVec, TypeVec, TypeScalar)     \
+
+#define VectorConditionalOpsIntsVariant(TypeVec, TypeScalar) \
+  VectorConditionalOpsInts(TypeVec, TypeVec, TypeVec)        \
+  VectorConditionalOpsInts(TypeVec, TypeScalar, TypeVec)     \
+  VectorConditionalOpsInts(TypeVec, TypeScalar, TypeScalar)  \
+  VectorConditionalOpsInts(TypeVec, TypeVec, TypeScalar)     \
+
+typedef long long i64;
+
+VectorConditionalOpsVariant(FourCharsVecSize, char)
+VectorConditionalOpsVariant(FourIntsVecSize, int);
+VectorConditionalOpsVariant(FourLongLongsVecSize, i64);
+VectorConditionalOpsVariant(FourI128VecSize, __int128_t);
+VectorConditionalOpsVariant(FourFloatsVecSize, float);
+VectorConditionalOpsVariant(FourDoublesVecSize, double);
+VectorConditionalOpsVariant(FourCharsExtVec, char);
+VectorConditionalOpsVariant(FourIntsExtVec, int);
+VectorConditionalOpsVariant(FourLongLongsExtVec, i64);
+VectorConditionalOpsVariant(FourI128ExtVec, __int128_t);
+VectorConditionalOpsVariant(FourFloatsExtVec, float);
+VectorConditionalOpsVariant(FourDoublesExtVec, double);
+VectorConditionalOpsVariant(FourBoolsExtVec, bool);
+
+VectorConditionalOpsIntsVariant(FourCharsVecSize, char);
+VectorConditionalOpsIntsVariant(FourIntsVecSize, int);
+VectorConditionalOpsIntsVariant(FourLongLongsVecSize, i64);
+VectorConditionalOpsIntsVariant(FourI128VecSize, __int128_t);
+VectorConditionalOpsIntsVariant(FourCharsExtVec, char);
+VectorConditionalOpsIntsVariant(FourIntsExtVec, int);
+VectorConditionalOpsIntsVariant(FourLongLongsExtVec, i64);
+VectorConditionalOpsIntsVariant(FourI128ExtVec, __int128_t);
 
 template <typename T, typename U>
 constexpr auto CmpMul(T t, U u) {
@@ -351,6 +425,38 @@ void CharUsage() {
 
   constexpr auto af = !FourCharsVecSize{0, 1, 8, -1};
   static_assert(af[0] == -1 && af[1] == 0 && af[2] == 0 && af[3] == 0, "");
+
+  constexpr auto ag = FourCharsVecSize{0, 1, 8, -1} ?
+    FourCharsVecSize{1, 2, 3, 4} : FourCharsVecSize{5, 6, 7, 8};
+  static_assert(ag[0] == 5 && ag[1] == 2 && ag[2] == 3 && ag[3] == 4, "");
+
+  constexpr auto ah = FourCharsVecSize{0, 1, 8, -1} < FourCharsVecSize{-1, 9, -10, 3} ?
+    FourCharsVecSize{1, 2, 3, 4} : FourCharsVecSize{5, 6, 7, 8};
+  static_assert(ah[0] == 5 && ah[1] == 2 && ah[2] == 7 && ah[3] == 4, "");
+
+  constexpr auto ai = !FourCharsVecSize{0, 1, 8, -1} ?
+    FourCharsVecSize{1, 2, 3, 4} : FourCharsVecSize{5, 6, 7, 8};
+  static_assert(ai[0] == 1 && ai[1] == 6 && ai[2] == 7 && ai[3] == 8, "");
+
+  constexpr auto aj = FourCharsVecSize{0, 1, 8, -1} < FourCharsVecSize{-1, 9, -10, 3} ?
+    127 : FourCharsVecSize{1, 2, 3, 4};
+  static_assert(aj[0] == 1 && aj[1] == 127 && aj[2] == 3 && aj[3] == 127, "");
+
+  constexpr auto ak = FourCharsVecSize{0, 1, 8, -1} < FourCharsVecSize{-1, 9, -10, 3} ?
+    FourCharsVecSize{1, 2, 3, 4} : 127;
+  static_assert(ak[0] == 127 && ak[1] == 2 && ak[2] == 127 && ak[3] == 4, "");
+
+  constexpr auto al = FourCharsVecSize{0, 1, 8, -1} < FourCharsVecSize{-1, 9, -10, 3} ?
+    char{9} : char{127};
+  static_assert(al[0] == 127 && al[1] == 9 && al[2] == 127 && al[3] == 9, "");
+
+  constexpr auto am = FourCharsVecSize{0, 1, 8, -1} < FourCharsVecSize{-1, 9, -10, 3}
+    ?: FourCharsVecSize{6, 7, 8, 9};
+  static_assert(am[0] == 6 && am[1] == -1 && am[2] == 8 && am[3] == -1, "");
+
+  constexpr auto an = CmpBinAnd(a, b) ?
+    FourCharsVecSize{1, 2, 3, 4} : FourCharsVecSize{5, 6, 7, 8};
+  static_assert(an[0] == 1 && an[1] == 6 && an[2] == 7 && an[3] == 4, "");
 }
 
 void CharExtVecUsage() {
@@ -538,6 +644,38 @@ void CharExtVecUsage() {
 
   constexpr auto af = !FourCharsExtVec{0, 1, 8, -1};
   static_assert(af[0] == -1 && af[1] == 0 && af[2] == 0 && af[3] == 0, "");
+
+  constexpr auto ag = FourCharsExtVec{0, 1, 8, -1} ?
+    FourCharsExtVec{1, 2, 3, 4} : FourCharsExtVec{5, 6, 7, 8};
+  static_assert(ag[0] == 5 && ag[1] == 6 && ag[2] == 7 && ag[3] == 4, "");
+
+  constexpr auto ah = FourCharsExtVec{0, 1, 8, -1} < FourCharsExtVec{-1, 9, -10, 3} ?
+    FourCharsExtVec{1, 2, 3, 4} : FourCharsExtVec{5, 6, 7, 8};
+  static_assert(ah[0] == 5 && ah[1] == 2 && ah[2] == 7 && ah[3] == 4, "");
+
+  constexpr auto ai = !FourCharsExtVec{0, 1, 8, -1} ?
+    FourCharsExtVec{1, 2, 3, 4} : FourCharsExtVec{5, 6, 7, 8};
+  static_assert(ai[0] == 1 && ai[1] == 6 && ai[2] == 7 && ai[3] == 8, "");
+
+  constexpr auto aj = FourCharsExtVec{0, 1, 8, -1} < FourCharsExtVec{-1, 9, -10, 3} ?
+    127 : FourCharsExtVec{1, 2, 3, 4};
+  static_assert(aj[0] == 1 && aj[1] == 127 && aj[2] == 3 && aj[3] == 127, "");
+
+  constexpr auto ak = FourCharsExtVec{0, 1, 8, -1} < FourCharsExtVec{-1, 9, -10, 3} ?
+    FourCharsExtVec{1, 2, 3, 4} : 127;
+  static_assert(ak[0] == 127 && ak[1] == 2 && ak[2] == 127 && ak[3] == 4, "");
+
+  constexpr auto al = FourCharsExtVec{0, 1, 8, -1} < FourCharsExtVec{-1, 9, -10, 3} ?
+    char{9} : char{127};
+  static_assert(al[0] == 127 && al[1] == 9 && al[2] == 127 && al[3] == 9, "");
+
+  constexpr auto am = FourCharsExtVec{0, 1, 8, -1} < FourCharsExtVec{-1, 9, -10, 3}
+    ?: FourCharsExtVec{6, 7, 8, 9};
+  static_assert(am[0] == 6 && am[1] == -1 && am[2] == 8 && am[3] == -1, "");
+
+  constexpr auto an = CmpBinAnd(a, b) ?
+    FourCharsExtVec{1, 2, 3, 4} : FourCharsExtVec{5, 6, 7, 8};
+  static_assert(an[0] == 5 && an[1] == 6 && an[2] == 7 && an[3] == 8, "");
 }
 
 void FloatUsage() {
@@ -657,6 +795,30 @@ void FloatUsage() {
 
   constexpr auto af = !FourFloatsVecSize{0, 1, 8, -1};
   static_assert(af[0] == -1 && af[1] == 0 && af[2] == 0 && af[3] == 0, "");
+
+  constexpr auto ag = FourFloatsVecSize{0, 1, 8, -1} < FourFloatsVecSize{-1, 9, -10, 3} ?
+    FourFloatsVecSize{1, 2, 3, 4} : FourFloatsVecSize{5, 6, 7, 8};
+  static_assert(ag[0] == 5 && ag[1] == 2 && ag[2] == 7 && ag[3] == 4, "");
+
+  constexpr auto ah = !FourFloatsVecSize{0, 1, 8, -1} ?
+    FourFloatsVecSize{1, 2, 3, 4} : FourFloatsVecSize{5, 6, 7, 8};
+  static_assert(ah[0] == 1 && ah[1] == 6 && ah[2] == 7 && ah[3] == 8, "");
+
+  constexpr auto ai = FourFloatsVecSize{0, 1, 8, -1} < FourFloatsVecSize{-1, 9, -10, 3} ?
+    123 : FourFloatsVecSize{5, 6, 7, 8};
+  static_assert(ai[0] == 5 && ai[1] == 123 && ai[2] == 7 && ai[3] == 123, "");
+
+  constexpr auto aj = FourFloatsVecSize{0, 1, 8, -1} < FourFloatsVecSize{-1, 9, -10, 3} ?
+    FourFloatsVecSize{1, 2, 3, 4} : 321;
+  static_assert(aj[0] == 321 && aj[1] == 2 && aj[2] == 321 && aj[3] == 4, "");
+
+  constexpr auto ak = FourFloatsVecSize{0, 1, 8, -1} < FourFloatsVecSize{-1, 9, -10, 3} ?
+    float{123} : float{321};
+  static_assert(ak[0] == 321 && ak[1] == 123 && ak[2] == 321 && ak[3] == 123, "");
+
+  constexpr auto al = FourFloatsVecSize{0, 1, 8, -1} < FourFloatsVecSize{-1, 9, -10, 3} ?:
+    FourIntsVecSize{5, 6, 7, 8};
+  static_assert(al[0] == 5 && al[1] == -1 && al[2] == 7 && al[3] == -1, "");
 }
 
 void FloatVecUsage() {
@@ -802,6 +964,34 @@ void I128Usage() {
 
   constexpr auto d = !FourI128VecSize{0, 1, 8, -1};
   static_assert(d[0] == -1 && d[1] == 0 && d[2] == 0 && d[3] == 0, "");
+
+  constexpr auto e = FourI128VecSize{0, 1, 8, -1} ?
+    FourI128VecSize{1, 2, 3, 4} : FourI128VecSize{5, 6, 7, 8};
+  static_assert(e[0] == 5 && e[1] == 2 && e[2] == 3 && e[3] == 4, "");
+
+  constexpr auto f = FourI128VecSize{0, 1, 8, -1} < FourI128VecSize{-1, 9, -10, 3} ?
+    FourI128VecSize{1, 2, 3, 4} : FourI128VecSize{5, 6, 7, 8};
+  static_assert(f[0] == 5 && f[1] == 2 && f[2] == 7 && f[3] == 4, "");
+
+  constexpr auto g = !FourI128VecSize{0, 1, 8, -1} ?
+    FourI128VecSize{1, 2, 3, 4} : FourI128VecSize{5, 6, 7, 8};
+  static_assert(g[0] == 1 && g[1] == 6 && g[2] == 7 && g[3] == 8, "");
+
+  constexpr auto h = FourI128VecSize{0, 1, 8, -1} < FourI128VecSize{-1, 9, -10, 3} ?
+    123 : FourI128VecSize{5, 6, 7, 8};
+  static_assert(h[0] == 5 && h[1] == 123 && h[2] == 7 && h[3] == 123, "");
+
+  constexpr auto i = FourI128VecSize{0, 1, 8, -1} < FourI128VecSize{-1, 9, -10, 3} ?
+    FourI128VecSize{1, 2, 3, 4} : 321;
+  static_assert(i[0] == 321 && i[1] == 2 && i[2] == 321 && i[3] == 4, "");
+
+  constexpr auto j = FourI128VecSize{0, 1, 8, -1} < FourI128VecSize{-1, 9, -10, 3} ?
+    __int128_t{123} : __int128_t{321};
+  static_assert(j[0] == 321 && j[1] == 123 && j[2] == 321 && j[3] == 123, "");
+
+  constexpr auto k = FourI128VecSize{0, 1, 8, -1} < FourI128VecSize{-1, 9, -10, 3} ?:
+    FourI128VecSize{5, 6, 7, 8};
+  static_assert(k[0] == 5 && k[1] == -1 && k[2] == 7 && k[3] == -1, "");
 }
 
 void I128VecUsage() {
@@ -828,9 +1018,36 @@ void I128VecUsage() {
 
   constexpr auto d = !FourI128ExtVec{0, 1, 8, -1};
   static_assert(d[0] == -1 && d[1] == 0 && d[2] == 0 && d[3] == 0, "");
+
+  constexpr auto e = FourI128ExtVec{0, 1, 8, -1} ?
+    FourI128ExtVec{1, 2, 3, 4} : FourI128ExtVec{5, 6, 7, 8};
+  static_assert(e[0] == 5 && e[1] == 6 && e[2] == 7 && e[3] == 4, "");
+
+  constexpr auto f = FourI128ExtVec{0, 1, 8, -1} < FourI128ExtVec{-1, 9, -10, 3} ?
+    FourI128ExtVec{1, 2, 3, 4} : FourI128ExtVec{5, 6, 7, 8};
+  static_assert(f[0] == 5 && f[1] == 2 && f[2] == 7 && f[3] == 4, "");
+
+  constexpr auto g = !FourI128ExtVec{0, 1, 8, -1} ?
+    FourI128ExtVec{1, 2, 3, 4} : FourI128ExtVec{5, 6, 7, 8};
+  static_assert(g[0] == 1 && g[1] == 6 && g[2] == 7 && g[3] == 8, "");
+
+  constexpr auto h = FourI128ExtVec{0, 1, 8, -1} < FourI128ExtVec{-1, 9, -10, 3} ?
+    123 : FourI128ExtVec{5, 6, 7, 8};
+  static_assert(h[0] == 5 && h[1] == 123 && h[2] == 7 && h[3] == 123, "");
+
+  constexpr auto i = FourI128ExtVec{0, 1, 8, -1} < FourI128ExtVec{-1, 9, -10, 3} ?
+    FourI128ExtVec{1, 2, 3, 4} : 321;
+  static_assert(i[0] == 321 && i[1] == 2 && i[2] == 321 && i[3] == 4, "");
+
+  constexpr auto j = FourI128ExtVec{0, 1, 8, -1} < FourI128ExtVec{-1, 9, -10, 3} ?
+    __int128_t{123} : __int128_t{321};
+  static_assert(j[0] == 321 && j[1] == 123 && j[2] == 321 && j[3] == 123, "");
+
+  constexpr auto k = FourI128ExtVec{0, 1, 8, -1} < FourI128ExtVec{-1, 9, -10, 3} ?:
+    FourI128ExtVec{5, 6, 7, 8};
+  static_assert(k[0] == 5 && k[1] == -1 && k[2] == 7 && k[3] == -1, "");
 }
 
-using FourBoolsExtVec __attribute__((ext_vector_type(4))) = bool;
 void BoolVecUsage() {
   constexpr auto a = FourBoolsExtVec{true, false, true, false} <
                      FourBoolsExtVec{false, false, true, true};
@@ -873,10 +1090,56 @@ void BoolVecUsage() {
 
   constexpr auto k = ~FourBoolsExtVec{true, false, true, false};
   static_assert(k[0] == false && k[1] == true && k[2] == false && k[3] == true, "");
+
+  constexpr auto l = FourBoolsExtVec{true, true, false, true}
+    != FourBoolsExtVec{true, true, false, false} ?
+    FourBoolsExtVec{true, true, true, true} :
+    FourBoolsExtVec{false, false, false, false};
+  static_assert(l[0] == false && l[1] == false && l[2] == false && l[3] == true, "");
+
+  constexpr auto m = !FourBoolsExtVec{true, true, false, false} ?
+    FourBoolsExtVec{true, true, true, true} :
+    FourBoolsExtVec{false, false, false, false};
+  static_assert(m[0] == false && m[1] == false && m[2] == true && m[3] == true, "");
+
+  constexpr auto n = FourBoolsExtVec{true, true, false, true}
+    != FourBoolsExtVec{true, true, false, false} ?
+    true : FourBoolsExtVec{false, false, false, false};
+  static_assert(n[0] == false && n[1] == false && n[2] == false && n[3] == true, "");
+
+  constexpr auto o = FourBoolsExtVec{true, true, false, true}
+    != FourBoolsExtVec{true, true, false, false} ?
+    FourBoolsExtVec{true, true, true, true} : false;
+  static_assert(o[0] == false && o[1] == false && o[2] == false && o[3] == true, "");
+
+  constexpr auto p = FourBoolsExtVec{true, true, false, true}
+    != FourBoolsExtVec{true, true, false, false} ?
+    true : false;
+  static_assert(p[0] == false && p[1] == false && p[2] == false && p[3] == true, "");
+
+  constexpr auto q = FourBoolsExtVec{true, true, false, true}
+    != FourBoolsExtVec{true, true, false, false} ?:
+    FourBoolsExtVec{true, false, true, true};
+  static_assert(q[0] == true && q[1] == false && q[2] == true && q[3] == true, "");
 }
 
 using EightBoolsExtVec __attribute__((ext_vector_type(8))) = bool;
 void BoolVecShuffle() {
   constexpr EightBoolsExtVec a = __builtin_shufflevector(
       FourBoolsExtVec{}, FourBoolsExtVec{}, 0, 1, 2, 3, 4, 5, 6, 7);
+}
+
+void VecSizeCondOpErrors() {
+  constexpr auto a = FourIntsVecSize{1, 2, 3, 4};
+  constexpr auto b = FourIntsVecSize{5, 6, 7, 8};
+
+  constexpr auto c = a + b == b - a // expected-error {{must be initialized by a constant expression}}
+    ? a / 0 : b + a;  // expected-note {{division by zero}}
+
+  constexpr auto d = a + b == b - a // expected-error {{must be initialized by a constant expression}}
+    ? a + b : a / 0;  // expected-note {{division by zero}}
+
+  constexpr auto e = a + b / 0 > 0 // expected-error {{must be initialized by a constant expression}} \
+                                   // expected-note {{division by zero}}
+    ? a + b : a;
 }
