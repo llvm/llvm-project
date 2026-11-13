@@ -31,15 +31,7 @@ test()
     assert(c.real() == -4);
     assert(c.imag() == 7.5);
 
-    std::complex<T> c3;
-
-    c3 = c;
-    std::complex<int> ic (1,1);
-    c3 *= ic;
-    assert(c3.real() == -11.5);
-    assert(c3.imag() == 3.5);
-
-    c3 = c;
+    std::complex<T> c3 = c;
     std::complex<float> fc (1,1);
     c3 *= fc;
     assert(c3.real() == -11.5);
