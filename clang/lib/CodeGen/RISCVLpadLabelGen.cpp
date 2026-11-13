@@ -108,9 +108,7 @@ public:
     return Ctx.getRValueReferenceType(Visit(T->getPointeeType()));
   }
 
-  // Pointer-to-array (e.g. "wchar_t (*)[4]") -- the only shape an array
-  // can take inside a mangled function signature, since arrays decay to
-  // pointers in parameter position and can't be returned directly.
+  // Pointer-to-array 
   QualType VisitConstantArrayType(const ConstantArrayType *T) {
     return Ctx.getConstantArrayType(Visit(T->getElementType()), T->getSize(),
                                     T->getSizeExpr(), T->getSizeModifier(),
@@ -122,10 +120,7 @@ public:
                                       T->getIndexTypeCVRQualifiers());
   }
 
-  // Nested pointer-to-member (e.g. as a parameter type): per psABI, the
-  // class/covariant-return substitutions only apply at the top level, so
-  // we only recurse for wchar_t/exception-spec normalization here --
-  // the class and pointee are otherwise left as-is.
+  // Nested pointer-to-member
   QualType VisitMemberPointerType(const MemberPointerType *T) {
     QualType NewPointee = Visit(T->getPointeeType());
     return Ctx.getMemberPointerType(NewPointee, std::nullopt,
@@ -302,10 +297,6 @@ combineTemplateArgScanResults(TemplateArgScanResult LHS,
 static TemplateArgScanResult
 scanTemplateArgumentForWCharT(const TemplateArgument &Arg);
 
-// Looks through sugar via getAsCXXRecordDecl() rather than matching a
-// specific Type subclass, so this is robust regardless of which sugar
-// node (TemplateSpecializationType/ElaboratedType/RecordType) the AST
-// actually uses for a given specialization.
 static TemplateArgScanResult
 scanTypeForWCharTInTemplateArgs(QualType T, bool WithinTemplateArgs = false) {
   if (WithinTemplateArgs && isWCharT(T))
@@ -327,8 +318,7 @@ scanTypeForWCharTInTemplateArgs(QualType T, bool WithinTemplateArgs = false) {
         return Result;
     }
   }
-  // Mirrors a subset of SignatureNormalizer's own structural recursion --
-  // if SignatureNormalizer gains a new recursive case, update this too.
+  
   if (const auto *PT = T->getAs<PointerType>())
     return scanTypeForWCharTInTemplateArgs(PT->getPointeeType(),
                                            WithinTemplateArgs);
