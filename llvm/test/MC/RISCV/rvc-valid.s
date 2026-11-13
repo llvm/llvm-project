@@ -19,159 +19,121 @@
 # RUN:     | llvm-objdump --mattr=+zca --no-print-imm-hex -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
-# RUN: not llvm-mc -triple riscv32 \
-# RUN:     -M no-aliases -show-encoding < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK-NO-EXT %s
+# RUN: llvm-mc --verify -triple riscv32 -M no-aliases -show-encoding < %s
 
 # TODO: more exhaustive testing of immediate encoding.
 
 # CHECK-ASM-AND-OBJ: c.lwsp ra, 0(sp)
 # CHECK-ASM: encoding: [0x82,0x40]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.lwsp ra, 0(sp)
+c.lwsp ra, 0(sp) # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.swsp ra, 252(sp)
 # CHECK-ASM: encoding: [0x86,0xdf]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.swsp ra, 252(sp)
+c.swsp ra, 252(sp) # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.lw a2, 0(a0)
 # CHECK-ASM: encoding: [0x10,0x41]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.lw a2, 0(a0)
+c.lw a2, 0(a0) # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.sw a5, 124(a3)
 # CHECK-ASM: encoding: [0xfc,0xde]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.sw a5, 124(a3)
+c.sw a5, 124(a3) # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 
 # CHECK-ASM-AND-OBJ: c.lwsp s0, 0(sp)
 # CHECK-ASM: encoding: [0x02,0x44]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.lwsp x8, (x2)
+c.lwsp x8, (x2) # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.swsp s0, 0(sp)
 # CHECK-ASM: encoding: [0x22,0xc0]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.swsp x8, (x2)
+c.swsp x8, (x2) # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.lw s0, 0(s1)
 # CHECK-ASM: encoding: [0x80,0x40]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.lw x8, (x9)
+c.lw x8, (x9) # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.sw s0, 0(s1)
 # CHECK-ASM: encoding: [0x80,0xc0]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.sw x8, (x9)
+c.sw x8, (x9) # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 
 # CHECK-OBJ: c.j 0xfffff810
 # CHECK-ASM: c.j -2048
 # CHECK-ASM: encoding: [0x01,0xb0]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.j -2048
+c.j -2048 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.jr a7
 # CHECK-ASM: encoding: [0x82,0x88]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.jr a7
+c.jr a7 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.jalr a1
 # CHECK-ASM: encoding: [0x82,0x95]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.jalr a1
+c.jalr a1 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-OBJ: c.beqz a3, 0xffffff16
 # CHECK-ASM: c.beqz a3, -256
 # CHECK-ASM: encoding: [0x81,0xd2]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.beqz a3, -256
+c.beqz a3, -256 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-OBJ: c.bnez a5, 0x116
 # CHECK-ASM: c.bnez a5, 254
 # CHECK-ASM: encoding: [0xfd,0xef]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.bnez a5,  254
+c.bnez a5,  254 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 
 # CHECK-ASM-AND-OBJ: c.li a7, 31
 # CHECK-ASM: encoding: [0xfd,0x48]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.li a7, 31
+c.li a7, 31 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.addi a3, -32
 # CHECK-ASM: encoding: [0x81,0x16]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.addi a3, -32
+c.addi a3, -32 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.addi16sp sp, -512
 # CHECK-ASM: encoding: [0x01,0x71]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.addi16sp sp, -512
+c.addi16sp sp, -512 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.addi16sp sp, 496
 # CHECK-ASM: encoding: [0x7d,0x61]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.addi16sp sp, 496
+c.addi16sp sp, 496 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.addi4spn a3, sp, 1020
 # CHECK-ASM: encoding: [0xf4,0x1f]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.addi4spn a3, sp, 1020
+c.addi4spn a3, sp, 1020 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.addi4spn a3, sp, 4
 # CHECK-ASM: encoding: [0x54,0x00]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.addi4spn a3, sp, 4
+c.addi4spn a3, sp, 4 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.slli a1, 1
 # CHECK-ASM: encoding: [0x86,0x05]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.slli a1, 1
+c.slli a1, 1 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.srli a3, 31
 # CHECK-ASM: encoding: [0xfd,0x82]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.srli a3, 31
+c.srli a3, 31 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.srai a4, 2
 # CHECK-ASM: encoding: [0x09,0x87]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.srai a4, 2
+c.srai a4, 2 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.andi a5, 15
 # CHECK-ASM: encoding: [0xbd,0x8b]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.andi a5, 15
+c.andi a5, 15 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.mv a7, s0
 # CHECK-ASM: encoding: [0xa2,0x88]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.mv a7, s0
+c.mv a7, s0 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.and a1, a2
 # CHECK-ASM: encoding: [0xf1,0x8d]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.and a1, a2
+c.and a1, a2 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.or a2, a3
 # CHECK-ASM: encoding: [0x55,0x8e]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.or a2, a3
+c.or a2, a3 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.xor a3, a4
 # CHECK-ASM: encoding: [0xb9,0x8e]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.xor a3, a4
+c.xor a3, a4 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.sub a4, a5
 # CHECK-ASM: encoding: [0x1d,0x8f]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.sub a4, a5
+c.sub a4, a5 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.nop
 # CHECK-ASM: encoding: [0x01,0x00]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.nop
+c.nop # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.nop
 # CHECK-ASM: encoding: [0x01,0x00]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.addi x0, 0
+c.addi x0, 0 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.ebreak
 # CHECK-ASM: encoding: [0x02,0x90]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.ebreak
+c.ebreak # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.lui s0, 1
 # CHECK-ASM: encoding: [0x05,0x64]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.lui s0, 1
+c.lui s0, 1 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.lui s0, 31
 # CHECK-ASM: encoding: [0x7d,0x64]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.lui s0, 31
+c.lui s0, 31 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.lui s0, 1048544
 # CHECK-ASM: encoding: [0x01,0x74]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.lui s0, 0xfffe0
+c.lui s0, 0xfffe0 # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.lui s0, 1048575
 # CHECK-ASM: encoding: [0x7d,0x74]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.lui s0, 0xfffff
+c.lui s0, 0xfffff # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
 # CHECK-ASM-AND-OBJ: c.unimp
 # CHECK-ASM: encoding: [0x00,0x00]
-# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-c.unimp
+c.unimp # expected-error {{instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores)}}
