@@ -2603,12 +2603,13 @@ fn -> other_fn -> other_fn ; fn is norecurse
     Interprocedural passes may still analyze this function, transform its body,
     and refine its attributes, but they will not rewrite its signature.
     Code generation defaults to the "fast" instruction selector.
-    This attribute cannot be used together with the `alwaysinline`
-    attribute; this attribute is also incompatible
-    with the `minsize`, `optsize`, and `optdebug` attributes.
+    This attribute is incompatible with the `minsize`, `optsize`, and
+    `optdebug` attributes.
 
-    This attribute requires the `noinline` attribute to be specified on
-    the function as well, so the function is never inlined into any caller.
+    This attribute implies `noinline`, so the function is not inlined into
+    any caller; the `noinline` attribute need not be specified as well.
+    If the function also has the `alwaysinline` attribute, `alwaysinline`
+    takes precedence and the function may be inlined.
     Only functions with the `alwaysinline` attribute are valid
     candidates for inlining into the body of this function.
 
@@ -9642,40 +9643,38 @@ Some important flag interactions:
 -  A module with `Objective-C Garbage Collection` set to 0 cannot be
    merged with a module with `Objective-C GC Only` set to 6.
 
-### C type width Module Flags Metadata
+### wchar_t Type Size Module Flags Metadata
 
-The ARM backend emits a section into each generated object file describing the
-options that it was compiled with (in a compiler-independent way) to prevent
-linking incompatible objects, and to allow automatic library selection. Some
-of these options are not visible at the IR level, namely wchar_t width and enum
-width.
+The `wchar_size` module flag records the size of `wchar_t` in bytes. Its value
+is a positive integer. The size of `wchar_t` is a property of the target's C
+ABI and is not implied by the widths available in the IR, so it is recorded
+explicitly.
 
-To pass this information to the backend, these options are encoded in module
-flags metadata, using the following key-value pairs:
+When the flag is absent, the target's default `wchar_t` size is used.
 
-```{list-table}
-:header-rows: 1
-:widths: 30 70
-* - Key
-  - Value
+For example, the following metadata section specifies a 4-byte `wchar_t`:
 
-* - short_wchar
-  - * 0 --- sizeof(wchar_t) == 4
-    * 1 --- sizeof(wchar_t) == 2
-
-* - short_enum
-  - * 0 --- Enums are at least as large as an `int`.
-    * 1 --- Enums are stored in the smallest integer type which can
-      represent all of its values.
+```llvm
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"wchar_size", i32 4}
 ```
 
-For example, the following metadata section specifies that the module was
-compiled with a `wchar_t` width of 4 bytes, and the underlying type of an
-enum is the smallest type which can represent all of its values:
-```
-!llvm.module.flags = !{!0, !1}
-!0 = !{i32 1, !"short_wchar", i32 1}
-!1 = !{i32 1, !"short_enum", i32 0}
+### Minimum Enum Size Module Flags Metadata
+
+The `min_enum_size` module flag records the minimum size of an enumeration type
+in bytes. Its value is an integer: a value of 1 indicates that enums are stored
+in the smallest integer type which can represent all of their values, and a
+value of 4 indicates that enums are at least as wide as `int`.
+
+The ARM backend reads this flag to emit the `Tag_ABI_enum_size` build attribute,
+which records the enum size the module was compiled with and prevents linking
+incompatible objects. The attribute is not emitted when the flag is absent.
+
+For example, the following metadata section specifies short enums:
+
+```llvm
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"min_enum_size", i32 1}
 ```
 
 ### Float ABI Module Flags Metadata
@@ -10052,10 +10051,11 @@ for a distributed ThinLTO backend via clang's "`-fthinlto-index=<>`" flag
 (this part is not yet implemented, use llvm-as to create a bitcode object
 before feeding into thin link tools for now).
 
-There are currently 3 types of summary entries in the LLVM assembly:
+Summary entries in the LLVM assembly include
 {ref}`module paths<module_path_summary>`,
-{ref}`global values<gv_summary>`, and
-{ref}`type identifiers<typeid_summary>`.
+{ref}`global values<gv_summary>`,
+{ref}`type identifiers<typeid_summary>`, and
+{ref}`CFI function lists<cfi_functions_summary>`.
 
 (module_path_summary)=
 
@@ -10386,6 +10386,28 @@ is `UniformRetVal` (indicates the uniform return value), or
 `UniqueRetVal` (holds the return value associated with the unique vtable
 (0 or 1)). The `byte` and `bit` fields are only used if the target does
 not support the use of absolute symbols to store constants.
+
+(cfi_functions_summary)=
+
+### CFI Function Summary Entries
+
+The `cfiFunctionDefs` and `cfiFunctionDecls` summary entries record the names
+of functions with
+[Control Flow Integrity](https://clang.llvm.org/docs/ControlFlowIntegrity.html)
+jump table entries, along with the GUIDs that ThinLTO uses for them. These
+entries are generated during the thin link and are only present in a combined
+summary index.
+
+Example:
+
+```text
+^4 = cfiFunctionDefs: ((guid: 14740650423002898831, name: "f"), (guid: 16617365750458309383, name: "f_dso_local"))
+^5 = cfiFunctionDecls: ((guid: 13146401226427987378, name: "g"), (guid: 13146401226427987378, name: "g.llvm.123"))
+```
+
+`cfiFunctionDefs` lists functions defined in the linked bitcode modules, and
+`cfiFunctionDecls` lists external functions declared by them. Multiple function
+names may share the same ThinLTO `guid`.
 
 (intrinsicglobalvariables)=
 
@@ -11946,7 +11968,7 @@ Instructions for bit-range manipulation on {ref}`byte type <t_byte>` values.
 ##### Syntax:
 
 ```
-<result> = bitextract <ty>, <bty> <source>, i32 <offset>
+<result> = bitextract <ty>, <bty> <source>, <ity> <offset>
 ```
 
 ##### Overview:
@@ -11957,14 +11979,12 @@ The '`bitextract`' instruction reads a contiguous range of bits from a
 ##### Arguments:
 
 `<ty>` must be an {ref}`integer <t_integer>`, {ref}`floating-point
-<t_floating>`, {ref}`pointer <t_pointer>`, or {ref}`byte <t_byte>` type
-and specifies the result type. The first operand, `source`, must be a value
-of {ref}`byte type <t_byte>`. The `offset` operand is an `i32` giving the bit
-position at which the extraction begins within `source`.
-
-```{note}
-Vector types are not currently supported as the result type.
-```
+<t_floating>`, {ref}`pointer <t_pointer>`, or {ref}`byte <t_byte>` type, or a
+{ref}`vector <t_vector>` of those types, and specifies the result type. The
+first operand, `source`, must be a value of {ref}`byte type <t_byte>`, or a
+vector of byte type with the same number of elements as `ty`. The `offset`
+operand is an `i32`, or a vector of `i32` with the same number of elements as
+`ty`, giving the bit position at which the extraction begins within `source`.
 
 ##### Semantics:
 
@@ -11974,6 +11994,11 @@ Bit `0` is the least significant bit of `source`.
 
 If `offset + bitwidth(ty)` is greater than `bitwidth(source)`,
 {ref}`poison value <poisonvalues>` is returned.
+
+If the arguments are vectors, each element of the result is extracted from
+the corresponding element of `source`, at the corresponding bit position in
+`offset`. In this case, `bitwidth(ty)` and `bitwidth(source)` refer to the
+element types, and an out-of-range offset only makes its own element poison.
 
 ##### Example:
 
@@ -11985,6 +12010,8 @@ If `offset + bitwidth(ty)` is greater than `bitwidth(source)`,
 %result = bitextract i16, b64 %src, i32 16 ; Extract bits [16..31] of %src and return a 16-bit integer
 
 %result = bitextract float, b32 %src, i32 0 ; Extract bits [0..31] of %src and reinterpret them as a 32-bit float
+
+%result = bitextract <2 x i8>, <2 x b32> %src, <2 x i32> <i32 0, i32 24> ; Extract bits [0..7] of the first element and bits [24..31] of the second element of %src
 ```
 
 (i_bitinsert)=
@@ -11993,7 +12020,7 @@ If `offset + bitwidth(ty)` is greater than `bitwidth(source)`,
 
 ##### Syntax:
 ```
-<result> = bitinsert <bty> <base>, <ty> <val>, i32 <offset>
+<result> = bitinsert <bty> <base>, <ty> <val>, <ity> <offset>
 ```
 ##### Overview:
 
@@ -12004,16 +12031,13 @@ the result as a value of the same byte type.
 ##### Arguments:
 
 `<ty>` must be an {ref}`integer <t_integer>`, {ref}`floating-point
-<t_floating>`, {ref}`pointer <t_pointer>`, or {ref}`byte <t_byte>` type
-and specifies the type of the value to insert. The first operand, `base`,
-must be a value of {ref}`byte type <t_byte>`. The second operand, `val`, must
-be a value of type `ty`. The `offset` operand is an `i32` giving the bit
-position at which the insertion begins within `base`.
-
-```{note}
-Vector types are not currently supported as the type of the value
-to insert.
-```
+<t_floating>`, {ref}`pointer <t_pointer>`, or {ref}`byte <t_byte>` type, or a
+{ref}`vector <t_vector>` of those types, and specifies the type of the value
+to insert. The first operand, `base`, must be a value of {ref}`byte type
+<t_byte>`, or a vector of byte type with the same number of elements as `ty`.
+The second operand, `val`, must be a value of type `ty`. The `offset` operand
+is an `i32`, or a vector of `i32` with the same number of elements as `ty`,
+giving the bit position at which the insertion begins within `base`.
 
 ##### Semantics:
 
@@ -12023,6 +12047,11 @@ Bit `0` is the least significant bit of `base`.
 
 If `offset + bitwidth(ty)` is greater than `bitwidth(base)`,
 {ref}`poison value <poisonvalues>` is returned.
+
+If the arguments are vectors, each element of `val` is inserted into the
+corresponding element of `base`, at the corresponding bit position in
+`offset`. In this case, `bitwidth(ty)` and `bitwidth(base)` refer to the
+element types, and an out-of-range offset only makes its own element poison.
 
 ##### Example:
 
@@ -12034,6 +12063,8 @@ If `offset + bitwidth(ty)` is greater than `bitwidth(base)`,
 %result = bitinsert b64 %x, i16 %y, i32 32 ; Inserts a 16-bit value into bits [32..47] of %x
 
 %result = bitinsert b32 %x, float %f, i32 0 ; Inserts the bit pattern of %f into bits [0..31] of %x, overwriting it entirely
+
+%result = bitinsert <2 x b32> %x, <2 x i8> %y, <2 x i32> <i32 0, i32 24> ; Inserts the first element of %y into bits [0..7] of the first element of %x, and the second element of %y into bits [24..31] of the second element of %x
 ```
 
 ### Vector Operations
@@ -12472,11 +12503,13 @@ The location of memory pointed to is loaded. If the value being loaded
 is of scalar type then the number of bytes read does not exceed the
 minimum number of bytes needed to hold all bits of the type. For
 example, loading an `i24` reads at most three bytes. When loading a
-value of a type like `i20` with a size that is not an integral number
-of bytes, the load will be performed on the next larger multiple of the byte
-size (here `i24`) and truncated. If any of the truncated bits are non-zero,
-the result is a poison value. As such, a non-byte-sized load behaves like a
-byte-sized load followed by a `trunc nuw` operation.
+non-byte-sized scalar or vector value, the load is performed on the next
+larger multiple of the byte size, reading a value of byte type. If any
+padding bit is non-zero or poison, all value bits in the byte containing that
+padding become poison. Then, the value bits are extracted from bit 0 using
+`bitextract`, and the extracted value is finally `bitcast` to the loaded type.
+As such, a non-byte-sized load behaves like a byte-sized load followed by a
+`trunc nuw` operation.
 
 If the value being loaded is of aggregate type, the bytes that correspond to
 padding may be accessed but are ignored, because it is impossible to observe
@@ -12570,11 +12603,13 @@ The contents of memory are updated to contain `<value>` at the
 location specified by the `<pointer>` operand. If `<value>` is
 of scalar type then the number of bytes written does not exceed the
 minimum number of bytes needed to hold all bits of the type. For
-example, storing an `i24` writes at most three bytes. When writing a
-value of a type like `i20` with a size that is not an integral number
-of bytes, the value will be zero extended to the next larger multiple of the
-byte size (here `i24`) and then stored. As such, a non-byte-sized store
-behaves like a `zext` followed by a byte-sized store.
+example, storing an `i24` writes at most three bytes. When storing a
+non-byte-sized scalar or vector value, the value is first `bitcast` to a
+scalar byte type and inserted at bit 0 into a byte type with the next
+larger byte size using `bitinsert`, and the resulting byte-sized value is
+stored. The padding bits are poison if every non-padding bit in the byte
+containing padding bits is poison; otherwise, they are zero. As such, a
+non-byte-sized store behaves like a `zext` followed by a byte-sized store.
 
 If `<value>` is of aggregate type, padding is filled with
 {ref}`undef <undefvalues>`.

@@ -816,7 +816,6 @@ bool X86TargetLowering::lowerInterleavedLoad(
 
   // Create an interleaved access group.
   IRBuilder<> Builder(LI);
-  Builder.disableGEPCanonicalization();
   X86InterleavedAccessGroup Grp(LI, Shuffles, Indices, Factor, Subtarget,
                                 Builder);
 

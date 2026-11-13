@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=amdgpu12.50 < %s | FileCheck %s
-; RUN: %if asserts %{ llc -mtriple=amdgpu12.50 -stress-regalloc=16 -debug-only=regalloc -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=REASSIGN %}
+; RUN: %if asserts %{ llc -mtriple=amdgpu12.50 -stress-regalloc=16 -debug-only=regalloc -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=NO-REASSIGN --implicit-check-not="can reassign:" %}
 ; RUN: %if asserts %{ llc -mtriple=amdgpu12.50 -stress-regalloc=16 -enable-local-reassign=true -debug-only=regalloc -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=REASSIGN %}
 ; RUN: %if asserts %{ llc -mtriple=amdgpu12.50 -stress-regalloc=16 -enable-local-reassign=false -debug-only=regalloc -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=NO-REASSIGN --implicit-check-not="can reassign:" %}
 

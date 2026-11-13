@@ -230,12 +230,13 @@ define bfloat @testExpbf16(bfloat %val, i32 %a) {
 ; SVE-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; SVE-NEXT:    fmov s1, w0
 ; SVE-NEXT:    ptrue p0.s
+; SVE-NEXT:    mov w10, #32767 // =0x7fff
 ; SVE-NEXT:    shll v0.4s, v0.4h, #16
 ; SVE-NEXT:    fscale z0.s, p0/m, z0.s, z1.s
 ; SVE-NEXT:    fmov w8, s0
-; SVE-NEXT:    fcmp s0, s0
-; SVE-NEXT:    orr w9, w8, #0x400000
-; SVE-NEXT:    csel w8, w9, w8, vs
+; SVE-NEXT:    ubfx w9, w8, #16, #1
+; SVE-NEXT:    add w8, w8, w10
+; SVE-NEXT:    add w8, w9, w8
 ; SVE-NEXT:    lsr w8, w8, #16
 ; SVE-NEXT:    fmov s0, w8
 ; SVE-NEXT:    // kill: def $h0 killed $h0 killed $s0

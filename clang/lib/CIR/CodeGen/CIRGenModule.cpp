@@ -220,7 +220,8 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
           /*enable_noundef_attrs=*/cgo.EnableNoundefAttrs,
           /*no_trapping_math=*/langOpts.getDefaultExceptionMode() ==
               LangOptions::FPE_Ignore,
-          /*ssp_buffer_size=*/cgo.SSPBufferSize));
+          /*ssp_buffer_size=*/cgo.SSPBufferSize,
+          /*relative_cxx_abi_vtables=*/langOpts.RelativeCXXABIVTables));
 
   if (cgo.OptimizationLevel > 0 || cgo.OptimizeSize > 0)
     getModule()->setAttr(cir::CIRDialect::getOptInfoAttrName(),
