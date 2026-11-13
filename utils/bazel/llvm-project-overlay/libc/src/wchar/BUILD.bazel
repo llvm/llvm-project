@@ -31,7 +31,7 @@ libc_function(
     srcs = ["btowc.cpp"],
     hdrs = ["btowc.h"],
     deps = [
-        "//libc:hdr_wchar_macros",
+        "//libc/hdr:wchar_macros",
         "//libc/hdr/types:wint_t",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
@@ -264,7 +264,7 @@ libc_function(
     srcs = ["wctob.cpp"],
     hdrs = ["wctob.h"],
     deps = [
-        "//libc:hdr_stdio_macros",
+        "//libc/hdr:stdio_macros",
         "//libc/hdr/types:wint_t",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",

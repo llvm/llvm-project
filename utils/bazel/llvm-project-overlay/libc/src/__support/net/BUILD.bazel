@@ -35,8 +35,8 @@ libc_support_library(
     hdrs = ["address.h"],
     deps = [
         ":hex",
-        "//libc:hdr_inet_address_macros",
-        "//libc:hdr_stdint_proxy",
+        "//libc/hdr:inet_address_macros",
+        "//libc/hdr:stdint_proxy",
         "//libc/hdr/types:in_addr_t",
         "//libc/hdr/types:struct_in6_addr",
         "//libc/hdr/types:struct_in_addr",

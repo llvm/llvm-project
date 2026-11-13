@@ -24,9 +24,9 @@ libc_function(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_errno_macros",
-        "//libc:hdr_sys_ipc_macros",
-        "//libc:hdr_sys_sem_macros",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:sys_ipc_macros",
+        "//libc/hdr:sys_sem_macros",
         "//libc/hdr/types:struct_semid_ds",
         "//libc/hdr/types:struct_seminfo",
         "//libc/src/__support:common",

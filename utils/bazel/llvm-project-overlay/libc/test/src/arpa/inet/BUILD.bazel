@@ -64,8 +64,8 @@ libc_test(
     name = "inet_ntop_test",
     srcs = ["inet_ntop_test.cpp"],
     deps = [
-        "//libc:hdr_errno_macros",
-        "//libc:hdr_sys_socket_macros",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:sys_socket_macros",
         "//libc/hdr/types:struct_in6_addr",
         "//libc/hdr/types:struct_in_addr",
         "//libc/src/__support:common",
@@ -77,8 +77,8 @@ libc_test(
     name = "inet_pton_test",
     srcs = ["inet_pton_test.cpp"],
     deps = [
-        "//libc:hdr_errno_macros",
-        "//libc:hdr_sys_socket_macros",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:sys_socket_macros",
         "//libc/hdr/types:struct_in6_addr",
         "//libc/hdr/types:struct_in_addr",
         "//libc/src/__support:common",

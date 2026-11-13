@@ -24,7 +24,7 @@ libc_test(
     name = "sprintf_test",
     srcs = ["sprintf_test.cpp"],
     deps = [
-        "//libc:hdr_wchar_macros",
+        "//libc/hdr:wchar_macros",
         "//libc/hdr/types:wint_t",
         "//libc/src/__support/FPUtil:fp_bits",
         "//libc/src/__support/printf_core:printf_config",
@@ -121,7 +121,7 @@ libc_test(
     name = "remove_test",
     srcs = ["remove_test.cpp"],
     deps = [
-        "//libc:hdr_sys_stat_macros",
+        "//libc/hdr:sys_stat_macros",
         "//libc/src/fcntl:open",
         "//libc/src/stdio:remove",
         "//libc/src/sys/stat:mkdirat",
@@ -134,7 +134,7 @@ libc_test(
     name = "sscanf_test",
     srcs = ["sscanf_test.cpp"],
     deps = [
-        "//libc:hdr_stdio_macros",
+        "//libc/hdr:stdio_macros",
         "//libc/src/__support/CPP:limits",
         "//libc/src/__support/FPUtil:fp_bits",
         "//libc/src/stdio:sscanf",
@@ -146,7 +146,7 @@ libc_test(
     name = "fscanf_test",
     srcs = ["fscanf_test.cpp"],
     deps = [
-        "//libc:hdr_stdio_macros",
+        "//libc/hdr:stdio_macros",
         "//libc/src/__support/CPP:string_view",
         "//libc/src/stdio:fscanf",
     ] + select({

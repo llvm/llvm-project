@@ -19,7 +19,7 @@ libc_support_library(
     name = "time",
     hdrs = glob(["*.h"]),
     deps = [
-        "//libc:hdr_time_macros",
+        "//libc/hdr:time_macros",
         "//libc/hdr/types:clockid_t",
         "//libc/hdr/types:struct_timespec",
         "//libc/hdr/types:time_t",

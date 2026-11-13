@@ -42,9 +42,9 @@ def math_test(name, hdrs = [], deps = [], **kwargs):
             "//libc/src/__support/macros/properties:types",
             "//libc/src/__support:math_extras",
             "//libc/src/__support:uint128",
-            "//libc:hdr_errno_macros",
-            "//libc:hdr_fenv_macros",
-            "//libc:hdr_math_macros",
+            "//libc/hdr:errno_macros",
+            "//libc/hdr:fenv_macros",
+            "//libc/hdr:math_macros",
             "//libc/test/UnitTest:fp_test_helpers",
         ] + deps,
         **kwargs

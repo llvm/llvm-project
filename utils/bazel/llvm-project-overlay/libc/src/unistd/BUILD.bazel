@@ -20,7 +20,7 @@ libc_function(
     srcs = ["linux/access.cpp"],
     hdrs = ["access.h"],
     deps = [
-        "//libc:hdr_fcntl_macros",
+        "//libc/hdr:fcntl_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil:syscall",
@@ -81,7 +81,7 @@ libc_function(
     srcs = ["linux/dup.cpp"],
     hdrs = ["dup.h"],
     deps = [
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil:syscall",
@@ -96,8 +96,8 @@ libc_function(
     srcs = ["linux/dup2.cpp"],
     hdrs = ["dup2.h"],
     deps = [
-        "//libc:hdr_fcntl_macros",
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:fcntl_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil:syscall",
@@ -116,7 +116,7 @@ libc_function(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil:syscall",
@@ -189,8 +189,8 @@ libc_function(
     srcs = ["linux/ftruncate.cpp"],
     hdrs = ["ftruncate.h"],
     deps = [
-        "//libc:hdr_stdint_proxy",
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:stdint_proxy",
+        "//libc/hdr:unistd_macros",
         "//libc/hdr/types:off_t",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
@@ -206,7 +206,7 @@ libc_function(
     srcs = ["linux/getcwd.cpp"],
     hdrs = ["getcwd.h"],
     deps = [
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/hdr/types:size_t",
         "//libc/hdr/types:ssize_t",
         "//libc/src/__support:checked_ptr",
@@ -223,7 +223,7 @@ libc_function(
     srcs = ["linux/geteuid.cpp"],
     hdrs = ["geteuid.h"],
     deps = [
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/hdr/types:uid_t",
         "//libc/src/__support:common",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:geteuid",
@@ -267,7 +267,7 @@ libc_function(
     srcs = ["linux/getpid.cpp"],
     hdrs = ["getpid.h"],
     deps = [
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/hdr/types:pid_t",
         "//libc/src/__support:common",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:getpid",
@@ -280,7 +280,7 @@ libc_function(
     srcs = ["linux/getppid.cpp"],
     hdrs = ["getppid.h"],
     deps = [
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/hdr/types:pid_t",
         "//libc/src/__support:common",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:getppid",
@@ -298,8 +298,8 @@ libc_function(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_signal_macros",
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:signal_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/hdr/types:pid_t",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
@@ -336,7 +336,7 @@ libc_function(
     srcs = ["linux/getuid.cpp"],
     hdrs = ["getuid.h"],
     deps = [
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/hdr/types:uid_t",
         "//libc/src/__support:common",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:getuid",
@@ -361,7 +361,7 @@ libc_function(
     srcs = ["linux/getgid.cpp"],
     hdrs = ["getgid.h"],
     deps = [
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/hdr/types:gid_t",
         "//libc/src/__support:common",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:getgid",
@@ -374,8 +374,8 @@ libc_function(
     srcs = ["linux/isatty.cpp"],
     hdrs = ["isatty.h"],
     deps = [
-        "//libc:hdr_unistd_macros",
-        "//libc:sys_ioctl_macros",
+        "//libc/hdr:sys_ioctl_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil:syscall",
@@ -390,8 +390,8 @@ libc_function(
     srcs = ["linux/link.cpp"],
     hdrs = ["link.h"],
     deps = [
-        "//libc:hdr_fcntl_macros",
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:fcntl_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil:syscall",
@@ -433,7 +433,7 @@ libc_function(
     srcs = ["linux/lseek.cpp"],
     hdrs = ["lseek.h"],
     deps = [
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/hdr/types:off_t",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
@@ -453,7 +453,7 @@ libc_function(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/hdr/types:off_t",
         "//libc/hdr/types:size_t",
         "//libc/hdr/types:ssize_t",
@@ -475,7 +475,7 @@ libc_function(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/hdr/types:off_t",
         "//libc/hdr/types:size_t",
         "//libc/hdr/types:ssize_t",
@@ -492,7 +492,7 @@ libc_function(
     srcs = ["linux/read.cpp"],
     hdrs = ["read.h"],
     deps = [
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/hdr/types:size_t",
         "//libc/hdr/types:ssize_t",
         "//libc/src/__support:common",
@@ -509,8 +509,8 @@ libc_function(
     srcs = ["linux/readlink.cpp"],
     hdrs = ["readlink.h"],
     deps = [
-        "//libc:hdr_fcntl_macros",
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:fcntl_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/hdr/types:size_t",
         "//libc/hdr/types:ssize_t",
         "//libc/src/__support:common",
@@ -527,8 +527,8 @@ libc_function(
     srcs = ["linux/readlinkat.cpp"],
     hdrs = ["readlinkat.h"],
     deps = [
-        "//libc:hdr_fcntl_macros",
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:fcntl_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/hdr/types:size_t",
         "//libc/hdr/types:ssize_t",
         "//libc/src/__support:common",
@@ -545,7 +545,7 @@ libc_function(
     srcs = ["linux/rmdir.cpp"],
     hdrs = ["rmdir.h"],
     deps = [
-        "//libc:hdr_fcntl_macros",
+        "//libc/hdr:fcntl_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil:syscall",
@@ -578,7 +578,7 @@ libc_function(
     srcs = ["linux/symlink.cpp"],
     hdrs = ["symlink.h"],
     deps = [
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:symlink",
@@ -592,7 +592,7 @@ libc_function(
     srcs = ["linux/symlinkat.cpp"],
     hdrs = ["symlinkat.h"],
     deps = [
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:symlinkat",
@@ -606,7 +606,7 @@ libc_function(
     srcs = ["swab.cpp"],
     hdrs = ["swab.h"],
     deps = [
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/hdr/types:ssize_t",
         "//libc/src/__support:common",
         "//libc/src/__support/OSUtil:syscall",
@@ -619,7 +619,7 @@ libc_function(
     srcs = ["linux/truncate.cpp"],
     hdrs = ["truncate.h"],
     deps = [
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/hdr/types:off_t",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
@@ -634,7 +634,7 @@ libc_function(
     srcs = ["linux/unlink.cpp"],
     hdrs = ["unlink.h"],
     deps = [
-        "//libc:hdr_fcntl_macros",
+        "//libc/hdr:fcntl_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil:syscall",
@@ -649,7 +649,7 @@ libc_function(
     srcs = ["linux/unlinkat.cpp"],
     hdrs = ["unlinkat.h"],
     deps = [
-        "//libc:hdr_fcntl_macros",
+        "//libc/hdr:fcntl_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil:syscall",
@@ -670,10 +670,10 @@ libc_function(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_limits_macros",
-        "//libc:hdr_sys_auxv_macros",
-        "//libc:hdr_sys_resource_macros",
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:limits_macros",
+        "//libc/hdr:sys_auxv_macros",
+        "//libc/hdr:sys_resource_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/hdr/types:struct_rlimit",
         "//libc/hdr/types:struct_sysinfo",
         "//libc/src/__support:common",
@@ -692,7 +692,7 @@ libc_function(
     srcs = ["linux/write.cpp"],
     hdrs = ["write.h"],
     deps = [
-        "//libc:hdr_unistd_macros",
+        "//libc/hdr:unistd_macros",
         "//libc/hdr/types:size_t",
         "//libc/hdr/types:ssize_t",
         "//libc/src/__support:common",

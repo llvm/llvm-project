@@ -35,9 +35,9 @@ libc_support_library(
     hdrs = ["complex_types.h"],
     deps = [
         ":types",
-        "//libc:hdr_stdint_proxy",
         "//libc:llvm_libc_types_cfloat128",
         "//libc:llvm_libc_types_cfloat16",
+        "//libc/hdr:stdint_proxy",
     ],
 )
 
@@ -49,10 +49,10 @@ libc_support_library(
         ":compiler",
         ":cpu_features",
         ":os",
-        "//libc:hdr_float_macros",
-        "//libc:hdr_stdint_proxy",
         "//libc:llvm_libc_macros_float16_macros",
         "//libc:llvm_libc_types_float128",
+        "//libc/hdr:float_macros",
+        "//libc/hdr:stdint_proxy",
         "//libc/src/__support/macros:config",
     ],
 )

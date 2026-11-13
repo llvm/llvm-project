@@ -58,7 +58,7 @@ libc_function(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_sys_epoll_macros",
+        "//libc/hdr:sys_epoll_macros",
         "//libc/hdr/types:struct_epoll_event",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",

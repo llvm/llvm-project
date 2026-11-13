@@ -143,8 +143,8 @@ libc_test(
     name = "realpath_test",
     srcs = ["realpath_test.cpp"],
     deps = [
-        "//libc:hdr_errno_macros",
-        "//libc:hdr_limits_macros",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:limits_macros",
         "//libc/hdr/types:size_t",
         "//libc/src/__support:c_string",
         "//libc/src/__support:fixedvector",
@@ -250,7 +250,7 @@ libc_test_library(
     name = "strtol_test_helper",
     hdrs = ["StrtolTest.h"],
     deps = [
-        "//libc:hdr_errno_macros",
+        "//libc/hdr:errno_macros",
         "//libc/src/__support:ctype_utils",
         "//libc/src/__support/CPP:limits",
         "//libc/src/__support/CPP:type_traits",

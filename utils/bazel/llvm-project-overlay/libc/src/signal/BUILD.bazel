@@ -40,7 +40,7 @@ libc_support_library(
     }),
     deps = [
         ":__restore_rt",
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/hdr/types:siginfo_t",
         "//libc/hdr/types:sigset_t",
         "//libc/hdr/types:size_t",
@@ -92,8 +92,8 @@ libc_function(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_errno_macros",
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:signal_macros",
         "//libc/hdr/types:stack_t",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
@@ -111,7 +111,7 @@ libc_function(
     full_build_only = True,
     deps = [
         ":sigaction",
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
     ],

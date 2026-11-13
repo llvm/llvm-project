@@ -14,8 +14,8 @@ libc_test_library(
     name = "socket_test_support",
     hdrs = ["linux/socket_test_support.h"],
     deps = [
-        "//libc:hdr_fcntl_macros",
-        "//libc:hdr_sys_socket_macros",
+        "//libc/hdr:fcntl_macros",
+        "//libc/hdr:sys_socket_macros",
         "//libc/hdr/types:size_t",
         "//libc/hdr/types:socklen_t",
         "//libc/hdr/types:struct_sockaddr_un",
@@ -36,8 +36,8 @@ libc_test(
     srcs = ["linux/bind_test.cpp"],
     deps = [
         ":socket_test_support",
-        "//libc:hdr_netinet_in_macros",
-        "//libc:hdr_sys_socket_macros",
+        "//libc/hdr:netinet_in_macros",
+        "//libc/hdr:sys_socket_macros",
         "//libc/hdr/types:sa_family_t",
         "//libc/hdr/types:struct_sockaddr_in",
         "//libc/hdr/types:struct_sockaddr_in6",
@@ -57,8 +57,8 @@ libc_test(
     srcs = ["linux/connect_accept_test.cpp"],
     deps = [
         ":socket_test_support",
-        "//libc:hdr_fcntl_macros",
-        "//libc:hdr_sys_socket_macros",
+        "//libc/hdr:fcntl_macros",
+        "//libc/hdr:sys_socket_macros",
         "//libc/hdr/types:sa_family_t",
         "//libc/hdr/types:size_t",
         "//libc/hdr/types:socklen_t",
@@ -81,7 +81,7 @@ libc_test(
     srcs = ["linux/listen_test.cpp"],
     deps = [
         ":socket_test_support",
-        "//libc:hdr_sys_socket_macros",
+        "//libc/hdr:sys_socket_macros",
         "//libc/hdr/types:struct_sockaddr_un",
         "//libc/src/__support/CPP:scope",
         "//libc/src/stdio:remove",
@@ -96,7 +96,7 @@ libc_test(
     name = "send_recv_test",
     srcs = ["linux/send_recv_test.cpp"],
     deps = [
-        "//libc:hdr_sys_socket_macros",
+        "//libc/hdr:sys_socket_macros",
         "//libc/src/__support/CPP:scope",
         "//libc/src/sys/socket:recv",
         "//libc/src/sys/socket:send",
@@ -109,9 +109,9 @@ libc_test(
     name = "sendmsg_recvmsg_test",
     srcs = ["linux/sendmsg_recvmsg_test.cpp"],
     deps = [
-        "//libc:hdr_fcntl_macros",
-        "//libc:hdr_sys_socket_macros",
         "//libc:llvm_libc_macros_sys_socket_macros",
+        "//libc/hdr:fcntl_macros",
+        "//libc/hdr:sys_socket_macros",
         "//libc/hdr/types:struct_cmsghdr",
         "//libc/src/__support/CPP:scope",
         "//libc/src/fcntl",
@@ -129,7 +129,7 @@ libc_test(
     name = "sendrecvmmsg_test",
     srcs = ["linux/sendrecvmmsg_test.cpp"],
     deps = [
-        "//libc:hdr_sys_socket_macros",
+        "//libc/hdr:sys_socket_macros",
         "//libc/hdr/types:struct_iovec",
         "//libc/hdr/types:struct_mmsghdr",
         "//libc/hdr/types:struct_timespec",
@@ -146,7 +146,7 @@ libc_test(
     name = "sendto_recvfrom_test",
     srcs = ["linux/sendto_recvfrom_test.cpp"],
     deps = [
-        "//libc:hdr_sys_socket_macros",
+        "//libc/hdr:sys_socket_macros",
         "//libc/src/__support/CPP:scope",
         "//libc/src/sys/socket:recvfrom",
         "//libc/src/sys/socket:sendto",
@@ -159,7 +159,7 @@ libc_test(
     name = "shutdown_test",
     srcs = ["linux/shutdown_test.cpp"],
     deps = [
-        "//libc:hdr_sys_socket_macros",
+        "//libc/hdr:sys_socket_macros",
         "//libc/hdr/types:ssize_t",
         "//libc/src/__support/CPP:scope",
         "//libc/src/sys/socket:shutdown",
@@ -176,7 +176,7 @@ libc_test(
         "linux/sockaddr_storage_test.cpp",
     ],
     deps = [
-        "//libc:hdr_sys_socket_macros",
+        "//libc/hdr:sys_socket_macros",
         "//libc/hdr/types:sa_family_t",
         "//libc/hdr/types:struct_sockaddr_storage",
         "//libc/hdr/types:struct_sockaddr_un",
@@ -187,7 +187,7 @@ libc_test(
     name = "socket_test",
     srcs = ["linux/socket_test.cpp"],
     deps = [
-        "//libc:hdr_sys_socket_macros",
+        "//libc/hdr:sys_socket_macros",
         "//libc/src/__support/CPP:scope",
         "//libc/src/sys/socket",
         "//libc/src/unistd:close",
@@ -198,10 +198,10 @@ libc_test(
     name = "socketopt_test",
     srcs = ["linux/socketopt_test.cpp"],
     deps = [
-        "//libc:hdr_netinet_in_macros",
-        "//libc:hdr_netinet_tcp_macros",
-        "//libc:hdr_sys_socket_macros",
-        "//libc:hdr_time_macros",
+        "//libc/hdr:netinet_in_macros",
+        "//libc/hdr:netinet_tcp_macros",
+        "//libc/hdr:sys_socket_macros",
+        "//libc/hdr:time_macros",
         "//libc/hdr/types:socklen_t",
         "//libc/hdr/types:struct_linger",
         "//libc/hdr/types:struct_timespec",
@@ -222,7 +222,7 @@ libc_test(
     name = "sockatmark_test",
     srcs = ["linux/sockatmark_test.cpp"],
     deps = [
-        "//libc:hdr_sys_socket_macros",
+        "//libc/hdr:sys_socket_macros",
         "//libc/src/__support/CPP:scope",
         "//libc/src/sys/socket:send",
         "//libc/src/sys/socket:sockatmark",
@@ -237,7 +237,7 @@ libc_test(
     name = "socketpair_test",
     srcs = ["linux/socketpair_test.cpp"],
     deps = [
-        "//libc:hdr_sys_socket_macros",
+        "//libc/hdr:sys_socket_macros",
         "//libc/src/__support/CPP:scope",
         "//libc/src/sys/socket:socketpair",
         "//libc/src/unistd:close",
@@ -249,7 +249,7 @@ libc_test(
     srcs = ["linux/sockname_test.cpp"],
     deps = [
         ":socket_test_support",
-        "//libc:hdr_sys_socket_macros",
+        "//libc/hdr:sys_socket_macros",
         "//libc/hdr/types:sa_family_t",
         "//libc/hdr/types:socklen_t",
         "//libc/hdr/types:struct_sockaddr_un",

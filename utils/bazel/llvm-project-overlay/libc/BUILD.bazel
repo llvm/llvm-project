@@ -337,7 +337,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        ":hdr_stdint_proxy",
+        "//libc/hdr:stdint_proxy",
         "//libc/src/__support/macros:attributes",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros/properties:architectures",
@@ -808,158 +808,6 @@ libc_support_library(
 ########################### Macro Proxy Header Files ###########################
 
 libc_support_library(
-    name = "hdr_math_macros",
-    hdrs = ["hdr/math_macros.h"],
-)
-
-libc_support_library(
-    name = "hdr_fenv_macros",
-    hdrs = ["hdr/fenv_macros.h"],
-)
-
-libc_support_library(
-    name = "hdr_fcntl_macros",
-    hdrs = ["hdr/fcntl_macros.h"],
-    deps = select({
-        ":full_build": [
-            ":llvm_libc_macros_fcntl_macros",
-        ],
-        "//conditions:default": [":hdr_fcntl_overlay"],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_fcntl_overlay",
-    hdrs = ["hdr/fcntl_overlay.h"],
-    target_compatible_with = select({
-        ":full_build": ["@platforms//:incompatible"],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_poll_overlay",
-    hdrs = ["hdr/poll_overlay.h"],
-    target_compatible_with = select({
-        ":full_build": ["@platforms//:incompatible"],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_sys_socket_overlay",
-    hdrs = ["hdr/sys_socket_overlay.h"],
-    target_compatible_with = select({
-        ":full_build": ["@platforms//:incompatible"],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_netinet_in_macros",
-    hdrs = ["hdr/netinet_in_macros.h"],
-)
-
-libc_support_library(
-    name = "hdr_netinet_tcp_macros",
-    hdrs = ["hdr/netinet_tcp_macros.h"],
-    deps = select({
-        ":full_build": [
-            ":llvm_libc_macros_netinet_tcp_macros",
-        ],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_offsetof_macros",
-    hdrs = ["hdr/offsetof_macros.h"],
-    deps = select({
-        ":full_build": [
-            ":llvm_libc_macros_offsetof_macro",
-        ],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_pthread_macros",
-    hdrs = ["hdr/pthread_macros.h"],
-    deps = select({
-        ":full_build": [
-            ":llvm_libc_macros_pthread_macros",
-        ],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_signal_macros",
-    hdrs = ["hdr/signal_macros.h"],
-    deps = select({
-        ":full_build": [
-            ":llvm_libc_macros_signal_macros",
-        ],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_sched_macros",
-    hdrs = ["hdr/sched_macros.h"],
-    deps = select({
-        ":full_build": [
-            ":llvm_libc_macros_sched_macros",
-        ],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_sys_epoll_macros",
-    hdrs = ["hdr/sys_epoll_macros.h"],
-)
-
-libc_support_library(
-    name = "sys_ioctl_macros",
-    hdrs = ["hdr/sys_ioctl_macros.h"],
-)
-
-libc_support_library(
-    name = "hdr_sys_mman_macros",
-    hdrs = ["hdr/sys_mman_macros.h"],
-)
-
-libc_support_library(
-    name = "hdr_sys_ipc_macros",
-    hdrs = ["hdr/sys_ipc_macros.h"],
-    deps = select({
-        ":full_build": [":llvm_libc_macros_sys_ipc_macros"],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_sys_sem_macros",
-    hdrs = ["hdr/sys_sem_macros.h"],
-    deps = select({
-        ":full_build": [":llvm_libc_macros_sys_sem_macros"],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_sys_socket_macros",
-    hdrs = ["hdr/sys_socket_macros.h"],
-    deps = select({
-        ":full_build": [
-            ":llvm_libc_macros_sys_socket_macros",
-        ],
-        "//conditions:default": [":hdr_sys_socket_overlay"],
-    }),
-)
-
-libc_support_library(
     name = "llvm_libc_macros_sys_stat_macros",
     hdrs = [
         "include/llvm-libc-macros/linux/sys-stat-macros.h",
@@ -968,24 +816,8 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "hdr_sys_stat_macros",
-    hdrs = ["hdr/sys_stat_macros.h"],
-    deps = [
-        ":llvm_libc_macros_sys_stat_macros",
-    ],
-)
-
-libc_support_library(
     name = "llvm_libc_macros_inet_address_macros",
     hdrs = ["include/llvm-libc-macros/inet-address-macros.h"],
-)
-
-libc_support_library(
-    name = "hdr_inet_address_macros",
-    hdrs = ["hdr/inet-address-macros.h"],
-    deps = [
-        ":llvm_libc_macros_inet_address_macros",
-    ],
 )
 
 libc_support_library(
@@ -996,183 +828,6 @@ libc_support_library(
         "@platforms//os:linux": ["include/llvm-libc-macros/linux/error-number-macros.h"],
         "//conditions:default": [],
     }),
-)
-
-libc_support_library(
-    name = "hdr_errno_macros",
-    hdrs = ["hdr/errno_macros.h"],
-    deps = select({
-        ":full_build": [
-            ":llvm_libc_macros_error_number_macros",
-        ],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_time_macros",
-    hdrs = ["hdr/time_macros.h"],
-)
-
-libc_support_library(
-    name = "hdr_float_macros",
-    hdrs = ["hdr/float_macros.h"],
-    deps = select({
-        ":full_build": [
-            ":llvm_libc_macros_float_macros",
-        ],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_stdio_macros",
-    hdrs = ["hdr/stdio_macros.h"],
-    deps = select({
-        ":full_build": [
-            ":llvm_libc_macros_file_seek_macros",
-            ":llvm_libc_macros_stdio_macros",
-        ],
-        "//conditions:default": [
-            ":hdr_stdio_overlay",
-        ],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_unistd_macros",
-    hdrs = ["hdr/unistd_macros.h"],
-    deps = select({
-        ":full_build": [
-            ":llvm_libc_macros_unistd_macros",
-        ],
-        "//conditions:default": [
-            ":hdr_unistd_overlay",
-        ],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_limits_macros",
-    hdrs = ["hdr/limits_macros.h"],
-    deps = select({
-        ":full_build": [
-            ":llvm_libc_macros_limits_macros",
-        ],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_stdio_overlay",
-    hdrs = ["hdr/stdio_overlay.h"],
-    target_compatible_with = select({
-        ":full_build": ["@platforms//:incompatible"],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_stdlib_macros",
-    hdrs = ["hdr/stdlib_macros.h"],
-    deps = select({
-        ":full_build": [],
-        "//conditions:default": [":hdr_stdlib_overlay"],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_stdlib_overlay",
-    hdrs = ["hdr/stdlib_overlay.h"],
-    target_compatible_with = select({
-        ":full_build": ["@platforms//:incompatible"],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_unistd_overlay",
-    hdrs = ["hdr/unistd_overlay.h"],
-    target_compatible_with = select({
-        ":full_build": ["@platforms//:incompatible"],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_wchar_macros",
-    hdrs = ["hdr/wchar_macros.h"],
-    deps = select({
-        ":full_build": [":llvm_libc_macros_wchar_macros"],
-        "//conditions:default": [":hdr_wchar_overlay"],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_wchar_overlay",
-    hdrs = ["hdr/wchar_overlay.h"],
-    target_compatible_with = select({
-        ":full_build": ["@platforms//:incompatible"],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_uchar_overlay",
-    hdrs = ["hdr/uchar_overlay.h"],
-    target_compatible_with = select({
-        ":full_build": ["@platforms//:incompatible"],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_wctype_overlay",
-    hdrs = ["hdr/wctype_overlay.h"],
-    target_compatible_with = select({
-        ":full_build": ["@platforms//:incompatible"],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_stdint_proxy",
-    hdrs = ["hdr/stdint_proxy.h"],
-)
-
-libc_support_library(
-    name = "hdr_sys_auxv_macros",
-    hdrs = ["hdr/sys_auxv_macros.h"],
-)
-
-libc_support_library(
-    name = "hdr_sys_resource_macros",
-    hdrs = ["hdr/sys_resource_macros.h"],
-)
-
-libc_support_library(
-    name = "hdr_sys_wait_macros",
-    hdrs = ["hdr/sys_wait_macros.h"],
-    deps = select({
-        ":full_build": [":llvm_libc_macros_sys_wait_macros"],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "hdr_elf_proxy",
-    hdrs = ["hdr/elf_proxy.h"],
-    textual_hdrs = [":include_llvm-libc-proxy_elf_proxy_h"],
-)
-
-libc_support_library(
-    name = "hdr_elf_macros",
-    hdrs = ["hdr/elf_macros.h"],
-)
-
-libc_support_library(
-    name = "hdr_link_macros",
-    hdrs = ["hdr/link_macros.h"],
 )
 
 ############################### Support libraries ##############################
@@ -1218,12 +873,12 @@ cc_library(
     copts = libc_common_copts(),
     includes = ["."],
     deps = [
-        ":hdr_errno_macros",
-        ":hdr_fenv_macros",
-        ":hdr_float_macros",
-        ":hdr_stdint_proxy",
         ":llvm_libc_macros_float16_macros",
         ":llvm_libc_types_float128",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:fenv_macros",
+        "//libc/hdr:float_macros",
+        "//libc/hdr:stdint_proxy",
         "//libc/src/__support:big_int",
         "//libc/src/__support:common",
         "//libc/src/__support:frac128",

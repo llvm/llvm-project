@@ -23,7 +23,7 @@ libc_support_library(
             "//libc/hdr/types:size_t",
             "//libc/src/__support:common",
         ],
-        "//conditions:default": ["//libc:hdr_stdlib_overlay"],
+        "//conditions:default": ["//libc/hdr:stdlib_overlay"],
     }),
 )
 
@@ -34,7 +34,7 @@ libc_support_library(
         "//libc:full_build": [
             "//libc/src/__support:common",
         ],
-        "//conditions:default": ["//libc:hdr_stdlib_overlay"],
+        "//conditions:default": ["//libc/hdr:stdlib_overlay"],
     }),
 )
 
@@ -46,7 +46,7 @@ libc_support_library(
             "//libc/hdr/types:size_t",
             "//libc/src/__support:common",
         ],
-        "//conditions:default": ["//libc:hdr_stdlib_overlay"],
+        "//conditions:default": ["//libc/hdr:stdlib_overlay"],
     }),
 )
 
@@ -58,6 +58,6 @@ libc_support_library(
             "//libc/hdr/types:size_t",
             "//libc/src/__support:common",
         ],
-        "//conditions:default": ["//libc:hdr_stdlib_overlay"],
+        "//conditions:default": ["//libc/hdr:stdlib_overlay"],
     }),
 )

@@ -20,7 +20,7 @@ libc_function(
     srcs = ["linux/mkdir.cpp"],
     hdrs = ["mkdir.h"],
     deps = [
-        "//libc:hdr_fcntl_macros",
+        "//libc/hdr:fcntl_macros",
         "//libc/hdr/types:mode_t",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",

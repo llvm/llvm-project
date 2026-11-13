@@ -36,7 +36,7 @@ libc_function(
     srcs = ["linux/mincore.cpp"],
     hdrs = ["mincore.h"],
     deps = [
-        "//libc:hdr_sys_mman_macros",
+        "//libc/hdr:sys_mman_macros",
         "//libc/hdr/types:size_t",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
@@ -51,7 +51,7 @@ libc_function(
     srcs = ["linux/mlock.cpp"],
     hdrs = ["mlock.h"],
     deps = [
-        "//libc:hdr_sys_mman_macros",
+        "//libc/hdr:sys_mman_macros",
         "//libc/hdr/types:size_t",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
@@ -66,7 +66,7 @@ libc_function(
     srcs = ["linux/mlock2.cpp"],
     hdrs = ["mlock2.h"],
     deps = [
-        "//libc:hdr_sys_mman_macros",
+        "//libc/hdr:sys_mman_macros",
         "//libc/hdr/types:size_t",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
@@ -81,7 +81,7 @@ libc_function(
     srcs = ["linux/mlockall.cpp"],
     hdrs = ["mlockall.h"],
     deps = [
-        "//libc:hdr_sys_mman_macros",
+        "//libc/hdr:sys_mman_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil:syscall",
@@ -95,7 +95,7 @@ libc_function(
     srcs = ["linux/mmap.cpp"],
     hdrs = ["mmap.h"],
     deps = [
-        "//libc:hdr_sys_mman_macros",
+        "//libc/hdr:sys_mman_macros",
         "//libc/hdr/types:off_t",
         "//libc/hdr/types:size_t",
         "//libc/src/__support:common",
@@ -112,7 +112,7 @@ libc_function(
     srcs = ["linux/mprotect.cpp"],
     hdrs = ["mprotect.h"],
     deps = [
-        "//libc:hdr_sys_mman_macros",
+        "//libc/hdr:sys_mman_macros",
         "//libc/hdr/types:size_t",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
@@ -129,7 +129,7 @@ libc_function(
     srcs = ["linux/mremap.cpp"],
     hdrs = ["mremap.h"],
     deps = [
-        "//libc:hdr_sys_mman_macros",
+        "//libc/hdr:sys_mman_macros",
         "//libc/hdr/types:size_t",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
@@ -144,7 +144,7 @@ libc_function(
     srcs = ["linux/msync.cpp"],
     hdrs = ["msync.h"],
     deps = [
-        "//libc:hdr_sys_mman_macros",
+        "//libc/hdr:sys_mman_macros",
         "//libc/hdr/types:size_t",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
@@ -159,7 +159,7 @@ libc_function(
     srcs = ["linux/munlock.cpp"],
     hdrs = ["munlock.h"],
     deps = [
-        "//libc:hdr_sys_mman_macros",
+        "//libc/hdr:sys_mman_macros",
         "//libc/hdr/types:size_t",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
@@ -174,7 +174,7 @@ libc_function(
     srcs = ["linux/munlockall.cpp"],
     hdrs = ["munlockall.h"],
     deps = [
-        "//libc:hdr_sys_mman_macros",
+        "//libc/hdr:sys_mman_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil:syscall",
@@ -188,7 +188,7 @@ libc_function(
     srcs = ["linux/munmap.cpp"],
     hdrs = ["munmap.h"],
     deps = [
-        "//libc:hdr_sys_mman_macros",
+        "//libc/hdr:sys_mman_macros",
         "//libc/hdr/types:size_t",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
@@ -258,7 +258,7 @@ libc_function(
     srcs = ["linux/pkey_mprotect.cpp"],
     hdrs = ["pkey_mprotect.h"],
     deps = [
-        "//libc:hdr_errno_macros",
+        "//libc/hdr:errno_macros",
         "//libc/hdr/types:size_t",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
@@ -296,8 +296,8 @@ libc_support_library(
         "//conditions:default": ["linux/generic/pkey_common.h"],
     }),
     deps = [
-        "//libc:hdr_errno_macros",
-        "//libc:hdr_stdint_proxy",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:stdint_proxy",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
         "//libc/src/__support/macros/properties:architectures",
@@ -309,7 +309,7 @@ libc_function(
     srcs = ["linux/posix_madvise.cpp"],
     hdrs = ["posix_madvise.h"],
     deps = [
-        "//libc:hdr_sys_mman_macros",
+        "//libc/hdr:sys_mman_macros",
         "//libc/hdr/types:size_t",
         "//libc/src/__support:common",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:madvise",
@@ -335,7 +335,7 @@ libc_support_library(
     name = "shm_common",
     hdrs = ["linux/shm_common.h"],
     deps = [
-        "//libc:hdr_errno_macros",
+        "//libc/hdr:errno_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
         "//libc/src/__support/CPP:array",
@@ -351,7 +351,7 @@ libc_function(
     hdrs = ["shm_open.h"],
     deps = [
         ":shm_common",
-        "//libc:hdr_fcntl_macros",
+        "//libc/hdr:fcntl_macros",
         "//libc/hdr/types:mode_t",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",

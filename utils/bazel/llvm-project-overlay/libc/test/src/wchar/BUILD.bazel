@@ -14,7 +14,7 @@ libc_test(
     name = "btowc_test",
     srcs = ["btowc_test.cpp"],
     deps = [
-        "//libc:hdr_wchar_macros",
+        "//libc/hdr:wchar_macros",
         "//libc/src/wchar:btowc",
     ],
 )
@@ -181,7 +181,7 @@ libc_test(
     name = "wctob_test",
     srcs = ["wctob_test.cpp"],
     deps = [
-        "//libc:hdr_stdio_macros",
+        "//libc/hdr:stdio_macros",
         "//libc/src/wchar:wctob",
     ],
 )

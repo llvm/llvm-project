@@ -17,7 +17,7 @@ libc_test(
         "excepts.h",
     ],
     deps = [
-        "//libc:hdr_fenv_macros",
+        "//libc/hdr:fenv_macros",
         "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/fenv:feclearexcept",
         "//libc/src/fenv:feraiseexcept",
@@ -34,7 +34,7 @@ libc_test(
         "rounding_mode_test.cpp",
     ],
     deps = [
-        "//libc:hdr_fenv_macros",
+        "//libc/hdr:fenv_macros",
         "//libc/src/fenv:fegetround",
         "//libc/src/fenv:fesetround",
         "//libc/test/UnitTest:fp_test_helpers",
@@ -49,8 +49,8 @@ libc_test(
     ],
     tags = ["nosan"],
     deps = [
-        "//libc:hdr_fenv_macros",
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:fenv_macros",
+        "//libc/hdr:signal_macros",
         "//libc/src/__support:common",
         "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/__support/macros/properties:architectures",
@@ -69,8 +69,8 @@ libc_test(
     ],
     tags = ["nosan"],
     deps = [
-        "//libc:hdr_fenv_macros",
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:fenv_macros",
+        "//libc/hdr:signal_macros",
         "//libc/hdr/types:fenv_t",
         "//libc/src/__support:common",
         "//libc/src/__support/FPUtil:fenv_impl",
@@ -87,7 +87,7 @@ libc_test(
         "excepts.h",
     ],
     deps = [
-        "//libc:hdr_fenv_macros",
+        "//libc/hdr:fenv_macros",
         "//libc/hdr/types:fexcept_t",
         "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/fenv:fegetexceptflag",
@@ -104,7 +104,7 @@ libc_test(
         "feclearexcept_test.cpp",
     ],
     deps = [
-        "//libc:hdr_fenv_macros",
+        "//libc/hdr:fenv_macros",
         "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/fenv:feclearexcept",
         "//libc/test/UnitTest:fp_test_helpers",
@@ -118,7 +118,7 @@ libc_test(
         "feenableexcept_test.cpp",
     ],
     deps = [
-        "//libc:hdr_fenv_macros",
+        "//libc/hdr:fenv_macros",
         "//libc/src/__support:common",
         "//libc/src/__support/macros/properties:architectures",
         "//libc/src/fenv:fedisableexcept",
@@ -135,7 +135,7 @@ libc_test(
         "feupdateenv_test.cpp",
     ],
     deps = [
-        "//libc:hdr_fenv_macros",
+        "//libc/hdr:fenv_macros",
         "//libc/hdr/types:fenv_t",
         "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/fenv:feupdateenv",
@@ -150,7 +150,7 @@ libc_test(
         "getenv_and_setenv_test.cpp",
     ],
     deps = [
-        "//libc:hdr_fenv_macros",
+        "//libc/hdr:fenv_macros",
         "//libc/hdr/types:fenv_t",
         "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/__support/macros/properties:os",

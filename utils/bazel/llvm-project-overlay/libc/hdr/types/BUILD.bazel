@@ -50,7 +50,7 @@ libc_support_library(
     hdrs = ["div_t.h"],
     deps = select({
         "//libc:full_build": [],
-        "//conditions:default": ["//libc:hdr_stdlib_overlay"],
+        "//conditions:default": ["//libc/hdr:stdlib_overlay"],
     }),
 )
 
@@ -69,7 +69,7 @@ libc_support_library(
     hdrs = ["ldiv_t.h"],
     deps = select({
         "//libc:full_build": [],
-        "//conditions:default": ["//libc:hdr_stdlib_overlay"],
+        "//conditions:default": ["//libc/hdr:stdlib_overlay"],
     }),
 )
 
@@ -78,7 +78,7 @@ libc_support_library(
     hdrs = ["lldiv_t.h"],
     deps = select({
         "//libc:full_build": [],
-        "//conditions:default": ["//libc:hdr_stdlib_overlay"],
+        "//conditions:default": ["//libc/hdr:stdlib_overlay"],
     }),
 )
 
@@ -102,7 +102,7 @@ libc_support_library(
     hdrs = ["mode_t.h"],
     deps = select({
         "//libc:full_build": ["//libc:llvm_libc_types_mode_t"],
-        "//conditions:default": ["//libc:hdr_fcntl_overlay"],
+        "//conditions:default": ["//libc/hdr:fcntl_overlay"],
     }),
 )
 
@@ -147,7 +147,7 @@ libc_support_library(
     hdrs = ["nfds_t.h"],
     deps = select({
         "//libc:full_build": ["//libc:llvm_libc_types_nfds_t"],
-        "//conditions:default": ["//libc:hdr_poll_overlay"],
+        "//conditions:default": ["//libc/hdr:poll_overlay"],
     }),
 )
 
@@ -156,7 +156,7 @@ libc_support_library(
     hdrs = ["struct_pollfd.h"],
     deps = select({
         "//libc:full_build": ["//libc:llvm_libc_types_struct_pollfd"],
-        "//conditions:default": ["//libc:hdr_poll_overlay"],
+        "//conditions:default": ["//libc/hdr:poll_overlay"],
     }),
 )
 
@@ -175,7 +175,7 @@ libc_support_library(
     hdrs = ["struct_f_owner_ex.h"],
     deps = select({
         "//libc:full_build": [],
-        "//conditions:default": ["//libc:hdr_fcntl_overlay"],
+        "//conditions:default": ["//libc/hdr:fcntl_overlay"],
     }),
 )
 
@@ -184,7 +184,7 @@ libc_support_library(
     hdrs = ["struct_flock.h"],
     deps = select({
         "//libc:full_build": [],
-        "//conditions:default": ["//libc:hdr_fcntl_overlay"],
+        "//conditions:default": ["//libc/hdr:fcntl_overlay"],
     }),
 )
 
@@ -193,7 +193,7 @@ libc_support_library(
     hdrs = ["struct_flock64.h"],
     deps = select({
         "//libc:full_build": [],
-        "//conditions:default": ["//libc:hdr_fcntl_overlay"],
+        "//conditions:default": ["//libc/hdr:fcntl_overlay"],
     }),
 )
 
@@ -335,7 +335,7 @@ libc_support_library(
     hdrs = ["off_t.h"],
     deps = select({
         "//libc:full_build": ["//libc:llvm_libc_types_off_t"],
-        "//conditions:default": ["//libc:hdr_stdio_overlay"],
+        "//conditions:default": ["//libc/hdr:stdio_overlay"],
     }),
 )
 
@@ -344,7 +344,7 @@ libc_support_library(
     hdrs = ["FILE.h"],
     deps = select({
         "//libc:full_build": ["//libc:llvm_libc_types_FILE"],
-        "//conditions:default": ["//libc:hdr_stdio_overlay"],
+        "//conditions:default": ["//libc/hdr:stdio_overlay"],
     }),
 )
 
@@ -358,7 +358,7 @@ libc_support_library(
     hdrs = ["sa_family_t.h"],
     deps = select({
         "//libc:full_build": [],
-        "//conditions:default": ["//libc:hdr_sys_socket_overlay"],
+        "//conditions:default": ["//libc/hdr:sys_socket_overlay"],
     }),
 )
 
@@ -367,7 +367,7 @@ libc_support_library(
     hdrs = ["socklen_t.h"],
     deps = select({
         "//libc:full_build": [],
-        "//conditions:default": ["//libc:hdr_sys_socket_overlay"],
+        "//conditions:default": ["//libc/hdr:sys_socket_overlay"],
     }),
 )
 
@@ -391,7 +391,7 @@ libc_support_library(
     hdrs = ["struct_sockaddr.h"],
     deps = select({
         "//libc:full_build": [],
-        "//conditions:default": ["//libc:hdr_sys_socket_overlay"],
+        "//conditions:default": ["//libc/hdr:sys_socket_overlay"],
     }),
 )
 
@@ -410,7 +410,7 @@ libc_support_library(
     hdrs = ["struct_sockaddr_storage.h"],
     deps = select({
         "//libc:full_build": [],
-        "//conditions:default": ["//libc:hdr_sys_socket_overlay"],
+        "//conditions:default": ["//libc/hdr:sys_socket_overlay"],
     }),
 )
 
@@ -424,7 +424,7 @@ libc_support_library(
     hdrs = ["struct_linger.h"],
     deps = select({
         "//libc:full_build": [],
-        "//conditions:default": ["//libc:hdr_sys_socket_overlay"],
+        "//conditions:default": ["//libc/hdr:sys_socket_overlay"],
     }),
 )
 
@@ -438,7 +438,7 @@ libc_support_library(
     hdrs = ["struct_mmsghdr.h"],
     deps = select({
         "//libc:full_build": [],
-        "//conditions:default": ["//libc:hdr_sys_socket_overlay"],
+        "//conditions:default": ["//libc/hdr:sys_socket_overlay"],
     }),
 )
 
@@ -447,7 +447,7 @@ libc_support_library(
     hdrs = ["struct_msghdr.h"],
     deps = select({
         "//libc:full_build": [],
-        "//conditions:default": ["//libc:hdr_sys_socket_overlay"],
+        "//conditions:default": ["//libc/hdr:sys_socket_overlay"],
     }),
 )
 
@@ -456,7 +456,7 @@ libc_support_library(
     hdrs = ["struct_cmsghdr.h"],
     deps = select({
         "//libc:full_build": ["//libc:llvm_libc_types_struct_cmsghdr"],
-        "//conditions:default": ["//libc:hdr_sys_socket_overlay"],
+        "//conditions:default": ["//libc/hdr:sys_socket_overlay"],
     }),
 )
 
@@ -476,7 +476,7 @@ libc_support_library(
     hdrs = ["wchar_t.h"],
     deps = select({
         "//libc:full_build": ["//libc:llvm_libc_types_wchar_t"],
-        "//conditions:default": ["//libc:hdr_wchar_overlay"],
+        "//conditions:default": ["//libc/hdr:wchar_overlay"],
     }),
 )
 
@@ -485,7 +485,7 @@ libc_support_library(
     hdrs = ["wctype_t.h"],
     deps = select({
         "//libc:full_build": ["//libc:llvm_libc_types_wctype_t"],
-        "//conditions:default": ["//libc:hdr_wctype_overlay"],
+        "//conditions:default": ["//libc/hdr:wctype_overlay"],
     }),
 )
 
@@ -494,7 +494,7 @@ libc_support_library(
     hdrs = ["wint_t.h"],
     deps = select({
         "//libc:full_build": ["//libc:llvm_libc_types_wint_t"],
-        "//conditions:default": ["//libc:hdr_wchar_overlay"],
+        "//conditions:default": ["//libc/hdr:wchar_overlay"],
     }),
 )
 
@@ -503,7 +503,7 @@ libc_support_library(
     hdrs = ["char32_t.h"],
     deps = select({
         "//libc:full_build": ["//libc:llvm_libc_types_char32_t"],
-        "//conditions:default": ["//libc:hdr_uchar_overlay"],
+        "//conditions:default": ["//libc/hdr:uchar_overlay"],
     }),
 )
 
@@ -512,6 +512,6 @@ libc_support_library(
     hdrs = ["char8_t.h"],
     deps = select({
         "//libc:full_build": ["//libc:llvm_libc_types_char8_t"],
-        "//conditions:default": ["//libc:hdr_uchar_overlay"],
+        "//conditions:default": ["//libc/hdr:uchar_overlay"],
     }),
 )

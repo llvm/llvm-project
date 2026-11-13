@@ -50,10 +50,10 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_errno_macros",
-        "//libc:hdr_fcntl_macros",
-        "//libc:hdr_sys_auxv_macros",
-        "//libc:hdr_sys_mman_macros",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:fcntl_macros",
+        "//libc/hdr:sys_auxv_macros",
+        "//libc/hdr:sys_mman_macros",
         "//libc/src/__support:common",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:close",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:mmap",
@@ -73,7 +73,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_errno_macros",
+        "//libc/hdr:errno_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:ctype_utils",
         "//libc/src/__support:error_or",
@@ -107,9 +107,9 @@ libc_support_library(
     ],
     deps = [
         ":linux_auxv",
-        "//libc:hdr_elf_proxy",
-        "//libc:hdr_link_macros",
-        "//libc:hdr_sys_auxv_macros",
+        "//libc/hdr:elf_proxy",
+        "//libc/hdr:link_macros",
+        "//libc/hdr:sys_auxv_macros",
         "//libc/hdr/types:clock_t",
         "//libc/hdr/types:clockid_t",
         "//libc/hdr/types:struct_timespec",
@@ -177,7 +177,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_stdint_proxy",
+        "//libc/hdr:stdint_proxy",
         "//libc/src/__support/macros:config",
     ],
 )
@@ -191,7 +191,7 @@ libc_support_library(
     }),
     deps = [
         ":linux_stat_kernel_statx_types",
-        "//libc:hdr_stdint_proxy",
+        "//libc/hdr:stdint_proxy",
         "//libc/hdr/types:struct_stat",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
@@ -233,8 +233,8 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_errno_macros",
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:signal_macros",
         "//libc/hdr/types:sigset_t",
         "//libc/hdr/types:size_t",
         "//libc/src/__support:common",

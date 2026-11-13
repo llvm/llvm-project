@@ -40,7 +40,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_errno_macros",
+        "//libc/hdr:errno_macros",
         "//libc/hdr/types:ssize_t",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
@@ -72,7 +72,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_fcntl_macros",
+        "//libc/hdr:fcntl_macros",
         "//libc/hdr/types:gid_t",
         "//libc/hdr/types:uid_t",
         "//libc/src/__support:common",
@@ -106,7 +106,7 @@ libc_support_library(
     }),
     deps = [
         ":fcntl",
-        "//libc:hdr_fcntl_macros",
+        "//libc/hdr:fcntl_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
         "//libc/src/__support/OSUtil:syscall",
@@ -137,7 +137,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_errno_macros",
+        "//libc/hdr:errno_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
         "//libc/src/__support/OSUtil:syscall",
@@ -184,7 +184,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/hdr/types:sigset_t",
         "//libc/hdr/types:struct_epoll_event",
         "//libc/src/__support:common",
@@ -202,7 +202,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/hdr/types:sigset_t",
         "//libc/hdr/types:struct_epoll_event",
         "//libc/hdr/types:struct_timespec",
@@ -221,7 +221,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/hdr/types:struct_epoll_event",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
@@ -271,7 +271,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_fcntl_macros",
+        "//libc/hdr:fcntl_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
         "//libc/src/__support/OSUtil:syscall",
@@ -334,7 +334,7 @@ libc_support_library(
     deps = [
         ":rt_sigprocmask",
         ":tgkill",
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/hdr/types:pid_t",
         "//libc/hdr/types:sigset_t",
         "//libc/src/__support:common",
@@ -352,7 +352,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_fcntl_macros",
+        "//libc/hdr:fcntl_macros",
         "//libc/hdr/types:ssize_t",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
@@ -369,7 +369,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_fcntl_macros",
+        "//libc/hdr:fcntl_macros",
         "//libc/hdr/types:ssize_t",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
@@ -454,7 +454,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_fcntl_macros",
+        "//libc/hdr:fcntl_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
         "//libc/src/__support/OSUtil:syscall",
@@ -470,7 +470,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_fcntl_macros",
+        "//libc/hdr:fcntl_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
         "//libc/src/__support/OSUtil:syscall",
@@ -826,7 +826,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_fcntl_macros",
+        "//libc/hdr:fcntl_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
         "//libc/src/__support/OSUtil:syscall",
@@ -857,7 +857,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_stdint_proxy",
+        "//libc/hdr:stdint_proxy",
         "//libc/hdr/types:off_t",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
@@ -890,7 +890,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_fcntl_macros",
+        "//libc/hdr:fcntl_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
         "//libc/src/__support/OSUtil:syscall",
@@ -1013,7 +1013,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_fcntl_macros",
+        "//libc/hdr:fcntl_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
         "//libc/src/__support/OSUtil:syscall",
@@ -1029,7 +1029,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_fcntl_macros",
+        "//libc/hdr:fcntl_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
         "//libc/src/__support/OSUtil:syscall",
@@ -1045,7 +1045,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_stdint_proxy",
+        "//libc/hdr:stdint_proxy",
         "//libc/hdr/types:off_t",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
@@ -1095,7 +1095,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_stdint_proxy",
+        "//libc/hdr:stdint_proxy",
         "//libc/hdr/types:off_t",
         "//libc/hdr/types:size_t",
         "//libc/hdr/types:ssize_t",
@@ -1115,7 +1115,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_stdint_proxy",
+        "//libc/hdr:stdint_proxy",
         "//libc/hdr/types:pid_t",
         "//libc/hdr/types:struct_rlimit",
         "//libc/src/__support:common",
@@ -1133,7 +1133,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_stdint_proxy",
+        "//libc/hdr:stdint_proxy",
         "//libc/hdr/types:off_t",
         "//libc/hdr/types:size_t",
         "//libc/hdr/types:ssize_t",
@@ -1236,7 +1236,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_fcntl_macros",
+        "//libc/hdr:fcntl_macros",
         "//libc/hdr/types:mode_t",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
@@ -1269,7 +1269,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_fcntl_macros",
+        "//libc/hdr:fcntl_macros",
         "//libc/hdr/types:mode_t",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
@@ -1323,7 +1323,7 @@ libc_support_library(
         "x86_64/clone.h",
     ],
     deps = [
-        "//libc:hdr_stdint_proxy",
+        "//libc/hdr:stdint_proxy",
         "//libc/hdr/types:pid_t",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
@@ -1456,8 +1456,8 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_signal_macros",
-        "//libc:hdr_sys_wait_macros",
+        "//libc/hdr:signal_macros",
+        "//libc/hdr:sys_wait_macros",
         "//libc/hdr/types:pid_t",
         "//libc/hdr/types:siginfo_t",
         "//libc/hdr/types:struct_rusage",
@@ -1492,7 +1492,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_errno_macros",
+        "//libc/hdr:errno_macros",
         "//libc/hdr/types:off_t",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
@@ -1585,7 +1585,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_errno_macros",
+        "//libc/hdr:errno_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
         "//libc/src/__support/OSUtil:syscall",
@@ -1601,7 +1601,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_errno_macros",
+        "//libc/hdr:errno_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
         "//libc/src/__support/OSUtil:syscall",
@@ -1617,7 +1617,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_errno_macros",
+        "//libc/hdr:errno_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
         "//libc/src/__support/OSUtil:syscall",
@@ -1809,8 +1809,8 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_errno_macros",
-        "//libc:hdr_fcntl_macros",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:fcntl_macros",
         "//libc/hdr/types:off_t",
         "//libc/hdr/types:struct_f_owner_ex",
         "//libc/hdr/types:struct_flock",
