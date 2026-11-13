@@ -504,8 +504,8 @@ def warn_hlsl_langstd_minimal :
   InGroup<HLSLDXCCompat>;
 def err_hlsl_signature_packing : Error<
   "failed to pack %select{input|output}0 signature: %1">;
-def err_hlsl_spirv_quad_all_numthreads : Error<
-  "entry point '%0' uses QuadAll with invalid numthreads: "
+def err_hlsl_spirv_derivative_group_numthreads : Error<
+  "entry point '%0' has invalid numthreads: "
   "%select{DerivativeGroupQuadsKHR requires X and Y to be multiples of 2|"
   "DerivativeGroupLinearKHR requires X * Y * Z to be a multiple of 4}1">;
 def warn_hlsl_signature_packing_ignored : Warning<

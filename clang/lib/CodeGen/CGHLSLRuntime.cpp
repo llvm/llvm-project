@@ -1020,7 +1020,7 @@ getSPIRVDerivativeGroupMode(CodeGenModule &CGM, const Function &F) {
   bool IsLinear = Threads[1] == 1 && Threads[2] == 1;
   if (IsLinear ? (uint64_t(Threads[0]) * Threads[1] * Threads[2]) % 4 != 0
                : Threads[0] % 2 != 0 || Threads[1] % 2 != 0) {
-    CGM.getDiags().Report(diag::err_hlsl_spirv_quad_all_numthreads)
+    CGM.getDiags().Report(diag::err_hlsl_spirv_derivative_group_numthreads)
         << F.getName() << IsLinear;
     return std::nullopt;
   }

@@ -51,7 +51,7 @@ void invalid_quad_3d() {
 [numthreads(3, 1, 1)]
 void no_vote() {}
 
-// CHECK-DAG: error: entry point 'invalid_linear' uses QuadAll with invalid numthreads: DerivativeGroupLinearKHR requires X * Y * Z to be a multiple of 4
-// CHECK-DAG: error: entry point 'invalid_quad_x' uses QuadAll with invalid numthreads: DerivativeGroupQuadsKHR requires X and Y to be multiples of 2
-// CHECK-DAG: error: entry point 'invalid_quad_y' uses QuadAll with invalid numthreads: DerivativeGroupQuadsKHR requires X and Y to be multiples of 2
-// CHECK-DAG: error: entry point 'invalid_quad_3d' uses QuadAll with invalid numthreads: DerivativeGroupQuadsKHR requires X and Y to be multiples of 2
+// CHECK-DAG: error: entry point 'invalid_linear' has invalid numthreads: DerivativeGroupLinearKHR requires X * Y * Z to be a multiple of 4
+// CHECK-DAG: error: entry point 'invalid_quad_x' has invalid numthreads: DerivativeGroupQuadsKHR requires X and Y to be multiples of 2
+// CHECK-DAG: error: entry point 'invalid_quad_y' has invalid numthreads: DerivativeGroupQuadsKHR requires X and Y to be multiples of 2
+// CHECK-DAG: error: entry point 'invalid_quad_3d' has invalid numthreads: DerivativeGroupQuadsKHR requires X and Y to be multiples of 2
