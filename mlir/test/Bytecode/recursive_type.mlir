@@ -59,14 +59,17 @@ func.func @roundtrip() {
   // CHECK: ![[$D]]
   "test.dummy_op_for_roundtrip"() : () -> !test.test_rec_alias<d, tuple<tuple<tuple<tuple<tuple<tuple<!test.test_rec_alias<d>>>>>>>>
 
-  // The same record first reached from an attribute: the type entry is
-  // read while parsing the attribute entry.
-  // CHECK: ![[$DATTR]]
-  "test.dummy_op_for_roundtrip"() {test_attr = !test.test_rec_alias<dattr, tuple<tuple<tuple<tuple<tuple<tuple<!test.test_rec_alias<dattr>>>>>>>>} : () -> ()
-
-  // The same record first reached from a function type.
-  // CHECK: ![[$DFUNC]]
-  "test.dummy_op_for_roundtrip"() : () -> ((!test.test_rec_alias<dfunc, tuple<tuple<tuple<tuple<tuple<tuple<!test.test_rec_alias<dfunc>>>>>>>>) -> i32)
+  // The same record first reached from an attribute, through five
+  // enclosing tuples, so the back-reference lands past the depth
+  // limit on the attribute path too.
+  // CHECK: test_attr = tuple<tuple<tuple<tuple<tuple<![[$DATTR]]>>>>>
+  "test.dummy_op_for_roundtrip"() {test_attr = tuple<tuple<tuple<tuple<tuple<!test.test_rec_alias<dattr, tuple<tuple<tuple<tuple<tuple<tuple<!test.test_rec_alias<dattr>>>>>>>>>>>>>} : () -> ()
 
   return
 }
+
+// The same record first reached from a function type, through five
+// enclosing tuples, so the back-reference lands past the depth limit
+// on the function-type path too.
+// CHECK: func.func private @from_function_type(tuple<tuple<tuple<tuple<tuple<![[$DFUNC]]>>>>>)
+func.func private @from_function_type(tuple<tuple<tuple<tuple<tuple<!test.test_rec_alias<dfunc, tuple<tuple<tuple<tuple<tuple<tuple<!test.test_rec_alias<dfunc>>>>>>>>>>>>>)
