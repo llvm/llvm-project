@@ -41,7 +41,6 @@ libc_test(
         "//libc:getsockname",
         "//libc:hdr_netinet_in_macros",
         "//libc:hdr_sys_socket_macros",
-        "//libc:htonl",
         "//libc:remove",
         "//libc:socket",
         "//libc:types_sa_family_t",
@@ -49,6 +48,7 @@ libc_test(
         "//libc:types_struct_sockaddr_in6",
         "//libc:types_struct_sockaddr_un",
         "//libc/src/__support/CPP:scope",
+        "//libc/src/arpa/inet:htonl",
     ],
 )
 

@@ -1870,128 +1870,49 @@ libc_function(
 
 ############################### arpa/inet targets ##############################
 
-libc_function(
+alias(
     name = "htonl",
-    srcs = ["src/arpa/inet/htonl.cpp"],
-    hdrs = ["src/arpa/inet/htonl.h"],
-    deps = [
-        ":hdr_stdint_proxy",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/arpa/inet:htonl",
 )
 
-libc_function(
+alias(
     name = "htons",
-    srcs = ["src/arpa/inet/htons.cpp"],
-    hdrs = ["src/arpa/inet/htons.h"],
-    deps = [
-        ":hdr_stdint_proxy",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/arpa/inet:htons",
 )
 
-libc_function(
+alias(
     name = "inet_addr",
-    srcs = ["src/arpa/inet/inet_addr.cpp"],
-    hdrs = ["src/arpa/inet/inet_addr.h"],
-    deps = [
-        ":hdr_netinet_in_macros",
-        ":types_in_addr_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/CPP:optional",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/__support/net:address",
-    ],
+    actual = "//libc/src/arpa/inet:inet_addr",
 )
 
-libc_function(
+alias(
     name = "inet_aton",
-    srcs = ["src/arpa/inet/inet_aton.cpp"],
-    hdrs = ["src/arpa/inet/inet_aton.h"],
-    deps = [
-        ":types_struct_in_addr",
-        "//libc/src/__support:common",
-        "//libc/src/__support/CPP:optional",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/__support/net:address",
-    ],
+    actual = "//libc/src/arpa/inet:inet_aton",
 )
 
-libc_function(
+alias(
     name = "inet_ntoa",
-    srcs = ["src/arpa/inet/inet_ntoa.cpp"],
-    hdrs = ["src/arpa/inet/inet_ntoa.h"],
-    deps = [
-        ":hdr_inet_address_macros",
-        ":types_struct_in_addr",
-        "//libc/src/__support:common",
-        "//libc/src/__support/CPP:span",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/net:address",
-    ],
+    actual = "//libc/src/arpa/inet:inet_ntoa",
 )
 
-libc_function(
+alias(
     name = "inet_ntop",
-    srcs = ["src/arpa/inet/inet_ntop.cpp"],
-    hdrs = ["src/arpa/inet/inet_ntop.h"],
-    deps = [
-        ":hdr_errno_macros",
-        ":hdr_sys_socket_macros",
-        ":types_socklen_t",
-        ":types_struct_in6_addr",
-        ":types_struct_in_addr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/CPP:span",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/__support/net:address",
-    ],
+    actual = "//libc/src/arpa/inet:inet_ntop",
 )
 
-libc_function(
+alias(
     name = "inet_pton",
-    srcs = ["src/arpa/inet/inet_pton.cpp"],
-    hdrs = ["src/arpa/inet/inet_pton.h"],
-    deps = [
-        ":hdr_errno_macros",
-        ":hdr_stdint_proxy",
-        ":hdr_sys_socket_macros",
-        ":types_struct_in6_addr",
-        ":types_struct_in_addr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/__support/net:address",
-    ],
+    actual = "//libc/src/arpa/inet:inet_pton",
 )
 
-libc_function(
+alias(
     name = "ntohl",
-    srcs = ["src/arpa/inet/ntohl.cpp"],
-    hdrs = ["src/arpa/inet/ntohl.h"],
-    deps = [
-        ":hdr_stdint_proxy",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/arpa/inet:ntohl",
 )
 
-libc_function(
+alias(
     name = "ntohs",
-    srcs = ["src/arpa/inet/ntohs.cpp"],
-    hdrs = ["src/arpa/inet/ntohs.h"],
-    deps = [
-        ":hdr_stdint_proxy",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/arpa/inet:ntohs",
 )
 
 ################################# ctype targets ################################
