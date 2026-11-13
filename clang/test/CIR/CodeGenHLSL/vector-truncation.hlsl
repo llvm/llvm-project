@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -x hlsl -std=hlsl2021 -triple spirv-unknown-vulkan-library -finclude-default-header -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -x hlsl -std=hlsl2021 -triple spirv-unknown-vulkan-library -finclude-default-header -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
+// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefixes=LLVM,LLVMCIR
 // RUN: %clang_cc1 -x hlsl -std=hlsl2021 -triple spirv-unknown-vulkan-library -finclude-default-header -emit-llvm -disable-llvm-passes %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=LLVM,OGCG
 
 void vector_truncation_to_scalar() {
   float4 a;
@@ -20,7 +20,8 @@ void vector_truncation_to_scalar() {
 // LLVM: %[[A_ADDR:.*]] = alloca <4 x float>, align 4
 // LLVM: %[[B_ADDR:.*]] = alloca float, align 4
 // LLVM: %[[TMP_A:.*]] = load <4 x float>, ptr %[[A_ADDR]], align 4
-// LLVM: %[[RESULT:.*]] = extractelement <4 x float> %[[TMP_A]], i64 0
+// LLVMCIR: %[[RESULT:.*]] = extractelement <4 x float> %[[TMP_A]], i64 0
+// OGCG: %[[RESULT:.*]] = extractelement <4 x float> %[[TMP_A]], i32 0
 // LLVM: store float %[[RESULT]], ptr %[[B_ADDR]], align 4
 
 void vector_truncation_to_vector() {
