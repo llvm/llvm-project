@@ -333,7 +333,7 @@ define void @invalid_legacy_cost(i64 %N, ptr %x) #0 {
 ; COST1-NEXT:    [[TMP8:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP6]], i64 0
 ; COST1-NEXT:    [[TMP9:%.*]] = insertelement <2 x ptr> [[TMP8]], ptr [[TMP7]], i64 1
 ; COST1-NEXT:    [[TMP2:%.*]] = getelementptr ptr, ptr [[X]], i64 [[INDEX]]
-; COST1-NEXT:    [[TMP3:%.*]] = getelementptr ptr, ptr [[TMP2]], i64 2
+; COST1-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP2]], i64 16
 ; COST1-NEXT:    store <2 x ptr> [[TMP5]], ptr [[TMP2]], align 8
 ; COST1-NEXT:    store <2 x ptr> [[TMP9]], ptr [[TMP3]], align 8
 ; COST1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

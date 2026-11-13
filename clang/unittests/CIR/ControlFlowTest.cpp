@@ -95,7 +95,8 @@ static void expectTerminatorSuccessors(Region &region,
 /// Verify control flow interface consistency beyond what mlir::verify checks:
 ///   - Every non-empty region is reachable
 ///   - Every non-empty region has at least one branching terminator
-///   - Op and terminator agree on successor regions at every branch point
+///   - Op and terminator agree on successors at every branch point, including
+///     the op that an exit leaves
 static void verifyControlFlowInterfaceConsistency(RegionBranchOpInterface op) {
   EXPECT_TRUE(succeeded(mlir::verify(op)))
       << "MLIR verifier failed for '" << op->getName().getStringRef().str()
@@ -120,14 +121,15 @@ static void verifyControlFlowInterfaceConsistency(RegionBranchOpInterface op) {
     regionsWithExit.insert(term->getParentRegion());
     SmallVector<RegionSuccessor> termSuccessors;
     term.getSuccessorRegions(/*operands=*/{}, termSuccessors);
-    SmallPtrSet<Region *, 4> opSet, termSet;
-    for (RegionSuccessor &s : opSuccessors)
-      opSet.insert(s.getSuccessor());
-    for (RegionSuccessor &s : termSuccessors)
-      termSet.insert(s.getSuccessor());
-    EXPECT_EQ(opSet, termSet)
-        << "op and terminator disagree on successors from region #"
-        << term->getParentRegion()->getRegionNumber();
+    unsigned from = term->getParentRegion()->getRegionNumber();
+    for (const RegionSuccessor &s : termSuccessors)
+      EXPECT_TRUE(llvm::is_contained(opSuccessors, s))
+          << "terminator of region #" << from << " reports successor " << s
+          << " that the op does not";
+    for (const RegionSuccessor &s : opSuccessors)
+      EXPECT_TRUE(llvm::is_contained(termSuccessors, s))
+          << "op reports successor " << s << " from region #" << from
+          << " that the terminator does not";
   }
 
   for (Region &region : op->getRegions()) {

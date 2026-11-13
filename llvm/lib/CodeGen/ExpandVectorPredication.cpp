@@ -437,7 +437,7 @@ bool CachingVPExpander::foldEVLIntoMask(VPIntrinsic &VPI) {
   // Convert the %evl predication into vector mask predication.
   ElementCount ElemCount = VPI.getStaticVectorLength();
   Value *VLMask = convertEVLToMask(Builder, OldEVLParam, ElemCount);
-  Value *NewMaskParam = Builder.CreateAnd(VLMask, OldMaskParam);
+  Value *NewMaskParam = Builder.CreateLogicalAnd(VLMask, OldMaskParam);
   if (VPI.getIntrinsicID() == Intrinsic::vp_merge)
     VPI.setArgOperand(0, NewMaskParam);
   else

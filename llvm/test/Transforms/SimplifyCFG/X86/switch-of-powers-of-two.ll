@@ -14,7 +14,7 @@ define i32 @switch_of_powers_two(i32 %arg) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[ARG]], i1 true)
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i8], ptr @switch.table.switch_of_powers_two, i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds i8, ptr @switch.table.switch_of_powers_two, i64 [[TMP1]]
 ; CHECK-NEXT:    [[SWITCH_LOAD1:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = zext i8 [[SWITCH_LOAD1]] to i32
 ; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
@@ -54,7 +54,7 @@ define i32 @switch_of_powers_two_default_reachable(i32 %arg) !prof !0 {
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[SWITCH_LOOKUP:.*]], label %[[RETURN]], !prof [[PROF2:![0-9]+]]
 ; CHECK:       [[SWITCH_LOOKUP]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext nneg i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i8], ptr @switch.table.switch_of_powers_two_default_reachable, i64 0, i64 [[TMP4]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds i8, ptr @switch.table.switch_of_powers_two_default_reachable, i64 [[TMP4]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
 ; CHECK-NEXT:    [[SWITCH_EXT:%.*]] = zext i8 [[SWITCH_LOAD]] to i32
 ; CHECK-NEXT:    br label %[[RETURN]]
@@ -102,7 +102,7 @@ define i32 @switch_of_powers_two_default_reachable_multipreds(i32 %arg, i1 %cond
 ; CHECK-NEXT:    br i1 [[OR_COND]], label %[[SWITCH_LOOKUP:.*]], label %[[RETURN]]
 ; CHECK:       [[SWITCH_LOOKUP]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext nneg i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i8], ptr @switch.table.switch_of_powers_two_default_reachable_multipreds, i64 0, i64 [[TMP4]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds i8, ptr @switch.table.switch_of_powers_two_default_reachable_multipreds, i64 [[TMP4]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
 ; CHECK-NEXT:    [[SWITCH_EXT:%.*]] = zext i8 [[SWITCH_LOAD]] to i32
 ; CHECK-NEXT:    br label %[[RETURN]]

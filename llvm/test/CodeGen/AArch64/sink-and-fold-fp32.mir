@@ -3,7 +3,6 @@
 
 ---
 name: sxtw_scaled
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $x1, $s0
@@ -29,7 +28,6 @@ body: |
 
 ---
 name: add_imm
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $s0
@@ -55,7 +53,6 @@ body: |
 
 ---
 name: add_sxtw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $w1, $s0
@@ -79,7 +76,6 @@ body: |
 
 ---
 name: add_uxtw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $w1, $s0
@@ -103,7 +99,6 @@ body: |
 
 ---
 name: add_lsl_scaled
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $x1, $s0
@@ -127,7 +122,6 @@ body: |
 
 ---
 name: add_lsl_unscaled
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $x1, $s0
@@ -151,7 +145,6 @@ body: |
 
 ---
 name: add_scaled_to_unscaled
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $s0
@@ -173,7 +166,6 @@ body: |
 
 ---
 name: add_unscaled_to_scaled
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $s0

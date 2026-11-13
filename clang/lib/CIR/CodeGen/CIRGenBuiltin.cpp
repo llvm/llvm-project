@@ -1129,7 +1129,8 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_ldexpf16:
   case Builtin::BI__builtin_ldexpf128:
   case Builtin::BI__builtin_elementwise_ldexp:
-    return errorBuiltinNYI(cgf, e, builtinID);
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::LdexpOp>(cgf, *e));
   default:
     break;
   }
@@ -1552,6 +1553,16 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                           cir::AssumeBundleKind::Dereferenceable,
                           mlir::ValueRange{ptrValue, sizeValue});
     return RValue::get(nullptr);
+  }
+
+  case Builtin::BI__builtin_annotation: {
+    mlir::Value value = emitScalarExpr(e->getArg(0));
+    StringRef str =
+        cast<StringLiteral>(e->getArg(1)->IgnoreParenCasts())->getString();
+    auto annotation = cir::AnnotationAttr::get(
+        &getMLIRContext(), builder.getStringAttr(str), /*args=*/{});
+    return RValue::get(cir::AnnotationOp::create(
+        builder, getLoc(e->getExprLoc()), value, annotation));
   }
 
   case Builtin::BI__assume:
@@ -2534,8 +2545,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value addr = cir::FrameAddrOp::create(
         builder, loc, allocaInt8PtrTy,
         builder.getConstAPInt(loc, builder.getUInt32Ty(), level));
-    return RValue::get(
-        builder.createCast(loc, cir::CastKind::bitcast, addr, voidPtrTy));
+    addr = builder.createBitcast(
+        addr, builder.getVoidPtrTy(getCIRAllocaAddressSpace()));
+    return RValue::get(performAddrSpaceCast(addr, convertType(e->getType())));
   }
   case Builtin::BI__builtin_extract_return_addr:
   case Builtin::BI__builtin_frob_return_addr:
@@ -2821,7 +2833,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
   case Builtin::BI__warn_memset_zero_len:
   case Builtin::BI__annotation:
-  case Builtin::BI__builtin_annotation:
     return errorBuiltinNYI(*this, e, builtinID);
 
   case Builtin::BI__builtin_addcb:
@@ -3373,10 +3384,11 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   if (std::optional<mlir::Value> rst =
           emitTargetBuiltinExpr(builtinID, e, returnValue)) {
     mlir::Value v = rst.value();
-    // CIR dialect operations may have no results, no values will be returned
-    // even if it executes successfully.
+    // A null value means either a void builtin or an already diagnosed NYI.
+    // In the case of a void builtin, getUndefRValue returns
+    // `RValue::get(nullptr)`.
     if (!v)
-      return RValue::get(nullptr);
+      return getUndefRValue(e->getType());
 
     switch (evalKind) {
     case cir::TEK_Scalar:

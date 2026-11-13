@@ -668,7 +668,7 @@ define void @exit_cond_zext_iv_store64(ptr %dst, i64 %N) {
 ; DEFAULT:       [[VECTOR_BODY]]:
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[DST]], i64 [[INDEX]]
-; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[TMP9]], i64 2
+; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP9]], i64 16
 ; DEFAULT-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP9]], align 8
 ; DEFAULT-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP10]], align 8
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

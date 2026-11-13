@@ -35,15 +35,15 @@ define void @vector_reverse_f64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[N]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[B]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i64 -7
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i64 -15
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 -56
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 -120
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x double>, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[REVERSE:%.*]] = load <8 x double>, ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[REVERSE3:%.*]] = fadd <8 x double> [[WIDE_LOAD]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <8 x double> [[REVERSE]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds double, ptr [[TMP7]], i64 -7
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds double, ptr [[TMP7]], i64 -15
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 -56
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 -120
 ; CHECK-NEXT:    store <8 x double> [[REVERSE3]], ptr [[TMP9]], align 8
 ; CHECK-NEXT:    store <8 x double> [[TMP6]], ptr [[TMP12]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
@@ -100,15 +100,15 @@ define void @vector_reverse_i64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[N]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP3]], i64 -7
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP3]], i64 -15
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 -56
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 -120
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i64>, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[REVERSE:%.*]] = load <8 x i64>, ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[REVERSE3:%.*]] = add <8 x i64> [[WIDE_LOAD]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <8 x i64> [[REVERSE]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[TMP7]], i64 -7
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[TMP7]], i64 -15
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 -56
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 -120
 ; CHECK-NEXT:    store <8 x i64> [[REVERSE3]], ptr [[TMP9]], align 8
 ; CHECK-NEXT:    store <8 x i64> [[TMP6]], ptr [[TMP12]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
@@ -175,15 +175,15 @@ define i32 @reverse_store_with_partial_reduction(ptr noalias %dst, ptr noalias %
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub nuw nsw i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = sub i64 0, [[TMP10]]
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i16, ptr [[TMP9]], i64 [[TMP20]]
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr [2 x i8], ptr [[TMP9]], i64 [[TMP20]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP20]], [[TMP4]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i16, ptr [[TMP9]], i64 [[TMP13]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr [2 x i8], ptr [[TMP9]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 -2, [[TMP4]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = sub i64 [[TMP16]], [[TMP10]]
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i16, ptr [[TMP9]], i64 [[TMP25]]
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr [2 x i8], ptr [[TMP9]], i64 [[TMP25]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = mul i64 -3, [[TMP4]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = sub i64 [[TMP21]], [[TMP10]]
-; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i16, ptr [[TMP9]], i64 [[TMP15]]
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr [2 x i8], ptr [[TMP9]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[REVERSE:%.*]] = call <vscale x 8 x i16> @llvm.vector.reverse.nxv8i16(<vscale x 8 x i16> [[BROADCAST_SPLAT]])
 ; CHECK-NEXT:    store <vscale x 8 x i16> [[REVERSE]], ptr [[TMP23]], align 2
 ; CHECK-NEXT:    store <vscale x 8 x i16> [[REVERSE]], ptr [[TMP19]], align 2
@@ -220,7 +220,7 @@ define i32 @reverse_store_with_partial_reduction(ptr noalias %dst, ptr noalias %
 ; CHECK-NEXT:    [[TMP27:%.*]] = sext <8 x i16> [[BROADCAST_SPLAT15]] to <8 x i32>
 ; CHECK-NEXT:    [[PARTIAL_REDUCE15]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v8i32(<4 x i32> [[VEC_PHI12]], <8 x i32> [[TMP27]])
 ; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr i16, ptr [[DST]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr i16, ptr [[TMP36]], i64 -7
+; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr i8, ptr [[TMP36]], i64 -14
 ; CHECK-NEXT:    [[REVERSE16:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLAT15]], <8 x i16> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    store <8 x i16> [[REVERSE16]], ptr [[TMP35]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT18]] = add nuw i64 [[INDEX12]], 8
