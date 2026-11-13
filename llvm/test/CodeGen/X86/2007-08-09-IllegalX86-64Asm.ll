@@ -22,17 +22,14 @@
 define ptr @ubyte_divmod(ptr %a, ptr %b) {
 ; CHECK-LABEL: ubyte_divmod:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    subq $32, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 24
+; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    .cfi_offset %rbx, -32
-; CHECK-NEXT:    .cfi_offset %r14, -24
-; CHECK-NEXT:    .cfi_offset %rbp, -16
+; CHECK-NEXT:    .cfi_offset %rbx, -24
+; CHECK-NEXT:    .cfi_offset %r14, -16
 ; CHECK-NEXT:    movq %rsi, %rbx
 ; CHECK-NEXT:    movq %rdi, %r14
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rsi
@@ -107,7 +104,8 @@ define ptr @ubyte_divmod(ptr %a, ptr %b) {
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; CHECK-NEXT:    movzbl %sil, %eax
 ; CHECK-NEXT:    divb %dl
-; CHECK-NEXT:    movzbl %ah, %ebp
+; CHECK-NEXT:    movzbl %ah, %eax
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; CHECK-NEXT:    jmp LBB0_18
 ; CHECK-NEXT:  LBB0_14: ## %cond_true.i200
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
@@ -117,7 +115,7 @@ define ptr @ubyte_divmod(ptr %a, ptr %b) {
 ; CHECK-NEXT:    movl $4, %edi
 ; CHECK-NEXT:    callq _feraiseexcept
 ; CHECK-NEXT:  LBB0_17: ## %ubyte_ctype_remainder.exit
-; CHECK-NEXT:    xorl %ebp, %ebp
+; CHECK-NEXT:    movl $0, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Folded Spill
 ; CHECK-NEXT:  LBB0_18: ## %ubyte_ctype_remainder.exit
 ; CHECK-NEXT:    movq (%r14), %rax
 ; CHECK-NEXT:    callq *224(%rax)
@@ -168,7 +166,8 @@ define ptr @ubyte_divmod(ptr %a, ptr %b) {
 ; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    je LBB0_25
 ; CHECK-NEXT:  ## %bb.24: ## %cond_next182
-; CHECK-NEXT:    movb %bpl, 16(%rax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ecx ## 4-byte Reload
+; CHECK-NEXT:    movb %cl, 16(%rax)
 ; CHECK-NEXT:    movq %rax, 32(%rbx)
 ; CHECK-NEXT:    movq %rbx, %rax
 ; CHECK-NEXT:    jmp LBB0_28
@@ -182,10 +181,9 @@ define ptr @ubyte_divmod(ptr %a, ptr %b) {
 ; CHECK-NEXT:  LBB0_27: ## %UnifiedReturnBlock
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:  LBB0_28: ## %UnifiedReturnBlock
-; CHECK-NEXT:    addq $32, %rsp
+; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14
-; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
 entry:
 	%arg1 = alloca i8, align 1		; <ptr> [#uses=3]

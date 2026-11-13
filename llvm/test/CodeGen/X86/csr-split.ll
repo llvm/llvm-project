@@ -76,13 +76,12 @@ define dso_local signext i32 @test2(ptr %p1) local_unnamed_addr  {
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB1_3: # %if.then2
-; X64-NEXT:    pushq %rbx
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    .cfi_offset %rbx, -16
-; X64-NEXT:    movq %rdi, %rbx
+; X64-NEXT:    movq %rdi, (%rsp) # 8-byte Spill
 ; X64-NEXT:    callq callVoid@PLT
-; X64-NEXT:    movq %rbx, %rdi
-; X64-NEXT:    popq %rbx
+; X64-NEXT:    movq (%rsp), %rdi # 8-byte Reload
+; X64-NEXT:    popq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    jmp callNonVoid@PLT # TAILCALL
 ;

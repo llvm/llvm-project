@@ -365,17 +365,8 @@ private:
   /// rematerialization is not possible.
   BlockFrequency calcRematCost(const LiveInterval &VirtReg,
                                AllocationOrder &Order) const;
-  /// Like tryAssignCSRFirstTime, but take the choice with the lowest cost of:
-  /// a pre-split, spilling or rematerializing VirtReg, evicting
-  /// rematerializable live ranges, and the first use of the CSR.
-  MCRegister tryAssignCSRFirstTimeMinCost(const LiveInterval &VirtReg,
-                                          AllocationOrder &Order,
-                                          MCRegister PhysReg,
-                                          uint8_t &CostPerUseLimit,
-                                          SmallVectorImpl<Register> &NewVRegs);
-  std::optional<BlockFrequency> calcEvictRematCost(const LiveInterval &VirtReg,
-                                                   MCRegister PhysReg,
-                                                   unsigned Cascade) const;
+  BlockFrequency calcEvictRematCost(const LiveInterval &VirtReg,
+                                    MCRegister PhysReg, unsigned Cascade) const;
   MCRegister tryEvictRematForCSR(const LiveInterval &VirtReg,
                                  AllocationOrder &Order,
                                  SmallVectorImpl<Register> &NewVRegs,
