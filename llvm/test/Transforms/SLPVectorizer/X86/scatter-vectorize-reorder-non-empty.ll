@@ -5,16 +5,17 @@ define double @test01() {
 ; CHECK-LABEL: define double @test01
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr null, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr double, <2 x ptr> splat (ptr null), <2 x i32> [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> align 8 [[TMP2]], <2 x i1> splat (i1 true), <2 x double> poison)
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd double 0.000000e+00, 0.000000e+00
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x double> [[TMP5]], <4 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double poison>, <4 x i32> <i32 4, i32 5, i32 6, i32 0>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 poison>
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x double> [[TMP7]], double [[TMP4]], i64 3
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd <4 x double> [[TMP6]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = call double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP9]])
-; CHECK-NEXT:    ret double [[TMP10]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [8 x i8], <2 x ptr> splat (ptr null), <2 x i64> [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> align 8 [[TMP3]], <2 x i1> splat (i1 true), <2 x double> poison)
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd double 0.000000e+00, 0.000000e+00
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x double> [[TMP6]], <4 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double poison>, <4 x i32> <i32 4, i32 5, i32 6, i32 0>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 poison>
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> [[TMP8]], double [[TMP5]], i64 3
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd <4 x double> [[TMP7]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = call double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP10]])
+; CHECK-NEXT:    ret double [[TMP11]]
 ;
   %1 = load i32, ptr null, align 8
   %2 = load i32, ptr getelementptr inbounds (i32, ptr null, i32 1), align 4

@@ -1088,6 +1088,12 @@ public:
 
   bool isXDL(const MachineInstr &MI) const;
 
+  /// On gfx1250, an XDL instruction whose destination spans at least eight
+  /// VGPRs decrements VA_VDST only after every earlier-issued VALU instruction,
+  /// of any type, has decremented it. Nothing is implied about the order
+  /// relative to instructions issued after it.
+  bool isVAVDSTOrderedXDL(const MachineInstr &MI) const;
+
   static bool isDGEMM(unsigned Opcode) { return AMDGPU::getMAIIsDGEMM(Opcode); }
 
   static bool isLDSDIR(const MachineInstr &MI) {
@@ -1648,6 +1654,14 @@ public:
                                MachineRegisterInfo &MRI) const;
   void legalizeOperandsVALUt16(MachineInstr &Inst, unsigned OpIdx,
                                MachineRegisterInfo &MRI) const;
+
+  /// Build a 32-bit VGPR whose low half is the 16-bit value \p Src.SrcSubReg
+  /// and whose high half is undefined. The instructions are inserted before
+  /// \p I. \returns the new register.
+  Register buildVGPR32FromLo16(MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator I,
+                               const DebugLoc &DL, Register Src,
+                               unsigned SrcSubReg) const;
 
   /// Replace the instructions opcode with the equivalent VALU
   /// opcode.  This function will also move the users of MachineInstruntions

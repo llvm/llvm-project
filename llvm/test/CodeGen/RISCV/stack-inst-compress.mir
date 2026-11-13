@@ -29,7 +29,6 @@
 ---
 name:            _Z15stack_size_2048v
 alignment:       2
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   adjustsStack:    true
@@ -127,7 +126,6 @@ body:             |
 ---
 name:            _Z15stack_size_4096v
 alignment:       2
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   adjustsStack:    true
@@ -233,7 +231,6 @@ body:             |
 ---
 name:            _Z15stack_size_8192v
 alignment:       2
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   adjustsStack:    true

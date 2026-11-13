@@ -4,7 +4,6 @@
 ---
 name:            mul_to_lshr
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -26,7 +25,6 @@ body:             |
 ---
 name:            mul_to_lshr_vector
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -50,7 +48,6 @@ body:             |
 ---
 name:            mul_to_lshr_vector_out_of_range_shift
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -74,7 +71,6 @@ body:             |
 ---
 name:            mul_to_lshr_out_of_range_shift
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -96,7 +92,6 @@ body:             |
 ---
 name:            mul_to_lshr_vector_nonuniform_const
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -126,7 +121,6 @@ body:             |
 ---
 name:            mul_to_lshr_vector_nonuniform_const_elt_is_one
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}

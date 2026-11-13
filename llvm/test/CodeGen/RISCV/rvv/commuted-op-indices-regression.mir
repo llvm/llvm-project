@@ -15,7 +15,6 @@
 ...
 ---
 name:            commuted_op_indices
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vr, preferred-register: '' }
   - { id: 1, class: vrnov0, preferred-register: '' }

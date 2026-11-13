@@ -210,23 +210,6 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   return true;
 }
 
-/// Returns true when \p TLI has a vector mapping for the scalar function name
-/// \p Name at \p EC (matching either masked or unmasked variants).
-static bool hasVectorMapping(const TargetLibraryInfo &TLI, StringRef Name,
-                             ElementCount EC) {
-  return TLI.getVectorMappingInfo(Name, EC, /*Masked=*/false) ||
-         TLI.getVectorMappingInfo(Name, EC, /*Masked=*/true);
-}
-
-/// Returns true when \p TLI has a vector mapping for \p IID at the given
-/// element type and \p EC.
-static bool hasIntrinsicVectorMapping(const TargetLibraryInfo &TLI,
-                                      Intrinsic::ID IID, Type *ScalarTy,
-                                      ElementCount EC, Module *M) {
-  std::string Name = Intrinsic::getName(IID, {ScalarTy}, M);
-  return hasVectorMapping(TLI, Name, EC);
-}
-
 /// If \p II is a vector llvm.sincos with no direct vector library mapping but
 /// the target does have vector mappings for both llvm.sin and llvm.cos at the
 /// same element count, replace it with separate llvm.sin and llvm.cos calls
@@ -245,23 +228,7 @@ static bool trySplitVectorSinCos(const TargetLibraryInfo &TLI,
   Type *ScalarTy = VTy->getElementType();
   Module *M = II->getModule();
 
-  // If a vector sincos mapping exists for the intrinsic name (e.g.
-  // "llvm.sincos.f32") or for the scalar libcall name ("sincos"/"sincosf"),
-  // leave the call alone -- SelectionDAG legalization will handle it via
-  // expandMultipleResultFPLibCall when the runtime libcall impl is enabled.
-  if (hasIntrinsicVectorMapping(TLI, Intrinsic::sincos, ScalarTy, EC, M))
-    return false;
-  LibFunc LF = NotLibFunc;
-  if (ScalarTy->isFloatTy())
-    LF = LibFunc_sincosf;
-  else if (ScalarTy->isDoubleTy())
-    LF = LibFunc_sincos;
-  if (LF != NotLibFunc && hasVectorMapping(TLI, TLI.getName(LF), EC))
-    return false;
-
-  // Splitting is only worthwhile when both sin and cos have vector mappings.
-  if (!hasIntrinsicVectorMapping(TLI, Intrinsic::sin, ScalarTy, EC, M) ||
-      !hasIntrinsicVectorMapping(TLI, Intrinsic::cos, ScalarTy, EC, M))
+  if (!shouldSplitVectorSinCos(TLI, ScalarTy, EC, M))
     return false;
 
   // All users must be extractvalue.

@@ -115,13 +115,6 @@
 ; SPIRV-Opt-NEXT:      Expand Atomic instructions
 ; SPIRV-Opt-NEXT:      Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Basic Alias Analysis (stateless AA impl)
-; SPIRV-Opt-NEXT:      Natural Loop Information
-; SPIRV-Opt-NEXT:      Canonicalize natural loops
-; SPIRV-Opt-NEXT:      Scalar Evolution Analysis
-; SPIRV-Opt-NEXT:      Loop Pass Manager
-; SPIRV-Opt-NEXT:        Canonicalize Freeze Instructions in Loops
-; SPIRV-Opt-NEXT:        Induction Variable Users
-; SPIRV-Opt-NEXT:        Loop Strength Reduction
 ; SPIRV-Opt-NEXT:      Lower Garbage Collection Instructions
 ; SPIRV-Opt-NEXT:      Shadow Stack GC Lowering
 ; SPIRV-Opt-NEXT:      Remove unreachable blocks from the CFG

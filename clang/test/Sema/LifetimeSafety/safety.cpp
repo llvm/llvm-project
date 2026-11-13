@@ -339,6 +339,78 @@ void loop_with_break_gsl(bool cond) {
   v.use();      // expected-note {{later used here}}
 }
 
+void infinite_for_loop() {
+  MyObj safe;
+  MyObj* p = &safe;
+  {
+    MyObj s;
+    p = &s;     // expected-warning {{local variable 's' does not live long enough}}
+  }             // expected-note {{local variable 's' is destroyed here}}
+  for (;;)
+    use(*p);    // expected-note {{later used here}}
+}
+
+// GH222273
+void infinite_while_loop(bool cond) {
+  while (true) {
+    MyObj* p;
+    if (cond) {
+      MyObj s;
+      p = &s;   // expected-warning {{local variable 's' does not live long enough}}
+    }           // expected-note {{local variable 's' is destroyed here}}
+    use(*p);    // expected-note {{later used here}}
+  }
+}
+
+void infinite_goto_loop() {
+  View v;
+  {
+    MyObj s;
+    v = s;      // expected-warning {{local variable 's' does not live long enough}}
+  }             // expected-note {{local variable 's' is destroyed here}}
+again:
+  v.use();      // expected-note {{later used here}}
+  goto again;
+}
+
+void infinite_loop_on_one_branch(bool cond) {
+  MyObj safe;
+  MyObj* p = &safe;
+  {
+    MyObj s;
+    p = &s;     // expected-warning {{local variable 's' does not live long enough}}
+  }             // expected-note {{local variable 's' is destroyed here}}
+  if (cond)
+    for (;;)
+      use(*p);  // expected-note {{later used here}}
+}
+
+void infinite_loops_on_both_branches(bool cond) {
+  MyObj safe;
+  MyObj* p = &safe;
+  MyObj* q = &safe;
+  {
+    MyObj s, t;
+    p = &s;     // expected-warning {{local variable 's' does not live long enough}}
+    q = &t;     // expected-warning {{local variable 't' does not live long enough}}
+  }             // expected-note {{local variable 's' is destroyed here}} \
+                // expected-note {{local variable 't' is destroyed here}}
+  if (cond) {
+    for (;;)
+      use(*p);  // expected-note {{later used here}}
+  } else {
+    for (;;)
+      use(*q);  // expected-note {{later used here}}
+  }
+}
+
+void safe_infinite_loop() {
+  MyObj safe;
+  MyObj* p = &safe;
+  for (;;)
+    use(*p);
+}
+
 void multiple_expiry_of_same_loan(bool cond) {
   // Choose the last expiry location for the loan (e.g., through scope-ends and break statements).
   MyObj safe;
@@ -2983,6 +3055,7 @@ void dangling_from_static_subscript(const Table &table) {
   }                  // expected-note {{local variable 'key' is destroyed here}}
   use(*p);           // expected-note {{later used here}}
 }
+#pragma clang diagnostic pop
 } // namespace static_call_operator
 
 namespace track_origins_for_lifetimebound_record_type {
@@ -3340,6 +3413,53 @@ struct PFieldFromTemp {
   Pointer<Bar> value;                // expected-note {{this field dangles}}
   PFieldFromTemp() : value(Bar{}) {} // expected-warning {{stack memory associated with temporary object escapes to the field 'value' which will dangle}}
 };
+
+template <typename T> struct [[gsl::Pointer]] MultiArgPointer {
+  MultiArgPointer();
+  MultiArgPointer(const T &bar [[clang::lifetimebound]], int flags = 0);
+};
+
+void multi_arg_pointer() {
+  MultiArgPointer<int> p, q;
+  {
+    int v;
+    p = MultiArgPointer(v, 1); // expected-warning {{local variable 'v' does not live long enough}}
+    q = MultiArgPointer(v);    // expected-warning {{local variable 'v' does not live long enough}}
+  }                            // expected-note 2 {{local variable 'v' is destroyed here}}
+  use(p, q);                   // expected-note 2 {{later used here}}
+}
+
+// A gsl::Pointer argument is seen through, as for a single argument.
+struct [[gsl::Pointer]] ViewArgPointer {
+  ViewArgPointer(const Pointer<int> &p [[clang::lifetimebound]], int flags);
+};
+
+ViewArgPointer view_arg_through_param(const int &x) {
+  Pointer<int> p(x);
+  return ViewArgPointer(p, 0);
+}
+
+ViewArgPointer view_arg_dangling() {
+  int x;
+  Pointer<int> p(x);           // expected-warning {{stack memory associated with local variable 'x' is returned}}
+  return ViewArgPointer(p, 0); // expected-note {{returned here}}
+}
+
+// Without an annotation, an owner argument of a constructor taking several
+// arguments is not assumed to be borrowed.
+struct [[gsl::Pointer]] UnannotatedMultiArgPointer {
+  UnannotatedMultiArgPointer();
+  UnannotatedMultiArgPointer(const MyObj &obj, int flags);
+};
+
+void unannotated_multi_arg_pointer() {
+  UnannotatedMultiArgPointer p;
+  {
+    MyObj obj;
+    p = UnannotatedMultiArgPointer(obj, 1);
+  }
+  use(p);
+}
 
 } // namespace gslpointer_construction_from_lifetimebound
 namespace conditional_operator_control_flow {
@@ -4664,7 +4784,7 @@ struct Helper {
 };
 } // namespace off_by_one_crash
 
-// FIXME(GH227246): Support capture_by_this on constructors without inference of lifetimebound.
+// `lifetime_capture_by_this` on a constructor parameter means `lifetimebound`.
 namespace constructor_test {
 struct Item {};
 
@@ -4680,9 +4800,15 @@ void test() {
   Container c;
   {
     Item item;
-    c = Container(item); // tu-warning {{local variable 'item' does not live long enough}}
-  }                      // tu-note {{local variable 'item' is destroyed here}}
-  use(c);                // tu-note {{later used here}}
+    c = Container(item); // expected-warning {{local variable 'item' does not live long enough}}
+  }                      // expected-note {{local variable 'item' is destroyed here}}
+  use(c);                // expected-note {{later used here}}
+}
+
+Container returned() {
+  Item item;
+  return Container(item); // expected-warning {{stack memory associated with local variable 'item' is returned}} \
+                          // expected-note {{returned here}}
 }
 } // namespace constructor_test
 

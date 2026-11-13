@@ -5681,7 +5681,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // Perform the actual loop transformation.
   IRBuilder<> Builder(PSE.getSE()->getModule());
-  Builder.enableGEPCanonicalization();
   VPTransformState State(&TTI, BestVF, LI, DT, Legal->getAssumptionCache(),
                          Builder, &BestVPlan, OrigLoop->getParentLoop());
 
@@ -7983,8 +7982,8 @@ LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
   // will simplify all loops, regardless of whether anything end up being
   // vectorized.
   for (const auto &L : *LI)
-    Changed |= CFGChanged |=
-        simplifyLoop(L, DT, LI, SE, AC, nullptr, false /* PreserveLCSSA */);
+    Changed |= CFGChanged |= simplifyLoop(L, DT, LI, SE, AC, nullptr,
+                                          false /* PreserveLCSSA */, TTI);
 
   // Build up a worklist of inner-loops to vectorize. This is necessary as
   // the act of vectorizing or partially unrolling a loop creates new loops

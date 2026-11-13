@@ -3,7 +3,6 @@
 ---
 name:            pnr_to_ppr
 alignment:       4
-tracksRegLiveness: true
 tracksDebugUserValues: true
 frameInfo:
   maxAlignment:    1
@@ -24,7 +23,6 @@ body:             |
 ---
 name:            ppr_to_pnr
 alignment:       4
-tracksRegLiveness: true
 tracksDebugUserValues: true
 frameInfo:
   maxAlignment:    1
@@ -45,7 +43,6 @@ body:             |
 ---
 name:            pnr_to_pnr
 alignment:       4
-tracksRegLiveness: true
 tracksDebugUserValues: true
 frameInfo:
   maxAlignment:    1
