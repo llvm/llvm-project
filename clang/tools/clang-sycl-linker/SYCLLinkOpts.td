@@ -51,6 +51,10 @@ def device_EQ : Joined<["--", "-"], "device=">,
                 MetaVarName<"<device>">,
                 HelpText<"An Intel GPU to compile ahead of time for. Can be "
                          "repeated. Defaults to --arch for an Intel GPU">;
+def no_embed_virtual_arch : Flag<["--", "-"], "no-embed-virtual-arch">,
+                            Flags<[LinkerOnlyOption]>,
+                            HelpText<"Do not keep the SPIR-V in a device image "
+                                     "compiled ahead of time for an Intel GPU">;
 def triple_EQ : Joined<["--", "-"], "triple=">,
                 Flags<[LinkerOnlyOption]>,
                 MetaVarName<"<triple>">,

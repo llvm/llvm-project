@@ -4162,6 +4162,8 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
       // An Intel GPU maps to a different name, its IGCA target.
       if (Target != Arch)
         C.addSYCLIGCADevice(&TC, Target, Arch);
+      else
+        C.addSYCLDirectArch(&TC, Arch);
     }
     Archs = std::move(Targets);
   }

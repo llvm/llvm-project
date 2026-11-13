@@ -722,6 +722,8 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
   assert(!Devices.empty() && "a device must be specified for AOT compilation");
   CmdArgs.push_back("-device");
   CmdArgs.push_back(Devices);
+  if (Args.hasArg(OPT_no_embed_virtual_arch))
+    CmdArgs.push_back("-exclude_ir");
 
   // getAllArgValues returns a temporary vector; retain it so the StringRefs
   // remain valid through the executeCommands call below.
@@ -1007,6 +1009,9 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
   OffloadArch OA = StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ));
   bool IsAOTCompileNeeded =
       OA.isIntelIGCA() ? Args.hasArg(OPT_device_EQ) : OA.isIntel();
+  // ocloc drops the SPIR-V for an Intel GPU; opencl-aot for a CPU keeps it.
+  bool NoEmbedVirtualArch = IsAOTCompileNeeded && !OA.isIntelCPU() &&
+                            Args.hasArg(OPT_no_embed_virtual_arch);
 
   StringRef OutputFileNameExt = ".spv";
 
@@ -1056,16 +1061,22 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     TheImage.StringData["arch"] =
         Args.MakeArgString(Args.getLastArgValue(OPT_arch_EQ));
     TheImage.StringData["symbols"] = SI.Symbols;
+    if (NoEmbedVirtualArch)
+      TheImage.StringData["no-embed-virtual-arch"] = "1";
     TheImage.Image = std::move(*FileOrErr);
     Images.emplace_back(std::move(TheImage));
   }
 
   if (Verbose) {
-    for (const OffloadingImage &Image : Images)
-      errs() << formatv(
-          "sycl-bundle: image kind: {0}, triple: {1}, arch: {2}\n",
-          getImageKindName(Image.TheImageKind),
-          Image.StringData.lookup("triple"), Image.StringData.lookup("arch"));
+    for (const OffloadingImage &Image : Images) {
+      errs() << formatv("sycl-bundle: image kind: {0}, triple: {1}, arch: {2}",
+                        getImageKindName(Image.TheImageKind),
+                        Image.StringData.lookup("triple"),
+                        Image.StringData.lookup("arch"));
+      if (Image.StringData.count("no-embed-virtual-arch"))
+        errs() << ", no-embed-virtual-arch";
+      errs() << "\n";
+    }
   }
 
   llvm::SmallString<0> Buffer = OffloadBinary::write(Images);

@@ -1103,6 +1103,26 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
         DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_device_EQ),
                          Args.MakeArgString(Device));
 
+  // Drop the SPIR-V from the ahead-of-time compiled image only if every image
+  // that lists Intel GPUs asks for it. Generic archive members list none.
+  if (Binary.getOffloadKind() == OFK_SYCL) {
+    auto HasKey = [](StringRef Key) {
+      return [=](const OffloadFile &File) {
+        return !File.getBinary()->getString(Key).empty();
+      };
+    };
+    size_t WithCode = llvm::count_if(Input, HasKey("code"));
+    size_t NoEmbed = llvm::count_if(Input, HasKey("no-embed-virtual-arch"));
+    if (WithCode && NoEmbed == WithCode)
+      DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_linker_arg_EQ),
+                       "--no-embed-virtual-arch");
+    else if (NoEmbed)
+      WithColor::warning(errs(), LinkerExecutable)
+          << "not all device code for '" << Binary.getArch()
+          << "' was compiled with --no-offload-embed-virtual-arch; the "
+             "SPIR-V is kept\n";
+  }
+
   // If every input file is bitcode we have whole program visibility as we
   // do only support static linking with bitcode.
   auto ContainsBitcode = [](const OffloadFile &F) {

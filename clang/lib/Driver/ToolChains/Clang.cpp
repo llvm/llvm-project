@@ -9763,9 +9763,20 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
 
     // Add one "code=" per Intel GPU of the IGCA target. llvm-offload-binary
     // joins them, so the image gets "code=xe-mtl-h,xe-mtl-u".
-    if (OffloadAction->getOffloadingDeviceKind() == Action::OFK_SYCL)
-      for (StringRef Device : C.getSYCLIGCADevices(TC, Arch.ArchName))
+    if (OffloadAction->getOffloadingDeviceKind() == Action::OFK_SYCL) {
+      ArrayRef<StringRef> Devices = C.getSYCLIGCADevices(TC, Arch.ArchName);
+      for (StringRef Device : Devices)
         Parts.emplace_back("code=" + Device.str());
+
+      // The SPIR-V can only be dropped when the image is compiled ahead of
+      // time, and is kept when the IGCA target is also named directly.
+      bool EmbedVirtualArch =
+          TCArgs.hasFlag(options::OPT_offload_embed_virtual_arch,
+                         options::OPT_no_offload_embed_virtual_arch, true);
+      if (!EmbedVirtualArch && !Devices.empty() &&
+          !C.isSYCLDirectArch(TC, Arch.ArchName))
+        Parts.emplace_back("no-embed-virtual-arch=1");
+    }
 
     if (TC->isUsingLTO(TCArgs, OffloadAction->getOffloadingDeviceKind()))
       for (StringRef Feature : FeatureArgs)

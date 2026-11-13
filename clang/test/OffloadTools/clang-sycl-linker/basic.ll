@@ -134,12 +134,23 @@
 ; AOT-IGCA-NEXT: sycl-bundle: image kind: o, triple: spirv64-unknown-unknown, arch: igca_30r
 ; AOT-IGCA-NOT:  {{.+}}
 ;
+; Test that --no-embed-virtual-arch drops the SPIR-V from the ocloc output and
+; is recorded on the device image.
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=igca_30r --device=xe-mtl-u --no-embed-virtual-arch %t/input1.bc %t/input2.bc -o %t/aot-igca-noembed.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=AOT-IGCA-NO-EMBED
+; AOT-IGCA-NO-EMBED: "{{.*}}ocloc{{.*}}" {{.*}}-device xe-mtl-u -exclude_ir -output
+; AOT-IGCA-NO-EMBED-NEXT: sycl-bundle: image kind: o, triple: spirv64-unknown-unknown, arch: igca_30r, no-embed-virtual-arch{{$}}
+;
+; Test that --no-embed-virtual-arch has no effect without --device.
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=igca_30r --no-embed-virtual-arch %t/input1.bc %t/input2.bc -o %t/jit-igca-noembed.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=JIT-IGCA
+;
 ; Test that an IGCA target without --device is compiled just in time.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=igca_30r %t/input1.bc %t/input2.bc -o %t/jit-igca.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=JIT-IGCA
 ; JIT-IGCA:      link: inputs: {{.*}}.bc, {{.*}}.bc output: [[LLVMLINKOUT:.*]].bc
 ; JIT-IGCA-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: {{.*}}.spv
-; JIT-IGCA-NEXT: sycl-bundle: image kind: spv, triple: spirv64-unknown-unknown, arch: igca_30r
+; JIT-IGCA-NEXT: sycl-bundle: image kind: spv, triple: spirv64-unknown-unknown, arch: igca_30r{{$}}
 ; JIT-IGCA-NOT:  {{.+}}
 ;
 ; Test AOT compilation for an Intel CPU.

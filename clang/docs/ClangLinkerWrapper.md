@@ -85,7 +85,10 @@ cause it be linked with any other device code with the same target triple.
 SYCL device code for an IGCA target can also list the Intel GPUs to compile it
 ahead of time for, as `code=xe-mtl-h,xe-mtl-u`. It is only linked with device
 code that lists the same GPUs, and the GPUs are passed on to
-`clang-sycl-linker`.
+`clang-sycl-linker`. If all of that device code was compiled with
+`--no-offload-embed-virtual-arch`, the SPIR-V is dropped from the device image
+compiled ahead of time; if only some of it was, a warning is given and the
+SPIR-V is kept.
 
 ## Debugging
 
