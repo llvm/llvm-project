@@ -12391,7 +12391,7 @@ behavior.
 ##### Syntax:
 
 ```
-<result> = load [volatile] <ty>, ptr <pointer>[, align <alignment>][, !nontemporal !<nontemp_node>][, !invariant.load !<empty_node>][, !invariant.group !<empty_node>][, !nonnull !<empty_node>][, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>][, !align !<align_node>][, !noundef !<empty_node>]
+<result> = load [volatile] <ty>, ptr <pointer>[, align <alignment>][, !nontemporal !<nontemp_node>][, !invariant.load !<empty_node>][, !invariant.group !<empty_node>][, !nonnull !<empty_node>][, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>][, !nofreeobj !<empty_node>][, !align !<align_node>][, !noundef !<empty_node>]
 <result> = load atomic [volatile] [elementwise] <ty>, ptr <pointer> [syncscope("<target-scope>")] <ordering>, align <alignment> [, !invariant.group !<empty_node>]
 !<nontemp_node> = !{ i32 1 }
 !<empty_node> = !{}
@@ -12478,6 +12478,15 @@ The optional `!dereferenceable_or_null` metadata must reference a single
 metadata name `<deref_bytes_node>` corresponding to a metadata node with one
 `i64` entry.
 See `dereferenceable_or_null` metadata {ref}`dereferenceable_or_null <md_dereferenceable_or_null>`.
+
+The optional `!nofreeobj` metadata must reference a single metadata name
+`<empty_node>` corresponding to a metadata node with no entries.
+The existence of the `!nofreeobj` metadata on the instruction tells the
+optimizer that the underlying object of the loaded pointer will not be freed
+after this point, through this pointer or any other. This is analogous to the
+`nofreeobj` attribute on return values. This metadata can only be applied to
+loads of a pointer type. If the underlying object is freed after the load, the
+behavior is undefined.
 
 The optional `!align` metadata must reference a single metadata name
 `<align_node>` corresponding to a metadata node with one `i64` entry.

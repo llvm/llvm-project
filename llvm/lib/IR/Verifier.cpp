@@ -5629,8 +5629,10 @@ void Verifier::visitDereferenceableMetadata(Instruction& I, MDNode* MD) {
 void Verifier::visitNoFreeObjMetadata(Instruction &I, MDNode *MD) {
   Check(I.getType()->isPointerTy(), "nofreeobj applies only to pointer types",
         &I);
-  Check((isa<IntToPtrInst>(I)),
-        "nofreeobj applies only to inttoptr instruction", &I);
+  Check((isa<LoadInst>(I) || isa<IntToPtrInst>(I)),
+        "nofreeobj applies only to load and inttoptr instructions, use "
+        "attributes for calls or invokes",
+        &I);
   Check(MD->getNumOperands() == 0, "nofreeobj metadata must be empty", &I);
 }
 

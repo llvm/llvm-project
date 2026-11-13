@@ -3086,6 +3086,11 @@ static void combineMetadata(Instruction *K, const Instruction *J,
           K->setMetadata(Kind,
             MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
         break;
+      case LLVMContext::MD_nofreeobj:
+        // Like !dereferenceable, a moved K may only keep it if J had it too.
+        if (!AAOnly && DoesKMove)
+          K->setMetadata(Kind, JMD);
+        break;
       case LLVMContext::MD_preserve_access_index:
         // Preserve !preserve.access.index in K.
         break;
@@ -3226,6 +3231,7 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
     case LLVMContext::MD_align:
     case LLVMContext::MD_dereferenceable:
     case LLVMContext::MD_dereferenceable_or_null:
+    case LLVMContext::MD_nofreeobj:
       // These only directly apply if the new type is also a pointer.
       if (NewType->isPointerTy())
         Dest.setMetadata(ID, N);
