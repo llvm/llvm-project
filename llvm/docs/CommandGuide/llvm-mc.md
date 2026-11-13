@@ -170,7 +170,7 @@ Check diagnostics against directives in single-line comments instead of printing
 Directives have the form:
 
 ```text
-<prefix>-<kind>[-re][@<offset>][:<col>] {{<text>}}
+<prefix>-<kind>[-re][@<offset>][:<col>] [<count>] {{<text>}}
 ```
 
 - `<prefix>`: `expected` by default, or any prefix listed in the comma-separated `<prefixes>` argument.
@@ -183,6 +183,7 @@ Directives have the form:
   - `@unknown`: a diagnostic with no source location.
 - `:<col>`: the expected 1-based column.
   (Note that in Clang, `@<file>:<line>` instead refers to a line in another file.)
+- `<count>`: the number of times the diagnostic is expected (defaults to 1).
 
 At most one directive is recognized per line.
 {program}`llvm-mc` succeeds if all directives are matched and no unexpected diagnostics are emitted.
