@@ -11589,9 +11589,25 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
     }
     for (const parser::Name &name :
         std::get<std::list<parser::Name>>(align->t)) {
-      Symbol *symbol{FindSymbol(name)};
-      if (!symbol) {
-        symbol = &MakeSymbol(name, Attrs{}, ObjectEntityDetails{});
+      Symbol *symbol{nullptr};
+      if (currScope().IsDerivedType()) {
+        // Among the components of a derived type, the directive can only
+        // name a component that is already declared: a name is not looked
+        // up in the enclosing scopes, and no component is created for it.
+        if (auto iter{currScope().find(name.source)};
+            iter != currScope().end()) {
+          symbol = &*iter->second;
+          Resolve(name, symbol);
+        } else {
+          Say(name,
+              "'%s' must be a previously declared component of this derived type to be aligned with !DIR$ ALIGN"_err_en_US);
+          continue;
+        }
+      } else {
+        symbol = FindSymbol(name);
+        if (!symbol) {
+          symbol = &MakeSymbol(name, Attrs{}, ObjectEntityDetails{});
+        }
       }
       if (symbol->owner() != currScope() || symbol->has<UseDetails>() ||
           symbol->has<HostAssocDetails>()) {

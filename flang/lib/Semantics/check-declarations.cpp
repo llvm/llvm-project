@@ -833,6 +833,11 @@ void CheckHelper::CheckObjectEntity(
       messages_.Say(
           "!DIR$ ALIGN is not yet supported for ALLOCATABLE or POINTER '%s'"_err_en_US,
           symbol.name());
+    } else if (isComponent) {
+      // The layout of a derived type does not take the request into account.
+      messages_.Say(
+          "!DIR$ ALIGN is not supported for component '%s', which is neither ALLOCATABLE nor POINTER"_err_en_US,
+          symbol.name());
     } else if (IsNamedConstant(symbol)) {
       messages_.Say(
           "!DIR$ ALIGN may not apply to named constant '%s'"_err_en_US,
@@ -852,10 +857,9 @@ void CheckHelper::CheckObjectEntity(
       messages_.Say("!DIR$ ALIGN may not apply to Cray pointee '%s'"_err_en_US,
           symbol.name());
     } else {
-      // Accepted, but lowering does not act on it yet: say so rather than
-      // letting the directive be silently ignored.
+      // Accepted, but lowering does not act on it yet.
       Warn(common::UsageWarning::IgnoredDirective,
-          "!DIR$ ALIGN on '%s' is not yet honored by this compiler"_warn_en_US,
+          "!DIR$ ALIGN on '%s' is not yet implemented and was ignored"_warn_en_US,
           symbol.name());
     }
   }

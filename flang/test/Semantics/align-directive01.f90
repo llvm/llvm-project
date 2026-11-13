@@ -6,15 +6,15 @@
 
 module m
   !dir$ align(64) :: ok_module
-  !WARNING: !DIR$ ALIGN on 'ok_module' is not yet honored by this compiler [-Wignored-directive]
+  !WARNING: !DIR$ ALIGN on 'ok_module' is not yet implemented and was ignored [-Wignored-directive]
   real :: ok_module(10)
   !dir$ align(32) :: ok_before, ok_after
-  !WARNING: !DIR$ ALIGN on 'ok_before' is not yet honored by this compiler [-Wignored-directive]
+  !WARNING: !DIR$ ALIGN on 'ok_before' is not yet implemented and was ignored [-Wignored-directive]
   real :: ok_before
-  !WARNING: !DIR$ ALIGN on 'ok_after' is not yet honored by this compiler [-Wignored-directive]
+  !WARNING: !DIR$ ALIGN on 'ok_after' is not yet implemented and was ignored [-Wignored-directive]
   real :: ok_after
   !dir$ attributes align : 16 :: ok_intel
-  !WARNING: !DIR$ ALIGN on 'ok_intel' is not yet honored by this compiler [-Wignored-directive]
+  !WARNING: !DIR$ ALIGN on 'ok_intel' is not yet implemented and was ignored [-Wignored-directive]
   real :: ok_intel(4)
   !ERROR: The alignment in !DIR$ ALIGN must be a power of two no greater than 268435456
   !dir$ align(24) :: bad_value
@@ -40,12 +40,30 @@ module m
   !dir$ align(32) :: twice
   !ERROR: 'twice' already has a different !DIR$ ALIGN alignment
   !dir$ align(64) :: twice
-  !WARNING: !DIR$ ALIGN on 'twice' is not yet honored by this compiler [-Wignored-directive]
+  !WARNING: !DIR$ ALIGN on 'twice' is not yet implemented and was ignored [-Wignored-directive]
   real :: twice
   !dir$ align(64) :: same_twice
   !dir$ align(64) :: same_twice
-  !WARNING: !DIR$ ALIGN on 'same_twice' is not yet honored by this compiler [-Wignored-directive]
+  !WARNING: !DIR$ ALIGN on 'same_twice' is not yet implemented and was ignored [-Wignored-directive]
   real :: same_twice
+  ! Among the components of a derived type, the directive names a component
+  ! that is already declared; no component is supported yet.
+  type t
+    !ERROR: !DIR$ ALIGN is not supported for component 'comp', which is neither ALLOCATABLE nor POINTER
+    real :: comp(8)
+    !dir$ align(64) :: comp
+    !ERROR: !DIR$ ALIGN is not yet supported for ALLOCATABLE or POINTER 'acomp'
+    real, allocatable :: acomp(:)
+    !dir$ align(64) :: acomp
+    !ERROR: 'later' must be a previously declared component of this derived type to be aligned with !DIR$ ALIGN
+    !dir$ align(64) :: later
+    real :: later
+    !ERROR: 'ok_module' must be a previously declared component of this derived type to be aligned with !DIR$ ALIGN
+    !dir$ align(64) :: ok_module
+    procedure(), pointer, nopass :: pcomp
+    !ERROR: 'pcomp' must be a variable to be aligned with !DIR$ ALIGN
+    !dir$ align(64) :: pcomp
+  end type
   !ERROR: 'sub' must be a variable to be aligned with !DIR$ ALIGN
   !dir$ align(64) :: sub
 contains
@@ -63,7 +81,7 @@ contains
     common /blk/ c1
     equivalence (e1, e2)
     !dir$ align(64) :: h
-    !WARNING: !DIR$ ALIGN on 'h' is not yet honored by this compiler [-Wignored-directive]
+    !WARNING: !DIR$ ALIGN on 'h' is not yet implemented and was ignored [-Wignored-directive]
     real :: h(10)
     h = 0.0
     !ERROR: !DIR$ ALIGN directive must appear in the specification part

@@ -2,9 +2,9 @@
 ! RUN: %flang_fc1 -fsyntax-only -Werror -Wno-ignored-directive %s
 ! RUN: %flang_fc1 -fsyntax-only -w %s
 ! Until lowering honors !DIR$ ALIGN, every object named by an accepted
-! directive gets exactly one "not yet honored" warning, forms the parser does
-! not recognize as ALIGN keep the unrecognized-directive warning, nothing is an
-! error, and both warnings belong to -Wignored-directive.
+! directive gets exactly one "not yet implemented" warning, forms the parser
+! does not recognize as ALIGN keep the unrecognized-directive warning, nothing
+! is an error, and both warnings belong to -Wignored-directive.
 
 subroutine s(n)
   integer :: n
@@ -30,10 +30,10 @@ subroutine s(n)
   !dir$ align
   ! !DEC$ lines are plain comments.
   !dec$ attributes align : 64 :: a
-  !WARNING: !DIR$ ALIGN on 'a' is not yet honored by this compiler [-Wignored-directive]
-  !WARNING: !DIR$ ALIGN on 'b' is not yet honored by this compiler [-Wignored-directive]
-  !WARNING: !DIR$ ALIGN on 'c' is not yet honored by this compiler [-Wignored-directive]
-  !WARNING: !DIR$ ALIGN on 'd' is not yet honored by this compiler [-Wignored-directive]
+  !WARNING: !DIR$ ALIGN on 'a' is not yet implemented and was ignored [-Wignored-directive]
+  !WARNING: !DIR$ ALIGN on 'b' is not yet implemented and was ignored [-Wignored-directive]
+  !WARNING: !DIR$ ALIGN on 'c' is not yet implemented and was ignored [-Wignored-directive]
+  !WARNING: !DIR$ ALIGN on 'd' is not yet implemented and was ignored [-Wignored-directive]
   real :: a(n), b(n), c, d(10), e
   common /cb/ e
 end subroutine
