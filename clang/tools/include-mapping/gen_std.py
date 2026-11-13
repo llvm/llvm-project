@@ -213,13 +213,14 @@ def GetCCompatibilitySymbols(symbol):
         return []
 
     # Introduce two more entries, both in the global namespace, one using the
-    # C++-compat header and another using the C header.
+    # C header and another using the C++-compat header. Only the C header is
+    # guaranteed to place these symbols in the global namespace, so prefer it.
     results = []
+    c_header = "<" + header[2:-1] + ".h>"  # <cstdio> => <stdio.h>
+    results.append(cppreference_parser.Symbol(symbol.name, None, [c_header]))
     if symbol.namespace is not None:
         # avoid printing duplicated entries, for C macros!
         results.append(cppreference_parser.Symbol(symbol.name, None, [header]))
-    c_header = "<" + header[2:-1] + ".h>"  # <cstdio> => <stdio.h>
-    results.append(cppreference_parser.Symbol(symbol.name, None, [c_header]))
     return results
 
 

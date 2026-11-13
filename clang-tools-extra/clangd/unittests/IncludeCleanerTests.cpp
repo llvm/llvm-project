@@ -745,6 +745,54 @@ TEST(IncludeCleaner, DifferentHeaderSameSpelling) {
   EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
   EXPECT_THAT(Findings.MissingIncludes, IsEmpty());
 }
+
+TEST(IncludeCleaner, CCompatGlobalVsStd) {
+  Annotations MainFile(R"cpp(
+#include "header.h"
+$global_size_t[[size_t]] a;
+std::$std_size_t[[size_t]] b;
+$global_uint32[[uint32_t]] c;
+std::$std_uint32[[uint32_t]] d;
+)cpp");
+  TestTU TU;
+  TU.Code = MainFile.code();
+  TU.AdditionalFiles["stddef.h"] = guard("typedef unsigned long size_t;");
+  TU.AdditionalFiles["cstddef"] =
+      guard("#include <stddef.h>\nnamespace std { using ::size_t; }");
+  TU.AdditionalFiles["stdint.h"] = guard("typedef unsigned int uint32_t;");
+  TU.AdditionalFiles["cstdint"] =
+      guard("#include <stdint.h>\nnamespace std { using ::uint32_t; }");
+  TU.AdditionalFiles["header.h"] =
+      guard("#include <stddef.h>\n#include <cstddef>\n"
+            "#include <stdint.h>\n#include <cstdint>");
+  TU.ExtraArgs = {"-isystem", testRoot()};
+
+  ParsedAST AST = TU.build();
+  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
+  Findings.UnusedIncludes.clear();
+  EXPECT_THAT(
+      issueIncludeCleanerDiagnostics(AST, TU.Code, Findings, MockFS()),
+      UnorderedElementsAre(
+          AllOf(Diag(MainFile.range("global_size_t"),
+                     "No header providing \"size_t\" is directly included"),
+                withFix({FixMessage("#include <stddef.h>"),
+                         FixMessage("add all missing includes")})),
+          AllOf(
+              Diag(MainFile.range("std_size_t"),
+                   "No header providing \"std::size_t\" is directly included"),
+              withFix({FixMessage("#include <cstddef>"),
+                       FixMessage("add all missing includes")})),
+          AllOf(Diag(MainFile.range("global_uint32"),
+                     "No header providing \"uint32_t\" is directly included"),
+                withFix({FixMessage("#include <stdint.h>"),
+                         FixMessage("add all missing includes")})),
+          AllOf(
+              Diag(
+                  MainFile.range("std_uint32"),
+                  "No header providing \"std::uint32_t\" is directly included"),
+              withFix({FixMessage("#include <cstdint>"),
+                       FixMessage("add all missing includes")}))));
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
