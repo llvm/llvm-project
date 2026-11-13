@@ -4,9 +4,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-p -verify-machineinstrs < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK,RV64 %s
 
-; When both P and V are enabled, fastcc must not pass P extension packed
-; vectors in RVV registers. They are passed in GPRs
-; when they are XLen wide (RV64 64-bit vectors), otherwise on the stack.
+;; P extension vectors are passed packed in GPRs. Falling back to stack when
+;; we run out of GPRs.
 
 define fastcc <4 x i8> @callee_v4i8(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-LABEL: callee_v4i8:
