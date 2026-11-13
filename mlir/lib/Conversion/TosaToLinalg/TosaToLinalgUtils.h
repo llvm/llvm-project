@@ -29,6 +29,11 @@ MatMulTOperands prepareMatMulOperands(PatternRewriter &rewriter, Location loc,
                                       Value a, Value b,
                                       RankedTensorType outputType,
                                       bool transposeB);
+
+Type getAccumulationType(Type requestedType);
+
+Value convertTensorElementType(PatternRewriter &rewriter, Location loc,
+                               Value input, RankedTensorType targetType);
 } // namespace tosa
 } // namespace mlir
 

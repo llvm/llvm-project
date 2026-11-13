@@ -1263,11 +1263,13 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
   auto elementTy = resultTy.getElementType();
   Value input = op->getOperand(0);
 
-  // Figure out the accType if needed
-  bool widenAccTy = std::is_same_v<OpTy, tosa::ReduceSumOp> &&
-                    isa<FloatType>(elementTy) &&
-                    cast<FloatType>(elementTy).isBF16();
-  Type accTy = widenAccTy ? rewriter.getF32Type() : elementTy;
+  // Accumulate BF16 sums and products in FP32.
+  constexpr bool isArithmeticReduction =
+      std::is_same_v<OpTy, tosa::ReduceSumOp> ||
+      std::is_same_v<OpTy, tosa::ReduceProductOp>;
+  Type accTy =
+      isArithmeticReduction ? getAccumulationType(elementTy) : elementTy;
+  bool widenAccTy = accTy != elementTy;
 
   SmallVector<int64_t> reduceShape;
   SmallVector<Value> dynDims;
@@ -1342,7 +1344,7 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
         std::array<Value, 2> binaryArgs{
             blockArgs[0], isNanIgnoreMode ? blockArgs[2] : blockArgs[1]};
 
-        // If reduction type differs then extend (applicable to reduce_sum)
+        // If reduction type differs then extend
         if (binaryArgs[0].getType() != accTy)
           binaryArgs[0] = arith::ExtFOp::create(
               nestedBuilder, nestedLoc, TypeRange{accTy},
@@ -1585,14 +1587,69 @@ MatMulTOperands mlir::tosa::prepareMatMulOperands(PatternRewriter &rewriter,
 
   Value zero = arith::ConstantOp::create(
       rewriter, loc, rewriter.getZeroAttr(outputType.getElementType()));
-  Value emptyTensor = tensor::EmptyOp::create(
-      rewriter, loc, outputType.getShape(), outputType.getElementType(),
-      condenseValues(dynamicDims));
+  Value emptyTensor = tensor::EmptyOp::create(rewriter, loc, outputType,
+                                              condenseValues(dynamicDims));
   Value zeroTensor = linalg::FillOp::create(rewriter, loc, ValueRange{zero},
                                             ValueRange{emptyTensor})
                          .result();
 
   return {a, b, zeroTensor};
+}
+
+Type mlir::tosa::getAccumulationType(Type requestedType) {
+  if (requestedType.isBF16())
+    return Float32Type::get(requestedType.getContext());
+  return requestedType;
+}
+
+/// Convert between BF16 and FP32 without changing shape.
+Value mlir::tosa::convertTensorElementType(PatternRewriter &rewriter,
+                                           Location loc, Value input,
+                                           RankedTensorType targetType) {
+  auto inputType = cast<RankedTensorType>(input.getType());
+
+  if (inputType == targetType)
+    return input;
+
+  assert(inputType.getShape() == targetType.getShape() &&
+         "element conversion must preserve shape");
+  assert(inputType.getEncoding() == targetType.getEncoding() &&
+         "element conversion must preserve encoding");
+
+  Type inputElementType = inputType.getElementType();
+  Type targetElementType = targetType.getElementType();
+
+  assert(((inputElementType.isBF16() && targetElementType.isF32()) ||
+          (inputElementType.isF32() && targetElementType.isBF16())) &&
+         "expected BF16-to-FP32 or FP32-to-BF16 conversion");
+
+  SmallVector<Value> dynamicDims;
+  for (int64_t dim = 0; dim < targetType.getRank(); ++dim) {
+    if (targetType.isDynamicDim(dim))
+      dynamicDims.push_back(tensor::DimOp::create(rewriter, loc, input, dim));
+  }
+
+  auto empty = tensor::EmptyOp::create(rewriter, loc, targetType, dynamicDims);
+  auto identityMap = rewriter.getMultiDimIdentityMap(targetType.getRank());
+
+  auto converted = linalg::GenericOp::create(
+      rewriter, loc, targetType, ValueRange{input},
+      ValueRange{empty.getResult()},
+      ArrayRef<AffineMap>{identityMap, identityMap},
+      getNParallelLoopsAttrs(targetType.getRank()),
+      [&](OpBuilder &builder, Location nestedLoc, ValueRange args) {
+        Value element;
+        if (inputElementType.isBF16()) {
+          element = arith::ExtFOp::create(builder, nestedLoc, targetElementType,
+                                          args[0], arith::FastMathFlagsAttr{});
+        } else {
+          element = arith::TruncFOp::create(builder, nestedLoc,
+                                            targetElementType, args[0]);
+        }
+        linalg::YieldOp::create(builder, nestedLoc, element);
+      });
+
+  return converted.getResult(0);
 }
 
 namespace {
