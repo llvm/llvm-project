@@ -5566,7 +5566,7 @@ bool AMDGPUAsmParser::validateMonitorSleep(const MCInst &Inst,
   int ImmIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::simm16);
   if (Inst.getOperand(ImmIdx).getImm() & 0x8000) {
     Error(getOperandLoc(Operands, ImmIdx),
-          "sleep forever is unsuported on the target");
+          "sleep forever is unsupported on the target");
     return false;
   }
 
