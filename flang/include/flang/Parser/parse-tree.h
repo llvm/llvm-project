@@ -1992,9 +1992,37 @@ struct AllocateCoarraySpec {
 // R932 allocation ->
 //        allocate-object [( allocate-shape-spec-list )]
 //        [lbracket allocate-coarray-spec rbracket]
+// F2023 R933 adds a second form, in which the bounds of all of the dimensions
+// are given by rank-1 integer array expressions:
+//        allocate-object ( [lower-bounds-expr :] upper-bounds-expr )
+//        [lbracket allocate-coarray-spec rbracket]
+// (The standard's text of that rule omits the allocate-object, which is a
+// typo.)  Unlike R815 array-spec, the standard has no named rule for the
+// bounds form, so these are used here:
+//   allocation ->
+//        allocate-object [( allocate-shape-spec-list-or-bounds )]
+//        [lbracket allocate-coarray-spec rbracket]
+//   allocate-shape-spec-list-or-bounds ->
+//        allocate-shape-spec-list | allocate-shape-bounds-spec
+//   allocate-shape-bounds-spec -> [lower-bounds-expr :] upper-bounds-expr
+// F2023 R937 lower-bounds-expr -> int-expr
+// F2023 R939 upper-bounds-expr -> int-expr
+// The two forms can't be distinguished without knowing the ranks of the
+// bounds, so the parser always produces an allocate-shape-spec-list, and
+// expression semantics rewrites it into an allocate-shape-bounds-spec.
+struct AllocateShapeBoundsSpec {
+  TUPLE_CLASS_BOILERPLATE(AllocateShapeBoundsSpec);
+  std::tuple<std::optional<IntExpr>, IntExpr> t;
+};
+
+struct AllocateShapeSpecListOrBounds {
+  UNION_CLASS_BOILERPLATE(AllocateShapeSpecListOrBounds);
+  std::variant<std::list<AllocateShapeSpec>, AllocateShapeBoundsSpec> u;
+};
+
 struct Allocation {
   TUPLE_CLASS_BOILERPLATE(Allocation);
-  std::tuple<AllocateObject, std::list<AllocateShapeSpec>,
+  std::tuple<AllocateObject, AllocateShapeSpecListOrBounds,
       std::optional<AllocateCoarraySpec>>
       t;
 };

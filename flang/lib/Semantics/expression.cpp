@@ -6358,6 +6358,48 @@ bool CheckMisparsedArrayElement(
 
 ExprChecker::ExprChecker(SemanticsContext &context) : context_{context} {}
 
+// F2023 R933: the parenthesized bounds of an allocation are either an
+// allocate-shape-spec-list of scalar bounds, or a single
+// [lower-bounds-expr :] upper-bounds-expr whose bounds are rank-1 integer
+// arrays (either of which may also be a scalar that is broadcast).  The two
+// can't be told apart without knowing the ranks of the bounds, so the parser
+// always produces an allocate-shape-spec-list.  When that list has a single
+// allocate-shape-spec with an array-valued bound, rewrite it here into an
+// AllocateShapeBoundsSpec.  This can't be left to RewriteParseTree(), which
+// runs before expressions are analyzed, and it must be done before the bounds
+// are analyzed as scalar-int-exprs, which would reject the arrays.
+bool ExprChecker::Pre(const parser::AllocateShapeSpecListOrBounds &x) {
+  const auto *shapeSpecs{
+      std::get_if<std::list<parser::AllocateShapeSpec>>(&x.u)};
+  if (shapeSpecs && shapeSpecs->size() == 1) {
+    // Analyze the bare expressions to get their ranks; the results are cached
+    // in the parse tree, and their types are checked when the bounds are
+    // visited below.
+    auto isArray{[&](const parser::BoundExpr &bound) {
+      auto expr{exprAnalyzer_.Analyze(parser::UnwrapRef<parser::Expr>(bound))};
+      return expr && expr->Rank() > 0;
+    }};
+    const auto &shapeSpec{shapeSpecs->front()};
+    const auto &lower{std::get<0>(shapeSpec.t)};
+    bool lowerIsArray{lower && isArray(*lower)};
+    bool upperIsArray{isArray(std::get<1>(shapeSpec.t))};
+    if (lowerIsArray || upperIsArray) {
+      auto &mutableX{const_cast<parser::AllocateShapeSpecListOrBounds &>(x)};
+      auto &mutableShapeSpec{
+          std::get<std::list<parser::AllocateShapeSpec>>(mutableX.u).front()};
+      std::optional<parser::IntExpr> lowerBounds;
+      if (auto &mutableLower{std::get<0>(mutableShapeSpec.t)}) {
+        lowerBounds.emplace(std::move(mutableLower->thing));
+      }
+      parser::IntExpr upperBounds{
+          std::move(std::get<1>(mutableShapeSpec.t).thing)};
+      mutableX.u = parser::AllocateShapeBoundsSpec{
+          std::move(lowerBounds), std::move(upperBounds)};
+    }
+  }
+  return true; // analyze the bounds, whichever form they have
+}
+
 bool ExprChecker::Pre(const parser::DataStmtObject &obj) {
   exprAnalyzer_.set_inDataStmtObject(true);
   return true;
