@@ -8839,17 +8839,14 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
   if (!GEP)
     return false;
 
-  // Check that the indexed size is also the same.
-  unsigned Size = DL.getTypeStoreSize(GEP->getResultElementType());
-
   // Multiply the start by the size of the struct, and add the base pointer.
-  Type *Int8Ty = IntegerType::getInt8Ty(ITy->getContext());
+  unsigned Size = DL.getTypeAllocSize(GEP->getSourceElementType());
   IRBuilder<> Builder(PreHeader->getTerminator());
   Value *StructSize = ConstantInt::get(ITy, Size);
   Value *SizeSplat =
       Builder.CreateVectorSplat(VTy->getElementCount(), StructSize);
   Value *NewStart = Builder.CreateMul(Start, SizeSplat);
-  NewStart = Builder.CreateGEP(Int8Ty, Base, NewStart);
+  NewStart = Builder.CreatePtrAdd(Base, NewStart);
 
   // Create a new step based on the total size of all struct addresses per
   // iteration.
@@ -8860,7 +8857,7 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
   Builder.SetInsertPoint(Phi);
   PHINode *NewPhi = Builder.CreatePHI(GEP->getType(), 2, "vec.lsr.phi");
   Builder.SetInsertPoint(cast<Instruction>(Step));
-  StructStride = Builder.CreateGEP(Int8Ty, NewPhi, StructStride);
+  StructStride = Builder.CreatePtrAdd(NewPhi, StructStride);
 
   // Set up the new PHI.
   NewPhi->addIncoming(NewStart, PreHeader);

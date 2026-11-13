@@ -573,4 +573,181 @@ exit:
   ret void
 }
 
+;; Padding on element and struct, expected size 4 bytes.
+%struct.padded.24 = type { i24 }
+
+define void @init_array_of_ptrs_to_padded_i24_structs(ptr noalias %arc_ptrs, ptr %arc_new, i64 %num_arcs) #0 {
+; CHECK-LABEL: define void @init_array_of_ptrs_to_padded_i24_structs(
+; CHECK-SAME: ptr noalias [[ARC_PTRS:%.*]], ptr [[ARC_NEW:%.*]], i64 [[NUM_ARCS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[VSCALE:%.*]] = tail call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[STEP:%.*]] = shl nuw nsw i64 [[VSCALE]], 1
+; CHECK-NEXT:    [[DOTNOT:%.*]] = sub nsw i64 0, [[STEP]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[DOTNOT]], [[NUM_ARCS]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <vscale x 2 x i64> [[TMP0]], splat (i64 4)
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[ARC_NEW]], <vscale x 2 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[STEP]], 4
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP3]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_LSR_PHI:%.*]] = phi <vscale x 2 x ptr> [ [[TMP2]], %[[ENTRY]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds nuw [[STRUCT_PADDED:%.*]], ptr [[ARC_NEW]], <vscale x 2 x i64> poison
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARC_PTRS]], i64 [[INDEX]]
+; CHECK-NEXT:    store <vscale x 2 x ptr> [[VEC_LSR_PHI]], ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP5]], 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7]] = getelementptr i8, <vscale x 2 x ptr> [[VEC_LSR_PHI]], <vscale x 2 x i64> [[DOTSPLAT]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %vscale = tail call i64 @llvm.vscale.i64()
+  %step = shl nuw nsw i64 %vscale, 1
+  %min.iters.check = icmp samesign ugt i64 %step, %num_arcs
+  %.not = sub nsw i64 0, %step
+  %n.vec = and i64 %.not, %num_arcs
+  %2 = tail call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+  %broadcast.splatinsert = insertelement <vscale x 2 x i64> poison, i64 %step, i64 0
+  %broadcast.splat = shufflevector <vscale x 2 x i64> %broadcast.splatinsert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %vec.ind = phi <vscale x 2 x i64> [ %2, %entry ], [ %vec.ind.next, %vector.body ]
+  %wide.gep = getelementptr inbounds nuw %struct.padded.24, ptr %arc_new, <vscale x 2 x i64> %vec.ind
+  %3 = getelementptr inbounds nuw [8 x i8], ptr %arc_ptrs, i64 %index
+  store <vscale x 2 x ptr> %wide.gep, ptr %3, align 8
+  %index.next = add nuw i64 %index, %step
+  %vec.ind.next = add nuw nsw <vscale x 2 x i64> %vec.ind, %broadcast.splat
+  %4 = icmp eq i64 %index.next, %n.vec
+  br i1 %4, label %middle.block, label %vector.body
+
+middle.block:
+  ret void
+}
+
+;; Packed struct but padded element, expected size 4 bytes.
+%struct.packed.i24 = type <{ i24 }>
+
+define void @init_array_of_ptrs_to_packed_i24_structs(ptr noalias %arc_ptrs, ptr %arc_new, i64 %num_arcs) #0 {
+; CHECK-LABEL: define void @init_array_of_ptrs_to_packed_i24_structs(
+; CHECK-SAME: ptr noalias [[ARC_PTRS:%.*]], ptr [[ARC_NEW:%.*]], i64 [[NUM_ARCS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[VSCALE:%.*]] = tail call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[STEP:%.*]] = shl nuw nsw i64 [[VSCALE]], 1
+; CHECK-NEXT:    [[DOTNOT:%.*]] = sub nsw i64 0, [[STEP]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[DOTNOT]], [[NUM_ARCS]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <vscale x 2 x i64> [[TMP0]], splat (i64 4)
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[ARC_NEW]], <vscale x 2 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[STEP]], 4
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP3]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_LSR_PHI:%.*]] = phi <vscale x 2 x ptr> [ [[TMP2]], %[[ENTRY]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds nuw [[STRUCT_PACKED_I24:%.*]], ptr [[ARC_NEW]], <vscale x 2 x i64> poison
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARC_PTRS]], i64 [[INDEX]]
+; CHECK-NEXT:    store <vscale x 2 x ptr> [[VEC_LSR_PHI]], ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP5]], 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7]] = getelementptr i8, <vscale x 2 x ptr> [[VEC_LSR_PHI]], <vscale x 2 x i64> [[DOTSPLAT]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %vscale = tail call i64 @llvm.vscale.i64()
+  %step = shl nuw nsw i64 %vscale, 1
+  %min.iters.check = icmp samesign ugt i64 %step, %num_arcs
+  %.not = sub nsw i64 0, %step
+  %n.vec = and i64 %.not, %num_arcs
+  %2 = tail call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+  %broadcast.splatinsert = insertelement <vscale x 2 x i64> poison, i64 %step, i64 0
+  %broadcast.splat = shufflevector <vscale x 2 x i64> %broadcast.splatinsert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %vec.ind = phi <vscale x 2 x i64> [ %2, %entry ], [ %vec.ind.next, %vector.body ]
+  %wide.gep = getelementptr inbounds nuw %struct.packed.i24, ptr %arc_new, <vscale x 2 x i64> %vec.ind
+  %3 = getelementptr inbounds nuw [8 x i8], ptr %arc_ptrs, i64 %index
+  store <vscale x 2 x ptr> %wide.gep, ptr %3, align 8
+  %index.next = add nuw i64 %index, %step
+  %vec.ind.next = add nuw nsw <vscale x 2 x i64> %vec.ind, %broadcast.splat
+  %4 = icmp eq i64 %index.next, %n.vec
+  br i1 %4, label %middle.block, label %vector.body
+
+middle.block:
+  ret void
+}
+
+;; Packed struct, two smaller legal types equivalent in size to i24 together, expected size 3 bytes.
+%struct.packed.i8.i16 = type <{ i8, i16 }>
+
+define void @init_array_of_ptrs_to_packed_i8_i16_structs(ptr noalias %arc_ptrs, ptr %arc_new, i64 %num_arcs) #0 {
+; CHECK-LABEL: define void @init_array_of_ptrs_to_packed_i8_i16_structs(
+; CHECK-SAME: ptr noalias [[ARC_PTRS:%.*]], ptr [[ARC_NEW:%.*]], i64 [[NUM_ARCS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[VSCALE:%.*]] = tail call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[STEP:%.*]] = shl nuw nsw i64 [[VSCALE]], 1
+; CHECK-NEXT:    [[DOTNOT:%.*]] = sub nsw i64 0, [[STEP]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[DOTNOT]], [[NUM_ARCS]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <vscale x 2 x i64> [[TMP0]], splat (i64 3)
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[ARC_NEW]], <vscale x 2 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[STEP]], 3
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP3]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_LSR_PHI:%.*]] = phi <vscale x 2 x ptr> [ [[TMP2]], %[[ENTRY]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds nuw [[STRUCT_PACKED_I8_I16:%.*]], ptr [[ARC_NEW]], <vscale x 2 x i64> poison
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARC_PTRS]], i64 [[INDEX]]
+; CHECK-NEXT:    store <vscale x 2 x ptr> [[VEC_LSR_PHI]], ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP5]], 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7]] = getelementptr i8, <vscale x 2 x ptr> [[VEC_LSR_PHI]], <vscale x 2 x i64> [[DOTSPLAT]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %vscale = tail call i64 @llvm.vscale.i64()
+  %step = shl nuw nsw i64 %vscale, 1
+  %min.iters.check = icmp samesign ugt i64 %step, %num_arcs
+  %.not = sub nsw i64 0, %step
+  %n.vec = and i64 %.not, %num_arcs
+  %2 = tail call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+  %broadcast.splatinsert = insertelement <vscale x 2 x i64> poison, i64 %step, i64 0
+  %broadcast.splat = shufflevector <vscale x 2 x i64> %broadcast.splatinsert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %vec.ind = phi <vscale x 2 x i64> [ %2, %entry ], [ %vec.ind.next, %vector.body ]
+  %wide.gep = getelementptr inbounds nuw %struct.packed.i8.i16, ptr %arc_new, <vscale x 2 x i64> %vec.ind
+  %3 = getelementptr inbounds nuw [8 x i8], ptr %arc_ptrs, i64 %index
+  store <vscale x 2 x ptr> %wide.gep, ptr %3, align 8
+  %index.next = add nuw i64 %index, %step
+  %vec.ind.next = add nuw nsw <vscale x 2 x i64> %vec.ind, %broadcast.splat
+  %4 = icmp eq i64 %index.next, %n.vec
+  br i1 %4, label %middle.block, label %vector.body
+
+middle.block:
+  ret void
+}
+
 attributes #0 = { nounwind vscale_range(1,16) "target-features"="+sve2" }
