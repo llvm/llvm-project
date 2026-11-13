@@ -68,6 +68,7 @@ body:             |
     %sbfx:gpr(i32) = G_SBFX %copy, %cst1, %cst2
     $w0 = COPY %sbfx
     RET_ReallyLR implicit $w0
+...
 ---
 name:            sbfx_s32_10_5
 legalized:       true
@@ -87,6 +88,7 @@ body:             |
     %sbfx:gpr(i32) = G_SBFX %copy, %cst1, %cst2
     $w0 = COPY %sbfx
     RET_ReallyLR implicit $w0
+...
 ---
 name:            sbfx_s64_10_5
 legalized:       true
@@ -106,3 +108,4 @@ body:             |
     %sbfx:gpr(i64) = G_SBFX %copy, %cst1, %cst2
     $x0 = COPY %sbfx
     RET_ReallyLR implicit $x0
+...

@@ -203,4 +203,4 @@ body: |
   ; CHECK-NEXT: DBG_VALUE %0, $noreg
   ; CHECK-NEXT: CALL @use, %0
   ; CHECK-NEXT: RETURN implicit-def $arguments
----
+...
