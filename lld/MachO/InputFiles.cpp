@@ -184,8 +184,7 @@ static bool checkCompatibility(const InputFile *input) {
   return true;
 }
 
-template <class Header>
-static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
+template <class Header> static bool hasCompatArch(const Header *hdr) {
   uint32_t cpuType;
   std::tie(cpuType, std::ignore) = getCPUTypeFromArchitecture(config->arch());
 
@@ -193,10 +192,15 @@ static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
   // needs a newer CPU, so neither takes it.
   uint32_t subtype = hdr->cpusubtype & ~CPU_SUBTYPE_MASK;
   bool isArm64e = subtype == CPU_SUBTYPE_ARM64E;
-  if (hdr->cputype != cpuType ||
-      (is_contained({AK_arm64, AK_arm64e}, config->arch()) &&
-       (subtype == CPU_SUBTYPE_ARM64E_X1 ||
-        isArm64e != (config->arch() == AK_arm64e)))) {
+  return hdr->cputype == cpuType &&
+         (!is_contained({AK_arm64, AK_arm64e}, config->arch()) ||
+          (subtype != CPU_SUBTYPE_ARM64E_X1 &&
+           isArm64e == (config->arch() == AK_arm64e)));
+}
+
+template <class Header>
+static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
+  if (!hasCompatArch(hdr)) {
     Architecture arch =
         getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
     auto msg = config->errorForArchMismatch
@@ -712,7 +716,8 @@ static bool shouldIgnoreLabel(const InputSection *isec, StringRef name) {
 template <class NList>
 static macho::Symbol *createDefined(const NList &sym, StringRef name,
                                     InputSection *isec, uint64_t value,
-                                    uint64_t size, bool forceHidden) {
+                                    uint64_t size, bool forceHidden,
+                                    macho::Symbol *known = nullptr) {
   // Symbol scope is determined by sym.n_type & (N_EXT | N_PEXT):
   // N_EXT: Global symbols. These go in the symbol table during the link,
   //        and also in the export table of the output so that the dynamic
@@ -777,7 +782,7 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
     return symtab->addDefined(
         name, isec->getFile(), isec, value, size, sym.n_desc & N_WEAK_DEF,
         isPrivateExtern, sym.n_desc & REFERENCED_DYNAMICALLY,
-        sym.n_desc & N_NO_DEAD_STRIP, isWeakDefCanBeHidden, isCold);
+        sym.n_desc & N_NO_DEAD_STRIP, isWeakDefCanBeHidden, isCold, known);
   }
   bool includeInSymtab = !isPrivateLabel(name) && !isEhFrameSection(isec);
   auto *defined = make<Defined>(
@@ -922,8 +927,8 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
                 " at misaligned offset");
           continue;
         }
-        symbols[symIndex] =
-            createDefined(sym, name, isec, 0, isec->getSize(), forceHidden);
+        symbols[symIndex] = createDefined(sym, name, isec, 0, isec->getSize(),
+                                          forceHidden, symbols[symIndex]);
       }
       continue;
     }
@@ -986,8 +991,9 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       if (!subsectionsViaSymbols || symbolOffset == 0 || isInteriorAltEntry ||
           !isa<ConcatInputSection>(isec)) {
         isec->hasAltEntry = symbolOffset != 0;
-        symbols[symIndex] = createDefined(sym, name, isec, symbolOffset,
-                                          symbolSize, forceHidden);
+        symbols[symIndex] =
+            createDefined(sym, name, isec, symbolOffset, symbolSize,
+                          forceHidden, symbols[symIndex]);
         continue;
       }
       auto *concatIsec = cast<ConcatInputSection>(isec);
@@ -1005,8 +1011,9 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
 
       // By construction, the symbol will be at offset zero in the new
       // subsection.
-      symbols[symIndex] = createDefined(sym, name, nextIsec, /*value=*/0,
-                                        symbolSize, forceHidden);
+      symbols[symIndex] =
+          createDefined(sym, name, nextIsec, /*value=*/0, symbolSize,
+                        forceHidden, symbols[symIndex]);
       // TODO: ld64 appears to preserve the original alignment as well as each
       // subsection's offset from the last aligned address. We should consider
       // emulating that behavior.
@@ -1154,9 +1161,10 @@ template <class LP> void ObjFile::parseLazy() {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   auto *hdr = reinterpret_cast<const Header *>(mb.getBufferStart());
 
+  compatArch =
+      compatArch && (archiveName.empty() ? compatWithTargetArch(this, hdr)
+                                         : hasCompatArch(hdr));
   if (!compatArch)
-    return;
-  if (!(compatArch = compatWithTargetArch(this, hdr)))
     return;
 
   const load_command *cmd = findCommand(hdr, LC_SYMTAB);
@@ -1172,8 +1180,6 @@ template <class LP> void ObjFile::parseLazy() {
       // TODO: Bound checking
       StringRef name = strtab + sym.n_strx;
       symbols[i] = symtab->addLazyObject(name, *this);
-      if (!lazy)
-        break;
     }
   }
 }
@@ -2344,40 +2350,23 @@ ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f, bool forceHidden)
 void ArchiveFile::addLazySymbols() {
   // Avoid calling getMemoryBufferRef() on zero-symbol archive
   // since that crashes.
-  if (file->isEmpty() ||
-      (file->hasSymbolTable() && file->getNumberOfSymbols() == 0))
+  if (file->isEmpty())
     return;
 
-  if (!file->hasSymbolTable()) {
-    // No index, treat each child as a lazy object file.
-    Error e = Error::success();
-    for (const object::Archive::Child &c : file->children(e)) {
-      // Check `seen` but don't insert so a future eager load can still happen.
-      if (seen.contains(c.getChildOffset()))
-        continue;
-      if (!seenLazy.insert(c.getChildOffset()).second)
-        continue;
-      auto file = childToObjectFile(c, /*lazy=*/true);
-      if (!file)
-        error(toString(this) +
-              ": couldn't process child: " + toString(file.takeError()));
-      inputFiles.insert(*file);
-    }
-    if (e)
-      error(toString(this) +
-            ": Archive::children failed: " + toString(std::move(e)));
-    return;
-  }
-
-  Error err = Error::success();
-  auto child = file->child_begin(err);
-  // Ignore the I/O error here - will be reported later.
-  if (!err) {
-    Expected<MemoryBufferRef> mbOrErr = child->getMemoryBufferRef();
-    if (!mbOrErr) {
-      llvm::consumeError(mbOrErr.takeError());
-    } else {
-      if (identify_magic(mbOrErr->getBuffer()) == file_magic::macho_object) {
+  // Check the target architecture once, against the first member, so that a
+  // wholly incompatible archive is reported against the archive rather than
+  // against each of its members.
+  {
+    Error err = Error::success();
+    auto child = file->child_begin(err);
+    // Ignore the I/O error here - will be reported later. An archive with no
+    // members at all has nothing to check against.
+    if (!err && child != file->child_end()) {
+      Expected<MemoryBufferRef> mbOrErr = child->getMemoryBufferRef();
+      if (!mbOrErr) {
+        llvm::consumeError(mbOrErr.takeError());
+      } else if (identify_magic(mbOrErr->getBuffer()) ==
+                 file_magic::macho_object) {
         if (target->wordSize == 8)
           compatArch = compatWithTargetArch(
               this, reinterpret_cast<const LP64::mach_header *>(
@@ -2392,8 +2381,42 @@ void ArchiveFile::addLazySymbols() {
     }
   }
 
-  for (const object::Archive::Symbol &sym : file->symbols())
-    symtab->addLazyArchive(sym.getName(), this, sym);
+  llvm::DenseSet<uint64_t> unopenable;
+  Error e = Error::success();
+  for (const object::Archive::Child &c : file->children(e)) {
+    // Check `seen` but don't insert so a future eager load can still happen.
+    if (seen.contains(c.getChildOffset()))
+      continue;
+    if (!seenLazy.insert(c.getChildOffset()).second)
+      continue;
+    auto childFile = childToObjectFile(c, /*lazy=*/true);
+    if (!childFile) {
+      llvm::consumeError(childFile.takeError());
+      unopenable.insert(c.getChildOffset());
+      continue;
+    }
+    inputFiles.insert(*childFile);
+  }
+  if (e)
+    error(toString(this) +
+          ": Archive::children failed: " + toString(std::move(e)));
+
+  if (unopenable.empty())
+    return;
+  if (!file->hasSymbolTable()) {
+    error(toString(this) + ": couldn't process child of archive without a "
+                           "symbol index");
+    return;
+  }
+  for (const object::Archive::Symbol &sym : file->symbols()) {
+    Expected<object::Archive::Child> member = sym.getMember();
+    if (!member) {
+      llvm::consumeError(member.takeError());
+      continue;
+    }
+    if (unopenable.contains(member->getChildOffset()))
+      symtab->addLazyArchive(sym.getName(), this, sym);
+  }
 }
 
 static Expected<InputFile *>
@@ -2420,12 +2443,12 @@ loadArchiveMember(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
 Error ArchiveFile::fetch(const object::Archive::Child &c, StringRef reason) {
   if (!seen.insert(c.getChildOffset()).second)
     return Error::success();
-  auto file = childToObjectFile(c, /*lazy=*/false);
-  if (!file)
-    return file.takeError();
+  auto childFile = childToObjectFile(c, /*lazy=*/false);
+  if (!childFile)
+    return childFile.takeError();
 
-  inputFiles.insert(*file);
-  printArchiveMemberLoad(reason, *file);
+  inputFiles.insert(*childFile);
+  printArchiveMemberLoad(reason, *childFile);
   return Error::success();
 }
 
@@ -2564,21 +2587,37 @@ std::string macho::replaceThinLTOSuffix(StringRef path) {
   return std::string(path);
 }
 
+static std::vector<ObjFile *> pendingExtracts;
+
 void macho::extract(InputFile &file, StringRef reason) {
   if (!file.lazy)
     return;
   file.lazy = false;
 
   printArchiveMemberLoad(reason, &file);
+
+  // Bitcode files stay eager. Which bitcode files LTO compiles, and which
+  // symbol it treats as prevailing, depends on the order they are parsed in
+  // relative to the rest of resolution -- see the "pending prevailing symbol"
+  // diagnostic in SymbolTable::addDefined().
   if (auto *bitcode = dyn_cast<BitcodeFile>(&file)) {
     bitcode->parse();
-  } else {
-    auto &f = cast<ObjFile>(file);
+    return;
+  }
+
+  pendingExtracts.push_back(&cast<ObjFile>(file));
+}
+
+void macho::parsePendingExtracts() {
+  // Parsing appends to pendingExtracts, so index rather than iterate.
+  for (size_t i = 0; i < pendingExtracts.size(); ++i) {
+    ObjFile &f = *pendingExtracts[i];
     if (target->wordSize == 8)
       f.parse<LP64>();
     else
       f.parse<ILP32>();
   }
+  pendingExtracts.clear();
 }
 
 template void ObjFile::parse<LP64>();

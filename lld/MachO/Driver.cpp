@@ -691,6 +691,7 @@ void macho::parseLCLinkerOption(
 }
 
 void macho::resolveLCLinkerOptions() {
+  parsePendingExtracts();
   while (!unprocessedLCLinkerOptions.empty()) {
     SmallVector<StringRef> LCLinkerOptions(unprocessedLCLinkerOptions);
     unprocessedLCLinkerOptions.clear();
@@ -744,6 +745,8 @@ void macho::resolveLCLinkerOptions() {
                          file.isReexport);
       checkAndCacheFramework(inputFile, file.path);
     }
+
+    parsePendingExtracts();
   }
 }
 
@@ -1664,9 +1667,11 @@ static void prepareObjCStubs() {
     // here: live stubs reference them later in ObjCStubsSection::addEntry(),
     // and adding them here would mark real dylib symbols referenced before dead
     // stripping.
-    if (needsEarlyUndefinedClassRef)
+    if (needsEarlyUndefinedClassRef) {
       classSym = symtab->addUndefined(names->classSymbolName, /*file=*/nullptr,
                                       /*isWeakRef=*/false);
+      parsePendingExtracts();
+    }
     in.objcStubs->recordClassSymbol(sym, classSym);
   }
 
@@ -1704,6 +1709,7 @@ static void referenceStubBinder() {
   // StubHelperSection::setUp() adds a reference and errors out if
   // dyld_stub_binder doesn't exist in case it is actually needed.
   symtab->addUndefined("dyld_stub_binder", /*file=*/nullptr, /*isWeak=*/false);
+  parsePendingExtracts();
 }
 
 static void createAliases() {
@@ -2479,6 +2485,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
     initLLVM(); // must be run before any call to addFile()
     createFiles(args);
+    parsePendingExtracts();
 
     // Now that all dylibs have been loaded, search for those that should be
     // re-exported.
@@ -2524,6 +2531,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     handleExplicitExports();
 
     bool didCompileBitcodeFiles = compileBitcodeFiles();
+    parsePendingExtracts();
 
     resolveLCLinkerOptions();
 
