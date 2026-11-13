@@ -41,7 +41,6 @@ libc_test(
         "//libc:getsockname",
         "//libc:hdr_netinet_in_macros",
         "//libc:hdr_sys_socket_macros",
-        "//libc:remove",
         "//libc:socket",
         "//libc:types_sa_family_t",
         "//libc:types_struct_sockaddr_in",
@@ -49,6 +48,7 @@ libc_test(
         "//libc:types_struct_sockaddr_un",
         "//libc/src/__support/CPP:scope",
         "//libc/src/arpa/inet:htonl",
+        "//libc/src/stdio:remove",
     ],
 )
 
@@ -65,7 +65,6 @@ libc_test(
         "//libc:hdr_fcntl_macros",
         "//libc:hdr_sys_socket_macros",
         "//libc:listen",
-        "//libc:remove",
         "//libc:socket",
         "//libc:types_sa_family_t",
         "//libc:types_size_t",
@@ -73,6 +72,7 @@ libc_test(
         "//libc:types_struct_sockaddr_un",
         "//libc/src/__support/CPP:scope",
         "//libc/src/fcntl",
+        "//libc/src/stdio:remove",
     ],
 )
 
@@ -85,10 +85,10 @@ libc_test(
         "//libc:close",
         "//libc:hdr_sys_socket_macros",
         "//libc:listen",
-        "//libc:remove",
         "//libc:socket",
         "//libc:types_struct_sockaddr_un",
         "//libc/src/__support/CPP:scope",
+        "//libc/src/stdio:remove",
     ],
 )
 
@@ -257,11 +257,11 @@ libc_test(
         "//libc:getsockname",
         "//libc:hdr_sys_socket_macros",
         "//libc:listen",
-        "//libc:remove",
         "//libc:socket",
         "//libc:types_sa_family_t",
         "//libc:types_socklen_t",
         "//libc:types_struct_sockaddr_un",
         "//libc/src/__support/CPP:scope",
+        "//libc/src/stdio:remove",
     ],
 )
