@@ -1198,6 +1198,49 @@ void WebAssemblyTargetLowering::computeKnownBitsForTargetNode(
   }
 }
 
+unsigned WebAssemblyTargetLowering::ComputeNumSignBitsForTargetNode(
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+    unsigned Depth) const {
+  switch (Op.getOpcode()) {
+  default:
+    break;
+  case WebAssemblyISD::EXTEND_LOW_U:
+  case WebAssemblyISD::EXTEND_HIGH_U: {
+    // We know the high half, of each destination vector element, will be sign.
+    SDValue SrcOp = Op.getOperand(0);
+    return SrcOp.getSimpleValueType().getScalarSizeInBits();
+  }
+  case WebAssemblyISD::EXTEND_LOW_S:
+  case WebAssemblyISD::EXTEND_HIGH_S: {
+    SDValue SrcOp = Op.getOperand(0);
+    unsigned SrcBits = SrcOp.getScalarValueSizeInBits();
+    unsigned DstBits = Op.getScalarValueSizeInBits();
+    unsigned SrcElts = SrcOp.getValueType().getVectorNumElements();
+    unsigned DstElts = Op.getValueType().getVectorNumElements();
+    APInt SrcDemandedElts = DemandedElts.zext(SrcElts);
+    if (Op.getOpcode() == WebAssemblyISD::EXTEND_HIGH_S)
+      SrcDemandedElts <<= DstElts;
+    unsigned InputSignBits =
+        DAG.ComputeNumSignBits(SrcOp, SrcDemandedElts, Depth + 1);
+    return std::min(DstBits, DstBits - SrcBits + InputSignBits);
+  }
+  case WebAssemblyISD::VEC_SHR_S:
+  case WebAssemblyISD::VEC_SHR_U:
+    if (auto *Shift = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+      unsigned BitWidth = Op.getScalarValueSizeInBits();
+      unsigned ShiftVal = Shift->getZExtValue() % BitWidth;
+      if (Op.getOpcode() == WebAssemblyISD::VEC_SHR_U)
+        return std::max(1u, ShiftVal);
+
+      unsigned InputSignBits =
+          DAG.ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
+      return std::min(BitWidth, InputSignBits + ShiftVal);
+    }
+    break;
+  }
+  return 1;
+}
+
 TargetLoweringBase::LegalizeTypeAction
 WebAssemblyTargetLowering::getPreferredVectorAction(MVT VT) const {
   if (VT.isFixedLengthVector()) {
@@ -2272,6 +2315,12 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
   switch (IntNo) {
   default:
     return SDValue(); // Don't custom lower most intrinsics.
+
+  case Intrinsic::wasm_narrow_signed:
+    assert(Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+           "Unexpected chain on narrow intrinsic");
+    return DAG.getNode(WebAssemblyISD::NARROW_S, DL, Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
 
   case Intrinsic::wasm_lsda: {
     auto PtrVT = getPointerTy(MF.getDataLayout());
@@ -3363,13 +3412,20 @@ static SDValue extractSubVector(SDValue Vec, unsigned IdxVal, SelectionDAG &DAG,
   return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ResultVT, Vec, VecIdx);
 }
 
-// Helper to recursively truncate vector elements in half with NARROW_U. DstVT
-// is the expected destination value type after recursion. In is the initial
-// input. Note that the input should have enough leading zero bits to prevent
-// NARROW_U from saturating results.
+// Helper to recursively truncate vector elements in half with a signed or
+// unsigned narrow. DstVT is the expected destination value type after
+// recursion. In is the initial input. The input should fit in the signed or
+// unsigned destination element type to prevent the narrow from saturating.
 static SDValue truncateVectorWithNARROW(EVT DstVT, SDValue In, const SDLoc &DL,
-                                        SelectionDAG &DAG) {
+                                        SelectionDAG &DAG,
+                                        bool Signed = false) {
   EVT SrcVT = In.getValueType();
+
+  auto Narrow = [&](EVT VT, SDValue Lo, SDValue Hi) {
+    unsigned Opcode =
+        Signed ? WebAssemblyISD::NARROW_S : WebAssemblyISD::NARROW_U;
+    return DAG.getNode(Opcode, DL, VT, Lo, Hi);
+  };
 
   if (In.isUndef())
     return DAG.getUNDEF(DstVT);
@@ -3391,31 +3447,27 @@ static SDValue truncateVectorWithNARROW(EVT DstVT, SDValue In, const SDLoc &DL,
     // Use a narrow to avoid a shuffle, which can also prevent other shuffles
     // degrading to extract/replace_lane.
     SDValue Poison = DAG.getPOISON(SrcVT);
-    SDValue Res =
-        DAG.getNode(WebAssemblyISD::NARROW_U, DL, MVT::v16i8, In, Poison);
+    SDValue Res = Narrow(MVT::v16i8, In, Poison);
     return extractSubVector(Res, 0, DAG, DL, 64);
   }
 
   if (SrcVT == MVT::v4i32 && DstVT == MVT::v4i8) {
     SDValue Poison = DAG.getPOISON(SrcVT);
-    SDValue Narrow =
-        DAG.getNode(WebAssemblyISD::NARROW_U, DL, MVT::v8i16, In, Poison);
-    SDValue Extract = extractSubVector(Narrow, 0, DAG, DL, 64);
-    return truncateVectorWithNARROW(DstVT, Extract, DL, DAG);
+    SDValue Narrowed = Narrow(MVT::v8i16, In, Poison);
+    SDValue Extract = extractSubVector(Narrowed, 0, DAG, DL, 64);
+    return truncateVectorWithNARROW(DstVT, Extract, DL, DAG, Signed);
   }
 
   if (SrcVT == MVT::v4i32 && DstVT == MVT::v4i16) {
     SDValue Poison = DAG.getPOISON(SrcVT);
-    SDValue Narrow =
-        DAG.getNode(WebAssemblyISD::NARROW_U, DL, MVT::v8i16, In, Poison);
-    return extractSubVector(Narrow, 0, DAG, DL, 64);
+    SDValue Narrowed = Narrow(MVT::v8i16, In, Poison);
+    return extractSubVector(Narrowed, 0, DAG, DL, 64);
   }
 
   if (SrcVT == MVT::v4i16 && DstVT == MVT::v4i8) {
     In = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i16,
                      {In, DAG.getPOISON(SrcVT)});
-    SDValue Res = DAG.getNode(WebAssemblyISD::NARROW_U, DL, MVT::v16i8, In,
-                              DAG.getPOISON(MVT::v8i16));
+    SDValue Res = Narrow(MVT::v16i8, In, DAG.getPOISON(MVT::v8i16));
     return extractSubVector(Res, 0, DAG, DL, 32);
   }
 
@@ -3436,30 +3488,30 @@ static SDValue truncateVectorWithNARROW(EVT DstVT, SDValue In, const SDLoc &DL,
       // 256bit -> 128bit truncate - Narrow lower/upper 128-bit subvectors.
       Lo = DAG.getBitcast(InVT, Lo);
       Hi = DAG.getBitcast(InVT, Hi);
-      SDValue Res = DAG.getNode(WebAssemblyISD::NARROW_U, DL, OutVT, Lo, Hi);
+      SDValue Res = Narrow(OutVT, Lo, Hi);
       return DAG.getBitcast(DstVT, Res);
     }
     if (DstVT.is64BitVector() || DstVT.is32BitVector()) {
       Lo = DAG.getBitcast(InVT, Lo);
       Hi = DAG.getBitcast(InVT, Hi);
-      SDValue Res = DAG.getNode(WebAssemblyISD::NARROW_U, DL, OutVT, Lo, Hi);
+      SDValue Res = Narrow(OutVT, Lo, Hi);
       if (OutVT.getVectorNumElements() > DstVT.getVectorNumElements()) {
         assert(InVT.getVectorNumElements() == DstVT.getVectorNumElements());
         Res = DAG.getBitcast(InVT, Res);
       }
-      return truncateVectorWithNARROW(DstVT, Res, DL, DAG);
+      return truncateVectorWithNARROW(DstVT, Res, DL, DAG, Signed);
     }
   }
 
   // Recursively narrow lower/upper subvectors, concat result and narrow again.
   EVT PackedSVT = EVT::getIntegerVT(Ctx, SrcVT.getScalarSizeInBits() / 2);
   EVT PackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumElems / 2);
-  Lo = truncateVectorWithNARROW(PackedVT, Lo, DL, DAG);
-  Hi = truncateVectorWithNARROW(PackedVT, Hi, DL, DAG);
+  Lo = truncateVectorWithNARROW(PackedVT, Lo, DL, DAG, Signed);
+  Hi = truncateVectorWithNARROW(PackedVT, Hi, DL, DAG, Signed);
 
   PackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumElems);
   SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, DL, PackedVT, Lo, Hi);
-  return truncateVectorWithNARROW(DstVT, Res, DL, DAG);
+  return truncateVectorWithNARROW(DstVT, Res, DL, DAG, Signed);
 }
 
 static SDValue performTruncateCombine(SDNode *N,
@@ -3480,10 +3532,15 @@ static SDValue performTruncateCombine(SDNode *N,
     return SDValue();
 
   SDLoc DL(N);
-  APInt Mask = APInt::getLowBitsSet(InVT.getScalarSizeInBits(),
-                                    OutVT.getScalarSizeInBits());
-  In = DAG.getNode(ISD::AND, DL, InVT, In, DAG.getConstant(Mask, DL, InVT));
-  return truncateVectorWithNARROW(OutVT, In, DL, DAG);
+  unsigned RequiredSignBits =
+      InVT.getScalarSizeInBits() - OutVT.getScalarSizeInBits() + 1;
+  bool Signed = DAG.ComputeNumSignBits(In) >= RequiredSignBits;
+  if (!Signed) {
+    APInt Mask = APInt::getLowBitsSet(InVT.getScalarSizeInBits(),
+                                      OutVT.getScalarSizeInBits());
+    In = DAG.getNode(ISD::AND, DL, InVT, In, DAG.getConstant(Mask, DL, InVT));
+  }
+  return truncateVectorWithNARROW(OutVT, In, DL, DAG, Signed);
 }
 
 static SDValue performBitcastCombine(SDNode *N,
