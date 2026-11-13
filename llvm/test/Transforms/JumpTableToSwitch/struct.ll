@@ -19,14 +19,14 @@ define i32 @func1() {
   ret i32 2
 }
 
-define i32 @function_with_jump_table(i32 %index) {
+define i32 @function_with_jump_table(i64 %index) {
 ; CHECK-LABEL: define i32 @function_with_jump_table(
-; CHECK-SAME: i32 [[INDEX:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @func_array, i32 0, i32 [[INDEX]]
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @func_array, i64 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[FUNC_PTR:%.*]] = load ptr, ptr [[GEP]], align 8
-; CHECK-NEXT:    switch i32 [[INDEX]], label [[DEFAULT_SWITCH_CASE_UNREACHABLE:%.*]] [
-; CHECK-NEXT:      i32 0, label [[CALL_0:%.*]]
-; CHECK-NEXT:      i32 1, label [[CALL_1:%.*]]
+; CHECK-NEXT:    switch i64 [[INDEX]], label [[DEFAULT_SWITCH_CASE_UNREACHABLE:%.*]] [
+; CHECK-NEXT:      i64 0, label [[CALL_0:%.*]]
+; CHECK-NEXT:      i64 1, label [[CALL_1:%.*]]
 ; CHECK-NEXT:    ], !prof [[PROF0:![0-9]+]]
 ; CHECK:       default.switch.case.unreachable:
 ; CHECK-NEXT:    unreachable
@@ -40,7 +40,7 @@ define i32 @function_with_jump_table(i32 %index) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ [[TMP1]], [[CALL_0]] ], [ [[TMP2]], [[CALL_1]] ]
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
-  %gep = getelementptr inbounds [2 x ptr], ptr @func_array, i32 0, i32 %index
+  %gep = getelementptr inbounds [2 x ptr], ptr @func_array, i64 0, i64 %index
   %func_ptr = load ptr, ptr %gep
   %result = call i32 %func_ptr()
   ret i32 %result
