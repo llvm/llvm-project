@@ -574,7 +574,8 @@ void CallLowering::buildCopyFromRegs(MachineIRBuilder &B,
       assert(NumElts > Regs.size());
       LLT SrcEltTy = MRI.getType(Regs[0]);
 
-      LLT OriginalEltTy = MRI.getType(OrigRegs[0]).getElementType();
+      LLT OriginalEltTy =
+          MRI.getType(OrigRegs[0]).getElementType().changeToInteger();
 
       // Input registers contain packed elements.
       // Determine how many elements per reg.
@@ -598,7 +599,12 @@ void CallLowering::buildCopyFromRegs(MachineIRBuilder &B,
       }
       BuildVec = B.buildBuildVector(BVType, BVRegs).getReg(0);
     }
-    B.buildTrunc(OrigRegs[0], BuildVec);
+    LLT OrigTy = MRI.getType(OrigRegs[0]);
+    if (OrigTy.isFloatOrFloatVector())
+      B.buildBitcast(OrigRegs[0],
+                     B.buildTrunc(OrigTy.changeToInteger(), BuildVec));
+    else
+      B.buildTrunc(OrigRegs[0], BuildVec);
   }
 }
 
@@ -1406,24 +1412,6 @@ Register CallLowering::ValueHandler::extendRegister(Register ValReg,
     // nop in big-endian situations.
     return ValReg;
   case CCValAssign::AExt: {
-    LLT Ty = MRI.getType(ValReg);
-    if (Ty.isFloat()) { // source is float type
-      Register R1 =
-          MIRBuilder.buildBitcast(Ty.changeToInteger(), ValReg).getReg(0);
-      Register R2 =
-          MIRBuilder.buildAnyExt(LocTy.changeToInteger(), R1).getReg(0);
-      if (LocTy.isFloat()) { // both source and destination are float type
-        return MIRBuilder.buildBitcast(LocTy, R2).getReg(0);
-      }
-      return R2;
-    }
-    if (LocTy.isFloat()) { // source is not float type, but destination
-                           // is float type
-      Register R1 =
-          MIRBuilder.buildAnyExt(LocTy.changeToInteger(), ValReg).getReg(0);
-      return MIRBuilder.buildBitcast(LocTy, R1).getReg(0);
-    }
-    // neither source or destination is float type
     auto MIB = MIRBuilder.buildAnyExt(LocTy, ValReg);
     return MIB.getReg(0);
   }

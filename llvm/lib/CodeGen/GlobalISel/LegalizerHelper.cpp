@@ -2225,8 +2225,21 @@ Register LegalizerHelper::coerceToInteger(Register Val) {
 void LegalizerHelper::widenScalarSrc(MachineInstr &MI, LLT WideTy,
                                      unsigned OpIdx, unsigned ExtOpcode) {
   MachineOperand &MO = MI.getOperand(OpIdx);
-  auto ExtB = MIRBuilder.buildInstr(ExtOpcode, {WideTy}, {MO});
-  MO.setReg(ExtB.getReg(0));
+  Register Src = MO.getReg();
+  LLT SrcTy = MRI.getType(Src);
+  LLT ExtTy = WideTy;
+  // Any-extension widens the bit pattern, including for floating-point loads,
+  // stores and other operations that do not interpret the value.
+  if (ExtOpcode == TargetOpcode::G_ANYEXT) {
+    if (SrcTy.isFloatOrFloatVector())
+      Src = MIRBuilder.buildBitcast(SrcTy.changeToInteger(), Src).getReg(0);
+    if (WideTy.isFloatOrFloatVector())
+      ExtTy = WideTy.changeToInteger();
+  }
+  Register Ext = MIRBuilder.buildInstr(ExtOpcode, {ExtTy}, {Src}).getReg(0);
+  if (ExtTy != WideTy)
+    Ext = MIRBuilder.buildBitcast(WideTy, Ext).getReg(0);
+  MO.setReg(Ext);
 }
 
 void LegalizerHelper::widenScalarSrcUsingFPExt(MachineInstr &MI, LLT WideTy,
@@ -2249,7 +2262,20 @@ void LegalizerHelper::widenScalarDst(MachineInstr &MI, LLT WideTy,
   MachineOperand &MO = MI.getOperand(OpIdx);
   Register DstExt = MRI.createGenericVirtualRegister(WideTy);
   MIRBuilder.setInsertPt(MIRBuilder.getMBB(), ++MIRBuilder.getInsertPt());
-  MIRBuilder.buildInstr(TruncOpcode, {MO}, {DstExt});
+  Register Src = DstExt;
+  LLT DstTy = MRI.getType(MO.getReg());
+  LLT TruncTy = DstTy;
+  // Restore the original bit pattern without a floating-point conversion.
+  if (TruncOpcode == TargetOpcode::G_TRUNC) {
+    if (WideTy.isFloatOrFloatVector())
+      Src = MIRBuilder.buildBitcast(WideTy.changeToInteger(), Src).getReg(0);
+    if (DstTy.isFloatOrFloatVector())
+      TruncTy = DstTy.changeToInteger();
+  }
+  auto Trunc = MIRBuilder.buildInstr(
+      TruncOpcode, {TruncTy == DstTy ? DstOp(MO) : DstOp(TruncTy)}, {Src});
+  if (TruncTy != DstTy)
+    MIRBuilder.buildBitcast(MO, Trunc);
   MO.setReg(DstExt);
 }
 
