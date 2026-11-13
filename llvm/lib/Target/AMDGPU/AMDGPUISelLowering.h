@@ -229,7 +229,7 @@ public:
   unsigned getVectorIdxWidth(const DataLayout &) const override;
   bool isSelectSupported(SelectSupportKind) const override;
 
-  bool shouldConvertBoolToFPWithSelect(unsigned Opcode, EVT VT) const override {
+  bool shouldConvertBoolToFPWithSelect(EVT VT) const override {
     // The select avoids an f32 conversion plus rounding for f16/bf16, a 64-bit
     // conversion for f64 and a missing libcall for f128, and is the same single
     // v_cndmask for f32. This also lets R600 handle i1 to f64 and bf16, which

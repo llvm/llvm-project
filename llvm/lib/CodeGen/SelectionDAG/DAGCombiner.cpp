@@ -20830,7 +20830,7 @@ static SDValue foldBoolToFPWithSelect(SDNode *N, const SDLoc &DL,
   EVT VT = N->getValueType(0);
   unsigned Opcode = N->getOpcode();
   if (LegalOperations || N0.getValueType().getScalarType() != MVT::i1 ||
-      !TLI.shouldConvertBoolToFPWithSelect(Opcode, VT))
+      !TLI.shouldConvertBoolToFPWithSelect(VT))
     return SDValue();
 
   // Leave (int_to_fp (fp_to_int x)) round trips to foldFPToIntToFP, which can
