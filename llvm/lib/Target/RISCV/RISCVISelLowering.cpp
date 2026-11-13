@@ -17595,11 +17595,13 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue ShAmt = N->getOperand(1);
 
       unsigned WideOpc = 0;
-      APInt HighMask = APInt::getHighBitsSet(64, 32);
-      if (DAG.MaskedValueIsZero(LHS, HighMask))
-        WideOpc = RISCVISD::WSLL;
-      else if (DAG.ComputeMaxSignificantBits(LHS) <= 32)
-        WideOpc = RISCVISD::WSLA;
+      if (N->getOpcode() == ISD::SHL) {
+        APInt HighMask = APInt::getHighBitsSet(64, 32);
+        if (DAG.MaskedValueIsZero(LHS, HighMask))
+          WideOpc = RISCVISD::WSLL;
+        else if (DAG.ComputeMaxSignificantBits(LHS) <= 32)
+          WideOpc = RISCVISD::WSLA;
+      }
 
       if (WideOpc) {
         SDValue Res =

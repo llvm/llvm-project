@@ -1726,7 +1726,10 @@ define i64 @wslli_i32(i32 %x, i64 %y) {
 define i64 @lshr_zext_i32(i32 %x, i64 %y) {
 ; RV32-LABEL: lshr_zext_i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    wsll a0, a0, a1
+; RV32-NEXT:    mv a2, a1
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    nsrl a0, a0, a2
+; RV32-NEXT:    li a1, 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: lshr_zext_i32:
@@ -1742,7 +1745,10 @@ define i64 @lshr_zext_i32(i32 %x, i64 %y) {
 define i64 @ashr_zext_i32(i32 %x, i64 %y) {
 ; RV32-LABEL: ashr_zext_i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    wsll a0, a0, a1
+; RV32-NEXT:    mv a2, a1
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    nsrl a0, a0, a2
+; RV32-NEXT:    li a1, 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ashr_zext_i32:
@@ -1758,7 +1764,13 @@ define i64 @ashr_zext_i32(i32 %x, i64 %y) {
 define i64 @lshr_sext_i32(i32 %x, i64 %y) {
 ; RV32-LABEL: lshr_sext_i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    wsla a0, a0, a1
+; RV32-NEXT:    mv a2, a1
+; RV32-NEXT:    srai a1, a0, 31
+; RV32-NEXT:    slli a3, a2, 26
+; RV32-NEXT:    srl a4, a1, a2
+; RV32-NEXT:    srai a3, a3, 31
+; RV32-NEXT:    nsrl a0, a0, a2
+; RV32-NEXT:    andn a1, a4, a3
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: lshr_sext_i32:
@@ -1774,7 +1786,9 @@ define i64 @lshr_sext_i32(i32 %x, i64 %y) {
 define i64 @ashr_sext_i32(i32 %x, i64 %y) {
 ; RV32-LABEL: ashr_sext_i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    wsla a0, a0, a1
+; RV32-NEXT:    mv a2, a1
+; RV32-NEXT:    srai a1, a0, 31
+; RV32-NEXT:    nsra a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ashr_sext_i32:
@@ -1790,7 +1804,9 @@ define i64 @ashr_sext_i32(i32 %x, i64 %y) {
 define i64 @lshr_sext_i32_2(i32 %x) {
 ; RV32-LABEL: lshr_sext_i32_2:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    wslai a0, a0, 2
+; RV32-NEXT:    srai a1, a0, 31
+; RV32-NEXT:    nsrli a0, a0, 2
+; RV32-NEXT:    srli a1, a1, 2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: lshr_sext_i32_2:
