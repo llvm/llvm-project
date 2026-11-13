@@ -5055,7 +5055,6 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
             dyn_cast<ExtractElementInst>(Op0 == Scalar ? Op1 : Op0);
         if (OtherEE && !IsLaneZeroExtract(OtherEE))
           return false;
-        }
       }
     } else {
       const auto *EE = cast<ExtractElementInst>(I);
