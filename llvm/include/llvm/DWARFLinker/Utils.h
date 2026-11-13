@@ -145,6 +145,26 @@ inline bool isInToolchainDir(StringRef Path) {
   return false;
 }
 
+/// \returns true if the attribute \p Attr of a DIE with tag \p Tag holds a
+/// file system path.
+inline bool isPathAttribute(dwarf::Tag Tag, dwarf::Attribute Attr) {
+  switch (Attr) {
+  case dwarf::DW_AT_comp_dir:
+  case dwarf::DW_AT_dwo_name:
+  case dwarf::DW_AT_GNU_dwo_name:
+  case dwarf::DW_AT_LLVM_include_path:
+  case dwarf::DW_AT_LLVM_sysroot:
+  case dwarf::DW_AT_LLVM_apinotes:
+    return true;
+  case dwarf::DW_AT_name:
+    return Tag == dwarf::DW_TAG_compile_unit ||
+           Tag == dwarf::DW_TAG_partial_unit ||
+           Tag == dwarf::DW_TAG_skeleton_unit;
+  default:
+    return false;
+  }
+}
+
 inline bool isPathAbsoluteOnWindowsOrPosix(const Twine &Path) {
   // Debug info can contain paths from any OS, not necessarily
   // an OS we're currently running on. Moreover different compilation units can

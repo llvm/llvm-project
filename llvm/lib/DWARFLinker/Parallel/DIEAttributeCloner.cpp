@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DIEAttributeCloner.h"
+#include "llvm/DWARFLinker/Utils.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
 
 using namespace llvm;
@@ -205,6 +206,14 @@ size_t DIEAttributeCloner::cloneStringAttr(
   if (!String) {
     InUnit.warn("cann't read string attribute.");
     return 0;
+  }
+
+  const DWARFFile &File = InUnit.getContainingFile();
+  std::string RemappedPath;
+  if (File.PrefixMap &&
+      isPathAttribute(InputDieEntry->getTag(), AttrSpec.Attr)) {
+    RemappedPath = File.remapPath(*String);
+    String = RemappedPath.c_str();
   }
 
   StringEntry *StringInPool =

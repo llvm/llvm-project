@@ -114,6 +114,10 @@ public:
   /// Returns DWARFFile containing this compile unit.
   const DWARFFile &getContainingFile() const { return File; }
 
+  std::string remapPath(StringRef Path) const override {
+    return File.remapPath(Path);
+  }
+
   /// Appends the names of the DW_TAG_module enclosing \p DieEntry, outermost
   /// first. Returns false when one of them has no name making the module
   /// unidentifiable across units.

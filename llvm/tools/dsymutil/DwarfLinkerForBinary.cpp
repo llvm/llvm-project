@@ -56,10 +56,12 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
@@ -478,6 +480,54 @@ void DwarfLinkerForBinary::collectRelocationsToApplyToSwiftReflectionSections(
     RelocationsToApply.emplace_back(AddressFromDwarfVM, Value,
                                     ShouldSubtractDwarfVM);
   }
+}
+
+std::shared_ptr<PrefixMapper>
+DwarfLinkerForBinary::findCompilationPrefixMap(StringRef ObjectPath) {
+  // With compilation caching, the compiler can prefix map the paths it sees,
+  // so that cache keys don't depend on where the build happens. The build
+  // system then records the mapping in compilation-prefix-map.json in a parent
+  // directory of the object files, as a JSON object from each remapped prefix
+  // to the original one.
+  StringRef ObjectDir = sys::path::parent_path(ObjectPath);
+  auto [It, Inserted] = CompilationPrefixMaps.try_emplace(ObjectDir);
+  if (!Inserted)
+    return It->second;
+
+  std::optional<std::string> Path = vfs::findFileInParentDirectories(
+      *Options.VFS, ObjectDir, {"compilation-prefix-map.json"});
+  if (!Path)
+    return nullptr;
+
+  if (Options.Verbose)
+    outs() << "found compilation prefix map " << *Path << '\n';
+  auto BufferOrErr = Options.VFS->getBufferForFile(*Path);
+  if (!BufferOrErr) {
+    reportWarning("cannot read compilation prefix map: " +
+                      BufferOrErr.getError().message(),
+                  *Path);
+    return nullptr;
+  }
+  Expected<json::Value> Root = json::parse((*BufferOrErr)->getBuffer());
+  if (!Root) {
+    reportWarning("cannot parse compilation prefix map: " +
+                      toString(Root.takeError()),
+                  *Path);
+    return nullptr;
+  }
+  const json::Object *Entries = Root->getAsObject();
+  if (!Entries) {
+    reportWarning("cannot parse compilation prefix map: expected a JSON "
+                  "object",
+                  *Path);
+    return nullptr;
+  }
+  auto PrefixMap = std::make_shared<PrefixMapper>();
+  for (const auto &Entry : *Entries)
+    if (std::optional<StringRef> Original = Entry.second.getAsString())
+      PrefixMap->add(MappedPrefix(Entry.first, *Original));
+  PrefixMap->sort();
+  return It->second = std::move(PrefixMap);
 }
 
 Error DwarfLinkerForBinary::copySwiftInterfaces(StringRef Architecture) const {
@@ -927,6 +977,8 @@ bool DwarfLinkerForBinary::linkImpl(
     auto DLBRelocMap = std::make_shared<DwarfLinkerForBinaryRelocationMap>();
     if (ErrorOr<std::unique_ptr<DWARFFile>> ErrorOrObj =
             loadObject(*Obj, Map, RL, PL, DLBRelocMap)) {
+      (*ErrorOrObj)->PrefixMap =
+          findCompilationPrefixMap(Obj->getObjectFilename());
       ObjectsForLinking.emplace_back(std::move(*ErrorOrObj), DLBRelocMap);
       GeneralLinker->addObjectFile(*ObjectsForLinking.back().Object, Loader,
                                    OnCUDieLoaded);
