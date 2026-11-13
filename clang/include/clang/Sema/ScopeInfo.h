@@ -251,13 +251,13 @@ public:
   /// The set of GNU address of label extension "&&label".
   llvm::SmallVector<AddrLabelExpr *, 4> AddrLabels;
 
-  // Implicit calls to the SYCL runtime library are synthesized for functions
-  // declared with the sycl_kernel_entry_point attribute. These calls require
-  // types and lookup results for SYCL runtime library declared functions that
-  // are produced at the start of a function definition. SYCLKernelASTFragments
-  // caches these artifacts for later use to construct a SYCLKernelCallStmt or
-  // UnresolvedSYCLKernelCallStmt. If production of these artifacts fails, a
-  // diagnostic will have been issued and a disengaged optional stored.
+  /// Implicit calls to the SYCL runtime library are synthesized for functions
+  /// declared with the sycl_kernel_entry_point attribute. These calls require
+  /// types and lookup results for SYCL runtime library declared functions that
+  /// are produced at the start of a function definition. SYCLKernelASTFragments
+  /// caches these artifacts for later use to construct a SYCLKernelCallStmt or
+  /// UnresolvedSYCLKernelCallStmt. If production of these artifacts fails, a
+  /// diagnostic will have been issued and a disengaged optional stored.
   std::optional<SemaSYCL::SYCLKernelCallStmtASTFragments>
       SYCLKernelASTFragments;
 
