@@ -1,0 +1,6825 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_support_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_support_library(
+    name = "f16sqrt",
+    hdrs = ["f16sqrt.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "f16sqrtf",
+    hdrs = ["f16sqrtf.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "f16sqrtf128",
+    hdrs = ["f16sqrtf128.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "f16sqrtl",
+    hdrs = ["f16sqrtl.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+filegroup(
+    name = "headers_for_apfloat",
+    srcs = glob(["**/*.h"]),
+)
+
+libc_support_library(
+    name = "log_range_reduction",
+    hdrs = ["log_range_reduction.h"],
+    deps = [
+        ":common_constants",
+        "//libc:__support_common",
+        "//libc:__support_uint128",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "acos",
+    hdrs = ["acos.h"],
+    deps = [
+        ":asin_utils",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "acosbf16",
+    hdrs = ["acosbf16.h"],
+    deps = [
+        ":asin_utils",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "acosf",
+    hdrs = ["acosf.h"],
+    deps = [
+        ":asin_utils",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "acosf16",
+    hdrs = ["acosf16.h"],
+    deps = [
+        ":asin_utils",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "acosh_float_constants",
+    hdrs = ["acosh_float_constants.h"],
+    deps = [
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "acoshf_utils",
+    hdrs = ["acoshf_utils.h"],
+    deps = [
+        ":acosh_float_constants",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "acoshf",
+    hdrs = ["acoshf.h"],
+    deps = [
+        ":acoshf_utils",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "acoshbf16",
+    hdrs = ["acoshbf16.h"],
+    deps = [
+        ":acoshf_utils",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "acoshf16",
+    hdrs = ["acoshf16.h"],
+    deps = [
+        ":acoshf_utils",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "acospif",
+    hdrs = ["acospif.h"],
+    deps = [
+        ":asin_utils",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "acospif16",
+    hdrs = ["acospif16.h"],
+    deps = [
+        ":asin_utils",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "rsqrtf",
+    hdrs = ["rsqrtf.h"],
+    deps = [
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fenv_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "rsqrtf16",
+    hdrs = ["rsqrtf16.h"],
+    deps = [
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fenv_macros",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "setpayload",
+    hdrs = ["setpayload.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "setpayloadbf16",
+    hdrs = ["setpayloadbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "setpayloadf",
+    hdrs = ["setpayloadf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "setpayloadf128",
+    hdrs = ["setpayloadf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "setpayloadf16",
+    hdrs = ["setpayloadf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "setpayloadl",
+    hdrs = ["setpayloadl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "setpayloadsig",
+    hdrs = ["setpayloadsig.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "setpayloadsigbf16",
+    hdrs = ["setpayloadsigbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "setpayloadsigf",
+    hdrs = ["setpayloadsigf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "setpayloadsigf128",
+    hdrs = ["setpayloadsigf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "setpayloadsigf16",
+    hdrs = ["setpayloadsigf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "setpayloadsigl",
+    hdrs = ["setpayloadsigl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "sqrtf16",
+    hdrs = ["sqrtf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "asin_utils",
+    hdrs = ["asin_utils.h"],
+    deps = [
+        "//libc:__support_integer_literals",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "asin",
+    hdrs = ["asin.h"],
+    deps = [
+        ":asin_utils",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "asinhf",
+    hdrs = ["asinhf.h"],
+    deps = [
+        ":acoshf_utils",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "asinhf16",
+    hdrs = ["asinhf16.h"],
+    deps = [
+        ":acoshf_utils",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "asinpi",
+    hdrs = ["asinpi.h"],
+    deps = [
+        ":asin_utils",
+        "//libc:__support_sign",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fenv_macros",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "asinpif",
+    hdrs = ["asinpif.h"],
+    deps = [
+        ":asin_utils",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "atan_utils",
+    hdrs = ["atan_utils.h"],
+    deps = [
+        "//libc:__support_integer_literals",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "atan",
+    hdrs = ["atan.h"],
+    deps = [
+        ":atan_utils",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "atan2",
+    hdrs = ["atan2.h"],
+    deps = [
+        ":atan_utils",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "atan2f",
+    hdrs = ["atan2f.h"],
+    deps = [
+        ":asin_utils",
+        ":atan_utils",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "atan2f128",
+    hdrs = ["atan2f128.h"],
+    deps = [
+        ":atan_utils",
+        "//libc:__support_integer_literals",
+        "//libc:__support_uint128",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "atan2f16",
+    hdrs = ["atan2f16.h"],
+    deps = [
+        ":asin_utils",
+        ":atan_utils",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "atanbf16",
+    hdrs = ["atanbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "atanf",
+    hdrs = ["atanf.h"],
+    deps = [
+        ":asin_utils",
+        ":atan_utils",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "atanf16",
+    hdrs = ["atanf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "asinbf16",
+    hdrs = ["asinbf16.h"],
+    deps = [
+        ":asin_utils",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "asinf",
+    hdrs = ["asinf.h"],
+    deps = [
+        ":asin_utils",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "asinf16",
+    hdrs = ["asinf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "atanhf",
+    hdrs = ["atanhf.h"],
+    deps = [
+        ":acoshf_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "atanhf16",
+    hdrs = ["atanhf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "atanpif16",
+    hdrs = ["atanpif16.h"],
+    deps = [
+        "//libc:hdr_fenv_macros",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "bf16add",
+    hdrs = ["bf16add.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "bf16addf",
+    hdrs = ["bf16addf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "bf16addl",
+    hdrs = ["bf16addl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "bf16addf128",
+    hdrs = ["bf16addf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "bf16div",
+    hdrs = ["bf16div.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "bf16divf",
+    hdrs = ["bf16divf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "bf16divl",
+    hdrs = ["bf16divl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "bf16divf128",
+    hdrs = ["bf16divf128.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "bf16fma",
+    hdrs = ["bf16fma.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "bf16fmaf",
+    hdrs = ["bf16fmaf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "bf16fmaf128",
+    hdrs = ["bf16fmaf128.h"],
+    deps = [
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "bf16fmal",
+    hdrs = ["bf16fmal.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "bf16mul",
+    hdrs = ["bf16mul.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "bf16mulf",
+    hdrs = ["bf16mulf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "bf16mulf128",
+    hdrs = ["bf16mulf128.h"],
+    deps = [
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "bf16mull",
+    hdrs = ["bf16mull.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "bf16sub",
+    hdrs = ["bf16sub.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "bf16subf",
+    hdrs = ["bf16subf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "bf16subf128",
+    hdrs = ["bf16subf128.h"],
+    deps = [
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "bf16subl",
+    hdrs = ["bf16subl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "canonicalize",
+    hdrs = ["canonicalize.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "canonicalizebf16",
+    hdrs = ["canonicalizebf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "canonicalizef",
+    hdrs = ["canonicalizef.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "canonicalizef128",
+    hdrs = ["canonicalizef128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "canonicalizef80",
+    hdrs = ["canonicalizef80.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "canonicalizef16",
+    hdrs = ["canonicalizef16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "canonicalizel",
+    hdrs = ["canonicalizel.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "cbrt",
+    hdrs = ["cbrt.h"],
+    deps = [
+        "//libc:__support_integer_literals",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "cbrtbf16",
+    hdrs = ["cbrtbf16.h"],
+    deps = [
+        ":cbrtf",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "cbrtf",
+    hdrs = ["cbrtf.h"],
+    deps = [
+        "//libc:__support_integer_literals",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "ceil",
+    hdrs = ["ceil.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ceilbf16",
+    hdrs = ["ceilbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ceilf",
+    hdrs = ["ceilf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ceilf128",
+    hdrs = ["ceilf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ceilf16",
+    hdrs = ["ceilf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "ceill",
+    hdrs = ["ceill.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "copysign",
+    hdrs = ["copysign.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "copysignbf16",
+    hdrs = ["copysignbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "copysignf",
+    hdrs = ["copysignf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "copysignf128",
+    hdrs = ["copysignf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "copysignf80",
+    hdrs = ["copysignf80.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "copysignf16",
+    hdrs = ["copysignf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "copysignl",
+    hdrs = ["copysignl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "cbrtf16",
+    hdrs = ["cbrtf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "common_constants",
+    hdrs = ["common_constants.h"],
+    deps = [
+        ":acosh_float_constants",
+        ":exp_constants",
+        "//libc:__support_number_pair",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "dsqrtf128",
+    hdrs = ["dsqrtf128.h"],
+    deps = [
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximum",
+    hdrs = ["fmaximum.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximumbf16",
+    hdrs = ["fmaximumbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximumf",
+    hdrs = ["fmaximumf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximumf128",
+    hdrs = ["fmaximumf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximumf16",
+    hdrs = ["fmaximumf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximumf80",
+    hdrs = ["fmaximumf80.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximuml",
+    hdrs = ["fmaximuml.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximum_mag",
+    hdrs = ["fmaximum_mag.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximum_magbf16",
+    hdrs = ["fmaximum_magbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximum_magf",
+    hdrs = ["fmaximum_magf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximum_magf128",
+    hdrs = ["fmaximum_magf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximum_magf16",
+    hdrs = ["fmaximum_magf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximum_magf80",
+    hdrs = ["fmaximum_magf80.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximum_magl",
+    hdrs = ["fmaximum_magl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximum_mag_numf128",
+    hdrs = ["fmaximum_mag_numf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximum_mag_numf16",
+    hdrs = ["fmaximum_mag_numf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximum_mag_numf80",
+    hdrs = ["fmaximum_mag_numf80.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximum_mag_numl",
+    hdrs = ["fmaximum_mag_numl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximum_num",
+    hdrs = ["fmaximum_num.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximum_numbf16",
+    hdrs = ["fmaximum_numbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximum_numf",
+    hdrs = ["fmaximum_numf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximum_numf128",
+    hdrs = ["fmaximum_numf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximum_numf16",
+    hdrs = ["fmaximum_numf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximum_numf80",
+    hdrs = ["fmaximum_numf80.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximum_numl",
+    hdrs = ["fmaximum_numl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmin",
+    hdrs = ["fmin.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminbf16",
+    hdrs = ["fminbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminf",
+    hdrs = ["fminf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminf128",
+    hdrs = ["fminf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminf16",
+    hdrs = ["fminf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminf80",
+    hdrs = ["fminf80.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimum",
+    hdrs = ["fminimum.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimumbf16",
+    hdrs = ["fminimumbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimumf",
+    hdrs = ["fminimumf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimumf128",
+    hdrs = ["fminimumf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimumf16",
+    hdrs = ["fminimumf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimumf80",
+    hdrs = ["fminimumf80.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimuml",
+    hdrs = ["fminimuml.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimum_mag",
+    hdrs = ["fminimum_mag.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimum_magbf16",
+    hdrs = ["fminimum_magbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimum_magf",
+    hdrs = ["fminimum_magf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimum_magf128",
+    hdrs = ["fminimum_magf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimum_magf16",
+    hdrs = ["fminimum_magf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimum_magf80",
+    hdrs = ["fminimum_magf80.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimum_magl",
+    hdrs = ["fminimum_magl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimum_mag_num",
+    hdrs = ["fminimum_mag_num.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimum_mag_numbf16",
+    hdrs = ["fminimum_mag_numbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimum_mag_numf",
+    hdrs = ["fminimum_mag_numf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimum_mag_numf128",
+    hdrs = ["fminimum_mag_numf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimum_mag_numf16",
+    hdrs = ["fminimum_mag_numf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimum_mag_numf80",
+    hdrs = ["fminimum_mag_numf80.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimum_mag_numl",
+    hdrs = ["fminimum_mag_numl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimum_num",
+    hdrs = ["fminimum_num.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimum_numbf16",
+    hdrs = ["fminimum_numbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimum_numf",
+    hdrs = ["fminimum_numf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimum_numf128",
+    hdrs = ["fminimum_numf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimum_numf16",
+    hdrs = ["fminimum_numf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimum_numf80",
+    hdrs = ["fminimum_numf80.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminimum_numl",
+    hdrs = ["fminimum_numl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fminl",
+    hdrs = ["fminl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmod",
+    hdrs = ["fmod.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:generic_fmod",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmodbf16",
+    hdrs = ["fmodbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:generic_fmod",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmodf",
+    hdrs = ["fmodf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:generic_fmod",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmodf128",
+    hdrs = ["fmodf128.h"],
+    deps = [
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:generic_fmod",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmodf16",
+    hdrs = ["fmodf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:generic_fmod",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmodl",
+    hdrs = ["fmodl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:generic_fmod",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmul",
+    hdrs = ["fmul.h"],
+    deps = [
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fenv_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmulf128",
+    hdrs = ["fmulf128.h"],
+    deps = [
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmull",
+    hdrs = ["fmull.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "frexp",
+    hdrs = ["frexp.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "frexpbf16",
+    hdrs = ["frexpbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "frexpl",
+    hdrs = ["frexpl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fromfp",
+    hdrs = ["fromfp.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fromfpbf16",
+    hdrs = ["fromfpbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fromfpf",
+    hdrs = ["fromfpf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fromfpf128",
+    hdrs = ["fromfpf128.h"],
+    deps = [
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fromfpf16",
+    hdrs = ["fromfpf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fromfpl",
+    hdrs = ["fromfpl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fromfpx",
+    hdrs = ["fromfpx.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fromfpxbf16",
+    hdrs = ["fromfpxbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fromfpxf",
+    hdrs = ["fromfpxf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fromfpxf128",
+    hdrs = ["fromfpxf128.h"],
+    deps = [
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fromfpxf16",
+    hdrs = ["fromfpxf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fromfpxl",
+    hdrs = ["fromfpxl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fsub",
+    hdrs = ["fsub.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fsubf128",
+    hdrs = ["fsubf128.h"],
+    deps = [
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fsubl",
+    hdrs = ["fsubl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "iscanonical",
+    hdrs = ["iscanonical.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "iscanonicalbf16",
+    hdrs = ["iscanonicalbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "iscanonicalf",
+    hdrs = ["iscanonicalf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "iscanonicalf128",
+    hdrs = ["iscanonicalf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "iscanonicalf80",
+    hdrs = ["iscanonicalf80.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "iscanonicalf16",
+    hdrs = ["iscanonicalf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "iscanonicall",
+    hdrs = ["iscanonicall.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "isnan",
+    hdrs = ["isnan.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "isnanf",
+    hdrs = ["isnanf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "isnanf128",
+    hdrs = ["isnanf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "isnanf80",
+    hdrs = ["isnanf80.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "isnanl",
+    hdrs = ["isnanl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "isnanf16",
+    hdrs = ["isnanf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "issignaling",
+    hdrs = ["issignaling.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "issignalingbf16",
+    hdrs = ["issignalingbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "issignalingf",
+    hdrs = ["issignalingf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "issignalingf128",
+    hdrs = ["issignalingf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "issignalingf80",
+    hdrs = ["issignalingf80.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "issignalingf16",
+    hdrs = ["issignalingf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "issignalingl",
+    hdrs = ["issignalingl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ldexp",
+    hdrs = ["ldexp.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ldexpbf16",
+    hdrs = ["ldexpbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ldexpl",
+    hdrs = ["ldexpl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ilogbbf16",
+    hdrs = ["ilogbbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "llrint",
+    hdrs = ["llrint.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "llrintbf16",
+    hdrs = ["llrintbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "llrintf",
+    hdrs = ["llrintf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "llrintf128",
+    hdrs = ["llrintf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "llrintf16",
+    hdrs = ["llrintf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "llrintl",
+    hdrs = ["llrintl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "llround",
+    hdrs = ["llround.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "llroundbf16",
+    hdrs = ["llroundbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "llroundf",
+    hdrs = ["llroundf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "llroundf128",
+    hdrs = ["llroundf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "llroundf16",
+    hdrs = ["llroundf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "llroundl",
+    hdrs = ["llroundl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "lrint",
+    hdrs = ["lrint.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "lrintbf16",
+    hdrs = ["lrintbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "lrintf",
+    hdrs = ["lrintf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "lrintf128",
+    hdrs = ["lrintf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "lrintf16",
+    hdrs = ["lrintf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "lrintl",
+    hdrs = ["lrintl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "lround",
+    hdrs = ["lround.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "lroundbf16",
+    hdrs = ["lroundbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "lroundf",
+    hdrs = ["lroundf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "lroundf128",
+    hdrs = ["lroundf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "lroundf16",
+    hdrs = ["lroundf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "lroundl",
+    hdrs = ["lroundl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "modf",
+    hdrs = ["modf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "modfbf16",
+    hdrs = ["modfbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "modff",
+    hdrs = ["modff.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "modff128",
+    hdrs = ["modff128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "modff16",
+    hdrs = ["modff16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "modfl",
+    hdrs = ["modfl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nan",
+    hdrs = ["nan.h"],
+    deps = [
+        "//libc:__support_libc_errno",
+        "//libc:__support_str_to_float",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nanbf16",
+    hdrs = ["nanbf16.h"],
+    deps = [
+        "//libc:__support_libc_errno",
+        "//libc:__support_str_to_float",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nanf",
+    hdrs = ["nanf.h"],
+    deps = [
+        "//libc:__support_libc_errno",
+        "//libc:__support_str_to_float",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nanf128",
+    hdrs = ["nanf128.h"],
+    deps = [
+        "//libc:__support_libc_errno",
+        "//libc:__support_str_to_float",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nanf16",
+    hdrs = ["nanf16.h"],
+    deps = [
+        "//libc:__support_libc_errno",
+        "//libc:__support_str_to_float",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nanl",
+    hdrs = ["nanl.h"],
+    deps = [
+        "//libc:__support_libc_errno",
+        "//libc:__support_str_to_float",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nearbyint",
+    hdrs = ["nearbyint.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nearbyintbf16",
+    hdrs = ["nearbyintbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nearbyintf",
+    hdrs = ["nearbyintf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nearbyintf128",
+    hdrs = ["nearbyintf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nearbyintf16",
+    hdrs = ["nearbyintf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nearbyintl",
+    hdrs = ["nearbyintl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "remainder",
+    hdrs = ["remainder.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:division_and_remainder_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "remainderbf16",
+    hdrs = ["remainderbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:division_and_remainder_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "remainderf",
+    hdrs = ["remainderf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:division_and_remainder_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "remainderf128",
+    hdrs = ["remainderf128.h"],
+    deps = [
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:division_and_remainder_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "remainderf16",
+    hdrs = ["remainderf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:division_and_remainder_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "remainderl",
+    hdrs = ["remainderl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:division_and_remainder_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "remquo",
+    hdrs = ["remquo.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:division_and_remainder_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "remquobf16",
+    hdrs = ["remquobf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:division_and_remainder_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "remquof",
+    hdrs = ["remquof.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:division_and_remainder_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "remquof128",
+    hdrs = ["remquof128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:division_and_remainder_operations",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "remquof16",
+    hdrs = ["remquof16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:division_and_remainder_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "remquol",
+    hdrs = ["remquol.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:division_and_remainder_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "rint",
+    hdrs = ["rint.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "rintbf16",
+    hdrs = ["rintbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "rintf",
+    hdrs = ["rintf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "rintf128",
+    hdrs = ["rintf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "rintf16",
+    hdrs = ["rintf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "rintl",
+    hdrs = ["rintl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "round",
+    hdrs = ["round.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:compiler",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "roundbf16",
+    hdrs = ["roundbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "roundeven",
+    hdrs = ["roundeven.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "roundevenbf16",
+    hdrs = ["roundevenbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "roundevenf",
+    hdrs = ["roundevenf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "roundevenf128",
+    hdrs = ["roundevenf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "roundevenf16",
+    hdrs = ["roundevenf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "roundevenl",
+    hdrs = ["roundevenl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "roundf",
+    hdrs = ["roundf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:compiler",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "roundf128",
+    hdrs = ["roundf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "roundf16",
+    hdrs = ["roundf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "roundl",
+    hdrs = ["roundl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "scalbln",
+    hdrs = ["scalbln.h"],
+    deps = [
+        "//libc:hdr_float_macros",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "scalblnbf16",
+    hdrs = ["scalblnbf16.h"],
+    deps = [
+        "//libc:hdr_float_macros",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "scalblnf",
+    hdrs = ["scalblnf.h"],
+    deps = [
+        "//libc:hdr_float_macros",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "scalblnf128",
+    hdrs = ["scalblnf128.h"],
+    deps = [
+        "//libc:hdr_float_macros",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "scalblnf16",
+    hdrs = ["scalblnf16.h"],
+    deps = [
+        "//libc:hdr_float_macros",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "scalblnl",
+    hdrs = ["scalblnl.h"],
+    deps = [
+        "//libc:hdr_float_macros",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "scalbn",
+    hdrs = ["scalbn.h"],
+    deps = [
+        "//libc:hdr_float_macros",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "scalbnbf16",
+    hdrs = ["scalbnbf16.h"],
+    deps = [
+        "//libc:hdr_float_macros",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "scalbnf",
+    hdrs = ["scalbnf.h"],
+    deps = [
+        "//libc:hdr_float_macros",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "scalbnf128",
+    hdrs = ["scalbnf128.h"],
+    deps = [
+        "//libc:hdr_float_macros",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "scalbnf16",
+    hdrs = ["scalbnf16.h"],
+    deps = [
+        "//libc:hdr_float_macros",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "scalbnl",
+    hdrs = ["scalbnl.h"],
+    deps = [
+        "//libc:hdr_float_macros",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "llogbbf16",
+    hdrs = ["llogbbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "sincos_integer_utils",
+    hdrs = ["sincos_integer_utils.h"],
+    deps = [
+        "//libc:__support_big_int",
+        "//libc:__support_frac128",
+        "//libc:__support_math_extras",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "cos_integer_eval",
+    hdrs = ["cos_integer_eval.h"],
+    deps = [
+        ":sincos_integer_utils",
+        "//libc:__support_frac128",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "sin_integer_eval",
+    hdrs = ["sin_integer_eval.h"],
+    deps = [
+        ":sincos_integer_utils",
+        "//libc:__support_frac128",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "cos",
+    hdrs = ["cos.h"],
+    deps = [
+        ":range_reduction_double",
+        ":sincos_eval",
+        "//libc:hdr_errno_macros",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "cosf",
+    hdrs = [
+        "cosf.h",
+        "cosf_double_eval.h",
+        "cosf_float_eval.h",
+    ],
+    deps = [
+        ":sincosf_utils",
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "cosf16",
+    hdrs = ["cosf16.h"],
+    deps = [
+        ":sincosf16_utils",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "cosh_double_eval",
+    hdrs = ["cosh_double_eval.h"],
+    deps = [
+        ":sinhcosh_utils",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "cosh",
+    hdrs = ["cosh.h"],
+    deps = [
+        ":cosh_double_eval",
+        "//libc:__support_common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "coshf",
+    hdrs = ["coshf.h"],
+    deps = [
+        ":sinhfcoshf_utils",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "coshf16",
+    hdrs = ["coshf16.h"],
+    deps = [
+        ":expxf16_utils",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "cospif",
+    hdrs = ["cospif.h"],
+    deps = [
+        ":common_constants",
+        ":sincosf_utils",
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "cospif16",
+    hdrs = ["cospif16.h"],
+    deps = [
+        ":sincosf16_utils",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:is_integer",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "daddf128",
+    hdrs = ["daddf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "daddl",
+    hdrs = ["daddl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ddivf128",
+    hdrs = ["ddivf128.h"],
+    deps = [
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ddivl",
+    hdrs = ["ddivl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "dmulf128",
+    hdrs = ["dmulf128.h"],
+    deps = [
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "dmull",
+    hdrs = ["dmull.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "dsqrtl",
+    hdrs = ["dsqrtl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:sqrt",
+    ],
+)
+
+libc_support_library(
+    name = "dsubf128",
+    hdrs = ["dsubf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "dsubl",
+    hdrs = ["dsubl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "exp10m1f",
+    hdrs = ["exp10m1f.h"],
+    deps = [
+        ":exp10f_utils",
+        "//libc:__support_common",
+        "//libc:hdr_errno_macros",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "exp10m1f16",
+    hdrs = ["exp10m1f16.h"],
+    deps = [
+        ":exp10f16_utils",
+        "//libc:__support_common",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "erff",
+    hdrs = ["erff.h"],
+    deps = [
+        ":common_constants",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "erff16",
+    hdrs = ["erff16.h"],
+    deps = [
+        ":common_constants",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "erfcf16",
+    hdrs = ["erfcf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "exp_float_constants",
+    hdrs = ["exp_float_constants.h"],
+    deps = [
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "check_exp_exceptions",
+    hdrs = ["check/exp_exceptions.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:hdr_fenv_macros",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "exp2f_float_utils",
+    hdrs = ["exp2f_float_utils.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "exp2f_integer_utils",
+    hdrs = ["exp2f_integer_utils.h"],
+    deps = [
+        "//libc:__support_frac64",
+        "//libc:hdr_fenv_macros",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "expf_double_eval",
+    hdrs = ["expf_double_eval.h"],
+    deps = [
+        ":check_exp_exceptions",
+        ":exp_float_constants",
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "expf_float_utils",
+    hdrs = ["expf_float_utils.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "expf_float_eval",
+    hdrs = ["expf_float_eval.h"],
+    deps = [
+        ":check_exp_exceptions",
+        ":exp2f_float_utils",
+        ":expf_float_utils",
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "expf_integer_eval",
+    hdrs = ["expf_integer_eval.h"],
+    deps = [
+        ":check_exp_exceptions",
+        ":exp2f_integer_utils",
+        "//libc:__support_frac64",
+        "//libc:hdr_fenv_macros",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "expf",
+    hdrs = ["expf.h"],
+    deps = [
+        ":expf_double_eval",
+        ":expf_float_eval",
+        ":expf_integer_eval",
+        "//libc:__support_common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "expf16_utils",
+    hdrs = ["expf16_utils.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/CPP:array",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "expf16",
+    hdrs = ["expf16.h"],
+    deps = [
+        ":expf16_utils",
+        "//libc:__support_common",
+        "//libc:hdr_fenv_macros",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/CPP:array",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "expbf16",
+    hdrs = ["expbf16.h"],
+    deps = [
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fenv_macros",
+        "//libc/src/__support/CPP:array",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "expxf16_utils",
+    hdrs = ["expxf16_utils.h"],
+    deps = [
+        ":exp10_float16_constants",
+        ":expf16_utils",
+        "//libc:hdr_stdint_proxy",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "f16add",
+    hdrs = ["f16add.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "f16addf",
+    hdrs = ["f16addf.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "f16addf128",
+    hdrs = ["f16addf128.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "f16addl",
+    hdrs = ["f16addl.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "f16div",
+    hdrs = ["f16div.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "f16divf",
+    hdrs = ["f16divf.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "f16divf128",
+    hdrs = ["f16divf128.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "f16divl",
+    hdrs = ["f16divl.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fabs",
+    hdrs = ["fabs.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fabsbf16",
+    hdrs = ["fabsbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fabsf",
+    hdrs = ["fabsf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fabsf128",
+    hdrs = ["fabsf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fabsf80",
+    hdrs = ["fabsf80.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fabsf16",
+    hdrs = ["fabsf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:compiler",
+    ],
+)
+
+libc_support_library(
+    name = "fabsl",
+    hdrs = ["fabsl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fdim",
+    hdrs = ["fdim.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fdimbf16",
+    hdrs = ["fdimbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fdimf",
+    hdrs = ["fdimf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fdimf128",
+    hdrs = ["fdimf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fdimf16",
+    hdrs = ["fdimf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fdimf80",
+    hdrs = ["fdimf80.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fdiml",
+    hdrs = ["fdiml.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fdiv",
+    hdrs = ["fdiv.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fdivf128",
+    hdrs = ["fdivf128.h"],
+    deps = [
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fdivl",
+    hdrs = ["fdivl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "f16mul",
+    hdrs = ["f16mul.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "f16mulf",
+    hdrs = ["f16mulf.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "f16mulf128",
+    hdrs = ["f16mulf128.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "f16mull",
+    hdrs = ["f16mull.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "f16sub",
+    hdrs = ["f16sub.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "f16subf",
+    hdrs = ["f16subf.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "f16subf128",
+    hdrs = ["f16subf128.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "f16subl",
+    hdrs = ["f16subl.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fadd",
+    hdrs = ["fadd.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "faddf128",
+    hdrs = ["faddf128.h"],
+    deps = [
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "faddl",
+    hdrs = ["faddl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "f16fma",
+    hdrs = ["f16fma.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "f16fmaf",
+    hdrs = ["f16fmaf.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "f16fmaf128",
+    hdrs = ["f16fmaf128.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "f16fmal",
+    hdrs = ["f16fmal.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ffma",
+    hdrs = ["ffma.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ffmaf128",
+    hdrs = ["ffmaf128.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "floor",
+    hdrs = ["floor.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "floorbf16",
+    hdrs = ["floorbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "floorf",
+    hdrs = ["floorf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "floorf128",
+    hdrs = ["floorf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "floorf16",
+    hdrs = ["floorf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "floorl",
+    hdrs = ["floorl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmabf16",
+    hdrs = ["fmabf16.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmax",
+    hdrs = ["fmax.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaxbf16",
+    hdrs = ["fmaxbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaxf",
+    hdrs = ["fmaxf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaxf128",
+    hdrs = ["fmaxf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaxf16",
+    hdrs = ["fmaxf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaxf80",
+    hdrs = ["fmaxf80.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaxl",
+    hdrs = ["fmaxl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximum_mag_num",
+    hdrs = ["fmaximum_mag_num.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximum_mag_numbf16",
+    hdrs = ["fmaximum_mag_numbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaximum_mag_numf",
+    hdrs = ["fmaximum_mag_numf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ffmal",
+    hdrs = ["ffmal.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fma",
+    hdrs = ["fma.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaf",
+    hdrs = ["fmaf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fmaf16",
+    hdrs = ["fmaf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "frexpf128",
+    hdrs = ["frexpf128.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ilogbf128",
+    hdrs = ["ilogbf128.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fsqrt",
+    hdrs = ["fsqrt.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:sqrt",
+    ],
+)
+
+libc_support_library(
+    name = "fsqrtf128",
+    hdrs = ["fsqrtf128.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fsqrtl",
+    hdrs = ["fsqrtl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:sqrt",
+    ],
+)
+
+libc_support_library(
+    name = "gamma_util",
+    hdrs = ["gamma_util.h"],
+    deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "getpayload",
+    hdrs = ["getpayload.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "getpayloadbf16",
+    hdrs = ["getpayloadbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "getpayloadf",
+    hdrs = ["getpayloadf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "getpayloadf128",
+    hdrs = ["getpayloadf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "getpayloadf16",
+    hdrs = ["getpayloadf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "getpayloadl",
+    hdrs = ["getpayloadl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "frexpf16",
+    hdrs = ["frexpf16.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "frexpf",
+    hdrs = ["frexpf.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ilogb",
+    hdrs = ["ilogb.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ilogbf16",
+    hdrs = ["ilogbf16.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ilogbf",
+    hdrs = ["ilogbf.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ilogbl",
+    hdrs = ["ilogbl.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nextafter",
+    hdrs = ["nextafter.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nextafterbf16",
+    hdrs = ["nextafterbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nextafterf",
+    hdrs = ["nextafterf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nextafterf128",
+    hdrs = ["nextafterf128.h"],
+    deps = [
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nextafterf16",
+    hdrs = ["nextafterf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nextafterl",
+    hdrs = ["nextafterl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nextdown",
+    hdrs = ["nextdown.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nextdownbf16",
+    hdrs = ["nextdownbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nextdownf",
+    hdrs = ["nextdownf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nextdownf128",
+    hdrs = ["nextdownf128.h"],
+    deps = [
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "nextdownf16",
+    hdrs = ["nextdownf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nextdownl",
+    hdrs = ["nextdownl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nexttoward",
+    hdrs = ["nexttoward.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nexttowardbf16",
+    hdrs = ["nexttowardbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nexttowardf",
+    hdrs = ["nexttowardf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nexttowardf16",
+    hdrs = ["nexttowardf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nexttowardl",
+    hdrs = ["nexttowardl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nextup",
+    hdrs = ["nextup.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nextupbf16",
+    hdrs = ["nextupbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nextupf",
+    hdrs = ["nextupf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nextupf128",
+    hdrs = ["nextupf128.h"],
+    deps = [
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nextupf16",
+    hdrs = ["nextupf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "nextupl",
+    hdrs = ["nextupl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ldexpf128",
+    hdrs = ["ldexpf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "llogbf128",
+    hdrs = ["llogbf128.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ldexpf16",
+    hdrs = ["ldexpf16.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "ldexpf",
+    hdrs = ["ldexpf.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "llogbl",
+    hdrs = ["llogbl.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "llogbf",
+    hdrs = ["llogbf.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "llogb",
+    hdrs = ["llogb.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "lgammaf",
+    hdrs = ["lgammaf.h"],
+    deps = [
+        ":gamma_util",
+        ":log",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fenv_macros",
+        "//libc:hdr_stdint_proxy",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:is_integer",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "lgammaf16",
+    hdrs = ["lgammaf16.h"],
+    deps = [
+        ":gamma_util",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fenv_macros",
+        "//libc:hdr_stdint_proxy",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:is_integer",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "llogbf16",
+    hdrs = ["llogbf16.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "log",
+    hdrs = ["log.h"],
+    deps = [
+        ":common_constants",
+        ":log_range_reduction",
+        "//libc:__support_common",
+        "//libc:__support_integer_literals",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "logbl",
+    hdrs = ["logbl.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "log10",
+    hdrs = ["log10.h"],
+    deps = [
+        ":common_constants",
+        ":log_range_reduction",
+        "//libc:__support_common",
+        "//libc:__support_integer_literals",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "log1p",
+    hdrs = ["log1p.h"],
+    deps = [
+        ":common_constants",
+        "//libc:__support_common",
+        "//libc:__support_integer_literals",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "log1pf_double_eval",
+    hdrs = ["log1pf_double_eval.h"],
+    deps = [
+        ":acoshf_utils",
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "log1pf",
+    hdrs = ["log1pf.h"],
+    deps = [
+        ":log1pf_double_eval",
+        "//libc:__support_common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "log2",
+    hdrs = ["log2.h"],
+    deps = [
+        ":common_constants",
+        ":log_range_reduction",
+        "//libc:__support_common",
+        "//libc:__support_integer_literals",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "logb",
+    hdrs = ["logb.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "log10f16",
+    hdrs = ["log10f16.h"],
+    deps = [
+        ":expxf16_utils",
+        "//libc:__support_common",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fenv_macros",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "log10p1bf16",
+    hdrs = ["log10p1bf16.h"],
+    deps = [
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fenv_macros",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "log10p1f16",
+    hdrs = ["log10p1f16.h"],
+    deps = [
+        ":exp10_float16_constants",
+        ":expxf16_utils",
+        "//libc:__support_common",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fenv_macros",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "log10f_double_eval",
+    hdrs = ["log10f_double_eval.h"],
+    deps = [
+        ":common_constants",
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "log10f",
+    hdrs = ["log10f.h"],
+    deps = [
+        ":log10f_double_eval",
+        "//libc:__support_common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "log2f16",
+    hdrs = ["log2f16.h"],
+    deps = [
+        ":expxf16_utils",
+        "//libc:__support_common",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fenv_macros",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "log2p1f16",
+    hdrs = ["log2p1f16.h"],
+    deps = [
+        ":expxf16_utils",
+        "//libc:__support_common",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fenv_macros",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "log2f_double_eval",
+    hdrs = ["log2f_double_eval.h"],
+    deps = [
+        ":common_constants",
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "log2f",
+    hdrs = ["log2f.h"],
+    deps = [
+        ":log2f_double_eval",
+        "//libc:__support_common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "logbbf16",
+    hdrs = ["logbbf16.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "logbf",
+    hdrs = ["logbf.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "logbf128",
+    hdrs = ["logbf128.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "logbf16",
+    hdrs = ["logbf16.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "logf_double_eval",
+    hdrs = ["logf_double_eval.h"],
+    deps = [
+        ":common_constants",
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "logf",
+    hdrs = ["logf.h"],
+    deps = [
+        ":logf_double_eval",
+        "//libc:__support_common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "pow",
+    hdrs = [
+        "pow.h",
+        "pow_accurate_128.h",
+        "pow_accurate_256.h",
+        "pow_fast.h",
+        "pow_utils.h",
+    ],
+    deps = [
+        ":common_constants",
+        ":exp10",
+        ":exp2",
+        ":exp2_accurate_128",
+        ":exp_constants",
+        "//libc:__support_big_int",
+        "//libc:__support_common",
+        "//libc:__support_frac128",
+        "//libc:__support_frac256",
+        "//libc:__support_frac64",
+        "//libc:__support_math_extras",
+        "//libc:__support_sign",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fenv_macros",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:optional",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:is_integer",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "exp_constants",
+    hdrs = ["exp_constants.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:triple_double",
+        "//libc/src/__support/macros:attributes",
+    ],
+)
+
+libc_support_library(
+    name = "exp2_accurate_128",
+    hdrs = ["exp2_accurate_128.h"],
+    deps = [
+        "//libc:__support_big_int",
+        "//libc:__support_common",
+        "//libc:__support_frac128",
+        "//libc:__support_sign",
+        "//libc:__support_uint128",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "exp_utils",
+    hdrs = ["exp_utils.h"],
+    deps = [
+        ":exp2_accurate_128",
+        "//libc:hdr_errno_macros",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:optional",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:fp_bitwise",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "powf_utils",
+    hdrs = ["powf_utils.h"],
+    deps = [
+        ":exp10f",
+        ":exp2f",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fenv_macros",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:optional",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:is_integer",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/FPUtil:triple_double",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "powf_double_eval",
+    hdrs = ["powf_double_eval.h"],
+    deps = [
+        ":common_constants",
+        ":exp_constants",
+        ":powf_utils",
+        "//libc:__support_common",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:optional",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "powf_float_eval",
+    hdrs = ["powf_float_eval.h"],
+    deps = [
+        ":exp2f_float_utils",
+        ":powf_utils",
+        "//libc:__support_common",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "powf",
+    hdrs = ["powf.h"],
+    deps = [
+        ":powf_double_eval",
+        ":powf_float_eval",
+        "//libc:__support_common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "exp_double_utils",
+    hdrs = ["exp_double_utils.h"],
+    deps = [
+        ":exp_utils",
+        "//libc:__support_common",
+        "//libc:hdr_errno_macros",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:fp_bitwise",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "exp2_double_eval",
+    hdrs = ["exp2_double_eval.h"],
+    deps = [
+        ":exp_double_utils",
+        ":exp_utils",
+        "//libc:__support_common",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:fp_bitwise",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "exp2",
+    hdrs = ["exp2.h"],
+    deps = [
+        ":exp2_double_eval",
+        "//libc:__support_common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "exp_double_eval",
+    hdrs = ["exp_double_eval.h"],
+    deps = [
+        ":exp_double_utils",
+        ":exp_utils",
+        "//libc:__support_common",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:fp_bitwise",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "exp",
+    hdrs = ["exp.h"],
+    deps = [
+        ":exp_double_eval",
+        "//libc:__support_common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "exp2f_double_eval",
+    hdrs = ["exp2f_double_eval.h"],
+    deps = [
+        ":exp10f_utils",
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "exp2f_float_eval",
+    hdrs = ["exp2f_float_eval.h"],
+    deps = [
+        ":exp2f_float_utils",
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "exp2f_integer_eval",
+    hdrs = ["exp2f_integer_eval.h"],
+    deps = [
+        ":exp2f_integer_utils",
+        "//libc:hdr_fenv_macros",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "exp2f",
+    hdrs = ["exp2f.h"],
+    deps = [
+        ":exp2f_double_eval",
+        ":exp2f_float_eval",
+        ":exp2f_integer_eval",
+        "//libc:__support_common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "exp2f16",
+    hdrs = ["exp2f16.h"],
+    deps = [
+        ":common_constants",
+        ":expxf16_utils",
+        "//libc:__support_common",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "exp2m1f",
+    hdrs = ["exp2m1f.h"],
+    deps = [
+        ":common_constants",
+        ":exp10f_utils",
+        "//libc:__support_common",
+        "//libc:hdr_errno_macros",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "exp2m1f16",
+    hdrs = ["exp2m1f16.h"],
+    deps = [
+        ":common_constants",
+        ":expxf16_utils",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "exp10_double_eval",
+    hdrs = ["exp10_double_eval.h"],
+    deps = [
+        ":exp_double_utils",
+        ":exp_utils",
+        "//libc:__support_common",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:fp_bitwise",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "exp10",
+    hdrs = ["exp10.h"],
+    deps = [
+        ":exp10_double_eval",
+        "//libc:__support_common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "exp10f_utils",
+    hdrs = ["exp10f_utils.h"],
+    deps = [
+        ":exp_utils",
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "exp10f_double_eval",
+    hdrs = ["exp10f_double_eval.h"],
+    deps = [
+        ":exp10f_utils",
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "exp10f_float_eval",
+    hdrs = ["exp10f_float_eval.h"],
+    deps = [
+        ":exp2f_float_utils",
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "exp10f",
+    hdrs = ["exp10f.h"],
+    deps = [
+        ":exp10f_double_eval",
+        ":exp10f_float_eval",
+        "//libc:__support_common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "exp10_float16_constants",
+    hdrs = ["exp10_float16_constants.h"],
+    deps = [
+        "//libc:hdr_stdint_proxy",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/CPP:array",
+    ],
+)
+
+libc_support_library(
+    name = "exp10f16_utils",
+    hdrs = ["exp10f16_utils.h"],
+    deps = [
+        ":exp10_float16_constants",
+        ":expf16_utils",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:fp_bits",
+    ],
+)
+
+libc_support_library(
+    name = "exp10f16",
+    hdrs = ["exp10f16.h"],
+    deps = [
+        ":exp10f16_utils",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "expm1",
+    hdrs = ["expm1.h"],
+    deps = [
+        ":exp_constants",
+        "//libc:__support_common",
+        "//libc:__support_integer_literals",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "expm1f",
+    hdrs = ["expm1f.h"],
+    deps = [
+        ":common_constants",
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "expm1f16",
+    hdrs = ["expm1f16.h"],
+    deps = [
+        ":expxf16_utils",
+        "//libc:__support_common",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "dfmal",
+    hdrs = ["dfmal.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "dfmaf128",
+    hdrs = ["dfmaf128.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "sqrtf128",
+    hdrs = ["sqrtf128.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:__support_uint128",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "sqrtl",
+    hdrs = ["sqrtl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "logf16",
+    hdrs = ["logf16.h"],
+    deps = [
+        ":expxf16_utils",
+        "//libc:__support_common",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fenv_macros",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "log_bf16",
+    hdrs = ["log_bf16.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "range_reduction_double",
+    hdrs = [
+        "range_reduction_double_common.h",
+        "range_reduction_double_fma.h",
+        "range_reduction_double_nofma.h",
+    ],
+    deps = [
+        "//libc:__support_common",
+        "//libc:__support_integer_literals",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "range_reduction",
+    hdrs = [
+        "range_reduction.h",
+        "range_reduction_fma.h",
+    ],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "sincos",
+    hdrs = ["sincos.h"],
+    deps = [
+        ":range_reduction_double",
+        ":sincos_eval",
+        "//libc:__support_common",
+        "//libc:hdr_errno_macros",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "sincos_eval",
+    hdrs = ["sincos_eval.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:__support_integer_literals",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "sincosf_utils",
+    hdrs = [
+        "sincosf_float_eval.h",
+        "sincosf_utils.h",
+    ],
+    deps = [
+        ":range_reduction",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "sincosf",
+    hdrs = ["sincosf.h"],
+    deps = [
+        ":range_reduction",
+        ":sincosf_utils",
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "sincosf16_utils",
+    hdrs = ["sincosf16_utils.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "sin",
+    hdrs = ["sin.h"],
+    deps = [
+        ":range_reduction_double",
+        ":sincos_eval",
+        "//libc:hdr_errno_macros",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "sinbf16",
+    hdrs = ["sinbf16.h"],
+    deps = [
+        ":sincosf_utils",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fenv_macros",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "sinf",
+    hdrs = [
+        "sinf.h",
+        "sinf_double_eval.h",
+        "sinf_float_eval.h",
+    ],
+    deps = [
+        ":range_reduction",
+        ":sincosf_utils",
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "sinhbf16",
+    hdrs = ["sinhbf16.h"],
+    deps = [
+        ":sinhcoshbf16_utils",
+        "//libc:hdr_fenv_macros",
+        "//libc:hdr_stdint_proxy",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "sinf16",
+    hdrs = ["sinf16.h"],
+    deps = [
+        ":sincosf16_utils",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fenv_macros",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "sinhf16",
+    hdrs = ["sinhf16.h"],
+    deps = [
+        ":expxf16_utils",
+        "//libc:__support_common",
+        "//libc:hdr_fenv_macros",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "sinhfcoshf_utils",
+    hdrs = ["sinhfcoshf_utils.h"],
+    deps = [
+        ":exp10f_utils",
+        "//libc/src/__support/FPUtil:multiply_add",
+    ],
+)
+
+libc_support_library(
+    name = "sinhcoshbf16_utils",
+    hdrs = ["sinhcoshbf16_utils.h"],
+    deps = [
+        "//libc/src/__support/CPP:array",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "sqrt",
+    hdrs = ["sqrt.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:sqrt",
+    ],
+)
+
+libc_support_library(
+    name = "sqrtbf16",
+    hdrs = ["sqrtbf16.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "sqrtf",
+    hdrs = ["sqrtf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:sqrt",
+    ],
+)
+
+libc_support_library(
+    name = "hypot",
+    hdrs = ["hypot.h"],
+    deps = [
+        "//libc:hdr_fenv_macros",
+        "//libc:hdr_stdint_proxy",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:hypot",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "hypotf",
+    hdrs = ["hypotf.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "hypotbf16",
+    hdrs = ["hypotbf16.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:hypot",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "hypotf16",
+    hdrs = ["hypotf16.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "sinhcosh_accurate_128",
+    hdrs = ["sinhcosh_accurate_128.h"],
+    deps = [
+        ":exp2_accurate_128",
+        "//libc:__support_common",
+        "//libc:__support_frac128",
+        "//libc:__support_frac64",
+        "//libc:__support_uint128",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "sinhcosh_utils",
+    hdrs = ["sinhcosh_utils.h"],
+    deps = [
+        ":exp_utils",
+        ":sinhcosh_accurate_128",
+        "//libc:__support_common",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:fp_bitwise",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "sinh_double_eval",
+    hdrs = ["sinh_double_eval.h"],
+    deps = [
+        ":sinhcosh_utils",
+        "//libc:hdr_errno_macros",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:fp_bitwise",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "sinh",
+    hdrs = ["sinh.h"],
+    deps = [
+        ":sinh_double_eval",
+        "//libc:__support_common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "sinhf",
+    hdrs = ["sinhf.h"],
+    deps = [
+        ":sinhfcoshf_utils",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "sinpif",
+    hdrs = ["sinpif.h"],
+    deps = [
+        ":sincosf_utils",
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "asinpif16",
+    hdrs = ["asinpif16.h"],
+    deps = [
+        ":atan_utils",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fenv_macros",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "sinpif16",
+    hdrs = ["sinpif16.h"],
+    deps = [
+        ":sincosf16_utils",
+        "//libc:__support_common",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fenv_macros",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:is_integer",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "tan",
+    hdrs = ["tan.h"],
+    deps = [
+        ":range_reduction_double",
+        ":sincos_eval",
+        "//libc:hdr_errno_macros",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "tanbf16",
+    hdrs = ["tanbf16.h"],
+    deps = [
+        ":sincosf_utils",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fenv_macros",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "tanf",
+    hdrs = [
+        "tanf.h",
+        "tanf_double_eval.h",
+        "tanf_float_eval.h",
+    ],
+    deps = [
+        ":range_reduction",
+        ":sincosf_utils",
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "tanf16",
+    hdrs = ["tanf16.h"],
+    deps = [
+        ":sincosf16_utils",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fenv_macros",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "tanpif16",
+    hdrs = ["tanpif16.h"],
+    deps = [
+        ":sincosf16_utils",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fenv_macros",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:is_integer",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "totalorder",
+    hdrs = ["totalorder.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "totalorderbf16",
+    hdrs = ["totalorderbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "totalorderf",
+    hdrs = ["totalorderf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "totalorderf128",
+    hdrs = ["totalorderf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "totalorderf80",
+    hdrs = ["totalorderf80.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "totalorderf16",
+    hdrs = ["totalorderf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "totalorderl",
+    hdrs = ["totalorderl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "totalordermag",
+    hdrs = ["totalordermag.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "totalordermagbf16",
+    hdrs = ["totalordermagbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "totalordermagf",
+    hdrs = ["totalordermagf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "totalordermagf128",
+    hdrs = ["totalordermagf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "totalordermagf80",
+    hdrs = ["totalordermagf80.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "totalordermagf16",
+    hdrs = ["totalordermagf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "totalordermagl",
+    hdrs = ["totalordermagl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "trunc",
+    hdrs = ["trunc.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "truncbf16",
+    hdrs = ["truncbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "truncf",
+    hdrs = ["truncf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "truncf128",
+    hdrs = ["truncf128.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "truncf16",
+    hdrs = ["truncf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "truncl",
+    hdrs = ["truncl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ufromfp",
+    hdrs = ["ufromfp.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ufromfpbf16",
+    hdrs = ["ufromfpbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ufromfpf",
+    hdrs = ["ufromfpf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ufromfpf128",
+    hdrs = ["ufromfpf128.h"],
+    deps = [
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ufromfpf16",
+    hdrs = ["ufromfpf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ufromfpl",
+    hdrs = ["ufromfpl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ufromfpx",
+    hdrs = ["ufromfpx.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ufromfpxbf16",
+    hdrs = ["ufromfpxbf16.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ufromfpxf",
+    hdrs = ["ufromfpxf.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ufromfpxf128",
+    hdrs = ["ufromfpxf128.h"],
+    deps = [
+        "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ufromfpxf16",
+    hdrs = ["ufromfpxf16.h"],
+    deps = [
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "ufromfpxl",
+    hdrs = ["ufromfpxl.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "tanh_accurate_128",
+    hdrs = ["tanh_accurate_128.h"],
+    deps = [
+        ":exp2_accurate_128",
+        "//libc:__support_common",
+        "//libc:__support_frac128",
+        "//libc:__support_frac64",
+        "//libc:__support_uint128",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "tanh_double_eval",
+    hdrs = ["tanh_double_eval.h"],
+    deps = [
+        ":exp_utils",
+        ":tanh_accurate_128",
+        "//libc:__support_common",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fenv_macros",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:fp_bitwise",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "tanh",
+    hdrs = ["tanh.h"],
+    deps = [
+        ":tanh_double_eval",
+        "//libc:__support_common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "tanhf",
+    hdrs = ["tanhf.h"],
+    deps = [
+        ":exp10f_utils",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "tanhf16",
+    hdrs = ["tanhf16.h"],
+    deps = [
+        ":expxf16_utils",
+        "//libc:__support_common",
+        "//libc:hdr_fenv_macros",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc/src/__support/CPP:array",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "tanpif",
+    hdrs = ["tanpif.h"],
+    deps = [
+        ":sincosf_utils",
+        "//libc:__support_common",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:is_integer",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
