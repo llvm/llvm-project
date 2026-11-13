@@ -1914,6 +1914,89 @@ public:
   }
 };
 
+// Moves an `xegpu.lane_shuffle` above the integer extension that feeds it, so
+// that the shuffle moves the narrow value. The shuffle only moves elements
+// between lanes, and the extension acts on each element, so
+// shuffle(ext(x)) == ext(shuffle(x)). A narrow fragment (the vector that one
+// lane holds) has fewer bits. A wide one can be over the 64-bit limit of the
+// lowering below: four i4 values extended to i32 are 128 bits.
+//
+// - The lowering takes only 8, 16, 32 or 64-bit elements. So the narrow
+//   width is the source width rounded up to a power of two, and at least 8.
+//   If that is not narrower than the result, the pattern does nothing. If the
+//   source is narrower than it, the source is first extended to it.
+// - Data-movement ops between the extension and the shuffle are rebuilt on
+//   the narrow value.
+// - The extension and each of those ops must have one use.
+//
+// HoistI4ExtensionAboveLaneShuffle handles the other order: an i4 extension
+// after a shuffle. It moves only the i4-to-i8 step above the shuffle.
+template <typename ExtOp>
+class ShuffleBeforeExtension final : public OpRewritePattern<ExtOp> {
+public:
+  using OpRewritePattern<ExtOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtOp ext,
+                                PatternRewriter &rewriter) const override {
+    auto srcTy = dyn_cast<VectorType>(ext.getIn().getType());
+    auto dstTy = dyn_cast<VectorType>(ext.getType());
+    if (!srcTy || !dstTy || !srcTy.getElementType().isInteger())
+      return failure();
+    unsigned narrowBits = std::max<unsigned>(
+        llvm::PowerOf2Ceil(srcTy.getElementTypeBitWidth()), 8);
+    if (narrowBits >= dstTy.getElementTypeBitWidth())
+      return failure();
+
+    auto isMover = [](Operation *op) {
+      return isa<vector::ShapeCastOp, vector::ExtractStridedSliceOp,
+                 vector::ExtractOp, vector::BroadcastOp, vector::TransposeOp>(
+          op);
+    };
+    // Walk forward from the extension through single-use movers to a shuffle.
+    SmallVector<Operation *> movers;
+    Value value = ext.getResult();
+    xegpu::LaneShuffleOp shuffle;
+    while (value.hasOneUse()) {
+      Operation *user = *value.getUsers().begin();
+      if ((shuffle = dyn_cast<xegpu::LaneShuffleOp>(user)))
+        break;
+      if (!isMover(user) || user->getNumResults() != 1 ||
+          user->getOperand(0) != value)
+        return failure();
+      movers.push_back(user);
+      value = user->getResult(0);
+    }
+    if (!shuffle)
+      return failure();
+
+    Type narrowElemTy = rewriter.getIntegerType(narrowBits);
+    Value narrow = ext.getIn();
+    rewriter.setInsertionPoint(ext);
+    if (srcTy.getElementTypeBitWidth() < narrowBits)
+      narrow = ExtOp::create(rewriter, ext.getLoc(), srcTy.clone(narrowElemTy),
+                             narrow);
+    IRMapping mapping;
+    mapping.map(ext.getResult(), narrow);
+    for (Operation *mover : movers) {
+      rewriter.setInsertionPoint(mover);
+      Operation *clone = rewriter.clone(*mover, mapping);
+      auto vectorTy = dyn_cast<VectorType>(mover->getResult(0).getType());
+      clone->getResult(0).setType(vectorTy ? Type(vectorTy.clone(narrowElemTy))
+                                           : narrowElemTy);
+    }
+    Value narrowSrc = mapping.lookup(shuffle.getSource());
+    rewriter.setInsertionPoint(shuffle);
+    Value moved = xegpu::LaneShuffleOp::create(rewriter, shuffle.getLoc(),
+                                               narrowSrc.getType(), narrowSrc,
+                                               shuffle.getMode());
+    rewriter.replaceOpWithNewOp<ExtOp>(shuffle, shuffle.getType(), moved);
+    for (Operation *mover : llvm::reverse(movers))
+      rewriter.eraseOp(mover);
+    rewriter.eraseOp(ext);
+    return success();
+  }
+};
+
 // Lowers `xegpu.lane_shuffle` to `xevm.bitcast_shuffle`.
 //
 // `xevm.bitcast_shuffle` concatenates the components of its operand across the
@@ -2000,7 +2083,9 @@ struct ConvertXeGPUToXeVMPass
     {
       RewritePatternSet patterns(context);
       patterns.add<HoistI4ExtensionAboveLaneShuffle<arith::ExtUIOp>,
-                   HoistI4ExtensionAboveLaneShuffle<arith::ExtSIOp>>(context);
+                   HoistI4ExtensionAboveLaneShuffle<arith::ExtSIOp>,
+                   ShuffleBeforeExtension<arith::ExtUIOp>,
+                   ShuffleBeforeExtension<arith::ExtSIOp>>(context);
       SmallVector<Operation *> extensions;
       getOperation()->walk([&](Operation *op) {
         if (isa<arith::ExtUIOp, arith::ExtSIOp>(op))
