@@ -2279,7 +2279,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       MachineBasicBlock *TargetMBB = MI.getOperand(0).getMBB();
       MachineBasicBlock::iterator InsertPt = MBBI;
       while (InsertPt != MBB.begin() &&
-             std::prev(InsertPt)->getFlag(MachineInstr::FrameDestroy))
+             (std::prev(InsertPt)->isDebugInstr() ||
+              std::prev(InsertPt)->getFlag(MachineInstr::FrameDestroy)))
         --InsertPt;
       MachineBasicBlock::iterator Mov =
           BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(ARM::t2MOVi32imm),
