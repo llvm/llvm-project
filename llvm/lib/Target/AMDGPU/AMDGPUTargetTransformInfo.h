@@ -210,6 +210,9 @@ public:
     return AMDGPU::addrspacesMayAlias(AS0, AS1);
   }
 
+  bool isAddrSpaceDeadAfterReturn(const Function &F,
+                                  unsigned AddrSpace) const override;
+
   unsigned getFlatAddressSpace() const override {
     // Don't bother running InferAddressSpaces pass on graphics shaders which
     // don't use flat addressing.

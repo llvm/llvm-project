@@ -146,6 +146,11 @@ public:
     return true;
   }
 
+  virtual bool isAddrSpaceDeadAfterReturn(const Function &F,
+                                          unsigned AddrSpace) const {
+    return false;
+  }
+
   virtual unsigned getFlatAddressSpace() const { return -1; }
 
   virtual unsigned getAddressSpaceJoin(unsigned AS1, unsigned AS2) const {

@@ -53,6 +53,7 @@
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/AttributeMask.h"
@@ -916,6 +917,7 @@ struct DSEState {
   DominatorTree &DT;
   PostDominatorTree &PDT;
   const TargetLibraryInfo &TLI;
+  const TargetTransformInfo &TTI;
   const DataLayout &DL;
   const CycleInfo &CI;
 
@@ -957,7 +959,8 @@ struct DSEState {
   // Class contains self-reference, make sure it's not copied/moved.
   DSEState(const ScalarOptions &Opts, Function &F, AliasAnalysis &AA,
            MemorySSA &MSSA, DominatorTree &DT, PostDominatorTree &PDT,
-           const TargetLibraryInfo &TLI, const CycleInfo &CI);
+           const TargetLibraryInfo &TLI, const TargetTransformInfo &TTI,
+           const CycleInfo &CI);
   DSEState(const DSEState &) = delete;
   DSEState &operator=(const DSEState &) = delete;
 
@@ -1134,9 +1137,11 @@ static bool isFuncLocalAndNotCaptured(Value *Arg, const CallBase *CB,
 
 DSEState::DSEState(const ScalarOptions &Opts, Function &F, AliasAnalysis &AA,
                    MemorySSA &MSSA, DominatorTree &DT, PostDominatorTree &PDT,
-                   const TargetLibraryInfo &TLI, const CycleInfo &CI)
+                   const TargetLibraryInfo &TLI, const TargetTransformInfo &TTI,
+                   const CycleInfo &CI)
     : Opts(Opts), F(F), AA(AA), EA(DT, nullptr, &CI), BatchAA(AA, &EA),
-      MSSA(MSSA), DT(DT), PDT(PDT), TLI(TLI), DL(F.getDataLayout()), CI(CI) {
+      MSSA(MSSA), DT(DT), PDT(PDT), TLI(TLI), TTI(TTI), DL(F.getDataLayout()),
+      CI(CI) {
   // Collect blocks with throwing instructions not modeled in MemorySSA and
   // alloc-like objects.
   unsigned PO = 0;
@@ -1356,6 +1361,11 @@ OverwriteResult DSEState::isOverwrite(const Instruction *KillingI,
 bool DSEState::isInvisibleToCallerAfterRet(const Value *V, const Value *Ptr,
                                            const LocationSize StoreSize) {
   if (isa<AllocaInst>(V))
+    return true;
+
+  // Some targets release objects in certain address spaces on return.
+  if (auto *GV = dyn_cast<GlobalVariable>(V);
+      GV && TTI.isAddrSpaceDeadAfterReturn(F, GV->getAddressSpace()))
     return true;
 
   auto IBounded = InvisibleToCallerAfterRetBounded.find(V);
@@ -2765,10 +2775,11 @@ bool DSEState::eliminateDeadDefs(const MemoryDefWrapper &KillingDefWrapper) {
 static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
                                 DominatorTree &DT, PostDominatorTree &PDT,
                                 const TargetLibraryInfo &TLI,
+                                const TargetTransformInfo &TTI,
                                 const CycleInfo &CI) {
   const ScalarOptions &Opts = getScalarOptions(F);
   bool MadeChange = false;
-  DSEState State(Opts, F, AA, MSSA, DT, PDT, TLI, CI);
+  DSEState State(Opts, F, AA, MSSA, DT, PDT, TLI, TTI, CI);
   // For each store:
   for (unsigned I = 0; I < State.MemDefs.size(); I++) {
     MemoryDef *KillingDef = State.MemDefs[I];
@@ -2804,12 +2815,13 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
 PreservedAnalyses DSEPass::run(Function &F, FunctionAnalysisManager &AM) {
   AliasAnalysis &AA = AM.getResult<AAManager>(F);
   const TargetLibraryInfo &TLI = AM.getResult<TargetLibraryAnalysis>(F);
+  const TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
   MemorySSA &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
   PostDominatorTree &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
   CycleInfo &CI = AM.getResult<CycleAnalysis>(F);
 
-  bool Changed = eliminateDeadStores(F, AA, MSSA, DT, PDT, TLI, CI);
+  bool Changed = eliminateDeadStores(F, AA, MSSA, DT, PDT, TLI, TTI, CI);
 
 #ifdef LLVM_ENABLE_STATS
   if (AreStatisticsEnabled())
@@ -2845,12 +2857,14 @@ public:
     DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     const TargetLibraryInfo &TLI =
         getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+    const TargetTransformInfo &TTI =
+        getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     MemorySSA &MSSA = getAnalysis<MemorySSAWrapperPass>().getMSSA();
     PostDominatorTree &PDT =
         getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
     CycleInfo &CI = getAnalysis<CycleInfoWrapperPass>().getResult();
 
-    bool Changed = eliminateDeadStores(F, AA, MSSA, DT, PDT, TLI, CI);
+    bool Changed = eliminateDeadStores(F, AA, MSSA, DT, PDT, TLI, TTI, CI);
 
 #ifdef LLVM_ENABLE_STATS
     if (AreStatisticsEnabled())
@@ -2865,6 +2879,7 @@ public:
     AU.setPreservesCFG();
     AU.addRequired<AAResultsWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<PostDominatorTreeWrapperPass>();
@@ -2888,6 +2903,7 @@ INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_END(DSELegacyPass, "dse", "Dead Store Elimination", false,

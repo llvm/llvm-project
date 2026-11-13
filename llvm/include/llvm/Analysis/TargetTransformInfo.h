@@ -564,6 +564,11 @@ public:
   /// Return false if a \p AS0 address cannot possibly alias a \p AS1 address.
   LLVM_ABI bool addrspacesMayAlias(unsigned AS0, unsigned AS1) const;
 
+  /// Return true if writes to objects in address space \p AddrSpace cannot be
+  /// observed once \p F returns, unless read or synchronized before then.
+  LLVM_ABI bool isAddrSpaceDeadAfterReturn(const Function &F,
+                                           unsigned AddrSpace) const;
+
   /// Returns the address space ID for a target's 'flat' address space. Note
   /// this is not necessarily the same as addrspace(0), which LLVM sometimes
   /// refers to as the generic address space. The flat address space is a

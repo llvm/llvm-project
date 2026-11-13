@@ -244,6 +244,15 @@ GCNTTIImpl::GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
   HasFP32Denormals = Mode.FP32Denormals != DenormalMode::getPreserveSign();
 }
 
+bool GCNTTIImpl::isAddrSpaceDeadAfterReturn(const Function &F,
+                                            unsigned AddrSpace) const {
+  // A wave ends when its entry function returns. Other waves only observe its
+  // LDS writes through a synchronizing operation, e.g. a barrier or fence,
+  // which DSE treats as a read.
+  return AddrSpace == AMDGPUAS::LOCAL_ADDRESS &&
+         AMDGPU::isEntryFunctionCC(F.getCallingConv());
+}
+
 bool GCNTTIImpl::hasBranchDivergence(const Function *F) const {
   return !F || !ST->isSingleLaneExecution(*F);
 }

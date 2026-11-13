@@ -16,7 +16,6 @@ declare void @reads_lds()
 define amdgpu_kernel void @store_before_ret(ptr addrspace(1) %out, float %v) {
 ; CHECK-LABEL: define amdgpu_kernel void @store_before_ret(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], float [[V:%.*]]) {
-; CHECK-NEXT:    store float [[V]], ptr addrspace(3) @lds, align 4
 ; CHECK-NEXT:    store float [[V]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -28,8 +27,6 @@ define amdgpu_kernel void @store_before_ret(ptr addrspace(1) %out, float %v) {
 define amdgpu_kernel void @gep_store_before_ret(float %v) {
 ; CHECK-LABEL: define amdgpu_kernel void @gep_store_before_ret(
 ; CHECK-SAME: float [[V:%.*]]) {
-; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [4 x float], ptr addrspace(3) @lds, i32 0, i32 2
-; CHECK-NEXT:    store float [[V]], ptr addrspace(3) [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %p = getelementptr inbounds [4 x float], ptr addrspace(3) @lds, i32 0, i32 2
@@ -39,7 +36,6 @@ define amdgpu_kernel void @gep_store_before_ret(float %v) {
 
 define amdgpu_kernel void @memset_before_ret() {
 ; CHECK-LABEL: define amdgpu_kernel void @memset_before_ret() {
-; CHECK-NEXT:    call void @llvm.memset.p3.i64(ptr addrspace(3) align 16 @lds, i8 0, i64 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p3.i64(ptr addrspace(3) align 16 @lds, i8 0, i64 16, i1 false)
@@ -49,7 +45,6 @@ define amdgpu_kernel void @memset_before_ret() {
 define amdgpu_kernel void @store_before_two_rets(float %v, i1 %c) {
 ; CHECK-LABEL: define amdgpu_kernel void @store_before_two_rets(
 ; CHECK-SAME: float [[V:%.*]], i1 [[C:%.*]]) {
-; CHECK-NEXT:    store float [[V]], ptr addrspace(3) @lds, align 4
 ; CHECK-NEXT:    br i1 [[C]], label %[[A:.*]], label %[[B:.*]]
 ; CHECK:       [[A]]:
 ; CHECK-NEXT:    ret void
@@ -68,10 +63,8 @@ b:
 define amdgpu_kernel void @store_overwritten_on_one_path(float %v, float %w, i1 %c) {
 ; CHECK-LABEL: define amdgpu_kernel void @store_overwritten_on_one_path(
 ; CHECK-SAME: float [[V:%.*]], float [[W:%.*]], i1 [[C:%.*]]) {
-; CHECK-NEXT:    store float [[V]], ptr addrspace(3) @lds, align 4
 ; CHECK-NEXT:    br i1 [[C]], label %[[A:.*]], label %[[B:.*]]
 ; CHECK:       [[A]]:
-; CHECK-NEXT:    store float [[W]], ptr addrspace(3) @lds, align 4
 ; CHECK-NEXT:    br label %[[B]]
 ; CHECK:       [[B]]:
 ; CHECK-NEXT:    ret void
@@ -88,7 +81,6 @@ b:
 define amdgpu_kernel void @flat_store_before_ret(float %v) {
 ; CHECK-LABEL: define amdgpu_kernel void @flat_store_before_ret(
 ; CHECK-SAME: float [[V:%.*]]) {
-; CHECK-NEXT:    store float [[V]], ptr addrspacecast (ptr addrspace(3) @lds to ptr), align 4
 ; CHECK-NEXT:    ret void
 ;
   store float %v, ptr addrspacecast (ptr addrspace(3) @lds to ptr), align 4
@@ -99,7 +91,6 @@ define amdgpu_kernel void @flat_store_before_ret(float %v) {
 define amdgpu_cs void @cs_store_before_ret(float %v) {
 ; CHECK-LABEL: define amdgpu_cs void @cs_store_before_ret(
 ; CHECK-SAME: float [[V:%.*]]) {
-; CHECK-NEXT:    store float [[V]], ptr addrspace(3) @lds, align 4
 ; CHECK-NEXT:    ret void
 ;
   store float %v, ptr addrspace(3) @lds, align 4

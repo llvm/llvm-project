@@ -305,6 +305,11 @@ bool llvm::TargetTransformInfo::addrspacesMayAlias(unsigned FromAS,
   return TTIImpl->addrspacesMayAlias(FromAS, ToAS);
 }
 
+bool TargetTransformInfo::isAddrSpaceDeadAfterReturn(const Function &F,
+                                                     unsigned AddrSpace) const {
+  return TTIImpl->isAddrSpaceDeadAfterReturn(F, AddrSpace);
+}
+
 unsigned TargetTransformInfo::getFlatAddressSpace() const {
   return TTIImpl->getFlatAddressSpace();
 }
