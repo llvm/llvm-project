@@ -1274,7 +1274,7 @@ class Sema;
     // Allocator for ConversionSequenceLists and deferred candidate args.
     // We store the first few of these
     // inline to avoid allocation for small sets.
-    llvm::BumpPtrAllocator SlabAllocator;
+    llvm::SmallBumpPtrAllocator SlabAllocator;
 
     SourceLocation Loc;
     CandidateSetKind Kind;

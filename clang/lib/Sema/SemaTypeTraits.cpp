@@ -1172,7 +1172,7 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
 
 static ExprResult CheckConvertibilityForTypeTraits(
     Sema &Self, const TypeSourceInfo *Lhs, const TypeSourceInfo *Rhs,
-    SourceLocation KeyLoc, llvm::BumpPtrAllocator &OpaqueExprAllocator) {
+    SourceLocation KeyLoc, llvm::SmallBumpPtrAllocator &OpaqueExprAllocator) {
 
   QualType LhsT = Lhs->getType();
   QualType RhsT = Rhs->getType();
@@ -1339,7 +1339,7 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
     if (RD && RD->isAbstract())
       return false;
 
-    llvm::BumpPtrAllocator OpaqueExprAllocator;
+    llvm::SmallBumpPtrAllocator OpaqueExprAllocator;
     SmallVector<Expr *, 2> ArgExprs;
     ArgExprs.reserve(Args.size() - 1);
     for (unsigned I = 1, N = Args.size(); I != N; ++I) {
@@ -1689,7 +1689,7 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
   case BTT_IsNothrowConvertible: {
     if (RhsT->isVoidType())
       return LhsT->isVoidType();
-    llvm::BumpPtrAllocator OpaqueExprAllocator;
+    llvm::SmallBumpPtrAllocator OpaqueExprAllocator;
     ExprResult Result = CheckConvertibilityForTypeTraits(Self, Lhs, Rhs, KeyLoc,
                                                          OpaqueExprAllocator);
     if (Result.isInvalid())
@@ -2268,7 +2268,7 @@ static void DiagnoseNonConstructibleReason(
   if (!D || D->isInvalidDecl() || !D->hasDefinition())
     return;
 
-  llvm::BumpPtrAllocator OpaqueExprAllocator;
+  llvm::SmallBumpPtrAllocator OpaqueExprAllocator;
   SmallVector<Expr *, 2> ArgExprs;
   ArgExprs.reserve(Ts.size() - 1);
   for (unsigned I = 1, N = Ts.size(); I != N; ++I) {
