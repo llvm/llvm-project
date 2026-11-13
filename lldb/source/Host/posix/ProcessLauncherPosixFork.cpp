@@ -16,6 +16,7 @@
 #include "lldb/Utility/Log.h"
 #include "llvm/Support/Errno.h"
 
+#include <algorithm>
 #include <climits>
 #include <fcntl.h>
 #include <sys/ptrace.h>
@@ -24,6 +25,10 @@
 
 #include <csignal>
 #include <sstream>
+
+#if defined(__FreeBSD__)
+#include <sys/param.h>
+#endif
 
 #if defined(__linux__)
 #include <sys/personality.h>
@@ -89,7 +94,7 @@ struct ForkFileAction {
 };
 
 struct ForkLaunchInfo {
-  ForkLaunchInfo(const ProcessLaunchInfo &info);
+  ForkLaunchInfo(const ProcessLaunchInfo &info, int error_fd);
 
   bool separate_process_group;
   bool debug;
@@ -99,16 +104,61 @@ struct ForkLaunchInfo {
   const char **argv;
   Environment::Envp envp;
   std::vector<ForkFileAction> actions;
+  std::vector<int> preserved_fds;
 
-  bool has_action(int fd) const {
-    for (const ForkFileAction &action : actions) {
-      if (action.fd == fd)
-        return true;
-    }
-    return false;
+  bool keep_fd(int fd) const {
+    return std::binary_search(preserved_fds.begin(), preserved_fds.end(), fd);
   }
 };
 } // namespace
+
+static void CloseFileDescriptors(const ForkLaunchInfo &info) {
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1202000
+  // Close gaps between preserved descriptors without scanning RLIMIT_NOFILE.
+  // The list is prepared before fork, so this path needs no allocations.
+  unsigned first = 3;
+  bool closed = true;
+  for (int fd : info.preserved_fds) {
+    if (first < static_cast<unsigned>(fd) &&
+        close_range(first, fd - 1, 0) != 0) {
+      closed = false;
+      break;
+    }
+    first = static_cast<unsigned>(fd) + 1;
+  }
+  if (closed && close_range(first, UINT_MAX, 0) == 0)
+    return;
+  // An older running kernel may not implement close_range. Fall back to the
+  // existing cleanup, including when some ranges have already been closed.
+#endif
+
+  // NB: This fallback is not async-signal safe, but we currently do not launch
+  // processes for debugging from within multithreaded contexts.
+  const llvm::StringRef proc_fd_path = "/proc/self/fd";
+  std::error_code ec;
+  bool result = false;
+  ec = llvm::sys::fs::is_directory(proc_fd_path, result);
+  if (result) {
+    std::vector<int> files_to_close;
+    // Directory iterator doesn't ensure any sequence.
+    for (llvm::sys::fs::directory_iterator iter(proc_fd_path, ec), file_end;
+         iter != file_end && !ec; iter.increment(ec)) {
+      int fd = std::stoi(iter->path().substr(proc_fd_path.size() + 1));
+
+      // Don't close stdin, stdout, stderr, or explicitly preserved descriptors.
+      if (fd > 2 && !info.keep_fd(fd))
+        files_to_close.push_back(fd);
+    }
+    for (int file_to_close : files_to_close)
+      close(file_to_close);
+  } else {
+    // Since /proc/self/fd didn't work, trying the slow way instead.
+    int max_fd = sysconf(_SC_OPEN_MAX);
+    for (int fd = 3; fd < max_fd; ++fd)
+      if (!info.keep_fd(fd))
+        close(fd);
+  }
+}
 
 [[noreturn]] static void ChildFunc(int error_fd, const ForkLaunchInfo &info) {
   if (info.separate_process_group) {
@@ -163,34 +213,7 @@ struct ForkLaunchInfo {
     // Close everything besides stdin, stdout, and stderr that has no file
     // action to avoid leaking. Only do this when debugging, as elsewhere we
     // actually rely on passing open descriptors to child processes.
-    // NB: This code is not async-signal safe, but we currently do not launch
-    // processes for debugging from within multithreaded contexts.
-
-    const llvm::StringRef proc_fd_path = "/proc/self/fd";
-    std::error_code ec;
-    bool result;
-    ec = llvm::sys::fs::is_directory(proc_fd_path, result);
-    if (result) {
-      std::vector<int> files_to_close;
-      // Directory iterator doesn't ensure any sequence.
-      for (llvm::sys::fs::directory_iterator iter(proc_fd_path, ec), file_end;
-           iter != file_end && !ec; iter.increment(ec)) {
-        int fd = std::stoi(iter->path().substr(proc_fd_path.size() + 1));
-
-        // Don't close first three entries since they are stdin, stdout and
-        // stderr.
-        if (fd > 2 && !info.has_action(fd) && fd != error_fd)
-          files_to_close.push_back(fd);
-      }
-      for (int file_to_close : files_to_close)
-        close(file_to_close);
-    } else {
-      // Since /proc/self/fd didn't work, trying the slow way instead.
-      int max_fd = sysconf(_SC_OPEN_MAX);
-      for (int fd = 3; fd < max_fd; ++fd)
-        if (!info.has_action(fd) && fd != error_fd)
-          close(fd);
-    }
+    CloseFileDescriptors(info);
 
     // Start tracing this child that is about to exec.
 #ifdef _AIX
@@ -240,7 +263,7 @@ MakeForkActions(const ProcessLaunchInfo &info) {
   return result;
 }
 
-ForkLaunchInfo::ForkLaunchInfo(const ProcessLaunchInfo &info)
+ForkLaunchInfo::ForkLaunchInfo(const ProcessLaunchInfo &info, int error_fd)
     : separate_process_group(
           info.GetFlags().Test(eLaunchFlagLaunchInSeparateProcessGroup)),
       debug(info.GetFlags().Test(eLaunchFlagDebug)),
@@ -248,7 +271,23 @@ ForkLaunchInfo::ForkLaunchInfo(const ProcessLaunchInfo &info)
       wd(info.GetWorkingDirectory().GetPath()),
       executable(info.GetExecutableFile().GetPath()),
       argv(info.GetArguments().GetConstArgumentVector()),
-      envp(info.GetEnvironment().getEnvp()), actions(MakeForkActions(info)) {}
+      envp(info.GetEnvironment().getEnvp()), actions(MakeForkActions(info)) {
+  if (!debug)
+    return;
+  auto preserve = [&](int fd) {
+    if (fd > 2)
+      preserved_fds.push_back(fd);
+  };
+  preserve(error_fd);
+  for (const ForkFileAction &action : actions) {
+    preserve(action.fd);
+    if (action.action == FileAction::eFileActionDuplicate)
+      preserve(action.arg);
+  }
+  std::sort(preserved_fds.begin(), preserved_fds.end());
+  preserved_fds.erase(std::unique(preserved_fds.begin(), preserved_fds.end()),
+                      preserved_fds.end());
+}
 
 HostProcess
 ProcessLauncherPosixFork::LaunchProcess(const ProcessLaunchInfo &launch_info,
@@ -259,7 +298,8 @@ ProcessLauncherPosixFork::LaunchProcess(const ProcessLaunchInfo &launch_info,
   if (error.Fail())
     return HostProcess();
 
-  const ForkLaunchInfo fork_launch_info(launch_info);
+  const ForkLaunchInfo fork_launch_info(launch_info,
+                                        pipe.GetWriteFileDescriptor());
 
   ::pid_t pid = ::fork();
   if (pid == -1) {
