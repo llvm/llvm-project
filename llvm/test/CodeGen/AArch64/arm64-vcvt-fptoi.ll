@@ -1974,9 +1974,6 @@ define <4 x i16> @fcvtzs_4h(<4 x half> %A) nounwind {
 ; CHECK-GI-NO16-LABEL: fcvtzs_4h:
 ; CHECK-GI-NO16:       // %bb.0:
 ; CHECK-GI-NO16-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-GI-NO16-NEXT:    frintz v0.4s, v0.4s
-; CHECK-GI-NO16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-GI-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NO16-NEXT:    fcvtzs v0.4s, v0.4s
 ; CHECK-GI-NO16-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-GI-NO16-NEXT:    ret
@@ -2005,9 +2002,6 @@ define <4 x i16> @fcvtzs_4h_sat(<4 x half> %A) nounwind {
 ;
 ; CHECK-GI-NO16-LABEL: fcvtzs_4h_sat:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-GI-NO16-NEXT:    frintz v0.4s, v0.4s
-; CHECK-GI-NO16-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-GI-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NO16-NEXT:    fcvtzs v0.4s, v0.4s
 ; CHECK-GI-NO16-NEXT:    sqxtn v0.4h, v0.4s
@@ -2042,12 +2036,6 @@ define <8 x i16> @fcvtzs_8h(<8 x half> %A) nounwind {
 ; CHECK-GI-NO16:       // %bb.0:
 ; CHECK-GI-NO16-NEXT:    fcvtl v1.4s, v0.4h
 ; CHECK-GI-NO16-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-GI-NO16-NEXT:    frintz v1.4s, v1.4s
-; CHECK-GI-NO16-NEXT:    frintz v0.4s, v0.4s
-; CHECK-GI-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-GI-NO16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-GI-NO16-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-GI-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NO16-NEXT:    fcvtzs v1.4s, v1.4s
 ; CHECK-GI-NO16-NEXT:    fcvtzs v0.4s, v0.4s
 ; CHECK-GI-NO16-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
@@ -2082,12 +2070,6 @@ define <8 x i16> @fcvtzs_8h_sat(<8 x half> %A) nounwind {
 ; CHECK-GI-NO16:       // %bb.0:
 ; CHECK-GI-NO16-NEXT:    fcvtl v1.4s, v0.4h
 ; CHECK-GI-NO16-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-GI-NO16-NEXT:    frintz v1.4s, v1.4s
-; CHECK-GI-NO16-NEXT:    frintz v0.4s, v0.4s
-; CHECK-GI-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-GI-NO16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-GI-NO16-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-GI-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NO16-NEXT:    fcvtzs v1.4s, v1.4s
 ; CHECK-GI-NO16-NEXT:    fcvtzs v2.4s, v0.4s
 ; CHECK-GI-NO16-NEXT:    sqxtn v0.4h, v1.4s
@@ -2120,9 +2102,6 @@ define <4 x i16> @fcvtzu_4h(<4 x half> %A) nounwind {
 ; CHECK-GI-NO16-LABEL: fcvtzu_4h:
 ; CHECK-GI-NO16:       // %bb.0:
 ; CHECK-GI-NO16-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-GI-NO16-NEXT:    frintz v0.4s, v0.4s
-; CHECK-GI-NO16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-GI-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NO16-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-GI-NO16-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-GI-NO16-NEXT:    ret
@@ -2151,9 +2130,6 @@ define <4 x i16> @fcvtzu_4h_sat(<4 x half> %A) nounwind {
 ;
 ; CHECK-GI-NO16-LABEL: fcvtzu_4h_sat:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-GI-NO16-NEXT:    frintz v0.4s, v0.4s
-; CHECK-GI-NO16-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-GI-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NO16-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-GI-NO16-NEXT:    uqxtn v0.4h, v0.4s
@@ -2188,12 +2164,6 @@ define <8 x i16> @fcvtzu_8h(<8 x half> %A) nounwind {
 ; CHECK-GI-NO16:       // %bb.0:
 ; CHECK-GI-NO16-NEXT:    fcvtl v1.4s, v0.4h
 ; CHECK-GI-NO16-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-GI-NO16-NEXT:    frintz v1.4s, v1.4s
-; CHECK-GI-NO16-NEXT:    frintz v0.4s, v0.4s
-; CHECK-GI-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-GI-NO16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-GI-NO16-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-GI-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NO16-NEXT:    fcvtzu v1.4s, v1.4s
 ; CHECK-GI-NO16-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-GI-NO16-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
@@ -2228,12 +2198,6 @@ define <8 x i16> @fcvtzu_8h_sat(<8 x half> %A) nounwind {
 ; CHECK-GI-NO16:       // %bb.0:
 ; CHECK-GI-NO16-NEXT:    fcvtl v1.4s, v0.4h
 ; CHECK-GI-NO16-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-GI-NO16-NEXT:    frintz v1.4s, v1.4s
-; CHECK-GI-NO16-NEXT:    frintz v0.4s, v0.4s
-; CHECK-GI-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-GI-NO16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-GI-NO16-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-GI-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NO16-NEXT:    fcvtzu v1.4s, v1.4s
 ; CHECK-GI-NO16-NEXT:    fcvtzu v2.4s, v0.4s
 ; CHECK-GI-NO16-NEXT:    uqxtn v0.4h, v1.4s

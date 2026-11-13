@@ -539,57 +539,12 @@ entry:
 ; Round towards zero (fcvtzs).
 
 define i32 @testzswbf(bfloat %a) {
-; CHECK-CVT-LABEL: testzswbf:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-CVT-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-NEXT:    fcvtzs w0, s0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testzswbf:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-FP16-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-FP16-NEXT:    fcvtzs w0, s0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testzswbf:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-GI-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-GI-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-GI-NEXT:    frintz s0, s0
-; CHECK-GI-NEXT:    fmov w9, s0
-; CHECK-GI-NEXT:    fcmp s0, #0.0
-; CHECK-GI-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-GI-NEXT:    add w8, w9, w8
-; CHECK-GI-NEXT:    orr w9, w9, #0x400000
-; CHECK-GI-NEXT:    add w8, w8, w10
-; CHECK-GI-NEXT:    csel w8, w9, w8, vs
-; CHECK-GI-NEXT:    lsr w8, w8, #16
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-GI-NEXT:    fcvtzs w0, s0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testzswbf:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-GI-FP16-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-GI-FP16-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-GI-FP16-NEXT:    frintz s0, s0
-; CHECK-GI-FP16-NEXT:    fmov w9, s0
-; CHECK-GI-FP16-NEXT:    fcmp s0, #0.0
-; CHECK-GI-FP16-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-GI-FP16-NEXT:    add w8, w9, w8
-; CHECK-GI-FP16-NEXT:    orr w9, w9, #0x400000
-; CHECK-GI-FP16-NEXT:    add w8, w8, w10
-; CHECK-GI-FP16-NEXT:    csel w8, w9, w8, vs
-; CHECK-GI-FP16-NEXT:    lsr w8, w8, #16
-; CHECK-GI-FP16-NEXT:    fmov s0, w8
-; CHECK-GI-FP16-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-GI-FP16-NEXT:    fcvtzs w0, s0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testzswbf:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    fcvtzs w0, s0
+; CHECK-NEXT:    ret
 entry:
   %r = call bfloat @llvm.trunc.bf16(bfloat %a)
   %i = call i32 @llvm.fptosi.sat.i32.bf16(bfloat %r)
@@ -597,57 +552,12 @@ entry:
 }
 
 define i64 @testzsxbf(bfloat %a) {
-; CHECK-CVT-LABEL: testzsxbf:
-; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-CVT-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-NEXT:    fcvtzs x0, s0
-; CHECK-CVT-NEXT:    ret
-;
-; CHECK-FP16-LABEL: testzsxbf:
-; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-FP16-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-FP16-NEXT:    fcvtzs x0, s0
-; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-LABEL: testzsxbf:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-GI-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-GI-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-GI-NEXT:    frintz s0, s0
-; CHECK-GI-NEXT:    fmov w9, s0
-; CHECK-GI-NEXT:    fcmp s0, #0.0
-; CHECK-GI-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-GI-NEXT:    add w8, w9, w8
-; CHECK-GI-NEXT:    orr w9, w9, #0x400000
-; CHECK-GI-NEXT:    add w8, w8, w10
-; CHECK-GI-NEXT:    csel w8, w9, w8, vs
-; CHECK-GI-NEXT:    lsr w8, w8, #16
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-GI-NEXT:    fcvtzs x0, s0
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: testzsxbf:
-; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-GI-FP16-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-GI-FP16-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-GI-FP16-NEXT:    frintz s0, s0
-; CHECK-GI-FP16-NEXT:    fmov w9, s0
-; CHECK-GI-FP16-NEXT:    fcmp s0, #0.0
-; CHECK-GI-FP16-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-GI-FP16-NEXT:    add w8, w9, w8
-; CHECK-GI-FP16-NEXT:    orr w9, w9, #0x400000
-; CHECK-GI-FP16-NEXT:    add w8, w8, w10
-; CHECK-GI-FP16-NEXT:    csel w8, w9, w8, vs
-; CHECK-GI-FP16-NEXT:    lsr w8, w8, #16
-; CHECK-GI-FP16-NEXT:    fmov s0, w8
-; CHECK-GI-FP16-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-GI-FP16-NEXT:    fcvtzs x0, s0
-; CHECK-GI-FP16-NEXT:    ret
+; CHECK-LABEL: testzsxbf:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    fcvtzs x0, s0
+; CHECK-NEXT:    ret
 entry:
   %r = call bfloat @llvm.trunc.bf16(bfloat %a)
   %i = call i64 @llvm.fptosi.sat.i64.bf16(bfloat %r)
@@ -668,9 +578,6 @@ define i32 @testzswh(half %a) {
 ;
 ; CHECK-GI-LABEL: testzswh:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fcvt s0, h0
-; CHECK-GI-NEXT:    frintz s0, s0
-; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    fcvt s0, h0
 ; CHECK-GI-NEXT:    fcvtzs w0, s0
 ; CHECK-GI-NEXT:    ret
@@ -699,9 +606,6 @@ define i64 @testzsxh(half %a) {
 ;
 ; CHECK-GI-LABEL: testzsxh:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fcvt s0, h0
-; CHECK-GI-NEXT:    frintz s0, s0
-; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    fcvt s0, h0
 ; CHECK-GI-NEXT:    fcvtzs x0, s0
 ; CHECK-GI-NEXT:    ret
