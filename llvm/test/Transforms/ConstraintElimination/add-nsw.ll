@@ -1201,10 +1201,11 @@ define i64 @add_i64_bound_above_max_constraint_value(i64 %x) {
   ret i64 %add
 }
 
+; We could infer nsw on the add here, but don't currently.
 define i64 @add_neg_via_known_bits(i64 %x) {
 ; CHECK-LABEL: @add_neg_via_known_bits(
 ; CHECK-NEXT:    [[NEG:%.*]] = or i64 [[X:%.*]], -9223372036854775808
-; CHECK-NEXT:    [[SUM:%.*]] = add nsw i64 [[NEG]], 3
+; CHECK-NEXT:    [[SUM:%.*]] = add i64 [[NEG]], 3
 ; CHECK-NEXT:    ret i64 [[SUM]]
 ;
   %neg = or i64 %x, -9223372036854775808

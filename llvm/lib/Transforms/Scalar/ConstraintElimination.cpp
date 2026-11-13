@@ -641,8 +641,7 @@ static bool isKnownNoWrap(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
     auto Range = ConstantRange::makeExactNoWrapRegion(
         Opcode, C->getValue(),
         Signed ? OBO::NoSignedWrap : OBO::NoUnsignedWrap);
-    if (doesHoldInRange(Info, Op0, Range, Signed))
-      return true;
+    return doesHoldInRange(Info, Op0, Range, Signed);
   }
 
   // A signed sum of operands with opposite signs cannot wrap.
