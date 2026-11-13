@@ -14347,6 +14347,7 @@ cc_library(
         ":TransformUtils",
         ":ValueBoundsOpInterface",
         ":VectorDialect",
+        ":VectorUtils",
         "//llvm:Support",
     ],
 )

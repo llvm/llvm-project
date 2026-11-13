@@ -95,16 +95,18 @@ func.func @negative_copy_src_scalable(%src: memref<8xf32>, %pad: f32) -> vector<
 // -----
 
 // A `memref.copy` into a dynamic subview, read back afterwards: the copy
-// becomes a read of the source masked to the subview's extent, kept only
-// where it falls inside the extent.
+// becomes a read of the source masked to the source's runtime shape, kept only
+// where it falls inside the subview's extent.
 
 // CHECK-LABEL: func.func @copy_src_into_dyn_subview(
 // CHECK-SAME:      %[[SRC:.*]]: memref<?x?xf32>, %[[N:.*]]: index
 // CHECK-NOT:     memref.alloca
 // CHECK-NOT:     memref.copy
 // CHECK:         %[[Z:.*]] = vector.broadcast %{{.*}} : f32 to vector<8x16xf32>
-// CHECK:         %[[READ_MASK:.*]] = vector.create_mask %[[N]], %[[N]] : vector<8x16xi1>
-// CHECK:         %[[RD:.*]] = vector.transfer_read %[[SRC]]{{.*}}, %[[READ_MASK]] {in_bounds = [true, true]} : memref<?x?xf32>, vector<8x16xf32>
+// CHECK:         %[[D0:.*]] = memref.dim %[[SRC]], %{{.*}} : memref<?x?xf32>
+// CHECK:         %[[D1:.*]] = memref.dim %[[SRC]], %{{.*}} : memref<?x?xf32>
+// CHECK:         %[[READ_MASK:.*]] = vector.create_mask %[[D0]], %[[D1]] : vector<8x16xi1>
+// CHECK:         %[[RD:.*]] = vector.mask %[[READ_MASK]] { vector.transfer_read %[[SRC]]{{.*}} {in_bounds = [true, true]} : memref<?x?xf32>, vector<8x16xf32> } : vector<8x16xi1> -> vector<8x16xf32>
 // CHECK:         %[[MASK:.*]] = vector.create_mask %[[N]], %[[N]] : vector<8x16xi1>
 // CHECK:         %[[SEL:.*]] = arith.select %[[MASK]], %[[RD]], %[[Z]]
 // CHECK:         return %[[SEL]]
@@ -131,7 +133,7 @@ func.func @copy_src_into_dyn_subview(%src: memref<?x?xf32>, %n: index, %pad: f32
 // CHECK-NOT:     memref.copy
 // CHECK:         %[[SS:.*]] = memref.subview %[[SRC]][0, 0] [8, %[[N]]] [1, 1]
 // CHECK:         %[[READ_MASK:.*]] = vector.create_mask %{{.*}}, %[[N]] : vector<8x16xi1>
-// CHECK:         %[[RD:.*]] = vector.transfer_read %[[SS]]{{.*}}, %[[READ_MASK]] {in_bounds = [true, true]}
+// CHECK:         %[[RD:.*]] = vector.mask %[[READ_MASK]] { vector.transfer_read %[[SS]]{{.*}} {in_bounds = [true, true]} : memref<8x?xf32, strided<[16, 1]>>, vector<8x16xf32> } : vector<8x16xi1> -> vector<8x16xf32>
 // CHECK:         %[[MASK:.*]] = vector.create_mask %{{.*}}, %[[N]] : vector<8x16xi1>
 // CHECK:         %[[SEL:.*]] = arith.select %[[MASK]], %[[RD]], %[[V]]
 // CHECK:         return %[[SEL]]
@@ -169,14 +171,17 @@ func.func @copy_src_global(%pad: f32) -> vector<8x16xf32> {
 // -----
 
 // A copy out of a dynamic subview becomes a transfer_write of the slot's value,
-// masked to the subview's extent.
+// masked to the target's runtime shape (which `memref.copy` requires to match
+// the subview's extent).
 
 // CHECK-LABEL: func.func @copy_dyn_subview_into_dst(
 // CHECK-SAME:      %[[V:.*]]: vector<8x16xf32>, %[[DST:.*]]: memref<?x?xf32>, %[[N:.*]]: index
 // CHECK-NOT:     memref.alloca
 // CHECK-NOT:     memref.copy
-// CHECK:         %[[MASK:.*]] = vector.create_mask %[[N]], %[[N]] : vector<8x16xi1>
-// CHECK:         vector.transfer_write %[[V]], %[[DST]][%{{.*}}, %{{.*}}], %[[MASK]] {in_bounds = [true, true]} : vector<8x16xf32>, memref<?x?xf32>
+// CHECK:         %[[D0:.*]] = memref.dim %[[DST]], %{{.*}} : memref<?x?xf32>
+// CHECK:         %[[D1:.*]] = memref.dim %[[DST]], %{{.*}} : memref<?x?xf32>
+// CHECK:         %[[MASK:.*]] = vector.create_mask %[[D0]], %[[D1]] : vector<8x16xi1>
+// CHECK:         vector.mask %[[MASK]] { vector.transfer_write %[[V]], %[[DST]][%{{.*}}, %{{.*}}] {in_bounds = [true, true]} : vector<8x16xf32>, memref<?x?xf32> } : vector<8x16xi1>
 // CHECK-NEXT:    return
 func.func @copy_dyn_subview_into_dst(%v: vector<8x16xf32>, %dst: memref<?x?xf32>, %n: index) {
   %c0 = arith.constant 0 : index
@@ -197,6 +202,7 @@ func.func @copy_dyn_subview_into_dst(%v: vector<8x16xf32>, %dst: memref<?x?xf32>
 // CHECK-NOT:     memref.alloca
 // CHECK-NOT:     memref.copy
 // CHECK:         %[[WRITE_MASK:.*]] = vector.create_mask %{{.*}}, %[[N]] : vector<8x16xi1>
+// CHECK-NOT:     vector.mask
 // CHECK:         %[[W:.*]] = arith.select %[[WRITE_MASK]], %[[VA]], %[[VB]]
 // CHECK:         %[[MASK:.*]] = vector.create_mask %{{.*}}, %[[N]] : vector<8x16xi1>
 // CHECK:         %[[SEL:.*]] = arith.select %[[MASK]], %[[W]], %[[VB]]
@@ -212,6 +218,45 @@ func.func @copy_intermediate_dyn_subview(%va: vector<8x16xf32>, %vb: vector<8x16
   memref.copy %sa, %sb : memref<8x?xf32, strided<[16, 1]>> to memref<8x?xf32, strided<[16, 1]>>
   %r = vector.transfer_read %b[%c0, %c0], %pad {in_bounds = [true, true]} : memref<8x16xf32>, vector<8x16xf32>
   return %r : vector<8x16xf32>
+}
+
+// -----
+
+// A `memref.copy` into a static subview becomes a read of the source, inserted
+// into the buffer's value at the subview's offsets.
+
+// CHECK-LABEL: func.func @copy_src_into_static_subview(
+// CHECK-SAME:      %[[V:.*]]: vector<8x16xf32>, %[[SRC:.*]]: memref<8x8xf32>
+// CHECK-NOT:     memref.alloca
+// CHECK-NOT:     memref.copy
+// CHECK:         %[[RD:.*]] = vector.transfer_read %[[SRC]]{{.*}} : memref<8x8xf32>, vector<8x8xf32>
+// CHECK:         %[[INS:.*]] = vector.insert_strided_slice %[[RD]], %[[V]] offsets = [0, 8], strides = [1, 1] : vector<8x8xf32> into vector<8x16xf32>
+// CHECK:         return %[[INS]]
+func.func @copy_src_into_static_subview(%v: vector<8x16xf32>, %src: memref<8x8xf32>, %pad: f32) -> vector<8x16xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8x16xf32>
+  vector.transfer_write %v, %a[%c0, %c0] {in_bounds = [true, true]} : vector<8x16xf32>, memref<8x16xf32>
+  %sv = memref.subview %a[0, 8] [8, 8] [1, 1] : memref<8x16xf32> to memref<8x8xf32, strided<[16, 1], offset: 8>>
+  memref.copy %src, %sv : memref<8x8xf32> to memref<8x8xf32, strided<[16, 1], offset: 8>>
+  %r = vector.transfer_read %a[%c0, %c0], %pad {in_bounds = [true, true]} : memref<8x16xf32>, vector<8x16xf32>
+  return %r : vector<8x16xf32>
+}
+
+// -----
+
+// NEGATIVE: a single-element buffer is promoted to a scalar, not a vector, and
+// copies of scalar slots are not supported.
+
+// CHECK-LABEL: func.func @negative_copy_single_element(
+// CHECK:         memref.alloca
+// CHECK:         memref.copy
+// CHECK:         memref.load
+func.func @negative_copy_single_element(%src: memref<1xf32>) -> f32 {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<1xf32>
+  memref.copy %src, %a : memref<1xf32> to memref<1xf32>
+  %r = memref.load %a[%c0] : memref<1xf32>
+  return %r : f32
 }
 
 // -----

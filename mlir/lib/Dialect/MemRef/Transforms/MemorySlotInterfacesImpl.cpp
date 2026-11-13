@@ -52,6 +52,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/IR/MemRefDialect.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 
 using namespace mlir;
@@ -168,47 +169,6 @@ Value mlir::memref::buildDynamicSubViewMask(OpBuilder &builder, Location loc,
   return buildSubViewMask(builder, loc, subView);
 }
 
-/// Produces the value that a `memref.copy` stores into a slot: reads `mem` at
-/// the origin into `vecType` with an identity map, marking every dimension
-/// in-bounds and masking the read with `mask` when set.
-///
-/// The padding value does not affect the copy: both operands must have the same
-/// runtime shape. For a whole-buffer slot, the source covers the whole vector.
-/// For a dynamic-subview slot,
-/// `PromotableAliaserInterface::projectAliasValueToSlotValue` discards lanes
-/// outside the subview's extent with a masked select.
-static Value readMemRefAsVector(OpBuilder &builder, Location loc, Value mem,
-                                VectorType vecType, Value mask) {
-  assert(!vecType.isScalable() && "expected a fixed-size vector");
-  int64_t rank = vecType.getRank();
-  Value zero = arith::ConstantIndexOp::create(builder, loc, 0);
-  SmallVector<Value> indices(rank, zero);
-  Value padding = arith::ConstantOp::create(
-      builder, loc, builder.getZeroAttr(vecType.getElementType()));
-  SmallVector<bool> inBounds(rank, true);
-  return vector::TransferReadOp::create(
-      builder, loc, vecType, mem, indices,
-      AffineMapAttr::get(builder.getMultiDimIdentityMap(rank)), padding, mask,
-      builder.getBoolArrayAttr(inBounds));
-}
-
-/// Stores a slot's value to the target of a `memref.copy`: writes `vec` into
-/// `mem` at the origin, with the identity map and in-bounds rule of
-/// `readMemRefAsVector`.
-static void writeVectorToMemRef(OpBuilder &builder, Location loc, Value vec,
-                                Value mem, Value mask) {
-  auto vecType = cast<VectorType>(vec.getType());
-  assert(!vecType.isScalable() && "expected a fixed-size vector");
-  int64_t rank = vecType.getRank();
-  Value zero = arith::ConstantIndexOp::create(builder, loc, 0);
-  SmallVector<Value> indices(rank, zero);
-  SmallVector<bool> inBounds(rank, true);
-  vector::TransferWriteOp::create(
-      builder, loc, vec, mem, indices,
-      AffineMapAttr::get(builder.getMultiDimIdentityMap(rank)), mask,
-      builder.getBoolArrayAttr(inBounds));
-}
-
 //===----------------------------------------------------------------------===//
 //  PromotableMemOpInterface model for memref.copy
 //===----------------------------------------------------------------------===//
@@ -237,12 +197,11 @@ struct CopyOpMemOpModel
   // Promotion replaces the slot with a vector value, so a copy into the slot
   // becomes the code producing that value: a read of the copy's source.
   Value getStored(Operation *op, const MemorySlot &slot, OpBuilder &builder,
-                  Value reachingDef, const DataLayout &dataLayout) const {
+                  Value /*reachingDef*/, const DataLayout &dataLayout) const {
     auto copyOp = cast<memref::CopyOp>(op);
-    Location loc = op->getLoc();
-    return readMemRefAsVector(
-        builder, loc, copyOp.getSource(), cast<VectorType>(slot.valueType),
-        memref::buildDynamicSubViewMask(builder, loc, slot.ptr));
+    return vector::createReadOrMaskedRead(builder, op->getLoc(),
+                                          copyOp.getSource(),
+                                          cast<VectorType>(slot.valueType));
   }
 
   bool canUsesBeRemoved(Operation *op, const MemorySlot &slot,
@@ -260,7 +219,7 @@ struct CopyOpMemOpModel
     if (srcIsSlot == dstIsSlot)
       return false;
     // No further check: `memref.copy` requires both operands to have the same
-    // shape and element type.
+    // element type and runtime shape; a shape mismatch is undefined behavior.
     return true;
   }
 
@@ -272,12 +231,9 @@ struct CopyOpMemOpModel
                      OpBuilder &builder, Value reachingDefinition,
                      const DataLayout &dataLayout) const {
     auto copyOp = cast<memref::CopyOp>(op);
-    if (copyOp.getSource() == slot.ptr) {
-      Location loc = op->getLoc();
-      writeVectorToMemRef(
-          builder, loc, reachingDefinition, copyOp.getTarget(),
-          memref::buildDynamicSubViewMask(builder, loc, slot.ptr));
-    }
+    if (copyOp.getSource() == slot.ptr)
+      vector::createWriteOrMaskedWrite(builder, op->getLoc(),
+                                       reachingDefinition, copyOp.getTarget());
     return DeletionKind::Delete;
   }
 };
