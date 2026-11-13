@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
   });
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
-    return mlir::createFallOffAnalysisPass();
+    return mlir::createFunctionExitAnalysisPass();
   });
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
