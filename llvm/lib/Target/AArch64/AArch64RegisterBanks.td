@@ -22,6 +22,8 @@ def FPRRegBank : RegisterBank<"FPR", [QQQQ, ZPR]> {
 def CCRegBank : RegisterBank<"CC", [CCR]>;
 
 def RegBankCustomMappingID : RegBankMappingID<"CustomMappingID", 1>;
+def RegBankCustomMappingID2 : RegBankMappingID<"CustomMappingID2", 2>;
+def RegBankCustomMappingID3 : RegBankMappingID<"CustomMappingID3", 3>;
 
 def : RegBankInstrMapping<[
     // G_{F|S|U}REM are not listed because they are not legal.
@@ -152,3 +154,39 @@ def : RegBankInstrMapping<[G_VECREDUCE_SEQ_FADD, G_VECREDUCE_SEQ_FMUL], [
   ]>
 ]>;
 
+def : RegBankInstrMapping<[G_OR], [
+  // 32 and 64-bit or can be mapped on either FPR or
+  // GPR for the same cost.
+  // If the instruction has any implicit-defs or uses,
+  // do not mess with it.
+  RegBankAltMappingRule<[RegBankTypeMapping<GPRRegBank, type0>],
+    id=RegBankCustomMappingID,
+    predicate=[{(Type0Size == 32 || Type0Size == 64) && MI.getNumOperands() == 3}]>,
+  RegBankAltMappingRule<[RegBankTypeMapping<FPRRegBank, type0>],
+    id=RegBankCustomMappingID2,
+    predicate=[{(Type0Size == 32 || Type0Size == 64) && MI.getNumOperands() == 3}]>
+]>;
+
+def : RegBankInstrMapping<[G_LOAD], [
+  RegBankAltMappingRule<[RegBankTypeMapping<GPRRegBank, type0>, RegBankTypeMapping<GPRRegBank, ptype1>],
+    id=RegBankCustomMappingID,
+    predicate=[{Type0Size == 64 && MI.getNumOperands() == 2}]>,
+  RegBankAltMappingRule<[RegBankTypeMapping<FPRRegBank, type0>, RegBankTypeMapping<GPRRegBank, ptype1>],
+    id=RegBankCustomMappingID2,
+    predicate=[{Type0Size == 64 && MI.getNumOperands() == 2}]>
+]>;
+
+def : RegBankInstrMapping<[G_BITCAST], [
+  RegBankAltMappingRule<[RegBankTypeMapping<GPRRegBank, type0>, RegBankTypeMapping<GPRRegBank, type1>],
+    id=RegBankCustomMappingID,
+    predicate=[{(Type0Size == 32|| Type0Size == 64) && MI.getNumOperands() == 2}]>,
+  RegBankAltMappingRule<[RegBankTypeMapping<FPRRegBank, type0>, RegBankTypeMapping<FPRRegBank, type1>],
+    id=RegBankCustomMappingID2,
+    predicate=[{(Type0Size == 32|| Type0Size == 64) && MI.getNumOperands() == 2}]>,
+  RegBankAltMappingRule<[RegBankTypeMapping<FPRRegBank, type0>, RegBankTypeMapping<GPRRegBank, type1>],
+    id=RegBankCustomMappingID3, cost=4,
+    predicate=[{(Type0Size == 32|| Type0Size == 64) && MI.getNumOperands() == 2}]>,
+  RegBankAltMappingRule<[RegBankTypeMapping<GPRRegBank, type0>, RegBankTypeMapping<FPRRegBank, type1>],
+    id=RegBankCustomMappingID3, cost=5,
+    predicate=[{(Type0Size == 32|| Type0Size == 64) && MI.getNumOperands() == 2}]>,
+]>;

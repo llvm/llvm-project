@@ -108,34 +108,11 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
+  if (InstructionMappings Mappings = getGeneratedInstrAltMappings(MI);
+      !Mappings.empty())
+    return Mappings;
+
   switch (MI.getOpcode()) {
-  case TargetOpcode::G_OR: {
-    // 32 and 64-bit or can be mapped on either FPR or
-    // GPR for the same cost.
-    TypeSize Size = TRI.getRegSizeInBits(MI.getOperand(0).getReg(), MRI);
-    if (Size != 32 && Size != 64)
-      break;
-
-    // If the instruction has any implicit-defs or uses,
-    // do not mess with it.
-    if (MI.getNumOperands() != 3)
-      break;
-    InstructionMappings AltMappings;
-    const ValueMapping *GPRVM =
-        AArch64::getGeneratedValueMapping(AArch64::GPRRegBankID, Size);
-    const ValueMapping *FPRVM =
-        AArch64::getGeneratedValueMapping(AArch64::FPRRegBankID, Size);
-    const InstructionMapping &GPRMapping = getInstructionMapping(
-        /*ID*/ 1, /*Cost*/ 1, getOperandsMapping({GPRVM, GPRVM, GPRVM}),
-        /*NumOperands*/ 3);
-    const InstructionMapping &FPRMapping = getInstructionMapping(
-        /*ID*/ 2, /*Cost*/ 1, getOperandsMapping({FPRVM, FPRVM, FPRVM}),
-        /*NumOperands*/ 3);
-
-    AltMappings.push_back(&GPRMapping);
-    AltMappings.push_back(&FPRMapping);
-    return AltMappings;
-  }
   case TargetOpcode::G_BITCAST: {
     TypeSize Size = TRI.getRegSizeInBits(MI.getOperand(0).getReg(), MRI);
     if (Size != 32 && Size != 64)
@@ -174,38 +151,6 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
     AltMappings.push_back(&FPRMapping);
     AltMappings.push_back(&GPRToFPRMapping);
     AltMappings.push_back(&FPRToGPRMapping);
-    return AltMappings;
-  }
-  case TargetOpcode::G_LOAD: {
-    TypeSize Size = TRI.getRegSizeInBits(MI.getOperand(0).getReg(), MRI);
-    if (Size != 64)
-      break;
-
-    // If the instruction has any implicit-defs or uses,
-    // do not mess with it.
-    if (MI.getNumOperands() != 2)
-      break;
-
-    InstructionMappings AltMappings;
-    const InstructionMapping &GPRMapping = getInstructionMapping(
-        /*ID*/ 1, /*Cost*/ 1,
-        getOperandsMapping(
-            {AArch64::getGeneratedValueMapping(AArch64::GPRRegBankID, Size),
-             // Addresses are GPR 64-bit.
-             AArch64::getGeneratedValueMapping(AArch64::GPRRegBankID,
-                                               TypeSize::getFixed(64))}),
-        /*NumOperands*/ 2);
-    const InstructionMapping &FPRMapping = getInstructionMapping(
-        /*ID*/ 2, /*Cost*/ 1,
-        getOperandsMapping(
-            {AArch64::getGeneratedValueMapping(AArch64::FPRRegBankID, Size),
-             // Addresses are GPR 64-bit.
-             AArch64::getGeneratedValueMapping(AArch64::GPRRegBankID,
-                                               TypeSize::getFixed(64))}),
-        /*NumOperands*/ 2);
-
-    AltMappings.push_back(&GPRMapping);
-    AltMappings.push_back(&FPRMapping);
     return AltMappings;
   }
   default:
@@ -695,6 +640,9 @@ bool AArch64RegisterBankInfo::isLoadFromFPType(const MachineInstr &MI) const {
   }
   return EltTy && EltTy->isFPOrFPVectorTy();
 }
+
+#define GET_TARGET_REGBANK_SEARCH_METHOD
+#include "AArch64GenRegisterBank.inc"
 
 const RegisterBankInfo::InstructionMapping &
 AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
