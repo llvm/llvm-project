@@ -2330,11 +2330,11 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (!DstTy.isIntegerOrIntegerVector() || !Src1Ty.isIntegerOrIntegerVector())
       report("mull must operate on integer types", MI);
     if (Src1Ty != Src2Ty)
-      report("mull must operate on integer types", MI);
+      report("mull must operate on the same input types", MI);
     verifyVectorElementMatch(DstTy, Src1Ty, MI);
 
-    if (DstTy.getScalarSizeInBits() < Src1Ty.getScalarSizeInBits() * 2)
-      report("mull must extend at least twice the input size", MI);
+    if (DstTy.getScalarSizeInBits() != Src1Ty.getScalarSizeInBits() * 2)
+      report("mull must extend to twice the input size", MI);
     break;
   }
   default:
