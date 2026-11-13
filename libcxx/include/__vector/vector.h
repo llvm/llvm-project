@@ -61,7 +61,9 @@
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_copyable.h>
+#include <__type_traits/is_volatile.h>
 #include <__type_traits/remove_const_ref.h>
+#include <__type_traits/remove_reference.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/assume.h>
 #include <__utility/declval.h>
@@ -967,9 +969,13 @@ vector<_Tp, _Allocator>::__assign_with_size(_Iterator __first, difference_type _
 
 #ifndef _LIBCPP_CXX03_LANG
   if constexpr (is_same<value_type, __policy_value_type<_AlgPolicy, _Iterator>>::value &&
-                __allocator_has_trivial_move_construct_v<allocator_type, value_type> &&
+                __allocator_has_trivial_copy_construct_v<allocator_type,
+                                                         __libcpp_remove_reference_t<decltype(*__first)>,
+                                                         value_type> &&
                 __allocator_has_trivial_destroy_v<allocator_type, value_type> &&
-                is_trivially_copyable<value_type>::value && __libcpp_is_contiguous_iterator<_Iterator>::value) {
+                is_trivially_copyable<value_type>::value && __libcpp_is_contiguous_iterator<_Iterator>::value &&
+                // `memmove` doesn't accept `volatile` pointers, so keep volatile sources off this path.
+                !is_volatile<__libcpp_remove_reference_t<decltype(*__first)>>::value) {
     if (!__libcpp_is_constant_evaluated()) {
       if (__new_size > capacity()) {
         __vdeallocate();
