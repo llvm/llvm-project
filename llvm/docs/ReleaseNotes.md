@@ -52,6 +52,13 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM IR
 
+* The `optnone` function attribute now implies `noinline`, and no longer
+  requires `noinline` to be present on the same function. `optnone` may now
+  be combined with `alwaysinline`, in which case `alwaysinline` takes
+  precedence and the function is inlined. Use `Function::isNoInline()` or
+  `CallBase::isNoInline()` to query whether a function or call should not be
+  inlined.
+
 * LLVM now assigns persistent print IDs to metadata nodes. Reusing these IDs
   avoids repeated module-wide scans to rebuild metadata numbering, which can
   significantly speed up debug and pass printing on large modules. Keeping
@@ -177,6 +184,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to LLVM infrastructure
 
+* Removed `mc::RegisterMCTargetOptionsFlags`.
+  A tool that created it now passes `mc::getToolOptions()`, or `codegen::getToolOptions()` with `codegen::RegisterCodeGenFlags`, to `cl::parseCommandLineOptions`.
+
 * Removed `TargetOptions::FloatABIType`. The soft float ABI should be
   controlled by setting the `"float-abi"` module flag.
 
@@ -213,6 +223,13 @@ Makes programs 10x faster by doing Special New Thing.
   which no longer had any users.
 
 * Removed `LiveVariables` analysis
+
+* `IRBuilder::CreateGEP()` and similar methods will now convert the GEP into a
+  ptradd-compatible representation, using a sequence of `getelementptr i8` and
+  `getelementptr [N x i8]` instructions. The `disableGEPCanonicalization()`
+  method can be used to temporarily disable this behavior. This method exists
+  only to allow incremental migration of LLVM IR tests, and will be removed in
+  the near future.
 
 ### Changes to building LLVM
 
@@ -500,6 +517,9 @@ Makes programs 10x faster by doing Special New Thing.
 * The new `LLVMParseCommandLineOptionsWithError()` function provides an
   alternative to `LLVMParseCommandLineOptions()` that also captures any error
   during parsing.
+
+* Added `LLVMPrintMetadataToString()` to obtain a `LLVMMetadataRef`'s string
+  representation without having to convert it to a `LLVMValueRef` first.
 
 ### Changes to the CodeGen infrastructure
 

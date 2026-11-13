@@ -104,6 +104,9 @@ public:
   void emitExternalName(MCSection *Sec, StringRef Name) {
     static_cast<MCSectionGOFF *>(Sec)->setExternalName(Name);
   }
+  void emitRenameable(MCSymbol *Sym, bool IsRenamable) {
+    static_cast<MCSymbolGOFF *>(Sym)->setRenameable(IsRenamable);
+  }
   void emitADA(MCSymbol *Sym, MCSection *Section) {
     static_cast<MCSymbolGOFF *>(Sym)->setADA(
         static_cast<MCSectionGOFF *>(Section));

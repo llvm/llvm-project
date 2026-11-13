@@ -1,6 +1,6 @@
 ; RUN: opt -S %s | FileCheck %s
 
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare i1 @llvm.coro.end(ptr, i1 immarg, token)
 
 define i1 @used_result(ptr %frame) presplitcoroutine {
 ; CHECK-LABEL: @used_result(
@@ -44,6 +44,6 @@ entry:
   ret void
 }
 
-; CHECK-DAG: declare void @llvm.coro.end(ptr, i1, token)
-; CHECK-DAG: declare void @llvm.coro.end.async(ptr, i1, ...)
+; CHECK-DAG: declare void @llvm.coro.end(ptr, i1 immarg, token)
+; CHECK-DAG: declare void @llvm.coro.end.async(ptr, i1 immarg, ...)
 ; CHECK-DAG: declare i1 @llvm.coro.is_in_ramp()

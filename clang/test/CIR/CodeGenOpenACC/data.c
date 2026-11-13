@@ -95,8 +95,7 @@ void acc_data(int cond) {
 
 #pragma acc data default(none) if(1)
   {}
-  // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast int_to_bool %[[ONE_LITERAL]] : !s32i -> !cir.bool
+  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.const #true
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[BOOL_CAST]] : !cir.bool to i1
   // CHECK-NEXT: acc.data if(%[[CONV_CAST]]) {
   // CHECK-NEXT: acc.terminator

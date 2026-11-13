@@ -22,11 +22,10 @@
   }
 
   !0 = !{i32 1}
-
+...
 ---
 name:            imp_null_check_with_pseudo_probe
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
 # CHECK-LABEL: name:            imp_null_check_with_pseudo_probe

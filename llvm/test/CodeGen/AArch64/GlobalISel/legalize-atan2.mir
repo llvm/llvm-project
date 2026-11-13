@@ -325,3 +325,4 @@ body:             |
     %2:_(f16) = G_FATAN2 %0, %1
     $h0 = COPY %2(f16)
     RET_ReallyLR implicit $h0
+...
