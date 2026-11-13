@@ -6,8 +6,8 @@
 //
 //===-----------------------------------------------------------------------===/
 
-#include "llvm/ADT/StringMap.h"
 #include "llvm/InterfaceStub/ELFObjHandler.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/InterfaceStub/IFSStub.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/Binary.h"
