@@ -26,11 +26,8 @@ define i1 @a_or_b_not_inv(i32 %a, i32 %b){
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[A_EQ_ZERO:%.*]] = icmp eq i32 [[A]], 0
 ; CHECK-NEXT:    [[B_NE_ZERO:%.*]] = icmp ne i32 [[B]], 0
-; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[A_EQ_ZERO]], [[B_NE_ZERO]]
-; CHECK-NEXT:    [[A_NE_ZERO:%.*]] = icmp ne i32 [[A]], 0
 ; CHECK-NEXT:    [[B_EQ_1:%.*]] = icmp eq i32 [[B]], 1
-; CHECK-NEXT:    [[AND_2:%.*]] = and i1 [[A_NE_ZERO]], [[B_EQ_1]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[AND_1]], [[AND_2]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[A_EQ_ZERO]], i1 [[B_NE_ZERO]], i1 [[B_EQ_1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %a_eq_zero = icmp eq i32 %a, 0

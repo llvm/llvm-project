@@ -3350,6 +3350,12 @@ Value *InstCombinerImpl::getSelectCondition(Value *A, Value *B,
   if (ABIsTheSame)
     return nullptr;
 
+  // A and B may be compares with inverse predicates (e.g. icmp ne X, C and
+  // icmp eq X, C). If either is poison, so is (A & C) | (B & D), so the
+  // select on A is a refinement of it.
+  if (isKnownInversion(A, B))
+    return A;
+
   // If both operands are constants, see if the constants are inverse bitmasks.
   Constant *AConst, *BConst;
   if (match(A, m_Constant(AConst)) && match(B, m_Constant(BConst)))
