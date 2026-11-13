@@ -76,3 +76,4 @@ body:             |
   bb.1:
     renamable $sgpr10 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
     S_ENDPGM 0
+...

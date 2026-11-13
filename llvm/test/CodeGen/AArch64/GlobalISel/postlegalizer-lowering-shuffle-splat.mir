@@ -411,3 +411,4 @@ body:             |
     %shuf:_(<4 x i32>) = G_SHUFFLE_VECTOR %buildvec0(<4 x i32>), %buildvec1, shufflemask(4, 4, 4, 4)
     $q0 = COPY %shuf(<4 x i32>)
     RET_ReallyLR implicit $q0
+...
