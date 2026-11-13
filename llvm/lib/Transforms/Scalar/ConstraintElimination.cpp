@@ -695,13 +695,13 @@ static bool isKnownWithinSignedRange(const Decomposition &D, SignedBound Bound,
   }
 
   if (!D.Vars.empty()) {
-    // V + C is at most the maximum if C <= 0 and at least the minimum if C >= 0,
-    // since V is itself in range.
+    // V + C is at most the maximum if C <= 0 and at least the minimum if
+    // C >= 0, since V is itself in range.
     if (D.Vars.size() != 1 || D.Vars[0].Coefficient != 1)
       return false;
 
     if (D.Vars[0].Variable->getType() != Ty)
-        return false;
+      return false;
   }
 
   // Compare in a type wide enough for both the bounds of Ty and the int64_t
