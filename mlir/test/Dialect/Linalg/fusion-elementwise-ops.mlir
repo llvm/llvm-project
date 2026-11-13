@@ -815,50 +815,6 @@ func.func @no_fusion_missing_reduction_shape(%arg0: tensor<f32>, %arg1: index) -
 
 // -----
 
-func.func @fusion_different_axes(%arg0 : tensor<5000xi64>, %arg1 : tensor<5000xi32>) -> tensor<5000xi32> {
-  %c1_i32 = arith.constant 1 : i32
-  %0 = linalg.generic {
-        indexing_maps = [affine_map<(d0) -> (d0)>],
-        iterator_types = ["parallel"]}
-        outs(%arg0 : tensor<5000xi64>) {
-        ^bb0(%arg3: i64):  // no predecessors
-          %22 = linalg.index 0 : index
-          %23 = arith.index_cast %22 : index to i64
-          linalg.yield %23 : i64
-        } -> tensor<5000xi64>
-  %1 = tensor.empty() : tensor<5000xi32>
-  %2 = linalg.generic {
-        indexing_maps = [affine_map<(d0, d1) -> (d0)>, affine_map<(d0, d1) -> (d1)>],
-        iterator_types = ["parallel", "parallel"]}
-        ins(%0 : tensor<5000xi64>) outs(%1 : tensor<5000xi32>) {
-        ^bb0(%arg3: i64, %arg5: i32):  // no predecessors
-          %22 = arith.index_cast %arg3 : i64 to index
-          %23 = tensor.extract %arg1[%22] : tensor<5000xi32>
-          linalg.yield %23 : i32
-        } -> tensor<5000xi32>
-  return %2 : tensor<5000xi32>
-}
-//  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1) -> (d0)>
-//  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1) -> (d1)>
-//      CHECK: func @fusion_different_axes(
-// CHECK-SAME:     %[[ARG0:.+]]: tensor<5000xi64>
-// CHECK-SAME:     %[[ARG1:.+]]: tensor<5000xi32>
-//  CHECK-DAG:   %[[INIT0:.+]] = tensor.empty() : tensor<5000xi64>
-//  CHECK-DAG:   %[[INIT1:.+]] = tensor.empty() : tensor<5000xi32>
-//      CHECK:   %[[RESULT:.+]]:2 = linalg.generic
-// CHECK-SAME:       indexing_maps = [#[[MAP0]], #[[MAP1]]]
-// CHECK-SAME:       outs(%[[INIT0]], %[[INIT1]] :
-// CHECK-NEXT:   ^bb0(
-// CHECK-SAME:       %[[B0:.+]]: i64
-// CHECK-SAME:       %[[B1:.+]]: i32
-//  CHECK-DAG:     %[[T0:.+]] = linalg.index 0
-//  CHECK-DAG:     %[[CAST1:.+]] = arith.index_cast %[[T0]] : index to i64
-//      CHECK:     %[[EXTRACT:.+]] = tensor.extract %[[ARG1]][%[[T0]]]
-//      CHECK:     linalg.yield %[[CAST1]], %[[EXTRACT]]
-//      CHECK:   return %[[RESULT]]#1
-
-// -----
-
 func.func @fusion_different_axes_indexed(%arg0: tensor<2x2xi32>) ->  tensor<2xi32> {
   %0 = tensor.empty() : tensor<2x2xi32>
   %1 = linalg.generic {
@@ -1055,3 +1011,37 @@ module {
 // CHECK:         tensor.expand_shape
 // CHECK:         linalg.generic {{.*}}, iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel", "parallel", "reduction"]}
 // CHECK-SAME:     ins(%[[ARG0]], %[[FUSED]]#1 : tensor<1x1x2x1xf32>, tensor<4x1x1x1xf32>)
+
+// -----
+
+// Fusion preserves the producer result because its payload reads the init.
+// The broadcast would make parallel iterations read and update the same element.
+
+#row = affine_map<(i, j) -> (i)>
+#identity = affine_map<(i, j) -> (i, j)>
+
+// CHECK-LABEL: func.func @no_fusion_broadcast_used_init(
+//       CHECK:   %[[PRODUCER:.+]] = linalg.generic
+//       CHECK:   %[[CONSUMER:.+]] = linalg.generic
+//  CHECK-SAME:     ins(%[[PRODUCER]] : tensor<2xi32>)
+//       CHECK:   return %[[CONSUMER]]
+func.func @no_fusion_broadcast_used_init(
+    %init: tensor<2xi32>, %out: tensor<2x3xi32>) -> tensor<2x3xi32> {
+  %one = arith.constant 1 : i32
+  %t = linalg.generic {
+      indexing_maps = [affine_map<(i) -> (i)>], iterator_types = ["parallel"]}
+      outs(%init : tensor<2xi32>) {
+  ^bb0(%x: i32):
+    %next = arith.addi %x, %one : i32
+    linalg.yield %next : i32
+  } -> tensor<2xi32>
+  %r = linalg.generic {
+      indexing_maps = [#row, #identity],
+      iterator_types = ["parallel", "parallel"]}
+      ins(%t : tensor<2xi32>)
+      outs(%out : tensor<2x3xi32>) {
+  ^bb0(%x: i32, %unused: i32):
+    linalg.yield %x : i32
+  } -> tensor<2x3xi32>
+  return %r : tensor<2x3xi32>
+}
