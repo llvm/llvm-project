@@ -1396,12 +1396,12 @@ LogicalResult checkErrorIfReshape(Operation *op) {
                                  shapeValues))
     return success();
 
-  // ERROR_IF(any(shape < 0)): shape dimensions must be non-negative. This also
-  // rejects the legacy inferable dimension (-1), which does not conform to the
-  // TOSA specification. Dynamic dimensions must be expressed with `tosa.dim`,
-  // not -1.
+  // ERROR_IF(any(shape < 1)): shape dimensions must be positive. This also
+  // rejects the legacy inferable dimension (-1) and zero-sized dimensions, and
+  // makes the `ShapedType::kDynamic` sentinel (INT64_MIN) invalid. Dynamic
+  // dimensions must be expressed with `tosa.dim`, not -1.
   for (int64_t dim : shapeValues)
-    if (dim < 0)
+    if (dim < 1)
       return op->emitOpError()
              << "new shape has invalid tensor dimension size " << dim;
 
@@ -1420,7 +1420,8 @@ LogicalResult checkErrorIfReshape(Operation *op) {
     }
   }
 
-  // ERROR_IF(the number of elements is not preserved)
+  // ERROR_IF(the number of elements is not preserved). Every dimension is now
+  // known to be positive, so the product is exact.
   if (auto inputType =
           dyn_cast<RankedTensorType>(reshapeOp.getInput1().getType());
       inputType && inputType.hasStaticShape()) {
@@ -1433,13 +1434,9 @@ LogicalResult checkErrorIfReshape(Operation *op) {
     }
 
     int64_t newShapeElementsNum =
-        llvm::accumulate(shapeValues, int64_t(1), [](int64_t acc, int64_t dim) {
-          return (dim > 0) ? acc * dim : acc;
-        });
-    bool isStaticNewShape =
-        llvm::all_of(shapeValues, [](int64_t s) { return s > 0; });
-    if ((isStaticNewShape && inputElementsNum != newShapeElementsNum) ||
-        (!isStaticNewShape && newShapeElementsNum > inputElementsNum))
+        llvm::accumulate(shapeValues, int64_t(1),
+                         [](int64_t acc, int64_t dim) { return acc * dim; });
+    if (inputElementsNum != newShapeElementsNum)
       return op->emitOpError() << "cannot reshape " << inputElementsNum
                                << " elements into " << newShapeElementsNum;
   }
