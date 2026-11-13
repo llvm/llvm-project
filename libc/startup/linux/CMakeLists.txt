@@ -97,8 +97,13 @@ add_object_library(
   DEPENDS
     libc.src.__support.CPP.string_view
     libc.src.__support.macros.config
+    libc.src.string.memory_utils.memory_utils
     libc.hdr.elf_proxy
     libc.hdr.link_macros
+  COMPILE_OPTIONS
+    -ffreestanding
+    -fno-builtin
+    -fno-stack-protector
 )
 
 add_object_library(
