@@ -351,7 +351,8 @@ SparcErrataWorkaroundPass::run(MachineFunction &MF,
 //*****************************************************************************
 // On the AT697E and AT697F, a single-word load into an odd-numbered FP register
 // followed by a double-precision operation on the enclosing register pair can
-// give a wrong result (AT697E erratum 13, AT697F erratum 1).
+// give a wrong result (AT697E erratum 13, AT697F erratum 1). On the UT699, a
+// single-cycle load followed by another load or store can fail.
 //
 // This pass inserts a NOP after any LD or LDF instruction.
 //

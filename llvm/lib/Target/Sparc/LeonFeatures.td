@@ -40,7 +40,7 @@ def InsertNOPLoad: SubtargetFeature<
   "insertnopload",
   "InsertNOPLoad",
   "true",
-  "AT697E/F erratum fix: Insert a NOP instruction after every load instruction"
+  "LEON erratum fix: Insert a NOP instruction after every load instruction"
 >;
 
 def LeonCycleCounter

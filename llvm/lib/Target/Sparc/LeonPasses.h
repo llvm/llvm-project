@@ -43,7 +43,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
-    return "InsertNOPLoad: AT697E/F erratum fix: insert a NOP instruction "
+    return "InsertNOPLoad: LEON erratum fix: insert a NOP instruction "
            "after every load instruction";
   }
 
