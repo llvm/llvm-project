@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
-; RUN:   -mcpu=pwr8 -mtriple=powerpcle < %s | FileCheck %s
+; RUN:   -mcpu=pwr8 -mtriple=powerpcle < %s | FileCheck %s --check-prefixes=CHECK,LE
 ; RUN: llc -verify-machineinstrs -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
-; RUN:   -mcpu=pwr8 -mtriple=powerpc < %s | FileCheck %s
+; RUN:   -mcpu=pwr8 -mtriple=powerpc < %s | FileCheck %s --check-prefixes=CHECK,BE
 %struct.d = type { [131072 x i32] }
 
 @a = dso_local local_unnamed_addr global [4096 x i32] zeroinitializer, align 4
@@ -9,12 +9,19 @@
 ; Function Attrs: mustprogress uwtable
 define dso_local void @_Z1g1dILi17EE(ptr nocapture noundef readnone byval(%struct.d) align 4 %0) local_unnamed_addr #0 {
 ; CHECK-LABEL: _Z1g1dILi17EE:
-; CHECK-NOT:    mtfprwz f0, r4
-; CHECK-NOT:    stwx r3, r1, r4
-; CHECK-NOT:    mffprwz r4, f0
-; CHECK-NOT:    mtfprwz f0, r4
-; CHECK-NOT:    lwzx r3, r1, r4
-; CHECK-NOT:    mffprwz r4, f0
+; Check the GPR save in a VSR when a large stack offset needs a temporary GPR.
+; LE:    mtfprwz f0, r4
+; LE:    stwx [[REG:r[0-9]+]], r1, r4
+; LE:    mffprwz r4, f0
+; LE:    mtfprwz f0, r4
+; LE:    lwzx [[REG]], r1, r4
+; LE:    mffprwz r4, f0
+; BE-NOT:    mtfprwz f0, r4
+; BE-NOT:    stwx r3, r1, r4
+; BE-NOT:    mffprwz r4, f0
+; BE-NOT:    mtfprwz f0, r4
+; BE-NOT:    lwzx r3, r1, r4
+; BE-NOT:    mffprwz r4, f0
 entry:
   %c = alloca %struct.d, align 4
   call void @llvm.lifetime.start.p0(i64 524288, ptr nonnull %c) #3
