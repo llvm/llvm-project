@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___PSTL_BACKENDS_SERIAL_H
 #define _LIBCPP___PSTL_BACKENDS_SERIAL_H
 
+#include <__algorithm/copy_if.h>
 #include <__algorithm/find_end.h>
 #include <__algorithm/find_if.h>
 #include <__algorithm/for_each.h>
@@ -481,6 +482,16 @@ struct __partition_copy<__serial_backend_tag, _ExecutionPolicy> {
              _Predicate __pred) const noexcept {
     return std::partition_copy(
         std::move(__first), std::move(__last), std::move(__out_true), std::move(__out_false), std::move(__pred));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __copy_if<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _ForwardOutIterator, class _Predicate>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator> operator()(
+      _Policy&&, _ForwardIterator __first, _ForwardIterator __last, _ForwardOutIterator __out_it, _Predicate __pred)
+      const noexcept {
+    return std::copy_if(std::move(__first), std::move(__last), std::move(__out_it), std::move(__pred));
   }
 };
 
