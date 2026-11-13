@@ -1236,6 +1236,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   argument of `std::addressof`, and an unresolvable overload set is diagnosed.
   (#GH77928)
 
+- Fixed a bug where, with `-fdelayed-template-parsing`, a member function of a
+  local class could not name declarations local to an enclosing templated
+  function when the class was nested in a lambda, in a member function of
+  another local class, or in a non-template member function of a class
+  template.
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made

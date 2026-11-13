@@ -204,3 +204,42 @@ namespace LateParsedAttrs {
     f<int>(1); // expected-error {{foo}}
   }
 } // namespace LateParsedAttrs
+
+namespace LocalClassUsesEnclosingLocals {
+struct InLambda {
+  template <class = void> static void foo() {
+    struct S {};
+    auto const g = []() {
+      struct H {
+        static void f() { typedef S S; }
+      };
+    };
+  }
+};
+
+template <class> struct InClassTemplateMember {
+  static void foo() {
+    struct S {};
+    struct H {
+      static void f() { typedef S S; }
+    };
+  }
+};
+
+template <class = void> void InLocalClassMember() {
+  struct S {};
+  struct A {
+    static void m() {
+      struct H {
+        static void f() { typedef S S; }
+      };
+    }
+  };
+}
+
+void trigger() {
+  InLambda::foo();
+  InClassTemplateMember<int>::foo();
+  InLocalClassMember();
+}
+} // namespace LocalClassUsesEnclosingLocals
