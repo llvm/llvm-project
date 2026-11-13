@@ -15,7 +15,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Signals.h"
-#include <sstream>
+#include <tuple>
 
 using namespace llvm;
 
@@ -28,49 +28,45 @@ void SystemZHLASMAsmStreamer::EmitEOL() {
   if (IsVerboseAsm)
     EmitComment();
 
-  std::istringstream Stream(Str);
-  SmallVector<std::string> Lines;
-  std::string Line;
-  while (std::getline(Stream, Line, '\n'))
-    Lines.push_back(Line);
+  // The continuation character is repeated at the start of the next line.
+  // If the last character of a line that is continued is a letter or a digit or
+  // one of _$@#, we reuse it as the continuation character by making the next
+  // substring start 1 character sooner, thus "duplicating" that character.
+  // Otherwise, we use an X as the continuation character, and the next line
+  // starts with an X followed by the remaining characters. Returns true if
+  // an X was used.
+  auto EmitContinued = [this](StringRef Chunk) {
+    char C = Chunk.back();
+    bool IsValid = isAlnum(C) || C == '_' || C == '$' || C == '@' || C == '#';
+    FOS << Chunk.drop_back() << (IsValid ? C : 'X');
+    return !IsValid;
+  };
 
-  for (auto S : Lines) {
-    if (LLVM_LIKELY(S.length() < ContIndicatorColumn)) {
-      FOS << S;
-      // Each line in HLASM must fill the full 80 characters.
-      FOS.PadToColumn(InstLimit);
-      FOS << "\n";
-    } else {
-      // If last character before end of the line is not a space
-      // we must insert an additional non-space character that
-      // is not part of the statement coding. We just reuse
-      // the existing character by making the new substring start
-      // 1 character sooner, thus "duplicating" that character
-      // If The last character is a space. We insert an X instead.
-      std::string TmpSubStr = S.substr(0, ContIndicatorColumn);
-      if (!TmpSubStr.compare(ContIndicatorColumn - 1, 1, " "))
-        TmpSubStr.replace(ContIndicatorColumn - 1, 1, "X");
+  StringRef Remaining(Str);
+  while (!Remaining.empty()) {
+    StringRef S;
+    std::tie(S, Remaining) = Remaining.split('\n');
+    if (LLVM_LIKELY(S.size() < ContIndicatorColumn)) {
+      FOS << S << '\n';
+      continue;
+    }
 
-      FOS << TmpSubStr;
-      FOS.PadToColumn(InstLimit);
-      FOS << "\n";
+    bool RepeatX = EmitContinued(S.take_front(ContIndicatorColumn));
+    FOS << '\n';
 
-      size_t Emitted = ContIndicatorColumn - 1;
-
-      while (Emitted < S.length()) {
-        if ((S.length() - Emitted) < ContLen)
-          TmpSubStr = S.substr(Emitted, S.length());
-        else {
-          TmpSubStr = S.substr(Emitted, ContLen);
-          if (!TmpSubStr.compare(ContLen - 1, 1, " "))
-            TmpSubStr.replace(ContLen - 1, 1, "X");
-        }
-        FOS.PadToColumn(ContStartColumn);
-        FOS << TmpSubStr;
-        FOS.PadToColumn(InstLimit);
-        FOS << "\n";
-        Emitted += ContLen - 1;
-      }
+    size_t Emitted = ContIndicatorColumn - 1;
+    while (Emitted < S.size()) {
+      size_t Avail = ContLen - (RepeatX ? 1 : 0);
+      StringRef Chunk = S.substr(Emitted, Avail);
+      FOS.PadToColumn(ContStartColumn);
+      if (RepeatX)
+        FOS << 'X';
+      if (Chunk.size() < Avail)
+        FOS << Chunk;
+      else
+        RepeatX = EmitContinued(Chunk);
+      FOS << '\n';
+      Emitted += Avail - 1;
     }
   }
   Str.clear();
