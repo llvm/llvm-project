@@ -35,7 +35,7 @@ def math_test(name, hdrs = [], deps = [], **kwargs):
             "//libc/src/__support/FPUtil:manipulation_functions",
             "//libc/src/__support/FPUtil:nearest_integer_operations",
             "//libc/src/__support/FPUtil:normal_float",
-            "//libc:__support_macros_optimization",
+            "//libc/src/__support/macros:optimization",
             "//libc/src/__support/macros/properties:architectures",
             "//libc/src/__support/macros/properties:cpu_features",
             "//libc/src/__support/macros/properties:os",

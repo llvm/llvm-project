@@ -49,11 +49,11 @@ libc_support_library(
         ":compiler",
         ":cpu_features",
         ":os",
-        "//libc:__support_macros_config",
         "//libc:hdr_float_macros",
         "//libc:hdr_stdint_proxy",
         "//libc:llvm_libc_macros_float16_macros",
         "//libc:llvm_libc_types_float128",
+        "//libc/src/__support/macros:config",
     ],
 )
 

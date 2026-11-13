@@ -123,7 +123,7 @@ libc_test_library(
     name = "qsort_test_helper",
     hdrs = ["SortingTest.h"],
     deps = [
-        "//libc:__support_macros_config",
+        "//libc/src/__support/macros:config",
         "//libc/test/UnitTest:LibcUnitTest",
     ],
 )

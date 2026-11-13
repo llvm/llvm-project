@@ -335,8 +335,8 @@ math_test(name = "cosf")
 math_test(
     name = "cosh",
     deps = [
-        "//libc:__support_macros_attributes",
         "//libc:__support_math_cosh_double_eval",
+        "//libc/src/__support/macros:attributes",
     ],
 )
 
@@ -600,8 +600,8 @@ math_test(name = "erff16")
 math_test(
     name = "exp",
     deps = [
-        "//libc:__support_macros_attributes",
         "//libc:__support_math_exp_double_eval",
+        "//libc/src/__support/macros:attributes",
     ],
 )
 
@@ -617,8 +617,8 @@ math_test(
 math_test(
     name = "exp10",
     deps = [
-        "//libc:__support_macros_attributes",
         "//libc:__support_math_exp10_double_eval",
+        "//libc/src/__support/macros:attributes",
     ],
 )
 
@@ -633,8 +633,8 @@ math_test(
 math_test(
     name = "exp2",
     deps = [
-        "//libc:__support_macros_attributes",
         "//libc:__support_math_exp2_double_eval",
+        "//libc/src/__support/macros:attributes",
     ],
 )
 
@@ -2428,8 +2428,8 @@ math_test(name = "sincosf")
 math_test(
     name = "sinh",
     deps = [
-        "//libc:__support_macros_attributes",
         "//libc:__support_math_sinh_double_eval",
+        "//libc/src/__support/macros:attributes",
     ],
 )
 
@@ -2456,8 +2456,8 @@ math_test(name = "tanf")
 math_test(
     name = "tanh",
     deps = [
-        "//libc:__support_macros_attributes",
         "//libc:__support_math_tanh_double_eval",
+        "//libc/src/__support/macros:attributes",
     ],
 )
 
@@ -2743,33 +2743,33 @@ math_test(name = "lgammaf16")
 math_test(
     name = "nan",
     deps = [
-        "//libc:__support_macros_sanitizer",
         "//libc:hdr_signal_macros",
+        "//libc/src/__support/macros:sanitizer",
     ],
 )
 
 math_test(
     name = "nanbf16",
     deps = [
-        "//libc:__support_macros_sanitizer",
         "//libc:hdr_signal_macros",
         "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/macros:sanitizer",
     ],
 )
 
 math_test(
     name = "nanf",
     deps = [
-        "//libc:__support_macros_sanitizer",
         "//libc:hdr_signal_macros",
+        "//libc/src/__support/macros:sanitizer",
     ],
 )
 
 math_test(
     name = "nanf16",
     deps = [
-        "//libc:__support_macros_sanitizer",
         "//libc:hdr_signal_macros",
+        "//libc/src/__support/macros:sanitizer",
     ],
 )
 

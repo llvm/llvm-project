@@ -19,7 +19,7 @@ libc_support_library(
     name = "file_io_result",
     hdrs = ["file_io_result.h"],
     deps = [
-        "//libc:__support_macros_config",
+        "//libc/src/__support/macros:config",
     ],
 )
 
@@ -36,8 +36,6 @@ libc_support_library(
         ":file_io_result",
         "//libc:__support_alloc_checker",
         "//libc:__support_error_or",
-        "//libc:__support_macros_attributes",
-        "//libc:__support_macros_config",
         "//libc:__support_threads_mutex",
         "//libc:__support_wchar_character_converter",
         "//libc:__support_wchar_mbstate",
@@ -59,6 +57,8 @@ libc_support_library(
         "//libc:types_wint_t",
         "//libc/src/__support/CPP:new",
         "//libc/src/__support/CPP:span",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
         "//libc/src/__support/macros/properties:architectures",
     ],
 )
@@ -77,8 +77,6 @@ libc_support_library(
         "//libc:__support_alloc_checker",
         "//libc:__support_common",
         "//libc:__support_error_or",
-        "//libc:__support_macros_attributes",
-        "//libc:__support_macros_config",
         "//libc:__support_osutil_linux_syscall_wrappers_close",
         "//libc:__support_osutil_linux_syscall_wrappers_dup3",
         "//libc:__support_osutil_linux_syscall_wrappers_fcntl",
@@ -96,5 +94,7 @@ libc_support_library(
         "//libc:types_off_t",
         "//libc/src/__support/CPP:new",
         "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
     ],
 )

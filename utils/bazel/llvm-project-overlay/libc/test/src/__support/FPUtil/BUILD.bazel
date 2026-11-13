@@ -27,7 +27,6 @@ libc_test(
     name = "except_value_utils_test",
     srcs = ["except_value_utils_test.cpp"],
     deps = [
-        "//libc:__support_macros_attributes",
         "//libc:__support_sign",
         "//libc:hdr_errno_macros",
         "//libc:hdr_fenv_macros",
@@ -36,6 +35,7 @@ libc_test(
         "//libc/src/__support/FPUtil:except_value_utils",
         "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros:attributes",
         "//libc/src/__support/macros/properties:types",
         "//libc/test/UnitTest:fp_test_helpers",
     ],

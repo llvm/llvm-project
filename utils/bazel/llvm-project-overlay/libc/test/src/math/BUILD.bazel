@@ -192,8 +192,8 @@ math_mpfr_test(
 math_mpfr_test(
     name = "cosh",
     deps = [
-        "//libc:__support_macros_attributes",
         "//libc:__support_math_cosh_double_eval",
+        "//libc/src/__support/macros:attributes",
     ],
 )
 
@@ -275,8 +275,8 @@ math_mpfr_test(name = "erfcf16")
 math_mpfr_test(
     name = "exp",
     deps = [
-        "//libc:__support_macros_attributes",
         "//libc:__support_math_exp_double_eval",
+        "//libc/src/__support/macros:attributes",
     ],
 )
 
@@ -292,8 +292,8 @@ math_mpfr_test(
 math_mpfr_test(
     name = "exp10",
     deps = [
-        "//libc:__support_macros_attributes",
         "//libc:__support_math_exp10_double_eval",
+        "//libc/src/__support/macros:attributes",
     ],
 )
 
@@ -315,8 +315,8 @@ math_mpfr_test(
 math_mpfr_test(
     name = "exp2",
     deps = [
-        "//libc:__support_macros_attributes",
         "//libc:__support_math_exp2_double_eval",
+        "//libc/src/__support/macros:attributes",
     ],
 )
 
@@ -1118,8 +1118,8 @@ math_mpfr_test(
 math_mpfr_test(
     name = "sinh",
     deps = [
-        "//libc:__support_macros_attributes",
         "//libc:__support_math_sinh_double_eval",
+        "//libc/src/__support/macros:attributes",
     ],
 )
 
@@ -1238,8 +1238,8 @@ math_mpfr_test(
 math_mpfr_test(
     name = "tanh",
     deps = [
-        "//libc:__support_macros_attributes",
         "//libc:__support_math_tanh_double_eval",
+        "//libc/src/__support/macros:attributes",
     ],
 )
 

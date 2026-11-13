@@ -20,10 +20,10 @@ libc_function(
     deps = [
         "//libc:__support_common",
         "//libc:__support_libc_errno",
-        "//libc:__support_macros_config",
         "//libc:__support_str_to_integer",
         "//libc:errno",
         "//libc:hdr_stdint_proxy",
+        "//libc/src/__support/macros:config",
     ],
 )
 
@@ -34,10 +34,10 @@ libc_function(
     deps = [
         "//libc:__support_common",
         "//libc:__support_libc_errno",
-        "//libc:__support_macros_config",
         "//libc:__support_str_to_integer",
         "//libc:errno",
         "//libc:hdr_stdint_proxy",
+        "//libc/src/__support/macros:config",
     ],
 )
 
@@ -48,7 +48,7 @@ libc_function(
     deps = [
         "//libc:__support_common",
         "//libc:__support_integer_operations",
-        "//libc:__support_macros_config",
+        "//libc/src/__support/macros:config",
     ],
 )
 
@@ -59,6 +59,6 @@ libc_function(
     deps = [
         "//libc:__support_common",
         "//libc:__support_integer_operations",
-        "//libc:__support_macros_config",
+        "//libc/src/__support/macros:config",
     ],
 )
