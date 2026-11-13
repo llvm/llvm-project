@@ -600,16 +600,8 @@ bb15:                                             ; preds = %bb15, %bb14
 define void @test_bounds_removed_before_runtime_checks(ptr %A, ptr %B, i1 %c) {
 ; CHECK-LABEL: @test_bounds_removed_before_runtime_checks(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul float 1.000000e+01, 2.000000e+01
-; CHECK-NEXT:    [[TMP2:%.*]] = fptosi float [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul float 3.000000e+01, 2.000000e+01
-; CHECK-NEXT:    [[TMP4:%.*]] = fptosi float [[TMP3]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt i32 100, [[TMP2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i32 [[TMP2]], i32 10
-; CHECK-NEXT:    [[TMP7:%.*]] = select i1 false, i32 0, i32 [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i32 200, [[TMP4]]
-; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i32 [[TMP4]], i32 300
-; CHECK-NEXT:    [[TMP10:%.*]] = select i1 false, i32 0, i32 [[TMP9]]
+; CHECK-NEXT:    [[TMP7:%.*]] = select i1 false, i32 0, i32 10
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 false, i32 0, i32 300
 ; CHECK-NEXT:    store i32 [[TMP7]], ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT:%.*]], ptr [[A]], i64 0, i32 1
 ; CHECK-NEXT:    store i32 [[TMP10]], ptr [[TMP12]], align 4

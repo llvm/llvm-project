@@ -2264,6 +2264,7 @@ public:
     AnalyzedBundles.clear();
     AnalyzedMinBWVals.clear();
   }
+
   /// Checks if the given value is gathered in one of the nodes.
   bool isAnyGathered(const SmallDenseSet<Value *> &Vals) const {
     return any_of(MustGather, [&](Value *V) { return Vals.contains(V); });
@@ -36291,6 +36292,38 @@ static bool compareCmp(const VectorizeOptions &Opts, Value *V, Value *V2,
   return IsCompatibility;
 }
 
+bool SLPVectorizerPass::tryToVectorizeListDownwards(ArrayRef<Value *> VL,
+                                                    BoUpSLP &R,
+                                                    bool MaxVFOnly) {
+  if (VL.size() <= 1)
+    return false;
+
+  // Walk the isomorphic user chain downward, toward the sinks. Each level is a
+  // candidate root: rooting at a deeper level subsumes the levels above it as
+  // operands of a larger tree.
+  auto IsDeleted = [&R](Instruction *I) { return R.isDeleted(I); };
+  SmallVector<SmallVector<Value *, 8>> Levels;
+  collectDownwardChain(VL, IsDeleted, Opts->slp_revec,
+                       Opts->slp_downward_allow_multi_use,
+                       Opts->slp_max_downward_levels, Levels);
+
+  // With no chain to walk this degenerates into the plain bottom-up attempt.
+  if (Levels.size() == 1)
+    return tryToVectorizeList(VL, R, MaxVFOnly);
+
+  // Rooting at a deeper level subsumes the levels above it as operands of a
+  // larger tree, so walk back up from the deepest level and take the first
+  // root that vectorizes.
+  for (unsigned Idx = Levels.size(); Idx-- > 1;) {
+    if (tryToVectorizeList(Levels[Idx], R, MaxVFOnly)) {
+      LLVM_DEBUG(dbgs() << "SLP: Rooted the downward use-chain at level " << Idx
+                        << " of " << Levels.size() << ".\n");
+      return true;
+    }
+  }
+  return tryToVectorizeList(VL, R, MaxVFOnly);
+}
+
 template <typename ItT>
 bool SLPVectorizerPass::vectorizeCmpInsts(
     iterator_range<ItT> CmpInsts, BasicBlock *BB, BoUpSLP &R,
@@ -36346,6 +36379,12 @@ bool SLPVectorizerPass::vectorizeCmpInsts(
         });
         if (ArePossiblyReducedInOtherBlock)
           return false;
+        // Extend the chain downward (toward the compares' users) first; this
+        // reroots the tree deeper and pulls the compares in as operands, and
+        // falls back internally to the bottom-up list vectorization of the
+        // compares themselves.
+        if (Opts->slp_traverse_down_nonvec)
+          return tryToVectorizeListDownwards(Candidates, R, MaxVFOnly);
         return tryToVectorizeList(Candidates, R, MaxVFOnly);
       },
       /*MaxVFOnly=*/true, R);
