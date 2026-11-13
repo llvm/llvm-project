@@ -79,18 +79,6 @@ public:
                       DebugNamesUnitsOffsets &CUOffsets,
                       CompUnitIDToIdx &UnitIDToIdxMap);
 
-  /// Emits .apple_names section according to the specified \p Table.
-  void emitAppleNames(AccelTable<AppleAccelTableStaticOffsetData> &Table);
-
-  /// Emits .apple_namespaces section according to the specified \p Table.
-  void emitAppleNamespaces(AccelTable<AppleAccelTableStaticOffsetData> &Table);
-
-  /// Emits .apple_objc section according to the specified \p Table.
-  void emitAppleObjc(AccelTable<AppleAccelTableStaticOffsetData> &Table);
-
-  /// Emits .apple_types section according to the specified \p Table.
-  void emitAppleTypes(AccelTable<AppleAccelTableStaticTypeData> &Table);
-
 private:
   /// \defgroup MCObjects MC layer objects constructed by the streamer
   /// @{
