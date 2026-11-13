@@ -41,6 +41,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
@@ -2686,6 +2687,18 @@ static bool isAllocDisjoint(const Value *V) {
   return isByValArg(V);
 }
 
+/// Return true if the alloca has any llvm.lifetime.start/end use, meaning its
+/// live range is smaller than the whole function and StackColoring may merge
+/// it with another alloca.
+static bool hasLifetimeIntrinsics(const AllocaInst *AI) {
+  for (const User *U : AI->users())
+    if (const auto *II = dyn_cast<IntrinsicInst>(U))
+      if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
+          II->getIntrinsicID() == Intrinsic::lifetime_end)
+        return true;
+  return false;
+}
+
 /// Return true if V1 and V2 are each the base of some distict storage region
 /// [V, object_size(V)] which do not overlap.  Note that zero sized regions
 /// *are* possible, and that zero sized regions do not overlap with any other.
@@ -2713,6 +2726,22 @@ static bool haveNonOverlappingStorage(const Value *V1, const Value *V2) {
   // convert regular allocas into these special allocas. It'd be nifty.
   // However, until then, this problem remains open.
   //
+  // Second problem, specific to two allocas: StackColoring may give two
+  // allocas with disjoint lifetimes (as delimited by llvm.lifetime
+  // intrinsics) the same stack slot.  As a consequence, their addresses
+  // may be equal at run time, even though the objects never coexist.  The
+  // addresses escape through pointer casts or stores and can be compared
+  // later, outside either lifetime -- producing two integer values that
+  // are equal at run time while this fold claims they are different
+  // (https://github.com/llvm/llvm-project/issues/45725, originally
+  // https://llvm.org/PR47090, miscompiling well-defined C11 and Rust
+  // programs that compare uintptr_t values).  An alloca without any
+  // llvm.lifetime intrinsics is live for the entire function and is never
+  // merged by StackColoring, so it is safe to fold against any other alloca;
+  // when both allocas carry lifetime intrinsics, we conservatively refuse
+  // to fold, implementing the "exist at the same time" precondition
+  // below.
+  //
   // So, we'll assume that two non-empty allocas have different addresses
   // for now.
   //
@@ -2735,6 +2764,13 @@ static bool haveNonOverlappingStorage(const Value *V1, const Value *V2) {
       (isDereferenceableArg(V2) && isa<AllocaInst>(V1)))
     return true;
 
+  const auto *AI1 = dyn_cast<AllocaInst>(V1);
+  const auto *AI2 = dyn_cast<AllocaInst>(V2);
+  if (AI1 && AI2)
+    // Only fold when we can prove coexistence: an alloca without lifetime
+    // intrinsics is live for the whole function, so two allocas cannot both
+    // be subject to merging by StackColoring.
+    return !hasLifetimeIntrinsics(AI1) || !hasLifetimeIntrinsics(AI2);
   return isa<AllocaInst>(V1) &&
          (isa<AllocaInst>(V2) || isa<GlobalVariable>(V2));
 }
