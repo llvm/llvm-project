@@ -16,6 +16,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
@@ -2272,6 +2273,23 @@ public:
     Location loc = funcOp.getLoc();
     StringRef name = funcOp.getName();
     auto newFuncOp = LLVM::LLVMFuncOp::create(rewriter, loc, name, llvmType);
+
+    // MaxByteOffset bounds accesses but does not guarantee dereferenceability,
+    // so only Alignment is lowered.
+    for (unsigned i = 0, e = funcOp.getNumArguments(); i < e; ++i) {
+      auto alignment = funcOp.getArgAttrOfType<IntegerAttr>(
+          i, spirv::getFuncParamAlignmentAttrName());
+      if (!alignment || alignment.getValue().isZero())
+        continue;
+      // A pointer aligned to N is also aligned to every divisor of N, so keep
+      // the largest power of two dividing N.
+      uint64_t align = uint64_t(1) << alignment.getValue().countr_zero();
+      auto mapping = signatureConverter.getInputMapping(i);
+      assert(mapping && "unexpected deletion of function argument");
+      newFuncOp.setArgAttr(mapping->inputNo,
+                           LLVM::LLVMDialect::getAlignAttrName(),
+                           rewriter.getI64IntegerAttr(align));
+    }
 
     // Convert SPIR-V Function Control to equivalent LLVM function attribute
     MLIRContext *context = funcOp.getContext();

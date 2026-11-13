@@ -61,6 +61,18 @@ spirv.func @vector_types(%arg0: vector<2xi64>, %arg1: vector<2xi64>) -> vector<2
   spirv.ReturnValue %0 : vector<2xi64>
 }
 
+// CHECK-LABEL: llvm.func @param_decorations
+// CHECK-SAME: (%{{.*}}: !llvm.ptr {llvm.align = 4 : i64}, %{{.*}}: !llvm.ptr {llvm.align = 2147483648 : i64}, %{{.*}}: !llvm.ptr, %{{.*}}: !llvm.ptr {llvm.align = 4 : i64}, %{{.*}}: !llvm.ptr)
+spirv.func @param_decorations(
+    %a: !spirv.ptr<f32, Function> {spirv.alignment = 4 : i32},
+    %b: !spirv.ptr<f32, Function> {spirv.alignment = -2147483648 : i32,
+                                   spirv.max_byte_offset = 16 : i32},
+    %c: !spirv.ptr<f32, Function> {spirv.alignment = 0 : i32},
+    %d: !spirv.ptr<f32, Function> {spirv.alignment = 12 : i32},
+    %e: !spirv.ptr<f32, Function> {spirv.decoration = #spirv.decoration<Restrict>}) "None" {
+  spirv.Return
+}
+
 //===----------------------------------------------------------------------===//
 // spirv.FunctionCall
 //===----------------------------------------------------------------------===//
