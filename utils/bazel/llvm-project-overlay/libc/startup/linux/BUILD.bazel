@@ -63,8 +63,6 @@ libc_startup_library(
         "//libc:hdr_stdint_proxy",
         "//libc:hdr_sys_auxv_macros",
         "//libc:hdr_sys_mman_macros",
-        "//libc:program_invocation_name",
-        "//libc:program_invocation_short_name",
         "//libc:types_struct_link_map",
         "//libc:types_struct_r_debug",
         "//libc/src/__support/OSUtil:linux_auxv",
@@ -76,6 +74,8 @@ libc_startup_library(
         "//libc/src/__support/threads:tcb",
         "//libc/src/__support/threads:thread",
         "//libc/src/__support/threads:thread_headers",
+        "//libc/src/errno:program_invocation_name",
+        "//libc/src/errno:program_invocation_short_name",
     ] + selects.with_or({
         PLATFORM_CPU_X86_64: [
             "//libc/startup/linux/x86_64:irelative",
