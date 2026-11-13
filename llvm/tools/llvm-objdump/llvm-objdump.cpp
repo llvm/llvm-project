@@ -68,6 +68,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/StringSaver.h"
@@ -1366,7 +1367,8 @@ static void addPltEntries(const MCSubtargetInfo &STI, const ObjectFile &Obj,
 // Normally the disassembly output will skip blocks of zeroes. This function
 // returns the number of zero bytes that can be skipped when dumping the
 // disassembly of the instructions in Buf.
-static size_t countSkippableZeroBytes(ArrayRef<uint8_t> Buf) {
+static size_t countSkippableZeroBytes(ArrayRef<uint8_t> Buf,
+                                      unsigned MinInstAlignment) {
   // Find the number of leading zeroes.
   size_t N = 0;
   while (N < Buf.size() && !Buf[N])
@@ -1377,9 +1379,9 @@ static size_t countSkippableZeroBytes(ArrayRef<uint8_t> Buf) {
   if (N < 8)
     return 0;
 
-  // We skip zeroes in multiples of 4 because do not want to truncate an
-  // instruction if it starts with a zero byte.
-  return N & ~0x3;
+  // Preserve the historical 4-byte granularity, but do not split instructions
+  // on targets with a larger minimum instruction alignment.
+  return alignDown(N, std::max(4U, MinInstAlignment));
 }
 
 // Returns a map from sections to their relocations.
@@ -2486,8 +2488,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
             MaxOffset = std::min(RelCur->getOffset() - RelAdjustment - Index,
                                  MaxOffset);
 
-          if (size_t N =
-                  countSkippableZeroBytes(Bytes.slice(Index, MaxOffset))) {
+          if (size_t N = countSkippableZeroBytes(
+                  Bytes.slice(Index, MaxOffset),
+                  DT->Context->getAsmInfo().getMinInstAlignment())) {
             FOS << "\t\t..." << '\n';
             Index += N;
             continue;
