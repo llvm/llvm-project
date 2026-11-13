@@ -1396,11 +1396,50 @@ LogicalResult checkErrorIfReshape(Operation *op) {
                                  shapeValues))
     return success();
 
-  if (llvm::is_contained(shapeValues, kInferableDimSize))
-    return op->emitOpError("shape input contains inferable dimension (")
-           << kInferableDimSize
-           << ") "
-              "which does not conform to the TOSA specification";
+  // ERROR_IF(any(shape < 1)): shape dimensions must be positive. This also
+  // rejects the legacy inferable dimension (-1) and zero-sized dimensions, and
+  // makes the `ShapedType::kDynamic` sentinel (INT64_MIN) invalid. Dynamic
+  // dimensions must be expressed with `tosa.dim`, not -1.
+  for (int64_t dim : shapeValues)
+    if (dim < 1)
+      return op->emitOpError()
+             << "new shape has invalid tensor dimension size " << dim;
+
+  auto outputType = dyn_cast<RankedTensorType>(reshapeOp.getType());
+
+  // ERROR_IF(shape disagrees with the statically known result shape)
+  if (outputType &&
+      outputType.getRank() == static_cast<int64_t>(shapeValues.size())) {
+    for (auto [newShapeDim, outputShapeDim] :
+         llvm::zip_equal(shapeValues, outputType.getShape())) {
+      if (ShapedType::isDynamic(outputShapeDim))
+        continue;
+      if (newShapeDim != outputShapeDim)
+        return op->emitOpError()
+               << "new shape is inconsistent with result shape";
+    }
+  }
+
+  // ERROR_IF(the number of elements is not preserved). Every dimension is now
+  // known to be positive, so the product is exact.
+  if (auto inputType =
+          dyn_cast<RankedTensorType>(reshapeOp.getInput1().getType());
+      inputType && inputType.hasStaticShape()) {
+    int64_t inputElementsNum = inputType.getNumElements();
+    if (outputType && outputType.hasStaticShape()) {
+      int64_t outputElementsNum = outputType.getNumElements();
+      if (inputElementsNum != outputElementsNum)
+        return op->emitOpError() << "cannot reshape " << inputElementsNum
+                                 << " elements into " << outputElementsNum;
+    }
+
+    int64_t newShapeElementsNum =
+        llvm::accumulate(shapeValues, int64_t(1),
+                         [](int64_t acc, int64_t dim) { return acc * dim; });
+    if (inputElementsNum != newShapeElementsNum)
+      return op->emitOpError() << "cannot reshape " << inputElementsNum
+                               << " elements into " << newShapeElementsNum;
+  }
 
   return success();
 }

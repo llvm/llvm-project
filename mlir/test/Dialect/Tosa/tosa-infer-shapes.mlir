@@ -2354,3 +2354,44 @@ func.func @resize_invalid_scale(%arg0: tensor<1x50x48x1xf32>) {
   %0 = tosa.resize %arg0, %scale, %offset, %border mode<NEAREST_NEIGHBOR> : (tensor<1x50x48x1xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xf32>
   return
 }
+
+// -----
+
+// A zero-sized dimension in the shape operand must make shape inference fall
+// back to a fully dynamic result instead of building an invalid
+// `tensor<0x...>` type (and it must not divide by zero when a -1 is present).
+// CHECK-LABEL: @test_reshape_zero_and_inferable_dim
+func.func @test_reshape_zero_and_inferable_dim(%arg0: tensor<8xf32>) -> tensor<?x?xf32> {
+  %shape = tosa.const_shape values(dense<[0, -1]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // CHECK: tosa.reshape %arg0, %{{.*}} : (tensor<8xf32>, !tosa.shape<2>) -> tensor<?x?xf32>
+  %0 = tosa.reshape %arg0, %shape : (tensor<8xf32>, !tosa.shape<2>) -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// -----
+
+// An out-of-range dimension must not reach RankedTensorType::get(). The
+// inferred type is fully dynamic and is joined with the declared result type,
+// so the statically known `4` is preserved.
+// CHECK-LABEL: @test_reshape_invalid_dimension
+func.func @test_reshape_invalid_dimension(%arg0: tensor<4x4xf32>) -> tensor<?x4xf32> {
+  %shape = tosa.const_shape values(dense<[-2, -1]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // CHECK: tosa.reshape %arg0, %{{.*}} : (tensor<4x4xf32>, !tosa.shape<2>) -> tensor<?x4xf32>
+  %0 = tosa.reshape %arg0, %shape : (tensor<4x4xf32>, !tosa.shape<2>) -> tensor<?x4xf32>
+  return %0 : tensor<?x4xf32>
+}
+
+// -----
+
+// Same, with an unranked input, which takes the non-constant/unranked
+// inference path and needs a cast back to the original function type.
+// CHECK-LABEL: @test_reshape_invalid_dimension_unranked
+func.func @test_reshape_invalid_dimension_unranked(%arg0: tensor<*xf32>) -> tensor<*xf32> {
+  %shape = tosa.const_shape values(dense<[-2, 4]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // CHECK: %[[RESHAPE:.+]] = tosa.reshape %arg0, %[[SHAPE:.+]] : (tensor<*xf32>, !tosa.shape<2>) -> tensor<?x?xf32>
+  // DEFAULT: %[[CAST:.+]] = tensor.cast %[[RESHAPE]] : tensor<?x?xf32> to tensor<*xf32>
+  // DEFAULT: return %[[CAST]] : tensor<*xf32>
+  // FUNCBOUND: return %[[RESHAPE]] : tensor<?x?xf32>
+  %0 = tosa.reshape %arg0, %shape : (tensor<*xf32>, !tosa.shape<2>) -> tensor<*xf32>
+  return %0 : tensor<*xf32>
+}

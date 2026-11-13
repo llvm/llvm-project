@@ -2513,3 +2513,12 @@ func.func @test_reverse_block_scaled_rank_zero(%arg0: tensor<!tosa.block_scaled<
   %0 = tosa.reverse %arg0 axis(0) : (tensor<!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
   return %0 : tensor<!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
 }
+
+// -----
+
+func.func @test_reshape_rank_mismatch(%arg0 : tensor<?xf32>) -> () {
+  %s = tosa.const_shape values(dense<[2, 4]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.reshape' op new shape does not match result rank}}
+  %0 = "tosa.reshape"(%arg0, %s) : (tensor<?xf32>, !tosa.shape<2>) -> tensor<?xf32>
+  return
+}
