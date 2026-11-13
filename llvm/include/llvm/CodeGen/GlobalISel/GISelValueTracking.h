@@ -177,6 +177,11 @@ public:
   /// Returns true if \p Val can be assumed to never be a signaling NaN.
   bool isKnownNeverSNaN(Register Val) { return isKnownNeverNaN(Val, true); }
 
+  /// Returns true if the floating-point value \p R (or every element of it, if
+  /// it is a vector) is known to be an integer, infinity or NaN, so rounding it
+  /// to an integral value leaves it unchanged.
+  bool isKnownIntegralOrNonFinite(Register R, unsigned Depth = 0);
+
   /// Returns true if \p Val can be assumed to never be a zero, accounting for
   /// denormal flushing of the containing function.
   bool isKnownNeverLogicalZero(Register Val, unsigned Depth = 0);

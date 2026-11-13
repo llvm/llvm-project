@@ -53,8 +53,9 @@ public:
                               MachineIRBuilder &B) const;
   bool legalizeITOFP(MachineInstr &MI, MachineRegisterInfo &MRI,
                      MachineIRBuilder &B, bool Signed) const;
-  bool legalizeFPTOI(MachineInstr &MI, MachineRegisterInfo &MRI,
-                     MachineIRBuilder &B, bool Signed) const;
+  bool legalizeFPTOI(LegalizerHelper &Helper, MachineInstr &MI,
+                     MachineRegisterInfo &MRI, MachineIRBuilder &B,
+                     bool Signed) const;
   bool legalizeMinNumMaxNum(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeExtract(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeInsert(LegalizerHelper &Helper, MachineInstr &MI) const;

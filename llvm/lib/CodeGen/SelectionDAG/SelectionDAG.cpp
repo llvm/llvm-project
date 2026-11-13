@@ -6412,6 +6412,43 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
   return Known;
 }
 
+bool SelectionDAG::isKnownIntegralOrNonFinite(SDValue Op,
+                                              unsigned Depth) const {
+  if (Op.getOpcode() == ISD::POISON)
+    return true;
+
+  if (ConstantFPSDNode *C = isConstOrConstSplatFP(Op)) {
+    const APFloat &Val = C->getValueAPF();
+    return !Val.isFinite() || Val.isInteger();
+  }
+
+  if (Depth >= MaxRecursionDepth)
+    return false; // Limit search depth.
+
+  switch (Op.getOpcode()) {
+  case ISD::FTRUNC:
+  case ISD::FFLOOR:
+  case ISD::FCEIL:
+  case ISD::FRINT:
+  case ISD::FNEARBYINT:
+  case ISD::FROUND:
+  case ISD::FROUNDEVEN:
+  case ISD::SINT_TO_FP:
+  case ISD::UINT_TO_FP:
+    return true;
+  case ISD::FNEG:
+  case ISD::FABS:
+  case ISD::FCOPYSIGN:
+    return isKnownIntegralOrNonFinite(Op.getOperand(0), Depth + 1);
+  case ISD::SELECT:
+  case ISD::VSELECT:
+    return isKnownIntegralOrNonFinite(Op.getOperand(1), Depth + 1) &&
+           isKnownIntegralOrNonFinite(Op.getOperand(2), Depth + 1);
+  default:
+    return false;
+  }
+}
+
 bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN,
                                    unsigned Depth) const {
   APInt DemandedElts = getDemandAllEltsMask(Op);
