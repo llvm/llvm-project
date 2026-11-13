@@ -91,13 +91,24 @@ lldb_private::formatters::RustVectorSyntheticFrontEnd::Update() {
           .GetChildAtNamePath({"buf", "inner", "ptr", "pointer", "pointer"})
           .get();
 
-  // If rust program was compiled with -Zrandomize-layout, the second
-  // "pointer" child may be omitted.
+  // Newer versions of the rustc compiler omit the second  "pointer" child.
   if (!m_start)
     m_start =
         m_backend.GetChildAtNamePath({"buf", "inner", "ptr", "pointer"}).get();
 
   m_len = m_backend.GetChildMemberWithName("len").get();
+
+  // Verify m_len < 1 << (ptr_bit_size - 1)
+  uint64_t len = m_len->GetValueAsUnsigned(0);
+  lldb::TargetSP target_sp = m_len->GetTargetSP();
+  if (target_sp) {
+    uint32_t ptr_byte_size = target_sp->GetArchitecture().GetAddressByteSize();
+    uint32_t ptr_bit_size = ptr_byte_size * 8;
+    if (len >= (1 << (ptr_bit_size - 1))) {
+      m_start = m_len = nullptr;
+      return lldb::ChildCacheState::eRefetch;
+    }
+  }
 
   m_element_type =
       m_backend.GetCompilerType().GetNonReferenceType().GetTypeTemplateArgument(
