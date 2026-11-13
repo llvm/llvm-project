@@ -517,13 +517,16 @@ struct LengthAndTypeCollector {
 };
 
 template <>
-struct LengthAndTypeCollector<Fortran::evaluate::SomeDerived> {
-  static mlir::Type collect(
-      mlir::Location loc, Fortran::lower::AbstractConverter &converter,
-      const Fortran::evaluate::ArrayConstructor<Fortran::evaluate::SomeDerived>
-          &arrayCtorExpr,
-      Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
-      mlir::SmallVectorImpl<mlir::Value> &lengths) {
+struct LengthAndTypeCollector<
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Derived>> {
+  static mlir::Type
+  collect(mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+          const Fortran::evaluate::ArrayConstructor<
+              Fortran::evaluate::Type<Fortran::common::TypeCategory::Derived>>
+              &arrayCtorExpr,
+          Fortran::lower::SymMap &symMap,
+          Fortran::lower::StatementContext &stmtCtx,
+          mlir::SmallVectorImpl<mlir::Value> &lengths) {
     // Array constructors cannot be unlimited polymorphic (C7113), so there must
     // be a derived type spec available.
     return Fortran::lower::translateDerivedTypeToFIRType(

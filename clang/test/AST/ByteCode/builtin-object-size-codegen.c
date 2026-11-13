@@ -148,3 +148,17 @@ void f18(void) {
   // CHECK: store i32 3
   gi = __builtin_object_size((char*)&_P + 5, 0);
 }
+
+void test26(void) {
+  struct { int v[10]; } t[10];
+
+  // CHECK: store i32 316
+  gi = __builtin_object_size(&t[1].v[11], 0);
+  // FIXME: Not sure why this should return 312. GCC also returns 0.
+  // store i32 312
+  // gi = __builtin_object_size(&t[1].v[12], 1);
+  // CHECK: store i32 308
+  gi = __builtin_object_size(&t[1].v[13], 2);
+  // CHECK: store i32 0
+  gi = __builtin_object_size(&t[1].v[14], 3);
+}

@@ -1700,6 +1700,28 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     ID = Intrinsic::riscv_asubu_u32;
     break;
 
+  // Scalar Narrowing Clip
+  case RISCV::BI__builtin_riscv_nclipu_u32:
+    ID = Intrinsic::riscv_nclipu_u32;
+    break;
+  case RISCV::BI__builtin_riscv_nclipru_u32:
+    ID = Intrinsic::riscv_nclipru_u32;
+    break;
+  case RISCV::BI__builtin_riscv_nsrar_i32:
+    ID = Intrinsic::riscv_nsrar_i32;
+    break;
+  case RISCV::BI__builtin_riscv_nclip_i32:
+    ID = Intrinsic::riscv_nclip_i32;
+    break;
+  case RISCV::BI__builtin_riscv_nclipr_i32:
+    ID = Intrinsic::riscv_nclipr_i32;
+    break;
+
+  // Scalar Shift-Add
+  case RISCV::BI__builtin_riscv_ssh1sadd_i32:
+    ID = Intrinsic::riscv_ssh1sadd_i32;
+    break;
+
   // Scalar Multiply High
   case RISCV::BI__builtin_riscv_mulhr_i32:
   case RISCV::BI__builtin_riscv_mulhru_u32:

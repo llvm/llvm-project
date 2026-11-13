@@ -8281,8 +8281,10 @@ bool AMDGPULegalizerInfo::legalizeBVHDualOrBVH8IntersectRayIntrinsic(
 
 bool AMDGPULegalizerInfo::legalizeStackSave(MachineInstr &MI,
                                             MachineIRBuilder &B) const {
-  const SITargetLowering *TLI = ST.getTargetLowering();
-  Register StackPtr = TLI->getStackPointerRegisterToSaveRestore();
+  // Entry functions still hold the SP_REG placeholder until finalizeLowering.
+  const SIMachineFunctionInfo *Info =
+      B.getMF().getInfo<SIMachineFunctionInfo>();
+  Register StackPtr = Info->getStackPtrOffsetReg();
   Register DstReg = MI.getOperand(0).getReg();
   B.buildInstr(AMDGPU::G_AMDGPU_WAVE_ADDRESS, {DstReg}, {StackPtr});
   MI.eraseFromParent();
