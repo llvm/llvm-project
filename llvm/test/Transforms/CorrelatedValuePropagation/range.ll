@@ -1355,6 +1355,94 @@ target:
   ret i8 %b
 }
 
+define i8 @ushl_sat_unknown_rhs(i8 range(i8 0, 2) %x, i8 %y) {
+; CHECK-LABEL: define i8 @ushl_sat_unknown_rhs(
+; CHECK-SAME: i8 range(i8 0, 2) [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.ushl.sat.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %res = call i8 @llvm.ushl.sat.i8(i8 %x, i8 %y)
+  ret i8 %res
+}
+
+define i8 @sshl_sat_pos_unknown_rhs(i8 range(i8 3, 10) %x, i8 %y) {
+; CHECK-LABEL: define i8 @sshl_sat_pos_unknown_rhs(
+; CHECK-SAME: i8 range(i8 3, 10) [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.sshl.sat.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %res = call i8 @llvm.sshl.sat.i8(i8 %x, i8 %y)
+  ret i8 %res
+}
+
+define i8 @sshl_sat_neg_unknown_rhs(i8 range(i8 -10, -2) %x, i8 %y) {
+; CHECK-LABEL: define i8 @sshl_sat_neg_unknown_rhs(
+; CHECK-SAME: i8 range(i8 -10, -2) [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.sshl.sat.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %res = call i8 @llvm.sshl.sat.i8(i8 %x, i8 %y)
+  ret i8 %res
+}
+
+define i8 @sshl_sat_partial_oob_rhs(i8 range(i8 -10, 3) %x, i8 range(i8 8, 3) %y) {
+; CHECK-LABEL: define i8 @sshl_sat_partial_oob_rhs(
+; CHECK-SAME: i8 range(i8 -10, 3) [[X:%.*]], i8 range(i8 8, 3) [[Y:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.sshl.sat.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %res = call i8 @llvm.sshl.sat.i8(i8 %x, i8 %y)
+  ret i8 %res
+}
+
+define i1 @ushl_sat_fold(i8 %x, i8 %y) {
+; CHECK-LABEL: define i1 @ushl_sat_fold(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[X]], 5
+; CHECK-NEXT:    br i1 [[CMP]], label %[[IF:.*]], label %[[ELSE:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.ushl.sat.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[RES:%.*]] = icmp uge i8 [[SAT]], 5
+; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp uge i8 %x, 5
+  br i1 %cmp, label %if, label %else
+
+if:
+  %sat = call i8 @llvm.ushl.sat.i8(i8 %x, i8 %y)
+  %res = icmp uge i8 %sat, 5
+  ret i1 %res
+
+else:
+  ret i1 true
+}
+
+define i1 @ushl_sat_nofold(i8 %x, i8 %y) {
+; CHECK-LABEL: define i1 @ushl_sat_nofold(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[X]], 5
+; CHECK-NEXT:    br i1 [[CMP]], label %[[IF:.*]], label %[[ELSE:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.ushl.sat.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[RES:%.*]] = icmp uge i8 [[SAT]], 6
+; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp uge i8 %x, 5
+  br i1 %cmp, label %if, label %else
+
+if:
+  %sat = call i8 @llvm.ushl.sat.i8(i8 %x, i8 %y)
+  %res = icmp uge i8 %sat, 6
+  ret i1 %res
+
+else:
+  ret i1 true
+}
+
 declare i16 @llvm.ctlz.i16(i16, i1)
 declare i16 @llvm.cttz.i16(i16, i1)
 declare i16 @llvm.ctpop.i16(i16)
