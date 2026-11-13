@@ -9,12 +9,8 @@
 #ifndef LLVM_LIBC_TYPES_PTHREAD_ONCE_T_H
 #define LLVM_LIBC_TYPES_PTHREAD_ONCE_T_H
 
-#include "__futex_word.h"
-
-#ifdef __linux__
-typedef __futex_word pthread_once_t;
-#else
-#error "Once flag type not defined for the target platform."
-#endif
+// An int, as it is in glibc, musl and bionic, so that code written against them
+// can initialise and compare it as one.
+typedef int pthread_once_t;
 
 #endif // LLVM_LIBC_TYPES_PTHREAD_ONCE_T_H

@@ -11,6 +11,17 @@ add_libc_test(
 )
 
 add_libc_test(
+  pthread_once_t_test
+  SUITE
+    libc-include-tests
+  SRCS
+    pthread_once_t_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.pthread_macros
+    libc.include.llvm-libc-types.pthread_once_t
+)
+
+add_libc_test(
   assert_test
   SUITE
     libc-include-tests
