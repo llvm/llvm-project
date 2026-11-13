@@ -673,6 +673,33 @@ bool CVPImpl::processMinMaxIntrinsic(MinMaxIntrinsic *MM) {
     return true;
   }
 
+  // A select condition that may be undef still constrains an operand if the
+  // operand is frozen, so that the condition and the min/max observe the same
+  // value:
+  //   select (m < 0), (shl x, (sub 0, smin(m, 0))), 0
+  //     --> m.fr = freeze m
+  //         select (m.fr < 0), (shl x, (sub 0, m.fr)), 0
+  auto TryFoldWithFreeze = [&](unsigned OpIdx,
+                               const ConstantRange &OtherRange) {
+    ConstantRange FrozenRange = LVI->getConstantRangeAtUse(
+        MM->getOperandUse(OpIdx),
+        /*UndefAllowed*/ false, /*AssumeFrozen*/ true);
+    if (!FrozenRange.icmp(Pred, OtherRange))
+      return false;
+    Value *Op = MM->getOperand(OpIdx);
+    auto *FI = new FreezeInst(Op, Op->getName() + ".fr", MM->getIterator());
+    if (!freezeUsesAfterDef(*FI, *DT)) {
+      FI->eraseFromParent();
+      return false;
+    }
+    ++NumMinMax;
+    MM->replaceAllUsesWith(FI);
+    MM->eraseFromParent();
+    return true;
+  };
+  if (TryFoldWithFreeze(0, RRange) || TryFoldWithFreeze(1, LRange))
+    return true;
+
   if (MM->isSigned() &&
       ConstantRange::areInsensitiveToSignednessOfICmpPredicate(LRange,
                                                                RRange)) {
