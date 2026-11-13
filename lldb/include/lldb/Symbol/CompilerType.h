@@ -419,8 +419,7 @@ public:
 
   /// Return the stride of the type in bytes. This is the distance between
   /// consecutive elements of this type in contiguous storage (e.g. array).
-  std::optional<uint64_t>
-  GetByteStride(ExecutionContextScope *exe_scope) const;
+  std::optional<uint64_t> GetByteStride(ExecutionContextScope *exe_scope) const;
 
   lldb::Encoding GetEncoding() const;
 
