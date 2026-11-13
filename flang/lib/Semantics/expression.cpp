@@ -2993,7 +2993,11 @@ static constexpr int cudaInfMatchingValue{common::numeric_limits<int>::max()};
 
 struct CudaMatchingDistance {
   std::vector<int> perArg;
+  // Some argument association has an infinite distance that argument checking
+  // nevertheless supports; such a candidate ranks after every finite one.
   bool isInfinite{false};
+  // Some argument association is incompatible; the candidate is not a match.
+  bool isUnsupported{false};
 };
 
 // Compare CUDA matching distances using lexicographical comparison of
@@ -3046,8 +3050,14 @@ static int CompareCudaMatchingDistance(
 // non-zero distance (3) so an explicit Device overload still wins. The
 // "ACC use_dev" column applies to actuals appearing in a surrounding
 // ACC HOST_DATA USE_DEVICE clause.
-static int GetMatchingDistance(const common::LanguageFeatureControl &features,
+//
+// An infinite distance is accepted only for the associations that argument
+// checking supports (see isSupportedInfinite below); otherwise the result is
+// std::nullopt and the candidate is rejected.
+static std::optional<int> GetMatchingDistance(
+    const common::LanguageFeatureControl &features,
     semantics::SemanticsContext &context,
+    const characteristics::Procedure &procedure, bool mayRunOnDevice,
     const characteristics::DummyArgument &dummy,
     const std::optional<ActualArgument> &actual) {
   bool isCudaManaged{features.IsEnabled(common::LanguageFeature::CudaManaged)};
@@ -3114,23 +3124,27 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     }
   }
 
+  bool dummyIsValue{false};
+  bool dummyIsAllocatableOrPointer{false};
+  common::IgnoreTKRSet dummyIgnoreTKR;
   bool dummyIsCudaAddressSpaceAgnostic{false};
   common::visit(common::visitors{
                     [&](const characteristics::DummyDataObject &object) {
                       dummyDataAttr = object.cudaDataAttr;
+                      dummyIsValue = object.attrs.test(
+                          characteristics::DummyDataObject::Attr::Value);
+                      dummyIsAllocatableOrPointer =
+                          object.attrs.test(characteristics::DummyDataObject::
+                                  Attr::Allocatable) ||
+                          object.attrs.test(
+                              characteristics::DummyDataObject::Attr::Pointer);
+                      dummyIgnoreTKR = object.ignoreTKR;
                       dummyIsCudaAddressSpaceAgnostic =
                           semantics::IsCUDAAddressSpaceAgnostic(object);
                     },
                     [&](const auto &) {},
                 },
       dummy.u);
-
-  if (actualDataAttr && dummyIsCudaAddressSpaceAgnostic) {
-    // TYPE(*) assumed-size/rank dummies model opaque buffers, so they can
-    // accept host or device storage. Keep a non-zero distance so an explicit
-    // DEVICE overload remains a better CUDA match.
-    return 3;
-  }
 
   auto actualIsDeviceMemory{[&]() {
     return actualDataAttr &&
@@ -3139,79 +3153,98 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
             *actualDataAttr == common::CUDADataAttr::Shared);
   }};
 
-  if (!dummyDataAttr) {
-    if (!actualDataAttr) {
-      if ((isCudaUnified || isCudaManaged) &&
-          actualCanUseImplicitCudaMemoryMode) {
-        return 3;
-      }
-      return 0;
-    } else if (actualIsDeviceMemory()) {
-      return cudaInfMatchingValue;
-    } else if (*actualDataAttr == common::CUDADataAttr::Managed ||
-        *actualDataAttr == common::CUDADataAttr::Unified) {
+  int distance{[&]() {
+    if (actualDataAttr && dummyIsCudaAddressSpaceAgnostic) {
+      // TYPE(*) assumed-size/rank dummies model opaque buffers, so they can
+      // accept host or device storage. Keep a non-zero distance so an explicit
+      // DEVICE overload remains a better CUDA match.
       return 3;
     }
-  } else if (*dummyDataAttr == common::CUDADataAttr::Device) {
-    if (!actualDataAttr) {
-      if ((isCudaUnified || isCudaManaged) &&
-          actualCanUseImplicitCudaMemoryMode) {
+
+    if (!dummyDataAttr) {
+      if (!actualDataAttr) {
+        if ((isCudaUnified || isCudaManaged) &&
+            actualCanUseImplicitCudaMemoryMode) {
+          return 3;
+        }
+        return 0;
+      } else if (actualIsDeviceMemory()) {
+        return cudaInfMatchingValue;
+      } else if (*actualDataAttr == common::CUDADataAttr::Managed ||
+          *actualDataAttr == common::CUDADataAttr::Unified) {
+        return 3;
+      }
+    } else if (*dummyDataAttr == common::CUDADataAttr::Device) {
+      if (!actualDataAttr) {
+        if ((isCudaUnified || isCudaManaged) &&
+            actualCanUseImplicitCudaMemoryMode) {
+          return 2;
+        }
+        return cudaInfMatchingValue;
+      } else if (actualIsDeviceMemory()) {
+        return 0;
+      } else if (*actualDataAttr == common::CUDADataAttr::Managed ||
+          *actualDataAttr == common::CUDADataAttr::Unified) {
         return 2;
       }
-      return cudaInfMatchingValue;
-    } else if (actualIsDeviceMemory()) {
-      return 0;
-    } else if (*actualDataAttr == common::CUDADataAttr::Managed ||
-        *actualDataAttr == common::CUDADataAttr::Unified) {
-      return 2;
-    }
-  } else if (*dummyDataAttr == common::CUDADataAttr::Managed) {
-    if (!actualDataAttr) {
-      if (!actualCanUseImplicitCudaMemoryMode) {
-        return cudaInfMatchingValue;
+    } else if (*dummyDataAttr == common::CUDADataAttr::Managed) {
+      if (!actualDataAttr) {
+        if (!actualCanUseImplicitCudaMemoryMode) {
+          return cudaInfMatchingValue;
+        }
+        return isCudaUnified ? 1 : isCudaManaged ? 0 : cudaInfMatchingValue;
       }
-      return isCudaUnified ? 1 : isCudaManaged ? 0 : cudaInfMatchingValue;
-    }
-    if (actualIsDeviceMemory()) {
-      return cudaInfMatchingValue;
-    } else if (*actualDataAttr == common::CUDADataAttr::Managed) {
-      return 0;
-    } else if (*actualDataAttr == common::CUDADataAttr::Unified) {
-      return 1;
-    }
-  } else if (*dummyDataAttr == common::CUDADataAttr::Unified) {
-    if (!actualDataAttr) {
-      if (!actualCanUseImplicitCudaMemoryMode) {
+      if (actualIsDeviceMemory()) {
         return cudaInfMatchingValue;
+      } else if (*actualDataAttr == common::CUDADataAttr::Managed) {
+        return 0;
+      } else if (*actualDataAttr == common::CUDADataAttr::Unified) {
+        return 1;
       }
-      return isCudaUnified ? 0 : isCudaManaged ? 1 : cudaInfMatchingValue;
+    } else if (*dummyDataAttr == common::CUDADataAttr::Unified) {
+      if (!actualDataAttr) {
+        if (!actualCanUseImplicitCudaMemoryMode) {
+          return cudaInfMatchingValue;
+        }
+        return isCudaUnified ? 0 : isCudaManaged ? 1 : cudaInfMatchingValue;
+      }
+      if (actualIsDeviceMemory()) {
+        return cudaInfMatchingValue;
+      } else if (*actualDataAttr == common::CUDADataAttr::Managed) {
+        return 1;
+      } else if (*actualDataAttr == common::CUDADataAttr::Unified) {
+        return 0;
+      }
     }
-    if (actualIsDeviceMemory()) {
-      return cudaInfMatchingValue;
-    } else if (*actualDataAttr == common::CUDADataAttr::Managed) {
-      return 1;
-    } else if (*actualDataAttr == common::CUDADataAttr::Unified) {
-      return 0;
+    // An actual argument with the UseDevice attribute comes from an OpenACC
+    // host_data use_device clause: the variable itself is host-resident, but
+    // inside the host_data region it is referenced via its device address.
+    // It matches a Device dummy with distance 0, a host dummy (no attribute)
+    // with distance 1, and is incompatible with any other dummy attribute.
+    if (actualDataAttr && *actualDataAttr == common::CUDADataAttr::UseDevice) {
+      if (!dummyDataAttr)
+        return 1;
+      if (*dummyDataAttr == common::CUDADataAttr::Device)
+        return 0;
     }
+    return cudaInfMatchingValue;
+  }()};
+
+  // Associations that the table above does not represent but that argument
+  // checking accepts. They keep their infinite distance, so they do not change
+  // the ranking of finite candidates.
+  auto isSupportedInfinite{[&]() { return false; }};
+
+  if (distance == cudaInfMatchingValue && !isSupportedInfinite()) {
+    return std::nullopt;
   }
-  // An actual argument with the UseDevice attribute comes from an OpenACC
-  // host_data use_device clause: the variable itself is host-resident, but
-  // inside the host_data region it is referenced via its device address.
-  // It matches a Device dummy with distance 0, a host dummy (no attribute)
-  // with distance 1, and is incompatible with any other dummy attribute.
-  if (actualDataAttr && *actualDataAttr == common::CUDADataAttr::UseDevice) {
-    if (!dummyDataAttr)
-      return 1;
-    if (*dummyDataAttr == common::CUDADataAttr::Device)
-      return 0;
-  }
-  return cudaInfMatchingValue;
+  return distance;
 }
 
 static CudaMatchingDistance ComputeCudaMatchingDistance(
     semantics::SemanticsContext &context,
-    const characteristics::Procedure &procedure,
-    const ActualArguments &actuals) {
+    const characteristics::Procedure &procedure, const ActualArguments &actuals,
+    bool mayRunOnDevice) {
   const auto &dummies{procedure.dummyArguments};
   CHECK(dummies.size() == actuals.size());
   CudaMatchingDistance distance;
@@ -3223,13 +3256,18 @@ static CudaMatchingDistance ComputeCudaMatchingDistance(
       // Omitted optional arguments do not affect CUDA matching distances.
       continue;
     }
-    int d{GetMatchingDistance(
-        context.languageFeatures(), context, dummy, actual)};
-    if (d == cudaInfMatchingValue) {
-      distance.isInfinite = true;
+    std::optional<int> d{GetMatchingDistance(context.languageFeatures(),
+        context, procedure, mayRunOnDevice, dummy, actual)};
+    if (!d) {
+      distance.isUnsupported = true;
       return distance;
     }
-    distance.perArg.push_back(d);
+    // Keep checking later arguments: one may still be incompatible.
+    if (*d == cudaInfMatchingValue) {
+      distance.isInfinite = true;
+    } else {
+      distance.perArg.push_back(*d);
+    }
   }
   return distance;
 }
@@ -3420,7 +3458,10 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
               CheckCompatibleArguments(
                   *procedure, localActuals, foldingContext_)) {
             CudaMatchingDistance d{ComputeCudaMatchingDistance(
-                context_, *procedure, localActuals)};
+                context_, *procedure, localActuals, !inHostCode)};
+            if (d.isUnsupported) {
+              continue;
+            }
             if ((procedure->IsElemental() && elemental) ||
                 (!procedure->IsElemental() && nonElemental)) {
               if (crtMatchingDistance) {
