@@ -61,7 +61,7 @@
 #define _LIBCXXABI_WEAK __attribute__((__weak__))
 
 #if __has_attribute(__no_sanitize__) && defined(_LIBCXXABI_COMPILER_CLANG)
-#define _LIBCXXABI_NO_CFI __attribute__((__no_sanitize__("cfi")))
+#define _LIBCXXABI_NO_CFI __attribute__((__no_sanitize__("cfi", "kcfi")))
 #else
 #define _LIBCXXABI_NO_CFI
 #endif
