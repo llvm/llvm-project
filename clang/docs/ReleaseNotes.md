@@ -1575,6 +1575,9 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   modes for `-fsanitize=alloc-token`, selected with
   `-Xclang -falloc-token-mode=<mode>`. These modes derive token IDs from both
   the allocated type and the name of the function containing the allocation.
+- `-fsanitize=alloc-token` now also infers the allocated type from a placement
+  `new` into the result of an untyped allocation call, e.g. `new (malloc(n)) T`
+  or `void *p = malloc(n); new (p) T;`.
 
 ### Python Binding Changes
 

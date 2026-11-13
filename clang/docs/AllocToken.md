@@ -56,6 +56,18 @@ The following command-line options affect generated token IDs:
       is of the form `2^k-1` (e.g. the default `SIZE_MAX`), all `k` bits are
       used and token IDs are in `[0, N]`, i.e. a token ID may be equal to `N`.
 
+## Allocated Type Inference
+
+For `new` expressions the allocated type is known syntactically. For untyped
+allocation functions such as `malloc`, the type is inferred heuristically from
+the allocation call and its context, in this order: a `sizeof` in the size
+argument, a placement `new` into the result, and a cast of the result. The
+heuristics are syntactic: `sizeof` expressions and casts ignore control flow
+and reassignments, and a placement `new` through a variable is only used if
+the function defines the variable exactly once (variables that are reassigned
+are not used for inference). If no type can be inferred, the allocation
+receives the fallback token.
+
 ## Querying Token IDs with `__builtin_infer_alloc_token`
 
 For use cases where the token ID must be known at compile time, Clang provides

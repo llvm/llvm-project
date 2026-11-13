@@ -24,6 +24,7 @@
 #include "ConstantEmitter.h"
 #include "PatternInit.h"
 #include "TargetInfo.h"
+#include "clang/AST/InferAlloc.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/DiagnosticFrontend.h"
@@ -4895,7 +4896,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
 
   case Builtin::BI__builtin_infer_alloc_token: {
-    llvm::MDNode *MDN = buildAllocToken(E);
+    // The builtin has no enclosing allocation whose placement-new uses could
+    // be inspected, so only the call-based inference applies.
+    llvm::MDNode *MDN = buildAllocToken(
+        infer_alloc::inferPossibleType(E, getContext(), CurCast));
     llvm::Value *MDV = MetadataAsValue::get(getLLVMContext(), MDN);
     llvm::Function *F =
         CGM.getIntrinsic(llvm::Intrinsic::alloc_token_id, {IntPtrTy});
