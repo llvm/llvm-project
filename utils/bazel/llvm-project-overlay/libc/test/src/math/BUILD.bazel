@@ -254,6 +254,14 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "dsubf128",
+    hdrs = ["SubTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
+)
+
+math_mpfr_test(
     name = "dsubl",
     hdrs = ["SubTest.h"],
 )
