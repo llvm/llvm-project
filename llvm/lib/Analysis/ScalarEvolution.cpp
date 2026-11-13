@@ -16332,3 +16332,19 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr,
     Guards.collectPending();
   return Guards.rewrite(Expr);
 }
+
+bool ScalarEvolution::haveMatchingLoopUses(const SCEV *LHS, const SCEV *RHS) {
+  SmallPtrSet<const Loop *, 2> LLoops;
+  SmallPtrSet<const Loop *, 2> RLoops;
+  getUsedLoops(LHS, LLoops);
+  getUsedLoops(RHS, RLoops);
+  if (LLoops.empty() || RLoops.empty())
+    return true;
+  if (LLoops.size() != RLoops.size())
+    return false;
+  for (const Loop *L : LLoops) {
+    if (!RLoops.count(L))
+      return false;
+  }
+  return true;
+}

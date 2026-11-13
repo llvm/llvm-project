@@ -597,6 +597,9 @@ public:
   LLVM_ABI bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                            Intrinsic::ID IID) const;
 
+  /// Return true if the address space is read-only and fast to read/write.
+  LLVM_ABI bool isReadOnlyAndFastAddressSpace(unsigned AddressSpace) const;
+
   LLVM_ABI bool isNoopAddrSpaceCast(unsigned FromAS, unsigned ToAS) const;
 
   // Given an address space cast of the given pointer value, calculate the known

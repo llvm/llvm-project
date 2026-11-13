@@ -320,6 +320,11 @@ bool TargetTransformInfo::collectFlatAddressOperands(
   return TTIImpl->collectFlatAddressOperands(OpIndexes, IID);
 }
 
+bool TargetTransformInfo::isReadOnlyAndFastAddressSpace(
+    unsigned AddressSpace) const {
+  return TTIImpl->isReadOnlyAndFastAddressSpace(AddressSpace);
+}
+
 bool TargetTransformInfo::isNoopAddrSpaceCast(unsigned FromAS,
                                               unsigned ToAS) const {
   return TTIImpl->isNoopAddrSpaceCast(FromAS, ToAS);

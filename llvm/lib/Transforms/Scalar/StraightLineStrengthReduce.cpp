@@ -510,6 +510,47 @@ private:
     return S;
   }
 
+  /// Wrapper for getMinusSCEV that computes the difference between two SCEVs.
+  /// 1. If A == B, returns 0.
+  /// 2. If both SCEVs are Div/Truncate/ZeroExtend/SignExtend, we do not run
+  /// getMinusSCEV to save compile time.
+  /// 3. For other cases, we run getMinusSCEV to compute the difference(A - B).
+  std::optional<const SCEV *> getDiffSCEV(const SCEV *A, const SCEV *B) const {
+    // Although getMinusSCEV has a "X - X --> 0" fast path, it is not redundant
+    // because it may return std::nullopt without calling getMinusSCEV when both
+    // SCEVs are Div/Truncate/ZeroExtend/SignExtend. So we test equality up
+    // front to return 0 when A == B.
+    if (A == B)
+      return SE->getZero(A->getType());
+
+    // For these SCEV types, getMinusSCEV is likely to give very conservative
+    // results, which is not helpful for SLSR/PSR. So we skip them.
+    auto IsConservativeExpr = [](const SCEV *A) {
+      switch (A->getSCEVType()) {
+      case SCEVTypes::scUDivExpr:
+      case SCEVTypes::scTruncate:
+      case SCEVTypes::scZeroExtend:
+      case SCEVTypes::scSignExtend:
+        return true;
+      default:
+        return false;
+      }
+    };
+
+    // We only skip when both SCEVs are Div/Truncate/ZeroExtend/SignExtend.
+    // This is because we may have the following case:
+    // A = sext(x) + 5 (Add)
+    // B = sext(x) (Sext)
+    // =>
+    // B - A = 5 (Const)
+    if (Opts.slsr_skip_scev_diff && IsConservativeExpr(A) &&
+        IsConservativeExpr(B))
+      return std::nullopt;
+
+    ++NumSCEVCandidateBasisDifferences;
+    return SE->getMinusSCEV(A, B);
+  }
+
   bool candidatePredicate(Candidate *Basis, Candidate &C, Candidate::DKind K);
 
   bool hasSameSCEVUnknowns(const SCEV *A, const SCEV *B);
@@ -557,6 +598,15 @@ private:
   friend raw_ostream &operator<<(raw_ostream &OS, const DeltaInfo &DI);
 
   DeltaInfo compressPath(Candidate &C, Candidate *Basis) const;
+
+  void partialStrengthReduce();
+  void collectPSRCandidates(
+      DenseMap<Candidate *, std::vector<DeltaInfo>> &PSRBasisToCandidates);
+  bool isProfitableToHoist(const Candidate &Basis,
+                           std::vector<DeltaInfo> &PSRCandidates,
+                           ArrayRef<Instruction *> HoistList) const;
+  bool dependencyBasisDominates(ArrayRef<Instruction *> HoistList,
+                                const Instruction *InsertPoint);
 
   Candidate *pickRewriteCandidate(Instruction *I) const;
   void sortCandidateInstructions();
@@ -1031,6 +1081,368 @@ auto StraightLineStrengthReduce::pickRewriteCandidate(Instruction *I) const
   return BestC;
 }
 
+// Search for PSR basis for instructions that did not get SLSR basis.
+// Only search for PSR basis from BBs that can reach but do not
+// dominate the candidate.
+void StraightLineStrengthReduce::collectPSRCandidates(
+    DenseMap<Candidate *, std::vector<DeltaInfo>> &PSRBasisToCandidates) {
+  auto SearchConstantDelta =
+      [this](const CandidateDictTy::CandsTy &BasisCandidates, Candidate *C,
+             Candidate::DKind K) -> DeltaInfo {
+    assert(K != Candidate::InvalidDelta);
+    for (auto *Basis : reverse(BasisCandidates)) {
+      if (!DT->isReachableFromEntry(C->Ins->getParent()) ||
+          !DT->isReachableFromEntry(Basis->Ins->getParent()))
+        continue;
+      if (isSimilar(*C, *Basis, K)) {
+        Value *Delta = nullptr;
+        if (K == Candidate::IndexDelta) {
+          auto *IndexDelta = getDelta(*C, *Basis, K);
+          if (C->isProfitableRewrite(*IndexDelta, K))
+            Delta = IndexDelta;
+        } else {
+          const SCEV *BasisSCEV =
+              (K == Candidate::StrideDelta) ? Basis->StrideSCEV : Basis->Base;
+          const SCEV *CandidateSCEV =
+              (K == Candidate::StrideDelta) ? C->StrideSCEV : C->Base;
+          // Different symbolic leaves cannot cancel to a constant.
+          if (!SE->haveMatchingLoopUses(CandidateSCEV, BasisSCEV) ||
+              !hasSameSCEVUnknowns(CandidateSCEV, BasisSCEV))
+            continue;
+          if (auto Diff = getDiffSCEV(CandidateSCEV, BasisSCEV))
+            if (auto *DeltaVal = dyn_cast<SCEVConstant>(*Diff))
+              Delta = DeltaVal->getValue();
+        }
+
+        if (Delta) {
+          if (auto CompressedBasis = compressPath(*C, Basis))
+            return CompressedBasis;
+
+          return {Basis, K, Delta};
+        }
+      }
+    }
+    return {};
+  };
+
+  auto UpdatePSRCandidatesAndDependencyGraph =
+      [this, &PSRBasisToCandidates](DeltaInfo &DI, Candidate *C) {
+        // If the candidate already has a better SLSR basis, skip PSR
+        if (C->getRewriteEfficiency() >
+            C->getRewriteEfficiency(*DI.Delta, DI.DeltaKind))
+          return;
+
+        LLVM_DEBUG(dbgs() << "Allocated PSR basis: " << DI << "\n"
+                          << "  Cand: \n  [ " << *C << " ]\n");
+        PSRBasisToCandidates[DI.Cand].emplace_back(C, DI.DeltaKind, DI.Delta);
+        addDependency(*C, DI.Cand);
+      };
+
+  for (Instruction *Inst : reverse(SortedCandidateInsts)) {
+    auto CandsIt = RewriteCandidates.find(Inst);
+    if (CandsIt == RewriteCandidates.end())
+      continue;
+
+    auto &Cands = CandsIt->second;
+    for (auto *C : reverse(Cands)) {
+      // TODO: handle Add candidates in PSR
+      if (C->CandidateKind != Candidate::GEP || isFoldable(*C, TTI) ||
+          !isSafeToFactorGepIndex(C->Stride, cast<GetElementPtrInst>(C->Ins),
+                                  DL))
+        continue;
+
+      // SLSR is good enough, stop searching for PSR basis for compile-time.
+      if (C->isHighEfficiency())
+        continue;
+
+      BasicBlock *BB = C->Ins->getParent();
+      // Track the path length in worklist
+      SmallVector<std::pair<BasicBlock *, unsigned>, 8> WorkList{{BB, 0}};
+      DenseSet<BasicBlock *> Visited;
+      const auto *IndexDeltaCandidates =
+          CandidateDict.getCandidatesWithDeltaKind(*C, Candidate::IndexDelta);
+      const auto *BaseDeltaCandidates =
+          CandidateDict.getCandidatesWithDeltaKind(*C, Candidate::BaseDelta);
+      const auto *StrideDeltaCandidates =
+          CandidateDict.getCandidatesWithDeltaKind(*C, Candidate::StrideDelta);
+
+      while (!WorkList.empty()) {
+        auto CurrItem = WorkList.pop_back_val();
+        BasicBlock *CurrBB = CurrItem.first;
+        const unsigned PathLength = CurrItem.second;
+        // If this path is too long, continue to search other paths
+        if (PathLength > Opts.max_psr_path_length)
+          continue;
+
+        if (!Visited.insert(CurrBB).second)
+          continue;
+
+        if (!DT->dominates(CurrBB, BB)) {
+          if (BaseDeltaCandidates) {
+            auto It = BaseDeltaCandidates->find(CurrBB);
+            if (It != BaseDeltaCandidates->end())
+              if (auto Res = SearchConstantDelta(It->second, C,
+                                                 Candidate::BaseDelta)) {
+                UpdatePSRCandidatesAndDependencyGraph(Res, C);
+                break;
+              }
+          }
+
+          if (StrideDeltaCandidates) {
+            auto It = StrideDeltaCandidates->find(CurrBB);
+            if (It != StrideDeltaCandidates->end())
+              if (auto Res = SearchConstantDelta(It->second, C,
+                                                 Candidate::StrideDelta)) {
+                UpdatePSRCandidatesAndDependencyGraph(Res, C);
+                break;
+              }
+          }
+
+          if (IndexDeltaCandidates) {
+            auto It = IndexDeltaCandidates->find(CurrBB);
+            if (It != IndexDeltaCandidates->end())
+              if (auto Res = SearchConstantDelta(It->second, C,
+                                                 Candidate::IndexDelta)) {
+                UpdatePSRCandidatesAndDependencyGraph(Res, C);
+                break;
+              }
+          }
+        }
+
+        for (BasicBlock *Pred : predecessors(CurrBB))
+          // Do not go through the back edges
+          // TODO: handle irreducible CFGs
+          if (!DT->dominates(CurrBB, Pred))
+            WorkList.push_back({Pred, PathLength + 1});
+      }
+    }
+  }
+}
+
+// Return true if Expr can be hoisted to InsertPoint, record all
+// the operands of Expr in HoistList that need to be hoisted in
+// the order from the root Expr to leaf operands.
+static bool canHoistTo(Instruction *InsertPoint, Instruction *Expr,
+                       DominatorTree *DT, const TargetTransformInfo *TTI,
+                       SmallVector<Instruction *, 8> &HoistList) {
+  // Map hoisting instructions to their in-degree
+  DenseMap<Instruction *, int> HoistInstInDegree;
+  SmallVector<Instruction *, 4> WorkList{Expr};
+  while (!WorkList.empty()) {
+    Instruction *I = WorkList.pop_back_val();
+
+    if (DT->dominates(I, InsertPoint))
+      continue;
+
+    // If encounter an operand that does not dominate the insert point and
+    // cannot be hoisted, we would not be able to hoist the expression
+    if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
+      if (!TTI->isReadOnlyAndFastAddressSpace(LI->getPointerAddressSpace()))
+        return false;
+    } else if (isa<PHINode>(I) || isa<AllocaInst>(I) || I->isTerminator() ||
+               I->getType()->isVoidTy() || I->mayReadFromMemory() ||
+               I->mayHaveSideEffects() || isa<DbgInfoIntrinsic>(I))
+      return false;
+
+    if (auto *CB = dyn_cast<CallBase>(I)) {
+      if (CB->isConvergent() || !isSafeToSpeculativelyExecute(CB))
+        return false;
+    }
+    // TODO: Compile-time. If an operand is present in multiple instructions,
+    // it will be added to the worklist multiple times. Each time it will
+    // re-check if it can be hoisted.
+
+    if (++HoistInstInDegree[I] == 1)
+      for (Value *Op : I->operands())
+        if (Instruction *OpInst = dyn_cast<Instruction>(Op))
+          WorkList.push_back(OpInst);
+  }
+
+  // Topologically sort the hoisting exporession tree
+  std::queue<Instruction *> SortWorkList;
+  SortWorkList.push(Expr);
+  while (!SortWorkList.empty()) {
+    Instruction *Inst = SortWorkList.front();
+    SortWorkList.pop();
+
+    HoistList.push_back(Inst);
+
+    for (Value *Op : Inst->operands())
+      if (Instruction *OpInst = dyn_cast<Instruction>(Op)) {
+        auto It = HoistInstInDegree.find(OpInst);
+        if (It != HoistInstInDegree.end()) {
+          It->second--;
+          if (It->second == 0)
+            SortWorkList.push(OpInst);
+        }
+      }
+  }
+
+  return true;
+}
+
+// PSR cost model:
+// PSR benefits are the strength reduced by reusing Basis, so more Candidates
+// that can reuse the PSR basis would give more profits.
+// PSR's major overhead is the register pressure may be increased by
+// hoisting the PSR Basis.
+bool StraightLineStrengthReduce::isProfitableToHoist(
+    const Candidate &Basis, std::vector<DeltaInfo> &PSRCandidates,
+    ArrayRef<Instruction *> HoistList) const {
+  SmallVector<Instruction *, 4> RegPressureOps;
+  for (auto Op : HoistList) {
+    if (Op != Basis.Ins && !Op->hasOneUse())
+      RegPressureOps.push_back(Op);
+  }
+
+  if (RegPressureOps.empty())
+    return true;
+
+  if (RegPressureOps.size() > 10)
+    return false;
+
+  if (PSRCandidates.size() < Opts.psr_threshold)
+    return false;
+
+  return true;
+}
+
+// If PSRBasis or Instructions that it is data dependent on (in HoistList) will
+// be strength reduced by SLSR and their SLSR Basis is not available at
+// InsertPoint, we must give up SLSR for PSRBasis OR PSR for PSRCandidates.
+// Currently, we give up PSR and retain SLSR.
+// TODO: Give up SLSR for PSRBasis and do PSR for PSRCandidates when it's
+// profitable.
+// Return true if the Basis for any of the Instructions in HoistList does not
+// dominate InsertPoint
+// TODO: only consider Basis picked by pickRewriteCandidate()?
+bool StraightLineStrengthReduce::dependencyBasisDominates(
+    ArrayRef<Instruction *> HoistList, const Instruction *InsertPoint) {
+  auto GetRewriteComponents =
+      [](Candidate *HICand) -> SmallVector<Instruction *, 2> {
+    SmallVector<Instruction *, 2> RewriteComponents;
+    RewriteComponents.push_back(HICand->Basis->Ins);
+    switch (HICand->DeltaKind) {
+    case Candidate::DKind::IndexDelta:
+      // For IndexDelta case, Y = X + Delta * S,
+      // where Delta is a constant, so we only need to check if S
+      // dominates InsertPoint.
+      if (auto *StrideInst = dyn_cast<Instruction>(HICand->Stride))
+        RewriteComponents.push_back(StrideInst);
+      break;
+    case Candidate::DKind::BaseDelta:
+    case Candidate::DKind::StrideDelta:
+      // For BaseDelta case, Y = X + Delta
+      // For StrideDelta case, Y = X + I * Delta
+      // where Delta can be an instruction, so we need to check if
+      // Delta dominates InsertPoint.
+      if (auto *DeltaInst = dyn_cast<Instruction>(HICand->Delta))
+        RewriteComponents.push_back(DeltaInst);
+      break;
+    default:
+      break;
+    }
+    return RewriteComponents;
+  };
+  for (auto *HI : HoistList)
+    if (auto CandsIt = RewriteCandidates.find(HI);
+        CandsIt != RewriteCandidates.end())
+      for (Candidate *HICand : CandsIt->second)
+        if (HICand->Basis) {
+          auto RewriteComponents = GetRewriteComponents(HICand);
+          for (auto *RewriteComponent : RewriteComponents)
+            if (!llvm::is_contained(HoistList, RewriteComponent) &&
+                !DT->dominates(RewriteComponent, InsertPoint))
+              return false;
+        }
+
+  return true;
+}
+
+// Reduce strength from partially redundant paths to handle code patterns from
+// unrolled loops with conditional body
+//
+// #pragma unroll
+// for (...)
+//   if (cond)
+//     body
+// unrolling ->
+//
+// if (cond1)
+//   body1
+// if (cond2)
+//   body2
+// body2 may reuse computations of body1 but body1 does not dominate body2.
+// Partial strength reduce could hoist the common computations to the common
+// dominator and reuse them to optimize body1 and body2.
+void StraightLineStrengthReduce::partialStrengthReduce() {
+  DenseMap<Candidate *, std::vector<DeltaInfo>> PSRBasisToCandidates;
+  collectPSRCandidates(PSRBasisToCandidates);
+  if (PSRBasisToCandidates.empty())
+    return;
+
+  // PSR dependencies added, sort candidate instructions.
+  sortCandidateInstructions();
+
+  // Execute PSR in the topological order, from roots to leaves.
+  for (auto *Inst : SortedCandidateInsts) {
+    if (auto CandsIt = RewriteCandidates.find(Inst);
+        CandsIt != RewriteCandidates.end()) {
+      for (Candidate *PSRBasis : CandsIt->second) {
+        auto It = PSRBasisToCandidates.find(PSRBasis);
+        if (It == PSRBasisToCandidates.end())
+          continue;
+
+        LLVM_DEBUG(dbgs() << "PSR Basis " << *PSRBasis->Ins << "\n";);
+
+        auto &PSRCands = It->second;
+        if (PSRCands.empty())
+          continue;
+
+        SmallVector<BasicBlock *, 4> BBs{PSRBasis->Ins->getParent()};
+        for (auto &DI : PSRCands)
+          BBs.push_back(DI.Cand->Ins->getParent());
+
+        BasicBlock *DomBB = DT->findNearestCommonDominator<
+            SmallVectorImpl<BasicBlock *>::iterator>(BBs);
+        if (!DomBB)
+          continue;
+
+        Instruction *InsertPoint = DomBB->getTerminator();
+        // PSRBasis->Ins may be already hoisted
+        if (!DT->dominates(PSRBasis->Ins, InsertPoint)) {
+          SmallVector<Instruction *, 8> HoistList;
+          if (!canHoistTo(InsertPoint, PSRBasis->Ins, DT, TTI, HoistList))
+            continue;
+
+          if (!isProfitableToHoist(*PSRBasis, PSRCands, HoistList))
+            continue;
+
+          if (!dependencyBasisDominates(HoistList, InsertPoint))
+            continue;
+
+          LLVM_DEBUG(dbgs() << "Hoist to the common dominator : "
+                            << DomBB->getName() << "\n");
+          for (auto *HI : reverse(HoistList)) {
+            LLVM_DEBUG(dbgs() << "  " << *HI << "\n");
+            HI->moveBefore(InsertPoint->getIterator());
+            // Poison-generating flags may not survive hoisting
+            HI->dropPoisonGeneratingFlags();
+          }
+        }
+
+        for (auto &DI : PSRCands) {
+          Candidate *Cand = DI.Cand;
+          Cand->Basis = PSRBasis;
+          Cand->DeltaKind = DI.DeltaKind;
+          Cand->Delta = DI.Delta;
+          LLVM_DEBUG(dbgs() << "Found PSR basis: " << *Cand << "\n");
+        }
+      }
+    }
+  }
+}
+
 static bool isGEPFoldable(GetElementPtrInst *GEP,
                           const TargetTransformInfo *TTI) {
   SmallVector<const Value *, 4> Indices(GEP->indices());
@@ -1425,6 +1837,9 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
     addDependency(C, C.Basis);
   }
   sortCandidateInstructions();
+
+  if (Opts.enable_partial_strength_reduce)
+    partialStrengthReduce();
 
   // Rewrite candidates in the topological order that rewrites a Candidate
   // always before rewriting its Basis
