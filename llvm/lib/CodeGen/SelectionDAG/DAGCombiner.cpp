@@ -23978,41 +23978,45 @@ bool DAGCombiner::hasCallInLdStChain(StoreSDNode *St, LoadSDNode *Ld) {
 unsigned
 DAGCombiner::getConsecutiveStores(SmallVectorImpl<MemOpLink> &StoreNodes,
                                   int64_t ElementSizeBytes) const {
-  while (true) {
+  size_t StartIdx = 0;
+  while (StartIdx + 1 < StoreNodes.size()) {
     // Find a store past the width of the first store.
-    size_t StartIdx = 0;
     while ((StartIdx + 1 < StoreNodes.size()) &&
            StoreNodes[StartIdx].OffsetFromBase + ElementSizeBytes !=
-              StoreNodes[StartIdx + 1].OffsetFromBase)
+               StoreNodes[StartIdx + 1].OffsetFromBase)
       ++StartIdx;
 
     // Bail if we don't have enough candidates to merge.
-    if (StartIdx + 1 >= StoreNodes.size())
+    if (StartIdx + 1 >= StoreNodes.size()) {
+      StoreNodes.clear();
       return 0;
-
-    // Trim stores that overlapped with the first store.
-    if (StartIdx)
-      StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + StartIdx);
+    }
 
     // Scan the memory operations on the chain and find the first
     // non-consecutive store memory address.
     unsigned NumConsecutiveStores = 1;
-    int64_t StartAddress = StoreNodes[0].OffsetFromBase;
+    int64_t StartAddress = StoreNodes[StartIdx].OffsetFromBase;
     // Check that the addresses are consecutive starting from the second
     // element in the list of stores.
-    for (unsigned i = 1, e = StoreNodes.size(); i < e; ++i) {
+    for (size_t i = StartIdx + 1, e = StoreNodes.size(); i < e; ++i) {
       int64_t CurrAddress = StoreNodes[i].OffsetFromBase;
-      if (CurrAddress - StartAddress != (ElementSizeBytes * i))
+      if (CurrAddress - StartAddress !=
+          ElementSizeBytes * static_cast<int64_t>(i - StartIdx))
         break;
-      NumConsecutiveStores = i + 1;
+      NumConsecutiveStores = static_cast<unsigned>(i - StartIdx + 1);
     }
-    if (NumConsecutiveStores > 1)
+    if (NumConsecutiveStores > 1) {
+      if (StartIdx)
+        StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + StartIdx);
       return NumConsecutiveStores;
+    }
 
-    // There are no consecutive stores at the start of the list.
-    // Remove the first store and try again.
-    StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + 1);
+    // No consecutive stores starting at StartIdx; advance without shifting the
+    // vector on every rejected candidate.
+    ++StartIdx;
   }
+  StoreNodes.clear();
+  return 0;
 }
 
 bool DAGCombiner::tryStoreMergeOfConstants(
@@ -24603,7 +24607,7 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
         getConsecutiveStores(StoreNodes, ElementSizeBytes);
     // There are no more stores in the list to examine.
     if (NumConsecutiveStores == 0)
-      return MadeChange;
+      break;
 
     // We have at least 2 consecutive stores. Try to merge them.
     assert(NumConsecutiveStores >= 2 && "Expected at least 2 stores");
@@ -32759,6 +32763,15 @@ SDValue DAGCombiner::FindBetterChain(SDNode *N, SDValue OldChain) {
 // to go from a partially-merged state to the desired final
 // fully-merged state.
 
+static bool isTruncStoreMergeCandidate(const StoreSDNode *St,
+                                       bool LegalOperations) {
+  if (LegalOperations || !St->isSimple() || St->isIndexed())
+    return false;
+  EVT MemVT = St->getMemoryVT();
+  return (MemVT == MVT::i8 || MemVT == MVT::i16 || MemVT == MVT::i32) &&
+         St->getValue().getOpcode() == ISD::TRUNCATE;
+}
+
 bool DAGCombiner::parallelizeChainedStores(StoreSDNode *St) {
   SmallVector<StoreSDNode *, 8> ChainedStores;
   StoreSDNode *STChain = St;
@@ -32798,7 +32811,8 @@ bool DAGCombiner::parallelizeChainedStores(StoreSDNode *St) {
                    std::monostate{});
 
   while (StoreSDNode *Chain = dyn_cast<StoreSDNode>(STChain->getChain())) {
-    if (Chain->getMemoryVT().isScalableVector())
+    if (Chain->getMemoryVT().isZeroSized() ||
+        Chain->getMemoryVT().isScalableVector())
       return false;
 
     // If the chain has more than one use, then we can't reorder the mem ops.
@@ -32807,6 +32821,14 @@ bool DAGCombiner::parallelizeChainedStores(StoreSDNode *St) {
     // TODO: Relax for unordered atomics (see D66309)
     if (!Chain->isSimple() || Chain->isIndexed())
       break;
+    // Avoid breaking chains of narrow truncating-store candidates that
+    // mergeTruncStores may combine when visiting an inner store in the chain.
+    if (isTruncStoreMergeCandidate(Chain, LegalOperations)) {
+      if (auto *PrevSt = dyn_cast<StoreSDNode>(Chain->getChain()))
+        if (PrevSt->getMemoryVT() == Chain->getMemoryVT() &&
+            isTruncStoreMergeCandidate(PrevSt, LegalOperations))
+          break;
+    }
 
     // Find the base pointer and offset for this memory node.
     const BaseIndexOffset Ptr = BaseIndexOffset::match(Chain, DAG);
@@ -32815,14 +32837,8 @@ bool DAGCombiner::parallelizeChainedStores(StoreSDNode *St) {
     if (!BasePtr.equalBaseIndex(Ptr, DAG, Offset))
       break;
     int64_t Length = (Chain->getMemoryVT().getSizeInBits() + 7) / 8;
-    // Make sure we don't overlap with other intervals by checking the ones to
-    // the left or right before inserting.
-    auto I = Intervals.find(Offset);
-    // If there's a next interval, we should end before it.
-    if (I != Intervals.end() && I.start() < (Offset + Length))
-      break;
-    // If there's a previous interval, we should start after it.
-    if (I != Intervals.begin() && (--I).stop() <= Offset)
+    // Make sure we don't overlap with any already-collected store interval.
+    if (Intervals.overlaps(Offset, Offset + Length))
       break;
     Intervals.insert(Offset, Offset + Length, std::monostate{});
 
@@ -32870,12 +32886,33 @@ bool DAGCombiner::parallelizeChainedStores(StoreSDNode *St) {
   if (AddNewChain)
     TFOps.insert(TFOps.begin(), NewChain);
 
-  SDValue TF = DAG.getTokenFactor(SDLoc(STChain), TFOps);
+  constexpr unsigned MaxTFChunkSize = 64;
+  SDValue TF;
+  SmallVector<SDValue, 8> SubTFs;
+  if (TFOps.size() <= MaxTFChunkSize) {
+    TF = DAG.getTokenFactor(SDLoc(STChain), TFOps);
+  } else {
+    for (size_t Idx = 0; Idx < TFOps.size(); Idx += MaxTFChunkSize) {
+      size_t EndIdx = std::min<size_t>(Idx + MaxTFChunkSize, TFOps.size());
+      SmallVector<SDValue, 64> Chunk(TFOps.begin() + Idx,
+                                     TFOps.begin() + EndIdx);
+      SubTFs.push_back(DAG.getTokenFactor(SDLoc(STChain), Chunk));
+    }
+    TF = DAG.getTokenFactor(SDLoc(STChain), SubTFs);
+  }
   CombineTo(St, TF);
 
-  // Add TF and its operands to the worklist.
+  // Add TF and its operands to the worklist, keeping individual stores at the
+  // back of the LIFO worklist so store merging runs before TokenFactor
+  // flattening. If the chain stopped at an earlier store (e.g., an overlapping
+  // store whose chain improvement was deferred), revisit it now that its chain
+  // has multiple users.
+  if (isa<StoreSDNode>(NewChain))
+    AddToWorklist(NewChain.getNode());
   AddToWorklist(TF.getNode());
-  for (const SDValue &Op : TF->ops())
+  for (const SDValue &SubTF : SubTFs)
+    AddToWorklist(SubTF.getNode());
+  for (const SDValue &Op : TFOps)
     AddToWorklist(Op.getNode());
   AddToWorklist(STChain);
   return true;
@@ -32894,6 +32931,39 @@ bool DAGCombiner::findBetterNeighborChains(StoreSDNode *St) {
   // Do not handle stores to undef base pointers.
   if (BasePtr.getBase().isUndef())
     return false;
+
+  // If St's chain result has a single user which is the chain operand of
+  // another simple, unindexed, disjoint store to the same base pointer, defer
+  // chain improvement until visiting NextSt so parallelizeChainedStores can
+  // parallelize the entire chain in one pass from its tail.
+  if (St->isSimple() && !St->isIndexed() && !St->getMemoryVT().isZeroSized() &&
+      !St->getMemoryVT().isScalableVT() &&
+      !isTruncStoreMergeCandidate(St, LegalOperations) &&
+      SDValue(St, 0)->hasOneUse()) {
+    SDUse &ChainUse = *SDValue(St, 0)->use_begin();
+    if (ChainUse.getOperandNo() == 0) {
+      if (auto *NextSt = dyn_cast<StoreSDNode>(ChainUse.getUser())) {
+        if (NextSt->isSimple() && NextSt->isUnindexed() &&
+            !NextSt->getValue().isUndef() &&
+            !NextSt->getMemoryVT().isZeroSized() &&
+            !NextSt->getMemoryVT().isScalableVT()) {
+          const BaseIndexOffset NextBasePtr =
+              BaseIndexOffset::match(NextSt, DAG);
+          int64_t Offset = 0;
+          if (NextBasePtr.getBase().getNode() &&
+              !NextBasePtr.getBase().isUndef() &&
+              NextBasePtr.equalBaseIndex(BasePtr, DAG, Offset)) {
+            int64_t StLen = (St->getMemoryVT().getSizeInBits() + 7) / 8;
+            int64_t NextLen = (NextSt->getMemoryVT().getSizeInBits() + 7) / 8;
+            if (Offset + StLen <= 0 || Offset >= NextLen) {
+              AddToWorklist(NextSt);
+              return false;
+            }
+          }
+        }
+      }
+    }
+  }
 
   // Directly improve a chain of disjoint stores starting at St.
   if (parallelizeChainedStores(St))
