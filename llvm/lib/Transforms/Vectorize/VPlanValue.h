@@ -491,13 +491,8 @@ public:
     return false;
   }
 
-  /// Returns true if the VPUser only uses the first part of operand \p Op.
-  /// Conservatively returns false.
-  virtual bool usesFirstPartOnly(const VPValue *Op) const {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return false;
-  }
+  /// Returns true if the VPUser would only use the first part of any operand.
+  virtual bool isFirstPartUser() const { return false; }
 };
 
 /// This class augments a recipe with a set of VPValues defined by the recipe.
