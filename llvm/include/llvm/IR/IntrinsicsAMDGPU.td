@@ -4515,6 +4515,38 @@ def int_amdgcn_global_load_monitor_b32  : AMDGPULoadMonitor<global_ptr_ty>;
 def int_amdgcn_global_load_monitor_b64  : AMDGPULoadMonitor<global_ptr_ty>;
 def int_amdgcn_global_load_monitor_b128 : AMDGPULoadMonitor<global_ptr_ty>;
 
+// Predicated global load: if predicate is true, load from ptr; else return passthru.
+// Lowered to EXEC mask manipulation + global load post-RA.
+def int_amdgcn_predicated_load : DefaultAttrsIntrinsic<
+  [llvm_any_ty],
+  [global_ptr_ty, llvm_i1_ty, LLVMMatchType<0>],
+  [IntrReadMem, IntrArgMemOnly, IntrWillReturn,
+   NoCapture<ArgIndex<0>>, IntrNoCallback, IntrNoFree],
+  "", [SDNPMemOperand]
+>;
+
+// Predicated global store: if predicate is true, store value to ptr; else no-op.
+// Lowered to EXEC mask manipulation + global store post-RA.
+def int_amdgcn_predicated_store : DefaultAttrsIntrinsic<
+  [],
+  [llvm_any_ty, global_ptr_ty, llvm_i1_ty],
+  [IntrWriteMem, IntrArgMemOnly, IntrWillReturn,
+   NoCapture<ArgIndex<1>>, IntrNoCallback, IntrNoFree],
+  "", [SDNPMemOperand]
+>;
+
+// Predicated atomic load: if predicate is true, atomically load from ptr;
+// else result is undefined for inactive lanes.
+// Lowered to EXEC mask manipulation + global load post-RA.
+def int_amdgcn_predicated_atomic_load : DefaultAttrsIntrinsic<
+  [llvm_any_ty],
+  [global_ptr_ty, llvm_i1_ty],
+  [IntrReadMem, IntrArgMemOnly, IntrWillReturn,
+   NoCapture<ArgIndex<0>>, IntrNoCallback, IntrNoFree],
+  "", [SDNPMemOperand]
+>;
+
+
 /// Make it clear to the backend that this value is really dead. For instance,
 /// when used as an input to a phi node, it will make it possible for the
 /// backend to allocate the dead lanes for operations within the corresponding

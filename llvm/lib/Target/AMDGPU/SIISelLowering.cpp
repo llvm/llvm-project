@@ -1646,6 +1646,33 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
 
   IntrinsicInfo Info;
   switch (IntrID) {
+  case Intrinsic::amdgcn_predicated_load: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::getVT(CI.getType());
+    Info.ptrVal = CI.getOperand(0);
+    Info.align.reset();
+    Info.flags = Flags | MachineMemOperand::MOLoad;
+    Infos.push_back(Info);
+    return;
+  }
+  case Intrinsic::amdgcn_predicated_store: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::getVT(CI.getOperand(0)->getType());
+    Info.ptrVal = CI.getOperand(1);
+    Info.align.reset();
+    Info.flags = Flags | MachineMemOperand::MOStore;
+    Infos.push_back(Info);
+    return;
+  }
+  case Intrinsic::amdgcn_predicated_atomic_load: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::getVT(CI.getType());
+    Info.ptrVal = CI.getOperand(0);
+    Info.align.reset();
+    Info.flags = Flags | MachineMemOperand::MOLoad;
+    Infos.push_back(Info);
+    return;
+  }
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
@@ -6947,6 +6974,124 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   const DebugLoc &DL = MI.getDebugLoc();
 
   switch (MI.getOpcode()) {
+  case AMDGPU::PRED_GLOBAL_LOAD_DWORD_ISEL:
+  case AMDGPU::PRED_GLOBAL_LOAD_DWORDX2_ISEL:
+  case AMDGPU::PRED_GLOBAL_LOAD_DWORDX4_ISEL:
+  case AMDGPU::PRED_GLOBAL_LOAD_DWORD_SADDR_ISEL:
+  case AMDGPU::PRED_GLOBAL_LOAD_DWORDX2_SADDR_ISEL:
+  case AMDGPU::PRED_GLOBAL_LOAD_DWORDX4_SADDR_ISEL: {
+    unsigned RAOpc;
+    switch (MI.getOpcode()) {
+    case AMDGPU::PRED_GLOBAL_LOAD_DWORD_ISEL:
+      RAOpc = AMDGPU::PRED_GLOBAL_LOAD_DWORD_RA;
+      break;
+    case AMDGPU::PRED_GLOBAL_LOAD_DWORDX2_ISEL:
+      RAOpc = AMDGPU::PRED_GLOBAL_LOAD_DWORDX2_RA;
+      break;
+    case AMDGPU::PRED_GLOBAL_LOAD_DWORDX4_ISEL:
+      RAOpc = AMDGPU::PRED_GLOBAL_LOAD_DWORDX4_RA;
+      break;
+    case AMDGPU::PRED_GLOBAL_LOAD_DWORD_SADDR_ISEL:
+      RAOpc = AMDGPU::PRED_GLOBAL_LOAD_DWORD_RA_SADDR;
+      break;
+    case AMDGPU::PRED_GLOBAL_LOAD_DWORDX2_SADDR_ISEL:
+      RAOpc = AMDGPU::PRED_GLOBAL_LOAD_DWORDX2_RA_SADDR;
+      break;
+    case AMDGPU::PRED_GLOBAL_LOAD_DWORDX4_SADDR_ISEL:
+      RAOpc = AMDGPU::PRED_GLOBAL_LOAD_DWORDX4_RA_SADDR;
+      break;
+    default:
+      llvm_unreachable("unexpected predicated load ISEL opcode");
+    }
+
+    Register SavedExec = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(RAOpc));
+    MIB.addDef(MI.getOperand(0).getReg());
+    MIB.addDef(SavedExec);
+    for (unsigned i = 1, e = MI.getNumExplicitOperands(); i < e; ++i)
+      MIB.add(MI.getOperand(i));
+    MIB.cloneMemRefs(MI);
+    MI.eraseFromParent();
+    return BB;
+  }
+  case AMDGPU::PRED_GLOBAL_STORE_DWORD_ISEL:
+  case AMDGPU::PRED_GLOBAL_STORE_DWORDX2_ISEL:
+  case AMDGPU::PRED_GLOBAL_STORE_DWORDX4_ISEL:
+  case AMDGPU::PRED_GLOBAL_STORE_DWORD_SADDR_ISEL:
+  case AMDGPU::PRED_GLOBAL_STORE_DWORDX2_SADDR_ISEL:
+  case AMDGPU::PRED_GLOBAL_STORE_DWORDX4_SADDR_ISEL: {
+    unsigned RAOpc;
+    switch (MI.getOpcode()) {
+    case AMDGPU::PRED_GLOBAL_STORE_DWORD_ISEL:
+      RAOpc = AMDGPU::PRED_GLOBAL_STORE_DWORD_RA;
+      break;
+    case AMDGPU::PRED_GLOBAL_STORE_DWORDX2_ISEL:
+      RAOpc = AMDGPU::PRED_GLOBAL_STORE_DWORDX2_RA;
+      break;
+    case AMDGPU::PRED_GLOBAL_STORE_DWORDX4_ISEL:
+      RAOpc = AMDGPU::PRED_GLOBAL_STORE_DWORDX4_RA;
+      break;
+    case AMDGPU::PRED_GLOBAL_STORE_DWORD_SADDR_ISEL:
+      RAOpc = AMDGPU::PRED_GLOBAL_STORE_DWORD_RA_SADDR;
+      break;
+    case AMDGPU::PRED_GLOBAL_STORE_DWORDX2_SADDR_ISEL:
+      RAOpc = AMDGPU::PRED_GLOBAL_STORE_DWORDX2_RA_SADDR;
+      break;
+    case AMDGPU::PRED_GLOBAL_STORE_DWORDX4_SADDR_ISEL:
+      RAOpc = AMDGPU::PRED_GLOBAL_STORE_DWORDX4_RA_SADDR;
+      break;
+    default:
+      llvm_unreachable("unexpected predicated store ISEL opcode");
+    }
+
+    Register SavedExec = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(RAOpc));
+    MIB.addDef(SavedExec);
+    for (const MachineOperand &MO : MI.explicit_operands())
+      MIB.add(MO);
+    MIB.cloneMemRefs(MI);
+    MI.eraseFromParent();
+    return BB;
+  }
+  case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORD_ISEL:
+  case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORDX2_ISEL:
+  case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORDX4_ISEL:
+  case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORD_SADDR_ISEL:
+  case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORDX2_SADDR_ISEL:
+  case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORDX4_SADDR_ISEL: {
+    unsigned RAOpc;
+    switch (MI.getOpcode()) {
+    case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORD_ISEL:
+      RAOpc = AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORD_RA;
+      break;
+    case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORDX2_ISEL:
+      RAOpc = AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORDX2_RA;
+      break;
+    case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORDX4_ISEL:
+      RAOpc = AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORDX4_RA;
+      break;
+    case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORD_SADDR_ISEL:
+      RAOpc = AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORD_RA_SADDR;
+      break;
+    case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORDX2_SADDR_ISEL:
+      RAOpc = AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORDX2_RA_SADDR;
+      break;
+    case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORDX4_SADDR_ISEL:
+      RAOpc = AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORDX4_RA_SADDR;
+      break;
+    default:
+      llvm_unreachable("unexpected predicated atomic load ISEL opcode");
+    }
+    Register SavedExec = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(RAOpc));
+    MIB.addDef(MI.getOperand(0).getReg());
+    MIB.addDef(SavedExec);
+    for (unsigned i = 1, e = MI.getNumExplicitOperands(); i < e; ++i)
+      MIB.add(MI.getOperand(i));
+    MIB.cloneMemRefs(MI);
+    MI.eraseFromParent();
+    return BB;
+  }
   case AMDGPU::WAVE_REDUCE_UMIN_PSEUDO_U32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MIN_U32);
   case AMDGPU::WAVE_REDUCE_UMIN_PSEUDO_U64:

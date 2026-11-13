@@ -2584,6 +2584,246 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(LMC.MovOpc));
     break;
   }
+
+  case AMDGPU::PRED_GLOBAL_LOAD_DWORD_RA:
+  case AMDGPU::PRED_GLOBAL_LOAD_DWORDX2_RA:
+  case AMDGPU::PRED_GLOBAL_LOAD_DWORDX4_RA: {
+    // GV load: outs: vdst(0), saved_exec(1) ins: vaddr(2), offset(3), pred(4)
+    Register Vdst = MI.getOperand(0).getReg();
+    Register SavedExec = MI.getOperand(1).getReg();
+    Register Vaddr = MI.getOperand(2).getReg();
+    int64_t Offset = MI.getOperand(3).getImm();
+    Register Pred = MI.getOperand(4).getReg();
+
+    unsigned LoadOpc;
+    switch (MI.getOpcode()) {
+    case AMDGPU::PRED_GLOBAL_LOAD_DWORD_RA:
+      LoadOpc = AMDGPU::GLOBAL_LOAD_DWORD;
+      break;
+    case AMDGPU::PRED_GLOBAL_LOAD_DWORDX2_RA:
+      LoadOpc = AMDGPU::GLOBAL_LOAD_DWORDX2;
+      break;
+    case AMDGPU::PRED_GLOBAL_LOAD_DWORDX4_RA:
+      LoadOpc = AMDGPU::GLOBAL_LOAD_DWORDX4;
+      break;
+    default:
+      llvm_unreachable("unexpected opcode");
+    }
+
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_AND_SAVEEXEC_B32), SavedExec)
+        .addReg(Pred);
+    auto LoadMI = BuildMI(MBB, MI, DL, get(LoadOpc), Vdst)
+                      .addReg(Vaddr)
+                      .addImm(Offset)
+                      .addImm(0);
+    LoadMI.cloneMemRefs(MI);
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), AMDGPU::EXEC_LO)
+        .addReg(SavedExec);
+
+    MI.eraseFromParent();
+    break;
+  }
+
+  case AMDGPU::PRED_GLOBAL_LOAD_DWORD_RA_SADDR:
+  case AMDGPU::PRED_GLOBAL_LOAD_DWORDX2_RA_SADDR:
+  case AMDGPU::PRED_GLOBAL_LOAD_DWORDX4_RA_SADDR: {
+    // GVS load: outs: vdst(0), saved_exec(1) ins: saddr(2), voffset(3),
+    // offset(4), cpol(5), pred(6)
+    Register Vdst = MI.getOperand(0).getReg();
+    Register SavedExec = MI.getOperand(1).getReg();
+    Register Saddr = MI.getOperand(2).getReg();
+    Register Voffset = MI.getOperand(3).getReg();
+    int64_t Offset = MI.getOperand(4).getImm();
+    int64_t Cpol = MI.getOperand(5).getImm();
+    Register Pred = MI.getOperand(6).getReg();
+
+    unsigned LoadOpc;
+    switch (MI.getOpcode()) {
+    case AMDGPU::PRED_GLOBAL_LOAD_DWORD_RA_SADDR:
+      LoadOpc = AMDGPU::GLOBAL_LOAD_DWORD_SADDR;
+      break;
+    case AMDGPU::PRED_GLOBAL_LOAD_DWORDX2_RA_SADDR:
+      LoadOpc = AMDGPU::GLOBAL_LOAD_DWORDX2_SADDR;
+      break;
+    case AMDGPU::PRED_GLOBAL_LOAD_DWORDX4_RA_SADDR:
+      LoadOpc = AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR;
+      break;
+    default:
+      llvm_unreachable("unexpected opcode");
+    }
+
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_AND_SAVEEXEC_B32), SavedExec)
+        .addReg(Pred);
+    auto LoadMI = BuildMI(MBB, MI, DL, get(LoadOpc), Vdst)
+                      .addReg(Saddr)
+                      .addReg(Voffset)
+                      .addImm(Offset)
+                      .addImm(Cpol);
+    LoadMI.cloneMemRefs(MI);
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), AMDGPU::EXEC_LO)
+        .addReg(SavedExec);
+
+    MI.eraseFromParent();
+    break;
+  }
+
+  case AMDGPU::PRED_GLOBAL_STORE_DWORD_RA:
+  case AMDGPU::PRED_GLOBAL_STORE_DWORDX2_RA:
+  case AMDGPU::PRED_GLOBAL_STORE_DWORDX4_RA: {
+    // GV store: outs: saved_exec(0) ins: vaddr(1), vdata(2), offset(3), pred(4)
+    Register SavedExec = MI.getOperand(0).getReg();
+    Register Vaddr = MI.getOperand(1).getReg();
+    Register Vdata = MI.getOperand(2).getReg();
+    int64_t Offset = MI.getOperand(3).getImm();
+    Register Pred = MI.getOperand(4).getReg();
+
+    unsigned StoreOpc;
+    switch (MI.getOpcode()) {
+    case AMDGPU::PRED_GLOBAL_STORE_DWORD_RA:
+      StoreOpc = AMDGPU::GLOBAL_STORE_DWORD;
+      break;
+    case AMDGPU::PRED_GLOBAL_STORE_DWORDX2_RA:
+      StoreOpc = AMDGPU::GLOBAL_STORE_DWORDX2;
+      break;
+    case AMDGPU::PRED_GLOBAL_STORE_DWORDX4_RA:
+      StoreOpc = AMDGPU::GLOBAL_STORE_DWORDX4;
+      break;
+    default:
+      llvm_unreachable("unexpected opcode");
+    }
+
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_AND_SAVEEXEC_B32), SavedExec)
+        .addReg(Pred);
+    auto StoreMI = BuildMI(MBB, MI, DL, get(StoreOpc))
+                       .addReg(Vaddr)
+                       .addReg(Vdata)
+                       .addImm(Offset)
+                       .addImm(0);
+    StoreMI.cloneMemRefs(MI);
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), AMDGPU::EXEC_LO)
+        .addReg(SavedExec);
+
+    MI.eraseFromParent();
+    break;
+  }
+
+  case AMDGPU::PRED_GLOBAL_STORE_DWORD_RA_SADDR:
+  case AMDGPU::PRED_GLOBAL_STORE_DWORDX2_RA_SADDR:
+  case AMDGPU::PRED_GLOBAL_STORE_DWORDX4_RA_SADDR: {
+    // GVS store: outs: saved_exec(0) ins: saddr(1), voffset(2), vdata(3),
+    // offset(4), cpol(5), pred(6)
+    Register SavedExec = MI.getOperand(0).getReg();
+    Register Saddr = MI.getOperand(1).getReg();
+    Register Voffset = MI.getOperand(2).getReg();
+    Register Vdata = MI.getOperand(3).getReg();
+    int64_t Offset = MI.getOperand(4).getImm();
+    int64_t Cpol = MI.getOperand(5).getImm();
+    Register Pred = MI.getOperand(6).getReg();
+
+    unsigned StoreOpc;
+    switch (MI.getOpcode()) {
+    case AMDGPU::PRED_GLOBAL_STORE_DWORD_RA_SADDR:
+      StoreOpc = AMDGPU::GLOBAL_STORE_DWORD_SADDR;
+      break;
+    case AMDGPU::PRED_GLOBAL_STORE_DWORDX2_RA_SADDR:
+      StoreOpc = AMDGPU::GLOBAL_STORE_DWORDX2_SADDR;
+      break;
+    case AMDGPU::PRED_GLOBAL_STORE_DWORDX4_RA_SADDR:
+      StoreOpc = AMDGPU::GLOBAL_STORE_DWORDX4_SADDR;
+      break;
+    default:
+      llvm_unreachable("unexpected opcode");
+    }
+
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_AND_SAVEEXEC_B32), SavedExec)
+        .addReg(Pred);
+    auto StoreMI = BuildMI(MBB, MI, DL, get(StoreOpc))
+                       .addReg(Voffset)
+                       .addReg(Vdata)
+                       .addReg(Saddr)
+                       .addImm(Offset)
+                       .addImm(Cpol);
+    StoreMI.cloneMemRefs(MI);
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), AMDGPU::EXEC_LO)
+        .addReg(SavedExec);
+
+    MI.eraseFromParent();
+    break;
+  }
+
+  case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORD_RA:
+  case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORDX2_RA:
+  case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORDX4_RA: {
+    Register Vdst = MI.getOperand(0).getReg();
+    Register SavedExec = MI.getOperand(1).getReg();
+    Register Vaddr = MI.getOperand(2).getReg();
+    int64_t Offset = MI.getOperand(3).getImm();
+    Register Pred = MI.getOperand(4).getReg();
+    unsigned LoadOpc;
+    switch (MI.getOpcode()) {
+    case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORD_RA:
+      LoadOpc = AMDGPU::GLOBAL_LOAD_DWORD;
+      break;
+    case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORDX2_RA:
+      LoadOpc = AMDGPU::GLOBAL_LOAD_DWORDX2;
+      break;
+    case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORDX4_RA:
+      LoadOpc = AMDGPU::GLOBAL_LOAD_DWORDX4;
+      break;
+    default:
+      llvm_unreachable("unexpected opcode");
+    }
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_AND_SAVEEXEC_B32), SavedExec)
+        .addReg(Pred);
+    auto LoadMI = BuildMI(MBB, MI, DL, get(LoadOpc), Vdst)
+                      .addReg(Vaddr)
+                      .addImm(Offset)
+                      .addImm(0);
+    LoadMI.cloneMemRefs(MI);
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), AMDGPU::EXEC_LO)
+        .addReg(SavedExec);
+    MI.eraseFromParent();
+    break;
+  }
+
+  case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORD_RA_SADDR:
+  case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORDX2_RA_SADDR:
+  case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORDX4_RA_SADDR: {
+    Register Vdst = MI.getOperand(0).getReg();
+    Register SavedExec = MI.getOperand(1).getReg();
+    Register Saddr = MI.getOperand(2).getReg();
+    Register Voffset = MI.getOperand(3).getReg();
+    int64_t Offset = MI.getOperand(4).getImm();
+    int64_t Cpol = MI.getOperand(5).getImm();
+    Register Pred = MI.getOperand(6).getReg();
+    unsigned LoadOpc;
+    switch (MI.getOpcode()) {
+    case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORD_RA_SADDR:
+      LoadOpc = AMDGPU::GLOBAL_LOAD_DWORD_SADDR;
+      break;
+    case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORDX2_RA_SADDR:
+      LoadOpc = AMDGPU::GLOBAL_LOAD_DWORDX2_SADDR;
+      break;
+    case AMDGPU::PRED_GLOBAL_ATOMIC_LOAD_DWORDX4_RA_SADDR:
+      LoadOpc = AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR;
+      break;
+    default:
+      llvm_unreachable("unexpected opcode");
+    }
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_AND_SAVEEXEC_B32), SavedExec)
+        .addReg(Pred);
+    auto LoadMI = BuildMI(MBB, MI, DL, get(LoadOpc), Vdst)
+                      .addReg(Saddr)
+                      .addReg(Voffset)
+                      .addImm(Offset)
+                      .addImm(Cpol);
+    LoadMI.cloneMemRefs(MI);
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), AMDGPU::EXEC_LO)
+        .addReg(SavedExec);
+    MI.eraseFromParent();
+    break;
+  }
+
   case AMDGPU::SI_RETURN: {
     const MachineFunction *MF = MBB.getParent();
     const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();

@@ -248,6 +248,226 @@ def EXIT_STRICT_WQM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
   let mayStore = 0;
 }
 
+// Predicated global load/store pseudos (wave32 only).
+// Two tiers: ISEL pseudos (pattern-matched, usesCustomInserter) and RA pseudos
+// (with $saved_exec output, created by custom inserter, expanded post-RA to
+// s_and_saveexec_b32 + global_load/store + s_mov_b32 exec_lo).
+
+// --- ISEL pseudos: matched by TableGen patterns, single output ---
+
+multiclass PredGlobalLoadPseudoISEL<RegisterOperand vdata_op> {
+  let WaveSizePredicate = isWave32, usesCustomInserter = 1,
+      Uses = [EXEC], Defs = [EXEC, SCC],
+      mayLoad = 1, mayStore = 0, hasSideEffects = 0 in {
+    def _ISEL : PseudoInstSI<
+      (outs vdata_op:$vdst),
+      (ins VReg_64:$vaddr, flat_offset:$offset,
+       SReg_32:$pred, vdata_op:$passthru)> {
+      let Constraints = "$vdst = $passthru";
+    }
+    def _SADDR_ISEL : PseudoInstSI<
+      (outs vdata_op:$vdst),
+      (ins SReg_64_XEXEC_XNULL:$saddr, VGPROp_32:$voffset,
+       flat_offset:$offset, CPol:$cpol,
+       SReg_32:$pred, vdata_op:$passthru)> {
+      let Constraints = "$vdst = $passthru";
+    }
+  }
+}
+
+multiclass PredGlobalStorePseudoISEL<RegisterOperand vdata_op> {
+  let WaveSizePredicate = isWave32, usesCustomInserter = 1,
+      Uses = [EXEC], Defs = [EXEC, SCC],
+      mayLoad = 0, mayStore = 1, hasSideEffects = 0 in {
+    def _ISEL : PseudoInstSI<
+      (outs), (ins VReg_64:$vaddr, vdata_op:$vdata,
+       flat_offset:$offset, SReg_32:$pred)>;
+    def _SADDR_ISEL : PseudoInstSI<
+      (outs), (ins SReg_64_XEXEC_XNULL:$saddr, VGPROp_32:$voffset,
+       vdata_op:$vdata, flat_offset:$offset, CPol:$cpol, SReg_32:$pred)>;
+  }
+}
+
+defm PRED_GLOBAL_LOAD_DWORD    : PredGlobalLoadPseudoISEL<VGPROp_32>;
+defm PRED_GLOBAL_LOAD_DWORDX2  : PredGlobalLoadPseudoISEL<VGPROp_64>;
+defm PRED_GLOBAL_LOAD_DWORDX4  : PredGlobalLoadPseudoISEL<VGPROp_128>;
+defm PRED_GLOBAL_STORE_DWORD   : PredGlobalStorePseudoISEL<VGPROp_32>;
+defm PRED_GLOBAL_STORE_DWORDX2 : PredGlobalStorePseudoISEL<VGPROp_64>;
+defm PRED_GLOBAL_STORE_DWORDX4 : PredGlobalStorePseudoISEL<VGPROp_128>;
+
+// --- RA pseudos: with $saved_exec output, expanded post-RA ---
+
+// TODO: @earlyclobber $saved_exec is only strictly necessary for the _SADDR
+// (GVS) variants where $saddr could alias $saved_exec. For the GV variants,
+// s_and_saveexec reads $pred before writing $saved_exec, so aliasing is safe.
+// Consider using conditional constraints per-def to give RA more freedom on GV.
+multiclass PredGlobalLoadPseudoRA<RegisterOperand vdata_op> {
+  let WaveSizePredicate = isWave32, Uses = [EXEC], Defs = [EXEC, SCC],
+      mayLoad = 1, mayStore = 0, hasSideEffects = 0 in {
+    def "" : PseudoInstSI<
+      (outs vdata_op:$vdst, SReg_32:$saved_exec),
+      (ins VReg_64:$vaddr, flat_offset:$offset,
+       SReg_32:$pred, vdata_op:$passthru)> {
+      let Constraints = "$vdst = $passthru,@earlyclobber $saved_exec";
+    }
+    def _SADDR : PseudoInstSI<
+      (outs vdata_op:$vdst, SReg_32:$saved_exec),
+      (ins SReg_64_XEXEC_XNULL:$saddr, VGPROp_32:$voffset,
+       flat_offset:$offset, CPol:$cpol,
+       SReg_32:$pred, vdata_op:$passthru)> {
+      let Constraints = "$vdst = $passthru,@earlyclobber $saved_exec";
+    }
+  }
+}
+
+// TODO: Same as above — @earlyclobber $saved_exec only needed for _SADDR.
+multiclass PredGlobalStorePseudoRA<RegisterOperand vdata_op> {
+  let WaveSizePredicate = isWave32, Uses = [EXEC], Defs = [EXEC, SCC],
+      mayLoad = 0, mayStore = 1, hasSideEffects = 0 in {
+    def "" : PseudoInstSI<
+      (outs SReg_32:$saved_exec),
+      (ins VReg_64:$vaddr, vdata_op:$vdata,
+       flat_offset:$offset, SReg_32:$pred)> {
+      let Constraints = "@earlyclobber $saved_exec";
+    }
+    def _SADDR : PseudoInstSI<
+      (outs SReg_32:$saved_exec),
+      (ins SReg_64_XEXEC_XNULL:$saddr, VGPROp_32:$voffset,
+       vdata_op:$vdata, flat_offset:$offset, CPol:$cpol, SReg_32:$pred)> {
+      let Constraints = "@earlyclobber $saved_exec";
+    }
+  }
+}
+
+defm PRED_GLOBAL_LOAD_DWORD_RA    : PredGlobalLoadPseudoRA<VGPROp_32>;
+defm PRED_GLOBAL_LOAD_DWORDX2_RA  : PredGlobalLoadPseudoRA<VGPROp_64>;
+defm PRED_GLOBAL_LOAD_DWORDX4_RA  : PredGlobalLoadPseudoRA<VGPROp_128>;
+defm PRED_GLOBAL_STORE_DWORD_RA   : PredGlobalStorePseudoRA<VGPROp_32>;
+defm PRED_GLOBAL_STORE_DWORDX2_RA : PredGlobalStorePseudoRA<VGPROp_64>;
+defm PRED_GLOBAL_STORE_DWORDX4_RA : PredGlobalStorePseudoRA<VGPROp_128>;
+
+// --- Predicated global load/store patterns (wave32 only) ---
+// Match int_amdgcn_predicated_load/store to ISEL pseudos for both
+// GV (GlobalOffset) and GVS (GlobalSAddr) addressing modes.
+
+multiclass PredGlobalLoadPats<string inst, SDPatternOperator node, ValueType vt> {
+  let WaveSizePredicate = isWave32 in {
+    def : GCNPat<
+      (vt (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset),
+                i1:$pred, vt:$passthru)),
+      (!cast<PseudoInstSI>(inst#"_ISEL") $vaddr, $offset, $pred, $passthru)
+    > { let AddedComplexity = 10; }
+    def : GCNPat<
+      (vt (node (GlobalSAddr (i64 SReg_64_XEXEC_XNULL:$saddr),
+                             (i32 VGPROp_32:$voffset), i32:$offset, CPol:$cpol),
+                i1:$pred, vt:$passthru)),
+      (!cast<PseudoInstSI>(inst#"_SADDR_ISEL") $saddr, $voffset, $offset,
+                           $cpol, $pred, $passthru)
+    > { let AddedComplexity = 11; }
+  }
+}
+
+multiclass PredGlobalStorePats<string inst, SDPatternOperator node, ValueType vt> {
+  let WaveSizePredicate = isWave32 in {
+    def : GCNPat<
+      (node vt:$data,
+            (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset),
+            i1:$pred),
+      (!cast<PseudoInstSI>(inst#"_ISEL") $vaddr, $data, $offset, $pred)
+    > { let AddedComplexity = 10; }
+    def : GCNPat<
+      (node vt:$data,
+            (GlobalSAddr (i64 SReg_64_XEXEC_XNULL:$saddr),
+                         (i32 VGPROp_32:$voffset), i32:$offset, CPol:$cpol),
+            i1:$pred),
+      (!cast<PseudoInstSI>(inst#"_SADDR_ISEL") $saddr, $voffset, $data,
+                           $offset, $cpol, $pred)
+    > { let AddedComplexity = 11; }
+  }
+}
+
+foreach vt = [i32, f32] in {
+  defm : PredGlobalLoadPats<"PRED_GLOBAL_LOAD_DWORD", int_amdgcn_predicated_load, vt>;
+  defm : PredGlobalStorePats<"PRED_GLOBAL_STORE_DWORD", int_amdgcn_predicated_store, vt>;
+}
+foreach vt = [v2i32, v2f32, i64, f64] in {
+  defm : PredGlobalLoadPats<"PRED_GLOBAL_LOAD_DWORDX2", int_amdgcn_predicated_load, vt>;
+  defm : PredGlobalStorePats<"PRED_GLOBAL_STORE_DWORDX2", int_amdgcn_predicated_store, vt>;
+}
+foreach vt = [v4i32, v4f32] in {
+  defm : PredGlobalLoadPats<"PRED_GLOBAL_LOAD_DWORDX4", int_amdgcn_predicated_load, vt>;
+  defm : PredGlobalStorePats<"PRED_GLOBAL_STORE_DWORDX4", int_amdgcn_predicated_store, vt>;
+}
+
+// --- Predicated atomic load pseudos (no passthru — inactive lanes undefined) ---
+
+multiclass PredGlobalAtomicLoadPseudoISEL<RegisterOperand vdata_op> {
+  let WaveSizePredicate = isWave32, usesCustomInserter = 1,
+      Uses = [EXEC], Defs = [EXEC, SCC],
+      mayLoad = 1, mayStore = 0, hasSideEffects = 0 in {
+    def _ISEL : PseudoInstSI<
+      (outs vdata_op:$vdst),
+      (ins VReg_64:$vaddr, flat_offset:$offset, SReg_32:$pred)>;
+    def _SADDR_ISEL : PseudoInstSI<
+      (outs vdata_op:$vdst),
+      (ins SReg_64_XEXEC_XNULL:$saddr, VGPROp_32:$voffset,
+       flat_offset:$offset, CPol:$cpol, SReg_32:$pred)>;
+  }
+}
+
+multiclass PredGlobalAtomicLoadPseudoRA<RegisterOperand vdata_op> {
+  let WaveSizePredicate = isWave32, Uses = [EXEC], Defs = [EXEC, SCC],
+      mayLoad = 1, mayStore = 0, hasSideEffects = 0 in {
+    def "" : PseudoInstSI<
+      (outs vdata_op:$vdst, SReg_32:$saved_exec),
+      (ins VReg_64:$vaddr, flat_offset:$offset, SReg_32:$pred)> {
+      let Constraints = "@earlyclobber $saved_exec";
+    }
+    def _SADDR : PseudoInstSI<
+      (outs vdata_op:$vdst, SReg_32:$saved_exec),
+      (ins SReg_64_XEXEC_XNULL:$saddr, VGPROp_32:$voffset,
+       flat_offset:$offset, CPol:$cpol, SReg_32:$pred)> {
+      let Constraints = "@earlyclobber $saved_exec";
+    }
+  }
+}
+
+defm PRED_GLOBAL_ATOMIC_LOAD_DWORD    : PredGlobalAtomicLoadPseudoISEL<VGPROp_32>;
+defm PRED_GLOBAL_ATOMIC_LOAD_DWORDX2  : PredGlobalAtomicLoadPseudoISEL<VGPROp_64>;
+defm PRED_GLOBAL_ATOMIC_LOAD_DWORDX4  : PredGlobalAtomicLoadPseudoISEL<VGPROp_128>;
+defm PRED_GLOBAL_ATOMIC_LOAD_DWORD_RA    : PredGlobalAtomicLoadPseudoRA<VGPROp_32>;
+defm PRED_GLOBAL_ATOMIC_LOAD_DWORDX2_RA  : PredGlobalAtomicLoadPseudoRA<VGPROp_64>;
+defm PRED_GLOBAL_ATOMIC_LOAD_DWORDX4_RA  : PredGlobalAtomicLoadPseudoRA<VGPROp_128>;
+
+multiclass PredGlobalAtomicLoadPats<string inst, SDPatternOperator node, ValueType vt> {
+  let WaveSizePredicate = isWave32 in {
+    def : GCNPat<
+      (vt (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), i1:$pred)),
+      (!cast<PseudoInstSI>(inst#"_ISEL") $vaddr, $offset, $pred)
+    > { let AddedComplexity = 10; }
+    def : GCNPat<
+      (vt (node (GlobalSAddr (i64 SReg_64_XEXEC_XNULL:$saddr),
+                             (i32 VGPROp_32:$voffset), i32:$offset, CPol:$cpol),
+                i1:$pred)),
+      (!cast<PseudoInstSI>(inst#"_SADDR_ISEL") $saddr, $voffset, $offset,
+                           $cpol, $pred)
+    > { let AddedComplexity = 11; }
+  }
+}
+
+foreach vt = [i32, f32] in {
+  defm : PredGlobalAtomicLoadPats<"PRED_GLOBAL_ATOMIC_LOAD_DWORD",
+                                   int_amdgcn_predicated_atomic_load, vt>;
+}
+foreach vt = [v2i32, v2f32, i64, f64] in {
+  defm : PredGlobalAtomicLoadPats<"PRED_GLOBAL_ATOMIC_LOAD_DWORDX2",
+                                   int_amdgcn_predicated_atomic_load, vt>;
+}
+foreach vt = [v4i32, v4f32] in {
+  defm : PredGlobalAtomicLoadPats<"PRED_GLOBAL_ATOMIC_LOAD_DWORDX4",
+                                   int_amdgcn_predicated_atomic_load, vt>;
+}
+
 let usesCustomInserter = 1, hasSideEffects = 0 in {
 let WaveSizePredicate = isWave32 in
 def S_INVERSE_BALLOT_U32 : SPseudoInstSI<
