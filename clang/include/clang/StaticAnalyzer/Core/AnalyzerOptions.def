@@ -231,7 +231,11 @@ ANALYZER_OPTION(
     StringRef, UnityBuildFileExtensions, "unitybuild-file-extensions",
     "Semicolon-separated file extensions (including leading dots, e.g. "
     "'.cpp;.impl;.c') of included files whose functions are considered "
-    "analysis entry points, regardless of the including file's name. ",
+    "analysis entry points, regardless of the including file's name. "
+    "This supports unity builds (also called jumbo builds, unified builds, "
+    "blob builds, amalgamated builds, monolithic builds, conglomerate builds, "
+    "single compilation units (SCU), single translation units (STU), or "
+    "unified sources).",
     "")
 
 ANALYZER_OPTION(bool, ShouldReportIssuesInMainSourceFile,
