@@ -56,11 +56,10 @@ public:
   }
   UnwindPlanSP CreateFunctionEntryUnwindPlan() override { return nullptr; }
   UnwindPlanSP CreateDefaultUnwindPlan() override { return nullptr; }
-  bool RegisterIsVolatile(const RegisterInfo *) override { return false; }
+  bool RegisterIsVolatile(const RegisterDescriptor *) override { return false; }
   bool CallFrameAddressIsValid(addr_t) override { return false; }
   bool CodeAddressIsValid(addr_t) override { return false; }
-  void
-  AugmentRegisterInfo(std::vector<DynamicRegisterInfo::Register> &) override {}
+  void AugmentRegisterInfo(std::vector<RegisterDefinition> &) override {}
 
 protected:
   ValueObjectSP GetReturnValueObjectImpl(Thread &,

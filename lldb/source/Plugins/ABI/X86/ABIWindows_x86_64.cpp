@@ -17,7 +17,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -25,7 +25,7 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectMemory.h"
@@ -142,21 +142,22 @@ bool ABIWindows_x86_64::PrepareTrivialCall(Thread &thread, addr_t sp,
     log->PutString(s.GetString());
   }
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
     return false;
 
-  const RegisterInfo *reg_info = nullptr;
+  const RegisterDescriptor *reg_info = nullptr;
 
   if (args.size() > 4) // Windows x64 only put first 4 arguments into registers
     return false;
 
   for (size_t i = 0; i < args.size(); ++i) {
-    reg_info = reg_ctx->GetRegisterInfo(eRegisterKindGeneric,
+    reg_info = reg_ctx->GetRegisterByNumber(eRegisterKindGeneric,
                                         LLDB_REGNUM_GENERIC_ARG1 + i);
     LLDB_LOGF(log, "About to write arg%" PRIu64 " (0x%" PRIx64 ") into %s",
-              static_cast<uint64_t>(i + 1), args[i], reg_info->name);
-    if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, args[i]))
+              static_cast<uint64_t>(i + 1), args[i], reg_info->name.c_str());
+    if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+            (reg_info ? reg_info->id : LLDB_INVALID_REGNUM), args[i])))
       return false;
   }
 
@@ -170,10 +171,10 @@ bool ABIWindows_x86_64::PrepareTrivialCall(Thread &thread, addr_t sp,
   sp -= 8; // return address
 
   Status error;
-  const RegisterInfo *pc_reg_info =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
-  const RegisterInfo *sp_reg_info =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
+  const RegisterDescriptor *pc_reg_info =
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
+  const RegisterDescriptor *sp_reg_info =
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
   ProcessSP process_sp(thread.GetProcess());
 
   RegisterValue reg_value;
@@ -190,14 +191,16 @@ bool ABIWindows_x86_64::PrepareTrivialCall(Thread &thread, addr_t sp,
 
   LLDB_LOGF(log, "Writing SP: 0x%" PRIx64, (uint64_t)sp);
 
-  if (!reg_ctx->WriteRegisterFromUnsigned(sp_reg_info, sp))
+  if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+          (sp_reg_info ? sp_reg_info->id : LLDB_INVALID_REGNUM), sp)))
     return false;
 
   // %rip is set to the address of the called function.
 
   LLDB_LOGF(log, "Writing IP: 0x%" PRIx64, (uint64_t)func_addr);
 
-  if (!reg_ctx->WriteRegisterFromUnsigned(pc_reg_info, func_addr))
+  if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+          (pc_reg_info ? pc_reg_info->id : LLDB_INVALID_REGNUM), func_addr)))
     return false;
 
   return true;
@@ -236,7 +239,7 @@ bool ABIWindows_x86_64::GetArgumentValues(Thread &thread,
 
   // Extract the register context so we can read arguments from registers
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
 
   if (!reg_ctx)
     return false;
@@ -254,17 +257,17 @@ bool ABIWindows_x86_64::GetArgumentValues(Thread &thread,
   uint32_t argument_register_ids[4];
 
   argument_register_ids[0] =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1)
-          ->kinds[eRegisterKindLLDB];
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1)
+          ->id;
   argument_register_ids[1] =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG2)
-          ->kinds[eRegisterKindLLDB];
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG2)
+          ->id;
   argument_register_ids[2] =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG3)
-          ->kinds[eRegisterKindLLDB];
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG3)
+          ->id;
   argument_register_ids[3] =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG4)
-          ->kinds[eRegisterKindLLDB];
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG4)
+          ->id;
 
   unsigned int current_argument_register = 0;
 
@@ -313,12 +316,13 @@ Status ABIWindows_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
 
   bool is_signed;
 
-  RegisterContext *reg_ctx = thread->GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread->GetRegisterContext().get();
 
   bool set_it_simple = false;
   if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||
       compiler_type.IsPointerType()) {
-    const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName("rax", 0);
+    const RegisterDescriptor *reg_info =
+        reg_ctx->GetRegisterByName("rax", 0);
 
     DataExtractor data;
     Status data_error;
@@ -333,7 +337,8 @@ Status ABIWindows_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
     if (num_bytes <= 8) {
       uint64_t raw_value = data.GetMaxU64(&offset, num_bytes);
 
-      if (reg_ctx->WriteRegisterFromUnsigned(reg_info, raw_value))
+      if (!llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+              (reg_info ? reg_info->id : LLDB_INVALID_REGNUM), raw_value)))
         set_it_simple = true;
     } else {
       error = Status::FromErrorString(
@@ -348,7 +353,8 @@ Status ABIWindows_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       return error;
     }
     if (*bit_width <= 64) {
-      const RegisterInfo *xmm0_info = reg_ctx->GetRegisterInfoByName("xmm0", 0);
+      const RegisterDescriptor *xmm0_info =
+          reg_ctx->GetRegisterByName("xmm0", 0);
       RegisterValue xmm0_value;
       DataExtractor data;
       Status data_error;
@@ -365,7 +371,8 @@ Status ABIWindows_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
 
       data.CopyByteOrderedData(0, num_bytes, buffer, 16, byte_order);
       xmm0_value.SetBytes(buffer, 16, byte_order);
-      reg_ctx->WriteRegister(xmm0_info, xmm0_value);
+      llvm::consumeError(reg_ctx->WriteRegister(
+          (xmm0_info ? xmm0_info->id : LLDB_INVALID_REGNUM), xmm0_value));
       set_it_simple = true;
     } else {
       // Windows doesn't support 80 bit FP
@@ -399,7 +406,7 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectSimple(
 
   value.SetCompilerType(return_compiler_type);
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
     return return_valobj_sp;
 
@@ -415,7 +422,7 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectSimple(
       if (!byte_size)
         return return_valobj_sp;
       uint64_t raw_value = thread.GetRegisterContext()->ReadRegisterAsUnsigned(
-          reg_ctx->GetRegisterInfoByName("rax", 0), 0);
+          (reg_ctx->GetRegisterByName("rax", 0))->id, 0);
       const bool is_signed = (type_flags & eTypeIsSigned) != 0;
       switch (*byte_size) {
       default:
@@ -460,10 +467,14 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectSimple(
         std::optional<uint64_t> byte_size =
             llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
         if (byte_size && *byte_size <= sizeof(long double)) {
-          const RegisterInfo *xmm0_info =
-              reg_ctx->GetRegisterInfoByName("xmm0", 0);
+          const RegisterDescriptor *xmm0_info =
+              reg_ctx->GetRegisterByName("xmm0", 0);
           RegisterValue xmm0_value;
-          if (reg_ctx->ReadRegister(xmm0_info, xmm0_value)) {
+          if (!llvm::errorToBool(
+                  reg_ctx
+                      ->ReadRegister(
+                          (xmm0_info ? xmm0_info->id : LLDB_INVALID_REGNUM))
+                      .moveInto(xmm0_value))) {
             DataExtractor data;
             if (xmm0_value.GetData(data)) {
               lldb::offset_t offset = 0;
@@ -486,8 +497,7 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectSimple(
           thread.GetStackFrameAtIndex(0).get(), value, ConstString(""));
   } else if ((type_flags & eTypeIsPointer) ||
              (type_flags & eTypeInstanceIsPointer)) {
-    unsigned rax_id =
-        reg_ctx->GetRegisterInfoByName("rax", 0)->kinds[eRegisterKindLLDB];
+    unsigned rax_id = reg_ctx->GetRegisterByName("rax", 0)->id;
     value.GetScalar() =
         (uint64_t)thread.GetRegisterContext()->ReadRegisterAsUnsigned(rax_id,
                                                                       0);
@@ -498,10 +508,10 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectSimple(
     std::optional<uint64_t> byte_size =
         llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
     if (byte_size && *byte_size > 0) {
-      const RegisterInfo *xmm_reg =
-          reg_ctx->GetRegisterInfoByName("xmm0", 0);
+      const RegisterDescriptor *xmm_reg =
+          reg_ctx->GetRegisterByName("xmm0", 0);
       if (xmm_reg == nullptr)
-        xmm_reg = reg_ctx->GetRegisterInfoByName("mm0", 0);
+        xmm_reg = reg_ctx->GetRegisterByName("mm0", 0);
 
       if (xmm_reg) {
         if (*byte_size <= xmm_reg->byte_size) {
@@ -511,11 +521,16 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectSimple(
                 new DataBufferHeap(*byte_size, 0));
             const ByteOrder byte_order = process_sp->GetByteOrder();
             RegisterValue reg_value;
-            if (reg_ctx->ReadRegister(xmm_reg, reg_value)) {
+            if (!llvm::errorToBool(
+                    reg_ctx
+                        ->ReadRegister(
+                            (xmm_reg ? xmm_reg->id : LLDB_INVALID_REGNUM))
+                        .moveInto(reg_value))) {
               Status error;
-              if (reg_value.GetAsMemoryData(*xmm_reg, heap_data_up->GetBytes(),
+              if (reg_value.GetAsMemoryData(xmm_reg->byte_size,
+                                            heap_data_up->GetBytes(),
                                             heap_data_up->GetByteSize(),
-                                            byte_order, error)) {
+                                            byte_order, error, xmm_reg->name)) {
                 DataExtractor data(DataBufferSP(heap_data_up.release()),
                                    byte_order,
                                    process_sp->GetTarget()
@@ -601,7 +616,7 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectImpl(
     return return_valobj_sp;
   }
 
-  RegisterContextSP reg_ctx_sp = thread.GetRegisterContext();
+  ThreadRegisterContextSP reg_ctx_sp = thread.GetRegisterContext();
   if (!reg_ctx_sp) {
     return return_valobj_sp;
   }
@@ -644,10 +659,13 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectImpl(
         target->GetArchitecture().GetAddressByteSize());
 
     // The only register used to return struct/class by value
-    const RegisterInfo *rax_info =
-        reg_ctx_sp->GetRegisterInfoByName("rax", 0);
+    const RegisterDescriptor *rax_info =
+        reg_ctx_sp->GetRegisterByName("rax", 0);
     RegisterValue rax_value;
-    reg_ctx_sp->ReadRegister(rax_info, rax_value);
+    llvm::consumeError(
+        reg_ctx_sp
+            ->ReadRegister((rax_info ? rax_info->id : LLDB_INVALID_REGNUM))
+            .moveInto(rax_value));
     DataExtractor rax_data;
     rax_value.GetData(rax_data);
 
@@ -718,8 +736,7 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectImpl(
   // instruction and if so stash away the return location.  Then we would
   // only return the memory return value if we know it is valid.
   if (is_memory) {
-    unsigned rax_id =
-        reg_ctx_sp->GetRegisterInfoByName("rax", 0)->kinds[eRegisterKindLLDB];
+    unsigned rax_id = reg_ctx_sp->GetRegisterByName("rax", 0)->id;
     lldb::addr_t storage_addr =
         (uint64_t)thread.GetRegisterContext()->ReadRegisterAsUnsigned(rax_id,
                                                                       0);
@@ -770,14 +787,15 @@ UnwindPlanSP ABIWindows_x86_64::CreateDefaultUnwindPlan() {
   return plan_sp;
 }
 
-bool ABIWindows_x86_64::RegisterIsVolatile(const RegisterInfo *reg_info) {
+bool ABIWindows_x86_64::RegisterIsVolatile(const RegisterDescriptor *reg_info) {
   return !RegisterIsCalleeSaved(reg_info);
 }
 
-bool ABIWindows_x86_64::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
+bool ABIWindows_x86_64::RegisterIsCalleeSaved(
+    const RegisterDescriptor *reg_info) {
   if (!reg_info)
     return false;
-  assert(reg_info->name != nullptr && "unnamed register?");
+  assert(!reg_info->name.empty() && "unnamed register?");
   std::string Name = std::string(reg_info->name);
   bool IsCalleeSaved =
       llvm::StringSwitch<bool>(Name)

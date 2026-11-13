@@ -17,7 +17,7 @@
 // clang-format on
 
 #include "Plugins/Process/FreeBSD/NativeRegisterContextFreeBSD.h"
-#include "Register/FreeBSD/RegisterInfoFreeBSD_powerpc.h"
+#include "lldb/Register/Layouts/FreeBSD/RegisterLayoutFreeBSD_powerpc.h"
 
 #include <array>
 #include <optional>
@@ -33,17 +33,12 @@ public:
   NativeRegisterContextFreeBSD_powerpc(const ArchSpec &target_arch,
                                        NativeThreadFreeBSD &native_thread);
 
-  uint32_t GetRegisterSetCount() const override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  uint32_t GetUserRegisterCount() const override;
-
-  const RegisterSet *GetRegisterSet(uint32_t set_index) const override;
-
-  Status ReadRegister(const RegisterInfo *reg_info,
-                      RegisterValue &reg_value) override;
-
-  Status WriteRegister(const RegisterInfo *reg_info,
-                       const RegisterValue &reg_value) override;
+  llvm::Error
+  WriteRegister(lldb_private::RegisterID id,
+                const lldb_private::RegisterValue &reg_value) override;
 
   Status ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
 
@@ -57,14 +52,13 @@ private:
     GPRegSet,
     FPRegSet,
   };
-  std::array<uint8_t, sizeof(reg) + sizeof(fpreg)> m_reg_data;
+  reg m_gpr{};
+  fpreg m_fpr{};
 
   std::optional<RegSetKind> GetSetForNativeRegNum(uint32_t reg_num) const;
 
   Status ReadRegisterSet(RegSetKind set);
   Status WriteRegisterSet(RegSetKind set);
-
-  RegisterInfoFreeBSD_powerpc &GetRegisterInfo() const;
 };
 
 } // namespace process_freebsd

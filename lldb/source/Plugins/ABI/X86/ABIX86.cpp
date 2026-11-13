@@ -54,19 +54,19 @@ struct RegData {
   std::optional<uint32_t> base_index;
 };
 
-static void
-addPartialRegisters(std::vector<DynamicRegisterInfo::Register> &regs,
-                    llvm::ArrayRef<RegData *> subregs, uint32_t base_size,
-                    lldb::Encoding encoding, lldb::Format format,
-                    uint32_t subreg_size, uint32_t subreg_offset = 0) {
+static void addPartialRegisters(std::vector<RegisterDefinition> &regs,
+                                llvm::ArrayRef<RegData *> subregs,
+                                uint32_t base_size, lldb::Encoding encoding,
+                                lldb::Format format, uint32_t subreg_size,
+                                uint32_t subreg_offset = 0) {
   for (const RegData *subreg : subregs) {
     assert(subreg);
     uint32_t base_index = *subreg->base_index;
-    DynamicRegisterInfo::Register &full_reg = regs[base_index];
+    RegisterDefinition &full_reg = regs[base_index];
     if (full_reg.byte_size != base_size)
       continue;
 
-    lldb_private::DynamicRegisterInfo::Register new_reg{
+    lldb_private::RegisterDefinition new_reg{
         lldb_private::ConstString(subreg->subreg_name),
         lldb_private::ConstString(),
         lldb_private::ConstString("supplementary registers"),
@@ -86,8 +86,7 @@ addPartialRegisters(std::vector<DynamicRegisterInfo::Register> &regs,
   }
 }
 
-static void
-addCombinedRegisters(std::vector<DynamicRegisterInfo::Register> &regs,
+static void addCombinedRegisters(std::vector<RegisterDefinition> &regs,
                      llvm::ArrayRef<RegData *> subregs1,
                      llvm::ArrayRef<RegData *> subregs2, uint32_t base_size,
                      lldb::Encoding encoding, lldb::Format format) {
@@ -107,7 +106,7 @@ addCombinedRegisters(std::vector<DynamicRegisterInfo::Register> &regs,
         regs[base_index2].byte_size != base_size)
       continue;
 
-    lldb_private::DynamicRegisterInfo::Register new_reg{
+    lldb_private::RegisterDefinition new_reg{
         lldb_private::ConstString(regdata1->subreg_name),
         lldb_private::ConstString(),
         lldb_private::ConstString("supplementary registers"),
@@ -197,8 +196,7 @@ BaseRegToRegsMap makeBaseRegMap(bool is64bit) {
   return out;
 }
 
-void ABIX86::AugmentRegisterInfo(
-    std::vector<DynamicRegisterInfo::Register> &regs) {
+void ABIX86::AugmentRegisterInfo(std::vector<RegisterDefinition> &regs) {
   MCBasedABI::AugmentRegisterInfo(regs);
 
   ProcessSP process_sp = GetProcessSP();

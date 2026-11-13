@@ -12,7 +12,7 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Target/RegisterTypeBuilder.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/RegisterTypeFlags.h"
+#include "lldb/Register/RegisterTypeFlags.h"
 
 namespace lldb_private {
 class RegisterTypeBuilderClang : public RegisterTypeBuilder {
@@ -30,7 +30,7 @@ public:
   }
   static lldb::RegisterTypeBuilderSP CreateInstance(Target &target);
 
-  CompilerType GetRegisterType(const RegisterInfo &reg_info) override;
+  CompilerType GetRegisterType(const RegisterDescriptor &reg_info) override;
 
 private:
   CompilerType BuildBuiltinType(const RegisterTypeBuiltin *builtin_type,

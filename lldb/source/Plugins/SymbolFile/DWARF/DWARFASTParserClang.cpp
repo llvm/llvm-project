@@ -692,7 +692,7 @@ ExtractDataMemberLocation(DWARFDIE const &die, DWARFFormValue const &form_value,
 
   llvm::Expected<Value> memberOffset = DWARFExpression::Evaluate(
       /*ExecutionContext=*/nullptr,
-      /*RegisterContext=*/nullptr, module_sp,
+      /*ThreadRegisterContext=*/nullptr, module_sp,
       DataExtractor(debug_info_data, block_offset, block_length), die.GetCU(),
       eRegisterKindDWARF, &initialValue, nullptr);
   if (!memberOffset) {

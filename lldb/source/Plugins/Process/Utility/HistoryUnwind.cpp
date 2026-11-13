@@ -36,9 +36,9 @@ void HistoryUnwind::DoClear() {
   m_pcs.clear();
 }
 
-lldb::RegisterContextSP
+lldb::ThreadRegisterContextSP
 HistoryUnwind::DoCreateRegisterContextForFrame(StackFrame *frame) {
-  RegisterContextSP rctx;
+  ThreadRegisterContextSP rctx;
   if (frame) {
     addr_t pc = frame->GetFrameCodeAddress().GetLoadAddress(
         &frame->GetThread()->GetProcess()->GetTarget());

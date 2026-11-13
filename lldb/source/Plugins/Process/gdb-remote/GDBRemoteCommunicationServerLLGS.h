@@ -17,7 +17,7 @@
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Utility/Locked.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/lldb-private-forward.h"
 
 #include "GDBRemoteCommunicationServerCommon.h"
@@ -149,7 +149,7 @@ protected:
   llvm::StringMap<std::unique_ptr<llvm::MemoryBuffer>> m_xfer_buffer_map;
 
   struct SavedRegisters {
-    std::unordered_map<uint32_t, lldb::DataBufferSP> map;
+    std::unordered_map<uint32_t, std::shared_ptr<RegisterCheckpoint>> map;
     uint32_t next_id = 1;
   };
   Guarded<SavedRegisters, std::mutex> m_saved_registers;

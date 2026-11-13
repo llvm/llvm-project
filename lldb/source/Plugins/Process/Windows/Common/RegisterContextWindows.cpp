@@ -27,7 +27,7 @@ const DWORD kWinContextFlags = CONTEXT_ALL;
 // Constructors and Destructors
 RegisterContextWindows::RegisterContextWindows(Thread &thread,
                                                uint32_t concrete_frame_idx)
-    : RegisterContext(thread, concrete_frame_idx), m_context(),
+    : ThreadRegisterContext(thread, concrete_frame_idx), m_context(),
       m_context_stale(true) {}
 
 RegisterContextWindows::~RegisterContextWindows() = default;
@@ -54,21 +54,6 @@ bool RegisterContextWindows::WriteAllRegisterValues(
   memcpy(&m_context, data_sp->GetBytes(), sizeof(m_context));
 
   return ApplyAllRegisterValues();
-}
-
-uint32_t RegisterContextWindows::ConvertRegisterKindToRegisterNumber(
-    lldb::RegisterKind kind, uint32_t num) {
-  const uint32_t num_regs = GetRegisterCount();
-
-  assert(kind < kNumRegisterKinds);
-  for (uint32_t reg_idx = 0; reg_idx < num_regs; ++reg_idx) {
-    const RegisterInfo *reg_info = GetRegisterInfoAtIndex(reg_idx);
-
-    if (reg_info->kinds[kind] == num)
-      return reg_idx;
-  }
-
-  return LLDB_INVALID_REGNUM;
 }
 
 bool RegisterContextWindows::HardwareSingleStep(bool enable) { return false; }

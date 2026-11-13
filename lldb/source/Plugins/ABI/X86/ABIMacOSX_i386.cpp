@@ -18,11 +18,11 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
@@ -62,19 +62,19 @@ ABIMacOSX_i386::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch)
 bool ABIMacOSX_i386::PrepareTrivialCall(Thread &thread, addr_t sp,
                                         addr_t func_addr, addr_t return_addr,
                                         llvm::ArrayRef<addr_t> args) const {
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
     return false;
-  uint32_t pc_reg_num = reg_ctx->ConvertRegisterKindToRegisterNumber(
-      eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
-  uint32_t sp_reg_num = reg_ctx->ConvertRegisterKindToRegisterNumber(
-      eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
+  uint32_t pc_reg_num = reg_ctx->GetRegisterIDForNumber(eRegisterKindGeneric,
+                                                        LLDB_REGNUM_GENERIC_PC);
+  uint32_t sp_reg_num = reg_ctx->GetRegisterIDForNumber(eRegisterKindGeneric,
+                                                        LLDB_REGNUM_GENERIC_SP);
 
   // When writing a register value down to memory, the register info used to
   // write memory just needs to have the correct size of a 32 bit register, the
   // actual register it pertains to is not important, just the size needs to be
   // correct. Here we use "eax"...
-  const RegisterInfo *reg_info_32 = reg_ctx->GetRegisterInfoByName("eax");
+  const RegisterDescriptor *reg_info_32 = reg_ctx->GetRegisterByName("eax");
   if (!reg_info_32)
     return false; // TODO this should actually never happen
 
@@ -111,12 +111,13 @@ bool ABIMacOSX_i386::PrepareTrivialCall(Thread &thread, addr_t sp,
 
   // %esp is set to the actual stack value.
 
-  if (!reg_ctx->WriteRegisterFromUnsigned(sp_reg_num, sp))
+  if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(sp_reg_num, sp)))
     return false;
 
   // %eip is set to the address of the called function.
 
-  if (!reg_ctx->WriteRegisterFromUnsigned(pc_reg_num, func_addr))
+  if (llvm::errorToBool(
+          reg_ctx->WriteRegisterFromUnsigned(pc_reg_num, func_addr)))
     return false;
 
   return true;
@@ -144,7 +145,7 @@ bool ABIMacOSX_i386::GetArgumentValues(Thread &thread,
   // Get the pointer to the first stack argument so we have a place to start
   // when reading data
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
 
   if (!reg_ctx)
     return false;
@@ -199,7 +200,7 @@ Status ABIMacOSX_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
 
   bool is_signed;
 
-  RegisterContext *reg_ctx = thread->GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread->GetRegisterContext().get();
 
   bool set_it_simple = false;
   if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||
@@ -215,21 +216,25 @@ Status ABIMacOSX_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
     }
     lldb::offset_t offset = 0;
     if (num_bytes <= 8) {
-      const RegisterInfo *eax_info = reg_ctx->GetRegisterInfoByName("eax", 0);
+      const RegisterDescriptor *eax_info =
+          reg_ctx->GetRegisterByName("eax", 0);
       if (num_bytes <= 4) {
         uint32_t raw_value = data.GetMaxU32(&offset, num_bytes);
 
-        if (reg_ctx->WriteRegisterFromUnsigned(eax_info, raw_value))
+        if (!llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+                (eax_info ? eax_info->id : LLDB_INVALID_REGNUM), raw_value)))
           set_it_simple = true;
       } else {
         uint32_t raw_value = data.GetMaxU32(&offset, 4);
 
-        if (reg_ctx->WriteRegisterFromUnsigned(eax_info, raw_value)) {
-          const RegisterInfo *edx_info =
-              reg_ctx->GetRegisterInfoByName("edx", 0);
+        if (!llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+                (eax_info ? eax_info->id : LLDB_INVALID_REGNUM), raw_value))) {
+          const RegisterDescriptor *edx_info =
+              reg_ctx->GetRegisterByName("edx", 0);
           uint32_t raw_value = data.GetMaxU32(&offset, num_bytes - offset);
 
-          if (reg_ctx->WriteRegisterFromUnsigned(edx_info, raw_value))
+          if (!llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+                  (edx_info ? edx_info->id : LLDB_INVALID_REGNUM), raw_value)))
             set_it_simple = true;
         }
       }
@@ -260,7 +265,7 @@ ABIMacOSX_i386::GetReturnValueObjectImpl(Thread &thread,
   // compiler_type.GetOpaqueQualType());
   value.SetCompilerType(compiler_type);
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
     return return_valobj_sp;
 
@@ -271,10 +276,8 @@ ABIMacOSX_i386::GetReturnValueObjectImpl(Thread &thread,
         llvm::expectedToOptional(compiler_type.GetBitSize(&thread));
     if (!bit_width)
       return return_valobj_sp;
-    unsigned eax_id =
-        reg_ctx->GetRegisterInfoByName("eax", 0)->kinds[eRegisterKindLLDB];
-    unsigned edx_id =
-        reg_ctx->GetRegisterInfoByName("edx", 0)->kinds[eRegisterKindLLDB];
+    unsigned eax_id = reg_ctx->GetRegisterByName("eax", 0)->id;
+    unsigned edx_id = reg_ctx->GetRegisterByName("edx", 0)->id;
 
     switch (*bit_width) {
     default:
@@ -327,8 +330,7 @@ ABIMacOSX_i386::GetReturnValueObjectImpl(Thread &thread,
       break;
     }
   } else if (compiler_type.IsPointerType()) {
-    unsigned eax_id =
-        reg_ctx->GetRegisterInfoByName("eax", 0)->kinds[eRegisterKindLLDB];
+    unsigned eax_id = reg_ctx->GetRegisterByName("eax", 0)->id;
     uint32_t ptr =
         thread.GetRegisterContext()->ReadRegisterAsUnsigned(eax_id, 0) &
         0xffffffff;
@@ -394,7 +396,7 @@ UnwindPlanSP ABIMacOSX_i386::CreateDefaultUnwindPlan() {
   return plan_sp;
 }
 
-bool ABIMacOSX_i386::RegisterIsVolatile(const RegisterInfo *reg_info) {
+bool ABIMacOSX_i386::RegisterIsVolatile(const RegisterDescriptor *reg_info) {
   return !RegisterIsCalleeSaved(reg_info);
 }
 
@@ -409,10 +411,10 @@ bool ABIMacOSX_i386::RegisterIsVolatile(const RegisterInfo *reg_info) {
 //
 // ebx, ebp, esi, edi, esp
 
-bool ABIMacOSX_i386::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
+bool ABIMacOSX_i386::RegisterIsCalleeSaved(const RegisterDescriptor *reg_info) {
   if (reg_info) {
     // Saved registers are ebx, ebp, esi, edi, esp, eip
-    const char *name = reg_info->name;
+    const char *name = reg_info->name.c_str();
     if (name[0] == 'e') {
       switch (name[1]) {
       case 'b':

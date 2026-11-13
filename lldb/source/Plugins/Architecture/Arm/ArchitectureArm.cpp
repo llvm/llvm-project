@@ -9,21 +9,23 @@
 #include "Plugins/Architecture/Arm/ArchitectureArm.h"
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "Plugins/Process/Utility/InstructionUtils.h"
-#include "Utility/ARM_DWARF_Registers.h"
+#include "lldb/Register/Arch/lldb-arm-dwarf-register-enums.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Register/RegisterNumber.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
-#include "lldb/Target/RegisterNumber.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/UnwindLLDB.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 
 #include "llvm/Support/Endian.h"
 
+
+namespace dwarf_regs = lldb_private::registers::arm::dwarf;
 using namespace lldb_private;
 using namespace lldb;
 
@@ -75,7 +77,7 @@ void ArchitectureArm::OverrideStopInfo(Thread &thread) const {
   // trailing 16 bits (the second half of the 32 bit thumb instruction you
   // partially overwrote).
 
-  RegisterContextSP reg_ctx_sp(thread.GetRegisterContext());
+  ThreadRegisterContextSP reg_ctx_sp(thread.GetRegisterContext());
   if (!reg_ctx_sp)
     return;
 
@@ -190,22 +192,22 @@ UnwindPlanSP ArchitectureArm::GetArchitectureUnwindPlan(
 
   // Get the caller's LR value from regctx (the LR value
   // at function entry to this function).
-  RegisterNumber ra_regnum(thread, eRegisterKindGeneric,
-                           LLDB_REGNUM_GENERIC_RA);
-  uint32_t ra_regnum_lldb = ra_regnum.GetAsKind(eRegisterKindLLDB);
+  RegisterNumber ra_regnum(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_RA);
+  uint32_t ra_regnum_lldb = ra_regnum.GetAsKind(
+      *thread.GetRegisterContext()->GetDescription(), eRegisterKindLLDB);
 
   if (ra_regnum_lldb == LLDB_INVALID_REGNUM)
     return {};
 
-  UnwindLLDB::ConcreteRegisterLocation regloc = {};
+  RegisterRecoveryLocation regloc = {};
   bool got_concrete_location = false;
   if (regctx->SavedLocationForRegister(ra_regnum_lldb, regloc) ==
       UnwindLLDB::RegisterSearchResult::eRegisterFound) {
     got_concrete_location = true;
   } else {
-    RegisterNumber pc_regnum(thread, eRegisterKindGeneric,
-                             LLDB_REGNUM_GENERIC_PC);
-    uint32_t pc_regnum_lldb = pc_regnum.GetAsKind(eRegisterKindLLDB);
+    RegisterNumber pc_regnum(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
+    uint32_t pc_regnum_lldb = pc_regnum.GetAsKind(
+        *thread.GetRegisterContext()->GetDescription(), eRegisterKindLLDB);
     if (regctx->SavedLocationForRegister(pc_regnum_lldb, regloc) ==
         UnwindLLDB::RegisterSearchResult::eRegisterFound)
       got_concrete_location = true;
@@ -215,7 +217,8 @@ UnwindPlanSP ArchitectureArm::GetArchitectureUnwindPlan(
     return {};
 
   addr_t callers_return_address = LLDB_INVALID_ADDRESS;
-  const RegisterInfo *reg_info = regctx->GetRegisterInfoAtIndex(ra_regnum_lldb);
+  const RegisterDescriptor *reg_info =
+      regctx->GetRegisterByNumber(eRegisterKindLLDB, ra_regnum_lldb);
   if (reg_info) {
     RegisterValue reg_value;
     if (regctx->ReadRegisterValueFromRegisterLocation(regloc, reg_info,
@@ -264,16 +267,18 @@ UnwindPlanSP ArchitectureArm::GetArchitectureUnwindPlan(
 
   int stored_regs_size = fp_regs_saved ? 0x68 : 0x20;
 
-  uint32_t gpr_regs[] = {dwarf_r0,  dwarf_r1, dwarf_r2, dwarf_r3,
-                         dwarf_r12, dwarf_lr, dwarf_pc, dwarf_cpsr};
+  uint32_t gpr_regs[] = {dwarf_regs::r0, dwarf_regs::r1,  dwarf_regs::r2,
+                         dwarf_regs::r3, dwarf_regs::r12, dwarf_regs::lr,
+                         dwarf_regs::pc, dwarf_regs::cpsr};
   const int gpr_reg_count = std::size(gpr_regs);
-  uint32_t fpr_regs[] = {dwarf_s0,  dwarf_s1,  dwarf_s2,  dwarf_s3,
-                         dwarf_s4,  dwarf_s5,  dwarf_s6,  dwarf_s7,
-                         dwarf_s8,  dwarf_s9,  dwarf_s10, dwarf_s11,
-                         dwarf_s12, dwarf_s13, dwarf_s14, dwarf_s15};
+  uint32_t fpr_regs[] = {
+      dwarf_regs::s0,  dwarf_regs::s1,  dwarf_regs::s2,  dwarf_regs::s3,
+      dwarf_regs::s4,  dwarf_regs::s5,  dwarf_regs::s6,  dwarf_regs::s7,
+      dwarf_regs::s8,  dwarf_regs::s9,  dwarf_regs::s10, dwarf_regs::s11,
+      dwarf_regs::s12, dwarf_regs::s13, dwarf_regs::s14, dwarf_regs::s15};
   const int fpr_reg_count = std::size(fpr_regs);
 
-  RegisterContextSP reg_ctx_sp = thread.GetRegisterContext();
+  ThreadRegisterContextSP reg_ctx_sp = thread.GetRegisterContext();
   std::vector<uint32_t> saved_regs;
   for (int i = 0; i < gpr_reg_count; i++) {
     uint32_t regno = gpr_regs[i];
@@ -315,8 +320,8 @@ UnwindPlanSP ArchitectureArm::GetArchitectureUnwindPlan(
             callers_return_address, cfa, fp_regs_saved, stored_regs_size,
             align_stack);
 
-  uint32_t sp_regnum = dwarf_sp;
-  reg_ctx_sp->ConvertBetweenRegisterKinds(eRegisterKindDWARF, dwarf_sp,
+  uint32_t sp_regnum = dwarf_regs::sp;
+  reg_ctx_sp->ConvertBetweenRegisterKinds(eRegisterKindDWARF, dwarf_regs::sp,
                                           plan_regkind, sp_regnum);
 
   const int row_count = current_unwindplan->GetRowCount();

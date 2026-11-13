@@ -24,12 +24,12 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectMemory.h"
@@ -42,12 +42,12 @@
 // of a register. Just provides correct dwarf and eh_frame numbers.
 
 #define DEFINE_GENERIC_REGISTER_STUB(dwarf_num, str_name, generic_num)        \
-  {                                                                           \
-    DEFINE_REG_NAME(dwarf_num), DEFINE_REG_NAME_STR(str_name),                \
-    0, 0, eEncodingInvalid, eFormatDefault,                                   \
-    { dwarf_num, dwarf_num, generic_num, LLDB_INVALID_REGNUM, dwarf_num },    \
-    nullptr, nullptr, nullptr,                                                \
-  }
+  RegisterDescriptor(dwarf_num, DEFINE_REG_NAME(dwarf_num),                   \
+                     DEFINE_REG_NAME_STR(str_name), 0,                        \
+                     eEncodingInvalid, eFormatDefault,                        \
+                     {dwarf_num, dwarf_num, generic_num, LLDB_INVALID_REGNUM, \
+                      dwarf_num},                                             \
+                     {}, {}, nullptr)
 
 #define DEFINE_REGISTER_STUB(dwarf_num, str_name) \
   DEFINE_GENERIC_REGISTER_STUB(dwarf_num, str_name, LLDB_INVALID_REGNUM)
@@ -68,8 +68,8 @@ enum regnums {
   /*reserved,*/ /*limm indicator,*/ r63 = 63, pc = 70, status32 = 74
 };
 
-static const std::array<RegisterInfo, 64> g_register_infos = { {
-    DEFINE_GENERIC_REGISTER_STUB(r0, nullptr, LLDB_REGNUM_GENERIC_ARG1),
+static const std::array<RegisterDescriptor, 64> g_register_infos = {
+    {DEFINE_GENERIC_REGISTER_STUB(r0, nullptr, LLDB_REGNUM_GENERIC_ARG1),
     DEFINE_GENERIC_REGISTER_STUB(r1, nullptr, LLDB_REGNUM_GENERIC_ARG2),
     DEFINE_GENERIC_REGISTER_STUB(r2, nullptr, LLDB_REGNUM_GENERIC_ARG3),
     DEFINE_GENERIC_REGISTER_STUB(r3, nullptr, LLDB_REGNUM_GENERIC_ARG4),
@@ -136,18 +136,19 @@ static const std::array<RegisterInfo, 64> g_register_infos = { {
 } // namespace dwarf
 } // namespace
 
-const RegisterInfo *ABISysV_arc::GetRegisterInfoArray(uint32_t &count) {
+const RegisterDescriptor *ABISysV_arc::GetRegisterInfoArray(uint32_t &count) {
   count = dwarf::g_register_infos.size();
   return dwarf::g_register_infos.data();
 }
 
 size_t ABISysV_arc::GetRedZoneSize() const { return 0; }
 
-bool ABISysV_arc::IsRegisterFileReduced(RegisterContext &reg_ctx) const {
+bool ABISysV_arc::IsRegisterFileReduced(ThreadRegisterContext &reg_ctx) const {
   if (!m_is_reg_file_reduced) {
-    const auto *const rf_build_reg = reg_ctx.GetRegisterInfoByName("rf_build");
+    const auto *const rf_build_reg = reg_ctx.GetRegisterByName("rf_build");
 
-    const auto reg_value = reg_ctx.ReadRegisterAsUnsigned(rf_build_reg,
+    const auto reg_value = reg_ctx.ReadRegisterAsUnsigned(
+        (rf_build_reg ? rf_build_reg->id : LLDB_INVALID_REGNUM),
                                                           /*fail_value*/ 0);
     // RF_BUILD "Number of Entries" bit.
     const uint32_t rf_entries_bit = 1U << 9U;
@@ -200,18 +201,18 @@ bool ABISysV_arc::PrepareTrivialCall(Thread &thread, addr_t sp, addr_t pc,
   if (!reg_ctx)
     return false;
 
-  uint32_t pc_reg = reg_ctx->ConvertRegisterKindToRegisterNumber(
-      eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
+  uint32_t pc_reg = reg_ctx->GetRegisterIDForNumber(eRegisterKindGeneric,
+                                                    LLDB_REGNUM_GENERIC_PC);
   if (pc_reg == LLDB_INVALID_REGNUM)
     return false;
 
-  uint32_t ra_reg = reg_ctx->ConvertRegisterKindToRegisterNumber(
-      eRegisterKindGeneric, LLDB_REGNUM_GENERIC_RA);
+  uint32_t ra_reg = reg_ctx->GetRegisterIDForNumber(eRegisterKindGeneric,
+                                                    LLDB_REGNUM_GENERIC_RA);
   if (ra_reg == LLDB_INVALID_REGNUM)
     return false;
 
-  uint32_t sp_reg = reg_ctx->ConvertRegisterKindToRegisterNumber(
-      eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
+  uint32_t sp_reg = reg_ctx->GetRegisterIDForNumber(eRegisterKindGeneric,
+                                                    LLDB_REGNUM_GENERIC_SP);
   if (sp_reg == LLDB_INVALID_REGNUM)
     return false;
 
@@ -273,9 +274,12 @@ bool ABISysV_arc::PrepareTrivialCall(Thread &thread, addr_t sp, addr_t pc,
 
       RegisterValue reg_val_obj(llvm::ArrayRef(reg_value, reg_size),
                                 eByteOrderLittle);
-      if (!reg_ctx->WriteRegister(
-            reg_ctx->GetRegisterInfo(eRegisterKindGeneric, reg_index),
-            reg_val_obj))
+      if (llvm::errorToBool(reg_ctx->WriteRegister(
+              (reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, reg_index)
+                   ? (reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, reg_index))
+                         ->id
+                   : LLDB_INVALID_REGNUM),
+              reg_val_obj)))
         return false;
 
       // NOTE: It's unsafe to iterate through LLDB_REGNUM_GENERICs.
@@ -297,9 +301,9 @@ bool ABISysV_arc::PrepareTrivialCall(Thread &thread, addr_t sp, addr_t pc,
   sp -= on_stack * word_size;
 
   // Update registers with current function call state.
-  reg_ctx->WriteRegisterFromUnsigned(pc_reg, pc);
-  reg_ctx->WriteRegisterFromUnsigned(ra_reg, ra);
-  reg_ctx->WriteRegisterFromUnsigned(sp_reg, sp);
+  llvm::consumeError(reg_ctx->WriteRegisterFromUnsigned(pc_reg, pc));
+  llvm::consumeError(reg_ctx->WriteRegisterFromUnsigned(ra_reg, ra));
+  llvm::consumeError(reg_ctx->WriteRegisterFromUnsigned(sp_reg, sp));
 
   return true;
 }
@@ -346,10 +350,11 @@ Status ABISysV_arc::SetReturnValueObject(StackFrameSP &frame_sp,
     uint64_t raw_value = data.GetMaxU64(&offset, num_bytes);
 
     auto reg_info =
-        reg_ctx.GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
-    if (!reg_ctx.WriteRegisterFromUnsigned(reg_info, raw_value)) {
+        reg_ctx.GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
+    if (llvm::errorToBool(reg_ctx.WriteRegisterFromUnsigned(
+            (reg_info ? reg_info->id : LLDB_INVALID_REGNUM), raw_value))) {
       result = Status::FromErrorStringWithFormat(
-          "Couldn't write value to register %s", reg_info->name);
+          "Couldn't write value to register %s", reg_info->name.c_str());
       return result;
     }
 
@@ -358,10 +363,11 @@ Status ABISysV_arc::SetReturnValueObject(StackFrameSP &frame_sp,
 
     raw_value >>= 32;
     reg_info =
-        reg_ctx.GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG2);
-    if (!reg_ctx.WriteRegisterFromUnsigned(reg_info, raw_value)) {
+        reg_ctx.GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG2);
+    if (llvm::errorToBool(reg_ctx.WriteRegisterFromUnsigned(
+            (reg_info ? reg_info->id : LLDB_INVALID_REGNUM), raw_value))) {
       result = Status::FromErrorStringWithFormat(
-          "Couldn't write value to register %s", reg_info->name);
+          "Couldn't write value to register %s", reg_info->name.c_str());
     }
 
     return result;
@@ -425,20 +431,25 @@ static bool SetSizedFloat(Scalar &scalar, uint64_t raw_value,
   return true;
 }
 
-static uint64_t ReadRawValue(const RegisterContextSP &reg_ctx,
+static uint64_t ReadRawValue(const ThreadRegisterContextSP &reg_ctx,
                              uint8_t size_in_bytes) {
   auto reg_info_r0 =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
 
   // Extract the register context so we can read arguments from registers.
   uint64_t raw_value =
-      reg_ctx->ReadRegisterAsUnsigned(reg_info_r0, 0) & UINT32_MAX;
+      reg_ctx->ReadRegisterAsUnsigned(
+          (reg_info_r0 ? reg_info_r0->id : LLDB_INVALID_REGNUM), 0) &
+      UINT32_MAX;
 
   if (sizeof(uint64_t) == size_in_bytes)
     raw_value |= (reg_ctx->ReadRegisterAsUnsigned(
-                      reg_ctx->GetRegisterInfo(eRegisterKindGeneric,
-                                               LLDB_REGNUM_GENERIC_ARG2), 0) &
-                  UINT64_MAX) << 32U;
+                      (reg_ctx->GetRegisterByNumber(eRegisterKindGeneric,
+                                                LLDB_REGNUM_GENERIC_ARG2))
+                          ->id,
+                      0) &
+                  UINT64_MAX)
+                 << 32U;
 
   return raw_value;
 }
@@ -472,9 +483,10 @@ ABISysV_arc::GetReturnValueObjectSimple(Thread &thread,
   }
   // Pointer return type.
   else if (type_flags & eTypeIsPointer) {
-    auto reg_info_r0 = reg_ctx->GetRegisterInfo(eRegisterKindGeneric,
+    auto reg_info_r0 = reg_ctx->GetRegisterByNumber(eRegisterKindGeneric,
                                                 LLDB_REGNUM_GENERIC_ARG1);
-    value.GetScalar() = reg_ctx->ReadRegisterAsUnsigned(reg_info_r0, 0);
+    value.GetScalar() = reg_ctx->ReadRegisterAsUnsigned(
+        (reg_info_r0 ? reg_info_r0->id : LLDB_INVALID_REGNUM), 0);
 
     value.SetValueType(Value::ValueType::Scalar);
   }
@@ -532,9 +544,10 @@ ValueObjectSP ABISysV_arc::GetReturnValueObjectImpl(Thread &thread,
   }
   // Pointer return type.
   else if (retType.isPointerTy()) {
-    auto reg_info_r0 = reg_ctx->GetRegisterInfo(eRegisterKindGeneric,
+    auto reg_info_r0 = reg_ctx->GetRegisterByNumber(eRegisterKindGeneric,
                                                 LLDB_REGNUM_GENERIC_ARG1);
-    value.GetScalar() = reg_ctx->ReadRegisterAsUnsigned(reg_info_r0, 0);
+    value.GetScalar() = reg_ctx->ReadRegisterAsUnsigned(
+        (reg_info_r0 ? reg_info_r0->id : LLDB_INVALID_REGNUM), 0);
     value.SetValueType(Value::ValueType::Scalar);
   }
   // Floating point return type.
@@ -571,12 +584,12 @@ UnwindPlanSP ABISysV_arc::CreateFunctionEntryUnwindPlan() {
 
 UnwindPlanSP ABISysV_arc::CreateDefaultUnwindPlan() { return nullptr; }
 
-bool ABISysV_arc::RegisterIsVolatile(const RegisterInfo *reg_info) {
+bool ABISysV_arc::RegisterIsVolatile(const RegisterDescriptor *reg_info) {
   if (nullptr == reg_info)
     return false;
 
   // Volatile registers are: r0..r12.
-  uint32_t regnum = reg_info->kinds[eRegisterKindDWARF];
+  uint32_t regnum = reg_info->numbers[eRegisterKindDWARF];
   if (regnum <= 12)
     return true;
 

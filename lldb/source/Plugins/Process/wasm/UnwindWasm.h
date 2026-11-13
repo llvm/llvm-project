@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_WASM_UNWINDWASM_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_WASM_UNWINDWASM_H
 
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/Unwind.h"
 #include <vector>
 
@@ -34,7 +34,7 @@ protected:
                              lldb::addr_t &pc,
                              bool &behaves_like_zeroth_frame) override;
 
-  lldb::RegisterContextSP
+  lldb::ThreadRegisterContextSP
   DoCreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
 
 private:

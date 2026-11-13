@@ -10,7 +10,7 @@
 #include "gtest/gtest.h"
 
 #include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
-#include "Register/Arch/lldb-x86-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86_64-register-enums.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
 
@@ -19,6 +19,8 @@
 #include "lldb/Symbol/UnwindPlan.h"
 #include "llvm/Testing/Support/Error.h"
 
+
+namespace reg_ids = lldb_private::registers::x86_64::id;
 using namespace lldb_private;
 using namespace lldb;
 
@@ -220,38 +222,38 @@ TEST_F(PECallFrameInfoTest, Basic_eh) {
 
   UnwindPlan::Row row;
   row.SetOffset(0);
-  row.GetCFAValue().SetIsRegisterPlusOffset(lldb_rsp_x86_64, 8);
-  row.SetRegisterLocationToIsCFAPlusOffset(lldb_rsp_x86_64, 0, true);
-  row.SetRegisterLocationToAtCFAPlusOffset(lldb_rip_x86_64, -8, true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(reg_ids::rsp, 8);
+  row.SetRegisterLocationToIsCFAPlusOffset(reg_ids::rsp, 0, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(reg_ids::rip, -8, true);
   EXPECT_EQ(*plan.GetRowAtIndex(0), row);
 
   row.SetOffset(2);
-  row.GetCFAValue().SetIsRegisterPlusOffset(lldb_rsp_x86_64, 0x10);
-  row.SetRegisterLocationToAtCFAPlusOffset(lldb_rbx_x86_64, -0x10, true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(reg_ids::rsp, 0x10);
+  row.SetRegisterLocationToAtCFAPlusOffset(reg_ids::rbx, -0x10, true);
   EXPECT_EQ(*plan.GetRowAtIndex(1), row);
 
   row.SetOffset(3);
-  row.GetCFAValue().SetIsRegisterPlusOffset(lldb_rsp_x86_64, 0x18);
-  row.SetRegisterLocationToAtCFAPlusOffset(lldb_rsi_x86_64, -0x18, true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(reg_ids::rsp, 0x18);
+  row.SetRegisterLocationToAtCFAPlusOffset(reg_ids::rsi, -0x18, true);
   EXPECT_EQ(*plan.GetRowAtIndex(2), row);
 
   row.SetOffset(4);
-  row.GetCFAValue().SetIsRegisterPlusOffset(lldb_rsp_x86_64, 0x20);
-  row.SetRegisterLocationToAtCFAPlusOffset(lldb_rdi_x86_64, -0x20, true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(reg_ids::rsp, 0x20);
+  row.SetRegisterLocationToAtCFAPlusOffset(reg_ids::rdi, -0x20, true);
   EXPECT_EQ(*plan.GetRowAtIndex(3), row);
 
   row.SetOffset(6);
-  row.GetCFAValue().SetIsRegisterPlusOffset(lldb_rsp_x86_64, 0x28);
-  row.SetRegisterLocationToAtCFAPlusOffset(lldb_r14_x86_64, -0x28, true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(reg_ids::rsp, 0x28);
+  row.SetRegisterLocationToAtCFAPlusOffset(reg_ids::r14, -0x28, true);
   EXPECT_EQ(*plan.GetRowAtIndex(4), row);
 
   row.SetOffset(8);
-  row.GetCFAValue().SetIsRegisterPlusOffset(lldb_rsp_x86_64, 0x30);
-  row.SetRegisterLocationToAtCFAPlusOffset(lldb_r15_x86_64, -0x30, true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(reg_ids::rsp, 0x30);
+  row.SetRegisterLocationToAtCFAPlusOffset(reg_ids::r15, -0x30, true);
   EXPECT_EQ(*plan.GetRowAtIndex(5), row);
 
   row.SetOffset(0xC);
-  row.GetCFAValue().SetIsRegisterPlusOffset(lldb_rsp_x86_64, 0x50);
+  row.GetCFAValue().SetIsRegisterPlusOffset(reg_ids::rsp, 0x50);
   EXPECT_EQ(*plan.GetRowAtIndex(6), row);
 }
 
@@ -264,18 +266,18 @@ TEST_F(PECallFrameInfoTest, Chained_eh) {
 
   UnwindPlan::Row row;
   row.SetOffset(0);
-  row.GetCFAValue().SetIsRegisterPlusOffset(lldb_rsp_x86_64, 0x50);
-  row.SetRegisterLocationToIsCFAPlusOffset(lldb_rsp_x86_64, 0, true);
-  row.SetRegisterLocationToAtCFAPlusOffset(lldb_rip_x86_64, -8, true);
-  row.SetRegisterLocationToAtCFAPlusOffset(lldb_rbx_x86_64, -0x10, true);
-  row.SetRegisterLocationToAtCFAPlusOffset(lldb_rsi_x86_64, -0x18, true);
-  row.SetRegisterLocationToAtCFAPlusOffset(lldb_rdi_x86_64, -0x20, true);
-  row.SetRegisterLocationToAtCFAPlusOffset(lldb_r14_x86_64, -0x28, true);
-  row.SetRegisterLocationToAtCFAPlusOffset(lldb_r15_x86_64, -0x30, true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(reg_ids::rsp, 0x50);
+  row.SetRegisterLocationToIsCFAPlusOffset(reg_ids::rsp, 0, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(reg_ids::rip, -8, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(reg_ids::rbx, -0x10, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(reg_ids::rsi, -0x18, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(reg_ids::rdi, -0x20, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(reg_ids::r14, -0x28, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(reg_ids::r15, -0x30, true);
   EXPECT_EQ(*plan.GetRowAtIndex(0), row);
 
   row.SetOffset(5);
-  row.SetRegisterLocationToAtCFAPlusOffset(lldb_rbp_x86_64, 0x18, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(reg_ids::rbp, 0x18, true);
   EXPECT_EQ(*plan.GetRowAtIndex(1), row);
 }
 
@@ -288,53 +290,53 @@ TEST_F(PECallFrameInfoTest, Frame_reg_eh) {
 
   UnwindPlan::Row row;
   row.SetOffset(0);
-  row.GetCFAValue().SetIsRegisterPlusOffset(lldb_rsp_x86_64, 8);
-  row.SetRegisterLocationToIsCFAPlusOffset(lldb_rsp_x86_64, 0, true);
-  row.SetRegisterLocationToAtCFAPlusOffset(lldb_rip_x86_64, -8, true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(reg_ids::rsp, 8);
+  row.SetRegisterLocationToIsCFAPlusOffset(reg_ids::rsp, 0, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(reg_ids::rip, -8, true);
   EXPECT_EQ(*plan.GetRowAtIndex(0), row);
 
   row.SetOffset(6);
-  row.GetCFAValue().SetIsRegisterPlusOffset(lldb_rsp_x86_64, 0x10);
-  row.SetRegisterLocationToAtCFAPlusOffset(lldb_rbp_x86_64, -0x10, true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(reg_ids::rsp, 0x10);
+  row.SetRegisterLocationToAtCFAPlusOffset(reg_ids::rbp, -0x10, true);
   EXPECT_EQ(*plan.GetRowAtIndex(1), row);
 
   row.SetOffset(8);
-  row.GetCFAValue().SetIsRegisterPlusOffset(lldb_rsp_x86_64, 0x18);
-  row.SetRegisterLocationToAtCFAPlusOffset(lldb_r12_x86_64, -0x18, true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(reg_ids::rsp, 0x18);
+  row.SetRegisterLocationToAtCFAPlusOffset(reg_ids::r12, -0x18, true);
   EXPECT_EQ(*plan.GetRowAtIndex(2), row);
 
   row.SetOffset(0xA);
-  row.GetCFAValue().SetIsRegisterPlusOffset(lldb_rsp_x86_64, 0x20);
-  row.SetRegisterLocationToAtCFAPlusOffset(lldb_r13_x86_64, -0x20, true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(reg_ids::rsp, 0x20);
+  row.SetRegisterLocationToAtCFAPlusOffset(reg_ids::r13, -0x20, true);
   EXPECT_EQ(*plan.GetRowAtIndex(3), row);
 
   row.SetOffset(0xC);
-  row.GetCFAValue().SetIsRegisterPlusOffset(lldb_rsp_x86_64, 0x28);
-  row.SetRegisterLocationToAtCFAPlusOffset(lldb_r14_x86_64, -0x28, true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(reg_ids::rsp, 0x28);
+  row.SetRegisterLocationToAtCFAPlusOffset(reg_ids::r14, -0x28, true);
   EXPECT_EQ(*plan.GetRowAtIndex(4), row);
 
   row.SetOffset(0xE);
-  row.GetCFAValue().SetIsRegisterPlusOffset(lldb_rsp_x86_64, 0x30);
-  row.SetRegisterLocationToAtCFAPlusOffset(lldb_r15_x86_64, -0x30, true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(reg_ids::rsp, 0x30);
+  row.SetRegisterLocationToAtCFAPlusOffset(reg_ids::r15, -0x30, true);
   EXPECT_EQ(*plan.GetRowAtIndex(5), row);
 
   row.SetOffset(0x15);
-  row.GetCFAValue().SetIsRegisterPlusOffset(lldb_rsp_x86_64, 0x320);
+  row.GetCFAValue().SetIsRegisterPlusOffset(reg_ids::rsp, 0x320);
   EXPECT_EQ(*plan.GetRowAtIndex(6), row);
 
   row.SetOffset(0x1A);
-  row.GetCFAValue().SetIsRegisterPlusOffset(lldb_rbp_x86_64, 0x2F0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(reg_ids::rbp, 0x2F0);
   EXPECT_EQ(*plan.GetRowAtIndex(7), row);
 
   row.SetOffset(0x21);
-  row.SetRegisterLocationToAtCFAPlusOffset(lldb_rbx_x86_64, 8, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(reg_ids::rbx, 8, true);
   EXPECT_EQ(*plan.GetRowAtIndex(8), row);
 
   row.SetOffset(0x28);
-  row.SetRegisterLocationToAtCFAPlusOffset(lldb_rsi_x86_64, 0x10, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(reg_ids::rsi, 0x10, true);
   EXPECT_EQ(*plan.GetRowAtIndex(9), row);
 
   row.SetOffset(0x2F);
-  row.SetRegisterLocationToAtCFAPlusOffset(lldb_rdi_x86_64, 0x18, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(reg_ids::rdi, 0x18, true);
   EXPECT_EQ(*plan.GetRowAtIndex(10), row);
 }

@@ -9,15 +9,16 @@
 
 #include "Plugins/ABI/AArch64/ABIMacOSX_arm64.h"
 #include "Plugins/ABI/AArch64/ABISysV_arm64.h"
-#include "Utility/ARM64_DWARF_Registers.h"
-#include "Utility/ARM64_ehframe_Registers.h"
-#include "lldb/Target/DynamicRegisterInfo.h"
+#include "lldb/Register/Arch/lldb-arm64-dwarf-register-enums.h"
+#include "lldb/Register/RegisterDefinition.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gtest/gtest.h"
 #include <vector>
 
+
+namespace dwarf_regs = lldb_private::registers::arm64::dwarf;
 using namespace lldb_private;
 using namespace lldb;
 
@@ -48,7 +49,7 @@ void ABIAArch64TestFixture::TearDownTestCase() {
 TEST_P(ABIAArch64TestFixture, AugmentRegisterInfo) {
   ABISP abi_sp = ABI::FindPlugin(ProcessSP(), ArchSpec(GetParam()));
   ASSERT_TRUE(abi_sp);
-  using Register = DynamicRegisterInfo::Register;
+  using Register = RegisterDefinition;
 
   Register pc;
   pc.name = ConstString("pc");
@@ -62,14 +63,14 @@ TEST_P(ABIAArch64TestFixture, AugmentRegisterInfo) {
   Register new_pc = regs[0];
   EXPECT_EQ(new_pc.name, pc.name);
   EXPECT_EQ(new_pc.set_name, pc.set_name);
-  EXPECT_EQ(new_pc.regnum_ehframe, arm64_ehframe::pc);
-  EXPECT_EQ(new_pc.regnum_dwarf, arm64_dwarf::pc);
+  EXPECT_EQ(new_pc.regnum_ehframe, dwarf_regs::pc);
+  EXPECT_EQ(new_pc.regnum_dwarf, dwarf_regs::pc);
 }
 
 TEST_P(ABIAArch64TestFixture, AugmentRegisterInfoThreadPointer) {
   ABISP abi_sp = ABI::FindPlugin(ProcessSP(), ArchSpec(GetParam()));
   ASSERT_TRUE(abi_sp);
-  using Register = DynamicRegisterInfo::Register;
+  using Register = RegisterDefinition;
 
   Register tpidr;
   tpidr.name = ConstString("tpidr");

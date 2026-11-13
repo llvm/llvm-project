@@ -10,9 +10,9 @@
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/ABI.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -295,12 +295,17 @@ OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
     StackFrame *frame = exe_ctx->GetFramePtr();
     llvm::StringRef reg_name = name;
     if (frame && reg_name.consume_front("$")) {
-      RegisterContextSP reg_ctx_sp = frame->GetRegisterContext();
+      ThreadRegisterContextSP reg_ctx_sp = frame->GetRegisterContext();
       if (reg_ctx_sp) {
-        const RegisterInfo *reg_info = reg_ctx_sp->GetRegisterInfoByName(reg_name);
+        const RegisterDescriptor *reg_info =
+            reg_ctx_sp->GetRegisterByName(reg_name);
         if (reg_info) {
           RegisterValue reg_val;
-          bool success = reg_ctx_sp->ReadRegister(reg_info, reg_val);
+          bool success = !llvm::errorToBool(
+              reg_ctx_sp
+                  ->ReadRegister(
+                      (reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+                  .moveInto(reg_val));
           if (success && reg_val.GetType() != RegisterValue::eTypeInvalid) {
             register_value = reg_val.GetAsUInt64(0, &success);
             if (!success)

@@ -15,13 +15,21 @@
 #define lldb_NativeRegisterContextLinux_ppc64le_h
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
-#include "Register/Arch/lldb-ppc64le-register-enums.h"
 
-#define DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
-#include "Register/Arch/RegisterInfos_ppc64le.h"
-#undef DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
+#include "lldb/Register/Arch/lldb-ppc64le-dwarf-register-enums.h"
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-types.h"
+#include "llvm/Support/Compiler.h"
+#include <cstddef>
+#include <cstdint>
+
+#include "lldb/Register/Arch/lldb-ppc64le-register-enums.h"
+
+#include "lldb/Register/Layouts/Linux/RegisterLayoutLinux_ppc64le.h"
 
 namespace lldb_private {
+
 namespace process_linux {
 
 class NativeProcessLinux;
@@ -31,17 +39,12 @@ public:
   NativeRegisterContextLinux_ppc64le(const ArchSpec &target_arch,
                                      NativeThreadProtocol &native_thread);
 
-  uint32_t GetRegisterSetCount() const override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  uint32_t GetUserRegisterCount() const override;
-
-  const RegisterSet *GetRegisterSet(uint32_t set_index) const override;
-
-  Status ReadRegister(const RegisterInfo *reg_info,
-                      RegisterValue &reg_value) override;
-
-  Status WriteRegister(const RegisterInfo *reg_info,
-                       const RegisterValue &reg_value) override;
+  llvm::Error
+  WriteRegister(lldb_private::RegisterID id,
+                const lldb_private::RegisterValue &reg_value) override;
 
   Status ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
 
@@ -87,10 +90,10 @@ protected:
   size_t GetFPRSize() override { return sizeof(m_fpr_ppc64le); }
 
 private:
-  GPR m_gpr_ppc64le; // 64-bit general purpose registers.
-  FPR m_fpr_ppc64le; // floating-point registers including extended register.
-  VMX m_vmx_ppc64le; // VMX registers.
-  VSX m_vsx_ppc64le; // Last lower bytes from first VSX registers.
+  linux_ppc64le::GPR m_gpr_ppc64le; // 64-bit general purpose registers.
+  linux_ppc64le::FPR m_fpr_ppc64le; // floating-point registers including extended register.
+  linux_ppc64le::VMX m_vmx_ppc64le; // linux_ppc64le::VMX registers.
+  linux_ppc64le::VSX m_vsx_ppc64le; // Last lower bytes from first linux_ppc64le::VSX registers.
 
   bool IsGPR(unsigned reg) const;
 
@@ -99,12 +102,6 @@ private:
   bool IsVMX(unsigned reg) const;
 
   bool IsVSX(unsigned reg) const;
-
-  uint32_t CalculateFprOffset(const RegisterInfo *reg_info) const;
-
-  uint32_t CalculateVmxOffset(const RegisterInfo *reg_info) const;
-
-  uint32_t CalculateVsxOffset(const RegisterInfo *reg_info) const;
 
   Status ReadHardwareDebugInfo();
 

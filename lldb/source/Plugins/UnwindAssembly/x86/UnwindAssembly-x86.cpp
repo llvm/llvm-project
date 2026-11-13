@@ -15,12 +15,12 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Register/RegisterNumber.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
-#include "lldb/Target/RegisterNumber.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/UnwindAssembly.h"
@@ -56,7 +56,7 @@ bool UnwindAssembly_x86::GetNonCallSiteUnwindPlanFromAssembly(
   if (process_sp->GetTarget().ReadMemory(
           func.GetBaseAddress(), function_text.data(), func.GetByteSize(),
           error) == func.GetByteSize()) {
-    RegisterContextSP reg_ctx(thread.GetRegisterContext());
+    ThreadRegisterContextSP reg_ctx(thread.GetRegisterContext());
     m_assembly_inspection_engine->Initialize(reg_ctx);
     return m_assembly_inspection_engine->GetNonCallSiteUnwindPlanFromAssembly(
         function_text.data(), func.GetByteSize(), func, unwind_plan);
@@ -78,10 +78,8 @@ bool UnwindAssembly_x86::AugmentUnwindPlanFromCallSite(
 
   wordsize = process_sp->GetTarget().GetArchitecture().GetAddressByteSize();
 
-  RegisterNumber sp_regnum(thread, eRegisterKindGeneric,
-                           LLDB_REGNUM_GENERIC_SP);
-  RegisterNumber pc_regnum(thread, eRegisterKindGeneric,
-                           LLDB_REGNUM_GENERIC_PC);
+  RegisterNumber sp_regnum(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
+  RegisterNumber pc_regnum(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
 
   // Does this UnwindPlan describe the prologue?  I want to see that the CFA is
   // set in terms of the stack pointer plus an offset, and I want to see that
@@ -91,15 +89,17 @@ bool UnwindAssembly_x86::AugmentUnwindPlanFromCallSite(
 
   if (first_row->GetCFAValue().GetValueType() !=
           UnwindPlan::Row::FAValue::isRegisterPlusOffset ||
-      RegisterNumber(thread, unwind_plan.GetRegisterKind(),
-                     first_row->GetCFAValue().GetRegisterNumber()) !=
-          sp_regnum ||
+      !RegisterNumber(unwind_plan.GetRegisterKind(),
+                      first_row->GetCFAValue().GetRegisterNumber())
+           .RefersToSameRegister(*thread.GetRegisterContext()->GetDescription(),
+                                 sp_regnum) ||
       first_row->GetCFAValue().GetOffset() != wordsize) {
     return false;
   }
   UnwindPlan::Row::AbstractRegisterLocation first_row_pc_loc;
   if (!first_row->GetRegisterInfo(
-          pc_regnum.GetAsKind(unwind_plan.GetRegisterKind()),
+          pc_regnum.GetAsKind(*thread.GetRegisterContext()->GetDescription(),
+                              unwind_plan.GetRegisterKind()),
           first_row_pc_loc) ||
       !first_row_pc_loc.IsAtCFAPlusOffset() ||
       first_row_pc_loc.GetOffset() != -wordsize) {
@@ -128,7 +128,9 @@ bool UnwindAssembly_x86::AugmentUnwindPlanFromCallSite(
 
       UnwindPlan::Row::AbstractRegisterLocation last_row_pc_loc;
       if (last_row->GetRegisterInfo(
-              pc_regnum.GetAsKind(unwind_plan.GetRegisterKind()),
+              pc_regnum.GetAsKind(
+                  *thread.GetRegisterContext()->GetDescription(),
+                  unwind_plan.GetRegisterKind()),
               last_row_pc_loc)) {
         if (last_row_pc_loc.IsAtCFAPlusOffset() &&
             first_row_pc_loc.GetOffset() == last_row_pc_loc.GetOffset()) {
@@ -157,7 +159,7 @@ bool UnwindAssembly_x86::AugmentUnwindPlanFromCallSite(
     if (process_sp->GetTarget().ReadMemory(
             func.GetBaseAddress(), function_text.data(), func.GetByteSize(),
             error) == func.GetByteSize()) {
-      RegisterContextSP reg_ctx(thread.GetRegisterContext());
+      ThreadRegisterContextSP reg_ctx(thread.GetRegisterContext());
       m_assembly_inspection_engine->Initialize(reg_ctx);
       return m_assembly_inspection_engine->AugmentUnwindPlanFromCallSite(
           function_text.data(), func.GetByteSize(), func, unwind_plan, reg_ctx);

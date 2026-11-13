@@ -34,7 +34,8 @@ public:
 
   lldb::UnwindPlanSP CreateDefaultUnwindPlan() override;
 
-  bool RegisterIsVolatile(const lldb_private::RegisterInfo *reg_info) override;
+  bool
+  RegisterIsVolatile(const lldb_private::RegisterDescriptor *reg_info) override;
 
   // The Darwin i386 ABI requires that stack frames be 16 byte aligned.
   // When there is a trap handler on the stack, e.g. _sigtramp in userland
@@ -83,7 +84,7 @@ protected:
   GetReturnValueObjectImpl(lldb_private::Thread &thread,
                            lldb_private::CompilerType &ast_type) const override;
 
-  bool RegisterIsCalleeSaved(const lldb_private::RegisterInfo *reg_info);
+  bool RegisterIsCalleeSaved(const lldb_private::RegisterDescriptor *reg_info);
 
   std::string GetMCName(std::string name) override {
     MapRegisterName(name, "stmm", "st");

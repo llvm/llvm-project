@@ -12,6 +12,7 @@ static_library("ValueObject") {
     #"//lldb/source/Symbol",
     # FIXME: 3-hop dependency cycle
     #"//lldb/source/Target",
+    "//lldb/source/Register",
     "//lldb/source/Utility",
 
     # FIXME: 3-hop dependency cycle

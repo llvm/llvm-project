@@ -9,7 +9,7 @@
 #ifndef lldb_NativeRegisterContextLinux_h
 #define lldb_NativeRegisterContextLinux_h
 
-#include "Plugins/Register/Native/NativeRegisterContextRegisterInfo.h"
+#include "lldb/Host/common/NativeRegisterContext.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/Target/MemoryTagManager.h"
 #include "llvm/Support/Error.h"
@@ -20,8 +20,7 @@ namespace process_linux {
 
 class NativeThreadLinux;
 
-class NativeRegisterContextLinux
-    : public virtual NativeRegisterContextRegisterInfo {
+class NativeRegisterContextLinux : public virtual NativeRegisterContext {
 public:
   // These static methods are implemented individual
   // NativeRegisterContextLinux_* subclasses.  The implementations can't collide
@@ -84,7 +83,7 @@ protected:
   // class initializer on abstract class (even though it is never used). It can
   // be deleted once we move to gcc>=7.0.
   NativeRegisterContextLinux(NativeThreadProtocol &thread)
-      : NativeRegisterContextRegisterInfo(thread, nullptr) {}
+      : NativeRegisterContext(thread) {}
 
   lldb::ByteOrder GetByteOrder() const;
 
@@ -109,16 +108,18 @@ protected:
 
   virtual void *GetGPRBuffer() = 0;
 
-  virtual size_t GetGPRSize() const {
-    return GetRegisterInfoInterface().GetGPRSize();
-  }
+  virtual size_t GetGPRSize() const { return GetBankSize(0); }
 
   virtual void *GetFPRBuffer() = 0;
 
   virtual size_t GetFPRSize() = 0;
 
   virtual uint32_t GetPtraceOffset(uint32_t reg_index) {
-    return GetRegisterInfoAtIndex(reg_index)->byte_offset;
+    const auto *reg = GetDescription()->Find(
+        GetRegisterAtIndex(reg_index)->name);
+    const auto *location = GetLayout().Find(reg->id);
+    assert(location && location->pieces.size() == 1);
+    return location->pieces.front().byte_offset;
   }
 
   // The Do*** functions are executed on the privileged thread and can perform

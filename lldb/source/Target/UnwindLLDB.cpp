@@ -13,7 +13,7 @@
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/RegisterContextUnwind.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -41,7 +41,7 @@ UnwindLLDB::UnwindLLDB(Thread &thread)
 
 uint32_t UnwindLLDB::DoGetFrameCount() {
   if (!m_unwind_complete) {
-//#define DEBUG_FRAME_SPEED 1
+// #define DEBUG_FRAME_SPEED 1
 #if DEBUG_FRAME_SPEED
 #define FRAME_COUNT 10000
     using namespace std::chrono;
@@ -160,15 +160,15 @@ UnwindLLDB::CursorSP UnwindLLDB::GetOneMoreFrame(ABI *abi) {
       return GetOneMoreFrame(abi);
     }
 
-    LLDB_LOGF(log, "%*sFrame %d did not get a RegisterContext, stopping.",
+    LLDB_LOGF(log, "%*sFrame %d did not get a ThreadRegisterContext, stopping.",
               cur_idx < 100 ? cur_idx : 100, "", cur_idx);
     return nullptr;
   }
 
   if (!reg_ctx_sp->IsValid()) {
-    // We failed to get a valid RegisterContext. See if the regctx below this
-    // on the stack has a fallback unwind plan it can use. Subsequent calls to
-    // TryFallbackUnwindPlan() will return false.
+    // We failed to get a valid ThreadRegisterContext. See if the regctx below
+    // this on the stack has a fallback unwind plan it can use. Subsequent calls
+    // to TryFallbackUnwindPlan() will return false.
     if (prev_frame->reg_ctx_lldb_sp->TryFallbackUnwindPlan()) {
       // TryFallbackUnwindPlan for prev_frame succeeded and updated
       // reg_ctx_lldb_sp field of prev_frame. However, cfa field of prev_frame
@@ -180,7 +180,7 @@ UnwindLLDB::CursorSP UnwindLLDB::GetOneMoreFrame(ABI *abi) {
     }
 
     LLDB_LOGF(log,
-              "%*sFrame %d invalid RegisterContext for this frame, "
+              "%*sFrame %d invalid ThreadRegisterContext for this frame, "
               "stopping stack walk",
               cur_idx < 100 ? cur_idx : 100, "", cur_idx);
     return nullptr;
@@ -434,9 +434,9 @@ bool UnwindLLDB::DoGetFrameInfoAtIndex(uint32_t idx, addr_t &cfa, addr_t &pc,
   return false;
 }
 
-lldb::RegisterContextSP
+lldb::ThreadRegisterContextSP
 UnwindLLDB::DoCreateRegisterContextForFrame(StackFrame *frame) {
-  lldb::RegisterContextSP reg_ctx_sp;
+  lldb::ThreadRegisterContextSP reg_ctx_sp;
   uint32_t idx = frame->GetConcreteFrameIndex();
 
   if (idx == 0) {
@@ -473,8 +473,7 @@ UnwindLLDB::GetRegisterContextForFrameNum(uint32_t frame_num) {
 }
 
 bool UnwindLLDB::SearchForSavedLocationForRegister(
-    uint32_t lldb_regnum,
-    lldb_private::UnwindLLDB::ConcreteRegisterLocation &regloc,
+    uint32_t lldb_regnum, lldb_private::RegisterRecoveryLocation &regloc,
     uint32_t starting_frame_num, bool pc_reg) {
   int64_t frame_num = starting_frame_num;
   if (static_cast<size_t>(frame_num) >= m_frames.size())
@@ -497,8 +496,8 @@ bool UnwindLLDB::SearchForSavedLocationForRegister(
     // We descended down to the live register context aka stack frame 0 and are
     // reading the value out of a live register.
     if (result == UnwindLLDB::RegisterSearchResult::eRegisterFound &&
-        regloc.type == UnwindLLDB::ConcreteRegisterLocation::
-                           eRegisterInLiveRegisterContext) {
+        regloc.type ==
+            RegisterRecoveryLocation::eRegisterInLiveRegisterContext) {
       return true;
     }
 
@@ -506,11 +505,10 @@ bool UnwindLLDB::SearchForSavedLocationForRegister(
     // register M in the middle of the stack (and N can equal M here, meaning
     // the register was not used in this function), then change the register
     // number we're looking for to M and keep looking for a concrete  location
-    // down the stack, or an actual value from a live RegisterContext at frame
-    // 0.
+    // down the stack, or an actual value from a live ThreadRegisterContext at
+    // frame 0.
     if (result == UnwindLLDB::RegisterSearchResult::eRegisterFound &&
-        regloc.type ==
-            UnwindLLDB::ConcreteRegisterLocation::eRegisterInRegister &&
+        regloc.type == RegisterRecoveryLocation::eRegisterInRegister &&
         frame_num > 0) {
       result = UnwindLLDB::RegisterSearchResult::eRegisterNotFound;
       lldb_regnum = regloc.location.register_number;

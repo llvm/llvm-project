@@ -19,12 +19,12 @@ using namespace lldb_private;
 
 RegisterContextThreadMemory::RegisterContextThreadMemory(
     Thread &thread, lldb::addr_t register_data_addr)
-    : RegisterContext(thread, 0), m_thread_wp(thread.shared_from_this()),
+    : ThreadRegisterContext(thread, 0), m_thread_wp(thread.shared_from_this()),
       m_reg_ctx_sp(), m_register_data_addr(register_data_addr), m_stop_id(0) {}
 
 RegisterContextThreadMemory::~RegisterContextThreadMemory() = default;
 
-void RegisterContextThreadMemory::UpdateRegisterContext() {
+void RegisterContextThreadMemory::UpdateRegisterContext() const {
   std::lock_guard<std::mutex> lock(m_update_register_ctx_lock);
 
   ThreadSP thread_sp(m_thread_wp.lock());
@@ -63,49 +63,21 @@ void RegisterContextThreadMemory::InvalidateAllRegisters() {
     m_reg_ctx_sp->InvalidateAllRegisters();
 }
 
-size_t RegisterContextThreadMemory::GetRegisterCount() {
+llvm::Expected<RegisterValue>
+RegisterContextThreadMemory::ReadRegister(RegisterID id) {
   UpdateRegisterContext();
-  if (m_reg_ctx_sp)
-    return m_reg_ctx_sp->GetRegisterCount();
-  return 0;
+  if (!m_reg_ctx_sp)
+    return llvm::createStringError("thread register source is unavailable");
+  return m_reg_ctx_sp->ReadRegister(id);
 }
 
-const RegisterInfo *
-RegisterContextThreadMemory::GetRegisterInfoAtIndex(size_t reg) {
+llvm::Error
+RegisterContextThreadMemory::WriteRegister(RegisterID id,
+                                           const RegisterValue &reg_value) {
   UpdateRegisterContext();
-  if (m_reg_ctx_sp)
-    return m_reg_ctx_sp->GetRegisterInfoAtIndex(reg);
-  return nullptr;
-}
-
-size_t RegisterContextThreadMemory::GetRegisterSetCount() {
-  UpdateRegisterContext();
-  if (m_reg_ctx_sp)
-    return m_reg_ctx_sp->GetRegisterSetCount();
-  return 0;
-}
-
-const RegisterSet *RegisterContextThreadMemory::GetRegisterSet(size_t reg_set) {
-  UpdateRegisterContext();
-  if (m_reg_ctx_sp)
-    return m_reg_ctx_sp->GetRegisterSet(reg_set);
-  return nullptr;
-}
-
-bool RegisterContextThreadMemory::ReadRegister(const RegisterInfo *reg_info,
-                                               RegisterValue &reg_value) {
-  UpdateRegisterContext();
-  if (m_reg_ctx_sp)
-    return m_reg_ctx_sp->ReadRegister(reg_info, reg_value);
-  return false;
-}
-
-bool RegisterContextThreadMemory::WriteRegister(
-    const RegisterInfo *reg_info, const RegisterValue &reg_value) {
-  UpdateRegisterContext();
-  if (m_reg_ctx_sp)
-    return m_reg_ctx_sp->WriteRegister(reg_info, reg_value);
-  return false;
+  if (!m_reg_ctx_sp)
+    return llvm::createStringError("thread register source is unavailable");
+  return m_reg_ctx_sp->WriteRegister(id, reg_value);
 }
 
 bool RegisterContextThreadMemory::ReadAllRegisterValues(
@@ -116,12 +88,29 @@ bool RegisterContextThreadMemory::ReadAllRegisterValues(
   return false;
 }
 
-bool RegisterContextThreadMemory::ReadAllRegisterValues(
-    lldb_private::RegisterCheckpoint &reg_checkpoint) {
+llvm::Expected<RegisterCheckpoint>
+RegisterContextThreadMemory::SaveCheckpoint() {
   UpdateRegisterContext();
-  if (m_reg_ctx_sp)
-    return m_reg_ctx_sp->ReadAllRegisterValues(reg_checkpoint);
-  return false;
+  if (!m_reg_ctx_sp)
+    return llvm::createStringError("thread register source is unavailable");
+  auto saved = m_reg_ctx_sp->SaveCheckpoint();
+  if (!saved)
+    return saved.takeError();
+  auto checkpoint = std::make_shared<RegisterCheckpoint>(std::move(*saved));
+  return CreateCheckpoint(
+      [source = std::static_pointer_cast<RegisterContextThreadMemory>(
+           shared_from_this()),
+       checkpoint, backing = m_reg_ctx_sp]() -> llvm::Error {
+        auto &context = *source;
+        context.UpdateRegisterContext();
+        if (!context.m_reg_ctx_sp)
+          return llvm::createStringError(
+              "thread register source is unavailable");
+        if (auto error = context.m_reg_ctx_sp->RestoreCheckpoint(*checkpoint))
+          return error;
+        context.m_reg_ctx_sp = backing;
+        return llvm::Error::success();
+      });
 }
 
 bool RegisterContextThreadMemory::WriteAllRegisterValues(
@@ -132,28 +121,12 @@ bool RegisterContextThreadMemory::WriteAllRegisterValues(
   return false;
 }
 
-bool RegisterContextThreadMemory::WriteAllRegisterValues(
-    const lldb_private::RegisterCheckpoint &reg_checkpoint) {
-  UpdateRegisterContext();
-  if (m_reg_ctx_sp)
-    return m_reg_ctx_sp->WriteAllRegisterValues(reg_checkpoint);
-  return false;
-}
-
 bool RegisterContextThreadMemory::CopyFromRegisterContext(
-    lldb::RegisterContextSP reg_ctx_sp) {
+    lldb::ThreadRegisterContextSP reg_ctx_sp) {
   UpdateRegisterContext();
   if (m_reg_ctx_sp)
     return m_reg_ctx_sp->CopyFromRegisterContext(reg_ctx_sp);
   return false;
-}
-
-uint32_t RegisterContextThreadMemory::ConvertRegisterKindToRegisterNumber(
-    lldb::RegisterKind kind, uint32_t num) {
-  UpdateRegisterContext();
-  if (m_reg_ctx_sp)
-    return m_reg_ctx_sp->ConvertRegisterKindToRegisterNumber(kind, num);
-  return LLDB_INVALID_REGNUM;
 }
 
 uint32_t RegisterContextThreadMemory::NumSupportedHardwareBreakpoints() {
@@ -210,7 +183,7 @@ bool RegisterContextThreadMemory::HardwareSingleStep(bool enable) {
 }
 
 Status RegisterContextThreadMemory::ReadRegisterValueFromMemory(
-    const lldb_private::RegisterInfo *reg_info, lldb::addr_t src_addr,
+    const lldb_private::RegisterDescriptor *reg_info, lldb::addr_t src_addr,
     uint32_t src_len, RegisterValue &reg_value) {
   UpdateRegisterContext();
   if (m_reg_ctx_sp)
@@ -220,11 +193,17 @@ Status RegisterContextThreadMemory::ReadRegisterValueFromMemory(
 }
 
 Status RegisterContextThreadMemory::WriteRegisterValueToMemory(
-    const lldb_private::RegisterInfo *reg_info, lldb::addr_t dst_addr,
+    const lldb_private::RegisterDescriptor *reg_info, lldb::addr_t dst_addr,
     uint32_t dst_len, const RegisterValue &reg_value) {
   UpdateRegisterContext();
   if (m_reg_ctx_sp)
     return m_reg_ctx_sp->WriteRegisterValueToMemory(reg_info, dst_addr, dst_len,
                                                     reg_value);
   return Status::FromErrorString("invalid register context");
+}
+
+std::shared_ptr<const RegisterDescription>
+RegisterContextThreadMemory::GetDescription() const {
+  UpdateRegisterContext();
+  return m_reg_ctx_sp ? m_reg_ctx_sp->GetDescription() : nullptr;
 }

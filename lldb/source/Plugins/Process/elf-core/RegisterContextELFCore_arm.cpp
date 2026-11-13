@@ -9,64 +9,43 @@
 #include "RegisterContextELFCore_arm.h"
 
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 
 #include <memory>
 
 using namespace lldb_private;
 
 RegisterContextELFCore_arm::RegisterContextELFCore_arm(
-    Thread &thread, std::unique_ptr<RegisterInfo_arm> register_info,
-    const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
-    : RegisterContextCore_arm(thread, std::move(register_info)) {
+    Thread &thread, RegisterLayout layout, const DataExtractor &gpregset,
+    llvm::ArrayRef<CoreNote> notes)
+    : ThreadRegisterContext(thread, 0, std::move(layout)) {
   m_gpr_buffer = std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
                                                   gpregset.GetByteSize());
   m_gpr.SetData(m_gpr_buffer);
   m_gpr.SetByteOrder(gpregset.GetByteOrder());
 
-  const llvm::Triple &target_triple =
-      m_register_info_up->GetTargetArchitecture().GetTriple();
+  const llvm::Triple &target_triple = GetTargetArchitecture().GetTriple();
   m_fpr = getRegset(notes, target_triple, ARM_VFP_Desc);
 }
 
 RegisterContextELFCore_arm::~RegisterContextELFCore_arm() = default;
 
-bool RegisterContextELFCore_arm::ReadGPR() { return true; }
-
-bool RegisterContextELFCore_arm::ReadFPR() { return false; }
-
-bool RegisterContextELFCore_arm::WriteGPR() {
-  assert(0);
-  return false;
-}
-
-bool RegisterContextELFCore_arm::WriteFPR() {
-  assert(0);
-  return false;
-}
-
-bool RegisterContextELFCore_arm::ReadRegister(const RegisterInfo *reg_info,
-                                                RegisterValue &value) {
-  const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
-  if (reg == LLDB_INVALID_REGNUM)
-    return false;
-
-  if (IsGPR(reg)) {
-    lldb::offset_t offset = reg_info->byte_offset;
-    if (m_gpr.ValidOffsetForDataOfSize(offset, reg_info->byte_size)) {
-      value = m_gpr.GetMaxU64(&offset, reg_info->byte_size);
-      return offset == reg_info->byte_offset + reg_info->byte_size;
-    }
-  } else if (IsFPR(reg)) {
-    assert(reg_info->byte_offset >= GetGPRSize());
-    lldb::offset_t offset = reg_info->byte_offset - GetGPRSize();
-    if (m_fpr.ValidOffsetForDataOfSize(offset, reg_info->byte_size))
-      return value
-          .SetValueFromData(*reg_info, m_fpr, offset, /*partial_data_ok=*/false)
-          .Success();
-  }
-
-  return false;
+llvm::Expected<RegisterValue>
+RegisterContextELFCore_arm::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
+  RegisterValue value;
+  if (!reg_info)
+    return llvm::createStringError("register value is unavailable");
+  const auto *reg = GetDescription()->Find(reg_info->id);
+  if (!reg)
+    return llvm::createStringError("register value is unavailable");
+  auto result = ReadBankRegister(
+      reg->id, {{0, {m_gpr.GetDataStart(), m_gpr.GetByteSize()}},
+                {1, {m_fpr.GetDataStart(), m_fpr.GetByteSize()}}});
+  return result;
 }
 
 bool RegisterContextELFCore_arm::ReadAllRegisterValues(
@@ -74,9 +53,10 @@ bool RegisterContextELFCore_arm::ReadAllRegisterValues(
   return false;
 }
 
-bool RegisterContextELFCore_arm::WriteRegister(const RegisterInfo *reg_info,
+llvm::Error
+RegisterContextELFCore_arm::WriteRegister(RegisterID id,
                                                  const RegisterValue &value) {
-  return false;
+  return llvm::createStringError("register write is unavailable");
 }
 
 bool RegisterContextELFCore_arm::WriteAllRegisterValues(

@@ -20,6 +20,7 @@
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -33,7 +34,7 @@
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/StopInfo.h"
@@ -45,7 +46,6 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
@@ -75,7 +75,7 @@ namespace lldb_private {
 class ScriptInterpreter;
 }
 namespace lldb_private {
-struct RegisterInfo;
+struct RegisterDescriptor;
 }
 
 using namespace lldb;
@@ -652,17 +652,21 @@ static bool DumpFile(Stream &s, const FileSpec &file, FileKind file_kind) {
 static bool DumpRegister(Stream &s, StackFrame *frame, RegisterKind reg_kind,
                          uint32_t reg_num, Format format) {
   if (frame) {
-    RegisterContext *reg_ctx = frame->GetRegisterContext().get();
+    ThreadRegisterContext *reg_ctx = frame->GetRegisterContext().get();
 
     if (reg_ctx) {
       const uint32_t lldb_reg_num =
-          reg_ctx->ConvertRegisterKindToRegisterNumber(reg_kind, reg_num);
+          reg_ctx->GetRegisterIDForNumber(reg_kind, reg_num);
       if (lldb_reg_num != LLDB_INVALID_REGNUM) {
-        const RegisterInfo *reg_info =
-            reg_ctx->GetRegisterInfoAtIndex(lldb_reg_num);
+        const RegisterDescriptor *reg_info =
+            reg_ctx->GetDescription()->Find(lldb_reg_num);
         if (reg_info) {
           RegisterValue reg_value;
-          if (reg_ctx->ReadRegister(reg_info, reg_value)) {
+          if (!llvm::errorToBool(
+                  reg_ctx
+                      ->ReadRegister(
+                          (reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+                      .moveInto(reg_value))) {
             DumpRegisterValue(reg_value, s, *reg_info, false, false, format);
             return true;
           }
@@ -1080,13 +1084,18 @@ bool FormatEntity::Formatter::DumpValue(Stream &s,
 static bool DumpRegister(Stream &s, StackFrame *frame, const char *reg_name,
                          Format format) {
   if (frame) {
-    RegisterContext *reg_ctx = frame->GetRegisterContext().get();
+    ThreadRegisterContext *reg_ctx = frame->GetRegisterContext().get();
 
     if (reg_ctx) {
-      const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(reg_name);
+      const RegisterDescriptor *reg_info =
+          reg_ctx->GetRegisterByName(reg_name);
       if (reg_info) {
         RegisterValue reg_value;
-        if (reg_ctx->ReadRegister(reg_info, reg_value)) {
+        if (!llvm::errorToBool(
+                reg_ctx
+                    ->ReadRegister(
+                        (reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+                    .moveInto(reg_value))) {
           DumpRegisterValue(reg_value, s, *reg_info, false, false, format);
           return true;
         }
@@ -2049,7 +2058,7 @@ bool FormatEntity::Formatter::Format(const Entry &entry, Stream &s,
 
   case Entry::Type::CurrentPCArrow:
     if (m_addr && m_exe_ctx && m_exe_ctx->GetFramePtr()) {
-      RegisterContextSP reg_ctx =
+      ThreadRegisterContextSP reg_ctx =
           m_exe_ctx->GetFramePtr()->GetRegisterContextSP();
       if (reg_ctx) {
         addr_t pc_loadaddr = reg_ctx->GetPC();

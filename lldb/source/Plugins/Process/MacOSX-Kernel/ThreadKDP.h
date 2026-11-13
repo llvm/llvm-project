@@ -28,9 +28,9 @@ public:
 
   const char *GetQueueName() override;
 
-  lldb::RegisterContextSP GetRegisterContext() override;
+  lldb::ThreadRegisterContextSP GetRegisterContext() override;
 
-  lldb::RegisterContextSP
+  lldb::ThreadRegisterContextSP
   CreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
 
   void Dump(lldb_private::Log *log, uint32_t index);

@@ -6,45 +6,62 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <set>
+#include "lldb/Register/Arch/lldb-x86_64-register-enums.h"
+
 #include "RegisterContextFreeBSDKernelCore_x86_64.h"
 
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "llvm/Support/Endian.h"
 
 #if defined(__FreeBSD__) && defined(__amd64__)
 #include <machine/pcb.h>
 #endif
 
+
+namespace reg_ids = lldb_private::registers::x86_64::id;
 using namespace lldb;
 using namespace lldb_private;
 
 RegisterContextFreeBSDKernelCore_x86_64::
-    RegisterContextFreeBSDKernelCore_x86_64(
-        Thread &thread, RegisterInfoInterface *register_info,
-        lldb::addr_t pcb_addr)
-    : RegisterContextCore_x86(thread, 0, register_info), m_pcb_addr(pcb_addr) {
+    RegisterContextFreeBSDKernelCore_x86_64(Thread &thread,
+                                            RegisterLayout layout,
+                                            lldb::addr_t pcb_addr)
+    : ThreadRegisterContext(thread, 0, std::move(layout)),
+      m_pcb_addr(pcb_addr) {
+
+  const size_t group_count = [&]() -> size_t { return 2; }();
+  auto previous = GetDescription();
+  auto selected = previous->GetGroups().take_front(group_count);
+  std::vector<RegisterGroup> groups(selected.begin(), selected.end());
+  std::set<RegisterID> visible;
+  for (const auto &group : groups)
+    visible.insert(group.registers.begin(), group.registers.end());
+  std::vector<RegisterID> order;
+  for (RegisterID id : previous->GetUserRegisters())
+    if (visible.count(id))
+      order.push_back(id);
+  auto description = llvm::cantFail(RegisterDescription::Create(
+      {previous->GetRegisters().begin(), previous->GetRegisters().end()},
+      std::move(groups),
+      {previous->GetOwnedTypes().begin(), previous->GetOwnedTypes().end()}));
+  auto presentation = llvm::cantFail(description.WithUserRegisters(order));
+  SetRegisterLayout(llvm::cantFail(RegisterLayout::Create(
+      std::make_shared<RegisterDescription>(std::move(presentation)),
+      GetLayout())));
 }
 
-bool RegisterContextFreeBSDKernelCore_x86_64::ReadGPR() { return true; }
-
-bool RegisterContextFreeBSDKernelCore_x86_64::ReadFPR() { return true; }
-
-bool RegisterContextFreeBSDKernelCore_x86_64::WriteGPR() {
-  assert(0);
-  return false;
-}
-
-bool RegisterContextFreeBSDKernelCore_x86_64::WriteFPR() {
-  assert(0);
-  return false;
-}
-
-bool RegisterContextFreeBSDKernelCore_x86_64::ReadRegister(
-    const RegisterInfo *reg_info, RegisterValue &value) {
+llvm::Expected<RegisterValue>
+RegisterContextFreeBSDKernelCore_x86_64::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
+  RegisterValue value;
   if (m_pcb_addr == LLDB_INVALID_ADDRESS)
-    return false;
+    return llvm::createStringError("register value is unavailable");
 
   // https://cgit.freebsd.org/src/tree/sys/amd64/include/pcb.h
   struct {
@@ -76,12 +93,12 @@ bool RegisterContextFreeBSDKernelCore_x86_64::ReadRegister(
   size_t rd =
       m_thread.GetProcess()->ReadMemory(m_pcb_addr, &pcb, sizeof(pcb), error);
   if (rd != sizeof(pcb))
-    return false;
+    return llvm::createStringError("register value is unavailable");
 
-  uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
+  uint32_t reg = reg_info->numbers[lldb::eRegisterKindLLDB];
   switch (reg) {
 #define REG(x)                                                                 \
-  case lldb_##x##_x86_64:                                                      \
+  case reg_ids::x:                                                             \
     value = pcb.x;                                                             \
     break;
 
@@ -94,20 +111,20 @@ bool RegisterContextFreeBSDKernelCore_x86_64::ReadRegister(
     REG(rbx);
     REG(rip);
 #undef REG
-  case lldb_cs_x86_64:
+  case reg_ids::cs:
     value.SetUInt(CODE_SEL, reg_info->byte_size);
     break;
-  case lldb_ss_x86_64:
+  case reg_ids::ss:
     value.SetUInt(DATA_SEL, reg_info->byte_size);
     break;
   default:
-    return false;
+    return llvm::createStringError("register value is unavailable");
   }
 
-  return true;
+  return value;
 }
 
-bool RegisterContextFreeBSDKernelCore_x86_64::WriteRegister(
-    const RegisterInfo *reg_info, const RegisterValue &value) {
-  return false;
+llvm::Error RegisterContextFreeBSDKernelCore_x86_64::WriteRegister(
+    RegisterID id, const RegisterValue &value) {
+  return llvm::createStringError("register write is unavailable");
 }

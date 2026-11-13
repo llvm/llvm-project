@@ -7,19 +7,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "ABISysV_ppc64.h"
+#include "lldb/Register/RegisterDescription.h"
+
+#include "lldb/Register/Arch/lldb-ppc64-register-enums.h"
+#include "lldb/Register/Arch/lldb-ppc64le-register-enums.h"
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-types.h"
+#include "llvm/Support/Compiler.h"
+#include <cstddef>
+#include <cstdint>
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/TargetParser/Triple.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-#include "Utility/PPC64LE_DWARF_Registers.h"
-#include "Utility/PPC64_DWARF_Registers.h"
+#include "lldb/Register/Arch/lldb-ppc64le-dwarf-register-enums.h"
+#include "lldb/Register/Arch/lldb-ppc64-dwarf-register-enums.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -27,7 +37,7 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectMemory.h"
@@ -37,29 +47,26 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 
-#define DECLARE_REGISTER_INFOS_PPC64_STRUCT
-#include "Register/Arch/RegisterInfos_ppc64.h"
-#undef DECLARE_REGISTER_INFOS_PPC64_STRUCT
+using namespace lldb_private;
 
-#define DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
-#include "Register/Arch/RegisterInfos_ppc64le.h"
-#undef DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
+#include "lldb/Register/Common/RegisterInfo_ppc64.h"
+#include "lldb/Register/Common/RegisterInfo_ppc64le.h"
 #include <optional>
 
 using namespace lldb;
-using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(ABISysV_ppc64)
 
-const lldb_private::RegisterInfo *
+const lldb_private::RegisterDescriptor *
 ABISysV_ppc64::GetRegisterInfoArray(uint32_t &count) {
-  if (GetByteOrder() == lldb::eByteOrderLittle) {
-    count = std::size(g_register_infos_ppc64le);
-    return g_register_infos_ppc64le;
-  } else {
-    count = std::size(g_register_infos_ppc64);
-    return g_register_infos_ppc64;
-  }
+  static const auto big = RegisterInfo_ppc64::CreateDescription(
+      ArchSpec("powerpc64-unknown-unknown"));
+  static const auto little = RegisterInfo_ppc64le::CreateDescription(
+      ArchSpec("powerpc64le-unknown-unknown"));
+  const auto &description =
+      GetByteOrder() == lldb::eByteOrderLittle ? little : big;
+  count = description->GetRegisters().size();
+  return description->GetRegisters().data();
 }
 
 size_t ABISysV_ppc64::GetRedZoneSize() const { return 224; }
@@ -99,21 +106,22 @@ bool ABISysV_ppc64::PrepareTrivialCall(Thread &thread, addr_t sp,
     log->PutString(s.GetString());
   }
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
     return false;
 
-  const RegisterInfo *reg_info = nullptr;
+  const RegisterDescriptor *reg_info = nullptr;
 
   if (args.size() > 8) // TODO handle more than 8 arguments
     return false;
 
   for (size_t i = 0; i < args.size(); ++i) {
-    reg_info = reg_ctx->GetRegisterInfo(eRegisterKindGeneric,
+    reg_info = reg_ctx->GetRegisterByNumber(eRegisterKindGeneric,
                                         LLDB_REGNUM_GENERIC_ARG1 + i);
     LLDB_LOGF(log, "About to write arg%" PRIu64 " (0x%" PRIx64 ") into %s",
-              static_cast<uint64_t>(i + 1), args[i], reg_info->name);
-    if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, args[i]))
+              static_cast<uint64_t>(i + 1), args[i], reg_info->name.c_str());
+    if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+            (reg_info ? reg_info->id : LLDB_INVALID_REGNUM), args[i])))
       return false;
   }
 
@@ -128,15 +136,17 @@ bool ABISysV_ppc64::PrepareTrivialCall(Thread &thread, addr_t sp,
 
   Status error;
   uint64_t reg_value;
-  const RegisterInfo *pc_reg_info =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
-  const RegisterInfo *sp_reg_info =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
+  const RegisterDescriptor *pc_reg_info =
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
+  const RegisterDescriptor *sp_reg_info =
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
   ProcessSP process_sp(thread.GetProcess());
-  const RegisterInfo *lr_reg_info =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_RA);
-  const RegisterInfo *r2_reg_info = reg_ctx->GetRegisterInfoAtIndex(2);
-  const RegisterInfo *r12_reg_info = reg_ctx->GetRegisterInfoAtIndex(12);
+  const RegisterDescriptor *lr_reg_info =
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_RA);
+  const RegisterDescriptor *r2_reg_info =
+      reg_ctx->GetRegisterByNumber(eRegisterKindDWARF, 2);
+  const RegisterDescriptor *r12_reg_info =
+      reg_ctx->GetRegisterByNumber(eRegisterKindDWARF, 12);
 
   // Save return address onto the stack.
   LLDB_LOGF(log,
@@ -148,16 +158,19 @@ bool ABISysV_ppc64::PrepareTrivialCall(Thread &thread, addr_t sp,
 
   // Write the return address to link register.
   LLDB_LOGF(log, "Writing LR: 0x%" PRIx64, (uint64_t)return_addr);
-  if (!reg_ctx->WriteRegisterFromUnsigned(lr_reg_info, return_addr))
+  if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+          (lr_reg_info ? lr_reg_info->id : LLDB_INVALID_REGNUM), return_addr)))
     return false;
 
   // Write target address to %r12 register.
   LLDB_LOGF(log, "Writing R12: 0x%" PRIx64, (uint64_t)func_addr);
-  if (!reg_ctx->WriteRegisterFromUnsigned(r12_reg_info, func_addr))
+  if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+          (r12_reg_info ? r12_reg_info->id : LLDB_INVALID_REGNUM), func_addr)))
     return false;
 
   // Read TOC pointer value.
-  reg_value = reg_ctx->ReadRegisterAsUnsigned(r2_reg_info, 0);
+  reg_value = reg_ctx->ReadRegisterAsUnsigned(
+      (r2_reg_info ? r2_reg_info->id : LLDB_INVALID_REGNUM), 0);
 
   // Write TOC pointer onto the stack.
   uint64_t stack_offset;
@@ -173,7 +186,8 @@ bool ABISysV_ppc64::PrepareTrivialCall(Thread &thread, addr_t sp,
     return false;
 
   // Read the current SP value.
-  reg_value = reg_ctx->ReadRegisterAsUnsigned(sp_reg_info, 0);
+  reg_value = reg_ctx->ReadRegisterAsUnsigned(
+      (sp_reg_info ? sp_reg_info->id : LLDB_INVALID_REGNUM), 0);
 
   // Save current SP onto the stack.
   LLDB_LOGF(log, "Writing SP at SP(0x%" PRIx64 ")+0: 0x%" PRIx64, (uint64_t)sp,
@@ -184,14 +198,16 @@ bool ABISysV_ppc64::PrepareTrivialCall(Thread &thread, addr_t sp,
   // %r1 is set to the actual stack value.
   LLDB_LOGF(log, "Writing SP: 0x%" PRIx64, (uint64_t)sp);
 
-  if (!reg_ctx->WriteRegisterFromUnsigned(sp_reg_info, sp))
+  if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+          (sp_reg_info ? sp_reg_info->id : LLDB_INVALID_REGNUM), sp)))
     return false;
 
   // %pc is set to the address of the called function.
 
   LLDB_LOGF(log, "Writing IP: 0x%" PRIx64, (uint64_t)func_addr);
 
-  if (!reg_ctx->WriteRegisterFromUnsigned(pc_reg_info, func_addr))
+  if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+          (pc_reg_info ? pc_reg_info->id : LLDB_INVALID_REGNUM), func_addr)))
     return false;
 
   return true;
@@ -230,7 +246,7 @@ bool ABISysV_ppc64::GetArgumentValues(Thread &thread, ValueList &values) const {
 
   // Extract the register context so we can read arguments from registers
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
 
   if (!reg_ctx)
     return false;
@@ -256,9 +272,9 @@ bool ABISysV_ppc64::GetArgumentValues(Thread &thread, ValueList &values) const {
   for (size_t i = 0; i < 8; ++i) {
     argument_register_ids[i] =
         reg_ctx
-            ->GetRegisterInfo(eRegisterKindGeneric,
+            ->GetRegisterByNumber(eRegisterKindGeneric,
                               LLDB_REGNUM_GENERIC_ARG1 + i)
-            ->kinds[eRegisterKindLLDB];
+            ->id;
   }
 
   unsigned int current_argument_register = 0;
@@ -310,12 +326,13 @@ Status ABISysV_ppc64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
 
   bool is_signed;
 
-  RegisterContext *reg_ctx = thread->GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread->GetRegisterContext().get();
 
   bool set_it_simple = false;
   if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||
       compiler_type.IsPointerType()) {
-    const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName("r3", 0);
+    const RegisterDescriptor *reg_info =
+        reg_ctx->GetRegisterByName("r3", 0);
 
     DataExtractor data;
     Status data_error;
@@ -330,7 +347,8 @@ Status ABISysV_ppc64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
     if (num_bytes <= 8) {
       uint64_t raw_value = data.GetMaxU64(&offset, num_bytes);
 
-      if (reg_ctx->WriteRegisterFromUnsigned(reg_info, raw_value))
+      if (!llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+              (reg_info ? reg_info->id : LLDB_INVALID_REGNUM), raw_value)))
         set_it_simple = true;
     } else {
       error = Status::FromErrorString(
@@ -404,19 +422,19 @@ class ReturnValueExtractor {
     // main constructor
     //
     // offs - field offset in struct
-    Register(Type ty, uint32_t index, uint32_t offs, RegisterContext *reg_ctx,
+    Register(Type ty, uint32_t index, uint32_t offs, ThreadRegisterContext *reg_ctx,
              ByteOrder byte_order)
         : m_index(index), m_offs(offs % sizeof(uint64_t)),
           m_avail(sizeof(uint64_t) - m_offs), m_type(ty), m_reg_ctx(reg_ctx),
           m_byte_order(byte_order) {}
 
     // explicit index, no offset
-    Register(Type ty, uint32_t index, RegisterContext *reg_ctx,
+    Register(Type ty, uint32_t index, ThreadRegisterContext *reg_ctx,
              ByteOrder byte_order)
         : Register(ty, index, 0, reg_ctx, byte_order) {}
 
     // GPR, calculate index from offs
-    Register(uint32_t offs, RegisterContext *reg_ctx, ByteOrder byte_order)
+    Register(uint32_t offs, ThreadRegisterContext *reg_ctx, ByteOrder byte_order)
         : Register(GPR, offs / sizeof(uint64_t), offs, reg_ctx, byte_order) {}
 
     uint32_t Index() const { return m_index; }
@@ -445,22 +463,26 @@ class ReturnValueExtractor {
 
     // get raw register data
     bool GetRawData(uint64_t &raw_data) {
-      const RegisterInfo *reg_info =
-          m_reg_ctx->GetRegisterInfoByName(GetName());
+      const RegisterDescriptor *reg_info =
+          m_reg_ctx->GetRegisterByName(GetName());
       if (!reg_info) {
-        LLDB_LOG(m_log, LOG_PREFIX "Failed to get RegisterInfo");
+        LLDB_LOG(m_log, LOG_PREFIX "Failed to get RegisterDescriptor");
         return false;
       }
 
       RegisterValue reg_val;
-      if (!m_reg_ctx->ReadRegister(reg_info, reg_val)) {
+      if (llvm::errorToBool(m_reg_ctx
+                                ->ReadRegister((reg_info ? reg_info->id
+                                                         : LLDB_INVALID_REGNUM))
+                                .moveInto(reg_val))) {
         LLDB_LOG(m_log, LOG_PREFIX "ReadRegister() failed");
         return false;
       }
 
       Status error;
-      uint32_t rc = reg_val.GetAsMemoryData(
-          *reg_info, &raw_data, sizeof(raw_data), m_byte_order, error);
+      uint32_t rc = reg_val.GetAsMemoryData(reg_info->byte_size, &raw_data,
+                                            sizeof(raw_data), m_byte_order,
+                                            error, reg_info->name);
       if (rc != sizeof(raw_data)) {
         LLDB_LOG(m_log, LOG_PREFIX "GetAsMemoryData() failed");
         return false;
@@ -474,7 +496,7 @@ class ReturnValueExtractor {
     uint32_t m_offs;
     uint32_t m_avail;
     Type m_type;
-    RegisterContext *m_reg_ctx;
+    ThreadRegisterContext *m_reg_ctx;
     ByteOrder m_byte_order;
     Log *m_log = GetLog(LLDBLog::Expressions);
   };
@@ -495,10 +517,10 @@ public:
   // factory
   static llvm::Expected<ReturnValueExtractor> Create(Thread &thread,
                                                      CompilerType &type) {
-    RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+    ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
     if (!reg_ctx)
       return llvm::createStringError(LOG_PREFIX
-                                     "Failed to get RegisterContext");
+                                     "Failed to get ThreadRegisterContext");
 
     ProcessSP process_sp = thread.GetProcess();
     if (!process_sp)
@@ -551,7 +573,7 @@ private:
   int32_t m_dst_offs = 0;
   bool m_packed = false;
   Log *m_log = GetLog(LLDBLog::Expressions);
-  RegisterContext *m_reg_ctx;
+  ThreadRegisterContext *m_reg_ctx;
   ProcessSP m_process_sp;
   ByteOrder m_byte_order;
   uint32_t m_addr_size;
@@ -560,7 +582,7 @@ private:
 
   // constructor
   ReturnValueExtractor(Thread &thread, CompilerType &type,
-                       RegisterContext *reg_ctx, ProcessSP process_sp)
+                       ThreadRegisterContext *reg_ctx, ProcessSP process_sp)
       : m_thread(thread), m_type(type),
         m_byte_size(
             llvm::expectedToOptional(m_type.GetByteSize(&thread)).value_or(0)),
@@ -685,10 +707,10 @@ private:
     const uint32_t MAX_VRS = 2;
 
     // get first V register used to return values
-    const RegisterInfo *vr[MAX_VRS];
-    vr[0] = m_reg_ctx->GetRegisterInfoByName("vr2");
+    const RegisterDescriptor *vr[MAX_VRS];
+    vr[0] = m_reg_ctx->GetRegisterByName("vr2");
     if (!vr[0]) {
-      LLDB_LOG(m_log, LOG_PREFIX "Failed to get vr2 RegisterInfo");
+      LLDB_LOG(m_log, LOG_PREFIX "Failed to get vr2 RegisterDescriptor");
       return ValueObjectSP();
     }
 
@@ -704,9 +726,9 @@ private:
     // load vr3, if needed
     if (m_byte_size > vr_size) {
       vrs++;
-      vr[1] = m_reg_ctx->GetRegisterInfoByName("vr3");
+      vr[1] = m_reg_ctx->GetRegisterByName("vr3");
       if (!vr[1]) {
-        LLDB_LOG(m_log, LOG_PREFIX "Failed to get vr3 RegisterInfo");
+        LLDB_LOG(m_log, LOG_PREFIX "Failed to get vr3 RegisterDescriptor");
         return ValueObjectSP();
       }
     }
@@ -720,12 +742,15 @@ private:
         new DataBufferHeap(vrs * vr_size, 0));
 
     for (uint32_t i = 0; i < vrs; i++) {
-      if (!m_reg_ctx->ReadRegister(vr[i], vr_val[i])) {
+      if (llvm::errorToBool(
+              m_reg_ctx->ReadRegister((vr[i] ? vr[i]->id : LLDB_INVALID_REGNUM))
+                  .moveInto(vr_val[i]))) {
         LLDB_LOG(m_log, LOG_PREFIX "Failed to read vector register contents");
         return ValueObjectSP();
       }
-      if (!vr_val[i].GetAsMemoryData(*vr[i], vr_data->GetBytes() + i * vr_size,
-                                     vr_size, m_byte_order, error)) {
+      if (!vr_val[i].GetAsMemoryData((vr[i])->byte_size,
+                                     vr_data->GetBytes() + i * vr_size, vr_size,
+                                     m_byte_order, error, (vr[i])->name)) {
         LLDB_LOG(m_log, LOG_PREFIX "Failed to extract vector register bytes");
         return ValueObjectSP();
       }
@@ -957,13 +982,13 @@ UnwindPlanSP ABISysV_ppc64::CreateFunctionEntryUnwindPlan() {
   uint32_t pc_reg_num;
 
   if (GetByteOrder() == lldb::eByteOrderLittle) {
-    lr_reg_num = ppc64le_dwarf::dwarf_lr_ppc64le;
-    sp_reg_num = ppc64le_dwarf::dwarf_r1_ppc64le;
-    pc_reg_num = ppc64le_dwarf::dwarf_pc_ppc64le;
+    lr_reg_num = registers::ppc64le::dwarf::lr;
+    sp_reg_num = registers::ppc64le::dwarf::r1;
+    pc_reg_num = registers::ppc64le::dwarf::pc;
   } else {
-    lr_reg_num = ppc64_dwarf::dwarf_lr_ppc64;
-    sp_reg_num = ppc64_dwarf::dwarf_r1_ppc64;
-    pc_reg_num = ppc64_dwarf::dwarf_pc_ppc64;
+    lr_reg_num = registers::ppc64::dwarf::lr;
+    sp_reg_num = registers::ppc64::dwarf::r1;
+    pc_reg_num = registers::ppc64::dwarf::pc;
   }
 
   UnwindPlan::Row row;
@@ -987,13 +1012,13 @@ UnwindPlanSP ABISysV_ppc64::CreateDefaultUnwindPlan() {
   uint32_t cr_reg_num;
 
   if (GetByteOrder() == lldb::eByteOrderLittle) {
-    sp_reg_num = ppc64le_dwarf::dwarf_r1_ppc64le;
-    pc_reg_num = ppc64le_dwarf::dwarf_lr_ppc64le;
-    cr_reg_num = ppc64le_dwarf::dwarf_cr_ppc64le;
+    sp_reg_num = registers::ppc64le::dwarf::r1;
+    pc_reg_num = registers::ppc64le::dwarf::lr;
+    cr_reg_num = registers::ppc64le::dwarf::cr;
   } else {
-    sp_reg_num = ppc64_dwarf::dwarf_r1_ppc64;
-    pc_reg_num = ppc64_dwarf::dwarf_lr_ppc64;
-    cr_reg_num = ppc64_dwarf::dwarf_cr_ppc64;
+    sp_reg_num = registers::ppc64::dwarf::r1;
+    pc_reg_num = registers::ppc64::dwarf::lr;
+    cr_reg_num = registers::ppc64::dwarf::cr;
   }
 
   UnwindPlan::Row row;
@@ -1015,7 +1040,7 @@ UnwindPlanSP ABISysV_ppc64::CreateDefaultUnwindPlan() {
   return plan_sp;
 }
 
-bool ABISysV_ppc64::RegisterIsVolatile(const RegisterInfo *reg_info) {
+bool ABISysV_ppc64::RegisterIsVolatile(const RegisterDescriptor *reg_info) {
   return !RegisterIsCalleeSaved(reg_info);
 }
 
@@ -1024,7 +1049,7 @@ bool ABISysV_ppc64::RegisterIsVolatile(const RegisterInfo *reg_info) {
 // "64-bit PowerPC ELF Application Binary Interface Supplement" current version
 // is 2 released 2015 at
 // https://members.openpowerfoundation.org/document/dl/576
-bool ABISysV_ppc64::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
+bool ABISysV_ppc64::RegisterIsCalleeSaved(const RegisterDescriptor *reg_info) {
   if (reg_info) {
     // Preserved registers are :
     //    r1,r2,r13-r31
@@ -1033,7 +1058,7 @@ bool ABISysV_ppc64::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
     //    v20-v31 (not yet)
     //    vrsave (not yet)
 
-    const char *name = reg_info->name;
+    const char *name = reg_info->name.c_str();
     if (name[0] == 'r') {
       if ((name[1] == '1' || name[1] == '2') && name[2] == '\0')
         return true;

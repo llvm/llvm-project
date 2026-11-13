@@ -26,21 +26,15 @@ public:
   virtual ~RegisterContextWindows_x64();
 
   // Subclasses must override these functions
-  size_t GetRegisterCount() override;
 
-  const RegisterInfo *GetRegisterInfoAtIndex(size_t reg) override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  size_t GetRegisterSetCount() override;
-
-  const RegisterSet *GetRegisterSet(size_t reg_set) override;
-
-  bool ReadRegister(const RegisterInfo *reg_info,
-                    RegisterValue &reg_value) override;
-
-  bool WriteRegister(const RegisterInfo *reg_info,
-                     const RegisterValue &reg_value) override;
+  llvm::Error
+  WriteRegister(lldb_private::RegisterID id,
+                const lldb_private::RegisterValue &reg_value) override;
 };
-}
+} // namespace lldb_private
 
 #endif // defined(__x86_64__) || defined(_M_X64)
 

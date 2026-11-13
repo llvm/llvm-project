@@ -14,11 +14,11 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Register/RegisterDescription.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/RegisterInfo.h"
-#include "lldb/Utility/RegisterType.h"
-#include "lldb/Utility/RegisterTypeFlags.h"
+#include "lldb/Register/RegisterType.h"
+#include "lldb/Register/RegisterTypeFlags.h"
 #include "gtest/gtest.h"
 
 #include <mutex>
@@ -49,12 +49,12 @@ protected:
 
   void TearDown() override { Target::SetDefaultArchitecture(m_default_arch); }
 
-  static RegisterInfo MakeRegisterInfo(const RegisterType &type,
+  static RegisterDescriptor MakeRegisterInfo(const RegisterType &type,
                                        uint32_t byte_size) {
-    RegisterInfo info{};
+    RegisterDescriptor info{};
     info.name = "test";
     info.byte_size = byte_size;
-    info.register_type = &type;
+    info.type = &type;
     return info;
   }
 
@@ -66,7 +66,7 @@ TEST_F(RegisterTypeBuilderClangTest, ReusesCachedType) {
   Target &target = m_debugger_sp->GetDummyTarget();
   RegisterTypeFlags flags("flags", 4,
                           {RegisterTypeFlags::Field("field", 0, 31)});
-  RegisterInfo info = MakeRegisterInfo(flags, 4);
+  RegisterDescriptor info = MakeRegisterInfo(flags, 4);
   RegisterTypeBuilderClang builder(target);
 
   CompilerType first = builder.GetRegisterType(info);
@@ -147,7 +147,7 @@ TEST_F(RegisterTypeBuilderClangTest, DistinguishesReusedObjectAddresses) {
 TEST_F(RegisterTypeBuilderClangTest, CacheFollowsScratchTypeSystem) {
   Target &target = m_debugger_sp->GetDummyTarget();
   RegisterTypeEnum type("enum", {{0, "zero"}, {1, "one"}});
-  RegisterInfo info = MakeRegisterInfo(type, 4);
+  RegisterDescriptor info = MakeRegisterInfo(type, 4);
   RegisterTypeBuilderClang builder(target);
 
   CompilerType first = builder.GetRegisterType(info);

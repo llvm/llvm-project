@@ -10,7 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_SCRIPTED_SCRIPTEDFRAME_H
 
 #include "ScriptedThread.h"
-#include "lldb/Target/DynamicRegisterInfo.h"
+#include "lldb/Register/RegisterDefinition.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/Support/Error.h"
@@ -61,7 +61,7 @@ public:
   const char *GetFunctionName() override;
   const char *GetDisplayFunctionName() override;
 
-  lldb::RegisterContextSP GetRegisterContext() override;
+  lldb::ThreadRegisterContextSP GetRegisterContext() override;
 
   VariableList *GetVariableList(bool get_file_globals,
                                 bool include_synthetic_vars,
@@ -93,7 +93,7 @@ public:
 private:
   void CheckInterpreterAndScriptObject() const;
   lldb::ScriptedFrameInterfaceSP GetInterface() const;
-  llvm::Expected<lldb::RegisterContextSP> CreateRegisterContext();
+  llvm::Expected<lldb::ThreadRegisterContextSP> CreateRegisterContext();
 
   // Populate m_variable_list_sp from the scripted frame interface. The boolean
   // controls if we should try to fabricate Variable objects for each of the
@@ -105,7 +105,7 @@ private:
   ScriptedFrame(const ScriptedFrame &) = delete;
   const ScriptedFrame &operator=(const ScriptedFrame &) = delete;
 
-  llvm::Expected<lldb::DynamicRegisterInfoSP> GetDynamicRegisterInfo();
+  llvm::Expected<std::shared_ptr<const RegisterLayout>> GetRegisterLayout();
 
   lldb::ScriptedFrameInterfaceSP m_scripted_frame_interface_sp;
   lldb_private::StructuredData::GenericSP m_script_object_sp;

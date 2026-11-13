@@ -14,7 +14,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -115,13 +115,13 @@ void ScriptedThread::WillResume(StateType resume_state) {}
 
 void ScriptedThread::ClearStackFrames() { Thread::ClearStackFrames(); }
 
-RegisterContextSP ScriptedThread::GetRegisterContext() {
+ThreadRegisterContextSP ScriptedThread::GetRegisterContext() {
   if (!m_reg_context_sp)
     m_reg_context_sp = CreateRegisterContextForFrame(nullptr);
   return m_reg_context_sp;
 }
 
-RegisterContextSP
+ThreadRegisterContextSP
 ScriptedThread::CreateRegisterContextForFrame(StackFrame *frame) {
   const uint32_t concrete_frame_idx =
       frame ? frame->GetConcreteFrameIndex() : 0;
@@ -129,12 +129,12 @@ ScriptedThread::CreateRegisterContextForFrame(StackFrame *frame) {
   if (concrete_frame_idx)
     return GetUnwinder().CreateRegisterContextForFrame(frame);
 
-  lldb::RegisterContextSP reg_ctx_sp;
+  lldb::ThreadRegisterContextSP reg_ctx_sp;
   Status error;
 
   std::optional<std::string> reg_data = GetInterface()->GetRegisterContext();
   if (!reg_data)
-    return ScriptedInterface::ErrorWithMessage<lldb::RegisterContextSP>(
+    return ScriptedInterface::ErrorWithMessage<lldb::ThreadRegisterContextSP>(
         LLVM_PRETTY_FUNCTION, "Failed to get scripted thread registers data.",
         error, LLDBLog::Thread);
 
@@ -142,13 +142,13 @@ ScriptedThread::CreateRegisterContextForFrame(StackFrame *frame) {
       std::make_shared<DataBufferHeap>(reg_data->c_str(), reg_data->size()));
 
   if (!data_sp->GetByteSize())
-    return ScriptedInterface::ErrorWithMessage<lldb::RegisterContextSP>(
+    return ScriptedInterface::ErrorWithMessage<lldb::ThreadRegisterContextSP>(
         LLVM_PRETTY_FUNCTION, "Failed to copy raw registers data.", error,
         LLDBLog::Thread);
 
-  DynamicRegisterInfoSP register_info_sp = GetDynamicRegisterInfo();
+  std::shared_ptr<const RegisterLayout> register_info_sp = GetRegisterLayout();
   if (!register_info_sp)
-    return ScriptedInterface::ErrorWithMessage<lldb::RegisterContextSP>(
+    return ScriptedInterface::ErrorWithMessage<lldb::ThreadRegisterContextSP>(
         LLVM_PRETTY_FUNCTION,
         "Failed to create scripted thread registers info.", error,
         LLDBLog::Thread);
@@ -157,7 +157,7 @@ ScriptedThread::CreateRegisterContextForFrame(StackFrame *frame) {
       std::make_shared<RegisterContextMemory>(
           *this, 0, std::move(register_info_sp), LLDB_INVALID_ADDRESS);
   if (!reg_ctx_memory)
-    return ScriptedInterface::ErrorWithMessage<lldb::RegisterContextSP>(
+    return ScriptedInterface::ErrorWithMessage<lldb::ThreadRegisterContextSP>(
         LLVM_PRETTY_FUNCTION, "Failed to create a register context.", error,
         LLDBLog::Thread);
 
@@ -327,7 +327,7 @@ bool ScriptedThread::CalculateStopInfo() {
   // If we're at a BreakpointSite, mark that we stopped there and
   // need to hit the breakpoint when we resume.  This will be cleared
   // if we CreateStopReasonWithBreakpointSiteID.
-  if (RegisterContextSP reg_ctx_sp = GetRegisterContext()) {
+  if (ThreadRegisterContextSP reg_ctx_sp = GetRegisterContext()) {
     addr_t pc = reg_ctx_sp->GetPC();
     ProcessSP proc = GetProcess();
     if (BreakpointSiteSP bp_site_sp =
@@ -443,18 +443,19 @@ lldb::ScriptedThreadInterfaceSP ScriptedThread::GetInterface() const {
   return m_scripted_thread_interface_sp;
 }
 
-DynamicRegisterInfoSP ScriptedThread::GetDynamicRegisterInfo() {
+std::shared_ptr<const RegisterLayout> ScriptedThread::GetRegisterLayout() {
   CheckInterpreterAndScriptObject();
 
   StructuredData::DictionarySP reg_info = GetInterface()->GetRegisterInfo();
 
   Status error;
   if (!reg_info)
-    return ScriptedInterface::ErrorWithMessage<DynamicRegisterInfoSP>(
+    return ScriptedInterface::ErrorWithMessage<
+        std::shared_ptr<const RegisterLayout>>(
         LLVM_PRETTY_FUNCTION, "Failed to get scripted thread registers info.",
         error, LLDBLog::Thread);
 
-  return DynamicRegisterInfo::Create(
+  return CreateRegisterImageLayout(
       *reg_info, m_scripted_process.GetTarget().GetArchitecture());
 }
 

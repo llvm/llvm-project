@@ -8,6 +8,7 @@ add_lldb_library(lldbPluginInstructionARM PLUGIN
     lldbCore
     lldbHost
     lldbInterpreter
+    lldbRegister
     lldbSymbol
     lldbTarget
     lldbPluginProcessUtility

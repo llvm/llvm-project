@@ -11,6 +11,7 @@ add_lldb_library(lldbPluginInstructionMIPS PLUGIN
     ${mips_target}
   LINK_LIBS
     lldbCore
+    lldbRegister
     lldbSymbol
     lldbTarget
     lldbPluginProcessUtility

@@ -13,8 +13,8 @@
 
 #if LLDB_ENABLE_PYTHON
 
-#include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/OperatingSystem.h"
+#include "lldb/Register/RegisterDefinition.h"
 #include "lldb/Utility/StructuredData.h"
 
 namespace lldb_private {
@@ -50,7 +50,7 @@ public:
 
   void ThreadWasSelected(lldb_private::Thread *thread) override;
 
-  lldb::RegisterContextSP
+  lldb::ThreadRegisterContextSP
   CreateRegisterContextForThread(lldb_private::Thread *thread,
                                  lldb::addr_t reg_data_addr) override;
 
@@ -73,7 +73,7 @@ protected:
       lldb_private::ThreadList &old_thread_list,
       std::vector<bool> &core_used_map, bool *did_create_ptr);
 
-  lldb::DynamicRegisterInfoSP GetDynamicRegisterInfo();
+  std::shared_ptr<const lldb_private::RegisterLayout> GetRegisterLayout();
 
   lldb::ValueObjectSP m_thread_list_valobj_sp;
   lldb_private::ScriptInterpreter *m_interpreter = nullptr;

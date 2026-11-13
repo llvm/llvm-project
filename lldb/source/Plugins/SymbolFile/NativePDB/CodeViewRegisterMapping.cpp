@@ -10,8 +10,9 @@
 
 #include "lldb/lldb-defines.h"
 
-#include "Register/Arch/lldb-arm64-register-enums.h"
-#include "Register/Arch/lldb-x86-register-enums.h"
+#include "lldb/Register/Arch/lldb-arm64-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86_64-register-enums.h"
 
 using namespace lldb_private;
 
@@ -20,222 +21,222 @@ static const uint32_t g_code_view_to_lldb_registers_arm64[] = {
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-    gpr_w0_arm64,  // ARM64_W0, 10)
-    gpr_w1_arm64,  // ARM64_W1, 11)
-    gpr_w2_arm64,  // ARM64_W2, 12)
-    gpr_w3_arm64,  // ARM64_W3, 13)
-    gpr_w4_arm64,  // ARM64_W4, 14)
-    gpr_w5_arm64,  // ARM64_W5, 15)
-    gpr_w6_arm64,  // ARM64_W6, 16)
-    gpr_w7_arm64,  // ARM64_W7, 17)
-    gpr_w8_arm64,  // ARM64_W8, 18)
-    gpr_w9_arm64,  // ARM64_W9, 19)
-    gpr_w10_arm64, // ARM64_W10, 20)
-    gpr_w11_arm64, // ARM64_W11, 21)
-    gpr_w12_arm64, // ARM64_W12, 22)
-    gpr_w13_arm64, // ARM64_W13, 23)
-    gpr_w14_arm64, // ARM64_W14, 24)
-    gpr_w15_arm64, // ARM64_W15, 25)
-    gpr_w16_arm64, // ARM64_W16, 26)
-    gpr_w17_arm64, // ARM64_W17, 27)
-    gpr_w18_arm64, // ARM64_W18, 28)
-    gpr_w19_arm64, // ARM64_W19, 29)
-    gpr_w20_arm64, // ARM64_W20, 30)
-    gpr_w21_arm64, // ARM64_W21, 31)
-    gpr_w22_arm64, // ARM64_W22, 32)
-    gpr_w23_arm64, // ARM64_W23, 33)
-    gpr_w24_arm64, // ARM64_W24, 34)
-    gpr_w25_arm64, // ARM64_W25, 35)
-    gpr_w26_arm64, // ARM64_W26, 36)
-    gpr_w27_arm64, // ARM64_W27, 37)
-    gpr_w28_arm64, // ARM64_W28, 38)
+    registers::arm64::id::gpr_w0,  // ARM64_W0, 10)
+    registers::arm64::id::gpr_w1,  // ARM64_W1, 11)
+    registers::arm64::id::gpr_w2,  // ARM64_W2, 12)
+    registers::arm64::id::gpr_w3,  // ARM64_W3, 13)
+    registers::arm64::id::gpr_w4,  // ARM64_W4, 14)
+    registers::arm64::id::gpr_w5,  // ARM64_W5, 15)
+    registers::arm64::id::gpr_w6,  // ARM64_W6, 16)
+    registers::arm64::id::gpr_w7,  // ARM64_W7, 17)
+    registers::arm64::id::gpr_w8,  // ARM64_W8, 18)
+    registers::arm64::id::gpr_w9,  // ARM64_W9, 19)
+    registers::arm64::id::gpr_w10, // ARM64_W10, 20)
+    registers::arm64::id::gpr_w11, // ARM64_W11, 21)
+    registers::arm64::id::gpr_w12, // ARM64_W12, 22)
+    registers::arm64::id::gpr_w13, // ARM64_W13, 23)
+    registers::arm64::id::gpr_w14, // ARM64_W14, 24)
+    registers::arm64::id::gpr_w15, // ARM64_W15, 25)
+    registers::arm64::id::gpr_w16, // ARM64_W16, 26)
+    registers::arm64::id::gpr_w17, // ARM64_W17, 27)
+    registers::arm64::id::gpr_w18, // ARM64_W18, 28)
+    registers::arm64::id::gpr_w19, // ARM64_W19, 29)
+    registers::arm64::id::gpr_w20, // ARM64_W20, 30)
+    registers::arm64::id::gpr_w21, // ARM64_W21, 31)
+    registers::arm64::id::gpr_w22, // ARM64_W22, 32)
+    registers::arm64::id::gpr_w23, // ARM64_W23, 33)
+    registers::arm64::id::gpr_w24, // ARM64_W24, 34)
+    registers::arm64::id::gpr_w25, // ARM64_W25, 35)
+    registers::arm64::id::gpr_w26, // ARM64_W26, 36)
+    registers::arm64::id::gpr_w27, // ARM64_W27, 37)
+    registers::arm64::id::gpr_w28, // ARM64_W28, 38)
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-    gpr_x0_arm64,  // ARM64_X0, 50)
-    gpr_x1_arm64,  // ARM64_X1, 51)
-    gpr_x2_arm64,  // ARM64_X2, 52)
-    gpr_x3_arm64,  // ARM64_X3, 53)
-    gpr_x4_arm64,  // ARM64_X4, 54)
-    gpr_x5_arm64,  // ARM64_X5, 55)
-    gpr_x6_arm64,  // ARM64_X6, 56)
-    gpr_x7_arm64,  // ARM64_X7, 57)
-    gpr_x8_arm64,  // ARM64_X8, 58)
-    gpr_x9_arm64,  // ARM64_X9, 59)
-    gpr_x10_arm64, // ARM64_X10, 60)
-    gpr_x11_arm64, // ARM64_X11, 61)
-    gpr_x12_arm64, // ARM64_X12, 62)
-    gpr_x13_arm64, // ARM64_X13, 63)
-    gpr_x14_arm64, // ARM64_X14, 64)
-    gpr_x15_arm64, // ARM64_X15, 65)
-    gpr_x16_arm64, // ARM64_X16, 66)
-    gpr_x17_arm64, // ARM64_X17, 67)
-    gpr_x18_arm64, // ARM64_X18, 68)
-    gpr_x19_arm64, // ARM64_X19, 69)
-    gpr_x20_arm64, // ARM64_X20, 70)
-    gpr_x21_arm64, // ARM64_X21, 71)
-    gpr_x22_arm64, // ARM64_X22, 72)
-    gpr_x23_arm64, // ARM64_X23, 73)
-    gpr_x24_arm64, // ARM64_X24, 74)
-    gpr_x25_arm64, // ARM64_X25, 75)
-    gpr_x26_arm64, // ARM64_X26, 76)
-    gpr_x27_arm64, // ARM64_X27, 77)
-    gpr_x28_arm64, // ARM64_X28, 78)
-    gpr_fp_arm64,  // ARM64_FP, 79)
-    gpr_lr_arm64,  // ARM64_LR, 80)
-    gpr_sp_arm64,  // ARM64_SP, 81)
+    registers::arm64::id::gpr_x0,  // ARM64_X0, 50)
+    registers::arm64::id::gpr_x1,  // ARM64_X1, 51)
+    registers::arm64::id::gpr_x2,  // ARM64_X2, 52)
+    registers::arm64::id::gpr_x3,  // ARM64_X3, 53)
+    registers::arm64::id::gpr_x4,  // ARM64_X4, 54)
+    registers::arm64::id::gpr_x5,  // ARM64_X5, 55)
+    registers::arm64::id::gpr_x6,  // ARM64_X6, 56)
+    registers::arm64::id::gpr_x7,  // ARM64_X7, 57)
+    registers::arm64::id::gpr_x8,  // ARM64_X8, 58)
+    registers::arm64::id::gpr_x9,  // ARM64_X9, 59)
+    registers::arm64::id::gpr_x10, // ARM64_X10, 60)
+    registers::arm64::id::gpr_x11, // ARM64_X11, 61)
+    registers::arm64::id::gpr_x12, // ARM64_X12, 62)
+    registers::arm64::id::gpr_x13, // ARM64_X13, 63)
+    registers::arm64::id::gpr_x14, // ARM64_X14, 64)
+    registers::arm64::id::gpr_x15, // ARM64_X15, 65)
+    registers::arm64::id::gpr_x16, // ARM64_X16, 66)
+    registers::arm64::id::gpr_x17, // ARM64_X17, 67)
+    registers::arm64::id::gpr_x18, // ARM64_X18, 68)
+    registers::arm64::id::gpr_x19, // ARM64_X19, 69)
+    registers::arm64::id::gpr_x20, // ARM64_X20, 70)
+    registers::arm64::id::gpr_x21, // ARM64_X21, 71)
+    registers::arm64::id::gpr_x22, // ARM64_X22, 72)
+    registers::arm64::id::gpr_x23, // ARM64_X23, 73)
+    registers::arm64::id::gpr_x24, // ARM64_X24, 74)
+    registers::arm64::id::gpr_x25, // ARM64_X25, 75)
+    registers::arm64::id::gpr_x26, // ARM64_X26, 76)
+    registers::arm64::id::gpr_x27, // ARM64_X27, 77)
+    registers::arm64::id::gpr_x28, // ARM64_X28, 78)
+    registers::arm64::id::gpr_fp,  // ARM64_FP, 79)
+    registers::arm64::id::gpr_lr,  // ARM64_LR, 80)
+    registers::arm64::id::gpr_sp,  // ARM64_SP, 81)
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-    gpr_cpsr_arm64, // ARM64_NZCV, 90)
+    registers::arm64::id::gpr_cpsr, // ARM64_NZCV, 90)
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-    fpu_s0_arm64,  // (ARM64_S0, 100)
-    fpu_s1_arm64,  // (ARM64_S1, 101)
-    fpu_s2_arm64,  // (ARM64_S2, 102)
-    fpu_s3_arm64,  // (ARM64_S3, 103)
-    fpu_s4_arm64,  // (ARM64_S4, 104)
-    fpu_s5_arm64,  // (ARM64_S5, 105)
-    fpu_s6_arm64,  // (ARM64_S6, 106)
-    fpu_s7_arm64,  // (ARM64_S7, 107)
-    fpu_s8_arm64,  // (ARM64_S8, 108)
-    fpu_s9_arm64,  // (ARM64_S9, 109)
-    fpu_s10_arm64, // (ARM64_S10, 110)
-    fpu_s11_arm64, // (ARM64_S11, 111)
-    fpu_s12_arm64, // (ARM64_S12, 112)
-    fpu_s13_arm64, // (ARM64_S13, 113)
-    fpu_s14_arm64, // (ARM64_S14, 114)
-    fpu_s15_arm64, // (ARM64_S15, 115)
-    fpu_s16_arm64, // (ARM64_S16, 116)
-    fpu_s17_arm64, // (ARM64_S17, 117)
-    fpu_s18_arm64, // (ARM64_S18, 118)
-    fpu_s19_arm64, // (ARM64_S19, 119)
-    fpu_s20_arm64, // (ARM64_S20, 120)
-    fpu_s21_arm64, // (ARM64_S21, 121)
-    fpu_s22_arm64, // (ARM64_S22, 122)
-    fpu_s23_arm64, // (ARM64_S23, 123)
-    fpu_s24_arm64, // (ARM64_S24, 124)
-    fpu_s25_arm64, // (ARM64_S25, 125)
-    fpu_s26_arm64, // (ARM64_S26, 126)
-    fpu_s27_arm64, // (ARM64_S27, 127)
-    fpu_s28_arm64, // (ARM64_S28, 128)
-    fpu_s29_arm64, // (ARM64_S29, 129)
-    fpu_s30_arm64, // (ARM64_S30, 130)
-    fpu_s31_arm64, // (ARM64_S31, 131)
-    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-    fpu_d0_arm64,  // (ARM64_D0, 140)
-    fpu_d1_arm64,  // (ARM64_D1, 141)
-    fpu_d2_arm64,  // (ARM64_D2, 142)
-    fpu_d3_arm64,  // (ARM64_D3, 143)
-    fpu_d4_arm64,  // (ARM64_D4, 144)
-    fpu_d5_arm64,  // (ARM64_D5, 145)
-    fpu_d6_arm64,  // (ARM64_D6, 146)
-    fpu_d7_arm64,  // (ARM64_D7, 147)
-    fpu_d8_arm64,  // (ARM64_D8, 148)
-    fpu_d9_arm64,  // (ARM64_D9, 149)
-    fpu_d10_arm64, // (ARM64_D10, 150)
-    fpu_d11_arm64, // (ARM64_D11, 151)
-    fpu_d12_arm64, // (ARM64_D12, 152)
-    fpu_d13_arm64, // (ARM64_D13, 153)
-    fpu_d14_arm64, // (ARM64_D14, 154)
-    fpu_d15_arm64, // (ARM64_D15, 155)
-    fpu_d16_arm64, // (ARM64_D16, 156)
-    fpu_d17_arm64, // (ARM64_D17, 157)
-    fpu_d18_arm64, // (ARM64_D18, 158)
-    fpu_d19_arm64, // (ARM64_D19, 159)
-    fpu_d20_arm64, // (ARM64_D20, 160)
-    fpu_d21_arm64, // (ARM64_D21, 161)
-    fpu_d22_arm64, // (ARM64_D22, 162)
-    fpu_d23_arm64, // (ARM64_D23, 163)
-    fpu_d24_arm64, // (ARM64_D24, 164)
-    fpu_d25_arm64, // (ARM64_D25, 165)
-    fpu_d26_arm64, // (ARM64_D26, 166)
-    fpu_d27_arm64, // (ARM64_D27, 167)
-    fpu_d28_arm64, // (ARM64_D28, 168)
-    fpu_d29_arm64, // (ARM64_D29, 169)
-    fpu_d30_arm64, // (ARM64_D30, 170)
-    fpu_d31_arm64, // (ARM64_D31, 171)
+    registers::arm64::id::fpu_s0,  // (ARM64_S0, 100)
+    registers::arm64::id::fpu_s1,  // (ARM64_S1, 101)
+    registers::arm64::id::fpu_s2,  // (ARM64_S2, 102)
+    registers::arm64::id::fpu_s3,  // (ARM64_S3, 103)
+    registers::arm64::id::fpu_s4,  // (ARM64_S4, 104)
+    registers::arm64::id::fpu_s5,  // (ARM64_S5, 105)
+    registers::arm64::id::fpu_s6,  // (ARM64_S6, 106)
+    registers::arm64::id::fpu_s7,  // (ARM64_S7, 107)
+    registers::arm64::id::fpu_s8,  // (ARM64_S8, 108)
+    registers::arm64::id::fpu_s9,  // (ARM64_S9, 109)
+    registers::arm64::id::fpu_s10, // (ARM64_S10, 110)
+    registers::arm64::id::fpu_s11, // (ARM64_S11, 111)
+    registers::arm64::id::fpu_s12, // (ARM64_S12, 112)
+    registers::arm64::id::fpu_s13, // (ARM64_S13, 113)
+    registers::arm64::id::fpu_s14, // (ARM64_S14, 114)
+    registers::arm64::id::fpu_s15, // (ARM64_S15, 115)
+    registers::arm64::id::fpu_s16, // (ARM64_S16, 116)
+    registers::arm64::id::fpu_s17, // (ARM64_S17, 117)
+    registers::arm64::id::fpu_s18, // (ARM64_S18, 118)
+    registers::arm64::id::fpu_s19, // (ARM64_S19, 119)
+    registers::arm64::id::fpu_s20, // (ARM64_S20, 120)
+    registers::arm64::id::fpu_s21, // (ARM64_S21, 121)
+    registers::arm64::id::fpu_s22, // (ARM64_S22, 122)
+    registers::arm64::id::fpu_s23, // (ARM64_S23, 123)
+    registers::arm64::id::fpu_s24, // (ARM64_S24, 124)
+    registers::arm64::id::fpu_s25, // (ARM64_S25, 125)
+    registers::arm64::id::fpu_s26, // (ARM64_S26, 126)
+    registers::arm64::id::fpu_s27, // (ARM64_S27, 127)
+    registers::arm64::id::fpu_s28, // (ARM64_S28, 128)
+    registers::arm64::id::fpu_s29, // (ARM64_S29, 129)
+    registers::arm64::id::fpu_s30, // (ARM64_S30, 130)
+    registers::arm64::id::fpu_s31, // (ARM64_S31, 131)
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-    fpu_v0_arm64,  // (ARM64_Q0, 180)
-    fpu_v1_arm64,  // (ARM64_Q1, 181)
-    fpu_v2_arm64,  // (ARM64_Q2, 182)
-    fpu_v3_arm64,  // (ARM64_Q3, 183)
-    fpu_v4_arm64,  // (ARM64_Q4, 184)
-    fpu_v5_arm64,  // (ARM64_Q5, 185)
-    fpu_v6_arm64,  // (ARM64_Q6, 186)
-    fpu_v7_arm64,  // (ARM64_Q7, 187)
-    fpu_v8_arm64,  // (ARM64_Q8, 188)
-    fpu_v9_arm64,  // (ARM64_Q9, 189)
-    fpu_v10_arm64, // (ARM64_Q10, 190)
-    fpu_v11_arm64, // (ARM64_Q11, 191)
-    fpu_v12_arm64, // (ARM64_Q12, 192)
-    fpu_v13_arm64, // (ARM64_Q13, 193)
-    fpu_v14_arm64, // (ARM64_Q14, 194)
-    fpu_v15_arm64, // (ARM64_Q15, 195)
-    fpu_v16_arm64, // (ARM64_Q16, 196)
-    fpu_v17_arm64, // (ARM64_Q17, 197)
-    fpu_v18_arm64, // (ARM64_Q18, 198)
-    fpu_v19_arm64, // (ARM64_Q19, 199)
-    fpu_v20_arm64, // (ARM64_Q20, 200)
-    fpu_v21_arm64, // (ARM64_Q21, 201)
-    fpu_v22_arm64, // (ARM64_Q22, 202)
-    fpu_v23_arm64, // (ARM64_Q23, 203)
-    fpu_v24_arm64, // (ARM64_Q24, 204)
-    fpu_v25_arm64, // (ARM64_Q25, 205)
-    fpu_v26_arm64, // (ARM64_Q26, 206)
-    fpu_v27_arm64, // (ARM64_Q27, 207)
-    fpu_v28_arm64, // (ARM64_Q28, 208)
-    fpu_v29_arm64, // (ARM64_Q29, 209)
-    fpu_v30_arm64, // (ARM64_Q30, 210)
-    fpu_v31_arm64, // (ARM64_Q31, 211)
+    registers::arm64::id::fpu_d0,  // (ARM64_D0, 140)
+    registers::arm64::id::fpu_d1,  // (ARM64_D1, 141)
+    registers::arm64::id::fpu_d2,  // (ARM64_D2, 142)
+    registers::arm64::id::fpu_d3,  // (ARM64_D3, 143)
+    registers::arm64::id::fpu_d4,  // (ARM64_D4, 144)
+    registers::arm64::id::fpu_d5,  // (ARM64_D5, 145)
+    registers::arm64::id::fpu_d6,  // (ARM64_D6, 146)
+    registers::arm64::id::fpu_d7,  // (ARM64_D7, 147)
+    registers::arm64::id::fpu_d8,  // (ARM64_D8, 148)
+    registers::arm64::id::fpu_d9,  // (ARM64_D9, 149)
+    registers::arm64::id::fpu_d10, // (ARM64_D10, 150)
+    registers::arm64::id::fpu_d11, // (ARM64_D11, 151)
+    registers::arm64::id::fpu_d12, // (ARM64_D12, 152)
+    registers::arm64::id::fpu_d13, // (ARM64_D13, 153)
+    registers::arm64::id::fpu_d14, // (ARM64_D14, 154)
+    registers::arm64::id::fpu_d15, // (ARM64_D15, 155)
+    registers::arm64::id::fpu_d16, // (ARM64_D16, 156)
+    registers::arm64::id::fpu_d17, // (ARM64_D17, 157)
+    registers::arm64::id::fpu_d18, // (ARM64_D18, 158)
+    registers::arm64::id::fpu_d19, // (ARM64_D19, 159)
+    registers::arm64::id::fpu_d20, // (ARM64_D20, 160)
+    registers::arm64::id::fpu_d21, // (ARM64_D21, 161)
+    registers::arm64::id::fpu_d22, // (ARM64_D22, 162)
+    registers::arm64::id::fpu_d23, // (ARM64_D23, 163)
+    registers::arm64::id::fpu_d24, // (ARM64_D24, 164)
+    registers::arm64::id::fpu_d25, // (ARM64_D25, 165)
+    registers::arm64::id::fpu_d26, // (ARM64_D26, 166)
+    registers::arm64::id::fpu_d27, // (ARM64_D27, 167)
+    registers::arm64::id::fpu_d28, // (ARM64_D28, 168)
+    registers::arm64::id::fpu_d29, // (ARM64_D29, 169)
+    registers::arm64::id::fpu_d30, // (ARM64_D30, 170)
+    registers::arm64::id::fpu_d31, // (ARM64_D31, 171)
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-    fpu_fpsr_arm64 // ARM64_FPSR, 220)
+    registers::arm64::id::fpu_v0,  // (ARM64_Q0, 180)
+    registers::arm64::id::fpu_v1,  // (ARM64_Q1, 181)
+    registers::arm64::id::fpu_v2,  // (ARM64_Q2, 182)
+    registers::arm64::id::fpu_v3,  // (ARM64_Q3, 183)
+    registers::arm64::id::fpu_v4,  // (ARM64_Q4, 184)
+    registers::arm64::id::fpu_v5,  // (ARM64_Q5, 185)
+    registers::arm64::id::fpu_v6,  // (ARM64_Q6, 186)
+    registers::arm64::id::fpu_v7,  // (ARM64_Q7, 187)
+    registers::arm64::id::fpu_v8,  // (ARM64_Q8, 188)
+    registers::arm64::id::fpu_v9,  // (ARM64_Q9, 189)
+    registers::arm64::id::fpu_v10, // (ARM64_Q10, 190)
+    registers::arm64::id::fpu_v11, // (ARM64_Q11, 191)
+    registers::arm64::id::fpu_v12, // (ARM64_Q12, 192)
+    registers::arm64::id::fpu_v13, // (ARM64_Q13, 193)
+    registers::arm64::id::fpu_v14, // (ARM64_Q14, 194)
+    registers::arm64::id::fpu_v15, // (ARM64_Q15, 195)
+    registers::arm64::id::fpu_v16, // (ARM64_Q16, 196)
+    registers::arm64::id::fpu_v17, // (ARM64_Q17, 197)
+    registers::arm64::id::fpu_v18, // (ARM64_Q18, 198)
+    registers::arm64::id::fpu_v19, // (ARM64_Q19, 199)
+    registers::arm64::id::fpu_v20, // (ARM64_Q20, 200)
+    registers::arm64::id::fpu_v21, // (ARM64_Q21, 201)
+    registers::arm64::id::fpu_v22, // (ARM64_Q22, 202)
+    registers::arm64::id::fpu_v23, // (ARM64_Q23, 203)
+    registers::arm64::id::fpu_v24, // (ARM64_Q24, 204)
+    registers::arm64::id::fpu_v25, // (ARM64_Q25, 205)
+    registers::arm64::id::fpu_v26, // (ARM64_Q26, 206)
+    registers::arm64::id::fpu_v27, // (ARM64_Q27, 207)
+    registers::arm64::id::fpu_v28, // (ARM64_Q28, 208)
+    registers::arm64::id::fpu_v29, // (ARM64_Q29, 209)
+    registers::arm64::id::fpu_v30, // (ARM64_Q30, 210)
+    registers::arm64::id::fpu_v31, // (ARM64_Q31, 211)
+    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+    registers::arm64::id::fpu_fpsr // ARM64_FPSR, 220)
 };
 
 static const uint32_t g_code_view_to_lldb_registers_x86[] = {
     LLDB_INVALID_REGNUM, // NONE
-    lldb_al_i386,        // AL
-    lldb_cl_i386,        // CL
-    lldb_dl_i386,        // DL
-    lldb_bl_i386,        // BL
-    lldb_ah_i386,        // AH
-    lldb_ch_i386,        // CH
-    lldb_dh_i386,        // DH
-    lldb_bh_i386,        // BH
-    lldb_ax_i386,        // AX
-    lldb_cx_i386,        // CX
-    lldb_dx_i386,        // DX
-    lldb_bx_i386,        // BX
-    lldb_sp_i386,        // SP
-    lldb_bp_i386,        // BP
-    lldb_si_i386,        // SI
-    lldb_di_i386,        // DI
-    lldb_eax_i386,       // EAX
-    lldb_ecx_i386,       // ECX
-    lldb_edx_i386,       // EDX
-    lldb_ebx_i386,       // EBX
-    lldb_esp_i386,       // ESP
-    lldb_ebp_i386,       // EBP
-    lldb_esi_i386,       // ESI
-    lldb_edi_i386,       // EDI
-    lldb_es_i386,        // ES
-    lldb_cs_i386,        // CS
-    lldb_ss_i386,        // SS
-    lldb_ds_i386,        // DS
-    lldb_fs_i386,        // FS
-    lldb_gs_i386,        // GS
+    registers::x86::id::al,        // AL
+    registers::x86::id::cl,        // CL
+    registers::x86::id::dl,        // DL
+    registers::x86::id::bl,        // BL
+    registers::x86::id::ah,        // AH
+    registers::x86::id::ch,        // CH
+    registers::x86::id::dh,        // DH
+    registers::x86::id::bh,        // BH
+    registers::x86::id::ax,        // AX
+    registers::x86::id::cx,        // CX
+    registers::x86::id::dx,        // DX
+    registers::x86::id::bx,        // BX
+    registers::x86::id::sp,        // SP
+    registers::x86::id::bp,        // BP
+    registers::x86::id::si,        // SI
+    registers::x86::id::di,        // DI
+    registers::x86::id::eax,       // EAX
+    registers::x86::id::ecx,       // ECX
+    registers::x86::id::edx,       // EDX
+    registers::x86::id::ebx,       // EBX
+    registers::x86::id::esp,       // ESP
+    registers::x86::id::ebp,       // EBP
+    registers::x86::id::esi,       // ESI
+    registers::x86::id::edi,       // EDI
+    registers::x86::id::es,        // ES
+    registers::x86::id::cs,        // CS
+    registers::x86::id::ss,        // SS
+    registers::x86::id::ds,        // DS
+    registers::x86::id::fs,        // FS
+    registers::x86::id::gs,        // GS
     LLDB_INVALID_REGNUM, // IP
     LLDB_INVALID_REGNUM, // FLAGS
-    lldb_eip_i386,       // EIP
-    lldb_eflags_i386,    // EFLAGS
+    registers::x86::id::eip,       // EIP
+    registers::x86::id::eflags,    // EFLAGS
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, // TEMP
@@ -264,14 +265,14 @@ static const uint32_t g_code_view_to_lldb_registers_x86[] = {
     LLDB_INVALID_REGNUM, // CR4
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-    lldb_dr0_i386, // DR0
-    lldb_dr1_i386, // DR1
-    lldb_dr2_i386, // DR2
-    lldb_dr3_i386, // DR3
-    lldb_dr4_i386, // DR4
-    lldb_dr5_i386, // DR5
-    lldb_dr6_i386, // DR6
-    lldb_dr7_i386, // DR7
+    registers::x86::id::dr0, // DR0
+    registers::x86::id::dr1, // DR1
+    registers::x86::id::dr2, // DR2
+    registers::x86::id::dr3, // DR3
+    registers::x86::id::dr4, // DR4
+    registers::x86::id::dr5, // DR5
+    registers::x86::id::dr6, // DR6
+    registers::x86::id::dr7, // DR7
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
@@ -292,14 +293,14 @@ static const uint32_t g_code_view_to_lldb_registers_x86[] = {
     LLDB_INVALID_REGNUM, // PSEUDO8
     LLDB_INVALID_REGNUM, // PSEUDO9
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-    lldb_st0_i386,       // ST0
-    lldb_st1_i386,       // ST1
-    lldb_st2_i386,       // ST2
-    lldb_st3_i386,       // ST3
-    lldb_st4_i386,       // ST4
-    lldb_st5_i386,       // ST5
-    lldb_st6_i386,       // ST6
-    lldb_st7_i386,       // ST7
+    registers::x86::id::st0,       // ST0
+    registers::x86::id::st1,       // ST1
+    registers::x86::id::st2,       // ST2
+    registers::x86::id::st3,       // ST3
+    registers::x86::id::st4,       // ST4
+    registers::x86::id::st5,       // ST5
+    registers::x86::id::st6,       // ST6
+    registers::x86::id::st7,       // ST7
     LLDB_INVALID_REGNUM, // CTRL
     LLDB_INVALID_REGNUM, // STAT
     LLDB_INVALID_REGNUM, // TAG
@@ -310,56 +311,56 @@ static const uint32_t g_code_view_to_lldb_registers_x86[] = {
     LLDB_INVALID_REGNUM, // ISEM
     LLDB_INVALID_REGNUM, // FPEIP
     LLDB_INVALID_REGNUM, // FPEDO
-    lldb_mm0_i386,       // MM0
-    lldb_mm1_i386,       // MM1
-    lldb_mm2_i386,       // MM2
-    lldb_mm3_i386,       // MM3
-    lldb_mm4_i386,       // MM4
-    lldb_mm5_i386,       // MM5
-    lldb_mm6_i386,       // MM6
-    lldb_mm7_i386,       // MM7
-    lldb_xmm0_i386,      // XMM0
-    lldb_xmm1_i386,      // XMM1
-    lldb_xmm2_i386,      // XMM2
-    lldb_xmm3_i386,      // XMM3
-    lldb_xmm4_i386,      // XMM4
-    lldb_xmm5_i386,      // XMM5
-    lldb_xmm6_i386,      // XMM6
-    lldb_xmm7_i386       // XMM7
+    registers::x86::id::mm0,       // MM0
+    registers::x86::id::mm1,       // MM1
+    registers::x86::id::mm2,       // MM2
+    registers::x86::id::mm3,       // MM3
+    registers::x86::id::mm4,       // MM4
+    registers::x86::id::mm5,       // MM5
+    registers::x86::id::mm6,       // MM6
+    registers::x86::id::mm7,       // MM7
+    registers::x86::id::xmm0,      // XMM0
+    registers::x86::id::xmm1,      // XMM1
+    registers::x86::id::xmm2,      // XMM2
+    registers::x86::id::xmm3,      // XMM3
+    registers::x86::id::xmm4,      // XMM4
+    registers::x86::id::xmm5,      // XMM5
+    registers::x86::id::xmm6,      // XMM6
+    registers::x86::id::xmm7       // XMM7
 };
 
 static const uint32_t g_code_view_to_lldb_registers_x86_64[] = {
     LLDB_INVALID_REGNUM, // NONE
-    lldb_al_x86_64,      // AL
-    lldb_cl_x86_64,      // CL
-    lldb_dl_x86_64,      // DL
-    lldb_bl_x86_64,      // BL
-    lldb_ah_x86_64,      // AH
-    lldb_ch_x86_64,      // CH
-    lldb_dh_x86_64,      // DH
-    lldb_bh_x86_64,      // BH
-    lldb_ax_x86_64,      // AX
-    lldb_cx_x86_64,      // CX
-    lldb_dx_x86_64,      // DX
-    lldb_bx_x86_64,      // BX
-    lldb_sp_x86_64,      // SP
-    lldb_bp_x86_64,      // BP
-    lldb_si_x86_64,      // SI
-    lldb_di_x86_64,      // DI
-    lldb_eax_x86_64,     // EAX
-    lldb_ecx_x86_64,     // ECX
-    lldb_edx_x86_64,     // EDX
-    lldb_ebx_x86_64,     // EBX
-    lldb_esp_x86_64,     // ESP
-    lldb_ebp_x86_64,     // EBP
-    lldb_esi_x86_64,     // ESI
-    lldb_edi_x86_64,     // EDI
-    lldb_es_x86_64,      // ES
-    lldb_cs_x86_64,      // CS
-    lldb_ss_x86_64,      // SS
-    lldb_ds_x86_64,      // DS
-    lldb_fs_x86_64,      // FS
-    lldb_gs_x86_64,      // GS
+    registers::x86_64::id::al,      // AL
+    registers::x86_64::id::cl,      // CL
+    registers::x86_64::id::dl,      // DL
+    registers::x86_64::id::bl,      // BL
+    registers::x86_64::id::ah,      // AH
+    registers::x86_64::id::ch,      // CH
+    registers::x86_64::id::dh,      // DH
+    registers::x86_64::id::bh,      // BH
+    registers::x86_64::id::ax,      // AX
+    registers::x86_64::id::cx,      // CX
+    registers::x86_64::id::dx,      // DX
+    registers::x86_64::id::bx,      // BX
+    registers::x86_64::id::sp,      // SP
+    registers::x86_64::id::bp,      // BP
+    registers::x86_64::id::si,      // SI
+    registers::x86_64::id::di,      // DI
+    registers::x86_64::id::eax,     // EAX
+    registers::x86_64::id::ecx,     // ECX
+    registers::x86_64::id::edx,     // EDX
+    registers::x86_64::id::ebx,     // EBX
+    registers::x86_64::id::esp,     // ESP
+    registers::x86_64::id::ebp,     // EBP
+    registers::x86_64::id::esi,     // ESI
+    registers::x86_64::id::edi,     // EDI
+    registers::x86_64::id::es,      // ES
+    registers::x86_64::id::cs,      // CS
+    registers::x86_64::id::ss,      // SS
+    registers::x86_64::id::ds,      // DS
+    registers::x86_64::id::fs,      // FS
+    registers::x86_64::id::gs,      // GS
     LLDB_INVALID_REGNUM, // IP
     LLDB_INVALID_REGNUM, // FLAGS
     LLDB_INVALID_REGNUM, // EIP
@@ -392,14 +393,14 @@ static const uint32_t g_code_view_to_lldb_registers_x86_64[] = {
     LLDB_INVALID_REGNUM, // CR4
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-    lldb_dr0_x86_64, // DR0
-    lldb_dr1_x86_64, // DR1
-    lldb_dr2_x86_64, // DR2
-    lldb_dr3_x86_64, // DR3
-    lldb_dr4_x86_64, // DR4
-    lldb_dr5_x86_64, // DR5
-    lldb_dr6_x86_64, // DR6
-    lldb_dr7_x86_64, // DR7
+    registers::x86_64::id::dr0, // DR0
+    registers::x86_64::id::dr1, // DR1
+    registers::x86_64::id::dr2, // DR2
+    registers::x86_64::id::dr3, // DR3
+    registers::x86_64::id::dr4, // DR4
+    registers::x86_64::id::dr5, // DR5
+    registers::x86_64::id::dr6, // DR6
+    registers::x86_64::id::dr7, // DR7
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
@@ -420,14 +421,14 @@ static const uint32_t g_code_view_to_lldb_registers_x86_64[] = {
     LLDB_INVALID_REGNUM, // PSEUDO8
     LLDB_INVALID_REGNUM, // PSEUDO9
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-    lldb_st0_x86_64,     // ST0
-    lldb_st1_x86_64,     // ST1
-    lldb_st2_x86_64,     // ST2
-    lldb_st3_x86_64,     // ST3
-    lldb_st4_x86_64,     // ST4
-    lldb_st5_x86_64,     // ST5
-    lldb_st6_x86_64,     // ST6
-    lldb_st7_x86_64,     // ST7
+    registers::x86_64::id::st0,     // ST0
+    registers::x86_64::id::st1,     // ST1
+    registers::x86_64::id::st2,     // ST2
+    registers::x86_64::id::st3,     // ST3
+    registers::x86_64::id::st4,     // ST4
+    registers::x86_64::id::st5,     // ST5
+    registers::x86_64::id::st6,     // ST6
+    registers::x86_64::id::st7,     // ST7
     LLDB_INVALID_REGNUM, // CTRL
     LLDB_INVALID_REGNUM, // STAT
     LLDB_INVALID_REGNUM, // TAG
@@ -438,22 +439,22 @@ static const uint32_t g_code_view_to_lldb_registers_x86_64[] = {
     LLDB_INVALID_REGNUM, // ISEM
     LLDB_INVALID_REGNUM, // FPEIP
     LLDB_INVALID_REGNUM, // FPEDO
-    lldb_mm0_x86_64,     // MM0
-    lldb_mm1_x86_64,     // MM1
-    lldb_mm2_x86_64,     // MM2
-    lldb_mm3_x86_64,     // MM3
-    lldb_mm4_x86_64,     // MM4
-    lldb_mm5_x86_64,     // MM5
-    lldb_mm6_x86_64,     // MM6
-    lldb_mm7_x86_64,     // MM7
-    lldb_xmm0_x86_64,    // XMM0
-    lldb_xmm1_x86_64,    // XMM1
-    lldb_xmm2_x86_64,    // XMM2
-    lldb_xmm3_x86_64,    // XMM3
-    lldb_xmm4_x86_64,    // XMM4
-    lldb_xmm5_x86_64,    // XMM5
-    lldb_xmm6_x86_64,    // XMM6
-    lldb_xmm7_x86_64,    // XMM7
+    registers::x86_64::id::mm0,     // MM0
+    registers::x86_64::id::mm1,     // MM1
+    registers::x86_64::id::mm2,     // MM2
+    registers::x86_64::id::mm3,     // MM3
+    registers::x86_64::id::mm4,     // MM4
+    registers::x86_64::id::mm5,     // MM5
+    registers::x86_64::id::mm6,     // MM6
+    registers::x86_64::id::mm7,     // MM7
+    registers::x86_64::id::xmm0,    // XMM0
+    registers::x86_64::id::xmm1,    // XMM1
+    registers::x86_64::id::xmm2,    // XMM2
+    registers::x86_64::id::xmm3,    // XMM3
+    registers::x86_64::id::xmm4,    // XMM4
+    registers::x86_64::id::xmm5,    // XMM5
+    registers::x86_64::id::xmm6,    // XMM6
+    registers::x86_64::id::xmm7,    // XMM7
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
@@ -471,7 +472,7 @@ static const uint32_t g_code_view_to_lldb_registers_x86_64[] = {
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM,
-    lldb_mxcsr_x86_64,   // MXCSR
+    registers::x86_64::id::mxcsr,   // MXCSR
     LLDB_INVALID_REGNUM, // EDXEAX
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
@@ -508,14 +509,14 @@ static const uint32_t g_code_view_to_lldb_registers_x86_64[] = {
     LLDB_INVALID_REGNUM, // MM61
     LLDB_INVALID_REGNUM, // MM70
     LLDB_INVALID_REGNUM, // MM71
-    lldb_xmm8_x86_64,    // XMM8
-    lldb_xmm9_x86_64,    // XMM9
-    lldb_xmm10_x86_64,   // XMM10
-    lldb_xmm11_x86_64,   // XMM11
-    lldb_xmm12_x86_64,   // XMM12
-    lldb_xmm13_x86_64,   // XMM13
-    lldb_xmm14_x86_64,   // XMM14
-    lldb_xmm15_x86_64,   // XMM15
+    registers::x86_64::id::xmm8,    // XMM8
+    registers::x86_64::id::xmm9,    // XMM9
+    registers::x86_64::id::xmm10,   // XMM10
+    registers::x86_64::id::xmm11,   // XMM11
+    registers::x86_64::id::xmm12,   // XMM12
+    registers::x86_64::id::xmm13,   // XMM13
+    registers::x86_64::id::xmm14,   // XMM14
+    registers::x86_64::id::xmm15,   // XMM15
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
@@ -538,73 +539,73 @@ static const uint32_t g_code_view_to_lldb_registers_x86_64[] = {
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM,
-    lldb_sil_x86_64,   // SIL
-    lldb_dil_x86_64,   // DIL
-    lldb_bpl_x86_64,   // BPL
-    lldb_spl_x86_64,   // SPL
-    lldb_rax_x86_64,   // RAX
-    lldb_rbx_x86_64,   // RBX
-    lldb_rcx_x86_64,   // RCX
-    lldb_rdx_x86_64,   // RDX
-    lldb_rsi_x86_64,   // RSI
-    lldb_rdi_x86_64,   // RDI
-    lldb_rbp_x86_64,   // RBP
-    lldb_rsp_x86_64,   // RSP
-    lldb_r8_x86_64,    // R8
-    lldb_r9_x86_64,    // R9
-    lldb_r10_x86_64,   // R10
-    lldb_r11_x86_64,   // R11
-    lldb_r12_x86_64,   // R12
-    lldb_r13_x86_64,   // R13
-    lldb_r14_x86_64,   // R14
-    lldb_r15_x86_64,   // R15
-    lldb_r8l_x86_64,   // R8B
-    lldb_r9l_x86_64,   // R9B
-    lldb_r10l_x86_64,  // R10B
-    lldb_r11l_x86_64,  // R11B
-    lldb_r12l_x86_64,  // R12B
-    lldb_r13l_x86_64,  // R13B
-    lldb_r14l_x86_64,  // R14B
-    lldb_r15l_x86_64,  // R15B
-    lldb_r8w_x86_64,   // R8W
-    lldb_r9w_x86_64,   // R9W
-    lldb_r10w_x86_64,  // R10W
-    lldb_r11w_x86_64,  // R11W
-    lldb_r12w_x86_64,  // R12W
-    lldb_r13w_x86_64,  // R13W
-    lldb_r14w_x86_64,  // R14W
-    lldb_r15w_x86_64,  // R15W
-    lldb_r8d_x86_64,   // R8D
-    lldb_r9d_x86_64,   // R9D
-    lldb_r10d_x86_64,  // R10D
-    lldb_r11d_x86_64,  // R11D
-    lldb_r12d_x86_64,  // R12D
-    lldb_r13d_x86_64,  // R13D
-    lldb_r14d_x86_64,  // R14D
-    lldb_r15d_x86_64,  // R15D
-    lldb_ymm0_x86_64,  // AMD64_YMM0
-    lldb_ymm1_x86_64,  // AMD64_YMM1
-    lldb_ymm2_x86_64,  // AMD64_YMM2
-    lldb_ymm3_x86_64,  // AMD64_YMM3
-    lldb_ymm4_x86_64,  // AMD64_YMM4
-    lldb_ymm5_x86_64,  // AMD64_YMM5
-    lldb_ymm6_x86_64,  // AMD64_YMM6
-    lldb_ymm7_x86_64,  // AMD64_YMM7
-    lldb_ymm8_x86_64,  // AMD64_YMM8
-    lldb_ymm9_x86_64,  // AMD64_YMM9
-    lldb_ymm10_x86_64, // AMD64_YMM10
-    lldb_ymm11_x86_64, // AMD64_YMM11
-    lldb_ymm12_x86_64, // AMD64_YMM12
-    lldb_ymm13_x86_64, // AMD64_YMM13
-    lldb_ymm14_x86_64, // AMD64_YMM14
-    lldb_ymm15_x86_64, // AMD64_YMM15
+    registers::x86_64::id::sil,   // SIL
+    registers::x86_64::id::dil,   // DIL
+    registers::x86_64::id::bpl,   // BPL
+    registers::x86_64::id::spl,   // SPL
+    registers::x86_64::id::rax,   // RAX
+    registers::x86_64::id::rbx,   // RBX
+    registers::x86_64::id::rcx,   // RCX
+    registers::x86_64::id::rdx,   // RDX
+    registers::x86_64::id::rsi,   // RSI
+    registers::x86_64::id::rdi,   // RDI
+    registers::x86_64::id::rbp,   // RBP
+    registers::x86_64::id::rsp,   // RSP
+    registers::x86_64::id::r8,    // R8
+    registers::x86_64::id::r9,    // R9
+    registers::x86_64::id::r10,   // R10
+    registers::x86_64::id::r11,   // R11
+    registers::x86_64::id::r12,   // R12
+    registers::x86_64::id::r13,   // R13
+    registers::x86_64::id::r14,   // R14
+    registers::x86_64::id::r15,   // R15
+    registers::x86_64::id::r8l,   // R8B
+    registers::x86_64::id::r9l,   // R9B
+    registers::x86_64::id::r10l,  // R10B
+    registers::x86_64::id::r11l,  // R11B
+    registers::x86_64::id::r12l,  // R12B
+    registers::x86_64::id::r13l,  // R13B
+    registers::x86_64::id::r14l,  // R14B
+    registers::x86_64::id::r15l,  // R15B
+    registers::x86_64::id::r8w,   // R8W
+    registers::x86_64::id::r9w,   // R9W
+    registers::x86_64::id::r10w,  // R10W
+    registers::x86_64::id::r11w,  // R11W
+    registers::x86_64::id::r12w,  // R12W
+    registers::x86_64::id::r13w,  // R13W
+    registers::x86_64::id::r14w,  // R14W
+    registers::x86_64::id::r15w,  // R15W
+    registers::x86_64::id::r8d,   // R8D
+    registers::x86_64::id::r9d,   // R9D
+    registers::x86_64::id::r10d,  // R10D
+    registers::x86_64::id::r11d,  // R11D
+    registers::x86_64::id::r12d,  // R12D
+    registers::x86_64::id::r13d,  // R13D
+    registers::x86_64::id::r14d,  // R14D
+    registers::x86_64::id::r15d,  // R15D
+    registers::x86_64::id::ymm0,  // AMD64_YMM0
+    registers::x86_64::id::ymm1,  // AMD64_YMM1
+    registers::x86_64::id::ymm2,  // AMD64_YMM2
+    registers::x86_64::id::ymm3,  // AMD64_YMM3
+    registers::x86_64::id::ymm4,  // AMD64_YMM4
+    registers::x86_64::id::ymm5,  // AMD64_YMM5
+    registers::x86_64::id::ymm6,  // AMD64_YMM6
+    registers::x86_64::id::ymm7,  // AMD64_YMM7
+    registers::x86_64::id::ymm8,  // AMD64_YMM8
+    registers::x86_64::id::ymm9,  // AMD64_YMM9
+    registers::x86_64::id::ymm10, // AMD64_YMM10
+    registers::x86_64::id::ymm11, // AMD64_YMM11
+    registers::x86_64::id::ymm12, // AMD64_YMM12
+    registers::x86_64::id::ymm13, // AMD64_YMM13
+    registers::x86_64::id::ymm14, // AMD64_YMM14
+    registers::x86_64::id::ymm15, // AMD64_YMM15
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-    lldb_bnd0_x86_64, // BND0
-    lldb_bnd1_x86_64, // BND1
-    lldb_bnd2_x86_64  // BND2
+    registers::x86_64::id::bnd0, // BND0
+    registers::x86_64::id::bnd1, // BND1
+    registers::x86_64::id::bnd2  // BND2
 };
 
 uint32_t lldb_private::npdb::GetLLDBRegisterNumber(
@@ -627,13 +628,13 @@ uint32_t lldb_private::npdb::GetLLDBRegisterNumber(
 
     switch (register_id) {
     case llvm::codeview::RegisterId::MXCSR:
-      return lldb_mxcsr_i386;
+      return registers::x86::id::mxcsr;
     case llvm::codeview::RegisterId::BND0:
-      return lldb_bnd0_i386;
+      return registers::x86::id::bnd0;
     case llvm::codeview::RegisterId::BND1:
-      return lldb_bnd1_i386;
+      return registers::x86::id::bnd1;
     case llvm::codeview::RegisterId::BND2:
-      return lldb_bnd2_i386;
+      return registers::x86::id::bnd2;
     default:
       return LLDB_INVALID_REGNUM;
     }

@@ -26,7 +26,7 @@
 #include "lldb/Utility/DataEncoder.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -39,7 +39,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/StackID.h"
 #include "lldb/Target/Target.h"
@@ -70,7 +70,7 @@ enum LocationDescriptionKind {
 /// so they don't need to re-thread these individually.
 struct EvalContext {
   ExecutionContext *exe_ctx;
-  RegisterContext *reg_ctx;
+  ThreadRegisterContext *reg_ctx;
   lldb::ModuleSP module_sp;
   const DWARFExpression::Delegate *dwarf_cu;
   lldb::RegisterKind reg_kind;
@@ -89,7 +89,7 @@ struct EvalContext {
   LocationDescriptionKind loc_desc_kind = Memory;
   /// @}
 
-  EvalContext(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
+  EvalContext(ExecutionContext *exe_ctx, ThreadRegisterContext *reg_ctx,
               lldb::ModuleSP module_sp,
               const DWARFExpression::Delegate *dwarf_cu,
               lldb::RegisterKind reg_kind, lldb::ByteOrder byte_order,
@@ -157,38 +157,24 @@ void DWARFExpression::SetRegisterKind(RegisterKind reg_kind) {
 }
 
 llvm::Error
-DWARFExpression::ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
+DWARFExpression::ReadRegisterValueAsScalar(ThreadRegisterContext *reg_ctx,
                                            lldb::RegisterKind reg_kind,
                                            uint32_t reg_num, Value &value) {
   if (reg_ctx == nullptr)
     return llvm::createStringError("no register context in frame");
 
-  const uint32_t native_reg =
-      reg_ctx->ConvertRegisterKindToRegisterNumber(reg_kind, reg_num);
-  if (native_reg == LLDB_INVALID_REGNUM)
+  auto id = reg_ctx->ResolveRegisterNumber(reg_kind, reg_num);
+  if (!id)
+    return id.takeError();
+  auto reg_value = reg_ctx->ReadRegister(*id);
+  if (!reg_value)
+    return reg_value.takeError();
+  if (!reg_value->GetScalarValue(value.GetScalar()))
     return llvm::createStringError(
-        "unable to convert register kind=%u reg_num=%u to a native "
-        "register number",
-        reg_kind, reg_num);
-
-  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(native_reg);
-  RegisterValue reg_value;
-  if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-    if (reg_value.GetScalarValue(value.GetScalar())) {
-      value.SetValueType(Value::ValueType::Scalar);
-      value.SetContext(Value::ContextType::RegisterInfo,
-                       const_cast<RegisterInfo *>(reg_info));
-      return llvm::Error::success();
-    }
-
-    // If we get this error, then we need to implement a value buffer in
-    // the dwarf expression evaluation function...
-    return llvm::createStringError(
-        "register %s can't be converted to a scalar value", reg_info->name);
-  }
-
-  return llvm::createStringError("register %s is not available",
-                                 reg_info->name);
+        "register value cannot be converted to a scalar");
+  value.SetValueType(Value::ValueType::Scalar);
+  value.SetRegister(reg_ctx->GetDescription(), *id);
+  return llvm::Error::success();
 }
 
 /// Return the length in bytes of the set of operands for \p op. No guarantees
@@ -1582,7 +1568,7 @@ static bool IsPotentiallyGenericIntegerOperand(const Scalar &operand,
 }
 
 llvm::Expected<Value> DWARFExpression::Evaluate(
-    ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
+    ExecutionContext *exe_ctx, ThreadRegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
     const DWARFExpression::Delegate *dwarf_cu,
     const lldb::RegisterKind reg_kind, const Value *initial_value_ptr,
@@ -2476,7 +2462,7 @@ bool DWARFExpression::MatchesOperand(
     StackFrame &frame, const Instruction::Operand &operand) const {
   using namespace OperandMatchers;
 
-  RegisterContextSP reg_ctx_sp = frame.GetRegisterContext();
+  ThreadRegisterContextSP reg_ctx_sp = frame.GetRegisterContext();
   if (!reg_ctx_sp) {
     return false;
   }
@@ -2511,21 +2497,21 @@ bool DWARFExpression::MatchesOperand(
   }
 
   bool dereference = false;
-  const RegisterInfo *reg = nullptr;
+  const RegisterDescriptor *reg = nullptr;
   int64_t offset = 0;
 
   if (opcode >= DW_OP_reg0 && opcode <= DW_OP_reg31) {
-    reg = reg_ctx_sp->GetRegisterInfo(m_reg_kind, opcode - DW_OP_reg0);
+    reg = reg_ctx_sp->GetRegisterByNumber(m_reg_kind, opcode - DW_OP_reg0);
   } else if (opcode >= DW_OP_breg0 && opcode <= DW_OP_breg31) {
     offset = opcodes.GetSLEB128(&op_offset);
-    reg = reg_ctx_sp->GetRegisterInfo(m_reg_kind, opcode - DW_OP_breg0);
+    reg = reg_ctx_sp->GetRegisterByNumber(m_reg_kind, opcode - DW_OP_breg0);
   } else if (opcode == DW_OP_regx) {
     uint32_t reg_num = static_cast<uint32_t>(opcodes.GetULEB128(&op_offset));
-    reg = reg_ctx_sp->GetRegisterInfo(m_reg_kind, reg_num);
+    reg = reg_ctx_sp->GetRegisterByNumber(m_reg_kind, reg_num);
   } else if (opcode == DW_OP_bregx) {
     uint32_t reg_num = static_cast<uint32_t>(opcodes.GetULEB128(&op_offset));
     offset = opcodes.GetSLEB128(&op_offset);
-    reg = reg_ctx_sp->GetRegisterInfo(m_reg_kind, reg_num);
+    reg = reg_ctx_sp->GetRegisterByNumber(m_reg_kind, reg_num);
   } else {
     return false;
   }

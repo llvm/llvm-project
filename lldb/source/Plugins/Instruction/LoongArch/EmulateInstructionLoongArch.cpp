@@ -11,20 +11,23 @@
 
 #include "EmulateInstructionLoongArch.h"
 #include "Plugins/Process/Utility/InstructionUtils.h"
-#include "Register/Common/RegisterInfo_loongarch64.h"
-#include "Register/Arch/lldb-loongarch-register-enums.h"
+#include "lldb/Register/Arch/lldb-loongarch-register-enums.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Interpreter/OptionValueArray.h"
 #include "lldb/Interpreter/OptionValueDictionary.h"
+#include "lldb/Register/Common/RegisterInfo_loongarch64.h"
+#include "lldb/Register/RegisterDescription.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Stream.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MathExtras.h"
 
+
+namespace reg_ids = lldb_private::registers::loongarch::id;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -133,26 +136,26 @@ bool EmulateInstructionLoongArch::ReadInstruction() {
   return true;
 }
 
-std::optional<RegisterInfo>
+std::optional<RegisterDescriptor>
 EmulateInstructionLoongArch::GetRegisterInfo(lldb::RegisterKind reg_kind,
                                              uint32_t reg_index) {
   if (reg_kind == eRegisterKindGeneric) {
     switch (reg_index) {
     case LLDB_REGNUM_GENERIC_PC:
       reg_kind = eRegisterKindLLDB;
-      reg_index = gpr_pc_loongarch;
+      reg_index = reg_ids::gpr_pc;
       break;
     case LLDB_REGNUM_GENERIC_SP:
       reg_kind = eRegisterKindLLDB;
-      reg_index = gpr_sp_loongarch;
+      reg_index = reg_ids::gpr_sp;
       break;
     case LLDB_REGNUM_GENERIC_FP:
       reg_kind = eRegisterKindLLDB;
-      reg_index = gpr_fp_loongarch;
+      reg_index = reg_ids::gpr_fp;
       break;
     case LLDB_REGNUM_GENERIC_RA:
       reg_kind = eRegisterKindLLDB;
-      reg_index = gpr_ra_loongarch;
+      reg_index = reg_ids::gpr_ra;
       break;
     // We may handle LLDB_REGNUM_GENERIC_ARGx when more instructions are
     // supported.
@@ -161,14 +164,11 @@ EmulateInstructionLoongArch::GetRegisterInfo(lldb::RegisterKind reg_kind,
     }
   }
 
-  const RegisterInfo *array =
-      RegisterInfo_loongarch64::GetRegisterInfoPtr(m_arch);
-  const uint32_t length =
-      RegisterInfo_loongarch64::GetRegisterInfoCount(m_arch);
-
-  if (reg_index >= length || reg_kind != eRegisterKindLLDB)
-    return {};
-  return array[reg_index];
+  // Architecture IDs need not be dense indices in the exposed table.
+  static const auto registers = RegisterInfo_loongarch64::CreateDescription();
+  if (const auto *reg = registers->FindByNumber(reg_kind, reg_index))
+    return *reg;
+  return {};
 }
 
 bool EmulateInstructionLoongArch::SetTargetTriple(const ArchSpec &arch) {
@@ -307,7 +307,7 @@ bool EmulateInstructionLoongArch::EmulateBNEZ64(uint32_t inst) {
 //	PC = PC + SignExtend({offs21, 2'b0}, GRLEN)
 bool EmulateInstructionLoongArch::EmulateBCEQZ64(uint32_t inst) {
   bool success = false;
-  uint32_t cj = Bits32(inst, 7, 5) + fpr_fcc0_loongarch;
+  uint32_t cj = Bits32(inst, 7, 5) + reg_ids::fpr_fcc0;
 
   auto addr = ReadPC();
   if (!addr)
@@ -332,7 +332,7 @@ bool EmulateInstructionLoongArch::EmulateBCEQZ64(uint32_t inst) {
 //	PC = PC + SignExtend({offs21, 2'b0}, GRLEN)
 bool EmulateInstructionLoongArch::EmulateBCNEZ64(uint32_t inst) {
   bool success = false;
-  uint32_t cj = Bits32(inst, 7, 5) + fpr_fcc0_loongarch;
+  uint32_t cj = Bits32(inst, 7, 5) + reg_ids::fpr_fcc0;
 
   auto addr = ReadPC();
   if (!addr)
@@ -398,7 +398,7 @@ bool EmulateInstructionLoongArch::EmulateBL64(uint32_t inst) {
   uint64_t pc = *addr;
 
   EmulateInstruction::Context ctx;
-  if (!WriteRegisterUnsigned(ctx, eRegisterKindLLDB, gpr_r1_loongarch, pc + 4))
+  if (!WriteRegisterUnsigned(ctx, eRegisterKindLLDB, reg_ids::gpr_r1, pc + 4))
     return false;
   uint32_t offs26 = Bits32(inst, 25, 10) + (Bits32(inst, 9, 0) << 16);
   uint64_t next_pc = pc + llvm::SignExtend64<28>(offs26 << 2);

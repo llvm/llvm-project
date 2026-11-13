@@ -6,6 +6,7 @@ add_lldb_unittest(ProcessGdbRemoteTests
   GDBRemoteCommunicationTest.cpp
   GDBRemoteTestUtils.cpp
   ProcessGDBRemoteTest.cpp
+  RegisterPacketLayoutTest.cpp
 
   LINK_COMPONENTS
     Option
@@ -14,8 +15,9 @@ add_lldb_unittest(ProcessGdbRemoteTests
     lldbCore
     lldbHost
     lldbPluginPlatformMacOSX
-    lldbPluginProcessUtility
     lldbPluginProcessGDBRemote
+    lldbPluginProcessUtility
+    lldbRegister
 
     LLVMTestingSupport
   )

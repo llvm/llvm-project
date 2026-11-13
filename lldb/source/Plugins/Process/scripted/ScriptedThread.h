@@ -15,13 +15,13 @@
 
 #include "Plugins/Process/Utility/RegisterContextMemory.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
-#include "lldb/Target/DynamicRegisterInfo.h"
+#include "lldb/Register/RegisterDefinition.h"
 #include "lldb/Target/Thread.h"
 
 namespace lldb_private {
 class ScriptedProcess;
 class ScriptedFrame;
-}
+} // namespace lldb_private
 
 namespace lldb_private {
 
@@ -38,9 +38,9 @@ public:
   Create(ScriptedProcess &process,
          StructuredData::Generic *script_object = nullptr);
 
-  lldb::RegisterContextSP GetRegisterContext() override;
+  lldb::ThreadRegisterContextSP GetRegisterContext() override;
 
-  lldb::RegisterContextSP
+  lldb::ThreadRegisterContextSP
   CreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
 
   bool LoadArtificialStackFrames();
@@ -70,7 +70,7 @@ private:
   ScriptedThread(const ScriptedThread &) = delete;
   const ScriptedThread &operator=(const ScriptedThread &) = delete;
 
-  lldb::DynamicRegisterInfoSP GetDynamicRegisterInfo();
+  std::shared_ptr<const RegisterLayout> GetRegisterLayout();
 
   const ScriptedProcess &m_scripted_process;
   lldb::ScriptedThreadInterfaceSP m_scripted_thread_interface_sp = nullptr;

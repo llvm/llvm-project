@@ -17,7 +17,7 @@
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -134,7 +134,7 @@ void ThreadPlanAssemblyTracer::Log() {
   if (!stream_sp)
     return;
 
-  RegisterContext *reg_ctx = GetThread().GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = GetThread().GetRegisterContext().get();
 
   lldb::addr_t pc = reg_ctx->GetPC();
   Address pc_addr;
@@ -210,15 +210,19 @@ void ThreadPlanAssemblyTracer::Log() {
   }
 
   if (m_register_values.empty()) {
-    RegisterContext *reg_ctx = GetThread().GetRegisterContext().get();
-    m_register_values.resize(reg_ctx->GetRegisterCount());
+    ThreadRegisterContext *reg_ctx = GetThread().GetRegisterContext().get();
+    m_register_values.resize(reg_ctx->GetUserRegisterCount());
   }
 
   RegisterValue reg_value;
-  for (uint32_t reg_num = 0, num_registers = reg_ctx->GetRegisterCount();
+  for (uint32_t reg_num = 0, num_registers = reg_ctx->GetUserRegisterCount();
        reg_num < num_registers; ++reg_num) {
-    const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg_num);
-    if (reg_ctx->ReadRegister(reg_info, reg_value)) {
+    const RegisterDescriptor *reg_info =
+        reg_ctx->GetUserRegisterAtIndex(reg_num);
+    if (!llvm::errorToBool(
+            reg_ctx
+                ->ReadRegister((reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+                .moveInto(reg_value))) {
       assert(reg_num < m_register_values.size());
       if (m_register_values[reg_num].GetType() == RegisterValue::eTypeInvalid ||
           reg_value != m_register_values[reg_num]) {

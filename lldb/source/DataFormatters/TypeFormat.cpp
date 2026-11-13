@@ -48,8 +48,8 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
     ExecutionContext exe_ctx(valobj->GetExecutionContextRef());
     DataExtractor data;
 
-    if (context_type == Value::ContextType::RegisterInfo) {
-      const RegisterInfo *reg_info = value.GetRegisterInfo();
+    if (context_type == Value::ContextType::RegisterDescriptor) {
+      const RegisterDescriptor *reg_info = value.GetRegisterInfo();
       if (reg_info) {
         Status error;
         valobj->GetData(data, error);

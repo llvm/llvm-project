@@ -1570,7 +1570,7 @@ lldb_private::OperandMatchers::MatchUnaryOp(
 }
 
 std::function<bool(const Instruction::Operand &)>
-lldb_private::OperandMatchers::MatchRegOp(const RegisterInfo &info) {
+lldb_private::OperandMatchers::MatchRegOp(const RegisterDescriptor &info) {
   return [&info](const Instruction::Operand &op) {
     return (op.m_type == Instruction::Operand::Type::Register &&
             (llvm::StringRef(op.m_register) == info.name ||

@@ -19,7 +19,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Stream.h"
 #include "llvm-c/Disassembler.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -36,8 +36,9 @@
 #include "llvm/ADT/STLExtras.h"
 
 #include "Plugins/Process/Utility/InstructionUtils.h"
-#include "Register/Arch/RegisterContext_mips.h"
+#include "lldb/Register/Arch/lldb-mips32-dwarf-register-enums.h"
 
+namespace dwarf_regs = lldb_private::registers::mips32::dwarf;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -218,145 +219,145 @@ const char *EmulateInstructionMIPS::GetRegisterName(unsigned reg_num,
                                                     bool alternate_name) {
   if (alternate_name) {
     switch (reg_num) {
-    case dwarf_sp_mips:
+    case dwarf_regs::sp:
       return "r29";
-    case dwarf_r30_mips:
+    case dwarf_regs::r30:
       return "r30";
-    case dwarf_ra_mips:
+    case dwarf_regs::ra:
       return "r31";
-    case dwarf_f0_mips:
+    case dwarf_regs::f0:
       return "f0";
-    case dwarf_f1_mips:
+    case dwarf_regs::f1:
       return "f1";
-    case dwarf_f2_mips:
+    case dwarf_regs::f2:
       return "f2";
-    case dwarf_f3_mips:
+    case dwarf_regs::f3:
       return "f3";
-    case dwarf_f4_mips:
+    case dwarf_regs::f4:
       return "f4";
-    case dwarf_f5_mips:
+    case dwarf_regs::f5:
       return "f5";
-    case dwarf_f6_mips:
+    case dwarf_regs::f6:
       return "f6";
-    case dwarf_f7_mips:
+    case dwarf_regs::f7:
       return "f7";
-    case dwarf_f8_mips:
+    case dwarf_regs::f8:
       return "f8";
-    case dwarf_f9_mips:
+    case dwarf_regs::f9:
       return "f9";
-    case dwarf_f10_mips:
+    case dwarf_regs::f10:
       return "f10";
-    case dwarf_f11_mips:
+    case dwarf_regs::f11:
       return "f11";
-    case dwarf_f12_mips:
+    case dwarf_regs::f12:
       return "f12";
-    case dwarf_f13_mips:
+    case dwarf_regs::f13:
       return "f13";
-    case dwarf_f14_mips:
+    case dwarf_regs::f14:
       return "f14";
-    case dwarf_f15_mips:
+    case dwarf_regs::f15:
       return "f15";
-    case dwarf_f16_mips:
+    case dwarf_regs::f16:
       return "f16";
-    case dwarf_f17_mips:
+    case dwarf_regs::f17:
       return "f17";
-    case dwarf_f18_mips:
+    case dwarf_regs::f18:
       return "f18";
-    case dwarf_f19_mips:
+    case dwarf_regs::f19:
       return "f19";
-    case dwarf_f20_mips:
+    case dwarf_regs::f20:
       return "f20";
-    case dwarf_f21_mips:
+    case dwarf_regs::f21:
       return "f21";
-    case dwarf_f22_mips:
+    case dwarf_regs::f22:
       return "f22";
-    case dwarf_f23_mips:
+    case dwarf_regs::f23:
       return "f23";
-    case dwarf_f24_mips:
+    case dwarf_regs::f24:
       return "f24";
-    case dwarf_f25_mips:
+    case dwarf_regs::f25:
       return "f25";
-    case dwarf_f26_mips:
+    case dwarf_regs::f26:
       return "f26";
-    case dwarf_f27_mips:
+    case dwarf_regs::f27:
       return "f27";
-    case dwarf_f28_mips:
+    case dwarf_regs::f28:
       return "f28";
-    case dwarf_f29_mips:
+    case dwarf_regs::f29:
       return "f29";
-    case dwarf_f30_mips:
+    case dwarf_regs::f30:
       return "f30";
-    case dwarf_f31_mips:
+    case dwarf_regs::f31:
       return "f31";
-    case dwarf_w0_mips:
+    case dwarf_regs::w0:
       return "w0";
-    case dwarf_w1_mips:
+    case dwarf_regs::w1:
       return "w1";
-    case dwarf_w2_mips:
+    case dwarf_regs::w2:
       return "w2";
-    case dwarf_w3_mips:
+    case dwarf_regs::w3:
       return "w3";
-    case dwarf_w4_mips:
+    case dwarf_regs::w4:
       return "w4";
-    case dwarf_w5_mips:
+    case dwarf_regs::w5:
       return "w5";
-    case dwarf_w6_mips:
+    case dwarf_regs::w6:
       return "w6";
-    case dwarf_w7_mips:
+    case dwarf_regs::w7:
       return "w7";
-    case dwarf_w8_mips:
+    case dwarf_regs::w8:
       return "w8";
-    case dwarf_w9_mips:
+    case dwarf_regs::w9:
       return "w9";
-    case dwarf_w10_mips:
+    case dwarf_regs::w10:
       return "w10";
-    case dwarf_w11_mips:
+    case dwarf_regs::w11:
       return "w11";
-    case dwarf_w12_mips:
+    case dwarf_regs::w12:
       return "w12";
-    case dwarf_w13_mips:
+    case dwarf_regs::w13:
       return "w13";
-    case dwarf_w14_mips:
+    case dwarf_regs::w14:
       return "w14";
-    case dwarf_w15_mips:
+    case dwarf_regs::w15:
       return "w15";
-    case dwarf_w16_mips:
+    case dwarf_regs::w16:
       return "w16";
-    case dwarf_w17_mips:
+    case dwarf_regs::w17:
       return "w17";
-    case dwarf_w18_mips:
+    case dwarf_regs::w18:
       return "w18";
-    case dwarf_w19_mips:
+    case dwarf_regs::w19:
       return "w19";
-    case dwarf_w20_mips:
+    case dwarf_regs::w20:
       return "w20";
-    case dwarf_w21_mips:
+    case dwarf_regs::w21:
       return "w21";
-    case dwarf_w22_mips:
+    case dwarf_regs::w22:
       return "w22";
-    case dwarf_w23_mips:
+    case dwarf_regs::w23:
       return "w23";
-    case dwarf_w24_mips:
+    case dwarf_regs::w24:
       return "w24";
-    case dwarf_w25_mips:
+    case dwarf_regs::w25:
       return "w25";
-    case dwarf_w26_mips:
+    case dwarf_regs::w26:
       return "w26";
-    case dwarf_w27_mips:
+    case dwarf_regs::w27:
       return "w27";
-    case dwarf_w28_mips:
+    case dwarf_regs::w28:
       return "w28";
-    case dwarf_w29_mips:
+    case dwarf_regs::w29:
       return "w29";
-    case dwarf_w30_mips:
+    case dwarf_regs::w30:
       return "w30";
-    case dwarf_w31_mips:
+    case dwarf_regs::w31:
       return "w31";
-    case dwarf_mir_mips:
+    case dwarf_regs::mir:
       return "mir";
-    case dwarf_mcsr_mips:
+    case dwarf_regs::mcsr:
       return "mcsr";
-    case dwarf_config5_mips:
+    case dwarf_regs::config5:
       return "config5";
     default:
       break;
@@ -365,248 +366,248 @@ const char *EmulateInstructionMIPS::GetRegisterName(unsigned reg_num,
   }
 
   switch (reg_num) {
-  case dwarf_zero_mips:
+  case dwarf_regs::zero:
     return "r0";
-  case dwarf_r1_mips:
+  case dwarf_regs::r1:
     return "r1";
-  case dwarf_r2_mips:
+  case dwarf_regs::r2:
     return "r2";
-  case dwarf_r3_mips:
+  case dwarf_regs::r3:
     return "r3";
-  case dwarf_r4_mips:
+  case dwarf_regs::r4:
     return "r4";
-  case dwarf_r5_mips:
+  case dwarf_regs::r5:
     return "r5";
-  case dwarf_r6_mips:
+  case dwarf_regs::r6:
     return "r6";
-  case dwarf_r7_mips:
+  case dwarf_regs::r7:
     return "r7";
-  case dwarf_r8_mips:
+  case dwarf_regs::r8:
     return "r8";
-  case dwarf_r9_mips:
+  case dwarf_regs::r9:
     return "r9";
-  case dwarf_r10_mips:
+  case dwarf_regs::r10:
     return "r10";
-  case dwarf_r11_mips:
+  case dwarf_regs::r11:
     return "r11";
-  case dwarf_r12_mips:
+  case dwarf_regs::r12:
     return "r12";
-  case dwarf_r13_mips:
+  case dwarf_regs::r13:
     return "r13";
-  case dwarf_r14_mips:
+  case dwarf_regs::r14:
     return "r14";
-  case dwarf_r15_mips:
+  case dwarf_regs::r15:
     return "r15";
-  case dwarf_r16_mips:
+  case dwarf_regs::r16:
     return "r16";
-  case dwarf_r17_mips:
+  case dwarf_regs::r17:
     return "r17";
-  case dwarf_r18_mips:
+  case dwarf_regs::r18:
     return "r18";
-  case dwarf_r19_mips:
+  case dwarf_regs::r19:
     return "r19";
-  case dwarf_r20_mips:
+  case dwarf_regs::r20:
     return "r20";
-  case dwarf_r21_mips:
+  case dwarf_regs::r21:
     return "r21";
-  case dwarf_r22_mips:
+  case dwarf_regs::r22:
     return "r22";
-  case dwarf_r23_mips:
+  case dwarf_regs::r23:
     return "r23";
-  case dwarf_r24_mips:
+  case dwarf_regs::r24:
     return "r24";
-  case dwarf_r25_mips:
+  case dwarf_regs::r25:
     return "r25";
-  case dwarf_r26_mips:
+  case dwarf_regs::r26:
     return "r26";
-  case dwarf_r27_mips:
+  case dwarf_regs::r27:
     return "r27";
-  case dwarf_gp_mips:
+  case dwarf_regs::gp:
     return "gp";
-  case dwarf_sp_mips:
+  case dwarf_regs::sp:
     return "sp";
-  case dwarf_r30_mips:
+  case dwarf_regs::r30:
     return "fp";
-  case dwarf_ra_mips:
+  case dwarf_regs::ra:
     return "ra";
-  case dwarf_sr_mips:
+  case dwarf_regs::sr:
     return "sr";
-  case dwarf_lo_mips:
+  case dwarf_regs::lo:
     return "lo";
-  case dwarf_hi_mips:
+  case dwarf_regs::hi:
     return "hi";
-  case dwarf_bad_mips:
+  case dwarf_regs::bad:
     return "bad";
-  case dwarf_cause_mips:
+  case dwarf_regs::cause:
     return "cause";
-  case dwarf_pc_mips:
+  case dwarf_regs::pc:
     return "pc";
-  case dwarf_f0_mips:
+  case dwarf_regs::f0:
     return "f0";
-  case dwarf_f1_mips:
+  case dwarf_regs::f1:
     return "f1";
-  case dwarf_f2_mips:
+  case dwarf_regs::f2:
     return "f2";
-  case dwarf_f3_mips:
+  case dwarf_regs::f3:
     return "f3";
-  case dwarf_f4_mips:
+  case dwarf_regs::f4:
     return "f4";
-  case dwarf_f5_mips:
+  case dwarf_regs::f5:
     return "f5";
-  case dwarf_f6_mips:
+  case dwarf_regs::f6:
     return "f6";
-  case dwarf_f7_mips:
+  case dwarf_regs::f7:
     return "f7";
-  case dwarf_f8_mips:
+  case dwarf_regs::f8:
     return "f8";
-  case dwarf_f9_mips:
+  case dwarf_regs::f9:
     return "f9";
-  case dwarf_f10_mips:
+  case dwarf_regs::f10:
     return "f10";
-  case dwarf_f11_mips:
+  case dwarf_regs::f11:
     return "f11";
-  case dwarf_f12_mips:
+  case dwarf_regs::f12:
     return "f12";
-  case dwarf_f13_mips:
+  case dwarf_regs::f13:
     return "f13";
-  case dwarf_f14_mips:
+  case dwarf_regs::f14:
     return "f14";
-  case dwarf_f15_mips:
+  case dwarf_regs::f15:
     return "f15";
-  case dwarf_f16_mips:
+  case dwarf_regs::f16:
     return "f16";
-  case dwarf_f17_mips:
+  case dwarf_regs::f17:
     return "f17";
-  case dwarf_f18_mips:
+  case dwarf_regs::f18:
     return "f18";
-  case dwarf_f19_mips:
+  case dwarf_regs::f19:
     return "f19";
-  case dwarf_f20_mips:
+  case dwarf_regs::f20:
     return "f20";
-  case dwarf_f21_mips:
+  case dwarf_regs::f21:
     return "f21";
-  case dwarf_f22_mips:
+  case dwarf_regs::f22:
     return "f22";
-  case dwarf_f23_mips:
+  case dwarf_regs::f23:
     return "f23";
-  case dwarf_f24_mips:
+  case dwarf_regs::f24:
     return "f24";
-  case dwarf_f25_mips:
+  case dwarf_regs::f25:
     return "f25";
-  case dwarf_f26_mips:
+  case dwarf_regs::f26:
     return "f26";
-  case dwarf_f27_mips:
+  case dwarf_regs::f27:
     return "f27";
-  case dwarf_f28_mips:
+  case dwarf_regs::f28:
     return "f28";
-  case dwarf_f29_mips:
+  case dwarf_regs::f29:
     return "f29";
-  case dwarf_f30_mips:
+  case dwarf_regs::f30:
     return "f30";
-  case dwarf_f31_mips:
+  case dwarf_regs::f31:
     return "f31";
-  case dwarf_fcsr_mips:
+  case dwarf_regs::fcsr:
     return "fcsr";
-  case dwarf_fir_mips:
+  case dwarf_regs::fir:
     return "fir";
-  case dwarf_w0_mips:
+  case dwarf_regs::w0:
     return "w0";
-  case dwarf_w1_mips:
+  case dwarf_regs::w1:
     return "w1";
-  case dwarf_w2_mips:
+  case dwarf_regs::w2:
     return "w2";
-  case dwarf_w3_mips:
+  case dwarf_regs::w3:
     return "w3";
-  case dwarf_w4_mips:
+  case dwarf_regs::w4:
     return "w4";
-  case dwarf_w5_mips:
+  case dwarf_regs::w5:
     return "w5";
-  case dwarf_w6_mips:
+  case dwarf_regs::w6:
     return "w6";
-  case dwarf_w7_mips:
+  case dwarf_regs::w7:
     return "w7";
-  case dwarf_w8_mips:
+  case dwarf_regs::w8:
     return "w8";
-  case dwarf_w9_mips:
+  case dwarf_regs::w9:
     return "w9";
-  case dwarf_w10_mips:
+  case dwarf_regs::w10:
     return "w10";
-  case dwarf_w11_mips:
+  case dwarf_regs::w11:
     return "w11";
-  case dwarf_w12_mips:
+  case dwarf_regs::w12:
     return "w12";
-  case dwarf_w13_mips:
+  case dwarf_regs::w13:
     return "w13";
-  case dwarf_w14_mips:
+  case dwarf_regs::w14:
     return "w14";
-  case dwarf_w15_mips:
+  case dwarf_regs::w15:
     return "w15";
-  case dwarf_w16_mips:
+  case dwarf_regs::w16:
     return "w16";
-  case dwarf_w17_mips:
+  case dwarf_regs::w17:
     return "w17";
-  case dwarf_w18_mips:
+  case dwarf_regs::w18:
     return "w18";
-  case dwarf_w19_mips:
+  case dwarf_regs::w19:
     return "w19";
-  case dwarf_w20_mips:
+  case dwarf_regs::w20:
     return "w20";
-  case dwarf_w21_mips:
+  case dwarf_regs::w21:
     return "w21";
-  case dwarf_w22_mips:
+  case dwarf_regs::w22:
     return "w22";
-  case dwarf_w23_mips:
+  case dwarf_regs::w23:
     return "w23";
-  case dwarf_w24_mips:
+  case dwarf_regs::w24:
     return "w24";
-  case dwarf_w25_mips:
+  case dwarf_regs::w25:
     return "w25";
-  case dwarf_w26_mips:
+  case dwarf_regs::w26:
     return "w26";
-  case dwarf_w27_mips:
+  case dwarf_regs::w27:
     return "w27";
-  case dwarf_w28_mips:
+  case dwarf_regs::w28:
     return "w28";
-  case dwarf_w29_mips:
+  case dwarf_regs::w29:
     return "w29";
-  case dwarf_w30_mips:
+  case dwarf_regs::w30:
     return "w30";
-  case dwarf_w31_mips:
+  case dwarf_regs::w31:
     return "w31";
-  case dwarf_mcsr_mips:
+  case dwarf_regs::mcsr:
     return "mcsr";
-  case dwarf_mir_mips:
+  case dwarf_regs::mir:
     return "mir";
-  case dwarf_config5_mips:
+  case dwarf_regs::config5:
     return "config5";
   }
   return nullptr;
 }
 
-std::optional<RegisterInfo>
+std::optional<RegisterDescriptor>
 EmulateInstructionMIPS::GetRegisterInfo(RegisterKind reg_kind,
                                         uint32_t reg_num) {
   if (reg_kind == eRegisterKindGeneric) {
     switch (reg_num) {
     case LLDB_REGNUM_GENERIC_PC:
       reg_kind = eRegisterKindDWARF;
-      reg_num = dwarf_pc_mips;
+      reg_num = dwarf_regs::pc;
       break;
     case LLDB_REGNUM_GENERIC_SP:
       reg_kind = eRegisterKindDWARF;
-      reg_num = dwarf_sp_mips;
+      reg_num = dwarf_regs::sp;
       break;
     case LLDB_REGNUM_GENERIC_FP:
       reg_kind = eRegisterKindDWARF;
-      reg_num = dwarf_r30_mips;
+      reg_num = dwarf_regs::r30;
       break;
     case LLDB_REGNUM_GENERIC_RA:
       reg_kind = eRegisterKindDWARF;
-      reg_num = dwarf_ra_mips;
+      reg_num = dwarf_regs::ra;
       break;
     case LLDB_REGNUM_GENERIC_FLAGS:
       reg_kind = eRegisterKindDWARF;
-      reg_num = dwarf_sr_mips;
+      reg_num = dwarf_regs::sr;
       break;
     default:
       return {};
@@ -614,23 +615,19 @@ EmulateInstructionMIPS::GetRegisterInfo(RegisterKind reg_kind,
   }
 
   if (reg_kind == eRegisterKindDWARF) {
-    RegisterInfo reg_info;
-    ::memset(&reg_info, 0, sizeof(RegisterInfo));
-    ::memset(reg_info.kinds, LLDB_INVALID_REGNUM, sizeof(reg_info.kinds));
+    RegisterDescriptor reg_info;
 
-    if (reg_num == dwarf_sr_mips || reg_num == dwarf_fcsr_mips ||
-        reg_num == dwarf_fir_mips || reg_num == dwarf_mcsr_mips ||
-        reg_num == dwarf_mir_mips || reg_num == dwarf_config5_mips) {
+    if (reg_num == dwarf_regs::sr || reg_num == dwarf_regs::fcsr ||
+        reg_num == dwarf_regs::fir || reg_num == dwarf_regs::mcsr ||
+        reg_num == dwarf_regs::mir || reg_num == dwarf_regs::config5) {
       reg_info.byte_size = 4;
       reg_info.format = eFormatHex;
       reg_info.encoding = eEncodingUint;
-    } else if ((int)reg_num >= dwarf_zero_mips &&
-               (int)reg_num <= dwarf_f31_mips) {
+    } else if (reg_num <= dwarf_regs::f31) {
       reg_info.byte_size = 4;
       reg_info.format = eFormatHex;
       reg_info.encoding = eEncodingUint;
-    } else if ((int)reg_num >= dwarf_w0_mips &&
-               (int)reg_num <= dwarf_w31_mips) {
+    } else if (reg_num >= dwarf_regs::w0 && reg_num <= dwarf_regs::w31) {
       reg_info.byte_size = 16;
       reg_info.format = eFormatVectorOfUInt8;
       reg_info.encoding = eEncodingVector;
@@ -639,24 +636,25 @@ EmulateInstructionMIPS::GetRegisterInfo(RegisterKind reg_kind,
     }
 
     reg_info.name = GetRegisterName(reg_num, false);
-    reg_info.alt_name = GetRegisterName(reg_num, true);
-    reg_info.kinds[eRegisterKindDWARF] = reg_num;
+    if (const char *alternate = GetRegisterName(reg_num, true))
+      reg_info.alt_name = alternate;
+    reg_info.numbers[eRegisterKindDWARF] = reg_num;
 
     switch (reg_num) {
-    case dwarf_r30_mips:
-      reg_info.kinds[eRegisterKindGeneric] = LLDB_REGNUM_GENERIC_FP;
+    case dwarf_regs::r30:
+      reg_info.numbers[eRegisterKindGeneric] = LLDB_REGNUM_GENERIC_FP;
       break;
-    case dwarf_ra_mips:
-      reg_info.kinds[eRegisterKindGeneric] = LLDB_REGNUM_GENERIC_RA;
+    case dwarf_regs::ra:
+      reg_info.numbers[eRegisterKindGeneric] = LLDB_REGNUM_GENERIC_RA;
       break;
-    case dwarf_sp_mips:
-      reg_info.kinds[eRegisterKindGeneric] = LLDB_REGNUM_GENERIC_SP;
+    case dwarf_regs::sp:
+      reg_info.numbers[eRegisterKindGeneric] = LLDB_REGNUM_GENERIC_SP;
       break;
-    case dwarf_pc_mips:
-      reg_info.kinds[eRegisterKindGeneric] = LLDB_REGNUM_GENERIC_PC;
+    case dwarf_regs::pc:
+      reg_info.numbers[eRegisterKindGeneric] = LLDB_REGNUM_GENERIC_PC;
       break;
-    case dwarf_sr_mips:
-      reg_info.kinds[eRegisterKindGeneric] = LLDB_REGNUM_GENERIC_FLAGS;
+    case dwarf_regs::sr:
+      reg_info.numbers[eRegisterKindGeneric] = LLDB_REGNUM_GENERIC_FLAGS;
       break;
     default:
       break;
@@ -1090,7 +1088,7 @@ bool EmulateInstructionMIPS::EvaluateInstruction(uint32_t evaluate_options) {
 
   if (auto_advance_pc) {
     old_pc =
-        ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+        ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
     if (!success)
       return false;
   }
@@ -1102,7 +1100,7 @@ bool EmulateInstructionMIPS::EvaluateInstruction(uint32_t evaluate_options) {
 
   if (auto_advance_pc) {
     new_pc =
-        ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+        ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
     if (!success)
       return false;
 
@@ -1110,7 +1108,7 @@ bool EmulateInstructionMIPS::EvaluateInstruction(uint32_t evaluate_options) {
     if (old_pc == new_pc) {
       new_pc += 4;
       Context context;
-      if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+      if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                                  new_pc))
         return false;
     }
@@ -1128,10 +1126,11 @@ bool EmulateInstructionMIPS::CreateFunctionEntryUnwind(
   const bool can_replace = false;
 
   // Our previous Call Frame Address is the stack pointer
-  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_sp_mips, 0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_regs::sp, 0);
 
   // Our previous PC is in the RA
-  row.SetRegisterLocationToRegister(dwarf_pc_mips, dwarf_ra_mips, can_replace);
+  row.SetRegisterLocationToRegister(dwarf_regs::pc, dwarf_regs::ra,
+                                    can_replace);
 
   unwind_plan.AppendRow(std::move(row));
 
@@ -1140,25 +1139,25 @@ bool EmulateInstructionMIPS::CreateFunctionEntryUnwind(
   unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
   unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolYes);
   unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
-  unwind_plan.SetReturnAddressRegister(dwarf_ra_mips);
+  unwind_plan.SetReturnAddressRegister(dwarf_regs::ra);
 
   return true;
 }
 
 bool EmulateInstructionMIPS::nonvolatile_reg_p(uint32_t regnum) {
   switch (regnum) {
-  case dwarf_r16_mips:
-  case dwarf_r17_mips:
-  case dwarf_r18_mips:
-  case dwarf_r19_mips:
-  case dwarf_r20_mips:
-  case dwarf_r21_mips:
-  case dwarf_r22_mips:
-  case dwarf_r23_mips:
-  case dwarf_gp_mips:
-  case dwarf_sp_mips:
-  case dwarf_r30_mips:
-  case dwarf_ra_mips:
+  case dwarf_regs::r16:
+  case dwarf_regs::r17:
+  case dwarf_regs::r18:
+  case dwarf_regs::r19:
+  case dwarf_regs::r20:
+  case dwarf_regs::r21:
+  case dwarf_regs::r22:
+  case dwarf_regs::r23:
+  case dwarf_regs::gp:
+  case dwarf_regs::sp:
+  case dwarf_regs::r30:
+  case dwarf_regs::ra:
     return true;
   default:
     return false;
@@ -1187,22 +1186,23 @@ bool EmulateInstructionMIPS::Emulate_ADDiu(llvm::MCInst &insn) {
 
     /* read <src> register */
     const int64_t src_opd_val = ReadRegisterUnsigned(
-        eRegisterKindDWARF, dwarf_zero_mips + src, 0, &success);
+        eRegisterKindDWARF, dwarf_regs::zero + src, 0, &success);
     if (!success)
       return false;
 
     /* Check if this is daddiu sp, sp, imm16 */
-    if (dst == dwarf_sp_mips) {
+    if (dst == dwarf_regs::sp) {
       uint64_t result = src_opd_val + imm;
-      std::optional<RegisterInfo> reg_info_sp =
-          GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips);
+      std::optional<RegisterDescriptor> reg_info_sp =
+          GetRegisterInfo(eRegisterKindDWARF, dwarf_regs::sp);
       if (reg_info_sp)
         context.SetRegisterPlusOffset(*reg_info_sp, imm);
 
       /* We are allocating bytes on stack */
       context.type = eContextAdjustStackPointer;
 
-      WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_sp_mips, result);
+      WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::sp,
+                            result);
       return true;
     }
 
@@ -1211,7 +1211,7 @@ bool EmulateInstructionMIPS::Emulate_ADDiu(llvm::MCInst &insn) {
     context.type = eContextImmediate;
 
     if (!WriteRegisterUnsigned(context, eRegisterKindDWARF,
-                               dwarf_zero_mips + dst, imm))
+                               dwarf_regs::zero + dst, imm))
       return false;
   }
 
@@ -1229,14 +1229,14 @@ bool EmulateInstructionMIPS::Emulate_SW(llvm::MCInst &insn) {
   src = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   base = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
 
-  std::optional<RegisterInfo> reg_info_base =
-      GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base);
+  std::optional<RegisterDescriptor> reg_info_base =
+      GetRegisterInfo(eRegisterKindDWARF, dwarf_regs::zero + base);
   if (!reg_info_base)
     return false;
 
   /* read base register */
   address = (int32_t)ReadRegisterUnsigned(eRegisterKindDWARF,
-                                          dwarf_zero_mips + base, 0, &success);
+                                          dwarf_regs::zero + base, 0, &success);
   if (!success)
     return false;
 
@@ -1245,13 +1245,13 @@ bool EmulateInstructionMIPS::Emulate_SW(llvm::MCInst &insn) {
 
   /* Set the bad_vaddr register with base address used in the instruction */
   bad_vaddr_context.type = eContextInvalid;
-  WriteRegisterUnsigned(bad_vaddr_context, eRegisterKindDWARF, dwarf_bad_mips,
+  WriteRegisterUnsigned(bad_vaddr_context, eRegisterKindDWARF, dwarf_regs::bad,
                         address);
 
   /* We look for sp based non-volatile register stores */
   if (nonvolatile_reg_p(src)) {
-    std::optional<RegisterInfo> reg_info_src =
-        GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + src);
+    std::optional<RegisterDescriptor> reg_info_src =
+        GetRegisterInfo(eRegisterKindDWARF, dwarf_regs::zero + src);
     if (!reg_info_src)
       return false;
 
@@ -1266,9 +1266,9 @@ bool EmulateInstructionMIPS::Emulate_SW(llvm::MCInst &insn) {
     if (!data_src)
       return false;
 
-    if (data_src->GetAsMemoryData(*reg_info_src, buffer.data(),
+    if (data_src->GetAsMemoryData(reg_info_src->byte_size, buffer.data(),
                                   reg_info_src->byte_size, eByteOrderLittle,
-                                  error) == 0)
+                                  error, reg_info_src->name) == 0)
       return false;
 
     if (!WriteMemory(context, address, buffer.data(), reg_info_src->byte_size))
@@ -1290,12 +1290,12 @@ bool EmulateInstructionMIPS::Emulate_LW(llvm::MCInst &insn) {
   base = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
   imm = insn.getOperand(2).getImm();
 
-  if (GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base))
+  if (GetRegisterInfo(eRegisterKindDWARF, dwarf_regs::zero + base))
     return false;
 
   /* read base register */
   address = (int32_t)ReadRegisterUnsigned(eRegisterKindDWARF,
-                                          dwarf_zero_mips + base, 0, &success);
+                                          dwarf_regs::zero + base, 0, &success);
   if (!success)
     return false;
 
@@ -1304,13 +1304,13 @@ bool EmulateInstructionMIPS::Emulate_LW(llvm::MCInst &insn) {
 
   /* Set the bad_vaddr register with base address used in the instruction */
   bad_vaddr_context.type = eContextInvalid;
-  WriteRegisterUnsigned(bad_vaddr_context, eRegisterKindDWARF, dwarf_bad_mips,
+  WriteRegisterUnsigned(bad_vaddr_context, eRegisterKindDWARF, dwarf_regs::bad,
                         address);
 
   if (nonvolatile_reg_p(src)) {
     RegisterValue data_src;
-    std::optional<RegisterInfo> reg_info_src =
-        GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + src);
+    std::optional<RegisterDescriptor> reg_info_src =
+        GetRegisterInfo(eRegisterKindDWARF, dwarf_regs::zero + src);
     if (!reg_info_src)
       return false;
 
@@ -1338,18 +1338,18 @@ bool EmulateInstructionMIPS::Emulate_SUBU_ADDU(llvm::MCInst &insn) {
   src = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
 
   /* Check if sp is destination register */
-  if (dst == dwarf_sp_mips) {
+  if (dst == dwarf_regs::sp) {
     rt = m_reg_info->getEncodingValue(insn.getOperand(2).getReg());
 
     /* read <src> register */
     uint64_t src_opd_val = ReadRegisterUnsigned(
-        eRegisterKindDWARF, dwarf_zero_mips + src, 0, &success);
+        eRegisterKindDWARF, dwarf_regs::zero + src, 0, &success);
     if (!success)
       return false;
 
     /* read <rt > register */
     uint64_t rt_opd_val = ReadRegisterUnsigned(
-        eRegisterKindDWARF, dwarf_zero_mips + rt, 0, &success);
+        eRegisterKindDWARF, dwarf_regs::zero + rt, 0, &success);
     if (!success)
       return false;
 
@@ -1359,29 +1359,29 @@ bool EmulateInstructionMIPS::Emulate_SUBU_ADDU(llvm::MCInst &insn) {
       result = src_opd_val + rt_opd_val;
 
     Context context;
-    std::optional<RegisterInfo> reg_info_sp =
-        GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips);
+    std::optional<RegisterDescriptor> reg_info_sp =
+        GetRegisterInfo(eRegisterKindDWARF, dwarf_regs::sp);
     if (reg_info_sp)
       context.SetRegisterPlusOffset(*reg_info_sp, rt_opd_val);
 
     /* We are allocating bytes on stack */
     context.type = eContextAdjustStackPointer;
 
-    WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_sp_mips, result);
+    WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::sp, result);
 
     return true;
-  } else if (src == dwarf_sp_mips) {
+  } else if (src == dwarf_regs::sp) {
     rt = m_reg_info->getEncodingValue(insn.getOperand(2).getReg());
 
     /* read <src> register */
     uint64_t src_opd_val = ReadRegisterUnsigned(
-        eRegisterKindDWARF, dwarf_zero_mips + src, 0, &success);
+        eRegisterKindDWARF, dwarf_regs::zero + src, 0, &success);
     if (!success)
       return false;
 
     /* read <rt> register */
     uint64_t rt_opd_val = ReadRegisterUnsigned(
-        eRegisterKindDWARF, dwarf_zero_mips + rt, 0, &success);
+        eRegisterKindDWARF, dwarf_regs::zero + rt, 0, &success);
     if (!success)
       return false;
 
@@ -1396,7 +1396,7 @@ bool EmulateInstructionMIPS::Emulate_SUBU_ADDU(llvm::MCInst &insn) {
     context.type = eContextImmediate;
 
     if (!WriteRegisterUnsigned(context, eRegisterKindDWARF,
-                               dwarf_zero_mips + dst, result))
+                               dwarf_regs::zero + dst, result))
       return false;
   }
 
@@ -1417,7 +1417,7 @@ bool EmulateInstructionMIPS::Emulate_LUI(llvm::MCInst &insn) {
   context.type = eContextImmediate;
 
   return WriteRegisterUnsigned(context, eRegisterKindDWARF,
-                               dwarf_zero_mips + rt, imm);
+                               dwarf_regs::zero + rt, imm);
 }
 
 bool EmulateInstructionMIPS::Emulate_ADDIUSP(llvm::MCInst &insn) {
@@ -1428,22 +1428,22 @@ bool EmulateInstructionMIPS::Emulate_ADDIUSP(llvm::MCInst &insn) {
   // This instruction operates implicitly on stack pointer, so read <sp>
   // register.
   uint64_t src_opd_val =
-      ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_sp_mips, 0, &success);
+      ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::sp, 0, &success);
   if (!success)
     return false;
 
   result = src_opd_val + imm9;
 
   Context context;
-  std::optional<RegisterInfo> reg_info_sp =
-      GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips);
+  std::optional<RegisterDescriptor> reg_info_sp =
+      GetRegisterInfo(eRegisterKindDWARF, dwarf_regs::sp);
   if (reg_info_sp)
     context.SetRegisterPlusOffset(*reg_info_sp, imm9);
 
   // We are adjusting the stack.
   context.type = eContextAdjustStackPointer;
 
-  WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_sp_mips, result);
+  WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::sp, result);
   return true;
 }
 
@@ -1457,25 +1457,25 @@ bool EmulateInstructionMIPS::Emulate_ADDIUS5(llvm::MCInst &insn) {
   base = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
 
   // We are looking for stack adjustment only
-  if (base == dwarf_sp_mips) {
+  if (base == dwarf_regs::sp) {
     // Read stack pointer register
     uint64_t src_opd_val = ReadRegisterUnsigned(
-        eRegisterKindDWARF, dwarf_zero_mips + base, 0, &success);
+        eRegisterKindDWARF, dwarf_regs::zero + base, 0, &success);
     if (!success)
       return false;
 
     result = src_opd_val + imm4;
 
     Context context;
-    std::optional<RegisterInfo> reg_info_sp =
-        GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips);
+    std::optional<RegisterDescriptor> reg_info_sp =
+        GetRegisterInfo(eRegisterKindDWARF, dwarf_regs::sp);
     if (reg_info_sp)
       context.SetRegisterPlusOffset(*reg_info_sp, imm4);
 
     // We are adjusting the stack.
     context.type = eContextAdjustStackPointer;
 
-    WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_sp_mips, result);
+    WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::sp, result);
   }
 
   return true;
@@ -1491,13 +1491,13 @@ bool EmulateInstructionMIPS::Emulate_SWSP(llvm::MCInst &insn) {
   src = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   base = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
 
-  std::optional<RegisterInfo> reg_info_base =
-      GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base);
+  std::optional<RegisterDescriptor> reg_info_base =
+      GetRegisterInfo(eRegisterKindDWARF, dwarf_regs::zero + base);
   if (!reg_info_base)
     return false;
 
   // read base register
-  address = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_zero_mips + base, 0,
+  address = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::zero + base, 0,
                                  &success);
   if (!success)
     return false;
@@ -1509,12 +1509,12 @@ bool EmulateInstructionMIPS::Emulate_SWSP(llvm::MCInst &insn) {
   // watchpoint Set the bad_vaddr register with base address used in the
   // instruction
   bad_vaddr_context.type = eContextInvalid;
-  WriteRegisterUnsigned(bad_vaddr_context, eRegisterKindDWARF, dwarf_bad_mips,
+  WriteRegisterUnsigned(bad_vaddr_context, eRegisterKindDWARF, dwarf_regs::bad,
                         address);
 
   // We look for sp based non-volatile register stores.
-  if (base == dwarf_sp_mips && nonvolatile_reg_p(src)) {
-    RegisterInfo reg_info_src = {};
+  if (base == dwarf_regs::sp && nonvolatile_reg_p(src)) {
+    RegisterDescriptor reg_info_src = {};
     Context context;
     context.type = eContextPushRegisterOnStack;
     context.SetRegisterToRegisterPlusOffset(reg_info_src, *reg_info_base, 0);
@@ -1526,9 +1526,9 @@ bool EmulateInstructionMIPS::Emulate_SWSP(llvm::MCInst &insn) {
     if (!data_src)
       return false;
 
-    if (data_src->GetAsMemoryData(reg_info_src, buffer.data(),
+    if (data_src->GetAsMemoryData(reg_info_src.byte_size, buffer.data(),
                                   reg_info_src.byte_size, eByteOrderLittle,
-                                  error) == 0)
+                                  error, reg_info_src.name) == 0)
       return false;
 
     if (!WriteMemory(context, address, buffer.data(), reg_info_src.byte_size))
@@ -1558,20 +1558,20 @@ bool EmulateInstructionMIPS::Emulate_SWM16_32(llvm::MCInst &insn) {
 
   // We are looking for sp based stores so if base is not a stack pointer then
   // don't proceed.
-  if (base != dwarf_sp_mips)
+  if (base != dwarf_regs::sp)
     return false;
 
   // offset is always the last operand.
   uint32_t offset = insn.getOperand(num_operands - 1).getImm();
 
-  std::optional<RegisterInfo> reg_info_base =
-      GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base);
+  std::optional<RegisterDescriptor> reg_info_base =
+      GetRegisterInfo(eRegisterKindDWARF, dwarf_regs::zero + base);
   if (!reg_info_base)
     return false;
 
   // read SP
   uint32_t base_address = ReadRegisterUnsigned(
-      eRegisterKindDWARF, dwarf_zero_mips + base, 0, &success);
+      eRegisterKindDWARF, dwarf_regs::zero + base, 0, &success);
   if (!success)
     return false;
 
@@ -1593,8 +1593,8 @@ bool EmulateInstructionMIPS::Emulate_SWM16_32(llvm::MCInst &insn) {
     if (!nonvolatile_reg_p(src))
       return false;
 
-    std::optional<RegisterInfo> reg_info_src =
-        GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + src);
+    std::optional<RegisterDescriptor> reg_info_src =
+        GetRegisterInfo(eRegisterKindDWARF, dwarf_regs::zero + src);
     if (!reg_info_src)
       return false;
 
@@ -1609,9 +1609,9 @@ bool EmulateInstructionMIPS::Emulate_SWM16_32(llvm::MCInst &insn) {
     if (!data_src)
       return false;
 
-    if (data_src->GetAsMemoryData(*reg_info_src, buffer.data(),
+    if (data_src->GetAsMemoryData(reg_info_src->byte_size, buffer.data(),
                                   reg_info_src->byte_size, eByteOrderLittle,
-                                  error) == 0)
+                                  error, reg_info_src->name) == 0)
       return false;
 
     if (!WriteMemory(context, base_address, buffer.data(),
@@ -1631,12 +1631,12 @@ bool EmulateInstructionMIPS::Emulate_LWSP(llvm::MCInst &insn) {
   uint32_t imm5 = insn.getOperand(2).getImm();
   Context bad_vaddr_context;
 
-  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base))
+  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_regs::zero + base))
     return false;
 
   // read base register
   uint32_t base_address = ReadRegisterUnsigned(
-      eRegisterKindDWARF, dwarf_zero_mips + base, 0, &success);
+      eRegisterKindDWARF, dwarf_regs::zero + base, 0, &success);
   if (!success)
     return false;
 
@@ -1646,13 +1646,13 @@ bool EmulateInstructionMIPS::Emulate_LWSP(llvm::MCInst &insn) {
   // watchpoint Set the bad_vaddr register with base address used in the
   // instruction
   bad_vaddr_context.type = eContextInvalid;
-  WriteRegisterUnsigned(bad_vaddr_context, eRegisterKindDWARF, dwarf_bad_mips,
+  WriteRegisterUnsigned(bad_vaddr_context, eRegisterKindDWARF, dwarf_regs::bad,
                         base_address);
 
-  if (base == dwarf_sp_mips && nonvolatile_reg_p(src)) {
+  if (base == dwarf_regs::sp && nonvolatile_reg_p(src)) {
     RegisterValue data_src;
-    std::optional<RegisterInfo> reg_info_src =
-        GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + src);
+    std::optional<RegisterDescriptor> reg_info_src =
+        GetRegisterInfo(eRegisterKindDWARF, dwarf_regs::zero + src);
     if (!reg_info_src)
       return false;
 
@@ -1686,11 +1686,11 @@ bool EmulateInstructionMIPS::Emulate_LWM16_32(llvm::MCInst &insn) {
 
   // We are looking for sp based loads so if base is not a stack pointer then
   // don't proceed.
-  if (base != dwarf_sp_mips)
+  if (base != dwarf_regs::sp)
     return false;
 
   uint32_t base_address = ReadRegisterUnsigned(
-      eRegisterKindDWARF, dwarf_zero_mips + base, 0, &success);
+      eRegisterKindDWARF, dwarf_regs::zero + base, 0, &success);
   if (!success)
     return false;
 
@@ -1713,8 +1713,8 @@ bool EmulateInstructionMIPS::Emulate_LWM16_32(llvm::MCInst &insn) {
     if (!nonvolatile_reg_p(dst))
       return false;
 
-    std::optional<RegisterInfo> reg_info_dst =
-        GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + dst);
+    std::optional<RegisterDescriptor> reg_info_dst =
+        GetRegisterInfo(eRegisterKindDWARF, dwarf_regs::zero + dst);
     if (!reg_info_dst)
       return false;
 
@@ -1741,12 +1741,12 @@ bool EmulateInstructionMIPS::Emulate_JRADDIUSP(llvm::MCInst &insn) {
   // This instruction operates implicitly on stack pointer, so read <sp>
   // register.
   int32_t src_opd_val =
-      ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_sp_mips, 0, &success);
+      ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::sp, 0, &success);
   if (!success)
     return false;
 
   int32_t ra_val =
-      ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_ra_mips, 0, &success);
+      ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::ra, 0, &success);
   if (!success)
     return false;
 
@@ -1755,12 +1755,12 @@ bool EmulateInstructionMIPS::Emulate_JRADDIUSP(llvm::MCInst &insn) {
   Context context;
 
   // Update the PC
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                              ra_val))
     return false;
 
-  std::optional<RegisterInfo> reg_info_sp =
-      GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips);
+  std::optional<RegisterDescriptor> reg_info_sp =
+      GetRegisterInfo(eRegisterKindDWARF, dwarf_regs::sp);
   if (reg_info_sp)
     context.SetRegisterPlusOffset(*reg_info_sp, imm5);
 
@@ -1768,7 +1768,7 @@ bool EmulateInstructionMIPS::Emulate_JRADDIUSP(llvm::MCInst &insn) {
   context.type = eContextAdjustStackPointer;
 
   // update SP
-  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_sp_mips,
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::sp,
                                result);
 }
 
@@ -1792,17 +1792,17 @@ bool EmulateInstructionMIPS::Emulate_BXX_3ops(llvm::MCInst &insn) {
   rt = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
   offset = insn.getOperand(2).getImm();
 
-  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
   rs_val = (int32_t)ReadRegisterUnsigned(eRegisterKindDWARF,
-                                         dwarf_zero_mips + rs, 0, &success);
+                                         dwarf_regs::zero + rs, 0, &success);
   if (!success)
     return false;
 
   rt_val = (int32_t)ReadRegisterUnsigned(eRegisterKindDWARF,
-                                         dwarf_zero_mips + rt, 0, &success);
+                                         dwarf_regs::zero + rt, 0, &success);
   if (!success)
     return false;
 
@@ -1823,7 +1823,7 @@ bool EmulateInstructionMIPS::Emulate_BXX_3ops(llvm::MCInst &insn) {
   context.type = eContextRelativeBranchImmediate;
   context.SetImmediate(offset);
 
-  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                                target);
 }
 
@@ -1843,17 +1843,17 @@ bool EmulateInstructionMIPS::Emulate_BXX_3ops_C(llvm::MCInst &insn) {
   rt = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
   offset = insn.getOperand(2).getImm();
 
-  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
   rs_val = (int32_t)ReadRegisterUnsigned(eRegisterKindDWARF,
-                                         dwarf_zero_mips + rs, 0, &success);
+                                         dwarf_regs::zero + rs, 0, &success);
   if (!success)
     return false;
 
   rt_val = (int32_t)ReadRegisterUnsigned(eRegisterKindDWARF,
-                                         dwarf_zero_mips + rt, 0, &success);
+                                         dwarf_regs::zero + rt, 0, &success);
   if (!success)
     return false;
 
@@ -1903,7 +1903,7 @@ bool EmulateInstructionMIPS::Emulate_BXX_3ops_C(llvm::MCInst &insn) {
   context.type = eContextRelativeBranchImmediate;
   context.SetImmediate(current_inst_size + offset);
 
-  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                                target);
 }
 
@@ -1921,12 +1921,12 @@ bool EmulateInstructionMIPS::Emulate_Bcond_Link_C(llvm::MCInst &insn) {
   rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   offset = insn.getOperand(1).getImm();
 
-  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
   rs_val = (int32_t)ReadRegisterUnsigned(eRegisterKindDWARF,
-                                         dwarf_zero_mips + rs, 0, &success);
+                                         dwarf_regs::zero + rs, 0, &success);
   if (!success)
     return false;
 
@@ -1964,11 +1964,11 @@ bool EmulateInstructionMIPS::Emulate_Bcond_Link_C(llvm::MCInst &insn) {
 
   Context context;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                              target))
     return false;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_ra_mips,
+  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::ra,
                              pc + 4))
     return false;
 
@@ -1990,12 +1990,12 @@ bool EmulateInstructionMIPS::Emulate_Bcond_Link(llvm::MCInst &insn) {
   rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   offset = insn.getOperand(1).getImm();
 
-  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
   rs_val = (int32_t)ReadRegisterUnsigned(eRegisterKindDWARF,
-                                         dwarf_zero_mips + rs, 0, &success);
+                                         dwarf_regs::zero + rs, 0, &success);
   if (!success)
     return false;
 
@@ -2015,11 +2015,11 @@ bool EmulateInstructionMIPS::Emulate_Bcond_Link(llvm::MCInst &insn) {
 
   Context context;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                              target))
     return false;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_ra_mips,
+  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::ra,
                              pc + 8))
     return false;
 
@@ -2041,12 +2041,12 @@ bool EmulateInstructionMIPS::Emulate_BXX_2ops(llvm::MCInst &insn) {
   rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   offset = insn.getOperand(1).getImm();
 
-  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
   rs_val = (int32_t)ReadRegisterUnsigned(eRegisterKindDWARF,
-                                         dwarf_zero_mips + rs, 0, &success);
+                                         dwarf_regs::zero + rs, 0, &success);
   if (!success)
     return false;
 
@@ -2080,7 +2080,7 @@ bool EmulateInstructionMIPS::Emulate_BXX_2ops(llvm::MCInst &insn) {
   context.type = eContextRelativeBranchImmediate;
   context.SetImmediate(offset);
 
-  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                                target);
 }
 
@@ -2099,12 +2099,12 @@ bool EmulateInstructionMIPS::Emulate_BXX_2ops_C(llvm::MCInst &insn) {
   rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   offset = insn.getOperand(1).getImm();
 
-  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
   rs_val = (int32_t)ReadRegisterUnsigned(eRegisterKindDWARF,
-                                         dwarf_zero_mips + rs, 0, &success);
+                                         dwarf_regs::zero + rs, 0, &success);
   if (!success)
     return false;
 
@@ -2144,7 +2144,7 @@ bool EmulateInstructionMIPS::Emulate_BXX_2ops_C(llvm::MCInst &insn) {
   context.type = eContextRelativeBranchImmediate;
   context.SetImmediate(current_inst_size + offset);
 
-  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                                target);
 }
 
@@ -2155,7 +2155,7 @@ bool EmulateInstructionMIPS::Emulate_B16_MM(llvm::MCInst &insn) {
 
   offset = insn.getOperand(0).getImm();
 
-  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
@@ -2166,7 +2166,7 @@ bool EmulateInstructionMIPS::Emulate_B16_MM(llvm::MCInst &insn) {
   context.type = eContextRelativeBranchImmediate;
   context.SetImmediate(current_inst_size + offset);
 
-  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                                target);
 }
 
@@ -2204,12 +2204,12 @@ bool EmulateInstructionMIPS::Emulate_Branch_MM(llvm::MCInst &insn) {
   int32_t offset = insn.getOperand(1).getImm();
 
   int32_t pc =
-      ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+      ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
   int32_t rs_val = (int32_t)ReadRegisterUnsigned(
-      eRegisterKindDWARF, dwarf_zero_mips + rs, 0, &success);
+      eRegisterKindDWARF, dwarf_regs::zero + rs, 0, &success);
   if (!success)
     return false;
 
@@ -2261,12 +2261,12 @@ bool EmulateInstructionMIPS::Emulate_Branch_MM(llvm::MCInst &insn) {
   context.type = eContextRelativeBranchImmediate;
   context.SetImmediate(current_inst_size + offset);
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                              target))
     return false;
 
   if (update_ra) {
-    if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_ra_mips,
+    if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::ra,
                                pc + ra_offset))
       return false;
   }
@@ -2284,12 +2284,12 @@ bool EmulateInstructionMIPS::Emulate_JALRx16_MM(llvm::MCInst &insn) {
   uint32_t rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
 
   uint32_t pc =
-      ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+      ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
   uint32_t rs_val = ReadRegisterUnsigned(eRegisterKindDWARF,
-                                         dwarf_zero_mips + rs, 0, &success);
+                                         dwarf_regs::zero + rs, 0, &success);
   if (!success)
     return false;
 
@@ -2300,11 +2300,11 @@ bool EmulateInstructionMIPS::Emulate_JALRx16_MM(llvm::MCInst &insn) {
 
   Context context;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                              rs_val))
     return false;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_ra_mips,
+  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::ra,
                              pc + ra_offset))
     return false;
 
@@ -2332,7 +2332,7 @@ bool EmulateInstructionMIPS::Emulate_JALx(llvm::MCInst &insn) {
   */
   offset = insn.getOperand(0).getImm();
 
-  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
@@ -2349,11 +2349,11 @@ bool EmulateInstructionMIPS::Emulate_JALx(llvm::MCInst &insn) {
 
   Context context;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                              target))
     return false;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_ra_mips,
+  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::ra,
                              pc + ra_offset))
     return false;
 
@@ -2375,22 +2375,22 @@ bool EmulateInstructionMIPS::Emulate_JALRS(llvm::MCInst &insn) {
   rs = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
 
   rs_val = (int32_t)ReadRegisterUnsigned(eRegisterKindDWARF,
-                                         dwarf_zero_mips + rs, 0, &success);
+                                         dwarf_regs::zero + rs, 0, &success);
   if (!success)
     return false;
 
-  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
   Context context;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                              rs_val))
     return false;
 
   // This is 4-byte instruction with 2-byte delay slot.
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_zero_mips + rt,
+  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::zero + rt,
                              pc + 6))
     return false;
 
@@ -2409,7 +2409,7 @@ bool EmulateInstructionMIPS::Emulate_BAL(llvm::MCInst &insn) {
   */
   offset = insn.getOperand(0).getImm();
 
-  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
@@ -2417,11 +2417,11 @@ bool EmulateInstructionMIPS::Emulate_BAL(llvm::MCInst &insn) {
 
   Context context;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                              target))
     return false;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_ra_mips,
+  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::ra,
                              pc + 8))
     return false;
 
@@ -2440,7 +2440,7 @@ bool EmulateInstructionMIPS::Emulate_BALC(llvm::MCInst &insn) {
   */
   offset = insn.getOperand(0).getImm();
 
-  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
@@ -2448,11 +2448,11 @@ bool EmulateInstructionMIPS::Emulate_BALC(llvm::MCInst &insn) {
 
   Context context;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                              target))
     return false;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_ra_mips,
+  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::ra,
                              pc + 4))
     return false;
 
@@ -2470,7 +2470,7 @@ bool EmulateInstructionMIPS::Emulate_BC(llvm::MCInst &insn) {
   */
   offset = insn.getOperand(0).getImm();
 
-  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
@@ -2478,7 +2478,7 @@ bool EmulateInstructionMIPS::Emulate_BC(llvm::MCInst &insn) {
 
   Context context;
 
-  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                                target);
 }
 
@@ -2493,7 +2493,7 @@ bool EmulateInstructionMIPS::Emulate_J(llvm::MCInst &insn) {
   */
   offset = insn.getOperand(0).getImm();
 
-  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
@@ -2502,7 +2502,7 @@ bool EmulateInstructionMIPS::Emulate_J(llvm::MCInst &insn) {
 
   Context context;
 
-  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips, pc);
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc, pc);
 }
 
 bool EmulateInstructionMIPS::Emulate_JAL(llvm::MCInst &insn) {
@@ -2516,7 +2516,7 @@ bool EmulateInstructionMIPS::Emulate_JAL(llvm::MCInst &insn) {
   */
   offset = insn.getOperand(0).getImm();
 
-  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
@@ -2525,11 +2525,11 @@ bool EmulateInstructionMIPS::Emulate_JAL(llvm::MCInst &insn) {
 
   Context context;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                              target))
     return false;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_ra_mips,
+  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::ra,
                              pc + 8))
     return false;
 
@@ -2549,22 +2549,22 @@ bool EmulateInstructionMIPS::Emulate_JALR(llvm::MCInst &insn) {
   rt = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   rs = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
 
-  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
-  rs_val = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_zero_mips + rs, 0,
+  rs_val = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::zero + rs, 0,
                                 &success);
   if (!success)
     return false;
 
   Context context;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                              rs_val))
     return false;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_zero_mips + rt,
+  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::zero + rt,
                              pc + 8))
     return false;
 
@@ -2585,12 +2585,12 @@ bool EmulateInstructionMIPS::Emulate_JIALC(llvm::MCInst &insn) {
   rt = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   offset = insn.getOperand(1).getImm();
 
-  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
   rt_val = (int32_t)ReadRegisterUnsigned(eRegisterKindDWARF,
-                                         dwarf_zero_mips + rt, 0, &success);
+                                         dwarf_regs::zero + rt, 0, &success);
   if (!success)
     return false;
 
@@ -2598,11 +2598,11 @@ bool EmulateInstructionMIPS::Emulate_JIALC(llvm::MCInst &insn) {
 
   Context context;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                              target))
     return false;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_ra_mips,
+  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::ra,
                              pc + 4))
     return false;
 
@@ -2623,7 +2623,7 @@ bool EmulateInstructionMIPS::Emulate_JIC(llvm::MCInst &insn) {
   offset = insn.getOperand(1).getImm();
 
   rt_val = (int32_t)ReadRegisterUnsigned(eRegisterKindDWARF,
-                                         dwarf_zero_mips + rt, 0, &success);
+                                         dwarf_regs::zero + rt, 0, &success);
   if (!success)
     return false;
 
@@ -2631,7 +2631,7 @@ bool EmulateInstructionMIPS::Emulate_JIC(llvm::MCInst &insn) {
 
   Context context;
 
-  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                                target);
 }
 
@@ -2646,14 +2646,14 @@ bool EmulateInstructionMIPS::Emulate_JR(llvm::MCInst &insn) {
   */
   rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
 
-  rs_val = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_zero_mips + rs, 0,
+  rs_val = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::zero + rs, 0,
                                 &success);
   if (!success)
     return false;
 
   Context context;
 
-  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                                rs_val);
 }
 
@@ -2671,11 +2671,12 @@ bool EmulateInstructionMIPS::Emulate_FP_branch(llvm::MCInst &insn) {
   cc = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   offset = insn.getOperand(1).getImm();
 
-  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
-  fcsr = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_fcsr_mips, 0, &success);
+  fcsr =
+      ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::fcsr, 0, &success);
   if (!success)
     return false;
 
@@ -2697,7 +2698,7 @@ bool EmulateInstructionMIPS::Emulate_FP_branch(llvm::MCInst &insn) {
   }
   Context context;
 
-  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                                target);
 }
 
@@ -2717,11 +2718,11 @@ bool EmulateInstructionMIPS::Emulate_BC1EQZ(llvm::MCInst &insn) {
   ft = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   offset = insn.getOperand(1).getImm();
 
-  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
-  ft_val = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_zero_mips + ft, 0,
+  ft_val = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::zero + ft, 0,
                                 &success);
   if (!success)
     return false;
@@ -2733,7 +2734,7 @@ bool EmulateInstructionMIPS::Emulate_BC1EQZ(llvm::MCInst &insn) {
 
   Context context;
 
-  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                                target);
 }
 
@@ -2753,11 +2754,11 @@ bool EmulateInstructionMIPS::Emulate_BC1NEZ(llvm::MCInst &insn) {
   ft = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   offset = insn.getOperand(1).getImm();
 
-  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
-  ft_val = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_zero_mips + ft, 0,
+  ft_val = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::zero + ft, 0,
                                 &success);
   if (!success)
     return false;
@@ -2769,7 +2770,7 @@ bool EmulateInstructionMIPS::Emulate_BC1NEZ(llvm::MCInst &insn) {
 
   Context context;
 
-  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                                target);
 }
 
@@ -2789,11 +2790,11 @@ bool EmulateInstructionMIPS::Emulate_3D_branch(llvm::MCInst &insn) {
   cc = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   offset = insn.getOperand(1).getImm();
 
-  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+  pc = ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
-  fcsr = (uint32_t)ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_fcsr_mips, 0,
+  fcsr = (uint32_t)ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::fcsr, 0,
                                         &success);
   if (!success)
     return false;
@@ -2828,7 +2829,7 @@ bool EmulateInstructionMIPS::Emulate_3D_branch(llvm::MCInst &insn) {
   }
   Context context;
 
-  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                                target);
 }
 
@@ -2876,11 +2877,11 @@ bool EmulateInstructionMIPS::Emulate_MSA_Branch_DF(llvm::MCInst &insn,
   int32_t offset = insn.getOperand(1).getImm();
 
   int32_t pc =
-      ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+      ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
-  if (ReadRegister(eRegisterKindDWARF, dwarf_w0_mips + wt, reg_value))
+  if (ReadRegister(eRegisterKindDWARF, dwarf_regs::w0 + wt, reg_value))
     ptr = (const uint8_t *)reg_value.GetBytes();
   else
     return false;
@@ -2920,7 +2921,7 @@ bool EmulateInstructionMIPS::Emulate_MSA_Branch_DF(llvm::MCInst &insn,
   Context context;
   context.type = eContextRelativeBranchImmediate;
 
-  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                                target);
 }
 
@@ -2945,11 +2946,11 @@ bool EmulateInstructionMIPS::Emulate_MSA_Branch_V(llvm::MCInst &insn,
   int32_t offset = insn.getOperand(1).getImm();
 
   int32_t pc =
-      ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_pc_mips, 0, &success);
+      ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_regs::pc, 0, &success);
   if (!success)
     return false;
 
-  if (ReadRegister(eRegisterKindDWARF, dwarf_w0_mips + wt, reg_value))
+  if (ReadRegister(eRegisterKindDWARF, dwarf_regs::w0 + wt, reg_value))
     wr_val = reg_value.GetAsUInt128(fail_value);
   else
     return false;
@@ -2963,7 +2964,7 @@ bool EmulateInstructionMIPS::Emulate_MSA_Branch_V(llvm::MCInst &insn,
   Context context;
   context.type = eContextRelativeBranchImmediate;
 
-  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_regs::pc,
                                target);
 }
 
@@ -2978,12 +2979,12 @@ bool EmulateInstructionMIPS::Emulate_LDST_Imm(llvm::MCInst &insn) {
       m_reg_info->getEncodingValue(insn.getOperand(num_operands - 2).getReg());
   imm = insn.getOperand(num_operands - 1).getImm();
 
-  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base))
+  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_regs::zero + base))
     return false;
 
   /* read base register */
   address = (int32_t)ReadRegisterUnsigned(eRegisterKindDWARF,
-                                          dwarf_zero_mips + base, 0, &success);
+                                          dwarf_regs::zero + base, 0, &success);
   if (!success)
     return false;
 
@@ -2992,7 +2993,7 @@ bool EmulateInstructionMIPS::Emulate_LDST_Imm(llvm::MCInst &insn) {
 
   /* Set the bad_vaddr register with base address used in the instruction */
   bad_vaddr_context.type = eContextInvalid;
-  WriteRegisterUnsigned(bad_vaddr_context, eRegisterKindDWARF, dwarf_bad_mips,
+  WriteRegisterUnsigned(bad_vaddr_context, eRegisterKindDWARF, dwarf_regs::bad,
                         address);
 
   return true;
@@ -3010,21 +3011,21 @@ bool EmulateInstructionMIPS::Emulate_LDST_Reg(llvm::MCInst &insn) {
   index =
       m_reg_info->getEncodingValue(insn.getOperand(num_operands - 1).getReg());
 
-  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base))
+  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_regs::zero + base))
     return false;
 
-  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + index))
+  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_regs::zero + index))
     return false;
 
   /* read base register */
   address = (int32_t)ReadRegisterUnsigned(eRegisterKindDWARF,
-                                          dwarf_zero_mips + base, 0, &success);
+                                          dwarf_regs::zero + base, 0, &success);
   if (!success)
     return false;
 
   /* read index register */
   index_address = (int32_t)ReadRegisterUnsigned(
-      eRegisterKindDWARF, dwarf_zero_mips + index, 0, &success);
+      eRegisterKindDWARF, dwarf_regs::zero + index, 0, &success);
   if (!success)
     return false;
 
@@ -3033,7 +3034,7 @@ bool EmulateInstructionMIPS::Emulate_LDST_Reg(llvm::MCInst &insn) {
 
   /* Set the bad_vaddr register with base address used in the instruction */
   bad_vaddr_context.type = eContextInvalid;
-  WriteRegisterUnsigned(bad_vaddr_context, eRegisterKindDWARF, dwarf_bad_mips,
+  WriteRegisterUnsigned(bad_vaddr_context, eRegisterKindDWARF, dwarf_regs::bad,
                         address);
 
   return true;

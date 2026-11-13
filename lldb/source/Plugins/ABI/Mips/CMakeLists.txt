@@ -8,6 +8,7 @@ add_lldb_library(lldbPluginABIMips PLUGIN
     TargetParser
   LINK_LIBS
     lldbCore
+    lldbRegister
     lldbSymbol
     lldbTarget
     lldbValueObject

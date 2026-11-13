@@ -7,44 +7,36 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextFreeBSDKernelCore_arm.h"
-#include "Register/Arch/lldb-arm-register-enums.h"
+#include "lldb/Register/Arch/lldb-arm-register-enums.h"
 
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "llvm/Support/Endian.h"
 
 #if defined(__FreeBSD__) && defined(__arm__)
 #include <machine/frame.h>
 #endif
 
+
+namespace reg_ids = lldb_private::registers::arm::id;
 using namespace lldb;
 using namespace lldb_private;
 
 RegisterContextFreeBSDKernelCore_arm::RegisterContextFreeBSDKernelCore_arm(
-    Thread &thread, std::unique_ptr<RegisterInfo_arm> register_info_up,
-    lldb::addr_t pcb_addr)
-    : RegisterContextCore_arm(thread, std::move(register_info_up)),
+    Thread &thread, RegisterLayout layout, lldb::addr_t pcb_addr)
+    : ThreadRegisterContext(thread, 0, std::move(layout)),
       m_pcb_addr(pcb_addr) {}
 
-bool RegisterContextFreeBSDKernelCore_arm::ReadGPR() { return true; }
-
-bool RegisterContextFreeBSDKernelCore_arm::ReadFPR() { return true; }
-
-bool RegisterContextFreeBSDKernelCore_arm::WriteGPR() {
-  assert(0);
-  return false;
-}
-
-bool RegisterContextFreeBSDKernelCore_arm::WriteFPR() {
-  assert(0);
-  return false;
-}
-
-bool RegisterContextFreeBSDKernelCore_arm::ReadRegister(
-    const RegisterInfo *reg_info, RegisterValue &value) {
+llvm::Expected<RegisterValue>
+RegisterContextFreeBSDKernelCore_arm::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
+  RegisterValue value;
   if (m_pcb_addr == LLDB_INVALID_ADDRESS)
-    return false;
+    return llvm::createStringError("register value is unavailable");
 
   // https://cgit.freebsd.org/src/tree/sys/arm/include/frame.h
   // struct pcb's first field is struct switchframe which is the only field used
@@ -96,13 +88,13 @@ bool RegisterContextFreeBSDKernelCore_arm::ReadRegister(
   size_t rd =
       m_thread.GetProcess()->ReadMemory(m_pcb_addr, &pcb, sizeof(pcb), error);
   if (rd != sizeof(pcb))
-    return false;
+    return llvm::createStringError("register value is unavailable");
 
-  uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
+  uint32_t reg = reg_info->numbers[lldb::eRegisterKindLLDB];
   switch (reg) {
 
 #define REG(x)                                                                 \
-  case gpr_##x##_arm:                                                          \
+  case reg_ids::gpr_##x:                                                       \
     value = pcb.x;                                                             \
     break;
 
@@ -122,12 +114,12 @@ bool RegisterContextFreeBSDKernelCore_arm::ReadRegister(
 #undef REG
 
   default:
-    return false;
+    return llvm::createStringError("register value is unavailable");
   }
-  return true;
+  return value;
 }
 
-bool RegisterContextFreeBSDKernelCore_arm::WriteRegister(
-    const RegisterInfo *reg_info, const RegisterValue &value) {
-  return false;
+llvm::Error RegisterContextFreeBSDKernelCore_arm::WriteRegister(
+    RegisterID id, const RegisterValue &value) {
+  return llvm::createStringError("register write is unavailable");
 }

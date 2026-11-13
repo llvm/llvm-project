@@ -9,6 +9,7 @@ set (FILES
   MainLoopTest.cpp
   JSONTransportTest.cpp
   NativeProcessProtocolTest.cpp
+  NativeRegisterContextTest.cpp
   PipeTest.cpp
   ProcessLaunchInfoTest.cpp
   ProcessRunLockTest.cpp
@@ -50,6 +51,7 @@ add_lldb_unittest(HostTests
   LINK_LIBS
     lldbHost
     lldbCore
+    lldbRegister
     lldbUtilityHelpers
     lldbHostHelpers
     LLVMTestingSupport

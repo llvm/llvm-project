@@ -10,7 +10,7 @@
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
 #include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
-#include "Utility/WasmVirtualRegisters.h"
+#include "lldb/Register/Arch/lldb-wasm-register-enums.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/Mangled.h"
@@ -26,6 +26,8 @@
 #include <utility>
 #include <vector>
 
+
+namespace reg_ids = lldb_private::registers::wasm::id;
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::plugin::dwarf;
@@ -220,14 +222,14 @@ SymbolFileWasm::GetVendorDWARFOpcodeSize(const DataExtractor &data,
 bool SymbolFileWasm::ParseVendorDWARFOpcode(uint8_t op,
                                             const llvm::DataExtractor &opcodes,
                                             lldb::offset_t &offset,
-                                            RegisterContext *reg_ctx,
+                                            ThreadRegisterContext *reg_ctx,
                                             lldb::RegisterKind reg_kind,
                                             std::vector<Value> &stack) const {
   if (op != llvm::dwarf::DW_OP_WASM_location)
     return false;
 
   uint32_t index = 0;
-  uint8_t tag = eWasmTagNotAWasmLocation;
+  uint8_t tag = reg_ids::eWasmTagNotAWasmLocation;
 
   /// |DWARF Location Index | WebAssembly Construct |
   /// |---------------------|-----------------------|
@@ -238,25 +240,25 @@ bool SymbolFileWasm::ParseVendorDWARFOpcode(uint8_t op,
   switch (wasm_op) {
   case 0: // LOCAL
     index = opcodes.getULEB128(&offset);
-    tag = eWasmTagLocal;
+    tag = reg_ids::eWasmTagLocal;
     break;
   case 1: // GLOBAL_FIXED
     index = opcodes.getULEB128(&offset);
-    tag = eWasmTagGlobal;
+    tag = reg_ids::eWasmTagGlobal;
     break;
   case 2: // OPERAND_STACK
     index = opcodes.getULEB128(&offset);
-    tag = eWasmTagOperandStack;
+    tag = reg_ids::eWasmTagOperandStack;
     break;
   case 3: // GLOBAL_RELOC
     index = opcodes.getU32(&offset);
-    tag = eWasmTagGlobal;
+    tag = reg_ids::eWasmTagGlobal;
     break;
   default:
     return false;
   }
 
-  const uint32_t reg_num = GetWasmRegister(tag, index);
+  const uint32_t reg_num = reg_ids::GetWasmRegister(tag, index);
 
   Value tmp;
   llvm::Error error = DWARFExpression::ReadRegisterValueAsScalar(

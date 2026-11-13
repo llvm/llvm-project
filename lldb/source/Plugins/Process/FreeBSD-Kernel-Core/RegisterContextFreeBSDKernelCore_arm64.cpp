@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextFreeBSDKernelCore_arm64.h"
-#include "Register/Arch/lldb-arm64-register-enums.h"
+#include "lldb/Register/Arch/lldb-arm64-register-enums.h"
 
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/Process.h"
@@ -15,7 +15,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "llvm/Support/Endian.h"
 
 #if defined(__FreeBSD__) && defined(__aarch64__)
@@ -23,33 +23,25 @@
 #include <sys/param.h>
 #endif
 
+
+namespace reg_ids = lldb_private::registers::arm64::id;
 using namespace lldb;
 using namespace lldb_private;
 
 RegisterContextFreeBSDKernelCore_arm64::RegisterContextFreeBSDKernelCore_arm64(
-    Thread &thread, std::unique_ptr<RegisterInfo_arm64> register_info_up,
-    lldb::addr_t pcb_addr)
-    : RegisterContextCore_arm64(thread, std::move(register_info_up)),
+    Thread &thread, RegisterLayout layout, lldb::addr_t pcb_addr)
+    : ThreadRegisterContext(thread, 0, std::move(layout)),
       m_pcb_addr(pcb_addr) {}
 
-bool RegisterContextFreeBSDKernelCore_arm64::ReadGPR() { return true; }
-
-bool RegisterContextFreeBSDKernelCore_arm64::ReadFPR() { return true; }
-
-bool RegisterContextFreeBSDKernelCore_arm64::WriteGPR() {
-  assert(0);
-  return false;
-}
-
-bool RegisterContextFreeBSDKernelCore_arm64::WriteFPR() {
-  assert(0);
-  return false;
-}
-
-bool RegisterContextFreeBSDKernelCore_arm64::ReadRegister(
-    const RegisterInfo *reg_info, RegisterValue &value) {
+llvm::Expected<RegisterValue>
+RegisterContextFreeBSDKernelCore_arm64::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
+  RegisterValue value;
   if (m_pcb_addr == LLDB_INVALID_ADDRESS)
-    return false;
+    return llvm::createStringError("register value is unavailable");
 
   // https://cgit.freebsd.org/src/tree/sys/arm64/include/pcb.h
   struct {
@@ -93,96 +85,96 @@ bool RegisterContextFreeBSDKernelCore_arm64::ReadRegister(
     size_t rd =
         m_thread.GetProcess()->ReadMemory(m_pcb_addr, &pcb, sizeof(pcb), error);
     if (rd != sizeof(pcb))
-      return false;
+      return llvm::createStringError("register value is unavailable");
 
-    uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
+    uint32_t reg = reg_info->numbers[lldb::eRegisterKindLLDB];
     switch (reg) {
-    case gpr_x19_arm64:
-    case gpr_x20_arm64:
-    case gpr_x21_arm64:
-    case gpr_x22_arm64:
-    case gpr_x23_arm64:
-    case gpr_x24_arm64:
-    case gpr_x25_arm64:
-    case gpr_x26_arm64:
-    case gpr_x27_arm64:
-    case gpr_x28_arm64:
-    case gpr_fp_arm64:
-      static_assert(gpr_fp_arm64 - gpr_x19_arm64 == pcb_fp,
+    case reg_ids::gpr_x19:
+    case reg_ids::gpr_x20:
+    case reg_ids::gpr_x21:
+    case reg_ids::gpr_x22:
+    case reg_ids::gpr_x23:
+    case reg_ids::gpr_x24:
+    case reg_ids::gpr_x25:
+    case reg_ids::gpr_x26:
+    case reg_ids::gpr_x27:
+    case reg_ids::gpr_x28:
+    case reg_ids::gpr_fp:
+      static_assert(reg_ids::gpr_fp - reg_ids::gpr_x19 == pcb_fp,
                     "nonconsecutive arm64 register numbers");
-      value = pcb.x[reg - gpr_x19_arm64];
+      value = pcb.x[reg - reg_ids::gpr_x19];
       break;
-    case gpr_sp_arm64:
+    case reg_ids::gpr_sp:
       value = pcb.sp;
       break;
-    case gpr_pc_arm64:
+    case reg_ids::gpr_pc:
       // The pc of crashing thread is stored in lr.
-      static_assert(gpr_lr_arm64 - gpr_x19_arm64 == pcb_lr,
+      static_assert(reg_ids::gpr_lr - reg_ids::gpr_x19 == pcb_lr,
                     "nonconsecutive arm64 register numbers");
-      value = pcb.x[gpr_lr_arm64 - gpr_x19_arm64];
+      value = pcb.x[reg_ids::gpr_lr - reg_ids::gpr_x19];
       break;
     default:
-      return false;
+      return llvm::createStringError("register value is unavailable");
     }
   } else {
     size_t rd = m_thread.GetProcess()->ReadMemory(m_pcb_addr, &pcb13,
                                                   sizeof(pcb13), error);
     if (rd != sizeof(pcb13))
-      return false;
+      return llvm::createStringError("register value is unavailable");
 
-    uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
+    uint32_t reg = reg_info->numbers[lldb::eRegisterKindLLDB];
     switch (reg) {
-    case gpr_x0_arm64:
-    case gpr_x1_arm64:
-    case gpr_x2_arm64:
-    case gpr_x3_arm64:
-    case gpr_x4_arm64:
-    case gpr_x5_arm64:
-    case gpr_x6_arm64:
-    case gpr_x7_arm64:
-    case gpr_x8_arm64:
-    case gpr_x9_arm64:
-    case gpr_x10_arm64:
-    case gpr_x11_arm64:
-    case gpr_x12_arm64:
-    case gpr_x13_arm64:
-    case gpr_x14_arm64:
-    case gpr_x15_arm64:
-    case gpr_x16_arm64:
-    case gpr_x17_arm64:
-    case gpr_x18_arm64:
-    case gpr_x19_arm64:
-    case gpr_x20_arm64:
-    case gpr_x21_arm64:
-    case gpr_x22_arm64:
-    case gpr_x23_arm64:
-    case gpr_x24_arm64:
-    case gpr_x25_arm64:
-    case gpr_x26_arm64:
-    case gpr_x27_arm64:
-    case gpr_x28_arm64:
-    case gpr_fp_arm64:
-      static_assert(gpr_fp_arm64 - gpr_x0_arm64 == 29,
+    case reg_ids::gpr_x0:
+    case reg_ids::gpr_x1:
+    case reg_ids::gpr_x2:
+    case reg_ids::gpr_x3:
+    case reg_ids::gpr_x4:
+    case reg_ids::gpr_x5:
+    case reg_ids::gpr_x6:
+    case reg_ids::gpr_x7:
+    case reg_ids::gpr_x8:
+    case reg_ids::gpr_x9:
+    case reg_ids::gpr_x10:
+    case reg_ids::gpr_x11:
+    case reg_ids::gpr_x12:
+    case reg_ids::gpr_x13:
+    case reg_ids::gpr_x14:
+    case reg_ids::gpr_x15:
+    case reg_ids::gpr_x16:
+    case reg_ids::gpr_x17:
+    case reg_ids::gpr_x18:
+    case reg_ids::gpr_x19:
+    case reg_ids::gpr_x20:
+    case reg_ids::gpr_x21:
+    case reg_ids::gpr_x22:
+    case reg_ids::gpr_x23:
+    case reg_ids::gpr_x24:
+    case reg_ids::gpr_x25:
+    case reg_ids::gpr_x26:
+    case reg_ids::gpr_x27:
+    case reg_ids::gpr_x28:
+    case reg_ids::gpr_fp:
+      static_assert(reg_ids::gpr_fp - reg_ids::gpr_x0 == 29,
                     "nonconsecutive arm64 register numbers");
-      value = pcb13.x[reg - gpr_x0_arm64];
+      value = pcb13.x[reg - reg_ids::gpr_x0];
       break;
-    case gpr_sp_arm64:
+    case reg_ids::gpr_sp:
       value = pcb13.sp;
       break;
-    case gpr_pc_arm64:
+    case reg_ids::gpr_pc:
       // The pc of crashing thread is stored in lr.
       value = pcb13.lr;
       break;
     default:
-      return false;
+      return llvm::createStringError("register value is unavailable");
     }
   }
-  return true;
+  return value;
 }
 
-bool RegisterContextFreeBSDKernelCore_arm64::WriteRegister(
-    const RegisterInfo *reg_info, const RegisterValue &value) {
-  return false;
+llvm::Error RegisterContextFreeBSDKernelCore_arm64::WriteRegister(
+    RegisterID id, const RegisterValue &value) {
+  return llvm::createStringError("register write is unavailable");
 }
 
 std::optional<int> RegisterContextFreeBSDKernelCore_arm64::GetOsreldate() {

@@ -267,8 +267,9 @@ public:
   ///     The thread that the unwind is happening on.
   ///
   /// \param[in] regctx
-  ///     The RegisterContext for the frame we need to create an UnwindPlan.
-  ///     We don't yet have a StackFrame when we're selecting the UnwindPlan.
+  ///     The ThreadRegisterContext for the frame we need to create an
+  ///     UnwindPlan. We don't yet have a StackFrame when we're selecting the
+  ///     UnwindPlan.
   ///
   /// \param[out] behaves_like_zeroth_frame
   ///     With normal ABI calls, all stack frames except the zeroth frame need
@@ -283,7 +284,7 @@ public:
   ///     function.
   static lldb::UnwindPlanSP
   GetRuntimeUnwindPlan(lldb_private::Thread &thread,
-                       lldb_private::RegisterContext *regctx,
+                       lldb_private::ThreadRegisterContext *regctx,
                        bool &behaves_like_zeroth_frame);
 
   /// Language runtime plugins can use this API to report
@@ -297,7 +298,7 @@ protected:
   // provide one of these UnwindPlans.
   virtual lldb::UnwindPlanSP
   GetRuntimeUnwindPlan(lldb::ProcessSP process_sp,
-                       lldb_private::RegisterContext *regctx,
+                       lldb_private::ThreadRegisterContext *regctx,
                        bool &behaves_like_zeroth_frame) {
     return lldb::UnwindPlanSP();
   }

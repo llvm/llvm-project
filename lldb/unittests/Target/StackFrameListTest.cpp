@@ -9,6 +9,8 @@
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/Platform/Linux/PlatformLinux.h"
 #include "Plugins/Process/Utility/HistoryThread.h"
+#include "Plugins/Process/Utility/RegisterContextDummy.h"
+#include "Plugins/Process/Utility/RegisterContextHistory.h"
 #include "Plugins/ScriptInterpreter/None/ScriptInterpreterNone.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
@@ -18,6 +20,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "gtest/gtest.h"
@@ -119,3 +122,44 @@ TEST_F(StackFrameListTest, InlineFramesInheritZerothFrameSymbolication) {
   }
 }
 } // namespace
+
+TEST_F(StackFrameListTest, SyntheticPCContextsOwnLogicalDescriptions) {
+  auto process = std::make_shared<DummyProcess>(
+      m_target_sp, Listener::MakeListener("synthetic-registers"));
+  auto thread = std::make_shared<HistoryThread>(
+      *process, 0x1234, std::vector<addr_t>{0x12345678});
+  RegisterContextHistory history(*thread, 0, 8, 0x12345678);
+  auto description = history.GetDescription();
+  ASSERT_TRUE(description);
+  const auto *pc =
+      description->FindByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
+  ASSERT_NE(pc, nullptr);
+  EXPECT_EQ(pc->name, "pc");
+  EXPECT_EQ(pc->byte_size, 8u);
+  ASSERT_EQ(description->GetGroups().size(), 1u);
+  EXPECT_EQ(description->GetGroups()[0].registers,
+            (std::vector<RegisterID>{pc->id}));
+  EXPECT_EQ(history.GetBankSize(0), 0u);
+  EXPECT_EQ(history.GetRegisterCount(), 1u);
+  EXPECT_EQ(history.GetRegisterAtIndex(1), nullptr);
+  RegisterValue value;
+  ASSERT_TRUE(!llvm::errorToBool(
+      history
+          .ReadRegister((history.GetRegisterAtIndex(0)
+                             ? (history.GetRegisterAtIndex(0))->id
+                             : LLDB_INVALID_REGNUM))
+          .moveInto(value)));
+  EXPECT_EQ(value.GetAsUInt64(), 0x12345678u);
+
+  RegisterContextDummy dummy(*thread, 0, 4);
+  ASSERT_TRUE(dummy.GetDescription());
+  EXPECT_EQ(dummy.GetDescription()->Find("pc")->byte_size, 4u);
+  EXPECT_EQ(dummy.GetBankSize(0), 0u);
+  ASSERT_TRUE(!llvm::errorToBool(
+      dummy
+          .ReadRegister((dummy.GetRegisterAtIndex(0)
+                             ? (dummy.GetRegisterAtIndex(0))->id
+                             : LLDB_INVALID_REGNUM))
+          .moveInto(value)));
+  EXPECT_EQ(value.GetAsUInt32(), UINT32_MAX);
+}

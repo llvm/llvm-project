@@ -16,7 +16,7 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/StopInfo.h"
@@ -347,7 +347,7 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
   if (!target_sp)
     return;
 
-  lldb::RegisterContextSP next_reg_ctx_sp = next_frame.GetRegisterContext();
+  lldb::ThreadRegisterContextSP next_reg_ctx_sp = next_frame.GetRegisterContext();
   if (!next_reg_ctx_sp)
     return;
 
@@ -539,7 +539,7 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
       // We might have already created frame zero, only create it if we need
       // to.
       if (m_frames.empty()) {
-        RegisterContextSP reg_ctx_sp(m_thread.GetRegisterContext());
+        ThreadRegisterContextSP reg_ctx_sp(m_thread.GetRegisterContext());
 
         if (reg_ctx_sp) {
           const bool success = unwinder.GetFrameInfoAtIndex(

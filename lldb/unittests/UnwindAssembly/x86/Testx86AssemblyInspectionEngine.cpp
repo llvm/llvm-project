@@ -2273,7 +2273,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSpArithx86_64Augmented) {
     unwind_plan.AppendRow(row);
   }
 
-  RegisterContextSP reg_ctx_sp;
+  ThreadRegisterContextSP reg_ctx_sp;
   EXPECT_TRUE(engine64->AugmentUnwindPlanFromCallSite(
       data, sizeof(data), sample_range, unwind_plan, reg_ctx_sp));
 
@@ -2349,7 +2349,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSimplex86_64Augmented) {
     unwind_plan.AppendRow(row);
   }
 
-  RegisterContextSP reg_ctx_sp;
+  ThreadRegisterContextSP reg_ctx_sp;
   EXPECT_TRUE(engine64->AugmentUnwindPlanFromCallSite(
       data, sizeof(data), sample_range, unwind_plan, reg_ctx_sp));
 
@@ -2416,7 +2416,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSimplei386ugmented) {
     unwind_plan.AppendRow(row);
   }
 
-  RegisterContextSP reg_ctx_sp;
+  ThreadRegisterContextSP reg_ctx_sp;
   EXPECT_TRUE(engine32->AugmentUnwindPlanFromCallSite(
       data, sizeof(data), sample_range, unwind_plan, reg_ctx_sp));
 

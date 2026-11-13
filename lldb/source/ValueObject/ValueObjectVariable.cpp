@@ -14,6 +14,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/DWARFExpressionList.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -23,10 +24,9 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -45,7 +45,7 @@ namespace lldb_private {
 class StackFrame;
 }
 namespace lldb_private {
-struct RegisterInfo;
+struct RegisterDescriptor;
 }
 using namespace lldb_private;
 
@@ -361,7 +361,8 @@ bool ValueObjectVariable::GetDeclaration(Declaration &decl) {
 }
 
 const char *ValueObjectVariable::GetLocationAsCString() {
-  if (m_resolved_value.GetContextType() == Value::ContextType::RegisterInfo)
+  if (m_resolved_value.GetContextType() ==
+      Value::ContextType::RegisterDescriptor)
     return GetLocationAsCStringImpl(m_resolved_value, m_data);
   else
     return ValueObject::GetLocationAsCString();
@@ -387,19 +388,22 @@ bool ValueObjectVariable::SetValueFromCString(const char *value_str,
     return false;
   }
 
-  if (m_resolved_value.GetContextType() == Value::ContextType::RegisterInfo) {
-    RegisterInfo *reg_info = m_resolved_value.GetRegisterInfo();
+  if (m_resolved_value.GetContextType() ==
+      Value::ContextType::RegisterDescriptor) {
+    const RegisterDescriptor *reg_info = m_resolved_value.GetRegisterInfo();
     ExecutionContext exe_ctx(GetExecutionContextRef());
-    RegisterContext *reg_ctx = exe_ctx.GetRegisterContext();
+    ThreadRegisterContext *reg_ctx = exe_ctx.GetRegisterContext();
     RegisterValue reg_value;
     if (!reg_info || !reg_ctx) {
       error = Status::FromErrorString("unable to retrieve register info");
       return false;
     }
-    error = reg_value.SetValueFromString(reg_info, llvm::StringRef(value_str));
+    error = reg_value.SetValueFromString(
+        reg_info->encoding, reg_info->byte_size, llvm::StringRef(value_str));
     if (error.Fail())
       return false;
-    if (reg_ctx->WriteRegister(reg_info, reg_value)) {
+    if (!llvm::errorToBool(reg_ctx->WriteRegister(
+            (reg_info ? reg_info->id : LLDB_INVALID_REGNUM), reg_value))) {
       SetNeedsUpdate();
       return true;
     } else {
@@ -421,19 +425,22 @@ bool ValueObjectVariable::SetData(DataExtractor &data, Status &error) {
     return false;
   }
 
-  if (m_resolved_value.GetContextType() == Value::ContextType::RegisterInfo) {
-    RegisterInfo *reg_info = m_resolved_value.GetRegisterInfo();
+  if (m_resolved_value.GetContextType() ==
+      Value::ContextType::RegisterDescriptor) {
+    const RegisterDescriptor *reg_info = m_resolved_value.GetRegisterInfo();
     ExecutionContext exe_ctx(GetExecutionContextRef());
-    RegisterContext *reg_ctx = exe_ctx.GetRegisterContext();
+    ThreadRegisterContext *reg_ctx = exe_ctx.GetRegisterContext();
     RegisterValue reg_value;
     if (!reg_info || !reg_ctx) {
       error = Status::FromErrorString("unable to retrieve register info");
       return false;
     }
-    error = reg_value.SetValueFromData(*reg_info, data, 0, true);
+    error = reg_value.SetValueFromData(reg_info->encoding, reg_info->byte_size,
+                                       data, 0, true, reg_info->name);
     if (error.Fail())
       return false;
-    if (reg_ctx->WriteRegister(reg_info, reg_value)) {
+    if (!llvm::errorToBool(reg_ctx->WriteRegister(
+            (reg_info ? reg_info->id : LLDB_INVALID_REGNUM), reg_value))) {
       SetNeedsUpdate();
       return true;
     } else {

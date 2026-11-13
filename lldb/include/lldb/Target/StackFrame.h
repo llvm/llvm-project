@@ -72,9 +72,9 @@ public:
     Synthetic
   };
 
-  /// Construct a StackFrame object without supplying a RegisterContextSP.
+  /// Construct a StackFrame object without supplying a ThreadRegisterContextSP.
   ///
-  /// This is the one constructor that doesn't take a RegisterContext
+  /// This is the one constructor that doesn't take a ThreadRegisterContext
   /// parameter.  This ctor may be called when creating a history StackFrame;
   /// these are used if we've collected a stack trace of pc addresses at some
   /// point in the past.  We may only have pc values. We may have a CFA,
@@ -120,13 +120,13 @@ public:
 
   StackFrame(const lldb::ThreadSP &thread_sp, lldb::user_id_t frame_idx,
              lldb::user_id_t concrete_frame_idx,
-             const lldb::RegisterContextSP &reg_context_sp, lldb::addr_t cfa,
+             const lldb::ThreadRegisterContextSP &reg_context_sp, lldb::addr_t cfa,
              lldb::addr_t pc, bool behaves_like_zeroth_frame,
              const SymbolContext *sc_ptr);
 
   StackFrame(const lldb::ThreadSP &thread_sp, lldb::user_id_t frame_idx,
              lldb::user_id_t concrete_frame_idx,
-             const lldb::RegisterContextSP &reg_context_sp, lldb::addr_t cfa,
+             const lldb::ThreadRegisterContextSP &reg_context_sp, lldb::addr_t cfa,
              const Address &pc, bool behaves_like_zeroth_frame,
              const SymbolContext *sc_ptr);
 
@@ -237,21 +237,22 @@ public:
   /// addr points to code of the inlined copy of F2, this returns false.
   bool IsAddressInFrameScope(const Address &addr);
 
-  /// Get the RegisterContext for this frame, if possible.
+  /// Get the ThreadRegisterContext for this frame, if possible.
   ///
-  /// Returns a shared pointer to the RegisterContext for this stack frame.
-  /// Only a live StackFrame object will be able to return a RegisterContext -
-  /// callers must be prepared for an empty shared pointer being returned.
+  /// Returns a shared pointer to the ThreadRegisterContext for this stack
+  /// frame. Only a live StackFrame object will be able to return a
+  /// ThreadRegisterContext - callers must be prepared for an empty shared
+  /// pointer being returned.
   ///
-  /// Even a live StackFrame RegisterContext may not be able to provide all
-  /// registers.  Only the currently executing frame (frame 0) can reliably
+  /// Even a live StackFrame ThreadRegisterContext may not be able to provide
+  /// all registers.  Only the currently executing frame (frame 0) can reliably
   /// provide every register in the register context.
   ///
   /// \return
-  ///   The RegisterContext shared point for this frame.
-  virtual lldb::RegisterContextSP GetRegisterContext();
+  ///   The ThreadRegisterContext shared point for this frame.
+  virtual lldb::ThreadRegisterContextSP GetRegisterContext();
 
-  const lldb::RegisterContextSP &GetRegisterContextSP() const {
+  const lldb::ThreadRegisterContextSP &GetRegisterContextSP() const {
     return m_reg_context_sp;
   }
 
@@ -608,7 +609,7 @@ protected:
   lldb::ThreadWP m_thread_wp;
   uint32_t m_frame_index;
   uint32_t m_concrete_frame_index;
-  lldb::RegisterContextSP m_reg_context_sp;
+  lldb::ThreadRegisterContextSP m_reg_context_sp;
   StackID m_id;
   /// \}
 

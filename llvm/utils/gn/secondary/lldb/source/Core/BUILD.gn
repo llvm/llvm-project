@@ -32,6 +32,7 @@ static_library("Core") {
     #"//lldb/source/DataFormatters", # Dependency cycle.
     #"//lldb/source/Expression", # Dependency cycle.
     "//lldb/source/Host",
+    "//lldb/source/Register",
     "//lldb/source/ValueObject",
 
     #"//lldb/source/Interpreter", # Dependency cycle.
@@ -68,7 +69,6 @@ static_library("Core") {
     "Diagnostics.cpp",
     "Disassembler.cpp",
     "DumpDataExtractor.cpp",
-    "DumpRegisterInfo.cpp",
     "DumpRegisterValue.cpp",
     "DynamicLoader.cpp",
     "EmulateInstruction.cpp",

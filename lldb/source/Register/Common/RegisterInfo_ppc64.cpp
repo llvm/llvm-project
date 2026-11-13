@@ -6,73 +6,78 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Register/Common/RegisterInfo_ppc64.h"
+#include "lldb/Register/Arch/lldb-ppc64-ehframe-register-enums.h"
+#include "RegisterInfo_powerpc_internal.h"
 #include <cassert>
 #include <cstddef>
-#include <vector>
-
-#include "lldb/lldb-defines.h"
+#include "lldb/Register/Arch/lldb-ppc64-register-enums.h"
+#include "llvm/ADT/STLExtras.h"
+#include "lldb/Register/Arch/lldb-ppc64-dwarf-register-enums.h"
+#include "lldb/lldb-private-types.h"
 #include "llvm/Support/Compiler.h"
+#include <iterator>
 
-#include "RegisterInfo_ppc64.h"
+using namespace lldb_private;
 
-// Include RegisterInfo_ppc64 to declare our g_register_infos_ppc64
-#define DECLARE_REGISTER_INFOS_PPC64_STRUCT
-#include "Register/Arch/RegisterInfos_ppc64.h"
-#undef DECLARE_REGISTER_INFOS_PPC64_STRUCT
+static llvm::ArrayRef<RegisterDescriptor> Values4() {
+  constexpr uint32_t word_size = 4;
+#include "Register/Arch/RegisterDescriptions_ppc64.inc"
+  return values;
+}
 
-static const lldb_private::RegisterInfo *
-GetRegisterInfoPtr(const lldb_private::ArchSpec &target_arch) {
-  switch (target_arch.GetMachine()) {
-  case llvm::Triple::ppc:
-    return g_register_infos_ppc;
-  case llvm::Triple::ppc64:
-    return g_register_infos_ppc64;
-  default:
-    assert(false && "Unhandled target architecture.");
-    return nullptr;
+static llvm::ArrayRef<RegisterDescriptor> Values8() {
+  constexpr uint32_t word_size = 8;
+#include "Register/Arch/RegisterDescriptions_ppc64.inc"
+  return values;
+}
+
+std::shared_ptr<const RegisterDescription>
+RegisterInfo_ppc64::CreateDescription(const ArchSpec &arch) {
+  static const auto description4 = std::make_shared<RegisterDescription>(
+      MakePowerPCDescription(Values4(), false));
+  static const auto description8 = std::make_shared<RegisterDescription>(
+      MakePowerPCDescription(Values8(), false));
+  return arch.GetMachine() == llvm::Triple::ppc ? description4 : description8;
+}
+
+RegisterDescription
+lldb_private::MakePowerPCDescription(llvm::ArrayRef<RegisterDescriptor> values,
+                                     bool normalize_identities) {
+  std::vector<RegisterDescriptor> registers(values.begin(), values.end());
+  std::shared_ptr<const RegisterDescription> master;
+  if (normalize_identities)
+    master = RegisterInfo_ppc64::CreateDescription(
+        ArchSpec("powerpc64-unknown-unknown"));
+  std::map<RegisterID, RegisterID> identities;
+  for (auto &reg : registers) {
+    std::string canonical = reg.name;
+    if (canonical.size() > 1 && canonical[0] == 'v' && canonical[1] >= '0' &&
+        canonical[1] <= '9')
+      canonical.insert(1, "r");
+    const auto *definition = master ? master->Find(canonical) : &reg;
+    assert(definition && "unknown PowerPC architecture identity");
+    identities[reg.id] = definition->id;
+    reg.id = definition->id;
   }
-}
-
-static uint32_t
-GetRegisterInfoCount(const lldb_private::ArchSpec &target_arch) {
-  switch (target_arch.GetMachine()) {
-  case llvm::Triple::ppc:
-    return static_cast<uint32_t>(sizeof(g_register_infos_ppc) /
-                                 sizeof(g_register_infos_ppc[0]));
-  case llvm::Triple::ppc64:
-    return static_cast<uint32_t>(sizeof(g_register_infos_ppc64) /
-                                 sizeof(g_register_infos_ppc64[0]));
-  default:
-    assert(false && "Unhandled target architecture.");
-    return 0;
+  std::vector<RegisterGroup> groups = {{"General Purpose Registers", "gpr", {}},
+                                       {"Floating Point Registers", "fpr", {}},
+                                       {"Altivec/VMX Registers", "vmx", {}},
+                                       {"VSX Registers", "vsx", {}}};
+  for (auto &reg : registers) {
+    for (auto *refs : {&reg.value_registers, &reg.invalidate_registers})
+      for (auto &id : *refs)
+        id = identities.at(id);
+    llvm::StringRef name(reg.name);
+    size_t group = 0;
+    if (name.starts_with("f"))
+      group = 1;
+    else if (name.starts_with("v")) {
+      group = name.starts_with("vs") && name != "vscr" ? 3 : 2;
+    }
+    groups[group].registers.push_back(reg.id);
   }
-}
-
-RegisterInfo_ppc64::RegisterInfo_ppc64(
-    const lldb_private::ArchSpec &target_arch)
-    : lldb_private::RegisterInfoInterface(target_arch),
-      m_register_info_p(GetRegisterInfoPtr(target_arch)),
-      m_register_info_count(GetRegisterInfoCount(target_arch)), m_gpr_size(0) {
-  switch (target_arch.GetMachine()) {
-  case llvm::Triple::ppc:
-    m_gpr_size = sizeof(GPR_PPC);
-    break;
-  case llvm::Triple::ppc64:
-    m_gpr_size = sizeof(GPR_PPC64);
-    break;
-  default:
-    assert(false && "Unhandled target architecture.");
-    break;
-  }
-}
-
-size_t RegisterInfo_ppc64::GetGPRSize() const { return m_gpr_size; }
-
-const lldb_private::RegisterInfo *
-RegisterInfo_ppc64::GetRegisterInfo() const {
-  return m_register_info_p;
-}
-
-uint32_t RegisterInfo_ppc64::GetRegisterCount() const {
-  return m_register_info_count;
+  llvm::erase_if(groups, [](const auto &g) { return g.registers.empty(); });
+  return llvm::cantFail(
+      RegisterDescription::Create(std::move(registers), std::move(groups)));
 }

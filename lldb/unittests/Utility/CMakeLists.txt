@@ -18,6 +18,7 @@ add_lldb_unittest(UtilityTests
   FileSpecListTest.cpp
   FileSpecTest.cpp
   FlagsTest.cpp
+  FormatTest.cpp
   IterableTest.cpp
   ListenerTest.cpp
   LockedTest.cpp
@@ -31,8 +32,6 @@ add_lldb_unittest(UtilityTests
   RangeMapTest.cpp
   RangeTest.cpp
   RealpathPrefixesTest.cpp
-  RegisterTypeTest.cpp
-  RegisterValueTest.cpp
   RegularExpressionTest.cpp
   ScalarTest.cpp
   SharedClusterTest.cpp

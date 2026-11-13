@@ -8,17 +8,21 @@
 
 #if defined(__s390x__) && defined(__linux__)
 
+#include <set>
+#include "lldb/Register/Arch/lldb-s390x-register-enums.h"
+
 #include "NativeRegisterContextLinux_s390x.h"
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
-#include "Register/Linux/RegisterInfoLinux_s390x.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Register/Layouts/Linux/RegisterLayoutLinux_s390x.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 #include <sys/ptrace.h>
 #include <sys/uio.h>
 
+namespace reg_ids = lldb_private::registers::s390x::id;
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
 
@@ -27,60 +31,70 @@ using namespace lldb_private::process_linux;
 namespace {
 // s390x 64-bit general purpose registers.
 static const uint32_t g_gpr_regnums_s390x[] = {
-    lldb_r0_s390x,      lldb_r1_s390x,    lldb_r2_s390x,    lldb_r3_s390x,
-    lldb_r4_s390x,      lldb_r5_s390x,    lldb_r6_s390x,    lldb_r7_s390x,
-    lldb_r8_s390x,      lldb_r9_s390x,    lldb_r10_s390x,   lldb_r11_s390x,
-    lldb_r12_s390x,     lldb_r13_s390x,   lldb_r14_s390x,   lldb_r15_s390x,
-    lldb_acr0_s390x,    lldb_acr1_s390x,  lldb_acr2_s390x,  lldb_acr3_s390x,
-    lldb_acr4_s390x,    lldb_acr5_s390x,  lldb_acr6_s390x,  lldb_acr7_s390x,
-    lldb_acr8_s390x,    lldb_acr9_s390x,  lldb_acr10_s390x, lldb_acr11_s390x,
-    lldb_acr12_s390x,   lldb_acr13_s390x, lldb_acr14_s390x, lldb_acr15_s390x,
-    lldb_pswm_s390x,    lldb_pswa_s390x,
+    reg_ids::r0,        reg_ids::r1,    reg_ids::r2,    reg_ids::r3,
+    reg_ids::r4,        reg_ids::r5,    reg_ids::r6,    reg_ids::r7,
+    reg_ids::r8,        reg_ids::r9,    reg_ids::r10,   reg_ids::r11,
+    reg_ids::r12,       reg_ids::r13,   reg_ids::r14,   reg_ids::r15,
+    reg_ids::acr0,      reg_ids::acr1,  reg_ids::acr2,  reg_ids::acr3,
+    reg_ids::acr4,      reg_ids::acr5,  reg_ids::acr6,  reg_ids::acr7,
+    reg_ids::acr8,      reg_ids::acr9,  reg_ids::acr10, reg_ids::acr11,
+    reg_ids::acr12,     reg_ids::acr13, reg_ids::acr14, reg_ids::acr15,
+    reg_ids::pswm,      reg_ids::pswa,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 static_assert((sizeof(g_gpr_regnums_s390x) / sizeof(g_gpr_regnums_s390x[0])) -
                       1 ==
-                  k_num_gpr_registers_s390x,
+                  reg_ids::k_num_gpr_registers,
               "g_gpr_regnums_s390x has wrong number of register infos");
 
 // s390x 64-bit floating point registers.
 static const uint32_t g_fpu_regnums_s390x[] = {
-    lldb_f0_s390x,      lldb_f1_s390x,  lldb_f2_s390x,  lldb_f3_s390x,
-    lldb_f4_s390x,      lldb_f5_s390x,  lldb_f6_s390x,  lldb_f7_s390x,
-    lldb_f8_s390x,      lldb_f9_s390x,  lldb_f10_s390x, lldb_f11_s390x,
-    lldb_f12_s390x,     lldb_f13_s390x, lldb_f14_s390x, lldb_f15_s390x,
-    lldb_fpc_s390x,
+    reg_ids::f0,        reg_ids::f1,  reg_ids::f2,  reg_ids::f3,  reg_ids::f4,
+    reg_ids::f5,        reg_ids::f6,  reg_ids::f7,  reg_ids::f8,  reg_ids::f9,
+    reg_ids::f10,       reg_ids::f11, reg_ids::f12, reg_ids::f13, reg_ids::f14,
+    reg_ids::f15,       reg_ids::fpc,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 static_assert((sizeof(g_fpu_regnums_s390x) / sizeof(g_fpu_regnums_s390x[0])) -
                       1 ==
-                  k_num_fpr_registers_s390x,
+                  reg_ids::k_num_fpr_registers,
               "g_fpu_regnums_s390x has wrong number of register infos");
 
 // s390x Linux operating-system information.
 static const uint32_t g_linux_regnums_s390x[] = {
-    lldb_orig_r2_s390x, lldb_last_break_s390x, lldb_system_call_s390x,
+    reg_ids::orig_r2, reg_ids::last_break, reg_ids::system_call,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 static_assert((sizeof(g_linux_regnums_s390x) /
                sizeof(g_linux_regnums_s390x[0])) -
                       1 ==
-                  k_num_linux_registers_s390x,
+                  reg_ids::k_num_linux_registers,
               "g_linux_regnums_s390x has wrong number of register infos");
 
 // Number of register sets provided by this context.
 enum { k_num_register_sets = 3 };
 
 // Register sets for s390x 64-bit.
-static const RegisterSet g_reg_sets_s390x[k_num_register_sets] = {
-    {"General Purpose Registers", "gpr", k_num_gpr_registers_s390x,
-     g_gpr_regnums_s390x},
-    {"Floating Point Registers", "fpr", k_num_fpr_registers_s390x,
-     g_fpu_regnums_s390x},
-    {"Linux Operating System Data", "linux", k_num_linux_registers_s390x,
-     g_linux_regnums_s390x},
+struct RegisterGroupNumbers {
+  const char *name;
+  const char *short_name;
+  std::vector<uint32_t> registers;
 };
-}
+
+static const RegisterGroupNumbers g_reg_sets_s390x[k_num_register_sets] = {
+    {"General Purpose Registers", "gpr",
+     std::vector<RegisterID>(g_gpr_regnums_s390x,
+                             g_gpr_regnums_s390x +
+                                 reg_ids::k_num_gpr_registers)},
+    {"Floating Point Registers", "fpr",
+     std::vector<RegisterID>(g_fpu_regnums_s390x,
+                             g_fpu_regnums_s390x +
+                                 reg_ids::k_num_fpr_registers)},
+    {"Linux Operating System Data", "linux",
+     std::vector<RegisterID>(g_linux_regnums_s390x,
+                             g_linux_regnums_s390x +
+                                 reg_ids::k_num_linux_registers)}};
+} // namespace
 
 #define REG_CONTEXT_SIZE (sizeof(s390_regs) + sizeof(s390_fp_regs) + 4)
 
@@ -103,27 +117,26 @@ NativeRegisterContextLinux::DetermineArchitecture(lldb::tid_t tid) {
 
 // NativeRegisterContextLinux_s390x members.
 
-static RegisterInfoInterface *
-CreateRegisterInfoInterface(const ArchSpec &target_arch) {
+static RegisterLayout CreateRegisterLayout(const ArchSpec &target_arch) {
   assert((HostInfo::GetArchitecture().GetAddressByteSize() == 8) &&
          "Register setting path assumes this is a 64-bit host");
-  return new RegisterInfoLinux_s390x(target_arch);
+  return CreateLinuxS390XRegisterLayout(target_arch);
 }
 
 NativeRegisterContextLinux_s390x::NativeRegisterContextLinux_s390x(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
-    : NativeRegisterContextRegisterInfo(
-          native_thread, CreateRegisterInfoInterface(target_arch)),
+    : NativeRegisterContext(native_thread, target_arch,
+                            CreateRegisterLayout(target_arch)),
       NativeRegisterContextLinux(native_thread) {
   // Set up data about ranges of valid registers.
   switch (target_arch.GetMachine()) {
   case llvm::Triple::systemz:
-    m_reg_info.num_registers = k_num_registers_s390x;
-    m_reg_info.num_gpr_registers = k_num_gpr_registers_s390x;
-    m_reg_info.num_fpr_registers = k_num_fpr_registers_s390x;
-    m_reg_info.last_gpr = k_last_gpr_s390x;
-    m_reg_info.first_fpr = k_first_fpr_s390x;
-    m_reg_info.last_fpr = k_last_fpr_s390x;
+    m_reg_info.num_registers = reg_ids::k_num_registers;
+    m_reg_info.num_gpr_registers = reg_ids::k_num_gpr_registers;
+    m_reg_info.num_fpr_registers = reg_ids::k_num_fpr_registers;
+    m_reg_info.last_gpr = reg_ids::k_last_gpr;
+    m_reg_info.first_fpr = reg_ids::k_first_fpr;
+    m_reg_info.last_fpr = reg_ids::k_last_fpr;
     break;
   default:
     assert(false && "Unhandled target architecture.");
@@ -132,42 +145,53 @@ NativeRegisterContextLinux_s390x::NativeRegisterContextLinux_s390x(
 
   // Clear out the watchpoint state.
   m_watchpoint_addr = LLDB_INVALID_ADDRESS;
-}
 
-uint32_t NativeRegisterContextLinux_s390x::GetRegisterSetCount() const {
-  uint32_t sets = 0;
-  for (uint32_t set_index = 0; set_index < k_num_register_sets; ++set_index) {
-    if (IsRegisterSetAvailable(set_index))
-      ++sets;
-  }
+  // Bind native presentation policy to this schema generation once. The
+  // private definitions above use the backend's external numbering.
+  auto select_group = [&](uint32_t set_index) -> const RegisterGroupNumbers * {
+    if (!IsRegisterSetAvailable(set_index))
+      return nullptr;
 
-  return sets;
-}
+    switch (GetTargetArchitecture().GetMachine()) {
+    case llvm::Triple::systemz:
+      return &g_reg_sets_s390x[set_index];
+    default:
+      assert(false && "Unhandled target architecture.");
+      return nullptr;
+    }
 
-uint32_t NativeRegisterContextLinux_s390x::GetUserRegisterCount() const {
-  uint32_t count = 0;
-  for (uint32_t set_index = 0; set_index < k_num_register_sets; ++set_index) {
-    const RegisterSet *set = GetRegisterSet(set_index);
-    if (set)
-      count += set->num_registers;
-  }
-  return count;
-}
-
-const RegisterSet *
-NativeRegisterContextLinux_s390x::GetRegisterSet(uint32_t set_index) const {
-  if (!IsRegisterSetAvailable(set_index))
     return nullptr;
-
-  switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
-  case llvm::Triple::systemz:
-    return &g_reg_sets_s390x[set_index];
-  default:
-    assert(false && "Unhandled target architecture.");
-    return nullptr;
+  };
+  auto previous = GetDescription();
+  std::vector<RegisterGroup> groups;
+  std::set<RegisterID> visible;
+  for (uint32_t index = 0; index < k_num_register_sets; ++index) {
+    const auto *input = select_group(index);
+    if (!input)
+      continue;
+    RegisterGroup group{input->name, input->short_name, {}};
+    for (uint32_t number : input->registers) {
+      const auto *reg = previous->FindByNumber(lldb::eRegisterKindLLDB, number);
+      assert(reg && "native presentation names an unknown register");
+      if (reg) {
+        group.registers.push_back(reg->id);
+        visible.insert(reg->id);
+      }
+    }
+    groups.push_back(std::move(group));
   }
-
-  return nullptr;
+  auto description = llvm::cantFail(RegisterDescription::Create(
+      {previous->GetRegisters().begin(), previous->GetRegisters().end()},
+      std::move(groups),
+      {previous->GetOwnedTypes().begin(), previous->GetOwnedTypes().end()}));
+  std::vector<RegisterID> order;
+  for (RegisterID id : previous->GetUserRegisters())
+    if (visible.count(id))
+      order.push_back(id);
+  auto presentation = llvm::cantFail(description.WithUserRegisters(order));
+  SetRegisterLayout(llvm::cantFail(RegisterLayout::Create(
+      std::make_shared<RegisterDescription>(std::move(presentation)),
+      GetLayout())));
 }
 
 bool NativeRegisterContextLinux_s390x::IsRegisterSetAvailable(
@@ -178,7 +202,7 @@ bool NativeRegisterContextLinux_s390x::IsRegisterSetAvailable(
 bool NativeRegisterContextLinux_s390x::IsGPR(uint32_t reg_index) const {
   // GPRs come first.  "orig_r2" counts as GPR since it is part of the GPR
   // register area.
-  return reg_index <= m_reg_info.last_gpr || reg_index == lldb_orig_r2_s390x;
+  return reg_index <= m_reg_info.last_gpr || reg_index == reg_ids::orig_r2;
 }
 
 bool NativeRegisterContextLinux_s390x::IsFPR(uint32_t reg_index) const {
@@ -186,154 +210,113 @@ bool NativeRegisterContextLinux_s390x::IsFPR(uint32_t reg_index) const {
           reg_index <= m_reg_info.last_fpr);
 }
 
-Status
-NativeRegisterContextLinux_s390x::ReadRegister(const RegisterInfo *reg_info,
-                                               RegisterValue &reg_value) {
-  if (!reg_info)
-    return Status::FromErrorString("reg_info NULL");
-
-  const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
-  if (reg == LLDB_INVALID_REGNUM)
-    return Status::FromErrorStringWithFormat(
-        "register \"%s\" is an internal-only lldb register, cannot "
-        "read directly",
-        reg_info->name);
-
-  if (IsGPR(reg)) {
-    Status error = ReadGPR();
-    if (error.Fail())
-      return error;
-
-    uint8_t *src = (uint8_t *)&m_regs + reg_info->byte_offset;
-    assert(reg_info->byte_offset + reg_info->byte_size <= sizeof(m_regs));
-    switch (reg_info->byte_size) {
-    case 4:
-      reg_value.SetUInt32(*(uint32_t *)src);
+llvm::Expected<RegisterValue>
+NativeRegisterContextLinux_s390x::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *descriptor = description ? description->Find(id) : nullptr;
+  if (!descriptor)
+    return Status::FromErrorString("unknown register").ToError();
+  auto required = GetLayout().GetRequiredBanks(descriptor->id, false);
+  if (!required)
+    return required.takeError();
+  uint64_t last_break = 0;
+  uint32_t system_call = 0;
+  for (RegisterBankID bank : *required) {
+    Status status;
+    switch (bank) {
+    case 0:
+      status = ReadGPR();
       break;
-    case 8:
-      reg_value.SetUInt64(*(uint64_t *)src);
+    case 1:
+      status = ReadFPR();
       break;
-    default:
-      assert(false && "Unhandled data size.");
-      return Status::FromErrorStringWithFormat("unhandled byte size: %" PRIu32,
-                                               reg_info->byte_size);
-    }
-    return Status();
-  }
-
-  if (IsFPR(reg)) {
-    Status error = ReadFPR();
-    if (error.Fail())
-      return error;
-
-    // byte_offset is just the offset within FPR, not the whole user area.
-    uint8_t *src = (uint8_t *)&m_fp_regs + reg_info->byte_offset;
-    assert(reg_info->byte_offset + reg_info->byte_size <= sizeof(m_fp_regs));
-    switch (reg_info->byte_size) {
-    case 4:
-      reg_value.SetUInt32(*(uint32_t *)src);
+    case 2:
+      status = DoReadRegisterSet(NT_S390_LAST_BREAK, &last_break,
+                                 sizeof(last_break));
       break;
-    case 8:
-      reg_value.SetUInt64(*(uint64_t *)src);
+    case 3:
+      status = DoReadRegisterSet(NT_S390_SYSTEM_CALL, &system_call,
+                                 sizeof(system_call));
       break;
     default:
-      assert(false && "Unhandled data size.");
-      return Status::FromErrorStringWithFormat("unhandled byte size: %" PRIu32,
-                                               reg_info->byte_size);
+      return Status::FromErrorString("unsupported register bank").ToError();
     }
-    return Status();
+    if (status.Fail())
+      return status.ToError();
   }
-
-  if (reg == lldb_last_break_s390x) {
-    uint64_t last_break;
-    Status error = DoReadRegisterSet(NT_S390_LAST_BREAK, &last_break, 8);
-    if (error.Fail())
-      return error;
-
-    reg_value.SetUInt64(last_break);
-    return Status();
-  }
-
-  if (reg == lldb_system_call_s390x) {
-    uint32_t system_call;
-    Status error = DoReadRegisterSet(NT_S390_SYSTEM_CALL, &system_call, 4);
-    if (error.Fail())
-      return error;
-
-    reg_value.SetUInt32(system_call);
-    return Status();
-  }
-
-  return Status::FromErrorString("failed - register wasn't recognized");
+  auto value = ReadBankRegister(
+      descriptor->id,
+      {{0, {reinterpret_cast<const uint8_t *>(&m_regs), sizeof(m_regs)}},
+       {1, {reinterpret_cast<const uint8_t *>(&m_fp_regs), sizeof(m_fp_regs)}},
+       {2,
+        {reinterpret_cast<const uint8_t *>(&last_break), sizeof(last_break)}},
+       {3,
+        {reinterpret_cast<const uint8_t *>(&system_call),
+         sizeof(system_call)}}});
+  return value;
 }
 
-Status NativeRegisterContextLinux_s390x::WriteRegister(
-    const RegisterInfo *reg_info, const RegisterValue &reg_value) {
-  if (!reg_info)
-    return Status::FromErrorString("reg_info NULL");
-
-  const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
-  if (reg == LLDB_INVALID_REGNUM)
-    return Status::FromErrorStringWithFormat(
-        "register \"%s\" is an internal-only lldb register, cannot "
-        "write directly",
-        reg_info->name);
-
-  if (IsGPR(reg)) {
-    Status error = ReadGPR();
-    if (error.Fail())
-      return error;
-
-    uint8_t *dst = (uint8_t *)&m_regs + reg_info->byte_offset;
-    assert(reg_info->byte_offset + reg_info->byte_size <= sizeof(m_regs));
-    switch (reg_info->byte_size) {
-    case 4:
-      *(uint32_t *)dst = reg_value.GetAsUInt32();
+llvm::Error NativeRegisterContextLinux_s390x::WriteRegister(
+    RegisterID id, const RegisterValue &reg_value) {
+  auto description = GetDescription();
+  const auto *descriptor = description ? description->Find(id) : nullptr;
+  if (!descriptor)
+    return Status::FromErrorString("unknown register").ToError();
+  auto required = GetLayout().GetRequiredBanks(descriptor->id, true);
+  if (!required)
+    return required.takeError();
+  uint64_t last_break = 0;
+  uint32_t system_call = 0;
+  for (RegisterBankID bank : *required) {
+    Status status;
+    switch (bank) {
+    case 0:
+      status = ReadGPR();
       break;
-    case 8:
-      *(uint64_t *)dst = reg_value.GetAsUInt64();
+    case 1:
+      status = ReadFPR();
       break;
-    default:
-      assert(false && "Unhandled data size.");
-      return Status::FromErrorStringWithFormat("unhandled byte size: %" PRIu32,
-                                               reg_info->byte_size);
-    }
-    return WriteGPR();
-  }
-
-  if (IsFPR(reg)) {
-    Status error = ReadFPR();
-    if (error.Fail())
-      return error;
-
-    // byte_offset is just the offset within fp_regs, not the whole user area.
-    uint8_t *dst = (uint8_t *)&m_fp_regs + reg_info->byte_offset;
-    assert(reg_info->byte_offset + reg_info->byte_size <= sizeof(m_fp_regs));
-    switch (reg_info->byte_size) {
-    case 4:
-      *(uint32_t *)dst = reg_value.GetAsUInt32();
-      break;
-    case 8:
-      *(uint64_t *)dst = reg_value.GetAsUInt64();
+    case 2:
+      return Status::FromErrorString("The last break address is read-only")
+          .ToError();
+    case 3:
+      status = DoReadRegisterSet(NT_S390_SYSTEM_CALL, &system_call,
+                                 sizeof(system_call));
       break;
     default:
-      assert(false && "Unhandled data size.");
-      return Status::FromErrorStringWithFormat("unhandled byte size: %" PRIu32,
-                                               reg_info->byte_size);
+      return Status::FromErrorString("unsupported register bank").ToError();
     }
-    return WriteFPR();
+    if (status.Fail())
+      return status.ToError();
   }
-
-  if (reg == lldb_last_break_s390x) {
-    return Status::FromErrorString("The last break address is read-only");
+  if (auto error = WriteBankRegister(
+          descriptor->id, reg_value,
+          {{0, {reinterpret_cast<uint8_t *>(&m_regs), sizeof(m_regs)}},
+           {1, {reinterpret_cast<uint8_t *>(&m_fp_regs), sizeof(m_fp_regs)}},
+           {2, {reinterpret_cast<uint8_t *>(&last_break), sizeof(last_break)}},
+           {3,
+            {reinterpret_cast<uint8_t *>(&system_call), sizeof(system_call)}}}))
+    return error;
+  for (RegisterBankID bank : *required) {
+    Status status;
+    switch (bank) {
+    case 0:
+      status = WriteGPR();
+      break;
+    case 1:
+      status = WriteFPR();
+      break;
+    case 3:
+      status = DoWriteRegisterSet(NT_S390_SYSTEM_CALL, &system_call,
+                                  sizeof(system_call));
+      break;
+    default:
+      llvm_unreachable("validated writable bank");
+    }
+    if (status.Fail())
+      return status.ToError();
   }
-
-  if (reg == lldb_system_call_s390x) {
-    uint32_t system_call = reg_value.GetAsUInt32();
-    return DoWriteRegisterSet(NT_S390_SYSTEM_CALL, &system_call, 4);
-  }
-
-  return Status::FromErrorString("failed - register wasn't recognized");
+  return llvm::Error::success();
 }
 
 Status NativeRegisterContextLinux_s390x::ReadAllRegisterValues(

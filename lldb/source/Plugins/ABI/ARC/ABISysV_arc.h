@@ -53,7 +53,8 @@ public:
 
   lldb::UnwindPlanSP CreateDefaultUnwindPlan() override;
 
-  bool RegisterIsVolatile(const lldb_private::RegisterInfo *reg_info) override;
+  bool
+  RegisterIsVolatile(const lldb_private::RegisterDescriptor *reg_info) override;
 
   bool CallFrameAddressIsValid(lldb::addr_t cfa) override {
     // Stack call frame address must be 4 byte aligned.
@@ -65,7 +66,7 @@ public:
     return (pc & 1ull) == 0;
   }
 
-  const lldb_private::RegisterInfo *
+  const lldb_private::RegisterDescriptor *
   GetRegisterInfoArray(uint32_t &count) override;
 
   //------------------------------------------------------------------
@@ -92,7 +93,7 @@ private:
   GetReturnValueObjectSimple(lldb_private::Thread &thread,
                              lldb_private::CompilerType &ast_type) const;
 
-  bool IsRegisterFileReduced(lldb_private::RegisterContext &reg_ctx) const;
+  bool IsRegisterFileReduced(lldb_private::ThreadRegisterContext &reg_ctx) const;
 
   using lldb_private::RegInfoBasedABI::RegInfoBasedABI; // Call CreateInstance instead.
 

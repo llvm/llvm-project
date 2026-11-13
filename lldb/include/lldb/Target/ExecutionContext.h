@@ -351,7 +351,7 @@ public:
   /// invalid value.
   void Clear();
 
-  RegisterContext *GetRegisterContext() const;
+  ThreadRegisterContext *GetRegisterContext() const;
 
   ExecutionContextScope *GetBestExecutionContextScope() const;
 

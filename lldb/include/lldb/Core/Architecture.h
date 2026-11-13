@@ -10,7 +10,7 @@
 #define LLDB_CORE_ARCHITECTURE_H
 
 #include "lldb/Core/PluginInterface.h"
-#include "lldb/Target/DynamicRegisterInfo.h"
+#include "lldb/Register/RegisterLayout.h"
 #include "lldb/Target/MemoryTagManager.h"
 #include "lldb/Target/RegisterContextUnwind.h"
 
@@ -135,9 +135,10 @@ public:
   // the new state e.g. the new length of scalable vector registers.
   // Returns true if anything changed, which means existing register values must
   // be invalidated.
-  virtual bool ReconfigureRegisterInfo(DynamicRegisterInfo &reg_info,
-                                       DataExtractor &reg_data,
-                                       RegisterContext &reg_context) const {
+  virtual bool
+  ReconfigureRegisterLayout(std::shared_ptr<const RegisterLayout> &layout,
+                            DataExtractor &reg_data,
+                            ThreadRegisterContext &reg_context) const {
     return false;
   }
 

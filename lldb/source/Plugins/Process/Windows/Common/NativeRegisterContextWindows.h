@@ -9,7 +9,7 @@
 #ifndef liblldb_NativeRegisterContextWindows_h_
 #define liblldb_NativeRegisterContextWindows_h_
 
-#include "Plugins/Register/Native/NativeRegisterContextRegisterInfo.h"
+#include "lldb/Host/common/NativeRegisterContext.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/Utility/DataBufferHeap.h"
 
@@ -17,8 +17,7 @@ namespace lldb_private {
 
 class NativeThreadWindows;
 
-class NativeRegisterContextWindows
-    : public virtual NativeRegisterContextRegisterInfo {
+class NativeRegisterContextWindows : public virtual NativeRegisterContext {
 public:
   static std::unique_ptr<NativeRegisterContextWindows>
   CreateHostNativeRegisterContextWindows(const ArchSpec &target_arch,

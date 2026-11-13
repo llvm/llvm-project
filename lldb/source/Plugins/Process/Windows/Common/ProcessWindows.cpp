@@ -355,7 +355,7 @@ void ProcessWindows::RefreshStateAfterStop() {
   if (!stop_thread)
     return;
 
-  RegisterContextSP register_context = stop_thread->GetRegisterContext();
+  ThreadRegisterContextSP register_context = stop_thread->GetRegisterContext();
   uint64_t pc = register_context->GetPC();
 
   // If we're at a BreakpointSite, mark this as an Unexecuted Breakpoint.

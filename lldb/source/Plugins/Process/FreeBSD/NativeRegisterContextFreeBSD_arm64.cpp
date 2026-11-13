@@ -9,15 +9,16 @@
 #if defined(__aarch64__)
 
 #include "NativeRegisterContextFreeBSD_arm64.h"
+#include "lldb/Register/Layouts/FreeBSD/RegisterLayoutFreeBSD_arm64.h"
 
 #include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 
 #include "Plugins/Process/FreeBSD/NativeProcessFreeBSD.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
-#include "Register/Common/RegisterInfo_arm64.h"
-#include "Register/Common/RegisterTypeDetector_arm64.h"
+#include "Plugins/Process/Utility/AuxVector.h"
+#include "lldb/Register/Common/RegisterInfo_arm64.h"
 
 // clang-format off
 #include <sys/param.h>
@@ -29,68 +30,34 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_freebsd;
 
-// A NativeRegisterContext is constructed per thread, but all threads' registers
-// will contain the same fields. Therefore this mutex prevents each instance
-// competing with the other, and subsequent instances from having to detect the
-// fields all over again.
-static std::mutex g_register_type_detector_mutex;
-static Arm64RegisterTypeDetector g_register_type_detector;
-
 NativeRegisterContextFreeBSD *
 NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
     const ArchSpec &target_arch, NativeThreadFreeBSD &native_thread) {
-  std::lock_guard<std::mutex> lock(g_register_type_detector_mutex);
-  if (!g_register_type_detector.HasDetected()) {
-    NativeProcessFreeBSD &process = native_thread.GetProcess();
-    g_register_type_detector.DetectTypes(
-        process.GetAuxValue(AuxVector::AUXV_FREEBSD_AT_HWCAP).value_or(0),
-        process.GetAuxValue(AuxVector::AUXV_AT_HWCAP2).value_or(0),
-        /*hwcap3=*/0);
-  }
-
   return new NativeRegisterContextFreeBSD_arm64(target_arch, native_thread);
 }
 
 NativeRegisterContextFreeBSD_arm64::NativeRegisterContextFreeBSD_arm64(
     const ArchSpec &target_arch, NativeThreadFreeBSD &native_thread)
-    : NativeRegisterContextRegisterInfo(
-          native_thread, new RegisterInfo_arm64(target_arch, 0)),
-      m_read_dbreg(false) {
-  g_register_type_detector.UpdateRegisterInfo(
-      GetRegisterInfoInterface().GetRegisterInfo(),
-      GetRegisterInfoInterface().GetRegisterCount());
-}
-
-RegisterInfo_arm64 &
-NativeRegisterContextFreeBSD_arm64::GetRegisterInfo() const {
-  return static_cast<RegisterInfo_arm64 &>(*m_register_info_interface_up);
-}
-
-uint32_t NativeRegisterContextFreeBSD_arm64::GetRegisterSetCount() const {
-  return GetRegisterInfo().GetRegisterSetCount();
-}
-
-const RegisterSet *
-NativeRegisterContextFreeBSD_arm64::GetRegisterSet(uint32_t set_index) const {
-  return GetRegisterInfo().GetRegisterSet(set_index);
-}
-
-uint32_t NativeRegisterContextFreeBSD_arm64::GetUserRegisterCount() const {
-  uint32_t count = 0;
-  for (uint32_t set_index = 0; set_index < GetRegisterSetCount(); ++set_index)
-    count += GetRegisterSet(set_index)->num_registers;
-  return count;
-}
+    : NativeRegisterContext(
+          native_thread, target_arch,
+          CreateFreeBSDArm64RegisterLayout(
+              target_arch,
+              native_thread.GetProcess()
+                  .GetAuxValue(AuxVector::AUXV_FREEBSD_AT_HWCAP)
+                  .value_or(0),
+              native_thread.GetProcess()
+                  .GetAuxValue(AuxVector::AUXV_AT_HWCAP2)
+                  .value_or(0))),
+      m_read_dbreg(false) {}
 
 Status NativeRegisterContextFreeBSD_arm64::ReadRegisterSet(uint32_t set) {
   switch (set) {
   case RegisterInfo_arm64::GPRegSet:
     return NativeProcessFreeBSD::PtraceWrapper(PT_GETREGS, m_thread.GetID(),
-                                               m_reg_data.data());
+                                               &m_gpr);
   case RegisterInfo_arm64::FPRegSet:
-    return NativeProcessFreeBSD::PtraceWrapper(
-        PT_GETFPREGS, m_thread.GetID(),
-        m_reg_data.data() + sizeof(RegisterInfo_arm64::GPR));
+    return NativeProcessFreeBSD::PtraceWrapper(PT_GETFPREGS, m_thread.GetID(),
+                                               &m_fpr);
   }
   llvm_unreachable("NativeRegisterContextFreeBSD_arm64::ReadRegisterSet");
 }
@@ -99,120 +66,115 @@ Status NativeRegisterContextFreeBSD_arm64::WriteRegisterSet(uint32_t set) {
   switch (set) {
   case RegisterInfo_arm64::GPRegSet:
     return NativeProcessFreeBSD::PtraceWrapper(PT_SETREGS, m_thread.GetID(),
-                                               m_reg_data.data());
+                                               &m_gpr);
   case RegisterInfo_arm64::FPRegSet:
-    return NativeProcessFreeBSD::PtraceWrapper(
-        PT_SETFPREGS, m_thread.GetID(),
-        m_reg_data.data() + sizeof(RegisterInfo_arm64::GPR));
+    return NativeProcessFreeBSD::PtraceWrapper(PT_SETFPREGS, m_thread.GetID(),
+                                               &m_fpr);
   }
   llvm_unreachable("NativeRegisterContextFreeBSD_arm64::WriteRegisterSet");
 }
 
-Status
-NativeRegisterContextFreeBSD_arm64::ReadRegister(const RegisterInfo *reg_info,
-                                                 RegisterValue &reg_value) {
-  Status error;
-
-  if (!reg_info)
-    return Status::FromErrorString("reg_info NULL");
-
-  const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
-
-  if (reg == LLDB_INVALID_REGNUM)
-    return Status::FromErrorStringWithFormat(
-        "no lldb regnum for %s",
-        reg_info && reg_info->name ? reg_info->name : "<unknown register>");
-
-  uint32_t set = GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg);
-  error = ReadRegisterSet(set);
-  if (error.Fail())
-    return error;
-
-  assert(reg_info->byte_offset + reg_info->byte_size <= m_reg_data.size());
-  reg_value.SetBytes(m_reg_data.data() + reg_info->byte_offset,
-                     reg_info->byte_size, endian::InlHostByteOrder());
-  return error;
+llvm::Expected<RegisterValue>
+NativeRegisterContextFreeBSD_arm64::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *descriptor = description ? description->Find(id) : nullptr;
+  if (!descriptor)
+    return Status::FromErrorString("unknown register").ToError();
+  auto required = GetLayout().GetRequiredBanks(descriptor->id, false);
+  if (!required)
+    return required.takeError();
+  for (RegisterBankID bank : *required) {
+    Status status;
+    switch (bank) {
+    case 0:
+      status = ReadRegisterSet(RegisterInfo_arm64::GPRegSet);
+      break;
+    case 1:
+      status = ReadRegisterSet(RegisterInfo_arm64::FPRegSet);
+      break;
+    default:
+      return Status::FromErrorString("unsupported register bank").ToError();
+    }
+    if (status.Fail())
+      return status.ToError();
+  }
+  auto value = ReadBankRegister(
+      descriptor->id,
+      {{0, {reinterpret_cast<const uint8_t *>(&m_gpr), sizeof(m_gpr)}},
+       {1, {reinterpret_cast<const uint8_t *>(&m_fpr), sizeof(m_fpr)}}});
+  return value;
 }
 
-Status NativeRegisterContextFreeBSD_arm64::WriteRegister(
-    const RegisterInfo *reg_info, const RegisterValue &reg_value) {
-  Status error;
-
-  if (!reg_info)
-    return Status::FromErrorString("reg_info NULL");
-
-  const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
-
-  if (reg == LLDB_INVALID_REGNUM)
-    return Status::FromErrorStringWithFormat(
-        "no lldb regnum for %s",
-        reg_info && reg_info->name ? reg_info->name : "<unknown register>");
-
-  uint32_t set = GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg);
-  error = ReadRegisterSet(set);
-  if (error.Fail())
+llvm::Error NativeRegisterContextFreeBSD_arm64::WriteRegister(
+    RegisterID id, const RegisterValue &reg_value) {
+  auto description = GetDescription();
+  const auto *descriptor = description ? description->Find(id) : nullptr;
+  if (!descriptor)
+    return Status::FromErrorString("unknown register").ToError();
+  auto required = GetLayout().GetRequiredBanks(descriptor->id, true);
+  if (!required)
+    return required.takeError();
+  for (RegisterBankID bank : *required) {
+    Status status;
+    switch (bank) {
+    case 0:
+      status = ReadRegisterSet(RegisterInfo_arm64::GPRegSet);
+      break;
+    case 1:
+      status = ReadRegisterSet(RegisterInfo_arm64::FPRegSet);
+      break;
+    default:
+      return Status::FromErrorString("unsupported register bank").ToError();
+    }
+    if (status.Fail())
+      return status.ToError();
+  }
+  if (auto error = WriteBankRegister(
+          descriptor->id, reg_value,
+          {{0, {reinterpret_cast<uint8_t *>(&m_gpr), sizeof(m_gpr)}},
+           {1, {reinterpret_cast<uint8_t *>(&m_fpr), sizeof(m_fpr)}}}))
     return error;
-
-  assert(reg_info->byte_offset + reg_info->byte_size <= m_reg_data.size());
-  ::memcpy(m_reg_data.data() + reg_info->byte_offset, reg_value.GetBytes(),
-           reg_info->byte_size);
-
-  return WriteRegisterSet(set);
+  for (RegisterBankID bank : *required) {
+    Status status;
+    switch (bank) {
+    case 0:
+      status = WriteRegisterSet(RegisterInfo_arm64::GPRegSet);
+      break;
+    case 1:
+      status = WriteRegisterSet(RegisterInfo_arm64::FPRegSet);
+      break;
+    default:
+      return Status::FromErrorString("unsupported register bank").ToError();
+    }
+    if (status.Fail())
+      return status.ToError();
+  }
+  return llvm::Error::success();
 }
 
 Status NativeRegisterContextFreeBSD_arm64::ReadAllRegisterValues(
     lldb::WritableDataBufferSP &data_sp) {
-  Status error;
-
-  error = ReadRegisterSet(RegisterInfo_arm64::GPRegSet);
+  Status error = ReadRegisterSet(RegisterInfo_arm64::GPRegSet);
   if (error.Fail())
     return error;
-
   error = ReadRegisterSet(RegisterInfo_arm64::FPRegSet);
   if (error.Fail())
     return error;
-
-  data_sp.reset(new DataBufferHeap(m_reg_data.size(), 0));
-  uint8_t *dst = data_sp->GetBytes();
-  ::memcpy(dst, m_reg_data.data(), m_reg_data.size());
-
-  return error;
+  data_sp = std::make_shared<DataBufferHeap>(sizeof(m_gpr) + sizeof(m_fpr), 0);
+  std::memcpy(data_sp->GetBytes(), &m_gpr, sizeof(m_gpr));
+  std::memcpy(data_sp->GetBytes() + sizeof(m_gpr), &m_fpr, sizeof(m_fpr));
+  return Status();
 }
 
 Status NativeRegisterContextFreeBSD_arm64::WriteAllRegisterValues(
     const lldb::DataBufferSP &data_sp) {
-  Status error;
-
-  if (!data_sp) {
-    error = Status::FromErrorStringWithFormat(
-        "NativeRegisterContextFreeBSD_arm64::%s invalid data_sp provided",
-        __FUNCTION__);
-    return error;
-  }
-
-  if (data_sp->GetByteSize() != m_reg_data.size()) {
-    error = Status::FromErrorStringWithFormat(
-        "NativeRegisterContextFreeBSD_arm64::%s data_sp contained mismatched "
-        "data size, expected %" PRIu64 ", actual %" PRIu64,
-        __FUNCTION__, m_reg_data.size(), data_sp->GetByteSize());
-    return error;
-  }
-
-  const uint8_t *src = data_sp->GetBytes();
-  if (src == nullptr) {
-    error = Status::FromErrorStringWithFormat(
-        "NativeRegisterContextFreeBSD_arm64::%s "
-        "DataBuffer::GetBytes() returned a null "
-        "pointer",
-        __FUNCTION__);
-    return error;
-  }
-  ::memcpy(m_reg_data.data(), src, m_reg_data.size());
-
-  error = WriteRegisterSet(RegisterInfo_arm64::GPRegSet);
+  if (!data_sp || data_sp->GetByteSize() != sizeof(m_gpr) + sizeof(m_fpr))
+    return Status::FromErrorString("invalid private register checkpoint");
+  std::memcpy(&m_gpr, data_sp->GetBytes(), sizeof(m_gpr));
+  std::memcpy(&m_fpr, data_sp->GetBytes() + sizeof(m_gpr), sizeof(m_fpr));
+  Status error = WriteRegisterSet(RegisterInfo_arm64::GPRegSet);
   if (error.Fail())
     return error;
-
   return WriteRegisterSet(RegisterInfo_arm64::FPRegSet);
 }
 

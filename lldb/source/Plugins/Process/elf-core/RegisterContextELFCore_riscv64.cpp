@@ -8,80 +8,73 @@
 
 #include "RegisterContextELFCore_riscv64.h"
 
+#include "lldb/Register/Layouts/Linux/RegisterLayoutLinux_riscv64.h"
+#include "lldb/Register/RegisterLayout.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include <optional>
 
 using namespace lldb_private;
 
-std::unique_ptr<RegisterContextELFCore_riscv64>
+llvm::Expected<std::unique_ptr<RegisterContextELFCore_riscv64>>
 RegisterContextELFCore_riscv64::Create(Thread &thread, const ArchSpec &arch,
                                          const DataExtractor &gpregset,
                                          llvm::ArrayRef<CoreNote> notes) {
   Flags opt_regsets = RegisterInfo_riscv64::eRegsetMaskDefault;
 
   DataExtractor fpregset = getRegset(notes, arch.GetTriple(), FPR_Desc);
-  if (fpregset.GetByteSize() >= sizeof(uint64_t)) {
-    opt_regsets.Set(RegisterInfo_riscv64::eRegsetMaskFP);
+  std::optional<RegisterLayout> layout;
+  switch (arch.GetTriple().getOS()) {
+  case llvm::Triple::Linux:
+    if (fpregset.GetByteSize() >= sizeof(linux_riscv64::FPR))
+      opt_regsets.Set(RegisterInfo_riscv64::eRegsetMaskFP);
+    layout = CreateLinuxRISCV64RegisterLayout(arch, opt_regsets);
+    break;
+  default:
+    return llvm::createStringError("unsupported OS for RISC-V64 ELF registers");
   }
 
   return std::unique_ptr<RegisterContextELFCore_riscv64>(
       new RegisterContextELFCore_riscv64(
-          thread,
-          std::make_unique<RegisterInfo_riscv64>(arch, opt_regsets),
-          gpregset, notes));
+          thread, std::move(*layout), gpregset, notes));
 }
 
 RegisterContextELFCore_riscv64::RegisterContextELFCore_riscv64(
-    Thread &thread, std::unique_ptr<RegisterInfo_riscv64> register_info,
-    const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
-    : RegisterContextCore_riscv64(thread, std::move(register_info)) {
+    Thread &thread, RegisterLayout layout, const DataExtractor &gpregset,
+    llvm::ArrayRef<CoreNote> notes)
+    : ThreadRegisterContext(thread, 0, std::move(layout)) {
 
   m_gpr.SetData(std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
                                                  gpregset.GetByteSize()));
   m_gpr.SetByteOrder(gpregset.GetByteOrder());
 
-  if (m_register_info_up->IsFPPresent()) {
-    ArchSpec arch = m_register_info_up->GetTargetArchitecture();
+  if (GetDescription()->FindGroup("fpr") != nullptr) {
+    ArchSpec arch = GetTargetArchitecture();
     m_fpr = getRegset(notes, arch.GetTriple(), FPR_Desc);
   }
 }
 
 RegisterContextELFCore_riscv64::~RegisterContextELFCore_riscv64() = default;
 
-bool RegisterContextELFCore_riscv64::ReadGPR() { return true; }
-
-bool RegisterContextELFCore_riscv64::ReadFPR() { return true; }
-
-bool RegisterContextELFCore_riscv64::WriteGPR() {
-  assert(false && "Writing registers is not allowed for core dumps");
-  return false;
+llvm::Expected<RegisterValue>
+RegisterContextELFCore_riscv64::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
+  RegisterValue value;
+  const auto *reg = description->Find(id);
+  if (!reg)
+    return llvm::createStringError("register value is unavailable");
+  std::vector<RegisterData> banks;
+  banks.push_back({0, {m_gpr.GetDataStart(), m_gpr.GetByteSize()}});
+  if (GetDescription()->FindGroup("fpr") != nullptr)
+    banks.push_back({1, {m_fpr.GetDataStart(), m_fpr.GetByteSize()}});
+  auto result = ReadBankRegister(reg->id, banks);
+  return result;
 }
 
-bool RegisterContextELFCore_riscv64::WriteFPR() {
-  assert(false && "Writing registers is not allowed for core dumps");
-  return false;
-}
-
-bool RegisterContextELFCore_riscv64::ReadRegister(
-    const RegisterInfo *reg_info, RegisterValue &value) {
-  const uint8_t *src = nullptr;
-  lldb::offset_t offset = reg_info->byte_offset;
-
-  if (IsGPR(reg_info->kinds[lldb::eRegisterKindLLDB])) {
-    src = m_gpr.GetDataStart();
-  } else if (IsFPR(reg_info->kinds[lldb::eRegisterKindLLDB])) {
-    src = m_fpr.GetDataStart();
-    offset -= GetGPRSize();
-  } else {
-    return false;
-  }
-
-  Status error;
-  value.SetFromMemoryData(*reg_info, src + offset, reg_info->byte_size,
-                          lldb::eByteOrderLittle, error);
-  return error.Success();
-}
-
-bool RegisterContextELFCore_riscv64::WriteRegister(
-    const RegisterInfo *reg_info, const RegisterValue &value) {
-  return false;
+llvm::Error
+RegisterContextELFCore_riscv64::WriteRegister(RegisterID id,
+                                                const RegisterValue &value) {
+  return llvm::createStringError("register write is unavailable");
 }

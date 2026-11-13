@@ -567,9 +567,9 @@ public:
   ///     or a problem parsing it.
   virtual StructuredData::ObjectSP GetCorefileProcessMetadata() { return {}; }
 
-  virtual lldb::RegisterContextSP
+  virtual lldb::ThreadRegisterContextSP
   GetThreadContextAtIndex(uint32_t idx, lldb_private::Thread &thread) {
-    return lldb::RegisterContextSP();
+    return lldb::ThreadRegisterContextSP();
   }
 
   /// The object file should be able to calculate its type by looking at its

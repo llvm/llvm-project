@@ -20,6 +20,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/Process.h"
@@ -29,7 +30,6 @@
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
@@ -142,14 +142,15 @@ OperatingSystemPython::OperatingSystemPython(lldb_private::Process *process,
 
 OperatingSystemPython::~OperatingSystemPython() = default;
 
-DynamicRegisterInfoSP OperatingSystemPython::GetDynamicRegisterInfo() {
+std::shared_ptr<const RegisterLayout>
+OperatingSystemPython::GetRegisterLayout() {
   if (!m_interpreter || !m_operating_system_interface_sp)
     return nullptr;
 
   Log *log = GetLog(LLDBLog::OS);
 
   LLDB_LOGF(log,
-            "OperatingSystemPython::GetDynamicRegisterInfo() fetching "
+            "OperatingSystemPython::GetRegisterLayout() fetching "
             "thread register definitions from python for pid %" PRIu64,
             m_process->GetID());
 
@@ -158,11 +159,12 @@ DynamicRegisterInfoSP OperatingSystemPython::GetDynamicRegisterInfo() {
   if (!dictionary)
     return nullptr;
 
-  DynamicRegisterInfoSP register_info_sp = DynamicRegisterInfo::Create(
-      *dictionary, m_process->GetTarget().GetArchitecture());
+  std::shared_ptr<const RegisterLayout> register_info_sp =
+      CreateRegisterImageLayout(*dictionary,
+                                m_process->GetTarget().GetArchitecture());
   assert(register_info_sp);
-  assert(register_info_sp->GetNumRegisters() > 0);
-  assert(register_info_sp->GetNumRegisterSets() > 0);
+  assert(register_info_sp->GetDescription()->GetRegisters().size() > 0);
+  assert(register_info_sp->GetDescription()->GetGroups().size() > 0);
 
   return register_info_sp;
 }
@@ -291,10 +293,10 @@ ThreadSP OperatingSystemPython::CreateThreadFromThreadInfo(
 
 void OperatingSystemPython::ThreadWasSelected(Thread *thread) {}
 
-RegisterContextSP
+ThreadRegisterContextSP
 OperatingSystemPython::CreateRegisterContextForThread(Thread *thread,
                                                       addr_t reg_data_addr) {
-  RegisterContextSP reg_ctx_sp;
+  ThreadRegisterContextSP reg_ctx_sp;
   if (!m_interpreter || !m_script_object_sp || !thread)
     return reg_ctx_sp;
 
@@ -312,7 +314,7 @@ OperatingSystemPython::CreateRegisterContextForThread(Thread *thread,
               ") creating memory register context",
               thread->GetID(), thread->GetProtocolID(), reg_data_addr);
     reg_ctx_sp = std::make_shared<RegisterContextMemory>(
-        *thread, 0, GetDynamicRegisterInfo(), reg_data_addr);
+        *thread, 0, GetRegisterLayout(), reg_data_addr);
   } else {
     // No register data address is provided, query the python plug-in to let it
     // make up the data as it sees fit
@@ -330,7 +332,7 @@ OperatingSystemPython::CreateRegisterContextForThread(Thread *thread,
       DataBufferSP data_sp(new DataBufferHeap(value.c_str(), value.length()));
       if (data_sp->GetByteSize()) {
         RegisterContextMemory *reg_ctx_memory = new RegisterContextMemory(
-            *thread, 0, GetDynamicRegisterInfo(), LLDB_INVALID_ADDRESS);
+            *thread, 0, GetRegisterLayout(), LLDB_INVALID_ADDRESS);
         if (reg_ctx_memory) {
           reg_ctx_sp.reset(reg_ctx_memory);
           reg_ctx_memory->SetAllRegisterData(data_sp);

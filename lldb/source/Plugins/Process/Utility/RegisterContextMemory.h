@@ -11,32 +11,21 @@
 
 #include <vector>
 
-#include "lldb/Target/DynamicRegisterInfo.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Register/RegisterDefinition.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/lldb-private.h"
 
-class RegisterContextMemory : public lldb_private::RegisterContext {
+class RegisterContextMemory : public lldb_private::ThreadRegisterContext {
 public:
   RegisterContextMemory(lldb_private::Thread &thread,
                         uint32_t concrete_frame_idx,
-                        lldb::DynamicRegisterInfoSP reg_info_sp,
+                        std::shared_ptr<const lldb_private::RegisterLayout> reg_info_sp,
                         lldb::addr_t reg_data_addr);
 
   ~RegisterContextMemory() override;
 
   void InvalidateAllRegisters() override;
-
-  size_t GetRegisterCount() override;
-
-  const lldb_private::RegisterInfo *GetRegisterInfoAtIndex(size_t reg) override;
-
-  size_t GetRegisterSetCount() override;
-
-  const lldb_private::RegisterSet *GetRegisterSet(size_t reg_set) override;
-
-  uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
-                                               uint32_t num) override;
 
   // If all of the thread register are in a contiguous buffer in
   // memory, then the default ReadRegister/WriteRegister and
@@ -44,11 +33,14 @@ public:
   // registers are not contiguous, clients will want to subclass this
   // class and modify the read/write functions as needed.
 
-  bool ReadRegister(const lldb_private::RegisterInfo *reg_info,
-                    lldb_private::RegisterValue &reg_value) override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  bool WriteRegister(const lldb_private::RegisterInfo *reg_info,
+  llvm::Error
+  WriteRegister(lldb_private::RegisterID id,
                      const lldb_private::RegisterValue &reg_value) override;
+
+  llvm::Expected<lldb_private::RegisterCheckpoint> SaveCheckpoint() override;
 
   bool ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
 
@@ -59,7 +51,7 @@ public:
 protected:
   void SetAllRegisterValid(bool b);
 
-  lldb::DynamicRegisterInfoSP m_reg_infos_sp;
+  std::shared_ptr<const lldb_private::RegisterLayout> m_reg_infos_sp;
   std::vector<bool> m_reg_valid;
   lldb::WritableDataBufferSP m_data;
   lldb_private::DataExtractor m_reg_data;

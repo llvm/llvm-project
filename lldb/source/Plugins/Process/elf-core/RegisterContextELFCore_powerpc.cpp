@@ -10,22 +10,22 @@
 
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 
 #include <memory>
 
 using namespace lldb_private;
 
 RegisterContextELFCore_powerpc::RegisterContextELFCore_powerpc(
-    Thread &thread, RegisterInfoInterface *register_info,
-    const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
-    : RegisterContextCore_powerpc(thread, 0, register_info) {
+    Thread &thread, RegisterLayout layout, const DataExtractor &gpregset,
+    llvm::ArrayRef<CoreNote> notes)
+    : ThreadRegisterContext(thread, 0, std::move(layout)) {
   m_gpr_buffer = std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
                                                   gpregset.GetByteSize());
   m_gpr.SetData(m_gpr_buffer);
   m_gpr.SetByteOrder(gpregset.GetByteOrder());
 
-  ArchSpec arch = register_info->GetTargetArchitecture();
+  ArchSpec arch = GetTargetArchitecture();
   DataExtractor fpregset = getRegset(notes, arch.GetTriple(), FPR_Desc);
   m_fpr_buffer = std::make_shared<DataBufferHeap>(fpregset.GetDataStart(),
                                                   fpregset.GetByteSize());
@@ -41,54 +41,23 @@ RegisterContextELFCore_powerpc::RegisterContextELFCore_powerpc(
 
 RegisterContextELFCore_powerpc::~RegisterContextELFCore_powerpc() = default;
 
-bool RegisterContextELFCore_powerpc::ReadGPR() { return true; }
-
-bool RegisterContextELFCore_powerpc::ReadFPR() { return true; }
-
-bool RegisterContextELFCore_powerpc::ReadVMX() { return true; }
-
-bool RegisterContextELFCore_powerpc::WriteGPR() {
-  assert(0);
-  return false;
-}
-
-bool RegisterContextELFCore_powerpc::WriteFPR() {
-  assert(0);
-  return false;
-}
-
-bool RegisterContextELFCore_powerpc::WriteVMX() {
-  assert(0);
-  return false;
-}
-
-bool RegisterContextELFCore_powerpc::ReadRegister(
-    const RegisterInfo *reg_info, RegisterValue &value) {
-  lldb::offset_t offset = reg_info->byte_offset;
-  if (IsFPR(reg_info->kinds[lldb::eRegisterKindLLDB])) {
-    uint64_t v = m_fpr.GetMaxU64(&offset, reg_info->byte_size);
-    if (offset == reg_info->byte_offset + reg_info->byte_size) {
-      value = v;
-      return true;
-    }
-  } else if (IsVMX(reg_info->kinds[lldb::eRegisterKindLLDB])) {
-    uint32_t v[4];
-    offset = m_vec.CopyData(offset, reg_info->byte_size, &v);
-    if (offset == reg_info->byte_size) {
-      value.SetBytes(v, reg_info->byte_size, m_vec.GetByteOrder());
-      return true;
-    }
-  } else {
-    uint64_t v = m_gpr.GetMaxU64(&offset, reg_info->byte_size);
-    if (offset == reg_info->byte_offset + reg_info->byte_size) {
-      if (reg_info->byte_size < sizeof(v))
-        value = (uint32_t)v;
-      else
-        value = v;
-      return true;
-    }
-  }
-  return false;
+llvm::Expected<RegisterValue>
+RegisterContextELFCore_powerpc::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
+  RegisterValue value;
+  if (!reg_info)
+    return llvm::createStringError("register value is unavailable");
+  const auto *reg = GetDescription()->Find(reg_info->id);
+  if (!reg)
+    return llvm::createStringError("register value is unavailable");
+  auto result = ReadBankRegister(
+      reg->id, {{0, {m_gpr.GetDataStart(), m_gpr.GetByteSize()}},
+                {1, {m_fpr.GetDataStart(), m_fpr.GetByteSize()}},
+                {2, {m_vec.GetDataStart(), m_vec.GetByteSize()}}});
+  return result;
 }
 
 bool RegisterContextELFCore_powerpc::ReadAllRegisterValues(
@@ -96,9 +65,10 @@ bool RegisterContextELFCore_powerpc::ReadAllRegisterValues(
   return false;
 }
 
-bool RegisterContextELFCore_powerpc::WriteRegister(
-    const RegisterInfo *reg_info, const RegisterValue &value) {
-  return false;
+llvm::Error
+RegisterContextELFCore_powerpc::WriteRegister(RegisterID id,
+                                                const RegisterValue &value) {
+  return llvm::createStringError("register write is unavailable");
 }
 
 bool RegisterContextELFCore_powerpc::WriteAllRegisterValues(

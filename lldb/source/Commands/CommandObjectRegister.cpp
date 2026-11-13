@@ -8,7 +8,7 @@
 
 #include "CommandObjectRegister.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/DumpRegisterInfo.h"
+#include "lldb/Register/DumpRegisterInfo.h"
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/Host/OptionParser.h"
@@ -22,13 +22,13 @@
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/ValueObject/ValueObject.h"
@@ -45,24 +45,25 @@ using namespace lldb_private;
 #define LLDB_OPTIONS_register_read
 #include "CommandOptions.inc"
 
-static size_t GetNameSize(const RegisterInfo *reg_info, bool use_primary_name) {
-  const char *reg_name = use_primary_name ? reg_info->name : reg_info->alt_name;
-  return reg_name ? strlen(reg_name) : 0;
+static size_t GetNameSize(const RegisterDescriptor *reg_info,
+                          bool use_primary_name) {
+  return (use_primary_name ? reg_info->name : reg_info->alt_name).size();
 }
 
-static size_t ComputeLongestRegisterName(RegisterContext *reg_ctx,
-                                         const RegisterSet &reg_set,
+static size_t ComputeLongestRegisterName(ThreadRegisterContext *reg_ctx,
+                                         const RegisterGroup &reg_set,
                                          bool use_primary_name,
                                          bool primitive_only) {
-  const size_t num_registers = reg_set.num_registers;
+  const size_t num_registers = reg_set.registers.size();
   size_t name_right_align_at = 0;
 
   // Loop through all the registers to find the longest register name.
   for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
     const size_t reg = reg_set.registers[reg_idx];
-    if (const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg)) {
+    if (const RegisterDescriptor *reg_info =
+            reg_ctx->GetDescription()->Find(reg)) {
       // Derived registers are skipped if primitive_only is true.
-      if (primitive_only && reg_info->value_regs)
+      if (primitive_only && !reg_info->value_registers.empty())
         continue;
 
       name_right_align_at = std::max(name_right_align_at,
@@ -111,10 +112,12 @@ public:
   Options *GetOptions() override { return &m_option_group; }
 
   bool DumpRegister(const ExecutionContext &exe_ctx, Stream &strm,
-                    RegisterContext &reg_ctx, const RegisterInfo &reg_info,
-                    bool print_type, size_t reg_name_right_align_at) {
+                    ThreadRegisterContext &reg_ctx,
+                    const RegisterDescriptor &reg_info, bool print_type,
+                    size_t reg_name_right_align_at) {
     RegisterValue reg_value;
-    if (!reg_ctx.ReadRegister(&reg_info, reg_value))
+    if (llvm::errorToBool(
+            reg_ctx.ReadRegister(reg_info.id).moveInto(reg_value)))
       return false;
 
     strm.Indent();
@@ -146,7 +149,7 @@ public:
     return true;
   }
 
-  void DumpRegisterField(Stream &strm, const RegisterInfo &reg_info,
+  void DumpRegisterField(Stream &strm, const RegisterDescriptor &reg_info,
                          const ValueObjectSP &value_sp,
                          size_t reg_name_right_align_at,
                          CommandReturnObject &result) {
@@ -166,8 +169,8 @@ public:
 
     llvm::StringRef value = value_stream.GetString();
     value.consume_back("\n");
-    const char *register_name =
-        m_command_options.alternate_name && reg_info.alt_name
+    llvm::StringRef register_name =
+        m_command_options.alternate_name && !reg_info.alt_name.empty()
             ? reg_info.alt_name
             : reg_info.name;
 
@@ -181,7 +184,7 @@ public:
     // Keep the resolved suffix while allowing an alternate register name.
     if (expression_path.consume_front(reg_info.name))
       strm.Printf("%*s%s = ", static_cast<int>(reg_name_right_align_at),
-                  register_name, expression_path.str().c_str());
+                  register_name.str().c_str(), expression_path.str().c_str());
     else
       strm.Printf("%*s = ", static_cast<int>(reg_name_right_align_at),
                   expression.str().c_str());
@@ -189,7 +192,7 @@ public:
   }
 
   bool DumpRegisterSet(const ExecutionContext &exe_ctx, Stream &strm,
-                       RegisterContext *reg_ctx, size_t set_idx,
+                       ThreadRegisterContext *reg_ctx, size_t set_idx,
                        bool primitive_only = false) {
     uint32_t unavailable_count = 0;
     uint32_t available_count = 0;
@@ -198,18 +201,20 @@ public:
       return false; // thread has no registers (i.e. core files are corrupt,
                     // incomplete crash logs...)
 
-    const RegisterSet *const reg_set = reg_ctx->GetRegisterSet(set_idx);
+    const RegisterGroup *const reg_set = reg_ctx->GetRegisterGroup(set_idx);
     if (reg_set) {
-      strm.Printf("%s:\n", (reg_set->name ? reg_set->name : "unknown"));
+      strm.Printf("%s:\n",
+                  (!reg_set->name.empty() ? reg_set->name.c_str() : "unknown"));
       strm.IndentMore();
-      const size_t num_registers = reg_set->num_registers;
+      const size_t num_registers = reg_set->registers.size();
       size_t reg_name_right_align_at = ComputeLongestRegisterName(
           reg_ctx, *reg_set, !m_command_options.alternate_name, primitive_only);
       for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
         const uint32_t reg = reg_set->registers[reg_idx];
-        const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg);
+        const RegisterDescriptor *reg_info =
+            reg_ctx->GetDescription()->Find(reg);
         // Skip the dumping of derived register if primitive_only is true.
-        if (primitive_only && reg_info && reg_info->value_regs)
+        if (primitive_only && reg_info && !reg_info->value_registers.empty())
           continue;
 
         if (reg_info &&
@@ -232,7 +237,7 @@ public:
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Stream &strm = result.GetOutputStream();
-    RegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
+    ThreadRegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
 
     if (command.GetArgumentCount() == 0) {
       size_t set_idx;
@@ -244,7 +249,7 @@ protected:
           set_idx =
               m_command_options.set_indexes[i]->GetValueAs<uint64_t>().value_or(
                   UINT32_MAX);
-          if (set_idx < reg_ctx->GetRegisterSetCount()) {
+          if (set_idx < reg_ctx->GetRegisterGroupCount()) {
             if (!DumpRegisterSet(m_exe_ctx, strm, reg_ctx, set_idx)) {
               if (errno)
                 result.AppendErrorWithFormatv("register read failed: {0}\n",
@@ -261,7 +266,7 @@ protected:
         }
       } else {
         if (m_command_options.dump_all_sets)
-          num_register_sets = reg_ctx->GetRegisterSetCount();
+          num_register_sets = reg_ctx->GetRegisterGroupCount();
 
         for (set_idx = 0; set_idx < num_register_sets; ++set_idx) {
           // When dump_all_sets option is set, dump primitive as well as
@@ -280,7 +285,7 @@ protected:
       } else {
         struct RegisterArgument {
           std::string expression;
-          const RegisterInfo *reg_info = nullptr;
+          const RegisterDescriptor *reg_info = nullptr;
           ValueObjectSP value_sp;
           Status error;
         };
@@ -316,7 +321,7 @@ protected:
           if (argument.error.Success()) {
             ValueObject *root = argument.value_sp->GetRoot();
             if (root && root->GetValueType() == eValueTypeRegister)
-              argument.reg_info = reg_ctx->GetRegisterInfoByName(
+              argument.reg_info = reg_ctx->GetRegisterByName(
                   root->GetName().GetStringRef());
           }
 
@@ -347,7 +352,7 @@ protected:
             if (!DumpRegister(m_exe_ctx, strm, *reg_ctx, *argument.reg_info,
                               print_type, reg_name_right_align_at))
               strm.Printf("%-12s = error: unavailable\n",
-                          argument.reg_info->name);
+                          argument.reg_info->name.c_str());
           } else {
             DumpRegisterField(strm, *argument.reg_info, argument.value_sp,
                               reg_name_right_align_at, result);
@@ -473,7 +478,7 @@ public:
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     DataExtractor reg_data;
-    RegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
+    ThreadRegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
 
     if (command.GetArgumentCount() != 2) {
       result.AppendError(
@@ -489,14 +494,18 @@ protected:
       // call our registers $rbx in our own API
       reg_name.consume_front("$");
 
-      const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(reg_name);
+      const RegisterDescriptor *reg_info =
+          reg_ctx->GetRegisterByName(reg_name);
 
       if (reg_info) {
         RegisterValue reg_value;
 
-        Status error(reg_value.SetValueFromString(reg_info, value_str));
+        Status error(reg_value.SetValueFromString(
+            reg_info->encoding, reg_info->byte_size, value_str));
         if (error.Success()) {
-          if (reg_ctx->WriteRegister(reg_info, reg_value)) {
+          if (!llvm::errorToBool(reg_ctx->WriteRegister(
+                  (reg_info ? reg_info->id : LLDB_INVALID_REGNUM),
+                  reg_value))) {
             // Toss all frames and anything else in the thread after a register
             // has been written.
             m_exe_ctx.GetThreadRef().Flush();
@@ -569,11 +578,12 @@ protected:
     }
 
     llvm::StringRef reg_name = command[0].ref();
-    RegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
-    const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(reg_name);
+    ThreadRegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
+    const RegisterDescriptor *reg_info =
+        reg_ctx->GetRegisterByName(reg_name);
     if (reg_info) {
       DumpRegisterInfo(
-          result.GetOutputStream(), *reg_ctx, *reg_info,
+          result.GetOutputStream(), *reg_ctx->GetDescription(), *reg_info,
           GetCommandInterpreter().GetDebugger().GetTerminalWidth());
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else

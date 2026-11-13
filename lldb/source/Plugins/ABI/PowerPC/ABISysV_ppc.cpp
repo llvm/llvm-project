@@ -16,7 +16,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -24,7 +24,7 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectMemory.h"
@@ -111,104 +111,95 @@ enum dwarf_regnums {
 };
 
 // Note that the size and offset will be updated by platform-specific classes.
-#define DEFINE_GPR(reg, alt, kind1, kind2, kind3, kind4)                       \
-  {                                                                            \
-    #reg, alt, 8, 0, eEncodingUint, eFormatHex, {kind1, kind2, kind3, kind4 }, \
-                                                 nullptr, nullptr, nullptr,    \
-  }
+#define DEFINE_GPR(reg_id, reg, alt, kind1, kind2, kind3, kind4)               \
+  RegisterDescriptor(reg_id, #reg, alt, 8, eEncodingUint, eFormatHex,          \
+                     {kind1, kind2, kind3, kind4, LLDB_INVALID_REGNUM}, {},    \
+                     {}, nullptr)
 
-static const RegisterInfo g_register_infos[] = {
-    // General purpose registers.             eh_frame,                 DWARF,
-    // Generic,    Process Plugin
-    DEFINE_GPR(r0, nullptr, dwarf_r0, dwarf_r0, LLDB_INVALID_REGNUM,
+static const RegisterDescriptor g_register_infos[] = {
+    DEFINE_GPR(536870912, r0, nullptr, dwarf_r0, dwarf_r0, LLDB_INVALID_REGNUM,
                LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r1, nullptr, dwarf_r1, dwarf_r1, LLDB_REGNUM_GENERIC_SP,
+    DEFINE_GPR(536870913, r1, nullptr, dwarf_r1, dwarf_r1,
+               LLDB_REGNUM_GENERIC_SP, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870914, r2, nullptr, dwarf_r2, dwarf_r2, LLDB_INVALID_REGNUM,
                LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r2, nullptr, dwarf_r2, dwarf_r2, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r3, nullptr, dwarf_r3, dwarf_r3, LLDB_REGNUM_GENERIC_ARG1,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r4, nullptr, dwarf_r4, dwarf_r4, LLDB_REGNUM_GENERIC_ARG2,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r5, nullptr, dwarf_r5, dwarf_r5, LLDB_REGNUM_GENERIC_ARG3,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r6, nullptr, dwarf_r6, dwarf_r6, LLDB_REGNUM_GENERIC_ARG4,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r7, nullptr, dwarf_r7, dwarf_r7, LLDB_REGNUM_GENERIC_ARG5,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r8, nullptr, dwarf_r8, dwarf_r8, LLDB_REGNUM_GENERIC_ARG6,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r9, nullptr, dwarf_r9, dwarf_r9, LLDB_REGNUM_GENERIC_ARG7,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r10, nullptr, dwarf_r10, dwarf_r10, LLDB_REGNUM_GENERIC_ARG8,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r11, nullptr, dwarf_r11, dwarf_r11, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r12, nullptr, dwarf_r12, dwarf_r12, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r13, nullptr, dwarf_r13, dwarf_r13, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r14, nullptr, dwarf_r14, dwarf_r14, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r15, nullptr, dwarf_r15, dwarf_r15, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r16, nullptr, dwarf_r16, dwarf_r16, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r17, nullptr, dwarf_r17, dwarf_r17, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r18, nullptr, dwarf_r18, dwarf_r18, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r19, nullptr, dwarf_r19, dwarf_r19, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r20, nullptr, dwarf_r20, dwarf_r20, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r21, nullptr, dwarf_r21, dwarf_r21, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r22, nullptr, dwarf_r22, dwarf_r22, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r23, nullptr, dwarf_r23, dwarf_r23, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r24, nullptr, dwarf_r24, dwarf_r24, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r25, nullptr, dwarf_r25, dwarf_r25, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r26, nullptr, dwarf_r26, dwarf_r26, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r27, nullptr, dwarf_r27, dwarf_r27, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r28, nullptr, dwarf_r28, dwarf_r28, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r29, nullptr, dwarf_r29, dwarf_r29, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r30, nullptr, dwarf_r30, dwarf_r30, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r31, nullptr, dwarf_r31, dwarf_r31, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(lr, nullptr, dwarf_lr, dwarf_lr, LLDB_REGNUM_GENERIC_RA,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(cr, nullptr, dwarf_cr, dwarf_cr, LLDB_REGNUM_GENERIC_FLAGS,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(xer, nullptr, dwarf_xer, dwarf_xer, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(ctr, nullptr, dwarf_ctr, dwarf_ctr, LLDB_INVALID_REGNUM,
-               LLDB_INVALID_REGNUM),
-    DEFINE_GPR(pc, nullptr, dwarf_pc, dwarf_pc, LLDB_REGNUM_GENERIC_PC,
-               LLDB_INVALID_REGNUM),
-    {nullptr,
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_cfa, dwarf_cfa, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-     }};
+    DEFINE_GPR(536870915, r3, nullptr, dwarf_r3, dwarf_r3,
+               LLDB_REGNUM_GENERIC_ARG1, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870916, r4, nullptr, dwarf_r4, dwarf_r4,
+               LLDB_REGNUM_GENERIC_ARG2, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870917, r5, nullptr, dwarf_r5, dwarf_r5,
+               LLDB_REGNUM_GENERIC_ARG3, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870918, r6, nullptr, dwarf_r6, dwarf_r6,
+               LLDB_REGNUM_GENERIC_ARG4, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870919, r7, nullptr, dwarf_r7, dwarf_r7,
+               LLDB_REGNUM_GENERIC_ARG5, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870920, r8, nullptr, dwarf_r8, dwarf_r8,
+               LLDB_REGNUM_GENERIC_ARG6, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870921, r9, nullptr, dwarf_r9, dwarf_r9,
+               LLDB_REGNUM_GENERIC_ARG7, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870922, r10, nullptr, dwarf_r10, dwarf_r10,
+               LLDB_REGNUM_GENERIC_ARG8, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870923, r11, nullptr, dwarf_r11, dwarf_r11,
+               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870924, r12, nullptr, dwarf_r12, dwarf_r12,
+               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870925, r13, nullptr, dwarf_r13, dwarf_r13,
+               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870926, r14, nullptr, dwarf_r14, dwarf_r14,
+               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870927, r15, nullptr, dwarf_r15, dwarf_r15,
+               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870928, r16, nullptr, dwarf_r16, dwarf_r16,
+               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870929, r17, nullptr, dwarf_r17, dwarf_r17,
+               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870930, r18, nullptr, dwarf_r18, dwarf_r18,
+               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870931, r19, nullptr, dwarf_r19, dwarf_r19,
+               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870932, r20, nullptr, dwarf_r20, dwarf_r20,
+               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870933, r21, nullptr, dwarf_r21, dwarf_r21,
+               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870934, r22, nullptr, dwarf_r22, dwarf_r22,
+               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870935, r23, nullptr, dwarf_r23, dwarf_r23,
+               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870936, r24, nullptr, dwarf_r24, dwarf_r24,
+               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870937, r25, nullptr, dwarf_r25, dwarf_r25,
+               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870938, r26, nullptr, dwarf_r26, dwarf_r26,
+               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870939, r27, nullptr, dwarf_r27, dwarf_r27,
+               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870940, r28, nullptr, dwarf_r28, dwarf_r28,
+               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870941, r29, nullptr, dwarf_r29, dwarf_r29,
+               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870942, r30, nullptr, dwarf_r30, dwarf_r30,
+               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870943, r31, nullptr, dwarf_r31, dwarf_r31,
+               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870944, lr, nullptr, dwarf_lr, dwarf_lr,
+               LLDB_REGNUM_GENERIC_RA, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870945, cr, nullptr, dwarf_cr, dwarf_cr,
+               LLDB_REGNUM_GENERIC_FLAGS, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870946, xer, nullptr, dwarf_xer, dwarf_xer,
+               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870947, ctr, nullptr, dwarf_ctr, dwarf_ctr,
+               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(536870948, pc, nullptr, dwarf_pc, dwarf_pc,
+               LLDB_REGNUM_GENERIC_PC, LLDB_INVALID_REGNUM),
+    RegisterDescriptor(536870949, "", nullptr, 8, eEncodingUint,
+                       eFormatHex,
+                       {dwarf_cfa, dwarf_cfa, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr)};
 
 static const uint32_t k_num_register_infos = std::size(g_register_infos);
 
-const lldb_private::RegisterInfo *
+const lldb_private::RegisterDescriptor *
 ABISysV_ppc::GetRegisterInfoArray(uint32_t &count) {
   count = k_num_register_infos;
   return g_register_infos;
@@ -247,21 +238,22 @@ bool ABISysV_ppc::PrepareTrivialCall(Thread &thread, addr_t sp,
     log->PutString(s.GetString());
   }
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
     return false;
 
-  const RegisterInfo *reg_info = nullptr;
+  const RegisterDescriptor *reg_info = nullptr;
 
   if (args.size() > 8) // TODO handle more than 8 arguments
     return false;
 
   for (size_t i = 0; i < args.size(); ++i) {
-    reg_info = reg_ctx->GetRegisterInfo(eRegisterKindGeneric,
+    reg_info = reg_ctx->GetRegisterByNumber(eRegisterKindGeneric,
                                         LLDB_REGNUM_GENERIC_ARG1 + i);
     LLDB_LOGF(log, "About to write arg%" PRIu64 " (0x%" PRIx64 ") into %s",
-              static_cast<uint64_t>(i + 1), args[i], reg_info->name);
-    if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, args[i]))
+              static_cast<uint64_t>(i + 1), args[i], reg_info->name.c_str());
+    if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+            (reg_info ? reg_info->id : LLDB_INVALID_REGNUM), args[i])))
       return false;
   }
 
@@ -275,10 +267,10 @@ bool ABISysV_ppc::PrepareTrivialCall(Thread &thread, addr_t sp,
   sp -= 8;
 
   Status error;
-  const RegisterInfo *pc_reg_info =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
-  const RegisterInfo *sp_reg_info =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
+  const RegisterDescriptor *pc_reg_info =
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
+  const RegisterDescriptor *sp_reg_info =
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
   ProcessSP process_sp(thread.GetProcess());
 
   RegisterValue reg_value;
@@ -296,14 +288,16 @@ bool ABISysV_ppc::PrepareTrivialCall(Thread &thread, addr_t sp,
 
   LLDB_LOGF(log, "Writing SP: 0x%" PRIx64, (uint64_t)sp);
 
-  if (!reg_ctx->WriteRegisterFromUnsigned(sp_reg_info, sp))
+  if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+          (sp_reg_info ? sp_reg_info->id : LLDB_INVALID_REGNUM), sp)))
     return false;
 
   // %pc is set to the address of the called function.
 
   LLDB_LOGF(log, "Writing IP: 0x%" PRIx64, (uint64_t)func_addr);
 
-  if (!reg_ctx->WriteRegisterFromUnsigned(pc_reg_info, func_addr))
+  if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+          (pc_reg_info ? pc_reg_info->id : LLDB_INVALID_REGNUM), func_addr)))
     return false;
 
   return true;
@@ -342,7 +336,7 @@ bool ABISysV_ppc::GetArgumentValues(Thread &thread, ValueList &values) const {
 
   // Extract the register context so we can read arguments from registers
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
 
   if (!reg_ctx)
     return false;
@@ -360,29 +354,29 @@ bool ABISysV_ppc::GetArgumentValues(Thread &thread, ValueList &values) const {
   uint32_t argument_register_ids[8];
 
   argument_register_ids[0] =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1)
-          ->kinds[eRegisterKindLLDB];
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1)
+          ->id;
   argument_register_ids[1] =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG2)
-          ->kinds[eRegisterKindLLDB];
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG2)
+          ->id;
   argument_register_ids[2] =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG3)
-          ->kinds[eRegisterKindLLDB];
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG3)
+          ->id;
   argument_register_ids[3] =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG4)
-          ->kinds[eRegisterKindLLDB];
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG4)
+          ->id;
   argument_register_ids[4] =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG5)
-          ->kinds[eRegisterKindLLDB];
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG5)
+          ->id;
   argument_register_ids[5] =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG6)
-          ->kinds[eRegisterKindLLDB];
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG6)
+          ->id;
   argument_register_ids[6] =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG7)
-          ->kinds[eRegisterKindLLDB];
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG7)
+          ->id;
   argument_register_ids[7] =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG8)
-          ->kinds[eRegisterKindLLDB];
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG8)
+          ->id;
 
   unsigned int current_argument_register = 0;
 
@@ -427,12 +421,13 @@ Status ABISysV_ppc::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
 
   bool is_signed;
 
-  RegisterContext *reg_ctx = thread->GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread->GetRegisterContext().get();
 
   bool set_it_simple = false;
   if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||
       compiler_type.IsPointerType()) {
-    const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName("r3", 0);
+    const RegisterDescriptor *reg_info =
+        reg_ctx->GetRegisterByName("r3", 0);
 
     DataExtractor data;
     Status data_error;
@@ -445,7 +440,8 @@ Status ABISysV_ppc::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
     if (num_bytes <= 8) {
       uint64_t raw_value = data.GetMaxU64(&offset, num_bytes);
 
-      if (reg_ctx->WriteRegisterFromUnsigned(reg_info, raw_value))
+      if (!llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+              (reg_info ? reg_info->id : LLDB_INVALID_REGNUM), raw_value)))
         set_it_simple = true;
     } else {
       error = Status::FromErrorString(
@@ -505,7 +501,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectSimple(
   // value.SetContext (Value::eContextTypeClangType, return_value_type);
   value.SetCompilerType(return_compiler_type);
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
     return return_valobj_sp;
 
@@ -522,7 +518,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectSimple(
       if (!byte_size)
         return return_valobj_sp;
       uint64_t raw_value = thread.GetRegisterContext()->ReadRegisterAsUnsigned(
-          reg_ctx->GetRegisterInfoByName("r3", 0), 0);
+          (reg_ctx->GetRegisterByName("r3", 0))->id, 0);
       const bool is_signed = (type_flags & eTypeIsSigned) != 0;
       switch (*byte_size) {
       default:
@@ -567,9 +563,14 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectSimple(
         std::optional<uint64_t> byte_size =
             llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
         if (byte_size && *byte_size <= sizeof(long double)) {
-          const RegisterInfo *f1_info = reg_ctx->GetRegisterInfoByName("f1", 0);
+          const RegisterDescriptor *f1_info =
+              reg_ctx->GetRegisterByName("f1", 0);
           RegisterValue f1_value;
-          if (reg_ctx->ReadRegister(f1_info, f1_value)) {
+          if (!llvm::errorToBool(
+                  reg_ctx
+                      ->ReadRegister(
+                          (f1_info ? f1_info->id : LLDB_INVALID_REGNUM))
+                      .moveInto(f1_value))) {
             DataExtractor data;
             if (f1_value.GetData(data)) {
               lldb::offset_t offset = 0;
@@ -590,8 +591,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectSimple(
       return_valobj_sp = ValueObjectConstResult::Create(
           thread.GetStackFrameAtIndex(0).get(), value, ConstString(""));
   } else if (type_flags & eTypeIsPointer) {
-    unsigned r3_id =
-        reg_ctx->GetRegisterInfoByName("r3", 0)->kinds[eRegisterKindLLDB];
+    unsigned r3_id = reg_ctx->GetRegisterByName("r3", 0)->id;
     value.GetScalar() =
         (uint64_t)thread.GetRegisterContext()->ReadRegisterAsUnsigned(r3_id, 0);
     value.SetValueType(Value::ValueType::Scalar);
@@ -601,7 +601,8 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectSimple(
     std::optional<uint64_t> byte_size =
         llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
     if (byte_size && *byte_size > 0) {
-      const RegisterInfo *altivec_reg = reg_ctx->GetRegisterInfoByName("v2", 0);
+      const RegisterDescriptor *altivec_reg =
+          reg_ctx->GetRegisterByName("v2", 0);
       if (altivec_reg) {
         if (*byte_size <= altivec_reg->byte_size) {
           ProcessSP process_sp(thread.GetProcess());
@@ -610,11 +611,16 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectSimple(
                 new DataBufferHeap(*byte_size, 0));
             const ByteOrder byte_order = process_sp->GetByteOrder();
             RegisterValue reg_value;
-            if (reg_ctx->ReadRegister(altivec_reg, reg_value)) {
+            if (!llvm::errorToBool(
+                    reg_ctx
+                        ->ReadRegister((altivec_reg ? altivec_reg->id
+                                                    : LLDB_INVALID_REGNUM))
+                        .moveInto(reg_value))) {
               Status error;
               if (reg_value.GetAsMemoryData(
-                      *altivec_reg, heap_data_up->GetBytes(),
-                      heap_data_up->GetByteSize(), byte_order, error)) {
+                      altivec_reg->byte_size, heap_data_up->GetBytes(),
+                      heap_data_up->GetByteSize(), byte_order, error,
+                      altivec_reg->name)) {
                 DataExtractor data(DataBufferSP(heap_data_up.release()),
                                    byte_order,
                                    process_sp->GetTarget()
@@ -645,7 +651,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectImpl(
   if (return_valobj_sp)
     return return_valobj_sp;
 
-  RegisterContextSP reg_ctx_sp = thread.GetRegisterContext();
+  ThreadRegisterContextSP reg_ctx_sp = thread.GetRegisterContext();
   if (!reg_ctx_sp)
     return return_valobj_sp;
 
@@ -662,13 +668,20 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectImpl(
       DataExtractor return_ext(data_sp, target_byte_order,
                                target->GetArchitecture().GetAddressByteSize());
 
-      const RegisterInfo *r3_info = reg_ctx_sp->GetRegisterInfoByName("r3", 0);
-      const RegisterInfo *rdx_info =
-          reg_ctx_sp->GetRegisterInfoByName("rdx", 0);
+      const RegisterDescriptor *r3_info =
+          reg_ctx_sp->GetRegisterByName("r3", 0);
+      const RegisterDescriptor *rdx_info =
+          reg_ctx_sp->GetRegisterByName("rdx", 0);
 
       RegisterValue r3_value, rdx_value;
-      reg_ctx_sp->ReadRegister(r3_info, r3_value);
-      reg_ctx_sp->ReadRegister(rdx_info, rdx_value);
+      llvm::consumeError(
+          reg_ctx_sp
+              ->ReadRegister((r3_info ? r3_info->id : LLDB_INVALID_REGNUM))
+              .moveInto(r3_value));
+      llvm::consumeError(
+          reg_ctx_sp
+              ->ReadRegister((rdx_info ? rdx_info->id : LLDB_INVALID_REGNUM))
+              .moveInto(rdx_value));
 
       DataExtractor r3_data, rdx_data;
 
@@ -837,8 +850,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectImpl(
     // only return the memory return value if we know it is valid.
 
     if (is_memory) {
-      unsigned r3_id =
-          reg_ctx_sp->GetRegisterInfoByName("r3", 0)->kinds[eRegisterKindLLDB];
+      unsigned r3_id = reg_ctx_sp->GetRegisterByName("r3", 0)->id;
       lldb::addr_t storage_addr =
           (uint64_t)thread.GetRegisterContext()->ReadRegisterAsUnsigned(r3_id,
                                                                         0);
@@ -894,7 +906,7 @@ UnwindPlanSP ABISysV_ppc::CreateDefaultUnwindPlan() {
   return plan_sp;
 }
 
-bool ABISysV_ppc::RegisterIsVolatile(const RegisterInfo *reg_info) {
+bool ABISysV_ppc::RegisterIsVolatile(const RegisterDescriptor *reg_info) {
   return !RegisterIsCalleeSaved(reg_info);
 }
 
@@ -904,7 +916,7 @@ bool ABISysV_ppc::RegisterIsVolatile(const RegisterInfo *reg_info) {
 // is 1.9 released 2004 at http://refspecs.linuxfoundation.org/ELF/ppc/PPC-
 // elf64abi-1.9.pdf
 
-bool ABISysV_ppc::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
+bool ABISysV_ppc::RegisterIsCalleeSaved(const RegisterDescriptor *reg_info) {
   if (reg_info) {
     // Preserved registers are :
     //    r1,r2,r13-r31
@@ -912,7 +924,7 @@ bool ABISysV_ppc::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
     //    v20-v31 (not yet)
     //    vrsave (not yet)
 
-    const char *name = reg_info->name;
+    const char *name = reg_info->name.c_str();
     if (name[0] == 'r') {
       if ((name[1] == '1' || name[1] == '2') && name[2] == '\0')
         return true;

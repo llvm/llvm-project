@@ -25,7 +25,6 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/ScriptedThreadPlan.h"
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/StopInfo.h"
@@ -43,6 +42,7 @@
 #include "lldb/Target/ThreadPlanStepOverRange.h"
 #include "lldb/Target/ThreadPlanStepThrough.h"
 #include "lldb/Target/ThreadPlanStepUntil.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Target/UnwindLLDB.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -522,14 +522,19 @@ bool Thread::ThreadStoppedForAReason() { return (bool)GetPrivateStopInfo(); }
 
 bool Thread::CheckpointThreadState(ThreadStateCheckpoint &saved_state) {
   saved_state.register_backup_sp.reset();
+  saved_state.register_context_sp.reset();
   lldb::StackFrameSP frame_sp(GetStackFrameAtIndex(0));
   if (frame_sp) {
-    lldb::RegisterCheckpointSP reg_checkpoint_sp(
-        new RegisterCheckpoint(RegisterCheckpoint::Reason::eExpression));
-    if (reg_checkpoint_sp) {
-      lldb::RegisterContextSP reg_ctx_sp(frame_sp->GetRegisterContext());
-      if (reg_ctx_sp && reg_ctx_sp->ReadAllRegisterValues(*reg_checkpoint_sp))
-        saved_state.register_backup_sp = reg_checkpoint_sp;
+    auto context = frame_sp->GetRegisterContext();
+    if (context) {
+      auto checkpoint = context->SaveCheckpoint();
+      if (!checkpoint)
+        llvm::consumeError(checkpoint.takeError());
+      else {
+        saved_state.register_backup_sp =
+            std::make_shared<RegisterCheckpoint>(std::move(*checkpoint));
+        saved_state.register_context_sp = std::move(context);
+      }
     }
   }
   if (!saved_state.register_backup_sp)
@@ -549,24 +554,21 @@ bool Thread::CheckpointThreadState(ThreadStateCheckpoint &saved_state) {
 
 bool Thread::RestoreRegisterStateFromCheckpoint(
     ThreadStateCheckpoint &saved_state) {
-  if (saved_state.register_backup_sp) {
-    lldb::StackFrameSP frame_sp(GetStackFrameAtIndex(0));
-    if (frame_sp) {
-      lldb::RegisterContextSP reg_ctx_sp(frame_sp->GetRegisterContext());
-      if (reg_ctx_sp) {
-        bool ret =
-            reg_ctx_sp->WriteAllRegisterValues(*saved_state.register_backup_sp);
-
-        // Clear out all stack frames as our world just changed.
-        ClearStackFrames();
-        reg_ctx_sp->InvalidateIfNeeded(true);
-        if (m_unwinder_up)
-          m_unwinder_up->Clear();
-        return ret;
-      }
-    }
-  }
-  return false;
+  auto context = saved_state.register_context_sp;
+  if (!saved_state.register_backup_sp || !context ||
+      context->GetThreadID() != GetID())
+    return false;
+  bool restored = !llvm::errorToBool(
+      context->RestoreCheckpoint(*saved_state.register_backup_sp));
+  // Expression execution can replace a context while changing vector lengths.
+  // Resume with the adapter and schema whose saved configuration was restored.
+  if (restored)
+    m_reg_context_sp = context;
+  ClearStackFrames();
+  context->InvalidateIfNeeded(true);
+  if (m_unwinder_up)
+    m_unwinder_up->Clear();
+  return restored;
 }
 
 void Thread::RestoreThreadStateFromCheckpoint(
@@ -650,7 +652,7 @@ bool Thread::SetupToStepOverBreakpointIfNeeded(RunDirection direction) {
     // before telling the current plan it will resume, since we might change
     // what the current plan is.
 
-    lldb::RegisterContextSP reg_ctx_sp(GetRegisterContext());
+    lldb::ThreadRegisterContextSP reg_ctx_sp(GetRegisterContext());
     ProcessSP process_sp(GetProcess());
     if (reg_ctx_sp && process_sp && direction == eRunForward) {
       const addr_t thread_pc = reg_ctx_sp->GetPC();
@@ -1768,7 +1770,7 @@ void Thread::ClearStackFrames() {
 
   GetUnwinder().Clear();
   m_prev_framezero_pc.reset();
-  if (RegisterContextSP reg_ctx_sp = GetRegisterContext())
+  if (ThreadRegisterContextSP reg_ctx_sp = GetRegisterContext())
     m_prev_framezero_pc = reg_ctx_sp->GetPC();
 
   // Only store away the old "reference" StackFrameLists if we got all their
@@ -1868,7 +1870,7 @@ Status Thread::ReturnFromFrame(lldb::StackFrameSP frame_sp,
 
   StackFrameSP youngest_frame_sp = thread->GetStackFrameAtIndex(0);
   if (youngest_frame_sp) {
-    lldb::RegisterContextSP reg_ctx_sp(youngest_frame_sp->GetRegisterContext());
+    lldb::ThreadRegisterContextSP reg_ctx_sp(youngest_frame_sp->GetRegisterContext());
     if (reg_ctx_sp) {
       bool copy_success = reg_ctx_sp->CopyFromRegisterContext(
           older_frame_sp->GetRegisterContext());
@@ -1907,7 +1909,7 @@ Status Thread::JumpToLine(const FileSpec &file, uint32_t line,
   ExecutionContext exe_ctx(GetStackFrameAtIndex(0));
   Target *target = exe_ctx.GetTargetPtr();
   TargetSP target_sp = exe_ctx.GetTargetSP();
-  RegisterContext *reg_ctx = exe_ctx.GetRegisterContext();
+  ThreadRegisterContext *reg_ctx = exe_ctx.GetRegisterContext();
   StackFrame *frame = exe_ctx.GetFramePtr();
   const SymbolContext &sc = frame->GetSymbolContext(eSymbolContextFunction);
 
@@ -2281,7 +2283,7 @@ bool Thread::IsStillAtLastBreakpointHit() {
     StopReason stop_reason = m_stop_info_sp->GetStopReason();
     if (stop_reason == lldb::eStopReasonBreakpoint) {
       uint64_t value = m_stop_info_sp->GetValue();
-      lldb::RegisterContextSP reg_ctx_sp(GetRegisterContext());
+      lldb::ThreadRegisterContextSP reg_ctx_sp(GetRegisterContext());
       if (reg_ctx_sp) {
         lldb::addr_t pc = reg_ctx_sp->GetPC();
         BreakpointSiteSP bp_site_sp =

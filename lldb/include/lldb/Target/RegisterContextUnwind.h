@@ -11,10 +11,10 @@
 
 #include <vector>
 
+#include "lldb/Register/RegisterNumber.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/UnwindPlan.h"
-#include "lldb/Target/RegisterContext.h"
-#include "lldb/Target/RegisterNumber.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/UnwindLLDB.h"
 #include "lldb/lldb-private.h"
 
@@ -23,7 +23,7 @@ namespace lldb_private {
 class UnwindLLDB;
 class ArchitectureArm;
 
-class RegisterContextUnwind : public lldb_private::RegisterContext {
+class RegisterContextUnwind : public lldb_private::ThreadRegisterContext {
 public:
   typedef std::shared_ptr<RegisterContextUnwind> SharedPtr;
 
@@ -35,28 +35,19 @@ public:
 
   ~RegisterContextUnwind() override = default;
 
+  std::shared_ptr<const RegisterDescription> GetDescription() const override;
+
   void InvalidateAllRegisters() override;
 
-  size_t GetRegisterCount() override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  const lldb_private::RegisterInfo *GetRegisterInfoAtIndex(size_t reg) override;
-
-  size_t GetRegisterSetCount() override;
-
-  const lldb_private::RegisterSet *GetRegisterSet(size_t reg_set) override;
-
-  bool ReadRegister(const lldb_private::RegisterInfo *reg_info,
-                    lldb_private::RegisterValue &value) override;
-
-  bool WriteRegister(const lldb_private::RegisterInfo *reg_info,
+  llvm::Error WriteRegister(lldb_private::RegisterID id,
                      const lldb_private::RegisterValue &value) override;
 
   bool ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
 
   bool WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
-
-  uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
-                                               uint32_t num) override;
 
   bool IsValid() const;
 
@@ -78,7 +69,7 @@ protected:
   // value, or a frame "below" this one saved it. That is, this function doesn't
   // modify the register, it may call a function that does & saved it to stack.
   //
-  // The ConcreteRegisterLocation type may be set to eRegisterNotAvailable --
+  // The RegisterRecoveryLocation type may be set to eRegisterNotAvailable --
   // this will happen for a volatile register being queried mid-stack.  Instead
   // of floating frame 0's contents of that register up the stack (which may or
   // may not be the value of that reg when the function was executing), we won't
@@ -88,9 +79,9 @@ protected:
   // register) is requested mid-stack, and no frames "below" the requested stack
   // have saved the register anywhere, it is safe to assume that frame 0's
   // register value is the same.
-  lldb_private::UnwindLLDB::RegisterSearchResult SavedLocationForRegister(
-      uint32_t lldb_regnum,
-      lldb_private::UnwindLLDB::ConcreteRegisterLocation &regloc);
+  lldb_private::UnwindLLDB::RegisterSearchResult
+  SavedLocationForRegister(uint32_t lldb_regnum,
+                           lldb_private::RegisterRecoveryLocation &regloc);
 
 private:
   enum FrameType {
@@ -104,7 +95,7 @@ private:
                     // past the top (end) of the stack
   };
 
-  // UnwindLLDB needs to pass around references to ConcreteRegisterLocations
+  // UnwindLLDB needs to pass around references to RegisterRecoveryLocations
   friend class UnwindLLDB;
   // Architecture may need to retrieve caller register values from this frame
   friend class ArchitectureArm;
@@ -153,13 +144,13 @@ private:
   GetAbstractRegisterLocation(uint32_t lldb_regnum, lldb::RegisterKind &kind);
 
   bool ReadRegisterValueFromRegisterLocation(
-      lldb_private::UnwindLLDB::ConcreteRegisterLocation regloc,
-      const lldb_private::RegisterInfo *reg_info,
+      lldb_private::RegisterRecoveryLocation regloc,
+      const lldb_private::RegisterDescriptor *reg_info,
       lldb_private::RegisterValue &value);
 
   bool WriteRegisterValueToRegisterLocation(
-      lldb_private::UnwindLLDB::ConcreteRegisterLocation regloc,
-      const lldb_private::RegisterInfo *reg_info,
+      lldb_private::RegisterRecoveryLocation regloc,
+      const lldb_private::RegisterDescriptor *reg_info,
       const lldb_private::RegisterValue &value);
 
   /// If the unwind has to the caller frame has failed, try something else
@@ -207,8 +198,6 @@ private:
 
   lldb::addr_t GetReturnAddressHint(int32_t plan_offset);
 
-  lldb_private::Thread &m_thread;
-
   ///
   // The following tell us how to retrieve the CALLER's register values (ie the
   // "previous" frame, aka the frame above)
@@ -246,9 +235,9 @@ private:
   bool m_sym_ctx_valid; // if ResolveSymbolContextForAddress fails, don't try to
                         // use m_sym_ctx
 
-  uint32_t m_frame_number; // What stack frame this RegisterContext is
+  uint32_t m_frame_number; // What stack frame this ThreadRegisterContext is
 
-  std::map<uint32_t, lldb_private::UnwindLLDB::ConcreteRegisterLocation>
+  std::map<uint32_t, lldb_private::RegisterRecoveryLocation>
       m_registers; // where to find reg values for this frame
 
   lldb_private::UnwindLLDB &m_parent_unwind; // The UnwindLLDB that is creating

@@ -18,13 +18,13 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
@@ -57,7 +57,7 @@ ABIMacOSX_arm64::CreateInstance(ProcessSP process_sp, const ArchSpec &arch) {
 bool ABIMacOSX_arm64::PrepareTrivialCall(
     Thread &thread, lldb::addr_t sp, lldb::addr_t func_addr,
     lldb::addr_t return_addr, llvm::ArrayRef<lldb::addr_t> args) const {
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
     return false;
 
@@ -77,11 +77,11 @@ bool ABIMacOSX_arm64::PrepareTrivialCall(
     log->PutString(s.GetString());
   }
 
-  const uint32_t pc_reg_num = reg_ctx->ConvertRegisterKindToRegisterNumber(
+  const uint32_t pc_reg_num = reg_ctx->GetRegisterIDForNumber(
       eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
-  const uint32_t sp_reg_num = reg_ctx->ConvertRegisterKindToRegisterNumber(
+  const uint32_t sp_reg_num = reg_ctx->GetRegisterIDForNumber(
       eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
-  const uint32_t ra_reg_num = reg_ctx->ConvertRegisterKindToRegisterNumber(
+  const uint32_t ra_reg_num = reg_ctx->GetRegisterIDForNumber(
       eRegisterKindGeneric, LLDB_REGNUM_GENERIC_RA);
 
   // x0 - x7 contain first 8 simple args
@@ -89,27 +89,27 @@ bool ABIMacOSX_arm64::PrepareTrivialCall(
     return false;
 
   for (size_t i = 0; i < args.size(); ++i) {
-    const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo(
+    const RegisterDescriptor *reg_info = reg_ctx->GetRegisterByNumber(
         eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1 + i);
     LLDB_LOGF(log, "About to write arg%d (0x%" PRIx64 ") into %s",
-              static_cast<int>(i + 1), args[i], reg_info->name);
-    if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, args[i]))
+              static_cast<int>(i + 1), args[i], reg_info->name.c_str());
+    if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+            (reg_info ? reg_info->id : LLDB_INVALID_REGNUM), args[i])))
       return false;
   }
 
   // Set "lr" to the return address
-  if (!reg_ctx->WriteRegisterFromUnsigned(
-          reg_ctx->GetRegisterInfoAtIndex(ra_reg_num), return_addr))
+  if (llvm::errorToBool(
+          reg_ctx->WriteRegisterFromUnsigned(ra_reg_num, return_addr)))
     return false;
 
   // Set "sp" to the requested value
-  if (!reg_ctx->WriteRegisterFromUnsigned(
-          reg_ctx->GetRegisterInfoAtIndex(sp_reg_num), sp))
+  if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(sp_reg_num, sp)))
     return false;
 
   // Set "pc" to the address requested
-  if (!reg_ctx->WriteRegisterFromUnsigned(
-          reg_ctx->GetRegisterInfoAtIndex(pc_reg_num), func_addr))
+  if (llvm::errorToBool(
+          reg_ctx->WriteRegisterFromUnsigned(pc_reg_num, func_addr)))
     return false;
 
   return true;
@@ -123,7 +123,7 @@ bool ABIMacOSX_arm64::GetArgumentValues(Thread &thread,
 
   // Extract the register context so we can read arguments from registers
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
 
   if (!reg_ctx)
     return false;
@@ -158,37 +158,37 @@ bool ABIMacOSX_arm64::GetArgumentValues(Thread &thread,
     if (bit_width <= (exe_ctx.GetProcessRef().GetAddressByteSize() * 8)) {
       if (value_idx < 8) {
         // Arguments 1-6 are in x0-x5...
-        const RegisterInfo *reg_info = nullptr;
+        const RegisterDescriptor *reg_info = nullptr;
         // Search by generic ID first, then fall back to by name
-        uint32_t arg_reg_num = reg_ctx->ConvertRegisterKindToRegisterNumber(
+        uint32_t arg_reg_num = reg_ctx->GetRegisterIDForNumber(
             eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1 + value_idx);
         if (arg_reg_num != LLDB_INVALID_REGNUM) {
-          reg_info = reg_ctx->GetRegisterInfoAtIndex(arg_reg_num);
+          reg_info = reg_ctx->GetDescription()->Find(arg_reg_num);
         } else {
           switch (value_idx) {
           case 0:
-            reg_info = reg_ctx->GetRegisterInfoByName("x0");
+            reg_info = reg_ctx->GetRegisterByName("x0");
             break;
           case 1:
-            reg_info = reg_ctx->GetRegisterInfoByName("x1");
+            reg_info = reg_ctx->GetRegisterByName("x1");
             break;
           case 2:
-            reg_info = reg_ctx->GetRegisterInfoByName("x2");
+            reg_info = reg_ctx->GetRegisterByName("x2");
             break;
           case 3:
-            reg_info = reg_ctx->GetRegisterInfoByName("x3");
+            reg_info = reg_ctx->GetRegisterByName("x3");
             break;
           case 4:
-            reg_info = reg_ctx->GetRegisterInfoByName("x4");
+            reg_info = reg_ctx->GetRegisterByName("x4");
             break;
           case 5:
-            reg_info = reg_ctx->GetRegisterInfoByName("x5");
+            reg_info = reg_ctx->GetRegisterByName("x5");
             break;
           case 6:
-            reg_info = reg_ctx->GetRegisterInfoByName("x6");
+            reg_info = reg_ctx->GetRegisterByName("x6");
             break;
           case 7:
-            reg_info = reg_ctx->GetRegisterInfoByName("x7");
+            reg_info = reg_ctx->GetRegisterByName("x7");
             break;
           }
         }
@@ -196,7 +196,11 @@ bool ABIMacOSX_arm64::GetArgumentValues(Thread &thread,
         if (reg_info) {
           RegisterValue reg_value;
 
-          if (reg_ctx->ReadRegister(reg_info, reg_value)) {
+          if (!llvm::errorToBool(
+                  reg_ctx
+                      ->ReadRegister(
+                          (reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+                      .moveInto(reg_value))) {
             if (is_signed)
               reg_value.SignExtend(bit_width);
             if (!reg_value.GetScalarValue(value->GetScalar()))
@@ -250,7 +254,7 @@ ABIMacOSX_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
 
   Thread *thread = frame_sp->GetThread().get();
 
-  RegisterContext *reg_ctx = thread->GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread->GetRegisterContext().get();
 
   if (reg_ctx) {
     DataExtractor data;
@@ -269,21 +273,27 @@ ABIMacOSX_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
         // Extract the register context so we can read arguments from registers
         lldb::offset_t offset = 0;
         if (byte_size <= 16) {
-          const RegisterInfo *x0_info = reg_ctx->GetRegisterInfoByName("x0", 0);
+          const RegisterDescriptor *x0_info =
+              reg_ctx->GetRegisterByName("x0", 0);
           if (byte_size <= 8) {
             uint64_t raw_value = data.GetMaxU64(&offset, byte_size);
 
-            if (!reg_ctx->WriteRegisterFromUnsigned(x0_info, raw_value))
+            if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+                    (x0_info ? x0_info->id : LLDB_INVALID_REGNUM), raw_value)))
               error = Status::FromErrorString("failed to write register x0");
           } else {
             uint64_t raw_value = data.GetMaxU64(&offset, 8);
 
-            if (reg_ctx->WriteRegisterFromUnsigned(x0_info, raw_value)) {
-              const RegisterInfo *x1_info =
-                  reg_ctx->GetRegisterInfoByName("x1", 0);
+            if (!llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+                    (x0_info ? x0_info->id : LLDB_INVALID_REGNUM),
+                    raw_value))) {
+              const RegisterDescriptor *x1_info =
+                  reg_ctx->GetRegisterByName("x1", 0);
               raw_value = data.GetMaxU64(&offset, byte_size - offset);
 
-              if (!reg_ctx->WriteRegisterFromUnsigned(x1_info, raw_value))
+              if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+                      (x1_info ? x1_info->id : LLDB_INVALID_REGNUM),
+                      raw_value)))
                 error = Status::FromErrorString("failed to write register x1");
             }
           }
@@ -298,14 +308,19 @@ ABIMacOSX_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
           error = Status::FromErrorString(
               "returning complex float values are not supported");
         } else {
-          const RegisterInfo *v0_info = reg_ctx->GetRegisterInfoByName("v0", 0);
+          const RegisterDescriptor *v0_info =
+              reg_ctx->GetRegisterByName("v0", 0);
 
           if (v0_info) {
             if (byte_size <= 16) {
               RegisterValue reg_value;
-              error = reg_value.SetValueFromData(*v0_info, data, 0, true);
+              error = reg_value.SetValueFromData(v0_info->encoding,
+                                                 v0_info->byte_size, data, 0,
+                                                 true, v0_info->name);
               if (error.Success())
-                if (!reg_ctx->WriteRegister(v0_info, reg_value))
+                if (llvm::errorToBool(reg_ctx->WriteRegister(
+                        (v0_info ? v0_info->id : LLDB_INVALID_REGNUM),
+                        reg_value)))
                   error =
                       Status::FromErrorString("failed to write register v0");
             } else {
@@ -320,14 +335,19 @@ ABIMacOSX_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       }
     } else if (type_flags & eTypeIsVector) {
       if (byte_size > 0) {
-        const RegisterInfo *v0_info = reg_ctx->GetRegisterInfoByName("v0", 0);
+        const RegisterDescriptor *v0_info =
+            reg_ctx->GetRegisterByName("v0", 0);
 
         if (v0_info) {
           if (byte_size <= v0_info->byte_size) {
             RegisterValue reg_value;
-            error = reg_value.SetValueFromData(*v0_info, data, 0, true);
+            error = reg_value.SetValueFromData(v0_info->encoding,
+                                               v0_info->byte_size, data, 0,
+                                               true, v0_info->name);
             if (error.Success()) {
-              if (!reg_ctx->WriteRegister(v0_info, reg_value))
+              if (llvm::errorToBool(reg_ctx->WriteRegister(
+                      (v0_info ? v0_info->id : LLDB_INVALID_REGNUM),
+                      reg_value)))
                 error = Status::FromErrorString("failed to write register v0");
             }
           }
@@ -351,9 +371,9 @@ ABIMacOSX_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
 // We treat x29 as callee preserved also, else the unwinder won't try to
 // retrieve fp saves.
 
-bool ABIMacOSX_arm64::RegisterIsVolatile(const RegisterInfo *reg_info) {
+bool ABIMacOSX_arm64::RegisterIsVolatile(const RegisterDescriptor *reg_info) {
   if (reg_info) {
-    const char *name = reg_info->name;
+    const char *name = reg_info->name.c_str();
 
     // Sometimes we'll be called with the "alternate" name for these registers;
     // recognize them as non-volatile.
@@ -431,7 +451,7 @@ bool ABIMacOSX_arm64::RegisterIsVolatile(const RegisterInfo *reg_info) {
 }
 
 static bool LoadValueFromConsecutiveGPRRegisters(
-    ExecutionContext &exe_ctx, RegisterContext *reg_ctx,
+    ExecutionContext &exe_ctx, ThreadRegisterContext *reg_ctx,
     const CompilerType &value_type,
     bool is_return_value, // false => parameter, true => return value
     uint32_t &NGRN,       // NGRN (see ABI documentation)
@@ -464,8 +484,8 @@ static bool LoadValueFromConsecutiveGPRRegisters(
       for (uint32_t i = 0; i < homogeneous_count; ++i) {
         char v_name[8];
         ::snprintf(v_name, sizeof(v_name), "v%u", NSRN);
-        const RegisterInfo *reg_info =
-            reg_ctx->GetRegisterInfoByName(v_name, 0);
+        const RegisterDescriptor *reg_info =
+            reg_ctx->GetRegisterByName(v_name, 0);
         if (reg_info == nullptr)
           return false;
 
@@ -474,14 +494,18 @@ static bool LoadValueFromConsecutiveGPRRegisters(
 
         RegisterValue reg_value;
 
-        if (!reg_ctx->ReadRegister(reg_info, reg_value))
+        if (llvm::errorToBool(
+                reg_ctx
+                    ->ReadRegister(
+                        (reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+                    .moveInto(reg_value)))
           return false;
 
         // Make sure we have enough room in "heap_data_up"
         if ((data_offset + *base_byte_size) <= heap_data_up->GetByteSize()) {
           const size_t bytes_copied = reg_value.GetAsMemoryData(
-              *reg_info, heap_data_up->GetBytes() + data_offset,
-              *base_byte_size, byte_order, error);
+              reg_info->byte_size, heap_data_up->GetBytes() + data_offset,
+              *base_byte_size, byte_order, error, reg_info->name);
           if (bytes_copied != *base_byte_size)
             return false;
           data_offset += bytes_copied;
@@ -504,24 +528,28 @@ static bool LoadValueFromConsecutiveGPRRegisters(
       if (NGRN >= 8)
         return false;
 
-      uint32_t reg_num = reg_ctx->ConvertRegisterKindToRegisterNumber(
+      uint32_t reg_num = reg_ctx->GetRegisterIDForNumber(
           eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1 + NGRN);
       if (reg_num == LLDB_INVALID_REGNUM)
         return false;
 
-      const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg_num);
+      const RegisterDescriptor *reg_info =
+          reg_ctx->GetDescription()->Find(reg_num);
       if (reg_info == nullptr)
         return false;
 
       RegisterValue reg_value;
 
-      if (!reg_ctx->ReadRegister(reg_info, reg_value))
+      if (llvm::errorToBool(reg_ctx
+                                ->ReadRegister((reg_info ? reg_info->id
+                                                         : LLDB_INVALID_REGNUM))
+                                .moveInto(reg_value)))
         return false;
 
       const size_t curr_byte_size = std::min<size_t>(8, bytes_left);
       const size_t bytes_copied = reg_value.GetAsMemoryData(
-          *reg_info, heap_data_up->GetBytes() + data_offset, curr_byte_size,
-          byte_order, error);
+          reg_info->byte_size, heap_data_up->GetBytes() + data_offset,
+          curr_byte_size, byte_order, error, reg_info->name);
       if (bytes_copied == 0)
         return false;
       if (bytes_copied >= bytes_left)
@@ -531,7 +559,7 @@ static bool LoadValueFromConsecutiveGPRRegisters(
       ++NGRN;
     }
   } else {
-    const RegisterInfo *reg_info = nullptr;
+    const RegisterDescriptor *reg_info = nullptr;
     if (is_return_value) {
       // The Darwin arm64 ABI doesn't write the return location back to x8
       // before returning from the function the way the x86_64 ABI does.  So
@@ -545,18 +573,18 @@ static bool LoadValueFromConsecutiveGPRRegisters(
       if (NGRN >= 8)
         return false;
 
-      uint32_t reg_num = reg_ctx->ConvertRegisterKindToRegisterNumber(
+      uint32_t reg_num = reg_ctx->GetRegisterIDForNumber(
           eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1 + NGRN);
       if (reg_num == LLDB_INVALID_REGNUM)
         return false;
-      reg_info = reg_ctx->GetRegisterInfoAtIndex(reg_num);
+      reg_info = reg_ctx->GetDescription()->Find(reg_num);
       if (reg_info == nullptr)
         return false;
       ++NGRN;
     }
 
-    const lldb::addr_t value_addr =
-        reg_ctx->ReadRegisterAsUnsigned(reg_info, LLDB_INVALID_ADDRESS);
+    const lldb::addr_t value_addr = reg_ctx->ReadRegisterAsUnsigned(
+        (reg_info ? reg_info->id : LLDB_INVALID_REGNUM), LLDB_INVALID_ADDRESS);
 
     if (value_addr == LLDB_INVALID_ADDRESS)
       return false;
@@ -586,7 +614,7 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
   // value.SetContext (Value::eContextTypeClangType, return_compiler_type);
   value.SetCompilerType(return_compiler_type);
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
     return return_valobj_sp;
 
@@ -603,12 +631,12 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
     if (type_flags & eTypeIsInteger || type_flags & eTypeIsPointer) {
       // Extract the register context so we can read arguments from registers
       if (*byte_size <= 8) {
-        const RegisterInfo *x0_reg_info =
-            reg_ctx->GetRegisterInfoByName("x0", 0);
+        const RegisterDescriptor *x0_reg_info =
+            reg_ctx->GetRegisterByName("x0", 0);
         if (x0_reg_info) {
           uint64_t raw_value =
-              thread.GetRegisterContext()->ReadRegisterAsUnsigned(x0_reg_info,
-                                                                  0);
+              thread.GetRegisterContext()->ReadRegisterAsUnsigned(
+                  (x0_reg_info ? x0_reg_info->id : LLDB_INVALID_REGNUM), 0);
           const bool is_signed = (type_flags & eTypeIsSigned) != 0;
           switch (*byte_size) {
           default:
@@ -616,8 +644,8 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
           case 16: // uint128_t
             // In register x0 and x1
             {
-              const RegisterInfo *x1_reg_info =
-                  reg_ctx->GetRegisterInfoByName("x1", 0);
+              const RegisterDescriptor *x1_reg_info =
+                  reg_ctx->GetRegisterByName("x1", 0);
 
               if (x1_reg_info) {
                 if (*byte_size <=
@@ -628,15 +656,27 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
                       exe_ctx.GetProcessRef().GetByteOrder();
                   RegisterValue x0_reg_value;
                   RegisterValue x1_reg_value;
-                  if (reg_ctx->ReadRegister(x0_reg_info, x0_reg_value) &&
-                      reg_ctx->ReadRegister(x1_reg_info, x1_reg_value)) {
+                  if (!llvm::errorToBool(
+                          reg_ctx
+                              ->ReadRegister((x0_reg_info
+                                                  ? x0_reg_info->id
+                                                  : LLDB_INVALID_REGNUM))
+                              .moveInto(x0_reg_value)) &&
+                      !llvm::errorToBool(
+                          reg_ctx
+                              ->ReadRegister((x1_reg_info
+                                                  ? x1_reg_info->id
+                                                  : LLDB_INVALID_REGNUM))
+                              .moveInto(x1_reg_value))) {
                     Status error;
                     if (x0_reg_value.GetAsMemoryData(
-                            *x0_reg_info, heap_data_up->GetBytes() + 0, 8,
-                            byte_order, error) &&
+                            x0_reg_info->byte_size,
+                            heap_data_up->GetBytes() + 0, 8, byte_order, error,
+                            x0_reg_info->name) &&
                         x1_reg_value.GetAsMemoryData(
-                            *x1_reg_info, heap_data_up->GetBytes() + 8, 8,
-                            byte_order, error)) {
+                            x1_reg_info->byte_size,
+                            heap_data_up->GetBytes() + 8, 8, byte_order, error,
+                            x1_reg_info->name)) {
                       DataExtractor data(
                           DataBufferSP(heap_data_up.release()), byte_order,
                           exe_ctx.GetProcessRef().GetAddressByteSize());
@@ -689,10 +729,14 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
         // Don't handle complex yet.
       } else {
         if (*byte_size <= sizeof(long double)) {
-          const RegisterInfo *v0_reg_info =
-              reg_ctx->GetRegisterInfoByName("v0", 0);
+          const RegisterDescriptor *v0_reg_info =
+              reg_ctx->GetRegisterByName("v0", 0);
           RegisterValue v0_value;
-          if (reg_ctx->ReadRegister(v0_reg_info, v0_value)) {
+          if (!llvm::errorToBool(
+                  reg_ctx
+                      ->ReadRegister(
+                          (v0_reg_info ? v0_reg_info->id : LLDB_INVALID_REGNUM))
+                      .moveInto(v0_value))) {
             DataExtractor data;
             if (v0_value.GetData(data)) {
               lldb::offset_t offset = 0;
@@ -718,7 +762,8 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
   } else if (type_flags & eTypeIsVector) {
     if (*byte_size > 0) {
 
-      const RegisterInfo *v0_info = reg_ctx->GetRegisterInfoByName("v0", 0);
+      const RegisterDescriptor *v0_info =
+          reg_ctx->GetRegisterByName("v0", 0);
 
       if (v0_info) {
         if (*byte_size <= v0_info->byte_size) {
@@ -726,11 +771,16 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
               new DataBufferHeap(*byte_size, 0));
           const ByteOrder byte_order = exe_ctx.GetProcessRef().GetByteOrder();
           RegisterValue reg_value;
-          if (reg_ctx->ReadRegister(v0_info, reg_value)) {
+          if (!llvm::errorToBool(
+                  reg_ctx
+                      ->ReadRegister(
+                          (v0_info ? v0_info->id : LLDB_INVALID_REGNUM))
+                      .moveInto(reg_value))) {
             Status error;
-            if (reg_value.GetAsMemoryData(*v0_info, heap_data_up->GetBytes(),
+            if (reg_value.GetAsMemoryData(v0_info->byte_size,
+                                          heap_data_up->GetBytes(),
                                           heap_data_up->GetByteSize(),
-                                          byte_order, error)) {
+                                          byte_order, error, v0_info->name)) {
               DataExtractor data(DataBufferSP(heap_data_up.release()),
                                  byte_order,
                                  exe_ctx.GetProcessRef().GetAddressByteSize());

@@ -7,34 +7,40 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextELFCore_loongarch64.h"
+#include "lldb/Register/Layouts/Linux/RegisterLayoutLinux_loongarch64.h"
+#include "lldb/Register/RegisterLayout.h"
 
 #include "lldb/Utility/DataBufferHeap.h"
 
 using namespace lldb_private;
 
-std::unique_ptr<RegisterContextELFCore_loongarch64>
+llvm::Expected<std::unique_ptr<RegisterContextELFCore_loongarch64>>
 RegisterContextELFCore_loongarch64::Create(Thread &thread,
                                              const ArchSpec &arch,
                                              const DataExtractor &gpregset,
                                              llvm::ArrayRef<CoreNote> notes) {
-  return std::unique_ptr<RegisterContextELFCore_loongarch64>(
-      new RegisterContextELFCore_loongarch64(
-          thread,
-          std::make_unique<RegisterInfo_loongarch64>(arch, Flags()),
-          gpregset, notes));
+  switch (arch.GetTriple().getOS()) {
+  case llvm::Triple::Linux:
+    return std::unique_ptr<RegisterContextELFCore_loongarch64>(
+        new RegisterContextELFCore_loongarch64(
+            thread, CreateLinuxLoongArch64RegisterLayout(arch), gpregset,
+            notes));
+  default:
+    return llvm::createStringError(
+        "unsupported OS for LoongArch64 ELF registers");
+  }
 }
 
 RegisterContextELFCore_loongarch64::RegisterContextELFCore_loongarch64(
-    Thread &thread,
-    std::unique_ptr<RegisterInfo_loongarch64> register_info,
-    const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
-    : RegisterContextCore_loongarch64(thread, std::move(register_info)) {
+    Thread &thread, RegisterLayout layout, const DataExtractor &gpregset,
+    llvm::ArrayRef<CoreNote> notes)
+    : ThreadRegisterContext(thread, 0, std::move(layout)) {
 
   m_gpr.SetData(std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
                                                  gpregset.GetByteSize()));
   m_gpr.SetByteOrder(gpregset.GetByteOrder());
 
-  ArchSpec arch = m_register_info_up->GetTargetArchitecture();
+  ArchSpec arch = GetTargetArchitecture();
   DataExtractor fpregset = getRegset(notes, arch.GetTriple(), FPR_Desc);
   m_fpr.SetData(std::make_shared<DataBufferHeap>(fpregset.GetDataStart(),
                                                  fpregset.GetByteSize()));
@@ -44,41 +50,24 @@ RegisterContextELFCore_loongarch64::RegisterContextELFCore_loongarch64(
 RegisterContextELFCore_loongarch64::~RegisterContextELFCore_loongarch64() =
     default;
 
-bool RegisterContextELFCore_loongarch64::ReadGPR() { return true; }
-
-bool RegisterContextELFCore_loongarch64::ReadFPR() { return true; }
-
-bool RegisterContextELFCore_loongarch64::WriteGPR() {
-  assert(false && "Writing registers is not allowed for core dumps");
-  return false;
+llvm::Expected<RegisterValue>
+RegisterContextELFCore_loongarch64::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
+  RegisterValue value;
+  const auto *reg = GetDescription()->Find(reg_info->id);
+  if (!reg)
+    return llvm::createStringError("register value is unavailable");
+  const RegisterData banks[] = {
+      {0, {m_gpr.GetDataStart(), m_gpr.GetByteSize()}},
+      {1, {m_fpr.GetDataStart(), m_fpr.GetByteSize()}}};
+  auto result = ReadBankRegister(reg->id, banks);
+  return result;
 }
 
-bool RegisterContextELFCore_loongarch64::WriteFPR() {
-  assert(false && "Writing registers is not allowed for core dumps");
-  return false;
-}
-
-bool RegisterContextELFCore_loongarch64::ReadRegister(
-    const RegisterInfo *reg_info, RegisterValue &value) {
-  const uint8_t *src = nullptr;
-  lldb::offset_t offset = reg_info->byte_offset;
-
-  if (IsGPR(reg_info->kinds[lldb::eRegisterKindLLDB])) {
-    src = m_gpr.GetDataStart();
-  } else if (IsFPR(reg_info->kinds[lldb::eRegisterKindLLDB])) {
-    src = m_fpr.GetDataStart();
-    offset -= GetGPRSize();
-  } else {
-    return false;
-  }
-
-  Status error;
-  value.SetFromMemoryData(*reg_info, src + offset, reg_info->byte_size,
-                          lldb::eByteOrderLittle, error);
-  return error.Success();
-}
-
-bool RegisterContextELFCore_loongarch64::WriteRegister(
-    const RegisterInfo *reg_info, const RegisterValue &value) {
-  return false;
+llvm::Error RegisterContextELFCore_loongarch64::WriteRegister(
+    RegisterID id, const RegisterValue &value) {
+  return llvm::createStringError("register write is unavailable");
 }

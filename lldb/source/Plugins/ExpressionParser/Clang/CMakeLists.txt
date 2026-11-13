@@ -41,6 +41,7 @@ add_lldb_library(lldbPluginExpressionParserClang
     lldbExpression
     lldbHost
     lldbInterpreter
+    lldbRegister
     lldbSymbol
     lldbTarget
     lldbUtility

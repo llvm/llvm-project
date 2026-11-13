@@ -44,7 +44,8 @@ public:
 
   lldb::UnwindPlanSP CreateDefaultUnwindPlan() override;
 
-  bool RegisterIsVolatile(const lldb_private::RegisterInfo *reg_info) override;
+  bool
+  RegisterIsVolatile(const lldb_private::RegisterDescriptor *reg_info) override;
 
   bool CallFrameAddressIsValid(lldb::addr_t cfa) override {
     // The CFA must be 16 byte aligned.
@@ -61,7 +62,7 @@ public:
     return true;
   }
 
-  const lldb_private::RegisterInfo *
+  const lldb_private::RegisterDescriptor *
   GetRegisterInfoArray(uint32_t &count) override;
 
   //------------------------------------------------------------------
@@ -85,9 +86,9 @@ public:
 
 protected:
   void AugmentRegisterInfo(
-      std::vector<lldb_private::DynamicRegisterInfo::Register> &regs) override;
+      std::vector<lldb_private::RegisterDefinition> &regs) override;
 
-  bool RegisterIsCalleeSaved(const lldb_private::RegisterInfo *reg_info);
+  bool RegisterIsCalleeSaved(const lldb_private::RegisterDescriptor *reg_info);
 
 private:
   lldb::ValueObjectSP

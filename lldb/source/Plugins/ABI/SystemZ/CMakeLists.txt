@@ -6,6 +6,7 @@ add_lldb_library(lldbPluginABISystemZ PLUGIN
     TargetParser
   LINK_LIBS
     lldbCore
+    lldbRegister
     lldbSymbol
     lldbTarget
     lldbValueObject

@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Register/Layouts/FreeBSD/RegisterLayoutFreeBSD_arm.h"
+#include "lldb/Register/Layouts/Linux/RegisterLayoutLinux_arm.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
@@ -16,21 +18,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/ProcessInfo.h"
 
-#include "Register/FreeBSD/RegisterInfoFreeBSD_i386.h"
-#include "Register/FreeBSD/RegisterInfoFreeBSD_powerpc.h"
-#include "Register/FreeBSD/RegisterInfoFreeBSD_x86_64.h"
-#include "Register/Linux/RegisterInfoLinux_i386.h"
-#include "Register/Linux/RegisterInfoLinux_s390x.h"
-#include "Register/Linux/RegisterInfoLinux_x86_64.h"
-#include "Register/NetBSD/RegisterInfoNetBSD_i386.h"
-#include "Register/NetBSD/RegisterInfoNetBSD_x86_64.h"
-#include "Register/OpenBSD/RegisterInfoOpenBSD_i386.h"
-#include "Register/OpenBSD/RegisterInfoOpenBSD_x86_64.h"
-#include "Register/Common/RegisterInfo_arm.h"
-#include "Register/Common/RegisterInfo_arm64.h"
-#include "Register/Common/RegisterInfo_ppc64le.h"
 #include "ProcessElfCore.h"
-#include "RegisterContextLinuxCore_x86.h"
 #include "RegisterContextELFCore_arm.h"
 #include "RegisterContextELFCore_arm64.h"
 #include "RegisterContextELFCore_loongarch64.h"
@@ -40,7 +28,21 @@
 #include "RegisterContextELFCore_riscv64.h"
 #include "RegisterContextELFCore_s390x.h"
 #include "RegisterContextELFCore_x86.h"
+#include "RegisterLayoutOpenBSD_i386.h"
+#include "RegisterLayoutOpenBSD_x86_64.h"
 #include "ThreadElfCore.h"
+#include "lldb/Register/Common/RegisterInfo_arm.h"
+#include "lldb/Register/Common/RegisterInfo_arm64.h"
+#include "lldb/Register/Common/RegisterInfo_ppc64le.h"
+#include "lldb/Register/Layouts/FreeBSD/RegisterLayoutFreeBSD_i386.h"
+#include "lldb/Register/Layouts/FreeBSD/RegisterLayoutFreeBSD_powerpc.h"
+#include "lldb/Register/Layouts/FreeBSD/RegisterLayoutFreeBSD_x86_64.h"
+#include "lldb/Register/Layouts/Linux/RegisterLayoutLinux_i386.h"
+#include "lldb/Register/Layouts/Linux/RegisterLayoutLinux_ppc64le.h"
+#include "lldb/Register/Layouts/Linux/RegisterLayoutLinux_s390x.h"
+#include "lldb/Register/Layouts/Linux/RegisterLayoutLinux_x86_64.h"
+#include "lldb/Register/Layouts/NetBSD/RegisterLayoutNetBSD_i386.h"
+#include "lldb/Register/Layouts/NetBSD/RegisterLayoutNetBSD_x86_64.h"
 
 #include <memory>
 
@@ -59,49 +61,50 @@ void ThreadElfCore::RefreshStateAfterStop() {
   GetRegisterContext()->InvalidateIfNeeded(false);
 }
 
-RegisterContextSP ThreadElfCore::GetRegisterContext() {
+ThreadRegisterContextSP ThreadElfCore::GetRegisterContext() {
   if (!m_reg_context_sp) {
     m_reg_context_sp = CreateRegisterContextForFrame(nullptr);
   }
   return m_reg_context_sp;
 }
 
-RegisterContextSP
+ThreadRegisterContextSP
 ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
-  RegisterContextSP reg_ctx_sp;
+  ThreadRegisterContextSP reg_ctx_sp;
   uint32_t concrete_frame_idx = 0;
   Log *log = GetLog(LLDBLog::Thread);
 
   if (frame)
     concrete_frame_idx = frame->GetConcreteFrameIndex();
 
-  bool is_linux = false;
   if (concrete_frame_idx == 0) {
     if (m_thread_reg_ctx_sp)
       return m_thread_reg_ctx_sp;
 
     ProcessElfCore *process = static_cast<ProcessElfCore *>(GetProcess().get());
     ArchSpec arch = process->GetArchitecture();
-    RegisterInfoInterface *reg_interface = nullptr;
+    std::optional<RegisterLayout> model;
 
     switch (arch.GetTriple().getOS()) {
     case llvm::Triple::FreeBSD: {
       switch (arch.GetMachine()) {
       case llvm::Triple::aarch64:
+        break;
       case llvm::Triple::arm:
+        model = CreateFreeBSDArmRegisterLayout(arch);
         break;
       case llvm::Triple::ppc:
-        reg_interface = new RegisterInfoFreeBSD_powerpc32(arch);
+        model = CreateFreeBSDPowerPC32RegisterLayout(arch);
         break;
       case llvm::Triple::ppc64:
       case llvm::Triple::ppc64le:
-        reg_interface = new RegisterInfoFreeBSD_powerpc64(arch);
+        model = CreateFreeBSDPowerPC64RegisterLayout(arch);
         break;
       case llvm::Triple::x86:
-        reg_interface = new RegisterInfoFreeBSD_i386(arch);
+        model = CreateFreeBSDI386RegisterLayout(arch);
         break;
       case llvm::Triple::x86_64:
-        reg_interface = new RegisterInfoFreeBSD_x86_64(arch);
+        model = CreateFreeBSDX86_64RegisterLayout(arch);
         break;
       default:
         break;
@@ -114,10 +117,10 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
       case llvm::Triple::aarch64:
         break;
       case llvm::Triple::x86:
-        reg_interface = new RegisterInfoNetBSD_i386(arch);
+        model = CreateNetBSDI386RegisterLayout(arch);
         break;
       case llvm::Triple::x86_64:
-        reg_interface = new RegisterInfoNetBSD_x86_64(arch);
+        model = CreateNetBSDX86_64RegisterLayout(arch);
         break;
       default:
         break;
@@ -126,21 +129,23 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
     }
 
     case llvm::Triple::Linux: {
-      is_linux = true;
       switch (arch.GetMachine()) {
       case llvm::Triple::aarch64:
         break;
+      case llvm::Triple::arm:
+        model = CreateLinuxArmRegisterLayout(arch);
+        break;
       case llvm::Triple::ppc64le:
-        reg_interface = new RegisterInfo_ppc64le(arch);
+        model = CreateLinuxPPC64LERegisterLayout(arch);
         break;
       case llvm::Triple::systemz:
-        reg_interface = new RegisterInfoLinux_s390x(arch);
+        model = CreateLinuxS390XRegisterLayout(arch);
         break;
       case llvm::Triple::x86:
-        reg_interface = new RegisterInfoLinux_i386(arch);
+        model = CreateLinuxI386RegisterLayout(arch);
         break;
       case llvm::Triple::x86_64:
-        reg_interface = new RegisterInfoLinux_x86_64(arch);
+        model = CreateLinuxX86_64RegisterLayout(arch);
         break;
       default:
         break;
@@ -153,10 +158,10 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
       case llvm::Triple::aarch64:
         break;
       case llvm::Triple::x86:
-        reg_interface = new RegisterInfoOpenBSD_i386(arch);
+        model = CreateOpenBSDI386RegisterLayout(arch);
         break;
       case llvm::Triple::x86_64:
-        reg_interface = new RegisterInfoOpenBSD_x86_64(arch);
+        model = CreateOpenBSDX86_64RegisterLayout(arch);
         break;
       default:
         break;
@@ -164,64 +169,75 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
       break;
     }
 
+    case llvm::Triple::UnknownOS:
+      if (arch.GetMachine() == llvm::Triple::riscv32)
+        break;
+      [[fallthrough]];
     default:
-      break;
+      LLDB_LOGF(log, "elf-core::%s:: OS(%d) not supported", __FUNCTION__,
+                arch.GetTriple().getOS());
+      return nullptr;
     }
 
-    if (!reg_interface && arch.GetMachine() != llvm::Triple::aarch64 &&
-        arch.GetMachine() != llvm::Triple::arm &&
+    if (!model && arch.GetMachine() != llvm::Triple::aarch64 &&
         arch.GetMachine() != llvm::Triple::loongarch64 &&
         arch.GetMachine() != llvm::Triple::riscv64 &&
         arch.GetMachine() != llvm::Triple::riscv32) {
       LLDB_LOGF(log, "elf-core::%s:: Architecture(%d) or OS(%d) not supported",
                 __FUNCTION__, arch.GetMachine(), arch.GetTriple().getOS());
-      assert(false && "Architecture or OS not supported");
+      return nullptr;
     }
 
+    auto set_context = [&](auto context) {
+      if (!context) {
+        LLDB_LOG_ERROR(log, context.takeError(), "elf-core: {0}");
+        return false;
+      }
+      m_thread_reg_ctx_sp = std::move(*context);
+      return true;
+    };
     switch (arch.GetMachine()) {
     case llvm::Triple::aarch64:
-      m_thread_reg_ctx_sp = RegisterContextELFCore_arm64::Create(
-          *this, arch, m_gpregset_data, m_notes);
+      if (!set_context(RegisterContextELFCore_arm64::Create(
+              *this, arch, m_gpregset_data, m_notes)))
+        return nullptr;
       break;
     case llvm::Triple::arm:
       m_thread_reg_ctx_sp = std::make_shared<RegisterContextELFCore_arm>(
-          *this, std::make_unique<RegisterInfo_arm>(arch), m_gpregset_data,
-          m_notes);
+          *this, std::move(*model), m_gpregset_data, m_notes);
       break;
     case llvm::Triple::loongarch64:
-      m_thread_reg_ctx_sp = RegisterContextELFCore_loongarch64::Create(
-          *this, arch, m_gpregset_data, m_notes);
+      if (!set_context(RegisterContextELFCore_loongarch64::Create(
+              *this, arch, m_gpregset_data, m_notes)))
+        return nullptr;
       break;
     case llvm::Triple::riscv32:
-      m_thread_reg_ctx_sp = RegisterContextELFCore_riscv32::Create(
-          *this, arch, m_gpregset_data, m_notes);
+      if (!set_context(RegisterContextELFCore_riscv32::Create(
+              *this, arch, m_gpregset_data, m_notes)))
+        return nullptr;
       break;
     case llvm::Triple::riscv64:
-      m_thread_reg_ctx_sp = RegisterContextELFCore_riscv64::Create(
-          *this, arch, m_gpregset_data, m_notes);
+      if (!set_context(RegisterContextELFCore_riscv64::Create(
+              *this, arch, m_gpregset_data, m_notes)))
+        return nullptr;
       break;
     case llvm::Triple::ppc:
     case llvm::Triple::ppc64:
       m_thread_reg_ctx_sp = std::make_shared<RegisterContextELFCore_powerpc>(
-          *this, reg_interface, m_gpregset_data, m_notes);
+          *this, std::move(*model), m_gpregset_data, m_notes);
       break;
     case llvm::Triple::ppc64le:
       m_thread_reg_ctx_sp = std::make_shared<RegisterContextELFCore_ppc64le>(
-          *this, reg_interface, m_gpregset_data, m_notes);
+          *this, std::move(*model), m_gpregset_data, m_notes);
       break;
     case llvm::Triple::systemz:
       m_thread_reg_ctx_sp = std::make_shared<RegisterContextELFCore_s390x>(
-          *this, reg_interface, m_gpregset_data, m_notes);
+          *this, std::move(*model), m_gpregset_data, m_notes);
       break;
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
-      if (is_linux) {
-        m_thread_reg_ctx_sp = std::make_shared<RegisterContextLinuxCore_x86>(
-              *this, reg_interface, m_gpregset_data, m_notes);
-      } else {
-        m_thread_reg_ctx_sp = std::make_shared<RegisterContextELFCore_x86>(
-              *this, reg_interface, m_gpregset_data, m_notes);
-      }
+      m_thread_reg_ctx_sp = std::make_shared<RegisterContextELFCore_x86>(
+          *this, std::move(*model), m_gpregset_data, m_notes);
       break;
     default:
       break;

@@ -13,6 +13,7 @@ add_lldb_library(lldbPluginInstructionMIPS64 PLUGIN
     lldbCore
     lldbHost
     lldbInterpreter
+    lldbRegister
     lldbSymbol
     lldbPluginProcessUtility
   )

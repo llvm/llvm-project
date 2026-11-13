@@ -59,6 +59,9 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Interpreter/Property.h"
+#include "lldb/Register/RegisterType.h"
+#include "lldb/Register/RegisterTypeFlags.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -77,9 +80,6 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/RegisterType.h"
-#include "lldb/Utility/RegisterTypeFlags.h"
-#include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
@@ -313,7 +313,7 @@ bool ProcessGDBRemote::CanDebug(lldb::TargetSP target_sp,
 ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
                                    ListenerSP listener_sp)
     : Process(target_sp, listener_sp),
-      m_debugserver_pid(LLDB_INVALID_PROCESS_ID), m_register_info_sp(nullptr),
+      m_debugserver_pid(LLDB_INVALID_PROCESS_ID), m_register_layout_sp(nullptr),
       m_async_broadcaster(nullptr, "lldb.process.gdb-remote.async-broadcaster"),
       m_async_listener_sp(
           Listener::MakeListener("lldb.process.gdb-remote.async-listener")),
@@ -434,8 +434,9 @@ bool ProcessGDBRemote::ParsePythonTargetDefinition(
           m_breakpoint_pc_offset = breakpoint_pc_int_value->GetValue();
       }
 
-      if (m_register_info_sp->SetRegisterInfo(
-              *target_definition_sp, GetTarget().GetArchitecture()) > 0) {
+      if (auto layout = CreateRegisterImageLayout(
+              *target_definition_sp, GetTarget().GetArchitecture())) {
+        m_register_layout_sp = std::move(layout);
         return true;
       }
     }
@@ -455,11 +456,12 @@ static size_t SplitCommaSeparatedRegisterNumberString(
   return regnums.size();
 }
 
-void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
-  if (!force && m_register_info_sp)
+void ProcessGDBRemote::BuildRegisterDescription(bool force) {
+  if (!force && m_register_layout_sp)
     return;
 
-  m_register_info_sp = std::make_shared<DynamicRegisterInfo>();
+  m_register_layout_sp = CreateRegisterImageLayout(
+      std::vector<RegisterDefinition>{}, GetTarget().GetArchitecture());
 
   // Check if qHostInfo specified a specific packet timeout for this
   // connection. If so then lets update our setting so the user knows what the
@@ -520,7 +522,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
   LLDB_LOG(log, "Now trying to use qRegisterInfo instead.");
 
   char packet[128];
-  std::vector<DynamicRegisterInfo::Register> registers;
+  std::vector<RegisterDefinition> registers;
   uint32_t reg_num = 0;
   for (StringExtractorGDBRemote::ResponseType response_type =
            StringExtractorGDBRemote::eResponse;
@@ -536,7 +538,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
       if (response_type == StringExtractorGDBRemote::eResponse) {
         llvm::StringRef name;
         llvm::StringRef value;
-        DynamicRegisterInfo::Register reg_info;
+        RegisterDefinition reg_info;
 
         while (response.GetNameColonValue(name, value)) {
           if (name == "name") {
@@ -607,9 +609,11 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
           } else if (name == "generic") {
             reg_info.regnum_generic = Args::StringToGenericRegister(value);
           } else if (name == "container-regs") {
-            SplitCommaSeparatedRegisterNumberString(value, reg_info.value_regs, 16);
+            SplitCommaSeparatedRegisterNumberString(
+                value, reg_info.value_registers, 16);
           } else if (name == "invalidate-regs") {
-            SplitCommaSeparatedRegisterNumberString(value, reg_info.invalidate_regs, 16);
+            SplitCommaSeparatedRegisterNumberString(
+                value, reg_info.invalidate_registers, 16);
           }
         }
 
@@ -1050,7 +1054,7 @@ Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
 
 void ProcessGDBRemote::DidLaunchOrAttach(ArchSpec &process_arch) {
   Log *log = GetLog(GDBRLog::Process);
-  BuildDynamicRegisterInfo(false);
+  BuildRegisterDescription(false);
 
   // See if the GDB server supports qHostInfo or qProcessInfo packets. Prefer
   // qProcessInfo as it will be more specific to our process.
@@ -1808,9 +1812,9 @@ void ProcessGDBRemote::SetThreadPc(const ThreadSP &thread_sp, uint64_t index) {
       GetByteOrder() != eByteOrderInvalid) {
     ThreadGDBRemote *gdb_thread =
         static_cast<ThreadGDBRemote *>(thread_sp.get());
-    RegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
+    ThreadRegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
     if (reg_ctx_sp) {
-      uint32_t pc_regnum = reg_ctx_sp->ConvertRegisterKindToRegisterNumber(
+      uint32_t pc_regnum = reg_ctx_sp->GetRegisterIDForNumber(
           eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
       if (pc_regnum != LLDB_INVALID_REGNUM) {
         gdb_thread->PrivateSetRegisterValue(pc_regnum, m_thread_pcs[index]);
@@ -1901,10 +1905,10 @@ bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
 void ProcessGDBRemote::ParseExpeditedRegisters(
     ExpeditedRegisterMap &expedited_register_map, ThreadSP thread_sp) {
   ThreadGDBRemote *gdb_thread = static_cast<ThreadGDBRemote *>(thread_sp.get());
-  RegisterContextSP gdb_reg_ctx_sp(gdb_thread->GetRegisterContext());
+  ThreadRegisterContextSP gdb_reg_ctx_sp(gdb_thread->GetRegisterContext());
 
   for (const auto &pair : expedited_register_map) {
-    uint32_t lldb_regnum = gdb_reg_ctx_sp->ConvertRegisterKindToRegisterNumber(
+    uint32_t lldb_regnum = gdb_reg_ctx_sp->GetRegisterIDForNumber(
         eRegisterKindProcessPlugin, pair.first);
     if (lldb_regnum != LLDB_INVALID_REGNUM) {
       StringExtractor reg_value_extractor(pair.second);
@@ -1952,7 +1956,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
   }
 
   ThreadGDBRemote *gdb_thread = static_cast<ThreadGDBRemote *>(thread_sp.get());
-  RegisterContextSP reg_ctx_sp(gdb_thread->GetRegisterContext());
+  ThreadRegisterContextSP reg_ctx_sp(gdb_thread->GetRegisterContext());
 
   reg_ctx_sp->InvalidateIfNeeded(true);
 
@@ -1961,7 +1965,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
 
   ParseExpeditedRegisters(expedited_register_map, thread_sp);
 
-  if (reg_ctx_sp->ReconfigureRegisterInfo()) {
+  if (reg_ctx_sp->ReconfigureRegisterLayout()) {
     // Now we have changed the offsets of all the registers, so the values
     // will be corrupted.
     reg_ctx_sp->InvalidateAllRegisters();
@@ -2479,7 +2483,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
       // know about our registers
       if (GetID() == LLDB_INVALID_PROCESS_ID && pid != LLDB_INVALID_PROCESS_ID)
         SetID(pid);
-      BuildDynamicRegisterInfo(true);
+      BuildRegisterDescription(true);
     }
     // Stop with signal and thread info
     lldb::pid_t stop_pid = LLDB_INVALID_PROCESS_ID;
@@ -2897,7 +2901,7 @@ void ProcessGDBRemote::SetLastStopPacket(
 
     m_thread_list_real.Clear();
     m_thread_list.Clear();
-    BuildDynamicRegisterInfo(true);
+    BuildRegisterDescription(true);
     m_gdb_comm.ResetDiscoverableSettings(did_exec);
   }
 
@@ -5176,9 +5180,9 @@ ParseEnumEvalues(const XMLNode &enum_node) {
   return final_enumerators;
 }
 
-static void
-ParseEnums(XMLNode feature_node, RegisterTypeMap &feature_register_types,
-           std::vector<std::unique_ptr<RegisterType>> &owned_register_types) {
+static void ParseEnums(XMLNode feature_node,
+                       RegisterTypeMap &feature_register_types,
+                       RegisterDescription::OwnedTypes &owned_register_types) {
   Log *log(GetLog(GDBRLog::Process));
 
   // The top level element is "<enum...".
@@ -5213,7 +5217,7 @@ ParseEnums(XMLNode feature_node, RegisterTypeMap &feature_register_types,
                      "ProcessGDBRemote::ParseEnums Found enum type \"{0}\"",
                      id);
             auto enum_type =
-                std::make_unique<RegisterTypeEnum>(id, enumerators);
+                std::make_shared<RegisterTypeEnum>(id, enumerators);
             const RegisterTypeEnum *enum_type_ptr = enum_type.get();
             auto [it, inserted] =
                 feature_register_types.try_emplace(id, enum_type_ptr);
@@ -5383,9 +5387,8 @@ ParseFlagsFields(XMLNode flags_node, unsigned size,
   return fields;
 }
 
-void ParseFlags(
-    XMLNode feature_node, RegisterTypeMap &feature_register_types,
-    std::vector<std::unique_ptr<RegisterType>> &owned_register_types) {
+void ParseFlags(XMLNode feature_node, RegisterTypeMap &feature_register_types,
+                RegisterDescription::OwnedTypes &owned_register_types) {
   Log *log(GetLog(GDBRLog::Process));
 
   feature_node.ForEachChildElementWithName(
@@ -5447,7 +5450,7 @@ void ParseFlags(
                     "definition.",
                     id->data());
               } else {
-                auto flags_type = std::make_unique<RegisterTypeFlags>(
+                auto flags_type = std::make_shared<RegisterTypeFlags>(
                     id->str(), *size, std::move(fields));
                 feature_register_types.try_emplace(*id, flags_type.get());
                 owned_register_types.push_back(std::move(flags_type));
@@ -5551,9 +5554,9 @@ ResolveGDBType(llvm::StringRef type_name,
   return ResolveGDBBuiltinType(type_name);
 }
 
-static void
-ParseVector(const XMLNode &vector_node, RegisterTypeMap &feature_register_types,
-            std::vector<std::unique_ptr<RegisterType>> &owned_register_types) {
+static void ParseVector(const XMLNode &vector_node,
+                        RegisterTypeMap &feature_register_types,
+                        RegisterDescription::OwnedTypes &owned_register_types) {
   Log *log(GetLog(GDBRLog::Process));
   std::optional<llvm::StringRef> id;
   std::optional<llvm::StringRef> element_type_name;
@@ -5630,7 +5633,7 @@ ParseVector(const XMLNode &vector_node, RegisterTypeMap &feature_register_types,
   }
 
   auto vector_type =
-      std::make_unique<RegisterTypeVector>(id->str(), element_type, *count);
+      std::make_shared<RegisterTypeVector>(id->str(), element_type, *count);
   feature_register_types.try_emplace(*id, vector_type.get());
   owned_register_types.push_back(std::move(vector_type));
 }
@@ -5715,9 +5718,9 @@ ParseUnionFields(const XMLNode &union_node, llvm::StringRef union_id,
   return fields;
 }
 
-static void
-ParseUnion(const XMLNode &union_node, RegisterTypeMap &feature_register_types,
-           std::vector<std::unique_ptr<RegisterType>> &owned_register_types) {
+static void ParseUnion(const XMLNode &union_node,
+                       RegisterTypeMap &feature_register_types,
+                       RegisterDescription::OwnedTypes &owned_register_types) {
   Log *log(GetLog(GDBRLog::Process));
   std::optional<llvm::StringRef> id;
 
@@ -5751,14 +5754,15 @@ ParseUnion(const XMLNode &union_node, RegisterTypeMap &feature_register_types,
     return;
 
   auto union_type =
-      std::make_unique<RegisterTypeUnion>(id->str(), std::move(fields));
+      std::make_shared<RegisterTypeUnion>(id->str(), std::move(fields));
   feature_register_types.try_emplace(*id, union_type.get());
   owned_register_types.push_back(std::move(union_type));
 }
 
-static void ParseCompositeTypes(
-    XMLNode feature_node, RegisterTypeMap &feature_register_types,
-    std::vector<std::unique_ptr<RegisterType>> &owned_register_types) {
+static void
+ParseCompositeTypes(XMLNode feature_node,
+                    RegisterTypeMap &feature_register_types,
+                    RegisterDescription::OwnedTypes &owned_register_types) {
   feature_node.ForEachChildElement(
       [&feature_register_types,
        &owned_register_types](const XMLNode &type_node) {
@@ -5770,10 +5774,9 @@ static void ParseCompositeTypes(
       });
 }
 
-bool ParseRegisters(
-    XMLNode feature_node, GdbServerTargetInfo &target_info,
-    std::vector<DynamicRegisterInfo::Register> &registers,
-    std::vector<std::unique_ptr<RegisterType>> &owned_register_types) {
+bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
+                    std::vector<RegisterDefinition> &registers,
+                    RegisterDescription::OwnedTypes &owned_register_types) {
   if (!feature_node)
     return false;
 
@@ -5813,7 +5816,7 @@ bool ParseRegisters(
        log](const XMLNode &reg_node) -> bool {
         std::string gdb_group;
         std::string gdb_type;
-        DynamicRegisterInfo::Register reg_info;
+        RegisterDefinition reg_info;
         bool encoding_set = false;
         bool format_set = false;
 
@@ -5872,11 +5875,11 @@ bool ParseRegisters(
           } else if (name == "generic") {
             reg_info.regnum_generic = Args::StringToGenericRegister(value);
           } else if (name == "value_regnums") {
-            SplitCommaSeparatedRegisterNumberString(value, reg_info.value_regs,
-                                                    0);
+            SplitCommaSeparatedRegisterNumberString(
+                value, reg_info.value_registers, 0);
           } else if (name == "invalidate_regnums") {
             SplitCommaSeparatedRegisterNumberString(
-                value, reg_info.invalidate_regs, 0);
+                value, reg_info.invalidate_registers, 0);
           } else {
             LLDB_LOGF(log,
                       "ProcessGDBRemote::ParseRegisters unhandled reg "
@@ -5915,7 +5918,7 @@ bool ParseRegisters(
                       reg_info.byte_size);
                 }
               } else {
-                reg_info.register_type = vector_type;
+                reg_info.type = vector_type;
                 if (!encoding_set) {
                   reg_info.encoding = eEncodingVector;
                   encoding_set = true;
@@ -5939,7 +5942,7 @@ bool ParseRegisters(
                          "{0} is incompatible with union type {1}",
                          reg_info.name, union_type->GetID());
               } else {
-                reg_info.register_type = union_type;
+                reg_info.type = union_type;
                 if (!encoding_set) {
                   reg_info.encoding = eEncodingUint;
                   encoding_set = true;
@@ -5952,7 +5955,7 @@ bool ParseRegisters(
             } else if (const auto *flags_type =
                            llvm::dyn_cast<RegisterTypeFlags>(it->second)) {
               if (reg_info.byte_size == flags_type->GetSize())
-                reg_info.register_type = flags_type;
+                reg_info.type = flags_type;
               else
                 LLDB_LOG(
                     log,
@@ -6034,7 +6037,7 @@ bool ParseRegisters(
 // to fetch and parse an xml file.
 bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
     ArchSpec &arch_to_use, std::string xml_filename,
-    std::vector<DynamicRegisterInfo::Register> &registers) {
+    std::vector<RegisterDefinition> &registers) {
   // request the target xml file
   llvm::Expected<std::string> raw = m_gdb_comm.ReadExtFeature("features", xml_filename);
   if (errorToBool(raw.takeError()))
@@ -6145,12 +6148,11 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
 }
 
 void ProcessGDBRemote::AddRemoteRegisters(
-    std::vector<DynamicRegisterInfo::Register> &registers,
-    const ArchSpec &arch_to_use) {
+    std::vector<RegisterDefinition> &registers, const ArchSpec &arch_to_use) {
   std::map<uint32_t, uint32_t> remote_to_local_map;
   uint32_t remote_regnum = 0;
   for (auto it : llvm::enumerate(registers)) {
-    DynamicRegisterInfo::Register &remote_reg_info = it.value();
+    RegisterDefinition &remote_reg_info = it.value();
 
     // Assign successive remote regnums if missing.
     if (remote_reg_info.regnum_remote == LLDB_INVALID_REGNUM)
@@ -6162,17 +6164,17 @@ void ProcessGDBRemote::AddRemoteRegisters(
     remote_regnum = remote_reg_info.regnum_remote + 1;
   }
 
-  for (DynamicRegisterInfo::Register &remote_reg_info : registers) {
+  for (RegisterDefinition &remote_reg_info : registers) {
     auto proc_to_lldb = [&remote_to_local_map](uint32_t process_regnum) {
       auto lldb_regit = remote_to_local_map.find(process_regnum);
       return lldb_regit != remote_to_local_map.end() ? lldb_regit->second
                                                      : LLDB_INVALID_REGNUM;
     };
 
-    llvm::transform(remote_reg_info.value_regs,
-                    remote_reg_info.value_regs.begin(), proc_to_lldb);
-    llvm::transform(remote_reg_info.invalidate_regs,
-                    remote_reg_info.invalidate_regs.begin(), proc_to_lldb);
+    llvm::transform(remote_reg_info.value_registers,
+                    remote_reg_info.value_registers.begin(), proc_to_lldb);
+    llvm::transform(remote_reg_info.invalidate_registers,
+                    remote_reg_info.invalidate_registers.begin(), proc_to_lldb);
   }
 
   // Don't use Process::GetABI, this code gets called from DidAttach, and
@@ -6181,7 +6183,9 @@ void ProcessGDBRemote::AddRemoteRegisters(
   if (ABISP abi_sp = ABI::FindPlugin(shared_from_this(), arch_to_use))
     abi_sp->AugmentRegisterInfo(registers);
 
-  m_register_info_sp->SetRegisterInfo(std::move(registers), arch_to_use);
+  if (auto layout = CreateRegisterImageLayout(std::move(registers), arch_to_use,
+                                              m_register_types))
+    m_register_layout_sp = std::move(layout);
 }
 
 // query the target of gdb-remote for extended target information returns
@@ -6200,14 +6204,15 @@ llvm::Error ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
         "the debug server supports \"qXfer:features:read\", but LLDB does not "
         "have XML parsing enabled (check LLLDB_ENABLE_LIBXML2)");
 
-  std::vector<DynamicRegisterInfo::Register> registers;
+  std::vector<RegisterDefinition> registers;
   if (GetGDBServerRegisterInfoXMLAndProcess(arch_to_use, "target.xml",
                                             registers) &&
       // Target XML is not required to include register information.
       !registers.empty())
     AddRemoteRegisters(registers, arch_to_use);
 
-  return m_register_info_sp->GetNumRegisters() > 0
+  return m_register_layout_sp &&
+                 !m_register_layout_sp->GetDescription()->GetRegisters().empty()
              ? llvm::ErrorSuccess()
              : llvm::createStringError(
                    llvm::inconvertibleErrorCode(),
@@ -6643,7 +6648,7 @@ void ProcessGDBRemote::HandleStopReply() {
     if (pid != LLDB_INVALID_PROCESS_ID)
       SetID(pid);
   }
-  BuildDynamicRegisterInfo(true);
+  BuildRegisterDescription(true);
 }
 
 llvm::Expected<bool> ProcessGDBRemote::SaveCore(llvm::StringRef outfile) {

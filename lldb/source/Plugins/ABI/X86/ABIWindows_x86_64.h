@@ -37,7 +37,8 @@ public:
 
   lldb::UnwindPlanSP CreateDefaultUnwindPlan() override;
 
-  bool RegisterIsVolatile(const lldb_private::RegisterInfo *reg_info) override;
+  bool
+  RegisterIsVolatile(const lldb_private::RegisterDescriptor *reg_info) override;
 
   // In Windows_x86_64 ABI requires that the stack will be maintained 16-byte
   // aligned.
@@ -86,7 +87,7 @@ protected:
   GetReturnValueObjectSimple(lldb_private::Thread &thread,
                              lldb_private::CompilerType &ast_type) const;
 
-  bool RegisterIsCalleeSaved(const lldb_private::RegisterInfo *reg_info);
+  bool RegisterIsCalleeSaved(const lldb_private::RegisterDescriptor *reg_info);
   uint32_t GetGenericNum(llvm::StringRef reg) override;
 
 private:

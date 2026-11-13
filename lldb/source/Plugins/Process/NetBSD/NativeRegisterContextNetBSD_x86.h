@@ -22,9 +22,9 @@
 #include <optional>
 
 #include "Plugins/Process/NetBSD/NativeRegisterContextNetBSD.h"
-#include "Register/Arch/RegisterContext_x86.h"
 #include "Plugins/Register/Native/NativeRegisterContextDBReg_x86.h"
-#include "Register/Arch/lldb-x86-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86-register-enums.h"
+#include "lldb/Register/Common/RegisterInfo_x86.h"
 
 namespace lldb_private {
 namespace process_netbsd {
@@ -37,15 +37,13 @@ class NativeRegisterContextNetBSD_x86
 public:
   NativeRegisterContextNetBSD_x86(const ArchSpec &target_arch,
                                      NativeThreadProtocol &native_thread);
-  uint32_t GetRegisterSetCount() const override;
 
-  const RegisterSet *GetRegisterSet(uint32_t set_index) const override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  Status ReadRegister(const RegisterInfo *reg_info,
-                      RegisterValue &reg_value) override;
-
-  Status WriteRegister(const RegisterInfo *reg_info,
-                       const RegisterValue &reg_value) override;
+  llvm::Error
+  WriteRegister(lldb_private::RegisterID id,
+                const lldb_private::RegisterValue &reg_value) override;
 
   Status ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
 
@@ -70,14 +68,11 @@ private:
   std::array<uint8_t, sizeof(struct reg)> m_gpr;
   std::array<uint8_t, sizeof(struct xstate)> m_xstate;
   std::array<uint8_t, sizeof(struct dbreg)> m_dbr;
-  std::array<size_t, MaxRegularRegSet + 1> m_regset_offsets;
 
   std::optional<RegSetKind> GetSetForNativeRegNum(uint32_t reg_num) const;
 
   Status ReadRegisterSet(RegSetKind set);
   Status WriteRegisterSet(RegSetKind set);
-
-  uint8_t *GetOffsetRegSetData(RegSetKind set, size_t reg_offset);
 
   struct YMMSplitPtr {
     void *xmm;

@@ -21,7 +21,7 @@
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
@@ -156,13 +156,15 @@ bool StopInfoMachException::DeterminePtrauthFailure(ExecutionContext &exe_ctx) {
   // authenticate is in x16.
   Address current_address = current_frame->GetFrameCodeAddress();
   if (IsBreakpoint) {
-    RegisterContext *reg_ctx = exe_ctx.GetRegisterContext();
+    ThreadRegisterContext *reg_ctx = exe_ctx.GetRegisterContext();
     if (!reg_ctx)
       return false;
 
-    const RegisterInfo *X16Info = reg_ctx->GetRegisterInfoByName("x16");
+    const RegisterDescriptor *X16Info = reg_ctx->GetRegisterByName("x16");
     RegisterValue X16Val;
-    if (!reg_ctx->ReadRegister(X16Info, X16Val))
+    if (llvm::errorToBool(
+            reg_ctx->ReadRegister((X16Info ? X16Info->id : LLDB_INVALID_REGNUM))
+                .moveInto(X16Val)))
       return false;
     uint64_t bad_address = X16Val.GetAsUInt64();
 
@@ -644,7 +646,7 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
              : llvm::Triple::UnknownArch;
 
   ProcessSP process_sp(thread.GetProcess());
-  RegisterContextSP reg_ctx_sp(thread.GetRegisterContext());
+  ThreadRegisterContextSP reg_ctx_sp(thread.GetRegisterContext());
   // Caveat: with x86 KDP if we've hit a breakpoint, the pc we
   // receive is past the breakpoint instruction.
   // If we have a breakpoints at 0x100 and 0x101, we hit the
@@ -878,7 +880,7 @@ bool StopInfoMachException::WasContinueInterrupted(Thread &thread) {
   if (!m_not_stepping_but_got_singlestep_exception)
     return false;
 
-  RegisterContextSP reg_ctx_sp(thread.GetRegisterContext());
+  ThreadRegisterContextSP reg_ctx_sp(thread.GetRegisterContext());
   std::optional<addr_t> prev_pc = thread.GetPreviousFrameZeroPC();
   if (!reg_ctx_sp || !prev_pc)
     return false;

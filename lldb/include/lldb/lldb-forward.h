@@ -81,7 +81,6 @@ class Disassembler;
 class DumpValueObjectOptions;
 class DynamicCheckerFunctions;
 class DynamicLoader;
-class DynamicRegisterInfo;
 class Editline;
 class EmulateInstruction;
 class Environment;
@@ -182,6 +181,7 @@ class RealpathPrefixes;
 class RecognizedStackFrame;
 class RegisterCheckpoint;
 class RegisterContext;
+class ThreadRegisterContext;
 class RegisterTypeBuilder;
 class RegisterValue;
 class RegularExpression;
@@ -360,8 +360,6 @@ typedef std::shared_ptr<lldb_private::Disassembler> DisassemblerSP;
 typedef std::unique_ptr<lldb_private::DynamicCheckerFunctions>
     DynamicCheckerFunctionsUP;
 typedef std::unique_ptr<lldb_private::DynamicLoader> DynamicLoaderUP;
-typedef std::shared_ptr<lldb_private::DynamicRegisterInfo>
-    DynamicRegisterInfoSP;
 typedef std::shared_ptr<lldb_private::Event> EventSP;
 typedef std::shared_ptr<lldb_private::EventData> EventDataSP;
 typedef std::shared_ptr<lldb_private::EventDataStructuredData>
@@ -412,7 +410,7 @@ typedef std::shared_ptr<lldb_private::ProcessLaunchInfo> ProcessLaunchInfoSP;
 typedef std::unique_ptr<lldb_private::ProtocolServer> ProtocolServerUP;
 typedef std::weak_ptr<lldb_private::Process> ProcessWP;
 typedef std::shared_ptr<lldb_private::RegisterCheckpoint> RegisterCheckpointSP;
-typedef std::shared_ptr<lldb_private::RegisterContext> RegisterContextSP;
+typedef std::shared_ptr<lldb_private::ThreadRegisterContext> ThreadRegisterContextSP;
 typedef std::shared_ptr<lldb_private::RegisterTypeBuilder>
     RegisterTypeBuilderSP;
 typedef std::shared_ptr<lldb_private::RegularExpression> RegularExpressionSP;

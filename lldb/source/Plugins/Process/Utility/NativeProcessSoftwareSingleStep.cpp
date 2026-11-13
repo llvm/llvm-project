@@ -10,7 +10,7 @@
 
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 
 #include <unordered_map>
 
@@ -44,38 +44,40 @@ static size_t ReadMemoryCallback(EmulateInstruction *instruction, void *baton,
 }
 
 static bool ReadRegisterCallback(EmulateInstruction *instruction, void *baton,
-                                 const RegisterInfo *reg_info,
+                                 const RegisterDescriptor *reg_info,
                                  RegisterValue &reg_value) {
   EmulatorBaton *emulator_baton = static_cast<EmulatorBaton *>(baton);
 
   auto it = emulator_baton->m_register_values.find(
-      reg_info->kinds[eRegisterKindDWARF]);
+      reg_info->numbers[eRegisterKindDWARF]);
   if (it != emulator_baton->m_register_values.end()) {
     reg_value = it->second;
     return true;
   }
 
-  // The emulator only fill in the dwarf register numbers (and in some case the
-  // generic register numbers). Get the full register info from the register
-  // context based on the dwarf register numbers.
-  const RegisterInfo *full_reg_info =
-      emulator_baton->m_reg_context.GetRegisterInfo(
-          eRegisterKindDWARF, reg_info->kinds[eRegisterKindDWARF]);
-
-  Status error =
-      emulator_baton->m_reg_context.ReadRegister(full_reg_info, reg_value);
-  if (error.Success())
+  auto description = emulator_baton->m_reg_context.GetDescription();
+  const auto *reg =
+      description
+          ? description->FindByNumber(eRegisterKindDWARF,
+                                      reg_info->numbers[eRegisterKindDWARF])
+          : nullptr;
+  if (!reg)
+    return false;
+  auto value = emulator_baton->m_reg_context.ReadRegister(reg->id);
+  if (!value) {
+    llvm::consumeError(value.takeError());
+    return false;
+  }
+  reg_value = std::move(*value);
     return true;
-
-  return false;
 }
 
 static bool WriteRegisterCallback(EmulateInstruction *instruction, void *baton,
                                   const EmulateInstruction::Context &context,
-                                  const RegisterInfo *reg_info,
+                                  const RegisterDescriptor *reg_info,
                                   const RegisterValue &reg_value) {
   EmulatorBaton *emulator_baton = static_cast<EmulatorBaton *>(baton);
-  emulator_baton->m_register_values[reg_info->kinds[eRegisterKindDWARF]] =
+  emulator_baton->m_register_values[reg_info->numbers[eRegisterKindDWARF]] =
       reg_value;
   return true;
 }

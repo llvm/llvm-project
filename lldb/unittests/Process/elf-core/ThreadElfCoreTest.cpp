@@ -8,15 +8,25 @@
 //===----------------------------------------------------------------------===//
 #include "Plugins/Process/elf-core/ThreadElfCore.h"
 #include "Plugins/Platform/Linux/PlatformLinux.h"
+#include "Plugins/Process/elf-core/RegisterContextELFCore_arm64.h"
+#include "Plugins/Process/elf-core/RegisterContextELFCore_loongarch64.h"
+#include "Plugins/Process/elf-core/RegisterContextELFCore_riscv32.h"
+#include "Plugins/Process/elf-core/RegisterContextELFCore_riscv64.h"
+#include "Plugins/Process/elf-core/RegisterContextELFCore_x86.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Register/Arch/lldb-riscv-register-enums.h"
+#include "lldb/Register/Layouts/Linux/RegisterLayoutLinux_x86_64.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Listener.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 #include <memory>
@@ -29,6 +39,8 @@
 pid_t gettid() { return ((pid_t)syscall(SYS_gettid)); }
 #endif
 
+
+namespace reg_ids = lldb_private::registers::riscv::id;
 using namespace lldb_private;
 
 namespace {
@@ -77,9 +89,9 @@ struct DummyThread : public Thread {
 
   void RefreshStateAfterStop() override {}
 
-  lldb::RegisterContextSP GetRegisterContext() override { return nullptr; }
+  lldb::ThreadRegisterContextSP GetRegisterContext() override { return nullptr; }
 
-  lldb::RegisterContextSP
+  lldb::ThreadRegisterContextSP
   CreateRegisterContextForFrame(StackFrame *frame) override {
     return nullptr;
   }
@@ -197,4 +209,194 @@ TEST_F(ElfCoreTest, NoStopReasonWhenNoPrStatus) {
   lldb::ThreadSP thread_sp = CreateThread(process_sp);
   ASSERT_TRUE(thread_sp);
   ASSERT_FALSE(thread_sp->ThreadStoppedForAReason());
+}
+
+TEST_F(ElfCoreTest, RegisterLayoutsPreserveX86GroupsAndUnavailableBanks) {
+  ArchSpec arch("x86_64-pc-linux");
+  auto debugger = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger);
+  auto target = CreateTarget(debugger, arch);
+  ASSERT_TRUE(target);
+  lldb::ProcessSP process = std::make_shared<DummyProcess>(
+      target, Listener::MakeListener("register-model"));
+  auto thread = CreateThread(process);
+  ASSERT_TRUE(thread);
+
+  auto model = CreateLinuxX86_64RegisterLayout(arch);
+  auto description = model.GetDescription();
+  std::vector<uint8_t> gp(model.FindBank(x86_layout::GP)->byte_size, 0);
+  const auto *rax = description->Find("rax");
+  ASSERT_NE(rax, nullptr);
+  ASSERT_THAT_ERROR(model.Write(rax->id,
+                                RegisterValue(uint64_t(0x123456789abcdef0)),
+                                {{x86_layout::GP, gp}}),
+                    llvm::Succeeded());
+  DataExtractor general(gp.data(), gp.size(), lldb::eByteOrderLittle, 8);
+  RegisterContextELFCore_x86 context(*thread, std::move(model), general, {});
+
+  // The context publishes its own presentation with unavailable groups hidden.
+  // Logical register identities and definitions remain those of the layout.
+  ASSERT_EQ(context.GetDescription()->GetRegisters().size(),
+            description->GetRegisters().size());
+  for (const auto &reg : description->GetRegisters()) {
+    const auto *actual = context.GetDescription()->Find(reg.id);
+    ASSERT_NE(actual, nullptr);
+    EXPECT_EQ(actual->name, reg.name);
+    EXPECT_EQ(actual->byte_size, reg.byte_size);
+    EXPECT_EQ(actual->numbers, reg.numbers);
+  }
+  EXPECT_EQ(context.GetRegisterGroupCount(), 2u);
+  EXPECT_EQ(context.GetRegisterGroup(2), nullptr);
+  EXPECT_EQ(context.GetUserRegisterCount(),
+            description->GetGroups()[0].registers.size() +
+                description->GetGroups()[1].registers.size());
+  // Use the model's Linux numbering, including FS/GS base registers.
+  const auto *base = context.GetRegisterByName("fs_base");
+  ASSERT_NE(base, nullptr);
+  EXPECT_EQ(base->numbers[lldb::eRegisterKindLLDB],
+            description->Find("fs_base")->numbers[lldb::eRegisterKindLLDB]);
+  RegisterValue value;
+  ASSERT_TRUE(!llvm::errorToBool(
+      context
+          .ReadRegister((context.GetRegisterByName("eax")
+                             ? (context.GetRegisterByName("eax"))->id
+                             : LLDB_INVALID_REGNUM))
+          .moveInto(value)));
+  EXPECT_EQ(value.GetAsUInt32(), 0x9abcdef0u);
+  EXPECT_FALSE(!llvm::errorToBool(
+      context
+          .ReadRegister((context.GetRegisterByName("xmm0")
+                             ? (context.GetRegisterByName("xmm0"))->id
+                             : LLDB_INVALID_REGNUM))
+          .moveInto(value)));
+  EXPECT_FALSE(!llvm::errorToBool(
+      context.WriteRegister((context.GetRegisterByName("rax")
+                                 ? (context.GetRegisterByName("rax"))->id
+                                 : LLDB_INVALID_REGNUM),
+                            value)));
+
+  // An FXSAVE note restores the historical AVX group exposure. Values whose
+  // additional bank was not saved remain unavailable to the shared codec.
+  std::vector<uint8_t> fp(sizeof(FXSAVE), 0);
+  CoreNote note;
+  note.info.n_type = llvm::ELF::NT_FPREGSET;
+  note.data = DataExtractor(fp.data(), fp.size(), lldb::eByteOrderLittle, 8);
+  RegisterContextELFCore_x86 with_fp(
+      *thread, CreateLinuxX86_64RegisterLayout(arch), general, {note});
+  EXPECT_EQ(with_fp.GetRegisterGroupCount(), 3u);
+  EXPECT_STREQ(with_fp.GetRegisterGroup(2)->short_name.c_str(), "avx");
+  EXPECT_TRUE(!llvm::errorToBool(
+      with_fp
+          .ReadRegister((with_fp.GetRegisterByName("xmm0")
+                             ? (with_fp.GetRegisterByName("xmm0"))->id
+                             : LLDB_INVALID_REGNUM))
+          .moveInto(value)));
+  EXPECT_FALSE(!llvm::errorToBool(
+      with_fp
+          .ReadRegister((with_fp.GetRegisterByName("ymm0")
+                             ? (with_fp.GetRegisterByName("ymm0"))->id
+                             : LLDB_INVALID_REGNUM))
+          .moveInto(value)));
+}
+
+TEST_F(ElfCoreTest, RejectsUnsupportedRegisterOperatingSystems) {
+  ArchSpec arch{HostInfo::GetTargetTriple()};
+  auto debugger = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger);
+  auto target = CreateTarget(debugger, arch);
+  ASSERT_TRUE(target);
+  lldb::ProcessSP process = std::make_shared<DummyProcess>(
+      target, Listener::MakeListener("unsupported-core-registers"));
+  auto thread = CreateThread(process);
+  ASSERT_TRUE(thread);
+  DataExtractor general;
+  EXPECT_THAT_EXPECTED(
+      RegisterContextELFCore_arm64::Create(
+          *thread, ArchSpec("aarch64-unknown-unknown"), general, {}),
+      llvm::Failed());
+  EXPECT_THAT_EXPECTED(
+      RegisterContextELFCore_loongarch64::Create(
+          *thread, ArchSpec("loongarch64-unknown-freebsd"), general, {}),
+      llvm::Failed());
+  EXPECT_THAT_EXPECTED(
+      RegisterContextELFCore_riscv64::Create(
+          *thread, ArchSpec("riscv64-unknown-netbsd"), general, {}),
+      llvm::Failed());
+  EXPECT_THAT_EXPECTED(
+      RegisterContextELFCore_riscv32::Create(
+          *thread, ArchSpec("riscv32-unknown-linux"), general, {}),
+      llvm::Failed());
+}
+
+TEST_F(ElfCoreTest, BSDArm64CoreNotesUseTheirOwnFPControlOrder) {
+  struct TestCase {
+    const char *triple;
+    uint32_t note_type;
+    uint32_t fpcr;
+    uint32_t fpsr;
+  };
+  for (const auto &test : {TestCase{"aarch64-unknown-netbsd",
+                                    NETBSD::AARCH64::NT_FPREGS, 0x1234, 0x5678},
+                           TestCase{"aarch64-unknown-openbsd",
+                                    OPENBSD::NT_FPREGS, 0x5678, 0x1234}}) {
+    SCOPED_TRACE(test.triple);
+    ArchSpec arch(test.triple);
+    auto debugger = Debugger::CreateInstance();
+    ASSERT_TRUE(debugger);
+    auto target = CreateTarget(debugger, arch);
+    ASSERT_TRUE(target);
+    lldb::ProcessSP process = std::make_shared<DummyProcess>(
+        target, Listener::MakeListener("bsd-arm64-registers"));
+    auto thread = CreateThread(process);
+    ASSERT_TRUE(thread);
+    std::vector<uint8_t> gp(280, 0), fp(528, 0);
+    llvm::support::endian::write32le(fp.data() + 512, 0x1234);
+    llvm::support::endian::write32le(fp.data() + 516, 0x5678);
+    DataExtractor general(gp.data(), gp.size(), lldb::eByteOrderLittle, 8);
+    CoreNote note{};
+    note.info.n_type = test.note_type;
+    note.data = DataExtractor(fp.data(), fp.size(), lldb::eByteOrderLittle, 8);
+    auto result =
+        RegisterContextELFCore_arm64::Create(*thread, arch, general, {note});
+    ASSERT_THAT_EXPECTED(result, llvm::Succeeded());
+    auto &context = *result;
+    EXPECT_EQ(context->GetBankSize(0), gp.size());
+    EXPECT_EQ(context->GetBankSize(1), fp.size());
+    const auto *fpcr = context->GetRegisterByName("fpcr");
+    const auto *fpsr = context->GetRegisterByName("fpsr");
+    ASSERT_NE(fpcr, nullptr);
+    ASSERT_NE(fpsr, nullptr);
+    auto control = context->ReadRegister(fpcr->id);
+    auto status = context->ReadRegister(fpsr->id);
+    ASSERT_THAT_EXPECTED(control, llvm::Succeeded());
+    ASSERT_THAT_EXPECTED(status, llvm::Succeeded());
+    EXPECT_EQ(control->GetAsUInt64(), test.fpcr);
+    EXPECT_EQ(status->GetAsUInt64(), test.fpsr);
+  }
+}
+
+TEST_F(ElfCoreTest, LinuxRISCV64DoesNotExposeTruncatedFPNotes) {
+  ArchSpec arch("riscv64-unknown-linux");
+  auto debugger = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger);
+  auto target = CreateTarget(debugger, arch);
+  ASSERT_TRUE(target);
+  lldb::ProcessSP process = std::make_shared<DummyProcess>(
+      target, Listener::MakeListener("riscv64-core-no-fp"));
+  auto thread = CreateThread(process);
+  ASSERT_TRUE(thread);
+  std::vector<uint8_t> gp(256, 0), fp(264, 0);
+  DataExtractor general(gp.data(), gp.size(), lldb::eByteOrderLittle, 8);
+  for (size_t size : {0u, 8u, 263u}) {
+    CoreNote note{};
+    note.info.n_type = llvm::ELF::NT_FPREGSET;
+    note.data = DataExtractor(fp.data(), size, lldb::eByteOrderLittle, 8);
+    auto result =
+        RegisterContextELFCore_riscv64::Create(*thread, arch, general, {note});
+    ASSERT_THAT_EXPECTED(result, llvm::Succeeded());
+    auto &context = *result;
+    EXPECT_EQ(context->GetDescription()->FindGroup("fpr"), nullptr);
+    EXPECT_THAT_EXPECTED(context->ReadRegister(reg_ids::fpr_f1),
+                         llvm::Failed());
+  }
 }

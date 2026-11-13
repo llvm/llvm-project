@@ -13,7 +13,8 @@
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
 #include "Plugins/Register/Native/NativeRegisterContextDBReg_loongarch.h"
-#include "Register/Common/RegisterInfo_loongarch64.h"
+#include "lldb/Register/Common/RegisterInfo_loongarch64.h"
+#include "lldb/Register/Layouts/Linux/RegisterLayoutLinux_loongarch64.h"
 
 #include <asm/ptrace.h>
 
@@ -28,28 +29,20 @@ class NativeRegisterContextLinux_loongarch64
 public:
   NativeRegisterContextLinux_loongarch64(
       const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
-      std::unique_ptr<RegisterInfo_loongarch64> register_info_up);
+      lldb_private::RegisterLayout register_model);
 
-  uint32_t GetRegisterSetCount() const override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  uint32_t GetUserRegisterCount() const override;
-
-  const RegisterSet *GetRegisterSet(uint32_t set_index) const override;
-
-  Status ReadRegister(const RegisterInfo *reg_info,
-                      RegisterValue &reg_value) override;
-
-  Status WriteRegister(const RegisterInfo *reg_info,
-                       const RegisterValue &reg_value) override;
+  llvm::Error
+  WriteRegister(lldb_private::RegisterID id,
+                const lldb_private::RegisterValue &reg_value) override;
 
   Status ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
 
   Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
   void InvalidateAllRegisters() override;
-
-  std::vector<uint32_t>
-  GetExpeditedRegisters(ExpeditedRegs expType) const override;
 
   bool RegisterOffsetIsDynamic() const override { return true; }
 
@@ -74,9 +67,9 @@ protected:
 
   void *GetFPRBuffer() override { return &m_fpr; }
 
-  size_t GetGPRSize() const override { return GetRegisterInfo().GetGPRSize(); }
+  size_t GetGPRSize() const override { return GetBankSize(0); }
 
-  size_t GetFPRSize() override { return GetRegisterInfo().GetFPRSize(); }
+  size_t GetFPRSize() override { return GetBankSize(1); }
 
 private:
   bool m_gpr_is_valid;
@@ -85,10 +78,10 @@ private:
   bool m_lasx_is_valid;
   bool m_refresh_hwdebug_info;
 
-  RegisterInfo_loongarch64::GPR m_gpr;
-  RegisterInfo_loongarch64::FPR m_fpr;
-  RegisterInfo_loongarch64::LSX m_lsx;
-  RegisterInfo_loongarch64::LASX m_lasx;
+  linux_loongarch64::GPR m_gpr;
+  linux_loongarch64::FPR m_fpr;
+  linux_loongarch64::LSX m_lsx;
+  linux_loongarch64::LASX m_lasx;
 
   bool IsGPR(unsigned reg) const;
 
@@ -97,14 +90,6 @@ private:
   bool IsLSX(unsigned reg) const;
 
   bool IsLASX(unsigned reg) const;
-
-  uint32_t CalculateFprOffset(const RegisterInfo *reg_info) const;
-
-  uint32_t CalculateLsxOffset(const RegisterInfo *reg_info) const;
-
-  uint32_t CalculateLasxOffset(const RegisterInfo *reg_info) const;
-
-  const RegisterInfo_loongarch64 &GetRegisterInfo() const;
 
   llvm::Error ReadHardwareDebugInfo() override;
 

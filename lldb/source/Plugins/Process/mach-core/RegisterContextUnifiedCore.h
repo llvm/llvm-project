@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-enumerations.h"
@@ -20,36 +20,23 @@
 
 namespace lldb_private {
 
-class RegisterContextUnifiedCore : public RegisterContext {
+class RegisterContextUnifiedCore : public ThreadRegisterContext {
 public:
   RegisterContextUnifiedCore(
       Thread &thread, uint32_t concrete_frame_idx,
-      lldb::RegisterContextSP core_thread_regctx_sp,
+      lldb::ThreadRegisterContextSP core_thread_regctx_sp,
       lldb_private::StructuredData::ObjectSP metadata_thread_registers);
 
   void InvalidateAllRegisters() override {};
 
-  size_t GetRegisterCount() override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  const lldb_private::RegisterInfo *GetRegisterInfoAtIndex(size_t reg) override;
-
-  size_t GetRegisterSetCount() override;
-
-  const lldb_private::RegisterSet *GetRegisterSet(size_t set) override;
-
-  bool ReadRegister(const lldb_private::RegisterInfo *reg_info,
-                    lldb_private::RegisterValue &value) override;
-
-  bool WriteRegister(const lldb_private::RegisterInfo *reg_info,
+  llvm::Error WriteRegister(lldb_private::RegisterID id,
                      const lldb_private::RegisterValue &value) override;
 
 private:
-  std::vector<lldb_private::RegisterSet> m_register_sets;
-  std::vector<lldb_private::RegisterInfo> m_register_infos;
-  /// For each register set, an array of register numbers included.
-  std::map<size_t, std::vector<uint32_t>> m_regset_regnum_collection;
-  /// Bytes of the register contents.
-  std::vector<uint8_t> m_register_data;
+  std::map<RegisterID, RegisterValue> m_values;
 };
 
 } // namespace lldb_private

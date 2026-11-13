@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_REGISTER_DARWIN_REGISTERCONTEXTDARWIN_ARM_H
 #define LLDB_SOURCE_PLUGINS_REGISTER_DARWIN_REGISTERCONTEXTDARWIN_ARM_H
 
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/lldb-private.h"
 
 // BCR address match type
@@ -43,7 +43,7 @@
 #define WCR_LOAD ((uint32_t)(1u << 3))
 #define WCR_STORE ((uint32_t)(1u << 4))
 
-class RegisterContextDarwin_arm : public lldb_private::RegisterContext {
+class RegisterContextDarwin_arm : public lldb_private::ThreadRegisterContext {
 public:
   RegisterContextDarwin_arm(lldb_private::Thread &thread,
                             uint32_t concrete_frame_idx);
@@ -52,26 +52,16 @@ public:
 
   void InvalidateAllRegisters() override;
 
-  size_t GetRegisterCount() override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  const lldb_private::RegisterInfo *GetRegisterInfoAtIndex(size_t reg) override;
-
-  size_t GetRegisterSetCount() override;
-
-  const lldb_private::RegisterSet *GetRegisterSet(size_t set) override;
-
-  bool ReadRegister(const lldb_private::RegisterInfo *reg_info,
-                    lldb_private::RegisterValue &reg_value) override;
-
-  bool WriteRegister(const lldb_private::RegisterInfo *reg_info,
+  llvm::Error
+  WriteRegister(lldb_private::RegisterID id,
                      const lldb_private::RegisterValue &reg_value) override;
 
   bool ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
 
   bool WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
-
-  uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
-                                               uint32_t num) override;
 
   uint32_t NumSupportedHardwareBreakpoints() override;
 
@@ -255,10 +245,6 @@ protected:
   static uint32_t GetRegisterNumber(uint32_t reg_kind, uint32_t reg_num);
 
   static int GetSetForNativeRegNum(int reg_num);
-
-  static size_t GetRegisterInfosCount();
-
-  static const lldb_private::RegisterInfo *GetRegisterInfos();
 };
 
 #endif // LLDB_SOURCE_PLUGINS_REGISTER_DARWIN_REGISTERCONTEXTDARWIN_ARM_H

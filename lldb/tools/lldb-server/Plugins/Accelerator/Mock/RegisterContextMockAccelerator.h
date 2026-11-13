@@ -22,16 +22,8 @@ class RegisterContextMockAccelerator : public NativeRegisterContext {
 public:
   RegisterContextMockAccelerator(NativeThreadProtocol &native_thread);
 
-  uint32_t GetRegisterCount() const override;
-  uint32_t GetUserRegisterCount() const override;
-  const RegisterInfo *GetRegisterInfoAtIndex(uint32_t reg) const override;
-  uint32_t GetRegisterSetCount() const override;
-  const RegisterSet *GetRegisterSet(uint32_t set_index) const override;
-
-  Status ReadRegister(const RegisterInfo *reg_info,
-                      RegisterValue &reg_value) override;
-  Status WriteRegister(const RegisterInfo *reg_info,
-                       const RegisterValue &reg_value) override;
+  llvm::Expected<RegisterValue> ReadRegister(RegisterID id) override;
+  llvm::Error WriteRegister(RegisterID id, const RegisterValue &value) override;
 
   Status ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
   Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;

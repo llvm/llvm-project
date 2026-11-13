@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "EmulateInstructionRISCV.h"
-#include "Register/RegisterInfoInterface.h"
-#include "Register/Common/RegisterInfo_riscv32.h"
-#include "Register/Common/RegisterInfo_riscv64.h"
-#include "Register/Arch/lldb-riscv-register-enums.h"
+#include "lldb/Register/Arch/lldb-riscv-register-enums.h"
 #include "RISCVCInstructions.h"
 #include "RISCVInstructions.h"
+#include "lldb/Register/Common/RegisterInfo_riscv32.h"
+#include "lldb/Register/Common/RegisterInfo_riscv64.h"
+#include "lldb/Register/RegisterDescription.h"
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/PluginManager.h"
@@ -28,6 +28,8 @@
 #include "llvm/Support/MathExtras.h"
 #include <optional>
 
+
+namespace reg_ids = lldb_private::registers::riscv::id;
 using namespace llvm;
 using namespace lldb;
 using namespace lldb_private;
@@ -103,20 +105,20 @@ constexpr uint32_t DecodeUImm(uint32_t inst) {
 
 static uint32_t GPREncodingToLLDB(uint32_t reg_encode) {
   if (reg_encode == 0)
-    return gpr_x0_riscv;
+    return reg_ids::gpr_x0;
   if (reg_encode >= 1 && reg_encode <= 31)
-    return gpr_x1_riscv + reg_encode - 1;
+    return reg_ids::gpr_x1 + reg_encode - 1;
   return LLDB_INVALID_REGNUM;
 }
 
 static uint32_t FPREncodingToLLDB(uint32_t reg_encode) {
   if (reg_encode <= 31)
-    return fpr_f0_riscv + reg_encode;
+    return reg_ids::fpr_f0 + reg_encode;
   return LLDB_INVALID_REGNUM;
 }
 
 // Helper function to get register info from GPR encoding
-static std::optional<RegisterInfo>
+static std::optional<RegisterDescriptor>
 GPREncodingToRegisterInfo(EmulateInstructionRISCV &emulator,
                           uint32_t reg_encode) {
   uint32_t lldb_reg = GPREncodingToLLDB(reg_encode);
@@ -252,7 +254,7 @@ Load(EmulateInstructionRISCV &emulator, I inst, uint64_t (*extend)(E)) {
   EmulateInstructionRISCV::Context context;
 
   // Get register info for base register
-  std::optional<RegisterInfo> reg_info_rs1 =
+  std::optional<RegisterDescriptor> reg_info_rs1 =
       GPREncodingToRegisterInfo(emulator, inst.rs1.rs);
 
   if (!reg_info_rs1)
@@ -288,9 +290,9 @@ Store(EmulateInstructionRISCV &emulator, I inst) {
   EmulateInstructionRISCV::Context context;
 
   // Get register info for source and base registers.
-  std::optional<RegisterInfo> reg_info_rs1 =
+  std::optional<RegisterDescriptor> reg_info_rs1 =
       GPREncodingToRegisterInfo(emulator, inst.rs1.rs);
-  std::optional<RegisterInfo> reg_info_rs2 =
+  std::optional<RegisterDescriptor> reg_info_rs2 =
       GPREncodingToRegisterInfo(emulator, inst.rs2.rs);
 
   if (!reg_info_rs1 || !reg_info_rs2)
@@ -1758,7 +1760,7 @@ bool EmulateInstructionRISCV::ReadInstruction() {
 
 RoundingMode EmulateInstructionRISCV::GetRoundingMode() {
   bool success = false;
-  auto fcsr = ReadRegisterUnsigned(eRegisterKindLLDB, fpr_fcsr_riscv,
+  auto fcsr = ReadRegisterUnsigned(eRegisterKindLLDB, reg_ids::fpr_fcsr,
                                    LLDB_INVALID_ADDRESS, &success);
   if (!success)
     return RoundingMode::Invalid;
@@ -1783,7 +1785,7 @@ RoundingMode EmulateInstructionRISCV::GetRoundingMode() {
 bool EmulateInstructionRISCV::SetAccruedExceptions(
     APFloatBase::opStatus opStatus) {
   bool success = false;
-  auto fcsr = ReadRegisterUnsigned(eRegisterKindLLDB, fpr_fcsr_riscv,
+  auto fcsr = ReadRegisterUnsigned(eRegisterKindLLDB, reg_ids::fpr_fcsr,
                                    LLDB_INVALID_ADDRESS, &success);
   if (!success)
     return false;
@@ -1809,29 +1811,29 @@ bool EmulateInstructionRISCV::SetAccruedExceptions(
   EmulateInstruction::Context ctx;
   ctx.type = eContextRegisterStore;
   ctx.SetNoArgs();
-  return WriteRegisterUnsigned(ctx, eRegisterKindLLDB, fpr_fcsr_riscv, fcsr);
+  return WriteRegisterUnsigned(ctx, eRegisterKindLLDB, reg_ids::fpr_fcsr, fcsr);
 }
 
-std::optional<RegisterInfo>
+std::optional<RegisterDescriptor>
 EmulateInstructionRISCV::GetRegisterInfo(RegisterKind reg_kind,
                                          uint32_t reg_index) {
   if (reg_kind == eRegisterKindGeneric) {
     switch (reg_index) {
     case LLDB_REGNUM_GENERIC_PC:
       reg_kind = eRegisterKindLLDB;
-      reg_index = gpr_pc_riscv;
+      reg_index = reg_ids::gpr_pc;
       break;
     case LLDB_REGNUM_GENERIC_SP:
       reg_kind = eRegisterKindLLDB;
-      reg_index = gpr_sp_riscv;
+      reg_index = reg_ids::gpr_sp;
       break;
     case LLDB_REGNUM_GENERIC_FP:
       reg_kind = eRegisterKindLLDB;
-      reg_index = gpr_fp_riscv;
+      reg_index = reg_ids::gpr_fp;
       break;
     case LLDB_REGNUM_GENERIC_RA:
       reg_kind = eRegisterKindLLDB;
-      reg_index = gpr_ra_riscv;
+      reg_index = reg_ids::gpr_ra;
       break;
     // We may handle LLDB_REGNUM_GENERIC_ARGx when more instructions are
     // supported.
@@ -1840,28 +1842,25 @@ EmulateInstructionRISCV::GetRegisterInfo(RegisterKind reg_kind,
     }
   }
 
-  std::unique_ptr<RegisterInfoInterface> reg_info;
-  switch (m_arch.GetTriple().getArch()) {
-  case llvm::Triple::riscv32:
-    reg_info = std::make_unique<RegisterInfo_riscv32>(
-        m_arch, RegisterInfo_riscv32::eRegsetMaskAll);
-    break;
-  case llvm::Triple::riscv64:
-    reg_info = std::make_unique<RegisterInfo_riscv64>(
-        m_arch, RegisterInfo_riscv64::eRegsetMaskAll);
-    break;
-  default:
-    assert(false && "unsupported triple");
-    return {};
+  auto &reg_info = m_register_info;
+  if (!reg_info) {
+    switch (m_arch.GetTriple().getArch()) {
+    case llvm::Triple::riscv32:
+      reg_info = RegisterInfo_riscv32::CreateDescription();
+      break;
+    case llvm::Triple::riscv64:
+      reg_info = RegisterInfo_riscv64::CreateDescription(
+          RegisterInfo_riscv64::eRegsetMaskAll);
+      break;
+    default:
+      assert(false && "unsupported triple");
+      return {};
+    }
   }
 
-  const RegisterInfo *array = reg_info->GetRegisterInfo();
-  const uint32_t length = reg_info->GetRegisterCount();
-
-  if (reg_index >= length || reg_kind != eRegisterKindLLDB)
-    return {};
-
-  return array[reg_index];
+  if (const auto *reg = reg_info->FindByNumber(reg_kind, reg_index))
+    return *reg;
+  return {};
 }
 
 bool EmulateInstructionRISCV::SetInstruction(const Opcode &opcode,
@@ -1906,16 +1905,16 @@ bool EmulateInstructionRISCV::CreateFunctionEntryUnwind(
 
   UnwindPlan::Row row;
 
-  row.GetCFAValue().SetIsRegisterPlusOffset(gpr_sp_riscv, 0);
-  row.SetRegisterLocationToSame(gpr_ra_riscv, /*must_replace=*/false);
-  row.SetRegisterLocationToSame(gpr_fp_riscv, /*must_replace=*/false);
+  row.GetCFAValue().SetIsRegisterPlusOffset(reg_ids::gpr_sp, 0);
+  row.SetRegisterLocationToSame(reg_ids::gpr_ra, /*must_replace=*/false);
+  row.SetRegisterLocationToSame(reg_ids::gpr_fp, /*must_replace=*/false);
 
   unwind_plan.AppendRow(std::move(row));
   unwind_plan.SetSourceName("EmulateInstructionRISCV");
   unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
   unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolYes);
   unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
-  unwind_plan.SetReturnAddressRegister(gpr_ra_riscv);
+  unwind_plan.SetReturnAddressRegister(reg_ids::gpr_ra);
   return true;
 }
 

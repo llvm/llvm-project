@@ -11,9 +11,7 @@
 
 #include "MinidumpTypes.h"
 
-#include "Register/RegisterInfoInterface.h"
-
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
@@ -27,7 +25,9 @@ namespace minidump {
 
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
-class RegisterContextMinidump_ARM : public lldb_private::RegisterContext {
+RegisterLayout CreateMinidumpArmRegisterLayout(bool apple);
+
+class RegisterContextMinidump_ARM : public lldb_private::ThreadRegisterContext {
 public:
   RegisterContextMinidump_ARM(lldb_private::Thread &thread,
                               const DataExtractor &data, bool apple);
@@ -38,30 +38,12 @@ public:
     // Do nothing... registers are always valid...
   }
 
-  // Used for unit testing.
-  static size_t GetRegisterCountStatic();
-  // Used for unit testing.
-  static const lldb_private::RegisterInfo *
-  GetRegisterInfoAtIndexStatic(size_t reg, bool apple);
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  size_t GetRegisterCount() override;
-
-  const lldb_private::RegisterInfo *GetRegisterInfoAtIndex(size_t reg) override;
-
-  size_t GetRegisterSetCount() override;
-
-  const lldb_private::RegisterSet *GetRegisterSet(size_t set) override;
-
-  const char *GetRegisterName(unsigned reg);
-
-  bool ReadRegister(const RegisterInfo *reg_info,
-                    RegisterValue &reg_value) override;
-
-  bool WriteRegister(const RegisterInfo *reg_info,
-                     const RegisterValue &reg_value) override;
-
-  uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
-                                               uint32_t num) override;
+  llvm::Error
+  WriteRegister(lldb_private::RegisterID id,
+                const lldb_private::RegisterValue &reg_value) override;
 
   // Reference: see breakpad/crashpad source
   struct QRegValue {
@@ -89,8 +71,7 @@ protected:
     FloatingPoint = ARM_Flag | 0x00000004,
     LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ FloatingPoint)
   };
-  Context m_regs;
-  const bool m_apple; // True if this is an Apple ARM where FP is R7
+  std::vector<uint8_t> m_context;
 };
 
 } // end namespace minidump

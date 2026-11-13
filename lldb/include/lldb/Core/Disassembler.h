@@ -53,7 +53,7 @@ class Stream;
 class SymbolContext;
 class SymbolContextList;
 class Target;
-struct RegisterInfo;
+struct RegisterDescriptor;
 
 class Instruction {
 public:
@@ -278,7 +278,7 @@ MatchUnaryOp(std::function<bool(const Instruction::Operand &)> base,
              std::function<bool(const Instruction::Operand &)> child);
 
 std::function<bool(const Instruction::Operand &)>
-MatchRegOp(const RegisterInfo &info);
+MatchRegOp(const RegisterDescriptor &info);
 
 std::function<bool(const Instruction::Operand &)> FetchRegOp(std::string &reg);
 

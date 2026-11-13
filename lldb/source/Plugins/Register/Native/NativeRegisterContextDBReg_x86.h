@@ -9,12 +9,11 @@
 #ifndef LLDB_SOURCE_PLUGINS_REGISTER_NATIVE_NATIVEREGISTERCONTEXTDBREG_X86_H
 #define LLDB_SOURCE_PLUGINS_REGISTER_NATIVE_NATIVEREGISTERCONTEXTDBREG_X86_H
 
-#include "NativeRegisterContextRegisterInfo.h"
+#include "lldb/Host/common/NativeRegisterContext.h"
 
 namespace lldb_private {
 
-class NativeRegisterContextDBReg_x86
-    : public virtual NativeRegisterContextRegisterInfo {
+class NativeRegisterContextDBReg_x86 : public virtual NativeRegisterContext {
 public:
   Status IsWatchpointHit(uint32_t wp_index, bool &is_hit) override;
 
@@ -40,7 +39,7 @@ public:
 
   uint32_t NumSupportedHardwareWatchpoints() override;
 
-  virtual const RegisterInfo *GetDR(int num) const;
+  RegisterID GetDR(int num) const;
 };
 
 } // namespace lldb_private

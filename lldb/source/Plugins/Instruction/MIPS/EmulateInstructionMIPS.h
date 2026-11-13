@@ -83,7 +83,7 @@ public:
     return false;
   }
 
-  std::optional<lldb_private::RegisterInfo>
+  std::optional<lldb_private::RegisterDescriptor>
   GetRegisterInfo(lldb::RegisterKind reg_kind, uint32_t reg_num) override;
 
   bool

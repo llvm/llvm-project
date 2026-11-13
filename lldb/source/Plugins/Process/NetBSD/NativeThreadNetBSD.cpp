@@ -14,7 +14,7 @@
 #include "Plugins/Process/POSIX/CrashReason.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "lldb/Utility/LLDBAssert.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/State.h"
 #include "llvm/Support/Errno.h"
 

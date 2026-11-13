@@ -27,13 +27,13 @@ public:
 
   void RefreshStateAfterStop() override;
 
-  lldb::RegisterContextSP GetRegisterContext() override;
+  lldb::ThreadRegisterContextSP GetRegisterContext() override;
 
-  lldb::RegisterContextSP
+  lldb::ThreadRegisterContextSP
   CreateRegisterContextForFrame(StackFrame *frame) override;
 
 protected:
-  lldb::RegisterContextSP m_thread_reg_ctx_sp;
+  lldb::ThreadRegisterContextSP m_thread_reg_ctx_sp;
   llvm::ArrayRef<uint8_t> m_gpregset_data;
 
   bool CalculateStopInfo() override;

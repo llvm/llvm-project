@@ -2784,7 +2784,7 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
                                                             create_on_demand);
 }
 
-CompilerType Target::GetRegisterType(const RegisterInfo &reg_info) {
+CompilerType Target::GetRegisterType(const RegisterDescriptor &reg_info) {
   if (!m_register_type_builder_sp)
     m_register_type_builder_sp = PluginManager::GetRegisterTypeBuilder(*this);
   assert(m_register_type_builder_sp);

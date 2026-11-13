@@ -71,6 +71,7 @@ add_lldb_library(lldbInterpreter NO_PLUGIN_DEPENDENCIES
     lldbCore
     lldbDataFormatters
     lldbHost
+    lldbRegister
     lldbSymbol
     lldbTarget
     lldbUtility
@@ -82,6 +83,7 @@ add_lldb_library(lldbInterpreter NO_PLUGIN_DEPENDENCIES
     lldbCore
     lldbDataFormatters
     lldbHost
+    lldbRegister
     lldbSymbol
     lldbTarget
     lldbUtility

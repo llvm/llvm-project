@@ -8,87 +8,109 @@
 
 #if defined(__powerpc64__)
 
+#include <set>
+#include "lldb/Register/Arch/lldb-ppc64-register-enums.h"
+
 #include "NativeRegisterContextAIX_ppc64.h"
 #include "NativeThreadAIX.h"
-#include "Register/Common/RegisterInfo_ppc64.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/Common/RegisterInfo_ppc64.h"
+#include "lldb/Register/RegisterValue.h"
 
+namespace reg_ids = lldb_private::registers::ppc64::id;
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::aix_ppc64;
 using namespace lldb_private::process_aix;
 
 static const uint32_t g_gpr_regnums_ppc64[] = {
-    gpr_r0_ppc64,       gpr_r1_ppc64,  gpr_r2_ppc64,  gpr_r3_ppc64,
-    gpr_r4_ppc64,       gpr_r5_ppc64,  gpr_r6_ppc64,  gpr_r7_ppc64,
-    gpr_r8_ppc64,       gpr_r9_ppc64,  gpr_r10_ppc64, gpr_r11_ppc64,
-    gpr_r12_ppc64,      gpr_r13_ppc64, gpr_r14_ppc64, gpr_r15_ppc64,
-    gpr_r16_ppc64,      gpr_r17_ppc64, gpr_r18_ppc64, gpr_r19_ppc64,
-    gpr_r20_ppc64,      gpr_r21_ppc64, gpr_r22_ppc64, gpr_r23_ppc64,
-    gpr_r24_ppc64,      gpr_r25_ppc64, gpr_r26_ppc64, gpr_r27_ppc64,
-    gpr_r28_ppc64,      gpr_r29_ppc64, gpr_r30_ppc64, gpr_r31_ppc64,
-    gpr_cr_ppc64,       gpr_msr_ppc64, gpr_xer_ppc64, gpr_lr_ppc64,
-    gpr_ctr_ppc64,      gpr_pc_ppc64,
+    reg_ids::gpr_r0,    reg_ids::gpr_r1,  reg_ids::gpr_r2,  reg_ids::gpr_r3,
+    reg_ids::gpr_r4,    reg_ids::gpr_r5,  reg_ids::gpr_r6,  reg_ids::gpr_r7,
+    reg_ids::gpr_r8,    reg_ids::gpr_r9,  reg_ids::gpr_r10, reg_ids::gpr_r11,
+    reg_ids::gpr_r12,   reg_ids::gpr_r13, reg_ids::gpr_r14, reg_ids::gpr_r15,
+    reg_ids::gpr_r16,   reg_ids::gpr_r17, reg_ids::gpr_r18, reg_ids::gpr_r19,
+    reg_ids::gpr_r20,   reg_ids::gpr_r21, reg_ids::gpr_r22, reg_ids::gpr_r23,
+    reg_ids::gpr_r24,   reg_ids::gpr_r25, reg_ids::gpr_r26, reg_ids::gpr_r27,
+    reg_ids::gpr_r28,   reg_ids::gpr_r29, reg_ids::gpr_r30, reg_ids::gpr_r31,
+    reg_ids::gpr_cr,    reg_ids::gpr_msr, reg_ids::gpr_xer, reg_ids::gpr_lr,
+    reg_ids::gpr_ctr,   reg_ids::gpr_pc,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 
 static const uint32_t g_fpr_regnums_ppc64[] = {
-    fpr_f0_ppc64,       fpr_f1_ppc64,  fpr_f2_ppc64,  fpr_f3_ppc64,
-    fpr_f4_ppc64,       fpr_f5_ppc64,  fpr_f6_ppc64,  fpr_f7_ppc64,
-    fpr_f8_ppc64,       fpr_f9_ppc64,  fpr_f10_ppc64, fpr_f11_ppc64,
-    fpr_f12_ppc64,      fpr_f13_ppc64, fpr_f14_ppc64, fpr_f15_ppc64,
-    fpr_f16_ppc64,      fpr_f17_ppc64, fpr_f18_ppc64, fpr_f19_ppc64,
-    fpr_f20_ppc64,      fpr_f21_ppc64, fpr_f22_ppc64, fpr_f23_ppc64,
-    fpr_f24_ppc64,      fpr_f25_ppc64, fpr_f26_ppc64, fpr_f27_ppc64,
-    fpr_f28_ppc64,      fpr_f29_ppc64, fpr_f30_ppc64, fpr_f31_ppc64,
-    fpr_fpscr_ppc64,
+    reg_ids::fpr_f0,    reg_ids::fpr_f1,  reg_ids::fpr_f2,  reg_ids::fpr_f3,
+    reg_ids::fpr_f4,    reg_ids::fpr_f5,  reg_ids::fpr_f6,  reg_ids::fpr_f7,
+    reg_ids::fpr_f8,    reg_ids::fpr_f9,  reg_ids::fpr_f10, reg_ids::fpr_f11,
+    reg_ids::fpr_f12,   reg_ids::fpr_f13, reg_ids::fpr_f14, reg_ids::fpr_f15,
+    reg_ids::fpr_f16,   reg_ids::fpr_f17, reg_ids::fpr_f18, reg_ids::fpr_f19,
+    reg_ids::fpr_f20,   reg_ids::fpr_f21, reg_ids::fpr_f22, reg_ids::fpr_f23,
+    reg_ids::fpr_f24,   reg_ids::fpr_f25, reg_ids::fpr_f26, reg_ids::fpr_f27,
+    reg_ids::fpr_f28,   reg_ids::fpr_f29, reg_ids::fpr_f30, reg_ids::fpr_f31,
+    reg_ids::fpr_fpscr,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 
 static const uint32_t g_vmx_regnums_ppc64[] = {
-    vmx_vr0_ppc64,      vmx_vr1_ppc64,    vmx_vr2_ppc64,  vmx_vr3_ppc64,
-    vmx_vr4_ppc64,      vmx_vr5_ppc64,    vmx_vr6_ppc64,  vmx_vr7_ppc64,
-    vmx_vr8_ppc64,      vmx_vr9_ppc64,    vmx_vr10_ppc64, vmx_vr11_ppc64,
-    vmx_vr12_ppc64,     vmx_vr13_ppc64,   vmx_vr14_ppc64, vmx_vr15_ppc64,
-    vmx_vr16_ppc64,     vmx_vr17_ppc64,   vmx_vr18_ppc64, vmx_vr19_ppc64,
-    vmx_vr20_ppc64,     vmx_vr21_ppc64,   vmx_vr22_ppc64, vmx_vr23_ppc64,
-    vmx_vr24_ppc64,     vmx_vr25_ppc64,   vmx_vr26_ppc64, vmx_vr27_ppc64,
-    vmx_vr28_ppc64,     vmx_vr29_ppc64,   vmx_vr30_ppc64, vmx_vr31_ppc64,
-    vmx_vscr_ppc64,     vmx_vrsave_ppc64,
+    reg_ids::vmx_vr0,    reg_ids::vmx_vr1,  reg_ids::vmx_vr2,
+    reg_ids::vmx_vr3,    reg_ids::vmx_vr4,  reg_ids::vmx_vr5,
+    reg_ids::vmx_vr6,    reg_ids::vmx_vr7,  reg_ids::vmx_vr8,
+    reg_ids::vmx_vr9,    reg_ids::vmx_vr10, reg_ids::vmx_vr11,
+    reg_ids::vmx_vr12,   reg_ids::vmx_vr13, reg_ids::vmx_vr14,
+    reg_ids::vmx_vr15,   reg_ids::vmx_vr16, reg_ids::vmx_vr17,
+    reg_ids::vmx_vr18,   reg_ids::vmx_vr19, reg_ids::vmx_vr20,
+    reg_ids::vmx_vr21,   reg_ids::vmx_vr22, reg_ids::vmx_vr23,
+    reg_ids::vmx_vr24,   reg_ids::vmx_vr25, reg_ids::vmx_vr26,
+    reg_ids::vmx_vr27,   reg_ids::vmx_vr28, reg_ids::vmx_vr29,
+    reg_ids::vmx_vr30,   reg_ids::vmx_vr31, reg_ids::vmx_vscr,
+    reg_ids::vmx_vrsave,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 
 static const uint32_t g_vsx_regnums_ppc64[] = {
-    vsx_vs0_ppc64,      vsx_vs1_ppc64,  vsx_vs2_ppc64,  vsx_vs3_ppc64,
-    vsx_vs4_ppc64,      vsx_vs5_ppc64,  vsx_vs6_ppc64,  vsx_vs7_ppc64,
-    vsx_vs8_ppc64,      vsx_vs9_ppc64,  vsx_vs10_ppc64, vsx_vs11_ppc64,
-    vsx_vs12_ppc64,     vsx_vs13_ppc64, vsx_vs14_ppc64, vsx_vs15_ppc64,
-    vsx_vs16_ppc64,     vsx_vs17_ppc64, vsx_vs18_ppc64, vsx_vs19_ppc64,
-    vsx_vs20_ppc64,     vsx_vs21_ppc64, vsx_vs22_ppc64, vsx_vs23_ppc64,
-    vsx_vs24_ppc64,     vsx_vs25_ppc64, vsx_vs26_ppc64, vsx_vs27_ppc64,
-    vsx_vs28_ppc64,     vsx_vs29_ppc64, vsx_vs30_ppc64, vsx_vs31_ppc64,
-    vsx_vs32_ppc64,     vsx_vs33_ppc64, vsx_vs34_ppc64, vsx_vs35_ppc64,
-    vsx_vs36_ppc64,     vsx_vs37_ppc64, vsx_vs38_ppc64, vsx_vs39_ppc64,
-    vsx_vs40_ppc64,     vsx_vs41_ppc64, vsx_vs42_ppc64, vsx_vs43_ppc64,
-    vsx_vs44_ppc64,     vsx_vs45_ppc64, vsx_vs46_ppc64, vsx_vs47_ppc64,
-    vsx_vs48_ppc64,     vsx_vs49_ppc64, vsx_vs50_ppc64, vsx_vs51_ppc64,
-    vsx_vs52_ppc64,     vsx_vs53_ppc64, vsx_vs54_ppc64, vsx_vs55_ppc64,
-    vsx_vs56_ppc64,     vsx_vs57_ppc64, vsx_vs58_ppc64, vsx_vs59_ppc64,
-    vsx_vs60_ppc64,     vsx_vs61_ppc64, vsx_vs62_ppc64, vsx_vs63_ppc64,
+    reg_ids::vsx_vs0,   reg_ids::vsx_vs1,  reg_ids::vsx_vs2,  reg_ids::vsx_vs3,
+    reg_ids::vsx_vs4,   reg_ids::vsx_vs5,  reg_ids::vsx_vs6,  reg_ids::vsx_vs7,
+    reg_ids::vsx_vs8,   reg_ids::vsx_vs9,  reg_ids::vsx_vs10, reg_ids::vsx_vs11,
+    reg_ids::vsx_vs12,  reg_ids::vsx_vs13, reg_ids::vsx_vs14, reg_ids::vsx_vs15,
+    reg_ids::vsx_vs16,  reg_ids::vsx_vs17, reg_ids::vsx_vs18, reg_ids::vsx_vs19,
+    reg_ids::vsx_vs20,  reg_ids::vsx_vs21, reg_ids::vsx_vs22, reg_ids::vsx_vs23,
+    reg_ids::vsx_vs24,  reg_ids::vsx_vs25, reg_ids::vsx_vs26, reg_ids::vsx_vs27,
+    reg_ids::vsx_vs28,  reg_ids::vsx_vs29, reg_ids::vsx_vs30, reg_ids::vsx_vs31,
+    reg_ids::vsx_vs32,  reg_ids::vsx_vs33, reg_ids::vsx_vs34, reg_ids::vsx_vs35,
+    reg_ids::vsx_vs36,  reg_ids::vsx_vs37, reg_ids::vsx_vs38, reg_ids::vsx_vs39,
+    reg_ids::vsx_vs40,  reg_ids::vsx_vs41, reg_ids::vsx_vs42, reg_ids::vsx_vs43,
+    reg_ids::vsx_vs44,  reg_ids::vsx_vs45, reg_ids::vsx_vs46, reg_ids::vsx_vs47,
+    reg_ids::vsx_vs48,  reg_ids::vsx_vs49, reg_ids::vsx_vs50, reg_ids::vsx_vs51,
+    reg_ids::vsx_vs52,  reg_ids::vsx_vs53, reg_ids::vsx_vs54, reg_ids::vsx_vs55,
+    reg_ids::vsx_vs56,  reg_ids::vsx_vs57, reg_ids::vsx_vs58, reg_ids::vsx_vs59,
+    reg_ids::vsx_vs60,  reg_ids::vsx_vs61, reg_ids::vsx_vs62, reg_ids::vsx_vs63,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 
 // Number of register sets provided by this context.
 static constexpr int k_num_register_sets = 4;
 
-static const RegisterSet g_reg_sets_ppc64[k_num_register_sets] = {
-    {"General Purpose Registers", "gpr", k_num_gpr_registers_ppc64,
-     g_gpr_regnums_ppc64},
-    {"Floating Point Registers", "fpr", k_num_fpr_registers_ppc64,
-     g_fpr_regnums_ppc64},
-    {"AltiVec/VMX Registers", "vmx", k_num_vmx_registers_ppc64,
-     g_vmx_regnums_ppc64},
-    {"VSX Registers", "vsx", k_num_vsx_registers_ppc64, g_vsx_regnums_ppc64},
+struct RegisterGroupNumbers {
+  const char *name;
+  const char *short_name;
+  std::vector<uint32_t> registers;
 };
+
+static const RegisterGroupNumbers g_reg_sets_ppc64[k_num_register_sets] = {
+    {"General Purpose Registers", "gpr",
+     std::vector<RegisterID>(g_gpr_regnums_ppc64,
+                             g_gpr_regnums_ppc64 +
+                                 reg_ids::k_num_gpr_registers)},
+    {"Floating Point Registers", "fpr",
+     std::vector<RegisterID>(g_fpr_regnums_ppc64,
+                             g_fpr_regnums_ppc64 +
+                                 reg_ids::k_num_fpr_registers)},
+    {"AltiVec/VMX Registers", "vmx",
+     std::vector<RegisterID>(g_vmx_regnums_ppc64,
+                             g_vmx_regnums_ppc64 +
+                                 reg_ids::k_num_vmx_registers)},
+    {"VSX Registers", "vsx",
+     std::vector<RegisterID>(g_vsx_regnums_ppc64,
+                             g_vsx_regnums_ppc64 +
+                                 reg_ids::k_num_vsx_registers)}};
 
 std::unique_ptr<NativeRegisterContextAIX>
 NativeRegisterContextAIX::CreateHostNativeRegisterContextAIX(
@@ -105,8 +127,8 @@ NativeRegisterContextAIX::CreateHostNativeRegisterContextAIX(
 
 NativeRegisterContextAIX_ppc64::NativeRegisterContextAIX_ppc64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
-    : NativeRegisterContextRegisterInfo(
-          native_thread, new RegisterInfo_ppc64(target_arch)),
+    : NativeRegisterContext(native_thread, target_arch,
+                            CreateAIXPPC64RegisterLayout(target_arch)),
       NativeRegisterContextAIX(native_thread) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::ppc:
@@ -114,86 +136,119 @@ NativeRegisterContextAIX_ppc64::NativeRegisterContextAIX_ppc64(
     m_gpr = &m_gpr_storage.gpr32;
     break;
   case llvm::Triple::ppc64:
-    new (&m_gpr_storage.gpr32) GPR_PPC64{};
+    new (&m_gpr_storage.gpr64) GPR_PPC64{};
     m_gpr = &m_gpr_storage.gpr64;
     break;
   default:
     llvm_unreachable("Unhandled target architecture.");
   }
-}
 
-uint32_t NativeRegisterContextAIX_ppc64::GetRegisterSetCount() const {
-  return k_num_register_sets;
-}
+  // Bind native presentation policy to this schema generation once. The
+  // private definitions above use the backend's external numbering.
+  auto select_group = [&](uint32_t set_index) -> const RegisterGroupNumbers * {
+    if (set_index < k_num_register_sets)
+      return &g_reg_sets_ppc64[set_index];
 
-const RegisterSet *
-NativeRegisterContextAIX_ppc64::GetRegisterSet(uint32_t set_index) const {
-  if (set_index < k_num_register_sets)
-    return &g_reg_sets_ppc64[set_index];
-
-  return nullptr;
-}
-
-uint32_t NativeRegisterContextAIX_ppc64::GetUserRegisterCount() const {
-  uint32_t count = 0;
-  for (uint32_t set_index = 0; set_index < k_num_register_sets; ++set_index)
-    count += g_reg_sets_ppc64[set_index].num_registers;
-  return count;
-}
-
-Status
-NativeRegisterContextAIX_ppc64::ReadRegister(const RegisterInfo *reg_info,
-                                             RegisterValue &reg_value) {
-  Status error;
-  if (!reg_info)
-    return Status::FromErrorString("reg_info NULL");
-
-  const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
-
-  if (IsGPR(reg)) {
-    error = ReadGPR();
-    if (error.Fail())
-      return error;
-
-    const uint8_t *src = reinterpret_cast<const uint8_t *>(GetGPRBuffer()) +
-                         reg_info->byte_offset;
-    reg_value.SetFromMemoryData(*reg_info, src, reg_info->byte_size,
-                                eByteOrderBig, error);
-
-    return error;
-  } else if (IsFPR(reg) || IsVSX(reg) || IsVMX(reg)) {
-    return Status::FromErrorString("unimplemented");
+    return nullptr;
+  };
+  auto previous = GetDescription();
+  std::vector<RegisterGroup> groups;
+  std::set<RegisterID> visible;
+  for (uint32_t index = 0; index < k_num_register_sets; ++index) {
+    const auto *input = select_group(index);
+    if (!input)
+      continue;
+    RegisterGroup group{input->name, input->short_name, {}};
+    for (uint32_t number : input->registers) {
+      const auto *reg = previous->FindByNumber(lldb::eRegisterKindLLDB, number);
+      assert(reg && "native presentation names an unknown register");
+      if (reg) {
+        group.registers.push_back(reg->id);
+        visible.insert(reg->id);
+      }
+    }
+    groups.push_back(std::move(group));
   }
-
-  return Status::FromErrorString("failed - register wasn't recognized to be a "
-                                 "GPR, FPR, VSX or VMX, read strategy unknown");
+  auto description = llvm::cantFail(RegisterDescription::Create(
+      {previous->GetRegisters().begin(), previous->GetRegisters().end()},
+      std::move(groups),
+      {previous->GetOwnedTypes().begin(), previous->GetOwnedTypes().end()}));
+  std::vector<RegisterID> order;
+  for (RegisterID id : previous->GetUserRegisters())
+    if (visible.count(id))
+      order.push_back(id);
+  auto presentation = llvm::cantFail(description.WithUserRegisters(order));
+  SetRegisterLayout(llvm::cantFail(RegisterLayout::Create(
+      std::make_shared<RegisterDescription>(std::move(presentation)),
+      GetLayout())));
 }
 
-Status
-NativeRegisterContextAIX_ppc64::WriteRegister(const RegisterInfo *reg_info,
+llvm::Expected<RegisterValue>
+NativeRegisterContextAIX_ppc64::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *descriptor = description ? description->Find(id) : nullptr;
+  if (!descriptor)
+    return Status::FromErrorString("unknown register").ToError();
+  auto required = GetLayout().GetRequiredBanks(descriptor->id, false);
+  if (!required)
+    return required.takeError();
+  for (RegisterBankID bank : *required) {
+    Status status;
+    switch (bank) {
+    case 0:
+      status = ReadGPR();
+      break;
+    default:
+      return Status::FromErrorString("unsupported register bank").ToError();
+    }
+    if (status.Fail())
+      return status.ToError();
+  }
+  auto value = ReadBankRegister(
+      descriptor->id,
+      {{0, {reinterpret_cast<const uint8_t *>(GetGPRBuffer()), GetGPRSize()}}});
+  return value;
+}
+
+llvm::Error
+NativeRegisterContextAIX_ppc64::WriteRegister(RegisterID id,
                                               const RegisterValue &reg_value) {
-  Status error;
-  if (!reg_info)
-    return Status::FromErrorString("reg_info NULL");
-
-  const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
-
-  if (IsGPR(reg)) {
-    error = ReadGPR();
-    if (error.Fail())
-      return error;
-
-    uint8_t *dst =
-        reinterpret_cast<uint8_t *>(GetGPRBuffer()) + reg_info->byte_offset;
-    ::memcpy(dst, reg_value.GetBytes(), reg_value.GetByteSize());
-
-    return (WriteGPR());
-  } else if (IsFPR(reg) || IsVMX(reg) || IsVSX(reg)) {
-    return Status::FromErrorString("unimplemented");
+  auto description = GetDescription();
+  const auto *descriptor = description ? description->Find(id) : nullptr;
+  if (!descriptor)
+    return Status::FromErrorString("unknown register").ToError();
+  auto required = GetLayout().GetRequiredBanks(descriptor->id, true);
+  if (!required)
+    return required.takeError();
+  for (RegisterBankID bank : *required) {
+    Status status;
+    switch (bank) {
+    case 0:
+      status = ReadGPR();
+      break;
+    default:
+      return Status::FromErrorString("unsupported register bank").ToError();
+    }
+    if (status.Fail())
+      return status.ToError();
   }
-
-  return Status::FromErrorString("failed - register wasn't recognized to be a "
-                                 "GPR, FPR, VSX or VMX, read strategy unknown");
+  if (auto error = WriteBankRegister(
+          descriptor->id, reg_value,
+          {{0, {reinterpret_cast<uint8_t *>(GetGPRBuffer()), GetGPRSize()}}}))
+    return error;
+  for (RegisterBankID bank : *required) {
+    Status status;
+    switch (bank) {
+    case 0:
+      status = WriteGPR();
+      break;
+    default:
+      return Status::FromErrorString("unsupported register bank").ToError();
+    }
+    if (status.Fail())
+      return status.ToError();
+  }
+  return llvm::Error::success();
 }
 
 Status NativeRegisterContextAIX_ppc64::ReadAllRegisterValues(
@@ -207,33 +262,33 @@ Status NativeRegisterContextAIX_ppc64::WriteAllRegisterValues(
 }
 
 bool NativeRegisterContextAIX_ppc64::IsGPR(unsigned reg) const {
-  return reg <= k_last_gpr_ppc64;
+  return reg <= reg_ids::k_last_gpr;
 }
 
 bool NativeRegisterContextAIX_ppc64::IsFPR(unsigned reg) const {
-  return (k_first_fpr_ppc64 <= reg && reg <= k_last_fpr_ppc64);
+  return (reg_ids::k_first_fpr <= reg && reg <= reg_ids::k_last_fpr);
 }
 
 bool NativeRegisterContextAIX_ppc64::IsVMX(unsigned reg) const {
-  return (reg >= k_first_vmx_ppc64) && (reg <= k_last_vmx_ppc64);
+  return (reg >= reg_ids::k_first_vmx) && (reg <= reg_ids::k_last_vmx);
 }
 
 bool NativeRegisterContextAIX_ppc64::IsVSX(unsigned reg) const {
-  return (reg >= k_first_vsx_ppc64) && (reg <= k_last_vsx_ppc64);
+  return (reg >= reg_ids::k_first_vsx) && (reg <= reg_ids::k_last_vsx);
 }
 
 uint32_t NativeRegisterContextAIX_ppc64::CalculateFprOffset(
-    const RegisterInfo *reg_info) const {
+    const RegisterDescriptor *reg_info) const {
   return 0;
 }
 
 uint32_t NativeRegisterContextAIX_ppc64::CalculateVmxOffset(
-    const RegisterInfo *reg_info) const {
+    const RegisterDescriptor *reg_info) const {
   return 0;
 }
 
 uint32_t NativeRegisterContextAIX_ppc64::CalculateVsxOffset(
-    const RegisterInfo *reg_info) const {
+    const RegisterDescriptor *reg_info) const {
   return 0;
 }
 

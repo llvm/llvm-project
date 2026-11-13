@@ -50,7 +50,7 @@
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
@@ -6042,9 +6042,9 @@ public:
     if (frame) {
       if (frame->GetStackID() != m_stack_id) {
         m_stack_id = frame->GetStackID();
-        RegisterContextSP reg_ctx(frame->GetRegisterContext());
+        ThreadRegisterContextSP reg_ctx(frame->GetRegisterContext());
         if (reg_ctx) {
-          const uint32_t num_sets = reg_ctx->GetRegisterSetCount();
+          const uint32_t num_sets = reg_ctx->GetRegisterGroupCount();
           for (uint32_t set_idx = 0; set_idx < num_sets; ++set_idx) {
             value_list.Append(
                 ValueObjectRegisterSet::Create(frame, reg_ctx, set_idx));

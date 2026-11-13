@@ -13,8 +13,9 @@
 
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Interpreter/OptionValue.h"
+#include "lldb/Register/RegisterDescription.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "llvm/Support/Error.h"
 #include <optional>
 
@@ -93,7 +94,7 @@ public:
   bool EvaluateInstruction(uint32_t options) override;
   bool TestEmulation(Stream &out_stream, ArchSpec &arch,
                      OptionValueDictionary *test_data) override;
-  std::optional<RegisterInfo> GetRegisterInfo(lldb::RegisterKind reg_kind,
+  std::optional<RegisterDescriptor> GetRegisterInfo(lldb::RegisterKind reg_kind,
                                               uint32_t reg_num) override;
 
   bool SetInstruction(const Opcode &opcode, const Address &inst_addr,
@@ -135,6 +136,8 @@ private:
   }
   /// Last decoded instruction from m_opcode
   DecodeResult m_decoded;
+  // RegisterDescriptor contains pointers into this owning provider.
+  std::shared_ptr<const RegisterDescription> m_register_info;
   /// Last decoded instruction size estimate.
   std::optional<uint32_t> m_last_size;
 };

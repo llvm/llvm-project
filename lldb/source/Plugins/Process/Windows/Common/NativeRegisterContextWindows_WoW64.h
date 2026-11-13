@@ -10,8 +10,7 @@
 #ifndef liblldb_NativeRegisterContextWindows_WoW64_h_
 #define liblldb_NativeRegisterContextWindows_WoW64_h_
 
-#include "Register/Arch/RegisterContext_x86.h"
-#include "Register/Arch/lldb-x86-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86-register-enums.h"
 
 #include "NativeRegisterContextWindows.h"
 
@@ -24,15 +23,12 @@ public:
   NativeRegisterContextWindows_WoW64(const ArchSpec &target_arch,
                                      NativeThreadProtocol &native_thread);
 
-  uint32_t GetRegisterSetCount() const override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  const RegisterSet *GetRegisterSet(uint32_t set_index) const override;
-
-  Status ReadRegister(const RegisterInfo *reg_info,
-                      RegisterValue &reg_value) override;
-
-  Status WriteRegister(const RegisterInfo *reg_info,
-                       const RegisterValue &reg_value) override;
+  llvm::Error
+  WriteRegister(lldb_private::RegisterID id,
+                const lldb_private::RegisterValue &reg_value) override;
 
   Status ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
 

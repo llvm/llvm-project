@@ -17,7 +17,7 @@
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/InstrumentationRuntimeStopInfo.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
@@ -89,15 +89,16 @@ InstrumentationRuntimeMainThreadChecker::RetrieveReportData(
   if (!frame_sp)
     return StructuredData::ObjectSP();
 
-  RegisterContextSP regctx_sp = frame_sp->GetRegisterContext();
+  ThreadRegisterContextSP regctx_sp = frame_sp->GetRegisterContext();
   if (!regctx_sp)
     return StructuredData::ObjectSP();
 
-  const RegisterInfo *reginfo = regctx_sp->GetRegisterInfoByName("arg1");
+  const RegisterDescriptor *reginfo = regctx_sp->GetRegisterByName("arg1");
   if (!reginfo)
     return StructuredData::ObjectSP();
 
-  uint64_t apiname_ptr = regctx_sp->ReadRegisterAsUnsigned(reginfo, 0);
+  uint64_t apiname_ptr = regctx_sp->ReadRegisterAsUnsigned(
+      (reginfo ? reginfo->id : LLDB_INVALID_REGNUM), 0);
   if (!apiname_ptr)
     return StructuredData::ObjectSP();
 

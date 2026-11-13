@@ -11,8 +11,7 @@
 
 #include "MinidumpTypes.h"
 
-#include "Register/RegisterInfoInterface.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
@@ -26,7 +25,10 @@ namespace minidump {
 
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
-class RegisterContextMinidump_ARM64 : public lldb_private::RegisterContext {
+RegisterLayout CreateMinidumpArm64RegisterLayout();
+
+class RegisterContextMinidump_ARM64
+    : public lldb_private::ThreadRegisterContext {
 public:
   RegisterContextMinidump_ARM64(lldb_private::Thread &thread,
                                 const DataExtractor &data);
@@ -37,24 +39,12 @@ public:
     // Do nothing... registers are always valid...
   }
 
-  size_t GetRegisterCount() override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  const lldb_private::RegisterInfo *GetRegisterInfoAtIndex(size_t reg) override;
-
-  size_t GetRegisterSetCount() override;
-
-  const lldb_private::RegisterSet *GetRegisterSet(size_t set) override;
-
-  const char *GetRegisterName(unsigned reg);
-
-  bool ReadRegister(const RegisterInfo *reg_info,
-                    RegisterValue &reg_value) override;
-
-  bool WriteRegister(const RegisterInfo *reg_info,
-                     const RegisterValue &reg_value) override;
-
-  uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
-                                               uint32_t num) override;
+  llvm::Error
+  WriteRegister(lldb_private::RegisterID id,
+                const lldb_private::RegisterValue &reg_value) override;
 
   // Reference: see breakpad/crashpad source
   struct Context {
@@ -75,7 +65,7 @@ public:
   };
 
 protected:
-  Context m_regs;
+  std::vector<uint8_t> m_context;
 };
 
 } // end namespace minidump

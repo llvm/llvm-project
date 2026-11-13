@@ -7,6 +7,7 @@ static_library("Common") {
     "//lldb/source/Interpreter",
     "//lldb/source/Plugins/DynamicLoader/Windows-DYLD",
     "//lldb/source/Plugins/Register/Native",
+    "//lldb/source/Register",
     "//lldb/source/Symbol",
     "//lldb/source/Target",
     "//llvm/lib/Support",

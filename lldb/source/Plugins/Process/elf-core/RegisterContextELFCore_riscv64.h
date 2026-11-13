@@ -9,45 +9,38 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_RISCV64_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_RISCV64_H
 
-#include "Plugins/Register/Core/RegisterContextCore_riscv64.h"
-#include "Register/Common/RegisterInfo_riscv64.h"
+#include "lldb/Register/Arch/lldb-riscv-register-enums.h"
+#include "lldb/Register/Common/RegisterInfo_riscv64.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 
 #include <memory>
 
-class RegisterContextELFCore_riscv64 : public RegisterContextCore_riscv64 {
+class RegisterContextELFCore_riscv64
+    : public lldb_private::ThreadRegisterContext {
 public:
-  static std::unique_ptr<RegisterContextELFCore_riscv64>
+  static llvm::Expected<std::unique_ptr<RegisterContextELFCore_riscv64>>
   Create(lldb_private::Thread &thread, const lldb_private::ArchSpec &arch,
          const lldb_private::DataExtractor &gpregset,
          llvm::ArrayRef<lldb_private::CoreNote> notes);
 
   ~RegisterContextELFCore_riscv64() override;
 
-  bool ReadRegister(const lldb_private::RegisterInfo *reg_info,
-                    lldb_private::RegisterValue &value) override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  bool WriteRegister(const lldb_private::RegisterInfo *reg_info,
+  llvm::Error WriteRegister(lldb_private::RegisterID id,
                      const lldb_private::RegisterValue &value) override;
 
 protected:
-  RegisterContextELFCore_riscv64(
-      lldb_private::Thread &thread,
-      std::unique_ptr<RegisterInfo_riscv64> register_info,
-      const lldb_private::DataExtractor &gpregset,
-      llvm::ArrayRef<lldb_private::CoreNote> notes);
-
-  bool ReadGPR() override;
-
-  bool ReadFPR() override;
-
-  bool WriteGPR() override;
-
-  bool WriteFPR() override;
+  RegisterContextELFCore_riscv64(lldb_private::Thread &thread,
+                                 lldb_private::RegisterLayout layout,
+                                 const lldb_private::DataExtractor &gpregset,
+                                 llvm::ArrayRef<lldb_private::CoreNote> notes);
 
 private:
   lldb_private::DataExtractor m_gpr;

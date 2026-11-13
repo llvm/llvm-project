@@ -16,7 +16,7 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -158,16 +158,21 @@ void ThreadPlanCallFunction::ReportRegisterState(const char *message) {
   Log *log = GetLog(LLDBLog::Step);
   if (log && log->GetVerbose()) {
     StreamString strm;
-    RegisterContext *reg_ctx = GetThread().GetRegisterContext().get();
+    ThreadRegisterContext *reg_ctx = GetThread().GetRegisterContext().get();
 
     log->PutCString(message);
 
     RegisterValue reg_value;
 
-    for (uint32_t reg_idx = 0, num_registers = reg_ctx->GetRegisterCount();
+    for (uint32_t reg_idx = 0, num_registers = reg_ctx->GetUserRegisterCount();
          reg_idx < num_registers; ++reg_idx) {
-      const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg_idx);
-      if (reg_ctx->ReadRegister(reg_info, reg_value)) {
+      const RegisterDescriptor *reg_info =
+          reg_ctx->GetUserRegisterAtIndex(reg_idx);
+      if (!llvm::errorToBool(
+              reg_ctx
+                  ->ReadRegister(
+                      (reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+                  .moveInto(reg_value))) {
         DumpRegisterValue(reg_value, strm, *reg_info, true, false,
                           eFormatDefault);
         strm.EOL();
@@ -210,7 +215,7 @@ void ThreadPlanCallFunction::DoTakedown(bool success) {
               "0x%4.4" PRIx64 ", m_valid: %d complete: %d.\n",
               static_cast<void *>(this), m_tid, m_valid, IsPlanComplete());
     m_takedown_done = true;
-    RegisterContextSP reg_ctx_sp = thread.GetRegisterContext();
+    ThreadRegisterContextSP reg_ctx_sp = thread.GetRegisterContext();
     if (reg_ctx_sp)
       m_stop_address = reg_ctx_sp->GetPC();
     else

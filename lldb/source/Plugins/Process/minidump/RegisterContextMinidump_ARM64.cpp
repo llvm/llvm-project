@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextMinidump_ARM64.h"
+#include "lldb/Register/Arch/lldb-arm64-ehframe-register-enums.h"
 
-#include "Utility/ARM64_DWARF_Registers.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/Arch/lldb-arm64-dwarf-register-enums.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/lldb-enumerations.h"
 
@@ -18,60 +19,51 @@
 
 // C++ includes
 
+
+namespace dwarf_regs = lldb_private::registers::arm64::dwarf;
+namespace ehframe_regs = lldb_private::registers::arm64::ehframe;
 using namespace lldb;
 using namespace lldb_private;
 using namespace minidump;
 
 #define INV LLDB_INVALID_REGNUM
-#define OFFSET(r) (offsetof(RegisterContextMinidump_ARM64::Context, r))
 
-#define DEF_X(i)                                                               \
-  {                                                                            \
-    "x" #i, nullptr, 8, OFFSET(x) + i * 8, eEncodingUint, eFormatHex,          \
-        {arm64_dwarf::x##i, arm64_dwarf::x##i, INV, INV, reg_x##i},            \
-        nullptr, nullptr, nullptr,                                             \
-  }
+#define DEF_X(reg_id, i)                                                       \
+  RegisterDescriptor(                                                          \
+      reg_id, "x" #i, nullptr, 8, eEncodingUint, eFormatHex,                   \
+      {ehframe_regs::x##i, dwarf_regs::x##i, INV, INV, reg_x##i}, {}, {},      \
+      nullptr)
 
-#define DEF_W(i)                                                               \
-  {                                                                            \
-    "w" #i, nullptr, 4, OFFSET(x) + i * 8, eEncodingUint, eFormatHex,          \
-        {INV, INV, INV, INV, reg_w##i}, nullptr, nullptr, nullptr,             \
-  }
+#define DEF_W(reg_id, i)                                                       \
+  RegisterDescriptor(reg_id, "w" #i, nullptr, 4, eEncodingUint, eFormatHex,    \
+                     {INV, INV, INV, INV, reg_w##i}, {}, {}, nullptr)
 
-#define DEF_X_ARG(i, n)                                                        \
-  {                                                                            \
-    "x" #i, "arg" #n, 8, OFFSET(x) + i * 8, eEncodingUint, eFormatHex,         \
-        {arm64_dwarf::x##i, arm64_dwarf::x##i, LLDB_REGNUM_GENERIC_ARG1 + i,   \
-         INV, reg_x##i}, nullptr, nullptr, nullptr,                            \
-  }
+#define DEF_X_ARG(reg_id, i, n)                                                \
+  RegisterDescriptor(reg_id, "x" #i, "arg" #n, 8, eEncodingUint, eFormatHex,   \
+                     {ehframe_regs::x##i, dwarf_regs::x##i,                    \
+                      LLDB_REGNUM_GENERIC_ARG1 + i, INV, reg_x##i},            \
+                     {}, {}, nullptr)
 
-#define DEF_V(i)                                                               \
-  {                                                                            \
-    "v" #i, nullptr, 16, OFFSET(v) + i * 16, eEncodingVector,                  \
-        eFormatVectorOfUInt8, {arm64_dwarf::v##i, arm64_dwarf::v##i, INV, INV, \
-        reg_v##i}, nullptr, nullptr, nullptr,                                  \
-  }
+#define DEF_V(reg_id, i)                                                       \
+  RegisterDescriptor(                                                          \
+      reg_id, "v" #i, nullptr, 16, eEncodingVector, eFormatVectorOfUInt8,      \
+      {ehframe_regs::v##i, dwarf_regs::v##i, INV, INV, reg_v##i}, {}, {},      \
+      nullptr)
 
-#define DEF_D(i)                                                               \
-  {                                                                            \
-    "d" #i, nullptr, 8, OFFSET(v) + i * 16, eEncodingVector,                   \
-        eFormatVectorOfUInt8, {INV, INV, INV, INV, reg_d##i}, nullptr,         \
-        nullptr, nullptr,                                                      \
-  }
+#define DEF_D(reg_id, i)                                                       \
+  RegisterDescriptor(reg_id, "d" #i, nullptr, 8, eEncodingVector,              \
+                     eFormatVectorOfUInt8, {INV, INV, INV, INV, reg_d##i}, {}, \
+                     {}, nullptr)
 
-#define DEF_S(i)                                                               \
-  {                                                                            \
-    "s" #i, nullptr, 4, OFFSET(v) + i * 16, eEncodingVector,                   \
-        eFormatVectorOfUInt8, {INV, INV, INV, INV, reg_s##i}, nullptr,         \
-        nullptr, nullptr,                                                      \
-  }
+#define DEF_S(reg_id, i)                                                       \
+  RegisterDescriptor(reg_id, "s" #i, nullptr, 4, eEncodingVector,              \
+                     eFormatVectorOfUInt8, {INV, INV, INV, INV, reg_s##i}, {}, \
+                     {}, nullptr)
 
-#define DEF_H(i)                                                               \
-  {                                                                            \
-    "h" #i, nullptr, 2, OFFSET(v) + i * 16, eEncodingVector,                   \
-        eFormatVectorOfUInt8, {INV, INV, INV, INV, reg_h##i}, nullptr,         \
-        nullptr, nullptr,                                                      \
-  }
+#define DEF_H(reg_id, i)                                                       \
+  RegisterDescriptor(reg_id, "h" #i, nullptr, 2, eEncodingVector,              \
+                     eFormatVectorOfUInt8, {INV, INV, INV, INV, reg_h##i}, {}, \
+                     {}, nullptr)
 
 // Zero based LLDB register numbers for this register context
 enum {
@@ -277,291 +269,219 @@ enum {
 };
 
 // Register info definitions for this register context
-static RegisterInfo g_reg_infos[] = {
-    DEF_X_ARG(0, 1),
-    DEF_X_ARG(1, 2),
-    DEF_X_ARG(2, 3),
-    DEF_X_ARG(3, 4),
-    DEF_X_ARG(4, 5),
-    DEF_X_ARG(5, 6),
-    DEF_X_ARG(6, 7),
-    DEF_X_ARG(7, 8),
-    DEF_X(8),
-    DEF_X(9),
-    DEF_X(10),
-    DEF_X(11),
-    DEF_X(12),
-    DEF_X(13),
-    DEF_X(14),
-    DEF_X(15),
-    DEF_X(16),
-    DEF_X(17),
-    DEF_X(18),
-    DEF_X(19),
-    DEF_X(20),
-    DEF_X(21),
-    DEF_X(22),
-    DEF_X(23),
-    DEF_X(24),
-    DEF_X(25),
-    DEF_X(26),
-    DEF_X(27),
-    DEF_X(28),
-    {
-        "fp",
-        "x29",
-        8,
-        OFFSET(x) + 29 * 8,
-        eEncodingUint,
-        eFormatHex,
-        {arm64_dwarf::x29, arm64_dwarf::x29, LLDB_REGNUM_GENERIC_FP, INV,
-         reg_fp},
-        nullptr,
-        nullptr,
-        nullptr,
-    },
-    {
-        "lr",
-        "x30",
-        8,
-        OFFSET(x) + 30 * 8,
-        eEncodingUint,
-        eFormatHex,
-        {arm64_dwarf::x30, arm64_dwarf::x30, LLDB_REGNUM_GENERIC_RA, INV,
-         reg_lr},
-        nullptr,
-        nullptr,
-        nullptr,
-    },
-    {
-        "sp",
-        "x31",
-        8,
-        OFFSET(x) + 31 * 8,
-        eEncodingUint,
-        eFormatHex,
-        {arm64_dwarf::x31, arm64_dwarf::x31, LLDB_REGNUM_GENERIC_SP, INV,
-         reg_sp},
-        nullptr,
-        nullptr,
-        nullptr,
-    },
-    {
-        "pc",
-        nullptr,
-        8,
-        OFFSET(pc),
-        eEncodingUint,
-        eFormatHex,
-        {arm64_dwarf::pc, arm64_dwarf::pc, LLDB_REGNUM_GENERIC_PC, INV, reg_pc},
-        nullptr,
-        nullptr,
-        nullptr,
-    },
-    // w0 - w31
-    DEF_W(0),
-    DEF_W(1),
-    DEF_W(2),
-    DEF_W(3),
-    DEF_W(4),
-    DEF_W(5),
-    DEF_W(6),
-    DEF_W(7),
-    DEF_W(8),
-    DEF_W(9),
-    DEF_W(10),
-    DEF_W(11),
-    DEF_W(12),
-    DEF_W(13),
-    DEF_W(14),
-    DEF_W(15),
-    DEF_W(16),
-    DEF_W(17),
-    DEF_W(18),
-    DEF_W(19),
-    DEF_W(20),
-    DEF_W(21),
-    DEF_W(22),
-    DEF_W(23),
-    DEF_W(24),
-    DEF_W(25),
-    DEF_W(26),
-    DEF_W(27),
-    DEF_W(28),
-    DEF_W(29),
-    DEF_W(30),
-    DEF_W(31),
-    {
-        "cpsr",
-        "psr",
-        4,
-        OFFSET(cpsr),
-        eEncodingUint,
-        eFormatHex,
-        {INV, INV, LLDB_REGNUM_GENERIC_FLAGS, INV, reg_cpsr},
-        nullptr,
-        nullptr,
-        nullptr,
-    },
-    {
-        "fpsr",
-        nullptr,
-        4,
-        OFFSET(fpsr),
-        eEncodingUint,
-        eFormatHex,
-        {INV, INV, INV, INV, reg_fpsr},
-        nullptr,
-        nullptr,
-        nullptr,
-    },
-    {
-        "fpcr",
-        nullptr,
-        4,
-        OFFSET(fpcr),
-        eEncodingUint,
-        eFormatHex,
-        {INV, INV, INV, INV, reg_fpcr},
-        nullptr,
-        nullptr,
-        nullptr,
-    },
-    // v0 - v31
-    DEF_V(0),
-    DEF_V(1),
-    DEF_V(2),
-    DEF_V(3),
-    DEF_V(4),
-    DEF_V(5),
-    DEF_V(6),
-    DEF_V(7),
-    DEF_V(8),
-    DEF_V(9),
-    DEF_V(10),
-    DEF_V(11),
-    DEF_V(12),
-    DEF_V(13),
-    DEF_V(14),
-    DEF_V(15),
-    DEF_V(16),
-    DEF_V(17),
-    DEF_V(18),
-    DEF_V(19),
-    DEF_V(20),
-    DEF_V(21),
-    DEF_V(22),
-    DEF_V(23),
-    DEF_V(24),
-    DEF_V(25),
-    DEF_V(26),
-    DEF_V(27),
-    DEF_V(28),
-    DEF_V(29),
-    DEF_V(30),
-    DEF_V(31),
-    // d0 - d31
-    DEF_D(0),
-    DEF_D(1),
-    DEF_D(2),
-    DEF_D(3),
-    DEF_D(4),
-    DEF_D(5),
-    DEF_D(6),
-    DEF_D(7),
-    DEF_D(8),
-    DEF_D(9),
-    DEF_D(10),
-    DEF_D(11),
-    DEF_D(12),
-    DEF_D(13),
-    DEF_D(14),
-    DEF_D(15),
-    DEF_D(16),
-    DEF_D(17),
-    DEF_D(18),
-    DEF_D(19),
-    DEF_D(20),
-    DEF_D(21),
-    DEF_D(22),
-    DEF_D(23),
-    DEF_D(24),
-    DEF_D(25),
-    DEF_D(26),
-    DEF_D(27),
-    DEF_D(28),
-    DEF_D(29),
-    DEF_D(30),
-    DEF_D(31),
-    // s0 - s31
-    DEF_S(0),
-    DEF_S(1),
-    DEF_S(2),
-    DEF_S(3),
-    DEF_S(4),
-    DEF_S(5),
-    DEF_S(6),
-    DEF_S(7),
-    DEF_S(8),
-    DEF_S(9),
-    DEF_S(10),
-    DEF_S(11),
-    DEF_S(12),
-    DEF_S(13),
-    DEF_S(14),
-    DEF_S(15),
-    DEF_S(16),
-    DEF_S(17),
-    DEF_S(18),
-    DEF_S(19),
-    DEF_S(20),
-    DEF_S(21),
-    DEF_S(22),
-    DEF_S(23),
-    DEF_S(24),
-    DEF_S(25),
-    DEF_S(26),
-    DEF_S(27),
-    DEF_S(28),
-    DEF_S(29),
-    DEF_S(30),
-    DEF_S(31),
-    // h0 - h31
-    DEF_H(0),
-    DEF_H(1),
-    DEF_H(2),
-    DEF_H(3),
-    DEF_H(4),
-    DEF_H(5),
-    DEF_H(6),
-    DEF_H(7),
-    DEF_H(8),
-    DEF_H(9),
-    DEF_H(10),
-    DEF_H(11),
-    DEF_H(12),
-    DEF_H(13),
-    DEF_H(14),
-    DEF_H(15),
-    DEF_H(16),
-    DEF_H(17),
-    DEF_H(18),
-    DEF_H(19),
-    DEF_H(20),
-    DEF_H(21),
-    DEF_H(22),
-    DEF_H(23),
-    DEF_H(24),
-    DEF_H(25),
-    DEF_H(26),
-    DEF_H(27),
-    DEF_H(28),
-    DEF_H(29),
-    DEF_H(30),
-    DEF_H(31),
-};
-
-constexpr size_t k_num_reg_infos = std::size(g_reg_infos);
+static RegisterDescriptor g_reg_infos[] = {
+    DEF_X_ARG(reg_x0, 0, 1),
+    DEF_X_ARG(reg_x1, 1, 2),
+    DEF_X_ARG(reg_x2, 2, 3),
+    DEF_X_ARG(reg_x3, 3, 4),
+    DEF_X_ARG(reg_x4, 4, 5),
+    DEF_X_ARG(reg_x5, 5, 6),
+    DEF_X_ARG(reg_x6, 6, 7),
+    DEF_X_ARG(reg_x7, 7, 8),
+    DEF_X(reg_x8, 8),
+    DEF_X(reg_x9, 9),
+    DEF_X(reg_x10, 10),
+    DEF_X(reg_x11, 11),
+    DEF_X(reg_x12, 12),
+    DEF_X(reg_x13, 13),
+    DEF_X(reg_x14, 14),
+    DEF_X(reg_x15, 15),
+    DEF_X(reg_x16, 16),
+    DEF_X(reg_x17, 17),
+    DEF_X(reg_x18, 18),
+    DEF_X(reg_x19, 19),
+    DEF_X(reg_x20, 20),
+    DEF_X(reg_x21, 21),
+    DEF_X(reg_x22, 22),
+    DEF_X(reg_x23, 23),
+    DEF_X(reg_x24, 24),
+    DEF_X(reg_x25, 25),
+    DEF_X(reg_x26, 26),
+    DEF_X(reg_x27, 27),
+    DEF_X(reg_x28, 28),
+    RegisterDescriptor(reg_fp, "fp", "x29", 8, eEncodingUint, eFormatHex,
+                       {ehframe_regs::x29, dwarf_regs::x29,
+                        LLDB_REGNUM_GENERIC_FP, INV, reg_fp},
+                       {}, {}, nullptr),
+    RegisterDescriptor(reg_lr, "lr", "x30", 8, eEncodingUint, eFormatHex,
+                       {ehframe_regs::x30, dwarf_regs::x30,
+                        LLDB_REGNUM_GENERIC_RA, INV, reg_lr},
+                       {}, {}, nullptr),
+    RegisterDescriptor(reg_sp, "sp", "x31", 8, eEncodingUint, eFormatHex,
+                       {ehframe_regs::x31, dwarf_regs::x31,
+                        LLDB_REGNUM_GENERIC_SP, INV, reg_sp},
+                       {}, {}, nullptr),
+    RegisterDescriptor(
+        reg_pc, "pc", nullptr, 8, eEncodingUint, eFormatHex,
+        {ehframe_regs::pc, dwarf_regs::pc, LLDB_REGNUM_GENERIC_PC, INV, reg_pc},
+        {}, {}, nullptr),
+    DEF_W(reg_w0, 0),
+    DEF_W(reg_w1, 1),
+    DEF_W(reg_w2, 2),
+    DEF_W(reg_w3, 3),
+    DEF_W(reg_w4, 4),
+    DEF_W(reg_w5, 5),
+    DEF_W(reg_w6, 6),
+    DEF_W(reg_w7, 7),
+    DEF_W(reg_w8, 8),
+    DEF_W(reg_w9, 9),
+    DEF_W(reg_w10, 10),
+    DEF_W(reg_w11, 11),
+    DEF_W(reg_w12, 12),
+    DEF_W(reg_w13, 13),
+    DEF_W(reg_w14, 14),
+    DEF_W(reg_w15, 15),
+    DEF_W(reg_w16, 16),
+    DEF_W(reg_w17, 17),
+    DEF_W(reg_w18, 18),
+    DEF_W(reg_w19, 19),
+    DEF_W(reg_w20, 20),
+    DEF_W(reg_w21, 21),
+    DEF_W(reg_w22, 22),
+    DEF_W(reg_w23, 23),
+    DEF_W(reg_w24, 24),
+    DEF_W(reg_w25, 25),
+    DEF_W(reg_w26, 26),
+    DEF_W(reg_w27, 27),
+    DEF_W(reg_w28, 28),
+    DEF_W(reg_w29, 29),
+    DEF_W(reg_w30, 30),
+    DEF_W(reg_w31, 31),
+    RegisterDescriptor(reg_cpsr, "cpsr", "psr", 4, eEncodingUint, eFormatHex,
+                       {INV, INV, LLDB_REGNUM_GENERIC_FLAGS, INV, reg_cpsr}, {},
+                       {}, nullptr),
+    RegisterDescriptor(reg_fpsr, "fpsr", nullptr, 4, eEncodingUint, eFormatHex,
+                       {INV, INV, INV, INV, reg_fpsr}, {}, {}, nullptr),
+    RegisterDescriptor(reg_fpcr, "fpcr", nullptr, 4, eEncodingUint, eFormatHex,
+                       {INV, INV, INV, INV, reg_fpcr}, {}, {}, nullptr),
+    DEF_V(reg_v0, 0),
+    DEF_V(reg_v1, 1),
+    DEF_V(reg_v2, 2),
+    DEF_V(reg_v3, 3),
+    DEF_V(reg_v4, 4),
+    DEF_V(reg_v5, 5),
+    DEF_V(reg_v6, 6),
+    DEF_V(reg_v7, 7),
+    DEF_V(reg_v8, 8),
+    DEF_V(reg_v9, 9),
+    DEF_V(reg_v10, 10),
+    DEF_V(reg_v11, 11),
+    DEF_V(reg_v12, 12),
+    DEF_V(reg_v13, 13),
+    DEF_V(reg_v14, 14),
+    DEF_V(reg_v15, 15),
+    DEF_V(reg_v16, 16),
+    DEF_V(reg_v17, 17),
+    DEF_V(reg_v18, 18),
+    DEF_V(reg_v19, 19),
+    DEF_V(reg_v20, 20),
+    DEF_V(reg_v21, 21),
+    DEF_V(reg_v22, 22),
+    DEF_V(reg_v23, 23),
+    DEF_V(reg_v24, 24),
+    DEF_V(reg_v25, 25),
+    DEF_V(reg_v26, 26),
+    DEF_V(reg_v27, 27),
+    DEF_V(reg_v28, 28),
+    DEF_V(reg_v29, 29),
+    DEF_V(reg_v30, 30),
+    DEF_V(reg_v31, 31),
+    DEF_D(reg_d0, 0),
+    DEF_D(reg_d1, 1),
+    DEF_D(reg_d2, 2),
+    DEF_D(reg_d3, 3),
+    DEF_D(reg_d4, 4),
+    DEF_D(reg_d5, 5),
+    DEF_D(reg_d6, 6),
+    DEF_D(reg_d7, 7),
+    DEF_D(reg_d8, 8),
+    DEF_D(reg_d9, 9),
+    DEF_D(reg_d10, 10),
+    DEF_D(reg_d11, 11),
+    DEF_D(reg_d12, 12),
+    DEF_D(reg_d13, 13),
+    DEF_D(reg_d14, 14),
+    DEF_D(reg_d15, 15),
+    DEF_D(reg_d16, 16),
+    DEF_D(reg_d17, 17),
+    DEF_D(reg_d18, 18),
+    DEF_D(reg_d19, 19),
+    DEF_D(reg_d20, 20),
+    DEF_D(reg_d21, 21),
+    DEF_D(reg_d22, 22),
+    DEF_D(reg_d23, 23),
+    DEF_D(reg_d24, 24),
+    DEF_D(reg_d25, 25),
+    DEF_D(reg_d26, 26),
+    DEF_D(reg_d27, 27),
+    DEF_D(reg_d28, 28),
+    DEF_D(reg_d29, 29),
+    DEF_D(reg_d30, 30),
+    DEF_D(reg_d31, 31),
+    DEF_S(reg_s0, 0),
+    DEF_S(reg_s1, 1),
+    DEF_S(reg_s2, 2),
+    DEF_S(reg_s3, 3),
+    DEF_S(reg_s4, 4),
+    DEF_S(reg_s5, 5),
+    DEF_S(reg_s6, 6),
+    DEF_S(reg_s7, 7),
+    DEF_S(reg_s8, 8),
+    DEF_S(reg_s9, 9),
+    DEF_S(reg_s10, 10),
+    DEF_S(reg_s11, 11),
+    DEF_S(reg_s12, 12),
+    DEF_S(reg_s13, 13),
+    DEF_S(reg_s14, 14),
+    DEF_S(reg_s15, 15),
+    DEF_S(reg_s16, 16),
+    DEF_S(reg_s17, 17),
+    DEF_S(reg_s18, 18),
+    DEF_S(reg_s19, 19),
+    DEF_S(reg_s20, 20),
+    DEF_S(reg_s21, 21),
+    DEF_S(reg_s22, 22),
+    DEF_S(reg_s23, 23),
+    DEF_S(reg_s24, 24),
+    DEF_S(reg_s25, 25),
+    DEF_S(reg_s26, 26),
+    DEF_S(reg_s27, 27),
+    DEF_S(reg_s28, 28),
+    DEF_S(reg_s29, 29),
+    DEF_S(reg_s30, 30),
+    DEF_S(reg_s31, 31),
+    DEF_H(reg_h0, 0),
+    DEF_H(reg_h1, 1),
+    DEF_H(reg_h2, 2),
+    DEF_H(reg_h3, 3),
+    DEF_H(reg_h4, 4),
+    DEF_H(reg_h5, 5),
+    DEF_H(reg_h6, 6),
+    DEF_H(reg_h7, 7),
+    DEF_H(reg_h8, 8),
+    DEF_H(reg_h9, 9),
+    DEF_H(reg_h10, 10),
+    DEF_H(reg_h11, 11),
+    DEF_H(reg_h12, 12),
+    DEF_H(reg_h13, 13),
+    DEF_H(reg_h14, 14),
+    DEF_H(reg_h15, 15),
+    DEF_H(reg_h16, 16),
+    DEF_H(reg_h17, 17),
+    DEF_H(reg_h18, 18),
+    DEF_H(reg_h19, 19),
+    DEF_H(reg_h20, 20),
+    DEF_H(reg_h21, 21),
+    DEF_H(reg_h22, 22),
+    DEF_H(reg_h23, 23),
+    DEF_H(reg_h24, 24),
+    DEF_H(reg_h25, 25),
+    DEF_H(reg_h26, 26),
+    DEF_H(reg_h27, 27),
+    DEF_H(reg_h28, 28),
+    DEF_H(reg_h29, 29),
+    DEF_H(reg_h30, 30),
+    DEF_H(reg_h31, 31)};
 
 // ARM64 general purpose registers.
 const uint32_t g_gpr_regnums[] = {
@@ -771,73 +691,446 @@ const uint32_t g_fpu_regnums[] = {
 constexpr size_t k_num_gpr_regs = std::size(g_gpr_regnums) - 1;
 constexpr size_t k_num_fpu_regs = std::size(g_fpu_regnums) - 1;
 
-static RegisterSet g_reg_sets[] = {
-    {"General Purpose Registers", "gpr", k_num_gpr_regs, g_gpr_regnums},
-    {"Floating Point Registers", "fpu", k_num_fpu_regs, g_fpu_regnums},
-};
+static RegisterGroup g_reg_sets[] = {
+    {"General Purpose Registers", "gpr",
+     std::vector<RegisterID>(g_gpr_regnums, g_gpr_regnums + k_num_gpr_regs)},
+    {"Floating Point Registers", "fpu",
+     std::vector<RegisterID>(g_fpu_regnums, g_fpu_regnums + k_num_fpu_regs)}};
 
-constexpr size_t k_num_reg_sets = std::size(g_reg_sets);
+RegisterLayout lldb_private::minidump::CreateMinidumpArm64RegisterLayout() {
+  std::vector<RegisterDescriptor> registers(std::begin(g_reg_infos),
+                                            std::end(g_reg_infos));
+  auto description = std::make_shared<RegisterDescription>(
+      llvm::cantFail(RegisterDescription::Create(
+          std::move(registers),
+          {std::begin(g_reg_sets), std::end(g_reg_sets)})));
+  RegisterLayout layout(eByteOrderLittle);
+  llvm::cantFail(
+      layout.AddBank(0, sizeof(RegisterContextMinidump_ARM64::Context)));
+  struct Field {
+    RegisterID id;
+    uint32_t offset;
+    uint32_t size;
+  };
+  const Field fields[] = {
+      {reg_x0, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 0 * 8,
+       8},
+      {reg_x1, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 1 * 8,
+       8},
+      {reg_x2, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 2 * 8,
+       8},
+      {reg_x3, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 3 * 8,
+       8},
+      {reg_x4, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 4 * 8,
+       8},
+      {reg_x5, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 5 * 8,
+       8},
+      {reg_x6, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 6 * 8,
+       8},
+      {reg_x7, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 7 * 8,
+       8},
+      {reg_x8, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 8 * 8,
+       8},
+      {reg_x9, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 9 * 8,
+       8},
+      {reg_x10, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 10 * 8,
+       8},
+      {reg_x11, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 11 * 8,
+       8},
+      {reg_x12, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 12 * 8,
+       8},
+      {reg_x13, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 13 * 8,
+       8},
+      {reg_x14, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 14 * 8,
+       8},
+      {reg_x15, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 15 * 8,
+       8},
+      {reg_x16, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 16 * 8,
+       8},
+      {reg_x17, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 17 * 8,
+       8},
+      {reg_x18, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 18 * 8,
+       8},
+      {reg_x19, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 19 * 8,
+       8},
+      {reg_x20, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 20 * 8,
+       8},
+      {reg_x21, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 21 * 8,
+       8},
+      {reg_x22, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 22 * 8,
+       8},
+      {reg_x23, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 23 * 8,
+       8},
+      {reg_x24, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 24 * 8,
+       8},
+      {reg_x25, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 25 * 8,
+       8},
+      {reg_x26, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 26 * 8,
+       8},
+      {reg_x27, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 27 * 8,
+       8},
+      {reg_x28, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 28 * 8,
+       8},
+      {reg_fp, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 29 * 8,
+       8},
+      {reg_lr, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 30 * 8,
+       8},
+      {reg_sp, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 31 * 8,
+       8},
+      {reg_pc, (offsetof(RegisterContextMinidump_ARM64::Context, pc)), 8},
+      {reg_w0, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 0 * 8,
+       4},
+      {reg_w1, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 1 * 8,
+       4},
+      {reg_w2, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 2 * 8,
+       4},
+      {reg_w3, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 3 * 8,
+       4},
+      {reg_w4, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 4 * 8,
+       4},
+      {reg_w5, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 5 * 8,
+       4},
+      {reg_w6, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 6 * 8,
+       4},
+      {reg_w7, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 7 * 8,
+       4},
+      {reg_w8, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 8 * 8,
+       4},
+      {reg_w9, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 9 * 8,
+       4},
+      {reg_w10, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 10 * 8,
+       4},
+      {reg_w11, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 11 * 8,
+       4},
+      {reg_w12, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 12 * 8,
+       4},
+      {reg_w13, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 13 * 8,
+       4},
+      {reg_w14, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 14 * 8,
+       4},
+      {reg_w15, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 15 * 8,
+       4},
+      {reg_w16, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 16 * 8,
+       4},
+      {reg_w17, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 17 * 8,
+       4},
+      {reg_w18, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 18 * 8,
+       4},
+      {reg_w19, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 19 * 8,
+       4},
+      {reg_w20, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 20 * 8,
+       4},
+      {reg_w21, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 21 * 8,
+       4},
+      {reg_w22, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 22 * 8,
+       4},
+      {reg_w23, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 23 * 8,
+       4},
+      {reg_w24, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 24 * 8,
+       4},
+      {reg_w25, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 25 * 8,
+       4},
+      {reg_w26, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 26 * 8,
+       4},
+      {reg_w27, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 27 * 8,
+       4},
+      {reg_w28, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 28 * 8,
+       4},
+      {reg_w29, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 29 * 8,
+       4},
+      {reg_w30, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 30 * 8,
+       4},
+      {reg_w31, (offsetof(RegisterContextMinidump_ARM64::Context, x)) + 31 * 8,
+       4},
+      {reg_cpsr, (offsetof(RegisterContextMinidump_ARM64::Context, cpsr)), 4},
+      {reg_fpsr, (offsetof(RegisterContextMinidump_ARM64::Context, fpsr)), 4},
+      {reg_fpcr, (offsetof(RegisterContextMinidump_ARM64::Context, fpcr)), 4},
+      {reg_v0, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 0 * 16,
+       16},
+      {reg_v1, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 1 * 16,
+       16},
+      {reg_v2, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 2 * 16,
+       16},
+      {reg_v3, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 3 * 16,
+       16},
+      {reg_v4, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 4 * 16,
+       16},
+      {reg_v5, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 5 * 16,
+       16},
+      {reg_v6, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 6 * 16,
+       16},
+      {reg_v7, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 7 * 16,
+       16},
+      {reg_v8, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 8 * 16,
+       16},
+      {reg_v9, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 9 * 16,
+       16},
+      {reg_v10, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 10 * 16,
+       16},
+      {reg_v11, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 11 * 16,
+       16},
+      {reg_v12, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 12 * 16,
+       16},
+      {reg_v13, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 13 * 16,
+       16},
+      {reg_v14, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 14 * 16,
+       16},
+      {reg_v15, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 15 * 16,
+       16},
+      {reg_v16, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 16 * 16,
+       16},
+      {reg_v17, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 17 * 16,
+       16},
+      {reg_v18, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 18 * 16,
+       16},
+      {reg_v19, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 19 * 16,
+       16},
+      {reg_v20, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 20 * 16,
+       16},
+      {reg_v21, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 21 * 16,
+       16},
+      {reg_v22, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 22 * 16,
+       16},
+      {reg_v23, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 23 * 16,
+       16},
+      {reg_v24, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 24 * 16,
+       16},
+      {reg_v25, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 25 * 16,
+       16},
+      {reg_v26, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 26 * 16,
+       16},
+      {reg_v27, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 27 * 16,
+       16},
+      {reg_v28, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 28 * 16,
+       16},
+      {reg_v29, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 29 * 16,
+       16},
+      {reg_v30, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 30 * 16,
+       16},
+      {reg_v31, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 31 * 16,
+       16},
+      {reg_d0, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 0 * 16,
+       8},
+      {reg_d1, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 1 * 16,
+       8},
+      {reg_d2, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 2 * 16,
+       8},
+      {reg_d3, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 3 * 16,
+       8},
+      {reg_d4, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 4 * 16,
+       8},
+      {reg_d5, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 5 * 16,
+       8},
+      {reg_d6, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 6 * 16,
+       8},
+      {reg_d7, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 7 * 16,
+       8},
+      {reg_d8, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 8 * 16,
+       8},
+      {reg_d9, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 9 * 16,
+       8},
+      {reg_d10, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 10 * 16,
+       8},
+      {reg_d11, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 11 * 16,
+       8},
+      {reg_d12, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 12 * 16,
+       8},
+      {reg_d13, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 13 * 16,
+       8},
+      {reg_d14, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 14 * 16,
+       8},
+      {reg_d15, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 15 * 16,
+       8},
+      {reg_d16, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 16 * 16,
+       8},
+      {reg_d17, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 17 * 16,
+       8},
+      {reg_d18, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 18 * 16,
+       8},
+      {reg_d19, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 19 * 16,
+       8},
+      {reg_d20, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 20 * 16,
+       8},
+      {reg_d21, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 21 * 16,
+       8},
+      {reg_d22, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 22 * 16,
+       8},
+      {reg_d23, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 23 * 16,
+       8},
+      {reg_d24, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 24 * 16,
+       8},
+      {reg_d25, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 25 * 16,
+       8},
+      {reg_d26, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 26 * 16,
+       8},
+      {reg_d27, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 27 * 16,
+       8},
+      {reg_d28, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 28 * 16,
+       8},
+      {reg_d29, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 29 * 16,
+       8},
+      {reg_d30, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 30 * 16,
+       8},
+      {reg_d31, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 31 * 16,
+       8},
+      {reg_s0, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 0 * 16,
+       4},
+      {reg_s1, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 1 * 16,
+       4},
+      {reg_s2, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 2 * 16,
+       4},
+      {reg_s3, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 3 * 16,
+       4},
+      {reg_s4, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 4 * 16,
+       4},
+      {reg_s5, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 5 * 16,
+       4},
+      {reg_s6, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 6 * 16,
+       4},
+      {reg_s7, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 7 * 16,
+       4},
+      {reg_s8, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 8 * 16,
+       4},
+      {reg_s9, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 9 * 16,
+       4},
+      {reg_s10, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 10 * 16,
+       4},
+      {reg_s11, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 11 * 16,
+       4},
+      {reg_s12, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 12 * 16,
+       4},
+      {reg_s13, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 13 * 16,
+       4},
+      {reg_s14, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 14 * 16,
+       4},
+      {reg_s15, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 15 * 16,
+       4},
+      {reg_s16, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 16 * 16,
+       4},
+      {reg_s17, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 17 * 16,
+       4},
+      {reg_s18, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 18 * 16,
+       4},
+      {reg_s19, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 19 * 16,
+       4},
+      {reg_s20, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 20 * 16,
+       4},
+      {reg_s21, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 21 * 16,
+       4},
+      {reg_s22, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 22 * 16,
+       4},
+      {reg_s23, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 23 * 16,
+       4},
+      {reg_s24, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 24 * 16,
+       4},
+      {reg_s25, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 25 * 16,
+       4},
+      {reg_s26, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 26 * 16,
+       4},
+      {reg_s27, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 27 * 16,
+       4},
+      {reg_s28, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 28 * 16,
+       4},
+      {reg_s29, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 29 * 16,
+       4},
+      {reg_s30, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 30 * 16,
+       4},
+      {reg_s31, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 31 * 16,
+       4},
+      {reg_h0, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 0 * 16,
+       2},
+      {reg_h1, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 1 * 16,
+       2},
+      {reg_h2, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 2 * 16,
+       2},
+      {reg_h3, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 3 * 16,
+       2},
+      {reg_h4, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 4 * 16,
+       2},
+      {reg_h5, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 5 * 16,
+       2},
+      {reg_h6, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 6 * 16,
+       2},
+      {reg_h7, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 7 * 16,
+       2},
+      {reg_h8, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 8 * 16,
+       2},
+      {reg_h9, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 9 * 16,
+       2},
+      {reg_h10, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 10 * 16,
+       2},
+      {reg_h11, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 11 * 16,
+       2},
+      {reg_h12, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 12 * 16,
+       2},
+      {reg_h13, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 13 * 16,
+       2},
+      {reg_h14, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 14 * 16,
+       2},
+      {reg_h15, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 15 * 16,
+       2},
+      {reg_h16, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 16 * 16,
+       2},
+      {reg_h17, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 17 * 16,
+       2},
+      {reg_h18, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 18 * 16,
+       2},
+      {reg_h19, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 19 * 16,
+       2},
+      {reg_h20, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 20 * 16,
+       2},
+      {reg_h21, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 21 * 16,
+       2},
+      {reg_h22, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 22 * 16,
+       2},
+      {reg_h23, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 23 * 16,
+       2},
+      {reg_h24, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 24 * 16,
+       2},
+      {reg_h25, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 25 * 16,
+       2},
+      {reg_h26, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 26 * 16,
+       2},
+      {reg_h27, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 27 * 16,
+       2},
+      {reg_h28, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 28 * 16,
+       2},
+      {reg_h29, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 29 * 16,
+       2},
+      {reg_h30, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 30 * 16,
+       2},
+      {reg_h31, (offsetof(RegisterContextMinidump_ARM64::Context, v)) + 31 * 16,
+       2},
+  };
+  for (const auto &field : fields) {
+    RegisterLocation location;
+    location.kind = RegisterLocation::Stored;
+    location.pieces.push_back({0, field.offset, field.size});
+    llvm::cantFail(layout.Add(field.id, std::move(location)));
+  }
+  return llvm::cantFail(
+      RegisterLayout::Create(std::move(description), std::move(layout)));
+}
 
 RegisterContextMinidump_ARM64::RegisterContextMinidump_ARM64(
     lldb_private::Thread &thread, const DataExtractor &data)
-    : RegisterContext(thread, 0) {
-  lldb::offset_t offset = 0;
-  m_regs.context_flags = data.GetU64(&offset);
-  for (unsigned i = 0; i < 32; ++i)
-    m_regs.x[i] = data.GetU64(&offset);
-  m_regs.pc = data.GetU64(&offset);
-  m_regs.cpsr = data.GetU32(&offset);
-  m_regs.fpsr = data.GetU32(&offset);
-  m_regs.fpcr = data.GetU32(&offset);
-  auto regs_data = data.GetData(&offset, sizeof(m_regs.v));
-  if (regs_data)
-    memcpy(m_regs.v, regs_data, sizeof(m_regs.v));
-  static_assert(k_num_regs == k_num_reg_infos);
-}
-size_t RegisterContextMinidump_ARM64::GetRegisterCount() { return k_num_regs; }
-
-const RegisterInfo *
-RegisterContextMinidump_ARM64::GetRegisterInfoAtIndex(size_t reg) {
-  if (reg < k_num_reg_infos)
-    return &g_reg_infos[reg];
-  return nullptr;
+    : ThreadRegisterContext(thread, 0, CreateMinidumpArm64RegisterLayout()) {
+  auto bytes = data.GetData().take_front(data.GetByteSize());
+  m_context.assign(bytes.begin(), bytes.end());
 }
 
-size_t RegisterContextMinidump_ARM64::GetRegisterSetCount() {
-  return k_num_reg_sets;
+llvm::Expected<RegisterValue>
+RegisterContextMinidump_ARM64::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
+  auto value = GetLayout().Read(reg_info->id, {{0, llvm::ArrayRef(m_context)}});
+  return value;
 }
 
-const RegisterSet *RegisterContextMinidump_ARM64::GetRegisterSet(size_t set) {
-  if (set < k_num_reg_sets)
-    return &g_reg_sets[set];
-  return nullptr;
-}
-
-const char *RegisterContextMinidump_ARM64::GetRegisterName(unsigned reg) {
-  if (reg < k_num_reg_infos)
-    return g_reg_infos[reg].name;
-  return nullptr;
-}
-
-bool RegisterContextMinidump_ARM64::ReadRegister(const RegisterInfo *reg_info,
-                                                 RegisterValue &reg_value) {
-  Status error;
-  reg_value.SetFromMemoryData(
-      *reg_info, (const uint8_t *)&m_regs + reg_info->byte_offset,
-      reg_info->byte_size, lldb::eByteOrderLittle, error);
-  return error.Success();
-}
-
-bool RegisterContextMinidump_ARM64::WriteRegister(const RegisterInfo *,
-                                                  const RegisterValue &) {
-  return false;
-}
-
-uint32_t RegisterContextMinidump_ARM64::ConvertRegisterKindToRegisterNumber(
-    lldb::RegisterKind kind, uint32_t num) {
-  for (size_t i = 0; i < k_num_regs; ++i) {
-    if (g_reg_infos[i].kinds[kind] == num)
-      return i;
-  }
-  return LLDB_INVALID_REGNUM;
+llvm::Error
+RegisterContextMinidump_ARM64::WriteRegister(RegisterID id,
+                                             const RegisterValue &value) {
+  return llvm::createStringError("register write is unavailable");
 }

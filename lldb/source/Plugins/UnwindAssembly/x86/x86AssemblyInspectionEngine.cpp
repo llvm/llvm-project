@@ -14,7 +14,7 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Symbol/UnwindPlan.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/UnwindAssembly.h"
 
 using namespace lldb_private;
@@ -40,7 +40,7 @@ x86AssemblyInspectionEngine::~x86AssemblyInspectionEngine() {
   ::LLVMDisasmDispose(m_disasm_context);
 }
 
-void x86AssemblyInspectionEngine::Initialize(RegisterContextSP &reg_ctx) {
+void x86AssemblyInspectionEngine::Initialize(ThreadRegisterContextSP &reg_ctx) {
   m_cpu = k_cpu_unspecified;
   m_wordsize = -1;
   m_register_map_initialized = false;
@@ -129,9 +129,10 @@ void x86AssemblyInspectionEngine::Initialize(RegisterContextSP &reg_ctx) {
 
   for (MachineRegnumToNameAndLLDBRegnum::iterator it = m_reg_map.begin();
        it != m_reg_map.end(); ++it) {
-    const RegisterInfo *ri = reg_ctx->GetRegisterInfoByName(it->second.name);
+    const RegisterDescriptor *ri =
+        reg_ctx->GetRegisterByName(it->second.name);
     if (ri)
-      it->second.lldb_regnum = ri->kinds[eRegisterKindLLDB];
+      it->second.lldb_regnum = ri->numbers[eRegisterKindLLDB];
   }
 
   uint32_t lldb_regno;
@@ -1321,12 +1322,12 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
 
 bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
     uint8_t *data, size_t size, AddressRange &func_range,
-    UnwindPlan &unwind_plan, RegisterContextSP &reg_ctx) {
+    UnwindPlan &unwind_plan, ThreadRegisterContextSP &reg_ctx) {
   Address addr_start = func_range.GetBaseAddress();
   if (!addr_start.IsValid())
     return false;
 
-  // We either need a live RegisterContext, or we need the UnwindPlan to
+  // We either need a live ThreadRegisterContext, or we need the UnwindPlan to
   // already be in the lldb register numbering scheme.
   if (reg_ctx.get() == nullptr &&
       unwind_plan.GetRegisterKind() != eRegisterKindLLDB)
@@ -1343,9 +1344,10 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
     return false;
   uint32_t cfa_reg = first_row.GetCFAValue().GetRegisterNumber();
   if (unwind_plan.GetRegisterKind() != eRegisterKindLLDB) {
-    cfa_reg = reg_ctx->ConvertRegisterKindToRegisterNumber(
-        unwind_plan.GetRegisterKind(),
+    const auto *reg =
+        reg_ctx->GetRegisterByNumber(unwind_plan.GetRegisterKind(),
         first_row.GetCFAValue().GetRegisterNumber());
+    cfa_reg = reg ? reg->numbers[eRegisterKindLLDB] : LLDB_INVALID_REGNUM;
   }
   if (cfa_reg != m_lldb_sp_regnum ||
       first_row.GetCFAValue().GetOffset() != m_wordsize)
@@ -1409,8 +1411,9 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
     // Inspect the instruction to check if we need a new row for it.
     cfa_reg = row.GetCFAValue().GetRegisterNumber();
     if (unwind_plan.GetRegisterKind() != eRegisterKindLLDB) {
-      cfa_reg = reg_ctx->ConvertRegisterKindToRegisterNumber(
+      const auto *reg = reg_ctx->GetRegisterByNumber(
           unwind_plan.GetRegisterKind(), row.GetCFAValue().GetRegisterNumber());
+      cfa_reg = reg ? reg->numbers[eRegisterKindLLDB] : LLDB_INVALID_REGNUM;
     }
     if (cfa_reg == m_lldb_sp_regnum) {
       // CFA register is sp.
@@ -1439,7 +1442,7 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
       }
       if (pop_reg_p(regno)) {
         // Technically, this might be a nonvolatile register recover in
-        // epilogue. We should reset RegisterInfo for the register. But in
+        // epilogue. We should reset RegisterDescriptor for the register. But in
         // practice, previous rule for the register is still valid... So we
         // ignore this case.
 

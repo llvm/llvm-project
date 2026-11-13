@@ -14,7 +14,7 @@
 #include <vector>
 
 #include "lldb/Core/AddressRange.h"
-#include "lldb/Utility/RegisterInfo.h"
+#include "lldb/Register/RegisterDescription.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-private.h"
 
@@ -538,7 +538,8 @@ public:
     m_plan_is_for_signal_trap = eLazyBoolCalculate;
   }
 
-  const RegisterInfo *GetRegisterInfo(Thread *thread, uint32_t reg_num) const;
+  const RegisterDescriptor *GetRegisterInfo(Thread *thread,
+                                            uint32_t reg_num) const;
 
 private:
   std::vector<Row> m_row_list;

@@ -16,14 +16,14 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/MathExtras.h"
 
-#include "Utility/LoongArch_DWARF_Registers.h"
+#include "lldb/Register/Arch/lldb-loongarch-dwarf-register-enums.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #define DEFINE_REG_NAME(reg_num) ConstString(#reg_num).GetCString()
@@ -32,23 +32,19 @@
 // The ABI is not a source of such information as size, offset, encoding, etc.
 // of a register. Just provides correct dwarf and eh_frame numbers.
 
-#define DEFINE_GENERIC_REGISTER_STUB(dwarf_num, generic_num)                   \
-  {                                                                            \
-      DEFINE_REG_NAME(dwarf_num),                                              \
-      DEFINE_REG_NAME_STR(nullptr),                                            \
-      0,                                                                       \
-      0,                                                                       \
-      eEncodingInvalid,                                                        \
-      eFormatDefault,                                                          \
-      {dwarf_num, dwarf_num, generic_num, LLDB_INVALID_REGNUM, dwarf_num},     \
-      nullptr,                                                                 \
-      nullptr,                                                                 \
-      nullptr,                                                                 \
-  }
+#define DEFINE_GENERIC_REGISTER_STUB(dwarf_num, generic_num)                  \
+  RegisterDescriptor(dwarf_num, DEFINE_REG_NAME(dwarf_num),                   \
+                     DEFINE_REG_NAME_STR(nullptr), 0,                         \
+                     eEncodingInvalid, eFormatDefault,                        \
+                     {dwarf_num, dwarf_num, generic_num, LLDB_INVALID_REGNUM, \
+                      dwarf_num},                                             \
+                     {}, {}, nullptr)
 
 #define DEFINE_REGISTER_STUB(dwarf_num)                                        \
   DEFINE_GENERIC_REGISTER_STUB(dwarf_num, LLDB_INVALID_REGNUM)
 
+
+namespace dwarf_regs = lldb_private::registers::loongarch::dwarf;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -95,7 +91,7 @@ enum regnums {
   pc
 };
 
-static const std::array<RegisterInfo, 33> g_register_infos = {
+static const std::array<RegisterDescriptor, 33> g_register_infos = {
     {DEFINE_REGISTER_STUB(r0),
      DEFINE_GENERIC_REGISTER_STUB(r1, LLDB_REGNUM_GENERIC_RA),
      DEFINE_REGISTER_STUB(r2),
@@ -136,7 +132,8 @@ static const std::array<RegisterInfo, 33> g_register_infos = {
 // provides 8 argument registers, a0-a7)
 static constexpr size_t g_regs_for_args_count = 8U;
 
-const RegisterInfo *ABISysV_loongarch::GetRegisterInfoArray(uint32_t &count) {
+const RegisterDescriptor *
+ABISysV_loongarch::GetRegisterInfoArray(uint32_t &count) {
   count = dwarf::g_register_infos.size();
   return dwarf::g_register_infos.data();
 }
@@ -160,16 +157,18 @@ ABISysV_loongarch::CreateInstance(ProcessSP process_sp, const ArchSpec &arch) {
   return ABISP(abi);
 }
 
-static bool UpdateRegister(RegisterContext *reg_ctx,
+static bool UpdateRegister(ThreadRegisterContext *reg_ctx,
                            const lldb::RegisterKind reg_kind,
                            const uint32_t reg_num, const addr_t value) {
   Log *log = GetLog(LLDBLog::Expressions);
 
-  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo(reg_kind, reg_num);
+  const RegisterDescriptor *reg_info =
+      reg_ctx->GetRegisterByNumber(reg_kind, reg_num);
 
   LLDB_LOG(log, "Writing {0}: {1:x}", reg_info->name,
            static_cast<uint64_t>(value));
-  if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, value)) {
+  if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+          (reg_info ? reg_info->id : LLDB_INVALID_REGNUM), value))) {
     LLDB_LOG(log, "Writing {0}: failed", reg_info->name);
     return false;
   }
@@ -199,7 +198,7 @@ bool ABISysV_loongarch::PrepareTrivialCall(Thread &thread, addr_t sp,
 
   const auto reg_ctx_sp = thread.GetRegisterContext();
   if (!reg_ctx_sp) {
-    LLDB_LOG(log, "Failed to get RegisterContext");
+    LLDB_LOG(log, "Failed to get ThreadRegisterContext");
     return false;
   }
 
@@ -211,12 +210,13 @@ bool ABISysV_loongarch::PrepareTrivialCall(Thread &thread, addr_t sp,
 
   // Write arguments to registers
   for (auto [idx, arg] : enumerate(args)) {
-    const RegisterInfo *reg_info = reg_ctx_sp->GetRegisterInfo(
+    const RegisterDescriptor *reg_info = reg_ctx_sp->GetRegisterByNumber(
         eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1 + idx);
     LLDB_LOG(log, "About to write arg{0} ({1:x}) into {2}", idx, arg,
              reg_info->name);
 
-    if (!reg_ctx_sp->WriteRegisterFromUnsigned(reg_info, arg)) {
+    if (llvm::errorToBool(reg_ctx_sp->WriteRegisterFromUnsigned(
+            (reg_info ? reg_info->id : LLDB_INVALID_REGNUM), arg))) {
       LLDB_LOG(log, "Failed to write arg{0} ({1:x}) into {2}", idx, arg,
                reg_info->name);
       return false;
@@ -295,10 +295,11 @@ Status ABISysV_loongarch::SetReturnValueObject(StackFrameSP &frame_sp,
   if (4 == num_bytes && m_is_la64)
     raw_value = llvm::SignExtend64<32>(raw_value);
   auto reg_info =
-      reg_ctx.GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
-  if (!reg_ctx.WriteRegisterFromUnsigned(reg_info, raw_value)) {
+      reg_ctx.GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
+  if (llvm::errorToBool(reg_ctx.WriteRegisterFromUnsigned(
+          (reg_info ? reg_info->id : LLDB_INVALID_REGNUM), raw_value))) {
     result = Status::FromErrorStringWithFormat(
-        "Couldn't write value to register %s", reg_info->name);
+        "Couldn't write value to register %s", reg_info->name.c_str());
     return result;
   }
 
@@ -313,10 +314,11 @@ Status ABISysV_loongarch::SetReturnValueObject(StackFrameSP &frame_sp,
     raw_value = data.GetMaxU64(&offset, num_bytes - reg_size);
 
   reg_info =
-      reg_ctx.GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG2);
-  if (!reg_ctx.WriteRegisterFromUnsigned(reg_info, raw_value))
+      reg_ctx.GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG2);
+  if (llvm::errorToBool(reg_ctx.WriteRegisterFromUnsigned(
+          (reg_info ? reg_info->id : LLDB_INVALID_REGNUM), raw_value)))
     result = Status::FromErrorStringWithFormat(
-        "Couldn't write value to register %s", reg_info->name);
+        "Couldn't write value to register %s", reg_info->name.c_str());
 
   return result;
 }
@@ -376,31 +378,40 @@ static bool SetSizedFloat(Scalar &scalar, uint64_t raw_value,
 }
 
 static ValueObjectSP GetValObjFromIntRegs(Thread &thread,
-                                          const RegisterContextSP &reg_ctx,
+                                          const ThreadRegisterContextSP &reg_ctx,
                                           llvm::Triple::ArchType machine,
                                           uint32_t type_flags,
                                           uint32_t byte_size) {
   Value value;
   ValueObjectSP return_valobj_sp;
   auto *reg_info_a0 =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
   auto *reg_info_a1 =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG2);
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG2);
   uint64_t raw_value = 0;
 
   switch (byte_size) {
   case sizeof(uint32_t):
     // Read a0 to get the arg
-    raw_value = reg_ctx->ReadRegisterAsUnsigned(reg_info_a0, 0) & UINT32_MAX;
+    raw_value = reg_ctx->ReadRegisterAsUnsigned(
+                    (reg_info_a0 ? reg_info_a0->id : LLDB_INVALID_REGNUM), 0) &
+                UINT32_MAX;
     break;
   case sizeof(uint64_t):
     // Read a0 to get the arg on loongarch64, a0 and a1 on loongarch32
     if (llvm::Triple::loongarch32 == machine) {
-      raw_value = reg_ctx->ReadRegisterAsUnsigned(reg_info_a0, 0) & UINT32_MAX;
+      raw_value =
+          reg_ctx->ReadRegisterAsUnsigned(
+              (reg_info_a0 ? reg_info_a0->id : LLDB_INVALID_REGNUM), 0) &
+          UINT32_MAX;
       raw_value |=
-          (reg_ctx->ReadRegisterAsUnsigned(reg_info_a1, 0) & UINT32_MAX) << 32U;
+          (reg_ctx->ReadRegisterAsUnsigned(
+               (reg_info_a1 ? reg_info_a1->id : LLDB_INVALID_REGNUM), 0) &
+           UINT32_MAX)
+          << 32U;
     } else {
-      raw_value = reg_ctx->ReadRegisterAsUnsigned(reg_info_a0, 0);
+      raw_value = reg_ctx->ReadRegisterAsUnsigned(
+          (reg_info_a0 ? reg_info_a0->id : LLDB_INVALID_REGNUM), 0);
     }
     break;
   case 16: {
@@ -414,15 +425,23 @@ static ValueObjectSP GetValObjFromIntRegs(Thread &thread,
         new DataBufferHeap(byte_size, 0));
     const ByteOrder byte_order = thread.GetProcess()->GetByteOrder();
     RegisterValue reg_value_a0, reg_value_a1;
-    if (reg_ctx->ReadRegister(reg_info_a0, reg_value_a0) &&
-        reg_ctx->ReadRegister(reg_info_a1, reg_value_a1)) {
+    if (!llvm::errorToBool(
+            reg_ctx
+                ->ReadRegister(
+                    (reg_info_a0 ? reg_info_a0->id : LLDB_INVALID_REGNUM))
+                .moveInto(reg_value_a0)) &&
+        !llvm::errorToBool(
+            reg_ctx
+                ->ReadRegister(
+                    (reg_info_a1 ? reg_info_a1->id : LLDB_INVALID_REGNUM))
+                .moveInto(reg_value_a1))) {
       Status error;
-      if (reg_value_a0.GetAsMemoryData(*reg_info_a0,
+      if (reg_value_a0.GetAsMemoryData(reg_info_a0->byte_size,
                                        heap_data_up->GetBytes() + 0, 8,
-                                       byte_order, error) &&
-          reg_value_a1.GetAsMemoryData(*reg_info_a1,
+                                       byte_order, error, reg_info_a0->name) &&
+          reg_value_a1.GetAsMemoryData(reg_info_a1->byte_size,
                                        heap_data_up->GetBytes() + 8, 8,
-                                       byte_order, error)) {
+                                       byte_order, error, reg_info_a1->name)) {
         value.SetBytes(heap_data_up.release(), byte_size);
         return ValueObjectConstResult::Create(
             thread.GetStackFrameAtIndex(0).get(), value, ConstString(""));
@@ -451,11 +470,11 @@ static ValueObjectSP GetValObjFromIntRegs(Thread &thread,
 }
 
 static ValueObjectSP GetValObjFromFPRegs(Thread &thread,
-                                         const RegisterContextSP &reg_ctx,
+                                         const ThreadRegisterContextSP &reg_ctx,
                                          llvm::Triple::ArchType machine,
                                          uint32_t type_flags,
                                          uint32_t byte_size) {
-  auto *reg_info_fa0 = reg_ctx->GetRegisterInfoByName("f0");
+  auto *reg_info_fa0 = reg_ctx->GetRegisterByName("f0");
   bool use_fp_regs = false;
   ValueObjectSP return_valobj_sp;
 
@@ -465,7 +484,8 @@ static ValueObjectSP GetValObjFromFPRegs(Thread &thread,
   if (use_fp_regs) {
     uint64_t raw_value;
     Value value;
-    raw_value = reg_ctx->ReadRegisterAsUnsigned(reg_info_fa0, 0);
+    raw_value = reg_ctx->ReadRegisterAsUnsigned(
+        (reg_info_fa0 ? reg_info_fa0->id : LLDB_INVALID_REGNUM), 0);
     if (!SetSizedFloat(value.GetScalar(), raw_value, byte_size))
       return return_valobj_sp;
     value.SetValueType(Value::ValueType::Scalar);
@@ -502,9 +522,10 @@ ValueObjectSP ABISysV_loongarch::GetReturnValueObjectSimple(
     return return_valobj_sp;
   }
   if (type_flags & eTypeIsPointer) {
-    const auto *reg_info_a0 = reg_ctx->GetRegisterInfo(
+    const auto *reg_info_a0 = reg_ctx->GetRegisterByNumber(
         eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
-    value.GetScalar() = reg_ctx->ReadRegisterAsUnsigned(reg_info_a0, 0);
+    value.GetScalar() = reg_ctx->ReadRegisterAsUnsigned(
+        (reg_info_a0 ? reg_info_a0->id : LLDB_INVALID_REGNUM), 0);
     value.SetValueType(Value::ValueType::Scalar);
     return ValueObjectConstResult::Create(thread.GetStackFrameAtIndex(0).get(),
                                           value, ConstString(""));
@@ -530,9 +551,9 @@ ValueObjectSP ABISysV_loongarch::GetReturnValueObjectImpl(
 }
 
 UnwindPlanSP ABISysV_loongarch::CreateFunctionEntryUnwindPlan() {
-  uint32_t pc_reg_num = loongarch_dwarf::dwarf_gpr_pc;
-  uint32_t sp_reg_num = loongarch_dwarf::dwarf_gpr_sp;
-  uint32_t ra_reg_num = loongarch_dwarf::dwarf_gpr_ra;
+  uint32_t pc_reg_num = dwarf_regs::gpr_pc;
+  uint32_t sp_reg_num = dwarf_regs::gpr_sp;
+  uint32_t ra_reg_num = dwarf_regs::gpr_ra;
 
   UnwindPlan::Row row;
 
@@ -576,15 +597,16 @@ UnwindPlanSP ABISysV_loongarch::CreateDefaultUnwindPlan() {
   return plan_sp;
 }
 
-bool ABISysV_loongarch::RegisterIsVolatile(const RegisterInfo *reg_info) {
+bool ABISysV_loongarch::RegisterIsVolatile(const RegisterDescriptor *reg_info) {
   return !RegisterIsCalleeSaved(reg_info);
 }
 
-bool ABISysV_loongarch::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
+bool ABISysV_loongarch::RegisterIsCalleeSaved(
+    const RegisterDescriptor *reg_info) {
   if (!reg_info)
     return false;
 
-  const char *name = reg_info->name;
+  const char *name = reg_info->name.c_str();
   ArchSpec arch = GetProcessSP()->GetTarget().GetArchitecture();
   uint32_t arch_flags = arch.GetFlags();
   // Floating point registers are only callee saved when using
@@ -634,7 +656,7 @@ static uint32_t GetGenericNum(llvm::StringRef name) {
 }
 
 void ABISysV_loongarch::AugmentRegisterInfo(
-    std::vector<lldb_private::DynamicRegisterInfo::Register> &regs) {
+    std::vector<lldb_private::RegisterDefinition> &regs) {
   lldb_private::RegInfoBasedABI::AugmentRegisterInfo(regs);
 
   static const llvm::StringMap<llvm::StringRef> isa_to_abi_alias_map = {

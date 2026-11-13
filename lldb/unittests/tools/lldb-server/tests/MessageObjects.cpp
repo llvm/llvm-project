@@ -71,7 +71,7 @@ const RegisterValue *ThreadInfo::ReadRegister(unsigned int Id) const {
 
 Expected<RegisterMap>
 JThreadsInfo::parseRegisters(const StructuredData::Dictionary &Dict,
-                             ArrayRef<RegisterInfo> RegInfos) {
+                             ArrayRef<RegisterDescriptor> RegInfos) {
   RegisterMap Result;
 
   auto KeysObj = Dict.GetKeys();
@@ -97,8 +97,9 @@ JThreadsInfo::parseRegisters(const StructuredData::Dictionary &Dict,
   return std::move(Result);
 }
 
-Expected<JThreadsInfo> JThreadsInfo::create(StringRef Response,
-                                            ArrayRef<RegisterInfo> RegInfos) {
+Expected<JThreadsInfo>
+JThreadsInfo::create(StringRef Response,
+                     ArrayRef<RegisterDescriptor> RegInfos) {
   JThreadsInfo jthreads_info;
 
   StructuredData::ObjectSP json = StructuredData::ParseJSON(Response);
@@ -140,42 +141,21 @@ const ThreadInfoMap &JThreadsInfo::GetThreadInfos() const {
   return m_thread_infos;
 }
 
-Expected<RegisterInfo> RegisterInfoParser::create(StringRef Response) {
+Expected<RegisterDescriptor> RegisterInfoParser::create(StringRef Response) {
   auto ElementsOr = SplitUniquePairList("RegisterInfoParser", Response);
   if (!ElementsOr)
     return ElementsOr.takeError();
   auto &Elements = *ElementsOr;
 
-  RegisterInfo Info = {
-      nullptr,       // Name
-      nullptr,       // Alt name
-      0,             // byte size
-      0,             // offset
-      eEncodingUint, // encoding
-      eFormatHex,    // format
-      {
-          LLDB_INVALID_REGNUM, // eh_frame reg num
-          LLDB_INVALID_REGNUM, // DWARF reg num
-          LLDB_INVALID_REGNUM, // generic reg num
-          LLDB_INVALID_REGNUM, // process plugin reg num
-          LLDB_INVALID_REGNUM  // native register number
-      },
-      nullptr,
-      nullptr,
-      nullptr,
-  };
-  Info.name = ConstString(Elements["name"]).GetCString();
-  if (!Info.name)
+  RegisterDescriptor Info;
+  Info.name = Elements["name"].str();
+  if (Info.name.empty())
     return make_parsing_error("qRegisterInfo: name");
-
-  Info.alt_name = ConstString(Elements["alt-name"]).GetCString();
+  Info.alt_name = Elements["alt-name"].str();
 
   if (!to_integer(Elements["bitsize"], Info.byte_size, 10))
     return make_parsing_error("qRegisterInfo: bit-size");
   Info.byte_size /= CHAR_BIT;
-
-  if (!to_integer(Elements["offset"], Info.byte_offset, 10))
-    Info.byte_offset = LLDB_INVALID_INDEX32;
 
   Info.encoding = Args::StringToEncoding(Elements["encoding"]);
   if (Info.encoding == eEncodingInvalid)
@@ -199,13 +179,13 @@ Expected<RegisterInfo> RegisterInfoParser::create(StringRef Response) {
   if (Info.format == eFormatInvalid)
     return make_parsing_error("qRegisterInfo: format");
 
-  Info.kinds[eRegisterKindGeneric] =
+  Info.numbers[eRegisterKindGeneric] =
       Args::StringToGenericRegister(Elements["generic"]);
 
   return std::move(Info);
 }
 
-Expected<RegisterValue> parseRegisterValue(const RegisterInfo &Info,
+Expected<RegisterValue> parseRegisterValue(const RegisterDescriptor &Info,
                                            StringRef HexValue,
                                            llvm::endianness Endian,
                                            bool ZeroPad) {
@@ -220,10 +200,10 @@ Expected<RegisterValue> parseRegisterValue(const RegisterInfo &Info,
   StringExtractor(HexValue).GetHexBytes(Bytes, '\xcc');
   RegisterValue Value;
   Status ST;
-  Value.SetFromMemoryData(Info, Bytes.data(), Bytes.size(),
-                          Endian == llvm::endianness::little ? eByteOrderLittle
-                                                             : eByteOrderBig,
-                          ST);
+  Value.SetFromMemoryData(
+      Info.encoding, Info.byte_size, Bytes.data(), Bytes.size(),
+      Endian == llvm::endianness::little ? eByteOrderLittle : eByteOrderBig, ST,
+      Info.name);
   if (ST.Fail())
     return ST.ToError();
   return Value;
@@ -232,7 +212,7 @@ Expected<RegisterValue> parseRegisterValue(const RegisterInfo &Info,
 //====== StopReply =============================================================
 Expected<std::unique_ptr<StopReply>>
 StopReply::create(StringRef Response, llvm::endianness Endian,
-                  ArrayRef<RegisterInfo> RegInfos) {
+                  ArrayRef<RegisterDescriptor> RegInfos) {
   if (Response.size() < 3)
     return make_parsing_error("StopReply: Invalid packet");
   if (Response.consume_front("T"))
@@ -244,7 +224,8 @@ StopReply::create(StringRef Response, llvm::endianness Endian,
 
 Expected<RegisterMap> StopReplyStop::parseRegisters(
     const StringMap<SmallVector<StringRef, 2>> &Elements,
-    llvm::endianness Endian, ArrayRef<lldb_private::RegisterInfo> RegInfos) {
+    llvm::endianness Endian,
+    ArrayRef<lldb_private::RegisterDescriptor> RegInfos) {
 
   RegisterMap Result;
   for (const auto &E : Elements) {
@@ -271,7 +252,7 @@ Expected<RegisterMap> StopReplyStop::parseRegisters(
 
 Expected<std::unique_ptr<StopReplyStop>>
 StopReplyStop::create(StringRef Response, llvm::endianness Endian,
-                      ArrayRef<RegisterInfo> RegInfos) {
+                      ArrayRef<RegisterDescriptor> RegInfos) {
   unsigned int Signal;
   StringRef SignalStr = Response.take_front(2);
   Response = Response.drop_front(2);
@@ -303,9 +284,10 @@ StopReplyStop::create(StringRef Response, llvm::endianness Endian,
     return make_parsing_error("StopReply: thread/PC count mismatch");
 
   RegisterMap ThreadPcs;
-  const RegisterInfo *PcInfo = find_if(RegInfos, [](const RegisterInfo &Info) {
-    return Info.kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_PC;
-  });
+  const RegisterDescriptor *PcInfo =
+      find_if(RegInfos, [](const RegisterDescriptor &Info) {
+        return Info.numbers[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_PC;
+      });
   assert(PcInfo);
 
   for (auto ThreadPc : zip(Threads, Pcs)) {
