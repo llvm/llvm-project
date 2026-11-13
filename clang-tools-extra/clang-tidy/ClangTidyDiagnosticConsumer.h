@@ -24,6 +24,7 @@
 namespace clang {
 
 class ASTContext;
+class Sema;
 class SourceManager;
 
 namespace tidy {
@@ -138,6 +139,15 @@ public:
 
   /// Sets ASTContext for the current translation unit.
   void setASTContext(ASTContext *Context);
+
+  /// Sets the \c Sema of the current translation unit, or null when it is no
+  /// longer available.
+  void setSema(Sema *S) { CurrentSema = S; }
+
+  /// Returns the \c Sema of the current translation unit. It is available
+  /// while matchers run in clang-tidy and clangd, but may be null in other
+  /// environments, so callers must handle a null result.
+  Sema *getSema() const { return CurrentSema; }
 
   /// Gets the language options from the AST context.
   const LangOptions &getLangOpts() const { return LangOpts; }
@@ -254,6 +264,8 @@ private:
   FileExtensionsSet ImplementationFileExtensions;
 
   LangOptions LangOpts;
+
+  Sema *CurrentSema = nullptr;
 
   ClangTidyStats Stats;
 

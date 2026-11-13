@@ -15302,6 +15302,29 @@ public:
       ConstrainedDeclOrNestedRequirement Entity,
       ArrayRef<AssociatedConstraint> AssociatedConstraints);
 
+  /// Determine whether the constraints of a class template partial
+  /// specialization permit any type that is not a program-defined type, i.e.
+  /// a type declared outside the standard library.
+  ///
+  /// This is used by diagnostics that decide whether a specialization of a
+  /// standard library template (such as adding a \c std::hash specialization)
+  /// depends only on program-defined types, as required by [namespace.std].
+  ///
+  /// The specialization's associated constraints are evaluated, without
+  /// emitting diagnostics, for combinations of probe arguments: fundamental
+  /// types and a few standard library types that are declared in this
+  /// translation unit for type parameters, an empty pack or a single probe for
+  /// packs, and 0 or 1 for integral and enumeration non-type parameters.
+  ///
+  /// \returns \c true if the specialization is unconstrained, if some probe
+  /// combination satisfies the constraints, if satisfaction could not be
+  /// decided, or if the specialization has a template parameter kind that
+  /// cannot be probed; \c false otherwise. A \c false result is a heuristic:
+  /// a non-program-defined type outside the probe set may still satisfy the
+  /// constraints.
+  bool constraintsAdmitNonProgramDefinedType(
+      const ClassTemplatePartialSpecializationDecl *PartialSpec);
+
   /// \brief Check whether the given declaration's associated constraints are
   /// at least as constrained than another declaration's according to the
   /// partial ordering of constraints.

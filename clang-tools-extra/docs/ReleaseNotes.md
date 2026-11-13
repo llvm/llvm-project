@@ -242,6 +242,12 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
   lambda closure types used as template arguments.
 
+- Improved {doc}`bugprone-std-namespace-modification
+  <clang-tidy/checks/bugprone/std-namespace-modification>` check by no longer
+  warning on partial specializations whose constraints restrict them to
+  user-defined types, such as
+  `template <std::derived_from<Base> T> struct std::hash<T>`.
+
 - Improved {doc}`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` check:
 
