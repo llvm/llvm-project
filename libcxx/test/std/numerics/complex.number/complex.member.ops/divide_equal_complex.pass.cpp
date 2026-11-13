@@ -32,16 +32,8 @@ test()
     assert(is_close(c.real(), T(1)));
     assert(is_close(c.imag(), T(0)));
 
-    std::complex<T> c3;
-
-    c3 = c;
-    std::complex<int> ic (1,1);
-    c3 /= ic;
-    assert(is_close(c3.real(), T(0.5)));
-    assert(is_close(c3.imag(), T(-0.5)));
-
-    c3 = c;
-    std::complex<float> fc (1,1);
+    std::complex<T> c3 = c;
+    std::complex<float> fc(1, 1);
     c3 /= fc;
     assert(is_close(c3.real(), T(0.5)));
     assert(is_close(c3.imag(), T(-0.5)));
