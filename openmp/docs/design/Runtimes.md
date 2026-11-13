@@ -1232,6 +1232,34 @@ replay tool will issue an error if you specify a number of threads or teams that
 is incompatible with the limits established by the original code (e.g.,
 exceeding bounds set by a `num_teams` or `thread_limit` clause).
 
+To replay several launch configurations of the same kernel within a single
+process, list them in a file and pass it with `--batch=<file>`. Each line holds
+`<num-teams> <num-threads>`, where `0` keeps the recorded value; blank lines and
+lines starting with `#` are ignored. The recorded inputs are restored before
+every replay, and `--repetitions` and `--verify` apply to each configuration.
+For each configuration, the tool prints machine-readable lines with its index,
+launch parameters, and median replay time:
+
+```console
+$ cat configs.txt
+0 0
+0 64
+$ llvm-omp-kernel-replay --batch=configs.txt --repetitions=3 records/5681756204876336171_6652394454608725381.json
+||ReplayConfig|| index: 0 num_teams: 256 num_threads: 128
+[llvm-omp-kernel-replay] Replay time (1): 94926702 ns
+[llvm-omp-kernel-replay] Replay time (2): 94642823 ns
+[llvm-omp-kernel-replay] Replay time (3): 94429614 ns
+||ReplayTiming|| duration_seconds: 0.094642823
+[llvm-omp-kernel-replay] Replay done, verification skipped
+||ReplayConfig|| index: 1 num_teams: 256 num_threads: 64
+...
+```
+
+A configuration that violates the recorded limits or fails verification is
+reported with a `||ReplayError|| index: <N>` line, and the remaining
+configurations are still replayed; the tool then exits with an error. The
+`--batch` flag cannot be combined with `--num-teams` or `--num-threads`.
+
 The time reported by the replay tool corresponds to the host-side kernel launch
 and synchronization time. If highly precise kernel timing is required, it is
 recommended to use dedicated profiling tools in conjunction with the replay
