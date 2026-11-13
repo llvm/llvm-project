@@ -3945,9 +3945,9 @@ let SubtargetPredicate = isGFX10Plus in {
 // better to select fma instead of fmac.
 let True16Predicate = NotHasTrue16BitInsts in
 def : GCNPat <
-  (fma (f16 (VOP3NoMods f32:$src0)),
-       (f16 (VOP3NoMods f32:$src1)),
-       (f16 (VOP3NoMods f32:$src2))),
+  (fma (f16 (VOP3NoOpSelMods f32:$src0)),
+       (f16 (VOP3NoOpSelMods f32:$src1)),
+       (f16 (VOP3NoOpSelMods f32:$src2))),
   (V_FMAC_F16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
                   SRCMODS.NONE, $src2)
 >;
@@ -3961,9 +3961,9 @@ def : GCNPat <
 >;
 let True16Predicate = UseFakeTrue16Insts in
 def : GCNPat <
-  (fma (f16 (VOP3NoMods f16:$src0)),
-       (f16 (VOP3NoMods f16:$src1)),
-       (f16 (VOP3NoMods f16:$src2))),
+  (fma (f16 (VOP3NoOpSelMods f16:$src0)),
+       (f16 (VOP3NoOpSelMods f16:$src1)),
+       (f16 (VOP3NoOpSelMods f16:$src2))),
   (V_FMAC_F16_fake16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
                   SRCMODS.NONE, $src2)
 >;

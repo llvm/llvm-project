@@ -662,7 +662,8 @@ public:
   ThinLTOProcessing(const cl::LibraryOptionsContext &LibraryOptions,
                     const TargetOptions &Options)
       : LibraryOptions(LibraryOptions), ThinGenerator(LibraryOptions) {
-    ThinGenerator.setCodePICModel(codegen::getExplicitRelocModel());
+    ThinGenerator.setCodePICModel(
+        codegen::getExplicitRelocModel(LibraryOptions));
     ThinGenerator.setTargetOptions(Options);
     ThinGenerator.setCacheDir(ThinLTOCacheDir);
     ThinGenerator.setCachePruningInterval(ThinLTOCachePruningInterval);
@@ -1079,7 +1080,7 @@ int main(int argc, char **argv) {
   if (UseDiagnosticHandler)
     CodeGen.setDiagnosticHandler(handleDiagnostics, nullptr);
 
-  CodeGen.setCodePICModel(codegen::getExplicitRelocModel());
+  CodeGen.setCodePICModel(codegen::getExplicitRelocModel(LibraryOptions));
   CodeGen.setFreestanding(EnableFreestanding);
   CodeGen.setDebugPassManager(DebugPassManager);
 
@@ -1129,12 +1130,12 @@ int main(int argc, char **argv) {
     CodeGen.addMustPreserveSymbol(KeptDSOSyms[i]);
 
   // Set cpu and attrs strings for the default target/subtarget.
-  CodeGen.setCpu(codegen::getMCPU());
+  CodeGen.setCpu(codegen::getMCPU(LibraryOptions));
 
   CodeGen.setOptLevel(OptLevel - '0');
-  CodeGen.setAttrs(codegen::getMAttrs());
+  CodeGen.setAttrs(codegen::getMAttrs(LibraryOptions));
 
-  if (auto FT = codegen::getExplicitFileType())
+  if (auto FT = codegen::getExplicitFileType(LibraryOptions))
     CodeGen.setFileType(*FT);
 
   if (!OutputFilename.empty()) {

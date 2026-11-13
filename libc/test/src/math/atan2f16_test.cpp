@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/__support/macros/optimization.h"
 #include "src/math/atan2f16.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -25,45 +26,58 @@ using LIBC_NAMESPACE::testing::tlog;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcAtan2f16Test, TrickyInputs) {
+  using LIBC_NAMESPACE::fputil::cast;
   constexpr int N = 17;
-  mpfr::BinaryInput<float16> INPUTS[N] = {
-      {0x1.0p0f, 0x1.4p0f},   {0x1.2p0f, 0x1.0p0f},   {-0x1.0p0f, 0x1.2p0f},
-      {0x1.8p0f, 0x1.0p0f},   {0x1.2p-2f, 0x1.0p-2f}, {0x1.0p0f, 0x1.0p0f},
-      {0x1.0p-1f, 0x1.0p0f},  {0x1.0p0f, 0x1.0p-1f},  {0x1.8p1f, 0x1.0p0f},
-      {0x1.0p0f, 0x1.4p1f},   {0x1.2p1f, 0x1.0p-1f},  {0x1.0p-2f, 0x1.0p0f},
-      {0x1.0p0f, 0x1.0p-3f},  {0x1.4p0f, 0x1.0p0f},   {0x1.0p0f, 0x1.8p0f},
-      {0x1.0p-1f, 0x1.0p-1f}, {0x1.2p0f, 0x1.2p0f},
+  mpfr::BinaryInput<float16> inputs[N] = {
+      {cast<float16>(0x1.0p0f), cast<float16>(0x1.4p0f)},
+      {cast<float16>(0x1.2p0f), cast<float16>(0x1.0p0f)},
+      {cast<float16>(-0x1.0p0f), cast<float16>(0x1.2p0f)},
+      {cast<float16>(0x1.8p0f), cast<float16>(0x1.0p0f)},
+      {cast<float16>(0x1.2p-2f), cast<float16>(0x1.0p-2f)},
+      {cast<float16>(0x1.0p0f), cast<float16>(0x1.0p0f)},
+      {cast<float16>(0x1.0p-1f), cast<float16>(0x1.0p0f)},
+      {cast<float16>(0x1.0p0f), cast<float16>(0x1.0p-1f)},
+      {cast<float16>(0x1.8p1f), cast<float16>(0x1.0p0f)},
+      {cast<float16>(0x1.0p0f), cast<float16>(0x1.4p1f)},
+      {cast<float16>(0x1.2p1f), cast<float16>(0x1.0p-1f)},
+      {cast<float16>(0x1.0p-2f), cast<float16>(0x1.0p0f)},
+      {cast<float16>(0x1.0p0f), cast<float16>(0x1.0p-3f)},
+      {cast<float16>(0x1.4p0f), cast<float16>(0x1.0p0f)},
+      {cast<float16>(0x1.0p0f), cast<float16>(0x1.8p0f)},
+      {cast<float16>(0x1.0p-1f), cast<float16>(0x1.0p-1f)},
+      {cast<float16>(0x1.2p0f), cast<float16>(0x1.2p0f)},
   };
 
   for (int i = 0; i < N; ++i) {
-    float16 x = INPUTS[i].x;
-    float16 y = INPUTS[i].y;
-    ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan2, INPUTS[i],
+    float16 x = inputs[i].x;
+    float16 y = inputs[i].y;
+    ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan2, inputs[i],
                                    LIBC_NAMESPACE::atan2f16(x, y),
                                    TOLERANCE + 0.5);
-    INPUTS[i].x = -INPUTS[i].x;
-    ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan2, INPUTS[i],
+    inputs[i].x = -inputs[i].x;
+    ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan2, inputs[i],
                                    LIBC_NAMESPACE::atan2f16(-x, y),
                                    TOLERANCE + 0.5);
-    INPUTS[i].y = -INPUTS[i].y;
-    ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan2, INPUTS[i],
+    inputs[i].y = -inputs[i].y;
+    ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan2, inputs[i],
                                    LIBC_NAMESPACE::atan2f16(-x, -y),
                                    TOLERANCE + 0.5);
-    INPUTS[i].x = -INPUTS[i].x;
-    ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan2, INPUTS[i],
+    inputs[i].x = -inputs[i].x;
+    ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan2, inputs[i],
                                    LIBC_NAMESPACE::atan2f16(x, -y),
                                    TOLERANCE + 0.5);
   }
 }
 
 TEST_F(LlvmLibcAtan2f16Test, InFloat16Range) {
-  constexpr uint16_t X_START = FPBits(static_cast<float16>(0.25f)).uintval();
-  constexpr uint16_t X_STOP = FPBits(static_cast<float16>(4.0f)).uintval();
+  using LIBC_NAMESPACE::fputil::cast;
+  constexpr uint16_t X_START = FPBits(cast<float16>(0.25f)).uintval();
+  constexpr uint16_t X_STOP = FPBits(cast<float16>(4.0f)).uintval();
   constexpr uint32_t X_COUNT = 1'23;
   constexpr uint32_t X_STEP = (X_STOP - X_START) / X_COUNT;
 
-  constexpr uint16_t Y_START = FPBits(static_cast<float16>(0.25f)).uintval();
-  constexpr uint16_t Y_STOP = FPBits(static_cast<float16>(4.0f)).uintval();
+  constexpr uint16_t Y_START = FPBits(cast<float16>(0.25f)).uintval();
+  constexpr uint16_t Y_STOP = FPBits(cast<float16>(4.0f)).uintval();
   constexpr uint32_t Y_COUNT = 1'37;
   constexpr uint32_t Y_STEP = (Y_STOP - Y_START) / Y_COUNT;
 
@@ -75,7 +89,7 @@ TEST_F(LlvmLibcAtan2f16Test, InFloat16Range) {
     uint64_t fails = 0;
     uint64_t finite_count = 0;
     uint64_t total_count = 0;
-    float16 failed_x = 0.0f, failed_y = 0.0f, failed_r = 0.0f;
+    float16 failed_x = zero, failed_y = zero, failed_r = zero;
     double tol = 0.5;
 
     for (uint32_t i = 0; i <= X_COUNT; ++i) {
