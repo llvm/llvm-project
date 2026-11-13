@@ -1,7 +1,8 @@
 // RUN: fir-opt --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" %s | FileCheck %s
 // RUN: fir-opt --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" %s | mlir-translate --mlir-to-llvmir | FileCheck %s --check-prefix=LLVM
-// RUN: mkdir -p %t
-// RUN: %flang_fc1 -emit-llvm -fopenmp -fopenmp-version=52 -module-dir %t -o - %S/../Lower/OpenMP/assumption.f90 | FileCheck %s --check-prefix=SCOPE
+// RUN: split-file %S/../Lower/OpenMP/assumption.f90 %t
+// RUN: %flang_fc1 -emit-llvm -fopenmp -fopenmp-version=52 -module-dir %t -o - %t/bare.f90 | FileCheck %s --check-prefix=SCOPE
+// RUN: %flang_fc1 -emit-llvm -fopenmp -fopenmp-version=60 -module-dir %t -o - %t/conditional.f90 | FileCheck %s --check-prefix=CONDITIONAL
 // REQUIRES: x86-registered-target
 
 // Preserve the direct callee alongside converted fast-math properties and
@@ -73,3 +74,29 @@ func.func @indirect(%callee: (f32) -> f32, %arg: f32) -> f32 {
 // SCOPE-NOT: #
 // SCOPE-SAME: {{$}}
 // SCOPE: attributes #[[ASSUMPTIONS]] = { "llvm.assume"="omp_no_openmp" }
+
+// CONDITIONAL-LABEL: define void {{.*}}assume_no_openmp_conditional
+// CONDITIONAL-NOT: #
+// CONDITIONAL-SAME: {{$}}
+// CONDITIONAL: call void {{.*}}external_helper
+// CONDITIONAL-NOT: #
+// CONDITIONAL-SAME: {{$}}
+// CONDITIONAL: call void @llvm.assume
+// CONDITIONAL: call void {{.*}}external_helper
+// CONDITIONAL-SAME: #[[ASSUMPTIONS:[0-9]+]]
+// CONDITIONAL: call void %{{[^ (]+}}
+// CONDITIONAL-SAME: #[[ASSUMPTIONS]]
+// CONDITIONAL: call void @llvm.assume
+// CONDITIONAL: call void {{.*}}external_helper
+// CONDITIONAL-NOT: #
+// CONDITIONAL-SAME: {{$}}
+// CONDITIONAL: call void %{{[^ (]+}}
+// CONDITIONAL-SAME: #[[ASSUMPTIONS]]
+// CONDITIONAL: call void {{.*}}external_helper
+// CONDITIONAL-NOT: #
+// CONDITIONAL-SAME: {{$}}
+// CONDITIONAL: call void {{.*}}external_helper
+// CONDITIONAL-NOT: #
+// CONDITIONAL-SAME: {{$}}
+// CONDITIONAL: ret void
+// CONDITIONAL: attributes #[[ASSUMPTIONS]] = { "llvm.assume"="omp_no_openmp" }

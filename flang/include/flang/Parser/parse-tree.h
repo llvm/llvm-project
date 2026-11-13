@@ -4984,10 +4984,12 @@ struct OmpMessageClause {
   WRAPPER_CLASS_BOILERPLATE(OmpMessageClause, Expr);
 };
 
-// Ref: [5.2: 214]
+// Ref: [5.2:214], [6.0:365]
 //
-// no_openmp_clause -> NO_OPENMP
-EMPTY_CLASS(OmpNoOpenMPClause);
+// no_openmp_clause -> NO_OPENMP[(can_assume)]
+struct OmpNoOpenMPClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpNoOpenMPClause, ScalarLogicalConstantExpr);
+};
 
 // Ref: [5.2: 214]
 //

@@ -368,6 +368,8 @@ def OMPC_Message : Clause<[Spelling<"message">]> {
 }
 def OMPC_NoOpenMP : Clause<[Spelling<"no_openmp">]> {
   let clangClass = "OMPNoOpenMPClause";
+  let flangClass = "OmpNoOpenMPClause";
+  let isValueOptional = true;
 }
 def OMPC_NoOpenMPConstructs : Clause<[Spelling<"no_openmp_constructs">]> {
   let clangClass = "OMPNoOpenMPConstructsClause";

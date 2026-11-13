@@ -1,12 +1,15 @@
-! RUN: mkdir -p %t
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -module-dir %t -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK5X,SUBMODULE,SCOPE,SCOPE5X,ABSENT,ABSENT5X,RELOAD,RELOAD5X
+! RUN: split-file %s %t
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -module-dir %t -o - %t/bare.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK5X,SUBMODULE,SCOPE,SCOPE5X,ABSENT,ABSENT5X,RELOAD,RELOAD5X
 ! RUN: FileCheck %s --check-prefix=MODFILE --input-file=%t/assumes_module.mod
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 -module-dir %t -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK60,SUBMODULE,SCOPE,SCOPE60,ABSENT,ABSENT60,RELOAD,RELOAD60
-! RUN: %flang_fc1 -emit-hlfir -fopenmp-simd -fopenmp-version=51 -module-dir %t -o - %s | FileCheck %s --check-prefix=SIMD
-! RUN: %flang_fc1 -fdebug-dump-symbols -fopenmp -fopenmp-version=51 -module-dir %t %s | FileCheck %s --check-prefix=SYMBOLS
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 -module-dir %t -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK60,SUBMODULE,SCOPE,SCOPE60,ABSENT,ABSENT60,RELOAD,RELOAD60,CONDITIONAL
+! RUN: %flang_fc1 -emit-hlfir -fopenmp-simd -fopenmp-version=51 -module-dir %t -o - %t/bare.f90 | FileCheck %s --check-prefix=SIMD
+! RUN: %flang_fc1 -emit-hlfir -fopenmp-simd -fopenmp-version=60 -module-dir %t -o - %s | FileCheck %s --check-prefix=SIMD
+! RUN: %flang_fc1 -fdebug-dump-symbols -fopenmp -fopenmp-version=51 -module-dir %t %t/bare.f90 | FileCheck %s --check-prefix=SYMBOLS
 
+!--- bare.f90
 ! SIMD: module
-! SIMD-NOT: "llvm.assume"
+! SIMD-NOT: llvm.assume
+! SIMD-NOT: llvm.intr.assume
 
 ! SYMBOLS-DAG: assume_block (Subroutine): Subprogram
 ! SYMBOLS-DAG: assumes_module (OmpAssumesNoOpenmp): Module
@@ -53,6 +56,7 @@ subroutine assume_no_openmp(value)
     ! CHECK-SAME: default_func_attrs = {llvm.assume = "omp_no_openmp"}
     call external_helper(value)
   end block
+  !$omp end assume
   ! CHECK: fir.call {{.*}}external_helper
   ! CHECK-NOT: default_func_attrs
   ! CHECK: return
@@ -409,3 +413,51 @@ contains
   module procedure absent_imported_work
   end procedure absent_imported_work
 end submodule absent_use_child
+
+!--- conditional.f90
+! CONDITIONAL-LABEL: func.func {{.*}}assume_no_openmp_conditional(
+! CONDITIONAL-NOT: llvm.passthrough
+subroutine assume_no_openmp_conditional(callback, value)
+  integer :: value
+  interface
+    subroutine callback(value)
+      integer :: value
+    end subroutine callback
+  end interface
+  ! CONDITIONAL: fir.call {{.*}}external_helper
+  ! CONDITIONAL-NOT: default_func_attrs
+  call external_helper(value)
+  !$omp assume holds(value > 0) no_openmp(.true.)
+  block
+    ! CONDITIONAL: llvm.intr.assume
+    ! CONDITIONAL: fir.call {{.*}}external_helper
+    ! CONDITIONAL-SAME: default_func_attrs = {llvm.assume = "omp_no_openmp"}
+    call external_helper(value)
+    !$omp assume no_openmp(.false.)
+    block
+      ! CONDITIONAL: fir.call %{{[^ (]+}}
+      ! CONDITIONAL-SAME: default_func_attrs = {llvm.assume = "omp_no_openmp"}
+      call callback(value)
+    end block
+  end block
+  !$omp assume no_openmp(.false.) holds(value > 0)
+  block
+    ! CONDITIONAL: llvm.intr.assume
+    ! CONDITIONAL: fir.call {{.*}}external_helper
+    ! CONDITIONAL-NOT: default_func_attrs
+    call external_helper(value)
+    !$omp assume no_openmp(.not. .false._1)
+    block
+      ! CONDITIONAL: fir.call %{{[^ (]+}}
+      ! CONDITIONAL-SAME: default_func_attrs = {llvm.assume = "omp_no_openmp"}
+      call callback(value)
+    end block
+    ! CONDITIONAL: fir.call {{.*}}external_helper
+    ! CONDITIONAL-NOT: default_func_attrs
+    call external_helper(value)
+  end block
+  ! CONDITIONAL: fir.call {{.*}}external_helper
+  ! CONDITIONAL-NOT: default_func_attrs
+  ! CONDITIONAL: return
+  call external_helper(value)
+end subroutine assume_no_openmp_conditional

@@ -1,5 +1,5 @@
-! RUN: mkdir -p %t
-! RUN: %flang_fc1 -fsyntax-only -fopenmp -fopenmp-version=51 -module-dir %t %S/assumption.f90
+! RUN: split-file %S/assumption.f90 %t
+! RUN: %flang_fc1 -fsyntax-only -fopenmp -fopenmp-version=51 -module-dir %t %t/bare.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -I %t -module-dir %t -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK5X
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 -I %t -module-dir %t -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK60
 

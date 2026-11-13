@@ -1,8 +1,12 @@
-!RUN: %flang_fc1 -fopenmp-version=51 -fopenmp -fdebug-unparse-no-sema %s | FileCheck --check-prefix="UNPARSE" %s
-!RUN: %flang_fc1 -fopenmp-version=51 -fopenmp -fdebug-dump-parse-tree-no-sema %s | FileCheck --check-prefix="PARSE-TREE" %s
-!RUN: %flang_fc1 -fopenmp-version=52 -fopenmp -fdebug-unparse-no-sema %s | FileCheck --check-prefix="UNPARSE" %s
-!RUN: %flang_fc1 -fopenmp-version=52 -fopenmp -fdebug-dump-parse-tree-no-sema %s | FileCheck --check-prefix="PARSE-TREE" %s
+!RUN: split-file %s %t
+!RUN: %flang_fc1 -fopenmp-version=51 -fopenmp -fdebug-unparse-no-sema %t/bare.f90 | FileCheck --check-prefix="UNPARSE" %s
+!RUN: %flang_fc1 -fopenmp-version=51 -fopenmp -fdebug-dump-parse-tree-no-sema %t/bare.f90 | FileCheck --check-prefix="PARSE-TREE" %s
+!RUN: %flang_fc1 -fopenmp-version=52 -fopenmp -fdebug-unparse-no-sema %t/bare.f90 | FileCheck --check-prefix="UNPARSE" %s
+!RUN: %flang_fc1 -fopenmp-version=52 -fopenmp -fdebug-dump-parse-tree-no-sema %t/bare.f90 | FileCheck --check-prefix="PARSE-TREE" %s
+!RUN: %flang_fc1 -fopenmp-version=60 -fopenmp -fdebug-unparse-no-sema %t/conditional.f90 | FileCheck --check-prefix="UNPARSE60" %s
+!RUN: %flang_fc1 -fopenmp-version=60 -fopenmp -fdebug-dump-parse-tree-no-sema %t/conditional.f90 | FileCheck --check-prefix="PARSE-TREE60" %s
 
+!--- bare.f90
 subroutine sub1
   integer :: r
   !$omp assume no_openmp
@@ -201,3 +205,37 @@ end subroutine assumes_absent
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = assumes
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Absent -> OmpAbsentClause -> llvm::omp::Directive = target enter data
 !PARSE-TREE: | Flags = {}
+
+!--- conditional.f90
+subroutine conditional_assumptions
+  logical, parameter :: enabled = .true.
+  !$omp assume no_openmp(enabled)
+  block
+  end block
+  !$omp assume no_openmp(.true.)
+  block
+  end block
+  !$omp assume no_openmp(.false.)
+  !$omp end assume
+end subroutine conditional_assumptions
+
+!UNPARSE60: SUBROUTINE conditional_assumptions
+!UNPARSE60: !$OMP ASSUME NO_OPENMP(enabled)
+!UNPARSE60: BLOCK
+!UNPARSE60: END BLOCK
+!UNPARSE60: !$OMP ASSUME NO_OPENMP(.TRUE.)
+!UNPARSE60: BLOCK
+!UNPARSE60: END BLOCK
+!UNPARSE60: !$OMP ASSUME NO_OPENMP(.FALSE.)
+!UNPARSE60: !$OMP END ASSUME
+!UNPARSE60: END SUBROUTINE conditional_assumptions
+
+!PARSE-TREE60: OmpAssumeDirective
+!PARSE-TREE60: OmpClause -> NoOpenmp -> OmpNoOpenMPClause
+!PARSE-TREE60: Expr -> Designator -> DataRef -> Name = 'enabled'
+!PARSE-TREE60: OmpAssumeDirective
+!PARSE-TREE60: OmpClause -> NoOpenmp -> OmpNoOpenMPClause
+!PARSE-TREE60: LogicalLiteralConstant
+!PARSE-TREE60: OmpAssumeDirective
+!PARSE-TREE60: OmpClause -> NoOpenmp -> OmpNoOpenMPClause
+!PARSE-TREE60: LogicalLiteralConstant

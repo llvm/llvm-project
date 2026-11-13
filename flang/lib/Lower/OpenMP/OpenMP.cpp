@@ -8432,8 +8432,11 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     const parser::OmpDirectiveSpecification &beginSpec =
         assumeConstruct.BeginDir();
     for (const parser::OmpClause &clause : beginSpec.Clauses().v) {
-      if (std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u)) {
-        noOpenMP = true;
+      if (const auto *noOpenmp =
+              std::get_if<parser::OmpClause::NoOpenmp>(&clause.u)) {
+        noOpenMP = !noOpenmp->v ||
+                   semantics::omp::GetLogicalArgument(noOpenmp->v, semaCtx)
+                       .value_or(false);
         continue;
       }
       mlir::Location clauseLoc = converter.genLocation(clause.source);

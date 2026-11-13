@@ -234,6 +234,7 @@ public:
   void Enter(const parser::OmpClause::Looprange &x);
   void Enter(const parser::OmpClause::Map &x);
   void Enter(const parser::OmpClause::Message &x);
+  void Enter(const parser::OmpClause::NoOpenmp &x);
   void Enter(const parser::OmpClause::NumTeams &x);
   void Enter(const parser::OmpClause::NumThreads &x);
   void Enter(const parser::OmpClause::OmpxBare &x);

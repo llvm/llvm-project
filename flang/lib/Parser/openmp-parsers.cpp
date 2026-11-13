@@ -1424,6 +1424,8 @@ TYPE_PARSER(construct<OmpReductionClause>(
 
 TYPE_PARSER(construct<OmpReplayableClause>(scalarLogicalConstantExpr))
 
+TYPE_PARSER(construct<OmpNoOpenMPClause>(scalarLogicalConstantExpr))
+
 // OMP 5.0 2.19.5.6 IN_REDUCTION (reduction-identifier: variable-name-list)
 TYPE_PARSER(construct<OmpInReductionClause>(
     maybe(nonemptyList(Parser<OmpInReductionClause::Modifier>{}) / ":"),
@@ -1817,7 +1819,8 @@ TYPE_PARSER( //
     "NOVARIANTS" >> construct<OmpClause>(construct<OmpClause::Novariants>(
                         parenthesized(scalarLogicalExpr))) ||
     "NOWAIT" >> construct<OmpClause>(construct<OmpClause::Nowait>()) ||
-    "NO_OPENMP"_id >> construct<OmpClause>(construct<OmpClause::NoOpenmp>()) ||
+    "NO_OPENMP"_id >> construct<OmpClause>(construct<OmpClause::NoOpenmp>(
+                          maybe(parenthesized(Parser<OmpNoOpenMPClause>{})))) ||
     "NO_OPENMP_ROUTINES" >>
         construct<OmpClause>(construct<OmpClause::NoOpenmpRoutines>()) ||
     "NO_PARALLELISM" >>
