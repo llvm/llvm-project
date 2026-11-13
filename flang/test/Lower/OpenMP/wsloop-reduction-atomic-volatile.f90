@@ -1,12 +1,7 @@
 ! Test that mixing a volatile and a non-volatile scalar by-value intrinsic
 ! reduction of the same operator/element type produces two distinct
-! omp.declare_reduction ops: the non-volatile one carries the atomic region
-! (barrier-free atomic method) while the volatile one is kept separate and
-! non-atomic. Sharing one declaration would fail verification, because the
-! atomic region is typed with a non-volatile reference (!fir.ref<f32>) but the
-! volatile operand is !fir.ref<f32, volatile>. Both source orders are covered:
-! the f32 subroutine reduces the volatile variable first, the f64 subroutine
-! reduces the non-volatile variable first.
+! omp.declare_reduction ops, in either source order. Only the non-volatile f32
+! one has an atomic region; f64 is too wide for one.
 
 ! RUN: bbc -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 
@@ -16,7 +11,7 @@
 ! CHECK-NOT:     atomic {
 ! CHECK-NOT:     llvm.atomicrmw
 ! CHECK-LABEL: omp.declare_reduction @add_reduction_f64 : f64
-! CHECK:         llvm.atomicrmw fadd %{{.*}}, %{{.*}} monotonic : !llvm.ptr, f64
+! CHECK-NOT:     llvm.atomicrmw
 ! CHECK-LABEL: omp.declare_reduction @add_reduction_f32 : f32
 ! CHECK:         llvm.atomicrmw fadd %{{.*}}, %{{.*}} monotonic : !llvm.ptr, f32
 ! CHECK-LABEL: omp.declare_reduction @add_reduction_volatile_f32 : f32

@@ -18,8 +18,10 @@
 ! CHECK-LABEL: omp.declare_reduction @and_reduction_l32 : !fir.logical<4>
 ! CHECK-NOT:     llvm.atomicrmw
 
+! Types wider than 32 bits can be under-aligned through storage association or
+! dummy-argument aliasing, so they get no atomic region.
 ! CHECK-LABEL: omp.declare_reduction @max_f64 : f64
-! CHECK:         llvm.atomicrmw fmax %{{.*}}, %{{.*}} monotonic : !llvm.ptr, f64
+! CHECK-NOT:     llvm.atomicrmw
 ! CHECK-LABEL: omp.declare_reduction @min_f32 : f32
 ! CHECK:         llvm.atomicrmw fmin %{{.*}}, %{{.*}} monotonic : !llvm.ptr, f32
 ! CHECK-LABEL: omp.declare_reduction @ieor_i32 : i32
@@ -29,9 +31,9 @@
 ! CHECK-LABEL: omp.declare_reduction @min_i32 : i32
 ! CHECK:         llvm.atomicrmw min %{{.*}}, %{{.*}} monotonic : !llvm.ptr, i32
 ! CHECK-LABEL: omp.declare_reduction @add_reduction_f64 : f64
-! CHECK:         llvm.atomicrmw fadd %{{.*}}, %{{.*}} monotonic : !llvm.ptr, f64
+! CHECK-NOT:     llvm.atomicrmw
 ! CHECK-LABEL: omp.declare_reduction @add_reduction_i64 : i64
-! CHECK:         llvm.atomicrmw add %{{.*}}, %{{.*}} monotonic : !llvm.ptr, i64
+! CHECK-NOT:     llvm.atomicrmw
 ! CHECK-LABEL: omp.declare_reduction @add_reduction_i16 : i16
 ! CHECK:         llvm.atomicrmw add %{{.*}}, %{{.*}} monotonic : !llvm.ptr, i16
 ! CHECK-LABEL: omp.declare_reduction @add_reduction_i8 : i8
