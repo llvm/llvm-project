@@ -266,7 +266,7 @@
       DEFINE_VSX(vs57, LLDB_INVALID_REGNUM),                                   \
       DEFINE_VSX(vs58, LLDB_INVALID_REGNUM),                                   \
       DEFINE_VSX(vs59, LLDB_INVALID_REGNUM),                                   \
-      DEFINE_VSX(vs50, LLDB_INVALID_REGNUM),                                   \
+      DEFINE_VSX(vs60, LLDB_INVALID_REGNUM),                                   \
       DEFINE_VSX(vs61, LLDB_INVALID_REGNUM),                                   \
       DEFINE_VSX(vs62, LLDB_INVALID_REGNUM),                                   \
       DEFINE_VSX(vs63, LLDB_INVALID_REGNUM), /* */

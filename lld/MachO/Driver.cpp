@@ -30,6 +30,7 @@
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Reproduce.h"
+#include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -837,20 +838,29 @@ static void replaceCommonSymbols() {
 
 static void initializeSectionRenameMap() {
   if (config->dataConst) {
-    SmallVector<StringRef> v{section_names::got,
-                             section_names::authGot,
+    SmallVector<StringRef> v{section_names::authGot,
                              section_names::authPtr,
-                             section_names::nonLazySymbolPtr,
-                             section_names::const_,
                              section_names::cfString,
+                             section_names::const_,
+                             section_names::constCfObj2,
+                             section_names::got,
                              section_names::moduleInitFunc,
                              section_names::moduleTermFunc,
-                             section_names::objcClassList,
-                             section_names::objcNonLazyClassList,
+                             section_names::nonLazySymbolPtr,
+                             section_names::objcArrayData,
+                             section_names::objcArrayObj,
                              section_names::objcCatList,
+                             section_names::objcCatList2,
+                             section_names::objcClassList,
+                             section_names::objcDateObj,
+                             section_names::objcDictObj,
+                             section_names::objcDoubleObj,
+                             section_names::objcFloatObj,
+                             section_names::objCImageInfo,
+                             section_names::objcIntObj,
                              section_names::objcNonLazyCatList,
-                             section_names::objcProtoList,
-                             section_names::objCImageInfo};
+                             section_names::objcNonLazyClassList,
+                             section_names::objcProtoList};
     for (StringRef s : v)
       config->sectionRenameMap[{segment_names::data, s}] = {
           segment_names::dataConst, s};
@@ -1126,7 +1136,8 @@ static void parseClangOption(StringRef opt, const Twine &msg) {
   raw_string_ostream os(err);
 
   const char *argv[] = {"lld", opt.data()};
-  if (cl::parseCommandLineOptions(config->libraryOptions, argv, "", &os))
+  if (cl::parseCommandLineOptions(config->libraryOptions, getToolOptions(),
+                                  argv, "", &os))
     return;
   error(msg + ": " + StringRef(err).trim());
 }
@@ -1623,13 +1634,41 @@ static void foldIdenticalLiterals() {
   in.wordLiteralSection->finalizeContents();
 }
 
-static void addSynthenticMethnames() {
+static void prepareObjCStubs() {
   std::string &data = *make<std::string>();
   llvm::raw_string_ostream os(data);
-  for (Symbol *sym : symtab->getSymbols())
-    if (isa<Undefined>(sym))
-      if (ObjCStubsSection::isObjCStubSymbol(sym))
-        os << ObjCStubsSection::getMethname(sym) << '\0';
+  // Iterate by index: resolving a class symbol may extract an archive member,
+  // which appends new symbols, including more stubs, to the symbol table.
+  for (size_t i = 0; i < symtab->getSymbols().size(); ++i) {
+    Symbol *sym = symtab->getSymbols()[i];
+    if (!isa<Undefined>(sym))
+      continue;
+    if (ObjCStubsSection::isObjCMsgSendStubSymbol(sym)) {
+      os << ObjCStubsSection::getMethname(sym) << '\0';
+      continue;
+    }
+    if (!ObjCStubsSection::isObjCClassStubSymbol(sym) ||
+        !target->supportsObjCClassStubs())
+      continue;
+    std::optional<ObjCStubsSection::ObjCClassStubNames> names =
+        ObjCStubsSection::parseObjCClassStubSymbol(sym);
+    if (!names)
+      continue;
+    os << names->selectorName << '\0';
+
+    Symbol *classSym = symtab->find(names->classSymbolName);
+    bool needsEarlyUndefinedClassRef =
+        !classSym || isa<LazyArchive>(classSym) || isa<LazyObject>(classSym);
+    // Missing symbols need a placeholder for diagnostics, and lazy symbols need
+    // extraction before markLive(). Do not call addUndefined() for DylibSymbol
+    // here: live stubs reference them later in ObjCStubsSection::addEntry(),
+    // and adding them here would mark real dylib symbols referenced before dead
+    // stripping.
+    if (needsEarlyUndefinedClassRef)
+      classSym = symtab->addUndefined(names->classSymbolName, /*file=*/nullptr,
+                                      /*isWeakRef=*/false);
+    in.objcStubs->recordClassSymbol(sym, classSym);
+  }
 
   if (data.empty())
     return;
@@ -2494,7 +2533,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     if (config->thinLTOIndexOnly || config->emitLLVM)
       return errorCount() == 0;
 
-    addSynthenticMethnames();
+    prepareObjCStubs();
 
     // LTO may emit a non-hidden (extern) object file symbol even if the
     // corresponding bitcode symbol is hidden. In particular, this happens for

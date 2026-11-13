@@ -32,7 +32,6 @@
 #include "llvm/LTO/legacy/LTOCodeGenerator.h"
 #include "llvm/LTO/legacy/LTOModule.h"
 #include "llvm/LTO/legacy/ThinLTOCodeGenerator.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -45,18 +44,15 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
 #include <string>
 #include <system_error>
-#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -520,11 +516,11 @@ static void listDependentLibraries() {
   }
 }
 
-static void printMachOCPUOnly() {
+static void printMachOCPUOnly(const cl::LibraryOptionsContext &LibraryOptions) {
   LLVMContext Context;
   Context.setDiagnosticHandler(std::make_unique<LLVMLTODiagnosticHandler>(),
                                true);
-  TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple());
+  TargetOptions Options = codegen::getTargetOptions(LibraryOptions, Triple());
   for (auto &Filename : InputFilenames) {
     ErrorOr<std::unique_ptr<LTOModule>> ModuleOrErr =
         LTOModule::createFromFile(Context, Filename, Options);
@@ -666,7 +662,8 @@ public:
   ThinLTOProcessing(const cl::LibraryOptionsContext &LibraryOptions,
                     const TargetOptions &Options)
       : LibraryOptions(LibraryOptions), ThinGenerator(LibraryOptions) {
-    ThinGenerator.setCodePICModel(codegen::getExplicitRelocModel());
+    ThinGenerator.setCodePICModel(
+        codegen::getExplicitRelocModel(LibraryOptions));
     ThinGenerator.setTargetOptions(Options);
     ThinGenerator.setCacheDir(ThinLTOCacheDir);
     ThinGenerator.setCachePruningInterval(ThinLTOCachePruningInterval);
@@ -1014,14 +1011,14 @@ int main(int argc, char **argv) {
   InitializeAllAsmParsers();
 
   cl::LibraryOptionsContext LibraryOptions;
-  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(argv, argc),
-                              "llvm LTO linker\n");
+  cl::parseCommandLineOptions(LibraryOptions, codegen::getToolOptions(),
+                              ArrayRef(argv, argc), "llvm LTO linker\n");
 
   if (OptLevel < '0' || OptLevel > '3')
     error("optimization level must be between 0 and 3");
 
   // set up the TargetOptions for the machine
-  TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple());
+  TargetOptions Options = codegen::getTargetOptions(LibraryOptions, Triple());
 
   if (ListSymbolsOnly || QueryHasCtorDtor) {
     testLTOModule(Options);
@@ -1054,7 +1051,7 @@ int main(int argc, char **argv) {
   }
 
   if (PrintMachOCPUOnly) {
-    printMachOCPUOnly();
+    printMachOCPUOnly(LibraryOptions);
     return 0;
   }
 
@@ -1083,7 +1080,7 @@ int main(int argc, char **argv) {
   if (UseDiagnosticHandler)
     CodeGen.setDiagnosticHandler(handleDiagnostics, nullptr);
 
-  CodeGen.setCodePICModel(codegen::getExplicitRelocModel());
+  CodeGen.setCodePICModel(codegen::getExplicitRelocModel(LibraryOptions));
   CodeGen.setFreestanding(EnableFreestanding);
   CodeGen.setDebugPassManager(DebugPassManager);
 
@@ -1133,12 +1130,12 @@ int main(int argc, char **argv) {
     CodeGen.addMustPreserveSymbol(KeptDSOSyms[i]);
 
   // Set cpu and attrs strings for the default target/subtarget.
-  CodeGen.setCpu(codegen::getMCPU());
+  CodeGen.setCpu(codegen::getMCPU(LibraryOptions));
 
   CodeGen.setOptLevel(OptLevel - '0');
-  CodeGen.setAttrs(codegen::getMAttrs());
+  CodeGen.setAttrs(codegen::getMAttrs(LibraryOptions));
 
-  if (auto FT = codegen::getExplicitFileType())
+  if (auto FT = codegen::getExplicitFileType(LibraryOptions))
     CodeGen.setFileType(*FT);
 
   if (!OutputFilename.empty()) {

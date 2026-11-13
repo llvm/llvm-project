@@ -407,6 +407,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.hasArg(clang::options::OPT_fno_optimize_sibling_calls))
     opts.DisableTailCalls = 1;
 
+  // -fplt / -fno-plt. The driver forwards only -fno-plt, and only for ELF
+  // x86 and AArch64. Last flag wins if both reach the frontend.
+  opts.NoPLT = args.hasFlag(clang::options::OPT_fno_plt,
+                            clang::options::OPT_fplt, /*Default=*/false);
+
   // -fno-integrated-as: emit GNU Assembler compatible assembly.
   if (!args.hasFlag(clang::options::OPT_fintegrated_as,
                     clang::options::OPT_fno_integrated_as, true))
@@ -580,6 +585,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::options::OPT_funderscoring, false)) {
     opts.Underscoring = 0;
   }
+
+  opts.ImplicitDefaultMapperAllocatableMembers = args.hasFlag(
+      clang::options::OPT_fimplicit_default_mapper_allocatable_members,
+      clang::options::OPT_fno_implicit_default_mapper_allocatable_members,
+      /*Default=*/true);
 
   if (const llvm::opt::Arg *arg =
           args.getLastArg(clang::options::OPT_complex_range_EQ)) {

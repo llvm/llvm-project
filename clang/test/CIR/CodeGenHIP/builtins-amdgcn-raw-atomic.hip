@@ -12,6 +12,12 @@ typedef __attribute__((address_space(3))) float *float_lds_ptr;
 typedef __attribute__((address_space(3))) double *double_lds_ptr;
 typedef __attribute__((address_space(1))) float *float_global_ptr;
 typedef __attribute__((address_space(1))) double *double_global_ptr;
+typedef _Float16 half2 __attribute__((ext_vector_type(2)));
+typedef short short2 __attribute__((ext_vector_type(2)));
+typedef __attribute__((address_space(3))) half2 *half2_lds_ptr;
+typedef __attribute__((address_space(1))) half2 *half2_global_ptr;
+typedef __attribute__((address_space(3))) short2 *short2_lds_ptr;
+typedef __attribute__((address_space(1))) short2 *short2_global_ptr;
 
 // CIR-LABEL: @_Z5inc32PVjj
 // CIR: cir.atomic.fetch uinc_wrap seq_cst syncscope(device) fetch_first %{{.+}}, %{{.+}} volatile : (!cir.ptr<!u32i>, !u32i) -> !u32i {cir.amdgpu_raw_atomic}
@@ -169,6 +175,65 @@ __device__ double flat_atomic_fmin_f64(double *p, double v) {
 // LLVM: atomicrmw fmax ptr %{{.+}}, double %{{.+}} syncscope("agent") monotonic, align 8, !amdgpu.no.fine.grained.memory
 __device__ double flat_atomic_fmax_f64(double *p, double v) {
   return __builtin_amdgcn_flat_atomic_fmax_f64(p, v);
+}
+
+// CIR-LABEL: @_Z20ds_atomic_fadd_v2f16
+// CIR: cir.atomic.fetch add relaxed syncscope(device) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.vector<2 x !cir.f16>, target_address_space(3)>, !cir.vector<2 x !cir.f16>) -> !cir.vector<2 x !cir.f16> {cir.amdgpu_raw_atomic}
+// LLVM-LABEL: @_Z20ds_atomic_fadd_v2f16
+// LLVM: atomicrmw fadd ptr addrspace(3) %{{.+}}, <2 x half> %{{.+}} syncscope("agent") monotonic, align 4
+// LLVM-NOT: amdgpu.no.fine.grained.memory
+__device__ half2 ds_atomic_fadd_v2f16(half2_lds_ptr p, half2 v) {
+  return __builtin_amdgcn_ds_atomic_fadd_v2f16(p, v);
+}
+
+// CIR-LABEL: @_Z24global_atomic_fadd_v2f16
+// CIR: cir.atomic.fetch add relaxed syncscope(device) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.vector<2 x !cir.f16>, target_address_space(1)>, !cir.vector<2 x !cir.f16>) -> !cir.vector<2 x !cir.f16> {cir.amdgpu_raw_atomic}
+// LLVM-LABEL: @_Z24global_atomic_fadd_v2f16
+// LLVM: atomicrmw fadd ptr addrspace(1) %{{.+}}, <2 x half> %{{.+}} syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+__device__ half2 global_atomic_fadd_v2f16(half2_global_ptr p, half2 v) {
+  return __builtin_amdgcn_global_atomic_fadd_v2f16(p, v);
+}
+
+// CIR-LABEL: @_Z22flat_atomic_fadd_v2f16
+// CIR: cir.atomic.fetch add relaxed syncscope(device) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.vector<2 x !cir.f16>>, !cir.vector<2 x !cir.f16>) -> !cir.vector<2 x !cir.f16> {cir.amdgpu_raw_atomic}
+// LLVM-LABEL: @_Z22flat_atomic_fadd_v2f16
+// LLVM: atomicrmw fadd ptr %{{.+}}, <2 x half> %{{.+}} syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+__device__ half2 flat_atomic_fadd_v2f16(half2 *p, half2 v) {
+  return __builtin_amdgcn_flat_atomic_fadd_v2f16(p, v);
+}
+
+// CIR-LABEL: @_Z21ds_atomic_fadd_v2bf16
+// CIR: %[[VAL:.+]] = cir.cast bitcast %{{.+}} : !cir.vector<2 x !s16i> -> !cir.vector<2 x !cir.bf16>
+// CIR: %[[PTR:.+]] = cir.cast bitcast %{{.+}} : !cir.ptr<!cir.vector<2 x !s16i>, target_address_space(3)> -> !cir.ptr<!cir.vector<2 x !cir.bf16>, target_address_space(3)>
+// CIR: %[[RMW:.+]] = cir.atomic.fetch add relaxed syncscope(device) fetch_first %[[PTR]], %[[VAL]] : (!cir.ptr<!cir.vector<2 x !cir.bf16>, target_address_space(3)>, !cir.vector<2 x !cir.bf16>) -> !cir.vector<2 x !cir.bf16> {cir.amdgpu_raw_atomic}
+// CIR: cir.cast bitcast %[[RMW]] : !cir.vector<2 x !cir.bf16> -> !cir.vector<2 x !s16i>
+// LLVM-LABEL: @_Z21ds_atomic_fadd_v2bf16
+// LLVM: %[[VAL:.+]] = bitcast <2 x i16> %{{.+}} to <2 x bfloat>
+// LLVM: %[[RMW:.+]] = atomicrmw fadd ptr addrspace(3) %{{.+}}, <2 x bfloat> %[[VAL]] syncscope("agent") monotonic, align 4
+// LLVM-NOT: amdgpu.no.fine.grained.memory
+// LLVM: bitcast <2 x bfloat> %[[RMW]] to <2 x i16>
+__device__ short2 ds_atomic_fadd_v2bf16(short2_lds_ptr p, short2 v) {
+  return __builtin_amdgcn_ds_atomic_fadd_v2bf16(p, v);
+}
+
+// CIR-LABEL: @_Z25global_atomic_fadd_v2bf16
+// CIR: cir.atomic.fetch add relaxed syncscope(device) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.vector<2 x !cir.bf16>, target_address_space(1)>, !cir.vector<2 x !cir.bf16>) -> !cir.vector<2 x !cir.bf16> {cir.amdgpu_raw_atomic}
+// LLVM-LABEL: @_Z25global_atomic_fadd_v2bf16
+// LLVM: %[[VAL:.+]] = bitcast <2 x i16> %{{.+}} to <2 x bfloat>
+// LLVM: %[[RMW:.+]] = atomicrmw fadd ptr addrspace(1) %{{.+}}, <2 x bfloat> %[[VAL]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+// LLVM: bitcast <2 x bfloat> %[[RMW]] to <2 x i16>
+__device__ short2 global_atomic_fadd_v2bf16(short2_global_ptr p, short2 v) {
+  return __builtin_amdgcn_global_atomic_fadd_v2bf16(p, v);
+}
+
+// CIR-LABEL: @_Z23flat_atomic_fadd_v2bf16
+// CIR: cir.atomic.fetch add relaxed syncscope(device) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.vector<2 x !cir.bf16>>, !cir.vector<2 x !cir.bf16>) -> !cir.vector<2 x !cir.bf16> {cir.amdgpu_raw_atomic}
+// LLVM-LABEL: @_Z23flat_atomic_fadd_v2bf16
+// LLVM: %[[VAL:.+]] = bitcast <2 x i16> %{{.+}} to <2 x bfloat>
+// LLVM: %[[RMW:.+]] = atomicrmw fadd ptr %{{.+}}, <2 x bfloat> %[[VAL]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+// LLVM: bitcast <2 x bfloat> %[[RMW]] to <2 x i16>
+__device__ short2 flat_atomic_fadd_v2bf16(short2 *p, short2 v) {
+  return __builtin_amdgcn_flat_atomic_fadd_v2bf16(p, v);
 }
 
 // CIR-LABEL: @_Z5fencev

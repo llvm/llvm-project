@@ -682,6 +682,12 @@ void Module::setCodeModel(CodeModel::Model CL) {
   addModuleFlag(ModFlagBehavior::Error, "Code Model", CL);
 }
 
+unsigned Module::getWCharSize() const {
+  if (auto *Val = cast_or_null<ConstantAsMetadata>(getModuleFlag("wchar_size")))
+    return cast<ConstantInt>(Val->getValue())->getZExtValue();
+  return getTargetTriple().getDefaultWCharSize();
+}
+
 LongDoubleFormat Module::getLongDoubleFormat() const {
   if (auto *Val = cast_or_null<MDString>(getModuleFlag("long-double-type"))) {
     if (std::optional<LongDoubleFormat> Format =
@@ -729,7 +735,7 @@ DebuggerKind Module::getDebuggerTuning() const {
       return *Tuning;
   }
 
-  return DebuggerKind::Default;
+  return getTargetTriple().getDefaultDebuggerTuning();
 }
 
 void Module::setDebuggerTuning(DebuggerKind Tuning) {

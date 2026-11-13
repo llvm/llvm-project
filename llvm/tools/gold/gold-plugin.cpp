@@ -881,28 +881,27 @@ createLTO(const cl::LibraryOptionsContext &LibraryOptions,
 
   Conf.LibraryOptions = &LibraryOptions;
   Conf.CPU = options::mcpu;
-  Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple());
+  Conf.Options = codegen::getTargetOptions(LibraryOptions, Triple());
 
   // Disable the new X86 relax relocations since gold might not support them.
   // FIXME: Check the gold version or add a new option to enable them.
   Conf.Options.MCOptions.X86RelaxRelocations = false;
 
   // Toggle function/data sections.
-  if (!codegen::getExplicitFunctionSections())
+  if (!codegen::getExplicitFunctionSections(LibraryOptions))
     Conf.Options.FunctionSections = SplitSections;
-  if (!codegen::getExplicitDataSections())
+  if (!codegen::getExplicitDataSections(LibraryOptions))
     Conf.Options.DataSections = SplitSections;
 
-  Conf.MAttrs = codegen::getMAttrs();
+  Conf.MAttrs = codegen::getMAttrs(LibraryOptions);
   Conf.RelocModel = RelocationModel;
-  Conf.CodeModel = codegen::getExplicitCodeModel();
+  Conf.CodeModel = codegen::getExplicitCodeModel(LibraryOptions);
   std::optional<CodeGenOptLevel> CGOptLevelOrNone =
       CodeGenOpt::getLevel(options::OptLevel);
   assert(CGOptLevelOrNone && "Invalid optimization level");
   Conf.CGOptLevel = *CGOptLevelOrNone;
   Conf.DisableVerify = options::DisableVerify;
   Conf.OptLevel = options::OptLevel;
-  Conf.PTO = PipelineTuningOptions(&LibraryOptions);
   Conf.PTO.LoopVectorization = options::OptLevel > 1;
   Conf.PTO.SLPVectorization = options::OptLevel > 1;
   Conf.PTO.MergeFunctions = options::merge_functions;
@@ -1156,7 +1155,8 @@ static ld_plugin_status allSymbolsReadHook() {
 
   cl::LibraryOptionsContext LibraryOptions;
   if (!options::extra.empty())
-    cl::parseCommandLineOptions(LibraryOptions, options::extra);
+    cl::parseCommandLineOptions(LibraryOptions, codegen::getToolOptions(),
+                                options::extra);
 
   // Initialize time trace profiler
   if (!options::time_trace_file.empty())
