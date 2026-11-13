@@ -15,7 +15,6 @@
 
   attributes #0 = { nounwind }
 ...
----
 
 # NOTE: Since we don't know what the args are, we rely on the fact that we can't
 # call llvm.amdgcn.cs.chain with more parameters than we received - so anything
