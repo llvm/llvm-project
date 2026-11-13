@@ -1041,9 +1041,6 @@ bool ShrinkWrapImpl::isShrinkWrapEnabled(const MachineFunction &MF) {
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
 
   bool UsesWindowsCFI = MF.usesWindowsUnwindInfo();
-  if (UsesWindowsCFI && !TFI->enableWindowsCFIShrinkWrapping(MF))
-    return false;
-
   switch (EnableShrinkWrapOpt) {
   case cl::boolOrDefault::BOU_UNSET:
     return TFI->enableShrinkWrapping(MF) &&

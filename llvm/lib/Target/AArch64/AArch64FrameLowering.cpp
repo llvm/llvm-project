@@ -938,6 +938,9 @@ AArch64FrameLowering::findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB,
 bool AArch64FrameLowering::canUseAsPrologue(
     const MachineBasicBlock &MBB) const {
   const MachineFunction *MF = MBB.getParent();
+  if (MF->usesWindowsUnwindInfo() && !enableWindowsCFIShrinkWrapping(*MF))
+    return false;
+
   MachineBasicBlock *TmpMBB = const_cast<MachineBasicBlock *>(&MBB);
   const AArch64Subtarget &Subtarget = MF->getSubtarget<AArch64Subtarget>();
   const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
