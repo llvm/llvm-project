@@ -111,6 +111,9 @@ public:
   // bits are zero extended.
   bool matchCombine_s_mul_u64(MachineInstr &MI, unsigned &NewOpcode) const;
 
+  bool matchCombineNarrowShlTo32(MachineInstr &MI, unsigned &C) const;
+  void applyCombineNarrowShlTo32(MachineInstr &MI, unsigned &C) const;
+
   /// Check if register is carry-out (operand 1) of a carry-producing add/sub
   bool isCarryOut(Register Reg) const;
 
@@ -396,6 +399,38 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCombine_s_mul_u64(
     return true;
   }
   return false;
+}
+
+bool AMDGPUPostLegalizerCombinerImpl::matchCombineNarrowShlTo32(
+    MachineInstr &MI, unsigned &C) const {
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+
+  if (MRI.getType(LHS) != LLT::integer(64))
+    return false;
+
+  auto MaybeShiftAmtVal = isConstantOrConstantSplatVector(RHS, MRI);
+  if (!MaybeShiftAmtVal)
+    return false;
+  int64_t ShiftAmt = MaybeShiftAmtVal->getSExtValue();
+
+  if (ShiftAmt >= 0 && ShiftAmt < 32 &&
+      VT->getKnownBits(LHS).countMinLeadingZeros() >= ShiftAmt + 32) {
+    C = ShiftAmt;
+    return true;
+  }
+  return false;
+}
+
+void AMDGPUPostLegalizerCombinerImpl::applyCombineNarrowShlTo32(
+    MachineInstr &MI, unsigned &C) const {
+  Register LHS = MI.getOperand(1).getReg();
+  LLT NarrowTy = MRI.getType(LHS).changeElementSize(32);
+  LHS = B.buildTrunc(NarrowTy, LHS).getReg(0);
+  auto ShiftAmt = B.buildConstant(NarrowTy, C);
+  auto NarrowShift = B.buildShl(NarrowTy, LHS, ShiftAmt, MI.getFlags());
+  B.buildZExt(MI.getOperand(0), NarrowShift);
+  MI.eraseFromParent();
 }
 
 bool AMDGPUPostLegalizerCombinerImpl::isCarryOut(Register Reg) const {
