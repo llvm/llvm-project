@@ -123,7 +123,6 @@ define i64 @cse_two_guards(ptr %base, i64 %n, ptr %cmp) {
 ; CHECK-LABEL: define i64 @cse_two_guards(
 ; CHECK-SAME: ptr [[BASE:%.*]], i64 [[N:%.*]], ptr nofree readonly captures(none) [[CMP:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[N_FR:%.*]] = freeze i64 [[N]]
 ; CHECK-NEXT:    store ptr [[BASE]], ptr [[BASE]], align 8
 ; CHECK-NEXT:    [[NE_I_NOT6:%.*]] = icmp eq ptr [[BASE]], @end
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[BASE]] to i64
@@ -138,7 +137,10 @@ define i64 @cse_two_guards(ptr %base, i64 %n, ptr %cmp) {
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP4]], 1152921504606846972
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[N_VEC]], 48
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i64 [[N_FR]], 2
+; CHECK-NEXT:    [[TMP29:%.*]] = icmp ugt i64 [[N]], 1
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[TMP29]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP30:%.*]] = freeze <2 x i1> [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -146,6 +148,8 @@ define i64 @cse_two_guards(ptr %base, i64 %n, ptr %cmp) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP31:%.*]] = bitcast <2 x i1> [[TMP30]] to i2
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i2 [[TMP31]], 0
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = zext i1 [[TMP7]] to i64
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP4]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[LOOP2_BODY_LR_PH:.*]], label %[[LOOP1_INC_PREHEADER41]]
@@ -212,7 +216,7 @@ define i64 @cse_two_guards(ptr %base, i64 %n, ptr %cmp) {
 ; CHECK:       [[LOOP1_INC]]:
 ; CHECK-NEXT:    [[R8:%.*]] = phi i64 [ [[SEL]], %[[LOOP1_INC]] ], [ [[R8_PH]], %[[LOOP1_INC_PREHEADER41]] ]
 ; CHECK-NEXT:    [[IT1_07:%.*]] = phi ptr [ [[NEXT_I:%.*]], %[[LOOP1_INC]] ], [ [[IT1_07_PH]], %[[LOOP1_INC_PREHEADER41]] ]
-; CHECK-NEXT:    [[GT:%.*]] = icmp ugt i64 [[N_FR]], [[R8]]
+; CHECK-NEXT:    [[GT:%.*]] = icmp ugt i64 [[N]], [[R8]]
 ; CHECK-NEXT:    [[SEL]] = select i1 [[GT]], i64 0, i64 [[R8]]
 ; CHECK-NEXT:    [[NEXT_I]] = getelementptr nusw nuw i8, ptr [[IT1_07]], i64 48
 ; CHECK-NEXT:    [[NE_I_NOT:%.*]] = icmp eq ptr [[NEXT_I]], @end

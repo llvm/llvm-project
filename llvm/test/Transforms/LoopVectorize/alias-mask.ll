@@ -612,9 +612,10 @@ define i64 @any_of_reduction(i64 %a, ptr %src, ptr %dst, i32 %n) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[TMP10]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP13]], <4 x i1> [[CLAMPED_HEADER_MASK]], <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp ne <4 x i32> [[WIDE_MASKED_LOAD]], splat (i32 1)
+; CHECK-NEXT:    [[TMP21:%.*]] = freeze <4 x i1> [[TMP14]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP10]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[WIDE_MASKED_LOAD]], ptr align 4 [[TMP15]], <4 x i1> [[CLAMPED_HEADER_MASK]])
-; CHECK-NEXT:    [[TMP16:%.*]] = select <4 x i1> [[CLAMPED_HEADER_MASK]], <4 x i1> [[TMP14]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP16:%.*]] = select <4 x i1> [[CLAMPED_HEADER_MASK]], <4 x i1> [[TMP21]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP17]] = or <4 x i1> [[VEC_PHI]], [[TMP16]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], [[TMP6]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i32> [[VEC_IND]], [[BROADCAST_SPLAT4]]

@@ -6665,6 +6665,11 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       if (TrueValIsPhi)
         Cmp = Builder.createNot(Cmp);
 
+      // A later true condition can overwrite poison in the scalar select chain.
+      // Freeze each condition before OR-ing it into the accumulator so poison
+      // cannot hide a true condition in another lane or iteration.
+      Cmp = Builder.createFreeze(Cmp, AnyOfSelect->getDebugLoc());
+
       // Build a fresh i1 chain (phi, or, and i1 versions of any blend/select
       // the exiting value flows through).
       auto *NewPhiR =

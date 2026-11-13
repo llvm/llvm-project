@@ -18,7 +18,8 @@ define i32 @anyof_two_blend_chain(i1 %c0, i1 %c1, i32 %n) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PREDPHI1:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i32> [[VEC_IND]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i1> [[VEC_PHI]], [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = freeze <4 x i1> [[TMP4]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i1> [[VEC_PHI]], [[TMP7]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C1]], <4 x i1> [[VEC_PHI]], <4 x i1> [[TMP3]]
 ; CHECK-NEXT:    [[PREDPHI1]] = select i1 [[C0]], <4 x i1> [[VEC_PHI]], <4 x i1> [[PREDPHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -103,7 +104,8 @@ define i32 @anyof_three_blend_chain(i1 %c0, i1 %c1, i1 %c2, i32 %n) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PREDPHI2:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i32> [[VEC_IND]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i1> [[VEC_PHI]], [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = freeze <4 x i1> [[TMP4]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i1> [[VEC_PHI]], [[TMP7]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C2]], <4 x i1> [[VEC_PHI]], <4 x i1> [[TMP3]]
 ; CHECK-NEXT:    [[PREDPHI1:%.*]] = select i1 [[C1]], <4 x i1> [[VEC_PHI]], <4 x i1> [[PREDPHI]]
 ; CHECK-NEXT:    [[PREDPHI2]] = select i1 [[C0]], <4 x i1> [[VEC_PHI]], <4 x i1> [[PREDPHI1]]
@@ -206,7 +208,8 @@ define i32 @anyof_diamond_blend_chain(i1 %c0, i1 %c1, i32 %n) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i32> [[VEC_IND]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[TMP3]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = freeze <4 x i1> [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[TMP9]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP5]] = or <4 x i1> [[VEC_PHI]], [[TMP6]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
@@ -309,7 +312,8 @@ define i32 @anyof_blend_with_select_mask(i1 %a, i1 %b, i32 %n) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PREDPHI:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i32> [[VEC_IND]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = or <4 x i1> [[VEC_PHI]], [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = freeze <4 x i1> [[TMP5]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or <4 x i1> [[VEC_PHI]], [[TMP8]]
 ; CHECK-NEXT:    [[PREDPHI]] = select i1 [[TMP2]], <4 x i1> [[VEC_PHI]], <4 x i1> [[TMP4]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
@@ -391,7 +395,8 @@ define i32 @anyof_blend_with_widen_select_mask(ptr noalias %A, i32 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD]], splat (i32 100)
 ; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[TMP3]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 5)
-; CHECK-NEXT:    [[TMP6:%.*]] = or <4 x i1> [[VEC_PHI]], [[TMP5]]
+; CHECK-NEXT:    [[TMP10:%.*]] = freeze <4 x i1> [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = or <4 x i1> [[VEC_PHI]], [[TMP10]]
 ; CHECK-NEXT:    [[PREDPHI]] = select <4 x i1> [[TMP4]], <4 x i1> [[VEC_PHI]], <4 x i1> [[TMP6]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
