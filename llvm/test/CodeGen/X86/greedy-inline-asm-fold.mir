@@ -117,20 +117,19 @@ body: |
     ; CHECK: liveins: $rdi, $rsi, $rdx, $rcx, $r8, $r9
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-    ; CHECK-NEXT: MOV64mr %stack.4, 1, $noreg, 0, $noreg, $rsi :: (store (s64) into %stack.4)
+    ; CHECK-NEXT: MOV64mr %stack.3, 1, $noreg, 0, $noreg, $rsi :: (store (s64) into %stack.3)
     ; CHECK-NEXT: MOV64mr %stack.0, 1, $noreg, 0, $noreg, $rdx :: (store (s64) into %stack.0)
     ; CHECK-NEXT: MOV64mr %stack.1, 1, $noreg, 0, $noreg, $rcx :: (store (s64) into %stack.1)
     ; CHECK-NEXT: MOV64mr %stack.2, 1, $noreg, 0, $noreg, $r8 :: (store (s64) into %stack.2)
-    ; CHECK-NEXT: MOV64mr %stack.3, 1, $noreg, 0, $noreg, $r9 :: (store (s64) into %stack.3)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $r9
     ; CHECK-NEXT: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.0, align 16)
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr64 = lr-split COPY [[COPY]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gr64 = lr-split COPY [[COPY]]
     ; CHECK-NEXT: [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
     ; CHECK-NEXT: [[MOV64rm2:%[0-9]+]]:gr64 = MOV64rm %stack.1, 1, $noreg, 0, $noreg :: (load (s64) from %stack.1)
     ; CHECK-NEXT: [[MOV64rm3:%[0-9]+]]:gr64 = MOV64rm %stack.2, 1, $noreg, 0, $noreg :: (load (s64) from %stack.2)
-    ; CHECK-NEXT: [[MOV64rm4:%[0-9]+]]:gr64 = MOV64rm %stack.3, 1, $noreg, 0, $noreg :: (load (s64) from %stack.3)
-    ; CHECK-NEXT: INLINEASM &"", sideeffect mayload maystore attdialect, regdef:GR64 foldable, def [[COPY1]], mem:m ops:5, %stack.4, 1, $noreg, 0, $noreg, reguse:GR64, [[MOV64rm1]], reguse:GR64, [[MOV64rm2]], reguse:GR64, [[MOV64rm3]], reguse:GR64, [[MOV64rm4]], reguse:GR64, [[MOV64rm]], reguse tiedto:$0, [[COPY1]](tied-def 3), mem:m ops:5, %stack.4, 1, $noreg, 0, $noreg, clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15 :: (load store (s64) on %stack.4)
-    ; CHECK-NEXT: $rax = COPY [[COPY1]]
-    ; CHECK-NEXT: $rdx = MOV64rm %stack.4, 1, $noreg, 0, $noreg :: (load (s64) from %stack.4)
+    ; CHECK-NEXT: INLINEASM &"", sideeffect mayload maystore attdialect, regdef:GR64 foldable, def [[COPY2]], mem:m ops:5, %stack.3, 1, $noreg, 0, $noreg, reguse:GR64, [[MOV64rm1]], reguse:GR64, [[MOV64rm2]], reguse:GR64, [[MOV64rm3]], reguse:GR64, [[COPY1]], reguse:GR64, [[MOV64rm]], reguse tiedto:$0, [[COPY2]](tied-def 3), mem:m ops:5, %stack.3, 1, $noreg, 0, $noreg, clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15 :: (load store (s64) on %stack.3)
+    ; CHECK-NEXT: $rax = COPY [[COPY2]]
+    ; CHECK-NEXT: $rdx = MOV64rm %stack.3, 1, $noreg, 0, $noreg :: (load (s64) from %stack.3)
     ; CHECK-NEXT: RET 0, $rax, $rdx
     %0:gr64 = COPY $rdi
     %1:gr64 = COPY $rsi
@@ -167,19 +166,14 @@ body: |
     ; CHECK-LABEL: name: tied_rm_undef
     ; CHECK: liveins: $rdi, $rsi, $rdx, $rcx, $r8, $r9
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: MOV64mr %stack.0, 1, $noreg, 0, $noreg, $rdi :: (store (s64) into %stack.0)
-    ; CHECK-NEXT: MOV64mr %stack.1, 1, $noreg, 0, $noreg, $rsi :: (store (s64) into %stack.1)
-    ; CHECK-NEXT: MOV64mr %stack.2, 1, $noreg, 0, $noreg, $rdx :: (store (s64) into %stack.2)
-    ; CHECK-NEXT: MOV64mr %stack.3, 1, $noreg, 0, $noreg, $rcx :: (store (s64) into %stack.3)
-    ; CHECK-NEXT: MOV64mr %stack.4, 1, $noreg, 0, $noreg, $r8 :: (store (s64) into %stack.4)
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $r9
-    ; CHECK-NEXT: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
-    ; CHECK-NEXT: [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm %stack.1, 1, $noreg, 0, $noreg :: (load (s64) from %stack.1)
-    ; CHECK-NEXT: [[MOV64rm2:%[0-9]+]]:gr64 = MOV64rm %stack.2, 1, $noreg, 0, $noreg :: (load (s64) from %stack.2)
-    ; CHECK-NEXT: [[MOV64rm3:%[0-9]+]]:gr64 = MOV64rm %stack.3, 1, $noreg, 0, $noreg :: (load (s64) from %stack.3)
-    ; CHECK-NEXT: [[MOV64rm4:%[0-9]+]]:gr64 = MOV64rm %stack.4, 1, $noreg, 0, $noreg :: (load (s64) from %stack.4)
-    ; CHECK-NEXT: INLINEASM &"", sideeffect maystore attdialect, mem:m ops:5, %stack.5, 1, $noreg, 0, $noreg, reguse:GR64, [[MOV64rm]], reguse:GR64, [[MOV64rm1]], reguse:GR64, [[MOV64rm2]], reguse:GR64, [[MOV64rm3]], reguse:GR64, [[MOV64rm4]], reguse:GR64, [[COPY]], mem:m ops:5, %stack.5, 1, $noreg, 0, $noreg, clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15 :: (store (s64) into %stack.5)
-    ; CHECK-NEXT: $rax = MOV64rm %stack.5, 1, $noreg, 0, $noreg :: (load (s64) from %stack.5)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rsi
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gr64 = COPY $rdx
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gr64 = COPY $rcx
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gr64 = COPY $r8
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:gr64 = COPY $r9
+    ; CHECK-NEXT: INLINEASM &"", sideeffect maystore attdialect, mem:m ops:5, %stack.0, 1, $noreg, 0, $noreg, reguse:GR64, [[COPY]], reguse:GR64, [[COPY1]], reguse:GR64, [[COPY2]], reguse:GR64, [[COPY3]], reguse:GR64, [[COPY4]], reguse:GR64, [[COPY5]], mem:m ops:5, %stack.0, 1, $noreg, 0, $noreg, clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15 :: (store (s64) into %stack.0)
+    ; CHECK-NEXT: $rax = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
     ; CHECK-NEXT: RET 0, $rax
     %1:gr64 = COPY $rdi
     %2:gr64 = COPY $rsi
@@ -450,5 +444,41 @@ body: |
     INLINEASM &"", sideeffect attdialect, clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rcx, clobber, implicit-def dead early-clobber $rdx, clobber, implicit-def dead early-clobber $rsi, clobber, implicit-def dead early-clobber $rdi, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r8, clobber, implicit-def dead early-clobber $r9, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15
     INLINEASM &"", sideeffect attdialect, reguse:GR64 foldable, %0, reguse:GR64 foldable, undef %0, reguse:GR64 foldable, %0, clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rcx, clobber, implicit-def dead early-clobber $rdx, clobber, implicit-def dead early-clobber $rsi, clobber, implicit-def dead early-clobber $rdi, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r8, clobber, implicit-def dead early-clobber $r9, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15
     INLINEASM &"", sideeffect attdialect, reguse:GR64 foldable, %0, reguse:GR64, undef %0
+    RET 0
+...
+---
+# A constant passed to an "rm" operand is spilled and folded rather than
+# rematerialized into a register, which would need a register that the asm
+# doesn't leave.
+#
+#   void rm_constant(long a, long b, long c, long d, long e, long f) {
+#     asm volatile("" : : "rm"(42L), "r"(a), "r"(b), "r"(c), "r"(d), "r"(e),
+#                         "r"(f) : CLOBBERS);
+#   }
+name: rm_constant
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $rdi, $rsi, $rdx, $rcx, $r8, $r9
+    ; CHECK-LABEL: name: rm_constant
+    ; CHECK: liveins: $rdi, $rsi, $rdx, $rcx, $r8, $r9
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rsi
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gr64 = COPY $rdx
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gr64 = COPY $rcx
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gr64 = COPY $r8
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:gr64 = COPY $r9
+    ; CHECK-NEXT: MOV64mi32 %stack.0, 1, $noreg, 0, $noreg, 42 :: (store (s64) into %stack.0)
+    ; CHECK-NEXT: INLINEASM &"", sideeffect mayload attdialect, mem:m ops:5, %stack.0, 1, $noreg, 0, $noreg, reguse:GR64, [[COPY]], reguse:GR64, [[COPY1]], reguse:GR64, [[COPY2]], reguse:GR64, [[COPY3]], reguse:GR64, [[COPY4]], reguse:GR64, [[COPY5]], clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15 :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: RET 0
+    %0:gr64 = COPY $rdi
+    %1:gr64 = COPY $rsi
+    %2:gr64 = COPY $rdx
+    %3:gr64 = COPY $rcx
+    %4:gr64 = COPY $r8
+    %5:gr64 = COPY $r9
+    %6:gr64 = MOV64ri32 42
+    INLINEASM &"", sideeffect attdialect, reguse:GR64 foldable, %6, reguse:GR64, %0, reguse:GR64, %1, reguse:GR64, %2, reguse:GR64, %3, reguse:GR64, %4, reguse:GR64, %5, clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15
     RET 0
 ...
