@@ -91,6 +91,12 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   switch (Kind) {
   case AMDGPU::fixup_si_sopp_br:
     return 2;
+  case AMDGPU::fixup_si_prefetch_sdata:
+    // The sdata field is 5 bits at bit offset 6, spanning bytes 0 and 1.
+    return 2;
+  case AMDGPU::fixup_si_prefetch_offset:
+    // The offset field is 24 bits at bit offset 32 (bytes 4-6 of 8-byte inst).
+    return 3;
   case FK_SecRel_1:
   case FK_Data_1:
     return 1;
@@ -121,6 +127,14 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
 
     return BrImm;
   }
+  case AMDGPU::fixup_si_prefetch_sdata:
+    // The value is already the encoded sdata field value from the MCExpr.
+    // Clamp to the maximum 5-bit encoded field value (31).
+    return std::min(Value, static_cast<uint64_t>(31));
+  case AMDGPU::fixup_si_prefetch_offset:
+    // The value is the byte offset. It's a 24-bit signed field.
+    // Clamp to valid range.
+    return SignedValue & 0xFFFFFF;
   case FK_Data_1:
   case FK_Data_2:
   case FK_Data_4:
@@ -179,6 +193,12 @@ MCFixupKindInfo AMDGPUAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[AMDGPU::NumTargetFixupKinds] = {
       // name                   offset bits  flags
       {"fixup_si_sopp_br", 0, 16, 0},
+      // Prefetch sdata is a 5-bit field at bits 10-6 in the 64-bit SMEM
+      // instruction encoding (GFX12+).
+      {"fixup_si_prefetch_sdata", 6, 5, 0},
+      // Prefetch offset is a 24-bit field at bit 0 of the high 32-bits
+      // (byte offset 4 from instruction start).
+      {"fixup_si_prefetch_offset", 0, 24, 0},
   };
 
   if (mc::isRelocation(Kind))
