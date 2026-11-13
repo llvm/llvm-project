@@ -15,6 +15,7 @@
 #define MLIR_C_EXTENSIBLEDIALECT_H
 
 #include "mlir-c/IR.h"
+#include "mlir-c/Rewrite.h"
 #include "mlir-c/Support.h"
 
 #ifdef __cplusplus
@@ -34,6 +35,7 @@ extern "C" {
 DEFINE_C_API_STRUCT(MlirDynamicOpTrait, void);
 DEFINE_C_API_STRUCT(MlirDynamicTypeDefinition, void);
 DEFINE_C_API_STRUCT(MlirDynamicAttrDefinition, void);
+DEFINE_C_API_STRUCT(MlirDynamicOpDefinition, void);
 
 #undef DEFINE_C_API_STRUCT
 
@@ -42,6 +44,7 @@ DEFINE_C_API_STRUCT(MlirDynamicAttrDefinition, void);
 /// registered.
 /// The ownership of the trait will be transferred to the operation name
 /// after this call.
+/// DEPRECATED: Use mlirDynamicOpDefinitionAddTrait instead.
 MLIR_CAPI_EXPORTED bool
 mlirDynamicOpTraitAttach(MlirDynamicOpTrait dynamicOpTrait,
                          MlirStringRef opName, MlirContext context);
@@ -178,6 +181,33 @@ mlirDynamicAttrDefinitionGetName(MlirDynamicAttrDefinition attrDef);
 /// Get the dialect that the given dynamic attribute definition belongs to.
 MLIR_CAPI_EXPORTED MlirDialect
 mlirDynamicAttrDefinitionGetDialect(MlirDynamicAttrDefinition attrDef);
+
+/// Look up a dynamic operation definition by operation name in a given context.
+/// Note that the operation name must be modeled by dynamic dialect and must be
+/// registered.
+MLIR_CAPI_EXPORTED MlirDynamicOpDefinition
+mlirDynamicOpDefinitionLookup(MlirStringRef opName, MlirContext context);
+
+/// The hook function type for getting canonicalization patterns for a given
+/// dynamic operation definition.
+typedef void (*MlirDynamicOpDefinitionGetCanonicalizationPatternsFn)(
+    MlirRewritePatternSet patterns, MlirContext context, void *userData);
+
+/// The hook function type for destructing the userData in callbacks of a
+/// dynamic operation definition.
+typedef void (*MlirDynamicOpDefinitionDestructUserDataFn)(void *userData);
+
+/// Set the hook returning any canonicalization pattern rewrites that the op
+/// supports for a given dynamic operation definition.
+MLIR_CAPI_EXPORTED void mlirDynamicOpDefinitionSetGetCanonicalizationPatternsFn(
+    MlirDynamicOpDefinition opDef,
+    MlirDynamicOpDefinitionGetCanonicalizationPatternsFn fn,
+    MlirDynamicOpDefinitionDestructUserDataFn destructFn, void *userData);
+
+/// Add a dynamic op trait to the given dynamic operation definition.
+MLIR_CAPI_EXPORTED bool
+mlirDynamicOpDefinitionAddTrait(MlirDynamicOpDefinition opDef,
+                                MlirDynamicOpTrait dynamicOpTrait);
 
 #ifdef __cplusplus
 }
