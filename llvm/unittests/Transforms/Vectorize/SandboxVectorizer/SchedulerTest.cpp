@@ -867,7 +867,7 @@ bb1:
 
 TEST_F(SchedulerTest, NotifyCreateInst) {
   parseIR(C, R"IR(
-define void @foo(ptr noalias %ptr, ptr noalias %ptr1, ptr noalias %ptr2) {
+define void @foo(ptr noalias %ptr, ptr noalias %ptr1, ptr noalias %ptr2, i8 %val) {
   %ld0 = load i8, ptr %ptr
   store i8 %ld0, ptr %ptr
   ret void
