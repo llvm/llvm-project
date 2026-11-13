@@ -382,7 +382,8 @@ PreservedAnalyses LoopSinkPass::run(Function &F, FunctionAnalysisManager &FAM) {
       continue;
 
     MemorySSAUpdater MSSAU(&MSSA);
-    SinkAndHoistDependencies Deps{AA, DT, MSSAU, /*ORE=*/nullptr};
+    EarliestEscapeAnalysis EEA(DT);
+    SinkAndHoistDependencies Deps{AA, DT, MSSAU, EEA, /*ORE=*/nullptr};
     // Note that we don't pass SCEV here because it is only used to invalidate
     // loops in SCEV and we don't preserve (or request) SCEV at all making that
     // unnecessary.
