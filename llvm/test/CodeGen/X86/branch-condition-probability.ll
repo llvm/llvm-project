@@ -17,8 +17,10 @@ define void @and_cold(i32 %a, i32 %b, i32 %c, i32 %d) !prof !2 {
 ; ASM-NEXT:    jne no@PLT # TAILCALL
 ; ASM-NEXT:  # %bb.1: # %entry
 ; ASM-NEXT:    cmpl %ecx, %edx
-; ASM-NEXT:    jne no@PLT # TAILCALL
-; ASM-NEXT:  # %bb.2: # %true
+; ASM-NEXT:    je .LBB0_2
+; ASM-NEXT:  # %bb.3: # %false
+; ASM-NEXT:    jmp no@PLT # TAILCALL
+; ASM-NEXT:  .LBB0_2: # %true
 ; ASM-NEXT:    jmp yes@PLT # TAILCALL
 ;
 ; OLD-ASM-LABEL: and_cold:
@@ -26,8 +28,10 @@ define void @and_cold(i32 %a, i32 %b, i32 %c, i32 %d) !prof !2 {
 ; OLD-ASM-NEXT:    xorl %esi, %edi
 ; OLD-ASM-NEXT:    xorl %ecx, %edx
 ; OLD-ASM-NEXT:    orl %edi, %edx
-; OLD-ASM-NEXT:    jne no@PLT # TAILCALL
-; OLD-ASM-NEXT:  # %bb.1: # %true
+; OLD-ASM-NEXT:    je .LBB0_1
+; OLD-ASM-NEXT:  # %bb.2: # %false
+; OLD-ASM-NEXT:    jmp no@PLT # TAILCALL
+; OLD-ASM-NEXT:  .LBB0_1: # %true
 ; OLD-ASM-NEXT:    jmp yes@PLT # TAILCALL
 ; MIR-LABEL: name: and_cold
 ; MIR: bb.0.entry:
@@ -250,8 +254,10 @@ define void @or_cold(i32 %a, i32 %b, i32 %c, i32 %d) !prof !2 {
 ; ASM-NEXT:    xorl %esi, %edi
 ; ASM-NEXT:    xorl %ecx, %edx
 ; ASM-NEXT:    orl %edi, %edx
-; ASM-NEXT:    je no@PLT # TAILCALL
-; ASM-NEXT:  # %bb.1: # %true
+; ASM-NEXT:    jne .LBB3_1
+; ASM-NEXT:  # %bb.2: # %false
+; ASM-NEXT:    jmp no@PLT # TAILCALL
+; ASM-NEXT:  .LBB3_1: # %true
 ; ASM-NEXT:    jmp yes@PLT # TAILCALL
 ;
 ; OLD-ASM-LABEL: or_cold:
@@ -260,8 +266,10 @@ define void @or_cold(i32 %a, i32 %b, i32 %c, i32 %d) !prof !2 {
 ; OLD-ASM-NEXT:    jne yes@PLT # TAILCALL
 ; OLD-ASM-NEXT:  # %bb.1: # %entry
 ; OLD-ASM-NEXT:    cmpl %ecx, %edx
-; OLD-ASM-NEXT:    je no@PLT # TAILCALL
-; OLD-ASM-NEXT:  # %bb.2: # %true
+; OLD-ASM-NEXT:    jne .LBB3_2
+; OLD-ASM-NEXT:  # %bb.3: # %false
+; OLD-ASM-NEXT:    jmp no@PLT # TAILCALL
+; OLD-ASM-NEXT:  .LBB3_2: # %true
 ; OLD-ASM-NEXT:    jmp yes@PLT # TAILCALL
 ; MIR-LABEL: name: or_cold
 ; MIR: bb.0.entry:

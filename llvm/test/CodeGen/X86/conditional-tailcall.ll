@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-linux   -show-mc-encoding | FileCheck %s --check-prefix=CHECK32
 ; RUN: llc < %s -mtriple=x86_64-linux -show-mc-encoding | FileCheck %s --check-prefix=CHECK64
 ; RUN: llc < %s -mtriple=x86_64-win32 -show-mc-encoding | FileCheck %s --check-prefix=WIN64
+; RUN: llc < %s -mtriple=x86_64-linux -enable-fallthrough-folding -show-mc-encoding | FileCheck %s --check-prefix=CHECK_FALLTHROUGH64
 
 declare dso_local void @foo()
 declare dso_local void @bar()
@@ -40,6 +41,17 @@ define void @f(i32 %x, i32 %y) optsize {
 ; WIN64-NEXT:    jmp foo # TAILCALL
 ; WIN64-NEXT:    # encoding: [0xeb,A]
 ; WIN64-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
+;
+; CHECK_FALLTHROUGH64-LABEL: f:
+; CHECK_FALLTHROUGH64:       # %bb.0: # %entry
+; CHECK_FALLTHROUGH64-NEXT:    cmpl %esi, %edi # encoding: [0x39,0xf7]
+; CHECK_FALLTHROUGH64-NEXT:    jne bar # TAILCALL
+; CHECK_FALLTHROUGH64-NEXT:    # encoding: [0x75,A]
+; CHECK_FALLTHROUGH64-NEXT:    # fixup A - offset: 1, value: bar, kind: FK_PCRel_1
+; CHECK_FALLTHROUGH64-NEXT:  # %bb.1: # %bb1
+; CHECK_FALLTHROUGH64-NEXT:    jmp foo # TAILCALL
+; CHECK_FALLTHROUGH64-NEXT:    # encoding: [0xeb,A]
+; CHECK_FALLTHROUGH64-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 entry:
 	%p = icmp eq i32 %x, %y
   br i1 %p, label %bb1, label %bb2
@@ -128,6 +140,30 @@ define void @f_non_leaf(i32 %x, i32 %y) optsize {
 ; WIN64-NEXT:    # encoding: [0xeb,A]
 ; WIN64-NEXT:    # fixup A - offset: 1, value: bar, kind: FK_PCRel_1
 ; WIN64-NEXT:    .seh_endproc
+;
+; CHECK_FALLTHROUGH64-LABEL: f_non_leaf:
+; CHECK_FALLTHROUGH64:       # %bb.0: # %entry
+; CHECK_FALLTHROUGH64-NEXT:    pushq %rbx # encoding: [0x53]
+; CHECK_FALLTHROUGH64-NEXT:    .cfi_def_cfa_offset 16
+; CHECK_FALLTHROUGH64-NEXT:    .cfi_offset %rbx, -16
+; CHECK_FALLTHROUGH64-NEXT:    #APP
+; CHECK_FALLTHROUGH64-NEXT:    #NO_APP
+; CHECK_FALLTHROUGH64-NEXT:    cmpl %esi, %edi # encoding: [0x39,0xf7]
+; CHECK_FALLTHROUGH64-NEXT:    jne .LBB1_2 # encoding: [0x75,A]
+; CHECK_FALLTHROUGH64-NEXT:    # fixup A - offset: 1, value: .LBB1_2, kind: FK_PCRel_1
+; CHECK_FALLTHROUGH64-NEXT:  # %bb.1: # %bb1
+; CHECK_FALLTHROUGH64-NEXT:    popq %rbx # encoding: [0x5b]
+; CHECK_FALLTHROUGH64-NEXT:    .cfi_def_cfa_offset 8
+; CHECK_FALLTHROUGH64-NEXT:    jmp foo # TAILCALL
+; CHECK_FALLTHROUGH64-NEXT:    # encoding: [0xeb,A]
+; CHECK_FALLTHROUGH64-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
+; CHECK_FALLTHROUGH64-NEXT:  .LBB1_2: # %bb2
+; CHECK_FALLTHROUGH64-NEXT:    .cfi_def_cfa_offset 16
+; CHECK_FALLTHROUGH64-NEXT:    popq %rbx # encoding: [0x5b]
+; CHECK_FALLTHROUGH64-NEXT:    .cfi_def_cfa_offset 8
+; CHECK_FALLTHROUGH64-NEXT:    jmp bar # TAILCALL
+; CHECK_FALLTHROUGH64-NEXT:    # encoding: [0xeb,A]
+; CHECK_FALLTHROUGH64-NEXT:    # fixup A - offset: 1, value: bar, kind: FK_PCRel_1
 entry:
   ; Force %ebx to be spilled on the stack, turning this into
   ; not a "leaf" function for Win64.
@@ -203,6 +239,25 @@ define x86_thiscallcc zeroext i1 @BlockPlacementTest(ptr %this, i32 %x) optsize 
 ; WIN64-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; WIN64-NEXT:    jmp .LBB2_2 # encoding: [0xeb,A]
 ; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB2_2, kind: FK_PCRel_1
+;
+; CHECK_FALLTHROUGH64-LABEL: BlockPlacementTest:
+; CHECK_FALLTHROUGH64:       # %bb.0: # %entry
+; CHECK_FALLTHROUGH64-NEXT:    testb $42, %sil # encoding: [0x40,0xf6,0xc6,0x2a]
+; CHECK_FALLTHROUGH64-NEXT:    je .LBB2_3 # encoding: [0x74,A]
+; CHECK_FALLTHROUGH64-NEXT:    # fixup A - offset: 1, value: .LBB2_3, kind: FK_PCRel_1
+; CHECK_FALLTHROUGH64-NEXT:  # %bb.1: # %land.rhs
+; CHECK_FALLTHROUGH64-NEXT:    movb $1, %al # encoding: [0xb0,0x01]
+; CHECK_FALLTHROUGH64-NEXT:    testb $44, %sil # encoding: [0x40,0xf6,0xc6,0x2c]
+; CHECK_FALLTHROUGH64-NEXT:    je baz # TAILCALL
+; CHECK_FALLTHROUGH64-NEXT:    # encoding: [0x74,A]
+; CHECK_FALLTHROUGH64-NEXT:    # fixup A - offset: 1, value: baz, kind: FK_PCRel_1
+; CHECK_FALLTHROUGH64-NEXT:  .LBB2_2: # %land.end
+; CHECK_FALLTHROUGH64-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK_FALLTHROUGH64-NEXT:    retq # encoding: [0xc3]
+; CHECK_FALLTHROUGH64-NEXT:  .LBB2_3:
+; CHECK_FALLTHROUGH64-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK_FALLTHROUGH64-NEXT:    jmp .LBB2_2 # encoding: [0xeb,A]
+; CHECK_FALLTHROUGH64-NEXT:    # fixup A - offset: 1, value: .LBB2_2, kind: FK_PCRel_1
 entry:
   %and = and i32 %x, 42
   %tobool = icmp eq i32 %and, 0
@@ -523,6 +578,95 @@ define zeroext i1 @pr31257(ptr nocapture readonly dereferenceable(8) %s) minsize
 ; WIN64-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; WIN64-NEXT:    # kill: def $al killed $al killed $eax
 ; WIN64-NEXT:    retq # encoding: [0xc3]
+;
+; CHECK_FALLTHROUGH64-LABEL: pr31257:
+; CHECK_FALLTHROUGH64:       # %bb.0: # %entry
+; CHECK_FALLTHROUGH64-NEXT:    movq (%rdi), %rdi # encoding: [0x48,0x8b,0x3f]
+; CHECK_FALLTHROUGH64-NEXT:    movq -24(%rdi), %rax # encoding: [0x48,0x8b,0x47,0xe8]
+; CHECK_FALLTHROUGH64-NEXT:    leaq (%rdi,%rax), %rsi # encoding: [0x48,0x8d,0x34,0x07]
+; CHECK_FALLTHROUGH64-NEXT:    xorl %r8d, %r8d # encoding: [0x45,0x31,0xc0]
+; CHECK_FALLTHROUGH64-NEXT:    pushq $2 # encoding: [0x6a,0x02]
+; CHECK_FALLTHROUGH64-NEXT:    .cfi_adjust_cfa_offset 8
+; CHECK_FALLTHROUGH64-NEXT:    popq %rcx # encoding: [0x59]
+; CHECK_FALLTHROUGH64-NEXT:    .cfi_adjust_cfa_offset -8
+; CHECK_FALLTHROUGH64-NEXT:    pushq $1 # encoding: [0x6a,0x01]
+; CHECK_FALLTHROUGH64-NEXT:    .cfi_adjust_cfa_offset 8
+; CHECK_FALLTHROUGH64-NEXT:    popq %rdx # encoding: [0x5a]
+; CHECK_FALLTHROUGH64-NEXT:    .cfi_adjust_cfa_offset -8
+; CHECK_FALLTHROUGH64-NEXT:  .LBB3_1: # %for.cond
+; CHECK_FALLTHROUGH64-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK_FALLTHROUGH64-NEXT:    subq $1, %rax # encoding: [0x48,0x83,0xe8,0x01]
+; CHECK_FALLTHROUGH64-NEXT:    jb .LBB3_12 # encoding: [0x72,A]
+; CHECK_FALLTHROUGH64-NEXT:    # fixup A - offset: 1, value: .LBB3_12, kind: FK_PCRel_1
+; CHECK_FALLTHROUGH64-NEXT:  # %bb.2: # %for.body
+; CHECK_FALLTHROUGH64-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; CHECK_FALLTHROUGH64-NEXT:    cmpl $2, %r8d # encoding: [0x41,0x83,0xf8,0x02]
+; CHECK_FALLTHROUGH64-NEXT:    je .LBB3_10 # encoding: [0x74,A]
+; CHECK_FALLTHROUGH64-NEXT:    # fixup A - offset: 1, value: .LBB3_10, kind: FK_PCRel_1
+; CHECK_FALLTHROUGH64-NEXT:  # %bb.3: # %for.body
+; CHECK_FALLTHROUGH64-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; CHECK_FALLTHROUGH64-NEXT:    cmpl $1, %r8d # encoding: [0x41,0x83,0xf8,0x01]
+; CHECK_FALLTHROUGH64-NEXT:    je .LBB3_8 # encoding: [0x74,A]
+; CHECK_FALLTHROUGH64-NEXT:    # fixup A - offset: 1, value: .LBB3_8, kind: FK_PCRel_1
+; CHECK_FALLTHROUGH64-NEXT:  # %bb.4: # %for.body
+; CHECK_FALLTHROUGH64-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; CHECK_FALLTHROUGH64-NEXT:    testl %r8d, %r8d # encoding: [0x45,0x85,0xc0]
+; CHECK_FALLTHROUGH64-NEXT:    jne .LBB3_11 # encoding: [0x75,A]
+; CHECK_FALLTHROUGH64-NEXT:    # fixup A - offset: 1, value: .LBB3_11, kind: FK_PCRel_1
+; CHECK_FALLTHROUGH64-NEXT:  # %bb.5: # %sw.bb
+; CHECK_FALLTHROUGH64-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; CHECK_FALLTHROUGH64-NEXT:    movzbl (%rdi), %r9d # encoding: [0x44,0x0f,0xb6,0x0f]
+; CHECK_FALLTHROUGH64-NEXT:    cmpl $43, %r9d # encoding: [0x41,0x83,0xf9,0x2b]
+; CHECK_FALLTHROUGH64-NEXT:    movl %edx, %r8d # encoding: [0x41,0x89,0xd0]
+; CHECK_FALLTHROUGH64-NEXT:    je .LBB3_11 # encoding: [0x74,A]
+; CHECK_FALLTHROUGH64-NEXT:    # fixup A - offset: 1, value: .LBB3_11, kind: FK_PCRel_1
+; CHECK_FALLTHROUGH64-NEXT:  # %bb.6: # %sw.bb
+; CHECK_FALLTHROUGH64-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; CHECK_FALLTHROUGH64-NEXT:    cmpl $45, %r9d # encoding: [0x41,0x83,0xf9,0x2d]
+; CHECK_FALLTHROUGH64-NEXT:    movl %edx, %r8d # encoding: [0x41,0x89,0xd0]
+; CHECK_FALLTHROUGH64-NEXT:    je .LBB3_11 # encoding: [0x74,A]
+; CHECK_FALLTHROUGH64-NEXT:    # fixup A - offset: 1, value: .LBB3_11, kind: FK_PCRel_1
+; CHECK_FALLTHROUGH64-NEXT:  # %bb.7: # %if.else
+; CHECK_FALLTHROUGH64-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; CHECK_FALLTHROUGH64-NEXT:    addl $-48, %r9d # encoding: [0x41,0x83,0xc1,0xd0]
+; CHECK_FALLTHROUGH64-NEXT:    cmpl $10, %r9d # encoding: [0x41,0x83,0xf9,0x0a]
+; CHECK_FALLTHROUGH64-NEXT:    jmp .LBB3_9 # encoding: [0xeb,A]
+; CHECK_FALLTHROUGH64-NEXT:    # fixup A - offset: 1, value: .LBB3_9, kind: FK_PCRel_1
+; CHECK_FALLTHROUGH64-NEXT:  .LBB3_8: # %sw.bb14
+; CHECK_FALLTHROUGH64-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; CHECK_FALLTHROUGH64-NEXT:    movzbl (%rdi), %r8d # encoding: [0x44,0x0f,0xb6,0x07]
+; CHECK_FALLTHROUGH64-NEXT:    addl $-48, %r8d # encoding: [0x41,0x83,0xc0,0xd0]
+; CHECK_FALLTHROUGH64-NEXT:    cmpl $10, %r8d # encoding: [0x41,0x83,0xf8,0x0a]
+; CHECK_FALLTHROUGH64-NEXT:  .LBB3_9: # %if.else
+; CHECK_FALLTHROUGH64-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; CHECK_FALLTHROUGH64-NEXT:    movl %ecx, %r8d # encoding: [0x41,0x89,0xc8]
+; CHECK_FALLTHROUGH64-NEXT:    jb .LBB3_11 # encoding: [0x72,A]
+; CHECK_FALLTHROUGH64-NEXT:    # fixup A - offset: 1, value: .LBB3_11, kind: FK_PCRel_1
+; CHECK_FALLTHROUGH64-NEXT:    jmp .LBB3_13 # encoding: [0xeb,A]
+; CHECK_FALLTHROUGH64-NEXT:    # fixup A - offset: 1, value: .LBB3_13, kind: FK_PCRel_1
+; CHECK_FALLTHROUGH64-NEXT:  .LBB3_10: # %sw.bb22
+; CHECK_FALLTHROUGH64-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; CHECK_FALLTHROUGH64-NEXT:    movzbl (%rdi), %r8d # encoding: [0x44,0x0f,0xb6,0x07]
+; CHECK_FALLTHROUGH64-NEXT:    addl $-48, %r8d # encoding: [0x41,0x83,0xc0,0xd0]
+; CHECK_FALLTHROUGH64-NEXT:    cmpl $10, %r8d # encoding: [0x41,0x83,0xf8,0x0a]
+; CHECK_FALLTHROUGH64-NEXT:    movl %ecx, %r8d # encoding: [0x41,0x89,0xc8]
+; CHECK_FALLTHROUGH64-NEXT:    jae _Z20isValidIntegerSuffixN9__gnu_cxx17__normal_iteratorIPKcSsEES3_ # TAILCALL
+; CHECK_FALLTHROUGH64-NEXT:    # encoding: [0x73,A]
+; CHECK_FALLTHROUGH64-NEXT:    # fixup A - offset: 1, value: _Z20isValidIntegerSuffixN9__gnu_cxx17__normal_iteratorIPKcSsEES3_, kind: FK_PCRel_1
+; CHECK_FALLTHROUGH64-NEXT:  .LBB3_11: # %for.inc
+; CHECK_FALLTHROUGH64-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; CHECK_FALLTHROUGH64-NEXT:    incq %rdi # encoding: [0x48,0xff,0xc7]
+; CHECK_FALLTHROUGH64-NEXT:    jmp .LBB3_1 # encoding: [0xeb,A]
+; CHECK_FALLTHROUGH64-NEXT:    # fixup A - offset: 1, value: .LBB3_1, kind: FK_PCRel_1
+; CHECK_FALLTHROUGH64-NEXT:  .LBB3_12:
+; CHECK_FALLTHROUGH64-NEXT:    cmpl $2, %r8d # encoding: [0x41,0x83,0xf8,0x02]
+; CHECK_FALLTHROUGH64-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK_FALLTHROUGH64-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK_FALLTHROUGH64-NEXT:    retq # encoding: [0xc3]
+; CHECK_FALLTHROUGH64-NEXT:  .LBB3_13:
+; CHECK_FALLTHROUGH64-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK_FALLTHROUGH64-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK_FALLTHROUGH64-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = load ptr, ptr %s, align 8
   %arrayidx.i.i.i54 = getelementptr inbounds i8, ptr %0, i64 -24
@@ -593,3 +737,135 @@ cleanup.thread:                                   ; preds = %cleanup.thread.loop
   %6 = phi i1 [ %cmp37, %5 ], [ %call34, %if.else28 ], [ false, %cleanup.thread.loopexit ]
   ret i1 %6
 }
+
+define void @true_likely(i1 noundef zeroext %0) {
+; CHECK32-LABEL: true_likely:
+; CHECK32:       # %bb.0:
+; CHECK32-NEXT:    cmpb $0, {{[0-9]+}}(%esp) # encoding: [0x80,0x7c,0x24,0x04,0x00]
+; CHECK32-NEXT:    je func_false # TAILCALL
+; CHECK32-NEXT:    # encoding: [0x74,A]
+; CHECK32-NEXT:    # fixup A - offset: 1, value: func_false, kind: FK_PCRel_1
+; CHECK32-NEXT:  # %bb.1:
+; CHECK32-NEXT:    jmp func_true # TAILCALL
+; CHECK32-NEXT:    # encoding: [0xeb,A]
+; CHECK32-NEXT:    # fixup A - offset: 1, value: func_true, kind: FK_PCRel_1
+;
+; CHECK64-LABEL: true_likely:
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    testl %edi, %edi # encoding: [0x85,0xff]
+; CHECK64-NEXT:    je func_false # TAILCALL
+; CHECK64-NEXT:    # encoding: [0x74,A]
+; CHECK64-NEXT:    # fixup A - offset: 1, value: func_false, kind: FK_PCRel_1
+; CHECK64-NEXT:  # %bb.1:
+; CHECK64-NEXT:    jmp func_true # TAILCALL
+; CHECK64-NEXT:    # encoding: [0xeb,A]
+; CHECK64-NEXT:    # fixup A - offset: 1, value: func_true, kind: FK_PCRel_1
+;
+; WIN64-LABEL: true_likely:
+; WIN64:       # %bb.0:
+; WIN64-NEXT:    testb %cl, %cl # encoding: [0x84,0xc9]
+; WIN64-NEXT:    je func_false # TAILCALL
+; WIN64-NEXT:    # encoding: [0x74,A]
+; WIN64-NEXT:    # fixup A - offset: 1, value: func_false, kind: FK_PCRel_1
+; WIN64-NEXT:  # %bb.1:
+; WIN64-NEXT:    jmp func_true # TAILCALL
+; WIN64-NEXT:    # encoding: [0xeb,A]
+; WIN64-NEXT:    # fixup A - offset: 1, value: func_true, kind: FK_PCRel_1
+;
+; CHECK_FALLTHROUGH64-LABEL: true_likely:
+; CHECK_FALLTHROUGH64:       # %bb.0:
+; CHECK_FALLTHROUGH64-NEXT:    testl %edi, %edi # encoding: [0x85,0xff]
+; CHECK_FALLTHROUGH64-NEXT:    je func_false # TAILCALL
+; CHECK_FALLTHROUGH64-NEXT:    # encoding: [0x74,A]
+; CHECK_FALLTHROUGH64-NEXT:    # fixup A - offset: 1, value: func_false, kind: FK_PCRel_1
+; CHECK_FALLTHROUGH64-NEXT:  # %bb.1:
+; CHECK_FALLTHROUGH64-NEXT:    jmp func_true # TAILCALL
+; CHECK_FALLTHROUGH64-NEXT:    # encoding: [0xeb,A]
+; CHECK_FALLTHROUGH64-NEXT:    # fixup A - offset: 1, value: func_true, kind: FK_PCRel_1
+  br i1 %0, label %2, label %3, !prof !6
+
+2:
+  tail call void @func_true()
+  br label %4
+
+3:
+  tail call void @func_false()
+  br label %4
+
+4:
+  ret void
+}
+
+define void @false_likely(i1 noundef zeroext %0) {
+; CHECK32-LABEL: false_likely:
+; CHECK32:       # %bb.0:
+; CHECK32-NEXT:    cmpb $0, {{[0-9]+}}(%esp) # encoding: [0x80,0x7c,0x24,0x04,0x00]
+; CHECK32-NEXT:    jne .LBB5_1 # encoding: [0x75,A]
+; CHECK32-NEXT:    # fixup A - offset: 1, value: .LBB5_1, kind: FK_PCRel_1
+; CHECK32-NEXT:  # %bb.2:
+; CHECK32-NEXT:    jmp func_false # TAILCALL
+; CHECK32-NEXT:    # encoding: [0xeb,A]
+; CHECK32-NEXT:    # fixup A - offset: 1, value: func_false, kind: FK_PCRel_1
+; CHECK32-NEXT:  .LBB5_1:
+; CHECK32-NEXT:    jmp func_true # TAILCALL
+; CHECK32-NEXT:    # encoding: [0xeb,A]
+; CHECK32-NEXT:    # fixup A - offset: 1, value: func_true, kind: FK_PCRel_1
+;
+; CHECK64-LABEL: false_likely:
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    testl %edi, %edi # encoding: [0x85,0xff]
+; CHECK64-NEXT:    jne .LBB5_1 # encoding: [0x75,A]
+; CHECK64-NEXT:    # fixup A - offset: 1, value: .LBB5_1, kind: FK_PCRel_1
+; CHECK64-NEXT:  # %bb.2:
+; CHECK64-NEXT:    jmp func_false # TAILCALL
+; CHECK64-NEXT:    # encoding: [0xeb,A]
+; CHECK64-NEXT:    # fixup A - offset: 1, value: func_false, kind: FK_PCRel_1
+; CHECK64-NEXT:  .LBB5_1:
+; CHECK64-NEXT:    jmp func_true # TAILCALL
+; CHECK64-NEXT:    # encoding: [0xeb,A]
+; CHECK64-NEXT:    # fixup A - offset: 1, value: func_true, kind: FK_PCRel_1
+;
+; WIN64-LABEL: false_likely:
+; WIN64:       # %bb.0:
+; WIN64-NEXT:    testb %cl, %cl # encoding: [0x84,0xc9]
+; WIN64-NEXT:    jne .LBB5_1 # encoding: [0x75,A]
+; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB5_1, kind: FK_PCRel_1
+; WIN64-NEXT:  # %bb.2:
+; WIN64-NEXT:    jmp func_false # TAILCALL
+; WIN64-NEXT:    # encoding: [0xeb,A]
+; WIN64-NEXT:    # fixup A - offset: 1, value: func_false, kind: FK_PCRel_1
+; WIN64-NEXT:  .LBB5_1:
+; WIN64-NEXT:    jmp func_true # TAILCALL
+; WIN64-NEXT:    # encoding: [0xeb,A]
+; WIN64-NEXT:    # fixup A - offset: 1, value: func_true, kind: FK_PCRel_1
+;
+; CHECK_FALLTHROUGH64-LABEL: false_likely:
+; CHECK_FALLTHROUGH64:       # %bb.0:
+; CHECK_FALLTHROUGH64-NEXT:    testl %edi, %edi # encoding: [0x85,0xff]
+; CHECK_FALLTHROUGH64-NEXT:    jne func_true # TAILCALL
+; CHECK_FALLTHROUGH64-NEXT:    # encoding: [0x75,A]
+; CHECK_FALLTHROUGH64-NEXT:    # fixup A - offset: 1, value: func_true, kind: FK_PCRel_1
+; CHECK_FALLTHROUGH64-NEXT:  # %bb.1:
+; CHECK_FALLTHROUGH64-NEXT:    jmp func_false # TAILCALL
+; CHECK_FALLTHROUGH64-NEXT:    # encoding: [0xeb,A]
+; CHECK_FALLTHROUGH64-NEXT:    # fixup A - offset: 1, value: func_false, kind: FK_PCRel_1
+  br i1 %0, label %2, label %3, !prof !7
+
+2:
+  tail call void @func_true()
+  br label %4
+
+3:
+  tail call void @func_false()
+  br label %4
+
+4:
+  ret void
+}
+
+!6 = !{!"branch_weights", i32 2000, i32 1}
+!7 = !{!"branch_weights", i32 1, i32 2000}
+
+
+declare dso_local void @func_true()
+declare dso_local void @func_false()
