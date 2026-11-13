@@ -118,4 +118,48 @@ TEST_F(StackFrameListTest, InlineFramesInheritZerothFrameSymbolication) {
         << "frame " << i << " symbolicates at an adjusted address";
   }
 }
+
+// A concrete frame and the frames inlined into it share a concrete frame
+// index, so a frame's index is not its concrete frame index once there is an
+// inlined frame below it.
+TEST_F(StackFrameListTest, GetFrameWithConcreteFrameIndex) {
+  // The first PC is in inner(), which is inlined into outer(). The second is
+  // in outer()'s own code; see the generation recipe in
+  // Inputs/inlined-function.yaml.
+  const addr_t inlined_pc = 0xd;
+  const addr_t caller_pc = 0x1d;
+
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  ProcessSP process_sp =
+      std::make_shared<DummyProcess>(m_target_sp, listener_sp);
+  ASSERT_TRUE(process_sp);
+  ThreadSP thread_sp = std::make_shared<HistoryThread>(
+      *process_sp, /*tid=*/0x1234, std::vector<addr_t>{inlined_pc, caller_pc});
+
+  // The YAML object file creates a backtrace like this:
+  //   frame #0: 0x000000000000000d inner() at inl.cpp:2:13 [inlined]
+  //   frame #1: 0x000000000000000d outer() at inl.cpp:6:27
+  //   frame #2: 0x000000000000001d outer() at inl.cpp:6:38
+  ASSERT_EQ(thread_sp->GetStackFrameCount(), 3u);
+  const uint32_t concrete_frame_indexes[] = {0, 0, 1};
+  for (uint32_t i = 0; i < 3; ++i) {
+    StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(i);
+    ASSERT_TRUE(frame_sp);
+    ASSERT_EQ(frame_sp->GetConcreteFrameIndex(), concrete_frame_indexes[i])
+        << "frame " << i;
+  }
+
+  // The first frame with the concrete frame index, which is the innermost
+  // inlined one.
+  StackFrameSP frame_sp = thread_sp->GetFrameWithConcreteFrameIndex(0);
+  ASSERT_TRUE(frame_sp);
+  EXPECT_EQ(frame_sp->GetFrameIndex(), 0u);
+
+  frame_sp = thread_sp->GetFrameWithConcreteFrameIndex(1);
+  ASSERT_TRUE(frame_sp);
+  EXPECT_EQ(frame_sp->GetFrameIndex(), 2u);
+  EXPECT_EQ(frame_sp->GetConcreteFrameIndex(), 1u);
+
+  EXPECT_FALSE(thread_sp->GetFrameWithConcreteFrameIndex(2));
+}
 } // namespace
