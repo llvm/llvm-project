@@ -95,6 +95,8 @@ public:
 
   void applyCanonicalizeZextShiftAmt(MachineInstr &MI, MachineInstr &Ext) const;
 
+  bool combineDivPhi(MachineInstr &MI) const;
+
   bool combineD16Load(MachineInstr &MI) const;
   void applyD16Load(unsigned D16Opc, MachineInstr &DstMI,
                     MachineInstr *SmallLoad, Register ToOverwriteD16,
@@ -420,6 +422,18 @@ void AMDGPURegBankCombinerImpl::applyCanonicalizeZextShiftAmt(
   MRI.setRegBank(Mask.getReg(0), RB);
   MRI.setRegBank(And.getReg(0), RB);
   MI.eraseFromParent();
+}
+
+bool AMDGPURegBankCombinerImpl::combineDivPhi(MachineInstr &MI) const {
+  Register Dst = MI.getOperand(0).getReg();
+
+  for (MachineInstr &Use : MRI.use_nodbg_instructions(Dst)) {
+    if (!(Use.getOpcode() == AMDGPU::G_PHI &&
+          isVgprRegBank(Use.getOperand(0).getReg())))
+      return false;
+  }
+  MRI.setRegBank(Dst, RBI.getRegBank(AMDGPU::VGPRRegBankID));
+  return true;
 }
 
 bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {

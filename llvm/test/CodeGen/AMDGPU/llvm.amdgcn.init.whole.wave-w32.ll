@@ -386,9 +386,7 @@ define amdgpu_cs_chain void @control_flow(<3 x i32> inreg %sgpr, ptr inreg %call
 ; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    s_xor_b32 exec_lo, exec_lo, s4
 ; GISEL12-NEXT:  ; %bb.7: ; %tail.then
-; GISEL12-NEXT:    s_mov_b32 s3, 44
-; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GISEL12-NEXT:    v_mov_b32_e32 v8, s3
+; GISEL12-NEXT:    v_mov_b32_e32 v8, 44
 ; GISEL12-NEXT:  ; %bb.8: ; %tail.end
 ; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s5
@@ -492,8 +490,7 @@ define amdgpu_cs_chain void @control_flow(<3 x i32> inreg %sgpr, ptr inreg %call
 ; GISEL10-NEXT:    v_mov_b32_e32 v8, s3
 ; GISEL10-NEXT:    s_xor_b32 exec_lo, exec_lo, s4
 ; GISEL10-NEXT:  ; %bb.7: ; %tail.then
-; GISEL10-NEXT:    s_mov_b32 s3, 44
-; GISEL10-NEXT:    v_mov_b32_e32 v8, s3
+; GISEL10-NEXT:    v_mov_b32_e32 v8, 44
 ; GISEL10-NEXT:  ; %bb.8: ; %tail.end
 ; GISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GISEL10-NEXT:    s_mov_b32 exec_lo, s5
