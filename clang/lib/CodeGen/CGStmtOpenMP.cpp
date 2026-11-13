@@ -6926,12 +6926,23 @@ convertToComplexValue(CodeGenFunction &CGF, RValue Val, QualType SrcType,
   return ComplexVal;
 }
 
+/// Without a memscope clause, the binding thread set of an atomic region is
+/// all threads on the device.
+static llvm::SyncScope::ID getOMPAtomicSyncScope(CodeGenFunction &CGF,
+                                                 llvm::AtomicOrdering AO) {
+  if (!CGF.getLangOpts().OpenMPIsTargetDevice)
+    return llvm::SyncScope::System;
+  return CGF.getTargetHooks().getLLVMSyncScopeID(
+      CGF.getLangOpts(), SyncScope::DeviceScope, AO, CGF.getLLVMContext());
+}
+
 static void emitSimpleAtomicStore(CodeGenFunction &CGF, llvm::AtomicOrdering AO,
                                   LValue LVal, RValue RVal) {
   if (LVal.isGlobalReg())
     CGF.EmitStoreThroughGlobalRegLValue(RVal, LVal);
   else
-    CGF.EmitAtomicStore(RVal, LVal, AO, LVal.isVolatile(), /*isInit=*/false);
+    CGF.EmitAtomicStore(RVal, LVal, AO, LVal.isVolatile(), /*isInit=*/false,
+                        getOMPAtomicSyncScope(CGF, AO));
 }
 
 static RValue emitSimpleAtomicLoad(CodeGenFunction &CGF,
@@ -6939,9 +6950,11 @@ static RValue emitSimpleAtomicLoad(CodeGenFunction &CGF,
                                    SourceLocation Loc) {
   if (LVal.isGlobalReg())
     return CGF.EmitLoadOfLValue(LVal, Loc);
-  return CGF.EmitAtomicLoad(
-      LVal, Loc, llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(AO),
-      LVal.isVolatile());
+  llvm::AtomicOrdering LoadAO =
+      llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(AO);
+  return CGF.EmitAtomicLoad(LVal, Loc, LoadAO, LVal.isVolatile(),
+                            AggValueSlot::ignored(),
+                            getOMPAtomicSyncScope(CGF, LoadAO));
 }
 
 void CodeGenFunction::emitOMPSimpleStore(LValue LVal, RValue RVal,
@@ -7133,8 +7146,8 @@ static std::pair<bool, RValue> emitOMPAtomicRMW(CodeGenFunction &CGF, LValue X,
       UpdateVal = CGF.Builder.CreateCast(llvm::Instruction::CastOps::UIToFP, IC,
                                          X.getAddress().getElementType());
   }
-  llvm::AtomicRMWInst *Res =
-      CGF.emitAtomicRMWInst(RMWOp, X.getAddress(), UpdateVal, AO);
+  llvm::AtomicRMWInst *Res = CGF.emitAtomicRMWInst(
+      RMWOp, X.getAddress(), UpdateVal, AO, getOMPAtomicSyncScope(CGF, AO));
   return std::make_pair(true, RValue::get(Res));
 }
 
@@ -7156,7 +7169,8 @@ std::pair<bool, RValue> CodeGenFunction::EmitOMPAtomicSimpleUpdateExpr(
       EmitStoreThroughLValue(CommonGen(EmitLoadOfLValue(X, Loc)), X);
     } else {
       // Perform compare-and-swap procedure.
-      EmitAtomicUpdate(X, AO, CommonGen, X.getType().isVolatileQualified());
+      EmitAtomicUpdate(X, AO, CommonGen, X.getType().isVolatileQualified(),
+                       getOMPAtomicSyncScope(*this, AO));
     }
   }
   return Res;
@@ -7410,16 +7424,17 @@ static void emitOMPAtomicCompareExpr(
   AC.FineGrainedMemory =
       AtomicOpts.getOption(AtomicOptionKind::FineGrainedMemory);
   AC.RemoteMemory = AtomicOpts.getOption(AtomicOptionKind::RemoteMemory);
+  llvm::SyncScope::ID SSID = getOMPAtomicSyncScope(CGF, AO);
   if (FailAO == llvm::AtomicOrdering::NotAtomic) {
     // fail clause was not mentioned on the
     // "#pragma omp atomic compare" construct.
     CGF.Builder.restoreIP(OMPBuilder.createAtomicCompare(
         CGF.Builder, XOpVal, VOpVal, ROpVal, EVal, DVal, AO, Op, IsXBinopExpr,
-        IsPostfixUpdate, IsFailOnly, /*IsWeak=*/false, AC));
+        IsPostfixUpdate, IsFailOnly, /*IsWeak=*/false, AC, SSID));
   } else
     CGF.Builder.restoreIP(OMPBuilder.createAtomicCompare(
         CGF.Builder, XOpVal, VOpVal, ROpVal, EVal, DVal, AO, Op, IsXBinopExpr,
-        IsPostfixUpdate, IsFailOnly, FailAO, /*IsWeak=*/false, AC));
+        IsPostfixUpdate, IsFailOnly, FailAO, /*IsWeak=*/false, AC, SSID));
 }
 
 static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,

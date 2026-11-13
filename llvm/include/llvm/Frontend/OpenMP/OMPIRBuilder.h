@@ -4291,19 +4291,22 @@ public:
   ///                     the strongest failure ordering valid for \p AO.
   /// \param IsWeak       True if the cmpxchg may fail spuriously.
   /// \param AC           Hints for the generated atomicrmw instruction.
+  /// \param SSID         Synchronization scope of the generated atomic
+  ///                     instructions.
   ///
   /// \return Insertion point after generated atomic capture IR.
   LLVM_ABI InsertPointTy createAtomicCompare(
       const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
       AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
       omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
-      bool IsFailOnly, bool IsWeak = false, omp::AtomicControl AC = {});
+      bool IsFailOnly, bool IsWeak = false, omp::AtomicControl AC = {},
+      SyncScope::ID SSID = SyncScope::System);
   LLVM_ABI InsertPointTy createAtomicCompare(
       const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
       AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
       omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
       bool IsFailOnly, AtomicOrdering Failure, bool IsWeak = false,
-      omp::AtomicControl AC = {});
+      omp::AtomicControl AC = {}, SyncScope::ID SSID = SyncScope::System);
 
   /// Whether to emit special handling for IEEE 754 -0.0 == +0.0 in
   /// atomic compare operations on floating-point types.

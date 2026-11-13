@@ -1585,6 +1585,9 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 ### OpenMP Support
 
+- `atomic` constructs in target device code now use device scope instead of
+  system scope, matching the OpenMP 6.0 default when no `memscope` clause is
+  given.
 - Added the `ompx_fast_fp_atomics` (alias `ompx_unsafe_fp_atomics`) and
   `ompx_safe_fp_atomics` hints for the `atomic` construct. They override
   `-f[no-]atomic-ignore-denormal-mode` (`-m[no-]unsafe-fp-atomics`) for a

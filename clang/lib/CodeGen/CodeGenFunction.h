@@ -4447,12 +4447,14 @@ public:
 
   RValue EmitAtomicLoad(LValue lvalue, SourceLocation loc,
                         llvm::AtomicOrdering AO, bool IsVolatile = false,
-                        AggValueSlot slot = AggValueSlot::ignored());
+                        AggValueSlot slot = AggValueSlot::ignored(),
+                        llvm::SyncScope::ID SSID = llvm::SyncScope::System);
 
   void EmitAtomicStore(RValue rvalue, LValue lvalue, bool isInit);
 
   void EmitAtomicStore(RValue rvalue, LValue lvalue, llvm::AtomicOrdering AO,
-                       bool IsVolatile, bool isInit);
+                       bool IsVolatile, bool isInit,
+                       llvm::SyncScope::ID SSID = llvm::SyncScope::System);
 
   std::pair<RValue, llvm::Value *> EmitAtomicCompareExchange(
       LValue Obj, RValue Expected, RValue Desired, SourceLocation Loc,
@@ -4478,7 +4480,8 @@ public:
 
   void EmitAtomicUpdate(LValue LVal, llvm::AtomicOrdering AO,
                         const llvm::function_ref<RValue(RValue)> &UpdateOp,
-                        bool IsVolatile);
+                        bool IsVolatile,
+                        llvm::SyncScope::ID SSID = llvm::SyncScope::System);
 
   /// EmitToMemory - Change a scalar value from its value
   /// representation to its in-memory representation.
