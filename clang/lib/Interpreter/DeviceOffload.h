@@ -62,6 +62,9 @@ class IncrementalHIPDeviceParser : public IncrementalDeviceParser {
   // Bundle the code object into a HIP fat binary.
   llvm::Expected<llvm::StringRef> GenerateFatbinary(llvm::StringRef HSACO);
 
+  // Embed the bundle in host codegen.
+  void EmbedOffloadBundle();
+
 public:
   IncrementalHIPDeviceParser(
       CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,

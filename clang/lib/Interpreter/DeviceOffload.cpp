@@ -14,18 +14,17 @@
 #include "DeviceOffload.h"
 
 #include "clang/Basic/TargetID.h"
-#include "clang/Basic/TargetID.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Driver/CommonArgs.h"
-#include "clang/Driver/OffloadBundler.h"
 #include "clang/Driver/OffloadBundler.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Options/Options.h"
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -37,8 +36,6 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/TargetParser/AMDGPUTargetParser.h"
-#include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
@@ -249,6 +246,16 @@ IncrementalHIPDeviceParser::GenerateFatbinary(llvm::StringRef HSACO) {
   return llvm::StringRef(FatbinContent.data(), FatbinContent.size());
 }
 
+void IncrementalHIPDeviceParser::EmbedOffloadBundle() {
+  const PartialTranslationUnit &PTU = PTUs.back();
+  std::string BundleFileName = "/" + PTU.TheModule->getName().str() + ".hipfb";
+  VFS->addFile(BundleFileName, 0,
+               llvm::MemoryBuffer::getMemBufferCopy(llvm::StringRef(
+                   FatbinContent.data(), FatbinContent.size())));
+
+  CodeGenOpts.OffloadBinaryToEmbedFile = std::move(BundleFileName);
+}
+
 llvm::Error IncrementalHIPDeviceParser::GenerateOffloadBinary() {
   llvm::Expected<llvm::StringRef> Object = GenerateDeviceObject();
   if (!Object)
@@ -262,15 +269,8 @@ llvm::Error IncrementalHIPDeviceParser::GenerateOffloadBinary() {
   if (!Fatbin)
     return Fatbin.takeError();
 
-  // FIXME: Embed the fat binary into the host compilation.
-  llvm::Expected<llvm::StringRef> Fatbin = GenerateFatbinary(*HSACO);
-  if (!Fatbin)
-    return Fatbin.takeError();
-
-  // FIXME: Embed the fat binary into the host compilation.
-  return llvm::make_error<llvm::StringError>(
-      "HIP offload binary generation is not supported yet.",
-      llvm::inconvertibleErrorCode());
+  EmbedOffloadBundle();
+  return llvm::Error::success();
 }
 
 IncrementalHIPDeviceParser::~IncrementalHIPDeviceParser() {}

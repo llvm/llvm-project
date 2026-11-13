@@ -157,18 +157,28 @@ TEST_F(DeviceOffloadHIPTest, DeviceCodeIsBundled) {
       std::move(*HostCI), std::move(*DeviceCI), OffloadType::HIP);
   ASSERT_THAT_EXPECTED(Interp, llvm::Succeeded());
 
-  // With lld, the unsupported embedding step is only reached after the device
-  // object was linked into an HSACO and bundled.
-  // FIXME: Check the fat binary once it is embedded into the host compilation.
   std::string Exe = llvm::sys::fs::getMainExecutable(nullptr, nullptr);
   bool HasLLD = llvm::sys::findProgramByName(
                     "lld", {llvm::sys::path::parent_path(Exe)}) ||
                 llvm::sys::findProgramByName("lld");
   auto PTU = (*Interp)->Parse("__attribute__((device)) void f() {}");
-  EXPECT_THAT_EXPECTED(
-      PTU, llvm::FailedWithMessage(
-               HasLLD ? "HIP offload binary generation is not supported yet."
-                      : "Could not find lld."));
+  if (!HasLLD) {
+    EXPECT_THAT_EXPECTED(PTU, llvm::FailedWithMessage("Could not find lld."));
+    return;
+  }
+  ASSERT_THAT_EXPECTED(PTU, llvm::Succeeded());
+
+  // The device object was linked into an HSACO, bundled into a fat binary and
+  // handed to the host compilation.
+  const CompilerInstance *CI = (*Interp)->getCompilerInstance();
+  llvm::StringRef Fatbin = CI->getCodeGenOpts().OffloadBinaryToEmbedFile;
+  ASSERT_FALSE(Fatbin.empty());
+  auto Buf = CI->getVirtualFileSystem().getBufferForFile(
+      Fatbin, /*FileSize=*/-1, /*RequiresNullTerminator=*/false);
+  ASSERT_TRUE(static_cast<bool>(Buf)) << Buf.getError().message();
+  llvm::StringRef Bundle = (*Buf)->getBuffer();
+  EXPECT_TRUE(Bundle.starts_with("__CLANG_OFFLOAD_BUNDLE__"));
+  EXPECT_TRUE(Bundle.contains("hipv4-amdgcn-amd-amdhsa--gfx1100"));
 }
 
 TEST_F(DeviceOffloadHIPTest, LdPathSelectsTheLinker) {
