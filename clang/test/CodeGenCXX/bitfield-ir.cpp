@@ -90,10 +90,10 @@ void A (Int *p) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[BF_LOAD:%.*]] = load i32, ptr [[P]], align 4
 // CHECK-NEXT:    [[INC:%.*]] = add i32 [[BF_LOAD]], 65536
-// CHECK-NEXT:    [[BF_VALUE:%.*]] = and i32 [[INC]], 16711680
-// CHECK-NEXT:    [[BF_CLEAR:%.*]] = and i32 [[BF_LOAD]], -16711681
-// CHECK-NEXT:    [[BF_SET:%.*]] = or disjoint i32 [[BF_VALUE]], [[BF_CLEAR]]
-// CHECK-NEXT:    store i32 [[BF_SET]], ptr [[P]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = lshr i32 [[INC]], 16
+// CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i8
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P]], i64 2
+// CHECK-NEXT:    store i8 [[TMP1]], ptr [[TMP2]], align 2
 // CHECK-NEXT:    ret void
 //
 void B (Int *p) {
