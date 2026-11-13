@@ -237,6 +237,22 @@ TEST_F(PopulateSwitchTest, Test) {
             switch (controlState) {case A:break;case B:case C:break;}
           )"",
        "TestTU.c"},
+      {
+          File,
+          R""(
+            struct MaybeSigned { enum {S,U} tag; };
+            void func(struct MaybeSigned val) {
+              ^switch (val.tag) {}
+            }
+          )"",
+          R""(
+            struct MaybeSigned { enum {S,U} tag; };
+            void func(struct MaybeSigned val) {
+              switch (val.tag) {case S:case U:break;}
+            }
+          )"",
+          "TestTU.c",
+      },
   };
 
   for (const auto &Case : Cases) {

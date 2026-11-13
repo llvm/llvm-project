@@ -106,6 +106,9 @@ std::string getQualification(ASTContext &Context,
                              const DeclContext *DestContext,
                              const DeclContext *SourceContext,
                              llvm::function_ref<bool(const Decl *)> IsVisible) {
+
+  if (!Context.getLangOpts().CPlusPlus)
+    return "";
   std::vector<const Decl *> Parents;
   [[maybe_unused]] bool ReachedNS = false;
   for (const DeclContext *CurContext = SourceContext; CurContext;
