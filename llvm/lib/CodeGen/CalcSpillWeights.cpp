@@ -226,13 +226,17 @@ void VirtRegAuxInfo::calculateSpillWeightAndHint(LiveInterval &LI) {
   LI.setWeight(Weight);
 }
 
+/// Return true if the inline asm \p MI can access \p Reg in Reg's stack slot,
+/// which the register allocator would fold its operands to if it spills Reg.
+static bool canMemFoldInlineAsm(const MachineInstr &MI, Register Reg) {
+  return MI.isInlineAsm() && MI.mayFoldInlineAsmReg(Reg);
+}
+
 static bool canMemFoldInlineAsm(LiveInterval &LI,
                                 const MachineRegisterInfo &MRI) {
-  for (const MachineOperand &MO : MRI.reg_operands(LI.reg())) {
-    const MachineInstr *MI = MO.getParent();
-    if (MI->isInlineAsm() && MI->mayFoldInlineAsmRegOp(MI->getOperandNo(&MO)))
+  for (const MachineInstr &MI : MRI.reg_nodbg_instructions(LI.reg()))
+    if (canMemFoldInlineAsm(MI, LI.reg()))
       return true;
-  }
 
   return false;
 }
