@@ -7367,7 +7367,6 @@ Retry2:
 }
 
 static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
-                                 TargetLowering::DAGCombinerInfo &DCI,
                                  const LoongArchSubtarget &Subtarget) {
   EVT VT = N->getValueType(0);
   // LA64 promotes i32 integer operations to GPR-width operations during
@@ -9381,7 +9380,7 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::OR:
     return performORCombine(N, DAG, DCI, Subtarget);
   case ISD::XOR:
-    return performXORCombine(N, DAG, DCI, Subtarget);
+    return performXORCombine(N, DAG, Subtarget);
   case ISD::SETCC:
     return performSETCCCombine(N, DAG, DCI, Subtarget);
   case ISD::SELECT:
