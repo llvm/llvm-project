@@ -13,10 +13,12 @@
 
 // ~sentry();
 //
-// If rdbuf()->pubsync() returns -1 or exits via an exception, sets badbit without propagating an exception.
+// LWG4188: If rdbuf()->pubsync() returns -1 or exits via an exception, sets badbit without propagating an exception.
 
 // UNSUPPORTED: no-exceptions
 
+// basic_ostream<char> and basic_ostream<wchar_t> are explicitly instantiated in the dylib, so the fixed
+// sentry destructor is only used with a dylib that contains the fix.
 // XFAIL: using-built-library-before-llvm-24
 
 #include <cassert>
