@@ -33,6 +33,7 @@ template <typename T> class MutableArrayRef;
 class GlobalVariable;
 class ModuleSummaryIndex;
 struct ValueInfo;
+struct IPOOptions;
 
 namespace wholeprogramdevirt {
 
@@ -273,7 +274,8 @@ LLVM_ABI void getVisibleToRegularObjVtableGUIDs(
 LLVM_ABI void runWholeProgramDevirtOnIndex(
     ModuleSummaryIndex &Summary, std::set<GlobalValue::GUID> &ExportedGUIDs,
     std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap,
-    DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr = nullptr);
+    DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr = nullptr,
+    const LLVMContext *Ctx = nullptr);
 
 /// Call after cross-module importing to update the recorded single impl
 /// devirt target names for any locals that were exported.
