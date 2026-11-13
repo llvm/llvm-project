@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -I %S/../../SemaCXX -fclangir -emit-cir -clangir-disable-passes -Wno-return-type %s -o %t.cir
-// RUN: cir-opt %t.cir -cir-fall-off-analysis -o /dev/null 2>&1 | FileCheck %s
+// RUN: cir-opt %t.cir -cir-function-exit-analysis -o /dev/null 2>&1 | FileCheck %s
 
 // With exceptions, the coroutine body is wrapped in an implicit try whose
 // handler calls unhandled_exception(); leaving it is not flowing off.
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -I %S/../../SemaCXX -fcxx-exceptions -fexceptions -fclangir -emit-cir -clangir-disable-passes -Wno-return-type %s -o %t-eh.cir
-// RUN: cir-opt %t-eh.cir -cir-fall-off-analysis -o /dev/null 2>&1 | FileCheck %s --check-prefixes=CHECK,EH
+// RUN: cir-opt %t-eh.cir -cir-function-exit-analysis -o /dev/null 2>&1 | FileCheck %s --check-prefixes=CHECK,EH
 
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -I %S/../../SemaCXX -fsyntax-only -Wreturn-type -verify %s
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -I %S/../../SemaCXX -fcxx-exceptions -fexceptions -fsyntax-only -Wreturn-type -verify %s
@@ -72,46 +72,46 @@ struct std::coroutine_traits<void, T...> {
 
 [[noreturn]] void die();
 
-// CHECK-DAG: fall-off-coroutine.cpp:[[@LINE+1]]:1: remark: fall-off: always
-int always() {
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: must_reach_end
+int must_reach_end() {
   co_await a;
 } // expected-warning {{non-void coroutine does not return a value}}
 
-// CHECK-DAG: fall-off-coroutine.cpp:[[@LINE+1]]:1: remark: fall-off: maybe
-int maybe(bool b) {
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: may_reach_end
+int may_reach_end(bool b) {
   if (b)
     co_return 1;
 } // expected-warning {{non-void coroutine does not return a value in all control paths}}
 
-// CHECK-DAG: fall-off-coroutine.cpp:[[@LINE+1]]:1: remark: fall-off: never
-int never(bool b) {
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: return_only
+int return_only(bool b) {
   if (b)
     co_return 1;
   co_await a;
   co_return 2;
 }
 
-// CHECK-DAG: fall-off-coroutine.cpp:[[@LINE+1]]:1: remark: fall-off: never
-int never_if_else(bool b) {
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: return_only
+int return_only_if_else(bool b) {
   if (b)
     co_return 1;
   else
     co_return 2;
 }
 
-// CHECK-DAG: fall-off-coroutine.cpp:[[@LINE+1]]:1: remark: fall-off: never-and-no-return
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: no_return
 int ends_in_noreturn() {
   co_await a;
   die();
 }
 
-// CHECK-DAG: fall-off-coroutine.cpp:[[@LINE+1]]:1: remark: fall-off: never-and-no-return
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: no_return
 int infinite_loop() {
   for (;;)
     co_await a;
 }
 
-// CHECK-DAG: fall-off-coroutine.cpp:[[@LINE+1]]:1: remark: fall-off: maybe
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: may_reach_end
 int loop_breaks(int n) {
   while (n--) {
     if (n == 3)
@@ -120,12 +120,12 @@ int loop_breaks(int n) {
   }
 } // expected-warning {{non-void coroutine does not return a value in all control paths}}
 
-// CHECK-DAG: fall-off-coroutine.cpp:[[@LINE+1]]:1: remark: fall-off: always
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: must_reach_end
 long throwing_initial_resume() {
   co_await a;
 } // expected-warning {{non-void coroutine does not return a value}}
 
-// CHECK-DAG: fall-off-coroutine.cpp:[[@LINE+1]]:1: remark: fall-off: never
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: return_only
 long throwing_initial_resume_returns(bool b) {
   if (b)
     co_return 1;
@@ -133,20 +133,20 @@ long throwing_initial_resume_returns(bool b) {
 }
 
 // The fall-through handler, return_void(), is the implicit co_return.
-// CHECK-DAG: fall-off-coroutine.cpp:[[@LINE+1]]:1: remark: fall-off: never
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: return_only
 float return_void() {
   co_await a;
 }
 
 // Without return_void(), flowing off is undefined whatever the return type.
-// CHECK-DAG: fall-off-coroutine.cpp:[[@LINE+1]]:1: remark: fall-off: always
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: must_reach_end
 void void_without_return_void(int) {
   co_await a;
 } // expected-warning {{non-void coroutine does not return a value}}
 
-// CHECK-DAG: fall-off-coroutine.cpp:[[@LINE+1]]:1: remark: fall-off: never
+// CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: return_only
 int use_lambda() {
-  // CHECK-DAG: fall-off-coroutine.cpp:[[@LINE+1]]:{{[0-9]+}}: remark: fall-off: maybe
+  // CHECK-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:{{[0-9]+}}: remark: function exit: may_reach_end
   auto l = [](bool b) -> int {
     if (b)
       co_return 1;
@@ -157,7 +157,7 @@ int use_lambda() {
 
 #ifdef __EXCEPTIONS
 // A try written in the body is not the implicit one.
-// EH-DAG: fall-off-coroutine.cpp:[[@LINE+1]]:1: remark: fall-off: maybe
+// EH-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: may_reach_end
 int user_try() {
   try {
     co_return 1;
@@ -165,7 +165,7 @@ int user_try() {
   }
 } // expected-warning {{non-void coroutine does not return a value in all control paths}}
 
-// EH-DAG: fall-off-coroutine.cpp:[[@LINE+1]]:1: remark: fall-off: never
+// EH-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: return_only
 int user_try_returns() {
   try {
     co_return 1;
@@ -174,7 +174,7 @@ int user_try_returns() {
   }
 }
 
-// EH-DAG: fall-off-coroutine.cpp:[[@LINE+1]]:1: remark: fall-off: never-and-no-return
+// EH-DAG: function-exit-coroutine.cpp:[[@LINE+1]]:1: remark: function exit: no_return
 int ends_in_throw() {
   co_await a;
   throw 1;

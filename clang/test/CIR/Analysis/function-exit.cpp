@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -fclangir -emit-cir -clangir-disable-passes -Wno-return-type %s -o %t.cir
-// RUN: cir-opt %t.cir -cir-fall-off-analysis -o /dev/null 2>&1 | FileCheck %s
+// RUN: cir-opt %t.cir -cir-function-exit-analysis -o /dev/null 2>&1 | FileCheck %s
 
-// At -O1 the fall-off terminator is cir.unreachable rather than cir.trap.
+// At -O1 the implicit terminator is cir.unreachable rather than cir.trap.
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -O1 -fclangir -emit-cir -clangir-disable-passes -Wno-return-type %s -o %t-O1.cir
-// RUN: cir-opt %t-O1.cir -cir-fall-off-analysis -o /dev/null 2>&1 | FileCheck %s
+// RUN: cir-opt %t-O1.cir -cir-function-exit-analysis -o /dev/null 2>&1 | FileCheck %s
 
 // The warning annotations are what Sema's CFG-based check reports
 // for the same code, so both classifications are pinned to each other.
@@ -12,69 +12,69 @@
 [[noreturn]] void die();
 int g();
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: always
-int always(int x) {
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: must_reach_end
+int must_reach_end(int x) {
   x++;
 } // expected-warning {{non-void function does not return a value}}
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: maybe
-int maybe(int x) {
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: may_reach_end
+int may_reach_end(int x) {
   if (x)
     return 1;
 } // expected-warning {{non-void function does not return a value in all control paths}}
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: never
-int never(int x) {
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: return_only
+int return_only(int x) {
   if (x)
     return 1;
   return 0;
 }
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: never
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: return_only
 int noreturn_call(int x) {
   if (x)
     return 1;
   die();
 }
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: never-and-no-return
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: no_return
 int only_noreturn_call() {
   die();
 }
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: never
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: return_only
 int user_unreachable(int x) {
   if (x)
     return 1;
   __builtin_unreachable();
 }
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: never
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: return_only
 int user_trap(int x) {
   if (x)
     return 1;
   __builtin_trap();
 }
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: maybe
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: may_reach_end
 int noreturn_on_some_path(int x) {
   if (x)
     die();
 } // expected-warning {{non-void function does not return a value in all control paths}}
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: never
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: return_only
 int constant_condition() {
   if (true)
     return 1;
 }
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: never-and-no-return
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: no_return
 int infinite_loop() {
   while (true) {
   }
 }
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: always
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: must_reach_end
 int infinite_loop_with_break(int x) {
   while (true) {
     if (x)
@@ -82,7 +82,7 @@ int infinite_loop_with_break(int x) {
   }
 } // expected-warning {{non-void function does not return a value}}
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: never
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: return_only
 int for_ever(int x) {
   for (;;) {
     if (x)
@@ -90,20 +90,20 @@ int for_ever(int x) {
   }
 }
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: maybe
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: may_reach_end
 int while_may_not_run(int x) {
   while (x)
     return 1;
 } // expected-warning {{non-void function does not return a value in all control paths}}
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: never
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: return_only
 int do_while_runs_once(int x) {
   do {
     return 1;
   } while (x);
 }
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: maybe
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: may_reach_end
 int continue_reaches_exit(int x) {
   for (int i = 0; i < x; ++i) {
     if (i == 3)
@@ -112,7 +112,7 @@ int continue_reaches_exit(int x) {
   }
 } // expected-warning {{non-void function does not return a value in all control paths}}
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: never
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: return_only
 int switch_with_default(int x) {
   switch (x) {
   case 0:
@@ -122,7 +122,7 @@ int switch_with_default(int x) {
   }
 }
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: maybe
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: may_reach_end
 int switch_without_default(int x) {
   switch (x) {
   case 0:
@@ -134,7 +134,7 @@ int switch_without_default(int x) {
 
 enum E { A, B };
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: never
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: return_only
 int switch_covers_enum(E e) {
   switch (e) {
   case A:
@@ -144,7 +144,7 @@ int switch_covers_enum(E e) {
   }
 }
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: maybe
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: may_reach_end
 int switch_break(int x) {
   switch (x) {
   case 0:
@@ -156,7 +156,7 @@ int switch_break(int x) {
 
 // A switch dispatches to cases nested anywhere in its body, even after dead
 // code.
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: maybe
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: may_reach_end
 int switch_nested_case_after_dead_code(int x) {
   switch (x) {
     return 0;
@@ -167,7 +167,7 @@ int switch_nested_case_after_dead_code(int x) {
   }
 } // expected-warning {{non-void function does not return a value in all control paths}}
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: never
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: return_only
 int switch_nested_default_after_dead_code(int x) {
   switch (x) {
     return 5;
@@ -178,7 +178,7 @@ int switch_nested_default_after_dead_code(int x) {
   }
 }
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: maybe
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: may_reach_end
 int switch_case_in_loop(int x, int n) {
   switch (x) {
   case 0:
@@ -191,7 +191,7 @@ int switch_case_in_loop(int x, int n) {
   }
 } // expected-warning {{non-void function does not return a value in all control paths}}
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: never
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: return_only
 int switch_fallthrough(int x) {
   switch (x) {
   case 0:
@@ -202,19 +202,19 @@ int switch_fallthrough(int x) {
   }
 }
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: never
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: return_only
 int throw_on_some_path(int x) {
   if (x)
     return 1;
   throw 0;
 }
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: never-and-no-return
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: no_return
 int only_throw() {
   throw 1;
 }
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: maybe
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: may_reach_end
 int catch_falls_off() {
   try {
     return g();
@@ -226,7 +226,7 @@ struct NoReturnDtor {
   [[noreturn]] ~NoReturnDtor();
 };
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: never-and-no-return
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: no_return
 int noreturn_destructor() {
   NoReturnDtor d;
 }
@@ -236,21 +236,21 @@ struct Dtor {
 };
 
 // The body of a function with a destructor to run is a cleanup scope.
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: maybe
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: may_reach_end
 int cleanup_scope_falls_off(int x) {
   Dtor d;
   if (x)
     return 1;
 } // expected-warning {{non-void function does not return a value in all control paths}}
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: never
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: return_only
 int cleanup_scope_returns() {
   Dtor d;
   return 1;
   g();
 }
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: never
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: return_only
 int goto_to_return(int x) {
   if (x)
     goto out;
@@ -259,7 +259,7 @@ out:
   return 1;
 }
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: maybe
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: may_reach_end
 int goto_to_end(int x) {
   if (x)
     goto out;
@@ -267,12 +267,12 @@ int goto_to_end(int x) {
 out:;
 } // expected-warning {{non-void function does not return a value in all control paths}}
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: always
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: must_reach_end
 void void_function() {}
 
-// CHECK-DAG: fall-off.cpp:[[@LINE+1]]:1: remark: fall-off: never
+// CHECK-DAG: function-exit.cpp:[[@LINE+1]]:1: remark: function exit: return_only
 int use_lambda(int x) {
-  // CHECK-DAG: fall-off.cpp:[[@LINE+1]]:{{[0-9]+}}: remark: fall-off: maybe
+  // CHECK-DAG: function-exit.cpp:[[@LINE+1]]:{{[0-9]+}}: remark: function exit: may_reach_end
   auto l = [](int y) -> int {
     if (y)
       return 1;

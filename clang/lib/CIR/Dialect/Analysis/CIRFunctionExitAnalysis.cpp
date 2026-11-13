@@ -1,4 +1,4 @@
-//===- CIRFallOffAnalysis.cpp - Can control flow off the end of a function ===//
+//===- CIRFunctionExitAnalysis.cpp - How control leaves a function --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,12 +10,12 @@
 // leaves it (falling through, break, continue, explicit return, or reaching an
 // `implicit` terminator), and each structured operation combines the exits of
 // its regions according to its semantics. Reachable noreturn calls, user
-// traps and throws are one more kind of exit, the edges Sema's CFG check uses
-// to tell "maybe" from "always".
+// traps and throws are one more kind of exit, the edges CheckFallThrough uses
+// to tell MaybeFallThrough from AlwaysFallThrough.
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/CIR/Dialect/Analysis/CIRFallOffAnalysis.h"
+#include "clang/CIR/Dialect/Analysis/CIRFunctionExitAnalysis.h"
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Threading.h"
@@ -41,7 +41,8 @@ enum class Exits : uint8_t {
   ExplicitReturn = 1 << 3,
   ImplicitReturn = 1 << 4,
   // A reachable noreturn call, user trap, throw or `__builtin_unreachable`:
-  // the edges Sema's CFG check uses to tell "maybe" from "always".
+  // the edges CheckFallThrough uses to tell MaybeFallThrough from
+  // AlwaysFallThrough.
   NoReturn = 1 << 5,
   // Outcomes of a reachable `cir.condition` terminating the region.
   CondTrue = 1 << 6,
@@ -104,11 +105,11 @@ private:
   llvm::SmallVector<LabelOp> labels;
 };
 
-class FallOffAnalyzer {
+class FunctionExitAnalyzer {
 public:
-  explicit FallOffAnalyzer(FuncOp func) : func(func), gotoTargets(func) {}
+  explicit FunctionExitAnalyzer(FuncOp func) : func(func), gotoTargets(func) {}
 
-  FallOffKind run();
+  FunctionExitKind run();
 
   /// Whether `op` may complete normally when control enters it at its start.
   /// Only exact if no goto can enter `op` through a label inside it.
@@ -138,7 +139,7 @@ private:
   /// Makes a switch the innermost one while it is in scope.
   class SwitchScope {
   public:
-    SwitchScope(FallOffAnalyzer &analyzer, bool entered)
+    SwitchScope(FunctionExitAnalyzer &analyzer, bool entered)
         : switches(analyzer.switches) {
       switches.push_back({entered, /*hasDefault=*/false});
     }
@@ -191,7 +192,8 @@ static mlir::Operation *getOnlyRegionOp(mlir::Region &region) {
 }
 
 /// The code written in a coroutine's body, without the implicit `try` (and the
-/// `if` around it) CIRGen adds with exceptions: leaving those is not fall-off.
+/// `if` around it) CIRGen adds with exceptions: leaving those is not reaching
+/// the end of the body.
 // TODO: Drop this once CIRGen emits that handling in the coroutine's planned
 // `unwind` region, leaving only the user's code in `body`.
 static mlir::Region &getCoroutineUserBody(CoroutineOp coro) {
@@ -206,7 +208,7 @@ static mlir::Region &getCoroutineUserBody(CoroutineOp coro) {
   return coro.getBody();
 }
 
-FallOffKind FallOffAnalyzer::run() {
+FunctionExitKind FunctionExitAnalyzer::run() {
   // For a coroutine, the end is that of the code written in its body, and
   // co_return is its return.
   mlir::Region *body = &func.getBody();
@@ -217,7 +219,7 @@ FallOffKind FallOffAnalyzer::run() {
       return mlir::WalkResult::interrupt();
     });
     if (!coro)
-      return FallOffKind::Unknown;
+      return FunctionExitKind::Unknown;
     body = &getCoroutineUserBody(coro);
   }
 
@@ -230,10 +232,11 @@ FallOffKind FallOffAnalyzer::run() {
 
   bool explicitReturn = mayExitVia(exits, Exits::ExplicitReturn);
   if (!mayExitVia(exits, Exits::Normal | Exits::ImplicitReturn))
-    return explicitReturn ? FallOffKind::Never : FallOffKind::NeverAndNoReturn;
+    return explicitReturn ? FunctionExitKind::ReturnOnly
+                          : FunctionExitKind::NoReturn;
   if (explicitReturn || mayExitVia(exits, Exits::NoReturn))
-    return FallOffKind::Maybe;
-  return FallOffKind::Always;
+    return FunctionExitKind::MayReachEnd;
+  return FunctionExitKind::MustReachEnd;
 }
 
 bool GotoTargets::finishWalk() {
@@ -280,7 +283,7 @@ void GotoTargets::updateTargetAncestors() {
   }
 }
 
-Exits FallOffAnalyzer::visitRegion(mlir::Region &region, bool entered) {
+Exits FunctionExitAnalyzer::visitRegion(mlir::Region &region, bool entered) {
   if (region.empty())
     return entered ? Exits::Normal : Exits::None;
 
@@ -359,7 +362,7 @@ Exits FallOffAnalyzer::visitRegion(mlir::Region &region, bool entered) {
   return exits;
 }
 
-void FallOffAnalyzer::visitTerminator(
+void FunctionExitAnalyzer::visitTerminator(
     mlir::Operation *op, Exits &exits,
     llvm::SmallVectorImpl<mlir::Block *> &liveSuccessors) {
   if (mlir::isa<YieldOp>(op)) {
@@ -398,7 +401,7 @@ void FallOffAnalyzer::visitTerminator(
   }
 }
 
-Exits FallOffAnalyzer::visitStructured(mlir::Operation *op, bool entered) {
+Exits FunctionExitAnalyzer::visitStructured(mlir::Operation *op, bool entered) {
   if (auto loop = mlir::dyn_cast<LoopOpInterface>(op))
     return visitLoop(loop, entered);
   if (auto switchOp = mlir::dyn_cast<SwitchOp>(op))
@@ -442,7 +445,7 @@ Exits FallOffAnalyzer::visitStructured(mlir::Operation *op, bool entered) {
   return exits;
 }
 
-Exits FallOffAnalyzer::visitLoop(LoopOpInterface loop, bool entered) {
+Exits FunctionExitAnalyzer::visitLoop(LoopOpInterface loop, bool entered) {
   bool isDoWhile = &loop.getEntry() == &loop.getBody();
   bool condEntered = entered && !isDoWhile;
   bool bodyEntered = entered && isDoWhile;
@@ -485,7 +488,7 @@ Exits FallOffAnalyzer::visitLoop(LoopOpInterface loop, bool entered) {
   return exits;
 }
 
-Exits FallOffAnalyzer::visitSwitch(SwitchOp op, bool entered) {
+Exits FunctionExitAnalyzer::visitSwitch(SwitchOp op, bool entered) {
   // The switch body is entered through its cases only, so code ahead of the
   // first case is dead.
   SwitchScope scope(*this, entered);
@@ -502,7 +505,7 @@ Exits FallOffAnalyzer::visitSwitch(SwitchOp op, bool entered) {
   return exits;
 }
 
-Exits FallOffAnalyzer::visitCleanupScope(CleanupScopeOp op, bool entered) {
+Exits FunctionExitAnalyzer::visitCleanupScope(CleanupScopeOp op, bool entered) {
   Exits bodyExits = visitRegion(op.getBodyRegion(), entered);
   if (op.getCleanupKind() == CleanupKind::EH)
     return bodyExits;
@@ -516,20 +519,20 @@ Exits FallOffAnalyzer::visitCleanupScope(CleanupScopeOp op, bool entered) {
   return Exits::NoReturn;
 }
 
-llvm::StringRef cir::stringifyFallOffKind(FallOffKind kind) {
+llvm::StringRef cir::stringifyFunctionExitKind(FunctionExitKind kind) {
   switch (kind) {
-  case FallOffKind::Unknown:
+  case FunctionExitKind::Unknown:
     return "unknown";
-  case FallOffKind::Never:
-    return "never";
-  case FallOffKind::NeverAndNoReturn:
-    return "never-and-no-return";
-  case FallOffKind::Maybe:
-    return "maybe";
-  case FallOffKind::Always:
-    return "always";
+  case FunctionExitKind::ReturnOnly:
+    return "return_only";
+  case FunctionExitKind::NoReturn:
+    return "no_return";
+  case FunctionExitKind::MayReachEnd:
+    return "may_reach_end";
+  case FunctionExitKind::MustReachEnd:
+    return "must_reach_end";
   }
-  llvm_unreachable("unknown FallOffKind");
+  llvm_unreachable("unknown FunctionExitKind");
 }
 
 static bool mayComplete(FuncOp func, mlir::Operation *op);
@@ -563,7 +566,7 @@ static bool mayComplete(FuncOp func, mlir::Operation *op) {
     bool hasLabel = op->walk([](LabelOp) {
                         return mlir::WalkResult::interrupt();
                       }).wasInterrupted();
-    return hasLabel || FallOffAnalyzer(func).mayCompleteWhenEntered(op);
+    return hasLabel || FunctionExitAnalyzer(func).mayCompleteWhenEntered(op);
   }
   if (body->empty())
     return true;
@@ -578,7 +581,7 @@ static bool mayComplete(FuncOp func, mlir::Operation *op) {
   });
 }
 
-bool cir::mayFallOff(FuncOp func) {
+bool cir::mayReachEnd(FuncOp func) {
   // A coroutine ends where the code in its body does, not at an implicit
   // terminator.
   if (func.getCoroutineKind().has_value())
@@ -598,23 +601,24 @@ bool cir::mayFallOff(FuncOp func) {
   });
 }
 
-FallOffKind cir::analyzeFallOff(FuncOp func) {
+FunctionExitKind cir::analyzeFunctionExits(FuncOp func) {
   // Declarations and aliases have no body to analyze.
   if (func.getBody().empty())
-    return FallOffKind::Unknown;
-  FallOffKind kind = FallOffAnalyzer(func).run();
+    return FunctionExitKind::Unknown;
+  FunctionExitKind kind = FunctionExitAnalyzer(func).run();
 #ifdef EXPENSIVE_CHECKS
-  assert(((kind != FallOffKind::Maybe && kind != FallOffKind::Always) ||
-          mayFallOff(func)) &&
-         "mayFallOff rejected a function that falls off");
+  assert(((kind != FunctionExitKind::MayReachEnd &&
+           kind != FunctionExitKind::MustReachEnd) ||
+          mayReachEnd(func)) &&
+         "mayReachEnd rejected a function that reaches its end");
 #endif
   return kind;
 }
 
-llvm::SmallVector<FallOffResult>
-cir::analyzeFallOff(mlir::ModuleOp module,
-                    llvm::function_ref<bool(FuncOp)> filter) {
-  llvm::TimeTraceScope timeScope("CIRFallOffAnalysis");
+llvm::SmallVector<FunctionExitResult>
+cir::analyzeFunctionExits(mlir::ModuleOp module,
+                          llvm::function_ref<bool(FuncOp)> filter) {
+  llvm::TimeTraceScope timeScope("CIRFunctionExitAnalysis");
   llvm::SmallVector<FuncOp> funcs;
   for (FuncOp func : module.getOps<FuncOp>())
     if (!func.getBody().empty())
@@ -629,14 +633,14 @@ cir::analyzeFallOff(mlir::ModuleOp module,
   size_t numTasks = funcs.size() < minFuncsForThreads
                         ? 1
                         : llvm::divideCeil(funcs.size(), funcsPerTask);
-  llvm::SmallVector<std::optional<FallOffKind>> kinds(funcs.size());
+  llvm::SmallVector<std::optional<FunctionExitKind>> kinds(funcs.size());
   mlir::parallelFor(module.getContext(), 0, numTasks, [&](size_t task) {
     for (size_t i = task; i < funcs.size(); i += numTasks)
       if (!filter || filter(funcs[i]))
-        kinds[i] = analyzeFallOff(funcs[i]);
+        kinds[i] = analyzeFunctionExits(funcs[i]);
   });
 
-  llvm::SmallVector<FallOffResult> results;
+  llvm::SmallVector<FunctionExitResult> results;
   for (auto [func, kind] : llvm::zip_equal(funcs, kinds))
     if (kind)
       results.push_back({func, *kind});

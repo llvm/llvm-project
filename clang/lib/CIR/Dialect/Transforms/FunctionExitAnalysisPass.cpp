@@ -7,30 +7,31 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "clang/CIR/Dialect/Analysis/CIRFallOffAnalysis.h"
+#include "clang/CIR/Dialect/Analysis/CIRFunctionExitAnalysis.h"
 #include "clang/CIR/Dialect/Passes.h"
 
 using namespace mlir;
 
 namespace mlir {
-#define GEN_PASS_DEF_FALLOFFANALYSIS
+#define GEN_PASS_DEF_FUNCTIONEXITANALYSIS
 #include "clang/CIR/Dialect/Passes.h.inc"
 } // namespace mlir
 
 namespace {
 
-struct FallOffAnalysisPass
-    : public impl::FallOffAnalysisBase<FallOffAnalysisPass> {
+struct FunctionExitAnalysisPass
+    : public impl::FunctionExitAnalysisBase<FunctionExitAnalysisPass> {
   void runOnOperation() override {
-    for (cir::FallOffResult result : cir::analyzeFallOff(getOperation()))
+    for (cir::FunctionExitResult result :
+         cir::analyzeFunctionExits(getOperation()))
       emitRemark(result.func.getLoc())
-          << "fall-off: " << cir::stringifyFallOffKind(result.kind);
+          << "function exit: " << cir::stringifyFunctionExitKind(result.kind);
     markAllAnalysesPreserved();
   }
 };
 
 } // namespace
 
-std::unique_ptr<Pass> mlir::createFallOffAnalysisPass() {
-  return std::make_unique<FallOffAnalysisPass>();
+std::unique_ptr<Pass> mlir::createFunctionExitAnalysisPass() {
+  return std::make_unique<FunctionExitAnalysisPass>();
 }
