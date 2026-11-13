@@ -62,12 +62,12 @@ define <3 x half> @insert_v3half(<3 x half> %v, half %elt, i32 %idx) {
 ; CHECK-NEXT: [[INSERT:%[0-9]+]]:_(<3 x f32>) = G_INSERT_VECTOR_ELT [[WIDE]], [[ELT]](f32), {{%[0-9]+}}(i32)
 ; CHECK-NEXT: [[BITS:%[0-9]+]]:_(<3 x i32>) = G_BITCAST [[INSERT]](<3 x f32>)
 ; CHECK-NEXT: [[LO:%[0-9]+]]:_(i32), [[MID:%[0-9]+]]:_(i32), [[HI:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[BITS]](<3 x i32>)
-; CHECK-NEXT: [[LO16:%[0-9]+]]:_(i16) = G_TRUNC [[LO]](i32)
-; CHECK-NEXT: [[MID16:%[0-9]+]]:_(i16) = G_TRUNC [[MID]](i32)
-; CHECK-NEXT: [[HI16:%[0-9]+]]:_(i16) = G_TRUNC [[HI]](i32)
-; CHECK-NEXT: {{%[0-9]+}}:_(f16) = G_BITCAST [[LO16]](i16)
-; CHECK-NEXT: {{%[0-9]+}}:_(f16) = G_BITCAST [[MID16]](i16)
-; CHECK-NEXT: {{%[0-9]+}}:_(f16) = G_BITCAST [[HI16]](i16)
+; CHECK-NEXT: [[MASK:%[0-9]+]]:_(i32) = G_CONSTANT i32 65535
+; CHECK-NEXT: [[LO16:%[0-9]+]]:_(i32) = G_AND [[LO]], [[MASK]]
+; CHECK-NEXT: [[MID16:%[0-9]+]]:_(i32) = G_AND [[MID]], [[MASK]]
+; CHECK-NEXT: [[SHIFT:%[0-9]+]]:_(i32) = G_SHL [[MID16]], {{%[0-9]+}}(i32)
+; CHECK-NEXT: [[PACKED:%[0-9]+]]:_(i32) = G_OR [[LO16]], [[SHIFT]]
+; CHECK-NEXT: [[HI16:%[0-9]+]]:_(i32) = G_AND [[HI]], [[MASK]]
   %x = insertelement <3 x half> %v, half %elt, i32 %idx
   ret <3 x half> %x
 }

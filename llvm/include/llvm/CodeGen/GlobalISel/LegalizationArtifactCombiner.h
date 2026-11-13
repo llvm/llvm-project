@@ -126,10 +126,15 @@ public:
     Register SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
 
     // zext(trunc x) - > and (aext/copy/trunc x), mask
+    // zext(bitcast(trunc x)) -> and (aext/copy/trunc x), mask
     // zext(sext x) -> and (sext x), mask
     Register TruncSrc;
     Register SextSrc;
+    LLT IntSrcTy = MRI.getType(SrcReg).changeToInteger();
     if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc))) ||
+        mi_match(SrcReg, MRI,
+                 m_GBitcast(m_all_of(m_SpecificType(IntSrcTy),
+                                     m_GTrunc(m_Reg(TruncSrc))))) ||
         mi_match(SrcReg, MRI, m_GSExt(m_Reg(SextSrc)))) {
       LLT DstTy = MRI.getType(DstReg);
       if (isInstUnsupported({TargetOpcode::G_AND, {DstTy}}) ||

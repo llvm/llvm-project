@@ -760,30 +760,24 @@ body: |
     ; SI-NEXT: [[FCMP:%[0-9]+]]:_(i1) = G_FCMP floatpred(uno), [[FCANONICALIZE]](f32), [[C4]]
     ; SI-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[FCMP]](i1), [[OR]], [[ADD1]]
     ; SI-NEXT: [[LSHR1:%[0-9]+]]:_(i32) = G_LSHR [[SELECT]], [[C]](i32)
-    ; SI-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[LSHR1]](i32)
-    ; SI-NEXT: [[BITCAST3:%[0-9]+]]:_(bf16) = G_BITCAST [[TRUNC]](i16)
-    ; SI-NEXT: [[BITCAST4:%[0-9]+]]:_(i16) = G_BITCAST [[DEF]](bf16)
-    ; SI-NEXT: [[ANYEXT1:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST4]](i16)
+    ; SI-NEXT: [[BITCAST3:%[0-9]+]]:_(i16) = G_BITCAST [[DEF]](bf16)
+    ; SI-NEXT: [[ANYEXT1:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST3]](i16)
     ; SI-NEXT: [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[ANYEXT1]], [[C]](i32)
-    ; SI-NEXT: [[BITCAST5:%[0-9]+]]:_(f32) = G_BITCAST [[SHL1]](i32)
-    ; SI-NEXT: [[FCANONICALIZE1:%[0-9]+]]:_(f32) = G_FCANONICALIZE [[BITCAST5]]
-    ; SI-NEXT: [[BITCAST6:%[0-9]+]]:_(i32) = G_BITCAST [[FCANONICALIZE1]](f32)
-    ; SI-NEXT: [[OR1:%[0-9]+]]:_(i32) = G_OR [[BITCAST6]], [[C1]]
-    ; SI-NEXT: [[LSHR2:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST6]], [[C]](i32)
+    ; SI-NEXT: [[BITCAST4:%[0-9]+]]:_(f32) = G_BITCAST [[SHL1]](i32)
+    ; SI-NEXT: [[FCANONICALIZE1:%[0-9]+]]:_(f32) = G_FCANONICALIZE [[BITCAST4]]
+    ; SI-NEXT: [[BITCAST5:%[0-9]+]]:_(i32) = G_BITCAST [[FCANONICALIZE1]](f32)
+    ; SI-NEXT: [[OR1:%[0-9]+]]:_(i32) = G_OR [[BITCAST5]], [[C1]]
+    ; SI-NEXT: [[LSHR2:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST5]], [[C]](i32)
     ; SI-NEXT: [[AND1:%[0-9]+]]:_(i32) = G_AND [[LSHR2]], [[C2]]
     ; SI-NEXT: [[ADD2:%[0-9]+]]:_(i32) = G_ADD [[AND1]], [[C3]]
-    ; SI-NEXT: [[ADD3:%[0-9]+]]:_(i32) = G_ADD [[BITCAST6]], [[ADD2]]
+    ; SI-NEXT: [[ADD3:%[0-9]+]]:_(i32) = G_ADD [[BITCAST5]], [[ADD2]]
     ; SI-NEXT: [[FCMP1:%[0-9]+]]:_(i1) = G_FCMP floatpred(uno), [[FCANONICALIZE1]](f32), [[C4]]
     ; SI-NEXT: [[SELECT1:%[0-9]+]]:_(i32) = G_SELECT [[FCMP1]](i1), [[OR1]], [[ADD3]]
     ; SI-NEXT: [[LSHR3:%[0-9]+]]:_(i32) = G_LSHR [[SELECT1]], [[C]](i32)
-    ; SI-NEXT: [[TRUNC1:%[0-9]+]]:_(i16) = G_TRUNC [[LSHR3]](i32)
-    ; SI-NEXT: [[BITCAST7:%[0-9]+]]:_(bf16) = G_BITCAST [[TRUNC1]](i16)
-    ; SI-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[BITCAST3]](bf16)
-    ; SI-NEXT: [[ZEXT1:%[0-9]+]]:_(i32) = G_ZEXT [[BITCAST7]](bf16)
-    ; SI-NEXT: [[SHL2:%[0-9]+]]:_(i32) = G_SHL [[ZEXT1]], [[C]](i32)
-    ; SI-NEXT: [[OR2:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL2]]
-    ; SI-NEXT: [[BITCAST8:%[0-9]+]]:_(<2 x bf16>) = G_BITCAST [[OR2]](i32)
-    ; SI-NEXT: S_NOP 0, implicit [[BITCAST8]](<2 x bf16>)
+    ; SI-NEXT: [[SHL2:%[0-9]+]]:_(i32) = G_SHL [[LSHR3]], [[C]](i32)
+    ; SI-NEXT: [[OR2:%[0-9]+]]:_(i32) = G_OR [[LSHR1]], [[SHL2]]
+    ; SI-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x bf16>) = G_BITCAST [[OR2]](i32)
+    ; SI-NEXT: S_NOP 0, implicit [[BITCAST6]](<2 x bf16>)
     ;
     ; VI-LABEL: name: test_fcanonicalize_v2bf16
     ; VI: [[DEF:%[0-9]+]]:_(bf16) = G_IMPLICIT_DEF
@@ -806,30 +800,24 @@ body: |
     ; VI-NEXT: [[FCMP:%[0-9]+]]:_(i1) = G_FCMP floatpred(uno), [[FCANONICALIZE]](f32), [[C4]]
     ; VI-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[FCMP]](i1), [[OR]], [[ADD1]]
     ; VI-NEXT: [[LSHR1:%[0-9]+]]:_(i32) = G_LSHR [[SELECT]], [[C]](i32)
-    ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[LSHR1]](i32)
-    ; VI-NEXT: [[BITCAST3:%[0-9]+]]:_(bf16) = G_BITCAST [[TRUNC]](i16)
-    ; VI-NEXT: [[BITCAST4:%[0-9]+]]:_(i16) = G_BITCAST [[DEF]](bf16)
-    ; VI-NEXT: [[ANYEXT1:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST4]](i16)
+    ; VI-NEXT: [[BITCAST3:%[0-9]+]]:_(i16) = G_BITCAST [[DEF]](bf16)
+    ; VI-NEXT: [[ANYEXT1:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST3]](i16)
     ; VI-NEXT: [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[ANYEXT1]], [[C]](i32)
-    ; VI-NEXT: [[BITCAST5:%[0-9]+]]:_(f32) = G_BITCAST [[SHL1]](i32)
-    ; VI-NEXT: [[FCANONICALIZE1:%[0-9]+]]:_(f32) = G_FCANONICALIZE [[BITCAST5]]
-    ; VI-NEXT: [[BITCAST6:%[0-9]+]]:_(i32) = G_BITCAST [[FCANONICALIZE1]](f32)
-    ; VI-NEXT: [[OR1:%[0-9]+]]:_(i32) = G_OR [[BITCAST6]], [[C1]]
-    ; VI-NEXT: [[LSHR2:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST6]], [[C]](i32)
+    ; VI-NEXT: [[BITCAST4:%[0-9]+]]:_(f32) = G_BITCAST [[SHL1]](i32)
+    ; VI-NEXT: [[FCANONICALIZE1:%[0-9]+]]:_(f32) = G_FCANONICALIZE [[BITCAST4]]
+    ; VI-NEXT: [[BITCAST5:%[0-9]+]]:_(i32) = G_BITCAST [[FCANONICALIZE1]](f32)
+    ; VI-NEXT: [[OR1:%[0-9]+]]:_(i32) = G_OR [[BITCAST5]], [[C1]]
+    ; VI-NEXT: [[LSHR2:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST5]], [[C]](i32)
     ; VI-NEXT: [[AND1:%[0-9]+]]:_(i32) = G_AND [[LSHR2]], [[C2]]
     ; VI-NEXT: [[ADD2:%[0-9]+]]:_(i32) = G_ADD [[AND1]], [[C3]]
-    ; VI-NEXT: [[ADD3:%[0-9]+]]:_(i32) = G_ADD [[BITCAST6]], [[ADD2]]
+    ; VI-NEXT: [[ADD3:%[0-9]+]]:_(i32) = G_ADD [[BITCAST5]], [[ADD2]]
     ; VI-NEXT: [[FCMP1:%[0-9]+]]:_(i1) = G_FCMP floatpred(uno), [[FCANONICALIZE1]](f32), [[C4]]
     ; VI-NEXT: [[SELECT1:%[0-9]+]]:_(i32) = G_SELECT [[FCMP1]](i1), [[OR1]], [[ADD3]]
     ; VI-NEXT: [[LSHR3:%[0-9]+]]:_(i32) = G_LSHR [[SELECT1]], [[C]](i32)
-    ; VI-NEXT: [[TRUNC1:%[0-9]+]]:_(i16) = G_TRUNC [[LSHR3]](i32)
-    ; VI-NEXT: [[BITCAST7:%[0-9]+]]:_(bf16) = G_BITCAST [[TRUNC1]](i16)
-    ; VI-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[BITCAST3]](bf16)
-    ; VI-NEXT: [[ZEXT1:%[0-9]+]]:_(i32) = G_ZEXT [[BITCAST7]](bf16)
-    ; VI-NEXT: [[SHL2:%[0-9]+]]:_(i32) = G_SHL [[ZEXT1]], [[C]](i32)
-    ; VI-NEXT: [[OR2:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL2]]
-    ; VI-NEXT: [[BITCAST8:%[0-9]+]]:_(<2 x bf16>) = G_BITCAST [[OR2]](i32)
-    ; VI-NEXT: S_NOP 0, implicit [[BITCAST8]](<2 x bf16>)
+    ; VI-NEXT: [[SHL2:%[0-9]+]]:_(i32) = G_SHL [[LSHR3]], [[C]](i32)
+    ; VI-NEXT: [[OR2:%[0-9]+]]:_(i32) = G_OR [[LSHR1]], [[SHL2]]
+    ; VI-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x bf16>) = G_BITCAST [[OR2]](i32)
+    ; VI-NEXT: S_NOP 0, implicit [[BITCAST6]](<2 x bf16>)
     ;
     ; GFX9-LABEL: name: test_fcanonicalize_v2bf16
     ; GFX9: [[DEF:%[0-9]+]]:_(bf16) = G_IMPLICIT_DEF
