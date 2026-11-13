@@ -498,11 +498,11 @@ Atan2Approximation::matchAndRewrite(math::Atan2Op op,
   auto bcast = [&](Value value) -> Value {
     return broadcast(builder, value, shape);
   };
-  Value zero = bcast(f32Cst(builder, 0.0));
-  Value one = bcast(f32Cst(builder, 1.0));
+  Value zero = bcast(f32Cst(builder, 0.0f));
+  Value one = bcast(f32Cst(builder, 1.0f));
   Value inf = bcast(f32FromBits(builder, 0x7f800000u));
-  Value pi = bcast(f32Cst(builder, llvm::numbers::pi));
-  Value halfPi = bcast(f32Cst(builder, llvm::numbers::pi / 2));
+  Value pi = bcast(f32Cst(builder, llvm::numbers::pi_v<float>));
+  Value halfPi = bcast(f32Cst(builder, llvm::numbers::pi_v<float> / 2));
 
   // Compute atan(t) for t = min(|x|, |y|) / max(|x|, |y|) in [0, 1] and
   // recover the quadrant from the signs of x and y. minimumf and maximumf
