@@ -151,7 +151,6 @@ libc_test(
         "//libc:hdr_errno_macros",
         "//libc:hdr_limits_macros",
         "//libc:mkdirat",
-        "//libc:strdup",
         "//libc:symlinkat",
         "//libc:types_size_t",
         "//libc:unlinkat",
@@ -164,6 +163,7 @@ libc_test(
         "//libc/src/__support/OSUtil:path",
         "//libc/src/fcntl:openat",
         "//libc/src/stdlib:realpath",
+        "//libc/src/string:strdup",
     ],
 )
 

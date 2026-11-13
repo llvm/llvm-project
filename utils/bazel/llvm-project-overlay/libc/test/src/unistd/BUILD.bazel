@@ -129,8 +129,8 @@ libc_test(
     name = "swab_test",
     srcs = ["swab_test.cpp"],
     deps = [
-        "//libc:string_utils",
         "//libc:swab",
+        "//libc/src/string:utils",
     ],
 )
 

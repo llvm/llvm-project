@@ -97,7 +97,6 @@ libc_support_library(
         ":printf_writer",
         "//libc:hdr_limits_macros",
         "//libc:hdr_wchar_macros",
-        "//libc:string_utils",
         "//libc:types_char32_t",
         "//libc:types_char8_t",
         "//libc:types_size_t",
@@ -123,6 +122,7 @@ libc_support_library(
         "//libc/src/__support/wchar:mbstate",
         "//libc/src/__support/wchar:string_converter",
         "//libc/src/__support/wchar:wcrtomb",
+        "//libc/src/string:utils",
     ],
 )
 

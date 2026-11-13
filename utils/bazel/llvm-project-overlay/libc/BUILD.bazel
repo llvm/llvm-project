@@ -2950,46 +2950,14 @@ alias(
 
 ############################### string targets ###############################
 
-libc_support_library(
-    name = "allocating_string_utils",
-    hdrs = ["src/string/allocating_string_utils.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:checked_ptr",
-        "//libc/src/__support/macros:config",
-        "//libc/src/string/memory_utils",
-    ],
-)
-
-libc_support_library(
-    name = "string_utils",
-    hdrs = [
-        "src/string/string_length.h",
-        "src/string/string_utils.h",
-    ],
-    deps = [
-        ":hdr_limits_macros",
-        ":hdr_stdint_proxy",
-        ":llvm_libc_types_size_t",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/CPP:bitset",
-        "//libc/src/__support/CPP:type_traits",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:optimization",
-        "//libc/src/string/memory_utils",
-    ],
-)
-
 libc_function(
     name = "index",
     srcs = ["src/strings/index.cpp"],
     hdrs = ["src/strings/index.h"],
     deps = [
-        ":string_utils",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
+        "//libc/src/string:utils",
     ],
 )
 
@@ -2998,106 +2966,51 @@ libc_function(
     srcs = ["src/strings/rindex.cpp"],
     hdrs = ["src/strings/rindex.h"],
     deps = [
-        ":string_utils",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros:null_check",
+        "//libc/src/string:utils",
     ],
 )
 
-libc_function(
+alias(
     name = "memchr",
-    srcs = ["src/string/memchr.cpp"],
-    hdrs = ["src/string/memchr.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:memchr",
 )
 
-libc_function(
+alias(
     name = "memcpy",
-    srcs = ["src/string/memcpy.cpp"],
-    hdrs = ["src/string/memcpy.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/string/memory_utils",
-    ],
+    actual = "//libc/src/string:memcpy",
 )
 
-libc_function(
+alias(
     name = "memccpy",
-    srcs = ["src/string/memccpy.cpp"],
-    hdrs = ["src/string/memccpy.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:memccpy",
 )
 
-libc_function(
+alias(
     name = "memset",
-    srcs = ["src/string/memset.cpp"],
-    hdrs = ["src/string/memset.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/string/memory_utils",
-    ],
+    actual = "//libc/src/string:memset",
 )
 
-libc_function(
+alias(
     name = "memset_explicit",
-    srcs = ["src/string/memset_explicit.cpp"],
-    hdrs = ["src/string/memset_explicit.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/string/memory_utils",
-    ],
+    actual = "//libc/src/string:memset_explicit",
 )
 
-libc_function(
+alias(
     name = "memmove",
-    srcs = ["src/string/memmove.cpp"],
-    hdrs = ["src/string/memmove.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/string/memory_utils",
-    ],
+    actual = "//libc/src/string:memmove",
 )
 
-libc_function(
+alias(
     name = "memmem",
-    srcs = ["src/string/memmem.cpp"],
-    hdrs = ["src/string/memmem.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/string/memory_utils",
-    ],
+    actual = "//libc/src/string:memmem",
 )
 
-libc_function(
+alias(
     name = "mempcpy",
-    srcs = ["src/string/mempcpy.cpp"],
-    hdrs = ["src/string/mempcpy.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/string/memory_utils",
-    ],
+    actual = "//libc/src/string:mempcpy",
 )
 
 libc_function(
@@ -3111,17 +3024,9 @@ libc_function(
     ],
 )
 
-libc_function(
+alias(
     name = "memcmp",
-    srcs = ["src/string/memcmp.cpp"],
-    hdrs = ["src/string/memcmp.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:integer_operations",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/string/memory_utils",
-    ],
+    actual = "//libc/src/string:memcmp",
 )
 
 libc_function(
@@ -3146,128 +3051,54 @@ libc_function(
     ],
 )
 
-libc_function(
+alias(
     name = "memrchr",
-    srcs = ["src/string/memrchr.cpp"],
-    hdrs = ["src/string/memrchr.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:memrchr",
 )
 
-libc_function(
+alias(
     name = "stpcpy",
-    srcs = ["src/string/stpcpy.cpp"],
-    hdrs = ["src/string/stpcpy.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/string/memory_utils",
-    ],
+    actual = "//libc/src/string:stpcpy",
 )
 
-libc_function(
+alias(
     name = "stpncpy",
-    srcs = ["src/string/stpncpy.cpp"],
-    hdrs = ["src/string/stpncpy.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/string/memory_utils",
-    ],
+    actual = "//libc/src/string:stpncpy",
 )
 
-libc_function(
+alias(
     name = "strlen",
-    srcs = ["src/string/strlen.cpp"],
-    hdrs = ["src/string/strlen.h"],
-    deps = [
-        ":llvm_libc_types_size_t",
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:strlen",
 )
 
-libc_function(
+alias(
     name = "strsignal",
-    srcs = ["src/string/strsignal.cpp"],
-    hdrs = ["src/string/strsignal.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/StringUtil",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strsignal",
 )
 
-libc_function(
+alias(
     name = "strcpy",
-    srcs = ["src/string/strcpy.cpp"],
-    hdrs = ["src/string/strcpy.h"],
-    deps = [
-        ":llvm_libc_types_size_t",
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/string/memory_utils",
-    ],
+    actual = "//libc/src/string:strcpy",
 )
 
-libc_function(
+alias(
     name = "strlcpy",
-    srcs = ["src/string/strlcpy.cpp"],
-    hdrs = ["src/string/strlcpy.h"],
-    deps = [
-        ":llvm_libc_types_size_t",
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strlcpy",
 )
 
-libc_function(
+alias(
     name = "strncpy",
-    srcs = ["src/string/strncpy.cpp"],
-    hdrs = ["src/string/strncpy.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:strncpy",
 )
 
-libc_function(
+alias(
     name = "strcmp",
-    srcs = ["src/string/strcmp.cpp"],
-    hdrs = ["src/string/strcmp.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/string/memory_utils",
-    ],
+    actual = "//libc/src/string:strcmp",
 )
 
-libc_function(
+alias(
     name = "strncmp",
-    srcs = ["src/string/strncmp.cpp"],
-    hdrs = ["src/string/strncmp.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/string/memory_utils",
-    ],
+    actual = "//libc/src/string:strncmp",
 )
 
 libc_function(
@@ -3296,199 +3127,84 @@ libc_function(
     ],
 )
 
-libc_function(
+alias(
     name = "strchr",
-    srcs = ["src/string/strchr.cpp"],
-    hdrs = ["src/string/strchr.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strchr",
 )
 
-libc_function(
+alias(
     name = "strrchr",
-    srcs = ["src/string/strrchr.cpp"],
-    hdrs = ["src/string/strrchr.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strrchr",
 )
 
-libc_function(
+alias(
     name = "strchrnul",
-    srcs = ["src/string/strchrnul.cpp"],
-    hdrs = ["src/string/strchrnul.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strchrnul",
 )
 
-libc_function(
+alias(
     name = "strsep",
-    srcs = ["src/string/strsep.cpp"],
-    hdrs = ["src/string/strsep.h"],
-    deps = [
-        ":hdr_signal_macros",
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/string/memory_utils",
-    ],
+    actual = "//libc/src/string:strsep",
 )
 
-libc_function(
+alias(
     name = "strstr",
-    srcs = ["src/string/strstr.cpp"],
-    hdrs = ["src/string/strstr.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/string/memory_utils",
-    ],
+    actual = "//libc/src/string:strstr",
 )
 
-libc_function(
+alias(
     name = "strcasestr",
-    srcs = ["src/string/strcasestr.cpp"],
-    hdrs = ["src/string/strcasestr.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/string/memory_utils",
-    ],
+    actual = "//libc/src/string:strcasestr",
 )
 
-libc_function(
+alias(
     name = "strcat",
-    srcs = ["src/string/strcat.cpp"],
-    hdrs = ["src/string/strcat.h"],
-    deps = [
-        ":llvm_libc_types_size_t",
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:strcat",
 )
 
-libc_function(
+alias(
     name = "strlcat",
-    srcs = ["src/string/strlcat.cpp"],
-    hdrs = ["src/string/strlcat.h"],
-    deps = [
-        ":llvm_libc_types_size_t",
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strlcat",
 )
 
-libc_function(
+alias(
     name = "strncat",
-    srcs = ["src/string/strncat.cpp"],
-    hdrs = ["src/string/strncat.h"],
-    deps = [
-        ":llvm_libc_types_size_t",
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:strncat",
 )
 
-libc_function(
+alias(
     name = "strnlen",
-    srcs = ["src/string/strnlen.cpp"],
-    hdrs = ["src/string/strnlen.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strnlen",
 )
 
-libc_function(
+alias(
     name = "strcspn",
-    srcs = ["src/string/strcspn.cpp"],
-    hdrs = ["src/string/strcspn.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strcspn",
 )
 
-libc_function(
+alias(
     name = "strdup",
-    srcs = ["src/string/strdup.cpp"],
-    hdrs = ["src/string/strdup.h"],
-    deps = [
-        ":allocating_string_utils",
-        ":hdr_stdlib_macros",
-        ":llvm_libc_types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/macros:config",
-        "//libc/src/string/memory_utils",
-    ],
+    actual = "//libc/src/string:strdup",
 )
 
-libc_function(
+alias(
     name = "strspn",
-    srcs = ["src/string/strspn.cpp"],
-    hdrs = ["src/string/strspn.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/CPP:bitset",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/string:strspn",
 )
 
-libc_function(
+alias(
     name = "strpbrk",
-    srcs = ["src/string/strpbrk.cpp"],
-    hdrs = ["src/string/strpbrk.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strpbrk",
 )
 
-libc_function(
+alias(
     name = "strtok",
-    srcs = ["src/string/strtok.cpp"],
-    hdrs = ["src/string/strtok.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strtok",
 )
 
-libc_function(
+alias(
     name = "strtok_r",
-    srcs = ["src/string/strtok_r.cpp"],
-    hdrs = ["src/string/strtok_r.h"],
-    deps = [
-        ":string_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/string:strtok_r",
 )
 
 ################################ fcntl targets #################################
@@ -3778,7 +3494,6 @@ libc_function(
     srcs = ["src/unistd/linux/getcwd.cpp"],
     hdrs = ["src/unistd/getcwd.h"],
     deps = [
-        ":allocating_string_utils",
         ":hdr_unistd_macros",
         ":types_size_t",
         ":types_ssize_t",
@@ -3787,6 +3502,7 @@ libc_function(
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:getcwd",
         "//libc/src/__support/macros:config",
+        "//libc/src/string:allocating_string_utils",
     ],
 )
 
@@ -3812,7 +3528,6 @@ libc_function(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        ":string_utils",
         ":types_size_t",
         ":types_struct_utsname",
         "//libc/src/__support:common",
@@ -3820,6 +3535,7 @@ libc_function(
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:uname",
         "//libc/src/__support/macros:config",
         "//libc/src/errno",
+        "//libc/src/string:utils",
     ],
 )
 
@@ -5560,11 +5276,11 @@ libc_function(
     srcs = ["src/wchar/wcpcpy.cpp"],
     hdrs = ["src/wchar/wcpcpy.h"],
     deps = [
-        ":string_utils",
         ":types_size_t",
         ":types_wchar_t",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
+        "//libc/src/string:utils",
     ],
 )
 
@@ -5586,11 +5302,11 @@ libc_function(
     srcs = ["src/wchar/wcscat.cpp"],
     hdrs = ["src/wchar/wcscat.h"],
     deps = [
-        ":string_utils",
         ":types_size_t",
         ":types_wchar_t",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
+        "//libc/src/string:utils",
     ],
 )
 
@@ -5625,11 +5341,11 @@ libc_function(
     srcs = ["src/wchar/wcscpy.cpp"],
     hdrs = ["src/wchar/wcscpy.h"],
     deps = [
-        ":string_utils",
         ":types_size_t",
         ":types_wchar_t",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
+        "//libc/src/string:utils",
     ],
 )
 
@@ -5652,11 +5368,11 @@ libc_function(
     srcs = ["src/wchar/wcslcat.cpp"],
     hdrs = ["src/wchar/wcslcat.h"],
     deps = [
-        ":string_utils",
         ":types_size_t",
         ":types_wchar_t",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
+        "//libc/src/string:utils",
     ],
 )
 
@@ -5665,11 +5381,11 @@ libc_function(
     srcs = ["src/wchar/wcslcpy.cpp"],
     hdrs = ["src/wchar/wcslcpy.h"],
     deps = [
-        ":string_utils",
         ":types_size_t",
         ":types_wchar_t",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
+        "//libc/src/string:utils",
     ],
 )
 
@@ -5678,11 +5394,11 @@ libc_function(
     srcs = ["src/wchar/wcslen.cpp"],
     hdrs = ["src/wchar/wcslen.h"],
     deps = [
-        ":string_utils",
         ":types_size_t",
         ":types_wchar_t",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
+        "//libc/src/string:utils",
     ],
 )
 
@@ -5691,11 +5407,11 @@ libc_function(
     srcs = ["src/wchar/wcsncat.cpp"],
     hdrs = ["src/wchar/wcsncat.h"],
     deps = [
-        ":string_utils",
         ":types_size_t",
         ":types_wchar_t",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
+        "//libc/src/string:utils",
     ],
 )
 
@@ -5768,11 +5484,11 @@ libc_function(
     srcs = ["src/wchar/wcsstr.cpp"],
     hdrs = ["src/wchar/wcsstr.h"],
     deps = [
-        ":string_utils",
         ":types_size_t",
         ":types_wchar_t",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
+        "//libc/src/string:utils",
     ],
 )
 

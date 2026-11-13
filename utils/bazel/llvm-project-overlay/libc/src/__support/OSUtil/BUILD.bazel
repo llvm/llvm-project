@@ -136,11 +136,11 @@ libc_support_library(
     }),
     deps = [
         ":syscall",
-        "//libc:string_utils",
         "//libc/src/__support:common",
         "//libc/src/__support/CPP:string_view",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/string:utils",
     ],
 )
 
