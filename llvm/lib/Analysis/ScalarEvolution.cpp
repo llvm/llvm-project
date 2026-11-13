@@ -2782,9 +2782,12 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
     if (!LIOps.empty()) {
       // Compute nowrap flags for the addition of the loop-invariant ops and
       // the addrec. Temporarily push it as an operand for that purpose. These
-      // flags are valid in the scope of the addrec only.
+      // flags are valid in the scope of the addrec only. ExprFlags only
+      // applies if there are no other (non-loop-invariant) operands in Ops.
       LIOps.push_back(AddRec);
-      SCEVFlags Flags = ComputeFlags(LIOps);
+      SCEVFlags Flags =
+          StrengthenNoWrapFlags(this, scAddExpr, LIOps,
+                                Ops.size() == 1 ? ExprFlags : SCEV::FlagNone);
       LIOps.pop_back();
 
       //  NLI + LI + {Start,+,Step}  -->  NLI + {LI+Start,+,Step}
