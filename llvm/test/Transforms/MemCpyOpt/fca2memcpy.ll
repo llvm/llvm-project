@@ -182,6 +182,18 @@ define void @multiple_clobbering(ptr %ptr, ptr %ptr.copy) {
   ret void
 }
 
+; This is a regression test for miscompilation due to improper EEA invalidation.
+;
+; The pass first merges load %s -> %v and store %v -> dst into memcpy %s -> %dst.
+; In order to do this before %s is overwritten, definition of %dst has to move
+; above the call to @esc.
+;
+; Previously, with the invalid cache, EEA still considered the call to @esc as
+; the earliest escape of %a making AA incorrectly conclude that
+; memcpy %s -> %dst can't write to %a.
+;
+; That led to memcpy %a -> %out being replaced with memcpy %orig -> %out, which
+; is a miscompilation.
 define void @addrproducer_captures(i64 %x, i64 %y, ptr %out) {
 ; CHECK-LABEL: @addrproducer_captures(
 ; CHECK-NEXT:    [[A:%.*]] = alloca { i32, i32 }, align 8

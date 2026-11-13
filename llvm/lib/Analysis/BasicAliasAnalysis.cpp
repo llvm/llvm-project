@@ -56,6 +56,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <cassert>
 #include <cstdint>
@@ -286,12 +287,13 @@ void EarliestEscapeAnalysis::removeInstruction(Instruction *I) {
   }
 }
 
-void EarliestEscapeAnalysis::insertInstructionTo(const Instruction *I,
-                                                 const BasicBlock *BB) {
+void EarliestEscapeAnalysis::insertInstruction(const Instruction *I) {
   for (const Use &U : I->operands()) {
-    if (!U->getType()->isPtrOrPtrVectorTy())
+    if (!U->getType()->isPointerTy())
       continue;
-    if (capturesAnything(DetermineUseCaptureKind(U, /*Base=*/nullptr).UseCC)) {
+
+    if (capturesAnyProvenance(
+            DetermineUseCaptureKind(U, /*Base=*/nullptr).UseCC)) {
       EarliestEscapes.clear();
       Inst2Obj.clear();
       return;

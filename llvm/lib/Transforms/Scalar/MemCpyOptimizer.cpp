@@ -613,7 +613,7 @@ bool MemCpyOptPass::moveUp(StoreInst *SI, Instruction *P, const LoadInst *LI) {
   // We made it, we need to lift.
   for (auto *I : llvm::reverse(ToLift)) {
     LLVM_DEBUG(dbgs() << "Lifting " << *I << " before " << *P << "\n");
-    EEA->insertInstructionTo(I, P->getParent());
+    EEA->insertInstruction(I);
     I->moveBefore(P->getIterator());
     assert(MemInsertPoint && "Must have found insert point");
     if (MemoryUseOrDef *MA = MSSA->getMemoryAccess(I)) {
@@ -1074,12 +1074,12 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
 
   if (NeedMoveGEP) {
     auto *GEP = dyn_cast<GetElementPtrInst>(cpyDest);
-    EEA->insertInstructionTo(GEP, C->getParent());
+    EEA->insertInstruction(GEP);
     GEP->moveBefore(C->getIterator());
   }
 
   if (SkippedLifetimeStart) {
-    EEA->insertInstructionTo(SkippedLifetimeStart, C->getParent());
+    EEA->insertInstruction(SkippedLifetimeStart);
     SkippedLifetimeStart->moveBefore(C->getIterator());
     MSSAU->moveBefore(MSSA->getMemoryAccess(SkippedLifetimeStart),
                       MSSA->getMemoryAccess(C));
@@ -1727,7 +1727,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
 
   // We can now do the transformation. First move the Src if it was after Dest.
   if (MoveSrc) {
-    EEA->insertInstructionTo(SrcAlloca, DestAlloca->getParent());
+    EEA->insertInstruction(SrcAlloca);
     SrcAlloca->moveBefore(DestAlloca->getIterator());
   }
 
