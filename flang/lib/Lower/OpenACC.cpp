@@ -2158,29 +2158,17 @@ void AccDataMap::remapDataOperandSymbols(
     // Note: this will instantiate all common block members even if they are not
     // used inside the region. If hlfir.declare DCE is not made possible, this
     // could be improved to reduce IR noise.
-    if (const auto *commonBlock = symbol->template detailsIf<
-                                  Fortran::semantics::CommonBlockDetails>()) {
+    if (symbol->template has<Fortran::semantics::CommonBlockDetails>()) {
       // Common block members keep their host binding; only whole objects get
       // an alternate device binding.
       if (deviceBindingsOnly)
         continue;
-      const Fortran::semantics::Scope &commonScope = symbol->owner();
-      if (commonScope.equivalenceSets().empty()) {
-        for (auto member : commonBlock->objects())
-          remapCommonBlockMember(converter, loc, *member, value, *symbol,
-                                 seenSymbols);
-      } else {
-        // Objects equivalenced with common block members still belong to the
-        // common block storage even if they are not part of the common block
-        // declaration. The easiest and most robust way to find all symbols
-        // belonging to the common block is to loop through the scope symbols
-        // and check if they belong to the common.
-        for (const auto &scopeSymbol : commonScope)
-          if (Fortran::semantics::FindCommonBlockContaining(
-                  *scopeSymbol.second) == &symbol.get())
-            remapCommonBlockMember(converter, loc, *scopeSymbol.second, value,
-                                   *symbol, seenSymbols);
-      }
+      // Objects EQUIVALENCEd with common block members belong to the block's
+      // storage too, even though no COMMON statement names them.
+      for (const Fortran::semantics::Symbol *member :
+           Fortran::lower::getCommonBlockStorageMembers(*symbol))
+        remapCommonBlockMember(converter, loc, *member, value, *symbol,
+                               seenSymbols);
       continue;
     }
     std::optional<fir::FortranVariableOpInterface> hostDef =

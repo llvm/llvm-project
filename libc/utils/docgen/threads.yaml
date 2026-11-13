@@ -1,4 +1,29 @@
+standard: c23
+posix: posix-2024
 c-reference-root: thread
+types:
+  cnd_t:
+    c-definition: 7.28.1
+    in-latest-posix: ''
+  mtx_t:
+    c-definition: 7.28.1
+    in-latest-posix: ''
+  once_flag:
+    c-definition: 7.28.1
+    c-reference: thread/call_once
+    in-latest-posix: ''
+  thrd_start_t:
+    c-definition: 7.28.1
+    in-latest-posix: ''
+  thrd_t:
+    c-definition: 7.28.1
+    in-latest-posix: ''
+  tss_dtor_t:
+    c-definition: 7.28.1
+    in-latest-posix: ''
+  tss_t:
+    c-definition: 7.28.1
+    in-latest-posix: ''
 functions:
   call_once:
     c-definition: 7.28.2.1
@@ -89,3 +114,35 @@ macros:
   thread_local:
     in-latest-posix: ''
 
+  mtx_plain:
+    c-definition: 7.28.1
+    c-reference: thread/mtx_types
+    in-latest-posix: ''
+  mtx_recursive:
+    c-definition: 7.28.1
+    c-reference: thread/mtx_types
+    in-latest-posix: ''
+  mtx_timed:
+    c-definition: 7.28.1
+    c-reference: thread/mtx_types
+    in-latest-posix: ''
+  thrd_busy:
+    c-definition: 7.28.1
+    c-reference: thread/thrd_errors
+    in-latest-posix: ''
+  thrd_error:
+    c-definition: 7.28.1
+    c-reference: thread/thrd_errors
+    in-latest-posix: ''
+  thrd_nomem:
+    c-definition: 7.28.1
+    c-reference: thread/thrd_errors
+    in-latest-posix: ''
+  thrd_success:
+    c-definition: 7.28.1
+    c-reference: thread/thrd_errors
+    in-latest-posix: ''
+  thrd_timedout:
+    c-definition: 7.28.1
+    c-reference: thread/thrd_errors
+    in-latest-posix: ''

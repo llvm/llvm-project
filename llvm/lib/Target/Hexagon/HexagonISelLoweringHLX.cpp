@@ -235,7 +235,7 @@ SDValue HexagonTargetLowering::splitHlxPairArgLoad(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue BaseAddr,
     MVT PairTy, MachinePointerInfo PtrInfo) const {
   unsigned HlxVLen = Subtarget.getHLXVectorLength();
-  MVT SingleTy = PairTy.changeVectorElementType(MVT::i16);
+  MVT SingleTy = typeHlxSplit(PairTy).first;
   SDValue Base1 =
       DAG.getMemBasePlusOffset(BaseAddr, TypeSize::getFixed(HlxVLen), dl);
   MachineFunction &MF = DAG.getMachineFunction();
@@ -258,7 +258,7 @@ void HexagonTargetLowering::splitHlxPairArgStore(
     SDValue BaseAddr, MVT PairTy, MachinePointerInfo PtrInfo,
     SmallVectorImpl<SDValue> &MemOpChains) const {
   unsigned HlxVLen = Subtarget.getHLXVectorLength();
-  MVT SingleTy = PairTy.changeVectorElementType(MVT::i16);
+  MVT SingleTy = typeHlxSplit(PairTy).first;
   SDValue Base1 =
       DAG.getMemBasePlusOffset(BaseAddr, TypeSize::getFixed(HlxVLen), dl);
   SDValue Lo =
@@ -268,6 +268,69 @@ void HexagonTargetLowering::splitHlxPairArgStore(
   MemOpChains.push_back(DAG.getStore(Chain, dl, Lo, BaseAddr, PtrInfo));
   MemOpChains.push_back(
       DAG.getStore(Chain, dl, Hi, Base1, PtrInfo.getWithOffset(HlxVLen)));
+}
+
+// Shared helper for splitting pair memory intrinsics into two single-vector
+// operations. Used by LowerHlxPairIntrinsic for the LX_LL16b_tmp /
+// LX_SS16b_new pair load/store intrinsics.
+static SDValue SplitHlxPairMemHelper(SDValue Op, SelectionDAG &DAG,
+                                     const HexagonSubtarget &ST,
+                                     SDValue BaseAddr,
+                                     SDValue StoreVal = SDValue()) {
+  auto *MemN = cast<MemSDNode>(Op.getNode());
+  MVT PairTy = MemN->getMemoryVT().getSimpleVT();
+  unsigned HlxVLen = ST.getHLXVectorLength();
+  assert(PairTy.getSizeInBits() == 16 * HlxVLen &&
+         PairTy.getVectorElementType() == MVT::i32 &&
+         "Expected HLX vector pair type");
+  MVT SingleTy = PairTy.changeVectorElementType(MVT::i16);
+  SDValue Chain = MemN->getChain();
+  const SDLoc &dl(Op);
+  SDValue Base1 =
+      DAG.getMemBasePlusOffset(BaseAddr, TypeSize::getFixed(HlxVLen), dl);
+
+  MachineMemOperand *MOp0 = nullptr, *MOp1 = nullptr;
+  if (MachineMemOperand *MMO = MemN->getMemOperand()) {
+    MachineFunction &MF = DAG.getMachineFunction();
+    MOp0 = MF.getMachineMemOperand(MMO, 0, HlxVLen);
+    MOp1 = MF.getMachineMemOperand(MMO, HlxVLen, HlxVLen);
+  }
+
+  if (StoreVal) {
+    // Store: split value into two halves, emit two stores, combine chains.
+    SDValue Lo =
+        DAG.getTargetExtractSubreg(Hexagon::vsub_lo, dl, SingleTy, StoreVal);
+    SDValue Hi =
+        DAG.getTargetExtractSubreg(Hexagon::vsub_hi, dl, SingleTy, StoreVal);
+    SDValue Store0 = DAG.getStore(Chain, dl, Lo, BaseAddr, MOp0);
+    SDValue Store1 = DAG.getStore(Chain, dl, Hi, Base1, MOp1);
+    return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Store0, Store1);
+  }
+
+  // Load: emit two single-vector loads, combine with COMBINELL.
+  SDValue Load0 = DAG.getLoad(SingleTy, dl, Chain, BaseAddr, MOp0);
+  SDValue Load1 = DAG.getLoad(SingleTy, dl, Chain, Base1, MOp1);
+  return DAG.getMergeValues(
+      {DAG.getNode(HexagonISD::COMBINELL, dl, PairTy, Load1, Load0),
+       DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Load0.getValue(1),
+                   Load1.getValue(1))},
+      dl);
+}
+
+// Lower pair load/store intrinsics (LX_LL16b_tmp, LX_SS16b_new) by
+// splitting into two single-vector operations via SplitHlxPairMemHelper.
+SDValue HexagonTargetLowering::LowerHlxPairIntrinsic(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  unsigned IntNo = Op.getConstantOperandVal(1);
+  switch (IntNo) {
+  case Intrinsic::hexagon_LX_LL16b_tmp:
+    return SplitHlxPairMemHelper(Op, DAG, Subtarget, Op.getOperand(2));
+  case Intrinsic::hexagon_LX_SS16b_new:
+    return SplitHlxPairMemHelper(Op, DAG, Subtarget, Op.getOperand(2),
+                                 Op.getOperand(3));
+  default:
+    return Op;
+  }
 }
 
 // Lower masked load/store operations to HLX instructions.
@@ -406,6 +469,7 @@ SDValue HexagonTargetLowering::LowerHlxOperation(SDValue Op,
     break;
   case ISD::INTRINSIC_W_CHAIN:
   case ISD::INTRINSIC_VOID:
+    return LowerHlxPairIntrinsic(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN:
     return Op;
   case ISD::MLOAD:

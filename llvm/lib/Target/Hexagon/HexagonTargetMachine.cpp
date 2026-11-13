@@ -189,6 +189,7 @@ static ScheduleDAGInstrs *createVLIWMachineSched(MachineSchedContext *C) {
   DAG->addMutation(std::make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::CallMutation>());
   DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII));
+  DAG->addMutation(std::make_unique<HexagonSubtarget::HLXPseudoMutation>());
   return DAG;
 }
 
@@ -221,6 +222,7 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonHardwareLoopsPass(PR);
   initializeHexagonHVXSaveRemarkPass(PR);
   initializeHexagonLoopIdiomRecognizeLegacyPassPass(PR);
+  initializeHexagonLowerHLXPairAllocasPass(PR);
   initializeHexagonNewValueJumpPass(PR);
   initializeHexagonOptAddrModePass(PR);
   initializeHexagonPacketizerPass(PR);
@@ -370,6 +372,7 @@ public:
   }
 
   void addIRPasses() override;
+  bool addPreISel() override;
   bool addInstSelector() override;
   bool addILPOpts() override;
   void addMachineSSAOptimization() override;
@@ -423,6 +426,13 @@ void HexagonPassConfig::addIRPasses() {
     if (EnableGenExtract)
       addPass(createHexagonGenExtract());
   }
+}
+
+bool HexagonPassConfig::addPreISel() {
+  // Functions can enable HLX through target-features, so the pass filters
+  // individual functions instead of being gated by the default subtarget.
+  addPass(createHexagonLowerHLXPairAllocas());
+  return false;
 }
 
 bool HexagonPassConfig::addInstSelector() {

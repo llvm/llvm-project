@@ -551,6 +551,7 @@ private:
                             SDValue StoreVal, SDValue BaseAddr, MVT PairTy,
                             MachinePointerInfo PtrInfo,
                             SmallVectorImpl<SDValue> &MemOpChains) const;
+  SDValue LowerHlxPairIntrinsic(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHlxMaskedOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHlxSelect(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHlxOperation(SDValue Op, SelectionDAG &DAG) const;

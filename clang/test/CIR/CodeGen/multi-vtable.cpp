@@ -39,7 +39,7 @@ void Child::MotherKey() {}
 
 // Child vtable
 
-// CIR:      cir.global "private" constant external @_ZTV5Child = #cir.vtable<{
+// CIR:      cir.global constant external @_ZTV5Child = #cir.vtable<{
 // CIR-SAME:     #cir.const_array<[
 // CIR-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
 // CIR-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
@@ -83,7 +83,7 @@ void Child::MotherKey() {}
 
 // Mother vtable
 
-// CIR:      cir.global "private" constant external @_ZTV6Mother = #cir.vtable<{
+// CIR:      cir.global constant external @_ZTV6Mother = #cir.vtable<{
 // CIR-SAME:      #cir.const_array<[
 // CIR-SAME:          #cir.ptr<null> : !cir.ptr<!u8i>,
 // CIR-SAME:          #cir.ptr<null> : !cir.ptr<!u8i>,
@@ -112,7 +112,7 @@ void Child::MotherKey() {}
 
 // Father vtable
 
-// CIR:      cir.global "private" constant external @_ZTV6Father = #cir.vtable<{
+// CIR:      cir.global constant external @_ZTV6Father = #cir.vtable<{
 // CIR-SAME:     #cir.const_array<[
 // CIR-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
 // CIR-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,

@@ -285,6 +285,14 @@ def : Pat <(v1024i16 (int_hexagon_LX_lo (v1024i32 HlxLLR:$src1))),
 def : Pat <(v1024i16 (int_hexagon_LX_hi (v1024i32 HlxLLR:$src1))),
            (v1024i16 (EXTRACT_SUBREG (v1024i32 HlxLLR:$src1), vsub_hi))>,
            Requires<[UseHLX]>;
+
+def : Pat <(v1024i16 (int_hexagon_LX_L16b_tmp I32:$Rt)),
+           (v1024i16 (LX_L16b_pseudo I32:$Rt))>,
+           Requires<[UseHLX]>;
+
+def : Pat <(int_hexagon_LX_S16b_new I32:$Rt, HlxLR:$Ku),
+           (LX_S16b_pseudo I32:$Rt, HlxLR:$Ku)>,
+           Requires<[UseHLX]>;
 }
 
 def: Pat<(v64i16 (trunc v64i32:$Vdd)),

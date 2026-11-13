@@ -21,7 +21,6 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Analysis.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -303,16 +302,38 @@ static bool checkSeqTN0013(MachineBasicBlock::iterator I,
   return false;
 }
 
+// On the AT697E and AT697F, a single-word load into an odd-numbered FP register
+// followed by a double-precision operation on the enclosing register pair can
+// give a wrong result (AT697E erratum 13, AT697F erratum 1). On the UT699, a
+// single-cycle load followed by another load or store can fail.
+//
+// Inserts a NOP after any LD or LDF instruction.
+static bool insertNOPLoad(MachineBasicBlock &MBB, const TargetInstrInfo *TII) {
+  bool Modified = false;
+  for (auto MBBI = MBB.begin(), E = MBB.end(); MBBI != E; ++MBBI) {
+    unsigned Opcode = MBBI->getOpcode();
+    if (Opcode >= SP::LDDArr && Opcode <= SP::LDrr) {
+      BuildMI(MBB, std::next(MBBI), DebugLoc(), TII->get(SP::NOP));
+      Modified = true;
+    }
+  }
+  return Modified;
+}
+
 static bool runErrataWorkaroundOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   const SparcSubtarget *ST = &MF.getSubtarget<SparcSubtarget>();
 
-  if (!(ST->fixTN0009() || ST->fixTN0010() || ST->fixTN0012() ||
-        ST->fixTN0013()))
+  if (!(ST->insertNOPLoad() || ST->fixTN0009() || ST->fixTN0010() ||
+        ST->fixTN0012() || ST->fixTN0013()))
     return false;
 
   const TargetInstrInfo *TII = ST->getInstrInfo();
   const TargetRegisterInfo *TRI = ST->getRegisterInfo();
+
+  if (ST->insertNOPLoad())
+    for (auto &MBB : MF)
+      Changed |= insertNOPLoad(MBB, TII);
 
   if (ST->fixTN0010())
     Changed |= checkSeqTN0010First(MF.front(), TII);
@@ -342,181 +363,6 @@ PreservedAnalyses
 SparcErrataWorkaroundPass::run(MachineFunction &MF,
                                MachineFunctionAnalysisManager &MFAM) {
   return runErrataWorkaroundOnMachineFunction(MF)
-             ? getMachineFunctionPassPreservedAnalyses()
-                   .preserveSet<CFGAnalyses>()
-             : PreservedAnalyses::all();
-}
-
-//*****************************************************************************
-//**** InsertNOPLoad pass
-//*****************************************************************************
-// This pass fixes the incorrectly working Load instructions that exists for
-// some earlier versions of the LEON processor line. NOP instructions must
-// be inserted after the load instruction to ensure that the Load instruction
-// behaves as expected for these processors.
-//
-// This pass inserts a NOP after any LD or LDF instruction.
-//
-char SparcInsertNOPLoadLegacy::ID = 0;
-
-SparcInsertNOPLoadLegacy::SparcInsertNOPLoadLegacy()
-    : MachineFunctionPass(ID) {}
-
-static bool insertNOPLoadInMachineFunction(MachineFunction &MF) {
-  const SparcSubtarget *Subtarget = &MF.getSubtarget<SparcSubtarget>();
-  if (!Subtarget->insertNOPLoad())
-    return false;
-
-  const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
-  DebugLoc DL = DebugLoc();
-
-  bool Modified = false;
-  for (MachineBasicBlock &MBB : MF) {
-    for (auto MBBI = MBB.begin(), E = MBB.end(); MBBI != E; ++MBBI) {
-      MachineInstr &MI = *MBBI;
-      unsigned Opcode = MI.getOpcode();
-      if (Opcode >= SP::LDDArr && Opcode <= SP::LDrr) {
-        MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-        BuildMI(MBB, NMBBI, DL, TII.get(SP::NOP));
-        Modified = true;
-      }
-    }
-  }
-
-  return Modified;
-}
-
-bool SparcInsertNOPLoadLegacy::runOnMachineFunction(MachineFunction &MF) {
-  return insertNOPLoadInMachineFunction(MF);
-}
-
-PreservedAnalyses
-SparcInsertNOPLoadPass::run(MachineFunction &MF,
-                            MachineFunctionAnalysisManager &MFAM) {
-  return insertNOPLoadInMachineFunction(MF)
-             ? getMachineFunctionPassPreservedAnalyses()
-                   .preserveSet<CFGAnalyses>()
-             : PreservedAnalyses::all();
-}
-
-//*****************************************************************************
-//**** DetectRoundChange pass
-//*****************************************************************************
-// To prevent any explicit change of the default rounding mode, this pass
-// detects any call of the fesetround function.
-// A warning is generated to ensure the user knows this has happened.
-//
-// Detects an erratum in UT699 LEON 3 processor
-
-char SparcDetectRoundChangeLegacy::ID = 0;
-
-SparcDetectRoundChangeLegacy::SparcDetectRoundChangeLegacy()
-    : MachineFunctionPass(ID) {}
-
-static bool detectRoundChangeOnMachineFunction(MachineFunction &MF) {
-  const SparcSubtarget *Subtarget = &MF.getSubtarget<SparcSubtarget>();
-  if (!Subtarget->detectRoundChange())
-    return false;
-
-  bool Modified = false;
-  for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &MI : MBB) {
-      unsigned Opcode = MI.getOpcode();
-      if (Opcode == SP::CALL && MI.getNumOperands() > 0) {
-        MachineOperand &MO = MI.getOperand(0);
-
-        if (MO.isGlobal()) {
-          StringRef FuncName = MO.getGlobal()->getName();
-          if (FuncName.compare_insensitive("fesetround") == 0) {
-            errs() << "Error: You are using the detectroundchange "
-                      "option to detect rounding changes that will "
-                      "cause LEON errata. The only way to fix this "
-                      "is to remove the call to fesetround from "
-                      "the source code.\n";
-          }
-        }
-      }
-    }
-  }
-
-  return Modified;
-}
-
-bool SparcDetectRoundChangeLegacy::runOnMachineFunction(MachineFunction &MF) {
-  return detectRoundChangeOnMachineFunction(MF);
-}
-
-PreservedAnalyses
-SparcDetectRoundChangePass::run(MachineFunction &MF,
-                                MachineFunctionAnalysisManager &MFAM) {
-  detectRoundChangeOnMachineFunction(MF);
-  return PreservedAnalyses::all();
-}
-
-//*****************************************************************************
-//**** FixAllFDIVSQRT pass
-//*****************************************************************************
-// This pass fixes the incorrectly working FDIVx and FSQRTx instructions that
-// exist for some earlier versions of the LEON processor line. Five NOP
-// instructions need to be inserted after these instructions to ensure the
-// correct result is placed in the destination registers before they are used.
-//
-// This pass implements two fixes:
-//  1) fixing the FSQRTS and FSQRTD instructions.
-//  2) fixing the FDIVS and FDIVD instructions.
-//
-// FSQRTS and FDIVS are converted to FDIVD and FSQRTD respectively earlier in
-// the pipeline when this option is enabled, so this pass needs only to deal
-// with the changes that still need implementing for the "double" versions
-// of these instructions.
-//
-char SparcFixAllFDIVSQRTLegacy::ID = 0;
-
-SparcFixAllFDIVSQRTLegacy::SparcFixAllFDIVSQRTLegacy()
-    : MachineFunctionPass(ID) {}
-
-static bool fixAllFDIVSQRTInMachineFunction(MachineFunction &MF) {
-  const SparcSubtarget *Subtarget = &MF.getSubtarget<SparcSubtarget>();
-  if (!Subtarget->fixAllFDIVSQRT())
-    return false;
-
-  const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
-  DebugLoc DL = DebugLoc();
-
-  bool Modified = false;
-  for (MachineBasicBlock &MBB : MF) {
-    for (auto MBBI = MBB.begin(), E = MBB.end(); MBBI != E; ++MBBI) {
-      MachineInstr &MI = *MBBI;
-      unsigned Opcode = MI.getOpcode();
-
-      // Note: FDIVS and FSQRTS cannot be generated when this erratum fix is
-      // switched on so we don't need to check for them here. They will
-      // already have been converted to FSQRTD or FDIVD earlier in the
-      // pipeline.
-      if (Opcode == SP::FSQRTD || Opcode == SP::FDIVD) {
-        for (int InsertedCount = 0; InsertedCount < 5; InsertedCount++)
-          BuildMI(MBB, MBBI, DL, TII.get(SP::NOP));
-
-        MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-        for (int InsertedCount = 0; InsertedCount < 28; InsertedCount++)
-          BuildMI(MBB, NMBBI, DL, TII.get(SP::NOP));
-
-        Modified = true;
-      }
-    }
-  }
-
-  return Modified;
-}
-
-bool SparcFixAllFDIVSQRTLegacy::runOnMachineFunction(MachineFunction &MF) {
-  return fixAllFDIVSQRTInMachineFunction(MF);
-}
-
-PreservedAnalyses
-SparcFixAllFDIVSQRTPass::run(MachineFunction &MF,
-                             MachineFunctionAnalysisManager &MFAM) {
-  return fixAllFDIVSQRTInMachineFunction(MF)
              ? getMachineFunctionPassPreservedAnalyses()
                    .preserveSet<CFGAnalyses>()
              : PreservedAnalyses::all();

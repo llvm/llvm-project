@@ -16,7 +16,13 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).parent))
-from docgen import check_api, cppreference_url, posix_url, print_header_status_md
+from docgen import (
+    check_api,
+    cppreference_url,
+    generate_index_md,
+    posix_url,
+    print_header_status_md,
+)
 from header import Header, _is_stub_file
 
 
@@ -25,6 +31,17 @@ class DocgenTest(unittest.TestCase):
         self.assertEqual(Header("math.h").stem, "math")
         self.assertEqual(Header("search.h").stem, "search")
         self.assertEqual(Header("arpa/inet.h").stem, "arpa/inet")
+
+    def test_new_c23_and_posix_headers(self):
+        self.assertTrue(Header("limits.h").implements_macro("CHAR_BIT"))
+        self.assertFalse(Header("limits.h").implements_macro("BITINT_MAXWIDTH"))
+        self.assertTrue(Header("stdint.h").implements_type("int64_t"))
+        self.assertTrue(Header("stdint.h").implements_macro("INT64_MAX"))
+        self.assertTrue(Header("stdckdint.h").implements_macro("ckd_add"))
+        self.assertEqual(Header("regex.h").fn_status("regcomp"), "experimental")
+        self.assertFalse(Header("regex.h").implements_fn("regcomp"))
+        self.assertTrue(Header("sys/shm.h").implements_fn("shmget"))
+        self.assertFalse(Header("ulimit.h").implements_fn("ulimit"))
 
     def test_is_stub_file(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -45,6 +62,8 @@ class DocgenTest(unittest.TestCase):
     def test_implements_fn(self):
         self.assertTrue(Header("stdio.h").implements_fn("printf"))
         self.assertTrue(Header("netinet/in.h").implements_fn("htonl"))
+        self.assertTrue(Header("math.h").implements_fn("acospif"))
+        self.assertFalse(Header("math.h").implements_fn("tgamma"))
         self.assertFalse(Header("stdio.h").implements_fn("sqrt"))
         self.assertFalse(Header("math.h").implements_fn("printf"))
 
@@ -69,16 +88,48 @@ class DocgenTest(unittest.TestCase):
 
     def test_implements_macro(self):
         self.assertTrue(Header("assert.h").implements_macro("assert"))
+        self.assertTrue(Header("math.h").implements_macro("isnan"))
+        self.assertFalse(Header("math.h").implements_macro("isgreater"))
         self.assertFalse(Header("sys/syscall.h").macro_file_exists())
         self.assertTrue(Header("sys/syscall.h").implements_macro("SYS_read"))
         self.assertTrue(Header("errno.h").implements_macro("errno"))
         self.assertTrue(Header("unistd.h").implements_macro("SEEK_SET"))
-        self.assertTrue(Header("float.h").implements_macro("NAN"))
+        self.assertTrue(Header("float.h").implements_macro("FLT_MAX"))
+        self.assertFalse(Header("float.h").implements_macro("NAN"))
+
+    def test_implements_type(self):
+        self.assertTrue(Header("stdio.h").implements_type("FILE"))
+        self.assertTrue(Header("time.h").implements_type("struct tm"))
+        self.assertTrue(Header("setjmp.h").implements_type("sigjmp_buf"))
+        self.assertFalse(Header("wctype.h").implements_type("wctrans_t"))
+        self.assertFalse(Header("monetary.h").implements_type("size_t"))
+
+    def test_implements_object(self):
+        self.assertTrue(Header("stdio.h").implements_object("stdin"))
+        self.assertEqual(Header("time.h").object_status("tzname"), "experimental")
+        self.assertFalse(Header("time.h").implements_object("tzname"))
+        self.assertTrue(Header("unistd.h").implements_object("optarg"))
+        self.assertFalse(Header("time.h").implements_object("getdate_err"))
+        self.assertFalse(Header("errno.h").implements_object("errno"))
 
     def test_md_output_generation(self):
         hdr = Header("stdio.h")
         api = {
             "c-reference-root": "io",
+            "types": {
+                "FILE": {
+                    "c-definition": "7.23.1",
+                    "c-reference": "io/FILE",
+                    "in-latest-posix": None,
+                }
+            },
+            "objects": {
+                "stdin": {
+                    "c-definition": "7.23.1",
+                    "c-reference": "io/std_streams",
+                    "in-latest-posix": None,
+                }
+            },
             "macros": {"EOF": {"c-definition": "7.23.1", "in-latest-posix": None}},
             "functions": {
                 "printf": {
@@ -100,9 +151,27 @@ class DocgenTest(unittest.TestCase):
         out = buf.getvalue()
         lines = {line.strip() for line in out.splitlines()}
         self.assertIn("# stdio.h", out)
+        self.assertIn("## Types", out)
+        self.assertIn("## Global Variables", out)
         self.assertIn("## Macros", out)
         self.assertIn("## Functions", out)
         self.assertIn('<table class="hc-table">', out)
+        self.assertTrue(
+            any(
+                'id="type-FILE"' in l
+                and 'title="Implemented"' in l
+                and 'href="https://en.cppreference.com/w/c/io/FILE"' in l
+                for l in lines
+            )
+        )
+        self.assertTrue(
+            any(
+                'id="object-stdin"' in l
+                and 'title="Implemented"' in l
+                and 'href="https://en.cppreference.com/w/c/io/std_streams"' in l
+                for l in lines
+            )
+        )
         self.assertTrue(
             any(
                 'id="macro-EOF"' in l
@@ -233,9 +302,143 @@ class DocgenTest(unittest.TestCase):
                 "function",
                 {"removed-in-posix-2024": None},
             ),
-            "https://pubs.opengroup.org/onlinepubs/9699919799.2018edition/functions/gettimeofday.html",
+            "https://pubs.opengroup.org/onlinepubs/"
+            "9699919799.2018edition/functions/gettimeofday.html",
         )
         self.assertEqual(posix_url(Header("stdio.h"), "printf", "function", {}), "")
+
+    def test_families_md(self):
+        math_hdr = Header("math.h")
+        ev = math_hdr.evaluate_family("atan2", math_hdr.api["families"]["atan2"])
+        self.assertTrue(ev["implemented"])
+        self.assertTrue(ev["variants"]["float"]["implemented"])
+        self.assertEqual(ev["variants"]["double"]["accuracy"], "1 ULP")
+        self.assertFalse(ev["variants"]["double_double"]["implemented"])
+
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            print_header_status_md(math_hdr, math_hdr.api)
+        math_out = buf.getvalue()
+        self.assertIn("{doc}`../math/index`", math_out)
+        self.assertIn("## Basic Operations", math_out)
+        self.assertIn("## Higher Math Functions", math_out)
+        self.assertNotIn("## GPU Conformance", math_out)
+        self.assertIn('title="atan2: Implemented (1 ULP)">1 ULP</span>', math_out)
+        self.assertIn('title="log_bf16: Implemented"', math_out)
+        self.assertIn(
+            'class="hc-status-na" title="Not applicable">N/A</span>', math_out
+        )
+        self.assertIn("F.10.1.4", math_out)
+
+        cmplx_hdr = Header("complex.h")
+        cbuf = io.StringIO()
+        with redirect_stdout(cbuf):
+            print_header_status_md(cmplx_hdr, cmplx_hdr.api)
+        cmplx_out = cbuf.getvalue()
+        self.assertIn("## Function Families", cmplx_out)
+        self.assertIn('title="carg: Implemented (1 ULP)">1 ULP</span>', cmplx_out)
+        self.assertIn("G.6.2.1", cmplx_out)
+
+        fx_hdr = Header("stdfix.h")
+        fbuf = io.StringIO()
+        with redirect_stdout(fbuf):
+            print_header_status_md(fx_hdr, fx_hdr.api)
+        fx_out = fbuf.getvalue()
+        self.assertIn("{doc}`../math/stdfix`", fx_out)
+        self.assertIn("## Fixed-point Arithmetics", fx_out)
+        self.assertIn("## Higher Math Functions", fx_out)
+        self.assertIn("## Conversion Functions", fx_out)
+        self.assertIn('title="uhrbits: Implemented"', fx_out)
+        self.assertIn('title="exphk: Implemented"', fx_out)
+        self.assertIn('title="strtofxr: Not Implemented"', fx_out)
+
+        srch_hdr = Header("search.h")
+        self.assertTrue(srch_hdr.implements_type("ACTION"))
+        self.assertTrue(srch_hdr.implements_fn("hcreate"))
+
+    def test_summary_stats(self):
+        stdio = Header("stdio.h").get_summary_stats()
+        self.assertEqual(stdio["standard"], "c23")
+        self.assertGreater(stdio["c23"]["implemented"], 0)
+        self.assertEqual(stdio["types"]["implemented"], stdio["types"]["total"])
+        self.assertEqual(stdio["objects"]["implemented"], 3)
+        for key in ("overall", "functions", "macros", "types", "objects", "c23"):
+            self.assertLessEqual(stdio[key]["implemented"], stdio[key]["total"])
+
+        self.assertEqual(Header("fcntl.h").get_summary_stats()["c23"]["total"], 0)
+        self.assertTrue(Header("ulimit.h").get_summary_stats()["removed_posix"])
+        self.assertFalse(Header("byteswap.h").get_summary_stats()["removed_posix"])
+
+        math_hdr = Header("math.h")
+        math_stats = math_hdr.get_summary_stats()
+        self.assertEqual(len(math_stats["precisions"]), 7)
+        self.assertEqual(
+            math_stats["overall"]["total"],
+            sum(
+                math_stats[k]["total"]
+                for k in ("functions", "macros", "types", "objects")
+            ),
+        )
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            print_header_status_md(math_hdr, math_hdr.api)
+        out = buf.getvalue()
+        self.assertIn('role="progressbar"', out)
+        self.assertIn("Base Families", out)
+        self.assertIn("Global Variables", out)
+        self.assertIn("Precision Coverage", out)
+
+        fx_stats = Header("stdfix.h").get_summary_stats()
+        self.assertEqual(len(fx_stats["precisions"]), 12)
+        self.assertGreater(fx_stats["tr18037"]["implemented"], 0)
+        self.assertEqual(fx_stats["c23"]["total"], 0)
+
+    def test_index_output_generation(self):
+        buf = io.StringIO()
+        with redirect_stdout(buf), redirect_stderr(io.StringIO()):
+            generate_index_md()
+        out = buf.getvalue()
+        self.assertIn("(implementation_status)=", out)
+        self.assertIn("(headers_index)=", out)
+        self.assertIn("# Headers\n", out)
+        self.assertIn("C23 Standard Completeness", out)
+        self.assertIn("POSIX.1-2024 Completeness", out)
+        self.assertIn("Global Variables", out)
+        self.assertIn("`stdarg.h`", out)
+        self.assertIn('data-stem="stdio"', out)
+        self.assertIn('data-stem="arpa/inet"', out)
+        self.assertIn("acosf128", out)
+        self.assertIn('class="dashboard-controls"', out)
+        self.assertIn('class="hc-chip-exp"', out)
+        self.assertIn('class="hc-chip-missing"', out)
+        self.assertIn('class="hc-chip-impl"', out)
+        self.assertIn('href="https://en.cppreference.com/w/c/io/clearerr"', out)
+        self.assertIn("```{toctree}\n:hidden: true", out)
+        self.assertIn("\npoll\npthread\npwd\n", out)
+
+    def test_experimental_and_stub_classification(self):
+        self.assertEqual(Header("unistd.h").fn_status("setuid"), "experimental")
+        self.assertEqual(Header("unistd.h").fn_status("getuid"), "implemented")
+        self.assertEqual(Header("grp.h").fn_status("initgroups"), "experimental")
+        self.assertEqual(Header("net/if.h").fn_status("if_nameindex"), "experimental")
+        self.assertEqual(Header("fnmatch.h").fn_status("fnmatch"), "missing")
+        self.assertEqual(Header("time.h").fn_status("strptime"), "missing")
+        self.assertEqual(Header("time.h").fn_status("tzset"), "missing")
+        self.assertEqual(Header("wchar.h").fn_status("swprintf"), "missing")
+
+        rx = Header("regex.h")
+        self.assertTrue(rx.is_experimental_header())
+        self.assertEqual(rx.macro_status("REG_EXTENDED"), "experimental")
+        self.assertEqual(rx.type_status("regex_t"), "experimental")
+        rx_stats = rx.get_summary_stats()
+        self.assertEqual(rx_stats["overall"]["implemented"], 0)
+        self.assertGreater(rx_stats["overall"]["experimental"], 0)
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            print_header_status_md(rx, rx.api)
+        rx_out = buf.getvalue()
+        self.assertIn('class="hc-status-exp"', rx_out)
+        self.assertIn("experimental)", rx_out)
 
 
 if __name__ == "__main__":

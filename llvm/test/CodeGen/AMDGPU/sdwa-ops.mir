@@ -14,8 +14,6 @@
 ---
 name:            test1_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -56,8 +54,6 @@ body:             |
 ---
 name:            test2_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -98,8 +94,6 @@ body:             |
 ---
 name:            test3_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -129,8 +123,6 @@ body:             |
 ---
 name:            test4_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -159,8 +151,6 @@ body:             |
 ---
 name:            test5_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -189,8 +179,6 @@ body:             |
 ---
 name:            test6_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -218,8 +206,6 @@ body:             |
 ---
 name:            test7_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -248,8 +234,6 @@ body:             |
 ---
 name:            test8_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -279,8 +263,6 @@ body:             |
 ---
 name:            test9_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -310,8 +292,6 @@ body:             |
 ---
 name:            test10_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -341,8 +321,6 @@ body:             |
 ---
 name:            test11_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -372,8 +350,6 @@ body:             |
 ---
 name:            test12_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
