@@ -87,6 +87,10 @@ private:
 
   bool RunLdsBranchVmemWARHazardFixup;
 
+  /// The number of VGPRs the function reports, or 0 before its first use.
+  /// Fixing hazards never stops naming a VGPR, so it stays valid for the pass.
+  unsigned NumReportedVGPRs = 0;
+
   //===--------------------------------------------------------------------===//
   // WMMA Co-execution Window State
   //===--------------------------------------------------------------------===//

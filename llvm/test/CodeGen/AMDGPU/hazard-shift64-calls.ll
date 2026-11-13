@@ -107,7 +107,8 @@ define amdgpu_kernel void @direct_call_callee_uses_v8(ptr addrspace(1) %out, i64
 ; CHECK-NEXT:    s_add_u32 s4, s4, writes_v8@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, writes_v8@gotpcrel32@hi+12
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_lshrrev_b64 v[0:1], v7, s[18:19]
+; CHECK-NEXT:    v_mov_b32_e32 v0, v7
+; CHECK-NEXT:    v_lshrrev_b64 v[0:1], v0, s[18:19]
 ; CHECK-NEXT:    global_store_dwordx2 v2, v[0:1], s[16:17]
 ; CHECK-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
 ; CHECK-NEXT:    s_mov_b32 s14, s10
@@ -142,7 +143,8 @@ define amdgpu_kernel void @indirect_call(ptr addrspace(1) %out, i64 %x, ptr %fp)
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_addc_u32 s9, s5, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_lshrrev_b64 v[0:1], v7, s[18:19]
+; CHECK-NEXT:    v_mov_b32_e32 v0, v7
+; CHECK-NEXT:    v_lshrrev_b64 v[0:1], v0, s[18:19]
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; CHECK-NEXT:    s_mov_b32 s32, 0
@@ -174,7 +176,8 @@ define amdgpu_kernel void @undef_arg_call(ptr addrspace(1) %out, i64 %x) {
 ; CHECK-NEXT:    s_add_u32 s4, s4, nine@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, nine@gotpcrel32@hi+12
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_lshrrev_b64 v[0:1], v7, s[18:19]
+; CHECK-NEXT:    v_mov_b32_e32 v0, v7
+; CHECK-NEXT:    v_lshrrev_b64 v[0:1], v0, s[18:19]
 ; CHECK-NEXT:    global_store_dwordx2 v2, v[0:1], s[16:17]
 ; CHECK-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
 ; CHECK-NEXT:    s_mov_b32 s14, s10
@@ -202,8 +205,11 @@ define void @indirect_tail_call(i64 %x, ptr addrspace(1) %out, ptr inreg %fp) {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    v_mov_b32_e32 v7, 5
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_swap_b32 v2, v7
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    v_lshrrev_b64 v[0:1], v7, v[0:1]
+; CHECK-NEXT:    v_lshrrev_b64 v[0:1], v2, v[0:1]
+; CHECK-NEXT:    v_swap_b32 v7, v2
 ; CHECK-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
 ; CHECK-NEXT:    s_setpc_b64 s[0:1]
   %amt = call i32 asm sideeffect "v_mov_b32 $0, 5", "={v7}"()
@@ -225,8 +231,11 @@ define void @undef_arg_tail_call(i64 %x, ptr addrspace(1) %out) {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    v_mov_b32_e32 v7, 5
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_swap_b32 v2, v7
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    v_lshrrev_b64 v[0:1], v7, v[0:1]
+; CHECK-NEXT:    v_lshrrev_b64 v[0:1], v2, v[0:1]
+; CHECK-NEXT:    v_swap_b32 v7, v2
 ; CHECK-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[0:1]

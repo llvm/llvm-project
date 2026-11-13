@@ -365,7 +365,8 @@ body:             |
     ; GFX125X-NEXT: $vgpr8 = IMPLICIT_DEF
     ; GFX125X-NEXT: $vgpr15 = IMPLICIT_DEF
     ; GFX125X-NEXT: $vgpr20 = IMPLICIT_DEF
-    ; GFX125X-NEXT: $vgpr10_vgpr11, $vgpr9 = V_DUAL_FMA_F64_e64_X_FMA_F32_e64_e96_gfx1250 0, $vgpr0_vgpr1, 0, $vgpr2_vgpr3, 0, $vgpr4_vgpr5, 0, $vgpr15, 0, $vgpr8, 0, $vgpr7, implicit $mode, implicit $exec, implicit $mode, implicit $exec, implicit $mode, implicit $exec
+    ; GFX125X-NEXT: $vgpr10_vgpr11 = V_FMA_F64_e64 0, $vgpr0_vgpr1, 0, $vgpr2_vgpr3, 0, $vgpr4_vgpr5, 0, 0, implicit $mode, implicit $exec
+    ; GFX125X-NEXT: $vgpr9 = V_FMA_F32_e64 0, $vgpr15, 0, $vgpr8, 0, $vgpr7, 0, 0, implicit $mode, implicit $exec
     ; GFX125X-NEXT: $sgpr30_sgpr31 = SI_CALL killed $sgpr16_sgpr17, 0, csr_amdgpu
     ;
     ; NOHAZARD-LABEL: name: fma_f64_opy_at_granule_boundary_call_implicit_def
@@ -409,7 +410,8 @@ body:             |
     ; GFX125X-NEXT: $vgpr7 = IMPLICIT_DEF
     ; GFX125X-NEXT: $vgpr8 = IMPLICIT_DEF
     ; GFX125X-NEXT: $vgpr15 = IMPLICIT_DEF
-    ; GFX125X-NEXT: $vgpr10_vgpr11, $vgpr9 = V_DUAL_FMA_F64_e64_X_FMA_F32_e64_e96_gfx1250 0, $vgpr0_vgpr1, 0, $vgpr2_vgpr3, 0, $vgpr4_vgpr5, 0, $vgpr15, 0, $vgpr8, 0, $vgpr7, implicit $mode, implicit $exec, implicit $mode, implicit $exec, implicit $mode, implicit $exec
+    ; GFX125X-NEXT: $vgpr10_vgpr11 = V_FMA_F64_e64 0, $vgpr0_vgpr1, 0, $vgpr2_vgpr3, 0, $vgpr4_vgpr5, 0, 0, implicit $mode, implicit $exec
+    ; GFX125X-NEXT: $vgpr9 = V_FMA_F32_e64 0, $vgpr15, 0, $vgpr8, 0, $vgpr7, 0, 0, implicit $mode, implicit $exec
     ; GFX125X-NEXT: $vgpr20 = IMPLICIT_DEF
     ; GFX125X-NEXT: $sgpr30_sgpr31 = SI_CALL killed $sgpr16_sgpr17, 0, csr_amdgpu, implicit killed $vgpr20
     ;

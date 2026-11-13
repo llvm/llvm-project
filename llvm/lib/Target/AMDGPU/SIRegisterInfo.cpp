@@ -4638,6 +4638,31 @@ unsigned SIRegisterInfo::getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
   return 0;
 }
 
+unsigned SIRegisterInfo::getNumReportedVGPRs(const MachineFunction &MF) const {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
+  // A tail call isn't considered a call for MachineFrameInfo's purposes.
+  if (!FrameInfo.hasCalls() && !FrameInfo.hasTailCall()) {
+    return getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass,
+                              /*IncludeCalls=*/false);
+  }
+
+  auto IsCounted = [](const MachineInstr &MI) {
+    return !MI.isCall() && !MI.isMetaInstruction();
+  };
+  ArrayRef<MCPhysReg> Registers =
+      AMDGPU::VGPR_32RegClass.getRegisters().take_front(
+          ST.getAddressableNumArchVGPRs());
+  for (MCPhysReg Reg : reverse(Registers)) {
+    for (MCRegAliasIterator AI(Reg, this, /*IncludeSelf=*/true); AI.isValid();
+         ++AI) {
+      if (any_of(MRI.reg_nodbg_instructions(*AI), IsCounted))
+        return getHWRegIndex(Reg) + 1;
+    }
+  }
+  return 0;
+}
+
 SmallVector<StringLiteral>
 SIRegisterInfo::getVRegFlagsOfReg(Register Reg,
                                   const MachineFunction &MF) const {
