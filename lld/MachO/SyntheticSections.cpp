@@ -2474,12 +2474,16 @@ void ObjCMethListSection::writeTo(uint8_t *bufStart) const {
 
 // Check if an InputSection is a method list. To do this we scan the
 // InputSection for any symbols who's names match the patterns we expect clang
-// to generate for method lists.
+// or Swift to generate for method lists.
 bool ObjCMethListSection::isMethodList(const ConcatInputSection *isec) {
   const char *symPrefixes[] = {objc::symbol_names::classMethods,
                                objc::symbol_names::instanceMethods,
                                objc::symbol_names::categoryInstanceMethods,
-                               objc::symbol_names::categoryClassMethods};
+                               objc::symbol_names::categoryClassMethods,
+                               objc::symbol_names::swiftInstanceMethods,
+                               objc::symbol_names::swiftClassMethods,
+                               objc::symbol_names::swiftCategoryInstanceMethods,
+                               objc::symbol_names::swiftCategoryClassMethods};
   if (!isec)
     return false;
   for (const Symbol *sym : isec->symbols) {
