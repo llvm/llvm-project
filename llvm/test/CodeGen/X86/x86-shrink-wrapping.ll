@@ -1560,10 +1560,10 @@ declare void @somethingElse(...)
 define i32 @loopInfoRestoreOutsideLoopMultiExit(i32 %cond, i32 %N) nounwind {
 ; ENABLE-LABEL: loopInfoRestoreOutsideLoopMultiExit:
 ; ENABLE:       ## %bb.0: ## %entry
-; ENABLE-NEXT:    pushq %rbx
 ; ENABLE-NEXT:    testl %edi, %edi
 ; ENABLE-NEXT:    je LBB18_5
 ; ENABLE-NEXT:  ## %bb.1: ## %if.then
+; ENABLE-NEXT:    pushq %rbx
 ; ENABLE-NEXT:    ## InlineAsm Start
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    ## InlineAsm End
@@ -1585,6 +1585,7 @@ define i32 @loopInfoRestoreOutsideLoopMultiExit(i32 %cond, i32 %N) nounwind {
 ; ENABLE-NEXT:    jne LBB18_2
 ; ENABLE-NEXT:  LBB18_4: ## %for.end
 ; ENABLE-NEXT:    shll $3, %eax
+; ENABLE-NEXT:    popq %rbx
 ; ENABLE-NEXT:    cmpl $101, %eax
 ; ENABLE-NEXT:    jl LBB18_8
 ; ENABLE-NEXT:  LBB18_7: ## %if.clamp
@@ -1593,7 +1594,6 @@ define i32 @loopInfoRestoreOutsideLoopMultiExit(i32 %cond, i32 %N) nounwind {
 ; ENABLE-NEXT:    ## InlineAsm End
 ; ENABLE-NEXT:    movl $100, %eax
 ; ENABLE-NEXT:  LBB18_8: ## %ret
-; ENABLE-NEXT:    popq %rbx
 ; ENABLE-NEXT:    retq
 ; ENABLE-NEXT:  LBB18_5: ## %if.else
 ; ENABLE-NEXT:    addl %esi, %esi
