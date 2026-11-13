@@ -5374,6 +5374,71 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
   Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
 }
 
+static void
+computeKnownFPClassForFAddSub(const Operator *Op, const APInt &DemandedElts,
+                              FPClassTest InterestedClasses,
+                              KnownFPClass &Known, const SimplifyQuery &Q,
+                              unsigned Depth, bool IsAdd, bool IsStrict) {
+  const Value *LHS = Op->getOperand(0);
+  const Value *RHS = Op->getOperand(1);
+
+  const RoundingMode RM =
+      IsStrict ? cast<ConstrainedFPIntrinsic>(Op)->getRoundingMode().value_or(
+                     RoundingMode::Dynamic)
+               : RoundingMode::NearestTiesToEven;
+
+  KnownFPClass KnownLHS, KnownRHS;
+  bool WantNegative =
+      IsAdd &&
+      (InterestedClasses & KnownFPClass::OrderedLessThanZeroMask) != fcNone;
+  bool WantNaN = (InterestedClasses & fcNan) != fcNone;
+  bool WantNegZero = (InterestedClasses & fcNegZero) != fcNone;
+
+  if (!WantNaN && !WantNegative && !WantNegZero)
+    return;
+
+  FPClassTest InterestedSrcs = InterestedClasses;
+  if (WantNegative)
+    InterestedSrcs |= KnownFPClass::OrderedLessThanZeroMask;
+  if (InterestedClasses & fcNan)
+    InterestedSrcs |= fcInf;
+  computeKnownFPClass(RHS, DemandedElts, InterestedSrcs, KnownRHS, Q,
+                      Depth + 1);
+
+  // Special case fadd x, x, which is the canonical form of fmul x, 2.
+  bool Self = LHS == RHS &&
+              isGuaranteedNotToBeUndef(LHS, Q.AC, Q.CtxI, Q.DT, Depth + 1);
+  if (Self)
+    KnownLHS = KnownRHS;
+
+  if ((WantNaN && KnownRHS.isKnownNeverNaN()) ||
+      (WantNegative && KnownRHS.cannotBeOrderedLessThanZero()) || WantNegZero ||
+      !IsAdd) {
+
+    // FIXME: Context function should always be passed in separately
+    const Function *F = cast<Instruction>(Op)->getFunction();
+    const fltSemantics &FltSem =
+        Op->getType()->getScalarType()->getFltSemantics();
+    DenormalMode Mode =
+        F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
+
+    if (Self && IsAdd) {
+      Known = KnownFPClass::fadd_self(KnownLHS, RM, Mode);
+    } else {
+      // RHS is canonically cheaper to compute. Skip inspecting the LHS if
+      // there's no point.
+
+      if (!Self) {
+        computeKnownFPClass(LHS, DemandedElts, InterestedSrcs, KnownLHS, Q,
+                            Depth + 1);
+      }
+
+      Known = IsAdd ? KnownFPClass::fadd(KnownLHS, KnownRHS, RM, Mode)
+                    : KnownFPClass::fsub(KnownLHS, KnownRHS, RM, Mode);
+    }
+  }
+}
+
 static void computeKnownFPClassForFRem(const Operator *Op,
                                        const APInt &DemandedElts,
                                        FPClassTest InterestedClasses,
@@ -5718,6 +5783,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           IsFMA ? KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode)
                 : KnownFPClass::fmuladd(KnownSrc[0], KnownSrc[1], KnownSrc[2],
                                         Mode);
+      break;
+    }
+    case Intrinsic::experimental_constrained_fadd:
+    case Intrinsic::experimental_constrained_fsub: {
+      computeKnownFPClassForFAddSub(
+          Op, DemandedElts, InterestedClasses, Known, Q, Depth,
+          /*IsAdd=*/IID == Intrinsic::experimental_constrained_fadd,
+          /*IsStrict=*/true);
       break;
     }
     case Intrinsic::experimental_constrained_frem: {
@@ -6262,59 +6335,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   }
   case Instruction::FAdd:
   case Instruction::FSub: {
-    KnownFPClass KnownLHS, KnownRHS;
-    bool WantNegative =
-        Op->getOpcode() == Instruction::FAdd &&
-        (InterestedClasses & KnownFPClass::OrderedLessThanZeroMask) != fcNone;
-    bool WantNaN = (InterestedClasses & fcNan) != fcNone;
-    bool WantNegZero = (InterestedClasses & fcNegZero) != fcNone;
-
-    if (!WantNaN && !WantNegative && !WantNegZero)
-      break;
-
-    FPClassTest InterestedSrcs = InterestedClasses;
-    if (WantNegative)
-      InterestedSrcs |= KnownFPClass::OrderedLessThanZeroMask;
-    if (InterestedClasses & fcNan)
-      InterestedSrcs |= fcInf;
-    computeKnownFPClass(Op->getOperand(1), DemandedElts, InterestedSrcs,
-                        KnownRHS, Q, Depth + 1);
-
-    // Special case fadd x, x, which is the canonical form of fmul x, 2.
-    bool Self = Op->getOperand(0) == Op->getOperand(1) &&
-                isGuaranteedNotToBeUndef(Op->getOperand(0), Q.AC, Q.CtxI, Q.DT,
-                                         Depth + 1);
-    if (Self)
-      KnownLHS = KnownRHS;
-
-    if ((WantNaN && KnownRHS.isKnownNeverNaN()) ||
-        (WantNegative && KnownRHS.cannotBeOrderedLessThanZero()) ||
-        WantNegZero || Opc == Instruction::FSub) {
-
-      // FIXME: Context function should always be passed in separately
-      const Function *F = cast<Instruction>(Op)->getFunction();
-      const fltSemantics &FltSem =
-          Op->getType()->getScalarType()->getFltSemantics();
-      DenormalMode Mode =
-          F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
-
-      if (Self && Opc == Instruction::FAdd) {
-        Known = KnownFPClass::fadd_self(KnownLHS, Mode);
-      } else {
-        // RHS is canonically cheaper to compute. Skip inspecting the LHS if
-        // there's no point.
-
-        if (!Self) {
-          computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedSrcs,
-                              KnownLHS, Q, Depth + 1);
-        }
-
-        Known = Opc == Instruction::FAdd
-                    ? KnownFPClass::fadd(KnownLHS, KnownRHS, Mode)
-                    : KnownFPClass::fsub(KnownLHS, KnownRHS, Mode);
-      }
-    }
-
+    computeKnownFPClassForFAddSub(Op, DemandedElts, InterestedClasses, Known, Q,
+                                  Depth, /*IsAdd=*/Opc == Instruction::FAdd,
+                                  /*IsStrict=*/false);
     break;
   }
   case Instruction::FMul: {
