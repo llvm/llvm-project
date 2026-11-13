@@ -8922,6 +8922,38 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
         .addMemOperand(*MI.memoperands_begin());
     MI.eraseFromParent();
     return true;
+  case Intrinsic::amdgcn_global_load_async_to_lds_b8:
+  case Intrinsic::amdgcn_global_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_global_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_global_load_async_to_lds_b128:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b8:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b128:
+  case Intrinsic::amdgcn_global_store_async_from_lds_b8:
+  case Intrinsic::amdgcn_global_store_async_from_lds_b32:
+  case Intrinsic::amdgcn_global_store_async_from_lds_b64:
+  case Intrinsic::amdgcn_global_store_async_from_lds_b128: {
+    // The LDS address gets only the low 16 bits of the instruction offset,
+    // so fold any other offset into both addresses.
+    int64_t Offset = MI.getOperand(3).getImm();
+    if (isUInt<16>(Offset))
+      return true;
+    B.setInstrAndDebugLoc(MI);
+    Register NewPtrs[2];
+    for (unsigned I : {0, 1}) {
+      Register Ptr = MI.getOperand(I + 1).getReg();
+      LLT PtrTy = MRI.getType(Ptr);
+      auto Off = B.buildConstant(LLT::integer(PtrTy.getSizeInBits()), Offset);
+      NewPtrs[I] = B.buildPtrAdd(PtrTy, Ptr, Off).getReg(0);
+    }
+    Helper.Observer.changingInstr(MI);
+    MI.getOperand(1).setReg(NewPtrs[0]);
+    MI.getOperand(2).setReg(NewPtrs[1]);
+    MI.getOperand(3).setImm(0);
+    Helper.Observer.changedInstr(MI);
+    return true;
+  }
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))

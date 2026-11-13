@@ -11927,6 +11927,24 @@ SITargetLowering::lowerStructBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
                                  M->getMemOperand());
 }
 
+// The async copies between memory and LDS add only the low 16 bits of the
+// instruction offset to the LDS address, the memory side gets all of it. Fold
+// any other offset into both addresses and leave 0 in the instruction.
+static void foldAsyncLDSOffset(SDValue Op, SelectionDAG &DAG, SDLoc DL) {
+  SDNode *N = Op.getNode();
+  int64_t Offset = N->getConstantOperandAPInt(4).getSExtValue();
+  if (isUInt<16>(Offset))
+    return;
+  SmallVector<SDValue, 7> Ops(N->ops());
+  for (unsigned OpIdx : {2, 3}) {
+    EVT VT = Ops[OpIdx].getValueType();
+    Ops[OpIdx] = DAG.getMemBasePlusOffset(
+        Ops[OpIdx], DAG.getSignedConstant(Offset, DL, VT), DL);
+  }
+  Ops[4] = DAG.getTargetConstant(0, DL, MVT::i32);
+  DAG.UpdateNodeOperands(N, Ops);
+}
+
 static void initializeM0ToZeroForClusterLoad(SDValue Op, SelectionDAG &DAG,
                                              SDLoc DL) {
   SDNode *N = Op.getNode();
@@ -12737,10 +12755,21 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b128: {
+    foldAsyncLDSOffset(Op, DAG, DL);
     if (Subtarget->hasGFX1250_STRICT())
       initializeM0ToZeroForClusterLoad(Op, DAG, DL);
     return SDValue();
   }
+  case Intrinsic::amdgcn_global_load_async_to_lds_b8:
+  case Intrinsic::amdgcn_global_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_global_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_global_load_async_to_lds_b128:
+  case Intrinsic::amdgcn_global_store_async_from_lds_b8:
+  case Intrinsic::amdgcn_global_store_async_from_lds_b32:
+  case Intrinsic::amdgcn_global_store_async_from_lds_b64:
+  case Intrinsic::amdgcn_global_store_async_from_lds_b128:
+    foldAsyncLDSOffset(Op, DAG, DL);
+    return SDValue();
   case Intrinsic::amdgcn_exp_compr: {
     SDValue Src0 = Op.getOperand(4);
     SDValue Src1 = Op.getOperand(5);
