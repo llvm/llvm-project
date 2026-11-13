@@ -1062,12 +1062,24 @@ let DecoderMethod = "DecodeLoadI32" in
 defm LD2BSX : LOADm<"ld2b.sx", 0x04, I32, i32, sextloadi16>;
 let cx = 1, DecoderMethod = "DecodeLoadI32" in
 defm LD2BZX : LOADm<"ld2b.zx", 0x04, I32, i32, zextloadi16>;
+// ld2b.sx and ld2b.zx sign or zero extend into the whole 64-bit register.
+let isCodeGenOnly = 1, DecoderMethod = "DecodeLoadI64" in {
+defm LD2BSX64 : LOADm<"ld2b.sx", 0x04, I64, i64, sextloadi16>;
+let cx = 1 in
+defm LD2BZX64 : LOADm<"ld2b.zx", 0x04, I64, i64, zextloadi16>;
+}
 
 // Section 8.2.6 - LD1B
 let DecoderMethod = "DecodeLoadI32" in
 defm LD1BSX : LOADm<"ld1b.sx", 0x05, I32, i32, sextloadi8>;
 let cx = 1, DecoderMethod = "DecodeLoadI32" in
 defm LD1BZX : LOADm<"ld1b.zx", 0x05, I32, i32, zextloadi8>;
+// ld1b.sx and ld1b.zx sign or zero extend into the whole 64-bit register.
+let isCodeGenOnly = 1, DecoderMethod = "DecodeLoadI64" in {
+defm LD1BSX64 : LOADm<"ld1b.sx", 0x05, I64, i64, sextloadi8>;
+let cx = 1 in
+defm LD1BZX64 : LOADm<"ld1b.zx", 0x05, I64, i64, zextloadi8>;
+}
 
 // LDQ pseudo instructions
 let mayLoad = 1, hasSideEffects = 0 in {
@@ -1744,26 +1756,8 @@ multiclass LOAD64m<SDPatternOperator from, RM torri, RM torii, RM tozri,
   def : Pat<(i64 (from ADDRzri:$addr)), (tozri MEMzri:$addr)>;
   def : Pat<(i64 (from ADDRzii:$addr)), (tozii MEMzii:$addr)>;
 }
-multiclass EXT64m<SDPatternOperator from,
-                  RM torri,
-                  RM torii,
-                  RM tozri,
-                  RM tozii> {
-  def : Pat<(i64 (from ADDRrri:$addr)),
-            (i2l (torri MEMrri:$addr))>;
-  def : Pat<(i64 (from ADDRrii:$addr)),
-            (i2l (torii MEMrii:$addr))>;
-  def : Pat<(i64 (from ADDRzri:$addr)),
-            (i2l (tozri MEMzri:$addr))>;
-  def : Pat<(i64 (from ADDRzii:$addr)),
-            (i2l (tozii MEMzii:$addr))>;
-}
-defm : EXT64m<sextloadi8, LD1BSXrri, LD1BSXrii, LD1BSXzri, LD1BSXzii>;
-defm : EXT64m<zextloadi8, LD1BZXrri, LD1BZXrii, LD1BZXzri, LD1BZXzii>;
-defm : EXT64m<extloadi8, LD1BZXrri, LD1BZXrii, LD1BZXzri, LD1BZXzii>;
-defm : EXT64m<sextloadi16, LD2BSXrri, LD2BSXrii, LD2BSXzri, LD2BSXzii>;
-defm : EXT64m<zextloadi16, LD2BZXrri, LD2BZXrii, LD2BZXzri, LD2BZXzii>;
-defm : EXT64m<extloadi16, LD2BZXrri, LD2BZXrii, LD2BZXzri, LD2BZXzii>;
+defm : LOAD64m<extloadi8, LD1BZX64rri, LD1BZX64rii, LD1BZX64zri, LD1BZX64zii>;
+defm : LOAD64m<extloadi16, LD2BZX64rri, LD2BZX64rii, LD2BZX64zri, LD2BZX64zii>;
 defm : LOAD64m<extloadi32, LDLSX64rri, LDLSX64rii, LDLSX64zri, LDLSX64zii>;
 
 // anyextload
