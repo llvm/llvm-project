@@ -6157,7 +6157,7 @@ void ArgumentAnalyzer::AddAssignmentConversion(
     if (actuals_[1]) {
       source = actuals_[1]->sourceLocation();
     }
-    actuals_[1] = ActualArgument{*rhsExpr};
+    actuals_[1] = ActualArgument{std::move(*rhsExpr)};
     SetArgSourceLocation(actuals_[1], source);
   } else {
     actuals_[1] = std::nullopt;

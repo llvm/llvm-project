@@ -3957,7 +3957,8 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &x) {
     }
   }
 
-  auto testThreadprivateVarErr = [&](Symbol sym, parser::Name name,
+  auto testThreadprivateVarErr = [&](const Symbol &sym,
+                                     const parser::Name &name,
                                      llvm::omp::Clause clauseTy) {
     if (sym.test(Symbol::Flag::OmpThreadprivate))
       context_.Say(name.source,
