@@ -188,7 +188,7 @@ AArch64PrologueEpilogueCommon::convertCalleeSaveRestoreToSPPrePostIncDec(
              RegInfo.getEncodingValue(MBBI->getOperand(1).getReg());
     if (NewOpc == AArch64::STRXpre) {
       return std::next(MBBI) != MBBI->getParent()->instr_end() &&
-         std::next(MBBI)->getOpcode() == AArch64::SEH_SaveVGSM;
+             std::next(MBBI)->getOpcode() == AArch64::SEH_SaveVGSM;
     }
     return false;
   };
