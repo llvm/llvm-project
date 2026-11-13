@@ -1,6 +1,7 @@
 // REQUIRES: x86-registered-target
 // Check the constraint "*m" of operand arr and the definition of arr is not removed by FE
 // RUN: %clang_cc1 %s -fasm-blocks -triple i386-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -fasm-blocks -triple i386-apple-darwin10 -emit-llvm -o - | FileCheck %s %}
 
 static int arr[10];
 void t1(void) {

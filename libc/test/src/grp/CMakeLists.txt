@@ -37,7 +37,6 @@ add_libc_test(
     libc.src.__support.File.platform_file
     libc.src.__support.ctype_utils
     libc.src.__support.libc_errno
-    libc.src.errno.errno
     libc.src.grp.endgrent
     libc.src.grp.getgrent
     libc.src.grp.grp_utils
@@ -112,7 +111,6 @@ add_libc_test(
     libc.src.__support.File.platform_file
     libc.src.__support.ctype_utils
     libc.src.__support.libc_errno
-    libc.src.errno.errno
     libc.src.grp.endgrent
     libc.src.grp.getgrent
     libc.src.grp.getgrnam
@@ -140,7 +138,6 @@ add_libc_test(
     libc.src.__support.File.platform_file
     libc.src.__support.ctype_utils
     libc.src.__support.libc_errno
-    libc.src.errno.errno
     libc.src.grp.endgrent
     libc.src.grp.getgrent
     libc.src.grp.getgrgid

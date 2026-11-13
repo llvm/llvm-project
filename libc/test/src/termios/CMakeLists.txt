@@ -10,7 +10,6 @@ add_libc_test(
     libc.include.termios
     libc.hdr.termios_macros
     libc.hdr.types.struct_termios
-    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.termios.cfgetispeed
     libc.src.termios.cfgetospeed
@@ -25,6 +24,30 @@ add_libc_test(
 )
 
 add_libc_test(
+  tcflush_test
+  SUITE
+    libc-termios-tests
+  SRCS
+    tcflush_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.poll_macros
+    libc.hdr.sys_ioctl_macros
+    libc.hdr.termios_macros
+    libc.hdr.types.struct_pollfd
+    libc.src.__support.libc_errno
+    libc.src.fcntl.open
+    libc.src.poll.poll
+    libc.src.stdio.snprintf
+    libc.src.sys.ioctl.ioctl
+    libc.src.termios.tcflush
+    libc.src.unistd.close
+    libc.src.unistd.write
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   tcgetwinsize_test
   SUITE
     libc-termios-tests
@@ -34,7 +57,6 @@ add_libc_test(
     libc.hdr.fcntl_macros
     libc.hdr.types.struct_winsize
     libc.src.__support.CPP.scope
-    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.termios.tcgetwinsize
     libc.src.unistd.close
@@ -53,7 +75,6 @@ add_libc_test(
     libc.hdr.fcntl_macros
     libc.hdr.types.struct_winsize
     libc.src.__support.CPP.scope
-    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.termios.tcsetwinsize
     libc.src.unistd.close

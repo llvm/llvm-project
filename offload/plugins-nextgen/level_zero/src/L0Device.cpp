@@ -13,7 +13,6 @@
 #include "L0Device.h"
 #include "L0Defs.h"
 #include "L0Event.h"
-#include "L0Interop.h"
 #include "L0Plugin.h"
 #include "L0Program.h"
 #include "L0Trace.h"
@@ -179,6 +178,8 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin,
   // Adjust the static SPIR-V grid values based on the device's reported limits.
   if (uint32_t MaxGroupSize = std::min(getMaxGroupSizeX(), getMaxGroupSize()))
     GridValues.GV_Max_WG_Size = MaxGroupSize;
+  if (uint32_t MaxGroupCount = getMaxGroupCountX())
+    GridValues.GV_Max_Teams = MaxGroupCount;
   if (uint32_t SIMDWidth = getSIMDWidth())
     GridValues.GV_Warp_Size = SIMDWidth;
 
@@ -186,10 +187,10 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin,
 
   DeviceArch = computeArch();
   // Default allocation kind for this device.
-  AllocKind = isDiscreteDevice() ? TARGET_ALLOC_DEVICE : TARGET_ALLOC_SHARED;
+  AllocKind = isDiscreteDevice() ? OL_ALLOC_TYPE_DEVICE : OL_ALLOC_TYPE_MANAGED;
 
   ze_kernel_indirect_access_flags_t Flags =
-      (AllocKind == TARGET_ALLOC_DEVICE)
+      (AllocKind == OL_ALLOC_TYPE_DEVICE)
           ? ZE_KERNEL_INDIRECT_ACCESS_FLAG_DEVICE
           : ZE_KERNEL_INDIRECT_ACCESS_FLAG_SHARED;
   IndirectAccessFlags = Flags;
@@ -339,14 +340,14 @@ Error L0DeviceTy::queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
   return Plugin::success();
 }
 
-Expected<void *> L0DeviceTy::allocate(size_t Size, void *HstPtr,
-                                      TargetAllocTy Kind, size_t Alignment) {
+Expected<void *> L0DeviceTy::allocate(size_t Size, ol_alloc_type_t Kind,
+                                      size_t Alignment) {
   return dataAlloc(Size, Alignment, Kind,
-                   /*Offset=*/0, /*UserAlloc=*/HstPtr == nullptr,
+                   /*Offset=*/0, /*UserAlloc=*/true,
                    /*DevMalloc=*/false);
 }
 
-Error L0DeviceTy::free(void *TgtPtr, TargetAllocTy Kind) {
+Error L0DeviceTy::free(void *TgtPtr, ol_alloc_type_t Kind) {
   return dataDelete(TgtPtr);
 }
 
@@ -444,8 +445,8 @@ const char *L0DeviceTy::getArchCStr() const {
 Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   InfoTreeNode Info;
   Info.add("Device Number", getDeviceId());
-  Info.add("Device Name", getNameCStr(), "", DeviceInfo::NAME);
-  Info.add("Product Name", getArchCStr(), "", DeviceInfo::PRODUCT_NAME);
+  Info.add("Device Name", getArchCStr(), "", DeviceInfo::NAME);
+  Info.add("Product Name", getNameCStr(), "", DeviceInfo::PRODUCT_NAME);
   Info.add("Device Type", "GPU", "", DeviceInfo::TYPE);
   Info.add("Vendor", "Intel", "", DeviceInfo::VENDOR);
   Info.add("Vendor ID", getVendorId(), "", DeviceInfo::VENDOR_ID);
@@ -604,79 +605,6 @@ Expected<void *> L0DeviceTy::getNativeQueueHandle(__tgt_async_info *AsyncInfo) {
   return CmdList;
 }
 
-interop_spec_t L0DeviceTy::selectInteropPreference(int32_t InteropType,
-                                                   int32_t NumPrefers,
-                                                   interop_spec_t *Prefers) {
-  // no supported preference found, set default to level_zero,
-  // non-ordered unless is targetsync.
-  return interop_spec_t{
-      tgt_fr_level_zero,
-      {InteropType == kmp_interop_type_targetsync /*inorder*/, 0},
-      0};
-}
-
-Expected<OmpInteropTy> L0DeviceTy::createInterop(int32_t InteropContext,
-                                                 interop_spec_t &InteropSpec) {
-  auto *Ret = new omp_interop_val_t(
-      DeviceId, static_cast<kmp_interop_type_t>(InteropContext));
-  Ret->fr_id = tgt_fr_level_zero;
-  Ret->vendor_id = omp_vendor_intel;
-
-  if (InteropContext == kmp_interop_type_target ||
-      InteropContext == kmp_interop_type_targetsync) {
-    Ret->device_info.Platform = getZeDriver();
-    Ret->device_info.Device = getZeDevice();
-    Ret->device_info.Context = getZeContext();
-  }
-
-  Ret->rtl_property = new L0Interop::Property();
-  if (InteropContext == kmp_interop_type_targetsync) {
-    Ret->async_info = new __tgt_async_info();
-
-    // Ensure cleanup on error
-    llvm::scope_exit CleanupOnError([&]() {
-      if (Ret->async_info)
-        delete Ret->async_info;
-      if (Ret->rtl_property)
-        delete static_cast<L0Interop::Property *>(Ret->rtl_property);
-      delete Ret;
-    });
-
-    auto *L0 = static_cast<L0Interop::Property *>(Ret->rtl_property);
-
-    bool InOrder = InteropSpec.attrs.inorder;
-    Ret->attrs.inorder = InOrder;
-    auto CmdListOrErr = createImmCmdList(getZeContext(), InOrder);
-    if (!CmdListOrErr)
-      return CmdListOrErr.takeError();
-    Ret->async_info->Queue = *CmdListOrErr;
-    L0->ImmCmdList = *CmdListOrErr;
-
-    CleanupOnError.release();
-  }
-
-  return Ret;
-}
-
-Error L0DeviceTy::releaseInterop(OmpInteropTy Interop) {
-  const auto DeviceId = getDeviceId();
-
-  if (!Interop || Interop->device_id != static_cast<intptr_t>(DeviceId)) {
-    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                         "Invalid/inconsistent OpenMP interop " DPxMOD "\n",
-                         DPxPTR(Interop));
-  }
-  auto *L0 = static_cast<L0Interop::Property *>(Interop->rtl_property);
-  if (Interop->async_info && Interop->async_info->Queue) {
-    auto ImmCmdList = L0->ImmCmdList;
-    CALL_ZE_RET_ERROR(zeCommandListDestroy, ImmCmdList);
-  }
-  delete L0;
-  delete Interop;
-
-  return Plugin::success();
-}
-
 /// Enqueue fill command.
 Error L0DeviceTy::enqueueMemFill(void *Ptr, const void *Pattern,
                                  size_t PatternSize, size_t Size,
@@ -721,19 +649,6 @@ Expected<void *> L0DeviceTy::dataAlloc(size_t Size, size_t Align, int32_t Kind,
                                        bool DevMalloc, uint32_t MemAdvice,
                                        AllocOptionTy AllocOpt) {
 
-  const bool UseDedicatedPool =
-      (AllocOpt == AllocOptionTy::ALLOC_OPT_REDUCTION_SCRATCH) ||
-      (AllocOpt == AllocOptionTy::ALLOC_OPT_REDUCTION_COUNTER);
-  if (Kind == TARGET_ALLOC_DEFAULT) {
-    if (UserAlloc)
-      Kind = TARGET_ALLOC_DEVICE;
-    else if (AllocOpt == AllocOptionTy::ALLOC_OPT_HOST_MEM)
-      Kind = TARGET_ALLOC_HOST;
-    else if (UseDedicatedPool)
-      Kind = TARGET_ALLOC_DEVICE;
-    else
-      Kind = getAllocKind();
-  }
   auto &Allocator = getMemAllocator(Kind);
   return Allocator.alloc(Size, Align, Kind, Offset, UserAlloc, DevMalloc,
                          MemAdvice, AllocOpt);
@@ -912,9 +827,8 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
   llvm::sort(Funcs,
              [](const auto &X, const auto &Y) { return X.second < Y.second; });
 
-  auto BufferOrErr =
-      allocate(Funcs.size() * sizeof(void *),
-               /*HostPtr=*/nullptr, TARGET_ALLOC_DEVICE, /*Alignment=*/0);
+  auto BufferOrErr = allocate(Funcs.size() * sizeof(void *),
+                              OL_ALLOC_TYPE_DEVICE, /*Alignment=*/0);
   if (!BufferOrErr)
     return HandleErr(BufferOrErr.takeError());
 
@@ -926,7 +840,7 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
         IsCtor ? "constructors" : "destructors");
 
   auto CleanupBufferAndErr = [&](Error RetErr) {
-    if (auto Err = free(Buffer, TARGET_ALLOC_DEVICE)) {
+    if (auto Err = free(Buffer, OL_ALLOC_TYPE_DEVICE)) {
       return joinErrors(std::move(RetErr), std::move(Err));
     }
     return RetErr;

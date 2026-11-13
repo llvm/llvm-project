@@ -17,7 +17,8 @@ bool CheckReductionDIM(std::optional<int> &dim, FoldingContext &context,
     return true; // no DIM= argument
   }
   if (auto *dimConst{
-          Folder<SubscriptInteger>{context}.Folding(arg[*dimIndex])}) {
+          Folder<SubscriptInteger>{SubscriptIntegerKind, context}.Folding(
+              arg[*dimIndex])}) {
     if (auto dimScalar{dimConst->GetScalarValue()}) {
       auto dimVal{dimScalar->ToInt64()};
       if (dimVal >= 1 && dimVal <= rank) {
@@ -37,7 +38,7 @@ Constant<LogicalResult> *GetReductionMASK(
     std::optional<ActualArgument> &maskArg, const ConstantSubscripts &shape,
     FoldingContext &context) {
   Constant<LogicalResult> *mask{
-      Folder<LogicalResult>{context}.Folding(maskArg)};
+      Folder<LogicalResult>{LogicalResultKind, context}.Folding(maskArg)};
   if (mask &&
       !CheckConformance(context.messages(), AsShape(shape),
           AsShape(mask->shape()), CheckConformanceFlags::RightScalarExpandable,

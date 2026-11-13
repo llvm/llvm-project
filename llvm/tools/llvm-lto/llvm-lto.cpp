@@ -32,7 +32,6 @@
 #include "llvm/LTO/legacy/LTOCodeGenerator.h"
 #include "llvm/LTO/legacy/LTOModule.h"
 #include "llvm/LTO/legacy/ThinLTOCodeGenerator.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -45,18 +44,15 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
 #include <string>
 #include <system_error>
-#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -520,11 +516,11 @@ static void listDependentLibraries() {
   }
 }
 
-static void printMachOCPUOnly() {
+static void printMachOCPUOnly(const cl::LibraryOptionsContext &LibraryOptions) {
   LLVMContext Context;
   Context.setDiagnosticHandler(std::make_unique<LLVMLTODiagnosticHandler>(),
                                true);
-  TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple());
+  TargetOptions Options = codegen::getTargetOptions(LibraryOptions, Triple());
   for (auto &Filename : InputFilenames) {
     ErrorOr<std::unique_ptr<LTOModule>> ModuleOrErr =
         LTOModule::createFromFile(Context, Filename, Options);
@@ -712,7 +708,6 @@ private:
       report_fatal_error(
           "OutputFilename is necessary to store the combined index.\n");
 
-    LLVMContext Ctx;
     std::vector<std::unique_ptr<MemoryBuffer>> InputBuffers;
     for (unsigned i = 0; i < InputFilenames.size(); ++i) {
       auto &Filename = InputFilenames[i];
@@ -930,7 +925,6 @@ private:
 
     std::vector<std::unique_ptr<MemoryBuffer>> InputBuffers;
     for (auto &Filename : InputFilenames) {
-      LLVMContext Ctx;
       auto InputOrErr = MemoryBuffer::getFile(Filename);
       error(InputOrErr, "error " + CurrentActivity);
       InputBuffers.push_back(std::move(*InputOrErr));
@@ -965,7 +959,6 @@ private:
     if (!ThinLTOIndex.empty())
       errs() << "Warning: -thinlto-index ignored for full ThinLTO process";
 
-    LLVMContext Ctx;
     std::vector<std::unique_ptr<MemoryBuffer>> InputBuffers;
     for (unsigned i = 0; i < InputFilenames.size(); ++i) {
       auto &Filename = InputFilenames[i];
@@ -1017,14 +1010,14 @@ int main(int argc, char **argv) {
   InitializeAllAsmParsers();
 
   cl::LibraryOptionsContext LibraryOptions;
-  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(argv, argc),
-                              "llvm LTO linker\n");
+  cl::parseCommandLineOptions(LibraryOptions, codegen::getToolOptions(),
+                              ArrayRef(argv, argc), "llvm LTO linker\n");
 
   if (OptLevel < '0' || OptLevel > '3')
     error("optimization level must be between 0 and 3");
 
   // set up the TargetOptions for the machine
-  TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple());
+  TargetOptions Options = codegen::getTargetOptions(LibraryOptions, Triple());
 
   if (ListSymbolsOnly || QueryHasCtorDtor) {
     testLTOModule(Options);
@@ -1057,7 +1050,7 @@ int main(int argc, char **argv) {
   }
 
   if (PrintMachOCPUOnly) {
-    printMachOCPUOnly();
+    printMachOCPUOnly(LibraryOptions);
     return 0;
   }
 

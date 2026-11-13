@@ -82,6 +82,14 @@ static bool isExtractHiElt(SDValue In, SDValue &Out) {
   return false;
 }
 
+static bool isLoEltExtractHi(SDValue BV) {
+  SDValue Lo = stripBitcast(BV.getOperand(0));
+  if (Lo.getOpcode() == ISD::FNEG)
+    Lo = stripBitcast(Lo.getOperand(0));
+  SDValue Unused;
+  return isExtractHiElt(Lo, Unused);
+}
+
 static SDValue createVOP3PSrc32FromLo16(SDValue Lo, SDValue Src,
                                         llvm::SelectionDAG *CurDAG,
                                         const GCNSubtarget *Subtarget) {
@@ -1629,6 +1637,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUF(SDValue Addr, SDValue &Ptr, SDValue &VAddr,
   if (Subtarget->useFlatForGlobal())
     return false;
 
+  Addr = Expand32BitAddress(Addr);
   SDLoc DL(Addr);
 
   Idxen = CurDAG->getTargetConstant(0, DL, MVT::i1);
@@ -1926,6 +1935,8 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(
   int64_t OffsetVal = 0;
 
   unsigned AS = findMemSDNode(N)->getAddressSpace();
+  if (AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
+    Addr = Expand32BitAddress(Addr);
 
   bool CanHaveFlatSegmentOffsetBug =
       Subtarget->hasFlatSegmentOffsetBug() &&
@@ -2073,6 +2084,8 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
   using AMDGPU::FlatAddrSpace;
   int64_t ImmOffset = 0;
   ScaleOffset = false;
+
+  Addr = Expand32BitAddress(Addr);
 
   // Match the immediate offset first, which canonically is moved as low as
   // possible.
@@ -2468,7 +2481,7 @@ bool AMDGPUDAGToDAGISel::isSOffsetLegalWithImmOffset(SDValue *SOffset,
 // the load byte size. If it is update \p Offset to a pre-scaled value and
 // return true.
 bool AMDGPUDAGToDAGISel::SelectScaleOffset(SDNode *N, SDValue &Offset,
-                                           bool IsSigned) const {
+                                           bool IsSigned, bool IsSMEM) const {
   bool ScaleOffset = false;
   if (!Subtarget->hasScaleOffset() || !Offset)
     return false;
@@ -2494,10 +2507,30 @@ bool AMDGPUDAGToDAGISel::SelectScaleOffset(SDNode *N, SDValue &Offset,
       ScaleOffset = C->getZExtValue() == Size;
   }
 
-  if (ScaleOffset)
-    Offset = Off.getOperand(0);
+  if (!ScaleOffset)
+    return false;
 
-  return ScaleOffset;
+  // SMEM scales the offset in 32 bits, other instructions in 64 bits.
+  unsigned Bits = Log2_32_Ceil(Size);
+  if (IsSMEM) {
+    if (Off.getValueType() == MVT::i64) {
+      KnownBits Known = CurDAG->computeKnownBits(Off.getOperand(0));
+      if (Known.countMaxActiveBits() + Bits > 32)
+        return false;
+    }
+  } else if (Off != Offset) {
+    SDNodeFlags Flags = Off->getFlags();
+    SDValue Idx = Off.getOperand(0);
+    if (IsSigned && !Flags.hasNoSignedWrap() &&
+        CurDAG->ComputeNumSignBits(Idx) <= Bits)
+      return false;
+    if (!IsSigned && !Flags.hasNoUnsignedWrap() &&
+        CurDAG->computeKnownBits(Idx).countMinLeadingZeros() < Bits)
+      return false;
+  }
+
+  Offset = Off.getOperand(0);
+  return true;
 }
 
 // Match an immediate (if Offset is not null) or an SGPR (if SOffset is
@@ -2514,7 +2547,8 @@ bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDNode *N, SDValue ByteOffsetNode,
   if (ScaleOffset) {
     assert(N && SOffset);
 
-    *ScaleOffset = SelectScaleOffset(N, ByteOffsetNode, false /* IsSigned */);
+    *ScaleOffset = SelectScaleOffset(N, ByteOffsetNode, false /* IsSigned */,
+                                     true /* IsSMEM */);
   }
 
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(ByteOffsetNode);
@@ -2895,7 +2929,7 @@ bool AMDGPUDAGToDAGISel::isCBranchSCC(const SDNode *N) const {
     return true;
 
   if (VT == MVT::i64) {
-    ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+    ISD::CondCode CC = Cond.getOperandCondCode(2);
     return (CC == ISD::SETEQ || CC == ISD::SETNE) &&
            Subtarget->hasScalarCompareEq64();
   }
@@ -2917,7 +2951,7 @@ static SDValue combineBallotPattern(SDValue VCMP, bool &Negate) {
   // Cond becomes a i(WaveSize) full mask value.
   // Note that ballot doesn't use SETEQ condition but its easy to support it
   // here for completeness, so in this case Negate is set true on return.
-  auto VCMP_CC = cast<CondCodeSDNode>(VCMP.getOperand(2))->get();
+  auto VCMP_CC = VCMP.getOperandCondCode(2);
   if ((VCMP_CC == ISD::SETEQ || VCMP_CC == ISD::SETNE) &&
       isNullConstant(VCMP.getOperand(1))) {
 
@@ -2951,7 +2985,7 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
   if (Cond.getOpcode() == ISD::SETCC &&
       Cond->getOperand(0)->getOpcode() == AMDGPUISD::SETCC) {
     SDValue VCMP = Cond->getOperand(0);
-    auto CC = cast<CondCodeSDNode>(Cond->getOperand(2))->get();
+    auto CC = Cond->getOperandCondCode(2);
     if ((CC == ISD::SETEQ || CC == ISD::SETNE) &&
         isNullConstant(Cond->getOperand(1)) &&
         // We may encounter ballot.i64 in wave32 mode on -O0.
@@ -3646,6 +3680,14 @@ bool AMDGPUDAGToDAGISel::SelectVOP3NoMods(SDValue In, SDValue &Src) const {
   return true;
 }
 
+bool AMDGPUDAGToDAGISel::SelectVOP3NoOpSelMods(SDValue In, SDValue &Src) const {
+  SDValue Unused;
+  if (isExtractHiElt(In, Unused))
+    return false;
+
+  return SelectVOP3NoMods(In, Src);
+}
+
 bool AMDGPUDAGToDAGISel::SelectVINTERPModsImpl(SDValue In, SDValue &Src,
                                                SDValue &SrcMods,
                                                bool OpSel) const {
@@ -3703,8 +3745,27 @@ bool AMDGPUDAGToDAGISel::SelectVOP3OMods(SDValue In, SDValue &Src,
   return true;
 }
 
+bool AMDGPUDAGToDAGISel::SelectVOP3PModsPkFmaOpSel0(SDValue In, SDValue &Src,
+                                                    SDValue &SrcMods) const {
+  return SelectVOP3PMods(In, Src, SrcMods, false,
+                         Subtarget->hasPkF32InvalidOpSel() &&
+                             In.getValueType() == MVT::v2f32);
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3PModsPkAddMulOpSel0(SDValue In, SDValue &Src,
+                                                       SDValue &SrcMods) const {
+  if (!SelectVOP3PMods(In, Src, SrcMods))
+    return false;
+
+  return !Subtarget->hasPkF32InvalidOpSel() ||
+         In.getValueType() != MVT::v2f32 ||
+         (cast<ConstantSDNode>(SrcMods)->getZExtValue() &
+          SISrcMods::OP_SEL_0) == 0;
+}
+
 bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
-                                         SDValue &SrcMods, bool IsDOT) const {
+                                         SDValue &SrcMods, bool IsDOT,
+                                         bool NoOpSel0) const {
   unsigned Mods = SISrcMods::NONE;
   Src = In;
 
@@ -3718,7 +3779,8 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
   bool HasOpSel = Src.getValueSizeInBits() != 128;
 
   if (Src.getOpcode() == ISD::BUILD_VECTOR && Src.getNumOperands() == 2 &&
-      (!IsDOT || !Subtarget->hasDOTOpSelHazard())) {
+      (!IsDOT || !Subtarget->hasDOTOpSelHazard()) &&
+      (!NoOpSel0 || !isLoEltExtractHi(Src))) {
     unsigned VecMods = Mods;
 
     SDValue Lo = stripBitcast(Src.getOperand(0));
@@ -3827,7 +3889,7 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
     auto *SVN = cast<ShuffleVectorSDNode>(Src);
     ArrayRef<int> Mask = SVN->getMask();
 
-    if (Mask[0] < 2 && Mask[1] < 2) {
+    if (Mask[0] < 2 && Mask[1] < 2 && (!NoOpSel0 || Mask[0] != 1)) {
       // src1 should be undef.
       SDValue ShuffleSrc = SVN->getOperand(0);
 

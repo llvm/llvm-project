@@ -293,15 +293,14 @@ define dso_local void @test_fetch_sub_32_noret(ptr nocapture noundef %i) local_u
 ; CHECK:       .Ltest_fetch_sub_32_noret$local:
 ; CHECK-NEXT:    .type .Ltest_fetch_sub_32_noret$local,@function
 ; CHECK-NEXT:  # %bb.0: # %entry
-; CHECK-NEXT:    w2 = 10
-; CHECK-NEXT:    w2 = -w2
-; CHECK-NEXT:    w3 = w2
+; CHECK-NEXT:    w2 = -10
+; CHECK-NEXT:    w3 = -10
 ; CHECK-NEXT:    lock *(u32 *)(r1 + 0) += w3
-; CHECK-NEXT:    w3 = w2
+; CHECK-NEXT:    w3 = -10
 ; CHECK-NEXT:    w3 = atomic_fetch_add((u32 *)(r1 + 0), w3)
-; CHECK-NEXT:    w3 = w2
+; CHECK-NEXT:    w3 = -10
 ; CHECK-NEXT:    w3 = atomic_fetch_add((u32 *)(r1 + 0), w3)
-; CHECK-NEXT:    w3 = w2
+; CHECK-NEXT:    w3 = -10
 ; CHECK-NEXT:    w3 = atomic_fetch_add((u32 *)(r1 + 0), w3)
 ; CHECK-NEXT:    w2 = atomic_fetch_add((u32 *)(r1 + 0), w2)
 ; CHECK-NEXT:    exit
@@ -320,17 +319,16 @@ define dso_local i32 @test_fetch_sub_32_ret(ptr nocapture noundef %i) local_unna
 ; CHECK:       .Ltest_fetch_sub_32_ret$local:
 ; CHECK-NEXT:    .type .Ltest_fetch_sub_32_ret$local,@function
 ; CHECK-NEXT:  # %bb.0: # %entry
-; CHECK-NEXT:    w0 = 10
-; CHECK-NEXT:    w0 = -w0
-; CHECK-NEXT:    w2 = w0
+; CHECK-NEXT:    w0 = -10
+; CHECK-NEXT:    w2 = -10
 ; CHECK-NEXT:    w2 = atomic_fetch_add((u32 *)(r1 + 0), w2)
-; CHECK-NEXT:    w3 = w0
+; CHECK-NEXT:    w3 = -10
 ; CHECK-NEXT:    w3 = atomic_fetch_add((u32 *)(r1 + 0), w3)
 ; CHECK-NEXT:    w3 += w2
-; CHECK-NEXT:    w2 = w0
+; CHECK-NEXT:    w2 = -10
 ; CHECK-NEXT:    w2 = atomic_fetch_add((u32 *)(r1 + 0), w2)
 ; CHECK-NEXT:    w2 += w3
-; CHECK-NEXT:    w3 = w0
+; CHECK-NEXT:    w3 = -10
 ; CHECK-NEXT:    w3 = atomic_fetch_add((u32 *)(r1 + 0), w3)
 ; CHECK-NEXT:    w3 += w2
 ; CHECK-NEXT:    w0 = atomic_fetch_add((u32 *)(r1 + 0), w0)
@@ -355,15 +353,14 @@ define dso_local void @test_fetch_sub_64_noret(ptr nocapture noundef %i) local_u
 ; CHECK:       .Ltest_fetch_sub_64_noret$local:
 ; CHECK-NEXT:    .type .Ltest_fetch_sub_64_noret$local,@function
 ; CHECK-NEXT:  # %bb.0: # %entry
-; CHECK-NEXT:    r2 = 10
-; CHECK-NEXT:    r2 = -r2
-; CHECK-NEXT:    r3 = r2
+; CHECK-NEXT:    r2 = -10
+; CHECK-NEXT:    r3 = -10
 ; CHECK-NEXT:    lock *(u64 *)(r1 + 0) += r3
-; CHECK-NEXT:    r3 = r2
+; CHECK-NEXT:    r3 = -10
 ; CHECK-NEXT:    r3 = atomic_fetch_add((u64 *)(r1 + 0), r3)
-; CHECK-NEXT:    r3 = r2
+; CHECK-NEXT:    r3 = -10
 ; CHECK-NEXT:    r3 = atomic_fetch_add((u64 *)(r1 + 0), r3)
-; CHECK-NEXT:    r3 = r2
+; CHECK-NEXT:    r3 = -10
 ; CHECK-NEXT:    r3 = atomic_fetch_add((u64 *)(r1 + 0), r3)
 ; CHECK-NEXT:    r2 = atomic_fetch_add((u64 *)(r1 + 0), r2)
 ; CHECK-NEXT:    exit
@@ -382,17 +379,16 @@ define dso_local i64 @test_fetch_sub_64_ret(ptr nocapture noundef %i) local_unna
 ; CHECK:       .Ltest_fetch_sub_64_ret$local:
 ; CHECK-NEXT:    .type .Ltest_fetch_sub_64_ret$local,@function
 ; CHECK-NEXT:  # %bb.0: # %entry
-; CHECK-NEXT:    r0 = 10
-; CHECK-NEXT:    r0 = -r0
-; CHECK-NEXT:    r2 = r0
+; CHECK-NEXT:    r0 = -10
+; CHECK-NEXT:    r2 = -10
 ; CHECK-NEXT:    r2 = atomic_fetch_add((u64 *)(r1 + 0), r2)
-; CHECK-NEXT:    r3 = r0
+; CHECK-NEXT:    r3 = -10
 ; CHECK-NEXT:    r3 = atomic_fetch_add((u64 *)(r1 + 0), r3)
 ; CHECK-NEXT:    r3 += r2
-; CHECK-NEXT:    r2 = r0
+; CHECK-NEXT:    r2 = -10
 ; CHECK-NEXT:    r2 = atomic_fetch_add((u64 *)(r1 + 0), r2)
 ; CHECK-NEXT:    r2 += r3
-; CHECK-NEXT:    r3 = r0
+; CHECK-NEXT:    r3 = -10
 ; CHECK-NEXT:    r3 = atomic_fetch_add((u64 *)(r1 + 0), r3)
 ; CHECK-NEXT:    r3 += r2
 ; CHECK-NEXT:    r0 = atomic_fetch_add((u64 *)(r1 + 0), r0)

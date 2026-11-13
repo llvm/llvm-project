@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386 -target-feature +avx10.2 -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -flax-vector-conversions=none -ffreestanding %s -triple=i386 -target-feature +avx10.2 -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK %}
 // RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64 -target-feature +avx10.2 -emit-llvm -o - | FileCheck %s  --check-prefixes=CHECK
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -flax-vector-conversions=none -ffreestanding %s -triple=x86_64 -target-feature +avx10.2 -emit-llvm -o - | FileCheck %s  --check-prefixes=CHECK %}
 
 #include <immintrin.h>
 #include <stddef.h>

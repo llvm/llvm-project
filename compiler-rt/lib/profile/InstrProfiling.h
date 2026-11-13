@@ -299,14 +299,20 @@ int __llvm_write_custom_profile(
 COMPILER_RT_VISIBILITY extern int INSTR_PROF_PROFILE_RUNTIME_VAR;
 
 /*!
- * This variable is defined in InstrProfilingVersionVar.c as a hidden symbol
- * (except on Apple platforms where this symbol is checked by TAPI).  Its main
- * purpose is to encode the raw profile version value and other format related
- * information such as whether the profile is from IR based instrumentation. The
- * variable is defined as weak so that compiler can emit an overriding
- * definition depending on user option.
+ * This variable has protected visibility on GPUs and the usual runtime
+ * visibility on other targets. It is defined in InstrProfilingVersionVar.c. Its
+ * main purpose is to encode the raw profile version value and other format
+ * related information such as whether the profile is from IR based
+ * instrumentation. The variable is defined as weak so that compiler can emit an
+ * overriding definition depending on user option.
  */
-COMPILER_RT_VISIBILITY extern uint64_t
+#if defined(__AMDGCN__) || defined(__NVPTX__)
+#define INSTR_PROF_RAW_VERSION_VISIBILITY                                      \
+  __attribute__((visibility("protected")))
+#else
+#define INSTR_PROF_RAW_VERSION_VISIBILITY COMPILER_RT_VISIBILITY
+#endif
+INSTR_PROF_RAW_VERSION_VISIBILITY extern uint64_t
     INSTR_PROF_RAW_VERSION_VAR; /* __llvm_profile_raw_version */
 
 /*!

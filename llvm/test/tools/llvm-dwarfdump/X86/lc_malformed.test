@@ -2,6 +2,7 @@
 # CHECK: load command 0 filesize field in LC_SEGMENT_64 greater than vmsize field
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

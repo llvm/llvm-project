@@ -43,7 +43,7 @@ body:             |
     %0 = MOV32r0 implicit-def dead $eflags, debug-location !20
     DBG_VALUE %0, _, !18, !DIExpression(), debug-location !21
     DBG_VALUE %0, _, !19, !DIExpression(), debug-location !22
-    $eax = COPY killed %0, debug-location !22
+    $eax = COPY %0, debug-location !22
     RET 0, killed $eax, debug-location !22
 
 ...

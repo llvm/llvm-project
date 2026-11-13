@@ -358,7 +358,9 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   if (TI->hasOneUse() || FI->hasOneUse()) {
     // Cond ? -X : -Y --> -(Cond ? X : Y)
     Value *X, *Y;
-    if (match(TI, m_FNeg(m_Value(X))) && match(FI, m_FNeg(m_Value(Y)))) {
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (match(TI, m_FNegOrFSubNegZero(m_Value(X))) &&
+        match(FI, m_FNegOrFSubNegZero(m_Value(Y)))) {
       // Intersect FMF from the fneg instructions and union those with the
       // select.
       FastMathFlags FMF = TI->getFastMathFlags();
@@ -507,6 +509,24 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   return nullptr;
 }
 
+/// Return true if a constant in the given argument position of the given
+/// intrinsic may enable cheaper lowering, in which case a select should not
+/// be sunk into that argument (it would hide the constant behind the
+/// select).
+static bool isConstantBeneficialInIntrinsicArg(Intrinsic::ID IID,
+                                               unsigned ArgNo) {
+  switch (IID) {
+  case Intrinsic::copysign:
+    // Only the sign operand is constant-sensitive: copysign(y, +-C) folds to
+    // fabs/fnabs. A constant magnitude has no cheaper lowering, so sinking
+    // the select is profitable (and merges two calls into one).
+    return ArgNo == 1;
+  default:
+    // Conservatively assume that a constant may be beneficial.
+    return true;
+  }
+}
+
 /// select C, f(..., X, ...), f(..., Y, ...) --> f(..., select C, X, Y, ...)
 static Instruction *
 foldSelectIntoIntrinsicArg(SelectInst &SI, IntrinsicInst *TII,
@@ -536,7 +556,10 @@ foldSelectIntoIntrinsicArg(SelectInst &SI, IntrinsicInst *TII,
       !TV->getType()->isVectorTy())
     return nullptr;
   // Constant args may enable cheaper lowering, e.g. pow(X, 2.0) -> X * X.
-  if (isa<Constant>(TV) || isa<Constant>(FV))
+  // Sinking the select into the argument would hide the constant, so reject
+  // the sink for argument positions where a constant is beneficial.
+  if ((isa<Constant>(TV) || isa<Constant>(FV)) &&
+      isConstantBeneficialInIntrinsicArg(TII->getIntrinsicID(), *DiffArgNo))
     return nullptr;
 
   SmallVector<Value *> Args(TII->args());
@@ -3352,11 +3375,8 @@ static Instruction *foldSelectWithSRem(SelectInst &SI, InstCombinerImpl &IC,
   return nullptr;
 }
 
-/// Given that \p CondVal is known to be \p CondIsTrue, try to simplify \p SI.
-static Value *simplifyNestedSelectsUsingImpliedCond(SelectInst &SI,
-                                                    Value *CondVal,
-                                                    bool CondIsTrue,
-                                                    const DataLayout &DL) {
+Value *InstCombinerImpl::simplifyNestedSelectsUsingImpliedCond(
+    SelectInst &SI, Value *CondVal, bool CondIsTrue) {
   Value *InnerCondVal = SI.getCondition();
   Value *InnerTrueVal = SI.getTrueValue();
   Value *InnerFalseVal = SI.getFalseValue();
@@ -3374,7 +3394,7 @@ Instruction *InstCombinerImpl::foldAndOrOfSelectUsingImpliedCond(Value *Op,
          "Op must be either i1 or vector of i1.");
   if (SI.getCondition()->getType() != Op->getType())
     return nullptr;
-  if (Value *V = simplifyNestedSelectsUsingImpliedCond(SI, Op, IsAnd, DL))
+  if (Value *V = simplifyNestedSelectsUsingImpliedCond(SI, Op, IsAnd))
     return createSelectInstWithUnknownProfile(
         Op, IsAnd ? V : ConstantInt::getTrue(Op->getType()),
         IsAnd ? ConstantInt::getFalse(Op->getType()) : V);
@@ -3419,7 +3439,8 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
       }
     }
 
-    if (!match(TrueVal, m_FNeg(m_Specific(X))))
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (!match(TrueVal, m_FNegOrFSubNegZero(m_Specific(X))))
       return nullptr;
 
     // Forward-propagate nnan and ninf from the fcmp to the select.
@@ -3496,7 +3517,8 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
                m_ICmp(Pred, m_ElementWiseBitCast(m_Specific(X)), m_APInt(C))) ||
         !isSignBitCheck(Pred, *C, TrueIfSigned))
       continue;
-    if (!match(TrueVal, m_FNeg(m_Specific(X))))
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (!match(TrueVal, m_FNegOrFSubNegZero(m_Specific(X))))
       return nullptr;
     if (Swap == TrueIfSigned && !CondVal->hasOneUse() && !TrueVal->hasOneUse())
       return nullptr;
@@ -5159,8 +5181,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     if (TrueSI->getCondition()->getType() == CondVal->getType()) {
       // Fold nested selects if the inner condition can be implied by the outer
       // condition.
-      if (Value *V = simplifyNestedSelectsUsingImpliedCond(
-              *TrueSI, CondVal, /*CondIsTrue=*/true, DL))
+      if (Value *V = simplifyNestedSelectsUsingImpliedCond(*TrueSI, CondVal,
+                                                           /*CondIsTrue=*/true))
         return replaceOperand(SI, 1, V);
 
       // We choose this as normal form to enable folding on the And and
@@ -5194,7 +5216,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       // Fold nested selects if the inner condition can be implied by the outer
       // condition.
       if (Value *V = simplifyNestedSelectsUsingImpliedCond(
-              *FalseSI, CondVal, /*CondIsTrue=*/false, DL))
+              *FalseSI, CondVal, /*CondIsTrue=*/false))
         return replaceOperand(SI, 2, V);
 
       if (FalseSI->hasOneUse()) {

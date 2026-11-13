@@ -39,7 +39,7 @@ end program
 
 ! CHECK-NEXT: 'func.func' Pipeline
 ! CHECK-NEXT:   CudaHeapAllocPromotion
-! CHECK-NEXT:   MemoryAllocationOpt
+! CHECK-NEXT:   AllocationPlacement
 
 ! CHECK-NEXT: Inliner
 ! CHECK-NEXT: SimplifyRegionLite

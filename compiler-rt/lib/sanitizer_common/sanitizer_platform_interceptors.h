@@ -431,6 +431,12 @@ SANITIZER_WEAK_IMPORT void *aligned_alloc(__sanitizer::usize __alignment,
 #define SANITIZER_INTERCEPT_TRYJOIN SI_GLIBC
 #define SANITIZER_INTERCEPT_TIMEDJOIN SI_GLIBC
 #define SANITIZER_INTERCEPT_THR_EXIT SI_FREEBSD
+// C11 <threads.h> functions. glibc implements them with its internal pthread
+// functions, so they bypass the pthread interceptors. FreeBSD, NetBSD and
+// Android call the public pthread functions, which are already intercepted,
+// so intercepting the C11 functions there too would handle each call twice.
+// musl has the same problem as glibc but isn't handled yet.
+#define SANITIZER_INTERCEPT_C11_THREADS (SI_GLIBC && __GLIBC_PREREQ(2, 28))
 #define SANITIZER_INTERCEPT_TMPNAM SI_POSIX
 #define SANITIZER_INTERCEPT_TMPNAM_R (SI_GLIBC || SI_SOLARIS)
 #define SANITIZER_INTERCEPT_PTSNAME SI_LINUX
@@ -575,8 +581,9 @@ SANITIZER_WEAK_IMPORT void *aligned_alloc(__sanitizer::usize __alignment,
 #define SANITIZER_INTERCEPT_FACCESSAT (SI_NETBSD || SI_FREEBSD)
 #define SANITIZER_INTERCEPT_GETGROUPLIST \
   (SI_NETBSD || SI_FREEBSD || SI_LINUX)
-#define SANITIZER_INTERCEPT_STRLCPY \
-  (SI_NETBSD || SI_FREEBSD || SI_MAC || SI_ANDROID)
+#define SANITIZER_INTERCEPT_STRLCPY                   \
+  (SI_NETBSD || SI_FREEBSD || SI_MAC || SI_ANDROID || \
+   (SI_LINUX && __GLIBC_PREREQ(2, 38)))
 
 #define SANITIZER_INTERCEPT_NAME_TO_HANDLE_AT SI_LINUX_NOT_ANDROID
 #define SANITIZER_INTERCEPT_OPEN_BY_HANDLE_AT SI_LINUX_NOT_ANDROID
@@ -672,6 +679,8 @@ SANITIZER_WEAK_IMPORT void *aligned_alloc(__sanitizer::usize __alignment,
 #define SANITIZER_INTERCEPT_GETSERVENT_R SI_GLIBC
 #define SANITIZER_INTERCEPT_GETSERVBYNAME_R SI_GLIBC
 #define SANITIZER_INTERCEPT_GETSERVBYPORT_R SI_GLIBC
+#define SANITIZER_INTERCEPT_FTW SI_LINUX_NOT_ANDROID
+#define SANITIZER_INTERCEPT_FTW64 SI_GLIBC
 
 // Until free_sized and free_aligned_sized are more generally available,
 // we can only unconditionally intercept on ELF-based platforms where it

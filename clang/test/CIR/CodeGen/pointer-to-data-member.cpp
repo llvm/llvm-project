@@ -111,7 +111,7 @@ int Diamond::*p_vbase_sibling_direct = &Diamond::d;
 
 // Checks for test1()
 
-// CIR-BEFORE: cir.func {{.*}} @_Z5test1v() -> !cir.data_member<!s32i in !rec_Point> attributes {{{.*}}nothrow, optnone} {
+// CIR-BEFORE: cir.func {{.*}} @_Z5test1v() -> !cir.data_member<!s32i in !rec_Point> requires_call_conv_lowering attributes {{{.*}}nothrow, optnone} {
 // CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.data_member<!s32i in !rec_Point>>
 // CIR-BEFORE:   %[[MEMBER:.*]] = cir.const #cir.data_member<[1]> : !cir.data_member<!s32i in !rec_Point>
 // CIR-BEFORE:   cir.store %[[MEMBER]], %[[RETVAL]] : !cir.data_member<!s32i in !rec_Point>, !cir.ptr<!cir.data_member<!s32i in !rec_Point>>

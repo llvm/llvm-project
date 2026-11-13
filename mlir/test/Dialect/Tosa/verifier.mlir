@@ -205,56 +205,6 @@ func.func @test_scalar_slice(%arg0: tensor<f32>) -> tensor<f32> {
 
 // -----
 
-func.func @test_slice_invalid_start_values(%arg0: tensor<4x31x31xf32>) {
-  %start = tosa.const_shape values(dense<[-2, 0, 0]> : tensor<3xindex>) : () -> !tosa.shape<3>
-  %size = tosa.const_shape values(dense<[1, 1, 1]> : tensor<3xindex>) : () -> !tosa.shape<3>
-  // expected-error@+1 {{'tosa.slice' op start values must be non-negative, got [-2, 0, 0]}}
-  %1 = tosa.slice %arg0, %start, %size : (tensor<4x31x31xf32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<1x1x1xf32>
-  return
-}
-
-// -----
-
-func.func @test_slice_invalid_size_values(%arg0: tensor<4x31x31xf32>) {
-  %start = tosa.const_shape values(dense<[0, 0, 0]> : tensor<3xindex>) : () -> !tosa.shape<3>
-  %size = tosa.const_shape values(dense<[1, 0, 1]> : tensor<3xindex>) : () -> !tosa.shape<3>
-  // expected-error@+1 {{'tosa.slice' op size values must be > 0, got [1, 0, 1]}}
-  %1 = tosa.slice %arg0, %start, %size : (tensor<4x31x31xf32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<?x?x?xf32>
-  return
-}
-
-// -----
-
-func.func @test_slice_output_shape_mismatch(%arg0: tensor<4x5x6xf32>) {
-  %start = tosa.const_shape values(dense<[0, 0, 0]> : tensor<3xindex>) : () -> !tosa.shape<3>
-  %size = tosa.const_shape values(dense<[1, 2, 3]> : tensor<3xindex>) : () -> !tosa.shape<3>
-  // expected-error@+1 {{'tosa.slice' op expected output shape to match size values, got 'tensor<1x2x4xf32>' vs [1, 2, 3]}}
-  %1 = tosa.slice %arg0, %start, %size : (tensor<4x5x6xf32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<1x2x4xf32>
-  return
-}
-
-// -----
-
-func.func @test_slice_invalid_start_plus_size(%arg0: tensor<?x2xf32>) {
-  %start = tosa.const_shape values(dense<[-1, 1]> : tensor<2xindex>) : () -> !tosa.shape<2>
-  %size = tosa.const_shape values(dense<[3, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
-  // expected-error@+1 {{'tosa.slice' op start + size must be less than or equal to input dimension size, got start=1, size=2 vs input dim size=2 at dimension 1}}
-  %1 = tosa.slice %arg0, %start, %size : (tensor<?x2xf32>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x2xf32>
-  return
-}
-
-// -----
-
-func.func @test_slice_output_shape_mismatch_dynamic(%arg0: tensor<?x5x6xf32>) {
-  %start = tosa.const_shape values(dense<[0, 0, 0]> : tensor<3xindex>) : () -> !tosa.shape<3>
-  %size = tosa.const_shape values(dense<[1, 2, 3]> : tensor<3xindex>) : () -> !tosa.shape<3>
-  // expected-error@+1 {{'tosa.slice' op expected output shape to match size values, got 'tensor<?x2x4xf32>' vs [1, 2, 3]}}
-  %1 = tosa.slice %arg0, %start, %size : (tensor<?x5x6xf32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<?x2x4xf32>
-  return
-}
-
-// -----
-
 func.func @test_conv2d_mxfp_invalid_weight_zp(%arg0: tensor<1x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %arg1: tensor<8x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %arg2: tensor<8xf16>) -> tensor<1x4x4x8xf16> {
   %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   %weight_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf16>}> : () -> tensor<1xf16>
@@ -2435,18 +2385,18 @@ func.func @test_maxpool2d_adaptive_unexpected_output_width(%arg0: tensor<1x32x32
 
 // -----
 
-func.func @test_const_mxint8_uint8(%arg0 : index) -> tensor<2x!tosa.mxint8> {
+func.func @test_const_mxint8_uint8(%arg0 : index) -> tensor<2xmxi8> {
   // expected-error@+1 {{incompatible attribute for element type}}
-  %0 = "tosa.const"() <{values = dense<tensor<2x!tosa.mxint8> : [127: ui8, 245: ui8]>}> : () -> tensor<2x!tosa.mxint8>
-  return %0 : tensor<2x!tosa.mxint8>
+  %0 = "tosa.const"() <{values = dense<tensor<2xmxi8> : [127: ui8, 245: ui8]>}> : () -> tensor<2xmxi8>
+  return %0 : tensor<2xmxi8>
 }
 
 // -----
 
-func.func @test_const_mxint8_int64(%arg0 : index) -> tensor<2x!tosa.mxint8> {
+func.func @test_const_mxint8_int64(%arg0 : index) -> tensor<2xmxi8> {
   // expected-error@+1 {{incompatible attribute for element type}}
-  %0 = "tosa.const"() <{values = dense<tensor<2x!tosa.mxint8> : [127, 245]>}> : () -> tensor<2x!tosa.mxint8>
-  return %0 : tensor<2x!tosa.mxint8>
+  %0 = "tosa.const"() <{values = dense<tensor<2xmxi8> : [127, 245]>}> : () -> tensor<2xmxi8>
+  return %0 : tensor<2xmxi8>
 }
 
 // -----
@@ -2492,8 +2442,8 @@ func.func @test_block_scaled_const_scale_value_non_float_explicit_type() -> tens
 
 // -----
 
-!mxint8 = !tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>
-!mxint8_scale = !tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8, {1.0, 2.0, 4.0}>
+!mxint8 = !tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:mxi8>
+!mxint8_scale = !tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:mxi8, {1.0, 2.0, 4.0}>
 
 func.func @test_block_scaled_const_invalid_num_scales() -> tensor<2x32x!mxint8> {
   // expected-error@+1 {{'tosa.const' op attribute block scaled type is invalid: block scaled tensor type with scale values must have scale values for each block, expected 2, got 3}}
@@ -2503,10 +2453,10 @@ func.func @test_block_scaled_const_invalid_num_scales() -> tensor<2x32x!mxint8> 
 
 // -----
 
-func.func @test_block_scaled_const_invalid_num_scales_wide_inner_dim() -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>> {
+func.func @test_block_scaled_const_invalid_num_scales_wide_inner_dim() -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:mxi8>> {
   // expected-error@+1 {{'tosa.const' op attribute block scaled type is invalid: block scaled tensor type with scale values must have scale values for each block, expected 4, got 2}}
-  %0 = "tosa.const"() <{values = dense<tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8, {1.0, 2.0}>> : 0 : i8>}> : () -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
-  return %0 : tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
+  %0 = "tosa.const"() <{values = dense<tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:mxi8, {1.0, 2.0}>> : 0 : i8>}> : () -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:mxi8>>
+  return %0 : tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:mxi8>>
 }
 
 // -----
@@ -2530,16 +2480,6 @@ func.func @test_transpose_block_scaled_illegal_perms(%input: tensor<29x12x32x96x
   // expected-error@+1 {{expected no-op permutation on innermost dimension for block scaled input}}
   %transpose = tosa.transpose %input perms([3, 0, 1, 2]) : (tensor<29x12x32x96x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>) -> tensor<96x29x12x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>
   return %transpose : tensor<96x29x12x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>
-}
-
-// -----
-
-func.func @test_slice_block_scaled_invalid_block_size(%arg0: tensor<4x4x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
-  %start = tosa.const_shape values(dense<[0, 0, 1]> : tensor<3xindex>) : () -> !tosa.shape<3>
-  %size = tosa.const_shape values(dense<[1, 1, 32]> : tensor<3xindex>) : () -> !tosa.shape<3>
-  // expected-error@+1 {{'tosa.slice' op expected start innermost block size to match data type for block scaled input, got start block=1, scale block=32}}
-  %0 = tosa.slice %arg0, %start, %size {input_unsigned = false} : (tensor<4x4x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
-  return %0 : tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
 }
 
 // -----
@@ -2572,4 +2512,26 @@ func.func @test_reverse_block_scaled_rank_zero(%arg0: tensor<!tosa.block_scaled<
   // expected-error@+1 {{'tosa.reverse' op operand #0 must be tosa-conformant tensor of at least rank 1}}
   %0 = tosa.reverse %arg0 axis(0) : (tensor<!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
   return %0 : tensor<!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+}
+
+// -----
+
+
+func.func @test_legacy_const_mxint8_int64(%arg0 : index) -> tensor<2x!tosa.mxint8> {
+  // expected-error@+1 {{incompatible attribute for element type}}
+  %0 = "tosa.const"() <{values = dense<tensor<2x!tosa.mxint8> : [127, 245]>}> : () -> tensor<2x!tosa.mxint8>
+  return %0 : tensor<2x!tosa.mxint8>
+}
+
+
+// -----
+
+
+!mxint8 = !tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>
+!mxint8_scale = !tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8, {1.0, 2.0, 4.0}>
+
+func.func @test_legacy_block_scaled_const_invalid_num_scales() -> tensor<2x32x!mxint8> {
+  // expected-error@+1 {{'tosa.const' op attribute block scaled type is invalid: block scaled tensor type with scale values must have scale values for each block, expected 2, got 3}}
+  %0 = "tosa.const"() <{values = dense<tensor<2x32x!mxint8_scale> : 0 : i8>}> : () -> tensor<2x32x!mxint8>
+  return %0 : tensor<2x32x!mxint8>
 }

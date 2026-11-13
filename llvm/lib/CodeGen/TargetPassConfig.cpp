@@ -705,7 +705,7 @@ void TargetPassConfig::addIRPasses() {
     addPass(createBasicAAWrapperPass());
 
     // Run loop strength reduction before anything else.
-    if (!Opts.disable_lsr) {
+    if (EnableLoopStrengthReduce && !Opts.disable_lsr) {
       addPass(createCanonicalizeFreezeInLoopsPass());
       addPass(createLoopStrengthReducePass());
       if (EnableLoopTermFold)
@@ -778,7 +778,7 @@ void TargetPassConfig::addPassesToHandleExceptions() {
   // pad is shared by multiple invokes and is also a target of a normal
   // edge from elsewhere.
   if (TM->supportsExceptionModel(ExceptionHandling::SjLj)) {
-    addPass(createSjLjEHPreparePass(TM));
+    addPass(createSjLjEHPreparePass());
     HasEHPrep = true;
   }
 
@@ -1350,9 +1350,6 @@ void TargetPassConfig::addOptimizedRegAlloc() {
     addPass(&SSAMachineSchedulerID);
   }
 
-  // LiveIntervals is computed unconditionally before TwoAddressInstruction so
-  // that pass can rely on it instead of LiveVariables. This is a step toward
-  // removing LiveVariables entirely.
   addPass(&LiveIntervalsID);
 
   // Edge splitting is smarter with machine loop info.

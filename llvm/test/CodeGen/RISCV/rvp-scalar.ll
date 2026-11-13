@@ -3874,7 +3874,8 @@ define i32 @test_sati_i32_w1(i32 %a) {
 ;
 ; RV64-LABEL: test_sati_i32_w1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    psati.w a0, a0, 1
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    sati a0, a0, 1
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.sati.i32(i32 %a, i32 1)
   ret i32 %res
@@ -3888,8 +3889,18 @@ define i32 @test_sati_i32_w32(i32 %a) {
 ;
 ; RV64-LABEL: test_sati_i32_w32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    psati.w a0, a0, 32
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    sati a0, a0, 32
 ; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.sati.i32(i32 %a, i32 32)
+  ret i32 %res
+}
+
+define signext i32 @test_sati_i32_w32_signext(i32 signext %a) {
+; CHECK-LABEL: test_sati_i32_w32_signext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sati a0, a0, 32
+; CHECK-NEXT:    ret
   %res = call i32 @llvm.riscv.sati.i32(i32 %a, i32 32)
   ret i32 %res
 }
@@ -3911,9 +3922,307 @@ define i32 @test_usati_u32_w31(i32 %a) {
 ;
 ; RV64-LABEL: test_usati_u32_w31:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    pusati.w a0, a0, 31
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    usati a0, a0, 31
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.usati.i32(i32 %a, i32 31)
+  ret i32 %res
+}
+
+define signext i32 @test_usati_u32_w31_signext(i32 signext %a) {
+; CHECK-LABEL: test_usati_u32_w31_signext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    usati a0, a0, 31
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.usati.i32(i32 %a, i32 31)
+  ret i32 %res
+}
+
+define i32 @nclipu_u32(i64 %a, i32 %shamt) {
+; RV32-LABEL: nclipu_u32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    nclipu a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: nclipu_u32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srl a0, a0, a1
+; RV64-NEXT:    pnclipup.w a0, a0, zero
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.nclipu.u32(i64 %a, i32 %shamt)
+  ret i32 %res
+}
+
+define i32 @nclipru_u32(i64 %a, i32 %shamt) {
+; RV32-LABEL: nclipru_u32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    nclipru a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: nclipru_u32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    andi a1, a1, 63
+; RV64-NEXT:    neg a1, a1
+; RV64-NEXT:    shlr a0, a0, a1
+; RV64-NEXT:    pnclipup.w a0, a0, zero
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.nclipru.u32(i64 %a, i32 %shamt)
+  ret i32 %res
+}
+
+define i32 @nsrar_i32(i64 %a, i32 %shamt) {
+; RV32-LABEL: nsrar_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    nsrar a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: nsrar_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    andi a1, a1, 63
+; RV64-NEXT:    neg a1, a1
+; RV64-NEXT:    shar a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.nsrar.i32(i64 %a, i32 %shamt)
+  ret i32 %res
+}
+
+define i32 @nclip_i32(i64 %a, i32 %shamt) {
+; RV32-LABEL: nclip_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    nclip a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: nclip_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sra a0, a0, a1
+; RV64-NEXT:    pnclipp.w a0, a0, zero
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.nclip.i32(i64 %a, i32 %shamt)
+  ret i32 %res
+}
+
+define i32 @nclipr_i32(i64 %a, i32 %shamt) {
+; RV32-LABEL: nclipr_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    nclipr a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: nclipr_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    andi a1, a1, 63
+; RV64-NEXT:    neg a1, a1
+; RV64-NEXT:    shar a0, a0, a1
+; RV64-NEXT:    pnclipp.w a0, a0, zero
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.nclipr.i32(i64 %a, i32 %shamt)
+  ret i32 %res
+}
+
+define i32 @nclipu_u32_imm(i64 %a) {
+; RV32-LABEL: nclipu_u32_imm:
+; RV32:       # %bb.0:
+; RV32-NEXT:    nclipiu a0, a0, 7
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: nclipu_u32_imm:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srli a0, a0, 7
+; RV64-NEXT:    pnclipup.w a0, a0, zero
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.nclipu.u32(i64 %a, i32 7)
+  ret i32 %res
+}
+
+define i32 @nclipru_u32_imm(i64 %a) {
+; RV32-LABEL: nclipru_u32_imm:
+; RV32:       # %bb.0:
+; RV32-NEXT:    nclipriu a0, a0, 7
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: nclipru_u32_imm:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, -7
+; RV64-NEXT:    shlr a0, a0, a1
+; RV64-NEXT:    pnclipup.w a0, a0, zero
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.nclipru.u32(i64 %a, i32 7)
+  ret i32 %res
+}
+
+define i32 @nsrar_i32_imm(i64 %a) {
+; RV32-LABEL: nsrar_i32_imm:
+; RV32:       # %bb.0:
+; RV32-NEXT:    nsrari a0, a0, 7
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: nsrar_i32_imm:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srari a0, a0, 7
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.nsrar.i32(i64 %a, i32 7)
+  ret i32 %res
+}
+
+define i32 @nclip_i32_imm(i64 %a) {
+; RV32-LABEL: nclip_i32_imm:
+; RV32:       # %bb.0:
+; RV32-NEXT:    nclipi a0, a0, 7
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: nclip_i32_imm:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srai a0, a0, 7
+; RV64-NEXT:    pnclipp.w a0, a0, zero
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.nclip.i32(i64 %a, i32 7)
+  ret i32 %res
+}
+
+define i32 @nclipr_i32_imm(i64 %a) {
+; RV32-LABEL: nclipr_i32_imm:
+; RV32:       # %bb.0:
+; RV32-NEXT:    nclipri a0, a0, 7
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: nclipr_i32_imm:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srari a0, a0, 7
+; RV64-NEXT:    pnclipp.w a0, a0, zero
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.nclipr.i32(i64 %a, i32 7)
+  ret i32 %res
+}
+
+define i32 @nclipu_u32_imm_max(i64 %a) {
+; RV32-LABEL: nclipu_u32_imm_max:
+; RV32:       # %bb.0:
+; RV32-NEXT:    nclipiu a0, a0, 63
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: nclipu_u32_imm_max:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srli a0, a0, 63
+; RV64-NEXT:    pnclipup.w a0, a0, zero
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.nclipu.u32(i64 %a, i32 63)
+  ret i32 %res
+}
+
+define i32 @nclipr_i32_imm_max(i64 %a) {
+; RV32-LABEL: nclipr_i32_imm_max:
+; RV32:       # %bb.0:
+; RV32-NEXT:    nclipri a0, a0, 63
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: nclipr_i32_imm_max:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srari a0, a0, 63
+; RV64-NEXT:    pnclipp.w a0, a0, zero
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.nclipr.i32(i64 %a, i32 63)
+  ret i32 %res
+}
+
+define i32 @nclipru_u32_imm_zero(i64 %a) {
+; RV32-LABEL: nclipru_u32_imm_zero:
+; RV32:       # %bb.0:
+; RV32-NEXT:    nclipriu a0, a0, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: nclipru_u32_imm_zero:
+; RV64:       # %bb.0:
+; RV64-NEXT:    shlr a0, a0, zero
+; RV64-NEXT:    pnclipup.w a0, a0, zero
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.nclipru.u32(i64 %a, i32 0)
+  ret i32 %res
+}
+
+define i32 @nsrar_i32_imm_zero(i64 %a) {
+; RV32-LABEL: nsrar_i32_imm_zero:
+; RV32:       # %bb.0:
+; RV32-NEXT:    nsrari a0, a0, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: nsrar_i32_imm_zero:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srari a0, a0, 0
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.nsrar.i32(i64 %a, i32 0)
+  ret i32 %res
+}
+
+define i32 @nclipr_i32_imm_zero(i64 %a) {
+; RV32-LABEL: nclipr_i32_imm_zero:
+; RV32:       # %bb.0:
+; RV32-NEXT:    nclipri a0, a0, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: nclipr_i32_imm_zero:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srari a0, a0, 0
+; RV64-NEXT:    pnclipp.w a0, a0, zero
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.nclipr.i32(i64 %a, i32 0)
+  ret i32 %res
+}
+
+define i32 @nclipu_u32_imm_modulo_zero(i64 %a) {
+; RV32-LABEL: nclipu_u32_imm_modulo_zero:
+; RV32:       # %bb.0:
+; RV32-NEXT:    nclipiu a0, a0, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: nclipu_u32_imm_modulo_zero:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pnclipup.w a0, a0, zero
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.nclipu.u32(i64 %a, i32 64)
+  ret i32 %res
+}
+
+define i32 @nclipr_i32_imm_modulo_zero(i64 %a) {
+; RV32-LABEL: nclipr_i32_imm_modulo_zero:
+; RV32:       # %bb.0:
+; RV32-NEXT:    nclipri a0, a0, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: nclipr_i32_imm_modulo_zero:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srari a0, a0, 0
+; RV64-NEXT:    pnclipp.w a0, a0, zero
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.nclipr.i32(i64 %a, i32 64)
+  ret i32 %res
+}
+
+define i32 @nclipu_u32_imm_modulo(i64 %a) {
+; RV32-LABEL: nclipu_u32_imm_modulo:
+; RV32:       # %bb.0:
+; RV32-NEXT:    nclipiu a0, a0, 1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: nclipu_u32_imm_modulo:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srli a0, a0, 1
+; RV64-NEXT:    pnclipup.w a0, a0, zero
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.nclipu.u32(i64 %a, i32 65)
+  ret i32 %res
+}
+
+define i32 @nclipr_i32_imm_modulo(i64 %a) {
+; RV32-LABEL: nclipr_i32_imm_modulo:
+; RV32:       # %bb.0:
+; RV32-NEXT:    nclipri a0, a0, 1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: nclipr_i32_imm_modulo:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srari a0, a0, 1
+; RV64-NEXT:    pnclipp.w a0, a0, zero
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.nclipr.i32(i64 %a, i32 65)
   ret i32 %res
 }
 
@@ -4391,4 +4700,235 @@ define i64 @test_mqrwacc_i64(i64 %rd, i32 %a, i32 %b) {
 ; RV64-NEXT:    ret
   %res = call i64 @llvm.riscv.mqrwacc.i64(i64 %rd, i32 %a, i32 %b)
   ret i64 %res
+}
+
+define i64 @slx_i64(i64 %a, i64 %b, i64 %shamt) {
+; RV32-LABEL: slx_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a5, a4, 26
+; RV32-NEXT:    mv a6, a0
+; RV32-NEXT:    slx a1, a0, a4
+; RV32-NEXT:    slx a6, a3, a4
+; RV32-NEXT:    slx a3, a2, a4
+; RV32-NEXT:    srai a5, a5, 31
+; RV32-NEXT:    mv a0, a5
+; RV32-NEXT:    merge a0, a6, a3
+; RV32-NEXT:    mvm a1, a6, a5
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: slx_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slx a0, a1, a2
+; RV64-NEXT:    ret
+  %1 = tail call i64 @llvm.fshl.i64(i64 %a, i64 %b, i64 %shamt)
+  ret i64 %1
+}
+
+define i64 @slxi_i64(i64 %a, i64 %b) {
+; RV32-LABEL: slxi_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a2, 7
+; RV32-NEXT:    srx a3, a0, a2
+; RV32-NEXT:    nsrli a1, a0, 7
+; RV32-NEXT:    mv a0, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: slxi_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a2, 25
+; RV64-NEXT:    slx a0, a1, a2
+; RV64-NEXT:    ret
+  %1 = tail call i64 @llvm.fshl.i64(i64 %a, i64 %b, i64 25)
+  ret i64 %1
+}
+
+define i64 @slxi_i64_large(i64 %a, i64 %b) {
+; RV32-LABEL: slxi_i64_large:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a1, a0
+; RV32-NEXT:    li a0, 7
+; RV32-NEXT:    slx a1, a3, a0
+; RV32-NEXT:    nsrli a0, a2, 25
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: slxi_i64_large:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a2, 39
+; RV64-NEXT:    slx a0, a1, a2
+; RV64-NEXT:    ret
+  %1 = tail call i64 @llvm.fshl.i64(i64 %a, i64 %b, i64 39)
+  ret i64 %1
+}
+
+define i64 @srx_i64(i64 %a, i64 %b, i64 %shamt) {
+; RV32-LABEL: srx_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srx a2, a3, a4
+; RV32-NEXT:    srx a3, a0, a4
+; RV32-NEXT:    slli a5, a4, 26
+; RV32-NEXT:    srai a5, a5, 31
+; RV32-NEXT:    srx a0, a1, a4
+; RV32-NEXT:    mvm a2, a3, a5
+; RV32-NEXT:    mv a1, a5
+; RV32-NEXT:    merge a1, a3, a0
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: srx_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srx a1, a0, a2
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    ret
+  %1 = tail call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 %shamt)
+  ret i64 %1
+}
+
+define i64 @srxi_i64(i64 %a, i64 %b) {
+; RV32-LABEL: srxi_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a1, a0
+; RV32-NEXT:    li a0, 7
+; RV32-NEXT:    slx a1, a3, a0
+; RV32-NEXT:    nsrli a0, a2, 25
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: srxi_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a2, 25
+; RV64-NEXT:    srx a1, a0, a2
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    ret
+  %1 = tail call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 25)
+  ret i64 %1
+}
+
+define i64 @srxi_i64_large(i64 %a, i64 %b) {
+; RV32-LABEL: srxi_i64_large:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a2, 7
+; RV32-NEXT:    srx a3, a0, a2
+; RV32-NEXT:    nsrli a1, a0, 7
+; RV32-NEXT:    mv a0, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: srxi_i64_large:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a2, 39
+; RV64-NEXT:    srx a1, a0, a2
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    ret
+  %1 = tail call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 39)
+  ret i64 %1
+}
+
+define i64 @slxi_i64_64(i64 %a, i64 %b) {
+; CHECK-LABEL: slxi_i64_64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %1 = tail call i64 @llvm.fshl.i64(i64 %a, i64 %b, i64 64)
+  ret i64 %1
+}
+
+define i64 @slxi_i64_89(i64 %a, i64 %b) {
+; RV32-LABEL: slxi_i64_89:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a2, 7
+; RV32-NEXT:    srx a3, a0, a2
+; RV32-NEXT:    nsrli a1, a0, 7
+; RV32-NEXT:    mv a0, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: slxi_i64_89:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a2, 25
+; RV64-NEXT:    slx a0, a1, a2
+; RV64-NEXT:    ret
+  %1 = tail call i64 @llvm.fshl.i64(i64 %a, i64 %b, i64 89)
+  ret i64 %1
+}
+
+define i64 @slxi_i64_103(i64 %a, i64 %b) {
+; RV32-LABEL: slxi_i64_103:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a1, a0
+; RV32-NEXT:    li a0, 7
+; RV32-NEXT:    slx a1, a3, a0
+; RV32-NEXT:    nsrli a0, a2, 25
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: slxi_i64_103:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a2, 39
+; RV64-NEXT:    slx a0, a1, a2
+; RV64-NEXT:    ret
+  %1 = tail call i64 @llvm.fshl.i64(i64 %a, i64 %b, i64 103)
+  ret i64 %1
+}
+
+define i64 @srxi_i64_64(i64 %a, i64 %b) {
+; RV32-LABEL: srxi_i64_64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mvd a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: srxi_i64_64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    ret
+  %1 = tail call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 64)
+  ret i64 %1
+}
+
+define i64 @srxi_i64_89(i64 %a, i64 %b) {
+; RV32-LABEL: srxi_i64_89:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a1, a0
+; RV32-NEXT:    li a0, 7
+; RV32-NEXT:    slx a1, a3, a0
+; RV32-NEXT:    nsrli a0, a2, 25
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: srxi_i64_89:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a2, 25
+; RV64-NEXT:    srx a1, a0, a2
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    ret
+  %1 = tail call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 89)
+  ret i64 %1
+}
+
+define i64 @srxi_i64_103(i64 %a, i64 %b) {
+; RV32-LABEL: srxi_i64_103:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a2, 7
+; RV32-NEXT:    srx a3, a0, a2
+; RV32-NEXT:    nsrli a1, a0, 7
+; RV32-NEXT:    mv a0, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: srxi_i64_103:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a2, 39
+; RV64-NEXT:    srx a1, a0, a2
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    ret
+  %1 = tail call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 103)
+  ret i64 %1
+}
+
+declare i32 @llvm.riscv.ssh1sadd.i32(i32, i32)
+
+define i32 @ssh1sadd_intrinsic_i32(i32 %a, i32 %b) nounwind {
+; RV32-LABEL: ssh1sadd_intrinsic_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ssh1sadd a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: ssh1sadd_intrinsic_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pssh1sadd.w a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.ssh1sadd.i32(i32 %a, i32 %b)
+  ret i32 %res
 }

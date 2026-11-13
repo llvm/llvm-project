@@ -932,16 +932,16 @@ entry:
 define amdgpu_kernel void @s_fdiv_v2f32(ptr addrspace(1) %out, <2 x float> %a, <2 x float> %b) #0 {
 ; GFX6-FASTFMA-LABEL: s_fdiv_v2f32:
 ; GFX6-FASTFMA:       ; %bb.0: ; %entry
-; GFX6-FASTFMA-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0xb
-; GFX6-FASTFMA-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; GFX6-FASTFMA-NEXT:    s_mov_b32 s3, 0xf000
-; GFX6-FASTFMA-NEXT:    s_mov_b32 s2, -1
+; GFX6-FASTFMA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xb
+; GFX6-FASTFMA-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; GFX6-FASTFMA-NEXT:    s_mov_b32 s7, 0xf000
+; GFX6-FASTFMA-NEXT:    s_mov_b32 s6, -1
 ; GFX6-FASTFMA-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-FASTFMA-NEXT:    v_mov_b32_e32 v0, s9
-; GFX6-FASTFMA-NEXT:    v_div_scale_f32 v1, s[4:5], s11, s11, v0
+; GFX6-FASTFMA-NEXT:    v_mov_b32_e32 v0, s1
+; GFX6-FASTFMA-NEXT:    v_div_scale_f32 v1, s[8:9], s3, s3, v0
 ; GFX6-FASTFMA-NEXT:    v_rcp_f32_e32 v2, v1
-; GFX6-FASTFMA-NEXT:    v_mov_b32_e32 v3, s11
-; GFX6-FASTFMA-NEXT:    v_div_scale_f32 v3, vcc, s9, v3, s9
+; GFX6-FASTFMA-NEXT:    v_mov_b32_e32 v3, s3
+; GFX6-FASTFMA-NEXT:    v_div_scale_f32 v3, vcc, s1, v3, s1
 ; GFX6-FASTFMA-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
 ; GFX6-FASTFMA-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
 ; GFX6-FASTFMA-NEXT:    v_fma_f32 v2, v4, v2, v2
@@ -951,12 +951,12 @@ define amdgpu_kernel void @s_fdiv_v2f32(ptr addrspace(1) %out, <2 x float> %a, <
 ; GFX6-FASTFMA-NEXT:    v_fma_f32 v1, -v1, v4, v3
 ; GFX6-FASTFMA-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
 ; GFX6-FASTFMA-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
-; GFX6-FASTFMA-NEXT:    v_div_fixup_f32 v1, v1, s11, v0
-; GFX6-FASTFMA-NEXT:    v_mov_b32_e32 v0, s8
-; GFX6-FASTFMA-NEXT:    v_div_scale_f32 v2, s[4:5], s10, s10, v0
+; GFX6-FASTFMA-NEXT:    v_div_fixup_f32 v1, v1, s3, v0
+; GFX6-FASTFMA-NEXT:    v_mov_b32_e32 v0, s0
+; GFX6-FASTFMA-NEXT:    v_div_scale_f32 v2, s[8:9], s2, s2, v0
 ; GFX6-FASTFMA-NEXT:    v_rcp_f32_e32 v3, v2
-; GFX6-FASTFMA-NEXT:    v_mov_b32_e32 v4, s10
-; GFX6-FASTFMA-NEXT:    v_div_scale_f32 v4, vcc, s8, v4, s8
+; GFX6-FASTFMA-NEXT:    v_mov_b32_e32 v4, s2
+; GFX6-FASTFMA-NEXT:    v_div_scale_f32 v4, vcc, s0, v4, s0
 ; GFX6-FASTFMA-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
 ; GFX6-FASTFMA-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
 ; GFX6-FASTFMA-NEXT:    v_fma_f32 v3, v5, v3, v3
@@ -966,8 +966,8 @@ define amdgpu_kernel void @s_fdiv_v2f32(ptr addrspace(1) %out, <2 x float> %a, <
 ; GFX6-FASTFMA-NEXT:    v_fma_f32 v2, -v2, v5, v4
 ; GFX6-FASTFMA-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
 ; GFX6-FASTFMA-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
-; GFX6-FASTFMA-NEXT:    v_div_fixup_f32 v0, v2, s10, v0
-; GFX6-FASTFMA-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GFX6-FASTFMA-NEXT:    v_div_fixup_f32 v0, v2, s2, v0
+; GFX6-FASTFMA-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX6-FASTFMA-NEXT:    s_endpgm
 ;
 ; GFX6-SLOWFMA-LABEL: s_fdiv_v2f32:
@@ -1012,16 +1012,16 @@ define amdgpu_kernel void @s_fdiv_v2f32(ptr addrspace(1) %out, <2 x float> %a, <
 ;
 ; GFX7-LABEL: s_fdiv_v2f32:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0xb
-; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; GFX7-NEXT:    s_mov_b32 s3, 0xf000
-; GFX7-NEXT:    s_mov_b32 s2, -1
+; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xb
+; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; GFX7-NEXT:    s_mov_b32 s7, 0xf000
+; GFX7-NEXT:    s_mov_b32 s6, -1
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v0, s9
-; GFX7-NEXT:    v_div_scale_f32 v1, s[4:5], s11, s11, v0
+; GFX7-NEXT:    v_mov_b32_e32 v0, s1
+; GFX7-NEXT:    v_div_scale_f32 v1, s[8:9], s3, s3, v0
 ; GFX7-NEXT:    v_rcp_f32_e32 v2, v1
-; GFX7-NEXT:    v_mov_b32_e32 v3, s11
-; GFX7-NEXT:    v_div_scale_f32 v3, vcc, s9, v3, s9
+; GFX7-NEXT:    v_mov_b32_e32 v3, s3
+; GFX7-NEXT:    v_div_scale_f32 v3, vcc, s1, v3, s1
 ; GFX7-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
 ; GFX7-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
 ; GFX7-NEXT:    v_fma_f32 v2, v4, v2, v2
@@ -1031,12 +1031,12 @@ define amdgpu_kernel void @s_fdiv_v2f32(ptr addrspace(1) %out, <2 x float> %a, <
 ; GFX7-NEXT:    v_fma_f32 v1, -v1, v4, v3
 ; GFX7-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
 ; GFX7-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
-; GFX7-NEXT:    v_div_fixup_f32 v1, v1, s11, v0
-; GFX7-NEXT:    v_mov_b32_e32 v0, s8
-; GFX7-NEXT:    v_div_scale_f32 v2, s[4:5], s10, s10, v0
+; GFX7-NEXT:    v_div_fixup_f32 v1, v1, s3, v0
+; GFX7-NEXT:    v_mov_b32_e32 v0, s0
+; GFX7-NEXT:    v_div_scale_f32 v2, s[8:9], s2, s2, v0
 ; GFX7-NEXT:    v_rcp_f32_e32 v3, v2
-; GFX7-NEXT:    v_mov_b32_e32 v4, s10
-; GFX7-NEXT:    v_div_scale_f32 v4, vcc, s8, v4, s8
+; GFX7-NEXT:    v_mov_b32_e32 v4, s2
+; GFX7-NEXT:    v_div_scale_f32 v4, vcc, s0, v4, s0
 ; GFX7-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
 ; GFX7-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
 ; GFX7-NEXT:    v_fma_f32 v3, v5, v3, v3
@@ -1046,8 +1046,8 @@ define amdgpu_kernel void @s_fdiv_v2f32(ptr addrspace(1) %out, <2 x float> %a, <
 ; GFX7-NEXT:    v_fma_f32 v2, -v2, v5, v4
 ; GFX7-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
 ; GFX7-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
-; GFX7-NEXT:    v_div_fixup_f32 v0, v2, s10, v0
-; GFX7-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GFX7-NEXT:    v_div_fixup_f32 v0, v2, s2, v0
+; GFX7-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX7-NEXT:    s_endpgm
 ;
 ; GFX8-LABEL: s_fdiv_v2f32:

@@ -783,6 +783,8 @@ class Thread:
 class CompileUnit:
     id: int
     compileUnitPath: str
+    language: Optional[str] = None
+    isOptimized: Optional[bool] = None
 
 
 @dataclass(frozen=True)
@@ -797,7 +799,15 @@ class StackFrame:
     canRestart: Optional[bool] = None
     instructionPointerReference: Optional[str] = None
     moduleId: Optional[Union[int, str]] = None
-    compileUnitId: Optional[int] = None
+    compileUnitId: Optional[int] = field(
+        metadata={"alias": "$__lldb_compileUnitId"}, default=None
+    )
+    languageSpecificData: Optional[Dict[str, Any]] = field(
+        metadata={"alias": "$__lldb_languageSpecificData"}, default=None
+    )
+    isOptimized: Optional[bool] = field(
+        metadata={"alias": "$__lldb_isOptimized"}, default=None
+    )
     presentationHint: Optional[StackFramePresentationHint] = None
 
 
@@ -1115,7 +1125,7 @@ class LaunchArgs:
     args: Optional[List[str]] = None
     env: Optional[Union[Dict[str, str], List[str]]] = None
     detachOnError: Optional[bool] = None
-    disableASLR: bool = False
+    disableASLR: Optional[bool] = False
     disableSTDIO: Optional[bool] = None
     shellExpandArguments: bool = False
     console: Optional[Console] = None
