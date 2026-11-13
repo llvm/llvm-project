@@ -3357,7 +3357,32 @@ public:
                                            bool IsInclusive,
                                            ScanInfo *ScanRedInfo);
 
+  /// Generator for a region that the active lanes of a GPU warp or wavefront
+  /// execute one at a time, in lane order.
+  ///
+  /// The lanes of a warp share an instruction stream, so a lane that takes a
+  /// lock inside a region cannot release it while other lanes of its warp are
+  /// still spinning for that lock. Running the lanes through the region one by
+  /// one lets each of them take and release the lock in turn. The region is
+  /// emitted as a loop over the warp's active-lane mask that runs the body only
+  /// in the lowest lane not yet served, synchronizing the warp after each step.
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param BodyGenCB Callback that will generate the region body code. It is
+  ///                  called with an insertion point in a block whose
+  ///                  terminator continues the loop; the code it generates
+  ///                  must reach that terminator.
+  ///
+  /// \returns The insertion position *after* the region.
+  LLVM_ABI InsertPointOrErrorTy createLaneSerializedRegion(
+      const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB);
+
   /// Generator for '#omp critical'
+  ///
+  /// Where the threads of a warp run in lockstep (omp::GV::GV_Lockstep_Lanes),
+  /// the region is serialized over the lanes of each warp (see
+  /// createLaneSerializedRegion) before the lock is taken, so that lanes of the
+  /// same warp do not contend for it.
   ///
   /// \param Loc The insert and source location description.
   /// \param BodyGenCB Callback that will generate the region body code.
@@ -4027,6 +4052,14 @@ private:
                                                InsertPointTy FinIP,
                                                Instruction *ExitCall,
                                                bool HasFinalize = true);
+
+  /// Emit the lock calls and body of a critical region, without the lane
+  /// serialization that createCritical adds on a GPU.
+  InsertPointOrErrorTy emitCriticalRegion(const LocationDescription &Loc,
+                                          BodyGenCallbackTy BodyGenCB,
+                                          FinalizeCallbackTy FiniCB,
+                                          StringRef CriticalName,
+                                          Value *HintInst);
 
   /// Common Interface to generate OMP inlined regions
   ///

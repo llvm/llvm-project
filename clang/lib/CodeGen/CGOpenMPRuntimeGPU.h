@@ -45,6 +45,10 @@ public:
   };
 
 private:
+  /// Emits code that the active threads of a warp execute one at a time.
+  void emitLaneSerializedRegion(CodeGenFunction &CGF,
+                                llvm::function_ref<void()> BodyGen);
+
   /// Parallel outlined function work for workers to execute.
   llvm::SmallVector<llvm::Function *, 16> Work;
 

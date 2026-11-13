@@ -439,13 +439,14 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
 private:
   /// Grid values for Generic ELF64 plugins.
   static constexpr GV GenELF64GridValues = {
-      1, // GV_Slot_Size
-      1, // GV_Warp_Size
-      1, // GV_Max_Teams
-      1, // GV_Default_Num_Teams
-      1, // GV_SimpleBufferSize
-      1, // GV_Max_WG_Size
-      1, // GV_Default_WG_Size
+      1,     // GV_Slot_Size
+      1,     // GV_Warp_Size
+      1,     // GV_Max_Teams
+      1,     // GV_Default_Num_Teams
+      1,     // GV_SimpleBufferSize
+      1,     // GV_Max_WG_Size
+      1,     // GV_Default_WG_Size
+      false, // GV_Lockstep_Lanes
   };
 };
 

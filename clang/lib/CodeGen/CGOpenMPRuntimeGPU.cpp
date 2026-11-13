@@ -1371,73 +1371,39 @@ void CGOpenMPRuntimeGPU::emitBarrierCall(CodeGenFunction &CGF,
                       Args);
 }
 
+void CGOpenMPRuntimeGPU::emitLaneSerializedRegion(
+    CodeGenFunction &CGF, llvm::function_ref<void()> BodyGen) {
+  using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+  auto BodyGenCB = [&](InsertPointTy, InsertPointTy CodeGenIP,
+                       ArrayRef<llvm::BasicBlock *>) -> llvm::Error {
+    CGF.Builder.restoreIP(CodeGenIP);
+    llvm::BasicBlock *AfterBB =
+        llvm::splitBBWithSuffix(CGF.Builder, /*CreateBranch=*/false, ".after");
+    BodyGen();
+    if (CGF.HaveInsertPoint())
+      CGF.Builder.CreateBr(AfterBB);
+    return llvm::Error::success();
+  };
+  InsertPointTy AfterIP =
+      cantFail(OMPBuilder.createLaneSerializedRegion(CGF.Builder, BodyGenCB));
+  CGF.Builder.restoreIP(AfterIP);
+}
+
 void CGOpenMPRuntimeGPU::emitCriticalRegion(
     CodeGenFunction &CGF, StringRef CriticalName,
     const RegionCodeGenTy &CriticalOpGen, SourceLocation Loc,
     const Expr *Hint) {
-  llvm::BasicBlock *LoopBB = CGF.createBasicBlock("omp.critical.loop");
-  llvm::BasicBlock *TestBB = CGF.createBasicBlock("omp.critical.test");
-  llvm::BasicBlock *SyncBB = CGF.createBasicBlock("omp.critical.sync");
-  llvm::BasicBlock *BodyBB = CGF.createBasicBlock("omp.critical.body");
-  llvm::BasicBlock *ExitBB = CGF.createBasicBlock("omp.critical.exit");
-
-  auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGF.CGM.getOpenMPRuntime());
-
-  // Get the mask of active threads in the warp.
-  llvm::Value *Mask = CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-      CGM.getModule(), OMPRTL___kmpc_warp_active_thread_mask));
-  // Fetch team-local id of the thread.
-  llvm::Value *ThreadID = RT.getGPUThreadID(CGF);
-
-  // Get the width of the team.
-  llvm::Value *TeamWidth = RT.getGPUNumThreads(CGF);
-
-  // Initialize the counter variable for the loop.
-  QualType Int32Ty =
-      CGF.getContext().getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/0);
-  Address Counter = CGF.CreateMemTempWithoutCast(Int32Ty, "critical_counter");
-  LValue CounterLVal = CGF.MakeAddrLValue(Counter, Int32Ty);
-  CGF.EmitStoreOfScalar(llvm::Constant::getNullValue(CGM.Int32Ty), CounterLVal,
-                        /*isInit=*/true);
-
-  // Block checks if loop counter exceeds upper bound.
-  CGF.EmitBlock(LoopBB);
-  llvm::Value *CounterVal = CGF.EmitLoadOfScalar(CounterLVal, Loc);
-  llvm::Value *CmpLoopBound = CGF.Builder.CreateICmpSLT(CounterVal, TeamWidth);
-  CGF.Builder.CreateCondBr(CmpLoopBound, TestBB, ExitBB);
-
-  // Block tests which single thread should execute region, and which threads
-  // should go straight to synchronisation point.
-  CGF.EmitBlock(TestBB);
-  CounterVal = CGF.EmitLoadOfScalar(CounterLVal, Loc);
-  llvm::Value *CmpThreadToCounter =
-      CGF.Builder.CreateICmpEQ(ThreadID, CounterVal);
-  CGF.Builder.CreateCondBr(CmpThreadToCounter, BodyBB, SyncBB);
-
-  // Block emits the body of the critical region.
-  CGF.EmitBlock(BodyBB);
-
-  // Output the critical statement.
-  CGOpenMPRuntime::emitCriticalRegion(CGF, CriticalName, CriticalOpGen, Loc,
-                                      Hint);
-
-  // After the body surrounded by the critical region, the single executing
-  // thread will jump to the synchronisation point.
-  // Block waits for all threads in current team to finish then increments the
-  // counter variable and returns to the loop.
-  CGF.EmitBlock(SyncBB);
-  // Reconverge active threads in the warp.
-  (void)CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                                CGM.getModule(), OMPRTL___kmpc_syncwarp),
-                            Mask);
-
-  llvm::Value *IncCounterVal =
-      CGF.Builder.CreateNSWAdd(CounterVal, CGF.Builder.getInt32(1));
-  CGF.EmitStoreOfScalar(IncCounterVal, CounterLVal);
-  CGF.EmitBranch(LoopBB);
-
-  // Block that is reached when  all threads in the team complete the region.
-  CGF.EmitBlock(ExitBB, /*IsFinished=*/true);
+  if (!CGM.getTarget().getGridValue().GV_Lockstep_Lanes) {
+    CGOpenMPRuntime::emitCriticalRegion(CGF, CriticalName, CriticalOpGen, Loc,
+                                        Hint);
+    return;
+  }
+  // Where the threads of a warp run in lockstep, the device runtime lets only
+  // one of them contend for the critical lock, so send each through in turn.
+  emitLaneSerializedRegion(CGF, [&] {
+    CGOpenMPRuntime::emitCriticalRegion(CGF, CriticalName, CriticalOpGen, Loc,
+                                        Hint);
+  });
 }
 
 /// Cast value to the specified type.
