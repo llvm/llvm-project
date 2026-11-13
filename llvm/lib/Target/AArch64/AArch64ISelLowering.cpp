@@ -9765,7 +9765,9 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   // On Windows, InReg pointers must be returned, so record the pointer in a
   // virtual register at the start of the function so it can be returned in the
   // epilogue.
-  if (IsWin64 || F.getCallingConv() == CallingConv::ARM64EC_Thunk_X64) {
+  if (IsWin64 || F.getCallingConv() == CallingConv::ARM64EC_Thunk_X64 ||
+      (Subtarget->isTargetWindowsOrUEFI() &&
+       F.getCallingConv() == CallingConv::PreserveNone)) {
     for (unsigned I = 0, E = Ins.size(); I != E; ++I) {
       if ((F.getCallingConv() == CallingConv::ARM64EC_Thunk_X64 ||
            Ins[I].Flags.isInReg()) &&

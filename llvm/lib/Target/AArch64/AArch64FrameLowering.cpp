@@ -780,9 +780,19 @@ static MCRegister getRegisterOrZero(MCRegister Reg, bool HasSVE) {
   CASE(16);
   CASE(17);
   CASE(18);
+  CASE(19);
+  CASE(20);
+  CASE(21);
+  CASE(22);
+  CASE(23);
+  CASE(24);
+  CASE(25);
+  CASE(26);
+  CASE(27);
+  CASE(28);
 #undef CASE
 
-    // FPRs
+  // FPRs
 #define CASE(n)                                                                \
   case AArch64::B##n:                                                          \
   case AArch64::H##n:                                                          \

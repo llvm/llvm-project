@@ -681,8 +681,12 @@ bool AArch64RegisterInfo::isArgumentRegister(const MachineFunction &MF,
   case CallingConv::GHC:
     return HasReg(CC_AArch64_GHC_ArgRegs, Reg);
   case CallingConv::PreserveNone:
-    if (!MF.getFunction().isVarArg())
-      return HasReg(CC_AArch64_Preserve_None_ArgRegs, Reg);
+    if (!MF.getFunction().isVarArg()) {
+      if (STI.isTargetWindows() && (Reg == AArch64::W15 || Reg == AArch64::X15))
+        return false;
+      if (HasReg(CC_AArch64_Preserve_None_ArgRegs, Reg))
+        return true;
+    }
     [[fallthrough]];
   case CallingConv::C:
   case CallingConv::Fast:
