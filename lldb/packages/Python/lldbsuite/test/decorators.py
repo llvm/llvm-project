@@ -779,18 +779,18 @@ def _usingLLDBServerOnWindows():
     )
 
 
-def expectedFailureWindowsAndLLDBServer(bugnumber=None):
+def expectedFailureWindowsAndLLDBServer(bugnumber=None, archs=None):
     """Mark a test as xfail on Windows when driving lldb-server."""
     if not _usingLLDBServerOnWindows():
         return lambda func: func
-    return expectedFailureOS(["windows"], bugnumber)
+    return expectedFailureOS(["windows"], bugnumber, archs=archs)
 
 
-def expectedFailureWindowsAndNoLLDBServer(bugnumber=None):
+def expectedFailureWindowsAndNoLLDBServer(bugnumber=None, archs=None):
     """Mark a test as xfail on Windows when using the in-process plugin."""
     if _usingLLDBServerOnWindows():
         return lambda func: func
-    return expectedFailureOS(["windows"], bugnumber)
+    return expectedFailureOS(["windows"], bugnumber, archs=archs)
 
 
 # TODO: This decorator does not do anything. Remove it.

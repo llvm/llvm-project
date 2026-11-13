@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fmodules -std=c++17 -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -fmodules -std=c++17 -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s %}
 // RUN: %clang_cc1 -fmodules -std=c++17 -emit-llvm %s -o - -triple x86_64-linux-gnu -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -fmodules -std=c++17 -emit-llvm %s -o - -triple x86_64-linux-gnu -fexperimental-new-constant-interpreter | FileCheck %s %}
 
 #pragma clang module build A
 module A {}

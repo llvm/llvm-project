@@ -170,10 +170,15 @@ void mlir::bufferization::populateDynamicDimSizes(
 //===----------------------------------------------------------------------===//
 
 LogicalResult AllocTensorOp::verify() {
+  auto type = dyn_cast<RankedTensorType>(getType());
+  if (!type && (!getDynamicSizes().empty() || getSizeHint()))
+    return emitError("takes dynamic sizes and a size hint only for a ranked "
+                     "tensor result");
   if (getCopy() && !getDynamicSizes().empty())
     return emitError("dynamic sizes not needed when copying a tensor");
-  if (!getCopy() && failed(verifyDynamicDimensionCount(
-                        getOperation(), getType(), getDynamicSizes())))
+  if (type && !getCopy() &&
+      failed(
+          verifyDynamicDimensionCount(getOperation(), type, getDynamicSizes())))
     return failure();
   if (getCopy() && getCopy().getType() != getType())
     return emitError("expected that `copy` and return type match");
@@ -182,7 +187,8 @@ LogicalResult AllocTensorOp::verify() {
 
 void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
                           RankedTensorType type, ValueRange dynamicSizes) {
-  build(builder, result, type, dynamicSizes, /*copy=*/Value(),
+  build(builder, result, llvm::cast<TensorLikeType>(type), dynamicSizes,
+        /*copy=*/Value(),
         /*size_hint=*/Value(),
         /*memory_space=*/IntegerAttr());
 }
@@ -190,15 +196,27 @@ void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
 void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
                           RankedTensorType type, ValueRange dynamicSizes,
                           Value copy) {
-  build(builder, result, type, dynamicSizes, copy, /*size_hint=*/Value(),
-        /*memory_space=*/IntegerAttr());
+  build(builder, result, llvm::cast<TensorLikeType>(type), dynamicSizes, copy);
 }
 
 void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
                           TensorType type, ValueRange dynamicSizes, Value copy,
                           IntegerAttr memorySpace) {
+  build(builder, result, llvm::cast<TensorLikeType>(type), dynamicSizes, copy,
+        /*size_hint=*/Value(), memorySpace);
+}
+
+void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
+                          TensorLikeType type, ValueRange dynamicSizes,
+                          Value copy) {
   build(builder, result, type, dynamicSizes, copy, /*size_hint=*/Value(),
-        memorySpace);
+        /*memory_space=*/Attribute());
+}
+
+void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
+                          TensorLikeType type, ValueRange dynamicSizes,
+                          Value copy, Value sizeHint, Attribute memorySpace) {
+  build(builder, result, Type(type), dynamicSizes, copy, sizeHint, memorySpace);
 }
 
 namespace {
@@ -218,13 +236,16 @@ struct ReplaceStaticShapeDims : OpRewritePattern<AllocTensorOp> {
 
   LogicalResult matchAndRewrite(AllocTensorOp op,
                                 PatternRewriter &rewriter) const override {
-    if (op.getCopy())
+    // Dynamic sizes, and so this fold, belong to a ranked tensor result; any
+    // other result carries none (verifier).
+    auto type = dyn_cast<RankedTensorType>(op.getType());
+    if (!type || op.getCopy())
       return failure();
-    SmallVector<int64_t> newShape = llvm::to_vector(op.getType().getShape());
+    SmallVector<int64_t> newShape = llvm::to_vector(type.getShape());
     SmallVector<Value> newDynamicSizes;
     unsigned int dynValCounter = 0;
-    for (int64_t i = 0; i < op.getType().getRank(); ++i) {
-      if (!op.isDynamicDim(i))
+    for (int64_t i = 0; i < type.getRank(); ++i) {
+      if (!type.isDynamicDim(i))
         continue;
       Value value = op.getDynamicSizes()[dynValCounter++];
       APInt intVal;
@@ -239,12 +260,12 @@ struct ReplaceStaticShapeDims : OpRewritePattern<AllocTensorOp> {
       }
     }
     RankedTensorType newType = RankedTensorType::get(
-        newShape, op.getType().getElementType(), op.getType().getEncoding());
-    if (newType == op.getType())
+        newShape, type.getElementType(), type.getEncoding());
+    if (newType == type)
       return failure();
     auto newOp = AllocTensorOp::create(rewriter, op.getLoc(), newType,
                                        newDynamicSizes, /*copy=*/Value());
-    rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(), newOp);
+    rewriter.replaceOpWithNewOp<tensor::CastOp>(op, type, newOp);
     return success();
   }
 };
@@ -258,10 +279,13 @@ struct FoldDimOfAllocTensorOp : public OpRewritePattern<tensor::DimOp> {
     auto allocTensorOp = dimOp.getSource().getDefiningOp<AllocTensorOp>();
     if (!allocTensorOp || !maybeConstantIndex)
       return failure();
-    if (*maybeConstantIndex < 0 ||
-        *maybeConstantIndex >= allocTensorOp.getType().getRank())
+    // Only a ranked tensor result has dynamic sizes to forward; any other
+    // result carries none (verifier).
+    auto type = dyn_cast<RankedTensorType>(allocTensorOp.getType());
+    if (!type || *maybeConstantIndex < 0 ||
+        *maybeConstantIndex >= type.getRank())
       return failure();
-    if (!allocTensorOp.getType().isDynamicDim(*maybeConstantIndex))
+    if (!type.isDynamicDim(*maybeConstantIndex))
       return failure();
     rewriter.replaceOp(
         dimOp, allocTensorOp.getDynamicSize(rewriter, *maybeConstantIndex));
@@ -277,13 +301,17 @@ void AllocTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 LogicalResult AllocTensorOp::reifyResultShapes(
     OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
-  auto shapes =
-      llvm::map_to_vector<4>(llvm::seq<int64_t>(0, getType().getRank()),
-                             [&](int64_t dim) -> OpFoldResult {
-                               if (isDynamicDim(dim))
-                                 return getDynamicSize(builder, dim);
-                               return builder.getIndexAttr(getStaticSize(dim));
-                             });
+  // The extents of a result that is not a ranked tensor are known only from
+  // its buffer.
+  auto type = dyn_cast<RankedTensorType>(getType());
+  if (!type)
+    return failure();
+  auto shapes = llvm::map_to_vector<4>(
+      llvm::seq<int64_t>(0, type.getRank()), [&](int64_t dim) -> OpFoldResult {
+        if (type.isDynamicDim(dim))
+          return getDynamicSize(builder, dim);
+        return builder.getIndexAttr(type.getDimSize(dim));
+      });
   reifiedReturnShapes.emplace_back(std::move(shapes));
   return success();
 }
@@ -326,7 +354,7 @@ ParseResult AllocTensorOp::parse(OpAsmParser &parser, OperationState &result) {
   if (parser.parseColon())
     return failure();
 
-  TensorType type;
+  TensorLikeType type;
   if (parser.parseCustomTypeWithFallback(type))
     return failure();
   result.addTypes(type);

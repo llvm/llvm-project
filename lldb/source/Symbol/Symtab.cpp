@@ -889,8 +889,10 @@ static void AddSectionsToRangeMap(SectionList *sectlist,
       if (child_sectlist.GetNumSections(0) > 0) {
         AddSectionsToRangeMap(&child_sectlist, section_ranges);
       } else {
+        // Debug info sections can share addresses with the sections that
+        // symbols are defined in.
         size_t size = sect_sp->GetByteSize();
-        if (size > 0) {
+        if (size > 0 && !sect_sp->ContainsOnlyDebugInfo()) {
           addr_t base_addr = sect_sp->GetFileAddress();
           RangeVector<addr_t, addr_t>::Entry entry;
           entry.SetRangeBase(base_addr);
@@ -1149,7 +1151,15 @@ std::string Symtab::GetCacheKey() {
 }
 
 void Symtab::SaveToCache() {
-  DataFileCache *cache = Module::GetIndexCache(m_objfile->IsInMemory());
+  Module::LLDBIndexType type = Module::LLDBIndexType::eLLDBIndexTypeSymtab;
+  if (m_objfile->IsInMemory()) {
+    if (m_objfile->GetDisableMemorySymtabCaching())
+      return;
+    else
+      type = Module::LLDBIndexType::eLLDBIndexTypeMemoryModuleSymtab;
+  }
+
+  DataFileCache *cache = Module::GetIndexCache(type);
   if (!cache)
     return; // Caching is not enabled.
 
@@ -1209,7 +1219,7 @@ bool DecodeCStrMap(const DataExtractor &data, lldb::offset_t *offset_ptr,
 }
 
 constexpr llvm::StringLiteral kIdentifierSymbolTable("SYMB");
-constexpr uint32_t CURRENT_CACHE_VERSION = 3;
+constexpr uint32_t CURRENT_CACHE_VERSION = 4;
 
 // If the size of the Symbol object changes, the serialized
 // format likely also needs to change so the
@@ -1307,8 +1317,12 @@ bool Symtab::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
     m_symbols.resize(num_symbols);
     SectionList *sections = m_objfile->GetModule()->GetSectionList();
     for (uint32_t i=0; i<num_symbols; ++i) {
-      if (!m_symbols[i].Decode(data, offset_ptr, sections, strtab))
+      if (!m_symbols[i].Decode(data, offset_ptr, sections, strtab)) {
+        // Don't leave partially decoded symbols behind for the caller to
+        // parse the symbol table on top of.
+        m_symbols.clear();
         return false;
+      }
     }
   }
 
@@ -1317,10 +1331,17 @@ bool Symtab::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
     const uint8_t num_cstr_maps = data.GetU8(offset_ptr);
     for (uint8_t i=0; i<num_cstr_maps; ++i) {
       uint8_t type = data.GetU8(offset_ptr);
-      UniqueCStringMap<uint32_t> &cstr_map =
-          GetNameToSymbolIndexMap((lldb::FunctionNameType)type);
-      if (!DecodeCStrMap(data, offset_ptr, strtab, cstr_map))
+      auto cstr_map =
+          m_name_to_symbol_indices.find((lldb::FunctionNameType)type);
+      if (cstr_map == m_name_to_symbol_indices.end() ||
+          !DecodeCStrMap(data, offset_ptr, strtab, cstr_map->second)) {
+        // Don't leave decoded symbols or name indexes behind for the caller
+        // to parse the symbol table on top of.
+        m_symbols.clear();
+        for (auto &pair : m_name_to_symbol_indices)
+          pair.second.Clear();
         return false;
+      }
     }
     m_name_indexes_computed = true;
   }
@@ -1328,7 +1349,14 @@ bool Symtab::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
 }
 
 bool Symtab::LoadFromCache() {
-  DataFileCache *cache = Module::GetIndexCache(m_objfile->IsInMemory());
+  Module::LLDBIndexType type = Module::LLDBIndexType::eLLDBIndexTypeSymtab;
+  if (m_objfile->IsInMemory()) {
+    if (m_objfile->GetDisableMemorySymtabCaching())
+      return false;
+    else
+      type = Module::LLDBIndexType::eLLDBIndexTypeMemoryModuleSymtab;
+  }
+  DataFileCache *cache = Module::GetIndexCache(type);
   if (!cache)
     return false;
 

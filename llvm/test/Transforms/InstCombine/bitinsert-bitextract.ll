@@ -148,3 +148,96 @@ define b64 @neg_bitinsert_variable_offset(b64 %x, i64 %y, i32 %n) {
   %r = bitinsert b64 %x, i64 %y, i32 %n
   ret b64 %r
 }
+
+define <2 x i64> @bitextract_vec_full_width(<2 x b64> %x) {
+; CHECK-LABEL: define <2 x i64> @bitextract_vec_full_width(
+; CHECK-SAME: <2 x b64> [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = bitcast <2 x b64> [[X]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[R]]
+;
+  %r = bitextract <2 x i64>, <2 x b64> %x, <2 x i32> zeroinitializer
+  ret <2 x i64> %r
+}
+
+define <2 x ptr> @bitextract_vec_full_width_ptr(<2 x b64> %x) {
+; CHECK-LABEL: define <2 x ptr> @bitextract_vec_full_width_ptr(
+; CHECK-SAME: <2 x b64> [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = bitcast <2 x b64> [[X]] to <2 x ptr>
+; CHECK-NEXT:    ret <2 x ptr> [[R]]
+;
+  %r = bitextract <2 x ptr>, <2 x b64> %x, <2 x i32> zeroinitializer
+  ret <2 x ptr> %r
+}
+
+define <vscale x 2 x double> @bitextract_scalable_vec_full_width(<vscale x 2 x b64> %x) {
+; CHECK-LABEL: define <vscale x 2 x double> @bitextract_scalable_vec_full_width(
+; CHECK-SAME: <vscale x 2 x b64> [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = bitcast <vscale x 2 x b64> [[X]] to <vscale x 2 x double>
+; CHECK-NEXT:    ret <vscale x 2 x double> [[R]]
+;
+  %r = bitextract <vscale x 2 x double>, <vscale x 2 x b64> %x, <vscale x 2 x i32> zeroinitializer
+  ret <vscale x 2 x double> %r
+}
+
+define <2 x b64> @bitinsert_vec_full_width(<2 x b64> %x, <2 x i64> %y) {
+; CHECK-LABEL: define <2 x b64> @bitinsert_vec_full_width(
+; CHECK-SAME: <2 x b64> [[X:%.*]], <2 x i64> [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = bitcast <2 x i64> [[Y]] to <2 x b64>
+; CHECK-NEXT:    ret <2 x b64> [[R]]
+;
+  %r = bitinsert <2 x b64> %x, <2 x i64> %y, <2 x i32> zeroinitializer
+  ret <2 x b64> %r
+}
+
+define <2 x b64> @bitinsert_vec_full_width_ptr(<2 x b64> %x, <2 x ptr> %y) {
+; CHECK-LABEL: define <2 x b64> @bitinsert_vec_full_width_ptr(
+; CHECK-SAME: <2 x b64> [[X:%.*]], <2 x ptr> [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = bitcast <2 x ptr> [[Y]] to <2 x b64>
+; CHECK-NEXT:    ret <2 x b64> [[R]]
+;
+  %r = bitinsert <2 x b64> %x, <2 x ptr> %y, <2 x i32> zeroinitializer
+  ret <2 x b64> %r
+}
+
+define <vscale x 2 x b64> @bitinsert_scalable_vec_full_width(<vscale x 2 x b64> %x, <vscale x 2 x double> %y) {
+; CHECK-LABEL: define <vscale x 2 x b64> @bitinsert_scalable_vec_full_width(
+; CHECK-SAME: <vscale x 2 x b64> [[X:%.*]], <vscale x 2 x double> [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = bitcast <vscale x 2 x double> [[Y]] to <vscale x 2 x b64>
+; CHECK-NEXT:    ret <vscale x 2 x b64> [[R]]
+;
+  %r = bitinsert <vscale x 2 x b64> %x, <vscale x 2 x double> %y, <vscale x 2 x i32> zeroinitializer
+  ret <vscale x 2 x b64> %r
+}
+
+; The elements are narrower than the source elements.
+define <2 x i32> @neg_bitextract_vec_partial(<2 x b64> %x) {
+; CHECK-LABEL: define <2 x i32> @neg_bitextract_vec_partial(
+; CHECK-SAME: <2 x b64> [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = bitextract <2 x i32>, <2 x b64> [[X]], <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %r = bitextract <2 x i32>, <2 x b64> %x, <2 x i32> zeroinitializer
+  ret <2 x i32> %r
+}
+
+; The offset may not be zero.
+define <2 x i64> @neg_bitextract_vec_variable_offset(<2 x b64> %x, <2 x i32> %n) {
+; CHECK-LABEL: define <2 x i64> @neg_bitextract_vec_variable_offset(
+; CHECK-SAME: <2 x b64> [[X:%.*]], <2 x i32> [[N:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = bitextract <2 x i64>, <2 x b64> [[X]], <2 x i32> [[N]]
+; CHECK-NEXT:    ret <2 x i64> [[R]]
+;
+  %r = bitextract <2 x i64>, <2 x b64> %x, <2 x i32> %n
+  ret <2 x i64> %r
+}
+
+; The elements are narrower than the base elements.
+define <2 x b64> @neg_bitinsert_vec_partial(<2 x b64> %x, <2 x i32> %y) {
+; CHECK-LABEL: define <2 x b64> @neg_bitinsert_vec_partial(
+; CHECK-SAME: <2 x b64> [[X:%.*]], <2 x i32> [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = bitinsert <2 x b64> [[X]], <2 x i32> [[Y]], <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x b64> [[R]]
+;
+  %r = bitinsert <2 x b64> %x, <2 x i32> %y, <2 x i32> zeroinitializer
+  ret <2 x b64> %r
+}

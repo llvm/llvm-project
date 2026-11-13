@@ -1,0 +1,49 @@
+posix: posix-2024
+types:
+  ACTION:
+    in-latest-posix: ''
+  ENTRY:
+    in-latest-posix: ''
+  VISIT:
+    in-latest-posix: ''
+  posix_tnode:
+    in-latest-posix: ''
+  size_t:
+    in-latest-posix: ''
+  struct hsearch_data:
+    extension: gnu
+  struct qelem:
+    extension: svid
+functions:
+  hcreate:
+    in-latest-posix: ''
+  hcreate_r:
+    extension: gnu
+  hdestroy:
+    in-latest-posix: ''
+  hdestroy_r:
+    extension: gnu
+  hsearch:
+    in-latest-posix: ''
+  hsearch_r:
+    extension: gnu
+  insque:
+    in-latest-posix: ''
+  lfind:
+    in-latest-posix: ''
+  lsearch:
+    in-latest-posix: ''
+  remque:
+    in-latest-posix: ''
+  tdelete:
+    in-latest-posix: ''
+  tdestroy:
+    extension: gnu
+  tfind:
+    in-latest-posix: ''
+  tsearch:
+    in-latest-posix: ''
+  twalk:
+    in-latest-posix: ''
+  twalk_r:
+    extension: gnu

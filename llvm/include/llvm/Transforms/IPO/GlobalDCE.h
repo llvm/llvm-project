@@ -18,6 +18,7 @@
 #define LLVM_TRANSFORMS_IPO_GLOBALDCE_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/PassManager.h"
@@ -52,6 +53,19 @@ private:
 
   /// Global -> Global that uses this global.
   DenseMap<GlobalValue *, SmallPtrSet<GlobalValue *, 4>> GVDependencies;
+
+  /// Function -> (vtable, virtual function) pairs. Maps a function to the
+  /// virtual functions that it may call and their vtables. This is used to only
+  /// mark a virtual function as live when both the caller and the vtable are
+  /// live.
+  DenseMap<Function *,
+           SmallSetVector<std::pair<GlobalVariable *, Function *>, 4>>
+      VFuncDependencies;
+
+  /// Vtable -> virtual functions that are live once the vtable is live.
+  /// If the vtable never becomes live, the virtual function is not kept
+  /// alive by this entry.
+  DenseMap<GlobalVariable *, SmallVector<Function *>> PendingVFuncs;
 
   /// Constant -> Globals that use this global cache.
   DenseMap<Constant *, SmallPtrSet<GlobalValue *, 8>> ConstantDependenciesCache;

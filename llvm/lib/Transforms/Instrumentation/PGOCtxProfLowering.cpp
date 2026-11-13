@@ -275,6 +275,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
       assert(Mark->getIndex()->isZero());
 
       IRBuilder<> Builder(Mark);
+      Builder.disableGEPCanonicalization();
       Guid = Builder.getInt64(cast<Function>(*Mark->getNameValue()).getGUID());
       // The type of the context of this function is now knowable since we have
       // NumCallsites and NumCounters. We declare it here because it's more
@@ -351,6 +352,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
     for (auto &I : llvm::make_early_inc_range(BB)) {
       if (auto *Instr = dyn_cast<InstrProfCntrInstBase>(&I)) {
         IRBuilder<> Builder(Instr);
+        Builder.disableGEPCanonicalization();
         switch (Instr->getIntrinsicID()) {
         case llvm::Intrinsic::instrprof_increment:
         case llvm::Intrinsic::instrprof_increment_step: {
@@ -412,7 +414,7 @@ PreservedAnalyses NoinlineNonPrevailing::run(Module &M,
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
-    if (F.hasFnAttribute(Attribute::NoInline))
+    if (F.isNoInline())
       continue;
     if (!F.isWeakForLinker())
       continue;

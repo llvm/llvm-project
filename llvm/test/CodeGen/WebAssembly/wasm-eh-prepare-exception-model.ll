@@ -1,8 +1,8 @@
 ; The pass only transforms modules that select the Wasm model.
 
 ; RUN: split-file %s %t
-; RUN: opt -passes=wasm-eh-prepare -S %t/wasm.ll   | FileCheck %s --check-prefix=WASM
-; RUN: opt -passes=wasm-eh-prepare -S %t/noflag.ll | FileCheck %s --check-prefix=NOFLAG
+; RUN: opt -passes='require<runtime-libcall-info>,wasm-eh-prepare' -S %t/wasm.ll   | FileCheck %s --check-prefix=WASM
+; RUN: opt -passes='require<runtime-libcall-info>,wasm-eh-prepare' -S %t/noflag.ll | FileCheck %s --check-prefix=NOFLAG
 
 ;--- wasm.ll
 target triple = "wasm32-unknown-unknown"

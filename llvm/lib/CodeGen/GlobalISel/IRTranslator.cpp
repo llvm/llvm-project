@@ -243,11 +243,17 @@ class IRTranslatorImpl {
   /// Translate a debug-info record of a dbg.value into a DBG_* instruction.
   /// Pass in all the contents of the record, rather than relying on how it's
   /// stored.
-  void translateDbgValueRecord(Value *V, bool HasArgList,
-                               const DILocalVariable *Variable,
+  void translateDbgValueRecord(Value *V, const DILocalVariable *Variable,
                                const DIExpression *Expression,
                                const DebugLoc &DL,
                                MachineIRBuilder &MIRBuilder);
+
+  /// Translate a debug-info record of a variadic dbg.value (one using a
+  /// DIArgList) into a DBG_VALUE_LIST instruction.
+  void translateDbgValueListRecord(
+      iterator_range<DbgVariableRecord::location_op_iterator> Values,
+      const DILocalVariable *Variable, const DIExpression *Expression,
+      const DebugLoc &DL, MachineIRBuilder &MIRBuilder);
 
   /// Translate a debug-info record of a dbg.declare into an indirect DBG_*
   /// instruction. Pass in all the contents of the record, rather than relying
@@ -1031,15 +1037,7 @@ int IRTranslatorImpl::getOrCreateFrameIndex(const AllocaInst &AI) {
   uint64_t Size = TySize.getKnownMinValue();
 
   // Always allocate at least one byte.
-  if (Size == 0) {
-    Size = 1;
-    // The frame object links to original AllocaInst for alias analysis, so
-    // adjust that as well.
-    auto &MutableAI = const_cast<AllocaInst &>(AI);
-    MutableAI.setAllocatedType(Type::getInt8Ty(AI.getContext()));
-    MutableAI.setOperand(
-        0, ConstantInt::get(MutableAI.getArraySize()->getType(), 1));
-  }
+  Size = std::max<uint64_t>(Size, 1u);
 
   int &FI = MapEntry->second;
   FI = MF->getFrameInfo().CreateStackObject(Size, AI.getAlign(), false, &AI);
@@ -4367,16 +4365,16 @@ bool IRTranslatorImpl::translateBitInsert(const User &U,
   LLT BaseTy = MRI.getType(Base);
   LLT ValTy = MRI.getType(Val);
 
-  assert(BaseTy.getSizeInBits() >= ValTy.getSizeInBits() &&
+  assert(BaseTy.getScalarSizeInBits() >= ValTy.getScalarSizeInBits() &&
          "bitinsert val wider than base should be rejected by verifier");
 
   // If Val is a floating-point type, bitcast it to an integer of the same
   // size so buildZExtOrTrunc can safely extend or truncate it.
-  if (ValTy.isFloat()) {
-    ValTy = LLT::scalar(ValTy.getSizeInBits());
+  if (ValTy.isFloatOrFloatVector()) {
+    ValTy = ValTy.changeToInteger();
     Val = MIRBuilder.buildBitcast(ValTy, Val).getReg(0);
-  } else if (ValTy.isPointer()) {
-    ValTy = LLT::scalar(ValTy.getSizeInBits());
+  } else if (ValTy.isPointerOrPointerVector()) {
+    ValTy = ValTy.changeElementType(LLT::integer(ValTy.getScalarSizeInBits()));
     Val = MIRBuilder.buildPtrToInt(ValTy, Val).getReg(0);
   }
 
@@ -4388,8 +4386,8 @@ bool IRTranslatorImpl::translateBitInsert(const User &U,
   // Truncate or extend Val to BaseTy so only the inserted bit range remains.
   Register ExtVal = MIRBuilder.buildZExtOrTrunc(BaseTy, Val).getReg(0);
 
-  unsigned BaseBitWidth = BaseTy.getSizeInBits();
-  unsigned ValBitWidth = ValTy.getSizeInBits();
+  unsigned BaseBitWidth = BaseTy.getScalarSizeInBits();
+  unsigned ValBitWidth = ValTy.getScalarSizeInBits();
   APInt InsertMask = APInt::getLowBitsSet(BaseBitWidth, ValBitWidth);
   Register MaskConst = MIRBuilder.buildConstant(BaseTy, InsertMask).getReg(0);
   Register ShiftedMask =
@@ -4411,7 +4409,7 @@ bool IRTranslatorImpl::translateBitExtract(const User &U,
   LLT SrcTy = MRI.getType(Src);
   LLT ResTy = MRI.getType(Res);
 
-  assert(ResTy.getSizeInBits() <= SrcTy.getSizeInBits() &&
+  assert(ResTy.getScalarSizeInBits() <= SrcTy.getScalarSizeInBits() &&
          "bitextract result wider than source should be rejected by verifier");
 
   // Convert Offset to the target's preferred shift amount type.
@@ -4422,9 +4420,9 @@ bool IRTranslatorImpl::translateBitExtract(const User &U,
   // Shift right by Offset to bring the target field down to bit 0.
   Register Shifted = MIRBuilder.buildLShr(SrcTy, Src, LegalOffset).getReg(0);
 
-  if (ResTy.isFloat()) {
+  if (ResTy.isFloatOrFloatVector()) {
     // Drop into the integer domain to safely handle the size conversion
-    LLT IntResTy = LLT::scalar(ResTy.getSizeInBits());
+    LLT IntResTy = ResTy.changeToInteger();
     Register IntRes = MRI.createGenericVirtualRegister(IntResTy);
 
     if (SrcTy == IntResTy)
@@ -4435,9 +4433,10 @@ bool IRTranslatorImpl::translateBitExtract(const User &U,
     // Bitcast the raw integer bits back into the requested floating-point
     // register
     MIRBuilder.buildBitcast(Res, IntRes);
-  } else if (ResTy.isPointer()) {
+  } else if (ResTy.isPointerOrPointerVector()) {
     // Drop into the integer domain to safely handle the size conversion
-    LLT IntResTy = LLT::scalar(ResTy.getSizeInBits());
+    LLT IntResTy =
+        ResTy.changeElementType(LLT::integer(ResTy.getScalarSizeInBits()));
     Register IntRes = MRI.createGenericVirtualRegister(IntResTy);
 
     if (SrcTy == IntResTy)
@@ -4663,7 +4662,7 @@ void IRTranslatorImpl::finishPendingPhis() {
   }
 }
 
-void IRTranslatorImpl::translateDbgValueRecord(Value *V, bool HasArgList,
+void IRTranslatorImpl::translateDbgValueRecord(Value *V,
                                                const DILocalVariable *Variable,
                                                const DIExpression *Expression,
                                                const DebugLoc &DL,
@@ -4673,7 +4672,7 @@ void IRTranslatorImpl::translateDbgValueRecord(Value *V, bool HasArgList,
   // Act as if we're handling a debug intrinsic.
   MIRBuilder.setDebugLoc(DL);
 
-  if (!V || HasArgList) {
+  if (!V) {
     // DI cannot produce a valid DBG_VALUE, so produce an undef DBG_VALUE to
     // terminate any prior location.
     MIRBuilder.buildIndirectDbgValue(0, Variable, Expression);
@@ -4709,6 +4708,57 @@ void IRTranslatorImpl::translateDbgValueRecord(Value *V, bool HasArgList,
     // pretty baked in right now.
     MIRBuilder.buildDirectDbgValue(Reg, Variable, Expression);
   }
+}
+
+void IRTranslatorImpl::translateDbgValueListRecord(
+    iterator_range<DbgVariableRecord::location_op_iterator> Values,
+    const DILocalVariable *Variable, const DIExpression *Expression,
+    const DebugLoc &DL, MachineIRBuilder &MIRBuilder) {
+  assert(Variable->isValidLocationForIntrinsic(DL) &&
+         "Expected inlined-at fields to agree");
+  MIRBuilder.setDebugLoc(DL);
+
+  auto GetLocationOperand = [&](Value *V) -> std::optional<MachineOperand> {
+    if (!V || isa<UndefValue>(V))
+      return std::nullopt;
+    if (auto *CI = dyn_cast<ConstantInt>(V)) {
+      if (CI->getBitWidth() > 64)
+        return MachineOperand::CreateCImm(CI);
+      return MachineOperand::CreateImm(
+          CI->getBitWidth() == 1 ? CI->getZExtValue() : CI->getSExtValue());
+    }
+    if (auto *CFP = dyn_cast<ConstantFP>(V))
+      return MachineOperand::CreateFPImm(CFP);
+    if (isa<ConstantPointerNull>(V))
+      return MachineOperand::CreateImm(0);
+    if (isa<Constant>(V))
+      return std::nullopt;
+    ArrayRef<Register> Regs = getOrCreateVRegs(*V);
+    if (Regs.size() != 1)
+      return std::nullopt;
+    return MachineOperand::CreateReg(Regs.front(), /*isDef=*/false,
+                                     /*isImp=*/false, /*isKill=*/false,
+                                     /*isDead=*/false, /*isUndef=*/false,
+                                     /*isEarlyClobber=*/false, /*SubReg=*/0,
+                                     /*isDebug=*/true);
+  };
+
+  SmallVector<MachineOperand, 4> MOs;
+  for (Value *V : Values) {
+    std::optional<MachineOperand> MO = GetLocationOperand(V);
+    if (!MO) {
+      // One of the location operands cannot be described, so produce an undef
+      // DBG_VALUE to terminate any prior location.
+      MIRBuilder.buildIndirectDbgValue(0, Variable, Expression);
+      return;
+    }
+    MOs.push_back(*MO);
+  }
+
+  MIRBuilder.insertInstr(
+      BuildMI(MIRBuilder.getMF(), DL,
+              MIRBuilder.getTII().get(TargetOpcode::DBG_VALUE_LIST),
+              /*IsIndirect=*/false, MOs, Variable, Expression));
 }
 
 void IRTranslatorImpl::translateDbgDeclareRecord(
@@ -4762,9 +4812,12 @@ void IRTranslatorImpl::translateDbgInfo(const Instruction &Inst,
     if (DVR.isDbgDeclare())
       translateDbgDeclareRecord(V, DVR.hasArgList(), Variable, Expression,
                                 DVR.getDebugLoc(), MIRBuilder);
+    else if (DVR.hasArgList())
+      translateDbgValueListRecord(DVR.location_ops(), Variable, Expression,
+                                  DVR.getDebugLoc(), MIRBuilder);
     else
-      translateDbgValueRecord(V, DVR.hasArgList(), Variable, Expression,
-                              DVR.getDebugLoc(), MIRBuilder);
+      translateDbgValueRecord(V, Variable, Expression, DVR.getDebugLoc(),
+                              MIRBuilder);
   }
 }
 

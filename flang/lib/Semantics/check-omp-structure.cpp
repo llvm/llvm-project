@@ -528,6 +528,28 @@ private:
   SemanticsContext &context_;
 };
 
+class OmpIteratorReferenceChecker {
+public:
+  explicit OmpIteratorReferenceChecker(
+      const UnorderedSymbolSet &iteratorSymbols)
+      : iteratorSymbols_{iteratorSymbols} {}
+
+  template <typename T> bool Pre(const T &) { return !found_; }
+  template <typename T> void Post(const T &) {}
+
+  bool Pre(const parser::Name &name) {
+    if (name.symbol && iteratorSymbols_.count(name.symbol->GetUltimate()) != 0)
+      found_ = true;
+    return !found_;
+  }
+
+  bool found() const { return found_; }
+
+private:
+  const UnorderedSymbolSet &iteratorSymbols_;
+  bool found_{false};
+};
+
 bool OmpStructureChecker::IsAllowedClause(llvm::omp::Clause clauseId) {
   // Do not do clause checks while processing METADIRECTIVE.
   if (GetDirectiveNest(ContextSelectorNest) > 0) {
@@ -5019,9 +5041,9 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
         "The specification of modifiers without comma separators for the "
         "'MAP' clause has been deprecated in OpenMP 5.2"_port_en_US);
   }
-  if (auto *iter{OmpGetUniqueModifier<parser::OmpIterator>(modifiers)}) {
-    CheckIteratorModifier(*iter);
-  }
+  const auto *iterator{OmpGetUniqueModifier<parser::OmpIterator>(modifiers)};
+  if (iterator)
+    CheckIteratorModifier(*iterator);
 
   using Directive = llvm::omp::Directive;
   Directive dir{GetContext().directive};
@@ -5152,23 +5174,106 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
     }
   }
 
-  // If we are an enter or exit map, iterate over the maps and add them to
-  // containers that track if the symbol has been referenced in both an
-  // enter/exit map in the current scope, if it falls into the category of
-  // having a temporary stack descriptor. If we have reference modifiers, we
-  // ignore the warning and trust that the user knows what they are doing
-  // already, as they are aware the type comes with a descriptor and pointer
-  // combination.
-  //
-  // We will utilise this information to emit a warning later if the neccesary
-  // conditions are met, where we have an enter map without a corresponding exit
-  // in the current scope.
+  // Warn if a variable with implicit or explicit SAVE attribute appears in a
+  // map clause without the ALWAYS modifier. Under OpenMP's reference-
+  // counted map semantics, the map operation for such a variable may be
+  // skipped if it is already present on the device, unless ALWAYS is
+  // specified.
+  bool hasAlwaysModifier{
+      OmpGetUniqueModifier<parser::OmpAlwaysModifier>(modifiers) != nullptr};
+  if (!hasAlwaysModifier) {
+    // The ALWAYS modifier may have been canonicalized into an
+    // OmpMapTypeModifier with value Always (see canonicalize-omp.cpp).
+    for (auto *typeMod :
+        OmpGetRepeatableModifier<parser::OmpMapTypeModifier>(modifiers)) {
+      if (typeMod->v == parser::OmpMapTypeModifier::Value::Always) {
+        hasAlwaysModifier = true;
+        break;
+      }
+    }
+  }
+  if (!hasAlwaysModifier) {
+    // Track base symbols already warned about within this clause so that a
+    // list item and one of its components (e.g. `map(x, x%y)`) yield only one
+    // diagnostic per base variable.
+    llvm::SmallPtrSet<const Symbol *, 4> warnedBases;
+    for (const parser::OmpObject &object : objects.v) {
+      const Symbol *baseSym{nullptr};
+      if (const parser::Designator *d{GetDesignatorFromObj(object)}) {
+        // For designators (including component references and subscripts),
+        // use the leftmost name so that `x%y` is treated as `x`.
+        baseSym = parser::GetFirstName(*d).symbol;
+      } else {
+        baseSym = GetObjectSymbol(object);
+      }
+      if (!baseSym) {
+        continue;
+      }
+      const Symbol &ultimate{baseSym->GetUltimate()};
+      // COMMON block members have static storage that persists across target
+      // regions just like SAVEd variables, so the same reference-counted map
+      // concern applies. However, the persistence only matters if the variable
+      // is DECLARE TARGET'd (or belongs to a DECLARE TARGET'd COMMON block),
+      // because that is what makes its device instance persist across regions.
+      bool isSaved{IsSaved(ultimate)};
+      const Symbol *commonBlock{semantics::FindCommonBlockContaining(ultimate)};
+      bool inCommon{!isSaved && commonBlock != nullptr};
+      if (!isSaved && !inCommon) {
+        continue;
+      }
+      bool isDeclareTarget{ultimate.test(Symbol::Flag::OmpDeclareTarget) ||
+          (commonBlock && commonBlock->test(Symbol::Flag::OmpDeclareTarget))};
+      if (!isDeclareTarget || !warnedBases.insert(&ultimate).second) {
+        continue;
+      }
+      auto maybeSource{GetObjectSource(object)};
+      if (isSaved) {
+        context_.Warn(common::UsageWarning::OpenMPMapSaveWithoutAlways,
+            maybeSource.value_or(GetContext().clauseSource),
+            "Variable '%s' has the SAVE attribute and appears in a MAP clause without the ALWAYS modifier; the map operation may be skipped when the variable is already present on the device"_warn_en_US,
+            ultimate.name());
+      } else {
+        context_.Warn(common::UsageWarning::OpenMPMapSaveWithoutAlways,
+            maybeSource.value_or(GetContext().clauseSource),
+            "Variable '%s' is a member of a COMMON block and appears in a MAP clause without the ALWAYS modifier; the map operation may be skipped when the variable is already present on the device"_warn_en_US,
+            ultimate.name());
+      }
+    }
+  }
+
+  // Track temporary descriptor maps to warn about enter maps without matching
+  // exits in this scope. Reference modifiers control descriptor mapping
+  // explicitly. Iterator-dependent maps transfer only selected data, so they
+  // neither introduce a descriptor map nor release one on exit.
   bool hasRefModifier{
       OmpGetUniqueModifier<parser::OmpRefModifier>(modifiers) != nullptr};
   if (!hasRefModifier &&
       (llvm::is_contained(leafs, Directive::OMPD_target_enter_data) ||
           llvm::is_contained(leafs, Directive::OMPD_target_exit_data))) {
+    UnorderedSymbolSet iteratorSymbols;
+    if (iterator) {
+      for (const parser::OmpIteratorSpecifier &iterSpec : iterator->v) {
+        const auto &typeDecl{std::get<parser::TypeDeclarationStmt>(iterSpec.t)};
+        const auto &entities{
+            std::get<std::list<parser::EntityDecl>>(typeDecl.t)};
+        for (const parser::EntityDecl &entity : entities) {
+          const auto &name{std::get<parser::ObjectName>(entity.t)};
+          if (name.symbol)
+            iteratorSymbols.insert(name.symbol->GetUltimate());
+        }
+      }
+    }
+
     for (const parser::OmpObject &object : objects.v) {
+      bool referencesIterator{false};
+      if (const auto *designator{GetDesignatorFromObj(object)}) {
+        OmpIteratorReferenceChecker checker{iteratorSymbols};
+        parser::Walk(*designator, checker);
+        referencesIterator = checker.found();
+      }
+      if (referencesIterator)
+        continue;
+
       if (const Symbol *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
         if (HasTemporaryStackDescriptor(*sym)) {
           auto maybeSource{GetObjectSource(object)};

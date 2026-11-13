@@ -13,10 +13,10 @@
 ; RUN: opt -thinlto-bc -thinlto-split-lto-unit %t.dir/b.ll -o %t.dir/b.bc
 ; RUN: llvm-lto2 run -save-temps %t.dir/a.bc %t.dir/b.bc -o %t.dir/out \
 ; RUN:   -r=%t.dir/a.bc,get_vtable,plx \
-; RUN:   -r=%t.dir/a.bc,vtable.b66cc3a748330e63b2451fa89522eb06,l \
-; RUN:   -r=%t.dir/a.bc,coro.b66cc3a748330e63b2451fa89522eb06,plx \
-; RUN:   -r=%t.dir/a.bc,vtable.b66cc3a748330e63b2451fa89522eb06,plx \
-; RUN:   -r=%t.dir/a.bc,coro.b66cc3a748330e63b2451fa89522eb06,l \
+; RUN:   -r=%t.dir/a.bc,vtable.llvm.b66cc3a748330e63b2451fa89522eb06,l \
+; RUN:   -r=%t.dir/a.bc,coro.llvm.b66cc3a748330e63b2451fa89522eb06,plx \
+; RUN:   -r=%t.dir/a.bc,vtable.llvm.b66cc3a748330e63b2451fa89522eb06,plx \
+; RUN:   -r=%t.dir/a.bc,coro.llvm.b66cc3a748330e63b2451fa89522eb06,l \
 ; RUN:   -r=%t.dir/b.bc,caller,plx
 ; RUN: llvm-dis %t.dir/out.2.3.import.bc -o - | FileCheck %s --check-prefix=IMPORT
 

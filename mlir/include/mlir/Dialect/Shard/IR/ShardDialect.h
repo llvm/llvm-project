@@ -9,8 +9,6 @@
 #ifndef MLIR_DIALECT_SHARD_IR_SHARDDIALECT_H
 #define MLIR_DIALECT_SHARD_IR_SHARDDIALECT_H
 
-#include "mlir/IR/Dialect.h"
-
 #include "mlir/Dialect/Shard/IR/ShardDialect.h.inc"
 
 #endif // MLIR_DIALECT_SHARD_IR_SHARDDIALECT_H

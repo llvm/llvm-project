@@ -15,6 +15,7 @@
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "llvm/Support/MathExtras.h"
 
 //===-----------------------------------------------------------------===//
 // RecordMembers
@@ -170,6 +171,20 @@ LogicalResult PtrSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   if (abi > preferred)
     return emitError() << "preferred alignment is expected to be at least "
                           "as large as ABI alignment";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// BitIntSpecAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+BitIntSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       uint32_t maxAlign) {
+  // TargetInfo::getBitIntMaxAlign() is a power of two, at least the char
+  // width. Char width is 8 bits.
+  if (maxAlign < 8 || !llvm::isPowerOf2_32(maxAlign))
+    return emitError() << "max_align must be a power of two of at least 8";
   return success();
 }
 
@@ -617,6 +632,11 @@ void CUDAVarRegistrationInfoAttr::print(AsmPrinter &p) const {
     p << ", managed";
   if (getKind() == CUDADeviceVarKind::Surface)
     p << ", surface_type = " << getSurfTexType();
+  else if (getKind() == CUDADeviceVarKind::Texture) {
+    p << ", texture_type = " << getSurfTexType();
+    if (getNormalized())
+      p << ", normalized";
+  }
   p << ">";
 }
 
@@ -652,6 +672,7 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
   bool isConstant = false;
   bool isManaged = false;
   int32_t surfTexType = 0;
+  bool normalized = false;
 
   while (parser.parseOptionalGreater().failed()) {
     if (parser.parseComma())
@@ -667,7 +688,27 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
       isConstant = true;
     else if (flag == "managed")
       isManaged = true;
-    else if (flag == "surface_type") {
+    else if (flag == "normalized") {
+      if (*kind != CUDADeviceVarKind::Texture) {
+        parser.emitError(parser.getCurrentLocation(),
+                         "'normalized' is only valid for Texture");
+        return {};
+      }
+      normalized = true;
+    } else if (flag == "surface_type") {
+      if (*kind != CUDADeviceVarKind::Surface) {
+        parser.emitError(parser.getCurrentLocation(),
+                         "'surface_type' is only valid for Surface");
+        return {};
+      }
+      if (parser.parseEqual() || parser.parseInteger(surfTexType))
+        return {};
+    } else if (flag == "texture_type") {
+      if (*kind != CUDADeviceVarKind::Texture) {
+        parser.emitError(parser.getCurrentLocation(),
+                         "'texture_type' is only valid for Texture");
+        return {};
+      }
       if (parser.parseEqual() || parser.parseInteger(surfTexType))
         return {};
     } else {
@@ -677,7 +718,7 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
   }
 
   return get(parser.getContext(), deviceSideName, *kind, isExtern, isConstant,
-             isManaged, surfTexType);
+             isManaged, surfTexType, normalized);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1039,6 +1080,104 @@ LogicalResult EhFilterAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   }
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// RecordLayoutAttr
+//===----------------------------------------------------------------------===//
+
+Attribute RecordLayoutAttr::parse(AsmParser &parser, Type odsType) {
+  (void)odsType;
+  SMLoc loc = parser.getCurrentLocation();
+  if (parser.parseLess() || parser.parseKeyword("arg_passing_kind") ||
+      parser.parseEqual())
+    return {};
+
+  FailureOr<ArgPassingKind> kind = FieldParser<ArgPassingKind>::parse(parser);
+  if (failed(kind))
+    return {};
+
+  if (parser.parseComma() || parser.parseKeyword("has_trivial_dtor") ||
+      parser.parseEqual())
+    return {};
+  FailureOr<bool> hasTrivialDtor = FieldParser<bool>::parse(parser);
+  if (failed(hasTrivialDtor))
+    return {};
+
+  if (parser.parseComma() || parser.parseKeyword("record_align") ||
+      parser.parseEqual())
+    return {};
+  FailureOr<uint64_t> recordAlign = FieldParser<uint64_t>::parse(parser);
+  if (failed(recordAlign))
+    return {};
+
+  // An omitted unadjusted_align stores the record alignment. The optional
+  // fields may follow record_align in any order.
+  uint64_t unadjustedAlign = *recordAlign;
+  bool transparentUnion = false;
+  bool flexibleArrayMember = false;
+  while (succeeded(parser.parseOptionalComma())) {
+    if (succeeded(parser.parseOptionalKeyword("unadjusted_align"))) {
+      if (parser.parseEqual())
+        return {};
+      FailureOr<uint64_t> parsed = FieldParser<uint64_t>::parse(parser);
+      if (failed(parsed))
+        return {};
+      unadjustedAlign = *parsed;
+      continue;
+    }
+    if (succeeded(parser.parseOptionalKeyword("transparent_union"))) {
+      if (parser.parseEqual())
+        return {};
+      FailureOr<bool> parsed = FieldParser<bool>::parse(parser);
+      if (failed(parsed))
+        return {};
+      transparentUnion = *parsed;
+      continue;
+    }
+    if (succeeded(parser.parseOptionalKeyword("flexible_array_member"))) {
+      if (parser.parseEqual())
+        return {};
+      FailureOr<bool> parsed = FieldParser<bool>::parse(parser);
+      if (failed(parsed))
+        return {};
+      flexibleArrayMember = *parsed;
+      continue;
+    }
+    parser.emitError(parser.getCurrentLocation(),
+                     "expected unadjusted_align, transparent_union or "
+                     "flexible_array_member");
+    return {};
+  }
+
+  if (parser.parseGreater())
+    return {};
+  return parser.getChecked<RecordLayoutAttr>(
+      loc, parser.getContext(), *kind, *hasTrivialDtor, *recordAlign,
+      unadjustedAlign, transparentUnion, flexibleArrayMember);
+}
+
+void RecordLayoutAttr::print(AsmPrinter &printer) const {
+  printer << "<arg_passing_kind = ";
+  printer.printStrippedAttrOrType(getArgPassingKind());
+  printer << ", has_trivial_dtor = ";
+  printer.printStrippedAttrOrType(getHasTrivialDtor());
+  printer << ", record_align = ";
+  printer.printStrippedAttrOrType(getRecordAlign());
+  // Print unadjusted_align only when it differs from record_align.
+  if (getUnadjustedAlign() != getRecordAlign()) {
+    printer << ", unadjusted_align = ";
+    printer.printStrippedAttrOrType(getUnadjustedAlign());
+  }
+  if (getTransparentUnion()) {
+    printer << ", transparent_union = ";
+    printer.printStrippedAttrOrType(getTransparentUnion());
+  }
+  if (getFlexibleArrayMember()) {
+    printer << ", flexible_array_member = ";
+    printer.printStrippedAttrOrType(getFlexibleArrayMember());
+  }
+  printer << '>';
 }
 
 //===----------------------------------------------------------------------===//

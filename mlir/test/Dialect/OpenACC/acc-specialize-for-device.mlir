@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -acc-specialize-for-device=the-device-types=3,4 -allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt %s -acc-specialize-for-device=the-device-types=4 -allow-unregistered-dialect | FileCheck %s --check-prefix=SINGLE
 
 //===----------------------------------------------------------------------===//
 // Data entry ops in specialized routines
@@ -316,6 +317,31 @@ func.func @fold_on_device_inside_parallel_alt() {
   acc.parallel {
     %on_nvidia = acc.on_device %nvidia : i32 -> i1
     "test.test"(%on_nvidia) : (i1) -> ()
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @fold_on_device_dynamic_inside_parallel
+// CHECK-SAME:      (%[[TYPE:.*]]: i32)
+// CHECK:         acc.parallel
+// CHECK:         %[[C3:.*]] = arith.constant 3 : i32
+// CHECK:         %[[EQ3:.*]] = arith.cmpi eq, %[[TYPE]], %[[C3]] : i32
+// CHECK:         %[[C4:.*]] = arith.constant 4 : i32
+// CHECK:         %[[EQ4:.*]] = arith.cmpi eq, %[[TYPE]], %[[C4]] : i32
+// CHECK:         %[[OR:.*]] = arith.ori %[[EQ3]], %[[EQ4]] : i1
+// CHECK:         "test.test"(%[[OR]]) : (i1) -> ()
+// A single device type needs one comparison and no disjunction.
+// SINGLE-LABEL: func.func @fold_on_device_dynamic_inside_parallel
+// SINGLE-SAME:      (%[[TYPE:.*]]: i32)
+// SINGLE:         acc.parallel
+// SINGLE:         %[[C4:.*]] = arith.constant 4 : i32
+// SINGLE:         %[[EQ:.*]] = arith.cmpi eq, %[[TYPE]], %[[C4]] : i32
+// SINGLE:         "test.test"(%[[EQ]]) : (i1) -> ()
+func.func @fold_on_device_dynamic_inside_parallel(%type: i32) {
+  acc.parallel {
+    %on_device = acc.on_device %type : i32 -> i1
+    "test.test"(%on_device) : (i1) -> ()
     acc.yield
   }
   return
