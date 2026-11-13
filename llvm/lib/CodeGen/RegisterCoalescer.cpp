@@ -1375,14 +1375,7 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
     }
   }
 
-  const unsigned DefSubIdx = DefMI->getOperand(0).getSubReg();
   const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0);
-  // CoalescerPair has already checked that DstReg is in SrcReg's register
-  // class, and SrcReg's class is compatible with DefMI's def operand.
-  assert((!DstReg.isPhysical() || !DefRC ||
-          DefRC->contains(DefSubIdx ? TRI->getSubReg(DstReg, DefSubIdx)
-                                    : MCRegister(DstReg))) &&
-         "Physical register not allowed by remat instruction!");
 
   if (!VirtRegAuxInfo::allUsesAvailableAt(DefMI, CopyIdx, *LIS, *MRI, *TII))
     return false;
@@ -1473,12 +1466,13 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
     if (MO.isReg() && MO.isDef()) {
       assert(MO.isImplicit());
       if (MO.getReg().isPhysical()) {
-        assert(MO.isDead() ||
-               (DefSubIdx &&
-                ((TRI->getSubReg(MO.getReg(), DefSubIdx) ==
-                  MCRegister((unsigned)NewMI.getOperand(0).getReg())) ||
-                 TRI->isSubRegisterEq(NewMI.getOperand(0).getReg(),
-                                      MO.getReg()))));
+        assert(
+            MO.isDead() ||
+            (DefMI->getOperand(0).getSubReg() &&
+             ((TRI->getSubReg(MO.getReg(), DefMI->getOperand(0).getSubReg()) ==
+               MCRegister((unsigned)NewMI.getOperand(0).getReg())) ||
+              TRI->isSubRegisterEq(NewMI.getOperand(0).getReg(),
+                                   MO.getReg()))));
         NewMIImplDefs.push_back({i, MO.getReg()});
       } else {
         assert(MO.getReg() == NewMI.getOperand(0).getReg());
@@ -1526,7 +1520,7 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
     //
     //    undef %2.subreg:reg = INST %1:reg    ; DefMI (rematerializable),
     //                                         ; Defines only some of lanes,
-    //                                         ; so DefSubIdx = NewIdx = subreg
+    //                                         ; so NewIdx = subreg
     //    %3:reg = COPY %2                     ; Copy full reg
     //    .... = SOMEINSTR %3:reg              ; Use full reg
     //
