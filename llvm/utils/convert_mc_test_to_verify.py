@@ -11,8 +11,10 @@ files. Run the converted tests with llvm-lit afterwards and fix up or revert
 any failures.
 """
 
+from __future__ import annotations
+
 import argparse
-import os
+from dataclasses import dataclass
 import pathlib
 import re
 import shlex
@@ -20,48 +22,103 @@ import sys
 
 from UpdateTestChecks import common
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lit"))
-from lit.ShCommands import Pipeline
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "lit"))
+from lit.ShCommands import Command, Pipeline
 from lit.ShUtil import ShParser
-from lit.TestRunner import (
-    CommandDirective,
-    IntegratedTestKeywordParser,
-    ParserKind,
-    kPdbgRegex,
-    parseIntegratedTestScriptCommands,
-)
+from lit.TestRunner import CommandDirective, parseIntegratedTestScriptCommands
 
 TEST_SUFFIXES = {".s", ".S", ".asm", ".txt", ".test"}
 # The body of a diagnostic check, e.g. ':[[@LINE-1]]:11: error: message'.
 DIAG_RE = re.compile(
-    r"""(?:(?:<stdin>|[^\s:\[]*):?(?:\[\[\#?\s*@LINE(?P<offset>[+-]\d+)?\]\]|\[\[\#\]\]|\{\{\[0-9\]\+\}\}|\b\d+):
-           (?:(?:(?P<col>\d+)|\[\[\#\]\]|\{\{[^}:\s]+\}\}):)?\s*)?
-        (?:(?P<kind>error|warning|note|remark):\s*)?
-        (?P<msg>.+?)(?:\{\{\$\}\})?""",
+    r"""
+    (?:
+      (?P<unknown><unknown>:0:\s*)
+    |
+      (?:<stdin>|[^\s:\[]*):?                       # Optional filename
+      (?:
+        \[\[\#?\s*@LINE(?P<offset>[+-]\d+)?\]\]     # [[@LINE]] or [[#@LINE+N]]
+      | \[\[\#\]\]                                  # [[#]]
+      | \{\{\[0-9\]\+\}\}                           # {{[0-9]+}}
+      | \b\d+                                       # Fixed line number
+      ):
+      (?:
+        (?:
+          (?P<col>\d+)                              # Fixed column number
+        | \[\[\#\]\]                                # [[#]]
+        | \{\{[^}:\s]+\}\}                          # Regex column, e.g. {{[0-9]+}}
+        ):
+      )?\s*
+    )?
+    (?:(?P<kind>error|warning|note|remark):\s*)?
+    (?P<msg>.+?)
+    (?:\{\{\$\}\})?                                 # Optional end-of-line {{$}}
+    """,
     re.VERBOSE,
 )
 
 
-def parse_run_lines(path):
-    """Return (first line, last line, shell AST) for each RUN line in path."""
-    parser = IntegratedTestKeywordParser("RUN:", ParserKind.COMMAND, initial_value=[])
-    for line_number, _, line in parseIntegratedTestScriptCommands(str(path), ["RUN:"]):
-        parser.parseLine(line_number, line)
-    # Drop the '%dbg(RUN: at line N)' that lit prepends to each command.
-    return [
-        (
-            d.start_line_number,
-            d.end_line_number,
-            ShParser(re.fullmatch(kPdbgRegex, d.command)[2]).parse(),
-        )
-        for d in parser.getValue()
-        if isinstance(d, CommandDirective)
-    ]
+@dataclass
+class RunLine:
+    first_line: int
+    last_line: int
+    mc: Command
+    prefixes: list[str]
 
 
-def is_negative_mc_run(ast):
+@dataclass
+class Directive:
+    indent: str
+    comment: str
+    prefix_kind: str
+    col: str
+    body: str
+
+    def format(self, loc: str = "") -> str:
+        return f"{self.comment}{self.prefix_kind}{loc}{self.col} {self.body}"
+
+
+def parse_run_lines(path: pathlib.Path) -> list[RunLine]:
+    """Return the 'not llvm-mc ... | FileCheck' RUN lines in path, or [] if the
+    test has none, uses compound RUN lines (e.g. 'rm -rf %t && split-file %s %t'),
+    or shares a FileCheck prefix with another RUN line."""
+    directives: list[CommandDirective] = []
+    for line_number, keyword, line in parseIntegratedTestScriptCommands(
+        str(path), ["RUN:"]
+    ):
+        if directives and directives[-1].add_continuation(line_number, keyword, line):
+            continue
+        directives.append(CommandDirective(line_number, line_number, keyword, line))
+
+    runs: list[RunLine] = []
+    other_prefixes: set[str] = set()
+    for d in directives:
+        try:
+            ast = ShParser(d.command).parse()
+        except ValueError:  # E.g. lit's %if substitutions.
+            return []
+        if not isinstance(ast, Pipeline):
+            return []
+
+        prefixes: list[str] = []
+        for cmd in ast.commands:
+            if cmd.args[0] == "FileCheck":
+                prefixes.extend(common.get_check_prefixes(shlex.join(cmd.args)))
+
+        if is_negative_mc_run(ast):
+            mc = ast.commands[0]
+            runs.append(RunLine(d.start_line_number, d.end_line_number, mc, prefixes))
+        else:
+            other_prefixes.update(prefixes)
+
+    for r in runs:
+        if other_prefixes.intersection(r.prefixes):
+            return []
+    return runs
+
+
+def is_negative_mc_run(ast: Pipeline) -> bool:
     """Match 'not llvm-mc ... 2>&1 | FileCheck ...'."""
-    if not isinstance(ast, Pipeline) or len(ast.commands) != 2:
+    if len(ast.commands) != 2:
         return False
     mc, filecheck = ast.commands
     return (
@@ -73,135 +130,180 @@ def is_negative_mc_run(ast):
     )
 
 
-def prefixes(command):
-    return common.get_check_prefixes(shlex.join(command.args))
-
-
-def commands(ast):
-    if isinstance(ast, Pipeline):
-        yield from ast.commands
-    else:
-        yield from commands(ast.lhs)
-        yield from commands(ast.rhs)
-
-
-def to_shell(command):
-    """Print a parsed command without its 2>&1 redirect."""
-    words = [
-        arg if re.fullmatch(r"[\w@%+=:,./-]+", arg) else shlex.quote(arg)
-        for arg in command.args
-    ]
-    for (op, *fd), arg in command.redirects:
-        if (op, *fd) != (">&", 2):
-            words.append(f"{fd[0] if fd else ''}{op} {arg}")
+def to_shell(command: Command) -> str:
+    words = [shlex.quote(arg) for arg in command.args]
+    # lit stores redirects as ((op,), target) or ((op, fd), target), e.g.
+    # (("<",), "%s") for '< %s' and ((">", 2), "%t") for '2> %t'.
+    for op, target in command.redirects:
+        fd = str(op[1]) if len(op) > 1 else ""
+        words.append(f"{fd}{op[0]} {target}")
     return " ".join(words)
 
 
-def find_code_line(lines, i):
+def find_code_line(lines: list[str], i: int) -> int | None:
     """Return the offset from line i to the closest code line, skipping checks."""
     for step in (-1, 1):
         j = i + step
         while 0 <= j < len(lines) and common.CHECK_RE.match(lines[j]):
             j += step
-        line = lines[j].strip() if 0 <= j < len(lines) else ""
+        if not (0 <= j < len(lines)):
+            continue
+        line = lines[j].strip()
         if line and not line.startswith(("#", "//")):
-            return f"@{j - i:+d}"
-    return "@above"
+            return j - i
+    return None
 
 
-def convert(path, text):
+def inline_directives(
+    lines: list[str], standalone: dict[int, tuple[int, Directive]]
+) -> list[str]:
+    """Move standalone directives to their target code line (on the same line
+    when there is only one, or immediately below as @-1, @-2, ...)."""
+    by_target: dict[int, list[Directive]] = {}
+    moved: set[int] = set()
+    for i, (target, d) in standalone.items():
+        if 0 <= target < len(lines) and target not in standalone:
+            by_target.setdefault(target, []).append(d)
+            moved.add(i)
+
+    result: list[str] = []
+    for i, line in enumerate(lines):
+        if i in moved:
+            continue
+        if i not in by_target:
+            result.append(line)
+            continue
+
+        directives = by_target[i]
+        code = line.rstrip()
+        d = directives[0]
+        # Moving a standalone check onto a line shifts its EndOfStatement token
+        # from '\n' (at len(code) + 1) to '#' (at len(code) + 2), so place
+        # end-of-line column checks on the line below instead.
+        at_eol = bool(d.col and int(d.col[1:]) > len(code))
+        has_comment = "#" in code or "//" in code
+        if (
+            len(directives) == 1
+            and not has_comment
+            and not code.endswith("\\")
+            and not at_eol
+        ):
+            result.append(f"{code} {d.format()}")
+        else:
+            result.append(line)
+            for idx, d in enumerate(directives, start=1):
+                result.append(f"{d.indent}{d.format(f'@-{idx}')}")
+    return result
+
+
+def convert(path: pathlib.Path, inline: bool = False) -> str | None:
     try:
-        runs = parse_run_lines(path)
-    except ValueError:  # E.g. lit's %if substitutions.
-        return None
-    if any(
-        cmd.args[0] == "split-file" or any("%t" in arg for arg in cmd.args)
-        for _, _, ast in runs
-        for cmd in commands(ast)
-    ):
-        return None
-    neg = [prefixes(ast.commands[1]) for _, _, ast in runs if is_negative_mc_run(ast)]
-    pos = {
-        p
-        for _, _, ast in runs
-        if not is_negative_mc_run(ast)
-        for cmd in commands(ast)
-        if cmd.args[0] == "FileCheck"
-        for p in prefixes(cmd)
-    }
-    neg_prefixes = {p for ps in neg for p in ps}
-    if not neg or neg_prefixes & pos:
+        # Split on '\n' only, so that the line numbers match lit's.
+        lines = path.read_text(encoding="utf-8").split("\n")
+    except UnicodeDecodeError:
         return None
 
-    # Prefixes used by every RUN line become 'expected', others e.g. 'rv32'.
-    shared = set.intersection(*map(set, neg))
-    verify_prefix = {
-        p: "expected" if p in shared else re.sub(r"^check[-_]?(?=.)", "", p.lower())
-        for p in neg_prefixes
-    }
+    runs = parse_run_lines(path)
+    if not runs:
+        return None
 
-    # Split on '\n' only, so that the line numbers match lit's.
-    lines = text.split("\n")
+    neg_prefixes: set[str] = set()
+    for r in runs:
+        neg_prefixes.update(r.prefixes)
+
+    verify_prefix: dict[str, str] = {}
+    for p in neg_prefixes:
+        used_by_all_runs = all(p in r.prefixes for r in runs)
+        if used_by_all_runs:
+            verify_prefix[p] = "expected"
+        else:
+            verify_prefix[p] = re.sub(r"^check[-_]+", "", p.lower())
+
     # Replace each converted (possibly multi-line) RUN line with a single line,
     # bottom-up so that the earlier line numbers stay valid.
-    for first, last, ast in reversed(runs):
-        if not is_negative_mc_run(ast):
-            continue
-        mc, filecheck = ast.commands
-        names = sorted({verify_prefix[p] for p in prefixes(filecheck)})
+    for r in reversed(runs):
+        names = sorted({verify_prefix[p] for p in r.prefixes})
         flag = "--verify" if names == ["expected"] else "--verify=" + ",".join(names)
-        mc.args = ["llvm-mc", flag] + mc.args[2:]
-        leader = lines[first - 1][: lines[first - 1].index("RUN:") + len("RUN:")]
-        lines[first - 1 : last] = [f"{leader} {to_shell(mc)}"]
+        r.mc.args = ["llvm-mc", flag] + r.mc.args[2:]
+        r.mc.redirects.remove(((">&", 2), "1"))
+        comment, _, _ = lines[r.first_line - 1].partition("RUN:")
+        lines[r.first_line - 1 : r.last_line] = [f"{comment}RUN: {to_shell(r.mc)}"]
 
     prefix_alt = "|".join(map(re.escape, neg_prefixes))
     check_re = re.compile(
         rf"^(?P<code>.*?)(?P<comment>(?:#|//)\s*)(?P<prefix>{prefix_alt})"
         rf"(?P<suffix>-NEXT|-LABEL)?:\s*(?P<body>.*?)\s*$"
     )
+    standalone: dict[int, tuple[int, Directive]] = {}
     for i, line in enumerate(lines):
         m = check_re.match(line)
         if not m or common.RUN_LINE_RE.match(line):
             continue
-        diag = DIAG_RE.fullmatch(m["body"])
-        if not diag or m["suffix"] == "-LABEL" or (m["suffix"] and not diag["kind"]):
+        if m["suffix"] == "-LABEL":
             return None
-        if diag["offset"]:
+        diag = DIAG_RE.fullmatch(m["body"])
+        if not diag:
+            return None
+        # A CHECK-NEXT line without a diagnostic kind is usually checking the
+        # caret or source line printed after a diagnostic.
+        if m["suffix"] == "-NEXT" and not diag["kind"]:
+            return None
+
+        offset = None
+        if diag["unknown"]:
+            loc = "@unknown"
+        elif diag["offset"]:
+            offset = int(diag["offset"])
             loc = "@" + diag["offset"]
         elif m["code"].strip():
             loc = ""  # Trailing comment on the same line as the code.
         else:
-            loc = find_code_line(lines, i)
-        if diag["col"]:
-            loc += ":" + diag["col"]
-        kind = (diag["kind"] or "error") + ("-re" if "{{" in diag["msg"] else "")
-        directive = f"{verify_prefix[m['prefix']]}-{kind}{loc} {{{{{diag['msg']}}}}}"
-        lines[i] = m["code"] + m["comment"] + directive
+            offset = find_code_line(lines, i)
+            loc = f"@{offset:+d}" if offset is not None else "@above"
+
+        kind = diag["kind"] or "error"
+        if "{{" in diag["msg"]:
+            kind += "-re"
+        d = Directive(
+            indent=m["code"],
+            comment=m["comment"],
+            prefix_kind=f"{verify_prefix[m['prefix']]}-{kind}",
+            col=":" + diag["col"] if diag["col"] else "",
+            body="{{" + diag["msg"] + "}}",
+        )
+        lines[i] = m["code"] + d.format(loc)
+        if not m["code"].strip() and offset is not None:
+            standalone[i] = (i + offset, d)
+
+    if inline:
+        lines = inline_directives(lines, standalone)
     return "\n".join(lines)
 
 
-def find_tests(paths):
-    for path in map(pathlib.Path, paths):
-        if path.is_dir():
-            yield from sorted(p for p in path.rglob("*") if p.suffix in TEST_SUFFIXES)
-        else:
-            yield path
-
-
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument(
+        "--inline",
+        action="store_true",
+        help="place single directives on the same line as the instruction and "
+        "multiple directives immediately below (@-1, @-2, ...)",
+    )
+    parser.add_argument(
         "tests", nargs="+", help="test files or directories to convert in place"
     )
-    for path in find_tests(parser.parse_args().tests):
-        # Some test inputs are not valid UTF-8, so preserve the raw bytes.
-        text = path.read_text(errors="surrogateescape")
-        new_text = convert(path, text)
-        if new_text is not None and new_text != text:
-            path.write_text(new_text, errors="surrogateescape")
-            print(f"Converted {path}")
+    args = parser.parse_args()
+    for arg in args.tests:
+        root = pathlib.Path(arg)
+        paths = sorted(root.rglob("*")) if root.is_dir() else [root]
+        for path in paths:
+            if path.suffix not in TEST_SUFFIXES:
+                continue
+            new_text = convert(path, inline=args.inline)
+            if new_text is not None:
+                path.write_text(new_text, encoding="utf-8")
+                print(f"Converted {path}")
 
 
 if __name__ == "__main__":
