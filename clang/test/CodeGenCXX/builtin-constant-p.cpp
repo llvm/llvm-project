@@ -47,3 +47,13 @@ bool bcp_stmt_expr_2(int n) {
   // CHECK-NOT: }
   // CHECK: ret i1 false
 }
+
+// GH119126: a complex argument was emitted as a scalar.
+// CHECK-LABEL: define {{.*}} @_Z8gh119126v()
+// CHECK: [[R:%.*]] = call i1 @llvm.is.constant.f64(double %f.real)
+// CHECK: [[I:%.*]] = call i1 @llvm.is.constant.f64(double %f.imag)
+// CHECK: and i1 [[R]], [[I]]
+__complex double gh119126() {
+  __complex double f;
+  return (__builtin_constant_p(f) ? f : 0);
+}
