@@ -763,6 +763,48 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// C is split with an expand_shape instead of being packed.
+
+//    CHECK-DAG: #[[$MAP_A:.*]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d2, d3, d5)>
+//    CHECK-DAG: #[[$MAP_B:.*]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d2, d1, d4, d5)>
+//    CHECK-DAG: #[[$MAP_C:.*]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d3, d1, d4)>
+
+// CHECK-LABEL: matmul_keep_layout_acc
+//  CHECK-SAME:   %[[A:.+]]: tensor<24x16xf32>, %[[B:.+]]: tensor<16x16xf32>, %[[C:.+]]: tensor<24x16xf32>
+func.func @matmul_keep_layout_acc(%A: tensor<24x16xf32>, %B: tensor<16x16xf32>,
+                                   %C: tensor<24x16xf32>) -> tensor<24x16xf32> {
+  //      CHECK: %[[PACK_A:.*]] = linalg.pack %[[A]] inner_dims_pos = [0, 1] inner_tiles = [12, 1]
+  // CHECK-SAME:   : tensor<24x16xf32> -> tensor<2x16x12x1xf32>
+  //      CHECK: %[[PACK_B:.*]] = linalg.pack %[[B]] inner_dims_pos = [1, 0] inner_tiles = [8, 1]
+  // CHECK-SAME:   : tensor<16x16xf32> -> tensor<16x2x8x1xf32>
+  //  CHECK-NOT: linalg.pack
+  //      CHECK: %[[EXPANDED:.*]] = tensor.expand_shape %[[C]] {{\[\[0, 1\], \[2, 3\]\]}}
+  // CHECK-SAME:   output_shape [2, 12, 2, 8] : tensor<24x16xf32> into tensor<2x12x2x8xf32>
+  //      CHECK: %[[RES:.*]] = linalg.generic
+  // CHECK-SAME:   indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
+  // CHECK-SAME:   iterator_types = ["parallel", "parallel", "reduction", "parallel", "parallel", "reduction"]
+  // CHECK-SAME:   ins(%[[PACK_A]], %[[PACK_B]] : tensor<2x16x12x1xf32>, tensor<16x2x8x1xf32>)
+  // CHECK-SAME:   outs(%[[EXPANDED]] : tensor<2x12x2x8xf32>)
+  //      CHECK: %[[COLLAPSED:.*]] = tensor.collapse_shape %[[RES]] {{\[\[0, 1\], \[2, 3\]\]}}
+  // CHECK-SAME:   : tensor<2x12x2x8xf32> into tensor<24x16xf32>
+  //  CHECK-NOT: linalg.unpack
+  //      CHECK: return %[[COLLAPSED]]
+  %0 = linalg.matmul ins(%A, %B : tensor<24x16xf32>, tensor<16x16xf32>)
+                     outs(%C : tensor<24x16xf32>) -> tensor<24x16xf32>
+  return %0 : tensor<24x16xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.pack %0 packed_sizes = [12, 8, 1] keep_layout_operands = [2]
+        : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+    transform.yield
+  }
+}
+
+// -----
+
 #identity = affine_map<(d0) -> (d0)>
 
 // Check index remapping when packing adds a padded iteration. Unpacking drops
@@ -797,6 +839,41 @@ module attributes {transform.with_named_sequence} {
       : (!transform.any_op) -> !transform.any_op
     transform.structured.pack %generic packed_sizes = [3]
       : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+    transform.yield
+  }
+}
+
+// -----
+
+// An input can keep its layout too.
+
+//    CHECK-DAG: #[[$MAP_A:.*]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d3, d2, d5)>
+//    CHECK-DAG: #[[$MAP_B:.*]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d2, d1, d4, d5)>
+//    CHECK-DAG: #[[$MAP_C:.*]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d3, d4)>
+
+// CHECK-LABEL: matmul_keep_layout_input
+//  CHECK-SAME:   %[[A:.+]]: tensor<24x16xf32>, %[[B:.+]]: tensor<16x16xf32>, %[[C:.+]]: tensor<24x16xf32>
+func.func @matmul_keep_layout_input(%A: tensor<24x16xf32>, %B: tensor<16x16xf32>,
+                                     %C: tensor<24x16xf32>) -> tensor<24x16xf32> {
+  //      CHECK: %[[EXPANDED:.*]] = tensor.expand_shape %[[A]] {{\[\[0, 1\], \[2, 3\]\]}}
+  // CHECK-SAME:   output_shape [2, 12, 4, 4] : tensor<24x16xf32> into tensor<2x12x4x4xf32>
+  //      CHECK: linalg.pack %[[B]]
+  //      CHECK: linalg.pack %[[C]]
+  //      CHECK: linalg.generic
+  // CHECK-SAME:   indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
+  // CHECK-SAME:   ins(%[[EXPANDED]], %{{.*}} : tensor<2x12x4x4xf32>, tensor<4x2x8x4xf32>)
+  //      CHECK: linalg.unpack
+  //  CHECK-NOT: tensor.collapse_shape
+  %0 = linalg.matmul ins(%A, %B : tensor<24x16xf32>, tensor<16x16xf32>)
+                     outs(%C : tensor<24x16xf32>) -> tensor<24x16xf32>
+  return %0 : tensor<24x16xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.pack %0 packed_sizes = [12, 8, 4] keep_layout_operands = [0]
+        : (!transform.any_op) -> (!transform.op<"linalg.generic">)
     transform.yield
   }
 }
@@ -853,6 +930,32 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// An operand without a packed dimension is left untouched.
+
+// CHECK-LABEL: matmul_keep_layout_without_packed_dim
+func.func @matmul_keep_layout_without_packed_dim(%A: tensor<24x16xf32>, %B: tensor<16x16xf32>,
+                                                  %C: tensor<24x16xf32>) -> tensor<24x16xf32> {
+  //  CHECK-NOT: tensor.expand_shape
+  //      CHECK: linalg.pack
+  //      CHECK: linalg.pack
+  //      CHECK: linalg.generic
+  // CHECK-SAME:   ins(%{{.*}}, %{{.*}} : tensor<24x16xf32>, tensor<16x2x8xf32>)
+  %0 = linalg.matmul ins(%A, %B : tensor<24x16xf32>, tensor<16x16xf32>)
+                     outs(%C : tensor<24x16xf32>) -> tensor<24x16xf32>
+  return %0 : tensor<24x16xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.pack %0 packed_sizes = [0, 8, 0] keep_layout_operands = [0]
+        : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+    transform.yield
+  }
+}
+
+// -----
+
 #identity_dynamic = affine_map<(d0) -> (d0)>
 
 // CHECK-DAG: #[[$DYNAMIC_PACK_INDEX:.*]] = affine_map<()[s0, s1, s2] -> (s0 * s1 + s2)>
@@ -888,6 +991,81 @@ module attributes {transform.with_named_sequence} {
       : (!transform.any_op) -> !transform.any_op
     transform.structured.pack %generic packed_sizes = [%tile_size]
       : (!transform.any_op, !transform.any_op) -> (!transform.op<"linalg.generic">)
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @matmul_keep_layout_not_a_multiple(%A: tensor<25x16xf32>, %B: tensor<16x16xf32>,
+                                              %C: tensor<25x16xf32>) -> tensor<25x16xf32> {
+  %0 = linalg.matmul ins(%A, %B : tensor<25x16xf32>, tensor<16x16xf32>)
+                     outs(%C : tensor<25x16xf32>) -> tensor<25x16xf32>
+  return %0 : tensor<25x16xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{data tiling failed}}
+    %1 = transform.structured.pack %0 packed_sizes = [12, 8, 1] keep_layout_operands = [2]
+        : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+    transform.yield
+  }
+}
+
+// -----
+
+// A dynamic dimension is assumed to be a multiple: split the op first.
+
+// CHECK-LABEL: matmul_keep_layout_dynamic_after_split
+func.func @matmul_keep_layout_dynamic_after_split(%A: tensor<?x16xf32>, %B: tensor<16x16xf32>,
+                                                   %C: tensor<?x16xf32>) -> tensor<?x16xf32> {
+  %c0 = arith.constant 0 : index
+  %m = tensor.dim %A, %c0 : tensor<?x16xf32>
+  %point = affine.apply affine_map<()[s0] -> (s0 - s0 mod 12)>()[%m]
+  //      CHECK: linalg.pack %{{.*}} padding_value(%{{.*}} : f32) inner_dims_pos = [0] inner_tiles = [12]
+  //      CHECK: linalg.pack %{{.*}} inner_dims_pos = [1] inner_tiles = [8]
+  //      CHECK: %[[OUTER:.*]] = affine.apply #{{.*}}()[%{{.*}}]
+  //      CHECK: %[[EXPANDED:.*]] = tensor.expand_shape %{{.*}} {{\[\[0, 1\], \[2, 3\]\]}}
+  // CHECK-SAME:   output_shape [%[[OUTER]], 12, 2, 8] : tensor<?x16xf32> into tensor<?x12x2x8xf32>
+  //      CHECK: %[[RES:.*]] = linalg.generic
+  // CHECK-SAME:   outs(%[[EXPANDED]] : tensor<?x12x2x8xf32>)
+  //      CHECK: tensor.collapse_shape %[[RES]] {{\[\[0, 1\], \[2, 3\]\]}}
+  // CHECK-SAME:   : tensor<?x12x2x8xf32> into tensor<?x16xf32>
+  //      CHECK: linalg.matmul
+  %0 = linalg.matmul ins(%A, %B : tensor<?x16xf32>, tensor<16x16xf32>)
+                     outs(%C : tensor<?x16xf32>) -> tensor<?x16xf32>
+  return %0 : tensor<?x16xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.match ops{["affine.apply"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.split %0 after %1 {dimension = 0} : !transform.any_op, !transform.any_op
+    %main, %rest = transform.split_handle %2 : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %3 = transform.structured.pack %main packed_sizes = [12, 8, 0] keep_layout_operands = [2]
+        : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @matmul_keep_layout_out_of_range(%A: tensor<24x16xf32>, %B: tensor<16x16xf32>,
+                                            %C: tensor<24x16xf32>) -> tensor<24x16xf32> {
+  %0 = linalg.matmul ins(%A, %B : tensor<24x16xf32>, tensor<16x16xf32>)
+                     outs(%C : tensor<24x16xf32>) -> tensor<24x16xf32>
+  return %0 : tensor<24x16xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{data tiling failed}}
+    %1 = transform.structured.pack %0 packed_sizes = [12, 8, 1] keep_layout_operands = [3]
+        : (!transform.any_op) -> (!transform.op<"linalg.generic">)
     transform.yield
   }
 }
