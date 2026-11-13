@@ -19,6 +19,8 @@ file(GLOB COPYPROF_HEADERS ../*.h)
 
 set(COPYPROF_NOINST_TEST_SOURCES
   driver.cpp
+  copyprof_allocator_test.cpp
+  copyprof_interceptors_test.cpp
   copyprof_shadow_test.cpp
   copyprof_state_test.cpp)
 

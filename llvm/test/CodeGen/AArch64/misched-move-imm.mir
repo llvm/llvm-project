@@ -20,7 +20,6 @@
 ---
 name:            foo1
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64 }
   - { id: 1, class: gpr64 }

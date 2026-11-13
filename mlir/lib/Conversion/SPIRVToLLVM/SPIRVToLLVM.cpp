@@ -19,7 +19,9 @@
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -344,21 +346,30 @@ collectAttrsForConversion(SourceOp op,
   return success();
 }
 
-class AccessChainPattern : public SPIRVToLLVMConversion<spirv::AccessChainOp> {
+template <typename SPIRVOp, bool InBounds>
+class AccessChainPattern : public SPIRVToLLVMConversion<SPIRVOp> {
 public:
-  using SPIRVToLLVMConversion<spirv::AccessChainOp>::SPIRVToLLVMConversion;
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
 
   LogicalResult
-  matchAndRewrite(spirv::AccessChainOp op, OpAdaptor adaptor,
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto dstType =
-        getTypeConverter()->convertType(op.getComponentPtr().getType());
+        this->getTypeConverter()->convertType(op.getComponentPtr().getType());
     if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+    if (op.getIndices().empty()) {
+      rewriter.replaceOp(op, adaptor.getBasePtr());
+      return success();
+    }
+    auto elementType = this->getTypeConverter()->convertType(
+        cast<spirv::PointerType>(op.getBasePtr().getType()).getPointeeType());
+    if (!elementType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
     // To use GEP we need to add a first 0 index to go through the pointer.
     auto indices = llvm::to_vector<4>(adaptor.getIndices());
     Type indexType = op.getIndices().front().getType();
-    auto llvmIndexType = getTypeConverter()->convertType(indexType);
+    auto llvmIndexType = this->getTypeConverter()->convertType(indexType);
     if (!llvmIndexType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
     Value zero =
@@ -366,12 +377,54 @@ public:
                                  rewriter.getIntegerAttr(llvmIndexType, 0));
     indices.insert(indices.begin(), zero);
 
-    auto elementType = getTypeConverter()->convertType(
-        cast<spirv::PointerType>(op.getBasePtr().getType()).getPointeeType());
+    rewriter.replaceOpWithNewOp<LLVM::GEPOp>(
+        op, dstType, elementType, adaptor.getBasePtr(), indices,
+        InBounds ? LLVM::GEPNoWrapFlags::inbounds : LLVM::GEPNoWrapFlags::none);
+    return success();
+  }
+};
+
+/// Converts `spirv.PtrAccessChain` and `spirv.InBoundsPtrAccessChain` to
+/// `llvm.getelementptr`, using `element` as the first index and preserving
+/// `inbounds` for the latter.
+template <typename SPIRVOp, bool InBounds>
+class PtrAccessChainPattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto baseType = cast<spirv::PointerType>(op.getBasePtr().getType());
+    // These storage classes may use a pointer ArrayStride decoration, which
+    // the SPIR-V dialect cannot represent.
+    switch (baseType.getStorageClass()) {
+    case spirv::StorageClass::Uniform:
+    case spirv::StorageClass::StorageBuffer:
+    case spirv::StorageClass::PushConstant:
+    case spirv::StorageClass::PhysicalStorageBuffer:
+      return rewriter.notifyMatchFailure(
+          op, "pointer ArrayStride is not supported for this storage class");
+    default:
+      break;
+    }
+
+    auto dstType = this->getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    auto elementType =
+        this->getTypeConverter()->convertType(baseType.getPointeeType());
     if (!elementType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
-    rewriter.replaceOpWithNewOp<LLVM::GEPOp>(op, dstType, elementType,
-                                             adaptor.getBasePtr(), indices);
+
+    SmallVector<Value, 4> indices;
+    indices.push_back(adaptor.getElement());
+    llvm::append_range(indices, adaptor.getIndices());
+
+    rewriter.replaceOpWithNewOp<LLVM::GEPOp>(
+        op, dstType, elementType, adaptor.getBasePtr(), indices,
+        InBounds ? LLVM::GEPNoWrapFlags::inbounds : LLVM::GEPNoWrapFlags::none);
     return success();
   }
 };
@@ -1039,23 +1092,46 @@ public:
   }
 };
 
-class InverseSqrtPattern
-    : public SPIRVToLLVMConversion<spirv::GLInverseSqrtOp> {
+/// Converts SPIR-V floating-point classification ops (`spirv.IsInf`,
+/// `spirv.IsNan`, `spirv.IsFinite`, `spirv.IsNormal`) to
+/// `llvm.intr.is.fpclass` with the matching `llvm::FPClassTest` mask. The
+/// intrinsic tests the operand per component, like the SPIR-V ops, and yields
+/// `i1` or a vector of `i1`.
+template <typename SPIRVOp, llvm::FPClassTest classMask>
+class FPClassPattern : public SPIRVToLLVMConversion<SPIRVOp> {
 public:
-  using SPIRVToLLVMConversion<spirv::GLInverseSqrtOp>::SPIRVToLLVMConversion;
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
 
   LogicalResult
-  matchAndRewrite(spirv::GLInverseSqrtOp op, OpAdaptor adaptor,
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto dstType = this->getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    rewriter.template replaceOpWithNewOp<LLVM::IsFPClass>(
+        op, dstType, adaptor.getOperand(), classMask);
+    return success();
+  }
+};
+
+template <typename SPIRVOp>
+class InverseSqrtPattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto srcType = op.getType();
-    auto dstType = getTypeConverter()->convertType(srcType);
+    auto dstType = this->getTypeConverter()->convertType(srcType);
     if (!dstType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
     Location loc = op.getLoc();
     Value one = createFPConstant(loc, srcType, dstType, rewriter, 1.0);
     Value sqrt = LLVM::SqrtOp::create(rewriter, loc, dstType, op.getOperand());
-    rewriter.replaceOpWithNewOp<LLVM::FDivOp>(op, dstType, one, sqrt);
+    rewriter.template replaceOpWithNewOp<LLVM::FDivOp>(op, dstType, one, sqrt);
     return success();
   }
 };
@@ -1109,8 +1185,8 @@ public:
   }
 };
 
-/// Converts the GLSL clamp ops (FClamp, SClamp, UClamp) into a nested
-/// min/max sequence, following the op semantics `min(max(x, minVal), maxVal)`.
+/// Converts the GL and CL clamp ops into a nested min/max sequence, following
+/// the op semantics `min(max(x, minVal), maxVal)`.
 template <typename SPIRVOp, typename LLVMMinOp, typename LLVMMaxOp>
 class ClampPattern : public SPIRVToLLVMConversion<SPIRVOp> {
 public:
@@ -1238,6 +1314,94 @@ public:
       // There is no support of other memory access attributes.
       return failure();
     }
+  }
+};
+
+/// Returns true if `type` is, or (transitively) includes, a runtime array.
+/// Such types have no fixed size, so they cannot be copied with a static byte
+/// count; the SPIR-V spec also forbids them as the copied type of
+/// `OpCopyMemory`.
+static bool containsRuntimeArray(Type type) {
+  if (isa<spirv::RuntimeArrayType>(type))
+    return true;
+  if (auto arrayType = dyn_cast<spirv::ArrayType>(type))
+    return containsRuntimeArray(arrayType.getElementType());
+  if (auto structType = dyn_cast<spirv::StructType>(type))
+    return llvm::any_of(structType.getElementTypes(), containsRuntimeArray);
+  return false;
+}
+
+/// Converts `spirv.CopyMemory` to `llvm.intr.memcpy`.
+class CopyMemoryPattern : public SPIRVToLLVMConversion<spirv::CopyMemoryOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::CopyMemoryOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::CopyMemoryOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type pointeeType =
+        cast<spirv::PointerType>(op.getTarget().getType()).getPointeeType();
+    // The op verifier does not reject runtime arrays, so check here. Note that
+    // a struct containing a runtime array still converts to an LLVM type with
+    // a well-defined (but meaningless here) size.
+    if (containsRuntimeArray(pointeeType))
+      return rewriter.notifyMatchFailure(op, "pointee has no static size");
+
+    Type dstPointeeType = getTypeConverter()->convertType(pointeeType);
+    if (!dstPointeeType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    // SPIR-V types have no scalable components, so the size is always fixed.
+    uint64_t byteSize =
+        DataLayout::closest(op).getTypeSize(dstPointeeType).getFixedValue();
+
+    // In SPIR-V < 1.4, a single memory-operands mask applies to both Target
+    // and Source; in SPIR-V >= 1.4, a second mask (if present) applies to
+    // Source while the first applies to Target.
+    using spirv::MemoryAccess;
+    constexpr MemoryAccess supportedMask = MemoryAccess::Aligned |
+                                           MemoryAccess::Volatile |
+                                           MemoryAccess::Nontemporal;
+    MemoryAccess targetAccess =
+        op.getMemoryAccess().value_or(MemoryAccess::None);
+    bool hasSourceAccess = op.getSourceMemoryAccess().has_value();
+    MemoryAccess sourceAccess =
+        hasSourceAccess ? *op.getSourceMemoryAccess() : targetAccess;
+    if (((targetAccess | sourceAccess) & ~supportedMask) != MemoryAccess::None)
+      return rewriter.notifyMatchFailure(
+          op, "unsupported memory access attributes");
+
+    bool isVolatile = spirv::bitEnumContainsAny(targetAccess | sourceAccess,
+                                                MemoryAccess::Volatile);
+    uint32_t targetAlign =
+        spirv::bitEnumContainsAny(targetAccess, MemoryAccess::Aligned)
+            ? op.getAlignment().value_or(0)
+            : 0;
+    uint32_t sourceAlign =
+        spirv::bitEnumContainsAny(sourceAccess, MemoryAccess::Aligned)
+            ? (hasSourceAccess ? op.getSourceAlignment().value_or(0)
+                               : targetAlign)
+            : 0;
+
+    Location loc = op.getLoc();
+    Value size = LLVM::ConstantOp::create(rewriter, loc, rewriter.getI64Type(),
+                                          rewriter.getI64IntegerAttr(byteSize));
+    auto memcpy = rewriter.replaceOpWithNewOp<LLVM::MemcpyOp>(
+        op, adaptor.getTarget(), adaptor.getSource(), size, isVolatile);
+
+    if (targetAlign || sourceAlign) {
+      auto makeAlignDict = [&](uint32_t align) {
+        if (!align)
+          return rewriter.getDictionaryAttr({});
+        return rewriter.getDictionaryAttr(
+            {rewriter.getNamedAttr(LLVM::LLVMDialect::getAlignAttrName(),
+                                   rewriter.getI64IntegerAttr(align))});
+      };
+      memcpy.setArgAttrsAttr(rewriter.getArrayAttr(
+          {makeAlignDict(targetAlign), makeAlignDict(sourceAlign),
+           rewriter.getDictionaryAttr({})}));
+    }
+    return success();
   }
 };
 
@@ -1675,9 +1839,8 @@ public:
   }
 };
 
-/// Converts `spirv.mlir.selection` with `spirv.BranchConditional` in its header
-/// block. All blocks within selection should be reachable for conversion to
-/// succeed.
+/// Converts `spirv.mlir.selection`. All blocks within selection should be
+/// reachable for conversion to succeed.
 class SelectionPattern : public SPIRVToLLVMConversion<spirv::SelectionOp> {
 public:
   using SPIRVToLLVMConversion<spirv::SelectionOp>::SPIRVToLLVMConversion;
@@ -1691,16 +1854,18 @@ public:
     if (op.getSelectionControl() != spirv::SelectionControl::None)
       return failure();
 
-    // `spirv.mlir.selection` should have at least two blocks: one selection
-    // header block and one merge block. If no blocks are present, or control
-    // flow branches straight to merge block (two blocks are present), the op is
-    // redundant and it is erased.
-    if (op.getBody().getBlocks().size() <= 2) {
+    // `spirv.mlir.selection` with empty region is redundant and is erased.
+    if (op.getBody().empty()) {
       rewriter.eraseOp(op);
       return success();
     }
 
     Location loc = op.getLoc();
+
+    SmallVector<Type> resultTypes;
+    if (failed(
+            getTypeConverter()->convertTypes(op.getResultTypes(), resultTypes)))
+      return rewriter.notifyMatchFailure(op, "failed to convert type");
 
     // Split the current block after `spirv.mlir.selection`. The remaining ops
     // will be used in `continueBlock`.
@@ -1710,23 +1875,8 @@ public:
     auto *continueBlock = rewriter.splitBlock(currentBlock, position);
 
     // Add arguments to the continue block for selections that yield values.
-    for (auto ty : op.getResultTypes()) {
-      Type dstTy = getTypeConverter()->convertType(ty);
-      if (!dstTy)
-        return rewriter.notifyMatchFailure(op, "failed to convert type");
-      continueBlock->addArgument(dstTy, loc);
-    }
-
-    // Extract conditional branch information from the header block. By SPIR-V
-    // dialect spec, it should contain `spirv.BranchConditional` or
-    // `spirv.Switch` op. Note that `spirv.Switch op` is not supported at the
-    // moment in the SPIR-V dialect. Remove this block when finished.
-    auto *headerBlock = op.getHeaderBlock();
-    assert(headerBlock->getOperations().size() == 1);
-    auto condBrOp = dyn_cast<spirv::BranchConditionalOp>(
-        headerBlock->getOperations().front());
-    if (!condBrOp)
-      return failure();
+    for (Type ty : resultTypes)
+      continueBlock->addArgument(ty, loc);
 
     // Branch from merge block to continue block.
     auto *mergeBlock = op.getMergeBlock();
@@ -1735,16 +1885,11 @@ public:
     rewriter.setInsertionPointToEnd(mergeBlock);
     LLVM::BrOp::create(rewriter, loc, terminatorOperands, continueBlock);
 
-    // Link current block to `true` and `false` blocks within the selection.
-    Block *trueBlock = condBrOp.getTrueBlock();
-    Block *falseBlock = condBrOp.getFalseBlock();
-    rewriter.setInsertionPointToEnd(currentBlock);
-    LLVM::CondBrOp::create(rewriter, loc, condBrOp.getCondition(), trueBlock,
-                           condBrOp.getTrueTargetOperands(), falseBlock,
-                           condBrOp.getFalseTargetOperands());
-
-    rewriter.eraseBlock(headerBlock);
+    // Header ops, including the terminator, are converted by their own
+    // patterns.
+    Block *headerBlock = op.getHeaderBlock();
     rewriter.inlineRegionBefore(op.getBody(), continueBlock);
+    rewriter.mergeBlocks(headerBlock, currentBlock);
     rewriter.replaceOp(op, continueBlock->getArguments());
     return success();
   }
@@ -1808,21 +1953,43 @@ public:
 };
 
 // `llvm.intr.abs` requires an `is_int_min_poison` immarg that `spirv.GL.SAbs`
-// does not carry; default to `false` to preserve SPIR-V's well-defined
-// behavior on INT_MIN.
-class SAbsPattern : public SPIRVToLLVMConversion<spirv::GLSAbsOp> {
+// and `spirv.CL.s_abs` do not carry; default to `false` to preserve SPIR-V's
+// well-defined behavior on INT_MIN.
+template <typename SPIRVOp>
+class SAbsPattern : public SPIRVToLLVMConversion<SPIRVOp> {
 public:
-  using SPIRVToLLVMConversion<spirv::GLSAbsOp>::SPIRVToLLVMConversion;
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
 
   LogicalResult
-  matchAndRewrite(spirv::GLSAbsOp op, OpAdaptor adaptor,
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Type dstType = getTypeConverter()->convertType(op.getType());
+    Type dstType = this->getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
-    rewriter.replaceOpWithNewOp<LLVM::AbsOp>(op, dstType, adaptor.getOperand(),
-                                             /*is_int_min_poison=*/false);
+    rewriter.template replaceOpWithNewOp<LLVM::AbsOp>(
+        op, dstType, adaptor.getOperand(), /*is_int_min_poison=*/false);
+    return success();
+  }
+};
+
+/// Converts `spirv.CL.clz` and `spirv.CL.ctz` to `llvm.intr.ctlz` and
+/// `llvm.intr.cttz`.
+template <typename SPIRVOp, typename LLVMOp>
+class CountZerosPattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = this->getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    rewriter.template replaceOpWithNewOp<LLVMOp>(op, dstType,
+                                                 adaptor.getOperand(),
+                                                 /*is_zero_poison=*/false);
     return success();
   }
 };
@@ -1892,6 +2059,32 @@ public:
     Value a = adaptor.getZ();
     Value diff = LLVM::FSubOp::create(rewriter, loc, dstType, y, x);
     rewriter.replaceOpWithNewOp<LLVM::FMAOp>(op, dstType, a, diff, x);
+    return success();
+  }
+};
+
+/// Converts `spirv.CL.sincos` to `llvm.intr.sincos`, storing the cosine to
+/// `cosval` and returning the sine.
+class CLSincosPattern : public SPIRVToLLVMConversion<spirv::CLSincosOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::CLSincosOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::CLSincosOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    auto structType = LLVM::LLVMStructType::getLiteral(rewriter.getContext(),
+                                                       {dstType, dstType});
+    Value sincos =
+        LLVM::SincosOp::create(rewriter, loc, structType, adaptor.getX());
+    Value sin = LLVM::ExtractValueOp::create(rewriter, loc, sincos, 0);
+    Value cos = LLVM::ExtractValueOp::create(rewriter, loc, sincos, 1);
+    LLVM::StoreOp::create(rewriter, loc, cos, adaptor.getCosval());
+    rewriter.replaceOp(op, sin);
     return success();
   }
 };
@@ -2332,6 +2525,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::GLFMinOp, LLVM::MinNumOp>,
       DirectConversionPattern<spirv::GLNMaxOp, LLVM::MaxNumOp>,
       DirectConversionPattern<spirv::GLNMinOp, LLVM::MinNumOp>,
+      DirectConversionPattern<spirv::GLLdexpOp, LLVM::LoadExpOp>,
       DirectConversionPattern<spirv::GLLogOp, LLVM::LogOp>,
       DirectConversionPattern<spirv::GLLog2Op, LLVM::Log2Op>,
       DirectConversionPattern<spirv::GLPowOp, LLVM::PowOp>,
@@ -2349,10 +2543,11 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::GLAsinOp, LLVM::ASinOp>,
       DirectConversionPattern<spirv::GLAcosOp, LLVM::ACosOp>,
       DirectConversionPattern<spirv::GLAtanOp, LLVM::ATanOp>,
+      DirectConversionPattern<spirv::GLAtan2Op, LLVM::ATan2Op>,
       DirectConversionPattern<spirv::GLTanOp, LLVM::TanOp>,
       DirectConversionPattern<spirv::GLTanhOp, LLVM::TanhOp>,
-      InverseSqrtPattern, SAbsPattern, FractPattern,
-      SignPattern<spirv::GLFSignOp, /*isFloat=*/true>,
+      InverseSqrtPattern<spirv::GLInverseSqrtOp>, SAbsPattern<spirv::GLSAbsOp>,
+      FractPattern, SignPattern<spirv::GLFSignOp, /*isFloat=*/true>,
       SignPattern<spirv::GLSSignOp, /*isFloat=*/false>, GLFMixPattern,
 
       // OpenCL extended instruction set ops
@@ -2366,6 +2561,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::CLFmaOp, LLVM::FMAOp>,
       DirectConversionPattern<spirv::CLFMaxOp, LLVM::MaxNumOp>,
       DirectConversionPattern<spirv::CLFMinOp, LLVM::MinNumOp>,
+      DirectConversionPattern<spirv::CLLdexpOp, LLVM::LoadExpOp>,
       DirectConversionPattern<spirv::CLLogOp, LLVM::LogOp>,
       DirectConversionPattern<spirv::CLLog2Op, LLVM::Log2Op>,
       DirectConversionPattern<spirv::CLLog10Op, LLVM::Log10Op>,
@@ -2389,6 +2585,13 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::CLSMinOp, LLVM::SMinOp>,
       DirectConversionPattern<spirv::CLUMaxOp, LLVM::UMaxOp>,
       DirectConversionPattern<spirv::CLUMinOp, LLVM::UMinOp>, CLMixPattern,
+      CLSincosPattern, InverseSqrtPattern<spirv::CLRsqrtOp>,
+      SAbsPattern<spirv::CLSAbsOp>,
+      ClampPattern<spirv::CLFClampOp, LLVM::MinNumOp, LLVM::MaxNumOp>,
+      ClampPattern<spirv::CLSClampOp, LLVM::SMinOp, LLVM::SMaxOp>,
+      ClampPattern<spirv::CLUClampOp, LLVM::UMinOp, LLVM::UMaxOp>,
+      CountZerosPattern<spirv::CLClzOp, LLVM::CountLeadingZerosOp>,
+      CountZerosPattern<spirv::CLCtzOp, LLVM::CountTrailingZerosOp>,
 
       // Logical ops
       DirectConversionPattern<spirv::LogicalAndOp, LLVM::AndOp>,
@@ -2396,9 +2599,17 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       IComparePattern<spirv::LogicalEqualOp, LLVM::ICmpPredicate::eq>,
       IComparePattern<spirv::LogicalNotEqualOp, LLVM::ICmpPredicate::ne>,
       NotPattern<spirv::LogicalNotOp>,
+      FPClassPattern<spirv::IsInfOp, llvm::fcInf>,
+      FPClassPattern<spirv::IsNanOp, llvm::fcNan>,
+      FPClassPattern<spirv::IsFiniteOp, llvm::fcFinite>,
+      FPClassPattern<spirv::IsNormalOp, llvm::fcNormal>,
 
       // Memory ops
-      AccessChainPattern, AddressOfPattern, LoadStorePattern<spirv::LoadOp>,
+      AccessChainPattern<spirv::AccessChainOp, /*InBounds=*/false>,
+      AccessChainPattern<spirv::InBoundsAccessChainOp, /*InBounds=*/true>,
+      PtrAccessChainPattern<spirv::PtrAccessChainOp, /*InBounds=*/false>,
+      PtrAccessChainPattern<spirv::InBoundsPtrAccessChainOp, /*InBounds=*/true>,
+      AddressOfPattern, CopyMemoryPattern, LoadStorePattern<spirv::LoadOp>,
       LoadStorePattern<spirv::StoreOp>, VariablePattern,
 
       // Miscellaneous ops

@@ -108,8 +108,11 @@ bool CharacterValue::operator==(const CharacterValue &y) const {
   return impl() == y.impl();
 }
 
-CharacterValue CharacterValue::ToAscii(int kind) const {
-  return FromImpl(impl().ToAscii(kind));
+std::optional<CharacterValue> CharacterValue::ToAscii(int kind) const {
+  if (auto result{impl().ToAscii(kind)}) {
+    return FromImpl(std::move(*result));
+  }
+  return std::nullopt;
 }
 
 void CharacterValue::assign(int kind, std::size_t n, char32_t c) {

@@ -33,9 +33,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/PassRegistry.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -94,6 +96,10 @@ void LLVMDisposeMessage(char *Message) {
 
 static LLVMContext &getGlobalContext() {
   static LLVMContext GlobalContext;
+  [[maybe_unused]] static bool Seeded = [] {
+    GlobalContext.getLibraryOptions().assign(cl::getCAPILibraryOptions());
+    return true;
+  }();
   return GlobalContext;
 }
 
@@ -102,7 +108,9 @@ LLVMContextRef llvm::getGlobalContextForCAPI() {
 }
 
 LLVMContextRef LLVMContextCreate() {
-  return wrap(new LLVMContext());
+  auto *C = new LLVMContext();
+  C->getLibraryOptions().assign(cl::getCAPILibraryOptions());
+  return wrap(C);
 }
 
 LLVMContextRef LLVMGetGlobalContext() { return getGlobalContextForCAPI(); }
@@ -1384,6 +1392,18 @@ LLVMMetadataRef LLVMValueAsMetadata(LLVMValueRef Val) {
   if (auto *MAV = dyn_cast<MetadataAsValue>(V))
     return wrap(MAV->getMetadata());
   return wrap(ValueAsMetadata::get(V));
+}
+
+char *LLVMPrintMetadataToString(LLVMMetadataRef MD) {
+  std::string buf;
+  raw_string_ostream os(buf);
+
+  if (unwrap(MD))
+    unwrap(MD)->print(os);
+  else
+    os << "Printing <null> Metadata";
+
+  return strdup(buf.c_str());
 }
 
 const char *LLVMGetMDString(LLVMValueRef V, unsigned *Length) {
@@ -3473,7 +3493,10 @@ struct DelayedIRBuilder {
   std::optional<IRBuilder<>> Builder;
 
   DelayedIRBuilder() = default;
-  DelayedIRBuilder(Module &M) { Builder.emplace(M); }
+  DelayedIRBuilder(Module &M) {
+    Builder.emplace(M);
+    Builder->disableGEPCanonicalization();
+  }
 
   void initUsingInsertionBlock(BasicBlock *BB) {
     if (Builder)
@@ -3483,6 +3506,7 @@ struct DelayedIRBuilder {
       if (Function *F = BB->getParent()) {
         if (Module *M = F->getParent()) {
           Builder.emplace(*M);
+          Builder->disableGEPCanonicalization();
           return;
         }
       }
@@ -3518,7 +3542,9 @@ LLVMBuilderRef LLVMCreateBuilderInContext(LLVMContextRef C) {
 }
 
 LLVMBuilderRef LLVMCreateBuilder(void) {
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   return LLVMCreateBuilderInContext(getGlobalContextForCAPI());
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 }
 
 LLVMBuilderRef LLVMCreateBuilderForModule(LLVMModuleRef M) {

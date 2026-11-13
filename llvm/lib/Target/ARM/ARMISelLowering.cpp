@@ -53,6 +53,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RuntimeLibcallUtil.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -113,6 +114,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::SDPatternMatch;
 
 #define DEBUG_TYPE "arm-isel"
 
@@ -1131,18 +1133,12 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
                        Subtarget->hasAnyDataBarrier() ? Custom : Expand);
 
     // Set them all for libcall, which will force libcalls.
-    setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_SWAP, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_ADD, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_AND, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_OR, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_XOR, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_NAND, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_MIN, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_MAX, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_UMIN, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_UMAX, MVT::i32, LibCall);
+    setOperationAction(
+        {ISD::ATOMIC_CMP_SWAP, ISD::ATOMIC_SWAP, ISD::ATOMIC_LOAD_ADD,
+         ISD::ATOMIC_LOAD_SUB, ISD::ATOMIC_LOAD_AND, ISD::ATOMIC_LOAD_OR,
+         ISD::ATOMIC_LOAD_XOR, ISD::ATOMIC_LOAD_NAND, ISD::ATOMIC_LOAD_MIN,
+         ISD::ATOMIC_LOAD_MAX, ISD::ATOMIC_LOAD_UMIN, ISD::ATOMIC_LOAD_UMAX},
+        {MVT::i8, MVT::i16, MVT::i32, MVT::i64}, LibCall);
     // Mark ATOMIC_LOAD and ATOMIC_STORE custom so we can handle the
     // Unordered/Monotonic case.
     if (!InsertFencesForAtomic) {
@@ -2142,6 +2138,17 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   RegsToPassVector RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
+
+  // A musttail call in a variadic function must receive the caller's unnamed
+  // register arguments unchanged.  The forwarded set is disjoint from the named
+  // arguments handled below.
+  if (isVarArg && CLI.CB && CLI.CB->isMustTailCall()) {
+    const auto &Forwards = AFI->getForwardedMustTailRegParms();
+    for (const ForwardedRegister &F : Forwards) {
+      SDValue Val = DAG.getCopyFromReg(Chain, dl, F.VReg, F.VT);
+      RegsToPass.push_back(std::make_pair(F.PReg, Val));
+    }
+  }
 
   // If we are doing a tail-call, any byval arguments will be written to stack
   // space which was used for incoming arguments. If any the values being used
@@ -4473,6 +4480,30 @@ SDValue ARMTargetLowering::LowerFormalArguments(
     }
   }
 
+  // A variadic function that forwards through a musttail call needs its unnamed
+  // register arguments modelled as live, so the allocator does not use one as
+  // scratch.  This must run after the va_list save area above, which consumes
+  // the same registers, and is deliberately *not* predicated on hasVAStart():
+  // a forwarding thunk never calls va_start.
+  if (isVarArg && MFI.hasMustTailInVarArgFunc()) {
+    // getRemainingRegParmsForType() walks the assign function until an argument
+    // lands in memory, so the convention must have a stack fallback.  GHC and
+    // the Windows CFGuard check stub assign to registers only and would run off
+    // the end of their tables; neither supports variadic arguments anyway.
+    CallingConv::ID EffCC = getEffectiveCallingConv(CallConv, isVarArg);
+    if (EffCC != CallingConv::GHC && EffCC != CallingConv::CFGuard_Check) {
+      // Only the core registers can hold an unnamed argument:
+      // getEffectiveCallingConv() degrades every VFP convention to ARM_AAPCS
+      // when isVarArg is set.
+      SmallVector<MVT, 1> RegParmTypes;
+      RegParmTypes.push_back(MVT::i32);
+      SmallVectorImpl<ForwardedRegister> &Forwards =
+          AFI->getForwardedMustTailRegParms();
+      CCInfo.analyzeMustTailForwardedRegisters(
+          Forwards, RegParmTypes, CCAssignFnForCall(CallConv, isVarArg));
+    }
+  }
+
   unsigned StackArgSize = CCInfo.getStackSize();
   bool TailCallOpt = MF.getTarget().Options.GuaranteedTailCallOpt;
   if (canGuaranteeTCO(CallConv, TailCallOpt)) {
@@ -5173,7 +5204,7 @@ static SDValue LowerSaturatingConditional(SDValue Op, SelectionDAG &DAG) {
   SDValue K1 = Op.getOperand(1);
   SDValue TrueVal1 = Op.getOperand(2);
   SDValue FalseVal1 = Op.getOperand(3);
-  ISD::CondCode CC1 = cast<CondCodeSDNode>(Op.getOperand(4))->get();
+  ISD::CondCode CC1 = Op.getOperandCondCode(4);
 
   const SDValue Op2 = isa<ConstantSDNode>(TrueVal1) ? FalseVal1 : TrueVal1;
   if (Op2.getOpcode() != ISD::SELECT_CC)
@@ -5183,7 +5214,7 @@ static SDValue LowerSaturatingConditional(SDValue Op, SelectionDAG &DAG) {
   SDValue K2 = Op2.getOperand(1);
   SDValue TrueVal2 = Op2.getOperand(2);
   SDValue FalseVal2 = Op2.getOperand(3);
-  ISD::CondCode CC2 = cast<CondCodeSDNode>(Op2.getOperand(4))->get();
+  ISD::CondCode CC2 = Op2.getOperandCondCode(4);
 
   SDValue V1Tmp = V1;
   SDValue V2Tmp = V2;
@@ -5238,7 +5269,7 @@ static bool isLowerSaturatingConditional(const SDValue &Op, SDValue &V,
 {
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(4);
   SDValue TrueVal = Op.getOperand(2);
   SDValue FalseVal = Op.getOperand(3);
 
@@ -5356,7 +5387,7 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
 
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(4);
   SDValue TrueVal = Op.getOperand(2);
   SDValue FalseVal = Op.getOperand(3);
   ConstantSDNode *CFVal = dyn_cast<ConstantSDNode>(FalseVal);
@@ -5548,7 +5579,7 @@ static void expandf64Toi32(SDValue Op, SelectionDAG &DAG,
 SDValue
 ARMTargetLowering::OptimizeVFPBrcond(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(1);
   SDValue LHS = Op.getOperand(2);
   SDValue RHS = Op.getOperand(3);
   SDValue Dest = Op.getOperand(4);
@@ -5649,7 +5680,7 @@ SDValue ARMTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(1);
   SDValue LHS = Op.getOperand(2);
   SDValue RHS = Op.getOperand(3);
   SDValue Dest = Op.getOperand(4);
@@ -10174,7 +10205,7 @@ SDValue ARMTargetLowering::LowerFSETCC(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
   SDValue LHS = Op.getOperand(1);
   SDValue RHS = Op.getOperand(2);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(3))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(3);
   bool IsSignaling = Op.getOpcode() == ISD::STRICT_FSETCCS;
 
   // If we don't have instructions of this float type then soften to a libcall
@@ -12746,6 +12777,9 @@ static SDValue AddCombineTo64bitMLAL(SDNode *AddeSubeNode,
          AddeSubeNode->getOperand(2).getValueType() == MVT::i32 &&
          "ADDE node has the wrong inputs");
 
+  if (AddeSubeNode->hasAnyUseOfValue(1))
+    return SDValue();
+
   // Check that we are chained to the right ADDC or SUBC node.
   SDNode *AddcSubcNode = AddeSubeNode->getOperand(2).getNode();
   if ((AddeSubeNode->getOpcode() == ARMISD::ADDE &&
@@ -12844,7 +12878,7 @@ static SDValue AddCombineTo64bitMLAL(SDNode *AddeSubeNode,
   // part of the result of the MLAL, furthermore the LowAddSub must be a constant
   // addition or subtraction with the value of 0x800000.
   if (Subtarget->hasV6Ops() && Subtarget->hasDSP() && Subtarget->useMulOps() &&
-      FinalOpc == ARMISD::SMLAL && !AddeSubeNode->hasAnyUseOfValue(1) &&
+      FinalOpc == ARMISD::SMLAL &&
       LowAddSub->getNode()->getOpcode() == ISD::Constant &&
       static_cast<ConstantSDNode *>(LowAddSub->getNode())->getZExtValue() ==
           0x80000000) {
@@ -12889,6 +12923,9 @@ static SDValue AddCombineTo64bitUMAAL(SDNode *AddeNode,
   // chance to use UMAAL. Check if Addc uses a node which has already
   // been combined into a UMLAL. The other pattern is UMLAL using Addc/Adde
   // as the addend, and it's handled in PerformUMLALCombine.
+
+  if (AddeNode->hasAnyUseOfValue(1))
+    return SDValue();
 
   if (!Subtarget->hasV6Ops() || !Subtarget->hasDSP())
     return AddCombineTo64bitMLAL(AddeNode, DCI, Subtarget);
@@ -13038,13 +13075,13 @@ static SDValue PerformSELECTCombine(SDNode *N,
     SetCC = N->getOperand(0);
     LHS = SetCC->getOperand(0);
     RHS = SetCC->getOperand(1);
-    CC = cast<CondCodeSDNode>(SetCC->getOperand(2))->get();
+    CC = SetCC->getOperandCondCode(2);
     TrueVal = N->getOperand(1);
     FalseVal = N->getOperand(2);
   } else if (N->getOpcode() == ISD::SELECT_CC) {
     LHS = N->getOperand(0);
     RHS = N->getOperand(1);
-    CC = cast<CondCodeSDNode>(N->getOperand(4))->get();
+    CC = N->getOperandCondCode(4);
     TrueVal = N->getOperand(2);
     FalseVal = N->getOperand(3);
   } else {
@@ -13145,7 +13182,7 @@ static SDValue PerformVQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
     // Detect a SMIN, which for an i64 node will be a vselect/setcc, not a smin.
     SDValue Cmp = N->getOperand(0);
     if (Cmp.getOpcode() != ISD::SETCC ||
-        cast<CondCodeSDNode>(Cmp.getOperand(2))->get() != ISD::SETLT ||
+        Cmp.getOperandCondCode(2) != ISD::SETLT ||
         Cmp.getOperand(0) != N->getOperand(1) ||
         Cmp.getOperand(1) != N->getOperand(2))
       return SDValue();
@@ -13294,7 +13331,7 @@ static SDValue PerformVSetCCToVCTPCombine(SDNode *N,
                                           const ARMSubtarget *Subtarget) {
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
   EVT VT = N->getValueType(0);
 
   if (!Subtarget->hasMVEIntegerOps() ||
@@ -15438,6 +15475,35 @@ PerformVECTOR_DEINTERLEAVECombine(SDNode *N,
 /// Target-specific dag combine xforms for ARMISD::BUILD_VECTOR.
 static SDValue
 PerformARMBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+  SelectionDAG &DAG = DCI.DAG;
+  EVT VT = N->getValueType(0);
+
+  // Fold buildvector(extractelt(bitcast(build_vector(a,b,_,_))),
+  //                  extractelt(bitcast(build_vector(_,_,c,d))))
+  //   -> bitcast(build_vector(a,b,c,d))
+  if (VT.getScalarSizeInBits() == 64 && N->getNumOperands() == 2) {
+    auto IsExtractFromBuildVec = [](SDValue V, SDValue &BV, int64_t &Lane) {
+      if (!sd_match(V, m_ExtractElt(m_Value(BV), m_ConstInt(Lane))))
+        return false;
+      while (BV.getOpcode() == ISD::BITCAST)
+        BV = BV.getOperand(0);
+      return BV.getOpcode() == ARMISD::BUILD_VECTOR &&
+             BV.getNumOperands() == 4 &&
+             BV.getValueType().getScalarSizeInBits() == 32;
+    };
+    SDValue BV1, BV2;
+    int64_t Lane1, Lane2;
+    if (IsExtractFromBuildVec(N->getOperand(0), BV1, Lane1) &&
+        IsExtractFromBuildVec(N->getOperand(1), BV2, Lane2))
+      return DAG.getBitcast(
+          VT, DAG.getNode(
+                  ARMISD::BUILD_VECTOR, N, MVT::v4f32,
+                  DAG.getBitcast(MVT::f32, BV1->getOperand(Lane1 * 2 + 0)),
+                  DAG.getBitcast(MVT::f32, BV1->getOperand(Lane1 * 2 + 1)),
+                  DAG.getBitcast(MVT::f32, BV2->getOperand(Lane2 * 2 + 0)),
+                  DAG.getBitcast(MVT::f32, BV2->getOperand(Lane2 * 2 + 1))));
+  }
+
   // ARMISD::BUILD_VECTOR is introduced when legalizing ISD::BUILD_VECTOR.
   // At that time, we may have inserted bitcasts from integer to float.
   // If these bitcasts have survived DAGCombine, change the lowering of this
@@ -15450,7 +15516,6 @@ PerformARMBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   //    1.1. Vector is used only once.
   //    1.2. Use is a bit convert to an integer type.
   // 2. The size of its operands are 32-bits (64-bits are not legal).
-  EVT VT = N->getValueType(0);
   EVT EltVT = VT.getVectorElementType();
 
   // Check 1.1. and 2.
@@ -15490,7 +15555,6 @@ PerformARMBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   if (NumOfBitCastedElts <= NumOfRelevantElts / 2)
     return SDValue();
 
-  SelectionDAG &DAG = DCI.DAG;
   // Create the new vector type.
   EVT VecVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32, NumElts);
   // Check if the type is legal.
@@ -18644,7 +18708,7 @@ static SDValue SearchLoopIntrinsic(SDValue N, ISD::CondCode &CC, int &Imm,
       Imm = 1;
     else
       return SDValue();
-    CC = cast<CondCodeSDNode>(N.getOperand(2))->get();
+    CC = N.getOperandCondCode(2);
     return SearchLoopIntrinsic(N->getOperand(0), CC, Imm, Negate);
   }
   case ISD::INTRINSIC_W_CHAIN: {
@@ -18686,7 +18750,7 @@ static SDValue PerformHWLoopCombine(SDNode *N,
     Dest = N->getOperand(2);
   } else {
     assert(N->getOpcode() == ISD::BR_CC && "Expected BRCOND or BR_CC!");
-    CC = cast<CondCodeSDNode>(N->getOperand(1))->get();
+    CC = N->getOperandCondCode(1);
     Cond = N->getOperand(2);
     Dest = N->getOperand(4);
     if (auto *Const = dyn_cast<ConstantSDNode>(N->getOperand(3))) {
@@ -21436,6 +21500,14 @@ ARMTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
   return FPImmAction::ConstantPool;
 }
 
+TargetLowering::FPImmAction
+ARMTargetLowering::getFPImmAction(const APFloat &Imm, LLT Ty,
+                                  bool ForCodeSize) const {
+  if (Subtarget->useSoftFloat() || !Subtarget->hasVFP2Base())
+    return FPImmAction::Bitcast;
+  return FPImmAction::ConstantPool;
+}
+
 /// getTgtMemIntrinsic - Represent NEON load and store intrinsics as
 /// MemIntrinsicNodes.  The associated MachineMemOperands record the alignment
 /// specified in the intrinsic calls.
@@ -21887,14 +21959,12 @@ void ARMTargetLowering::insertSSPDeclarations(
   if (SecurityCheckCookieLibcall != RTLIB::Unsupported &&
       SecurityCookieVar != RTLIB::Unsupported) {
     // MSVC CRT has a global variable holding security cookie.
-    M.getOrInsertGlobal(getLibcallImplName(SecurityCookieVar),
-                        PointerType::getUnqual(M.getContext()));
+    const RTLIB::RuntimeLibcallsInfo &RTLCI = Libcalls.getRuntimeLibcallsInfo();
+    RTLCI.getOrInsertImplGlobal(M, SecurityCookieVar);
 
     // MSVC CRT has a function to validate security cookie.
     FunctionCallee SecurityCheckCookie =
-        M.getOrInsertFunction(getLibcallImplName(SecurityCheckCookieLibcall),
-                              Type::getVoidTy(M.getContext()),
-                              PointerType::getUnqual(M.getContext()));
+        RTLCI.getOrInsertLibcallDecl(M, SecurityCheckCookieLibcall);
     if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee()))
       F->addParamAttr(0, Attribute::AttrKind::InReg);
   }
@@ -22154,6 +22224,7 @@ bool ARMTargetLowering::lowerInterleavedLoad(
     VecTy = FixedVectorType::get(DL.getIntPtrType(EltTy), VecTy);
 
   IRBuilder<> Builder(LI);
+  Builder.disableGEPCanonicalization();
 
   // The base address of the load.
   Value *BaseAddr = LI->getPointerOperand();
@@ -22302,6 +22373,7 @@ bool ARMTargetLowering::lowerInterleavedStore(Instruction *Store,
   Value *Op0 = SVI->getOperand(0);
   Value *Op1 = SVI->getOperand(1);
   IRBuilder<> Builder(SI);
+  Builder.disableGEPCanonicalization();
 
   // StN intrinsics don't support pointer vectors as arguments. Convert pointer
   // vectors to integer vectors.

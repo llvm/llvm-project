@@ -6210,12 +6210,9 @@ static ImplicitConversionSequence TryObjectArgumentInitialization(
       ExplicitParameterType = Method->getFunctionObjectParameterReferenceType();
     OpaqueValueExpr TmpExpr(Loc, FromType.getNonReferenceType(),
                             ValueKindFromClassification(FromClassification));
-    ImplicitConversionSequence ICS = TryCopyInitialization(
-        S, &TmpExpr, ExplicitParameterType, SuppressUserConversion,
-        /*InOverloadResolution=*/true, false);
-    if (ICS.isBad())
-      ICS.Bad.FromExpr = nullptr;
-    return ICS;
+    return TryCopyInitialization(S, &TmpExpr, ExplicitParameterType,
+                                 SuppressUserConversion,
+                                 /*InOverloadResolution=*/true, false);
   }
 
   assert(FromType->isRecordType());
@@ -6586,17 +6583,6 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
 
   if (checkPlaceholderForOverload(S, From))
     return ExprError();
-
-  if (From->containsErrors()) {
-    if (S.Context.hasSameType(From->getType(), T))
-      return From;
-
-    // The expression already has errors, so the correct cast kind can't be
-    // determined. Use RecoveryExpr to keep the expected type T and mark the
-    // result as invalid, preventing further cascading errors.
-    return S.CreateRecoveryExpr(From->getBeginLoc(), From->getEndLoc(), {From},
-                                T);
-  }
 
   // C++1z [expr.const]p3:
   //  A converted constant expression of type T is an expression,
@@ -15568,6 +15554,19 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
     return ExprError();
 
   case OR_Deleted: {
+    // A defaulted postfix increment or decrement operator that was implicitly
+    // defined as deleted. Explain why it was deleted.
+    if (FunctionDecl *DeletedFD = Best->Function;
+        DeletedFD->isDefaulted() &&
+        DeletedFD->getDefaultedFunctionKind().isPostfixOperator()) {
+      Diag(OpLoc, diag::err_ovl_deleted_postfix_operator)
+          << Input->getType()
+          << (int)DeletedFD->getDefaultedFunctionKind().asPostfixOperator()
+          << Input->getSourceRange();
+      NoteDeletedFunction(DeletedFD);
+      return ExprError();
+    }
+
     // CreateOverloadedUnaryOp fills the first element of ArgsArray with the
     // object whose method was called. Later in NoteCandidates size of ArgsArray
     // is passed further and it eventually ends up compared to number of

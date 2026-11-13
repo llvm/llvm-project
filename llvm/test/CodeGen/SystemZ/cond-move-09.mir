@@ -13,7 +13,6 @@
 ---
 name:            'fun'
 alignment:       16
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    8
 machineFunctionInfo: {}

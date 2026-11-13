@@ -8,7 +8,6 @@
 ///
 /// \file
 /// This file provides a LoopVectorizationPlanner class.
-/// InnerLoopVectorizer vectorizes loops which contain only one basic
 /// LoopVectorizationPlanner - drives the vectorization process after having
 /// passed Legality checks.
 /// The planner builds and optimizes the Vectorization Plans which record the
@@ -45,10 +44,8 @@ class LoopVectorizationCostModel;
 class PredicatedScalarEvolution;
 class LoopVectorizeHints;
 class RecurrenceDescriptor;
-class LoopVersioning;
 class OptimizationRemarkEmitter;
 class TargetLibraryInfo;
-class VPRecipeBuilder;
 struct VPRegisterUsage;
 struct VFRange;
 struct VectorizeOptions;
@@ -99,11 +96,10 @@ void reportVectorization(OptimizationRemarkEmitter *ORE, Loop *TheLoop,
 
 } // namespace LoopVectorizationUtils
 
-/// Default inserter for VPBuilderBase, inserting \p R at \p It in \p VPBB.
+/// Default inserter for VPBuilderBase, inserting \p R before \p It.
 struct VPBuilderDefaultInserter {
-  void insertHelper(VPRecipeBase *R, VPBasicBlock *VPBB,
-                    VPBasicBlock::iterator It) {
-    VPBB->insert(R, It);
+  void insertHelper(VPRecipeBase *R, VPBasicBlock::iterator It) {
+    R->insertBefore(It);
   }
 };
 
@@ -112,42 +108,41 @@ struct VPBuilderDefaultInserter {
 template <typename InserterTy> class VPBuilderBase : public InserterTy {
 private:
   class VPInsertPoint {
-    VPBasicBlock *Block = nullptr;
     VPBasicBlock::iterator Iterator;
 
   public:
     /// Creates a new insertion point which doesn't point to anything.
     VPInsertPoint() = default;
 
-    /// Creates a new insertion point to insert at \p Iterator in \p Block.
-    VPInsertPoint(VPBasicBlock *Block, VPBasicBlock::iterator Iterator)
-        : Block(Block), Iterator(Iterator) {}
+    /// Creates a new insertion point to insert before \p Iterator.
+    VPInsertPoint(VPBasicBlock::iterator Iterator) : Iterator(Iterator) {}
 
     /// Creates a new insertion point to insert before \p R.
-    VPInsertPoint(VPRecipeBase *R)
-        : Block(R->getParent()), Iterator(R->getIterator()) {}
+    VPInsertPoint(VPRecipeBase *R) : Iterator(R->getIterator()) {}
 
     /// Creates a new insertion point to insert at the end of \p Block.
-    VPInsertPoint(VPBasicBlock *Block) : Block(Block), Iterator(Block->end()) {}
+    VPInsertPoint(VPBasicBlock *Block) : Iterator(Block->end()) {}
 
     /// Returns true if this insert point is set.
-    operator bool() const { return Block; }
+    operator bool() const { return Iterator.isValid(); }
 
-    VPBasicBlock *getBlock() const { return Block; }
+    VPBasicBlock *getBlock() const {
+      return Iterator.isValid() ? Iterator.getNodeParent() : nullptr;
+    }
     VPBasicBlock::iterator getIterator() const { return Iterator; }
 
     operator VPRecipeBase *() const {
-      return Iterator == Block->end() ? nullptr : &*Iterator;
+      return Iterator == getBlock()->end() ? nullptr : &*Iterator;
     }
   };
 
   VPInsertPoint InsertPt;
 
 protected:
-  /// Insert \p VPI in BB at InsertPt if BB is set.
+  /// Insert \p R at InsertPt if InsertPt is set.
   template <typename T> T *tryInsertInstruction(T *R) {
     if (InsertPt)
-      InserterTy::insertHelper(R, InsertPt.getBlock(), InsertPt.getIterator());
+      InserterTy::insertHelper(R, InsertPt.getIterator());
     return R;
   }
 
@@ -168,8 +163,6 @@ public:
   VPBuilderBase() = default;
   VPBuilderBase(const VPInsertPoint &IP) : InsertPt(IP) {}
   VPBuilderBase(InserterTy Inserter) : InserterTy(Inserter) {}
-  VPBuilderBase(VPBasicBlock *TheBB, VPBasicBlock::iterator IP)
-      : InsertPt(TheBB, IP) {}
 
   /// Get the recipe at the current insert point or nullptr if the insert point
   /// is the end of the block.
@@ -179,7 +172,7 @@ public:
 
   /// Create a builder to insert after \p R.
   static VPBuilderBase getToInsertAfter(VPRecipeBase *R) {
-    return {R->getParent(), std::next(R->getIterator())};
+    return VPBuilderBase(std::next(R->getIterator()));
   }
 
   /// Sets the current insert point to a previously-saved location.
@@ -190,14 +183,10 @@ public:
     assert(IP && "Attempting to set a null insert point");
     InsertPt = IP;
   }
-  void setInsertPoint(VPBasicBlock *TheBB, VPBasicBlock::iterator IP) {
-    assert(TheBB && "Attempting to set a null insert point");
-    InsertPt = VPInsertPoint(TheBB, IP);
-  }
 
   /// Insert \p R at the current insertion point. Returns \p R unchanged.
   template <typename T> [[maybe_unused]] T *insert(T *R) {
-    InserterTy::insertHelper(R, InsertPt.getBlock(), InsertPt.getIterator());
+    InserterTy::insertHelper(R, InsertPt.getIterator());
     return R;
   }
 
@@ -208,10 +197,10 @@ public:
                               const VPIRFlags &Flags = {},
                               const VPIRMetadata &MD = {},
                               DebugLoc DL = DebugLoc::getUnknown(),
-                              const Twine &Name = "",
-                              Type *ResultTy = nullptr) {
-    VPInstruction *NewVPInst = tryInsertInstruction(
-        new VPInstruction(Opcode, Operands, Flags, MD, DL, Name, ResultTy));
+                              const Twine &Name = "", Type *ResultTy = nullptr,
+                              const VPIRAttributes &Attrs = {}) {
+    VPInstruction *NewVPInst = tryInsertInstruction(new VPInstruction(
+        Opcode, Operands, Flags, MD, DL, Name, ResultTy, Attrs));
     NewVPInst->setUnderlyingValue(Inst);
     return NewVPInst;
   }
@@ -576,21 +565,22 @@ public:
   /// be null).
   VPWidenLoadRecipe *createWidenLoad(LoadInst &Load, VPValue *Addr,
                                      VPValue *Mask, bool Consecutive,
+                                     Align Alignment,
                                      const VPIRMetadata &Metadata,
                                      DebugLoc DL) {
-    return tryInsertInstruction(
-        new VPWidenLoadRecipe(Load, Addr, Mask, Consecutive, Metadata, DL));
+    return tryInsertInstruction(new VPWidenLoadRecipe(
+        Load, Addr, Mask, Consecutive, Alignment, Metadata, DL));
   }
 
   /// Create a recipe widening \p Store, storing \p StoredVal to \p Addr with
   /// \p Mask (may be null).
   VPWidenStoreRecipe *createWidenStore(StoreInst &Store, VPValue *Addr,
                                        VPValue *StoredVal, VPValue *Mask,
-                                       bool Consecutive,
+                                       bool Consecutive, Align Alignment,
                                        const VPIRMetadata &Metadata,
                                        DebugLoc DL) {
     return tryInsertInstruction(new VPWidenStoreRecipe(
-        Store, Addr, StoredVal, Mask, Consecutive, Metadata, DL));
+        Store, Addr, StoredVal, Mask, Consecutive, Alignment, Metadata, DL));
   }
 
   //===--------------------------------------------------------------------===//
@@ -674,16 +664,32 @@ struct FixedScalableVFPair {
 /// Holds state needed to make cost decisions before computing costs per-VF,
 /// including the maximum VFs.
 class VFSelectionContext {
+  using VectorKind = TargetTransformInfo::VectorKind;
   /// \return True if maximizing vector bandwidth is enabled by the target or
   /// user options, for the given register kind (scalable or fixed-width).
-  bool useMaxBandwidth(bool IsScalable) const;
+  bool useMaxBandwidth(VectorKind Kind, Type *ElementTy = nullptr) const;
+  bool useMaxBandwidth(bool IsScalable, Type *ElementTy = nullptr) const {
+    return useMaxBandwidth(
+        IsScalable ? VectorKind::Scalable : VectorKind::FixedWidth, ElementTy);
+  }
+
+  struct TypeWidths {
+    unsigned SmallestTypeForMaxBandwidth;
+    unsigned SmallestType;
+    unsigned WidestType;
+  };
+
+  /// \return The size (in bits) of the of the types used to determine the
+  /// possible VFs. That is the widest type in the loop and the smallest type
+  /// the target wants to maximize vector bandwidth for. We ignore values that
+  /// remain scalar such as 64 bit loop indices.
+  TypeWidths getTypeWidthsForVFSelection() const;
 
   /// \return the maximized element count based on the targets vector
   /// registers and the loop trip-count, but limited to a maximum safe VF.
   /// This is a helper function of computeFeasibleMaxVF.
   ElementCount getMaximizedVFForTarget(unsigned MaxTripCount,
-                                       unsigned SmallestType,
-                                       unsigned WidestType,
+                                       const TypeWidths &TyWidths,
                                        ElementCount MaxSafeVF, unsigned UserIC,
                                        bool FoldTailByMasking,
                                        bool RequiresScalarEpilogue);
@@ -796,11 +802,6 @@ public:
   /// Collect element types in the loop that need widening.
   void collectElementTypesForWidening(
       const SmallPtrSetImpl<const Value *> *ValuesToIgnore = nullptr);
-
-  /// \return The size (in bits) of the smallest and widest types in the code
-  /// that need to be vectorized. We ignore values that remain scalar such as
-  /// 64 bit loop indices.
-  std::pair<unsigned, unsigned> getSmallestAndWidestTypes() const;
 
   /// \return An upper bound for the vectorization factors for both
   /// fixed and scalable vectorization, where the minimum-known number of
@@ -988,7 +989,8 @@ public:
                                  InstructionCost LoopCost);
 
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
-  /// according to the best selected \p VF and  \p UF.
+  /// according to the best selected \p VF and \p UF. \p HasRuntimeChecks is
+  /// used to decide whether runtime unrolling of the scalar loop is disabled.
   ///
   /// TODO: \p EpilogueVecKind should be removed once the re-use issue has been
   /// fixed.
@@ -1006,7 +1008,7 @@ public:
   };
   DenseMap<const SCEV *, Value *>
   executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
-              InnerLoopVectorizer &LB, DominatorTree *DT,
+              bool HasRuntimeChecks,
               EpilogueVectorizationKind EpilogueVecKind =
                   EpilogueVectorizationKind::None,
               MutableArrayRef<VPBasicBlock *> TrackedBlocks = {});
@@ -1043,9 +1045,13 @@ public:
   void emitInvalidCostRemarks(OptimizationRemarkEmitter *ORE);
 
   /// Create a check to \p Plan to see if the vector loop should be executed
-  /// based on its trip count.
+  /// based on its trip count. When \p TailFoldedEpilogue is true, the
+  /// tail-folded vector epilogue executes all iterations not executed by
+  /// the main vector loop, so the check never needs to branch to the scalar
+  /// loop.
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
-                                ElementCount MinProfitableTripCount) const;
+                                ElementCount MinProfitableTripCount,
+                                bool TailFoldedEpilogue) const;
 
   /// Attach the runtime checks of \p RTChecks to \p Plan. \p VF and \p UF are
   /// used to compute the thresholds of difference checks.
@@ -1070,6 +1076,10 @@ public:
       bool DisableRuntimeUnroll, bool UnrollVectorizedLoop);
 
 private:
+  /// Build VPlan for the forced epilogue VF. If vectorization and tail-folding
+  /// should be avoided up-front, no tail-folded plans are generated.
+  bool planForEpilogueTF();
+
   /// Build an initial VPlan, with HCFG wrapping the original scalar loop and
   /// scalar transformations applied. Returns null if an initial VPlan cannot
   /// be built. \p PlanCM is the cost model to use for decisions made while
@@ -1120,16 +1130,6 @@ private:
   /// epilogue, assuming the main loop is vectorized by \p MainPlan.
   bool isCandidateForEpilogueVectorization(VPlan &MainPlan) const;
 };
-
-/// A helper function that returns true if the given type is irregular. The
-/// type is irregular if its allocated size doesn't equal the store size of an
-/// element of the corresponding vector type.
-inline bool hasIrregularType(Type *Ty, const DataLayout &DL) {
-  // Determine if an array of N elements of type Ty is "bitcast compatible"
-  // with a <N x Ty> vector.
-  // This is only true if there is no padding between the array elements.
-  return DL.getTypeAllocSizeInBits(Ty) != DL.getTypeSizeInBits(Ty);
-}
 
 } // namespace llvm
 

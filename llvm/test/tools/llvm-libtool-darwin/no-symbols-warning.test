@@ -32,6 +32,7 @@
 
 ## x86_64
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x1000007
@@ -45,6 +46,7 @@ FileHeader:
 
 ## armv7
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACE
   cputype:         0x0000000C

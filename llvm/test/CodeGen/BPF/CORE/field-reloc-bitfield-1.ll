@@ -32,7 +32,6 @@ define dso_local i32 @test(ptr %arg) local_unnamed_addr !dbg !13 {
 ; CHECK-ALU64-NEXT:  .Lfunc_begin0:
 ; CHECK-ALU64-NEXT:    .file 1 "/tmp/home/yhs/work/tests/core" "test.c"
 ; CHECK-ALU64-NEXT:    .loc 1 11 0 # test.c:11:0
-; CHECK-ALU64-NEXT:    .cfi_sections .debug_frame
 ; CHECK-ALU64-NEXT:    .cfi_startproc
 ; CHECK-ALU64-NEXT:  # %bb.0: # %entry
 ; CHECK-ALU64-NEXT:    #DEBUG_VALUE: test:arg <- $r1
@@ -64,7 +63,6 @@ define dso_local i32 @test(ptr %arg) local_unnamed_addr !dbg !13 {
 ; CHECK-ALU32-NEXT:  .Lfunc_begin0:
 ; CHECK-ALU32-NEXT:    .file 1 "/tmp/home/yhs/work/tests/core" "test.c"
 ; CHECK-ALU32-NEXT:    .loc 1 11 0 # test.c:11:0
-; CHECK-ALU32-NEXT:    .cfi_sections .debug_frame
 ; CHECK-ALU32-NEXT:    .cfi_startproc
 ; CHECK-ALU32-NEXT:  # %bb.0: # %entry
 ; CHECK-ALU32-NEXT:    #DEBUG_VALUE: test:arg <- $r1

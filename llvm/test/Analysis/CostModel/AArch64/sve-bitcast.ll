@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=aarch64-linux-gnu -mattr=+sve -passes="print<cost-model>" 2>&1 -disable-output < %s | FileCheck %s
+; RUN: opt -mtriple=aarch64-linux-gnu -mattr=+sve -passes="print<cost-model>" -disable-output < %s 2>&1 | FileCheck %s
 
 ; Integer to float bitcasts
 

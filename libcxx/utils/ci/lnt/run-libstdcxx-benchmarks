@@ -37,8 +37,8 @@ def gather_machine_information(args):
 
 def version_ordinal(version):
     """
-    Return the ordinal of a GCC version (e.g. 16.2.0) in the libstdcxx LNT test suite. LNT orders commits
-    by their ordinal, so this must sort versions correctly.
+    Return the ordinal of a GCC version (e.g. 16.2.0) in the libcxx/libstdcxx_microbenchmarks LNT test suite.
+    LNT orders commits by their ordinal, so this must sort versions correctly.
     """
     parts = version.split('.')
     if len(parts) != 3 or not all(p.isdigit() for p in parts):
@@ -52,7 +52,8 @@ def main(argv):
     parser = argparse.ArgumentParser(
         prog='run-libstdcxx-benchmarks',
         description='Run the libc++ benchmark suite against the libstdc++ of the given GCC and produce a LNT JSON '
-                    'report for the libstdcxx LNT test suite. The results are attributed to the version of that GCC.')
+                    'report for the libcxx/libstdcxx_microbenchmarks LNT test suite. The results are attributed to '
+                    'the version of that GCC.')
     parser.add_argument('--gcc', type=str, required=True,
         help='The GCC whose libstdc++ is benchmarked, e.g. g++-16. This is not the compiler used to build the benchmarks.')
     parser.add_argument('--compiler', type=str, required=True,
@@ -74,8 +75,8 @@ def main(argv):
             sys.exit('error: for clarity, Lit options must be separated from other options by --')
         lit_options = args.lit_options[1:]
 
-    # The commits of the libstdcxx test suite are versions of libstdc++. Determine it up front, since it
-    # doesn't depend on the results and can fail.
+    # The commits of the libcxx/libstdcxx_microbenchmarks test suite are versions of libstdc++. Determine it up
+    # front, since it doesn't depend on the results and can fail.
     version = subprocess.check_output([args.gcc, '-dumpfullversion']).decode().strip()
     commit = {'value': version, 'ordinal': version_ordinal(version)}
 

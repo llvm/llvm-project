@@ -10,6 +10,7 @@ config.lldb_obj_root = "@LLDB_BINARY_DIR@"
 config.lldb_src_root = "@LLDB_SOURCE_DIR@"
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
+config.lldb_test_extra_tsan_options = "@LLDB_TEST_EXTRA_TSAN_OPTIONS@"
 config.python_executable = "@Python3_EXECUTABLE@"
 config.python_root_dir = "@Python3_ROOT_DIR@"
 

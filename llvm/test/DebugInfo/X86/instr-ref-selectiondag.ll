@@ -3,11 +3,11 @@
 ; RUN:     --implicit-check-not=debug-instr-number \
 ; RUN:     --implicit-check-not=DBG_INSTR_REF
 ; RUN: llc %s -mtriple=x86_64-unknown-unknown -o - -stop-before=finalize-isel \
-; RUN:     -experimental-debug-variable-locations -verify-machineinstrs \
+; RUN:     -experimental-debug-variable-locations \
 ; RUN:   | FileCheck %s --check-prefix=INSTRREF \
 ; RUN:     --implicit-check-not=DBG_VALUE
 ; RUN: llc %s -mtriple=x86_64-unknown-unknown -o - -stop-before=finalize-isel \
-; RUN:     -experimental-debug-variable-locations -verify-machineinstrs \
+; RUN:     -experimental-debug-variable-locations \
 ; RUN:     -fast-isel \
 ; RUN:   | FileCheck %s --check-prefix=FASTISEL-INSTRREF \
 ; RUN:     --implicit-check-not=DBG_VALUE

@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/Compiler.h"
@@ -251,11 +252,28 @@ enum {
   /// GIM_CheckType but InsnID is omitted and defaults to zero.
   GIM_RootCheckType,
 
+  /// Check the type for the specified operand where the type depends on the
+  /// HwMode.
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
+  /// - Idx(1) - Index passed to getLLTForHwMode
+  GIM_CheckTypeByHwMode,
+  /// GIM_CheckTypeByHwMode but InsnID is omitted and defaults to zero.
+  GIM_RootCheckTypeByHwMode,
+
   /// Check the type of a pointer to any address space.
   /// - InsnID(ULEB128) - Instruction ID
   /// - OpIdx(ULEB128) - Operand index
   /// - SizeInBits(ULEB128) - The size of the pointer value in bits.
   GIM_CheckPointerToAny,
+
+  /// Check the type of a pointer to any address space where the size of the
+  /// pointer depends on the HwMode.
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
+  /// - Idx(1) - Index passed to getLLTForHwMode. The size of the returned type
+  ///            is the size of the pointer value in bits.
+  GIM_CheckPointerToAnyByHwMode,
 
   /// Check the register bank for the specified operand
   /// - InsnID(ULEB128) - Instruction ID
@@ -583,6 +601,12 @@ enum {
   /// - Ty(1) - Expected type
   GIR_MakeTempReg,
 
+  /// Create a new temporary register that's not constrained where the type
+  /// depends on the HwMode.
+  /// - TempRegID(ULEB128) - The temporary register ID to initialize.
+  /// - Idx(1) - Index passed to getLLTForHwMode
+  GIR_MakeTempRegByHwMode,
+
   /// Replaces all references to a register from an instruction
   /// with another register from another instruction.
   /// - OldInsnID(ULEB128)
@@ -623,6 +647,9 @@ public:
   // For some predicates, we need to track the current MBB.
   MachineBasicBlock *CurMBB = nullptr;
 
+  // HwMode of the current subtarget. Used by getLLTForHwMode.
+  unsigned HwMode = 0;
+
   virtual void setupGeneratedPerFunctionState(MachineFunction &MF) = 0;
 
   /// Setup per-MF executor state.
@@ -636,6 +663,7 @@ public:
     PSI = psi;
     BFI = bfi;
     CurMBB = nullptr;
+    HwMode = mf.getSubtarget().getHwMode();
     setupGeneratedPerFunctionState(mf);
   }
 
@@ -713,6 +741,10 @@ protected:
                          CodeGenCoverage *CoverageInfo) const;
 
   virtual const uint8_t *getMatchTable() const {
+    llvm_unreachable("Should have been overridden by tablegen if used");
+  }
+
+  virtual LLT getLLTForHwMode(unsigned Index) const {
     llvm_unreachable("Should have been overridden by tablegen if used");
   }
 

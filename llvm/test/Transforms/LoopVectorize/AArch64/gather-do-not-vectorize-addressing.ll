@@ -4,7 +4,7 @@
 ; RUN: opt < %s -passes=loop-vectorize -mtriple=aarch64--linux-gnu -mattr=+sve -force-vector-width=2 -force-vector-interleave=1 \
 ; RUN:   -tail-folding-policy=dont-fold-tail -scalable-vectorization=on -S -o - | FileCheck --check-prefix=SVE %s
 
-define double @test(ptr nocapture noundef readonly %data, ptr nocapture noundef readonly %offset, i32 noundef %size) {
+define double @test(ptr nocapture noundef readonly %data, ptr nocapture noundef readonly %offset, i32 noundef %size) vscale_range(1,16) {
 ; CHECK-LABEL: define double @test(
 ; CHECK-SAME: ptr noundef readonly captures(none) [[DATA:%.*]], ptr noundef readonly captures(none) [[OFFSET:%.*]], i32 noundef [[SIZE:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -86,7 +86,7 @@ define double @test(ptr nocapture noundef readonly %data, ptr nocapture noundef 
 ; SVE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[OFFSET]], i64 [[INDEX]]
 ; SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i32>, ptr [[TMP2]], align 4
 ; SVE-NEXT:    [[TMP3:%.*]] = sext <vscale x 2 x i32> [[WIDE_LOAD]] to <vscale x 2 x i64>
-; SVE-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds double, ptr [[DATA]], <vscale x 2 x i64> [[TMP3]]
+; SVE-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [8 x i8], ptr [[DATA]], <vscale x 2 x i64> [[TMP3]]
 ; SVE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x double> @llvm.masked.gather.nxv2f64.nxv2p0(<vscale x 2 x ptr> align 8 [[WIDE_GEP]], <vscale x 2 x i1> splat (i1 true), <vscale x 2 x double> poison)
 ; SVE-NEXT:    [[TMP4]] = fadd <vscale x 2 x double> [[VEC_PHI]], [[WIDE_MASKED_GATHER]]
 ; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
@@ -150,7 +150,7 @@ for.body:
 }
 
 ; %l is only used in an address via the first-order recurrence %for.
-define void @load_used_as_address_via_recurrence(ptr noalias %A, ptr noalias %src, ptr noalias %dst, i64 %n) {
+define void @load_used_as_address_via_recurrence(ptr noalias %A, ptr noalias %src, ptr noalias %dst, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: define void @load_used_as_address_via_recurrence(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -223,7 +223,7 @@ define void @load_used_as_address_via_recurrence(ptr noalias %A, ptr noalias %sr
 ; SVE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[INDEX]]
 ; SVE-NEXT:    [[WIDE_LOAD]] = load <vscale x 2 x i64>, ptr [[TMP5]], align 8
 ; SVE-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.vector.splice.right.nxv2i64(<vscale x 2 x i64> [[VECTOR_RECUR]], <vscale x 2 x i64> [[WIDE_LOAD]], i32 1)
-; SVE-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds i64, ptr [[A]], <vscale x 2 x i64> [[TMP6]]
+; SVE-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [8 x i8], ptr [[A]], <vscale x 2 x i64> [[TMP6]]
 ; SVE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i64> @llvm.masked.gather.nxv2i64.nxv2p0(<vscale x 2 x ptr> align 8 [[WIDE_GEP]], <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> poison)
 ; SVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[INDEX]]
 ; SVE-NEXT:    store <vscale x 2 x i64> [[WIDE_MASKED_GATHER]], ptr [[TMP7]], align 8
@@ -278,7 +278,7 @@ exit:
 
 ; %l is used in an address via the pointer first-order recurrence %for, which
 ; is directly used as address.
-define void @load_used_as_address_via_ptr_recurrence(ptr noalias %A, ptr noalias %src, ptr noalias %dst, i64 %n) {
+define void @load_used_as_address_via_ptr_recurrence(ptr noalias %A, ptr noalias %src, ptr noalias %dst, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: define void @load_used_as_address_via_ptr_recurrence(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -355,7 +355,7 @@ define void @load_used_as_address_via_ptr_recurrence(ptr noalias %A, ptr noalias
 ; SVE-NEXT:    [[VECTOR_RECUR:%.*]] = phi <vscale x 2 x ptr> [ [[VECTOR_RECUR_INIT]], %[[VECTOR_PH]] ], [ [[WIDE_GEP:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[INDEX]]
 ; SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP5]], align 8
-; SVE-NEXT:    [[WIDE_GEP]] = getelementptr inbounds i64, ptr [[A]], <vscale x 2 x i64> [[WIDE_LOAD]]
+; SVE-NEXT:    [[WIDE_GEP]] = getelementptr inbounds [8 x i8], ptr [[A]], <vscale x 2 x i64> [[WIDE_LOAD]]
 ; SVE-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x ptr> @llvm.vector.splice.right.nxv2p0(<vscale x 2 x ptr> [[VECTOR_RECUR]], <vscale x 2 x ptr> [[WIDE_GEP]], i32 1)
 ; SVE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i64> @llvm.masked.gather.nxv2i64.nxv2p0(<vscale x 2 x ptr> align 8 [[TMP6]], <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> poison)
 ; SVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[INDEX]]

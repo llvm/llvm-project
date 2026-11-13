@@ -10,6 +10,7 @@
 // RUN: mlir-opt %s -split-input-file -tosa-attach-target="level=8k" | FileCheck %s --check-prefix=CHECK-LVL-8K
 // RUN: mlir-opt %s -split-input-file -tosa-attach-target | FileCheck %s --check-prefix=CHECK-DEFAULT
 // RUN: mlir-opt %s -split-input-file -tosa-attach-target="specification_version=1.1.draft" | FileCheck %s --check-prefix=CHECK-VERSION-1P1
+// RUN: mlir-opt %s -split-input-file -tosa-attach-target | mlir-opt | FileCheck %s --check-prefix=CHECK-DEFAULT
 
 // -----
 

@@ -28,9 +28,11 @@ void CIRCXXABI::readArrayCookie(mlir::Location loc, mlir::Value elementPtr,
                                 CIRBaseBuilderTy &builder,
                                 mlir::Value &numElements, mlir::Value &allocPtr,
                                 clang::CharUnits &cookieSize) const {
-  auto u8PtrTy = builder.getPointerTo(builder.getUIntNTy(8));
+  mlir::ptr::MemorySpaceAttrInterface addrSpace =
+      mlir::cast<cir::PointerType>(elementPtr.getType()).getAddrSpace();
+  auto u8PtrTy = builder.getPointerTo(builder.getUIntNTy(8), addrSpace);
   auto ptrDiffTy = builder.getSIntNTy(getPtrSizeInBits());
-  auto voidPtrTy = builder.getVoidPtrTy();
+  auto voidPtrTy = builder.getVoidPtrTy(addrSpace);
 
   cookieSize = getArrayCookieSizeImpl(elementAlign);
 

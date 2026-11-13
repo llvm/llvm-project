@@ -10,7 +10,6 @@
 #include "Context.h"
 #include "Function.h"
 #include "PrimType.h"
-#include "Reflect.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
@@ -21,20 +20,19 @@ using namespace clang::interp;
 Pointer Program::getPtrGlobal(unsigned Idx) const {
   assert(Idx < Globals.size());
 
-  Block *B = Globals[Idx]->block();
+  Block *B = Globals[Idx];
 
   // Force de-serialization of a redeclaration that might initialize this
   // global.
-  if (B->getMetadataSize() != 0 &&
-      B->getBlockDesc<GlobalInlineDescriptor>().InitState !=
-          GlobalInitState::Initialized) {
+  if (B->isGlobal() && B->getBlockDesc<GlobalInlineDescriptor>().InitState !=
+                           GlobalInitState::Initialized) {
     if (const VarDecl *VD = B->getDescriptor()->asVarDecl()) {
       const VarDecl *MD = VD->getMostRecentDecl();
       if (MD != VD && MD->hasInit() && !MD->getInit()->isValueDependent()) {
         MD->evaluateValue();
         // Note that we need to get Globals[Idx] here again since the code block
         // above might've actually changed what global Idx points to.
-        return Pointer(Globals[Idx]->block());
+        return Pointer(Globals[Idx]);
       }
     }
   }
@@ -81,29 +79,26 @@ UnsignedOrNone Program::getOrCreateGlobal(const ValueDecl *VD,
 }
 
 UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init,
-                                     bool IsConstexprUnknown) {
-  bool IsStatic, IsExtern;
+                                     bool IsConstexprUnknown,
+                                     bool CanBeExtern) {
+  bool IsExtern;
   bool IsWeak = VD->isWeak();
   if (const auto *Var = dyn_cast<VarDecl>(VD)) {
-    IsStatic = Context::shouldBeGloballyIndexed(VD);
-    IsExtern = Var->hasExternalStorage();
-  } else if (isa<UnnamedGlobalConstantDecl, MSGuidDecl,
-                 TemplateParamObjectDecl>(VD)) {
-    IsStatic = true;
-    IsExtern = false;
+    IsExtern = CanBeExtern && !Init && Var->hasExternalStorage();
   } else {
-    IsStatic = false;
-    IsExtern = true;
+    assert((isa<UnnamedGlobalConstantDecl, MSGuidDecl, TemplateParamObjectDecl>(
+        VD)));
+    IsExtern = false;
   }
 
   // Register all previous declarations as well. For extern blocks, just replace
   // the index with the new variable.
-  UnsignedOrNone Idx = createGlobal(VD, VD->getType(), IsStatic, IsExtern,
-                                    IsWeak, IsConstexprUnknown, Init);
+  UnsignedOrNone Idx = createGlobal(VD, VD->getType(), IsExtern, IsWeak,
+                                    IsConstexprUnknown, Init);
   if (!Idx)
     return std::nullopt;
 
-  Global *NewGlobal = Globals[*Idx];
+  Block *NewGlobal = Globals[*Idx];
   GlobalIndices[VD] = *Idx;
 
   for (const Decl *Redecl = VD->getPreviousDecl(); Redecl;
@@ -118,13 +113,15 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init,
       continue;
     }
 
-    Block *RedeclBlock = Globals[Iter->second]->block();
+    Block *RedeclBlock = Globals[Iter->second];
     // All pointers pointing to the previous extern decl now point to the
     // new decl.
     // A previous iteration might've already fixed up the pointers for this
     // global.
-    if (RedeclBlock != NewGlobal->block())
-      RedeclBlock->movePointersTo(NewGlobal->block());
+    if (RedeclBlock != NewGlobal) {
+      RedeclBlock->movePointersTo(NewGlobal);
+      RedeclBlock->invokeDtor();
+    }
 
     Globals[Iter->second] = NewGlobal;
     Iter->second = *Idx;
@@ -136,7 +133,7 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init,
 UnsignedOrNone Program::createGlobal(const Expr *E, QualType ExprType) {
   if (auto Idx = getGlobal(E))
     return Idx;
-  if (auto Idx = createGlobal(E, ExprType, /*IsStatic=*/true,
+  if (auto Idx = createGlobal(E, ExprType,
                               /*IsExtern=*/false, /*IsWeak=*/false,
                               /*IsConstexprUnknown=*/false)) {
     GlobalIndices[E] = *Idx;
@@ -145,9 +142,8 @@ UnsignedOrNone Program::createGlobal(const Expr *E, QualType ExprType) {
   return std::nullopt;
 }
 
-UnsignedOrNone Program::createGlobal(DeclOrExpr D, QualType Ty, bool IsStatic,
-                                     bool IsExtern, bool IsWeak,
-                                     bool IsConstexprUnknown,
+UnsignedOrNone Program::createGlobal(DeclOrExpr D, QualType Ty, bool IsExtern,
+                                     bool IsWeak, bool IsConstexprUnknown,
                                      const Expr *Init) {
   // Since this global variable is constexpr-unknown and a reference, register
   // the pointee type instead. When referencing the variable, the pointer will
@@ -169,18 +165,21 @@ UnsignedOrNone Program::createGlobal(DeclOrExpr D, QualType Ty, bool IsStatic,
 
   if (!Desc)
     return std::nullopt;
-  Desc->IsConstexprUnknown = IsConstexprUnknown;
 
   // Allocate a block for storage.
   unsigned I = Globals.size();
 
-  auto *G = new (Allocator, Desc->getAllocSize() + Block::GlobalMD)
-      Global(Ctx.getEvalID(), getCurrentDecl(), Desc, Block::GlobalMD, IsStatic,
-             IsExtern, IsWeak);
-  G->block()->invokeCtor();
+  BlockFlags Flags =
+      BlockFlags().withExtern(IsExtern).withWeak(IsWeak).withConstexprUnknown(
+          IsConstexprUnknown);
+  auto *G =
+      new (Allocate(Block::allocSize(Desc, Block::Global), alignof(Block)))
+          Block(Ctx.getEvalID(), getCurrentDecl(), Desc, Block::Global, Flags);
+  G->invokeCtor();
 
   // Initialize GlobalInlineDescriptor fields.
-  auto *GD = new (G->block()->rawData()) GlobalInlineDescriptor();
+  auto *GD =
+      new (&G->getBlockDesc<GlobalInlineDescriptor>()) GlobalInlineDescriptor();
   if (!Init)
     GD->InitState = GlobalInitState::NoInitializer;
   Globals.push_back(G);

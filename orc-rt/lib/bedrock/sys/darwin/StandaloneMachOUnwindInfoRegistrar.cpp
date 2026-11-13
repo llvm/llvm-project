@@ -42,7 +42,7 @@ size_t LibunwindRegistrationCount;
 
 } // namespace
 
-namespace orc_rt {
+namespace orc_rt::sys::darwin {
 
 // === UnwindInfoMap method definitions ===
 
@@ -231,4 +231,4 @@ Error StandaloneMachOUnwindInfoRegistrar::deregisterSections(
   return unwindInfoMap().deregisterRanges(CodeRanges);
 }
 
-} // namespace orc_rt
+} // namespace orc_rt::sys::darwin
