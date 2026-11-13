@@ -124,9 +124,9 @@ libc_test(
         "//libc:access",
         "//libc:close",
         "//libc:hdr_sys_stat_macros",
-        "//libc:mkdirat",
         "//libc/src/fcntl:open",
         "//libc/src/stdio:remove",
+        "//libc/src/sys/stat:mkdirat",
     ],
 )
 

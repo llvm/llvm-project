@@ -4306,35 +4306,14 @@ alias(
 
 ############################### sys/stat targets ###############################
 
-libc_function(
+alias(
     name = "mkdir",
-    srcs = ["src/sys/stat/linux/mkdir.cpp"],
-    hdrs = ["src/sys/stat/mkdir.h"],
-    deps = [
-        ":hdr_fcntl_macros",
-        ":types_mode_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:mkdir",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/stat:mkdir",
 )
 
-libc_function(
+alias(
     name = "mkdirat",
-    srcs = ["src/sys/stat/linux/mkdirat.cpp"],
-    hdrs = ["src/sys/stat/mkdirat.h"],
-    deps = [
-        ":types_mode_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:mkdirat",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/stat:mkdirat",
 )
 
 ############################## sys/socket targets ##############################
