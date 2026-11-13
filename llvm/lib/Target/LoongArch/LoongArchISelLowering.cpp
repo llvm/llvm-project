@@ -952,7 +952,7 @@ SDValue LoongArchTargetLowering::lowerVSELECT(SDValue Op,
   // build_vector condition will be handled. NOTE: On 32-bit platform, vselect
   // with v2i64/v4i64 type condition will never enter this because of the extra
   // bitcast. It can be considered separately later.
-  if (ISD::isBuildVectorOfConstantSDNodes(Cond.getNode())) {
+  if (ISD::isBuildVectorOfConstantSDNodes(Cond)) {
     BuildVectorSDNode *BVN = cast<BuildVectorSDNode>(Cond.getNode());
     APInt SplatValue, SplatUndef;
     unsigned SplatBitSize;
@@ -8800,7 +8800,7 @@ static SDValue performVANDNCombine(SDNode *N, SelectionDAG &DAG,
     if (Shl.getOpcode() == ISD::SHL && ShlVT.isVector() && ShlVT.isInteger() &&
         ShlVT != VT && ShlVT.getSizeInBits() == VT.getSizeInBits() &&
         DAG.getTargetLoweringInfo().isTypeLegal(ShlVT) &&
-        ISD::isConstantSplatVector(Shl.getOperand(0).getNode(), SplatVal) &&
+        ISD::isConstantSplatVector(Shl.getOperand(0), SplatVal) &&
         SplatVal.isOne()) {
       SDValue V = DAG.getNode(LoongArchISD::VANDN, DL, ShlVT, Shl,
                               DAG.getBitcast(ShlVT, N1));
