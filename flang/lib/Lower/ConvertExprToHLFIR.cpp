@@ -1096,24 +1096,9 @@ hlfir::EntityWithAttributes HlfirDesignatorBuilder::genDesignatorExpr(
         using T = std::decay_t<decltype(x)>;
         if constexpr (Fortran::common::HasMember<
                           T, Fortran::lower::CategoryExpression>) {
-          if constexpr (T::Result::category ==
-                        Fortran::common::TypeCategory::Derived) {
-            return gen(std::get<Fortran::evaluate::Designator<
-                           Fortran::evaluate::SomeDerived>>(x.u)
-                           .u,
-                       vectorSubscriptDesignatorToValue);
-          } else {
-            return Fortran::common::visit(
-                [&](const auto &preciseKind) {
-                  using TK =
-                      typename std::decay_t<decltype(preciseKind)>::Result;
-                  return gen(
-                      std::get<Fortran::evaluate::Designator<TK>>(preciseKind.u)
-                          .u,
-                      vectorSubscriptDesignatorToValue);
-                },
-                x.u);
-          }
+          using TK = typename T::Result;
+          return gen(std::get<Fortran::evaluate::Designator<TK>>(x.u).u,
+                     vectorSubscriptDesignatorToValue);
         } else {
           fir::emitFatalError(loc, "unexpected typeless Designator");
         }
@@ -1739,7 +1724,9 @@ private:
     mlir::Type resType =
         Fortran::lower::TypeBuilder<T>::genType(getConverter(), expr);
 
-    if constexpr (std::is_same_v<T, Fortran::evaluate::SomeDerived>) {
+    if constexpr (std::is_same_v<T,
+                                 Fortran::evaluate::Type<
+                                     Fortran::common::TypeCategory::Derived>>) {
       if (const auto *intrinsic = expr.proc().GetSpecificIntrinsic();
           intrinsic && intrinsic->name == "huge")
         return genEnumerationHuge(expr, resType);
@@ -1764,7 +1751,8 @@ private:
 
   // Number of enumerators of the enumeration type returned by expr.
   int getEnumerationEnumeratorCount(
-      const Fortran::evaluate::FunctionRef<Fortran::evaluate::SomeDerived>
+      const Fortran::evaluate::FunctionRef<
+          Fortran::evaluate::Type<Fortran::common::TypeCategory::Derived>>
           &expr,
       llvm::StringRef name) {
     auto resultDynType = expr.proc().GetType();
@@ -1786,7 +1774,8 @@ private:
   // Lower HUGE(enumVar) for non-constant enumeration arguments.
   // Should always be folded, but handle as a constant just in case.
   hlfir::EntityWithAttributes genEnumerationHuge(
-      const Fortran::evaluate::FunctionRef<Fortran::evaluate::SomeDerived>
+      const Fortran::evaluate::FunctionRef<
+          Fortran::evaluate::Type<Fortran::common::TypeCategory::Derived>>
           &expr,
       mlir::Type resType) {
     mlir::Location loc = getLoc();
@@ -1821,15 +1810,13 @@ private:
       ordinal = builder.createIntegerConstant(loc, ordTy, *constOrdinal);
     } else {
       const Fortran::evaluate::Convert<Int4> *narrowing = nullptr;
-      if (const auto *intExpr = std::get_if<
-              Fortran::evaluate::Expr<Fortran::evaluate::SomeInteger>>(
+      if (const auto *intExpr = std::get_if<Fortran::evaluate::Expr<
+              Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>>(
               &ordExpr.u))
-        if (const auto *int4Expr =
-                std::get_if<Fortran::evaluate::Expr<Int4>>(&intExpr->u))
-          if (const auto *conv =
-                  std::get_if<Fortran::evaluate::Convert<Int4>>(&int4Expr->u))
-            if (conv->kind() == 4)
-              narrowing = conv;
+        if (const auto *conv =
+                std::get_if<Fortran::evaluate::Convert<Int4>>(&intExpr->u))
+          if (conv->kind() == 4)
+            narrowing = conv;
       hlfir::Entity original =
           narrowing ? gen(narrowing->left()) : gen(ordExpr);
       mlir::Value value = hlfir::loadTrivialScalar(loc, builder, original);
@@ -2163,7 +2150,8 @@ private:
     mlir::Type resultType = getConverter().genType(ResTy::category, resKind);
     // Evaluate the rank-1 base expression.
     Fortran::lower::SomeExpr someExpr{Fortran::evaluate::AsGenericExpr(
-        Fortran::evaluate::Expr<Fortran::evaluate::SomeInteger>{
+        Fortran::evaluate::Expr<
+            Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>{
             Fortran::common::Clone(x.base())})};
     hlfir::Entity baseArray{Fortran::lower::convertExprToHLFIR(
         loc, getConverter(), someExpr, getSymMap(), getStmtCtx())};

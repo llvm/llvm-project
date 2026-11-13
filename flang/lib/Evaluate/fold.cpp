@@ -67,52 +67,54 @@ std::optional<Constant<SubscriptInteger>> GetConstantSubscript(
       ss.u);
 }
 
-Expr<SomeDerived> FoldEnumerationNextOrPrevious(
-    FoldingContext &context, FunctionRef<SomeDerived> &&funcRef, bool isNext) {
+Expr<Type<TypeCategory::Derived>> FoldEnumerationNextOrPrevious(
+    FoldingContext &context, FunctionRef<Type<TypeCategory::Derived>> &&funcRef,
+    bool isNext) {
   ActualArguments &args{funcRef.arguments()};
   // Don't fold if STAT is present — STAT assignment is a side effect
   if (args.size() >= 2 && args[1]) {
-    return Expr<SomeDerived>{std::move(funcRef)};
+    return Expr<Type<TypeCategory::Derived>>{std::move(funcRef)};
   }
   auto *expr{args.size() >= 1 && args[0]
-          ? UnwrapExpr<Expr<SomeDerived>>(args[0])
+          ? UnwrapExpr<Expr<Type<TypeCategory::Derived>>>(args[0])
           : nullptr};
   if (!expr) {
-    return Expr<SomeDerived>{std::move(funcRef)};
+    return Expr<Type<TypeCategory::Derived>>{std::move(funcRef)};
   }
   const auto *derived{GetEnumerationTypeSpec(expr->GetType())};
   const semantics::Scope *scope{derived ? derived->GetScope() : nullptr};
   if (!scope) {
-    return Expr<SomeDerived>{std::move(funcRef)};
+    return Expr<Type<TypeCategory::Derived>>{std::move(funcRef)};
   }
   auto ordIter{scope->find(
       semantics::SourceName{semantics::DerivedTypeDetails::ordinalComponentName,
           sizeof(semantics::DerivedTypeDetails::ordinalComponentName) - 1})};
   if (ordIter == scope->end()) {
-    return Expr<SomeDerived>{std::move(funcRef)};
+    return Expr<Type<TypeCategory::Derived>>{std::move(funcRef)};
   }
   const semantics::Symbol &ordSym{*ordIter->second};
   int count{derived->typeSymbol()
           .GetUltimate()
           .get<semantics::DerivedTypeDetails>()
           .enumeratorCount()};
-  auto *constant{UnwrapConstantValue<SomeDerived>(*expr)};
+  auto *constant{UnwrapConstantValue<Type<TypeCategory::Derived>>(*expr)};
   if (!constant) {
-    return Expr<SomeDerived>{std::move(funcRef)};
+    return Expr<Type<TypeCategory::Derived>>{std::move(funcRef)};
   }
   // A boundary hit (NEXT() of the last enumerator or PREVIOUS() of the first)
   // without STAT= is a runtime error termination.  In a required-constant
   // context that value cannot be deferred, so it is diagnosed as out of range.
   // Outside a constant context the reference is left unfolded and deferred to
   // run time, where lowering emits the STAT assignment or error termination.
-  auto handleBoundary{[&]() -> Expr<SomeDerived> {
+  auto handleBoundary{[&]() -> Expr<Type<TypeCategory::Derived>> {
     if (context.inConstantContext()) {
       context.messages().Say(isNext
               ? "NEXT() of the last enumerator is out of range"_err_en_US
               : "PREVIOUS() of the first enumerator is out of range"_err_en_US);
-      return MakeInvalidIntrinsic<SomeDerived>(std::move(funcRef));
+      return MakeInvalidIntrinsic<Type<TypeCategory::Derived>>(
+          std::move(funcRef));
     }
-    return Expr<SomeDerived>{std::move(funcRef)};
+    return Expr<Type<TypeCategory::Derived>>{std::move(funcRef)};
   }};
   if (auto sc{constant->GetScalarValue()}) {
     if (auto ordExpr{sc->Find(ordSym)}) {
@@ -124,8 +126,10 @@ Expr<SomeDerived> FoldEnumerationNextOrPrevious(
                           : static_cast<int>(*ordVal - 1)};
         StructureConstructor ctor{*derived};
         ctor.Add(ordSym,
-            Expr<SomeType>{Expr<SomeInteger>{MakeCIntegerExpr(newOrd)}});
-        return Expr<SomeDerived>{Constant<SomeDerived>{std::move(ctor)}};
+            Expr<SomeType>{
+                Expr<Type<TypeCategory::Integer>>{MakeCIntegerExpr(newOrd)}});
+        return Expr<Type<TypeCategory::Derived>>{
+            Constant<Type<TypeCategory::Derived>>{std::move(ctor)}};
       }
     }
   } else if (constant->Rank() > 0) {
@@ -144,14 +148,16 @@ Expr<SomeDerived> FoldEnumerationNextOrPrevious(
       int newOrd{isNext ? static_cast<int>(*ordVal + 1)
                         : static_cast<int>(*ordVal - 1)};
       StructureConstructor ctor{*derived};
-      ctor.Add(
-          ordSym, Expr<SomeType>{Expr<SomeInteger>{MakeCIntegerExpr(newOrd)}});
+      ctor.Add(ordSym,
+          Expr<SomeType>{
+              Expr<Type<TypeCategory::Integer>>{MakeCIntegerExpr(newOrd)}});
       elements.emplace_back(std::move(ctor));
     }
-    return Expr<SomeDerived>{Constant<SomeDerived>{
-        *derived, std::move(elements), ConstantSubscripts{constant->shape()}}};
+    return Expr<Type<TypeCategory::Derived>>{
+        Constant<Type<TypeCategory::Derived>>{*derived, std::move(elements),
+            ConstantSubscripts{constant->shape()}}};
   }
-  return Expr<SomeDerived>{std::move(funcRef)};
+  return Expr<Type<TypeCategory::Derived>>{std::move(funcRef)};
 }
 
 bool IsTypeOnlyInquiryArg(const SpecificIntrinsic &intrinsic, std::size_t j) {
@@ -166,7 +172,7 @@ bool IsTypeOnlyInquiryArg(const SpecificIntrinsic &intrinsic, std::size_t j) {
   return false;
 }
 
-Expr<SomeDerived> FoldOperation(
+Expr<Type<TypeCategory::Derived>> FoldOperation(
     FoldingContext &context, StructureConstructor &&structure) {
   StructureConstructor ctor{structure.derivedTypeSpec()};
   bool isConstant{true};
@@ -214,9 +220,10 @@ Expr<SomeDerived> FoldOperation(
     ctor.Add(symbol, std::move(expr));
   }
   if (isConstant) {
-    return Expr<SomeDerived>{Constant<SomeDerived>{std::move(ctor)}};
+    return Expr<Type<TypeCategory::Derived>>{
+        Constant<Type<TypeCategory::Derived>>{std::move(ctor)}};
   } else {
-    return Expr<SomeDerived>{std::move(ctor)};
+    return Expr<Type<TypeCategory::Derived>>{std::move(ctor)};
   }
 }
 
@@ -245,6 +252,7 @@ Subscript FoldOperation(FoldingContext &context, Subscript &&subscript) {
       common::visitors{
           [&](IndirectSubscriptIntegerExpr &&expr) {
             expr.value() = Fold(context, std::move(expr.value()));
+            CHECK(IsSubscriptIntegerKind(expr.value()));
             return Subscript(std::move(expr));
           },
           [&](Triplet &&triplet) {
@@ -269,7 +277,8 @@ CoarrayRef FoldOperation(FoldingContext &context, CoarrayRef &&coarrayRef) {
     cosubscript.emplace_back(Fold(context, std::move(x)));
   }
   CoarrayRef folded{std::move(base), std::move(cosubscript)};
-  if (std::optional<Expr<SomeInteger>> stat{coarrayRef.stat()}) {
+  if (std::optional<Expr<Type<TypeCategory::Integer>>> stat{
+          coarrayRef.stat()}) {
     folded.set_stat(Fold(context, std::move(*stat)));
   }
   if (std::optional<Expr<SomeType>> notify{coarrayRef.notify()}) {
@@ -345,7 +354,8 @@ std::optional<Expr<SomeType>> FoldTransfer(
   if (arguments[1]) { // MOLD=
     moldType = arguments[1]->GetType();
     if (moldType && moldType->category() == TypeCategory::Character) {
-      if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(arguments[1])}) {
+      if (const auto *chExpr{
+              UnwrapExpr<Expr<Type<TypeCategory::Character>>>(arguments[1])}) {
         moldLength = ToInt64(Fold(context, chExpr->LEN()));
       }
     }
@@ -496,7 +506,7 @@ void FoldConditionalArg(
   }
 }
 
-template class ExpressionBase<SomeDerived>;
+template class ExpressionBase<Type<TypeCategory::Derived>>;
 template class ExpressionBase<SomeType>;
 
 } // namespace Fortran::evaluate

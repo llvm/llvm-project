@@ -3,7 +3,6 @@
 ---
 name:            extract_from_build_vector
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -33,7 +32,6 @@ body:             |
 ---
 name:            extract_from_trunc_build_vector
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -67,7 +65,6 @@ body:             |
 ---
 name:            extract_from_build_vector_idx1
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -97,7 +94,6 @@ body:             |
 ---
 name:            extract_from_build_vector_idx_invalid
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -127,7 +123,6 @@ body:             |
 ---
 name:            extract_from_build_vector_trunc
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -158,7 +153,6 @@ body:             |
 ---
 name:            extract_from_build_vector_multiple_uses
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -192,7 +186,6 @@ body:             |
 ---
 # This test checks that this combine runs after the insertvec->build_vector
 name:            extract_from_insert
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -222,7 +215,6 @@ body:             |
 ---
 # This test checks that this combine runs after the insertvec->build_vector
 name:            extract_from_insert2
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -253,7 +245,6 @@ body:             |
 ---
 name:            extract_from_idx_negative
 alignment:       4
-tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -261,9 +252,9 @@ frameInfo:
   maxAlignment:    1
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $q0, $x0, $x1
     ; CHECK-LABEL: name: extract_from_idx_negative
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $q0, $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %extract:_(i64) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $x0 = COPY %extract(i64)
@@ -278,7 +269,6 @@ body:             |
 ---
 name:            extract_from_vector_undef
 alignment:       4
-tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -303,7 +293,6 @@ body:             |
 ---
 name:            extract_from_index_undef
 alignment:       4
-tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -311,8 +300,11 @@ frameInfo:
   maxAlignment:    1
 body:             |
   bb.1:
+    liveins: $q0
     ; CHECK-LABEL: name: extract_from_index_undef
-    ; CHECK: %extract:_(i64) = G_IMPLICIT_DEF
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %extract:_(i64) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $x0 = COPY %extract(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %vec:_(<2 x i64>) = COPY $q0
@@ -325,7 +317,6 @@ body:             |
 ---
 name:            extract_from_index_too_large
 alignment:       4
-tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -333,9 +324,9 @@ frameInfo:
   maxAlignment:    1
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $q0, $x0, $x1
     ; CHECK-LABEL: name: extract_from_index_too_large
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $q0, $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %extract:_(i64) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $x0 = COPY %extract(i64)
@@ -350,7 +341,6 @@ body:             |
 ---
 name:            extract_with_freeze
 alignment:       4
-tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -358,9 +348,9 @@ frameInfo:
   maxAlignment:    1
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $q0, $x0, $x1
     ; CHECK-LABEL: name: extract_with_freeze
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $q0, $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %vec:_(<2 x i64>) = COPY $q0
     ; CHECK-NEXT: %idx:_(i64) = COPY $x1
@@ -379,7 +369,6 @@ body:             |
 ---
 name:            extract_from_insert_symmetry
 alignment:       4
-tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -387,9 +376,9 @@ frameInfo:
   maxAlignment:    1
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $q0, $x0, $x1
     ; CHECK-LABEL: name: extract_from_insert_symmetry
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $q0, $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %element:_(i64) = COPY $x1
     ; CHECK-NEXT: $x0 = COPY %element(i64)
@@ -406,7 +395,6 @@ body:             |
 ---
 name:            extract_from_insert_with_different_consts
 alignment:       4
-tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -414,9 +402,9 @@ frameInfo:
   maxAlignment:    1
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $q0, $x0, $x1
     ; CHECK-LABEL: name: extract_from_insert_with_different_consts
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $q0, $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %vec:_(<2 x i64>) = COPY $q0
     ; CHECK-NEXT: %idx2:_(i64) = G_CONSTANT i64 1
@@ -436,7 +424,6 @@ body:             |
 ---
 name:            extract_from_build_vector_non_const
 alignment:       4
-tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -444,9 +431,9 @@ frameInfo:
   maxAlignment:    1
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $q0, $x0, $x1
     ; CHECK-LABEL: name: extract_from_build_vector_non_const
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $q0, $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %idx:_(i64) = COPY $x0
     ; CHECK-NEXT: %arg1:_(i64) = COPY $x0
@@ -468,7 +455,6 @@ body:             |
 ---
 name:            extract_from_build_vector_const
 alignment:       4
-tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -476,9 +462,9 @@ frameInfo:
   maxAlignment:    1
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $q0, $x0, $x1
     ; CHECK-LABEL: name: extract_from_build_vector_const
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $q0, $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %arg1:_(i64) = COPY $x0
     ; CHECK-NEXT: $x0 = COPY %arg1(i64)
@@ -496,7 +482,6 @@ body:             |
 ---
 name:            extract_from_build_vector_trunc_const2
 alignment:       4
-tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -504,9 +489,9 @@ frameInfo:
   maxAlignment:    1
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $q0, $x0, $x1
     ; CHECK-LABEL: name: extract_from_build_vector_trunc_const2
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $q0, $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %arg1:_(i64) = COPY $x0
     ; CHECK-NEXT: %extract:_(i32) = G_TRUNC %arg1(i64)
@@ -526,7 +511,6 @@ body:             |
 ---
 name:            extract_from_build_vector_trunc2
 alignment:       4
-tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -556,7 +540,6 @@ body:             |
 ---
 name:            extract_from_build_vector_trunc_const3
 alignment:       4
-tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -564,9 +547,9 @@ frameInfo:
   maxAlignment:    1
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $q0, $q1, $x0, $x1
     ; CHECK-LABEL: name: extract_from_build_vector_trunc_const3
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $q0, $q1, $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %arg1:_(i128) = COPY $q0
     ; CHECK-NEXT: %extract:_(i64) = G_TRUNC %arg1(i128)
@@ -582,12 +565,11 @@ body:             |
 ...
 ---
 name:            extract_from_build_vector_shuffle_vector_undef
-tracksRegLiveness: false
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $q0, $q1, $x0, $x1
     ; CHECK-LABEL: name: extract_from_build_vector_shuffle_vector_undef
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $q0, $q1, $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %extract:_(i32) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $w0 = COPY %extract(i32)
@@ -602,12 +584,11 @@ body:             |
 ...
 ---
 name:            extract_from_build_vector_shuffle_vector_opaque
-tracksRegLiveness: false
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $q0, $q1, $x0, $x1
     ; CHECK-LABEL: name: extract_from_build_vector_shuffle_vector_opaque
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $q0, $q1, $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %arg1:_(<4 x i32>) = COPY $q0
     ; CHECK-NEXT: %idx:_(i64) = COPY $x1
@@ -626,12 +607,11 @@ body:             |
 ...
 ---
 name:            extract_from_build_vector_shuffle_vector_const
-tracksRegLiveness: false
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $q0, $q1, $x0, $x1
     ; CHECK-LABEL: name: extract_from_build_vector_shuffle_vector_const
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $q0, $q1, $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %arg1:_(<4 x i32>) = COPY $q0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 3
@@ -649,7 +629,6 @@ body:             |
 ---
 name:            extract_from_build_vector_const_huge
 alignment:       4
-tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -657,9 +636,9 @@ frameInfo:
   maxAlignment:    1
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $q0, $x0, $x1
     ; CHECK-LABEL: name: extract_from_build_vector_const_huge
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $q0, $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %arg1:_(i64) = COPY $x0
     ; CHECK-NEXT: $x0 = COPY %arg1(i64)
@@ -674,4 +653,3 @@ body:             |
     RET_ReallyLR implicit $x0
 
 ...
----

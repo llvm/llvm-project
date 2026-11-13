@@ -45,10 +45,9 @@ define float @test_float(float %x, i32 %exp) nounwind {
 ; CHECK-NEXT:    vscalefss %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
-  %r = tail call fast float @ldexpf(float %x, i32 %exp)
+  %r = tail call fast float @llvm.ldexp.f32.i32(float %x, i32 %exp)
   ret float %r
 }
-declare float @ldexpf(float, i32) memory(none)
 
 define double @test_double(double %x, i32 %exp) nounwind {
 ; CHECK-LABEL: test_double:
@@ -57,10 +56,9 @@ define double @test_double(double %x, i32 %exp) nounwind {
 ; CHECK-NEXT:    vscalefsd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
-  %r = tail call fast double @ldexp(double %x, i32 %exp)
+  %r = tail call fast double @llvm.ldexp.f64.i32(double %x, i32 %exp)
   ret double %r
 }
-declare double @ldexp(double, i32) memory(none)
 
 define x86_fp80 @test_fp80(x86_fp80 %x, i32 %exp) nounwind {
 ; CHECK-LABEL: test_fp80:

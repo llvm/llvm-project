@@ -34,8 +34,6 @@
 
 using namespace llvm;
 
-static codegen::RegisterCodeGenFlags CGF;
-
 static cl::opt<char>
     OptLevel("O",
              cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
@@ -123,7 +121,7 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
   // Created after the targets register their library options.
   static cl::LibraryOptionsContext LibraryOptions;
   handleExecNameEncodedBEOpts(LibraryOptions, ExecName);
-  parseFuzzerCLOpts(LibraryOptions, *argc, *argv);
+  parseFuzzerCLOpts(LibraryOptions, codegen::getToolOptions(), *argc, *argv);
 
   if (TargetTriple.empty()) {
     errs() << ExecName << ": -mtriple must be specified\n";

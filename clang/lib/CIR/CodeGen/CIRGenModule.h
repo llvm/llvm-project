@@ -452,24 +452,6 @@ public:
   mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc, QualType ty,
                                           bool forEH = false);
 
-  static mlir::SymbolTable::Visibility getMLIRVisibility(Visibility v) {
-    switch (v) {
-    case DefaultVisibility:
-      return mlir::SymbolTable::Visibility::Public;
-    case HiddenVisibility:
-      return mlir::SymbolTable::Visibility::Private;
-    case ProtectedVisibility:
-      // The distinction between ProtectedVisibility and DefaultVisibility is
-      // that symbols with ProtectedVisibility, while visible to the dynamic
-      // linker like DefaultVisibility, are guaranteed to always dynamically
-      // resolve to a symbol in the current shared object. There is currently no
-      // equivalent MLIR visibility, so we fall back on the fact that the symbol
-      // is visible.
-      return mlir::SymbolTable::Visibility::Public;
-    }
-    llvm_unreachable("unknown visibility!");
-  }
-
   static cir::VisibilityKind getCIRVisibilityKind(Visibility v) {
     switch (v) {
     case DefaultVisibility:
@@ -523,6 +505,16 @@ public:
   /// expectations of the AST, rather than using the target's allocation address
   /// space, which may lead to type mismatches in other parts of the IR.
   LangAS getLangTempAllocaAddressSpace() const;
+
+  /// Return the AST address space of the underlying global variable for D, as
+  /// determined by its declaration. Normally this is the same as the address
+  /// space of D's type, but in CUDA, address spaces are associated with
+  /// declarations, not types. If D is nullptr, return the default address
+  /// space for global variable.
+  ///
+  /// For languages without explicit address spaces, if D has default address
+  /// space, target-specific global or constant address space may be returned.
+  LangAS getGlobalVarAddressSpace(const VarDecl *decl);
 
   /// Return the CIR address space attribute for a global in \p as, honoring
   /// the target address space map where the LangAS fold would lose it.
@@ -684,9 +676,12 @@ public:
   /// declarations are emitted lazily.
   void emitGlobal(clang::GlobalDecl gd);
 
-  void emitAliasForGlobal(llvm::StringRef mangledName, mlir::Operation *op,
-                          GlobalDecl aliasGD, cir::FuncOp aliasee,
-                          cir::GlobalLinkageKind linkage);
+  /// Emit `aliasGD` as an alias of `aliasee`, replacing any existing
+  /// declaration `op`, and return the alias.
+  cir::FuncOp emitAliasForGlobal(llvm::StringRef mangledName,
+                                 mlir::Operation *op, GlobalDecl aliasGD,
+                                 cir::FuncOp aliasee,
+                                 cir::GlobalLinkageKind linkage);
 
   /// Emit a definition for an `__attribute__((alias))` declaration.
   void emitAliasDefinition(GlobalDecl gd);
@@ -1010,6 +1005,13 @@ public:
   /// Emits AMDGPU specific Metadata.
   void emitAMDGPUMetadata();
 
+  /// Build (or fetch from the dedup cache) the args ArrayAttr for an
+  /// annotation. Returns the empty ArrayAttr when the annotation has none.
+  mlir::ArrayAttr getOrCreateAnnotationArgs(const clang::AnnotateAttr *attr);
+
+  /// Create cir::AnnotationAttr for a single AnnotateAttr.
+  cir::AnnotationAttr emitAnnotateAttr(const clang::AnnotateAttr *aa);
+
   /// Add global annotations for a global value (GlobalOp or FuncOp).
   void addGlobalAnnotations(const clang::ValueDecl *d, mlir::Operation *gv);
 
@@ -1039,23 +1041,6 @@ private:
 
   /// Emit all the global annotations.
   void emitGlobalAnnotations();
-
-  /// Build (or fetch from the dedup cache) the args ArrayAttr for an
-  /// annotation. Returns the empty ArrayAttr when the annotation has none.
-  mlir::ArrayAttr getOrCreateAnnotationArgs(const clang::AnnotateAttr *attr);
-
-  /// Create cir::AnnotationAttr for a single AnnotateAttr on a global.
-  cir::AnnotationAttr emitAnnotateAttr(const clang::AnnotateAttr *aa);
-
-  /// Return the AST address space of the underlying global variable for D, as
-  /// determined by its declaration. Normally this is the same as the address
-  /// space of D's type, but in CUDA, address spaces are associated with
-  /// declarations, not types. If D is nullptr, return the default address
-  /// space for global variable.
-  ///
-  /// For languages without explicit address spaces, if D has default address
-  /// space, target-specific global or constant address space may be returned.
-  LangAS getGlobalVarAddressSpace(const VarDecl *decl);
 };
 } // namespace CIRGen
 

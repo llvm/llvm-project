@@ -87,6 +87,31 @@ getAtomicScopeIRString(const Triple &T, AtomicScope S,
   return std::nullopt;
 }
 
+/// Parses an AMDGPU syncscope string into its abstract scope and whether it is
+/// the single address space variant.
+inline std::optional<std::pair<AtomicScope, bool>>
+parseAMDGPUAtomicScopeIRString(StringRef Name) {
+  using Result = std::optional<std::pair<AtomicScope, bool>>;
+  auto Make = [](AtomicScope S,
+                 bool IsSingleAddressSpace) -> std::pair<AtomicScope, bool> {
+    return {S, IsSingleAddressSpace};
+  };
+  return StringSwitch<Result>(Name)
+      .Case("singlethread", Make(AtomicScope::Single, false))
+      .Case("wavefront", Make(AtomicScope::Wavefront, false))
+      .Case("workgroup", Make(AtomicScope::Workgroup, false))
+      .Case("cluster", Make(AtomicScope::Cluster, false))
+      .Case("agent", Make(AtomicScope::Device, false))
+      .Case("", Make(AtomicScope::System, false))
+      .Case("singlethread-one-as", Make(AtomicScope::Single, true))
+      .Case("wavefront-one-as", Make(AtomicScope::Wavefront, true))
+      .Case("workgroup-one-as", Make(AtomicScope::Workgroup, true))
+      .Case("cluster-one-as", Make(AtomicScope::Cluster, true))
+      .Case("agent-one-as", Make(AtomicScope::Device, true))
+      .Case("one-as", Make(AtomicScope::System, true))
+      .Default(std::nullopt);
+}
+
 /// Parses a target syncscope string into its abstract scope, the inverse of
 /// getAtomicScopeIRString. Returns the scope and whether it is the single
 /// address space variant.
@@ -98,20 +123,7 @@ parseAtomicScopeIRString(const Triple &T, StringRef Name) {
     return {S, IsSingleAddressSpace};
   };
   if (T.isAMDGPU())
-    return StringSwitch<Result>(Name)
-        .Case("singlethread", Make(AtomicScope::Single, false))
-        .Case("wavefront", Make(AtomicScope::Wavefront, false))
-        .Case("workgroup", Make(AtomicScope::Workgroup, false))
-        .Case("cluster", Make(AtomicScope::Cluster, false))
-        .Case("agent", Make(AtomicScope::Device, false))
-        .Case("", Make(AtomicScope::System, false))
-        .Case("singlethread-one-as", Make(AtomicScope::Single, true))
-        .Case("wavefront-one-as", Make(AtomicScope::Wavefront, true))
-        .Case("workgroup-one-as", Make(AtomicScope::Workgroup, true))
-        .Case("cluster-one-as", Make(AtomicScope::Cluster, true))
-        .Case("agent-one-as", Make(AtomicScope::Device, true))
-        .Case("one-as", Make(AtomicScope::System, true))
-        .Default(std::nullopt);
+    return parseAMDGPUAtomicScopeIRString(Name);
   if (T.isNVPTX())
     return StringSwitch<Result>(Name)
         .Case("singlethread", Make(AtomicScope::Single, false))

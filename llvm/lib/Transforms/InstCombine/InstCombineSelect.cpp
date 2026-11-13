@@ -509,6 +509,24 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   return nullptr;
 }
 
+/// Return true if a constant in the given argument position of the given
+/// intrinsic may enable cheaper lowering, in which case a select should not
+/// be sunk into that argument (it would hide the constant behind the
+/// select).
+static bool isConstantBeneficialInIntrinsicArg(Intrinsic::ID IID,
+                                               unsigned ArgNo) {
+  switch (IID) {
+  case Intrinsic::copysign:
+    // Only the sign operand is constant-sensitive: copysign(y, +-C) folds to
+    // fabs/fnabs. A constant magnitude has no cheaper lowering, so sinking
+    // the select is profitable (and merges two calls into one).
+    return ArgNo == 1;
+  default:
+    // Conservatively assume that a constant may be beneficial.
+    return true;
+  }
+}
+
 /// select C, f(..., X, ...), f(..., Y, ...) --> f(..., select C, X, Y, ...)
 static Instruction *
 foldSelectIntoIntrinsicArg(SelectInst &SI, IntrinsicInst *TII,
@@ -538,7 +556,10 @@ foldSelectIntoIntrinsicArg(SelectInst &SI, IntrinsicInst *TII,
       !TV->getType()->isVectorTy())
     return nullptr;
   // Constant args may enable cheaper lowering, e.g. pow(X, 2.0) -> X * X.
-  if (isa<Constant>(TV) || isa<Constant>(FV))
+  // Sinking the select into the argument would hide the constant, so reject
+  // the sink for argument positions where a constant is beneficial.
+  if ((isa<Constant>(TV) || isa<Constant>(FV)) &&
+      isConstantBeneficialInIntrinsicArg(TII->getIntrinsicID(), *DiffArgNo))
     return nullptr;
 
   SmallVector<Value *> Args(TII->args());

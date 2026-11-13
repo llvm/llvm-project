@@ -15,7 +15,7 @@
 // CHECK-NEXT:    [[D:%.*]] = alloca double, align 8
 // CHECK-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 8, !tbaa [[ANYPTR_TBAA6:![0-9]+]]
 // CHECK-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8, !tbaa [[DOUBLEPTR_TBAA8:![0-9]+]]
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[LOCAL]]) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[LOCAL]])
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !tbaa [[ANYPTR_TBAA6]]
 // CHECK-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[DOTREAL:%.*]] = load double, ptr [[DOTREALP]], align 8, !tbaa [[DOUBLE_TBAA10:![0-9]+]]
@@ -25,12 +25,12 @@
 // CHECK-NEXT:    [[LOCAL_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[LOCAL]], i32 0, i32 1
 // CHECK-NEXT:    store double [[DOTREAL]], ptr [[LOCAL_REALP]], align 8, !tbaa [[DOUBLE_TBAA10]]
 // CHECK-NEXT:    store double [[DOTIMAG]], ptr [[LOCAL_IMAGP]], align 8, !tbaa [[DOUBLE_TBAA10]]
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[D]]) #[[ATTR2]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[D]])
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[S_ADDR]], align 8, !tbaa [[DOUBLEPTR_TBAA8]]
 // CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[TMP1]], align 8, !tbaa [[DOUBLE_TBAA10]]
 // CHECK-NEXT:    store double [[TMP2]], ptr [[D]], align 8, !tbaa [[DOUBLE_TBAA10]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[D]]) #[[ATTR2]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[LOCAL]]) #[[ATTR2]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[D]])
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[LOCAL]])
 // CHECK-NEXT:    ret void
 //
 void load_double_complex_and_scalar(_Complex double *c, double *s) {
