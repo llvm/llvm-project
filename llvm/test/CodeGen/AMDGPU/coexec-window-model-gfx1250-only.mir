@@ -1,12 +1,12 @@
 # RUN: llc -mtriple=amdgpu12.50 -run-pass=postmisched %s -o - | FileCheck -check-prefix=GFX1250 %s
+# RUN: llc -mtriple=amdgpu12.50s -run-pass=postmisched %s -o - | FileCheck -check-prefix=GFX1250 %s
 # RUN: llc -mtriple=amdgpu12.51 -run-pass=postmisched %s -o - | FileCheck -check-prefix=NOWINDOW %s
-# RUN: llc -mtriple=amdgpu12.50s -run-pass=postmisched %s -o - | FileCheck -check-prefix=NOWINDOW %s
 # RUN: llc -mtriple=amdgpu12.5 -run-pass=postmisched %s -o - | FileCheck -check-prefix=NOWINDOW %s
 
-# The co-execution window model (hasCoExecWindowModel) is only active for
-# gfx1250. On gfx1251, gfx1250-strict, and gfx12-5-generic the postRA
-# scheduler does not consider co-execution slot hazards, so VALU instructions
-# are not reordered to respect WMMA co-execution windows.
+# The co-execution window model (hasCoExecWindowModel) is active for gfx1250
+# and gfx1250-strict. On gfx1251 and gfx12-5-generic the postRA scheduler does
+# not consider co-execution slot hazards, so VALU instructions are not reordered
+# to respect WMMA co-execution windows.
 
 --- |
   define void @wmma_valu_salu_interleave() #0 { ret void }
@@ -15,10 +15,10 @@
 ...
 
 # WMMA F32_16X16X32_F16 has co-execution pattern 0EIIEEIIV (9-cycle window).
-# On gfx1250, the scheduler will place SALU in 'E' slots (stages 1, 4, 5)
-# and VALU in 'I' slots (stages 2, 3, 6, 7).
-# On gfx1251/gfx1250-strict/gfx12-5-generic, the scheduler does not track
-# co-execution slots and schedules based on standard latency/resource pressure.
+# On gfx1250/gfx1250-strict, the scheduler will place SALU in 'E' slots
+# (stages 1, 4, 5) and VALU in 'I' slots (stages 2, 3, 6, 7).
+# On gfx1251/gfx12-5-generic, the scheduler does not track co-execution slots
+# and schedules based on standard latency/resource pressure.
 ---
 name: wmma_valu_salu_interleave
 tracksRegLiveness: true
