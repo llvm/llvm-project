@@ -2630,6 +2630,21 @@ write_file(
     ],
 )
 
+expand_template(
+    name = "DwarfDebugFixed",
+    out = "lib/CodeGen/AsmPrinter/DwarfDebugFixed.cpp",
+    substitutions = {
+        '#include "DwarfDebug.h"': '#include "llvm/lib/CodeGen/AsmPrinter/DwarfDebug.h"',
+        '#include "ByteStreamer.h"': '#include "llvm/lib/CodeGen/AsmPrinter/ByteStreamer.h"',
+        '#include "DIEHash.h"': '#include "llvm/lib/CodeGen/AsmPrinter/DIEHash.h"',
+        '#include "DwarfCompileUnit.h"': '#include "llvm/lib/CodeGen/AsmPrinter/DwarfCompileUnit.h"',
+        '#include "DwarfExpression.h"': '#include "llvm/lib/CodeGen/AsmPrinter/DwarfExpression.h"',
+        '#include "DwarfUnit.h"': '#include "llvm/lib/CodeGen/AsmPrinter/DwarfUnit.h"',
+        "EmitDebugEntryValues = Asm->TM.shouldEmitDebugEntryValues();": "// EmitDebugEntryValues = Asm->TM.shouldEmitDebugEntryValues();",
+    },
+    template = "lib/CodeGen/AsmPrinter/DwarfDebug.cpp",
+)
+
 cc_library(
     name = "CodeGen",
     srcs = glob(
@@ -2639,7 +2654,8 @@ cc_library(
             "lib/CodeGen/SelectionDAG/*.cpp",
             "lib/CodeGen/SelectionDAG/*.h",
         ],
-    ),
+        exclude = ["lib/CodeGen/AsmPrinter/DwarfDebug.cpp"],
+    ) + [":DwarfDebugFixed"],
     hdrs = [
         "include/llvm/CodeGen/RegAllocEvictModels.h",
         "include/llvm/CodeGen/regalloc_Model1.h",
