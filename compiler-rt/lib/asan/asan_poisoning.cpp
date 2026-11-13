@@ -256,14 +256,12 @@ uptr __asan_region_is_poisoned(uptr beg, uptr size) {
   // the ASAN_SHADOW_GRANULARITY-aligned region by calling mem_is_zero
   // on the corresponding shadow (first granule is fully checked).
   if (!__asan::AddressIsPoisoned(last)) {
-    uptr aligned_b = RoundDownTo(beg, ASAN_SHADOW_GRANULARITY);
-    uptr aligned_e = RoundDownTo(last, ASAN_SHADOW_GRANULARITY);
-    if (aligned_b == aligned_e)  // one granule case => last check is enough.
+    // Both ends are in application memory (see above), so MEM_TO_SHADOW needs
+    // no further check.
+    uptr shadow_beg = MEM_TO_SHADOW(beg);
+    uptr shadow_end = MEM_TO_SHADOW(last);
+    if (shadow_beg == shadow_end)  // one granule case => last check is enough.
       return 0;
-    CHECK_LT(aligned_b, aligned_e);
-    uptr shadow_beg = MemToShadow(aligned_b);
-    uptr shadow_end = MemToShadow(aligned_e);
-    CHECK_LT(shadow_beg, shadow_end);
     if (__sanitizer::mem_is_zero((const char*)shadow_beg,
                                  shadow_end - shadow_beg))
       return 0;
