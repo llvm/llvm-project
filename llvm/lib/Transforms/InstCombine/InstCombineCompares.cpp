@@ -2318,17 +2318,52 @@ Instruction *InstCombinerImpl::foldICmpMulConstant(ICmpInst &Cmp,
       return new ICmpInst(Pred, X, NewC);
     }
 
-    // C % MulC == 0 is weaker than we could use if MulC is odd because it
-    // correct to transform if MulC * N == C including overflow. I.e with i8
-    // (icmp eq (mul X, 5), 101) -> (icmp eq X, 225) but since 101 % 5 != 0, we
-    // miss that case.
-    if (C.urem(*MulC).isZero()) {
-      // (mul nuw X, MulC) eq/ne C --> X eq/ne C /u MulC
-      // (mul X, OddC) eq/ne N * C --> X eq/ne N
-      if ((*MulC & 1).isOne() || Mul->hasNoUnsignedWrap()) {
-        Constant *NewC = ConstantInt::get(MulTy, C.udiv(*MulC));
-        return new ICmpInst(Pred, X, NewC);
-      }
+    // X * MulC == C is an equation in Z/2^N.
+    //
+    // We can write any non-zero MulC as 2^K * Q where Q is odd.
+    // This makes Q invertible in Z/2^N.
+    const unsigned K = MulC->countr_zero();
+
+    // If C is not divisable by 2^K, there are no solutions and
+    // we fold the compare using KB elsewhere.
+    if (C.countr_zero() >= K) {
+      // We can rewrite our equation as follows:
+      //
+      //   X * MulC == C (mod 2^N) <=>
+      //   X * 2^K * Q == 2^K * C' (mod 2^N) <=>
+      //   X * Q == C' (mod 2^{N-K}) <=>
+      //   X == C' * Q^{-1} (mod 2^{N-K})
+      //
+      // C' * Q^{-1} is a constant that we can compute statically.
+      const unsigned N = C.getBitWidth();
+
+      // To operate mod 2^{N-K} we need to use the corresponding mask.
+      APInt Mask = APInt::getLowBitsSet(N, N - K);
+
+      // Inverse of Q in Z/2^N is also an inverse of Q in Z/2^{N'}
+      // for every N' in (0, N].
+      APInt NewC = (C.lshr(K) * MulC->lshr(K).multiplicativeInverse()) & Mask;
+
+      // (mul X, OddC) eq/ne C --> X eq/ne C * OddC^{-1}
+      //
+      // It's also true for EvenC when multiplication has nuw.
+      //
+      //   X * MulC < 2^N <=>
+      //   X * 2^K * Q < 2^N <=>
+      //   X * Q < 2^{N-K} =>
+      //   X < 2^{N-K} and Q < 2^{N-K}
+      //
+      // Because of this fact, applying Mask to X is a no-op and we
+      // can skip it.
+      if (K == 0 || Mul->hasNoUnsignedWrap())
+        return new ICmpInst(Pred, X, ConstantInt::get(MulTy, NewC));
+
+      // (mul X, EvenC) eq/ne C --> (and X, Mask) eq/ne NewC
+      //
+      // We only do it when we can replace mul with and fully.
+      if (Mul->hasOneUse())
+        return new ICmpInst(Pred, Builder.CreateAnd(X, Mask),
+                            ConstantInt::get(MulTy, NewC));
     }
   }
 
