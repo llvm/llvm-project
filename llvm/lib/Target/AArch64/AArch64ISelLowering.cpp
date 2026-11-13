@@ -22469,9 +22469,6 @@ static SDValue performSVEDeinterleaveExtendCombine(
   if (Deinterleave.getNumOperands() != 2)
     return SDValue();
 
-  assert(Deinterleave->getNumValues() == 2 &&
-         "VECTOR_DEINTERLEAVE with 2 operands should have 2 results");
-
   SDValue VectorExtend = Deinterleave.getOperand(0);
   SDValue UunpkHi = Deinterleave.getOperand(1);
 
