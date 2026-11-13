@@ -80,6 +80,7 @@
 #include "../../../test_hash.h"
 #include "deduction_guides_sfinae_checks.h"
 #include "test_allocator.h"
+#include "type_algorithms.h"
 
 int main(int, char**) {
   const int expected_s[] = {1, 1, 2, 3, INT_MAX};
@@ -275,6 +276,59 @@ int main(int, char**) {
     }
   }
 #endif
+
+  // LWG 2982: Making size_type consistent in associative container deduction guides
+  {
+    using Alloc    = test_allocator<int>;
+    using Iter     = const int*;
+    using Hash     = std::hash<int>;
+    using InitList = std::initializer_list<int>;
+
+#if TEST_STD_VER >= 23
+    using Range = std::array<int, 0>;
+#endif
+
+    types::for_each(
+        types::unsigned_integer_types(), types::apply_type_identity{[](auto id) {
+          using UI = typename decltype(id)::type;
+
+          // (iter, iter, size, alloc)
+          static_assert(SFINAEs_away<std::unordered_multiset, Iter, Iter, OnlyConvertibleTo<UI>, Alloc> ==
+                        !std::is_same_v<UI, Alloc::size_type>);
+
+          // (iter, iter, size, hash, alloc)
+          static_assert(SFINAEs_away<std::unordered_multiset, Iter, Iter, OnlyConvertibleTo<UI>, Hash, Alloc> ==
+                        !std::is_same_v<UI, Alloc::size_type>);
+
+          // (init_list, size, alloc)
+          static_assert(SFINAEs_away<std::unordered_multiset, InitList, OnlyConvertibleTo<UI>, Alloc> ==
+                        !std::is_same_v<UI, Alloc::size_type>);
+
+          // (init_list, size, hash, alloc)
+          static_assert(SFINAEs_away<std::unordered_multiset, InitList, OnlyConvertibleTo<UI>, Hash, Alloc> ==
+                        !std::is_same_v<UI, Alloc::size_type>);
+
+#if TEST_STD_VER >= 23
+          // (from_range, range, size, alloc)
+          static_assert(SFINAEs_away<std::unordered_multiset, std::from_range_t, Range, OnlyConvertibleTo<UI>, Alloc> ==
+                        !std::is_same_v<UI, Alloc::size_type>);
+
+          // (from_range, range, size, hash, alloc)
+          static_assert(
+              SFINAEs_away<std::unordered_multiset, std::from_range_t, Range, OnlyConvertibleTo<UI>, Hash, Alloc> ==
+              !std::is_same_v<UI, Alloc::size_type>);
+#endif
+        }});
+
+    { // (iter, iter, size, alloc) - runtime check
+      const int arr[] = {1, 2, 1, INT_MAX, 3};
+      std::unordered_multiset s(std::begin(arr), std::end(arr), OnlyConvertibleTo<Alloc::size_type>{}, Alloc(0, 45));
+      ASSERT_SAME_TYPE(decltype(s), std::unordered_multiset<int, std::hash<int>, std::equal_to<int>, Alloc>);
+      assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
+      assert(s.get_allocator().get_id() == 45);
+    }
+  }
+
   UnorderedContainerDeductionGuidesSfinaeAway<std::unordered_multiset, std::unordered_multiset<int>>();
 
   return 0;

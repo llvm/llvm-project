@@ -33,7 +33,7 @@
 "`LWG2979 <https://wg21.link/LWG2979>`__","aligned_union should require complete object types","2017-11 (Albuquerque)","|Complete|","","`#103758 <https://github.com/llvm/llvm-project/issues/103758>`__",""
 "`LWG2980 <https://wg21.link/LWG2980>`__","Cannot compare_exchange empty pointers","2017-11 (Albuquerque)","","","`#100225 <https://github.com/llvm/llvm-project/issues/100225>`__",""
 "`LWG2981 <https://wg21.link/LWG2981>`__","Remove redundant deduction guides from standard library","2017-11 (Albuquerque)","|Nothing To Do|","","`#103759 <https://github.com/llvm/llvm-project/issues/103759>`__",""
-"`LWG2982 <https://wg21.link/LWG2982>`__","Making size_type consistent in associative container deduction guides","2017-11 (Albuquerque)","","","`#100226 <https://github.com/llvm/llvm-project/issues/100226>`__",""
+"`LWG2982 <https://wg21.link/LWG2982>`__","Making size_type consistent in associative container deduction guides","2017-11 (Albuquerque)","|Complete|","9","`#100226 <https://github.com/llvm/llvm-project/issues/100226>`__",""
 "`LWG2988 <https://wg21.link/LWG2988>`__","Clause 32 cleanup missed one typename","2017-11 (Albuquerque)","|Complete|","13","`#103760 <https://github.com/llvm/llvm-project/issues/103760>`__",""
 "`LWG2993 <https://wg21.link/LWG2993>`__","reference_wrapper<T> conversion from T&&","2017-11 (Albuquerque)","|Complete|","13","`#103761 <https://github.com/llvm/llvm-project/issues/103761>`__",""
 "`LWG2998 <https://wg21.link/LWG2998>`__","Requirements on function objects passed to {``forward_``,}list-specific algorithms","2017-11 (Albuquerque)","|Nothing To Do|","","`#103762 <https://github.com/llvm/llvm-project/issues/103762>`__",""
