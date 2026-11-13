@@ -41,7 +41,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$d12_64', virtual-reg: '' }
   - { reg: '$d14_64', virtual-reg: '' }
@@ -132,7 +131,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$d12_64', virtual-reg: '' }
   - { reg: '$d14_64', virtual-reg: '' }
