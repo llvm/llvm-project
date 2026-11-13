@@ -1,4 +1,4 @@
-// FIXME: Tracked by Github Issue 241514
+// FIXME: Tracked by https://github.com/llvm/llvm-project/issues/241514
 // RUN: not --crash %clang_cc1 -triple s390x-none-zos -fexec-charset IBM-1047 %s -std=c++23 -fsyntax-only -verify
 // REQUIRES: asserts
 
