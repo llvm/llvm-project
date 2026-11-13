@@ -3,6 +3,7 @@
 
 # Test that DbgStart/DbgEnd of main mark line entries of its inline sites.
 # The start run puts both at entry starts, the mid run in the middle of entries.
+# The sed patterns match only the DbgStart/DbgEnd fields of main, once each.
 
 # RUN: sed -e 's/0 *# Offset after prologue/0xc/' \
 # RUN:     -e 's/0 *# Offset before epilogue/0x3f/' \
@@ -12,8 +13,8 @@
 # RUN: %lldb -f %t.start.exe -b -o "image dump line-table a.cpp -v" \
 # RUN:     2>&1 | FileCheck %s --check-prefix=START
 
-# RUN: sed -e 's/0 *# Offset after prologue/0x8/' \
-# RUN:     -e 's/0 *# Offset before epilogue/0x40/' \
+# RUN: sed -e 's/0 *# Offset after prologue/0x14/' \
+# RUN:     -e 's/0 *# Offset before epilogue/0x43/' \
 # RUN:     %p/Inputs/inline_sites.s > %t.mid.s
 # RUN: llvm-mc -triple=x86_64-windows-msvc --filetype=obj %t.mid.s > %t.mid.obj
 # RUN: lld-link -debug:full -nodefaultlib -entry:main -base:0x140000000 %t.mid.obj -out:%t.mid.exe
@@ -41,10 +42,9 @@
 
 # MID:      (lldb) image dump line-table a.cpp -v
 # MID-NEXT: Line table
-# MID-NEXT: 0x0000000140001000: /tmp/a.cpp:2
-# MID-NEXT: 0x0000000140001004: /tmp/a.h:5, is_start_of_statement = TRUE, is_prologue_end = TRUE
-# MID-NEXT: 0x0000000140001008: /tmp/a.h:5, is_start_of_statement = TRUE, is_prologue_end = TRUE
-# MID-NEXT: 0x000000014000100c: /tmp/a.h:6
+# MID:      0x0000000140001010: /tmp/a.h:7
+# MID-NEXT: 0x0000000140001014: /tmp/a.h:7, is_prologue_end = TRUE
+# MID-NEXT: 0x0000000140001018: /tmp/a.h:9
 # MID:      0x000000014000103d: /tmp/a.cpp:4
-# MID-NEXT: 0x000000014000103f: /tmp/a.h:20
+# MID-NEXT: 0x000000014000103f: /tmp/a.h:20{{ *$}}
 # MID-NEXT: 0x0000000140001044: /tmp/a.h:8
