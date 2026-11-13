@@ -9649,8 +9649,9 @@ is a positive integer. The size of `wchar_t` is a property of the target's C
 ABI and is not implied by the widths available in the IR, so it is recorded
 explicitly.
 
-When the flag is absent, the target's default `wchar_t` size is used. For
-example, the following metadata section specifies a 4-byte `wchar_t`:
+When the flag is absent, the target's default `wchar_t` size is used.
+
+For example, the following metadata section specifies a 4-byte `wchar_t`:
 
 ```llvm
 !llvm.module.flags = !{!0}
@@ -9666,8 +9667,9 @@ value of 4 indicates that enums are at least as wide as `int`.
 
 The ARM backend reads this flag to emit the `Tag_ABI_enum_size` build attribute,
 which records the enum size the module was compiled with and prevents linking
-incompatible objects. The attribute is not emitted when the flag is absent. For
-example, the following metadata section specifies short enums:
+incompatible objects. The attribute is not emitted when the flag is absent.
+
+For example, the following metadata section specifies short enums:
 
 ```llvm
 !llvm.module.flags = !{!0}
