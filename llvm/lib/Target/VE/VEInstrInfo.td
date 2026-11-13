@@ -1050,6 +1050,12 @@ let DecoderMethod = "DecodeLoadI32" in
 defm LDLSX : LOADm<"ldl.sx", 0x03, I32, i32, load>;
 let cx = 1, DecoderMethod = "DecodeLoadI32" in
 defm LDLZX : LOADm<"ldl.zx", 0x03, I32, i32, load>;
+// ldl.sx and ldl.zx sign or zero extend into the whole 64-bit register.
+let isCodeGenOnly = 1, DecoderMethod = "DecodeLoadI64" in {
+defm LDLSX64 : LOADm<"ldl.sx", 0x03, I64, i64, sextloadi32>;
+let cx = 1 in
+defm LDLZX64 : LOADm<"ldl.zx", 0x03, I64, i64, zextloadi32>;
+}
 
 // Section 8.2.5 - LD2B
 let DecoderMethod = "DecodeLoadI32" in
@@ -1730,6 +1736,14 @@ def : Pat<(f128 (sint_to_fp i64:$src)), (CVTQDr (CVTDLr $src))>;
 
 
 // extload, sextload and zextload stuff
+// Extending loads to i64 by instructions that define the whole register.
+multiclass LOAD64m<SDPatternOperator from, RM torri, RM torii, RM tozri,
+                   RM tozii> {
+  def : Pat<(i64 (from ADDRrri:$addr)), (torri MEMrri:$addr)>;
+  def : Pat<(i64 (from ADDRrii:$addr)), (torii MEMrii:$addr)>;
+  def : Pat<(i64 (from ADDRzri:$addr)), (tozri MEMzri:$addr)>;
+  def : Pat<(i64 (from ADDRzii:$addr)), (tozii MEMzii:$addr)>;
+}
 multiclass EXT64m<SDPatternOperator from,
                   RM torri,
                   RM torii,
@@ -1750,9 +1764,7 @@ defm : EXT64m<extloadi8, LD1BZXrri, LD1BZXrii, LD1BZXzri, LD1BZXzii>;
 defm : EXT64m<sextloadi16, LD2BSXrri, LD2BSXrii, LD2BSXzri, LD2BSXzii>;
 defm : EXT64m<zextloadi16, LD2BZXrri, LD2BZXrii, LD2BZXzri, LD2BZXzii>;
 defm : EXT64m<extloadi16, LD2BZXrri, LD2BZXrii, LD2BZXzri, LD2BZXzii>;
-defm : EXT64m<sextloadi32, LDLSXrri, LDLSXrii, LDLSXzri, LDLSXzii>;
-defm : EXT64m<zextloadi32, LDLZXrri, LDLZXrii, LDLZXzri, LDLZXzii>;
-defm : EXT64m<extloadi32, LDLSXrri, LDLSXrii, LDLSXzri, LDLSXzii>;
+defm : LOAD64m<extloadi32, LDLSX64rri, LDLSX64rii, LDLSX64zri, LDLSX64zii>;
 
 // anyextload
 multiclass EXT32m<SDPatternOperator from,
