@@ -159,7 +159,7 @@ public:
       : platform_write(wf), platform_read(rf), platform_seek(sf),
         platform_close(cf), buf(buffer), bufsize(buffer_size), pos(0),
         read_limit(0), prev(nullptr), next(nullptr), mbstate(), mode(mode),
-        ungetc_buf{}, mutex(/*timed=*/false, /*recursive=*/false,
+        ungetc_buf{}, mutex(/*timed=*/false, /*recursive=*/true,
                             /*robust=*/false, /*pshared=*/false),
         bufmode(static_cast<int8_t>(buffer_mode)), prev_op(FileOp::NONE),
         orientation(Orientation::UNORIENTED), own_buf(owned), eof(false),
@@ -336,6 +336,7 @@ private:
 
   FileIOResult read_unlocked_fbf(uint8_t *data, size_t len);
   FileIOResult read_unlocked_nbf(uint8_t *data, size_t len);
+  FileIOResult read_data_directly(uint8_t *data, size_t len);
   size_t copy_data_from_buf(uint8_t *data, size_t len);
 
   LIBC_INLINE constexpr void adjust_buf() {
