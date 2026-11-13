@@ -3181,22 +3181,12 @@ alias(
 
 ################################ time targets ##################################
 
-libc_function(
-    name = "clock",
-    srcs = ["src/time/linux/clock.cpp"],
-    hdrs = ["src/time/clock.h"],
-    deps = [
-        ":hdr_time_macros",
-        ":types_clock_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/time",
-        "//libc/src/__support/time:clock_gettime",
-    ],
-)
 ################################ unistd targets ################################
+
+alias(
+    name = "clock",
+    actual = "//libc/src/time:clock",
+)
 
 libc_function(
     name = "access",

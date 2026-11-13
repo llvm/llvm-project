@@ -57,7 +57,6 @@ libc_test_library(
     deps = [
         ":string_utils",
         ":test_logger",
-        "//libc:clock",
         "//libc:func_aligned_alloc",
         "//libc:func_free",
         "//libc:func_malloc",
@@ -90,6 +89,7 @@ libc_test_library(
         "//libc/src/__support/macros/properties:types",
         "//libc/src/__support/wchar:string_converter",
         "//libc/src/errno",
+        "//libc/src/time:clock",
     ] + select({
         "//libc:full_build": [
             "//libc:close",
