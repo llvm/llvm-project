@@ -1,0 +1,61 @@
+! RUN: split-file %s %t
+! RUN: bbc -fcuda -emit-hlfir %t/device.cuf -o - | FileCheck %s --check-prefix=DEVICE
+! RUN: not bbc -fcuda -emit-hlfir %t/host.cuf -o - 2>&1 | FileCheck %s --check-prefix=HOST
+! RUN: bbc -fcuda -emit-hlfir %t/rank.cuf -o - | FileCheck %s --check-prefix=RANK
+
+!--- device.cuf
+attributes(device) subroutine device_caller(a)
+  integer, device :: a
+  interface choose
+    attributes(device) subroutine device_value(x)
+      integer, value :: x
+    end subroutine
+  end interface
+  ! DEVICE-LABEL: func.func @_QPdevice_caller
+  ! DEVICE: fir.call @_QPdevice_value
+  ! DEVICE: fir.call @_QPdevice_value
+  call choose(a)
+  call device_value(a)
+end subroutine
+
+attributes(global) subroutine global_caller()
+  integer, shared :: a
+  interface choose
+    attributes(device) subroutine device_value(x)
+      integer, value :: x
+    end subroutine
+  end interface
+  ! DEVICE-LABEL: func.func @_QPglobal_caller
+  ! DEVICE: fir.call @_QPdevice_value
+  call choose(a)
+end subroutine
+
+!--- host.cuf
+subroutine host_caller(a)
+  integer, device :: a
+  interface choose
+    subroutine host_value(x)
+      integer, value :: x
+    end subroutine
+  end interface
+  ! HOST: No specific subroutine of generic 'choose' matches the actual arguments
+  call choose(a)
+end subroutine
+
+!--- rank.cuf
+! A device VALUE association keeps its infinite table distance, so a DEVICE
+! reference specific, whose distance is finite, is still preferred.
+attributes(device) subroutine rank_value(a)
+  integer, device :: a
+  interface choose
+    attributes(device) subroutine value_specific(x)
+      integer, value :: x
+    end subroutine
+    attributes(device) subroutine reference_specific(x)
+      integer, device :: x
+    end subroutine
+  end interface
+  ! RANK-LABEL: func.func @_QPrank_value
+  ! RANK: fir.call @_QPreference_specific
+  call choose(a)
+end subroutine

@@ -3246,6 +3246,10 @@ static std::optional<int> GetMatchingDistance(
     if (dummyIgnoreTKR.test(common::IgnoreTKR::Device)) {
       return true;
     }
+    // Device code can load device storage to pass it by value.
+    if (dummyIsValue && actualIsDeviceMemory() && mayRunOnDevice) {
+      return true;
+    }
     return false;
   }};
 

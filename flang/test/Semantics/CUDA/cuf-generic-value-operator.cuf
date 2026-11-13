@@ -1,0 +1,61 @@
+! RUN: split-file %s %t
+! RUN: bbc -fcuda -emit-hlfir %t/device.cuf -o - | FileCheck %s --check-prefix=DEVICE
+! RUN: not bbc -fcuda -emit-hlfir %t/host.cuf -o - 2>&1 | FileCheck %s --check-prefix=HOST
+
+!--- device.cuf
+module value_operators
+  interface operator(.foo.)
+    module procedure val
+  end interface
+  interface operator(.bar.)
+    module procedure binary
+  end interface
+contains
+  attributes(device) integer function val(x)
+    integer, value :: x
+    val = x
+  end function
+  attributes(device) integer function binary(x, y)
+    integer, value :: x, y
+    binary = x + y
+  end function
+  attributes(device) subroutine caller(a, b)
+    integer, device :: a, b
+    ! VALUE permits a defined operator dummy (F2023 15.4.3.4.2 p1).
+    ! Eligibility depends on the call's execution context, not whether its
+    ! operand has a separately recorded source span or is parenthesized.
+    ! DEVICE-LABEL: func.func @_QMvalue_operatorsPcaller
+    ! DEVICE: [[A:%.*]] = fir.load {{.*}} : !fir.ref<i32>
+    ! DEVICE: fir.call @_QMvalue_operatorsPval([[A]]) {{.*}} : (i32) -> i32
+    b = .foo.a
+    ! DEVICE: fir.call @_QMvalue_operatorsPval
+    b = .foo. a
+    ! DEVICE: fir.call @_QMvalue_operatorsPval
+    b = .foo.(a)
+    ! DEVICE: fir.call @_QMvalue_operatorsPval
+    ! DEVICE: fir.call @_QMvalue_operatorsPval
+    b = .foo.(.foo.a)
+    ! DEVICE: fir.call @_QMvalue_operatorsPbinary
+    b = a .bar. a
+    ! DEVICE: fir.call @_QMvalue_operatorsPval
+    b = val(a)
+  end subroutine
+end module
+
+!--- host.cuf
+module host_value_operators
+  interface operator(.foo.)
+    module procedure val
+  end interface
+contains
+  integer function val(x)
+    integer, value :: x
+    val = x
+  end function
+  subroutine caller(a, b)
+    integer, device :: a, b
+    ! Host evaluation cannot load DEVICE storage to pass it by value.
+    ! HOST: No intrinsic or user-defined .FOO. matches
+    b = .foo.a
+  end subroutine
+end module
