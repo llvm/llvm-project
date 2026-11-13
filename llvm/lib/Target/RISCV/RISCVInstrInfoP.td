@@ -125,6 +125,8 @@ class RISCVUImmNegLeaf<int bitsNum>
 
 def uimm4_neg : RISCVUImmNegLeaf<4>;
 def uimm5_neg : RISCVUImmNegLeaf<5>;
+def uimm6_neg_or_zero
+    : ImmLeaf<XLenVT, "return Imm <= 0 && isUInt<6>(-Imm);", NegImm>;
 
 //===----------------------------------------------------------------------===//
 // Instruction class templates
@@ -2117,6 +2119,9 @@ def riscv_psshar : RVSDNode<"PSSHAR", SDT_RISCVPackedShift>;
 def riscv_psshl : RVSDNode<"PSSHL", SDT_RISCVPackedShift>;
 def riscv_psshlr : RVSDNode<"PSSHLR", SDT_RISCVPackedShift>;
 
+def riscv_shar : RVSDNode<"SHAR", SDT_RISCVIntBinOpW>;
+def riscv_shlr : RVSDNode<"SHLR", SDT_RISCVIntBinOpW>;
+
 // RV32 packed narrowing shift.
 def SDT_RISCVPackedNarrowingShift
     : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
@@ -2149,6 +2154,9 @@ def SDT_RISCVNarrowingClip
                            SDTCisVT<2, XLenVT>, SDTCisVT<3, XLenVT>]>;
 def riscv_nclip  : RVSDNode<"NCLIP", SDT_RISCVNarrowingClip>;
 def riscv_nclipu : RVSDNode<"NCLIPU", SDT_RISCVNarrowingClip>;
+def riscv_nclipr  : RVSDNode<"NCLIPR", SDT_RISCVNarrowingClip>;
+def riscv_nclipru : RVSDNode<"NCLIPRU", SDT_RISCVNarrowingClip>;
+def riscv_nsrar   : RVSDNode<"NSRAR", SDT_RISCVNarrowingClip>;
 
 // Packed "Q-format" multiply parts accumulate. The result and accumulator are
 // either a scalar (RV32 halfword form with v2i16 sources, RV64 word form with
@@ -3290,6 +3298,28 @@ let append Predicates = [IsRV32] in {
             (NCLIPI (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$imm)>;
   def : Pat<(XLenVT (riscv_nclipu XLenVT:$lo, XLenVT:$hi, uimm6:$imm)),
             (NCLIPIU (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$imm)>;
+  def : Pat<(XLenVT (riscv_nclipr XLenVT:$lo, XLenVT:$hi, uimm6:$imm)),
+            (NCLIPRI (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$imm)>;
+  def : Pat<(XLenVT (riscv_nclipru XLenVT:$lo, XLenVT:$hi, uimm6:$imm)),
+            (NCLIPRIU (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$imm)>;
+  def : Pat<(XLenVT (riscv_nsrar XLenVT:$lo, XLenVT:$hi, uimm6:$imm)),
+            (NSRARI (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$imm)>;
+
+  def : Pat<(XLenVT (riscv_nclip XLenVT:$lo, XLenVT:$hi,
+                                  shiftMask64:$shamt)),
+            (NCLIP (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
+  def : Pat<(XLenVT (riscv_nclipu XLenVT:$lo, XLenVT:$hi,
+                                   shiftMask64:$shamt)),
+            (NCLIPU (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
+  def : Pat<(XLenVT (riscv_nclipr XLenVT:$lo, XLenVT:$hi,
+                                   shiftMask64:$shamt)),
+            (NCLIPR (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
+  def : Pat<(XLenVT (riscv_nclipru XLenVT:$lo, XLenVT:$hi,
+                                    shiftMask64:$shamt)),
+            (NCLIPRU (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
+  def : Pat<(XLenVT (riscv_nsrar XLenVT:$lo, XLenVT:$hi,
+                                  shiftMask64:$shamt)),
+            (NSRAR (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
 
   // Packed multiply high accumulate, scalar halfword (RV32). The packed
   // intrinsic expands to a pair of these, one per result word.
@@ -3391,6 +3421,10 @@ let append Predicates = [IsRV64] in {
             (SATI_RV64 GPR:$rs1, sati_width6:$imm)>;
   def : Pat<(XLenVT (riscv_usati GPR:$rs1, usati_width6:$imm)),
             (USATI_RV64 GPR:$rs1, usati_width6:$imm)>;
+
+  def : PatGprShift<riscv_shar, SHAR, i64>;
+  def : PatGprShift<riscv_shlr, SHLR, i64>;
+  def : PatGprImm<riscv_shar, SRARI_RV64, uimm6_neg_or_zero, i64>;
 
   // Word multiply patterns where one operand is a sext.w or zext.w and
   // the other is a sext.w or zext.w or is known to be sign/zero-extended. We

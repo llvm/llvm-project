@@ -136,11 +136,14 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
 
 // Base class for structured control flow ops whose regions take no inputs and
 // yield the parent's results on the way out. Users still have to define
-// `getSuccessorRegions` themselves.
-class CIR_RegionBranchOpBase<string mnemonic, list<Trait> traits = []>
+// `getSuccessorRegions` themselves, and the optional `RegionBranchOpInterface`
+// methods they list in `regionBranchMethods`.
+class CIR_RegionBranchOpBase<string mnemonic, list<Trait> traits = [],
+                             list<string> regionBranchMethods = []>
     : CIR_Op<mnemonic, !listconcat([
         DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                  ["getSuccessorInputs"]>], traits)> {
+            !listconcat(["getSuccessorInputs"], regionBranchMethods)>],
+        traits)> {
   let extraClassDefinition = [{
     ValueRange $cppClass::getSuccessorInputs(
         mlir::RegionSuccessor successor) {
@@ -154,9 +157,11 @@ class CIR_RegionBranchOpBase<string mnemonic, list<Trait> traits = []>
 
 // Base class for the region-branch ops whose successors do not depend on the
 // operation: any of their regions may be entered from the parent operation, and
-// every region returns to it on exit.
-class CIR_EnterAnyRegionBranchOpBase<string mnemonic, list<Trait> traits = []>
-    : CIR_RegionBranchOpBase<mnemonic, traits> {
+// every region returns to it on exit. Subclasses may narrow which regions are
+// entered for constant operands, through `getEntrySuccessorRegions`.
+class CIR_EnterAnyRegionBranchOpBase<string mnemonic, list<Trait> traits = [],
+                                     list<string> regionBranchMethods = []>
+    : CIR_RegionBranchOpBase<mnemonic, traits, regionBranchMethods> {
   let append extraClassDefinition = [{
     void $cppClass::getSuccessorRegions(
         mlir::RegionBranchPoint point,
@@ -810,8 +815,7 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
     UnitAttr:$init,
     UnitAttr:$constant,
     UnitAttr:$cleanup_dest_slot,
-    ConfinedAttr<I64Attr, [IntMinValue<1>]>:$alignment,
-    OptionalAttr<CIR_AnnotationArrayAttr>:$annotations
+    ConfinedAttr<I64Attr, [IntMinValue<1>]>:$alignment
   );
 
   let results = (outs Res<CIR_PointerType, "",
@@ -850,7 +854,7 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
           | `const`             $constant
           | `cleanup_dest_slot` $cleanup_dest_slot)
     (`size` `(` $dynAllocSize^ `)`)? `:` qualified(type($addr))
-    ($annotations^)? attr-dict
+    attr-dict
   }];
 
   let hasCXXABILowering = true;
@@ -3405,7 +3409,7 @@ def CIR_SelectOp : CIR_Op<"select", [
 
 def CIR_TernaryOp : CIR_EnterAnyRegionBranchOpBase<"ternary", [
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
-]> {
+], ["getEntrySuccessorRegions"]> {
   let summary = "The `cond ? a : b` C/C++ ternary operation";
   let description = [{
     The `cir.ternary` operation represents C/C++ ternary, much like a `select`
@@ -8294,6 +8298,84 @@ def CIR_AssumeOp : CIR_Op<"assume"> {
   let hasVerifier = 1;
 }
 
+
+//===----------------------------------------------------------------------===//
+// Annotation operations
+//===----------------------------------------------------------------------===//
+
+def CIR_VarAnnotationOp : CIR_Op<"var_annotation"> {
+  let summary = "Annotate the storage of a local variable or parameter";
+  let description = [{
+    Attaches an `annotate` attribute to the local variable or parameter stored
+    at `addr`. Corresponds to `llvm.var.annotation`.
+
+    ```
+    cir.var_annotation %0 [#cir.annotation<"on_local", [7 : i32]>]
+        : !cir.ptr<!s32i>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$addr,
+                       CIR_AnnotationAttr:$annotation);
+
+  let assemblyFormat = [{
+    $addr ` ` `[` qualified($annotation) `]` `:` qualified(type($addr))
+    attr-dict
+  }];
+  let customLLVMLoweringConstructorDecl = LoweringBuilders<(
+      ins "LLVMAnnotationGlobals &":$annotationGlobals)>;
+}
+
+def CIR_PtrAnnotationOp : CIR_Op<"ptr_annotation", [
+  AllTypesMatch<["addr", "result"]>
+]> {
+  let summary = "Annotate a pointer to a record field";
+  let description = [{
+    Returns `addr` annotated with the `annotate` attribute of a record field;
+    accesses to the field use the result. Corresponds to `llvm.ptr.annotation`.
+
+    ```
+    %1 = cir.ptr_annotation %0 [#cir.annotation<"on_field">] : !cir.ptr<!s32i>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$addr,
+                       CIR_AnnotationAttr:$annotation);
+  let results = (outs CIR_PointerType:$result);
+
+  let assemblyFormat = [{
+    $addr ` ` `[` qualified($annotation) `]` `:` qualified(type($addr))
+    attr-dict
+  }];
+  let customLLVMLoweringConstructorDecl = LoweringBuilders<(
+      ins "LLVMAnnotationGlobals &":$annotationGlobals)>;
+}
+
+def CIR_AnnotationOp : CIR_Op<"annotation", [
+  AllTypesMatch<["value", "result"]>
+]> {
+  let summary = "Annotate an integer value";
+  let description = [{
+    Returns `value` annotated with a string, as `__builtin_annotation` does.
+    The annotation takes no arguments. Corresponds to `llvm.annotation`.
+
+    ```
+    %1 = cir.annotation %0 [#cir.annotation<"on_builtin">] : !s32i
+    ```
+  }];
+
+  let arguments = (ins CIR_AnyIntType:$value,
+                       CIR_AnnotationAttr:$annotation);
+  let results = (outs CIR_AnyIntType:$result);
+
+  let assemblyFormat = [{
+    $value ` ` `[` qualified($annotation) `]` `:` type($value) attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let customLLVMLoweringConstructorDecl = LoweringBuilders<(
+      ins "LLVMAnnotationGlobals &":$annotationGlobals)>;
+}
 //===----------------------------------------------------------------------===//
 // Branch Probability Operations
 //===----------------------------------------------------------------------===//
