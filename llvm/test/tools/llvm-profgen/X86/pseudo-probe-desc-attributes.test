@@ -1,0 +1,46 @@
+; Test that the pseudo probe decoder splits the always_inline (1) and noinline
+; (2) attributes out of bits [60:63] of the hash field of .pseudo_probe_desc:
+; ai is always_inline, ni is noinline, ord and main have neither.
+; RUN: llvm-profgen --binary=%S/Inputs/cs-preinline-inline-attributes.perfbin --show-pseudo-probe --show-disassembly-only --output=%t | FileCheck %s
+
+; CHECK:      Pseudo Probe Desc:
+; CHECK-NEXT: GUID: 422178697300263398 Name: ni
+; CHECK-NEXT: Hash: 4294967295 Attributes: 2
+; CHECK-NEXT: GUID: 10504318061262903873 Name: _ZL2aii.__uniq.{{[0-9]+}}
+; CHECK-NEXT: Hash: 107105011060 Attributes: 1
+; CHECK-NEXT: GUID: 12028034793742813545 Name: _ZL3ordi.__uniq.{{[0-9]+}}
+; CHECK-NEXT: Hash: 4294967295 Attributes: 0
+; CHECK-NEXT: GUID: 15822663052811949562 Name: main
+; CHECK-NEXT: Hash: 844633524831508 Attributes: 0
+
+; Inputs/cs-preinline-inline-attributes.perfbin was built from the source below
+; with
+;   clang -O2 -fno-pie -no-pie -fpseudo-probe-for-profiling -fno-omit-frame-pointer
+;         -mno-omit-leaf-frame-pointer -fno-unroll-loops -g test.c
+;
+; volatile int sink;
+;
+; // Hot and tiny, but never inlined.
+; __attribute__((noinline)) int ni(int x) { return x * 3 + 1; }
+;
+; // Always inlined; its loop gives the inlined copy samples and a size.
+; __attribute__((always_inline)) static inline int ai(int n) {
+;   int s = 0;
+;   for (int i = 0; i < n; i++)
+;     s += (i * 7) ^ n;
+;   return s;
+; }
+;
+; // An ordinary callee, inlined by the compiler.
+; static int ord(int x) { return (x * x) ^ (x >> 3); }
+;
+; int main() {
+;   for (int k = 0; k < 4000000; k++) {
+;     sink += ai(32 + (k & 7));
+;     if (k & 1)
+;       sink += ni(k);
+;     if ((k & 3) == 0)
+;       sink += ord(k);
+;   }
+;   return 0;
+; }
