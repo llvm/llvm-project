@@ -28917,6 +28917,34 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
           return DAG.getBitcast(NVT, Src);
         }
 
+        // If the BUILD_VECTOR is also used as a full vector (not just by
+        // EXTRACT_SUBVECTORs) and all of its elements are extracted from legal
+        // vectors, try reducing it to a VECTOR_SHUFFLE first instead of
+        // slicing it into smaller BUILD_VECTORs and duplicating work.
+        auto HasNonExtractUse = [](SDNode *BV) {
+          for (SDNode *U : BV->users()) {
+            if (U->getOpcode() == ISD::EXTRACT_SUBVECTOR)
+              continue;
+            if (U->getOpcode() == ISD::BITCAST &&
+                all_of(U->users(), [](SDNode *BU) {
+                  return BU->getOpcode() == ISD::EXTRACT_SUBVECTOR;
+                }))
+              continue;
+            return true;
+          }
+          return false;
+        };
+        if (HasNonExtractUse(V.getNode()) &&
+            all_of(V->ops(), [&](SDValue Op) {
+              return Op.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+                     TLI.isTypeLegal(Op.getOperand(0).getValueType());
+            })) {
+          if (SDValue Shuf = reduceBuildVecToShuffle(V.getNode())) {
+            CombineTo(V.getNode(), Shuf);
+            return SDValue();
+          }
+        }
+
         // Extract the pieces from the original build_vector.
         SDValue BuildVec =
             DAG.getBuildVector(ExtractVT, DL, V->ops().slice(IdxVal, NumElems));
