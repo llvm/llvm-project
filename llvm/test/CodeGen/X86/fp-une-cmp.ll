@@ -113,8 +113,6 @@ define void @pr27750(ptr %b, float %x, i1 %y) {
 ; CHECK-NEXT:  .LBB3_3: # %for.end
 ; CHECK-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    jne .LBB3_1
-; CHECK-NEXT:    jp .LBB3_1
 ; CHECK-NEXT:  .LBB3_1: # %for.cond1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb $1, %sil

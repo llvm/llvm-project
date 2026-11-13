@@ -10,7 +10,6 @@ define void @knownbits_zext_in_reg(ptr) nounwind {
 ; CHECK-NEXT:  .LBB0_1: # %CF237
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:    jmp .LBB0_1
 BB:
   %L5 = load i8, ptr %0

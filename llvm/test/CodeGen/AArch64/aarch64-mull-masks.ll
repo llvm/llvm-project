@@ -1485,7 +1485,6 @@ define i32 @f(i32 %0) {
 ; CHECK-SD-NEXT:    neg w8, w0
 ; CHECK-SD-NEXT:  .LBB93_1: // %B
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-SD-NEXT:    cbnz x8, .LBB93_1
 ; CHECK-SD-NEXT:    b .LBB93_1
 ;
 ; CHECK-GI-LABEL: f:
@@ -1493,7 +1492,6 @@ define i32 @f(i32 %0) {
 ; CHECK-GI-NEXT:    neg w8, w0
 ; CHECK-GI-NEXT:  .LBB93_1: // %B
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-GI-NEXT:    cbnz x8, .LBB93_1
 ; CHECK-GI-NEXT:    b .LBB93_1
 entry:
   %1 = sext i32 %0 to i64
