@@ -4246,7 +4246,8 @@ lowerBuiltinType(const Type *OpaqueType,
   } else if (Name == "spirv.VulkanBuffer") {
     TargetType = getVulkanBufferType(BuiltinType, MIRBuilder, GR);
   } else if (Name == "spirv.Padding") {
-    TargetType = GR->getOrCreatePaddingType(MIRBuilder);
+    TargetType =
+        GR->getOrCreatePaddingType(MIRBuilder, BuiltinType->getIntParameter(0));
   } else if (Name == "spirv.PushConstant") {
     TargetType = getVulkanPushConstantType(BuiltinType, MIRBuilder, GR);
   } else if (Name == "spirv.Layout") {
@@ -4290,8 +4291,10 @@ lowerBuiltinType(const Type *OpaqueType,
   }
 
   // Emit OpName instruction if a new OpType<...> instruction was added
-  // (equivalent type was not found in GlobalRegistry).
-  if (NumStartingVRegs < MIRBuilder.getMRI()->getNumVirtRegs())
+  // (equivalent type was not found in GlobalRegistry). Padding is a plain
+  // integer type that may be shared with real members, so do not name it.
+  if (Name != "spirv.Padding" &&
+      NumStartingVRegs < MIRBuilder.getMRI()->getNumVirtRegs())
     buildOpName(GR->getSPIRVTypeID(TargetType), Name, MIRBuilder);
 
   return TargetType;
