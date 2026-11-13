@@ -20,6 +20,7 @@
 #include "llvm/ProfileData/SampleProfWriter.h"
 #include "llvm/ADT/Eytzinger.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ProfileData/MemProfYAML.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Compression.h"
@@ -170,6 +171,9 @@ std::error_code SampleProfileWriter::write(const SampleProfileMap &ProfileMap) {
   if (std::error_code EC = writeFuncProfiles(ProfileMap))
     return EC;
 
+  if (std::error_code EC = writeDataAccessProfiles())
+    return EC;
+
   return sampleprof_error::success;
 }
 
@@ -186,7 +190,7 @@ SampleProfileWriterExtBinaryBase::getExtBinaryHdrLayout(SectionLayout SL) {
         {SecProfSummary, 0, 0, 0, 0},  {SecNameTable, 0, 0, 0, 0},
         {SecCSNameTable, 0, 0, 0, 0},  {SecFuncOffsetTable, 0, 0, 0, 0},
         {SecLBRProfile, 0, 0, 0, 0},   {SecProfileSymbolList, 0, 0, 0, 0},
-        {SecFuncMetadata, 0, 0, 0, 0},
+        {SecFuncMetadata, 0, 0, 0, 0}, {SecDataAccessProfile, 0, 0, 0, 0},
     };
   case CtxSplitLayout:
     return {
@@ -204,6 +208,7 @@ SampleProfileWriterExtBinaryBase::getExtBinaryHdrLayout(SectionLayout SL) {
          0, 0},
         {SecProfileSymbolList, 0, 0, 0, 0},
         {SecFuncMetadata, 0, 0, 0, 0},
+        {SecDataAccessProfile, 0, 0, 0, 0},
     };
   case NumOfLayout:
     break;
@@ -740,6 +745,10 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
     if (auto EC = writeProfileSymbolListSection())
       return EC;
     break;
+  case SecDataAccessProfile:
+    if (std::error_code EC = writeDataAccessProfiles())
+      return EC;
+    break;
   default:
     if (auto EC = writeCustomSection(Type))
       return EC;
@@ -761,8 +770,9 @@ std::error_code SampleProfileWriterExtBinary::writeDefaultLayout(
   // ProfSection / FuncOffsetSection are SecLBR* or SecComposite* after
   // configureCompositeProfile.
   const SecType Sections[] = {
-      SecProfSummary,       SecNameTable,      SecCSNameTable,  ProfSection,
-      SecProfileSymbolList, FuncOffsetSection, SecFuncMetadata,
+      SecProfSummary,  SecNameTable,         SecCSNameTable,
+      ProfSection,     SecProfileSymbolList, FuncOffsetSection,
+      SecFuncMetadata, SecDataAccessProfile,
   };
   for (SecType Type : Sections)
     if (std::error_code EC = writeOneSection(Type, ProfileMap))
@@ -793,6 +803,7 @@ std::error_code SampleProfileWriterExtBinary::writeCtxSplitLayout(
       {ProfSection, NestedProfileMap},    {FuncOffsetSection, NestedProfileMap},
       {ProfSection, FlatProfileMap},      {FuncOffsetSection, FlatProfileMap},
       {SecProfileSymbolList, ProfileMap}, {SecFuncMetadata, ProfileMap},
+      {SecDataAccessProfile, ProfileMap},
   };
   for (const auto &[Type, Map] : Sections)
     if (std::error_code EC = writeOneSection(Type, Map))
@@ -923,6 +934,32 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
   return sampleprof_error::success;
 }
 
+std::error_code SampleProfileWriterText::writeDataAccessProfiles() {
+  if (!DataAccessProfileData || DataAccessProfileData->empty())
+    return sampleprof_error::success;
+
+  raw_ostream &OS = *OutputStream;
+  OS << "[DataAccessProfiles]\n";
+  LineCount++;
+
+  memprof::YamlDataAccessProfData YamlData;
+  for (const auto &[SymHandleRef, RecordRef] :
+       DataAccessProfileData->getRecords())
+    YamlData.Records.emplace_back(SymHandleRef, RecordRef.AccessCount,
+                                  RecordRef.Locations);
+
+  for (StringRef ColdSymbol : DataAccessProfileData->getKnownColdSymbols())
+    YamlData.KnownColdSymbols.push_back(ColdSymbol.str());
+
+  for (uint64_t Hash : DataAccessProfileData->getKnownColdHashes())
+    YamlData.KnownColdStrHashes.push_back(Hash);
+
+  yaml::Output Yout(OS);
+  Yout << YamlData;
+
+  return sampleprof_error::success;
+}
+
 std::error_code
 SampleProfileWriterBinary::writeContextIdx(const SampleContext &Context) {
   assert(!Context.hasContext() && "cs profile is not supported");
@@ -1004,6 +1041,22 @@ SampleProfileWriterBinary::writeMagicIdent(SampleProfileFormat Format) {
   // Write file magic identifier.
   encodeULEB128(SPMagic(Format), OS);
   encodeULEB128(FormatVersion, OS);
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileWriterExtBinaryBase::writeDataAccessProfiles() {
+  if (!DataAccessProfileData || DataAccessProfileData->empty())
+    return sampleprof_error::success;
+
+  std::string SerializedData;
+  raw_string_ostream OS(SerializedData);
+  ProfOStream POS(OS);
+  if (Error E = DataAccessProfileData->serialize(POS)) {
+    consumeError(std::move(E));
+    return sampleprof_error::unsupported_writing_format;
+  }
+
+  *OutputStream << SerializedData;
   return sampleprof_error::success;
 }
 

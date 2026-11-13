@@ -24,6 +24,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/FunctionId.h"
 #include "llvm/ProfileData/HashKeyMap.h"
 #include "llvm/Support/Allocator.h"
@@ -155,6 +156,7 @@ enum SecType {
   SecCSNameTable = 6,
   // Function offset table used by the composite profile representation.
   SecCompositeFuncOffsetTable = 7,
+  SecDataAccessProfile = 8,
   // marker for the first type of profile.
   SecFuncProfileFirst = 32,
   SecLBRProfile = SecFuncProfileFirst,
@@ -180,6 +182,8 @@ static inline std::string getSecName(SecType Type) {
     return "CSNameTableSection";
   case SecCompositeFuncOffsetTable:
     return "CompositeFuncOffsetTableSection";
+  case SecDataAccessProfile:
+    return "DataAccessProfileSection";
   case SecLBRProfile:
     return "LBRProfileSection";
   case SecCompositeProfile:
