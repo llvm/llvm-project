@@ -80,6 +80,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MemCacheHint.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -4903,7 +4904,7 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
   Align Alignment = I.getAlign();
   AAMDNodes AAInfo = I.getAAMetadata();
   const MDNode *Ranges = getRangeMetadata(I);
-  const MDNode *MemCacheHint = getMemCacheHintMetadata(I);
+  const MDNode *MemCacheHint = getMemCacheHint(I);
   bool isVolatile = I.isVolatile();
   MachineMemOperand::Flags MMOFlags =
       TLI.getLoadMemOperandFlags(I, DAG.getDataLayout(), AC, LibInfo);
@@ -5093,8 +5094,7 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
   SDLoc dl = getCurSDLoc();
   Align Alignment = I.getAlign();
   AAMDNodes AAInfo = I.getAAMetadata();
-  const MDNode *MemCacheHint =
-      getMemCacheHintMetadata(I, I.getPointerOperandIndex());
+  const MDNode *MemCacheHint = getMemCacheHint(I, I.getPointerOperandIndex());
 
   auto MMOFlags = TLI.getStoreMemOperandFlags(I, DAG.getDataLayout());
 
@@ -5153,7 +5153,7 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
   if (I.hasMetadata(LLVMContext::MD_nontemporal))
     MMOFlags |= MachineMemOperand::MONonTemporal;
 
-  const MDNode *MemCacheHint = getMemCacheHintMetadata(I, /*OperandNo=*/1);
+  const MDNode *MemCacheHint = getMemCacheHint(I, /*OperandNo=*/1);
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MMOFlags,
@@ -5300,7 +5300,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   EVT VT = Src0.getValueType();
   AAMDNodes AAInfo = I.getAAMetadata();
   const MDNode *Ranges = getRangeMetadata(I);
-  const MDNode *MemCacheHint = getMemCacheHintMetadata(I, /*OperandNo=*/0);
+  const MDNode *MemCacheHint = getMemCacheHint(I, /*OperandNo=*/0);
 
   // Do not serialize masked loads of constant memory with anything.
   MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
@@ -5435,7 +5435,7 @@ void SelectionDAGBuilder::visitAtomicCmpXchg(const AtomicCmpXchgInst &I) {
   auto Flags = TLI.getAtomicMemOperandFlags(I, DAG.getDataLayout());
 
   MachineFunction &MF = DAG.getMachineFunction();
-  const MDNode *MemCacheHint = getMemCacheHintMetadata(I);
+  const MDNode *MemCacheHint = getMemCacheHint(I);
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
       I.getAlign(), MMOMetadata(AAMDNodes(), /*Ranges=*/nullptr, MemCacheHint),
@@ -5508,7 +5508,7 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
   auto Flags = TLI.getAtomicMemOperandFlags(I, DAG.getDataLayout());
 
   MachineFunction &MF = DAG.getMachineFunction();
-  const MDNode *MemCacheHint = getMemCacheHintMetadata(I);
+  const MDNode *MemCacheHint = getMemCacheHint(I);
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
       I.getAlign(), MMOMetadata(AAMDNodes(), /*Ranges=*/nullptr, MemCacheHint),
@@ -5556,7 +5556,7 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
   auto Flags = TLI.getLoadMemOperandFlags(I, DAG.getDataLayout(), AC, LibInfo);
 
   const MDNode *Ranges = getRangeMetadata(I);
-  const MDNode *MemCacheHint = getMemCacheHintMetadata(I);
+  const MDNode *MemCacheHint = getMemCacheHint(I);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
       I.getAlign(), MMOMetadata(AAMDNodes(), Ranges, MemCacheHint), SSID,
@@ -5594,8 +5594,7 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
   auto Flags = TLI.getStoreMemOperandFlags(I, DAG.getDataLayout());
 
   MachineFunction &MF = DAG.getMachineFunction();
-  const MDNode *MemCacheHint =
-      getMemCacheHintMetadata(I, I.getPointerOperandIndex());
+  const MDNode *MemCacheHint = getMemCacheHint(I, I.getPointerOperandIndex());
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
       I.getAlign(), MMOMetadata(AAMDNodes(), /*Ranges=*/nullptr, MemCacheHint),
