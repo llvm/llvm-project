@@ -1,0 +1,47 @@
+# Test that the classic linker undoes prefix mapping before resolving the
+# declaration files of types for ODR uniquing. Both compile units define a
+# different struct Foo on line 1 of a foo.h, but in different directories, so
+# neither definition may replace the other.
+
+# RUN: rm -rf %t.dir
+# RUN: mkdir -p %t.dir/build %t.dir/src/a %t.dir/src/b
+# RUN: split-file %p/../Inputs/compilation-prefix-map-odr.s %t.dir/inputs
+# RUN: llvm-mc -triple x86_64-apple-macos -filetype=obj \
+# RUN:    -o %t.dir/build/a.o %t.dir/inputs/a.s
+# RUN: llvm-mc -triple x86_64-apple-macos -filetype=obj \
+# RUN:    -o %t.dir/build/b.o %t.dir/inputs/b.s
+# RUN: echo '{"/^src": "%/t.dir/src"}' > %t.dir/build/compilation-prefix-map.json
+# RUN: dsymutil --linker classic -oso-prepend-path %t.dir -y %s \
+# RUN:    -o %t.dir/out.dSYM 2>&1 | count 0
+# RUN: llvm-dwarfdump --debug-info %t.dir/out.dSYM | FileCheck %s
+
+# CHECK: DW_AT_name ("a.cpp")
+# CHECK-NOT: DW_TAG_compile_unit
+# CHECK: DW_TAG_structure_type
+# CHECK-NOT: DW_TAG
+# CHECK: DW_AT_name ("Foo")
+# CHECK-NOT: DW_TAG
+# CHECK: DW_AT_decl_file ("{{.*}}.dir{{[/\\]}}src{{[/\\]}}a{{[/\\]}}foo.h")
+# CHECK: DW_TAG_member
+# CHECK-NEXT: DW_AT_name ("x")
+
+# CHECK: DW_AT_name ("b.cpp")
+# CHECK-NOT: DW_TAG_compile_unit
+# CHECK: DW_TAG_structure_type
+# CHECK-NOT: DW_TAG
+# CHECK: DW_AT_name ("Foo")
+# CHECK-NOT: DW_TAG
+# CHECK: DW_AT_decl_file ("{{.*}}.dir{{[/\\]}}src{{[/\\]}}b{{[/\\]}}foo.h")
+# CHECK: DW_TAG_member
+# CHECK-NEXT: DW_AT_name ("y")
+
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename: build/a.o
+    symbols:
+      - { sym: _main, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }
+  - filename: build/b.o
+    symbols:
+      - { sym: _f, objAddr: 0x0, binAddr: 0x10010, size: 0x10 }
+...
