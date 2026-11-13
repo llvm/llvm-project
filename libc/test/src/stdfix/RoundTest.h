@@ -1,10 +1,18 @@
-//===-- Utility class to test fixed-point round -----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Utility class to test fixed-point round.
+///
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIBC_TEST_SRC_STDFIX_ROUNDTEST_H
+#define LLVM_LIBC_TEST_SRC_STDFIX_ROUNDTEST_H
 
 #include "test/UnitTest/Test.h"
 
@@ -63,3 +71,5 @@ public:
   using LlvmLibcRoundTest = RoundTest<T>;                                      \
   TEST_F(LlvmLibcRoundTest, SpecialNumbers) { testSpecialNumbers(&func); }     \
   static_assert(true, "Require semicolon.")
+
+#endif // LLVM_LIBC_TEST_SRC_STDFIX_ROUNDTEST_H

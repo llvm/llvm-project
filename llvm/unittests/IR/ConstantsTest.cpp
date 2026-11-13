@@ -378,6 +378,51 @@ TEST(ConstantsTest, GEPReplaceWithConstant) {
   ASSERT_EQ(GEP->getOperand(0), Alias);
 }
 
+TEST(ConstantsTest, MayHaveConstantUsers) {
+  LLVMContext Context;
+  Module M("MyModule", Context);
+
+  Type *IntTy = Type::getInt64Ty(Context);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context), false);
+  Function *F = Function::Create(FTy, GlobalValue::InternalLinkage, "f", M);
+  auto *G1 = new GlobalVariable(M, IntTy, false, GlobalValue::ExternalLinkage,
+                                nullptr);
+  auto *G2 = new GlobalVariable(M, IntTy, false, GlobalValue::ExternalLinkage,
+                                nullptr);
+  EXPECT_FALSE(F->mayHaveConstantUsers());
+  EXPECT_FALSE(G1->mayHaveConstantUsers());
+
+  // A global used only by another global's initializer has no constant users
+  // that removeDeadConstantUsers could remove.
+  auto *Ref = new GlobalVariable(M, F->getType(), false,
+                                 GlobalValue::ExternalLinkage, F);
+  EXPECT_FALSE(F->mayHaveConstantUsers());
+
+  // Creating a constant expression marks its global operand.
+  Constant *Int1 = ConstantExpr::getPtrToInt(G1, IntTy);
+  EXPECT_TRUE(G1->mayHaveConstantUsers());
+
+  // Updating a constant in place marks the new operand.
+  auto *Ref2 =
+      new GlobalVariable(M, IntTy, false, GlobalValue::ExternalLinkage, Int1);
+  G1->replaceAllUsesWith(G2);
+  EXPECT_TRUE(G2->mayHaveConstantUsers());
+
+  // A live constant user keeps the flag set.
+  G2->removeDeadConstantUsers();
+  EXPECT_TRUE(G2->mayHaveConstantUsers());
+
+  // Once the constant users are gone, the next walk clears the flag.
+  Ref2->setInitializer(nullptr);
+  G2->removeDeadConstantUsers();
+  EXPECT_TRUE(G2->use_empty());
+  EXPECT_FALSE(G2->mayHaveConstantUsers());
+
+  // DSOLocalEquivalent is not uniqued through ConstantUniqueMap.
+  Ref->setInitializer(DSOLocalEquivalent::get(F));
+  EXPECT_TRUE(F->mayHaveConstantUsers());
+}
+
 TEST(ConstantsTest, DSOLocalEquivalentReplaceWithAlias) {
   LLVMContext Context;
   std::unique_ptr<Module> M(new Module("MyModule", Context));

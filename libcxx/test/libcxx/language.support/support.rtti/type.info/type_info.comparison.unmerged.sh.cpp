@@ -11,9 +11,6 @@
 // the executable each get their own copy.
 
 // UNSUPPORTED: no-rtti
-// UNSUPPORTED: android
-
-// XFAIL: target={{.+}}-zos{{.*}}
 
 // REQUIRES: can-build-shared-libraries
 

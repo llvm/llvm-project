@@ -22,7 +22,6 @@
 # Test that load pairs get register hints and allocate consecutive registers
 # After register allocation, should either keep LD_RV32 or split back to LW
 name: test_load_pair_hints
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x10
@@ -54,7 +53,6 @@ body: |
 # Test that store pairs get register hints and allocate consecutive registers
 # After register allocation, should either keep SD_RV32 or split back to SW
 name: test_store_pair_hints
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x10, $x11, $x12

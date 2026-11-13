@@ -99,7 +99,7 @@ void DroppedVariableStatsIR::visitEveryInstruction(unsigned &DroppedCount,
     auto *DbgLoc = I.getDebugLoc().get();
     if (!DbgLoc)
       continue;
-    if (updateDroppedCount(DbgLoc, DbgLoc->getScope(), Var, DroppedCount))
+    if (updateDroppedCount(DbgLoc, Var, DroppedCount))
       break;
   }
 }

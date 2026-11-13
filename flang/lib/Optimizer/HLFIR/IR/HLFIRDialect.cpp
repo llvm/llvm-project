@@ -92,6 +92,8 @@ bool hlfir::isFortranVariableType(mlir::Type type) {
 }
 
 bool hlfir::isFortranScalarCharacterType(mlir::Type type) {
+  if (isBoxAddressType(type))
+    return false;
   return isFortranScalarCharacterExprType(type) ||
          mlir::isa<fir::BoxCharType>(type) ||
          mlir::isa<fir::CharacterType>(

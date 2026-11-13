@@ -41,6 +41,7 @@ public:
   void VisitDeclStmt(const DeclStmt *DS);
   void VisitDeclRefExpr(const DeclRefExpr *DRE);
   void VisitCXXConstructExpr(const CXXConstructExpr *CCE);
+  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *DAE);
   void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *DIE);
   void VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE);
   void VisitMemberExpr(const MemberExpr *ME);
@@ -120,6 +121,16 @@ private:
   /// \param IsGslConstruction True if this is a GSL construction where all
   ///   argument origins should flow to the returned origin.
   void handleFunctionCall(const Expr *Call, bool IsGslConstruction = false);
+
+  // Handles calls that allocate memory (e.g. functions annotated with
+  // `ownership_returns`): the call result is a fresh allocation, so a new
+  // loan is issued for it.
+  void handleAllocatingCall(const Expr *Call, const FunctionDecl *FD);
+
+  // Handles calls that free memory (e.g. functions annotated with
+  // `ownership_takes`): the freed arguments' origins are invalidated.
+  void handleFreeingCall(const Expr *Call, const FunctionDecl *FD,
+                         ArrayRef<const Expr *> Args);
 
   // Detect methods that invalidate iterators/references/pointees.
   // For instance methods, Args[0] is the implicit 'this' pointer.

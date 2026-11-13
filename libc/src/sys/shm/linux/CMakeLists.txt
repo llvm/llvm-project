@@ -1,4 +1,48 @@
 add_entrypoint_object(
+  shmat
+  SRCS
+    shmat.cpp
+  HDRS
+    ../shmat.h
+  DEPENDS
+    libc.hdr.sys_shm_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.shmat
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  shmctl
+  SRCS
+    shmctl.cpp
+  HDRS
+    ../shmctl.h
+  DEPENDS
+    libc.hdr.types.struct_shmid_ds
+    libc.src.__support.OSUtil.linux.syscall_wrappers.shmctl
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  shmdt
+  SRCS
+    shmdt.cpp
+  HDRS
+    ../shmdt.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.shmdt
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   shmget
   SRCS
     shmget.cpp

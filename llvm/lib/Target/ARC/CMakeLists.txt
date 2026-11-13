@@ -11,6 +11,9 @@ llvm_tablegen(ARCGenRegisterInfo.inc -gen-register-info)
 llvm_tablegen(ARCGenSDNodeInfo.inc -gen-sd-node-info)
 llvm_tablegen(ARCGenSubtargetInfo.inc -gen-subtarget)
 
+set(LLVM_TARGET_DEFINITIONS ARCOptions.td)
+llvm_tablegen(ARCOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(ARCCommonTableGen)
 
 add_llvm_target(ARCCodeGen
@@ -38,6 +41,7 @@ add_llvm_target(ARCCodeGen
   CodeGenTypes
   Core
   MC
+  Option
   SelectionDAG
   Support
   Target

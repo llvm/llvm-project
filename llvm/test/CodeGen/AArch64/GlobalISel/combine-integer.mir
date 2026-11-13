@@ -4,7 +4,6 @@
 
 ---
 name:   APlusBMinusCMinusB
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -28,7 +27,6 @@ body:             |
 ...
 ---
 name:   APlusBMinusCMinusB_nuw
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -52,7 +50,6 @@ body:             |
 ...
 ---
 name:   AMinusBMinusCMinusC
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -76,7 +73,6 @@ body:             |
 ...
 ---
 name:   ZeroMinusAPlusB
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -101,7 +97,6 @@ body:             |
 ...
 ---
 name:   ZeroMinusAPlusB_multi_use
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -130,13 +125,12 @@ body:             |
 ...
 ---
 name:   APlusZeroMiunusB
-tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $w0, $w1
+    liveins: $w0, $w1, $x2
 
     ; CHECK-LABEL: name: APlusZeroMiunusB
-    ; CHECK: liveins: $w0, $w1
+    ; CHECK: liveins: $w0, $w1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %a:_(i64) = COPY $x1
     ; CHECK-NEXT: %b:_(i64) = COPY $x2
@@ -155,7 +149,6 @@ body:             |
 ...
 ---
 name:   APlusBMinusB
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -177,7 +170,6 @@ body:             |
 ...
 ---
 name:   BMinusAPlusA
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -199,13 +191,12 @@ body:             |
 ...
 ---
 name:   AMinusBPlusCMinusA
-tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $w0, $w1
+    liveins: $w0, $w1, $x2
 
     ; CHECK-LABEL: name: AMinusBPlusCMinusA
-    ; CHECK: liveins: $w0, $w1
+    ; CHECK: liveins: $w0, $w1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %b:_(i64) = COPY $x1
     ; CHECK-NEXT: %c:_(i64) = COPY $x2
@@ -225,13 +216,12 @@ body:             |
 ...
 ---
 name:   AMinusBPlusBMinusC
-tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $w0, $w1
+    liveins: $w0, $w1, $x2
 
     ; CHECK-LABEL: name: AMinusBPlusBMinusC
-    ; CHECK: liveins: $w0, $w1
+    ; CHECK: liveins: $w0, $w1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %a:_(i64) = COPY $x0
     ; CHECK-NEXT: %c:_(i64) = COPY $x2
@@ -252,13 +242,12 @@ body:             |
 ...
 ---
 name:   APlusBMinusAplusC
-tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $w0, $w1
+    liveins: $w0, $w1, $x2
 
     ; CHECK-LABEL: name: APlusBMinusAplusC
-    ; CHECK: liveins: $w0, $w1
+    ; CHECK: liveins: $w0, $w1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %b:_(i64) = COPY $x1
     ; CHECK-NEXT: %c:_(i64) = COPY $x2
@@ -278,13 +267,12 @@ body:             |
 ...
 ---
 name:   APlusBMinusCPlusA
-tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $w0, $w1
+    liveins: $w0, $w1, $x2
 
     ; CHECK-LABEL: name: APlusBMinusCPlusA
-    ; CHECK: liveins: $w0, $w1
+    ; CHECK: liveins: $w0, $w1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %b:_(i64) = COPY $x1
     ; CHECK-NEXT: %c:_(i64) = COPY $x2
@@ -304,18 +292,17 @@ body:             |
 ...
 ---
 name:   APlusBMinusCPlusA_BV
-tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $w0, $w1
+    liveins: $w0, $w1, $x2
 
     ; CHECK-LABEL: name: APlusBMinusCPlusA_BV
-    ; CHECK: liveins: $w0, $w1
+    ; CHECK: liveins: $w0, $w1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %a1:_(i64) = COPY $x0
     ; CHECK-NEXT: %b1:_(i64) = COPY $x1
     ; CHECK-NEXT: %c1:_(i64) = COPY $x2
-    ; CHECK-NEXT: %b:_(<2 x i64>) = G_BUILD_VECTOR %b1(i64), %ba:_(i64)
+    ; CHECK-NEXT: %b:_(<2 x i64>) = G_BUILD_VECTOR %b1(i64), %c1(i64)
     ; CHECK-NEXT: %c:_(<2 x i64>) = G_BUILD_VECTOR %a1(i64), %c1(i64)
     ; CHECK-NEXT: %add:_(<2 x i64>) = G_SUB %b, %c
     ; CHECK-NEXT: $q0 = COPY %add(<2 x i64>)
@@ -324,7 +311,7 @@ body:             |
     %b1:_(i64) = COPY $x1
     %c1:_(i64) = COPY $x2
     %a:_(<2 x i64>) = G_BUILD_VECTOR %a1:_(i64), %b1:_(i64)
-    %b:_(<2 x i64>) = G_BUILD_VECTOR %b1:_(i64), %ba:_(i64)
+    %b:_(<2 x i64>) = G_BUILD_VECTOR %b1:_(i64), %c1:_(i64)
     %c:_(<2 x i64>) = G_BUILD_VECTOR %a1:_(i64), %c1:_(i64)
     %zero:_(i64) = G_CONSTANT i64 0
     %add1:_(<2 x i64>) = G_ADD %c, %a
@@ -336,7 +323,6 @@ body:             |
 ...
 ---
 name:   APlusC1MinusC2
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -360,7 +346,6 @@ body:             |
 ...
 ---
 name:   C2MinusAPlusC1
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -384,7 +369,6 @@ body:             |
 ...
 ---
 name:   AMinusC1MinusC2
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -408,7 +392,6 @@ body:             |
 ...
 ---
 name:   C1Minus2MinusC2
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -433,7 +416,6 @@ body:             |
 ...
 ---
 name:   AMinusC2PlusC2
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -457,7 +439,6 @@ body:             |
 ...
 ---
 name:   AMinusBMinusC_oneUse
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -486,7 +467,6 @@ body:             |
 ...
 ---
 name:   AMinusBMinusC_multi
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -516,7 +496,6 @@ body:             |
 ...
 ---
 name:   AMinusBMinusC
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -543,7 +522,6 @@ body:             |
 ...
 ---
 name:   AMinusZeroMinusB
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -568,7 +546,6 @@ body:             |
 ...
 ---
 name:   AMinusZeroMinusB_BV
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -593,7 +570,6 @@ body:             |
 ...
 ---
 name:   AMinusBMinusA
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -614,7 +590,6 @@ body:             |
 ...
 ---
 name:   AMinusBMinusA_BV
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $q0, $q1

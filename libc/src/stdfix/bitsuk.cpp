@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "bitsuk.h"
+#include "src/stdfix/bitsuk.h"
 #include "include/llvm-libc-macros/stdfix-macros.h" // unsigned accum
 #include "include/llvm-libc-types/uint_uk_t.h"      // uint_uk_t
 #include "src/__support/common.h"                   // LLVM_LIBC_FUNCTION

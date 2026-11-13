@@ -29,7 +29,6 @@
 ---
 name:            test_shl_imm_promote_debug
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$w1' }

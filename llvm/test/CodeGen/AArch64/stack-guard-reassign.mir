@@ -9,7 +9,6 @@
 ...
 ---
 name:            main
-tracksRegLiveness: true
 frameInfo:
 # CHECK: stackSize: 544
   stackProtector:  '%stack.0.StackGuardSlot'
