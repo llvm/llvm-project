@@ -224,7 +224,7 @@ uint64_t RISCVRelocationHandler::encodeValue(uint32_t Type, uint64_t Value,
     llvm_unreachable("unsupported relocation");
   case ELF::R_RISCV_32:
   case ELF::R_RISCV_64:
-    break;
+    return Value;
   case ELF::R_RISCV_JAL:
     Value -= PC;
     return (OriginalInst & 0x00000fff) | ((Value & 0x100000) << 11) |
@@ -246,7 +246,6 @@ uint64_t RISCVRelocationHandler::encodeValue(uint32_t Type, uint64_t Value,
            ((Value & 0x18) << 7) | ((Value & 0xc0) >> 1) |
            ((Value & 0x6) << 2) | ((Value & 0x20) >> 3);
   }
-  return Value;
 }
 
 static uint64_t extractUImmRISCV(uint32_t Contents) {

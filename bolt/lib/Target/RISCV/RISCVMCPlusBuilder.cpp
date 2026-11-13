@@ -320,7 +320,7 @@ public:
     // jalr zero, %pcrel_lo(1b)(xi)
     if (Instruction.getOpcode() == RISCV::JALR && Begin != End) {
       MCInst &PrevInst = *std::prev(End);
-      if (isRISCVCall(PrevInst, Instruction) &&
+      if (isRISCVCall(PrevInst, &Instruction) &&
           Instruction.getOperand(0).getReg() == RISCV::X0)
         return IndirectBranchType::POSSIBLE_TAIL_CALL;
     }
@@ -688,13 +688,15 @@ public:
     return false;
   }
 
-  bool isCallAuipc(const MCInst &Inst) const {
-    if (Inst.getOpcode() != RISCV::AUIPC ||
-        MCPlus::getNumPrimeOperands(Inst) != 2 || !Inst.getOperand(0).isReg() ||
-        Inst.getOperand(0).getReg() == RISCV::X0)
+  bool isRISCVCall(const MCInst &First,
+                   const MCInst *Second = nullptr) const override {
+    if (First.getOpcode() != RISCV::AUIPC ||
+        MCPlus::getNumPrimeOperands(First) != 2 ||
+        !First.getOperand(0).isReg() ||
+        First.getOperand(0).getReg() == RISCV::X0)
       return false;
 
-    const auto &ImmOp = Inst.getOperand(1);
+    const auto &ImmOp = First.getOperand(1);
     if (!ImmOp.isExpr())
       return false;
 
@@ -707,24 +709,16 @@ public:
       return false;
     case RISCV::S_CALL_PLT:
     case ELF::R_RISCV_CALL_PLT:
-      return true;
+      return !Second || isValidCallJALR(*Second);
     }
   }
 
-  bool isRISCVCall(const MCInst &First, const MCInst &Second) const override {
-    if (!isCallAuipc(First) || !isValidCallJALR(Second))
-      return false;
-
-    return true;
-  }
-
-  InstructionListType createReferencePatch(const MCInst &Inst,
-                                           const MCInst *NextInst,
-                                           const MCSymbol *Target,
-                                           uint32_t RelType, bool IsLow,
-                                           MCContext *Ctx) const override {
+  InstructionListType
+  createReferencePatch(const MCInst &Inst, const MCInst *NextInst,
+                       const MCSymbol *Target, uint32_t TargetRelType,
+                       bool IsPCRelLow, MCContext *Ctx) const override {
     InstructionListType Patch{Inst};
-    if (NextInst && isRISCVCall(Inst, *NextInst) &&
+    if (NextInst && isRISCVCall(Inst, NextInst) &&
         Inst.getOperand(0).getReg() == NextInst->getOperand(1).getReg()) {
       // Keep the original base and link registers and the return address.
       // HI20/LO12 relocations preserve both instructions during linking.
@@ -738,7 +732,7 @@ public:
       return Patch;
     }
 
-    switch (RelType) {
+    switch (TargetRelType) {
     default:
       return {};
     case ELF::R_RISCV_PCREL_HI20:
@@ -749,14 +743,15 @@ public:
     }
 
     // PCREL_LO12 must keep the symbolizer's label on its AUIPC instruction.
-    if (IsLow)
+    if (IsPCRelLow)
       return Patch;
 
     for (unsigned OpNum = 0; OpNum < MCPlus::getNumPrimeOperands(Inst);
          ++OpNum) {
       if (!Inst.getOperand(OpNum).isExpr())
         continue;
-      setOperandToSymbolRef(Patch.front(), OpNum, Target, 0, Ctx, RelType);
+      setOperandToSymbolRef(Patch.front(), OpNum, Target, 0, Ctx,
+                            TargetRelType);
       return Patch;
     }
     return {};

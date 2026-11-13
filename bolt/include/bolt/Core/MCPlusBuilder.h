@@ -907,22 +907,24 @@ public:
     return false;
   }
 
-  /// Returns true if First/Second is a AUIPC/JALR call pair.
-  virtual bool isRISCVCall(const MCInst &First, const MCInst &Second) const {
+  /// Return true if First is an AUIPC with a symbolic RISC-V call target.
+  /// If Second is provided, also require it to be a valid JALR instruction.
+  virtual bool isRISCVCall(const MCInst &First,
+                           const MCInst *Second = nullptr) const {
     llvm_unreachable("not implemented");
-    return false;
   }
 
-  /// Create an in-place RISC-V reference patch, preserving instruction sizes
-  /// and registers. NextInst, if provided, is the adjacent decoded instruction
-  /// and may be consumed with Inst as a call pair. Return an empty
-  /// sequence if unsupported. For a PCREL_LO12 instruction, IsLow is true and
-  /// RelType is the paired high relocation's type.
-  virtual InstructionListType createReferencePatch(const MCInst &Inst,
-                                                   const MCInst *NextInst,
-                                                   const MCSymbol *Target,
-                                                   uint32_t RelType, bool IsLow,
-                                                   MCContext *Ctx) const {
+  /// Create an in-place RISC-V reference patch containing one or two 4-byte
+  /// instructions, preserving instruction sizes and registers. NextInst, if
+  /// provided, is the adjacent decoded 4-byte instruction and may be consumed
+  /// with Inst as a call pair. Return an empty sequence if unsupported. For a
+  /// PCREL_LO12 instruction, IsPCRelLow is true and TargetRelType is the paired
+  /// high relocation's type. Calls recovered without an input relocation use
+  /// NONE and are identified by their symbolic call expression.
+  virtual InstructionListType
+  createReferencePatch(const MCInst &Inst, const MCInst *NextInst,
+                       const MCSymbol *Target, uint32_t TargetRelType,
+                       bool IsPCRelLow, MCContext *Ctx) const {
     llvm_unreachable("not implemented");
     return {};
   }
