@@ -358,13 +358,13 @@ libc_support_library(
         ":tcb",
         "//libc:config_app_h",
         "//libc:hdr_sys_mman_macros",
-        "//libc:string_memory_utils",
         "//libc/src/__support/OSUtil:syscall",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:exit",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:getrandom",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:mmap",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:munmap",
         "//libc/src/__support/macros:config",
+        "//libc/src/string/memory_utils",
     ],
 )
 

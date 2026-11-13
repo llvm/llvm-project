@@ -18,12 +18,12 @@ libc_function(
     srcs = ["strtoimax.cpp"],
     hdrs = ["strtoimax.h"],
     deps = [
-        "//libc:errno",
         "//libc:hdr_stdint_proxy",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support:str_to_integer",
         "//libc/src/__support/macros:config",
+        "//libc/src/errno",
     ],
 )
 
@@ -32,12 +32,12 @@ libc_function(
     srcs = ["strtoumax.cpp"],
     hdrs = ["strtoumax.h"],
     deps = [
-        "//libc:errno",
         "//libc:hdr_stdint_proxy",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support:str_to_integer",
         "//libc/src/__support/macros:config",
+        "//libc/src/errno",
     ],
 )
 
