@@ -19,6 +19,7 @@
 #include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include <optional>
 
 namespace llvm {
 
@@ -26,6 +27,7 @@ class BatchAAResults;
 class AssumptionCache;
 class DataLayout;
 class DominatorTree;
+class IRBuilderBase;
 class Instruction;
 class LoadInst;
 struct LoadStoreInstProperties;
@@ -238,6 +240,40 @@ struct LinearExpression {
 /// multiple GEPs.
 LLVM_ABI LinearExpression decomposeLinearExpression(const DataLayout &DL,
                                                     Value *Ptr);
+
+/// A helper to analyze a load instruction that loads from a constant global.
+/// Provides an API to iterate the elements of the global.
+class ConstGlobalIterator {
+  const DataLayout &DL;
+  LinearExpression Expr;
+  uint64_t ElementCount;
+  GlobalVariable *GV;
+  Type *EltTy;
+
+  ConstGlobalIterator(const DataLayout &DL, LinearExpression Expr,
+                      uint64_t ArrayElementCount, GlobalVariable *GV,
+                      Type *EltTy)
+      : DL(DL), Expr(Expr), ElementCount(ArrayElementCount), GV(GV),
+        EltTy(EltTy) {}
+
+public:
+  /// Analyze a load instruction to a linear expression that loads from a
+  /// constant global.
+  LLVM_ABI static std::optional<ConstGlobalIterator> fromLoadInst(LoadInst *LI);
+
+  /// Get the element of the global that the load instruction reads when its
+  /// linear expression's index value is the given value.
+  LLVM_ABI Constant *elementAt(uint64_t Idx) const;
+
+  /// Number of elements that can be read from the global.
+  uint64_t size() const { return ElementCount; }
+
+  /// Get the index value of the linear experession that can be compared against
+  /// known index values. E.g. if `elementAt(5)` returns a constant, then the
+  /// load instruction, when the returned value here is '5' reads the same
+  /// constant.
+  LLVM_ABI Value *getIndex(IRBuilderBase &Builder) const;
+};
 }
 
 #endif
