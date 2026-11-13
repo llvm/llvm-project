@@ -493,6 +493,18 @@ __packed_pabs(abs_u64, int64_t, uint64_t)
 #define __riscv_usati_u64(rs1, width) __builtin_riscv_usati_u64(rs1, width)
 #endif
 
+/* Scalar Narrowing Clip */
+__packed_binary_builtin_mixed(nclipu_u32, uint32_t, uint64_t, unsigned,
+                              __builtin_riscv_nclipu_u32)
+__packed_binary_builtin_mixed(nclipru_u32, uint32_t, uint64_t, unsigned,
+                              __builtin_riscv_nclipru_u32)
+__packed_binary_builtin_mixed(nsrar_i32, int32_t, int64_t, unsigned,
+                              __builtin_riscv_nsrar_i32)
+__packed_binary_builtin_mixed(nclip_i32, int32_t, int64_t, unsigned,
+                              __builtin_riscv_nclip_i32)
+__packed_binary_builtin_mixed(nclipr_i32, int32_t, int64_t, unsigned,
+                              __builtin_riscv_nclipr_i32)
+
 /* Scalar Multiply High */
 #define __packed_mulh_builtin(name, res_ty, ty1, ty2)                          \
   static __inline__ res_ty __DEFAULT_FN_ATTRS __riscv_##name(ty1 __rs1,        \
@@ -995,6 +1007,61 @@ __packed_unzipe2(punzipe_i16x2, int16x2_t, int16x4_t)
 __packed_unzipo2(punzipo_i16x2, int16x2_t, int16x4_t)
 __packed_unzipe2(punzipe_u16x2, uint16x2_t, uint16x4_t)
 __packed_unzipo2(punzipo_u16x2, uint16x2_t, uint16x4_t)
+
+#if __riscv_xlen == 64
+/* Scalar Zip/Unzip */
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_zip8p_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint8x8_t)__rs1,
+                                           (uint8x8_t)__rs2, 0, 8, 1, 9, 2, 10,
+                                           3, 11);
+}
+
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_zip16p_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint16x4_t)__rs1,
+                                           (uint16x4_t)__rs2, 0, 4, 1, 5);
+}
+
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_zip8hp_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint8x8_t)__rs1,
+                                           (uint8x8_t)__rs2, 4, 12, 5, 13, 6,
+                                           14, 7, 15);
+}
+
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_zip16hp_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint16x4_t)__rs1,
+                                           (uint16x4_t)__rs2, 2, 6, 3, 7);
+}
+
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_unzip8p_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint8x8_t)__rs1,
+                                           (uint8x8_t)__rs2, 0, 2, 4, 6, 8, 10,
+                                           12, 14);
+}
+
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_unzip16p_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint16x4_t)__rs1,
+                                           (uint16x4_t)__rs2, 0, 2, 4, 6);
+}
+
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_unzip8hp_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint8x8_t)__rs1,
+                                           (uint8x8_t)__rs2, 1, 3, 5, 7, 9, 11,
+                                           13, 15);
+}
+
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_unzip16hp_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint16x4_t)__rs1,
+                                           (uint16x4_t)__rs2, 1, 3, 5, 7);
+}
+#endif
 
 /* Packed Pair (32-bit) */
 __packed_pair_ee4(ppaire_i8x4, int8x4_t)
