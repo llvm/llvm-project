@@ -6,14 +6,12 @@
 // RUN: %clang_cc1 -x c++ -std=c++26 -triple x86_64-unknown-unknown -include-pch %t -ast-dump-all /dev/null \
 // RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//"
 
-#if 0 // Disabled until we support iterating expansion statements.
 template <typename T, __SIZE_TYPE__ size>
 struct Array {
   T data[size]{};
   constexpr const T* begin() const { return data; }
   constexpr const T* end() const { return data + size; }
 };
-#endif // 0
 
 void foo(int);
 
@@ -26,16 +24,13 @@ void test(T t) {
     foo(x);
   }
 
-#if 0 // Disabled until we support iterating expansion statements.
-  // NOTE: Remove 'DISABLED-' when the '#if 0' is removed.
-  // DISABLED-CHECK:      CXXExpansionStmtDecl
-  // DISABLED-CHECK-NEXT:   CXXExpansionStmtPattern {{.*}} iterating
-  // DISABLED-CHECK:        CXXExpansionStmtInstantiation
+  // CHECK:      CXXExpansionStmtDecl
+  // CHECK-NEXT:   CXXExpansionStmtPattern {{.*}} iterating
+  // CHECK:        CXXExpansionStmtInstantiation
   static constexpr Array<int, 3> a;
   template for (auto x : a) {
     foo(x);
   }
-#endif
 
   // CHECK:      CXXExpansionStmtDecl
   // CHECK-NEXT:   CXXExpansionStmtPattern {{.*}} destructuring
