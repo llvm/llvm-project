@@ -7648,7 +7648,7 @@ void llvm::UpgradeSectionAttributes(Module &M) {
   }
 }
 
-void llvm::UpgradeAliasScopes(Module &M) {
+void llvm::UpgradeInstructionMetadata(Module &M) {
   DenseMap<MDNode *, MDNode *> UpgradedAliasScopes;
 
   for (Function &F : M)

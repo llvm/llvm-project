@@ -78,10 +78,11 @@ namespace llvm {
 
   LLVM_ABI void UpgradeSectionAttributes(Module &M);
 
-  /// Discover all alias scope lists used by !alias.scope or !noalias metadata,
-  /// or the llvm.experimental.noalias.scope.decl intrinsic, and upgrade them
-  /// using \ref UpgradeAliasScopeList.
-  LLVM_ABI void UpgradeAliasScopes(Module &M);
+  /// Discover metadata used by instructions in this module, and apply the
+  /// suitable upgrade. Alias scope lists used by !alias.scope or !noalias
+  /// annotations, or by llvm.experimental.noalias.scope.decl intrinsics, are
+  /// upgraded using \ref UpgradeAliasScopeList.
+  LLVM_ABI void UpgradeInstructionMetadata(Module &M);
 
   /// Correct any IR that is relying on old function attribute behavior.
   LLVM_ABI void UpgradeFunctionAttributes(Function &F);
