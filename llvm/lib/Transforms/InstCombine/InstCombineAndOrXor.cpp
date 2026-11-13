@@ -3556,9 +3556,11 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
     }
   }
 
-  if (Value *V = foldAndOfMaskedICmpEqAndICmp(
-          PredL, LHS0, LHS1, LHSOneUse, PredR, RHS0, RHS1, RHSOneUse, Builder))
-    return V;
+  if (IsAnd)
+    if (Value *V =
+            foldAndOfMaskedICmpEqAndICmp(PredL, LHS0, LHS1, LHSOneUse, PredR,
+                                         RHS0, RHS1, RHSOneUse, Builder))
+      return V;
 
   if (Value *V = foldAndOrOfICmpEqConstantAndICmp(PredL, LHS0, LHS1, LHSOneUse,
                                                   PredR, RHS0, RHS1, RHSOneUse,

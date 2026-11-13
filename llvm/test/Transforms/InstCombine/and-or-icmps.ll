@@ -3910,3 +3910,18 @@ define i1 @and_masked_icmp_eq_and_const_icmp_3(i8 %x) {
   %and = and i1 %icmp, %eq
   ret i1 %and
 }
+
+define i1 @and_masked_icmp_eq_and_const_icmp_4(i8 %x) {
+; CHECK-LABEL: @and_masked_icmp_eq_and_const_icmp_4(
+; CHECK-NEXT:    [[MASKED:%.*]] = and i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i8 [[MASKED]], 1
+; CHECK-NEXT:    [[ULE:%.*]] = icmp ult i8 [[X]], 9
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[EQ]], [[ULE]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %masked = and i8 %x, 7
+  %eq = icmp eq i8 %masked, 1
+  %ule = icmp ule i8 %x, 8
+  %or = or i1 %eq, %ule
+  ret i1 %or
+}
