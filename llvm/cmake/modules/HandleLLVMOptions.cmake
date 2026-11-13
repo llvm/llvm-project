@@ -259,7 +259,7 @@ else()
   MESSAGE(SEND_ERROR "Unable to determine platform")
 endif()
 
-if (CMAKE_SYSTEM_NAME MATCHES "OS390")
+if (CMAKE_SYSTEM_NAME STREQUAL "OS390")
   set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
 endif()
 
