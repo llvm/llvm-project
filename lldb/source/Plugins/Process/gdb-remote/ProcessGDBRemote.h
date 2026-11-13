@@ -306,6 +306,28 @@ protected:
   typedef std::vector<std::pair<lldb::tid_t, int>> tid_sig_collection;
   typedef std::map<lldb::addr_t, lldb::addr_t> MMapMap;
   typedef std::map<uint32_t, std::string> ExpeditedRegisterMap;
+
+  /// A "jstopinfo" or "jThreadsInfo" reply, indexed by thread ID.
+  class ThreadInfos {
+  public:
+    /// Index \a json_sp, which must not be null, by thread ID. The index is
+    /// empty if the reply is not an array of thread dictionaries.
+    explicit ThreadInfos(StructuredData::ObjectSP json_sp);
+
+    /// The reply as an array, or null if it is not one.
+    StructuredData::Array *GetArray() const { return m_json_sp->GetAsArray(); }
+
+    /// The dictionary of thread \a tid, or null if the reply has none.
+    StructuredData::Dictionary *FindThread(lldb::tid_t tid) const;
+
+  private:
+    StructuredData::ObjectSP m_json_sp;
+    /// Each thread's dictionary in m_json_sp, by thread ID.
+    std::unordered_map<lldb::tid_t, StructuredData::Dictionary *>
+        m_thread_dicts;
+  };
+  using ThreadInfosSP = std::shared_ptr<const ThreadInfos>;
+
   tid_collection m_thread_ids; // Thread IDs for all threads. This list gets
                                // updated after stopping
   std::vector<lldb::addr_t> m_thread_pcs;     // PC values for all the threads.
@@ -317,10 +339,10 @@ protected:
   /// takes the real thread list mutex, which a reader may already hold.
   /// @{
   /// Stop info for the threads that have one, from a stop reply's "jstopinfo".
-  Guarded<StructuredData::ObjectSP, std::mutex> m_jstopinfo;
+  Guarded<ThreadInfosSP, std::mutex> m_jstopinfo;
   /// Full stop info, expedited registers and memory for all threads, from the
   /// "jThreadsInfo" packet.
-  Guarded<StructuredData::ObjectSP, std::mutex> m_jthreadsinfo;
+  Guarded<ThreadInfosSP, std::mutex> m_jthreadsinfo;
   /// @}
   /// Shared cache image list from the "jGetSharedCacheInfo" packet.
   Guarded<StructuredData::ObjectSP, std::mutex> m_shared_cache_info;
@@ -405,9 +427,14 @@ protected:
 
   lldb::StateType SetThreadStopInfo(StringExtractor &stop_packet);
 
-  bool
-  GetThreadStopInfoFromJSON(ThreadGDBRemote *thread,
-                            const StructuredData::ObjectSP &thread_infos_sp);
+  bool GetThreadStopInfoFromJSON(ThreadGDBRemote *thread,
+                                 const ThreadInfosSP &thread_infos_sp);
+
+  /// Index a "jstopinfo" or "jThreadsInfo" reply by thread ID.
+  ///
+  /// \return
+  ///     Null if \a json_sp is null. Otherwise the indexed reply.
+  static ThreadInfosSP IndexThreadInfos(StructuredData::ObjectSP json_sp);
 
   /// Set the stop info of the thread that \a thread_dict describes.
   ///
