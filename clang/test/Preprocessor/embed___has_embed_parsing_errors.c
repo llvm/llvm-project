@@ -243,6 +243,17 @@
 #if __has_embed (__FILE__ limit(-1))
 #endif
 
+// An invalid parameter at eod must not discard the following #endif.
+// expected-error@+2 {{invalid value '-1'; must be positive}} \
+   expected-error@+2 {{expected value in expression}}
+#if __has_embed(__FILE__ limit(-1)
+#endif
+
+// expected-error@+2 {{'defined' cannot appear within this context}} \
+   expected-error@+2 {{expected value in expression}}
+#if __has_embed(__FILE__ limit(defined(X))
+#endif
+
 // expected-error@+2 {{invalid value '-100000000000000000'; must be positive}}\
    expected-error@+2 {{expected value in expression}}
 #if __has_embed (__FILE__ limit(-100000000000000000)) != __STDC_EMBED_NOT_FOUND__

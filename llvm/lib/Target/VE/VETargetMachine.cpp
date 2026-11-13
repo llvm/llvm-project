@@ -110,11 +110,11 @@ void VEPassConfig::addIRPasses() {
 }
 
 bool VEPassConfig::addInstSelector() {
-  addPass(createVEISelDag(getVETargetMachine()));
+  addPass(createVEDAGToDAGISelLegacyPass(getVETargetMachine()));
   return false;
 }
 
 void VEPassConfig::addPreEmitPass() {
   // LVLGen should be called after scheduling and register allocation
-  addPass(createLVLGenPass());
+  addPass(createVELVLGenLegacyPass());
 }

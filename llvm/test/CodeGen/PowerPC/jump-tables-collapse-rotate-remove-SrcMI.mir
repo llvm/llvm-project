@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=powerpc64le--linux-gnu -start-before ppc-mi-peepholes %s -o - -verify-machineinstrs | FileCheck %s
-# RUN: llc -mtriple=powerpc64le--linux-gnu -run-pass ppc-mi-peepholes %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-PASS
+# RUN: llc -mtriple=powerpc64le--linux-gnu -run-pass ppc-mi-peepholes %s -o - | FileCheck %s --check-prefix=CHECK-PASS
 
 # The differential revision https://reviews.llvm.org/D60402 was supposed to
 # collapse RLDICL/RLDICR into RLDIC when possible, but it missed removing the

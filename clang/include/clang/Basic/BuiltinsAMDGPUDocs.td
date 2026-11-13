@@ -614,28 +614,40 @@ Requires target feature ``wmma-f4-insts`` and wave32.
 
 def DocCatAVLoadStore : DocumentationCategory<"Available/Visible Memory Access Builtins"> {
   let Content = [{
-These builtins perform 128-bit global or flat memory loads and stores with
-available/visible (AV) semantics.
+These builtins perform global or flat memory loads and
+stores with available/visible (AV) semantics.
 }];
 }
 
-def DocAVLoadB128 : Documentation {
+class DocAVLoadBase<string width> : Documentation {
   let Category = DocCatAVLoadStore;
-  let Content = [{
-Loads 128 bits (4 x i32) from the pointer ``ptr``. The pointer must be in
-the global or generic address space. The ``scope`` argument specifies the
-synchronization scope using a ``__MEMORY_SCOPE_*`` constant.
-}];
+  let Content = !strconcat("\nLoads ", width, [{ bits from the pointer ``ptr``.
+The pointer must be in the global or generic address space. The ``scope``
+argument specifies the synchronization scope using a ``__MEMORY_SCOPE_*``
+constant.
+}]);
 }
 
-def DocAVStoreB128 : Documentation {
+def DocAVLoadB8   : DocAVLoadBase<"8">;
+def DocAVLoadB16  : DocAVLoadBase<"16">;
+def DocAVLoadB32  : DocAVLoadBase<"32">;
+def DocAVLoadB64  : DocAVLoadBase<"64">;
+def DocAVLoadB128 : DocAVLoadBase<"128">;
+
+class DocAVStoreBase<string width> : Documentation {
   let Category = DocCatAVLoadStore;
-  let Content = [{
-Stores 128 bits (4 x i32) of ``data`` to the pointer ``ptr``. The pointer
-must be in the global or generic address space. The ``scope`` argument
-specifies the synchronization scope using a ``__MEMORY_SCOPE_*`` constant.
-}];
+  let Content = !strconcat("\nStores ", width, [{ bits of ``data`` to the pointer
+``ptr``. The pointer must be in the global or generic address space. The
+``scope`` argument specifies the synchronization scope using a
+``__MEMORY_SCOPE_*`` constant.
+}]);
 }
+
+def DocAVStoreB8   : DocAVStoreBase<"8">;
+def DocAVStoreB16  : DocAVStoreBase<"16">;
+def DocAVStoreB32  : DocAVStoreBase<"32">;
+def DocAVStoreB64  : DocAVStoreBase<"64">;
+def DocAVStoreB128 : DocAVStoreBase<"128">;
 
 //===----------------------------------------------------------------------===//
 // Wave Data Exchange Builtins

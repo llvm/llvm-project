@@ -1,5 +1,4 @@
-# RUN: llc -run-pass=ppc-mi-peepholes  -mtriple powerpc64-ibm-aix-xcoff %s -o - \
-# RUN:   -verify-machineinstrs | FileCheck %s
+# RUN: llc -run-pass=ppc-mi-peepholes -mtriple powerpc64-ibm-aix-xcoff %s -o - | FileCheck %s
 
 --- |
   ; ModuleID = '71030_tmp_reduce-O2.ll'

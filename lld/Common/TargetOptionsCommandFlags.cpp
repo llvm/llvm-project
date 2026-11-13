@@ -12,8 +12,13 @@
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
-llvm::TargetOptions lld::initTargetOptionsFromCodeGenFlags() {
-  return llvm::codegen::InitTargetOptionsFromCodeGenFlags(llvm::Triple());
+llvm::TargetOptions
+lld::getTargetOptions(const llvm::cl::LibraryOptionsContext &libraryOptions) {
+  return llvm::codegen::getTargetOptions(libraryOptions, llvm::Triple());
+}
+
+llvm::ArrayRef<const llvm::cl::LibraryOptions *> lld::getToolOptions() {
+  return llvm::codegen::getToolOptions();
 }
 
 std::optional<llvm::Reloc::Model> lld::getRelocModelFromCMModel() {

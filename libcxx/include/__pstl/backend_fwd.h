@@ -48,27 +48,14 @@ template <class... _Backends>
 struct __backend_configuration;
 
 struct __default_backend_tag;
-struct __libdispatch_backend_tag;
 struct __serial_backend_tag;
-struct __std_thread_backend_tag;
 struct __statpart_backend_tag;
 
-#  if defined(_LIBCPP_PSTL_BACKEND_SERIAL)
-using __current_configuration _LIBCPP_NODEBUG = __backend_configuration<__serial_backend_tag, __default_backend_tag>;
-#  elif defined(_LIBCPP_PSTL_BACKEND_STD_THREAD)
-using __current_configuration _LIBCPP_NODEBUG =
-    __backend_configuration<__std_thread_backend_tag, __default_backend_tag, __serial_backend_tag>;
-#  elif defined(_LIBCPP_PSTL_BACKEND_LIBDISPATCH)
-using __current_configuration _LIBCPP_NODEBUG =
-    __backend_configuration<__libdispatch_backend_tag, __default_backend_tag, __serial_backend_tag>;
-#  elif defined(_LIBCPP_PSTL_BACKEND_STATPART)
+#  if _LIBCPP_HAS_THREADS
 using __current_configuration _LIBCPP_NODEBUG =
     __backend_configuration<__statpart_backend_tag, __default_backend_tag, __serial_backend_tag>;
-#  else
-
-// ...New vendors can add parallel backends here...
-
-#    error "Invalid PSTL backend configuration"
+#  else // ...New vendors can add parallel backends here...
+using __current_configuration _LIBCPP_NODEBUG = __backend_configuration<__serial_backend_tag, __default_backend_tag>;
 #  endif
 
 template <class _Backend, class _ExecutionPolicy>
@@ -227,6 +214,25 @@ struct __includes;
 //                                _Compare __comp) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __inclusive_scan;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2,
+//                          class _BinaryOperation>
+// optional<_ForwardIterator2>
+// operator()(_Policy&&, _ForwardIterator1 __first, _ForwardIterator1 __last,
+//                       _ForwardIterator2 __result,
+//                       _BinaryOperation __reduce) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __inclusive_scan_init;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2,
+//                          class _BinaryOperation, class _Tp>
+// optional<_ForwardIterator2>
+// operator()(_Policy&&, _ForwardIterator1 __first, _ForwardIterator1 __last,
+//                       _ForwardIterator2 __result,
+//                       _BinaryOperation __reduce,
+//                       _Tp __value) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __is_heap;
 // template <class _Policy, class _RandomAccessIterator, class _Comp>
 // optional<bool>
@@ -318,6 +324,21 @@ struct __none_of;
 // template <class _Policy, class _ForwardIterator, class _Predicate>
 // optional<bool>
 // operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __partition;
+// template <class _Policy, class _ForwardIterator, class _Predicate>
+// optional<_ForwardIterator>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __partition_copy;
+// template <class _Policy, class _ForwardIterator,
+//           class _ForwardOutIterator1, class _ForwardOutIterator2, class _Predicate>
+// optional<pair<_ForwardOutIterator1, _ForwardOutIterator2>>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last,
+//                                _ForwardOutIterator1 __out_true, _ForwardOutIterator2 __out_false,
+//                                _Predicate __pred) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
 struct __reduce;
@@ -435,6 +456,13 @@ struct __sort;
 // operator()(_Policy&&, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __stable_partition;
+// template <class _Policy, class _BidirectionalIterator, class _Predicate>
+// optional<_BidirectionalIterator>
+// operator()(_Policy&& __policy, _BidirectionalIterator __first, _BidirectionalIterator __last, _Predicate __pred)
+// const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __stable_sort;
 // template <class _Policy, class _RandomAccessIterator, class _Comp>
 // optional<__empty>
@@ -465,6 +493,27 @@ struct __transform_binary;
 //                       _ForwardIterator2 __first2,
 //                       _ForwardOutIterator __result,
 //                       _BinaryOperation __op) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __transform_inclusive_scan;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2,
+//                          class _BinaryOperation, class _UnaryOperation>
+// optional<_ForwardIterator2>
+// operator()(_Policy&&, _ForwardIterator1 __first, _ForwardIterator1 __last,
+//                       _ForwardIterator2 __result,
+//                       _BinaryOperation __reduce,
+//                       _UnaryOperation __transform) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __transform_inclusive_scan_init;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2,
+//                          class _BinaryOperation, class _UnaryOperation, class _Tp>
+// optional<_ForwardIterator2>
+// operator()(_Policy&&, _ForwardIterator1 __first, _ForwardIterator1 __last,
+//                       _ForwardIterator2 __result,
+//                       _BinaryOperation __reduce,
+//                       _UnaryOperation __transform,
+//                       _Tp __init) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
 struct __transform_reduce;

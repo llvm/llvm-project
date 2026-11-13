@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -76,8 +77,6 @@
 using namespace llvm;
 using namespace dwarf;
 
-extern cl::opt<bool> PreserveHotDataSectionPrefix;
-
 static cl::opt<bool> JumpTableInFunctionSection(
     "jumptable-in-function-section", cl::Hidden, cl::init(false),
     cl::desc("Putting Jump Table in function section"));
@@ -99,13 +98,14 @@ static void GetObjCImageInfo(const Module &M, unsigned &Version,
                Key == "Objective-C GC Only" ||
                Key == "Objective-C Is Simulated" ||
                Key == "Objective-C Class Properties" ||
+               Key == "Objective-C Enforce ClassRO Pointer Signing" ||
                Key == "Objective-C Image Swift Version") {
       Flags |= mdconst::extract<ConstantInt>(MFE.Val)->getZExtValue();
     } else if (Key == "Objective-C Image Info Section") {
       Section = cast<MDString>(MFE.Val)->getString();
     }
-    // Backend generates L_OBJC_IMAGE_INFO from Swift ABI version + major + minor +
-    // "Objective-C Garbage Collection".
+    // Backend generates L_OBJC_IMAGE_INFO from Swift ABI version + major +
+    // minor + "Objective-C Garbage Collection".
     else if (Key == "Swift ABI Version") {
       Flags |= (mdconst::extract<ConstantInt>(MFE.Val)->getZExtValue()) << 8;
     } else if (Key == "Swift Major Version") {
@@ -687,7 +687,8 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
         raw_svector_ostream(SectionPrefix) << ".unlikely";
         break;
       case MachineFunctionDataHotness::Hot: {
-        if (PreserveHotDataSectionPrefix)
+        if (StaticDataProfileInfo::shouldPreserveHotDataSectionPrefix(
+                GO->getContext()))
           raw_svector_ostream(SectionPrefix) << ".hot";
         break;
       }
@@ -709,7 +710,9 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
         Kind.isBSS()) {
       AddSectionPrefix =
           TM.getEnableStaticDataPartitioning() &&
-          (!SectionPrefix.starts_with(".hot") || PreserveHotDataSectionPrefix);
+          (!SectionPrefix.starts_with(".hot") ||
+           StaticDataProfileInfo::shouldPreserveHotDataSectionPrefix(
+               GO->getContext()));
     }
 
     if (AddSectionPrefix) {
@@ -2151,10 +2154,6 @@ MCSection *TargetLoweringObjectFileCOFF::getStaticDtorSection(
 const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(
     const GlobalValue *LHS, const GlobalValue *RHS, int64_t Addend,
     std::optional<int64_t> PCRelativeOffset, const TargetMachine &TM) const {
-  const Triple &T = LHS->getParent()->getTargetTriple();
-  if (T.isOSCygMing())
-    return nullptr;
-
   // Our symbols should exist in address space zero, cowardly no-op if
   // otherwise.
   if (LHS->getType()->getPointerAddressSpace() != 0 ||

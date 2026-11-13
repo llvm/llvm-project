@@ -318,6 +318,11 @@ const AMDGPUFeatureBitset &AMDGPU::getFeatureBitset(GPUKind AK) {
   return Info ? Info->Features : Empty;
 }
 
+const AMDGPUFeatureBitset &
+AMDGPU::getFeatureBitset(Triple::SubArchType SubArch) {
+  return getFeatureBitset(getGPUKindFromSubArch(SubArch));
+}
+
 const R600FeatureBitset &AMDGPU::getFeatureBitsetR600(GPUKind AK) {
   static constexpr R600FeatureBitset Empty{};
   const R600Info *Info = getR600Info(AK);

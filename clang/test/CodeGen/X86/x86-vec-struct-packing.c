@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -ffreestanding -emit-llvm-only  -triple x86_64-windows-coff -fdump-record-layouts %s | FileCheck %s --check-prefix=CHECK-MS
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -ffreestanding -emit-llvm-only  -triple x86_64-windows-coff -fdump-record-layouts %s | FileCheck %s --check-prefix=CHECK-MS %}
 // RUN: %clang_cc1 -ffreestanding -emit-llvm-only  -triple x86_64-apple-darwin -fdump-record-layouts %s | FileCheck %s --check-prefix=CHECK-NOTMS
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -ffreestanding -emit-llvm-only  -triple x86_64-apple-darwin -fdump-record-layouts %s | FileCheck %s --check-prefix=CHECK-NOTMS %}
 #include <x86intrin.h>
 
 #pragma pack(1)

@@ -12,7 +12,6 @@
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/FormattedStream.h"
 
@@ -39,7 +38,6 @@ Error DwarfEmitterImpl::init(Triple TheTriple,
                              "no register info for target %s",
                              TripleName.c_str());
 
-  MCOptions = mc::InitMCTargetOptionsFromFlags();
   MCOptions.AsmVerbose = true;
   MCOptions.MCUseDwarfDirectory = MCTargetOptions::EnableDwarfDirectory;
   MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));

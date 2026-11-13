@@ -55,11 +55,8 @@ namespace llvm {
 
 class BasicBlock;
 class DominatorTree;
-class InnerLoopVectorizer;
-class IRBuilderBase;
 struct VPTransformState;
 class raw_ostream;
-class RecurrenceDescriptor;
 class SCEV;
 class SCEVPredicate;
 class Type;
@@ -70,7 +67,6 @@ using VPBuilder = VPBuilderBase<>;
 class VPDominatorTree;
 class VPRegionBlock;
 class VPlan;
-class VPLane;
 class VPReplicateRecipe;
 class Value;
 class LoopVectorizationCostModel;
@@ -400,14 +396,12 @@ protected:
 /// recipes must inherit from VPSingleDef instead of inheriting from both
 /// VPRecipeBase and VPValue separately.
 class LLVM_ABI_FOR_TEST VPRecipeBase
-    : public ilist_node_with_parent<VPRecipeBase, VPBasicBlock>,
+    : public ilist_node_with_parent<VPRecipeBase, VPBasicBlock,
+                                    ilist_parent<VPBasicBlock>>,
       public VPDef,
       public VPUser {
   friend VPBasicBlock;
   friend class VPBlockUtils;
-
-  /// Each VPRecipe belongs to a single VPBasicBlock.
-  VPBasicBlock *Parent = nullptr;
 
   /// The debug location for the recipe.
   DebugLoc DL;
@@ -456,12 +450,13 @@ public:
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
     VPReductionPHISC,
+    VPConditionalInductionPHISC,
     // END: SubclassID for recipes that inherit VPHeaderPHIRecipe
     // END: Phi-like recipes
     VPFirstPHISC = VPWidenPHISC,
     VPFirstHeaderPHISC = VPCurrentIterationPHISC,
-    VPLastHeaderPHISC = VPReductionPHISC,
-    VPLastPHISC = VPReductionPHISC,
+    VPLastHeaderPHISC = VPConditionalInductionPHISC,
+    VPLastPHISC = VPConditionalInductionPHISC,
   };
 
   VPRecipeBase(VPRecipeTy SC, ArrayRef<VPValue *> Operands,
@@ -473,9 +468,9 @@ public:
   /// Clone the current recipe.
   virtual VPRecipeBase *clone() = 0;
 
-  /// \return the VPBasicBlock which this VPRecipe belongs to.
-  VPBasicBlock *getParent() { return Parent; }
-  const VPBasicBlock *getParent() const { return Parent; }
+  /// The list type holding the recipes of a VPBasicBlock. Each node, including
+  /// the sentinel, stores its parent VPBasicBlock.
+  using RecipeListTy = iplist<VPRecipeBase, ilist_parent<VPBasicBlock>>;
 
   /// \return the VPRegionBlock which the recipe belongs to.
   VPRegionBlock *getRegion();
@@ -493,9 +488,8 @@ public:
   /// Insert an unlinked recipe into a basic block immediately before
   /// the specified recipe.
   void insertBefore(VPRecipeBase *InsertPos);
-  /// Insert an unlinked recipe into \p BB immediately before the insertion
-  /// point \p IP;
-  void insertBefore(VPBasicBlock &BB, iplist<VPRecipeBase>::iterator IP);
+  /// Insert an unlinked recipe immediately before the insertion point \p IP.
+  void insertBefore(RecipeListTy::iterator IP);
 
   /// Insert an unlinked Recipe into a basic block immediately after
   /// the specified Recipe.
@@ -505,10 +499,8 @@ public:
   /// the VPBasicBlock that MovePos lives in, right after MovePos.
   void moveAfter(VPRecipeBase *MovePos);
 
-  /// Unlink this recipe and insert into BB before I.
-  ///
-  /// \pre I is a valid iterator into BB.
-  void moveBefore(VPBasicBlock &BB, iplist<VPRecipeBase>::iterator I);
+  /// Unlink this recipe and insert it before \p I.
+  void moveBefore(RecipeListTy::iterator I);
 
   /// This method unlinks 'this' from the containing basic block, but does not
   /// delete it.
@@ -517,7 +509,7 @@ public:
   /// This method unlinks 'this' from the containing basic block and deletes it.
   ///
   /// \returns an iterator pointing to the element after the erased one
-  iplist<VPRecipeBase>::iterator eraseFromParent();
+  RecipeListTy::iterator eraseFromParent();
 
   /// \return an ID for the concrete type of this object.
   VPRecipeTy getVPRecipeID() const { return SubclassID; }
@@ -646,6 +638,7 @@ public:
     case VPRecipeBase::VPReductionPHISC:
     case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
+    case VPRecipeBase::VPConditionalInductionPHISC:
       return true;
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPInterleaveEVLSC:
@@ -1484,7 +1477,12 @@ private:
 
   /// Returns true if the VPInstruction does not need masking.
   bool alwaysUnmasked() const {
-    if (Opcode == VPInstruction::MaskedCond)
+    assert(Opcode != VPInstruction::MaskedCond &&
+           "Should be expanded in VPlanPredicator");
+
+    // These VPInstruction can be (optionally) masked.
+    if (Opcode == VPInstruction::WideVectorLoad ||
+        Opcode == VPInstruction::WideVectorStore)
       return false;
 
     // For now only VPInstructions with underlying values use masks.
@@ -1495,6 +1493,12 @@ private:
     return Instruction::isCast(Opcode) || Opcode == Instruction::PHI ||
            Opcode == Instruction::GetElementPtr ||
            Opcode == Instruction::ExtractValue;
+  }
+
+  /// Returns true if this is an abstract instruction that can't be executed.
+  bool isAbstract() const {
+    return isMasked() && Opcode != VPInstruction::WideVectorLoad &&
+           Opcode != VPInstruction::WideVectorStore;
   }
 
 public:
@@ -1525,9 +1529,6 @@ public:
   /// ExtractLastActive, FirstActiveLane, LastActiveLane.
   void addOperand(VPValue *Op);
 
-  /// Generate the instruction.
-  /// TODO: We currently execute only per-part unless a specific instance is
-  /// provided.
   void execute(VPTransformState &State) override;
 
   /// Return the cost of this VPInstruction.
@@ -1539,30 +1540,7 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 #endif
 
-  bool hasResult() const {
-    // CallInst may or may not have a result, depending on the called function.
-    // Conservatively return calls have results for now.
-    switch (getOpcode()) {
-    case Instruction::Ret:
-    case Instruction::UncondBr:
-    case Instruction::CondBr:
-    case Instruction::Store:
-    case Instruction::Switch:
-    case Instruction::IndirectBr:
-    case Instruction::Resume:
-    case Instruction::CatchRet:
-    case Instruction::Unreachable:
-    case Instruction::Fence:
-    case Instruction::AtomicRMW:
-    case VPInstruction::BranchOnCond:
-    case VPInstruction::BranchOnTwoConds:
-    case VPInstruction::BranchOnCount:
-    case VPInstruction::WideVectorStore:
-      return false;
-    default:
-      return true;
-    }
-  }
+  bool hasResult() const { return !getScalarType()->isVoidTy(); }
 
   /// Returns true if the VPInstruction has a mask operand.
   bool isMasked() const {
@@ -3013,6 +2991,61 @@ protected:
 #endif
 };
 
+/// A recipe for handling scalar conditional induction PHIs. The start value is
+/// the first operand of the recipe and the incoming value from the backedge is
+/// the second operand.
+class VPConditionalInductionPHIRecipe : public VPHeaderPHIRecipe {
+  const SCEV *StepSCEV = nullptr;
+
+public:
+  VPConditionalInductionPHIRecipe(PHINode &Phi, VPValue &Start,
+                                  VPValue &BackedgeValue, const SCEV *StepSCEV)
+      : VPHeaderPHIRecipe(VPRecipeBase::VPConditionalInductionPHISC, &Phi,
+                          &Start, Start.getScalarType()),
+        StepSCEV(StepSCEV) {
+    addOperand(&BackedgeValue);
+  }
+
+  ~VPConditionalInductionPHIRecipe() override = default;
+
+  /// Returns the underlying PHINode.
+  PHINode *getPHINode() const { return cast<PHINode>(getUnderlyingValue()); }
+
+  /// Returns the conditional induction step SCEV expression.
+  const SCEV *getStepSCEV() const { return StepSCEV; }
+
+  VPConditionalInductionPHIRecipe *clone() override {
+    return new VPConditionalInductionPHIRecipe(
+        *getPHINode(), *getStartValue(), *getBackedgeValue(), getStepSCEV());
+  }
+
+  VP_CLASSOF_IMPL(VPRecipeBase::VPConditionalInductionPHISC)
+
+  static inline bool classof(const VPHeaderPHIRecipe *R) {
+    return R->getVPRecipeID() == VPRecipeBase::VPConditionalInductionPHISC;
+  }
+
+  void execute(VPTransformState &) override {
+    llvm_unreachable("must be expanded before final execute");
+  }
+
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
+};
+
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select
 /// instructions.
 class LLVM_ABI_FOR_TEST VPBlendRecipe : public VPRecipeWithIRFlags {
@@ -3833,10 +3866,10 @@ protected:
     IsMasked = true;
   }
 
-  VPWidenMemoryRecipe(Instruction &I, bool Consecutive,
+  VPWidenMemoryRecipe(Instruction &I, Align Alignment, bool Consecutive,
                       const VPIRMetadata &Metadata)
-      : VPIRMetadata(Metadata), Ingredient(I),
-        Alignment(getLoadStoreAlignment(&I)), Consecutive(Consecutive) {}
+      : VPIRMetadata(Metadata), Ingredient(I), Alignment(Alignment),
+        Consecutive(Consecutive) {}
 
 public:
   virtual ~VPWidenMemoryRecipe() = default;
@@ -3876,16 +3909,18 @@ public:
 struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPSingleDefRecipe,
                                                    public VPWidenMemoryRecipe {
   VPWidenLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
-                    bool Consecutive, const VPIRMetadata &Metadata, DebugLoc DL)
+                    bool Consecutive, Align Alignment,
+                    const VPIRMetadata &Metadata, DebugLoc DL)
       : VPSingleDefRecipe(VPRecipeBase::VPWidenLoadSC, {Addr}, Load.getType(),
                           &Load, DL),
-        VPWidenMemoryRecipe(Load, Consecutive, Metadata) {
+        VPWidenMemoryRecipe(Load, Alignment, Consecutive, Metadata) {
     setMask(Mask);
   }
 
   VPWidenLoadRecipe *clone() override {
     return new VPWidenLoadRecipe(cast<LoadInst>(Ingredient), getAddr(),
-                                 getMask(), Consecutive, *this, getDebugLoc());
+                                 getMask(), Consecutive, getAlign(), *this,
+                                 getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenLoadSC);
@@ -3933,7 +3968,8 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadEVLRecipe final
       : VPSingleDefRecipe(VPRecipeBase::VPWidenLoadEVLSC, {Addr, &EVL},
                           L.getIngredient().getType(), &L.getIngredient(),
                           L.getDebugLoc()),
-        VPWidenMemoryRecipe(L.getIngredient(), L.isConsecutive(), L) {
+        VPWidenMemoryRecipe(L.getIngredient(), L.getAlign(), L.isConsecutive(),
+                            L) {
     setMask(Mask);
   }
 
@@ -3981,17 +4017,17 @@ protected:
 struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPRecipeBase,
                                                     public VPWidenMemoryRecipe {
   VPWidenStoreRecipe(StoreInst &Store, VPValue *Addr, VPValue *StoredVal,
-                     VPValue *Mask, bool Consecutive,
+                     VPValue *Mask, bool Consecutive, Align Alignment,
                      const VPIRMetadata &Metadata, DebugLoc DL)
       : VPRecipeBase(VPRecipeBase::VPWidenStoreSC, {Addr, StoredVal}, DL),
-        VPWidenMemoryRecipe(Store, Consecutive, Metadata) {
+        VPWidenMemoryRecipe(Store, Alignment, Consecutive, Metadata) {
     setMask(Mask);
   }
 
   VPWidenStoreRecipe *clone() override {
     return new VPWidenStoreRecipe(cast<StoreInst>(Ingredient), getAddr(),
                                   getStoredValue(), getMask(), Consecutive,
-                                  *this, getDebugLoc());
+                                  getAlign(), *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenStoreSC);
@@ -4038,7 +4074,8 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreEVLRecipe final
                         VPValue *StoredVal, VPValue &EVL, VPValue *Mask)
       : VPRecipeBase(VPRecipeBase::VPWidenStoreEVLSC, {Addr, StoredVal, &EVL},
                      S.getDebugLoc()),
-        VPWidenMemoryRecipe(S.getIngredient(), S.isConsecutive(), S) {
+        VPWidenMemoryRecipe(S.getIngredient(), S.getAlign(), S.isConsecutive(),
+                            S) {
     setMask(Mask);
   }
 
@@ -4424,7 +4461,8 @@ struct CastInfoMixinImpl
 template <>
 struct CastInfo<VPPhiAccessors, VPRecipeBase *>
     : vpdetail::CastInfoMixinImpl<VPPhiAccessors, VPPhi, VPIRPhi,
-                                  VPWidenPHIRecipe, VPHeaderPHIRecipe> {};
+                                  VPWidenPHIRecipe, VPHeaderPHIRecipe,
+                                  VPConditionalInductionPHIRecipe> {};
 
 template <>
 struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
@@ -4497,20 +4535,24 @@ class LLVM_ABI_FOR_TEST VPBasicBlock : public VPBlockBase {
 
   /// Use VPlan::createVPBasicBlock to create VPBasicBlocks.
   VPBasicBlock(const Twine &Name = "", VPRecipeBase *Recipe = nullptr)
-      : VPBlockBase(VPBasicBlockSC, Name.str()) {
+      : VPBasicBlock(VPBasicBlockSC, Name) {
     if (Recipe)
       appendRecipe(Recipe);
   }
 
 public:
-  using RecipeListTy = iplist<VPRecipeBase>;
+  using RecipeListTy = VPRecipeBase::RecipeListTy;
 
 protected:
   /// The VPRecipes held in the order of output instructions to generate.
   RecipeListTy Recipes;
 
   VPBasicBlock(VPBlockTy BlockSC, const Twine &Name = "")
-      : VPBlockBase(BlockSC, Name.str()) {}
+      : VPBlockBase(BlockSC, Name.str()) {
+    // Set the parent of the list's sentinel, so end() iterators know their
+    // block.
+    Recipes.end().getNodePtr()->setParent(this);
+  }
 
 public:
   ~VPBasicBlock() override {
@@ -4560,8 +4602,10 @@ public:
 
   void insert(VPRecipeBase *Recipe, iterator InsertPt) {
     assert(Recipe && "No recipe to append.");
-    assert(!Recipe->Parent && "Recipe already in VPlan");
-    Recipe->Parent = this;
+    assert(!Recipe->getParent() && "Recipe already in VPlan");
+    assert(InsertPt.getNodeParent() == this &&
+           "Insertion position not in this VPBasicBlock");
+    Recipe->setParent(this);
     Recipes.insert(InsertPt, Recipe);
   }
 

@@ -199,6 +199,7 @@ def CMASK32  : VISInstFormat<0b000011111, (outs), (ins I64Regs:$rs2),
 
 def FCHKSM16 : VISInst<0b001000100, "fchksm16">;
 
+let Uses = [FSR], mayRaiseFPException = 1 in {
 def FHADDS   : F3_3<0b10, 0b110100, 0b001100001,
                     (outs FPRegs:$rd), (ins FPRegs:$rs1, FPRegs:$rs2),
                     "fhadds $rs1, $rs2, $rd", []>;
@@ -211,6 +212,8 @@ def FHSUBS   : F3_3<0b10, 0b110100, 0b001100101,
 def FHSUBD   : F3_3<0b10, 0b110100, 0b001100110,
                     (outs DFPRegs:$rd), (ins DFPRegs:$rs1, DFPRegs:$rs2),
                     "fhsubd $rs1, $rs2, $rd", []>;
+} // Uses = [FSR], mayRaiseFPException = 1
+
 def FLCMPS   : VISInstFormat<0b101010001, (outs FCCRegs:$rd),
                      (ins FPRegs:$rs1, FPRegs:$rs2),
                      "flcmps $rd, $rs1, $rs2">;
@@ -220,6 +223,7 @@ def FLCMPD   : VISInstFormat<0b101010010, (outs FCCRegs:$rd),
 
 def FMEAN16  : VISInst<0b001000000, "fmean16">;
 
+let Uses = [FSR], mayRaiseFPException = 1 in {
 def FNADDS   : F3_3<0b10, 0b110100, 0b001010001,
                     (outs FPRegs:$rd), (ins FPRegs:$rs1, FPRegs:$rs2),
                     "fnadds $rs1, $rs2, $rd", []>;
@@ -242,6 +246,7 @@ def FNMULD   : F3_3<0b10, 0b110100, 0b001011010,
 def FNSMULD  : F3_3<0b10, 0b110100, 0b001111001,
                     (outs DFPRegs:$rd), (ins FPRegs:$rs1, FPRegs:$rs2),
                     "fnsmuld $rs1, $rs2, $rd", []>;
+} // Uses = [FSR], mayRaiseFPException = 1
 
 def FPADD64   : VISInst<0b001000010, "fpadd64">;
 

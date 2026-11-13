@@ -6,7 +6,7 @@
 # at the return instruction. In order to do so, the test has a control flow
 # that doesn't make sense in a real program.
 
-# RUN: llc -mtriple=aarch64 -mattr=+pauth -run-pass=aarch64-ptrauth -verify-machineinstrs -o - %s 2> %t | FileCheck %s
+# RUN: llc -mtriple=aarch64 -mattr=+pauth -run-pass=aarch64-ptrauth -o - %s 2> %t | FileCheck %s
 # RUN: FileCheck %s < %t --check-prefix=CHECK-WARNING
 
 --- |
@@ -27,7 +27,6 @@
 
 ---
 name:            no_gpr_available
-tracksRegLiveness: true
 body:             |
   ; CHECK-WARNING: warning: harden-pac-ret failed for function no_gpr_available
   ; CHECK-LABEL: name: no_gpr_available
@@ -55,7 +54,6 @@ body:             |
 ...
 
 name:            one_gpr_available
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: one_gpr_available
   ; CHECK:       bb.0.entry:

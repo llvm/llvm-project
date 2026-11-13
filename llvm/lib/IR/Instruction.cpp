@@ -1183,6 +1183,27 @@ bool Instruction::mayWriteToMemory() const {
   }
 }
 
+bool Instruction::mayReadOrWriteMemory() const {
+  // Keep in sync with mayReadFromMemory and mayWriteToMemory.
+  switch (getOpcode()) {
+  default:
+    return false;
+  case Instruction::VAArg:
+  case Instruction::Load:
+  case Instruction::Store:
+  case Instruction::Fence:
+  case Instruction::AtomicCmpXchg:
+  case Instruction::AtomicRMW:
+  case Instruction::CatchPad:
+  case Instruction::CatchRet:
+    return true;
+  case Instruction::Call:
+  case Instruction::Invoke:
+  case Instruction::CallBr:
+    return !cast<CallBase>(this)->doesNotAccessMemory();
+  }
+}
+
 bool Instruction::isAtomic() const {
   switch (getOpcode()) {
   default:
@@ -1192,9 +1213,9 @@ bool Instruction::isAtomic() const {
   case Instruction::Fence:
     return true;
   case Instruction::Load:
-    return cast<LoadInst>(this)->getOrdering() != AtomicOrdering::NotAtomic;
+    return cast<LoadInst>(this)->isAtomic();
   case Instruction::Store:
-    return cast<StoreInst>(this)->getOrdering() != AtomicOrdering::NotAtomic;
+    return cast<StoreInst>(this)->isAtomic();
   }
 }
 
@@ -1376,12 +1397,9 @@ bool Instruction::isSafeToRemove() const {
 
 bool Instruction::willReturn() const {
   // Volatile operations are not guaranteed to return.
-  if (isVolatile())
-    return false;
-
   if (const auto *CB = dyn_cast<CallBase>(this))
-    return CB->hasFnAttr(Attribute::WillReturn);
-  return true;
+    return CB->hasFnAttr(Attribute::WillReturn) && !isVolatile();
+  return !isVolatile();
 }
 
 bool Instruction::isLifetimeStartOrEnd() const {

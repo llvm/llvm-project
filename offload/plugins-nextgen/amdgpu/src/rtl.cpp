@@ -25,7 +25,6 @@
 #include <unordered_map>
 
 #include "ErrorReporting.h"
-#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
 #include "Shared/RefCnt.h"
@@ -37,7 +36,6 @@
 #include "OffloadAPI.h"
 #include "PluginInterface.h"
 #include "UtilitiesRTL.h"
-#include "omptarget.h"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -293,6 +291,37 @@ static Error iterateAgentMemoryPools(hsa_agent_t Agent, CallbackTy Cb) {
                        "error in hsa_amd_agent_iterate_memory_pools: %s");
 }
 
+/// Get the SDMA engine ID for a mem copy operation from src to dst agent.
+/// Use a round-robin system to target all available engines. Check availability
+/// using hsa_amd_memory_copy_engine_status.
+/// Return nullopt if no available engine ID could be found.
+static std::optional<hsa_amd_sdma_engine_id_t>
+getSdmaEngineId(hsa_agent_t DstAgent, hsa_agent_t SrcAgent) {
+  static std::atomic<uint32_t> NextIdx{0u};
+
+  uint32_t AvailMask;
+  if (hsa_amd_memory_copy_engine_status(DstAgent, SrcAgent, &AvailMask) ||
+      !AvailMask)
+    return std::nullopt;
+
+  // Evaluates to 31, aka 0b11111.
+  constexpr uint32_t ShiftWidthMask = sizeof(uint32_t) * 8 - 1;
+  // The first engine ID we want to check is at NextIdx in the engine mask.
+  uint32_t Start = NextIdx.load(std::memory_order_relaxed);
+  // Inspect the bits starting from this ID.
+  uint32_t FromStart = llvm::rotr(AvailMask, Start);
+  // The first non-zero bit is the index of the next available engine. This
+  // might be in the wrapped-around part of the mask, so we need to do a "modulo
+  // bitwidth", aka & 0b11111. The addition of Start is necessary since we
+  // rotated by that amount.
+  uint32_t Idx = (Start + llvm::countr_zero(FromStart)) & ShiftWidthMask;
+  // The next engine we want to check is at + 1, again wrapped by bitwidth.
+  NextIdx.store((Idx + 1u) & ShiftWidthMask, std::memory_order_relaxed);
+
+  // We now have the *index* of the engine. The ID is the bit set at that index.
+  return static_cast<hsa_amd_sdma_engine_id_t>(1u << Idx);
+}
+
 /// Dispatches an asynchronous memory copy.
 /// Enables different SDMA engines for the dispatch in a round-robin fashion.
 static Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst,
@@ -308,22 +337,17 @@ static Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst,
     return Plugin::check(S, "error in hsa_amd_memory_async_copy: %s");
   }
 
-  static std::atomic<int> SdmaEngine{1};
+  std::optional<hsa_amd_sdma_engine_id_t> SdmaEngine =
+      getSdmaEngineId(DstAgent, SrcAgent);
+  if (!SdmaEngine)
+    return asyncMemCopy(/*UseMultipleSdmaEngines=*/false, Dst, DstAgent, Src,
+                        SrcAgent, Size, NumDepSignals, DepSignals,
+                        CompletionSignal);
 
-  // This atomics solution is probably not the best, but should be sufficient
-  // for now.
-  // In a worst case scenario, in which threads read the same value, they will
-  // dispatch to the same SDMA engine. This may result in sub-optimal
-  // performance. However, I think the possibility to be fairly low.
-  int LocalSdmaEngine = SdmaEngine.load(std::memory_order_acquire);
+  ODBG(OLDT_Tool) << "Running Async Copy on SDMA Engine: " << *SdmaEngine;
   hsa_status_t S = hsa_amd_memory_async_copy_on_engine(
       Dst, DstAgent, Src, SrcAgent, Size, NumDepSignals, DepSignals,
-      CompletionSignal, (hsa_amd_sdma_engine_id_t)LocalSdmaEngine,
-      /*force_copy_on_sdma=*/true);
-  // Increment to use one of two SDMA engines: 0x1, 0x2
-  LocalSdmaEngine = (LocalSdmaEngine << 1) % 3;
-  SdmaEngine.store(LocalSdmaEngine, std::memory_order_relaxed);
-
+      CompletionSignal, *SdmaEngine, /*force_copy_on_sdma=*/true);
   return Plugin::check(S, "error in hsa_amd_memory_async_copy_on_engine: %s");
 }
 
@@ -660,8 +684,7 @@ struct AMDGPUMemoryManagerTy : public DeviceAllocatorTy {
     assert(MemoryManager && "Invalid memory manager");
     assert(PtrStorage && "Invalid pointer storage");
 
-    auto PtrStorageOrErr =
-        MemoryManager->allocate(Size, nullptr, /*Alignment=*/0);
+    auto PtrStorageOrErr = MemoryManager->allocate(Size, /*Alignment=*/0);
     if (!PtrStorageOrErr)
       return PtrStorageOrErr.takeError();
 
@@ -685,11 +708,11 @@ struct AMDGPUMemoryManagerTy : public DeviceAllocatorTy {
 private:
   /// Allocation callback that will be called once the memory manager does not
   /// have more previously allocated buffers.
-  Expected<void *> allocate(size_t Size, void *HstPtr, TargetAllocTy Kind,
+  Expected<void *> allocate(size_t Size, ol_alloc_type_t Kind,
                             size_t Alignment) override;
 
   /// Deallocation callback that will be called by the memory manager.
-  Error free(void *TgtPtr, TargetAllocTy Kind) override {
+  Error free(void *TgtPtr, ol_alloc_type_t Kind) override {
     return MemoryPool->deallocate(TgtPtr);
   }
 
@@ -992,10 +1015,13 @@ struct AMDGPUQueueTy {
   }
 
   /// Returns the number of streams, this queue is currently assigned to.
-  bool getUserCount() const { return NumUsers; }
+  uint32_t getUserCount() const { return NumUsers; }
 
   /// Returns if the underlying HSA queue is initialized.
   bool isInitialized() { return Queue != nullptr; }
+
+  /// Returns the underlying HSA queue.
+  hsa_queue_t *getHsaQueue() const { return Queue; }
 
   /// Decrement user count of the queue object.
   void removeUser() { --NumUsers; }
@@ -2890,6 +2916,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return HardwareParallelism;
   }
 
+  /// See allowsDirectWrite() for the condition a transfer must meet in
+  /// addition.
+  uint64_t getMaxDirectWriteSize() const override {
+    return HostWritesDeviceMemory ? MaxDirectWriteSize : 0;
+  }
+
   /// We want to set up the RPC server for host services to the GPU if it is
   /// available.
   bool shouldSetupRPCServer() const override { return true; }
@@ -2934,26 +2966,27 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Allocate memory on the device or related to the device.
-  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind,
+  Expected<void *> allocate(size_t Size, ol_alloc_type_t Kind,
                             size_t Alignment) override;
 
   /// Deallocate memory on the device or related to the device.
-  Error free(void *TgtPtr, TargetAllocTy Kind) override {
+  Error free(void *TgtPtr, ol_alloc_type_t Kind) override {
     if (TgtPtr == nullptr)
       return Plugin::success();
 
     AMDGPUMemoryPoolTy *MemoryPool = nullptr;
     switch (Kind) {
-    case TARGET_ALLOC_DEFAULT:
-    case TARGET_ALLOC_DEVICE:
+    case OL_ALLOC_TYPE_DEVICE:
       MemoryPool = CoarseGrainedMemoryPools[0];
       break;
-    case TARGET_ALLOC_HOST:
+    case OL_ALLOC_TYPE_HOST:
       MemoryPool = &HostDevice.getFineGrainedMemoryPool();
       break;
-    case TARGET_ALLOC_SHARED:
+    case OL_ALLOC_TYPE_MANAGED:
       MemoryPool = &HostDevice.getFineGrainedMemoryPool();
       break;
+    default:
+      llvm_unreachable("unexpected allocation type");
     }
 
     if (!MemoryPool)
@@ -2962,7 +2995,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // See allocate() for the registration of host / shared memory as pinned
     // memory.
-    if (Kind == TARGET_ALLOC_HOST || Kind == TARGET_ALLOC_SHARED)
+    if (Kind == OL_ALLOC_TYPE_HOST || Kind == OL_ALLOC_TYPE_MANAGED)
       if (auto Err = PinnedAllocs.unregisterHostBuffer(TgtPtr))
         return Err;
 
@@ -3074,9 +3107,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// Whether a transfer of \p Size bytes should be done via direct H2D
   /// transfer.
   bool allowsDirectWrite(const void *Ptr, int64_t Size) const {
-    // A first heuristic, tune as new insights arise.
-    static constexpr int64_t MaxDirectWriteSize = 2 * 4096;
-    return HostWritesDeviceMemory && Size > 0 && Size <= MaxDirectWriteSize &&
+    return Size > 0 && uint64_t(Size) <= getMaxDirectWriteSize() &&
            hsa_utils::isHostWritable(Agent, Ptr, Size);
   }
 
@@ -3353,39 +3384,21 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         Size / PatternSize);
   }
 
+  /// The HSA queue that \p AsyncInfo's stream is bound to.  A stream is bound
+  /// to a queue when it is first needed, so this binds one if necessary.
+  /// Several streams can share an HSA queue.
+  Expected<void *> getNativeQueueHandle(__tgt_async_info *AsyncInfo) override {
+    AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+    AMDGPUStreamTy *Stream = nullptr;
+    Error Err = getStream(AsyncInfoWrapper, Stream);
+    AsyncInfoWrapper.finalize(Err);
+    if (Err)
+      return std::move(Err);
+    return Stream->getQueue()->getHsaQueue();
+  }
+
   Expected<void *> getNativeHandle() override {
     return reinterpret_cast<void *>(Agent.handle);
-  }
-
-  interop_spec_t selectInteropPreference(int32_t InteropType,
-                                         int32_t NumPrefers,
-                                         interop_spec_t *Prefers) override {
-    // TODO: update once targetsync is supported
-    if (InteropType == kmp_interop_type_target)
-      return interop_spec_t{tgt_fr_hsa, {false, 0}, 0};
-    return interop_spec_t{tgt_fr_none, {false, 0}, 0};
-  }
-
-  Expected<omp_interop_val_t *>
-  createInterop(int32_t InteropType, interop_spec_t &InteropSpec) override {
-    auto *Ret = new omp_interop_val_t(
-        DeviceId, static_cast<kmp_interop_type_t>(InteropType));
-    Ret->fr_id = tgt_fr_hsa;
-    Ret->vendor_id = omp_vendor_amd;
-
-    // TODO: implement targetsync support
-
-    Ret->device_info.Platform = nullptr;
-    Ret->device_info.Device = reinterpret_cast<void *>(Agent.handle);
-    Ret->device_info.Context = nullptr;
-
-    return Ret;
-  }
-
-  Error releaseInterop(omp_interop_val_t *Interop) override {
-    if (Interop)
-      delete Interop;
-    return Plugin::success();
   }
 
   Error enqueueHostCallImpl(AMDGPUStreamTy::HostFnType Callback, void *UserData,
@@ -3986,6 +3999,10 @@ private:
   /// transfers into it directly.
   bool HostWritesDeviceMemory = false;
 
+  /// The maximum size of a direct write. A first heuristic, tune as new
+  /// insights arise.
+  static constexpr uint64_t MaxDirectWriteSize = 2 * 4096;
+
   /// Whether the host reaches this device's memory over XGMI rather than PCIe.
   bool HostLinkIsXGMI = false;
 
@@ -4256,7 +4273,7 @@ struct AMDGPUPluginContextTy final : public PluginContextTy {
   }
 
   void trackAllocation(GenericDeviceTy &Device, void *Ptr, int64_t Size,
-                       TargetAllocTy Kind) override {
+                       ol_alloc_type_t Kind) override {
     std::lock_guard<std::mutex> Lock(AllocationsMutex);
     Allocations[Ptr] = {Kind, &Device};
   }
@@ -4271,9 +4288,9 @@ struct AMDGPUPluginContextTy final : public PluginContextTy {
 private:
   // Track each allocation's Kind so we can tell HOST from SHARED — HSA
   // backs both with the same host fine-grained pool.
-  // TODO: drop once TARGET_ALLOC_SHARED has its own backing pool.
+  // TODO: drop once OL_ALLOC_TYPE_MANAGED has its own backing pool.
   struct AllocInfo {
-    TargetAllocTy Kind;
+    ol_alloc_type_t Kind;
     GenericDeviceTy *Device;
   };
   llvm::DenseMap<const void *, AllocInfo> Allocations;
@@ -4810,8 +4827,8 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   return Plugin::error(getOffloadErrorCode(ResultCode), ErrFmt, Args..., Desc);
 }
 
-Expected<void *> AMDGPUMemoryManagerTy::allocate(size_t Size, void *HstPtr,
-                                                 TargetAllocTy Kind,
+Expected<void *> AMDGPUMemoryManagerTy::allocate(size_t Size,
+                                                 ol_alloc_type_t Kind,
                                                  size_t Alignment) {
   // Allocate memory from the pool.
   void *Ptr = nullptr;
@@ -4832,8 +4849,7 @@ Expected<void *> AMDGPUMemoryManagerTy::allocate(size_t Size, void *HstPtr,
   return Ptr;
 }
 
-Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
-                                          TargetAllocTy Kind,
+Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, ol_alloc_type_t Kind,
                                           size_t Alignment) {
   if (Size == 0)
     return nullptr;
@@ -4841,16 +4857,17 @@ Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
   // Find the correct memory pool.
   AMDGPUMemoryPoolTy *MemoryPool = nullptr;
   switch (Kind) {
-  case TARGET_ALLOC_DEFAULT:
-  case TARGET_ALLOC_DEVICE:
+  case OL_ALLOC_TYPE_DEVICE:
     MemoryPool = CoarseGrainedMemoryPools[0];
     break;
-  case TARGET_ALLOC_HOST:
+  case OL_ALLOC_TYPE_HOST:
     MemoryPool = &HostDevice.getFineGrainedMemoryPool();
     break;
-  case TARGET_ALLOC_SHARED:
+  case OL_ALLOC_TYPE_MANAGED:
     MemoryPool = &HostDevice.getFineGrainedMemoryPool();
     break;
+  default:
+    llvm_unreachable("unexpected allocation type");
   }
 
   if (!MemoryPool)
@@ -4878,7 +4895,7 @@ Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
 
     // Register host / shared memory as pinned memory, so that transfers reading
     // from it can take a device-accessible path.
-    if (Kind == TARGET_ALLOC_HOST || Kind == TARGET_ALLOC_SHARED)
+    if (Kind == OL_ALLOC_TYPE_HOST || Kind == OL_ALLOC_TYPE_MANAGED)
       if (auto Err = PinnedAllocs.registerHostBuffer(Alloc, Alloc, Size))
         return std::move(Err);
   }

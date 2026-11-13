@@ -1101,6 +1101,7 @@ TEST(OrderedExtensionMap, ExtensionsAreCorrectlyOrdered) {
   EXPECT_THAT(ExtNames,
               ElementsAre("i", "y", "m", "l", "c", "zicsr", "zmfoo", "zfinx",
                           "zzfoo", "sbar", "sfoo", "xbar", "xfoo"));
+  EXPECT_NE(Exts.find(StringRef("zicsr")), Exts.end());
 }
 
 TEST(ParseArchString, ZceImplication) {
@@ -1771,6 +1772,7 @@ Experimental extensions
     zibi                 0.1
     zicfilp              1.0       This is a long dummy description
     zilx                 0.1
+    zyhybrid             0.910
     zvabd                0.9
     zvbc32e              0.7
     zvdot4a8i            0.1

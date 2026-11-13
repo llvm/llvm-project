@@ -113,6 +113,8 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   for (auto VT : {MVT::i32, MVT::i64}) {
     setOperationAction(ISD::ATOMIC_LOAD, VT, Custom);
     setOperationAction(ISD::ATOMIC_STORE, VT, Custom);
+    // No atomic sub insn. Expand it into atomic add of the negated value.
+    setOperationAction(ISD::ATOMIC_LOAD_SUB, VT, Expand);
   }
 
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
@@ -353,9 +355,9 @@ void BPFTargetLowering::ReplaceNodeResults(
   }
 
   SDLoc DL(N);
-  // We'll still produce a fatal error downstream, but this diagnostic is more
-  // user-friendly.
   fail(DL, DAG, Msg);
+  for (EVT VT : N->values())
+    Results.push_back(VT == MVT::Other ? N->getOperand(0) : DAG.getUNDEF(VT));
 }
 
 SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
@@ -583,10 +585,7 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         break;
       }
 
-      // STORE_STACK_ARG requires i64 operands. With ALU32 mode, the CC
-      // promotion may only extend to i32, so extend to i64 if needed.
-      if (Arg.getValueType() != MVT::i64)
-        Arg = DAG.getNode(ISD::ANY_EXTEND, CLI.DL, MVT::i64, Arg);
+      assert(Arg.getValueType() == MVT::i64 && "stack args are i64");
 
       SDValue OffVal = DAG.getConstant(Off, CLI.DL, MVT::i64);
       Chain = DAG.getNode(BPFISD::STORE_STACK_ARG, CLI.DL, MVT::Other, Chain,
@@ -775,7 +774,7 @@ SDValue BPFTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
 
 SDValue BPFTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(1);
   SDValue LHS = Op.getOperand(2);
   SDValue RHS = Op.getOperand(3);
   SDValue Dest = Op.getOperand(4);
@@ -793,7 +792,7 @@ SDValue BPFTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue RHS = Op.getOperand(1);
   SDValue TrueV = Op.getOperand(2);
   SDValue FalseV = Op.getOperand(3);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(4);
   SDLoc DL(Op);
 
   if (!getHasJmpExt())

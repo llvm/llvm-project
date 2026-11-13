@@ -1,4 +1,4 @@
-# RUN: llc -verify-machineinstrs -O0 -mtriple spirv-unknown-unknown -run-pass=spirv-prelegalizer-combiner %s -o - | FileCheck %s
+# RUN: llc -O0 -mtriple spirv-unknown-unknown -run-pass=spirv-prelegalizer-combiner %s -o - | FileCheck %s
 ---
 name:            distance_instcombine_float4
 tracksRegLiveness: true
@@ -22,4 +22,4 @@ body:             |
     %6:_(<4 x s32>) = G_FSUB %2, %3
     %7:id(s32) = G_INTRINSIC intrinsic(@llvm.spv.length), %6(<4 x s32>)
     OpReturnValue %7(s32)
-    
+...

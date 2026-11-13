@@ -189,3 +189,24 @@ define <vscale x 2 x float> @test_select_frexp_scalable_vec1(<vscale x 2 x float
 
 declare { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float>)
 declare { <vscale x 2 x float>, <vscale x 2 x i32> } @llvm.frexp.nxv2f32.nxv2i32(<vscale x 2 x float>)
+
+define float @test_scalar_fcmp(float %x) {
+; CHECK-LABEL: define float @test_scalar_fcmp(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X]], 1.000000e+00
+; CHECK-NEXT:    [[FREXP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
+; CHECK-NEXT:    [[MANTISSA2:%.*]] = extractvalue { float, i32 } [[FREXP1]], 0
+; CHECK-NEXT:    [[SELECT_FREXP:%.*]] = select i1 [[CMP]], float 5.000000e-01, float [[MANTISSA2]], !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    ret float [[SELECT_FREXP]]
+;
+  %cmp = fcmp olt float %x, 1.000000e+00
+  %sel = select i1 %cmp, float 1.000000e+00, float %x, !prof !0
+  %frexp = call { float, i32 } @llvm.frexp.f32.i32(float %sel)
+  %mantissa = extractvalue { float, i32 } %frexp, 0
+  ret float %mantissa
+}
+
+!0 = !{!"branch_weights", i32 1, i32 99}
+;.
+; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 99}
+;.

@@ -411,15 +411,20 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
   CodeObjectVersion = AMDGPU::getAMDHSACodeObjectVersion(M);
 
   if (TT.getOS() == Triple::AMDHSA) {
+    const AMDGPUOptions &CLOpts =
+        static_cast<const AMDGPUTargetMachine &>(TM).getCLOpts();
     switch (CodeObjectVersion) {
     case AMDGPU::AMDHSA_COV4:
-      HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV4>();
+      HSAMetadataStream =
+          std::make_unique<HSAMD::MetadataStreamerMsgPackV4>(CLOpts);
       break;
     case AMDGPU::AMDHSA_COV5:
-      HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV5>();
+      HSAMetadataStream =
+          std::make_unique<HSAMD::MetadataStreamerMsgPackV5>(CLOpts);
       break;
     case AMDGPU::AMDHSA_COV6:
-      HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV6>();
+      HSAMetadataStream =
+          std::make_unique<HSAMD::MetadataStreamerMsgPackV6>(CLOpts);
       break;
     default:
       reportFatalUsageError("unsupported code object version");
@@ -560,7 +565,8 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
       const SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
       unsigned MaxWaves = MFI.getMaxWavesPerEU();
       uint64_t TotalNumVgpr =
-          getTotalNumVGPRs(STM.hasGFX90AInsts(), NumAgpr, NumVgpr);
+          getTotalNumVGPRs(STM.hasGFX90AInsts(), static_cast<uint32_t>(NumAgpr),
+                           static_cast<uint32_t>(NumVgpr));
       uint64_t NumVGPRsForWavesPerEU =
           std::max({TotalNumVgpr, (uint64_t)1,
                     (uint64_t)STM.getMinNumVGPRs(
@@ -597,7 +603,7 @@ static void appendTypeEncoding(std::string &Enc, Type *Ty, const DataLayout &DL,
     Enc += 'v';
     return;
   }
-  unsigned Bits = DL.getTypeSizeInBits(Ty);
+  uint64_t Bits = DL.getTypeSizeInBits(Ty);
   // Zero-sized non-void types (e.g. `{}` or `[0 x i8]`) consume no ABI
   // registers. For returns, emit the same no-result marker as void so the
   // parameter encoding still has an explicit return-type prefix.
@@ -835,10 +841,7 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE;
   }
-  const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
-  if (STM.isWave32() &&
-      STM.getFeatureBits().test(AMDGPU::FeatureSupportsWave32) &&
-      STM.getFeatureBits().test(AMDGPU::FeatureSupportsWave64)) {
+  if (MF.getSubtarget<GCNSubtarget>().isWave32()) {
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
   }
@@ -1227,16 +1230,17 @@ void AMDGPUAsmPrinter::initializeTargetID(const Module &M) {
   }
 
   // Apply xnack/sramecc settings from module flags.
+  const auto &GCNTM = static_cast<const GCNTargetMachine &>(TM);
   if (getGlobalSTI()->getFeatureBits().test(AMDGPU::FeatureXNACKOnOffModes)) {
     AMDGPU::TargetIDSetting Setting =
-        GCNTargetMachine::getTargetIDSettingFromModuleFlag(M, "amdgpu.xnack");
+        GCNTM.getTargetIDSettingFromModuleFlag(M, "amdgpu.xnack");
     if (Setting != AMDGPU::TargetIDSetting::Any)
       TSTargetID->setXnackSetting(Setting);
   }
 
   if (getGlobalSTI()->getFeatureBits().test(AMDGPU::FeatureSRAMECCOnOffModes)) {
     AMDGPU::TargetIDSetting Setting =
-        GCNTargetMachine::getTargetIDSettingFromModuleFlag(M, "amdgpu.sramecc");
+        GCNTM.getTargetIDSettingFromModuleFlag(M, "amdgpu.sramecc");
     if (Setting != AMDGPU::TargetIDSetting::Any)
       TSTargetID->setSramEccSetting(Setting);
   }
@@ -1915,7 +1919,8 @@ void AMDGPUAsmPrinter::getAmdKernelCode(AMDGPUMCKernelCodeT &Out,
   // kernarg_segment_alignment is specified as log of the alignment.
   // The minimum alignment is 16.
   // FIXME: The metadata treats the minimum as 4?
-  Out.kernarg_segment_alignment = Log2(std::max(Align(16), MaxKernArgAlign));
+  Out.kernarg_segment_alignment =
+      static_cast<uint8_t>(Log2(std::max(Align(16), MaxKernArgAlign)));
 }
 
 bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,

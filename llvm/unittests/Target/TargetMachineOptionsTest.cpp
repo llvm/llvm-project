@@ -50,9 +50,11 @@ TEST(TargetMachineCTest, TargetMachineCreation) {
 
   LLVMTargetRef Target = nullptr;
   char *Error = nullptr;
-  if (LLVMGetTargetFromTriple(Triple, &Target, &Error))
-    FAIL() << "Failed to create target from default triple (" << Triple
-           << "): " << Error;
+  if (LLVMGetTargetFromTriple(Triple, &Target, &Error)) {
+    LLVMDisposeMessage(Error);
+    LLVMDisposeMessage(Triple);
+    GTEST_SKIP() << "Default target is not built";
+  }
 
   ASSERT_NE(Target, nullptr);
 
