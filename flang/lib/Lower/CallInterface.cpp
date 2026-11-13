@@ -383,7 +383,7 @@ Fortran::lower::CallerInterface::characterize() const {
       }
     }
   }
-  return *characteristic;
+  return std::move(*characteristic);
 }
 
 void Fortran::lower::CallerInterface::placeInput(
@@ -645,7 +645,7 @@ Fortran::lower::CalleeInterface::characterize() const {
       Fortran::evaluate::characteristics::Procedure::Characterize(
           funit.getSubprogramSymbol(), foldingContext);
   assert(characteristic && "Fail to get characteristic from symbol");
-  return *characteristic;
+  return std::move(*characteristic);
 }
 
 bool Fortran::lower::CalleeInterface::isMainProgram() const {
