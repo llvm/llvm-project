@@ -3675,6 +3675,10 @@ class VPExpressionRecipe : public VPSingleDefRecipe {
     /// extended vector operands, negating the multiplication, performing a
     /// reduction.add on the result, and adding the scalar result to a chain.
     ExtNegatedMulAccReduction,
+    /// Represent a chain of recipes whose last recipe will be optimized away.
+    /// Currently only supports folding vp.merge with an in-loop operation, so
+    /// LV does not account for the cost or register pressure of vp.merge.
+    FoldedVPMerge,
   };
 
   /// Type of the expression.
@@ -3732,6 +3736,13 @@ public:
     } else
       assert(Neg->getOpcode() == Instruction::FNeg && "Unexpected opcode");
   }
+  VPExpressionRecipe(VPSingleDefRecipe *InLoopOp,
+                     VPWidenIntrinsicRecipe *VPMerge)
+      : VPExpressionRecipe(ExpressionTypes::FoldedVPMerge,
+                           {InLoopOp, VPMerge}) {
+    assert(VPMerge->getVectorIntrinsicID() == Intrinsic::vp_merge &&
+           "Expected a vp.merge");
+  }
 
   ~VPExpressionRecipe() override {
     SmallPtrSet<VPSingleDefRecipe *, 4> ExpressionRecipesSeen;
@@ -3782,6 +3793,9 @@ public:
 
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool usesFirstLaneOnly(const VPValue *Op) const override;
 
   /// Returns true if this expression contains recipes that may read from or
   /// write to memory.

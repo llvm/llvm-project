@@ -660,6 +660,11 @@ struct VPlanTransforms {
   static void narrowInductionTruncates(VPlan &Plan, VFRange &Range,
                                        const TargetTransformInfo &TTI,
                                        PredicatedScalarEvolution &PSE);
+
+  /// Wrap reduction operations and their vp.merge in expression recipes when
+  /// the merge is expected to be folded, to better model the cost and register
+  /// pressure of the \p Plan.
+  static void foldPredicateMerge(VPlan &Plan, VPCostContext &CostCtx);
 };
 
 } // namespace llvm

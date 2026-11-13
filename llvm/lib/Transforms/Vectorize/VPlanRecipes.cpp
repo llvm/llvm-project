@@ -2550,12 +2550,21 @@ InstructionCost VPWidenIntrinsicRecipe::computeCallCost(
       });
 
   VectorInstrContext VIC = VectorInstrContext::None;
-  for (const VPValue *Op : Operands)
+  for (const VPValue *Op : Operands) {
     if (isa<VPWidenRecipe>(Op) &&
         Instruction::isBinaryOp(cast<VPWidenRecipe>(Op)->getOpcode())) {
       VIC = VectorInstrContext::BinaryOp;
       break;
     }
+    if (auto *WidenIntrinsic = dyn_cast<VPWidenIntrinsicRecipe>(Op)) {
+      if (is_contained({Intrinsic::umin, Intrinsic::umax, Intrinsic::smin,
+                        Intrinsic::smax},
+                       WidenIntrinsic->getVectorIntrinsicID())) {
+        VIC = VectorInstrContext::BinaryOp;
+        break;
+      }
+    }
+  }
 
   // TODO: Rework TTI interface to avoid reliance on underlying IntrinsicInst.
   IntrinsicCostAttributes CostAttrs(
@@ -3824,9 +3833,14 @@ VPExpressionRecipe::VPExpressionRecipe(
     ExpressionTypes ExpressionType,
     ArrayRef<VPSingleDefRecipe *> ExpressionRecipes)
     : VPSingleDefRecipe(VPRecipeBase::VPExpressionSC, {},
-                        cast<VPReductionRecipe>(ExpressionRecipes.back())
-                            ->getChainOp()
-                            ->getScalarType()),
+                        [&]() {
+                          if (ExpressionType == ExpressionTypes::FoldedVPMerge)
+                            return ExpressionRecipes.back()->getScalarType();
+                          return cast<VPReductionRecipe>(
+                                     ExpressionRecipes.back())
+                              ->getChainOp()
+                              ->getScalarType();
+                        }()),
       ExpressionRecipes(ExpressionRecipes), ExpressionType(ExpressionType) {
   assert(!ExpressionRecipes.empty() && "Nothing to combine?");
   assert(
@@ -3897,8 +3911,29 @@ SmallVector<VPSingleDefRecipe *> VPExpressionRecipe::decompose() {
   return DecomposedRecipes;
 }
 
+bool VPExpressionRecipe::usesFirstLaneOnly(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  // The last operand of a folded operation is the vp.merge EVL.
+  if (ExpressionType == ExpressionTypes::FoldedVPMerge &&
+      Op == getLastOperand()) {
+    assert(match(Op, m_EVL(m_VPValue())) &&
+           "Expected an explicit vector length recipe");
+    return true;
+  }
+
+  return false;
+}
+
 InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
                                                 VPCostContext &Ctx) const {
+  // The last recipes in the chain will be optimized away, so igonre the cost.
+  if (ExpressionType == ExpressionTypes::FoldedVPMerge) {
+    InstructionCost Cost = 0;
+    for (auto *R : drop_end(ExpressionRecipes))
+      Cost += R->cost(VF, Ctx);
+    return Cost;
+  }
+
   Type *RedTy = this->getScalarType();
   auto *SrcVecTy =
       cast<VectorType>(toVectorTy(getOperand(0)->getScalarType(), VF));
@@ -3970,6 +4005,8 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
             Instruction::ZExt,
         Opcode, RedTy, SrcVecTy, Ctx.CostKind);
   }
+  case ExpressionTypes::FoldedVPMerge:
+    llvm_unreachable("Folded vp.merge expression should be handled eariler");
   }
   llvm_unreachable("Unknown VPExpressionRecipe::ExpressionTypes enum");
 }
@@ -4000,6 +4037,40 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << Indent << "EXPRESSION ";
   printAsOperand(O, SlotTracker);
   O << " = ";
+  if (ExpressionType == ExpressionTypes::FoldedVPMerge) {
+    VPSingleDefRecipe *InLoopOp = ExpressionRecipes[0];
+    unsigned NumInLoopOps = InLoopOp->getNumOperands();
+    O << "vp.merge ";
+    getOperand(NumInLoopOps)->printAsOperand(O, SlotTracker);
+    O << ", ";
+    auto PrintInLoopOperands = [&]() {
+      O << "(";
+      interleaveComma(make_range(op_begin(), op_begin() + NumInLoopOps), O,
+                      [&O, &SlotTracker](VPValue *Op) {
+                        Op->printAsOperand(O, SlotTracker);
+                      });
+      O << ")";
+    };
+
+    if (auto *WidenIntrinsic = dyn_cast<VPWidenIntrinsicRecipe>(InLoopOp)) {
+      O << WidenIntrinsic->getIntrinsicName();
+      WidenIntrinsic->printFlags(O);
+      PrintInLoopOperands();
+    } else if (auto *Widen = dyn_cast<VPWidenRecipe>(InLoopOp)) {
+      O << Instruction::getOpcodeName(Widen->getOpcode());
+      Widen->printFlags(O);
+      PrintInLoopOperands();
+    }
+    O << ", ";
+    interleaveComma(make_range(op_begin() + NumInLoopOps + 1,
+                               op_begin() + NumInLoopOps + 3),
+                    O, [&O, &SlotTracker](VPValue *Op) {
+                      Op->printAsOperand(O, SlotTracker);
+                    });
+
+    return;
+  }
+
   auto *Red = cast<VPReductionRecipe>(ExpressionRecipes.back());
   unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
   VPValue *Mask = getLastOperand();
@@ -4094,6 +4165,8 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     O << ")";
     break;
   }
+  default:
+    llvm_unreachable("Unhandled VPExpressionRecipe::ExpressionTypes enum");
   }
 }
 
