@@ -796,14 +796,15 @@ static bool CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
     MCRegister Reg = State.AllocateReg(ArgGPRs);
     if (Reg) {
       LocVT = MVT::i32;
-      State.addLoc(CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      State.addLoc(
+          CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       if (MCRegister HiReg = State.AllocateReg(ArgGPRs)) {
         State.addLoc(
             CCValAssign::getCustomReg(ValNo, ValVT, HiReg, LocVT, LocInfo));
       } else {
         int64_t StackOffset = State.AllocateStack(4, Align(4));
-        State.addLoc(
-            CCValAssign::getCustomMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
+        State.addLoc(CCValAssign::getCustomMem(ValNo, ValVT, StackOffset, LocVT,
+                                               LocInfo));
       }
       return false;
     }
