@@ -94,9 +94,9 @@ private:
   buildSubmoduleImports(mlir::ModuleOp module, mlir::LLVM::DIFileAttr fileAttr,
                         mlir::LLVM::DIScopeAttr cuAttr);
   mlir::LLVM::DICommonBlockAttr
-  getOrCreateCommonBlockAttr(llvm::StringRef name,
+  getOrCreateCommonBlockAttr(fir::GlobalOp global,
                              mlir::LLVM::DIFileAttr fileAttr,
-                             mlir::LLVM::DIScopeAttr scope, unsigned line);
+                             mlir::LLVM::DIScopeAttr scope);
 
   void handleGlobalOp(fir::GlobalOp glocalOp, mlir::LLVM::DIFileAttr fileAttr,
                       mlir::LLVM::DIScopeAttr scope,
@@ -139,6 +139,16 @@ private:
                                mlir::LLVM::DIScopeAttr scopeAttr,
                                fir::DebugTypeGenerator &typeGen,
                                mlir::SymbolTable *symbolTable);
+  void handleCommonBlockMembers(std::optional<mlir::ArrayAttr> members,
+                                mlir::LLVM::DIFileAttr fileAttr,
+                                mlir::LLVM::DIScopeAttr scopeAttr,
+                                fir::DebugTypeGenerator &typeGen,
+                                mlir::SymbolTable *symbolTable);
+  void handleHostCommonBlockMembers(llvm::StringRef moduleName,
+                                    mlir::LLVM::DIFileAttr fileAttr,
+                                    mlir::LLVM::DIScopeAttr scopeAttr,
+                                    fir::DebugTypeGenerator &typeGen,
+                                    mlir::SymbolTable *symbolTable);
   std::optional<mlir::LLVM::DIModuleAttr>
   getModuleAttrFromGlobalOp(fir::GlobalOp globalOp,
                             mlir::LLVM::DIFileAttr fileAttr,
@@ -173,6 +183,20 @@ std::string getDebugModuleName(llvm::ArrayRef<std::string> modules) {
   if (modules.size() == 1)
     return modules.front();
   return getDebugModuleName(modules.front(), modules.back());
+}
+
+// The (sub)module directly above the submodule \p op, as named in the debug
+// info, or nothing if \p op is not a submodule.
+std::optional<std::string>
+getDebugParentModuleName(fir::ModuleDebugImportsOp op) {
+  std::optional<llvm::StringRef> ancestor = op.getAncestorModule();
+  std::optional<llvm::StringRef> parent = op.getParentModule();
+  if (!ancestor || !parent)
+    return std::nullopt;
+  // The parent of a first level submodule is the root module, whose name
+  // stands alone. Any other parent is a submodule, and is named like one.
+  return *parent == *ancestor ? parent->str()
+                              : getDebugModuleName(*ancestor, *parent);
 }
 
 /// Whether \p loc already carries debug information of type \c AttrT, fused
@@ -342,26 +366,24 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
   if (globalResult.first == fir::NameUniquer::NameKind::VARIABLE)
     return false;
 
-  // FIXME: We are trying to extract the name of the common block from the
-  // name of the global. As part of mangling, GetCommonBlockObjectName can
-  // add a trailing _ in the name of that global. The demangle function
-  // does not seem to handle such cases. So the following hack is used to
-  // remove the trailing '_'.
-  llvm::StringRef commonName = globalSymbol;
-  if (commonName != Fortran::common::blankCommonObjectName &&
-      !commonName.empty() && commonName.back() == '_')
-    commonName = commonName.drop_back();
-
   // Create the debug attributes.
-  unsigned line = fir::getLineFromLoc(global.getLoc());
-  mlir::LLVM::DICommonBlockAttr commonBlock = getOrCreateCommonBlockAttr(
-      commonName, fir::getFileAttrFromLoc(global.getLoc(), fileAttr), scopeAttr,
-      line);
+  mlir::LLVM::DICommonBlockAttr commonBlock =
+      getOrCreateCommonBlockAttr(global, fileAttr, scopeAttr);
+
+  auto &globalExprs = globalToGlobalExprsMap[global];
+  if (llvm::any_of(globalExprs, [&](mlir::Attribute attr) {
+        auto globalExpr =
+            mlir::cast<mlir::LLVM::DIGlobalVariableExpressionAttr>(attr);
+        mlir::LLVM::DIGlobalVariableAttr var = globalExpr.getVar();
+        return var.getScope() == commonBlock && var.getLinkageName() &&
+               var.getLinkageName().getValue() == declOp.getUniqName();
+      }))
+    return true;
 
   mlir::LLVM::DITypeAttr diType = typeGen.convertType(
       fir::unwrapRefType(declOp.getType()), fileAttr, scopeAttr, declOp);
 
-  line = fir::getLineFromLoc(declOp.getLoc());
+  unsigned line = fir::getLineFromLoc(declOp.getLoc());
   auto gvAttr = mlir::LLVM::DIGlobalVariableAttr::get(
       context, commonBlock, mlir::StringAttr::get(context, name),
       declOp.getUniqName(), fir::getFileAttrFromLoc(declOp.getLoc(), fileAttr),
@@ -379,9 +401,70 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
 
   auto dbgExpr = mlir::LLVM::DIGlobalVariableExpressionAttr::get(
       global.getContext(), gvAttr, expr);
-  globalToGlobalExprsMap[global].push_back(dbgExpr);
+  globalExprs.push_back(dbgExpr);
 
   return true;
+}
+
+void AddDebugInfoPass::handleCommonBlockMembers(
+    std::optional<mlir::ArrayAttr> members, mlir::LLVM::DIFileAttr fileAttr,
+    mlir::LLVM::DIScopeAttr scopeAttr, fir::DebugTypeGenerator &typeGen,
+    mlir::SymbolTable *symbolTable) {
+  if (!members)
+    return;
+
+  mlir::MLIRContext *context = &getContext();
+  for (mlir::Attribute attr : *members) {
+    auto member = mlir::cast<fir::UseCommonBlockMemberAttr>(attr);
+    fir::GlobalOp global =
+        symbolTable->lookup<fir::GlobalOp>(member.getCommonBlock().getValue());
+    if (!global)
+      continue;
+
+    mlir::LLVM::DICommonBlockAttr commonBlock =
+        getOrCreateCommonBlockAttr(global, fileAttr, scopeAttr);
+    mlir::LLVM::DITypeAttr diType = typeGen.convertType(
+        member.getFortranType(), fileAttr, scopeAttr, nullptr);
+    auto gvAttr = mlir::LLVM::DIGlobalVariableAttr::get(
+        context, commonBlock, member.getName(), member.getLinkageName(),
+        fir::getFileAttrFromLoc(member.getLoc(), fileAttr),
+        fir::getLineFromLoc(member.getLoc()), diType,
+        /*isLocalToUnit=*/false, /*isDefinition=*/true, /*alignInBits=*/0);
+
+    mlir::LLVM::DIExpressionAttr expr;
+    if (uint64_t offset = member.getOffset()) {
+      llvm::SmallVector<mlir::LLVM::DIExpressionElemAttr> ops{
+          mlir::LLVM::DIExpressionElemAttr::get(
+              context, llvm::dwarf::DW_OP_plus_uconst, offset)};
+      expr = mlir::LLVM::DIExpressionAttr::get(context, ops);
+    }
+    auto dbgExpr =
+        mlir::LLVM::DIGlobalVariableExpressionAttr::get(context, gvAttr, expr);
+    auto &globalExprs = globalToGlobalExprsMap[global];
+    if (!llvm::is_contained(globalExprs, dbgExpr))
+      globalExprs.push_back(dbgExpr);
+  }
+}
+
+// Describe the COMMON members that a procedure of the (sub)module
+// \p moduleName accesses by host association: those of the module and of its
+// USE statements, and for a submodule, those of its whole ancestry.
+void AddDebugInfoPass::handleHostCommonBlockMembers(
+    llvm::StringRef moduleName, mlir::LLVM::DIFileAttr fileAttr,
+    mlir::LLVM::DIScopeAttr scopeAttr, fir::DebugTypeGenerator &typeGen,
+    mlir::SymbolTable *symbolTable) {
+  for (std::optional<std::string> name = moduleName.str(); name;) {
+    auto iter = moduleDebugImportsByName.find(*name);
+    if (iter == moduleDebugImportsByName.end())
+      return;
+    fir::ModuleDebugImportsOp imports = iter->second;
+    handleCommonBlockMembers(imports.getCommonBlockMembers(), fileAttr,
+                             scopeAttr, typeGen, symbolTable);
+    for (fir::UseStmtOp useOp : imports.getUses().getOps<fir::UseStmtOp>())
+      handleCommonBlockMembers(useOp.getCommonBlockMembers(), fileAttr,
+                               scopeAttr, typeGen, symbolTable);
+    name = getDebugParentModuleName(imports);
+  }
 }
 
 // Create fake uses for compiler-generated internal variables that represent
@@ -519,17 +602,29 @@ void AddDebugInfoPass::handleDeclareValueOp(fir::DeclareValueOp declOp,
                       dummyScope, declOp.getValue().getType(), nullptr);
 }
 
-mlir::LLVM::DICommonBlockAttr AddDebugInfoPass::getOrCreateCommonBlockAttr(
-    llvm::StringRef name, mlir::LLVM::DIFileAttr fileAttr,
-    mlir::LLVM::DIScopeAttr scope, unsigned line) {
+mlir::LLVM::DICommonBlockAttr
+AddDebugInfoPass::getOrCreateCommonBlockAttr(fir::GlobalOp global,
+                                             mlir::LLVM::DIFileAttr fileAttr,
+                                             mlir::LLVM::DIScopeAttr scope) {
+  // FIXME: We are trying to extract the name of the common block from the
+  // name of the global. As part of mangling, GetCommonBlockObjectName can
+  // add a trailing _ in the name of that global. The demangle function
+  // does not seem to handle such cases. So the following hack is used to
+  // remove the trailing '_'.
+  llvm::StringRef name = global.getSymName();
+  if (name != Fortran::common::blankCommonObjectName && !name.empty() &&
+      name.back() == '_')
+    name = name.drop_back();
+
   mlir::MLIRContext *context = &getContext();
   mlir::LLVM::DICommonBlockAttr cbAttr;
   if (auto iter{commonBlockMap.find(name)}; iter != commonBlockMap.end()) {
     cbAttr = iter->getValue();
   } else {
     cbAttr = mlir::LLVM::DICommonBlockAttr::get(
-        context, scope, nullptr, mlir::StringAttr::get(context, name), fileAttr,
-        line);
+        context, scope, nullptr, mlir::StringAttr::get(context, name),
+        fir::getFileAttrFromLoc(global.getLoc(), fileAttr),
+        fir::getLineFromLoc(global.getLoc()));
     commonBlockMap[name] = cbAttr;
   }
   return cbAttr;
@@ -786,6 +881,18 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
     subprogramFlags =
         subprogramFlags | mlir::LLVM::DISubprogramFlags::Recursive;
 
+  // A separate module procedure is mangled with the module that declares its
+  // interface, so its own name does not name the submodule that defines it.
+  // The root of the ancestry is the same either way.
+  std::string moduleName;
+  if (!result.second.modules.empty()) {
+    auto submodule = funcOp->getAttrOfType<mlir::StringAttr>(
+        fir::getDefiningSubmoduleAttrName());
+    moduleName = submodule ? getDebugModuleName(result.second.modules.front(),
+                                                submodule.getValue())
+                           : getDebugModuleName(result.second.modules);
+  }
+
   unsigned line = fir::getLineFromLoc(l);
   // A target device module holds the internal procedures and the outlined
   // target regions, but not the host procedure they are contained in, which
@@ -811,17 +918,8 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
         }
       }
     }
-  } else if (!result.second.modules.empty()) {
-    // A separate module procedure is mangled with the module that declares its
-    // interface, so its own name does not name the submodule that defines it.
-    // The root of the ancestry is the same either way.
-    auto submodule = funcOp->getAttrOfType<mlir::StringAttr>(
-        fir::getDefiningSubmoduleAttrName());
-    std::string name = submodule
-                           ? getDebugModuleName(result.second.modules.front(),
-                                                submodule.getValue())
-                           : getDebugModuleName(result.second.modules);
-    Scope = getOrCreateModuleAttr(name, fileAttr, cuAttr);
+  } else if (!moduleName.empty()) {
+    Scope = getOrCreateModuleAttr(moduleName, fileAttr, cuAttr);
   }
 
   auto addTargetOpDISP = [&](llvm::ArrayRef<mlir::Attribute> entities) {
@@ -962,6 +1060,14 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
 
   funcOp->setLoc(builder.getFusedLoc({l}, spAttr));
   addTargetOpDISP(retainedNodes);
+
+  funcOp.walk([&](fir::UseStmtOp useOp) {
+    handleCommonBlockMembers(useOp.getCommonBlockMembers(), fileAttr, spAttr,
+                             typeGen, symbolTable);
+  });
+  if (!moduleName.empty())
+    handleHostCommonBlockMembers(moduleName, fileAttr, spAttr, typeGen,
+                                 symbolTable);
 
   // Find the first dummy_scope definition. This is the one of the current
   // function. The other ones may come from inlined calls. The variables inside
@@ -1128,20 +1234,15 @@ AddDebugInfoPass::buildSubmoduleImports(mlir::ModuleOp module,
   // Walked rather than taken from the map so that the order is that of the
   // program and does not depend on how the names happen to hash.
   module.walk([&](fir::ModuleDebugImportsOp op) {
-    std::optional<llvm::StringRef> ancestor = op.getAncestorModule();
-    std::optional<llvm::StringRef> parent = op.getParentModule();
-    if (!ancestor || !parent)
+    std::optional<std::string> parentName = getDebugParentModuleName(op);
+    if (!parentName)
       return;
-    // The parent of a first level submodule is the root module, whose name
-    // stands alone. Any other parent is a submodule, and is named like one.
-    std::string parentName = *parent == *ancestor
-                                 ? parent->str()
-                                 : getDebugModuleName(*ancestor, *parent);
-    std::string name = getDebugModuleName(*ancestor, op.getModuleName());
+    std::string name =
+        getDebugModuleName(*op.getAncestorModule(), op.getModuleName());
     imports.push_back(mlir::LLVM::DIImportedEntityAttr::get(
         context, llvm::dwarf::DW_TAG_imported_module,
         createModuleAttr(name, fileAttr, cuAttr),
-        createModuleAttr(parentName, fileAttr, cuAttr),
+        createModuleAttr(*parentName, fileAttr, cuAttr),
         fir::getFileAttrFromLoc(op.getLoc(), fileAttr),
         fir::getLineFromLoc(op.getLoc()), /*name=*/mlir::StringAttr(),
         /*elements=*/{}));
@@ -1164,7 +1265,7 @@ void AddDebugInfoPass::expandUseStmtForDebug(
       getOrCreateModuleAttr(modName, fileAttr, cuAttr);
 
   llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> importedModules;
-  if (useOp.hasOnlyClause() || useOp.getHasOnlyWithRenames())
+  if (useOp.hasOnlyClause())
     handleOnlyClause(useOp, spAttr, fileAttr, symbolTable, importedModules);
   else if (useOp.hasRenames())
     handleRenamesWithoutOnly(useOp, spAttr, modAttr, fileAttr, symbolTable,
