@@ -1,0 +1,88 @@
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv81 -mattr=+hvxv81,+hvx-length128b,+hvx-qfloat \
+# RUN:   -run-pass=handle-qfp-spills-refills -verify-machineinstrs -o - %s | FileCheck %s
+#
+# A qf32 vector pair is spilled and refilled, then one half is redefined
+# before the pair is narrowed from qf32 to hf. The refill only reaches the
+# other half, so the refill only needs a qf32 = sf conversion on that half.
+# The redefined half needs one only if its own def is IEEE.
+
+# The lo half is redefined with a qf32 value and must not be converted.
+# CHECK-LABEL: name: pair_refill_lo_redefined
+# CHECK:       $w3 = PS_vloadrw_ai %stack.0, 0
+# CHECK-NEXT:  $v6 = V6_vadd_sf
+# CHECK-NEXT:  $v7 = V6_vconv_qf32_sf
+# CHECK-NEXT:  $v3 = V6_vconv_hf_qf32
+
+# The hi half is redefined with a qf32 value and must not be converted.
+# CHECK-LABEL: name: pair_refill_hi_redefined
+# CHECK:       $w3 = PS_vloadrw_ai %stack.0, 0
+# CHECK-NEXT:  $v7 = V6_vadd_sf
+# CHECK-NEXT:  $v6 = V6_vconv_qf32_sf
+# CHECK-NEXT:  $v3 = V6_vconv_hf_qf32
+
+# The lo half is redefined by a refill, so it is IEEE and both halves are
+# converted.
+# CHECK-LABEL: name: pair_refill_lo_refilled
+# CHECK:       $w3 = PS_vloadrw_ai %stack.0, 0
+# CHECK-NEXT:  $v6 = PS_vloadrv_ai %stack.1, 0
+# CHECK-NEXT:  $v6 = V6_vconv_qf32_sf
+# CHECK-NEXT:  $v7 = V6_vconv_qf32_sf
+# CHECK-NEXT:  $v3 = V6_vconv_hf_qf32
+
+---
+name:            pair_refill_lo_redefined
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 256, alignment: 128 }
+body:             |
+  bb.0:
+    liveins: $r0, $r31, $v0, $v1, $v2
+
+    renamable $v7 = V6_vadd_sf renamable $v0, renamable $v0
+    renamable $v6 = V6_vadd_sf renamable $v1, renamable $v0
+    PS_vstorerw_ai %stack.0, 0, killed renamable $w3 :: (store (s2048) into %stack.0, align 128)
+    renamable $w3 = PS_vloadrw_ai %stack.0, 0 :: (load (s2048) from %stack.0, align 128)
+    renamable $v6 = V6_vadd_sf killed renamable $v2, renamable $v0
+    renamable $v3 = V6_vconv_hf_qf32 killed renamable $w3
+    V6_vS32b_ai killed renamable $r0, 0, killed renamable $v3 :: (store (s1024))
+    PS_jmpret $r31, implicit-def dead $pc
+...
+---
+name:            pair_refill_hi_redefined
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 256, alignment: 128 }
+body:             |
+  bb.0:
+    liveins: $r0, $r31, $v0, $v1, $v2
+
+    renamable $v7 = V6_vadd_sf renamable $v0, renamable $v0
+    renamable $v6 = V6_vadd_sf renamable $v1, renamable $v0
+    PS_vstorerw_ai %stack.0, 0, killed renamable $w3 :: (store (s2048) into %stack.0, align 128)
+    renamable $w3 = PS_vloadrw_ai %stack.0, 0 :: (load (s2048) from %stack.0, align 128)
+    renamable $v7 = V6_vadd_sf killed renamable $v2, renamable $v0
+    renamable $v3 = V6_vconv_hf_qf32 killed renamable $w3
+    V6_vS32b_ai killed renamable $r0, 0, killed renamable $v3 :: (store (s1024))
+    PS_jmpret $r31, implicit-def dead $pc
+...
+---
+name:            pair_refill_lo_refilled
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 256, alignment: 128 }
+  - { id: 1, type: spill-slot, size: 128, alignment: 128 }
+body:             |
+  bb.0:
+    liveins: $r0, $r31, $v0, $v1, $v2
+
+    renamable $v7 = V6_vadd_sf renamable $v0, renamable $v0
+    renamable $v6 = V6_vadd_sf renamable $v1, renamable $v0
+    PS_vstorerw_ai %stack.0, 0, killed renamable $w3 :: (store (s2048) into %stack.0, align 128)
+    renamable $v6 = V6_vadd_sf killed renamable $v2, renamable $v0
+    PS_vstorerv_ai %stack.1, 0, killed renamable $v6 :: (store (s1024) into %stack.1, align 128)
+    renamable $w3 = PS_vloadrw_ai %stack.0, 0 :: (load (s2048) from %stack.0, align 128)
+    renamable $v6 = PS_vloadrv_ai %stack.1, 0 :: (load (s1024) from %stack.1, align 128)
+    renamable $v3 = V6_vconv_hf_qf32 killed renamable $w3
+    V6_vS32b_ai killed renamable $r0, 0, killed renamable $v3 :: (store (s1024))
+    PS_jmpret $r31, implicit-def dead $pc
+...
