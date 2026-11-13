@@ -5,14 +5,10 @@
 ! block where the previous initialization actually appeared, not the
 ! current appearance's own (different) Fortran name.
 !
-! /a/ and /b/ both carry the same explicit BIND(C) binding label ("cblk"),
-! so they denote one object and the merge itself is not an error (19.2 p2
-! does not apply: every common block sharing the key genuinely carries
-! that label). Since both appearances initialize that one object to the
-! identical value, this is accepted as the nonstandard "duplicate
-! initialization" extension -- the same one common-block-multiple-init.f90
-! exercises for same-named commons -- and reported as a portability
-! warning rather than an error.
+! Merging /a/ and /b/ through their shared BIND(C) label is accepted as an
+! extension.  Their identical initializations are also accepted as the
+! duplicate initialization extension tested in common-block-multiple-init.f90,
+! with a portability warning rather than an error.
 
 subroutine s1
   integer :: xa
