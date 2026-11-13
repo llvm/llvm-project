@@ -1483,6 +1483,43 @@ INTERCEPTOR(int, pthread_cond_destroy, void *c) {
   return res;
 }
 
+#if SANITIZER_INTERCEPT_C11_THREADS
+TSAN_INTERCEPTOR(int, cnd_init, void* c) {
+  SCOPED_TSAN_INTERCEPTOR(cnd_init, c);
+  MemoryAccessRange(thr, pc, (uptr)c, sizeof(uptr), true);
+  return REAL(cnd_init)(c);
+}
+
+TSAN_INTERCEPTOR(int, cnd_wait, void* c, void* m) {
+  SCOPED_TSAN_INTERCEPTOR(cnd_wait, c, m);
+  return cond_wait(thr, pc, &si, [=]() { return REAL(cnd_wait)(c, m); }, c, m);
+}
+
+TSAN_INTERCEPTOR(int, cnd_timedwait, void* c, void* m, void* ts) {
+  SCOPED_TSAN_INTERCEPTOR(cnd_timedwait, c, m, ts);
+  return cond_wait(
+      thr, pc, &si, [=]() { return REAL(cnd_timedwait)(c, m, ts); }, c, m);
+}
+
+TSAN_INTERCEPTOR(int, cnd_signal, void* c) {
+  SCOPED_TSAN_INTERCEPTOR(cnd_signal, c);
+  MemoryAccessRange(thr, pc, (uptr)c, sizeof(uptr), false);
+  return REAL(cnd_signal)(c);
+}
+
+TSAN_INTERCEPTOR(int, cnd_broadcast, void* c) {
+  SCOPED_TSAN_INTERCEPTOR(cnd_broadcast, c);
+  MemoryAccessRange(thr, pc, (uptr)c, sizeof(uptr), false);
+  return REAL(cnd_broadcast)(c);
+}
+
+TSAN_INTERCEPTOR(void, cnd_destroy, void* c) {
+  SCOPED_TSAN_INTERCEPTOR(cnd_destroy, c);
+  MemoryAccessRange(thr, pc, (uptr)c, sizeof(uptr), true);
+  REAL(cnd_destroy)(c);
+}
+#endif  // SANITIZER_INTERCEPT_C11_THREADS
+
 TSAN_INTERCEPTOR(int, pthread_mutex_init, void *m, void *a) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_init, m, a);
   int res = REAL(pthread_mutex_init)(m, a);
@@ -1602,6 +1639,60 @@ TSAN_INTERCEPTOR(int, __pthread_mutex_unlock, void *m) {
 }
 #  endif
 #endif
+
+#if SANITIZER_INTERCEPT_C11_THREADS
+TSAN_INTERCEPTOR(int, mtx_init, void* m, int type) {
+  SCOPED_TSAN_INTERCEPTOR(mtx_init, m, type);
+  int res = REAL(mtx_init)(m, type);
+  if (res == 0) {
+    MutexCreate(thr, pc, (uptr)m,
+                (type & threads_mtx_recursive) ? MutexFlagWriteReentrant : 0);
+  }
+  return res;
+}
+
+TSAN_INTERCEPTOR(void, mtx_destroy, void* m) {
+  SCOPED_TSAN_INTERCEPTOR(mtx_destroy, m);
+  REAL(mtx_destroy)(m);
+  MutexDestroy(thr, pc, (uptr)m);
+}
+
+TSAN_INTERCEPTOR(int, mtx_lock, void* m) {
+  SCOPED_TSAN_INTERCEPTOR(mtx_lock, m);
+  MutexPreLock(thr, pc, (uptr)m);
+  AdaptiveDelay::SyncOp();
+  int res = BLOCK_REAL(mtx_lock)(m);
+  if (res == 0)
+    MutexPostLock(thr, pc, (uptr)m);
+  return res;
+}
+
+TSAN_INTERCEPTOR(int, mtx_trylock, void* m) {
+  SCOPED_TSAN_INTERCEPTOR(mtx_trylock, m);
+  AdaptiveDelay::SyncOp();
+  int res = REAL(mtx_trylock)(m);
+  if (res == 0)
+    MutexPostLock(thr, pc, (uptr)m, MutexFlagTryLock);
+  return res;
+}
+
+TSAN_INTERCEPTOR(int, mtx_timedlock, void* m, void* ts) {
+  SCOPED_TSAN_INTERCEPTOR(mtx_timedlock, m, ts);
+  AdaptiveDelay::SyncOp();
+  int res = REAL(mtx_timedlock)(m, ts);
+  if (res == 0)
+    MutexPostLock(thr, pc, (uptr)m, MutexFlagTryLock);
+  return res;
+}
+
+TSAN_INTERCEPTOR(int, mtx_unlock, void* m) {
+  SCOPED_TSAN_INTERCEPTOR(mtx_unlock, m);
+  MutexUnlock(thr, pc, (uptr)m);
+  int res = REAL(mtx_unlock)(m);
+  AdaptiveDelay::SyncOp();
+  return res;
+}
+#endif  // SANITIZER_INTERCEPT_C11_THREADS
 
 #if !SANITIZER_APPLE
 TSAN_INTERCEPTOR(int, pthread_spin_init, void *m, int pshared) {
@@ -1802,6 +1893,17 @@ TSAN_INTERCEPTOR(int, pthread_once, void *o, void (*f)()) {
   }
   return 0;
 }
+
+#if SANITIZER_INTERCEPT_C11_THREADS
+TSAN_INTERCEPTOR(void, call_once, void* flag, void (*f)()) {
+  SCOPED_INTERCEPTOR_RAW(call_once, flag, f);
+  atomic_uint32_t* a = static_cast<atomic_uint32_t*>(flag);
+  if (guard_acquire(thr, pc, a)) {
+    (*f)();
+    guard_release(thr, pc, a, kGuardDone);
+  }
+}
+#endif
 
 #if SANITIZER_GLIBC
 TSAN_INTERCEPTOR(int, __fxstat, int version, int fd, void *buf) {
@@ -3209,6 +3311,14 @@ void InitializeInterceptors() {
 #endif
 
   TSAN_MAYBE_PTHREAD_COND_CLOCKWAIT;
+#if SANITIZER_INTERCEPT_C11_THREADS
+  TSAN_INTERCEPT(cnd_init);
+  TSAN_INTERCEPT(cnd_signal);
+  TSAN_INTERCEPT(cnd_broadcast);
+  TSAN_INTERCEPT(cnd_wait);
+  TSAN_INTERCEPT(cnd_timedwait);
+  TSAN_INTERCEPT(cnd_destroy);
+#endif
 
   TSAN_INTERCEPT(pthread_mutex_init);
   TSAN_INTERCEPT(pthread_mutex_destroy);
@@ -3224,6 +3334,14 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(__pthread_mutex_lock);
   TSAN_INTERCEPT(__pthread_mutex_unlock);
 #  endif
+#endif
+#if SANITIZER_INTERCEPT_C11_THREADS
+  TSAN_INTERCEPT(mtx_init);
+  TSAN_INTERCEPT(mtx_destroy);
+  TSAN_INTERCEPT(mtx_lock);
+  TSAN_INTERCEPT(mtx_trylock);
+  TSAN_INTERCEPT(mtx_timedlock);
+  TSAN_INTERCEPT(mtx_unlock);
 #endif
 
   TSAN_INTERCEPT(pthread_spin_init);
@@ -3247,6 +3365,9 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(pthread_barrier_wait);
 
   TSAN_INTERCEPT(pthread_once);
+#if SANITIZER_INTERCEPT_C11_THREADS
+  TSAN_INTERCEPT(call_once);
+#endif
 
   TSAN_MAYBE_INTERCEPT___FXSTAT;
   TSAN_MAYBE_INTERCEPT_FSTAT;
