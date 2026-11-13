@@ -9,7 +9,6 @@ load("@rules_python//python:defs.bzl", "py_binary")
 load(
     ":libc_build_rules.bzl",
     "libc_common_copts",
-    "libc_function",
     "libc_generated_header",
     "libc_header_info",
     "libc_header_library",
@@ -3979,335 +3978,127 @@ alias(
 
 ############################## wchar targets ###############################
 
-libc_support_library(
-    name = "wchar_utils",
-    hdrs = ["src/wchar/wchar_utils.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:attributes",
-    ],
-)
-
-libc_function(
+alias(
     name = "btowc",
-    srcs = ["src/wchar/btowc.cpp"],
-    hdrs = ["src/wchar/btowc.h"],
-    deps = [
-        ":hdr_wchar_macros",
-        ":types_wint_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/wchar:btowc",
 )
 
-libc_function(
+alias(
     name = "wcpcpy",
-    srcs = ["src/wchar/wcpcpy.cpp"],
-    hdrs = ["src/wchar/wcpcpy.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/string:utils",
-    ],
+    actual = "//libc/src/wchar:wcpcpy",
 )
 
-libc_function(
+alias(
     name = "wcpncpy",
-    srcs = ["src/wchar/wcpncpy.cpp"],
-    hdrs = ["src/wchar/wcpncpy.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/wchar:wcpncpy",
 )
 
-libc_function(
+alias(
     name = "wcscat",
-    srcs = ["src/wchar/wcscat.cpp"],
-    hdrs = ["src/wchar/wcscat.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/string:utils",
-    ],
+    actual = "//libc/src/wchar:wcscat",
 )
 
-libc_function(
+alias(
     name = "wcschr",
-    srcs = ["src/wchar/wcschr.cpp"],
-    hdrs = ["src/wchar/wcschr.h"],
-    deps = [
-        ":types_wchar_t",
-        ":wchar_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/wchar:wcschr",
 )
 
-libc_function(
+alias(
     name = "wcscmp",
-    srcs = ["src/wchar/wcscmp.cpp"],
-    hdrs = ["src/wchar/wcscmp.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/wchar:wcscmp",
 )
 
-libc_function(
+alias(
     name = "wcscpy",
-    srcs = ["src/wchar/wcscpy.cpp"],
-    hdrs = ["src/wchar/wcscpy.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/string:utils",
-    ],
+    actual = "//libc/src/wchar:wcscpy",
 )
 
-libc_function(
+alias(
     name = "wcscspn",
-    srcs = ["src/wchar/wcscspn.cpp"],
-    hdrs = ["src/wchar/wcscspn.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        ":wchar_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/wchar:wcscspn",
 )
 
-libc_function(
+alias(
     name = "wcslcat",
-    srcs = ["src/wchar/wcslcat.cpp"],
-    hdrs = ["src/wchar/wcslcat.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/string:utils",
-    ],
+    actual = "//libc/src/wchar:wcslcat",
 )
 
-libc_function(
+alias(
     name = "wcslcpy",
-    srcs = ["src/wchar/wcslcpy.cpp"],
-    hdrs = ["src/wchar/wcslcpy.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/string:utils",
-    ],
+    actual = "//libc/src/wchar:wcslcpy",
 )
 
-libc_function(
+alias(
     name = "wcslen",
-    srcs = ["src/wchar/wcslen.cpp"],
-    hdrs = ["src/wchar/wcslen.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/string:utils",
-    ],
+    actual = "//libc/src/wchar:wcslen",
 )
 
-libc_function(
+alias(
     name = "wcsncat",
-    srcs = ["src/wchar/wcsncat.cpp"],
-    hdrs = ["src/wchar/wcsncat.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/string:utils",
-    ],
+    actual = "//libc/src/wchar:wcsncat",
 )
 
-libc_function(
+alias(
     name = "wcsncmp",
-    srcs = ["src/wchar/wcsncmp.cpp"],
-    hdrs = ["src/wchar/wcsncmp.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/wchar:wcsncmp",
 )
 
-libc_function(
+alias(
     name = "wcsncpy",
-    srcs = ["src/wchar/wcsncpy.cpp"],
-    hdrs = ["src/wchar/wcsncpy.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/wchar:wcsncpy",
 )
 
-libc_function(
+alias(
     name = "wcspbrk",
-    srcs = ["src/wchar/wcspbrk.cpp"],
-    hdrs = ["src/wchar/wcspbrk.h"],
-    deps = [
-        ":types_wchar_t",
-        ":wchar_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/wchar:wcspbrk",
 )
 
-libc_function(
+alias(
     name = "wcsrchr",
-    srcs = ["src/wchar/wcsrchr.cpp"],
-    hdrs = ["src/wchar/wcsrchr.h"],
-    deps = [
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/wchar:wcsrchr",
 )
 
-libc_function(
+alias(
     name = "wcsspn",
-    srcs = ["src/wchar/wcsspn.cpp"],
-    hdrs = ["src/wchar/wcsspn.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        ":wchar_utils",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/wchar:wcsspn",
 )
 
-libc_function(
+alias(
     name = "wcsstr",
-    srcs = ["src/wchar/wcsstr.cpp"],
-    hdrs = ["src/wchar/wcsstr.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/string:utils",
-    ],
+    actual = "//libc/src/wchar:wcsstr",
 )
 
-libc_function(
+alias(
     name = "wctob",
-    srcs = ["src/wchar/wctob.cpp"],
-    hdrs = ["src/wchar/wctob.h"],
-    deps = [
-        ":hdr_stdio_macros",
-        ":types_wint_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/wchar:wctob",
 )
 
-libc_function(
+alias(
     name = "wmemchr",
-    srcs = ["src/wchar/wmemchr.cpp"],
-    hdrs = ["src/wchar/wmemchr.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/wchar:wmemchr",
 )
 
-libc_function(
+alias(
     name = "wmemcmp",
-    srcs = ["src/wchar/wmemcmp.cpp"],
-    hdrs = ["src/wchar/wmemcmp.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/wchar:wmemcmp",
 )
 
-libc_function(
+alias(
     name = "wmemcpy",
-    srcs = ["src/wchar/wmemcpy.cpp"],
-    hdrs = ["src/wchar/wmemcpy.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/string/memory_utils",
-    ],
+    actual = "//libc/src/wchar:wmemcpy",
 )
 
-libc_function(
+alias(
     name = "wmemmove",
-    srcs = ["src/wchar/wmemmove.cpp"],
-    hdrs = ["src/wchar/wmemmove.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-    ],
+    actual = "//libc/src/wchar:wmemmove",
 )
 
-libc_function(
+alias(
     name = "wmempcpy",
-    srcs = ["src/wchar/wmempcpy.cpp"],
-    hdrs = ["src/wchar/wmempcpy.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/string/memory_utils",
-    ],
+    actual = "//libc/src/wchar:wmempcpy",
 )
 
-libc_function(
+alias(
     name = "wmemset",
-    srcs = ["src/wchar/wmemset.cpp"],
-    hdrs = ["src/wchar/wmemset.h"],
-    deps = [
-        ":types_size_t",
-        ":types_wchar_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/wchar:wmemset",
 )
