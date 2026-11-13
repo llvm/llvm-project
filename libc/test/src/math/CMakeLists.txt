@@ -3767,6 +3767,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  ddivf128_test
+  NEED_MPFR_F128
+  SUITE
+    libc-math-tests
+  SRCS
+    ddivf128_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.src.math.ddivf128
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   dfmal_test
   NEED_MPFR
   SUITE
