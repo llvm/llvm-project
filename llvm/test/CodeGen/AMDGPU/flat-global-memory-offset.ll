@@ -131,9 +131,8 @@ define i8 @as6_offset(ptr addrspace(6) %p) {
 ; GFX1010-GLOBAL-SDAG-LABEL: as6_offset:
 ; GFX1010-GLOBAL-SDAG:       ; %bb.0:
 ; GFX1010-GLOBAL-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1010-GLOBAL-SDAG-NEXT:    v_add_nc_u32_e32 v0, 0x64, v0
 ; GFX1010-GLOBAL-SDAG-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1010-GLOBAL-SDAG-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX1010-GLOBAL-SDAG-NEXT:    global_load_ubyte v0, v[0:1], off offset:100
 ; GFX1010-GLOBAL-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010-GLOBAL-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -149,9 +148,8 @@ define i8 @as6_offset(ptr addrspace(6) %p) {
 ; GFX1030-FLAT-SDAG-LABEL: as6_offset:
 ; GFX1030-FLAT-SDAG:       ; %bb.0:
 ; GFX1030-FLAT-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1030-FLAT-SDAG-NEXT:    v_add_nc_u32_e32 v0, 0x64, v0
 ; GFX1030-FLAT-SDAG-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1030-FLAT-SDAG-NEXT:    flat_load_ubyte v0, v[0:1]
+; GFX1030-FLAT-SDAG-NEXT:    flat_load_ubyte v0, v[0:1] offset:100
 ; GFX1030-FLAT-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1030-FLAT-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
