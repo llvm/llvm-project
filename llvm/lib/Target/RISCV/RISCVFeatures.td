@@ -2095,7 +2095,7 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "that allows a memory tag in the upper address bits">;
 
 def FeatureFixSiFiveMAL9174
-    : SubtargetFeature<"fix-sifive-mal-9174", "FixSiFiveMAL_9174", "true",
+    : SubtargetFeature<"fix-sifive-mal-9174", "FixSiFiveMAL9174", "true",
                        "Workaround SiFive erratum MAL-9174 by disallowing "
                        "overlapping source and destination for vector index "
                        "loads">;
