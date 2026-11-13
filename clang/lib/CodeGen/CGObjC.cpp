@@ -782,16 +782,18 @@ void CodeGenFunction::StartObjCMethod(const ObjCMethodDecl *OMD,
     // Default hidden visibility
     Fn->setVisibility(llvm::Function::HiddenVisibility);
     if (CGM.isObjCDirectPreconditionThunkEnabled()) {
-      // However, if we expose the symbol, and the decl (property or method)
-      // have visibility attribute set ...
-      const NamedDecl *Decl = OMD;
-      if (const auto *PD = OMD->findPropertyDecl()) {
-        Decl = PD;
+      // However, if we expose the symbol, respect an explicit visibility
+      // attribute. If the method is an accessor and the property also sets
+      // the attribute, prefer the method's, as it's the more specific one.
+      auto V = OMD->getExplicitVisibility(NamedDecl::VisibilityForValue);
+      if (!V) {
+        // Find the property through the method's declaration: a hand-written
+        // accessor isn't marked as an accessor, but its declaration is.
+        if (const auto *PD = OMD->getCanonicalDecl()->findPropertyDecl())
+          V = PD->getExplicitVisibility(NamedDecl::VisibilityForValue);
       }
-      // ... then respect source level visibility setting
-      if (auto V = Decl->getExplicitVisibility(NamedDecl::VisibilityForValue)) {
+      if (V)
         Fn->setVisibility(CGM.GetLLVMVisibility(*V));
-      }
     }
     CGM.SetLLVMFunctionAttributes(OMD, FI, Fn, /*IsThunk=*/false);
     CGM.SetLLVMFunctionAttributesForDefinition(OMD, Fn);
