@@ -88,8 +88,8 @@ libc_test(
     name = "big_int_test",
     srcs = ["big_int_test.cpp"],
     deps = [
-        "//libc:hdr_math_macros",
         "//libc:llvm_libc_macros_math_macros",
+        "//libc/hdr:math_macros",
         "//libc/src/__support:big_int",
         "//libc/src/__support:integer_literals",
         "//libc/src/__support/CPP:optional",

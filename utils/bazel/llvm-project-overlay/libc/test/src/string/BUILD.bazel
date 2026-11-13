@@ -22,7 +22,7 @@ libc_test(
     name = "strcpy_test",
     srcs = ["strcpy_test.cpp"],
     deps = [
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/src/string:strcpy",
     ],
 )
@@ -48,7 +48,7 @@ libc_test(
     name = "stpncpy_test",
     srcs = ["stpncpy_test.cpp"],
     deps = [
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/src/__support/CPP:span",
         "//libc/src/string:stpncpy",
     ],
@@ -74,7 +74,7 @@ libc_test(
     name = "memchr_test",
     srcs = ["memchr_test.cpp"],
     deps = [
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/src/string:memchr",
     ],
 )
@@ -114,7 +114,7 @@ libc_test(
     name = "strsep_test",
     srcs = ["strsep_test.cpp"],
     deps = [
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/src/string:strsep",
     ],
 )
@@ -139,7 +139,7 @@ libc_test(
     name = "memrchr_test",
     srcs = ["memrchr_test.cpp"],
     deps = [
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/src/string:memrchr",
     ],
 )
@@ -165,7 +165,7 @@ libc_test(
     name = "strcat_test",
     srcs = ["strcat_test.cpp"],
     deps = [
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/src/string:strcat",
     ],
 )
@@ -198,7 +198,7 @@ libc_test(
     name = "strspn_test",
     srcs = ["strspn_test.cpp"],
     deps = [
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/src/string:strspn",
     ],
 )
@@ -223,7 +223,7 @@ libc_test_library(
     name = "memory_check_utils",
     hdrs = ["memory_utils/memory_check_utils.h"],
     deps = [
-        "//libc:hdr_stdint_proxy",
+        "//libc/hdr:stdint_proxy",
         "//libc/src/__support:libc_assert",
         "//libc/src/__support/CPP:span",
         "//libc/src/__support/macros:config",
@@ -240,8 +240,8 @@ libc_test_library(
         "//conditions:default": [],
     }),
     deps = [
-        "//libc:hdr_stdint_proxy",
-        "//libc:hdr_sys_mman_macros",
+        "//libc/hdr:stdint_proxy",
+        "//libc/hdr:sys_mman_macros",
         "//libc/src/__support/macros:attributes",
         "//libc/src/__support/macros/properties:os",
     ],
@@ -252,7 +252,7 @@ libc_test(
     srcs = ["memcpy_test.cpp"],
     deps = [
         ":memory_check_utils",
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/src/__support/macros/properties:os",
         "//libc/src/string:memcpy",
     ] + select({
@@ -276,7 +276,7 @@ libc_test(
     name = "mempcpy_test",
     srcs = ["mempcpy_test.cpp"],
     deps = [
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/src/string:mempcpy",
     ],
 )
@@ -286,7 +286,7 @@ libc_test(
     srcs = ["memset_test.cpp"],
     deps = [
         ":memory_check_utils",
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/src/__support/macros/properties:os",
         "//libc/src/string:memset",
     ] + select({
@@ -312,7 +312,7 @@ libc_test(
     srcs = ["memmove_test.cpp"],
     deps = [
         ":memory_check_utils",
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/src/__support/CPP:span",
         "//libc/src/string:memcmp",
         "//libc/src/string:memmove",
@@ -325,7 +325,7 @@ libc_test(
     srcs = ["memcmp_test.cpp"],
     deps = [
         ":memory_check_utils",
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/src/string:memcmp",
         "//libc/test/UnitTest:test_logger",
     ],

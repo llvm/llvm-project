@@ -33,10 +33,10 @@ libc_support_library(
         "string_utils.h",
     ],
     deps = [
-        "//libc:hdr_limits_macros",
-        "//libc:hdr_stdint_proxy",
         "//libc:llvm_libc_types_size_t",
-        "//libc:types_size_t",
+        "//libc/hdr:limits_macros",
+        "//libc/hdr:stdint_proxy",
+        "//libc/hdr/types:size_t",
         "//libc/src/__support:common",
         "//libc/src/__support/CPP:bitset",
         "//libc/src/__support/CPP:type_traits",
@@ -318,7 +318,7 @@ libc_function(
     hdrs = ["strsep.h"],
     deps = [
         ":utils",
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:signal_macros",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros:null_check",
@@ -419,8 +419,8 @@ libc_function(
     hdrs = ["strdup.h"],
     deps = [
         ":allocating_string_utils",
-        "//libc:hdr_stdlib_macros",
         "//libc:llvm_libc_types_size_t",
+        "//libc/hdr:stdlib_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/macros:config",

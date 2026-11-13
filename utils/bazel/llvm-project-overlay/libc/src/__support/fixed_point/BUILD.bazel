@@ -22,8 +22,8 @@ libc_support_library(
         "fx_rep.h",
     ],
     deps = [
-        "//libc:hdr_stdint_proxy",
         "//libc:llvm_libc_macros_stdfix_macros",
+        "//libc/hdr:stdint_proxy",
         "//libc/src/__support:big_int",
         "//libc/src/__support:libc_assert",
         "//libc/src/__support:math_extras",

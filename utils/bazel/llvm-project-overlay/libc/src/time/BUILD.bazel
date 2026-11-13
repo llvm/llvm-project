@@ -20,8 +20,8 @@ libc_function(
     srcs = ["linux/clock.cpp"],
     hdrs = ["clock.h"],
     deps = [
-        "//libc:hdr_time_macros",
-        "//libc:types_clock_t",
+        "//libc/hdr:time_macros",
+        "//libc/hdr/types:clock_t",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/CPP:limits",
