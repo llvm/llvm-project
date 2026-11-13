@@ -1350,12 +1350,19 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v4s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
-      .bitcastIf(isPointerVector(0), [=](const LegalityQuery &Query) {
-        // Bitcast pointers vector to i64.
-        const LLT DstTy = Query.Types[0];
-        return std::pair(
-            0, LLT::vector(DstTy.getElementCount(), LLT::integer(64)));
-      });
+      .bitcastIf(
+          [=](const LegalityQuery &Query) {
+            // Only 64-bit pointers can be bitcast to i64 elements; vectors of
+            // 32-bit pointers (arm64_32) are left to fall back.
+            const LLT Ty = Query.Types[0];
+            return Ty.isPointerVector() && Ty.getScalarSizeInBits() == 64;
+          },
+          [=](const LegalityQuery &Query) {
+            // Bitcast pointers vector to i64.
+            const LLT DstTy = Query.Types[0];
+            return std::pair(
+                0, LLT::vector(DstTy.getElementCount(), LLT::integer(64)));
+          });
 
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
       .legalFor({{v16s8, v8s8}, {v8s16, v4s16}, {v4s32, v2s32}})
