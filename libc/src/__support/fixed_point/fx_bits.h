@@ -217,17 +217,20 @@ idiv(T x, T y) {
   // behavior is undefined. Ref: ISO/IEC TR 18037:2008(E) p.g. 16
   LIBC_CRASH_ON_VALUE(y, FXRep::ZERO());
 
+  // MIN / -EPS == 2^VALUE_LEN does not fit in CompType (the division would
+  // truncate, or trap with SIGFPE), but it fits in XType if XType is wider
+  // than CompType. This is the only input pair that overflows CompType.
+  if constexpr (FXRep::SIGN_LEN > 0 && sizeof(XType) > sizeof(CompType)) {
+    if (LIBC_UNLIKELY(x == FXRep::MIN() && y == -FXRep::EPS()))
+      return static_cast<XType>(1) << FXRep::VALUE_LEN;
+  }
+
   CompType x_comp = static_cast<CompType>(FXBits(x).get_bits());
   CompType y_comp = static_cast<CompType>(FXBits(y).get_bits());
 
   // If an integer result of one of these functions overflows, the behavior is
   // undefined. Ref: ISO/IEC TR 18037:2008(E) p.g. 16
-  using WideType = cpp::conditional_t<
-      (sizeof(CompType) < sizeof(int64_t)),
-      cpp::conditional_t<cpp::is_signed_v<CompType>, int64_t, uint64_t>,
-      cpp::conditional_t<cpp::is_signed_v<CompType>, Int128, UInt128>>;
-  WideType result =
-      static_cast<WideType>(x_comp) / static_cast<WideType>(y_comp);
+  CompType result = x_comp / y_comp;
 
   return static_cast<XType>(result);
 }

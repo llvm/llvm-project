@@ -69,9 +69,16 @@ public:
       }
     }
 
+    // MIN / -EPS == 2^VALUE_LEN does not fit in the storage type of T, but it
+    // is representable (and thus well defined) if XType is wider than T. The
+    // neighbouring inputs must keep working.
     if constexpr (is_signed && (sizeof(XType) > sizeof(T))) {
-      EXPECT_EQ(func(min, -eps), static_cast<XType>(1)
-                                     << (FXRep::TOTAL_LEN - 1));
+      constexpr XType two_pow_value_len = static_cast<XType>(1)
+                                          << FXRep::VALUE_LEN;
+      EXPECT_EQ(func(min, -eps), two_pow_value_len);
+      EXPECT_EQ(func(min + eps, -eps), two_pow_value_len - 1);
+      EXPECT_EQ(func(min, -eps - eps), two_pow_value_len / 2);
+      EXPECT_EQ(func(max, -eps), -(two_pow_value_len - 1));
     }
   }
 
