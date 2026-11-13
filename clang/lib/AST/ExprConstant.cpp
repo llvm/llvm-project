@@ -823,6 +823,10 @@ namespace {
     /// The number of heap allocations performed so far in this evaluation.
     uintptr_t NumHeapAllocs = 0;
 
+    /// The compound literal that the current lvalue-to-rvalue conversion reads
+    /// directly; see getDirectlyReadCompoundLiteral.
+    const CompoundLiteralExpr *DirectlyReadCompoundLiteral = nullptr;
+
     struct EvaluatingConstructorRAII {
       EvalInfo &EI;
       ObjectUnderConstruction Object;
@@ -4995,6 +4999,19 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
           return CompleteObject();
         }
 
+        // A compound literal with static storage duration is an unnamed object
+        // (C11 6.5.2.5) that can be modified unless it is const-qualified, so
+        // its value is not known, except in the GNU extension
+        // 'int x = (int){1};'; see getDirectlyReadCompoundLiteral.
+        if (!CLE->getType().isConstant(Info.Ctx) &&
+            CLE != Info.DirectlyReadCompoundLiteral) {
+          if (!IsAccess)
+            return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
+          Info.FFDiag(E);
+          Info.Note(CLE->getExprLoc(), diag::note_declared_at);
+          return CompleteObject();
+        }
+
         BaseVal = &CLE->getStaticValue();
       } else {
         if (!IsAccess)
@@ -8722,6 +8739,25 @@ static bool handleLValueToRValueBitCast(EvalInfo &Info, APValue &DestValue,
   return handleRValueToRValueBitCast(Info, DestValue, SourceRValue, BCE);
 }
 
+/// GNU extension: a compound literal that is immediately read by an
+/// lvalue-to-rvalue conversion, possibly through '.' member access or
+/// __real/__imag, as in 'int x = (int){1};' or 'int y = (struct S){1}.a;', is
+/// not a read of the compound literal object; the value of its initializer is
+/// used directly. Returns that compound literal, if E is such an operand.
+static const CompoundLiteralExpr *
+getDirectlyReadCompoundLiteral(const Expr *E) {
+  while (true) {
+    E = E->IgnoreParens();
+    if (const auto *ME = dyn_cast<MemberExpr>(E); ME && !ME->isArrow())
+      E = ME->getBase();
+    else if (const auto *UO = dyn_cast<UnaryOperator>(E);
+             UO && (UO->getOpcode() == UO_Real || UO->getOpcode() == UO_Imag))
+      E = UO->getSubExpr();
+    else
+      return dyn_cast<CompoundLiteralExpr>(E);
+  }
+}
+
 template <class Derived>
 class ExprEvaluatorBase
   : public ConstStmtVisitor<Derived, bool> {
@@ -9344,6 +9380,9 @@ public:
       if (!EvaluateLValue(E->getSubExpr(), LVal, Info))
         return false;
       APValue RVal;
+      llvm::SaveAndRestore DirectRead(
+          Info.DirectlyReadCompoundLiteral,
+          getDirectlyReadCompoundLiteral(E->getSubExpr()));
       // Note, we use the subexpression's type in order to retain cv-qualifiers.
       if (!handleLValueToRValueConversion(Info, E, E->getSubExpr()->getType(),
                                           LVal, RVal))
@@ -10578,6 +10617,8 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
       return false;
 
     APValue RVal;
+    llvm::SaveAndRestore DirectRead(Info.DirectlyReadCompoundLiteral,
+                                    getDirectlyReadCompoundLiteral(SubExpr));
     // Note, we use the subexpression's type in order to retain cv-qualifiers.
     if (!handleLValueToRValueConversion(Info, E, E->getSubExpr()->getType(),
                                         LVal, RVal))
