@@ -206,12 +206,9 @@ size_t StringRef::rfind_insensitive(char C, size_t From) const {
   return npos;
 }
 
-// Returns the index of the last C in Data[0, End), or npos. There is no
-// portable memrchr, so this is written for the loop vectorizer instead: each
-// 16-byte chunk is tested with a branch-free OR of compares, which compiles to
-// one vector compare and mask test, and only a matching chunk is scanned
-// bytewise. GCC at -O3 fully unrolls the inner loop before vectorizing, which
-// leaves it scalar; the pragma prevents that.
+// Returns the index of the last C in Data[0, End), or npos if it is not found.
+// Written to be vectorizable. GCC at -O3 fully unrolls the inner loop before
+// vectorizing, which leaves it scalar; the pragma prevents that.
 static size_t rfindByte(const char *Data, size_t End, char C) {
   size_t I = End;
   for (; I >= 16; I -= 16) {

@@ -552,6 +552,26 @@ TEST(StringRefTest, Find) {
   EXPECT_EQ(0U, Str.rfind("hello"));
   EXPECT_EQ(1U, Str.rfind("ello"));
   EXPECT_EQ(StringRef::npos, Str.rfind("zz"));
+  EXPECT_EQ(10U, Str.rfind(""));
+  EXPECT_EQ(0U, StringRef().rfind(""));
+  EXPECT_EQ(StringRef::npos, StringRef().rfind("a"));
+  EXPECT_EQ(4U, StringRef("aaaaaa").rfind("aa"));
+  EXPECT_EQ(StringRef::npos, StringRef("abcabcab").rfind("abd"));
+  EXPECT_EQ(StringRef::npos, StringRef("foo.llvm").rfind(".llvm."));
+
+  // Test a few longer haystacks to exercise the vectorized paths.
+  EXPECT_EQ(28U,
+            StringRef("_ZN4llvm9StringRef5rfindES0_.llvm.123").rfind(".llvm."));
+  EXPECT_EQ(
+      3U,
+      StringRef("foo.llvm.0123456789abcdef0123456789abcdef").rfind(".llvm."));
+  EXPECT_EQ(
+      3U, StringRef("foo.llvm.bar.baz.qux.quux.corge.grault").rfind(".llvm."));
+  EXPECT_EQ(StringRef::npos,
+            StringRef("foo_bar_baz_qux_quux_corge_grault").rfind(".llvm."));
+  EXPECT_EQ(
+      StringRef::npos,
+      StringRef("foo_bar_baz_qux_quux_corge_grault.llvm").rfind(".llvm."));
 
   EXPECT_EQ(8U, Str.rfind_insensitive('l'));
   EXPECT_EQ(8U, Str.rfind_insensitive('L'));
