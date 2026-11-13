@@ -341,11 +341,8 @@ ReductionProcessor::getReductionInitValue(mlir::Location loc, mlir::Type type,
     int64_t zeroInt = llvm::APInt::getZero(bits).getSExtValue();
     return builder.createIntegerConstant(loc, type, zeroInt);
   }
-  case ReductionIdentifier::IAND: {
-    unsigned bits = type.getIntOrFloatBitWidth();
-    int64_t allOnInt = llvm::APInt::getAllOnes(bits).getSExtValue();
-    return builder.createIntegerConstant(loc, type, allOnInt);
-  }
+  case ReductionIdentifier::IAND:
+    return builder.createAllOnesInteger(loc, type);
   case ReductionIdentifier::ADD:
   case ReductionIdentifier::MULTIPLY:
   case ReductionIdentifier::AND:
