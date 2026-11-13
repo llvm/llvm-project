@@ -174,6 +174,8 @@ FmtContext &FmtContext::withSelf(Twine subst) {
   return addSubst("_self", subst);
 }
 
+// GCC also diagnoses deprecated types inside their out-of-line definitions.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
 std::optional<StringRef>
 FmtContext::getSubstFor(FmtContext::PHKind placeholder) const {
   switch (placeholder) {
@@ -187,6 +189,8 @@ FmtContext::getSubstFor(FmtContext::PHKind placeholder) const {
   }
   llvm_unreachable("unknown placeholder kind");
 }
+
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 std::optional<StringRef> FmtContext::getSubstFor(StringRef placeholder) const {
   auto it = substMap.find(placeholder);
@@ -210,6 +214,7 @@ void FmtContext::printBindings(raw_ostream &os) const {
   ::printBindings(os, getBindings());
 }
 
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
 FmtContext::PHKind FmtContext::getPlaceHolderKind(StringRef str) {
   return StringSwitch<FmtContext::PHKind>(str)
       .Case("_builder", FmtContext::PHKind::Builder)
@@ -408,3 +413,5 @@ FmtStrVecObject::FmtStrVecObject(FmtStrVecObject &&that)
   for (auto &p : parameters)
     adapters.push_back(p);
 }
+
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP

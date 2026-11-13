@@ -296,6 +296,8 @@ std::string stringify(T &&t) {
 /// into:
 ///   "failed to verify " << bar
 /// where bar is the result of formatting "foo" with ctx during code generation.
+[[deprecated("use buildErrorStreamingStringChecked or "
+             "buildErrorStreamingStringOrFatal")]]
 std::string buildErrorStreamingString(
     StringRef message, const FmtContext &ctx,
     ErrorStreamType errorStreamType = ErrorStreamType::InString);
