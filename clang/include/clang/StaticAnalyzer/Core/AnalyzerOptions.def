@@ -231,8 +231,7 @@ ANALYZER_OPTION(
     StringRef, UnityBuildFileExtensions, "unitybuild-file-extensions",
     "Semicolon-separated file extensions (including leading dots, e.g. "
     "'.cpp;.impl;.c') of included files whose functions are considered "
-    "analysis entry points, regardless of the including file's name. "
-    "Empty by default.",
+    "analysis entry points, regardless of the including file's name. ",
     "")
 
 ANALYZER_OPTION(bool, ShouldReportIssuesInMainSourceFile,
