@@ -106,6 +106,11 @@ public:
     return false;
   }
 
+  // Check if it's profitable to sink operands of given instruction. This is
+  // currently used for mul.wide generation.
+  bool isProfitableToSinkOperands(Instruction *I,
+                                  SmallVectorImpl<Use *> &Ops) const override;
+
   // We don't want to prevent inlining because of target-cpu and -features
   // attributes that were added to newer versions of LLVM/Clang: There are
   // no incompatible functions in PTX, ptxas will throw errors in such cases.
