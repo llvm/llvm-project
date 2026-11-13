@@ -12,8 +12,8 @@
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/Transforms/AddComdats.h"
 #include "mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"
-#include "mlir/Dialect/LLVMIR/Transforms/SimplifyCFG.h"
 #include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
+#include "mlir/Dialect/LLVMIR/Transforms/SimplifyCFG.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
