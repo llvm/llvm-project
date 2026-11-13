@@ -148,7 +148,7 @@ func.func @trivially_all_true_case_fixed_size()
 
 // -----
 
-// ALL-LABEL: @trivially_all_true_case_fixed_size_rank_0()
+// ALL-LABEL: @trivially_all_true_case_fixed_size_rank_0
 // ALL: %[[MASK:.*]] = vector.create_mask %arg0 : vector<i1>
 // ALL: return %[[MASK]]
 func.func @trivially_all_true_case_fixed_size_rank_0(%n: index) -> vector<i1> {
