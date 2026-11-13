@@ -3,9 +3,9 @@
 
 ---
 name:            Scalar
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
   ; CHECK-LABEL: name: @Scalar
   ; CHECK-NEXT: %copy_x0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %maskf:_ KnownBits:0000000000001111 SignBits:12 IsKnownNeverZero:1
@@ -23,9 +23,9 @@ body:             |
 ...
 ---
 name:            Vector
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
   ; CHECK-LABEL: name: @Vector
   ; CHECK-NEXT: %copy_x0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %maskff:_ KnownBits:11111111 SignBits:8 IsKnownNeverZero:1
@@ -47,9 +47,9 @@ body:             |
 ...
 ---
 name:            Sign_Scalar
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
   ; CHECK-LABEL: name: @Sign_Scalar
   ; CHECK-NEXT: %copy_x0:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %mask4:_ KnownBits:00000000000000000000000000000100 SignBits:29 IsKnownNeverZero:1
@@ -77,9 +77,9 @@ body:             |
 ...
 ---
 name:            Sign_Scalar_Vector
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
   ; CHECK-LABEL: name: @Sign_Scalar_Vector
   ; CHECK-NEXT: %copy_x0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %maskf:_ KnownBits:0000000000000100 SignBits:13 IsKnownNeverZero:1
@@ -95,9 +95,9 @@ body:             |
 ...
 ---
 name:            Sign_Vector
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
   ; CHECK-LABEL: name: @Sign_Vector
   ; CHECK-NEXT: %copy_x0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %mask6:_ KnownBits:00000110 SignBits:5 IsKnownNeverZero:1
@@ -115,9 +115,9 @@ body:             |
 ...
 ---
 name:            Sign_Vector_Poison
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
   ; CHECK-LABEL: name: @Sign_Vector_Poison
   ; CHECK-NEXT: %copy_x0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %mask8:_ KnownBits:00001000 SignBits:4 IsKnownNeverZero:1
