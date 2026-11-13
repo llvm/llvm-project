@@ -8075,8 +8075,9 @@ The number of bytes known to be dereferenceable is specified by the integer
 value in the metadata node. This is analogous to the ''dereferenceable''
 attribute on parameters and return values.
 
-The `!deferenceable` metadata can be combined with the `!nofree` metadata
-to indicate that the pointer will stay dereferenceable forever.
+The `!dereferenceable` metadata can be combined with the `!nofreeobj` metadata
+{ref}`nofreeobj <md_nofreeobj>` to indicate that the pointer will stay
+dereferenceable forever.
 
 (md_dereferenceable_or_null)=
 
@@ -8089,6 +8090,21 @@ undefined.
 The number of bytes known to be dereferenceable is specified by the integer
 value in the metadata node. This is analogous to the ''dereferenceable_or_null''
 attribute on parameters and return values.
+
+(md_nofreeobj)=
+
+#### '`nofreeobj`' Metadata
+
+The `!nofreeobj` metadata can only be applied to `load` and `inttoptr`
+instructions with a pointer-typed result. It must reference a metadata node
+with no entries.
+
+The existence of the `!nofreeobj` metadata on the instruction tells the
+optimizer that the underlying object of the resulting pointer is never freed,
+neither through this pointer nor through any other. If the instruction is
+executed and the underlying object is freed, whether before or after the
+instruction, the behavior is undefined. This is analogous to the `nofreeobj`
+attribute on return values.
 
 #### '`captures`' Metadata
 
@@ -12481,12 +12497,7 @@ See `dereferenceable_or_null` metadata {ref}`dereferenceable_or_null <md_derefer
 
 The optional `!nofreeobj` metadata must reference a single metadata name
 `<empty_node>` corresponding to a metadata node with no entries.
-The existence of the `!nofreeobj` metadata on the instruction tells the
-optimizer that the underlying object of the loaded pointer will not be freed
-after this point, through this pointer or any other. This is analogous to the
-`nofreeobj` attribute on return values. This metadata can only be applied to
-loads of a pointer type. If the underlying object is freed after the load, the
-behavior is undefined.
+See `nofreeobj` metadata {ref}`nofreeobj <md_nofreeobj>`.
 
 The optional `!align` metadata must reference a single metadata name
 `<align_node>` corresponding to a metadata node with one `i64` entry.
@@ -13649,9 +13660,7 @@ See `dereferenceable_or_null` metadata.
 
 The optional `!nofreeobj` metadata must reference a single metadata name
 `<empty_node>` corresponding to a metadata node with no entries.
-The existence of the `!nofreeobj` metadata on the instruction tells the
-optimizer that the memory pointed by the pointer will not be freed after this
-point.
+See `nofreeobj` metadata {ref}`nofreeobj <md_nofreeobj>`.
 
 ##### Semantics:
 
