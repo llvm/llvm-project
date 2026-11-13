@@ -694,8 +694,9 @@ bool IndVarSimplify::simplifyAndExtend(Loop *L,
       // Information about sign/zero extensions of CurrIV.
       IndVarSimplifyVisitor Visitor(CurrIV, SE, TTI, DT);
 
-      const auto &[C, U] = simplifyUsersOfIV(CurrIV, SE, DT, LI, TTI, DeadInsts,
-                                             Rewriter, &Visitor);
+      const auto &[C, U] =
+          simplifyUsersOfIV(CurrIV, SE, DT, LI, TTI, DeadInsts, Rewriter,
+                            &Visitor, /*HoistInvariantCmps=*/true);
 
       Changed |= C;
       RunUnswitching |= U;
@@ -1968,13 +1969,19 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   // 1) We don't bother to constant fold dominated exits with identical exit
   //    counts; that's simply a form of CSE/equality propagation and we leave
   //    it for dedicated passes.
-  // 2) We insert the comparison at the branch.  Hoisting introduces additional
-  //    legality constraints and we leave that to dedicated logic.  We want to
-  //    predicate even if we can't insert a loop invariant expression as
-  //    peeling or unrolling will likely reduce the cost of the otherwise loop
-  //    varying check.
-  Rewriter.setInsertPoint(L->getLoopPreheader()->getTerminator());
-  IRBuilder<> B(L->getLoopPreheader()->getTerminator());
+  // 2) We insert the comparison in the preheader of the outermost loop in
+  //    which the exit counts are invariant and safe to expand, so that
+  //    unswitching of the enclosing loops can use it.  We want to predicate
+  //    even if we can't insert a loop invariant expression as peeling or
+  //    unrolling will likely reduce the cost of the otherwise loop varying
+  //    check.
+  SmallVector<const SCEV *> Exprs = {ExactBTC};
+  append_range(Exprs, map_range(ExitingBlocks, [&](BasicBlock *ExitingBB) {
+                 return SE->getExitCount(L, ExitingBB);
+               }));
+  Instruction *InsertPt = findOutermostInvariantInsertPt(L, Exprs, Rewriter);
+  Rewriter.setInsertPoint(InsertPt);
+  IRBuilder<> B(InsertPt);
   Value *ExactBTCV = nullptr; // Lazily generated if needed.
   for (BasicBlock *ExitingBB : ExitingBlocks) {
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
@@ -2204,7 +2211,10 @@ PreservedAnalyses IndVarSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
   auto PA = getLoopPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
   if (IVS.runUnswitching()) {
-    AM.getResult<ShouldRunExtraSimpleLoopUnswitch>(L, AR);
+    // The new invariant conditions may also be invariant in parent loops.
+    // Requests for parent loops stay cached until their extra unswitch run.
+    for (Loop *UL = &L; UL; UL = UL->getParentLoop())
+      AM.getResult<ShouldRunExtraSimpleLoopUnswitch>(*UL, AR);
     PA.preserve<ShouldRunExtraSimpleLoopUnswitch>();
   }
 
