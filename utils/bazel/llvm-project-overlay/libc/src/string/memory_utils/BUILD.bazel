@@ -1,0 +1,79 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_support_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_support_library(
+    name = "memory_utils",
+    hdrs = [
+        "op_aarch64.h",
+        "op_builtin.h",
+        "op_generic.h",
+        "op_riscv.h",
+        "op_x86.h",
+        "utils.h",
+    ],
+    textual_hdrs = [
+        "aarch64/inline_bcmp.h",
+        "aarch64/inline_memcmp.h",
+        "aarch64/inline_memcpy.h",
+        "aarch64/inline_memmove.h",
+        "aarch64/inline_memset.h",
+        "aarch64/inline_strlen.h",
+        "arm/common.h",
+        "arm/inline_memcpy.h",
+        "arm/inline_memset.h",
+        "generic/aligned_access.h",
+        "generic/byte_per_byte.h",
+        "generic/inline_strlen.h",
+        "inline_bcmp.h",
+        "inline_bzero.h",
+        "inline_memcmp.h",
+        "inline_memcpy.h",
+        "inline_memmem.h",
+        "inline_memmove.h",
+        "inline_memset.h",
+        "inline_strcmp.h",
+        "inline_strstr.h",
+        "riscv/inline_bcmp.h",
+        "riscv/inline_memcmp.h",
+        "riscv/inline_memcpy.h",
+        "riscv/inline_memmove.h",
+        "riscv/inline_memset.h",
+        "x86_64/inline_bcmp.h",
+        "x86_64/inline_memcmp.h",
+        "x86_64/inline_memcpy.h",
+        "x86_64/inline_memmove.h",
+        "x86_64/inline_memset.h",
+        "x86_64/inline_strlen.h",
+    ],
+    deps = [
+        "//libc:hdr_stdint_proxy",
+        "//libc/src/__support:common",
+        "//libc/src/__support/CPP:array",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:cstddef",
+        "//libc/src/__support/CPP:simd",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:is_defined",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:compiler",
+        "//libc/src/__support/macros/properties:cpu_features",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)

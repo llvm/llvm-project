@@ -19,6 +19,18 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
 
 // -----
 
+// Alignment and MaxByteOffset are also preserved on module-scope variables.
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.1, [Addresses, Kernel, Linkage], []> {
+  // CHECK: spirv.GlobalVariable @aligned {alignment = 16 : i32} : !spirv.ptr<f32, CrossWorkgroup>
+  // CHECK: spirv.GlobalVariable @high_bit {alignment = -2147483648 : i32} : !spirv.ptr<f32, CrossWorkgroup>
+  // CHECK: spirv.GlobalVariable @bounded {max_byte_offset = 64 : i32} : !spirv.ptr<f32, CrossWorkgroup>
+  spirv.GlobalVariable @aligned {alignment = 16 : i32} : !spirv.ptr<f32, CrossWorkgroup>
+  spirv.GlobalVariable @high_bit {alignment = 2147483648 : i32} : !spirv.ptr<f32, CrossWorkgroup>
+  spirv.GlobalVariable @bounded {max_byte_offset = 64 : i32} : !spirv.ptr<f32, CrossWorkgroup>
+}
+
+// -----
+
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, Int8], []> {
   // CHECK:         spirv.SpecConstant @sc = 1 : i8
   // CHECK-NEXT:    spirv.GlobalVariable @var initializer(@sc) : !spirv.ptr<i8, Uniform>

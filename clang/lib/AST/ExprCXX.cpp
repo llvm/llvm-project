@@ -25,6 +25,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/LambdaCapture.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/Reflection.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
@@ -531,9 +532,8 @@ OverloadExpr::OverloadExpr(StmtClass SC, const ASTContext &Context,
   }
 
   if (TemplateArgs) {
-    auto Deps = TemplateArgumentDependence::None;
     getTrailingASTTemplateKWAndArgsInfo()->initializeFrom(
-        TemplateKWLoc, *TemplateArgs, getTrailingTemplateArgumentLoc(), Deps);
+        TemplateKWLoc, *TemplateArgs, getTrailingTemplateArgumentLoc());
   } else if (TemplateKWLoc.isValid()) {
     getTrailingASTTemplateKWAndArgsInfo()->initializeFrom(TemplateKWLoc);
   }
@@ -562,9 +562,8 @@ DependentScopeDeclRefExpr::DependentScopeDeclRefExpr(
   DependentScopeDeclRefExprBits.HasTemplateKWAndArgsInfo =
       (Args != nullptr) || TemplateKWLoc.isValid();
   if (Args) {
-    auto Deps = TemplateArgumentDependence::None;
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
-        TemplateKWLoc, *Args, getTrailingObjects<TemplateArgumentLoc>(), Deps);
+        TemplateKWLoc, *Args, getTrailingObjects<TemplateArgumentLoc>());
   } else if (TemplateKWLoc.isValid()) {
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc);
@@ -1556,10 +1555,9 @@ CXXDependentScopeMemberExpr::CXXDependentScopeMemberExpr(
   CXXDependentScopeMemberExprBits.OperatorLoc = OperatorLoc;
 
   if (TemplateArgs) {
-    auto Deps = TemplateArgumentDependence::None;
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
-        TemplateKWLoc, *TemplateArgs, getTrailingObjects<TemplateArgumentLoc>(),
-        Deps);
+        TemplateKWLoc, *TemplateArgs,
+        getTrailingObjects<TemplateArgumentLoc>());
   } else if (TemplateKWLoc.isValid()) {
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc);
@@ -1977,15 +1975,15 @@ TypeTraitExpr *TypeTraitExpr::CreateDeserialized(const ASTContext &C,
 CXXReflectExpr::CXXReflectExpr(EmptyShell Empty)
     : Expr(CXXReflectExprClass, Empty) {}
 
-CXXReflectExpr::CXXReflectExpr(SourceLocation CaretCaretLoc,
+CXXReflectExpr::CXXReflectExpr(ASTContext &C, SourceLocation CaretCaretLoc,
                                const TypeSourceInfo *TSI)
-    : Expr(CXXReflectExprClass, TSI->getType(), VK_PRValue, OK_Ordinary),
-      CaretCaretLoc(CaretCaretLoc), Operand(TSI) {}
+    : Expr(CXXReflectExprClass, C.MetaInfoTy, VK_PRValue, OK_Ordinary),
+      CaretCaretLoc(CaretCaretLoc), Kind(ReflectionKind::Type), Operand(TSI) {}
 
 CXXReflectExpr *CXXReflectExpr::Create(ASTContext &C,
                                        SourceLocation CaretCaretLoc,
-                                       TypeSourceInfo *TSI) {
-  return new (C) CXXReflectExpr(CaretCaretLoc, TSI);
+                                       const TypeSourceInfo *TSI) {
+  return new (C) CXXReflectExpr(C, CaretCaretLoc, TSI);
 }
 
 CXXReflectExpr *CXXReflectExpr::CreateEmpty(ASTContext &C) {

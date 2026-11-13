@@ -128,10 +128,10 @@ defm GRX32 : SystemZRegClass<"GRX32", [i32], 32,
                                R12L,R12H,R13L,R13H,R14L,R14H,R15L,R15H)
                              ]>;
 
-// On machines without SIMD support, i128 is not a legal type, so model the
-// register pairs as untyped instead.
+// Register pairs hold v2i64. Inline assembly operands use untyped, which is
+// listed first so that i128 operands are not bitcast to v2i64.
 // XPLINK64: Allocate all registers in natural order
-defm GR128 : SystemZRegClass<"GR128", [untyped], 128,
+defm GR128 : SystemZRegClass<"GR128", [untyped, v2i64], 128,
                              (add R0Q, R2Q, R4Q, R12Q, R10Q, R8Q, R6Q, R14Q),
                              [(add R0Q, R2Q, R4Q, R6Q, R8Q, R10Q, R12Q, R14Q)]>;
 
@@ -146,7 +146,7 @@ defm ADDR64 : SystemZRegClass<"ADDR64", [i64], 64, (sub GR64Bit, R0D),
 // Not used directly, but needs to exist for ADDR32 and ADDR64 subregs
 // of a GR128.
 // XPLINK64: Allocate all registers in natural order
-defm ADDR128 : SystemZRegClass<"ADDR128", [untyped], 128, (sub GR128Bit, R0Q),
+defm ADDR128 : SystemZRegClass<"ADDR128", [untyped, v2i64], 128, (sub GR128Bit, R0Q),
                                [(add R2Q, R4Q, R6Q, R8Q, R10Q, R12Q, R14Q)]>;
 
 // Any type register. Used for .insn directives when we don't know what the

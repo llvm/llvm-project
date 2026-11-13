@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "omptarget.h"
-
 #include "L0Options.h"
+
+#include "Shared/APITypes.h"
 
 namespace llvm::omp::target::plugin {
 
@@ -25,6 +25,9 @@ void L0OptionsTy::processEnvironmentVars() {
 
   Flags.UseCopyOffloadHint =
       BoolEnvar("LIBOFFLOAD_LEVEL_ZERO_USE_COPY_OFFLOAD_HINT", true);
+
+  // Always print the full module build/link log, not only on failure.
+  Flags.ShowBuildLog = BoolEnvar("LIBOFFLOAD_LEVEL_ZERO_SHOW_BUILD_LOG", false);
 
   // Memory pool syntax:
   // LIBOMPTARGET_LEVEL_ZERO_MEMORY_POOL=<Option>
@@ -56,16 +59,16 @@ void L0OptionsTy::processEnvironmentVars() {
       PoolInfo.fill({-1, 0, 0});
       for (std::string Token; std::getline(Str, Token, ',') && Valid > 0;) {
         if (Token == "device") {
-          MemType = TARGET_ALLOC_DEVICE;
-          PoolInfo[TARGET_ALLOC_DEVICE] = DefaultValue;
+          MemType = OL_ALLOC_TYPE_DEVICE;
+          PoolInfo[OL_ALLOC_TYPE_DEVICE] = DefaultValue;
           Offset = 0;
         } else if (Token == "host") {
-          MemType = TARGET_ALLOC_HOST;
-          PoolInfo[TARGET_ALLOC_HOST] = DefaultValue;
+          MemType = OL_ALLOC_TYPE_HOST;
+          PoolInfo[OL_ALLOC_TYPE_HOST] = DefaultValue;
           Offset = 0;
         } else if (Token == "shared") {
-          MemType = TARGET_ALLOC_SHARED;
-          PoolInfo[TARGET_ALLOC_SHARED] = DefaultValue;
+          MemType = OL_ALLOC_TYPE_MANAGED;
+          PoolInfo[OL_ALLOC_TYPE_MANAGED] = DefaultValue;
           Offset = 0;
         } else if (Token == "all") {
           MemType = AllMemType;
@@ -90,12 +93,12 @@ void L0OptionsTy::processEnvironmentVars() {
         if (Valid == 2) {
           // "all" is specified -- ignore other inputs.
           if (AllInfo[0] > 0) {
-            MemPoolConfig[TARGET_ALLOC_DEVICE] = {true, AllInfo[0], AllInfo[1],
-                                                  AllInfo[2]};
-            MemPoolConfig[TARGET_ALLOC_HOST] = {true, AllInfo[0], AllInfo[1],
-                                                AllInfo[2]};
-            MemPoolConfig[TARGET_ALLOC_SHARED] = {true, AllInfo[0], AllInfo[1],
-                                                  AllInfo[2]};
+            MemPoolConfig[OL_ALLOC_TYPE_DEVICE] = {true, AllInfo[0], AllInfo[1],
+                                                   AllInfo[2]};
+            MemPoolConfig[OL_ALLOC_TYPE_HOST] = {true, AllInfo[0], AllInfo[1],
+                                                 AllInfo[2]};
+            MemPoolConfig[OL_ALLOC_TYPE_MANAGED] = {true, AllInfo[0],
+                                                    AllInfo[1], AllInfo[2]};
           } else {
             MemPoolConfig.fill({false, 0, 0, 0});
           }
@@ -144,19 +147,6 @@ void L0OptionsTy::processEnvironmentVars() {
     // INTEL_ENABLE_OFFLOAD_ANNOTATIONS is set. The actual value
     // does not matter.
     CommonSpecConstants.addConstant<char>(0xFF747469, 1);
-  }
-
-  // LIBOMPTARGET_LEVEL_ZERO_STAGING_BUFFER_SIZE=<SizeInKB>.
-  const Envar<size_t> StagingBufferSizeVar(
-      "LIBOMPTARGET_LEVEL_ZERO_STAGING_BUFFER_SIZE");
-  if (StagingBufferSizeVar.isPresent()) {
-    size_t SizeInKB = StagingBufferSizeVar;
-    if (SizeInKB > (16 << 10)) {
-      SizeInKB = (16 << 10);
-      ODBG(OLDT_Init) << "Staging buffer size is capped at " << SizeInKB
-                      << " KB";
-    }
-    StagingBufferSize = SizeInKB << 10;
   }
 
   // LIBOMPTARGET_LEVEL_ZERO_COMMAND_MODE=<Fmt>.

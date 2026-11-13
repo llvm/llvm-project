@@ -35,6 +35,8 @@ public:
         const override;
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
         CallingConv::ID) const override;
+  /// Mask for calls that pass or return values in HLX registers.
+  const uint32_t *getHLXCallPreservedMask() const;
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
 
@@ -69,15 +71,13 @@ public:
   Register getFrameRegister(const MachineFunction &MF) const override;
   Register getFrameRegister() const;
   Register getStackRegister() const;
+  Register getVTCMStackRegister() const;
 
   unsigned getHexagonSubRegIndex(const TargetRegisterClass &RC,
         unsigned GenIdx) const;
 
   const MCPhysReg *getCallerSavedRegs(const MachineFunction *MF,
         const TargetRegisterClass *RC) const;
-
-  const TargetRegisterClass *
-  getPointerRegClass(unsigned Kind = 0) const override;
 
   /// Returns true if the given reserved physical register is live across
   /// function calls/returns.

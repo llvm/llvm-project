@@ -3,7 +3,7 @@
 ! CHECK-LABEL: func @_QPm
 function m(index)
     ! CHECK:   %[[INDEX_DECL:.*]]:2 = hlfir.declare %arg0
-    ! CHECK:   %[[M_REF:.*]] = fir.alloca i32 {bindc_name = "m"
+    ! CHECK:   %[[M_REF:.*]] = fir.alloca i32 <{bindc_name = "m"
     ! CHECK:   %[[M_DECL:.*]]:2 = hlfir.declare %[[M_REF]]
     ! CHECK:   %[[V_1:[0-9]+]] = fir.load %[[INDEX_DECL]]#0 : !fir.ref<i32>
     ! CHECK:   fir.select %[[V_1]] : i32 [1, ^bb6, 2, ^bb5, 3, ^bb4, 4, ^bb3, 5, ^bb2, unit, ^bb1]
@@ -40,7 +40,7 @@ end
 ! CHECK-LABEL: func @_QPm1
 function m1(index)
     ! CHECK:   %[[INDEX_DECL:.*]]:2 = hlfir.declare %arg0
-    ! CHECK:   %[[M_REF:.*]] = fir.alloca i32 {bindc_name = "m1"
+    ! CHECK:   %[[M_REF:.*]] = fir.alloca i32 <{bindc_name = "m1"
     ! CHECK:   %[[M_DECL:.*]]:2 = hlfir.declare %[[M_REF]]
     ! CHECK:   %[[V_1:[0-9]+]] = llvm.intr.stacksave : !llvm.ptr
     ! CHECK:   %[[V_2:[0-9]+]] = fir.load %[[INDEX_DECL]]#0 : !fir.ref<i32>
@@ -69,7 +69,7 @@ end
 ! CHECK-LABEL: func @_QPm2
 function m2(index)
     ! CHECK:   %[[INDEX_DECL:.*]]:2 = hlfir.declare %arg0
-    ! CHECK:   %[[M_REF:.*]] = fir.alloca i32 {bindc_name = "m2"
+    ! CHECK:   %[[M_REF:.*]] = fir.alloca i32 <{bindc_name = "m2"
     ! CHECK:   %[[M_DECL:.*]]:2 = hlfir.declare %[[M_REF]]
     ! CHECK:   %[[V_1:[0-9]+]] = llvm.intr.stacksave : !llvm.ptr
     ! CHECK:   %[[V_2:[0-9]+]] = fir.load %[[INDEX_DECL]]#0 : !fir.ref<i32>
@@ -108,7 +108,7 @@ end
 ! CHECK-LABEL: func @_QPm3
 function m3(index)
     ! CHECK:   %[[INDEX_DECL:.*]]:2 = hlfir.declare %arg0
-    ! CHECK:   %[[M_REF:.*]] = fir.alloca i32 {bindc_name = "m3"
+    ! CHECK:   %[[M_REF:.*]] = fir.alloca i32 <{bindc_name = "m3"
     ! CHECK:   %[[M_DECL:.*]]:2 = hlfir.declare %[[M_REF]]
     ! CHECK:   %[[V_1:[0-9]+]] = llvm.intr.stacksave : !llvm.ptr
     ! CHECK:   %[[V_2:[0-9]+]] = fir.load %[[INDEX_DECL]]#0 : !fir.ref<i32>

@@ -30,20 +30,29 @@ let Uses = [SP32, SP64], isCall = 1 in {
 // this is not possible to model directly. Instead, we select calls to a
 // CALL_PARAMS taking variadic arguments linked with a CALL_RESULTS that handles
 // producing the call's variadic results. We recombine the two in a custom
-// inserter hook after DAG ISel, so passes over MachineInstrs will only ever
-// observe CALL nodes with all of the expected variadic uses and defs.
+// inserter hook during FinalizeISel. Tail-call pseudos must already describe
+// the complete terminator sequence before then, so stack-protector insertion
+// moves both halves into its success block together.
 let isPseudo = 1 in
 defm CALL_PARAMS :
   I<(outs), (ins function32_op:$callee, variable_ops),
     (outs), (ins function32_op:$callee), [],
     "call_params\t$callee", "call_params\t$callee", -1>;
 
+let isPseudo = 1, isReturn = 1, isTerminator = 1, hasCtrlDep = 1,
+    isBarrier = 1 in
+defm RET_CALL_PARAMS :
+  I<(outs), (ins function32_op:$callee, variable_ops),
+    (outs), (ins function32_op:$callee), [],
+    "return_call_params\t$callee", "return_call_params\t$callee", -1>;
+
 let variadicOpsAreDefs = 1, usesCustomInserter = 1, isPseudo = 1 in
 defm CALL_RESULTS :
   I<(outs), (ins variable_ops), (outs), (ins), [],
      "call_results", "call_results", -1>;
 
-let variadicOpsAreDefs = 1, usesCustomInserter = 1, isPseudo = 1 in
+let variadicOpsAreDefs = 1, usesCustomInserter = 1, isPseudo = 1,
+    isReturn = 1, isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in
 defm RET_CALL_RESULTS :
   I<(outs), (ins variable_ops), (outs), (ins), [],
      "return_call_results", "return_call_results", -1>;

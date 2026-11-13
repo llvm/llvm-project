@@ -9,11 +9,18 @@
 ! cuf.free'd.
 
 module m
+  type t
+    integer, allocatable :: a(:)
+  end type
 contains
   function fsum() result(res)
     integer(4), allocatable, managed :: res(:)
     allocate(res(4))
     res = 0
+  end function
+  function fderived() result(res)
+    type(t), allocatable, managed :: res
+    res = t([1, 2])
   end function
 end module
 
@@ -23,32 +30,51 @@ subroutine test()
   b = fsum()
 end subroutine
 
+subroutine test_derived()
+  use m
+  type(t) :: x
+  x = fderived()
+end subroutine
+
 ! CHECK-LABEL: func.func @_QMmPfsum()
-! CHECK: %[[RES:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "res", data_attr = #cuf.cuda<managed>
+! CHECK: %[[RES:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xi32>>> {{.*}}bindc_name("res") data_attr(managed)
 ! CHECK: hlfir.declare %[[RES]]
 ! CHECK: %[[LOAD:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK: %[[REBOX:.*]] = fir.rebox %[[LOAD]]
 ! CHECK: fir.store %[[REBOX]] to %[[TMP:.*]]
 ! CHECK: %[[RET:.*]] = fir.load %[[TMP]]
 ! CHECK: fir.if
-! CHECK: cuf.free %{{.*}} : {{.*}} {data_attr = #cuf.cuda<managed>}
+! CHECK: cuf.free %{{.*}} : {{.*}} data_attr(managed)
 ! CHECK: return %[[RET]]
 
 ! CHECK-LABEL: func.func @_QPtest()
-! CHECK: %[[RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = ".result"}
-! CHECK: hlfir.declare %[[RES]] {uniq_name = ".tmp.func_result"}
+! CHECK: %[[RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = ".result"}>
+! CHECK: hlfir.declare %[[RES]] uniq_name(".tmp.func_result")
 ! CHECK: fir.call @_QMmPfsum()
 ! CHECK: fir.if
-! CHECK: cuf.deallocate %[[RES]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>{{.*}}<managed>
-! CHECK: cuf.free %{{.*}} : !fir.ref<!fir.array<4xi32>> {data_attr = #cuf.cuda<managed>}
+! CHECK: cuf.deallocate %[[RES]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> data_attr(managed)
+! CHECK: cuf.free %{{.*}} : !fir.ref<!fir.array<4xi32>> data_attr(managed)
+
+! A result that must be destroyed is kept as a variable on its own. After it
+! is destroyed, its storage is released through the runtime with the allocator
+! recorded in its descriptor, not freed inline.
+! CHECK-LABEL: func.func @_QPtest_derived()
+! CHECK: %[[RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>> <{bindc_name = ".result"}>
+! CHECK: fir.call @_QMmPfderived()
+! CHECK: fir.call @_FortranADestroy(
+! CHECK: fir.if
+! CHECK: %[[DESC:.*]] = fir.convert %[[RES]] : {{.*}} -> !fir.ref<!fir.box<none>>
+! CHECK: fir.call @_FortranAAllocatableDeallocateNoFinal(%[[DESC]],
+! CHECK-NOT: fir.freemem
+! CHECK: return
 
 ! After abstract-result, the hidden result argument is written from the spilled
 ! box and only then is the CUDA descriptor freed.
 ! AR-LABEL: func.func @_QMmPfsum(
 ! AR-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! AR: %[[RES:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "res", data_attr = #cuf.cuda<managed>
+! AR: %[[RES:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xi32>>> {{.*}}bindc_name("res") data_attr(managed)
 ! AR: fir.store %{{.*}} to %[[ARG0]]
 ! AR-NOT:  cuf.free %[[ARG0]]
-! AR:      cuf.free %{{.*}} {data_attr = #cuf.cuda<managed>}
+! AR:      cuf.free %{{.*}} data_attr(managed)
 ! AR-NEXT: }
 ! AR-NEXT: return  

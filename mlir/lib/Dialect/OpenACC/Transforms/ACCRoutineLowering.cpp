@@ -33,6 +33,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -58,7 +59,6 @@ using namespace mlir;
 using namespace mlir::acc;
 
 namespace {
-
 /// Compute the ParLevel from an acc.routine op for specialization.
 static ParLevel computeParLevel(RoutineOp routineOp, DeviceType deviceType) {
   auto gangDim = routineOp.getGangDimValue(deviceType);
@@ -107,8 +107,8 @@ static func::FuncOp createFunctionForDeviceStaging(func::FuncOp hostFunc,
   FunctionType funcType = hostFunc.getFunctionType();
   func::FuncOp deviceFunc =
       func::FuncOp::create(rewriter, loc, hostFunc.getName(), funcType);
-  deviceFunc->setDiscardableAttrs(
-      hostFunc->getDiscardableAttrDictionary().getValue());
+  deviceFunc->copyProperties(hostFunc->getPropertiesStorage());
+  deviceFunc->setDiscardableAttrs(hostFunc->getDiscardableAttrDictionary());
   deviceFunc->removeDiscardableAttr(getRoutineInfoAttrName());
   deviceFunc->setDiscardableAttr(
       getSpecializedRoutineAttrName(),
@@ -184,6 +184,11 @@ class ACCRoutineLowering
 public:
   using ACCRoutineLoweringBase::ACCRoutineLoweringBase;
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    ACCRoutineLoweringBase::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
+
   void runOnOperation() override {
     ModuleOp mod = getOperation();
     if (mod.getOps<RoutineOp>().empty()) {
@@ -201,8 +206,7 @@ public:
     SmallVector<std::pair<func::FuncOp, RoutineOp>, 4> accRoutineInfo;
 
     for (RoutineOp routineOp : mod.getOps<RoutineOp>()) {
-      if (routineOp.getBindNameValue() ||
-          routineOp.getBindNameValue(deviceType))
+      if (routineOp.getEffectiveBindName(deviceType))
         continue;
 
       func::FuncOp hostFunc = symTab.lookup<func::FuncOp>(
@@ -232,5 +236,4 @@ public:
     finalizeRoutines(accRoutineInfo, ctx);
   }
 };
-
 } // namespace

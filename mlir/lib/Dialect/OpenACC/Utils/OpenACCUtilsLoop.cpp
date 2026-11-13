@@ -101,8 +101,9 @@ static Block::iterator cloneACCRegionIntoForLoop(Region *src, Block *dest,
 /// lowered SCF op so later SCF to CFG/LLVM lowering can emit !llvm.loop
 /// metadata.
 static void copyLoopAnnotationAttr(Operation *from, Operation *to) {
-  if (Attribute ann = from->getDiscardableAttr(LLVM::LoopAnnotationAttr::name))
-    to->setDiscardableAttr(LLVM::LoopAnnotationAttr::name, ann);
+  if (Attribute ann =
+          from->getDiscardableAttr(LLVM::getLoopAnnotationAttrName()))
+    to->setDiscardableAttr(LLVM::getLoopAnnotationAttrName(), ann);
 }
 
 namespace mlir {
@@ -241,9 +242,20 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
     scfIVs.push_back(forOp.getInductionVar());
   mapACCLoopIVsToSCFIVs(loopOp, scfIVs, rewriter, mapping);
 
-  // Clone the loop body into the innermost scf.for
-  cloneACCRegionIntoForLoop(&loopOp.getRegion(), forOps.back().getBody(),
-                            rewriter.getInsertionPoint(), mapping, rewriter);
+  // Clone the loop body into the innermost scf.for. scf.for has a single-block
+  // region, so a multi-block body is wrapped in scf.execute_region, matching
+  // convertACCLoopToSCFParallel.
+  if (!loopOp.getRegion().hasOneBlock()) {
+    auto exeRegion = wrapMultiBlockRegionWithSCFExecuteRegion(
+        loopOp.getRegion(), mapping, loc, rewriter);
+    if (!exeRegion) {
+      rewriter.eraseOp(forOps.front());
+      return nullptr;
+    }
+  } else {
+    cloneACCRegionIntoForLoop(&loopOp.getRegion(), forOps.back().getBody(),
+                              rewriter.getInsertionPoint(), mapping, rewriter);
+  }
 
   // Denormalize IV uses: original_iv = normalized_iv * orig_step + orig_lb
   for (size_t idx = 0; idx < forOps.size(); ++idx) {

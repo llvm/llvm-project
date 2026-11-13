@@ -8,7 +8,7 @@
 ! flang/test/Semantics/common-block-multiple-init.f90 and
 ! flang/docs/Extensions.md.
 
-! CHECK-LABEL: fir.global @blk_ {alignment = 4 : i64} : tuple<i32, !fir.array<4xi8>> {
+! CHECK-LABEL: fir.global @blk_ <{alignment = 4 : i64}> : tuple<i32, !fir.array<4xi8>> {
 ! CHECK:  %[[val:.*]] = arith.constant 111 : i32
 ! CHECK:  %[[undef:.*]] = fir.zero_bits tuple<i32, !fir.array<4xi8>>
 ! CHECK:  %[[init:.*]] = fir.insert_value %[[undef]], %[[val]], [0 : index] : (tuple<i32, !fir.array<4xi8>>, i32) -> tuple<i32, !fir.array<4xi8>>

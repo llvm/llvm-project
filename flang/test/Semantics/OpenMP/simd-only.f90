@@ -414,3 +414,15 @@ module test_declare_mapper
   ! CHECK-NOT: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareMapperDirective
   !$omp declare mapper(myvec_t :: v) map(v, v%data(1:v%len))
 end module
+
+! CHECK-LABEL: Name = 'test_dispatch'
+subroutine test_dispatch()
+  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPDispatchConstruct
+  ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = dispatch
+  ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> CallStmt
+  !$omp dispatch
+  call foo()
+contains
+  subroutine foo()
+  end subroutine
+end subroutine

@@ -56,6 +56,7 @@ class NVVM_PTXBuilder_Op<string mnemonic, list<Trait> extraTraits = []> :
 
 class NVVM_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<NVVM_Dialect, attrName, traits> {
+  let cppIncludes = ["mlir/Dialect/LLVMIR/NVVMAttributes.h"];
   let mnemonic = attrMnemonic;
 }
 
@@ -645,7 +646,8 @@ def NVVM_PMEventOp : NVVM_VoidIntrinsicOp<"pmevent">,
 //===----------------------------------------------------------------------===//
 
 /// mbarrier.init instruction with generic pointer type
-def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init">,
+def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init",
+    [NVVMRequiresSM<80>]>,
   Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
                  I32:$count,
                  DefaultValuedAttr<ConfinedAttr<I32Attr,
@@ -697,7 +699,8 @@ def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init">,
   }];
 }
 
-def NVVM_MBarrierInvalOp : NVVM_VoidIntrinsicOp<"mbarrier.inval">,
+def NVVM_MBarrierInvalOp : NVVM_VoidIntrinsicOp<"mbarrier.inval",
+    [NVVMRequiresSM<80>]>,
   Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr)> {
   let summary = "MBarrier Invalidation Operation";
   let description = [{
@@ -753,7 +756,8 @@ def NVVM_MBarrierCheckLayoutOp :
     "$addr (`layout` `=` $layout^)? attr-dict `:` type($addr) `->` type($res)";
 }
 
-def NVVM_MBarrierExpectTxOp : NVVM_VoidIntrinsicOp<"mbarrier.expect_tx"> {
+def NVVM_MBarrierExpectTxOp : NVVM_VoidIntrinsicOp<"mbarrier.expect_tx",
+    [NVVMRequiresSM<90>]> {
   let summary = "MBarrier expect-tx Operation";
   let description = [{
     The `nvvm.mbarrier.expect_tx` operation increases the transaction count
@@ -762,22 +766,30 @@ def NVVM_MBarrierExpectTxOp : NVVM_VoidIntrinsicOp<"mbarrier.expect_tx"> {
     synchronizing effect of the `mbarrier.expect_tx` operation. `CTA`
     and `CLUSTER` are the only allowed values for `scope`.
 
+    When `multicastMask` is present, the operation updates the barrier at the
+    same shared-memory offset in each CTA selected by the 32-bit mask. The
+    `addr` must be in shared::cluster space. Both CTA and cluster scopes are
+    supported. Omitting the mask preserves the non-multicast behavior.
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-expect-tx)
   }];
 
   let arguments = (ins
     AnyTypeOf<[LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
     I32:$txcount,
+    Optional<I32>:$multicastMask,
     DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope);
 
   let assemblyFormat = [{
-    $addr `,` $txcount oilist(`scope` `=` enum($scope)) attr-dict `:` type(operands)
+    $addr `,` $txcount (`multicast_mask` `=` $multicastMask^)?
+    oilist(`scope` `=` enum($scope)) attr-dict `:` type(operands)
   }];
 
   let hasVerifier = 1;
 }
 
-def NVVM_MBarrierCompleteTxOp : NVVM_VoidIntrinsicOp<"mbarrier.complete_tx"> {
+def NVVM_MBarrierCompleteTxOp : NVVM_VoidIntrinsicOp<"mbarrier.complete_tx",
+    [NVVMRequiresSM<90>]> {
   let summary = "MBarrier complete-tx Operation";
   let description = [{
     The `nvvm.mbarrier.complete_tx` operation decrements the transaction
@@ -787,23 +799,31 @@ def NVVM_MBarrierCompleteTxOp : NVVM_VoidIntrinsicOp<"mbarrier.complete_tx"> {
     observe the memory synchronizing effect of the `mbarrier.complete_tx`
     operation. `CTA` and `CLUSTER` are the only allowed values for `scope`.
 
+    When `multicastMask` is present, the operation updates the barrier at the
+    same shared-memory offset in each CTA selected by the 32-bit mask. The
+    `addr` must be in shared::cluster space. Both CTA and cluster scopes are
+    supported. Omitting the mask preserves the non-multicast behavior.
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-complete-tx)
   }];
 
   let arguments = (ins
     AnyTypeOf<[LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
     I32:$txcount,
+    Optional<I32>:$multicastMask,
     DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope);
 
   let assemblyFormat = [{
-    $addr `,` $txcount oilist(`scope` `=` enum($scope)) attr-dict `:` type(operands)
+    $addr `,` $txcount (`multicast_mask` `=` $multicastMask^)?
+    oilist(`scope` `=` enum($scope)) attr-dict `:` type(operands)
   }];
 
   let hasVerifier = 1;
 }
 
 def NVVM_MBarrierArriveOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive",
-    [InferTypeOpAdaptorWithIsCompatible]> {
+    [AttrSizedOperandSegments, InferTypeOpAdaptorWithIsCompatible,
+     NVVMRequiresSM<80>]> {
   let summary = "MBarrier Arrive Operation";
   let description = [{
     The `nvvm.mbarrier.arrive` operation performs an arrive-on operation on the 
@@ -836,6 +856,11 @@ def NVVM_MBarrierArriveOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive",
     - `relaxed`: When set to true, the `arrive` operation has relaxed memory semantics
       and does not provide any ordering or visibility guarantees.
 
+    When `multicastMask` is present, the operation updates the barrier at the
+    same shared-memory offset in each CTA selected by the 32-bit mask. The
+    `addr` must be in shared::cluster space. Both CTA and cluster scopes are
+    supported. Omitting the mask preserves the non-multicast behavior.
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive)
   }];
 
@@ -843,11 +868,13 @@ def NVVM_MBarrierArriveOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive",
   let arguments = (ins
     AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
     Optional<I32>:$count,
+    Optional<I32>:$multicastMask,
     DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
     DefaultValuedAttr<BoolAttr, "false">:$relaxed);
 
   let assemblyFormat = [{
-    $addr (`,` $count^)? oilist(`scope` `=` enum($scope) | `relaxed` `=` $relaxed)
+    $addr (`,` $count^)? (`multicast_mask` `=` $multicastMask^)?
+    oilist(`scope` `=` enum($scope) | `relaxed` `=` $relaxed)
     attr-dict `:` type($addr)
     (`->` type($res)^)?
   }];
@@ -856,7 +883,8 @@ def NVVM_MBarrierArriveOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive",
 }
 
 def NVVM_MBarrierArriveDropOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_drop",
-    [InferTypeOpAdaptorWithIsCompatible]> {
+    [AttrSizedOperandSegments, InferTypeOpAdaptorWithIsCompatible,
+     NVVMRequiresSM<80>]> {
   let summary = "MBarrier Arrive-Drop Operation";
   let description = [{
     The `nvvm.mbarrier.arrive_drop` operation decrements the expected arrival
@@ -866,6 +894,11 @@ def NVVM_MBarrierArriveDropOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_dr
     *mbarrier object*. The remaining semantics are identical to those of the
     `nvvm.mbarrier.arrive` operation.
 
+    When `multicastMask` is present, the operation updates the barrier at the
+    same shared-memory offset in each CTA selected by the 32-bit mask. The
+    `addr` must be in shared::cluster space. Both CTA and cluster scopes are
+    supported. Omitting the mask preserves the non-multicast behavior.
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive-drop)
   }];
 
@@ -873,11 +906,13 @@ def NVVM_MBarrierArriveDropOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_dr
   let arguments = (ins
     AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
     Optional<I32>:$count,
+    Optional<I32>:$multicastMask,
     DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
     DefaultValuedAttr<BoolAttr, "false">:$relaxed);
 
   let assemblyFormat = [{
-    $addr (`,` $count^)? oilist(`scope` `=` enum($scope) | `relaxed` `=` $relaxed)
+    $addr (`,` $count^)? (`multicast_mask` `=` $multicastMask^)?
+    oilist(`scope` `=` enum($scope) | `relaxed` `=` $relaxed)
     attr-dict `:` type($addr)
     (`->` type($res)^)?
   }];
@@ -885,7 +920,8 @@ def NVVM_MBarrierArriveDropOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_dr
   let hasVerifier = 1;
 }
 
-def NVVM_MBarrierArriveNocompleteOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive.nocomplete">,
+def NVVM_MBarrierArriveNocompleteOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive.nocomplete",
+    [NVVMRequiresSM<80>]>,
   Results<(outs I64:$res)>,
   Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
                  I32:$count)> {
@@ -919,7 +955,8 @@ def NVVM_MBarrierArriveNocompleteOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arr
   let assemblyFormat = "$addr `,` $count attr-dict `:` type(operands) `->` type($res)";
 }
 
-def NVVM_MBarrierArriveDropNocompleteOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_drop.nocomplete">,
+def NVVM_MBarrierArriveDropNocompleteOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_drop.nocomplete",
+    [NVVMRequiresSM<80>]>,
   Results<(outs I64:$res)>,
   Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
                  I32:$count)> {
@@ -937,7 +974,8 @@ def NVVM_MBarrierArriveDropNocompleteOp : NVVM_SingleResultIntrinsicOp<"mbarrier
 }
 
 def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_tx",
-    [InferTypeOpAdaptorWithIsCompatible]> {
+    [AttrSizedOperandSegments, InferTypeOpAdaptorWithIsCompatible,
+     NVVMRequiresSM<90>]> {
   let summary = "MBarrier Arrive with Expected Transaction Count";
   let description = [{
     The `nvvm.mbarrier.arrive.expect_tx` operation performs an expect-tx operation 
@@ -967,6 +1005,11 @@ def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_t
     - `predicate`: Optional predicate for conditional execution used only when lowering to
       inline-ptx.
 
+    When `multicastMask` is present, the operation updates the barrier at the
+    same shared-memory offset in each CTA selected by the 32-bit mask. The
+    `addr` must be in shared::cluster space. Both CTA and cluster scopes are
+    supported. Omitting the mask preserves the non-multicast behavior.
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive-drop)
   }];
 
@@ -974,12 +1017,14 @@ def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_t
   let arguments = (ins
     AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
     I32:$txcount,
+    Optional<I32>:$multicastMask,
     DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
     DefaultValuedAttr<BoolAttr, "false">:$relaxed,
     PtxPredicate:$predicate);
 
   let assemblyFormat = [{
     $addr `,` $txcount (`,` `predicate` `=` $predicate^)?
+    (`multicast_mask` `=` $multicastMask^)?
     oilist(`scope` `=` enum($scope) | `relaxed` `=` $relaxed)
     attr-dict `:` type(operands) (`->` type($res)^)?
   }];
@@ -1008,12 +1053,17 @@ def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_t
 }
 
 def NVVM_MBarrierArriveDropExpectTxOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_drop.expect_tx",
-    [InferTypeOpAdaptorWithIsCompatible]> {
+    [InferTypeOpAdaptorWithIsCompatible, NVVMRequiresSM<90>]> {
   let summary = "MBarrier arrive_drop with expected transaction count";
   let description = [{
     The `nvvm.mbarrier.arrive_drop.expect_tx` operation is similar to the
     `nvvm.mbarrier.arrive.expect_tx` operation except that it performs an
     `arrive_drop` operation instead of only an `arrive` operation.
+
+    When `multicastMask` is present, the operation updates the barrier at the
+    same shared-memory offset in each CTA selected by the 32-bit mask. The
+    `addr` must be in shared::cluster space. Both CTA and cluster scopes are
+    supported. Omitting the mask preserves the non-multicast behavior.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive-drop)
   }];
@@ -1022,18 +1072,21 @@ def NVVM_MBarrierArriveDropExpectTxOp : NVVM_SingleResultIntrinsicOp<"mbarrier.a
   let arguments = (ins
     AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
     I32:$txcount,
+    Optional<I32>:$multicastMask,
     DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
     DefaultValuedAttr<BoolAttr, "false">:$relaxed);
 
   let assemblyFormat = [{
-    $addr `,` $txcount oilist(`scope` `=` enum($scope) | `relaxed` `=` $relaxed)
+    $addr `,` $txcount (`multicast_mask` `=` $multicastMask^)?
+    oilist(`scope` `=` enum($scope) | `relaxed` `=` $relaxed)
     attr-dict `:` type(operands)
     (`->` type($res)^)?
   }];
   let hasVerifier = 1;
 }
 
-def NVVM_MBarrierTryWaitParityOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity">,  
+def NVVM_MBarrierTryWaitParityOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity",
+    [NVVMRequiresSM<90>]>,
   Arguments<(ins
     AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
     I32:$phase, I32:$ticks)> {
@@ -1091,7 +1144,8 @@ def NVVM_MBarrierTryWaitParityOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity"
   let assemblyFormat = "$addr `,` $phase `,` $ticks attr-dict `:` type(operands)";
 }
 
-def NVVM_MBarrierTestWaitOp : NVVM_SingleResultIntrinsicOp<"mbarrier.test.wait"> {
+def NVVM_MBarrierTestWaitOp : NVVM_SingleResultIntrinsicOp<"mbarrier.test.wait",
+    [NVVMRequiresSM<80>]> {
   let summary = "MBarrier Non-Blocking Test Wait Operation";
   let description = [{
     The `nvvm.mbarrier.test.wait` operation performs a non-blocking test for the
@@ -1161,7 +1215,8 @@ def NVVM_MBarrierTestWaitOp : NVVM_SingleResultIntrinsicOp<"mbarrier.test.wait">
   let hasVerifier = 1;
 }
 
-def NVVM_MBarrierTryWaitOp : NVVM_SingleResultIntrinsicOp<"mbarrier.try_wait"> {
+def NVVM_MBarrierTryWaitOp : NVVM_SingleResultIntrinsicOp<"mbarrier.try_wait",
+    [NVVMRequiresSM<90>]> {
   let summary = "MBarrier try wait on state or phase with an optional timelimit";
   let description = [{
     The `nvvm.mbarrier.try_wait` operation checks whether the specified
@@ -1336,7 +1391,7 @@ def NVVM_BarrierArriveOp : NVVM_VoidIntrinsicOp<"barrier.arrive">
   }];
 }
 
-def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive"> {
+def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive", [NVVMRequiresSM<90>]> {
   let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
 
   let summary = "Cluster Barrier Arrive Op";
@@ -2037,19 +2092,28 @@ def NVVM_ConvertF32x2ToF4x2Op : NVVM_Op<"convert.f32x2.to.f4x2"> {
     packed such that the value converted from `a` is stored in the upper 4 bits 
     of `dst` and the value converted from `b` is stored in the lower 4 bits of 
     `dst`.
+    The `rnd` attribute specifies the rounding mode (`rn` or `rz`).
     The `relu` attribute, when set, lowers to the '.relu' variant of
-    the cvt instruction.
+    the cvt instruction. The `pzo` attribute, when set, lowers to the
+    '.pzo' variant of the cvt instruction.
+    The optional `scale_factor` operand is an i8 `ue8m0` scale.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
 
   let results = (outs I8:$dst);
-  let arguments = (ins F32:$a, F32:$b,
+  let arguments = (ins F32:$a, F32:$b, Optional<I8>:$scale_factor,
                        DefaultValuedAttr<BoolAttr, "false">:$relu,
-                       TypeAttr:$dstTy);
+                       TypeAttr:$dstTy,
+                       DefaultValuedAttr<ConfinedAttr<FPRoundingModeAttr,
+                         [EnumAttrIsOneOf<FPRoundingModeAttr,
+                           [FPRoundingModeRN, FPRoundingModeRZ]>]>,
+                         "FPRoundingMode::RN">:$rnd,
+                       DefaultValuedAttr<BoolAttr, "false">:$pzo);
   let assemblyFormat = [{
-    $a `,` $b oilist(`relu` `=` $relu) attr-dict
-    `:` type($dst) `(` $dstTy `)`
+    $a `,` $b (`,` $scale_factor^)? oilist(
+      `rnd` `=` $rnd | `relu` `=` $relu | `pzo` `=` $pzo
+    ) attr-dict `:` type($dst) `(` $dstTy `)`
   }];
   let hasVerifier = 1;
 
@@ -2076,18 +2140,28 @@ class NVVM_ConvertFPx2ToF4x2Op<string srcType>
     packed such that the value converted from the first element of `a` is 
     stored in the lower 4 bits of `dst` and the value converted from the second 
     element of `a` is stored in the upper 4 bits of `dst`.
+    The `rnd` attribute specifies the rounding mode (`rn` or `rz`).
     The `relu` attribute, when set, lowers to the '.relu' variant of
-    the cvt instruction.
+    the cvt instruction. The `pzo` attribute, when set, lowers to the
+    '.pzo' variant of the cvt instruction.
+    The optional `scale_factor` operand is an i8 `ue8m0` scale.
     }];
   let results = (outs I8:$dst);
   let arguments = (ins
       VectorOfLengthAndType<[2], [!cast<Type>(srcType)]>:$src,
+      Optional<I8>:$scale_factor,
       DefaultValuedAttr<BoolAttr, "false">:$relu,
-      TypeAttrOf<F4E2M1FN>:$dstTy);
+      TypeAttrOf<F4E2M1FN>:$dstTy,
+      DefaultValuedAttr<ConfinedAttr<FPRoundingModeAttr,
+        [EnumAttrIsOneOf<FPRoundingModeAttr,
+          [FPRoundingModeRN, FPRoundingModeRZ]>]>,
+        "FPRoundingMode::RN">:$rnd,
+      DefaultValuedAttr<BoolAttr, "false">:$pzo);
 
   let assemblyFormat = [{
-    $src oilist(`relu` `=` $relu) attr-dict
-    `:` type($src) `->` type($dst) `(` $dstTy `)`
+    $src (`,` $scale_factor^)? oilist(
+      `rnd` `=` $rnd | `relu` `=` $relu | `pzo` `=` $pzo
+    ) attr-dict `:` type($src) `->` type($dst) `(` $dstTy `)`
   }];
 
   let extraClassDeclaration = [{
@@ -2118,8 +2192,11 @@ def NVVM_ConvertF32x2ToF6x2Op : NVVM_Op<"convert.f32x2.to.f6x2"> {
     stored in the lower 8 bits of `dst` with 2 MSB bits padded with zeros.
     If `dst` is returned as a vector type, each converted value is stored as an 
     i8 element in the vector.
+    The `rnd` attribute specifies the rounding mode (`rn` or `rz`).
     The `relu` attribute, when set, lowers to the '.relu' variant of
-    the cvt instruction.
+    the cvt instruction. The `pzo` attribute, when set, lowers to the
+    '.pzo' variant of the cvt instruction.
+    The optional `scale_factor` operand is an i8 `ue8m0` scale.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
@@ -2128,22 +2205,32 @@ def NVVM_ConvertF32x2ToF6x2Op : NVVM_Op<"convert.f32x2.to.f6x2"> {
   let arguments = (ins 
     F32:$a,
     F32:$b,
+    Optional<I8>:$scale_factor,
     DefaultValuedAttr<BoolAttr, "false">:$relu,
-    TypeAttr:$dstTy);
+    TypeAttr:$dstTy,
+    DefaultValuedAttr<ConfinedAttr<FPRoundingModeAttr,
+      [EnumAttrIsOneOf<FPRoundingModeAttr,
+        [FPRoundingModeRN, FPRoundingModeRZ]>]>,
+      "FPRoundingMode::RN">:$rnd,
+    DefaultValuedAttr<BoolAttr, "false">:$pzo);
   let assemblyFormat = [{
-    $a `,` $b oilist(`relu` `=` $relu) attr-dict
-    `:` type($dst) `(` $dstTy `)`
+    $a `,` $b (`,` $scale_factor^)? oilist(
+      `rnd` `=` $rnd | `relu` `=` $relu | `pzo` `=` $pzo
+    ) attr-dict `:` type($dst) `(` $dstTy `)`
   }];
   let hasVerifier = 1;
-  
+
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(mlir::Type dstTy,
-                                              bool hasRelu);
+    static NVVM::IDArgPair
+    getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF6x2Op &op,
+                          LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
   }];
 
   string llvmBuilder = [{
-    auto intId = NVVM::ConvertF32x2ToF6x2Op::getIntrinsicID($dstTy, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a, $b});
+    auto [intId, args] =
+        NVVM::ConvertF32x2ToF6x2Op::getIntrinsicIDAndArgs(op, moduleTranslation, builder);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -2166,26 +2253,40 @@ class NVVM_ConvertFPx2ToF6x2Op<string srcType>
     `dst` with 2 MSB bits padded with zeros.
     If `dst` is returned as a vector type, each converted value is stored as an 
     i8 element in the vector with 2 MSB bits padded with zeros.
+    The `rnd` attribute specifies the rounding mode (`rn` or `rz`).
     The `relu` attribute, when set, lowers to the '.relu' variant of
-    the cvt instruction.
+    the cvt instruction. The `pzo` attribute, when set, lowers to the
+    '.pzo' variant of the cvt instruction.
+    The optional `scale_factor` operand is an i8 `ue8m0` scale.
   }];
 
   let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
   let arguments = (ins
       VectorOfLengthAndType<[2], [!cast<Type>(srcType)]>:$src,
+      Optional<I8>:$scale_factor,
       DefaultValuedAttr<BoolAttr, "false">:$relu,
-      TypeAttrOf<AnyTypeOf<[F6E2M3FN, F6E3M2FN]>>:$dstTy);
+      TypeAttrOf<AnyTypeOf<[F6E2M3FN, F6E3M2FN]>>:$dstTy,
+      DefaultValuedAttr<ConfinedAttr<FPRoundingModeAttr,
+        [EnumAttrIsOneOf<FPRoundingModeAttr,
+          [FPRoundingModeRN, FPRoundingModeRZ]>]>,
+        "FPRoundingMode::RN">:$rnd,
+      DefaultValuedAttr<BoolAttr, "false">:$pzo);
   let assemblyFormat = [{
-    $src oilist(`relu` `=` $relu) attr-dict
-    `:` type($src) `->` type($dst) `(` $dstTy `)`
+    $src (`,` $scale_factor^)? oilist(
+      `rnd` `=` $rnd | `relu` `=` $relu | `pzo` `=` $pzo
+    ) attr-dict `:` type($src) `->` type($dst) `(` $dstTy `)`
   }];
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(mlir::Type dstTy, bool hasRelu);
+    static NVVM::IDArgPair
+    getIntrinsicIDAndArgs(NVVM::Convert}]#srcType#[{x2ToF6x2Op &op,
+                          LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
   }];
 
   string llvmBuilder = [{
-    auto intId = NVVM::Convert}]#srcType#[{x2ToF6x2Op::getIntrinsicID($dstTy, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$src});
+    auto [intId, args] = NVVM::Convert}]#srcType#[{x2ToF6x2Op::getIntrinsicIDAndArgs(
+        op, moduleTranslation, builder);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -2209,8 +2310,13 @@ def NVVM_ConvertF32x2ToF8x2Op : NVVM_Op<"convert.f32x2.to.f8x2"> {
     If `dst` is returned as a vector type, each converted value is stored as an 
     i8 element in the vector.
     The `rnd` and `sat` attributes specify the rounding and saturation modes respectively.
+    Conversions to `f8E4M3FN` and `f8E5M2` support `rn` and `rz` rounding.
     The `relu` attribute, when set, lowers to the '.relu' variant of
-    the cvt instruction.
+    the cvt instruction. The `pzo` attribute, when set, lowers to the
+    '.pzo' variant of the cvt instruction. `pzo` is not supported for
+    conversions to `f8E8M0FNU` or `f8E5M3FNU`.
+    The optional `scale_factor` operand is an i8 `ue8m0` scale.
+    Scaled conversions to `f8E5M3FNU` support `rn` and `rz` only.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
@@ -2220,26 +2326,27 @@ def NVVM_ConvertF32x2ToF8x2Op : NVVM_Op<"convert.f32x2.to.f8x2"> {
   let arguments = (ins
     F32:$a,
     F32:$b,
+    Optional<I8>:$scale_factor,
     DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
     DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
     DefaultValuedAttr<BoolAttr, "false">:$relu,
-    TypeAttr:$dstTy);
+    TypeAttr:$dstTy,
+    DefaultValuedAttr<BoolAttr, "false">:$pzo);
   let assemblyFormat = [{
-    $a `,` $b oilist(
-      `rnd` `=` $rnd | `sat` `=` $sat | `relu` `=` $relu
+    $a `,` $b (`,` $scale_factor^)? oilist(
+      `rnd` `=` $rnd | `sat` `=` $sat | `relu` `=` $relu | `pzo` `=` $pzo
     ) attr-dict `:` type($dst) `(` $dstTy `)`
   }];
 
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(mlir::Type dstTy,
-                                              NVVM::FPRoundingMode rnd,
-                                              NVVM::SaturationMode sat,
-                                              bool hasRelu);
+    static NVVM::IDArgPair
+    getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF8x2Op &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
   }];
   
   string llvmBuilder = [{
-    auto intId = NVVM::ConvertF32x2ToF8x2Op::getIntrinsicID($dstTy, $rnd, $sat, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a, $b});
+    auto [intId, args] = NVVM::ConvertF32x2ToF8x2Op::getIntrinsicIDAndArgs(op, moduleTranslation, builder);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -2261,8 +2368,14 @@ def NVVM_ConvertF16x2ToF8x2Op : NVVM_Op<"convert.f16x2.to.f8x2"> {
     second element of `a` is stored in the lower 8 bits of `dst`.
     If `dst` is returned as a vector type, each converted value is stored as an 
     i8 element in the vector.
+    The `rnd` attribute specifies the rounding mode. Conversions to
+    `f8E4M3FN` and `f8E5M2` support `rn` and `rz`. Conversions to
+    `f8E5M3FNU` also support `rp`, except when a scale factor is present.
     The `relu` attribute, when set, lowers to the '.relu' variant of
-    the cvt instruction.
+    the cvt instruction. The `pzo` attribute, when set, lowers to the
+    '.pzo' variant of the cvt instruction. `relu` and `pzo` are not
+    supported for conversions to `f8E5M3FNU`.
+    The optional `scale_factor` operand is an i8 `ue8m0` scale.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
@@ -2271,21 +2384,28 @@ def NVVM_ConvertF16x2ToF8x2Op : NVVM_Op<"convert.f16x2.to.f8x2"> {
   let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
   let arguments = (ins
     VectorOfLengthAndType<[2], [F16]>:$a,
+    Optional<I8>:$scale_factor,
+    DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
     DefaultValuedAttr<BoolAttr, "false">:$relu,
-    TypeAttr:$dstTy);
+    TypeAttr:$dstTy,
+    DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::RN">:$rnd,
+    DefaultValuedAttr<BoolAttr, "false">:$pzo);
   let assemblyFormat = [{
-    $a oilist(`relu` `=` $relu) attr-dict
-    `:` type($a) `->` type($dst) `(` $dstTy `)`
+    $a (`,` $scale_factor^)? oilist(
+      `rnd` `=` $rnd | `sat` `=` $sat | `relu` `=` $relu | `pzo` `=` $pzo
+    ) attr-dict `:` type($a) `->` type($dst) `(` $dstTy `)`
   }];
 
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(mlir::Type dstTy,
-                                              bool hasRelu);
+    static NVVM::IDArgPair
+    getIntrinsicIDAndArgs(NVVM::ConvertF16x2ToF8x2Op &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
   }];
 
   string llvmBuilder = [{
-    auto intId = NVVM::ConvertF16x2ToF8x2Op::getIntrinsicID($dstTy, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a});
+    auto [intId, args] =
+        NVVM::ConvertF16x2ToF8x2Op::getIntrinsicIDAndArgs(op, moduleTranslation, builder);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -2307,7 +2427,13 @@ def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
     If `dst` is returned as a vector type, each converted value is stored as an 
     i8 element in the vector.
     The `rnd` and `sat` attributes specify the rounding and saturation modes 
-    respectively.
+    respectively. Conversions to `f8E4M3FN` and `f8E5M2` support `rn` and `rz`
+    rounding. The `relu` attribute, when set, lowers to the '.relu' variant of
+    the cvt instruction. The `pzo` attribute, when set, lowers to the '.pzo'
+    variant of the cvt instruction. `pzo` is not supported for conversions to
+    `f8E8M0FNU` or `f8E5M3FNU`.
+    The optional `scale_factor` operand is an i8 `ue8m0` scale.
+    Scaled conversions to `f8E5M3FNU` support `rn` and `rz` only.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
@@ -2316,26 +2442,30 @@ def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
   let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
   let arguments = (ins
     VectorOfLengthAndType<[2], [BF16]>:$src,
+    Optional<I8>:$scale_factor,
     DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
     DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
     DefaultValuedAttr<BoolAttr, "false">:$relu,
-    TypeAttrOf<AnyTypeOf<[F8E8M0FNU, F8E4M3FN, F8E5M2]>>:$dstTy);
+    TypeAttrOf<AnyTypeOf<[F8E8M0FNU, F8E5M3FNU, F8E4M3FN, F8E5M2]>>:$dstTy,
+    DefaultValuedAttr<BoolAttr, "false">:$pzo);
   let assemblyFormat = [{
-    $src oilist(
-      `rnd` `=` $rnd | `sat` `=` $sat | `relu` `=` $relu
+    $src (`,` $scale_factor^)? oilist(
+      `rnd` `=` $rnd | `sat` `=` $sat | `relu` `=` $relu | `pzo` `=` $pzo
     ) attr-dict
     `:` type($src) `->` type($dst) `(` $dstTy `)`
   }];
-  
+
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(mlir::Type dstTy,
-                                  NVVM::FPRoundingMode rnd,
-                                  NVVM::SaturationMode sat, bool hasRelu);
+    static NVVM::IDArgPair
+    getIntrinsicIDAndArgs(NVVM::ConvertBF16x2ToF8x2Op &op,
+                          LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
   }];
 
   string llvmBuilder = [{
-    auto intId = NVVM::ConvertBF16x2ToF8x2Op::getIntrinsicID($dstTy, $rnd, $sat, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$src});
+    auto [intId, args] =
+        NVVM::ConvertBF16x2ToF8x2Op::getIntrinsicIDAndArgs(op, moduleTranslation, builder);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -2390,11 +2520,11 @@ class NVVM_ConvertToFP16x2Op_Base <string srcTypeStr, Type srcStorageType, strin
 }
 
 def NVVM_ConvertF8x2ToF16x2Op :
-  NVVM_ConvertToFP16x2Op_Base<"F8", VectorOfLengthAndType<[2], [I8]>, "F16", 
-    [F8E4M3FN, F8E5M2]>;
+  NVVM_ConvertToFP16x2Op_Base<"F8", VectorOfLengthAndType<[2], [I8]>, "F16",
+    [F8E4M3FN, F8E5M2, F8E5M3FNU], 1>;
 def NVVM_ConvertF8x2ToBF16x2Op :
   NVVM_ConvertToFP16x2Op_Base<"F8", VectorOfLengthAndType<[2], [I8]>, "BF16",
-    [F8E8M0FNU, F8E4M3FN, F8E5M2], 1> {
+    [F8E8M0FNU, F8E4M3FN, F8E5M2, F8E5M3FNU], 1> {
   let append description = [{
 
     Example:
@@ -2596,7 +2726,8 @@ class NVVM_ConvertF32x2ToFPx2OpBase<string dstFormat, string mnemonic, Type dstT
                  Optional<I32>:$random_bits,
                  DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
                  DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
-                 DefaultValuedAttr<BoolAttr, "false">:$relu)> {
+                 DefaultValuedAttr<BoolAttr, "false">:$relu,
+                 DefaultValuedAttr<BoolAttr, "false">:$pzo)> {
   let summary = "Convert two F32 values to packed " # !tolower(dstFormat) # ".";
   let description = [{
     Converts two F32 values to packed }] # !tolower(dstFormat) # [{ format with 
@@ -2613,14 +2744,17 @@ class NVVM_ConvertF32x2ToFPx2OpBase<string dstFormat, string mnemonic, Type dstT
     The `relu` attribute clamps negative results to 0.
 
     The `sat` attribute determines saturation behavior.
-    
+
+    The `pzo` attribute, when set, lowers to the '.pzo' variant of the cvt
+    instruction. `pzo` is not supported with the RS rounding mode.
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
   
   let assemblyFormat = [{
     $src_hi `,` $src_lo oilist(
       `random_bits` `=` $random_bits | `rnd` `=` $rnd
-      | `sat` `=` $sat | `relu` `=` $relu
+      | `sat` `=` $sat | `relu` `=` $relu | `pzo` `=` $pzo
     )
     attr-dict `:` type($dst)
   }];
@@ -3412,10 +3546,12 @@ def LdStMatrixEltTypeB16 : I32EnumAttrCase<"B16", 0, "b16">;
 def LdStMatrixEltTypeB8 : I32EnumAttrCase<"B8", 1, "b8">;
 def LdStMatrixEltTypeB8X16_B6X16_P32 : I32EnumAttrCase<"B8X16_B6X16_P32", 2, "b8x16.b6x16_p32">;
 def LdStMatrixEltTypeB8X16_B4X16_P64 : I32EnumAttrCase<"B8X16_B4X16_P64", 3, "b8x16.b4x16_p64">;
+def LdStMatrixEltTypeS8_S4 : I32EnumAttrCase<"S8_S4", 4, "s8.s4">;
 
 def LdStMatrixEltType : I32EnumAttr<"LdStMatrixEltType", "Element type for ldmatrix and stmatrix",
   [LdStMatrixEltTypeB16, LdStMatrixEltTypeB8,
-   LdStMatrixEltTypeB8X16_B6X16_P32, LdStMatrixEltTypeB8X16_B4X16_P64]> {
+   LdStMatrixEltTypeB8X16_B6X16_P32, LdStMatrixEltTypeB8X16_B4X16_P64,
+   LdStMatrixEltTypeS8_S4]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
@@ -3487,7 +3623,16 @@ def NVVM_LdMatrixOp: NVVM_Op<"ldmatrix", [InferTypeOpAdaptor]>,
     %l2 = nvvm.ldmatrix %ptr, num = 4, layout = <row>,
       shape = <m = 8, n = 8>, element_type = <b16> :
       (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
+    // Load an 8x16 matrix of signed 4-bit elements, sign-extended to 8 bits.
+    %l3 = nvvm.ldmatrix %ptr, num = 1, layout = <row>,
+      shape = <m = 8, n = 16>, element_type = <s8.s4> :
+      (!llvm.ptr<3>) -> i32
     ```
+
+    For the 8x16 shape, element type `s8.s4` loads signed 4-bit elements and
+    sign-extends each of them to a signed 8-bit value during the load.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#warp-level-matrix-instructions-ldmatrix)
   }];
 
   let assemblyFormat = [{
@@ -4783,6 +4928,43 @@ def NVVM_PrefetchOp : NVVM_Op<"prefetch",
   }];
 }
 
+def NVVM_PrefetchValidAddrOp :
+  NVVM_Op<"prefetch.valid_addr", [NVVMRequiresSM<90>]> {
+  let summary = "Prefetch from a valid global address into the selected cache";
+  let description = [{
+    Prefetches data from the address given by `addr` into the cache selected by
+    `cacheLevel`. Currently, only L1 is supported and the operation requests a
+    prefetch of at least 32 bytes.
+
+    The operand must be a global or generic pointer. A generic address must
+    refer to the global state space. At least one byte at `addr` must be valid
+    and accessible for this access; otherwise, behavior is undefined and the
+    instruction may fault.
+
+    Examples:
+    ```mlir
+    nvvm.prefetch.valid_addr level = L1, %global_ptr : !llvm.ptr<1>
+    nvvm.prefetch.valid_addr level = L1, %generic_ptr : !llvm.ptr
+    ```
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-prefetch-prefetchu)
+  }];
+
+  let arguments = (ins
+    ConfinedAttr<PrefetchCacheLevelAttr,
+      [EnumAttrIsOneOf<PrefetchCacheLevelAttr,
+                      [PrefetchCacheLevelL1]>]>:$cacheLevel,
+    AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerGlobal]>:$addr);
+  let assemblyFormat =
+    "`level` `=` enum($cacheLevel) `,` $addr attr-dict `:` type($addr)";
+
+  let llvmBuilder = [{
+    createIntrinsicCall(builder,
+                        llvm::Intrinsic::nvvm_prefetch_L1_32B_valid_addr,
+                        builder.getVoidTy(), {$addr});
+  }];
+}
+
 def NVVM_CpAsyncBulkPrefetchOp : NVVM_VoidIntrinsicOp<"cp.async.bulk.prefetch"> {
   let summary = "Async bulk prefetch from global memory to L2 cache";
   let description = [{
@@ -5437,7 +5619,7 @@ def NVVM_MatchSyncOp : NVVM_Op<"match.sync", [InferTypeOpAdaptor]>,
 //===----------------------------------------------------------------------===//
 
 def NVVM_BulkStoreOp: NVVM_Op<"st.bulk"> {
-  let arguments = (ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr, I64:$size, DefaultValuedAttr<I64Attr, "0">:$initVal);
+  let arguments = (ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr, AnyTypeOf<[I32, I64]>:$size, DefaultValuedAttr<I64Attr, "0">:$initVal);
 
   let summary = "Bulk Store Op";
   let description = [{
@@ -5451,13 +5633,12 @@ def NVVM_BulkStoreOp: NVVM_Op<"st.bulk"> {
   }];
 
   string llvmBuilder = [{
-    auto intId = getStBulkIntrinsicId(
-          llvm::cast<LLVM::LLVMPointerType>(op.getAddr().getType()));
-    createIntrinsicCall(builder, intId,
-                      {$addr, $size, builder.getInt64($initVal)});
+    createIntrinsicCall(builder, llvm::Intrinsic::nvvm_st_bulk,
+                        builder.getVoidTy(),
+                        {$addr, $size, builder.getInt64($initVal)});
   }];
   
-  let assemblyFormat = "$addr `,` `size` `=` $size (`,` `init` `=` $initVal^)? attr-dict `:` type($addr)";
+  let assemblyFormat = "$addr `,` `size` `=` $size (`,` `init` `=` $initVal^)? attr-dict `:` type($addr) `,` type($size)";
   
   let hasVerifier = 1;
 }
@@ -7135,6 +7316,167 @@ def NVVM_Tcgen05MMABlockScaleDecompressBOp :
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// NVVM sparse.compress and sparse.decompress Ops
+//===----------------------------------------------------------------------===//
+
+// Size in bits of each structured sparsity metadata index.
+def SPIdxSizeAttr : ConfinedAttr<I32Attr, [IntIsOneOf<[2, 4]>]>;
+
+// Size of each structured sparsity group in the dense data.
+def SPNumTgtAttr : ConfinedAttr<I32Attr, [IntIsOneOf<[2, 4, 8, 16]>]>;
+
+// Dense and compressed data are vectors of 8-bit or 16-bit elements.
+defvar SPElemVectorType = FixedVectorOfRankAndType<[1], [I8, I16]>;
+
+// Metadata is a bundle of 32-bit registers: i32 or a vector of i32. A
+// single-register bundle may be either i32 or vector<1xi32>.
+defvar SPMetadataType = AnyTypeOf<[I32,
+    FixedVectorOfRankAndLengthAndType<[1], [1, 2, 4, 8, 16, 32], [I32]>]>;
+
+def NVVM_SparseCompressOp : NVVM_Op<"sparse.compress",
+    [Pure, NVVMRequiresSMa<[107]>]> {
+  let summary = "Compress dense vector to structured sparse vector";
+  let description = [{
+    Compresses elements from a dense vector `data` into a structured sparse
+    vector `compressed_data` using the 2:4 sparsity pattern: 2 out of every
+    4 elements of `data` are selected. The indices of the selected elements
+    are returned in `metadata`.
+
+    The element size (8 or 16 bits) is given by the element type of `data`
+    and `compressed_data`. `data` must occupy `2 * repFactor` 32-bit
+    registers, where the repeat factor `repFactor` is a power of two from 1
+    to 64.
+
+    Arguments:
+    - `spDesc`: Sparsity descriptor specifying the selection operation and the
+      element data type.
+    - `data`: Dense vector containing the elements to be compressed.
+    - `idxSize`: Size in bits of each metadata index (2 or 4).
+
+    Results:
+    - `metadata`: Indices of the selected elements, stored in
+      `ceil(repFactor * idxSize / elemSize)` 32-bit registers. A single
+      register may be either `i32` or `vector<1xi32>`.
+    - `compressed_data`: Selected elements; half as many as in `data`.
+
+    Examples:
+    ```mlir
+    // 8-bit elements, 2-bit indices, repeat factor of 1.
+    %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data
+        idx_size = 2
+        : i32, vector<8xi8> -> i32, vector<4xi8>
+
+    // 16-bit elements, 4-bit indices, repeat factor of 8.
+    %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data
+        idx_size = 4
+        : i32, vector<32xi16> -> vector<2xi32>, vector<16xi16>
+    ```
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-spcompress)
+  }];
+
+  let arguments = (ins
+    I32:$spDesc,
+    SPElemVectorType:$data,
+    SPIdxSizeAttr:$idxSize);
+
+  let results = (outs
+    SPMetadataType:$metadata,
+    SPElemVectorType:$compressed_data);
+
+  let assemblyFormat = [{
+    $spDesc `,` $data `idx_size` `=` $idxSize attr-dict
+    `:` type(operands) `->` type($metadata) `,` type($compressed_data)
+  }];
+
+  let extraClassDeclaration = [{
+    static void lowerToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
+                              llvm::IRBuilderBase &builder);
+  }];
+
+  let hasVerifier = 1;
+
+  string llvmBuilder = [{
+    NVVM::SparseCompressOp::lowerToLLVMIR(*op, moduleTranslation, builder);
+  }];
+}
+
+def NVVM_SparseDecompressOp : NVVM_Op<"sparse.decompress",
+    [Pure, NVVMRequiresSMa<[107]>]> {
+  let summary = "Decompress structured sparse vector to dense vector";
+  let description = [{
+    Decompresses elements from a structured sparse vector `compressed_data`
+    into a dense vector `data`, using the indices stored in `metadata`. Dense
+    positions not selected by `metadata` are set to zero.
+
+    `data` consists of `repFactor` groups of `numTgt` elements, and
+    `compressed_data` holds `numSrc` elements for each group, i.e. the
+    sparsity factor is `numSrc:numTgt`. Both `numSrc` and the repeat factor
+    `repFactor` are derived from the vector lengths. The element size
+    `elemSize` (8 or 16 bits) is given by the element type of `data` and
+    `compressed_data`.
+
+    The following conditions must hold:
+    - `numSrc:numTgt` is one of 1:2, 1:4, 1:8, 1:16, 2:4, 2:8, 2:16, 4:8, or
+      4:16.
+    - `repFactor` is a power of two from 1 to 64.
+    - `numTgt * elemSize * repFactor` is between 32 and 4096.
+    - `numSrc * elemSize` is at most 32.
+    - `idxSize` is 2 only if `numTgt` is at most 4.
+    - `metadata` occupies `ceil(numSrc * idxSize * repFactor / 32)` 32-bit
+      registers. A single register may be either `i32` or `vector<1xi32>`.
+
+    Arguments:
+    - `metadata`: Indices of the selected elements.
+    - `compressed_data`: Compressed vector containing the selected elements.
+    - `idxSize`: Size in bits of each metadata index (2 or 4).
+    - `numTgt`: Size of each group in `data` (2, 4, 8, or 16).
+
+    Results:
+    - `data`: Dense vector containing the decompressed elements.
+
+    Examples:
+    ```mlir
+    // 2:4 sparsity, 8-bit elements, 2-bit indices, repeat factor of 1.
+    %res = nvvm.sparse.decompress %metadata, %compdata idx_size = 2 num_tgt = 4
+        : i32, vector<2xi8> -> vector<4xi8>
+
+    // 2:4 sparsity, 16-bit elements, 4-bit indices, repeat factor of 64.
+    %res = nvvm.sparse.decompress %metadata, %compdata idx_size = 4 num_tgt = 4
+        : vector<16xi32>, vector<128xi16> -> vector<256xi16>
+    ```
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-spdecompress)
+  }];
+
+  let arguments = (ins
+    SPMetadataType:$metadata,
+    SPElemVectorType:$compressed_data,
+    SPIdxSizeAttr:$idxSize,
+    SPNumTgtAttr:$numTgt);
+
+  let results = (outs
+    SPElemVectorType:$data);
+
+  let assemblyFormat = [{
+    $metadata `,` $compressed_data
+    `idx_size` `=` $idxSize `num_tgt` `=` $numTgt attr-dict
+    `:` type($metadata) `,` type($compressed_data) `->` type($data)
+  }];
+
+  let extraClassDeclaration = [{
+    static void lowerToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
+                              llvm::IRBuilderBase &builder);
+  }];
+
+  let hasVerifier = 1;
+
+  string llvmBuilder = [{
+    NVVM::SparseDecompressOp::lowerToLLVMIR(*op, moduleTranslation, builder);
+  }];
+}
+
 def SIMTFloatType : AnyTypeOf<[F16, BF16, F32, F64,
                       VectorOfLengthAndType<[2], [F16, BF16, F32, F64]>]>;
 
@@ -7215,6 +7557,35 @@ def NVVM_SubFOp : NVVM_FloatBinaryOp<"subf"> {
     // sub(a, b) = add(a, -b)
     llvm::Value *rhs = builder.CreateFNeg($rhs);
     NVVM::AddFOp::lowerAddFToLLVMIR($lhs, rhs, op.getRes(), $rnd, $sat, $ftz,
+                                    moduleTranslation, builder);
+  }];
+}
+
+def NVVM_MulFOp : NVVM_FloatBinaryOp<"mulf", [Commutative]> {
+  let summary = [{
+    Performs floating point multiplication of the given arguments `lhs` and `rhs`
+  }];
+  let description = [{
+    The `nvvm.mulf` operation performs floating point multiplication of two 
+    floating point operands of the same type.
+
+    The rounding mode is specified by the `rnd` attribute, saturation mode by 
+    the `sat` attribute, and flush-to-zero by the `ftz` attribute.
+
+    For more information, see PTX ISA:
+    - [floating point multiplication](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-mul)
+    - [half-precision floating point multiplication](https://docs.nvidia.com/cuda/parallel-thread-execution/#half-precision-floating-point-instructions-mul)
+  }];
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static void lowerMulFToLLVMIR(
+        llvm::Value *lhs, llvm::Value *rhs, Value res,
+        NVVM::FPRoundingMode rnd, NVVM::SaturationMode sat, bool ftz,
+        LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
+  let llvmBuilder = [{
+    NVVM::MulFOp::lowerMulFToLLVMIR($lhs, $rhs, op.getRes(), $rnd, $sat, $ftz,
                                     moduleTranslation, builder);
   }];
 }

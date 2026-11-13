@@ -7,6 +7,8 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   Analyses/SharedLexicalRepresentation/EntitySourceLocationExtractorTest.cpp
   Analyses/UnsafeBufferUsage/UnsafeBufferUsageTest.cpp
   Analyses/UnsafeBufferUsage/UnsafeBufferUsageWPATest.cpp
+  Analyses/VirtualMethodFamily/VirtualMethodFamilyAnalysisTest.cpp
+  Analyses/VirtualMethodFamily/VirtualMethodFamilyExtractorTest.cpp
   ASTEntityMappingTest.cpp
   BuildNamespaceTest.cpp
   EntityIdTableTest.cpp
@@ -28,6 +30,7 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   Serialization/JSONFormatTest/LUSummaryTest.cpp
   Serialization/JSONFormatTest/SharedLexicalRepresentationFormatTest.cpp
   Serialization/JSONFormatTest/TUSummaryTest.cpp
+  Serialization/JSONFormatTest/VirtualMethodFamilyFormatTest.cpp
   SourceTransformation/CppBoundedBuffersTest.cpp
   SourceTransformation/EmitterTest.cpp
   SourceTransformation/RegistryTest.cpp

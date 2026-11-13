@@ -9,6 +9,7 @@
 #include "lldb/Core/Debugger.h"
 
 #include "lldb/Breakpoint/Breakpoint.h"
+#include "lldb/Core/BugReporter.h"
 #include "lldb/Core/DebuggerEvents.h"
 #include "lldb/Core/Diagnostics.h"
 #include "lldb/Core/FormatEntity.h"
@@ -578,6 +579,42 @@ llvm::StringRef Debugger::GetShowProgressAnsiSuffix() const {
       idx, g_debugger_properties[idx].default_cstr_value);
 }
 
+llvm::StringRef Debugger::GetLabelAnsiPrefix() const {
+  const uint32_t idx = ePropertyLabelAnsiPrefix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetLabelAnsiSuffix() const {
+  const uint32_t idx = ePropertyLabelAnsiSuffix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetTitleAnsiPrefix() const {
+  const uint32_t idx = ePropertyTitleAnsiPrefix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetTitleAnsiSuffix() const {
+  const uint32_t idx = ePropertyTitleAnsiSuffix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetDividerAnsiPrefix() const {
+  const uint32_t idx = ePropertyDividerAnsiPrefix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetDividerAnsiSuffix() const {
+  const uint32_t idx = ePropertyDividerAnsiSuffix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
 bool Debugger::GetShowStatusline() const {
   const uint32_t idx = ePropertyShowStatusline;
   return GetPropertyAtIndexAs<bool>(
@@ -943,7 +980,7 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
   lldb_private::telemetry::ScopedDispatcher<
       lldb_private::telemetry::DebuggerInfo>
       helper([](lldb_private::telemetry::DebuggerInfo *entry) {
-        entry->lldb_version = lldb_private::GetVersion();
+        entry->lldb_version = Language::GetVersionWithLanguageInfo();
       });
   DebuggerSP debugger_sp(new Debugger(log_callback, baton));
   helper.SetDebugger(debugger_sp.get());
@@ -1042,8 +1079,8 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_error_stream_sp(std::make_shared<LockableStreamFile>(
           stderr, NativeFile::Unowned, m_output_mutex)),
       m_broadcaster_manager_sp(BroadcasterManager::MakeBroadcasterManager()),
-      m_terminal_state(), m_target_list(*this), m_platform_list(),
-      m_listener_sp(Listener::MakeListener("lldb.Debugger")),
+      m_terminal_state(), m_target_list(*this), m_target_group_list(*this),
+      m_platform_list(), m_listener_sp(Listener::MakeListener("lldb.Debugger")),
       m_source_manager_up(), m_source_file_cache(),
       m_command_interpreter_up(
           std::make_unique<CommandInterpreter>(*this, false)),
@@ -1165,6 +1202,7 @@ void Debugger::Clear() {
         target_sp->Destroy();
       }
     }
+    m_target_group_list.Clear();
     m_broadcaster_manager_sp->Clear();
 
     // Close the input file _before_ we close the input read communications
@@ -1283,20 +1321,16 @@ void Debugger::RedrawStatusline(
     std::optional<ExecutionContextRef> exe_ctx_ref) {
   std::lock_guard<std::mutex> guard(m_statusline_mutex);
 
+  const bool flush = m_flush_statusline.exchange(false);
   if (!m_statusline)
     return;
 
+  if (flush)
+    m_statusline->ClearExecutionContext();
   m_statusline->Redraw(exe_ctx_ref);
 }
 
-void Debugger::FlushStatusLine() {
-  std::lock_guard<std::mutex> guard(m_statusline_mutex);
-
-  if (!m_statusline)
-    return;
-
-  m_statusline->ClearExecutionContext();
-}
+void Debugger::FlushStatusLine() { m_flush_statusline = true; }
 
 ExecutionContext
 Debugger::GetSelectedExecutionContext(bool adopt_dummy_target) {
@@ -1622,6 +1656,14 @@ lldb::DebuggerSP Debugger::GetDebuggerAtIndex(size_t index) {
   return nullptr;
 }
 
+Debugger::DebuggerIterable Debugger::Debuggers() {
+  static const DebuggerList g_empty_debugger_list;
+  std::unique_lock<std::mutex> lock(GetDebuggerListMutex());
+  const DebuggerList &debugger_list =
+      g_debugger_list_ptr ? *g_debugger_list_ptr : g_empty_debugger_list;
+  return DebuggerIterable(debugger_list, std::move(lock));
+}
+
 DebuggerSP Debugger::FindDebuggerWithID(lldb::user_id_t id) {
   std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
   if (!g_debugger_list_ptr)
@@ -1684,6 +1726,8 @@ bool Debugger::FormatDisassemblerAddress(const FormatEntity::Entry *format,
 void Debugger::AssertCallback(llvm::StringRef message,
                               llvm::StringRef backtrace,
                               llvm::StringRef prompt) {
+  // Don't use Language::GetVersionWithLanguageInfo() here: an assertion can
+  // fail while Language::FindPlugin() holds its lock to create a plugin.
   Debugger::ReportError(llvm::formatv("{0}\n{1}{2}\n{3}", message, backtrace,
                                       GetVersion(), prompt)
                             .str());
@@ -1786,8 +1830,8 @@ void Debugger::ReportProgress(uint64_t progress_id, std::string title,
 }
 
 static void PrivateReportDiagnostic(Debugger &debugger, Severity severity,
-                                    std::string message,
-                                    bool debugger_specific) {
+                                    std::string message, bool debugger_specific,
+                                    bool internal_error) {
   uint32_t event_type = 0;
   switch (severity) {
   case eSeverityInfo:
@@ -1800,6 +1844,9 @@ static void PrivateReportDiagnostic(Debugger &debugger, Severity severity,
     event_type = lldb::eBroadcastBitError;
     break;
   }
+
+  if (internal_error && debugger.ShouldSuggestBugReport(message))
+    message += GetBugReportNote();
 
   Broadcaster &broadcaster = debugger.GetBroadcaster();
   if (!broadcaster.EventTypeHasListeners(event_type)) {
@@ -1818,7 +1865,7 @@ static void PrivateReportDiagnostic(Debugger &debugger, Severity severity,
 
 void Debugger::ReportDiagnosticImpl(Severity severity, std::string message,
                                     std::optional<lldb::user_id_t> debugger_id,
-                                    std::once_flag *once) {
+                                    std::once_flag *once, bool internal_error) {
   auto ReportDiagnosticLambda = [&]() {
     // Always log diagnostics to the system log.
     Host::SystemLog(severity, message);
@@ -1839,7 +1886,7 @@ void Debugger::ReportDiagnosticImpl(Severity severity, std::string message,
       DebuggerSP debugger_sp = FindDebuggerWithID(*debugger_id);
       if (debugger_sp)
         PrivateReportDiagnostic(*debugger_sp, severity, std::move(message),
-                                true);
+                                true, internal_error);
       return;
     }
     // The diagnostic event is not debugger specific, iterate over all debuggers
@@ -1847,7 +1894,8 @@ void Debugger::ReportDiagnosticImpl(Severity severity, std::string message,
     std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
     if (g_debugger_list_ptr) {
       for (const auto &debugger : *g_debugger_list_ptr)
-        PrivateReportDiagnostic(*debugger, severity, message, false);
+        PrivateReportDiagnostic(*debugger, severity, message, false,
+                                internal_error);
     }
   };
 
@@ -1867,6 +1915,18 @@ void Debugger::ReportError(std::string message,
                            std::optional<lldb::user_id_t> debugger_id,
                            std::once_flag *once) {
   ReportDiagnosticImpl(eSeverityError, std::move(message), debugger_id, once);
+}
+
+void Debugger::ReportInternalError(std::string message,
+                                   std::optional<lldb::user_id_t> debugger_id,
+                                   std::once_flag *once) {
+  ReportDiagnosticImpl(eSeverityError, std::move(message), debugger_id, once,
+                       /*internal_error=*/true);
+}
+
+bool Debugger::ShouldSuggestBugReport(llvm::StringRef failure) {
+  return Diagnostics::GetGlobalProperties().GetSuggestBugReport() &&
+         m_suggested_bugreports.Insert(llvm::stable_hash_name(failure));
 }
 
 void Debugger::ReportInfo(std::string message,
@@ -2622,7 +2682,7 @@ StructuredData::DictionarySP Debugger::GetBuildConfiguration() {
       *config_up, "zlib", LLVM_ENABLE_ZLIB,
       "A boolean value that indicates if zlib support is enabled in LLDB");
   AddBoolConfigEntry(
-      *config_up, "lzma", LLDB_ENABLE_LZMA,
+      *config_up, "lzma", LLVM_ENABLE_LZMA,
       "A boolean value that indicates if lzma support is enabled in LLDB");
   AddBoolConfigEntry(
       *config_up, "python", LLDB_ENABLE_PYTHON,

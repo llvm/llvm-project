@@ -8,8 +8,10 @@
 
 #include "llvm/ExecutionEngine/Orc/LazyReexports.h"
 
+#include "llvm/ExecutionEngine/Orc/BindCallControllerHandler.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
+#include "llvm/ExecutionEngine/Orc/SPSHandlerSpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -331,6 +333,17 @@ void LazyReexportsManager::handleTransferResources(JITDylib &JD,
   }
 }
 
+// Spec for the call-controller handler that the ORC runtime calls to
+// resolve lazy reexports.
+namespace lazy_reexports_sps_handlers {
+struct Resolve
+    : sps::HandlerSpec<shared::SPSExpected<shared::SPSExecutorSymbolDef>(
+          shared::SPSExecutorAddr)> {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_resolve_tag");
+};
+} // namespace lazy_reexports_sps_handlers
+
 LazyReexportsManager::LazyReexportsManager(EmitTrampolinesFn EmitTrampolines,
                                            RedirectableSymbolManager &RSMgr,
                                            JITDylib &PlatformJD, Listener *L,
@@ -339,16 +352,11 @@ LazyReexportsManager::LazyReexportsManager(EmitTrampolinesFn EmitTrampolines,
       EmitTrampolines(std::move(EmitTrampolines)), RSMgr(RSMgr), L(L) {
 
   using namespace shared;
-
   ErrorAsOutParameter _(&Err);
-
-  ExecutionSession::JITDispatchHandlerAssociationMap WFs;
-
-  WFs[ES.intern("__orc_rt_resolve_tag")] =
-      ES.wrapAsyncWithSPS<SPSExpected<SPSExecutorSymbolDef>(SPSExecutorAddr)>(
-          this, &LazyReexportsManager::resolve);
-
-  Err = ES.registerJITDispatchHandlers(PlatformJD, std::move(WFs));
+  Err = ES.registerCallControllerHandlers(
+      PlatformJD,
+      bindCallControllerHandler<lazy_reexports_sps_handlers::Resolve>(
+          this, &LazyReexportsManager::resolve));
 }
 
 std::unique_ptr<MaterializationUnit>

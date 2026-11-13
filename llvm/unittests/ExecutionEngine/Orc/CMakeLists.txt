@@ -1,5 +1,6 @@
 
 set(LLVM_LINK_COMPONENTS
+  Analysis
   Core
   ExecutionEngine
   IRReader
@@ -19,6 +20,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(OrcJITTests
   COFFAutoImportGeneratorTest.cpp
+  ConnectionSpecTest.cpp
   CoreAPIsTest.cpp
   ExecutorAddressTest.cpp
   ExecutionSessionWrapperFunctionCallsTest.cpp
@@ -27,10 +29,12 @@ add_llvm_unittest(OrcJITTests
   EPCGenericDylibManagerTest.cpp
   IndirectionUtilsTest.cpp
   InProcessEPCTest.cpp
+  InstanceSymbolGeneratorTest.cpp
   JITTargetMachineBuilderTest.cpp
   LazyCallThroughAndReexportsTest.cpp
   LibraryResolverTest.cpp
   LinkGraphLinkingLayerTest.cpp
+  LLJITTest.cpp
   LookupAndApplyTest.cpp
   MachOBuilderTest.cpp
   ManglerTest.cpp
@@ -49,6 +53,7 @@ add_llvm_unittest(OrcJITTests
   SimpleExecutorMemoryManagerTest.cpp
   SimplePackedSerializationTest.cpp
   SimpleRemoteEPCUtilsTest.cpp
+  SPSHandlerSpecTest.cpp
   SPSProxySpecTest.cpp
   SymbolLookupSetTest.cpp
   SymbolStringPoolTest.cpp

@@ -61,13 +61,13 @@ public:
 
   Error parse(ArrayRef<uint8_t> section, llvm::endianness endian) override;
 
-  std::optional<unsigned> getAttributeValue(unsigned tag) const override {
+  std::optional<uint64_t> getAttributeValue(unsigned tag) const override {
     auto I = attributes.find(tag);
     if (I == attributes.end())
       return std::nullopt;
     return I->second;
   }
-  std::optional<unsigned>
+  std::optional<uint64_t>
   getAttributeValue(StringRef buildAttributeSubsectionName,
                     unsigned tag) const override {
     assert("" == buildAttributeSubsectionName &&

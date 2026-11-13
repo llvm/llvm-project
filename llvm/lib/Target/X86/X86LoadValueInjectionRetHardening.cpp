@@ -90,7 +90,7 @@ static bool runX86LoadValueInjectionRetHardening(MachineFunction &MF) {
         MachineInstr *Fence =
             BuildMI(MBB, MBBI, DebugLoc(), TII->get(X86::LFENCE));
         addRegOffset(BuildMI(MBB, Fence, DebugLoc(), TII->get(X86::SHL64mi)),
-                     X86::RSP, false, 0)
+                     X86::RSP, 0)
             .addImm(0)
             ->addRegisterDead(X86::EFLAGS, TRI);
       }

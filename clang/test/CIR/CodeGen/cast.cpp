@@ -8,13 +8,13 @@ unsigned char cxxstaticcast_0(unsigned int x) {
 }
 
 // CIR: cir.func{{.*}} @_Z15cxxstaticcast_0j
-// CIR:    %[[XPTR:[0-9]+]] = cir.alloca "x" align(4) init : !cir.ptr<!u32i>
 // CIR:    %[[RV:[0-9]+]] = cir.alloca "__retval" align(1) : !cir.ptr<!u8i>
+// CIR:    %[[XPTR:[0-9]+]] = cir.alloca "x" align(4) init : !cir.ptr<!u32i>
 // CIR:    cir.store %arg0, %[[XPTR]] : !u32i, !cir.ptr<!u32i>
 // CIR:    %[[XVAL:[0-9]+]] = cir.load{{.*}} %[[XPTR]] : !cir.ptr<!u32i>, !u32i
 // CIR:    %[[CASTED:[0-9]+]] = cir.cast integral %[[XVAL]] : !u32i -> !u8i
 // CIR:    cir.store %[[CASTED]], %[[RV]] : !u8i, !cir.ptr<!u8i>
-// CIR:    %[[R:[0-9]+]] = cir.load{{.*}} %1 : !cir.ptr<!u8i>, !u8i
+// CIR:    %[[R:[0-9]+]] = cir.load{{.*}} %[[RV]] : !cir.ptr<!u8i>, !u8i
 // CIR:    cir.return %[[R]] : !u8i
 // CIR:  }
 
@@ -96,8 +96,8 @@ bool cptr(void *d) {
 // CIR:   %{{[0-9]+}} = cir.cast ptr_to_bool %[[DVAL]] : !cir.ptr<!void> -> !cir.bool
 
 // LLVM-LABEL: define{{.*}} i1 @_Z4cptrPv(ptr {{.*}} %0)
-// LLVM:         %[[ARG_STORAGE:.*]] = alloca ptr, 
 // LLVM:         %[[RETVAL:.*]] = alloca i8, 
+// LLVM:         %[[ARG_STORAGE:.*]] = alloca ptr, 
 // LLVM:         %[[X_STORAGE:.*]] = alloca i8, 
 // LLVM:         store ptr %0, ptr %[[ARG_STORAGE]]
 // LLVM:         %[[LOADED_PTR:.*]] = load ptr, ptr %[[ARG_STORAGE]]
@@ -175,11 +175,13 @@ int test_unser_defined_cast_with_aligned_load(B x) {
 }
 
 // CIR: cir.func{{.*}} @_Z41test_unser_defined_cast_with_aligned_load1B
-// CIR:   cir.store %{{.*}}, %[[B_PTR:.*]] : !rec_B, !cir.ptr<!rec_B>
+// CIR:   %[[B_PTR:.*]] = cir.alloca "x" align(8) init : !cir.ptr<!rec_B>
+// CIR:   cir.copy %{{.*}} align(8) to %[[B_PTR]] align(8) : !cir.ptr<!rec_B>
 // CIR:   %[[CAST:.*]] = cir.call @_ZNK1BcvPiEv(%[[B_PTR]])
 // CIR:   %[[LOAD:.*]] = cir.load{{.*}} %[[CAST]]
 
 // LLVM: define{{.*}} i32 @_Z41test_unser_defined_cast_with_aligned_load1B
-// LLVM:   store %struct.B %{{.*}}, ptr %[[B_PTR:.*]], align 8
+// LLVM:   %[[B_PTR:.*]] = alloca %struct.B, align 8
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[B_PTR]], ptr align 8 %{{.*}}, i64 8, i1 false)
 // LLVM:   %[[CAST:.*]] = call {{.*}} ptr @_ZNK1BcvPiEv(ptr {{.*}} %[[B_PTR]])
 // LLVM:   %[[LOAD:.*]] = load i32, ptr %[[CAST]]

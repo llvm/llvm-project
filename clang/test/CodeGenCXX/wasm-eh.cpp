@@ -3,8 +3,8 @@
 // RUN: %clang -E -dM %s -target wasm32-unknown-unknown -fwasm-exceptions | FileCheck %s -check-prefix PREPROCESSOR
 // PREPROCESSOR: #define __WASM_EXCEPTIONS__ 1
 
-// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -mllvm -wasm-enable-eh -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
-// RUN: %clang_cc1 %s -triple wasm64-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -mllvm -wasm-enable-eh -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 %s -triple wasm64-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
 
 // Test code generation for Wasm EH using WebAssembly EH proposal.
 // (https://github.com/WebAssembly/exception-handling/blob/main/proposals/exception-handling/Exceptions.md)
@@ -41,7 +41,7 @@ void multiple_catches_wo_catch_all() {
 // CHECK-NEXT:   %[[EXN:.*]] = call ptr @llvm.wasm.get.exception(token %[[CATCHPAD]])
 // CHECK-NEXT:   store ptr %[[EXN]], ptr %exn.slot
 // CHECK-NEXT:   %[[SELECTOR:.*]] = call i32 @llvm.wasm.get.ehselector(token %[[CATCHPAD]])
-// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi) {{.*}}
+// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi){{$}}
 // CHECK-NEXT:   %[[MATCHES:.*]] = icmp eq i32 %[[SELECTOR]], %[[TYPEID]]
 // CHECK-NEXT:   br i1 %[[MATCHES]], label %[[CATCH_INT_BB:.*]], label %[[CATCH_FALLTHROUGH_BB:.*]]
 
@@ -58,7 +58,7 @@ void multiple_catches_wo_catch_all() {
 // CHECK-NEXT:   br label %[[TRY_CONT_BB:.*]]
 
 // CHECK: [[CATCH_FALLTHROUGH_BB]]
-// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTId) {{.*}}
+// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTId){{$}}
 // CHECK-NEXT:   %[[MATCHES:.*]] = icmp eq i32 %[[SELECTOR]], %[[TYPEID]]
 // CHECK-NEXT:   br i1 %[[MATCHES]], label %[[CATCH_FLOAT_BB:.*]], label %[[RETHROW_BB:.*]]
 
@@ -421,9 +421,9 @@ int tls_wrapper_within_funclet() {
 // CHECK-NEXT:  call void @_ZSt9terminatev()
 
 
-// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -mllvm -wasm-enable-eh -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-DEFAULT
-// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -mllvm -wasm-enable-eh -exception-model=wasm -target-feature +exception-handling -Wwasm-exception-spec -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-ON
-// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -mllvm -wasm-enable-eh -exception-model=wasm -target-feature +exception-handling -Wno-wasm-exception-spec -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-OFF
+// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-DEFAULT
+// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -Wwasm-exception-spec -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-ON
+// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -Wno-wasm-exception-spec -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-OFF
 // RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fexceptions -fcxx-exceptions -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=EM-EH-WARNING
 
 // Wasm EH ignores dynamic exception specifications with types at the moment.
@@ -448,7 +448,7 @@ void exception_spec_throw_empty() throw() {
 // Here we only check if the command enables wasm exception handling in the
 // backend so that exception handling instructions can be generated in .s file.
 
-// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -mllvm -wasm-enable-eh -exception-model=wasm -target-feature +exception-handling -S -o - -std=c++11 | FileCheck %s --check-prefix=ASSEMBLY
+// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -S -o - -std=c++11 | FileCheck %s --check-prefix=ASSEMBLY
 
 // ASSEMBLY: try
 // ASSEMBLY: catch

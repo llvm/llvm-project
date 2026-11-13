@@ -145,7 +145,6 @@ protected:
   bool arePredicatesComplements(MachineInstr &MI1, MachineInstr &MI2);
   bool restrictingDepExistInPacket(MachineInstr&, unsigned);
   bool isNewifiable(const MachineInstr &MI, const TargetRegisterClass *NewRC);
-  bool isCurifiable(MachineInstr &MI);
   bool cannotCoexist(const MachineInstr &MI, const MachineInstr &MJ);
 
   bool isPromotedToDotNew() const {

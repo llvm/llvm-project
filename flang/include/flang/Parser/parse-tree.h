@@ -469,7 +469,7 @@ struct InternalSubprogram {
   UNION_CLASS_BOILERPLATE(InternalSubprogram);
   std::variant<common::Indirection<FunctionSubprogram>,
       common::Indirection<SubroutineSubprogram>,
-      common::Indirection<CompilerDirective>>
+      common::Indirection<CompilerDirective>, ErrorRecovery>
       u;
 };
 
@@ -580,7 +580,7 @@ struct ProgramUnit {
       common::Indirection<SubroutineSubprogram>, common::Indirection<Module>,
       common::Indirection<Submodule>, common::Indirection<BlockData>,
       common::Indirection<CompilerDirective>,
-      common::Indirection<OpenACCRoutineConstruct>>
+      common::Indirection<OpenACCRoutineConstruct>, ErrorRecovery>
       u;
 };
 
@@ -999,10 +999,21 @@ struct ComponentArraySpec {
 EMPTY_CLASS(Allocatable);
 EMPTY_CLASS(Pointer);
 EMPTY_CLASS(Contiguous);
+// CUDA-data-attr [( IMPLICIT )]
+// The (IMPLICIT) qualifier marks an attribute that the compiler applied on the
+// user's behalf (e.g. an unattributed ALLOCATABLE under -gpu=mem:managed)
+// rather than one the user wrote. It exists so that module files can carry
+// that distinction; user code is not expected to spell it.
+struct CUDADataAttrSpec {
+  TUPLE_CLASS_BOILERPLATE(CUDADataAttrSpec);
+  EMPTY_CLASS(Implicit);
+  std::tuple<common::CUDADataAttr, std::optional<Implicit>> t;
+};
+
 struct ComponentAttrSpec {
   UNION_CLASS_BOILERPLATE(ComponentAttrSpec);
   std::variant<AccessSpec, Allocatable, CoarraySpec, Contiguous,
-      ComponentArraySpec, Pointer, common::CUDADataAttr, ErrorRecovery>
+      ComponentArraySpec, Pointer, CUDADataAttrSpec, ErrorRecovery>
       u;
 };
 
@@ -1412,7 +1423,7 @@ struct AttrSpec {
   std::variant<AccessSpec, Allocatable, Asynchronous, CoarraySpec, Contiguous,
       ArraySpec, External, IntentSpec, Intrinsic, LanguageBindingSpec, Optional,
       Parameter, Pointer, Protected, RankClause, Save, Target, Value, Volatile,
-      common::CUDADataAttr>
+      CUDADataAttrSpec>
       u;
 };
 
@@ -2989,7 +3000,7 @@ struct ModuleSubprogram {
       common::Indirection<SubroutineSubprogram>,
       common::Indirection<SeparateModuleSubprogram>,
       common::Indirection<OpenACCRoutineConstruct>,
-      common::Indirection<CompilerDirective>>
+      common::Indirection<CompilerDirective>, ErrorRecovery>
       u;
 };
 
@@ -3246,7 +3257,7 @@ struct InterfaceSpecification {
   UNION_CLASS_BOILERPLATE(InterfaceSpecification);
   std::variant<InterfaceBody, Statement<ProcedureStmt>,
       common::Indirection<CompilerDirective>,
-      common::Indirection<OpenACCRoutineConstruct>>
+      common::Indirection<OpenACCRoutineConstruct>, ErrorRecovery>
       u;
 };
 
@@ -4650,6 +4661,7 @@ struct OmpIterationOffset {
 // iteration ->
 //    induction-variable [iteration-offset]         // since 4.5
 struct OmpIteration {
+  CharBlock source;
   TUPLE_CLASS_BOILERPLATE(OmpIteration);
   std::tuple<Name, std::optional<OmpIterationOffset>> t;
 };

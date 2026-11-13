@@ -12,8 +12,8 @@
 #define lldb_NativeRegisterContextLinux_s390x_h
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
-#include "Plugins/Process/Utility/RegisterContext_s390x.h"
-#include "Plugins/Process/Utility/lldb-s390x-register-enums.h"
+#include "Register/Arch/RegisterContext_s390x.h"
+#include "Register/Arch/lldb-s390x-register-enums.h"
 #include <asm/ptrace.h>
 
 namespace lldb_private {

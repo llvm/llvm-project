@@ -535,7 +535,7 @@ void ARMAsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
 }
 
 void ARMAsmPrinter::emitStartOfAsmFile(Module &M) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
   auto &TS =
       static_cast<ARMTargetStreamer &>(*OutStreamer->getTargetStreamer());
   // Use unified assembler syntax.
@@ -544,6 +544,9 @@ void ARMAsmPrinter::emitStartOfAsmFile(Module &M) {
   // Emit ARM Build Attributes
   if (TT.isOSBinFormatELF())
     emitAttributes();
+
+  if (TT.isOSBinFormatCOFF())
+    emitCOFFFeatureSymbol(M);
 
   // Use the triple's architecture and subarchitecture to determine
   // if we're thumb for the purposes of the top level code16 state.
@@ -576,7 +579,7 @@ emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
 
 
 void ARMAsmPrinter::emitEndOfAsmFile(Module &M) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
   if (TT.isOSBinFormatMachO()) {
     // All darwin targets use mach-o.
     const TargetLoweringObjectFileMachO &TLOFMacho =
@@ -830,13 +833,10 @@ void ARMAsmPrinter::emitAttributes() {
   if (const Module *SourceModule = MMI->getModule()) {
     // ABI_PCS_wchar_t to indicate wchar_t width
     // FIXME: There is no way to emit value 0 (wchar_t prohibited).
-    int WCharWidth = TM.getTargetTriple().getDefaultWCharSize();
-    if (auto WCharWidthValue = mdconst::extract_or_null<ConstantInt>(
-            SourceModule->getModuleFlag("wchar_size")))
-      WCharWidth = WCharWidthValue->getZExtValue();
-    assert((WCharWidth == 2 || WCharWidth == 4) &&
-           "wchar_t width must be 2 or 4 bytes");
-    ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_wchar_t, WCharWidth);
+    unsigned WCharSize = SourceModule->getWCharSize();
+    assert((WCharSize == 2 || WCharSize == 4) &&
+           "wchar_t size must be 2 or 4 bytes");
+    ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_wchar_t, WCharSize);
 
     // ABI_enum_size to indicate enum width
     // FIXME: There is no way to emit value 0 (enums prohibited) or value 3
@@ -929,7 +929,7 @@ static uint8_t getModifierSpecifier(ARMCP::ARMCPModifier Modifier) {
 
 MCSymbol *ARMAsmPrinter::GetARMGVSymbol(const GlobalValue *GV,
                                         unsigned char TargetFlags) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = GV->getParent()->getTargetTriple();
   if (TT.isOSBinFormatMachO()) {
     bool IsIndirect =
         (TargetFlags & ARMII::MO_NONLAZY) && getTM().isGVIndirectSymbol(GV);
@@ -1411,7 +1411,7 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
       PadBefore = -MI->getOperand(4).getImm() - 8;
       break;
     }
-    if (MAI.getExceptionHandlingType() == ExceptionHandling::ARM) {
+    if (getModuleExceptionModel() == ExceptionHandling::ARM) {
       if (PadBefore)
         ATS.emitPad(PadBefore);
       ATS.emitRegSave(RegList, Opc == ARM::VSTMDDB_UPD);
@@ -1462,7 +1462,7 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
         break;
       }
 
-      if (MAI.getExceptionHandlingType() == ExceptionHandling::ARM) {
+      if (getModuleExceptionModel() == ExceptionHandling::ARM) {
         if (DstReg == FramePtr && FramePtr != ARM::SP)
           // Set-up of the frame pointer. Positive values correspond to "add"
           // instruction.
@@ -1629,14 +1629,13 @@ void ARMAsmPrinter::EmitKCFI_CHECK_ARM32(Register AddrReg, int64_t Type,
            "Cannot encode immediate as ARM modified immediate");
 
     // eor[s] scratch, scratch, #imm (last one sets flags with CPSR)
-    EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(ARM::EORri)
-                       .addReg(ScratchReg)
-                       .addReg(ScratchReg)
-                       .addImm(SOImmVal)
-                       .addImm(ARMCC::AL)
-                       .addReg(0)
-                       .addReg(isLast ? ARM::CPSR : ARM::NoRegister));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::EORri)
+                                     .addReg(ScratchReg)
+                                     .addReg(ScratchReg)
+                                     .addImm(SOImmVal)
+                                     .addImm(ARMCC::AL)
+                                     .addReg(0)
+                                     .addReg(isLast ? ARM::CPSR : Register()));
   }
 
   // If we spilled r3, restore it immediately after the comparison.
@@ -1727,14 +1726,13 @@ void ARMAsmPrinter::EmitKCFI_CHECK_Thumb2(Register AddrReg, int64_t Type,
            "Cannot encode immediate as Thumb2 modified immediate");
 
     // eor[s] scratch, scratch, #imm (last one sets flags with CPSR)
-    EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(ARM::t2EORri)
-                       .addReg(ScratchReg)
-                       .addReg(ScratchReg)
-                       .addImm(imm)
-                       .addImm(ARMCC::AL)
-                       .addReg(0)
-                       .addReg(isLast ? ARM::CPSR : ARM::NoRegister));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::t2EORri)
+                                     .addReg(ScratchReg)
+                                     .addReg(ScratchReg)
+                                     .addImm(imm)
+                                     .addImm(ARMCC::AL)
+                                     .addReg(0)
+                                     .addReg(isLast ? ARM::CPSR : Register()));
   }
 
   // If we spilled r3, restore it immediately after the comparison.

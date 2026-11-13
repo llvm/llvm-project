@@ -79,10 +79,15 @@ private:
   /// post-unrolling.
   DenseMap<Value *, Value *> &SimplifiedValues;
 
+  /// Cache of in-loop instructions known to compute the same value on every
+  /// iteration (see isInvariantComputation).
+  SmallDenseMap<Instruction *, bool> InvariantInsts;
+
   ScalarEvolution &SE;
   const Loop *L;
 
   bool simplifyInstWithSCEV(Instruction *I);
+  bool isInvariantComputation(Instruction *I);
 
   LLVM_ABI bool visitInstruction(Instruction &I);
   LLVM_ABI bool visitBinaryOperator(BinaryOperator &I);

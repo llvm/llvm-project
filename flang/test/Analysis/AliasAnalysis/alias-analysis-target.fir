@@ -54,18 +54,18 @@ fir.global @_QMmodEv : f32 {
 func.func @_QPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.address_of(@_QMmodEalloc) : !fir.ref<!fir.box<!fir.heap<f32>>>
-  %2 = fir.declare %1 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmodEalloc"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
-  %3 = fir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %2 = fir.declare %1 uniq_name("_QMmodEalloc") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  %3 = fir.declare %arg0 dummy_scope %0 uniq_name("_QFtestEn") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   %4 = fir.address_of(@_QMmodEp0) : !fir.ref<!fir.box<!fir.ptr<f32>>>
-  %5 = fir.declare %4 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmodEp0"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %5 = fir.declare %4 uniq_name("_QMmodEp0") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %6 = fir.alloca f32 {bindc_name = "r1", uniq_name = "_QFtestEr1"}
-  %7 = fir.declare %6 {test.ptr="r1", uniq_name = "_QFtestEr1"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %7 = fir.declare %6 uniq_name("_QFtestEr1") {test.ptr = "r1"} : (!fir.ref<f32>) -> !fir.ref<f32>
   %8 = fir.address_of(@_QMmodEt) : !fir.ref<f32>
-  %9 = fir.declare %8 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMmodEt"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %9 = fir.declare %8 uniq_name("_QMmodEt") fortran_attrs<target> : (!fir.ref<f32>) -> !fir.ref<f32>
   %10 = fir.address_of(@_QMmodEt_alloc) : !fir.ref<!fir.box<!fir.heap<f32>>>
-  %11 = fir.declare %10 {fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QMmodEt_alloc"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  %11 = fir.declare %10 uniq_name("_QMmodEt_alloc") fortran_attrs<allocatable, target> : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
   %12 = fir.address_of(@_QMmodEv) : !fir.ref<f32>
-  %13 = fir.declare %12 {uniq_name = "_QMmodEv"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %13 = fir.declare %12 uniq_name("_QMmodEv") : (!fir.ref<f32>) -> !fir.ref<f32>
   %14 = fir.load %11 : !fir.ref<!fir.box<!fir.heap<f32>>>
   %15 = fir.box_addr %14 {test.ptr="t_alloc"}: (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
   %16 = fir.embox %15 : (!fir.heap<f32>) -> !fir.box<!fir.ptr<f32>>

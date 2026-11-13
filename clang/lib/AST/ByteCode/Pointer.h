@@ -13,10 +13,10 @@
 #ifndef LLVM_CLANG_AST_INTERP_POINTER_H
 #define LLVM_CLANG_AST_INTERP_POINTER_H
 
+#include "Block.h"
 #include "Descriptor.h"
 #include "Function.h"
 #include "InitMap.h"
-#include "InterpBlock.h"
 #include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -49,31 +49,34 @@ struct PtrView {
   bool isMutable() const {
     return !isRoot() && getInlineDesc()->IsFieldMutable;
   }
+  bool isConstInMutable() const {
+    return !isRoot() && getInlineDesc()->IsConstInMutable;
+  }
+  bool isExtern() const { return Pointee && Pointee->isExtern(); }
+  bool isVolatile() const {
+    return isRoot() ? getDeclDesc()->IsVolatile : getInlineDesc()->IsVolatile;
+  }
   bool inUnion() const { return getInlineDesc()->InUnion; };
   bool inArray() const { return getFieldDesc()->IsArray; }
   bool inPrimitiveArray() const { return getFieldDesc()->isPrimitiveArray(); }
-  bool canBeInitialized() const { return Pointee && Base > 0; }
   const Block *block() const { return Pointee; }
 
-  unsigned getEvalID() { return Pointee->getEvalID(); }
-
-  bool isRoot() const { return Base == Pointee->getMetadataSize(); }
+  bool isRoot() const { return Base == 0; }
 
   bool isConst() const {
     return isRoot() ? getDeclDesc()->IsConst : getInlineDesc()->IsConst;
   }
 
   InlineDescriptor *getInlineDesc() const {
-    assert(Base != sizeof(GlobalInlineDescriptor));
     assert(Base <= Pointee->getSize());
-    assert(Base >= sizeof(InlineDescriptor));
+    assert(Base != 0);
     return getDescriptor(Base);
   }
 
   InlineDescriptor *getDescriptor(unsigned Offset) const {
     assert(Offset != 0 && "Not a nested pointer");
-    return reinterpret_cast<InlineDescriptor *>(Pointee->rawData() + Offset) -
-           1;
+    assert(Offset >= sizeof(InlineDescriptor));
+    return reinterpret_cast<InlineDescriptor *>(Pointee->data() + Offset) - 1;
   }
 
   const Descriptor *getFieldDesc() const {
@@ -130,9 +133,8 @@ struct PtrView {
 
     // Step into the containing array, if inside one.
     unsigned Next = Base - getInlineDesc()->Offset;
-    const Descriptor *Desc = (Next == Pointee->getMetadataSize())
-                                 ? getDeclDesc()
-                                 : getDescriptor(Next)->Desc;
+    const Descriptor *Desc =
+        (Next == 0) ? getDeclDesc() : getDescriptor(Next)->Desc;
     if (!Desc->IsArray)
       return *this;
     return PtrView{Pointee, Next, Offset};
@@ -219,7 +221,7 @@ struct PtrView {
     if (isZero())
       return 0;
     // narrow()ed element in a composite array.
-    if (Base > sizeof(InlineDescriptor) && Base == Offset)
+    if (Base != 0 && Base == Offset)
       return 0;
 
     if (auto ElemSize = elemSize())
@@ -235,7 +237,7 @@ struct PtrView {
 
     // Might be a narrow()'ed element in a composite array.
     // Check the inline descriptor.
-    if (Base >= sizeof(InlineDescriptor) && getInlineDesc()->IsArrayElement)
+    if (Base != 0 && getInlineDesc()->IsArrayElement)
       return true;
 
     return false;
@@ -246,10 +248,10 @@ struct PtrView {
     assert(Pointee);
 
     if (isArrayRoot())
-      return *reinterpret_cast<T *>(Pointee->rawData() + Base +
+      return *reinterpret_cast<T *>(Pointee->data() + Base +
                                     sizeof(InitMapPtr));
 
-    return *reinterpret_cast<T *>(Pointee->rawData() + Offset);
+    return *reinterpret_cast<T *>(Pointee->data() + Offset);
   }
 
   template <typename T> T &elem(unsigned I) const {
@@ -262,7 +264,7 @@ struct PtrView {
     unsigned ReadOffset = Base + sizeof(InitMapPtr) + ElemByteOffset;
     assert(ReadOffset + sizeof(T) <= Pointee->getSize());
 
-    return *reinterpret_cast<T *>(Pointee->rawData() + ReadOffset);
+    return *reinterpret_cast<T *>(Pointee->data() + ReadOffset);
   }
 
   [[nodiscard]] PtrView getBase() const {
@@ -299,28 +301,36 @@ struct PtrView {
   }
 
   bool isInitialized() const {
-    if (isRoot() && Base == sizeof(GlobalInlineDescriptor) && Offset == Base) {
-      const auto &GD = Pointee->getBlockDesc<GlobalInlineDescriptor>();
-      return GD.InitState == GlobalInitState::Initialized;
+    if (!Pointee->isInitialized())
+      return false;
+
+    if (Offset == 0) {
+      if (Pointee->isGlobal()) {
+        const auto &GD = Pointee->getBlockDesc<GlobalInlineDescriptor>();
+        return GD.InitState == GlobalInitState::Initialized;
+      }
+      if (Pointee->isLocal()) {
+        const auto &LD = Pointee->getBlockDesc<LocalInlineDescriptor>();
+        return LD.IsInitialized;
+      }
+      return true;
     }
 
     assert(Pointee && "Cannot check if null pointer was initialized");
     const Descriptor *Desc = getFieldDesc();
     assert(Desc);
-    if (Desc->isPrimitiveArray())
+    if (Offset != Base && Desc->isPrimitiveArray())
       return isElementInitialized(getIndex());
 
-    if (Base == 0)
-      return true;
     // Field has its bit in an inline descriptor.
-    return getInlineDesc()->IsInitialized;
+    return getDescriptor(Offset)->IsInitialized;
   }
 
   void initializeElement(unsigned Index) const;
   bool allElementsInitialized() const;
   bool isElementInitialized(unsigned Index) const;
   InitMapPtr &getInitMap() const {
-    return *reinterpret_cast<InitMapPtr *>(Pointee->rawData() + Base);
+    return *reinterpret_cast<InitMapPtr *>(Pointee->data() + Base);
   }
   void initialize() const;
   void activate() const;
@@ -350,17 +360,20 @@ struct BlockPointer {
 };
 
 struct IntPointer {
-  const Type *Ty;
+  llvm::PointerIntPair<const Type *, 1, bool> TypeAndIsNull;
   uint64_t Value;
 
   std::optional<IntPointer> atOffset(const Context &Ctx, unsigned Offset) const;
   IntPointer baseCast(const Context &Ctx, unsigned BaseOffset) const;
 
+  const Type *getType() const { return TypeAndIsNull.getPointer(); }
+  bool isNull() const { return TypeAndIsNull.getInt(); }
+
   QualType getPointeeType() const {
-    if (!Ty)
+    if (!getType())
       return QualType();
 
-    QualType QT(Ty, 0);
+    QualType QT(getType(), 0);
     if (QT->isPointerOrReferenceType())
       QT = QT->getPointeeType();
     else if (QT->isArrayType())
@@ -437,8 +450,11 @@ struct OpaquePointer {
   unsigned PathLength = 0;
 
   ArrayRef<PointerPathEntry> path() const { return ArrayRef(Path, PathLength); }
-  const VarDecl *getBaseDecl() const { return Base.asVarDecl(); }
+  bool hasDeclBase() const { return Base.isDecl(); }
+  const ValueDecl *getBaseDecl() const { return Base.asValueDecl(); }
+  const VarDecl *getBaseVarDecl() const { return Base.asVarDecl(); }
   const Expr *getBaseExpr() const { return Base.asExpr(); }
+  bool hasValidBase() const;
 
   OpaquePointer
   withFieldType(const Type *FieldTy,
@@ -514,7 +530,7 @@ enum class Storage { Int, Block, Fn, Typeid, String, Opaque };
 ///
 /// The Offset field is used to access the actual data. In other words, the
 /// data the pointer decribes can be found at
-/// Pointee->rawData() + Pointer.Offset.
+/// Pointee->data() + Pointer.Offset.
 ///
 /// \verbatim
 /// Pointee                      Offset
@@ -531,15 +547,17 @@ enum class Storage { Int, Block, Fn, Typeid, String, Opaque };
 /// \endverbatim
 class Pointer {
 public:
-  Pointer() : StorageKind(Storage::Int), Int{nullptr, 0} {}
+  Pointer() : StorageKind(Storage::Int), Int{{nullptr, true}, 0} {}
   Pointer(IntPointer &&IntPtr)
       : StorageKind(Storage::Int), Int(std::move(IntPtr)) {}
   Pointer(Block *B);
   Pointer(Block *B, uint64_t BaseAndOffset);
   Pointer(const Pointer &P);
   Pointer(Pointer &&P);
-  Pointer(uint64_t Address, const Type *Ty, uint64_t Offset = 0)
-      : Offset(Offset), StorageKind(Storage::Int), Int{Ty, Address} {}
+  Pointer(uint64_t Address, const Type *Ty, uint64_t Offset = 0,
+          std::optional<bool> IsNull = std::nullopt)
+      : Offset(Offset), StorageKind(Storage::Int),
+        Int{{Ty, IsNull.value_or(Address == 0)}, Address} {}
   Pointer(const Function *F, uint64_t Offset = 0)
       : Offset(Offset), StorageKind(Storage::Fn), Fn{F} {}
   Pointer(const Type *TypePtr, const Type *TypeInfoType, uint64_t Offset = 0)
@@ -599,7 +617,7 @@ public:
   [[nodiscard]] Pointer atIndex(uint64_t Idx) const {
     switch (StorageKind) {
     case Storage::Int:
-      return Pointer(Int.Value, Int.Ty, Idx);
+      return Pointer(Int.Value, Int.getType(), Idx);
     case Storage::Block:
       return Pointer(view().atIndex(Idx));
     case Storage::Fn:
@@ -642,7 +660,7 @@ public:
   bool isZero() const {
     switch (StorageKind) {
     case Storage::Int:
-      return Int.Value == 0 && Offset == 0;
+      return Int.isNull();
     case Storage::Block:
       return BS.Pointee == nullptr;
     case Storage::Fn:
@@ -714,7 +732,7 @@ public:
     case Storage::Block:
       return view().getType();
     case Storage::Fn:
-      return Fn.Func->getDecl()->getType();
+      return Fn.Func->getType();
     case Storage::Typeid:
       return QualType(Typeid.TypeInfoType, 0);
     case Storage::String:
@@ -731,6 +749,7 @@ public:
   }
 
   const VarDecl *getRootVarDecl() const;
+  const ValueDecl *getRootValueDecl() const;
   const Expr *getRootExpr() const;
 
   [[nodiscard]] Pointer getDeclPtr() const { return Pointer(BS.Pointee); }
@@ -760,18 +779,37 @@ public:
 
   /// Whether this array refers to an array, but not
   /// to the first element.
-  bool isArrayRoot() const { return view().isArrayRoot(); }
+  bool isArrayRoot() const {
+    switch (StorageKind) {
+    case Storage::Block:
+      return view().isArrayRoot();
+    case Storage::String:
+      return Offset == 0;
+    case Storage::Opaque:
+      return asOpaquePointer().getFieldType()->isArrayType();
+    default:
+      return false;
+    }
+    llvm_unreachable("Unhandled storage kind");
+  }
 
   /// Checks if the innermost field is an array.
   bool inArray() const {
-    if (isBlockPointer())
+    switch (StorageKind) {
+    case Storage::Block:
       return view().inArray();
-    if (isStringPointer())
+    case Storage::String:
       return true;
-    return false;
+    case Storage::Opaque:
+      return asOpaquePointer().isArrayElement();
+    default:
+      return false;
+    }
+
+    llvm_unreachable("Unhandled storage kind");
   }
   bool inUnion() const {
-    if (isBlockPointer() && BS.Base >= sizeof(InlineDescriptor))
+    if (isBlockPointer() && BS.Base != 0)
       return view().inUnion();
     return false;
   };
@@ -806,13 +844,6 @@ public:
     if (isOpaquePointer())
       return Opaque.isRoot();
     return true;
-  }
-  /// If this pointer has an InlineDescriptor we can use to initialize.
-  bool canBeInitialized() const {
-    if (!isBlockPointer())
-      return false;
-
-    return BS.Pointee && BS.Base > 0;
   }
 
   [[nodiscard]] const BlockPointer &asBlockPointer() const {
@@ -865,7 +896,7 @@ public:
   /// Checks if the storage is extern.
   bool isExtern() const {
     if (isBlockPointer())
-      return BS.Pointee && BS.Pointee->isExtern();
+      return view().isExtern();
     return false;
   }
   /// Checks if the storage is static.
@@ -873,7 +904,7 @@ public:
     if (!isBlockPointer())
       return true;
     assert(BS.Pointee);
-    return BS.Pointee->isStatic();
+    return BS.Pointee->isGlobal();
   }
   /// Checks if the storage is temporary.
   bool isTemporary() const {
@@ -902,23 +933,21 @@ public:
   }
 
   bool isWeak() const {
-    if (isFunctionPointer()) {
+    switch (StorageKind) {
+    case Storage::Fn:
       if (!Fn.Func || !Fn.Func->getDecl())
         return false;
-
       return Fn.Func->getDecl()->isWeak();
-    }
-
-    if (isOpaquePointer()) {
-      if (const VarDecl *BaseDecl = Opaque.getBaseDecl())
+    case Storage::Opaque:
+      if (const VarDecl *BaseDecl = Opaque.getBaseVarDecl())
         return BaseDecl->isWeak();
       return false;
-    }
-    if (!isBlockPointer())
+    case Storage::Block:
+      return BS.Pointee->isWeak();
+    default:
       return false;
-
-    assert(isBlockPointer());
-    return BS.Pointee->isWeak();
+    }
+    llvm_unreachable("Unhandled storage kind");
   }
   /// Checks if the object is active.
   bool isActive() const {
@@ -943,17 +972,12 @@ public:
       return false;
     return view().isConst();
   }
-  bool isConstInMutable() const {
-    if (!isBlockPointer())
-      return false;
-    return isRoot() ? false : getInlineDesc()->IsConstInMutable;
-  }
 
   /// Checks if an object or a subfield is volatile.
   bool isVolatile() const {
     if (!isBlockPointer())
       return false;
-    return isRoot() ? getDeclDesc()->IsVolatile : getInlineDesc()->IsVolatile;
+    return view().isVolatile();
   }
 
   /// Returns the declaration ID.
@@ -987,7 +1011,10 @@ public:
     return view().getNumElems();
   }
 
-  const Block *block() const { return BS.Pointee; }
+  const Block *block() const {
+    assert(isBlockPointer());
+    return BS.Pointee;
+  }
 
   /// If backed by actual data (i.e. a block or string pointer), return
   /// an address to that data.
@@ -998,7 +1025,7 @@ public:
           Lit->getBytes().data() + (Offset * Lit->getCharByteWidth()));
     }
     assert(isBlockPointer());
-    return BS.Pointee->rawData() + Offset;
+    return BS.Pointee->data() + Offset;
   }
 
   /// Returns the index into an array.
@@ -1160,7 +1187,7 @@ public:
     if (isOpaquePointer())
       return Opaque.isConstexprUnknown();
     if (isBlockPointer())
-      return getDeclDesc()->IsConstexprUnknown;
+      return block()->isConstexprUnknown();
     return false;
   }
 
@@ -1198,7 +1225,13 @@ public:
   /// of a primtive array.
   void initializeAllElements() const;
   /// Checks if an object was initialized.
-  bool isInitialized() const;
+  bool isInitialized() const {
+    if (!isBlockPointer())
+      return true;
+
+    return view().isInitialized();
+  }
+
   /// Like isInitialized(), but for primitive arrays.
   bool isElementInitialized(unsigned Index) const {
     if (!isBlockPointer())
@@ -1215,7 +1248,11 @@ public:
   bool isElementAlive(unsigned Index) const;
 
   /// Activates a field.
-  void activate() const { view().activate(); }
+  void activate() const {
+    if (!isBlockPointer())
+      return;
+    view().activate();
+  }
   /// Deactivates an entire strurcutre.
   void deactivate() const {
     // TODO: this only appears in constructors, so nothing to deactivate.
@@ -1306,9 +1343,8 @@ private:
   /// Returns the embedded descriptor preceding a field.
   InlineDescriptor *getInlineDesc() const {
     assert(isBlockPointer());
-    assert(BS.Base != sizeof(GlobalInlineDescriptor));
     assert(BS.Base <= BS.Pointee->getSize());
-    assert(BS.Base >= sizeof(InlineDescriptor));
+    assert(BS.Base != 0);
     return getDescriptor(BS.Base);
   }
 
@@ -1373,6 +1409,10 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
     OS << " dead";
   if (P.isBlockPointer() && P.isBaseClass())
     OS << " base-class";
+  if (!P.isInitialized()) {
+    ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_RED, true});
+    OS << " uninitialized";
+  }
   return OS;
 }
 

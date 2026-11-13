@@ -13,7 +13,7 @@
 ;     RWBuffer<float> tmp = src; src = dst; dst = tmp;
 ;   }
 
-; CHECK: error: Resource access is not guaranteed to map to a unique global resource
+; CHECK: LLVM ERROR: Resource access is not guaranteed to map to a unique global resource
 
 @.str = private unnamed_addr constant [5 x i8] c"bufA\00", align 1
 @.str.2 = private unnamed_addr constant [5 x i8] c"bufB\00", align 1

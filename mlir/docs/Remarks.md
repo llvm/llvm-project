@@ -202,20 +202,44 @@ Emits **all** remarks unconditionally.
 
 ### RemarkEmittingPolicyFinal
 
-Emits only the **final** remark for each location. This is useful in multi-pass
-compilers where an early pass may report a failure, but a later pass succeeds.
+Stores remarks until `finalize()` is called and keeps the last report for each
+identity: the complete location, remark name, combined category and subcategory,
+and remark kind. The function name is not part of the identity. Reports with
+different kinds, such as a missed remark followed by a passed remark, both
+survive.
 
-**Example:** Only the successful remark is emitted:
+For example, only the second missed remark is emitted:
 
 ```c++
 auto opts = remark::RemarkOpts::name("Unroller").category("LoopUnroll");
 
-// First pass: reports failure
-remark::failed(loc, opts) << "Loop could not be unrolled";
+remark::missed(loc, opts) << "Loop trip count is unknown";
 
-// Later pass: reports success (this is the one emitted)
-remark::passed(loc, opts) << "Loop unrolled successfully";
+// A later report replaces the earlier remark with the same identity.
+remark::missed(loc, opts) << "Loop trip count is too small";
 ```
+
+`finalize()` drains one batch of stored remarks. Traversals start from roots
+with IDs in ID order, then ID-less roots in unspecified order, then any unvisited
+remarks in ID order. Related remarks are grouped after their parent.
+Shared targets, transitive links, and cycles emit every surviving remark once.
+Calling `finalize()` again emits only remarks reported since the previous drain.
+
+If a related target was overwritten in the current batch, its link is removed
+from the surviving consumer and its serialized arguments. The consumer still
+emits; its link is not redirected to the replacement. Explicit IDs that were not
+overwritten in that batch are preserved, including IDs from earlier batches and
+IDs unknown to the policy. Callers are responsible for the validity of those
+references. The policy releases the discarded-ID bookkeeping after each batch.
+An ordinary user argument named `RelatedTo` is preserved independently of typed
+remark links.
+
+Reports may run concurrently. Call `finalize()` after reporting stops; it must
+not overlap other policy operations, including calls from streamer callbacks.
+When concurrent reports have the same identity, the last report to acquire the
+policy lock wins. ID order does not guarantee reproducibility across thread
+schedules. The built-in LLVM streamer serializes writes; custom streamers used
+with `All` must support concurrent calls.
 
 You can also implement custom policies by inheriting from the policy interface.
 
@@ -245,6 +269,69 @@ if (engine->isRemarkEnabled(remark::RemarkKind::RemarkPassed, "Vectorizer"))
 | `isAnyRemarkEnabled(category)`               | Some kind of remark is enabled for the category      |
 | `isRemarkEnabled(kind, category)`            | Remarks of `kind` are enabled for the category       |
 | `is{Passed,Missed,Analysis,Failed}OptRemarkEnabled(category)` | Per-kind query                      |
+
+***
+
+## Searching and Linking Remarks
+
+History is opt-in. When enabled, the engine records the ID, name, category,
+subcategory, function, kind, and location of every emitted remark, and
+`findRemarks(query)` returns the matching IDs in ID order. Under `Final`,
+pending candidates are searchable as well. They may be replaced before emission;
+once replaced, they no longer match.
+
+`RemarkQuery` matches exact values: `category()` the base category, `at()` the
+complete location, wrappers included. Unset fields match anything; an empty
+string matches an empty field.
+
+```c++
+auto *engine = context.getRemarkEngine();
+if (!engine)
+  return;
+engine->enableHistory();
+auto analysisOpts = remark::RemarkOpts::name("VectorSizeInference")
+                        .category("Vectorizer")
+                        .function("kernel");
+remark::analysis(loc, analysisOpts)
+    << remark::reason("Unable to infer vector sizes");
+
+auto query = remark::RemarkQuery::named("VectorSizeInference")
+                 .category("Vectorizer")
+                 .function("kernel")
+                 .kind(remark::RemarkKind::RemarkAnalysis)
+                 .at(loc);
+remark::missed(loc, remark::RemarkOpts::name("Vectorization")
+                       .category("Vectorizer")
+                       .function("kernel"))
+    << remark::relatedTo(query);
+```
+
+`relatedTo(query)` links the remark to every match at the time of the `<<`,
+each once. With no match, or with history disabled, it adds nothing. Under
+`Final`, a link whose target is replaced in the same finalization batch is
+dropped, also when the replacement comes from another function or is the linking
+remark itself. A match indicates a relationship, not causality, and the IR may
+have changed since.
+
+Each query scans all pending and emitted remarks, and a broad query in a loop
+produces many links; a known ID links without a query through
+`RemarkOpts::relatedTo(id)`. Each link is serialized as its own `RelatedTo`
+argument.
+
+Reports and queries may run concurrently. Under `Final`, they must finish before
+`finalize()` starts and may resume after it returns; its streamer callbacks must
+not report or query remarks. Under `All`, streamers run on the reporting threads.
+With parallel passes, cross-function results depend on timing; scope queries
+with `function()` or `at()`.
+
+`clearHistory()` discards the recorded metadata; `enableHistory(false)` also
+stops recording and makes queries return nothing. Neither touches pending
+remarks or existing links.
+
+Pending IDs describe the current candidates. If a consumer is reported only
+after its target's batch has drained, Final no longer knows whether that target
+was replaced. Callers carrying IDs across batches must ensure those targets
+were emitted.
 
 ***
 

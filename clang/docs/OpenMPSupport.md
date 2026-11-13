@@ -3,6 +3,16 @@
   .none { background-color: #FFCCCC }
   .part { background-color: #FFFF99 }
   .good { background-color: #CCFF99 }
+
+  article table.docutils {
+    margin-left: 0;
+    margin-right: auto;
+  }
+
+  table.docutils td,
+  table.docutils th {
+    text-align: left;
+  }
 </style>
 ```
 
@@ -29,6 +39,11 @@ For the list of supported features from OpenMP 5.0 and 5.1
 see {ref}`OpenMP implementation details <openmp-implementation-details>` and
 {ref}`OpenMP 51 implementation details <openmp-51-implementation-details>`.
 
+This page tracks OpenMP support in Clang (C/C++) and in the LLVM OpenMP
+runtimes (libomp, libomptarget, the device runtime, OMPT, and OMPD). Runtime
+features apply to both C/C++ and Fortran. Fortran support in Flang is tracked on
+the [Flang OpenMP Support](https://flang.llvm.org/docs/OpenMPSupport.html) page.
+
 ## General improvements
 
 - New collapse clause scheme to avoid expensive remainder operations.
@@ -41,6 +56,19 @@ see {ref}`OpenMP implementation details <openmp-implementation-details>` and
   known at compile time. To prevent this conservative choice and use
   at most 32 bits, compile your program with the
   `-fopenmp-optimistic-collapse`.
+- C++20 structured bindings are now supported in OpenMP constructs.
+  Bindings from structured binding declarations can be used in data-sharing
+  clauses (``private``, ``firstprivate``, ``lastprivate``, ``shared``,
+  ``linear``), and in ``map`` clauses for target directives.
+  Limitations: tuple-like bindings (using the tuple protocol with ``get<N>()``)
+  are not yet supported; conditional lastprivate and reductions are not yet
+  supported.
+  Important restriction for target regions: if the original variable is
+  explicitly mapped (e.g., ``map(tofrom: t)``) but only bindings from it,
+  and not the original variable itself, are used in the target region, the
+  compiler emits an error. Either use the original variable directly in the
+  target region, or map the bindings explicitly instead of the original
+  variable.
 
 ## GPU devices support
 
@@ -81,7 +109,7 @@ implementation.
 | ----------------- | ------------------------------------------------------------ | ----------------------- | ----------------------------------------------------------------------------------------------------- |
 | loop              | support != in the canonical loop form                        | {good}`done`            | [D54441][D54441]                                                                                      |
 | loop              | #pragma omp loop (directive)                                 | {part}`partial`         | [D145823][D145823] (combined forms)                                                                   |
-| loop              | #pragma omp loop bind                                        | {part}`worked on`       | [D144634][D144634] (needs review)                                                                     |
+| loop              | #pragma omp loop bind                                        | {part}`in progress`     | [D144634][D144634] (needs review)                                                                     |
 | loop              | collapse imperfectly nested loop                             | {good}`done`            |                                                                                                       |
 | loop              | collapse non-rectangular nested loop                         | {good}`done`            |                                                                                                       |
 | loop              | C++ range-base for loop                                      | {good}`done`            |                                                                                                       |
@@ -93,7 +121,7 @@ implementation.
 | OMPT              | OMPT interfaces (callback support)                           | {good}`done`            |                                                                                                       |
 | thread affinity   | thread affinity                                              | {good}`done`            |                                                                                                       |
 | task              | taskloop reduction                                           | {good}`done`            |                                                                                                       |
-| task              | task affinity                                                | {part}`not upstream`    | <https://github.com/jklinkenberg/openmp/tree/task-affinity>                                           |
+| task              | task affinity                                                | {none}`unclaimed`       | <https://github.com/jklinkenberg/openmp/tree/task-affinity>                                           |
 | task              | clause: depend on the taskwait construct                     | {good}`done`            | [D113540][D113540] (regular codegen only)                                                             |
 | task              | depend objects and detachable tasks                          | {good}`done`            |                                                                                                       |
 | task              | mutexinoutset dependence-type for tasks                      | {good}`done`            | [D53380][D53380],[D57576][D57576]                                                                     |
@@ -104,7 +132,7 @@ implementation.
 | task              | parallel master taskloop simd                                | {good}`done`            |                                                                                                       |
 | SIMD              | atomic and simd constructs inside SIMD code                  | {good}`done`            |                                                                                                       |
 | SIMD              | SIMD nontemporal                                             | {good}`done`            |                                                                                                       |
-| device            | infer target functions from initializers                     | {part}`worked on`       |                                                                                                       |
+| device            | infer target functions from initializers                     | {part}`in progress`     |                                                                                                       |
 | device            | infer target variables from initializers                     | {good}`done`            | [D146418][D146418]                                                                                    |
 | device            | OMP_TARGET_OFFLOAD environment variable                      | {good}`done`            | [D50522][D50522]                                                                                      |
 | device            | support full 'defaultmap' functionality                      | {good}`done`            | [D69204][D69204]                                                                                      |
@@ -112,7 +140,7 @@ implementation.
 | device            | clause: device_type                                          | {good}`done`            |                                                                                                       |
 | device            | clause: extended device                                      | {good}`done`            |                                                                                                       |
 | device            | clause: uses_allocators clause                               | {good}`done`            | [PR157025][PR157025]                                                                                  |
-| device            | clause: in_reduction                                         | {part}`worked on`       | r308768                                                                                               |
+| device            | clause: in_reduction                                         | {part}`in progress`     | r308768                                                                                               |
 | device            | omp_get_device_num()                                         | {good}`done`            | [D54342][D54342],[D128347][D128347]                                                                   |
 | device            | structure mapping of references                              | {none}`unclaimed`       |                                                                                                       |
 | device            | nested target declare                                        | {good}`done`            | [D51378][D51378]                                                                                      |
@@ -123,7 +151,7 @@ implementation.
 | device            | clause: unified_address                                      | {part}`partial`         |                                                                                                       |
 | device            | clause: reverse_offload                                      | {part}`partial`         | [D52780][D52780],[D155003][D155003]                                                                   |
 | device            | clause: atomic_default_mem_order                             | {good}`done`            | [D53513][D53513]                                                                                      |
-| device            | clause: dynamic_allocators                                   | {part}`unclaimed parts` | [D53079][D53079]                                                                                      |
+| device            | clause: dynamic_allocators                                   | {part}`partial`         | [D53079][D53079]                                                                                      |
 | device            | user-defined mappers                                         | {good}`done`            | [D56326][D56326],[D58638][D58638],[D58523][D58523],[D58074][D58074],[D60972][D60972],[D59474][D59474] |
 | device            | map array-section with implicit mapper                       | {good}`done`            | [PR101101][PR101101]                                                                                  |
 | device            | mapping lambda expression                                    | {good}`done`            | [D51107][D51107]                                                                                      |
@@ -131,14 +159,14 @@ implementation.
 | device            | support close modifier on map clause                         | {good}`done`            | [D55719][D55719],[D55892][D55892]                                                                     |
 | device            | teams construct on the host device                           | {good}`done`            | r371553                                                                                               |
 | device            | support non-contiguous array sections for target update      | {good}`done`            | [PR144635][PR144635]                                                                                  |
-| device            | pointer attachment                                           | {part}`being repaired`  | @abhinavgaba ([PR153683][PR153683], [PR210213][PR210213])                                             |
+| device            | pointer attachment                                           | {part}`partial`         | @abhinavgaba ([PR153683][PR153683], [PR210213][PR210213])                                             |
 | atomic            | hints for the atomic construct                               | {good}`done`            | [D51233][D51233]                                                                                      |
 | base language     | C11 support                                                  | {good}`done`            |                                                                                                       |
 | base language     | C++11/14/17 support                                          | {good}`done`            |                                                                                                       |
 | base language     | lambda support                                               | {good}`done`            |                                                                                                       |
 | misc              | array shaping                                                | {good}`done`            | [D74144][D74144]                                                                                      |
 | misc              | library shutdown (omp_pause_resource[\_all])                 | {good}`done`            | [D55078][D55078]                                                                                      |
-| misc              | metadirectives                                               | {part}`mostly done`     | [D91944][D91944], [PR128640][PR128640]                                                                |
+| misc              | metadirectives                                               | {part}`partial`         | [D91944][D91944], [PR128640][PR128640]                                                                |
 | misc              | conditional modifier for lastprivate clause                  | {good}`done`            |                                                                                                       |
 | misc              | iterator and multidependences                                | {good}`done`            |                                                                                                       |
 | misc              | depobj directive and depobj dependency kind                  | {good}`done`            |                                                                                                       |
@@ -161,7 +189,7 @@ implementation.
 | Category          | Feature                                                     | Status              | Reviews                                                                                                                                                                                                                         |
 | ----------------- | ----------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | atomic            | 'compare' clause on atomic construct                        | {good}`done`        | [D120290][D120290], [D120007][D120007], [D118632][D118632], [D120200][D120200], [D116261][D116261], [D118547][D118547], [D116637][D116637]                                                                                      |
-| atomic            | 'fail' clause on atomic construct                           | {part}`worked on`   | [D123235][D123235] (in progress)                                                                                                                                                                                                |
+| atomic            | 'fail' clause on atomic construct                           | {part}`in progress` | [D123235][D123235] (in progress)                                                                                                                                                                                                |
 | base language     | C++ attribute specifier syntax                              | {good}`done`        | [D105648][D105648]                                                                                                                                                                                                              |
 | device            | 'present' map type modifier                                 | {good}`done`        | [D83061][D83061], [D83062][D83062], [D84422][D84422]                                                                                                                                                                            |
 | device            | 'present' motion modifier                                   | {good}`done`        | [D84711][D84711], [D84712][D84712]                                                                                                                                                                                              |
@@ -175,7 +203,7 @@ implementation.
 | device            | has_device_addr clause on target construct                  | {none}`unclaimed`   |                                                                                                                                                                                                                                 |
 | device            | use_device_ptr/addr preserve host address when lookup fails | {good}`done`        | [PR174659][PR174659]                                                                                                                                                                                                            |
 | device            | iterators in map clause or motion clauses                   | {good}`done`        | [PR159112][PR159112]                                                                                                                                                                                                            |
-| device            | indirect clause on declare target directive                 | {part}`In Progress` |                                                                                                                                                                                                                                 |
+| device            | indirect clause on declare target directive                 | {part}`in progress` |                                                                                                                                                                                                                                 |
 | device            | allow virtual functions calls for mapped object on device   | {part}`partial`     |                                                                                                                                                                                                                                 |
 | device            | interop construct                                           | {part}`partial`     | parsing/sema done: [D98558][D98558], [D98834][D98834], [D98815][D98815]                                                                                                                                                         |
 | device            | assorted routines for querying interoperable properties     | {part}`partial`     | [D106674][D106674]                                                                                                                                                                                                              |
@@ -195,10 +223,10 @@ implementation.
 | misc              | omp_display_env routine                                     | {good}`done`        | [D74956][D74956]                                                                                                                                                                                                                |
 | misc              | extended OMP_PLACES syntax                                  | {none}`unclaimed`   |                                                                                                                                                                                                                                 |
 | misc              | OMP_NUM_TEAMS and OMP_TEAMS_THREAD_LIMIT env vars           | {good}`done`        | [D138769][D138769]                                                                                                                                                                                                              |
-| misc              | 'target_device' selector in context specifier               | {part}`worked on`   |                                                                                                                                                                                                                                 |
+| misc              | 'target_device' selector in context specifier               | {part}`in progress` |                                                                                                                                                                                                                                 |
 | misc              | begin/end declare variant                                   | {good}`done`        | [D71179][D71179]                                                                                                                                                                                                                |
-| misc              | dispatch construct and function variant argument adjustment | {part}`worked on`   | [D99537][D99537], [D99679][D99679]                                                                                                                                                                                              |
-| misc              | assumes directives                                          | {part}`worked on`   |                                                                                                                                                                                                                                 |
+| misc              | dispatch construct and function variant argument adjustment | {part}`in progress` | [D99537][D99537], [D99679][D99679]                                                                                                                                                                                              |
+| misc              | assumes directives                                          | {part}`in progress` |                                                                                                                                                                                                                                 |
 | misc              | assume directive                                            | {good}`done`        |                                                                                                                                                                                                                                 |
 | misc              | nothing directive                                           | {good}`done`        | [D123286][D123286]                                                                                                                                                                                                              |
 | misc              | masked construct and related combined constructs            | {good}`done`        | [D99995][D99995], [D100514][D100514], [PR121741][PR121741] (parallel_masked_taskloop) [PR121746][PR121746] (parallel_masked_task_loop_simd), [PR121914][PR121914] (masked_taskloop) [PR121916][PR121916] (masked_taskloop_simd) |
@@ -224,49 +252,45 @@ and their implementation status. Please post on the
 information or if you want to help with the
 implementation.
 
-| Feature                                                 | C/C++ Status      | Fortran Status    | Reviews                                  |
-| ------------------------------------------------------- | ----------------- | ----------------- | ---------------------------------------- |
-| omp_in_explicit_task()                                  | {none}`unclaimed` | {none}`unclaimed` |                                          |
-| semantics of explicit_task_var and implicit_task_var    | {none}`unclaimed` | {none}`unclaimed` |                                          |
-| ompx sentinel for C/C++ directive extensions            | {none}`unclaimed` | {none}`unclaimed` |                                          |
-| ompx prefix for clause extensions                       | {none}`unclaimed` | {none}`unclaimed` |                                          |
-| if clause on teams construct                            | {none}`unclaimed` | {none}`unclaimed` |                                          |
-| step modifier added                                     | {none}`unclaimed` | {none}`unclaimed` |                                          |
-| declare mapper: Add iterator modifier on map clause     | {none}`unclaimed` | {none}`unclaimed` |                                          |
-| declare mapper: Add iterator modifier on map clause     | {none}`unclaimed` | {none}`unclaimed` |                                          |
-| memspace and traits modifiers to uses allocator i       | {none}`unclaimed` | {none}`unclaimed` |                                          |
-| Add otherwise clause to metadirectives                  | {none}`unclaimed` | {none}`unclaimed` |                                          |
-| doacross clause with support for omp_cur_iteration      | {none}`unclaimed` | {none}`unclaimed` |                                          |
-| position of interop_type in init clause on iterop       | {none}`unclaimed` | {none}`unclaimed` |                                          |
-| implicit map type for target enter/exit data            | {none}`unclaimed` | {none}`unclaimed` |                                          |
-| work OMPT type for work-sharing loop constructs         | {good}`done`      | {good}`done`      | [PR189347][PR189347], [PR97429][PR97429] |
-| extend ompt_dispatch_t for new enum values              | {good}`done`      | {good}`done`      | [D122107][D122107]                       |
-| allocate and firstprivate on scope directive            | {none}`unclaimed` | {none}`unclaimed` |                                          |
-| Change loop consistency for order clause                | {none}`unclaimed` | {none}`unclaimed` |                                          |
-| Add memspace and traits modifiers to uses_allocators    | {none}`unclaimed` | {none}`unclaimed` |                                          |
-| Keep original base pointer on map w/o matched candidate | {none}`unclaimed` | {none}`unclaimed` |                                          |
-| Pure procedure support for certain directives           | {none}`N/A`       | {none}`unclaimed` |                                          |
-| ALLOCATE statement support for allocators               | {none}`N/A`       | {none}`unclaimed` |                                          |
-| dispatch construct extension to support end directive   | {none}`N/A`       | {none}`unclaimed` |                                          |
+For Fortran, see [Flang OpenMP 5.2 support](https://flang.llvm.org/docs/OpenMPSupport.html#openmp-5-2).
+
+| Feature                                                 | Status            | Reviews                                                        |
+| ------------------------------------------------------- | ----------------- | -------------------------------------------------------------- |
+| omp_in_explicit_task()                                  | {good}`done`      | [D120671][D120671]                                             |
+| semantics of explicit_task_var and implicit_task_var    | {none}`unclaimed` |                                                                |
+| ompx sentinel for C/C++ directive extensions            | {none}`unclaimed` |                                                                |
+| ompx prefix for clause extensions                       | {none}`unclaimed` |                                                                |
+| if clause on teams construct                            | {none}`unclaimed` |                                                                |
+| step modifier added                                     | {none}`unclaimed` |                                                                |
+| declare mapper: Add iterator modifier on map clause     | {none}`unclaimed` |                                                                |
+| declare mapper: Add present modifier on map clause      | {none}`unclaimed` |                                                                |
+| Add otherwise clause to metadirectives                  | {none}`unclaimed` |                                                                |
+| doacross clause with support for omp_cur_iteration      | {none}`unclaimed` | RT: host `__kmpc_doacross_*` exists; no device-runtime support |
+| implicit map type for target enter/exit data            | {none}`unclaimed` |                                                                |
+| work OMPT type for work-sharing loop constructs         | {good}`done`      | [PR189347][PR189347], [PR97429][PR97429]                       |
+| extend ompt_dispatch_t for new enum values              | {good}`done`      | [D122107][D122107]                                             |
+| allocate and firstprivate on scope directive            | {none}`unclaimed` |                                                                |
+| Change loop consistency for order clause                | {none}`unclaimed` |                                                                |
+| Add memspace and traits modifiers to uses_allocators    | {none}`unclaimed` |                                                                |
+| Keep original base pointer on map w/o matched candidate | {part}`partial`   | [PR174659][PR174659]                                           |
 
 (openmp-5-2-deprecations)=
 
 ## OpenMP 5.2 Deprecations
 
-|                                                          | C/C++ Status      | Fortran Status    | Reviews |
-| -------------------------------------------------------- | ----------------- | ----------------- | ------- |
-| Linear clause syntax                                     | {none}`unclaimed` | {none}`unclaimed` |         |
-| The minus operator                                       | {none}`unclaimed` | {none}`unclaimed` |         |
-| Map clause modifiers without commas                      | {none}`unclaimed` | {none}`unclaimed` |         |
-| The use of allocate directives with ALLOCATE statement   | {good}`N/A`       | {none}`unclaimed` |         |
-| uses_allocators list syntax                              | {none}`unclaimed` | {none}`unclaimed` |         |
-| The default clause on metadirectives                     | {none}`unclaimed` | {none}`unclaimed` |         |
-| The delimited form of the declare target directive       | {none}`unclaimed` | {good}`N/A`       |         |
-| The use of the to clause on the declare target directive | {none}`unclaimed` | {none}`unclaimed` |         |
-| The syntax of the destroy clause on the depobj construct | {none}`unclaimed` | {none}`unclaimed` |         |
-| keyword source and sink as task-dependence modifiers     | {none}`unclaimed` | {none}`unclaimed` |         |
-| interop types in any position on init clause of interop  | {none}`unclaimed` | {none}`unclaimed` |         |
-| ompd prefix usage for some ICVs                          | {none}`unclaimed` | {none}`unclaimed` |         |
+| Feature                                                  | Status            | Reviews |
+| -------------------------------------------------------- | ----------------- | ------- |
+| Linear clause syntax                                     | {none}`unclaimed` |         |
+| The minus operator                                       | {none}`unclaimed` |         |
+| Map clause modifiers without commas                      | {none}`unclaimed` |         |
+| uses_allocators list syntax                              | {none}`unclaimed` |         |
+| The default clause on metadirectives                     | {none}`unclaimed` |         |
+| The delimited form of the declare target directive       | {none}`unclaimed` |         |
+| The use of the to clause on the declare target directive | {none}`unclaimed` |         |
+| The syntax of the destroy clause on the depobj construct | {none}`unclaimed` |         |
+| keyword source and sink as task-dependence modifiers     | {none}`unclaimed` |         |
+| interop types in any position on init clause of interop  | {none}`unclaimed` |         |
+| ompd prefix usage for some ICVs                          | {none}`unclaimed` |         |
 
 (openmp-6-0-implementation-details)=
 
@@ -278,94 +302,93 @@ and their implementation status. Please post on the
 information or if you want to help with the
 implementation.
 
-| Feature                                                   | C/C++ Status        | Fortran Status      | Reviews                                                                                                                             |
-| --------------------------------------------------------- | ------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| free-agent threads                                        | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| threadset clause                                          | {part}`partial`     | {none}`unclaimed`   | Parse/Sema/Codegen: [PR13580][PR13580]                                                                                              |
-| Recording of task graphs                                  | {part}`in progress` | {part}`in progress` | clang: jtb20, flang: kparzysz                                                                                                       |
-| Parallel inductions                                       | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| init_complete for scan directive                          | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| loop interchange transformation                           | {good}`done`        | {none}`unclaimed`   | Clang (interchange): [PR93022][PR93022] Clang (permutation): [PR92030][PR92030]                                                     |
-| loop reverse transformation                               | {good}`done`        | {none}`unclaimed`   | [PR92916][PR92916]                                                                                                                  |
-| loop stripe transformation                                | {good}`done`        | {none}`unclaimed`   | [PR119891][PR119891]                                                                                                                |
-| loop fusion transformation                                | {part}`in progress` | {good}`done`        | [PR139293][PR139293] [PR161213][PR161213] [PR168898][PR168898]                                                                      |
-| loop index set splitting transformation with count clause | {part}`in progress` | {none}`unclaimed`   | @amitamd7                                                                                                                           |
-| loop transformation apply clause                          | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| loop fuse transformation                                  | {good}`done`        | {none}`unclaimed`   |                                                                                                                                     |
-| workdistribute construct                                  |                     | {none}`in progress` | @skc7, @mjklemm                                                                                                                     |
-| task_iteration                                            | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| memscope clause for atomic and flush                      | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| transparent clause (hull tasks)                           | {part}`partial`     | {none}`unclaimed`   | Clang parsing/sema [PR174646][PR174646]                                                                                             |
-| rule-based compound directives                            | {part}`In Progress` | {part}`In Progress` | kparzysz Testing for Fortran missing                                                                                                |
-| C23, C++23                                                | {none}`unclaimed`   |                     |                                                                                                                                     |
-| Fortran 2023                                              |                     | {none}`unclaimed`   |                                                                                                                                     |
-| decl attribute for declarative directives                 | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| C attribute syntax                                        | {none}`unclaimed`   |                     |                                                                                                                                     |
-| pure directives in DO CONCURRENT                          |                     | {none}`unclaimed`   |                                                                                                                                     |
-| Optional argument for all clauses                         | {part}`partial`     | {part}`In Progress` | Parse/Sema (nowait): [PR159628][PR159628]                                                                                           |
-| Function references for locator list items                | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| All clauses accept directive name modifier                | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| Extensions to depobj construct                            | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| Extensions to atomic construct                            | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| Private reductions                                        | {part}`mostly`      | {none}`unclaimed`   | Parse/Sema: [PR129938][PR129938] Codegen: [PR134709][PR134709]                                                                      |
-| Self maps                                                 | {part}`partial`     | {none}`unclaimed`   | parsing/sema done: [PR129888][PR129888]                                                                                             |
-| Release map type for declare mapper                       | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| Extensions to interop construct                           | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| no_openmp_constructs                                      | {good}`done`        | {none}`unclaimed`   | [PR125933][PR125933]                                                                                                                |
-| safe_sync and progress with identifier and API            | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| OpenMP directives in concurrent loop regions              | {good}`done`        | {none}`unclaimed`   | [PR125621][PR125621]                                                                                                                |
-| atomics constructs on concurrent loop regions             | {good}`done`        | {none}`unclaimed`   | [PR125621][PR125621]                                                                                                                |
-| Loop construct with DO CONCURRENT                         |                     | {part}`In Progress` |                                                                                                                                     |
-| device_type clause for target construct                   | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| nowait for ancestor target directives                     | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| New API for devices' num_teams/thread_limit               | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| Host and device environment variables                     | {part}`in progress` | {none}`unclaimed`   | @amitamd7                                                                                                                           |
-| num_threads ICV and clause accepts list                   | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| Numeric names for environment variables                   | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| Increment between places for OMP_PLACES                   | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| OMP_AVAILABLE_DEVICES envirable                           | {none}`unclaimed`   | {none}`unclaimed`   | (should wait for "Traits for default device envirable" being done)                                                                  |
-| Traits for default device envirable                       | {part}`in progress` | {none}`unclaimed`   | ro-i                                                                                                                                |
-| Optionally omit array length expression                   | {good}`done`        | {none}`unclaimed`   | (Parse) [PR148048][PR148048], (Sema) [PR152786][PR152786]                                                                           |
-| Canonical loop sequences                                  | {part}`in progress` | {part}`in progress` | Clang: [PR139293][PR139293]                                                                                                         |
-| Clarifications to Fortran map semantics                   | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| default clause at target construct                        | {good}`done`        | {none}`unclaimed`   | [PR162910][PR162910]                                                                                                                |
-| ref count update use_device_{ptr, addr}                   | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| Clarifications to implicit reductions                     | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| ref modifier for map clauses                              | {part}`In Progress` | {none}`unclaimed`   |                                                                                                                                     |
-| map-type modifiers in arbitrary position                  | {good}`done`        | {none}`unclaimed`   | [PR90499][PR90499]                                                                                                                  |
-| Lift nesting restriction on concurrent loop               | {good}`done`        | {none}`unclaimed`   | [PR125621][PR125621]                                                                                                                |
-| priority clause for target constructs                     | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| changes to target_data construct                          | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| Non-const do_not_sync for nowait/nogroup                  | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| need_device_addr modifier for adjust_args clause          | {part}`partial`     | {none}`unclaimed`   | Parsing/Sema: [PR143442][PR143442] [PR149586][PR149586]                                                                             |
-| need_device_ptr modifier for adjust_args clause           | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                                                     |
-| Prescriptive num_threads                                  | {good}`done`        | {none}`unclaimed`   | [PR160659][PR160659] [PR146403][PR146403] [PR146404][PR146404] [PR146405][PR146405]                                                 |
-| Message and severity clauses                              | {good}`done`        | {none}`unclaimed`   | [PR146093][PR146093]                                                                                                                |
-| Local clause on declare target                            | {good}`done`        | {none}`unclaimed`   | clang Parse/Sema: [PR186281][PR186281] clang Codegen: [PR196431][PR196431]                                                          |
-| groupprivate directive                                    | {part}`In Progress` | {part}`partial`     | Flang: kparzysz, mjklemm Flang parser: [PR153807][PR153807] Flang sema: [PR154779][PR154779] Clang parse/sema: [PR158134][PR158134] |
-| variable-category on default clause                       | {good}`done`        | {none}`unclaimed`   |                                                                                                                                     |
-| Changes to omp_target_is_accessible                       | {part}`In Progress` | {part}`In Progress` |                                                                                                                                     |
-| defaultmap implicit-behavior 'storage'                    | {good}`done`        | {none}`unclaimed`   | [PR158336][PR158336]                                                                                                                |
-| defaultmap implicit-behavior 'private'                    | {good}`done`        | {none}`unclaimed`   | [PR158712][PR158712]                                                                                                                |
-| OMPT: ompt_get_buffer_limits entry point                  | {part}`partial`     | {good}`N/A`         | Definition: [PR195829][PR195829]                                                                                                    |
-| OMPT: ompt_any_record_ompt_t for device tracing           | {good}`done`        | {good}`N/A`         | [PR195829][PR195829]                                                                                                                |
-| OMPT: ompt_target_data_transfer_rect(_async) & subvolume  | {part}`partial`     | {good}`N/A`         | Enum: [PR195829][PR195829]                                                                                                          |
-| OMPT: ompt_target_data_transfer(_async)                   | {part}`partial`     | {good}`N/A`         | Enum: [PR195829][PR195829]                                                                                                          |
-| OMPT: ompt_target_data_memset(_async)                     | {part}`partial`     | {good}`N/A`         | Enum: [PR195829][PR195829] Callbacks: [PR194168][PR194168]                                                                          |
-| OMPT: workdistribute work callback enum                   | {part}`partial`     | {good}`N/A`         | Enum: [PR195829][PR195829]                                                                                                          |
-| OMPT: transparent task flag enum (importing/exporting)    | {part}`partial`     | {good}`N/A`         | Enum: [PR195829][PR195829]                                                                                                          |
-| OMPT: dependence type {out, inout}_all_memory             | {part}`partial`     | {good}`N/A`         | Enum: [PR195829][PR195829]                                                                                                          |
-| OMPT: removed master callback                             | {none}`unclaimed`   | {good}`N/A`         |                                                                                                                                     |
-| OMPT: removed sync_region_barrier(_implicit) enum value   | {none}`unclaimed`   | {good}`N/A`         |                                                                                                                                     |
+For Fortran, see [Flang OpenMP 6.0 support](https://flang.llvm.org/docs/OpenMPSupport.html#openmp-6-0).
+
+| Feature                                                  | Status              | Reviews                                                                             |
+| -------------------------------------------------------- | ------------------- | ----------------------------------------------------------------------------------- |
+| free-agent threads                                       | {none}`unclaimed`   |                                                                                     |
+| threadset clause                                         | {part}`partial`     | Parse/Sema/Codegen: [PR13580][PR13580]                                              |
+| Recording of task graphs                                 | {part}`in progress` | clang: jtb20                                                                        |
+| Parallel inductions                                      | {none}`unclaimed`   |                                                                                     |
+| init_complete for scan directive                         | {none}`unclaimed`   |                                                                                     |
+| loop interchange transformation                          | {good}`done`        | Clang (interchange): [PR93022][PR93022] Clang (permutation): [PR92030][PR92030]     |
+| loop reverse transformation                              | {good}`done`        | [PR92916][PR92916]                                                                  |
+| loop stripe transformation                               | {good}`done`        | [PR119891][PR119891]                                                                |
+| loop fusion transformation                               | {part}`in progress` | [PR139293][PR139293] [PR161213][PR161213] [PR168898][PR168898]                      |
+| loop index set splitting transformation                  | {good}`done`        | C/C++: @loopacino                                                                   |
+| counts clause on loop split                              | {good}`done`        | C/C++: @loopacino                                                                   |
+| loop transformation apply clause                         | {none}`unclaimed`   |                                                                                     |
+| loop fuse transformation                                 | {good}`done`        |                                                                                     |
+| depth clause on loop fuse                                | {none}`unclaimed`   |                                                                                     |
+| task_iteration                                           | {none}`unclaimed`   |                                                                                     |
+| memscope clause for atomic and flush                     | {none}`unclaimed`   |                                                                                     |
+| transparent clause (hull tasks)                          | {part}`partial`     | Clang parsing/sema [PR174646][PR174646]                                             |
+| rule-based compound directives                           | {part}`in progress` | kparzysz                                                                            |
+| C23, C++23                                               | {none}`unclaimed`   |                                                                                     |
+| decl attribute for declarative directives                | {none}`unclaimed`   |                                                                                     |
+| C attribute syntax                                       | {none}`unclaimed`   |                                                                                     |
+| Optional argument for all clauses                        | {part}`partial`     | Parse/Sema (nowait): [PR159628][PR159628]                                           |
+| Function references for locator list items               | {none}`unclaimed`   |                                                                                     |
+| All clauses accept directive name modifier               | {none}`unclaimed`   |                                                                                     |
+| Extensions to depobj construct                           | {none}`unclaimed`   |                                                                                     |
+| Extensions to atomic construct                           | {none}`unclaimed`   |                                                                                     |
+| Private reductions                                       | {part}`partial`     | Parse/Sema: [PR129938][PR129938] Codegen: [PR134709][PR134709]                      |
+| Self maps                                                | {part}`partial`     | parsing/sema done: [PR129888][PR129888]                                             |
+| Release map type for declare mapper                      | {none}`unclaimed`   |                                                                                     |
+| Extensions to interop construct                          | {none}`unclaimed`   |                                                                                     |
+| no_openmp_constructs                                     | {good}`done`        | [PR125933][PR125933]                                                                |
+| safe_sync and progress with identifier and API           | {none}`unclaimed`   |                                                                                     |
+| OpenMP directives in concurrent loop regions             | {good}`done`        | [PR125621][PR125621]                                                                |
+| atomics constructs on concurrent loop regions            | {good}`done`        | [PR125621][PR125621]                                                                |
+| device_type clause for target construct                  | {none}`unclaimed`   |                                                                                     |
+| nowait for ancestor target directives                    | {none}`unclaimed`   |                                                                                     |
+| New API for devices' num_teams/thread_limit              | {none}`unclaimed`   |                                                                                     |
+| Host and device environment variables                    | {part}`in progress` | @amitamd7                                                                           |
+| num_threads ICV and clause accepts list                  | {none}`unclaimed`   |                                                                                     |
+| Numeric names for environment variables                  | {none}`unclaimed`   |                                                                                     |
+| Increment between places for OMP_PLACES                  | {none}`unclaimed`   |                                                                                     |
+| OMP_AVAILABLE_DEVICES envirable                          | {none}`unclaimed`   | (should wait for "Traits for default device envirable" being done)                  |
+| Traits for default device envirable                      | {part}`in progress` | ro-i                                                                                |
+| Optionally omit array length expression                  | {good}`done`        | (Parse) [PR148048][PR148048], (Sema) [PR152786][PR152786]                           |
+| Canonical loop sequences                                 | {part}`in progress` | Clang: [PR139293][PR139293]                                                         |
+| default clause at target construct                       | {good}`done`        | [PR162910][PR162910]                                                                |
+| ref count update use_device_{ptr, addr}                  | {none}`unclaimed`   |                                                                                     |
+| Clarifications to implicit reductions                    | {none}`unclaimed`   |                                                                                     |
+| ref modifier for map clauses                             | {part}`in progress` |                                                                                     |
+| map-type modifiers in arbitrary position                 | {good}`done`        | [PR90499][PR90499]                                                                  |
+| Lift nesting restriction on concurrent loop              | {good}`done`        | [PR125621][PR125621]                                                                |
+| priority clause for target constructs                    | {none}`unclaimed`   |                                                                                     |
+| changes to target_data construct                         | {none}`unclaimed`   |                                                                                     |
+| Non-const do_not_sync for nowait/nogroup                 | {none}`unclaimed`   |                                                                                     |
+| need_device_addr modifier for adjust_args clause         | {part}`partial`     | Parsing/Sema: [PR143442][PR143442] [PR149586][PR149586]                             |
+| need_device_ptr modifier for adjust_args clause          | {none}`unclaimed`   |                                                                                     |
+| Prescriptive num_threads                                 | {good}`done`        | [PR160659][PR160659] [PR146403][PR146403] [PR146404][PR146404] [PR146405][PR146405] |
+| Message and severity clauses                             | {good}`done`        | [PR146093][PR146093]                                                                |
+| Local clause on declare target                           | {good}`done`        | clang Parse/Sema: [PR186281][PR186281] clang Codegen: [PR196431][PR196431]          |
+| groupprivate directive                                   | {part}`in progress` | Clang parse/sema: [PR158134][PR158134]                                              |
+| variable-category on default clause                      | {good}`done`        |                                                                                     |
+| Changes to omp_target_is_accessible                      | {part}`in progress` |                                                                                     |
+| defaultmap implicit-behavior 'storage'                   | {good}`done`        | [PR158336][PR158336]                                                                |
+| defaultmap implicit-behavior 'private'                   | {good}`done`        | [PR158712][PR158712]                                                                |
+| OMPT: ompt_get_buffer_limits entry point                 | {part}`partial`     | Definition: [PR195829][PR195829]                                                    |
+| OMPT: ompt_any_record_ompt_t for device tracing          | {good}`done`        | [PR195829][PR195829]                                                                |
+| OMPT: ompt_target_data_transfer_rect(_async) & subvolume | {part}`partial`     | Enum: [PR195829][PR195829]                                                          |
+| OMPT: ompt_target_data_transfer(_async)                  | {part}`partial`     | Enum: [PR195829][PR195829]                                                          |
+| OMPT: ompt_target_data_memset(_async)                    | {part}`partial`     | Enum: [PR195829][PR195829] Callbacks: [PR194168][PR194168]                          |
+| OMPT: workdistribute work callback enum                  | {part}`partial`     | Enum: [PR195829][PR195829]                                                          |
+| OMPT: transparent task flag enum (importing/exporting)   | {part}`partial`     | Enum: [PR195829][PR195829]                                                          |
+| OMPT: dependence type {out, inout}_all_memory            | {part}`partial`     | Enum: [PR195829][PR195829]                                                          |
+| OMPT: removed master callback                            | {none}`unclaimed`   |                                                                                     |
+| OMPT: removed sync_region_barrier(_implicit) enum value  | {none}`unclaimed`   |                                                                                     |
 
 (openmp-6-0-deprecations)=
 
 ## OpenMP 6.0 Deprecations
 
-|                                                       | C/C++ Status      | Fortran Status | Reviews |
-| ----------------------------------------------------- | ----------------- | -------------- | ------- |
-| OMPT: non-emi target callbacks                        | {none}`unclaimed` | {good}`N/A`    |         |
-| OMPT: transfer_to_device / transfer_from_device enums | {none}`unclaimed` | {good}`N/A`    |         |
+| Feature                                               | Status            | Reviews |
+| ----------------------------------------------------- | ----------------- | ------- |
+| OMPT: non-emi target callbacks                        | {none}`unclaimed` |         |
+| OMPT: transfer_to_device / transfer_from_device enums | {none}`unclaimed` |         |
 
 (openmp-6-1-implementation-details)=
 
@@ -378,15 +401,18 @@ Please post on the [Discourse forums (Runtimes - OpenMP category)] for more
 information or if you want to help with the
 implementation.
 
-| Feature                                                               | C/C++ Status        | Fortran Status      | Reviews                                                                                                  |
-| --------------------------------------------------------------------- | ------------------- | ------------------- | -------------------------------------------------------------------------------------------------------- |
-| dyn_groupprivate clause                                               | {part}`partial`     | {part}`In Progress` | C/C++: Host device support missing                                                                       |
-| loop flatten transformation                                           | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                          |
-| loop grid/tile modifiers for sizes clause                             | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                          |
-| attach map-type modifier                                              | {part}`In Progress` | {none}`unclaimed`   | C/C++: @abhinavgaba; RT: @abhinavgaba ([PR149036][PR149036], [PR158370][PR158370], [PR210213][PR210213]) |
-| need_device_ptr modifier for adjust_args clause                       | {part}`partial`     | {none}`unclaimed`   | Clang Parsing/Sema: [PR168905][PR168905] [PR169558][PR169558]                                            |
-| fallback modifier for use_device_ptr clause                           | {good}`done`        | {none}`unclaimed`   | Clang: @abhinavgaba ([PR170578][PR170578], [PR173931][PR173931]) RT: @abhinavgaba ([PR169603][PR169603]) |
-| dims modifier for num_teams, thread_limit, and num_threads clauses    | {part}`partial`     | {part}`In Progress` | C/C++: @kevinsala ([PR206412][PR208353]); Fortran: @skc7, @kparzysz, @mjklemm                            |
+For Fortran, see [Flang OpenMP 6.1 support](https://flang.llvm.org/docs/OpenMPSupport.html#openmp-6-1-future-experimental).
+
+| Feature                                                            | Status              | Reviews                                                                                                  |
+| ------------------------------------------------------------------ | ------------------- | -------------------------------------------------------------------------------------------------------- |
+| dyn_groupprivate clause                                            | {part}`partial`     | C/C++: Host device support missing                                                                       |
+| loop flatten transformation                                        | {part}`partial`     | C/C++: @loopacino ([PR206977][PR206977]); non-rectangular loops are not supported yet                    |
+| depth clause on loop flatten                                       | {good}`done`        | C/C++: @loopacino                                                                                        |
+| loop grid/tile modifiers for sizes clause                          | {none}`unclaimed`   |                                                                                                          |
+| attach map-type modifier                                           | {part}`in progress` | C/C++: @abhinavgaba; RT: @abhinavgaba ([PR149036][PR149036], [PR158370][PR158370], [PR210213][PR210213]) |
+| need_device_ptr modifier for adjust_args clause                    | {part}`partial`     | Clang Parsing/Sema: [PR168905][PR168905] [PR169558][PR169558]                                            |
+| fallback modifier for use_device_ptr clause                        | {good}`done`        | Clang: @abhinavgaba ([PR170578][PR170578], [PR173931][PR173931]) RT: @abhinavgaba ([PR169603][PR169603]) |
+| dims modifier for num_teams, thread_limit, and num_threads clauses | {part}`partial`     | C/C++: @kevinsala ([PR206412][PR208353])                                                                 |
 
 ## OpenMP Extensions
 
@@ -399,9 +425,9 @@ considered for standardization. Please post on the
 
 | Category         | Feature                                                                                                                 | Status             | Reviews                                                        |
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------ | -------------------------------------------------------------- |
-| atomic extension | ['atomic' strictly nested within 'teams'](https://openmp.llvm.org/docs/openacc/OpenMPExtensions.html#atomicWithinTeams) | {part}`prototyped` | [D126323][D126323]                                             |
-| device extension | ['ompx_hold' map type modifier](https://openmp.llvm.org/docs/openacc/OpenMPExtensions.html#ompx-hold)                   | {part}`prototyped` | [D106509][D106509], [D106510][D106510]                         |
-| device extension | ['ompx_bare' clause on 'target teams' construct](https://www.osti.gov/servlets/purl/2205717)                            | {part}`prototyped` | [PR66844][PR66844], [PR70612][PR70612]                         |
+| atomic extension | ['atomic' strictly nested within 'teams'](https://openmp.llvm.org/docs/openacc/OpenMPExtensions.html#atomicWithinTeams) | {part}`partial`    | [D126323][D126323]                                             |
+| device extension | ['ompx_hold' map type modifier](https://openmp.llvm.org/docs/openacc/OpenMPExtensions.html#ompx-hold)                   | {part}`partial`    | [D106509][D106509], [D106510][D106510]                         |
+| device extension | ['ompx_bare' clause on 'target teams' construct](https://www.osti.gov/servlets/purl/2205717)                            | {part}`partial`    | [PR66844][PR66844], [PR70612][PR70612]                         |
 | device extension | Multi-dim 'num_teams' and 'thread_limit' clause on 'target teams ompx_bare' construct                                   | {part}`partial`    | [PR99732][PR99732], [PR101407][PR101407], [PR102715][PR102715] |
 
 
@@ -472,6 +498,7 @@ considered for standardization. Please post on the
 [D120007]: https://reviews.llvm.org/D120007
 [D120200]: https://reviews.llvm.org/D120200
 [D120290]: https://reviews.llvm.org/D120290
+[D120671]: https://reviews.llvm.org/D120671
 [D122107]: https://reviews.llvm.org/D122107
 [D123235]: https://reviews.llvm.org/D123235
 [D123286]: https://reviews.llvm.org/D123286
@@ -560,6 +587,7 @@ considered for standardization. Please post on the
 [PR194168]: https://github.com/llvm/llvm-project/pull/194168
 [PR195829]: https://github.com/llvm/llvm-project/pull/195829
 [PR196431]: https://github.com/llvm/llvm-project/pull/196431
+[PR206977]: https://github.com/llvm/llvm-project/pull/206977
 [PR210213]: https://github.com/llvm/llvm-project/pull/210213
 
 [discourse forums (runtimes - openmp category)]: https://discourse.llvm.org/c/runtimes/openmp/35

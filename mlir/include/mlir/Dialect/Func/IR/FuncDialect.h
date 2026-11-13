@@ -9,8 +9,6 @@
 #ifndef MLIR_DIALECT_FUNC_IR_FUNCDIALECT_H
 #define MLIR_DIALECT_FUNC_IR_FUNCDIALECT_H
 
-#include "mlir/IR/Dialect.h"
-
 #include "mlir/Dialect/Func/IR/FuncOpsDialect.h.inc"
 
 #endif // MLIR_DIALECT_FUNC_IR_FUNCDIALECT_H

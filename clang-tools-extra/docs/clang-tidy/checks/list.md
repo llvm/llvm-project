@@ -32,6 +32,10 @@ portability/*
 readability/*
 ```
 
+:::{table}
+:class: clang-tidy-checks-table
+:widths: 90 10
+
 | Name | Offers fixes |
 | --- | --- |
 | {doc}`abseil-cleanup-ctad <abseil/cleanup-ctad>` | Yes |
@@ -320,6 +324,7 @@ readability/*
 | {doc}`modernize-use-emplace <modernize/use-emplace>` | Yes |
 | {doc}`modernize-use-equals-default <modernize/use-equals-default>` | Yes |
 | {doc}`modernize-use-equals-delete <modernize/use-equals-delete>` | Yes |
+| {doc}`modernize-use-if-consteval <modernize/use-if-consteval>` | Yes |
 | {doc}`modernize-use-integer-sign-comparison <modernize/use-integer-sign-comparison>` | Yes |
 | {doc}`modernize-use-nodiscard <modernize/use-nodiscard>` | Yes |
 | {doc}`modernize-use-noexcept <modernize/use-noexcept>` | Yes |
@@ -445,7 +450,13 @@ readability/*
 | {doc}`readability-use-concise-preprocessor-directives <readability/use-concise-preprocessor-directives>` | Yes |
 | {doc}`readability-use-std-min-max <readability/use-std-min-max>` | Yes |
 
+:::
+
 ## Check aliases
+
+:::{table}
+:class: clang-tidy-checks-table
+:widths: 45 45 10
 
 | Name | Redirect | Offers fixes |
 | --- | --- | --- |
@@ -626,3 +637,5 @@ readability/*
 | {doc}`llvm-else-after-return <llvm/else-after-return>` | {doc}`readability-else-after-return <readability/else-after-return>` | Yes |
 | {doc}`llvm-qualified-auto <llvm/qualified-auto>` | {doc}`readability-qualified-auto <readability/qualified-auto>` | Yes |
 | {doc}`performance-faster-string-find <performance/faster-string-find>` | {doc}`performance-prefer-single-char-overloads <performance/prefer-single-char-overloads>` | Yes |
+
+:::

@@ -8,9 +8,8 @@
 # 80 bytes is plenty for both Offset=10 and Offset=20.
 # RUN: printf '%%80s' '' > %t.dir/foo.cpp
 
-# RUN: cp %S/Inputs/non-overlapping-a.tpl.yaml %t.dir/a.yaml
-# RUN: cp %S/Inputs/non-overlapping-b.tpl.yaml %t.dir/b.yaml
-# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" %t.dir/a.yaml %t.dir/b.yaml
+# RUN: sed "s|@FOO@|%/t.dir/foo.cpp|g" %S/Inputs/non-overlapping-a.tpl.yaml > %t.dir/a.yaml
+# RUN: sed "s|@FOO@|%/t.dir/foo.cpp|g" %S/Inputs/non-overlapping-b.tpl.yaml > %t.dir/b.yaml
 
 # RUN: clang-ssaf-src-edit-merge -o %t.dir/merged.yaml %t.dir/a.yaml %t.dir/b.yaml \
 # RUN:   2> %t.dir/stderr.txt

@@ -16,6 +16,7 @@
 #define LLVM_CLANG_BASIC_BUILTINS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringTable.h"
@@ -47,6 +48,7 @@ enum LanguageID : uint16_t {
   HLSL_LANG = 0x1000,        // builtin requires HLSL.
   C23_LANG = 0x2000,         // builtin requires C23 or later.
   C2Y_LANG = 0x4000,         // builtin requires C2y or later.
+  REFLECTION_LANG = 0x8000,  // builtin requires use of 'freflection' option.
   ALL_LANGUAGES = C_LANG | CXX_LANG | OBJC_LANG, // builtin for all languages.
   ALL_GNU_LANGUAGES = ALL_LANGUAGES | GNU_LANG,  // builtin requires GNU mode.
   ALL_MS_LANGUAGES = ALL_LANGUAGES | MS_LANG     // builtin requires MS mode.
@@ -260,7 +262,7 @@ public:
 
   /// Return the identifier name for the specified builtin inside single quotes
   /// for a diagnostic, e.g. "'__builtin_abs'".
-  std::string getQuotedName(unsigned ID) const;
+  llvm::SmallString<64> getQuotedName(unsigned ID) const;
 
   /// Get the type descriptor string for the specified builtin.
   const char *getTypeString(unsigned ID) const;
@@ -400,6 +402,16 @@ public:
   bool performsCallback(unsigned ID,
                         llvm::SmallVectorImpl<int> &Encoding) const;
 
+  /// A constant argument that must be in the half-open range [Lower, Upper).
+  struct ArgRange {
+    unsigned Index;
+    int Lower;
+    int Upper;
+  };
+
+  /// Append the constant argument ranges of this builtin into \p Ranges.
+  void getArgRanges(unsigned ID, llvm::SmallVectorImpl<ArgRange> &Ranges) const;
+
   /// Return true if this builtin has parameters that must be non-null.
   /// The parameter indices are appended into 'Indxs'.
   bool isNonNull(unsigned ID, llvm::SmallVectorImpl<int> &Indxs,
@@ -464,6 +476,11 @@ public:
   /// Returns true if this is an immediate (consteval) function
   bool isImmediate(unsigned ID) const {
     return strchr(getAttributesString(ID), 'G') != nullptr;
+  }
+
+  /// Returns true if this is a reflection metafunction builtin.
+  bool isReflectionMetafunctionBuiltin(unsigned ID) const {
+    return getInfo(ID).Langs & REFLECTION_LANG;
   }
 
 private:

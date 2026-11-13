@@ -23,6 +23,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def FIROpsDialect : Dialect {
   let name = "fir";
+  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::fir";
   let useDefaultTypePrinterParser = 0;
   let useDefaultAttributePrinterParser = 0;

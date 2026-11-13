@@ -22,8 +22,11 @@ cc_library(
     name = "mpc_impl",
     hdrs = ["mpc_inc.h"],
     target_compatible_with = select({
-        "//conditions:default": [],
         "//libc:mpc_disable": ["@platforms//:incompatible"],
+        # In full build mode, the MPFR library should be built
+        # using our own facilities, which is currently not possible.
+        "//libc:full_build": ["@platforms//:incompatible"],
+        "//conditions:default": [],
     }),
     deps = select(
         {
@@ -46,20 +49,21 @@ libc_test_library(
         },
     ),
     target_compatible_with = select({
-        "//conditions:default": [],
         "//libc:mpc_disable": ["@platforms//:incompatible"],
+        "//libc:full_build": ["@platforms//:incompatible"],
+        "//conditions:default": [],
     }),
     deps = [
         ":mpc_impl",
-        "//libc:__support_complex_type",
-        "//libc:__support_cpp_array",
-        "//libc:__support_cpp_stringstream",
-        "//libc:__support_cpp_type_traits",
-        "//libc:__support_macros_config",
-        "//libc:__support_macros_properties_complex_types",
-        "//libc:__support_macros_properties_types",
         "//libc:hdr_math_macros",
         "//libc:hdr_stdint_proxy",
+        "//libc/src/__support:complex_type",
+        "//libc/src/__support/CPP:array",
+        "//libc/src/__support/CPP:stringstream",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:complex_types",
+        "//libc/src/__support/macros/properties:types",
         "//libc/test/UnitTest:LibcUnitTest",
         "//libc/test/UnitTest:fp_test_helpers",
         "//libc/utils/MPFRWrapper:mp_common",

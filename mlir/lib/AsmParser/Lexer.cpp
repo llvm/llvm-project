@@ -111,10 +111,7 @@ Token Lexer::lexToken() {
       return lexBareIdentifierOrKeyword(tokStart);
 
     case 0:
-      // This may either be a nul character in the source file or may be the EOF
-      // marker that llvm::MemoryBuffer guarantees will be there.
-      if (curPtr - 1 == curBufferEnd)
-        return formToken(Token::eof, tokStart);
+      // A nul character in the source is skipped like whitespace.
       continue;
 
     case ':':
@@ -128,7 +125,7 @@ Token Lexer::lexToken() {
     case ')':
       return formToken(Token::r_paren, tokStart);
     case '{':
-      if (*curPtr == '-' && *(curPtr + 1) == '#') {
+      if (peek() == '-' && peek(1) == '#') {
         curPtr += 2;
         return formToken(Token::file_metadata_begin, tokStart);
       }
@@ -151,7 +148,7 @@ Token Lexer::lexToken() {
     case '*':
       return formToken(Token::star, tokStart);
     case '-':
-      if (*curPtr == '>') {
+      if (peek() == '>') {
         ++curPtr;
         return formToken(Token::arrow, tokStart);
       }
@@ -164,7 +161,7 @@ Token Lexer::lexToken() {
       return formToken(Token::vertical_bar, tokStart);
 
     case '/':
-      if (*curPtr == '/') {
+      if (peek() == '/') {
         skipComment();
         continue;
       }
@@ -174,7 +171,7 @@ Token Lexer::lexToken() {
       return lexAtIdentifier(tokStart);
 
     case '#':
-      if (*curPtr == '-' && *(curPtr + 1) == '}') {
+      if (peek() == '-' && peek(1) == '}') {
         curPtr += 2;
         return formToken(Token::file_metadata_end, tokStart);
       }
@@ -206,10 +203,11 @@ Token Lexer::lexToken() {
 ///   symbol-ref-id ::= `@` (bare-id | string-literal)
 ///
 Token Lexer::lexAtIdentifier(const char *tokStart) {
-  char cur = *curPtr++;
+  char cur = peek();
 
   // Try to parse a string literal, if present.
   if (cur == '"') {
+    ++curPtr;
     Token stringIdentifier = lexString(curPtr);
     if (stringIdentifier.is(Token::error))
       return stringIdentifier;
@@ -218,11 +216,12 @@ Token Lexer::lexAtIdentifier(const char *tokStart) {
 
   // Otherwise, these always start with a letter or underscore.
   if (!isalpha(cur) && cur != '_')
-    return emitError(curPtr - 1,
+    return emitError(curPtr,
                      "@ identifier expected to start with letter or '_'");
 
-  while (isalpha(*curPtr) || isdigit(*curPtr) || *curPtr == '_' ||
-         *curPtr == '$' || *curPtr == '.')
+  ++curPtr;
+  while (isalpha(peek()) || isdigit(peek()) || peek() == '_' || peek() == '$' ||
+         peek() == '.')
     ++curPtr;
   return formToken(Token::at_identifier, tokStart);
 }
@@ -234,8 +233,8 @@ Token Lexer::lexAtIdentifier(const char *tokStart) {
 ///
 Token Lexer::lexBareIdentifierOrKeyword(const char *tokStart) {
   // Match the rest of the identifier regex: [0-9a-zA-Z_.$]*
-  while (isalpha(*curPtr) || isdigit(*curPtr) || *curPtr == '_' ||
-         *curPtr == '$' || *curPtr == '.')
+  while (isalpha(peek()) || isdigit(peek()) || peek() == '_' || peek() == '$' ||
+         peek() == '.')
     ++curPtr;
 
   // Check to see if this identifier is a keyword.
@@ -267,7 +266,7 @@ Token Lexer::lexBareIdentifierOrKeyword(const char *tokStart) {
 ///
 void Lexer::skipComment() {
   // Advance over the second '/' in a '//' comment.
-  assert(*curPtr == '/');
+  assert(peek() == '/');
   ++curPtr;
 
   const char *curBufferEnd = curBuffer.end();
@@ -280,13 +279,6 @@ void Lexer::skipComment() {
     case '\r':
       // Newline is end of comment.
       return;
-    case 0:
-      // If this is the end of the buffer, end the comment.
-      if (curPtr - 1 == curBufferEnd) {
-        --curPtr;
-        return;
-      }
-      [[fallthrough]];
     default:
       // Skip over other characters.
       break;
@@ -301,7 +293,7 @@ void Lexer::skipComment() {
 Token Lexer::lexEllipsis(const char *tokStart) {
   assert(curPtr[-1] == '.');
 
-  if (curPtr == curBuffer.end() || *curPtr != '.' || *(curPtr + 1) != '.')
+  if (peek() != '.' || peek(1) != '.')
     return emitError(curPtr, "expected three consecutive dots for an ellipsis");
 
   curPtr += 2;
@@ -317,37 +309,37 @@ Token Lexer::lexNumber(const char *tokStart) {
   assert(isdigit(curPtr[-1]));
 
   // Handle the hexadecimal case.
-  if (curPtr[-1] == '0' && *curPtr == 'x') {
+  if (curPtr[-1] == '0' && peek() == 'x') {
     // If we see stuff like 0xi32, this is a literal `0` followed by an
     // identifier `xi32`, stop after `0`.
-    if (!isxdigit(curPtr[1]))
+    if (!isxdigit(peek(1)))
       return formToken(Token::integer, tokStart);
 
     curPtr += 2;
-    while (isxdigit(*curPtr))
+    while (isxdigit(peek()))
       ++curPtr;
 
     return formToken(Token::integer, tokStart);
   }
 
   // Handle the normal decimal case.
-  while (isdigit(*curPtr))
+  while (isdigit(peek()))
     ++curPtr;
 
-  if (*curPtr != '.')
+  if (peek() != '.')
     return formToken(Token::integer, tokStart);
   ++curPtr;
 
   // Skip over [0-9]*([eE][-+]?[0-9]+)?
-  while (isdigit(*curPtr))
+  while (isdigit(peek()))
     ++curPtr;
 
-  if (*curPtr == 'e' || *curPtr == 'E') {
-    if (isdigit(static_cast<unsigned char>(curPtr[1])) ||
-        ((curPtr[1] == '-' || curPtr[1] == '+') &&
-         isdigit(static_cast<unsigned char>(curPtr[2])))) {
+  if (peek() == 'e' || peek() == 'E') {
+    if (isdigit(static_cast<unsigned char>(peek(1))) ||
+        ((peek(1) == '-' || peek(1) == '+') &&
+         isdigit(static_cast<unsigned char>(peek(2))))) {
       curPtr += 2;
-      while (isdigit(*curPtr))
+      while (isdigit(peek()))
         ++curPtr;
     }
   }
@@ -388,14 +380,14 @@ Token Lexer::lexPrefixedIdentifier(const char *tokStart) {
   }
 
   // Parse suffix-id.
-  if (isdigit(*curPtr)) {
+  if (isdigit(peek())) {
     // If suffix-id starts with a digit, the rest must be digits.
-    while (isdigit(*curPtr))
+    while (isdigit(peek()))
       ++curPtr;
-  } else if (isalpha(*curPtr) || isPunct(*curPtr)) {
+  } else if (isalpha(peek()) || isPunct(peek())) {
     do {
       ++curPtr;
-    } while (isalpha(*curPtr) || isdigit(*curPtr) || isPunct(*curPtr));
+    } while (isalpha(peek()) || isdigit(peek()) || isPunct(peek()));
   } else if (curPtr == codeCompleteLoc) {
     return formToken(Token::code_complete, tokStart);
   } else {
@@ -429,24 +421,22 @@ Token Lexer::lexString(const char *tokStart) {
     if (curPtr == codeCompleteLoc)
       return formToken(Token::code_complete, tokStart);
 
+    if (curPtr == curBufferEnd)
+      return emitError(curPtr, "expected '\"' in string literal");
+
+    // A nul character in the string is included like any other character.
     switch (*curPtr++) {
     case '"':
       return formToken(Token::string, tokStart);
-    case 0:
-      // If this is a random nul character in the middle of a string, just
-      // include it.  If it is the end of file, then it is an error.
-      if (curPtr - 1 != curBufferEnd)
-        continue;
-      [[fallthrough]];
     case '\n':
     case '\v':
     case '\f':
       return emitError(curPtr - 1, "expected '\"' in string literal");
     case '\\':
       // Handle explicitly a few escapes.
-      if (*curPtr == '"' || *curPtr == '\\' || *curPtr == 'n' || *curPtr == 't')
+      if (peek() == '"' || peek() == '\\' || peek() == 'n' || peek() == 't')
         ++curPtr;
-      else if (llvm::isHexDigit(*curPtr) && llvm::isHexDigit(curPtr[1]))
+      else if (llvm::isHexDigit(peek()) && llvm::isHexDigit(peek(1)))
         // Support \xx for two hex digits.
         curPtr += 2;
       else

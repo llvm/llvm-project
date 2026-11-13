@@ -6,7 +6,7 @@ It imports nodes of an `ASTContext` into another `ASTContext`.
 In this document, we assume basic knowledge about the Clang AST. See the {doc}`Introduction
 to the Clang AST <IntroductionToTheClangAST>` if you want to learn more
 about how the AST is structured.
-Knowledge about {doc}`matching the Clang AST <LibASTMatchers>` and the [reference for the matchers](https://clang.llvm.org/docs/LibASTMatchersReference.html) are also useful.
+Knowledge about [matching the Clang AST](LibASTMatchers.md) and the [reference for the matchers](LibASTMatchersReference.html){.external} are also useful.
 
 
 ## Introduction
@@ -588,8 +588,8 @@ int main() {
 We shall generate the AST files, merge them, create the executable and then run it:
 
 ```console
-$ clang++ -x c++-header -o foo.ast foo.cpp
-$ clang++ -x c++-header -o main.ast main.cpp
+$ clang++ -emit-ast foo.cpp
+$ clang++ -emit-ast main.cpp
 $ clang++ -cc1 -x c++ -ast-merge foo.ast -ast-merge main.ast /dev/null -ast-dump
 $ clang++ -cc1 -x c++ -ast-merge foo.ast -ast-merge main.ast /dev/null -emit-obj -o main.o
 $ clang++ -o a.out main.o

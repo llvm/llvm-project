@@ -33,6 +33,8 @@
 // 2. geps when corresponding load/store cannot be hoisted.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Scalar/GVNHoist.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -62,10 +64,9 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Scalar/GVNValueTable.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <algorithm>
 #include <cassert>
@@ -86,31 +87,10 @@ STATISTIC(NumStoresRemoved, "Number of stores removed");
 STATISTIC(NumCallsHoisted, "Number of calls hoisted");
 STATISTIC(NumCallsRemoved, "Number of calls removed");
 
-static cl::opt<int>
-    MaxHoistedThreshold("gvn-max-hoisted", cl::Hidden, cl::init(-1),
-                        cl::desc("Max number of instructions to hoist "
-                                 "(default unlimited = -1)"));
-
-static cl::opt<int> MaxNumberOfBBSInPath(
-    "gvn-hoist-max-bbs", cl::Hidden, cl::init(4),
-    cl::desc("Max number of basic blocks on the path between "
-             "hoisting locations (default = 4, unlimited = -1)"));
-
-static cl::opt<int> MaxDepthInBB(
-    "gvn-hoist-max-depth", cl::Hidden, cl::init(100),
-    cl::desc("Hoist instructions from the beginning of the BB up to the "
-             "maximum specified depth (default = 100, unlimited = -1)"));
-
-static cl::opt<int>
-    MaxChainLength("gvn-hoist-max-chain-length", cl::Hidden, cl::init(10),
-                   cl::desc("Maximum length of dependent chains to hoist "
-                            "(default = 10, unlimited = -1)"));
-
 namespace llvm {
 
 using BBSideEffectsSet = DenseMap<const BasicBlock *, bool>;
 using SmallVecInsn = SmallVector<Instruction *, 4>;
-using SmallVecImplInsn = SmallVectorImpl<Instruction *>;
 
 // Each element of a hoisting list contains the basic block where to hoist and
 // a list of instructions to be hoisted.
@@ -162,7 +142,7 @@ class InsnInfo {
 
 public:
   // Inserts I and its value number in VNtoScalars.
-  void insert(Instruction *I, GVNPass::ValueTable &VN) {
+  void insert(Instruction *I, GVNValueTable &VN) {
     // Scalar instruction.
     unsigned V = VN.lookupOrAdd(I);
     VNtoScalars[{V, InvalidVN}].push_back(I);
@@ -177,7 +157,7 @@ class LoadInfo {
 
 public:
   // Insert Load and the value number of its memory address in VNtoLoads.
-  void insert(LoadInst *Load, GVNPass::ValueTable &VN) {
+  void insert(LoadInst *Load, GVNValueTable &VN) {
     if (Load->isSimple()) {
       unsigned V = VN.lookupOrAdd(Load->getPointerOperand());
       // With opaque pointers we may have loads from the same pointer with
@@ -196,7 +176,7 @@ class StoreInfo {
 public:
   // Insert the Store and a hash number of the store address and the stored
   // value in VNtoStores.
-  void insert(StoreInst *Store, GVNPass::ValueTable &VN) {
+  void insert(StoreInst *Store, GVNValueTable &VN) {
     if (!Store->isSimple())
       return;
     // Hash the store address and the stored value.
@@ -216,7 +196,7 @@ class CallInfo {
 
 public:
   // Insert Call and its value numbering in one of the VNtoCalls* containers.
-  void insert(CallInst *Call, GVNPass::ValueTable &VN) {
+  void insert(CallInst *Call, GVNValueTable &VN) {
     // A call that doesNotAccessMemory is handled as a Scalar,
     // onlyReadsMemory will be handled as a Load instruction,
     // all other calls will be handled as stores.
@@ -241,11 +221,10 @@ public:
 // cases reduce critical path (by exposing more ILP).
 class GVNHoist {
 public:
-  GVNHoist(DominatorTree *DT, PostDominatorTree *PDT, AliasAnalysis *AA,
-           MemorySSA *MSSA)
-      : DT(DT), PDT(PDT), AA(AA), MSSA(MSSA),
+  GVNHoist(const ScalarOptions &Opts, DominatorTree *DT, PostDominatorTree *PDT,
+           AliasAnalysis *AA, MemorySSA *MSSA)
+      : Opts(Opts), DT(DT), PDT(PDT), AA(AA), MSSA(MSSA),
         MSSAUpdater(std::make_unique<MemorySSAUpdater>(MSSA)) {
-    MSSA->ensureOptimizedUses();
   }
 
   bool run(Function &F);
@@ -259,7 +238,8 @@ public:
   unsigned int rank(const Value *V) const;
 
 private:
-  GVNPass::ValueTable VN;
+  const ScalarOptions &Opts;
+  GVNValueTable VN;
   DominatorTree *DT;
   PostDominatorTree *PDT;
   AliasAnalysis *AA;
@@ -478,8 +458,7 @@ private:
 
   // Remove all the instructions in Candidates and replace their usage with
   // Repl. Returns the number of instructions removed.
-  unsigned rauw(const SmallVecInsn &Candidates, Instruction *Repl,
-                MemoryUseOrDef *NewMemAcc);
+  unsigned rauw(const SmallVecInsn &Candidates, Instruction *Repl);
 
   // Replace all Memory PHI usage with NewMemAcc.
   void raMPHIuw(MemoryUseOrDef *NewMemAcc);
@@ -521,7 +500,8 @@ bool GVNHoist::run(Function &F) {
 
   // FIXME: use lazy evaluation of VN to avoid the fix-point computation.
   while (true) {
-    if (MaxChainLength != -1 && ++ChainLength >= MaxChainLength)
+    if (Opts.gvn_hoist_max_chain_length != -1 &&
+        ++ChainLength >= Opts.gvn_hoist_max_chain_length)
       return Res;
 
     auto HoistStat = hoistExpressions(F);
@@ -638,8 +618,6 @@ bool GVNHoist::hasEHOrLoadsOnPath(const Instruction *NewPt, MemoryDef *Def,
   const BasicBlock *NewBB = NewPt->getParent();
   const BasicBlock *OldBB = Def->getBlock();
   assert(DT->dominates(NewBB, OldBB) && "invalid path");
-  assert(DT->dominates(Def->getDefiningAccess()->getBlock(), NewBB) &&
-         "def does not dominate new hoisting point");
 
   // Walk all basic blocks reachable in depth-first iteration on the inverse
   // CFG from OldBB to NewBB. These blocks are all the blocks that may be
@@ -712,7 +690,7 @@ bool GVNHoist::safeToHoistLdSt(const Instruction *NewPt,
   const BasicBlock *UBB = U->getBlock();
 
   // Check for dependences on the Memory SSA.
-  MemoryAccess *D = U->getDefiningAccess();
+  MemoryAccess *D = MSSA->getWalker()->getClobberingMemoryAccess(U);
   BasicBlock *DBB = D->getBlock();
   if (DT->properlyDominates(NewBB, DBB))
     // Cannot move the load or store to NewBB above its definition in DBB.
@@ -756,7 +734,7 @@ bool GVNHoist::valueAnticipable(CHIArgs C, Instruction *TI) const {
 
 void GVNHoist::checkSafety(CHIArgs C, BasicBlock *BB, GVNHoist::InsKind K,
                            SmallVectorImpl<CHIArg> &Safe) {
-  int NumBBsOnAllPaths = MaxNumberOfBBSInPath;
+  int NumBBsOnAllPaths = Opts.gvn_hoist_max_bbs;
   const Instruction *T = BB->getTerminator();
   for (auto CHI : C) {
     Instruction *Insn = CHI.I;
@@ -967,24 +945,16 @@ void GVNHoist::updateAlignment(Instruction *I, Instruction *Repl) {
   }
 }
 
-unsigned GVNHoist::rauw(const SmallVecInsn &Candidates, Instruction *Repl,
-                        MemoryUseOrDef *NewMemAcc) {
+unsigned GVNHoist::rauw(const SmallVecInsn &Candidates, Instruction *Repl) {
   unsigned NR = 0;
   for (Instruction *I : Candidates) {
     if (I != Repl) {
       ++NR;
       updateAlignment(I, Repl);
-      if (NewMemAcc) {
-        // Update the uses of the old MSSA access with NewMemAcc.
-        MemoryAccess *OldMA = MSSA->getMemoryAccess(I);
-        OldMA->replaceAllUsesWith(NewMemAcc);
+      if (MemoryAccess *OldMA = MSSA->getMemoryAccess(I))
         MSSAUpdater->removeMemoryAccess(OldMA);
-      } else if (MemoryAccess *OldMA = MSSA->getMemoryAccess(I)) {
-        MSSAUpdater->removeMemoryAccess(OldMA);
-      }
 
-      combineMetadataForCSE(Repl, I, true);
-      Repl->andIRFlags(I);
+      patchReplacementInstruction(I, Repl, /*DoesKMove=*/true);
       I->replaceAllUsesWith(Repl);
       I->eraseFromParent();
     }
@@ -1012,13 +982,13 @@ unsigned GVNHoist::removeAndReplace(const SmallVecInsn &Candidates,
                                     bool MoveAccess) {
   MemoryUseOrDef *NewMemAcc = MSSA->getMemoryAccess(Repl);
   if (MoveAccess && NewMemAcc) {
-    // The definition of this ld/st will not change: ld/st hoisting is
-    // legal when the ld/st is not moved past its current definition.
+    // The ld/st is not moved past its clobbering access, but a store may be
+    // moved past MemoryDefs that do not alias it; moveToPlace renames those.
     MSSAUpdater->moveToPlace(NewMemAcc, DestBB, MemorySSA::BeforeTerminator);
   }
 
-  // Replace all other instructions with Repl with memory access NewMemAcc.
-  unsigned NR = rauw(Candidates, Repl, NewMemAcc);
+  // Replace all other instructions with Repl.
+  unsigned NR = rauw(Candidates, Repl);
 
   // Remove MemorySSA phi nodes with the same arguments.
   if (NewMemAcc)
@@ -1153,7 +1123,8 @@ std::pair<unsigned, unsigned> GVNHoist::hoistExpressions(Function &F) {
       }
       // Only hoist the first instructions in BB up to MaxDepthInBB. Hoisting
       // deeper may increase the register pressure and compilation time.
-      if (MaxDepthInBB != -1 && InstructionNb++ >= MaxDepthInBB)
+      if (Opts.gvn_hoist_max_depth != -1 &&
+          InstructionNb++ >= Opts.gvn_hoist_max_depth)
         break;
 
       // Do not value number terminator instructions.
@@ -1203,7 +1174,8 @@ PreservedAnalyses GVNHoistPass::run(Function &F, FunctionAnalysisManager &AM) {
   PostDominatorTree &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
   AliasAnalysis &AA = AM.getResult<AAManager>(F);
   MemorySSA &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
-  GVNHoist G(&DT, &PDT, &AA, &MSSA);
+  const ScalarOptions &Opts = getScalarOptions(F);
+  GVNHoist G(Opts, &DT, &PDT, &AA, &MSSA);
   if (!G.run(F))
     return PreservedAnalyses::all();
 

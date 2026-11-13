@@ -327,7 +327,7 @@ bool AMDGPUPostLegalizerCombinerImpl::matchRemoveFcanonicalize(
 
 // The buffer_load_{i8, i16} intrinsics are initially lowered as
 // buffer_load_{u8, u16} instructions. Here, the buffer_load_{u8, u16}
-// instructions are combined with sign extension instrucions in order to
+// instructions are combined with sign extension instructions in order to
 // generate buffer_load_{i8, i16} instructions.
 
 // Identify buffer_load_{u8, u16}.
@@ -504,7 +504,8 @@ AMDGPUPostLegalizerCombinerPass::run(MachineFunction &MF,
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 
-  bool IsOptNone = MF.getTarget().getOptLevel() == CodeGenOptLevel::None;
+  bool IsOptNone = MF.getTarget().getOptLevel() == CodeGenOptLevel::None ||
+                   shouldSkipOptimizationForOptBisect(MF.getFunction());
 
   GISelValueTracking &VT = MFAM.getResult<GISelValueTrackingAnalysis>(MF);
   GISelCSEInfo *CSEInfo = MFAM.getResult<GISelCSEAnalysis>(MF).get();

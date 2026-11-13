@@ -14,10 +14,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
@@ -26,8 +28,10 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -68,7 +72,6 @@
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -81,6 +84,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/MemProfContextDisambiguation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
@@ -102,37 +106,6 @@ STATISTIC(ByteArraySizeBytes, "Byte array size in bytes");
 STATISTIC(NumByteArraysCreated, "Number of byte arrays created");
 STATISTIC(NumTypeTestCallsLowered, "Number of type test calls lowered");
 STATISTIC(NumTypeIdDisjointSets, "Number of disjoint sets of type identifiers");
-
-static cl::opt<bool> AvoidReuse(
-    "lowertypetests-avoid-reuse",
-    cl::desc("Try to avoid reuse of byte array addresses using aliases"),
-    cl::Hidden, cl::init(true));
-
-static cl::opt<PassSummaryAction> ClSummaryAction(
-    "lowertypetests-summary-action",
-    cl::desc("What to do with the summary when running this pass"),
-    cl::values(clEnumValN(PassSummaryAction::None, "none", "Do nothing"),
-               clEnumValN(PassSummaryAction::Import, "import",
-                          "Import typeid resolutions from summary and globals"),
-               clEnumValN(PassSummaryAction::Export, "export",
-                          "Export typeid resolutions to summary and globals")),
-    cl::Hidden);
-
-static cl::opt<std::string>
-    ClReadSummary("lowertypetests-read-summary",
-                  cl::desc("Read summary from given textual assembly or YAML "
-                           "file before running pass"),
-                  cl::Hidden);
-
-static cl::opt<std::string> ClWriteSummary(
-    "lowertypetests-write-summary",
-    cl::desc("Write summary to given YAML file after running pass"),
-    cl::Hidden);
-
-// FIXME: Remove in clang 24.
-static cl::opt<bool> EnableJumpTableDebugInfo(
-    "lowertypetests-jump-table-debug-info", cl::init(true), cl::Hidden,
-    cl::desc("Enable debug info generation for jump tables"));
 
 bool BitSetInfo::containsGlobalOffset(uint64_t Offset) const {
   if (Offset < ByteOffset)
@@ -365,10 +338,94 @@ enum class CfiFunctionLinkage : uint8_t {
   WeakDeclaration = 2,
 };
 
+/// The hotness of a CFI jumptable function entry.
+class CfiFunctionHotness {
+  enum class Kind : uint8_t {
+    Unknown = 0, // It's higher rank than Cold, but convenient to store as zero.
+    Cold = 1,
+    Other = 2,
+    Hot = 3,
+  };
+
+  Kind Type = Kind::Unknown;
+
+  CfiFunctionHotness(Kind Type) : Type(Type) {}
+
+public:
+  CfiFunctionHotness() = default;
+
+  // Computes the execution weight for F across its entry count and basic block
+  // counts. Placing the hottest function (i.e. the function with the highest
+  // weight) as the last jump table entry makes it more likely to benefit from
+  // the SHT_LLVM_CFI_JUMP_TABLE last-entry optimization and locks the jump
+  // table into the target's section, which is likely hot.
+  // The most important goal is to put functions which end up in .hot at the
+  // end of jumptable, to keep jump table in the same section.
+  static CfiFunctionHotness
+  fromFunction(Function &F, ProfileSummaryInfo &PSI,
+               function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter) {
+    if (F.isDeclaration())
+      return Kind::Unknown;
+
+    // We want to mimic CodeGenPrepare::_run to match section assignments.
+    const BlockFrequencyInfo &BFI = BFIGetter(F);
+    if (F.hasFnAttribute(Attribute::Hot) ||
+        PSI.isFunctionHotInCallGraph(&F, BFI)) {
+      return Kind::Hot;
+    }
+
+    if (PSI.isFunctionColdInCallGraph(&F, BFI) ||
+        F.hasFnAttribute(Attribute::Cold)) {
+      return Kind::Cold;
+    }
+
+    return (!PSI.hasPartialSampleProfile() || PSI.isFunctionHotnessUnknown(F))
+               ? Kind::Unknown
+               : Kind::Other;
+  }
+
+  static CfiFunctionHotness fromUint6(uint8_t V) {
+    return CfiFunctionHotness(static_cast<Kind>(V & 0x3));
+  }
+
+  uint8_t asUint6() const { return static_cast<uint8_t>(Type) & 0x3; }
+
+  bool operator==(const CfiFunctionHotness &Other) const {
+    return Type == Other.Type;
+  }
+
+  bool operator<(const CfiFunctionHotness &Other) const {
+    auto Rank = [](Kind K) -> int {
+      return (K == Kind::Cold) ? -1 : static_cast<int>(K);
+    };
+    return Rank(Type) < Rank(Other.Type);
+  }
+};
+
 } // namespace
 
-static void createCfiFunctionsMetadata(Module &DestM,
-                                       ArrayRef<GlobalValue *> CfiFunctions) {
+static CfiFunctionLinkage decodeCfiFunctionLinkage(uint8_t Encoded) {
+  return static_cast<CfiFunctionLinkage>(Encoded & 0x3);
+}
+
+static CfiFunctionHotness decodeCfiFunctionHotness(uint8_t Encoded) {
+  return CfiFunctionHotness::fromUint6(Encoded >> 2);
+}
+
+static uint8_t encodeCfiFunctionLinkage(CfiFunctionLinkage Linkage,
+                                        CfiFunctionHotness Hotness) {
+  uint8_t Encoded =
+      (Hotness.asUint6() << 2) | (static_cast<uint8_t>(Linkage) & 0x3);
+  assert(decodeCfiFunctionLinkage(Encoded) == Linkage);
+  assert(decodeCfiFunctionHotness(Encoded) == Hotness);
+  return Encoded;
+}
+
+static void createCfiFunctionsMetadata(
+    Module &DestM, ArrayRef<GlobalValue *> CfiFunctions,
+    ProfileSummaryInfo &PSI,
+    function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter) {
+  const IPOOptions &Opts = getIPOOptions(DestM);
   auto &Ctx = DestM.getContext();
   SmallVector<MDNode *, 8> CfiFunctionMDs;
   for (auto *V : CfiFunctions) {
@@ -383,8 +440,16 @@ static void createCfiFunctionsMetadata(Module &DestM,
       Linkage = CfiFunctionLinkage::Definition;
     else if (F.hasExternalWeakLinkage())
       Linkage = CfiFunctionLinkage::WeakDeclaration;
-    Elts.push_back(ConstantAsMetadata::get(llvm::ConstantInt::get(
-        Type::getInt8Ty(Ctx), static_cast<uint8_t>(Linkage))));
+
+    CfiFunctionHotness Hotness =
+        Opts.reorder_cfi_jump_tables_profiles
+            ? CfiFunctionHotness::fromFunction(F, PSI, BFIGetter)
+            : CfiFunctionHotness();
+
+    uint8_t EncodedLinkage = encodeCfiFunctionLinkage(Linkage, Hotness);
+
+    Elts.push_back(ConstantAsMetadata::get(
+        llvm::ConstantInt::get(Type::getInt8Ty(Ctx), EncodedLinkage)));
     GlobalValue::GUID GUID = V->getGUID();
     Elts.push_back(ConstantAsMetadata::get(
         llvm::ConstantInt::get(Type::getInt64Ty(Ctx), GUID)));
@@ -442,9 +507,11 @@ static void createCfiSymversMetadata(Module &DestM, const Module &SrcM) {
   }
 }
 
-void lowertypetests::createCfiMetadata(Module &DestM, const Module &SrcM,
-                                       ArrayRef<GlobalValue *> CfiFunctions) {
-  createCfiFunctionsMetadata(DestM, CfiFunctions);
+void lowertypetests::createCfiMetadata(
+    Module &DestM, const Module &SrcM, ArrayRef<GlobalValue *> CfiFunctions,
+    ProfileSummaryInfo &PSI,
+    function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter) {
+  createCfiFunctionsMetadata(DestM, CfiFunctions, PSI, BFIGetter);
   createCfiAliasesMetadata(DestM, SrcM);
   createCfiSymversMetadata(DestM, SrcM);
 }
@@ -611,6 +678,7 @@ struct ScopedSaveAliaseesAndUsed {
 };
 
 class LowerTypeTestsModule {
+  const IPOOptions &Opts;
   Module &M;
 
   ModuleSummaryIndex *ExportSummary;
@@ -627,6 +695,9 @@ class LowerTypeTestsModule {
 
   // Cache variable used by hasBranchTargetEnforcement().
   int HasBranchTargetEnforcement = -1;
+
+  // Map from function to hotness passed via cfi.functions metadata.
+  DenseMap<const Function *, CfiFunctionHotness> FunctionSummaryHotness;
 
   IntegerType *Int1Ty = Type::getInt1Ty(M.getContext());
   IntegerType *Int8Ty = Type::getInt8Ty(M.getContext());
@@ -860,7 +931,7 @@ Value *LowerTypeTestsModule::createBitSetTest(IRBuilder<> &B,
     return createMaskedBitTest(B, TIL.InlineBits, BitOffset);
   } else {
     Constant *ByteArray = TIL.TheByteArray;
-    if (AvoidReuse && !ImportSummary) {
+    if (Opts.lowertypetests_avoid_reuse && !ImportSummary) {
       // Each use of the byte array uses a different alias. This makes the
       // backend less likely to reuse previously computed byte array addresses,
       // improving the security of the CFI mechanism based on this pass.
@@ -1067,8 +1138,9 @@ void LowerTypeTestsModule::buildBitSetsFromGlobalVariables(
     // Multiply by 2 to account for padding elements.
     Constant *CombinedGlobalIdxs[] = {ConstantInt::get(Int32Ty, 0),
                                       ConstantInt::get(Int32Ty, I * 2)};
-    Constant *CombinedGlobalElemPtr = ConstantExpr::getInBoundsGetElementPtr(
-        NewInit->getType(), CombinedGlobal, CombinedGlobalIdxs);
+    Constant *CombinedGlobalElemPtr = ConstantExpr::getGetElementPtr(
+        DL, NewInit->getType(), CombinedGlobal, CombinedGlobalIdxs,
+        GEPNoWrapFlags::inBounds());
     assert(GV->getType()->getAddressSpace() == 0);
     GlobalAlias *GAlias =
         GlobalAlias::create(NewTy->getElementType(I * 2), 0, GV->getLinkage(),
@@ -1324,6 +1396,13 @@ void LowerTypeTestsModule::importFunction(Function *F,
     // alias. Redirect all other users to the jump table entry.
     for (auto &U : F->uses()) {
       if (auto *A = dyn_cast<GlobalAlias>(U.getUser())) {
+        // MemProf duplicate-clone aliases are created in the ThinLTO backend
+        // after the thin link has finalized the CFI jump table and !aliases in
+        // the merged module, and are only called directly. Leave them aliasing
+        // the local .cfi body (restored by ScopedSaveAliaseesAndUsed) rather
+        // than redirecting them to a non-existent jump table entry.
+        if (isMemProfClone(*A))
+          continue;
         std::string AliasName = A->getName().str() + ".cfi";
         Function *AliasDecl = Function::Create(
             F->getFunctionType(), GlobalValue::ExternalLinkage,
@@ -1810,7 +1889,7 @@ void LowerTypeTestsModule::createJumpTable(
   IRBuilder<> IRB(BB);
 
   SmallVector<DILocation *> Locations;
-  if (M.getDwarfVersion() != 0 && EnableJumpTableDebugInfo)
+  if (M.getDwarfVersion() != 0 && Opts.lowertypetests_jump_table_debug_info)
     Locations = createJumpTableDebugInfo(F, Functions);
 
   InlineAsm *JumpTableAsm = createJumpTableEntryAsm(JumpTableArch);
@@ -1985,16 +2064,18 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
 
   lowerTypeTestCalls(TypeIds, JumpTable, GlobalLayout);
 
+  SmallVector<GlobalValue *> UsedJtAliases;
+
   // Build aliases pointing to offsets into the jump table, and replace
   // references to the original functions with references to the aliases.
   for (unsigned I = 0; I != Functions.size(); ++I) {
     Function *F = cast<Function>(Functions[I]->getGlobal());
     bool IsJumpTableCanonical = Functions[I]->isJumpTableCanonical();
 
-    Constant *CombinedGlobalElemPtr = ConstantExpr::getInBoundsGetElementPtr(
-        JumpTableType, JumpTable,
-        ArrayRef<Constant *>{ConstantInt::get(IntPtrTy, 0),
-                             ConstantInt::get(IntPtrTy, I)});
+    Constant *CombinedGlobalElemPtr = ConstantExpr::getGetElementPtr(
+        F->getDataLayout(), JumpTableType, JumpTable,
+        {ConstantInt::get(IntPtrTy, 0), ConstantInt::get(IntPtrTy, I)},
+        GEPNoWrapFlags::inBounds());
 
     const bool IsExported = Functions[I]->isExported();
     if (!IsJumpTableCanonical) {
@@ -2006,7 +2087,7 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
       if (IsExported)
         JtAlias->setVisibility(GlobalValue::HiddenVisibility);
       else
-        appendToUsed(M, {JtAlias});
+        UsedJtAliases.push_back(JtAlias);
     }
 
     if (IsExported) {
@@ -2043,6 +2124,9 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
         F->setVisibility(GlobalVariable::HiddenVisibility);
     }
   }
+
+  if (!UsedJtAliases.empty())
+    appendToUsed(M, UsedJtAliases);
 
   createJumpTable(JumpTableFn, Functions, JumpTableArch);
 }
@@ -2120,16 +2204,45 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
     return O1.size() < O2.size();
   });
 
+  bool IsGlobalSet =
+      Globals.empty() || isa<GlobalVariable>(Globals[0]->getGlobal());
+
+  unique_function<bool(uint64_t, uint64_t)> Less;
+  if (!IsGlobalSet && !FunctionSummaryHotness.empty() &&
+      Opts.reorder_cfi_jump_tables_profiles) {
+    // Estimated weight of each jump entry.
+    std::vector<CfiFunctionHotness> GTMHotness;
+    GTMHotness.reserve(Globals.size());
+    for (GlobalTypeMember *GTM : Globals) {
+      GTMHotness.push_back(
+          FunctionSummaryHotness.lookup(cast<Function>(GTM->getGlobal())));
+    }
+
+    // Order jump table entries by hotness ascending so that the hottest
+    // entry is placed at the end of the jump table:
+    // 1. Under jump table relaxation (SHT_LLVM_CFI_JUMP_TABLE), the linker
+    //    moves the jump table directly before the target of the last entry
+    //    and deletes its branch so the target function body acts as the
+    //    last entry.
+    // 2. The jump table is placed into the output section of that last
+    //    target. Jump tables are critical to performance; if the last
+    //    entry were a cold function, the jump table would be dragged into a
+    //    cold binary section (such as .text.unlikely). Placing the hottest
+    //    entry at the end ensures the jump table lands in a hot section and
+    //    the hottest callee benefits from fall-through without a branch.
+    Less = [GTMHotness = std::move(GTMHotness)](uint64_t A, uint64_t B) {
+      return GTMHotness[A] < GTMHotness[B];
+    };
+  }
+
   // Create a GlobalLayoutBuilder and provide it with index sets as layout
   // fragments. The GlobalLayoutBuilder tries to lay out members of fragments as
   // close together as possible.
-  GlobalLayoutBuilder GLB(Globals.size());
+  GlobalLayoutBuilder GLB(Globals.size(), std::move(Less));
   for (auto &&MemSet : TypeMembers)
     GLB.addFragment(MemSet);
 
   // Build a vector of globals with the computed layout.
-  bool IsGlobalSet =
-      Globals.empty() || isa<GlobalVariable>(Globals[0]->getGlobal());
   std::vector<GlobalTypeMember *> OrderedGTMs(Globals.size());
   auto OGTMI = OrderedGTMs.begin();
   for (uint64_t Offset : GLB.build()) {
@@ -2150,15 +2263,16 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
 LowerTypeTestsModule::LowerTypeTestsModule(
     Module &M, ModuleAnalysisManager &AM, ModuleSummaryIndex *ExportSummary,
     const ModuleSummaryIndex *ImportSummary)
-    : M(M), ExportSummary(ExportSummary), ImportSummary(ImportSummary) {
+    : Opts(getIPOOptions(M)), M(M), ExportSummary(ExportSummary),
+      ImportSummary(ImportSummary) {
   assert(!(ExportSummary && ImportSummary));
   Triple TargetTriple(M.getTargetTriple());
   Arch = TargetTriple.getArch();
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
   if (Arch == Triple::arm)
     CanUseArmJumpTable = true;
   if (Arch == Triple::arm || Arch == Triple::thumb) {
-    auto &FAM =
-        AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     for (Function &F : M) {
       // Skip declarations since we should not query the TTI for them.
       if (F.isDeclaration())
@@ -2184,15 +2298,19 @@ LowerTypeTestsModule::LowerTypeTestsModule(
 }
 
 bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
+  const IPOOptions &Opts = getIPOOptions(M);
+  StringRef ReadSummary = Opts.lowertypetests_read_summary;
+  StringRef WriteSummary = Opts.lowertypetests_write_summary;
+  PassSummaryAction SummaryAction = Opts.lowertypetests_summary_action;
   std::unique_ptr<ModuleSummaryIndex> Summary;
 
   // Handle the command-line summary arguments. This code is for testing
   // purposes only, so we handle errors directly.
-  if (!ClReadSummary.empty()) {
-    ExitOnError ExitOnErr("-lowertypetests-read-summary: " + ClReadSummary +
-                          ": ");
-    auto ReadSummaryFile = ExitOnErr(errorOrToExpected(
-        MemoryBuffer::getFile(ClReadSummary, /*IsText=*/true)));
+  if (!ReadSummary.empty()) {
+    ExitOnError ExitOnErr(
+        ("-lowertypetests-read-summary: " + ReadSummary + ": ").str());
+    auto ReadSummaryFile = ExitOnErr(
+        errorOrToExpected(MemoryBuffer::getFile(ReadSummary, /*IsText=*/true)));
     // TODO: Convert the rest of tests (some YAML features are missing from
     // textual summary assembly) and remove YAML from this file.
     if (ReadSummaryFile->getBuffer().starts_with("---")) {
@@ -2205,7 +2323,7 @@ bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
       Summary =
           parseSummaryIndexAssembly(ReadSummaryFile->getMemBufferRef(), Err);
       if (!Summary) {
-        Err.print(ClReadSummary.c_str(), errs());
+        Err.print(ReadSummary.str().c_str(), errs());
         report_fatal_error("Failed to parse summary index assembly");
       }
     }
@@ -2216,17 +2334,15 @@ bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
   bool Changed =
       LowerTypeTestsModule(
           M, AM,
-          ClSummaryAction == PassSummaryAction::Export ? Summary.get()
-                                                       : nullptr,
-          ClSummaryAction == PassSummaryAction::Import ? Summary.get()
-                                                       : nullptr)
+          SummaryAction == PassSummaryAction::Export ? Summary.get() : nullptr,
+          SummaryAction == PassSummaryAction::Import ? Summary.get() : nullptr)
           .lower();
 
-  if (!ClWriteSummary.empty()) {
-    ExitOnError ExitOnErr("-lowertypetests-write-summary: " + ClWriteSummary +
-                          ": ");
+  if (!WriteSummary.empty()) {
+    ExitOnError ExitOnErr(
+        ("-lowertypetests-write-summary: " + WriteSummary + ": ").str());
     std::error_code EC;
-    raw_fd_ostream OS(ClWriteSummary, EC, sys::fs::OF_TextWithCRLF);
+    raw_fd_ostream OS(WriteSummary, EC, sys::fs::OF_TextWithCRLF);
     ExitOnErr(errorCodeToError(EC));
 
     yaml::Output Out(OS);
@@ -2281,6 +2397,46 @@ void LowerTypeTestsModule::replaceDirectCalls(Value *Old, Value *New) {
   Old->replaceUsesWithIf(New, isDirectCall);
 }
 
+// Sound wherever the caller has already dropped the type tests: the check
+// folds to true, the trap branch becomes dead, and later passes fold it
+// away. Required because the backend cannot select these intrinsics
+// ("must be lowered by the LowerTypeTests pass before code generation").
+bool lowertypetests::cleanUpTypeCheckedLoad(Module &M, Function &CheckedLoadFn,
+                                            bool IsRelative) {
+  bool Changed = false;
+  for (User *User : llvm::make_early_inc_range(CheckedLoadFn.users())) {
+    Instruction *I = dyn_cast<Instruction>(User);
+    if (!I)
+      continue;
+    IRBuilder<> IRB(I);
+    Value *Ptr = I->getOperand(0);
+    Value *Offset = I->getOperand(1);
+    Type *PtrTy = I->getType()->getStructElementType(0);
+    ConstantInt *True = ConstantInt::getTrue(M.getContext());
+    Instruction *Load;
+    if (IsRelative) {
+      Load = IRB.CreateIntrinsicWithoutFolding(
+          Intrinsic::load_relative, {Offset->getType()}, {Ptr, Offset},
+          /*FMFSource=*/nullptr, "rel_load");
+    } else {
+      Value *PtrAdd = IRB.CreatePtrAddWithSExtOrTrunc(Ptr, Offset);
+      Load = IRB.CreateLoad(PtrTy, PtrAdd, "vfunc");
+    }
+
+    Value *Replacement = PoisonValue::get(I->getType());
+    Replacement = IRB.CreateInsertValue(Replacement, True, {1});
+    Replacement = IRB.CreateInsertValue(Replacement, Load, {0});
+    I->replaceAllUsesWith(Replacement);
+
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": erase " << *I << "\n");
+    I->eraseFromParent();
+    Changed = true;
+  }
+  if (Changed)
+    CheckedLoadFn.eraseFromParent();
+  return Changed;
+}
+
 static void dropTypeTests(Module &M, Function &TypeTestFunc,
                           bool ShouldDropAll) {
   for (Use &U : llvm::make_early_inc_range(TypeTestFunc.uses())) {
@@ -2310,6 +2466,20 @@ static bool dropTypeTests(Module &M, bool ShouldDropAll) {
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
   if (TypeTestFunc)
     dropTypeTests(M, *TypeTestFunc, ShouldDropAll);
+  // Only drop checked loads when dropping everything: in Assume mode a
+  // checked load may feed a CFI trap check, which must keep diagnosing
+  // loudly instead of being turned to true.
+  bool DroppedCheckedLoads = false;
+  if (ShouldDropAll) {
+    if (Function *F =
+            Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_checked_load))
+      DroppedCheckedLoads |=
+          lowertypetests::cleanUpTypeCheckedLoad(M, *F, false);
+    if (Function *F = Intrinsic::getDeclarationIfExists(
+            &M, Intrinsic::type_checked_load_relative))
+      DroppedCheckedLoads |=
+          lowertypetests::cleanUpTypeCheckedLoad(M, *F, true);
+  }
   // Normally we'd have already removed all @llvm.public.type.test calls,
   // except for in the case where we originally were performing ThinLTO but
   // decided not to in the backend.
@@ -2317,7 +2487,7 @@ static bool dropTypeTests(Module &M, bool ShouldDropAll) {
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
   if (PublicTypeTestFunc)
     dropTypeTests(M, *PublicTypeTestFunc, ShouldDropAll);
-  if (TypeTestFunc || PublicTypeTestFunc) {
+  if (TypeTestFunc || PublicTypeTestFunc || DroppedCheckedLoads) {
     // We have deleted the type intrinsics, so we no longer have enough
     // information to reason about the liveness of virtual function pointers
     // in GlobalDCE.
@@ -2356,6 +2526,38 @@ bool LowerTypeTestsModule::lower() {
       report_fatal_error(
           "unexpected call to llvm.icall.branch.funnel during import phase");
 
+    // For internal linkage cfiFunction defs/decls, we only needed the alias
+    // through the linker. We can replace those aliases with the aliased
+    // function here.
+    SmallVector<std::pair<Function *, std::string>> PromotedFuncs;
+    for (auto &A : llvm::make_early_inc_range(M.aliases())) {
+      if (A.hasLocalLinkage())
+        continue;
+      if (ImportSummary->cfiFunctionDefs().contains(A.getName()) ||
+          ImportSummary->cfiFunctionDecls().contains(A.getName())) {
+        if (auto *F = dyn_cast_or_null<Function>(A.getAliaseeObject())) {
+          if (F->hasExternalLinkage()) {
+            // The original internal linkage function was independently promoted
+            // by thinlink. While, pre-link, all static references to it
+            // (implicitly, module-internal) were replaced with references to
+            // the alias, thinlink might decide to promote it because (for
+            // example) it turns out to be a hot indirect call target in a
+            // different module.
+            // In that case, we need to remember its thinlink-promoted name
+            // because it's potentially referenced elsewhere, and make sure
+            // there's an alias to it.
+            PromotedFuncs.emplace_back(F, F->getName());
+          } else {
+            F->setLinkage(GlobalValue::ExternalLinkage);
+            F->setVisibility(GlobalValue::HiddenVisibility);
+          }
+          A.replaceAllUsesWith(F);
+          F->takeName(&A);
+          A.eraseFromParent();
+        }
+      }
+    }
+
     SmallVector<Function *, 8> Defs;
     SmallVector<Function *, 8> Decls;
     for (auto &F : M) {
@@ -2376,6 +2578,9 @@ bool LowerTypeTestsModule::lower() {
       for (auto *F : Decls)
         importFunction(F, /*isJumpTableCanonical*/ false);
     }
+    // Add an alias with the thinlink promotion name.
+    for (auto &[F, Name] : PromotedFuncs)
+      GlobalAlias::create(GlobalValue::LinkageTypes::ExternalLinkage, Name, F);
 
     return true;
   }
@@ -2438,7 +2643,7 @@ bool LowerTypeTestsModule::lower() {
         assert(FuncMD->getNumOperands() >= 2);
         StringRef FunctionName =
             cast<MDString>(FuncMD->getOperand(0))->getString();
-        CfiFunctionLinkage Linkage = static_cast<CfiFunctionLinkage>(
+        CfiFunctionLinkage Linkage = decodeCfiFunctionLinkage(
             cast<ConstantAsMetadata>(FuncMD->getOperand(1))
                 ->getValue()
                 ->getUniqueInteger()
@@ -2540,6 +2745,12 @@ bool LowerTypeTestsModule::lower() {
             F->addMetadata(LLVMContext::MD_type,
                            *cast<MDNode>(FuncMD->getOperand(I).get()));
         }
+        uint8_t Encoded = cast<ConstantAsMetadata>(FuncMD->getOperand(1))
+                              ->getValue()
+                              ->getUniqueInteger()
+                              .getZExtValue();
+        // TODO: Implement for Full LTO.
+        FunctionSummaryHotness[F] = decodeCfiFunctionHotness(Encoded);
       }
     }
   }
@@ -2556,10 +2767,7 @@ bool LowerTypeTestsModule::lower() {
     if (NamedMDNode *AliasesMD = M.getNamedMetadata("aliases")) {
       for (auto *AliasMD : AliasesMD->operands()) {
         SmallVector<Function *> Aliases;
-        for (Metadata *MD : AliasMD->operands()) {
-          auto *MDS = dyn_cast<MDString>(MD);
-          if (!MDS)
-            continue;
+        for (MDString *MDS : make_isa_range<MDString>(AliasMD->operands())) {
           StringRef AliasName = MDS->getString();
           if (!ExportedFunctions.count(AliasName))
             continue;
@@ -2606,6 +2814,10 @@ bool LowerTypeTestsModule::lower() {
         if (!CrossDsoCfi || !IsJumpTableCanonical || F->hasLocalLinkage())
           continue;
       }
+
+      // TODO: Pre-fill for full LTO.
+      // if (!ExportSummary)
+      //   FunctionSummaryHotness[F] = getHotness(*F, PSI, BFIGetter);
     }
 
     auto *GTM = GlobalTypeMember::create(Alloc, &GO, IsJumpTableCanonical,

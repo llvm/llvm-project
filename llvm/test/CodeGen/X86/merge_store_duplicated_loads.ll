@@ -15,17 +15,17 @@ define void @merge_double(ptr noalias nocapture %st, ptr noalias nocapture reado
 ; CHECK-NEXT:    movsd %xmm1, 24(%rdi)
 ; CHECK-NEXT:    retq
   %ld_idx1 = getelementptr inbounds double, ptr %ld, i64 1
-  %ld0 = load double, ptr %ld, align 8, !tbaa !2
-  %ld1 = load double, ptr %ld_idx1, align 8, !tbaa !2
+  %ld0 = load double, ptr %ld, align 8, !tbaa !5
+  %ld1 = load double, ptr %ld_idx1, align 8, !tbaa !5
 
   %st_idx1 = getelementptr inbounds double, ptr %st, i64 1
   %st_idx2 = getelementptr inbounds double, ptr %st, i64 2
   %st_idx3 = getelementptr inbounds double, ptr %st, i64 3
 
-  store double %ld0, ptr %st, align 8, !tbaa !2
-  store double %ld1, ptr %st_idx1, align 8, !tbaa !2
-  store double %ld0, ptr %st_idx2, align 8, !tbaa !2
-  store double %ld1, ptr %st_idx3, align 8, !tbaa !2
+  store double %ld0, ptr %st, align 8, !tbaa !5
+  store double %ld1, ptr %st_idx1, align 8, !tbaa !5
+  store double %ld0, ptr %st_idx2, align 8, !tbaa !5
+  store double %ld1, ptr %st_idx3, align 8, !tbaa !5
   ret void
 }
 
@@ -86,3 +86,5 @@ attributes #0 = { "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2
 !2 = !{!"double", !3, i64 0}
 !3 = !{!"omnipotent char", !4, i64 0}
 !4 = !{!"Simple C/C++ TBAA"}
+!6 = !{!"double", !3}
+!5 = !{!6, !6, i64 0, i64 0}

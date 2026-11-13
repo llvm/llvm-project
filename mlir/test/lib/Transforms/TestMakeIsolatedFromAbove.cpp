@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestDialect.h"
-#include "TestOps.h"
+#include "TestOpsCore.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -41,7 +40,7 @@ namespace {
 /// operations.
 struct SimpleMakeIsolatedFromAbove
     : OpRewritePattern<test::OneRegionWithOperandsOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(test::OneRegionWithOperandsOp regionOp,
                                 PatternRewriter &rewriter) const override {
@@ -54,7 +53,7 @@ struct SimpleMakeIsolatedFromAbove
 /// with no operands.
 struct MakeIsolatedFromAboveAndCloneOpsWithNoOperands
     : OpRewritePattern<test::OneRegionWithOperandsOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(test::OneRegionWithOperandsOp regionOp,
                                 PatternRewriter &rewriter) const override {
@@ -68,7 +67,7 @@ struct MakeIsolatedFromAboveAndCloneOpsWithNoOperands
 /// with no operands.
 struct MakeIsolatedFromAboveAndCloneOpsWithOperands
     : OpRewritePattern<test::OneRegionWithOperandsOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(test::OneRegionWithOperandsOp regionOp,
                                 PatternRewriter &rewriter) const override {

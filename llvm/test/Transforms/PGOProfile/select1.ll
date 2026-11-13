@@ -29,3 +29,12 @@ if.end:
   %retv = phi i32 [ %add, %if.then ], [ %sub, %if.else ]
   ret i32 %retv
 }
+
+define i32 @test_select_maybe_poison(i1 %cmp) {
+; GEN: %[[FREEZE:[0-9]+]] = freeze i1 %cmp
+; GEN: %[[STEP:[0-9]+]] = zext i1 %[[FREEZE]] to i64
+; GEN: call void @llvm.instrprof.increment.step({{.*}} i32 2, i32 1, i64 %[[STEP]])
+; NOSELECT-NOT: call void @llvm.instrprof.increment.step
+  %s = select i1 %cmp, i32 1, i32 2
+  ret i32 %s
+}

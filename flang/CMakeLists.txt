@@ -262,7 +262,7 @@ else()
   endif()
 
   set(MLIR_INCLUDE_DIRS ${MLIR_MAIN_SRC_DIR}/include ) # --includedir
-  set(MLIR_TABLEGEN_OUTPUT_DIR ${CMAKE_BINARY_DIR}/tools/mlir/include)
+  set(MLIR_TABLEGEN_OUTPUT_DIR ${LLVM_BINARY_DIR}/tools/mlir/include)
   include_directories(SYSTEM ${MLIR_INCLUDE_DIRS})
   include_directories(SYSTEM ${MLIR_TABLEGEN_OUTPUT_DIR})
 endif()
@@ -301,6 +301,7 @@ endif()
 set(LLVM_BUILD_TOOLS ON)
 
 include_directories(BEFORE
+  ${FLANG_BINARY_DIR}/include/object-sizes/$<CONFIG>
   ${FLANG_BINARY_DIR}/include
   ${FLANG_SOURCE_DIR}/include)
 
@@ -497,6 +498,9 @@ if (FLANG_INCLUDE_TESTS)
   add_compile_definitions(FLANG_INCLUDE_TESTS=1)
 endif()
 
+add_custom_target(flang-headers)
+set_target_properties(flang-headers PROPERTIES FOLDER "Flang/Meta")
+
 add_subdirectory(include)
 add_subdirectory(lib)
 
@@ -550,6 +554,7 @@ endif()
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   add_llvm_install_targets(install-flang-headers
+    DEPENDS flang-headers
     COMPONENT flang-headers)
 
   install(DIRECTORY include/flang

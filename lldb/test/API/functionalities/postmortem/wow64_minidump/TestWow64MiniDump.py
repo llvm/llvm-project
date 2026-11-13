@@ -65,3 +65,30 @@ class Wow64MiniDumpTestCase(TestBase):
         eip = frame.FindRegister("pc")
         self.assertTrue(eip.IsValid())
         self.assertEqual(pc, eip.GetValueAsUnsigned())
+
+    @skipIfLLVMTargetMissing("X86")
+    def test_load_image_error_replayed_on_wow64_mini_dump(self):
+        """Test that Process::LoadImage reports a real error, not an empty
+        one, on every call, when debugging a minidump."""
+        self.runCmd("platform select remote-windows")
+        target = self.dbg.CreateTarget("")
+        process = target.LoadCore("fizzbuzz_wow64.dmp")
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        nonexistent = lldb.SBFileSpec(
+            r"Z:\NoSuchDir\NoSuchSubdir\not-a-real-library.dll", False
+        )
+
+        messages = []
+        for _ in range(2):
+            error = lldb.SBError()
+            token = process.LoadImage(nonexistent, error)
+            self.assertEqual(token, lldb.LLDB_INVALID_IMAGE_TOKEN)
+            self.assertTrue(error.Fail())
+            message = error.GetCString()
+            self.assertIsNotNone(message)
+            self.assertNotEqual(message, "")
+            self.assertNotIn("(null)", message)
+            messages.append(message)
+
+        self.assertEqual(messages[0], messages[1])

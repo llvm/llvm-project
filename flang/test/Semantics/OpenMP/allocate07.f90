@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp-version=50
 ! OpenMP Version 5.0
 ! 2.11.3 allocate Directive
 ! A type parameter inquiry cannot appear in an allocate directive.

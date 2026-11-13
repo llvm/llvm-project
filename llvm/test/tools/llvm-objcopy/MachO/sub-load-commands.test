@@ -7,6 +7,7 @@
 # RUN: llvm-objdump --macho --private-headers %t2 | FileCheck %s
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:      0xFEEDFACF
   cputype:    0x01000007

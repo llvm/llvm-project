@@ -17,6 +17,7 @@
 
 ; RUN: llc -filetype=obj -mtriple=amdgpu12.50 < %s | llvm-readobj --file-header - | FileCheck --check-prefix=SRAM-ECC-GFX1250 %s
 ; RUN: llc -filetype=obj -mtriple=amdgpu12.50 -amdgpu-sramecc=1 < %s | llvm-readobj --file-header - | FileCheck --check-prefix=SRAM-ECC-GFX1250 %s
+; RUN: llc -filetype=obj -mtriple=amdgpu12.50-amd-amdhsa -amdgpu-sramecc=0 < %s | llvm-readobj --file-header - | FileCheck --check-prefix=HSA-GFX1250 %s
 
 ; RUN: llc -filetype=obj -mtriple=amdgpu12.51 < %s | llvm-readobj --file-header - | FileCheck --check-prefix=SRAM-ECC-GFX1251 %s
 ; RUN: llc -filetype=obj -mtriple=amdgpu12.51 -amdgpu-sramecc=1 < %s | llvm-readobj --file-header - | FileCheck --check-prefix=SRAM-ECC-GFX1251 %s
@@ -65,6 +66,12 @@
 ; SRAM-ECC-GFX1250:    EF_AMDGPU_FEATURE_SRAMECC_V3 (0x200)
 ; SRAM-ECC-GFX1250:    EF_AMDGPU_MACH_AMDGCN_GFX1250 (0x49)
 ; SRAM-ECC-GFX1250:  ]
+
+; Hardwired-on SRAMECC is not an ELF mode; -amdgpu-sramecc=0 is ignored.
+; HSA-GFX1250:      Flags [
+; HSA-GFX1250-NEXT:   EF_AMDGPU_FEATURE_XNACK_ANY_V4 (0x100)
+; HSA-GFX1250-NEXT:   EF_AMDGPU_MACH_AMDGCN_GFX1250 (0x49)
+; HSA-GFX1250-NEXT: ]
 
 ; SRAM-ECC-GFX1251: Flags [
 ; SRAM-ECC-GFX1251:    EF_AMDGPU_FEATURE_SRAMECC_V3 (0x200)

@@ -317,7 +317,6 @@ public:
   augmentOneCycle(GCOVBlock *src,
                   std::vector<std::pair<GCOVBlock *, size_t>> &stack);
   LLVM_ABI static uint64_t getCyclesCount(const BlockVector &blocks);
-  LLVM_ABI static uint64_t getLineCount(const BlockVector &Blocks);
 
 public:
   uint32_t number;

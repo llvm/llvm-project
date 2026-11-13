@@ -702,6 +702,10 @@ struct DropPadUnitDims : public OpRewritePattern<tensor::PadOp> {
       return rewriter.notifyMatchFailure(padOp, "Failed to collapse source");
     }
 
+    // Clone the padding value if it is defined in the region of the pad op.
+    if (paddingVal.getParentBlock() == &padOp.getRegion().front())
+      paddingVal = rewriter.clone(*paddingVal.getDefiningOp())->getResult(0);
+
     auto newResultType = RankedTensorType::get(
         newResultShape, padOp.getResultType().getElementType());
     auto newPadOp = tensor::PadOp::create(
@@ -962,6 +966,14 @@ struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
     if (contractionOp.hasUserDefinedMaps()) {
       return rewriter.notifyMatchFailure(
           contractionOp, "ops with user-defined maps are not supported");
+    }
+    // linalg.matmul is the only target op with a `cast` attribute.
+    if constexpr ((std::is_same_v<FromOpTy, MatmulOp> ||
+                   std::is_same_v<FromOpTy, BatchMatmulOp>) &&
+                  !std::is_same_v<ToOpTy, MatmulOp>) {
+      if (contractionOp.getCast() != TypeFn::cast_signed)
+        return rewriter.notifyMatchFailure(
+            contractionOp, "target op cannot represent a non-signed cast");
     }
 
     auto loc = contractionOp.getLoc();

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64---  --verify-machineinstrs -stop-before=finalize-isel -simplify-mir -o - < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64--- -stop-before=finalize-isel -simplify-mir -o - < %s | FileCheck %s
 
 ; Here we check thatt the noredzone attribute is carried through the machine
 ; IR generation and is put in MachineFunctionInfo

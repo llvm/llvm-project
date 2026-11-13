@@ -84,6 +84,10 @@ private:
   static RASignStatus getReturnAddressSignStatus(A &addressSpace, R registers,
                                                  pint_t cfa,
                                                  PrologInfo &prolog);
+
+  __attribute__((target("pauth-lr"))) static pint_t
+  nonHintLRAuthentication(pint_t ptrAuthDiv, pint_t cfa, pint_t returnAddr,
+                          bool BKey);
 #endif
 };
 
@@ -203,6 +207,21 @@ DwarfInstructions<A, R>::getReturnAddressSignStatus(A &addressSpace,
   // bits[1:0] describe how RA is signed.
   assert((raSignState & 0x3) != 3 && "unexpected RA sign state");
   return static_cast<RASignStatus>(raSignState & 0x3);
+}
+
+template <typename A, typename R>
+__attribute__((target("pauth-lr"))) typename A::pint_t
+DwarfInstructions<A, R>::nonHintLRAuthentication(pint_t ptrAuthDiv, pint_t cfa,
+                                                 pint_t returnAddr, bool BKey) {
+  register unsigned long long x15 __asm("x15") = ptrAuthDiv;
+  register unsigned long long x16 __asm("x16") = cfa;
+  register unsigned long long x17 __asm("x17") = returnAddr;
+  if (BKey)
+    asm("autib171615" : "+r"(x17) : "r"(x16), "r"(x15));
+  else
+    asm("autia171615" : "+r"(x17) : "r"(x16), "r"(x15));
+
+  return x17;
 }
 #endif
 
@@ -343,18 +362,27 @@ int DwarfInstructions<A, R>::stepWithDwarf(
         if (RAState == RASignedWithPC) {
           register unsigned long long x15 __asm("x15") =
               prolog.ptrAuthDiversifier;
-          if (cieInfo.addressesSignedWithBKey) {
-            asm("hint 0x27\n\t" // pacm
-                "hint 0xe"
-                : "+r"(x17)
-                : "r"(x16), "r"(x15)); // autib1716
-          } else {
-            asm("hint 0x27\n\t" // pacm
-                "hint 0xc"
-                : "+r"(x17)
-                : "r"(x16), "r"(x15)); // autia1716
+          if (cieInfo.nonHintPAuthFrame)
+            x17 = nonHintLRAuthentication(prolog.ptrAuthDiversifier, cfa,
+                                          returnAddress,
+                                          cieInfo.addressesSignedWithBKey);
+          else {
+            if (cieInfo.addressesSignedWithBKey) {
+              asm("hint 0x27\n\t" // pacm
+                  "hint 0xe"
+                  : "+r"(x17)
+                  : "r"(x16), "r"(x15)); // autib1716
+            } else {
+              asm("hint 0x27\n\t" // pacm
+                  "hint 0xc"
+                  : "+r"(x17)
+                  : "r"(x16), "r"(x15)); // autia1716
+            }
           }
         } else {
+          assert(!cieInfo.nonHintPAuthFrame &&
+                 "Non-hint space FEAT_PAuth_LR instructions expect"
+                 "RASignedWithPC");
           if (cieInfo.addressesSignedWithBKey)
             asm("hint 0xe" : "+r"(x17) : "r"(x16)); // autib1716
           else

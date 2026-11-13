@@ -68,7 +68,7 @@ static uint32_t getFunctionControl(const Function &F,
 
   uint32_t FuncControl = static_cast<uint32_t>(SPIRV::FunctionControl::None);
 
-  if (F.hasFnAttribute(Attribute::AttrKind::NoInline))
+  if (F.isNoInline())
     FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::DontInline);
   else if (F.hasFnAttribute(Attribute::AttrKind::AlwaysInline))
     FuncControl |= static_cast<uint32_t>(SPIRV::FunctionControl::Inline);
@@ -205,6 +205,13 @@ static SPIRVTypeInst getArgSPIRVType(const Function &F, unsigned ArgIdx,
             cast<ConstantInt>(II->getOperand(2))->getZExtValue(), ST));
   }
 
+  // Use the recorded pointee type for declarations.
+  if (F.isDeclaration())
+    if (Type *ElemTy = GR->findDeducedElementType(Arg))
+      return GR->getOrCreateSPIRVPointerType(
+          ElemTy, MIRBuilder,
+          addressSpaceToStorageClass(getPointerAddressSpace(ArgType), ST));
+
   // Replace PointerType with TypedPointerType to be able to map SPIR-V types to
   // LLVM types in a consistent manner
   return GR->getOrCreateSPIRVType(toTypedPointer(OriginalArgType), MIRBuilder,
@@ -264,11 +271,14 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       GR->assignSPIRVTypeToVReg(SpirvTy, VRegs[i][0], MIRBuilder.getMF());
       ArgTypeVRegs.push_back(SpirvTy);
 
-      if (Arg.hasName())
-        buildOpName(VRegs[i][0], Arg.getName(), MIRBuilder);
-      if (isPointerTyOrWrapper(Arg.getType())) {
+      StringRef ArgName = Arg.getName();
+      if (F.getCallingConv() == CallingConv::SPIR_KERNEL)
+        if (MDString *MDName = getOCLKernelArgName(F, i))
+          ArgName = MDName->getString();
+      buildOpName(VRegs[i][0], ArgName, MIRBuilder);
+      if (isPointerTyOrWrapper(Arg.getType()) && !ST->isShader()) {
         auto DerefBytes = static_cast<unsigned>(Arg.getDereferenceableBytes());
-        if (DerefBytes != 0)
+        if (DerefBytes != 0 && ST->isAtLeastSPIRVVer(VersionTuple(1, 1)))
           buildOpDecorate(VRegs[i][0], MIRBuilder,
                           SPIRV::Decoration::MaxByteOffset, {DerefBytes});
       }
@@ -278,7 +288,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
         buildOpDecorate(VRegs[i][0], MIRBuilder, SPIRV::Decoration::Alignment,
                         {Alignment});
       }
-      if (!ST->isShader()) {
+      if (ST->isKernel()) {
         if (Arg.hasAttribute(Attribute::ReadOnly)) {
           auto Attr =
               static_cast<unsigned>(SPIRV::FunctionParameterAttribute::NoWrite);
@@ -309,6 +319,12 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
           buildOpDecorate(VRegs[i][0], MIRBuilder,
                           SPIRV::Decoration::FuncParamAttr, {Attr});
         }
+        if (Arg.hasNoCaptureAttr()) {
+          auto Attr = static_cast<unsigned>(
+              SPIRV::FunctionParameterAttribute::NoCapture);
+          buildOpDecorate(VRegs[i][0], MIRBuilder,
+                          SPIRV::Decoration::FuncParamAttr, {Attr});
+        }
         // TODO: the AMDGPU BE only supports ByRef argument passing, thus for
         //       AMDGCN flavoured SPIRV we CodeGen for ByRef, but lower it to
         //       ByVal, handling the impedance mismatch during reverse
@@ -333,24 +349,9 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
       MDNode *Node = F.getMetadata("spirv.ParameterDecorations");
       if (Node && i < Node->getNumOperands() &&
-          isa<MDNode>(Node->getOperand(i))) {
-        MDNode *MD = cast<MDNode>(Node->getOperand(i));
-        for (const MDOperand &MDOp : MD->operands()) {
-          MDNode *MD2 = dyn_cast<MDNode>(MDOp);
-          assert(MD2 && "Metadata operand is expected");
-          ConstantInt *Const = getMDOperandAsConstInt(MD2, 0);
-          assert(Const && "MDOperand should be ConstantInt");
-          auto Dec =
-              static_cast<SPIRV::Decoration::Decoration>(Const->getZExtValue());
-          std::vector<uint32_t> DecVec;
-          for (unsigned j = 1; j < MD2->getNumOperands(); j++) {
-            ConstantInt *Const = getMDOperandAsConstInt(MD2, j);
-            assert(Const && "MDOperand should be ConstantInt");
-            DecVec.push_back(static_cast<uint32_t>(Const->getZExtValue()));
-          }
-          buildOpDecorate(VRegs[i][0], MIRBuilder, Dec, DecVec);
-        }
-      }
+          isa<MDNode>(Node->getOperand(i)))
+        buildOpSpirvDecorations(VRegs[i][0], MIRBuilder,
+                                cast<MDNode>(Node->getOperand(i)), *ST);
       ++i;
     }
   }
@@ -400,6 +401,21 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     GR->addGlobalObject(&Arg, &MIRBuilder.getMF(), ArgReg);
     i++;
   }
+  if (!ST->isShader()) {
+    if (F.hasRetAttribute(Attribute::ZExt)) {
+      auto Attr =
+          static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Zext);
+      buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::FuncParamAttr,
+                      {Attr});
+    }
+    if (F.hasRetAttribute(Attribute::SExt)) {
+      auto Attr =
+          static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Sext);
+      buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::FuncParamAttr,
+                      {Attr});
+    }
+  }
+
   // Name the function.
   if (F.hasName())
     buildOpName(FuncVReg, F.getName(), MIRBuilder);
@@ -430,6 +446,9 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                       SPIRV::Decoration::ReferencedIndirectlyINTEL, {});
     }
   }
+
+  if (MDNode *FuncMD = F.getMetadata("spirv.Decorations"))
+    buildOpSpirvDecorations(FuncVReg, MIRBuilder, FuncMD, *ST);
 
   return true;
 }
@@ -605,6 +624,7 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
           .isValid()) {
     // insert a no-op
     MIRBuilder.buildTrap();
+    Info.LoweredTailCall = true; // Do not emit an ill-formed G_ASSERT_ALIGN.
     return true;
   }
 
@@ -649,6 +669,8 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                  .addDef(ResVReg)
                  .addUse(GR->getSPIRVTypeID(RetType))
                  .add(Info.Callee);
+  if (Info.NoMerge)
+    MIB.setMIFlag(MachineInstr::MIFlag::NoMerge);
 
   for (const auto &Arg : Info.OrigArgs) {
     // Currently call args should have single vregs.

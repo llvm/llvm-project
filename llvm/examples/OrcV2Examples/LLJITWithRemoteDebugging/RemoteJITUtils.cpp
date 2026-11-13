@@ -26,10 +26,10 @@
 using namespace llvm;
 using namespace llvm::orc;
 
-Expected<std::unique_ptr<DefinitionGenerator>>
-loadDylib(ExecutionSession &ES, DylibManager &DylibMgr, StringRef RemotePath) {
+Expected<std::unique_ptr<DefinitionGenerator>> loadDylib(DylibManager &DylibMgr,
+                                                         StringRef RemotePath) {
   if (auto Handle = DylibMgr.loadDylib(RemotePath.data()))
-    return std::make_unique<EPCDynamicLibrarySearchGenerator>(ES, DylibMgr,
+    return std::make_unique<EPCDynamicLibrarySearchGenerator>(DylibMgr,
                                                               *Handle);
   else
     return Handle.takeError();
@@ -89,7 +89,8 @@ launchLocalExecutor(StringRef ExecutablePath) {
 
     std::string ExecPath = ExecutablePath.str();
     std::string TestOutputFlag = "test-jitloadergdb";
-    std::string ConnSpec = "fd=" + std::to_string(Sockets[ChildSocket]);
+    std::string ConnSpec =
+        "socket:adopt=" + std::to_string(Sockets[ChildSocket]);
     char *const Args[] = {ExecPath.data(), TestOutputFlag.data(),
                           ConnSpec.data(), nullptr};
     int RC = execvp(ExecutablePath.data(), Args);

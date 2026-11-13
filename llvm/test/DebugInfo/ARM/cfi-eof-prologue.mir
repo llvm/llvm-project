@@ -1,5 +1,5 @@
-# RUN: llc -o - %s -mtriple=thumbv7-apple-ios -start-before=livedebugvalues | FileCheck %s
-# RUN: llc -o - %s -mtriple=thumbv6-apple-ios -start-before=livedebugvalues | FileCheck %s
+# RUN: llc -o - %s -mtriple=thumbv7-apple-ios -start-before=live-debug-values | FileCheck %s
+# RUN: llc -o - %s -mtriple=thumbv6-apple-ios -start-before=live-debug-values | FileCheck %s
 
 # struct A {
 #   A();
@@ -139,7 +139,6 @@
 ---
 name:            _ZN1BC2Ev
 alignment:       2
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0' }
 frameInfo:
@@ -178,7 +177,6 @@ body:             |
 ---
 name:            _ZN1BC1Ev
 alignment:       2
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0' }
 frameInfo:

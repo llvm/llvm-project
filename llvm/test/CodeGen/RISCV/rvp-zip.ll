@@ -34,6 +34,48 @@ define <4 x i16> @test_pzip_v4i16(<2 x i16> %a, <2 x i16> %b) {
   ret <4 x i16> %r
 }
 
+define <8 x i8> @test_zip8hp_v8i8(<8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: test_zip8hp_v8i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srli a0, a3, 24
+; RV32-NEXT:    srli a2, a1, 24
+; RV32-NEXT:    srli a4, a3, 16
+; RV32-NEXT:    srli a5, a1, 16
+; RV32-NEXT:    ppaire.b a0, a2, a0
+; RV32-NEXT:    ppaire.b a2, a5, a4
+; RV32-NEXT:    srli a4, a3, 8
+; RV32-NEXT:    srli a5, a1, 8
+; RV32-NEXT:    ppaire.b a3, a1, a3
+; RV32-NEXT:    ppaire.b a4, a5, a4
+; RV32-NEXT:    pack a1, a2, a0
+; RV32-NEXT:    pack a0, a3, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_zip8hp_v8i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zip8hp a0, a0, a1
+; RV64-NEXT:    ret
+  %r = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+  ret <8 x i8> %r
+}
+
+define <4 x i16> @test_zip16hp_v4i16(<4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_zip16hp_v4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srli a2, a3, 16
+; RV32-NEXT:    srli a4, a1, 16
+; RV32-NEXT:    pack a0, a1, a3
+; RV32-NEXT:    pack a1, a4, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_zip16hp_v4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zip16hp a0, a0, a1
+; RV64-NEXT:    ret
+  %r = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
+  ret <4 x i16> %r
+}
+
 define <4 x i8> @test_punzipe_v4i8(<8 x i8> %a) {
 ; RV32-LABEL: test_punzipe_v4i8:
 ; RV32:       # %bb.0:
@@ -65,7 +107,7 @@ define <4 x i8> @test_punzipo_v4i8(<8 x i8> %a) {
 define <2 x i16> @test_punzipe_v2i16(<4 x i16> %a) {
 ; RV32-LABEL: test_punzipe_v2i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pncvt.h a0, a0
+; RV32-NEXT:    pack a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_punzipe_v2i16:
@@ -79,7 +121,7 @@ define <2 x i16> @test_punzipe_v2i16(<4 x i16> %a) {
 define <2 x i16> @test_punzipo_v2i16(<4 x i16> %a) {
 ; RV32-LABEL: test_punzipo_v2i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pncvth.h a0, a0
+; RV32-NEXT:    ppairo.h a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_punzipo_v2i16:
@@ -181,10 +223,9 @@ define <8 x i8> @test_unzip8p_v8i8_partial_poison(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-NEXT:    srli a4, a2, 16
 ; RV32-NEXT:    ppaire.b a2, a2, a4
 ; RV32-NEXT:    srli a3, a3, 16
-; RV32-NEXT:    ppaire.b a3, a0, a3
 ; RV32-NEXT:    srli a4, a1, 16
+; RV32-NEXT:    ppaire.b a3, a0, a3
 ; RV32-NEXT:    ppaire.b a4, a1, a4
-; RV32-NEXT:    ppaire.b a0, a0, a0
 ; RV32-NEXT:    pack a1, a2, a3
 ; RV32-NEXT:    pack a0, a0, a4
 ; RV32-NEXT:    ret
@@ -204,7 +245,6 @@ define <8 x i8> @test_unzip8hp_v8i8_partial_poison(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-NEXT:    srli a2, a2, 8
 ; RV32-NEXT:    ppaire.b a2, a2, a4
 ; RV32-NEXT:    srli a3, a3, 8
-; RV32-NEXT:    ppaire.b a3, a3, a0
 ; RV32-NEXT:    srli a4, a0, 24
 ; RV32-NEXT:    srli a0, a0, 8
 ; RV32-NEXT:    srli a1, a1, 24
@@ -226,7 +266,6 @@ define <4 x i16> @test_unzip16p_v4i16_partial_poison(<4 x i16> %a, <4 x i16> %b)
 ; RV32-LABEL: test_unzip16p_v4i16_partial_poison:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    pack a1, a2, a3
-; RV32-NEXT:    pack a0, a0, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_unzip16p_v4i16_partial_poison:
@@ -290,7 +329,7 @@ define i32 @test_punzipo_v4i8_coerce(i64 %a.coerce) {
 define i32 @test_punzipe_v2i16_coerce(i64 %a.coerce) {
 ; RV32-LABEL: test_punzipe_v2i16_coerce:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pncvt.h a0, a0
+; RV32-NEXT:    pack a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_punzipe_v2i16_coerce:
@@ -306,7 +345,7 @@ define i32 @test_punzipe_v2i16_coerce(i64 %a.coerce) {
 define i32 @test_punzipo_v2i16_coerce(i64 %a.coerce) {
 ; RV32-LABEL: test_punzipo_v2i16_coerce:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pncvth.h a0, a0
+; RV32-NEXT:    ppairo.h a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_punzipo_v2i16_coerce:

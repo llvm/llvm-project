@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin9 -target-cpu corei7-avx -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-apple-darwin9 -target-cpu corei7-avx -emit-llvm %s -o - | FileCheck %s %}
 // RUN: %clang_cc1 -triple x86_64-apple-darwin9 -target-cpu corei7-avx -emit-llvm -x c++ %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-apple-darwin9 -target-cpu corei7-avx -emit-llvm -x c++ %s -o - | FileCheck %s %}
 
 typedef double vector8double __attribute__((__vector_size__(64)));
 typedef float  vector8float  __attribute__((__vector_size__(32)));

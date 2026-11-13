@@ -147,6 +147,36 @@ auto JIT = LLLazyJITBuilder()
 For users wanting to get started with LLJIT a minimal example program can be
 found at `llvm/examples/HowToUseLLJIT`.
 
+By default LLJIT allocates each linked object independently, so two objects that
+belong to the same JITDylib are not guaranteed to land within range of one
+another in the executor's address space. This matters under a small code model:
+the compiler emits direct, range-limited relocations for references within a
+program (such as the x86-64 REL32 relocation, which only reaches +/-2GB), so
+when a referenced object is allocated too far away JITLink has to route the
+reference through a stub instead. (References that cross JITDylibs or bind to
+external libraries are resolved indirectly regardless, so they are unaffected.)
+
+The `setColocatingSlabAllocator` builder option opts in to a slab-based memory
+manager that reserves a large region of address space per JITDylib and
+sub-allocates that JITDylib's objects from it, keeping them close enough to stay
+within range of one another:
+
+```c++
+// Use an in-process, per-JITDylib colocating slab allocator.
+auto JIT = LLJITBuilder()
+             .setColocatingSlabAllocator()
+             .create();
+```
+
+This option only affects the JITLink linking path. Targets that still default to
+RuntimeDyld (e.g. COFF today) are unaffected unless JITLink is also enabled (for
+example via `setObjectLinkingLayerCreator`).
+
+By default each JITDylib is restricted to a single slab, so an allocation that
+does not fit is rejected rather than silently spilling into another, possibly
+out-of-range, slab. A custom growth policy can be supplied as a second argument
+to `setColocatingSlabAllocator`.
+
 ## Design Overview
 
 ORC's JIT program model aims to emulate the linking and symbol resolution
@@ -768,6 +798,102 @@ for (const auto &IRPath : IRPaths) {
   CompileLayer.add(MainJD, ThreadSafeModule(std::move(TSM));
 }
 ```
+
+(CallingExecutorFunctions)=
+
+### How to call functions in the executor
+
+JIT'd code runs in an *executor* process, which may or may not be the same
+process as the JIT itself (the *controller*). The controller calls into the
+executor through *wrapper functions*: executor-side functions that take a
+serialized argument buffer and return a serialized result. ORC provides three
+pieces for making these calls:
+
+* A **controller-interface (CI) descriptor** is the contract between the two
+  sides. It is a struct naming the wrapper function (a `SymbolNameSpec`, which
+  records the name's mangling kind so that ORC can mangle it for the target)
+  and giving its Simple Packed Serialization (SPS) wire signature. The
+  descriptors for ORC's own services live in
+  `llvm/ExecutionEngine/Orc/Shared/SPSCI/`.
+* A **`Proxy<RetT(ArgTs...)>`** (`Proxy.h`) is a typed, protocol-agnostic
+  handle to one executor-side operation: a callee address plus a dispatch
+  function. Its call operator takes an `ExecutionSession` and the C++
+  arguments. Dispatch failures and the callee's own errors are reported on a
+  single channel: callees returning `void` or `Error` yield an `Error`, and
+  callees returning `T` or `Expected<T>` yield an `Expected<T>`.
+* An **`sps::ProxySpec<CI>`** (`SPSProxySpec.h`) implements proxy dispatch for
+  a CI descriptor. Its `dispatch` function serializes the arguments using
+  `CI::SPSSig`, calls the wrapper, and deserializes the result. It can be used
+  with any proxy whose argument and result types are serializable with that
+  signature.
+
+For example, given an executor-side wrapper named `my_add_wrapper`:
+
+```c++
+// The contract: the wrapper's name and wire signature.
+struct AddCI {
+  static constexpr SymbolNameSpec Name = SymbolNameSpec::c("my_add_wrapper");
+  using SPSSig = int32_t(int32_t, int32_t);
+};
+
+// The controller-side handle, and its SPS binding.
+using AddProxy = Proxy<int32_t(int32_t, int32_t)>;
+using AddProxySpec = sps::ProxySpec<AddCI>;
+```
+
+Proxies are usually resolved with `lookupAndApply` (`LookupAndApply.h`) and
+`recordProxy` (`RecordProxy.h`), which look up the spec's name (mangled for the
+target) and construct the proxy over the resulting address:
+
+```c++
+AddProxy Add;
+if (auto Err = lookupAndApply(JD, {recordProxy<AddProxySpec>(&Add)}))
+  return Err;
+```
+
+All of the entries in a `lookupAndApply` list are resolved by a single lookup,
+so a service's proxies can be bound together with any data symbols it needs
+(use `recordAddr` for those). Passing
+`SymbolLookupFlags::WeaklyReferencedSymbol` leaves the proxy null (see
+`Proxy::operator bool`) if the symbol is absent, and passing a name as the
+second argument to `recordProxy` binds the same spec to a different
+implementation. If you already have the wrapper's address, construct the proxy
+directly: `AddProxy Add(AddProxySpec::dispatch, AddAddr);`.
+
+Proxies can be called synchronously or asynchronously:
+
+```c++
+// Blocking:
+Expected<int32_t> Sum = Add(ES, 1, 2);
+
+// Asynchronous:
+Add([](Expected<int32_t> Sum) { /* ... */ }, ES, 1, 2);
+```
+
+A blocking call blocks a controller thread, so prefer the asynchronous form
+where possible.
+
+`Proxy` supersedes the `callSPSWrapper` and `callSPSWrapperAsync` methods of
+`ExecutionSession` and `ExecutorProcessControl`. To migrate a call such as:
+
+```c++
+int32_t Sum;
+if (auto Err = ES.callSPSWrapper<int32_t(int32_t, int32_t)>(AddAddr, Sum, 1, 2))
+  return Err;
+```
+
+define a CI descriptor and proxy as above, then write:
+
+```c++
+AddProxy Add(AddProxySpec::dispatch, AddAddr);
+Expected<int32_t> Sum = Add(ES, 1, 2);
+```
+
+Asynchronous callbacks that took a serialization `Error` and the callee's
+result as separate arguments now take the single `Error` or `Expected<T>`
+described above. `CallProxies.h` and `CallProxiesSPS.h` are small in-tree
+examples of named proxies and their specs, and `SimpleMemoryMap.h` and
+`SimpleMemoryMapSPS.h` show how to bundle a service's proxies into a handle.
 
 (ProcessAndLibrarySymbols)=
 

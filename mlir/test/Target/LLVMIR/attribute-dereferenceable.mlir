@@ -20,5 +20,14 @@ llvm.func @deref_or_null(%arg0: i64, %arg1: !llvm.ptr) {
   llvm.return
 }
 
+// Dereferenceable metadata is dropped if the cast is folded.
+llvm.func @deref_folded_away() -> !llvm.ptr {
+  // CHECK: define ptr @deref_folded_away()
+  // CHECK-NEXT: ret ptr inttoptr (i64 64 to ptr)
+  %0 = llvm.mlir.constant(64 : i64) : i64
+  %1 = llvm.inttoptr %0 dereferenceable<bytes = 4> : i64 to !llvm.ptr
+  llvm.return %1 : !llvm.ptr
+}
+
 // CHECK: [[D0]] = !{i64 4}
 // CHECK: [[D1]] = !{i64 8}

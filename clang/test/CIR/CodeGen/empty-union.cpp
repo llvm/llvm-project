@@ -34,7 +34,7 @@ struct WrapEmpty {
 WrapEmpty w;
 // CIR-DAG: !rec_OuterWithEmpty = !cir.union<"OuterWithEmpty" {data !rec_Empty, data !s32i}>
 // CIR-DAG: !rec_WrapEmpty = !cir.struct<"WrapEmpty" {data !rec_OuterWithEmpty, data !s32i}>
-// CIR-DAG: cir.global external @w = #cir.zero : !rec_WrapEmpty {alignment = 4 : i64}
+// CIR-DAG: cir.global external @w = #cir.zero : !rec_WrapEmpty align(4)
 // LLVM-DAG: %struct.WrapEmpty = type { %union.OuterWithEmpty, i32 }
 // LLVM-DAG: %union.OuterWithEmpty = type { i32 }
 // LLVM-DAG: @w = global %struct.WrapEmpty zeroinitializer, align 4
@@ -183,7 +183,7 @@ int getArray() { return leadArr[1].x; }
 
 // CIR:  cir.func{{.*}} @_Z8getArrayv()
 // CIR:    %[[A:.*]] = cir.get_global @leadArr : !cir.ptr<!cir.array<!rec_Leading x 2>>
-// CIR:    %[[E:.*]] = cir.get_element %[[A]][%{{.*}} : !s64i] : !cir.ptr<!cir.array<!rec_Leading x 2>> -> !cir.ptr<!rec_Leading>
+// CIR:    %[[E:.*]] = cir.get_element inbounds %[[A]][%{{.*}} : !s64i] : !cir.ptr<!cir.array<!rec_Leading x 2>> -> !cir.ptr<!rec_Leading>
 // CIR:    %{{.*}} = cir.get_member %[[E]][1] {name = "x"} : !cir.ptr<!rec_Leading> -> !cir.ptr<!s32i>
 // LLVM: define dso_local noundef i32 @_Z8getArrayv()
 // LLVM:   load i32, ptr getelementptr inbounds nuw (i8, ptr @leadArr, i64 12), align 4

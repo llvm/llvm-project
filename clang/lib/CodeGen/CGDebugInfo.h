@@ -97,11 +97,17 @@ class CGDebugInfo {
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   llvm::DIType *SingletonId = nullptr;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  llvm::DIType *SingletonId = nullptr;
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) llvm::DIType *SingletonId = nullptr;
 #include "clang/Basic/SPIRVTypes.def"
 
   /// Cache of previously constructed Types.
   llvm::DenseMap<const void *, llvm::TrackingMDRef> TypeCache;
+
+  /// DI element indices used by preserve-access intrinsics.
+  llvm::DenseMap<const FieldDecl *, unsigned> FieldIndexCache;
 
   /// Cache that maps VLA types to size expressions for that type,
   /// represented by instantiated Metadata nodes.
@@ -623,8 +629,10 @@ public:
   /// Emit C++ namespace alias.
   llvm::DIImportedEntity *EmitNamespaceAlias(const NamespaceAliasDecl &NA);
 
-  /// Emit record type's standalone debug info.
-  llvm::DIType *getOrCreateRecordType(QualType Ty, SourceLocation L);
+  /// Return the complete record type and field index for preserve-access
+  /// intrinsics.
+  std::pair<llvm::DIType *, unsigned>
+  getOrCreatePreserveAccessInfo(QualType Ty, const FieldDecl *Field);
 
   /// Emit an Objective-C interface type standalone debug info.
   llvm::DIType *getOrCreateInterfaceType(QualType Ty, SourceLocation Loc);
@@ -1020,7 +1028,8 @@ public:
   /// Restore everything back to the original state.
   ~ApplyInlineDebugLocation();
   ApplyInlineDebugLocation(const ApplyInlineDebugLocation &) = delete;
-  ApplyInlineDebugLocation &operator=(ApplyInlineDebugLocation &) = delete;
+  ApplyInlineDebugLocation &
+  operator=(const ApplyInlineDebugLocation &) = delete;
 };
 
 class SanitizerDebugLocation {
@@ -1033,7 +1042,7 @@ public:
                          SanitizerHandler Handler);
   ~SanitizerDebugLocation();
   SanitizerDebugLocation(const SanitizerDebugLocation &) = delete;
-  SanitizerDebugLocation &operator=(SanitizerDebugLocation &) = delete;
+  SanitizerDebugLocation &operator=(const SanitizerDebugLocation &) = delete;
 };
 
 } // namespace CodeGen

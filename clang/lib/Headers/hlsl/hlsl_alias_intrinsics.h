@@ -16,14 +16,6 @@ namespace hlsl {
 // unsigned integer and floating point. Keeping this ordering consistent will
 // help keep this file manageable as it grows.
 
-#define _HLSL_BUILTIN_ALIAS(builtin)                                           \
-  __attribute__((clang_builtin_alias(builtin)))
-#define _HLSL_AVAILABILITY(platform, version)                                  \
-  __attribute__((availability(platform, introduced = version)))
-#define _HLSL_AVAILABILITY_STAGE(platform, version, stage)                     \
-  __attribute__((                                                              \
-      availability(platform, introduced = version, environment = stage)))
-
 #ifdef __HLSL_ENABLE_16_BIT
 #define _HLSL_16BIT_AVAILABILITY(platform, version, ...)                       \
   __attribute__((availability(platform, introduced = version)))
@@ -190,6 +182,76 @@ __detail::enable_if_t<(N > 1 && __detail::is_arithmetic<T>::Value),
                       vector<T, N>>
 select(vector<U, N> Conds, T TrueVal, T FalseVal) {
   return __builtin_hlsl_select((vector<bool, N>)Conds, TrueVal, FalseVal);
+}
+
+/// \fn matrix<T,R,C> select(matrix<bool,R,C> Conds, matrix<T,R,C> TrueVals,
+///                          matrix<T,R,C> FalseVals)
+/// \brief ternary operator for matrices. All matrices must be the same size.
+/// \param Conds The Condition input values.
+/// \param TrueVals The matrix values are chosen from when conditions are true.
+/// \param FalseVals The matrix values are chosen from when conditions are
+/// false.
+
+template <typename T, int R, int C>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+matrix<T, R, C> select(
+    __detail::enable_if_t<(R * C > 1),
+                          __detail::type_identity_t<matrix<bool, R, C>>>,
+    matrix<T, R, C>, matrix<T, R, C>);
+
+/// \fn matrix<T,R,C> select(matrix<bool,R,C> Conds, T TrueVal,
+///                          matrix<T,R,C> FalseVals)
+/// \brief ternary operator for matrices. All matrices must be the same size.
+/// \param Conds The Condition input values.
+/// \param TrueVal The scalar value to splat from when conditions are true.
+/// \param FalseVals The matrix values are chosen from when conditions are
+/// false.
+
+template <typename T, int R, int C>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+matrix<T, R, C> select(
+    __detail::enable_if_t<(R * C > 1),
+                          __detail::type_identity_t<matrix<bool, R, C>>>,
+    T, matrix<T, R, C>);
+
+/// \fn matrix<T,R,C> select(matrix<bool,R,C> Conds, matrix<T,R,C> TrueVals,
+///                          T FalseVal)
+/// \brief ternary operator for matrices. All matrices must be the same size.
+/// \param Conds The Condition input values.
+/// \param TrueVals The matrix values are chosen from when conditions are true.
+/// \param FalseVal The scalar value to splat from when conditions are false.
+
+template <typename T, int R, int C>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+matrix<T, R, C> select(
+    __detail::enable_if_t<(R * C > 1),
+                          __detail::type_identity_t<matrix<bool, R, C>>>,
+    matrix<T, R, C>, T);
+
+/// \fn matrix<T,R,C> select(matrix<bool,R,C> Conds, T TrueVal, T FalseVal)
+/// \brief ternary operator for a boolean matrix condition with scalar values.
+/// \param Conds The Condition input values.
+/// \param TrueVal The scalar value to splat from when conditions are true.
+/// \param FalseVal The scalar value to splat from when conditions are false.
+
+template <typename T, int R, int C>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+matrix<T, R, C> select(matrix<bool, R, C>, T, T);
+
+/// \fn matrix<T,R,C> select(matrix<U,R,C> Conds, T TrueVal, T FalseVal)
+/// \brief ternary operator for a non-boolean matrix condition with scalar
+/// values.
+/// \param Conds The Condition input values.
+/// \param TrueVal The scalar value to splat from when conditions are true.
+/// \param FalseVal The scalar value to splat from when conditions are false.
+
+// Forwards to the boolean overload rather than calling the builtin directly
+// because the builtin is variadic and matrices cannot pass through it.
+template <typename T, typename U, int R, int C>
+__detail::enable_if_t<(R * C > 1 && __detail::is_arithmetic<T>::Value),
+                      matrix<T, R, C>>
+select(matrix<U, R, C> Conds, T TrueVal, T FalseVal) {
+  return select((matrix<bool, R, C>)Conds, TrueVal, FalseVal);
 }
 
 } // namespace hlsl

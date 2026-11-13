@@ -4,8 +4,11 @@
 name:            test_scalar_add_big
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1, $x2, $x3
     ; CHECK-LABEL: name: test_scalar_add_big
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0, $x1, $x2, $x3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i64) = COPY $x2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(i64) = COPY $x3
@@ -29,8 +32,11 @@ body:             |
 name:            test_scalar_add_big_nonpow2
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1, $x2, $x3
     ; CHECK-LABEL: name: test_scalar_add_big_nonpow2
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0, $x1, $x2, $x3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i64) = COPY $x2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(i64) = COPY $x3
@@ -57,8 +63,11 @@ body:             |
 name:            test_scalar_add_small
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_scalar_add_small
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC [[COPY1]](i64)
@@ -78,8 +87,11 @@ body:             |
 name:            test_scalar_add_narrowing
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1, $x2, $x3
     ; CHECK-LABEL: name: test_scalar_add_narrowing
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0, $x1, $x2, $x3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i64) = COPY $x2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(i64) = COPY $x3
@@ -106,8 +118,11 @@ body:             |
 name:            test_scalar_add_narrowing_s65
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1, $x2, $x3
     ; CHECK-LABEL: name: test_scalar_add_narrowing_s65
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0, $x1, $x2, $x3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i64) = COPY $x2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(i64) = COPY $x3
@@ -134,8 +149,11 @@ body:             |
 name:            test_vector_add
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1, $q2, $q3
     ; CHECK-LABEL: name: test_vector_add
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
+    ; CHECK: liveins: $q0, $q1, $q2, $q3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $q1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x i64>) = COPY $q2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<2 x i64>) = COPY $q3
@@ -159,8 +177,11 @@ body:             |
 name:            test_vector_add_v16s16
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_vector_add_v16s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x i16>) = COPY $q1
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<8 x i16>) = G_ADD [[COPY]], [[COPY]]
     ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(<8 x i16>) = G_ADD [[COPY1]], [[COPY1]]
@@ -179,8 +200,11 @@ body:             |
 name:            test_vector_add_v32s8
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_vector_add_v32s8
-    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x i8>) = COPY $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x i8>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x i8>) = COPY $q1
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<16 x i8>) = G_ADD [[COPY]], [[COPY]]
     ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(<16 x i8>) = G_ADD [[COPY1]], [[COPY1]]
@@ -199,8 +223,11 @@ body:             |
 name:            test_vector_add_nonpow2
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1, $q2, $q3
     ; CHECK-LABEL: name: test_vector_add_nonpow2
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
+    ; CHECK: liveins: $q0, $q1, $q2, $q3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $q1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x i64>) = COPY $q2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<2 x i64>) = COPY $q3
@@ -225,7 +252,6 @@ body:             |
 ---
 name:            add_v8i16
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -249,7 +275,6 @@ body:             |
 ---
 name:            add_v16i8
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -273,7 +298,6 @@ body:             |
 ---
 name:            add_v4i16
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -295,7 +319,6 @@ body:             |
 ...
 ---
 name:            add_v8s8
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1
@@ -317,7 +340,6 @@ body:             |
 ...
 ---
 name:            add_v2s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -347,7 +369,6 @@ body:             |
 ...
 ---
 name:            add_v3s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $b0, $b1, $b2
@@ -381,7 +402,6 @@ body:             |
 ...
 ---
 name:            add_v4s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -411,7 +431,6 @@ body:             |
 ...
 ---
 name:            add_v8s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -441,7 +460,6 @@ body:             |
 ...
 ---
 name:            add_v16s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1, $q2, $q3

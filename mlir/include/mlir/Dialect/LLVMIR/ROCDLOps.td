@@ -675,8 +675,9 @@ def ROCDL_WaitTensorcntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.tensorcnt", [], 0,
   let assemblyFormat = "$count attr-dict";
 }
 
-def ROCDL_AsyncmarkOp : ROCDL_ConcreteNonMemIntrOp<"asyncmark", [], 0>,
-    Arguments<(ins)> {
+def ROCDL_AsyncmarkOp : ROCDL_ConcreteNonMemIntrOp<"asyncmark", [], 0, [0], ["stages"]>,
+    Arguments<(ins DefaultValuedAttr<ROCDL_AsyncStagesAttr,
+                     "::mlir::ROCDL::AsyncStages::all">:$stages)> {
   let summary = "Mark the end of a group of asynchronous operations";
   let description = [{
       This operation, in conjunction with `rocdl.wait.asyncmark`, forms the
@@ -685,24 +686,31 @@ def ROCDL_AsyncmarkOp : ROCDL_ConcreteNonMemIntrOp<"asyncmark", [], 0>,
       and gfx1250's tensor loads.
 
       Details of its behavior can be found in
-      [the LLVM documentation on async tracking](/llvm/docs/AMDGPUAsyncOperations.rst).
+      [the LLVM documentation on async tracking](/llvm/docs/AMDGPUAsyncOperations.md).
 
       See `rocdl.wait.asyncmark`'s documentation for a usage example.
 
+      `stages` is a mask of the async stages to mark: the mark is appended to
+      the sequence of every stage it names. `all` names every stage.
+
       Example:
       ```mlir
-      // Mark the end of an async operation group.
+      // Mark the end of an async operation group in every stage.
       rocdl.asyncmark
+      // Mark the end of a group of tensor loads and stores alone.
+      rocdl.asyncmark stages = tensor
       ```
 
       Available on gfx9 and later.
   }];
   let results = (outs);
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "(`stages` `=` enum($stages)^)? attr-dict";
 }
 
-def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [0], ["count"]>,
-    Arguments<(ins I16Attr:$count)> {
+def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [0, 1], ["count", "stages"]>,
+    Arguments<(ins I16Attr:$count,
+                   DefaultValuedAttr<ROCDL_AsyncStagesAttr,
+                     "::mlir::ROCDL::AsyncStages::all">:$stages)> {
   let summary = "Wait until N or fewer async operation groups are unexecuted";
   let description = [{
       This operation, along with `rocdl.asyncmark`, forms the compiler-provided
@@ -712,8 +720,12 @@ def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [
       that were parts of any async group (established by asyncmark in program order)
       other than the `count` previously-added ones will have finished executing.
 
+      `stages` is a mask of the async stages to wait on: each stage it names
+      is waited on separately, using its own sequence of asyncmarks. `all`
+      names every stage.
+
       For more detail, including on how this mechanism composes with function calls,
-      see [the LLVM documentation on async tracking](/llvm/docs/AMDGPUAsyncOperations.rst).
+      see [the LLVM documentation on async tracking](/llvm/docs/AMDGPUAsyncOperations.md).
 
       Available on gfx9 and later.
 
@@ -721,6 +733,8 @@ def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [
       ```mlir
       // Wait until at most N async groups remain outstanding.
       rocdl.wait.asyncmark 1
+      // The same, counting the tensor groups alone.
+      rocdl.wait.asyncmark 1 stages = tensor
       ```
 
       Usage example:
@@ -739,7 +753,7 @@ def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [
       ```
   }];
   let results = (outs);
-  let assemblyFormat = "$count attr-dict";
+  let assemblyFormat = "$count (`stages` `=` enum($stages)^)? attr-dict";
 }
 
 def ROCDL_SetPrioOp : ROCDL_ConcreteNonMemIntrOp<"s.setprio", [], 0, [0], ["priority"]>,
@@ -1750,7 +1764,7 @@ def ROCDL_LoadAsyncToLDSOp :
     stored values to - you need to use the `rocdl.asyncmark` and `rocdl.wait.asyncmark`
     operations to explicitly group these operations and wait for their completion.
 
-    Available on gfx10 and earlier with varying suppported values of `size`.
+    Available on gfx10 and earlier with varying supported values of `size`.
 
     Example:
     ```mlir
@@ -2140,6 +2154,23 @@ def ROCDL_RawPtrBufferAtomicUminOp : ROCDL_RawPtrBufferAtomicRet<"umin">;
 def ROCDL_RawPtrBufferAtomicFaddOp : ROCDL_RawPtrBufferAtomicRet<"fadd">;
 
 //===---------------------------------------------------------------------===//
+// Deprecated raw buffer ops taking a vector<4xi32> resource
+
+// Shared documentation for the ops that take their buffer resource as a
+// vector<4xi32> and map to the deprecated llvm.amdgcn.raw.buffer.* intrinsics.
+// `suffix` is the part of the intrinsic name after "raw.buffer.", and also
+// selects the rocdl.raw.ptr.buffer.* replacement.
+class ROCDL_DeprecatedV4I32BufferDoc<string suffix> {
+  string description = [{
+    Deprecated. This op takes its buffer resource as a `vector<4xi32>` and maps
+    to `llvm.amdgcn.raw.buffer.}] # suffix # [{`, which is deprecated and will
+    be removed in a future LLVM release. Use `rocdl.raw.ptr.buffer.}]
+    # suffix # [{`, which takes a `!llvm.ptr<8>` resource produced by
+    `rocdl.make.buffer.rsrc`, instead.
+  }];
+}
+
+//===---------------------------------------------------------------------===//
 // Raw buffer load/store intrinsics
 
 def ROCDL_RawBufferLoadOp :
@@ -2148,6 +2179,7 @@ def ROCDL_RawBufferLoadOp :
                  I32:$offset,
                  I32:$soffset,
                  ROCDL_DefaultCachePolicyAttr<ROCDL_NonAtomicBufferCachePolicyCompatAttr>:$aux)> {
+  let description = ROCDL_DeprecatedV4I32BufferDoc<"load">.description;
   let assemblyFormat = "$rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($res)";
 }
 
@@ -2158,6 +2190,7 @@ def ROCDL_RawBufferStoreOp :
                  I32:$offset,
                  I32:$soffset,
                  ROCDL_DefaultCachePolicyAttr<ROCDL_NonAtomicBufferCachePolicyCompatAttr>:$aux)>{
+  let description = ROCDL_DeprecatedV4I32BufferDoc<"store">.description;
   let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($vdata)";
 }
 
@@ -2170,6 +2203,7 @@ def ROCDL_RawBufferAtomicCmpSwap :
                  I32:$offset,
                  I32:$soffset,
                  ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux)>{
+  let description = ROCDL_DeprecatedV4I32BufferDoc<"atomic.cmpswap">.description;
   let assemblyFormat = [{
     attr-dict `(` $src `,` $cmp `,` $rsrc `,` $offset `,` $soffset `,`
     custom<CachePolicy>($aux) `)` `:` type($res) `,` type($rsrc)
@@ -2292,6 +2326,7 @@ def ROCDL_RawBufferAtomicFAddOp :
                  I32:$offset,
                  I32:$soffset,
                  ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux)>{
+  let description = ROCDL_DeprecatedV4I32BufferDoc<"atomic.fadd">.description;
   let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($vdata)";
 }
 
@@ -2306,6 +2341,7 @@ def ROCDL_RawBufferAtomicFMaxOp :
                  I32:$offset,
                  I32:$soffset,
                  ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux)>{
+  let description = ROCDL_DeprecatedV4I32BufferDoc<"atomic.fmax">.description;
   let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($vdata)";
 }
 
@@ -2320,6 +2356,7 @@ def ROCDL_RawBufferAtomicSMaxOp :
                  I32:$offset,
                  I32:$soffset,
                  ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux)>{
+  let description = ROCDL_DeprecatedV4I32BufferDoc<"atomic.smax">.description;
   let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($vdata)";
 }
 
@@ -2334,6 +2371,7 @@ def ROCDL_RawBufferAtomicUMinOp :
                  I32:$offset,
                  I32:$soffset,
                  ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux)>{
+  let description = ROCDL_DeprecatedV4I32BufferDoc<"atomic.umin">.description;
   let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($vdata)";
 }
 
