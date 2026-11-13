@@ -339,12 +339,23 @@ def gfx6gfx7_combines : GICombineGroup<[fcmp_select_to_fmin_fmax_legacy]>;
 // Combines which should only apply on VI
 def gfx8_combines : GICombineGroup<[expand_promoted_fmed3]>;
 
+// Push anyext through a bitcast of a select to expose integer cast combines.
+def select_of_anyext_bitcast : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (G_SELECT $select, $cond, $true, $false):$Select,
+         (G_BITCAST $bits, $select),
+         (G_ANYEXT $root, $bits):$Cast,
+         [{ return MRI.hasOneNonDBGUse(${bits}.getReg()) &&
+                   Helper.matchCastOfSelect(*${Cast}, *${Select}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${Cast}, ${matchinfo}); }])>;
+
 def AMDGPUPreLegalizerCombiner: GICombiner<
   "AMDGPUPreLegalizerCombinerImpl",
   [all_combines, combine_fmul_with_select_to_fldexp, clamp_i64_to_i16,
    foldable_fneg, fold_fabs_fptrunc, combine_shuffle_vector,
    combine_shuffle_vector_to_build_vector, trunc_lshr16_to_unmerge,
-   binop_s64_with_s32_mask_combines, combine_or_s64_s32]> {
+   binop_s64_with_s32_mask_combines, combine_or_s64_s32,
+   select_of_anyext_bitcast]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 

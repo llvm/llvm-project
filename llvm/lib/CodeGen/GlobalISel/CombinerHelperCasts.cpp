@@ -214,8 +214,18 @@ bool CombinerHelper::matchCastOfSelect(const MachineInstr &CastMI,
   LLT CondTy = MRI.getType(Select->getCondReg());
   Register TrueReg = Select->getTrueReg();
   Register FalseReg = Select->getFalseReg();
-  LLT SrcTy = MRI.getType(TrueReg);
+  LLT SelectTy = MRI.getType(TrueReg);
+  LLT SrcTy = MRI.getType(Cast->getSrcReg());
   Register Cond = Select->getCondReg();
+
+  if (SrcTy != SelectTy) {
+    // Only look through bitcasts that preserve the vector shape, so vector
+    // conditions still select the same elements.
+    if (SrcTy.isVector() != SelectTy.isVector() ||
+        (SrcTy.isVector() &&
+         SrcTy.getElementCount() != SelectTy.getElementCount()))
+      return false;
+  }
 
   if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SELECT, {DstTy, CondTy}}))
     return false;
@@ -224,8 +234,14 @@ bool CombinerHelper::matchCastOfSelect(const MachineInstr &CastMI,
     return false;
 
   MatchInfo = [=](MachineIRBuilder &B) {
-    auto True = B.buildInstr(Cast->getOpcode(), {DstTy}, {TrueReg});
-    auto False = B.buildInstr(Cast->getOpcode(), {DstTy}, {FalseReg});
+    Register True = TrueReg;
+    Register False = FalseReg;
+    if (SrcTy != SelectTy) {
+      True = B.buildBitcast(SrcTy, True).getReg(0);
+      False = B.buildBitcast(SrcTy, False).getReg(0);
+    }
+    True = B.buildInstr(Cast->getOpcode(), {DstTy}, {True}).getReg(0);
+    False = B.buildInstr(Cast->getOpcode(), {DstTy}, {False}).getReg(0);
     B.buildSelect(Dst, Cond, True, False);
   };
 
