@@ -14,6 +14,7 @@
 #include "bolt/Passes/DataflowInfoManager.h"
 #include "bolt/Passes/RegAnalysis.h"
 #include <optional>
+#include <tuple>
 
 using namespace llvm;
 using namespace llvm::bolt;
@@ -80,9 +81,28 @@ void keepFragmentsTogether(BinaryFunction &BF) {
   BF.fixBranches();
 }
 
-/// Insert a stub for every cross-fragment CFG edge, without estimating its
-/// final distance. Return the number of stubs, or std::nullopt if splitting was
-/// cancelled for lack of scratch.
+/// Bound distances from each block to the end of its fragment, including all
+/// long-jump stubs. Allow for alignment, an 8-byte relaxed conditional branch,
+/// and a 4-byte jump from fixBranches() per block.
+DenseMap<const BinaryBasicBlock *, uint64_t>
+estimateDistancesToFragmentEnd(const BinaryFunction &BF) {
+  DenseMap<const BinaryBasicBlock *, uint64_t> DistanceToEnd;
+  for (const FunctionFragment &FF : BF.getLayout().fragments()) {
+    uint64_t Size = 0;
+    for (const BinaryBasicBlock *BB : FF)
+      for (const BinaryBasicBlock *Target : BB->successors())
+        if (Target->getFragmentNum() != FF.getFragmentNum())
+          Size += 8;
+    for (const BinaryBasicBlock *BB : llvm::reverse(FF)) {
+      Size += BB->estimateSize() + 12 + BB->getAlignment() - 1;
+      DistanceToEnd[BB] = Size;
+    }
+  }
+  return DistanceToEnd;
+}
+
+/// Insert a stub for every cross-fragment CFG edge. Return the number of stubs,
+/// or std::nullopt if splitting was cancelled for lack of scratch.
 /// Analyze all edges before mutating the CFG so fallback needs no stub
 /// rollback.
 std::optional<size_t> insertLongJumpStubs(BinaryFunction &BF, RegAnalysis &RA) {
@@ -91,7 +111,7 @@ std::optional<size_t> insertLongJumpStubs(BinaryFunction &BF, RegAnalysis &RA) {
   struct LongJumpEdge {
     BinaryBasicBlock *Source;
     BinaryBasicBlock *Target;
-    BinaryBasicBlock *Stub;
+    bool AtFragmentEnd = false;
   };
   SmallVector<LongJumpEdge> Edges;
   DenseMap<BinaryBasicBlock *, MCPhysReg> ScratchRegs;
@@ -102,7 +122,7 @@ std::optional<size_t> insertLongJumpStubs(BinaryFunction &BF, RegAnalysis &RA) {
       for (BinaryBasicBlock *Target : BB.successors()) {
         if (Target->getFragmentNum() == BB.getFragmentNum())
           continue;
-        Edges.push_back({&BB, Target, nullptr});
+        Edges.push_back({&BB, Target});
         if (ScratchRegs.contains(Target))
           continue;
         BitVector Dead = *LA.getStateAt(ProgramPoint::getFirstPointAt(*Target));
@@ -122,33 +142,84 @@ std::optional<size_t> insertLongJumpStubs(BinaryFunction &BF, RegAnalysis &RA) {
     }
   }
 
-  // splitEdge() assumes at most two fragments, so insert the stubs here.
+  const DenseMap<const BinaryBasicBlock *, uint64_t> DistanceToEnd =
+      estimateDistancesToFragmentEnd(BF);
+  // Keep cold stubs at the end of the fragment to preserve hot fall-through
+  // paths, provided they fit in the conditional-branch range. The RISC-V
+  // Conditional Branches instruction, defines 12-bit signed B-immediates in
+  // units of two bytes, limiting forward offsets to 4094 bytes.
+  // https://docs.riscv.org/reference/isa/v20260120/unpriv/rv32.html#ct-conditional
+  // Choose positions before inserting stubs changes the layout.
   for (LongJumpEdge &E : Edges) {
-    auto Stub = BF.createBasicBlock();
-    E.Stub = Stub.get();
+    const BinaryBasicBlock *Next =
+        BF.getLayout().getBasicBlockAfter(E.Source, /*IgnoreSplits=*/false);
+    E.AtFragmentEnd = E.Source->succ_size() == 2 &&
+                      E.Source->isSuccessor(Next) &&
+                      DistanceToEnd.lookup(E.Source) <= 4094;
+  }
+
+  // All sources using a fragment-end stub have already been checked for reach.
+  // Sharing also requires the same fragment and unwind state.
+  // Requiring identical CFI state IDs is conservative.
+  using StubKey = std::tuple<unsigned, BinaryBasicBlock *, int32_t>;
+  DenseMap<StubKey, BinaryBasicBlock *> SharedStubs;
+  SmallVector<BinaryBasicBlock *> Stubs;
+  // splitEdge() assumes at most two fragments, so insert the stubs here.
+  for (const LongJumpEdge &E : Edges) {
     const auto BI = E.Source->getBranchInfo(*E.Target);
+    const auto Key = std::make_tuple(E.Source->getFragmentNum().get(), E.Target,
+                                     E.Source->getCFIStateAtExit());
+    if (BinaryBasicBlock *Stub =
+            E.AtFragmentEnd ? SharedStubs.lookup(Key) : nullptr) {
+      auto &StubBI = Stub->getBranchInfo(*E.Target);
+      if (StubBI.Count == BinaryBasicBlock::COUNT_NO_PROFILE ||
+          BI.Count == BinaryBasicBlock::COUNT_NO_PROFILE)
+        StubBI.Count = BinaryBasicBlock::COUNT_NO_PROFILE;
+      else
+        StubBI.Count += BI.Count;
+      if (StubBI.MispredictedCount == BinaryBasicBlock::COUNT_INFERRED ||
+          BI.MispredictedCount == BinaryBasicBlock::COUNT_INFERRED)
+        StubBI.MispredictedCount = BinaryBasicBlock::COUNT_INFERRED;
+      else
+        StubBI.MispredictedCount += BI.MispredictedCount;
+      Stub->setExecutionCount(StubBI.Count);
+      E.Source->replaceSuccessor(E.Target, Stub, BI.Count,
+                                 BI.MispredictedCount);
+      continue;
+    }
+
+    auto Stub = BF.createBasicBlock();
+    Stubs.push_back(Stub.get());
     Stub->setFragmentNum(E.Source->getFragmentNum());
+    Stub->setCFIState(E.Source->getCFIStateAtExit());
     Stub->setExecutionCount(BI.Count);
     Stub->addSuccessor(E.Target, BI.Count, BI.MispredictedCount);
+    BinaryBasicBlock *InsertAfter = E.Source;
+    if (E.AtFragmentEnd) {
+      InsertAfter =
+          BF.getLayout().getFragment(E.Source->getFragmentNum()).back();
+      SharedStubs[Key] = Stub.get();
+    }
     E.Source->replaceSuccessor(E.Target, Stub.get(), BI.Count,
                                BI.MispredictedCount);
     std::vector<std::unique_ptr<BinaryBasicBlock>> NewBlocks;
     NewBlocks.push_back(std::move(Stub));
-    BF.insertBasicBlocks(E.Source, std::move(NewBlocks),
-                         /*UpdateLayout=*/true, /*UpdateCFIState=*/true,
+    BF.insertBasicBlocks(InsertAfter, std::move(NewBlocks),
+                         /*UpdateLayout=*/true, /*UpdateCFIState=*/false,
                          /*RecomputeLandingPads=*/false);
   }
   BF.fixBranches();
-  for (const LongJumpEdge &E : Edges) {
+  for (BinaryBasicBlock *Stub : Stubs) {
+    BinaryBasicBlock *Target = *Stub->succ_begin();
     MCInst Jump;
     // PseudoJump expands to AUIPC scratch + JALR x0, scratch. It overwrites the
     // chosen dead register without changing ra; JITLink may later shorten it.
-    BC.MIB->createLongUncondBranch(Jump, E.Target->getLabel(),
-                                   ScratchRegs[E.Target], BC.Ctx.get());
-    E.Stub->clear();
-    E.Stub->addInstruction(Jump);
+    BC.MIB->createLongUncondBranch(Jump, Target->getLabel(),
+                                   ScratchRegs[Target], BC.Ctx.get());
+    Stub->clear();
+    Stub->addInstruction(Jump);
   }
-  return Edges.size();
+  return Stubs.size();
 }
 
 } // namespace
