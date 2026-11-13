@@ -2387,8 +2387,8 @@ bool ClauseProcessor::processNontemporal(
 bool ClauseProcessor::processReduction(
     mlir::Location currentLocation, mlir::omp::ReductionClauseOps &result,
     llvm::SmallVectorImpl<Object> &outReductionObjects,
-    llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache)
-    const {
+    llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache,
+    bool *hasUserDefinedReduction) const {
   llvm::SmallVector<mlir::Attribute> modifiers;
   bool hasExplicitModifier = false;
   bool found = findRepeatableClause<omp::clause::Reduction>(
@@ -2409,7 +2409,8 @@ bool ClauseProcessor::processReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 reductionVars, reduceVarByRef, reductionDeclSymbols,
-                reductionSyms, &semaCtx, reductionVarCache))
+                reductionSyms, &semaCtx, reductionVarCache,
+                hasUserDefinedReduction))
           TODO(currentLocation, "Lowering unrecognised reduction type");
         auto modifier = mlir::omp::ReductionModifierAttr::get(
             converter.getFirOpBuilder().getContext(),
@@ -2430,7 +2431,8 @@ bool ClauseProcessor::processReduction(
 
 bool ClauseProcessor::processTaskReduction(
     mlir::Location currentLocation, mlir::omp::TaskReductionClauseOps &result,
-    llvm::SmallVectorImpl<Object> &outReductionObjects) const {
+    llvm::SmallVectorImpl<Object> &outReductionObjects,
+    bool *hasUserDefinedReduction) const {
   return findRepeatableClause<omp::clause::TaskReduction>(
       [&](const omp::clause::TaskReduction &clause, const parser::CharBlock &) {
         llvm::SmallVector<mlir::Value> taskReductionVars;
@@ -2446,7 +2448,8 @@ bool ClauseProcessor::processTaskReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 taskReductionVars, taskReduceVarByRef, taskReductionDeclSymbols,
-                taskReductionSyms, &semaCtx))
+                taskReductionSyms, &semaCtx, /*reductionVarCache=*/nullptr,
+                hasUserDefinedReduction))
           TODO(currentLocation, "Lowering unrecognised reduction type");
         // Copy local lists into the output.
         llvm::copy(taskReductionVars,
