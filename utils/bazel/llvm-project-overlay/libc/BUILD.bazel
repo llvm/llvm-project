@@ -1978,187 +1978,84 @@ alias(
 
 ################################ fenv targets ################################
 
-libc_function(
+alias(
     name = "fetestexcept",
-    srcs = ["src/fenv/fetestexcept.cpp"],
-    hdrs = ["src/fenv/fetestexcept.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:fetestexcept",
 )
 
-libc_function(
+alias(
     name = "fetestexceptflag",
-    srcs = ["src/fenv/fetestexceptflag.cpp"],
-    hdrs = ["src/fenv/fetestexceptflag.h"],
-    deps = [
-        ":types_fexcept_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:fetestexceptflag",
 )
 
-libc_function(
+alias(
     name = "feclearexcept",
-    srcs = ["src/fenv/feclearexcept.cpp"],
-    hdrs = ["src/fenv/feclearexcept.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:feclearexcept",
 )
 
-libc_function(
+alias(
     name = "feraiseexcept",
-    srcs = ["src/fenv/feraiseexcept.cpp"],
-    hdrs = ["src/fenv/feraiseexcept.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:feraiseexcept",
 )
 
-libc_function(
+alias(
     name = "fegetround",
-    srcs = ["src/fenv/fegetround.cpp"],
-    hdrs = ["src/fenv/fegetround.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:fegetround",
 )
 
-libc_function(
+alias(
     name = "fesetround",
-    srcs = ["src/fenv/fesetround.cpp"],
-    hdrs = ["src/fenv/fesetround.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:fesetround",
 )
 
-libc_function(
+alias(
     name = "fedisableexcept",
-    srcs = ["src/fenv/fedisableexcept.cpp"],
-    hdrs = ["src/fenv/fedisableexcept.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:fedisableexcept",
 )
 
-libc_function(
+alias(
     name = "feenableexcept",
-    srcs = ["src/fenv/feenableexcept.cpp"],
-    hdrs = ["src/fenv/feenableexcept.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:feenableexcept",
 )
 
-libc_function(
+alias(
     name = "fegetexcept",
-    srcs = ["src/fenv/fegetexcept.cpp"],
-    hdrs = ["src/fenv/fegetexcept.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:fegetexcept",
 )
 
-libc_function(
+alias(
     name = "fegetenv",
-    srcs = ["src/fenv/fegetenv.cpp"],
-    hdrs = ["src/fenv/fegetenv.h"],
-    deps = [
-        ":types_fenv_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:fegetenv",
 )
 
-libc_function(
+alias(
     name = "fesetenv",
-    srcs = ["src/fenv/fesetenv.cpp"],
-    hdrs = ["src/fenv/fesetenv.h"],
-    deps = [
-        ":types_fenv_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:fesetenv",
 )
 
-libc_function(
+alias(
     name = "feupdateenv",
-    srcs = ["src/fenv/feupdateenv.cpp"],
-    hdrs = ["src/fenv/feupdateenv.h"],
-    deps = [
-        ":types_fenv_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:feupdateenv",
 )
 
-libc_function(
+alias(
     name = "fesetexcept",
-    srcs = ["src/fenv/fesetexcept.cpp"],
-    hdrs = ["src/fenv/fesetexcept.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:fesetexcept",
 )
 
-libc_function(
+alias(
     name = "fegetexceptflag",
-    srcs = ["src/fenv/fegetexceptflag.cpp"],
-    hdrs = ["src/fenv/fegetexceptflag.h"],
-    deps = [
-        ":types_fexcept_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:fegetexceptflag",
 )
 
-libc_function(
+alias(
     name = "fesetexceptflag",
-    srcs = ["src/fenv/fesetexceptflag.cpp"],
-    hdrs = ["src/fenv/fesetexceptflag.h"],
-    deps = [
-        ":types_fexcept_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:fesetexceptflag",
 )
 
-libc_function(
+alias(
     name = "feholdexcept",
-    srcs = ["src/fenv/feholdexcept.cpp"],
-    hdrs = ["src/fenv/feholdexcept.h"],
-    deps = [
-        ":types_fenv_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/FPUtil:fenv_impl",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/fenv:feholdexcept",
 )
 
 ########################### math support library ###############################
