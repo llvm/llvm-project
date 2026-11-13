@@ -1231,7 +1231,7 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
         if (ValueData.empty() || TotalCount == 0) {
           Weights = MDB.createLikelyBranchWeights();
         } else {
-          uint64_t TargetGUID = cast<GlobalValue>(TheFn)->getGUID();
+          GlobalValue::GUID TargetGUID = cast<GlobalValue>(TheFn)->getGUID();
           auto It = llvm::find_if(ValueData, [&](const InstrProfValueData &VD) {
             return VD.Value == TargetGUID;
           });
@@ -1240,6 +1240,8 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
           } else {
             uint64_t FallbackCount =
                 TotalCount - std::min(TotalCount, It->Count);
+            assert((FallbackCount != 0 || It->Count != 0) &&
+                   "devirt branch weights are both zero.");
             Weights =
                 MDB.createBranchWeights(fitWeights({It->Count, FallbackCount}));
           }
