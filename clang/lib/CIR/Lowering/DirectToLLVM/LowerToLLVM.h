@@ -24,6 +24,7 @@ namespace cir {
 namespace direct {
 
 struct LLVMBlockAddressInfo;
+struct LLVMAnnotationGlobals;
 
 /// Convert a CIR attribute to an LLVM value, or return null on failure.
 /// May use the datalayout for lowering attributes to-be-stored in memory. When
