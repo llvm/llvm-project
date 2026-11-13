@@ -554,3 +554,4 @@ body:             |
     $ymm0 = VPSLLDYri $ymm0, 1
     $ymm0 = VPSLLQYri $ymm0, 1
     RET64 implicit $xmm0
+...

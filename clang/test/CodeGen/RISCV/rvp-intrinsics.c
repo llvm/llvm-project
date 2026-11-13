@@ -136,6 +136,110 @@ uint64_t test_slx_64(uint64_t rd, uint64_t rs1, unsigned shamt) {
 uint64_t test_srx_64(uint64_t rd, uint64_t rs1, unsigned shamt) {
   return __riscv_srx_64(rd, rs1, shamt);
 }
+
+// RV64-LABEL: define dso_local i64 @test_zip8p_64(
+// RV64-SAME: i64 noundef [[RS1:%.*]], i64 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1]] to <8 x i8>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2]] to <8 x i8>
+// RV64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> [[TMP1]], <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[SHUFFLE_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
+//
+uint64_t test_zip8p_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_zip8p_64(rs1, rs2);
+}
+
+// RV64-LABEL: define dso_local i64 @test_zip16p_64(
+// RV64-SAME: i64 noundef [[RS1:%.*]], i64 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1]] to <4 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2]] to <4 x i16>
+// RV64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> [[TMP1]], <4 x i32> <i32 0, i32 4, i32 1, i32 5>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[SHUFFLE_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
+//
+uint64_t test_zip16p_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_zip16p_64(rs1, rs2);
+}
+
+// RV64-LABEL: define dso_local i64 @test_zip8hp_64(
+// RV64-SAME: i64 noundef [[RS1:%.*]], i64 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1]] to <8 x i8>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2]] to <8 x i8>
+// RV64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> [[TMP1]], <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[SHUFFLE_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
+//
+uint64_t test_zip8hp_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_zip8hp_64(rs1, rs2);
+}
+
+// RV64-LABEL: define dso_local i64 @test_zip16hp_64(
+// RV64-SAME: i64 noundef [[RS1:%.*]], i64 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1]] to <4 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2]] to <4 x i16>
+// RV64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> [[TMP1]], <4 x i32> <i32 2, i32 6, i32 3, i32 7>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[SHUFFLE_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
+//
+uint64_t test_zip16hp_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_zip16hp_64(rs1, rs2);
+}
+
+// RV64-LABEL: define dso_local i64 @test_unzip8p_64(
+// RV64-SAME: i64 noundef [[RS1:%.*]], i64 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1]] to <8 x i8>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2]] to <8 x i8>
+// RV64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> [[TMP1]], <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[SHUFFLE_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
+//
+uint64_t test_unzip8p_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_unzip8p_64(rs1, rs2);
+}
+
+// RV64-LABEL: define dso_local i64 @test_unzip16p_64(
+// RV64-SAME: i64 noundef [[RS1:%.*]], i64 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1]] to <4 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2]] to <4 x i16>
+// RV64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> [[TMP1]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[SHUFFLE_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
+//
+uint64_t test_unzip16p_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_unzip16p_64(rs1, rs2);
+}
+
+// RV64-LABEL: define dso_local i64 @test_unzip8hp_64(
+// RV64-SAME: i64 noundef [[RS1:%.*]], i64 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1]] to <8 x i8>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2]] to <8 x i8>
+// RV64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> [[TMP1]], <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[SHUFFLE_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
+//
+uint64_t test_unzip8hp_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_unzip8hp_64(rs1, rs2);
+}
+
+// RV64-LABEL: define dso_local i64 @test_unzip16hp_64(
+// RV64-SAME: i64 noundef [[RS1:%.*]], i64 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1]] to <4 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2]] to <4 x i16>
+// RV64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> [[TMP1]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[SHUFFLE_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
+//
+uint64_t test_unzip16hp_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_unzip16hp_64(rs1, rs2);
+}
 #endif
 
 /* Scalar Averaging Addition and Subtraction */

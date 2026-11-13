@@ -177,10 +177,6 @@ private:
   /// Map global data and execute pending ctors.
   int loadImagesOntoDevice(DeviceTy &Device);
 
-  /// Destroy the programs loaded for the library identified by \p Key, whose
-  /// translation table is \p TT, and forget the launch info of their kernels.
-  void unloadPrograms(const void *Key, TranslationTable &TT);
-
   /// Register the image \p Img from \p Desc on the compatible device
   /// \p DeviceHandle, unless the device is already in \p UsedDevices. Returns
   /// true if the image was registered.

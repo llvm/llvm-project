@@ -18991,17 +18991,21 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
       E = N0;
     }
 
+    SmallVector<SDValue, 4> FMAChain;
     SDValue TmpFMA = FMA;
     while (E && isFusedOp(TmpFMA) && TmpFMA.hasOneUse()) {
+      FMAChain.push_back(TmpFMA);
       SDValue FMul = TmpFMA->getOperand(2);
       if (FMul.getOpcode() == ISD::FMUL && FMul.hasOneUse()) {
         SDValue C = FMul.getOperand(0);
         SDValue D = FMul.getOperand(1);
-        SDValue CDE = DAG.getNode(PreferredFusedOpcode, SL, VT, C, D, E);
-        DAG.ReplaceAllUsesOfValueWith(FMul, CDE);
-        // Replacing the inner FMul could cause the outer FMA to be simplified
-        // away.
-        return FMA.getOpcode() == ISD::DELETED_NODE ? SDValue(N, 0) : FMA;
+        SDValue Res = DAG.getNode(PreferredFusedOpcode, SL, VT, C, D, E);
+        // Rebuild the chain; mutating it in place could CSE N away.
+        for (SDValue Outer : reverse(FMAChain))
+          Res = DAG.getNode(Outer.getOpcode(), SDLoc(Outer), VT,
+                            Outer.getOperand(0), Outer.getOperand(1), Res,
+                            Outer->getFlags());
+        return Res;
       }
 
       TmpFMA = TmpFMA->getOperand(2);
@@ -19713,8 +19717,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
 
   // FADD -> FMA combines:
   if (SDValue Fused = visitFADDForFMACombine(N)) {
-    if (Fused.getOpcode() != ISD::DELETED_NODE)
-      AddToWorklist(Fused.getNode());
+    AddToWorklist(Fused.getNode());
     return Fused;
   }
   return SDValue();
@@ -21765,7 +21768,7 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
   // can be folded with this one. We should do this to avoid having to keep
   // a copy of the original base pointer.
   SmallVector<SDNode *, 16> OtherUses;
-  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
+  unsigned MaxSteps = DAG.getHasPredecessorMaxSteps();
   if (isa<ConstantSDNode>(Offset))
     for (SDUse &Use : BasePtr->uses()) {
       // Skip the use that is Ptr and uses of other results from BasePtr's
@@ -21926,7 +21929,7 @@ static bool shouldCombineToPostInc(SDNode *N, SDValue Ptr, SDNode *PtrUse,
     return false;
 
   SmallPtrSet<const SDNode *, 32> Visited;
-  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
+  unsigned MaxSteps = DAG.getHasPredecessorMaxSteps();
   for (SDNode *User : BasePtr->users()) {
     if (User == Ptr.getNode())
       continue;
@@ -21973,7 +21976,7 @@ static SDNode *getPostIndexedLoadStoreOp(SDNode *N, bool &IsLoad,
   // 2) Op must be independent of N, i.e. Op is neither a predecessor
   //    nor a successor of N. Otherwise, if Op is folded that would
   //    create a cycle.
-  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
+  unsigned MaxSteps = DAG.getHasPredecessorMaxSteps();
   for (SDUse &U : Ptr->uses()) {
     if (U.getResNo() != Ptr.getResNo())
       continue;

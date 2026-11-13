@@ -5748,7 +5748,6 @@ AMDGPUInstructionSelector::selectWMMAModsF16NegAbs(MachineOperand &Root) const {
 
     // All elements had ModOpcode modifier
     if (CV->getNumSources() == EltsV2F16.size()) {
-      MachineIRBuilder B(*Root.getParent());
       selectWMMAModsNegAbs(ModOpcode, Mods, EltsV2F16, Src, Root.getParent(),
                            *MRI);
     }

@@ -2198,6 +2198,7 @@ def SDT_RISCVPZip : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                          SDTCisSameAs<0, 1>,
                                          SDTCisSameAs<0, 2>]>;
 def riscv_pzip : RVSDNode<"PZIP", SDT_RISCVPZip>;
+def riscv_pziph : RVSDNode<"PZIPH", SDT_RISCVPZip>;
 
 def SDT_RISCVPWZip : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                           SDTCisSubVecOfVec<1, 0>,
@@ -3230,17 +3231,7 @@ let append Predicates = [IsRV32] in {
   def : Pat<(v4i16 (bswap GPRPair:$rs)),
             (PPAIROE_DB GPRPair:$rs, GPRPair:$rs)>;
 
-  // 8/16-bit bitreverse patterns
-  // FIXME: Custom lower?
-  // With Zbkb, brev8 reverses the bits within each byte directly.
-  let append Predicates = [NoStdExtZbkb] in
-  def : Pat<(v8i8 (bitreverse GPRPair:$rs)),
-            (BuildGPRPair (REV8_RV32 (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even))),
-                          (REV8_RV32 (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd))))>;
-  let append Predicates = [HasStdExtZbkb] in
-  def : Pat<(v8i8 (bitreverse GPRPair:$rs)),
-            (BuildGPRPair (BREV8 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even)),
-                          (BREV8 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd)))>;
+  // 16-bit bitreverse patterns. v8i8 is custom lowered to two v4i8.
   def : Pat<(v4i16 (bitreverse GPRPair:$rs)),
             (PPAIROE_DH (BuildGPRPair (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even)),
                                       (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd))),
@@ -3831,6 +3822,8 @@ let append Predicates = [IsRV64] in {
   // Packed zip.
   def : PatGprGpr<riscv_pzip, ZIP8P,  v8i8>;
   def : PatGprGpr<riscv_pzip, ZIP16P, v4i16>;
+  def : PatGprGpr<riscv_pziph, ZIP8HP,  v8i8>;
+  def : PatGprGpr<riscv_pziph, ZIP16HP, v4i16>;
 
   // Packed pair: pair the even/odd-position elements of rs1 and rs2.
   def : PatGprGpr<riscv_ppaire,  PACK,      v2i32>;

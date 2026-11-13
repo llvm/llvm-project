@@ -1233,6 +1233,26 @@
 // RUN:   | %{filecheck} --check-prefix=CHECK-NOLIB-PS5
 // CHECK-NOLIB-PS5-NOT: SceAddressSanitizer_nosubmission_stub_weak
 
+// RUN: not %clang -fsanitize=type %s -### -o %t.o 2>&1 \
+// RUN:     --target=x86_64-sie-ps5 -fuse-ld=ld \
+// RUN:     -shared \
+// RUN:   | %{filecheck} --check-prefix=CHECK-TYSAN-PS5
+//
+// CHECK-TYSAN-PS5: --dependent-lib=libSceTypeSanitizer_nosubmission_stub_weak.a
+// CHECK-TYSAN-PS5: "{{.*}}ld{{(.gold)?(.exe)?}}"
+// CHECK-TYSAN-PS5: -lSceTypeSanitizer_nosubmission_stub_weak
+
+// RUN: not %clang -fsanitize=type,undefined -### %s 2>&1 \
+// RUN:     --target=x86_64-sie-ps5 -fuse-ld=ld \
+// RUN:     -shared \
+// RUN:   | %{filecheck} --check-prefix=CHECK-UBTYSAN-PS5
+//
+// CHECK-UBTYSAN-PS5-NOT: --dependent-lib=libSceUBSanitizer_nosubmission_stub_weak.a
+// CHECK-UBTYSAN-PS5: --dependent-lib=libSceTypeSanitizer_nosubmission_stub_weak.a
+// CHECK-UBTYSAN-PS5-NOT: --dependent-lib=libSceUBSanitizer_nosubmission_stub_weak.a
+// CHECK-UBTYSAN-PS5: "{{.*}}ld{{(.gold)?(.exe)?}}"
+// CHECK-UBTYSAN-PS5: -lSceTypeSanitizer_nosubmission_stub_weak
+
 // RUN: %clang -fsanitize=scudo -### %s 2>&1 \
 // RUN:     --target=i386-unknown-linux -fuse-ld=ld \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
