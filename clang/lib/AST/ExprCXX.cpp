@@ -947,7 +947,7 @@ CXXAddrspaceCastExpr *CXXAddrspaceCastExpr::CreateEmpty(const ASTContext &C) {
   return new (C) CXXAddrspaceCastExpr(EmptyShell());
 }
 
-CXXFunctionalCastExpr *CXXFunctionalCastExpr::Create(
+CXXFunctionalCastExpr *CXXFunctionalCastExpr::CreateInternal(
     const ASTContext &C, QualType T, ExprValueKind VK, TypeSourceInfo *Written,
     CastKind K, Expr *Op, const CXXCastPath *BasePath, FPOptionsOverride FPO,
     SourceLocation L, SourceLocation R) {
@@ -976,9 +976,19 @@ CXXFunctionalCastExpr *CXXFunctionalCastExpr::CreateEmpty(const ASTContext &C,
 CXXFunctionalCastExpr *CXXFunctionalCastExpr::CreateListInitializer(
     const ASTContext &C, QualType T, ExprValueKind VK, TypeSourceInfo *Written,
     CastKind K, Expr *Op, const CXXCastPath *BasePath, FPOptionsOverride FPO,
-    SourceLocation R) {
+    SourceRange Range) {
   // List-initialization is represented by the null LParen location.
-  return Create(C, T, VK, Written, K, Op, BasePath, FPO, SourceLocation(), R);
+  return CreateInternal(C, T, VK, Written, K, Op, BasePath, FPO,
+                        SourceLocation(), Range.getEnd());
+}
+
+CXXFunctionalCastExpr *
+CXXFunctionalCastExpr::Create(const ASTContext &C, QualType T, ExprValueKind VK,
+                              TypeSourceInfo *Written, CastKind Kind, Expr *Op,
+                              const CXXCastPath *Path, FPOptionsOverride FPO,
+                              SourceRange Range) {
+  return CreateInternal(C, T, VK, Written, Kind, Op, Path, FPO,
+                        Range.getBegin(), Range.getEnd());
 }
 
 SourceLocation CXXFunctionalCastExpr::getBeginLoc() const {
