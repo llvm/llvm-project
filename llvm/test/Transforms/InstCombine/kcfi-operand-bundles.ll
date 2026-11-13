@@ -22,17 +22,17 @@ define void @g(ptr noundef %x) #0 {
   ret void
 }
 
-; FIXME: The metadata of a call is dropped along with its kcfi operand bundle.
+; COM: Must keep the metadata of a call when dropping its kcfi operand bundle.
 ; CHECK-LABEL: define void @h() #0 personality ptr @__gxx_personality_v0
 define void @h() #0 personality ptr @__gxx_personality_v0 {
-  ; CHECK: call void @f1(){{$}}
+  ; CHECK: call void @f1(), !prof [[PROF:![0-9]+]], !callsite [[CALLSITE:![0-9]+]]
   call void @f1() [ "kcfi"(i32 10) ], !prof !0, !callsite !1
 
-  ; CHECK: call ptr @f3(){{$}}
+  ; CHECK: call ptr @f3(), !memprof [[MEMPROF:![0-9]+]], !callsite [[CALLSITE]]
   call ptr @f3() [ "kcfi"(i32 12) ], !memprof !2, !callsite !1
 
   ; CHECK: invoke void @f2()
-  ; CHECK-NEXT: to label %ok unwind label %lpad{{$}}
+  ; CHECK-NEXT: to label %ok unwind label %lpad, !prof [[PROF]]
   invoke void @f2() [ "kcfi"(i32 11) ]
           to label %ok unwind label %lpad, !prof !0
 
@@ -56,3 +56,7 @@ attributes #0 = { "kcfi-target" }
 !2 = !{!3}
 !3 = !{!4, !"notcold"}
 !4 = !{i64 123, i64 456}
+
+; CHECK: [[PROF]] = !{!"branch_weights", i32 1000}
+; CHECK: [[CALLSITE]] = !{i64 123}
+; CHECK: [[MEMPROF]] = !{

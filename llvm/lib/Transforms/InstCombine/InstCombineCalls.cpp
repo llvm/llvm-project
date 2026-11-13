@@ -5378,7 +5378,13 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
       }
     });
 
-    return CallBase::removeOperandBundle(&Call, LLVMContext::OB_kcfi);
+    // removeOperandBundle rebuilds the call without its metadata, and the
+    // caller only carries over !annotation. Keep the rest (!prof, !callsite,
+    // !memprof, ...), as for a direct call that never had the bundle.
+    CallBase *NewCall =
+        CallBase::removeOperandBundle(&Call, LLVMContext::OB_kcfi);
+    NewCall->copyMetadata(Call);
+    return NewCall;
   }
 
   if (isRemovableAlloc(&Call, &TLI))
