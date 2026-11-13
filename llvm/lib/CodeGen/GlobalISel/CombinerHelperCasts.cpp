@@ -218,14 +218,9 @@ bool CombinerHelper::matchCastOfSelect(const MachineInstr &CastMI,
   LLT SrcTy = MRI.getType(Cast->getSrcReg());
   Register Cond = Select->getCondReg();
 
-  if (SrcTy != SelectTy) {
-    // Only look through bitcasts that preserve the vector shape, so vector
-    // conditions still select the same elements.
-    if (SrcTy.isVector() != SelectTy.isVector() ||
-        (SrcTy.isVector() &&
-         SrcTy.getElementCount() != SelectTy.getElementCount()))
-      return false;
-  }
+  // Only look through bitcasts that preserve element size and vector shape.
+  if (SrcTy.changeToInteger() != SelectTy.changeToInteger())
+    return false;
 
   if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SELECT, {DstTy, CondTy}}))
     return false;
