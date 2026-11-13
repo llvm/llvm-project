@@ -17,14 +17,14 @@ define void @or_zero_operands(i32 noundef %x, i32 noundef %y) {
 ; CHECK-NEXT:    [[BITS:%.*]] = or i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[ZERO:%.*]] = icmp eq i32 [[BITS]], 0
 ; CHECK-NEXT:    [[NONZERO:%.*]] = xor i1 [[ZERO]], true
-; CHECK-NEXT:    br i1 [[NONZERO]], label %[[NOPE:.*]], label %[[BOTH_ZERO:.*]]
+; CHECK-NEXT:    br i1 [[NONZERO]], label %[[EXIT:.*]], label %[[BOTH_ZERO:.*]]
 ; CHECK:       [[BOTH_ZERO]]:
 ; CHECK-NEXT:    call void @foo(i1 [[X_NONZERO]])
 ; CHECK-NEXT:    call void @foo(i1 [[Y_NONZERO]])
 ; CHECK-NEXT:    call void @bar(i32 0)
 ; CHECK-NEXT:    call void @bar(i32 0)
 ; CHECK-NEXT:    ret void
-; CHECK:       [[NOPE]]:
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    call void @foo(i1 [[EITHER_NONZERO]])
 ; CHECK-NEXT:    ret void
 ;
@@ -35,7 +35,7 @@ entry:
   %bits = or i32 %x, %y
   %zero = icmp eq i32 %bits, 0
   %nonzero = xor i1 %zero, true
-  br i1 %nonzero, label %nope, label %both_zero
+  br i1 %nonzero, label %exit, label %both_zero
 
 both_zero:
   call void @foo(i1 %x_nonzero)
@@ -44,12 +44,11 @@ both_zero:
   call void @bar(i32 %y)
   ret void
 
-nope:
+exit:
   call void @foo(i1 %either_nonzero)
   ret void
 }
 
-; Reduced from FFmpeg's mov_read_sample_encryption_info.
 ; The zero PHI input lets the empty path bypass the read-size check.
 define void @load_or_zero_phi(ptr %size_ptr, ptr %out, i32 %extra) {
 ; CHECK-LABEL: define void @load_or_zero_phi(

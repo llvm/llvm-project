@@ -3550,8 +3550,8 @@ bool GVNPassImpl::propagateEquality(
     // the known equality was "(A != B)" == "false" then it follows that A and B
     // are equal in the scope.
 
-    // If an integer OR is zero, both operands are zero.
-    // If an integer AND is all ones, both operands are all ones.
+    // If a bitwise OR is zero, both operands are zero. If a bitwise AND is
+    // all ones, both operands are all ones.
     Value *A, *B;
     if ((match(RHS, m_ZeroInt()) && match(LHS, m_Or(m_Value(A), m_Value(B)))) ||
         (match(RHS, m_AllOnes()) &&
