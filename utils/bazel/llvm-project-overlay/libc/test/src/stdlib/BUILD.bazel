@@ -147,7 +147,6 @@ libc_test(
         "//libc:close",
         "//libc:getcwd",
         "//libc:getpid",
-        "//libc:getrandom",
         "//libc:hdr_errno_macros",
         "//libc:hdr_limits_macros",
         "//libc:mkdirat",
@@ -164,6 +163,7 @@ libc_test(
         "//libc/src/fcntl:openat",
         "//libc/src/stdlib:realpath",
         "//libc/src/string:strdup",
+        "//libc/src/sys/random:getrandom",
     ],
 )
 
