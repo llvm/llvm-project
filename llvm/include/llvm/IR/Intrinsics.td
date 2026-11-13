@@ -683,6 +683,7 @@ def llvm_v16i16_ty     : LLVMType<v16i16>;    //   16 x i16
 def llvm_v32i16_ty     : LLVMType<v32i16>;    //   32 x i16
 def llvm_v64i16_ty     : LLVMType<v64i16>;    //   64 x i16
 def llvm_v128i16_ty    : LLVMType<v128i16>;   //  128 x i16
+def llvm_v1024i16_ty   : LLVMType<v1024i16>;  // 1024 x i16
 def llvm_v4096i16_ty   : LLVMType<v4096i16>;  // 4096 x i16
 
 def llvm_v1i32_ty      : LLVMType<v1i32>;     //    1 x i32
@@ -697,6 +698,7 @@ def llvm_v32i32_ty     : LLVMType<v32i32>;    //   32 x i32
 def llvm_v64i32_ty     : LLVMType<v64i32>;    //   64 x i32
 def llvm_v128i32_ty    : LLVMType<v128i32>;   //  128 x i32
 def llvm_v256i32_ty    : LLVMType<v256i32>;   //  256 x i32
+def llvm_v1024i32_ty   : LLVMType<v1024i32>;  // 1024 x i32
 def llvm_v2048i32_ty   : LLVMType<v2048i32>;  // 2048 x i32
 def llvm_v4096i32_ty   : LLVMType<v4096i32>;  // 4096 x i32
 
@@ -2007,10 +2009,12 @@ def int_coro_free : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_ptr_ty],
                                ReadOnly<ArgIndex<1>>,
                                NoCapture<ArgIndex<1>>]>;
 def int_coro_dead : Intrinsic<[], [llvm_ptr_ty], [IntrNoMem]>;
-def int_coro_end : Intrinsic<[], [llvm_ptr_ty, llvm_i1_ty, llvm_token_ty], []>;
+def int_coro_end : Intrinsic<[], [llvm_ptr_ty, llvm_i1_ty, llvm_token_ty],
+                             [ImmArg<ArgIndex<1>>]>;
 def int_coro_end_results : Intrinsic<[llvm_token_ty], [llvm_vararg_ty]>;
 def int_coro_end_async
-    : Intrinsic<[], [llvm_ptr_ty, llvm_i1_ty, llvm_vararg_ty], []>;
+    : Intrinsic<[], [llvm_ptr_ty, llvm_i1_ty, llvm_vararg_ty],
+                [ImmArg<ArgIndex<1>>]>;
 
 def int_coro_frame : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
 def int_coro_is_in_ramp : Intrinsic<[llvm_i1_ty], [], [IntrNoMem],

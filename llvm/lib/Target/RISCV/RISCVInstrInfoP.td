@@ -125,6 +125,8 @@ class RISCVUImmNegLeaf<int bitsNum>
 
 def uimm4_neg : RISCVUImmNegLeaf<4>;
 def uimm5_neg : RISCVUImmNegLeaf<5>;
+def uimm6_neg_or_zero
+    : ImmLeaf<XLenVT, "return Imm <= 0 && isUInt<6>(-Imm);", NegImm>;
 
 //===----------------------------------------------------------------------===//
 // Instruction class templates
@@ -2035,6 +2037,9 @@ def riscv_mulhr : RVSDNode<"MULHR", SDTIntBinOp, [SDNPCommutative]>;
 def riscv_mulhru : RVSDNode<"MULHRU", SDTIntBinOp, [SDNPCommutative]>;
 def riscv_mulhrsu : RVSDNode<"MULHRSU", SDTIntBinOp>;
 
+// Shift-add.
+def riscv_ssh1sadd : RVSDNode<"SSH1SADD", SDTIntBinOp>;
+
 def SDT_RISCVSameTernary : SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
                                                 SDTCisSameAs<0, 2>,
                                                 SDTCisSameAs<0, 3>]>;
@@ -2114,6 +2119,9 @@ def riscv_psshar : RVSDNode<"PSSHAR", SDT_RISCVPackedShift>;
 def riscv_psshl : RVSDNode<"PSSHL", SDT_RISCVPackedShift>;
 def riscv_psshlr : RVSDNode<"PSSHLR", SDT_RISCVPackedShift>;
 
+def riscv_shar : RVSDNode<"SHAR", SDT_RISCVIntBinOpW>;
+def riscv_shlr : RVSDNode<"SHLR", SDT_RISCVIntBinOpW>;
+
 // RV32 packed narrowing shift.
 def SDT_RISCVPackedNarrowingShift
     : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
@@ -2146,6 +2154,9 @@ def SDT_RISCVNarrowingClip
                            SDTCisVT<2, XLenVT>, SDTCisVT<3, XLenVT>]>;
 def riscv_nclip  : RVSDNode<"NCLIP", SDT_RISCVNarrowingClip>;
 def riscv_nclipu : RVSDNode<"NCLIPU", SDT_RISCVNarrowingClip>;
+def riscv_nclipr  : RVSDNode<"NCLIPR", SDT_RISCVNarrowingClip>;
+def riscv_nclipru : RVSDNode<"NCLIPRU", SDT_RISCVNarrowingClip>;
+def riscv_nsrar   : RVSDNode<"NSRAR", SDT_RISCVNarrowingClip>;
 
 // Packed "Q-format" multiply parts accumulate. The result and accumulator are
 // either a scalar (RV32 halfword form with v2i16 sources, RV64 word form with
@@ -2195,6 +2206,7 @@ def SDT_RISCVPZip : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                          SDTCisSameAs<0, 1>,
                                          SDTCisSameAs<0, 2>]>;
 def riscv_pzip : RVSDNode<"PZIP", SDT_RISCVPZip>;
+def riscv_pziph : RVSDNode<"PZIPH", SDT_RISCVPZip>;
 
 def SDT_RISCVPWZip : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                           SDTCisSubVecOfVec<1, 0>,
@@ -2301,10 +2313,12 @@ let Predicates = [HasStdExtP] in {
   // Pattern for insert_vector_elt
   def : Pat<(XLenVT (riscv_merge GPR:$rd, GPR:$rs1, GPR:$rs2)),
             (PseudoMERGE GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVecI8VT (riscv_merge GPR:$rd, GPR:$rs1, GPR:$rs2)),
-            (PseudoMERGE GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVecI16VT (riscv_merge GPR:$rd, GPR:$rs1, GPR:$rs2)),
-            (PseudoMERGE GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  foreach vt = [XLenVecI8VT, XLenVecI16VT] in {
+    def : Pat<(vt (riscv_merge GPR:$rd, GPR:$rs1, GPR:$rs2)),
+              (PseudoMERGE GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+    def : Pat<(vt (or (and GPR:$rd, GPR:$rs2), (and (vnot GPR:$rd), GPR:$rs1))),
+              (PseudoMERGE GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  }
 
   // Match a pattern of 2 bytes being inserted into bits [15:8] when only the
   // upper 16 bits are being demanded.
@@ -2610,6 +2624,9 @@ let append Predicates = [IsRV32] in {
             (SSH1SADD GPR:$rs1, GPR:$rs2)>;
   def : Pat<(XLenVT (saddsat (saddsat GPR:$rs1, GPR:$rs1), GPR:$rs2)),
             (SSH1SADD GPR:$rs1, GPR:$rs2)>;
+
+  // 32-bit shift-add pattern
+  def : PatGprGpr<riscv_ssh1sadd, SSH1SADD, i32>;
 
   // 32-bit averaging patterns
   def : PatGprGpr<avgfloors, AADD, i32>;
@@ -3222,17 +3239,7 @@ let append Predicates = [IsRV32] in {
   def : Pat<(v4i16 (bswap GPRPair:$rs)),
             (PPAIROE_DB GPRPair:$rs, GPRPair:$rs)>;
 
-  // 8/16-bit bitreverse patterns
-  // FIXME: Custom lower?
-  // With Zbkb, brev8 reverses the bits within each byte directly.
-  let append Predicates = [NoStdExtZbkb] in
-  def : Pat<(v8i8 (bitreverse GPRPair:$rs)),
-            (BuildGPRPair (REV8_RV32 (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even))),
-                          (REV8_RV32 (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd))))>;
-  let append Predicates = [HasStdExtZbkb] in
-  def : Pat<(v8i8 (bitreverse GPRPair:$rs)),
-            (BuildGPRPair (BREV8 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even)),
-                          (BREV8 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd)))>;
+  // 16-bit bitreverse patterns. v8i8 is custom lowered to two v4i8.
   def : Pat<(v4i16 (bitreverse GPRPair:$rs)),
             (PPAIROE_DH (BuildGPRPair (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even)),
                                       (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd))),
@@ -3248,19 +3255,6 @@ let append Predicates = [IsRV32] in {
             (BuildGPRPair GPR:$rs2, GPR:$rs2)>;
 
   // Build vector patterns
-  def : Pat<(v8i8 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b),
-                                (XLenVT GPR:$c), (XLenVT GPR:$d),
-                                (XLenVT GPR:$e), (XLenVT GPR:$f),
-                                (XLenVT GPR:$g), (XLenVT GPR:$h))),
-            (BuildGPRPair (PACK (PPAIRE_B GPR:$a, GPR:$b),
-                                (PPAIRE_B GPR:$c, GPR:$d)),
-                          (PACK (PPAIRE_B GPR:$e, GPR:$f),
-                                (PPAIRE_B GPR:$g, GPR:$h)))>;
-
-  def : Pat<(v4i16 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b),
-                                 (XLenVT GPR:$c), (XLenVT GPR:$d))),
-            (BuildGPRPair (PACK GPR:$a, GPR:$b), (PACK GPR:$c, GPR:$d))>;
-
   def : Pat<(v2i32 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b))),
             (BuildGPRPair GPR:$a, GPR:$b)>;
 
@@ -3274,6 +3268,11 @@ let append Predicates = [IsRV32] in {
             (EXTRACT_SUBREG GPRPair:$vec, sub_gpr_even)>;
   def : Pat<(i32 (extractelt (v2i32 GPRPair:$vec), (i32 1))),
             (EXTRACT_SUBREG GPRPair:$vec, sub_gpr_odd)>;
+
+  def : Pat<(v2i32 (vector_insert (v2i32 GPRPair:$vec), (i32 GPR:$val), (i32 0))),
+            (INSERT_SUBREG GPRPair:$vec, GPR:$val, sub_gpr_even)>;
+  def : Pat<(v2i32 (vector_insert (v2i32 GPRPair:$vec), (i32 GPR:$val), (i32 1))),
+            (INSERT_SUBREG GPRPair:$vec, GPR:$val, sub_gpr_odd)>;
 
   def : Pat<(v2i16 (extract_subvector (v4i16 GPRPair:$vec), (i32 0))),
             (EXTRACT_SUBREG GPRPair:$vec, sub_gpr_even)>;
@@ -3299,6 +3298,28 @@ let append Predicates = [IsRV32] in {
             (NCLIPI (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$imm)>;
   def : Pat<(XLenVT (riscv_nclipu XLenVT:$lo, XLenVT:$hi, uimm6:$imm)),
             (NCLIPIU (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$imm)>;
+  def : Pat<(XLenVT (riscv_nclipr XLenVT:$lo, XLenVT:$hi, uimm6:$imm)),
+            (NCLIPRI (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$imm)>;
+  def : Pat<(XLenVT (riscv_nclipru XLenVT:$lo, XLenVT:$hi, uimm6:$imm)),
+            (NCLIPRIU (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$imm)>;
+  def : Pat<(XLenVT (riscv_nsrar XLenVT:$lo, XLenVT:$hi, uimm6:$imm)),
+            (NSRARI (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$imm)>;
+
+  def : Pat<(XLenVT (riscv_nclip XLenVT:$lo, XLenVT:$hi,
+                                  shiftMask64:$shamt)),
+            (NCLIP (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
+  def : Pat<(XLenVT (riscv_nclipu XLenVT:$lo, XLenVT:$hi,
+                                   shiftMask64:$shamt)),
+            (NCLIPU (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
+  def : Pat<(XLenVT (riscv_nclipr XLenVT:$lo, XLenVT:$hi,
+                                   shiftMask64:$shamt)),
+            (NCLIPR (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
+  def : Pat<(XLenVT (riscv_nclipru XLenVT:$lo, XLenVT:$hi,
+                                    shiftMask64:$shamt)),
+            (NCLIPRU (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
+  def : Pat<(XLenVT (riscv_nsrar XLenVT:$lo, XLenVT:$hi,
+                                  shiftMask64:$shamt)),
+            (NSRAR (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
 
   // Packed multiply high accumulate, scalar halfword (RV32). The packed
   // intrinsic expands to a pair of these, one per result word.
@@ -3401,6 +3422,10 @@ let append Predicates = [IsRV64] in {
   def : Pat<(XLenVT (riscv_usati GPR:$rs1, usati_width6:$imm)),
             (USATI_RV64 GPR:$rs1, usati_width6:$imm)>;
 
+  def : PatGprShift<riscv_shar, SHAR, i64>;
+  def : PatGprShift<riscv_shlr, SHLR, i64>;
+  def : PatGprImm<riscv_shar, SRARI_RV64, uimm6_neg_or_zero, i64>;
+
   // Word multiply patterns where one operand is a sext.w or zext.w and
   // the other is a sext.w or zext.w or is known to be sign/zero-extended. We
   // prefer plain mul when both operands are known to be sign/zero-extended.
@@ -3476,6 +3501,7 @@ let append Predicates = [IsRV64] in {
   // 32-bit shift-add patterns
   def : PatPSh1Add<PSH1ADD_W, v2i32>;
   def : PatPSSh1SAdd<PSSH1SADD_W, v2i32>;
+  def : PatGprGpr<riscv_ssh1sadd, PSSH1SADD_W, v2i32>;
 
   // 32-bit exchanged add/sub patterns
   def : PatGprGpr<int_riscv_pas,  PAS_WX,  v2i32>;
@@ -3755,6 +3781,9 @@ let append Predicates = [IsRV64] in {
             (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
   def : Pat<(v2i32 (riscv_merge GPR:$rd, GPR:$rs1, GPR:$rs2)),
             (PseudoMERGE GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (or (and GPR:$rd, GPR:$rs2),
+                       (and (vnot GPR:$rd), GPR:$rs1))),
+            (PseudoMERGE GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // Packed sign extend patterns
   // Sign extend inreg patterns using psext. sext_invec is lowered to
@@ -3794,27 +3823,6 @@ let append Predicates = [IsRV64] in {
   def : LdPat<load, LD, v2i32>;
 
   // Build vector patterns
-  def : Pat<(v8i8 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b),
-                                (XLenVT GPR:$c), (XLenVT GPR:$d),
-                                (XLenVT undef), (XLenVT undef),
-                                (XLenVT undef), (XLenVT undef))),
-            (PPAIRE_H (PPAIRE_B GPR:$a, GPR:$b), (PPAIRE_B GPR:$c, GPR:$d))>;
-
-  def : Pat<(v8i8 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b),
-                                (XLenVT GPR:$c), (XLenVT GPR:$d),
-                                (XLenVT GPR:$e), (XLenVT GPR:$f),
-                                (XLenVT GPR:$g), (XLenVT GPR:$h))),
-            (PACK (PPAIRE_H (PPAIRE_B GPR:$a, GPR:$b), (PPAIRE_B GPR:$c, GPR:$d)),
-                  (PPAIRE_H (PPAIRE_B GPR:$e, GPR:$f), (PPAIRE_B GPR:$g, GPR:$h)))>;
-
-  def : Pat<(v4i16 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b),
-                                 (XLenVT undef), (XLenVT undef))),
-            (PPAIRE_H GPR:$a, GPR:$b)>;
-
-  def : Pat<(v4i16 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b),
-                                 (XLenVT GPR:$c), (XLenVT GPR:$d))),
-            (PACK (PPAIRE_H GPR:$a, GPR:$b), (PPAIRE_H GPR:$c, GPR:$d))>;
-
   // PPAIREO.W packs the low word of rs1 with the high word of rs2.
   def : Pat<(v2i32 (build_vector (XLenVT GPR:$a),
                                  (XLenVT (srl GPR:$x, (XLenVT 32))))),
@@ -3826,6 +3834,8 @@ let append Predicates = [IsRV64] in {
   // Zero-extend patterns using zip*p with zero
   def : Pat<(v4i16 (zext_invec (v8i8 GPR:$rs))), (ZIP8P GPR:$rs, (v8i8 X0))>;
   def : Pat<(v2i32 (zext_invec (v4i16 GPR:$rs))), (ZIP16P GPR:$rs, (v4i16 X0))>;
+  def : Pat<(v2i32 (zext_invec (v8i8 GPR:$rs))),
+            (ZIP16P (ZIP8P GPR:$rs, (v8i8 X0)), (v4i16 X0))>;
 
   // Packed unzip.
   def : PatGprGpr<riscv_punzipe, UNZIP8P,   v8i8>;
@@ -3848,6 +3858,8 @@ let append Predicates = [IsRV64] in {
   // Packed zip.
   def : PatGprGpr<riscv_pzip, ZIP8P,  v8i8>;
   def : PatGprGpr<riscv_pzip, ZIP16P, v4i16>;
+  def : PatGprGpr<riscv_pziph, ZIP8HP,  v8i8>;
+  def : PatGprGpr<riscv_pziph, ZIP16HP, v4i16>;
 
   // Packed pair: pair the even/odd-position elements of rs1 and rs2.
   def : PatGprGpr<riscv_ppaire,  PACK,      v2i32>;

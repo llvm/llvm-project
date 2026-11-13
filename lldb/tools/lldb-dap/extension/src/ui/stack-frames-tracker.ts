@@ -1,11 +1,8 @@
-import { DebugProtocol as dap } from "@vscode/debugprotocol";
 import * as vscode from "vscode";
 
-const OPTIMIZED_SUFFIX = " [opt]";
+import type { dap } from "@protocol/dap";
 
-interface LLDBStackFrame extends dap.StackFrame {
-  $__lldb_isOptimized?: boolean;
-}
+const OPTIMIZED_SUFFIX = " [opt]";
 
 export function registerStackFramesTracker(context: vscode.ExtensionContext) {
   const tracker = vscode.debug.registerDebugAdapterTrackerFactory(
@@ -48,7 +45,7 @@ class OptimizedFramesTracker implements vscode.DebugAdapterTracker {
       return;
     }
 
-    const frames = (message.body.stackFrames ?? []) as LLDBStackFrame[];
+    const frames = message.body.stackFrames ?? [];
     for (const frame of frames) {
       if (
         frame.$__lldb_isOptimized === true &&

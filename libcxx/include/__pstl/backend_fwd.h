@@ -48,9 +48,7 @@ template <class... _Backends>
 struct __backend_configuration;
 
 struct __default_backend_tag;
-struct __libdispatch_backend_tag;
 struct __serial_backend_tag;
-struct __std_thread_backend_tag;
 struct __statpart_backend_tag;
 
 #  if _LIBCPP_HAS_THREADS
