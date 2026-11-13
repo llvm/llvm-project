@@ -44,10 +44,12 @@ if [[ " ${runtime_targets} " == *" check-libc "* ]]; then
   fi
   runtime_cmake_args+=(
     -D LLVM_LIBC_FULL_BUILD=ON
+    -D LLVM_LIBC_ENABLE_LINTING=ON
     -D LIBC_TEST_SKIP_DEATH_TESTS=ON
     -D LIBC_TEST_SKIP_SHARED_TESTS=ON
     -D LIBC_KERNEL_HEADERS="${libc_kernel_headers}"
   )
+  runtime_targets="${runtime_targets} libc-lint"
 fi
 
 start-group "CMake"

@@ -26,13 +26,15 @@ a list of open projects that one can start with:
    implemented but many more are yet to be implemented. So, a project of medium
    complexity would be to implement syscall wrappers which have not yet been
    implemented.
-4. **Update the clang-tidy lint rules and use them in the build and/or CI** -
+4. **Expand the clang-tidy lint rules and coverage** -
    The libc project has a set of clang-tidy checks (see
    {ref}`clang-tidy checks <clang_tidy_checks>`)
-   but they are not enabled by default. They can be enabled by configuring with
-   `-DLLVM_LIBC_ENABLE_LINTING=ON` (or by setting `LLVM_LIBC_CLANG_TIDY`) and
-   running the `libc-lint` build target. This project is about keeping the
-   checks up to date and reintegrating them into the build and CI.
+   that run in Linux premerge CI on `libc/src` via the `libc-lint` target,
+   and can be enabled locally by configuring with
+   `-DLLVM_LIBC_ENABLE_LINTING=ON` (or by setting `LLVM_LIBC_CLANG_TIDY`).
+   This project is about resolving remaining diagnostics so more checks can be
+   enabled and extending lint coverage to additional targets and
+   configurations.
 5. **double and higher precision math functions** - These are under active
    development but you can take a shot at those not yet implemented. See
    {ref}`math` for more information.
