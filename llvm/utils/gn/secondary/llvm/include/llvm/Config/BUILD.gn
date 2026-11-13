@@ -28,7 +28,7 @@ import("//llvm/version.gni")
 # to keep the gn build close to the cmake build.
 
 # Other than in the cmake build, header generation doesn't do any feature
-# checking. See also "Philosophy" in llvm/utils/gn/README.rst.
+# checking. See also "Philosophy" in llvm/utils/gn/README.md.
 
 ##############################################################################
 # config.h, llvm-config.h, abi-breaking.h
@@ -124,6 +124,7 @@ write_cmake_config("config") {
     "LLVM_VERSION_PRINTER_SHOW_BUILD_CONFIG=1",
     "LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO=1",
     "LLVM_WINDOWS_PREFER_FORWARD_SLASH=",
+    "LLVM_WINDOWS_RESTRICTED_APIS=",
     "PACKAGE_BUGREPORT=https://github.com/llvm/llvm-project/issues/",
     "PACKAGE_NAME=LLVM",
     "PACKAGE_STRING=LLVM ${llvm_version}git",

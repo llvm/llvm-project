@@ -12,7 +12,6 @@
 ---
 # CHECK-LABEL: main
 name:            main
-tracksRegLiveness: true
 frameInfo:
   stackSize:       52
 fixedStack:

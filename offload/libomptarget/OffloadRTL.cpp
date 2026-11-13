@@ -18,6 +18,8 @@
 #include "Shared/Debug.h"
 #include "Shared/Profile.h"
 
+#include <thread>
+
 using namespace llvm::omp::target::debug;
 using llvm::omp::target::OmpPluginManager;
 

@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx78 -denormal-fp-math-f32=preserve-sign | FileCheck %s
-; RUN: %if ptxas-sm_90 && ptxas-isa-7.8 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx78 -denormal-fp-math-f32=preserve-sign | %ptxas-verify -arch=sm_90 %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx78 -denormal-fp-math=preserve-sign | FileCheck %s
+; RUN: %if ptxas-sm_90 && ptxas-isa-7.8 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx78 -denormal-fp-math=preserve-sign | %ptxas-verify -arch=sm_90 %}
 
 ; Check for working ftz on f16 to be sure
 define i1 @setp_f16_ftz(half %a, half %b) {

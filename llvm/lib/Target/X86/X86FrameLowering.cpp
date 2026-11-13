@@ -3468,9 +3468,11 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(
     if (X86FI->isCandidateForPush2Pop2(Reg)) {
       MCRegister Reg2 = (++I)->getReg();
       if (IsWin64UnwindV3) {
+        // Name the pair in PUSH2 order: the epilog op must describe the PUSH2
+        // that this POP2 undoes.
         BuildMI(MBB, MI, DL, TII.get(X86::SEH_Push2Regs))
-            .addImm(Reg)
             .addImm(Reg2)
+            .addImm(Reg)
             .setMIFlag(MachineInstr::FrameDestroy);
       }
       BuildMI(MBB, MI, DL, TII.get(getPOP2Opcode(STI)), Reg)
@@ -4026,11 +4028,11 @@ bool X86FrameLowering::adjustStackWithPops(MachineBasicBlock &MBB,
   if (NumPops != 1 && NumPops != 2)
     return false;
 
-  // Handle only the trivial case where the adjustment directly follows
-  // a call. This is the most common one, anyway.
+  // Handle only the trivial case where the adjustment follows a call, ignoring
+  // debug instructions. This is the most common one, anyway.
   if (MBBI == MBB.begin())
     return false;
-  MachineBasicBlock::iterator Prev = std::prev(MBBI);
+  MachineBasicBlock::iterator Prev = prev_nodbg(MBBI, MBB.begin());
   if (!Prev->isCall() || !Prev->getOperand(1).isRegMask())
     return false;
 

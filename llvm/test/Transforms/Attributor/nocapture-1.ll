@@ -738,14 +738,14 @@ declare ptr @unknownpi8pi8(ptr,ptr returned)
 define ptr @test_returned1(ptr %A, ptr returned %B) nounwind readonly {
 ; TUNIT: Function Attrs: nosync nounwind memory(read)
 ; TUNIT-LABEL: define {{[^@]+}}@test_returned1
-; TUNIT-SAME: (ptr captures(none) [[A:%.*]], ptr returned [[B:%.*]]) #[[ATTR12:[0-9]+]] {
+; TUNIT-SAME: (ptr [[A:%.*]], ptr returned [[B:%.*]]) #[[ATTR12:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[P:%.*]] = call ptr @unknownpi8pi8(ptr [[A]], ptr [[B]])
 ; TUNIT-NEXT:    ret ptr [[P]]
 ;
 ; CGSCC: Function Attrs: nosync nounwind memory(read)
 ; CGSCC-LABEL: define {{[^@]+}}@test_returned1
-; CGSCC-SAME: (ptr captures(none) [[A:%.*]], ptr returned [[B:%.*]]) #[[ATTR15:[0-9]+]] {
+; CGSCC-SAME: (ptr [[A:%.*]], ptr returned [[B:%.*]]) #[[ATTR15:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[P:%.*]] = call ptr @unknownpi8pi8(ptr [[A]], ptr [[B]])
 ; CGSCC-NEXT:    ret ptr [[P]]

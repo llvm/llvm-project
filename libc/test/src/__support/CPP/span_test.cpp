@@ -86,6 +86,15 @@ TEST(LlvmLibcSpanTest, InitializeViewFormMutableArray) {
   ASSERT_EQ(s[2], 3);
 }
 
+TEST(LlvmLibcSpanTest, InitializeViewFromConstArray) {
+  const array<int, 3> a = {1, 2, 3};
+  span<const int> s(a);
+  ASSERT_EQ(s.size(), size_t(3));
+  ASSERT_EQ(s[0], 1);
+  ASSERT_EQ(s[1], 2);
+  ASSERT_EQ(s[2], 3);
+}
+
 TEST(LlvmLibcSpanTest, InitializeFromMutable) {
   int a[] = {1, 2, 3};
   span<int> s(a);

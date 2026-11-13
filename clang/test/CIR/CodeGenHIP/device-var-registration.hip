@@ -5,8 +5,9 @@
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir \
 // RUN:            -x hip -fhip-new-launch-api -fcuda-include-gpubinary %t \
-// RUN:            -emit-cir %s -o %t.cir
-// RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
+// RUN:            -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2> %t-before.cir
+// RUN: FileCheck --check-prefix=CIR-BEFORE-LPP --input-file=%t-before.cir %s
+// RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s --implicit-check-not=cu.var_registration
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir \
 // RUN:            -x hip -fhip-new-launch-api -fcuda-include-gpubinary %t \
@@ -25,8 +26,10 @@ __attribute__((constant)) int constant_var;
 // CIR-LABEL: cir.func internal private @__hip_register_globals
 // CIR: cir.call @__hipRegisterVar
 // CIR: cir.call @__hipRegisterVar
-// CIR-DAG: cir.global{{.*}} @device_var = {{.*}}cu.var_registration = #cir.cu.var_registration<device_var, Variable>
-// CIR-DAG: cir.global{{.*}} @constant_var = {{.*}}cu.var_registration = #cir.cu.var_registration<constant_var, Variable, constant>
+// CIR-DAG: cir.global{{.*}} @device_var =
+// CIR-BEFORE-LPP-DAG: cir.global{{.*}} @device_var = {{.*}}cu.var_registration = #cir.cu.var_registration<device_var, Variable>
+// CIR-DAG: cir.global{{.*}} @constant_var =
+// CIR-BEFORE-LPP-DAG: cir.global{{.*}} @constant_var = {{.*}}cu.var_registration = #cir.cu.var_registration<constant_var, Variable, constant>
 
 // LLVM-LABEL: define internal void @__hip_register_globals
 // LLVM: call void @__hipRegisterVar(ptr %[[HANDLE:[^,]+]], ptr @device_var, ptr @[[DEVICE_VAR_NAME:[^,]+]], ptr @[[DEVICE_VAR_NAME]], i32 0, i64 4, i32 0, i32 0)

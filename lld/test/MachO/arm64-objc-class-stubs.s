@@ -20,16 +20,50 @@
 # RUN:   %t/libexternal.dylib -objc_stubs_small
 # RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_stubs --syms \
 # RUN:   --macho %t/small.out | FileCheck %s --check-prefix=SMALL
-# RUN: llvm-mc -filetype=obj -triple=arm64e-apple-darwin %t/main.s \
-# RUN:   -o %t/main-arm64e.o
-# RUN: llvm-mc -filetype=obj -triple=arm64e-apple-darwin %t/external.s \
-# RUN:   -o %t/external-arm64e.o
+
+# Check arm64e. Fast stubs reach _objc_msgSend through __auth_got and braa;
+# small stubs branch to it or to its stub, as on arm64.
+# RUN: llvm-mc -filetype=obj -triple=arm64e-apple-darwin %t/main.s -o %t/main-arm64e.o
+# RUN: llvm-mc -filetype=obj -triple=arm64e-apple-darwin %t/external.s -o %t/external-arm64e.o
 # RUN: %lld -arch arm64e -dylib -install_name @executable_path/libexternal.dylib \
 # RUN:   -o %t/libexternal-arm64e.dylib %t/external-arm64e.o
 # RUN: %lld -arch arm64e -lSystem -o %t/fast-arm64e.out %t/main-arm64e.o \
 # RUN:   %t/libexternal-arm64e.dylib -objc_stubs_fast
+# RUN: llvm-objdump --no-show-raw-insn --section=__objc_stubs --syms \
+# RUN:   --section=__auth_got --section-headers --macho %t/fast-arm64e.out \
+# RUN:   | FileCheck %s --check-prefix=FAST-ARM64E
+# RUN: llvm-objdump --macho --dyld-info %t/fast-arm64e.out \
+# RUN:   | FileCheck %s --check-prefix=FAST-ARM64E-GOT
+# RUN: %lld -arch arm64e -lSystem -o %t/small-arm64e.out %t/main-arm64e.o \
+# RUN:   %t/libexternal-arm64e.dylib -objc_stubs_small
 # RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_stubs --syms \
-# RUN:   --macho %t/fast-arm64e.out | FileCheck %s --check-prefix=FAST
+# RUN:   --macho %t/small-arm64e.out | FileCheck %s --check-prefix=SMALL-ARM64E
+# RUN: %lld -arch arm64e -lSystem -interposable -o %t/interposable-arm64e.out \
+# RUN:   %t/main-arm64e.o %t/libexternal-arm64e.dylib -objc_stubs_fast
+# RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_stubs \
+# RUN:   --macho %t/interposable-arm64e.out \
+# RUN:   | FileCheck %s --check-prefixes=INTERPOSABLE,INTERPOSABLE-ARM64E
+
+# A raw __got slot for _objc_msgSend must not change the slot the stubs use.
+# RUN: llvm-mc -filetype=obj -triple=arm64e-apple-darwin %t/got-load.s \
+# RUN:   -o %t/got-load-arm64e.o
+# RUN: %lld -arch arm64e -lSystem -o %t/got-load-arm64e.out %t/got-load-arm64e.o \
+# RUN:   %t/libexternal-arm64e.dylib -objc_stubs_fast -U _objc_msgSend
+# RUN: llvm-objdump --no-show-raw-insn --section=__objc_stubs \
+# RUN:   --section=__auth_got --section-headers --macho %t/got-load-arm64e.out \
+# RUN:   | FileCheck %s --check-prefix=GOT-LOAD-ARM64E
+# RUN: llvm-objdump --macho --dyld-info %t/got-load-arm64e.out \
+# RUN:   | FileCheck %s --check-prefix=GOT-LOAD-ARM64E-GOT
+
+# Small class stubs branch to _objc_msgSend's authenticated stub.
+# RUN: llvm-mc -filetype=obj -triple=arm64e-apple-darwin %t/dynamic.s \
+# RUN:   -o %t/dynamic-arm64e.o
+# RUN: %lld -arch arm64e -lSystem -o %t/dynamic-small-arm64e.out \
+# RUN:   %t/dynamic-arm64e.o -objc_stubs_small \
+# RUN:   -U '_OBJC_CLASS_$_DynamicClass' -U _objc_msgSend
+# RUN: llvm-objdump --no-show-raw-insn --section=__objc_stubs \
+# RUN:   --section=__auth_stubs --section-headers --macho \
+# RUN:   %t/dynamic-small-arm64e.out | FileCheck %s --check-prefix=DYNAMIC-SMALL-ARM64E
 
 # Check archive extraction through class-stub references.
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/archive-main.s \
@@ -155,6 +189,100 @@
 # SMALL-LABEL: SYMBOL TABLE:
 # SMALL-DAG: {{0*}}[[#%x,SMALL_LOCAL_CLASS_PAGE+SMALL_LOCAL_CLASS_OFF]] g     O __DATA,__data _OBJC_CLASS_$_LocalClass
 
+# Each arm64e tail is pinned to the address of __auth_got: __auth_got and __got
+# can share a page, so a stub that read the raw __got would otherwise match.
+# llvm-objdump does not decode chained fixups yet, so most selector refs are
+# not annotated on arm64e and are left unchecked.
+# FAST-ARM64E:      __auth_got {{[0-9a-f]+}} {{0*}}[[#%x,FAST_E_AUTH_GOT:]] DATA
+# FAST-ARM64E:      Contents of (__TEXT,__objc_stubs) section
+# FAST-ARM64E:      _objc_msgSend$instance:
+# FAST-ARM64E-NEXT: adrp    x1,
+# FAST-ARM64E-NEXT: ldr     x1, [x1
+# FAST-ARM64E-NEXT: adrp    x17, [[#]] ; 0x[[#%x,FAST_E_INSTANCE_PAGE:]]
+# FAST-ARM64E-NEXT: add     x17, x17, #0x[[#%x,FAST_E_AUTH_GOT-FAST_E_INSTANCE_PAGE]]
+# FAST-ARM64E-NEXT: ldr     x16, [x17]
+# FAST-ARM64E-NEXT: braa    x16, x17
+# FAST-ARM64E-NEXT: brk     #0x1
+# FAST-ARM64E-NEXT: brk     #0x1
+# FAST-ARM64E-NEXT: _objc_msgSendClass$external$_OBJC_CLASS_$_ExternalClass:
+# FAST-ARM64E-NEXT: adrp    x0,
+# FAST-ARM64E-NEXT: ldr     x0, {{.*}} ; literal pool symbol address: _OBJC_CLASS_$_ExternalClass
+# FAST-ARM64E-NEXT: adrp    x1,
+# FAST-ARM64E-NEXT: ldr     x1, [x1
+# FAST-ARM64E-NEXT: adrp    x17, [[#]] ; 0x[[#%x,FAST_E_EXTERNAL_PAGE:]]
+# FAST-ARM64E-NEXT: add     x17, x17, #0x[[#%x,FAST_E_AUTH_GOT-FAST_E_EXTERNAL_PAGE]]
+# FAST-ARM64E-NEXT: ldr     x16, [x17]
+# FAST-ARM64E-NEXT: braa    x16, x17
+# FAST-ARM64E-NEXT: _objc_msgSendClass$local$_OBJC_CLASS_$_LocalClass:
+# FAST-ARM64E-NEXT: adrp    x0, [[#]] ; 0x[[#%x,FAST_E_LOCAL_CLASS_PAGE:]]
+# FAST-ARM64E-NEXT: add     x0, x0, #0x[[#%x,FAST_E_LOCAL_CLASS_OFF:]]
+# FAST-ARM64E-NEXT: adrp    x1,
+# FAST-ARM64E-NEXT: ldr     x1, [x1
+# FAST-ARM64E-NEXT: adrp    x17, [[#]] ; 0x[[#%x,FAST_E_LOCAL_PAGE:]]
+# FAST-ARM64E-NEXT: add     x17, x17, #0x[[#%x,FAST_E_AUTH_GOT-FAST_E_LOCAL_PAGE]]
+# FAST-ARM64E-NEXT: ldr     x16, [x17]
+# FAST-ARM64E-NEXT: braa    x16, x17
+# FAST-ARM64E-LABEL: SYMBOL TABLE:
+# FAST-ARM64E-DAG: {{0*}}[[#%x,FAST_E_LOCAL_CLASS_PAGE+FAST_E_LOCAL_CLASS_OFF]] g     O __DATA,__data _OBJC_CLASS_$_LocalClass
+
+# The class pointer stays unsigned in the raw __got, as in ld64.
+# FAST-ARM64E-GOT: __DATA_CONST __auth_got 0x{{[0-9A-Fa-f]+}} 0x{{[0-9A-Fa-f]+}} rebase 0x0000 true IA
+# FAST-ARM64E-GOT: __DATA_CONST __got 0x{{[0-9A-Fa-f]+}} 0x{{[0-9A-Fa-f]+}} bind 0x0 libexternal _OBJC_CLASS_$_ExternalClass
+
+# SMALL-ARM64E:      Contents of (__TEXT,__objc_stubs) section
+# SMALL-ARM64E:      _objc_msgSend$instance:
+# SMALL-ARM64E-NEXT: adrp    x1,
+# SMALL-ARM64E-NEXT: ldr     x1, [x1
+# SMALL-ARM64E-NEXT: b       _objc_msgSend
+# SMALL-ARM64E-NEXT: _objc_msgSendClass$external$_OBJC_CLASS_$_ExternalClass:
+# SMALL-ARM64E-NEXT: adrp    x0,
+# SMALL-ARM64E-NEXT: ldr     x0, {{.*}} ; literal pool symbol address: _OBJC_CLASS_$_ExternalClass
+# SMALL-ARM64E-NEXT: adrp    x1,
+# SMALL-ARM64E-NEXT: ldr     x1, [x1
+# SMALL-ARM64E-NEXT: b       _objc_msgSend
+# SMALL-ARM64E-NEXT: _objc_msgSendClass$local$_OBJC_CLASS_$_LocalClass:
+# SMALL-ARM64E-NEXT: adrp    x0, [[#]] ; 0x[[#%x,SMALL_E_LOCAL_CLASS_PAGE:]]
+# SMALL-ARM64E-NEXT: add     x0, x0, #0x[[#%x,SMALL_E_LOCAL_CLASS_OFF:]]
+# SMALL-ARM64E-NEXT: adrp    x1,
+# SMALL-ARM64E-NEXT: ldr     x1, [x1
+# SMALL-ARM64E-NEXT: b       _objc_msgSend
+# SMALL-ARM64E-LABEL: SYMBOL TABLE:
+# SMALL-ARM64E-DAG: {{0*}}[[#%x,SMALL_E_LOCAL_CLASS_PAGE+SMALL_E_LOCAL_CLASS_OFF]] g     O __DATA,__data _OBJC_CLASS_$_LocalClass
+
+# GOT-LOAD-ARM64E:      __auth_got {{[0-9a-f]+}} {{0*}}[[#%x,GOT_LOAD_AUTH_GOT:]] DATA
+# GOT-LOAD-ARM64E:      Contents of (__TEXT,__objc_stubs) section
+# GOT-LOAD-ARM64E-NEXT: _objc_msgSend$got:
+# GOT-LOAD-ARM64E-NEXT: adrp    x1,
+# GOT-LOAD-ARM64E-NEXT: ldr     x1, [x1
+# GOT-LOAD-ARM64E-NEXT: adrp    x17, [[#]] ; 0x[[#%x,GOT_LOAD_SEL_PAGE:]]
+# GOT-LOAD-ARM64E-NEXT: add     x17, x17, #0x[[#%x,GOT_LOAD_AUTH_GOT-GOT_LOAD_SEL_PAGE]]
+# GOT-LOAD-ARM64E-NEXT: ldr     x16, [x17]
+# GOT-LOAD-ARM64E-NEXT: braa    x16, x17
+# GOT-LOAD-ARM64E-NEXT: brk     #0x1
+# GOT-LOAD-ARM64E-NEXT: brk     #0x1
+# GOT-LOAD-ARM64E-NEXT: _objc_msgSendClass$got$_OBJC_CLASS_$_ExternalClass:
+# GOT-LOAD-ARM64E-NEXT: adrp    x0,
+# GOT-LOAD-ARM64E-NEXT: ldr     x0, {{.*}} ; literal pool symbol address: _OBJC_CLASS_$_ExternalClass
+# GOT-LOAD-ARM64E-NEXT: adrp    x1,
+# GOT-LOAD-ARM64E-NEXT: ldr     x1, [x1
+# GOT-LOAD-ARM64E-NEXT: adrp    x17, [[#]] ; 0x[[#%x,GOT_LOAD_CLASS_PAGE:]]
+# GOT-LOAD-ARM64E-NEXT: add     x17, x17, #0x[[#%x,GOT_LOAD_AUTH_GOT-GOT_LOAD_CLASS_PAGE]]
+# GOT-LOAD-ARM64E-NEXT: ldr     x16, [x17]
+# GOT-LOAD-ARM64E-NEXT: braa    x16, x17
+
+# _objc_msgSend has an authenticated bind in __auth_got for the stubs and a
+# plain one in __got for the GOT load.
+# GOT-LOAD-ARM64E-GOT: __DATA_CONST __auth_got 0x{{[0-9A-Fa-f]+}} 0x{{[0-9A-Fa-f]+}} bind 0x0000 true IA 0x0 flat-namespace _objc_msgSend
+# GOT-LOAD-ARM64E-GOT: __DATA_CONST __got 0x{{[0-9A-Fa-f]+}} 0x{{[0-9A-Fa-f]+}} bind 0x0 flat-namespace _objc_msgSend
+
+# DYNAMIC-SMALL-ARM64E:      __auth_stubs {{[0-9a-f]+}} {{0*}}[[#%x,DYN_E_AUTH_STUBS:]] TEXT
+# DYNAMIC-SMALL-ARM64E:      _objc_msgSendClass$dynamic$_OBJC_CLASS_$_DynamicClass:
+# DYNAMIC-SMALL-ARM64E-NEXT: adrp    x0,
+# DYNAMIC-SMALL-ARM64E-NEXT: ldr     x0, {{.*}} ; literal pool symbol address: _OBJC_CLASS_$_DynamicClass
+# DYNAMIC-SMALL-ARM64E-NEXT: adrp    x1,
+# DYNAMIC-SMALL-ARM64E-NEXT: ldr     x1, [x1
+# DYNAMIC-SMALL-ARM64E-NEXT: b       0x[[#%x,DYN_E_AUTH_STUBS]]
+
 # DYNAMIC:      Contents of (__TEXT,__objc_stubs) section
 # DYNAMIC-NEXT: _objc_msgSendClass$dynamic$_OBJC_CLASS_$_DynamicClass:
 # DYNAMIC-NEXT: adrp    x0,
@@ -169,6 +297,14 @@
 # INTERPOSABLE:      _objc_msgSendClass$local$_OBJC_CLASS_$_LocalClass:
 # INTERPOSABLE-NEXT: adrp    x0,
 # INTERPOSABLE-NEXT: ldr     x0, {{.*}} ; literal pool symbol address: _OBJC_CLASS_$_LocalClass
+# _objc_msgSend is not the first __auth_got entry here and has no __got slot,
+# so the annotation shows the stub uses its own __auth_got slot.
+# INTERPOSABLE-ARM64E-NEXT: adrp    x1,
+# INTERPOSABLE-ARM64E-NEXT: ldr     x1, [x1
+# INTERPOSABLE-ARM64E-NEXT: adrp    x17,
+# INTERPOSABLE-ARM64E-NEXT: add     x17, x17, #0x{{[0-9a-f]+}} ; literal pool symbol address: _objc_msgSend{{$}}
+# INTERPOSABLE-ARM64E-NEXT: ldr     x16, [x17]
+# INTERPOSABLE-ARM64E-NEXT: braa    x16, x17
 
 # ARCHIVE:      Contents of (__TEXT,__objc_stubs) section
 # ARCHIVE-NEXT: _objc_msgSendClass$archive$_OBJC_CLASS_$_ArchiveClass:
@@ -377,3 +513,25 @@ _main:
 _main:
   bl _objc_msgSendClass$malformed
   ret
+
+#--- got-load.s
+# Takes the address of _objc_msgSend through a GOT load, as clang does on
+# arm64e, which gives it a raw __got slot next to its __auth_got slot.
+.section __TEXT,__objc_methname,cstring_literals
+Lgot:
+  .asciz "got"
+
+.section __DATA,__objc_selrefs,literal_pointers,no_dead_strip
+.p2align 3
+  .quad Lgot
+
+.text
+.globl _main
+_main:
+  adrp x8, _objc_msgSend@GOTPAGE
+  ldr x8, [x8, _objc_msgSend@GOTPAGEOFF]
+  bl _objc_msgSend$got
+  bl _objc_msgSendClass$got$_OBJC_CLASS_$_ExternalClass
+  ret
+
+.subsections_via_symbols

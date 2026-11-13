@@ -119,33 +119,17 @@ void RISCVTargetELFStreamer::finish() {
   if (hasTSO())
     EFlags |= ELF::EF_RISCV_TSO;
 
-  switch (ABI) {
-  case RISCVABI::ABI_ILP32:
-  case RISCVABI::ABI_IL32PC64:
-  case RISCVABI::ABI_LP64:
-  case RISCVABI::ABI_L64PC128:
-    break;
-  case RISCVABI::ABI_ILP32F:
-  case RISCVABI::ABI_IL32PC64F:
-  case RISCVABI::ABI_LP64F:
-  case RISCVABI::ABI_L64PC128F:
-    EFlags |= ELF::EF_RISCV_FLOAT_ABI_SINGLE;
-    break;
-  case RISCVABI::ABI_ILP32D:
-  case RISCVABI::ABI_IL32PC64D:
-  case RISCVABI::ABI_LP64D:
-  case RISCVABI::ABI_L64PC128D:
-    EFlags |= ELF::EF_RISCV_FLOAT_ABI_DOUBLE;
-    break;
-  case RISCVABI::ABI_ILP32E:
-  case RISCVABI::ABI_IL32PC64E:
-  case RISCVABI::ABI_LP64E:
-  case RISCVABI::ABI_CHERIOT:
+  if (RISCVABI::isRVE(ABI))
     EFlags |= ELF::EF_RISCV_RVE;
-    break;
-  case RISCVABI::ABI_Unknown:
-    break;
-  }
+
+  if (RISCVABI::isSoftFP(ABI))
+    EFlags |= ELF::EF_RISCV_FLOAT_ABI_SOFT;
+  else if (RISCVABI::isSingleFP(ABI))
+    EFlags |= ELF::EF_RISCV_FLOAT_ABI_SINGLE;
+  else if (RISCVABI::isDoubleFP(ABI))
+    EFlags |= ELF::EF_RISCV_FLOAT_ABI_DOUBLE;
+  else
+    assert(ABI == RISCVABI::ABI::Unknown);
 
   W.setELFHeaderEFlags(EFlags);
 }

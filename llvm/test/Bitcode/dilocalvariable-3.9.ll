@@ -1,7 +1,7 @@
 ; RUN: llvm-dis -o - %s.bc | FileCheck %s
 
-; CHECK: !9 = !DILocalVariable(name: "i", scope: !6, file: !1, line: 1, type: !10)
-; CHECK: !10 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+; CHECK: !10 = !DILocalVariable(name: "i", scope: !6, file: !1, line: 1, type: !11)
+; CHECK: !11 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

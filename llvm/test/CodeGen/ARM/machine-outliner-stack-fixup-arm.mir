@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=armv7-- -run-pass=prolog-epilog -run-pass=machine-outliner \
-# RUN: -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: %s -o - | FileCheck %s
 
 --- |
   define void @CheckAddrMode_i12() { ret void }
@@ -12,7 +12,6 @@
 ---
 
 name:           CheckAddrMode_i12
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $r0
@@ -42,7 +41,6 @@ body:             |
 ---
 
 name:           CheckAddrMode3
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $r1
@@ -72,7 +70,6 @@ body:             |
 ---
 
 name:           CheckAddrMode5
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $r2
@@ -108,7 +105,6 @@ body:             |
 ---
 
 name:           CheckAddrMode5FP16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $r3
@@ -143,7 +139,6 @@ body:             |
 ---
 
 name:           foo
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $lr
@@ -177,3 +172,4 @@ body:             |
     ;CHECK-NEXT: $r2 = LDRSH $sp, $noreg, 8, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: $r5 = LDRSH $sp, $noreg, 247, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg
+...

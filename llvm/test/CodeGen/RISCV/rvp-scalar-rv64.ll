@@ -1644,3 +1644,47 @@ define i64 @test_usati_u64_w63(i64 %a) {
   %res = call i64 @llvm.riscv.usati.i64(i64 %a, i32 63)
   ret i64 %res
 }
+
+; Only the lower 32 bits of the merge result are used, so the mask constant can
+; be materialized with a sign-extended lui.
+define void @merge_wusers_v4i16(<4 x i16> %a, i16 %x, ptr %p) nounwind {
+; CHECK-LABEL: merge_wusers_v4i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a1, 16
+; CHECK-NEXT:    lui a3, 1048560
+; CHECK-NEXT:    mvm a0, a1, a3
+; CHECK-NEXT:    sw a0, 0(a2)
+; CHECK-NEXT:    ret
+  %r = insertelement <4 x i16> %a, i16 %x, i32 1
+  %b = bitcast <4 x i16> %r to i64
+  %t = trunc i64 %b to i32
+  store i32 %t, ptr %p
+  ret void
+}
+
+define void @merge_wusers_v8i8(<8 x i8> %a, i8 %x, ptr %p) nounwind {
+; CHECK-LABEL: merge_wusers_v8i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a1, 24
+; CHECK-NEXT:    lui a3, 1044480
+; CHECK-NEXT:    mvm a0, a1, a3
+; CHECK-NEXT:    sw a0, 0(a2)
+; CHECK-NEXT:    ret
+  %r = insertelement <8 x i8> %a, i8 %x, i32 3
+  %b = bitcast <8 x i8> %r to i64
+  %t = trunc i64 %b to i32
+  store i32 %t, ptr %p
+  ret void
+}
+
+declare i32 @llvm.riscv.ssh1sadd.i32(i32, i32)
+
+define signext i32 @ssh1sadd_intrinsic_i32(i32 signext %a, i32 signext %b) nounwind {
+; CHECK-LABEL: ssh1sadd_intrinsic_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pssh1sadd.w a0, a0, a1
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.ssh1sadd.i32(i32 %a, i32 %b)
+  ret i32 %res
+}

@@ -445,10 +445,17 @@ struct GPUBarrierOpToNVVMLowering final
       rewriter.replaceOpWithNewOp<NVVM::SyncWarpOp>(op, mask);
       return success();
     }
-    default:
-      return rewriter.notifyMatchFailure(
-          op, "unsupported scope for NVVM barrier lowering");
+    case gpu::BarrierScope::Cluster: {
+      UnitAttr aligned = rewriter.getUnitAttr();
+      if (op.getAddressSpaces() && op.getAddressSpaces()->empty())
+        NVVM::ClusterArriveRelaxedOp::create(rewriter, op.getLoc(), aligned);
+      else
+        NVVM::ClusterArriveOp::create(rewriter, op.getLoc(), aligned);
+      rewriter.replaceOpWithNewOp<NVVM::ClusterWaitOp>(op, aligned);
+      return success();
     }
+    }
+    llvm_unreachable("unknown barrier scope");
   }
 };
 

@@ -370,10 +370,12 @@ def SectionsOp : OpenMP_Op<"sections", traits = [
 //===----------------------------------------------------------------------===//
 
 def SingleOp : OpenMP_Op<"single", traits = [
-    AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>
+    AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>, RecursiveMemoryEffects
   ], clauses = [
-    OpenMP_AllocateClause, OpenMP_CopyprivateClause, OpenMP_NowaitClause,
-    OpenMP_PrivateClause
+    OpenMP_AllocateClause,
+    OpenMP_CopyprivateClauseSkip<boundedRecipeEffects = true>, OpenMP_NowaitClause,
+    OpenMP_PrivateClauseSkip<boundedRecipeEffects = true>
   ], singleRegion = true> {
   let summary = "single directive";
   let description = [{
@@ -390,7 +392,7 @@ def SingleOp : OpenMP_Op<"single", traits = [
 
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<PrivateRegion>($region, $private_vars, type($private_vars),
-        $private_syms, $private_needs_barrier) attr-dict
+        $private_syms, $private_needs_barrier) prop-dict attr-dict
   }];
 
   let hasVerifier = 1;
@@ -1269,9 +1271,11 @@ def TaskloopWrapperOp : OpenMP_Op<"taskloop.wrapper", traits = [
 }
 
 def TaskgroupOp : OpenMP_Op<"taskgroup", traits = [
-    AttrSizedOperandSegments, AutomaticAllocationScope
+    AttrSizedOperandSegments, AutomaticAllocationScope,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>, RecursiveMemoryEffects
   ], clauses = [
-    OpenMP_AllocateClause, OpenMP_TaskReductionClause
+    OpenMP_AllocateClause,
+    OpenMP_TaskReductionClauseSkip<boundedRecipeEffects = true>
   ], singleRegion = true> {
   let summary = "taskgroup construct";
   let description = [{
@@ -1294,7 +1298,7 @@ def TaskgroupOp : OpenMP_Op<"taskgroup", traits = [
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<TaskReductionRegion>(
         $region, $task_reduction_vars, type($task_reduction_vars),
-        $task_reduction_byref, $task_reduction_syms) attr-dict
+        $task_reduction_byref, $task_reduction_syms) prop-dict attr-dict
   }];
 
   let hasVerifier = 1;
@@ -1927,7 +1931,8 @@ def OrderedRegionOp : OpenMP_Op<"ordered.region", clauses = [
 //===----------------------------------------------------------------------===//
 
 def TaskwaitOp
-    : OpenMP_Op<"taskwait", traits = [AttrSizedOperandSegments],
+    : OpenMP_Op<"taskwait", traits = [AttrSizedOperandSegments,
+                MemoryEffects<[MemRead, MemWrite]>],
                 clauses = [OpenMP_DependClause, OpenMP_NowaitClause]> {
   let summary = "taskwait construct";
   let description = [{
@@ -2783,6 +2788,12 @@ def IteratorOp : OpenMP_Op<"iterator", [AttrSizedOperandSegments],
 
     The region may contain multiple blocks. Exactly one of them is terminated
     by `omp.yield`; every other block branches to a block of the region.
+
+    Each range has a nonzero step and an exclusive upper bound unless
+    `inclusive` is specified. A range is empty when its lower bound is beyond
+    its upper bound in the direction of the step (or equal to an exclusive
+    upper bound). If any range is empty, the result is an empty list and the
+    region is not evaluated.
 
     Example:
       %it = omp.iterator(%i, %j) =

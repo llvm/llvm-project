@@ -33,7 +33,7 @@ void Fortran::lower::SymMap::addSymbol(Fortran::semantics::SymbolRef sym,
 
 Fortran::lower::SymbolBox
 Fortran::lower::SymMap::lookupSymbol(Fortran::semantics::SymbolRef symRef) {
-  auto *sym = symRef->HasLocalLocality() ? &*symRef : &symRef->GetUltimate();
+  auto *sym = &getKey(symRef);
   for (auto jmap = symbolMapStack.rbegin(), jend = symbolMapStack.rend();
        jmap != jend; ++jmap) {
     auto iter = jmap->find(sym);
@@ -45,7 +45,7 @@ Fortran::lower::SymMap::lookupSymbol(Fortran::semantics::SymbolRef symRef) {
 
 Fortran::lower::SymbolBox Fortran::lower::SymMap::lookupDeviceSymbol(
     Fortran::semantics::SymbolRef symRef) {
-  auto *sym = symRef->HasLocalLocality() ? &*symRef : &symRef->GetUltimate();
+  auto *sym = &getKey(symRef);
   for (auto jmap = deviceSymbolMapStack.rbegin(),
             jend = deviceSymbolMapStack.rend();
        jmap != jend; ++jmap) {
@@ -68,7 +68,7 @@ Fortran::lower::SymMap::lookupSymbolByName(llvm::StringRef symName) {
 
 Fortran::lower::SymbolBox Fortran::lower::SymMap::shallowLookupSymbol(
     Fortran::semantics::SymbolRef symRef) {
-  auto *sym = symRef->HasLocalLocality() ? &*symRef : &symRef->GetUltimate();
+  auto *sym = &getKey(symRef);
   auto &map = symbolMapStack.back();
   auto iter = map.find(sym);
   if (iter != map.end())
@@ -81,7 +81,7 @@ Fortran::lower::SymbolBox Fortran::lower::SymMap::shallowLookupSymbol(
 /// host-association in OpenMP code.
 Fortran::lower::SymbolBox Fortran::lower::SymMap::lookupOneLevelUpSymbol(
     Fortran::semantics::SymbolRef symRef) {
-  auto *sym = symRef->HasLocalLocality() ? &*symRef : &symRef->GetUltimate();
+  auto *sym = &getKey(symRef);
   auto jmap = symbolMapStack.rbegin();
   auto jend = symbolMapStack.rend();
   if (jmap == jend)
@@ -105,14 +105,14 @@ Fortran::lower::SymMap::lookupImpliedDo(Fortran::lower::SymMap::AcDoVar var) {
 
 void Fortran::lower::SymMap::registerStorage(
     semantics::SymbolRef symRef, Fortran::lower::SymMap::StorageDesc storage) {
-  auto *sym = symRef->HasLocalLocality() ? &*symRef : &symRef->GetUltimate();
+  auto *sym = &getKey(symRef);
   assert(storage.first && "registerting storage without an address");
   storageMapStack.back().insert_or_assign(sym, std::move(storage));
 }
 
 Fortran::lower::SymMap::StorageDesc
 Fortran::lower::SymMap::lookupStorage(Fortran::semantics::SymbolRef symRef) {
-  auto *sym = symRef->HasLocalLocality() ? &*symRef : &symRef->GetUltimate();
+  auto *sym = &getKey(symRef);
   auto &map = storageMapStack.back();
   auto iter = map.find(sym);
   if (iter != map.end())

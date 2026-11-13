@@ -22835,6 +22835,25 @@ TEST_F(FormatTest, OneLineFormatOffRegex) {
                "  tm t; // FormatOff\n"
                " int i;",
                Style);
+
+  Style = getLLVMStyle();
+  Style.UseTab = FormatStyle::UT_Always;
+  Style.TabWidth = 4;
+  Style.IndentWidth = 4;
+  Style.ReflowComments = FormatStyle::RCS_Never;
+  Style.OneLineFormatOffRegex = "// #if";
+  verifyFormat("void f() {\n"
+               "#if !X\n"
+               "#else\n"
+               "\t{\n"
+               "#if Y\n"
+               "#else // #if Y\n"
+               "\t\t// comment\n"
+               "#endif\n"
+               "\t}\n"
+               "#endif\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, DoNotCrashOnInvalidInput) {
@@ -23000,6 +23019,17 @@ TEST_F(FormatTest, FileAndCode) {
                                    "#else\n"
                                    "#define B() [NSString a:@\"\"]\n"
                                    "#endif"));
+}
+
+TEST_F(FormatTest, GuessJavaScriptLanguageByFileName) {
+  for (StringRef FileName :
+       {"foo.js", "foo.mjs", "foo.cjs", "foo.ts", "foo.mts", "foo.cts",
+        "foo.JS", "foo.MJS", "foo.CJS", "foo.TS", "foo.MTS", "foo.CTS",
+        "foo.d.ts", "foo.d.mts", "foo.d.cts", "foo.mts.in",
+        "foo.cts.template"}) {
+    SCOPED_TRACE(FileName);
+    EXPECT_EQ(FormatStyle::LK_JavaScript, guessLanguage(FileName, ""));
+  }
 }
 
 TEST_F(FormatTest, GuessLanguageWithCpp11AttributeSpecifiers) {

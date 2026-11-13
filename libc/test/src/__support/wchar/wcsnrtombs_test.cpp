@@ -10,16 +10,15 @@
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
 #include "src/__support/error_or.h"
-#include "src/__support/macros/null_check.h"
-#include "src/__support/macros/properties/os.h"
+#include "src/__support/macros/properties/types.h"
 #include "src/__support/wchar/mbstate.h"
 #include "src/__support/wchar/wcsnrtombs.h"
 #include "test/UnitTest/Test.h"
 
-// TODO: add support for 16-bit widechars to remove this macro
-#ifdef LIBC_TARGET_OS_IS_WINDOWS
-TEST(LlvmLibcStringConverterTest, Windows) {
-  // pass on windows for now
+// TODO: add support for 16-bit widechars to remove this guard
+#if !defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
+TEST(LlvmLibcWcsnrtombs, UTF16) {
+  // pass on 16-bit wchar_t platforms (e.g. Windows) for now
 }
 
 #else
@@ -187,21 +186,34 @@ TEST(LlvmLibcWcsnrtombs, InvalidCharacter) {
   const wchar_t *cur = src;
   char mbs[11];
 
-  // n parameter ignored when dest is null
-  auto res = LIBC_NAMESPACE::internal::wcsnrtombs(mbs, &cur, 5, 7, &state1);
+  constexpr size_t SRC_LEN = sizeof(src) / sizeof(wchar_t);
+
+  // Conversion stops at dest_len (7 bytes) before reaching the invalid wchar.
+  auto res =
+      LIBC_NAMESPACE::internal::wcsnrtombs(mbs, &cur, SRC_LEN, 7, &state1);
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(res.value(), static_cast<size_t>(7));
 
   LIBC_NAMESPACE::internal::mbstate state2;
   cur = src;
-  res = LIBC_NAMESPACE::internal::wcsnrtombs(mbs, &cur, 5, 11, &state2);
+  res = LIBC_NAMESPACE::internal::wcsnrtombs(mbs, &cur, SRC_LEN, 11, &state2);
+  ASSERT_FALSE(res.has_value());
+  ASSERT_EQ(res.error(), EILSEQ);
+
+  // Negative wchar_t values (when wchar_t is signed) must also fail with
+  // EILSEQ rather than passing a signed range comparison.
+  const wchar_t neg_src[] = {static_cast<wchar_t>(-1), static_cast<wchar_t>(0)};
+  LIBC_NAMESPACE::internal::mbstate state3;
+  cur = neg_src;
+  res =
+      LIBC_NAMESPACE::internal::wcsnrtombs(mbs, &cur, 2, sizeof(mbs), &state3);
   ASSERT_FALSE(res.has_value());
   ASSERT_EQ(res.error(), EILSEQ);
 }
 
-#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+#if defined(LIBC_ADD_NULL_CHECKS)
 TEST(LlvmLibcWcsnrtombs, NullSrc) {
-  EXPECT_DEATH(
+  ASSERT_DEATH(
       [] {
         LIBC_NAMESPACE::internal::mbstate state;
         char mbs[10];
@@ -209,5 +221,5 @@ TEST(LlvmLibcWcsnrtombs, NullSrc) {
       },
       WITH_SIGNAL(-1));
 }
-#endif // LIBC_HAS_ADDRESS_SANITIZER
-#endif
+#endif // LIBC_ADD_NULL_CHECKS
+#endif // !LIBC_TYPES_WCHAR_T_IS_UTF32

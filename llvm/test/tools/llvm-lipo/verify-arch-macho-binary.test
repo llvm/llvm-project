@@ -20,6 +20,7 @@
 # RUN: not llvm-lipo %t %t -verify_arch i386 2>&1 | FileCheck --check-prefix=MULTIPLE_INPUT_OBJ %s
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACE
   cputype:         0x00000007

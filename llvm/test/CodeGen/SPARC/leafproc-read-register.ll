@@ -1,4 +1,6 @@
-; RUN: llc -mtriple=sparc -verify-machineinstrs -stop-after=prolog-epilog < %s | FileCheck %s --check-prefix=MIR
+; RUN: llc -mtriple=sparc -stop-after=prolog-epilog < %s | FileCheck %s --check-prefix=MIR
+; RUN: llc -mtriple=sparc -enable-new-pm -stop-after=prolog-epilog < %s \
+; RUN:   | FileCheck %s --check-prefix=MIR
 ; RUN: llc -mtriple=sparc -verify-machineinstrs < %s | FileCheck %s
 
 ;; A leaf procedure remaps %i7 to %o7. A read of the reserved %i7 through

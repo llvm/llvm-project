@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+include "llvm/IR/Attributes.td"
 include "llvm/TableGen/SetTheory.td"
 
 // Dag operators for composing predicates.
@@ -85,6 +86,10 @@ def ULLong : FuncArgType;
 def UInt128 : FuncArgType;
 def SizeT : FuncArgType;    // size_t.
 def SSizeT : FuncArgType;   // POSIX ssize_t.
+defvar AlignValT = SizeT;  // std::align_val_t.
+def CmpResult : FuncArgType; // libgcc_cmp_return.
+def Half : FuncArgType;     // IEEE half.
+def BFloat : FuncArgType;   // bfloat16.
 def Flt : FuncArgType;      // IEEE float.
 def Dbl : FuncArgType;      // IEEE double.
 def LDbl : FuncArgType;     // Any floating type (TODO: tighten this up).
@@ -93,6 +98,7 @@ def FP128 : FuncArgType;
 def PPCFP128 : FuncArgType;
 def Floating : FuncArgType; // Any floating type.
 def Ptr : FuncArgType;      // Any pointer type.
+def AllocaPtr : FuncArgType; // Pointer in the alloca address space.
 def Struct : FuncArgType;   // Any struct type.
 def Ellip : FuncArgType;    // The ellipsis (...).
 def Same : FuncArgType;     // Same argument type as the previous one.
@@ -104,6 +110,16 @@ def V8I32 : FuncArgType;
 def V16I32 : FuncArgType;
 def NXV2I32 : FuncArgType;
 def NXV4I32 : FuncArgType;
+
+// Signature markers for libcalls that are global variables rather than
+// functions. The variable's type follows the marker.
+def Variable : FuncArgType;
+def ThreadLocalVariable : FuncArgType;
+
+class StructFuncArgType<list<FuncArgType> elementTypes> : FuncArgType {
+  list<FuncArgType> ElementTypes = elementTypes;
+  bit InReg = false;
+}
 
 class VectorFuncArgType<FuncArgType elementType, int numElements,
                         bit scalable = false> : FuncArgType {
@@ -126,6 +142,66 @@ def V4F64 : VectorFuncArgType<Dbl, 4>;
 def V8F64 : VectorFuncArgType<Dbl, 8>;
 def NXV2F64 : VectorFuncArgType<Dbl, 2, scalable = true>;
 
+class ModRefInfo;
+def NoModRef : ModRefInfo;
+def Ref : ModRefInfo;
+def Mod : ModRefInfo;
+def ModRef : ModRefInfo;
+
+class MemoryEffects<ModRefInfo mr = ModRef> {
+  ModRefInfo ArgMem = mr;
+  ModRefInfo InaccessibleMem = mr;
+  ModRefInfo ErrnoMem = mr;
+  ModRefInfo Other = mr;
+  ModRefInfo TargetMem0 = mr;
+  ModRefInfo TargetMem1 = mr;
+}
+
+def UnknownMemory : MemoryEffects;
+def NoMemory : MemoryEffects<NoModRef>;
+def ArgMemOnly : MemoryEffects<NoModRef> { let ArgMem = ModRef; }
+def ArgMemReadOnly : MemoryEffects<NoModRef> { let ArgMem = Ref; }
+def ArgMemWriteOnly : MemoryEffects<NoModRef> { let ArgMem = Mod; }
+def ArgOrErrnoMemWriteOnly : MemoryEffects<NoModRef> {
+  let ArgMem = Mod;
+  let ErrnoMem = Mod;
+}
+
+def ErrnoMemWriteOnly : MemoryEffects<NoModRef> { let ErrnoMem = Mod; }
+def InaccessibleOrErrnoMem : MemoryEffects<NoModRef> {
+  let InaccessibleMem = ModRef;
+  let ErrnoMem = ModRef;
+}
+
+def InaccessibleOrArgMem : MemoryEffects<NoModRef> {
+  let ArgMem = ModRef;
+  let InaccessibleMem = ModRef;
+}
+
+class ValueAttr<list<AttrProperty> props, string expr>
+    : Attr<"", IntersectPreserve, props> {
+  string Expr = expr;
+}
+
+class AllocKindAttr<string kind>
+    : ValueAttr<[FnAttr], "Attribute::getWithAllocKind(C, " # kind # ")">;
+
+class AllocSizeAttr<int elemSizeArg, string numElemsArg = "std::nullopt">
+    : ValueAttr<[FnAttr], "Attribute::getWithAllocSizeArgs(C, " # elemSizeArg #
+                          ", " # numElemsArg # ")">;
+
+class AllocFamilyAttr<string family>
+    : ValueAttr<[FnAttr],
+                "Attribute::get(C, \"alloc-family\", \"" # family # "\")">;
+
+class NoFPClassAttr<string mask>
+    : ValueAttr<[ParamAttr, RetAttr],
+                "Attribute::getWithNoFPClass(C, " # mask # ")">;
+
+def CapturesNone
+    : ValueAttr<[ParamAttr],
+                "Attribute::getWithCaptureInfo(C, CaptureInfo::none())">;
+
 /// Abstract definition for functionality the compiler may need to
 /// emit a call to. Emits the RTLIB::Libcall enum - This enum defines
 /// all of the runtime library calls the backend can emit. The various
@@ -141,20 +217,43 @@ class RuntimeLibcall<FuncArgType RetType = NoneType,
   FuncArgType ReturnType = RetType;
   list<FuncArgType> ArgumentTypes = ArgTypes;
 
-  // TODO: Record attributes
+  list<Attr> FnAttrs = [];
+  MemoryEffects Memory = UnknownMemory;
+  list<Attr> RetAttrs = [];
+  list<list<Attr>> ParamAttrs = [];
+  list<FuncArgType> ParamPointeeTypes = [];
 }
+
+class RuntimeLibcallVariable<FuncArgType Ty, bit threadLocal = false>
+    : RuntimeLibcall<!if(threadLocal, ThreadLocalVariable, Variable), [Ty]>;
 
 class MaskedRuntimeLibcall<RuntimeLibcall unmasked, FuncArgType mask>
     : RuntimeLibcall<unmasked.ReturnType,
                      !if(!empty(unmasked.ArgumentTypes), [],
                          !listconcat(unmasked.ArgumentTypes, [mask]))> {
   RuntimeLibcall Unmasked = unmasked;
+  let FnAttrs = unmasked.FnAttrs;
+  let Memory = unmasked.Memory;
+  let RetAttrs = unmasked.RetAttrs;
+  let ParamAttrs = unmasked.ParamAttrs;
+  let ParamPointeeTypes = unmasked.ParamPointeeTypes;
 }
 
+// TODO: NoCallback probably unsafe in general
+defvar CommonFnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+
 multiclass VectorMathLibcall<string suffix, FuncArgType RetType = NoneType,
-                             list<FuncArgType> ArgTypes = []> {
+                             list<FuncArgType> ArgTypes = [],
+                             MemoryEffects memory = UnknownMemory,
+                             list<list<Attr>> paramAttrs = [],
+                             list<FuncArgType> paramPointeeTypes = []> {
   defvar VT = !cast<VectorFuncArgType>(suffix);
-  def _#suffix : RuntimeLibcall<RetType, ArgTypes>;
+  def _#suffix : RuntimeLibcall<RetType, ArgTypes> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = memory;
+    let ParamAttrs = paramAttrs;
+    let ParamPointeeTypes = paramPointeeTypes;
+  }
   if !initialized(VT.MaskType) then
     def _MASKED_#suffix
         : MaskedRuntimeLibcall<!cast<RuntimeLibcall>(NAME#"_"#suffix),
@@ -169,6 +268,12 @@ class RuntimeLibcallImpl<RuntimeLibcall P, string Name = NAME> {
   string LibCallFuncName = Name;
   FuncArgType ReturnType = P.ReturnType;
   list<FuncArgType> ArgumentTypes = P.ArgumentTypes;
+  list<Attr> FnAttrs = P.FnAttrs;
+  MemoryEffects Memory = P.Memory;
+  list<Attr> RetAttrs = P.RetAttrs;
+  list<list<Attr>> ParamAttrs = P.ParamAttrs;
+  list<FuncArgType> ParamPointeeTypes = P.ParamPointeeTypes;
+  bit AlignPointeesToElementType = true;
 }
 
 // Implementation of a long double function, which provides the libcall
@@ -186,6 +291,8 @@ class LongDoubleLibcallImpl<string libcall_basename, string Name = NAME>
                        ProvidesF128.ReturnType);
   let ArgumentTypes = !foreach(Ty, ProvidesF128.ArgumentTypes,
                                !if(!eq(Ty, FP128), LDbl, Ty));
+  let ParamPointeeTypes = !foreach(Ty, ProvidesF128.ParamPointeeTypes,
+                                   !if(!eq(Ty, FP128), LDbl, Ty));
 }
 
 /// A family of runtime libcalls implementing one floating-point operation, used
