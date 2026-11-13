@@ -8743,10 +8743,12 @@ llvm::Metadata *CodeGenModule::CreateMetadataIdentifierImpl(
   if (ForceString || isExternallyVisible(T->getLinkage())) {
     std::string OutName;
     llvm::raw_string_ostream Out(OutName);
-    getCXXABI().getMangleContext().mangleCanonicalTypeName(
-        T, Out, getCodeGenOpts().SanitizeCfiICallNormalizeIntegers);
+    bool NormalizeIntegers = T->isFunctionType() &&
+                             getCodeGenOpts().SanitizeCfiICallNormalizeIntegers;
+    getCXXABI().getMangleContext().mangleCanonicalTypeName(T, Out,
+                                                           NormalizeIntegers);
 
-    if (getCodeGenOpts().SanitizeCfiICallNormalizeIntegers)
+    if (NormalizeIntegers)
       Out << ".normalized";
 
     Out << Suffix;
