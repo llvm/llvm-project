@@ -4778,6 +4778,18 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
             FP16Tbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
       return Entry->Cost;
 
+  // Without FullFP16 an f16 vector is extended to f32 before a conversion to
+  // i8, i16 or i32.
+  if (!ST->hasFullFP16() &&
+      (ISD == ISD::FP_TO_SINT || ISD == ISD::FP_TO_UINT) &&
+      SrcTy.isFixedLengthVector() && SrcTy.getScalarType() == MVT::f16 &&
+      DstTy.getScalarSizeInBits() >= 8 && DstTy.getScalarSizeInBits() <= 32) {
+    Type *ExtTy = Src->getWithNewType(Type::getFloatTy(Src->getContext()));
+    return getCastInstrCost(Instruction::FPExt, ExtTy, Src, CCH, CostKind) +
+           getCastInstrCost(Opcode, Dst, ExtTy, TTI::CastContextHint::None,
+                            CostKind);
+  }
+
   // INT_TO_FP of i64->f32 will scalarize, which is required to avoid
   // double-rounding issues.
   if ((ISD == ISD::SINT_TO_FP || ISD == ISD::UINT_TO_FP) &&
