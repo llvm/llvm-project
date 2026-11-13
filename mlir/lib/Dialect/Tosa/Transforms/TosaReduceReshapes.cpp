@@ -78,11 +78,12 @@ static bool isSupportedProducer(Operation *op) {
           op->hasTrait<OpTrait::tosa::TosaElementwiseOperator>());
 }
 
-/// Whether a reshape inserted on `operand` can fold after its producer is
-/// replaced. Match the constant cases handled by ReshapeOp::fold.
+/// Whether reshaping `operand` avoids leaving an additional reshape. An
+/// existing reshape must have one use so that it can be removed after the
+/// inserted reshape folds. Match the constant cases handled by ReshapeOp::fold.
 static bool canFoldOperandReshape(Value operand, RankedTensorType operandType) {
   if (isa_and_nonnull<tosa::ReshapeOp>(operand.getDefiningOp())) {
-    return true;
+    return operand.hasOneUse();
   }
 
   auto constOp = operand.getDefiningOp<tosa::ConstOp>();

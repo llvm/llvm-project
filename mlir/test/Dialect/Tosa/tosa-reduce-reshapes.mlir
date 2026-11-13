@@ -110,6 +110,22 @@ func.func @keep_two_non_foldable_operands(%arg0: tensor<24xf32>, %arg1: tensor<2
 
 // -----
 
+// CHECK-LABEL: @keep_shared_reshape
+// CHECK: %[[SHARED:.*]] = tosa.reshape %arg0{{.*}} -> tensor<2x3xf32>
+// CHECK: %[[SUM:.*]] = tosa.add %[[SHARED]], %arg1 : (tensor<2x3xf32>, tensor<2x3xf32>) -> tensor<2x3xf32>
+// CHECK: %[[RESULT:.*]] = tosa.reshape %[[SUM]]{{.*}} -> tensor<1x2x3xf32>
+// CHECK: return %[[RESULT]], %[[SHARED]]
+func.func @keep_shared_reshape(%arg0: tensor<6xf32>, %arg1: tensor<2x3xf32>) -> (tensor<1x2x3xf32>, tensor<2x3xf32>) {
+  %input_shape = tosa.const_shape values(dense<[2, 3]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %shared = tosa.reshape %arg0, %input_shape : (tensor<6xf32>, !tosa.shape<2>) -> tensor<2x3xf32>
+  %sum = tosa.add %shared, %arg1 : (tensor<2x3xf32>, tensor<2x3xf32>) -> tensor<2x3xf32>
+  %output_shape = tosa.const_shape values(dense<[1, 2, 3]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  %result = tosa.reshape %sum, %output_shape : (tensor<2x3xf32>, !tosa.shape<3>) -> tensor<1x2x3xf32>
+  return %result, %shared : tensor<1x2x3xf32>, tensor<2x3xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @propagate_foldable_operands
 // CHECK: %[[LHS:.*]] = tosa.reshape %arg0{{.*}} -> tensor<1x2x3x4xf32>
 // CHECK: %[[RHS:.*]] = tosa.reshape %arg1{{.*}} -> tensor<1x1x1x4xf16>
