@@ -104,11 +104,10 @@ class TestRustVectorFormatter(TestBase):
             "core::num::niche_types::UsizeNoHighBit"
         )
         self.expect("frame variable vector.buf.inner.cap", substrs=["CPP_FALLBACK"])
+
     def test_enum_variant_part_language(self):
         """Inner $Inner union and $Variant structs of Rust enums should not get C++ instead of Rust."""
-        enum_yaml = os.path.join(
-            self.getSourceDir(), "..", "enum-structs", "main.yaml"
-        )
+        enum_yaml = os.path.join(self.getSourceDir(), "..", "enum-structs", "main.yaml")
         obj_path = self.getBuildArtifact("enum.o")
         self.yaml2obj(enum_yaml, obj_path)
         target = self.dbg.CreateTarget(obj_path)
