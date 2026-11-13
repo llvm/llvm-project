@@ -27,12 +27,45 @@ let Namespace = "Arch" in {
   def V5 : Register<"v5">;
   def V6 : Register<"v6">;
   def V7 : Register<"v7">;
-  def V0M2 : Register<"v0">;
-  def V2M2 : Register<"v2">;
-  def V4M2 : Register<"v4">;
-  def V6M2 : Register<"v6">;
-  def V0M4 : Register<"v0">;
-  def V4M4 : Register<"v4">;
+  // Like RISC-V, use PositionOrder to keep each LMUL group contiguous in enum
+  // order.
+  let PositionOrder = 1 in {
+    def V0M2 : Register<"v0">;
+    def V2M2 : Register<"v2">;
+    def V4M2 : Register<"v4">;
+    def V6M2 : Register<"v6">;
+  }
+  let PositionOrder = 2 in {
+    def V0M4 : Register<"v0">;
+    def V4M4 : Register<"v4">;
+  }
+
+  def W0 : Register<"w0">;
+  def W1 : Register<"w1">;
+  def W2 : Register<"w2">;
+  // WP2 is not part of WPR, so the WPR registers are not evenly spaced.
+  let PositionOrder = 3 in {
+    def WP0 : Register<"w0">;
+    def WP1 : Register<"w1">;
+    def WP2 : Register<"wp2">;
+    def WP3 : Register<"w2">;
+  }
+
+  def U0 : Register<"u0">;
+  def U1 : Register<"u1">;
+  def U2 : Register<"u2">;
+  def U3 : Register<"u3">;
+  def U4 : Register<"u4">;
+  // Only every third register is part of UPR.
+  let PositionOrder = 4 in {
+    def UP0 : Register<"u0">;
+    def UP1 : Register<"up1">;
+    def UP2 : Register<"up2">;
+    def UP3 : Register<"u2">;
+    def UP4 : Register<"up4">;
+    def UP5 : Register<"up5">;
+    def UP6 : Register<"u4">;
+  }
 }
 
 def GPR : RegisterClass<"Arch", [i32], 32, (add R0, R1)>;
@@ -45,9 +78,8 @@ def YGPR : RegisterClass<"Arch", [i64], 64, (add R0_Y, R1_Y)> {
   let CoerceFromRegClass = GPR;
 }
 
-/// Only the even/4-aligned registers in VR have counterparts in VRM2/VRM4.
-/// V0M4 interleaves between V0M2 and V2M2 in enum order, so VRM2 falls back to
-/// a switch while VRM4 uses strided arithmetic.
+/// Only the even/4-aligned registers in VR have counterparts in VRM2/VRM4, so
+/// the conversions use strided arithmetic.
 def VR : RegisterClass<"Arch", [v2i32], 64,
                        (add V0, V1, V2, V3, V4, V5, V6, V7)>;
 def VRM2 : RegisterClass<"Arch", [v4i32], 128, (add V0M2, V2M2, V4M2, V6M2)> {
@@ -55,6 +87,20 @@ def VRM2 : RegisterClass<"Arch", [v4i32], 128, (add V0M2, V2M2, V4M2, V6M2)> {
 }
 def VRM4 : RegisterClass<"Arch", [v8i32], 256, (add V0M4, V4M4)> {
   let CoerceFromRegClass = VR;
+}
+
+/// The WPR registers are not evenly spaced in enum order, so the conversion
+/// falls back to a switch.
+def WR : RegisterClass<"Arch", [i32], 32, (add W0, W1, W2)>;
+def WPR : RegisterClass<"Arch", [i64], 64, (add WP0, WP1, WP3)> {
+  let CoerceFromRegClass = WR;
+}
+
+/// Only the even UR registers have counterparts in UPR, which are three apart
+/// in enum order, so the conversion has to both divide and multiply.
+def UR : RegisterClass<"Arch", [i32], 32, (add U0, U1, U2, U3, U4)>;
+def UPR : RegisterClass<"Arch", [i64], 64, (add UP0, UP3, UP6)> {
+  let CoerceFromRegClass = UR;
 }
 
 /// Registers are only converted in the HwModes that select a class with
@@ -88,6 +134,18 @@ def InstVRM4 : Instruction {
   let AsmString = "v4inst $vd, $vs";
 }
 
+def InstWPR : Instruction {
+  let OutOperandList = (outs WPR:$wd);
+  let InOperandList = (ins WR:$ws);
+  let AsmString = "winst $wd, $ws";
+}
+
+def InstUPR : Instruction {
+  let OutOperandList = (outs UPR:$ud);
+  let InOperandList = (ins UR:$us);
+  let AsmString = "uinst $ud, $us";
+}
+
 def InstPtr : Instruction {
   let OutOperandList = (outs GPR:$rd);
   let InOperandList = (ins PtrRC:$ptr);
@@ -111,18 +169,29 @@ def BadRC : RegisterClass<"Arch", [i32], 32, (add R0, R1)> {
 // ERR-SHADOWED: error: RegisterClass 'BadRC' cannot coerce from 'R0_Y' since MatchRegisterName returns 'R0' for 'r0'
 #endif
 
+// CHECK-LABEL: static MCRegister convertToUPR(MCRegister Reg) {
+// CHECK-NEXT:    assert(Reg.id() >= Arch::U0 && Reg.id() <= Arch::U4 &&
+// CHECK-NEXT:           (Reg.id() - Arch::U0) % 2 == 0 && "unexpected register");
+// CHECK-NEXT:    return Arch::UP0 + (Reg.id() - Arch::U0) / 2 * 3;
+// CHECK-NEXT:  }
+
 // CHECK-LABEL: static MCRegister convertToVRM4(MCRegister Reg) {
 // CHECK-NEXT:    assert(Reg.id() >= Arch::V0 && Reg.id() <= Arch::V4 &&
 // CHECK-NEXT:           (Reg.id() - Arch::V0) % 4 == 0 && "unexpected register");
-// CHECK-NEXT:    return Arch::V0M4 + (Reg.id() - Arch::V0) / 4 * 3;
+// CHECK-NEXT:    return Arch::V0M4 + (Reg.id() - Arch::V0) / 4;
 // CHECK-NEXT:  }
 
 // CHECK-LABEL: static MCRegister convertToVRM2(MCRegister Reg) {
+// CHECK-NEXT:    assert(Reg.id() >= Arch::V0 && Reg.id() <= Arch::V6 &&
+// CHECK-NEXT:           (Reg.id() - Arch::V0) % 2 == 0 && "unexpected register");
+// CHECK-NEXT:    return Arch::V0M2 + (Reg.id() - Arch::V0) / 2;
+// CHECK-NEXT:  }
+
+// CHECK-LABEL: static MCRegister convertToWPR(MCRegister Reg) {
 // CHECK-NEXT:    switch (Reg.id()) {
-// CHECK-NEXT:    case Arch::V0: return Arch::V0M2;
-// CHECK-NEXT:    case Arch::V2: return Arch::V2M2;
-// CHECK-NEXT:    case Arch::V4: return Arch::V4M2;
-// CHECK-NEXT:    case Arch::V6: return Arch::V6M2;
+// CHECK-NEXT:    case Arch::W0: return Arch::WP0;
+// CHECK-NEXT:    case Arch::W1: return Arch::WP1;
+// CHECK-NEXT:    case Arch::W2: return Arch::WP3;
 // CHECK-NEXT:    default: llvm_unreachable("unexpected register");
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }
@@ -136,6 +205,13 @@ def BadRC : RegisterClass<"Arch", [i32], 32, (add R0, R1)> {
 // CHECK:       case CVT_95_Reg:
 // CHECK-NEXT:    static_cast<ArchOperand &>(*Operands[OpIdx]).addRegOperands(Inst, 1);
 // CHECK-NEXT:    break;
+// CHECK-NEXT:  case CVT_95_convertToUPR: {
+// CHECK-NEXT:    MCRegister Reg = Operands[OpIdx]->getReg();
+// CHECK-NEXT:    if (!getArchMCRegisterClass(Arch::UPRRegClassID).contains(Reg))
+// CHECK-NEXT:      Reg = convertToUPR(Reg);
+// CHECK-NEXT:    Inst.addOperand(MCOperand::createReg(Reg));
+// CHECK-NEXT:    break;
+// CHECK-NEXT:  }
 // CHECK-NEXT:  case CVT_95_convertToVRM4: {
 // CHECK-NEXT:    MCRegister Reg = Operands[OpIdx]->getReg();
 // CHECK-NEXT:    if (!getArchMCRegisterClass(Arch::VRM4RegClassID).contains(Reg))
@@ -147,6 +223,13 @@ def BadRC : RegisterClass<"Arch", [i32], 32, (add R0, R1)> {
 // CHECK-NEXT:    MCRegister Reg = Operands[OpIdx]->getReg();
 // CHECK-NEXT:    if (!getArchMCRegisterClass(Arch::VRM2RegClassID).contains(Reg))
 // CHECK-NEXT:      Reg = convertToVRM2(Reg);
+// CHECK-NEXT:    Inst.addOperand(MCOperand::createReg(Reg));
+// CHECK-NEXT:    break;
+// CHECK-NEXT:  }
+// CHECK-NEXT:  case CVT_95_convertToWPR: {
+// CHECK-NEXT:    MCRegister Reg = Operands[OpIdx]->getReg();
+// CHECK-NEXT:    if (!getArchMCRegisterClass(Arch::WPRRegClassID).contains(Reg))
+// CHECK-NEXT:      Reg = convertToWPR(Reg);
 // CHECK-NEXT:    Inst.addOperand(MCOperand::createReg(Reg));
 // CHECK-NEXT:    break;
 // CHECK-NEXT:  }
@@ -173,17 +256,24 @@ def BadRC : RegisterClass<"Arch", [i32], 32, (add R0, R1)> {
 // CHECK-NEXT:    break;
 
 /// Coerced YGPR and AnyGPR share MCK_AnyGPR because they match the same set of
-/// registers, whereas VRM2 and VRM4 get their own match classes.
+/// registers, whereas VRM2, VRM4, WPR and UPR get their own match classes.
 // CHECK-LABEL: enum MatchClassKind {
 // CHECK:         MCK_GPR, // register class 'GPR'
+// CHECK-NEXT:    MCK_Reg10, // derived register class
+// CHECK-NEXT:    MCK_WR, // register class 'WR'
 // CHECK-NEXT:    MCK_Reg3, // derived register class
 // CHECK-NEXT:    MCK_AnyGPR, // register class 'AnyGPR,YGPR'
 // CHECK-NEXT:    MCK_VRM4, // register class 'VRM4'
+// CHECK-NEXT:    MCK_UR, // register class 'UR'
+// CHECK-NEXT:    MCK_UPR, // register class 'UPR'
+// CHECK-NEXT:    MCK_WPR, // register class 'WPR'
 // CHECK-NEXT:    MCK_VR, // register class 'VR'
 // CHECK-NEXT:    MCK_VRM2, // register class 'VRM2'
 
 // CHECK-LABEL: MatchEntry MatchTable0[] = {
 // CHECK-NEXT:    /* anyinst */, Arch::InstAnyGPR, Convert__Reg1_0__Reg1_1, AMFBS_None, { MCK_AnyGPR, MCK_GPR },
+// CHECK-NEXT:    /* uinst */, Arch::InstUPR, Convert__UPR1_0__Reg1_1, AMFBS_None, { MCK_UPR, MCK_UR },
 // CHECK-NEXT:    /* v4inst */, Arch::InstVRM4, Convert__VRM41_0__Reg1_1, AMFBS_None, { MCK_VRM4, MCK_VR },
 // CHECK-NEXT:    /* vinst */, Arch::InstVRM2, Convert__VRM21_0__Reg1_1, AMFBS_None, { MCK_VRM2, MCK_VR },
+// CHECK-NEXT:    /* winst */, Arch::InstWPR, Convert__WPR1_0__Reg1_1, AMFBS_None, { MCK_WPR, MCK_WR },
 // CHECK-NEXT:    /* yinst */, Arch::InstYGPR, Convert__YGPR1_0__Reg1_1, AMFBS_None, { MCK_AnyGPR, MCK_GPR },
