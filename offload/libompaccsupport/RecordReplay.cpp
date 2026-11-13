@@ -91,7 +91,7 @@ Error RecordReplayTy::init(uint64_t MemSize, void *VAddr) {
   if (EC)
     return createError(ErrorCode::BackendFailure, "creating output directory");
 
-  INFO(1, OMP_INFOTYPE_PLUGIN_KERNEL, Device.DeviceID,
+  INFO(3, OMP_INFOTYPE_PLUGIN_KERNEL, Device.DeviceID,
        "%s initialized with starting address %p, "
        "memory size %" PRIu64 " bytes, and output directory in %s\n",
        Status == StatusTy::Recording ? "Record" : "Replay", StartAddr,

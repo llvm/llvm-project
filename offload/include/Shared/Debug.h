@@ -312,6 +312,8 @@ struct DebugSettings {
   return {Type, Level};
 }
 
+[[maybe_unused]] static const char *infoTypeName(uint32_t Flag);
+
 [[maybe_unused]] static DebugSettings &getDebugSettings() {
   // Never destroyed: it is still queried during runtime teardown at exit.
   static DebugSettings &Settings = *new DebugSettings();
@@ -351,6 +353,14 @@ struct DebugSettings {
       if (FilterSpec.empty())
         continue;
       DebugFilter Filter = parseDebugFilter(FilterSpec);
+
+      if (Filter.Type.equals_insensitive("info")) {
+        uint32_t InfoLevel = FilterSpec.contains(':') ? Filter.Level : 3;
+        for (uint32_t F = OMP_INFOTYPE_KERNEL_ARGS;
+             F <= OMP_INFOTYPE_EMPTY_MAPPING; F <<= 1)
+          Settings.IncludeFilters.push_back({infoTypeName(F), InfoLevel});
+        continue;
+      }
 
       // Remove from ExcludeFilters if present
       Settings.ExcludeFilters.erase(

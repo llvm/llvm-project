@@ -723,11 +723,29 @@ variables is defined below.
 
 #### LIBOMPTARGET_DEBUG
 
-`LIBOMPTARGET_DEBUG` controls whether or not debugging information will be
-displayed. This feature is only available if `libomptarget` was built with
-`-DOMPTARGET_DEBUG`. The debugging output provided is intended for use by
-`libomptarget` developers. More user-friendly output is presented when using
-`LIBOMPTARGET_INFO`.
+`LIBOMPTARGET_DEBUG` selects the {ref}`libomptarget_info` messages by category
+and sets how much detail they show. Its value is either a numeric level, applied
+to every category, or a comma-separated list of `Type[:Level]` filters, for
+example `LIBOMPTARGET_DEBUG=DataCopy:2,KernelArgs`. `Type` is one of the
+categories below, or `Info` for all of them. Levels are cumulative: a type
+without a level prints the summary, `Info` without a level prints full detail,
+and level `3` matches the output of `LIBOMPTARGET_INFO`.
+
+| Category | L1 (summary) | L2 (detailed) | L3 (full) |
+| --- | --- | --- | --- |
+| `KernelArgs` | region header only | + explicit, named argument lines | + implicit / unnamed arguments |
+| `MappingExists` | incremented lines | + decremented / delayed-deletion lines | + update-suppressed lines and host/target pointers |
+| `DumpTable` | non-empty tables, no pointer columns | + empty-table message *(TODO: used devices only)* | + host/target pointer columns *(TODO: empty tables for unused devices)* |
+| `MappingChanged` | `Creating/Removing map entry Size Name` | + reference counts | + all addresses and the USM `Return HstPtrBegin` line |
+| `PluginKernel` | `Launching kernel ... in <mode> mode`, CUDA `CU_CTX_SCHED_BLOCKING_SYNC` warning | + tripcount and plugin launch shape | + occupancy metrics, CUDA primary-context status, JIT `lld` and record-replay lines |
+| `DataCopy` | *TODO:* per-region `Transfer N items (X bytes) @ file:line` summary (no L1 output today) | + per-copy lines without pointers | + host/target pointers, runtime-internal copies and `Waiting for asynchronous operations` lines |
+| `EmptyMapping` | missing-counterpart message | — | *TODO:* + host pointer and size |
+
+If `libomptarget` was built with `-DOMPTARGET_DEBUG`, `LIBOMPTARGET_DEBUG` also
+controls debugging output intended for `libomptarget` developers, selected with
+further debug types such as `LIBOMPTARGET_DEBUG=Kernel:2,Mapping`. In such a
+build the messages above are printed with the debug prefix (for example
+`omptarget --> `) instead of `info:`.
 
 #### LIBOMPTARGET_PROFILE
 
@@ -791,6 +809,12 @@ Or, to enable every flag run with every bit set.
 ```console
 $ env LIBOMPTARGET_INFO=-1 ./your-application
 ```
+
+The same messages can also be selected by name, with a choice of detail,
+through `LIBOMPTARGET_DEBUG` (see above). Each bit corresponds to a debug type:
+`0x01` `KernelArgs`, `0x02` `MappingExists`, `0x04` `DumpTable`, `0x08`
+`MappingChanged`, `0x10` `PluginKernel`, `0x20` `DataCopy`, `0x40`
+`EmptyMapping`. `LIBOMPTARGET_INFO` always prints them in full.
 
 For example, given a small application implementing the `ZAXPY` BLAS routine,
 `Libomptarget` can provide useful information about data mappings and thread

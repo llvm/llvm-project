@@ -20,11 +20,18 @@ using namespace llvm::omp::target::debug;
 /// Dump a table of all the host-target pointer pairs on failure
 void dumpTargetPointerMappings(const ident_t *Loc, DeviceTy &Device,
                                bool toStdOut) {
+
+  uint32_t V = toStdOut ? 3 : INFO_VERBOSITY(OMP_INFOTYPE_DUMP_TABLE);
+  if (!V)
+    return;
+
   MappingInfoTy::HDTTMapAccessorTy HDTTMap =
       Device.getMappingInfo().HostDataToTargetMap.getExclusiveAccessor();
   if (HDTTMap->empty()) {
-    DUMP_INFO(toStdOut, OMP_INFOTYPE_DUMP_TABLE, Device.DeviceID,
-              "OpenMP Host-Device pointer mappings table empty\n");
+    // Empty tables are reported from L2 onward (non-empty tables only at L1).
+    if (V >= 2)
+      DUMP_INFO(toStdOut, OMP_INFOTYPE_DUMP_TABLE, Device.DeviceID,
+                "OpenMP Host-Device pointer mappings table empty\n");
     return;
   }
 
@@ -32,19 +39,33 @@ void dumpTargetPointerMappings(const ident_t *Loc, DeviceTy &Device,
   DUMP_INFO(toStdOut, OMP_INFOTYPE_DUMP_TABLE, Device.DeviceID,
             "OpenMP Host-Device pointer mappings after block at %s:%d:%d:\n",
             Kernel.getFilename(), Kernel.getLine(), Kernel.getColumn());
-  DUMP_INFO(toStdOut, OMP_INFOTYPE_DUMP_TABLE, Device.DeviceID,
-            "%-18s %-18s %s %s %s %s\n", "Host Ptr", "Target Ptr", "Size (B)",
-            "DynRefCount", "HoldRefCount", "Declaration");
+  // The host/target pointer columns are full-detail (L3) elements.
+  if (V >= 3)
+    DUMP_INFO(toStdOut, OMP_INFOTYPE_DUMP_TABLE, Device.DeviceID,
+              "%-18s %-18s %s %s %s %s\n", "Host Ptr", "Target Ptr", "Size (B)",
+              "DynRefCount", "HoldRefCount", "Declaration");
+  else
+    DUMP_INFO(toStdOut, OMP_INFOTYPE_DUMP_TABLE, Device.DeviceID,
+              "%s %s %s %s\n", "Size (B)", "DynRefCount", "HoldRefCount",
+              "Declaration");
   for (const auto &It : *HDTTMap) {
     HostDataToTargetTy &HDTT = *It.HDTT;
     SourceInfo Info(HDTT.HstPtrName);
-    DUMP_INFO(toStdOut, OMP_INFOTYPE_DUMP_TABLE, Device.DeviceID,
-              DPxMOD " " DPxMOD " %-8" PRIuPTR " %-11s %-12s %s at %s:%d:%d\n",
-              DPxPTR(HDTT.HstPtrBegin), DPxPTR(HDTT.TgtPtrBegin),
-              HDTT.HstPtrEnd - HDTT.HstPtrBegin,
-              HDTT.dynRefCountToStr().c_str(), HDTT.holdRefCountToStr().c_str(),
-              Info.getName(), Info.getFilename(), Info.getLine(),
-              Info.getColumn());
+    if (V >= 3)
+      DUMP_INFO(
+          toStdOut, OMP_INFOTYPE_DUMP_TABLE, Device.DeviceID,
+          DPxMOD " " DPxMOD " %-8" PRIuPTR " %-11s %-12s %s at %s:%d:%d\n",
+          DPxPTR(HDTT.HstPtrBegin), DPxPTR(HDTT.TgtPtrBegin),
+          HDTT.HstPtrEnd - HDTT.HstPtrBegin, HDTT.dynRefCountToStr().c_str(),
+          HDTT.holdRefCountToStr().c_str(), Info.getName(), Info.getFilename(),
+          Info.getLine(), Info.getColumn());
+    else
+      DUMP_INFO(toStdOut, OMP_INFOTYPE_DUMP_TABLE, Device.DeviceID,
+                "%-8" PRIuPTR " %-11s %-12s %s at %s:%d:%d\n",
+                HDTT.HstPtrEnd - HDTT.HstPtrBegin,
+                HDTT.dynRefCountToStr().c_str(),
+                HDTT.holdRefCountToStr().c_str(), Info.getName(),
+                Info.getFilename(), Info.getLine(), Info.getColumn());
   }
 }
 
@@ -242,13 +263,29 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
     const char *HoldRefCountAction = HasHoldModifier ? RefCountAction : "";
     uintptr_t Ptr = LR.TPR.getEntry()->TgtPtrBegin +
                     ((uintptr_t)HstPtrBegin - LR.TPR.getEntry()->HstPtrBegin);
-    INFO(1, OMP_INFOTYPE_MAPPING_EXISTS, Device.DeviceID,
-         "Mapping exists%s with HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD
-         ", Size=%" PRId64 ", DynRefCount=%s%s, HoldRefCount=%s%s, Name=%s\n",
-         (IsImplicit ? " (implicit)" : ""), DPxPTR(HstPtrBegin), DPxPTR(Ptr),
-         Size, LR.TPR.getEntry()->dynRefCountToStr().c_str(), DynRefCountAction,
-         LR.TPR.getEntry()->holdRefCountToStr().c_str(), HoldRefCountAction,
-         (HstPtrName) ? getNameFromMapping(HstPtrName).c_str() : "unknown");
+    if (uint32_t V = INFO_VERBOSITY(OMP_INFOTYPE_MAPPING_EXISTS)) {
+      if (UpdateRefCount || V >= 3) {
+        std::string Buf;
+        llvm::raw_string_ostream OS(Buf);
+        OS << "Mapping exists";
+        if (IsImplicit)
+          OS << " (implicit)";
+        if (V >= 3)
+          OS << " with HstPtrBegin="
+             << llvm::format(DPxMOD, DPxPTR(HstPtrBegin))
+             << ", TgtPtrBegin=" << llvm::format(DPxMOD, DPxPTR(Ptr)) << ",";
+        OS << " Size=" << Size
+           << ", DynRefCount=" << LR.TPR.getEntry()->dynRefCountToStr()
+           << DynRefCountAction
+           << ", HoldRefCount=" << LR.TPR.getEntry()->holdRefCountToStr()
+           << HoldRefCountAction << ", Name="
+           << (HstPtrName ? getNameFromMapping(HstPtrName)
+                          : std::string("unknown"))
+           << "\n";
+        INFO(1, OMP_INFOTYPE_MAPPING_EXISTS, Device.DeviceID, "%s",
+             Buf.c_str());
+      }
+    }
     LR.TPR.TargetPointer = (void *)Ptr;
   } else if ((LR.Flags.ExtendsBefore || LR.Flags.ExtendsAfter) && !IsImplicit) {
     // Explicit extension of mapped data - not allowed.
@@ -273,7 +310,7 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
     // In addition to the mapping rules above, the close map modifier forces the
     // mapping of the variable to the device.
     if (Size) {
-      INFO(1, OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
+      INFO(3, OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
            "Return HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
            "memory\n",
            DPxPTR((uintptr_t)HstPtrBegin), Size);
@@ -304,16 +341,27 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
                             (uintptr_t)HstPtrBegin + Size, TgtAllocBegin,
                             TgtPtrBegin, HasHoldModifier, HstPtrName))
                         .first->HDTT);
-    INFO(1, OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
-         "Creating new map entry with HstPtrBase=" DPxMOD
-         ", HstPtrBegin=" DPxMOD ", TgtAllocBegin=" DPxMOD
-         ", TgtPtrBegin=" DPxMOD
-         ", Size=%ld, DynRefCount=%s, HoldRefCount=%s, Name=%s\n",
-         DPxPTR(HstPtrBase), DPxPTR(HstPtrBegin), DPxPTR(TgtAllocBegin),
-         DPxPTR(TgtPtrBegin), Size,
-         LR.TPR.getEntry()->dynRefCountToStr().c_str(),
-         LR.TPR.getEntry()->holdRefCountToStr().c_str(),
-         (HstPtrName) ? getNameFromMapping(HstPtrName).c_str() : "unknown");
+    if (uint32_t V = INFO_VERBOSITY(OMP_INFOTYPE_MAPPING_CHANGED)) {
+      std::string Buf;
+      llvm::raw_string_ostream OS(Buf);
+      OS << "Creating new map entry";
+      // Addresses are L3; reference counts are L2.
+      if (V >= 3)
+        OS << " with HstPtrBase=" << llvm::format(DPxMOD, DPxPTR(HstPtrBase))
+           << ", HstPtrBegin=" << llvm::format(DPxMOD, DPxPTR(HstPtrBegin))
+           << ", TgtAllocBegin=" << llvm::format(DPxMOD, DPxPTR(TgtAllocBegin))
+           << ", TgtPtrBegin=" << llvm::format(DPxMOD, DPxPTR(TgtPtrBegin))
+           << ",";
+      OS << " Size=" << Size;
+      if (V >= 2)
+        OS << ", DynRefCount=" << LR.TPR.getEntry()->dynRefCountToStr()
+           << ", HoldRefCount=" << LR.TPR.getEntry()->holdRefCountToStr();
+      OS << ", Name="
+         << (HstPtrName ? getNameFromMapping(HstPtrName)
+                        : std::string("unknown"))
+         << "\n";
+      INFO(1, OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID, "%s", Buf.c_str());
+    }
     LR.TPR.TargetPointer = (void *)TgtPtrBegin;
 
     // Notify the plugin about the new mapping.
@@ -466,12 +514,27 @@ TargetPointerResultTy MappingInfoTy::getTgtPtrBegin(
     const char *HoldRefCountAction = UseHoldRefCount ? RefCountAction : "";
     uintptr_t TP = LR.TPR.getEntry()->TgtPtrBegin +
                    ((uintptr_t)HstPtrBegin - LR.TPR.getEntry()->HstPtrBegin);
-    INFO(1, OMP_INFOTYPE_MAPPING_EXISTS, Device.DeviceID,
-         "Mapping exists with HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD ", "
-         "Size=%" PRId64 ", DynRefCount=%s%s, HoldRefCount=%s%s\n",
-         DPxPTR(HstPtrBegin), DPxPTR(TP), Size,
-         LR.TPR.getEntry()->dynRefCountToStr().c_str(), DynRefCountAction,
-         LR.TPR.getEntry()->holdRefCountToStr().c_str(), HoldRefCountAction);
+    if (uint32_t V = INFO_VERBOSITY(OMP_INFOTYPE_MAPPING_EXISTS)) {
+      const bool Suppressed = !UpdateRefCount;
+      // Decremented / delayed-deletion lines are L2; update-suppressed lines
+      // and the host/target pointer elements are L3.
+      if (V >= (Suppressed ? 3u : 2u)) {
+        std::string Buf;
+        llvm::raw_string_ostream OS(Buf);
+        OS << "Mapping exists";
+        if (V >= 3)
+          OS << " with HstPtrBegin="
+             << llvm::format(DPxMOD, DPxPTR(HstPtrBegin))
+             << ", TgtPtrBegin=" << llvm::format(DPxMOD, DPxPTR(TP)) << ",";
+        OS << " Size=" << Size
+           << ", DynRefCount=" << LR.TPR.getEntry()->dynRefCountToStr()
+           << DynRefCountAction
+           << ", HoldRefCount=" << LR.TPR.getEntry()->holdRefCountToStr()
+           << HoldRefCountAction << "\n";
+        INFO(1, OMP_INFOTYPE_MAPPING_EXISTS, Device.DeviceID, "%s",
+             Buf.c_str());
+      }
+    }
     LR.TPR.TargetPointer = (void *)TP;
   } else if (Device.PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY ||
              Device.PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY) {
@@ -515,12 +578,22 @@ int MappingInfoTy::eraseMapEntry(HDTTMapAccessorTy &HDTTMap,
          Entry->getDataEndThreadCount() == 0 &&
          "Trying to delete entry that is in use or owned by another thread.");
 
-  INFO(1, OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
-       "Removing map entry with HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD
-       ", Size=%" PRId64 ", Name=%s\n",
-       DPxPTR(Entry->HstPtrBegin), DPxPTR(Entry->TgtPtrBegin), Size,
-       (Entry->HstPtrName) ? getNameFromMapping(Entry->HstPtrName).c_str()
-                           : "unknown");
+  if (uint32_t V = INFO_VERBOSITY(OMP_INFOTYPE_MAPPING_CHANGED)) {
+    std::string Buf;
+    llvm::raw_string_ostream OS(Buf);
+    OS << "Removing map entry";
+    // Host/target pointers are L3 elements.
+    if (V >= 3)
+      OS << " with HstPtrBegin="
+         << llvm::format(DPxMOD, DPxPTR(Entry->HstPtrBegin))
+         << ", TgtPtrBegin=" << llvm::format(DPxMOD, DPxPTR(Entry->TgtPtrBegin))
+         << ",";
+    OS << " Size=" << Size << ", Name="
+       << (Entry->HstPtrName ? getNameFromMapping(Entry->HstPtrName)
+                             : std::string("unknown"))
+       << "\n";
+    INFO(1, OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID, "%s", Buf.c_str());
+  }
 
   if (HDTTMap->erase(Entry) == 0) {
     REPORT() << "Trying to remove a non-existent map entry";
@@ -560,6 +633,11 @@ static void printCopyInfoImpl(int DeviceId, bool H2D, void *SrcPtrBegin,
                               void *DstPtrBegin, int64_t Size,
                               HostDataToTargetTy *HT, const ident_t *Loc,
                               const char *Name) {
+  uint32_t V = INFO_VERBOSITY(OMP_INFOTYPE_DATA_TRANSFER);
+  // Copies without a map entry are runtime-internal and only shown at L3.
+  if (V < (HT ? 2u : 3u))
+    return;
+
   SourceInfo Info(Loc);
   std::string LocStr;
   if (Info.isAvailable())
@@ -567,15 +645,20 @@ static void printCopyInfoImpl(int DeviceId, bool H2D, void *SrcPtrBegin,
              std::to_string(Info.getLine()) + ":" +
              std::to_string(Info.getColumn());
 
-  INFO(1, OMP_INFOTYPE_DATA_TRANSFER, DeviceId,
-       "Copying data from %s to %s, %sPtr=" DPxMOD ", %sPtr=" DPxMOD
-       ", Size=%" PRId64 ", Name=%s%s\n",
-       H2D ? "host" : "device", H2D ? "device" : "host", H2D ? "Hst" : "Tgt",
-       DPxPTR(H2D ? SrcPtrBegin : DstPtrBegin), H2D ? "Tgt" : "Hst",
-       DPxPTR(H2D ? DstPtrBegin : SrcPtrBegin), Size,
-       (HT && HT->HstPtrName) ? getNameFromMapping(HT->HstPtrName).c_str()
-                              : (Name ? Name : "unknown"),
-       LocStr.c_str());
+  std::string Buf;
+  llvm::raw_string_ostream OS(Buf);
+  OS << "Copying data from " << (H2D ? "host" : "device") << " to "
+     << (H2D ? "device" : "host") << ", ";
+  if (V >= 3)
+    OS << (H2D ? "Hst" : "Tgt") << "Ptr="
+       << llvm::format(DPxMOD, DPxPTR(H2D ? SrcPtrBegin : DstPtrBegin)) << ", "
+       << (H2D ? "Tgt" : "Hst") << "Ptr="
+       << llvm::format(DPxMOD, DPxPTR(H2D ? DstPtrBegin : SrcPtrBegin)) << ", ";
+  OS << "Size=" << Size << ", Name="
+     << ((HT && HT->HstPtrName) ? getNameFromMapping(HT->HstPtrName)
+                                : std::string(Name ? Name : "unknown"))
+     << LocStr << "\n";
+  INFO(1, OMP_INFOTYPE_DATA_TRANSFER, DeviceId, "%s", Buf.c_str());
 }
 
 void MappingInfoTy::printCopyInfo(void *TgtPtrBegin, void *HstPtrBegin,
@@ -588,7 +671,9 @@ void MappingInfoTy::printCopyInfo(void *TgtPtrBegin, void *HstPtrBegin,
   LookupResult LR;
   if (!Entry) {
     LR = lookupMapping(HDTTMapPtr ? *HDTTMapPtr : HDTTMap, HstPtrBegin, Size);
-    Entry = LR.TPR.getEntry();
+    // The lookup may return a neighboring entry that does not hold the data.
+    if (LR.Flags.IsContained)
+      Entry = LR.TPR.getEntry();
   }
   printCopyInfoImpl(Device.DeviceID, H2D, HstPtrBegin, TgtPtrBegin, Size, Entry,
                     Loc, Name);

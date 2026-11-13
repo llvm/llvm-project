@@ -1505,13 +1505,20 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
     return OFFLOAD_FAIL;
   }
 
-  INFO(1, OMP_INFOTYPE_PLUGIN_KERNEL, DeviceID,
-       "Launching kernel %s with [%u,%u,%u] blocks and [%u,%u,%u] threads in "
-       "%s mode with tripcount %" PRIu64 "\n",
-       KernelLaunchInfo.Name, Config.Size.NumGroups.x, Config.Size.NumGroups.y,
-       Config.Size.NumGroups.z, Config.Size.GroupSize.x,
-       Config.Size.GroupSize.y, Config.Size.GroupSize.z,
-       KernelLaunchInfo.getExecutionModeName(), KernelArgs.Tripcount);
+  if (uint32_t V = INFO_VERBOSITY(OMP_INFOTYPE_PLUGIN_KERNEL)) {
+    std::string Buf;
+    llvm::raw_string_ostream OS(Buf);
+    OS << "Launching kernel " << KernelLaunchInfo.Name << " with ["
+       << Config.Size.NumGroups.x << "," << Config.Size.NumGroups.y << ","
+       << Config.Size.NumGroups.z << "] blocks and [" << Config.Size.GroupSize.x
+       << "," << Config.Size.GroupSize.y << "," << Config.Size.GroupSize.z
+       << "] threads in " << KernelLaunchInfo.getExecutionModeName() << " mode";
+    // The tripcount is a detailed (L2) element of the launch shape.
+    if (V >= 2)
+      OS << " with tripcount " << KernelArgs.Tripcount;
+    OS << "\n";
+    INFO(1, OMP_INFOTYPE_PLUGIN_KERNEL, DeviceID, "%s", Buf.c_str());
+  }
 
   // Record the kernel prologue data before the launch.
   RecordReplayTy::HandleTy RRHandle;
