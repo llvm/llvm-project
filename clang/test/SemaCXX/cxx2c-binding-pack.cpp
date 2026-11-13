@@ -301,3 +301,20 @@ void i() {
 template void i<void>();
 
 } // namespace GH214160
+
+namespace GH226183 {
+struct S { // expected-note {{previous definition is here}}
+  constexpr S() : i(1) {};
+  int i : 2;
+};
+
+void foo(auto) { constexpr auto [... p] = S(); }
+
+void bar() { foo(42); }
+
+template <> struct S {};
+// expected-error@-1 {{extraneous 'template<>' in declaration of struct 'S'}}
+// expected-error@-2 {{redefinition of 'S'}}
+
+static_assert(S().i == 1);
+} // namespace GH226183
