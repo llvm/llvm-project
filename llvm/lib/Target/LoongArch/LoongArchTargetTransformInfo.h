@@ -93,6 +93,9 @@ public:
       std::optional<FastMathFlags> FMF) const override {
     return InstructionCost::getInvalid();
   }
+
+  bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
+                     const TargetTransformInfo::LSRCost &C2) const override;
 };
 
 } // end namespace llvm
