@@ -172,14 +172,11 @@ void MarkLiveImpl<RecordWhyLive>::visit(WorklistEntry *entry,
     addSym(d, entry, worklist);
 }
 
-// Visits the sections in nextLevel, one level at a time. Workers take chunks of
-// a level, small enough that every worker gets some, and visit them depth-first
-// to take advantage of memory locality. Once one worker has run out of chunks,
-// the others move the rest of their stacks to nextLevel if they have already
-// visited a minimum number of sections. Thus the level quickly ends and all
-// workers share the rest in the next one. With one thread, this reduces to a
-// single depth-first walk. The last join makes every live bit visible to the
-// live-support scan, which reads them with plain loads.
+// Level-synchronous marking with depth-first workers and work sharing on idle.
+// Each level is a parallelFor round: workers claim chunks of the level and walk
+// depth-first for cache locality. Once one runs out of chunks, the others move
+// their stacks to the next level. The last join makes every live bit visible
+// to the live-support scan, which reads them with plain loads.
 template <bool RecordWhyLive> void MarkLiveImpl<RecordWhyLive>::drain() {
   const size_t numThreads = parallel::getThreadCount();
   // The minimum number of visits a worker makes in a level before it may hand
@@ -200,16 +197,16 @@ template <bool RecordWhyLive> void MarkLiveImpl<RecordWhyLive>::drain() {
     parallelFor(0, numThreads, [&](size_t shard) {
       Worklist stack;
       size_t visited = 0;
-      for (size_t begin = shard * chunkSize; begin < level.size();
+      for (size_t begin = shard * chunkSize, end = level.size(); begin < end;
            begin = next.fetch_add(chunkSize, std::memory_order_relaxed)) {
-        size_t end = std::min(begin + chunkSize, level.size());
-        stack.append(level.begin() + begin, level.begin() + end);
+        size_t chunkEnd = std::min(begin + chunkSize, end);
+        stack.append(level.begin() + begin, level.begin() + chunkEnd);
         while (!stack.empty()) {
           visit(stack.pop_back_val(), stack);
           if (++visited >= minVisitsPerLevel && !stack.empty() &&
               anyWorkerIdle.load(std::memory_order_relaxed)) {
             std::lock_guard<std::mutex> lock(nextLevelMutex);
-            nextLevel.append(stack.begin(), stack.end());
+            nextLevel.append(stack);
             stack.clear();
           }
         }
