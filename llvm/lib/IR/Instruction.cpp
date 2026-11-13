@@ -1213,9 +1213,9 @@ bool Instruction::isAtomic() const {
   case Instruction::Fence:
     return true;
   case Instruction::Load:
-    return cast<LoadInst>(this)->getOrdering() != AtomicOrdering::NotAtomic;
+    return cast<LoadInst>(this)->isAtomic();
   case Instruction::Store:
-    return cast<StoreInst>(this)->getOrdering() != AtomicOrdering::NotAtomic;
+    return cast<StoreInst>(this)->isAtomic();
   }
 }
 

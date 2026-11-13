@@ -6,7 +6,6 @@ name:            _amdgpu_ps_main
 alignment:       1
 tracksRegLiveness: true
 registers:
-  - { id: 0, class: sgpr_128 }
   - { id: 1, class: sreg_32_xm0, preferred-register: '%2' }
   - { id: 2, class: sreg_32_xm0, preferred-register: '%1' }
 machineFunctionInfo:
@@ -18,7 +17,7 @@ body:             |
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[V_TRUNC_F32_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_TRUNC_F32_e32 undef %4:vgpr_32, implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[V_TRUNC_F32_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_TRUNC_F32_e32 undef %3:vgpr_32, implicit $mode, implicit $exec
   ; GCN-NEXT:   [[V_CVT_U32_F32_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_U32_F32_e32 [[V_TRUNC_F32_e32_]], implicit $mode, implicit $exec
   ; GCN-NEXT:   [[V_LSHRREV_B32_e32_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e32 4, [[V_CVT_U32_F32_e32_]], implicit $exec
   ; GCN-NEXT:   undef [[V_MUL_LO_I32_e64_:%[0-9]+]].sub0:vreg_128 = V_MUL_LO_I32_e64 [[V_LSHRREV_B32_e32_]], 3, implicit $exec
@@ -44,7 +43,7 @@ body:             |
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   successors: %bb.4(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   dead [[BUFFER_LOAD_FORMAT_XYZW_IDXEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_IDXEN [[COPY]].sub3, undef %17:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from constant-pool, align 1, addrspace 4)
+  ; GCN-NEXT:   dead [[BUFFER_LOAD_FORMAT_XYZW_IDXEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_IDXEN [[COPY]].sub3, undef %16:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from constant-pool, align 1, addrspace 4)
   ; GCN-NEXT:   dead [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
   ; GCN-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 $exec, -1, implicit-def dead $scc
   ; GCN-NEXT:   dead [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
@@ -62,8 +61,8 @@ body:             |
   ; GCN-NEXT:   [[V_MAD_F32_e64_:%[0-9]+]]:vgpr_32 = nnan arcp contract reassoc nofpexcept V_MAD_F32_e64 0, [[V_MIN_F32_e32_]], 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   [[V_MAD_F32_e64_1:%[0-9]+]]:vgpr_32 = nnan arcp contract reassoc nofpexcept V_MAD_F32_e64 0, [[V_MAD_F32_e64_]], 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   [[V_MAD_F32_e64_2:%[0-9]+]]:vgpr_32 = nofpexcept V_MAD_F32_e64 0, [[V_MAD_F32_e64_1]], 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   [[V_CVT_PKRTZ_F16_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_PKRTZ_F16_F32_e64 0, [[V_MAD_F32_e64_2]], 0, undef %27:vgpr_32, 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   EXP_DONE 0, [[V_CVT_PKRTZ_F16_F32_e64_]], undef %28:vgpr_32, undef %29:vgpr_32, undef %30:vgpr_32, -1, -1, 15, implicit $exec
+  ; GCN-NEXT:   [[V_CVT_PKRTZ_F16_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_PKRTZ_F16_F32_e64 0, [[V_MAD_F32_e64_2]], 0, undef %26:vgpr_32, 0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   EXP_DONE 0, [[V_CVT_PKRTZ_F16_F32_e64_]], undef %27:vgpr_32, undef %28:vgpr_32, undef %29:vgpr_32, -1, -1, 15, implicit $exec
   ; GCN-NEXT:   S_ENDPGM 0
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.6:

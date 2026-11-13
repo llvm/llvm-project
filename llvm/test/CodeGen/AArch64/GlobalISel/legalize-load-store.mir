@@ -711,3 +711,4 @@ body:             |
     %val:_(<6 x p0>) = G_LOAD %ptr(p0) :: (load (<6 x p0>))
     G_STORE %val(<6 x p0>), %ptr(p0) :: (store (<6 x p0>))
     RET_ReallyLR
+...
