@@ -542,6 +542,114 @@ uint64_t test_usati_u64(int64_t a) {
 }
 #endif
 
+/* Scalar Saturating and Rounding Shift */
+
+// RV32-LABEL: define dso_local i32 @test_ssha_i32(
+// RV32-SAME: i32 noundef [[A:%.*]], i32 noundef [[S:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.ssha.i32(i32 [[A]], i32 [[S]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_ssha_i32(
+// RV64-SAME: i32 noundef signext [[A:%.*]], i32 noundef signext [[S:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.ssha.i32(i32 [[A]], i32 [[S]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int32_t test_ssha_i32(int32_t a, int s) {
+  return __riscv_ssha_i32(a, s);
+}
+
+// RV32-LABEL: define dso_local i32 @test_sshar_i32(
+// RV32-SAME: i32 noundef [[A:%.*]], i32 noundef [[S:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.sshar.i32(i32 [[A]], i32 [[S]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_sshar_i32(
+// RV64-SAME: i32 noundef signext [[A:%.*]], i32 noundef signext [[S:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.sshar.i32(i32 [[A]], i32 [[S]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int32_t test_sshar_i32(int32_t a, int s) {
+  return __riscv_sshar_i32(a, s);
+}
+
+// RV32-LABEL: define dso_local i32 @test_sshl_u32(
+// RV32-SAME: i32 noundef [[A:%.*]], i32 noundef [[S:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.sshl.u32(i32 [[A]], i32 [[S]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_sshl_u32(
+// RV64-SAME: i32 noundef signext [[A:%.*]], i32 noundef signext [[S:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.sshl.u32(i32 [[A]], i32 [[S]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t test_sshl_u32(uint32_t a, int s) {
+  return __riscv_sshl_u32(a, s);
+}
+
+// RV32-LABEL: define dso_local i32 @test_sshlr_u32(
+// RV32-SAME: i32 noundef [[A:%.*]], i32 noundef [[S:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.sshlr.u32(i32 [[A]], i32 [[S]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_sshlr_u32(
+// RV64-SAME: i32 noundef signext [[A:%.*]], i32 noundef signext [[S:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.sshlr.u32(i32 [[A]], i32 [[S]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t test_sshlr_u32(uint32_t a, int s) {
+  return __riscv_sshlr_u32(a, s);
+}
+
+#if __riscv_xlen == 64
+// RV64-LABEL: define dso_local i64 @test_sha_i64(
+// RV64-SAME: i64 noundef [[A:%.*]], i32 noundef signext [[S:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.sha.i64(i64 [[A]], i32 [[S]])
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+int64_t test_sha_i64(int64_t a, int s) {
+  return __riscv_sha_i64(a, s);
+}
+
+// RV64-LABEL: define dso_local i64 @test_shar_i64(
+// RV64-SAME: i64 noundef [[A:%.*]], i32 noundef signext [[S:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.shar.i64(i64 [[A]], i32 [[S]])
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+int64_t test_shar_i64(int64_t a, int s) {
+  return __riscv_shar_i64(a, s);
+}
+
+// RV64-LABEL: define dso_local i64 @test_shl_u64(
+// RV64-SAME: i64 noundef [[A:%.*]], i32 noundef signext [[S:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.shl.u64(i64 [[A]], i32 [[S]])
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t test_shl_u64(uint64_t a, int s) {
+  return __riscv_shl_u64(a, s);
+}
+
+// RV64-LABEL: define dso_local i64 @test_shlr_u64(
+// RV64-SAME: i64 noundef [[A:%.*]], i32 noundef signext [[S:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.shlr.u64(i64 [[A]], i32 [[S]])
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t test_shlr_u64(uint64_t a, int s) {
+  return __riscv_shlr_u64(a, s);
+}
+#endif
+
 // RV32-LABEL: define dso_local i32 @test_mulh_i32(
 // RV32-SAME: i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]

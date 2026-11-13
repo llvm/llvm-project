@@ -493,6 +493,18 @@ __packed_pabs(abs_u64, int64_t, uint64_t)
 #define __riscv_usati_u64(rs1, width) __builtin_riscv_usati_u64(rs1, width)
 #endif
 
+/* Scalar Saturating and Rounding Shift */
+__packed_binary_builtin_mixed(ssha_i32, int32_t, int32_t, int, __builtin_riscv_ssha_i32)
+__packed_binary_builtin_mixed(sshar_i32, int32_t, int32_t, int, __builtin_riscv_sshar_i32)
+__packed_binary_builtin_mixed(sshl_u32, uint32_t, uint32_t, int, __builtin_riscv_sshl_u32)
+__packed_binary_builtin_mixed(sshlr_u32, uint32_t, uint32_t, int, __builtin_riscv_sshlr_u32)
+#if __riscv_xlen == 64
+__packed_binary_builtin_mixed(sha_i64, int64_t, int64_t, int, __builtin_riscv_sha_i64)
+__packed_binary_builtin_mixed(shar_i64, int64_t, int64_t, int, __builtin_riscv_shar_i64)
+__packed_binary_builtin_mixed(shl_u64, uint64_t, uint64_t, int, __builtin_riscv_shl_u64)
+__packed_binary_builtin_mixed(shlr_u64, uint64_t, uint64_t, int, __builtin_riscv_shlr_u64)
+#endif
+
 /* Scalar Multiply High */
 #define __packed_mulh_builtin(name, res_ty, ty1, ty2)                          \
   static __inline__ res_ty __DEFAULT_FN_ATTRS __riscv_##name(ty1 __rs1,        \

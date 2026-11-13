@@ -2174,11 +2174,13 @@ class RVPBinaryIntrinsic
   def int_riscv_pmulhsu  : RVPBinaryIntrinsic;
   def int_riscv_pmulhrsu : RVPBinaryIntrinsic;
 
-  // Scalar Averaging Addition and Subtraction. On RV64 these map to the
-  // packed paadd.w family on the low words.
+  // Scalar binary intrinsic on i32 operands. On RV64 these map to a packed .w
+  // instruction on the low words.
   class RVPScalarBinaryIntrinsic
       : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
                               [IntrNoMem, IntrSpeculatable]>;
+
+  // Scalar Averaging Addition and Subtraction.
   def int_riscv_aadd_i32  : RVPScalarBinaryIntrinsic;
   def int_riscv_aaddu_u32 : RVPScalarBinaryIntrinsic;
   def int_riscv_asub_i32  : RVPScalarBinaryIntrinsic;
@@ -2186,6 +2188,21 @@ class RVPBinaryIntrinsic
 
   // Scalar Shift-Add. On RV64 this maps to pssh1sadd.w on the low words.
   def int_riscv_ssh1sadd_i32 : RVPScalarBinaryIntrinsic;
+
+  // Scalar Saturating and Rounding Shifts. The 32-bit forms saturate, the
+  // 64-bit forms do not. The second operand is a signed shift amount; negative
+  // amounts shift right.
+  class RVPScalarShift64Intrinsic
+      : DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_ssha_i32  : RVPScalarBinaryIntrinsic;
+  def int_riscv_sshar_i32 : RVPScalarBinaryIntrinsic;
+  def int_riscv_sshl_u32  : RVPScalarBinaryIntrinsic;
+  def int_riscv_sshlr_u32 : RVPScalarBinaryIntrinsic;
+  def int_riscv_sha_i64  : RVPScalarShift64Intrinsic;
+  def int_riscv_shar_i64 : RVPScalarShift64Intrinsic;
+  def int_riscv_shl_u64  : RVPScalarShift64Intrinsic;
+  def int_riscv_shlr_u64 : RVPScalarShift64Intrinsic;
 
   // Scalar Multiply High. On RV32 these map to the M-extension mulh
   // instructions and the P-extension mulhr instructions.

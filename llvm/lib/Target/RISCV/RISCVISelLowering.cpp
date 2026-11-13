@@ -9686,7 +9686,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
           Opc = RISCVISD::PSRA;
           break;
         case ISD::SSHLSAT:
-          Opc = RISCVISD::PSSHA;
+          Opc = RISCVISD::SSHA;
           break;
         }
         return DAG.getNode(Opc, SDLoc(Op), Op.getValueType(), Op.getOperand(0),
@@ -12469,13 +12469,21 @@ static unsigned getRVPShiftOpcode(Intrinsic::ID IntNo) {
   case Intrinsic::riscv_psra:
     return RISCVISD::PSRA;
   case Intrinsic::riscv_pssha:
-    return RISCVISD::PSSHA;
+    return RISCVISD::SSHA;
   case Intrinsic::riscv_psshar:
-    return RISCVISD::PSSHAR;
+    return RISCVISD::SSHAR;
   case Intrinsic::riscv_psshl:
-    return RISCVISD::PSSHL;
+    return RISCVISD::SSHL;
   case Intrinsic::riscv_psshlr:
-    return RISCVISD::PSSHLR;
+    return RISCVISD::SSHLR;
+  case Intrinsic::riscv_sha_i64:
+    return RISCVISD::SHA;
+  case Intrinsic::riscv_shar_i64:
+    return RISCVISD::SHAR;
+  case Intrinsic::riscv_shl_u64:
+    return RISCVISD::SHL;
+  case Intrinsic::riscv_shlr_u64:
+    return RISCVISD::SHLR;
   }
 }
 
@@ -12533,7 +12541,7 @@ static unsigned getRVPScalarOpcode(unsigned IntNo) {
   default:
     llvm_unreachable(
         "Unexpected RISC-V scalar averaging, multiply high, Q-format "
-        "multiply or multiply high accumulate intrinsic");
+        "multiply, multiply high accumulate or saturating shift intrinsic");
   case Intrinsic::riscv_aadd_i32:
     return ISD::AVGFLOORS;
   case Intrinsic::riscv_aaddu_u32:
@@ -12544,6 +12552,14 @@ static unsigned getRVPScalarOpcode(unsigned IntNo) {
     return ISD::AVGSUBFLOORU;
   case Intrinsic::riscv_ssh1sadd_i32:
     return RISCVISD::SSH1SADD;
+  case Intrinsic::riscv_ssha_i32:
+    return RISCVISD::SSHA;
+  case Intrinsic::riscv_sshar_i32:
+    return RISCVISD::SSHAR;
+  case Intrinsic::riscv_sshl_u32:
+    return RISCVISD::SSHL;
+  case Intrinsic::riscv_sshlr_u32:
+    return RISCVISD::SSHLR;
   case Intrinsic::riscv_mulhr_i32:
     return RISCVISD::MULHR;
   case Intrinsic::riscv_mulhru_u32:
@@ -13387,7 +13403,13 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_pssha:
   case Intrinsic::riscv_psshar:
   case Intrinsic::riscv_psshl:
-  case Intrinsic::riscv_psshlr: {
+  case Intrinsic::riscv_psshlr:
+  case Intrinsic::riscv_sha_i64:
+  case Intrinsic::riscv_shar_i64:
+  case Intrinsic::riscv_shl_u64:
+  case Intrinsic::riscv_shlr_u64: {
+    // The 64-bit scalar shifts share the shift amount handling here; the 32-bit
+    // scalar shifts are lowered with the scalar i32 intrinsics below.
     SDValue ShAmt = Op.getOperand(2);
     ShAmt = DAG.getAnyExtOrTrunc(ShAmt, DL, XLenVT);
     return DAG.getNode(getRVPShiftOpcode(IntNo), DL, Op.getValueType(),
@@ -13532,6 +13554,10 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_asub_i32:
   case Intrinsic::riscv_asubu_u32:
   case Intrinsic::riscv_ssh1sadd_i32:
+  case Intrinsic::riscv_ssha_i32:
+  case Intrinsic::riscv_sshar_i32:
+  case Intrinsic::riscv_sshl_u32:
+  case Intrinsic::riscv_sshlr_u32:
   case Intrinsic::riscv_mulhr_i32:
   case Intrinsic::riscv_mulhru_u32:
   case Intrinsic::riscv_mulhsu_i32:
@@ -18646,6 +18672,23 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
       return;
     }
+    case Intrinsic::riscv_ssha_i32:
+    case Intrinsic::riscv_sshar_i32:
+    case Intrinsic::riscv_sshl_u32:
+    case Intrinsic::riscv_sshlr_u32: {
+      // RV64 has no scalar saturating shift instructions; reuse the packed .ws
+      // family on the low word. The shift amount stays a scalar. Unlike sati
+      // this cannot be promoted to i64: SHA/SHL do not saturate.
+      assert(Subtarget.is64Bit() && N->getValueType(0) == MVT::i32 &&
+             "Unexpected subtarget or result type");
+      unsigned Opc = getRVPScalarOpcode(IntNo);
+      SDValue Rs1 =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(1));
+      SDValue ShAmt = DAG.getAnyExtOrTrunc(N->getOperand(2), DL, MVT::i64);
+      SDValue Res = DAG.getNode(Opc, DL, MVT::v2i32, Rs1, ShAmt);
+      Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
+      return;
+    }
     case Intrinsic::riscv_sati:
     case Intrinsic::riscv_usati: {
       // RV64 has no 32-bit sati; promote to i64.
@@ -18748,7 +18791,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         Opc = RISCVISD::PSRA;
         break;
       case Intrinsic::riscv_pnsrar:
-        Opc = RISCVISD::PSSHAR;
+        Opc = RISCVISD::SSHAR;
         ShAmt = DAG.getNode(ISD::AND, DL, XLenVT, ShAmt,
                             DAG.getConstant(31, DL, XLenVT));
         ShAmt = DAG.getNegative(ShAmt, DL, XLenVT);
@@ -18791,7 +18834,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       }
 
       unsigned ShiftOpc = IsRounding
-                              ? (IsSigned ? RISCVISD::PSSHAR : RISCVISD::PSSHLR)
+                              ? (IsSigned ? RISCVISD::SSHAR : RISCVISD::SSHLR)
                               : (IsSigned ? RISCVISD::PSRA : RISCVISD::PSRL);
       SDValue Shifted = DAG.getNode(ShiftOpc, DL, SrcVT, Src, ShAmt);
       MVT WideVT = VT == MVT::v4i8 ? MVT::v8i8 : MVT::v4i16;

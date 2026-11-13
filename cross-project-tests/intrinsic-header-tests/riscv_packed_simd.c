@@ -212,6 +212,62 @@ int64_t test_sati_i64(int64_t a) { return __riscv_sati_i64(a, 16); }
 uint64_t test_usati_u64(int64_t a) { return __riscv_usati_u64(a, 16); }
 #endif
 
+// CHECK-LABEL: test_ssha_i32:
+// RV32:        ssha{{[[:space:]]}}
+// RV64:        pssha.ws
+int32_t test_ssha_i32(int32_t a, int s) { return __riscv_ssha_i32(a, s); }
+
+// CHECK-LABEL: test_ssha_i32_imm:
+// RV32:        sslai{{[[:space:]]}}
+// RV64:        psslai.w
+int32_t test_ssha_i32_imm(int32_t a) { return __riscv_ssha_i32(a, 3); }
+
+// CHECK-LABEL: test_sshar_i32:
+// RV32:        sshar{{[[:space:]]}}
+// RV64:        psshar.ws
+int32_t test_sshar_i32(int32_t a, int s) { return __riscv_sshar_i32(a, s); }
+
+// CHECK-LABEL: test_sshar_i32_negimm:
+// RV32:        srari{{[[:space:]]}}
+// RV64:        psrari.w
+int32_t test_sshar_i32_negimm(int32_t a) { return __riscv_sshar_i32(a, -3); }
+
+// CHECK-LABEL: test_sshl_u32:
+// RV32:        sshl{{[[:space:]]}}
+// RV64:        psshl.ws
+uint32_t test_sshl_u32(uint32_t a, int s) { return __riscv_sshl_u32(a, s); }
+
+// CHECK-LABEL: test_sshlr_u32:
+// RV32:        sshlr{{[[:space:]]}}
+// RV64:        psshlr.ws
+uint32_t test_sshlr_u32(uint32_t a, int s) { return __riscv_sshlr_u32(a, s); }
+
+#if __riscv_xlen == 64
+// RV64-LABEL: test_sha_i64:
+// RV64:        sha{{[[:space:]]}}
+int64_t test_sha_i64(int64_t a, int s) { return __riscv_sha_i64(a, s); }
+
+// RV64-LABEL: test_sha_i64_imm:
+// RV64:        slli{{[[:space:]]}}
+int64_t test_sha_i64_imm(int64_t a) { return __riscv_sha_i64(a, 3); }
+
+// RV64-LABEL: test_shar_i64:
+// RV64:        shar{{[[:space:]]}}
+int64_t test_shar_i64(int64_t a, int s) { return __riscv_shar_i64(a, s); }
+
+// RV64-LABEL: test_shar_i64_negimm:
+// RV64:        srari{{[[:space:]]}}
+int64_t test_shar_i64_negimm(int64_t a) { return __riscv_shar_i64(a, -3); }
+
+// RV64-LABEL: test_shl_u64:
+// RV64:        shl{{[[:space:]]}}
+uint64_t test_shl_u64(uint64_t a, int s) { return __riscv_shl_u64(a, s); }
+
+// RV64-LABEL: test_shlr_u64:
+// RV64:        shlr{{[[:space:]]}}
+uint64_t test_shlr_u64(uint64_t a, int s) { return __riscv_shlr_u64(a, s); }
+#endif
+
 // CHECK-LABEL: test_pmv_s_u8x4:
 // CHECK:       pmv.bs
 uint8x4_t test_pmv_s_u8x4(uint8_t x) { return __riscv_pmv_s_u8x4(x); }

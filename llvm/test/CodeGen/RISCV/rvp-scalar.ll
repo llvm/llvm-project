@@ -3938,6 +3938,165 @@ define signext i32 @test_usati_u32_w31_signext(i32 signext %a) {
   ret i32 %res
 }
 
+define i32 @test_ssha_i32(i32 %a, i32 %shamt) {
+; RV32-LABEL: test_ssha_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ssha a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ssha_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pssha.ws a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.ssha.i32(i32 %a, i32 %shamt)
+  ret i32 %res
+}
+
+define i32 @test_ssha_i32_imm(i32 %a) {
+; RV32-LABEL: test_ssha_i32_imm:
+; RV32:       # %bb.0:
+; RV32-NEXT:    sslai a0, a0, 3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ssha_i32_imm:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psslai.w a0, a0, 3
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.ssha.i32(i32 %a, i32 3)
+  ret i32 %res
+}
+
+define i32 @test_ssha_i32_negimm(i32 %a) {
+; RV32-LABEL: test_ssha_i32_negimm:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srai a0, a0, 3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ssha_i32_negimm:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psrai.w a0, a0, 3
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.ssha.i32(i32 %a, i32 -3)
+  ret i32 %res
+}
+
+define i32 @test_ssha_i32_mask(i32 %a, i32 %shamt) {
+; RV32-LABEL: test_ssha_i32_mask:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ssha a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ssha_i32_mask:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pssha.ws a0, a0, a1
+; RV64-NEXT:    ret
+  %m = and i32 %shamt, 255
+  %res = call i32 @llvm.riscv.ssha.i32(i32 %a, i32 %m)
+  ret i32 %res
+}
+
+define i32 @test_sshar_i32(i32 %a, i32 %shamt) {
+; RV32-LABEL: test_sshar_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    sshar a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_sshar_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psshar.ws a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.sshar.i32(i32 %a, i32 %shamt)
+  ret i32 %res
+}
+
+define i32 @test_sshar_i32_imm(i32 %a) {
+; RV32-LABEL: test_sshar_i32_imm:
+; RV32:       # %bb.0:
+; RV32-NEXT:    sslai a0, a0, 3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_sshar_i32_imm:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psslai.w a0, a0, 3
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.sshar.i32(i32 %a, i32 3)
+  ret i32 %res
+}
+
+define i32 @test_sshar_i32_negimm(i32 %a) {
+; RV32-LABEL: test_sshar_i32_negimm:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srari a0, a0, 3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_sshar_i32_negimm:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psrari.w a0, a0, 3
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.sshar.i32(i32 %a, i32 -3)
+  ret i32 %res
+}
+
+define i32 @test_sshl_u32(i32 %a, i32 %shamt) {
+; RV32-LABEL: test_sshl_u32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    sshl a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_sshl_u32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psshl.ws a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.sshl.u32(i32 %a, i32 %shamt)
+  ret i32 %res
+}
+
+define i32 @test_sshlr_u32(i32 %a, i32 %shamt) {
+; RV32-LABEL: test_sshlr_u32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    sshlr a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_sshlr_u32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psshlr.ws a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.sshlr.u32(i32 %a, i32 %shamt)
+  ret i32 %res
+}
+
+define i32 @test_sshl_u32_imm(i32 %a) {
+; RV32-LABEL: test_sshl_u32_imm:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, 3
+; RV32-NEXT:    sshl a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_sshl_u32_imm:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, 3
+; RV64-NEXT:    psshl.ws a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.sshl.u32(i32 %a, i32 3)
+  ret i32 %res
+}
+
+define i32 @test_sshlr_u32_negimm(i32 %a) {
+; RV32-LABEL: test_sshlr_u32_negimm:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, -3
+; RV32-NEXT:    sshlr a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_sshlr_u32_negimm:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, -3
+; RV64-NEXT:    psshlr.ws a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.sshlr.u32(i32 %a, i32 -3)
+  ret i32 %res
+}
+
 ; Test that pli.b is rematerialized rather than spilled
 define i32 @test_pli_b_remat(ptr %p) nounwind {
 ; RV32-LABEL: test_pli_b_remat:
