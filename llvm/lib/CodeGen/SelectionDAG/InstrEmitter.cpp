@@ -441,6 +441,18 @@ Register InstrEmitter::ConstrainForSubReg(Register VReg, unsigned SubIdx,
   return NewReg;
 }
 
+/// Return the sub-register index covering the low \p Size bits of every
+/// register in \p RC, or 0 if there is none.
+static unsigned getLowSubRegIdx(const TargetRegisterInfo *TRI,
+                                const TargetRegisterClass *RC, unsigned Size) {
+  for (unsigned Idx = 1, E = TRI->getNumSubRegIndices(); Idx != E; ++Idx)
+    if (TRI->getSubRegIdxOffset(Idx) == 0 &&
+        TRI->getSubRegIdxSize(Idx) == Size &&
+        TRI->isSubRegValidForRegClass(RC, Idx))
+      return Idx;
+  return 0;
+}
+
 /// EmitSubregNode - Generate machine code for subreg nodes.
 ///
 void InstrEmitter::EmitSubregNode(SDNode *Node, VRBaseMapType &VRBaseMap,
@@ -462,9 +474,8 @@ void InstrEmitter::EmitSubregNode(SDNode *Node, VRBaseMapType &VRBaseMap,
   }
 
   if (Opc == TargetOpcode::EXTRACT_SUBREG) {
-    // EXTRACT_SUBREG is lowered as %dst = COPY %src:sub.  There are no
-    // constraints on the %dst register, COPY can target all legal register
-    // classes.
+    // If %dst and %src:sub are the same size, EXTRACT_SUBREG is lowered as
+    // %dst = COPY %src:sub.
     unsigned SubIdx = Node->getConstantOperandVal(1);
     const TargetRegisterClass *TRC =
       TLI->getRegClassFor(Node->getSimpleValueType(0), Node->isDivergent());
@@ -503,9 +514,49 @@ void InstrEmitter::EmitSubregNode(SDNode *Node, VRBaseMapType &VRBaseMap,
         Reg = ConstrainForSubReg(Reg, SubIdx,
                                  Node->getOperand(0).getSimpleValueType(),
                                  Node->isDivergent(), Node->getDebugLoc());
+      unsigned SubSize = TRI->getSubRegIdxSize(SubIdx);
+      const TargetRegisterClass *SubRC = nullptr;
+      if (Reg.isVirtual()) {
+        SubRC = TRI->getSubRegisterClass(MRI->getRegClass(Reg), SubIdx);
+        if (SubRC && TRI->getRegSizeInBits(*SubRC) != SubSize)
+          SubRC = nullptr;
+      }
+
       // Create the destreg if it is missing.
-      if (!VRBase)
-        VRBase = MRI->createVirtualRegister(TRC);
+      if (!VRBase) {
+        const TargetRegisterClass *DstRC = TRC;
+        if (SubRC && TRI->getRegSizeInBits(*TRC) > SubSize) {
+          const TargetRegisterClass *VTRC = TLI->getRegClassFor(
+              Node->getSimpleValueType(0),
+              Node->isDivergent() || TRI->isDivergentRegClass(SubRC));
+          if (VTRC->hasSubClassEq(SubRC))
+            DstRC = VTRC;
+        }
+        VRBase = MRI->createVirtualRegister(DstRC);
+      }
+
+      unsigned DstSize = TRI->getRegSizeInBits(*MRI->getRegClass(VRBase));
+      if (SubRC && DstSize > SubSize) {
+        const TargetRegisterClass *SrcRC = MRI->getRegClass(Reg);
+        unsigned LowIdx = getLowSubRegIdx(TRI, SrcRC, SubSize);
+        assert(LowIdx && "No sub-register at bit 0 to move %src:sub into");
+        if (LowIdx != SubIdx) {
+          // Move %src:sub to bit 0 of an otherwise undefined register.
+          Register Undef = MRI->createVirtualRegister(SrcRC);
+          BuildMI(*MBB, InsertPos, Node->getDebugLoc(),
+                  TII->get(TargetOpcode::IMPLICIT_DEF), Undef);
+          Register LowReg = MRI->createVirtualRegister(SrcRC);
+          BuildMI(*MBB, InsertPos, Node->getDebugLoc(),
+                  TII->get(TargetOpcode::INSERT_SUBREG), LowReg)
+              .addReg(Undef)
+              .addReg(Reg, {}, SubIdx)
+              .addImm(LowIdx);
+          Reg = LowReg;
+        }
+        // Copy the low DstSize bits of Reg so that the COPY writes all of %dst.
+        unsigned SrcSize = TRI->getRegSizeInBits(*SrcRC);
+        SubIdx = SrcSize == DstSize ? 0 : getLowSubRegIdx(TRI, SrcRC, DstSize);
+      }
 
       // Create the extract_subreg machine instruction.
       MachineInstrBuilder CopyMI =
