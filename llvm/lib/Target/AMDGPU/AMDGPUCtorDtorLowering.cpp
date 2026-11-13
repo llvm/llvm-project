@@ -74,7 +74,6 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
   LLVMContext &C = M.getContext();
 
   IRBuilder<> IRB(BasicBlock::Create(C, "entry", &F));
-  IRB.disableGEPCanonicalization();
   auto *LoopBB = BasicBlock::Create(C, "while.entry", &F);
   auto *ExitBB = BasicBlock::Create(C, "while.end", &F);
   Type *PtrTy = IRB.getPtrTy(AMDGPUAS::GLOBAL_ADDRESS);

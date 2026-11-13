@@ -744,6 +744,16 @@ LogicalResult cir::AssumeOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// AnnotationOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::AnnotationOp::verify() {
+  if (mlir::ArrayAttr args = getAnnotation().getArgs(); args && !args.empty())
+    return emitOpError("annotation must not have arguments");
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // LocalInitOp
 //===----------------------------------------------------------------------===//
 

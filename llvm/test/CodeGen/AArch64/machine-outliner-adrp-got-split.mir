@@ -106,7 +106,7 @@ body:             |
   bb.3:
   liveins: $lr
     RET undef $lr
-
+...
 # Check that no outlined function split the ADRP pair apart
 #
 # CHECK: OUTLINED_FUNCTION_[[F0]]

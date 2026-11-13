@@ -181,6 +181,15 @@ getLdMatrixIntrinsicId(NVVM::MMALayout layout, int32_t num,
         return llvm::Intrinsic::
             nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b4x16_p64;
       }
+    } else if (eltType == NVVM::LdStMatrixEltType::S8_S4) {
+      switch (num) {
+      case 1:
+        return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x1_s8_s4;
+      case 2:
+        return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x2_s8_s4;
+      case 4:
+        return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x4_s8_s4;
+      }
     }
   } else if (shape.getM() == 16 && shape.getN() == 16) {
     if (eltType == NVVM::LdStMatrixEltType::B8) {
