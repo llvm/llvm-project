@@ -55,6 +55,19 @@ contains
       a(i) = k
     end do
   end subroutine lin
+
+  subroutine after(p, y)
+    class(base), intent(in) :: p
+    integer, intent(out) :: y
+    select type (p)
+    type is (derived)
+      y = p%b
+    class default
+      y = p%a
+      return
+    end select
+    y = y + 1
+  end subroutine after
 end module m
 
 ! CHECK-DAG: ![[RANKS:[0-9]+]] = distinct !DISubprogram(name: "ranks"
@@ -69,7 +82,7 @@ end module m
 ! CHECK-DAG: !DILocalVariable(name: "p", arg: 1, scope: ![[TYPES]],
 ! CHECK-DAG: ![[T1:[0-9]+]] = distinct !DILexicalBlock(scope: ![[TYPES]], {{.*}}line: 27,
 ! CHECK-DAG: !DILocalVariable(name: "p", scope: ![[T1]],
-! CHECK-DAG: ![[T2:[0-9]+]] = distinct !DILexicalBlock(scope: ![[TYPES]], {{.*}}line: 30,
+! CHECK-DAG: ![[T2:[0-9]+]] = distinct !DILexicalBlock(scope: ![[TYPES]], {{.*}}line: 29,
 ! CHECK-DAG: !DILocalVariable(name: "p", scope: ![[T2]],
 
 ! CHECK-DAG: ![[ASSOC:[0-9]+]] = distinct !DISubprogram(name: "assoc"
@@ -83,3 +96,10 @@ end module m
 ! CHECK-DAG: ![[SIMD:[0-9]+]] = distinct !DILexicalBlock(scope: ![[LIN]],
 ! CHECK-DAG: !DILocalVariable(name: "k", scope: ![[SIMD]],
 ! CHECK-DAG: !DILocation(line: 55, column: 7, scope: ![[SIMD]])
+
+! The other branch returns, so the code after the construct joins the block of
+! the first branch, but not its scope.
+! CHECK-DAG: ![[AFTER:[0-9]+]] = distinct !DISubprogram(name: "after"
+! CHECK-DAG: ![[AF1:[0-9]+]] = distinct !DILexicalBlock(scope: ![[AFTER]], {{.*}}line: 63,
+! CHECK-DAG: !DILocation(line: 64, column: 7, scope: ![[AF1]])
+! CHECK-DAG: !DILocation(line: 69, column: 5, scope: ![[AFTER]])

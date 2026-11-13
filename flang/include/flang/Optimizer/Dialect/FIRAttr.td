@@ -232,6 +232,29 @@ def fir_LocationKindAttr : EnumAttr<FIROpsDialect, fir_LocationKind, "loc_kind">
 def LocationKindArrayAttr : ArrayOfAttr<FIROpsDialect, "LocationKindArray",
     "loc_kind_array", "LocationKindAttr">;
 
+def fir_LexicalScopeAttr : fir_Attr<"LexicalScope"> {
+  let mnemonic = "lexical_scope";
+  let summary = "Marks the code of a branch that associates names";
+  let description = [{
+    Constructs such as SELECT TYPE associate a name in each of their branches.
+    When it generates debug information, lowering fuses this attribute into the
+    location of each operation that it generates for such a branch. AddDebugInfo
+    can then put the operations of a branch in a lexical block, so that the
+    name of the branch is visible only there.
+
+    `loc` is the location of the statement that starts the branch, and `parent`
+    is the scope of the branch that holds the construct, if any.
+
+    ```
+    #fir.lexical_scope<loc = loc("a.f90":12:5),
+                       parent = #fir.lexical_scope<loc = loc("a.f90":10:3)>>
+    ```
+  }];
+  let parameters = (ins "mlir::LocationAttr":$loc,
+                        OptionalParameter<"::fir::LexicalScopeAttr">:$parent);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 /// Optimization heuristics for fir.pack_array operation.
 def fir_PackArrayHeuristics
     : I32BitEnumAttr<"PackArrayHeuristics", "",

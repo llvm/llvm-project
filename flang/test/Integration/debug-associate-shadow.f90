@@ -1,7 +1,5 @@
 ! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone %s -o - | FileCheck %s
 
-! XFAIL: *
-
 ! Test that an associate-name that shadows a dummy argument or a SAVE variable
 ! is not visible after END ASSOCIATE.
 
@@ -30,14 +28,14 @@ end subroutine shadow_save
 
 ! CHECK-DAG: ![[SPD:[0-9]+]] = distinct !DISubprogram(name: "shadow_dummy"
 ! CHECK-DAG: !DILocalVariable(name: "r", arg: 1, scope: ![[SPD]],
-! CHECK-DAG: ![[BD:[0-9]+]] = distinct !DILexicalBlock(scope: ![[SPD]], {{.*}}line: 12,
+! CHECK-DAG: ![[BD:[0-9]+]] = distinct !DILexicalBlock(scope: ![[SPD]], {{.*}}line: 10,
 ! CHECK-DAG: !DILocalVariable(name: "r", scope: ![[BD]],
-! CHECK-DAG: !DILocation(line: 13, column: 7, scope: ![[BD]])
-! CHECK-DAG: !DILocation(line: 15, column: 5, scope: ![[SPD]])
+! CHECK-DAG: !DILocation(line: 11, column: 7, scope: ![[BD]])
+! CHECK-DAG: !DILocation(line: 13, column: 5, scope: ![[SPD]])
 
 ! CHECK-DAG: ![[SPS:[0-9]+]] = distinct !DISubprogram(name: "shadow_save"
 ! CHECK-DAG: !DIGlobalVariable(name: "r", scope: ![[SPS]],
-! CHECK-DAG: ![[BS:[0-9]+]] = distinct !DILexicalBlock(scope: ![[SPS]], {{.*}}line: 24,
+! CHECK-DAG: ![[BS:[0-9]+]] = distinct !DILexicalBlock(scope: ![[SPS]], {{.*}}line: 22,
 ! CHECK-DAG: !DILocalVariable(name: "r", scope: ![[BS]],
-! CHECK-DAG: !DILocation(line: 25, column: 7, scope: ![[BS]])
-! CHECK-DAG: !DILocation(line: 27, column: 5, scope: ![[SPS]])
+! CHECK-DAG: !DILocation(line: 23, column: 7, scope: ![[BS]])
+! CHECK-DAG: !DILocation(line: 25, column: 5, scope: ![[SPS]])
