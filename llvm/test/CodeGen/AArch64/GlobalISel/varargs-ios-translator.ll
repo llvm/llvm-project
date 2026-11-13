@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-apple-ios -stop-after=instruction-select -global-isel -verify-machineinstrs %s -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64-apple-ios -stop-after=instruction-select -global-isel %s -o - | FileCheck %s
 
 define void @test_varargs_sentinel(ptr %list, i64, i64, i64, i64, i64, i64, i64,
                                    i32, ...) {

@@ -1,6 +1,7 @@
 # RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -run-pass=if-converter %s -o - | FileCheck %s
 ---
 name:           foo
+tracksRegLiveness: false
 body:           |
   bb.0:
   liveins: $x0, $x3

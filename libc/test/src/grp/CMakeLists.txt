@@ -1,4 +1,4 @@
-add_custom_target(libc_grp_unittests)
+add_libc_testsuite(libc-grp-tests)
 
 if(NOT TARGET libc.src.grp.grp_utils)
   return()
@@ -7,7 +7,7 @@ endif()
 add_libc_test(
   grp_utils_test
   SUITE
-    libc_grp_unittests
+    libc-grp-tests
   SRCS
     grp_utils_test.cpp
   DEPENDS
@@ -23,7 +23,7 @@ add_libc_test(
 add_libc_test(
   getgrent_test
   SUITE
-    libc_grp_unittests
+    libc-grp-tests
   HDRS
     grp_test_utils.h
   SRCS
@@ -37,7 +37,6 @@ add_libc_test(
     libc.src.__support.File.platform_file
     libc.src.__support.ctype_utils
     libc.src.__support.libc_errno
-    libc.src.errno.errno
     libc.src.grp.endgrent
     libc.src.grp.getgrent
     libc.src.grp.grp_utils
@@ -51,7 +50,7 @@ add_libc_test(
 add_libc_test(
   getgrnam_r_test
   SUITE
-    libc_grp_unittests
+    libc-grp-tests
   HDRS
     grp_test_utils.h
   SRCS
@@ -74,7 +73,7 @@ add_libc_test(
 add_libc_test(
   getgrgid_r_test
   SUITE
-    libc_grp_unittests
+    libc-grp-tests
   HDRS
     grp_test_utils.h
   SRCS
@@ -97,7 +96,7 @@ add_libc_test(
 add_libc_test(
   getgrnam_test
   SUITE
-    libc_grp_unittests
+    libc-grp-tests
   HDRS
     grp_test_utils.h
   SRCS
@@ -112,7 +111,6 @@ add_libc_test(
     libc.src.__support.File.platform_file
     libc.src.__support.ctype_utils
     libc.src.__support.libc_errno
-    libc.src.errno.errno
     libc.src.grp.endgrent
     libc.src.grp.getgrent
     libc.src.grp.getgrnam
@@ -126,7 +124,7 @@ add_libc_test(
 add_libc_test(
   getgrgid_test
   SUITE
-    libc_grp_unittests
+    libc-grp-tests
   HDRS
     grp_test_utils.h
   SRCS
@@ -140,7 +138,6 @@ add_libc_test(
     libc.src.__support.File.platform_file
     libc.src.__support.ctype_utils
     libc.src.__support.libc_errno
-    libc.src.errno.errno
     libc.src.grp.endgrent
     libc.src.grp.getgrent
     libc.src.grp.getgrgid
@@ -154,7 +151,7 @@ add_libc_test(
 add_libc_test(
   getgrouplist_test
   SUITE
-    libc_grp_unittests
+    libc-grp-tests
   HDRS
     grp_test_utils.h
   SRCS
@@ -183,7 +180,7 @@ add_libc_test(
 add_libc_test(
   initgroups_test
   SUITE
-    libc_grp_unittests
+    libc-grp-tests
   HDRS
     grp_test_utils.h
   SRCS
@@ -211,7 +208,7 @@ add_libc_test(
 add_libc_test(
   setgroups_test
   SUITE
-    libc_grp_unittests
+    libc-grp-tests
   SRCS
     setgroups_test.cpp
   DEPENDS

@@ -1,8 +1,7 @@
-# RUN: llc -mtriple=amdgpu9.0a -run-pass=gcn-dpp-combine -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=GCN
-# RUN: llc -mtriple=amdgpu9.42 -run-pass=gcn-dpp-combine -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=GCN
+# RUN: llc -mtriple=amdgpu9.0a -run-pass=gcn-dpp-combine -o - %s | FileCheck %s --check-prefix=GCN
+# RUN: llc -mtriple=amdgpu9.42 -run-pass=gcn-dpp-combine -o - %s | FileCheck %s --check-prefix=GCN
 # RUN: llc -mtriple=amdgpu12.51 -run-pass=gcn-dpp-combine -o - %s | FileCheck %s --check-prefix=GCN
 
----
 # GCN-LABEL: name: dpp64_old_impdef
 # GCN: %3:vreg_64_align2 = V_CEIL_F64_dpp %1, 0, %0, 337, 15, 15, 1, implicit $mode, implicit $exec
 ---

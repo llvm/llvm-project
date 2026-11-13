@@ -643,13 +643,15 @@ struct SgToLaneVectorReduction
     Value laneValVec = adaptor.getVector();
 
     // Distribute and reduce across lanes in the subgroup.
-    Value fullReduce = xegpu::subgroupReduction(
-        op.getLoc(), rewriter, laneValVec, op.getKind(), sgSize);
+    Value fullReduce =
+        xegpu::subgroupReduction(op.getLoc(), rewriter, laneValVec,
+                                 op.getKind(), sgSize, op.getFastmathAttr());
 
     // If there's an accumulator, combine it with the reduced value.
     if (adaptor.getAcc())
       fullReduce = vector::makeArithReduction(
-          rewriter, op.getLoc(), op.getKind(), fullReduce, adaptor.getAcc());
+          rewriter, op.getLoc(), op.getKind(), fullReduce, adaptor.getAcc(),
+          op.getFastmathAttr());
 
     rewriter.replaceOp(op, fullReduce);
     return success();
@@ -690,13 +692,14 @@ struct SgToLaneMultiDimReduction
       VectorType origSourceType = op.getSourceVectorType();
       int64_t reductionDimSize = origSourceType.getShape()[reductionDim];
       // Local reduction to scalar, then cross-lane butterfly shuffles.
-      result =
-          xegpu::subgroupReduction(op.getLoc(), rewriter, adaptor.getSource(),
-                                   op.getKind(), reductionDimSize);
+      result = xegpu::subgroupReduction(op.getLoc(), rewriter,
+                                        adaptor.getSource(), op.getKind(),
+                                        reductionDimSize, op.getFastmathAttr());
       // Combine with accumulator if present.
       if (adaptor.getAcc())
         result = vector::makeArithReduction(rewriter, op.getLoc(), op.getKind(),
-                                            result, adaptor.getAcc());
+                                            result, adaptor.getAcc(),
+                                            op.getFastmathAttr());
     } else if (isReductionLaneLocal(op)) {
       // For lane-local reduction, lower to a sequence of vector.reduction ops
       // over 1D slices extracted from the distributed source vector. This is
@@ -705,7 +708,7 @@ struct SgToLaneMultiDimReduction
       result = xegpu::lowerToVectorReductions(
           cast<TypedValue<VectorType>>(adaptor.getSource()),
           cast<TypedValue<VectorType>>(adaptor.getAcc()), op.getKind(),
-          reductionDim, op.getLoc(), rewriter);
+          reductionDim, op.getLoc(), rewriter, op.getFastmathAttr());
     } else {
       auto reductionDim = reductionDims[0];
       VectorType sourceType = op.getSourceVectorType();
@@ -713,7 +716,8 @@ struct SgToLaneMultiDimReduction
       result = xegpu::lowerCrossLaneReductionToShuffles(
           cast<TypedValue<VectorType>>(adaptor.getSource()),
           cast<TypedValue<VectorType>>(adaptor.getAcc()), op.getKind(),
-          reductionDim, reductionDimSize, op.getLoc(), rewriter);
+          reductionDim, reductionDimSize, op.getLoc(), rewriter,
+          op.getFastmathAttr());
     }
     rewriter.replaceOp(op, result);
     return success();
@@ -2524,8 +2528,8 @@ struct SgToLaneConvertLayoutDeinterleaveSelect
     Value isFirstGroup = arith::CmpIOp::create(
         rewriter, loc, arith::CmpIPredicate::eq, group, zero);
     Value selected = arith::SelectOp::create(rewriter, loc, isFirstGroup,
-                                             deinterleaved.getRes1(),
-                                             deinterleaved.getRes2());
+                                             deinterleaved.getResultEven(),
+                                             deinterleaved.getResultOdd());
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
         op, redistribution->distributedTarget, selected);
     return success();
@@ -2723,7 +2727,14 @@ void XeGPUSgToLaneDistributePass::runOnOperation() {
     xegpu::populateXeGPUSgToLaneDistributeTypeConversionAndLegality(
         typeConverter, patterns, target, root);
     target.addLegalOp<UnrealizedConversionCastOp>();
-    if (failed(applyPartialConversion(root, target, std::move(patterns))))
+    // Fold only after the patterns. A fold builds new ops without the
+    // temporary layout attribute, so they are never distributed. For example,
+    // an all-ones vector.constant_mask folds to an arith.constant that stays
+    // at subgroup size behind an unrealized cast.
+    ConversionConfig config;
+    config.foldingMode = DialectConversionFoldingMode::AfterPatterns;
+    if (failed(
+            applyPartialConversion(root, target, std::move(patterns), config)))
       return signalPassFailure();
   }
   // Fold cancelling cast chains and erase dead casts.

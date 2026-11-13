@@ -58,6 +58,7 @@
 # DELETE_AND_ADD: @executable_b/.
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

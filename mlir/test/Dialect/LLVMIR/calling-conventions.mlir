@@ -6,10 +6,12 @@ llvm.func @__gxx_personality_v0(...) -> i32
 // CHECK: declare        void @cconv_ccc()
 // CHECK: declare tailcc void @cconv_tailcc()
 // CHECK: declare ghccc  void @cconv_ghccc()
+// CHECK: declare preserve_nonecc void @cconv_preserve_none()
 llvm.func fastcc @cconv_fastcc()
 llvm.func ccc    @cconv_ccc()
 llvm.func tailcc @cconv_tailcc()
 llvm.func cc_10  @cconv_ghccc()
+llvm.func preserve_nonecc @cconv_preserve_none()
 
 // CHECK-LABEL: @test_ccs
 llvm.func @test_ccs() {
@@ -18,12 +20,14 @@ llvm.func @test_ccs() {
   // CHECK-NEXT: call        void @cconv_ccc()
   // CHECK-NEXT: call tailcc void @cconv_tailcc()
   // CHECK-NEXT: call ghccc  void @cconv_ghccc()
+  // CHECK-NEXT: call preserve_nonecc void @cconv_preserve_none()
   // CHECK-NEXT: ret void
   llvm.call fastcc @cconv_fastcc() : () -> ()
   llvm.call ccc    @cconv_ccc()    : () -> ()
   llvm.call        @cconv_ccc()    : () -> ()
   llvm.call tailcc @cconv_tailcc() : () -> ()
   llvm.call cc_10  @cconv_ghccc()  : () -> ()
+  llvm.call preserve_nonecc @cconv_preserve_none() : () -> ()
   llvm.return
 }
 
@@ -59,6 +63,12 @@ llvm.func @test_ccs_invoke() attributes { personality = @__gxx_personality_v0 } 
 
 ^bb5:
   // CHECK: [[normal5]]:
+  // CHECK-NEXT: invoke preserve_nonecc void @cconv_preserve_none()
+  // CHECK-NEXT:   to label %[[normal6:[0-9]+]] unwind label %[[unwind:[0-9]+]]
+  llvm.invoke preserve_nonecc @cconv_preserve_none() to ^bb7 unwind ^bb6 : () -> ()
+
+^bb7:
+  // CHECK: [[normal6]]:
   // CHECK-NEXT: ret void
   llvm.return
 

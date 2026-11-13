@@ -169,7 +169,7 @@
 /* Features in %ecx for leaf 7 sub-leaf 0 */
 #define bit_PREFTCHWT1       0x00000001
 #define bit_AVX512VBMI       0x00000002
-#define bit_PKU              0x00000004
+#define bit_PKU              0x00000008
 #define bit_OSPKE            0x00000010
 #define bit_WAITPKG          0x00000020
 #define bit_AVX512VBMI2      0x00000040

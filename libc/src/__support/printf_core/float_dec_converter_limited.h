@@ -145,8 +145,9 @@ LIBC_INLINE DigitsOutput<CharT> decimal_digits(DigitsInput input, int precision,
       output.ndigits = 0;
       output.exponent = -precision - 1;
     } else {
-      // In E mode, set the expected number of 0s (output.digits has been
-      // value-initialized to all zeroes).
+      // In E mode, generate a string containing the expected number of 0s.
+      for (int i = 0; i < precision; ++i)
+        output.digits[i] = CharT{'0'};
       output.ndigits = precision;
       output.exponent = 0;
     }

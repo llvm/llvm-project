@@ -76,7 +76,6 @@
 ---
 name:            '_ZNSt3__111__introsortINS_17_ClassicAlgPolicyERZL18DumpAnnotatedInputRN4llvm11raw_ostreamERKNS2_16FileCheckRequestE20DumpInputFilterValuejNS2_9StringRefERNS_6vectorI15InputAnnotationNS_9allocatorISB_EEEEjE3$_0PSB_Lb0EEEvT1_SJ_T0_NS_15iterator_traitsISJ_E15difference_typeEb'
 alignment:       4
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         true

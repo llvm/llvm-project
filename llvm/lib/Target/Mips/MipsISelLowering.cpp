@@ -573,7 +573,7 @@ static SDValue createFPCmp(SelectionDAG &DAG, const SDValue &Op) {
 
   // Assume the 3rd operand is a CondCodeSDNode. Add code to check the type of
   // node if necessary.
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(2);
 
   return DAG.getNode(MipsISD::FPCmp, DL, MVT::Glue, LHS, RHS,
                      DAG.getConstant(condCodeToFCC(CC), DL, MVT::i32));
@@ -608,6 +608,22 @@ static SDValue performSELECTCombine(SDNode *N, SelectionDAG &DAG,
   if (!FalseTy.isInteger())
     return SDValue();
 
+  // r6 selects can test canonical words directly in i64.
+  SDValue LHS = SetCC.getOperand(0);
+  ISD::CondCode CC = SetCC.getOperandCondCode(2);
+  if (Subtarget.hasMips64r6() && FalseTy == MVT::i64 &&
+      LHS.getOpcode() == ISD::TRUNCATE && LHS.getValueType() == MVT::i32 &&
+      LHS.getOperand(0).getValueType() == MVT::i64 &&
+      (CC == ISD::SETEQ || CC == ISD::SETNE) &&
+      isNullConstant(SetCC.getOperand(1)) &&
+      DAG.ComputeNumSignBits(LHS.getOperand(0)) > 32) {
+    SDLoc DL(N);
+    SDValue WideCC = DAG.getSetCC(DL, SetCC.getValueType(), LHS.getOperand(0),
+                                  DAG.getConstant(0, DL, MVT::i64), CC);
+    return DAG.getNode(ISD::SELECT, DL, FalseTy, WideCC, N->getOperand(1),
+                       False);
+  }
+
   ConstantSDNode *FalseC = dyn_cast<ConstantSDNode>(False);
 
   // If the RHS (False) is 0, we swap the order of the operands
@@ -623,7 +639,7 @@ static SDValue performSELECTCombine(SDNode *N, SelectionDAG &DAG,
   const SDLoc DL(N);
 
   if (!FalseC->getZExtValue()) {
-    ISD::CondCode CC = cast<CondCodeSDNode>(SetCC.getOperand(2))->get();
+    ISD::CondCode CC = SetCC.getOperandCondCode(2);
     SDValue True = N->getOperand(1);
 
     SetCC = DAG.getSetCC(DL, SetCC.getValueType(), SetCC.getOperand(0),
@@ -660,7 +676,7 @@ static SDValue performSELECTCombine(SDNode *N, SelectionDAG &DAG,
   //  xor $reg1, $reg1, 1
   //  addiu $reg2, $reg1, y-1
   if (Diff == -1) {
-    ISD::CondCode CC = cast<CondCodeSDNode>(SetCC.getOperand(2))->get();
+    ISD::CondCode CC = SetCC.getOperandCondCode(2);
     SetCC = DAG.getSetCC(DL, SetCC.getValueType(), SetCC.getOperand(0),
                          SetCC.getOperand(1),
                          ISD::getSetCCInverse(CC, SetCC.getValueType()));
@@ -1133,6 +1149,20 @@ static SDValue performSignExtendCombine(SDNode *N, SelectionDAG &DAG,
 
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+
+  // Widen AND/OR on canonical words; sign-extended constants preserve this
+  // form. Require one use to avoid duplicating shared operations and constants.
+  if (VT == MVT::i64 && N0.getValueType() == MVT::i32 && N0.hasOneUse() &&
+      (N0.getOpcode() == ISD::AND || N0.getOpcode() == ISD::OR) &&
+      N0.getOperand(0).getOpcode() == ISD::TRUNCATE &&
+      isa<ConstantSDNode>(N0.getOperand(1))) {
+    SDValue Src = N0.getOperand(0).getOperand(0);
+    if (Src.getValueType() == MVT::i64 && DAG.ComputeNumSignBits(Src) > 32) {
+      int64_t Imm = cast<ConstantSDNode>(N0.getOperand(1))->getSExtValue();
+      return DAG.getNode(N0.getOpcode(), SDLoc(N), VT, Src,
+                         DAG.getConstant(Imm, SDLoc(N), VT));
+    }
+  }
 
   // Pattern match XOR.
   // $dst = sign_extend (xor (trunc $src, i32), imm)
@@ -2232,7 +2262,7 @@ SDValue MipsTargetLowering::lowerFSETCC(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
   SDValue LHS = Op.getOperand(1);
   SDValue RHS = Op.getOperand(2);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(3))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(3);
 
   SDValue Cond = DAG.getNode(MipsISD::FPCmp, DL, MVT::Glue, LHS, RHS,
                              DAG.getConstant(condCodeToFCC(CC), DL, MVT::i32));
@@ -4571,13 +4601,14 @@ EVT MipsTargetLowering::getOptimalMemOpType(
   return MVT::i32;
 }
 
-bool MipsTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                      bool ForCodeSize) const {
+TargetLowering::FPImmAction
+MipsTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                   bool ForCodeSize) const {
   if (VT != MVT::f32 && VT != MVT::f64)
-    return false;
+    return FPImmAction::ConstantPool;
   if (Imm.isNegZero())
-    return false;
-  return Imm.isZero();
+    return FPImmAction::ConstantPool;
+  return Imm.isZero() ? FPImmAction::Legal : FPImmAction::ConstantPool;
 }
 
 bool MipsTargetLowering::isLegalICmpImmediate(int64_t Imm) const {

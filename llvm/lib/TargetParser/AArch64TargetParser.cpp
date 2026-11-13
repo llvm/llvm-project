@@ -145,7 +145,7 @@ void AArch64::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
 
 bool AArch64::isX18ReservedByDefault(const Triple &TT) {
   return TT.isAndroid() || TT.isOSDarwin() || TT.isOSFuchsia() ||
-         TT.isOSWindows() || TT.isOHOSFamily();
+         TT.isOSWindowsOrUEFI() || TT.isOHOSFamily();
 }
 
 // Allows partial match, ex. "v8a" matches "armv8a".

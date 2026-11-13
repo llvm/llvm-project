@@ -17,8 +17,6 @@
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/FuzzMutate/FuzzerCLI.h"
 #include "llvm/FuzzMutate/IRMutator.h"
-#include "llvm/FuzzMutate/Operations.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
@@ -26,7 +24,6 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/SourceMgr.h"
@@ -37,8 +34,6 @@
 
 using namespace llvm;
 
-static codegen::RegisterCodeGenFlags CGF;
-
 static cl::opt<char>
     OptLevel("O",
              cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
@@ -48,7 +43,6 @@ static cl::opt<char>
 static cl::opt<std::string>
     TargetTriple("mtriple", cl::desc("Override target triple for module"));
 
-static cl::LibraryOptionsContext LibraryOptions;
 static std::unique_ptr<TargetMachine> TM;
 static std::unique_ptr<IRMutator> Mutator;
 
@@ -124,8 +118,10 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
   InitializeAllAsmPrinters();
   InitializeAllAsmParsers();
 
-  handleExecNameEncodedBEOpts(ExecName);
-  parseFuzzerCLOpts(*argc, *argv);
+  // Created after the targets register their library options.
+  static cl::LibraryOptionsContext LibraryOptions;
+  handleExecNameEncodedBEOpts(LibraryOptions, ExecName);
+  parseFuzzerCLOpts(LibraryOptions, codegen::getToolOptions(), *argc, *argv);
 
   if (TargetTriple.empty()) {
     errs() << ExecName << ": -mtriple must be specified\n";

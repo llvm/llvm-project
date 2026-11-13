@@ -553,11 +553,11 @@ multiclass Arithmetic_i16_0Hi_TernaryPats <SDPatternOperator op, Instruction ins
   >;
 }
 
-let Predicates = [Has16BitInsts, isGFX8GFX9] in {
+let Predicates = [Has16BitInsts, isGFX8Only] in {
 defm : Arithmetic_i16_0Hi_TernaryPats<imad, V_MAD_U16_e64>;
 }
 
-let Predicates = [Has16BitInsts, isGFX6GFX7GFX8GFX9] in {
+let Predicates = [Has16BitInsts, isGFX8Only] in {
 
 // FIXME: Should be able to just pass imad to the instruction
 // definition pattern, but the implied clamp input interferes.
@@ -570,13 +570,16 @@ multiclass Ternary_i16_Pats <SDPatternOperator op, Instruction inst> {
 
 defm: Ternary_i16_Pats<imad, V_MAD_U16_e64>;
 
-} // End Predicates = [Has16BitInsts, isGFX6GFX7GFX8GFX9]
+} // End Predicates = [Has16BitInsts, isGFX8Only]
 
 multiclass Ternary_i16_Pats_gfx9<SDPatternOperator op1, SDPatternOperator op2,
                                  Instruction inst> {
   def : GCNPat <
-    (op2 (op1 i16:$src0, i16:$src1), i16:$src2),
-    (inst SRCMODS.NONE, $src0, SRCMODS.NONE, $src1, SRCMODS.NONE, $src2, DSTCLAMP.NONE)
+    (op2 (op1 (i16 (VOP3OpSel i16:$src0, i32:$src0_modifiers)),
+              (i16 (VOP3OpSel i16:$src1, i32:$src1_modifiers))),
+         (i16 (VOP3OpSel i16:$src2, i32:$src2_modifiers))),
+    (inst $src0_modifiers, $src0, $src1_modifiers, $src1,
+          $src2_modifiers, $src2, DSTCLAMP.NONE)
   >;
 }
 
@@ -586,9 +589,24 @@ let True16Predicate = UseRealTrue16Insts in {
 let True16Predicate = UseFakeTrue16Insts in {
   defm: Ternary_i16_Pats_gfx9<mul, add, V_MAD_U16_gfx9_fake16_e64>;
 } // End True16Predicates = UseFakeTrue16Insts
-let OtherPredicates = [isGFX10Plus, Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
+let OtherPredicates = [isGFX9Plus, Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
   defm: Ternary_i16_Pats_gfx9<mul, add, V_MAD_U16_gfx9_e64>;
-} // End OtherPredicates = [isGFX10Plus, Has16BitInsts], True16Predicate = NotHasTrue16BitInsts
+} // End OtherPredicates = [isGFX9Plus, Has16BitInsts], True16Predicate = NotHasTrue16BitInsts
+
+// On GFX9, select the op_sel version with an explicit zero-extension of the
+// result. SIFoldOperands removes the AND by switching back to the legacy
+// v_mad_u16 (renamed v_mad_legacy_u16), which zeros the high 16 bits, if no
+// op_sel bits are set.
+let OtherPredicates = [isGFX9Only, Has16BitInsts] in {
+def : GCNPat <
+  (i32 (zext (add (mul (i16 (VOP3OpSel i16:$src0, i32:$src0_modifiers)),
+                       (i16 (VOP3OpSel i16:$src1, i32:$src1_modifiers))),
+                  (i16 (VOP3OpSel i16:$src2, i32:$src2_modifiers))))),
+  (V_AND_B32_e64 (S_MOV_B32 (i32 0xffff)),
+    (V_MAD_U16_gfx9_e64 $src0_modifiers, $src0, $src1_modifiers, $src1,
+                        $src2_modifiers, $src2, DSTCLAMP.NONE))
+>;
+} // End OtherPredicates = [isGFX9Only, Has16BitInsts]
 
 class ThreeOpFragSDAG<SDPatternOperator op1, SDPatternOperator op2> : PatFrag<
   (ops node:$x, node:$y, node:$z),
@@ -804,7 +822,8 @@ defm V_LSHL_OR_B32 : VOP3Inst <"v_lshl_or_b32", VOP3_Profile<VOP_I32_I32_I32_I32
 
 // V_LSHL_ADD_U64: D0.u64 = (S0.u64 << S1.u[2:0]) + S2.u64
 // src0 is shifted left by 0-4 (use "0" to get ADD_U64).
-let SubtargetPredicate = HasLshlAddU64Inst, GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in
+let SubtargetPredicate = HasLshlAddU64Inst, GFX1250BlockingCycles = 2,
+    HasGFX1250BlockingCycles = true, isReMaterializable = 1 in
 defm V_LSHL_ADD_U64 : VOP3Inst <"v_lshl_add_u64", V_LSHL_ADD_U64_PROF>;
 
 let OtherPredicates = [HasFP8ConversionInsts], mayRaiseFPException = 0,
@@ -1484,10 +1503,11 @@ let SubtargetPredicate = HasCvtPkF16F32Inst in {
   }
 
   def : GCNPat<(v2f16 (fpround v2f32:$src)),
-               (V_CVT_PK_F16_F32_e64 0, (EXTRACT_SUBREG VReg_64:$src, sub0), 0, (EXTRACT_SUBREG VReg_64:$src, sub1))>;
+               (V_CVT_PK_F16_F32_e64 0, (f32 (EXTRACT_SUBREG VReg_64:$src, sub0)),
+                                     0, (f32 (EXTRACT_SUBREG VReg_64:$src, sub1)))>;
   def : GCNPat<(v2f16 (fpround v2f64:$src)),
-               (V_CVT_PK_F16_F32_e64 0, (V_CVT_F32_F64_e64 0, (EXTRACT_SUBREG VReg_128:$src, sub0_sub1)),
-                                     0, (V_CVT_F32_F64_e64 0, (EXTRACT_SUBREG VReg_128:$src, sub2_sub3)))>;
+               (V_CVT_PK_F16_F32_e64 0, (V_CVT_F32_F64_e64 0, (f64 (EXTRACT_SUBREG VReg_128:$src, sub0_sub1))),
+                                     0, (V_CVT_F32_F64_e64 0, (f64 (EXTRACT_SUBREG VReg_128:$src, sub2_sub3))))>;
   def : GCNPat<(v2f16 (build_vector (f16 (fpround (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
                                     (f16 (fpround (f32 (VOP3Mods f32:$src1, i32:$src1_modifiers)))))),
                (V_CVT_PK_F16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1)>;
@@ -1607,7 +1627,7 @@ let True16Predicate = UseRealTrue16Insts in {
   def : OpSelBinOpClampPat<usubsat, V_SUB_NC_U16_t16_e64>;
   def : GCNPat<
     (add i16:$src0, (i16 NegSubInlineIntConst16:$src1)),
-    (V_SUB_NC_U16_t16_e64 0, VSrc_b16:$src0, 0, NegSubInlineIntConst16:$src1, 0, 0)
+    (V_SUB_NC_U16_t16_e64 0, VSrcT_b16:$src0, 0, NegSubInlineIntConst16:$src1, 0, 0)
   >;
 } // End True16Predicate = UseRealTrue16Insts
 
@@ -1716,6 +1736,30 @@ let OtherPredicates = [HasBitOp3Insts] in {
 
 } // End OtherPredicates = [HasBitOp3Insts]
 
+class UnscaledDivFmasPat<ValueType vt, Instruction inst> : GCNPat<
+  (unscaled_div_fmas
+    (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
+    (vt (VOP3Mods vt:$src1, i32:$src1_modifiers)),
+    (vt (VOP3Mods vt:$src2, i32:$src2_modifiers)), (i1 srcvalue)),
+  (inst $src0_modifiers, $src0, $src1_modifiers, $src1,
+        $src2_modifiers, $src2, 0, 0)
+>;
+
+def : UnscaledDivFmasPat<f32, V_FMA_F32_e64>;
+def : UnscaledDivFmasPat<f64, V_FMA_F64_e64>;
+
+// Each VOP3Mods matcher contributes three more complexity points than
+// VOP3NoMods. Prefer FMAC when no modifiers are needed.
+let OtherPredicates = [HasDLInsts], AddedComplexity = 10 in
+def : GCNPat<
+  (unscaled_div_fmas
+    (f32 (VOP3NoMods f32:$src0)),
+    (f32 (VOP3NoMods f32:$src1)),
+    (f32 (VOP3NoMods f32:$src2)), (i1 srcvalue)),
+  (V_FMAC_F32_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
+                  SRCMODS.NONE, $src2)
+>;
+
 class DivFmasPat<ValueType vt, Instruction inst, Register CondReg> : GCNPat<
   (AMDGPUdiv_fmas (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
                   (vt (VOP3Mods vt:$src1, i32:$src1_modifiers)),
@@ -1815,10 +1859,15 @@ let SubtargetPredicate = HasBF16ConversionInsts in {
     defm V_CVT_PK_BF16_F32    : VOP3Inst<"v_cvt_pk_bf16_f32", VOP3_Profile<VOP_V2BF16_F32_F32>>;
   }
   def : GCNPat<(v2bf16 (bf16_fpround v2f32:$src)),
-               (V_CVT_PK_BF16_F32_e64 0, (EXTRACT_SUBREG VReg_64:$src, sub0), 0, (EXTRACT_SUBREG VReg_64:$src, sub1))>;
+               (V_CVT_PK_BF16_F32_e64 0, (f32 (EXTRACT_SUBREG VReg_64:$src, sub0)),
+                                      0, (f32 (EXTRACT_SUBREG VReg_64:$src, sub1)))>;
   def : GCNPat<(v2bf16 (build_vector (bf16 (bf16_fpround (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
                                      (bf16 (bf16_fpround (f32 (VOP3Mods f32:$src1, i32:$src1_modifiers)))))),
                (V_CVT_PK_BF16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1)>;
+  let True16Predicate = UseRealTrue16Insts in
+  def : GCNPat<(bf16 (bf16_fpround (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+               (EXTRACT_SUBREG (v2bf16 (V_CVT_PK_BF16_F32_e64 $src0_modifiers, $src0, 0, (f32 (IMPLICIT_DEF)))), lo16)>;
+  let True16Predicate = NotUseRealTrue16Insts in
   def : GCNPat<(bf16 (bf16_fpround (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
                (V_CVT_PK_BF16_F32_e64 $src0_modifiers, $src0, 0, (f32 (IMPLICIT_DEF)))>;
 }

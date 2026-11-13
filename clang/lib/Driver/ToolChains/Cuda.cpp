@@ -328,6 +328,15 @@ void CudaInstallationDetector::AddCudaIncludeArgs(
 
   CC1Args.push_back("-include");
   CC1Args.push_back("__clang_cuda_runtime_wrapper.h");
+
+  // From CUDA 13.0 on, libcu++, CUB and Thrust are in include/cccl, and some
+  // of the toolkit's own headers, such as cooperative_groups.h, include them.
+  SmallString<128> CCCLPath(getIncludePath());
+  llvm::sys::path::append(CCCLPath, "cccl");
+  if (D.getVFS().exists(CCCLPath)) {
+    CC1Args.push_back("-internal-isystem");
+    CC1Args.push_back(DriverArgs.MakeArgString(CCCLPath));
+  }
 }
 
 void CudaInstallationDetector::CheckCudaVersionSupportsArch(

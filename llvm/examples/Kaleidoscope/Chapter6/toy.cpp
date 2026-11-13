@@ -984,7 +984,7 @@ static void InitializeModuleAndManagers() {
   TheFPM->addPass(SimplifyCFGPass());
 
   // Register analysis passes used in these transform passes.
-  PassBuilder PB;
+  PassBuilder PB(*TheContext);
   PB.registerModuleAnalyses(*TheMAM);
   PB.registerFunctionAnalyses(*TheFAM);
   PB.crossRegisterProxies(*TheLAM, *TheFAM, *TheCGAM, *TheMAM);

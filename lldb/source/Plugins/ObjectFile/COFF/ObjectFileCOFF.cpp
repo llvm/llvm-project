@@ -209,8 +209,6 @@ void ObjectFileCOFF::CreateSections(lldb_private::SectionList &sections) {
   if (!module)
     return;
 
-  std::lock_guard<std::recursive_mutex> guard(module->GetMutex());
-
   auto SectionType = [](StringRef Name,
                         const coff_section *Section) -> lldb::SectionType {
     // DWARF Debug Sections

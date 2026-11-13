@@ -46,7 +46,9 @@ class BitcodeWriter {
 public:
   /// Create a BitcodeWriter that writes to Buffer.
   LLVM_ABI BitcodeWriter(SmallVectorImpl<char> &Buffer);
-  LLVM_ABI BitcodeWriter(raw_ostream &FS);
+  /// Create a BitcodeWriter that writes to FS, flushing whenever the buffer
+  /// exceeds FlushThreshold MiB.
+  LLVM_ABI BitcodeWriter(raw_ostream &FS, uint32_t FlushThreshold = 512);
 
   LLVM_ABI ~BitcodeWriter();
 

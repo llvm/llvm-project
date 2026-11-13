@@ -61,6 +61,7 @@ def Tosa_Dialect : Dialect {
 
 class Tosa_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<Tosa_Dialect, attrName, traits> {
+  let cppIncludes = ["mlir/Dialect/Tosa/IR/TosaOps.h"];
   let mnemonic = attrMnemonic;
 }
 
@@ -366,13 +367,13 @@ def Tosa_TargetEnv : Tosa_Attr<"TargetEnv", "target_env"> {
   let parameters = ( ins
     "SpecificationVersion": $specification_version,
     "Level": $level,
-    ArrayRefParameter<"Profile">: $profiles,
-    ArrayRefParameter<"Extension">: $extensions
+    OptionalArrayRefParameter<"Profile">: $profiles,
+    OptionalArrayRefParameter<"Extension">: $extensions
   );
 
   let assemblyFormat = "`<` `specification_version` `=` $specification_version `,` "
-                       "`level` `=` $level `,` `profiles` `=` `[` $profiles `]` `,` "
-                       "`extensions` `=` `[` $extensions `]` `>`";
+                       "`level` `=` $level `,` `profiles` `=` `[` (`]`) : ($profiles^ `]`)? `,` "
+                       "`extensions` `=` `[` (`]`) : ($extensions^ `]`)? `>`";
 }
 
 //===----------------------------------------------------------------------===//

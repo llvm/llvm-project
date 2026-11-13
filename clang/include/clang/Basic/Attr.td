@@ -266,6 +266,7 @@ class DeclArgument<DeclNode kind, string name, bit opt = 0, bit fake = 0>
 //
 class OMPTraitInfoArgument<string name> : Argument<name, 0>;
 class VariadicOMPInteropInfoArgument<string name> : Argument<name, 0>;
+class VariadicOMPAdjustArgsDescriptorArgument<string name> : Argument<name, 0>;
 
 class TypeArgument<string name, bit opt = 0> : Argument<name, opt>;
 class UnsignedArgument<string name, bit opt = 0> : Argument<name, opt>;
@@ -4706,12 +4707,16 @@ def MSVtorDisp : InheritableAttr {
 
 def InitSeg : Attr {
   let Spellings = [Pragma<"", "init_seg">];
-  let Args = [StringArgument<"Section">];
+  let Args = [StringArgument<"Section">,
+              DeclArgument<Function, "Func", /*optional=*/1>];
   let SemaHandler = 0;
   let Documentation = [InitSegDocs];
   let AdditionalMembers = [{
   void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {
-    OS << " (" << getSection() << ')';
+    OS << " (" << getSection();
+    if (const auto *FD = getFunc())
+      OS << ", " << FD->getName();
+    OS << ')';
   }
   }];
 }
@@ -4951,9 +4956,7 @@ def OMPDeclareVariant : InheritableAttr {
   let Args = [
     ExprArgument<"VariantFuncRef">,
     OMPTraitInfoArgument<"TraitInfos">,
-    VariadicExprArgument<"AdjustArgsNothing">,
-    VariadicExprArgument<"AdjustArgsNeedDevicePtr">,
-    VariadicExprArgument<"AdjustArgsNeedDeviceAddr">,
+    VariadicOMPAdjustArgsDescriptorArgument<"AdjustArgs">,
     VariadicOMPInteropInfoArgument<"AppendArgs">,
   ];
   let AdditionalMembers = [{
@@ -5461,6 +5464,14 @@ def HLSLVkLocation : HLSLAnnotationAttr {
   let Subjects = SubjectList<[ParmVar, Field, Function], ErrorDiag>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLVkLocationDocs];
+}
+
+def HLSLVkBuiltIn : HLSLAnnotationAttr, TargetSpecificAttr<TargetSPIRV> {
+  let Spellings = [CXX11<"vk", "builtin">];
+  let Args = [StringArgument<"BuiltIn">];
+  let Subjects = SubjectList<[ParmVar, Field, Function], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLVkBuiltInDocs];
 }
 
 // `row_major` / `column_major` are HLSL keywords that select the in-memory

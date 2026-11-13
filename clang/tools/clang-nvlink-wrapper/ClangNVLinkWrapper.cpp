@@ -39,6 +39,7 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -46,6 +47,9 @@
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
+
+#include <list>
+#include <mutex>
 
 using namespace llvm;
 using namespace llvm::opt;
@@ -93,11 +97,11 @@ static void printVersion(raw_ostream &OS) {
 /// The value of `argv[0]` when run.
 static const char *Executable;
 
-/// Temporary files to be cleaned up.
-static SmallVector<SmallString<128>> TempFiles;
+/// Mutex lock to protect writes to shared TempFiles in parallel.
+static std::mutex TempFilesMutex;
 
-/// Codegen flags for LTO backend.
-static codegen::RegisterCodeGenFlags CodeGenFlags;
+/// Temporary files to be cleaned up.
+static std::list<SmallString<128>> TempFiles;
 
 namespace {
 // Must not overlap with llvm::opt::DriverFlag.
@@ -170,6 +174,7 @@ bool hasFatBinary(const ArgList &Args, MemoryBufferRef Buffer) {
 
 Expected<StringRef> createTempFile(const ArgList &Args, const Twine &Prefix,
                                    StringRef Extension) {
+  std::scoped_lock<decltype(TempFilesMutex)> Lock(TempFilesMutex);
   SmallString<128> OutputFile;
   if (Args.hasArg(OPT_save_temps)) {
     (Prefix + "." + Extension).toNullTerminatedStringRef(OutputFile);
@@ -341,8 +346,7 @@ Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
     return createStringError(
         "must pass in an explicit nvptx64 gpu architecture to 'ptxas'");
 
-  auto TempFileOrErr = createTempFile(
-      Args, sys::path::stem(Args.getLastArgValue(OPT_o, "a.out")), "cubin");
+  auto TempFileOrErr = createTempFile(Args, sys::path::stem(File), "cubin");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -369,9 +373,12 @@ Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
   return Args.MakeArgString(*TempFileOrErr);
 }
 
-Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
+Expected<std::unique_ptr<lto::LTO>>
+createLTO(const cl::LibraryOptionsContext &LibraryOptions,
+          const ArgList &Args) {
   const llvm::Triple Triple("nvptx64-nvidia-cuda");
   lto::Config Conf;
+  Conf.LibraryOptions = &LibraryOptions;
   lto::ThinBackend Backend;
   unsigned Jobs = 0;
   if (auto *Arg = Args.getLastArg(OPT_jobs))
@@ -383,12 +390,12 @@ Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
       lto::createInProcessThinBackend(heavyweight_hardware_concurrency(Jobs));
 
   Conf.CPU = Args.getLastArgValue(OPT_arch);
-  Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple);
+  Conf.Options = codegen::getTargetOptions(LibraryOptions, Triple);
 
   Conf.RemarksFilename =
       Args.getLastArgValue(OPT_opt_remarks_filename, RemarksFilename);
   Conf.RemarksPasses =
-      Args.getLastArgValue(OPT_opt_remarks_filter, RemarksPasses);
+      Args.getLastArgValue(OPT_opt_remarks_passes, RemarksPasses);
   Conf.RemarksFormat =
       Args.getLastArgValue(OPT_opt_remarks_format, RemarksFormat);
 
@@ -396,7 +403,7 @@ Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
       Args.hasArg(OPT_opt_remarks_with_hotness) || RemarksWithHotness;
   Conf.RemarksHotnessThreshold = RemarksHotnessThreshold;
 
-  Conf.MAttrs = llvm::codegen::getMAttrs();
+  Conf.MAttrs = llvm::codegen::getMAttrs(LibraryOptions);
   std::optional<CodeGenOptLevel> CGOptLevelOrNone =
       CodeGenOpt::parseLevel(Args.getLastArgValue(OPT_O, "2")[0]);
   assert(CGOptLevelOrNone && "Invalid optimization level");
@@ -522,7 +529,8 @@ Expected<bool> getSymbols(MemoryBufferRef Buffer, StringMap<Symbol> &SymTab,
   }
 }
 
-Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
+Expected<SmallVector<StringRef>>
+getInput(const cl::LibraryOptionsContext &LibraryOptions, const ArgList &Args) {
   SmallVector<StringRef> LibraryPaths;
   for (const opt::Arg *Arg : Args.filtered(OPT_library_path))
     LibraryPaths.push_back(Arg->getValue());
@@ -626,7 +634,7 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
   // Run the LTO pipeline on the extracted inputs.
   SmallVector<StringRef> Files;
   if (!BitcodeFiles.empty()) {
-    auto LTOBackendOrErr = createLTO(Args);
+    auto LTOBackendOrErr = createLTO(LibraryOptions, Args);
     if (!LTOBackendOrErr)
       return LTOBackendOrErr.takeError();
     lto::LTO &LTOBackend = **LTOBackendOrErr;
@@ -687,8 +695,10 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
       if (Args.hasArg(OPT_lto_emit_asm))
         TempFile = Args.getLastArgValue(OPT_o, "a.out");
       else {
+        StringRef Stem = sys::path::stem(Args.getLastArgValue(OPT_o, "a.out"));
         auto TempFileOrErr = createTempFile(
-            Args, sys::path::stem(Args.getLastArgValue(OPT_o, "a.out")), "s");
+            Args, Stem + (Task == 0 ? Twine("") : Twine('.') + Twine(Task)),
+            "s");
         if (!TempFileOrErr)
           reportError(TempFileOrErr.takeError());
         TempFile = Args.MakeArgString(*TempFileOrErr);
@@ -706,6 +716,8 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
       return Files;
 
     for (StringRef LTOFile : LTOFiles) {
+      if (LTOFile.empty())
+        continue;
       auto FileOrErr = runPTXAs(LTOFile, Args);
       if (!FileOrErr)
         return FileOrErr.takeError();
@@ -817,10 +829,12 @@ int main(int argc, char **argv) {
     NewArgv.push_back(Arg->getValue());
   for (const opt::Arg *Arg : Args.filtered(OPT_plugin_opt))
     NewArgv.push_back(Arg->getValue());
-  cl::ParseCommandLineOptions(NewArgv.size(), &NewArgv[0]);
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(LibraryOptions, codegen::getToolOptions(),
+                              NewArgv);
 
   // Get the input files to pass to 'nvlink'.
-  auto FilesOrErr = getInput(Args);
+  auto FilesOrErr = getInput(LibraryOptions, Args);
   if (!FilesOrErr)
     reportError(FilesOrErr.takeError());
 

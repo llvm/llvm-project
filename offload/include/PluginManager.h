@@ -14,16 +14,18 @@
 #define OMPTARGET_PLUGIN_MANAGER_H
 
 #include "OffloadAPI.h"
-#include "PluginInterface.h"
 
 #include "DeviceImage.h"
 #include "ExclusiveAccess.h"
 #include "OmpAccError.h"
 #include "Shared/APITypes.h"
 #include "Shared/Requirements.h"
+#include "Shared/Utils.h"
 
+#include "Platform.h"
 #include "device.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
@@ -36,8 +38,6 @@
 #include <memory>
 #include <mutex>
 #include <string>
-
-using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
 
 /// Struct for the data required to handle plugins
 struct PluginManager {
@@ -69,6 +69,12 @@ struct PluginManager {
   /// Return the device presented to the user as device \p DeviceNo if it is
   /// initialized and ready. Otherwise return an error explaining the problem.
   llvm::Expected<DeviceTy &> getDevice(uint32_t DeviceNo);
+
+  /// Return the platform for \p Handle, or nullptr if it is not known.
+  const PlatformTy *getPlatform(ol_platform_handle_t Handle) const {
+    auto It = Platforms.find(Handle);
+    return It == Platforms.end() ? nullptr : &It->second;
+  }
 
   /// Iterate over all initialized and ready devices registered with this
   /// plugin.
@@ -123,12 +129,6 @@ struct PluginManager {
   /// Eagerly initialize all plugins and their devices.
   void initializeAllDevices();
 
-  /// Iterator range for all plugins (in use or not, but always valid).
-  auto plugins() { return llvm::make_pointee_range(Plugins); }
-
-  /// Iterator range for all plugins (in use or not, but always valid).
-  auto plugins() const { return llvm::make_pointee_range(Plugins); }
-
   /// Return the user provided requirements.
   int64_t getRequirements() const { return Requirements.getRequirements(); }
 
@@ -138,18 +138,23 @@ struct PluginManager {
   /// Returns the number of plugins that are active.
   int getNumActivePlugins() const;
 
+  /// Get the UID for the host device.
+  static constexpr const char *getHostDeviceUid() { return "HOST"; }
+
+  /// Return true if liboffload was initialized by init().
+  bool isLibOffloadInitialized() const { return LibOffloadInitialized; }
+
 private:
   bool RTLsLoaded = false;
+  // Whether init() called olInit, so deinit() must call olShutDown.
+  bool LibOffloadInitialized = false;
   llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
 
-  // List of all plugins, in use or not.
-  llvm::SmallVector<GenericPluginTy *> Plugins;
+  // Platforms reported by liboffload, indexed by their handle.
+  llvm::DenseMap<ol_platform_handle_t, PlatformTy> Platforms;
 
   // Mapping of device handles to the OpenMP device identifier.
   llvm::DenseMap<ol_device_handle_t, int32_t> DeviceIds;
-
-  // Set of all device images currently in use.
-  llvm::DenseSet<const __tgt_device_image *> UsedImages;
 
   /// Executable images and information extracted from the input images passed
   /// to the runtime.
@@ -171,6 +176,10 @@ private:
 
   /// Map global data and execute pending ctors.
   int loadImagesOntoDevice(DeviceTy &Device);
+
+  /// Destroy the programs loaded for the library identified by \p Key, whose
+  /// translation table is \p TT, and forget the launch info of their kernels.
+  void unloadPrograms(const void *Key, TranslationTable &TT);
 
   /// Register the image \p Img from \p Desc on the compatible device
   /// \p DeviceHandle, unless the device is already in \p UsedDevices. Returns

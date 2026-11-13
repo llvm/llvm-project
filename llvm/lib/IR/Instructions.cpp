@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Instructions.h"
+#include "IROptions.h"
 #include "LLVMContextImpl.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -26,6 +27,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
@@ -52,10 +54,6 @@
 #include <vector>
 
 using namespace llvm;
-
-static cl::opt<bool> DisableI2pP2iOpt(
-    "disable-i2p-p2i-opt", cl::init(false),
-    cl::desc("Disables inttoptr/ptrtoint roundtrip optimization"));
 
 //===----------------------------------------------------------------------===//
 //                            AllocaInst Class
@@ -460,6 +458,14 @@ bool CallBase::paramHasNonNullAttr(unsigned ArgNo,
   return false;
 }
 
+bool CallBase::isNoInline() const {
+  if (Attrs.hasFnAttr(Attribute::NoInline))
+    return true;
+  if (const auto *F = dyn_cast<Function>(getCalledOperand()))
+    return F->isNoInline();
+  return false;
+}
+
 bool CallBase::hasFnAttrOnCalledFunction(Attribute::AttrKind Kind) const {
   if (auto *F = dyn_cast<Function>(getCalledOperand()))
     return F->getAttributes().hasFnAttr(Kind);
@@ -650,6 +656,21 @@ bool CallBase::hasClobberingOperandBundles() const {
               LLVMContext::OB_convergencectrl,
               LLVMContext::OB_deactivation_symbol}) &&
          getIntrinsicID() != Intrinsic::assume;
+}
+
+bool CallBase::isVolatile() const {
+  // There are a very limited number of intrinsics with volatile flags.
+  if (const auto *MI = dyn_cast<MemIntrinsic>(this))
+    return MI->isVolatile();
+
+  switch (getIntrinsicID()) {
+  case Intrinsic::matrix_column_major_load:
+    return cast<ConstantInt>(getArgOperand(2))->isOne();
+  case Intrinsic::matrix_column_major_store:
+    return cast<ConstantInt>(getArgOperand(3))->isOne();
+  default:
+    return false;
+  }
 }
 
 MemoryEffects CallBase::getMemoryEffects() const {
@@ -2646,14 +2667,21 @@ BitInsertInst::BitInsertInst(Value *Base, Value *Val, Value *Offset,
 
 const char *BitInsertInst::areInvalidOperands(Value *Base, Value *Val,
                                               Value *Offset) {
-  if (!Base->getType()->isByteTy())
-    return "bitinsert base must be a byte type";
-  if (!(Val->getType()->isFloatingPointTy() || Val->getType()->isIntegerTy() ||
-        Val->getType()->isPointerTy() || Val->getType()->isByteTy()))
+  Type *BaseTy = Base->getType();
+  if (!BaseTy->isByteOrByteVectorTy())
+    return "bitinsert base must be a byte type or a vector of byte type";
+  Type *ValTy = Val->getType()->getScalarType();
+  if (!(ValTy->isFloatingPointTy() || ValTy->isIntegerTy() ||
+        ValTy->isPointerTy() || ValTy->isByteTy()))
     return "bitinsert value must be an integer, floating-point, pointer, or "
-           "byte type";
-  if (!Offset->getType()->isIntegerTy(32))
-    return "bitinsert offset must be i32";
+           "byte type, or a vector of those types";
+  if (!Offset->getType()->isIntOrIntVectorTy(32))
+    return "bitinsert offset must be i32 or a vector of i32";
+  if (BaseTy->getWithNewType(ValTy) != Val->getType() ||
+      BaseTy->getWithNewType(Offset->getType()->getScalarType()) !=
+          Offset->getType())
+    return "bitinsert operands must all be scalars or all be vectors with the "
+           "same number of elements";
   return nullptr;
 }
 
@@ -2672,14 +2700,20 @@ BitExtractInst::BitExtractInst(Type *Ty, Value *Src, Value *Offset,
 
 const char *BitExtractInst::areInvalidOperands(const Type *Ty, Value *Src,
                                                Value *Offset) {
-  if (!(Ty->isFloatingPointTy() || Ty->isIntegerTy() || Ty->isPointerTy() ||
-        Ty->isByteTy()))
+  const Type *EltTy = Ty->getScalarType();
+  if (!(EltTy->isFloatingPointTy() || EltTy->isIntegerTy() ||
+        EltTy->isPointerTy() || EltTy->isByteTy()))
     return "bitextract result must be an integer, floating-point, pointer, or "
-           "byte type";
-  if (!Src->getType()->isByteTy())
-    return "bitextract source must be a byte type";
-  if (!Offset->getType()->isIntegerTy(32))
-    return "bitextract offset must be i32";
+           "byte type, or a vector of those types";
+  if (!Src->getType()->isByteOrByteVectorTy())
+    return "bitextract source must be a byte type or a vector of byte type";
+  if (!Offset->getType()->isIntOrIntVectorTy(32))
+    return "bitextract offset must be i32 or a vector of i32";
+  if (Ty->getWithNewType(Src->getType()->getScalarType()) != Src->getType() ||
+      Ty->getWithNewType(Offset->getType()->getScalarType()) !=
+          Offset->getType())
+    return "bitextract operands must all be scalars or all be vectors with the "
+           "same number of elements";
   return nullptr;
 }
 
@@ -2988,7 +3022,7 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
     {  1, 0, 0,99,99, 0, 0,99,99,99,99, 7, 3, 0}, // PtrToInt       |
     {  0, 0, 0,99,99, 0, 0,99,99,99,99, 0, 3, 0}, // PtrToAddr      |
     { 99,99,99,99,99,99,99,99,99,11,11,99,15, 0}, // IntToPtr       |
-    {  5, 5, 5, 0, 0, 5, 5, 0, 0,16,16, 5, 1,14}, // BitCast        |
+    {  5, 5, 5, 0, 0, 5, 5, 0, 0,16,16, 5,18,14}, // BitCast        |
     {  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,13,12}, // AddrSpaceCast -+
   };
   // clang-format on
@@ -3039,8 +3073,8 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
         return secondOp;
       return 0;
     case 7: {
-      // Disable inttoptr/ptrtoint optimization if enabled.
-      if (DisableI2pP2iOpt)
+      // Skip the inttoptr/ptrtoint optimization if disabled.
+      if (!getIROptions(SrcTy->getContext()).i2p_p2i_opt)
         return 0;
 
       // Cannot simplify if address spaces are different!
@@ -3125,6 +3159,10 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
       // FIXME: this state can be merged with (1), but the following assert
       // is useful to check the correcteness of the sequence due to semantic
       // change of bitcast.
+      // inttoptr can only fold through a bitcast if the result remains a
+      // pointer. A pointer-to-byte bitcast must stay as a separate bitcast.
+      if (!DstTy->isPtrOrPtrVectorTy())
+        return 0;
       assert(
         SrcTy->isIntOrIntVectorTy() &&
         MidTy->isPtrOrPtrVectorTy() &&
@@ -3137,6 +3175,18 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
       // FIXME: this state can be merged with (2), but the following assert
       // is useful to check the correcteness of the sequence due to semantic
       // change of bitcast.
+      // bitcast, ptrtoaddr -> bitcast, if SrcTy is a byte and the address is
+      //                                the whole pointer
+      // ptrtoint can only fold through a bitcast if the source was already a
+      // pointer, as ptrtoint exposes the provenance.
+      if (!SrcTy->isPtrOrPtrVectorTy()) {
+        // ptrtoaddr yields the address width, so the sizes only match if the
+        // address is the whole pointer.
+        if (secondOp == Instruction::PtrToAddr &&
+            SrcTy->getPrimitiveSizeInBits() == DstTy->getPrimitiveSizeInBits())
+          return Instruction::BitCast;
+        return 0;
+      }
       assert(
         SrcTy->isPtrOrPtrVectorTy() &&
         MidTy->isPtrOrPtrVectorTy() &&
@@ -3148,6 +3198,31 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
     case 17:
       // (sitofp (zext x)) -> (uitofp x)
       return Instruction::UIToFP;
+    case 18:
+      // bitcast, bitcast -> bitcast, if neither SrcTy nor DstTy is a pointer,
+      //                              both are pointers in the same addrspace,
+      //                              or one is a pointer and the other a byte
+      // bitcast, bitcast -> ptrtoint, if a pointer goes through a byte to an
+      //                               integer of the pointer width
+      // bitcast, bitcast -> inttoptr, if an integer of the pointer width goes
+      //                               through a byte to a pointer
+      // A pair of bitcasts through a byte must stay separate otherwise.
+      if (!SrcTy->isPtrOrPtrVectorTy() && !DstTy->isPtrOrPtrVectorTy())
+        return Instruction::BitCast;
+      if (SrcTy->isPtrOrPtrVectorTy() && DstTy->isPtrOrPtrVectorTy() &&
+          SrcTy->getPointerAddressSpace() == DstTy->getPointerAddressSpace())
+        return Instruction::BitCast;
+      if (SrcTy->isByteOrByteVectorTy() || DstTy->isByteOrByteVectorTy())
+        return Instruction::BitCast;
+      if (SrcTy->isVectorTy() == DstTy->isVectorTy() && DL) {
+        if (SrcTy->isPtrOrPtrVectorTy() && DstTy->isIntOrIntVectorTy() &&
+            DL->getPointerTypeSizeInBits(SrcTy) == DstTy->getScalarSizeInBits())
+          return Instruction::PtrToInt;
+        if (SrcTy->isIntOrIntVectorTy() && DstTy->isPtrOrPtrVectorTy() &&
+            SrcTy->getScalarSizeInBits() == DL->getPointerTypeSizeInBits(DstTy))
+          return Instruction::IntToPtr;
+      }
+      return 0;
     case 99:
       // Cast combination can't happen (error in input). This is for all cases
       // where the MidTy is not the same for the two cast instructions.

@@ -1559,10 +1559,8 @@ defm DS_BVH_STACK_PUSH8_POP2_RTN_B64  : DS_Real_gfx12<0x0e2>;
 defm DS_ADD_F64     : DS_Real_gfx12_gfx13<0x054>;
 defm DS_ADD_RTN_F64 : DS_Real_gfx12_gfx13<0x074>;
 
-let AssemblerPredicate = HasLdsBarrierArriveAtomic in {
 defm DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_Real_gfx12_gfx13<0x056>;
 defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64   : DS_Real_gfx12_gfx13<0x075>;
-}
 
 // New aliases added in GFX12 without renaming the instructions.
 let AssemblerPredicate = isGFX12Plus in {
@@ -1937,11 +1935,7 @@ defm DS_MAX_SRC2_F64        : DS_Real_gfx6_gfx7_gfx10<0x0d3, DS_MAX_SRC2_F64, DS
 //===----------------------------------------------------------------------===//
 
 class DS_Real_Base_vi <bits<8> op, DS_Pseudo ps> :
-  DS_Real <ps>,
-  SIMCInstr <ps.PseudoInstr, SIEncodingFamily.VI> {
-  let AssemblerPredicate = isGFX8GFX9;
-  let DecoderNamespace = "GFX8";
-
+  DS_Real <ps>, Select_vi <ps.PseudoInstr> {
   // encoding
   let Inst{7-0}   = !if(ps.has_offset0, offset0, 0);
   let Inst{15-8}  = !if(ps.has_offset1, offset1, 0);

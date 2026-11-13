@@ -49,6 +49,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -537,9 +538,10 @@ RTLIB::Libcall RTLIB::getUINTTOFP(EVT OpVT, EVT RetVT) {
 #define GET_RUNTIME_LIBCALL_FP_SELECTORS
 #include "llvm/IR/RuntimeLibcalls.inc"
 
-RTLIB::Libcall RTLIB::getOutlineAtomicHelper(const Libcall (&LC)[5][4],
+static RTLIB::Libcall getOutlineAtomicHelper(const RTLIB::Libcall (&LC)[5][4],
                                              AtomicOrdering Order,
                                              uint64_t MemSize) {
+  using namespace RTLIB;
   unsigned ModeN, ModelN;
   switch (MemSize) {
   case 1:
@@ -662,6 +664,15 @@ RTLIB::Libcall RTLIB::getSYNC(unsigned Opc, MVT VT) {
   return UNKNOWN_LIBCALL;
 }
 
+RTLIB::AtomicLibcall
+RTLIB::selectAtomicLibcall(const LibcallLoweringInfo &Libcalls, unsigned Opc,
+                           AtomicOrdering Order, MVT VT) {
+  LibcallImpl Impl = Libcalls.getLibcallImpl(getOUTLINE_ATOMIC(Opc, Order, VT));
+  if (Impl != Unsupported)
+    return {Impl, /*IsOutline=*/true};
+  return {Libcalls.getLibcallImpl(getSYNC(Opc, VT)), /*IsOutline=*/false};
+}
+
 RTLIB::Libcall RTLIB::getMEMCPY_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
   switch (ElementSize) {
   case 1:
@@ -717,8 +728,9 @@ RTLIB::Libcall RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
 TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
                                        const TargetSubtargetInfo &STI)
     : TM(tm),
-      RuntimeLibcallInfo(TM.getTargetTriple(), TM.Options.ExceptionModel,
+      RuntimeLibcallInfo(TM.getTargetTriple(), ExceptionHandling::Default,
                          TM.getTargetTriple().getDefaultFloatABI(),
+                         TM.getTargetTriple().getDefaultLongDoubleFormat(),
                          TM.Options.MCOptions.getABIName(), TM.Options.VecLib),
       Libcalls(RuntimeLibcallInfo, [&STI](LibcallLoweringInfo &Info) {
         STI.initLibcallLoweringInfo(Info);
@@ -951,7 +963,9 @@ void TargetLoweringBase::initActions() {
                        Expand);
 
     // Only some target support these vector operations. Default them to Expand.
-    setOperationAction({ISD::VECTOR_COMPRESS, ISD::VECTOR_MATCH}, VT, Expand);
+    setOperationAction(
+        {ISD::VECTOR_COMPRESS, ISD::VECTOR_MATCH, ISD::VECTOR_SHUFFLE_VAR}, VT,
+        Expand);
     setOperationAction({ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON}, VT,
                        Expand);
     setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Expand);
@@ -1054,19 +1068,6 @@ EVT TargetLoweringBase::getShiftAmountTy(EVT LHSTy,
   assert(ShiftVT.getSizeInBits() >= Log2_32_Ceil(LHSTy.getSizeInBits()) &&
          "ShiftVT is still too small!");
   return ShiftVT;
-}
-
-bool TargetLoweringBase::canOpTrap(unsigned Op, EVT VT) const {
-  assert(isTypeLegal(VT));
-  switch (Op) {
-  default:
-    return false;
-  case ISD::SDIV:
-  case ISD::UDIV:
-  case ISD::SREM:
-  case ISD::UREM:
-    return true;
-  }
 }
 
 bool TargetLoweringBase::isFreeAddrSpaceCast(const DataLayout &DL,
@@ -1249,13 +1250,13 @@ unsigned TargetLoweringBase::getVectorTypeBreakdownMVT(
 
   // Scalable vectors cannot be scalarized, so splitting or widening is
   // required.
-  if (VT.isScalableVector() && !isPowerOf2_32(EC.getKnownMinValue()))
+  if (VT.isScalableVector() && !EC.isPowerOf2())
     llvm_unreachable(
         "Splitting or widening of non-power-of-2 MVTs is not implemented.");
 
   // FIXME: We don't support non-power-of-2-sized vectors for now.
   // Ideally we could break down into LHS/RHS like LegalizeDAG does.
-  if (!isPowerOf2_32(EC.getKnownMinValue())) {
+  if (!EC.isPowerOf2()) {
     // Split EC to unit size (scalable property is preserved).
     NumVectorRegs = EC.getKnownMinValue();
     EC = ElementCount::getFixed(1);
@@ -1406,7 +1407,7 @@ TargetLoweringBase::findRepresentativeClass(const TargetRegisterInfo *TRI,
 
   // Compute the set of all super-register classes.
   BitVector SuperRegRC(TRI->getNumRegClasses());
-  for (SuperRegClassIterator RCI(RC, TRI); RCI.isValid(); ++RCI)
+  for (SuperRegClassIterator RCI(RC); RCI.isValid(); ++RCI)
     SuperRegRC.setBitsInMask(RCI.getMask());
 
   // Find the first legal register class with the largest spill size.
@@ -1585,7 +1586,7 @@ void TargetLoweringBase::computeRegisterProperties(
     }
 
     case TypeWidenVector:
-      if (isPowerOf2_32(EC.getKnownMinValue())) {
+      if (EC.isPowerOf2()) {
         // Try to widen the vector.
         for (unsigned nVT = i + 1; nVT <= MVT::LAST_VECTOR_VALUETYPE; ++nVT) {
           MVT SVT = (MVT::SimpleValueType) nVT;
@@ -1748,7 +1749,7 @@ unsigned TargetLoweringBase::getVectorTypeBreakdownImpl(
 
   // FIXME: We don't generically support non-power-of-2-sized vectors for now.
   // Ideally we could break down into LHS/RHS like LegalizeDAG does.
-  if (!isPowerOf2_32(EltCnt.getKnownMinValue())) {
+  if (!EltCnt.isPowerOf2()) {
     assert(VT.isFixedLengthVector() && "Expected a fixed-length vector VT");
     unsigned NumElts = EltCnt.getKnownMinValue();
 
@@ -2074,9 +2075,8 @@ int TargetLoweringBase::IntrinsicIDToISD(Intrinsic::ID ID) const {
   }
 }
 
-Value *
-TargetLoweringBase::getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
-                                                       bool UseTLS) const {
+Value *TargetLoweringBase::getDefaultSafeStackPointerLocation(
+    IRBuilderBase &IRB, const LibcallLoweringInfo &Libcalls) const {
   // compiler-rt provides a variable with a magic name.  Targets that do not
   // link with compiler-rt may also provide such a variable.
   Module *M = IRB.getModule();
@@ -2086,54 +2086,54 @@ TargetLoweringBase::getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
   if (UnsafeStackPtrImpl == RTLIB::Unsupported)
     return nullptr;
 
-  StringRef UnsafeStackPtrVar =
-      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(UnsafeStackPtrImpl);
-  auto UnsafeStackPtr =
-      dyn_cast_or_null<GlobalVariable>(M->getNamedValue(UnsafeStackPtrVar));
+  const RTLIB::RuntimeLibcallsInfo &RTLCI = Libcalls.getRuntimeLibcallsInfo();
+  GlobalValue *GV = RTLCI.getOrInsertImplGlobal(*M, UnsafeStackPtrImpl);
 
-  const DataLayout &DL = M->getDataLayout();
-  PointerType *StackPtrTy = DL.getAllocaPtrType(M->getContext());
-
+  // The variable may already exist, check its type and attributes.
+  LLVMContext &Ctx = M->getContext();
+  StringRef UnsafeStackPtrVar = GV->getName();
+  auto *UnsafeStackPtr = dyn_cast<GlobalVariable>(GV);
   if (!UnsafeStackPtr) {
-    auto TLSModel = UseTLS ?
-        GlobalValue::InitialExecTLSModel :
-        GlobalValue::NotThreadLocal;
-    // The global variable is not defined yet, define it ourselves.
-    // We use the initial-exec TLS model because we do not support the
-    // variable living anywhere other than in the main executable.
-    UnsafeStackPtr = new GlobalVariable(
-        *M, StackPtrTy, false, GlobalValue::ExternalLinkage, nullptr,
-        UnsafeStackPtrVar, nullptr, TLSModel);
-  } else {
-    // The variable exists, check its type and attributes.
-    //
-    // FIXME: Move to IR verifier.
-    if (UnsafeStackPtr->getValueType() != StackPtrTy)
-      report_fatal_error(Twine(UnsafeStackPtrVar) + " must have void* type");
-    if (UseTLS != UnsafeStackPtr->isThreadLocal())
-      report_fatal_error(Twine(UnsafeStackPtrVar) + " must " +
-                         (UseTLS ? "" : "not ") + "be thread-local");
+    Ctx.emitError(Twine(UnsafeStackPtrVar) + " must be a global variable");
+    return GV;
   }
+
+  Type *StackPtrTy = RTLCI.getVariableType(
+      Ctx, M->getTargetTriple(), M->getDataLayout(), UnsafeStackPtrImpl);
+  if (UnsafeStackPtr->getValueType() != StackPtrTy) {
+    Ctx.emitError(
+        formatv("{0} must have type {1}", UnsafeStackPtrVar, *StackPtrTy));
+  }
+
+  if (RTLIB::RuntimeLibcallsInfo::isThreadLocalVariable(UnsafeStackPtrImpl) &&
+      !UnsafeStackPtr->isThreadLocal())
+    Ctx.emitError(Twine(UnsafeStackPtrVar) + " must be thread-local");
+
   return UnsafeStackPtr;
 }
 
-Value *TargetLoweringBase::getSafeStackPointerLocation(
+Value *TargetLoweringBase::getSafeStackPointerAddressCall(
     IRBuilderBase &IRB, const LibcallLoweringInfo &Libcalls) const {
   RTLIB::LibcallImpl SafestackPointerAddressImpl =
       Libcalls.getLibcallImpl(RTLIB::SAFESTACK_POINTER_ADDRESS);
   if (SafestackPointerAddressImpl == RTLIB::Unsupported)
-    return getDefaultSafeStackPointerLocation(IRB, true);
+    return nullptr;
 
-  Module *M = IRB.getModule();
-  auto *PtrTy = PointerType::getUnqual(M->getContext());
+  FunctionCallee Fn = Libcalls.getRuntimeLibcallsInfo().getOrInsertLibcallDecl(
+      *IRB.getModule(), SafestackPointerAddressImpl);
+  CallInst *Call = IRB.CreateCall(Fn);
+  Call->setCallingConv(
+      Libcalls.getLibcallImplCallingConv(SafestackPointerAddressImpl));
+  return Call;
+}
 
+Value *TargetLoweringBase::getSafeStackPointerLocation(
+    IRBuilderBase &IRB, const LibcallLoweringInfo &Libcalls) const {
   // Android provides a libc function to retrieve the address of the current
   // thread's unsafe stack pointer.
-  FunctionCallee Fn =
-      M->getOrInsertFunction(RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
-                                 SafestackPointerAddressImpl),
-                             PtrTy);
-  return IRB.CreateCall(Fn);
+  if (Value *Ptr = getSafeStackPointerAddressCall(IRB, Libcalls))
+    return Ptr;
+  return getDefaultSafeStackPointerLocation(IRB, Libcalls);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2195,12 +2195,8 @@ TargetLoweringBase::getIRStackGuard(IRBuilderBase &IRB,
   if (GuardLocalImpl != RTLIB::impl___guard_local)
     return nullptr;
 
-  Module &M = *IRB.getModule();
-  const DataLayout &DL = M.getDataLayout();
-  PointerType *PtrTy =
-      PointerType::get(M.getContext(), DL.getDefaultGlobalsAddressSpace());
-  GlobalVariable *G =
-      M.getOrInsertGlobal(getLibcallImplName(GuardLocalImpl), PtrTy);
+  GlobalValue *G = Libcalls.getRuntimeLibcallsInfo().getOrInsertImplGlobal(
+      *IRB.getModule(), GuardLocalImpl);
   G->setVisibility(GlobalValue::HiddenVisibility);
   return G;
 }
@@ -2226,8 +2222,7 @@ void TargetLoweringBase::insertSSPDeclarations(
             !M.getTargetTriple().isOSCygMing() &&
             !(M.getTargetTriple().isPPC64() &&
               M.getTargetTriple().isOSFreeBSD()) &&
-            (!M.getTargetTriple().isOSDarwin() ||
-             TM.getRelocationModel() == Reloc::Static))
+            !M.getTargetTriple().isOSDarwin())
           GV->setDSOLocal(true);
 
         return GV;

@@ -18,12 +18,19 @@
 #include "flang/Parser/message.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MathExtras.h"
 #include <functional>
 
 using namespace std::placeholders; // _1, _2, &c. for std::bind()
 
 namespace Fortran::evaluate {
+
+bool IsSubscriptIntegerKind(const Shape &shape) {
+  return llvm::all_of(shape, [](const MaybeExtentExpr &extent) {
+    return IsSubscriptIntegerKind(extent);
+  });
+}
 
 FoldingContext &GetFoldingContextFrom(const Symbol &symbol) {
   return symbol.owner().context().foldingContext();
@@ -54,7 +61,7 @@ Shape GetShapeHelper::ConstantShape(const Constant<ExtentType> &arrayConstant) {
   std::size_t dimensions{arrayConstant.size()};
   for (std::size_t j{0}; j < dimensions; ++j) {
     Scalar<ExtentType> extent{arrayConstant.values().at(j)};
-    result.emplace_back(MaybeExtentExpr{ExtentExpr{std::move(extent)}});
+    result.emplace_back(MakeExtentExpr(std::move(extent)));
   }
   return result;
 }
@@ -63,10 +70,12 @@ auto GetShapeHelper::AsShapeResult(ExtentExpr &&arrayExpr) const -> Result {
   if (context_) {
     arrayExpr = Fold(*context_, std::move(arrayExpr));
   }
-  if (const auto *constArray{UnwrapConstantValue<ExtentType>(arrayExpr)}) {
+  if (const auto *constArray{
+          UnwrapConstantValue<ExtentType>(SubscriptIntegerKind, arrayExpr)}) {
     return ConstantShape(*constArray);
   }
-  if (auto *constructor{UnwrapExpr<ArrayConstructor<ExtentType>>(arrayExpr)}) {
+  if (auto *constructor{UnwrapExpr<ArrayConstructor<ExtentType>>(
+          SubscriptIntegerKind, arrayExpr)}) {
     Shape result;
     for (auto &value : *constructor) {
       auto *expr{std::get_if<ExtentExpr>(&value.u)};
@@ -99,14 +108,16 @@ std::optional<ExtentExpr> AsExtentArrayExpr(const Shape &shape) {
       return std::nullopt;
     }
   }
-  return ExtentExpr{ArrayConstructor<ExtentType>{std::move(values)}};
+  return ExtentExpr{
+      ArrayConstructor<ExtentType>{SubscriptIntegerKind, std::move(values)}};
 }
 
 std::optional<Constant<ExtentType>> AsConstantShape(
     FoldingContext &context, const Shape &shape) {
   if (auto shapeArray{AsExtentArrayExpr(shape)}) {
     auto folded{Fold(context, std::move(*shapeArray))};
-    if (auto *p{UnwrapConstantValue<ExtentType>(folded)}) {
+    if (auto *p{
+            UnwrapConstantValue<ExtentType>(SubscriptIntegerKind, folded)}) {
       return std::move(*p);
     }
   }
@@ -117,9 +128,10 @@ Constant<SubscriptInteger> AsConstantShape(const ConstantSubscripts &shape) {
   using IntType = Scalar<SubscriptInteger>;
   std::vector<IntType> result;
   for (auto dim : shape) {
-    result.emplace_back(dim);
+    result.emplace_back(SubscriptIntegerKind, dim);
   }
-  return {std::move(result), ConstantSubscripts{GetRank(shape)}};
+  return {SubscriptIntegerKind, std::move(result),
+      ConstantSubscripts{GetRank(shape)}};
 }
 
 ConstantSubscripts AsConstantExtents(const Constant<ExtentType> &shape) {
@@ -142,7 +154,7 @@ std::optional<ConstantSubscripts> AsConstantExtents(
 Shape AsShape(const ConstantSubscripts &shape) {
   Shape result;
   for (const auto &extent : shape) {
-    result.emplace_back(ExtentExpr{extent});
+    result.emplace_back(MakeExtentExpr(extent));
   }
   return result;
 }
@@ -177,8 +189,8 @@ static ExtentExpr ComputeTripCount(
   ExtentExpr span{
       (std::move(upper) - std::move(lower) + std::move(strideCopy)) /
       std::move(stride)};
-  return ExtentExpr{
-      Extremum<ExtentType>{Ordering::Greater, std::move(span), ExtentExpr{0}}};
+  return ExtentExpr{Extremum<ExtentType>{
+      Ordering::Greater, std::move(span), MakeExtentExpr(0)}};
 }
 
 ExtentExpr CountTrips(
@@ -202,7 +214,7 @@ MaybeExtentExpr CountTrips(MaybeExtentExpr &&lower, MaybeExtentExpr &&upper,
 }
 
 MaybeExtentExpr GetSize(Shape &&shape) {
-  ExtentExpr extent{1};
+  ExtentExpr extent{MakeExtentExpr(1)};
   for (auto &&dim : std::move(shape)) {
     if (dim) {
       extent = std::move(extent) * std::move(*dim);
@@ -232,6 +244,41 @@ bool ContainsAnyImpliedDoIndex(const ExtentExpr &expr) {
   return MyVisitor{}(expr);
 }
 
+template <typename T>
+bool ContainsUntaggedRankOneBoundElement(const Expr<T> &expr) {
+  struct MyVisitor : public AnyTraverse<MyVisitor> {
+    using Base = AnyTraverse<MyVisitor>;
+    MyVisitor() : Base{*this} {}
+    using Base::operator();
+    bool operator()(const RankOneBoundElement &x) {
+      return !x.originatingArray() || (*this)(x.base());
+    }
+  };
+  return MyVisitor{}(expr);
+}
+template bool ContainsUntaggedRankOneBoundElement(const Expr<SomeType> &);
+template bool ContainsUntaggedRankOneBoundElement(
+    const Expr<SubscriptInteger> &);
+
+// Copies a declared bound out of its ShapeSpec.  A rank-1 array bound is stored
+// as a RankOneBoundElement wrapping the whole rank-1 expression; the copy is
+// stamped with ubound()/lbound() provenance so that, if it survives folding, it
+// serializes as that intrinsic rather than as the non-Fortran %ROBE marker.
+// Callers must only request provenance where the intrinsic is exact, i.e. where
+// its empty-dimension result (UBOUND -> 0, LBOUND -> 1) coincides with the
+// declared bound; otherwise the raw copy stays untagged and any inquiry that
+// would embed it must decline to fold.
+static ExtentExpr CloneBound(const ExtentExpr &bound,
+    const NamedEntity *array = nullptr, bool isUpperBound = false) {
+  ExtentExpr copy{bound};
+  if (array) {
+    if (auto *robe{std::get_if<RankOneBoundElement>(&copy.u)}) {
+      robe->set_provenance(*array, isUpperBound);
+    }
+  }
+  return copy;
+}
+
 // Determines lower bound on a dimension.  This can be other than 1 only
 // for a reference to a whole array object or component. (See LBOUND, 16.9.109).
 // ASSOCIATE construct entities may require traversal of their referents.
@@ -246,10 +293,10 @@ public:
       int d, FoldingContext *context, bool invariantOnly)
       : Base{*this}, dimension_{d}, context_{context},
         invariantOnly_{invariantOnly} {}
-  static Result Default() { return Result{1}; }
+  static Result Default() { return Result{MakeExtentExpr(1)}; }
   static Result Combine(Result &&, Result &&) {
     // Operator results and array references always have lower bounds == 1
-    return Result{1};
+    return MakeExtentExpr(1);
   }
 
   Result GetLowerBound(const Symbol &symbol0, NamedEntity &&base) const {
@@ -282,10 +329,10 @@ public:
                 if (context_) {
                   auto extent{ToInt64(Fold(*context_,
                       ExtentExpr{*ubound} - ExtentExpr{*lbound} +
-                          ExtentExpr{1}))};
+                          MakeExtentExpr(1)))};
                   if (extent) {
                     if (extent <= 0) {
-                      return Result{1};
+                      return MakeExtentExpr(1);
                     }
                     ok = true;
                   } else {
@@ -295,7 +342,7 @@ public:
                   auto ubValue{ToInt64(*ubound)};
                   if (lbValue && ubValue) {
                     if (*lbValue > *ubValue) {
-                      return Result{1};
+                      return MakeExtentExpr(1);
                     }
                     ok = true;
                   } else {
@@ -308,17 +355,20 @@ public:
                 if (auto extent{
                         ToInt64(GetExtent(base, dimension_, invariantOnly_))}) {
                   if (*extent <= 0) {
-                    return Result{1};
+                    return MakeExtentExpr(1);
                   }
                   ok = true;
                 }
               }
-              return ok ? *lbound : Result{};
+              // ok: LBOUND is exact here (lb==1, dimension provably nonempty,
+              // or assumed-size last dimension), so lbound() provenance is
+              // safe.
+              return ok ? Result{CloneBound(*lbound, &base, false)} : Result{};
             } else {
-              return *lbound;
+              return CloneBound(*lbound); // raw declared bound, internal use
             }
           } else {
-            return Result{1};
+            return MakeExtentExpr(1);
           }
         }
         if (IsDescriptor(symbol)) {
@@ -329,7 +379,7 @@ public:
     } else if (const auto *assoc{
                    symbol.detailsIf<semantics::AssocEntityDetails>()}) {
       if (assoc->IsAssumedSize()) { // RANK(*)
-        return Result{1};
+        return MakeExtentExpr(1);
       } else if (assoc->IsAssumedRank()) { // RANK DEFAULT
       } else if (assoc->rank()) { // RANK(n)
         const Symbol &resolved{ResolveAssociations(symbol)};
@@ -354,7 +404,7 @@ public:
     if constexpr (LBOUND_SEMANTICS) {
       return Result{};
     } else {
-      return Result{1};
+      return MakeExtentExpr(1);
     }
   }
 
@@ -367,7 +417,7 @@ public:
       return GetLowerBound(
           component.GetLastSymbol(), NamedEntity{common::Clone(component)});
     }
-    return Result{1};
+    return MakeExtentExpr(1);
   }
 
   template <typename T> Result operator()(const Expr<T> &expr) const {
@@ -377,10 +427,10 @@ public:
       if (const auto *con{std::get_if<Constant<T>>(&expr.u)}) {
         ConstantSubscripts lb{con->lbounds()};
         if (dimension_ < GetRank(lb)) {
-          return Result{lb[dimension_]};
+          return MakeExtentExpr(lb[dimension_]);
         }
       } else { // operation
-        return Result{1};
+        return MakeExtentExpr(1);
       }
     } else {
       return (*this)(expr.u);
@@ -388,7 +438,7 @@ public:
     if constexpr (LBOUND_SEMANTICS) {
       return Result{};
     } else {
-      return Result{1};
+      return MakeExtentExpr(1);
     }
   }
 
@@ -465,7 +515,7 @@ Shape GetLBOUNDs(
 // If the upper and lower bounds are constant, return a constant expression for
 // the extent.  In particular, if the upper bound is less than the lower bound,
 // return zero.
-static MaybeExtentExpr GetNonNegativeExtent(
+static MaybeExtentExpr GetNonNegativeExtent(const NamedEntity &base,
     const semantics::ShapeSpec &shapeSpec, bool invariantOnly) {
   const auto &ubound{shapeSpec.ubound().GetExplicit()};
   const auto &lbound{shapeSpec.lbound().GetExplicit()};
@@ -473,7 +523,7 @@ static MaybeExtentExpr GetNonNegativeExtent(
   std::optional<ConstantSubscript> lval{ToInt64(lbound)};
   if (uval && lval) {
     if (*uval < *lval) {
-      return ExtentExpr{0};
+      return MakeExtentExpr(0);
     } else {
       // The extent of an oversized dimension, e.g. integer(1)::a(0:huge(0_8)),
       // does not fit and wraps around; storage sequences that are too large
@@ -483,7 +533,7 @@ static MaybeExtentExpr GetNonNegativeExtent(
       ConstantSubscript extent;
       (void)llvm::SubOverflow(*uval, *lval, extent);
       (void)llvm::AddOverflow(extent, ConstantSubscript{1}, extent);
-      return ExtentExpr{extent};
+      return MakeExtentExpr(extent);
     }
   } else if (lbound && ubound && lbound->Rank() == 0 && ubound->Rank() == 0 &&
       (!invariantOnly ||
@@ -491,12 +541,17 @@ static MaybeExtentExpr GetNonNegativeExtent(
     // Apply effective IDIM (MAX calculation with 0) so thet the
     // result is never negative
     if (lval.value_or(0) == 1) {
-      return ExtentExpr{Extremum<SubscriptInteger>{
-          Ordering::Greater, ExtentExpr{0}, common::Clone(*ubound)}};
-    } else {
+      // max(0,ub) == max(0,UBOUND(a,dim)) for every ub when lb == 1, so a
+      // surviving rank-1 bound element can carry ubound() provenance exactly.
       return ExtentExpr{
-          Extremum<SubscriptInteger>{Ordering::Greater, ExtentExpr{0},
-              common::Clone(*ubound) - common::Clone(*lbound) + ExtentExpr{1}}};
+          Extremum<SubscriptInteger>{Ordering::Greater, MakeExtentExpr(0),
+              CloneBound(*ubound, &base, /*isUpperBound=*/true)}};
+    } else {
+      // Neither UBOUND() nor LBOUND() equals the declared bound of an empty
+      // dimension, so the raw copies cannot carry provenance here.
+      return ExtentExpr{
+          Extremum<SubscriptInteger>{Ordering::Greater, MakeExtentExpr(0),
+              CloneBound(*ubound) - CloneBound(*lbound) + MakeExtentExpr(1)}};
     }
   } else {
     return std::nullopt;
@@ -553,7 +608,8 @@ MaybeExtentExpr GetExtent(
       int j{0};
       for (const auto &shapeSpec : details->shape()) {
         if (j++ == dimension) {
-          if (auto extent{GetNonNegativeExtent(shapeSpec, invariantOnly)}) {
+          if (auto extent{
+                  GetNonNegativeExtent(base, shapeSpec, invariantOnly)}) {
             return extent;
           } else if (semantics::IsAssumedSizeArray(symbol) &&
               j == symbol.Rank()) {
@@ -617,7 +673,7 @@ MaybeExtentExpr ComputeUpperBound(
     if (ToInt64(lower).value_or(0) == 1) {
       return std::move(*extent);
     } else {
-      return std::move(*extent) + std::move(lower) - ExtentExpr{1};
+      return std::move(*extent) + std::move(lower) - MakeExtentExpr(1);
     }
   } else {
     return std::nullopt;
@@ -667,17 +723,19 @@ MaybeExtentExpr GetRawUpperBound(FoldingContext &context,
 }
 
 static MaybeExtentExpr GetExplicitUBOUND(FoldingContext *context,
-    const semantics::ShapeSpec &shapeSpec, bool invariantOnly) {
+    const NamedEntity &base, const semantics::ShapeSpec &shapeSpec,
+    bool invariantOnly) {
   const auto &ubound{shapeSpec.ubound().GetExplicit()};
   if (ubound && ubound->Rank() == 0 &&
       (!invariantOnly || IsScopeInvariantExpr(*ubound, context))) {
-    if (auto extent{GetNonNegativeExtent(shapeSpec, invariantOnly)}) {
+    if (auto extent{GetNonNegativeExtent(base, shapeSpec, invariantOnly)}) {
       if (auto cstExtent{ToInt64(
               context ? Fold(*context, std::move(*extent)) : *extent)}) {
         if (cstExtent > 0) {
-          return *ubound;
+          // Dimension is nonempty, so UBOUND is exactly the declared bound.
+          return CloneBound(*ubound, &base, /*isUpperBound=*/true);
         } else if (cstExtent == 0) {
-          return ExtentExpr{0};
+          return MakeExtentExpr(0);
         }
       }
     }
@@ -692,7 +750,8 @@ static MaybeExtentExpr GetUBOUND(FoldingContext *context,
     int rank{details->shape().Rank()};
     if (dimension < rank) {
       const semantics::ShapeSpec &shapeSpec{details->shape()[dimension]};
-      if (auto ubound{GetExplicitUBOUND(context, shapeSpec, invariantOnly)}) {
+      if (auto ubound{
+              GetExplicitUBOUND(context, base, shapeSpec, invariantOnly)}) {
         return *ubound;
       } else if (semantics::IsAssumedSizeArray(symbol) &&
           dimension + 1 == symbol.Rank()) {
@@ -1011,8 +1070,7 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
         if (semantics::IsAssumedRank(*call.arguments().front())) {
           return Shape{MaybeExtentExpr{}};
         } else {
-          return Shape{
-              MaybeExtentExpr{ExtentExpr{call.arguments().front()->Rank()}}};
+          return Shape{MakeExtentExpr(call.arguments().front()->Rank())};
         }
       }
     } else if (intrinsic->name == "all" || intrinsic->name == "any" ||
@@ -1052,7 +1110,7 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
             }
           } else {
             // xxxLOC(no DIM=) result is vector(1:RANK(ARRAY=))
-            return Shape{ExtentExpr{rank}};
+            return Shape{MakeExtentExpr(rank)};
           }
         }
       }
@@ -1062,7 +1120,7 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
       }
     } else if (intrinsic->name == "lcobound" || intrinsic->name == "ucobound") {
       if (call.arguments().size() == 3 && !call.arguments().at(1).has_value()) {
-        return Shape(1, ExtentExpr{GetCorank(call.arguments().at(0))});
+        return Shape(1, MakeExtentExpr(GetCorank(call.arguments().at(0))));
       }
     } else if (intrinsic->name == "matmul") {
       if (call.arguments().size() == 2) {
@@ -1093,12 +1151,12 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
               if (auto arraySize{GetSize(std::move(*arrayShape))}) {
                 ActualArguments toMerge{
                     ActualArgument{AsGenericExpr(std::move(*arraySize))},
-                    ActualArgument{AsGenericExpr(ExtentExpr{0})},
+                    ActualArgument{AsGenericExpr(MakeExtentExpr(0))},
                     common::Clone(call.arguments().at(1))};
                 auto specific{context_->intrinsics().Probe(
                     CallCharacteristics{"merge"}, toMerge, *context_)};
                 CHECK(specific);
-                return Shape{ExtentExpr{FunctionRef<ExtentType>{
+                return Shape{ExtentExpr{FunctionRef<ExtentType>{ExtentIntKind,
                     ProcedureDesignator{std::move(specific->specificIntrinsic)},
                     std::move(specific->arguments)}}};
               }
@@ -1106,7 +1164,7 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
           } else {
             // Non-scalar MASK= -> [COUNT(mask, KIND=extent_kind)]
             ActualArgument kindArg{
-                AsGenericExpr(Constant<ExtentType>{ExtentType::kind})};
+                AsGenericExpr(MakeExtentConstant(ExtentIntKind))};
             kindArg.set_keyword(context_->SaveTempName("kind"));
             ActualArguments toCount{
                 ActualArgument{common::Clone(
@@ -1115,7 +1173,7 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
             auto specific{context_->intrinsics().Probe(
                 CallCharacteristics{"count"}, toCount, *context_)};
             CHECK(specific);
-            return Shape{ExtentExpr{FunctionRef<ExtentType>{
+            return Shape{ExtentExpr{FunctionRef<ExtentType>{ExtentIntKind,
                 ProcedureDesignator{std::move(specific->specificIntrinsic)},
                 std::move(specific->arguments)}}};
           }
@@ -1126,9 +1184,10 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
         // SHAPE(RESHAPE(array,shape)) -> shape
         if (const auto *shapeExpr{
                 call.arguments().at(1).value().UnwrapExpr()}) {
-          auto shapeArg{std::get<Expr<SomeInteger>>(shapeExpr->u)};
-          if (auto result{AsShapeResult(
-                  ConvertToType<ExtentType>(std::move(shapeArg)))}) {
+          auto shapeArg{
+              std::get<Expr<Type<TypeCategory::Integer>>>(shapeExpr->u)};
+          if (auto result{AsShapeResult(ConvertToType<ExtentType>(
+                  ExtentIntKind, std::move(shapeArg)))}) {
             return result;
           }
         }
@@ -1140,15 +1199,17 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
         auto arrayShape{
             (*this)(UnwrapExpr<Expr<SomeType>>(call.arguments().at(0)))};
         const auto *dimArg{UnwrapExpr<Expr<SomeType>>(call.arguments().at(1))};
-        const auto *nCopies{
-            UnwrapExpr<Expr<SomeInteger>>(call.arguments().at(2))};
+        const auto *nCopies{UnwrapExpr<Expr<Type<TypeCategory::Integer>>>(
+            call.arguments().at(2))};
         if (arrayShape && dimArg && nCopies) {
           if (auto dim{ToInt64(*dimArg)}) {
             if (*dim >= 1 &&
                 static_cast<std::size_t>(*dim) <= arrayShape->size() + 1) {
               arrayShape->emplace(arrayShape->begin() + *dim - 1,
-                  Extremum<SubscriptInteger>{Ordering::Greater, ExtentExpr{0},
-                      ConvertToType<ExtentType>(common::Clone(*nCopies))});
+                  Extremum<SubscriptInteger>{Ordering::Greater,
+                      MakeExtentExpr(0),
+                      ConvertToType<ExtentType>(
+                          ExtentIntKind, common::Clone(*nCopies))});
               return std::move(*arrayShape);
             }
           }
@@ -1157,10 +1218,10 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
     } else if (intrinsic->name == "transfer") {
       if (call.arguments().size() == 3 && call.arguments().at(2)) {
         // SIZE= is present; shape is vector [SIZE=]
-        if (const auto *size{
-                UnwrapExpr<Expr<SomeInteger>>(call.arguments().at(2))}) {
-          return Shape{
-              MaybeExtentExpr{ConvertToType<ExtentType>(common::Clone(*size))}};
+        if (const auto *size{UnwrapExpr<Expr<Type<TypeCategory::Integer>>>(
+                call.arguments().at(2))}) {
+          return Shape{MaybeExtentExpr{
+              ConvertToType<ExtentType>(ExtentIntKind, common::Clone(*size))}};
         }
       } else if (context_) {
         if (auto moldTypeAndShape{characteristics::TypeAndShape::Characterize(
@@ -1182,7 +1243,7 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
                 *sourceBytes = Fold(*context_, std::move(*sourceBytes));
                 if (auto sourceBytesConst{ToInt64(*sourceBytes)}) {
                   if (*sourceBytesConst == 0) {
-                    return Shape{ExtentExpr{0}};
+                    return Shape{MakeExtentExpr(0)};
                   }
                 }
                 if (auto moldElementBytes{
@@ -1194,7 +1255,8 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
                   if (moldElementBytesConst && *moldElementBytesConst != 0) {
                     ExtentExpr extent{Fold(*context_,
                         (std::move(*sourceBytes) +
-                            common::Clone(*moldElementBytes) - ExtentExpr{1}) /
+                            common::Clone(*moldElementBytes) -
+                            MakeExtentExpr(1)) /
                             common::Clone(*moldElementBytes))};
                     return Shape{MaybeExtentExpr{std::move(extent)}};
                   }
@@ -1207,7 +1269,7 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
     } else if (intrinsic->name == "this_image") {
       if (call.arguments().size() == 2) {
         // THIS_IMAGE(coarray, no DIM, [TEAM])
-        return Shape(1, ExtentExpr{GetCorank(call.arguments().at(0))});
+        return Shape(1, MakeExtentExpr(GetCorank(call.arguments().at(0))));
       }
     } else if (intrinsic->name == "transpose") {
       if (call.arguments().size() >= 1) {

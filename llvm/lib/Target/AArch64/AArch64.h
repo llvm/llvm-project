@@ -34,10 +34,12 @@ struct AArch64O0PreLegalizerCombinerImplRuleConfig;
 struct AArch64PreLegalizerCombinerImplRuleConfig;
 struct AArch64PostLegalizerCombinerImplRuleConfig;
 struct AArch64PostLegalizerLoweringImplRuleConfig;
+struct SLSHardeningInserter;
 
 namespace llvm {
 
 class AArch64RegisterBankInfo;
+struct AArch64Options;
 class AArch64Subtarget;
 class AArch64TargetMachine;
 enum class CodeGenOptLevel;
@@ -159,7 +161,8 @@ FunctionPass *createAArch64PreLegalizerCombiner();
 FunctionPass *createAArch64PostLegalizerCombinerLegacy(bool IsOptNone);
 FunctionPass *createAArch64PostLegalizerLowering();
 FunctionPass *createAArch64PostSelectOptimize();
-FunctionPass *createAArch64StackTaggingPass(bool IsOptNone);
+FunctionPass *createAArch64StackTaggingPass(const AArch64Options &CLOpts,
+                                            bool IsOptNone);
 FunctionPass *createAArch64StackTaggingPreRALegacyPass();
 ModulePass *createAArch64Arm64ECCallLoweringPass();
 
@@ -341,7 +344,13 @@ public:
 
 class AArch64SLSHardeningPass
     : public RequiredPassInfoMixin<AArch64SLSHardeningPass> {
+  std::unique_ptr<SLSHardeningInserter> Inserter;
+
 public:
+  AArch64SLSHardeningPass();
+  AArch64SLSHardeningPass(AArch64SLSHardeningPass &&);
+  ~AArch64SLSHardeningPass();
+
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };

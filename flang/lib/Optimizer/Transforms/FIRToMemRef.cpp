@@ -282,7 +282,8 @@ bool FIRToMemRef::isCompilerGeneratedAlloca(Operation *op) const {
   if (!isa<fir::AllocaOp, memref::AllocaOp>(op))
     llvm_unreachable("expected alloca op");
 
-  return !op->getAttr("bindc_name") && !op->getAttr("uniq_name");
+  return !op->getAttr(fir::getBindcNameAttrName()) &&
+         !op->getAttr(fir::getUniqNameAttrName());
 }
 
 void FIRToMemRef::copyAttribute(Operation *from, Operation *to,
@@ -506,6 +507,8 @@ void FIRToMemRef::rewriteAlloca(fir::AllocaOp firAlloca,
   std::reverse(sizes.begin(), sizes.end());
 
   auto alloca = memref::AllocaOp::create(rewriter, loc, memrefTy, sizes);
+  // The alignment is not part of the memref type, so carry it over.
+  copyAttribute(firAlloca, alloca, firAlloca.getAlignmentAttrName());
   copyAttribute(firAlloca, alloca, firAlloca.getBindcNameAttrName());
   copyAttribute(firAlloca, alloca, firAlloca.getUniqNameAttrName());
   copyAttribute(firAlloca, alloca, cuf::getDataAttrName());
@@ -1754,10 +1757,13 @@ void FIRToMemRef::rewriteLoadOp(fir::LoadOp load, PatternRewriter &rewriter,
   rewriter.setInsertionPointAfter(load);
 
   Attribute attr = (load.getOperation())->getAttr("tbaa");
+  bool nontemporal = load.getNontemporal();
   memref::LoadOp loadOp =
       rewriter.replaceOpWithNewOp<memref::LoadOp>(load, converted, indices);
   if (attr)
     loadOp.getOperation()->setAttr("tbaa", attr);
+  if (nontemporal)
+    loadOp.setNontemporal(true);
 
   LLVM_DEBUG(llvm::dbgs() << "FIRToMemRef: new memref.load op:\n";
              loadOp.dump(); assert(succeeded(verify(loadOp))));
@@ -1810,10 +1816,13 @@ void FIRToMemRef::rewriteStoreOp(fir::StoreOp store, PatternRewriter &rewriter,
         createTypeConversion(rewriter, store.getLoc(), convertedType, value);
 
   Attribute attr = store.getOperation()->getAttr("tbaa");
+  bool nontemporal = store.getNontemporal();
   memref::StoreOp storeOp = rewriter.replaceOpWithNewOp<memref::StoreOp>(
       store, value, converted, indices);
   if (attr)
     storeOp.getOperation()->setAttr("tbaa", attr);
+  if (nontemporal)
+    storeOp.setNontemporal(true);
 
   LLVM_DEBUG(llvm::dbgs() << "FIRToMemRef: new memref.store op:\n";
              storeOp.dump(); assert(succeeded(verify(storeOp))));

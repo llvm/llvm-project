@@ -15,24 +15,19 @@
 
 #include "mlir/Dialect/OpenACC/OpenACCVariableInfo.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/SymbolTable.h"
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/IR/GPUBase.h"
 #include "mlir/Dialect/OpenACC/OpenACCOpsDialect.h.inc"
 #include "mlir/Dialect/OpenACC/OpenACCOpsEnums.h.inc"
 #include "mlir/Dialect/OpenACC/OpenACCOpsInterfaces.h.inc"
 #include "mlir/Dialect/OpenACC/OpenACCTypeInterfaces.h.inc"
 #include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"
 #include "mlir/IR/Value.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Interfaces/ViewLikeInterface.h"
+#include "llvm/ADT/SmallVector.h"
 #include <variant>
 
 #define GET_TYPEDEF_CLASSES
@@ -78,7 +73,6 @@
 
 namespace mlir {
 namespace acc {
-
 /// Enumeration used to encode the execution mapping on a loop construct.
 /// They refer directly to the OpenACC 3.3 standard:
 /// 2.9.2. gang
@@ -138,6 +132,12 @@ mlir::ArrayAttr getAsyncOperandsDeviceType(mlir::Operation *accDataClauseOp);
 /// an acc data clause operation, that correspond to the device types
 /// associated with the async clauses without an async-value.
 mlir::ArrayAttr getAsyncOnly(mlir::Operation *accDataClauseOp);
+
+/// The clauses of a construct can be given once per device type. Of the values
+/// that reach a given device type, the ones naming it are the most specific,
+/// then the ones naming every device type, then the ones given before any
+/// device_type clause.
+SmallVector<DeviceType, 3> getDeviceTypesByPrecedence(DeviceType deviceType);
 
 /// Used to obtain the `name` from an acc operation.
 std::optional<llvm::StringRef> getVarName(mlir::Operation *accOp);
@@ -290,7 +290,6 @@ bool isGangWorkerVectorAllOne(ComputeOpT op) {
   return isConstantIntValue(stripIndexCasts(numWorkers), 1) &&
          isConstantIntValue(stripIndexCasts(vectorLength), 1);
 }
-
 } // namespace acc
 } // namespace mlir
 

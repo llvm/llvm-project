@@ -21,7 +21,6 @@
 #include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
-#include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
@@ -35,7 +34,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
@@ -480,7 +478,7 @@ bool llvm::runPassPipeline(
   PTO.LoopUnrolling = !DisableLoopUnrolling;
   PTO.UnifiedLTO = UnifiedLTO;
   PTO.LoopFusion = EnableLoopFusion;
-  PassBuilder PB(TM, PTO, P, &PIC);
+  PassBuilder PB(M.getContext(), TM, PTO, P, &PIC);
   registerEPCallbacks(PB);
 
   // Let plugins and linked extensions register pass builder callbacks.
@@ -625,7 +623,7 @@ bool llvm::runPassPipeline(
   return true;
 }
 
-void llvm::printPasses(raw_ostream &OS) {
-  PassBuilder PB;
+void llvm::printPasses(LLVMContext &Context, raw_ostream &OS) {
+  PassBuilder PB(Context);
   PB.printPassNames(OS);
 }

@@ -48,6 +48,7 @@ bool PurityChecker::HasPurePrefix(
     if (std::holds_alternative<parser::PrefixSpec::Impure>(prefix.u)) {
       return false;
     } else if (std::holds_alternative<parser::PrefixSpec::Pure>(prefix.u) ||
+        std::holds_alternative<parser::PrefixSpec::Simple>(prefix.u) ||
         std::holds_alternative<parser::PrefixSpec::Elemental>(prefix.u)) {
       result = true;
     }

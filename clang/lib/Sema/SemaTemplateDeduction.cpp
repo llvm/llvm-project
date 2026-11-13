@@ -261,7 +261,7 @@ QualType Sema::getTypeOfConstantTemplateParameter(const TemplateArgument &Arg) {
     if (NonTypeOrVarTemplateParmDecl NTTP =
             getNTTParameterFromExpr(Arg.getAsExpr(), std::nullopt))
       return NTTP.getType();
-  return QualType();
+  return Arg.getNonTypeTemplateArgumentType();
 }
 
 static const NonTypeOrVarTemplateParmDecl
@@ -2556,16 +2556,15 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       // No template argument deduction for these types
       return TemplateDeductionResult::Success;
 
-    case Type::PackIndexing: {
-      const PackIndexingType *PIT = P->getAs<PackIndexingType>();
-      if (PIT->hasSelectedType()) {
-        return DeduceTemplateArgumentsByTypeMatch(
-            S, TemplateParams, PIT->getSelectedType(), A, Info, Deduced, TDF,
-            degradeCallPartialOrderingKind(POK),
-            /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
-      }
-      return TemplateDeductionResult::IncompletePack;
-    }
+    case Type::PackIndexing:
+      // C++26 [temp.deduct.type]p5.2:
+      //   The non-deduced contexts are:
+      //   [...]
+      //   - A pack-index-specifier or a pack-index-expression.
+      assert(!P->getAs<PackIndexingType>()->hasSelectedType() &&
+             "a pack-index-specifier with a selected type canonicalizes to "
+             "the selected type and should not dispatch here");
+      return TemplateDeductionResult::Success;
     }
 
   llvm_unreachable("Invalid Type Class!");

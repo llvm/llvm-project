@@ -20,6 +20,7 @@
 #include "lld/Common/Memory.h"
 #include "lld/Common/Reproduce.h"
 #include "lld/Common/Strings.h"
+#include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h"
@@ -1321,7 +1322,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   for (auto *arg : args.filtered(OPT_mllvm))
     v.push_back(arg->getValue());
   cl::ResetAllOptionOccurrences();
-  cl::ParseCommandLineOptions(v.size(), v.data());
+  cl::parseCommandLineOptions(ctx.arg.libraryOptions, getToolOptions(), v);
 
   readConfigs(args);
   setConfigs();
@@ -1468,6 +1469,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Resolve any variant symbols that were created due to signature
   // mismatches.
   symtab->handleSymbolVariants();
+  symtab->checkImportAttributes();
   if (errorCount())
     return;
 

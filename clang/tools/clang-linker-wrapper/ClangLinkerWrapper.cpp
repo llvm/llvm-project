@@ -39,6 +39,7 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
@@ -125,9 +126,6 @@ static std::mutex TempFilesMutex;
 
 /// Temporary files created by the linker wrapper.
 static std::list<SmallString<128>> TempFiles;
-
-/// Codegen flags for LTO backend.
-static codegen::RegisterCodeGenFlags CodeGenFlags;
 
 /// Whether or not to look through symlinks when resolving binaries.
 static bool CanonicalPrefixes = true;
@@ -224,20 +222,34 @@ Expected<StringRef> createOutputFile(const Twine &Prefix, StringRef Extension) {
 }
 
 /// Execute the command \p ExecutablePath with the arguments \p Args.
-Error executeCommands(StringRef ExecutablePath, ArrayRef<StringRef> Args) {
+/// If \p Proc is set, launch without waiting and store the process handle.
+Error executeCommands(StringRef ExecutablePath, ArrayRef<StringRef> Args,
+                      sys::ProcessInfo *Proc = nullptr) {
   if (Verbose || DryRun)
     printCommands(Args);
 
   if (DryRun)
     return Error::success();
 
-  // If the command line fits within system limits, execute directly.
-  if (sys::commandLineFitsWithinSystemLimits(ExecutablePath, Args)) {
-    if (sys::ExecuteAndWait(ExecutablePath, Args))
+  auto Launch = [&](ArrayRef<StringRef> ExecArgs) -> Error {
+    if (Proc) {
+      bool ExecutionFailed = false;
+      *Proc = sys::ExecuteNoWait(ExecutablePath, ExecArgs, std::nullopt, {}, 0,
+                                 nullptr, &ExecutionFailed);
+      if (ExecutionFailed)
+        return createStringError(
+            "'%s' failed", sys::path::filename(ExecutablePath).str().c_str());
+      return Error::success();
+    }
+    if (sys::ExecuteAndWait(ExecutablePath, ExecArgs))
       return createStringError(
           "'%s' failed", sys::path::filename(ExecutablePath).str().c_str());
     return Error::success();
-  }
+  };
+
+  // If the command line fits within system limits, execute directly.
+  if (sys::commandLineFitsWithinSystemLimits(ExecutablePath, Args))
+    return Launch(Args);
 
   // Write the arguments to a response file and pass that instead.
   auto TempFileOrErr = createOutputFile("response", "rsp");
@@ -257,10 +269,7 @@ Error executeCommands(StringRef ExecutablePath, ArrayRef<StringRef> Args) {
 
   std::string ResponseFile = ("@" + *TempFileOrErr).str();
   SmallVector<StringRef, 2> NewArgs = {Args.front(), ResponseFile};
-  if (sys::ExecuteAndWait(ExecutablePath, NewArgs))
-    return createStringError("'%s' failed",
-                             sys::path::filename(ExecutablePath).str().c_str());
-  return Error::success();
+  return Launch(NewArgs);
 }
 
 Expected<std::string> findProgram(StringRef Name, ArrayRef<StringRef> Paths) {
@@ -585,7 +594,24 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   for (StringRef Arg : Args.getAllArgValues(OPT_compiler_arg_EQ))
     CmdArgs.push_back(Args.MakeArgString(Arg));
 
-  if (Error Err = executeCommands(*ClangPath, CmdArgs))
+  // We cannot generate temporary assembly files to satisfy `--save-temps`
+  // through the LTO pipeline. Launch a separate clang job to emit the file.
+  sys::ProcessInfo AsmProc;
+  if (SaveTemps && Triple.isAMDGPU()) {
+    SmallVector<StringRef, 16> AsmArgs(CmdArgs);
+    llvm::erase(AsmArgs, "-Wl,--save-temps");
+    AsmArgs.append({"-Xlinker", "--lto-emit-asm"});
+    if (Error Err = executeCommands(*ClangPath, AsmArgs, &AsmProc))
+      return std::move(Err);
+  }
+
+  Error Err = executeCommands(*ClangPath, CmdArgs);
+  if (SaveTemps && Triple.isAMDGPU() && !DryRun) {
+    if (sys::Wait(AsmProc, std::nullopt).ReturnCode && !Err)
+      Err = createStringError("'%s' failed",
+                              sys::path::filename(*ClangPath).str().c_str());
+  }
+  if (Err)
     return std::move(Err);
 
   return *TempFileOrErr;
@@ -659,8 +685,8 @@ Expected<StringRef> compileModule(Module &M, OffloadKind Kind) {
   if (!T)
     return createStringError(Msg);
 
-  auto Options =
-      codegen::InitTargetOptionsFromCodeGenFlags(M.getTargetTriple());
+  auto Options = codegen::getTargetOptions(M.getContext().getLibraryOptions(),
+                                           M.getTargetTriple());
   StringRef CPU = "";
   StringRef Features = "";
   std::unique_ptr<TargetMachine> TM(
@@ -714,7 +740,8 @@ wrapDeviceImagesVerbose(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
       "-o",
       *BitcodeOrErr,
   };
-  if (Kind == OFK_OpenMP && Args.hasArg(OPT_relocatable))
+  if ((Kind == OFK_OpenMP || Kind == OFK_OpenACC) &&
+      Args.hasArg(OPT_relocatable))
     WrapperArgs.push_back("--relocatable");
   for (const auto &Buffer : Buffers)
     WrapperArgs.push_back(Buffer->getBufferIdentifier());
@@ -779,6 +806,12 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
             /*Suffix=*/"", /*Relocatable=*/Args.hasArg(OPT_relocatable)))
       return std::move(Err);
     break;
+  case OFK_OpenACC:
+    if (Error Err = offloading::wrapOpenACCBinaries(
+            M, BuffersToWrap, offloading::getOffloadEntryArray(M),
+            /*Relocatable=*/Args.hasArg(OPT_relocatable)))
+      return std::move(Err);
+    break;
   case OFK_Cuda:
     if (Error Err = offloading::wrapCudaBinary(
             M, BuffersToWrap.front(), offloading::getOffloadEntryArray(M),
@@ -824,9 +857,10 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
   return *FileOrErr;
 }
 
-/// Perform the OpenMP bundling with 'llvm-offload-binary' in verbose mode.
+/// Perform the OpenMP and OpenACC bundling with 'llvm-offload-binary' in
+/// verbose mode.
 Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
-bundleOpenMPVerbose(ArrayRef<OffloadingImage> Images) {
+bundleOmpAccVerbose(ArrayRef<OffloadingImage> Images) {
   Expected<std::string> OffloadBinaryPath = findProgram(
       "llvm-offload-binary", {getExecutableDir("llvm-offload-binary")});
   if (!OffloadBinaryPath)
@@ -869,7 +903,7 @@ bundleOpenMPVerbose(ArrayRef<OffloadingImage> Images) {
 }
 
 Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
-bundleOpenMP(ArrayRef<OffloadingImage> Images) {
+bundleOmpAcc(ArrayRef<OffloadingImage> Images) {
   SmallVector<std::unique_ptr<MemoryBuffer>> Buffers;
   for (const OffloadingImage &Image : Images)
     Buffers.emplace_back(
@@ -951,13 +985,11 @@ Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
 bundleLinkedOutput(ArrayRef<OffloadingImage> Images, const ArgList &Args,
                    OffloadKind Kind) {
   llvm::TimeTraceScope TimeScope("Bundle linked output");
-  if (usesLLVMOffloadWrapper(Images))
-    return bundleOpenMP(Images);
-
   switch (Kind) {
   case OFK_OpenMP:
-    return (Verbose && SaveTemps) ? bundleOpenMPVerbose(Images)
-                                  : bundleOpenMP(Images);
+  case OFK_OpenACC:
+    return (Verbose && SaveTemps) ? bundleOmpAccVerbose(Images)
+                                  : bundleOmpAcc(Images);
   case OFK_SYCL:
     return bundleSYCL(Images);
   case OFK_Cuda:
@@ -1123,7 +1155,7 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
       return OutputOrErr.takeError();
 
     // Store the offloading image for each linked output file.
-    for (OffloadKind Kind = OFK_OpenMP; Kind != OFK_LAST;
+    for (OffloadKind Kind = OFK_FIRST; Kind != OFK_LAST;
          Kind = static_cast<OffloadKind>((uint16_t)(Kind) << 1)) {
       if ((ActiveOffloadKindMask & Kind) == 0)
         continue;
@@ -1163,6 +1195,7 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
   // fat binary directly (e.g. .hipfb / .fatbin).
   SmallVector<StringRef> WrappedOutput;
   for (auto &[Kind, Input] : Images) {
+    OffloadKind WrapperKind = usesLLVMOffloadWrapper(Input) ? OFK_OpenMP : Kind;
     // We sort the entries before bundling so they appear in a deterministic
     // order in the final binary.
     llvm::sort(Input, [](OffloadingImage &A, OffloadingImage &B) {
@@ -1176,7 +1209,7 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
         return ArchA > ArchB;
       return A.TheOffloadKind < B.TheOffloadKind;
     });
-    auto BundledImagesOrErr = bundleLinkedOutput(Input, Args, Kind);
+    auto BundledImagesOrErr = bundleLinkedOutput(Input, Args, WrapperKind);
     if (!BundledImagesOrErr)
       return BundledImagesOrErr.takeError();
 
@@ -1199,7 +1232,6 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
       continue;
     }
 
-    OffloadKind WrapperKind = usesLLVMOffloadWrapper(Input) ? OFK_OpenMP : Kind;
     auto OutputOrErr = wrapDeviceImages(*BundledImagesOrErr, Args, WrapperKind);
     if (!OutputOrErr)
       return OutputOrErr.takeError();
@@ -1527,7 +1559,8 @@ int main(int Argc, char **Argv) {
     NewArgv.push_back(Arg->getValue());
   for (const opt::Arg *Arg : Args.filtered(OPT_offload_opt_eq_minus))
     NewArgv.push_back(Arg->getValue());
-  cl::ParseCommandLineOptions(NewArgv.size(), &NewArgv[0]);
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(LibraryOptions, NewArgv);
 
   Verbose = Args.hasArg(OPT_verbose);
   DryRun = Args.hasArg(OPT_dry_run);

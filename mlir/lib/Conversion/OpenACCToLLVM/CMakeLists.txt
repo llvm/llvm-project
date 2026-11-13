@@ -29,6 +29,7 @@ add_mlir_conversion_library(MLIROpenACCToLLVM
   MLIRMemRefToLLVM
   MLIROpenACCAnalysis
   MLIROpenACCDialect
+  MLIROpenACCAllExtensions
   MLIROpenACCUtils
   MLIRTransforms
 )

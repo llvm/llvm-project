@@ -280,10 +280,10 @@ bool AArch64AdvSIMDScalarImpl::isProfitableToTransform(
 }
 
 static MachineInstr *insertCopy(const TargetInstrInfo *TII, MachineInstr &MI,
-                                unsigned Dst, unsigned Src, bool IsKill) {
+                                unsigned Dst, unsigned Src) {
   MachineInstrBuilder MIB = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                                     TII->get(AArch64::COPY), Dst)
-                                .addReg(Src, getKillRegState(IsKill));
+                                .addReg(Src);
   LLVM_DEBUG(dbgs() << "    adding copy: " << *MIB);
   ++NumCopiesInserted;
   return MIB;
@@ -305,7 +305,6 @@ void AArch64AdvSIMDScalarImpl::transformInstruction(MachineInstr &MI) {
   Register OrigSrc1 = MI.getOperand(2).getReg();
   unsigned Src0 = 0, SubReg0;
   unsigned Src1 = 0, SubReg1;
-  bool KillSrc0 = false, KillSrc1 = false;
   if (!MRI->def_empty(OrigSrc0)) {
     MachineRegisterInfo::def_instr_iterator Def =
         MRI->def_instr_begin(OrigSrc0);
@@ -315,7 +314,6 @@ void AArch64AdvSIMDScalarImpl::transformInstruction(MachineInstr &MI) {
     // that instruction.
     if (MOSrc0) {
       Src0 = MOSrc0->getReg();
-      KillSrc0 = MOSrc0->isKill();
       // Src0 is going to be reused, thus, it cannot be killed anymore.
       MOSrc0->setIsKill(false);
       if (MRI->hasOneNonDBGUse(OrigSrc0)) {
@@ -334,7 +332,6 @@ void AArch64AdvSIMDScalarImpl::transformInstruction(MachineInstr &MI) {
     // that instruction.
     if (MOSrc1) {
       Src1 = MOSrc1->getReg();
-      KillSrc1 = MOSrc1->isKill();
       // Src0 is going to be reused, thus, it cannot be killed anymore.
       MOSrc1->setIsKill(false);
       if (MRI->hasOneNonDBGUse(OrigSrc1)) {
@@ -349,14 +346,12 @@ void AArch64AdvSIMDScalarImpl::transformInstruction(MachineInstr &MI) {
   if (!Src0) {
     SubReg0 = 0;
     Src0 = MRI->createVirtualRegister(&AArch64::FPR64RegClass);
-    insertCopy(TII, MI, Src0, OrigSrc0, KillSrc0);
-    KillSrc0 = true;
+    insertCopy(TII, MI, Src0, OrigSrc0);
   }
   if (!Src1) {
     SubReg1 = 0;
     Src1 = MRI->createVirtualRegister(&AArch64::FPR64RegClass);
-    insertCopy(TII, MI, Src1, OrigSrc1, KillSrc1);
-    KillSrc1 = true;
+    insertCopy(TII, MI, Src1, OrigSrc1);
   }
 
   // Create a vreg for the destination.
@@ -368,13 +363,13 @@ void AArch64AdvSIMDScalarImpl::transformInstruction(MachineInstr &MI) {
   // form, so no need to special case based on what instruction we're
   // building.
   BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(NewOpc), Dst)
-      .addReg(Src0, getKillRegState(KillSrc0), SubReg0)
-      .addReg(Src1, getKillRegState(KillSrc1), SubReg1);
+      .addReg(Src0, {}, SubReg0)
+      .addReg(Src1, {}, SubReg1);
 
   // Now copy the result back out to a GPR.
   // FIXME: Try to avoid this if all uses could actually just use the FPR64
   // directly.
-  insertCopy(TII, MI, MI.getOperand(0).getReg(), Dst, true);
+  insertCopy(TII, MI, MI.getOperand(0).getReg(), Dst);
 
   // Erase the old instruction.
   MI.eraseFromParent();

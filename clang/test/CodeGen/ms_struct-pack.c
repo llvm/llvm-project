@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm-only  -triple i386-apple-darwin9 -fdump-record-layouts %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm-only  -triple i386-apple-darwin9 -fdump-record-layouts %s | FileCheck %s %}
 
 #pragma pack(1)
 struct _one_ms {

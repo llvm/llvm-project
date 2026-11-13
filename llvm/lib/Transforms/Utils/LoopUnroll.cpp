@@ -319,6 +319,8 @@ void loadCSE(Loop *L, DominatorTree &DT, ScalarEvolution &SE, LoopInfo &LI,
         if (Value *M =
                 getMatchingValue(LV, Load, CurrentGeneration, BAA, GetMSSA)) {
           if (LI.replacementPreservesLCSSAForm(Load, M)) {
+            combineMetadataForCSE(cast<Instruction>(M), Load,
+                                  /*DoesKMove=*/false);
             Load->replaceAllUsesWith(M);
             Load->eraseFromParent();
           }
@@ -1736,11 +1738,11 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
     // TODO: That potentially might be compile-time expensive. We should try
     // to fix the loop-simplified form incrementally.
-    simplifyLoop(OuterL, DT, LI, SE, AC, nullptr, PreserveLCSSA);
+    simplifyLoop(OuterL, DT, LI, SE, AC, nullptr, PreserveLCSSA, TTI);
   } else {
     // Simplify loops for which we might've broken loop-simplify form.
     for (Loop *SubLoop : LoopsToSimplify)
-      simplifyLoop(SubLoop, DT, LI, SE, AC, nullptr, PreserveLCSSA);
+      simplifyLoop(SubLoop, DT, LI, SE, AC, nullptr, PreserveLCSSA, TTI);
   }
 
   return CompletelyUnroll ? LoopUnrollResult::FullyUnrolled

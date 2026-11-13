@@ -81,12 +81,6 @@ jobs:
           "${COMPILER}" --version
           python3 --version
 
-      - name: Setup virtual environment
-        run: |
-          python3 -m venv .venv
-          source .venv/bin/activate
-          pip install -r libcxx/utils/ci/lnt/requirements.txt
-
       # Build the library.
       #
       # A build failure is tolerated on purpose, since the library doesn't build at every historical commit.
@@ -110,6 +104,7 @@ jobs:
 
       - name: Run the benchmarks
         env:
+          CI_JOB_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ job.check_run_id }}
           COMMIT: ${{ inputs.commit }}
           FILTER: ${{ inputs.filter }}
           LIBRARY_BUILD: ${{ steps.build.outcome }}
@@ -119,7 +114,6 @@ jobs:
           keepalive=$!
           trap 'kill ${keepalive}' EXIT
 
-          source .venv/bin/activate
           filter_arg=()
           if [ -n "${FILTER}" ]; then
             filter_arg=(--filter "${FILTER}")
@@ -145,6 +139,8 @@ jobs:
             --compiler "${COMPILER}"                                    \
             --benchmark-commit "${COMMIT}"                              \
             --test-config "${TEST_CONFIG}"                              \
+            --run-parameter "library_build=${LIBRARY_BUILD}"            \
+            --run-parameter "ci_job=${CI_JOB_URL}"                      \
             "${filter_arg[@]}"                                          \
             --output "${COMMIT}.json"                                   \
             -- "${lit_params[@]}" --param "libcxx_installation=${INSTALL_DIR}"

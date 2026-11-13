@@ -2003,7 +2003,12 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
         dwarf::toUnsigned(InputDIE.find(dwarf::DW_AT_APPLE_objc_complete_type))
             .value_or(0);
     if (Success && AttrInfo.Name && !AttrInfo.Name.getString().empty()) {
-      uint32_t Hash = hashFullyQualifiedName(InputDIE, Unit, File);
+      uint32_t Hash = hashFullyQualifiedName(
+          InputDIE, [&](const DWARFDie &Referrer, const DWARFFormValue &Ref) {
+            CompileUnit *RefCU;
+            return Linker.resolveDIEReference(File, CompileUnits, Ref, Referrer,
+                                              RefCU);
+          });
       Unit.addTypeAccelerator(Die, AttrInfo.Name, ObjCClassIsImplementation,
                               Hash);
     }
@@ -2035,6 +2040,15 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
     Die->addValue(DIEAlloc, dwarf::DW_AT_str_offsets_base,
                   dwarf::DW_FORM_sec_offset, DIEInteger(8));
     OutOffset += 4;
+  }
+
+  // No DW_AT_addr_base seen, as GCC emits; add one for the addrx-indexed
+  // entries. emitDebugAddrSection() patches in the real offset.
+  if (!Update && Die == Unit.getOutputUnitDIE() && U.getVersion() >= 5 &&
+      !Die->findAttribute(dwarf::DW_AT_addr_base)) {
+    OutOffset += Die->addValue(DIEAlloc, dwarf::DW_AT_addr_base,
+                               dwarf::DW_FORM_sec_offset, DIEInteger(0))
+                     ->sizeOf(U.getFormParams());
   }
 
   DIEAbbrev NewAbbrev = Die->generateAbbrev();
@@ -2232,7 +2246,10 @@ Error DWARFLinker::DIECloner::emitDebugAddrSection(
   if (DwarfVersion < 5)
     return Error::success();
 
-  if (AddrPool.getValues().empty())
+  // Every cloned unit root has DW_AT_addr_base, so emit the table even when it
+  // is empty.
+  DIE *OutputUnitDIE = Unit.getOutputUnitDIE();
+  if (OutputUnitDIE == nullptr)
     return Error::success();
 
   MCSymbol *EndLabel = Emitter->emitDwarfDebugAddrsHeader(Unit);
@@ -2242,7 +2259,7 @@ Error DWARFLinker::DIECloner::emitDebugAddrSection(
     return createStringError(".debug_addr section offset 0x" +
                              Twine::utohexstr(AddrOffset) + " exceeds the " +
                              dwarf::FormatString(FP.Format) + " limit");
-  patchAddrBase(*Unit.getOutputUnitDIE(), DIEInteger(AddrOffset));
+  patchAddrBase(*OutputUnitDIE, DIEInteger(AddrOffset));
   Emitter->emitDwarfDebugAddrs(AddrPool.getValues(),
                                Unit.getOrigUnit().getAddressByteSize());
   Emitter->emitDwarfDebugAddrsFooter(Unit, EndLabel);
@@ -2686,52 +2703,6 @@ void DWARFLinker::patchFrameInfoForObject(LinkContext &Context) {
                              FrameData.substr(InputOffset, FDERemainingBytes));
     InputOffset += FDERemainingBytes;
   }
-}
-
-uint32_t DWARFLinker::DIECloner::hashFullyQualifiedName(DWARFDie DIE,
-                                                        CompileUnit &U,
-                                                        const DWARFFile &File,
-                                                        int ChildRecurseDepth) {
-  const char *Name = nullptr;
-  DWARFUnit *OrigUnit = &U.getOrigUnit();
-  CompileUnit *CU = &U;
-  std::optional<DWARFFormValue> Ref;
-
-  while (true) {
-    if (const char *CurrentName = DIE.getName(DINameKind::ShortName))
-      Name = CurrentName;
-
-    if (!(Ref = DIE.find(dwarf::DW_AT_specification)) &&
-        !(Ref = DIE.find(dwarf::DW_AT_abstract_origin)))
-      break;
-
-    if (!Ref->isFormClass(DWARFFormValue::FC_Reference))
-      break;
-
-    CompileUnit *RefCU;
-    if (auto RefDIE =
-            Linker.resolveDIEReference(File, CompileUnits, *Ref, DIE, RefCU)) {
-      CU = RefCU;
-      OrigUnit = &RefCU->getOrigUnit();
-      DIE = RefDIE;
-    }
-  }
-
-  unsigned Idx = OrigUnit->getDIEIndex(DIE);
-  if (!Name && DIE.getTag() == dwarf::DW_TAG_namespace)
-    Name = "(anonymous namespace)";
-
-  if (CU->getInfo(Idx).ParentIdx == 0 ||
-      // FIXME: dsymutil-classic compatibility. Ignore modules.
-      CU->getOrigUnit().getDIEAtIndex(CU->getInfo(Idx).ParentIdx).getTag() ==
-          dwarf::DW_TAG_module)
-    return djbHash(Name ? Name : "", djbHash(ChildRecurseDepth ? "" : "::"));
-
-  DWARFDie Die = OrigUnit->getDIEAtIndex(CU->getInfo(Idx).ParentIdx);
-  return djbHash(
-      (Name ? Name : ""),
-      djbHash((Name ? "::" : ""),
-              hashFullyQualifiedName(Die, *CU, File, ++ChildRecurseDepth)));
 }
 
 static uint64_t getDwoId(const DWARFDie &CUDie) {

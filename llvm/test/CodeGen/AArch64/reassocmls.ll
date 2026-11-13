@@ -176,9 +176,9 @@ define i64 @mla_i64_uses(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) {
 define i64 @mla_i64_mul(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) {
 ; CHECK-SD-LABEL: mla_i64_mul:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mul x8, x4, x3
-; CHECK-SD-NEXT:    mul x9, x2, x1
-; CHECK-SD-NEXT:    add x0, x8, x9, lsl #1
+; CHECK-SD-NEXT:    mul x8, x2, x1
+; CHECK-SD-NEXT:    lsl x8, x8, #1
+; CHECK-SD-NEXT:    madd x0, x4, x3, x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: mla_i64_mul:
@@ -284,7 +284,7 @@ define <8 x i16> @mla_v8i16_C(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16
 ; CHECK-GI-NEXT:    mul v0.8h, v2.8h, v1.8h
 ; CHECK-GI-NEXT:    movi v1.8h, #10
 ; CHECK-GI-NEXT:    mla v0.8h, v4.8h, v3.8h
-; CHECK-GI-NEXT:    add v0.8h, v1.8h, v0.8h
+; CHECK-GI-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
   %m1.neg = mul <8 x i16> %c, %b
   %m2.neg = mul <8 x i16> %e, %d

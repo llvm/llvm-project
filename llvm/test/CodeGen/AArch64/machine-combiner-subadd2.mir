@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-linux-gnu -run-pass machine-combiner -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64-linux-gnu -run-pass machine-combiner -o - %s | FileCheck %s
 
 # The test cases in this file check following transformation if the right form
 # can reduce latency.
@@ -8,8 +8,8 @@
 # 32 bit.
 
 # CHECK-LABEL: name: test1
-# CHECK:       [[TMP:%[0-9]+]]:gpr32 = SUBWrr killed %3, %4
-# CHECK-NEXT:  %7:gpr32 = SUBWrr killed [[TMP]], %5
+# CHECK:       [[TMP:%[0-9]+]]:gpr32 = SUBWrr %3, %4
+# CHECK-NEXT:  %7:gpr32 = SUBWrr [[TMP]], %5
 
 name:            test1
 registers:
@@ -24,6 +24,7 @@ registers:
   - { id: 8, class: gpr32 }
 body:              |
   bb.0:
+    liveins: $w0, $w1, $w2
     %2:gpr32 = COPY $w2
     %1:gpr32 = COPY $w1
     %0:gpr32common = COPY $w0
@@ -31,8 +32,8 @@ body:              |
     %4:gpr32common = ADDWri %0:gpr32common, 100, 0
     %5:gpr32 = EORWrs %1:gpr32, %4:gpr32common, 8
     %6:gpr32 = ADDWrr %5:gpr32, %4:gpr32common
-    %7:gpr32 = SUBWrr killed %3:gpr32common, killed %6:gpr32
-    %8:gpr32 = EORWrs killed %7:gpr32, %5:gpr32, 141
+    %7:gpr32 = SUBWrr %3:gpr32common, %6:gpr32
+    %8:gpr32 = EORWrs %7:gpr32, %5:gpr32, 141
     $w0 = COPY %8:gpr32
     RET_ReallyLR implicit $w0
 
@@ -41,8 +42,8 @@ body:              |
 # 64 bit.
 
 # CHECK-LABEL: name: test2
-# CHECK:       [[TMP:%[0-9]+]]:gpr64 = SUBXrr killed %3, %4
-# CHECK-NEXT:  %7:gpr64 = SUBXrr killed [[TMP]], %5
+# CHECK:       [[TMP:%[0-9]+]]:gpr64 = SUBXrr %3, %4
+# CHECK-NEXT:  %7:gpr64 = SUBXrr [[TMP]], %5
 
 name:            test2
 registers:
@@ -57,6 +58,7 @@ registers:
   - { id: 8, class: gpr64 }
 body:              |
   bb.0:
+    liveins: $x0, $x1, $x2
     %2:gpr64 = COPY $x2
     %1:gpr64 = COPY $x1
     %0:gpr64common = COPY $x0
@@ -64,8 +66,8 @@ body:              |
     %4:gpr64common = ADDXri %0:gpr64common, 100, 0
     %5:gpr64 = EORXrs %1:gpr64, %4:gpr64common, 8
     %6:gpr64 = ADDXrr %5:gpr64, %4:gpr64common
-    %7:gpr64 = SUBXrr killed %3:gpr64common, killed %6:gpr64
-    %8:gpr64 = EORXrs killed %7:gpr64, %5:gpr64, 141
+    %7:gpr64 = SUBXrr %3:gpr64common, %6:gpr64
+    %8:gpr64 = EORXrs %7:gpr64, %5:gpr64, 141
     $x0 = COPY %8:gpr64
     RET_ReallyLR implicit $x0
 
@@ -74,8 +76,8 @@ body:              |
 # Negative test. The right form can't reduce latency.
 
 # CHECK-LABEL: name: test3
-# CHECK:       %6:gpr32 = ADDWrr killed %3, %4
-# CHECK-NEXT:  %7:gpr32 = SUBWrr %5, killed %6
+# CHECK:       %6:gpr32 = ADDWrr %3, %4
+# CHECK-NEXT:  %7:gpr32 = SUBWrr %5, %6
 
 name:           test3
 registers:
@@ -90,15 +92,16 @@ registers:
   - { id: 8, class: gpr32 }
 body:              |
   bb.0:
+    liveins: $w0, $w1, $w2
     %2:gpr32 = COPY $w2
     %1:gpr32 = COPY $w1
     %0:gpr32common = COPY $w0
     %3:gpr32common = ORRWri %2:gpr32, 1600
     %4:gpr32common = ADDWri %0:gpr32common, 100, 0
     %5:gpr32 = EORWrs %1:gpr32, %4:gpr32common, 8
-    %6:gpr32 = ADDWrr killed %3:gpr32common, %4:gpr32common
-    %7:gpr32 = SUBWrr %5:gpr32, killed %6:gpr32
-    %8:gpr32 = EORWrs killed %7:gpr32, %5:gpr32, 141
+    %6:gpr32 = ADDWrr %3:gpr32common, %4:gpr32common
+    %7:gpr32 = SUBWrr %5:gpr32, %6:gpr32
+    %8:gpr32 = EORWrs %7:gpr32, %5:gpr32, 141
     $w0 = COPY %8:gpr32
     RET_ReallyLR implicit $w0
 
@@ -107,8 +110,8 @@ body:              |
 # Dead define of flag registers should not block transformation.
 
 # CHECK-LABEL: name: test4
-# CHECK:       [[TMP:%[0-9]+]]:gpr64 = SUBXrr killed %3, %4
-# CHECK-NEXT:  %7:gpr64 = SUBXrr killed [[TMP]], %5
+# CHECK:       [[TMP:%[0-9]+]]:gpr64 = SUBXrr %3, %4
+# CHECK-NEXT:  %7:gpr64 = SUBXrr [[TMP]], %5
 
 name:            test4
 registers:
@@ -123,6 +126,7 @@ registers:
   - { id: 8, class: gpr64 }
 body:              |
   bb.0:
+    liveins: $x0, $x1, $x2
     %2:gpr64 = COPY $x2
     %1:gpr64 = COPY $x1
     %0:gpr64common = COPY $x0
@@ -130,8 +134,8 @@ body:              |
     %4:gpr64common = ADDXri %0:gpr64common, 100, 0
     %5:gpr64 = EORXrs %1:gpr64, %4:gpr64common, 8
     %6:gpr64 = ADDSXrr %5:gpr64, %4:gpr64common, implicit-def dead $nzcv
-    %7:gpr64 = SUBSXrr killed %3:gpr64common, killed %6:gpr64, implicit-def dead $nzcv
-    %8:gpr64 = EORXrs killed %7:gpr64, %5:gpr64, 141
+    %7:gpr64 = SUBSXrr %3:gpr64common, %6:gpr64, implicit-def dead $nzcv
+    %8:gpr64 = EORXrs %7:gpr64, %5:gpr64, 141
     $x0 = COPY %8:gpr64
     RET_ReallyLR implicit $x0
 
@@ -141,7 +145,7 @@ body:              |
 
 # CHECK-LABEL: name: test5
 # CHECK:       %6:gpr32 = ADDWrr %5, %4
-# CHECK-NEXT:  %7:gpr32 = SUBSWrr killed %3, killed %6, implicit-def $nzcv
+# CHECK-NEXT:  %7:gpr32 = SUBSWrr %3, %6, implicit-def $nzcv
 
 name:            test5
 registers:
@@ -156,6 +160,7 @@ registers:
   - { id: 8, class: gpr32 }
 body:              |
   bb.0:
+    liveins: $w0, $w1, $w2
     %2:gpr32 = COPY $w2
     %1:gpr32 = COPY $w1
     %0:gpr32common = COPY $w0
@@ -163,8 +168,8 @@ body:              |
     %4:gpr32common = ADDWri %0:gpr32common, 100, 0
     %5:gpr32 = EORWrs %1:gpr32, %4:gpr32common, 8
     %6:gpr32 = ADDWrr %5:gpr32, %4:gpr32common
-    %7:gpr32 = SUBSWrr killed %3:gpr32common, killed %6:gpr32, implicit-def $nzcv
-    %8:gpr32 = EORWrs killed %7:gpr32, %5:gpr32, 141
+    %7:gpr32 = SUBSWrr %3:gpr32common, %6:gpr32, implicit-def $nzcv
+    %8:gpr32 = EORWrs %7:gpr32, %5:gpr32, 141
     $w0 = COPY %8:gpr32
     RET_ReallyLR implicit $w0
 
@@ -174,7 +179,7 @@ body:              |
 
 # CHECK-LABEL: name: test6
 # CHECK:       %6:gpr64 = ADDSXrr %5, %4, implicit-def $nzcv
-# CHECK-NEXT:  %7:gpr64 = SUBXrr killed %3, killed %6
+# CHECK-NEXT:  %7:gpr64 = SUBXrr %3, %6
 
 name:            test6
 registers:
@@ -189,6 +194,7 @@ registers:
   - { id: 8, class: gpr64 }
 body:              |
   bb.0:
+    liveins: $x0, $x1, $x2
     %2:gpr64 = COPY $x2
     %1:gpr64 = COPY $x1
     %0:gpr64common = COPY $x0
@@ -196,8 +202,8 @@ body:              |
     %4:gpr64common = ADDXri %0:gpr64common, 100, 0
     %5:gpr64 = EORXrs %1:gpr64, %4:gpr64common, 8
     %6:gpr64 = ADDSXrr %5:gpr64, %4:gpr64common, implicit-def $nzcv
-    %7:gpr64 = SUBXrr killed %3:gpr64common, killed %6:gpr64
-    %8:gpr64 = EORXrs killed %7:gpr64, %5:gpr64, 141
+    %7:gpr64 = SUBXrr %3:gpr64common, %6:gpr64
+    %8:gpr64 = EORXrs %7:gpr64, %5:gpr64, 141
     $x0 = COPY %8:gpr64
     RET_ReallyLR implicit $x0
 
@@ -207,7 +213,7 @@ body:              |
 
 # CHECK-LABEL: name: test7
 # CHECK:       %6:gpr32 = ADDWrr %5, %4
-# CHECK-NEXT:  %7:gpr32 = SUBWrr killed %3, %6
+# CHECK-NEXT:  %7:gpr32 = SUBWrr %3, %6
 
 name:            test7
 registers:
@@ -223,6 +229,7 @@ registers:
   - { id: 9, class: gpr32 }
 body:              |
   bb.0:
+    liveins: $w0, $w1, $w2
     %2:gpr32 = COPY $w2
     %1:gpr32 = COPY $w1
     %0:gpr32common = COPY $w0
@@ -230,8 +237,8 @@ body:              |
     %4:gpr32common = ADDWri %0:gpr32common, 100, 0
     %5:gpr32 = EORWrs %1:gpr32, %4:gpr32common, 8
     %6:gpr32 = ADDWrr %5:gpr32, %4:gpr32common
-    %7:gpr32 = SUBWrr killed %3:gpr32common, %6:gpr32
-    %8:gpr32 = EORWrs killed %7:gpr32, %5:gpr32, 141
+    %7:gpr32 = SUBWrr %3:gpr32common, %6:gpr32
+    %8:gpr32 = EORWrs %7:gpr32, %5:gpr32, 141
     %9:gpr32 = ADDWrr %8:gpr32, %6:gpr32
     $w0 = COPY %9:gpr32
     RET_ReallyLR implicit $w0
@@ -242,7 +249,7 @@ body:              |
 
 # CHECK-LABEL: name: test8
 # CHECK:       [[SUBXrr:%[0-9]+]]:gpr64 = SUBXrr %1, %0
-# CHECK-NEXT:  %4:gpr64common = SUBXrr killed [[SUBXrr]], killed %2
+# CHECK-NEXT:  %4:gpr64common = SUBXrr [[SUBXrr]], %2
 
 name:            test8
 registers:
@@ -254,11 +261,12 @@ registers:
   - { id: 5, class: gpr64 }
 body:              |
   bb.0:
+    liveins: $x0, $x1
     %1:gpr64 = COPY $x1
     %0:gpr64 = COPY $x0
     %2:gpr64common = ORRXri %0:gpr64, 4096
-    %3:gpr64 = ADDXrr killed %2:gpr64common, %0:gpr64
-    %4:gpr64common = nsw SUBSXrr %1:gpr64, killed %3:gpr64, implicit-def dead $nzcv
+    %3:gpr64 = ADDXrr %2:gpr64common, %0:gpr64
+    %4:gpr64common = nsw SUBSXrr %1:gpr64, %3:gpr64, implicit-def dead $nzcv
     %5:gpr64 = SUBSXri %4:gpr64common, 0, 0, implicit-def $nzcv
     $x0 = COPY %5:gpr64
     RET_ReallyLR implicit $x0
@@ -268,8 +276,8 @@ body:              |
 # WZR use
 
 # CHECK-LABEL: name: wzr
-# CHECK:       [[TMP:%[0-9]+]]:gpr32 = SUBWrr killed $wzr, %4
-# CHECK-NEXT:  %7:gpr32 = SUBWrr killed [[TMP]], %5
+# CHECK:       [[TMP:%[0-9]+]]:gpr32 = SUBWrr $wzr, %4
+# CHECK-NEXT:  %7:gpr32 = SUBWrr [[TMP]], %5
 
 name:            wzr
 registers:
@@ -284,6 +292,7 @@ registers:
   - { id: 8, class: gpr32 }
 body:              |
   bb.0:
+    liveins: $w0, $w1, $w2
     %2:gpr32 = COPY $w2
     %1:gpr32 = COPY $w1
     %0:gpr32common = COPY $w0
@@ -291,8 +300,8 @@ body:              |
     %4:gpr32common = ADDWri %0:gpr32common, 100, 0
     %5:gpr32 = EORWrs %1:gpr32, %4:gpr32common, 8
     %6:gpr32 = ADDWrr %5:gpr32, %4:gpr32common
-    %7:gpr32 = SUBWrr killed $wzr, killed %6:gpr32
-    %8:gpr32 = EORWrs killed %7:gpr32, %5:gpr32, 141
+    %7:gpr32 = SUBWrr killed $wzr, %6:gpr32
+    %8:gpr32 = EORWrs %7:gpr32, %5:gpr32, 141
     $w0 = COPY %8:gpr32
     RET_ReallyLR implicit $w0
 

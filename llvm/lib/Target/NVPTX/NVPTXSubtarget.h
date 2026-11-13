@@ -23,14 +23,28 @@
 #include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/TargetParser/NVPTXTargetParser.h"
+#include <optional>
+
+#define OPTIONS_STRUCT_DECL
+#include "NVPTXOptions.inc"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "NVPTXGenSubtargetInfo.inc"
 
 namespace llvm {
 
+class Function;
+class LLVMContext;
+class Module;
+
+const NVPTXOptions &getNVPTXOptions(const LLVMContext &C);
+const NVPTXOptions &getNVPTXOptions(const Module &M);
+const NVPTXOptions &getNVPTXOptions(const Function &F);
+
 class NVPTXSubtarget : public NVPTXGenSubtargetInfo {
   virtual void anchor();
+
+  const NVPTXOptions &CLOpts;
 
   // PTX version x.y is represented as 10*x+y, e.g. 3.1 == 31
   unsigned PTXVersion;
@@ -57,6 +71,8 @@ public:
                  const NVPTXTargetMachine &TM);
 
   ~NVPTXSubtarget() override;
+
+  const NVPTXOptions &getCLOpts() const { return CLOpts; }
 
   const TargetFrameLowering *getFrameLowering() const override {
     return &FrameLowering;
@@ -85,6 +101,9 @@ public:
   bool hasUsedBytesMaskPragma() const {
     return hasFeature(NVPTX::SM50) && hasFeature(NVPTX::PTX83);
   }
+  bool hasABIPreserve() const {
+    return hasFeature(NVPTX::SM80) && hasFeature(NVPTX::PTX90);
+  }
   bool hasAtomAddF64() const { return hasFeature(NVPTX::SM60); }
   bool hasAtomScope() const { return hasFeature(NVPTX::SM60); }
   bool hasAtomMinMaxAndOrXor() const { return hasFeature(NVPTX::SM32); }
@@ -93,6 +112,12 @@ public:
   }
   bool hasAtomSwap128() const {
     return hasFeature(NVPTX::SM90) && hasFeature(NVPTX::PTX83);
+  }
+  bool hasLdStB128() const {
+    return hasFeature(NVPTX::SM70) && hasFeature(NVPTX::PTX83);
+  }
+  bool hasSysScopeLdStB128() const {
+    return hasLdStB128() && hasFeature(NVPTX::PTX84);
   }
   bool hasClusters() const { return hasFeature(NVPTX::SM90); }
   bool hasLDG() const { return hasFeature(NVPTX::SM32); }

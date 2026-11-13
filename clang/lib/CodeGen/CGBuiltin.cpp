@@ -272,9 +272,10 @@ Address CheckAtomicAlignment(CodeGenFunction &CGF, const CallExpr *E) {
 
 /// Utility to insert an atomic instruction based on Intrinsic::ID
 /// and the expression node.
-Value *MakeBinaryAtomicValue(
-    CodeGenFunction &CGF, llvm::AtomicRMWInst::BinOp Kind, const CallExpr *E,
-    AtomicOrdering Ordering) {
+Value *MakeBinaryAtomicValue(CodeGenFunction &CGF,
+                             llvm::AtomicRMWInst::BinOp Kind, const CallExpr *E,
+                             AtomicOrdering Ordering,
+                             llvm::SyncScope::ID SSID) {
 
   QualType T = E->getType();
   assert(E->getArg(0)->getType()->isPointerType());
@@ -292,7 +293,7 @@ Value *MakeBinaryAtomicValue(
   Val = EmitToInt(CGF, Val, T, IntType);
 
   llvm::Value *Result =
-      CGF.Builder.CreateAtomicRMW(Kind, DestAddr, Val, Ordering);
+      CGF.Builder.CreateAtomicRMW(Kind, DestAddr, Val, Ordering, SSID);
   // Consider atomics to be volatile in MS kernel mode.
   if (CGF.CGM.getLangOpts().Kernel)
     cast<llvm::AtomicRMWInst>(Result)->setVolatile(true);
@@ -375,7 +376,8 @@ static RValue EmitBinaryAtomicPost(CodeGenFunction &CGF,
 Value *MakeAtomicCmpXchgValue(CodeGenFunction &CGF, const CallExpr *E,
                               bool ReturnBool,
                               llvm::AtomicOrdering SuccessOrdering,
-                              llvm::AtomicOrdering FailureOrdering) {
+                              llvm::AtomicOrdering FailureOrdering,
+                              llvm::SyncScope::ID SSID) {
   QualType T = ReturnBool ? E->getArg(1)->getType() : E->getType();
   Address DestAddr = CheckAtomicAlignment(CGF, E);
 
@@ -388,7 +390,7 @@ Value *MakeAtomicCmpXchgValue(CodeGenFunction &CGF, const CallExpr *E,
   Value *New = EmitToInt(CGF, CGF.EmitScalarExpr(E->getArg(2)), T, IntType);
 
   Value *Pair = CGF.Builder.CreateAtomicCmpXchg(
-      DestAddr, Cmp, New, SuccessOrdering, FailureOrdering);
+      DestAddr, Cmp, New, SuccessOrdering, FailureOrdering, SSID);
   if (ReturnBool)
     // Extract boolean success flag and zext it to int.
     return CGF.Builder.CreateZExt(CGF.Builder.CreateExtractValue(Pair, 1),
@@ -1944,6 +1946,10 @@ Value *CodeGenFunction::EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID,
     return EmitAtomicDecrementValue(*this, E);
   case MSVCIntrin::_InterlockedIncrement:
     return EmitAtomicIncrementValue(*this, E);
+
+  case MSVCIntrin::_ReadWriteBarrier:
+    return Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent,
+                               llvm::SyncScope::SingleThread);
 
   case MSVCIntrin::__fastfail: {
     // Request immediate process termination from the kernel. The instruction
@@ -3997,6 +4003,92 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     // General case: fall back to the library function stdc_memreverse8.
     break;
+  }
+
+  // stdc_load8_*: load N bytes from a const unsigned char* and assemble
+  // into an integer using little-endian or big-endian byte order.
+  case Builtin::BIstdc_load8_leu8:
+  case Builtin::BIstdc_load8_les8:
+  case Builtin::BIstdc_load8_beu8:
+  case Builtin::BIstdc_load8_bes8:
+  case Builtin::BIstdc_load8_aligned_leu8:
+  case Builtin::BIstdc_load8_aligned_les8:
+  case Builtin::BIstdc_load8_aligned_beu8:
+  case Builtin::BIstdc_load8_aligned_bes8:
+  case Builtin::BIstdc_load8_leu16:
+  case Builtin::BIstdc_load8_les16:
+  case Builtin::BIstdc_load8_beu16:
+  case Builtin::BIstdc_load8_bes16:
+  case Builtin::BIstdc_load8_aligned_leu16:
+  case Builtin::BIstdc_load8_aligned_les16:
+  case Builtin::BIstdc_load8_aligned_beu16:
+  case Builtin::BIstdc_load8_aligned_bes16:
+  case Builtin::BIstdc_load8_leu32:
+  case Builtin::BIstdc_load8_les32:
+  case Builtin::BIstdc_load8_beu32:
+  case Builtin::BIstdc_load8_bes32:
+  case Builtin::BIstdc_load8_aligned_leu32:
+  case Builtin::BIstdc_load8_aligned_les32:
+  case Builtin::BIstdc_load8_aligned_beu32:
+  case Builtin::BIstdc_load8_aligned_bes32:
+  case Builtin::BIstdc_load8_leu64:
+  case Builtin::BIstdc_load8_les64:
+  case Builtin::BIstdc_load8_beu64:
+  case Builtin::BIstdc_load8_bes64:
+  case Builtin::BIstdc_load8_aligned_leu64:
+  case Builtin::BIstdc_load8_aligned_les64:
+  case Builtin::BIstdc_load8_aligned_beu64:
+  case Builtin::BIstdc_load8_aligned_bes64: {
+    bool IsBE = BuiltinID == Builtin::BIstdc_load8_beu8 ||
+                BuiltinID == Builtin::BIstdc_load8_bes8 ||
+                BuiltinID == Builtin::BIstdc_load8_beu16 ||
+                BuiltinID == Builtin::BIstdc_load8_bes16 ||
+                BuiltinID == Builtin::BIstdc_load8_beu32 ||
+                BuiltinID == Builtin::BIstdc_load8_bes32 ||
+                BuiltinID == Builtin::BIstdc_load8_beu64 ||
+                BuiltinID == Builtin::BIstdc_load8_bes64 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_beu8 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_bes8 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_beu16 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_bes16 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_beu32 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_bes32 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_beu64 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_bes64;
+    bool IsAligned = BuiltinID == Builtin::BIstdc_load8_aligned_leu8 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_les8 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_beu8 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_bes8 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_leu16 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_les16 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_beu16 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_bes16 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_leu32 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_les32 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_beu32 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_bes32 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_leu64 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_les64 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_beu64 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_bes64;
+
+    llvm::Type *IntTy = ConvertType(E->getType());
+    unsigned BitWidth = IntTy->getIntegerBitWidth();
+    assert(
+        (BitWidth == 8 || BitWidth == 16 || BitWidth == 32 || BitWidth == 64) &&
+        "unexpected bit width for stdc_load8_*");
+    Address Addr = EmitPointerWithAlignment(E->getArg(0));
+    if (IsAligned) {
+      CharUnits TypeAlign = getContext().getTypeAlignInChars(E->getType());
+      Addr = Addr.withAlignment(std::max(Addr.getAlignment(), TypeAlign));
+    }
+    Addr = Addr.withElementType(IntTy);
+    Value *Val = Builder.CreateLoad(Addr);
+    if ((BitWidth == 16 || BitWidth == 32 || BitWidth == 64) &&
+        IsBE != getTarget().isBigEndian())
+      Val = Builder.CreateCall(CGM.getIntrinsic(Intrinsic::bswap, IntTy), Val);
+
+    return RValue::get(Val);
   }
 
   case Builtin::BI__builtin_constant_p: {

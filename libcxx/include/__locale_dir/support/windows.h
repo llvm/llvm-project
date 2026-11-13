@@ -166,6 +166,12 @@ inline _LIBCPP_HIDE_FROM_ABI char* __setlocale(int __category, const char* __loc
     std::__throw_bad_alloc();
   return __new_locale;
 }
+inline _LIBCPP_HIDE_FROM_ABI wchar_t* __wsetlocale(int __category, const wchar_t* __locale) {
+  wchar_t* __new_locale = ::_wsetlocale(__category, __locale);
+  if (__new_locale == nullptr)
+    std::__throw_bad_alloc();
+  return __new_locale;
+}
 _LIBCPP_EXPORTED_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc);
 _LIBCPP_EXPORTED_FROM_ABI const char* __get_locale_encoding(__locale_t __loc);
 #endif // _LIBCPP_BUILDING_LIBRARY
@@ -177,7 +183,6 @@ _LIBCPP_EXPORTED_FROM_ABI const char* __get_locale_encoding(__locale_t __loc);
 // the *_l functions are prefixed on Windows, only available for msvcr80+, VS2005+
 template <class _FloatT>
 _LIBCPP_HIDE_FROM_ABI _FloatT __str_to_float_c_locale(const char* __nptr, char** __endptr);
-#if defined(_LIBCPP_MSVCRT)
 
 template <>
 inline _LIBCPP_HIDE_FROM_ABI float __str_to_float_c_locale<float>(const char* __nptr, char** __endptr) {
@@ -185,21 +190,25 @@ inline _LIBCPP_HIDE_FROM_ABI float __str_to_float_c_locale<float>(const char* __
 }
 
 template <>
+inline _LIBCPP_HIDE_FROM_ABI double __str_to_float_c_locale<double>(const char* __nptr, char** __endptr) {
+  return ::_strtod_l(__nptr, __endptr, __get_c_locale());
+}
+
+#if defined(_LIBCPP_MSVCRT)
+template <>
 inline _LIBCPP_HIDE_FROM_ABI long double __str_to_float_c_locale<long double>(const char* __nptr, char** __endptr) {
   return ::_strtold_l(__nptr, __endptr, __get_c_locale());
 }
 #else
-template <>
-_LIBCPP_EXPORTED_FROM_ABI float __str_to_float_c_locale<float>(const char*, char**);
+// _strtold_l is unavailable on MinGW. Export a plain (non-template) helper so
+// that no abi_tag is inherited from the primary template, then delegate to it.
+_LIBCPP_EXPORTED_FROM_ABI long double __strtold_c_locale(const char*, char**);
 
 template <>
-_LIBCPP_EXPORTED_FROM_ABI long double __str_to_float_c_locale<long double>(const char*, char**);
-#endif
-
-template <>
-inline _LIBCPP_HIDE_FROM_ABI double __str_to_float_c_locale<double>(const char* __nptr, char** __endptr) {
-  return ::_strtod_l(__nptr, __endptr, __get_c_locale());
+inline _LIBCPP_HIDE_FROM_ABI long double __str_to_float_c_locale<long double>(const char* __nptr, char** __endptr) {
+  return __strtold_c_locale(__nptr, __endptr);
 }
+#endif
 
 //
 // Character manipulation functions
@@ -296,7 +305,11 @@ struct __locale_guard {
     // each category.  In the second case, we know at least one category won't
     // be what we want, so we only have to check the first case.
     if (std::strcmp(__l.__get_locale(), __lc) != 0) {
-      __locale_all = _strdup(__lc);
+      // Use wsetlocale to query the current locale string. This avoids a lossy
+      // conversion of the locale string from UTF-16 to the current LC_CTYPE
+      // charset. The Windows CRT allows language / country strings outside of
+      // ASCII, e.g. "Norwegian Bokm\u00E5l_Norway.utf8".
+      __locale_all = _wcsdup(__locale::__wsetlocale(LC_ALL, nullptr));
       if (__locale_all == nullptr)
         std::__throw_bad_alloc();
       __locale::__setlocale(LC_ALL, __l.__get_locale());
@@ -308,13 +321,13 @@ struct __locale_guard {
     // for the different categories in the same format as returned by
     // setlocale(LC_ALL, nullptr).
     if (__locale_all != nullptr) {
-      __locale::__setlocale(LC_ALL, __locale_all);
+      __locale::__wsetlocale(LC_ALL, __locale_all);
       free(__locale_all);
     }
     _configthreadlocale(__status);
   }
   int __status;
-  char* __locale_all = nullptr;
+  wchar_t* __locale_all = nullptr;
 };
 #endif // _LIBCPP_BUILDING_LIBRARY
 

@@ -19,7 +19,7 @@ combiner {
 }
 
 llvm.func @parallel_task_reduction(%x: !llvm.ptr) {
-  omp.parallel reduction(mod: task, @add_i32 %x -> %prv : !llvm.ptr) {
+  omp.parallel reduction(task @add_i32 %x -> %prv : !llvm.ptr) {
     omp.terminator
   }
   llvm.return
@@ -51,7 +51,7 @@ llvm.func @wsloop_task_reduction(%x: !llvm.ptr) {
   %lb = llvm.mlir.constant(1 : i32) : i32
   %ub = llvm.mlir.constant(10 : i32) : i32
   %step = llvm.mlir.constant(1 : i32) : i32
-  omp.wsloop reduction(mod: task, @add_i32 %x -> %prv : !llvm.ptr) {
+  omp.wsloop reduction(task @add_i32 %x -> %prv : !llvm.ptr) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) inclusive step (%step) {
       omp.yield
     }
@@ -80,7 +80,7 @@ combiner {
 }
 
 llvm.func @sections_task_reduction(%x: !llvm.ptr) {
-  omp.sections reduction(mod: task, @add_i32 %x -> %prv : !llvm.ptr) {
+  omp.sections reduction(task @add_i32 %x -> %prv : !llvm.ptr) {
     omp.section {
     ^bb0(%arg: !llvm.ptr):
       omp.terminator
@@ -111,7 +111,7 @@ combiner {
 }
 
 llvm.func @parallel_two_task_reductions(%x: !llvm.ptr, %y: !llvm.ptr) {
-  omp.parallel reduction(mod: task, @add_i32 %x -> %p0, @add_i32 %y -> %p1 : !llvm.ptr, !llvm.ptr) {
+  omp.parallel reduction(task @add_i32 %x -> %p0, task @add_i32 %y -> %p1 : !llvm.ptr, !llvm.ptr) {
     omp.terminator
   }
   llvm.return
@@ -142,7 +142,7 @@ combiner {
 }
 
 llvm.func @empty_sections_task_reduction(%x: !llvm.ptr) {
-  omp.sections reduction(mod: task, @add_i32 %x -> %prv : !llvm.ptr) {
+  omp.sections reduction(task @add_i32 %x -> %prv : !llvm.ptr) {
     omp.terminator
   }
   llvm.return
@@ -155,11 +155,11 @@ llvm.func @empty_sections_task_reduction(%x: !llvm.ptr) {
 
 // -----
 
-// A verifier-valid omp.parallel that carries reduction_mod = task but has no
+// A verifier-valid omp.parallel that has an empty modifier list and no
 // reduction variables must not open a task-reduction scope.
 
 llvm.func @parallel_task_mod_no_reductions() {
-  "omp.parallel"() <{operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0>, reduction_mod = #omp.reduction_modifier<task>}> ({
+  "omp.parallel"() <{operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0>, reduction_mods = []}> ({
     omp.terminator
   }) : () -> ()
   llvm.return
@@ -172,14 +172,14 @@ llvm.func @parallel_task_mod_no_reductions() {
 
 // -----
 
-// A verifier-valid omp.wsloop that carries reduction_mod = task but has no
+// A verifier-valid omp.wsloop that has an empty modifier list and no
 // reduction variables must not open a task-reduction scope.
 
 llvm.func @wsloop_task_mod_no_reductions() {
   %lb = llvm.mlir.constant(1 : i32) : i32
   %ub = llvm.mlir.constant(10 : i32) : i32
   %step = llvm.mlir.constant(1 : i32) : i32
-  "omp.wsloop"() <{operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0>, reduction_mod = #omp.reduction_modifier<task>}> ({
+  "omp.wsloop"() <{operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0>, reduction_mods = []}> ({
     "omp.loop_nest"(%lb, %ub, %step) <{loop_inclusive}> ({
     ^bb0(%iv: i32):
       "omp.yield"() : () -> ()
@@ -195,13 +195,13 @@ llvm.func @wsloop_task_mod_no_reductions() {
 
 // -----
 
-// A verifier-valid omp.sections that carries reduction_mod = task but has no
+// A verifier-valid omp.sections that has an empty modifier list and no
 // reduction variables must not open a task-reduction scope. A section body is
 // present, so this exercises the reduction-count guard rather than the
 // empty-sections early return tested above.
 
 llvm.func @sections_task_mod_no_reductions() {
-  "omp.sections"() <{operandSegmentSizes = array<i32: 0, 0, 0, 0>, reduction_mod = #omp.reduction_modifier<task>}> ({
+  "omp.sections"() <{operandSegmentSizes = array<i32: 0, 0, 0, 0>, reduction_mods = []}> ({
     "omp.section"() ({
       "omp.terminator"() : () -> ()
     }) : () -> ()

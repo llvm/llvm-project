@@ -26,6 +26,7 @@ include "mlir/Dialect/Tosa/IR/TosaOpBase.td"
 // The base class for Tosa dialect types.
 class Tosa_Type<string name, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<Tosa_Dialect, name, traits> {
+  let cppIncludes = ["mlir/Dialect/Tosa/IR/TosaOps.h"];
   let mnemonic = typeMnemonic;
 }
 
@@ -55,9 +56,10 @@ def Tosa_Int32 : I<32>;
 def Tosa_Int64 : I<64>;
 
 // The TOSA dialect allows more types than the TOSA standard to allow for
-// experimentation. For historical reasons, signless is used in the place of
-// signed.
-// The TosaValidation pass can be used to check for standard conformance.
+// experimentation.
+// TOSA integer values are signless and interpreted as signed two's-complement
+// unless an operation specifies otherwise.
+// Use TosaValidation with strict-op-spec-alignment to check standard conformance.
 def Tosa_Int : AnyTypeOf<[AnyUnsignedInteger,
                           AnySignlessInteger]>;
 
@@ -89,22 +91,26 @@ def Tosa_QuantizedInt : AnyTypeOf<[Tosa_QuantizedType<"uint8", [8], 0>,
 // Custom TOSA element types.
 //===----------------------------------------------------------------------===//
 
-// MLIR doesn't have a builtin type for mxint8 yet. For now declared it as a
-// custom TOSA type. This may be changed in the future.
+// Deprecated: use the builtin mxi8 type instead. This type is retained for
+// compatibility with existing IR. It will be removed in the future.
 def Tosa_MXInt8
     : Tosa_Type<"mxint8", "mxint8",
                 [DeclareTypeInterfaceMethods<
                     DenseElementTypeInterface, ["getDenseElementBitSize",
                                                 "convertToAttribute",
                                                 "convertFromAttribute"]>]> {
-  let summary = "INT8 type as defined by OCP-MX";
+  let summary = "Deprecated INT8 type as defined by OCP-MX; use mxi8 instead";
   let description = [{
+    Deprecated: use the builtin `mxi8` type instead. This type is retained for
+    compatibility with existing IR. It will be removed in the future.
+
     8-bit integer format with an implicit 1/64 scale defined by OCP-MX.
   }];
 }
 
 def Tosa_MXFPValue
-    : AnyTypeOf<[F8E4M3FN, F8E5M2, F4E2M1FN, F6E2M3FN, F6E3M2FN, Tosa_MXInt8],
+    : AnyTypeOf<[F8E4M3FN, F8E5M2, F4E2M1FN, F6E2M3FN, F6E3M2FN,
+                 MXI8, Tosa_MXInt8],
                 "micro-scaling format number">;
 def Tosa_MXFPScale
     : AnyTypeOf<[F8E8M0FNU], "micro-scaling format scale number">;
@@ -152,7 +158,7 @@ def Tosa_BlockScaled
 // Multi-category types.
 //===----------------------------------------------------------------------===//
 def Tosa_AnyNumber : AnyTypeOf<[Tosa_Int, Tosa_QuantizedInt, AnyFloat,
-                                Tosa_MXInt8, Tosa_BlockScaled],
+                                MXI8, Tosa_MXInt8, Tosa_BlockScaled],
                                "number">;
 
 //===----------------------------------------------------------------------===//

@@ -141,9 +141,10 @@ if is_configured("llvm_use_sanitizer"):
         tsan_suppressions = os.path.join(
             os.path.dirname(config.test_source_root), "tsan-suppressions.txt"
         )
-        config.environment["TSAN_OPTIONS"] = (
-            "halt_on_error=1:suppressions=" + tsan_suppressions
-        )
+        tsan_options = "halt_on_error=1:suppressions=" + tsan_suppressions
+        if config.lldb_test_extra_tsan_options:
+            tsan_options += ":" + config.lldb_test_extra_tsan_options
+        config.environment["TSAN_OPTIONS"] = tsan_options
         if "Darwin" in config.target_os:
             config.environment["DYLD_INSERT_LIBRARIES"] = find_sanitizer_runtime(
                 "libclang_rt.tsan_osx_dynamic.dylib"
@@ -413,6 +414,10 @@ if "FREEBSD_LEGACY_PLUGIN" in os.environ:
 # Propagate XDG_CACHE_HOME
 if "XDG_CACHE_HOME" in os.environ:
     config.environment["XDG_CACHE_HOME"] = os.environ["XDG_CACHE_HOME"]
+
+# Propagate LLDBDAP_RUN_AS_SERVER to run the lldb-dap tests in server mode.
+if "LLDBDAP_RUN_AS_SERVER" in os.environ:
+    config.environment["LLDBDAP_RUN_AS_SERVER"] = os.environ["LLDBDAP_RUN_AS_SERVER"]
 
 # Transfer some environment variables into the tests on Windows build host.
 if platform.system() == "Windows":

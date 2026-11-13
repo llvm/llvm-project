@@ -37,7 +37,6 @@ class Module;
 class PointerType;
 class ScalableVectorType;
 class StructType;
-class TargetExtType;
 class VectorType;
 #define DEF_INSTR(ID, OPCODE, CLASS) class CLASS;
 #define DEF_CONST(ID, CLASS) class CLASS;
@@ -61,13 +60,13 @@ protected:
   friend class Function;           // For LLVMTy.
   friend class CallBase;           // For LLVMTy.
   friend class ConstantInt;        // For LLVMTy.
+  friend class ConstantExpr;       // For LLVMTy.
   friend class ConstantArray;      // For LLVMTy.
   friend class ConstantStruct;     // For LLVMTy.
   friend class ConstantVector;     // For LLVMTy.
   friend class CmpInst;            // For LLVMTy. TODO: Cleanup after
                                    // sandboxir::VectorType is more complete.
   friend class Utils;              // for LLVMTy
-  friend class TargetExtType;      // For LLVMTy.
   friend class Module;             // For LLVMTy.
   friend class FPMathOperator;     // For LLVMTy.
   friend class ConstantDataSequential; // For LLVMTy.

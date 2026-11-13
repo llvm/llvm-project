@@ -106,7 +106,7 @@ private:
     }
   }
 
-  // Specialization for optional<Expr<SomeInteger and SubscriptInteger>>
+  // Specialization for std::optional<Expr<T>>.
   template <typename T>
   evaluate::StructureConstructor GetValue(
       const std::optional<evaluate::Expr<T>> &expr,
@@ -219,8 +219,8 @@ static SomeExpr SaveDerivedPointerTarget(Scope &scope, SourceName name,
       }
       object.set_shape(arraySpec);
     }
-    object.set_init(
-        evaluate::AsGenericExpr(evaluate::Constant<evaluate::SomeDerived>{
+    object.set_init(evaluate::AsGenericExpr(
+        evaluate::Constant<evaluate::Type<common::TypeCategory::Derived>>{
             derivedType, std::move(x), std::move(shape)}));
     Symbol &symbol{*scope
                         .try_emplace(name, Attrs{Attr::TARGET, Attr::SAVE},
@@ -228,7 +228,8 @@ static SomeExpr SaveDerivedPointerTarget(Scope &scope, SourceName name,
                         .first->second};
     SetReadOnlyCompilerCreatedFlags(symbol);
     return evaluate::AsGenericExpr(
-        evaluate::Designator<evaluate::SomeDerived>{symbol});
+        evaluate::Designator<evaluate::Type<common::TypeCategory::Derived>>{
+            symbol});
   }
 }
 
@@ -296,7 +297,7 @@ static evaluate::StructureConstructorValues &AddValue(
 }
 
 static SomeExpr IntToExpr(std::int64_t n) {
-  return evaluate::AsGenericExpr(evaluate::ExtentExpr{n});
+  return evaluate::AsGenericExpr(evaluate::MakeExtentExpr(n));
 }
 
 static evaluate::StructureConstructor Structure(
@@ -305,7 +306,8 @@ static evaluate::StructureConstructor Structure(
 }
 
 static SomeExpr StructureExpr(evaluate::StructureConstructor &&x) {
-  return SomeExpr{evaluate::Expr<evaluate::SomeDerived>{std::move(x)}};
+  return SomeExpr{evaluate::Expr<evaluate::Type<common::TypeCategory::Derived>>{
+      std::move(x)}};
 }
 
 static int GetIntegerKind(const Symbol &symbol, bool canBeUninstantiated) {
@@ -320,31 +322,31 @@ static int GetIntegerKind(const Symbol &symbol, bool canBeUninstantiated) {
 // Save a rank-1 array constant of some numeric type as an
 // initialized data object in a scope.
 template <typename T>
-static SomeExpr SaveNumericPointerTarget(
-    Scope &scope, SourceName name, std::vector<typename T::Scalar> &&x) {
+static SomeExpr SaveNumericPointerTarget(int kind, Scope &scope,
+    SourceName name, std::vector<typename T::Scalar> &&x) {
   if (x.empty()) {
     return SomeExpr{evaluate::NullPointer{}};
   } else {
     ObjectEntityDetails object;
     if (const auto *spec{scope.FindType(
-            DeclTypeSpec{NumericTypeSpec{T::category, KindExpr{T::kind}}})}) {
+            DeclTypeSpec{NumericTypeSpec{T::category, MakeKindExpr(kind)}})}) {
       object.set_type(*spec);
     } else {
-      object.set_type(scope.MakeNumericType(T::category, KindExpr{T::kind}));
+      object.set_type(scope.MakeNumericType(T::category, MakeKindExpr(kind)));
     }
     auto elements{static_cast<evaluate::ConstantSubscript>(x.size())};
     ArraySpec arraySpec;
     arraySpec.push_back(ShapeSpec::MakeExplicit(Bound{0}, Bound{elements - 1}));
     object.set_shape(arraySpec);
     object.set_init(evaluate::AsGenericExpr(evaluate::Constant<T>{
-        std::move(x), evaluate::ConstantSubscripts{elements}}));
+        kind, std::move(x), evaluate::ConstantSubscripts{elements}}));
     Symbol &symbol{*scope
                         .try_emplace(name, Attrs{Attr::TARGET, Attr::SAVE},
                             std::move(object))
                         .first->second};
     SetReadOnlyCompilerCreatedFlags(symbol);
     return evaluate::AsGenericExpr(
-        evaluate::Expr<T>{evaluate::Designator<T>{symbol}});
+        evaluate::Expr<T>{evaluate::Designator<T>{kind, symbol}});
   }
 }
 
@@ -357,12 +359,13 @@ static SomeExpr SaveObjectInit(
   CHECK(symbol.get<ObjectEntityDetails>().init().has_value());
   SetReadOnlyCompilerCreatedFlags(symbol);
   return evaluate::AsGenericExpr(
-      evaluate::Designator<evaluate::SomeDerived>{symbol});
+      evaluate::Designator<evaluate::Type<common::TypeCategory::Derived>>{
+          /*kind=*/0, symbol});
 }
 
-template <int KIND> static SomeExpr IntExpr(std::int64_t n) {
+static SomeExpr IntExpr(int kind, std::int64_t n) {
   return evaluate::AsGenericExpr(
-      evaluate::Constant<evaluate::Type<TypeCategory::Integer, KIND>>{n});
+      evaluate::MakeConstant<evaluate::Type<TypeCategory::Integer>>(kind, n));
 }
 
 static std::optional<std::string> GetSuffixIfTypeKindParameters(
@@ -483,15 +486,16 @@ const Symbol *RuntimeTableBuilder::DescribeType(
                     /*wantUninstantiatedPDT=*/true)
               : nullptr}) {
     AddValue(dtValues, derivedTypeSchema_, "uninstantiated"s,
-        evaluate::AsGenericExpr(evaluate::Expr<evaluate::SomeDerived>{
-            evaluate::Designator<evaluate::SomeDerived>{
+        evaluate::AsGenericExpr(evaluate::Expr<
+            evaluate::Type<common::TypeCategory::Derived>>{
+            evaluate::Designator<evaluate::Type<common::TypeCategory::Derived>>{
                 DEREF(uninstDescObject)}}));
   } else {
     AddValue(dtValues, derivedTypeSchema_, "uninstantiated"s,
         SomeExpr{evaluate::NullPointer{}});
   }
-  using Int8 = evaluate::Type<TypeCategory::Integer, 8>;
-  using Int1 = evaluate::Type<TypeCategory::Integer, 1>;
+  using Int8 = evaluate::Type<TypeCategory::Integer>;
+  using Int1 = evaluate::Type<TypeCategory::Integer>;
   std::vector<Int8::Scalar> kinds;
   std::vector<Int1::Scalar> lenKinds;
   if (parameters) {
@@ -514,20 +518,20 @@ const Symbol *RuntimeTableBuilder::DescribeType(
               }
             }
           }
-          kinds.emplace_back(value);
+          kinds.emplace_back(8, value);
         } else { // LEN= parameter
           lenKinds.emplace_back(
-              GetIntegerKind(*inst, isPDTDefinitionWithKindParameters));
+              1, GetIntegerKind(*inst, isPDTDefinitionWithKindParameters));
         }
       }
     }
   }
   AddValue(dtValues, derivedTypeSchema_, "kindparameter"s,
-      SaveNumericPointerTarget<Int8>(scope,
+      SaveNumericPointerTarget<Int8>(8, scope,
           SaveObjectName((fir::kKindParameterSeparator + distinctName).str()),
           std::move(kinds)));
   AddValue(dtValues, derivedTypeSchema_, "lenparameterkind"s,
-      SaveNumericPointerTarget<Int1>(scope,
+      SaveNumericPointerTarget<Int1>(1, scope,
           SaveObjectName((fir::kLenKindSeparator + distinctName).str()),
           std::move(lenKinds)));
   // Traverse the components of the derived type
@@ -645,27 +649,28 @@ const Symbol *RuntimeTableBuilder::DescribeType(
                   static_cast<evaluate::ConstantSubscript>(specials.size())}));
     }
     AddValue(dtValues, derivedTypeSchema_, "specialbitset"s,
-        IntExpr<4>(specialBitSet));
+        IntExpr(4, specialBitSet));
     // Note the presence/absence of a parent component
     AddValue(dtValues, derivedTypeSchema_, "hasparent"s,
-        IntExpr<1>(dtScope.GetDerivedTypeParent() != nullptr));
+        IntExpr(1, dtScope.GetDerivedTypeParent() != nullptr));
     // To avoid wasting run time attempting to initialize derived type
     // instances without any initialized components, analyze the type
     // and set a flag if there's nothing to do for it at run time.
     AddValue(dtValues, derivedTypeSchema_, "noinitializationneeded"s,
-        IntExpr<1>(derivedTypeSpec &&
-            !derivedTypeSpec->HasDefaultInitialization(false, false)));
+        IntExpr(1,
+            derivedTypeSpec &&
+                !derivedTypeSpec->HasDefaultInitialization(false, false)));
     // Similarly, a flag to short-circuit destruction when not needed.
     AddValue(dtValues, derivedTypeSchema_, "nodestructionneeded"s,
-        IntExpr<1>(derivedTypeSpec && !derivedTypeSpec->HasDestruction()));
+        IntExpr(1, derivedTypeSpec && !derivedTypeSpec->HasDestruction()));
     // Similarly, a flag to short-circuit finalization when not needed.
     AddValue(dtValues, derivedTypeSchema_, "nofinalizationneeded"s,
-        IntExpr<1>(
-            derivedTypeSpec && !MayRequireFinalization(*derivedTypeSpec)));
+        IntExpr(
+            1, derivedTypeSpec && !MayRequireFinalization(*derivedTypeSpec)));
     // Similarly, a flag to enable optimized runtime assignment.
     AddValue(dtValues, derivedTypeSchema_, "nodefinedassignment"s,
-        IntExpr<1>(
-            derivedTypeSpec && !MayHaveDefinedAssignment(*derivedTypeSpec)));
+        IntExpr(
+            1, derivedTypeSpec && !MayHaveDefinedAssignment(*derivedTypeSpec)));
   }
   dtObject.get<ObjectEntityDetails>().set_init(MaybeExpr{
       StructureExpr(Structure(derivedTypeSchema_, std::move(dtValues)))});
@@ -715,7 +720,7 @@ SomeExpr RuntimeTableBuilder::GetEnumValue(const char *name) const {
   const Symbol &symbol{GetSchemaSymbol(name)};
   auto value{evaluate::ToInt64(symbol.get<ObjectEntityDetails>().init())};
   CHECK(value.has_value());
-  return IntExpr<1>(*value);
+  return IntExpr(1, *value);
 }
 
 Symbol &RuntimeTableBuilder::CreateObject(
@@ -741,15 +746,16 @@ SomeExpr RuntimeTableBuilder::SaveNameAsPointerTarget(
   ObjectEntityDetails object;
   auto len{static_cast<common::ConstantSubscript>(name.size())};
   if (const auto *spec{scope.FindType(DeclTypeSpec{CharacterTypeSpec{
-          ParamValue{len, common::TypeParamAttr::Len}, KindExpr{1}}})}) {
+          ParamValue{len, common::TypeParamAttr::Len}, MakeKindExpr(1)}})}) {
     object.set_type(*spec);
   } else {
     object.set_type(scope.MakeCharacterType(
-        ParamValue{len, common::TypeParamAttr::Len}, KindExpr{1}));
+        ParamValue{len, common::TypeParamAttr::Len}, MakeKindExpr(1)));
   }
-  using evaluate::Ascii;
+  using evaluate::Ascii, evaluate::AsciiKind, evaluate::MakeConstantExpr;
   using AsciiExpr = evaluate::Expr<Ascii>;
-  object.set_init(evaluate::AsGenericExpr(AsciiExpr{name}));
+  object.set_init(
+      evaluate::AsGenericExpr(MakeConstantExpr<Ascii>(AsciiKind, name)));
   Symbol &symbol{
       *scope
            .try_emplace(
@@ -758,7 +764,7 @@ SomeExpr RuntimeTableBuilder::SaveNameAsPointerTarget(
            .first->second};
   SetReadOnlyCompilerCreatedFlags(symbol);
   return evaluate::AsGenericExpr(
-      AsciiExpr{evaluate::Designator<Ascii>{symbol}});
+      AsciiExpr{evaluate::Designator<Ascii>{AsciiKind, symbol}});
 }
 
 evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
@@ -781,14 +787,14 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
   AddValue(values, componentSchema_, "name"s,
       SaveNameAsPointerTarget(scope, symbol.name().ToString()));
   AddValue(values, componentSchema_, "category"s,
-      IntExpr<1>(static_cast<int>(dyType.category())));
+      IntExpr(1, static_cast<int>(dyType.category())));
   if (dyType.IsUnlimitedPolymorphic() ||
       dyType.category() == TypeCategory::Derived) {
-    AddValue(values, componentSchema_, "kind"s, IntExpr<1>(0));
+    AddValue(values, componentSchema_, "kind"s, IntExpr(1, 0));
   } else {
-    AddValue(values, componentSchema_, "kind"s, IntExpr<1>(dyType.kind()));
+    AddValue(values, componentSchema_, "kind"s, IntExpr(1, dyType.kind()));
   }
-  AddValue(values, componentSchema_, "offset"s, IntExpr<8>(symbol.offset()));
+  AddValue(values, componentSchema_, "offset"s, IntExpr(8, symbol.offset()));
   // CHARACTER length
   auto len{typeAndShape->LEN()};
   if (const semantics::DerivedTypeSpec *
@@ -801,7 +807,7 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
     if (const auto *clamped{evaluate::UnwrapExpr<
             evaluate::Extremum<evaluate::SubscriptInteger>>(*len)}) {
       if (clamped->ordering == evaluate::Ordering::Greater &&
-          clamped->left() == evaluate::Expr<evaluate::SubscriptInteger>{0}) {
+          clamped->left() == evaluate::MakeSubscriptIntExpr(0)) {
         len = common::Clone(clamped->right());
       }
     }
@@ -822,9 +828,11 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
         derivedDescription{DescribeType(
             DEREF(derivedScope), /*wantUninstantiatedPDT=*/false)}) {
       AddValue(values, componentSchema_, "derived"s,
-          evaluate::AsGenericExpr(evaluate::Expr<evaluate::SomeDerived>{
-              evaluate::Designator<evaluate::SomeDerived>{
-                  DEREF(derivedDescription)}}));
+          evaluate::AsGenericExpr(
+              evaluate::Expr<evaluate::Type<common::TypeCategory::Derived>>{
+                  evaluate::Designator<
+                      evaluate::Type<common::TypeCategory::Derived>>{
+                      DEREF(derivedDescription)}}));
       // Package values of LEN parameters, if any
       if (const SymbolVector *
           specParams{GetTypeParameters(spec.typeSymbol())}) {
@@ -862,7 +870,7 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
         SomeExpr{evaluate::NullPointer{}});
   }
   // Shape information
-  AddValue(values, componentSchema_, "rank"s, IntExpr<1>(rank));
+  AddValue(values, componentSchema_, "rank"s, IntExpr(1, rank));
   if (rank > 0 && !IsAllocatable(symbol) && !IsPointer(symbol)) {
     std::vector<evaluate::StructureConstructor> bounds;
     evaluate::NamedEntity entity{symbol};
@@ -927,7 +935,7 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
   evaluate::StructureConstructorValues values;
   AddValue(values, procPtrSchema_, "name"s,
       SaveNameAsPointerTarget(scope, symbol.name().ToString()));
-  AddValue(values, procPtrSchema_, "offset"s, IntExpr<8>(symbol.offset()));
+  AddValue(values, procPtrSchema_, "offset"s, IntExpr(8, symbol.offset()));
   if (auto init{proc.init()}; init && *init) {
     AddValue(values, procPtrSchema_, "initialization"s,
         SomeExpr{evaluate::ProcedureDesignator{**init}});
@@ -1202,7 +1210,7 @@ void RuntimeTableBuilder::DescribeSpecialProc(
         } else {
           which = scalarFinalEnum_;
           if (int rank{typeAndShape.Rank()}; rank > 0) {
-            which = IntExpr<1>(ToInt64(which).value() + rank);
+            which = IntExpr(1, ToInt64(which).value() + rank);
             if (dummyData.IsPassedByDescriptor(proc->IsBindC())) {
               argThatMightBeDescriptor = 1;
             }
@@ -1264,7 +1272,7 @@ void RuntimeTableBuilder::DescribeSpecialProc(
     AddValue(
         values, specialSchema_, "which"s, SomeExpr{std::move(which.value())});
     AddValue(values, specialSchema_, "isargdescriptorset"s,
-        IntExpr<1>(isArgDescriptorSet));
+        IntExpr(1, isArgDescriptorSet));
     int bindingIndex{0};
     if (bindings) {
       int j{0};
@@ -1277,9 +1285,9 @@ void RuntimeTableBuilder::DescribeSpecialProc(
       }
     }
     CHECK(bindingIndex <= 255);
-    AddValue(values, specialSchema_, "istypebound"s, IntExpr<1>(bindingIndex));
+    AddValue(values, specialSchema_, "istypebound"s, IntExpr(1, bindingIndex));
     AddValue(values, specialSchema_, "specialcaseflag"s,
-        IntExpr<1>(specialCaseFlag));
+        IntExpr(1, specialCaseFlag));
     AddValue(values, specialSchema_, procCompName,
         SomeExpr{evaluate::ProcedureDesignator{specific}});
     // index might already be present in the case of an override

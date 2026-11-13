@@ -2126,9 +2126,10 @@ size_t Process::ReadMemory(const ProcessAddress &process_addr, void *buf,
     return DoReadMemory(process_addr, buf, size, error);
   }
 
-  lldb::addr_t addr = process_addr.GetValue();
-  if (ABISP abi_sp = GetABI())
-    addr = abi_sp->FixAnyAddress(addr);
+  const lldb::addr_t addr = FixAnyAddress(process_addr.GetValue());
+
+  if (!ShouldUseMemoryCache(addr))
+    return DoReadMemory(addr, buf, size, error);
 
   if (GetDisableMemoryCache())
     return ReadMemoryFromInferior(addr, buf, size, error);
@@ -2819,14 +2820,22 @@ Process::ReadModuleFromMemory(const FileSpec &file_spec,
 
   Status error;
   std::unique_ptr<Progress> progress_up;
-  // Reading an ObjectFile from a local corefile is very fast,
-  // only print a progress update if we're reading from a
-  // live session which might go over gdb remote serial protocol.
-  if (IsLiveDebugSession())
+  bool disable_memory_symtab_caching;
+  if (IsLiveDebugSession()) {
+    // Reading an ObjectFile from a local corefile is very fast,
+    // only print a progress update if we're reading from a
+    // live session which might go over gdb remote serial protocol.
     progress_up = std::make_unique<Progress>("Reading binary from memory",
                                              file_spec.GetFilename().str());
+    // Allow caching of memory-read modules in a live process.
+    disable_memory_symtab_caching = false;
+  } else {
+    // This is a corefile target; no memory-read module caching.
+    disable_memory_symtab_caching = true;
+  }
 
   if (module_sp->GetMemoryObjectFile(shared_from_this(), header_addr, error,
+                                     disable_memory_symtab_caching,
                                      size_to_read))
     return module_sp;
 
@@ -3260,6 +3269,17 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
   m_os_up.reset();
   GetTarget().ClearAllLoadedSections();
 
+  // StartPrivateStateThread does nothing if the thread is already running, so
+  // publish the state ourselves.
+  auto start_private_state_thread = [this] {
+    if (PrivateStateThreadIsRunning()) {
+      SetPublicState(lldb::eStateAttaching, /*restarted=*/false);
+      SetPublicRunLockToRunning();
+    } else {
+      StartPrivateStateThread(lldb::eStateAttaching, true);
+    }
+  };
+
   lldb::pid_t attach_pid = attach_info.GetProcessID();
   Status error;
   if (attach_pid == LLDB_INVALID_PROCESS_ID) {
@@ -3287,7 +3307,7 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
           } else {
             SetNextEventAction(new Process::AttachCompletionHandler(
                 this, attach_info.GetResumeCount()));
-            StartPrivateStateThread(lldb::eStateAttaching, true);
+            start_private_state_thread();
             if (!m_current_private_state_thread_sp) {
               // We are not going to get any further here.  The only way
               // this could fail is if we can't start a host thread, and we're
@@ -3350,7 +3370,7 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
         SetNextEventAction(new Process::AttachCompletionHandler(
             this, attach_info.GetResumeCount()));
 
-        StartPrivateStateThread(lldb::eStateAttaching, true);
+        start_private_state_thread();
         if (!m_current_private_state_thread_sp) {
           // We are not going to get any further here.  The only way this
           // could fail is if we can't start a host thread, so we're pretty much

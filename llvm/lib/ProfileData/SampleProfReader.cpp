@@ -1281,6 +1281,14 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
       StringRef FuncNameStr = FuncName.stringRef();
       if (!FuncsToUse.count(FuncNameStr) && !Remapper->exist(FuncNameStr))
         continue;
+      // This function may be called more than once on the same reader: once
+      // for the module's functions and then incrementally (e.g. by
+      // SampleProfileMatcher) for additional candidates. The remapper is
+      // cumulative, so names inserted by an earlier call still match here.
+      // Skip profiles that are already loaded; otherwise they would be read
+      // again and merged into themselves.
+      if (Profiles.find(FContext) != Profiles.end())
+        continue;
       const uint8_t *FuncProfileAddr = Start + NameOffset.second;
       if (std::error_code EC = readFuncProfile(FuncProfileAddr, Profiles))
         return EC;

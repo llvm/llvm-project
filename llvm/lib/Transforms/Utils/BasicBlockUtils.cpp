@@ -1349,7 +1349,7 @@ SplitBlockPredecessorsImpl(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
     // to be applied to the new latch.
     OldLatch = L->getLoopLatch();
   } else
-    BI->setDebugLoc(BB->getFirstNonPHIOrDbg()->getDebugLoc());
+    BI->setDebugLoc(BB->getFirstNonPHIOrPseudoProbe()->getDebugLoc());
 
   // Move the edges from Preds to point to NewBB instead of BB.
   for (BasicBlock *Pred : Preds) {
@@ -1741,6 +1741,7 @@ void llvm::SplitBlockAndInsertForEachLane(
     std::function<void(IRBuilderBase &, Value *)> Func) {
 
   IRBuilder<> IRB(InsertBefore);
+  IRB.disableGEPCanonicalization();
 
   if (EC.isScalable()) {
     Value *NumElements = IRB.CreateElementCount(IndexTy, EC);
@@ -1765,6 +1766,7 @@ void llvm::SplitBlockAndInsertForEachLane(
     std::function<void(IRBuilderBase &, Value *)> Func) {
 
   IRBuilder<> IRB(InsertBefore);
+  IRB.disableGEPCanonicalization();
   Type *Ty = EVL->getType();
 
   if (!isa<ConstantInt>(EVL)) {

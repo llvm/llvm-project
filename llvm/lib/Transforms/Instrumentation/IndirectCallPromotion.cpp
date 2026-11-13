@@ -29,6 +29,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Value.h"
@@ -57,8 +58,6 @@ STATISTIC(NumOfPGOICallPromotion, "Number of indirect call promotions.");
 STATISTIC(NumOfPGOICallsites, "Number of indirect call candidate sites.");
 
 namespace llvm {
-extern cl::opt<unsigned> MaxNumVTableAnnotations;
-
 extern cl::opt<bool> EnableVTableProfileUse;
 } // namespace llvm
 
@@ -245,6 +244,9 @@ private:
 
   const DenseSet<StringRef> &IgnoredBaseTypes;
 
+  // The combined summary index of a ThinLTO backend compile, or null.
+  const ModuleSummaryIndex *const ImportSummary;
+
   // A struct that records the direct target and it's call count.
   struct PromotionCandidate {
     Function *const TargetFunction;
@@ -322,6 +324,11 @@ private:
 
   bool isValidTarget(uint64_t, Function *, const CallBase &, uint64_t);
 
+  // Return true if the ThinLTO index has a summary for the declared target
+  // indicating that it is live, so that a direct call to it from this module
+  // will resolve.
+  bool isDeclaredTargetLiveInIndex(const Function &TargetFunction) const;
+
 public:
   IndirectCallPromoter(
       const InstrumentationOptions &Opts, Function &Func, Module &M,
@@ -329,11 +336,11 @@ public:
       const VirtualCallSiteTypeInfoMap &VirtualCSInfo,
       VTableAddressPointOffsetValMap &VTableAddressPointOffsetVal,
       const DenseSet<StringRef> &IgnoredBaseTypes,
-      OptimizationRemarkEmitter &ORE)
+      OptimizationRemarkEmitter &ORE, const ModuleSummaryIndex *ImportSummary)
       : Opts(Opts), F(Func), M(M), Symtab(Symtab), SamplePGO(SamplePGO),
         VirtualCSInfo(VirtualCSInfo),
         VTableAddressPointOffsetVal(VTableAddressPointOffsetVal), ORE(ORE),
-        IgnoredBaseTypes(IgnoredBaseTypes) {}
+        IgnoredBaseTypes(IgnoredBaseTypes), ImportSummary(ImportSummary) {}
   IndirectCallPromoter(const IndirectCallPromoter &) = delete;
   IndirectCallPromoter &operator=(const IndirectCallPromoter &) = delete;
 
@@ -341,6 +348,27 @@ public:
 };
 
 } // end anonymous namespace
+
+bool IndirectCallPromoter::isDeclaredTargetLiveInIndex(
+    const Function &TargetFunction) const {
+  assert(TargetFunction.isDeclaration());
+  // In a ThinLTO backend, a direct call to a declaration only resolves if the
+  // index has a summary for the target indicating that it is live: dead
+  // definitions are dropped in their defining module while declarations of
+  // them elsewhere are not, so a declaration left behind by dead code
+  // elimination, or named by a stale profile, would otherwise become an
+  // undefined reference (see llvm/test/ThinLTO/X86/icp-allow-decls-index.ll).
+  // In distributed ThinLTO the per-module index only carries the module's own
+  // and imported GUIDs, including declarations imported for indirect call
+  // targets, so a target without a summary is rejected as well. The thin link
+  // exports every target it imports a declaration for, and every target
+  // declared in more than one module, so a live target is never internalized.
+  ValueInfo VI = ImportSummary->getValueInfo(TargetFunction.getGUID());
+  return VI && llvm::any_of(VI.getSummaryList(),
+                            [](const std::unique_ptr<GlobalValueSummary> &S) {
+                              return S->isLive();
+                            });
+}
 
 bool IndirectCallPromoter::isValidTarget(uint64_t Target,
                                          Function *TargetFunction,
@@ -363,7 +391,9 @@ bool IndirectCallPromoter::isValidTarget(uint64_t Target,
     });
     return false;
   }
-  if (!Opts.icp_allow_decls && TargetFunction->isDeclaration()) {
+  if (TargetFunction->isDeclaration() &&
+      (!Opts.icp_allow_decls ||
+       (ImportSummary && !isDeclaredTargetLiveInIndex(*TargetFunction)))) {
     LLVM_DEBUG(dbgs() << " Not promote: target definition is not available\n");
     ORE.emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "NoTargetDef", &CB)
@@ -507,9 +537,9 @@ Instruction *IndirectCallPromoter::computeVTableInfos(
     CalleeIndexMap[Candidates[I].TargetFunction] = I;
 
   uint64_t TotalVTableCount = 0;
-  auto VTableValueDataArray =
-      getValueProfDataFromInst(*VirtualCallInfo.VPtr, IPVK_VTableTarget,
-                               MaxNumVTableAnnotations, TotalVTableCount);
+  auto VTableValueDataArray = getValueProfDataFromInst(
+      *VirtualCallInfo.VPtr, IPVK_VTableTarget,
+      getMaxNumVTableAnnotations(VPtr->getContext()), TotalVTableCount);
   if (VTableValueDataArray.empty())
     return VPtr;
 
@@ -959,7 +989,8 @@ computeVirtualCallSiteTypeInfoMap(Module &M, ModuleAnalysisManager &MAM,
 // A wrapper function that does the actual work.
 static bool promoteIndirectCalls(const InstrumentationOptions &Opts, Module &M,
                                  ProfileSummaryInfo *PSI, bool InLTO,
-                                 bool SamplePGO, ModuleAnalysisManager &MAM) {
+                                 bool SamplePGO, ModuleAnalysisManager &MAM,
+                                 const ModuleSummaryIndex *ImportSummary) {
   if (Opts.disable_icp)
     return false;
   InstrProfSymtab Symtab;
@@ -998,7 +1029,7 @@ static bool promoteIndirectCalls(const InstrumentationOptions &Opts, Module &M,
 
     IndirectCallPromoter CallPromoter(
         Opts, F, M, &Symtab, SamplePGO, VirtualCSInfo,
-        VTableAddressPointOffsetVal, IgnoredBaseTypes, ORE);
+        VTableAddressPointOffsetVal, IgnoredBaseTypes, ORE, ImportSummary);
     bool FuncChanged = CallPromoter.processFunction(PSI);
     if (Opts.icp_dumpafter && FuncChanged) {
       LLVM_DEBUG(dbgs() << "\n== IR Dump After =="; F.print(dbgs()));
@@ -1017,9 +1048,9 @@ PreservedAnalyses PGOIndirectCallPromotion::run(Module &M,
                                                 ModuleAnalysisManager &MAM) {
   ProfileSummaryInfo *PSI = &MAM.getResult<ProfileSummaryAnalysis>(M);
 
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   if (!promoteIndirectCalls(Opts, M, PSI, InLTO | Opts.icp_lto,
-                            SamplePGO | Opts.icp_samplepgo, MAM))
+                            SamplePGO | Opts.icp_samplepgo, MAM, ImportSummary))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();

@@ -395,6 +395,11 @@ public:
   llvm::Expected<AcceleratorBreakpointHitResponse>
   AcceleratorBreakpointHit(const AcceleratorBreakpointHitArgs &args);
 
+  /// Returns std::nullopt if the packet failed or the response did not parse.
+  std::optional<AcceleratorDynamicLoaderResponse>
+  GetAcceleratorDynamicLoaderLibraryInfos(
+      const AcceleratorDynamicLoaderArgs &args);
+
   LazyBool SupportsAllocDeallocMemory() // const
   {
     // Uncomment this to have lldb pretend the debug server doesn't respond to
@@ -520,6 +525,9 @@ public:
 
   llvm::Expected<std::string> ReadExtFeature(llvm::StringRef object,
                                              llvm::StringRef annex);
+
+  /// Read the siginfo of the given thread using the qXfer:siginfo:read packet.
+  llvm::Expected<std::string> ReadSiginfo(lldb::tid_t tid);
 
   void ServeSymbolLookups(lldb_private::Process *process);
 

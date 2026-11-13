@@ -44,6 +44,11 @@ GetPersistenceDataForSymbol(lldb::SBSymbol &symbol) {
 void Breakpoint::SetCondition() { m_bp.SetCondition(m_condition.c_str()); }
 
 void Breakpoint::SetHitCondition() {
+  if (m_hit_condition.empty()) {
+    m_bp.SetIgnoreCount(0);
+    return;
+  }
+
   uint64_t hitCount = 0;
   if (llvm::to_integer(m_hit_condition, hitCount))
     m_bp.SetIgnoreCount(hitCount - 1);

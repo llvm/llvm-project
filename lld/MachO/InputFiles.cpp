@@ -189,7 +189,14 @@ static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
   uint32_t cpuType;
   std::tie(cpuType, std::ignore) = getCPUTypeFromArchitecture(config->arch());
 
-  if (hdr->cputype != cpuType) {
+  // arm64 and arm64e are ABI incompatible. arm64e.x1 has the arm64e ABI but
+  // needs a newer CPU, so neither takes it.
+  uint32_t subtype = hdr->cpusubtype & ~CPU_SUBTYPE_MASK;
+  bool isArm64e = subtype == CPU_SUBTYPE_ARM64E;
+  if (hdr->cputype != cpuType ||
+      (is_contained({AK_arm64, AK_arm64e}, config->arch()) &&
+       (subtype == CPU_SUBTYPE_ARM64E_X1 ||
+        isArm64e != (config->arch() == AK_arm64e)))) {
     Architecture arch =
         getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
     auto msg = config->errorForArchMismatch
@@ -505,6 +512,18 @@ static Defined *findSymbolAtOffset(const ConcatInputSection *isec,
   return d;
 }
 
+namespace {
+// The in-object form of the target of an ARM64_RELOC_AUTHENTICATED_POINTER.
+struct AuthEmbeddedPointer {
+  uint64_t addend : 32;
+  uint64_t diversity : 16;
+  uint64_t addrDiv : 1;
+  uint64_t key : 2;
+  uint64_t reserved : 12;
+  uint64_t auth : 1;
+};
+} // namespace
+
 template <class SectionHeader>
 static bool validateRelocationInfo(InputFile *file, const SectionHeader &sec,
                                    relocation_info rel) {
@@ -529,6 +548,14 @@ static bool validateRelocationInfo(InputFile *file, const SectionHeader &sec,
   if (!relocAttrs.hasAttr(static_cast<RelocAttrBits>(1 << rel.r_length))) {
     error(message("has invalid width of " + std::to_string(1 << rel.r_length) +
                   " bytes"));
+  }
+  if (valid && relocAttrs.hasAttr(RelocAttrBits::AUTH)) {
+    auto ptr = bit_cast<AuthEmbeddedPointer>(
+        read64le(file->mb.getBufferStart() + sec.offset + rel.r_address));
+    if (!ptr.auth)
+      error(message("requires bit 63 to be set"));
+    if (ptr.reserved)
+      error(message("requires bits 51..62 to be zero"));
   }
   return valid;
 }
@@ -589,9 +616,18 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
     r.pcrel = relInfo.r_pcrel;
     r.length = relInfo.r_length;
     r.offset = relInfo.r_address;
+
+    if (target->hasAttr(relInfo.r_type, RelocAttrBits::AUTH)) {
+      auto ptr = bit_cast<AuthEmbeddedPointer>(
+          read64le(buf + sec.offset + relInfo.r_address));
+      r.setAuthInfo({static_cast<uint16_t>(ptr.diversity),
+                     static_cast<PtrAuthKey>(ptr.key),
+                     static_cast<bool>(ptr.addrDiv)});
+    }
+
     if (relInfo.r_extern) {
       r.referent = symbols[relInfo.r_symbolnum];
-      r.addend = isSubtrahend ? 0 : totalAddend;
+      r.setAddend(isSubtrahend ? 0 : totalAddend);
     } else {
       assert(!isSubtrahend);
       const SectionHeader &referentSecHead =
@@ -613,7 +649,7 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
       }
       r.referent = findContainingSubsection(*sections[relInfo.r_symbolnum - 1],
                                             &referentOffset);
-      r.addend = referentOffset;
+      r.setAddend(referentOffset);
     }
 
     // Find the subsection that this relocation belongs to.
@@ -649,13 +685,13 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
       p.offset = r.offset;
       if (minuendInfo.r_extern) {
         p.referent = symbols[minuendInfo.r_symbolnum];
-        p.addend = totalAddend;
+        p.setAddend(totalAddend);
       } else {
         uint64_t referentOffset =
             totalAddend - sectionHeaders[minuendInfo.r_symbolnum - 1].addr;
         p.referent = findContainingSubsection(
             *sections[minuendInfo.r_symbolnum - 1], &referentOffset);
-        p.addend = referentOffset;
+        p.setAddend(referentOffset);
       }
       subsec->relocs.push_back(p);
     }
@@ -1261,7 +1297,7 @@ void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
         ++it;
         continue;
       }
-      uint64_t add = r.addend;
+      uint64_t add = r.getAddend();
       if (auto *sym = cast_or_null<Defined>(dyn_cast<Symbol *>(r.referent))) {
         // Check whether the symbol defined in this file is the prevailing one.
         // Skip if it is e.g. a weak def that didn't prevail.
@@ -1459,17 +1495,18 @@ targetSymFromCanonicalSubtractor(const InputSection *isec,
   // Note: pcSym may *not* be exactly at the PC; there's usually a non-zero
   // addend.
   auto *pcSym = cast<Defined>(cast<macho::Symbol *>(subtrahend.referent));
-  Defined *target =
-      cast_or_null<Defined>(minuend.referent.dyn_cast<macho::Symbol *>());
+  Defined *target = cast_or_null<Defined>(
+      dyn_cast_if_present<macho::Symbol *>(minuend.referent));
   if (!pcSym) {
     auto *targetIsec =
         cast<ConcatInputSection>(cast<InputSection *>(minuend.referent));
-    target = findSymbolAtOffset(targetIsec, minuend.addend);
+    target = findSymbolAtOffset(targetIsec, minuend.getAddend());
   }
   if (Invert)
     std::swap(pcSym, target);
   if (pcSym->isec() == isec) {
-    if (pcSym->value - (Invert ? -1 : 1) * minuend.addend != subtrahend.offset)
+    if (pcSym->value - (Invert ? -1 : 1) * minuend.getAddend() !=
+        subtrahend.offset)
       fatal("invalid FDE relocation in __eh_frame");
   } else {
     // Ensure the pcReloc points to a symbol within the current EH frame.
@@ -1481,7 +1518,7 @@ targetSymFromCanonicalSubtractor(const InputSection *isec,
     Relocation &pcReloc = Invert ? minuend : subtrahend;
     pcReloc.referent = isec->symbols[0];
     assert(isec->symbols[0]->value == 0);
-    minuend.addend = pcReloc.offset * (Invert ? 1LL : -1LL);
+    minuend.setAddend(pcReloc.offset * (Invert ? 1LL : -1LL));
   }
   return target;
 }

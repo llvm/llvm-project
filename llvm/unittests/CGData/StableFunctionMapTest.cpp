@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CGData/StableFunctionMap.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "gmock/gmock-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -90,7 +91,7 @@ TEST(StableFunctionMap, Finalize1) {
   Map.insert(Func2);
 
   // Instruction count is mis-matched, so they're not mergeable.
-  Map.finalize();
+  Map.finalize(cl::LibraryOptionsContext());
   EXPECT_THAT(Map, IsEmpty());
 }
 
@@ -102,7 +103,7 @@ TEST(StableFunctionMap, Finalize2) {
   Map.insert(Func2);
 
   // Operand map size is mis-matched, so they're not mergeable.
-  Map.finalize();
+  Map.finalize(cl::LibraryOptionsContext());
   EXPECT_THAT(Map, IsEmpty());
 }
 
@@ -114,7 +115,7 @@ TEST(StableFunctionMap, Finalize3) {
   Map.insert(Func2);
 
   // The same operand entry is removed, which is redundant.
-  Map.finalize();
+  Map.finalize(cl::LibraryOptionsContext());
   auto &M = Map.getFunctionMap();
   EXPECT_THAT(M, SizeIs(1));
   auto &FuncEntries = M.begin()->second.Entries;

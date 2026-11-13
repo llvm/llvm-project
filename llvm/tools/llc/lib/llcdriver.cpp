@@ -38,7 +38,6 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Plugins/PassPlugin.h"
@@ -46,9 +45,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/PGOOptions.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -64,7 +61,6 @@
 #include <optional>
 using namespace llvm;
 
-static codegen::RegisterCodeGenFlags CGF;
 static codegen::RegisterMTuneFlag MTF;
 static codegen::RegisterSaveStatsFlag SSF;
 
@@ -315,7 +311,9 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &,
   llvm_unreachable("reportError() should not return");
 }
 
-static std::unique_ptr<ToolOutputFile> GetOutputStream(Triple::OSType OS) {
+static std::unique_ptr<ToolOutputFile>
+GetOutputStream(const cl::LibraryOptionsContext &LibraryOptions,
+                Triple::OSType OS) {
   // If we don't yet have an output filename, make one.
   if (OutputFilename.empty()) {
     if (InputFilename == "-")
@@ -330,7 +328,7 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(Triple::OSType OS) {
       else
         OutputFilename = std::string(IFN);
 
-      switch (codegen::getFileType()) {
+      switch (codegen::getFileType(LibraryOptions)) {
       case CodeGenFileType::AssemblyFile:
         OutputFilename += ".s";
         break;
@@ -349,7 +347,7 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(Triple::OSType OS) {
 
   // Decide if we need "binary" output.
   bool Binary = false;
-  switch (codegen::getFileType()) {
+  switch (codegen::getFileType(LibraryOptions)) {
   case CodeGenFileType::AssemblyFile:
     break;
   case CodeGenFileType::ObjectFile:
@@ -386,14 +384,9 @@ extern "C" int llcMain(int argc, char **argv) {
   PassRegistry *Registry = PassRegistry::getPassRegistry();
   initializeCore(*Registry);
   initializeCodeGen(*Registry);
-  initializeLoopStrengthReducePass(*Registry);
-  initializePostInlineEntryExitInstrumenterPass(*Registry);
-  initializeUnreachableBlockElimLegacyPassPass(*Registry);
-  initializeConstantHoistingLegacyPassPass(*Registry);
   initializeScalarOpts(*Registry);
   initializeIPO(*Registry);
   initializeVectorization(*Registry);
-  initializeScalarizeMaskedMemIntrinLegacyPassPass(*Registry);
   initializeTransformUtils(*Registry);
 
   // Initialize debugging passes.
@@ -404,7 +397,10 @@ extern "C" int llcMain(int argc, char **argv) {
   // Register the target printer for --version.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
-  cl::ParseCommandLineOptions(argc, argv, "llvm system compiler\n");
+  LLVMContext Context;
+  cl::parseCommandLineOptions(Context.getLibraryOptions(),
+                              codegen::getToolOptions(), ArrayRef(argv, argc),
+                              "llvm system compiler\n");
 
   SmallVector<PassPlugin, 1> PluginList;
   for (const std::string &Path : PassPlugins) {
@@ -440,7 +436,6 @@ extern "C" int llcMain(int argc, char **argv) {
     }
   });
 
-  LLVMContext Context;
   Context.setDiscardValueNames(DiscardValueNames);
 
   // Set a diagnostic handler that doesn't exit on the first error
@@ -454,7 +449,7 @@ extern "C" int llcMain(int argc, char **argv) {
     reportError(std::move(E), RemarksFilename);
   LLVMRemarkFileHandle RemarksFile = std::move(*RemarksFileOrErr);
 
-  codegen::MaybeEnableStatistics();
+  codegen::maybeEnableStatistics(Context.getLibraryOptions());
   std::string OutputFilename;
 
   if (InputLanguage != "" && InputLanguage != "ir" && InputLanguage != "mir")
@@ -469,7 +464,8 @@ extern "C" int llcMain(int argc, char **argv) {
   if (RemarksFile)
     RemarksFile->keep();
 
-  return codegen::MaybeSaveStatistics(OutputFilename, "llc");
+  return codegen::maybeSaveStatistics(Context.getLibraryOptions(),
+                                      OutputFilename, "llc");
 }
 
 static bool addPass(PassManagerBase &PM, const char *argv0, StringRef PassName,
@@ -508,9 +504,10 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   std::unique_ptr<Module> M;
   std::unique_ptr<MIRParser> MIR;
   Triple TheTriple;
-  std::string CPUStr = codegen::getCPUStr();
-  std::string TuneCPUStr = codegen::getTuneCPUStr();
-  std::string FeaturesStr = codegen::getFeaturesStr();
+  std::string CPUStr = codegen::getCPUStr(Context.getLibraryOptions());
+  std::string TuneCPUStr = codegen::getTuneCPUStr(Context.getLibraryOptions());
+  std::string FeaturesStr =
+      codegen::getFeaturesStr(Context.getLibraryOptions());
 
   // Set attributes on functions as loaded from MIR from command line arguments.
   auto setMIRFunctionAttributes = [&CPUStr, &TuneCPUStr,
@@ -541,7 +538,8 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   }
   TargetOptions Options;
   auto InitializeOptions = [&](const Triple &TheTriple) {
-    Options = codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
+    Options = codegen::getTargetOptions(Context.getLibraryOptions(), TheTriple);
+    Options.MCOptions.LibraryOptions = &Context.getLibraryOptions();
 
     if (Options.XCOFFReadOnlyPointers) {
       if (!TheTriple.isOSAIX())
@@ -585,14 +583,16 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
     }
   };
 
-  std::optional<Reloc::Model> RM = codegen::getExplicitRelocModel();
-  std::optional<CodeModel::Model> CM = codegen::getExplicitCodeModel();
+  std::optional<Reloc::Model> RM =
+      codegen::getExplicitRelocModel(Context.getLibraryOptions());
+  std::optional<CodeModel::Model> CM =
+      codegen::getExplicitCodeModel(Context.getLibraryOptions());
 
   const Target *TheTarget = nullptr;
   std::unique_ptr<TargetMachine> Target;
 
   // If user just wants to list available options, skip module loading
-  auto MAttrs = codegen::getMAttrs();
+  auto MAttrs = codegen::getMAttrs(Context.getLibraryOptions());
   bool SkipModule =
       CPUStr == "help" || TuneCPUStr == "help" || is_contained(MAttrs, "help");
   if (SkipModule) {
@@ -603,8 +603,8 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
 
     // Get the target specific parser.
     std::string Error;
-    TheTarget =
-        TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
+    TheTarget = TargetRegistry::lookupTarget(
+        codegen::getMArch(Context.getLibraryOptions()), TheTriple, Error);
     if (!TheTarget) {
       WithColor::error(errs(), argv[0]) << Error << "\n";
       return 1;
@@ -640,8 +640,8 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
       TheTriple.setTriple(sys::getDefaultTargetTriple());
 
     std::string Error;
-    TheTarget =
-        TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
+    TheTarget = TargetRegistry::lookupTarget(
+        codegen::getMArch(Context.getLibraryOptions()), TheTriple, Error);
     if (!TheTarget) {
       WithColor::error(errs(), argv[0]) << Error << "\n";
       exit(1);
@@ -681,11 +681,13 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   std::optional<CodeModel::Model> CM_IR = M->getCodeModel();
   if (!CM && CM_IR)
     Target->setCodeModel(*CM_IR);
-  if (std::optional<uint64_t> LDT = codegen::getExplicitLargeDataThreshold())
+  if (std::optional<uint64_t> LDT =
+          codegen::getExplicitLargeDataThreshold(Context.getLibraryOptions()))
     Target->setLargeDataThreshold(*LDT);
 
   // Figure out where we are going to send the output.
-  std::unique_ptr<ToolOutputFile> Out = GetOutputStream(TheTriple.getOS());
+  std::unique_ptr<ToolOutputFile> Out =
+      GetOutputStream(Context.getLibraryOptions(), TheTriple.getOS());
   if (!Out)
     return 1;
 
@@ -694,10 +696,6 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
 
   // Return a copy of the output filename via the output param
   OutputFilename = Out->outputFilename();
-
-  // Tell target that this tool is not necessarily used with argument ABI
-  // compliance (i.e. narrow integer argument extensions).
-  Target->Options.VerifyArgABICompliance = 0;
 
   std::unique_ptr<ToolOutputFile> DwoOut;
   if (!SplitDwarfOutputFile.empty()) {
@@ -725,7 +723,7 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   codegen::setFunctionAttributes(*M, CPUStr, FeaturesStr, TuneCPUStr);
 
   for (auto &Plugin : PluginList) {
-    CodeGenFileType CGFT = codegen::getFileType();
+    CodeGenFileType CGFT = codegen::getFileType(Context.getLibraryOptions());
     if (Plugin.invokePreCodeGenCallback(*M, *Target, CGFT, Out->os())) {
       // TODO: Deduplicate code with below and the NewPMDriver.
       if (Context.getDiagHandlerPtr()->HasErrors)
@@ -735,8 +733,9 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
     }
   }
 
-  if (mc::getExplicitRelaxAll() &&
-      codegen::getFileType() != CodeGenFileType::ObjectFile)
+  if (Options.MCOptions.MCRelaxAll &&
+      codegen::getFileType(Context.getLibraryOptions()) !=
+          CodeGenFileType::ObjectFile)
     WithColor::warning(errs(), argv[0])
         << ": warning: ignoring -mc-relax-all because filetype != obj";
 
@@ -758,7 +757,7 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
     return compileModuleWithNewPM(
         argv[0], std::move(M), std::move(MIR), std::move(Target),
         std::move(Out), std::move(DwoOut), Context, TLII, VK, PassPipeline,
-        PluginList, codegen::getFileType());
+        PluginList, codegen::getFileType(Context.getLibraryOptions()));
   }
 
   // Build up all of the passes that we want to do to the module.
@@ -774,7 +773,8 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
     // so we can memcmp the contents in CompileTwice mode
     SmallVector<char, 0> Buffer;
     std::unique_ptr<raw_svector_ostream> BOS;
-    if ((codegen::getFileType() != CodeGenFileType::AssemblyFile &&
+    if ((codegen::getFileType(Context.getLibraryOptions()) !=
+             CodeGenFileType::AssemblyFile &&
          !Out->os().supportsSeeking()) ||
         CompileTwice) {
       BOS = std::make_unique<raw_svector_ostream>(Buffer);
@@ -841,9 +841,10 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
 
       PM.add(createFreeMachineFunctionPass());
     } else {
-      if (Target->addPassesToEmitFile(PM, *OS, DwoOut ? &DwoOut->os() : nullptr,
-                                      codegen::getFileType(), NoVerify,
-                                      MMIWP)) {
+      if (Target->addPassesToEmitFile(
+              PM, *OS, DwoOut ? &DwoOut->os() : nullptr,
+              codegen::getFileType(Context.getLibraryOptions()), NoVerify,
+              MMIWP)) {
         if (!HasMCErrors)
           reportError("target does not support generation of this file type");
       }

@@ -223,7 +223,7 @@ public:
   LLVM_ABI bool isRegDefinedAfter(MachineInstr *MI, Register Reg) const;
 
   /// Provides the clearance - the number of instructions since the closest
-  /// reaching def instuction of Reg that reaches MI.
+  /// reaching def instruction of Reg that reaches MI.
   LLVM_ABI int getClearance(MachineInstr *MI, Register Reg) const;
 
   /// Provides the uses, in the same block as MI, of register that MI defines.

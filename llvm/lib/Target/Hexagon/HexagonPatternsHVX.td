@@ -384,7 +384,7 @@ let Predicates = [UseHVXV68, UseHVXFloatingPoint] in {
     def: Pat<(VecF16  (splat_vector u16_0ImmPred:$V)), (PS_vsplatih imm:$V)>;
     def: Pat<(VecBF16  (splat_vector u16_0ImmPred:$V)), (PS_vsplatih imm:$V)>;
     def: Pat<(VecF32  (splat_vector anyint:$V)),       (PS_vsplatiw imm:$V)>;
-    def: Pat<(VecF32  (splat_vector f32ImmPred:$V)),   (PS_vsplatiw (ftoi $V))>;
+    def: Pat<(VecF32  (splat_vector f32ImmPred:$V)),   (PS_vsplatiw (bitcast_fpimm_to_i32 $V))>;
   }
   let AddedComplexity = 20 in {
     def: Pat<(VecF16  (splat_vector I32:$Rs)), (PS_vsplatrh $Rs)>;
@@ -1150,7 +1150,7 @@ def: Pat<(VecI32 (abs HVI32:$Vs)), (V6_vabsw HvxVR:$Vs)>;
 multiclass Saturates<ValueType HvxTy_i8, ValueType HvxTy_i16> {
   def: Pat<(VecI8 (ssat HWI16:$Vss, HvxTy_i8)),
            (V6_vpackhb_sat (HiVec $Vss), (LoVec $Vss))>;
-  def: Pat<(VecI8 (ssat (concat_vectors HWI32:$Vss, HWI32:$Vtt), HvxTy_i8)),
+  def: Pat<(VecI8 (ssat (VecQI32 (concat_vectors HWI32:$Vss, HWI32:$Vtt)), HvxTy_i8)),
            (V6_vpackhb_sat (V6_vpackwh_sat (HiVec $Vtt), (LoVec $Vtt)),
                            (V6_vpackwh_sat (HiVec $Vss), (LoVec $Vss)))>;
   def: Pat<(VecI16 (ssat HWI32:$Vss, HvxTy_i16)),
@@ -1158,7 +1158,7 @@ multiclass Saturates<ValueType HvxTy_i8, ValueType HvxTy_i16> {
 
   def: Pat<(VecI8 (usat HWI16:$Vss, HvxTy_i8)),
            (V6_vpackhub_sat (HiVec $Vss), (LoVec $Vss))>;
-  def: Pat<(VecI8 (usat (concat_vectors HWI32:$Vss, HWI32:$Vtt), HvxTy_i8)),
+  def: Pat<(VecI8 (usat (VecQI32 (concat_vectors HWI32:$Vss, HWI32:$Vtt)), HvxTy_i8)),
            (V6_vpackhub_sat (V6_vpackwuh_sat (HiVec $Vtt), (LoVec $Vtt)),
                             (V6_vpackwuh_sat (HiVec $Vss), (LoVec $Vss)))>;
   def: Pat<(VecI16 (usat HWI32:$Vss, HvxTy_i16)),

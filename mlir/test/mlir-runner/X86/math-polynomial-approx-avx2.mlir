@@ -47,7 +47,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.math.polynomial_approximation enable_avx2
+      transform.apply_patterns.x86.math_rsqrt_approximation
     } : !transform.any_op
     transform.yield
   }

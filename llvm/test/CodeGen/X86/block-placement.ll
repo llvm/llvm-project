@@ -625,6 +625,7 @@ loop2a:
   %var = phi ptr [ null, %entry ], [ null, %body ], [ %next.phi, %loop1 ]
   %next.var = phi ptr [ null, %entry ], [ undef, %body ], [ %next.load, %loop1 ]
   %comp.a = icmp eq ptr %var, null
+  store volatile i32 0, ptr null
   br label %loop3
 
 loop2b:

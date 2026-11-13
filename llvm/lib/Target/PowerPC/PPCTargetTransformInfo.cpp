@@ -388,8 +388,6 @@ bool PPCTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
   // we should not transform this loop.
   for (auto &BB : ExitingBlocks) {
     Instruction *TI = BB->getTerminator();
-    if (!TI) continue;
-
     if (CondBrInst *BI = dyn_cast<CondBrInst>(TI)) {
       uint64_t TrueWeight = 0, FalseWeight = 0;
       if (!extractBranchWeights(*BI, TrueWeight, FalseWeight))

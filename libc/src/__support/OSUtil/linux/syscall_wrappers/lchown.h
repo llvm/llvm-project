@@ -30,10 +30,12 @@ LIBC_INLINE ErrorOr<int> lchown(const char *path, uid_t owner, gid_t group) {
 #if defined(SYS_fchownat)
   return syscall_checked<int>(SYS_fchownat, AT_FDCWD, path, owner, group,
                               AT_SYMLINK_NOFOLLOW);
+#elif defined(SYS_lchown32)
+  return syscall_checked<int>(SYS_lchown32, path, owner, group);
 #elif defined(SYS_lchown)
   return syscall_checked<int>(SYS_lchown, path, owner, group);
 #else
-#error "fchownat and lchown syscalls not available."
+#error "fchownat, lchown32, and lchown syscalls not available."
 #endif
 }
 
