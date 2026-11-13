@@ -1,10 +1,12 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=kcfi -fwhole-program-vtables -flto=thin -flto-unit -fsanitize-cfi-icall-experimental-normalize-integers -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,KCFI --implicit-check-not=.normalized.virtual
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=cfi-icall,cfi-vcall,cfi-mfcall -fsanitize-trap=cfi-icall,cfi-vcall,cfi-mfcall -fwhole-program-vtables -flto=thin -flto-unit -fsanitize-cfi-icall-experimental-normalize-integers -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,CFI,CFI-PUBLIC --implicit-check-not=.normalized.virtual
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-icall,cfi-vcall,cfi-mfcall -fsanitize-trap=cfi-icall,cfi-vcall,cfi-mfcall -fwhole-program-vtables -flto=thin -flto-unit -fsanitize-cfi-icall-experimental-normalize-integers -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,CFI,CFI-HIDDEN --implicit-check-not=.normalized.virtual
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=cfi-icall,cfi-vcall,cfi-mfcall -fsanitize-trap=cfi-icall,cfi-vcall,cfi-mfcall -fwhole-program-vtables -flto=thin -flto-unit -fsanitize-cfi-icall-experimental-normalize-integers -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,CFI,CFI-NOCG,CFI-PUBLIC --implicit-check-not=.normalized.virtual
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-icall,cfi-vcall,cfi-mfcall -fsanitize-trap=cfi-icall,cfi-vcall,cfi-mfcall -fwhole-program-vtables -flto=thin -flto-unit -fsanitize-cfi-icall-experimental-normalize-integers -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,CFI,CFI-NOCG,CFI-HIDDEN --implicit-check-not=.normalized.virtual
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -fexperimental-call-graph-section -fsanitize=cfi-icall,cfi-vcall,cfi-mfcall -fsanitize-trap=cfi-icall,cfi-vcall,cfi-mfcall -fwhole-program-vtables -flto=thin -flto-unit -fsanitize-cfi-icall-experimental-normalize-integers -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,CFI,CFI-PUBLIC,CALLGRAPH --implicit-check-not=.normalized.virtual
 
 // Verify that -fsanitize-cfi-icall-experimental-normalize-integers only
-// normalizes FunctionType metadata and does not alter class vtable !type
-// metadata or virtual member-pointer .virtual metadata.
+// normalizes cfi-icall/kcfi function metadata and does not alter class vtable
+// !type metadata, member-pointer metadata, or -fexperimental-call-graph-section
+// metadata.
 
 struct Base {
   virtual int get(int x);
@@ -52,7 +54,9 @@ void take_addr() {
 // CHECK-DAG: @_ZTV7Derived = {{.*}}!type ![[BASE_TYPE]], !type ![[BASE_VMEMPTR]], !type ![[DERIVED_TYPE:[0-9]+]], !type ![[DERIVED_VMEMPTR:[0-9]+]]
 // CHECK-DAG: @_ZTV3BoxIiE = {{.*}}!type ![[BOX_TYPE:[0-9]+]], !type ![[BOX_VMEMPTR:[0-9]+]]
 
-// CFI-DAG: define{{.*}} void @_Z12icall_targeti(i32 {{.*}}){{.*}} !type ![[FN_TYPE:[0-9]+]] !type ![[FN_GEN_TYPE:[0-9]+]]
+// CALLGRAPH-DAG: define{{.*}} i32 @_ZN4Base3getEi(ptr {{.*}}, i32 {{.*}}){{.*}} !callgraph ![[CG_METHOD_TYPE:[0-9]+]]
+// CFI-NOCG-DAG: define{{.*}} void @_Z12icall_targeti(i32 {{.*}}){{.*}} !type ![[FN_TYPE:[0-9]+]] !type ![[FN_GEN_TYPE:[0-9]+]]
+// CALLGRAPH-DAG: define{{.*}} void @_Z12icall_targeti(i32 {{.*}}){{.*}} !type ![[FN_TYPE:[0-9]+]] !type ![[FN_GEN_TYPE:[0-9]+]]{{.*}} !callgraph ![[CG_FN_TYPE:[0-9]+]]
 // KCFI-DAG: define{{.*}} void @_Z12icall_targeti(i32 {{.*}}){{.*}} !kcfi_type ![[KCFI_FN_TYPE:[0-9]+]]
 
 // CHECK-LABEL: define{{.*}} i32 @_Z10test_callsP4BaseMS_FiiEP3BoxIiEPFviEi(
@@ -65,6 +69,8 @@ void take_addr() {
 // CFI-HIDDEN-DAG: call i1 @llvm.type.test(ptr {{.*}}, metadata !"_ZTSM4BaseFiiE")
 // CFI-HIDDEN-DAG: call { ptr, i1 } @llvm.type.checked.load(ptr {{.*}}, i32 0, metadata !"_ZTS3BoxIiE")
 // CFI-DAG: call i1 @llvm.type.test(ptr {{.*}}, metadata !"_ZTSFvu3i32E.normalized")
+// CALLGRAPH-DAG: call noundef i32 %{{.*}}(ptr {{.*}}, i32 {{.*}}), !callee_type ![[CG_METHOD_CALLEE:[0-9]+]]
+// CALLGRAPH-DAG: call void %{{.*}}(i32 {{.*}}), !callee_type ![[CG_FN_CALLEE:[0-9]+]]
 
 // CHECK-DAG: ![[BASE_TYPE]] = !{i64 16, !"_ZTS4Base"}
 // CHECK-DAG: ![[BASE_VMEMPTR]] = !{i64 16, !"_ZTSM4BaseFiiE.virtual"}
@@ -75,3 +81,7 @@ void take_addr() {
 // CFI-DAG: ![[FN_TYPE]] = !{i64 0, !"_ZTSFvu3i32E.normalized"}
 // CFI-DAG: ![[FN_GEN_TYPE]] = !{i64 0, !"_ZTSFvu3i32E.normalized.generalized"}
 // KCFI-DAG: ![[KCFI_FN_TYPE]] = !{i32 1162514891}
+// CALLGRAPH-DAG: ![[CG_METHOD_TYPE]] = !{!"_ZTSFiiE"}
+// CALLGRAPH-DAG: ![[CG_METHOD_CALLEE]] = !{![[CG_METHOD_TYPE]]}
+// CALLGRAPH-DAG: ![[CG_FN_TYPE]] = !{!"_ZTSFviE"}
+// CALLGRAPH-DAG: ![[CG_FN_CALLEE]] = !{![[CG_FN_TYPE]]}
