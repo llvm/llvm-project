@@ -2,9 +2,11 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=barcelona | FileCheck %s --check-prefixes=ALL,SSE,AMD10H
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=btver1 | FileCheck %s --check-prefixes=ALL,SSE,BTVER1
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=btver2 | FileCheck %s --check-prefixes=ALL,AVX,BTVER2
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver1 | FileCheck %s --check-prefixes=ALL,AVX,ZNVER2
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver2 | FileCheck %s --check-prefixes=ALL,AVX,ZNVER2
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver3 | FileCheck %s --check-prefixes=ALL,AVX,ZNVER2
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver1 | FileCheck %s --check-prefixes=ALL,AVX,ZNVER2,ZNVER2-SLOW
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver2 | FileCheck %s --check-prefixes=ALL,AVX,ZNVER2,ZNVER2-SLOW
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver3 | FileCheck %s --check-prefixes=ALL,AVX,ZNVER2,ZNVER2-SLOW
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver2 -mattr=+slow-sse4a | FileCheck %s --check-prefixes=ALL,AVX,ZNVER2,ZNVER2-SLOW
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver2 -mattr=-slow-sse4a | FileCheck %s --check-prefixes=ALL,AVX,ZNVER2,ZNVER2-FAST
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver4 | FileCheck %s --check-prefixes=ALL,AVX,ZNVER4
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver5 | FileCheck %s --check-prefixes=ALL,AVX,ZNVER4
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver6 | FileCheck %s --check-prefixes=ALL,AVX,ZNVER4
@@ -157,10 +159,15 @@ define <16 x i8> @shuf_1zzzuuuuuuuuuuuu(<16 x i8> %a0) {
 ; BTVER2-NEXT:    extrq {{.*#+}} xmm0 = xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
 ; BTVER2-NEXT:    retq
 ;
-; ZNVER2-LABEL: shuf_1zzzuuuuuuuuuuuu:
-; ZNVER2:       # %bb.0:
-; ZNVER2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; ZNVER2-NEXT:    retq
+; ZNVER2-SLOW-LABEL: shuf_1zzzuuuuuuuuuuuu:
+; ZNVER2-SLOW:       # %bb.0:
+; ZNVER2-SLOW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; ZNVER2-SLOW-NEXT:    retq
+;
+; ZNVER2-FAST-LABEL: shuf_1zzzuuuuuuuuuuuu:
+; ZNVER2-FAST:       # %bb.0:
+; ZNVER2-FAST-NEXT:    extrq {{.*#+}} xmm0 = xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
+; ZNVER2-FAST-NEXT:    retq
 ;
 ; ZNVER4-LABEL: shuf_1zzzuuuuuuuuuuuu:
 ; ZNVER4:       # %bb.0:
@@ -181,10 +188,15 @@ define <8 x i16> @shuf_1zzzuuuu(<8 x i16> %a0) {
 ; BTVER2-NEXT:    extrq {{.*#+}} xmm0 = xmm0[2,3],zero,zero,zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
 ; BTVER2-NEXT:    retq
 ;
-; ZNVER2-LABEL: shuf_1zzzuuuu:
-; ZNVER2:       # %bb.0:
-; ZNVER2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; ZNVER2-NEXT:    retq
+; ZNVER2-SLOW-LABEL: shuf_1zzzuuuu:
+; ZNVER2-SLOW:       # %bb.0:
+; ZNVER2-SLOW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; ZNVER2-SLOW-NEXT:    retq
+;
+; ZNVER2-FAST-LABEL: shuf_1zzzuuuu:
+; ZNVER2-FAST:       # %bb.0:
+; ZNVER2-FAST-NEXT:    extrq {{.*#+}} xmm0 = xmm0[2,3],zero,zero,zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
+; ZNVER2-FAST-NEXT:    retq
 ;
 ; ZNVER4-LABEL: shuf_1zzzuuuu:
 ; ZNVER4:       # %bb.0:
@@ -205,10 +217,15 @@ define <8 x i16> @shuf_12zzuuuu(<8 x i16> %a0) {
 ; BTVER2-NEXT:    extrq {{.*#+}} xmm0 = xmm0[2,3,4,5],zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
 ; BTVER2-NEXT:    retq
 ;
-; ZNVER2-LABEL: shuf_12zzuuuu:
-; ZNVER2:       # %bb.0:
-; ZNVER2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3,4,5],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; ZNVER2-NEXT:    retq
+; ZNVER2-SLOW-LABEL: shuf_12zzuuuu:
+; ZNVER2-SLOW:       # %bb.0:
+; ZNVER2-SLOW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3,4,5],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; ZNVER2-SLOW-NEXT:    retq
+;
+; ZNVER2-FAST-LABEL: shuf_12zzuuuu:
+; ZNVER2-FAST:       # %bb.0:
+; ZNVER2-FAST-NEXT:    extrq {{.*#+}} xmm0 = xmm0[2,3,4,5],zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
+; ZNVER2-FAST-NEXT:    retq
 ;
 ; ZNVER4-LABEL: shuf_12zzuuuu:
 ; ZNVER4:       # %bb.0:
@@ -319,10 +336,15 @@ define <16 x i8> @shuf_0_0_2_3_uuuu_uuuu_uuuu(<16 x i8> %a0, <16 x i8> %a1) {
 ; BTVER2-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0,0,2,3,4,5,6,7,u,u,u,u,u,u,u,u]
 ; BTVER2-NEXT:    retq
 ;
-; ZNVER2-LABEL: shuf_0_0_2_3_uuuu_uuuu_uuuu:
-; ZNVER2:       # %bb.0:
-; ZNVER2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,0,2,3,u,u,u,u,u,u,u,u,u,u,u,u]
-; ZNVER2-NEXT:    retq
+; ZNVER2-SLOW-LABEL: shuf_0_0_2_3_uuuu_uuuu_uuuu:
+; ZNVER2-SLOW:       # %bb.0:
+; ZNVER2-SLOW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,0,2,3,u,u,u,u,u,u,u,u,u,u,u,u]
+; ZNVER2-SLOW-NEXT:    retq
+;
+; ZNVER2-FAST-LABEL: shuf_0_0_2_3_uuuu_uuuu_uuuu:
+; ZNVER2-FAST:       # %bb.0:
+; ZNVER2-FAST-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0,0,2,3,4,5,6,7,u,u,u,u,u,u,u,u]
+; ZNVER2-FAST-NEXT:    retq
 ;
 ; ZNVER4-LABEL: shuf_0_0_2_3_uuuu_uuuu_uuuu:
 ; ZNVER4:       # %bb.0:
@@ -343,11 +365,16 @@ define <16 x i8> @shuf_0_16_2_3_uuuu_uuuu_uuuu(<16 x i8> %a0, <16 x i8> %a1) {
 ; BTVER2-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3,4,5,6,7,u,u,u,u,u,u,u,u]
 ; BTVER2-NEXT:    retq
 ;
-; ZNVER2-LABEL: shuf_0_16_2_3_uuuu_uuuu_uuuu:
-; ZNVER2:       # %bb.0:
-; ZNVER2-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
-; ZNVER2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,6,u,u,u,u,u,u,u,u,u,u,u,u]
-; ZNVER2-NEXT:    retq
+; ZNVER2-SLOW-LABEL: shuf_0_16_2_3_uuuu_uuuu_uuuu:
+; ZNVER2-SLOW:       # %bb.0:
+; ZNVER2-SLOW-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; ZNVER2-SLOW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,6,u,u,u,u,u,u,u,u,u,u,u,u]
+; ZNVER2-SLOW-NEXT:    retq
+;
+; ZNVER2-FAST-LABEL: shuf_0_16_2_3_uuuu_uuuu_uuuu:
+; ZNVER2-FAST:       # %bb.0:
+; ZNVER2-FAST-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3,4,5,6,7,u,u,u,u,u,u,u,u]
+; ZNVER2-FAST-NEXT:    retq
 ;
 ; ZNVER4-LABEL: shuf_0_16_2_3_uuuu_uuuu_uuuu:
 ; ZNVER4:       # %bb.0:
@@ -368,11 +395,16 @@ define <16 x i8> @shuf_16_1_2_3_uuuu_uuuu_uuuu(<16 x i8> %a0, <16 x i8> %a1) {
 ; BTVER2-NEXT:    insertq {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3,4,5,6,7,u,u,u,u,u,u,u,u]
 ; BTVER2-NEXT:    retq
 ;
-; ZNVER2-LABEL: shuf_16_1_2_3_uuuu_uuuu_uuuu:
-; ZNVER2:       # %bb.0:
-; ZNVER2-NEXT:    vmovd {{.*#+}} xmm2 = [0,255,255,255,0,0,0,0,0,0,0,0,0,0,0,0]
-; ZNVER2-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
-; ZNVER2-NEXT:    retq
+; ZNVER2-SLOW-LABEL: shuf_16_1_2_3_uuuu_uuuu_uuuu:
+; ZNVER2-SLOW:       # %bb.0:
+; ZNVER2-SLOW-NEXT:    vmovd {{.*#+}} xmm2 = [0,255,255,255,0,0,0,0,0,0,0,0,0,0,0,0]
+; ZNVER2-SLOW-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
+; ZNVER2-SLOW-NEXT:    retq
+;
+; ZNVER2-FAST-LABEL: shuf_16_1_2_3_uuuu_uuuu_uuuu:
+; ZNVER2-FAST:       # %bb.0:
+; ZNVER2-FAST-NEXT:    insertq {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3,4,5,6,7,u,u,u,u,u,u,u,u]
+; ZNVER2-FAST-NEXT:    retq
 ;
 ; ZNVER4-LABEL: shuf_16_1_2_3_uuuu_uuuu_uuuu:
 ; ZNVER4:       # %bb.0:
@@ -393,11 +425,16 @@ define <8 x i16> @shuf_0823uuuu(<8 x i16> %a0, <8 x i16> %a1) {
 ; BTVER2-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,1],xmm0[4,5,6,7,u,u,u,u,u,u,u,u]
 ; BTVER2-NEXT:    retq
 ;
-; ZNVER2-LABEL: shuf_0823uuuu:
-; ZNVER2:       # %bb.0:
-; ZNVER2-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; ZNVER2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,8,9,12,13,8,9,12,13,12,13,14,15]
-; ZNVER2-NEXT:    retq
+; ZNVER2-SLOW-LABEL: shuf_0823uuuu:
+; ZNVER2-SLOW:       # %bb.0:
+; ZNVER2-SLOW-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; ZNVER2-SLOW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,8,9,12,13,8,9,12,13,12,13,14,15]
+; ZNVER2-SLOW-NEXT:    retq
+;
+; ZNVER2-FAST-LABEL: shuf_0823uuuu:
+; ZNVER2-FAST:       # %bb.0:
+; ZNVER2-FAST-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,1],xmm0[4,5,6,7,u,u,u,u,u,u,u,u]
+; ZNVER2-FAST-NEXT:    retq
 ;
 ; ZNVER4-LABEL: shuf_0823uuuu:
 ; ZNVER4:       # %bb.0:
@@ -418,11 +455,16 @@ define <8 x i16> @shuf_0183uuuu(<8 x i16> %a0, <8 x i16> %a1) {
 ; BTVER2-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[0,1],xmm0[6,7,u,u,u,u,u,u,u,u]
 ; BTVER2-NEXT:    retq
 ;
-; ZNVER2-LABEL: shuf_0183uuuu:
-; ZNVER2:       # %bb.0:
-; ZNVER2-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; ZNVER2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,2,3,12,13,4,5,12,13,12,13,14,15]
-; ZNVER2-NEXT:    retq
+; ZNVER2-SLOW-LABEL: shuf_0183uuuu:
+; ZNVER2-SLOW:       # %bb.0:
+; ZNVER2-SLOW-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; ZNVER2-SLOW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,2,3,12,13,4,5,12,13,12,13,14,15]
+; ZNVER2-SLOW-NEXT:    retq
+;
+; ZNVER2-FAST-LABEL: shuf_0183uuuu:
+; ZNVER2-FAST:       # %bb.0:
+; ZNVER2-FAST-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[0,1],xmm0[6,7,u,u,u,u,u,u,u,u]
+; ZNVER2-FAST-NEXT:    retq
 ;
 ; ZNVER4-LABEL: shuf_0183uuuu:
 ; ZNVER4:       # %bb.0:
@@ -443,11 +485,16 @@ define <8 x i16> @shuf_0128uuuu(<8 x i16> %a0, <8 x i16> %a1) {
 ; BTVER2-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5],xmm1[0,1],xmm0[u,u,u,u,u,u,u,u]
 ; BTVER2-NEXT:    retq
 ;
-; ZNVER2-LABEL: shuf_0128uuuu:
-; ZNVER2:       # %bb.0:
-; ZNVER2-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; ZNVER2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,2,3,8,9,4,5,4,5,6,7]
-; ZNVER2-NEXT:    retq
+; ZNVER2-SLOW-LABEL: shuf_0128uuuu:
+; ZNVER2-SLOW:       # %bb.0:
+; ZNVER2-SLOW-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; ZNVER2-SLOW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,2,3,8,9,4,5,4,5,6,7]
+; ZNVER2-SLOW-NEXT:    retq
+;
+; ZNVER2-FAST-LABEL: shuf_0128uuuu:
+; ZNVER2-FAST:       # %bb.0:
+; ZNVER2-FAST-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5],xmm1[0,1],xmm0[u,u,u,u,u,u,u,u]
+; ZNVER2-FAST-NEXT:    retq
 ;
 ; ZNVER4-LABEL: shuf_0128uuuu:
 ; ZNVER4:       # %bb.0:
@@ -468,11 +515,16 @@ define <8 x i16> @shuf_0893uuuu(<8 x i16> %a0, <8 x i16> %a1) {
 ; BTVER2-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,1,2,3],xmm0[6,7,u,u,u,u,u,u,u,u]
 ; BTVER2-NEXT:    retq
 ;
-; ZNVER2-LABEL: shuf_0893uuuu:
-; ZNVER2:       # %bb.0:
-; ZNVER2-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; ZNVER2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,6,7,12,13,12,13,6,7,12,13,14,15]
-; ZNVER2-NEXT:    retq
+; ZNVER2-SLOW-LABEL: shuf_0893uuuu:
+; ZNVER2-SLOW:       # %bb.0:
+; ZNVER2-SLOW-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; ZNVER2-SLOW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,6,7,12,13,12,13,6,7,12,13,14,15]
+; ZNVER2-SLOW-NEXT:    retq
+;
+; ZNVER2-FAST-LABEL: shuf_0893uuuu:
+; ZNVER2-FAST:       # %bb.0:
+; ZNVER2-FAST-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,1,2,3],xmm0[6,7,u,u,u,u,u,u,u,u]
+; ZNVER2-FAST-NEXT:    retq
 ;
 ; ZNVER4-LABEL: shuf_0893uuuu:
 ; ZNVER4:       # %bb.0:
@@ -493,11 +545,16 @@ define <8 x i16> @shuf_089Auuuu(<8 x i16> %a0, <8 x i16> %a1) {
 ; BTVER2-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,1,2,3,4,5],xmm0[u,u,u,u,u,u,u,u]
 ; BTVER2-NEXT:    retq
 ;
-; ZNVER2-LABEL: shuf_089Auuuu:
-; ZNVER2:       # %bb.0:
-; ZNVER2-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; ZNVER2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3,0,1,4,5,8,9,8,9,4,5,4,5,6,7]
-; ZNVER2-NEXT:    retq
+; ZNVER2-SLOW-LABEL: shuf_089Auuuu:
+; ZNVER2-SLOW:       # %bb.0:
+; ZNVER2-SLOW-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; ZNVER2-SLOW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3,0,1,4,5,8,9,8,9,4,5,4,5,6,7]
+; ZNVER2-SLOW-NEXT:    retq
+;
+; ZNVER2-FAST-LABEL: shuf_089Auuuu:
+; ZNVER2-FAST:       # %bb.0:
+; ZNVER2-FAST-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,1,2,3,4,5],xmm0[u,u,u,u,u,u,u,u]
+; ZNVER2-FAST-NEXT:    retq
 ;
 ; ZNVER4-LABEL: shuf_089Auuuu:
 ; ZNVER4:       # %bb.0:
@@ -518,11 +575,16 @@ define <8 x i16> @shuf_089uuuuu(<8 x i16> %a0, <8 x i16> %a1) {
 ; BTVER2-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,1,2,3],xmm0[6,7,u,u,u,u,u,u,u,u]
 ; BTVER2-NEXT:    retq
 ;
-; ZNVER2-LABEL: shuf_089uuuuu:
-; ZNVER2:       # %bb.0:
-; ZNVER2-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; ZNVER2-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,0,2,3,4,5,6,7]
-; ZNVER2-NEXT:    retq
+; ZNVER2-SLOW-LABEL: shuf_089uuuuu:
+; ZNVER2-SLOW:       # %bb.0:
+; ZNVER2-SLOW-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; ZNVER2-SLOW-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,0,2,3,4,5,6,7]
+; ZNVER2-SLOW-NEXT:    retq
+;
+; ZNVER2-FAST-LABEL: shuf_089uuuuu:
+; ZNVER2-FAST:       # %bb.0:
+; ZNVER2-FAST-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,1,2,3],xmm0[6,7,u,u,u,u,u,u,u,u]
+; ZNVER2-FAST-NEXT:    retq
 ;
 ; ZNVER4-LABEL: shuf_089uuuuu:
 ; ZNVER4:       # %bb.0:
@@ -608,10 +670,15 @@ define <16 x i8> @shuffle_uu_uu_4_16_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu(<16 x i
 ; BTVER2-NEXT:    extrq {{.*#+}} xmm0 = xmm0[2,3,4],zero,zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
 ; BTVER2-NEXT:    retq
 ;
-; ZNVER2-LABEL: shuffle_uu_uu_4_16_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu:
-; ZNVER2:       # %bb.0:
-; ZNVER2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[u,u,4],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
-; ZNVER2-NEXT:    retq
+; ZNVER2-SLOW-LABEL: shuffle_uu_uu_4_16_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu:
+; ZNVER2-SLOW:       # %bb.0:
+; ZNVER2-SLOW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[u,u,4],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
+; ZNVER2-SLOW-NEXT:    retq
+;
+; ZNVER2-FAST-LABEL: shuffle_uu_uu_4_16_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu:
+; ZNVER2-FAST:       # %bb.0:
+; ZNVER2-FAST-NEXT:    extrq {{.*#+}} xmm0 = xmm0[2,3,4],zero,zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
+; ZNVER2-FAST-NEXT:    retq
 ;
 ; ZNVER4-LABEL: shuffle_uu_uu_4_16_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu:
 ; ZNVER4:       # %bb.0:
@@ -634,10 +701,16 @@ define <8 x i8> @insert_v8i8_0_0(<8 x i8> %a0) {
 ; BTVER2-NEXT:    insertq {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3,4,5,6,7,u,u,u,u,u,u,u,u]
 ; BTVER2-NEXT:    retq
 ;
-; ZNVER2-LABEL: insert_v8i8_0_0:
-; ZNVER2:       # %bb.0:
-; ZNVER2-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; ZNVER2-NEXT:    retq
+; ZNVER2-SLOW-LABEL: insert_v8i8_0_0:
+; ZNVER2-SLOW:       # %bb.0:
+; ZNVER2-SLOW-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; ZNVER2-SLOW-NEXT:    retq
+;
+; ZNVER2-FAST-LABEL: insert_v8i8_0_0:
+; ZNVER2-FAST:       # %bb.0:
+; ZNVER2-FAST-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; ZNVER2-FAST-NEXT:    insertq {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3,4,5,6,7,u,u,u,u,u,u,u,u]
+; ZNVER2-FAST-NEXT:    retq
 ;
 ; ZNVER4-LABEL: insert_v8i8_0_0:
 ; ZNVER4:       # %bb.0:

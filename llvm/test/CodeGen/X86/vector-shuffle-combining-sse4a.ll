@@ -9,6 +9,8 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver1 | FileCheck %s --check-prefixes=AVX,AVX2
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver2 | FileCheck %s --check-prefixes=AVX,AVX2
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver3 | FileCheck %s --check-prefixes=AVX,AVX2
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver2 -mattr=+slow-sse4a | FileCheck %s --check-prefixes=AVX,AVX2
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver2 -mattr=-slow-sse4a | FileCheck %s --check-prefixes=SSE4A,AVX
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver4 | FileCheck %s --check-prefixes=AVX,AVX512
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver5 | FileCheck %s --check-prefixes=AVX,AVX512
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver6 | FileCheck %s --check-prefixes=AVX,AVX512
