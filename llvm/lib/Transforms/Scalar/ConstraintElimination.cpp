@@ -36,6 +36,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Verifier.h"
@@ -670,27 +671,26 @@ enum class SignedBound { Upper, Lower };
 static bool isKnownWithinSignedRange(Decomposition D, SignedBound Bound,
                                      Type *Ty, ConstraintInfo &Info,
                                      unsigned Depth) {
-  if (D.canonicalize())
-    return false;
-
   if (Depth != 0) {
     for (const DecompEntry &E : D.Vars) {
       auto *MM = dyn_cast<MinMaxIntrinsic>(E.Variable);
       if (!MM || !MM->isSigned() || MM->getType() != Ty)
         continue;
-      auto LHS = D.substitute(E.Variable, MM->getLHS(), Info);
-      auto RHS = D.substitute(E.Variable, MM->getRHS(), Info);
-      if (!LHS || !RHS)
-        return false;
 
       // D is increasing in the min/max result iff its coefficient is positive.
       // Then D is a max over the respective sides iff the intrinsic is a max.
       bool IsMax =
           (MM->getIntrinsicID() == Intrinsic::smax) == (E.Coefficient > 0);
-      bool L = isKnownWithinSignedRange(*LHS, Bound, Ty, Info, Depth - 1);
-      if ((Bound == SignedBound::Upper) == IsMax)
-        return L && isKnownWithinSignedRange(*RHS, Bound, Ty, Info, Depth - 1);
-      return L || isKnownWithinSignedRange(*RHS, Bound, Ty, Info, Depth - 1);
+      bool IsAnd = ((Bound == SignedBound::Upper) == IsMax);
+      auto IsOperandInRange = [&](Value *Replacement) {
+        auto Res = D.substitute(E.Variable, Replacement, Info);
+        return Res && !Res->canonicalize() &&
+               isKnownWithinSignedRange(*Res, Bound, Ty, Info, Depth - 1);
+      };
+      bool L = IsOperandInRange(MM->getLHS());
+      if (L != IsAnd)
+        return L;
+      return IsOperandInRange(MM->getRHS());
     }
   }
 
@@ -734,6 +734,8 @@ static bool isKnownWithinSignedRange(Decomposition D, SignedBound Bound,
                        ConstantInt::get(Ty, Limit.trunc(BitWidth)));
 }
 
+static bool mayLookThrough(Value *V);
+
 /// Returns true if the signed \p Opcode (Add or Sub) of \p Op0 and \p Op1 is
 /// known to not overflow because the result is in the range of the type.
 /// For example, A + (B - A) is B and therefore cannot overflow.
@@ -746,10 +748,24 @@ static bool isKnownNoSignedWrap(Instruction::BinaryOps Opcode, Value *Op0,
   if (!Ty->isIntegerTy())
     return false;
 
+  if (Op0 != Op1 && !mayLookThrough(Op0) && !isa<MinMaxIntrinsic>(Op0) &&
+      !mayLookThrough(Op1) && !isa<MinMaxIntrinsic>(Op1) &&
+      !isa<ConstantInt>(Op0))
+    return false;
+
   const DataLayout &DL = Info.getDataLayout();
   Decomposition LHS = decompose(Op0, Info, /*IsSigned=*/true, DL);
   Decomposition RHS = decompose(Op1, Info, /*IsSigned=*/true, DL);
   if (Opcode == Instruction::Add ? LHS.add(RHS) : LHS.sub(RHS))
+    return false;
+
+  if (LHS.canonicalize())
+    return false;
+
+  if (LHS.Vars.size() > 1 && none_of(LHS.Vars, [](const DecompEntry &E) {
+        auto *MM = dyn_cast<MinMaxIntrinsic>(E.Variable);
+        return MM && MM->isSigned();
+      }))
     return false;
 
   constexpr unsigned MaxDepth = 2;
