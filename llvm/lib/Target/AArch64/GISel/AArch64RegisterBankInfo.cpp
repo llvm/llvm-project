@@ -40,13 +40,6 @@
 #include "llvm/Support/Threading.h"
 #include <cassert>
 
-static bool preferGPRForFPImm(const llvm::MachineInstr &MI,
-                              const llvm::MachineRegisterInfo &MRI,
-                              const llvm::AArch64Subtarget &STI);
-static bool preferGPRForFPImm(const llvm::MachineInstr &MI,
-                              const llvm::MachineRegisterInfo &MRI,
-                              const llvm::AArch64Subtarget &STI);
-
 #define GET_TARGET_REGBANK_IMPL
 #include "AArch64GenRegisterBank.inc"
 
