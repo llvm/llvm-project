@@ -2950,27 +2950,14 @@ alias(
 
 ############################### string targets ###############################
 
-libc_function(
+alias(
     name = "index",
-    srcs = ["src/strings/index.cpp"],
-    hdrs = ["src/strings/index.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/string:utils",
-    ],
+    actual = "//libc/src/strings:index",
 )
 
-libc_function(
+alias(
     name = "rindex",
-    srcs = ["src/strings/rindex.cpp"],
-    hdrs = ["src/strings/rindex.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/string:utils",
-    ],
+    actual = "//libc/src/strings:rindex",
 )
 
 alias(
@@ -3013,15 +3000,9 @@ alias(
     actual = "//libc/src/string:mempcpy",
 )
 
-libc_function(
+alias(
     name = "bcopy",
-    srcs = ["src/strings/bcopy.cpp"],
-    hdrs = ["src/strings/bcopy.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/string/memory_utils",
-    ],
+    actual = "//libc/src/strings:bcopy",
 )
 
 alias(
@@ -3029,26 +3010,14 @@ alias(
     actual = "//libc/src/string:memcmp",
 )
 
-libc_function(
+alias(
     name = "bcmp",
-    srcs = ["src/strings/bcmp.cpp"],
-    hdrs = ["src/strings/bcmp.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/string/memory_utils",
-    ],
+    actual = "//libc/src/strings:bcmp",
 )
 
-libc_function(
+alias(
     name = "bzero",
-    srcs = ["src/strings/bzero.cpp"],
-    hdrs = ["src/strings/bzero.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-        "//libc/src/string/memory_utils",
-    ],
+    actual = "//libc/src/strings:bzero",
 )
 
 alias(
@@ -3101,30 +3070,14 @@ alias(
     actual = "//libc/src/string:strncmp",
 )
 
-libc_function(
+alias(
     name = "strcasecmp",
-    srcs = ["src/strings/strcasecmp.cpp"],
-    hdrs = ["src/strings/strcasecmp.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/string/memory_utils",
-    ],
+    actual = "//libc/src/strings:strcasecmp",
 )
 
-libc_function(
+alias(
     name = "strncasecmp",
-    srcs = ["src/strings/strncasecmp.cpp"],
-    hdrs = ["src/strings/strncasecmp.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:null_check",
-        "//libc/src/string/memory_utils",
-    ],
+    actual = "//libc/src/strings:strncasecmp",
 )
 
 alias(

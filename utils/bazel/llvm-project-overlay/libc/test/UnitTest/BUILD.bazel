@@ -132,8 +132,6 @@ libc_test_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:bcmp",
-        "//libc:bzero",
         "//libc:hdr_errno_macros",
         "//libc:hdr_stdint_proxy",
         "//libc/src/__support:common",
@@ -144,6 +142,8 @@ libc_test_library(
         "//libc/src/string:memcpy",
         "//libc/src/string:memmove",
         "//libc/src/string:memset",
+        "//libc/src/strings:bcmp",
+        "//libc/src/strings:bzero",
     ],
 )
 
