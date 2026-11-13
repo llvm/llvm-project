@@ -14,9 +14,8 @@ define <2 x i32> @mul_mask_rhs(<2 x i32> %a) {
 define <2 x i32> @mul_mask_lhs(<2 x i32> %a) {
 ; CHECK-LABEL: mul_mask_lhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI1_0
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI1_0]
-; CHECK-NEXT:    mul v0.2s, v1.2s, v0.2s
+; CHECK-NEXT:    movi d1, #0x000000ffffffff
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %r = mul <2 x i32> <i32 1, i32 0>, %a
   ret <2 x i32> %r
