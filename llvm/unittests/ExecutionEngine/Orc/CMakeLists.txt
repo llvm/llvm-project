@@ -27,6 +27,7 @@ add_llvm_unittest(OrcJITTests
   EPCGenericJITLinkMemoryManagerTest.cpp
   EPCGenericMemoryAccessTest.cpp
   EPCGenericDylibManagerTest.cpp
+  HandleLookupInJITDylibTest.cpp
   IndirectionUtilsTest.cpp
   InProcessEPCTest.cpp
   InstanceSymbolGeneratorTest.cpp
