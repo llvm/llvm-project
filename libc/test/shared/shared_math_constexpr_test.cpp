@@ -623,6 +623,8 @@ static_assert(Float128(0.0) ==
                                                    Float128(0.0)));
 static_assert(0.0 ==
               LIBC_NAMESPACE::shared::daddf128(Float128(0.0), Float128(0.0)));
+static_assert(0.0 ==
+              LIBC_NAMESPACE::shared::dsubf128(Float128(0.0), Float128(0.0)));
 static_assert(Float128(1.0) ==
               LIBC_NAMESPACE::shared::fabsf128(Float128(-1.0)));
 static_assert(Float80(0.0) ==
@@ -837,7 +839,7 @@ static_assert(bfloat16(2.0) ==
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::daddf128(Float128(0.0), Float128(0.0)));
 static_assert(0.0 ==
-              LIBC_NAMESPACE::shared::dsubf128(float128(0.0), float128(0.0)));
+              LIBC_NAMESPACE::shared::dsubf128(Float128(0.0), Float128(0.0)));
 static_assert(LIBC_NAMESPACE::fputil::FPBits<float128>::min_subnormal(
                   LIBC_NAMESPACE::Sign::NEG)
                   .get_val() ==

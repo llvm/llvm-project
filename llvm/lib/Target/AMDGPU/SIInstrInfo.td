@@ -1754,6 +1754,8 @@ def VOP3ModsNonCanonicalizing : ComplexPattern<untyped, 2,
 
 def VOP3NoMods : ComplexPattern<untyped, 1, "SelectVOP3NoMods">;
 
+def VOP3NoOpSelMods : ComplexPattern<untyped, 1, "SelectVOP3NoOpSelMods">;
+
 def VOP3OMods : ComplexPattern<untyped, 3, "SelectVOP3OMods">;
 
 def VOP3PMods  : ComplexPattern<untyped, 2, "SelectVOP3PMods">;

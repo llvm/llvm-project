@@ -3432,10 +3432,10 @@ define amdgpu_gs void @wqm_init_exec_wwm() {
 ; GFX9-W64:       ; %bb.0:
 ; GFX9-W64-NEXT:    s_mov_b64 exec, 0
 ; GFX9-W64-NEXT:    s_mov_b32 s0, 0
-; GFX9-W64-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX9-W64-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX9-W64-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-W64-NEXT:    v_cndmask_b32_e64 v1, 0, 1.0, s[0:1]
+; GFX9-W64-NEXT:    v_cndmask_b32_e64 v1, 1.0, 0, s[0:1]
 ; GFX9-W64-NEXT:    exp mrt0, off, off, off, off
 ; GFX9-W64-NEXT:    s_endpgm
 ;
@@ -3444,9 +3444,9 @@ define amdgpu_gs void @wqm_init_exec_wwm() {
 ; GFX10-W32-NEXT:    s_mov_b32 exec_lo, 0
 ; GFX10-W32-NEXT:    s_mov_b32 s0, 0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-W32-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX10-W32-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX10-W32-NEXT:    s_cselect_b32 s0, -1, 0
-; GFX10-W32-NEXT:    v_cndmask_b32_e64 v1, 0, 1.0, s0
+; GFX10-W32-NEXT:    v_cndmask_b32_e64 v1, 1.0, 0, s0
 ; GFX10-W32-NEXT:    exp mrt0, off, off, off, off
 ; GFX10-W32-NEXT:    s_endpgm
   call void @llvm.amdgcn.init.exec(i64 0)
