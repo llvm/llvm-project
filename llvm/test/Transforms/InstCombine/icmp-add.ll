@@ -3605,10 +3605,7 @@ entry:
 
 define i1 @window_no_multiple_i64(i64 %iv) {
 ; CHECK-LABEL: @window_no_multiple_i64(
-; CHECK-NEXT:    [[SCALED:%.*]] = mul nuw nsw i64 [[IV:%.*]], 26456
-; CHECK-NEXT:    [[OFFSET:%.*]] = add nsw i64 [[SCALED]], -26457
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[OFFSET]], 31
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %scaled = mul nuw nsw i64 %iv, 26456
   %offset = add nsw i64 %scaled, -26457
@@ -3618,10 +3615,7 @@ define i1 @window_no_multiple_i64(i64 %iv) {
 
 define i1 @window_no_multiple_i32(i32 %x) {
 ; CHECK-LABEL: @window_no_multiple_i32(
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[X:%.*]], 13
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[MUL]], -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 7
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %mul = mul nuw i32 %x, 13
   %add = add i32 %mul, -1
@@ -3631,10 +3625,7 @@ define i1 @window_no_multiple_i32(i32 %x) {
 
 define <2 x i1> @window_no_multiple_splat(<2 x i32> %x) {
 ; CHECK-LABEL: @window_no_multiple_splat(
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw <2 x i32> [[X:%.*]], splat (i32 13)
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[MUL]], splat (i32 -1)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[ADD]], splat (i32 7)
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %mul = mul nuw <2 x i32> %x, splat (i32 13)
   %add = add <2 x i32> %mul, splat (i32 -1)
@@ -3644,10 +3635,7 @@ define <2 x i1> @window_no_multiple_splat(<2 x i32> %x) {
 
 define i1 @inverse_window_no_multiple(i8 %x) {
 ; CHECK-LABEL: @inverse_window_no_multiple(
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i8 [[X:%.*]], 13
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[MUL]], -8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP1]], -7
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %mul = mul nuw i8 %x, 13
   %add = add i8 %mul, -1
@@ -3662,10 +3650,7 @@ define i1 @issue_reproducer(i32 noundef %a) {
 ; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i32, i1 } [[SQUARE]], 1
 ; CHECK-NEXT:    br i1 [[OVERFLOW]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[A]], 10000
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[MUL]], -5000
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[ADD]], 4999
-; CHECK-NEXT:    ret i1 [[COND]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
 ;

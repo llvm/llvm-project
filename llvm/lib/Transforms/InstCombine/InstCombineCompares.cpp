@@ -3304,6 +3304,23 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
   auto CR = ConstantRange::makeExactICmpRegion(Pred, C).subtract(*C2);
   const APInt &Upper = CR.getUpper();
   const APInt &Lower = CR.getLower();
+
+  const APInt *MulC;
+  if (match(X, m_NUWMul(m_Value(), m_APInt(MulC))) && !MulC->isZero()) {
+    auto HasMultiple = [&](const ConstantRange &R) {
+      if (R.isEmptySet())
+        return false;
+      if (R.isWrappedSet())
+        return true;
+      APInt Max = R.getUnsignedMax();
+      return (Max.udiv(*MulC) * *MulC).uge(R.getUnsignedMin());
+    };
+    if (!HasMultiple(CR))
+      return replaceInstUsesWith(Cmp, ConstantInt::getFalse(Cmp.getType()));
+    if (!HasMultiple(CR.inverse()))
+      return replaceInstUsesWith(Cmp, ConstantInt::getTrue(Cmp.getType()));
+  }
+
   if (Cmp.isSigned()) {
     if (Lower.isSignMask())
       return new ICmpInst(ICmpInst::ICMP_SLT, X, ConstantInt::get(Ty, Upper));
