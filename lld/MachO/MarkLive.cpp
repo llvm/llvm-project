@@ -185,9 +185,8 @@ template <bool RecordWhyLive> void MarkLiveImpl<RecordWhyLive>::drain() {
   // overhead.
   constexpr size_t minVisitsPerLevel = 256;
   Worklist level;
+  level.reserve(nextLevel.size());
   while (!nextLevel.empty()) {
-    // Swapping hands nextLevel the previous level's buffer, so later levels
-    // rarely need to grow it.
     level.clear();
     std::swap(level, nextLevel);
     std::mutex nextLevelMutex;
