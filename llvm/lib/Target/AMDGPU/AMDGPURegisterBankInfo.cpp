@@ -5376,8 +5376,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
             AMDGPU::lookupBufferIntrinsic(IntrID)) {
       // The legalizer turns all other buffer intrinsics into
       // G_AMDGPU_BUFFER_* and similar instructions.
-      assert(BufInfo->Kind == AMDGPU::BufferKindLoadToLDS &&
-             "buffer intrinsic should have been legalized");
+      if (BufInfo->Kind != AMDGPU::BufferKindLoadToLDS)
+        return getInvalidInstructionMapping();
       auto MapArg = [&](unsigned Arg, bool IsSGPR) {
         unsigned Idx = AMDGPU::getMIROperandIdx(MI, Arg);
         Register Reg = MI.getOperand(Idx).getReg();

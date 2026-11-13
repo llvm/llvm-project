@@ -1783,7 +1783,9 @@ defset list<AMDGPUBufferIntrinsic> AMDGPUBufferIntrinsics = {
 // add such markings.
 //
 // The legacy int_amdgcn_s_buffer_load form (will be deprecated) uses a <4 x i32>
-// vector to hold the resource instead of a pointer.
+// vector to hold the resource instead of a pointer. Therefore, it's marked as not
+// reading memory even through it does do so (this produces an approximation to
+// invariant load optimizations).
 
 class AMDGPUSBufferLoad<bit isDeprecatedIntIntrinsic = false>
     : AMDGPUBufferIntrinsic<AMDGPUBufferKindSLoad, isDeprecatedIntIntrinsic> {
@@ -1863,9 +1865,10 @@ def int_amdgcn_raw_ptr_buffer_atomic_cond_sub_u32 : AMDGPUBufferAtomicRMW;
 def int_amdgcn_raw_buffer_atomic_sub_clamp_u32 : AMDGPUBufferAtomicRMW<llvm_any_ty, /*isDeprecatedIntIntrinsic=*/true>;
 def int_amdgcn_raw_ptr_buffer_atomic_sub_clamp_u32 : AMDGPUBufferAtomicRMW;
 
-// fadd: gfx908, supports v2bf16 on gfx12+ and gfx950. fmin/fmax: gfx90a.
+// fadd: Supports float and <2 x half> on gfx908. Also supports v2bf16 on gfx90a, gfx942, gfx950, gfx12+.
 def int_amdgcn_raw_buffer_atomic_fadd : AMDGPUBufferAtomicRMW<llvm_anyfloat_ty, /*isDeprecatedIntIntrinsic=*/true>;
 def int_amdgcn_raw_ptr_buffer_atomic_fadd : AMDGPUBufferAtomicRMW<llvm_anyfloat_ty>;
+// fmax/fmin were introduced in gfx90a.
 def int_amdgcn_raw_buffer_atomic_fmin : AMDGPUBufferAtomicRMW<llvm_anyfloat_ty, /*isDeprecatedIntIntrinsic=*/true>;
 def int_amdgcn_raw_ptr_buffer_atomic_fmin : AMDGPUBufferAtomicRMW<llvm_anyfloat_ty>;
 def int_amdgcn_raw_buffer_atomic_fmax : AMDGPUBufferAtomicRMW<llvm_anyfloat_ty, /*isDeprecatedIntIntrinsic=*/true>;
