@@ -1,0 +1,377 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@bazel_skylib//lib:selects.bzl", "selects")
+load("//libc:libc_build_rules.bzl", "libc_function", "libc_support_library")
+load("//libc:platforms.bzl", "PLATFORM_CPU_X86_64")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_function(
+    name = "madvise",
+    srcs = ["linux/madvise.cpp"],
+    hdrs = ["madvise.h"],
+    deps = [
+        "//libc:types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:madvise",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "mincore",
+    srcs = ["linux/mincore.cpp"],
+    hdrs = ["mincore.h"],
+    deps = [
+        "//libc:hdr_sys_mman_macros",
+        "//libc:types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "mlock",
+    srcs = ["linux/mlock.cpp"],
+    hdrs = ["mlock.h"],
+    deps = [
+        "//libc:hdr_sys_mman_macros",
+        "//libc:types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "mlock2",
+    srcs = ["linux/mlock2.cpp"],
+    hdrs = ["mlock2.h"],
+    deps = [
+        "//libc:hdr_sys_mman_macros",
+        "//libc:types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "mlockall",
+    srcs = ["linux/mlockall.cpp"],
+    hdrs = ["mlockall.h"],
+    deps = [
+        "//libc:hdr_sys_mman_macros",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "mmap",
+    srcs = ["linux/mmap.cpp"],
+    hdrs = ["mmap.h"],
+    deps = [
+        "//libc:hdr_sys_mman_macros",
+        "//libc:types_off_t",
+        "//libc:types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:mmap",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "mprotect",
+    srcs = ["linux/mprotect.cpp"],
+    hdrs = ["mprotect.h"],
+    deps = [
+        "//libc:hdr_sys_mman_macros",
+        "//libc:types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:error_or",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:mprotect",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "mremap",
+    srcs = ["linux/mremap.cpp"],
+    hdrs = ["mremap.h"],
+    deps = [
+        "//libc:hdr_sys_mman_macros",
+        "//libc:types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:mremap",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "msync",
+    srcs = ["linux/msync.cpp"],
+    hdrs = ["msync.h"],
+    deps = [
+        "//libc:hdr_sys_mman_macros",
+        "//libc:types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "munlock",
+    srcs = ["linux/munlock.cpp"],
+    hdrs = ["munlock.h"],
+    deps = [
+        "//libc:hdr_sys_mman_macros",
+        "//libc:types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "munlockall",
+    srcs = ["linux/munlockall.cpp"],
+    hdrs = ["munlockall.h"],
+    deps = [
+        "//libc:hdr_sys_mman_macros",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "munmap",
+    srcs = ["linux/munmap.cpp"],
+    hdrs = ["munmap.h"],
+    deps = [
+        "//libc:hdr_sys_mman_macros",
+        "//libc:types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:munmap",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "memfd_create",
+    srcs = ["linux/memfd_create.cpp"],
+    hdrs = ["memfd_create.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:memfd_create",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "pkey_alloc",
+    srcs = ["linux/pkey_alloc.cpp"],
+    hdrs = ["pkey_alloc.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:pkey_alloc",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "pkey_free",
+    srcs = ["linux/pkey_free.cpp"],
+    hdrs = ["pkey_free.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:pkey_free",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "pkey_get",
+    srcs = ["linux/pkey_get.cpp"],
+    hdrs = ["pkey_get.h"],
+    deps = [
+        ":pkey_common",
+        "//libc/src/__support:common",
+        "//libc/src/__support:error_or",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "pkey_mprotect",
+    srcs = ["linux/pkey_mprotect.cpp"],
+    hdrs = ["pkey_mprotect.h"],
+    deps = [
+        "//libc:hdr_errno_macros",
+        "//libc:types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:error_or",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:mprotect",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:pkey_mprotect",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "pkey_set",
+    srcs = ["linux/pkey_set.cpp"],
+    hdrs = ["pkey_set.h"],
+    deps = [
+        ":pkey_common",
+        "//libc/src/__support:common",
+        "//libc/src/__support:error_or",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_support_library(
+    name = "pkey_common",
+    hdrs = [
+        "linux/pkey_common.h",
+    ] + selects.with_or({
+        PLATFORM_CPU_X86_64: ["linux/x86_64/pkey_common.h"],
+        "//conditions:default": ["linux/generic/pkey_common.h"],
+    }),
+    deps = [
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_stdint_proxy",
+        "//libc/src/__support:common",
+        "//libc/src/__support:error_or",
+        "//libc/src/__support/macros/properties:architectures",
+    ],
+)
+
+libc_function(
+    name = "posix_madvise",
+    srcs = ["linux/posix_madvise.cpp"],
+    hdrs = ["posix_madvise.h"],
+    deps = [
+        "//libc:hdr_sys_mman_macros",
+        "//libc:types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:madvise",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "remap_file_pages",
+    srcs = ["linux/remap_file_pages.cpp"],
+    hdrs = ["remap_file_pages.h"],
+    deps = [
+        "//libc:types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:remap_file_pages",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_support_library(
+    name = "shm_common",
+    hdrs = ["linux/shm_common.h"],
+    deps = [
+        "//libc:hdr_errno_macros",
+        "//libc/src/__support:common",
+        "//libc/src/__support:error_or",
+        "//libc/src/__support/CPP:array",
+        "//libc/src/__support/CPP:string_view",
+        "//libc/src/__support/macros:config",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_function(
+    name = "shm_open",
+    srcs = ["linux/shm_open.cpp"],
+    hdrs = ["shm_open.h"],
+    deps = [
+        ":shm_common",
+        "//libc:hdr_fcntl_macros",
+        "//libc:types_mode_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:open",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)
+
+libc_function(
+    name = "shm_unlink",
+    srcs = ["linux/shm_unlink.cpp"],
+    hdrs = ["shm_unlink.h"],
+    deps = [
+        ":shm_common",
+        "//libc:types_mode_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:unlink",
+        "//libc/src/__support/macros:config",
+        "//libc/src/errno",
+    ],
+)

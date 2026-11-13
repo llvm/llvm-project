@@ -2,8 +2,6 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-# LLVM libc project.
-load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 load("@rules_cc//cc:defs.bzl", "cc_library")
@@ -17,7 +15,6 @@ load(
     "libc_header_library",
     "libc_support_library",
 )
-load(":platforms.bzl", "PLATFORM_CPU_X86_64")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -4147,363 +4144,114 @@ alias(
 
 ############################### sys/mman targets ###############################
 
-libc_function(
+alias(
     name = "madvise",
-    srcs = ["src/sys/mman/linux/madvise.cpp"],
-    hdrs = ["src/sys/mman/madvise.h"],
-    deps = [
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:madvise",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/mman:madvise",
 )
 
-libc_function(
+alias(
     name = "mincore",
-    srcs = ["src/sys/mman/linux/mincore.cpp"],
-    hdrs = ["src/sys/mman/mincore.h"],
-    deps = [
-        ":hdr_sys_mman_macros",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/mman:mincore",
 )
 
-libc_function(
+alias(
     name = "mlock",
-    srcs = ["src/sys/mman/linux/mlock.cpp"],
-    hdrs = ["src/sys/mman/mlock.h"],
-    deps = [
-        ":hdr_sys_mman_macros",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/mman:mlock",
 )
 
-libc_function(
+alias(
     name = "mlock2",
-    srcs = ["src/sys/mman/linux/mlock2.cpp"],
-    hdrs = ["src/sys/mman/mlock2.h"],
-    deps = [
-        ":hdr_sys_mman_macros",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/mman:mlock2",
 )
 
-libc_function(
+alias(
     name = "mlockall",
-    srcs = ["src/sys/mman/linux/mlockall.cpp"],
-    hdrs = ["src/sys/mman/mlockall.h"],
-    deps = [
-        ":hdr_sys_mman_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/mman:mlockall",
 )
 
-libc_function(
+alias(
     name = "mmap",
-    srcs = ["src/sys/mman/linux/mmap.cpp"],
-    hdrs = ["src/sys/mman/mmap.h"],
-    deps = [
-        ":hdr_sys_mman_macros",
-        ":types_off_t",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:mmap",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/mman:mmap",
 )
 
-libc_function(
+alias(
     name = "mprotect",
-    srcs = ["src/sys/mman/linux/mprotect.cpp"],
-    hdrs = ["src/sys/mman/mprotect.h"],
-    deps = [
-        ":hdr_sys_mman_macros",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:error_or",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:mprotect",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/mman:mprotect",
 )
 
-libc_function(
+alias(
     name = "mremap",
-    srcs = ["src/sys/mman/linux/mremap.cpp"],
-    hdrs = ["src/sys/mman/mremap.h"],
-    deps = [
-        ":hdr_sys_mman_macros",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:mremap",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/mman:mremap",
 )
 
-libc_function(
+alias(
     name = "msync",
-    srcs = ["src/sys/mman/linux/msync.cpp"],
-    hdrs = ["src/sys/mman/msync.h"],
-    deps = [
-        ":hdr_sys_mman_macros",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/mman:msync",
 )
 
-libc_function(
+alias(
     name = "munlock",
-    srcs = ["src/sys/mman/linux/munlock.cpp"],
-    hdrs = ["src/sys/mman/munlock.h"],
-    deps = [
-        ":hdr_sys_mman_macros",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/mman:munlock",
 )
 
-libc_function(
+alias(
     name = "munlockall",
-    srcs = ["src/sys/mman/linux/munlockall.cpp"],
-    hdrs = ["src/sys/mman/munlockall.h"],
-    deps = [
-        ":hdr_sys_mman_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/mman:munlockall",
 )
 
-libc_function(
+alias(
     name = "munmap",
-    srcs = ["src/sys/mman/linux/munmap.cpp"],
-    hdrs = ["src/sys/mman/munmap.h"],
-    deps = [
-        ":hdr_sys_mman_macros",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:munmap",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/mman:munmap",
 )
 
-libc_function(
+alias(
     name = "memfd_create",
-    srcs = ["src/sys/mman/linux/memfd_create.cpp"],
-    hdrs = ["src/sys/mman/memfd_create.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:memfd_create",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/mman:memfd_create",
 )
 
-libc_function(
+alias(
     name = "pkey_alloc",
-    srcs = ["src/sys/mman/linux/pkey_alloc.cpp"],
-    hdrs = ["src/sys/mman/pkey_alloc.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:pkey_alloc",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/mman:pkey_alloc",
 )
 
-libc_function(
+alias(
     name = "pkey_free",
-    srcs = ["src/sys/mman/linux/pkey_free.cpp"],
-    hdrs = ["src/sys/mman/pkey_free.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:pkey_free",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/mman:pkey_free",
 )
 
-libc_function(
+alias(
     name = "pkey_get",
-    srcs = ["src/sys/mman/linux/pkey_get.cpp"],
-    hdrs = ["src/sys/mman/pkey_get.h"],
-    deps = [
-        ":pkey_common",
-        "//libc/src/__support:common",
-        "//libc/src/__support:error_or",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros/properties:architectures",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/mman:pkey_get",
 )
 
-libc_function(
+alias(
     name = "pkey_mprotect",
-    srcs = ["src/sys/mman/linux/pkey_mprotect.cpp"],
-    hdrs = ["src/sys/mman/pkey_mprotect.h"],
-    deps = [
-        ":hdr_errno_macros",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:error_or",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:mprotect",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:pkey_mprotect",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/mman:pkey_mprotect",
 )
 
-libc_function(
+alias(
     name = "pkey_set",
-    srcs = ["src/sys/mman/linux/pkey_set.cpp"],
-    hdrs = ["src/sys/mman/pkey_set.h"],
-    deps = [
-        ":pkey_common",
-        "//libc/src/__support:common",
-        "//libc/src/__support:error_or",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/mman:pkey_set",
 )
 
-libc_support_library(
-    name = "pkey_common",
-    hdrs = [
-        "src/sys/mman/linux/pkey_common.h",
-    ] + selects.with_or({
-        PLATFORM_CPU_X86_64: ["src/sys/mman/linux/x86_64/pkey_common.h"],
-        "//conditions:default": ["src/sys/mman/linux/generic/pkey_common.h"],
-    }),
-    deps = [
-        ":hdr_errno_macros",
-        ":hdr_stdint_proxy",
-        "//libc/src/__support:common",
-        "//libc/src/__support:error_or",
-        "//libc/src/__support/macros/properties:architectures",
-    ],
-)
-
-libc_function(
+alias(
     name = "posix_madvise",
-    srcs = ["src/sys/mman/linux/posix_madvise.cpp"],
-    hdrs = ["src/sys/mman/posix_madvise.h"],
-    deps = [
-        ":hdr_sys_mman_macros",
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:madvise",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/sys/mman:posix_madvise",
 )
 
-libc_function(
+alias(
     name = "remap_file_pages",
-    srcs = ["src/sys/mman/linux/remap_file_pages.cpp"],
-    hdrs = ["src/sys/mman/remap_file_pages.h"],
-    deps = [
-        ":types_size_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:remap_file_pages",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/mman:remap_file_pages",
 )
 
-libc_support_library(
-    name = "shm_common",
-    hdrs = ["src/sys/mman/linux/shm_common.h"],
-    deps = [
-        ":hdr_errno_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:error_or",
-        "//libc/src/__support/CPP:array",
-        "//libc/src/__support/CPP:string_view",
-        "//libc/src/__support/macros:config",
-        "//libc/src/string/memory_utils",
-    ],
-)
-
-libc_function(
+alias(
     name = "shm_open",
-    srcs = ["src/sys/mman/linux/shm_open.cpp"],
-    hdrs = ["src/sys/mman/shm_open.h"],
-    deps = [
-        ":hdr_fcntl_macros",
-        ":shm_common",
-        ":types_mode_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:open",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/mman:shm_open",
 )
 
-libc_function(
+alias(
     name = "shm_unlink",
-    srcs = ["src/sys/mman/linux/shm_unlink.cpp"],
-    hdrs = ["src/sys/mman/shm_unlink.h"],
-    deps = [
-        ":shm_common",
-        ":types_mode_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:unlink",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/mman:shm_unlink",
 )
 
 ############################# sys/random targets #############################
