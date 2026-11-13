@@ -1587,6 +1587,80 @@ define half @fdiv_pow_shl_cnt_fail_out_of_bound2(i16 %cnt) nounwind {
   ret half %mul
 }
 
+; (half)(1 << 16) is +inf, so the fdiv must not become an exponent subtract.
+define half @fdiv_pow_shl_cnt_fail_inf_half(i32 %cnt) nounwind {
+; CHECK-SSE-LABEL: fdiv_pow_shl_cnt_fail_inf_half:
+; CHECK-SSE:       # %bb.0:
+; CHECK-SSE-NEXT:    andl $16, %edi
+; CHECK-SSE-NEXT:    xorl $28, %edi
+; CHECK-SSE-NEXT:    shll $10, %edi
+; CHECK-SSE-NEXT:    movd %edi, %xmm0
+; CHECK-SSE-NEXT:    retq
+;
+; CHECK-AVX-LABEL: fdiv_pow_shl_cnt_fail_inf_half:
+; CHECK-AVX:       # %bb.0:
+; CHECK-AVX-NEXT:    andl $16, %edi
+; CHECK-AVX-NEXT:    xorl $28, %edi
+; CHECK-AVX-NEXT:    shll $10, %edi
+; CHECK-AVX-NEXT:    vmovd %edi, %xmm0
+; CHECK-AVX-NEXT:    retq
+  %and = and i32 %cnt, 16
+  %shl = shl nuw i32 1, %and
+  %conv = uitofp i32 %shl to half
+  %div = fdiv half 0xH7000, %conv
+  ret half %div
+}
+
+; 2^15 is the largest power of 2 that is finite in half.
+define half @fdiv_pow_shl_cnt_max_finite_half(i32 %cnt) nounwind {
+; CHECK-SSE-LABEL: fdiv_pow_shl_cnt_max_finite_half:
+; CHECK-SSE:       # %bb.0:
+; CHECK-SSE-NEXT:    andl $15, %edi
+; CHECK-SSE-NEXT:    shll $10, %edi
+; CHECK-SSE-NEXT:    movl $28672, %eax # imm = 0x7000
+; CHECK-SSE-NEXT:    subl %edi, %eax
+; CHECK-SSE-NEXT:    movd %eax, %xmm0
+; CHECK-SSE-NEXT:    retq
+;
+; CHECK-AVX-LABEL: fdiv_pow_shl_cnt_max_finite_half:
+; CHECK-AVX:       # %bb.0:
+; CHECK-AVX-NEXT:    andl $15, %edi
+; CHECK-AVX-NEXT:    shll $10, %edi
+; CHECK-AVX-NEXT:    movl $28672, %eax # imm = 0x7000
+; CHECK-AVX-NEXT:    subl %edi, %eax
+; CHECK-AVX-NEXT:    vmovd %eax, %xmm0
+; CHECK-AVX-NEXT:    retq
+  %and = and i32 %cnt, 15
+  %shl = shl nuw i32 1, %and
+  %conv = uitofp i32 %shl to half
+  %div = fdiv half 0xH7000, %conv
+  ret half %div
+}
+
+; (half)(1 << 16) is +inf, so the fmul must not become an exponent add.
+define half @fmul_pow_shl_cnt_fail_inf_half(i32 %cnt) nounwind {
+; CHECK-SSE-LABEL: fmul_pow_shl_cnt_fail_inf_half:
+; CHECK-SSE:       # %bb.0:
+; CHECK-SSE-NEXT:    andl $16, %edi
+; CHECK-SSE-NEXT:    orl $5, %edi
+; CHECK-SSE-NEXT:    shll $10, %edi
+; CHECK-SSE-NEXT:    movd %edi, %xmm0
+; CHECK-SSE-NEXT:    retq
+;
+; CHECK-AVX-LABEL: fmul_pow_shl_cnt_fail_inf_half:
+; CHECK-AVX:       # %bb.0:
+; CHECK-AVX-NEXT:    andl $16, %edi
+; CHECK-AVX-NEXT:    orl $5, %edi
+; CHECK-AVX-NEXT:    shll $10, %edi
+; CHECK-AVX-NEXT:    vmovd %edi, %xmm0
+; CHECK-AVX-NEXT:    retq
+  %and = and i32 %cnt, 16
+  %shl = shl nuw i32 1, %and
+  %conv = uitofp i32 %shl to half
+  %mul = fmul half 0xH1400, %conv
+  ret half %mul
+}
+
 ; FIXME: The movzbl is unnecessary. It would be UB for the upper bits to be set
 ; in the original IR.
 define double @fdiv_pow_shl_cnt32_to_dbl_okay(i32 %cnt) nounwind {
