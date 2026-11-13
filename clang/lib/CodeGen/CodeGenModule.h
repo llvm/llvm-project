@@ -1568,6 +1568,13 @@ public:
   /// of the given class.
   llvm::GlobalVariable::LinkageTypes getVTableLinkage(const CXXRecordDecl *RD);
 
+  /// In incremental compilation, whether the vtable of \p RD was emitted
+  /// because its key function was defined, possibly into the module of an
+  /// earlier input.
+  bool isVTableEmittedWithKeyFunction(const CXXRecordDecl *RD) const {
+    return EmittedVTables.contains(RD);
+  }
+
   /// Returns true if a vtable with the given linkage may be emitted with more
   /// than one address in the program, because the vtable is weak and the
   /// target's ABI allows weak vtables to be duplicated across images.

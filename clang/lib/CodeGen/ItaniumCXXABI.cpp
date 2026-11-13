@@ -3654,6 +3654,14 @@ static bool ShouldUseExternalRTTIDescriptor(CodeGenModule &CGM,
     if (CGM.getTriple().isOSCygMing())
       return false;
 
+    // In incremental compilation (clang-repl), the RTTI was emitted with the
+    // vtable into the module of the input that defined the key function. A
+    // later input refers to it; a second definition would clash in the JIT.
+    if (CGM.getLangOpts().IncrementalExtensions &&
+        CGM.isVTableEmittedWithKeyFunction(RD) &&
+        CGM.getVTableLinkage(RD) == llvm::GlobalValue::ExternalLinkage)
+      return true;
+
     if (CGM.getVTables().isVTableExternal(RD)) {
       if (CGM.getTarget().hasPS4DLLImportExport())
         return true;
