@@ -1496,6 +1496,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### AST Matchers
 
+- Add the `hasKind` matcher and an `Attr` overload of `hasArgument` to match
+  attributes by kind and by the value of a string argument, e.g.
+  `varDecl(has(attr(hasKind(attr::Annotate), hasArgument(0, "foo"))))`.
+  ([#240552](https://github.com/llvm/llvm-project/issues/240552))
+
 ### clang-format
 
 - Add `RegroupByDirectory` value to `IncludeBlocks` to group includes by

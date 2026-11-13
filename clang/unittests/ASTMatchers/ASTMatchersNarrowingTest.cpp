@@ -440,6 +440,33 @@ TEST_P(ASTMatchersTest, HasAttr) {
   EXPECT_FALSE(matches("struct X {};", decl(hasAttr(clang::attr::WarnUnused))));
 }
 
+TEST_P(ASTMatchersTest, AttrHasKind) {
+  StringRef Code = "__attribute__((annotate(\"foo\"))) int x;";
+  EXPECT_TRUE(matches(Code, attr(hasKind(clang::attr::Annotate))));
+  EXPECT_TRUE(
+      matches(Code, varDecl(has(attr(hasKind(clang::attr::Annotate))))));
+  EXPECT_TRUE(notMatches(Code, attr(hasKind(clang::attr::WarnUnused))));
+  EXPECT_TRUE(
+      notMatches("int x;", varDecl(has(attr(hasKind(clang::attr::Annotate))))));
+}
+
+TEST_P(ASTMatchersTest, AttrHasArgument) {
+  StringRef Code = "__attribute__((annotate(\"foo\"))) int *p;"
+                   "__attribute__((annotate(\"bar\"))) int *q;";
+  auto FooAnnotation =
+      attr(hasKind(clang::attr::Annotate), hasArgument(0, "foo"));
+  EXPECT_TRUE(matches(Code, varDecl(hasName("p"), has(FooAnnotation))));
+  EXPECT_TRUE(notMatches(Code, varDecl(hasName("q"), has(FooAnnotation))));
+  EXPECT_TRUE(notMatches("__attribute__((annotate(\"foobar\"))) int x;",
+                         attr(hasArgument(0, "foo"))));
+  EXPECT_TRUE(notMatches("__attribute__((annotate(\"foo\", 1))) int x;",
+                         attr(hasArgument(1, "foo"))));
+  EXPECT_TRUE(notMatches("__attribute__((annotate(\"foo\"))) int x;",
+                         attr(hasArgument(2, "foo"))));
+  EXPECT_TRUE(notMatches("struct __attribute__((warn_unused)) X {};",
+                         attr(hasArgument(0, "foo"))));
+}
+
 TEST_P(ASTMatchersTest, AnyOf) {
   if (!GetParam().isCXX()) {
     // FIXME: Add a test for `anyOf()` that does not depend on C++.
