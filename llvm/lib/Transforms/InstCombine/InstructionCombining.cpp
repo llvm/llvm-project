@@ -6331,7 +6331,7 @@ static bool combineInstructionsOverFunction(
           "a comment explaining the reason for the convergence failure.\n\n"
           "If you encountered this error in any other situation, "
           "use 'instcombine<no-verify-fixpoint>' and "
-          "do **not** file an issue.");
+          "do *not* file an issue.");
     }
   }
 
