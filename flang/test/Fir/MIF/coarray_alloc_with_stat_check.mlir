@@ -117,7 +117,8 @@ func.func @_QPdefault_init() {
   return
 }
 
-// CHECK-LABEL: func.func @_QPalloc_stat(%arg0: !fir.ref<i32> {fir.bindc_name = "s"}) {
+// CHECK-LABEL: func.func @_QPalloc_stat(
+// CHECK-SAME: %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "s"}) {
 // CHECK:   %[[VAL_0:.*]] = fir.alloca i64
 // CHECK:   %[[VAL_1:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 // CHECK:   %[[VAL_2:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_prif_coarray_handle_type{{.*}}>
@@ -128,38 +129,40 @@ func.func @_QPdefault_init() {
 // CHECK:   %[[VAL_7:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:   %[[VAL_8:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>, corank:1> {{.*}}
 // CHECK:   %[[VAL_9:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
-// CHECK:   %c0 = arith.constant 0 : index
-// CHECK:   %[[VAL_10:.*]] = fir.shape %c0 : (index) -> !fir.shape<1>
+// CHECK:   %[[C0:.*]] = arith.constant 0 : index
+// CHECK:   %[[VAL_10:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
 // CHECK:   %[[VAL_11:.*]] = fir.embox %[[VAL_9]](%[[VAL_10]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>, corank:1>
 // CHECK:   fir.store %[[VAL_11]] to %[[VAL_8]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>, corank:1>>
 // CHECK:   %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_8]] uniq_name("_QFalloc_statEa") fortran_attrs<allocatable> : {{.*}}
-// CHECK:   %[[VAL_13:.*]]:2 = hlfir.declare %arg0 dummy_scope %[[VAL_7]] arg 1 uniq_name("_QFalloc_statEs") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:   %[[VAL_13:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_7]] arg 1 uniq_name("_QFalloc_statEs") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:   %[[VAL_14:.*]] = fir.absent !fir.box<none>
-// CHECK:   %c1 = arith.constant 1 : index
-// CHECK:   %c10_i32 = arith.constant 10 : i32
-// CHECK:   %c0_i32 = arith.constant 0 : i32
-// CHECK:   %[[VAL_15:.*]] = fir.convert %[[VAL_12]]#0 : {{.*}} -> !fir.ref<!fir.box<none>>
-// CHECK:   %[[VAL_16:.*]] = fir.convert %c1 : (index) -> i64
-// CHECK:   %[[VAL_17:.*]] = fir.convert %c10_i32 : (i32) -> i64
-// CHECK:   fir.call @_FortranAAllocatableSetBounds(%[[VAL_15]], %c0_i32, %[[VAL_16]], %[[VAL_17]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
-// CHECK:   %c1_i64 = arith.constant 1 : i64
-// CHECK:   %c0_0 = arith.constant 0 : index
-// CHECK:   %[[VAL_18:.*]] = fir.coordinate_of %[[VAL_5]], %c0_0 : (!fir.ref<!fir.array<1xi64>>, index) -> !fir.ref<i64>
-// CHECK:   fir.store %c1_i64 to %[[VAL_18]] : !fir.ref<i64>
+// CHECK:   %[[C1:.*]] = arith.constant 1 : index
+// CHECK:   %[[C10_I32:.*]] = arith.constant 10 : i32
+// CHECK:   %[[C0_I32:.*]] = arith.constant 0 : i32
+// CHECK:   %[[VAL_15:.*]] = fir.convert %[[VAL_12]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>, corank:1>>) -> !fir.ref<!fir.box<none>>
+// CHECK:   %[[VAL_16:.*]] = fir.convert %[[C1]] : (index) -> i64
+// CHECK:   %[[VAL_17:.*]] = fir.convert %[[C10_I32]] : (i32) -> i64
+// CHECK:   fir.call @_FortranAAllocatableSetBounds(%[[VAL_15]], %[[C0_I32]], %[[VAL_16]], %[[VAL_17]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
+// CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
+// CHECK:   %[[C0_0:.*]] = arith.constant 0 : index
+// CHECK:   %[[VAL_18:.*]] = fir.coordinate_of %[[VAL_5]], %[[C0_0]] : (!fir.ref<!fir.array<1xi64>>, index) -> !fir.ref<i64>
+// CHECK:   fir.store %[[C1_I64]] to %[[VAL_18]] : !fir.ref<i64>
 // CHECK:   %[[VAL_19:.*]] = fir.embox %[[VAL_5]] : (!fir.ref<!fir.array<1xi64>>) -> !fir.box<!fir.array<1xi64>>
 // CHECK:   %[[VAL_20:.*]] = fir.embox %[[VAL_4]] : (!fir.ref<!fir.array<0xi64>>) -> !fir.box<!fir.array<0xi64>>
 // CHECK:   %[[VAL_21:.*]] = fir.zero_bits (!fir.ref<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>) -> ()
-// CHECK:   %[[VAL_22:.*]] = fir.emboxproc %[[VAL_21]] : {{.*}}
-// CHECK:   fir.store %[[VAL_22]] to %[[VAL_3]] : {{.*}}
+// CHECK:   %[[VAL_22:.*]] = fir.emboxproc %[[VAL_21]] : ((!fir.ref<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>) -> ()) -> !fir.boxproc<{{.*}}>
+// CHECK:   fir.store %[[VAL_22]] to %[[VAL_3]] : !fir.ref<!fir.boxproc<{{.*}}>>
 // CHECK:   %[[VAL_23:.*]] = fir.load %[[VAL_12]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>, corank:1>>
 // CHECK:   %[[VAL_24:.*]] = fir.box_elesize %[[VAL_23]] : (!fir.box<!fir.heap<!fir.array<?xi32>>, corank:1>) -> i64
-// CHECK:   %[[VAL_25:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{[0-9]+}}>>
-// CHECK:   %c30_i32 = arith.constant 30 : i32
+// CHECK:   %[[VAL_25:.*]] = fir.address_of(@{{.*}}) : !fir.ref<!fir.char<1,{{[0-9]+}}>>
+// CHECK:   %[[C30_I32:.*]] = arith.constant 30 : i32
 // CHECK:   %[[VAL_26:.*]] = fir.convert %[[VAL_23]] : (!fir.box<!fir.heap<!fir.array<?xi32>>, corank:1>) -> !fir.box<none>
 // CHECK:   %[[VAL_27:.*]] = fir.convert %[[VAL_25]] : (!fir.ref<!fir.char<1,{{[0-9]+}}>>) -> !fir.ref<i8>
-// CHECK:   %[[VAL_28:.*]] = fir.call @_FortranASize(%[[VAL_26]], %[[VAL_27]], %c30_i32) : (!fir.box<none>, !fir.ref<i8>, i32) -> i64
+// CHECK:   %[[VAL_28:.*]] = fir.call @_FortranASize(%[[VAL_26]], %[[VAL_27]], %[[C30_I32]]) : (!fir.box<none>, !fir.ref<i8>, i32) -> i64
 // CHECK:   %[[VAL_29:.*]] = arith.muli %[[VAL_24]], %[[VAL_28]] : i64
 // CHECK:   fir.store %[[VAL_29]] to %[[VAL_0]] : !fir.ref<i64>
+// CHECK:   %[[C0_I32_1:.*]] = arith.constant 0 : i32
+// CHECK:   fir.store %[[C0_I32_1]] to %[[VAL_6]] : !fir.ref<i32>
 // CHECK:   %[[VAL_30:.*]] = fir.absent !fir.box<!fir.char<1,?>>
 // CHECK:   %[[VAL_31:.*]] = fir.convert %[[VAL_19]] : (!fir.box<!fir.array<1xi64>>) -> !fir.box<!fir.array<?xi64>>
 // CHECK:   %[[VAL_32:.*]] = fir.convert %[[VAL_20]] : (!fir.box<!fir.array<0xi64>>) -> !fir.box<!fir.array<?xi64>>
@@ -167,40 +170,40 @@ func.func @_QPdefault_init() {
 // CHECK:   %[[VAL_34:.*]] = fir.convert %[[VAL_2]] : {{.*}} -> !fir.ref<none>
 // CHECK:   %[[VAL_35:.*]] = fir.convert %[[VAL_14]] : (!fir.box<none>) -> !fir.box<!fir.char<1,?>>
 // CHECK:   fir.call @_QMprifPprif_allocate_coarray(%[[VAL_31]], %[[VAL_32]], %[[VAL_0]], %[[VAL_33]], %[[VAL_34]], %[[VAL_1]], %[[VAL_6]], %[[VAL_35]], %[[VAL_30]]) : {{.*}} -> ()
-// CHECK:   %[[VAL_36:.*]] = fir.address_of(@_QFalloc_statEa_coarray_handle) : {{.*}}
-// CHECK:   fir.copy %[[VAL_2]] to %[[VAL_36]] : {{.*}}
-// CHECK:   %c0_i32_1 = arith.constant 0 : i32
-// CHECK:   %[[VAL_37:.*]] = fir.load %[[VAL_6]] : !fir.ref<i32>
-// CHECK:   %[[VAL_38:.*]] = arith.cmpi eq, %[[VAL_37]], %c0_i32_1 : i32
-// CHECK:   cf.cond_br %[[VAL_38]], ^bb1, ^bb2
-// CHECK: ^bb1:
+// CHECK:   %[[C0_I32_2:.*]] = arith.constant 0 : i32
+// CHECK:   %[[VAL_36:.*]] = fir.load %[[VAL_6]] : !fir.ref<i32>
+// CHECK:   %[[VAL_37:.*]] = arith.cmpi eq, %[[VAL_36]], %[[C0_I32_2]] : i32
+// CHECK:   cf.cond_br %[[VAL_37]], ^bb1, ^bb2
+// CHECK: ^bb1:  // pred: ^bb0
+// CHECK:   %[[VAL_38:.*]] = fir.address_of(@_QFalloc_statEa_coarray_handle) : {{.*}}
+// CHECK:   fir.copy %[[VAL_2]] to %[[VAL_38]] : {{.*}}
 // CHECK:   %[[VAL_39:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 // CHECK:   %[[VAL_40:.*]] = fir.coordinate_of %[[VAL_1]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 // CHECK:   %[[VAL_41:.*]] = fir.load %[[VAL_40]] : !fir.ref<i64>
-// CHECK:   %[[VAL_42:.*]] = fir.convert %[[VAL_12]]#0 : {{.*}} -> !fir.ref<!fir.box<none>>
+// CHECK:   %[[VAL_42:.*]] = fir.convert %[[VAL_12]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>, corank:1>>) -> !fir.ref<!fir.box<none>>
 // CHECK:   %[[VAL_43:.*]] = fir.convert %[[VAL_41]] : (i64) -> !fir.llvm_ptr<i8>
 // CHECK:   fir.call @_FortranAAllocatableSetBaseAddr(%[[VAL_42]], %[[VAL_43]]) : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
 // CHECK:   cf.br ^bb2
-// CHECK: ^bb2:
+// CHECK: ^bb2:  // 2 preds: ^bb0, ^bb1
 // CHECK:   %[[VAL_44:.*]] = fir.load %[[VAL_6]] : !fir.ref<i32>
 // CHECK:   fir.store %[[VAL_44]] to %[[VAL_13]]#0 : !fir.ref<i32>
-// CHECK:   %c6_i32 = arith.constant 6 : i32
-// CHECK:   %[[VAL_45:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,48>>
+// CHECK:   %[[C6_I32:.*]] = arith.constant 6 : i32
+// CHECK:   %[[VAL_45:.*]] = fir.address_of(@{{.*}}) : !fir.ref<!fir.char<1,48>>
 // CHECK:   %[[VAL_46:.*]] = fir.convert %[[VAL_45]] : (!fir.ref<!fir.char<1,48>>) -> !fir.ref<i8>
-// CHECK:   %c5_i32 = arith.constant 5 : i32
-// CHECK:   %[[VAL_47:.*]] = fir.call @_FortranAioBeginExternalListOutput(%c6_i32, %[[VAL_46]], %c5_i32) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+// CHECK:   %[[C5_I32:.*]] = arith.constant 5 : i32
+// CHECK:   %[[VAL_47:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[C6_I32]], %[[VAL_46]], %[[C5_I32]]) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 // CHECK:   %[[VAL_48:.*]] = fir.load %[[VAL_12]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>, corank:1>>
 // CHECK:   %[[VAL_49:.*]] = fir.box_addr %[[VAL_48]] : (!fir.box<!fir.heap<!fir.array<?xi32>>, corank:1>) -> !fir.heap<!fir.array<?xi32>>
 // CHECK:   %[[VAL_50:.*]] = fir.convert %[[VAL_49]] : (!fir.heap<!fir.array<?xi32>>) -> i64
-// CHECK:   %c0_i64 = arith.constant 0 : i64
-// CHECK:   %[[VAL_51:.*]] = arith.cmpi ne, %[[VAL_50]], %c0_i64 : i64
+// CHECK:   %[[C0_I64:.*]] = arith.constant 0 : i64
+// CHECK:   %[[VAL_51:.*]] = arith.cmpi ne, %[[VAL_50]], %[[C0_I64]] : i64
 // CHECK:   %[[VAL_52:.*]] = fir.call @_FortranAioOutputLogical(%[[VAL_47]], %[[VAL_51]]) fastmath<contract> : (!fir.ref<i8>, i1) -> i1
 // CHECK:   %[[VAL_53:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_47]]) fastmath<contract> : (!fir.ref<i8>) -> i32
 // CHECK:   %[[VAL_54:.*]] = fir.load %[[VAL_12]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>, corank:1>>
 // CHECK:   %[[VAL_55:.*]] = fir.box_addr %[[VAL_54]] : (!fir.box<!fir.heap<!fir.array<?xi32>>, corank:1>) -> !fir.heap<!fir.array<?xi32>>
 // CHECK:   %[[VAL_56:.*]] = fir.convert %[[VAL_55]] : (!fir.heap<!fir.array<?xi32>>) -> i64
-// CHECK:   %c0_i64_2 = arith.constant 0 : i64
-// CHECK:   %[[VAL_57:.*]] = arith.cmpi ne, %[[VAL_56]], %c0_i64_2 : i64
+// CHECK:   %[[C0_I64_3:.*]] = arith.constant 0 : i64
+// CHECK:   %[[VAL_57:.*]] = arith.cmpi ne, %[[VAL_56]], %[[C0_I64_3]] : i64
 // CHECK:   fir.if %[[VAL_57]] {
 // CHECK:     %[[VAL_58:.*]] = fir.absent !fir.box<none>
 // CHECK:     %[[VAL_59:.*]] = fir.absent !fir.ref<i32>
@@ -208,16 +211,17 @@ func.func @_QPdefault_init() {
 // CHECK:     %[[VAL_61:.*]] = fir.absent !fir.box<!fir.char<1,?>>
 // CHECK:     %[[VAL_62:.*]] = fir.convert %[[VAL_60]] : {{.*}} -> !fir.ref<none>
 // CHECK:     %[[VAL_63:.*]] = fir.convert %[[VAL_58]] : (!fir.box<none>) -> !fir.box<!fir.char<1,?>>
-// CHECK:     fir.call @_QMprifPprif_deallocate_coarray(%[[VAL_62]], %[[VAL_59]], %[[VAL_63]], %[[VAL_61]]) : {{.*}} -> ()
+// CHECK:     fir.call @_QMprifPprif_deallocate_coarray(%[[VAL_62]], %[[VAL_59]], %[[VAL_63]], %[[VAL_61]]) : (!fir.ref<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
 // CHECK:     %[[VAL_64:.*]] = fir.absent !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>, corank:1>>
-// CHECK:     %[[VAL_65:.*]] = fir.convert %[[VAL_12]]#0 : {{.*}} -> !fir.ref<!fir.box<none>>
-// CHECK:     %[[VAL_66:.*]] = fir.convert %[[VAL_64]] : {{.*}} -> !fir.llvm_ptr<i8>
+// CHECK:     %[[VAL_65:.*]] = fir.convert %[[VAL_12]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>, corank:1>>) -> !fir.ref<!fir.box<none>>
+// CHECK:     %[[VAL_66:.*]] = fir.convert %[[VAL_64]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>, corank:1>>) -> !fir.llvm_ptr<i8>
 // CHECK:     fir.call @_FortranAPointerAssociateScalar(%[[VAL_65]], %[[VAL_66]]) : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
 // CHECK:   }
 // CHECK:   return
 // CHECK: }
 
-// CHECK-LABEL: func.func @_QPalloc_event_stat(%arg0: !fir.ref<i32> {fir.bindc_name = "s"}) {
+// CHECK-LABEL: func.func @_QPalloc_event_stat(
+// CHECK-SAME: %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "s"}) {
 // CHECK:   %[[VAL_0:.*]] = fir.alloca i64
 // CHECK:   %[[VAL_1:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 // CHECK:   %[[VAL_2:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_prif_coarray_handle_type{{.*}}>
@@ -226,17 +230,17 @@ func.func @_QPdefault_init() {
 // CHECK:   %[[VAL_5:.*]] = fir.alloca !fir.array<1xi64>
 // CHECK:   %[[VAL_6:.*]] = fir.alloca i32
 // CHECK:   %[[VAL_7:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:   %[[VAL_8:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1> {{.*}}
-// CHECK:   %[[VAL_9:.*]] = fir.zero_bits !fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>
-// CHECK:   %[[VAL_10:.*]] = fir.embox %[[VAL_9]] : {{.*}} -> !fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>
+// CHECK:   %[[VAL_8:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1> {{.*}}uniq_name = "_QFalloc_event_statEev"
+// CHECK:   %[[VAL_9:.*]] = fir.zero_bits !fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}
+// CHECK:   %[[VAL_10:.*]] = fir.embox %[[VAL_9]] : {{.*}}
 // CHECK:   fir.store %[[VAL_10]] to %[[VAL_8]] : {{.*}}
 // CHECK:   %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_8]] uniq_name("_QFalloc_event_statEev") fortran_attrs<allocatable> : {{.*}}
-// CHECK:   %[[VAL_12:.*]]:2 = hlfir.declare %arg0 dummy_scope %[[VAL_7]] arg 1 uniq_name("_QFalloc_event_statEs") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:   %[[VAL_12:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_7]] arg 1 uniq_name("_QFalloc_event_statEs") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:   %[[VAL_13:.*]] = fir.absent !fir.box<none>
-// CHECK:   %c1_i64 = arith.constant 1 : i64
-// CHECK:   %c0 = arith.constant 0 : index
-// CHECK:   %[[VAL_14:.*]] = fir.coordinate_of %[[VAL_5]], %c0 : (!fir.ref<!fir.array<1xi64>>, index) -> !fir.ref<i64>
-// CHECK:   fir.store %c1_i64 to %[[VAL_14]] : !fir.ref<i64>
+// CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
+// CHECK:   %[[C0:.*]] = arith.constant 0 : index
+// CHECK:   %[[VAL_14:.*]] = fir.coordinate_of %[[VAL_5]], %[[C0]] : (!fir.ref<!fir.array<1xi64>>, index) -> !fir.ref<i64>
+// CHECK:   fir.store %[[C1_I64]] to %[[VAL_14]] : !fir.ref<i64>
 // CHECK:   %[[VAL_15:.*]] = fir.embox %[[VAL_5]] : (!fir.ref<!fir.array<1xi64>>) -> !fir.box<!fir.array<1xi64>>
 // CHECK:   %[[VAL_16:.*]] = fir.embox %[[VAL_4]] : (!fir.ref<!fir.array<0xi64>>) -> !fir.box<!fir.array<0xi64>>
 // CHECK:   %[[VAL_17:.*]] = fir.zero_bits (!fir.ref<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>) -> ()
@@ -245,6 +249,8 @@ func.func @_QPdefault_init() {
 // CHECK:   %[[VAL_19:.*]] = fir.load %[[VAL_11]]#0 : {{.*}}
 // CHECK:   %[[VAL_20:.*]] = fir.box_elesize %[[VAL_19]] : {{.*}} -> i64
 // CHECK:   fir.store %[[VAL_20]] to %[[VAL_0]] : !fir.ref<i64>
+// CHECK:   %[[C0_I32:.*]] = arith.constant 0 : i32
+// CHECK:   fir.store %[[C0_I32]] to %[[VAL_6]] : !fir.ref<i32>
 // CHECK:   %[[VAL_21:.*]] = fir.absent !fir.box<!fir.char<1,?>>
 // CHECK:   %[[VAL_22:.*]] = fir.convert %[[VAL_15]] : (!fir.box<!fir.array<1xi64>>) -> !fir.box<!fir.array<?xi64>>
 // CHECK:   %[[VAL_23:.*]] = fir.convert %[[VAL_16]] : (!fir.box<!fir.array<0xi64>>) -> !fir.box<!fir.array<?xi64>>
@@ -252,36 +258,36 @@ func.func @_QPdefault_init() {
 // CHECK:   %[[VAL_25:.*]] = fir.convert %[[VAL_2]] : {{.*}} -> !fir.ref<none>
 // CHECK:   %[[VAL_26:.*]] = fir.convert %[[VAL_13]] : (!fir.box<none>) -> !fir.box<!fir.char<1,?>>
 // CHECK:   fir.call @_QMprifPprif_allocate_coarray(%[[VAL_22]], %[[VAL_23]], %[[VAL_0]], %[[VAL_24]], %[[VAL_25]], %[[VAL_1]], %[[VAL_6]], %[[VAL_26]], %[[VAL_21]]) : {{.*}} -> ()
-// CHECK:   %[[VAL_27:.*]] = fir.address_of(@_QFalloc_event_statEev_coarray_handle) : {{.*}}
-// CHECK:   fir.copy %[[VAL_2]] to %[[VAL_27]] : {{.*}}
-// CHECK:   %c0_i32 = arith.constant 0 : i32
-// CHECK:   %[[VAL_28:.*]] = fir.load %[[VAL_6]] : !fir.ref<i32>
-// CHECK:   %[[VAL_29:.*]] = arith.cmpi eq, %[[VAL_28]], %c0_i32 : i32
-// CHECK:   cf.cond_br %[[VAL_29]], ^bb1, ^bb2
-// CHECK: ^bb1:
+// CHECK:   %[[C0_I32_0:.*]] = arith.constant 0 : i32
+// CHECK:   %[[VAL_27:.*]] = fir.load %[[VAL_6]] : !fir.ref<i32>
+// CHECK:   %[[VAL_28:.*]] = arith.cmpi eq, %[[VAL_27]], %[[C0_I32_0]] : i32
+// CHECK:   cf.cond_br %[[VAL_28]], ^bb1, ^bb2
+// CHECK: ^bb1:  // pred: ^bb0
+// CHECK:   %[[VAL_29:.*]] = fir.address_of(@_QFalloc_event_statEev_coarray_handle) : {{.*}}
+// CHECK:   fir.copy %[[VAL_2]] to %[[VAL_29]] : {{.*}}
 // CHECK:   %[[VAL_30:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 // CHECK:   %[[VAL_31:.*]] = fir.coordinate_of %[[VAL_1]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 // CHECK:   %[[VAL_32:.*]] = fir.load %[[VAL_31]] : !fir.ref<i64>
 // CHECK:   %[[VAL_33:.*]] = fir.convert %[[VAL_11]]#0 : {{.*}} -> !fir.ref<!fir.box<none>>
 // CHECK:   %[[VAL_34:.*]] = fir.convert %[[VAL_32]] : (i64) -> !fir.llvm_ptr<i8>
 // CHECK:   fir.call @_FortranAAllocatableSetBaseAddr(%[[VAL_33]], %[[VAL_34]]) : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
-// CHECK:   %[[VAL_35:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{[0-9]+}}>>
-// CHECK:   %c76_i32 = arith.constant 76 : i32
+// CHECK:   %[[VAL_35:.*]] = fir.address_of(@{{.*}}) : !fir.ref<!fir.char<1,{{[0-9]+}}>>
+// CHECK:   %[[C76_I32:.*]] = arith.constant 76 : i32
 // CHECK:   %[[VAL_36:.*]] = fir.convert %[[VAL_11]]#0 : {{.*}} -> !fir.box<none>
 // CHECK:   %[[VAL_37:.*]] = fir.convert %[[VAL_35]] : (!fir.ref<!fir.char<1,{{[0-9]+}}>>) -> !fir.ref<i8>
-// CHECK:   fir.call @_FortranAInitialize(%[[VAL_36]], %[[VAL_37]], %c76_i32) : (!fir.box<none>, !fir.ref<i8>, i32) -> ()
+// CHECK:   fir.call @_FortranAInitialize(%[[VAL_36]], %[[VAL_37]], %[[C76_I32]]) : (!fir.box<none>, !fir.ref<i8>, i32) -> ()
 // CHECK:   %[[VAL_38:.*]] = fir.absent !fir.box<!fir.char<1,?>>
 // CHECK:   %[[VAL_39:.*]] = fir.convert %[[VAL_13]] : (!fir.box<none>) -> !fir.box<!fir.char<1,?>>
 // CHECK:   fir.call @_QMprifPprif_sync_all(%[[VAL_6]], %[[VAL_39]], %[[VAL_38]]) : (!fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
 // CHECK:   cf.br ^bb2
-// CHECK: ^bb2:
+// CHECK: ^bb2:  // 2 preds: ^bb0, ^bb1
 // CHECK:   %[[VAL_40:.*]] = fir.load %[[VAL_6]] : !fir.ref<i32>
 // CHECK:   fir.store %[[VAL_40]] to %[[VAL_12]]#0 : !fir.ref<i32>
 // CHECK:   %[[VAL_41:.*]] = fir.load %[[VAL_11]]#0 : {{.*}}
 // CHECK:   %[[VAL_42:.*]] = fir.box_addr %[[VAL_41]] : {{.*}}
 // CHECK:   %[[VAL_43:.*]] = fir.convert %[[VAL_42]] : {{.*}} -> i64
-// CHECK:   %c0_i64 = arith.constant 0 : i64
-// CHECK:   %[[VAL_44:.*]] = arith.cmpi ne, %[[VAL_43]], %c0_i64 : i64
+// CHECK:   %[[C0_I64:.*]] = arith.constant 0 : i64
+// CHECK:   %[[VAL_44:.*]] = arith.cmpi ne, %[[VAL_43]], %[[C0_I64]] : i64
 // CHECK:   fir.if %[[VAL_44]] {
 // CHECK:     %[[VAL_45:.*]] = fir.absent !fir.box<none>
 // CHECK:     %[[VAL_46:.*]] = fir.absent !fir.ref<i32>
@@ -289,8 +295,8 @@ func.func @_QPdefault_init() {
 // CHECK:     %[[VAL_48:.*]] = fir.absent !fir.box<!fir.char<1,?>>
 // CHECK:     %[[VAL_49:.*]] = fir.convert %[[VAL_47]] : {{.*}} -> !fir.ref<none>
 // CHECK:     %[[VAL_50:.*]] = fir.convert %[[VAL_45]] : (!fir.box<none>) -> !fir.box<!fir.char<1,?>>
-// CHECK:     fir.call @_QMprifPprif_deallocate_coarray(%[[VAL_49]], %[[VAL_46]], %[[VAL_50]], %[[VAL_48]]) : {{.*}} -> ()
-// CHECK:     %[[VAL_51:.*]] = fir.absent !fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>
+// CHECK:     fir.call @_QMprifPprif_deallocate_coarray(%[[VAL_49]], %[[VAL_46]], %[[VAL_50]], %[[VAL_48]]) : (!fir.ref<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
+// CHECK:     %[[VAL_51:.*]] = fir.absent !fir.ref<!fir.box<{{.*}}
 // CHECK:     %[[VAL_52:.*]] = fir.convert %[[VAL_11]]#0 : {{.*}} -> !fir.ref<!fir.box<none>>
 // CHECK:     %[[VAL_53:.*]] = fir.convert %[[VAL_51]] : {{.*}} -> !fir.llvm_ptr<i8>
 // CHECK:     fir.call @_FortranAPointerAssociateScalar(%[[VAL_52]], %[[VAL_53]]) : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
@@ -298,30 +304,29 @@ func.func @_QPdefault_init() {
 // CHECK:   return
 // CHECK: }
 
-
 // CHECK-LABEL: func.func @_QPdefault_init() {
-// CHECK-NEXT:   %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK-NEXT:   %[[VAL_1:.*]] = fir.address_of(@_QFdefault_initE.n.pad) : !fir.ref<!fir.char<1,3>>
-// CHECK-NEXT:   %c3 = arith.constant 3 : index
-// CHECK-NEXT:   %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] typeparams %c3 uniq_name("_QFdefault_initE.n.pad") fortran_attrs<target> : (!fir.ref<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>)
-// CHECK-NEXT:   %[[VAL_3:.*]] = fir.address_of(@_QFdefault_initE.di.t.pad) : !fir.ref<i64>
-// CHECK-NEXT:   %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] uniq_name("_QFdefault_initE.di.t.pad") fortran_attrs<target> : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-// CHECK-NEXT:   %[[VAL_5:.*]] = fir.address_of(@_QFdefault_initE.n.x) : !fir.ref<!fir.char<1>>
-// CHECK-NEXT:   %c1 = arith.constant 1 : index
-// CHECK-NEXT:   %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] typeparams %c1 uniq_name("_QFdefault_initE.n.x") fortran_attrs<target> : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
-// CHECK-NEXT:   %[[VAL_7:.*]] = fir.address_of(@_QFdefault_initE.di.t.x) : !fir.ref<i32>
-// CHECK-NEXT:   %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] uniq_name("_QFdefault_initE.di.t.x") fortran_attrs<target> : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-// CHECK-NEXT:   %[[VAL_9:.*]] = fir.address_of(@_QFdefault_initE.n.t) : !fir.ref<!fir.char<1>>
-// CHECK-NEXT:   %c1_0 = arith.constant 1 : index
-// CHECK-NEXT:   %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] typeparams %c1_0 uniq_name("_QFdefault_initE.n.t") fortran_attrs<target> : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
-// CHECK-NEXT:   %[[VAL_11:.*]] = fir.address_of(@_QFdefault_initEc) : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFdefault_initTt{pad:i64,x:i32}>>, corank:1>>
-// CHECK-NEXT:   %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] uniq_name("_QFdefault_initEc") : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QFdefault_initTt{pad:i64,x:i32}>>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.type<_QFdefault_initTt{pad:i64,x:i32}>>, corank:1>>, !fir.ref<!fir.box<!fir.heap<!fir.type<_QFdefault_initTt{pad:i64,x:i32}>>, corank:1>>)
-// CHECK-NEXT:   %[[VAL_13:.*]] = fir.address_of(@_QFdefault_initE.c.t) : !fir.ref<!fir.array<2x!fir.type<_QM__fortran_type_infoTcomponent{{.*}}>>>
-// CHECK-NEXT:   %c0 = arith.constant 0 : index
-// CHECK-NEXT:   %c2 = arith.constant 2 : index
-// CHECK-NEXT:   %[[VAL_14:.*]] = fir.shape_shift %c0, %c2 : (index, index) -> !fir.shapeshift<1>
-// CHECK-NEXT:   %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_13]](%[[VAL_14]]) uniq_name("_QFdefault_initE.c.t") fortran_attrs<target> : {{.*}}
-// CHECK-NEXT:   %[[VAL_16:.*]] = fir.address_of(@_QFdefault_initE.dt.t) : !fir.ref<!fir.type<_QM__fortran_type_infoTderivedtype{{.*}}>>
-// CHECK-NEXT:   %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_16]] uniq_name("_QFdefault_initE.dt.t") fortran_attrs<target> : {{.*}}
-// CHECK-NEXT:   return
-// CHECK-NEXT: }
+// CHECK:   %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
+// CHECK:   %[[VAL_1:.*]] = fir.address_of(@_QFdefault_initE.n.pad) : !fir.ref<!fir.char<1,3>>
+// CHECK:   %[[C3:.*]] = arith.constant 3 : index
+// CHECK:   %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] typeparams %[[C3]] uniq_name("_QFdefault_initE.n.pad") fortran_attrs<target> : (!fir.ref<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>)
+// CHECK:   %[[VAL_3:.*]] = fir.address_of(@_QFdefault_initE.di.t.pad) : !fir.ref<i64>
+// CHECK:   %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] uniq_name("_QFdefault_initE.di.t.pad") fortran_attrs<target> : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+// CHECK:   %[[VAL_5:.*]] = fir.address_of(@_QFdefault_initE.n.x) : !fir.ref<!fir.char<1>>
+// CHECK:   %[[C1:.*]] = arith.constant 1 : index
+// CHECK:   %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] typeparams %[[C1]] uniq_name("_QFdefault_initE.n.x") fortran_attrs<target> : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+// CHECK:   %[[VAL_7:.*]] = fir.address_of(@_QFdefault_initE.di.t.x) : !fir.ref<i32>
+// CHECK:   %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] uniq_name("_QFdefault_initE.di.t.x") fortran_attrs<target> : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:   %[[VAL_9:.*]] = fir.address_of(@_QFdefault_initE.n.t) : !fir.ref<!fir.char<1>>
+// CHECK:   %[[C1_0:.*]] = arith.constant 1 : index
+// CHECK:   %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] typeparams %[[C1_0]] uniq_name("_QFdefault_initE.n.t") fortran_attrs<target> : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+// CHECK:   %[[VAL_11:.*]] = fir.address_of(@_QFdefault_initEc) : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFdefault_initTt{pad:i64,x:i32}>>, corank:1>>
+// CHECK:   %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] uniq_name("_QFdefault_initEc") : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QFdefault_initTt{pad:i64,x:i32}>>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.type<_QFdefault_initTt{pad:i64,x:i32}>>, corank:1>>, !fir.ref<!fir.box<!fir.heap<!fir.type<_QFdefault_initTt{pad:i64,x:i32}>>, corank:1>>)
+// CHECK:   %[[VAL_13:.*]] = fir.address_of(@_QFdefault_initE.c.t) : !fir.ref<!fir.array<2x!fir.type<_QM__fortran_type_infoTcomponent{{.*}}
+// CHECK:   %[[C0:.*]] = arith.constant 0 : index
+// CHECK:   %[[C2:.*]] = arith.constant 2 : index
+// CHECK:   %[[VAL_14:.*]] = fir.shape_shift %[[C0]], %[[C2]] : (index, index) -> !fir.shapeshift<1>
+// CHECK:   %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_13]](%[[VAL_14]]) uniq_name("_QFdefault_initE.c.t") fortran_attrs<target> : {{.*}}
+// CHECK:   %[[VAL_16:.*]] = fir.address_of(@_QFdefault_initE.dt.t) : !fir.ref<!fir.type<_QM__fortran_type_infoTderivedtype{{.*}}
+// CHECK:   %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_16]] uniq_name("_QFdefault_initE.dt.t") fortran_attrs<target> : {{.*}}
+// CHECK:   return
+// CHECK: }
