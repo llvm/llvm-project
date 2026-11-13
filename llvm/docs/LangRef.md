@@ -2907,7 +2907,7 @@ fn -> other_fn -> other_fn ; fn is norecurse
     the floating point mode appropriately before function entry.
 
     If the input mode is `preservesign`, or `positivezero`,
-    a floating-point operation must treat any input denormal value as
+    a floating-point operation may treat any input denormal value as
     zero. In some situations, if an instruction does not respect this
     mode, the input may need to be converted to 0 as if by
     `@llvm.canonicalize` during lowering for correctness.
