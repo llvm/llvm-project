@@ -74,11 +74,6 @@ define void @memory_intrinsics(ptr %dst, ptr %src) {
   ret void
 }
 
-declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
-declare void @llvm.memmove.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1 immarg)
-declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
-declare i32 @llvm.x86.atomic.bts.i32(ptr, i8 immarg)
-
 !0 = !{i32 0, !4}
 !1 = !{i32 1, !5}
 !2 = !{i32 0, !5, i32 1, !4}
