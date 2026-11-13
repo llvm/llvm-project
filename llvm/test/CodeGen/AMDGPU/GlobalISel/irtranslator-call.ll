@@ -1633,7 +1633,8 @@ define amdgpu_kernel void @test_call_external_void_func_f16_imm() #0 {
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; CHECK-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C3]](i32)
   ; CHECK-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[C]](f16)
+  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(i16) = G_CONSTANT i16 17408
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[C4]](i16)
   ; CHECK-NEXT:   $vgpr0 = COPY [[ANYEXT]](i32)
   ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
   ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY20]](<4 x s32>)
@@ -5573,7 +5574,8 @@ define void @test_call_external_void_func_f16_inreg(half inreg %arg) #0 {
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY2]]
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY1]]
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST]](f16)
+  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(i16) = G_BITCAST [[BITCAST]](f16)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST1]](i16)
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[ANYEXT]](i32)
   ; CHECK-NEXT:   $sgpr16 = COPY [[INTRINSIC_CONVERGENT]](i32)
   ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
@@ -5622,7 +5624,8 @@ define void @test_call_external_void_func_bf16_inreg(bfloat inreg %arg) #0 {
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY2]]
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY1]]
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST]](bf16)
+  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(i16) = G_BITCAST [[BITCAST]](bf16)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST1]](i16)
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[ANYEXT]](i32)
   ; CHECK-NEXT:   $sgpr16 = COPY [[INTRINSIC_CONVERGENT]](i32)
   ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3

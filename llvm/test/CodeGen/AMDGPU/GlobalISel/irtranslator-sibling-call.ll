@@ -1309,7 +1309,8 @@ define hidden fastcc half @sibling_call_f16_fastcc_f16(half %a) #1 {
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
-  ; GCN-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST]](f16)
+  ; GCN-NEXT:   [[BITCAST1:%[0-9]+]]:_(i16) = G_BITCAST [[BITCAST]](f16)
+  ; GCN-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST1]](i16)
   ; GCN-NEXT:   $vgpr0 = COPY [[ANYEXT]](i32)
   ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; GCN-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY19]](<4 x s32>)

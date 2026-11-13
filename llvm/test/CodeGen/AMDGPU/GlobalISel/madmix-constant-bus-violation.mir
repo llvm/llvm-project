@@ -28,9 +28,11 @@ body: |
     %1:sgpr(i32) = COPY $sgpr1
     %2:sgpr(i32) = G_CONSTANT i32 16
     %3:sgpr(i32) = G_LSHR %0:sgpr, %2:sgpr(i32)
-    %4:sgpr(f16) = G_TRUNC %3:sgpr(i32)
+    %14:sgpr(i16) = G_TRUNC %3
+    %4:sgpr(f16) = G_BITCAST %14
     %5:sgpr(i32) = G_LSHR %1:sgpr, %2:sgpr(i32)
-    %6:sgpr(f16) = G_TRUNC %5:sgpr(i32)
+    %15:sgpr(i16) = G_TRUNC %5
+    %6:sgpr(f16) = G_BITCAST %15
     %7:vgpr(f16) = COPY %4:sgpr(f16)
     %8:vgpr(f32) = G_FPEXT %7:vgpr(f16)
     %9:vgpr(f16) = COPY %6:sgpr(f16)

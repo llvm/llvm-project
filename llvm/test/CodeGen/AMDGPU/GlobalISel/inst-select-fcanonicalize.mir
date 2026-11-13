@@ -54,7 +54,8 @@ body: |
     ; GFX11-FAKE16-NEXT: [[V_MAX_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_MAX_F16_fake16_e64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX11-FAKE16-NEXT: S_ENDPGM 0, implicit [[V_MAX_F16_fake16_e64_]]
     %0:vgpr(i32) = COPY $vgpr0
-    %1:vgpr(f16) = G_TRUNC %0
+    %3:vgpr(i16) = G_TRUNC %0
+    %1:vgpr(f16) = G_BITCAST %3
     %2:vgpr(f16) = G_FCANONICALIZE %1
     S_ENDPGM 0, implicit %2
 ...
@@ -108,7 +109,8 @@ body: |
     ; GFX11-FAKE16-NEXT: [[V_MAX_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_MAX_F16_fake16_e64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX11-FAKE16-NEXT: S_ENDPGM 0, implicit [[V_MAX_F16_fake16_e64_]]
     %0:vgpr(i32) = COPY $vgpr0
-    %1:vgpr(f16) = G_TRUNC %0
+    %3:vgpr(i16) = G_TRUNC %0
+    %1:vgpr(f16) = G_BITCAST %3
     %2:vgpr(f16) = G_FCANONICALIZE %1
     S_ENDPGM 0, implicit %2
 ...
