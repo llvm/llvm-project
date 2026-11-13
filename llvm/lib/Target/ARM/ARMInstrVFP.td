@@ -55,15 +55,14 @@ def arm_fmdrr  : SDNode<"ARMISD::VMOVDRR", SDT_VMOVDRR>;
 // double to two gprs.
 def arm_fmrrd  : SDNode<"ARMISD::VMOVRRD", SDT_VMOVRRD>;
 
-// move gpr to single, used for f32 literal constructed in a gpr
-def arm_vmovsr  : SDNode<"ARMISD::VMOVSR", SDT_VMOVSR>;
-
 def SDT_VMOVhr : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVT<1, i32>] >;
 def SDT_VMOVrh : SDTypeProfile<1, 1, [SDTCisVT<0, i32>, SDTCisFP<1>] >;
 
 // Move H <-> R, clearing top 16 bits
 def arm_vmovhr : SDNode<"ARMISD::VMOVhr", SDT_VMOVhr>;
 def arm_vmovrh : SDNode<"ARMISD::VMOVrh", SDT_VMOVrh>;
+def arm_vmovsr : SDNode<"ARMISD::VMOVsr", SDT_VMOVhr>;
+def arm_vmovrs : SDNode<"ARMISD::VMOVrs", SDT_VMOVrh>;
 
 //===----------------------------------------------------------------------===//
 // Operand Definitions.
@@ -1269,7 +1268,9 @@ def VMOVSR : AVConv4I<0b11100000, 0b1010,
   let D = VFPNeonDomain;
 }
 } // isMoveReg
-def : Pat<(arm_vmovsr GPR:$Rt), (VMOVSR GPR:$Rt)>, Requires<[HasFPRegs, UseVMOVSR]>;
+
+def : Pat<(f32 (arm_vmovsr (i32 GPR:$Rt))),
+          (VMOVSR GPR:$Rt)>, Requires<[HasFPRegs, UseVMOVSR]>;
 
 let hasSideEffects = 0 in {
 def VMOVRRD  : AVConv3I<0b11000101, 0b1011,
@@ -1444,10 +1445,22 @@ def VMOVHR : AVConv4I<0b11100000, 0b1001,
   let isUnpredicable = 1;
 }
 
-def : FPRegs16Pat<(arm_vmovrh (f16 HPR:$Sn)), (VMOVRH (f16 HPR:$Sn))>;
-def : FPRegs16Pat<(arm_vmovrh (bf16 HPR:$Sn)), (VMOVRH (bf16 HPR:$Sn))>;
-def : FPRegs16Pat<(f16 (arm_vmovhr rGPR:$Rt)), (VMOVHR rGPR:$Rt)>;
-def : FPRegs16Pat<(bf16 (arm_vmovhr rGPR:$Rt)), (VMOVHR rGPR:$Rt)>;
+def : FPRegs16Pat<(arm_vmovrh (f16 HPR:$Sn)),
+                  (VMOVRH (f16 HPR:$Sn))>;
+def : FPRegs16Pat<(arm_vmovrh (bf16 HPR:$Sn)),
+                  (VMOVRH (bf16 HPR:$Sn))>;
+def : FPRegs16Pat<(f16 (arm_vmovhr rGPR:$Rt)),
+                  (VMOVHR rGPR:$Rt)>;
+def : FPRegs16Pat<(bf16 (arm_vmovhr rGPR:$Rt)),
+                  (VMOVHR rGPR:$Rt)>;
+def : Pat<(f16 (bitconvert (bf16 HPR:$Sn))),
+          (f16 HPR:$Sn)>;
+def : Pat<(bf16 (bitconvert (f16 HPR:$Sn))),
+          (bf16 HPR:$Sn)>;
+def : Pat<(bf16 (arm_vmovsr (i32 GPR:$Rn))),
+          (COPY_TO_REGCLASS $Rn, HPR)>;
+def : Pat<(i32 (arm_vmovrs (bf16 HPR:$Sn))),
+          (COPY_TO_REGCLASS $Sn, GPR)>;
 
 // FMRDH: SPR -> GPR
 // FMRDL: SPR -> GPR
