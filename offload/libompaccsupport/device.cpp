@@ -36,6 +36,7 @@
 #include <cstdio>
 #include <limits>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
 
@@ -682,6 +683,290 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
     return OFFLOAD_FAIL;
   }
   return OFFLOAD_SUCCESS;
+}
+
+// Returns false if another path is needed; \p Unsupported is set if liboffload
+// reported the copy as unsupported.
+static llvm::Expected<bool> memcpy3DImpl(
+    ol_queue_handle_t Queue, void *DstPtr, ol_device_handle_t DstHandle,
+    const ol_memcpy3d_layout_t &DstLayout, const void *SrcPtr,
+    ol_device_handle_t SrcHandle, const ol_memcpy3d_layout_t &SrcLayout,
+    ol_dimensions_t Size, bool &Unsupported) {
+  if (auto Res = olMemcpy3D(Queue, DstPtr, DstHandle, &DstLayout, SrcPtr,
+                            SrcHandle, &SrcLayout, Size)) {
+    Unsupported = Res->Code == OL_ERRC_UNSUPPORTED;
+    // The generic path accepts layouts that liboffload rejects.
+    if (Unsupported || Res->Code == OL_ERRC_INVALID_SIZE)
+      return false;
+    return createError(ErrorCode::BackendFailure,
+                       "failure in rectangular memcpy: %s", Res->Details);
+  }
+  return true;
+}
+
+// First byte of the region described by \p Layout.
+static char *regionStart(char *Base, const ol_memcpy3d_layout_t &Layout) {
+  return Base + Layout.Offset.x + Layout.Offset.y * Layout.Pitch +
+         Layout.Offset.z * Layout.SlicePitch;
+}
+
+llvm::Expected<bool> DeviceTy::dataMemcpy3D(
+    CopyDirTy Dir, void *DstPtr, const ol_memcpy3d_layout_t &DstLayout,
+    const void *SrcPtr, const ol_memcpy3d_layout_t &SrcLayout,
+    ol_dimensions_t Size, DeviceTy *PeerDev, AsyncInfoTy *AsyncInfo) {
+  assert((Dir != CopyDirTy::DeviceToDevice || PeerDev) &&
+         "DeviceToDevice needs a destination device");
+  ol_queue_handle_t Queue = nullptr;
+  if (AsyncInfo) {
+    Queue = AsyncInfo->getQueue();
+    if (!Queue)
+      return createError(ErrorCode::BackendFailure,
+                         "no queue available for rectangular memcpy");
+  }
+  ol_device_handle_t DstHandle;
+  ol_device_handle_t SrcHandle;
+  switch (Dir) {
+  case CopyDirTy::HostToDevice:
+    DstHandle = DeviceHandle;
+    SrcHandle = nullptr;
+    break;
+  case CopyDirTy::DeviceToHost:
+    DstHandle = nullptr;
+    SrcHandle = DeviceHandle;
+    break;
+  case CopyDirTy::DeviceToDevice:
+    DstHandle = PeerDev->DeviceHandle;
+    SrcHandle = DeviceHandle;
+    break;
+  }
+
+  bool Unsupported = false;
+  auto Result = memcpy3DImpl(Queue, DstPtr, DstHandle, DstLayout, SrcPtr,
+                             SrcHandle, SrcLayout, Size, Unsupported);
+  // Device-to-device may fail just because the devices cannot exchange data.
+  if (Unsupported && Dir != CopyDirTy::DeviceToDevice)
+    Memcpy3DUnsupported = true;
+  if (!Result || !*Result)
+    return Result;
+
+  // Report the copy as a single transfer, once it is known to be done this way.
+  void *DstStart = regionStart(static_cast<char *>(DstPtr), DstLayout);
+  void *SrcStart =
+      regionStart(static_cast<char *>(const_cast<void *>(SrcPtr)), SrcLayout);
+  int64_t Bytes = static_cast<int64_t>(Size.x) * Size.y * Size.z;
+  if (Dir != CopyDirTy::DeviceToDevice &&
+      (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER)) {
+    bool H2D = Dir == CopyDirTy::HostToDevice;
+    MappingInfo.printCopyInfo(H2D ? DstStart : SrcStart,
+                              H2D ? SrcStart : DstStart, Bytes, H2D,
+                              /*Entry=*/nullptr, /*HDTTMapPtr=*/nullptr);
+  }
+
+  // Tool anchors around the transfer.
+  // clang-format messes the following block so we need to disable it.
+  // clang-format off
+  OMPT_IF_BUILT(
+      // Device-to-device is reported as from_device, like dataExchange.
+      auto Callbacks =
+          RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>();
+      int32_t SrcID;
+      int32_t DstID;
+      switch (Dir) {
+      case CopyDirTy::HostToDevice:
+        Callbacks =
+            RegionInterface.getCallbacks<ompt_target_data_transfer_to_device>();
+        SrcID = omp_initial_device;
+        DstID = DeviceID;
+        break;
+      case CopyDirTy::DeviceToHost:
+        SrcID = DeviceID;
+        DstID = omp_initial_device;
+        break;
+      case CopyDirTy::DeviceToDevice:
+        SrcID = DeviceID;
+        DstID = PeerDev->DeviceID;
+        break;
+      }
+      InterfaceRAII TargetDataRAII(
+          Callbacks, SrcID, SrcStart, DstID, DstStart, Bytes,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
+  // clang-format on
+
+  return true;
+}
+
+llvm::Error forEachMemcpyRectRow(
+    void *Dst, const void *Src, const MemcpyRectTy &Rect,
+    llvm::function_ref<llvm::Error(void *, const void *, size_t)> CopyRow) {
+  const auto [ElementSize, NumDims, Volume, DstOffsets, SrcOffsets,
+              DstDimensions, SrcDimensions] = Rect;
+  for (int I = 0; I < NumDims; ++I)
+    if (!Volume[I])
+      return llvm::Error::success();
+
+  llvm::SmallVector<size_t, 4> DstStride(NumDims), SrcStride(NumDims);
+  DstStride[NumDims - 1] = SrcStride[NumDims - 1] = ElementSize;
+  for (int I = NumDims - 2; I >= 0; --I) {
+    DstStride[I] = DstStride[I + 1] * DstDimensions[I + 1];
+    SrcStride[I] = SrcStride[I + 1] * SrcDimensions[I + 1];
+  }
+  size_t DstBase = 0, SrcBase = 0;
+  for (int I = 0; I < NumDims; ++I) {
+    DstBase += DstOffsets[I] * DstStride[I];
+    SrcBase += SrcOffsets[I] * SrcStride[I];
+  }
+  size_t RowLength = Volume[NumDims - 1] * ElementSize;
+
+  llvm::SmallVector<size_t, 4> Idx(NumDims, 0);
+  while (true) {
+    char *DstAddr = static_cast<char *>(Dst) + DstBase;
+    const char *SrcAddr = static_cast<const char *>(Src) + SrcBase;
+    for (int I = 0; I < NumDims - 1; ++I) {
+      DstAddr += Idx[I] * DstStride[I];
+      SrcAddr += Idx[I] * SrcStride[I];
+    }
+    if (llvm::Error Err = CopyRow(DstAddr, SrcAddr, RowLength))
+      return Err;
+
+    int D = NumDims - 2;
+    for (; D >= 0; --D) {
+      if (++Idx[D] < Volume[D])
+        break;
+      Idx[D] = 0;
+    }
+    if (D < 0)
+      return llvm::Error::success();
+  }
+}
+
+// Describe \p Rect as a 3D copy, padding leading dimensions. Returns false if
+// the values do not fit what liboffload takes.
+static bool makeMemcpy3DArgs(const MemcpyRectTy &Rect,
+                             ol_memcpy3d_layout_t &DstLayout,
+                             ol_memcpy3d_layout_t &SrcLayout,
+                             ol_dimensions_t &Size) {
+  size_t Vol[3] = {1, 1, 1}, DstOff[3] = {0, 0, 0}, SrcOff[3] = {0, 0, 0};
+  size_t DstDim[3] = {1, 1, 1}, SrcDim[3] = {1, 1, 1};
+  for (int I = 0; I < Rect.NumDims; ++I) {
+    int J = 3 - Rect.NumDims + I;
+    Vol[J] = Rect.Volume[I];
+    DstOff[J] = Rect.DstOffsets[I];
+    SrcOff[J] = Rect.SrcOffsets[I];
+    DstDim[J] = Rect.DstDimensions[I];
+    SrcDim[J] = Rect.SrcDimensions[I];
+  }
+
+  // Offsets and extents must fit in 32 bits; pitches must not overflow.
+  constexpr size_t Max = std::numeric_limits<uint32_t>::max();
+  bool InRange = true;
+  auto Mul = [&](size_t A, size_t B) {
+    size_t R;
+    InRange &= !__builtin_mul_overflow(A, B, &R);
+    return R;
+  };
+  size_t ES = Rect.ElementSize;
+  size_t DstPitch = Mul(DstDim[2], ES);
+  size_t SrcPitch = Mul(SrcDim[2], ES);
+  size_t DstSlicePitch = Mul(DstDim[1], DstPitch);
+  size_t SrcSlicePitch = Mul(SrcDim[1], SrcPitch);
+  size_t Width = Mul(Vol[2], ES);
+  size_t DstX = Mul(DstOff[2], ES);
+  size_t SrcX = Mul(SrcOff[2], ES);
+  for (size_t V : {Width, Vol[1], Vol[0], DstX, DstOff[1], DstOff[0], SrcX,
+                   SrcOff[1], SrcOff[0]})
+    InRange &= V <= Max;
+  if (!InRange)
+    return false;
+
+  DstLayout = {{static_cast<uint32_t>(DstX), static_cast<uint32_t>(DstOff[1]),
+                static_cast<uint32_t>(DstOff[0])},
+               DstPitch,
+               DstSlicePitch};
+  SrcLayout = {{static_cast<uint32_t>(SrcX), static_cast<uint32_t>(SrcOff[1]),
+                static_cast<uint32_t>(SrcOff[0])},
+               SrcPitch,
+               SrcSlicePitch};
+  Size = {static_cast<uint32_t>(Width), static_cast<uint32_t>(Vol[1]),
+          static_cast<uint32_t>(Vol[0])};
+  return true;
+}
+
+llvm::Error DeviceTy::dataMemcpyRect(
+    CopyDirTy Dir, void *Dst, const void *Src, const MemcpyRectTy &Rect,
+    DeviceTy *PeerDev, AsyncInfoTy *AsyncInfo,
+    llvm::function_ref<int32_t(void *, const void *, size_t, AsyncInfoTy &)>
+        CopyRow) {
+  // Fast path: one liboffload call.
+  ol_memcpy3d_layout_t DstLayout, SrcLayout;
+  ol_dimensions_t Size;
+  if (!Memcpy3DUnsupported && Rect.NumDims >= 2 && Rect.NumDims <= 3 &&
+      makeMemcpy3DArgs(Rect, DstLayout, SrcLayout, Size)) {
+    auto SupportedOrErr = dataMemcpy3D(Dir, Dst, DstLayout, Src, SrcLayout,
+                                       Size, PeerDev, AsyncInfo);
+    if (!SupportedOrErr)
+      return SupportedOrErr.takeError();
+    if (*SupportedOrErr)
+      return llvm::Error::success();
+  }
+
+  // Generic path: one copy per contiguous row.
+  // Without an AsyncInfo, use a local one and synchronize at the end.
+  std::optional<AsyncInfoTy> LocalAsyncInfo;
+  AsyncInfoTy *Info = AsyncInfo;
+  if (!Info) {
+    LocalAsyncInfo.emplace(*this);
+    Info = &*LocalAsyncInfo;
+  }
+
+  auto CopyCheckedRow = [&](void *DstAddr, const void *SrcAddr,
+                            size_t Length) -> llvm::Error {
+    if (CopyRow(DstAddr, SrcAddr, Length, *Info) != OFFLOAD_SUCCESS)
+      return createError(ErrorCode::BackendFailure,
+                         "failure in rectangular memcpy row copy: dst=%p "
+                         "src=%p size=%zu",
+                         DstAddr, SrcAddr, Length);
+    return llvm::Error::success();
+  };
+  if (llvm::Error Err = forEachMemcpyRectRow(Dst, Src, Rect, CopyCheckedRow))
+    return Err;
+
+  if (LocalAsyncInfo && LocalAsyncInfo->synchronize() != OFFLOAD_SUCCESS)
+    return createError(ErrorCode::BackendFailure,
+                       "failed to synchronize rectangular memcpy");
+  return llvm::Error::success();
+}
+
+llvm::Error DeviceTy::submitDataRect(void *TgtPtr, const void *HstPtr,
+                                     const MemcpyRectTy &Rect,
+                                     AsyncInfoTy *AsyncInfo) {
+  auto CopyRow = [&](void *Dst, const void *Src, size_t Length,
+                     AsyncInfoTy &Info) {
+    return submitData(Dst, const_cast<void *>(Src), Length, Info);
+  };
+  return dataMemcpyRect(CopyDirTy::HostToDevice, TgtPtr, HstPtr, Rect, nullptr,
+                        AsyncInfo, CopyRow);
+}
+
+llvm::Error DeviceTy::retrieveDataRect(void *HstPtr, const void *TgtPtr,
+                                       const MemcpyRectTy &Rect,
+                                       AsyncInfoTy *AsyncInfo) {
+  auto CopyRow = [&](void *Dst, const void *Src, size_t Length,
+                     AsyncInfoTy &Info) {
+    return retrieveData(Dst, const_cast<void *>(Src), Length, Info);
+  };
+  return dataMemcpyRect(CopyDirTy::DeviceToHost, HstPtr, TgtPtr, Rect, nullptr,
+                        AsyncInfo, CopyRow);
+}
+
+llvm::Error DeviceTy::dataExchangeRect(const void *SrcPtr, DeviceTy &DstDev,
+                                       void *DstPtr, const MemcpyRectTy &Rect,
+                                       AsyncInfoTy *AsyncInfo) {
+  auto CopyRow = [&](void *Dst, const void *Src, size_t Length,
+                     AsyncInfoTy &Info) {
+    return dataExchange(const_cast<void *>(Src), DstDev, Dst, Length, Info);
+  };
+  return dataMemcpyRect(CopyDirTy::DeviceToDevice, DstPtr, SrcPtr, Rect,
+                        &DstDev, AsyncInfo, CopyRow);
 }
 
 llvm::Expected<void *> DeviceTy::registerMemory(void *HstPtr, int64_t Size,
