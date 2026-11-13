@@ -45,6 +45,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/TargetSelect.h"
@@ -504,9 +505,9 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   // input filename already has the device and architecture.
   std::string OutputFileBase =
       "." + Triple.getArchName().str() + "." + Arch.str();
-  // Images with the same architecture but different devices are linked
-  // separately, so the devices are part of the name.
-  std::vector<std::string> Devices = Args.getAllArgValues(OPT_device_EQ);
+  // Images with the same architecture but different "code" are linked
+  // separately, so the real devices are part of the name.
+  std::vector<std::string> Devices = Args.getAllArgValues(OPT_code_EQ);
   for (const std::string &Device : Devices)
     OutputFileBase += "." + Device;
   auto TempFileOrErr = createOutputFile(ExecutableName + OutputFileBase, "img");
@@ -597,9 +598,9 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   if (ActiveOffloadKindMask & OFK_SYCL)
     CmdArgs.push_back("--sycl-link");
 
-  // Pass the devices on to clang-sycl-linker.
+  // Pass the real devices on to clang-sycl-linker.
   for (const std::string &Device : Devices)
-    CmdArgs.append({"-Xlinker", Args.MakeArgString("--device=" + Device)});
+    CmdArgs.append({"-Xlinker", Args.MakeArgString("--code=" + Device)});
 
   for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
     CmdArgs.append({"-Xlinker", Args.MakeArgString(Arg)});
@@ -937,8 +938,9 @@ bundleSYCL(ArrayRef<OffloadingImage> Images) {
     return std::move(Buffers);
   }
 
-  // Images with different "code" are linked separately, but the SYCL runtime
-  // registers a single offload binary, so merge their device images into one.
+  // Images for different IGCA targets or with different "code" are linked
+  // separately, but the SYCL runtime registers one offload binary per wrapper,
+  // so merge their device images into one.
   SmallVector<std::unique_ptr<OffloadBinary>> Binaries;
   SmallVector<OffloadingImage> Merged;
   for (const OffloadingImage &Image : Images) {
@@ -999,7 +1001,8 @@ bundleSYCL(ArrayRef<OffloadingImage> Images) {
     }
     Identifier = *FileOrErr;
   }
-  Buffers.emplace_back(MemoryBuffer::getMemBufferCopy(Data, Identifier));
+  Buffers.emplace_back(std::make_unique<SmallVectorMemoryBuffer>(
+      std::move(Data), Identifier, /*RequiresNullTerminator=*/false));
   return std::move(Buffers);
 }
 
@@ -1094,13 +1097,13 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
   DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_triple_EQ),
                    Args.MakeArgString(Input.front().getBinary()->getTriple()));
 
-  // Get the Intel GPUs that a SYCL image lists in "code". clang-sycl-linker
+  // Get the real devices that a SYCL image lists in "code". clang-sycl-linker
   // compiles the image ahead of time for them.
   const OffloadBinary &Binary = *Input.front().getBinary();
   if (Binary.getOffloadKind() == OFK_SYCL)
     for (StringRef Device : llvm::split(Binary.getString("code"), ','))
       if (!Device.empty())
-        DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_device_EQ),
+        DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_code_EQ),
                          Args.MakeArgString(Device));
 
   // If every input file is bitcode we have whole program visibility as we
@@ -1266,9 +1269,9 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
           Args.MakeArgString(LinkerArgs.getLastArgValue(OPT_triple_EQ));
       TheImage.StringData["arch"] =
           Args.MakeArgString(LinkerArgs.getLastArgValue(OPT_arch_EQ));
-      if (LinkerArgs.hasArg(OPT_device_EQ))
+      if (LinkerArgs.hasArg(OPT_code_EQ))
         TheImage.StringData["code"] = Args.MakeArgString(
-            llvm::join(LinkerArgs.getAllArgValues(OPT_device_EQ), ","));
+            llvm::join(LinkerArgs.getAllArgValues(OPT_code_EQ), ","));
       TheImage.Image = std::move(*FileOrErr);
 
       Images[Kind].emplace_back(std::move(TheImage));
@@ -1427,16 +1430,14 @@ Error emitExtractCommands(
               .str();
       if (!Binary.getArch().empty())
         ImageArg += (",arch=" + Binary.getArch()).str();
-      // Filter SYCL images on "code", including an empty one, so that an
-      // image without "code" does not also match one with it.
-      if (Binary.getOffloadKind() == OFK_SYCL) {
-        StringRef Code = Binary.getString("code");
-        if (Code.empty())
-          ImageArg += ",code=";
-        for (StringRef Device : llvm::split(Code, ','))
-          if (!Device.empty())
-            ImageArg += (",code=" + Device).str();
-      }
+      // Filter on "code", including an empty one, so that an image without
+      // "code" does not also match one with it for the same architecture.
+      StringRef Code = Binary.getString("code");
+      if (Code.empty())
+        ImageArg += ",code=";
+      for (StringRef Device : llvm::split(Code, ','))
+        if (!Device.empty())
+          ImageArg += (",code=" + Device).str();
       file_magic Magic;
       if (!identify_magic(Source, Magic) && Magic == file_magic::archive)
         ImageArg += (",member=" + sys::path::filename(Identifier)).str();
@@ -1550,9 +1551,9 @@ getDeviceInput(const ArgList &Args) {
                              B.getBinary()->getArch().count(':');
                     });
 
-  // A SYCL image can list Intel GPUs in "code", e.g. "code=xe-mtl-h,xe-mtl-u".
-  // Images with different lists are linked separately, so the key of an image
-  // is its target and its "code".
+  // An image can list real devices in "code", e.g. "code=xe-mtl-h,xe-mtl-u" for
+  // Intel GPUs. Images with different lists are linked separately, so the key
+  // of an image is its target and its "code".
   using ImageID = std::pair<OffloadFile::TargetID, StringRef>;
   auto GetImageID = [](const OffloadFile &Binary) -> ImageID {
     return {Binary, Binary.getBinary()->getString("code")};

@@ -98,8 +98,9 @@ class Compilation {
   };
   std::map<TCArgsKey, llvm::opt::DerivedArgList *> TCArgs;
 
-  /// For SYCL, the Intel GPUs given in --offload-arch for each IGCA target,
-  /// e.g. xe-mtl-h and xe-mtl-u for igca_30r. Each list is sorted.
+  /// For SYCL, maps a device toolchain and an IGCA target, e.g. igca_30r, to
+  /// the Intel GPUs from --offload-arch that share that target, e.g. xe-mtl-h
+  /// and xe-mtl-u. Each list is sorted and has no duplicates.
   llvm::DenseMap<std::pair<const ToolChain *, StringRef>,
                  llvm::SmallVector<StringRef, 2>>
       SYCLIGCADevices;

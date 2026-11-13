@@ -4157,9 +4157,8 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
   if (Kind == Action::OFK_SYCL) {
     llvm::DenseSet<StringRef> Targets;
     for (StringRef Arch : Archs) {
-      StringRef Target = toolchains::getSYCLDeviceArch(Arch);
+      StringRef Target = toolchains::getSYCLVirtualArch(Arch);
       Targets.insert(Target);
-      // An Intel GPU maps to a different name, its IGCA target.
       if (Target != Arch)
         C.addSYCLIGCADevice(&TC, Target, Arch);
     }

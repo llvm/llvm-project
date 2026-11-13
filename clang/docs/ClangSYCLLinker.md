@@ -37,7 +37,7 @@ USAGE: clang-sycl-linker [options] <input bitcode files>
 
 OPTIONS:
   --arch <value>                Specify the name of the target architecture.
-  --device=<value>              An Intel GPU to compile ahead of time for. Can be repeated.
+  --code=<code>                 Specify a real device to compile ahead of time for. Can be repeated. Without it, a real --arch is compiled ahead of time and a virtual one is kept for just-in-time compilation.
   --dry-run                     Print generated commands without running.
   -help-hidden                  Display all available options
   -help                         Display available options (--help-hidden for more)
@@ -109,12 +109,19 @@ generate the final executable.
 clang-sycl-linker --triple spirv64 --arch xe-bmg-g21 input.bc
 ```
 
-For an IGCA target, such as `igca_30r`, the device image is compiled ahead of
-time for the Intel GPUs given with `--device`, with a single ocloc call, or just
-in time if no `--device` is given:
+### Specifying a virtual architecture and real devices
+
+`--arch` can name a virtual architecture, which several real devices share.
+`--code` then names the real devices to compile the device code for ahead of
+time.
+
+For example, for an IGCA target, such as `igca_30r`, the device image is
+compiled ahead of time for the Intel GPUs given with `--code`, with a single
+ocloc call, or, if no `--code` is given, kept as SPIR-V to be compiled just in
+time by the runtime:
 
 ```console
-clang-sycl-linker --triple spirv64 --arch igca_30r --device=xe-mtl-u --device=xe-mtl-h input.bc
+clang-sycl-linker --triple spirv64 --arch igca_30r --code=xe-mtl-u --code=xe-mtl-h input.bc
 ```
 
 ### Linking with Device Libraries

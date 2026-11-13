@@ -126,25 +126,25 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN:   --save-temps --wrapper-verbose --linker-path=/usr/bin/ld %t.sycl-mix.o \
 // RUN:   -o a.out 2>&1 | FileCheck %s --check-prefix=SYCL-REPLAY
 
-// SYCL-SAME-CODE:     clang{{.*}} -march=igca_30r {{.*}}.o {{.*}}.o --sycl-link -Xlinker --device=xe-mtl-u -Xlinker --device=xe-mtl-h{{$}}
+// SYCL-SAME-CODE:     clang{{.*}} -march=igca_30r {{.*}}.o {{.*}}.o --sycl-link -Xlinker --code=xe-mtl-u -Xlinker --code=xe-mtl-h{{$}}
 // SYCL-SAME-CODE-NOT: --sycl-link
 
-// SYCL-DIFFERENT-CODE-DAG: clang{{.*}} -march=igca_30r {{.*}}.o --sycl-link -Xlinker --device=xe-mtl-u{{$}}
-// SYCL-DIFFERENT-CODE-DAG: clang{{.*}} -march=igca_30r {{.*}}.o --sycl-link -Xlinker --device=xe-mtl-u -Xlinker --device=xe-mtl-h{{$}}
+// SYCL-DIFFERENT-CODE-DAG: clang{{.*}} -march=igca_30r {{.*}}.o --sycl-link -Xlinker --code=xe-mtl-u{{$}}
+// SYCL-DIFFERENT-CODE-DAG: clang{{.*}} -march=igca_30r {{.*}}.o --sycl-link -Xlinker --code=xe-mtl-u -Xlinker --code=xe-mtl-h{{$}}
 
 // The devices are part of the output name, so the two images do not overwrite
 // each other with --save-temps.
-// SYCL-SAVE-TEMPS-DAG: clang{{.*}} -o a.out.spirv64.igca_30r.xe-mtl-u.img {{.*}}--device=xe-mtl-u{{$}}
-// SYCL-SAVE-TEMPS-DAG: clang{{.*}} -o a.out.spirv64.igca_30r.xe-mtl-u.xe-mtl-h.img {{.*}}--device=xe-mtl-h{{$}}
+// SYCL-SAVE-TEMPS-DAG: clang{{.*}} -o a.out.spirv64.igca_30r.xe-mtl-u.img {{.*}}--code=xe-mtl-u{{$}}
+// SYCL-SAVE-TEMPS-DAG: clang{{.*}} -o a.out.spirv64.igca_30r.xe-mtl-u.xe-mtl-h.img {{.*}}--code=xe-mtl-h{{$}}
 
 // A generic archive member is still linked into an image that lists devices.
-// SYCL-GENERIC-ARCHIVE: clang{{.*}} -march=igca_30r {{.*}}igca_30r{{.*}}.o {{.*}}generic{{.*}}.o --sycl-link -Xlinker --device=xe-mtl-u{{$}}
+// SYCL-GENERIC-ARCHIVE: clang{{.*}} -march=igca_30r {{.*}}igca_30r{{.*}}.o {{.*}}generic{{.*}}.o --sycl-link -Xlinker --code=xe-mtl-u{{$}}
 
 // Images that only differ in "code" are extracted to different files, also
 // when replaying the extraction.
 // SYCL-EXTRACT-DAG: llvm-offload-binary{{.*}} --image=kind=sycl,triple=spirv64-unknown-unknown,arch=igca_30r,code=xe-mtl-u,file={{.*}}-igca_30r.xe-mtl-u.o --image=kind=sycl,triple=spirv64-unknown-unknown,arch=igca_30r,code=xe-mtl-u,code=xe-mtl-h,file={{.*}}-igca_30r.xe-mtl-u.xe-mtl-h.o
-// SYCL-EXTRACT-DAG: clang{{.*}} -march=igca_30r {{.*}}-igca_30r.xe-mtl-u.o --sycl-link -Xlinker --device=xe-mtl-u{{$}}
-// SYCL-EXTRACT-DAG: clang{{.*}} -march=igca_30r {{.*}}-igca_30r.xe-mtl-u.xe-mtl-h.o --sycl-link -Xlinker --device=xe-mtl-u -Xlinker --device=xe-mtl-h{{$}}
+// SYCL-EXTRACT-DAG: clang{{.*}} -march=igca_30r {{.*}}-igca_30r.xe-mtl-u.o --sycl-link -Xlinker --code=xe-mtl-u{{$}}
+// SYCL-EXTRACT-DAG: clang{{.*}} -march=igca_30r {{.*}}-igca_30r.xe-mtl-u.xe-mtl-h.o --sycl-link -Xlinker --code=xe-mtl-u -Xlinker --code=xe-mtl-h{{$}}
 
 // The device images of SYCL images that are linked separately end up in a
 // single offload binary.

@@ -714,9 +714,9 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
   CmdArgs.push_back("-output_no_suffix");
   CmdArgs.push_back("-spirv_input");
 
-  // Compile for the --device list, e.g. "xe-mtl-u,xe-mtl-h" for an IGCA
-  // target, or else for the Intel GPU in --arch.
-  std::string Devices = llvm::join(Args.getAllArgValues(OPT_device_EQ), ",");
+  // Compile for the --code list, e.g. "xe-mtl-u,xe-mtl-h" for an IGCA target,
+  // or else for the Intel GPU in --arch.
+  std::string Devices = llvm::join(Args.getAllArgValues(OPT_code_EQ), ",");
   if (Devices.empty())
     Devices = Args.getLastArgValue(OPT_arch_EQ);
   assert(!Devices.empty() && "a device must be specified for AOT compilation");
@@ -1002,11 +1002,10 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     SplitModules = std::move(*SplitModulesOrErr);
   }
 
-  // An IGCA target is compiled ahead of time only for its --device list, and
-  // otherwise just in time.
+  // An IGCA target is compiled ahead of time only for its --code list.
   OffloadArch OA = StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ));
   bool IsAOTCompileNeeded =
-      OA.isIntelIGCA() ? Args.hasArg(OPT_device_EQ) : OA.isIntel();
+      OA.isIntelIGCA() ? Args.hasArg(OPT_code_EQ) : OA.isIntel();
 
   StringRef OutputFileNameExt = ".spv";
 

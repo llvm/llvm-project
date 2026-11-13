@@ -46,11 +46,13 @@ def arch_EQ : Joined<["--", "-"], "arch=">,
               Flags<[LinkerOnlyOption]>,
               MetaVarName<"<arch>">,
               HelpText<"The device architecture">;
-def device_EQ : Joined<["--", "-"], "device=">,
-                Flags<[LinkerOnlyOption]>,
-                MetaVarName<"<device>">,
-                HelpText<"An Intel GPU to compile ahead of time for. Can be "
-                         "repeated. Defaults to --arch for an Intel GPU">;
+def code_EQ : Joined<["--", "-"], "code=">,
+              Flags<[LinkerOnlyOption]>,
+              MetaVarName<"<code>">,
+              HelpText<"Specify a real device to compile ahead of time for. "
+                       "Can be repeated. Without it, a real --arch is compiled "
+                       "ahead of time and a virtual one is kept for "
+                       "just-in-time compilation.">;
 def triple_EQ : Joined<["--", "-"], "triple=">,
                 Flags<[LinkerOnlyOption]>,
                 MetaVarName<"<triple>">,

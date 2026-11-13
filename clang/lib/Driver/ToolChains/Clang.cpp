@@ -9761,8 +9761,9 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
         "kind=" + Kind.str(),
     };
 
-    // Add one "code=" per Intel GPU of the IGCA target. llvm-offload-binary
-    // joins them, so the image gets "code=xe-mtl-h,xe-mtl-u".
+    // Add one "code=" per Intel GPU requested for this IGCA target.
+    // llvm-offload-binary joins them, so the image gets
+    // "code=xe-mtl-h,xe-mtl-u".
     if (OffloadAction->getOffloadingDeviceKind() == Action::OFK_SYCL)
       for (StringRef Device : C.getSYCLIGCADevices(TC, Arch.ArchName))
         Parts.emplace_back("code=" + Device.str());
@@ -9966,7 +9967,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         // A SYCL device image for an Intel GPU is labeled with the GPU's IGCA
         // target.
         if (Kind == Action::OFK_SYCL)
-          Name = toolchains::getSYCLDeviceArch(Name);
+          Name = toolchains::getSYCLVirtualArch(Name);
         // Intel GPUs that share an IGCA target ask for it once.
         if (ShouldExtract.insert(Name).second)
           CmdArgs.emplace_back(Args.MakeArgString("--should-extract=" + Name));
