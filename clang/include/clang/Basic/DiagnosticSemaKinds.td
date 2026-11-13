@@ -385,10 +385,10 @@ def err_invalid_width_spec : Error<
 def err_invalid_complex_spec : Error<"'_Complex %0' is invalid">;
 
 def ext_auto_type_specifier : ExtWarn<
-  "'auto' type specifier is a %select{C++11|HLSL 202y}0 extension">,
+  "'auto' type specifier is %select{a C++11|an HLSL 202x}0 extension">,
   InGroup<CXX11>;
 def ext_hlsl_auto_type_specifier : ExtWarn<
-  ext_auto_type_specifier.Summary>, InGroup<HLSL202y>;
+  ext_auto_type_specifier.Summary>, InGroup<HLSL202x>;
 def warn_auto_storage_class : Warning<
   "'auto' storage class specifier is redundant and incompatible with C++11">,
   InGroup<CXX11Compat>, DefaultIgnore;
@@ -2661,6 +2661,8 @@ def warn_unsequenced_mod_mod : Warning<
   "multiple unsequenced modifications to %0">, InGroup<Unsequenced>;
 def warn_unsequenced_mod_use : Warning<
   "unsequenced modification and access to %0">, InGroup<Unsequenced>;
+def warn_unsequenced_use_use_volatile : Warning<
+  "unsequenced accesses to volatile qualified %0">, InGroup<Unsequenced>;
 
 def select_initialized_entity_kind : TextSubstitution<
   "%select{copying variable|copying parameter|initializing template parameter|"
@@ -13911,6 +13913,10 @@ def err_hlsl_semantic_partial_explicit_indexing
 def err_hlsl_vk_builtin_unsupported_value
     : Error<"'%0' is not a supported value for the 'vk::builtin' attribute; "
             "supported values are: %1">;
+def err_hlsl_vk_builtin_wrong_type
+    : Error<"'%0' builtin must be of type %1">;
+def err_hlsl_vk_builtin_wrong_stage
+    : Error<"'%0' builtin cannot be used as %1 shader %2">;
 
 def warn_hlsl_user_defined_type_missing_member: Warning<"binding type '%select{t|u|b|s|c}0' only applies to types containing %select{SRV resources|UAV resources|constant buffer resources|sampler state|numeric types}0">, InGroup<LegacyConstantRegisterBinding>;
 def err_hlsl_binding_type_mismatch: Error<"binding type '%select{t|u|b|s|c}0' only applies to %select{SRV resources|UAV resources|constant buffer resources|sampler state|numeric variables in the global scope}0">;

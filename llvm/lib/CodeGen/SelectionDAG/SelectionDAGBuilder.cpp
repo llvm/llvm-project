@@ -4299,7 +4299,7 @@ void SelectionDAGBuilder::visitBitInsert(const User &I) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc dl = getCurSDLoc();
 
-  assert(BaseVT.getSizeInBits() >= ValVT.getSizeInBits() &&
+  assert(BaseVT.getScalarSizeInBits() >= ValVT.getScalarSizeInBits() &&
          "bitinsert val wider than base should be rejected by verifier");
 
   // If Val is a float, cast it to an integer of the same bitwidth
@@ -4337,7 +4337,7 @@ void SelectionDAGBuilder::visitBitExtract(const User &I) {
   EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
   SDLoc dl = getCurSDLoc();
 
-  assert(ResultVT.getSizeInBits() <= SrcVT.getSizeInBits() &&
+  assert(ResultVT.getScalarSizeInBits() <= SrcVT.getScalarSizeInBits() &&
          "bitextract result wider than source should be rejected by verifier");
 
   // Legalize shift amount to the target's shift amount type.
@@ -10779,8 +10779,14 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
         assert((OpInfo.isIndirect ||
                 OpInfo.ConstraintType != TargetLowering::C_Memory) &&
                "Operand must be indirect to be a mem!");
+
         assert(InOperandVal.getValueType() ==
-                   TLI.getPointerTy(DAG.getDataLayout()) &&
+                   TLI.getPointerTy(
+                       DAG.getDataLayout(),
+                       OpInfo.CallOperandVal
+                           ? cast<PointerType>(OpInfo.CallOperandVal->getType())
+                                 ->getAddressSpace()
+                           : 0) &&
                "Memory operands expect pointer values");
 
         const InlineAsm::ConstraintCode ConstraintID =
