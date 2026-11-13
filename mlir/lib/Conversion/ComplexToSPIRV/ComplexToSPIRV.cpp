@@ -630,11 +630,9 @@ struct TanTanhOpPattern final : OpConversionPattern<ComplexOp> {
   }
 };
 
-/// Computes complex.pow(lhs, rhs) following the polar decomposition
-/// lhs^rhs = exp(c*log(abs(lhs)) - d*arg(lhs))
-///         * (cos(c*arg(lhs) + d*log(abs(lhs)))
-///            + i*sin(c*arg(lhs) + d*log(abs(lhs))))
-/// where rhs = c + i*d.
+/// Lowers complex.pow following the identity
+/// (a + ib)^(c + id) = abs^c * exp(-d * arg) * (cos(q) + i * sin(q))
+/// where abs = |a + ib|, arg = atan2(b, a), q = c * arg + d * log(abs)
 template <typename SqrtOp, typename LogOp, typename ExpOp, typename SinOp,
           typename CosOp, typename Atan2Op, typename PowOp>
 struct PowOpPattern final : OpConversionPattern<complex::PowOp> {
