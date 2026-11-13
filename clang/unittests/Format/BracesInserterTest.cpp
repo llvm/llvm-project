@@ -214,12 +214,150 @@ TEST_F(BracesInserterTest, InsertBraces) {
                "#endif",
                Style);
 
-  verifyFormat("if (a)\n"
+  verifyFormat("if (a) {\n"
                "  f(\n"
                "#ifdef A\n"
                "      1\n"
                "#else\n"
                "      2\n"
+               "#endif\n"
+               "  );\n"
+               "}",
+               "if (a)\n"
+               "  f(\n"
+               "#ifdef A\n"
+               "      1\n"
+               "#else\n"
+               "      2\n"
+               "#endif\n"
+               "  );",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  f(\n"
+               "#if A\n"
+               "      1\n"
+               "#else\n"
+               "#if B\n"
+               "      2\n"
+               "#else\n"
+               "      3\n"
+               "#endif\n"
+               "#endif\n"
+               "  );\n"
+               "}",
+               "if (a)\n"
+               "  f(\n"
+               "#if A\n"
+               "      1\n"
+               "#else\n"
+               "#if B\n"
+               "      2\n"
+               "#else\n"
+               "      3\n"
+               "#endif\n"
+               "#endif\n"
+               "  );",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  if (b) {\n"
+               "#ifdef A\n"
+               "    f();\n"
+               "#endif\n"
+               "  }\n"
+               "}",
+               "if (a)\n"
+               "  if (b) {\n"
+               "#ifdef A\n"
+               "    f();\n"
+               "#endif\n"
+               "  }",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  g([] {\n"
+               "#ifdef A\n"
+               "    f();\n"
+               "#endif\n"
+               "  });\n"
+               "}",
+               "if (a)\n"
+               "  g([] {\n"
+               "#ifdef A\n"
+               "    f();\n"
+               "#endif\n"
+               "  });",
+               Style);
+
+  verifyFormat("auto l = [] {\n"
+               "  if (a) {\n"
+               "    f(\n"
+               "#ifdef A\n"
+               "        1\n"
+               "#else\n"
+               "        2\n"
+               "#endif\n"
+               "    );\n"
+               "  }\n"
+               "};",
+               "auto l = [] {\n"
+               "  if (a)\n"
+               "    f(\n"
+               "#ifdef A\n"
+               "        1\n"
+               "#else\n"
+               "        2\n"
+               "#endif\n"
+               "    );\n"
+               "};",
+               Style);
+
+  verifyFormat("if (a)\n"
+               "  if (b)\n"
+               "#/* comment */ if A\n"
+               "    f();\n"
+               "#else\n"
+               "    g();\n"
+               "#endif",
+               Style);
+
+  verifyFormat("if (a)\n"
+               "  f(\n"
+               "#if A\n"
+               "#/* comment */\n"
+               "      endif);\n"
+               "#else\n"
+               "      2);\n"
+               "#endif",
+               Style);
+
+  verifyFormat("if (a)\n"
+               "  if (b)\n"
+               "#if A\n"
+               "    do\n"
+               "#else\n"
+               "    if (c)\n"
+               "#endif\n"
+               "      f();\n"
+               "    while (c);\n"
+               "g();",
+               Style);
+
+  verifyFormat("if (a)\n"
+               "  f(\n"
+               "#if A\n"
+               "      1\n"
+               "#else\n"
+               "      2)\n"
+               "#if B\n"
+               "      ;\n"
+               "h();\n"
+               "#else\n"
+               "      ;\n"
+               "g();\n"
+               "#endif\n"
+               "f(3\n"
                "#endif\n"
                "  );",
                Style);
@@ -369,6 +507,17 @@ TEST_F(BracesInserterTest, InsertBraces) {
                "  f();",
                Style);
 
+  Style.Macros = {"ID(x)=x"};
+  verifyFormat("if (a)\n"
+               "  ID(f(\n"
+               "#ifdef A\n"
+               "      1\n"
+               "#endif\n"
+               "      ));",
+               Style);
+
+  Style.Macros.clear();
+
   Style.RemoveBracesLLVM = true;
   verifyFormat("if (a) //\n"
                "  return b;",
@@ -399,6 +548,212 @@ TEST_F(BracesInserterTest, InsertBraces) {
                "}",
                "if (a) //\n"
                "  b = 1;",
+               Style);
+}
+
+TEST_F(BracesInserterTest, ConditionalElse) {
+  FormatStyle Style = getLLVMStyle();
+  Style.InsertBraces = true;
+
+  verifyFormat("if (a)\n"
+               "  if (b) {\n"
+               "    f();\n"
+               "  }\n"
+               "#if A\n"
+               "g();\n"
+               "#else\n"
+               "  else {\n"
+               "    h();\n"
+               "  }\n"
+               "#endif",
+               "if (a)\n"
+               "  if (b)\n"
+               "    f();\n"
+               "#if A\n"
+               "g();\n"
+               "#else\n"
+               "  else\n"
+               "    h();\n"
+               "#endif",
+               Style);
+
+  verifyFormat("auto l = [&] {\n"
+               "  while (a)\n"
+               "    if (b) {\n"
+               "      f();\n"
+               "    }\n"
+               "#if A\n"
+               "    else {\n"
+               "      h();\n"
+               "    }\n"
+               "#else\n"
+               "  g();\n"
+               "#endif\n"
+               "};",
+               "auto l = [&] {\n"
+               "  while (a)\n"
+               "    if (b)\n"
+               "      f();\n"
+               "#if A\n"
+               "    else\n"
+               "      h();\n"
+               "#else\n"
+               "  g();\n"
+               "#endif\n"
+               "};",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  f();\n"
+               "}\n"
+               "#if A\n"
+               "g();\n"
+               "#else\n"
+               "else {\n"
+               "  h();\n"
+               "}\n"
+               "#endif",
+               "if (a)\n"
+               "  f();\n"
+               "#if A\n"
+               "g();\n"
+               "#else\n"
+               "else\n"
+               "  h();\n"
+               "#endif",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  if (b) {\n"
+               "    f();\n"
+               "  }\n"
+               "}\n"
+               "#if 0\n"
+               "#define Q 1\n"
+               "#if B\n"
+               "#endif\n"
+               "else\n"
+               "  g();\n"
+               "#endif",
+               "if (a)\n"
+               "  if (b)\n"
+               "    f();\n"
+               "#if 0\n"
+               "#define Q 1\n"
+               "#if B\n"
+               "#endif\n"
+               "else\n"
+               "  g();\n"
+               "#endif",
+               Style);
+
+  verifyFormat("if (a)\n"
+               "  if (b) {\n"
+               "    f();\n"
+               "  }\n"
+               "#if 0 || A\n"
+               "else g();\n"
+               "#endif",
+               "if (a)\n"
+               "  if (b)\n"
+               "    f();\n"
+               "#if 0 || A\n"
+               "else g();\n"
+               "#endif",
+               Style);
+
+  verifyFormat("if (a)\n"
+               "  if (b) {\n"
+               "    f();\n"
+               "  }\n"
+               "#if A\n"
+               "g();\n"
+               "#else\n"
+               "#if 0\n"
+               "h();\n"
+               "#elif B\n"
+               "  else {\n"
+               "    h();\n"
+               "  }\n"
+               "#else\n"
+               "k();\n"
+               "#endif\n"
+               "#endif",
+               "if (a)\n"
+               "  if (b)\n"
+               "    f();\n"
+               "#if A\n"
+               "g();\n"
+               "#else\n"
+               "#if 0\n"
+               "h();\n"
+               "#elif B\n"
+               "else h();\n"
+               "#else\n"
+               "k();\n"
+               "#endif\n"
+               "#endif",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  if (b) {\n"
+               "    f();\n"
+               "  }\n"
+               "}\n"
+               "#if A\n"
+               "g();\n"
+               "#elif 0\n"
+               "else {\n"
+               "  h();\n"
+               "}\n"
+               "#elif 1\n"
+               "k();\n"
+               "#else\n"
+               "else {\n"
+               "  m();\n"
+               "}\n"
+               "#endif",
+               "if (a)\n"
+               "  if (b)\n"
+               "    f();\n"
+               "#if A\n"
+               "g();\n"
+               "#elif 0\n"
+               "else\n"
+               "  h();\n"
+               "#elif 1\n"
+               "k();\n"
+               "#else\n"
+               "else\n"
+               "  m();\n"
+               "#endif",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  if (b) {\n"
+               "    f();\n"
+               "  }\n"
+               "}\n"
+               "#if 1\n"
+               "#if 1\n"
+               "g();\n"
+               "#else\n"
+               "else {\n"
+               "  h();\n"
+               "}\n"
+               "#endif\n"
+               "#endif",
+               "if (a)\n"
+               "  if (b)\n"
+               "    f();\n"
+               "#if 1\n"
+               "#if 1\n"
+               "g();\n"
+               "#else\n"
+               "else\n"
+               "  h();\n"
+               "#endif\n"
+               "#endif",
                Style);
 }
 
