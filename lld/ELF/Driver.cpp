@@ -43,6 +43,7 @@
 #include "lld/Common/Memory.h"
 #include "lld/Common/Parallel.h"
 #include "lld/Common/Strings.h"
+#include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -1361,7 +1362,8 @@ static void parseClangOption(Ctx &ctx, StringRef opt, const Twine &msg) {
   const char *argv[] = {ctx.arg.progName.data(), opt.data()};
   // Called after initLLVM() to ensure target-specific RegisterLibraryOptions
   // have been called.
-  if (cl::parseCommandLineOptions(ctx.arg.libraryOptions, argv, "", &os))
+  if (cl::parseCommandLineOptions(ctx.arg.libraryOptions, getToolOptions(),
+                                  argv, "", &os))
     return;
   ErrAlways(ctx) << msg << ": " << StringRef(err).trim();
 }

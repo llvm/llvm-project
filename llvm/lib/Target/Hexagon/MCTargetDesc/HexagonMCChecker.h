@@ -101,6 +101,7 @@ class HexagonMCChecker {
   bool checkHWLoop();
   bool checkCOFMax1();
   bool checkLegalVecRegPair();
+  bool checkValidHMX();
   bool checkValidTmpDst();
   bool checkHVXAccum();
   // An HLX instruction that reads a 64-bit scalar register may not be in the
