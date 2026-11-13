@@ -19,7 +19,6 @@
 namespace mlir {
 class Operation;
 namespace emitc {
-
 /// Translates the given operation to C++ code. The operation or operations in
 /// the region of 'op' need almost all be in EmitC dialect. The parameter
 /// 'declareVariablesAtTop' enforces that all variables for op results and block
