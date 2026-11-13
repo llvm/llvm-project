@@ -443,10 +443,13 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
               ? LastAddr
               : SE->getSCEV(ConstantExpr::getIntToPtr(
                     Constant::getNullValue(DL.getIndexType(PtrTy)), PtrTy));
-      // FIXME: Start + EltSize is neither checked to stay within the
-      // dereferenceable region nor guarded against wrapping; it should
-      // saturate like the non-negative case below when that can't be proven.
-      ScEnd = SE->getAddExpr(Start, EltSizeSCEV);
+      // Without an exact BTC, Start + EltSize may wrap unless it is in bounds;
+      // saturate it like the non-negative case below.
+      if (isa<SCEVCouldNotCompute>(BTC) && !FirstEndInBounds)
+        ScEnd = SE->getSCEV(ConstantExpr::getIntToPtr(
+            Constant::getAllOnesValue(DL.getIndexType(PtrTy)), PtrTy));
+      else
+        ScEnd = SE->getAddExpr(Start, EltSizeSCEV);
     } else if (SE->isKnownNonNegative(Step)) {
       ScStart = Start;
       // The highest address for the type saturates; adding EltSize to it would

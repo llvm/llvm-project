@@ -20,7 +20,7 @@ define void @negative_step_all_ones_null(ptr addrspace(1) %P, ptr addrspace(1) %
 ; CHECK-NEXT:        ptr addrspace(1) %S
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: null High: (4 + %P))
+; CHECK-NEXT:          (Low: null High: inttoptr (i64 -1 to ptr addrspace(1)))
 ; CHECK-NEXT:            Member: {%P,+,-4}<nw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %S High: (4 + %S))

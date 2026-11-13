@@ -34,7 +34,7 @@ define void @reverse_symbolic_start_below_base(ptr dereferenceable(32) %A, ptr d
 ; CHECK-NEXT:          (Low: %B High: (4 + (4 * (zext i3 %n to i64))<nuw><nsw> + %B))
 ; CHECK-NEXT:            Member: {((4 * (zext i3 %n to i64))<nuw><nsw> + %B),+,-4}<nw><%loop.header>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: null High: ((4 * (zext i3 %n to i64))<nuw><nsw> + %A))
+; CHECK-NEXT:          (Low: null High: inttoptr (i64 -1 to ptr))
 ; CHECK-NEXT:            Member: {(-4 + (4 * (zext i3 %n to i64))<nuw><nsw> + %A),+,-4}<nw><%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
