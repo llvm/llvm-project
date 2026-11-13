@@ -583,7 +583,8 @@ static bool isFusableAppleSMEComputeOp(const MachineInstr &MI,
     return false;
 
   // (NOT write P)
-  if (definesRegInClass(MI, {&AArch64::PPRRegClass, &AArch64::PPR2RegClass}))
+  if (definesRegInClass(MI, {&AArch64::PPRRegClass, &AArch64::PPR2RegClass,
+                             &AArch64::PNRRegClass}))
     return false;
 
   // (NOT write GPR)
@@ -621,17 +622,18 @@ static bool isAppleSMEComputePair(const MachineInstr *FirstMI,
   return false;
 }
 
+enum class FMinFMaxKind { None, Scalar, Vector };
+
 // Floating-point minimum or maximum, scalar (H/S/D) or vector (Vd).
-static bool isFMinFMax(unsigned Opcode) {
+static FMinFMaxKind getFMinFMaxKind(unsigned Opcode) {
   switch (Opcode) {
-  // Scalar.
   case AArch64::FMAXHrr:
   case AArch64::FMAXSrr:
   case AArch64::FMAXDrr:
   case AArch64::FMINHrr:
   case AArch64::FMINSrr:
   case AArch64::FMINDrr:
-  // Vector.
+    return FMinFMaxKind::Scalar;
   case AArch64::FMAXv4f16:
   case AArch64::FMAXv8f16:
   case AArch64::FMAXv2f32:
@@ -642,22 +644,23 @@ static bool isFMinFMax(unsigned Opcode) {
   case AArch64::FMINv2f32:
   case AArch64::FMINv4f32:
   case AArch64::FMINv2f64:
-    return true;
+    return FMinFMaxKind::Vector;
   }
-  return false;
+  return FMinFMaxKind::None;
 }
 
-// FMIN + FMAX.
+// FMIN + FMAX, both scalar or both vector.
 static bool isFMinFMaxPair(const MachineInstr *FirstMI,
                            const MachineInstr &SecondMI) {
-  if (!isFMinFMax(SecondMI.getOpcode()))
+  FMinFMaxKind SecondKind = getFMinFMaxKind(SecondMI.getOpcode());
+  if (SecondKind == FMinFMaxKind::None)
     return false;
 
   // Assume the 1st instr to be a wildcard if it is unspecified.
   if (FirstMI == nullptr)
     return true;
 
-  if (!isFMinFMax(FirstMI->getOpcode()))
+  if (getFMinFMaxKind(FirstMI->getOpcode()) != SecondKind)
     return false;
 
   return mayHaveWAWDependency(*FirstMI, SecondMI);

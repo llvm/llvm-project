@@ -1754,6 +1754,8 @@ def VOP3ModsNonCanonicalizing : ComplexPattern<untyped, 2,
 
 def VOP3NoMods : ComplexPattern<untyped, 1, "SelectVOP3NoMods">;
 
+def VOP3NoOpSelMods : ComplexPattern<untyped, 1, "SelectVOP3NoOpSelMods">;
+
 def VOP3OMods : ComplexPattern<untyped, 3, "SelectVOP3OMods">;
 
 def VOP3PMods  : ComplexPattern<untyped, 2, "SelectVOP3PMods">;
@@ -2743,11 +2745,11 @@ class getEquivalentAGPROperand<RegisterOperand RC> {
   defvar Size = !cast<SIRegisterClassLike>(RC.RegClass).Size;
   RegisterOperand ret =
     !cond(!eq(Size, 32)   : RegisterOperand<AGPR_32>,
-          !eq(Size, 64)   : RegisterOperand<AReg_64>,
-          !eq(Size, 96)   : RegisterOperand<AReg_96>,
-          !eq(Size, 128)  : RegisterOperand<AReg_128>,
-          !eq(Size, 160)  : RegisterOperand<AReg_160>,
-          !eq(Size, 1024) : RegisterOperand<AReg_1024>);
+          !eq(Size, 64)   : RegisterOperand<AReg_64_Align2>,
+          !eq(Size, 96)   : RegisterOperand<AReg_96_Align2>,
+          !eq(Size, 128)  : RegisterOperand<AReg_128_Align2>,
+          !eq(Size, 160)  : RegisterOperand<AReg_160_Align2>,
+          !eq(Size, 1024) : RegisterOperand<AReg_1024_Align2>);
 }
 
 class getEquivalentVGPROperand<RegisterOperand RC> {

@@ -44,21 +44,8 @@ using namespace llvm::omp::target::ompt;
 #endif
 
 using namespace llvm::omp::target::error;
-using namespace llvm::omp::target::plugin;
 using namespace llvm::omp::target::rr;
 using namespace llvm::omp::target::debug;
-
-namespace llvm::offload::tmp {
-GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform);
-int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device);
-llvm::Expected<void *> __ol_tgt_MemAlloc(ol_context_handle_t Context,
-                                         ol_device_handle_t Device,
-                                         TargetAllocTy Kind, int64_t Size,
-                                         void *HostPtr);
-llvm::Error __ol_tgt_MemFree(ol_context_handle_t Context,
-                             ol_device_handle_t Device, void *Ptr,
-                             TargetAllocTy Kind);
-} // namespace llvm::offload::tmp
 
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
                                             AsyncInfoTy &AsyncInfo) const {
@@ -155,8 +142,6 @@ llvm::Error DeviceTy::init() {
                        "failed to create context for device %d: %s", DeviceID,
                        Res->Details);
 
-  RTL = llvm::offload::tmp::__ol_tgt_GetPluginFromPlatform(Platform);
-  RTLDeviceID = llvm::offload::tmp::__ol_tgt_GetPluginDeviceId(DeviceHandle);
 
   // Needs to be initialized before the GeometryProps.
   if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(Backend),
@@ -217,7 +202,7 @@ llvm::Error DeviceTy::init() {
     BoolEnvar OMPX_EmitRecordReport("LIBOMPTARGET_RECORD_REPORT", false);
     StringEnvar OMPX_RecordReportFilename("LIBOMPTARGET_RECORD_REPORT_FILENAME",
                                           "");
-    if (OMPX_RecordDevice != RTLDeviceID)
+    if (OMPX_RecordDevice != DeviceID)
       return llvm::Error::success();
 
     if (OMPX_RecordMemSize <= 0) {
@@ -244,6 +229,90 @@ llvm::Error DeviceTy::init() {
   return llvm::Error::success();
 }
 
+ProgramTy &DeviceTy::addProgram(const void *Key, ProgramTy Program) {
+  auto &Slot = (*Programs.getExclusiveAccessor())[Key];
+  assert(!Slot && "a program is already loaded for this library");
+  Slot = std::make_unique<ProgramTy>(std::move(Program));
+  return *Slot;
+}
+
+void DeviceTy::unloadProgram(
+    const void *Key, llvm::ArrayRef<llvm::offloading::EntryTy> Entries,
+    llvm::ArrayRef<llvm::offloading::EntryTy> HostEntries) {
+  std::unique_ptr<ProgramTy> Program;
+  {
+    auto Accessor = Programs.getExclusiveAccessor();
+    auto It = Accessor->find(Key);
+    if (It == Accessor->end())
+      return;
+    Program = std::move(It->second);
+    Accessor->erase(It);
+  }
+
+  {
+    auto Accessor = KernelLaunchInfoMap.getExclusiveAccessor();
+    for (const llvm::offloading::EntryTy &Entry : Entries) {
+      if (Entry.Kind == llvm::object::OffloadKind::OFK_OpenMP && !Entry.Size)
+        Accessor->erase(Entry.Address);
+    }
+  }
+
+  // Declare-target globals were mapped (with an infinite reference count) to
+  // addresses inside this program; they dangle once it is destroyed.
+  {
+    auto HDTTMap = getMappingInfo().HostDataToTargetMap.getExclusiveAccessor();
+    for (size_t I = 0, E = std::min(Entries.size(), HostEntries.size()); I < E;
+         ++I) {
+      const llvm::offloading::EntryTy &Entry = Entries[I];
+      const llvm::offloading::EntryTy &HostEntry = HostEntries[I];
+      if (Entry.Kind != llvm::object::OffloadKind::OFK_OpenMP || !Entry.Size)
+        continue;
+      auto It = HDTTMap->find(HostEntry.Address);
+      if (It == HDTTMap->end())
+        continue;
+      HostDataToTargetTy *HDTT = It->HDTT;
+      // A weak symbol may have been mapped by another program; only drop the
+      // mapping if it points into this one. The converse is not handled: if
+      // this program owned the mapping of a weak global that another live
+      // library also defines, the global is left unmapped (not supported).
+      // Indirect entries point at the pointee instead of the global, so they
+      // cannot be compared.
+      if (!(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT) &&
+          HDTT->TgtPtrBegin != uintptr_t(Entry.Address))
+        continue;
+      void *Event = HDTT->getEvent();
+      HDTTMap->erase(It);
+      delete HDTT;
+      notifyDataUnmapped(HostEntry.Address);
+      if (Event)
+        destroyEvent(Event);
+    }
+  }
+
+  if (llvm::Error Err = releaseProgram(*Program))
+    REPORT() << "Failed to destroy program on device " << DeviceID << ": "
+             << llvm::toString(std::move(Err));
+}
+
+llvm::Error DeviceTy::releaseProgram(ProgramTy &Program) {
+  llvm::Error Result = llvm::Error::success();
+  if (ol_result_t Res = olDestroyProgram(Program.getHandle()))
+    Result = createError(ErrorCode::BackendFailure,
+                         "failed to destroy program on device %d: %s", DeviceID,
+                         Res->Details);
+  // The kernels of the program are gone, so its indirect call table is dead.
+  if (void *Table = Program.getIndirectCallTable()) {
+    Program.setIndirectCallTable(nullptr);
+    if (deleteData(Table))
+      Result = llvm::joinErrors(
+          std::move(Result),
+          createError(ErrorCode::BackendFailure,
+                      "failed to free indirect call table on device %d",
+                      DeviceID));
+  }
+  return Result;
+}
+
 llvm::Error DeviceTy::deinit() {
   OMPT_IF_BUILT_AND_INITIALIZED(
       { performOmptCallback(device_finalize, DeviceID); });
@@ -252,6 +321,17 @@ llvm::Error DeviceTy::deinit() {
   llvm::Error Result =
       RecordReplay ? RecordReplay->deinit() : llvm::Error::success();
   RecordReplay.reset();
+
+  // Programs must go before the context they belong to.
+  // Destroy them in reverse load order so that global destructors run in the
+  // opposite order of the libraries' registration.
+  {
+    auto Accessor = Programs.getExclusiveAccessor();
+    for (auto &[Key, Program] : llvm::reverse(*Accessor))
+      Result = llvm::joinErrors(std::move(Result), releaseProgram(*Program));
+    Accessor->clear();
+  }
+  KernelLaunchInfoMap.getExclusiveAccessor()->clear();
 
   if (!Context)
     return Result;
@@ -394,11 +474,16 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
   void *DevicePtr = Device.allocData(TableSize, nullptr, TARGET_ALLOC_DEVICE);
   // The IndirectCallTable is on the stack, so the copy must be synchronous to
   // ensure the data is copied before we return.
+  if (!DevicePtr)
+    return createError(ErrorCode::BackendFailure,
+                       "failed to allocate the indirect call table");
   if (Device.submitDataSync(DevicePtr, IndirectCallTable.data(), TableSize,
                             /*Entry=*/nullptr,
                             /*HDTTMapPtr=*/nullptr, /*Loc=*/nullptr,
-                            /*Name=*/"IndirectCallTable"))
+                            /*Name=*/"IndirectCallTable")) {
+    Device.deleteData(DevicePtr);
     return createError(ErrorCode::InvalidBinary, "failed to copy data");
+  }
 
   return std::pair<void *, uint64_t>(DevicePtr, IndirectCallTable.size());
 }
@@ -412,8 +497,10 @@ llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
 
   OMPT_IF_BUILT_AND_INITIALIZED({
     auto ImageOrErr = Program.getImage();
-    if (!ImageOrErr)
+    if (!ImageOrErr) {
+      llvm::consumeError(releaseProgram(Program));
       return ImageOrErr.takeError();
+    }
     llvm::MemoryBufferRef Image = *ImageOrErr;
     performOmptCallback(device_load, DeviceID, /*FileName=*/nullptr,
                         /*FileOffset=*/0, /*VmaInFile=*/nullptr,
@@ -433,8 +520,11 @@ llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
 
   // Obtain a table mapping host function pointers to device function pointers.
   auto CallTablePairOrErr = setupIndirectCallTable(*this, Img, Program);
-  if (!CallTablePairOrErr)
+  if (!CallTablePairOrErr) {
+    llvm::consumeError(releaseProgram(Program));
     return CallTablePairOrErr.takeError();
+  }
+  Program.setIndirectCallTable(CallTablePairOrErr->first);
 
   // Debug flags for the device runtime.
   static Int32Envar OMPX_DebugKind("LIBOMPTARGET_DEVICE_RTL_DEBUG");
@@ -458,8 +548,10 @@ llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
                      /*Entry=*/nullptr,
                      /*HDTTMapPtr=*/nullptr,
                      /*Loc=*/nullptr,
-                     /*Name=*/"DeviceEnvironment"))
+                     /*Name=*/"DeviceEnvironment")) {
+    llvm::consumeError(releaseProgram(Program));
     return createError(ErrorCode::InvalidBinary, "failed to copy data");
+  }
 
   return Program;
 }
@@ -485,20 +577,33 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
     return TargetPtr = *AllocOrErr;
   }
 
-  auto AllocOrErr = llvm::offload::tmp::__ol_tgt_MemAlloc(
-      Context, DeviceHandle, static_cast<TargetAllocTy>(Kind), Size, HstPtr);
-  if (!AllocOrErr) {
-    REPORT() << "Failure to allocate device memory: "
-             << llvm::toString(AllocOrErr.takeError());
+  // liboffload has no default allocation kind; it is a device allocation.
+  ol_result_t Res = OL_SUCCESS;
+  switch (Kind) {
+  case TARGET_ALLOC_HOST:
+    Res = olMemAllocHost(Context, DeviceHandle, Size, &TargetPtr);
+    break;
+  case TARGET_ALLOC_SHARED:
+    Res = olMemAlloc(Context, DeviceHandle, OL_ALLOC_TYPE_MANAGED, Size,
+                     &TargetPtr);
+    break;
+  case TARGET_ALLOC_DEVICE:
+  case TARGET_ALLOC_DEFAULT:
+    Res = olMemAlloc(Context, DeviceHandle, OL_ALLOC_TYPE_DEVICE, Size,
+                     &TargetPtr);
+    break;
+  default:
+    llvm_unreachable("unhandled TargetAllocTy");
+  }
+  if (Res) {
+    REPORT() << "Failure to allocate device memory: " << Res->Details;
     return nullptr;
   }
-  assert(*AllocOrErr && "Null pointer upon successful allocation");
-
-  TargetPtr = *AllocOrErr;
+  assert(TargetPtr && "Null pointer upon successful allocation");
   return TargetPtr;
 }
 
-int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
+int32_t DeviceTy::deleteData(void *TgtAllocBegin) {
   /// RAII to establish tool anchors before and after data deletion
   OMPT_IF_BUILT(InterfaceRAII TargetDataDeleteRAII(
                     RegionInterface.getCallbacks<ompt_target_data_delete>(),
@@ -516,11 +621,9 @@ int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
     return OFFLOAD_SUCCESS;
   }
 
-  if (auto Err = llvm::offload::tmp::__ol_tgt_MemFree(
-          Context, DeviceHandle, TgtAllocBegin,
-          static_cast<TargetAllocTy>(Kind))) {
+  if (auto Res = olMemFree(Context, TgtAllocBegin)) {
     REPORT() << "Failure to deallocate device pointer " << TgtAllocBegin << ": "
-             << llvm::toString(std::move(Err));
+             << Res->Details;
     return OFFLOAD_FAIL;
   }
 
@@ -671,7 +774,7 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
   OMPT_IF_BUILT(
       InterfaceRAII TargetDataExchangeRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
-          RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr, Size,
+          DeviceID, SrcPtr, DstDev.DeviceID, DstPtr, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   ol_queue_handle_t queue = AsyncInfo.getQueue();
@@ -679,8 +782,8 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
     return OFFLOAD_FAIL;
   if (auto Res = olMemcpy(queue, DstPtr, DstDev.DeviceHandle, SrcPtr,
                           DeviceHandle, Size)) {
-    REPORT() << "Failure to copy data from device (" << RTLDeviceID
-             << ") to device (" << DstDev.RTLDeviceID
+    REPORT() << "Failure to copy data from device (" << DeviceID
+             << ") to device (" << DstDev.DeviceID
              << "). Pointers: host = " << SrcPtr << ", device = " << DstPtr
              << ", size = " << Size << ": " << Res->Details;
     return OFFLOAD_FAIL;
@@ -1414,14 +1517,16 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   RecordReplayTy::HandleTy RRHandle;
   KernelInfoTy Kernel;
   if (RecordReplay) {
-    auto ImageOrErr = KernelLaunchInfo.Program.getImage();
+    assert(KernelLaunchInfo.Program &&
+           "Kernel program must be valid for record replay.");
+    auto ImageOrErr = KernelLaunchInfo.Program->getImage();
     if (!ImageOrErr) {
       REPORT() << "Failure to get the image of kernel " << KernelLaunchInfo.Name
                << ": " << toString(ImageOrErr.takeError());
       return OFFLOAD_FAIL;
     }
     Kernel = KernelInfoTy(KernelLaunchInfo.Name, *ImageOrErr,
-                          KernelLaunchInfo.Program.getIRImage());
+                          KernelLaunchInfo.Program->getIRImage());
 
     // Record replay requires synchronization of any previous operation.
     if (synchronize(AsyncInfo) != OFFLOAD_SUCCESS)

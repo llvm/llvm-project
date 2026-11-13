@@ -1,5 +1,7 @@
 // RUN: not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_FN_ATTR %s 2>&1 | FileCheck -check-prefix=ERR-FN-ATTR %s
 // RUN: not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_PARAM_ATTR %s 2>&1 | FileCheck -check-prefix=ERR-PARAM-ATTR %s
+// RUN: not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_RET_ATTR %s 2>&1 | FileCheck -check-prefix=ERR-RET-ATTR %s
+// RUN: not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_INT_ATTR %s 2>&1 | FileCheck -check-prefix=ERR-INT-ATTR %s
 // RUN: not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_TOO_MANY_PARAM_ATTRS %s 2>&1 | FileCheck -check-prefix=ERR-TOO-MANY-ATTRS %s
 // RUN: not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_TOO_MANY_POINTEE_TYPES %s 2>&1 | FileCheck -check-prefix=ERR-TOO-MANY-POINTEE %s
 // RUN: not llvm-tblgen -gen-runtime-libcalls -I %p/../../include -DERR_POINTEE_NON_PTR %s 2>&1 | FileCheck -check-prefix=ERR-POINTEE-NON-PTR %s
@@ -22,6 +24,24 @@ def MODF_F32 : RuntimeLibcall<Flt, [Flt, Ptr]> {
 
 // ERR-PARAM-ATTR: [[@LINE+1]]:5: error: 'WillReturn' is not a valid ParamAttr
 def modff : RuntimeLibcallImpl<MODF_F32>;
+#endif
+
+#ifdef ERR_RET_ATTR
+def MODF_F32 : RuntimeLibcall<Flt, [Flt, Ptr]> {
+  let RetAttrs = [NoUndef, WillReturn];
+}
+
+// ERR-RET-ATTR: [[@LINE+1]]:5: error: 'WillReturn' is not a valid RetAttr
+def modff : RuntimeLibcallImpl<MODF_F32>;
+#endif
+
+#ifdef ERR_INT_ATTR
+def MALLOC : RuntimeLibcall<Ptr, [SizeT]> {
+  let FnAttrs = [NoUnwind, AllocKind];
+}
+
+// ERR-INT-ATTR: [[@LINE+1]]:5: error: 'AllocKind' requires a value; use a ValueAttr
+def malloc : RuntimeLibcallImpl<MALLOC>;
 #endif
 
 #ifdef ERR_TOO_MANY_PARAM_ATTRS

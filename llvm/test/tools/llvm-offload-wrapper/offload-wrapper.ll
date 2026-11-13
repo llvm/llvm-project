@@ -10,21 +10,21 @@
 ; OMP-NEXT: @__stop_llvm_offload_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
 ; OMP-NEXT: @__dummy.llvm_offload_entries = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries", align 8
 ; OMP-NEXT: @llvm.used = appending global [1 x ptr] [ptr @__dummy.llvm_offload_entries], section "llvm.metadata"
-; OMP-NEXT: @.omp_offloading.device_image = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"{{.*}}", section ".llvm.offloading", align 8
-; OMP-NEXT: @.omp_offloading.device_images = internal unnamed_addr constant [1 x %__tgt_device_image] [%__tgt_device_image { ptr @.omp_offloading.device_image, ptr getelementptr (i8, ptr @.omp_offloading.device_image, i64 [[SIZE]]), ptr @__start_llvm_offload_entries, ptr @__stop_llvm_offload_entries }]
-; OMP-NEXT: @.omp_offloading.descriptor = internal constant %__tgt_bin_desc { i32 1, ptr @.omp_offloading.device_images, ptr @__start_llvm_offload_entries, ptr @__stop_llvm_offload_entries }
-; OMP-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @.omp_offloading.descriptor_reg, ptr null }]
+; OMP-NEXT: @.llvm_offloading.device_image = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"{{.*}}", section ".llvm.offloading", align 8
+; OMP-NEXT: @.llvm_offloading.device_images = internal unnamed_addr constant [1 x %__tgt_device_image] [%__tgt_device_image { ptr @.llvm_offloading.device_image, ptr getelementptr (i8, ptr @.llvm_offloading.device_image, i64 [[SIZE]]), ptr @__start_llvm_offload_entries, ptr @__stop_llvm_offload_entries }]
+; OMP-NEXT: @.llvm_offloading.descriptor = internal constant %__tgt_bin_desc { i32 1, ptr @.llvm_offloading.device_images, ptr @__start_llvm_offload_entries, ptr @__stop_llvm_offload_entries }
+; OMP-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @.llvm_offloading.descriptor_reg, ptr null }]
 
-;      OMP: define internal void @.omp_offloading.descriptor_reg() section ".text.startup" {
+;      OMP: define internal void @.llvm_offloading.descriptor_reg() section ".text.startup" {
 ; OMP-NEXT: entry:
-; OMP-NEXT:   call void @__tgt_register_lib(ptr @.omp_offloading.descriptor)
-; OMP-NEXT:   %0 = call i32 @atexit(ptr @.omp_offloading.descriptor_unreg)
+; OMP-NEXT:   call void @__tgt_register_lib(ptr @.llvm_offloading.descriptor)
+; OMP-NEXT:   %0 = call i32 @atexit(ptr @.llvm_offloading.descriptor_unreg)
 ; OMP-NEXT:   ret void
 ; OMP-NEXT: }
 
-;      OMP: define internal void @.omp_offloading.descriptor_unreg() section ".text.startup" {
+;      OMP: define internal void @.llvm_offloading.descriptor_unreg() section ".text.startup" {
 ; OMP-NEXT: entry:
-; OMP-NEXT:   call void @__tgt_unregister_lib(ptr @.omp_offloading.descriptor)
+; OMP-NEXT:   call void @__tgt_unregister_lib(ptr @.llvm_offloading.descriptor)
 ; OMP-NEXT:   ret void
 ; OMP-NEXT: }
 
@@ -143,4 +143,21 @@
 ; RUN: llvm-offload-wrapper --triple=x86_64-unknown-linux-gnu -kind=openmp --relocatable %s -o %t.bc
 ; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=OMP-RELOCATABLE
 
-; OMP-RELOCATABLE: @.omp_offloading.device_image = internal unnamed_addr constant [{{[0-9]+}} x i8] c"{{.*}}", section ".llvm.offloading.relocatable", align 8
+; OMP-RELOCATABLE: @.llvm_offloading.device_image = internal unnamed_addr constant [{{[0-9]+}} x i8] c"{{.*}}", section ".llvm.offloading.relocatable", align 8
+
+; RUN: llvm-offload-wrapper --triple=x86_64-unknown-linux-gnu -kind=openacc %s -o %t.bc
+; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=ACC
+
+;      ACC: @.llvm_offloading.descriptor = internal constant %__tgt_bin_desc { i32 1, ptr @.llvm_offloading.device_images, ptr @__start_llvm_offload_entries, ptr @__stop_llvm_offload_entries }
+;      ACC: define internal void @.llvm_offloading.descriptor_reg() section ".text.startup" {
+; ACC-NEXT: entry:
+; ACC-NEXT:   call void @__tgt_acc_register_lib(ptr @.llvm_offloading.descriptor)
+; ACC-NEXT:   %0 = call i32 @atexit(ptr @.llvm_offloading.descriptor_unreg)
+; ACC-NEXT:   ret void
+; ACC-NEXT: }
+
+;      ACC: define internal void @.llvm_offloading.descriptor_unreg() section ".text.startup" {
+; ACC-NEXT: entry:
+; ACC-NEXT:   call void @__tgt_acc_unregister_lib(ptr @.llvm_offloading.descriptor)
+; ACC-NEXT:   ret void
+; ACC-NEXT: }
