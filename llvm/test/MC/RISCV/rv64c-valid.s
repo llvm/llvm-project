@@ -22,38 +22,38 @@
 # CHECK-ASM-AND-OBJ: c.ldsp s0, 0(sp)
 # CHECK-ASM: encoding: [0x02,0x64]
 # CHECK-NO-EXT: error: invalid instruction, any one of the following would fix this:
-# CHECK-NO-EXT-DAG: note: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-# CHECK-NO-EXT-DAG: note: instruction requires the following: 'Zclsd' (Compressed Load/Store pair instructions), RV32I Base Instruction Set{{$}}
+# CHECK-NO-EXT: note: instruction requires the following: 'Zclsd' (Compressed Load/Store pair instructions), RV32I Base Instruction Set{{$}}
+# CHECK-NO-EXT: note: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
 # CHECK-NO-RV64: error: invalid instruction, any one of the following would fix this:
-# CHECK-NO-RV64-DAG: note: instruction requires the following: 'Zclsd' (Compressed Load/Store pair instructions){{$}}
-# CHECK-NO-RV64-DAG: note: instruction requires the following: RV64I Base Instruction Set{{$}}
+# CHECK-NO-RV64: note: instruction requires the following: 'Zclsd' (Compressed Load/Store pair instructions){{$}}
+# CHECK-NO-RV64: note: instruction requires the following: RV64I Base Instruction Set{{$}}
 c.ldsp s0, 0(sp)
 # CHECK-ASM-AND-OBJ: c.sdsp s2, 504(sp)
 # CHECK-ASM: encoding: [0xca,0xff]
 # CHECK-NO-EXT: error: invalid instruction, any one of the following would fix this:
-# CHECK-NO-EXT-DAG: note: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-# CHECK-NO-EXT-DAG: note: instruction requires the following: 'Zclsd' (Compressed Load/Store pair instructions), RV32I Base Instruction Set{{$}}
+# CHECK-NO-EXT: note: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
+# CHECK-NO-EXT: note: instruction requires the following: 'Zclsd' (Compressed Load/Store pair instructions), RV32I Base Instruction Set{{$}}
 # CHECK-NO-RV64: error: invalid instruction, any one of the following would fix this:
-# CHECK-NO-RV64-DAG: note: instruction requires the following: 'Zclsd' (Compressed Load/Store pair instructions){{$}}
-# CHECK-NO-RV64-DAG: note: instruction requires the following: RV64I Base Instruction Set{{$}}
+# CHECK-NO-RV64: note: instruction requires the following: RV64I Base Instruction Set{{$}}
+# CHECK-NO-RV64: note: instruction requires the following: 'Zclsd' (Compressed Load/Store pair instructions){{$}}
 c.sdsp s2, 504(sp)
 # CHECK-ASM-AND-OBJ: c.ld a4, 0(a3)
 # CHECK-ASM: encoding: [0x98,0x62]
 # CHECK-NO-EXT: error: invalid instruction, any one of the following would fix this:
-# CHECK-NO-EXT-DAG: note: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-# CHECK-NO-EXT-DAG: note: instruction requires the following: 'Zclsd' (Compressed Load/Store pair instructions), RV32I Base Instruction Set{{$}}
+# CHECK-NO-EXT: note: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
+# CHECK-NO-EXT: note: instruction requires the following: 'Zclsd' (Compressed Load/Store pair instructions), RV32I Base Instruction Set{{$}}
 # CHECK-NO-RV64: error: invalid instruction, any one of the following would fix this:
-# CHECK-NO-RV64-DAG: note: instruction requires the following: 'Zclsd' (Compressed Load/Store pair instructions){{$}}
-# CHECK-NO-RV64-DAG: note: instruction requires the following: RV64I Base Instruction Set{{$}}
+# CHECK-NO-RV64: note: instruction requires the following: RV64I Base Instruction Set{{$}}
+# CHECK-NO-RV64: note: instruction requires the following: 'Zclsd' (Compressed Load/Store pair instructions){{$}}
 c.ld a4, 0(a3)
 # CHECK-ASM-AND-OBJ: c.sd a2, 248(a3)
 # CHECK-ASM: encoding: [0xf0,0xfe]
 # CHECK-NO-EXT: error: invalid instruction, any one of the following would fix this:
-# CHECK-NO-EXT-DAG: note: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-# CHECK-NO-EXT-DAG: note: instruction requires the following: 'Zclsd' (Compressed Load/Store pair instructions), RV32I Base Instruction Set{{$}}
+# CHECK-NO-EXT: note: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
+# CHECK-NO-EXT: note: instruction requires the following: 'Zclsd' (Compressed Load/Store pair instructions), RV32I Base Instruction Set{{$}}
 # CHECK-NO-RV64: error: invalid instruction, any one of the following would fix this:
-# CHECK-NO-RV64-DAG: note: instruction requires the following: 'Zclsd' (Compressed Load/Store pair instructions){{$}}
-# CHECK-NO-RV64-DAG: note: instruction requires the following: RV64I Base Instruction Set{{$}}
+# CHECK-NO-RV64: note: instruction requires the following: RV64I Base Instruction Set{{$}}
+# CHECK-NO-RV64: note: instruction requires the following: 'Zclsd' (Compressed Load/Store pair instructions){{$}}
 c.sd a2, 248(a3)
 
 # CHECK-ASM-AND-OBJ: c.subw a3, a4

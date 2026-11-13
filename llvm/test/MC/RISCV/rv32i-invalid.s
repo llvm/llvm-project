@@ -83,10 +83,10 @@ lw a0, -2049(f0)
 # CHECK: :[[@LINE-4]]:8: note: immediate must be an integer in the range [-2048, 2047]
 ld a0, (a3)
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:1: note: instruction requires the following: RV64I Base Instruction Set
-# CHECK: :[[@LINE-3]]:1: note: instruction requires the following: 'Zilsd' (Load/Store pair instructions)
+# CHECK: :[[@LINE-2]]:1: note: instruction requires the following: RV64I Base Instruction Set{{$}}
+# CHECK: :[[@LINE-3]]:1: note: instruction requires the following: 'Zilsd' (Load/Store pair instructions){{$}}
 ld a1, (a3)
-# CHECK: :[[@LINE-1]]:1: error: instruction requires the following: RV64I Base Instruction Set
+# CHECK: :[[@LINE-1]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}
 
 add a1, a2, foo
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
