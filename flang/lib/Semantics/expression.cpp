@@ -3263,6 +3263,12 @@ static std::optional<int> GetMatchingDistance(
         }
       }
     }
+    // A HOST,DEVICE procedure's DEVICE dummy accepts host storage.
+    if (procedure.cudaSubprogramAttrs ==
+            common::CUDASubprogramAttrs::HostDevice &&
+        dummyDataAttr == common::CUDADataAttr::Device && !actualDataAttr) {
+      return true;
+    }
     return false;
   }};
 
