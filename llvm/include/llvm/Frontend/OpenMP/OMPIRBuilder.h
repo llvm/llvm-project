@@ -4133,6 +4133,9 @@ public:
     Type *ElemTy = nullptr;
     bool IsSigned = false;
     bool IsVolatile = false;
+    /// Alignment of the memory \p Var points to. When unset, the natural
+    /// alignment of \p ElemTy is assumed.
+    MaybeAlign Alignment = std::nullopt;
   };
 
   /// Emit atomic Read for : V = X --- Only Scalar data types.

@@ -7386,21 +7386,23 @@ static void emitOMPAtomicCompareExpr(
   llvm::OpenMPIRBuilder::AtomicOpValue XOpVal{
       XAddr.emitRawPointer(CGF), XAddr.getElementType(),
       X->getType()->hasSignedIntegerRepresentation(),
-      X->getType().isVolatileQualified()};
+      X->getType().isVolatileQualified(), XAddr.getAlignment().getAsAlign()};
   llvm::OpenMPIRBuilder::AtomicOpValue VOpVal, ROpVal;
   if (V) {
     LValue LV = CGF.EmitLValue(V);
     Address Addr = LV.getAddress();
     VOpVal = {Addr.emitRawPointer(CGF), Addr.getElementType(),
               V->getType()->hasSignedIntegerRepresentation(),
-              V->getType().isVolatileQualified()};
+              V->getType().isVolatileQualified(),
+              Addr.getAlignment().getAsAlign()};
   }
   if (R) {
     LValue LV = CGF.EmitLValue(R);
     Address Addr = LV.getAddress();
     ROpVal = {Addr.emitRawPointer(CGF), Addr.getElementType(),
               R->getType()->hasSignedIntegerRepresentation(),
-              R->getType().isVolatileQualified()};
+              R->getType().isVolatileQualified(),
+              Addr.getAlignment().getAsAlign()};
   }
 
   if (FailAO == llvm::AtomicOrdering::NotAtomic) {

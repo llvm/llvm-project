@@ -4381,7 +4381,7 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicCompareCapture) {
   SelectInst *Sel1 = dyn_cast<SelectInst>(ExtVal2->getNextNode());
   EXPECT_NE(Sel1, nullptr);
   EXPECT_EQ(Sel1->getCondition(), ExtVal2);
-  EXPECT_EQ(Sel1->getTrueValue(), Expr);
+  EXPECT_EQ(Sel1->getTrueValue(), D);
   EXPECT_EQ(Sel1->getFalseValue(), ExtVal1);
   StoreInst *Store1 = dyn_cast<StoreInst>(Sel1->getNextNode());
   EXPECT_NE(Store1, nullptr);
@@ -4527,6 +4527,76 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicCompareCapture) {
   Builder.CreateRetVoid();
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
+TEST_F(OpenMPIRBuilderTest, OMPAtomicComparePaddedFPUnderAligned) {
+  // x86_fp80 is 80 value bits in 16 bytes; x is aligned to 1 here.
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.Config.IsTargetDevice = false;
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  LLVMContext &Ctx = M->getContext();
+  Type *FP80Ty = Type::getX86_FP80Ty(Ctx);
+  IntegerType *Int128 = Type::getInt128Ty(Ctx);
+  ASSERT_EQ(M->getDataLayout().getTypeAllocSizeInBits(FP80Ty).getFixedValue(),
+            128u);
+
+  AllocaInst *XVal = Builder.CreateAlloca(FP80Ty);
+  XVal->setName("x");
+  XVal->setAlignment(Align(1));
+  AllocaInst *VVal = Builder.CreateAlloca(FP80Ty);
+  VVal->setName("v");
+
+  OpenMPIRBuilder::AtomicOpValue X = {XVal, FP80Ty, false, false, Align(1)};
+  OpenMPIRBuilder::AtomicOpValue V = {VVal, FP80Ty, false, false};
+  OpenMPIRBuilder::AtomicOpValue NoR = {nullptr, nullptr, false, false};
+  Constant *E = ConstantFP::get(FP80Ty, 1.0);
+  Constant *D = ConstantFP::get(FP80Ty, 2.0);
+
+  // { v = x; x = x == e ? d : x; }
+  bool SavedHandleFPNegZero = OMPBuilder.setHandleFPNegZero(true);
+  Builder.restoreIP(OMPBuilder.createAtomicCompare(
+      Builder, X, V, NoR, E, D, AtomicOrdering::Monotonic,
+      OMPAtomicCompareOp::EQ, /*IsXBinopExpr=*/true,
+      /*IsPostfixUpdate=*/true, /*IsFailOnly=*/false));
+  OMPBuilder.setHandleFPNegZero(SavedHandleFPNegZero);
+
+  Builder.CreateRetVoid();
+  OMPBuilder.finalize();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  unsigned NumAtomicLoads = 0, NumCmpXchgs = 0, NumFCmps = 0;
+  StoreInst *VStore = nullptr;
+  for (BasicBlock &Block : *F) {
+    for (Instruction &I : Block) {
+      if (auto *LI = dyn_cast<LoadInst>(&I)) {
+        if (!LI->isAtomic())
+          continue;
+        ++NumAtomicLoads;
+        EXPECT_EQ(LI->getPointerOperand(), XVal);
+        EXPECT_EQ(LI->getType(), Int128);
+        EXPECT_EQ(LI->getAlign().value(), 1u);
+      } else if (auto *CXI = dyn_cast<AtomicCmpXchgInst>(&I)) {
+        ++NumCmpXchgs;
+        EXPECT_EQ(CXI->getPointerOperand(), XVal);
+        EXPECT_EQ(CXI->getNewValOperand()->getType(), Int128);
+        EXPECT_EQ(CXI->getAlign().value(), 1u);
+      } else if (auto *FCI = dyn_cast<FCmpInst>(&I)) {
+        ++NumFCmps;
+        EXPECT_EQ(FCI->getPredicate(), CmpInst::FCMP_OEQ);
+      } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
+        if (SI->getPointerOperand() == VVal)
+          VStore = SI;
+      }
+    }
+  }
+  EXPECT_EQ(NumAtomicLoads, 1u);
+  EXPECT_EQ(NumCmpXchgs, 1u);
+  EXPECT_EQ(NumFCmps, 1u);
+  ASSERT_NE(VStore, nullptr);
+  EXPECT_EQ(VStore->getValueOperand()->getType(), FP80Ty);
 }
 
 TEST_F(OpenMPIRBuilderTest, OMPAtomicRWStructType) {
