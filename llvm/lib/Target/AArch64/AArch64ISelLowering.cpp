@@ -18757,6 +18757,33 @@ void AArch64TargetLowering::getTgtMemIntrinsic(
     Infos.push_back(Info);
     return;
   }
+  case Intrinsic::aarch64_neon_vstnq_x2: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    auto *VecTy = cast<FixedVectorType>(I.getArgOperand(0)->getType());
+    Info.memVT =
+        EVT::getVectorVT(I.getContext(), EVT::getEVT(VecTy->getElementType()),
+                         VecTy->getNumElements() * 2);
+    Info.ptrVal = I.getArgOperand(2);
+    Info.offset = 0;
+    Info.align.reset();
+    Info.flags = MachineMemOperand::MOStore | MachineMemOperand::MONonTemporal;
+    Infos.push_back(Info);
+    return;
+  }
+  case Intrinsic::aarch64_neon_vldnq_x2: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    auto *ST = cast<StructType>(I.getType());
+    auto *VecTy = cast<FixedVectorType>(ST->getElementType(0));
+    Info.memVT =
+        EVT::getVectorVT(I.getContext(), EVT::getEVT(VecTy->getElementType()),
+                         VecTy->getNumElements() * 2);
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.align.reset();
+    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MONonTemporal;
+    Infos.push_back(Info);
+    return;
+  }
   case Intrinsic::aarch64_ldaxr:
   case Intrinsic::aarch64_ldxr: {
     Type *ValTy = I.getParamElementType(0);
