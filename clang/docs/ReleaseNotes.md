@@ -377,6 +377,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### New Compiler Flags
 
+- Added `-fpch-base-dir-is-cwd` to serialize precompiled header input paths
+  relative to the current working directory. Paths resolve against the
+  consumer's working directory when loading the PCH, allowing a build tree
+  to be moved without rewriting paths. Paths outside the working directory
+  remain absolute. This option cannot be combined with `--relocatable-pch`.
+
 - New option `-fmodules-validate-directory-dependencies` makes an implicitly
   built module out of date when a header is added to a directory it enumerated,
   such as an umbrella directory or the directory of an umbrella header, after it
@@ -862,7 +868,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   (such as `std::map`) whose mapper lookup instantiates a class template specialization. (#GH154704)
 - Fixed a bug where repeated #imports of modular headers in non-modular compilation were translated to #pragma clang module import. (#GH216924)
 - Fixed an assertion when `#pragma omp declare simd` or `#pragma omp declare variant` is followed by another OpenMP declarative directive containing a qualified identifier. (#GH217204)
-- Fixed crashes on an OpenMP `target` region inside a lambda or block at namespace scope, including when the region used a global reference. (#GH223397)
+- Fixed crashes on an OpenMP `target` region inside a lambda or block at namespace scope, including when the region used a global reference; such a region in a lambda is now also emitted for the offloading device. (#GH223397, #GH136652)
 - Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
 - Fixed a crash when a local register variable bound to a pseudo or status register by an `asm` label,
   such as `register long double t __asm("17");` (the flags register), was used as an inline asm operand.

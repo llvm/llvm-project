@@ -3528,10 +3528,12 @@ def LdStMatrixEltTypeB16 : I32EnumAttrCase<"B16", 0, "b16">;
 def LdStMatrixEltTypeB8 : I32EnumAttrCase<"B8", 1, "b8">;
 def LdStMatrixEltTypeB8X16_B6X16_P32 : I32EnumAttrCase<"B8X16_B6X16_P32", 2, "b8x16.b6x16_p32">;
 def LdStMatrixEltTypeB8X16_B4X16_P64 : I32EnumAttrCase<"B8X16_B4X16_P64", 3, "b8x16.b4x16_p64">;
+def LdStMatrixEltTypeS8_S4 : I32EnumAttrCase<"S8_S4", 4, "s8.s4">;
 
 def LdStMatrixEltType : I32EnumAttr<"LdStMatrixEltType", "Element type for ldmatrix and stmatrix",
   [LdStMatrixEltTypeB16, LdStMatrixEltTypeB8,
-   LdStMatrixEltTypeB8X16_B6X16_P32, LdStMatrixEltTypeB8X16_B4X16_P64]> {
+   LdStMatrixEltTypeB8X16_B6X16_P32, LdStMatrixEltTypeB8X16_B4X16_P64,
+   LdStMatrixEltTypeS8_S4]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
@@ -3603,7 +3605,16 @@ def NVVM_LdMatrixOp: NVVM_Op<"ldmatrix", [InferTypeOpAdaptor]>,
     %l2 = nvvm.ldmatrix %ptr, num = 4, layout = <row>,
       shape = <m = 8, n = 8>, element_type = <b16> :
       (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
+    // Load an 8x16 matrix of signed 4-bit elements, sign-extended to 8 bits.
+    %l3 = nvvm.ldmatrix %ptr, num = 1, layout = <row>,
+      shape = <m = 8, n = 16>, element_type = <s8.s4> :
+      (!llvm.ptr<3>) -> i32
     ```
+
+    For the 8x16 shape, element type `s8.s4` loads signed 4-bit elements and
+    sign-extends each of them to a signed 8-bit value during the load.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#warp-level-matrix-instructions-ldmatrix)
   }];
 
   let assemblyFormat = [{

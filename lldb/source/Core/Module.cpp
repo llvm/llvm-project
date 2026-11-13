@@ -1139,12 +1139,17 @@ bool Module::ShouldReportDiagnostic(llvm::StringRef msg) {
   return m_shown_diagnostics.Insert(llvm::stable_hash_name(msg));
 }
 
-void Module::ReportError(const llvm::formatv_object_base &payload) {
+void Module::ReportError(const llvm::formatv_object_base &payload,
+                         bool internal_error) {
   StreamString strm;
   GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelBrief);
   std::string msg = payload.str();
   strm << ' ' << msg;
-  if (ShouldReportDiagnostic(msg))
+  if (!ShouldReportDiagnostic(msg))
+    return;
+  if (internal_error)
+    Debugger::ReportInternalError(strm.GetString().str());
+  else
     Debugger::ReportError(strm.GetString().str());
 }
 
