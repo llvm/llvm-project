@@ -184,9 +184,12 @@ template <bool RecordWhyLive> void MarkLiveImpl<RecordWhyLive>::drain() {
   // ending after a visit or two, which would result in a lot of fork-join
   // overhead.
   constexpr size_t minVisitsPerLevel = 256;
+  Worklist level;
   while (!nextLevel.empty()) {
-    Worklist level = std::move(nextLevel);
-    nextLevel.clear();
+    // Swapping hands nextLevel the previous level's buffer, so later levels
+    // rarely need to grow it.
+    level.clear();
+    std::swap(level, nextLevel);
     std::mutex nextLevelMutex;
     std::atomic<bool> anyWorkerIdle{false};
     size_t chunkSize =
