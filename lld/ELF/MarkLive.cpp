@@ -567,6 +567,7 @@ template <class ELFT, bool TrackWhyLive>
 void MarkLive<ELFT, TrackWhyLive>::markParallel() {
   const size_t numThreads = parallel::getThreadCount();
   SmallVector<InputSection *, 0> level;
+  level.reserve(queue.size());
   while (!queue.empty()) {
     level.clear();
     std::swap(level, queue);
