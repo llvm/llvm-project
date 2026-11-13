@@ -40,11 +40,10 @@ static cl::opt<object::OffloadKind> Kind(
                clEnumValN(object::OFK_OpenACC, "openacc",
                           "Wrap OpenACC binaries")));
 
-static cl::opt<bool> Relocatable(
-    "relocatable",
-    cl::desc("Wrap for a relocatable offloading application (OpenMP, OpenACC "
-             "and SYCL)"),
-    cl::cat(OffloadWrapeprCategory));
+static cl::opt<bool>
+    Relocatable("relocatable",
+                cl::desc("Wrap for a relocatable offloading application"),
+                cl::cat(OffloadWrapeprCategory));
 
 static cl::opt<std::string> OutputFile("o", cl::desc("Write output to <file>."),
                                        cl::value_desc("file"),
