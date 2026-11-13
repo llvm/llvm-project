@@ -3384,6 +3384,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
           emitTargetBuiltinExpr(builtinID, e, returnValue)) {
     mlir::Value v = rst.value();
     // A null value means either a void builtin or an already diagnosed NYI.
+    // In the case of a void builtin, getUndefRValue returns
+    // `RValue::get(nullptr)`.
     if (!v)
       return getUndefRValue(e->getType());
 
