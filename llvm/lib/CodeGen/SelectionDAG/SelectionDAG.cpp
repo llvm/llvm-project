@@ -180,7 +180,8 @@ bool ISD::isConstantSplatVectorAllOnes(SDValue V, bool BuildVectorOnly) {
     return isConstantSplatVector(V, SplatVal) && SplatVal.isAllOnes();
   }
 
-  if (V.getOpcode() != ISD::BUILD_VECTOR) return false;
+  if (V.getOpcode() != ISD::BUILD_VECTOR)
+    return false;
 
   unsigned i = 0, e = V.getNumOperands();
 
@@ -226,7 +227,8 @@ bool ISD::isConstantSplatVectorAllZeros(SDValue V, bool BuildVectorOnly) {
     return isConstantSplatVector(V, SplatVal) && SplatVal.isZero();
   }
 
-  if (V.getOpcode() != ISD::BUILD_VECTOR) return false;
+  if (V.getOpcode() != ISD::BUILD_VECTOR)
+    return false;
 
   bool IsAllUndef = true;
   for (const SDValue &Op : V->op_values()) {
@@ -289,8 +291,7 @@ bool ISD::isBuildVectorOfConstantFPSDNodes(SDValue V) {
   return true;
 }
 
-bool ISD::isVectorShrinkable(SDValue V, unsigned NewEltSize,
-                             bool Signed) {
+bool ISD::isVectorShrinkable(SDValue V, unsigned NewEltSize, bool Signed) {
   assert(V.getValueType().isVector() && "Expected a vector!");
 
   unsigned EltSize = V.getValueType().getScalarSizeInBits();

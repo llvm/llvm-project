@@ -122,8 +122,7 @@ LLVM_ABI bool isBuildVectorOfConstantFPSDNodes(SDValue V);
 
 /// Returns true if the specified value is a vector where all elements can
 /// be truncated to the specified element size without a loss in meaning.
-LLVM_ABI bool isVectorShrinkable(SDValue V, unsigned NewEltSize,
-                                 bool Signed);
+LLVM_ABI bool isVectorShrinkable(SDValue V, unsigned NewEltSize, bool Signed);
 
 /// Return true if the value has at least one operand and all operands of the
 /// specified value are ISD::UNDEF.

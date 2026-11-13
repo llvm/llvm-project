@@ -62824,9 +62824,9 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
           ISD::isBuildVectorAllZeros(Ins.getOperand(0)) &&
           Ins.getOperand(1).getValueSizeInBits().getFixedValue() <=
               SubVecVT.getFixedSizeInBits())
-          return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT,
-                             getZeroVector(OpVT, Subtarget, DAG, dl),
-                             Ins.getOperand(1), N->getOperand(2));
+        return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT,
+                           getZeroVector(OpVT, Subtarget, DAG, dl),
+                           Ins.getOperand(1), N->getOperand(2));
     }
 
     // See if were inserting into a zero vXi1 vector and the subvector was
