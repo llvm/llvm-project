@@ -88,8 +88,6 @@
 
 using namespace llvm;
 
-static codegen::RegisterCodeGenFlags CGF;
-
 #define DEBUG_TYPE "lli"
 
 namespace {
