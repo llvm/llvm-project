@@ -64,6 +64,52 @@ STATISTIC(NumCompletelyUnrolledAndJammed, "Number of loops unroll and jammed");
 
 typedef SmallPtrSet<BasicBlock *, 4> BasicBlockSet;
 
+// Returns true for intrinsics that may nominally read/write memory but do not
+// impose a real cross-iteration data dependence, so they can be safely ignored
+// by the unroll-and-jam dependency analysis and safely cloned/reordered by the
+// transform.
+//
+// Rather than a fixed allow-list, safety is derived from memory effects and
+// attributes so the rule generalises to any harmless intrinsic:
+//   * reordering/cloning must be legal: not convergent, will-return, nothrow;
+//   * it must not access memory that can alias the loop's loads/stores:
+//     doesNotAccessMemory() or onlyAccessesInaccessibleMemory().
+// The stack/scope marker intrinsics access their own argument memory only, but
+// the real loads/stores to that alloca stay in the dependence set, so they are
+// admitted explicitly.
+static bool isSafeUnrollAndJamIntrinsic(const Instruction &I) {
+  const auto *II = dyn_cast<IntrinsicInst>(&I);
+  if (!II)
+    return false;
+
+  // experimental.noalias_scope_decl only accesses inaccessible memory, so it
+  // would pass the generic test below -- but cloning it during jamming without
+  // duplicating its !noalias scopes (which UnrollAndJamLoop does not do) would
+  // corrupt alias metadata. Keep it blocking until that support is added.
+  if (II->getIntrinsicID() == Intrinsic::experimental_noalias_scope_decl)
+    return false;
+
+  // Cloning/reordering across the jammed iterations must be semantically legal.
+  if (II->isConvergent() || II->mayThrow() || !II->willReturn())
+    return false;
+
+  // Generic case: cannot form a dependence with any analysable load/store.
+  if (II->doesNotAccessMemory() || II->onlyAccessesInaccessibleMemory())
+    return true;
+
+  // Stack/lifetime markers: only touch their own alloca; the substantive
+  // accesses to that alloca remain dependence-checked.
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::lifetime_start:
+  case Intrinsic::lifetime_end:
+  case Intrinsic::invariant_start:
+  case Intrinsic::invariant_end:
+    return true;
+  default:
+    return false;
+  }
+}
+
 // Partition blocks in an outer/inner loop pair into blocks before and after
 // the loop
 static bool partitionLoopBlocks(Loop &L, BasicBlockSet &ForeBlocks,
@@ -624,7 +670,8 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
 }
 
 static bool getLoadsAndStores(BasicBlockSet &Blocks,
-                              SmallVector<Instruction *, 4> &MemInstr) {
+                              SmallVector<Instruction *, 4> &MemInstr,
+                              bool AllowSafeIntrinsics) {
   // Scan the BBs and collect legal loads and stores.
   // Returns false if non-simple loads/stores are found.
   for (BasicBlock *BB : Blocks) {
@@ -638,6 +685,10 @@ static bool getLoadsAndStores(BasicBlockSet &Blocks,
           return false;
         MemInstr.push_back(&I);
       } else if (I.mayReadOrWriteMemory()) {
+        // Side-effect-free intrinsics (lifetime markers, assume, ...) do not
+        // create real memory dependencies; skip them instead of bailing.
+        if (AllowSafeIntrinsics && isSafeUnrollAndJamIntrinsic(I))
+          continue;
         return false;
       }
     }
@@ -756,7 +807,7 @@ static bool
 checkDependencies(Loop &Root, const BasicBlockSet &SubLoopBlocks,
                   const DenseMap<Loop *, BasicBlockSet> &ForeBlocksMap,
                   const DenseMap<Loop *, BasicBlockSet> &AftBlocksMap,
-                  DependenceInfo &DI, LoopInfo &LI) {
+                  DependenceInfo &DI, LoopInfo &LI, bool AllowSafeIntrinsics) {
   SmallVector<BasicBlockSet, 8> AllBlocks;
   for (Loop *L : Root.getLoopsInPreorder())
     if (ForeBlocksMap.contains(L))
@@ -771,7 +822,7 @@ checkDependencies(Loop &Root, const BasicBlockSet &SubLoopBlocks,
   SmallVector<Instruction *, 4> CurrentLoadsAndStores;
   for (BasicBlockSet &Blocks : AllBlocks) {
     CurrentLoadsAndStores.clear();
-    if (!getLoadsAndStores(Blocks, CurrentLoadsAndStores))
+    if (!getLoadsAndStores(Blocks, CurrentLoadsAndStores, AllowSafeIntrinsics))
       return false;
 
     Loop *CurLoop = LI.getLoopFor((*Blocks.begin())->front().getParent());
@@ -860,7 +911,8 @@ static Loop *getInnerMostLoop(Loop *L) {
 }
 
 bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
-                                DependenceInfo &DI, LoopInfo &LI) {
+                                DependenceInfo &DI, LoopInfo &LI,
+                                bool AllowSafeIntrinsics) {
   if (!isEligibleLoopForm(*L)) {
     LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Ineligible loop form\n");
     return false;
@@ -990,8 +1042,8 @@ bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   // Check for memory dependencies which prohibit the unrolling we are doing.
   // Because of the way we are unrolling Fore/Sub/Aft blocks, we need to check
   // there are no dependencies between Fore-Sub, Fore-Aft, Sub-Aft and Sub-Sub.
-  if (!checkDependencies(*L, SubLoopBlocks, ForeBlocksMap, AftBlocksMap, DI,
-                         LI)) {
+  if (!checkDependencies(*L, SubLoopBlocks, ForeBlocksMap, AftBlocksMap, DI, LI,
+                         AllowSafeIntrinsics)) {
     LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; failed dependency check\n");
     return false;
   }
