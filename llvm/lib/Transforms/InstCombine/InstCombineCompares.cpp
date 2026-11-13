@@ -5551,8 +5551,13 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
   if (!BO0 && !BO1)
     return nullptr;
 
-  if (Instruction *NewICmp = foldICmpXNegX(I, Builder))
-    return NewICmp;
+  // Skip the helpers below when neither operand is the operator they match.
+  unsigned Opc0 = Operator::getOpcode(Op0), Opc1 = Operator::getOpcode(Op1);
+  auto HasOpcode = [&](unsigned Opc) { return Opc0 == Opc || Opc1 == Opc; };
+
+  if (HasOpcode(Instruction::Sub))
+    if (Instruction *NewICmp = foldICmpXNegX(I, Builder))
+      return NewICmp;
 
   const CmpInst::Predicate Pred = I.getPredicate();
 
@@ -5820,10 +5825,12 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
                               ConstantExpr::getNeg(RHSC));
   }
 
-  if (Instruction *R = foldICmpXorXX(I, Q, *this))
-    return R;
-  if (Instruction *R = foldICmpOrXX(I, Q, *this))
-    return R;
+  if (HasOpcode(Instruction::Xor))
+    if (Instruction *R = foldICmpXorXX(I, Q, *this))
+      return R;
+  if (HasOpcode(Instruction::Or))
+    if (Instruction *R = foldICmpOrXX(I, Q, *this))
+      return R;
 
   {
     // Try to remove shared multiplier from comparison:
@@ -6001,17 +6008,21 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
                           Constant::getNullValue(Op0->getType()), Op0);
   }
 
-  if (Value *V = foldMultiplicationOverflowCheck(I))
-    return replaceInstUsesWith(I, V);
+  if (HasOpcode(Instruction::UDiv) || HasOpcode(Instruction::SDiv))
+    if (Value *V = foldMultiplicationOverflowCheck(I))
+      return replaceInstUsesWith(I, V);
 
-  if (Instruction *R = foldICmpAndXX(I, Q, *this))
-    return R;
+  if (HasOpcode(Instruction::And))
+    if (Instruction *R = foldICmpAndXX(I, Q, *this))
+      return R;
 
-  if (Value *V = foldICmpWithTruncSignExtendedVal(I, Builder))
-    return replaceInstUsesWith(I, V);
+  if (HasOpcode(Instruction::AShr))
+    if (Value *V = foldICmpWithTruncSignExtendedVal(I, Builder))
+      return replaceInstUsesWith(I, V);
 
-  if (Value *V = foldShiftIntoShiftInAnotherHandOfAndInICmp(I, SQ, Builder))
-    return replaceInstUsesWith(I, V);
+  if (Opc0 == Instruction::And)
+    if (Value *V = foldShiftIntoShiftInAnotherHandOfAndInICmp(I, SQ, Builder))
+      return replaceInstUsesWith(I, V);
 
   return nullptr;
 }
@@ -6576,8 +6587,9 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
     }
   }
 
-  if (Instruction *ICmp = foldICmpIntrinsicWithIntrinsic(I, Builder))
-    return ICmp;
+  if (isa<CallInst>(Op0) && isa<CallInst>(Op1))
+    if (Instruction *ICmp = foldICmpIntrinsicWithIntrinsic(I, Builder))
+      return ICmp;
 
   // Match icmp eq (trunc (lshr A, BW), (ashr (trunc A), BW-1)), which checks
   // the top BW/2 + 1 bits are all the same. Create "A >=s INT_MIN && A <=s
@@ -7985,42 +7997,44 @@ static Instruction *foldReductionIdiom(ICmpInst &I,
 Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
                                                    Value *Op0, Value *Op1,
                                                    ICmpInst &CtxI) {
-  // Try to optimize 'icmp GEP, P' or 'icmp P, GEP'.
-  if (auto *GEP = dyn_cast<GEPOperator>(Op0))
-    if (Instruction *NI = foldGEPICmp(GEP, Op1, Pred, CtxI))
-      return NI;
+  // Each fold below requires Op0 to be a particular operator, so dispatch on
+  // its opcode and only try the folds that can apply.
+  switch (Operator::getOpcode(Op0)) {
+  default:
+    return nullptr;
 
-  if (auto *SI = dyn_cast<SelectInst>(Op0))
-    if (Instruction *NI = foldSelectICmp(Pred, SI, Op1, CtxI))
-      return NI;
+  case Instruction::GetElementPtr:
+    // Try to optimize 'icmp GEP, P' or 'icmp P, GEP'.
+    if (auto *GEP = dyn_cast<GEPOperator>(Op0))
+      if (Instruction *NI = foldGEPICmp(GEP, Op1, Pred, CtxI))
+        return NI;
+    return nullptr;
 
-  if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(Op0)) {
-    if (Instruction *Res = foldICmpWithMinMax(CtxI, MinMax, Op1, Pred))
-      return Res;
+  case Instruction::Select:
+    if (auto *SI = dyn_cast<SelectInst>(Op0))
+      if (Instruction *NI = foldSelectICmp(Pred, SI, Op1, CtxI))
+        return NI;
+    return nullptr;
 
-    if (Instruction *Res = foldICmpWithClamp(CtxI, Op1, MinMax))
-      return Res;
-  }
+  case Instruction::Call: {
+    if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(Op0)) {
+      if (Instruction *Res = foldICmpWithMinMax(CtxI, MinMax, Op1, Pred))
+        return Res;
 
-  {
-    Value *X;
-    const APInt *C;
-    // icmp X+Cst, X
-    if (match(Op0, m_Add(m_Value(X), m_APInt(C))) && Op1 == X)
-      return foldICmpAddOpConst(X, *C, Pred);
-  }
+      if (Instruction *Res = foldICmpWithClamp(CtxI, Op1, MinMax))
+        return Res;
+    }
 
-  // abs(X) >=  X --> true
-  // abs(X) u<= X --> true
-  // abs(X) <   X --> false
-  // abs(X) u>  X --> false
-  // abs(X) u>= X --> IsIntMinPosion ? `X > -1`: `X u<= INTMIN`
-  // abs(X) <=  X --> IsIntMinPosion ? `X > -1`: `X u<= INTMIN`
-  // abs(X) ==  X --> IsIntMinPosion ? `X > -1`: `X u<= INTMIN`
-  // abs(X) u<  X --> IsIntMinPosion ? `X < 0` : `X >   INTMIN`
-  // abs(X) >   X --> IsIntMinPosion ? `X < 0` : `X >   INTMIN`
-  // abs(X) !=  X --> IsIntMinPosion ? `X < 0` : `X >   INTMIN`
-  {
+    // abs(X) >=  X --> true
+    // abs(X) u<= X --> true
+    // abs(X) <   X --> false
+    // abs(X) u>  X --> false
+    // abs(X) u>= X --> IsIntMinPosion ? `X > -1`: `X u<= INTMIN`
+    // abs(X) <=  X --> IsIntMinPosion ? `X > -1`: `X u<= INTMIN`
+    // abs(X) ==  X --> IsIntMinPosion ? `X > -1`: `X u<= INTMIN`
+    // abs(X) u<  X --> IsIntMinPosion ? `X < 0` : `X >   INTMIN`
+    // abs(X) >   X --> IsIntMinPosion ? `X < 0` : `X >   INTMIN`
+    // abs(X) !=  X --> IsIntMinPosion ? `X < 0` : `X >   INTMIN`
     Value *X;
     Constant *C;
     if (match(Op0, m_Intrinsic<Intrinsic::abs>(m_Value(X), m_Constant(C))) &&
@@ -8059,9 +8073,7 @@ Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
         llvm_unreachable("Invalid predicate!");
       }
     }
-  }
 
-  {
     // For a nonzero constant C:
     // usub.sat(X, C) == X  --> X == 0
     // usub.sat(X, C) != X  --> X != 0
@@ -8073,15 +8085,30 @@ Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
           CmpInst::isEquality(Pred) ? Pred.dropSameSign() : ICmpInst::ICMP_NE;
       return new ICmpInst(NewPred, Op1, Constant::getNullValue(Op1->getType()));
     }
+    return nullptr;
   }
 
-  const SimplifyQuery Q = SQ.getWithInstruction(&CtxI);
-  if (Value *V = foldICmpWithLowBitMaskedVal(Pred, Op0, Op1, Q, *this))
-    return replaceInstUsesWith(CtxI, V);
+  case Instruction::Add: {
+    Value *X;
+    const APInt *C;
+    // icmp X+Cst, X
+    if (match(Op0, m_Add(m_Value(X), m_APInt(C))) && Op1 == X)
+      return foldICmpAddOpConst(X, *C, Pred);
+    return nullptr;
+  }
 
-  // Folding (X / Y) pred X => X swap(pred) 0 for constant Y other than 0 or 1
-  auto CheckUGT1 = [](const APInt &Divisor) { return Divisor.ugt(1); };
-  {
+  case Instruction::And:
+  case Instruction::Or: {
+    const SimplifyQuery Q = SQ.getWithInstruction(&CtxI);
+    if (Value *V = foldICmpWithLowBitMaskedVal(Pred, Op0, Op1, Q, *this))
+      return replaceInstUsesWith(CtxI, V);
+    return nullptr;
+  }
+
+  case Instruction::UDiv:
+  case Instruction::SDiv: {
+    // Folding (X / Y) pred X => X swap(pred) 0 for constant Y other than 0 or 1
+    auto CheckUGT1 = [](const APInt &Divisor) { return Divisor.ugt(1); };
     if (match(Op0, m_UDiv(m_Specific(Op1), m_CheckedInt(CheckUGT1)))) {
       return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
                           Constant::getNullValue(Op1->getType()));
@@ -8092,11 +8119,13 @@ Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
       return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
                           Constant::getNullValue(Op1->getType()));
     }
+    return nullptr;
   }
 
-  // Another case of this fold is (X >> Y) pred X => X swap(pred) 0 if Y != 0
-  auto CheckNE0 = [](const APInt &Shift) { return !Shift.isZero(); };
-  {
+  case Instruction::LShr:
+  case Instruction::AShr: {
+    // Another case of this fold is (X >> Y) pred X => X swap(pred) 0 if Y != 0
+    auto CheckNE0 = [](const APInt &Shift) { return !Shift.isZero(); };
     if (match(Op0, m_LShr(m_Specific(Op1), m_CheckedInt(CheckNE0)))) {
       return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
                           Constant::getNullValue(Op1->getType()));
@@ -8107,37 +8136,41 @@ Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
       return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
                           Constant::getNullValue(Op1->getType()));
     }
+    return nullptr;
   }
 
-  // icmp (shl nsw/nuw X, L), (add nsw/nuw (shl nsw/nuw Y, L), K)
-  //   -> icmp X, (add nsw/nuw Y, K >> L)
-  // We use AShr for nsw and LShr for nuw to safely peel off the shift.
-  Value *X;
-  uint64_t ShAmt;
-  if (match(Op0, m_NUWShl(m_Value(X), m_ConstantInt(ShAmt))) &&
-      !CtxI.isSigned()) {
-    if (ShAmt >= X->getType()->getScalarSizeInBits())
-      return nullptr;
-    if (canEvaluateShifted(Op1, ShAmt, /*IsLeftShift=*/false,
-                           ShiftSemantics::Unsigned, &CtxI)) {
-      Value *NewOp1 = getShiftedValue(Op1, ShAmt, /*IsLeftShift=*/false,
-                                      ShiftSemantics::Unsigned);
-      return new ICmpInst(Pred, X, NewOp1);
+  case Instruction::Shl: {
+    // icmp (shl nsw/nuw X, L), (add nsw/nuw (shl nsw/nuw Y, L), K)
+    //   -> icmp X, (add nsw/nuw Y, K >> L)
+    // We use AShr for nsw and LShr for nuw to safely peel off the shift.
+    Value *X;
+    uint64_t ShAmt;
+    if (match(Op0, m_NUWShl(m_Value(X), m_ConstantInt(ShAmt))) &&
+        !CtxI.isSigned()) {
+      if (ShAmt >= X->getType()->getScalarSizeInBits())
+        return nullptr;
+      if (canEvaluateShifted(Op1, ShAmt, /*IsLeftShift=*/false,
+                             ShiftSemantics::Unsigned, &CtxI)) {
+        Value *NewOp1 = getShiftedValue(Op1, ShAmt, /*IsLeftShift=*/false,
+                                        ShiftSemantics::Unsigned);
+        return new ICmpInst(Pred, X, NewOp1);
+      }
     }
-  }
 
-  if (match(Op0, m_NSWShl(m_Value(X), m_ConstantInt(ShAmt))) &&
-      !CtxI.isUnsigned()) {
-    if (ShAmt >= X->getType()->getScalarSizeInBits())
-      return nullptr;
-    if (canEvaluateShifted(Op1, ShAmt, /*IsLeftShift=*/false,
-                           ShiftSemantics::Signed, &CtxI)) {
-      Value *NewOp1 = getShiftedValue(Op1, ShAmt, /*IsLeftShift=*/false,
-                                      ShiftSemantics::Signed);
-      return new ICmpInst(Pred, X, NewOp1);
+    if (match(Op0, m_NSWShl(m_Value(X), m_ConstantInt(ShAmt))) &&
+        !CtxI.isUnsigned()) {
+      if (ShAmt >= X->getType()->getScalarSizeInBits())
+        return nullptr;
+      if (canEvaluateShifted(Op1, ShAmt, /*IsLeftShift=*/false,
+                             ShiftSemantics::Signed, &CtxI)) {
+        Value *NewOp1 = getShiftedValue(Op1, ShAmt, /*IsLeftShift=*/false,
+                                        ShiftSemantics::Signed);
+        return new ICmpInst(Pred, X, NewOp1);
+      }
     }
+    return nullptr;
   }
-  return nullptr;
+  }
 }
 
 Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
@@ -8159,33 +8192,46 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Value *V = simplifyICmpInst(I.getCmpPredicate(), Op0, Op1, Q))
     return replaceInstUsesWith(I, V);
 
-  if (Instruction *Res = foldICmpTruncWithTruncOrExt(I, Q))
-    return Res;
+  // Most folds below only apply when an operand is a particular operator or a
+  // constant. Check that up front and skip the helpers whose precondition
+  // fails: the operands do not change until a fold returns.
+  unsigned Opc0 = Operator::getOpcode(Op0), Opc1 = Operator::getOpcode(Op1);
+  auto HasOpcode = [&](unsigned Opc) { return Opc0 == Opc || Opc1 == Opc; };
+  bool ConstRHS = isa<Constant>(Op1);
+
+  if (HasOpcode(Instruction::Trunc))
+    if (Instruction *Res = foldICmpTruncWithTruncOrExt(I, Q))
+      return Res;
 
   if (Op0->getType()->isIntOrIntVectorTy(1))
     if (Instruction *Res = canonicalizeICmpBool(I, Builder))
       return Res;
 
-  if (Instruction *Res = canonicalizeCmpWithConstant(I))
-    return Res;
+  if (ConstRHS)
+    if (Instruction *Res = canonicalizeCmpWithConstant(I))
+      return Res;
 
   if (Instruction *Res = canonicalizeICmpPredicate(I))
     return Res;
 
-  if (Instruction *Res = foldICmpWithConstant(I))
-    return Res;
+  if (ConstRHS) {
+    if (Instruction *Res = foldICmpWithConstant(I))
+      return Res;
 
-  if (Instruction *Res = foldICmpWithDominatingICmp(I))
-    return Res;
+    if (Instruction *Res = foldICmpWithDominatingICmp(I))
+      return Res;
+  }
 
-  if (Instruction *Res = foldICmpUsingBoolRange(I))
-    return Res;
+  if (HasOpcode(Instruction::ZExt) || HasOpcode(Instruction::SExt))
+    if (Instruction *Res = foldICmpUsingBoolRange(I))
+      return Res;
 
   if (Instruction *Res = foldICmpUsingKnownBits(I))
     return Res;
 
-  if (Instruction *Res = foldIsMultipleOfAPowerOfTwo(I))
-    return Res;
+  if (HasOpcode(Instruction::And))
+    if (Instruction *Res = foldIsMultipleOfAPowerOfTwo(I))
+      return Res;
 
   // Test if the ICmpInst instruction is used exclusively by a select as
   // part of a minimum or maximum operation. If so, refrain from doing
@@ -8205,8 +8251,9 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     }
 
   // Do this after checking for min/max to prevent infinite looping.
-  if (Instruction *Res = foldICmpWithZero(I))
-    return Res;
+  if (ConstRHS)
+    if (Instruction *Res = foldICmpWithZero(I))
+      return Res;
 
   Value *X;
   const APInt *C;
@@ -8259,13 +8306,16 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = foldICmpBinOp(I, Q))
     return Res;
 
-  if (Instruction *Res = foldICmpInstWithConstant(I))
-    return Res;
+  if (ConstRHS) {
+    if (Instruction *Res = foldICmpInstWithConstant(I))
+      return Res;
 
-  // Try to match comparison as a sign bit test. Intentionally do this after
-  // foldICmpInstWithConstant() to potentially let other folds to happen first.
-  if (Instruction *New = foldSignBitTest(I))
-    return New;
+    // Try to match comparison as a sign bit test. Intentionally do this after
+    // foldICmpInstWithConstant() to potentially let other folds to happen
+    // first.
+    if (Instruction *New = foldSignBitTest(I))
+      return New;
+  }
 
   if (auto *PN = dyn_cast<PHINode>(Op0))
     if (Instruction *NV = foldOpIntoPhi(I, PN))
@@ -8274,8 +8324,9 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     if (Instruction *NV = foldOpIntoPhi(I, PN))
       return NV;
 
-  if (Instruction *Res = foldICmpInstWithConstantNotInt(I))
-    return Res;
+  if (ConstRHS)
+    if (Instruction *Res = foldICmpInstWithConstantNotInt(I))
+      return Res;
 
   if (Instruction *Res = foldICmpCommutative(I.getCmpPredicate(), Op0, Op1, I))
     return Res;
@@ -8283,7 +8334,7 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
           foldICmpCommutative(I.getSwappedCmpPredicate(), Op1, Op0, I))
     return Res;
 
-  if (I.isCommutative()) {
+  if (I.isCommutative() && Opc0 == Opc1) {
     if (auto Pair = matchSymmetricPair(I.getOperand(0), I.getOperand(1))) {
       replaceOperand(I, 0, Pair->first);
       replaceOperand(I, 1, Pair->second);
@@ -8293,8 +8344,9 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
 
   // Fold icmp pred (select C1, TV1, FV1), (select C2, TV2, FV2)
   // when all select arms are constants, via truth table.
-  if (Instruction *R = foldCmpSelectOfConstants(I))
-    return R;
+  if (Opc0 == Instruction::Select && Opc1 == Instruction::Select)
+    if (Instruction *R = foldCmpSelectOfConstants(I))
+      return R;
 
   // In case of a comparison with two select instructions having the same
   // condition, check whether one of the resulting branches can be simplified.
@@ -8367,12 +8419,14 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
         return nullptr;
   }
 
-  if (Instruction *Res = foldICmpBitCast(I))
-    return Res;
+  if (Opc0 == Instruction::BitCast)
+    if (Instruction *Res = foldICmpBitCast(I))
+      return Res;
 
   // TODO: Hoist this above the min/max bailout.
-  if (Instruction *R = foldICmpWithCastOp(I))
-    return R;
+  if (Instruction::isCast(Opc0) || Opc1 == Instruction::IntToPtr)
+    if (Instruction *R = foldICmpWithCastOp(I))
+      return R;
 
   // icmp (zext X), (and (trunc Y), Mask) -> icmp X, trunc Y IFF Mask exactly
   // covers the bits of X
@@ -8473,14 +8527,17 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = foldICmpEquality(I))
     return Res;
 
-  if (Instruction *Res = foldICmpPow2Test(I, Builder))
-    return Res;
+  if (HasOpcode(Instruction::And) || HasOpcode(Instruction::Xor))
+    if (Instruction *Res = foldICmpPow2Test(I, Builder))
+      return Res;
 
-  if (Instruction *Res = foldICmpOfUAddOv(I))
-    return Res;
+  if (HasOpcode(Instruction::ExtractValue))
+    if (Instruction *Res = foldICmpOfUAddOv(I))
+      return Res;
 
-  if (Instruction *Res = foldICmpOfVectorReduce(I, DL, Builder))
-    return Res;
+  if (Opc0 == Instruction::Call)
+    if (Instruction *Res = foldICmpOfVectorReduce(I, DL, Builder))
+      return Res;
 
   // The 'cmpxchg' instruction returns an aggregate containing the old value and
   // an i1 which indicates whether or not we successfully did the swap.
@@ -8498,18 +8555,22 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
             !ACXI->isWeak())
           return ExtractValueInst::Create(ACXI, 1);
 
-  if (Instruction *Res = foldICmpWithHighBitMask(I, Builder))
-    return Res;
+  if (HasOpcode(Instruction::Shl) || HasOpcode(Instruction::Xor) ||
+      HasOpcode(Instruction::Add))
+    if (Instruction *Res = foldICmpWithHighBitMask(I, Builder))
+      return Res;
 
   if (I.getType()->isVectorTy())
     if (Instruction *Res = foldVectorCmp(I, Builder))
       return Res;
 
-  if (Instruction *Res = foldICmpInvariantGroup(I))
-    return Res;
+  if (Opc0 == Instruction::Call)
+    if (Instruction *Res = foldICmpInvariantGroup(I))
+      return Res;
 
-  if (Instruction *Res = foldReductionIdiom(I, Builder, DL))
-    return Res;
+  if (Opc0 == Instruction::BitCast)
+    if (Instruction *Res = foldReductionIdiom(I, Builder, DL))
+      return Res;
 
   {
     Value *A;
