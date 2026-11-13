@@ -40,8 +40,7 @@ define i1 @test1_inbounds(i32 %X) {
 
 define i1 @test1_nusw(i32 %X) {
 ; CHECK-LABEL: @test1_nusw(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 2147483647
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1]], 9
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1:%.*]], 9
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %P = getelementptr nusw [10 x i16], ptr @G16, i32 0, i32 %X
