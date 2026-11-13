@@ -3031,14 +3031,14 @@ static int CompareCudaMatchingDistance(
 // depends on its CUDA data attribute and (for unattributed actuals) on the
 // active -gpu=mem:{unified,managed} mode.
 //
-// Distance values returned (smaller is a better match; INF means
-// incompatible and disqualifies the candidate):
+// Distance values returned (smaller is a better match; INF disqualifies the
+// candidate, except as described below):
 //
 //                       Actual argument attribute
 //                 None                              ACC      gpu=    gpu=
 //   Dummy attr   (Host)  Device  Managed  Unified  use_dev  unified  managed
 //   ----------+--------+-------+--------+--------+--------+--------+--------+
-//   None(host)|    0   |  INF  |   3    |   3    |   3    |   3    |   3    |
+//   None(host)|    0   |  INF  |   3    |   3    |   1    |   3    |   3    |
 //   Device    |   INF  |   0   |   2    |   2    |   0    |   2    |   2    |
 //   Managed   |   INF  |  INF  |   0    |   1    |  INF   |   1    |   0    |
 //   Unified   |   INF  |  INF  |   1    |   0    |  INF   |   0    |   1    |
@@ -3051,9 +3051,12 @@ static int CompareCudaMatchingDistance(
 // "ACC use_dev" column applies to actuals appearing in a surrounding
 // ACC HOST_DATA USE_DEVICE clause.
 //
-// An infinite distance is accepted only for the associations that argument
-// checking supports (see isSupportedInfinite below); otherwise the result is
-// std::nullopt and the candidate is rejected.
+// Every other association, including any with a PINNED, SHARED or CONSTANT
+// dummy, has an infinite distance. An infinite distance is kept only for the
+// associations that argument checking accepts but the table does not
+// represent (see isSupportedInfinite below); such a candidate ranks after every
+// candidate with finite distances, and ties with any other such candidate.
+// Otherwise the result is std::nullopt and the candidate is rejected.
 static std::optional<int> GetMatchingDistance(
     const common::LanguageFeatureControl &features,
     semantics::SemanticsContext &context,
