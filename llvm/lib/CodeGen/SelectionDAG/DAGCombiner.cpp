@@ -28934,8 +28934,7 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
           }
           return false;
         };
-        if (HasNonExtractUse(V.getNode()) &&
-            all_of(V->ops(), [&](SDValue Op) {
+        if (HasNonExtractUse(V.getNode()) && all_of(V->ops(), [&](SDValue Op) {
               return Op.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
                      TLI.isTypeLegal(Op.getOperand(0).getValueType());
             })) {
