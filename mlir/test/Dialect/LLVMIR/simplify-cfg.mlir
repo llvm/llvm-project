@@ -1,4 +1,4 @@
-// RUN: mlir-opt --llvm-merge-branch-blocks %s -split-input-file | FileCheck %s
+// RUN: mlir-opt --llvm-simplify-cfg %s -split-input-file | FileCheck %s
 
 // This file only proves the standalone pass runs the branch patterns
 // independently of full canonicalization, that it leaves

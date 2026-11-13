@@ -46,17 +46,21 @@ def LLVMRequestCWrappersPass
   }];
 }
 
-def LLVMMergeBranchBlocksPass
-    : Pass<"llvm-merge-branch-blocks", "::mlir::LLVM::LLVMFuncOp"> {
-  let summary = "Merge llvm.br branches into single-predecessor blocks";
+def LLVMSimplifyCFGPass
+    : Pass<"llvm-simplify-cfg", "::mlir::LLVM::LLVMFuncOp"> {
+  let summary = "Simplify the control-flow graph of LLVM functions";
   let description = [{
-    Applies only the llvm.br canonicalization patterns, inlining blocks
-    with a single predecessor into their predecessor. Other
-    canonicalizations are deliberately not run, so the pass only
-    performs block merging. Making the patterns available standalone
-    matters for pipelines that need only block merging without paying
-    for full canonicalization or changing other operations. Functions
-    with the optimize-none attribute are left untouched.
+    This pass is the home for control-flow simplifications in the
+    LLVM dialect. Simplifications should be added here.
+
+    It currently runs branch canonicalization: the llvm.br
+    canonicalization patterns, inlining blocks with a single
+    predecessor into their predecessor. Other canonicalizations are
+    deliberately not run, so the pass only performs block merging.
+    Making the patterns available standalone matters for pipelines
+    that need only block merging without paying for full
+    canonicalization or changing other operations. Functions with
+    the optimize-none attribute are left untouched.
   }];
   let dependentDialects = ["LLVM::LLVMDialect"];
 }

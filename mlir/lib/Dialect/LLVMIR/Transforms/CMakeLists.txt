@@ -5,7 +5,7 @@ add_mlir_dialect_library(MLIRLLVMIRTransforms
   DIScopeForLLVMFuncOp.cpp
   InlinerInterfaceImpl.cpp
   LegalizeForExport.cpp
-  MergeBranchBlocks.cpp
+  SimplifyCFG.cpp
   RequestCWrappers.cpp
   UseDefaultVisibilityPass.cpp
 

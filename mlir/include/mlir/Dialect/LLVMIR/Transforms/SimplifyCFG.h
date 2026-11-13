@@ -1,4 +1,4 @@
-//===- MergeBranchBlocks.h - Merge llvm.br forwarding blocks -*- C++ -*-===//
+//===- SimplifyCFG.h - Simplify LLVM control-flow graphs------- -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LLVMIR_TRANSFORMS_MERGEBRANCHBLOCKS_H
-#define MLIR_DIALECT_LLVMIR_TRANSFORMS_MERGEBRANCHBLOCKS_H
+#ifndef MLIR_DIALECT_LLVMIR_TRANSFORMS_SIMPLIFYCFG_H
+#define MLIR_DIALECT_LLVMIR_TRANSFORMS_SIMPLIFYCFG_H
 
 #include <memory>
 
@@ -16,9 +16,9 @@ class Operation;
 class Pass;
 
 namespace LLVM {
-#define GEN_PASS_DECL_LLVMMERGEBRANCHBLOCKSPASS
+#define GEN_PASS_DECL_LLVMSIMPLIFYCFGPASS
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h.inc"
 } // namespace LLVM
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LLVMIR_TRANSFORMS_MERGEBRANCHBLOCKS_H
+#endif // MLIR_DIALECT_LLVMIR_TRANSFORMS_SIMPLIFYCFG_H
