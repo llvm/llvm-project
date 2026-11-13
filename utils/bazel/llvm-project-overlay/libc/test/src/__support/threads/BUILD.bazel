@@ -24,7 +24,6 @@ libc_test(
     name = "raw_mutex_test",
     srcs = ["linux/raw_mutex_test.cpp"],
     deps = [
-        "//libc:__support_time_clock_gettime",
         "//libc:hdr_signal_macros",
         "//libc:hdr_sys_mman_macros",
         "//libc:llvm_libc_macros_time_macros",
@@ -35,6 +34,7 @@ libc_test(
         "//libc/src/__support/OSUtil:syscall",
         "//libc/src/__support/threads:raw_mutex",
         "//libc/src/__support/threads:sleep",
+        "//libc/src/__support/time:clock_gettime",
     ],
 )
 
@@ -42,8 +42,8 @@ libc_test(
     name = "raw_rwlock_test",
     srcs = ["linux/raw_rwlock_test.cpp"],
     deps = [
-        "//libc:__support_time_clock_gettime",
         "//libc:hdr_time_macros",
         "//libc/src/__support/threads:raw_rwlock",
+        "//libc/src/__support/time:clock_gettime",
     ],
 )

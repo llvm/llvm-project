@@ -198,7 +198,6 @@ libc_test(
     name = "socketopt_test",
     srcs = ["linux/socketopt_test.cpp"],
     deps = [
-        "//libc:__support_time_clock_gettime",
         "//libc:close",
         "//libc:getsockopt",
         "//libc:hdr_netinet_in_macros",
@@ -215,6 +214,7 @@ libc_test(
         "//libc:types_struct_timespec",
         "//libc:types_struct_timeval",
         "//libc/src/__support/CPP:scope",
+        "//libc/src/__support/time:clock_gettime",
     ],
 )
 

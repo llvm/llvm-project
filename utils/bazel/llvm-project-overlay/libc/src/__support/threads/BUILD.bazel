@@ -86,7 +86,6 @@ libc_support_library(
     deps = [
         ":linux_futex_word_type",
         "//libc:__support_error_or",
-        "//libc:__support_time_time",
         "//libc:types_struct_timespec",
         "//libc/src/__support/CPP:atomic",
         "//libc/src/__support/CPP:limits",
@@ -94,6 +93,7 @@ libc_support_library(
         "//libc/src/__support/OSUtil:syscall",
         "//libc/src/__support/macros:attributes",
         "//libc/src/__support/macros:config",
+        "//libc/src/__support/time",
     ],
 )
 
@@ -161,12 +161,12 @@ libc_support_library(
         ":sleep",
         "//libc:__support_common",
         "//libc:__support_libc_assert",
-        "//libc:__support_time_time",
         "//libc:hdr_errno_macros",
         "//libc/src/__support/CPP:optional",
         "//libc/src/__support/macros:attributes",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/time",
     ],
 )
 
@@ -182,7 +182,6 @@ libc_support_library(
         ":sleep",
         "//libc:__support_common",
         "//libc:__support_libc_assert",
-        "//libc:__support_time_time",
         "//libc:hdr_errno_macros",
         "//libc/src/__support/CPP:atomic",
         "//libc/src/__support/CPP:limits",
@@ -190,6 +189,7 @@ libc_support_library(
         "//libc/src/__support/macros:attributes",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/time",
     ],
 )
 

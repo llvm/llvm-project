@@ -2117,73 +2117,6 @@ alias(
 )
 
 libc_support_library(
-    name = "__support_time_time",
-    hdrs = glob(["src/__support/time/*.h"]),
-    deps = [
-        ":__support_common",
-        ":__support_error_or",
-        ":__support_libc_assert",
-        ":hdr_time_macros",
-        ":types_clockid_t",
-        ":types_struct_timespec",
-        ":types_time_t",
-        "//libc/src/__support/CPP:expected",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
-    name = "__support_time_clock_conversion",
-    hdrs = ["src/__support/time/clock_conversion.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":__support_time_clock_gettime",
-        ":__support_time_time",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
-    name = "__support_time_clock_gettime",
-    srcs = ["src/__support/time/linux/clock_gettime.cpp"],
-    hdrs = ["src/__support/time/clock_gettime.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":__support_common",
-        ":__support_error_or",
-        ":types_clockid_t",
-        ":types_struct_timespec",
-        "//libc/src/__support/OSUtil:vdso",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:clock_gettime",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
-    name = "__support_time_clock_settime",
-    srcs = ["src/__support/time/linux/clock_settime.cpp"],
-    hdrs = ["src/__support/time/clock_settime.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":__support_common",
-        ":__support_error_or",
-        ":types_clockid_t",
-        ":types_struct_timespec",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:clock_settime",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
     name = "__support_wctype_utils",
     hdrs = ["src/__support/wctype_utils.h"],
     deps = [
@@ -8153,12 +8086,12 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_libc_errno",
-        ":__support_time_clock_gettime",
-        ":__support_time_time",
         ":hdr_time_macros",
         ":types_clock_t",
         "//libc/src/__support/CPP:limits",
         "//libc/src/__support/macros:config",
+        "//libc/src/__support/time",
+        "//libc/src/__support/time:clock_gettime",
     ],
 )
 ################################ unistd targets ################################
