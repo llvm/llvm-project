@@ -1591,19 +1591,66 @@ define half @fdiv_pow_shl_cnt_fail_out_of_bound2(i16 %cnt) nounwind {
 define half @fdiv_pow_shl_cnt_fail_inf_half(i32 %cnt) nounwind {
 ; CHECK-SSE-LABEL: fdiv_pow_shl_cnt_fail_inf_half:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    andl $16, %edi
-; CHECK-SSE-NEXT:    xorl $28, %edi
-; CHECK-SSE-NEXT:    shll $10, %edi
-; CHECK-SSE-NEXT:    movd %edi, %xmm0
+; CHECK-SSE-NEXT:    pushq %rax
+; CHECK-SSE-NEXT:    movl %edi, %ecx
+; CHECK-SSE-NEXT:    andb $16, %cl
+; CHECK-SSE-NEXT:    movl $1, %eax
+; CHECK-SSE-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-SSE-NEXT:    shll %cl, %eax
+; CHECK-SSE-NEXT:    cvtsi2ss %eax, %xmm0
+; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
+; CHECK-SSE-NEXT:    callq __extendhfsf2@PLT
+; CHECK-SSE-NEXT:    movss {{.*#+}} xmm1 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-SSE-NEXT:    divss %xmm0, %xmm1
+; CHECK-SSE-NEXT:    movaps %xmm1, %xmm0
+; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
+; CHECK-SSE-NEXT:    popq %rax
 ; CHECK-SSE-NEXT:    retq
 ;
-; CHECK-AVX-LABEL: fdiv_pow_shl_cnt_fail_inf_half:
-; CHECK-AVX:       # %bb.0:
-; CHECK-AVX-NEXT:    andl $16, %edi
-; CHECK-AVX-NEXT:    xorl $28, %edi
-; CHECK-AVX-NEXT:    shll $10, %edi
-; CHECK-AVX-NEXT:    vmovd %edi, %xmm0
-; CHECK-AVX-NEXT:    retq
+; CHECK-AVX2-LABEL: fdiv_pow_shl_cnt_fail_inf_half:
+; CHECK-AVX2:       # %bb.0:
+; CHECK-AVX2-NEXT:    pushq %rax
+; CHECK-AVX2-NEXT:    movl %edi, %ecx
+; CHECK-AVX2-NEXT:    andb $16, %cl
+; CHECK-AVX2-NEXT:    movl $1, %eax
+; CHECK-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-AVX2-NEXT:    shll %cl, %eax
+; CHECK-AVX2-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
+; CHECK-AVX2-NEXT:    callq __truncsfhf2@PLT
+; CHECK-AVX2-NEXT:    callq __extendhfsf2@PLT
+; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm1 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-AVX2-NEXT:    vdivss %xmm0, %xmm1, %xmm0
+; CHECK-AVX2-NEXT:    callq __truncsfhf2@PLT
+; CHECK-AVX2-NEXT:    popq %rax
+; CHECK-AVX2-NEXT:    retq
+;
+; CHECK-ONLY-AVX512F-LABEL: fdiv_pow_shl_cnt_fail_inf_half:
+; CHECK-ONLY-AVX512F:       # %bb.0:
+; CHECK-ONLY-AVX512F-NEXT:    movl %edi, %ecx
+; CHECK-ONLY-AVX512F-NEXT:    andb $16, %cl
+; CHECK-ONLY-AVX512F-NEXT:    movl $1, %eax
+; CHECK-ONLY-AVX512F-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-ONLY-AVX512F-NEXT:    shll %cl, %eax
+; CHECK-ONLY-AVX512F-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
+; CHECK-ONLY-AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-ONLY-AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
+; CHECK-ONLY-AVX512F-NEXT:    vmovss {{.*#+}} xmm1 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-ONLY-AVX512F-NEXT:    vdivss %xmm0, %xmm1, %xmm0
+; CHECK-ONLY-AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-ONLY-AVX512F-NEXT:    retq
+;
+; CHECK-SKX-LABEL: fdiv_pow_shl_cnt_fail_inf_half:
+; CHECK-SKX:       # %bb.0:
+; CHECK-SKX-NEXT:    andb $16, %dil
+; CHECK-SKX-NEXT:    movl $1, %eax
+; CHECK-SKX-NEXT:    shlxl %edi, %eax, %eax
+; CHECK-SKX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
+; CHECK-SKX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-SKX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; CHECK-SKX-NEXT:    vmovss {{.*#+}} xmm1 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-SKX-NEXT:    vdivss %xmm0, %xmm1, %xmm0
+; CHECK-SKX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-SKX-NEXT:    retq
   %and = and i32 %cnt, 16
   %shl = shl nuw i32 1, %and
   %conv = uitofp i32 %shl to half
@@ -1641,19 +1688,61 @@ define half @fdiv_pow_shl_cnt_max_finite_half(i32 %cnt) nounwind {
 define half @fmul_pow_shl_cnt_fail_inf_half(i32 %cnt) nounwind {
 ; CHECK-SSE-LABEL: fmul_pow_shl_cnt_fail_inf_half:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    andl $16, %edi
-; CHECK-SSE-NEXT:    orl $5, %edi
-; CHECK-SSE-NEXT:    shll $10, %edi
-; CHECK-SSE-NEXT:    movd %edi, %xmm0
+; CHECK-SSE-NEXT:    pushq %rax
+; CHECK-SSE-NEXT:    movl %edi, %ecx
+; CHECK-SSE-NEXT:    andb $16, %cl
+; CHECK-SSE-NEXT:    movl $1, %eax
+; CHECK-SSE-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-SSE-NEXT:    shll %cl, %eax
+; CHECK-SSE-NEXT:    cvtsi2ss %eax, %xmm0
+; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
+; CHECK-SSE-NEXT:    callq __extendhfsf2@PLT
+; CHECK-SSE-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
+; CHECK-SSE-NEXT:    popq %rax
 ; CHECK-SSE-NEXT:    retq
 ;
-; CHECK-AVX-LABEL: fmul_pow_shl_cnt_fail_inf_half:
-; CHECK-AVX:       # %bb.0:
-; CHECK-AVX-NEXT:    andl $16, %edi
-; CHECK-AVX-NEXT:    orl $5, %edi
-; CHECK-AVX-NEXT:    shll $10, %edi
-; CHECK-AVX-NEXT:    vmovd %edi, %xmm0
-; CHECK-AVX-NEXT:    retq
+; CHECK-AVX2-LABEL: fmul_pow_shl_cnt_fail_inf_half:
+; CHECK-AVX2:       # %bb.0:
+; CHECK-AVX2-NEXT:    pushq %rax
+; CHECK-AVX2-NEXT:    movl %edi, %ecx
+; CHECK-AVX2-NEXT:    andb $16, %cl
+; CHECK-AVX2-NEXT:    movl $1, %eax
+; CHECK-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-AVX2-NEXT:    shll %cl, %eax
+; CHECK-AVX2-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
+; CHECK-AVX2-NEXT:    callq __truncsfhf2@PLT
+; CHECK-AVX2-NEXT:    callq __extendhfsf2@PLT
+; CHECK-AVX2-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    callq __truncsfhf2@PLT
+; CHECK-AVX2-NEXT:    popq %rax
+; CHECK-AVX2-NEXT:    retq
+;
+; CHECK-ONLY-AVX512F-LABEL: fmul_pow_shl_cnt_fail_inf_half:
+; CHECK-ONLY-AVX512F:       # %bb.0:
+; CHECK-ONLY-AVX512F-NEXT:    movl %edi, %ecx
+; CHECK-ONLY-AVX512F-NEXT:    andb $16, %cl
+; CHECK-ONLY-AVX512F-NEXT:    movl $1, %eax
+; CHECK-ONLY-AVX512F-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-ONLY-AVX512F-NEXT:    shll %cl, %eax
+; CHECK-ONLY-AVX512F-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
+; CHECK-ONLY-AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-ONLY-AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
+; CHECK-ONLY-AVX512F-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-ONLY-AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-ONLY-AVX512F-NEXT:    retq
+;
+; CHECK-SKX-LABEL: fmul_pow_shl_cnt_fail_inf_half:
+; CHECK-SKX:       # %bb.0:
+; CHECK-SKX-NEXT:    andb $16, %dil
+; CHECK-SKX-NEXT:    movl $1, %eax
+; CHECK-SKX-NEXT:    shlxl %edi, %eax, %eax
+; CHECK-SKX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
+; CHECK-SKX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-SKX-NEXT:    vcvtph2ps %xmm0, %xmm0
+; CHECK-SKX-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-SKX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-SKX-NEXT:    retq
   %and = and i32 %cnt, 16
   %shl = shl nuw i32 1, %and
   %conv = uitofp i32 %shl to half
