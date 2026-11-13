@@ -2970,14 +2970,8 @@ def int_aarch64_sve_stnt1_pn_x4 : SVE2p1_Store_PN_X4_Intrinsic;
 // SVE2 - Contiguous conflict detection
 //
 
-def int_aarch64_sve_whilerw_b : SVE2_CONFLICT_DETECT_Intrinsic<[IntrSpeculatable]>;
-def int_aarch64_sve_whilerw_h : SVE2_CONFLICT_DETECT_Intrinsic<[IntrSpeculatable]>;
-def int_aarch64_sve_whilerw_s : SVE2_CONFLICT_DETECT_Intrinsic<[IntrSpeculatable]>;
-def int_aarch64_sve_whilerw_d : SVE2_CONFLICT_DETECT_Intrinsic<[IntrSpeculatable]>;
-def int_aarch64_sve_whilewr_b : SVE2_CONFLICT_DETECT_Intrinsic<[IntrSpeculatable]>;
-def int_aarch64_sve_whilewr_h : SVE2_CONFLICT_DETECT_Intrinsic<[IntrSpeculatable]>;
-def int_aarch64_sve_whilewr_s : SVE2_CONFLICT_DETECT_Intrinsic<[IntrSpeculatable]>;
-def int_aarch64_sve_whilewr_d : SVE2_CONFLICT_DETECT_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_whilerw : SVE2_CONFLICT_DETECT_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_whilewr : SVE2_CONFLICT_DETECT_Intrinsic<[IntrSpeculatable]>;
 
 // Scalable Matrix Extension (SME) Intrinsics
 let TargetPrefix = "aarch64" in {

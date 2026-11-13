@@ -6789,46 +6789,17 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     EVT PtrVT = getPointerTy(DAG.getDataLayout());
     return DAG.getNode(AArch64ISD::THREAD_POINTER, DL, PtrVT);
   }
-  case Intrinsic::aarch64_sve_whilewr_b:
-    return DAG.getNode(ISD::LOOP_DEPENDENCE_WAR_MASK, DL, Op.getValueType(),
-                       Op.getOperand(1), Op.getOperand(2),
-                       DAG.getConstant(1, DL, MVT::i64),
+  case Intrinsic::aarch64_sve_whilewr:
+  case Intrinsic::aarch64_sve_whilerw: {
+    EVT VT = Op.getValueType();
+    unsigned ElementSize = 16 / VT.getVectorMinNumElements();
+    unsigned Opcode = IntNo == Intrinsic::aarch64_sve_whilewr
+                          ? ISD::LOOP_DEPENDENCE_WAR_MASK
+                          : ISD::LOOP_DEPENDENCE_RAW_MASK;
+    return DAG.getNode(Opcode, DL, VT, Op.getOperand(1), Op.getOperand(2),
+                       DAG.getConstant(ElementSize, DL, MVT::i64),
                        DAG.getConstant(0, DL, MVT::i64));
-  case Intrinsic::aarch64_sve_whilewr_h:
-    return DAG.getNode(ISD::LOOP_DEPENDENCE_WAR_MASK, DL, Op.getValueType(),
-                       Op.getOperand(1), Op.getOperand(2),
-                       DAG.getConstant(2, DL, MVT::i64),
-                       DAG.getConstant(0, DL, MVT::i64));
-  case Intrinsic::aarch64_sve_whilewr_s:
-    return DAG.getNode(ISD::LOOP_DEPENDENCE_WAR_MASK, DL, Op.getValueType(),
-                       Op.getOperand(1), Op.getOperand(2),
-                       DAG.getConstant(4, DL, MVT::i64),
-                       DAG.getConstant(0, DL, MVT::i64));
-  case Intrinsic::aarch64_sve_whilewr_d:
-    return DAG.getNode(ISD::LOOP_DEPENDENCE_WAR_MASK, DL, Op.getValueType(),
-                       Op.getOperand(1), Op.getOperand(2),
-                       DAG.getConstant(8, DL, MVT::i64),
-                       DAG.getConstant(0, DL, MVT::i64));
-  case Intrinsic::aarch64_sve_whilerw_b:
-    return DAG.getNode(ISD::LOOP_DEPENDENCE_RAW_MASK, DL, Op.getValueType(),
-                       Op.getOperand(1), Op.getOperand(2),
-                       DAG.getConstant(1, DL, MVT::i64),
-                       DAG.getConstant(0, DL, MVT::i64));
-  case Intrinsic::aarch64_sve_whilerw_h:
-    return DAG.getNode(ISD::LOOP_DEPENDENCE_RAW_MASK, DL, Op.getValueType(),
-                       Op.getOperand(1), Op.getOperand(2),
-                       DAG.getConstant(2, DL, MVT::i64),
-                       DAG.getConstant(0, DL, MVT::i64));
-  case Intrinsic::aarch64_sve_whilerw_s:
-    return DAG.getNode(ISD::LOOP_DEPENDENCE_RAW_MASK, DL, Op.getValueType(),
-                       Op.getOperand(1), Op.getOperand(2),
-                       DAG.getConstant(4, DL, MVT::i64),
-                       DAG.getConstant(0, DL, MVT::i64));
-  case Intrinsic::aarch64_sve_whilerw_d:
-    return DAG.getNode(ISD::LOOP_DEPENDENCE_RAW_MASK, DL, Op.getValueType(),
-                       Op.getOperand(1), Op.getOperand(2),
-                       DAG.getConstant(8, DL, MVT::i64),
-                       DAG.getConstant(0, DL, MVT::i64));
+  }
   case Intrinsic::aarch64_neon_abs: {
     EVT Ty = Op.getValueType();
     if (Ty == MVT::i64) {
