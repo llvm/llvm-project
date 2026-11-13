@@ -8,20 +8,16 @@
 # RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+zve64x --mattr=+zvknhb %s \
 # RUN:        | llvm-objdump -d --mattr=+zve64x --mattr=+zvknhb  - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
-# RUN: not llvm-mc -triple=riscv32 -show-encoding %s 2>&1 \
-# RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
+# RUN: llvm-mc --verify -triple=riscv32 -show-encoding %s
 
-vsha2ms.vv v10, v9, v8
+vsha2ms.vv v10, v9, v8 # expected-error {{instruction requires the following: 'Zvknha' (Vector SHA-2 (SHA-256 only))}}
 # CHECK-INST: vsha2ms.vv v10, v9, v8
 # CHECK-ENCODING: [0x77,0x25,0x94,0xb6]
-# CHECK-ERROR: instruction requires the following: 'Zvknha' (Vector SHA-2 (SHA-256 only)){{$}}
 
-vsha2ch.vv v10, v9, v8
+vsha2ch.vv v10, v9, v8 # expected-error {{instruction requires the following: 'Zvknha' (Vector SHA-2 (SHA-256 only))}}
 # CHECK-INST: vsha2ch.vv v10, v9, v8
 # CHECK-ENCODING: [0x77,0x25,0x94,0xba]
-# CHECK-ERROR: instruction requires the following: 'Zvknha' (Vector SHA-2 (SHA-256 only)){{$}}
 
-vsha2cl.vv v10, v9, v8
+vsha2cl.vv v10, v9, v8 # expected-error {{instruction requires the following: 'Zvknha' (Vector SHA-2 (SHA-256 only))}}
 # CHECK-INST: vsha2cl.vv v10, v9, v8
 # CHECK-ENCODING: [0x77,0x25,0x94,0xbe]
-# CHECK-ERROR: instruction requires the following: 'Zvknha' (Vector SHA-2 (SHA-256 only)){{$}}

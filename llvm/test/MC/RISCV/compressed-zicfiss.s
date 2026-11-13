@@ -23,45 +23,36 @@
 # RUN:     | llvm-objdump --mattr=+zcmop,+zimop -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 #
-# RUN: not llvm-mc -triple riscv32 -M no-aliases -show-encoding < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK-NO-EXT %s
+# RUN: llvm-mc --verify -triple riscv32 -M no-aliases -show-encoding < %s
 
 # CHECK-ASM-AND-OBJ: c.sspopchk t0
 # CHECK-ASM: encoding: [0x81,0x62]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zimop' (May-Be-Operations)
-sspopchk x5
+sspopchk x5 # expected-error {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 
 # CHECK-ASM-AND-OBJ: c.sspopchk t0
 # CHECK-ASM: encoding: [0x81,0x62]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zimop' (May-Be-Operations)
-sspopchk t0
+sspopchk t0 # expected-error {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 
 # CHECK-ASM-AND-OBJ: c.sspush ra
 # CHECK-ASM: encoding: [0x81,0x60]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zimop' (May-Be-Operations)
-sspush x1
+sspush x1 # expected-error {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 
 # CHECK-ASM-AND-OBJ: c.sspush ra
 # CHECK-ASM: encoding: [0x81,0x60]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zimop' (May-Be-Operations)
-sspush ra
+sspush ra # expected-error {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 
 # CHECK-ASM-AND-OBJ: c.sspush ra
 # CHECK-ASM: encoding: [0x81,0x60]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zcmop' (Compressed May-Be-Operations)
-c.sspush x1
+c.sspush x1 # expected-error {{instruction requires the following: 'Zcmop' (Compressed May-Be-Operations)}}
 
 # CHECK-ASM-AND-OBJ: c.sspush ra
 # CHECK-ASM: encoding: [0x81,0x60]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zcmop' (Compressed May-Be-Operations)
-c.sspush ra
+c.sspush ra # expected-error {{instruction requires the following: 'Zcmop' (Compressed May-Be-Operations)}}
 
 # CHECK-ASM-AND-OBJ: c.sspopchk t0
 # CHECK-ASM: encoding: [0x81,0x62]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zcmop' (Compressed May-Be-Operations)
-c.sspopchk x5
+c.sspopchk x5 # expected-error {{instruction requires the following: 'Zcmop' (Compressed May-Be-Operations)}}
 
 # CHECK-ASM-AND-OBJ: c.sspopchk t0
 # CHECK-ASM: encoding: [0x81,0x62]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zcmop' (Compressed May-Be-Operations)
-c.sspopchk t0
+c.sspopchk t0 # expected-error {{instruction requires the following: 'Zcmop' (Compressed May-Be-Operations)}}

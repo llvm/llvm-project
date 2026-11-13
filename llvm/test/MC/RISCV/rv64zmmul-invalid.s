@@ -1,14 +1,9 @@
-# RUN: not llvm-mc %s -triple=riscv64 -mattr=+zmmul -M no-aliases 2>&1 \
-# RUN:  | FileCheck -check-prefixes=CHECK-ERROR %s
+# RUN: llvm-mc --verify %s -triple=riscv64 -mattr=+zmmul -M no-aliases
 
-# CHECK-ERROR: 5:1: error: instruction requires the following: 'M' (Integer Multiplication and Division){{$}}
-divw tp, t0, t1
+divw tp, t0, t1 # expected-error {{instruction requires the following: 'M' (Integer Multiplication and Division)}}
 
-# CHECK-ERROR: 8:1: error: instruction requires the following: 'M' (Integer Multiplication and Division){{$}}
-divuw t2, s0, s2
+divuw t2, s0, s2 # expected-error {{instruction requires the following: 'M' (Integer Multiplication and Division)}}
 
-# CHECK-ERROR: 11:1: error: instruction requires the following: 'M' (Integer Multiplication and Division){{$}}
-remw a0, a1, a2
+remw a0, a1, a2 # expected-error {{instruction requires the following: 'M' (Integer Multiplication and Division)}}
 
-# CHECK-ERROR: 14:1: error: instruction requires the following: 'M' (Integer Multiplication and Division){{$}}
-remuw a3, a4, a5
+remuw a3, a4, a5 # expected-error {{instruction requires the following: 'M' (Integer Multiplication and Division)}}

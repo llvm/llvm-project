@@ -1,13 +1,9 @@
 # With Zks extension:
-# RUN: not llvm-mc -triple=riscv64 -mattr=+zks < %s 2>&1 \
-# RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
+# RUN: llvm-mc --verify -triple=riscv64 -mattr=+zks < %s
 
 # With Zksed extension:
-# RUN: not llvm-mc -triple=riscv64 -mattr=+zksed < %s 2>&1 \
-# RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
+# RUN: llvm-mc --verify -triple=riscv64 -mattr=+zksed < %s
 
-sm4ed a0, a1, a2, 8
-# CHECK-ERROR: immediate must be an integer in the range [0, 3]
+sm4ed a0, a1, a2, 8 # expected-error {{immediate must be an integer in the range [0, 3]}}
 
-sm4ks a0, a1, a2, 8
-# CHECK-ERROR: immediate must be an integer in the range [0, 3]
+sm4ks a0, a1, a2, 8 # expected-error {{immediate must be an integer in the range [0, 3]}}

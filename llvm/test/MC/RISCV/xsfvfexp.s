@@ -1,7 +1,6 @@
 # RUN: llvm-mc -triple=riscv64 -show-encoding --mattr=+xsfvfexp32e %s \
 # RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
-# RUN: not llvm-mc -triple=riscv64 -show-encoding %s 2>&1 \
-# RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
+# RUN: llvm-mc --verify -triple=riscv64 -show-encoding %s
 # RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+xsfvfexp32e %s \
 # RUN:        | llvm-objdump -d --mattr=+xsfvfexp32e - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
@@ -16,7 +15,6 @@
 # RUN:        | llvm-objdump -d --mattr=+xsfvfbfexp16e - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
 
-sf.vfexp.v v2, v5, v0.t
+sf.vfexp.v v2, v5, v0.t # expected-error {{instruction requires the following: 'Xsfvfbfexp16e', 'Xsfvfexp16e', or 'Xsfvfexp32e' (SiFive Vector Floating-Point Exponential Function Instruction)}}
 # CHECK-INST: sf.vfexp.v v2, v5, v0.t
 # CHECK-ENCODING: [0x57,0x91,0x53,0x4c]
-# CHECK-ERROR: instruction requires the following: 'Xsfvfbfexp16e', 'Xsfvfexp16e', or 'Xsfvfexp32e' (SiFive Vector Floating-Point Exponential Function Instruction){{$}}

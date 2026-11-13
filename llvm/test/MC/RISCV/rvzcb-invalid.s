@@ -1,19 +1,12 @@
-# RUN: not llvm-mc -triple=riscv32 -mattr=zcb -M no-aliases -show-encoding %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK-ERROR %s
-# RUN: not llvm-mc -triple=riscv64 -mattr=zcb -M no-aliases -show-encoding < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK-ERROR %s
+# RUN: llvm-mc --verify -triple=riscv32 -mattr=zcb -M no-aliases -show-encoding %s
+# RUN: llvm-mc --verify -triple=riscv64 -mattr=zcb -M no-aliases -show-encoding < %s
 
-# CHECK-ERROR: error: immediate must be an integer in the range [0, 3]
-c.lbu a5, 10(a4)
+c.lbu a5, 10(a4) # expected-error {{immediate must be an integer in the range [0, 3]}}
 
-# CHECK-ERROR: error: immediate must be one of [0, 2]
-c.lhu a5, 10(a4)
+c.lhu a5, 10(a4) # expected-error {{immediate must be one of [0, 2]}}
 
-# CHECK-ERROR: error: immediate must be one of [0, 2]
-c.lh a5, 10(a4)
+c.lh a5, 10(a4) # expected-error {{immediate must be one of [0, 2]}}
 
-# CHECK-ERROR: error: immediate must be an integer in the range [0, 3]
-c.sb a5, 10(a4)
+c.sb a5, 10(a4) # expected-error {{immediate must be an integer in the range [0, 3]}}
 
-# CHECK-ERROR: error: immediate must be one of [0, 2]
-c.sh a5, 10(a4)
+c.sh a5, 10(a4) # expected-error {{immediate must be one of [0, 2]}}

@@ -15,19 +15,13 @@
 # RUN:  -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ %s
 #
-# RUN: not llvm-mc -triple riscv32 \
-# RUN:     -M no-aliases -show-encoding < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK-NO-EXT %s
-# RUN: not llvm-mc -triple riscv64 \
-# RUN:     -M no-aliases -show-encoding < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK-NO-EXT %s
+# RUN: llvm-mc --verify -triple riscv32 -M no-aliases -show-encoding < %s
+# RUN: llvm-mc --verify -triple riscv64 -M no-aliases -show-encoding < %s
 
 # CHECK-ASM-AND-OBJ: cm.jt 1
 # CHECK-ASM: encoding: [0x06,0xa0]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zcmt' (table jump instructions for code-size reduction){{$}}
-cm.jt 1
+cm.jt 1 # expected-error {{instruction requires the following: 'Zcmt' (table jump instructions for code-size reduction)}}
 
 # CHECK-ASM-AND-OBJ: cm.jalt 32
 # CHECK-ASM: encoding: [0x82,0xa0]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zcmt' (table jump instructions for code-size reduction){{$}}
-cm.jalt 32
+cm.jalt 32 # expected-error {{instruction requires the following: 'Zcmt' (table jump instructions for code-size reduction)}}

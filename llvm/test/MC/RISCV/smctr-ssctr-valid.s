@@ -19,12 +19,9 @@
 # RUN:     | llvm-objdump --mattr=+ssctr -M no-aliases -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
-# RUN: not llvm-mc -triple riscv32 -M no-aliases -show-encoding < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK-NO-EXT %s
-# RUN: not llvm-mc -triple riscv64 -defsym=RV64=1 -M no-aliases -show-encoding < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK-NO-EXT %s
+# RUN: llvm-mc --verify -triple riscv32 -M no-aliases -show-encoding < %s
+# RUN: llvm-mc --verify -triple riscv64 -defsym=RV64=1 -M no-aliases -show-encoding < %s
 
 # CHECK-INST: sctrclr
 # CHECK: encoding: [0x73,0x00,0x40,0x10]
-# CHECK-NO-EXT: error: instruction requires the following: 'Smctr' (Control Transfer Records Machine Level) or 'Ssctr' (Control Transfer Records Supervisor Level){{$}}
-sctrclr
+sctrclr # expected-error {{instruction requires the following: 'Smctr' (Control Transfer Records Machine Level) or 'Ssctr' (Control Transfer Records Supervisor Level)}}

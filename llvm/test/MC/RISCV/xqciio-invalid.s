@@ -1,33 +1,27 @@
 # Xqciio - Qualcomm uC External Input Output Extension
-# RUN: not llvm-mc -triple riscv32 -mattr=+xqciio < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK,CHECK-PLUS --implicit-check-not="error:" --implicit-check-not="note:" %s
-# RUN: not llvm-mc -triple riscv32 -mattr=-xqciio < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK,CHECK-MINUS --implicit-check-not="error:" --implicit-check-not="note:" %s
+# RUN: llvm-mc --verify=expected,plus -triple riscv32 -mattr=+xqciio < %s
+# RUN: llvm-mc --verify=expected,minus -triple riscv32 -mattr=-xqciio < %s
 
-# CHECK: :[[@LINE+1]]:18: error: expected register
-qc.outw x5, 2048(10)
+qc.outw x5, 2048(10) # expected-error:18 {{expected register}}
 
-# CHECK-PLUS: :[[@LINE+2]]:13: error: expected '('
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciio' (Qualcomm uC External Input Output Extension)
 qc.outw x5, x10
+# plus-error@-1:13 {{expected '('}}
+# minus-error@-2:1 {{instruction requires the following: 'Xqciio' (Qualcomm uC External Input Output Extension)}}
 
-# CHECK-PLUS: :[[@LINE+2]]:13: error: immediate must be a multiple of 4 bytes in the range [0, 16380]
-# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.outw x5, 4099(x10)
+# plus-error@-1:13 {{immediate must be a multiple of 4 bytes in the range [0, 16380]}}
+# minus-error@-2:1 {{invalid instruction}}
 
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciio' (Qualcomm uC External Input Output Extension)
-qc.outw x5, 2048(x10)
+qc.outw x5, 2048(x10) # minus-error:1 {{instruction requires the following: 'Xqciio' (Qualcomm uC External Input Output Extension)}}
 
-# CHECK: :[[@LINE+1]]:19: error: expected register
-qc.inw x23, 16380(17)
+qc.inw x23, 16380(17) # expected-error:19 {{expected register}}
 
-# CHECK-PLUS: :[[@LINE+2]]:13: error: expected '('
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciio' (Qualcomm uC External Input Output Extension)
 qc.inw x23, x17
+# plus-error@-1:13 {{expected '('}}
+# minus-error@-2:1 {{instruction requires the following: 'Xqciio' (Qualcomm uC External Input Output Extension)}}
 
-# CHECK-PLUS: :[[@LINE+2]]:13: error: immediate must be a multiple of 4 bytes in the range [0, 16380]
-# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.inw x23, 16384(x17)
+# plus-error@-1:13 {{immediate must be a multiple of 4 bytes in the range [0, 16380]}}
+# minus-error@-2:1 {{invalid instruction}}
 
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciio' (Qualcomm uC External Input Output Extension)
-qc.inw x23, 16380(x17)
+qc.inw x23, 16380(x17) # minus-error:1 {{instruction requires the following: 'Xqciio' (Qualcomm uC External Input Output Extension)}}

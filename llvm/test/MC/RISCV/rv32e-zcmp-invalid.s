@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple riscv32 -mattr=+e,+zcmp < %s 2>&1 | FileCheck %s
+# RUN: llvm-mc --verify -triple riscv32 -mattr=+e,+zcmp < %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+zcmp < %s \
 # RUN:     | llvm-objdump --mattr=+e,+zcmp -M no-aliases -d -r - \
 # RUN:     | FileCheck -check-prefix=CHECK-DIS %s
@@ -8,14 +8,10 @@
 
 
 # CHECK-DIS: b872 <unknown>
-# CHECK: :[[@LINE+1]]:16: error: invalid register
-cm.push {ra,s0-s2}, -16
+cm.push {ra,s0-s2}, -16 # expected-error:16 {{invalid register}}
 # CHECK-DIS: be72 <unknown>
-# CHECK: :[[@LINE+1]]:18: error: invalid register
-cm.popret {ra,s0-s2}, 16
+cm.popret {ra,s0-s2}, 16 # expected-error:18 {{invalid register}}
 # CHECK-DIS: ba72 <unknown>
-# CHECK: :[[@LINE+1]]:20: error: invalid register
-cm.pop {x1, x8-x9, x18}, 16
+cm.pop {x1, x8-x9, x18}, 16 # expected-error:20 {{invalid register}}
 # CHECK-DIS: ba72 <unknown>
-# CHECK: :[[@LINE+1]]:16: error: invalid register
-cm.pop {ra, s0-s2}, 16
+cm.pop {ra, s0-s2}, 16 # expected-error:16 {{invalid register}}
