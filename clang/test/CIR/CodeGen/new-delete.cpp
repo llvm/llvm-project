@@ -73,7 +73,7 @@ A *a() {
 // OGCG:   store ptr %[[EXN_PTR]], ptr %[[EXN_SLOT]]
 // OGCG:   %[[TYPEID:.*]] = extractvalue { ptr, i32 } %[[EXN]], 1
 // OGCG:   store i32 %[[TYPEID]], ptr %[[EHSELECTOR_SLOT]]
-// OGCG:   call void @_ZdlPv(ptr %[[PTR]]) #[[OGCG_ATTR_BUILTIN_DEL:.*]]
+// OGCG:   call void @_ZdlPv(ptr allocptr %[[PTR]]) #[[OGCG_ATTR_BUILTIN_DEL:.*]]
 // OGCG:   br label %[[EH_RESUME:.*]]
 // OGCG: [[EH_RESUME]]:
 // OGCG:   %[[EXN_PTR:.*]] = load ptr, ptr %[[EXN_SLOT]]
@@ -154,7 +154,7 @@ A *b() {
 // OGCG:   store ptr %[[EXN_PTR]], ptr %[[EXN_SLOT]]
 // OGCG:   %[[TYPEID:.*]] = extractvalue { ptr, i32 } %[[EXN]], 1
 // OGCG:   store i32 %[[TYPEID]], ptr %[[EHSELECTOR_SLOT]]
-// OGCG:   call void @_ZdlPv(ptr %[[PTR]]) #[[OGCG_ATTR_BUILTIN_DEL]]
+// OGCG:   call void @_ZdlPv(ptr allocptr %[[PTR]]) #[[OGCG_ATTR_BUILTIN_DEL]]
 // OGCG:   br label %[[EH_RESUME:.*]]
 // OGCG: [[EH_RESUME]]:
 // OGCG:   %[[EXN_PTR:.*]] = load ptr, ptr %[[EXN_SLOT]]
@@ -325,7 +325,7 @@ C *test_new_delete_conditional(bool cond) {
 // OGCG:   br i1 %[[OG_ACTIVE]], label %[[OG_DO_DEL:.*]], label %[[OG_SKIP_DEL:.*]]
 // OGCG: [[OG_DO_DEL]]:
 // OGCG:   %[[OG_LOAD:.*]] = load ptr, ptr %[[OG_SAVE]], align 8
-// OGCG:   call void @_ZdlPv(ptr %[[OG_LOAD]]) #[[OGCG_ATTR_BUILTIN_DEL]]
+// OGCG:   call void @_ZdlPv(ptr allocptr %[[OG_LOAD]]) #[[OGCG_ATTR_BUILTIN_DEL]]
 // OGCG:   resume
 
 void *operator new(unsigned long, int);

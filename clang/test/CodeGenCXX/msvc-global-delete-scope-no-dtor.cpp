@@ -62,6 +62,6 @@ void scopeTrivial(Trivial *q) {
 
 // __empty_global_delete is emitted as the trapping fallback (shared by the
 // scalar and array wrappers of this signature).
-// CHECK: define linkonce_odr void @"?__empty_global_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
+// CHECK: define linkonce_odr void @"?__empty_global_delete@@YAXPEAX_K@Z"(ptr allocptr noundef %0, i64 noundef %1)
 // CHECK-NEXT: call void @llvm.trap()
 // CHECK-NEXT: unreachable

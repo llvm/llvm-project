@@ -46,7 +46,7 @@ void test() {
 // The shared __empty_global_delete fallback is emitted with a trapping body
 // (kept alive via llvm.used) even though both wrappers have real forwarding
 // bodies here.
-// CHECK: define linkonce_odr void @"?__empty_global_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
+// CHECK: define linkonce_odr void @"?__empty_global_delete@@YAXPEAX_K@Z"(ptr allocptr noundef %0, i64 noundef %1)
 // CHECK-NEXT: call void @llvm.trap()
 
 // The scalar deleting destructor's global path calls __global_delete.
@@ -58,7 +58,7 @@ void test() {
 // The forwarding bodies are emitted at end-of-module. Each wrapper forwards to
 // its OWN global operator delete: __global_delete to the scalar ??3@,
 // __global_array_delete to the array ??_V@.
-// CHECK: define linkonce_odr void @"?__global_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
+// CHECK: define linkonce_odr void @"?__global_delete@@YAXPEAX_K@Z"(ptr allocptr noundef %0, i64 noundef %1)
 // CHECK-NEXT: call void @"??3@YAXPEAX_K@Z"(ptr %0, i64 %1)
-// CHECK: define linkonce_odr void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
+// CHECK: define linkonce_odr void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr allocptr noundef %0, i64 noundef %1)
 // CHECK-NEXT: call void @"??_V@YAXPEAX_K@Z"(ptr %0, i64 %1)
