@@ -31,6 +31,17 @@ ASM_FUNCTION_X86_RE = re.compile(
     flags=(re.M | re.S),
 )
 
+# TODO: update other triplets that support basic-block-sections
+ASM_FUNCTION_X86_BB_SECTIONS_RE = re.compile(
+    r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*(@"?(?P=func)"?| -- Begin function (?P=func))\n(?:\s*\.?Lfunc_begin[^:\n]*:\n)?'
+    r"(?:\.L(?P=func)\$local:\n)?"  # drop .L<func>$local:
+    r"(?:\s*\.type\s+\.L(?P=func)\$local,@function\n)?"  # drop .type .L<func>$local
+    r"(?:[ \t]*(?:\.cfi_startproc|\.cfi_personality|\.cfi_lsda|\.seh_proc|\.seh_handler)\b[^\n]*\n)*"  # drop optional cfi
+    r"(?P<body>^##?[ \t]+[^:]+:.*?)\s*"
+    r"^\s*(?:\.globl|\.comm|#+ -- End function)",
+    flags=(re.M | re.S),
+)
+
 ASM_FUNCTION_ARM_RE = re.compile(
     r'^(?P<func>[0-9a-zA-Z_$]+):[ \t]*(@+[ \t]*@"?(?P=func)"?)?\n'  # f: (name of function)
     r"(?:\.L(?P=func)\$local:\n)?"  # drop .L<func>$local:
@@ -559,11 +570,15 @@ def scrub_asm_loongarch(asm, args):
 # Returns a tuple of a scrub function and a function regex. Scrub function is
 # used to alter function body in some way, for example, remove trailing spaces.
 # Function regex is used to match function name, body, etc. in raw llc output.
-def get_run_handler(triple):
+def get_run_handler(triple, bb_sections=False):
+    # TODO: update other triplets that support basic-block-sections
+    asm_func_x86_re = (
+        ASM_FUNCTION_X86_BB_SECTIONS_RE if bb_sections else ASM_FUNCTION_X86_RE
+    )
     target_handlers = {
-        "i686": (scrub_asm_x86, ASM_FUNCTION_X86_RE),
-        "x86": (scrub_asm_x86, ASM_FUNCTION_X86_RE),
-        "i386": (scrub_asm_x86, ASM_FUNCTION_X86_RE),
+        "i686": (scrub_asm_x86, asm_func_x86_re),
+        "x86": (scrub_asm_x86, asm_func_x86_re),
+        "i386": (scrub_asm_x86, asm_func_x86_re),
         "arm64_32": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
         "aarch64": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_RE),
         "aarch64-apple-darwin": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
