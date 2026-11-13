@@ -6,6 +6,8 @@
 // RUN:   spirv-unknown-vulkan-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF -DTARGET=spv
 
+using namespace hlsl;
+
 // CHECK-LABEL: test_clamp_half2x3
 // NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <6 x half> @llvm.[[TARGET]].nclamp.v6f16(<6 x half> %{{.*}}, <6 x half> %{{.*}}, <6 x half> %{{.*}})
 // NO_HALF: call reassoc nnan ninf nsz arcp afn <6 x float> @llvm.[[TARGET]].nclamp.v6f32(<6 x float> %{{.*}}, <6 x float> %{{.*}}, <6 x float> %{{.*}})

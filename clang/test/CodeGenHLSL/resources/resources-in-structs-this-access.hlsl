@@ -4,6 +4,8 @@
 
 // CHECK: %"class.hlsl::RWBuffer" = type { target("dx.TypedBuffer", i32, 1, 0, 1) }
 
+using namespace hlsl;
+
 struct A {
   RWBuffer<int> Buf;
 

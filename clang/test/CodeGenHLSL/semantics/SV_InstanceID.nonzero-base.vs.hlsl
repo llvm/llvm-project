@@ -5,6 +5,8 @@
 // RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-vertex -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -fvk-support-nonzero-base-instance -o - %s | FileCheck %s --check-prefix=CHECK-FLAG
 // RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-vertex -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=CHECK-NOFLAG
 
+using namespace hlsl;
+
 // CHECK-FLAG: @SV_InstanceID = external hidden thread_local addrspace(7) externally_initialized constant i32, !spirv.Decorations ![[#MD_0:]]
 // CHECK-FLAG: @SV_InstanceID.base = external hidden thread_local addrspace(7) externally_initialized constant i32, !spirv.Decorations ![[#MD_BASE:]]
 
