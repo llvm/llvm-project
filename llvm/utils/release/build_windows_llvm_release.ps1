@@ -460,7 +460,6 @@ try {
         'LLVM_ENABLE_RUNTIMES="compiler-rt"'
         "COMPILER_RT_BUILD_ORC=OFF"
         "LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF"
-        "CMAKE_DISABLE_PRECOMPILE_HEADERS=ON"
         # Configure WiX explicitly so llvm/CMakeLists.txt sets its MSI
         # compression, install scope, and permanent UpgradeCode.
         "CPACK_GENERATOR=WIX"
