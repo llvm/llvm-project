@@ -159,6 +159,12 @@ public:
     return true;
   }
 
+  bool shouldConvertBoolToFPWithSelect(EVT VT) const override {
+    // A selp of the exact result replaces selp.b32 plus a conversion.
+    return VT == MVT::f16 || VT == MVT::bf16 || VT == MVT::f32 ||
+           VT == MVT::f64;
+  }
+
   bool shouldInsertFencesForAtomic(const Instruction *) const override;
 
   AtomicOrdering

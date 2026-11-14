@@ -22,17 +22,14 @@ legalized:       true
 regBankSelected: true
 selected:        false
 # CHECK: selected: true
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
 body:             |
   bb.0:
-    %0(p0) = G_GLOBAL_VALUE @internal_global
+    %0:gprb(p0) = G_GLOBAL_VALUE @internal_global
     ; DARWIN-MOVT: [[G:%[0-9]+]]:rgpr = t2MOV_ga_pcrel target-flags(arm-nonlazy) @internal_global
     ; DARWIN-NOMOVT: [[G:%[0-9]+]]:tgpr = tLDRLIT_ga_pcrel target-flags(arm-nonlazy) @internal_global
     ; ELF: [[G:%[0-9]+]]:tgpr = tLDRLIT_ga_pcrel @internal_global
 
-    %1(i32) = G_LOAD %0(p0) :: (load (i32) from @internal_global)
+    %1:gprb(i32) = G_LOAD %0(p0) :: (load (i32) from @internal_global)
     ; CHECK: [[V:%[0-9]+]]:gpr = t2LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load (i32) from @internal_global)
 
     $r0 = COPY %1(i32)
@@ -48,12 +45,9 @@ legalized:       true
 regBankSelected: true
 selected:        false
 # CHECK: selected: true
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
 body:             |
   bb.0:
-    %0(p0) = G_GLOBAL_VALUE @external_global
+    %0:gprb(p0) = G_GLOBAL_VALUE @external_global
     ; DARWIN-MOVT: [[G_GOT:%[0-9]+]]:rgpr = t2MOV_ga_pcrel target-flags(arm-nonlazy) @external_global
     ; DARWIN-MOVT: [[G:%[0-9]+]]:gpr = t2LDRi12 [[G_GOT]], 0, 14 /* CC::al */, $noreg :: (load (s32) from got)
     ; DARWIN-NOMOVT: [[G_GOT:%[0-9]+]]:tgpr = tLDRLIT_ga_pcrel target-flags(arm-nonlazy) @external_global
@@ -61,7 +55,7 @@ body:             |
     ; ELF: [[G_GOT:%[0-9]+]]:tgpr = tLDRLIT_ga_pcrel target-flags(arm-got) @external_global
     ; ELF: [[G:%[0-9]+]]:gpr = t2LDRi12 [[G_GOT]], 0, 14 /* CC::al */, $noreg :: (load (s32) from got)
 
-    %1(i32) = G_LOAD %0(p0) :: (load (i32) from @external_global)
+    %1:gprb(i32) = G_LOAD %0(p0) :: (load (i32) from @external_global)
     ; CHECK: [[V:%[0-9]+]]:gpr = t2LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load (i32) from @external_global)
 
     $r0 = COPY %1(i32)
@@ -77,17 +71,14 @@ legalized:       true
 regBankSelected: true
 selected:        false
 # CHECK: selected: true
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
 body:             |
   bb.0:
-    %0(p0) = G_GLOBAL_VALUE @internal_constant
+    %0:gprb(p0) = G_GLOBAL_VALUE @internal_constant
     ; DARWIN-MOVT: [[G:%[0-9]+]]:rgpr = t2MOV_ga_pcrel target-flags(arm-nonlazy) @internal_constant
     ; DARWIN-NOMOVT: [[G:%[0-9]+]]:tgpr = tLDRLIT_ga_pcrel target-flags(arm-nonlazy) @internal_constant
     ; ELF: [[G:%[0-9]+]]:tgpr = tLDRLIT_ga_pcrel @internal_constant
 
-    %1(i32) = G_LOAD %0(p0) :: (load (i32) from @internal_constant)
+    %1:gprb(i32) = G_LOAD %0(p0) :: (load (i32) from @internal_constant)
     ; CHECK: [[V:%[0-9]+]]:gpr = t2LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load (i32) from @internal_constant)
 
     $r0 = COPY %1(i32)
@@ -103,12 +94,9 @@ legalized:       true
 regBankSelected: true
 selected:        false
 # CHECK: selected: true
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
 body:             |
   bb.0:
-    %0(p0) = G_GLOBAL_VALUE @external_constant
+    %0:gprb(p0) = G_GLOBAL_VALUE @external_constant
     ; DARWIN-MOVT: [[G_GOT:%[0-9]+]]:rgpr = t2MOV_ga_pcrel target-flags(arm-nonlazy) @external_constant
     ; DARWIN-MOVT: [[G:%[0-9]+]]:gpr = t2LDRi12 [[G_GOT]], 0, 14 /* CC::al */, $noreg :: (load (s32) from got)
     ; DARWIN-NOMOVT: [[G_GOT:%[0-9]+]]:tgpr = tLDRLIT_ga_pcrel target-flags(arm-nonlazy) @external_constant
@@ -116,7 +104,7 @@ body:             |
     ; ELF: [[G_GOT:%[0-9]+]]:tgpr = tLDRLIT_ga_pcrel target-flags(arm-got) @external_constant
     ; ELF: [[G:%[0-9]+]]:gpr = t2LDRi12 [[G_GOT]], 0, 14 /* CC::al */, $noreg :: (load (s32) from got)
 
-    %1(i32) = G_LOAD %0(p0) :: (load (i32) from @external_constant)
+    %1:gprb(i32) = G_LOAD %0(p0) :: (load (i32) from @external_constant)
     ; CHECK: [[V:%[0-9]+]]:gpr = t2LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load (i32) from @external_constant)
 
     $r0 = COPY %1(i32)

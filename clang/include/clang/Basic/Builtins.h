@@ -402,6 +402,16 @@ public:
   bool performsCallback(unsigned ID,
                         llvm::SmallVectorImpl<int> &Encoding) const;
 
+  /// A constant argument that must be in the half-open range [Lower, Upper).
+  struct ArgRange {
+    unsigned Index;
+    int Lower;
+    int Upper;
+  };
+
+  /// Append the constant argument ranges of this builtin into \p Ranges.
+  void getArgRanges(unsigned ID, llvm::SmallVectorImpl<ArgRange> &Ranges) const;
+
   /// Return true if this builtin has parameters that must be non-null.
   /// The parameter indices are appended into 'Indxs'.
   bool isNonNull(unsigned ID, llvm::SmallVectorImpl<int> &Indxs,

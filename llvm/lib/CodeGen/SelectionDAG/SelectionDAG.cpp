@@ -58,6 +58,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/MemCacheHint.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
@@ -5948,6 +5949,25 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
            });
   }
 
+  case ISD::LOAD: {
+    // If we're loading an unindexed constant pool, check if the constant
+    // contains poison/undef - skip ANYEXT loads.
+    // TODO: DemandedElts and type size mismatch handling.
+    auto *LD = cast<LoadSDNode>(Op);
+    if (ISD::isUNINDEXEDLoad(LD) && !ISD::isEXTLoad(LD)) {
+      if (const Constant *Cst = TLI->getTargetConstantFromLoad(LD)) {
+        // TODO: expose isGuaranteedNotToBeUndefOrPoison(UndefPoisonKind)
+        if (includesPoison(Kind) && includesUndef(Kind))
+          return ::isGuaranteedNotToBeUndefOrPoison(Cst);
+        if (includesPoison(Kind))
+          return ::isGuaranteedNotToBePoison(Cst);
+        assert(includesUndef(Kind) && "UndefOnly expected");
+        return ::isGuaranteedNotToBeUndef(Cst);
+      }
+    }
+    break;
+  }
+
     // TODO: Search for noundef attributes from library functions.
 
     // TODO: Pointers dereferenced by ISD::LOAD/STORE ops are noundef.
@@ -10360,9 +10380,9 @@ SDValue SelectionDAG::getMemcpy(
   // Check to see if we should lower the memcpy to loads and stores first.
   // For cases within the target-specified limits, this is the best choice.
   const MDNode *DstMemCacheHint =
-      CI ? getMemCacheHintMetadata(*CI, /*OperandNo=*/0) : nullptr;
+      CI ? getMemCacheHint(*CI, /*OperandNo=*/0) : nullptr;
   const MDNode *SrcMemCacheHint =
-      CI ? getMemCacheHintMetadata(*CI, /*OperandNo=*/1) : nullptr;
+      CI ? getMemCacheHint(*CI, /*OperandNo=*/1) : nullptr;
 
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
   if (ConstantSize) {

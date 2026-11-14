@@ -1,0 +1,3682 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_math_function")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+libc_math_function(
+    name = "acos",
+    additional_deps = ["//libc/src/__support/math:acos"],
+)
+
+libc_math_function(
+    name = "acosbf16",
+    additional_deps = ["//libc/src/__support/math:acosbf16"],
+)
+
+libc_math_function(
+    name = "acosf",
+    additional_deps = ["//libc/src/__support/math:acosf"],
+)
+
+libc_math_function(
+    name = "acosf16",
+    additional_deps = [
+        "//libc/src/__support/math:acosf16",
+    ],
+)
+
+libc_math_function(
+    name = "acoshf",
+    additional_deps = ["//libc/src/__support/math:acoshf"],
+)
+
+libc_math_function(
+    name = "acoshbf16",
+    additional_deps = ["//libc/src/__support/math:acoshbf16"],
+)
+
+libc_math_function(
+    name = "acoshf16",
+    additional_deps = [
+        "//libc/src/__support/math:acoshf16",
+    ],
+)
+
+libc_math_function(
+    name = "acospif",
+    additional_deps = [
+        "//libc/src/__support/math:acospif",
+    ],
+)
+
+libc_math_function(
+    name = "acospif16",
+    additional_deps = [
+        "//libc/src/__support/math:acospif16",
+    ],
+)
+
+libc_math_function(
+    name = "asin",
+    additional_deps = ["//libc/src/__support/math:asin"],
+)
+
+libc_math_function(
+    name = "asinbf16",
+    additional_deps = [
+        "//libc/src/__support/math:asinbf16",
+    ],
+)
+
+libc_math_function(
+    name = "asinf",
+    additional_deps = ["//libc/src/__support/math:asinf"],
+)
+
+libc_math_function(
+    name = "asinf16",
+    additional_deps = [
+        "//libc/src/__support/math:asinf16",
+    ],
+)
+
+libc_math_function(
+    name = "asinhf",
+    additional_deps = ["//libc/src/__support/math:asinhf"],
+)
+
+libc_math_function(
+    name = "asinhf16",
+    additional_deps = [
+        "//libc/src/__support/math:asinhf16",
+    ],
+)
+
+libc_math_function(
+    name = "asinpi",
+    additional_deps = [
+        "//libc/src/__support/math:asinpi",
+    ],
+)
+
+libc_math_function(
+    name = "asinpif",
+    additional_deps = [
+        "//libc/src/__support/math:asinpif",
+    ],
+)
+
+libc_math_function(
+    name = "atanbf16",
+    additional_deps = ["//libc/src/__support/math:atanbf16"],
+)
+
+libc_math_function(
+    name = "atanf",
+    additional_deps = ["//libc/src/__support/math:atanf"],
+)
+
+libc_math_function(
+    name = "atanf16",
+    additional_deps = [
+        "//libc/src/__support/math:atanf16",
+    ],
+)
+
+libc_math_function(
+    name = "atan",
+    additional_deps = ["//libc/src/__support/math:atan"],
+)
+
+libc_math_function(
+    name = "atan2f",
+    additional_deps = ["//libc/src/__support/math:atan2f"],
+)
+
+libc_math_function(
+    name = "atan2f128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:atan2f128",
+    ],
+)
+
+libc_math_function(
+    name = "atan2f16",
+    additional_deps = ["//libc/src/__support/math:atan2f16"],
+)
+
+libc_math_function(
+    name = "atan2",
+    additional_deps = ["//libc/src/__support/math:atan2"],
+)
+
+libc_math_function(
+    name = "atanhf",
+    additional_deps = ["//libc/src/__support/math:atanhf"],
+)
+
+libc_math_function(
+    name = "atanhf16",
+    additional_deps = [
+        "//libc/src/__support/math:atanhf16",
+    ],
+)
+
+libc_math_function(
+    name = "atanpif16",
+    additional_deps = ["//libc/src/__support/math:atanpif16"],
+)
+
+libc_math_function(
+    name = "bf16add",
+    additional_deps = ["//libc/src/__support/math:bf16add"],
+)
+
+libc_math_function(
+    name = "bf16addf",
+    additional_deps = ["//libc/src/__support/math:bf16addf"],
+)
+
+libc_math_function(
+    name = "bf16addl",
+    additional_deps = ["//libc/src/__support/math:bf16addl"],
+)
+
+libc_math_function(
+    name = "bf16addf128",
+    additional_deps = ["//libc/src/__support/math:bf16addf128"],
+)
+
+libc_math_function(
+    name = "bf16div",
+    additional_deps = ["//libc/src/__support/math:bf16div"],
+)
+
+libc_math_function(
+    name = "bf16divl",
+    additional_deps = ["//libc/src/__support/math:bf16divl"],
+)
+
+libc_math_function(
+    name = "bf16sub",
+    additional_deps = ["//libc/src/__support/math:bf16sub"],
+)
+
+libc_math_function(
+    name = "bf16subf",
+    additional_deps = ["//libc/src/__support/math:bf16subf"],
+)
+
+libc_math_function(
+    name = "bf16subf128",
+    additional_deps = ["//libc/src/__support/math:bf16subf128"],
+)
+
+libc_math_function(
+    name = "bf16subl",
+    additional_deps = ["//libc/src/__support/math:bf16subl"],
+)
+
+libc_math_function(
+    name = "bf16fma",
+    additional_deps = ["//libc/src/__support/math:bf16fma"],
+)
+
+libc_math_function(
+    name = "bf16fmaf",
+    additional_deps = ["//libc/src/__support/math:bf16fmaf"],
+)
+
+libc_math_function(
+    name = "bf16fmaf128",
+    additional_deps = ["//libc/src/__support/math:bf16fmaf128"],
+)
+
+libc_math_function(
+    name = "bf16fmal",
+    additional_deps = ["//libc/src/__support/math:bf16fmal"],
+)
+
+libc_math_function(
+    name = "bf16mul",
+    additional_deps = [
+        "//libc/src/__support/math:bf16mul",
+    ],
+)
+
+libc_math_function(
+    name = "bf16mulf",
+    additional_deps = [
+        "//libc/src/__support/math:bf16mulf",
+    ],
+)
+
+libc_math_function(
+    name = "bf16mulf128",
+    additional_deps = [
+        "//libc/src/__support/math:bf16mulf128",
+    ],
+)
+
+libc_math_function(
+    name = "bf16mull",
+    additional_deps = [
+        "//libc/src/__support/math:bf16mull",
+    ],
+)
+
+libc_math_function(
+    name = "bf16divf",
+    additional_deps = [
+        "//libc/src/__support/math:bf16divf",
+    ],
+)
+
+libc_math_function(
+    name = "bf16divf128",
+    additional_deps = [
+        "//libc/src/__support/math:bf16divf128",
+    ],
+)
+
+libc_math_function(
+    name = "canonicalize",
+    additional_deps = [
+        "//libc/src/__support/math:canonicalize",
+    ],
+)
+
+libc_math_function(
+    name = "canonicalizef",
+    additional_deps = [
+        "//libc/src/__support/math:canonicalizef",
+    ],
+)
+
+libc_math_function(
+    name = "canonicalizebf16",
+    additional_deps = [
+        "//libc/src/__support/math:canonicalizebf16",
+    ],
+)
+
+libc_math_function(
+    name = "canonicalizel",
+    additional_deps = [
+        "//libc/src/__support/math:canonicalizel",
+    ],
+)
+
+libc_math_function(
+    name = "canonicalizef128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:canonicalizef128",
+    ],
+)
+
+libc_math_function(
+    name = "canonicalizef80",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/math:canonicalizef80",
+    ],
+)
+
+libc_math_function(
+    name = "canonicalizef16",
+    additional_deps = [
+        "//libc/src/__support/math:canonicalizef16",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximumbf16",
+    additional_deps = [
+        "//libc/src/__support/math:fmaximumbf16",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_magbf16",
+    additional_deps = [
+        "//libc/src/__support/math:fmaximum_magbf16",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_numbf16",
+    additional_deps = [
+        "//libc/src/__support/math:fmaximum_numbf16",
+    ],
+)
+
+libc_math_function(
+    name = "fminbf16",
+    additional_deps = [
+        "//libc/src/__support/math:fminbf16",
+    ],
+)
+
+libc_math_function(
+    name = "fminimumbf16",
+    additional_deps = [
+        "//libc/src/__support/math:fminimumbf16",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum_magbf16",
+    additional_deps = [
+        "//libc/src/__support/math:fminimum_magbf16",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum_mag_numbf16",
+    additional_deps = [
+        "//libc/src/__support/math:fminimum_mag_numbf16",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum_numbf16",
+    additional_deps = [
+        "//libc/src/__support/math:fminimum_numbf16",
+    ],
+)
+
+libc_math_function(
+    name = "frexpbf16",
+    additional_deps = [
+        "//libc/src/__support/math:frexpbf16",
+    ],
+)
+
+libc_math_function(
+    name = "fromfpbf16",
+    additional_deps = [
+        "//libc/src/__support/math:fromfpbf16",
+    ],
+)
+
+libc_math_function(
+    name = "fromfpxbf16",
+    additional_deps = [
+        "//libc/src/__support/math:fromfpxbf16",
+    ],
+)
+
+libc_math_function(
+    name = "ilogbbf16",
+    additional_deps = [
+        "//libc/src/__support/math:ilogbbf16",
+    ],
+)
+
+libc_math_function(
+    name = "iscanonical",
+    additional_deps = [
+        "//libc/src/__support/math:iscanonical",
+    ],
+)
+
+libc_math_function(
+    name = "iscanonicalbf16",
+    additional_deps = [
+        "//libc/src/__support/math:iscanonicalbf16",
+    ],
+)
+
+libc_math_function(
+    name = "iscanonicalf",
+    additional_deps = [
+        "//libc/src/__support/math:iscanonicalf",
+    ],
+)
+
+libc_math_function(
+    name = "iscanonicall",
+    additional_deps = [
+        "//libc/src/__support/math:iscanonicall",
+    ],
+)
+
+libc_math_function(
+    name = "iscanonicalf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:iscanonicalf128",
+    ],
+)
+
+libc_math_function(
+    name = "iscanonicalf80",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/math:iscanonicalf80",
+    ],
+)
+
+libc_math_function(
+    name = "iscanonicalf16",
+    additional_deps = [
+        "//libc/src/__support/math:iscanonicalf16",
+    ],
+)
+
+libc_math_function(
+    name = "isnan",
+    additional_deps = [
+        "//libc/src/__support/math:isnan",
+    ],
+)
+
+libc_math_function(
+    name = "isnanf",
+    additional_deps = [
+        "//libc/src/__support/math:isnanf",
+    ],
+)
+
+libc_math_function(
+    name = "isnanf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:isnanf128",
+    ],
+)
+
+libc_math_function(
+    name = "isnanf80",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/math:isnanf80",
+    ],
+)
+
+libc_math_function(
+    name = "isnanl",
+    additional_deps = [
+        "//libc/src/__support/math:isnanl",
+    ],
+)
+
+libc_math_function(
+    name = "isnanf16",
+    additional_deps = [
+        "//libc/src/__support/math:isnanf16",
+    ],
+)
+
+libc_math_function(
+    name = "issignaling",
+    additional_deps = [
+        "//libc/src/__support/math:issignaling",
+    ],
+)
+
+libc_math_function(
+    name = "issignalingbf16",
+    additional_deps = [
+        "//libc/src/__support/math:issignalingbf16",
+    ],
+)
+
+libc_math_function(
+    name = "issignalingf",
+    additional_deps = [
+        "//libc/src/__support/math:issignalingf",
+    ],
+)
+
+libc_math_function(
+    name = "issignalingl",
+    additional_deps = [
+        "//libc/src/__support/math:issignalingl",
+    ],
+)
+
+libc_math_function(
+    name = "issignalingf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:issignalingf128",
+    ],
+)
+
+libc_math_function(
+    name = "issignalingf80",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/math:issignalingf80",
+    ],
+)
+
+libc_math_function(
+    name = "issignalingf16",
+    additional_deps = [
+        "//libc/src/__support/math:issignalingf16",
+    ],
+)
+
+libc_math_function(
+    name = "cbrt",
+    additional_deps = ["//libc/src/__support/math:cbrt"],
+)
+
+libc_math_function(
+    name = "cbrtbf16",
+    additional_deps = ["//libc/src/__support/math:cbrtbf16"],
+)
+
+libc_math_function(
+    name = "cbrtf",
+    additional_deps = ["//libc/src/__support/math:cbrtf"],
+)
+
+libc_math_function(
+    name = "cbrtf16",
+    additional_deps = ["//libc/src/__support/math:cbrtf16"],
+)
+
+libc_math_function(
+    name = "ceil",
+    additional_deps = [
+        "//libc/src/__support/math:ceil",
+    ],
+)
+
+libc_math_function(
+    name = "ceilbf16",
+    additional_deps = [
+        "//libc/src/__support/math:ceilbf16",
+    ],
+)
+
+libc_math_function(
+    name = "ceilf",
+    additional_deps = [
+        "//libc/src/__support/math:ceilf",
+    ],
+)
+
+libc_math_function(
+    name = "ceill",
+    additional_deps = [
+        "//libc/src/__support/math:ceill",
+    ],
+)
+
+libc_math_function(
+    name = "ceilf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/math:ceilf128",
+        "//libc/src/__support/FPUtil:float128",
+    ],
+)
+
+libc_math_function(
+    name = "ceilf16",
+    additional_deps = [
+        "//libc/src/__support/math:ceilf16",
+    ],
+)
+
+libc_math_function(
+    name = "copysign",
+    additional_deps = [
+        "//libc/src/__support/math:copysign",
+    ],
+)
+
+libc_math_function(
+    name = "copysignbf16",
+    additional_deps = [
+        "//libc/src/__support/math:copysignbf16",
+    ],
+)
+
+libc_math_function(
+    name = "copysignf",
+    additional_deps = [
+        "//libc/src/__support/math:copysignf",
+    ],
+)
+
+libc_math_function(
+    name = "copysignl",
+    additional_deps = [
+        "//libc/src/__support/math:copysignl",
+    ],
+)
+
+libc_math_function(
+    name = "copysignf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:copysignf128",
+    ],
+)
+
+libc_math_function(
+    name = "copysignf80",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/math:copysignf80",
+    ],
+)
+
+libc_math_function(
+    name = "copysignf16",
+    additional_deps = [
+        "//libc/src/__support/math:copysignf16",
+    ],
+)
+
+libc_math_function(
+    name = "cos",
+    additional_deps = [
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+        "//libc/src/__support/math:cos",
+        "//libc/src/__support/math:cos_integer_eval",
+    ],
+)
+
+libc_math_function(
+    name = "cosf",
+    additional_deps = ["//libc/src/__support/math:cosf"],
+)
+
+libc_math_function(
+    name = "cosf16",
+    additional_deps = [
+        "//libc/src/__support/math:cosf16",
+    ],
+)
+
+libc_math_function(
+    name = "cosh",
+    additional_deps = ["//libc/src/__support/math:cosh"],
+)
+
+libc_math_function(
+    name = "coshf",
+    additional_deps = ["//libc/src/__support/math:coshf"],
+)
+
+libc_math_function(
+    name = "coshf16",
+    additional_deps = [
+        "//libc/src/__support/math:coshf16",
+    ],
+)
+
+libc_math_function(
+    name = "cospif",
+    additional_deps = ["//libc/src/__support/math:cospif"],
+)
+
+libc_math_function(
+    name = "cospif16",
+    additional_deps = [
+        "//libc/src/__support/math:cospif16",
+    ],
+)
+
+libc_math_function(
+    name = "daddl",
+    additional_deps = [
+        "//libc/src/__support/math:daddl",
+    ],
+)
+
+libc_math_function(
+    name = "daddf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:daddf128",
+    ],
+)
+
+libc_math_function(
+    name = "ddivl",
+    additional_deps = [
+        "//libc/src/__support/math:ddivl",
+    ],
+)
+
+libc_math_function(
+    name = "ddivf128",
+    additional_deps = [
+        "//libc/src/__support/math:ddivf128",
+    ],
+)
+
+libc_math_function(
+    name = "dfmal",
+    additional_deps = ["//libc/src/__support/math:dfmal"],
+)
+
+libc_math_function(
+    name = "dfmaf128",
+    additional_deps = [
+        "//libc/src/__support/math:dfmaf128",
+        "//libc:llvm_libc_types_float128",
+    ],
+)
+
+libc_math_function(
+    name = "dmull",
+    additional_deps = [
+        "//libc/src/__support/math:dmull",
+    ],
+)
+
+libc_math_function(
+    name = "dmulf128",
+    additional_deps = [
+        "//libc/src/__support/math:dmulf128",
+    ],
+)
+
+libc_math_function(
+    name = "dsqrtl",
+    additional_deps = ["//libc/src/__support/math:dsqrtl"],
+)
+
+libc_math_function(
+    name = "dsqrtf128",
+    additional_deps = [
+        "//libc/src/__support/math:dsqrtf128",
+    ],
+)
+
+libc_math_function(
+    name = "dsubl",
+    additional_deps = [
+        "//libc/src/__support/math:dsubl",
+    ],
+)
+
+libc_math_function(
+    name = "dsubf128",
+    additional_deps = [
+        "//libc/src/__support/math:dsubf128",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+    ],
+)
+
+libc_math_function(
+    name = "erff",
+    additional_deps = ["//libc/src/__support/math:erff"],
+)
+
+libc_math_function(
+    name = "erff16",
+    additional_deps = [
+        "//libc/src/__support/math:erff16",
+    ],
+)
+
+libc_math_function(
+    name = "erfcf16",
+    additional_deps = [
+        "//libc/src/__support/math:erfcf16",
+    ],
+)
+
+libc_math_function(
+    name = "exp",
+    additional_deps = [
+        "//libc/src/__support/math:exp",
+    ],
+)
+
+libc_math_function(
+    name = "expf",
+    additional_deps = [
+        "//libc/src/__support/math:expf",
+        "//libc:__support_math_static_rounding_expf",
+    ],
+)
+
+libc_math_function(
+    name = "expf16",
+    additional_deps = [
+        "//libc/src/__support/math:expf16",
+        "//libc/src/__support/math:expxf16_utils",
+    ],
+)
+
+libc_math_function(
+    name = "expbf16",
+    additional_deps = [
+        "//libc/src/__support/math:expbf16",
+    ],
+)
+
+libc_math_function(
+    name = "exp10",
+    additional_deps = [
+        "//libc/src/__support/math:exp10",
+    ],
+)
+
+libc_math_function(
+    name = "exp10f",
+    additional_deps = [
+        "//libc/src/__support/math:exp10f",
+    ],
+)
+
+libc_math_function(
+    name = "exp10f16",
+    additional_deps = [
+        "//libc/src/__support/math:exp10f16",
+    ],
+)
+
+libc_math_function(
+    name = "exp10m1f16",
+    additional_deps = [
+        "//libc/src/__support/math:exp10m1f16",
+    ],
+)
+
+libc_math_function(
+    name = "exp10m1f",
+    additional_deps = ["//libc/src/__support/math:exp10m1f"],
+)
+
+libc_math_function(
+    name = "exp2",
+    additional_deps = ["//libc/src/__support/math:exp2"],
+)
+
+libc_math_function(
+    name = "exp2f",
+    additional_deps = [
+        "//libc/src/__support/math:exp2f",
+        "//libc:__support_math_static_rounding_exp2f",
+    ],
+)
+
+libc_math_function(
+    name = "exp2f16",
+    additional_deps = [
+        "//libc/src/__support/math:exp2f16",
+    ],
+)
+
+libc_math_function(
+    name = "exp2m1f",
+    additional_deps = ["//libc/src/__support/math:exp2m1f"],
+)
+
+libc_math_function(
+    name = "exp2m1f16",
+    additional_deps = [
+        "//libc/src/__support/math:exp2m1f16",
+    ],
+)
+
+libc_math_function(
+    name = "expm1",
+    additional_deps = ["//libc/src/__support/math:expm1"],
+)
+
+libc_math_function(
+    name = "expm1f",
+    additional_deps = ["//libc/src/__support/math:expm1f"],
+)
+
+libc_math_function(
+    name = "expm1f16",
+    additional_deps = [
+        "//libc/src/__support/math:expm1f16",
+    ],
+)
+
+libc_math_function(
+    name = "f16add",
+    additional_deps = ["//libc/src/__support/math:f16add"],
+)
+
+libc_math_function(
+    name = "f16addf",
+    additional_deps = ["//libc/src/__support/math:f16addf"],
+)
+
+libc_math_function(
+    name = "f16addf128",
+    additional_deps = ["//libc/src/__support/math:f16addf128"],
+)
+
+libc_math_function(
+    name = "f16addl",
+    additional_deps = ["//libc/src/__support/math:f16addl"],
+)
+
+libc_math_function(
+    name = "f16div",
+    additional_deps = [
+        "//libc/src/__support/math:f16div",
+    ],
+)
+
+libc_math_function(
+    name = "f16divf",
+    additional_deps = [
+        "//libc/src/__support/math:f16divf",
+    ],
+)
+
+libc_math_function(
+    name = "f16divf128",
+    additional_deps = [
+        "//libc/src/__support/math:f16divf128",
+    ],
+)
+
+libc_math_function(
+    name = "f16divl",
+    additional_deps = [
+        "//libc/src/__support/math:f16divl",
+    ],
+)
+
+libc_math_function(
+    name = "f16fma",
+    additional_deps = [
+        "//libc/src/__support/math:f16fma",
+    ],
+)
+
+libc_math_function(
+    name = "f16fmaf",
+    additional_deps = [
+        "//libc/src/__support/math:f16fmaf",
+    ],
+)
+
+libc_math_function(
+    name = "f16fmaf128",
+    additional_deps = [
+        "//libc/src/__support/math:f16fmaf128",
+    ],
+)
+
+libc_math_function(
+    name = "f16fmal",
+    additional_deps = [
+        "//libc/src/__support/math:f16fmal",
+    ],
+)
+
+libc_math_function(
+    name = "f16mul",
+    additional_deps = [
+        "//libc/src/__support/math:f16mul",
+    ],
+)
+
+libc_math_function(
+    name = "f16mulf",
+    additional_deps = [
+        "//libc/src/__support/math:f16mulf",
+    ],
+)
+
+libc_math_function(
+    name = "f16mulf128",
+    additional_deps = [
+        "//libc/src/__support/math:f16mulf128",
+    ],
+)
+
+libc_math_function(
+    name = "f16mull",
+    additional_deps = [
+        "//libc/src/__support/math:f16mull",
+    ],
+)
+
+libc_math_function(
+    name = "f16sqrt",
+    additional_deps = [
+        "//libc/src/__support/math:f16sqrt",
+    ],
+)
+
+libc_math_function(
+    name = "f16sqrtf",
+    additional_deps = [
+        "//libc/src/__support/math:f16sqrtf",
+    ],
+)
+
+libc_math_function(
+    name = "f16sqrtf128",
+    additional_deps = [
+        "//libc/src/__support/math:f16sqrtf128",
+    ],
+)
+
+libc_math_function(
+    name = "f16sqrtl",
+    additional_deps = [
+        "//libc/src/__support/math:f16sqrtl",
+    ],
+)
+
+libc_math_function(
+    name = "f16sub",
+    additional_deps = [
+        "//libc/src/__support/math:f16sub",
+    ],
+)
+
+libc_math_function(
+    name = "f16subf",
+    additional_deps = [
+        "//libc/src/__support/math:f16subf",
+    ],
+)
+
+libc_math_function(
+    name = "f16subf128",
+    additional_deps = [
+        "//libc/src/__support/math:f16subf128",
+    ],
+)
+
+libc_math_function(
+    name = "f16subl",
+    additional_deps = [
+        "//libc/src/__support/math:f16subl",
+    ],
+)
+
+libc_math_function(
+    name = "fabs",
+    additional_deps = [
+        "//libc/src/__support/math:fabs",
+    ],
+)
+
+libc_math_function(
+    name = "fabsbf16",
+    additional_deps = [
+        "//libc/src/__support/math:fabsbf16",
+    ],
+)
+
+libc_math_function(
+    name = "fabsf",
+    additional_deps = [
+        "//libc/src/__support/math:fabsf",
+    ],
+)
+
+libc_math_function(
+    name = "fabsl",
+    additional_deps = [
+        "//libc/src/__support/math:fabsl",
+    ],
+)
+
+libc_math_function(
+    name = "fabsf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:fabsf128",
+    ],
+)
+
+libc_math_function(
+    name = "fabsf80",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/math:fabsf80",
+    ],
+)
+
+libc_math_function(
+    name = "fabsf16",
+    additional_deps = [
+        "//libc/src/__support/math:fabsf16",
+    ],
+)
+
+libc_math_function(
+    name = "fadd",
+    additional_deps = [
+        "//libc/src/__support/math:fadd",
+    ],
+)
+
+libc_math_function(
+    name = "faddl",
+    additional_deps = [
+        "//libc/src/__support/math:faddl",
+    ],
+)
+
+libc_math_function(
+    name = "faddf128",
+    additional_deps = [
+        "//libc/src/__support/math:faddf128",
+    ],
+)
+
+libc_math_function(
+    name = "fdim",
+    additional_deps = [
+        "//libc/src/__support/math:fdim",
+    ],
+)
+
+libc_math_function(
+    name = "fdimbf16",
+    additional_deps = [
+        "//libc/src/__support/math:fdimbf16",
+    ],
+)
+
+libc_math_function(
+    name = "fdimf",
+    additional_deps = [
+        "//libc/src/__support/math:fdimf",
+    ],
+)
+
+libc_math_function(
+    name = "fdiml",
+    additional_deps = [
+        "//libc/src/__support/math:fdiml",
+    ],
+)
+
+libc_math_function(
+    name = "fdimf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:fdimf128",
+    ],
+)
+
+libc_math_function(
+    name = "fdimf80",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/math:fdimf80",
+    ],
+)
+
+libc_math_function(
+    name = "fdimf16",
+    additional_deps = [
+        "//libc/src/__support/math:fdimf16",
+    ],
+)
+
+libc_math_function(
+    name = "fdiv",
+    additional_deps = [
+        "//libc/src/__support/math:fdiv",
+    ],
+)
+
+libc_math_function(
+    name = "fdivl",
+    additional_deps = [
+        "//libc/src/__support/math:fdivl",
+    ],
+)
+
+libc_math_function(
+    name = "fdivf128",
+    additional_deps = [
+        "//libc/src/__support/math:fdivf128",
+    ],
+)
+
+libc_math_function(
+    name = "ffma",
+    additional_deps = [
+        "//libc/src/__support/math:ffma",
+    ],
+)
+
+libc_math_function(
+    name = "ffmal",
+    additional_deps = ["//libc/src/__support/math:ffmal"],
+)
+
+libc_math_function(
+    name = "ffmaf128",
+    additional_deps = [
+        "//libc/src/__support/math:ffmaf128",
+    ],
+)
+
+libc_math_function(
+    name = "floor",
+    additional_deps = [
+        "//libc/src/__support/math:floor",
+    ],
+)
+
+libc_math_function(
+    name = "floorbf16",
+    additional_deps = [
+        "//libc/src/__support/math:floorbf16",
+    ],
+)
+
+libc_math_function(
+    name = "floorf",
+    additional_deps = [
+        "//libc/src/__support/math:floorf",
+    ],
+)
+
+libc_math_function(
+    name = "floorl",
+    additional_deps = [
+        "//libc/src/__support/math:floorl",
+    ],
+)
+
+libc_math_function(
+    name = "floorf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/math:floorf128",
+        "//libc/src/__support/FPUtil:float128",
+    ],
+)
+
+libc_math_function(
+    name = "floorf16",
+    additional_deps = [
+        "//libc/src/__support/math:floorf16",
+    ],
+)
+
+libc_math_function(
+    name = "fma",
+    additional_deps = ["//libc/src/__support/math:fma"],
+)
+
+libc_math_function(
+    name = "fmaf",
+    additional_deps = ["//libc/src/__support/math:fmaf"],
+)
+
+libc_math_function(
+    name = "fmaf16",
+    additional_deps = [
+        "//libc/src/__support/math:fmaf16",
+    ],
+)
+
+libc_math_function(
+    name = "fmabf16",
+    additional_deps = [
+        "//libc/src/__support/math:fmabf16",
+    ],
+)
+
+libc_math_function(
+    name = "fmax",
+    additional_deps = [
+        "//libc/src/__support/math:fmax",
+    ],
+)
+
+libc_math_function(
+    name = "fmaxf",
+    additional_deps = [
+        "//libc/src/__support/math:fmaxf",
+    ],
+)
+
+libc_math_function(
+    name = "fmaxbf16",
+    additional_deps = [
+        "//libc/src/__support/math:fmaxbf16",
+    ],
+)
+
+libc_math_function(
+    name = "fmaxf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:fmaxf128",
+    ],
+)
+
+libc_math_function(
+    name = "fmaxf16",
+    additional_deps = [
+        "//libc/src/__support/math:fmaxf16",
+    ],
+)
+
+libc_math_function(
+    name = "fmaxf80",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/math:fmaxf80",
+    ],
+)
+
+libc_math_function(
+    name = "fmaxl",
+    additional_deps = [
+        "//libc/src/__support/math:fmaxl",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum",
+    additional_deps = [
+        "//libc/src/__support/math:fmaximum",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximumf",
+    additional_deps = [
+        "//libc/src/__support/math:fmaximumf",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximuml",
+    additional_deps = [
+        "//libc/src/__support/math:fmaximuml",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximumf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:fmaximumf128",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximumf16",
+    additional_deps = [
+        "//libc/src/__support/math:fmaximumf16",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximumf80",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/math:fmaximumf80",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_mag",
+    additional_deps = [
+        "//libc/src/__support/math:fmaximum_mag",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_magf",
+    additional_deps = [
+        "//libc/src/__support/math:fmaximum_magf",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_magl",
+    additional_deps = [
+        "//libc/src/__support/math:fmaximum_magl",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_magf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:fmaximum_magf128",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_magf80",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/math:fmaximum_magf80",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_magf16",
+    additional_deps = [
+        "//libc/src/__support/math:fmaximum_magf16",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_mag_num",
+    additional_deps = [
+        "//libc/src/__support/math:fmaximum_mag_num",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_mag_numbf16",
+    additional_deps = [
+        "//libc/src/__support/math:fmaximum_mag_numbf16",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_mag_numf",
+    additional_deps = [
+        "//libc/src/__support/math:fmaximum_mag_numf",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_mag_numl",
+    additional_deps = [
+        "//libc/src/__support/math:fmaximum_mag_numl",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_mag_numf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:fmaximum_mag_numf128",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_mag_numf80",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/math:fmaximum_mag_numf80",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_mag_numf16",
+    additional_deps = [
+        "//libc/src/__support/math:fmaximum_mag_numf16",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_num",
+    additional_deps = [
+        "//libc/src/__support/math:fmaximum_num",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_numf",
+    additional_deps = [
+        "//libc/src/__support/math:fmaximum_numf",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_numl",
+    additional_deps = [
+        "//libc/src/__support/math:fmaximum_numl",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_numf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:fmaximum_numf128",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_numf80",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/math:fmaximum_numf80",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_numf16",
+    additional_deps = [
+        "//libc/src/__support/math:fmaximum_numf16",
+    ],
+)
+
+libc_math_function(
+    name = "fmin",
+    additional_deps = [
+        "//libc/src/__support/math:fmin",
+    ],
+)
+
+libc_math_function(
+    name = "fminf",
+    additional_deps = [
+        "//libc/src/__support/math:fminf",
+    ],
+)
+
+libc_math_function(
+    name = "fminl",
+    additional_deps = [
+        "//libc/src/__support/math:fminl",
+    ],
+)
+
+libc_math_function(
+    name = "fminf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:fminf128",
+    ],
+)
+
+libc_math_function(
+    name = "fminf16",
+    additional_deps = [
+        "//libc/src/__support/math:fminf16",
+    ],
+)
+
+libc_math_function(
+    name = "fminf80",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/math:fminf80",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum",
+    additional_deps = [
+        "//libc/src/__support/math:fminimum",
+    ],
+)
+
+libc_math_function(
+    name = "fminimumf",
+    additional_deps = [
+        "//libc/src/__support/math:fminimumf",
+    ],
+)
+
+libc_math_function(
+    name = "fminimuml",
+    additional_deps = [
+        "//libc/src/__support/math:fminimuml",
+    ],
+)
+
+libc_math_function(
+    name = "fminimumf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:fminimumf128",
+    ],
+)
+
+libc_math_function(
+    name = "fminimumf16",
+    additional_deps = [
+        "//libc/src/__support/math:fminimumf16",
+    ],
+)
+
+libc_math_function(
+    name = "fminimumf80",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/math:fminimumf80",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum_mag",
+    additional_deps = [
+        "//libc/src/__support/math:fminimum_mag",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum_magf",
+    additional_deps = [
+        "//libc/src/__support/math:fminimum_magf",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum_magl",
+    additional_deps = [
+        "//libc/src/__support/math:fminimum_magl",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum_magf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:fminimum_magf128",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum_magf80",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/math:fminimum_magf80",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum_magf16",
+    additional_deps = [
+        "//libc/src/__support/math:fminimum_magf16",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum_mag_num",
+    additional_deps = [
+        "//libc/src/__support/math:fminimum_mag_num",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum_mag_numf",
+    additional_deps = [
+        "//libc/src/__support/math:fminimum_mag_numf",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum_mag_numl",
+    additional_deps = [
+        "//libc/src/__support/math:fminimum_mag_numl",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum_mag_numf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:fminimum_mag_numf128",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum_mag_numf80",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/math:fminimum_mag_numf80",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum_mag_numf16",
+    additional_deps = [
+        "//libc/src/__support/math:fminimum_mag_numf16",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum_num",
+    additional_deps = [
+        "//libc/src/__support/math:fminimum_num",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum_numf",
+    additional_deps = [
+        "//libc/src/__support/math:fminimum_numf",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum_numl",
+    additional_deps = [
+        "//libc/src/__support/math:fminimum_numl",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum_numf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:fminimum_numf128",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum_numf80",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/math:fminimum_numf80",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum_numf16",
+    additional_deps = [
+        "//libc/src/__support/math:fminimum_numf16",
+    ],
+)
+
+libc_math_function(
+    name = "fmod",
+    additional_deps = [
+        "//libc/src/__support/math:fmod",
+    ],
+)
+
+libc_math_function(
+    name = "fmodbf16",
+    additional_deps = [
+        "//libc/src/__support/math:fmodbf16",
+    ],
+)
+
+libc_math_function(
+    name = "fmodf",
+    additional_deps = [
+        "//libc/src/__support/math:fmodf",
+    ],
+)
+
+libc_math_function(
+    name = "fmodl",
+    additional_deps = [
+        "//libc/src/__support/math:fmodl",
+    ],
+)
+
+libc_math_function(
+    name = "fmodf128",
+    additional_deps = [
+        "//libc/src/__support/math:fmodf128",
+    ],
+)
+
+libc_math_function(
+    name = "fmodf16",
+    additional_deps = [
+        "//libc/src/__support/math:fmodf16",
+    ],
+)
+
+libc_math_function(
+    name = "fmul",
+    additional_deps = [
+        "//libc/src/__support/math:fmul",
+    ],
+)
+
+libc_math_function(
+    name = "fmull",
+    additional_deps = [
+        "//libc/src/__support/math:fmull",
+    ],
+)
+
+libc_math_function(
+    name = "fmulf128",
+    additional_deps = [
+        "//libc/src/__support/math:fmulf128",
+    ],
+)
+
+libc_math_function(
+    name = "frexp",
+    additional_deps = [
+        "//libc/src/__support/math:frexp",
+    ],
+)
+
+libc_math_function(
+    name = "frexpf",
+    additional_deps = ["//libc/src/__support/math:frexpf"],
+)
+
+libc_math_function(
+    name = "frexpl",
+    additional_deps = [
+        "//libc/src/__support/math:frexpl",
+    ],
+)
+
+libc_math_function(
+    name = "frexpf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:frexpf128",
+    ],
+)
+
+libc_math_function(
+    name = "frexpf16",
+    additional_deps = [
+        "//libc/src/__support/math:frexpf16",
+    ],
+)
+
+libc_math_function(
+    name = "fromfp",
+    additional_deps = [
+        "//libc/src/__support/math:fromfp",
+    ],
+)
+
+libc_math_function(
+    name = "fromfpf",
+    additional_deps = [
+        "//libc/src/__support/math:fromfpf",
+    ],
+)
+
+libc_math_function(
+    name = "fromfpl",
+    additional_deps = [
+        "//libc/src/__support/math:fromfpl",
+    ],
+)
+
+libc_math_function(
+    name = "fromfpf128",
+    additional_deps = [
+        "//libc/src/__support/math:fromfpf128",
+    ],
+)
+
+libc_math_function(
+    name = "fromfpf16",
+    additional_deps = [
+        "//libc/src/__support/math:fromfpf16",
+    ],
+)
+
+libc_math_function(
+    name = "fromfpx",
+    additional_deps = [
+        "//libc/src/__support/math:fromfpx",
+    ],
+)
+
+libc_math_function(
+    name = "fromfpxf",
+    additional_deps = [
+        "//libc/src/__support/math:fromfpxf",
+    ],
+)
+
+libc_math_function(
+    name = "fromfpxl",
+    additional_deps = [
+        "//libc/src/__support/math:fromfpxl",
+    ],
+)
+
+libc_math_function(
+    name = "fromfpxf128",
+    additional_deps = [
+        "//libc/src/__support/math:fromfpxf128",
+    ],
+)
+
+libc_math_function(
+    name = "fromfpxf16",
+    additional_deps = [
+        "//libc/src/__support/math:fromfpxf16",
+    ],
+)
+
+libc_math_function(
+    name = "fsqrt",
+    additional_deps = ["//libc/src/__support/math:fsqrt"],
+)
+
+libc_math_function(
+    name = "fsqrtl",
+    additional_deps = ["//libc/src/__support/math:fsqrtl"],
+)
+
+libc_math_function(
+    name = "fsqrtf128",
+    additional_deps = [
+        "//libc/src/__support/math:fsqrtf128",
+    ],
+)
+
+libc_math_function(
+    name = "fsub",
+    additional_deps = [
+        "//libc/src/__support/math:fsub",
+    ],
+)
+
+libc_math_function(
+    name = "fsubl",
+    additional_deps = [
+        "//libc/src/__support/math:fsubl",
+    ],
+)
+
+libc_math_function(
+    name = "fsubf128",
+    additional_deps = [
+        "//libc/src/__support/math:fsubf128",
+    ],
+)
+
+libc_math_function(
+    name = "getpayload",
+    additional_deps = [
+        "//libc/src/__support/math:getpayload",
+    ],
+)
+
+libc_math_function(
+    name = "getpayloadbf16",
+    additional_deps = [
+        "//libc/src/__support/math:getpayloadbf16",
+    ],
+)
+
+libc_math_function(
+    name = "getpayloadf",
+    additional_deps = [
+        "//libc/src/__support/math:getpayloadf",
+    ],
+)
+
+libc_math_function(
+    name = "getpayloadl",
+    additional_deps = [
+        "//libc/src/__support/math:getpayloadl",
+    ],
+)
+
+libc_math_function(
+    name = "getpayloadf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:getpayloadf128",
+    ],
+)
+
+libc_math_function(
+    name = "getpayloadf16",
+    additional_deps = [
+        "//libc/src/__support/math:getpayloadf16",
+    ],
+)
+
+libc_math_function(
+    name = "hypot",
+    additional_deps = [
+        "//libc/src/__support/math:hypot",
+    ],
+)
+
+libc_math_function(
+    name = "hypotf",
+    additional_deps = [
+        "//libc/src/__support/math:hypotf",
+    ],
+)
+
+libc_math_function(
+    name = "hypotbf16",
+    additional_deps = [
+        "//libc/src/__support/math:hypotbf16",
+    ],
+)
+
+libc_math_function(
+    name = "hypotf16",
+    additional_deps = [
+        "//libc/src/__support/math:hypotf16",
+    ],
+)
+
+libc_math_function(
+    name = "ilogb",
+    additional_deps = ["//libc/src/__support/math:ilogb"],
+)
+
+libc_math_function(
+    name = "ilogbf",
+    additional_deps = ["//libc/src/__support/math:ilogbf"],
+)
+
+libc_math_function(
+    name = "ilogbl",
+    additional_deps = ["//libc/src/__support/math:ilogbl"],
+)
+
+libc_math_function(
+    name = "ilogbf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:ilogbf128",
+    ],
+)
+
+libc_math_function(
+    name = "ilogbf16",
+    additional_deps = [
+        "//libc/src/__support/math:ilogbf16",
+    ],
+)
+
+libc_math_function(
+    name = "ldexp",
+    additional_deps = [
+        "//libc/src/__support/math:ldexp",
+    ],
+)
+
+libc_math_function(
+    name = "ldexpbf16",
+    additional_deps = [
+        "//libc/src/__support/math:ldexpbf16",
+    ],
+)
+
+libc_math_function(
+    name = "ldexpf",
+    additional_deps = ["//libc/src/__support/math:ldexpf"],
+)
+
+libc_math_function(
+    name = "ldexpl",
+    additional_deps = [
+        "//libc/src/__support/math:ldexpl",
+    ],
+)
+
+libc_math_function(
+    name = "ldexpf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:ldexpf128",
+    ],
+)
+
+libc_math_function(
+    name = "ldexpf16",
+    additional_deps = [
+        "//libc/src/__support/math:ldexpf16",
+    ],
+)
+
+libc_math_function(
+    name = "lgammaf",
+    additional_deps = ["//libc/src/__support/math:lgammaf"],
+)
+
+libc_math_function(
+    name = "lgammaf16",
+    additional_deps = ["//libc/src/__support/math:lgammaf16"],
+)
+
+libc_math_function(
+    name = "llogb",
+    additional_deps = [
+        "//libc/src/__support/math:llogb",
+    ],
+)
+
+libc_math_function(
+    name = "llogbbf16",
+    additional_deps = [
+        "//libc/src/__support/math:llogbbf16",
+    ],
+)
+
+libc_math_function(
+    name = "llogbf",
+    additional_deps = [
+        "//libc/src/__support/math:llogbf",
+    ],
+)
+
+libc_math_function(
+    name = "llogbl",
+    additional_deps = [
+        "//libc/src/__support/math:llogbl",
+    ],
+)
+
+libc_math_function(
+    name = "llogbf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:llogbf128",
+    ],
+)
+
+libc_math_function(
+    name = "llogbf16",
+    additional_deps = [
+        "//libc/src/__support/math:llogbf16",
+    ],
+)
+
+libc_math_function(
+    name = "llrint",
+    additional_deps = [
+        "//libc/src/__support/math:llrint",
+    ],
+)
+
+libc_math_function(
+    name = "llrintbf16",
+    additional_deps = [
+        "//libc/src/__support/math:llrintbf16",
+    ],
+)
+
+libc_math_function(
+    name = "llrintf",
+    additional_deps = [
+        "//libc/src/__support/math:llrintf",
+    ],
+)
+
+libc_math_function(
+    name = "llrintl",
+    additional_deps = [
+        "//libc/src/__support/math:llrintl",
+    ],
+)
+
+libc_math_function(
+    name = "llrintf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:llrintf128",
+    ],
+)
+
+libc_math_function(
+    name = "llrintf16",
+    additional_deps = [
+        "//libc/src/__support/math:llrintf16",
+    ],
+)
+
+libc_math_function(
+    name = "llround",
+    additional_deps = [
+        "//libc/src/__support/math:llround",
+    ],
+)
+
+libc_math_function(
+    name = "llroundbf16",
+    additional_deps = [
+        "//libc/src/__support/math:llroundbf16",
+    ],
+)
+
+libc_math_function(
+    name = "llroundf",
+    additional_deps = [
+        "//libc/src/__support/math:llroundf",
+    ],
+)
+
+libc_math_function(
+    name = "llroundl",
+    additional_deps = [
+        "//libc/src/__support/math:llroundl",
+    ],
+)
+
+libc_math_function(
+    name = "llroundf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:llroundf128",
+    ],
+)
+
+libc_math_function(
+    name = "llroundf16",
+    additional_deps = [
+        "//libc/src/__support/math:llroundf16",
+    ],
+)
+
+libc_math_function(
+    name = "log",
+    additional_deps = [
+        "//libc/src/__support/math:log",
+    ],
+)
+
+libc_math_function(
+    name = "logf",
+    additional_deps = ["//libc/src/__support/math:logf"],
+)
+
+libc_math_function(
+    name = "logf16",
+    additional_deps = [
+        "//libc/src/__support/math:logf16",
+    ],
+)
+
+libc_math_function(
+    name = "log10",
+    additional_deps = ["//libc/src/__support/math:log10"],
+)
+
+libc_math_function(
+    name = "log10f",
+    additional_deps = [
+        "//libc/src/__support/math:log10f",
+    ],
+)
+
+libc_math_function(
+    name = "log10f16",
+    additional_deps = [
+        "//libc/src/__support/math:log10f16",
+    ],
+)
+
+libc_math_function(
+    name = "log10p1bf16",
+    additional_deps = [
+        "//libc/src/__support/math:log10p1bf16",
+    ],
+)
+
+libc_math_function(
+    name = "log10p1f16",
+    additional_deps = [
+        "//libc/src/__support/math:log10p1f16",
+    ],
+)
+
+libc_math_function(
+    name = "log1p",
+    additional_deps = ["//libc/src/__support/math:log1p"],
+)
+
+libc_math_function(
+    name = "log1pf",
+    additional_deps = [
+        "//libc/src/__support/math:log1pf",
+    ],
+)
+
+libc_math_function(
+    name = "log2",
+    additional_deps = ["//libc/src/__support/math:log2"],
+)
+
+libc_math_function(
+    name = "log2f",
+    additional_deps = [
+        "//libc/src/__support/math:log2f",
+    ],
+)
+
+libc_math_function(
+    name = "log2f16",
+    additional_deps = [
+        "//libc/src/__support/math:log2f16",
+    ],
+)
+
+libc_math_function(
+    name = "log2p1f16",
+    additional_deps = [
+        "//libc/src/__support/math:log2p1f16",
+    ],
+)
+
+libc_math_function(
+    name = "logb",
+    additional_deps = [
+        "//libc/src/__support/math:logb",
+    ],
+)
+
+libc_math_function(
+    name = "logbbf16",
+    additional_deps = ["//libc/src/__support/math:logbbf16"],
+)
+
+libc_math_function(
+    name = "logbf",
+    additional_deps = ["//libc/src/__support/math:logbf"],
+)
+
+libc_math_function(
+    name = "logbl",
+    additional_deps = ["//libc/src/__support/math:logbl"],
+)
+
+libc_math_function(
+    name = "logbf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:logbf128",
+    ],
+)
+
+libc_math_function(
+    name = "logbf16",
+    additional_deps = [
+        "//libc/src/__support/math:logbf16",
+    ],
+)
+
+libc_math_function(
+    name = "log_bf16",
+    additional_deps = [
+        "//libc/src/__support/math:log_bf16",
+    ],
+)
+
+libc_math_function(
+    name = "lrint",
+    additional_deps = [
+        "//libc/src/__support/math:lrint",
+    ],
+)
+
+libc_math_function(
+    name = "lrintbf16",
+    additional_deps = [
+        "//libc/src/__support/math:lrintbf16",
+    ],
+)
+
+libc_math_function(
+    name = "lrintf",
+    additional_deps = [
+        "//libc/src/__support/math:lrintf",
+    ],
+)
+
+libc_math_function(
+    name = "lrintl",
+    additional_deps = [
+        "//libc/src/__support/math:lrintl",
+    ],
+)
+
+libc_math_function(
+    name = "lrintf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:lrintf128",
+    ],
+)
+
+libc_math_function(
+    name = "lrintf16",
+    additional_deps = [
+        "//libc/src/__support/math:lrintf16",
+    ],
+)
+
+libc_math_function(
+    name = "lround",
+    additional_deps = [
+        "//libc/src/__support/math:lround",
+    ],
+)
+
+libc_math_function(
+    name = "lroundbf16",
+    additional_deps = [
+        "//libc/src/__support/math:lroundbf16",
+    ],
+)
+
+libc_math_function(
+    name = "lroundf",
+    additional_deps = [
+        "//libc/src/__support/math:lroundf",
+    ],
+)
+
+libc_math_function(
+    name = "lroundl",
+    additional_deps = [
+        "//libc/src/__support/math:lroundl",
+    ],
+)
+
+libc_math_function(
+    name = "lroundf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:lroundf128",
+    ],
+)
+
+libc_math_function(
+    name = "lroundf16",
+    additional_deps = [
+        "//libc/src/__support/math:lroundf16",
+    ],
+)
+
+libc_math_function(
+    name = "modf",
+    additional_deps = [
+        "//libc/src/__support/math:modf",
+    ],
+)
+
+libc_math_function(
+    name = "modfbf16",
+    additional_deps = [
+        "//libc/src/__support/math:modfbf16",
+    ],
+)
+
+libc_math_function(
+    name = "modff",
+    additional_deps = [
+        "//libc/src/__support/math:modff",
+    ],
+)
+
+libc_math_function(
+    name = "modfl",
+    additional_deps = [
+        "//libc/src/__support/math:modfl",
+    ],
+)
+
+libc_math_function(
+    name = "modff128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:modff128",
+    ],
+)
+
+libc_math_function(
+    name = "modff16",
+    additional_deps = [
+        "//libc/src/__support/math:modff16",
+    ],
+)
+
+libc_math_function(
+    name = "nan",
+    additional_deps = [
+        "//libc/src/__support/math:nan",
+    ],
+)
+
+libc_math_function(
+    name = "nanbf16",
+    additional_deps = [
+        "//libc/src/__support/math:nanbf16",
+    ],
+)
+
+libc_math_function(
+    name = "nanf",
+    additional_deps = [
+        "//libc/src/__support/math:nanf",
+    ],
+)
+
+libc_math_function(
+    name = "nanl",
+    additional_deps = [
+        "//libc/src/__support/math:nanl",
+    ],
+)
+
+libc_math_function(
+    name = "nanf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:nanf128",
+    ],
+)
+
+libc_math_function(
+    name = "nanf16",
+    additional_deps = [
+        "//libc/src/__support/math:nanf16",
+    ],
+)
+
+libc_math_function(
+    name = "nearbyint",
+    additional_deps = [
+        "//libc/src/__support/math:nearbyint",
+    ],
+)
+
+libc_math_function(
+    name = "nearbyintbf16",
+    additional_deps = [
+        "//libc/src/__support/math:nearbyintbf16",
+    ],
+)
+
+libc_math_function(
+    name = "nearbyintf",
+    additional_deps = [
+        "//libc/src/__support/math:nearbyintf",
+    ],
+)
+
+libc_math_function(
+    name = "nearbyintl",
+    additional_deps = [
+        "//libc/src/__support/math:nearbyintl",
+    ],
+)
+
+libc_math_function(
+    name = "nearbyintf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:nearbyintf128",
+    ],
+)
+
+libc_math_function(
+    name = "nearbyintf16",
+    additional_deps = [
+        "//libc/src/__support/math:nearbyintf16",
+    ],
+)
+
+libc_math_function(
+    name = "nextafter",
+    additional_deps = [
+        "//libc/src/__support/math:nextafter",
+    ],
+)
+
+libc_math_function(
+    name = "nextafterbf16",
+    additional_deps = [
+        "//libc/src/__support/math:nextafterbf16",
+    ],
+)
+
+libc_math_function(
+    name = "nextafterf",
+    additional_deps = [
+        "//libc/src/__support/math:nextafterf",
+    ],
+)
+
+libc_math_function(
+    name = "nextafterl",
+    additional_deps = [
+        "//libc/src/__support/math:nextafterl",
+    ],
+)
+
+libc_math_function(
+    name = "nextafterf128",
+    additional_deps = [
+        "//libc/src/__support/math:nextafterf128",
+    ],
+)
+
+libc_math_function(
+    name = "nextafterf16",
+    additional_deps = [
+        "//libc/src/__support/math:nextafterf16",
+    ],
+)
+
+libc_math_function(
+    name = "nextdown",
+    additional_deps = [
+        "//libc/src/__support/math:nextdown",
+    ],
+)
+
+libc_math_function(
+    name = "nextdownbf16",
+    additional_deps = [
+        "//libc/src/__support/math:nextdownbf16",
+    ],
+)
+
+libc_math_function(
+    name = "nextdownf",
+    additional_deps = [
+        "//libc/src/__support/math:nextdownf",
+    ],
+)
+
+libc_math_function(
+    name = "nextdownl",
+    additional_deps = [
+        "//libc/src/__support/math:nextdownl",
+    ],
+)
+
+libc_math_function(
+    name = "nextdownf128",
+    additional_deps = [
+        "//libc/src/__support/math:nextdownf128",
+    ],
+)
+
+libc_math_function(
+    name = "nextdownf16",
+    additional_deps = [
+        "//libc/src/__support/math:nextdownf16",
+    ],
+)
+
+libc_math_function(
+    name = "nexttoward",
+    additional_deps = [
+        "//libc/src/__support/math:nexttoward",
+    ],
+)
+
+libc_math_function(
+    name = "nexttowardbf16",
+    additional_deps = [
+        "//libc/src/__support/math:nexttowardbf16",
+    ],
+)
+
+libc_math_function(
+    name = "nexttowardf",
+    additional_deps = [
+        "//libc/src/__support/math:nexttowardf",
+    ],
+)
+
+libc_math_function(
+    name = "nexttowardf16",
+    additional_deps = [
+        "//libc/src/__support/math:nexttowardf16",
+    ],
+)
+
+libc_math_function(
+    name = "nexttowardl",
+    additional_deps = [
+        "//libc/src/__support/math:nexttowardl",
+    ],
+)
+
+libc_math_function(
+    name = "nextup",
+    additional_deps = [
+        "//libc/src/__support/math:nextup",
+    ],
+)
+
+libc_math_function(
+    name = "nextupf",
+    additional_deps = [
+        "//libc/src/__support/math:nextupf",
+    ],
+)
+
+libc_math_function(
+    name = "nextupl",
+    additional_deps = [
+        "//libc/src/__support/math:nextupl",
+    ],
+)
+
+libc_math_function(
+    name = "nextupf128",
+    additional_deps = [
+        "//libc/src/__support/math:nextupf128",
+    ],
+)
+
+libc_math_function(
+    name = "nextupf16",
+    additional_deps = [
+        "//libc/src/__support/math:nextupf16",
+    ],
+)
+
+libc_math_function(
+    name = "nextupbf16",
+    additional_deps = [
+        "//libc/src/__support/math:nextupbf16",
+    ],
+)
+
+libc_math_function(
+    name = "pow",
+    additional_deps = [
+        "//libc/src/__support/math:pow",
+    ],
+)
+
+libc_math_function(
+    name = "powf",
+    additional_deps = [
+        "//libc/src/__support/math:powf",
+    ],
+)
+
+libc_math_function(
+    name = "remainder",
+    additional_deps = [
+        "//libc/src/__support/math:remainder",
+    ],
+)
+
+libc_math_function(
+    name = "remainderbf16",
+    additional_deps = [
+        "//libc/src/__support/math:remainderbf16",
+    ],
+)
+
+libc_math_function(
+    name = "remainderf",
+    additional_deps = [
+        "//libc/src/__support/math:remainderf",
+    ],
+)
+
+libc_math_function(
+    name = "remainderl",
+    additional_deps = [
+        "//libc/src/__support/math:remainderl",
+    ],
+)
+
+libc_math_function(
+    name = "remainderf128",
+    additional_deps = [
+        "//libc/src/__support/math:remainderf128",
+    ],
+)
+
+libc_math_function(
+    name = "remainderf16",
+    additional_deps = [
+        "//libc/src/__support/math:remainderf16",
+    ],
+)
+
+libc_math_function(
+    name = "remquo",
+    additional_deps = [
+        "//libc/src/__support/math:remquo",
+    ],
+)
+
+libc_math_function(
+    name = "remquobf16",
+    additional_deps = [
+        "//libc/src/__support/math:remquobf16",
+    ],
+)
+
+libc_math_function(
+    name = "remquof",
+    additional_deps = [
+        "//libc/src/__support/math:remquof",
+    ],
+)
+
+libc_math_function(
+    name = "remquol",
+    additional_deps = [
+        "//libc/src/__support/math:remquol",
+    ],
+)
+
+libc_math_function(
+    name = "remquof128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:remquof128",
+    ],
+)
+
+libc_math_function(
+    name = "remquof16",
+    additional_deps = [
+        "//libc/src/__support/math:remquof16",
+    ],
+)
+
+libc_math_function(
+    name = "rint",
+    additional_deps = [
+        "//libc/src/__support/math:rint",
+    ],
+)
+
+libc_math_function(
+    name = "rintbf16",
+    additional_deps = [
+        "//libc/src/__support/math:rintbf16",
+    ],
+)
+
+libc_math_function(
+    name = "rintf",
+    additional_deps = [
+        "//libc/src/__support/math:rintf",
+    ],
+)
+
+libc_math_function(
+    name = "rintl",
+    additional_deps = [
+        "//libc/src/__support/math:rintl",
+    ],
+)
+
+libc_math_function(
+    name = "rintf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:rintf128",
+    ],
+)
+
+libc_math_function(
+    name = "rintf16",
+    additional_deps = [
+        "//libc/src/__support/math:rintf16",
+    ],
+)
+
+libc_math_function(
+    name = "round",
+    additional_deps = [
+        "//libc/src/__support/math:round",
+    ],
+)
+
+libc_math_function(
+    name = "roundbf16",
+    additional_deps = [
+        "//libc/src/__support/math:roundbf16",
+    ],
+)
+
+libc_math_function(
+    name = "roundevenbf16",
+    additional_deps = [
+        "//libc/src/__support/math:roundevenbf16",
+    ],
+)
+
+libc_math_function(
+    name = "roundf",
+    additional_deps = [
+        "//libc/src/__support/math:roundf",
+    ],
+)
+
+libc_math_function(
+    name = "roundl",
+    additional_deps = [
+        "//libc/src/__support/math:roundl",
+    ],
+)
+
+libc_math_function(
+    name = "roundf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:roundf128",
+    ],
+)
+
+libc_math_function(
+    name = "roundf16",
+    additional_deps = [
+        "//libc/src/__support/math:roundf16",
+    ],
+)
+
+libc_math_function(
+    name = "roundeven",
+    additional_deps = [
+        "//libc/src/__support/math:roundeven",
+    ],
+)
+
+libc_math_function(
+    name = "roundevenf",
+    additional_deps = [
+        "//libc/src/__support/math:roundevenf",
+    ],
+)
+
+libc_math_function(
+    name = "roundevenl",
+    additional_deps = [
+        "//libc/src/__support/math:roundevenl",
+    ],
+)
+
+libc_math_function(
+    name = "roundevenf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:roundevenf128",
+    ],
+)
+
+libc_math_function(
+    name = "roundevenf16",
+    additional_deps = [
+        "//libc/src/__support/math:roundevenf16",
+    ],
+)
+
+libc_math_function(
+    name = "rsqrtf",
+    additional_deps = ["//libc/src/__support/math:rsqrtf"],
+)
+
+libc_math_function(
+    name = "rsqrtf16",
+    additional_deps = [
+        "//libc/src/__support/math:rsqrtf16",
+    ],
+)
+
+libc_math_function(
+    name = "scalbln",
+    additional_deps = [
+        "//libc/src/__support/math:scalbln",
+    ],
+)
+
+libc_math_function(
+    name = "scalblnbf16",
+    additional_deps = [
+        "//libc/src/__support/math:scalblnbf16",
+    ],
+)
+
+libc_math_function(
+    name = "scalblnf",
+    additional_deps = [
+        "//libc/src/__support/math:scalblnf",
+    ],
+)
+
+libc_math_function(
+    name = "scalblnl",
+    additional_deps = [
+        "//libc/src/__support/math:scalblnl",
+    ],
+)
+
+libc_math_function(
+    name = "scalblnf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:scalblnf128",
+    ],
+)
+
+libc_math_function(
+    name = "scalblnf16",
+    additional_deps = [
+        "//libc/src/__support/math:scalblnf16",
+    ],
+)
+
+libc_math_function(
+    name = "scalbn",
+    additional_deps = [
+        "//libc/src/__support/math:scalbn",
+    ],
+)
+
+libc_math_function(
+    name = "scalbnbf16",
+    additional_deps = [
+        "//libc/src/__support/math:scalbnbf16",
+    ],
+)
+
+libc_math_function(
+    name = "scalbnf",
+    additional_deps = [
+        "//libc/src/__support/math:scalbnf",
+    ],
+)
+
+libc_math_function(
+    name = "scalbnl",
+    additional_deps = [
+        "//libc/src/__support/math:scalbnl",
+    ],
+)
+
+libc_math_function(
+    name = "scalbnf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:scalbnf128",
+    ],
+)
+
+libc_math_function(
+    name = "scalbnf16",
+    additional_deps = [
+        "//libc/src/__support/math:scalbnf16",
+    ],
+)
+
+libc_math_function(
+    name = "setpayload",
+    additional_deps = [
+        "//libc/src/__support/math:setpayload",
+    ],
+)
+
+libc_math_function(
+    name = "setpayloadbf16",
+    additional_deps = [
+        "//libc/src/__support/math:setpayloadbf16",
+    ],
+)
+
+libc_math_function(
+    name = "setpayloadf",
+    additional_deps = [
+        "//libc/src/__support/math:setpayloadf",
+    ],
+)
+
+libc_math_function(
+    name = "setpayloadl",
+    additional_deps = [
+        "//libc/src/__support/math:setpayloadl",
+    ],
+)
+
+libc_math_function(
+    name = "setpayloadf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:setpayloadf128",
+    ],
+)
+
+libc_math_function(
+    name = "setpayloadf16",
+    additional_deps = [
+        "//libc/src/__support/math:setpayloadf16",
+    ],
+)
+
+libc_math_function(
+    name = "setpayloadsig",
+    additional_deps = [
+        "//libc/src/__support/math:setpayloadsig",
+    ],
+)
+
+libc_math_function(
+    name = "setpayloadsigbf16",
+    additional_deps = [
+        "//libc/src/__support/math:setpayloadsigbf16",
+    ],
+)
+
+libc_math_function(
+    name = "setpayloadsigf",
+    additional_deps = [
+        "//libc/src/__support/math:setpayloadsigf",
+    ],
+)
+
+libc_math_function(
+    name = "setpayloadsigl",
+    additional_deps = [
+        "//libc/src/__support/math:setpayloadsigl",
+    ],
+)
+
+libc_math_function(
+    name = "setpayloadsigf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:setpayloadsigf128",
+    ],
+)
+
+libc_math_function(
+    name = "setpayloadsigf16",
+    additional_deps = [
+        "//libc/src/__support/math:setpayloadsigf16",
+    ],
+)
+
+libc_math_function(
+    name = "sin",
+    additional_deps = [
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:cpu_features",
+        "//libc/src/__support/math:sin",
+        "//libc/src/__support/math:sin_integer_eval",
+    ],
+)
+
+libc_math_function(
+    name = "sinbf16",
+    additional_deps = [
+        "//libc/src/__support/math:sinbf16",
+    ],
+)
+
+libc_math_function(
+    name = "sinf",
+    additional_deps = ["//libc/src/__support/math:sinf"],
+)
+
+libc_math_function(
+    name = "sinf16",
+    additional_deps = [
+        "//libc/src/__support/math:sinf16",
+    ],
+)
+
+libc_math_function(
+    name = "sincos",
+    additional_deps = [
+        "//libc/src/__support/math:sincos",
+    ],
+)
+
+libc_math_function(
+    name = "sincosf",
+    additional_deps = ["//libc/src/__support/math:sincosf"],
+)
+
+libc_math_function(
+    name = "sinh",
+    additional_deps = ["//libc/src/__support/math:sinh"],
+)
+
+libc_math_function(
+    name = "sinhf",
+    additional_deps = ["//libc/src/__support/math:sinhf"],
+)
+
+libc_math_function(
+    name = "sinhbf16",
+    additional_deps = [
+        "//libc/src/__support/math:sinhbf16",
+    ],
+)
+
+libc_math_function(
+    name = "sinhf16",
+    additional_deps = [
+        "//libc/src/__support/math:sinhf16",
+    ],
+)
+
+libc_math_function(
+    name = "sinpif",
+    additional_deps = ["//libc/src/__support/math:sinpif"],
+)
+
+libc_math_function(
+    name = "sinpif16",
+    additional_deps = [
+        "//libc/src/__support/math:sinpif16",
+    ],
+)
+
+libc_math_function(
+    name = "asinpif16",
+    additional_deps = [
+        "//libc/src/__support/math:asinpif16",
+    ],
+)
+
+libc_math_function(
+    name = "sqrt",
+    additional_deps = ["//libc/src/__support/math:sqrt"],
+)
+
+libc_math_function(
+    name = "sqrtbf16",
+    additional_deps = ["//libc/src/__support/math:sqrtbf16"],
+)
+
+libc_math_function(
+    name = "sqrtf",
+    additional_deps = ["//libc/src/__support/math:sqrtf"],
+)
+
+libc_math_function(
+    name = "sqrtl",
+    additional_deps = [
+        "//libc/src/__support/math:sqrtl",
+    ],
+)
+
+libc_math_function(
+    name = "sqrtf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:sqrtf128",
+    ],
+)
+
+libc_math_function(
+    name = "sqrtf16",
+    additional_deps = [
+        "//libc/src/__support/math:sqrtf16",
+    ],
+)
+
+libc_math_function(
+    name = "tan",
+    additional_deps = ["//libc/src/__support/math:tan"],
+)
+
+libc_math_function(
+    name = "tanbf16",
+    additional_deps = [
+        "//libc/src/__support/math:tanbf16",
+    ],
+)
+
+libc_math_function(
+    name = "tanf",
+    additional_deps = ["//libc/src/__support/math:tanf"],
+)
+
+libc_math_function(
+    name = "tanf16",
+    additional_deps = [
+        "//libc/src/__support/math:tanf16",
+    ],
+)
+
+libc_math_function(
+    name = "tanh",
+    additional_deps = ["//libc/src/__support/math:tanh"],
+)
+
+libc_math_function(
+    name = "tanhbf16",
+    additional_deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/math:tanhbf16",
+    ],
+)
+
+libc_math_function(
+    name = "tanhf",
+    additional_deps = [
+        "//libc/src/__support/math:tanhf",
+    ],
+)
+
+libc_math_function(
+    name = "tanhf16",
+    additional_deps = [
+        "//libc/src/__support/math:tanhf16",
+    ],
+)
+
+libc_math_function(
+    name = "tanpif",
+    additional_deps = [
+        "//libc/src/__support/math:tanpif",
+    ],
+)
+
+libc_math_function(
+    name = "tanpif16",
+    additional_deps = ["//libc/src/__support/math:tanpif16"],
+)
+
+libc_math_function(
+    name = "totalorder",
+    additional_deps = [
+        "//libc/src/__support/math:totalorder",
+    ],
+)
+
+libc_math_function(
+    name = "totalorderbf16",
+    additional_deps = [
+        "//libc/src/__support/math:totalorderbf16",
+    ],
+)
+
+libc_math_function(
+    name = "totalorderf",
+    additional_deps = [
+        "//libc/src/__support/math:totalorderf",
+    ],
+)
+
+libc_math_function(
+    name = "totalorderl",
+    additional_deps = [
+        "//libc/src/__support/math:totalorderl",
+    ],
+)
+
+libc_math_function(
+    name = "totalorderf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:totalorderf128",
+    ],
+)
+
+libc_math_function(
+    name = "totalorderf80",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/math:totalorderf80",
+    ],
+)
+
+libc_math_function(
+    name = "totalorderf16",
+    additional_deps = [
+        "//libc/src/__support/math:totalorderf16",
+    ],
+)
+
+libc_math_function(
+    name = "totalordermag",
+    additional_deps = [
+        "//libc/src/__support/math:totalordermag",
+    ],
+)
+
+libc_math_function(
+    name = "totalordermagbf16",
+    additional_deps = [
+        "//libc/src/__support/math:totalordermagbf16",
+    ],
+)
+
+libc_math_function(
+    name = "totalordermagf",
+    additional_deps = [
+        "//libc/src/__support/math:totalordermagf",
+    ],
+)
+
+libc_math_function(
+    name = "totalordermagl",
+    additional_deps = [
+        "//libc/src/__support/math:totalordermagl",
+    ],
+)
+
+libc_math_function(
+    name = "totalordermagf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:totalordermagf128",
+    ],
+)
+
+libc_math_function(
+    name = "totalordermagf80",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/math:totalordermagf80",
+    ],
+)
+
+libc_math_function(
+    name = "totalordermagf16",
+    additional_deps = [
+        "//libc/src/__support/math:totalordermagf16",
+    ],
+)
+
+libc_math_function(
+    name = "trunc",
+    additional_deps = [
+        "//libc/src/__support/math:trunc",
+    ],
+)
+
+libc_math_function(
+    name = "truncbf16",
+    additional_deps = [
+        "//libc/src/__support/math:truncbf16",
+    ],
+)
+
+libc_math_function(
+    name = "truncf",
+    additional_deps = [
+        "//libc/src/__support/math:truncf",
+    ],
+)
+
+libc_math_function(
+    name = "truncl",
+    additional_deps = [
+        "//libc/src/__support/math:truncl",
+    ],
+)
+
+libc_math_function(
+    name = "truncf128",
+    additional_deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/math:truncf128",
+    ],
+)
+
+libc_math_function(
+    name = "truncf16",
+    additional_deps = [
+        "//libc/src/__support/math:truncf16",
+    ],
+)
+
+libc_math_function(
+    name = "ufromfp",
+    additional_deps = [
+        "//libc/src/__support/math:ufromfp",
+    ],
+)
+
+libc_math_function(
+    name = "ufromfpbf16",
+    additional_deps = [
+        "//libc/src/__support/math:ufromfpbf16",
+    ],
+)
+
+libc_math_function(
+    name = "ufromfpf",
+    additional_deps = [
+        "//libc/src/__support/math:ufromfpf",
+    ],
+)
+
+libc_math_function(
+    name = "ufromfpl",
+    additional_deps = [
+        "//libc/src/__support/math:ufromfpl",
+    ],
+)
+
+libc_math_function(
+    name = "ufromfpf128",
+    additional_deps = [
+        "//libc/src/__support/math:ufromfpf128",
+    ],
+)
+
+libc_math_function(
+    name = "ufromfpf16",
+    additional_deps = [
+        "//libc/src/__support/math:ufromfpf16",
+    ],
+)
+
+libc_math_function(
+    name = "ufromfpx",
+    additional_deps = [
+        "//libc/src/__support/math:ufromfpx",
+    ],
+)
+
+libc_math_function(
+    name = "ufromfpxbf16",
+    additional_deps = [
+        "//libc/src/__support/math:ufromfpxbf16",
+    ],
+)
+
+libc_math_function(
+    name = "ufromfpxf",
+    additional_deps = [
+        "//libc/src/__support/math:ufromfpxf",
+    ],
+)
+
+libc_math_function(
+    name = "ufromfpxl",
+    additional_deps = [
+        "//libc/src/__support/math:ufromfpxl",
+    ],
+)
+
+libc_math_function(
+    name = "ufromfpxf128",
+    additional_deps = [
+        "//libc/src/__support/math:ufromfpxf128",
+    ],
+)
+
+libc_math_function(
+    name = "ufromfpxf16",
+    additional_deps = [
+        "//libc/src/__support/math:ufromfpxf16",
+    ],
+)

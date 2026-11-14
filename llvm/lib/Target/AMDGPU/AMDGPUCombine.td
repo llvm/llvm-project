@@ -162,6 +162,13 @@ def fold_fabs_fptrunc : GICombineRule<
          [{ return Helper.matchFoldFAbsFptrunc(*${fabs}, *${fptrunc}); }]),
   (apply [{ Helper.applyFoldFAbsFptrunc(*${fabs}, *${fptrunc}); }])>;
 
+// Utilize 24-bit v_mul instructions
+def mul24 : GICombineRule<
+  (defs root:$mul),
+  (match (G_MUL $dst, $src0, $src1):$mul,
+         [{ return matchCombine_mul24(*${mul}); }]),
+  (apply [{ applyCombine_mul24(*${mul}); }])>;
+
 // Detects s_mul_u64 instructions whose higher bits are zero/sign extended.
 def smulu64 : GICombineRule<
   (defs root:$smul, unsigned_matchinfo:$matchinfo),
@@ -394,5 +401,5 @@ def AMDGPURegBankCombiner : GICombiner<
    identity_combines, redundant_and, constant_fold_cast_op,
    cast_of_cast_combines, sext_trunc, zext_of_shift_amount_combines,
    d16_load, minmax_to_minmax3_combines, redundant_sext_inreg,
-   redundant_zext_sext_inreg, redundant_aext_sext_inreg]> {
+   redundant_zext_sext_inreg, redundant_aext_sext_inreg, mul24]> {
 }
