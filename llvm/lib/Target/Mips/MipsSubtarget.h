@@ -243,6 +243,7 @@ public:
   bool enablePostRAScheduler() const override;
   void getCriticalPathRCs(RegClassVector &CriticalPathRCs) const override;
   CodeGenOptLevel getOptLevelToEnablePostRAScheduler() const override;
+  void mirFileLoaded(MachineFunction &MF) const override;
 
   bool isABI_N64() const;
   bool isABI_N32() const;
