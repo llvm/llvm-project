@@ -71,10 +71,9 @@ public:
 
   bool enableShrinkWrapping(const MachineFunction &MF) const override;
 
-  Register
-  findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB,
-                                   Register PreferredReg,
-                                   Register DontUseReg = Register()) const;
+  Register findScratchNonCalleeSaveRegister(
+      const MachineBasicBlock *MBB, MachineBasicBlock::const_iterator MBBI,
+      Register PreferredReg, Register DontUseReg = Register()) const;
 
   bool isSupportedStackID(TargetStackID::Value ID) const override;
   TargetStackID::Value getStackIDForScalableVectors() const override;

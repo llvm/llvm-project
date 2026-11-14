@@ -12,8 +12,27 @@
 
   declare void @callee_stack_args(ptr, [518 x i64]) #1
 
+  ; A call frame large enough for a probe loop, allocated where $x6 and $x7 are
+  ; live: the probe loop must use other registers.
+  define void @call_frame_live_regs(i64 %c, i64 %n) #0 {
+  entry:
+    %v = alloca i32, i64 %n, align 4
+    call void @callee_large_args(ptr %v, [5127 x i64] poison)
+    ret void
+  }
+
+  declare void @callee_large_args(ptr, [5127 x i64]) #1
+
+  ; $x5 and $x6 are live at the prologue: the probe loop uses $x7 and $x28.
+  define void @two_live_temps() #2 {
+  entry:
+    %buf = alloca [6000 x i8], align 4
+    ret void
+  }
+
   attributes #0 = { uwtable "frame-pointer"="none" "probe-stack"="inline-asm" "target-features"="+m" }
   attributes #1 = { "target-features"="+m" }
+  attributes #2 = { uwtable "frame-pointer"="none" "probe-stack"="inline-asm" "stack-probe-size"="1024" "target-features"="+m" }
 ...
 ---
 name:            no_reserved_call_frame
@@ -190,5 +209,223 @@ body:             |
     ADJCALLSTACKDOWN 4088, 0, implicit-def dead $x2, implicit $x2
     PseudoCALL target-flags(riscv-call) @callee_stack_args, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit undef $x11, implicit undef $x12, implicit undef $x13, implicit undef $x14, implicit undef $x15, implicit undef $x16, implicit undef $x17, implicit-def $x2
     ADJCALLSTACKUP 4088, 0, implicit-def dead $x2, implicit $x2
+    PseudoRET
+...
+---
+name:            call_frame_live_regs
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x10', virtual-reg: '' }
+frameInfo:
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+stack:
+  - { id: 0, name: v, type: variable-sized, offset: 0, alignment: 1, stack-id: default }
+body:             |
+  ; RV64I-LABEL: name: call_frame_live_regs
+  ; RV64I: bb.0.entry:
+  ; RV64I-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; RV64I-NEXT:   liveins: $x10, $x1
+  ; RV64I-NEXT: {{  $}}
+  ; RV64I-NEXT:   $x2 = frame-setup ADDI $x2, -16
+  ; RV64I-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 16
+  ; RV64I-NEXT:   frame-setup SD killed $x1, $x2, 8 :: (store (s64) into %stack.1)
+  ; RV64I-NEXT:   frame-setup SD killed $x8, $x2, 0 :: (store (s64) into %stack.2)
+  ; RV64I-NEXT:   frame-setup CFI_INSTRUCTION offset $x1, -8
+  ; RV64I-NEXT:   frame-setup CFI_INSTRUCTION offset $x8, -16
+  ; RV64I-NEXT:   $x8 = frame-setup ADDI $x2, 16
+  ; RV64I-NEXT:   frame-setup CFI_INSTRUCTION def_cfa $x8, 0
+  ; RV64I-NEXT:   BEQ killed $x10, $x0, %bb.2
+  ; RV64I-NEXT: {{  $}}
+  ; RV64I-NEXT: bb.1:
+  ; RV64I-NEXT:   successors: %bb.3(0x80000000)
+  ; RV64I-NEXT: {{  $}}
+  ; RV64I-NEXT:   $x6 = ADDI $x0, 1
+  ; RV64I-NEXT:   $x7 = ADDI $x0, 2
+  ; RV64I-NEXT:   $x10 = LUI 10
+  ; RV64I-NEXT:   $x5 = SUB $x2, killed $x10
+  ; RV64I-NEXT:   $x28 = frame-setup LUI 1
+  ; RV64I-NEXT: {{  $}}
+  ; RV64I-NEXT: bb.3:
+  ; RV64I-NEXT:   successors: %bb.4(0x40000000), %bb.3(0x40000000)
+  ; RV64I-NEXT:   liveins: $x5, $x6, $x7, $x28
+  ; RV64I-NEXT: {{  $}}
+  ; RV64I-NEXT:   $x2 = frame-setup SUB $x2, $x28
+  ; RV64I-NEXT:   frame-setup SD $x0, $x2, 0
+  ; RV64I-NEXT:   frame-setup BNE $x2, $x5, %bb.3
+  ; RV64I-NEXT: {{  $}}
+  ; RV64I-NEXT: bb.4:
+  ; RV64I-NEXT:   successors: %bb.2(0x80000000)
+  ; RV64I-NEXT:   liveins: $x6, $x7
+  ; RV64I-NEXT: {{  $}}
+  ; RV64I-NEXT:   SW killed $x6, $x2, 0
+  ; RV64I-NEXT:   SW killed $x7, $x2, 4
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_args, csr_ilp32_lp64, implicit-def dead $x1, implicit-def $x2
+  ; RV64I-NEXT:   $x10 = LUI 10
+  ; RV64I-NEXT:   $x2 = ADD $x2, killed $x10
+  ; RV64I-NEXT: {{  $}}
+  ; RV64I-NEXT: bb.2:
+  ; RV64I-NEXT:   $x2 = frame-destroy ADDI $x8, -16
+  ; RV64I-NEXT:   frame-destroy CFI_INSTRUCTION def_cfa $x2, 16
+  ; RV64I-NEXT:   $x1 = frame-destroy LD $x2, 8 :: (load (s64) from %stack.1)
+  ; RV64I-NEXT:   $x8 = frame-destroy LD $x2, 0 :: (load (s64) from %stack.2)
+  ; RV64I-NEXT:   frame-destroy CFI_INSTRUCTION restore $x1
+  ; RV64I-NEXT:   frame-destroy CFI_INSTRUCTION restore $x8
+  ; RV64I-NEXT:   $x2 = frame-destroy ADDI $x2, 16
+  ; RV64I-NEXT:   frame-destroy CFI_INSTRUCTION def_cfa_offset 0
+  ; RV64I-NEXT:   PseudoRET
+  ;
+  ; RV32I-LABEL: name: call_frame_live_regs
+  ; RV32I: bb.0.entry:
+  ; RV32I-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; RV32I-NEXT:   liveins: $x10, $x1
+  ; RV32I-NEXT: {{  $}}
+  ; RV32I-NEXT:   $x2 = frame-setup ADDI $x2, -16
+  ; RV32I-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 16
+  ; RV32I-NEXT:   frame-setup SW killed $x1, $x2, 12 :: (store (s32) into %stack.1)
+  ; RV32I-NEXT:   frame-setup SW killed $x8, $x2, 8 :: (store (s32) into %stack.2)
+  ; RV32I-NEXT:   frame-setup CFI_INSTRUCTION offset $x1, -4
+  ; RV32I-NEXT:   frame-setup CFI_INSTRUCTION offset $x8, -8
+  ; RV32I-NEXT:   $x8 = frame-setup ADDI $x2, 16
+  ; RV32I-NEXT:   frame-setup CFI_INSTRUCTION def_cfa $x8, 0
+  ; RV32I-NEXT:   BEQ killed $x10, $x0, %bb.2
+  ; RV32I-NEXT: {{  $}}
+  ; RV32I-NEXT: bb.1:
+  ; RV32I-NEXT:   successors: %bb.3(0x80000000)
+  ; RV32I-NEXT: {{  $}}
+  ; RV32I-NEXT:   $x6 = ADDI $x0, 1
+  ; RV32I-NEXT:   $x7 = ADDI $x0, 2
+  ; RV32I-NEXT:   $x10 = LUI 10
+  ; RV32I-NEXT:   $x5 = SUB $x2, killed $x10
+  ; RV32I-NEXT:   $x28 = frame-setup LUI 1
+  ; RV32I-NEXT: {{  $}}
+  ; RV32I-NEXT: bb.3:
+  ; RV32I-NEXT:   successors: %bb.4(0x40000000), %bb.3(0x40000000)
+  ; RV32I-NEXT:   liveins: $x5, $x6, $x7, $x28
+  ; RV32I-NEXT: {{  $}}
+  ; RV32I-NEXT:   $x2 = frame-setup SUB $x2, $x28
+  ; RV32I-NEXT:   frame-setup SW $x0, $x2, 0
+  ; RV32I-NEXT:   frame-setup BNE $x2, $x5, %bb.3
+  ; RV32I-NEXT: {{  $}}
+  ; RV32I-NEXT: bb.4:
+  ; RV32I-NEXT:   successors: %bb.2(0x80000000)
+  ; RV32I-NEXT:   liveins: $x6, $x7
+  ; RV32I-NEXT: {{  $}}
+  ; RV32I-NEXT:   SW killed $x6, $x2, 0
+  ; RV32I-NEXT:   SW killed $x7, $x2, 4
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_args, csr_ilp32_lp64, implicit-def dead $x1, implicit-def $x2
+  ; RV32I-NEXT:   $x10 = LUI 10
+  ; RV32I-NEXT:   $x2 = ADD $x2, killed $x10
+  ; RV32I-NEXT: {{  $}}
+  ; RV32I-NEXT: bb.2:
+  ; RV32I-NEXT:   $x2 = frame-destroy ADDI $x8, -16
+  ; RV32I-NEXT:   frame-destroy CFI_INSTRUCTION def_cfa $x2, 16
+  ; RV32I-NEXT:   $x1 = frame-destroy LW $x2, 12 :: (load (s32) from %stack.1)
+  ; RV32I-NEXT:   $x8 = frame-destroy LW $x2, 8 :: (load (s32) from %stack.2)
+  ; RV32I-NEXT:   frame-destroy CFI_INSTRUCTION restore $x1
+  ; RV32I-NEXT:   frame-destroy CFI_INSTRUCTION restore $x8
+  ; RV32I-NEXT:   $x2 = frame-destroy ADDI $x2, 16
+  ; RV32I-NEXT:   frame-destroy CFI_INSTRUCTION def_cfa_offset 0
+  ; RV32I-NEXT:   PseudoRET
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: $x10
+
+    BEQ killed $x10, $x0, %bb.2
+
+  bb.1:
+    successors: %bb.2
+
+    $x6 = ADDI $x0, 1
+    $x7 = ADDI $x0, 2
+    ADJCALLSTACKDOWN 40960, 0, implicit-def dead $x2, implicit $x2
+    SW killed $x6, $x2, 0
+    SW killed $x7, $x2, 4
+    PseudoCALL target-flags(riscv-call) @callee_large_args, csr_ilp32_lp64, implicit-def dead $x1, implicit-def $x2
+    ADJCALLSTACKUP 40960, 0, implicit-def dead $x2, implicit $x2
+
+  bb.2:
+    PseudoRET
+...
+---
+name:            two_live_temps
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x5', virtual-reg: '' }
+  - { reg: '$x6', virtual-reg: '' }
+frameInfo:
+  maxAlignment:    4
+stack:
+  - { id: 0, name: buf, type: default, offset: 0, size: 6000, alignment: 4, stack-id: default }
+body:             |
+  bb.0.entry:
+    liveins: $x5, $x6
+
+    ; RV64I-LABEL: name: two_live_temps
+    ; RV64I: successors: %bb.1(0x80000000)
+    ; RV64I-NEXT: liveins: $x5, $x6
+    ; RV64I-NEXT: {{  $}}
+    ; RV64I-NEXT: $x10 = frame-setup ADDI $x0, 5
+    ; RV64I-NEXT: $x10 = frame-setup SLLI killed $x10, 10
+    ; RV64I-NEXT: $x7 = frame-setup SUB $x2, killed $x10
+    ; RV64I-NEXT: frame-setup CFI_INSTRUCTION def_cfa $x7, 5120
+    ; RV64I-NEXT: $x28 = frame-setup ADDI $x0, 1024
+    ; RV64I-NEXT: {{  $}}
+    ; RV64I-NEXT: .1.entry:
+    ; RV64I-NEXT: successors: %bb.2(0x40000000), %bb.1(0x40000000)
+    ; RV64I-NEXT: liveins: $x5, $x6, $x7, $x28
+    ; RV64I-NEXT: {{  $}}
+    ; RV64I-NEXT: $x2 = frame-setup SUB $x2, $x28
+    ; RV64I-NEXT: frame-setup SD $x0, $x2, 0
+    ; RV64I-NEXT: frame-setup BNE $x2, $x7, %bb.1
+    ; RV64I-NEXT: {{  $}}
+    ; RV64I-NEXT: .2.entry:
+    ; RV64I-NEXT: liveins: $x5, $x6
+    ; RV64I-NEXT: {{  $}}
+    ; RV64I-NEXT: frame-setup CFI_INSTRUCTION def_cfa_register $x2
+    ; RV64I-NEXT: $x2 = frame-setup ADDI $x2, -896
+    ; RV64I-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 6016
+    ; RV64I-NEXT: SW killed $x5, $x2, 16
+    ; RV64I-NEXT: SW killed $x6, $x2, 20
+    ; RV64I-NEXT: $x10 = frame-destroy LUI 1
+    ; RV64I-NEXT: $x10 = frame-destroy ADDI killed $x10, 1920
+    ; RV64I-NEXT: $x2 = frame-destroy ADD $x2, killed $x10
+    ; RV64I-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
+    ; RV64I-NEXT: PseudoRET
+    ;
+    ; RV32I-LABEL: name: two_live_temps
+    ; RV32I: successors: %bb.1(0x80000000)
+    ; RV32I-NEXT: liveins: $x5, $x6
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: $x10 = frame-setup ADDI $x0, 5
+    ; RV32I-NEXT: $x10 = frame-setup SLLI killed $x10, 10
+    ; RV32I-NEXT: $x7 = frame-setup SUB $x2, killed $x10
+    ; RV32I-NEXT: frame-setup CFI_INSTRUCTION def_cfa $x7, 5120
+    ; RV32I-NEXT: $x28 = frame-setup ADDI $x0, 1024
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: .1.entry:
+    ; RV32I-NEXT: successors: %bb.2(0x40000000), %bb.1(0x40000000)
+    ; RV32I-NEXT: liveins: $x5, $x6, $x7, $x28
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: $x2 = frame-setup SUB $x2, $x28
+    ; RV32I-NEXT: frame-setup SW $x0, $x2, 0
+    ; RV32I-NEXT: frame-setup BNE $x2, $x7, %bb.1
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: .2.entry:
+    ; RV32I-NEXT: liveins: $x5, $x6
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: frame-setup CFI_INSTRUCTION def_cfa_register $x2
+    ; RV32I-NEXT: $x2 = frame-setup ADDI $x2, -896
+    ; RV32I-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 6016
+    ; RV32I-NEXT: SW killed $x5, $x2, 16
+    ; RV32I-NEXT: SW killed $x6, $x2, 20
+    ; RV32I-NEXT: $x10 = frame-destroy LUI 1
+    ; RV32I-NEXT: $x10 = frame-destroy ADDI killed $x10, 1920
+    ; RV32I-NEXT: $x2 = frame-destroy ADD $x2, killed $x10
+    ; RV32I-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
+    ; RV32I-NEXT: PseudoRET
+    SW killed $x5, %stack.0.buf, 0
+    SW killed $x6, %stack.0.buf, 4
     PseudoRET
 ...

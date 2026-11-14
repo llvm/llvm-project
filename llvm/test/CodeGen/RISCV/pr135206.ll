@@ -16,21 +16,21 @@ define i1 @foo() nounwind "probe-stack"="inline-asm" "target-features"="+v" {
 ; CHECK-NEXT:    sd s3, 1992(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    lui a0, 7
 ; CHECK-NEXT:    sub t1, sp, a0
-; CHECK-NEXT:    lui t2, 1
+; CHECK-NEXT:    lui t0, 1
 ; CHECK-NEXT:  .LBB0_1: # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    sub sp, sp, t2
+; CHECK-NEXT:    sub sp, sp, t0
 ; CHECK-NEXT:    sd zero, 0(sp)
 ; CHECK-NEXT:    bne sp, t1, .LBB0_1
 ; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    addi sp, sp, -2048
 ; CHECK-NEXT:    addi sp, sp, -96
 ; CHECK-NEXT:    csrr t1, vlenb
-; CHECK-NEXT:    lui t2, 1
+; CHECK-NEXT:    lui t0, 1
 ; CHECK-NEXT:  .LBB0_3: # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    sub sp, sp, t2
+; CHECK-NEXT:    sub sp, sp, t0
 ; CHECK-NEXT:    sd zero, 0(sp)
-; CHECK-NEXT:    sub t1, t1, t2
-; CHECK-NEXT:    bge t1, t2, .LBB0_3
+; CHECK-NEXT:    sub t1, t1, t0
+; CHECK-NEXT:    bge t1, t0, .LBB0_3
 ; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    sub sp, sp, t1
 ; CHECK-NEXT:    li a0, 86
