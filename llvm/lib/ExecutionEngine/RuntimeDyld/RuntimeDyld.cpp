@@ -474,17 +474,14 @@ static bool isRequiredForExecution(const SectionRef Section) {
     return ELFSectionRef(Section).getFlags() & ELF::SHF_ALLOC;
   if (auto *COFFObj = dyn_cast<object::COFFObjectFile>(Obj)) {
     const coff_section *CoffSection = COFFObj->getCOFFSection(Section);
-    // Avoid loading zero-sized COFF sections.
-    // In PE files, VirtualSize gives the section size, and SizeOfRawData
-    // may be zero for sections with content. In Obj files, SizeOfRawData
-    // gives the section size, and VirtualSize is always zero. Hence
-    // the need to check for both cases below.
-    bool HasContent =
-        (CoffSection->VirtualSize > 0) || (CoffSection->SizeOfRawData > 0);
+    // Zero-sized sections must still be loaded: symbols may be defined in
+    // them (e.g. a zero-sized object, like an empty struct in C, in .bss),
+    // and references to such symbols need a valid address. Sections are only
+    // emitted on demand, and a zero-sized section gets a minimal allocation.
     bool IsDiscardable =
         CoffSection->Characteristics &
         (COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_LNK_INFO);
-    return HasContent && !IsDiscardable;
+    return !IsDiscardable;
   }
 
   assert(isa<MachOObjectFile>(Obj));
