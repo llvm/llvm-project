@@ -368,3 +368,46 @@ for.body:
   %exitcond.not = icmp eq i32 %inc, %N
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
+
+define i32 @const_rem_add_offset(i32 noundef %start, i32 noundef %off) {
+; CHECK-LABEL: define i32 @const_rem_add_offset(
+; CHECK-SAME: i32 noundef [[START:%.*]], i32 noundef [[OFF:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[N:%.*]] = add nuw i32 [[START]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i32 [[START]], [[OFF]]
+; CHECK-NEXT:    [[TMP1:%.*]] = urem i32 [[TMP0]], 5
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP1]], %[[ENTRY]] ], [ [[TMP5:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[START]], %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ACC_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[ACC_NEXT]] = xor i32 [[ACC]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw i32 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 5
+; CHECK-NEXT:    [[TMP5]] = select i1 [[TMP4]], i32 0, i32 [[TMP3]]
+; CHECK-NEXT:    [[INC]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[INC]], [[N]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[FOR_BODY]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[ACC_NEXT]]
+;
+entry:
+  %N = add nuw i32 %start, 2
+  br label %for.body
+
+for.body:
+  %i = phi i32 [ %start, %entry ], [ %inc, %latch ]
+  %acc = phi i32 [ 0, %entry ], [ %acc.next, %latch ]
+  %add = add nuw i32 %i, %off
+  %rem = urem i32 %add, 5
+  %acc.next = xor i32 %acc, %rem
+  br label %latch
+
+latch:
+  %inc = add nuw i32 %i, 1
+  %done = icmp eq i32 %inc, %N
+  br i1 %done, label %exit, label %for.body
+
+exit:
+  ret i32 %acc.next
+}
