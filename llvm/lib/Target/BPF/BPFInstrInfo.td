@@ -503,6 +503,7 @@ let Predicates = [BPFHasMovsx] in {
 }
 }
 
+let isReMaterializable = 1, hasSideEffects = 0 in
 def ADDR_SPACE_CAST
     : ALU_RR<BPF_ALU64, BPF_MOV, 64,
              (outs GPR:$dst),

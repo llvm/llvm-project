@@ -67,8 +67,17 @@ void BPFCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addModulePass(BPFCheckAndAdjustIRPass(), PMW);
   if (Subtarget->hasFuncTable())
     addModulePass(BPFFuncTablePass(), PMW);
+  if (Subtarget->hasArena())
+    addModulePass(BPFArenaDataPass(), PMW);
 
   Base::addIRPasses(PMW);
+  if (Subtarget->hasArena()) {
+    flushFPMsToMPM(PMW);
+    addModulePass(BPFArenaKptrPass(), PMW);
+    addFunctionPass(BPFArenaStackPass(), PMW);
+    flushFPMsToMPM(PMW);
+    addModulePass(BPFArenaCastPass(), PMW);
+  }
 }
 
 Error BPFCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
@@ -143,6 +152,8 @@ void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
   PB.registerPipelineStartEPCallback(
       [=](ModulePassManager &MPM, OptimizationLevel) {
         FunctionPassManager FPM;
+        if (getSubtargetImpl()->hasArena())
+          FPM.addPass(BPFArenaNullPass());
         FPM.addPass(BPFPreserveStaticOffsetPass(true));
         FPM.addPass(BPFAbstractMemberAccessPass(this));
         FPM.addPass(BPFPreserveDITypePass());

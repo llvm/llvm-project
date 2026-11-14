@@ -69,6 +69,9 @@ protected:
   // whether a pointer to a function is an index into a table
   bool HasFuncTable;
 
+  // whether locals and global data are in arena, and 'ptr' is a flat pointer
+  bool HasArena;
+
   // whether cpu v4 insns are enabled.
   bool HasLdsx, HasMovsx, HasBswap, HasSdivSmod, HasGotol, HasStoreImm,
       HasLoadAcqStoreRel, HasGotox;
@@ -100,6 +103,7 @@ public:
     return AllowsMisalignedMemAccess;
   }
   bool hasFuncTable() const { return HasFuncTable; }
+  bool hasArena() const { return HasArena; }
   bool hasLdsx() const { return HasLdsx; }
   bool hasMovsx() const { return HasMovsx; }
   bool hasBswap() const { return HasBswap; }
