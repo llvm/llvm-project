@@ -83,3 +83,17 @@ define <2 x i32> @test_pwsubau_v2i16(<2 x i32> %rd, <2 x i16> %a, <2 x i16> %b) 
   %sum.b = sub <2 x i32> %sum.a, %ext.b
   ret <2 x i32> %sum.b
 }
+
+define i48 @PR242679_sub(i48 %x) {
+; RV32-LABEL: PR242679_sub:
+; RV32:       # %bb.0:
+; RV32-NEXT:    negd a0, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: PR242679_sub:
+; RV64:       # %bb.0:
+; RV64-NEXT:    neg a0, a0
+; RV64-NEXT:    ret
+  %sub = sub i48 0, %x
+  ret i48 %sub
+}
