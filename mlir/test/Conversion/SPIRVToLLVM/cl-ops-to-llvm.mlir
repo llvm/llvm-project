@@ -1,6 +1,8 @@
 // RUN: mlir-opt -convert-spirv-to-llvm %s | FileCheck %s
 // RUN: mlir-opt -convert-spirv-to-llvm='allow-pattern-rollback=0' %s | FileCheck %s
 
+// CHECK: llvm.func spir_funccc @printf(!llvm.ptr, ...) -> i32 attributes {no_unwind, will_return}
+
 //===----------------------------------------------------------------------===//
 // Unary floating-point OpenCL ops mapped to LLVM intrinsics
 //===----------------------------------------------------------------------===//
@@ -205,5 +207,18 @@ spirv.func @sincos_vector(%x: vector<3xf16>, %p: !spirv.ptr<vector<3xf16>, Cross
   // CHECK: %[[COS:.*]] = llvm.extractvalue %[[SINCOS]][1] : !llvm.struct<(vector<3xf16>, vector<3xf16>)>
   // CHECK: llvm.store %[[COS]], %{{.*}} : vector<3xf16>, !llvm.ptr
   %0 = spirv.CL.sincos %x, %p : vector<3xf16>, !spirv.ptr<vector<3xf16>, CrossWorkgroup> -> vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.printf
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @cl_printf
+spirv.func @cl_printf(%fmt: !spirv.ptr<i8, UniformConstant>, %arg0: i32, %arg1: f32) "None" {
+  // CHECK: llvm.call spir_funccc @printf(%{{.*}}, %{{.*}}, %{{.*}}) vararg(!llvm.func<i32 (ptr, ...)>) {no_unwind, will_return} : (!llvm.ptr, i32, f32) -> i32
+  %0 = spirv.CL.printf %fmt %arg0, %arg1 : !spirv.ptr<i8, UniformConstant>, i32, f32 -> i32
+  // CHECK: llvm.call spir_funccc @printf(%{{.*}}) vararg(!llvm.func<i32 (ptr, ...)>) {no_unwind, will_return} : (!llvm.ptr) -> i32
+  %1 = spirv.CL.printf %fmt : !spirv.ptr<i8, UniformConstant> -> i32
   spirv.Return
 }
