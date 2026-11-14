@@ -14,6 +14,7 @@
 #include "llvm/DWARFLinker/Parallel/DWARFLinker.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
+#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ThreadPool.h"
@@ -33,56 +34,37 @@ namespace dwarfutil {
 // https://reviews.llvm.org/D81784 and https://reviews.llvm.org/D84825.
 // So we use following values as indicators of dead addresses:
 //
-// bfd: (LowPC == 0) or (LowPC == 1 and HighPC == 1 and  DWARF v4 (or less))
-//      or ([LowPC, HighPC] is not inside address ranges of .text sections).
+// bfd: (LowPC == 0) or (LowPC == 1 and HighPC == 1 and DWARF v4 (or less))
+//      or exec.
 //
 // maxpc: (LowPC == -1) or (LowPC == -2 and  DWARF v4 (or less))
 //        That value is assumed to be compatible with
 //        http://www.dwarfstd.org/ShowIssue.php?issue=200609.1
 //
-// exec: [LowPC, HighPC] is not inside address ranges of .text sections
+// exec: function addresses ([LowPC, HighPC]) are outside executable sections;
+//       location expression addresses are outside allocated sections.
 //
 // universal: maxpc and bfd
 class ObjFileAddressMap : public AddressesMap {
 public:
-  ObjFileAddressMap(DWARFContext &Context, const Options &Options,
-                    object::ObjectFile &ObjFile)
+  ObjFileAddressMap(const Options &Options, object::ObjectFile &ObjFile)
       : Opts(Options) {
-    // Remember addresses of existing text sections.
+    // Remember code ranges separately from the ranges that can hold variables.
     for (const object::SectionRef &Sect : ObjFile.sections()) {
-      if (!Sect.isText())
-        continue;
       const uint64_t Size = Sect.getSize();
       if (Size == 0)
         continue;
       const uint64_t StartAddr = Sect.getAddress();
-      TextAddressRanges.insert({StartAddr, StartAddr + Size});
-    }
-
-    // Check CU address ranges for tombstone value.
-    for (std::unique_ptr<DWARFUnit> &CU : Context.compile_units()) {
-      Expected<llvm::DWARFAddressRangesVector> ARanges =
-          CU->getUnitDIE().getAddressRanges();
-      if (!ARanges) {
-        llvm::consumeError(ARanges.takeError());
-        continue;
-      }
-
-      for (auto &Range : *ARanges) {
-        if (!isDeadAddressRange(Range.LowPC, Range.HighPC, CU->getVersion(),
-                                Options.Tombstone, CU->getAddressByteSize())) {
-          HasValidAddressRanges = true;
-          break;
-        }
-      }
-
-      if (HasValidAddressRanges)
-        break;
+      if (Sect.isText())
+        TextAddressRanges.insert({StartAddr, StartAddr + Size});
+      if (object::ELFSectionRef(Sect).getFlags() & ELF::SHF_ALLOC)
+        AllocAddressRanges.insert({StartAddr, StartAddr + Size});
     }
   }
 
-  // should be renamed into has valid address ranges
-  bool hasValidRelocs() override { return HasValidAddressRanges; }
+  // Determine liveness from each DIE's addresses rather than relocations.
+  // Return true so the linker processes the file and performs those checks.
+  bool hasValidRelocs() override { return true; }
 
   std::optional<int64_t> getSubprogramRelocAdjustment(const DWARFDie &DIE,
                                                       bool Verbose) override {
@@ -92,9 +74,9 @@ public:
 
     if (std::optional<uint64_t> LowPC =
             dwarf::toAddress(DIE.find(dwarf::DW_AT_low_pc))) {
-      if (!isDeadAddress(*LowPC, DIE.getDwarfUnit()->getVersion(),
-                         Opts.Tombstone,
-                         DIE.getDwarfUnit()->getAddressByteSize()))
+      if (!isDeadAddress(
+              *LowPC, DIE.getDwarfUnit()->getVersion(), Opts.Tombstone,
+              DIE.getDwarfUnit()->getAddressByteSize(), TextAddressRanges))
         // Relocation value for the linked binary is 0.
         return 0;
     }
@@ -116,18 +98,23 @@ public:
     case dwarf::DW_OP_const2s:
     case dwarf::DW_OP_const4s:
     case dwarf::DW_OP_const8s:
+    case dwarf::DW_OP_constx:
+      // TLS offsets cannot be checked against section addresses. Keep these
+      // locations until we can determine TLS liveness reliably.
+      // The linkers also pass non-TLS DW_OP_constx here. Conservatively retain
+      // those locations too until callers distinguish them from TLS offsets.
+      return 0;
     case dwarf::DW_OP_addr: {
       if (!isDeadAddress(Op.getRawOperand(0), U.getVersion(), Opts.Tombstone,
-                         U.getAddressByteSize()))
+                         U.getAddressByteSize(), AllocAddressRanges))
         // Relocation value for the linked binary is 0.
         return 0;
     } break;
-    case dwarf::DW_OP_constx:
     case dwarf::DW_OP_addrx: {
       if (std::optional<object::SectionedAddress> Address =
               U.getAddrOffsetSectionItem(Op.getRawOperand(0))) {
         if (!isDeadAddress(Address->Address, U.getVersion(), Opts.Tombstone,
-                           U.getAddressByteSize()))
+                           U.getAddressByteSize(), AllocAddressRanges))
           // Relocation value for the linked binary is 0.
           return 0;
       }
@@ -157,12 +144,11 @@ public:
   void clear() override {}
 
 protected:
-  // returns true if specified address range is inside address ranges
-  // of executable sections.
-  bool isInsideExecutableSectionsAddressRange(uint64_t LowPC,
-                                              std::optional<uint64_t> HighPC) {
-    std::optional<AddressRange> Range =
-        TextAddressRanges.getRangeThatContains(LowPC);
+  // Returns true if the specified address range is inside a section range.
+  bool isInsideSectionsAddressRange(uint64_t LowPC,
+                                    std::optional<uint64_t> HighPC,
+                                    const AddressRanges &Ranges) {
+    std::optional<AddressRange> Range = Ranges.getRangeThatContains(LowPC);
 
     if (HighPC)
       return Range.has_value() && Range->end() >= *HighPC;
@@ -171,27 +157,29 @@ protected:
   }
 
   uint64_t isBFDDeadAddressRange(uint64_t LowPC, std::optional<uint64_t> HighPC,
-                                 uint16_t Version) {
+                                 uint16_t Version,
+                                 const AddressRanges &Ranges) {
     if (LowPC == 0)
       return true;
 
     if ((Version <= 4) && HighPC && (LowPC == 1 && *HighPC == 1))
       return true;
 
-    return !isInsideExecutableSectionsAddressRange(LowPC, HighPC);
+    return !isInsideSectionsAddressRange(LowPC, HighPC, Ranges);
   }
 
   uint64_t isMAXPCDeadAddressRange(uint64_t LowPC,
                                    std::optional<uint64_t> HighPC,
-                                   uint16_t Version, uint8_t AddressByteSize) {
+                                   uint16_t Version, uint8_t AddressByteSize,
+                                   const AddressRanges &Ranges) {
     if (Version <= 4 && HighPC) {
       if (LowPC == (dwarf::computeTombstoneAddress(AddressByteSize) - 1))
         return true;
     } else if (LowPC == dwarf::computeTombstoneAddress(AddressByteSize))
       return true;
 
-    if (!isInsideExecutableSectionsAddressRange(LowPC, HighPC))
-      warning("Address referencing invalid text section is not marked with "
+    if (!isInsideSectionsAddressRange(LowPC, HighPC, Ranges))
+      warning("Address referencing invalid section is not marked with "
               "tombstone value");
 
     return false;
@@ -199,32 +187,35 @@ protected:
 
   bool isDeadAddressRange(uint64_t LowPC, std::optional<uint64_t> HighPC,
                           uint16_t Version, TombstoneKind Tombstone,
-                          uint8_t AddressByteSize) {
+                          uint8_t AddressByteSize,
+                          const AddressRanges &Ranges) {
     switch (Tombstone) {
     case TombstoneKind::BFD:
-      return isBFDDeadAddressRange(LowPC, HighPC, Version);
+      return isBFDDeadAddressRange(LowPC, HighPC, Version, Ranges);
     case TombstoneKind::MaxPC:
-      return isMAXPCDeadAddressRange(LowPC, HighPC, Version, AddressByteSize);
+      return isMAXPCDeadAddressRange(LowPC, HighPC, Version, AddressByteSize,
+                                     Ranges);
     case TombstoneKind::Universal:
-      return isBFDDeadAddressRange(LowPC, HighPC, Version) ||
-             isMAXPCDeadAddressRange(LowPC, HighPC, Version, AddressByteSize);
+      return isBFDDeadAddressRange(LowPC, HighPC, Version, Ranges) ||
+             isMAXPCDeadAddressRange(LowPC, HighPC, Version, AddressByteSize,
+                                     Ranges);
     case TombstoneKind::Exec:
-      return !isInsideExecutableSectionsAddressRange(LowPC, HighPC);
+      return !isInsideSectionsAddressRange(LowPC, HighPC, Ranges);
     }
 
     llvm_unreachable("Unknown tombstone value");
   }
 
   bool isDeadAddress(uint64_t LowPC, uint16_t Version, TombstoneKind Tombstone,
-                     uint8_t AddressByteSize) {
+                     uint8_t AddressByteSize, const AddressRanges &Ranges) {
     return isDeadAddressRange(LowPC, std::nullopt, Version, Tombstone,
-                              AddressByteSize);
+                              AddressByteSize, Ranges);
   }
 
 private:
   AddressRanges TextAddressRanges;
+  AddressRanges AllocAddressRanges;
   const Options &Opts;
-  bool HasValidAddressRanges = false;
 };
 
 static bool knownByDWARFUtil(StringRef SecName) {
@@ -389,7 +380,7 @@ Error linkDebugInfoImpl(object::ObjectFile &File, const Options &Options,
         });
       });
   std::unique_ptr<ObjFileAddressMap> AddressesMap(
-      std::make_unique<ObjFileAddressMap>(*Context, Options, File));
+      std::make_unique<ObjFileAddressMap>(Options, File));
 
   ObjectsForLinking[0] = std::make_unique<DWARFFile>(
       File.getFileName(), std::move(Context), std::move(AddressesMap));
