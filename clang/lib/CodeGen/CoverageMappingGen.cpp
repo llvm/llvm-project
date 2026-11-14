@@ -395,9 +395,29 @@ public:
           auto BeginLoc = SM.getSpellingLoc(Loc);
           auto EndLoc = SM.getSpellingLoc(Region.getEndLoc());
           if (SM.isWrittenInSameFile(BeginLoc, EndLoc)) {
-            Loc = SM.getFileLoc(Loc);
-            Region.setStartLoc(Loc);
-            Region.setEndLoc(SM.getFileLoc(Region.getEndLoc()));
+            auto ExpansionRange = SM.getImmediateExpansionRange(Loc);
+            while (ExpansionRange.getBegin().isMacroID() &&
+                   SM.isInSystemHeader(
+                       SM.getSpellingLoc(ExpansionRange.getBegin())))
+              ExpansionRange =
+                  SM.getImmediateExpansionRange(ExpansionRange.getBegin());
+
+            if (ExpansionRange.getBegin().isMacroID()) {
+              // Keep a system macro nested in a user macro in that macro's
+              // virtual file. Mapping it all the way to a physical file can
+              // introduce a disconnected, zero-length region at the outermost
+              // invocation (e.g. false in a macro-defined function).
+              Loc = ExpansionRange.getBegin();
+              Region.setStartLoc(Loc);
+              Region.setEndLoc(
+                  ExpansionRange.isTokenRange()
+                      ? getPreciseTokenLocEnd(ExpansionRange.getEnd())
+                      : ExpansionRange.getEnd());
+            } else {
+              Loc = SM.getFileLoc(Loc);
+              Region.setStartLoc(Loc);
+              Region.setEndLoc(SM.getFileLoc(Region.getEndLoc()));
+            }
           }
         }
         if (SM.isInSystemHeader(SM.getSpellingLoc(Loc)))
