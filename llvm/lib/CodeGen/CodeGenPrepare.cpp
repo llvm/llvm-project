@@ -186,6 +186,10 @@ class CodeGenPrepare {
   /// to optimize. Transforms that can invalidate this should update it.
   BasicBlock::iterator CurInstIterator;
 
+  /// True when optimizeBlock is re-iterating a basic block after an in-block
+  /// instruction dominance change (ModifyInstDT).
+  bool ReiteratingBlock = false;
+
   /// Keeps track of non-local addresses that have been sunk into a block.
   /// This allows us to avoid inserting duplicate code for blocks with
   /// multiple load/stores of the same address. The usage of WeakTrackingVH
@@ -267,6 +271,7 @@ private:
     if (IterHandle != CurValue) {
       CurInstIterator = BB->begin();
       SunkAddrs.clear();
+      ReiteratingBlock = false;
     }
   }
 
@@ -5648,33 +5653,45 @@ static bool IsNonLocalValue(Value *V, BasicBlock *BB) {
   return false;
 }
 
-// Find an insert position of Addr for MemoryInst. We can't guarantee MemoryInst
-// is the first instruction that will use Addr. So we need to find the first
-// user of Addr in current BB.
-static BasicBlock::iterator findInsertPos(Value *Addr, Instruction *MemoryInst,
-                                          Value *SunkAddr) {
-  if (Addr->hasOneUse())
-    return MemoryInst->getIterator();
+static bool canMoveSunkInst(const Instruction *I) {
+  if (isa<GetElementPtrInst>(I) || isa<CastInst>(I))
+    return true;
+  if (const auto *BO = dyn_cast<BinaryOperator>(I))
+    return BO->getOpcode() == Instruction::Add ||
+           BO->getOpcode() == Instruction::Mul;
+  return false;
+}
 
-  // We already have a SunkAddr in current BB, but we may need to insert cast
-  // instruction after it.
-  if (SunkAddr) {
-    if (Instruction *AddrInst = dyn_cast<Instruction>(SunkAddr))
-      return std::next(AddrInst->getIterator());
-  }
-
-  // Find the first user of Addr in current BB.
-  Instruction *Earliest = MemoryInst;
-  for (User *U : Addr->users()) {
-    Instruction *UserInst = dyn_cast<Instruction>(U);
-    if (UserInst && UserInst->getParent() == MemoryInst->getParent()) {
-      if (isa<PHINode>(UserInst))
+// If SunkAddrInst was sunk at a later instruction in the same basic block
+// during an earlier iteration of optimizeBlock, try to move it (and any sunk
+// operand instructions in the same block) before MemoryInst so it dominates
+// MemoryInst.
+static bool tryMoveSunkAddrBefore(Instruction *SunkAddrInst,
+                                  Instruction *MemoryInst) {
+  if (!canMoveSunkInst(SunkAddrInst))
+    return false;
+  BasicBlock *BB = MemoryInst->getParent();
+  SmallVector<Instruction *, 8> Worklist;
+  SmallVector<Instruction *, 8> ToMove;
+  SmallPtrSet<Instruction *, 8> Visited;
+  Worklist.push_back(SunkAddrInst);
+  Visited.insert(SunkAddrInst);
+  while (!Worklist.empty()) {
+    Instruction *I = Worklist.pop_back_val();
+    ToMove.push_back(I);
+    for (Value *Op : I->operands()) {
+      auto *OpI = dyn_cast<Instruction>(Op);
+      if (!OpI || OpI->getParent() != BB || OpI->comesBefore(MemoryInst))
         continue;
-      if (UserInst->comesBefore(Earliest))
-        Earliest = UserInst;
+      if (!OpI->hasOneUse() || !canMoveSunkInst(OpI))
+        return false;
+      if (Visited.insert(OpI).second)
+        Worklist.push_back(OpI);
     }
   }
-  return Earliest->getIterator();
+  for (Instruction *I : llvm::reverse(ToMove))
+    I->moveBefore(MemoryInst->getIterator());
+  return true;
 }
 
 /// Sink addressing mode computation immediate before MemoryInst if doing so
@@ -5803,22 +5820,39 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
   // the computation.  Before attempting reuse, check if the address is valid
   // as it may have been erased.
 
-  WeakTrackingVH SunkAddrVH = SunkAddrs[Addr];
+  WeakTrackingVH SunkAddrVH = SunkAddrs.lookup(Addr);
 
   Value *SunkAddr = SunkAddrVH.pointsToAliveValue() ? SunkAddrVH : nullptr;
   Type *IntPtrTy = DL->getIntPtrType(Addr->getType());
   Type *IdxTy = DL->getIndexType(Addr->getType());
 
-  // The current BB may be optimized multiple times, we can't guarantee the
-  // reuse of Addr happens later, call findInsertPos to find an appropriate
-  // insert position.
-  auto InsertPos = findInsertPos(Addr, MemoryInst, SunkAddr);
+  auto dominatesInsertPos = [&](Value *Reg, const Instruction *InsertPt) {
+    auto *RegI = dyn_cast_or_null<Instruction>(Reg);
+    if (!RegI)
+      return true;
+    if (RegI->getParent() == MemoryInst->getParent() && !PhiOrSelectSeen &&
+        InsertPt == MemoryInst)
+      return true;
+    return getDT().dominates(RegI, InsertPt);
+  };
 
-  // TODO: Adjust insert point considering (Base|Scaled)Reg if possible.
+  BasicBlock::iterator InsertPos = MemoryInst->getIterator();
+  if (SunkAddr) {
+    if (Instruction *AddrInst = dyn_cast<Instruction>(SunkAddr)) {
+      if (ReiteratingBlock &&
+          AddrInst->getParent() == MemoryInst->getParent() &&
+          MemoryInst->comesBefore(AddrInst)) {
+        if (!tryMoveSunkAddrBefore(AddrInst, MemoryInst))
+          SunkAddr = nullptr;
+      }
+      if (SunkAddr)
+        InsertPos = std::next(AddrInst->getIterator());
+    }
+  }
   if (!SunkAddr) {
-    auto &DT = getDT();
-    if ((AddrMode.BaseReg && !DT.dominates(AddrMode.BaseReg, &*InsertPos)) ||
-        (AddrMode.ScaledReg && !DT.dominates(AddrMode.ScaledReg, &*InsertPos)))
+    // TODO: Adjust insert point considering (Base|Scaled)Reg if possible.
+    if (!dominatesInsertPos(AddrMode.BaseReg, &*InsertPos) ||
+        !dominatesInsertPos(AddrMode.ScaledReg, &*InsertPos))
       return Modified;
   }
 
@@ -9105,6 +9139,7 @@ bool CodeGenPrepare::makeBitReverse(Instruction &I) {
 // selection.
 bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, ModifyDT &ModifiedDT) {
   SunkAddrs.clear();
+  ReiteratingBlock = false;
   bool MadeChange = false;
 
   do {
@@ -9121,6 +9156,7 @@ bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, ModifyDT &ModifiedDT) {
         return true;
       }
     }
+    ReiteratingBlock = true;
   } while (ModifiedDT == ModifyDT::ModifyInstDT);
 
   bool MadeBitReverse = true;
@@ -9157,7 +9193,7 @@ bool CodeGenPrepare::fixupDbgVariableRecord(DbgVariableRecord &DVR) {
   SmallDenseSet<Value *> LocationOps(DVR.location_ops().begin(),
                                      DVR.location_ops().end());
   for (Value *Location : LocationOps) {
-    WeakTrackingVH SunkAddrVH = SunkAddrs[Location];
+    WeakTrackingVH SunkAddrVH = SunkAddrs.lookup(Location);
     Value *SunkAddr = SunkAddrVH.pointsToAliveValue() ? SunkAddrVH : nullptr;
     if (SunkAddr) {
       // Point dbg.value at locally computed address, which should give the best
