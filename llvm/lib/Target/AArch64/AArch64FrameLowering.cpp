@@ -2898,7 +2898,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   uint64_t SVELocals = ZPRLocalStackSize + PPRLocalStackSize;
   uint64_t SVEStackSize =
       alignTo(ZPRCSStackSize + PPRCSStackSize + SVELocals, 16);
-  bool CanEliminateFrame = (CSStackSize == 0) && !SVEStackSize;
+  bool CanEliminateFrame = (SavedRegs.count() == 0) && !SVEStackSize;
 
   // The CSR spill slots have not been allocated yet, so estimateStackSize
   // won't include them.

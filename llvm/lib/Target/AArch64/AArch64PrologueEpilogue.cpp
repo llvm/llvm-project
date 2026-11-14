@@ -1045,6 +1045,15 @@ void AArch64PrologueEmitter::emitEmptyStackFramePrologue(
 
   if (NeedsWinCFI) {
     HasWinCFI = true;
+    if (AFL.requiresSaveVG(MF)) {
+      const AArch64TargetLowering *TLI = Subtarget.getTargetLowering();
+      while (isVGInstruction(MBBI, *TLI))
+        ++MBBI;
+      assert(MBBI->getOpcode() == AArch64::STRXui);
+      ++MBBI;
+      assert(MBBI->getOpcode() == AArch64::SEH_SaveVGSM);
+      ++MBBI;
+    }
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PrologEnd))
         .setMIFlag(MachineInstr::FrameSetup);
   }

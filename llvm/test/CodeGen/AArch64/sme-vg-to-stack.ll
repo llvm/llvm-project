@@ -3714,14 +3714,14 @@ define preserve_nonecc void @locally_streaming_inline_asm() #3 {
 ; WINDOWS-CHECK-LABEL: locally_streaming_inline_asm:
 ; WINDOWS-CHECK:       .seh_proc locally_streaming_inline_asm
 ; WINDOWS-CHECK-NEXT:  // %bb.0:
+; WINDOWS-CHECK-NEXT:    sub sp, sp, #16
+; WINDOWS-CHECK-NEXT:    .seh_stackalloc 16
 ; WINDOWS-CHECK-NEXT:    cntd x9
 ; WINDOWS-CHECK-NEXT:    .seh_nop
 ; WINDOWS-CHECK-NEXT:    mrs x0, SVCR
 ; WINDOWS-CHECK-NEXT:    .seh_nop
 ; WINDOWS-CHECK-NEXT:    bfi x9, x0, #63, #1
 ; WINDOWS-CHECK-NEXT:    .seh_nop
-; WINDOWS-CHECK-NEXT:    sub sp, sp, #16
-; WINDOWS-CHECK-NEXT:    .seh_stackalloc 16
 ; WINDOWS-CHECK-NEXT:    str x9, [sp] // 8-byte Spill
 ; WINDOWS-CHECK-NEXT:    .seh_save_vg_sm 0
 ; WINDOWS-CHECK-NEXT:    .seh_endprologue
