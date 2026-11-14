@@ -2920,6 +2920,16 @@ fn -> other_fn -> other_fn ; fn is norecurse
     no attempt is made to diagnose unsupported uses. Currently the separate
     `float:` attribute is respected by the AMDGPU and NVPTX backends.
 
+    **NOTE:** Although `denormal_fpenv` is specified to only flush denormal
+    values, in practice most hardware implementations will flush based on
+    whether IEEE 754 underflow conditions are detected, not on whether the
+    final output is denormal. This can lead to edge cases like
+    `fmul(f0x00800000, f0x3f7fffff)`, which produces `f0x00800000` (the
+    minimum positive normal number) but will return `0.0` with
+    `denormal_fpenv(preservesign)` on most hardware that supports denormal
+    flushing. In such cases, inexact outputs rounded to the minimum magnitude
+    positive or negitive normal number may also be flushed by the hardware.
+
     **Examples:**
 
     - `denormal_fpenv(preservesign)`
