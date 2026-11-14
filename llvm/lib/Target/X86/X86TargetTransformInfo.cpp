@@ -8334,6 +8334,44 @@ bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
     return !Ops.empty();
   }
 
+  unsigned Opc = I->getOpcode();
+  if (Opc == Instruction::Call)
+    switch (cast<CallInst>(I)->getIntrinsicID()) {
+    case Intrinsic::masked_udiv:
+      Opc = Instruction::UDiv;
+      break;
+    case Intrinsic::masked_sdiv:
+      Opc = Instruction::SDiv;
+      break;
+    case Intrinsic::masked_urem:
+      Opc = Instruction::URem;
+      break;
+    case Intrinsic::masked_srem:
+      Opc = Instruction::SRem;
+      break;
+    default:
+      break;
+    }
+
+  switch (Opc) {
+  case Instruction::UDiv:
+  case Instruction::SDiv:
+  case Instruction::URem:
+  case Instruction::SRem:
+    // A uniform divisor needs only one scalar divide, so sink the splat.
+    if (VTy->getElementType()->isIntegerTy(64) && ST->hasDQI() &&
+        ST->useAVX512Regs() &&
+        match(I->getOperand(1),
+              m_Shuffle(m_InsertElt(m_Value(), m_Value(), m_ZeroInt()),
+                        m_Value(), m_ZeroMask()))) {
+      Use &Shuf = I->getOperandUse(1);
+      Ops.push_back(&cast<Instruction>(Shuf)->getOperandUse(0));
+      Ops.push_back(&Shuf);
+      return true;
+    }
+    break;
+  }
+
   // A uniform shift amount in a vector shift or funnel shift may be much
   // cheaper than a generic variable vector shift, so make that pattern visible
   // to SDAG by sinking the shuffle instruction next to the shift.
