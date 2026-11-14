@@ -564,12 +564,11 @@ define half @frem_f16(half %in1, half %in2) #0 {
 ; GFX11-TRUE16-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v4
 ; GFX11-TRUE16-NEXT:    v_add_f32_e32 v3, v4, v3
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v3, v4, v3, vcc_lo
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_ldexp_f32 v2, v3, v2
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v0.l
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.l, v2
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_bfi_b32 v2, 0x7fff, v2, v3
+; GFX11-TRUE16-NEXT:    v_bfi_b32 v2, 0x7fff, v2, v0
 ; GFX11-TRUE16-NEXT:  .LBB0_8: ; %Flow16
 ; GFX11-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    v_cmp_lg_f16_e32 vcc_lo, 0, v1.l
@@ -779,12 +778,11 @@ define half @frem_f16(half %in1, half %in2) #0 {
 ; GFX1150-TRUE16-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v4
 ; GFX1150-TRUE16-NEXT:    v_add_f32_e32 v3, v4, v3
 ; GFX1150-TRUE16-NEXT:    v_cndmask_b32_e32 v3, v4, v3, vcc_lo
-; GFX1150-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1150-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-TRUE16-NEXT:    v_ldexp_f32 v2, v3, v2
-; GFX1150-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v0.l
 ; GFX1150-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.l, v2
 ; GFX1150-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1150-TRUE16-NEXT:    v_bfi_b32 v2, 0x7fff, v2, v3
+; GFX1150-TRUE16-NEXT:    v_bfi_b32 v2, 0x7fff, v2, v0
 ; GFX1150-TRUE16-NEXT:  .LBB0_8: ; %Flow16
 ; GFX1150-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX1150-TRUE16-NEXT:    v_cmp_lg_f16_e32 vcc_lo, 0, v1.l
@@ -1005,12 +1003,11 @@ define half @frem_f16(half %in1, half %in2) #0 {
 ; GFX1200-TRUE16-NEXT:    v_add_f32_e32 v3, v4, v3
 ; GFX1200-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX1200-TRUE16-NEXT:    v_cndmask_b32_e32 v3, v4, v3, vcc_lo
-; GFX1200-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1200-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-TRUE16-NEXT:    v_ldexp_f32 v2, v3, v2
-; GFX1200-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v0.l
 ; GFX1200-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.l, v2
 ; GFX1200-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1200-TRUE16-NEXT:    v_bfi_b32 v2, 0x7fff, v2, v3
+; GFX1200-TRUE16-NEXT:    v_bfi_b32 v2, 0x7fff, v2, v0
 ; GFX1200-TRUE16-NEXT:  .LBB0_8: ; %Flow16
 ; GFX1200-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX1200-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
