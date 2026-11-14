@@ -408,7 +408,7 @@ IteratorModeling::handleOverloadedOperator(CheckerContext &C,
       }
 
       handleIncrement(C, Call.getCFGElementRef(), Call.getReturnValue(),
-                      Call.getArgSVal(0), Call.getNumArgs());
+                      Call.getArgSVal(0), Call.getNumArgs() > 1);
       return;
     } else if (isDecrementOperator(Op)) {
       if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
@@ -418,7 +418,7 @@ IteratorModeling::handleOverloadedOperator(CheckerContext &C,
       }
 
       handleDecrement(C, Call.getCFGElementRef(), Call.getReturnValue(),
-                      Call.getArgSVal(0), Call.getNumArgs());
+                      Call.getArgSVal(0), Call.getNumArgs() > 1);
       return;
     }
 }
