@@ -157,7 +157,7 @@ public:
       llvm::jitlink::JITLinkMemoryManager::FinalizedAlloc Alloc) override {
     if (NotifyFinalized)
       NotifyFinalized(std::move(Alloc));
-    else
+    else if (Alloc)
       FinalizedAllocs.push_back(std::move(Alloc));
   }
 

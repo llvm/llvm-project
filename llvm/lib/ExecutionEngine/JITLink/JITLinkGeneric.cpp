@@ -45,7 +45,7 @@ void JITLinkerBase::linkPhase1(std::unique_ptr<JITLinkerBase> Self) {
 
   // Skip straight to phase 2 if the graph is empty with no associated actions.
   if (G->allocActions().empty() && llvm::all_of(G->sections(), [](Section &S) {
-        return S.getMemLifetime() == orc::MemLifetime::NoAlloc;
+        return S.empty() || S.getMemLifetime() == orc::MemLifetime::NoAlloc;
       })) {
     linkPhase2(std::move(Self), nullptr);
     return;
