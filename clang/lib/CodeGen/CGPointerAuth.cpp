@@ -758,7 +758,7 @@ Address Address::getResignedAddress(const CGPointerAuthInfo &NewInfo,
     return Address(getBasePointer(), getElementType(), getAlignment(),
                    isKnownNonNull());
 
-  assert(ElementType && "Effective type has to be set");
+  assert(getElementType() && "Effective type has to be set");
   assert(!Offset && "unexpected non-null offset");
 
   // If the current and the new ptrauth infos are the same and the offset is

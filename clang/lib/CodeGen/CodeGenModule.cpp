@@ -6502,6 +6502,15 @@ LangAS CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D) {
   return getTargetCodeGenInfo().getGlobalVarAddressSpace(*this, D);
 }
 
+bool CodeGenModule::isGlobalVarInvariant(const VarDecl *D) {
+  if (isInvariantAddressSpace(D->getType().getAddressSpace()))
+    return true;
+  // CUDA and HIP assign constant storage from declaration attributes, not
+  // from the variable's type.
+  return LangOpts.CUDA && LangOpts.CUDAIsDevice &&
+         isInvariantAddressSpace(GetGlobalVarAddressSpace(D));
+}
+
 LangAS CodeGenModule::GetGlobalConstantAddressSpace() const {
   return CodeGenUtils::getGlobalConstantAddressSpace(LangOpts, getTarget());
 }

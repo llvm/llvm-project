@@ -1086,6 +1086,15 @@ public:
   /// space, target-specific global or constant address space may be returned.
   LangAS GetGlobalVarAddressSpace(const VarDecl *D);
 
+  /// Return whether loads from an address space are invariant.
+  bool isInvariantAddressSpace(LangAS AS) const {
+    return AS == LangAS::opencl_constant || AS == LangAS::cuda_constant ||
+           AS == LangAS::hlsl_constant;
+  }
+
+  /// Return whether loads from a global variable are invariant.
+  bool isGlobalVarInvariant(const VarDecl *D);
+
   /// Return the AST address space of constant literal, which is used to emit
   /// the constant literal as global variable in LLVM IR.
   /// Note: This is not necessarily the address space of the constant literal

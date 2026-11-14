@@ -2850,7 +2850,7 @@ LValue CGHLSLRuntime::emitBufferMemberExpr(CodeGenFunction &CGF,
                          llvm::ConstantInt::get(CGM.IntTy, FieldIdx))
                    : CGF.Builder.CreateStructGEP(LayoutTy, Base.getPointer(CGF),
                                                  FieldIdx, Field->getName());
-  Address Addr(Ptr, FieldLLVMTy, Align, KnownNonNull);
+  Address Addr(Ptr, FieldLLVMTy, Align, KnownNonNull, Base.isInvariant());
 
   LValue LV = LValue::MakeAddr(Addr, FieldType, CGM.getContext(),
                                LValueBaseInfo(AlignmentSource::Type),
