@@ -102,3 +102,10 @@ define { x86_fp80, i32 } @test_frexp(x86_fp80 %x) nounwind {
   %r = call { x86_fp80, i32 } @llvm.frexp.f80.i32(x86_fp80 %x)
   ret { x86_fp80, i32 } %r
 }
+
+; CHECK: error: no libcall available for fcos
+; CHECK: error: no libcall available for fsin
+define { x86_fp80, x86_fp80 } @test_sincos(x86_fp80 %x) nounwind {
+  %r = call { x86_fp80, x86_fp80 } @llvm.sincos.f80(x86_fp80 %x)
+  ret { x86_fp80, x86_fp80 } %r
+}
