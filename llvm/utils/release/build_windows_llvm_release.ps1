@@ -27,7 +27,7 @@
 
 .PARAMETER Version
     LLVM version string (e.g. "19.1.0"). If omitted, auto-detected from
-    the source tree.
+    the local source tree. Required with -DownloadSource.
 
 .PARAMETER DownloadSource
     Download and extract the tagged release source tarball from GitHub
@@ -130,17 +130,18 @@ param(
 # and re-launch ourselves under it, forwarding all original arguments.
 #===============================================================================
 if ($PSVersionTable.PSVersion.Major -lt 7) {
-    # Try to find pwsh in PATH first.
-    $Pwsh = Get-Command pwsh -ErrorAction SilentlyContinue
-    if (-not $Pwsh) {
-        # Check the default install location.
+    # Returns the path of pwsh.exe from PATH or the default install location,
+    # or $null when PowerShell 7 is not installed.
+    function Find-Pwsh {
+        $Command = Get-Command pwsh -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($Command) { return $Command.Source }
         $DefaultPath = "$env:ProgramFiles\PowerShell\7\pwsh.exe"
-        if (Test-Path $DefaultPath) {
-            $Pwsh = Get-Item $DefaultPath
-        }
+        if (Test-Path $DefaultPath) { return $DefaultPath }
+        return $null
     }
 
-    if (-not $Pwsh) {
+    $PwshPath = Find-Pwsh
+    if (-not $PwshPath) {
         if ($Unattended) {
             Write-Error "PowerShell 7 is required. Install it before running in unattended mode."
             exit 1
@@ -160,15 +161,9 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
         # Refresh PATH so we can find the newly installed pwsh.
         $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
                      [System.Environment]::GetEnvironmentVariable("Path", "User")
-        $Pwsh = Get-Command pwsh -ErrorAction SilentlyContinue
-        if (-not $Pwsh) {
-            $DefaultPath = "$env:ProgramFiles\PowerShell\7\pwsh.exe"
-            if (Test-Path $DefaultPath) {
-                $Pwsh = Get-Item $DefaultPath
-            }
-        }
-        if (-not $Pwsh) {
-            Write-Error "PowerShell 7 was installed but pwsh.exe could not be found in PATH."
+        $PwshPath = Find-Pwsh
+        if (-not $PwshPath) {
+            Write-Error "PowerShell 7 was installed but pwsh.exe could not be found in PATH or $env:ProgramFiles\PowerShell\7."
             exit 1
         }
         Write-Host "PowerShell 7 installed successfully." -ForegroundColor Green
@@ -177,7 +172,6 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
     # Re-launch this script under PowerShell 7, forwarding all arguments.
     # Note: avoid PS7-only syntax (??  ternary, etc.) in this block since
     # it executes under PS5 (PowerShell 5).
-    $PwshPath = if ($Pwsh.Source) { $Pwsh.Source } else { $Pwsh.Path }
     Write-Host "Re-launching under PowerShell 7 ($PwshPath)..." -ForegroundColor Cyan
     $ForwardArgs = @()
     foreach ($Entry in $PSBoundParameters.GetEnumerator()) {
@@ -254,9 +248,17 @@ if ($PSBoundParameters.ContainsKey('StartAt')) {
     if ($StartAt -notin $script:StepOrder) {
         throw "Invalid -StartAt value: '$StartAt'. Valid steps: $($script:StepOrder -join ', ')"
     }
+    # -notin ignores case, but Test-ShouldRun looks steps up by exact name.
+    $StartAt = $script:StepOrder | Where-Object { $_ -eq $StartAt }
 }
 
 $script:StartAtStep = if ($StartAt) { $StartAt } else { $null }
+
+# Release tags exist only for released versions. The version detected from a
+# development tree does not name one, so the download needs -Version.
+if ($DownloadSource -and -not $Version) {
+    throw '-DownloadSource requires -Version (for example, -Version 19.1.0).'
+}
 
 # Test targets that failed. They are reported at the end instead of stopping
 # the build, so that a test failure does not prevent packaging.
@@ -343,27 +345,15 @@ if ($DownloadSource) {
     $LLVMSrc = Resolve-Path (Join-Path $script:ReleaseScriptRoot '..\..\..') | Select-Object -ExpandProperty Path
 }
 
-# Auto-detect or validate version
+# Use the specified version, or detect it from the local source tree.
+# -DownloadSource always has -Version (checked above).
 if ($Version) {
     $PackageVersion = $Version
     Write-Host "Using specified version: $PackageVersion"
 } else {
-    if ($LLVMSrc) {
-        $VersionInfo = Get-LLVMVersionFromSource -SourceDir $LLVMSrc
-        $PackageVersion = $VersionInfo.Full
-        Write-Host "Auto-detected LLVM version from source: $PackageVersion"
-    } else {
-        # -DownloadSource without -Version: try detecting from the repo the script lives in.
-        $RepoRoot = Join-Path $script:ReleaseScriptRoot '..\..\..'
-        if (Test-Path (Join-Path $RepoRoot 'cmake' 'Modules' 'LLVMVersion.cmake')) {
-            $VersionInfo = Get-LLVMVersionFromSource -SourceDir (Resolve-Path $RepoRoot)
-            $PackageVersion = $VersionInfo.Full
-            Write-Host "Auto-detected LLVM version from repo: $PackageVersion"
-        } else {
-            Write-Error "Cannot auto-detect version. Use -Version <version> when using -DownloadSource."
-            exit 1
-        }
-    }
+    $VersionInfo = Get-LLVMVersionFromSource -SourceDir $LLVMSrc
+    $PackageVersion = $VersionInfo.Full
+    Write-Host "Auto-detected LLVM version from source: $PackageVersion"
 }
 
 $Revision = "llvmorg-$PackageVersion"
@@ -407,7 +397,9 @@ try {
     }
     if ($DownloadSource -and -not $StartAt) {
         Write-Step "Downloading $Revision"
-        Invoke-NativeCommand curl.exe -L `
+        # --fail turns an HTTP error, such as a missing tag, into a failure
+        # here instead of an error page that 7-Zip later rejects.
+        Invoke-NativeCommand curl.exe -L --fail `
             "https://github.com/llvm/llvm-project/archive/$Revision.zip" -o src.zip
         Invoke-NativeCommand 7z x src.zip
         Get-ChildItem -Directory -Filter 'llvm-project-*' |

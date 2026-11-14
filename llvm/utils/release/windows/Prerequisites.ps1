@@ -380,7 +380,8 @@ function Find-WingetExecutable {
     # from the elevated PATH. Discover the installed package directly too.
     try {
         $Packages = @(Get-AppxPackage -AllUsers -Name Microsoft.DesktopAppInstaller -ErrorAction Stop)
-        foreach ($Package in ($Packages | Sort-Object Version -Descending)) {
+        # Version is a string; compare it as a version so 1.29 sorts after 1.9.
+        foreach ($Package in ($Packages | Sort-Object { [version]$_.Version } -Descending)) {
             if ($Package.InstallLocation) {
                 $Candidates += Join-Path $Package.InstallLocation 'winget.exe'
             }

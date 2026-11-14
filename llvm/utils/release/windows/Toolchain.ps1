@@ -172,9 +172,11 @@ function Get-PythonExecutableForArch {
 
     $BasePath = "$env:LOCALAPPDATA\Programs\Python"
     if (Test-Path $BasePath) {
+        # Pick the newest minor version. Sorting the names as strings would
+        # put Python39-arm64 ahead of Python313-arm64.
         $Candidates = @(Get-ChildItem -Path $BasePath -Directory -Filter 'Python3*-arm64' |
             Where-Object { Test-Path (Join-Path $_.FullName 'python.exe') } |
-            Sort-Object Name -Descending)
+            Sort-Object { if ($_.Name -match '^Python3(\d+)') { [int]$Matches[1] } else { -1 } } -Descending)
         if ($Candidates.Count -gt 0) {
             return Join-Path $Candidates[0].FullName 'python.exe'
         }

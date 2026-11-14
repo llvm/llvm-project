@@ -455,6 +455,11 @@ function Build-Architecture {
     #-------------------------------------------------------------------
     $Stage2Extra = @(
         "PYTHON_HOME=$env:PYTHONHOME"
+        # The tarball step overrides these settings. Set them explicitly so
+        # that -StartAt package restores them. CPack installs the MSI under
+        # CPACK_PACKAGE_INSTALL_DIRECTORY, so the prefix does not affect it.
+        "CMAKE_INSTALL_PREFIX:PATH=$env:ProgramFiles\LLVM"
+        "LLVM_INCLUDE_TESTS:BOOL=ON"
     ) + $Stage2CMakeFlags + @(
         "SWIG_EXECUTABLE=$($SwigConfig.Executable)"
         "SWIG_DIR=$($SwigConfig.LibraryDirectory)"
