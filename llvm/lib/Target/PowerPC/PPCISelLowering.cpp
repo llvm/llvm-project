@@ -18973,14 +18973,20 @@ PPCTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                 StringRef Constraint,
                                                 MVT VT) const {
   if (Constraint.size() == 1) {
+    // On a 64-bit target, an i64 takes a 64-bit register, and an integer wider
+    // than that, such as an i128, takes one for each 64 bits of it. 32-bit
+    // registers would hold only half of it.
+    bool Use64BitGPRs =
+        Subtarget.isPPC64() && VT.isScalarInteger() && VT.getSizeInBits() >= 64;
+
     // GCC RS6000 Constraint Letters
     switch (Constraint[0]) {
     case 'b':   // R1-R31
-      if (VT == MVT::i64 && Subtarget.isPPC64())
+      if (Use64BitGPRs)
         return std::make_pair(0U, &PPC::G8RC_NOX0RegClass);
       return std::make_pair(0U, &PPC::GPRC_NOR0RegClass);
     case 'r':   // R0-R31
-      if (VT == MVT::i64 && Subtarget.isPPC64())
+      if (Use64BitGPRs)
         return std::make_pair(0U, &PPC::G8RCRegClass);
       return std::make_pair(0U, &PPC::GPRCRegClass);
     // 'd' and 'f' constraints are both defined to be "the floating point
