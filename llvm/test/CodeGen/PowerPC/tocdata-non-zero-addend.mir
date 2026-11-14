@@ -39,8 +39,6 @@
 name:            read_x
 alignment:       4
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: g8rc }
 frameInfo:
   maxAlignment:    8
 machineFunctionInfo: {}
@@ -56,8 +54,6 @@ body:             |
 name:            read_y
 alignment:       4
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: g8rc }
 frameInfo:
   maxAlignment:    8
 machineFunctionInfo: {}

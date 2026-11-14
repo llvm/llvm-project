@@ -37,17 +37,6 @@ selected:        false
 failedISel:      false
 tracksRegLiveness: true
 hasWinCFI:       false
-registers:       
-  - { id: 0, class: g8rc, preferred-register: '' }
-  - { id: 1, class: g8rc, preferred-register: '' }
-  - { id: 2, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 3, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 4, class: g8rc, preferred-register: '' }
-  - { id: 5, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 6, class: gprc, preferred-register: '' }
-  - { id: 7, class: gprc, preferred-register: '' }
-  - { id: 8, class: crrc, preferred-register: '' }
-  - { id: 9, class: g8rc, preferred-register: '' }
 liveins:         
   - { reg: '$x3', virtual-reg: '%2' }
   - { reg: '$x4', virtual-reg: '%3' }
@@ -95,26 +84,26 @@ body:             |
     BCC 76, %8, %bb.1
     B %bb.2
     ; CHECK-LABEL: foo
-    ; CHECK: %5:g8rc_and_g8rc_nox0 = RLDICL %0, 0, 32
-    ; CHECK-NEXT: %9:g8rc = ADDI8 %5, 1
-    ; CHECK-NEXT: %6:gprc = LBZX %2, %5 :: (load (s8) from %ir.arrayidx) 
-    ; CHECK-NEXT: %7:gprc = LBZX %3, %5 :: (load (s8) from %ir.arrayidx4) 
-    ; CHECK-NEXT: %8:crrc = CMPLW %6, %7 
-    ; CHECK-NEXT: BCC 76, %8
+    ; CHECK: %4:g8rc_and_g8rc_nox0 = RLDICL %3, 0, 32
+    ; CHECK-NEXT: %2:g8rc = ADDI8 %4, 1
+    ; CHECK-NEXT: %5:gprc = LBZX %0, %4 :: (load (s8) from %ir.arrayidx) 
+    ; CHECK-NEXT: %6:gprc = LBZX %1, %4 :: (load (s8) from %ir.arrayidx4) 
+    ; CHECK-NEXT: %7:crrc = CMPLW %5, %6 
+    ; CHECK-NEXT: BCC 76, %7
     ; CHECK-DISABLE-LABEL: foo
-    ; CHECK-DISABLE: %5:g8rc_and_g8rc_nox0 = RLDICL %0, 0, 32
-    ; CHECK-DISABLE-NEXT: %6:gprc = LBZX %2, %5 :: (load (s8) from %ir.arrayidx) 
-    ; CHECK-DISABLE-NEXT: %7:gprc = LBZX %3, %5 :: (load (s8) from %ir.arrayidx4) 
-    ; CHECK-DISABLE-NEXT: %9:g8rc = ADDI8 %5, 1
-    ; CHECK-DISABLE-NEXT: %8:crrc = CMPLW %6, %7 
-    ; CHECK-DISABLE-NEXT: BCC 76, %8
+    ; CHECK-DISABLE: %4:g8rc_and_g8rc_nox0 = RLDICL %3, 0, 32
+    ; CHECK-DISABLE-NEXT: %5:gprc = LBZX %0, %4 :: (load (s8) from %ir.arrayidx) 
+    ; CHECK-DISABLE-NEXT: %6:gprc = LBZX %1, %4 :: (load (s8) from %ir.arrayidx4) 
+    ; CHECK-DISABLE-NEXT: %2:g8rc = ADDI8 %4, 1
+    ; CHECK-DISABLE-NEXT: %7:crrc = CMPLW %5, %6 
+    ; CHECK-DISABLE-NEXT: BCC 76, %7
     ; CHECK-P8-LABEL: foo
-    ; CHECK-P8: %5:g8rc_and_g8rc_nox0 = RLDICL %0, 0, 32
-    ; CHECK-P8-NEXT: %6:gprc = LBZX %2, %5 :: (load (s8) from %ir.arrayidx)
-    ; CHECK-P8-NEXT: %7:gprc = LBZX %3, %5 :: (load (s8) from %ir.arrayidx4)
-    ; CHECK-P8-NEXT: %9:g8rc = ADDI8 %5, 1
-    ; CHECK-P8-NEXT: %8:crrc = CMPLW %6, %7
-    ; CHECK-P8-NEXT: BCC 76, %8
+    ; CHECK-P8: %4:g8rc_and_g8rc_nox0 = RLDICL %3, 0, 32
+    ; CHECK-P8-NEXT: %5:gprc = LBZX %0, %4 :: (load (s8) from %ir.arrayidx)
+    ; CHECK-P8-NEXT: %6:gprc = LBZX %1, %4 :: (load (s8) from %ir.arrayidx4)
+    ; CHECK-P8-NEXT: %2:g8rc = ADDI8 %4, 1
+    ; CHECK-P8-NEXT: %7:crrc = CMPLW %5, %6
+    ; CHECK-P8-NEXT: BCC 76, %7
   
   bb.2.while.end:
     $x3 = COPY %0

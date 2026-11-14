@@ -4,10 +4,6 @@
 name:            special_right_shift32_0
 alignment:       2
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: gprc }
-  - { id: 1, class: gprc }
-  - { id: 2, class: gprc }
 liveins:
   - { reg: '$r3', virtual-reg: '%0' }
 machineFunctionInfo: {}
@@ -32,10 +28,6 @@ body:             |
 name:            special_right_shift64_0
 alignment:       2
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: g8rc }
-  - { id: 1, class: gprc }
-  - { id: 2, class: g8rc }
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
 machineFunctionInfo: {}
