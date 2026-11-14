@@ -19,10 +19,12 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Option.h"
 #include <cassert>
+#include <functional>
 #include <iterator>
 #include <map>
 #include <memory>
 #include <optional>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -44,6 +46,12 @@ class ToolChain;
 /// Compilation - A set of tasks to perform for a single driver
 /// invocation.
 class Compilation {
+public:
+  using JobExecutor = std::function<std::optional<int>(
+      const Command &Job, ArrayRef<std::optional<StringRef>> Redirects,
+      std::string &Error, bool &ExecutionFailed)>;
+
+private:
   /// The driver we were created by.
   const Driver &TheDriver;
 
@@ -130,6 +138,8 @@ class Compilation {
   /// The bound architecture currently being built, if any. Set around
   /// ConstructJob calls so addCommand can stamp it onto each new Command.
   BoundArch CurrentBoundArch;
+
+  JobExecutor Executor;
 
 public:
   Compilation(const Driver &D, const ToolChain &DefaultToolChain,
@@ -240,6 +250,13 @@ public:
   void setPostCallback(const std::function<void(const Command &, int)> &CB) {
     PostCallback = CB;
   }
+
+  /// Installs a synchronous job executor. Return std::nullopt without changing
+  /// the error outputs to use Command::Execute. A handled job returns its exit
+  /// code and reports launch failures through Error and ExecutionFailed, as
+  /// Execute does. The host is responsible for tool isolation and crash
+  /// handling.
+  void setJobExecutor(JobExecutor Execute) { Executor = std::move(Execute); }
 
   /// Returns the sysroot path.
   StringRef getSysRoot() const;

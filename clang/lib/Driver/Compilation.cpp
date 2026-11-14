@@ -208,8 +208,11 @@ int Compilation::ExecuteCommand(const Command &C,
     return 0;
 
   std::string Error;
-  bool ExecutionFailed;
-  int Res = C.Execute(Redirects, &Error, &ExecutionFailed);
+  bool ExecutionFailed = false;
+  std::optional<int> Result;
+  if (Executor)
+    Result = Executor(C, Redirects, Error, ExecutionFailed);
+  int Res = Result ? *Result : C.Execute(Redirects, &Error, &ExecutionFailed);
   if (PostCallback)
     PostCallback(C, Res);
   if (!Error.empty()) {
@@ -380,7 +383,7 @@ void Compilation::ExecuteJobs(const JobList &Jobs,
       !LogOnly && !getDriver().CCPrintOptions &&
       !getDriver().CCPrintProcessStats && !getDriver().CCGenDiagnostics &&
       !getDriver().IsCLMode() && !getArgs().hasArg(options::OPT_v) &&
-      Redirects.empty() && !PostCallback;
+      Redirects.empty() && !PostCallback && !Executor;
 
   // Jobs run as part of a parallel offload group. Group members are not
   // necessarily adjacent, so track them and skip them when the loop reaches

@@ -1,4 +1,5 @@
 add_clang_unittest(ClangDriverTests
+  CompilationTest.cpp
   DistroTest.cpp
   DXCModeTest.cpp
   EscapedCommandLineTest.cpp
