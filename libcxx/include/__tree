@@ -2133,6 +2133,8 @@ template <class _Tp, class _Compare, class _Allocator>
 template <class _NodeHandle>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _NodeHandle
 __tree<_Tp, _Compare, _Allocator>::__node_handle_extract(const_iterator __p) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+      __p != end(), "associative container::extract(iterator) called with a non-dereferenceable iterator");
   __node_pointer __np = __p.__get_np();
   __remove_node_pointer(__np);
   return _NodeHandle(__np, __alloc());
@@ -2200,6 +2202,8 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_merge_multi(__tree<_Tp, _Comp2,
 template <class _Tp, class _Compare, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX26
     typename __tree<_Tp, _Compare, _Allocator>::iterator __tree<_Tp, _Compare, _Allocator>::erase(const_iterator __p) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+      __p != end(), "associative container::erase(iterator) called with a non-dereferenceable iterator");
   __node_pointer __np    = __p.__get_np();
   iterator __r           = __remove_node_pointer(__np);
   __node_allocator& __na = __node_alloc();
