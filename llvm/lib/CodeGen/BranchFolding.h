@@ -198,6 +198,11 @@ class TargetRegisterInfo;
     /// updating the CFG.
     void RemoveDeadBlock(MachineBasicBlock *MBB);
 
+    /// Remove blocks that are not reachable from the entry block, an EH pad
+    /// or a block whose address is taken. Unlike the per-block check in
+    /// OptimizeBranches, this also removes dead cycles.
+    bool RemoveUnreachableBlocks(MachineFunction &MF);
+
     /// Hoist common instruction sequences at the start of basic blocks to their
     /// common predecessor.
     bool HoistCommonCode(MachineFunction &MF);
