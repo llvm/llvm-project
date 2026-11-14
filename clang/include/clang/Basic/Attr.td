@@ -5662,3 +5662,10 @@ def Personality : InheritableAttr {
   let Subjects = SubjectList<[Function]>;
   let Documentation = [PersonalityDocs];
 }
+
+def OracleFunction : InheritableAttr {
+  let Spellings = [Clang<"oracle_function">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [OracleFunctionDocs];
+  let SimpleHandler = true;
+}
