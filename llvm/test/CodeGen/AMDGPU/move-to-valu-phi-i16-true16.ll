@@ -11,11 +11,13 @@ define void @uniform_i16_phi_from_vmem_load(ptr addrspace(1) inreg %ptr, i32 inr
 ; ISA-NEXT:    s_cmp_eq_u32 s2, 0
 ; ISA-NEXT:    s_cbranch_scc1 .LBB0_2
 ; ISA-NEXT:  ; %bb.1: ; %load
-; ISA-NEXT:    ; implicit-def: $vgpr1
+; ISA-NEXT:    v_mov_b32_e32 v1, s2
+; ISA-NEXT:    global_load_u16 v1, v1, s[0:1] scale_offset
 ; ISA-NEXT:    s_branch .LBB0_3
 ; ISA-NEXT:  .LBB0_2:
 ; ISA-NEXT:    v_mov_b32_e32 v1, 0
 ; ISA-NEXT:  .LBB0_3: ; %exit
+; ISA-NEXT:    s_wait_loadcnt 0x0
 ; ISA-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; ISA-NEXT:    v_cmp_lt_u16_e32 vcc_lo, v0.l, v1.l
 ; ISA-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -51,7 +53,7 @@ define void @uniform_i16_phi_from_vmem_load(ptr addrspace(1) inreg %ptr, i32 inr
 ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_USHORT_SADDR]]
 ; CHECK-NEXT: {{  $}}
 ; CHECK-NEXT: bb.2.exit:
-; CHECK-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[V_MOV_B32_e32_]], %bb.0, [[COPY9]].lo16, %bb.1
+; CHECK-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[V_MOV_B32_e32_]], %bb.0, [[COPY9]], %bb.1
 ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vgpr_16 = COPY [[COPY2]]
 ; CHECK-NEXT:   [[V_CMP_LT_U16_t16_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_LT_U16_t16_e64 0, [[COPY10]], 0, [[PHI]].lo16, 0, implicit $exec
 ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[V_CMP_LT_U16_t16_e64_]], implicit $exec
@@ -114,6 +116,8 @@ define amdgpu_kernel void @uniform_i16_phi_from_sdag_divergent_hi16(ptr addrspac
 ; CHECK-NEXT:   [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 [[S_MOV_B32_]], [[COPY1]](i32), implicit $exec
 ; CHECK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_LSHRREV_B32_e64_]], [[S_LOAD_DWORD_IMM]], 0, implicit $exec
 ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[V_ADD_U32_e64_]]
+; CHECK-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+; CHECK-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:vgpr_32 = INSERT_SUBREG [[DEF]], [[COPY3]].hi16, %subreg.lo16
 ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
 ; CHECK-NEXT:   S_CMP_EQ_U32 [[S_LOAD_DWORD_IMM]], [[S_MOV_B32_1]], implicit-def $scc
 ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
@@ -126,13 +130,13 @@ define amdgpu_kernel void @uniform_i16_phi_from_sdag_divergent_hi16(ptr addrspac
 ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
 ; CHECK-NEXT: {{  $}}
 ; CHECK-NEXT: bb.2.exit:
-; CHECK-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY3]].hi16, %bb.0, [[V_MOV_B32_e32_]], %bb.1
-; CHECK-NEXT:   early-clobber %15:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM_ec [[COPY2]], 36, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
+; CHECK-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[INSERT_SUBREG]], %bb.0, [[V_MOV_B32_e32_]], %bb.1
+; CHECK-NEXT:   early-clobber %17:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM_ec [[COPY2]], 36, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; CHECK-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
 ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
 ; CHECK-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[S_MOV_B32_3]], [[PHI]], implicit $exec
 ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[V_AND_B32_e64_]]
-; CHECK-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_1]], [[COPY4]], %15, 0, 0, implicit $exec :: (store (s32) into %ir.out.load, addrspace 1)
+; CHECK-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_1]], [[COPY4]], %17, 0, 0, implicit $exec :: (store (s32) into %ir.out.load, addrspace 1)
 ; CHECK-NEXT:   S_ENDPGM 0
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -173,9 +177,7 @@ define amdgpu_kernel void @uniform_i16_phi_from_sdag_divergent_i64_trunc(ptr add
 ; ISA-NEXT:    s_cbranch_scc1 .LBB2_2
 ; ISA-NEXT:  ; %bb.1: ; %other
 ; ISA-NEXT:    v_mov_b32_e32 v0, 0
-; ISA-NEXT:    s_branch .LBB2_3
-; ISA-NEXT:  .LBB2_2:
-; ISA-NEXT:  .LBB2_3: ; %exit
+; ISA-NEXT:  .LBB2_2: ; %exit
 ; ISA-NEXT:    s_mov_b32 s2, 0xffff
 ; ISA-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; ISA-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s2, v0 bitop3:0x40
@@ -198,7 +200,7 @@ define amdgpu_kernel void @uniform_i16_phi_from_sdag_divergent_i64_trunc(ptr add
 ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 56
 ; CHECK-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[V_LSHRREV_B32_e64_]], [[S_MOV_B32_1]], implicit $exec
 ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[REG_SEQUENCE]], [[V_AND_B32_e64_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s64) from %ir.gep, addrspace 1)
-; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].lo16
+; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub0
 ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 0
 ; CHECK-NEXT:   S_CMP_EQ_U32 [[S_LOAD_DWORD_IMM]], [[S_MOV_B32_2]], implicit-def $scc
 ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
