@@ -250,10 +250,14 @@ declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture reado
 
 define void @f8() {
 ; CHECK-Z13-LABEL: f8:
-; CHECK-Z13: mvc
-; CHECK-Z13-NEXT: mvc
-; CHECK-Z13-NEXT: mvc
-; CHECK-Z13-NEXT: mvc
+; CHECK-Z13-NOT: lay
+; CHECK-Z13: mvc 88(8,[[DST:%r[0-9]+]]), 88([[SRC:%r[0-9]+]])
+; CHECK-Z13-NOT: lay
+; CHECK-Z13: mvc 64(8,[[DST]]), 64([[SRC]])
+; CHECK-Z13-NOT: lay
+; CHECK-Z13: mvc 40(8,[[DST]]), 40([[SRC]])
+; CHECK-Z13-NOT: lay
+; CHECK-Z13: mvc 16(8,[[DST]]), 16([[SRC]])
 
 bb:
   %tmp = load ptr, ptr undef, align 8

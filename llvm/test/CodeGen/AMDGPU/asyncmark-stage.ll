@@ -707,19 +707,19 @@ define amdgpu_kernel void @loop_wait_then_mark_same_stage(<4 x i32> %sd, <8 x i3
 ; SDAG-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; SDAG-NEXT:  .LBB8_1: ; %loop
 ; SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
-; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; SDAG-NEXT:    s_add_co_i32 s6, s5, 8
+; SDAG-NEXT:    v_dual_mov_b32 v2, s5 :: v_dual_mov_b32 v3, s6
 ; SDAG-NEXT:    ; wait_asyncmark(1, stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; SDAG-NEXT:    s_wait_asynccnt 0x1
-; SDAG-NEXT:    v_dual_mov_b32 v2, s6 :: v_dual_mov_b32 v3, s5
 ; SDAG-NEXT:    s_add_co_i32 s4, s4, 1
 ; SDAG-NEXT:    s_add_co_i32 s5, s5, 4
+; SDAG-NEXT:    ds_load_b32 v2, v2
+; SDAG-NEXT:    global_load_async_to_lds_b32 v3, v0, s[0:1] offset:12
 ; SDAG-NEXT:    s_cmp_lt_u32 s4, s3
-; SDAG-NEXT:    global_load_async_to_lds_b32 v2, v0, s[0:1] offset:12
-; SDAG-NEXT:    ds_load_b32 v3, v3
 ; SDAG-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; SDAG-NEXT:    s_wait_dscnt 0x0
-; SDAG-NEXT:    v_add_nc_u32_e32 v1, v1, v3
+; SDAG-NEXT:    v_add_nc_u32_e32 v1, v1, v2
 ; SDAG-NEXT:    s_cbranch_scc1 .LBB8_1
 ; SDAG-NEXT:  ; %bb.2: ; %exit
 ; SDAG-NEXT:    s_add_co_i32 s2, s2, -4
@@ -769,16 +769,17 @@ define amdgpu_kernel void @loop_wait_then_mark_same_stage(<4 x i32> %sd, <8 x i3
 ; GISEL-NEXT:  .LBB8_1: ; %loop
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-NEXT:    s_add_co_u32 s7, s6, 8
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GISEL-NEXT:    v_dual_mov_b32 v1, s6 :: v_dual_mov_b32 v2, s7
 ; GISEL-NEXT:    ; wait_asyncmark(1, stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; GISEL-NEXT:    s_wait_asynccnt 0x1
-; GISEL-NEXT:    v_dual_mov_b32 v1, s7 :: v_dual_mov_b32 v2, s6
 ; GISEL-NEXT:    s_add_co_i32 s5, s5, 1
 ; GISEL-NEXT:    s_add_co_u32 s6, s6, 4
-; GISEL-NEXT:    global_load_async_to_lds_b32 v1, v0, s[0:1] offset:12
-; GISEL-NEXT:    ds_load_b32 v2, v2
+; GISEL-NEXT:    ds_load_b32 v1, v1
+; GISEL-NEXT:    global_load_async_to_lds_b32 v2, v0, s[0:1] offset:12
 ; GISEL-NEXT:    ; asyncmark(stages=GLOBAL_LOAD_ASYNC_TO_LDS)
 ; GISEL-NEXT:    s_wait_dscnt 0x0
-; GISEL-NEXT:    v_readfirstlane_b32 s7, v2
+; GISEL-NEXT:    v_readfirstlane_b32 s7, v1
 ; GISEL-NEXT:    s_add_co_i32 s4, s4, s7
 ; GISEL-NEXT:    s_cmp_lt_u32 s5, s3
 ; GISEL-NEXT:    s_cbranch_scc1 .LBB8_1
