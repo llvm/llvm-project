@@ -324,11 +324,18 @@ DecomposeLinalgOp::matchAndRewrite(GenericOp genericOp,
 
   /// In the split operations, replace block arguments uses that refer to
   /// original operation to the block arguments of the newly created operation.
+  /// The residual operation has the results of the peeled operation as extra
+  /// inputs, placed before the original outputs, so the block arguments of the
+  /// original outputs are shifted by the number of extra inputs.
   unsigned origNumInputs = genericOp.getNumDpsInputs();
+  unsigned numExtraInputs = residualGenericOp.getNumDpsInputs() - origNumInputs;
   for (const auto &inputBlockArg :
        llvm::enumerate(genericOp.getBody()->getArguments())) {
+    unsigned residualArgNum = inputBlockArg.index();
+    if (residualArgNum >= origNumInputs)
+      residualArgNum += numExtraInputs;
     Value residualOpReplacementArg =
-        residualGenericOpBody->getArgument(inputBlockArg.index());
+        residualGenericOpBody->getArgument(residualArgNum);
     rewriter.replaceUsesWithIf(
         inputBlockArg.value(), residualOpReplacementArg, [&](OpOperand &use) {
           return use.getOwner()->getBlock() == residualGenericOpBody;
