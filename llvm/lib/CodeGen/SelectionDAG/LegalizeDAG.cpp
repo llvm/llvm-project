@@ -4323,8 +4323,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     const DataLayout &TD = DAG.getDataLayout();
     EVT PTy = TLI.getPointerTy(TD);
 
-    unsigned EntrySize =
-      DAG.getMachineFunction().getJumpTableInfo()->getEntrySize(TD);
+    MachineJumpTableInfo *MJTI = DAG.getMachineFunction().getJumpTableInfo();
+    unsigned EntrySize = MJTI->getEntrySize(TD);
 
     // For power-of-two jumptable entry sizes convert multiplication to a shift.
     // This transformation needs to be done here since otherwise the MIPS
@@ -4341,10 +4341,15 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
 
     EVT MemVT = EVT::getIntegerVT(*DAG.getContext(), EntrySize * 8);
     SDValue LD = DAG.getExtLoad(
-        ISD::SEXTLOAD, dl, PTy, Chain, Addr,
-        MachinePointerInfo::getJumpTable(DAG.getMachineFunction()), MemVT);
+        MJTI->getEntryIsSigned() ? ISD::SEXTLOAD : ISD::ZEXTLOAD, dl, PTy,
+        Chain, Addr, MachinePointerInfo::getJumpTable(DAG.getMachineFunction()),
+        MemVT);
     Addr = LD;
-    if (TLI.isJumpTableRelative()) {
+    if (MJTI->getEntryKind() == MachineJumpTableInfo::EK_CoffImgRel32) {
+      SDValue ImageBase = DAG.getExternalSymbol(
+          "__ImageBase", TLI.getPointerTy(DAG.getDataLayout()));
+      Addr = DAG.getMemBasePlusOffset(ImageBase, Addr, dl);
+    } else if (TLI.isJumpTableRelative()) {
       // For PIC, the sequence is:
       // BRIND(RelocBase + load(Jumptable + index))
       // RelocBase can be JumpTable, GOT or some sort of global base.
