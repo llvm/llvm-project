@@ -135,6 +135,24 @@ spirv.module Logical OpenCL {
   spirv.ExecutionMode @bar "LocalSizeHint", 32, 1, 1
 }
 
+//      CHECK: module {
+//      CHECK:   llvm.mlir.global external constant @__spv__baz_execution_mode_info_4459_1()
+//      CHECK:     llvm.mlir.constant(64 : i32) : i32
+//      CHECK:   llvm.mlir.global external constant @__spv__baz_execution_mode_info_4459_0()
+//      CHECK:     llvm.mlir.constant(32 : i32) : i32
+//      CHECK:   llvm.mlir.global external constant @__spv__baz_execution_mode_info_4459()
+//      CHECK:     llvm.mlir.constant(16 : i32) : i32
+//      CHECK:   llvm.func @baz
+spirv.module Logical OpenCL {
+  spirv.func @baz() "None" {
+    spirv.Return
+  }
+  spirv.EntryPoint "Kernel" @baz
+  spirv.ExecutionMode @baz "DenormPreserve", 16
+  spirv.ExecutionMode @baz "DenormPreserve", 32
+  spirv.ExecutionMode @baz "DenormPreserve", 64
+}
+
 //===----------------------------------------------------------------------===//
 // spirv.Undef
 //===----------------------------------------------------------------------===//
