@@ -4157,7 +4157,9 @@ bool TargetLowering::SimplifyDemandedVectorElts(
                                    Depth + 1))
       return true;
 
-    KnownZero = ZeroLHS & ZeroRHS;
+    // 0.0 / 0.0 and frem(0.0, 0.0) are NaN, not zero.
+    if (Opcode != ISD::FDIV && Opcode != ISD::FREM)
+      KnownZero = ZeroLHS & ZeroRHS;
     KnownUndef = getKnownUndefForVectorBinop(Op, TLO.DAG, UndefLHS, UndefRHS);
 
     // Attempt to avoid multi-use ops if we don't need anything from them.
