@@ -71,7 +71,7 @@ std::unique_ptr<MLModelRunner> createReleaseModeModelRunner(
         InteractiveChannelBaseName + ".in");
   }
   if (auto EmitCRunner = CreateEmitCModelRunner(Ctx, InputFeatures))
-    return EmitCRunner;
+    return EmitCRunner->isValid() ? std::move(EmitCRunner) : nullptr;
   if (isEmbeddedModelEvaluatorValid<CompiledModelType>()) {
     auto Runner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
         Ctx, InputFeatures, DecisionName, Options);

@@ -68,6 +68,7 @@ def MLGOAddReflectionMapPass : Pass<"mlgo-add-reflection-map", "ModuleOp"> {
   let description = [{
     This pass adds a `reflectionMap` field and an accompanying `getBufferForName`
     method to EmitC classes, enabling runtime lookup of class fields by name. 
+    A `reflectionSizeMap` field maps the same keys to the field byte sizes.
     Each `emitc.field` is expected to have an attribute (configured by the
     `included-field-attrs` option) that is an array containing a single string
     attribute which will be used as the reflection map key. If none of the specified
@@ -88,6 +89,7 @@ def MLGOAddReflectionMapPass : Pass<"mlgo-add-reflection-map", "ModuleOp"> {
       emitc.field @field0 : !emitc.array<1xf32> {emitc.field_ref = ["feature0"]}
       // reflectionMap maps the string "feature0" to the address of @field0
       emitc.field @reflectionMap : const std::map<string, char*> = {{"feature0", &field0}}
+      emitc.field @reflectionSizeMap : const std::map<string, size_t> = {{"feature0", sizeof(field0)}}
       emitc.func @getBufferForName(%name: string) -> char* {
         return reflectionMap.at(%name)
       }

@@ -57,6 +57,8 @@ class MockEmitCModel1 final {
 
 public:
   std::map<std::string, void *> reflectionMap;
+  std::map<std::string, size_t> reflectionSizeMap{{"a", sizeof(A)},
+                                                  {"b", sizeof(B)}};
 
   MockEmitCModel1() : reflectionMap{{"a", &A}, {"b", &B}} {}
 
@@ -69,6 +71,8 @@ class MockEmitCModel2 final {
 
 public:
   std::map<std::string, void *> reflectionMap;
+  std::map<std::string, size_t> reflectionSizeMap{{"a", sizeof(A)},
+                                                  {"b", sizeof(B)}};
 
   MockEmitCModel2() : reflectionMap{{"a", &A}, {"b", &B}} {}
 
