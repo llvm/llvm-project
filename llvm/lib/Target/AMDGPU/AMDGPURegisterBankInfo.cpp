@@ -4265,9 +4265,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   }
   case AMDGPU::G_AMDGPU_WAVE_ADDRESS: {
-    // This case is weird because we expect a physical register in the source,
-    // but need to set a bank anyway.
-    //
     // TODO: We could select the result to SGPR or VGPR
     OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, 32);
     OpdsMapping[1] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, 32);
