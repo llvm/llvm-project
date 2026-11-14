@@ -373,7 +373,7 @@ private:
 
   basic_string<_CharT, _Traits, _Allocator> __str_;
 
-  bool __emit(bool __flush) override final {
+  bool __emit(bool __flush) {
     if (!__wrapped_)
       return false;
 

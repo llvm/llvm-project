@@ -12,6 +12,7 @@
 
 #include <__config>
 #include <__ostream/basic_ostream.h>
+#include <__utility/scope_guard.h>
 #include <streambuf>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -39,8 +40,6 @@ protected:
 private:
   bool __emit_on_sync_;
 
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual bool __emit(bool __flush) = 0;
-
   template <class, class, class>
   friend class basic_syncbuf;
 
@@ -67,17 +66,19 @@ _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>& noemit_on_flush(basic_ostr
 
 template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>& flush_emit(basic_ostream<_CharT, _Traits>& __os) {
-  __os.flush();
+  // [ostream.manip]/12 specifies flush_emit as os.flush(), followed by an
+  // unformatted output function that calls buf->emit() and sets badbit if it
+  // fails. Temporarily enabling emit-on-sync gives the same behaviour: flush()
+  // calls sync(), which then calls emit() and returns -1 on failure. flush() is
+  // itself an unformatted output function, so it constructs the sentry, sets
+  // badbit when sync() fails and handles exceptions.
   if (auto* __buf = dynamic_cast<__syncbuf_base<_CharT, _Traits>*>(__os.rdbuf())) {
-    // The standard specifies that:
-    // After constructing a sentry object, calls buf->emit().
-    // If that call returns false, calls os.setstate(ios_base::badbit).
-    //
-    // syncstream::emit already constructs a sentry
-    bool __emit_result = __buf->__emit(false);
-    if (!__emit_result) {
-      __os.setstate(ios_base::badbit);
-    }
+    auto __restore =
+        std::__make_scope_guard([__buf, __old = __buf->__emit_on_sync_] { __buf->__emit_on_sync_ = __old; });
+    __buf->__emit_on_sync_ = true;
+    __os.flush();
+  } else {
+    __os.flush();
   }
   return __os;
 }
