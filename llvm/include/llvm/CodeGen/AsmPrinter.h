@@ -195,6 +195,8 @@ public:
   std::function<void(Module &)> EmitStackMaps;
   std::function<void()> AssertDebugEHFinalized;
 
+  void emitStackMapsForGCStrategies(ArrayRef<GCStrategy *> Strategies);
+
 private:
   MCSymbol *CurrentFnEnd = nullptr;
 
