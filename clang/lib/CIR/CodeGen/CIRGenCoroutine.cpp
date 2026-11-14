@@ -17,6 +17,8 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/Twine.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -26,6 +28,8 @@ struct clang::CIRGen::CGCoroData {
   // await/yield expressions were encountered so far.
   // These are used to generate pretty labels for await expressions in LLVM IR.
   cir::AwaitKind currentAwaitKind = cir::AwaitKind::Init;
+  unsigned awaitNum = 0;
+  unsigned yieldNum = 0;
   // Stores the __builtin_coro_id emitted in the function so that we can supply
   // it as the first argument to other builtins.
   cir::CoroIdOp coroId = nullptr;
@@ -61,6 +65,34 @@ CIRGenFunction::CGCoroInfo::CGCoroInfo() {}
 CIRGenFunction::CGCoroInfo::~CGCoroInfo() {}
 
 namespace {
+static llvm::SmallString<32> buildSuspendPointName(CGCoroData &coro,
+                                                   cir::AwaitKind kind) {
+  llvm::StringRef name;
+  unsigned number = 0;
+
+  switch (kind) {
+  case cir::AwaitKind::Init:
+    name = "init";
+    break;
+  case cir::AwaitKind::User:
+    name = "await";
+    number = ++coro.awaitNum;
+    break;
+  case cir::AwaitKind::Yield:
+    name = "yield";
+    number = ++coro.yieldNum;
+    break;
+  case cir::AwaitKind::Final:
+    name = "final";
+    break;
+  }
+
+  llvm::SmallString<32> result(name);
+  if (number > 1)
+    llvm::Twine(number).toVector(result);
+
+  return result;
+}
 // FIXME: both GetParamRef and ParamReferenceReplacerRAII are good template
 // candidates to be shared among LLVM / CIR codegen.
 
@@ -124,8 +156,81 @@ RValue CIRGenFunction::emitCoroutineFrame() {
   if (curCoro.data && curCoro.data->coroBegin) {
     return RValue::get(curCoro.data->coroBegin);
   }
+
+  if (curAwaitSuspendWrapper.framePtr)
+    return RValue::get(curAwaitSuspendWrapper.framePtr);
+
   cgm.errorNYI("NYI");
   return RValue();
+}
+
+cir::FuncOp
+CIRGenFunction::generateAwaitSuspendWrapper(llvm::StringRef coroutineName,
+                                            llvm::StringRef suspendPointName,
+                                            const CoroutineSuspendExpr &s) {
+  llvm::SmallString<128> functionName(coroutineName);
+  functionName += ".__await_suspend_wrapper__";
+  functionName += suspendPointName;
+
+  ASTContext &context = getContext();
+
+  auto *awaiterDecl = ImplicitParamDecl::Create(context, context.VoidPtrTy,
+                                                ImplicitParamKind::Other);
+  auto *frameDecl = ImplicitParamDecl::Create(context, context.VoidPtrTy,
+                                              ImplicitParamKind::Other);
+
+  QualType returnTy = s.getSuspendExpr()->getType();
+
+  FunctionArgList args;
+  args.push_back(awaiterDecl);
+  args.push_back(frameDecl);
+
+  const CIRGenFunctionInfo &functionInfo =
+      cgm.getTypes().arrangeBuiltinFunctionDeclaration(returnTy, args);
+
+  cir::FuncType functionType = cgm.getTypes().getFunctionType(functionInfo);
+
+  cir::FuncOp function =
+      cgm.createCIRFunction(getLoc(s.getSourceRange()), functionName,
+                            functionType, /*funcDecl=*/nullptr);
+
+  function.setLinkage(cir::GlobalLinkageKind::InternalLinkage);
+
+  cgm.setCIRFunctionAttributes(GlobalDecl(), functionInfo, function,
+                               /*isThunk=*/false);
+
+  mlir::OpBuilder::InsertionGuard insertionGuard(builder);
+  SourceLocRAIIObject functionLocation(*this, s.getSourceRange());
+
+  mlir::Location location = getLoc(s.getSourceRange());
+  mlir::Block *entryBlock = function.addEntryBlock();
+
+  SymTableScopeTy variableScope(symbolTable);
+  {
+    LexicalScope lexicalScope(*this, location, entryBlock);
+    startFunction(GlobalDecl(), returnTy, function, functionType, args,
+                  s.getBeginLoc(), s.getBeginLoc());
+    mlir::Value awaiterPtr =
+        builder.createLoad(location, getAddrOfLocalVar(awaiterDecl));
+
+    QualType awaiterTy = s.getOpaqueValue()->getType();
+    mlir::Type awaiterType = convertTypeForMem(awaiterTy);
+    awaiterPtr = builder.createPtrBitcast(awaiterPtr, awaiterType);
+
+    LValue awaiterLValue = makeNaturalAlignAddrLValue(awaiterPtr, awaiterTy);
+    curAwaitSuspendWrapper.framePtr =
+        builder.createLoad(location, getAddrOfLocalVar(frameDecl));
+
+    OpaqueValueMapping awaiterBinder(*this, s.getOpaqueValue(), awaiterLValue);
+
+    mlir::Value suspendResult = emitScalarExpr(s.getSuspendExpr());
+    if (suspendResult)
+      builder.createStore(location, suspendResult, returnValue);
+
+    curAwaitSuspendWrapper.framePtr = nullptr;
+    finishFunction(s.getEndLoc());
+  }
+  return function;
 }
 
 static void createCoroData(CIRGenFunction &cgf,
@@ -718,6 +823,7 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
   CIRGenFunction::OpaqueValueMapping binder =
       CIRGenFunction::OpaqueValueMapping(cgf, s.getOpaqueValue());
   CIRGenBuilderTy &builder = cgf.getBuilder();
+  llvm::SmallString<32> suspendPointName = buildSuspendPointName(coro, kind);
 
   // Exception handling requires additional IR. We avoid generating it when
   // neither the await_resume() call nor the destruction of its result can
@@ -771,21 +877,43 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
         // and coro.suspend here, that should be done as part of lowering this
         // to LLVM dialect (or some other MLIR dialect)
 
+        cir::FuncOp coroutineFunction = mlir::cast<cir::FuncOp>(cgf.curFn);
+
+        CIRGenFunction wrapperCGF(cgf.cgm, builder);
+
+        cir::FuncOp suspendWrapper = wrapperCGF.generateAwaitSuspendWrapper(
+            coroutineFunction.getSymName(), suspendPointName, s);
+
+        mlir::Value awaiterPointer =
+            cgf.getOrCreateOpaqueLValueMapping(s.getOpaqueValue()).getPointer();
+
+        assert(coro.coroBegin && "expected coroutine frame");
+
+        cir::PointerType wrapperPointerType =
+            cir::PointerType::get(suspendWrapper.getFunctionType());
+
+        mlir::Value wrapperPointer = cir::GetGlobalOp::create(
+            builder, loc, wrapperPointerType, suspendWrapper.getSymName());
+
         switch (s.getSuspendReturnType()) {
         case CoroutineSuspendExpr::SuspendReturnType::SuspendBool: {
-          mlir::Value suspendRet = cgf.evaluateExprAsBool(s.getSuspendExpr());
+          cir::CoroAwaitSuspendBoolOp suspendRet =
+              cir::CoroAwaitSuspendBoolOp::create(
+                  builder, loc, awaiterPointer, coro.coroBegin, wrapperPointer);
           // Veto suspension if requested by bool returning await_suspend.
-          cir::CoroSuspendPoint::create(builder, loc, suspendRet);
+          cir::CoroSuspendPoint::create(builder, loc, suspendRet.getResult());
           break;
         }
         case CoroutineSuspendExpr::SuspendReturnType::SuspendVoid:
-          cgf.emitScalarExpr(s.getSuspendExpr());
+          cir::CoroAwaitSuspendVoidOp::create(builder, loc, awaiterPointer,
+                                              coro.coroBegin, wrapperPointer);
           // Signals the parent that execution flows to next region.
           cir::CoroSuspendPoint::create(builder, loc);
           break;
         case CoroutineSuspendExpr::SuspendReturnType::SuspendHandle:
-          cgf.cgm.errorNYI(s.getSourceRange(),
-                           "await_suspend returning handle");
+          // TODO(cir): Handle exceptions when resuming the returned coroutine.
+          cir::CoroAwaitSuspendHandleOp::create(builder, loc, awaiterPointer,
+                                                coro.coroBegin, wrapperPointer);
           cir::CoroSuspendPoint::create(builder, loc);
           break;
         }

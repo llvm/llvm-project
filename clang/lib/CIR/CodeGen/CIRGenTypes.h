@@ -198,6 +198,10 @@ public:
   const CIRGenFunctionInfo &arrangeBuiltinFunctionCall(QualType resultType,
                                                        const CallArgList &args);
 
+  const CIRGenFunctionInfo &
+  arrangeBuiltinFunctionDeclaration(QualType resultType,
+                                    const FunctionArgList &args);
+
   /// Return whether a type can be zero-initialized (in the C++ sense) with an
   /// LLVM zeroinitializer.
   bool isZeroInitializable(clang::QualType ty);

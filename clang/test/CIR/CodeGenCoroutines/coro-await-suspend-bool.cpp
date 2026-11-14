@@ -34,7 +34,7 @@ Task await_bool_veto() {
   // CIR:   %[[READY:.*]] = cir.call @_ZN11BoolAwaiter11await_readyEv(%{{.*}}) : (!cir.ptr<!rec_BoolAwaiter>{{.*}}) -> (!cir.bool{{.*}})
   // CIR:   cir.condition(%[[READY]])
   // CIR: }, suspend : {
-  // CIR:   %[[SUSPEND_RET:.*]] = cir.call @_ZN11BoolAwaiter13await_suspendESt16coroutine_handleIvE(%{{.*}}) : (!cir.ptr<!rec_BoolAwaiter>{{.*}}) -> (!cir.bool{{.*}})
+  // CIR:   %[[SUSPEND_RET:.*]] = cir.coro.intrinsic.await.suspend.bool
   // CIR:   cir.coro.suspend_point(%[[SUSPEND_RET]])
   // CIR: }, resume : {
   // CIR:   cir.call @_ZN11BoolAwaiter12await_resumeEv(%{{.*}}) : (!cir.ptr<!rec_BoolAwaiter>{{.*}}) -> ()
@@ -44,7 +44,7 @@ Task await_bool_veto() {
   // CIR-FLAT:   %[[READY:.*]] = cir.call @_ZN11BoolAwaiter11await_readyEv(%[[AWAITER:[0-9]+]])
   // CIR-FLAT-NEXT:   cir.brcond %[[READY]] ^[[RESUME:bb[0-9]+]], ^[[SUSPEND:.*]]
   // CIR-FLAT: ^[[SUSPEND]]:
-  // CIR-FLAT:   %[[SUSPEND_RET:.*]] = cir.call @_ZN11BoolAwaiter13await_suspendESt16coroutine_handleIvE(%[[AWAITER]])
+  // CIR-FLAT:   %[[SUSPEND_RET:.*]] = cir.coro.intrinsic.await.suspend.bool
   // CIR-FLAT-NEXT:   cir.brcond %[[SUSPEND_RET]] ^[[DO_SUSPEND:.*]], ^[[RESUME]]
   // CIR-FLAT: ^[[DO_SUSPEND]]:
   // CIR-FLAT:   %[[RES:.*]] = cir.coro.intrinsic.suspend
@@ -59,7 +59,7 @@ Task await_bool_veto() {
   // LLVM-NEXT:   br i1 %[[READY]], label %[[RESUME:[0-9]+]], label %[[SUSPEND:[0-9]+]]
   // LLVM: [[SUSPEND]]:
   // LLVM-NEXT:   %[[SAVE:.*]] = call token @llvm.coro.save(ptr null)
-  // LLVM:   %[[SUSPEND_RET:.*]] = call noundef zeroext i1 @_ZN11BoolAwaiter13await_suspendESt16coroutine_handleIvE(ptr {{.*}} %[[AWAITER]])
+  // LLVM:   %[[SUSPEND_RET:.*]] = call i1 @llvm.coro.await.suspend.bool(ptr %[[AWAITER]], ptr {{.*}}, ptr @_Z15await_bool_vetov.__await_suspend_wrapper__await)
   // LLVM-NEXT:   br i1 %[[SUSPEND_RET]], label %[[DO_SUSPEND:[0-9]+]], label %[[RESUME]]
   // LLVM: [[DO_SUSPEND]]:
   // LLVM-NEXT:   %[[RES:.*]] = call i8 @llvm.coro.suspend(token %[[SAVE]], i1 false)

@@ -871,6 +871,18 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeGlobalDeclaration(GlobalDecl gd) {
   return arrangeFunctionDeclaration(fd);
 }
 
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeBuiltinFunctionDeclaration(QualType resultType,
+                                               const FunctionArgList &args) {
+  SmallVector<CanQualType, 16> argTypes;
+  for (const VarDecl *arg : args)
+    argTypes.push_back(astContext.getCanonicalParamType(arg->getType()));
+
+  return arrangeCIRFunctionInfo(resultType->getCanonicalTypeUnqualified(),
+                                /*isInstanceMethod=*/false, argTypes,
+                                FunctionType::ExtInfo(), RequiredArgs::All);
+}
+
 // When we find the full definition for a TagDecl, replace the 'opaque' type we
 // previously made for it if applicable.
 void CIRGenTypes::updateCompletedType(const TagDecl *td) {
