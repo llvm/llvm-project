@@ -93,26 +93,26 @@ define amdgpu_ps <2 x float> @test8(i64 %val, <4 x i32> inreg %rsrc, i32 %voffse
 define amdgpu_ps float @wf_test1(i32 %val, <4 x i32> %rsrc, i32 %voffset, i32 inreg %soffset) {
 ; CHECK-LABEL: wf_test1:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_mov_b32 s2, exec_lo
+; CHECK-NEXT:    s_mov_b32 s1, exec_lo
+; CHECK-NEXT:    s_mov_b32 s2, s1
 ; CHECK-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_readfirstlane_b32 s4, v1
 ; CHECK-NEXT:    v_readfirstlane_b32 s5, v2
 ; CHECK-NEXT:    v_readfirstlane_b32 s6, v3
 ; CHECK-NEXT:    v_readfirstlane_b32 s7, v4
-; CHECK-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[1:2]
-; CHECK-NEXT:    v_cmp_eq_u64_e64 s1, s[6:7], v[3:4]
-; CHECK-NEXT:    s_and_b32 s1, vcc_lo, s1
-; CHECK-NEXT:    s_and_saveexec_b32 s1, s1
+; CHECK-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
+; CHECK-NEXT:    v_cmpx_eq_u64_e32 s[4:5], v[1:2]
+; CHECK-NEXT:    v_cmpx_eq_u64_e32 s[6:7], v[3:4]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_atomic_smin v0, v5, s[4:7], s0 offen glc
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:    ; implicit-def: $vgpr5
 ; CHECK-NEXT:    ; implicit-def: $vgpr3_vgpr4
-; CHECK-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
-; CHECK-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
+; CHECK-NEXT:    s_andn2_wrexec_b32 s2, s2
 ; CHECK-NEXT:    s_cbranch_execnz .LBB8_1
 ; CHECK-NEXT:  ; %bb.2:
-; CHECK-NEXT:    s_mov_b32 exec_lo, s2
+; CHECK-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
+; CHECK-NEXT:    s_mov_b32 exec_lo, s1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %ret = call i32 @llvm.amdgcn.raw.buffer.atomic.smin.i32(i32 %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -123,26 +123,26 @@ define amdgpu_ps float @wf_test1(i32 %val, <4 x i32> %rsrc, i32 %voffset, i32 in
 define amdgpu_ps <2 x float> @wf_test2(i64 %val, <4 x i32> %rsrc, i32 %voffset, i32 inreg %soffset) {
 ; CHECK-LABEL: wf_test2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_mov_b32 s2, exec_lo
+; CHECK-NEXT:    s_mov_b32 s1, exec_lo
+; CHECK-NEXT:    s_mov_b32 s2, s1
 ; CHECK-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_readfirstlane_b32 s4, v2
 ; CHECK-NEXT:    v_readfirstlane_b32 s5, v3
 ; CHECK-NEXT:    v_readfirstlane_b32 s6, v4
 ; CHECK-NEXT:    v_readfirstlane_b32 s7, v5
-; CHECK-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[2:3]
-; CHECK-NEXT:    v_cmp_eq_u64_e64 s1, s[6:7], v[4:5]
-; CHECK-NEXT:    s_and_b32 s1, vcc_lo, s1
-; CHECK-NEXT:    s_and_saveexec_b32 s1, s1
+; CHECK-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
+; CHECK-NEXT:    v_cmpx_eq_u64_e32 s[4:5], v[2:3]
+; CHECK-NEXT:    v_cmpx_eq_u64_e32 s[6:7], v[4:5]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_atomic_smax_x2 v[0:1], v6, s[4:7], s0 offen glc
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
 ; CHECK-NEXT:    ; implicit-def: $vgpr6
 ; CHECK-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; CHECK-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
-; CHECK-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
+; CHECK-NEXT:    s_andn2_wrexec_b32 s2, s2
 ; CHECK-NEXT:    s_cbranch_execnz .LBB9_1
 ; CHECK-NEXT:  ; %bb.2:
-; CHECK-NEXT:    s_mov_b32 exec_lo, s2
+; CHECK-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
+; CHECK-NEXT:    s_mov_b32 exec_lo, s1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %ret = call i64 @llvm.amdgcn.raw.buffer.atomic.smax.i64(i64 %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -155,18 +155,19 @@ define amdgpu_ps float @wf_test3(i32 %val, <4 x i32> inreg %rsrc, i32 %voffset, 
 ; CHECK-LABEL: wf_test3:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_mov_b32 s4, exec_lo
+; CHECK-NEXT:    s_mov_b32 s5, s4
 ; CHECK-NEXT:  .LBB10_1: ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_readfirstlane_b32 s6, v2
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s6, v2
-; CHECK-NEXT:    s_and_saveexec_b32 s5, vcc_lo
+; CHECK-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
+; CHECK-NEXT:    v_cmpx_eq_u32_e32 s6, v2
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_atomic_umin v0, v1, s[0:3], s6 offen glc
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
-; CHECK-NEXT:    s_xor_b32 exec_lo, exec_lo, s5
+; CHECK-NEXT:    s_andn2_wrexec_b32 s5, s5
 ; CHECK-NEXT:    s_cbranch_execnz .LBB10_1
 ; CHECK-NEXT:  ; %bb.2:
+; CHECK-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
@@ -179,18 +180,19 @@ define amdgpu_ps <2 x float> @wf_test5(i64 %val, <4 x i32> inreg %rsrc, i32 %vof
 ; CHECK-LABEL: wf_test5:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_mov_b32 s4, exec_lo
+; CHECK-NEXT:    s_mov_b32 s5, s4
 ; CHECK-NEXT:  .LBB11_1: ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_readfirstlane_b32 s6, v3
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s6, v3
-; CHECK-NEXT:    s_and_saveexec_b32 s5, vcc_lo
+; CHECK-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
+; CHECK-NEXT:    v_cmpx_eq_u32_e32 s6, v3
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_atomic_umax_x2 v[0:1], v2, s[0:3], s6 offen glc
 ; CHECK-NEXT:    ; implicit-def: $vgpr3
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
-; CHECK-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
-; CHECK-NEXT:    s_xor_b32 exec_lo, exec_lo, s5
+; CHECK-NEXT:    s_andn2_wrexec_b32 s5, s5
 ; CHECK-NEXT:    s_cbranch_execnz .LBB11_1
 ; CHECK-NEXT:  ; %bb.2:
+; CHECK-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
@@ -203,30 +205,29 @@ define amdgpu_ps <2 x float> @wf_test5(i64 %val, <4 x i32> inreg %rsrc, i32 %vof
 define amdgpu_ps float @wf_test6(i32 %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset) {
 ; CHECK-LABEL: wf_test6:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_mov_b32 s2, exec_lo
+; CHECK-NEXT:    s_mov_b32 s4, exec_lo
+; CHECK-NEXT:    s_mov_b32 s5, s4
 ; CHECK-NEXT:  .LBB12_1: ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    v_readfirstlane_b32 s4, v1
-; CHECK-NEXT:    v_readfirstlane_b32 s5, v2
-; CHECK-NEXT:    v_readfirstlane_b32 s6, v3
-; CHECK-NEXT:    v_readfirstlane_b32 s7, v4
-; CHECK-NEXT:    v_readfirstlane_b32 s3, v6
-; CHECK-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[1:2]
-; CHECK-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[3:4]
-; CHECK-NEXT:    v_cmp_eq_u32_e64 s1, s3, v6
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    s_and_b32 s0, s0, s1
-; CHECK-NEXT:    s_and_saveexec_b32 s0, s0
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v1
+; CHECK-NEXT:    v_readfirstlane_b32 s1, v2
+; CHECK-NEXT:    v_readfirstlane_b32 s2, v3
+; CHECK-NEXT:    v_readfirstlane_b32 s3, v4
+; CHECK-NEXT:    v_readfirstlane_b32 s6, v6
+; CHECK-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
+; CHECK-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[1:2]
+; CHECK-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[3:4]
+; CHECK-NEXT:    v_cmpx_eq_u32_e32 s6, v6
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_atomic_smin v0, v5, s[4:7], s3 offen glc
+; CHECK-NEXT:    buffer_atomic_smin v0, v5, s[0:3], s6 offen glc
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:    ; implicit-def: $vgpr6
 ; CHECK-NEXT:    ; implicit-def: $vgpr5
 ; CHECK-NEXT:    ; implicit-def: $vgpr3_vgpr4
-; CHECK-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
-; CHECK-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; CHECK-NEXT:    s_andn2_wrexec_b32 s5, s5
 ; CHECK-NEXT:    s_cbranch_execnz .LBB12_1
 ; CHECK-NEXT:  ; %bb.2:
-; CHECK-NEXT:    s_mov_b32 exec_lo, s2
+; CHECK-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
+; CHECK-NEXT:    s_mov_b32 exec_lo, s4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %ret = call i32 @llvm.amdgcn.raw.buffer.atomic.smin.i32(i32 %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -237,30 +238,29 @@ define amdgpu_ps float @wf_test6(i32 %val, <4 x i32> %rsrc, i32 %voffset, i32 %s
 define amdgpu_ps <2 x float> @wf_test7(i64 %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset) {
 ; CHECK-LABEL: wf_test7:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_mov_b32 s2, exec_lo
+; CHECK-NEXT:    s_mov_b32 s4, exec_lo
+; CHECK-NEXT:    s_mov_b32 s5, s4
 ; CHECK-NEXT:  .LBB13_1: ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    v_readfirstlane_b32 s4, v2
-; CHECK-NEXT:    v_readfirstlane_b32 s5, v3
-; CHECK-NEXT:    v_readfirstlane_b32 s6, v4
-; CHECK-NEXT:    v_readfirstlane_b32 s7, v5
-; CHECK-NEXT:    v_readfirstlane_b32 s3, v7
-; CHECK-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[2:3]
-; CHECK-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[4:5]
-; CHECK-NEXT:    v_cmp_eq_u32_e64 s1, s3, v7
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    s_and_b32 s0, s0, s1
-; CHECK-NEXT:    s_and_saveexec_b32 s0, s0
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v2
+; CHECK-NEXT:    v_readfirstlane_b32 s1, v3
+; CHECK-NEXT:    v_readfirstlane_b32 s2, v4
+; CHECK-NEXT:    v_readfirstlane_b32 s3, v5
+; CHECK-NEXT:    v_readfirstlane_b32 s6, v7
+; CHECK-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
+; CHECK-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[2:3]
+; CHECK-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[4:5]
+; CHECK-NEXT:    v_cmpx_eq_u32_e32 s6, v7
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_atomic_umin_x2 v[0:1], v6, s[4:7], s3 offen glc
+; CHECK-NEXT:    buffer_atomic_umin_x2 v[0:1], v6, s[0:3], s6 offen glc
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
 ; CHECK-NEXT:    ; implicit-def: $vgpr7
 ; CHECK-NEXT:    ; implicit-def: $vgpr6
 ; CHECK-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; CHECK-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
-; CHECK-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; CHECK-NEXT:    s_andn2_wrexec_b32 s5, s5
 ; CHECK-NEXT:    s_cbranch_execnz .LBB13_1
 ; CHECK-NEXT:  ; %bb.2:
-; CHECK-NEXT:    s_mov_b32 exec_lo, s2
+; CHECK-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
+; CHECK-NEXT:    s_mov_b32 exec_lo, s4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %ret = call i64 @llvm.amdgcn.raw.buffer.atomic.umin.i64(i64 %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)

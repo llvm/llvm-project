@@ -199,6 +199,12 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
   auto NewEnd = BodyBB->end();
   assert(std::distance(NewBegin, NewEnd) == OrigRangeSize);
 
+  // Emit v_cmpx_eq and s_andn2_wrexec when both instructions are available.
+  // Otherwise, use the previous pattern of v_cmp_eq, s_and_saveexec and s_xor.
+  const bool UseNewExecInstructions =
+      ST.hasNoSdstCMPX() && TII.pseudoToMCOpcode(LMC.AndN2WrExecOpc) != -1;
+  SmallVector<std::pair<Register, Register>, 4> CmpxOperands;
+
   B.setMBB(*LoopBB);
   Register CondReg;
 
@@ -245,6 +251,11 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
       }
 
       for (unsigned i = 0; i < NumParts; ++i) {
+        if (UseNewExecInstructions) {
+          CmpxOperands.emplace_back(CurrentLaneParts[i], OpParts[i]);
+          continue;
+        }
+
         Register CmpReg = MRI.createVirtualRegister(VccRB_S1);
         B.buildICmp(CmpInst::ICMP_EQ, CmpReg, CurrentLaneParts[i], OpParts[i]);
 
@@ -261,26 +272,69 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
     }
   }
 
-  // Copy vcc to sgpr32/64, ballot becomes a no-op during instruction selection.
-  Register CondRegLM =
-      MRI.createVirtualRegister({WaveRC, LLT::integer(IsWave32 ? 32 : 64)});
-  B.buildIntrinsic(Intrinsic::amdgcn_ballot, CondRegLM).addReg(CondReg);
+  if (UseNewExecInstructions) {
+    // v_cmpx writes EXEC, so it must be a terminator. Emit the copies into
+    // register classes for all compares first, then the compares themselves.
+    SmallVector<std::tuple<unsigned, Register, Register>, 4> Cmpxs;
+    for (auto [CurrentLane, Op] : CmpxOperands) {
+      bool Is64 = MRI.getType(Op).getSizeInBits() == 64;
+      unsigned Opc = Is64 ? AMDGPU::V_CMPX_EQ_U64_nosdst_e32_term
+                          : AMDGPU::V_CMPX_EQ_U32_nosdst_e32_term;
+      Register SReg = MRI.createVirtualRegister(
+          Is64 ? &AMDGPU::SReg_64RegClass : &AMDGPU::SReg_32_XM0RegClass);
+      Register VReg =
+          MRI.createVirtualRegister(TII.getRegClass(TII.get(Opc), 1));
+      B.buildCopy(SReg, CurrentLane);
+      B.buildCopy(VReg, Op);
+      Cmpxs.emplace_back(Opc, SReg, VReg);
+    }
+    for (auto [Opc, SReg, VReg] : Cmpxs)
+      B.buildInstr(Opc).addReg(SReg).addReg(VReg);
 
-  // Update EXEC, save the original EXEC value to SavedExec.
-  B.buildInstr(LMC.AndSaveExecOpc)
-      .addDef(SavedExec)
-      .addReg(CondRegLM)
-      .setOperandDead(3);
-  MRI.setSimpleHint(SavedExec, CondRegLM);
+    // Remaining lanes are PhiExec & ~exec. Write EXEC from a terminator so
+    // spill code for NewExec is placed before EXEC changes;
+    // SIOptimizeExecMasking folds the pair into S_ANDN2_WREXEC.
+    Register PhiExec = MRI.createVirtualRegister(WaveRC);
+    Register NewExec = MRI.createVirtualRegister(WaveRC);
+    B.setInsertPt(*LoopBB, LoopBB->begin());
+    B.buildInstr(TargetOpcode::PHI)
+        .addDef(PhiExec)
+        .addReg(SaveExecReg)
+        .addMBB(&MBB)
+        .addReg(NewExec)
+        .addMBB(BodyBB);
 
-  B.setInsertPt(*BodyBB, BodyBB->end());
+    B.setInsertPt(*BodyBB, BodyBB->end());
+    MRI.setSimpleHint(NewExec, PhiExec);
+    B.buildInstr(LMC.AndN2Opc)
+        .addDef(NewExec)
+        .addReg(PhiExec)
+        .addReg(LMC.ExecReg)
+        .setOperandDead(3);
+    B.buildInstr(LMC.MovTermOpc).addDef(LMC.ExecReg).addReg(NewExec);
+  } else {
+    // Copy vcc to sgpr32/64, ballot becomes a no-op during instruction
+    // selection.
+    Register CondRegLM =
+        MRI.createVirtualRegister({WaveRC, LLT::integer(IsWave32 ? 32 : 64)});
+    B.buildIntrinsic(Intrinsic::amdgcn_ballot, CondRegLM).addReg(CondReg);
 
-  // Update EXEC, switch all done bits to 0 and all todo bits to 1.
-  B.buildInstr(LMC.XorTermOpc)
-      .addDef(LMC.ExecReg)
-      .addReg(LMC.ExecReg)
-      .addReg(SavedExec)
-      .setOperandDead(3);
+    // Update EXEC, save the original EXEC value to SavedExec.
+    B.buildInstr(LMC.AndSaveExecOpc)
+        .addDef(SavedExec)
+        .addReg(CondRegLM)
+        .setOperandDead(3);
+    MRI.setSimpleHint(SavedExec, CondRegLM);
+
+    B.setInsertPt(*BodyBB, BodyBB->end());
+
+    // Update EXEC, switch all done bits to 0 and all todo bits to 1.
+    B.buildInstr(LMC.XorTermOpc)
+        .addDef(LMC.ExecReg)
+        .addReg(LMC.ExecReg)
+        .addReg(SavedExec)
+        .setOperandDead(3);
+  }
 
   // XXX - s_xor_b64 sets scc to 1 if the result is nonzero, so can we use
   // s_cbranch_scc0?
