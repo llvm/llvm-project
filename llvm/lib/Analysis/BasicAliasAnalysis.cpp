@@ -1664,6 +1664,11 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
                                                AAQI.AllowEphemerals)) ||
               (AAQI.AllowEphemerals && (ValidAssumeForPtrContext(V1) ||
                                         ValidAssumeForPtrContext(V2)))) {
+            // The assumption relates values from the same iteration. Across
+            // iterations, both underlying objects must be invariant.
+            if (!isValueEqualInPotentialCycles(O1, O1, AAQI) ||
+                !isValueEqualInPotentialCycles(O2, O2, AAQI))
+              break;
             return AliasResult::NoAlias;
           }
         }
