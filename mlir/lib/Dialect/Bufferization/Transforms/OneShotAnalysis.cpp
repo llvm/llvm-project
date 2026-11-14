@@ -147,42 +147,6 @@ static bool detectParallelRegions(Operation *op,
   return walkRes.wasInterrupted();
 }
 
-OneShotAnalysisState::OneShotAnalysisState(
-    Operation *op, const OneShotBufferizationOptions &options)
-    : AnalysisState(options, TypeID::get<OneShotAnalysisState>()) {
-  mayHaveUnstructuredCF = options.mayHaveUnstructuredControlFlow.value_or(
-      detectUnstructuredControlFlow(op));
-  if (!options.mayHaveParallelRegions.has_value()) {
-    mayHaveParallelRegionsFlag = detectParallelRegions(op, options);
-  } else {
-    mayHaveParallelRegionsFlag = *options.mayHaveParallelRegions;
-  }
-
-  // Set up alias sets.
-  op->walk([&](Operation *op) {
-    for (Value v : op->getResults())
-      if (isa<TensorLikeType>(v.getType()))
-        createAliasInfoEntry(v);
-    for (Region &r : op->getRegions())
-      for (Block &b : r.getBlocks())
-        for (auto bbArg : b.getArguments())
-          if (isa<TensorLikeType>(bbArg.getType()))
-            createAliasInfoEntry(bbArg);
-  });
-
-  // Mark OpOperands in-place that must bufferize in-place.
-  op->walk([&](BufferizableOpInterface bufferizableOp) {
-    if (!options.isOpAllowed(bufferizableOp))
-      return WalkResult::skip();
-
-    for (OpOperand &opOperand : bufferizableOp->getOpOperands())
-      if (isa<TensorLikeType>(opOperand.get().getType()))
-        if (bufferizableOp.mustBufferizeInPlace(opOperand, *this))
-          bufferizeInPlace(opOperand);
-    return WalkResult::advance();
-  });
-}
-
 void OneShotAnalysisState::applyOnEquivalenceClass(
     Value v, function_ref<void(Value)> fun) const {
   auto leaderIt = equivalentInfo.findLeader(v);
@@ -401,6 +365,44 @@ private:
   /// Sorted unique definition blocks, for reads with several definitions.
   DenseMap<std::pair<Block *, Block *>, DenseMap<DefKey, bool>> manyDefs;
 };
+
+// Define the constructor after the cache types so that member cleanup can
+// instantiate their unique_ptr deleters.
+OneShotAnalysisState::OneShotAnalysisState(
+    Operation *op, const OneShotBufferizationOptions &options)
+    : AnalysisState(options, TypeID::get<OneShotAnalysisState>()) {
+  mayHaveUnstructuredCF = options.mayHaveUnstructuredControlFlow.value_or(
+      detectUnstructuredControlFlow(op));
+  if (!options.mayHaveParallelRegions.has_value()) {
+    mayHaveParallelRegionsFlag = detectParallelRegions(op, options);
+  } else {
+    mayHaveParallelRegionsFlag = *options.mayHaveParallelRegions;
+  }
+
+  // Set up alias sets.
+  op->walk([&](Operation *op) {
+    for (Value v : op->getResults())
+      if (isa<TensorLikeType>(v.getType()))
+        createAliasInfoEntry(v);
+    for (Region &r : op->getRegions())
+      for (Block &b : r.getBlocks())
+        for (auto bbArg : b.getArguments())
+          if (isa<TensorLikeType>(bbArg.getType()))
+            createAliasInfoEntry(bbArg);
+  });
+
+  // Mark OpOperands in-place that must bufferize in-place.
+  op->walk([&](BufferizableOpInterface bufferizableOp) {
+    if (!options.isOpAllowed(bufferizableOp))
+      return WalkResult::skip();
+
+    for (OpOperand &opOperand : bufferizableOp->getOpOperands())
+      if (isa<TensorLikeType>(opOperand.get().getType()))
+        if (bufferizableOp.mustBufferizeInPlace(opOperand, *this))
+          bufferizeInPlace(opOperand);
+    return WalkResult::advance();
+  });
+}
 
 OneShotAnalysisState::~OneShotAnalysisState() = default;
 
