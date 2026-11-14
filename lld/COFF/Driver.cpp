@@ -868,6 +868,21 @@ void LinkerDriver::detectWinSysRoot(const opt::InputArgList &Args) {
   }
 }
 
+static StringRef archToTargetTriple(llvm::Triple::ArchType arch) {
+  switch (arch) {
+  case Triple::x86:
+    return "i686-pc-windows-msvc";
+  case Triple::x86_64:
+    return "x86_64-pc-windows-msvc";
+  case Triple::aarch64:
+    return "aarch64-pc-windows-msvc";
+  case Triple::thumb:
+    return "thumbv7-pc-windows-msvc";
+  default:
+    return "";
+  }
+}
+
 void LinkerDriver::addClangLibSearchPaths(const std::string &argv0) {
   std::string lldBinary = sys::fs::getMainExecutable(argv0.c_str(), nullptr);
   SmallString<128> binDir(lldBinary);
@@ -878,16 +893,27 @@ void LinkerDriver::addClangLibSearchPaths(const std::string &argv0) {
   sys::path::append(libDir, "lib");
 
   // Add the resource dir library path
-  SmallString<128> runtimeLibDir(rootDir);
-  sys::path::append(runtimeLibDir, "lib", "clang",
+  SmallString<128> resourceLibDir(libDir);
+  sys::path::append(resourceLibDir, "clang",
                     std::to_string(LLVM_VERSION_MAJOR), "lib");
+
+  StringRef triple = archToTargetTriple(getArch());
+  if (!triple.empty()) {
+    SmallString<128> resourceLibDirPerTarget(resourceLibDir);
+    sys::path::append(resourceLibDirPerTarget, triple);
+    searchPaths.push_back(saver().save(resourceLibDirPerTarget.str()));
+
+    SmallString<128> runtimeLibDirPerTarget(libDir);
+    sys::path::append(runtimeLibDirPerTarget, triple);
+    searchPaths.push_back(saver().save(runtimeLibDirPerTarget.str()));
+  }
+
   // Resource dir + osname, which is hardcoded to windows since we are in the
   // COFF driver.
-  SmallString<128> runtimeLibDirWithOS(runtimeLibDir);
-  sys::path::append(runtimeLibDirWithOS, "windows");
+  SmallString<128> resourceLibDirWithOS(resourceLibDir);
+  sys::path::append(resourceLibDirWithOS, "windows");
 
-  searchPaths.push_back(saver().save(runtimeLibDirWithOS.str()));
-  searchPaths.push_back(saver().save(runtimeLibDir.str()));
+  searchPaths.push_back(saver().save(resourceLibDirWithOS.str()));
   searchPaths.push_back(saver().save(libDir.str()));
 }
 
@@ -1751,6 +1777,17 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       Fatal(ctx) << "no input files";
   }
 
+  // Handle /machine
+  {
+    llvm::TimeTraceScope timeScope2("Machine arg");
+    if (auto *arg = args.getLastArg(OPT_machine)) {
+      MachineTypes machine = getMachineType(arg->getValue());
+      if (machine == IMAGE_FILE_MACHINE_UNKNOWN)
+        Fatal(ctx) << "unknown /machine argument: " << arg->getValue();
+      setMachine(machine);
+    }
+  }
+
   // Construct search path list.
   {
     llvm::TimeTraceScope timeScope2("Search paths");
@@ -1955,17 +1992,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle /appcontainer
   config->appContainer =
       args.hasFlag(OPT_appcontainer, OPT_appcontainer_no, false);
-
-  // Handle /machine
-  {
-    llvm::TimeTraceScope timeScope2("Machine arg");
-    if (auto *arg = args.getLastArg(OPT_machine)) {
-      MachineTypes machine = getMachineType(arg->getValue());
-      if (machine == IMAGE_FILE_MACHINE_UNKNOWN)
-        Fatal(ctx) << "unknown /machine argument: " << arg->getValue();
-      setMachine(machine);
-    }
-  }
 
   // Handle /nodefaultlib:<filename>
   {
