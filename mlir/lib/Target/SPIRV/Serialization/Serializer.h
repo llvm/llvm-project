@@ -226,6 +226,11 @@ private:
     return constIDMap.lookup(value);
   }
 
+  uint32_t
+  getConstantCompositeID(std::pair<Attribute, Type> valueTypePair) const {
+    return constCompositeIDMap.lookup(valueTypePair);
+  }
+
   uint32_t getConstantCompositeReplicateID(
       std::pair<Attribute, Type> valueTypePair) const {
     return constCompositeReplicateIDMap.lookup(valueTypePair);
@@ -481,6 +486,9 @@ private:
 
   /// Map from constant values to their <id>s.
   DenseMap<Attribute, uint32_t> constIDMap;
+
+  /// Map from a composite constant's value and type to their <id>s.
+  DenseMap<std::pair<Attribute, Type>, uint32_t> constCompositeIDMap;
 
   /// Map from a replicated composite constant's value and type to their <id>s.
   DenseMap<std::pair<Attribute, Type>, uint32_t> constCompositeReplicateIDMap;
