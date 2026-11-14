@@ -2569,42 +2569,21 @@ SPIRVEmitIntrinsicsImpl::visitExtractValueInst(ExtractValueInst &I) {
     Args.push_back(B.getInt32(Op));
   Instruction *NewI = B.CreateIntrinsicWithoutFolding(Intrinsic::spv_extractv,
                                                       {I.getType()}, {Args});
-  // If this aggregate extract feeds another insertvalue, the extracted
-  // composite is used as a SPIR-V value-id by llvm.spv.insertv. Keep the real
-  // aggregate type in metadata, but expose the value itself as i32 so the
-  // intrinsic signature remains valid.
-  if (NewI->getType()->isAggregateType() &&
-      any_of(I.users(), [](User *U) { return isa<InsertValueInst>(U); })) {
-    AggrConstTypes[NewI] = I.getType();
+  // An aggregate extract is a SPIR-V value-id like an aggregate PHI, select or
+  // freeze: keep the real aggregate type in metadata, but expose the value
+  // itself as i32 so the intrinsic signature and its users stay valid.
+  if (NewI->getType()->isAggregateType()) {
+    Type *AggrTy = I.getType();
+    AggrConstTypes[NewI] = AggrTy;
     NewI->mutateType(B.getInt32Ty());
     replaceMemInstrUses(&I, NewI, B);
+    // The aggregate extractvalue only carried a name record; unlike a PHI, a
+    // select or freeze does not pass its type down to an untyped operand.
+    setInsertPointAfterDef(B, NewI);
+    GR->buildAssignType(B, AggrTy, NewI, CanUseAnyVectorRank);
     return NewI;
   }
   replaceAllUsesWithAndErase(B, &I, NewI);
-  // If the aggregate result feeds a return or callsite whose type was rewritten
-  // to an i32 value-id by SPIRVPrepareFunctions, mutate it to match.
-  if (NewI->getType()->isAggregateType()) {
-    for (const Use &U : NewI->uses()) {
-      User *Usr = U.getUser();
-      if (auto *RI = dyn_cast<ReturnInst>(Usr)) {
-        if (RI->getFunction()->getReturnType() != NewI->getType()) {
-          NewI->mutateType(B.getInt32Ty());
-          break;
-        }
-        continue;
-      }
-      auto *CB = dyn_cast<CallBase>(Usr);
-      if (!CB || !CB->isArgOperand(&U))
-        continue;
-      unsigned ArgNo = CB->getArgOperandNo(&U);
-      FunctionType *FT = CB->getFunctionType();
-      if (ArgNo < FT->getNumParams() &&
-          !FT->getParamType(ArgNo)->isAggregateType()) {
-        NewI->mutateType(B.getInt32Ty());
-        break;
-      }
-    }
-  }
   return NewI;
 }
 
