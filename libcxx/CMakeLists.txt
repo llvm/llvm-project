@@ -722,10 +722,7 @@ function(cxx_add_windows_flags target)
                                  # Don't warn on the use of "deprecated"
                                  # "insecure" functions which are standards
                                  # specified.
-                                 _CRT_SECURE_NO_WARNINGS
-                                 # Use the ISO conforming behaviour for conversion
-                                 # in printf, scanf.
-                                 _CRT_STDIO_ISO_WIDE_SPECIFIERS)
+                                 _CRT_SECURE_NO_WARNINGS)
   endif()
 endfunction()
 
