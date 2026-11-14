@@ -349,7 +349,7 @@ int main(int argc, const char **argv) {
 
   if (DeviceEnabled) {
     Interp = ExitOnErr(clang::Interpreter::createWithDevice(
-        std::move(CI), std::move(DeviceCI), OffloadKind));
+        std::move(CI), std::move(DeviceCI), OffloadKind, ClangArgv));
 
     const char *RuntimeLib = UseHip ? "libamdhip64.so" : "libcudart.so";
     if (DevicePath.empty()) {

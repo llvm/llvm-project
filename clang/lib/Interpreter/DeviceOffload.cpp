@@ -16,13 +16,22 @@
 #include "clang/Basic/TargetOptions.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ModuleBuilder.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
+#include "clang/Options/Options.h"
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -43,7 +52,8 @@ IncrementalHIPDeviceParser::IncrementalHIPDeviceParser(
     CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,
     IncrementalAction *DeviceAct,
     llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS,
-    llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs)
+    llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs,
+    llvm::ArrayRef<const char *> DriverArgs)
     : IncrementalDeviceParser(DeviceInstance, HostInstance, DeviceAct, FS, Err,
                               PTUs),
       DeviceCI(DeviceInstance) {
@@ -57,6 +67,27 @@ IncrementalHIPDeviceParser::IncrementalHIPDeviceParser(
             llvm::inconvertibleErrorCode()));
     return;
   }
+
+  unsigned MissingArgIndex, MissingArgCount;
+  llvm::opt::InputArgList Args = getDriverOptTable().ParseArgs(
+      DriverArgs, MissingArgIndex, MissingArgCount,
+      llvm::opt::Visibility(options::ClangOption));
+  driver::tools::addPrefixDirs(Args, PrefixDirs);
+  LdPath = Args.getLastArgValue(options::OPT_ld_path_EQ).str();
+}
+
+static std::string getProgramPath(llvm::StringRef Name,
+                                  llvm::ArrayRef<std::string> PrefixDirs) {
+  if (std::optional<std::string> P =
+          driver::tools::findProgramInPrefixDirs(Name, PrefixDirs))
+    return *P;
+  std::string Exe = llvm::sys::fs::getMainExecutable(nullptr, nullptr);
+  if (llvm::ErrorOr<std::string> P = llvm::sys::findProgramByName(
+          Name, {llvm::sys::path::parent_path(Exe)}))
+    return *P;
+  if (llvm::ErrorOr<std::string> P = llvm::sys::findProgramByName(Name))
+    return *P;
+  return Name.str();
 }
 
 llvm::Expected<llvm::StringRef>
@@ -80,13 +111,71 @@ IncrementalHIPDeviceParser::GenerateDeviceObject() {
   return llvm::StringRef(ObjectContent.data(), ObjectContent.size());
 }
 
+llvm::Expected<llvm::StringRef>
+IncrementalHIPDeviceParser::GenerateHSACO(llvm::StringRef Object) {
+  // Without --ld-path, look for a program named "lld".
+  llvm::StringRef LinkerName = LdPath;
+  if (LinkerName.empty())
+    LinkerName = "lld";
+  std::optional<std::string> Linker =
+      driver::tools::resolveLdPath(LinkerName, [&](llvm::StringRef Name) {
+        return getProgramPath(Name, PrefixDirs);
+      });
+  if (!Linker)
+    return llvm::make_error<llvm::StringError>(
+        LdPath.empty()
+            ? "Could not find lld."
+            : "Invalid linker name in argument '--ld-path=" + LdPath + "'.",
+        llvm::inconvertibleErrorCode());
+
+  int ObjFD = -1;
+  llvm::SmallString<128> ObjFile;
+  if (llvm::sys::fs::createTemporaryFile("kernel", "o", ObjFD, ObjFile))
+    return llvm::make_error<llvm::StringError>(
+        "Failed to create a temporary object file.",
+        llvm::inconvertibleErrorCode());
+  llvm::FileRemover ObjRemover(ObjFile);
+  {
+    llvm::raw_fd_ostream OS(ObjFD, /*shouldClose=*/true);
+    OS << Object;
+  }
+
+  llvm::SmallString<128> HSACOFile;
+  if (llvm::sys::fs::createTemporaryFile("kernel", "hsaco", HSACOFile))
+    return llvm::make_error<llvm::StringError>(
+        "Failed to create a temporary code object file.",
+        llvm::inconvertibleErrorCode());
+  llvm::FileRemover HSACORemover(HSACOFile);
+
+  // These match the driver's HIP device link (AMDGCN::Linker) for an object.
+  llvm::StringRef Args[] = {*Linker,   "-flavor",         "gnu",
+                            "-m",      "elf64_amdgpu",    "--no-undefined",
+                            "-shared", "--whole-archive", "-o",
+                            HSACOFile, ObjFile,           "--no-whole-archive"};
+  if (llvm::sys::ExecuteAndWait(*Linker, Args) != 0)
+    return llvm::make_error<llvm::StringError>("The linker invocation failed.",
+                                               llvm::inconvertibleErrorCode());
+
+  auto HSACOBuf = llvm::MemoryBuffer::getFile(HSACOFile, /*IsText=*/false);
+  if (!HSACOBuf)
+    return llvm::make_error<llvm::StringError>(
+        "Failed to read the code object.", llvm::inconvertibleErrorCode());
+
+  llvm::StringRef Buffer = (*HSACOBuf)->getBuffer();
+  HSACOContent.assign(Buffer.begin(), Buffer.end());
+  return llvm::StringRef(HSACOContent.data(), HSACOContent.size());
+}
+
 llvm::Error IncrementalHIPDeviceParser::GenerateOffloadBinary() {
   llvm::Expected<llvm::StringRef> Object = GenerateDeviceObject();
   if (!Object)
     return Object.takeError();
 
-  // FIXME: Link the object into an HSACO and bundle it for the host
-  // compilation.
+  llvm::Expected<llvm::StringRef> HSACO = GenerateHSACO(*Object);
+  if (!HSACO)
+    return HSACO.takeError();
+
+  // FIXME: Bundle the HSACO and embed it into the host compilation.
   return llvm::make_error<llvm::StringError>(
       "HIP offload binary generation is not supported yet.",
       llvm::inconvertibleErrorCode());

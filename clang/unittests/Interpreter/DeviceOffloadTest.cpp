@@ -18,6 +18,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/Interpreter.h"
 
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
@@ -27,6 +28,8 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -156,10 +159,73 @@ TEST_F(DeviceOffloadHIPTest, DeviceObjectIsGenerated) {
 
   // FIXME: Replace this with a check of the embedded bundle once the offload
   // binary is generated.
+  std::string Exe = llvm::sys::fs::getMainExecutable(nullptr, nullptr);
+  bool HasLLD = llvm::sys::findProgramByName(
+                    "lld", {llvm::sys::path::parent_path(Exe)}) ||
+                llvm::sys::findProgramByName("lld");
   auto PTU = (*Interp)->Parse("__attribute__((device)) void f() {}");
   EXPECT_THAT_EXPECTED(
-      PTU, llvm::FailedWithMessage("HIP offload binary generation is not "
-                                   "supported yet."));
+      PTU, llvm::FailedWithMessage(
+               HasLLD ? "HIP offload binary generation is not supported yet."
+                      : "Could not find lld."));
+}
+
+TEST_F(DeviceOffloadHIPTest, LdPathSelectsTheLinker) {
+  std::vector<const char *> Args = {"--offload-arch=gfx1100", "-nogpulib",
+                                    "-nogpuinc", "--ld-path=/nonexistent/lld"};
+  IncrementalCompilerBuilder CB;
+  CB.SetCompilerArgs(Args);
+  auto DeviceCI = CB.CreateDevice(OffloadType::HIP);
+  ASSERT_THAT_EXPECTED(DeviceCI, llvm::Succeeded());
+  auto HostCI = CB.CreateHost(OffloadType::HIP);
+  ASSERT_THAT_EXPECTED(HostCI, llvm::Succeeded());
+  auto Interp = Interpreter::createWithDevice(
+      std::move(*HostCI), std::move(*DeviceCI), OffloadType::HIP, Args);
+  ASSERT_THAT_EXPECTED(Interp, llvm::Succeeded());
+
+  auto PTU = (*Interp)->Parse("__attribute__((device)) void f() {}");
+  EXPECT_THAT_EXPECTED(
+      PTU, llvm::FailedWithMessage("Invalid linker name in argument "
+                                   "'--ld-path=/nonexistent/lld'."));
+}
+
+TEST_F(DeviceOffloadHIPTest, PrefixDirSelectsTheLinker) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Needs an executable shell script.";
+#else
+  // A fake lld in a -B directory must be found and run before any other lld.
+  llvm::SmallString<128> Dir;
+  ASSERT_FALSE(llvm::sys::fs::createUniqueDirectory("fake-lld", Dir));
+  llvm::FileRemover DirRemover(Dir);
+  llvm::SmallString<128> Lld(Dir);
+  llvm::sys::path::append(Lld, "lld");
+  llvm::FileRemover LldRemover(Lld);
+  {
+    std::error_code EC;
+    llvm::raw_fd_ostream OS(Lld, EC);
+    ASSERT_FALSE(EC);
+    OS << "#!/bin/sh\nexit 1\n";
+  }
+  ASSERT_FALSE(llvm::sys::fs::setPermissions(Lld, llvm::sys::fs::all_all));
+
+  std::string Prefix = "-B" + Dir.str().str();
+  std::vector<const char *> Args = {"--offload-arch=gfx1100", "-nogpulib",
+                                    "-nogpuinc", Prefix.c_str()};
+  IncrementalCompilerBuilder CB;
+  CB.SetCompilerArgs(Args);
+  auto DeviceCI = CB.CreateDevice(OffloadType::HIP);
+  ASSERT_THAT_EXPECTED(DeviceCI, llvm::Succeeded());
+  auto HostCI = CB.CreateHost(OffloadType::HIP);
+  ASSERT_THAT_EXPECTED(HostCI, llvm::Succeeded());
+  auto Interp = Interpreter::createWithDevice(
+      std::move(*HostCI), std::move(*DeviceCI), OffloadType::HIP, Args);
+  ASSERT_THAT_EXPECTED(Interp, llvm::Succeeded());
+
+  // The fake lld fails, which can only be reported if -B located and ran it.
+  auto PTU = (*Interp)->Parse("__attribute__((device)) void f() {}");
+  EXPECT_THAT_EXPECTED(
+      PTU, llvm::FailedWithMessage("The linker invocation failed."));
+#endif
 }
 
 // A bitcode library with one float(float) function that doubles its argument,
