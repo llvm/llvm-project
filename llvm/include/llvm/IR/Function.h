@@ -398,7 +398,9 @@ public:
   void removeParamAttrs(unsigned ArgNo, const AttributeMask &Attrs);
 
   /// Return true if the function has the attribute.
-  bool hasFnAttribute(Attribute::AttrKind Kind) const;
+  bool hasFnAttribute(Attribute::AttrKind Kind) const {
+    return AttributeSets.hasFnAttr(Kind);
+  }
 
   /// Return true if the function has the attribute.
   bool hasFnAttribute(StringRef Kind) const;
