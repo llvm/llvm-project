@@ -912,12 +912,14 @@ define double @sqrt_fdiv_common_operand(double %x) nounwind {
 define <2 x double> @sqrt_fdiv_common_operand_vec(<2 x double> %x) nounwind {
 ; SSE-LABEL: sqrt_fdiv_common_operand_vec:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    sqrtpd %xmm0, %xmm0
+; SSE-NEXT:    sqrtpd %xmm0, %xmm1
+; SSE-NEXT:    divpd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: sqrt_fdiv_common_operand_vec:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vsqrtpd %xmm0, %xmm0
+; AVX-NEXT:    vsqrtpd %xmm0, %xmm1
+; AVX-NEXT:    vdivpd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %sqrt = call <2 x double> @llvm.sqrt.v2f64(<2 x double> %x)
   %r = fdiv arcp nsz reassoc <2 x double> %x, %sqrt
