@@ -7037,8 +7037,29 @@ static void handleNoSanitizeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     Sanitizers.push_back(SanitizerName);
   }
 
-  D->addAttr(::new (S.Context) NoSanitizeAttr(S.Context, AL, Sanitizers.data(),
-                                              Sanitizers.size()));
+  auto *NewAttr = ::new (S.Context)
+      NoSanitizeAttr(S.Context, AL, Sanitizers.data(), Sanitizers.size());
+  if (NewAttr->getMask() & SanitizerKind::MemtagGlobals) {
+    if (const auto *MTA = D->getAttr<MemTagAttr>()) {
+      S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+          << NewAttr << MTA << false;
+      S.Diag(MTA->getLocation(), diag::note_conflicting_attribute);
+      return;
+    }
+  }
+  D->addAttr(NewAttr);
+}
+
+static void handleMemTagAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  for (const auto *NSA : D->specific_attrs<NoSanitizeAttr>()) {
+    if (NSA->getMask() & SanitizerKind::MemtagGlobals) {
+      S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+          << AL << NSA << false;
+      S.Diag(NSA->getLocation(), diag::note_conflicting_attribute);
+      return;
+    }
+  }
+  D->addAttr(::new (S.Context) MemTagAttr(S.Context, AL));
 }
 
 static AttributeCommonInfo
@@ -8355,6 +8376,10 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_NoSanitize:
     handleNoSanitizeAttr(S, D, AL);
     break;
+  case ParsedAttr::AT_MemTag:
+    handleMemTagAttr(S, D, AL);
+    break;
+
   case ParsedAttr::AT_NoSanitizeAddress:
     handleNoSanitizeAddressAttr(S, D, AL);
     break;
@@ -9132,5 +9157,16 @@ void Sema::ActOnInitPriorityAttr(Decl *D, const Attr *A) {
   if (!T->isRecordType()) {
     this->Diag(A->getLoc(), diag::err_init_priority_object_attr);
     D->dropAttr<InitPriorityAttr>();
+  }
+}
+
+void Sema::ActOnMemTagAttr(Decl *D, const Attr *A) {
+  auto *VD = cast<VarDecl>(D);
+  if (VD->isInvalidDecl() || VD->getType()->isDependentType())
+    return;
+  if (VD->getType().isConstantStorage(this->Context, /*ExcludeCtor=*/false,
+                                      /*ExcludeDtor=*/false)) {
+    this->Diag(A->getLocation(), diag::err_memtag_attr_const_global) << A;
+    D->dropAttr<MemTagAttr>();
   }
 }

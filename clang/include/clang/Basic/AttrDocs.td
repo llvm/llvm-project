@@ -4087,6 +4087,18 @@ on the tool may still insert instrumentation to prevent false positive reports.
   }];
 }
 
+def MemTagDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Use the `memtag` attribute on a non-TLS global variable declaration to
+selectively enable hardware memory tagging protection for that variable (as if
+`-fsanitize=memtag-globals` were applied to it). This attribute is only
+available when targeting an architecture with hardware memory tagging enabled
+(such as AArch64 with `+memtag`), and its availability can be tested with
+`__has_attribute(memtag)`.
+  }];
+}
+
 def NoSanitizeAddressDocs : Documentation {
   let Category = DocCatFunction;
   // This function has multiple distinct spellings, and so it requires a custom

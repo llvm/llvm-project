@@ -15917,6 +15917,7 @@ public:
 
   void ActOnCleanupAttr(Decl *D, const Attr *A);
   void ActOnInitPriorityAttr(Decl *D, const Attr *A);
+  void ActOnMemTagAttr(Decl *D, const Attr *A);
 
 private:
   /// The implementation of RequireCompleteType
