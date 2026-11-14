@@ -75,9 +75,10 @@ struct MaskedArrayExpr {
                             mlir::IRMapping &mapper);
   /// Return the value of an element value for this expression given the current
   /// where loop indices.
-  mlir::Value generateElementalParts(fir::FirOpBuilder &builder,
-                                     mlir::ValueRange oneBasedIndices,
-                                     mlir::IRMapping &mapper);
+  mlir::Value generateElementalParts(
+      fir::FirOpBuilder &builder, mlir::ValueRange oneBasedIndices,
+      mlir::IRMapping &mapper,
+      llvm::SmallVectorImpl<hlfir::CleanupFunction> &cleanups);
   /// Generate the cleanup for the none elemental parts, if any. This must be
   /// called after the loops created for the WHERE construct.
   void generateNoneElementalCleanupIfAny(fir::FirOpBuilder &builder,
@@ -845,14 +846,30 @@ OrderedAssignmentRewriter::generateMaskedEntity(MaskedArrayExpr &maskedExpr) {
   // at the current insertion point (inside the where loops, and any fir.if
   // generated for previous masks).
   builder.restoreInsertionPoint(insertionPoint);
+  llvm::SmallVector<hlfir::CleanupFunction> cleanups;
   mlir::Value scalar = maskedExpr.generateElementalParts(
-      builder, whereLoopNest->oneBasedIndices, mapper);
+      builder, whereLoopNest->oneBasedIndices, mapper, cleanups);
   /// Generate cleanups for the elemental parts inside the loops (setting the
   /// location so that the assignment will be generated before the cleanups).
   if (!maskedExpr.isOuterMaskExpr)
     if (mlir::Operation *firstCleanup =
             maskedExpr.generateMaskedExprCleanUps(builder, mapper))
       builder.setInsertionPoint(firstCleanup);
+  // Replay each inlined yield's cleanup after the assignment. Remember the
+  // operation before the insertion point so the caller can insert the consumer
+  // before these newly cloned operations.
+  if (!cleanups.empty()) {
+    auto *block = builder.getBlock();
+    auto point = builder.getInsertionPoint();
+    mlir::Operation *previous =
+        point == block->begin() ? nullptr : &*std::prev(point);
+    for (auto &cleanup : llvm::reverse(cleanups))
+      cleanup();
+    if (previous)
+      builder.setInsertionPointAfter(previous);
+    else
+      builder.setInsertionPointToStart(block);
+  }
   return scalar;
 }
 
@@ -969,10 +986,10 @@ mlir::Value MaskedArrayExpr::generateShape(fir::FirOpBuilder &builder,
   return hlfir::genShape(loc, builder, hlfir::Entity{clonedEntity});
 }
 
-mlir::Value
-MaskedArrayExpr::generateElementalParts(fir::FirOpBuilder &builder,
-                                        mlir::ValueRange oneBasedIndices,
-                                        mlir::IRMapping &mapper) {
+mlir::Value MaskedArrayExpr::generateElementalParts(
+    fir::FirOpBuilder &builder, mlir::ValueRange oneBasedIndices,
+    mlir::IRMapping &mapper,
+    llvm::SmallVectorImpl<hlfir::CleanupFunction> &cleanups) {
   assert(noneElementalPartWasGenerated &&
          "non elemental part must have been generated");
   if (!isOuterMaskExpr) {
@@ -1005,7 +1022,7 @@ MaskedArrayExpr::generateElementalParts(fir::FirOpBuilder &builder,
     return elementalParts.contains(appliedElemental.getOperation());
   };
   return inlineElementalOp(loc, builder, elemental, oneBasedIndices, mapper,
-                           mustRecursivelyInline);
+                           mustRecursivelyInline, cleanups);
 }
 
 mlir::Operation *

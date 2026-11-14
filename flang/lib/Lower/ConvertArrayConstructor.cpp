@@ -234,32 +234,11 @@ public:
       elementResult =
           builder.createConvert(loc, exprType.getElementType(), elementResult);
 
-    // The clean-ups associated with the implied-do body operations
-    // must be initiated before the YieldElementOp, so we have to pop the scope
-    // right now.
-    stmtCtx.finalizeAndPop();
-
-    // This is a hacky way to get rid of the DestroyOp clean-up
-    // associated with the final ac-value result if it is hlfir.expr.
-    // Example:
-    //   ... = (/(REPEAT(REPEAT(CHAR(i),2),2),i=1,n)/)
-    // Each intrinsic call lowering will produce hlfir.expr result
-    // with the associated clean-up, but only the last of them
-    // is wrong. It is wrong because the value is used in hlfir.yield_element,
-    // so it cannot be destroyed.
-    mlir::Operation *destroyOp = nullptr;
-    for (mlir::Operation *useOp : elementResult.getUsers())
-      if (mlir::isa<hlfir::DestroyOp>(useOp)) {
-        if (destroyOp)
-          fir::emitFatalError(loc,
-                              "multiple DestroyOp's for ac-value expression");
-        destroyOp = useOp;
-      }
-
-    if (destroyOp)
-      destroyOp->erase();
-
-    hlfir::YieldElementOp::create(builder, loc, elementResult);
+    auto yield = hlfir::YieldElementOp::create(builder, loc, elementResult);
+    Fortran::lower::genCleanUpInRegionIfAny(loc, builder, yield.getCleanup(),
+                                            stmtCtx);
+    if (yield.getCleanup().empty())
+      stmtCtx.pop();
   }
 
   // Override the default, because the context scope must be popped in

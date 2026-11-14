@@ -22,8 +22,8 @@ end subroutine charconvert1
 ! CHECK:     %[[VAL_42:.*]]:2 = fir.unboxchar %[[VAL_39]] : (!fir.boxchar<4>) -> (!fir.ref<!fir.char<4,?>>, index)
 ! CHECK:     %[[C4_5:.*]] = arith.constant 4 : index
 ! CHECK:     %[[VAL_40:.*]] = arith.muli %[[VAL_38]], %[[C4_5]] : index
-! CHECK:     %[[VAL_41:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_40]] : index)
-! CHECK:     fir.char_convert %[[VAL_42]]#0 for %[[VAL_38:.*]] to %[[VAL_41]] : !fir.ref<!fir.char<4,?>>, index, !fir.ref<!fir.char<1,?>>
+! CHECK:     %[[VAL_41:.*]] = fir.allocmem !fir.char<1,?>(%[[VAL_40]] : index)
+! CHECK:     fir.char_convert %[[VAL_42]]#0 for %[[VAL_38:.*]] to %[[VAL_41]] : !fir.ref<!fir.char<4,?>>, index, !fir.heap<!fir.char<1,?>>
 
 subroutine charconvert2(x)
   integer,intent(in) :: x
@@ -46,8 +46,9 @@ end subroutine charconvert2
 ! CHECK:   %[[FALSE:.*]] = arith.constant false
 ! CHECK:   %[[VAL_9:.*]] = hlfir.as_expr %[[VAL_0]] move %[[FALSE]] : (!fir.ref<!fir.char<1>>, i1) -> !hlfir.expr<!fir.char<1>>
 ! CHECK:   %[[C1_0:.*]] = arith.constant 1 : index
-! CHECK:   %[[VAL_10:.*]] = fir.alloca !fir.char<4,?>(%[[C1_0]] : index)
-! CHECK:   fir.char_convert %[[VAL_0:.*]] for %[[C1_0]] to %[[VAL_10]] : !fir.ref<!fir.char<1>>, index, !fir.ref<!fir.char<4,?>>
+! CHECK:   %[[ASSOC:.*]]:3 = hlfir.associate %[[VAL_9]]
+! CHECK:   %[[VAL_10:.*]] = fir.allocmem !fir.char<4,?>(%[[C1_0]] : index)
+! CHECK:   fir.char_convert %[[ASSOC]]#0 for %[[C1_0]] to %[[VAL_10]] : !fir.ref<!fir.char<1>>, index, !fir.heap<!fir.char<4,?>>
 
 subroutine charconvert3(c, c4)
   character(kind=1, len=*) :: c
@@ -64,8 +65,10 @@ end subroutine
 ! CHECK:   %[[VAL_4:.*]] = arith.addi %[[VAL_0]]#1, %[[VAL_0]]#1 : index
 ! CHECK:   %[[VAL_5:.*]] = hlfir.concat %[[VAL_1]]#0, %[[VAL_1]]#0 len %[[VAL_4]] : (!fir.boxchar<1>, !fir.boxchar<1>, index) -> !hlfir.expr<!fir.char<1,?>>
 ! CHECK:   %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_5]] typeparams %[[VAL_4]] {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
-! CHECK:   %[[VAL_6:.*]] = fir.alloca !fir.char<4,?>(%[[VAL_4]] : index)
-! CHECK:   fir.char_convert %[[VAL_7]]#1 for %[[VAL_4:.*]] to %[[VAL_6]] : !fir.ref<!fir.char<1,?>>, index, !fir.ref<!fir.char<4,?>>
+! CHECK:   %[[VAL_6:.*]] = fir.allocmem !fir.char<4,?>(%[[VAL_4]] : index)
+! CHECK:   fir.char_convert %[[VAL_7]]#1 for %[[VAL_4:.*]] to %[[VAL_6]] : !fir.ref<!fir.char<1,?>>, index, !fir.heap<!fir.char<4,?>>
 ! CHECK:   hlfir.end_associate %[[VAL_7]]#1, %[[VAL_7]]#2 : !fir.ref<!fir.char<1,?>>, i1
-! CHECK:   %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]] typeparams %[[VAL_4]] uniq_name(".temp.kindconvert") : (!fir.ref<!fir.char<4,?>>, index) -> (!fir.boxchar<4>, !fir.ref<!fir.char<4,?>>)
-! CHECK:   hlfir.assign %[[VAL_8]]#0 to %[[VAL_3]]#0 : !fir.boxchar<4>, !fir.boxchar<4>
+! CHECK:   %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]] typeparams %[[VAL_4]] uniq_name(".temp.kindconvert") : (!fir.heap<!fir.char<4,?>>, index) -> (!fir.boxchar<4>, !fir.heap<!fir.char<4,?>>)
+! CHECK:   %[[CONVERTED:.*]] = hlfir.as_expr %[[VAL_8]]#0 move
+! CHECK:   hlfir.assign %[[CONVERTED]] to %[[VAL_3]]#0 : !hlfir.expr<!fir.char<4,?>>, !fir.boxchar<4>
+! CHECK:   hlfir.destroy %[[CONVERTED]]

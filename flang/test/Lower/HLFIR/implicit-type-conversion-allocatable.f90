@@ -57,10 +57,11 @@ end subroutine
 ! CHECK:         %[[VAL_9:.*]] = hlfir.elemental %[[VAL_8]] typeparams %[[VAL_4]] unordered : (!fir.shape<1>, index) -> !hlfir.expr<?x!fir.char<4,2>> {
 ! CHECK:         ^bb0(%[[VAL_10:.*]]: index):
 ! CHECK:           %[[VAL_11:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_10]])  typeparams %[[VAL_4]] : (!fir.box<!fir.array<?x!fir.char<1,2>>>, index, index) -> !fir.ref<!fir.char<1,2>>
-! CHECK:           %[[VAL_12:.*]] = fir.alloca !fir.char<4,?>(%[[VAL_4]] : index)
-! CHECK:           fir.char_convert %[[VAL_11]] for %[[VAL_4]] to %[[VAL_12]] : !fir.ref<!fir.char<1,2>>, index, !fir.ref<!fir.char<4,?>>
-! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12:[a-z0-9]*]] typeparams %[[VAL_4:[a-z0-9]*]] uniq_name(".temp.kindconvert") : (!fir.ref<!fir.char<4,?>>, index) -> (!fir.boxchar<4>, !fir.ref<!fir.char<4,?>>)
-! CHECK:           hlfir.yield_element %[[VAL_13]]#0 : !fir.boxchar<4>
+! CHECK:           %[[VAL_12:.*]] = fir.allocmem !fir.char<4,?>(%[[VAL_4]] : index)
+! CHECK:           fir.char_convert %[[VAL_11]] for %[[VAL_4]] to %[[VAL_12]] : !fir.ref<!fir.char<1,2>>, index, !fir.heap<!fir.char<4,?>>
+! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12:[a-z0-9]*]] typeparams %[[VAL_4:[a-z0-9]*]] uniq_name(".temp.kindconvert") : (!fir.heap<!fir.char<4,?>>, index) -> (!fir.boxchar<4>, !fir.heap<!fir.char<4,?>>)
+! CHECK:           %[[EXPR:.*]] = hlfir.as_expr %[[VAL_13]]#0 move
+! CHECK:           hlfir.yield_element %[[EXPR]] : !hlfir.expr<!fir.char<4,?>>
 ! CHECK:         }
 ! CHECK:         hlfir.assign %[[VAL_9]] to %[[VAL_3]]#0 realloc keep_lhs_len : !hlfir.expr<?x!fir.char<4,2>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<4,4>>>>>
 

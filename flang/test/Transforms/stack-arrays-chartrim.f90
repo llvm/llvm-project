@@ -3,8 +3,8 @@
 ! placement to the stack-arrays or allocation-placement pass. Run the lowering
 ! output through the passes in between to check that bufferization produces a
 ! fir.freemem the StackArrays analysis can match to the allocmem, so that the
-! constant-length temporaries end up on the stack, hoisted to the entry block,
-! while the dynamic-length ones stay on the heap. The driver runs check the
+! temporaries end up on the stack, the constant-length ones hoisted to the
+! entry block. The driver runs check the
 ! same thing through the real -O2 pipeline. The consumer is an external
 ! procedure so that the copy cannot be elided by inlining.
 
@@ -93,14 +93,13 @@ subroutine in_target(x)
   !$omp end target
 end subroutine
 
-! Above the small-array threshold the default policy keeps the temporary on
-! the heap; -fstack-arrays moves it to the stack.
+! Character temporaries are moved to the stack independently of the
+! small-array threshold of the default policy.
 ! ALL-LABEL: func.func @_QPbig(
 ! STACK:       fir.alloca !fir.char<1,2048>
 ! STACK-NOT:   fir.allocmem
-! PLACE-NOT:   fir.alloca !fir.char<1,2048>
-! PLACE:       fir.allocmem !fir.char<1,2048>
-! PLACE:       fir.freemem
+! PLACE:       fir.alloca !fir.char<1,2048>
+! PLACE-NOT:   fir.allocmem
 ! ALL-NOT:     _FortranATrim
 ! ALL:         return
 subroutine big(x)
@@ -109,10 +108,10 @@ subroutine big(x)
 end subroutine
 
 ! ALL-LABEL: func.func @_QPdynamic(
-! ALL-NOT:     fir.alloca !fir.char
-! ALL:         fir.allocmem !fir.char<1,?>
+! ALL:         fir.alloca !fir.char<1,?>
+! ALL-NOT:     fir.allocmem
 ! ALL:         fir.call @_QPsub(
-! ALL:         fir.freemem
+! ALL-NOT:     fir.freemem
 ! ALL-NOT:     _FortranATrim
 ! ALL:         return
 subroutine dynamic(x)

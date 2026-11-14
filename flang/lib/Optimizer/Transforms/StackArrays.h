@@ -28,6 +28,7 @@
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
@@ -36,15 +37,23 @@
 namespace fir {
 
 /// Return true if a fir.allocmem of \p type may be moved to the stack: arrays,
-/// and the constant-length scalar characters that inlined character intrinsics
-/// allocate for their results.
+/// and the scalar characters that character expressions allocate for their
+/// results. Like dynamic-size arrays, dynamic-length characters are only moved
+/// where their stack storage is reclaimed.
 inline bool isStackArraysCandidateType(mlir::Type type) {
-  if (mlir::isa<fir::SequenceType>(type))
-    return true;
-  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(type))
-    return charTy.hasConstantLen();
-  return false;
+  return mlir::isa<fir::SequenceType, fir::CharacterType>(type);
 }
+
+/// Stack scopes of a block in which the allocations that must stay inside a
+/// loop share one llvm.stacksave/llvm.stackrestore pair.
+struct BlockStackScopes {
+  /// Whether a stack scope covering the whole block can be added without
+  /// reclaiming stack storage that is still in use.
+  bool canSaveRestore = false;
+  /// The llvm.stacksave/llvm.stackrestore pairs already in the block.
+  llvm::SmallVector<std::pair<mlir::Operation *, mlir::Operation *>> pairs;
+};
+using BlockStackScopesMap = llvm::DenseMap<mlir::Block *, BlockStackScopes>;
 
 /// Stores where an alloca should be inserted. If the PointerUnion is an
 /// Operation the alloca should be inserted /after/ the operation. If it is a
@@ -78,8 +87,8 @@ public:
   mlir::Block *tryGetBlock() const { return tryGetPtr<mlir::Block>(); }
 
   /// Get whether the stack should be saved/restored. If yes, an llvm.stacksave
-  /// intrinsic should be added before the alloca, and an llvm.stackrestore
-  /// intrinsic should be added where the freemem is
+  /// intrinsic should be added at the start of the allocation block, and an
+  /// llvm.stackrestore intrinsic should be added before its terminator.
   bool shouldSaveRestoreStack() const { return saveRestoreStack; }
 
   operator bool() const { return tryGetOperation() || tryGetBlock(); }
@@ -135,7 +144,8 @@ public:
   /// be checked to see if it is inside a loop
   static InsertionPoint
   findAllocaInsertionPoint(fir::AllocMemOp &oldAlloc,
-                           const llvm::SmallVector<mlir::Operation *> &freeOps);
+                           const llvm::SmallVector<mlir::Operation *> &freeOps,
+                           BlockStackScopesMap &blockStackScopes);
 
 private:
   /// Handle to the DFA (already run)
@@ -143,19 +153,21 @@ private:
 
   const std::optional<mlir::DataLayout> &dl;
   const std::optional<fir::KindMapping> &kindMap;
+  mutable llvm::DenseSet<mlir::Block *> blocksWithStackSaveRestore;
 
   /// If we failed to find an insertion point not inside a loop, see if it would
   /// be safe to use an llvm.stacksave/llvm.stackrestore inside the loop
   static InsertionPoint findAllocaLoopInsertionPoint(
       fir::AllocMemOp &oldAlloc,
-      const llvm::SmallVector<mlir::Operation *> &freeOps);
+      const llvm::SmallVector<mlir::Operation *> &freeOps,
+      BlockStackScopesMap &blockStackScopes);
 
   /// Returns the alloca if it was successfully inserted, otherwise {}
   std::optional<fir::AllocaOp>
   insertAlloca(fir::AllocMemOp &oldAlloc,
                mlir::PatternRewriter &rewriter) const;
 
-  /// Inserts a stacksave before oldAlloc and a stackrestore after each freemem
+  /// Insert one stacksave/stackrestore pair for the entire allocation block.
   void insertStackSaveRestore(fir::AllocMemOp oldAlloc,
                               mlir::PatternRewriter &rewriter) const;
   /// Emit lifetime markers for newAlloc between oldAlloc and each freemem.
