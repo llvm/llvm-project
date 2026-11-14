@@ -455,9 +455,488 @@ body: |
     %6:fpr128 = FMINv2f64 %0, undef %7:fpr128, implicit $fpcr
 ...
 
-## Scalar and vector instructions should not be mixed
-
 ---
+name: fmaxnm_fmaxnm_h
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fmaxnm_fmaxnm_h
+    ; CHECK: SU(0): %0:fpr16 = FMAXNMHrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr16 = FMAXNMHrr
+    %0:fpr16 = FMAXNMHrr undef %1:fpr16, undef %2:fpr16, implicit $fpcr
+    %3:fpr16 = FADDHrr undef %4:fpr16, undef %5:fpr16, implicit $fpcr
+    %6:fpr16 = FMAXNMHrr %0, undef %7:fpr16, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_h
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fmaxnm_fminnm_h
+    ; CHECK: SU(0): %0:fpr16 = FMAXNMHrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr16 = FMINNMHrr
+    %0:fpr16 = FMAXNMHrr undef %1:fpr16, undef %2:fpr16, implicit $fpcr
+    %3:fpr16 = FADDHrr undef %4:fpr16, undef %5:fpr16, implicit $fpcr
+    %6:fpr16 = FMINNMHrr %0, undef %7:fpr16, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_h
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fminnm_fmaxnm_h
+    ; CHECK: SU(0): %0:fpr16 = FMINNMHrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr16 = FMAXNMHrr
+    %0:fpr16 = FMINNMHrr undef %1:fpr16, undef %2:fpr16, implicit $fpcr
+    %3:fpr16 = FADDHrr undef %4:fpr16, undef %5:fpr16, implicit $fpcr
+    %6:fpr16 = FMAXNMHrr %0, undef %7:fpr16, implicit $fpcr
+...
+---
+name: fminnm_fminnm_h
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fminnm_fminnm_h
+    ; CHECK: SU(0): %0:fpr16 = FMINNMHrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr16 = FMINNMHrr
+    %0:fpr16 = FMINNMHrr undef %1:fpr16, undef %2:fpr16, implicit $fpcr
+    %3:fpr16 = FADDHrr undef %4:fpr16, undef %5:fpr16, implicit $fpcr
+    %6:fpr16 = FMINNMHrr %0, undef %7:fpr16, implicit $fpcr
+...
+---
+name: fmaxnm_fmaxnm_s
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fmaxnm_fmaxnm_s
+    ; CHECK: SU(0): %0:fpr32 = FMAXNMSrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr32 = FMAXNMSrr
+    %0:fpr32 = FMAXNMSrr undef %1:fpr32, undef %2:fpr32, implicit $fpcr
+    %3:fpr32 = FADDSrr undef %4:fpr32, undef %5:fpr32, implicit $fpcr
+    %6:fpr32 = FMAXNMSrr %0, undef %7:fpr32, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_s
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fmaxnm_fminnm_s
+    ; CHECK: SU(0): %0:fpr32 = FMAXNMSrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr32 = FMINNMSrr
+    %0:fpr32 = FMAXNMSrr undef %1:fpr32, undef %2:fpr32, implicit $fpcr
+    %3:fpr32 = FADDSrr undef %4:fpr32, undef %5:fpr32, implicit $fpcr
+    %6:fpr32 = FMINNMSrr %0, undef %7:fpr32, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_s
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fminnm_fmaxnm_s
+    ; CHECK: SU(0): %0:fpr32 = FMINNMSrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr32 = FMAXNMSrr
+    %0:fpr32 = FMINNMSrr undef %1:fpr32, undef %2:fpr32, implicit $fpcr
+    %3:fpr32 = FADDSrr undef %4:fpr32, undef %5:fpr32, implicit $fpcr
+    %6:fpr32 = FMAXNMSrr %0, undef %7:fpr32, implicit $fpcr
+...
+---
+name: fminnm_fminnm_s
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fminnm_fminnm_s
+    ; CHECK: SU(0): %0:fpr32 = FMINNMSrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr32 = FMINNMSrr
+    %0:fpr32 = FMINNMSrr undef %1:fpr32, undef %2:fpr32, implicit $fpcr
+    %3:fpr32 = FADDSrr undef %4:fpr32, undef %5:fpr32, implicit $fpcr
+    %6:fpr32 = FMINNMSrr %0, undef %7:fpr32, implicit $fpcr
+...
+---
+name: fmaxnm_fmaxnm_d
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fmaxnm_fmaxnm_d
+    ; CHECK: SU(0): %0:fpr64 = FMAXNMDrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr64 = FMAXNMDrr
+    %0:fpr64 = FMAXNMDrr undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDDrr undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMAXNMDrr %0, undef %7:fpr64, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_d
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fmaxnm_fminnm_d
+    ; CHECK: SU(0): %0:fpr64 = FMAXNMDrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr64 = FMINNMDrr
+    %0:fpr64 = FMAXNMDrr undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDDrr undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMINNMDrr %0, undef %7:fpr64, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_d
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fminnm_fmaxnm_d
+    ; CHECK: SU(0): %0:fpr64 = FMINNMDrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr64 = FMAXNMDrr
+    %0:fpr64 = FMINNMDrr undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDDrr undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMAXNMDrr %0, undef %7:fpr64, implicit $fpcr
+...
+---
+name: fminnm_fminnm_d
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fminnm_fminnm_d
+    ; CHECK: SU(0): %0:fpr64 = FMINNMDrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr64 = FMINNMDrr
+    %0:fpr64 = FMINNMDrr undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDDrr undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMINNMDrr %0, undef %7:fpr64, implicit $fpcr
+...
+---
+name: fmaxnm_fmaxnm_v4f16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fmaxnm_fmaxnm_v4f16
+    ; CHECK: SU(0): %0:fpr64 = FMAXNMv4f16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr64 = FMAXNMv4f16
+    %0:fpr64 = FMAXNMv4f16 undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDv4f16 undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMAXNMv4f16 %0, undef %7:fpr64, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_v4f16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fmaxnm_fminnm_v4f16
+    ; CHECK: SU(0): %0:fpr64 = FMAXNMv4f16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr64 = FMINNMv4f16
+    %0:fpr64 = FMAXNMv4f16 undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDv4f16 undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMINNMv4f16 %0, undef %7:fpr64, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_v4f16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fminnm_fmaxnm_v4f16
+    ; CHECK: SU(0): %0:fpr64 = FMINNMv4f16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr64 = FMAXNMv4f16
+    %0:fpr64 = FMINNMv4f16 undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDv4f16 undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMAXNMv4f16 %0, undef %7:fpr64, implicit $fpcr
+...
+---
+name: fminnm_fminnm_v4f16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fminnm_fminnm_v4f16
+    ; CHECK: SU(0): %0:fpr64 = FMINNMv4f16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr64 = FMINNMv4f16
+    %0:fpr64 = FMINNMv4f16 undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDv4f16 undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMINNMv4f16 %0, undef %7:fpr64, implicit $fpcr
+...
+---
+name: fmaxnm_fmaxnm_v8f16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fmaxnm_fmaxnm_v8f16
+    ; CHECK: SU(0): %0:fpr128 = FMAXNMv8f16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr128 = FMAXNMv8f16
+    %0:fpr128 = FMAXNMv8f16 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv8f16 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMAXNMv8f16 %0, undef %7:fpr128, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_v8f16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fmaxnm_fminnm_v8f16
+    ; CHECK: SU(0): %0:fpr128 = FMAXNMv8f16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr128 = FMINNMv8f16
+    %0:fpr128 = FMAXNMv8f16 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv8f16 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMINNMv8f16 %0, undef %7:fpr128, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_v8f16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fminnm_fmaxnm_v8f16
+    ; CHECK: SU(0): %0:fpr128 = FMINNMv8f16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr128 = FMAXNMv8f16
+    %0:fpr128 = FMINNMv8f16 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv8f16 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMAXNMv8f16 %0, undef %7:fpr128, implicit $fpcr
+...
+---
+name: fminnm_fminnm_v8f16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fminnm_fminnm_v8f16
+    ; CHECK: SU(0): %0:fpr128 = FMINNMv8f16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr128 = FMINNMv8f16
+    %0:fpr128 = FMINNMv8f16 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv8f16 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMINNMv8f16 %0, undef %7:fpr128, implicit $fpcr
+...
+---
+name: fmaxnm_fmaxnm_v2f32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fmaxnm_fmaxnm_v2f32
+    ; CHECK: SU(0): %0:fpr64 = FMAXNMv2f32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr64 = FMAXNMv2f32
+    %0:fpr64 = FMAXNMv2f32 undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDv2f32 undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMAXNMv2f32 %0, undef %7:fpr64, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_v2f32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fmaxnm_fminnm_v2f32
+    ; CHECK: SU(0): %0:fpr64 = FMAXNMv2f32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr64 = FMINNMv2f32
+    %0:fpr64 = FMAXNMv2f32 undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDv2f32 undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMINNMv2f32 %0, undef %7:fpr64, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_v2f32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fminnm_fmaxnm_v2f32
+    ; CHECK: SU(0): %0:fpr64 = FMINNMv2f32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr64 = FMAXNMv2f32
+    %0:fpr64 = FMINNMv2f32 undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDv2f32 undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMAXNMv2f32 %0, undef %7:fpr64, implicit $fpcr
+...
+---
+name: fminnm_fminnm_v2f32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fminnm_fminnm_v2f32
+    ; CHECK: SU(0): %0:fpr64 = FMINNMv2f32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr64 = FMINNMv2f32
+    %0:fpr64 = FMINNMv2f32 undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDv2f32 undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMINNMv2f32 %0, undef %7:fpr64, implicit $fpcr
+...
+---
+name: fmaxnm_fmaxnm_v4f32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fmaxnm_fmaxnm_v4f32
+    ; CHECK: SU(0): %0:fpr128 = FMAXNMv4f32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr128 = FMAXNMv4f32
+    %0:fpr128 = FMAXNMv4f32 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv4f32 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMAXNMv4f32 %0, undef %7:fpr128, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_v4f32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fmaxnm_fminnm_v4f32
+    ; CHECK: SU(0): %0:fpr128 = FMAXNMv4f32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr128 = FMINNMv4f32
+    %0:fpr128 = FMAXNMv4f32 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv4f32 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMINNMv4f32 %0, undef %7:fpr128, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_v4f32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fminnm_fmaxnm_v4f32
+    ; CHECK: SU(0): %0:fpr128 = FMINNMv4f32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr128 = FMAXNMv4f32
+    %0:fpr128 = FMINNMv4f32 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv4f32 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMAXNMv4f32 %0, undef %7:fpr128, implicit $fpcr
+...
+---
+name: fminnm_fminnm_v4f32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fminnm_fminnm_v4f32
+    ; CHECK: SU(0): %0:fpr128 = FMINNMv4f32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr128 = FMINNMv4f32
+    %0:fpr128 = FMINNMv4f32 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv4f32 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMINNMv4f32 %0, undef %7:fpr128, implicit $fpcr
+...
+---
+name: fmaxnm_fmaxnm_v2f64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fmaxnm_fmaxnm_v2f64
+    ; CHECK: SU(0): %0:fpr128 = FMAXNMv2f64
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr128 = FMAXNMv2f64
+    %0:fpr128 = FMAXNMv2f64 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv2f64 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMAXNMv2f64 %0, undef %7:fpr128, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_v2f64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fmaxnm_fminnm_v2f64
+    ; CHECK: SU(0): %0:fpr128 = FMAXNMv2f64
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr128 = FMINNMv2f64
+    %0:fpr128 = FMAXNMv2f64 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv2f64 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMINNMv2f64 %0, undef %7:fpr128, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_v2f64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fminnm_fmaxnm_v2f64
+    ; CHECK: SU(0): %0:fpr128 = FMINNMv2f64
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr128 = FMAXNMv2f64
+    %0:fpr128 = FMINNMv2f64 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv2f64 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMAXNMv2f64 %0, undef %7:fpr128, implicit $fpcr
+...
+---
+name: fminnm_fminnm_v2f64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fminnm_fminnm_v2f64
+    ; CHECK: SU(0): %0:fpr128 = FMINNMv2f64
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr128 = FMINNMv2f64
+    %0:fpr128 = FMINNMv2f64 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv2f64 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMINNMv2f64 %0, undef %7:fpr128, implicit $fpcr
+...
+---
+## Scalar and vector instructions should not be mixed
 name: fmax_fmin_mixed_scalar_vector
 body: |
   bb.0:
@@ -470,4 +949,20 @@ body: |
     %0:fpr128 = FMAXv4f32 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
     %3:fpr128 = FADDv4f32 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
     %6:fpr32 = FMINSrr %0.ssub, undef %7:fpr32, implicit $fpcr
+...
+---
+## FMIN/FMAX and FMINNM/FMAXNM should not be mixed
+name: fmax_fminnm_mixed
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: fmax_fminnm_mixed
+    ; CHECK: SU(0): %0:fpr32 = FMAXSrr
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %6:fpr32 = FMINNMSrr
+    %0:fpr32 = FMAXSrr undef %1:fpr32, undef %2:fpr32, implicit $fpcr
+    %3:fpr32 = FADDSrr undef %4:fpr32, undef %5:fpr32, implicit $fpcr
+    %6:fpr32 = FMINNMSrr %0, undef %7:fpr32, implicit $fpcr
 ...

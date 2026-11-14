@@ -967,9 +967,1032 @@ body: |
     $q7 = FMINv2f64 $q5, $q2, implicit $fpcr
 ...
 
-## Scalar and vector instructions should not be mixed
-
 ---
+name: fmaxnm_fmaxnm_h_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $h0, $h1, $h2, $h3, $h4
+    ; CHECK-LABEL: fmaxnm_fmaxnm_h_waw
+    ; CHECK: SU(0): $h5 = FMAXNMHrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $h5 = FMAXNMHrr
+    $h5 = FMAXNMHrr $h0, $h1, implicit $fpcr
+    $h6 = FADDHrr $h3, $h4, implicit $fpcr
+    $h5 = FMAXNMHrr $h5, $h2, implicit $fpcr
+...
+---
+name: fmaxnm_fmaxnm_h_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $h0, $h1, $h2, $h3, $h4
+    ; CHECK-LABEL: fmaxnm_fmaxnm_h_nowaw
+    ; CHECK: SU(0): $h5 = FMAXNMHrr
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $h7 = FMAXNMHrr
+    $h5 = FMAXNMHrr $h0, $h1, implicit $fpcr
+    $h6 = FADDHrr $h3, $h4, implicit $fpcr
+    $h7 = FMAXNMHrr $h5, $h2, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_h_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $h0, $h1, $h2, $h3, $h4
+    ; CHECK-LABEL: fmaxnm_fminnm_h_waw
+    ; CHECK: SU(0): $h5 = FMAXNMHrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $h5 = FMINNMHrr
+    $h5 = FMAXNMHrr $h0, $h1, implicit $fpcr
+    $h6 = FADDHrr $h3, $h4, implicit $fpcr
+    $h5 = FMINNMHrr $h5, $h2, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_h_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $h0, $h1, $h2, $h3, $h4
+    ; CHECK-LABEL: fmaxnm_fminnm_h_nowaw
+    ; CHECK: SU(0): $h5 = FMAXNMHrr
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $h7 = FMINNMHrr
+    $h5 = FMAXNMHrr $h0, $h1, implicit $fpcr
+    $h6 = FADDHrr $h3, $h4, implicit $fpcr
+    $h7 = FMINNMHrr $h5, $h2, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_h_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $h0, $h1, $h2, $h3, $h4
+    ; CHECK-LABEL: fminnm_fmaxnm_h_waw
+    ; CHECK: SU(0): $h5 = FMINNMHrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $h5 = FMAXNMHrr
+    $h5 = FMINNMHrr $h0, $h1, implicit $fpcr
+    $h6 = FADDHrr $h3, $h4, implicit $fpcr
+    $h5 = FMAXNMHrr $h5, $h2, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_h_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $h0, $h1, $h2, $h3, $h4
+    ; CHECK-LABEL: fminnm_fmaxnm_h_nowaw
+    ; CHECK: SU(0): $h5 = FMINNMHrr
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $h7 = FMAXNMHrr
+    $h5 = FMINNMHrr $h0, $h1, implicit $fpcr
+    $h6 = FADDHrr $h3, $h4, implicit $fpcr
+    $h7 = FMAXNMHrr $h5, $h2, implicit $fpcr
+...
+---
+name: fminnm_fminnm_h_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $h0, $h1, $h2, $h3, $h4
+    ; CHECK-LABEL: fminnm_fminnm_h_waw
+    ; CHECK: SU(0): $h5 = FMINNMHrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $h5 = FMINNMHrr
+    $h5 = FMINNMHrr $h0, $h1, implicit $fpcr
+    $h6 = FADDHrr $h3, $h4, implicit $fpcr
+    $h5 = FMINNMHrr $h5, $h2, implicit $fpcr
+...
+---
+name: fminnm_fminnm_h_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $h0, $h1, $h2, $h3, $h4
+    ; CHECK-LABEL: fminnm_fminnm_h_nowaw
+    ; CHECK: SU(0): $h5 = FMINNMHrr
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $h7 = FMINNMHrr
+    $h5 = FMINNMHrr $h0, $h1, implicit $fpcr
+    $h6 = FADDHrr $h3, $h4, implicit $fpcr
+    $h7 = FMINNMHrr $h5, $h2, implicit $fpcr
+...
+---
+name: fmaxnm_fmaxnm_s_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $s0, $s1, $s2, $s3, $s4
+    ; CHECK-LABEL: fmaxnm_fmaxnm_s_waw
+    ; CHECK: SU(0): $s5 = FMAXNMSrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $s5 = FMAXNMSrr
+    $s5 = FMAXNMSrr $s0, $s1, implicit $fpcr
+    $s6 = FADDSrr $s3, $s4, implicit $fpcr
+    $s5 = FMAXNMSrr $s5, $s2, implicit $fpcr
+...
+---
+name: fmaxnm_fmaxnm_s_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $s0, $s1, $s2, $s3, $s4
+    ; CHECK-LABEL: fmaxnm_fmaxnm_s_nowaw
+    ; CHECK: SU(0): $s5 = FMAXNMSrr
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $s7 = FMAXNMSrr
+    $s5 = FMAXNMSrr $s0, $s1, implicit $fpcr
+    $s6 = FADDSrr $s3, $s4, implicit $fpcr
+    $s7 = FMAXNMSrr $s5, $s2, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_s_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $s0, $s1, $s2, $s3, $s4
+    ; CHECK-LABEL: fmaxnm_fminnm_s_waw
+    ; CHECK: SU(0): $s5 = FMAXNMSrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $s5 = FMINNMSrr
+    $s5 = FMAXNMSrr $s0, $s1, implicit $fpcr
+    $s6 = FADDSrr $s3, $s4, implicit $fpcr
+    $s5 = FMINNMSrr $s5, $s2, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_s_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $s0, $s1, $s2, $s3, $s4
+    ; CHECK-LABEL: fmaxnm_fminnm_s_nowaw
+    ; CHECK: SU(0): $s5 = FMAXNMSrr
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $s7 = FMINNMSrr
+    $s5 = FMAXNMSrr $s0, $s1, implicit $fpcr
+    $s6 = FADDSrr $s3, $s4, implicit $fpcr
+    $s7 = FMINNMSrr $s5, $s2, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_s_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $s0, $s1, $s2, $s3, $s4
+    ; CHECK-LABEL: fminnm_fmaxnm_s_waw
+    ; CHECK: SU(0): $s5 = FMINNMSrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $s5 = FMAXNMSrr
+    $s5 = FMINNMSrr $s0, $s1, implicit $fpcr
+    $s6 = FADDSrr $s3, $s4, implicit $fpcr
+    $s5 = FMAXNMSrr $s5, $s2, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_s_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $s0, $s1, $s2, $s3, $s4
+    ; CHECK-LABEL: fminnm_fmaxnm_s_nowaw
+    ; CHECK: SU(0): $s5 = FMINNMSrr
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $s7 = FMAXNMSrr
+    $s5 = FMINNMSrr $s0, $s1, implicit $fpcr
+    $s6 = FADDSrr $s3, $s4, implicit $fpcr
+    $s7 = FMAXNMSrr $s5, $s2, implicit $fpcr
+...
+---
+name: fminnm_fminnm_s_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $s0, $s1, $s2, $s3, $s4
+    ; CHECK-LABEL: fminnm_fminnm_s_waw
+    ; CHECK: SU(0): $s5 = FMINNMSrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $s5 = FMINNMSrr
+    $s5 = FMINNMSrr $s0, $s1, implicit $fpcr
+    $s6 = FADDSrr $s3, $s4, implicit $fpcr
+    $s5 = FMINNMSrr $s5, $s2, implicit $fpcr
+...
+---
+name: fminnm_fminnm_s_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $s0, $s1, $s2, $s3, $s4
+    ; CHECK-LABEL: fminnm_fminnm_s_nowaw
+    ; CHECK: SU(0): $s5 = FMINNMSrr
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $s7 = FMINNMSrr
+    $s5 = FMINNMSrr $s0, $s1, implicit $fpcr
+    $s6 = FADDSrr $s3, $s4, implicit $fpcr
+    $s7 = FMINNMSrr $s5, $s2, implicit $fpcr
+...
+---
+name: fmaxnm_fmaxnm_d_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmaxnm_fmaxnm_d_waw
+    ; CHECK: SU(0): $d5 = FMAXNMDrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d5 = FMAXNMDrr
+    $d5 = FMAXNMDrr $d0, $d1, implicit $fpcr
+    $d6 = FADDDrr $d3, $d4, implicit $fpcr
+    $d5 = FMAXNMDrr $d5, $d2, implicit $fpcr
+...
+---
+name: fmaxnm_fmaxnm_d_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmaxnm_fmaxnm_d_nowaw
+    ; CHECK: SU(0): $d5 = FMAXNMDrr
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d7 = FMAXNMDrr
+    $d5 = FMAXNMDrr $d0, $d1, implicit $fpcr
+    $d6 = FADDDrr $d3, $d4, implicit $fpcr
+    $d7 = FMAXNMDrr $d5, $d2, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_d_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmaxnm_fminnm_d_waw
+    ; CHECK: SU(0): $d5 = FMAXNMDrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d5 = FMINNMDrr
+    $d5 = FMAXNMDrr $d0, $d1, implicit $fpcr
+    $d6 = FADDDrr $d3, $d4, implicit $fpcr
+    $d5 = FMINNMDrr $d5, $d2, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_d_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmaxnm_fminnm_d_nowaw
+    ; CHECK: SU(0): $d5 = FMAXNMDrr
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d7 = FMINNMDrr
+    $d5 = FMAXNMDrr $d0, $d1, implicit $fpcr
+    $d6 = FADDDrr $d3, $d4, implicit $fpcr
+    $d7 = FMINNMDrr $d5, $d2, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_d_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fminnm_fmaxnm_d_waw
+    ; CHECK: SU(0): $d5 = FMINNMDrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d5 = FMAXNMDrr
+    $d5 = FMINNMDrr $d0, $d1, implicit $fpcr
+    $d6 = FADDDrr $d3, $d4, implicit $fpcr
+    $d5 = FMAXNMDrr $d5, $d2, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_d_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fminnm_fmaxnm_d_nowaw
+    ; CHECK: SU(0): $d5 = FMINNMDrr
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d7 = FMAXNMDrr
+    $d5 = FMINNMDrr $d0, $d1, implicit $fpcr
+    $d6 = FADDDrr $d3, $d4, implicit $fpcr
+    $d7 = FMAXNMDrr $d5, $d2, implicit $fpcr
+...
+---
+name: fminnm_fminnm_d_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fminnm_fminnm_d_waw
+    ; CHECK: SU(0): $d5 = FMINNMDrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d5 = FMINNMDrr
+    $d5 = FMINNMDrr $d0, $d1, implicit $fpcr
+    $d6 = FADDDrr $d3, $d4, implicit $fpcr
+    $d5 = FMINNMDrr $d5, $d2, implicit $fpcr
+...
+---
+name: fminnm_fminnm_d_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fminnm_fminnm_d_nowaw
+    ; CHECK: SU(0): $d5 = FMINNMDrr
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d7 = FMINNMDrr
+    $d5 = FMINNMDrr $d0, $d1, implicit $fpcr
+    $d6 = FADDDrr $d3, $d4, implicit $fpcr
+    $d7 = FMINNMDrr $d5, $d2, implicit $fpcr
+...
+---
+name: fmaxnm_fmaxnm_v4f16_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmaxnm_fmaxnm_v4f16_waw
+    ; CHECK: SU(0): $d5 = FMAXNMv4f16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d5 = FMAXNMv4f16
+    $d5 = FMAXNMv4f16 $d0, $d1, implicit $fpcr
+    $d6 = FADDv4f16 $d3, $d4, implicit $fpcr
+    $d5 = FMAXNMv4f16 $d5, $d2, implicit $fpcr
+...
+---
+name: fmaxnm_fmaxnm_v4f16_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmaxnm_fmaxnm_v4f16_nowaw
+    ; CHECK: SU(0): $d5 = FMAXNMv4f16
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d7 = FMAXNMv4f16
+    $d5 = FMAXNMv4f16 $d0, $d1, implicit $fpcr
+    $d6 = FADDv4f16 $d3, $d4, implicit $fpcr
+    $d7 = FMAXNMv4f16 $d5, $d2, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_v4f16_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmaxnm_fminnm_v4f16_waw
+    ; CHECK: SU(0): $d5 = FMAXNMv4f16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d5 = FMINNMv4f16
+    $d5 = FMAXNMv4f16 $d0, $d1, implicit $fpcr
+    $d6 = FADDv4f16 $d3, $d4, implicit $fpcr
+    $d5 = FMINNMv4f16 $d5, $d2, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_v4f16_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmaxnm_fminnm_v4f16_nowaw
+    ; CHECK: SU(0): $d5 = FMAXNMv4f16
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d7 = FMINNMv4f16
+    $d5 = FMAXNMv4f16 $d0, $d1, implicit $fpcr
+    $d6 = FADDv4f16 $d3, $d4, implicit $fpcr
+    $d7 = FMINNMv4f16 $d5, $d2, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_v4f16_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fminnm_fmaxnm_v4f16_waw
+    ; CHECK: SU(0): $d5 = FMINNMv4f16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d5 = FMAXNMv4f16
+    $d5 = FMINNMv4f16 $d0, $d1, implicit $fpcr
+    $d6 = FADDv4f16 $d3, $d4, implicit $fpcr
+    $d5 = FMAXNMv4f16 $d5, $d2, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_v4f16_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fminnm_fmaxnm_v4f16_nowaw
+    ; CHECK: SU(0): $d5 = FMINNMv4f16
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d7 = FMAXNMv4f16
+    $d5 = FMINNMv4f16 $d0, $d1, implicit $fpcr
+    $d6 = FADDv4f16 $d3, $d4, implicit $fpcr
+    $d7 = FMAXNMv4f16 $d5, $d2, implicit $fpcr
+...
+---
+name: fminnm_fminnm_v4f16_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fminnm_fminnm_v4f16_waw
+    ; CHECK: SU(0): $d5 = FMINNMv4f16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d5 = FMINNMv4f16
+    $d5 = FMINNMv4f16 $d0, $d1, implicit $fpcr
+    $d6 = FADDv4f16 $d3, $d4, implicit $fpcr
+    $d5 = FMINNMv4f16 $d5, $d2, implicit $fpcr
+...
+---
+name: fminnm_fminnm_v4f16_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fminnm_fminnm_v4f16_nowaw
+    ; CHECK: SU(0): $d5 = FMINNMv4f16
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d7 = FMINNMv4f16
+    $d5 = FMINNMv4f16 $d0, $d1, implicit $fpcr
+    $d6 = FADDv4f16 $d3, $d4, implicit $fpcr
+    $d7 = FMINNMv4f16 $d5, $d2, implicit $fpcr
+...
+---
+name: fmaxnm_fmaxnm_v8f16_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmaxnm_fmaxnm_v8f16_waw
+    ; CHECK: SU(0): $q5 = FMAXNMv8f16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q5 = FMAXNMv8f16
+    $q5 = FMAXNMv8f16 $q0, $q1, implicit $fpcr
+    $q6 = FADDv8f16 $q3, $q4, implicit $fpcr
+    $q5 = FMAXNMv8f16 $q5, $q2, implicit $fpcr
+...
+---
+name: fmaxnm_fmaxnm_v8f16_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmaxnm_fmaxnm_v8f16_nowaw
+    ; CHECK: SU(0): $q5 = FMAXNMv8f16
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q7 = FMAXNMv8f16
+    $q5 = FMAXNMv8f16 $q0, $q1, implicit $fpcr
+    $q6 = FADDv8f16 $q3, $q4, implicit $fpcr
+    $q7 = FMAXNMv8f16 $q5, $q2, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_v8f16_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmaxnm_fminnm_v8f16_waw
+    ; CHECK: SU(0): $q5 = FMAXNMv8f16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q5 = FMINNMv8f16
+    $q5 = FMAXNMv8f16 $q0, $q1, implicit $fpcr
+    $q6 = FADDv8f16 $q3, $q4, implicit $fpcr
+    $q5 = FMINNMv8f16 $q5, $q2, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_v8f16_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmaxnm_fminnm_v8f16_nowaw
+    ; CHECK: SU(0): $q5 = FMAXNMv8f16
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q7 = FMINNMv8f16
+    $q5 = FMAXNMv8f16 $q0, $q1, implicit $fpcr
+    $q6 = FADDv8f16 $q3, $q4, implicit $fpcr
+    $q7 = FMINNMv8f16 $q5, $q2, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_v8f16_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fminnm_fmaxnm_v8f16_waw
+    ; CHECK: SU(0): $q5 = FMINNMv8f16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q5 = FMAXNMv8f16
+    $q5 = FMINNMv8f16 $q0, $q1, implicit $fpcr
+    $q6 = FADDv8f16 $q3, $q4, implicit $fpcr
+    $q5 = FMAXNMv8f16 $q5, $q2, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_v8f16_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fminnm_fmaxnm_v8f16_nowaw
+    ; CHECK: SU(0): $q5 = FMINNMv8f16
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q7 = FMAXNMv8f16
+    $q5 = FMINNMv8f16 $q0, $q1, implicit $fpcr
+    $q6 = FADDv8f16 $q3, $q4, implicit $fpcr
+    $q7 = FMAXNMv8f16 $q5, $q2, implicit $fpcr
+...
+---
+name: fminnm_fminnm_v8f16_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fminnm_fminnm_v8f16_waw
+    ; CHECK: SU(0): $q5 = FMINNMv8f16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q5 = FMINNMv8f16
+    $q5 = FMINNMv8f16 $q0, $q1, implicit $fpcr
+    $q6 = FADDv8f16 $q3, $q4, implicit $fpcr
+    $q5 = FMINNMv8f16 $q5, $q2, implicit $fpcr
+...
+---
+name: fminnm_fminnm_v8f16_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fminnm_fminnm_v8f16_nowaw
+    ; CHECK: SU(0): $q5 = FMINNMv8f16
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q7 = FMINNMv8f16
+    $q5 = FMINNMv8f16 $q0, $q1, implicit $fpcr
+    $q6 = FADDv8f16 $q3, $q4, implicit $fpcr
+    $q7 = FMINNMv8f16 $q5, $q2, implicit $fpcr
+...
+---
+name: fmaxnm_fmaxnm_v2f32_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmaxnm_fmaxnm_v2f32_waw
+    ; CHECK: SU(0): $d5 = FMAXNMv2f32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d5 = FMAXNMv2f32
+    $d5 = FMAXNMv2f32 $d0, $d1, implicit $fpcr
+    $d6 = FADDv2f32 $d3, $d4, implicit $fpcr
+    $d5 = FMAXNMv2f32 $d5, $d2, implicit $fpcr
+...
+---
+name: fmaxnm_fmaxnm_v2f32_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmaxnm_fmaxnm_v2f32_nowaw
+    ; CHECK: SU(0): $d5 = FMAXNMv2f32
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d7 = FMAXNMv2f32
+    $d5 = FMAXNMv2f32 $d0, $d1, implicit $fpcr
+    $d6 = FADDv2f32 $d3, $d4, implicit $fpcr
+    $d7 = FMAXNMv2f32 $d5, $d2, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_v2f32_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmaxnm_fminnm_v2f32_waw
+    ; CHECK: SU(0): $d5 = FMAXNMv2f32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d5 = FMINNMv2f32
+    $d5 = FMAXNMv2f32 $d0, $d1, implicit $fpcr
+    $d6 = FADDv2f32 $d3, $d4, implicit $fpcr
+    $d5 = FMINNMv2f32 $d5, $d2, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_v2f32_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmaxnm_fminnm_v2f32_nowaw
+    ; CHECK: SU(0): $d5 = FMAXNMv2f32
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d7 = FMINNMv2f32
+    $d5 = FMAXNMv2f32 $d0, $d1, implicit $fpcr
+    $d6 = FADDv2f32 $d3, $d4, implicit $fpcr
+    $d7 = FMINNMv2f32 $d5, $d2, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_v2f32_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fminnm_fmaxnm_v2f32_waw
+    ; CHECK: SU(0): $d5 = FMINNMv2f32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d5 = FMAXNMv2f32
+    $d5 = FMINNMv2f32 $d0, $d1, implicit $fpcr
+    $d6 = FADDv2f32 $d3, $d4, implicit $fpcr
+    $d5 = FMAXNMv2f32 $d5, $d2, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_v2f32_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fminnm_fmaxnm_v2f32_nowaw
+    ; CHECK: SU(0): $d5 = FMINNMv2f32
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d7 = FMAXNMv2f32
+    $d5 = FMINNMv2f32 $d0, $d1, implicit $fpcr
+    $d6 = FADDv2f32 $d3, $d4, implicit $fpcr
+    $d7 = FMAXNMv2f32 $d5, $d2, implicit $fpcr
+...
+---
+name: fminnm_fminnm_v2f32_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fminnm_fminnm_v2f32_waw
+    ; CHECK: SU(0): $d5 = FMINNMv2f32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d5 = FMINNMv2f32
+    $d5 = FMINNMv2f32 $d0, $d1, implicit $fpcr
+    $d6 = FADDv2f32 $d3, $d4, implicit $fpcr
+    $d5 = FMINNMv2f32 $d5, $d2, implicit $fpcr
+...
+---
+name: fminnm_fminnm_v2f32_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fminnm_fminnm_v2f32_nowaw
+    ; CHECK: SU(0): $d5 = FMINNMv2f32
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d7 = FMINNMv2f32
+    $d5 = FMINNMv2f32 $d0, $d1, implicit $fpcr
+    $d6 = FADDv2f32 $d3, $d4, implicit $fpcr
+    $d7 = FMINNMv2f32 $d5, $d2, implicit $fpcr
+...
+---
+name: fmaxnm_fmaxnm_v4f32_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmaxnm_fmaxnm_v4f32_waw
+    ; CHECK: SU(0): $q5 = FMAXNMv4f32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q5 = FMAXNMv4f32
+    $q5 = FMAXNMv4f32 $q0, $q1, implicit $fpcr
+    $q6 = FADDv4f32 $q3, $q4, implicit $fpcr
+    $q5 = FMAXNMv4f32 $q5, $q2, implicit $fpcr
+...
+---
+name: fmaxnm_fmaxnm_v4f32_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmaxnm_fmaxnm_v4f32_nowaw
+    ; CHECK: SU(0): $q5 = FMAXNMv4f32
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q7 = FMAXNMv4f32
+    $q5 = FMAXNMv4f32 $q0, $q1, implicit $fpcr
+    $q6 = FADDv4f32 $q3, $q4, implicit $fpcr
+    $q7 = FMAXNMv4f32 $q5, $q2, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_v4f32_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmaxnm_fminnm_v4f32_waw
+    ; CHECK: SU(0): $q5 = FMAXNMv4f32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q5 = FMINNMv4f32
+    $q5 = FMAXNMv4f32 $q0, $q1, implicit $fpcr
+    $q6 = FADDv4f32 $q3, $q4, implicit $fpcr
+    $q5 = FMINNMv4f32 $q5, $q2, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_v4f32_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmaxnm_fminnm_v4f32_nowaw
+    ; CHECK: SU(0): $q5 = FMAXNMv4f32
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q7 = FMINNMv4f32
+    $q5 = FMAXNMv4f32 $q0, $q1, implicit $fpcr
+    $q6 = FADDv4f32 $q3, $q4, implicit $fpcr
+    $q7 = FMINNMv4f32 $q5, $q2, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_v4f32_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fminnm_fmaxnm_v4f32_waw
+    ; CHECK: SU(0): $q5 = FMINNMv4f32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q5 = FMAXNMv4f32
+    $q5 = FMINNMv4f32 $q0, $q1, implicit $fpcr
+    $q6 = FADDv4f32 $q3, $q4, implicit $fpcr
+    $q5 = FMAXNMv4f32 $q5, $q2, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_v4f32_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fminnm_fmaxnm_v4f32_nowaw
+    ; CHECK: SU(0): $q5 = FMINNMv4f32
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q7 = FMAXNMv4f32
+    $q5 = FMINNMv4f32 $q0, $q1, implicit $fpcr
+    $q6 = FADDv4f32 $q3, $q4, implicit $fpcr
+    $q7 = FMAXNMv4f32 $q5, $q2, implicit $fpcr
+...
+---
+name: fminnm_fminnm_v4f32_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fminnm_fminnm_v4f32_waw
+    ; CHECK: SU(0): $q5 = FMINNMv4f32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q5 = FMINNMv4f32
+    $q5 = FMINNMv4f32 $q0, $q1, implicit $fpcr
+    $q6 = FADDv4f32 $q3, $q4, implicit $fpcr
+    $q5 = FMINNMv4f32 $q5, $q2, implicit $fpcr
+...
+---
+name: fminnm_fminnm_v4f32_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fminnm_fminnm_v4f32_nowaw
+    ; CHECK: SU(0): $q5 = FMINNMv4f32
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q7 = FMINNMv4f32
+    $q5 = FMINNMv4f32 $q0, $q1, implicit $fpcr
+    $q6 = FADDv4f32 $q3, $q4, implicit $fpcr
+    $q7 = FMINNMv4f32 $q5, $q2, implicit $fpcr
+...
+---
+name: fmaxnm_fmaxnm_v2f64_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmaxnm_fmaxnm_v2f64_waw
+    ; CHECK: SU(0): $q5 = FMAXNMv2f64
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q5 = FMAXNMv2f64
+    $q5 = FMAXNMv2f64 $q0, $q1, implicit $fpcr
+    $q6 = FADDv2f64 $q3, $q4, implicit $fpcr
+    $q5 = FMAXNMv2f64 $q5, $q2, implicit $fpcr
+...
+---
+name: fmaxnm_fmaxnm_v2f64_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmaxnm_fmaxnm_v2f64_nowaw
+    ; CHECK: SU(0): $q5 = FMAXNMv2f64
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q7 = FMAXNMv2f64
+    $q5 = FMAXNMv2f64 $q0, $q1, implicit $fpcr
+    $q6 = FADDv2f64 $q3, $q4, implicit $fpcr
+    $q7 = FMAXNMv2f64 $q5, $q2, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_v2f64_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmaxnm_fminnm_v2f64_waw
+    ; CHECK: SU(0): $q5 = FMAXNMv2f64
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q5 = FMINNMv2f64
+    $q5 = FMAXNMv2f64 $q0, $q1, implicit $fpcr
+    $q6 = FADDv2f64 $q3, $q4, implicit $fpcr
+    $q5 = FMINNMv2f64 $q5, $q2, implicit $fpcr
+...
+---
+name: fmaxnm_fminnm_v2f64_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmaxnm_fminnm_v2f64_nowaw
+    ; CHECK: SU(0): $q5 = FMAXNMv2f64
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q7 = FMINNMv2f64
+    $q5 = FMAXNMv2f64 $q0, $q1, implicit $fpcr
+    $q6 = FADDv2f64 $q3, $q4, implicit $fpcr
+    $q7 = FMINNMv2f64 $q5, $q2, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_v2f64_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fminnm_fmaxnm_v2f64_waw
+    ; CHECK: SU(0): $q5 = FMINNMv2f64
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q5 = FMAXNMv2f64
+    $q5 = FMINNMv2f64 $q0, $q1, implicit $fpcr
+    $q6 = FADDv2f64 $q3, $q4, implicit $fpcr
+    $q5 = FMAXNMv2f64 $q5, $q2, implicit $fpcr
+...
+---
+name: fminnm_fmaxnm_v2f64_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fminnm_fmaxnm_v2f64_nowaw
+    ; CHECK: SU(0): $q5 = FMINNMv2f64
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q7 = FMAXNMv2f64
+    $q5 = FMINNMv2f64 $q0, $q1, implicit $fpcr
+    $q6 = FADDv2f64 $q3, $q4, implicit $fpcr
+    $q7 = FMAXNMv2f64 $q5, $q2, implicit $fpcr
+...
+---
+name: fminnm_fminnm_v2f64_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fminnm_fminnm_v2f64_waw
+    ; CHECK: SU(0): $q5 = FMINNMv2f64
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q5 = FMINNMv2f64
+    $q5 = FMINNMv2f64 $q0, $q1, implicit $fpcr
+    $q6 = FADDv2f64 $q3, $q4, implicit $fpcr
+    $q5 = FMINNMv2f64 $q5, $q2, implicit $fpcr
+...
+---
+name: fminnm_fminnm_v2f64_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fminnm_fminnm_v2f64_nowaw
+    ; CHECK: SU(0): $q5 = FMINNMv2f64
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $q7 = FMINNMv2f64
+    $q5 = FMINNMv2f64 $q0, $q1, implicit $fpcr
+    $q6 = FADDv2f64 $q3, $q4, implicit $fpcr
+    $q7 = FMINNMv2f64 $q5, $q2, implicit $fpcr
+...
+---
+## Scalar and vector instructions should not be mixed
 name: fmax_fmin_mixed_scalar_vector
 body: |
   bb.0:
@@ -983,4 +2006,21 @@ body: |
     $q5 = FMAXv4f32 $q0, $q1, implicit $fpcr
     $q6 = FADDv4f32 $q3, $q4, implicit $fpcr
     $s7 = FMINSrr $s5, $s2, implicit $fpcr
+...
+---
+## FMIN/FMAX and FMINNM/FMAXNM should not be mixed
+name: fmax_fminnm_mixed
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $s0, $s1, $s2, $s3, $s4
+    ; CHECK-LABEL: fmax_fminnm_mixed
+    ; CHECK: SU(0): $s5 = FMAXSrr
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $s5 = FMINNMSrr
+    $s5 = FMAXSrr $s0, $s1, implicit $fpcr
+    $s6 = FADDSrr $s3, $s4, implicit $fpcr
+    $s5 = FMINNMSrr $s5, $s2, implicit $fpcr
 ...
