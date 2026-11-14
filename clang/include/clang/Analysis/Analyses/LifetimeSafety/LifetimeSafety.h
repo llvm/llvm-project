@@ -32,6 +32,10 @@
 #include <cstddef>
 #include <memory>
 
+namespace clang {
+class LifetimeCaptureByAttr;
+} // namespace clang
+
 namespace clang::lifetimes {
 
 struct LifetimeSafetyOpts {
@@ -49,6 +53,7 @@ struct LifetimeSafetyOpts {
   bool CheckFieldOriginEscape = false;
   /// Whether to model non-trivial destructors at scope exit as uses.
   bool CheckDestructorUses = false;
+  bool CheckCaptureByViolations = false;
 };
 
 /// Enum to track functions visible across or within TU.
@@ -56,6 +61,9 @@ enum class WarningScope {
   CrossTU, // For warnings on declarations visible across Translation Units.
   IntraTU  // For warnings on functions local to a Translation Unit.
 };
+
+/// An entity a parameter can be captured by, beyond another parameter.
+enum class CapturingEntity { This, Global };
 
 /// Abstract interface for operations requiring Sema access.
 ///
@@ -155,6 +163,14 @@ public:
   // doesn't escape through return.
   virtual void
   reportLifetimeboundViolation(const CXXMethodDecl *MDWithLifetimebound) {}
+
+  // Reports a parameter captured by an entity that its
+  // [[clang::lifetime_capture_by]] attributes do not name. \p CapturedBy is
+  // the field or global it is captured by, if known.
+  virtual void reportCaptureByViolation(const ParmVarDecl *PVD,
+                                        const LifetimeCaptureByAttr *Attr,
+                                        CapturingEntity Entity,
+                                        const ValueDecl *CapturedBy) {}
 
   // Reports a member function definition that has [[clang::lifetimebound]] on
   // the implicit this parameter when the canonical declaration does not.

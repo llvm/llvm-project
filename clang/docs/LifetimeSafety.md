@@ -519,6 +519,7 @@ enables only the high-confidence subset of these checks.
 
   - `-Wlifetime-safety-noescape`: Warns when a parameter marked with `[[clang::noescape]]` escapes the function.
   - `-Wlifetime-safety-lifetimebound-violation`: Warns when the analysis cannot verify that the return value can be lifetime bound to a parameter marked with `[[clang::lifetimebound]]`.
+  - `-Wlifetime-safety-capture-by-violation`: Warns when a parameter with `[[clang::lifetime_capture_by]]` attributes is captured by the enclosing object or by global storage, but none of the attributes names that entity (`lifetime_capture_by_this` or `lifetime_capture_by_global`) or `unknown`. Captures by other parameters are not verified.
 
 - `-Wlifetime-safety-experimental`: Enables experimental checks. These may have known false positives and their behavior may change. They are not enabled by `-Wlifetime-safety-all`.
 
