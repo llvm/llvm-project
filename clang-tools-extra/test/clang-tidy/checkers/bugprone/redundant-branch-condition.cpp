@@ -14,6 +14,8 @@ bool callTheFD();
 void scream();
 bool isFireFighterComing();
 bool someOtherCondition();
+bool hasEmergencyExits();
+bool powerCutOff();
 
 //===--- Basic Positives --------------------------------------------------===//
 
@@ -404,6 +406,157 @@ void positive_indirect_outer_and_rhs_inner_or_rhs() {
     }
   }
 }
+
+// ===--- Long Conjuction-disjunction Chain Positives --- ===//
+void positive_direct_first_in_four_conj_chain(){
+  bool onFire=isBurning();
+  bool hasEmergencyExit=hasEmergencyExits();
+  bool isPowerSupplyOn=!powerCutOff();
+  if(onFire && fireFighters<10 && !hasEmergencyExit && isPowerSupplyOn){
+    if(onFire){
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
+      // CHECK-FIXES: {{^\ *$}}
+    scream();
+    }
+    // CHECK-FIXES: {{^\ *$}}
+  }
+}
+
+void positive_direct_second_in_four_conj_chain(){
+  bool onFire=isBurning();
+  bool hasEmergencyExit=hasEmergencyExits();
+  bool isPowerSupplyOn=!powerCutOff();
+  if(fireFighters<10 && onFire &&!hasEmergencyExit && isPowerSupplyOn){
+    if(onFire){
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
+      // CHECK-FIXES: {{^\ *$}}
+    scream();
+    }
+    // CHECK-FIXES: {{^\ *$}}
+  }
+}
+
+void positive_direct_third_in_four_conj_chain(){
+  bool onFire=isBurning();
+  bool hasntEmergencyExit=hasEmergencyExits();
+  bool isPowerSupplyOn=!powerCutOff();
+  if(onFire && fireFighters<10 && hasntEmergencyExit && isPowerSupplyOn){
+    if(hasntEmergencyExit){
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'hasntEmergencyExit' [bugprone-redundant-branch-condition]
+      // CHECK-FIXES: {{^\ *$}}
+    scream();
+    }
+    // CHECK-FIXES: {{^\ *$}}
+  }
+}
+
+void positive_direct_fourth_in_four_conj_chain(){
+  bool onFire=isBurning();
+  bool hasEmergencyExit=hasEmergencyExits();
+  bool isPowerSupplyOn=!powerCutOff();
+  if(onFire && fireFighters<10 && !hasEmergencyExit && isPowerSupplyOn){
+    if(isPowerSupplyOn){
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'isPowerSupplyOn' [bugprone-redundant-branch-condition]
+      // CHECK-FIXES: {{^\ *$}}
+    scream();
+    }
+          // CHECK-FIXES: {{^\ *$}}
+  }
+}
+
+void positive_indirect_first_in_four_conj_chain(){
+  bool onFire=isBurning();
+  bool hasEmergencyExit=hasEmergencyExits();
+  bool isPowerSupplyOn=!powerCutOff();
+  if(onFire && fireFighters<10 && !hasEmergencyExit && isPowerSupplyOn){
+    if (someOtherCondition()) {
+      if(onFire){
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
+        // CHECK-FIXES: {{^\ *$}}
+      scream();
+      }
+      // CHECK-FIXES: {{^\ *$}}
+    }
+  }
+}
+
+void positive_indirect_second_in_four_conj_chain(){
+  bool onFire=isBurning();
+  bool hasEmergencyExit=hasEmergencyExits();
+  bool isPowerSupplyOn=!powerCutOff();
+  if(fireFighters<10 && onFire &&!hasEmergencyExit && isPowerSupplyOn){
+    if (someOtherCondition()) {
+      if(onFire){
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
+        // CHECK-FIXES: {{^\ *$}}
+      scream();
+      }
+      // CHECK-FIXES: {{^\ *$}}
+    }  
+  }
+}
+
+void positive_indirect_third_in_four_conj_chain(){
+  bool onFire=isBurning();
+  bool hasntEmergencyExit=hasEmergencyExits();
+  bool isPowerSupplyOn=!powerCutOff();
+  if(onFire && fireFighters<10 && hasntEmergencyExit && isPowerSupplyOn){
+    if (someOtherCondition()) {
+      if(hasntEmergencyExit){
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant condition 'hasntEmergencyExit' [bugprone-redundant-branch-condition]
+        // CHECK-FIXES: {{^\ *$}}
+      scream();
+      }
+      // CHECK-FIXES: {{^\ *$}}
+    }  
+  }
+}
+
+void positive_indirect_fourth_in_four_conj_chain(){
+  bool onFire=isBurning();
+  bool hasEmergencyExit=hasEmergencyExits();
+  bool isPowerSupplyOn=!powerCutOff();
+  if(onFire && fireFighters<10 && !hasEmergencyExit && isPowerSupplyOn){
+    if (someOtherCondition()) {
+      if(isPowerSupplyOn){
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant condition 'isPowerSupplyOn' [bugprone-redundant-branch-condition]
+        // CHECK-FIXES: {{^\ *$}}
+      scream();
+      }
+      // CHECK-FIXES: {{^\ *$}}
+    }
+  }
+}
+
+void positive_direct_inner_disj_outer_conj_chain(){
+  bool onFire=isBurning();
+  bool hasntEmergencyExit=hasEmergencyExits();
+  bool isPowerSupplyOn=!powerCutOff();
+  if(onFire && fireFighters<10 && hasntEmergencyExit && isPowerSupplyOn){
+    if(isCollapsing() ||hasntEmergencyExit){
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'hasntEmergencyExit' [bugprone-redundant-branch-condition]
+      // CHECK-FIXES: {{^\ *$}}
+    scream();
+    }
+    // CHECK-FIXES: {{^\ *$}}
+    
+  }
+}
+void positive_direct_inner_conj_chain_outer_conj_chain(){
+  bool onFire=isBurning();
+  bool hasntEmergencyExit=hasEmergencyExits();
+  bool isPowerSupplyOn=!powerCutOff();
+  if(onFire && fireFighters<10 && hasntEmergencyExit && isPowerSupplyOn){
+    if(onFire && hasntEmergencyExit && isPowerSupplyOn){
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'hasntEmergencyExit' [bugprone-redundant-branch-condition]
+      // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: redundant condition 'isPowerSupplyOn' [bugprone-redundant-branch-condition]
+      // CHECK-MESSAGES: :[[@LINE-3]]:5: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
+      // CHECK-FIXES: if(onFire && hasntEmergencyExit && isPowerSupplyOn){
+    scream();
+    }
+  }
+}
+
 
 //===--- Basic Negatives --------------------------------------------------===//
 
@@ -993,6 +1146,20 @@ void negative_reassigned() {
     if (onFire) {
       // NO-MESSAGE: it was a false alarm then
       scream();
+    }
+  }
+}
+
+// ===--- Long Conjuction-disjunction Chain Negatives --- ===//
+
+void negative_direct__outer_disj_inner_conj_chain(){
+  bool onFire=isBurning();
+  bool hasntEmergencyExit=hasEmergencyExits();
+  bool isPowerSupplyOn=!powerCutOff();
+  if(onFire && fireFighters<10 || hasntEmergencyExit && isPowerSupplyOn){
+    if(onFire && hasntEmergencyExit && isPowerSupplyOn){
+      // NO-MESSAGE:Fire may have been extinguished
+    scream();
     }
   }
 }
