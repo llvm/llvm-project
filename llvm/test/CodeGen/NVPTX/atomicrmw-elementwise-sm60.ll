@@ -506,27 +506,27 @@ define <4 x i8> @add_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %v
 ; SM60-NEXT:    ld.volatile.global.b32 %r18, [%rd1];
 ; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs1, %r3;
-; SM60-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
-; SM60-NEXT:    cvt.u16.u32 %rs4, %r6;
-; SM60-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
-; SM60-NEXT:    cvt.u16.u32 %rs7, %r10;
-; SM60-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
-; SM60-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM60-NEXT:  $L__BB18_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    prmt.b32 %r4, %r18, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs2, %r4;
 ; SM60-NEXT:    add.s16 %rs3, %rs2, %rs1;
 ; SM60-NEXT:    cvt.u32.u16 %r5, %rs3;
+; SM60-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
+; SM60-NEXT:    cvt.u16.u32 %rs4, %r6;
 ; SM60-NEXT:    prmt.b32 %r7, %r18, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; SM60-NEXT:    add.s16 %rs6, %rs5, %rs4;
 ; SM60-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM60-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
+; SM60-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
+; SM60-NEXT:    cvt.u16.u32 %rs7, %r10;
 ; SM60-NEXT:    prmt.b32 %r11, %r18, 0, 0x7771U;
 ; SM60-NEXT:    cvt.u16.u32 %rs8, %r11;
 ; SM60-NEXT:    add.s16 %rs9, %rs8, %rs7;
 ; SM60-NEXT:    cvt.u32.u16 %r12, %rs9;
+; SM60-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
+; SM60-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM60-NEXT:    prmt.b32 %r14, %r18, 0, 0x7770U;
 ; SM60-NEXT:    cvt.u16.u32 %rs11, %r14;
 ; SM60-NEXT:    add.s16 %rs12, %rs11, %rs10;
@@ -723,7 +723,6 @@ define <4 x i16> @add_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 x i16>
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r5, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:  $L__BB22_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r5;
@@ -731,6 +730,7 @@ define <4 x i16> @add_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 x i16>
 ; SM60-NEXT:    add.s16 %rs6, %rs3, %rs1;
 ; SM60-NEXT:    mov.b32 %r3, {%rs6, %rs5};
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r3;
+; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r6;
 ; SM60-NEXT:    add.s16 %rs11, %rs10, %rs8;
 ; SM60-NEXT:    add.s16 %rs12, %rs9, %rs7;
@@ -771,7 +771,6 @@ define <8 x i16> @add_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16>
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:  $L__BB23_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r9;
@@ -779,6 +778,7 @@ define <8 x i16> @add_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16>
 ; SM60-NEXT:    add.s16 %rs6, %rs3, %rs1;
 ; SM60-NEXT:    mov.b32 %r5, {%rs6, %rs5};
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r5;
+; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r10;
 ; SM60-NEXT:    add.s16 %rs11, %rs10, %rs8;
 ; SM60-NEXT:    add.s16 %rs12, %rs9, %rs7;
@@ -800,7 +800,6 @@ define <8 x i16> @add_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16>
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r12}, %rd12; }
 ; SM60-NEXT:    cvt.u32.u64 %r11, %rd12;
 ; SM60-NEXT:    mov.b32 {%rs13, %rs14}, %r3;
-; SM60-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-NEXT:  $L__BB23_3: // %atomicrmw.start2
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs15, %rs16}, %r11;
@@ -808,6 +807,7 @@ define <8 x i16> @add_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16>
 ; SM60-NEXT:    add.s16 %rs18, %rs15, %rs13;
 ; SM60-NEXT:    mov.b32 %r7, {%rs18, %rs17};
 ; SM60-NEXT:    cvt.u64.u32 %rd13, %r7;
+; SM60-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-NEXT:    mov.b32 {%rs21, %rs22}, %r12;
 ; SM60-NEXT:    add.s16 %rs23, %rs22, %rs20;
 ; SM60-NEXT:    add.s16 %rs24, %rs21, %rs19;
@@ -1105,27 +1105,27 @@ define <4 x i8> @sub_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %v
 ; SM60-NEXT:    ld.volatile.global.b32 %r18, [%rd1];
 ; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs1, %r3;
-; SM60-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
-; SM60-NEXT:    cvt.u16.u32 %rs4, %r6;
-; SM60-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
-; SM60-NEXT:    cvt.u16.u32 %rs7, %r10;
-; SM60-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
-; SM60-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM60-NEXT:  $L__BB34_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    prmt.b32 %r4, %r18, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs2, %r4;
 ; SM60-NEXT:    sub.s16 %rs3, %rs2, %rs1;
 ; SM60-NEXT:    cvt.u32.u16 %r5, %rs3;
+; SM60-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
+; SM60-NEXT:    cvt.u16.u32 %rs4, %r6;
 ; SM60-NEXT:    prmt.b32 %r7, %r18, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; SM60-NEXT:    sub.s16 %rs6, %rs5, %rs4;
 ; SM60-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM60-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
+; SM60-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
+; SM60-NEXT:    cvt.u16.u32 %rs7, %r10;
 ; SM60-NEXT:    prmt.b32 %r11, %r18, 0, 0x7771U;
 ; SM60-NEXT:    cvt.u16.u32 %rs8, %r11;
 ; SM60-NEXT:    sub.s16 %rs9, %rs8, %rs7;
 ; SM60-NEXT:    cvt.u32.u16 %r12, %rs9;
+; SM60-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
+; SM60-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM60-NEXT:    prmt.b32 %r14, %r18, 0, 0x7770U;
 ; SM60-NEXT:    cvt.u16.u32 %rs11, %r14;
 ; SM60-NEXT:    sub.s16 %rs12, %rs11, %rs10;
@@ -1322,7 +1322,6 @@ define <4 x i16> @sub_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 x i16>
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r5, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:  $L__BB38_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r5;
@@ -1330,6 +1329,7 @@ define <4 x i16> @sub_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 x i16>
 ; SM60-NEXT:    sub.s16 %rs6, %rs3, %rs1;
 ; SM60-NEXT:    mov.b32 %r3, {%rs6, %rs5};
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r3;
+; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r6;
 ; SM60-NEXT:    sub.s16 %rs11, %rs10, %rs8;
 ; SM60-NEXT:    sub.s16 %rs12, %rs9, %rs7;
@@ -1370,7 +1370,6 @@ define <8 x i16> @sub_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16>
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:  $L__BB39_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r9;
@@ -1378,6 +1377,7 @@ define <8 x i16> @sub_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16>
 ; SM60-NEXT:    sub.s16 %rs6, %rs3, %rs1;
 ; SM60-NEXT:    mov.b32 %r5, {%rs6, %rs5};
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r5;
+; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r10;
 ; SM60-NEXT:    sub.s16 %rs11, %rs10, %rs8;
 ; SM60-NEXT:    sub.s16 %rs12, %rs9, %rs7;
@@ -1399,7 +1399,6 @@ define <8 x i16> @sub_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16>
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r12}, %rd12; }
 ; SM60-NEXT:    cvt.u32.u64 %r11, %rd12;
 ; SM60-NEXT:    mov.b32 {%rs13, %rs14}, %r3;
-; SM60-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-NEXT:  $L__BB39_3: // %atomicrmw.start2
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs15, %rs16}, %r11;
@@ -1407,6 +1406,7 @@ define <8 x i16> @sub_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16>
 ; SM60-NEXT:    sub.s16 %rs18, %rs15, %rs13;
 ; SM60-NEXT:    mov.b32 %r7, {%rs18, %rs17};
 ; SM60-NEXT:    cvt.u64.u32 %rd13, %r7;
+; SM60-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-NEXT:    mov.b32 {%rs21, %rs22}, %r12;
 ; SM60-NEXT:    sub.s16 %rs23, %rs22, %rs20;
 ; SM60-NEXT:    sub.s16 %rs24, %rs21, %rs19;
@@ -3839,11 +3839,11 @@ define <4 x i8> @max_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %v
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.volatile.global.b32 %r26, [%rd1];
 ; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x8880U;
-; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x9991U;
 ; SM60-NEXT:  $L__BB114_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    prmt.b32 %r4, %r26, 0, 0x8880U;
 ; SM60-NEXT:    setp.gt.s32 %p1, %r4, %r3;
+; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x9991U;
 ; SM60-NEXT:    prmt.b32 %r6, %r26, 0, 0x9991U;
 ; SM60-NEXT:    setp.gt.s32 %p2, %r6, %r5;
 ; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0xaaa2U;
@@ -4084,7 +4084,6 @@ define <4 x i16> @max_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 x i16>
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r5, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:  $L__BB118_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r5;
@@ -4096,6 +4095,7 @@ define <4 x i16> @max_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 x i16>
 ; SM60-NEXT:    max.s16 %rs6, %rs3, %rs1;
 ; SM60-NEXT:    mov.b32 %r3, {%rs6, %rs5};
 ; SM60-NEXT:    cvt.u64.u32 %rd7, %r3;
+; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r6;
 ; SM60-NEXT:    max.s16 %rs11, %rs10, %rs8;
 ; SM60-NEXT:    max.s16 %rs12, %rs9, %rs7;
@@ -4132,7 +4132,6 @@ define <8 x i16> @max_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16>
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:  $L__BB119_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r9;
@@ -4144,6 +4143,7 @@ define <8 x i16> @max_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16>
 ; SM60-NEXT:    max.s16 %rs6, %rs3, %rs1;
 ; SM60-NEXT:    mov.b32 %r5, {%rs6, %rs5};
 ; SM60-NEXT:    cvt.u64.u32 %rd7, %r5;
+; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r10;
 ; SM60-NEXT:    max.s16 %rs11, %rs10, %rs8;
 ; SM60-NEXT:    max.s16 %rs12, %rs9, %rs7;
@@ -4161,7 +4161,6 @@ define <8 x i16> @max_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16>
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r12}, %rd12; }
 ; SM60-NEXT:    cvt.u32.u64 %r11, %rd12;
 ; SM60-NEXT:    mov.b32 {%rs13, %rs14}, %r3;
-; SM60-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-NEXT:  $L__BB119_3: // %atomicrmw.start2
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd13, %r11;
@@ -4173,6 +4172,7 @@ define <8 x i16> @max_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16>
 ; SM60-NEXT:    max.s16 %rs18, %rs15, %rs13;
 ; SM60-NEXT:    mov.b32 %r7, {%rs18, %rs17};
 ; SM60-NEXT:    cvt.u64.u32 %rd17, %r7;
+; SM60-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-NEXT:    mov.b32 {%rs21, %rs22}, %r12;
 ; SM60-NEXT:    max.s16 %rs23, %rs22, %rs20;
 ; SM60-NEXT:    max.s16 %rs24, %rs21, %rs19;
@@ -4471,11 +4471,11 @@ define <4 x i8> @min_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %v
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.volatile.global.b32 %r26, [%rd1];
 ; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x8880U;
-; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x9991U;
 ; SM60-NEXT:  $L__BB130_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    prmt.b32 %r4, %r26, 0, 0x8880U;
 ; SM60-NEXT:    setp.le.s32 %p1, %r4, %r3;
+; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x9991U;
 ; SM60-NEXT:    prmt.b32 %r6, %r26, 0, 0x9991U;
 ; SM60-NEXT:    setp.le.s32 %p2, %r6, %r5;
 ; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0xaaa2U;
@@ -4716,7 +4716,6 @@ define <4 x i16> @min_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 x i16>
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r5, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:  $L__BB134_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r5;
@@ -4728,6 +4727,7 @@ define <4 x i16> @min_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 x i16>
 ; SM60-NEXT:    min.s16 %rs6, %rs3, %rs1;
 ; SM60-NEXT:    mov.b32 %r3, {%rs6, %rs5};
 ; SM60-NEXT:    cvt.u64.u32 %rd7, %r3;
+; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r6;
 ; SM60-NEXT:    min.s16 %rs11, %rs10, %rs8;
 ; SM60-NEXT:    min.s16 %rs12, %rs9, %rs7;
@@ -4764,7 +4764,6 @@ define <8 x i16> @min_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16>
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:  $L__BB135_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r9;
@@ -4776,6 +4775,7 @@ define <8 x i16> @min_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16>
 ; SM60-NEXT:    min.s16 %rs6, %rs3, %rs1;
 ; SM60-NEXT:    mov.b32 %r5, {%rs6, %rs5};
 ; SM60-NEXT:    cvt.u64.u32 %rd7, %r5;
+; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r10;
 ; SM60-NEXT:    min.s16 %rs11, %rs10, %rs8;
 ; SM60-NEXT:    min.s16 %rs12, %rs9, %rs7;
@@ -4793,7 +4793,6 @@ define <8 x i16> @min_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16>
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r12}, %rd12; }
 ; SM60-NEXT:    cvt.u32.u64 %r11, %rd12;
 ; SM60-NEXT:    mov.b32 {%rs13, %rs14}, %r3;
-; SM60-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-NEXT:  $L__BB135_3: // %atomicrmw.start2
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd13, %r11;
@@ -4805,6 +4804,7 @@ define <8 x i16> @min_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16>
 ; SM60-NEXT:    min.s16 %rs18, %rs15, %rs13;
 ; SM60-NEXT:    mov.b32 %r7, {%rs18, %rs17};
 ; SM60-NEXT:    cvt.u64.u32 %rd17, %r7;
+; SM60-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-NEXT:    mov.b32 {%rs21, %rs22}, %r12;
 ; SM60-NEXT:    min.s16 %rs23, %rs22, %rs20;
 ; SM60-NEXT:    min.s16 %rs24, %rs21, %rs19;
@@ -5059,7 +5059,6 @@ define <2 x i8> @umax_acq_rel_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i8> %
 ; SM60-NEXT:    shl.b32 %r7, 65535, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
 ; SM60-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
-; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r4;
 ; SM60-NEXT:  $L__BB145_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r16, %r1;
@@ -5068,6 +5067,7 @@ define <2 x i8> @umax_acq_rel_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i8> %
 ; SM60-NEXT:    mov.b32 %r9, {%rs3, %rs4};
 ; SM60-NEXT:    and.b32 %r10, %r9, 16711935;
 ; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r10;
+; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r4;
 ; SM60-NEXT:    max.u16 %rs9, %rs5, %rs7;
 ; SM60-NEXT:    max.u16 %rs10, %rs6, %rs8;
 ; SM60-NEXT:    shl.b16 %rs11, %rs10, 8;
@@ -5102,11 +5102,11 @@ define <4 x i8> @umax_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.volatile.global.b32 %r18, [%rd1];
 ; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
-; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
 ; SM60-NEXT:  $L__BB146_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    prmt.b32 %r4, %r18, 0, 0x7770U;
 ; SM60-NEXT:    setp.gt.u32 %p1, %r4, %r3;
+; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
 ; SM60-NEXT:    prmt.b32 %r6, %r18, 0, 0x7771U;
 ; SM60-NEXT:    setp.gt.u32 %p2, %r6, %r5;
 ; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
@@ -5323,7 +5323,6 @@ define <4 x i16> @umax_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 x i16
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r5, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:  $L__BB150_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r5;
@@ -5335,6 +5334,7 @@ define <4 x i16> @umax_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 x i16
 ; SM60-NEXT:    max.u16 %rs6, %rs3, %rs1;
 ; SM60-NEXT:    mov.b32 %r3, {%rs6, %rs5};
 ; SM60-NEXT:    cvt.u64.u32 %rd7, %r3;
+; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r6;
 ; SM60-NEXT:    max.u16 %rs11, %rs10, %rs8;
 ; SM60-NEXT:    max.u16 %rs12, %rs9, %rs7;
@@ -5371,7 +5371,6 @@ define <8 x i16> @umax_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:  $L__BB151_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r9;
@@ -5383,6 +5382,7 @@ define <8 x i16> @umax_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16
 ; SM60-NEXT:    max.u16 %rs6, %rs3, %rs1;
 ; SM60-NEXT:    mov.b32 %r5, {%rs6, %rs5};
 ; SM60-NEXT:    cvt.u64.u32 %rd7, %r5;
+; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r10;
 ; SM60-NEXT:    max.u16 %rs11, %rs10, %rs8;
 ; SM60-NEXT:    max.u16 %rs12, %rs9, %rs7;
@@ -5400,7 +5400,6 @@ define <8 x i16> @umax_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r12}, %rd12; }
 ; SM60-NEXT:    cvt.u32.u64 %r11, %rd12;
 ; SM60-NEXT:    mov.b32 {%rs13, %rs14}, %r3;
-; SM60-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-NEXT:  $L__BB151_3: // %atomicrmw.start2
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd13, %r11;
@@ -5412,6 +5411,7 @@ define <8 x i16> @umax_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16
 ; SM60-NEXT:    max.u16 %rs18, %rs15, %rs13;
 ; SM60-NEXT:    mov.b32 %r7, {%rs18, %rs17};
 ; SM60-NEXT:    cvt.u64.u32 %rd17, %r7;
+; SM60-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-NEXT:    mov.b32 {%rs21, %rs22}, %r12;
 ; SM60-NEXT:    max.u16 %rs23, %rs22, %rs20;
 ; SM60-NEXT:    max.u16 %rs24, %rs21, %rs19;
@@ -5666,7 +5666,6 @@ define <2 x i8> @umin_acq_rel_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i8> %
 ; SM60-NEXT:    shl.b32 %r7, 65535, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
 ; SM60-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
-; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r4;
 ; SM60-NEXT:  $L__BB161_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r16, %r1;
@@ -5675,6 +5674,7 @@ define <2 x i8> @umin_acq_rel_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i8> %
 ; SM60-NEXT:    mov.b32 %r9, {%rs3, %rs4};
 ; SM60-NEXT:    and.b32 %r10, %r9, 16711935;
 ; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r10;
+; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r4;
 ; SM60-NEXT:    min.u16 %rs9, %rs5, %rs7;
 ; SM60-NEXT:    min.u16 %rs10, %rs6, %rs8;
 ; SM60-NEXT:    shl.b16 %rs11, %rs10, 8;
@@ -5709,11 +5709,11 @@ define <4 x i8> @umin_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.volatile.global.b32 %r18, [%rd1];
 ; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
-; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
 ; SM60-NEXT:  $L__BB162_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    prmt.b32 %r4, %r18, 0, 0x7770U;
 ; SM60-NEXT:    setp.le.u32 %p1, %r4, %r3;
+; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
 ; SM60-NEXT:    prmt.b32 %r6, %r18, 0, 0x7771U;
 ; SM60-NEXT:    setp.le.u32 %p2, %r6, %r5;
 ; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
@@ -5930,7 +5930,6 @@ define <4 x i16> @umin_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 x i16
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r5, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:  $L__BB166_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r5;
@@ -5942,6 +5941,7 @@ define <4 x i16> @umin_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 x i16
 ; SM60-NEXT:    min.u16 %rs6, %rs3, %rs1;
 ; SM60-NEXT:    mov.b32 %r3, {%rs6, %rs5};
 ; SM60-NEXT:    cvt.u64.u32 %rd7, %r3;
+; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r6;
 ; SM60-NEXT:    min.u16 %rs11, %rs10, %rs8;
 ; SM60-NEXT:    min.u16 %rs12, %rs9, %rs7;
@@ -5978,7 +5978,6 @@ define <8 x i16> @umin_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:  $L__BB167_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r9;
@@ -5990,6 +5989,7 @@ define <8 x i16> @umin_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16
 ; SM60-NEXT:    min.u16 %rs6, %rs3, %rs1;
 ; SM60-NEXT:    mov.b32 %r5, {%rs6, %rs5};
 ; SM60-NEXT:    cvt.u64.u32 %rd7, %r5;
+; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r10;
 ; SM60-NEXT:    min.u16 %rs11, %rs10, %rs8;
 ; SM60-NEXT:    min.u16 %rs12, %rs9, %rs7;
@@ -6007,7 +6007,6 @@ define <8 x i16> @umin_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r12}, %rd12; }
 ; SM60-NEXT:    cvt.u32.u64 %r11, %rd12;
 ; SM60-NEXT:    mov.b32 {%rs13, %rs14}, %r3;
-; SM60-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-NEXT:  $L__BB167_3: // %atomicrmw.start2
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd13, %r11;
@@ -6019,6 +6018,7 @@ define <8 x i16> @umin_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x i16
 ; SM60-NEXT:    min.u16 %rs18, %rs15, %rs13;
 ; SM60-NEXT:    mov.b32 %r7, {%rs18, %rs17};
 ; SM60-NEXT:    cvt.u64.u32 %rd17, %r7;
+; SM60-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-NEXT:    mov.b32 {%rs21, %rs22}, %r12;
 ; SM60-NEXT:    min.u16 %rs23, %rs22, %rs20;
 ; SM60-NEXT:    min.u16 %rs24, %rs21, %rs19;
@@ -6276,7 +6276,6 @@ define <2 x i8> @uinc_wrap_acq_rel_v2i8_global_cta(ptr addrspace(1) %addr, <2 x 
 ; SM60-NEXT:    shl.b32 %r7, 65535, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
 ; SM60-NEXT:    ld.volatile.global.b32 %r14, [%rd1];
-; SM60-NEXT:    mov.b32 {%rs8, %rs9}, %r4;
 ; SM60-NEXT:  $L__BB177_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r14, %r1;
@@ -6285,6 +6284,7 @@ define <2 x i8> @uinc_wrap_acq_rel_v2i8_global_cta(ptr addrspace(1) %addr, <2 x 
 ; SM60-NEXT:    shr.u16 %rs5, %rs3, 8;
 ; SM60-NEXT:    add.s16 %rs6, %rs5, 1;
 ; SM60-NEXT:    add.s16 %rs7, %rs3, 1;
+; SM60-NEXT:    mov.b32 {%rs8, %rs9}, %r4;
 ; SM60-NEXT:    setp.ge.u16 %p1, %rs5, %rs9;
 ; SM60-NEXT:    setp.ge.u16 %p2, %rs4, %rs8;
 ; SM60-NEXT:    selp.b16 %rs10, 0, %rs7, %p2;
@@ -6322,8 +6322,6 @@ define <4 x i8> @uinc_wrap_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x 
 ; SM60-NEXT:    ld.param.b64 %rd1, [uinc_wrap_acq_rel_v4i8_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.volatile.global.b32 %r22, [%rd1];
-; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0x7770U;
-; SM60-NEXT:    prmt.b32 %r8, %r2, 0, 0x7771U;
 ; SM60-NEXT:  $L__BB178_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    prmt.b32 %r3, %r22, 0, 0x7770U;
@@ -6338,7 +6336,9 @@ define <4 x i8> @uinc_wrap_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x 
 ; SM60-NEXT:    prmt.b32 %r6, %r22, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs7, %r6;
 ; SM60-NEXT:    add.s16 %rs8, %rs7, 1;
+; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0x7770U;
 ; SM60-NEXT:    setp.ge.u32 %p1, %r3, %r7;
+; SM60-NEXT:    prmt.b32 %r8, %r2, 0, 0x7771U;
 ; SM60-NEXT:    setp.ge.u32 %p2, %r4, %r8;
 ; SM60-NEXT:    prmt.b32 %r9, %r2, 0, 0x7772U;
 ; SM60-NEXT:    setp.ge.u32 %p3, %r5, %r9;
@@ -6523,12 +6523,12 @@ define <2 x i16> @uinc_wrap_acq_rel_v2i16_global_cta(ptr addrspace(1) %addr, <2 
 ; SM60-NEXT:    ld.param.b64 %rd1, [uinc_wrap_acq_rel_v2i16_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.volatile.global.b32 %r4, [%rd1];
-; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NEXT:  $L__BB181_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
 ; SM60-NEXT:    add.s16 %rs3, %rs1, 1;
 ; SM60-NEXT:    add.s16 %rs4, %rs2, 1;
+; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NEXT:    setp.ge.u16 %p1, %rs1, %rs5;
 ; SM60-NEXT:    setp.ge.u16 %p2, %rs2, %rs6;
 ; SM60-NEXT:    selp.b16 %rs7, 0, %rs4, %p2;
@@ -6561,8 +6561,6 @@ define <4 x i16> @uinc_wrap_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
-; SM60-NEXT:    mov.b32 {%rs11, %rs12}, %r1;
 ; SM60-NEXT:  $L__BB182_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r5;
@@ -6575,8 +6573,10 @@ define <4 x i16> @uinc_wrap_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r5;
 ; SM60-NEXT:    add.s16 %rs7, %rs5, 1;
 ; SM60-NEXT:    add.s16 %rs8, %rs6, 1;
+; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
 ; SM60-NEXT:    setp.ge.u16 %p1, %rs1, %rs9;
 ; SM60-NEXT:    setp.ge.u16 %p2, %rs2, %rs10;
+; SM60-NEXT:    mov.b32 {%rs11, %rs12}, %r1;
 ; SM60-NEXT:    setp.ge.u16 %p3, %rs5, %rs11;
 ; SM60-NEXT:    setp.ge.u16 %p4, %rs6, %rs12;
 ; SM60-NEXT:    selp.b16 %rs13, 0, %rs8, %p4;
@@ -6617,8 +6617,6 @@ define <8 x i16> @uinc_wrap_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
-; SM60-NEXT:    mov.b32 {%rs11, %rs12}, %r1;
 ; SM60-NEXT:  $L__BB183_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r9;
@@ -6631,8 +6629,10 @@ define <8 x i16> @uinc_wrap_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r9;
 ; SM60-NEXT:    add.s16 %rs7, %rs5, 1;
 ; SM60-NEXT:    add.s16 %rs8, %rs6, 1;
+; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
 ; SM60-NEXT:    setp.ge.u16 %p1, %rs1, %rs9;
 ; SM60-NEXT:    setp.ge.u16 %p2, %rs2, %rs10;
+; SM60-NEXT:    mov.b32 {%rs11, %rs12}, %r1;
 ; SM60-NEXT:    setp.ge.u16 %p3, %rs5, %rs11;
 ; SM60-NEXT:    setp.ge.u16 %p4, %rs6, %rs12;
 ; SM60-NEXT:    selp.b16 %rs13, 0, %rs8, %p4;
@@ -7088,7 +7088,6 @@ define <2 x i8> @udec_wrap_acq_rel_v2i8_global_cta(ptr addrspace(1) %addr, <2 x 
 ; SM60-NEXT:    shl.b32 %r7, 65535, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
 ; SM60-NEXT:    ld.volatile.global.b32 %r14, [%rd1];
-; SM60-NEXT:    mov.b32 {%rs8, %rs9}, %r4;
 ; SM60-NEXT:  $L__BB193_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r14, %r1;
@@ -7099,6 +7098,7 @@ define <2 x i8> @udec_wrap_acq_rel_v2i8_global_cta(ptr addrspace(1) %addr, <2 x 
 ; SM60-NEXT:    add.s16 %rs7, %rs3, -1;
 ; SM60-NEXT:    setp.eq.b16 %p1, %rs5, 0;
 ; SM60-NEXT:    setp.eq.b16 %p2, %rs4, 0;
+; SM60-NEXT:    mov.b32 {%rs8, %rs9}, %r4;
 ; SM60-NEXT:    setp.gt.u16 %p3, %rs5, %rs9;
 ; SM60-NEXT:    setp.gt.u16 %p4, %rs4, %rs8;
 ; SM60-NEXT:    selp.b16 %rs10, %rs8, %rs7, %p4;
@@ -7138,8 +7138,6 @@ define <4 x i8> @udec_wrap_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x 
 ; SM60-NEXT:    ld.param.b64 %rd1, [udec_wrap_acq_rel_v4i8_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.volatile.global.b32 %r26, [%rd1];
-; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0x7770U;
-; SM60-NEXT:    prmt.b32 %r8, %r2, 0, 0x7771U;
 ; SM60-NEXT:  $L__BB194_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    prmt.b32 %r3, %r26, 0, 0x7770U;
@@ -7158,7 +7156,9 @@ define <4 x i8> @udec_wrap_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x 
 ; SM60-NEXT:    setp.eq.b32 %p2, %r4, 0;
 ; SM60-NEXT:    setp.eq.b32 %p3, %r5, 0;
 ; SM60-NEXT:    setp.eq.b32 %p4, %r6, 0;
+; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0x7770U;
 ; SM60-NEXT:    setp.gt.u32 %p5, %r3, %r7;
+; SM60-NEXT:    prmt.b32 %r8, %r2, 0, 0x7771U;
 ; SM60-NEXT:    setp.gt.u32 %p6, %r4, %r8;
 ; SM60-NEXT:    prmt.b32 %r9, %r2, 0, 0x7772U;
 ; SM60-NEXT:    setp.gt.u32 %p7, %r5, %r9;
@@ -7373,7 +7373,6 @@ define <2 x i16> @udec_wrap_acq_rel_v2i16_global_cta(ptr addrspace(1) %addr, <2 
 ; SM60-NEXT:    ld.param.b64 %rd1, [udec_wrap_acq_rel_v2i16_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.volatile.global.b32 %r4, [%rd1];
-; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NEXT:  $L__BB197_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
@@ -7381,6 +7380,7 @@ define <2 x i16> @udec_wrap_acq_rel_v2i16_global_cta(ptr addrspace(1) %addr, <2 
 ; SM60-NEXT:    add.s16 %rs4, %rs2, -1;
 ; SM60-NEXT:    setp.eq.b16 %p1, %rs1, 0;
 ; SM60-NEXT:    setp.eq.b16 %p2, %rs2, 0;
+; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NEXT:    setp.gt.u16 %p3, %rs1, %rs5;
 ; SM60-NEXT:    setp.gt.u16 %p4, %rs2, %rs6;
 ; SM60-NEXT:    selp.b16 %rs7, %rs6, %rs4, %p4;
@@ -7415,8 +7415,6 @@ define <4 x i16> @udec_wrap_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
-; SM60-NEXT:    mov.b32 {%rs11, %rs12}, %r1;
 ; SM60-NEXT:  $L__BB198_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r5;
@@ -7433,8 +7431,10 @@ define <4 x i16> @udec_wrap_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-NEXT:    setp.eq.b16 %p2, %rs2, 0;
 ; SM60-NEXT:    setp.eq.b16 %p3, %rs5, 0;
 ; SM60-NEXT:    setp.eq.b16 %p4, %rs6, 0;
+; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
 ; SM60-NEXT:    setp.gt.u16 %p5, %rs1, %rs9;
 ; SM60-NEXT:    setp.gt.u16 %p6, %rs2, %rs10;
+; SM60-NEXT:    mov.b32 {%rs11, %rs12}, %r1;
 ; SM60-NEXT:    setp.gt.u16 %p7, %rs5, %rs11;
 ; SM60-NEXT:    setp.gt.u16 %p8, %rs6, %rs12;
 ; SM60-NEXT:    selp.b16 %rs13, %rs12, %rs8, %p8;
@@ -7479,8 +7479,6 @@ define <8 x i16> @udec_wrap_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
-; SM60-NEXT:    mov.b32 {%rs11, %rs12}, %r1;
 ; SM60-NEXT:  $L__BB199_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r9;
@@ -7497,8 +7495,10 @@ define <8 x i16> @udec_wrap_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-NEXT:    setp.eq.b16 %p2, %rs2, 0;
 ; SM60-NEXT:    setp.eq.b16 %p3, %rs5, 0;
 ; SM60-NEXT:    setp.eq.b16 %p4, %rs6, 0;
+; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
 ; SM60-NEXT:    setp.gt.u16 %p5, %rs1, %rs9;
 ; SM60-NEXT:    setp.gt.u16 %p6, %rs2, %rs10;
+; SM60-NEXT:    mov.b32 {%rs11, %rs12}, %r1;
 ; SM60-NEXT:    setp.gt.u16 %p7, %rs5, %rs11;
 ; SM60-NEXT:    setp.gt.u16 %p8, %rs6, %rs12;
 ; SM60-NEXT:    selp.b16 %rs13, %rs12, %rs8, %p8;
@@ -7994,13 +7994,13 @@ define <2 x i8> @usub_cond_acq_rel_v2i8_global_cta(ptr addrspace(1) %addr, <2 x 
 ; SM60-NEXT:    shl.b32 %r7, 65535, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
 ; SM60-NEXT:    ld.volatile.global.b32 %r14, [%rd1];
-; SM60-NEXT:    mov.b32 {%rs6, %rs7}, %r4;
 ; SM60-NEXT:  $L__BB209_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r14, %r1;
 ; SM60-NEXT:    cvt.u16.u32 %rs3, %r8;
 ; SM60-NEXT:    and.b16 %rs4, %rs3, 255;
 ; SM60-NEXT:    shr.u16 %rs5, %rs3, 8;
+; SM60-NEXT:    mov.b32 {%rs6, %rs7}, %r4;
 ; SM60-NEXT:    setp.ge.u16 %p1, %rs5, %rs7;
 ; SM60-NEXT:    setp.ge.u16 %p2, %rs4, %rs6;
 ; SM60-NEXT:    sub.s16 %rs8, %rs5, %rs7;
@@ -8041,13 +8041,12 @@ define <4 x i8> @usub_cond_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x 
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.volatile.global.b32 %r22, [%rd1];
 ; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
-; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
-; SM60-NEXT:    cvt.u16.u32 %rs3, %r5;
 ; SM60-NEXT:    cvt.u16.u32 %rs4, %r3;
 ; SM60-NEXT:  $L__BB210_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    prmt.b32 %r4, %r22, 0, 0x7770U;
 ; SM60-NEXT:    setp.ge.u32 %p1, %r4, %r3;
+; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
 ; SM60-NEXT:    prmt.b32 %r6, %r22, 0, 0x7771U;
 ; SM60-NEXT:    setp.ge.u32 %p2, %r6, %r5;
 ; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
@@ -8058,6 +8057,7 @@ define <4 x i8> @usub_cond_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x 
 ; SM60-NEXT:    setp.ge.u32 %p4, %r10, %r9;
 ; SM60-NEXT:    cvt.u16.u32 %rs1, %r9;
 ; SM60-NEXT:    cvt.u16.u32 %rs2, %r7;
+; SM60-NEXT:    cvt.u16.u32 %rs3, %r5;
 ; SM60-NEXT:    cvt.u16.u32 %rs5, %r4;
 ; SM60-NEXT:    sub.s16 %rs6, %rs5, %rs4;
 ; SM60-NEXT:    cvt.u16.u32 %rs7, %r6;
@@ -8292,7 +8292,6 @@ define <4 x i16> @usub_cond_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r5, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
 ; SM60-NEXT:  $L__BB214_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r5;
@@ -8302,6 +8301,7 @@ define <4 x i16> @usub_cond_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r6;
 ; SM60-NEXT:    setp.ge.u16 %p1, %rs3, %rs1;
 ; SM60-NEXT:    setp.ge.u16 %p2, %rs4, %rs2;
+; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
 ; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r5;
 ; SM60-NEXT:    setp.ge.u16 %p3, %rs7, %rs5;
 ; SM60-NEXT:    setp.ge.u16 %p4, %rs8, %rs6;
@@ -8348,7 +8348,6 @@ define <8 x i16> @usub_cond_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
 ; SM60-NEXT:  $L__BB215_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r9;
@@ -8358,6 +8357,7 @@ define <8 x i16> @usub_cond_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r10;
 ; SM60-NEXT:    setp.ge.u16 %p1, %rs3, %rs1;
 ; SM60-NEXT:    setp.ge.u16 %p2, %rs4, %rs2;
+; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
 ; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r9;
 ; SM60-NEXT:    setp.ge.u16 %p3, %rs7, %rs5;
 ; SM60-NEXT:    setp.ge.u16 %p4, %rs8, %rs6;
@@ -8989,7 +8989,6 @@ define <2 x i8> @usub_sat_acq_rel_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i
 ; SM60-NEXT:    shl.b32 %r7, 65535, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
 ; SM60-NEXT:    ld.volatile.global.b32 %r20, [%rd1];
-; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r4;
 ; SM60-NEXT:  $L__BB225_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r20, %r1;
@@ -8998,6 +8997,7 @@ define <2 x i8> @usub_sat_acq_rel_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i
 ; SM60-NEXT:    mov.b32 %r9, {%rs3, %rs4};
 ; SM60-NEXT:    and.b32 %r10, %r9, 16711935;
 ; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r10;
+; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r4;
 ; SM60-NEXT:    sub.s16 %rs9, %rs6, %rs8;
 ; SM60-NEXT:    setp.gt.u16 %p1, %rs9, %rs6;
 ; SM60-NEXT:    selp.b16 %rs10, -1, 0, %p1;
@@ -9043,12 +9043,6 @@ define <4 x i8> @usub_sat_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i
 ; SM60-NEXT:    ld.volatile.global.b32 %r18, [%rd1];
 ; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs1, %r3;
-; SM60-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
-; SM60-NEXT:    cvt.u16.u32 %rs5, %r6;
-; SM60-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
-; SM60-NEXT:    cvt.u16.u32 %rs9, %r10;
-; SM60-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
-; SM60-NEXT:    cvt.u16.u32 %rs13, %r13;
 ; SM60-NEXT:  $L__BB226_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    prmt.b32 %r4, %r18, 0, 0x7773U;
@@ -9056,17 +9050,23 @@ define <4 x i8> @usub_sat_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i
 ; SM60-NEXT:    max.u16 %rs3, %rs2, %rs1;
 ; SM60-NEXT:    sub.s16 %rs4, %rs3, %rs1;
 ; SM60-NEXT:    cvt.u32.u16 %r5, %rs4;
+; SM60-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
+; SM60-NEXT:    cvt.u16.u32 %rs5, %r6;
 ; SM60-NEXT:    prmt.b32 %r7, %r18, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs6, %r7;
 ; SM60-NEXT:    max.u16 %rs7, %rs6, %rs5;
 ; SM60-NEXT:    sub.s16 %rs8, %rs7, %rs5;
 ; SM60-NEXT:    cvt.u32.u16 %r8, %rs8;
 ; SM60-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
+; SM60-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
+; SM60-NEXT:    cvt.u16.u32 %rs9, %r10;
 ; SM60-NEXT:    prmt.b32 %r11, %r18, 0, 0x7771U;
 ; SM60-NEXT:    cvt.u16.u32 %rs10, %r11;
 ; SM60-NEXT:    max.u16 %rs11, %rs10, %rs9;
 ; SM60-NEXT:    sub.s16 %rs12, %rs11, %rs9;
 ; SM60-NEXT:    cvt.u32.u16 %r12, %rs12;
+; SM60-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
+; SM60-NEXT:    cvt.u16.u32 %rs13, %r13;
 ; SM60-NEXT:    prmt.b32 %r14, %r18, 0, 0x7770U;
 ; SM60-NEXT:    cvt.u16.u32 %rs14, %r14;
 ; SM60-NEXT:    max.u16 %rs15, %rs14, %rs13;
@@ -9283,7 +9283,6 @@ define <4 x i16> @usub_sat_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r12}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r11, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
 ; SM60-NEXT:  $L__BB230_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r11;
@@ -9298,6 +9297,7 @@ define <4 x i16> @usub_sat_acq_rel_v4i16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NEXT:    xor.b32 %r5, %r4, -1;
 ; SM60-NEXT:    and.b32 %r6, %r3, %r5;
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r6;
+; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
 ; SM60-NEXT:    mov.b32 {%rs11, %rs12}, %r12;
 ; SM60-NEXT:    sub.s16 %rs13, %rs12, %rs10;
 ; SM60-NEXT:    sub.s16 %rs14, %rs11, %rs9;
@@ -9345,7 +9345,6 @@ define <8 x i16> @usub_sat_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r22}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r21, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
 ; SM60-NEXT:  $L__BB231_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r21;
@@ -9360,6 +9359,7 @@ define <8 x i16> @usub_sat_acq_rel_v8i16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NEXT:    xor.b32 %r7, %r6, -1;
 ; SM60-NEXT:    and.b32 %r8, %r5, %r7;
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r8;
+; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
 ; SM60-NEXT:    mov.b32 {%rs11, %rs12}, %r22;
 ; SM60-NEXT:    sub.s16 %rs13, %rs12, %rs10;
 ; SM60-NEXT:    sub.s16 %rs14, %rs11, %rs9;
@@ -17504,12 +17504,12 @@ define <1 x half> @fmin_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 x ha
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-NOFTZ-DISALLOW-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r9, %rs1;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB296_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    shr.u32 %r7, %r16, %r1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r8, %rs2;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r9, %rs1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    min.f32 %r10, %r8, %r9;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs3, %r10;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r11, %rs3;
@@ -17544,12 +17544,12 @@ define <1 x half> @fmin_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 x ha
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-NOFTZ-ALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-NOFTZ-ALLOW-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r9, %rs1;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB296_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    shr.u32 %r7, %r16, %r1;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r8, %rs2;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r9, %rs1;
 ; SM60-NOFTZ-ALLOW-NEXT:    min.f32 %r10, %r8, %r9;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs3, %r10;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r11, %rs3;
@@ -17584,12 +17584,12 @@ define <1 x half> @fmin_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 x ha
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-FTZ-DISALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-FTZ-DISALLOW-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
-; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r9, %rs1;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB296_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    shr.u32 %r7, %r16, %r1;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r8, %rs2;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r9, %rs1;
 ; SM60-FTZ-DISALLOW-NEXT:    min.ftz.f32 %r10, %r8, %r9;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs3, %r10;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r11, %rs3;
@@ -17624,12 +17624,12 @@ define <1 x half> @fmin_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 x ha
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-FTZ-ALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-FTZ-ALLOW-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
-; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r9, %rs1;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB296_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    shr.u32 %r7, %r16, %r1;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r8, %rs2;
+; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r9, %rs1;
 ; SM60-FTZ-ALLOW-NEXT:    min.ftz.f32 %r10, %r8, %r9;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs3, %r10;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r11, %rs3;
@@ -17664,13 +17664,13 @@ define <2 x half> @fmin_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 x ha
 ; SM60-NOFTZ-DISALLOW-NEXT:    ld.volatile.global.b32 %r10, [%rd1];
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r3, %rs2;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r6, %rs1;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB297_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r10;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r4, %rs4;
 ; SM60-NOFTZ-DISALLOW-NEXT:    min.f32 %r5, %r4, %r3;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs5, %r5;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r6, %rs1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r7, %rs3;
 ; SM60-NOFTZ-DISALLOW-NEXT:    min.f32 %r8, %r7, %r6;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r8;
@@ -17698,13 +17698,13 @@ define <2 x half> @fmin_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 x ha
 ; SM60-NOFTZ-ALLOW-NEXT:    ld.volatile.global.b32 %r10, [%rd1];
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r3, %rs2;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r6, %rs1;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB297_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r10;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r4, %rs4;
 ; SM60-NOFTZ-ALLOW-NEXT:    min.f32 %r5, %r4, %r3;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs5, %r5;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r6, %rs1;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r7, %rs3;
 ; SM60-NOFTZ-ALLOW-NEXT:    min.f32 %r8, %r7, %r6;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r8;
@@ -17732,13 +17732,13 @@ define <2 x half> @fmin_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 x ha
 ; SM60-FTZ-DISALLOW-NEXT:    ld.volatile.global.b32 %r10, [%rd1];
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r3, %rs2;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r6, %rs1;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB297_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r10;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r4, %rs4;
 ; SM60-FTZ-DISALLOW-NEXT:    min.ftz.f32 %r5, %r4, %r3;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs5, %r5;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r6, %rs1;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r7, %rs3;
 ; SM60-FTZ-DISALLOW-NEXT:    min.ftz.f32 %r8, %r7, %r6;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r8;
@@ -17766,13 +17766,13 @@ define <2 x half> @fmin_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 x ha
 ; SM60-FTZ-ALLOW-NEXT:    ld.volatile.global.b32 %r10, [%rd1];
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r3, %rs2;
-; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r6, %rs1;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB297_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r10;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r4, %rs4;
 ; SM60-FTZ-ALLOW-NEXT:    min.ftz.f32 %r5, %r4, %r3;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs5, %r5;
+; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r6, %rs1;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r7, %rs3;
 ; SM60-FTZ-ALLOW-NEXT:    min.ftz.f32 %r8, %r7, %r6;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r8;
@@ -17805,11 +17805,9 @@ define <4 x half> @fmin_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r18}, %rd2; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r17, %rd2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r3, %rs2;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r10, %rs8;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB298_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r3, %rs2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r17;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r4, %rs4;
 ; SM60-NOFTZ-DISALLOW-NEXT:    min.f32 %r5, %r4, %r3;
@@ -17820,6 +17818,8 @@ define <4 x half> @fmin_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r8;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 %r9, {%rs6, %rs5};
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r9;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r10, %rs8;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r18;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r11, %rs10;
 ; SM60-NOFTZ-DISALLOW-NEXT:    min.f32 %r12, %r11, %r10;
@@ -17861,11 +17861,9 @@ define <4 x half> @fmin_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r18}, %rd2; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r17, %rd2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r3, %rs2;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r10, %rs8;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB298_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r3, %rs2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r17;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r4, %rs4;
 ; SM60-NOFTZ-ALLOW-NEXT:    min.f32 %r5, %r4, %r3;
@@ -17876,6 +17874,8 @@ define <4 x half> @fmin_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r8;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 %r9, {%rs6, %rs5};
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r9;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r10, %rs8;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r18;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r11, %rs10;
 ; SM60-NOFTZ-ALLOW-NEXT:    min.f32 %r12, %r11, %r10;
@@ -17917,11 +17917,9 @@ define <4 x half> @fmin_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r18}, %rd2; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r17, %rd2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r3, %rs2;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r10, %rs8;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB298_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r3, %rs2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r17;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r4, %rs4;
 ; SM60-FTZ-DISALLOW-NEXT:    min.ftz.f32 %r5, %r4, %r3;
@@ -17932,6 +17930,8 @@ define <4 x half> @fmin_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r8;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 %r9, {%rs6, %rs5};
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r9;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r10, %rs8;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r18;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r11, %rs10;
 ; SM60-FTZ-DISALLOW-NEXT:    min.ftz.f32 %r12, %r11, %r10;
@@ -17973,11 +17973,9 @@ define <4 x half> @fmin_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r18}, %rd2; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r17, %rd2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r3, %rs2;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
-; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r10, %rs8;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB298_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r3, %rs2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r17;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r4, %rs4;
 ; SM60-FTZ-ALLOW-NEXT:    min.ftz.f32 %r5, %r4, %r3;
@@ -17988,6 +17986,8 @@ define <4 x half> @fmin_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM60-FTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r8;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 %r9, {%rs6, %rs5};
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r9;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
+; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r10, %rs8;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r18;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r11, %rs10;
 ; SM60-FTZ-ALLOW-NEXT:    min.ftz.f32 %r12, %r11, %r10;
@@ -18033,7 +18033,6 @@ define <8 x half> @fmin_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd2; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r33, %rd2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB299_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r5, %rs2;
@@ -18047,6 +18046,7 @@ define <8 x half> @fmin_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r10;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 %r11, {%rs6, %rs5};
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r11;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r12, %rs8;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r34;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r13, %rs10;
@@ -18074,7 +18074,6 @@ define <8 x half> @fmin_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r36}, %rd12; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r35, %rd12;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r3;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB299_3: // %atomicrmw.start2
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r19, %rs14;
@@ -18088,6 +18087,7 @@ define <8 x half> @fmin_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs18, %r24;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 %r25, {%rs18, %rs17};
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd13, %r25;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r26, %rs20;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs21, %rs22}, %r36;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r27, %rs22;
@@ -18130,7 +18130,6 @@ define <8 x half> @fmin_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd2; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r33, %rd2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB299_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r5, %rs2;
@@ -18144,6 +18143,7 @@ define <8 x half> @fmin_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r10;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 %r11, {%rs6, %rs5};
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r11;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r12, %rs8;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r34;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r13, %rs10;
@@ -18171,7 +18171,6 @@ define <8 x half> @fmin_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r36}, %rd12; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r35, %rd12;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r3;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB299_3: // %atomicrmw.start2
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r19, %rs14;
@@ -18185,6 +18184,7 @@ define <8 x half> @fmin_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs18, %r24;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 %r25, {%rs18, %rs17};
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd13, %r25;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r26, %rs20;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs21, %rs22}, %r36;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r27, %rs22;
@@ -18227,7 +18227,6 @@ define <8 x half> @fmin_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd2; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r33, %rd2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB299_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r5, %rs2;
@@ -18241,6 +18240,7 @@ define <8 x half> @fmin_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r10;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 %r11, {%rs6, %rs5};
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r11;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r12, %rs8;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r34;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r13, %rs10;
@@ -18268,7 +18268,6 @@ define <8 x half> @fmin_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r36}, %rd12; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r35, %rd12;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r3;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB299_3: // %atomicrmw.start2
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r19, %rs14;
@@ -18282,6 +18281,7 @@ define <8 x half> @fmin_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs18, %r24;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 %r25, {%rs18, %rs17};
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd13, %r25;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r26, %rs20;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs21, %rs22}, %r36;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r27, %rs22;
@@ -18324,7 +18324,6 @@ define <8 x half> @fmin_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd2; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r33, %rd2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB299_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r5, %rs2;
@@ -18338,6 +18337,7 @@ define <8 x half> @fmin_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-FTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r10;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 %r11, {%rs6, %rs5};
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r11;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r12, %rs8;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r34;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r13, %rs10;
@@ -18365,7 +18365,6 @@ define <8 x half> @fmin_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r36}, %rd12; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r35, %rd12;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r3;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB299_3: // %atomicrmw.start2
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r19, %rs14;
@@ -18379,6 +18378,7 @@ define <8 x half> @fmin_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-FTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs18, %r24;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 %r25, {%rs18, %rs17};
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd13, %r25;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r26, %rs20;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs21, %rs22}, %r36;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r27, %rs22;
@@ -18428,12 +18428,12 @@ define <1 x half> @fmax_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 x ha
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-NOFTZ-DISALLOW-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r9, %rs1;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB300_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    shr.u32 %r7, %r16, %r1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r8, %rs2;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r9, %rs1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    max.f32 %r10, %r8, %r9;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs3, %r10;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r11, %rs3;
@@ -18468,12 +18468,12 @@ define <1 x half> @fmax_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 x ha
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-NOFTZ-ALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-NOFTZ-ALLOW-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r9, %rs1;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB300_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    shr.u32 %r7, %r16, %r1;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r8, %rs2;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r9, %rs1;
 ; SM60-NOFTZ-ALLOW-NEXT:    max.f32 %r10, %r8, %r9;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs3, %r10;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r11, %rs3;
@@ -18508,12 +18508,12 @@ define <1 x half> @fmax_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 x ha
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-FTZ-DISALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-FTZ-DISALLOW-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
-; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r9, %rs1;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB300_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    shr.u32 %r7, %r16, %r1;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r8, %rs2;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r9, %rs1;
 ; SM60-FTZ-DISALLOW-NEXT:    max.ftz.f32 %r10, %r8, %r9;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs3, %r10;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r11, %rs3;
@@ -18548,12 +18548,12 @@ define <1 x half> @fmax_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 x ha
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-FTZ-ALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-FTZ-ALLOW-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
-; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r9, %rs1;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB300_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    shr.u32 %r7, %r16, %r1;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u16.u32 %rs2, %r7;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r8, %rs2;
+; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r9, %rs1;
 ; SM60-FTZ-ALLOW-NEXT:    max.ftz.f32 %r10, %r8, %r9;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs3, %r10;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r11, %rs3;
@@ -18588,13 +18588,13 @@ define <2 x half> @fmax_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 x ha
 ; SM60-NOFTZ-DISALLOW-NEXT:    ld.volatile.global.b32 %r10, [%rd1];
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r3, %rs2;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r6, %rs1;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB301_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r10;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r4, %rs4;
 ; SM60-NOFTZ-DISALLOW-NEXT:    max.f32 %r5, %r4, %r3;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs5, %r5;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r6, %rs1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r7, %rs3;
 ; SM60-NOFTZ-DISALLOW-NEXT:    max.f32 %r8, %r7, %r6;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r8;
@@ -18622,13 +18622,13 @@ define <2 x half> @fmax_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 x ha
 ; SM60-NOFTZ-ALLOW-NEXT:    ld.volatile.global.b32 %r10, [%rd1];
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r3, %rs2;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r6, %rs1;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB301_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r10;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r4, %rs4;
 ; SM60-NOFTZ-ALLOW-NEXT:    max.f32 %r5, %r4, %r3;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs5, %r5;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r6, %rs1;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r7, %rs3;
 ; SM60-NOFTZ-ALLOW-NEXT:    max.f32 %r8, %r7, %r6;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r8;
@@ -18656,13 +18656,13 @@ define <2 x half> @fmax_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 x ha
 ; SM60-FTZ-DISALLOW-NEXT:    ld.volatile.global.b32 %r10, [%rd1];
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r3, %rs2;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r6, %rs1;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB301_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r10;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r4, %rs4;
 ; SM60-FTZ-DISALLOW-NEXT:    max.ftz.f32 %r5, %r4, %r3;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs5, %r5;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r6, %rs1;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r7, %rs3;
 ; SM60-FTZ-DISALLOW-NEXT:    max.ftz.f32 %r8, %r7, %r6;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r8;
@@ -18690,13 +18690,13 @@ define <2 x half> @fmax_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 x ha
 ; SM60-FTZ-ALLOW-NEXT:    ld.volatile.global.b32 %r10, [%rd1];
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r3, %rs2;
-; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r6, %rs1;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB301_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r10;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r4, %rs4;
 ; SM60-FTZ-ALLOW-NEXT:    max.ftz.f32 %r5, %r4, %r3;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs5, %r5;
+; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r6, %rs1;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r7, %rs3;
 ; SM60-FTZ-ALLOW-NEXT:    max.ftz.f32 %r8, %r7, %r6;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r8;
@@ -18729,11 +18729,9 @@ define <4 x half> @fmax_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r18}, %rd2; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r17, %rd2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r3, %rs2;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r10, %rs8;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB302_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r3, %rs2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r17;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r4, %rs4;
 ; SM60-NOFTZ-DISALLOW-NEXT:    max.f32 %r5, %r4, %r3;
@@ -18744,6 +18742,8 @@ define <4 x half> @fmax_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r8;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 %r9, {%rs6, %rs5};
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r9;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r10, %rs8;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r18;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r11, %rs10;
 ; SM60-NOFTZ-DISALLOW-NEXT:    max.f32 %r12, %r11, %r10;
@@ -18785,11 +18785,9 @@ define <4 x half> @fmax_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r18}, %rd2; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r17, %rd2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r3, %rs2;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r10, %rs8;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB302_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r3, %rs2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r17;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r4, %rs4;
 ; SM60-NOFTZ-ALLOW-NEXT:    max.f32 %r5, %r4, %r3;
@@ -18800,6 +18798,8 @@ define <4 x half> @fmax_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r8;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 %r9, {%rs6, %rs5};
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r9;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r10, %rs8;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r18;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r11, %rs10;
 ; SM60-NOFTZ-ALLOW-NEXT:    max.f32 %r12, %r11, %r10;
@@ -18841,11 +18841,9 @@ define <4 x half> @fmax_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r18}, %rd2; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r17, %rd2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r3, %rs2;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r10, %rs8;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB302_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r3, %rs2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r17;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r4, %rs4;
 ; SM60-FTZ-DISALLOW-NEXT:    max.ftz.f32 %r5, %r4, %r3;
@@ -18856,6 +18854,8 @@ define <4 x half> @fmax_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r8;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 %r9, {%rs6, %rs5};
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r9;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r10, %rs8;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r18;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r11, %rs10;
 ; SM60-FTZ-DISALLOW-NEXT:    max.ftz.f32 %r12, %r11, %r10;
@@ -18897,11 +18897,9 @@ define <4 x half> @fmax_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r18}, %rd2; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r17, %rd2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r3, %rs2;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
-; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r10, %rs8;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB302_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r3, %rs2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r17;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r4, %rs4;
 ; SM60-FTZ-ALLOW-NEXT:    max.ftz.f32 %r5, %r4, %r3;
@@ -18912,6 +18910,8 @@ define <4 x half> @fmax_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM60-FTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r8;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 %r9, {%rs6, %rs5};
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r9;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
+; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r10, %rs8;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r18;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r11, %rs10;
 ; SM60-FTZ-ALLOW-NEXT:    max.ftz.f32 %r12, %r11, %r10;
@@ -18957,7 +18957,6 @@ define <8 x half> @fmax_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd2; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r33, %rd2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB303_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r5, %rs2;
@@ -18971,6 +18970,7 @@ define <8 x half> @fmax_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r10;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 %r11, {%rs6, %rs5};
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r11;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r12, %rs8;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r34;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r13, %rs10;
@@ -18998,7 +18998,6 @@ define <8 x half> @fmax_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r36}, %rd12; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r35, %rd12;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r3;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB303_3: // %atomicrmw.start2
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r19, %rs14;
@@ -19012,6 +19011,7 @@ define <8 x half> @fmax_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs18, %r24;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 %r25, {%rs18, %rs17};
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd13, %r25;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r26, %rs20;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs21, %rs22}, %r36;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.f32.f16 %r27, %rs22;
@@ -19054,7 +19054,6 @@ define <8 x half> @fmax_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd2; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r33, %rd2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB303_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r5, %rs2;
@@ -19068,6 +19067,7 @@ define <8 x half> @fmax_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r10;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 %r11, {%rs6, %rs5};
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r11;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r12, %rs8;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r34;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r13, %rs10;
@@ -19095,7 +19095,6 @@ define <8 x half> @fmax_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r36}, %rd12; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r35, %rd12;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r3;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB303_3: // %atomicrmw.start2
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r19, %rs14;
@@ -19109,6 +19108,7 @@ define <8 x half> @fmax_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs18, %r24;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 %r25, {%rs18, %rs17};
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd13, %r25;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r26, %rs20;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs21, %rs22}, %r36;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.f32.f16 %r27, %rs22;
@@ -19151,7 +19151,6 @@ define <8 x half> @fmax_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd2; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r33, %rd2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB303_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r5, %rs2;
@@ -19165,6 +19164,7 @@ define <8 x half> @fmax_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r10;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 %r11, {%rs6, %rs5};
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r11;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r12, %rs8;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r34;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r13, %rs10;
@@ -19192,7 +19192,6 @@ define <8 x half> @fmax_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r36}, %rd12; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r35, %rd12;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r3;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB303_3: // %atomicrmw.start2
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r19, %rs14;
@@ -19206,6 +19205,7 @@ define <8 x half> @fmax_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.rn.f16.f32 %rs18, %r24;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 %r25, {%rs18, %rs17};
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd13, %r25;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r26, %rs20;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs21, %rs22}, %r36;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.ftz.f32.f16 %r27, %rs22;
@@ -19248,7 +19248,6 @@ define <8 x half> @fmax_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd2; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r33, %rd2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB303_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r5, %rs2;
@@ -19262,6 +19261,7 @@ define <8 x half> @fmax_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-FTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs6, %r10;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 %r11, {%rs6, %rs5};
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r11;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r12, %rs8;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r34;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r13, %rs10;
@@ -19289,7 +19289,6 @@ define <8 x half> @fmax_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r36}, %rd12; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r35, %rd12;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r3;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB303_3: // %atomicrmw.start2
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r19, %rs14;
@@ -19303,6 +19302,7 @@ define <8 x half> @fmax_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-FTZ-ALLOW-NEXT:    cvt.rn.f16.f32 %rs18, %r24;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 %r25, {%rs18, %rs17};
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd13, %r25;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r26, %rs20;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs21, %rs22}, %r36;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.ftz.f32.f16 %r27, %rs22;
@@ -19701,7 +19701,6 @@ define <4 x half> @fminimum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd2; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r5, %rd2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB306_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r5;
@@ -19723,6 +19722,7 @@ define <4 x half> @fminimum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 %r3, {%rs12, %rs8};
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r3;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r6;
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -19773,7 +19773,6 @@ define <4 x half> @fminimum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd2; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r5, %rd2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB306_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r5;
@@ -19795,6 +19794,7 @@ define <4 x half> @fminimum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 %r3, {%rs12, %rs8};
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r3;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r6;
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -19845,7 +19845,6 @@ define <4 x half> @fminimum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd2; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r5, %rd2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB306_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r5;
@@ -19867,6 +19866,7 @@ define <4 x half> @fminimum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 %r3, {%rs12, %rs8};
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r3;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r6;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -19917,7 +19917,6 @@ define <4 x half> @fminimum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd2; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r5, %rd2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB306_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r5;
@@ -19939,6 +19938,7 @@ define <4 x half> @fminimum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 %r3, {%rs12, %rs8};
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r3;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r6;
 ; SM60-FTZ-ALLOW-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -19993,7 +19993,6 @@ define <8 x half> @fminimum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd2; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB307_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r9;
@@ -20015,6 +20014,7 @@ define <8 x half> @fminimum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 %r5, {%rs12, %rs8};
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r5;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r10;
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -20122,7 +20122,6 @@ define <8 x half> @fminimum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd2; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB307_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r9;
@@ -20144,6 +20143,7 @@ define <8 x half> @fminimum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 %r5, {%rs12, %rs8};
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r5;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r10;
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -20251,7 +20251,6 @@ define <8 x half> @fminimum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd2; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB307_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r9;
@@ -20273,6 +20272,7 @@ define <8 x half> @fminimum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 %r5, {%rs12, %rs8};
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r5;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r10;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -20380,7 +20380,6 @@ define <8 x half> @fminimum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd2; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB307_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r9;
@@ -20402,6 +20401,7 @@ define <8 x half> @fminimum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 %r5, {%rs12, %rs8};
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r5;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r10;
 ; SM60-FTZ-ALLOW-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -20865,7 +20865,6 @@ define <4 x half> @fmaximum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd2; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r5, %rd2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB310_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r5;
@@ -20887,6 +20886,7 @@ define <4 x half> @fmaximum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 %r3, {%rs12, %rs8};
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r3;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r6;
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.eq.b16 %p9, %rs16, 0;
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -20937,7 +20937,6 @@ define <4 x half> @fmaximum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd2; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r5, %rd2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB310_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r5;
@@ -20959,6 +20958,7 @@ define <4 x half> @fmaximum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 %r3, {%rs12, %rs8};
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r3;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r6;
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.eq.b16 %p9, %rs16, 0;
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -21009,7 +21009,6 @@ define <4 x half> @fmaximum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd2; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r5, %rd2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB310_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r5;
@@ -21031,6 +21030,7 @@ define <4 x half> @fmaximum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 %r3, {%rs12, %rs8};
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r3;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r6;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p9, %rs16, 0;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -21081,7 +21081,6 @@ define <4 x half> @fmaximum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r6}, %rd2; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r5, %rd2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB310_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r5;
@@ -21103,6 +21102,7 @@ define <4 x half> @fmaximum_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 %r3, {%rs12, %rs8};
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r3;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r6;
 ; SM60-FTZ-ALLOW-NEXT:    setp.eq.b16 %p9, %rs16, 0;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -21157,7 +21157,6 @@ define <8 x half> @fmaximum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd2; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB311_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r9;
@@ -21179,6 +21178,7 @@ define <8 x half> @fmaximum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 %r5, {%rs12, %rs8};
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r5;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r10;
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.eq.b16 %p9, %rs16, 0;
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -21286,7 +21286,6 @@ define <8 x half> @fmaximum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd2; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB311_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r9;
@@ -21308,6 +21307,7 @@ define <8 x half> @fmaximum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 %r5, {%rs12, %rs8};
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r5;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r10;
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.eq.b16 %p9, %rs16, 0;
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -21415,7 +21415,6 @@ define <8 x half> @fmaximum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd2; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB311_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r9;
@@ -21437,6 +21436,7 @@ define <8 x half> @fmaximum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 %r5, {%rs12, %rs8};
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r5;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r10;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p9, %rs16, 0;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -21544,7 +21544,6 @@ define <8 x half> @fmaximum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r10}, %rd2; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB311_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r9;
@@ -21566,6 +21565,7 @@ define <8 x half> @fmaximum_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 %r5, {%rs12, %rs8};
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r5;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r10;
 ; SM60-FTZ-ALLOW-NEXT:    setp.eq.b16 %p9, %rs16, 0;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -21680,12 +21680,12 @@ define <1 x bfloat> @fadd_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, <1 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-NOFTZ-DISALLOW-NEXT:    ld.volatile.global.b32 %r22, [%rd1];
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB312_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    shr.u32 %r7, %r22, %r1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    add.rn.f32 %r11, %r8, %r10;
 ; SM60-NOFTZ-DISALLOW-NEXT:    bfe.u32 %r12, %r11, 16, 1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    add.s32 %r13, %r12, %r11;
@@ -21725,12 +21725,12 @@ define <1 x bfloat> @fadd_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, <1 x
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-NOFTZ-ALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-NOFTZ-ALLOW-NEXT:    ld.volatile.global.b32 %r22, [%rd1];
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB312_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    shr.u32 %r7, %r22, %r1;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    add.rn.f32 %r11, %r8, %r10;
 ; SM60-NOFTZ-ALLOW-NEXT:    bfe.u32 %r12, %r11, 16, 1;
 ; SM60-NOFTZ-ALLOW-NEXT:    add.s32 %r13, %r12, %r11;
@@ -21770,12 +21770,12 @@ define <1 x bfloat> @fadd_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, <1 x
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-FTZ-DISALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-FTZ-DISALLOW-NEXT:    ld.volatile.global.b32 %r22, [%rd1];
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB312_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    shr.u32 %r7, %r22, %r1;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    add.rn.ftz.f32 %r11, %r8, %r10;
 ; SM60-FTZ-DISALLOW-NEXT:    bfe.u32 %r12, %r11, 16, 1;
 ; SM60-FTZ-DISALLOW-NEXT:    add.s32 %r13, %r12, %r11;
@@ -21815,12 +21815,12 @@ define <1 x bfloat> @fadd_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, <1 x
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-FTZ-ALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-FTZ-ALLOW-NEXT:    ld.volatile.global.b32 %r22, [%rd1];
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB312_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    shr.u32 %r7, %r22, %r1;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-ALLOW-NEXT:    add.rn.ftz.f32 %r11, %r8, %r10;
 ; SM60-FTZ-ALLOW-NEXT:    bfe.u32 %r12, %r11, 16, 1;
 ; SM60-FTZ-ALLOW-NEXT:    add.s32 %r13, %r12, %r11;
@@ -21861,8 +21861,6 @@ define <2 x bfloat> @fadd_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB313_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r24;
@@ -21875,6 +21873,8 @@ define <2 x bfloat> @fadd_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.nan.f32 %p1, %r7, %r7;
 ; SM60-NOFTZ-DISALLOW-NEXT:    or.b32 %r11, %r7, 4194304;
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r15, %rs3;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r16, %r15, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    add.rn.f32 %r17, %r16, %r14;
@@ -21909,8 +21909,6 @@ define <2 x bfloat> @fadd_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB313_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r24;
@@ -21923,6 +21921,8 @@ define <2 x bfloat> @fadd_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.nan.f32 %p1, %r7, %r7;
 ; SM60-NOFTZ-ALLOW-NEXT:    or.b32 %r11, %r7, 4194304;
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r15, %rs3;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r16, %r15, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    add.rn.f32 %r17, %r16, %r14;
@@ -21957,8 +21957,6 @@ define <2 x bfloat> @fadd_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB313_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r24;
@@ -21971,6 +21969,8 @@ define <2 x bfloat> @fadd_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f32 %p1, %r7, %r7;
 ; SM60-FTZ-DISALLOW-NEXT:    or.b32 %r11, %r7, 4194304;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r15, %rs3;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r16, %r15, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    add.rn.ftz.f32 %r17, %r16, %r14;
@@ -22005,8 +22005,6 @@ define <2 x bfloat> @fadd_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB313_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r24;
@@ -22019,6 +22017,8 @@ define <2 x bfloat> @fadd_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-FTZ-ALLOW-NEXT:    setp.nan.ftz.f32 %p1, %r7, %r7;
 ; SM60-FTZ-ALLOW-NEXT:    or.b32 %r11, %r7, 4194304;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r15, %rs3;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r16, %r15, 16;
 ; SM60-FTZ-ALLOW-NEXT:    add.rn.ftz.f32 %r17, %r16, %r14;
@@ -22057,13 +22057,10 @@ define <4 x bfloat> @fadd_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r46}, %rd2; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r45, %rd2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB314_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r45;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r6, %r5, 16;
@@ -22087,6 +22084,9 @@ define <4 x bfloat> @fadd_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    prmt.b32 %r23, %r22, %r12, 0x7632U;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r23;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r46;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r26, %rs8;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r27, %r26, 16;
@@ -22141,13 +22141,10 @@ define <4 x bfloat> @fadd_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r46}, %rd2; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r45, %rd2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB314_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r45;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r6, %r5, 16;
@@ -22171,6 +22168,9 @@ define <4 x bfloat> @fadd_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
 ; SM60-NOFTZ-ALLOW-NEXT:    prmt.b32 %r23, %r22, %r12, 0x7632U;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r23;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r46;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r26, %rs8;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r27, %r26, 16;
@@ -22225,13 +22225,10 @@ define <4 x bfloat> @fadd_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r46}, %rd2; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r45, %rd2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB314_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r45;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r6, %r5, 16;
@@ -22255,6 +22252,9 @@ define <4 x bfloat> @fadd_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
 ; SM60-FTZ-DISALLOW-NEXT:    prmt.b32 %r23, %r22, %r12, 0x7632U;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r23;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r46;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r26, %rs8;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r27, %r26, 16;
@@ -22309,13 +22309,10 @@ define <4 x bfloat> @fadd_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r46}, %rd2; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r45, %rd2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB314_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r45;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r6, %r5, 16;
@@ -22339,6 +22336,9 @@ define <4 x bfloat> @fadd_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-FTZ-ALLOW-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
 ; SM60-FTZ-ALLOW-NEXT:    prmt.b32 %r23, %r22, %r12, 0x7632U;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r23;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r46;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r26, %rs8;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r27, %r26, 16;
@@ -22397,7 +22397,6 @@ define <8 x bfloat> @fadd_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r90}, %rd2; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r89, %rd2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB315_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r5, %rs2;
@@ -22425,6 +22424,7 @@ define <8 x bfloat> @fadd_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b32 %r24, %r23, %r22, %p2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    prmt.b32 %r25, %r24, %r14, 0x7632U;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r25;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r26, %rs6;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r90;
@@ -22466,7 +22466,6 @@ define <8 x bfloat> @fadd_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r92}, %rd12; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r91, %rd12;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r3;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB315_3: // %atomicrmw.start2
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r47, %rs10;
@@ -22494,6 +22493,7 @@ define <8 x bfloat> @fadd_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b32 %r66, %r65, %r64, %p7;
 ; SM60-NOFTZ-DISALLOW-NEXT:    prmt.b32 %r67, %r66, %r56, 0x7632U;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd13, %r67;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r68, %rs14;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r69, %r68, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r92;
@@ -22550,7 +22550,6 @@ define <8 x bfloat> @fadd_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r90}, %rd2; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r89, %rd2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB315_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r5, %rs2;
@@ -22578,6 +22577,7 @@ define <8 x bfloat> @fadd_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b32 %r24, %r23, %r22, %p2;
 ; SM60-NOFTZ-ALLOW-NEXT:    prmt.b32 %r25, %r24, %r14, 0x7632U;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r25;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r26, %rs6;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r90;
@@ -22619,7 +22619,6 @@ define <8 x bfloat> @fadd_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r92}, %rd12; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r91, %rd12;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r3;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB315_3: // %atomicrmw.start2
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r47, %rs10;
@@ -22647,6 +22646,7 @@ define <8 x bfloat> @fadd_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b32 %r66, %r65, %r64, %p7;
 ; SM60-NOFTZ-ALLOW-NEXT:    prmt.b32 %r67, %r66, %r56, 0x7632U;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd13, %r67;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r68, %rs14;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r69, %r68, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r92;
@@ -22703,7 +22703,6 @@ define <8 x bfloat> @fadd_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r90}, %rd2; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r89, %rd2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB315_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r5, %rs2;
@@ -22731,6 +22730,7 @@ define <8 x bfloat> @fadd_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b32 %r24, %r23, %r22, %p2;
 ; SM60-FTZ-DISALLOW-NEXT:    prmt.b32 %r25, %r24, %r14, 0x7632U;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r25;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r26, %rs6;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r90;
@@ -22772,7 +22772,6 @@ define <8 x bfloat> @fadd_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r92}, %rd12; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r91, %rd12;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r3;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB315_3: // %atomicrmw.start2
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r47, %rs10;
@@ -22800,6 +22799,7 @@ define <8 x bfloat> @fadd_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b32 %r66, %r65, %r64, %p7;
 ; SM60-FTZ-DISALLOW-NEXT:    prmt.b32 %r67, %r66, %r56, 0x7632U;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd13, %r67;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r68, %rs14;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r69, %r68, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r92;
@@ -22856,7 +22856,6 @@ define <8 x bfloat> @fadd_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r90}, %rd2; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r89, %rd2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB315_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r5, %rs2;
@@ -22884,6 +22883,7 @@ define <8 x bfloat> @fadd_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-ALLOW-NEXT:    selp.b32 %r24, %r23, %r22, %p2;
 ; SM60-FTZ-ALLOW-NEXT:    prmt.b32 %r25, %r24, %r14, 0x7632U;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r25;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r26, %rs6;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r90;
@@ -22925,7 +22925,6 @@ define <8 x bfloat> @fadd_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r92}, %rd12; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r91, %rd12;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r3;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB315_3: // %atomicrmw.start2
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r47, %rs10;
@@ -22953,6 +22952,7 @@ define <8 x bfloat> @fadd_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-ALLOW-NEXT:    selp.b32 %r66, %r65, %r64, %p7;
 ; SM60-FTZ-ALLOW-NEXT:    prmt.b32 %r67, %r66, %r56, 0x7632U;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd13, %r67;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r68, %rs14;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r69, %r68, 16;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r92;
@@ -23016,12 +23016,12 @@ define <1 x bfloat> @fsub_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, <1 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-NOFTZ-DISALLOW-NEXT:    ld.volatile.global.b32 %r22, [%rd1];
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB316_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    shr.u32 %r7, %r22, %r1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    sub.rn.f32 %r11, %r8, %r10;
 ; SM60-NOFTZ-DISALLOW-NEXT:    bfe.u32 %r12, %r11, 16, 1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    add.s32 %r13, %r12, %r11;
@@ -23061,12 +23061,12 @@ define <1 x bfloat> @fsub_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, <1 x
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-NOFTZ-ALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-NOFTZ-ALLOW-NEXT:    ld.volatile.global.b32 %r22, [%rd1];
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB316_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    shr.u32 %r7, %r22, %r1;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    sub.rn.f32 %r11, %r8, %r10;
 ; SM60-NOFTZ-ALLOW-NEXT:    bfe.u32 %r12, %r11, 16, 1;
 ; SM60-NOFTZ-ALLOW-NEXT:    add.s32 %r13, %r12, %r11;
@@ -23106,12 +23106,12 @@ define <1 x bfloat> @fsub_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, <1 x
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-FTZ-DISALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-FTZ-DISALLOW-NEXT:    ld.volatile.global.b32 %r22, [%rd1];
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB316_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    shr.u32 %r7, %r22, %r1;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    sub.rn.ftz.f32 %r11, %r8, %r10;
 ; SM60-FTZ-DISALLOW-NEXT:    bfe.u32 %r12, %r11, 16, 1;
 ; SM60-FTZ-DISALLOW-NEXT:    add.s32 %r13, %r12, %r11;
@@ -23151,12 +23151,12 @@ define <1 x bfloat> @fsub_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, <1 x
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-FTZ-ALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-FTZ-ALLOW-NEXT:    ld.volatile.global.b32 %r22, [%rd1];
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB316_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    shr.u32 %r7, %r22, %r1;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-ALLOW-NEXT:    sub.rn.ftz.f32 %r11, %r8, %r10;
 ; SM60-FTZ-ALLOW-NEXT:    bfe.u32 %r12, %r11, 16, 1;
 ; SM60-FTZ-ALLOW-NEXT:    add.s32 %r13, %r12, %r11;
@@ -23197,8 +23197,6 @@ define <2 x bfloat> @fsub_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB317_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r24;
@@ -23211,6 +23209,8 @@ define <2 x bfloat> @fsub_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.nan.f32 %p1, %r7, %r7;
 ; SM60-NOFTZ-DISALLOW-NEXT:    or.b32 %r11, %r7, 4194304;
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r15, %rs3;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r16, %r15, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    sub.rn.f32 %r17, %r16, %r14;
@@ -23245,8 +23245,6 @@ define <2 x bfloat> @fsub_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB317_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r24;
@@ -23259,6 +23257,8 @@ define <2 x bfloat> @fsub_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.nan.f32 %p1, %r7, %r7;
 ; SM60-NOFTZ-ALLOW-NEXT:    or.b32 %r11, %r7, 4194304;
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r15, %rs3;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r16, %r15, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    sub.rn.f32 %r17, %r16, %r14;
@@ -23293,8 +23293,6 @@ define <2 x bfloat> @fsub_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB317_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r24;
@@ -23307,6 +23305,8 @@ define <2 x bfloat> @fsub_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f32 %p1, %r7, %r7;
 ; SM60-FTZ-DISALLOW-NEXT:    or.b32 %r11, %r7, 4194304;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r15, %rs3;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r16, %r15, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    sub.rn.ftz.f32 %r17, %r16, %r14;
@@ -23341,8 +23341,6 @@ define <2 x bfloat> @fsub_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB317_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r24;
@@ -23355,6 +23353,8 @@ define <2 x bfloat> @fsub_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-FTZ-ALLOW-NEXT:    setp.nan.ftz.f32 %p1, %r7, %r7;
 ; SM60-FTZ-ALLOW-NEXT:    or.b32 %r11, %r7, 4194304;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r15, %rs3;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r16, %r15, 16;
 ; SM60-FTZ-ALLOW-NEXT:    sub.rn.ftz.f32 %r17, %r16, %r14;
@@ -23393,13 +23393,10 @@ define <4 x bfloat> @fsub_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r46}, %rd2; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r45, %rd2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB318_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r45;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r6, %r5, 16;
@@ -23423,6 +23420,9 @@ define <4 x bfloat> @fsub_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    prmt.b32 %r23, %r22, %r12, 0x7632U;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r23;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r46;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r26, %rs8;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r27, %r26, 16;
@@ -23477,13 +23477,10 @@ define <4 x bfloat> @fsub_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r46}, %rd2; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r45, %rd2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB318_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r45;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r6, %r5, 16;
@@ -23507,6 +23504,9 @@ define <4 x bfloat> @fsub_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
 ; SM60-NOFTZ-ALLOW-NEXT:    prmt.b32 %r23, %r22, %r12, 0x7632U;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r23;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r46;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r26, %rs8;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r27, %r26, 16;
@@ -23561,13 +23561,10 @@ define <4 x bfloat> @fsub_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r46}, %rd2; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r45, %rd2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB318_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r45;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r6, %r5, 16;
@@ -23591,6 +23588,9 @@ define <4 x bfloat> @fsub_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
 ; SM60-FTZ-DISALLOW-NEXT:    prmt.b32 %r23, %r22, %r12, 0x7632U;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r23;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r46;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r26, %rs8;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r27, %r26, 16;
@@ -23645,13 +23645,10 @@ define <4 x bfloat> @fsub_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r46}, %rd2; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r45, %rd2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB318_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r45;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r6, %r5, 16;
@@ -23675,6 +23672,9 @@ define <4 x bfloat> @fsub_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-FTZ-ALLOW-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
 ; SM60-FTZ-ALLOW-NEXT:    prmt.b32 %r23, %r22, %r12, 0x7632U;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r23;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r46;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r26, %rs8;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r27, %r26, 16;
@@ -23733,7 +23733,6 @@ define <8 x bfloat> @fsub_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r90}, %rd2; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r89, %rd2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB319_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r5, %rs2;
@@ -23761,6 +23760,7 @@ define <8 x bfloat> @fsub_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b32 %r24, %r23, %r22, %p2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    prmt.b32 %r25, %r24, %r14, 0x7632U;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r25;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r26, %rs6;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r90;
@@ -23802,7 +23802,6 @@ define <8 x bfloat> @fsub_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r92}, %rd12; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r91, %rd12;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r3;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB319_3: // %atomicrmw.start2
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r47, %rs10;
@@ -23830,6 +23829,7 @@ define <8 x bfloat> @fsub_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b32 %r66, %r65, %r64, %p7;
 ; SM60-NOFTZ-DISALLOW-NEXT:    prmt.b32 %r67, %r66, %r56, 0x7632U;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd13, %r67;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r68, %rs14;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r69, %r68, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r92;
@@ -23886,7 +23886,6 @@ define <8 x bfloat> @fsub_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r90}, %rd2; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r89, %rd2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB319_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r5, %rs2;
@@ -23914,6 +23913,7 @@ define <8 x bfloat> @fsub_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b32 %r24, %r23, %r22, %p2;
 ; SM60-NOFTZ-ALLOW-NEXT:    prmt.b32 %r25, %r24, %r14, 0x7632U;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r25;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r26, %rs6;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r90;
@@ -23955,7 +23955,6 @@ define <8 x bfloat> @fsub_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r92}, %rd12; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r91, %rd12;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r3;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB319_3: // %atomicrmw.start2
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r47, %rs10;
@@ -23983,6 +23982,7 @@ define <8 x bfloat> @fsub_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b32 %r66, %r65, %r64, %p7;
 ; SM60-NOFTZ-ALLOW-NEXT:    prmt.b32 %r67, %r66, %r56, 0x7632U;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd13, %r67;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r68, %rs14;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r69, %r68, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r92;
@@ -24039,7 +24039,6 @@ define <8 x bfloat> @fsub_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r90}, %rd2; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r89, %rd2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB319_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r5, %rs2;
@@ -24067,6 +24066,7 @@ define <8 x bfloat> @fsub_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b32 %r24, %r23, %r22, %p2;
 ; SM60-FTZ-DISALLOW-NEXT:    prmt.b32 %r25, %r24, %r14, 0x7632U;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r25;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r26, %rs6;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r90;
@@ -24108,7 +24108,6 @@ define <8 x bfloat> @fsub_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r92}, %rd12; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r91, %rd12;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r3;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB319_3: // %atomicrmw.start2
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r47, %rs10;
@@ -24136,6 +24135,7 @@ define <8 x bfloat> @fsub_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b32 %r66, %r65, %r64, %p7;
 ; SM60-FTZ-DISALLOW-NEXT:    prmt.b32 %r67, %r66, %r56, 0x7632U;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd13, %r67;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r68, %rs14;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r69, %r68, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r92;
@@ -24192,7 +24192,6 @@ define <8 x bfloat> @fsub_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r90}, %rd2; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r89, %rd2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB319_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r5, %rs2;
@@ -24220,6 +24219,7 @@ define <8 x bfloat> @fsub_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-ALLOW-NEXT:    selp.b32 %r24, %r23, %r22, %p2;
 ; SM60-FTZ-ALLOW-NEXT:    prmt.b32 %r25, %r24, %r14, 0x7632U;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r25;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r26, %rs6;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r90;
@@ -24261,7 +24261,6 @@ define <8 x bfloat> @fsub_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r92}, %rd12; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r91, %rd12;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r3;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB319_3: // %atomicrmw.start2
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r47, %rs10;
@@ -24289,6 +24288,7 @@ define <8 x bfloat> @fsub_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-ALLOW-NEXT:    selp.b32 %r66, %r65, %r64, %p7;
 ; SM60-FTZ-ALLOW-NEXT:    prmt.b32 %r67, %r66, %r56, 0x7632U;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd13, %r67;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r68, %rs14;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r69, %r68, 16;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r92;
@@ -24352,12 +24352,12 @@ define <1 x bfloat> @fmin_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, <1 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-NOFTZ-DISALLOW-NEXT:    ld.volatile.global.b32 %r22, [%rd1];
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB320_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    shr.u32 %r7, %r22, %r1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    min.f32 %r11, %r8, %r10;
 ; SM60-NOFTZ-DISALLOW-NEXT:    bfe.u32 %r12, %r11, 16, 1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    add.s32 %r13, %r12, %r11;
@@ -24397,12 +24397,12 @@ define <1 x bfloat> @fmin_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, <1 x
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-NOFTZ-ALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-NOFTZ-ALLOW-NEXT:    ld.volatile.global.b32 %r22, [%rd1];
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB320_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    shr.u32 %r7, %r22, %r1;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    min.f32 %r11, %r8, %r10;
 ; SM60-NOFTZ-ALLOW-NEXT:    bfe.u32 %r12, %r11, 16, 1;
 ; SM60-NOFTZ-ALLOW-NEXT:    add.s32 %r13, %r12, %r11;
@@ -24442,12 +24442,12 @@ define <1 x bfloat> @fmin_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, <1 x
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-FTZ-DISALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-FTZ-DISALLOW-NEXT:    ld.volatile.global.b32 %r22, [%rd1];
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB320_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    shr.u32 %r7, %r22, %r1;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    min.ftz.f32 %r11, %r8, %r10;
 ; SM60-FTZ-DISALLOW-NEXT:    bfe.u32 %r12, %r11, 16, 1;
 ; SM60-FTZ-DISALLOW-NEXT:    add.s32 %r13, %r12, %r11;
@@ -24487,12 +24487,12 @@ define <1 x bfloat> @fmin_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, <1 x
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-FTZ-ALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-FTZ-ALLOW-NEXT:    ld.volatile.global.b32 %r22, [%rd1];
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB320_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    shr.u32 %r7, %r22, %r1;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-ALLOW-NEXT:    min.ftz.f32 %r11, %r8, %r10;
 ; SM60-FTZ-ALLOW-NEXT:    bfe.u32 %r12, %r11, 16, 1;
 ; SM60-FTZ-ALLOW-NEXT:    add.s32 %r13, %r12, %r11;
@@ -24533,8 +24533,6 @@ define <2 x bfloat> @fmin_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB321_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r24;
@@ -24547,6 +24545,8 @@ define <2 x bfloat> @fmin_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.nan.f32 %p1, %r7, %r7;
 ; SM60-NOFTZ-DISALLOW-NEXT:    or.b32 %r11, %r7, 4194304;
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r15, %rs3;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r16, %r15, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    min.f32 %r17, %r16, %r14;
@@ -24581,8 +24581,6 @@ define <2 x bfloat> @fmin_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB321_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r24;
@@ -24595,6 +24593,8 @@ define <2 x bfloat> @fmin_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.nan.f32 %p1, %r7, %r7;
 ; SM60-NOFTZ-ALLOW-NEXT:    or.b32 %r11, %r7, 4194304;
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r15, %rs3;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r16, %r15, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    min.f32 %r17, %r16, %r14;
@@ -24629,8 +24629,6 @@ define <2 x bfloat> @fmin_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB321_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r24;
@@ -24643,6 +24641,8 @@ define <2 x bfloat> @fmin_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f32 %p1, %r7, %r7;
 ; SM60-FTZ-DISALLOW-NEXT:    or.b32 %r11, %r7, 4194304;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r15, %rs3;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r16, %r15, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    min.ftz.f32 %r17, %r16, %r14;
@@ -24677,8 +24677,6 @@ define <2 x bfloat> @fmin_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB321_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r24;
@@ -24691,6 +24689,8 @@ define <2 x bfloat> @fmin_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-FTZ-ALLOW-NEXT:    setp.nan.ftz.f32 %p1, %r7, %r7;
 ; SM60-FTZ-ALLOW-NEXT:    or.b32 %r11, %r7, 4194304;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r15, %rs3;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r16, %r15, 16;
 ; SM60-FTZ-ALLOW-NEXT:    min.ftz.f32 %r17, %r16, %r14;
@@ -24729,13 +24729,10 @@ define <4 x bfloat> @fmin_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r46}, %rd2; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r45, %rd2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB322_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r45;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r6, %r5, 16;
@@ -24759,6 +24756,9 @@ define <4 x bfloat> @fmin_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    prmt.b32 %r23, %r22, %r12, 0x7632U;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r23;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r46;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r26, %rs8;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r27, %r26, 16;
@@ -24813,13 +24813,10 @@ define <4 x bfloat> @fmin_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r46}, %rd2; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r45, %rd2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB322_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r45;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r6, %r5, 16;
@@ -24843,6 +24840,9 @@ define <4 x bfloat> @fmin_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
 ; SM60-NOFTZ-ALLOW-NEXT:    prmt.b32 %r23, %r22, %r12, 0x7632U;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r23;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r46;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r26, %rs8;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r27, %r26, 16;
@@ -24897,13 +24897,10 @@ define <4 x bfloat> @fmin_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r46}, %rd2; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r45, %rd2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB322_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r45;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r6, %r5, 16;
@@ -24927,6 +24924,9 @@ define <4 x bfloat> @fmin_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
 ; SM60-FTZ-DISALLOW-NEXT:    prmt.b32 %r23, %r22, %r12, 0x7632U;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r23;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r46;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r26, %rs8;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r27, %r26, 16;
@@ -24981,13 +24981,10 @@ define <4 x bfloat> @fmin_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r46}, %rd2; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r45, %rd2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB322_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r45;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r6, %r5, 16;
@@ -25011,6 +25008,9 @@ define <4 x bfloat> @fmin_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-FTZ-ALLOW-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
 ; SM60-FTZ-ALLOW-NEXT:    prmt.b32 %r23, %r22, %r12, 0x7632U;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r23;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r46;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r26, %rs8;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r27, %r26, 16;
@@ -25069,7 +25069,6 @@ define <8 x bfloat> @fmin_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r90}, %rd2; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r89, %rd2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB323_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r5, %rs2;
@@ -25097,6 +25096,7 @@ define <8 x bfloat> @fmin_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b32 %r24, %r23, %r22, %p2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    prmt.b32 %r25, %r24, %r14, 0x7632U;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r25;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r26, %rs6;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r90;
@@ -25138,7 +25138,6 @@ define <8 x bfloat> @fmin_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r92}, %rd12; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r91, %rd12;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r3;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB323_3: // %atomicrmw.start2
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r47, %rs10;
@@ -25166,6 +25165,7 @@ define <8 x bfloat> @fmin_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b32 %r66, %r65, %r64, %p7;
 ; SM60-NOFTZ-DISALLOW-NEXT:    prmt.b32 %r67, %r66, %r56, 0x7632U;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd13, %r67;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r68, %rs14;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r69, %r68, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r92;
@@ -25222,7 +25222,6 @@ define <8 x bfloat> @fmin_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r90}, %rd2; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r89, %rd2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB323_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r5, %rs2;
@@ -25250,6 +25249,7 @@ define <8 x bfloat> @fmin_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b32 %r24, %r23, %r22, %p2;
 ; SM60-NOFTZ-ALLOW-NEXT:    prmt.b32 %r25, %r24, %r14, 0x7632U;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r25;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r26, %rs6;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r90;
@@ -25291,7 +25291,6 @@ define <8 x bfloat> @fmin_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r92}, %rd12; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r91, %rd12;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r3;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB323_3: // %atomicrmw.start2
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r47, %rs10;
@@ -25319,6 +25318,7 @@ define <8 x bfloat> @fmin_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b32 %r66, %r65, %r64, %p7;
 ; SM60-NOFTZ-ALLOW-NEXT:    prmt.b32 %r67, %r66, %r56, 0x7632U;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd13, %r67;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r68, %rs14;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r69, %r68, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r92;
@@ -25375,7 +25375,6 @@ define <8 x bfloat> @fmin_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r90}, %rd2; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r89, %rd2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB323_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r5, %rs2;
@@ -25403,6 +25402,7 @@ define <8 x bfloat> @fmin_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b32 %r24, %r23, %r22, %p2;
 ; SM60-FTZ-DISALLOW-NEXT:    prmt.b32 %r25, %r24, %r14, 0x7632U;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r25;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r26, %rs6;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r90;
@@ -25444,7 +25444,6 @@ define <8 x bfloat> @fmin_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r92}, %rd12; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r91, %rd12;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r3;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB323_3: // %atomicrmw.start2
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r47, %rs10;
@@ -25472,6 +25471,7 @@ define <8 x bfloat> @fmin_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b32 %r66, %r65, %r64, %p7;
 ; SM60-FTZ-DISALLOW-NEXT:    prmt.b32 %r67, %r66, %r56, 0x7632U;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd13, %r67;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r68, %rs14;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r69, %r68, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r92;
@@ -25528,7 +25528,6 @@ define <8 x bfloat> @fmin_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r90}, %rd2; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r89, %rd2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB323_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r5, %rs2;
@@ -25556,6 +25555,7 @@ define <8 x bfloat> @fmin_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-ALLOW-NEXT:    selp.b32 %r24, %r23, %r22, %p2;
 ; SM60-FTZ-ALLOW-NEXT:    prmt.b32 %r25, %r24, %r14, 0x7632U;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r25;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r26, %rs6;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r90;
@@ -25597,7 +25597,6 @@ define <8 x bfloat> @fmin_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r92}, %rd12; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r91, %rd12;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r3;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB323_3: // %atomicrmw.start2
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r47, %rs10;
@@ -25625,6 +25624,7 @@ define <8 x bfloat> @fmin_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-ALLOW-NEXT:    selp.b32 %r66, %r65, %r64, %p7;
 ; SM60-FTZ-ALLOW-NEXT:    prmt.b32 %r67, %r66, %r56, 0x7632U;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd13, %r67;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r68, %rs14;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r69, %r68, 16;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r92;
@@ -25688,12 +25688,12 @@ define <1 x bfloat> @fmax_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, <1 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-NOFTZ-DISALLOW-NEXT:    ld.volatile.global.b32 %r22, [%rd1];
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB324_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    shr.u32 %r7, %r22, %r1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    max.f32 %r11, %r8, %r10;
 ; SM60-NOFTZ-DISALLOW-NEXT:    bfe.u32 %r12, %r11, 16, 1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    add.s32 %r13, %r12, %r11;
@@ -25733,12 +25733,12 @@ define <1 x bfloat> @fmax_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, <1 x
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-NOFTZ-ALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-NOFTZ-ALLOW-NEXT:    ld.volatile.global.b32 %r22, [%rd1];
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB324_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    shr.u32 %r7, %r22, %r1;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    max.f32 %r11, %r8, %r10;
 ; SM60-NOFTZ-ALLOW-NEXT:    bfe.u32 %r12, %r11, 16, 1;
 ; SM60-NOFTZ-ALLOW-NEXT:    add.s32 %r13, %r12, %r11;
@@ -25778,12 +25778,12 @@ define <1 x bfloat> @fmax_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, <1 x
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-FTZ-DISALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-FTZ-DISALLOW-NEXT:    ld.volatile.global.b32 %r22, [%rd1];
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB324_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    shr.u32 %r7, %r22, %r1;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    max.ftz.f32 %r11, %r8, %r10;
 ; SM60-FTZ-DISALLOW-NEXT:    bfe.u32 %r12, %r11, 16, 1;
 ; SM60-FTZ-DISALLOW-NEXT:    add.s32 %r13, %r12, %r11;
@@ -25823,12 +25823,12 @@ define <1 x bfloat> @fmax_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, <1 x
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-FTZ-ALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-FTZ-ALLOW-NEXT:    ld.volatile.global.b32 %r22, [%rd1];
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB324_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    shr.u32 %r7, %r22, %r1;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-ALLOW-NEXT:    max.ftz.f32 %r11, %r8, %r10;
 ; SM60-FTZ-ALLOW-NEXT:    bfe.u32 %r12, %r11, 16, 1;
 ; SM60-FTZ-ALLOW-NEXT:    add.s32 %r13, %r12, %r11;
@@ -25869,8 +25869,6 @@ define <2 x bfloat> @fmax_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB325_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r24;
@@ -25883,6 +25881,8 @@ define <2 x bfloat> @fmax_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.nan.f32 %p1, %r7, %r7;
 ; SM60-NOFTZ-DISALLOW-NEXT:    or.b32 %r11, %r7, 4194304;
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r15, %rs3;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r16, %r15, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    max.f32 %r17, %r16, %r14;
@@ -25917,8 +25917,6 @@ define <2 x bfloat> @fmax_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB325_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r24;
@@ -25931,6 +25929,8 @@ define <2 x bfloat> @fmax_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.nan.f32 %p1, %r7, %r7;
 ; SM60-NOFTZ-ALLOW-NEXT:    or.b32 %r11, %r7, 4194304;
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r15, %rs3;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r16, %r15, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    max.f32 %r17, %r16, %r14;
@@ -25965,8 +25965,6 @@ define <2 x bfloat> @fmax_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB325_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r24;
@@ -25979,6 +25977,8 @@ define <2 x bfloat> @fmax_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f32 %p1, %r7, %r7;
 ; SM60-FTZ-DISALLOW-NEXT:    or.b32 %r11, %r7, 4194304;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r15, %rs3;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r16, %r15, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    max.ftz.f32 %r17, %r16, %r14;
@@ -26013,8 +26013,6 @@ define <2 x bfloat> @fmax_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB325_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r24;
@@ -26027,6 +26025,8 @@ define <2 x bfloat> @fmax_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 ; SM60-FTZ-ALLOW-NEXT:    setp.nan.ftz.f32 %p1, %r7, %r7;
 ; SM60-FTZ-ALLOW-NEXT:    or.b32 %r11, %r7, 4194304;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r15, %rs3;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r16, %r15, 16;
 ; SM60-FTZ-ALLOW-NEXT:    max.ftz.f32 %r17, %r16, %r14;
@@ -26065,13 +26065,10 @@ define <4 x bfloat> @fmax_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r46}, %rd2; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r45, %rd2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB326_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r45;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r6, %r5, 16;
@@ -26095,6 +26092,9 @@ define <4 x bfloat> @fmax_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    prmt.b32 %r23, %r22, %r12, 0x7632U;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r23;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r46;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r26, %rs8;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r27, %r26, 16;
@@ -26149,13 +26149,10 @@ define <4 x bfloat> @fmax_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r46}, %rd2; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r45, %rd2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB326_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r45;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r6, %r5, 16;
@@ -26179,6 +26176,9 @@ define <4 x bfloat> @fmax_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
 ; SM60-NOFTZ-ALLOW-NEXT:    prmt.b32 %r23, %r22, %r12, 0x7632U;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r23;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r46;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r26, %rs8;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r27, %r26, 16;
@@ -26233,13 +26233,10 @@ define <4 x bfloat> @fmax_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r46}, %rd2; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r45, %rd2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB326_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r45;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r6, %r5, 16;
@@ -26263,6 +26260,9 @@ define <4 x bfloat> @fmax_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
 ; SM60-FTZ-DISALLOW-NEXT:    prmt.b32 %r23, %r22, %r12, 0x7632U;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r23;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r46;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r26, %rs8;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r27, %r26, 16;
@@ -26317,13 +26317,10 @@ define <4 x bfloat> @fmax_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r46}, %rd2; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r45, %rd2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB326_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r45;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r6, %r5, 16;
@@ -26347,6 +26344,9 @@ define <4 x bfloat> @fmax_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-FTZ-ALLOW-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
 ; SM60-FTZ-ALLOW-NEXT:    prmt.b32 %r23, %r22, %r12, 0x7632U;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r23;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r24, %rs6;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r25, %r24, 16;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r46;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r26, %rs8;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r27, %r26, 16;
@@ -26405,7 +26405,6 @@ define <8 x bfloat> @fmax_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r90}, %rd2; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r89, %rd2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB327_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r5, %rs2;
@@ -26433,6 +26432,7 @@ define <8 x bfloat> @fmax_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b32 %r24, %r23, %r22, %p2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    prmt.b32 %r25, %r24, %r14, 0x7632U;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r25;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r26, %rs6;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r90;
@@ -26474,7 +26474,6 @@ define <8 x bfloat> @fmax_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r92}, %rd12; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r91, %rd12;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r3;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB327_3: // %atomicrmw.start2
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r47, %rs10;
@@ -26502,6 +26501,7 @@ define <8 x bfloat> @fmax_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b32 %r66, %r65, %r64, %p7;
 ; SM60-NOFTZ-DISALLOW-NEXT:    prmt.b32 %r67, %r66, %r56, 0x7632U;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd13, %r67;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r68, %rs14;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r69, %r68, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r92;
@@ -26558,7 +26558,6 @@ define <8 x bfloat> @fmax_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r90}, %rd2; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r89, %rd2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB327_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r5, %rs2;
@@ -26586,6 +26585,7 @@ define <8 x bfloat> @fmax_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b32 %r24, %r23, %r22, %p2;
 ; SM60-NOFTZ-ALLOW-NEXT:    prmt.b32 %r25, %r24, %r14, 0x7632U;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r25;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r26, %rs6;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r90;
@@ -26627,7 +26627,6 @@ define <8 x bfloat> @fmax_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r92}, %rd12; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r91, %rd12;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r3;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB327_3: // %atomicrmw.start2
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r47, %rs10;
@@ -26655,6 +26654,7 @@ define <8 x bfloat> @fmax_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b32 %r66, %r65, %r64, %p7;
 ; SM60-NOFTZ-ALLOW-NEXT:    prmt.b32 %r67, %r66, %r56, 0x7632U;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd13, %r67;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r68, %rs14;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r69, %r68, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r92;
@@ -26711,7 +26711,6 @@ define <8 x bfloat> @fmax_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r90}, %rd2; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r89, %rd2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB327_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r5, %rs2;
@@ -26739,6 +26738,7 @@ define <8 x bfloat> @fmax_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b32 %r24, %r23, %r22, %p2;
 ; SM60-FTZ-DISALLOW-NEXT:    prmt.b32 %r25, %r24, %r14, 0x7632U;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r25;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r26, %rs6;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r90;
@@ -26780,7 +26780,6 @@ define <8 x bfloat> @fmax_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r92}, %rd12; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r91, %rd12;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r3;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB327_3: // %atomicrmw.start2
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r47, %rs10;
@@ -26808,6 +26807,7 @@ define <8 x bfloat> @fmax_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b32 %r66, %r65, %r64, %p7;
 ; SM60-FTZ-DISALLOW-NEXT:    prmt.b32 %r67, %r66, %r56, 0x7632U;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd13, %r67;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r68, %rs14;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r69, %r68, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r92;
@@ -26864,7 +26864,6 @@ define <8 x bfloat> @fmax_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r90}, %rd2; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r89, %rd2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB327_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r5, %rs2;
@@ -26892,6 +26891,7 @@ define <8 x bfloat> @fmax_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-ALLOW-NEXT:    selp.b32 %r24, %r23, %r22, %p2;
 ; SM60-FTZ-ALLOW-NEXT:    prmt.b32 %r25, %r24, %r14, 0x7632U;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r25;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r26, %rs6;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs7, %rs8}, %r90;
@@ -26933,7 +26933,6 @@ define <8 x bfloat> @fmax_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r92}, %rd12; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r91, %rd12;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r3;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB327_3: // %atomicrmw.start2
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r47, %rs10;
@@ -26961,6 +26960,7 @@ define <8 x bfloat> @fmax_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-FTZ-ALLOW-NEXT:    selp.b32 %r66, %r65, %r64, %p7;
 ; SM60-FTZ-ALLOW-NEXT:    prmt.b32 %r67, %r66, %r56, 0x7632U;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd13, %r67;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r4;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r68, %rs14;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r69, %r68, 16;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r92;
@@ -27024,8 +27024,6 @@ define <1 x bfloat> @fminimum_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-NOFTZ-DISALLOW-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB328_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    shr.u32 %r7, %r16, %r1;
@@ -27033,6 +27031,8 @@ define <1 x bfloat> @fminimum_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.eq.b16 %p1, %rs2, -32768;
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.lt.f32 %p2, %r8, %r10;
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.nan.f32 %p3, %r8, %r10;
@@ -27071,8 +27071,6 @@ define <1 x bfloat> @fminimum_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-NOFTZ-ALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-NOFTZ-ALLOW-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB328_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    shr.u32 %r7, %r16, %r1;
@@ -27080,6 +27078,8 @@ define <1 x bfloat> @fminimum_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.eq.b16 %p1, %rs2, -32768;
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.lt.f32 %p2, %r8, %r10;
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.nan.f32 %p3, %r8, %r10;
@@ -27118,8 +27118,6 @@ define <1 x bfloat> @fminimum_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-FTZ-DISALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-FTZ-DISALLOW-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB328_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    shr.u32 %r7, %r16, %r1;
@@ -27127,6 +27125,8 @@ define <1 x bfloat> @fminimum_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p1, %rs2, -32768;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.lt.ftz.f32 %p2, %r8, %r10;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f32 %p3, %r8, %r10;
@@ -27165,8 +27165,6 @@ define <1 x bfloat> @fminimum_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-FTZ-ALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-FTZ-ALLOW-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB328_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    shr.u32 %r7, %r16, %r1;
@@ -27174,6 +27172,8 @@ define <1 x bfloat> @fminimum_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-ALLOW-NEXT:    setp.eq.b16 %p1, %rs2, -32768;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-ALLOW-NEXT:    setp.lt.ftz.f32 %p2, %r8, %r10;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
 ; SM60-FTZ-ALLOW-NEXT:    setp.nan.ftz.f32 %p3, %r8, %r10;
@@ -27213,8 +27213,6 @@ define <2 x bfloat> @fminimum_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r7, %rs1;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB329_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r12;
@@ -27230,6 +27228,8 @@ define <2 x bfloat> @fminimum_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.eq.b16 %p5, %rs3, -32768;
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r7, %rs1;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs3;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.lt.f32 %p6, %r10, %r8;
@@ -27263,8 +27263,6 @@ define <2 x bfloat> @fminimum_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r7, %rs1;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB329_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r12;
@@ -27280,6 +27278,8 @@ define <2 x bfloat> @fminimum_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.eq.b16 %p5, %rs3, -32768;
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r7, %rs1;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs3;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.lt.f32 %p6, %r10, %r8;
@@ -27313,8 +27313,6 @@ define <2 x bfloat> @fminimum_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r7, %rs1;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB329_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r12;
@@ -27330,6 +27328,8 @@ define <2 x bfloat> @fminimum_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p5, %rs3, -32768;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r7, %rs1;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs3;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.lt.ftz.f32 %p6, %r10, %r8;
@@ -27363,8 +27363,6 @@ define <2 x bfloat> @fminimum_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r7, %rs1;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB329_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r12;
@@ -27380,6 +27378,8 @@ define <2 x bfloat> @fminimum_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
 ; SM60-FTZ-ALLOW-NEXT:    setp.eq.b16 %p5, %rs3, -32768;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r7, %rs1;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs3;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-ALLOW-NEXT:    setp.lt.ftz.f32 %p6, %r10, %r8;
@@ -27417,16 +27417,13 @@ define <4 x bfloat> @fminimum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r22}, %rd2; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r21, %rd2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r12, %rs14;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r13, %r12, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB330_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r21;
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.eq.b16 %p1, %rs4, -32768;
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r6, %r5, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.lt.f32 %p2, %r6, %r4;
@@ -27449,9 +27446,12 @@ define <4 x bfloat> @fminimum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 %r11, {%rs12, %rs8};
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r11;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r22;
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r12, %rs14;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r13, %r12, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r14, %rs16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r15, %r14, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.lt.f32 %p10, %r15, %r13;
@@ -27505,16 +27505,13 @@ define <4 x bfloat> @fminimum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r22}, %rd2; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r21, %rd2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r12, %rs14;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r13, %r12, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB330_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r21;
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.eq.b16 %p1, %rs4, -32768;
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r6, %r5, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.lt.f32 %p2, %r6, %r4;
@@ -27537,9 +27534,12 @@ define <4 x bfloat> @fminimum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 %r11, {%rs12, %rs8};
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r11;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r22;
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r12, %rs14;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r13, %r12, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r14, %rs16;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r15, %r14, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.lt.f32 %p10, %r15, %r13;
@@ -27593,16 +27593,13 @@ define <4 x bfloat> @fminimum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r22}, %rd2; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r21, %rd2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r12, %rs14;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r13, %r12, 16;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB330_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r21;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p1, %rs4, -32768;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r6, %r5, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.lt.ftz.f32 %p2, %r6, %r4;
@@ -27625,9 +27622,12 @@ define <4 x bfloat> @fminimum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 %r11, {%rs12, %rs8};
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r11;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r22;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r12, %rs14;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r13, %r12, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r14, %rs16;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r15, %r14, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.lt.ftz.f32 %p10, %r15, %r13;
@@ -27681,16 +27681,13 @@ define <4 x bfloat> @fminimum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r22}, %rd2; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r21, %rd2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r12, %rs14;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r13, %r12, 16;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB330_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r21;
 ; SM60-FTZ-ALLOW-NEXT:    setp.eq.b16 %p1, %rs4, -32768;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r6, %r5, 16;
 ; SM60-FTZ-ALLOW-NEXT:    setp.lt.ftz.f32 %p2, %r6, %r4;
@@ -27713,9 +27710,12 @@ define <4 x bfloat> @fminimum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 %r11, {%rs12, %rs8};
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r11;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r22;
 ; SM60-FTZ-ALLOW-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r12, %rs14;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r13, %r12, 16;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r14, %rs16;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r15, %r14, 16;
 ; SM60-FTZ-ALLOW-NEXT:    setp.lt.ftz.f32 %p10, %r15, %r13;
@@ -27773,7 +27773,6 @@ define <8 x bfloat> @fminimum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r42}, %rd2; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r41, %rd2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB331_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r41;
@@ -27803,6 +27802,7 @@ define <8 x bfloat> @fminimum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 %r13, {%rs12, %rs8};
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r13;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r42;
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -27934,7 +27934,6 @@ define <8 x bfloat> @fminimum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r42}, %rd2; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r41, %rd2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB331_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r41;
@@ -27964,6 +27963,7 @@ define <8 x bfloat> @fminimum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 %r13, {%rs12, %rs8};
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r13;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r42;
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -28095,7 +28095,6 @@ define <8 x bfloat> @fminimum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r42}, %rd2; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r41, %rd2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB331_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r41;
@@ -28125,6 +28124,7 @@ define <8 x bfloat> @fminimum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 %r13, {%rs12, %rs8};
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r13;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r42;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -28256,7 +28256,6 @@ define <8 x bfloat> @fminimum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r42}, %rd2; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r41, %rd2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB331_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r41;
@@ -28286,6 +28285,7 @@ define <8 x bfloat> @fminimum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 %r13, {%rs12, %rs8};
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r13;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r42;
 ; SM60-FTZ-ALLOW-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -28424,8 +28424,6 @@ define <1 x bfloat> @fmaximum_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-NOFTZ-DISALLOW-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB332_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    shr.u32 %r7, %r16, %r1;
@@ -28433,6 +28431,8 @@ define <1 x bfloat> @fmaximum_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.eq.b16 %p1, %rs2, 0;
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.gt.f32 %p2, %r8, %r10;
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.nan.f32 %p3, %r8, %r10;
@@ -28471,8 +28471,6 @@ define <1 x bfloat> @fmaximum_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-NOFTZ-ALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-NOFTZ-ALLOW-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB332_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    shr.u32 %r7, %r16, %r1;
@@ -28480,6 +28478,8 @@ define <1 x bfloat> @fmaximum_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.eq.b16 %p1, %rs2, 0;
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.gt.f32 %p2, %r8, %r10;
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.nan.f32 %p3, %r8, %r10;
@@ -28518,8 +28518,6 @@ define <1 x bfloat> @fmaximum_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-FTZ-DISALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-FTZ-DISALLOW-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB332_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    shr.u32 %r7, %r16, %r1;
@@ -28527,6 +28525,8 @@ define <1 x bfloat> @fmaximum_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p1, %rs2, 0;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.gt.ftz.f32 %p2, %r8, %r10;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.nan.ftz.f32 %p3, %r8, %r10;
@@ -28565,8 +28565,6 @@ define <1 x bfloat> @fmaximum_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r6, 65535, %r1;
 ; SM60-FTZ-ALLOW-NEXT:    not.b32 %r2, %r6;
 ; SM60-FTZ-ALLOW-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB332_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    shr.u32 %r7, %r16, %r1;
@@ -28574,6 +28572,8 @@ define <1 x bfloat> @fmaximum_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-ALLOW-NEXT:    setp.eq.b16 %p1, %rs2, 0;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs3, %rs2, %rs1, %p1;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r8, %r7, 16;
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs1;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-ALLOW-NEXT:    setp.gt.ftz.f32 %p2, %r8, %r10;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs4, %rs2, %rs1, %p2;
 ; SM60-FTZ-ALLOW-NEXT:    setp.nan.ftz.f32 %p3, %r8, %r10;
@@ -28613,8 +28613,6 @@ define <2 x bfloat> @fmaximum_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r7, %rs1;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB333_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r12;
@@ -28630,6 +28628,8 @@ define <2 x bfloat> @fmaximum_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.eq.b16 %p5, %rs3, 0;
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r7, %rs1;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs3;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.gt.f32 %p6, %r10, %r8;
@@ -28663,8 +28663,6 @@ define <2 x bfloat> @fmaximum_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r7, %rs1;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB333_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r12;
@@ -28680,6 +28678,8 @@ define <2 x bfloat> @fmaximum_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.eq.b16 %p5, %rs3, 0;
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r7, %rs1;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs3;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.gt.f32 %p6, %r10, %r8;
@@ -28713,8 +28713,6 @@ define <2 x bfloat> @fmaximum_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r7, %rs1;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB333_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r12;
@@ -28730,6 +28728,8 @@ define <2 x bfloat> @fmaximum_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p5, %rs3, 0;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r7, %rs1;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs3;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.gt.ftz.f32 %p6, %r10, %r8;
@@ -28763,8 +28763,6 @@ define <2 x bfloat> @fmaximum_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r7, %rs1;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB333_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r12;
@@ -28780,6 +28778,8 @@ define <2 x bfloat> @fmaximum_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
 ; SM60-FTZ-ALLOW-NEXT:    setp.eq.b16 %p5, %rs3, 0;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r7, %rs1;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r9, %rs3;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-FTZ-ALLOW-NEXT:    setp.gt.ftz.f32 %p6, %r10, %r8;
@@ -28817,16 +28817,13 @@ define <4 x bfloat> @fmaximum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r22}, %rd2; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r21, %rd2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
-; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r12, %rs14;
-; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r13, %r12, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB334_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r21;
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.eq.b16 %p1, %rs4, 0;
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r6, %r5, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.gt.f32 %p2, %r6, %r4;
@@ -28849,9 +28846,12 @@ define <4 x bfloat> @fmaximum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 %r11, {%rs12, %rs8};
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r11;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r22;
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.eq.b16 %p9, %rs16, 0;
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
+; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r12, %rs14;
+; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r13, %r12, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u16 %r14, %rs16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    shl.b32 %r15, %r14, 16;
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.gt.f32 %p10, %r15, %r13;
@@ -28905,16 +28905,13 @@ define <4 x bfloat> @fmaximum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r22}, %rd2; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r21, %rd2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
-; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r12, %rs14;
-; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r13, %r12, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB334_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r21;
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.eq.b16 %p1, %rs4, 0;
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r6, %r5, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.gt.f32 %p2, %r6, %r4;
@@ -28937,9 +28934,12 @@ define <4 x bfloat> @fmaximum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 %r11, {%rs12, %rs8};
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r11;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r22;
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.eq.b16 %p9, %rs16, 0;
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
+; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r12, %rs14;
+; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r13, %r12, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u16 %r14, %rs16;
 ; SM60-NOFTZ-ALLOW-NEXT:    shl.b32 %r15, %r14, 16;
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.gt.f32 %p10, %r15, %r13;
@@ -28993,16 +28993,13 @@ define <4 x bfloat> @fmaximum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r22}, %rd2; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r21, %rd2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
-; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r12, %rs14;
-; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r13, %r12, 16;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB334_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r21;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p1, %rs4, 0;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r6, %r5, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.gt.ftz.f32 %p2, %r6, %r4;
@@ -29025,9 +29022,12 @@ define <4 x bfloat> @fmaximum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 %r11, {%rs12, %rs8};
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r11;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r22;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p9, %rs16, 0;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
+; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r12, %rs14;
+; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r13, %r12, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r14, %rs16;
 ; SM60-FTZ-DISALLOW-NEXT:    shl.b32 %r15, %r14, 16;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.gt.ftz.f32 %p10, %r15, %r13;
@@ -29081,16 +29081,13 @@ define <4 x bfloat> @fmaximum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r22}, %rd2; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r21, %rd2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
-; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r12, %rs14;
-; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r13, %r12, 16;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB334_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r21;
 ; SM60-FTZ-ALLOW-NEXT:    setp.eq.b16 %p1, %rs4, 0;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r3, %rs2;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r4, %r3, 16;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r6, %r5, 16;
 ; SM60-FTZ-ALLOW-NEXT:    setp.gt.ftz.f32 %p2, %r6, %r4;
@@ -29113,9 +29110,12 @@ define <4 x bfloat> @fmaximum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 %r11, {%rs12, %rs8};
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r11;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r22;
 ; SM60-FTZ-ALLOW-NEXT:    setp.eq.b16 %p9, %rs16, 0;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
+; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r12, %rs14;
+; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r13, %r12, 16;
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u16 %r14, %rs16;
 ; SM60-FTZ-ALLOW-NEXT:    shl.b32 %r15, %r14, 16;
 ; SM60-FTZ-ALLOW-NEXT:    setp.gt.ftz.f32 %p10, %r15, %r13;
@@ -29173,7 +29173,6 @@ define <8 x bfloat> @fmaximum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r42}, %rd2; }
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r41, %rd2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:  $L__BB335_1: // %atomicrmw.start
 ; SM60-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r41;
@@ -29203,6 +29202,7 @@ define <8 x bfloat> @fmaximum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 %r13, {%rs12, %rs8};
 ; SM60-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r13;
+; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r42;
 ; SM60-NOFTZ-DISALLOW-NEXT:    setp.eq.b16 %p9, %rs16, 0;
 ; SM60-NOFTZ-DISALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -29334,7 +29334,6 @@ define <8 x bfloat> @fmaximum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r42}, %rd2; }
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r41, %rd2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:  $L__BB335_1: // %atomicrmw.start
 ; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r41;
@@ -29364,6 +29363,7 @@ define <8 x bfloat> @fmaximum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 %r13, {%rs12, %rs8};
 ; SM60-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r13;
+; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r42;
 ; SM60-NOFTZ-ALLOW-NEXT:    setp.eq.b16 %p9, %rs16, 0;
 ; SM60-NOFTZ-ALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -29495,7 +29495,6 @@ define <8 x bfloat> @fmaximum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-DISALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r42}, %rd2; }
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r41, %rd2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:  $L__BB335_1: // %atomicrmw.start
 ; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r41;
@@ -29525,6 +29524,7 @@ define <8 x bfloat> @fmaximum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 %r13, {%rs12, %rs8};
 ; SM60-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r13;
+; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-DISALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r42;
 ; SM60-FTZ-DISALLOW-NEXT:    setp.eq.b16 %p9, %rs16, 0;
 ; SM60-FTZ-DISALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -29656,7 +29656,6 @@ define <8 x bfloat> @fmaximum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-ALLOW-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r42}, %rd2; }
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r41, %rd2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:  $L__BB335_1: // %atomicrmw.start
 ; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs3, %rs4}, %r41;
@@ -29686,6 +29685,7 @@ define <8 x bfloat> @fmaximum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs12, %rs9, %rs11, %p8;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 %r13, {%rs12, %rs8};
 ; SM60-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r13;
+; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-FTZ-ALLOW-NEXT:    mov.b32 {%rs15, %rs16}, %r42;
 ; SM60-FTZ-ALLOW-NEXT:    setp.eq.b16 %p9, %rs16, 0;
 ; SM60-FTZ-ALLOW-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
@@ -29901,27 +29901,27 @@ define <4 x i8> @add_monotonic_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> 
 ; SM60-NEXT:    ld.volatile.global.b32 %r18, [%rd1];
 ; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs1, %r3;
-; SM60-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
-; SM60-NEXT:    cvt.u16.u32 %rs4, %r6;
-; SM60-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
-; SM60-NEXT:    cvt.u16.u32 %rs7, %r10;
-; SM60-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
-; SM60-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM60-NEXT:  $L__BB338_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    prmt.b32 %r4, %r18, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs2, %r4;
 ; SM60-NEXT:    add.s16 %rs3, %rs2, %rs1;
 ; SM60-NEXT:    cvt.u32.u16 %r5, %rs3;
+; SM60-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
+; SM60-NEXT:    cvt.u16.u32 %rs4, %r6;
 ; SM60-NEXT:    prmt.b32 %r7, %r18, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; SM60-NEXT:    add.s16 %rs6, %rs5, %rs4;
 ; SM60-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM60-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
+; SM60-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
+; SM60-NEXT:    cvt.u16.u32 %rs7, %r10;
 ; SM60-NEXT:    prmt.b32 %r11, %r18, 0, 0x7771U;
 ; SM60-NEXT:    cvt.u16.u32 %rs8, %r11;
 ; SM60-NEXT:    add.s16 %rs9, %rs8, %rs7;
 ; SM60-NEXT:    cvt.u32.u16 %r12, %rs9;
+; SM60-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
+; SM60-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM60-NEXT:    prmt.b32 %r14, %r18, 0, 0x7770U;
 ; SM60-NEXT:    cvt.u16.u32 %rs11, %r14;
 ; SM60-NEXT:    add.s16 %rs12, %rs11, %rs10;
@@ -30127,27 +30127,27 @@ define <4 x i8> @add_acquire_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %v
 ; SM60-NEXT:    ld.volatile.global.b32 %r18, [%rd1];
 ; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs1, %r3;
-; SM60-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
-; SM60-NEXT:    cvt.u16.u32 %rs4, %r6;
-; SM60-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
-; SM60-NEXT:    cvt.u16.u32 %rs7, %r10;
-; SM60-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
-; SM60-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM60-NEXT:  $L__BB342_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    prmt.b32 %r4, %r18, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs2, %r4;
 ; SM60-NEXT:    add.s16 %rs3, %rs2, %rs1;
 ; SM60-NEXT:    cvt.u32.u16 %r5, %rs3;
+; SM60-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
+; SM60-NEXT:    cvt.u16.u32 %rs4, %r6;
 ; SM60-NEXT:    prmt.b32 %r7, %r18, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; SM60-NEXT:    add.s16 %rs6, %rs5, %rs4;
 ; SM60-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM60-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
+; SM60-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
+; SM60-NEXT:    cvt.u16.u32 %rs7, %r10;
 ; SM60-NEXT:    prmt.b32 %r11, %r18, 0, 0x7771U;
 ; SM60-NEXT:    cvt.u16.u32 %rs8, %r11;
 ; SM60-NEXT:    add.s16 %rs9, %rs8, %rs7;
 ; SM60-NEXT:    cvt.u32.u16 %r12, %rs9;
+; SM60-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
+; SM60-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM60-NEXT:    prmt.b32 %r14, %r18, 0, 0x7770U;
 ; SM60-NEXT:    cvt.u16.u32 %rs11, %r14;
 ; SM60-NEXT:    add.s16 %rs12, %rs11, %rs10;
@@ -30356,27 +30356,27 @@ define <4 x i8> @add_release_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %v
 ; SM60-NEXT:    ld.volatile.global.b32 %r18, [%rd1];
 ; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs1, %r3;
-; SM60-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
-; SM60-NEXT:    cvt.u16.u32 %rs4, %r6;
-; SM60-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
-; SM60-NEXT:    cvt.u16.u32 %rs7, %r10;
-; SM60-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
-; SM60-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM60-NEXT:  $L__BB346_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    prmt.b32 %r4, %r18, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs2, %r4;
 ; SM60-NEXT:    add.s16 %rs3, %rs2, %rs1;
 ; SM60-NEXT:    cvt.u32.u16 %r5, %rs3;
+; SM60-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
+; SM60-NEXT:    cvt.u16.u32 %rs4, %r6;
 ; SM60-NEXT:    prmt.b32 %r7, %r18, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; SM60-NEXT:    add.s16 %rs6, %rs5, %rs4;
 ; SM60-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM60-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
+; SM60-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
+; SM60-NEXT:    cvt.u16.u32 %rs7, %r10;
 ; SM60-NEXT:    prmt.b32 %r11, %r18, 0, 0x7771U;
 ; SM60-NEXT:    cvt.u16.u32 %rs8, %r11;
 ; SM60-NEXT:    add.s16 %rs9, %rs8, %rs7;
 ; SM60-NEXT:    cvt.u32.u16 %r12, %rs9;
+; SM60-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
+; SM60-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM60-NEXT:    prmt.b32 %r14, %r18, 0, 0x7770U;
 ; SM60-NEXT:    cvt.u16.u32 %rs11, %r14;
 ; SM60-NEXT:    add.s16 %rs12, %rs11, %rs10;

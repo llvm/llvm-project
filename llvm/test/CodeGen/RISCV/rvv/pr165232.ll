@@ -10,14 +10,12 @@ define i1 @main(ptr %var_117, ptr %arrayinit.element3045, ptr %arrayinit.element
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr t0, vlenb
-; CHECK-NEXT:    slli t1, t0, 4
-; CHECK-NEXT:    add t0, t1, t0
+; CHECK-NEXT:    slli t0, t0, 4
 ; CHECK-NEXT:    sub sp, sp, t0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x11, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 17 * vlenb
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
 ; CHECK-NEXT:    sd a0, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli t0, a0, 3
-; CHECK-NEXT:    add a0, t0, a0
+; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vs4r.v v12, (a0) # vscale x 32-byte Folded Spill
@@ -26,155 +24,141 @@ define i1 @main(ptr %var_117, ptr %arrayinit.element3045, ptr %arrayinit.element
 ; CHECK-NEXT:    add a0, a0, t0
 ; CHECK-NEXT:    vs4r.v v16, (a0) # vscale x 32-byte Folded Spill
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli t0, a0, 2
-; CHECK-NEXT:    add a0, t0, a0
+; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vs4r.v v8, (a0) # vscale x 32-byte Folded Spill
 ; CHECK-NEXT:    vsetvli t0, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    # kill: def $v11 killed $v10 killed $vtype
+; CHECK-NEXT:    vmv.v.i v12, 0
 ; CHECK-NEXT:    vmv.v.i v13, 0
-; CHECK-NEXT:    # kill: def $v14 killed $v13 killed $vtype
+; CHECK-NEXT:    vmv.v.i v14, 0
 ; CHECK-NEXT:    vmv.v.i v15, 0
 ; CHECK-NEXT:    vmv.v.i v16, 0
-; CHECK-NEXT:    vmv.v.i v17, 0
-; CHECK-NEXT:    vsetvli t0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v20, 0
-; CHECK-NEXT:    vmv1r.v v18, v13
-; CHECK-NEXT:    vmv.v.i v22, 0
-; CHECK-NEXT:    vmv1r.v v19, v13
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli t0, a0, 4
-; CHECK-NEXT:    add a0, t0, a0
+; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    ld t0, 56(a0)
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli t1, a0, 4
-; CHECK-NEXT:    add a0, t1, a0
+; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    ld t1, 48(a0)
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli t2, a0, 4
-; CHECK-NEXT:    add a0, t2, a0
+; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    ld t2, 40(a0)
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli t3, a0, 4
-; CHECK-NEXT:    add a0, t3, a0
+; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    ld t3, 32(a0)
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli t4, a0, 4
-; CHECK-NEXT:    add a0, t4, a0
+; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    ld t4, 16(a0)
-; CHECK-NEXT:    vmv.v.i v24, 0
-; CHECK-NEXT:    vmv1r.v v9, v13
-; CHECK-NEXT:    vmv1r.v v10, v13
+; CHECK-NEXT:    vmv1r.v v21, v10
 ; CHECK-NEXT:    vsetivli zero, 0, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmv.v.i v20, 0
+; CHECK-NEXT:    vmv1r.v v22, v10
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli t5, a0, 4
-; CHECK-NEXT:    add a0, t5, a0
+; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    ld t5, 24(a0)
-; CHECK-NEXT:    vmv1r.v v11, v13
-; CHECK-NEXT:    vmv1r.v v12, v13
-; CHECK-NEXT:    csrr t6, vlenb
-; CHECK-NEXT:    add t6, sp, t6
-; CHECK-NEXT:    addi t6, t6, 16
-; CHECK-NEXT:    vs1r.v v9, (t6) # vscale x 8-byte Folded Spill
+; CHECK-NEXT:    vmv1r.v v23, v10
+; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vmv.v.i v18, 0
+; CHECK-NEXT:    vmv1r.v v24, v10
+; CHECK-NEXT:    addi t6, sp, 16
+; CHECK-NEXT:    vs1r.v v21, (t6) # vscale x 8-byte Folded Spill
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    add t6, t6, a0
-; CHECK-NEXT:    vs2r.v v10, (t6) # vscale x 16-byte Folded Spill
+; CHECK-NEXT:    vs2r.v v22, (t6) # vscale x 16-byte Folded Spill
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add t6, t6, a0
 ; CHECK-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    vs1r.v v12, (t6) # vscale x 8-byte Folded Spill
-; CHECK-NEXT:    vmclr.m v9
-; CHECK-NEXT:    addi t6, sp, 16
-; CHECK-NEXT:    vs1r.v v9, (t6) # vscale x 8-byte Folded Spill
-; CHECK-NEXT:    vmv2r.v v26, v20
+; CHECK-NEXT:    vs1r.v v24, (t6) # vscale x 8-byte Folded Spill
 ; CHECK-NEXT:    li t6, 1023
 ; CHECK-NEXT:    slli t6, t6, 52
 ; CHECK-NEXT:    sd zero, 0(a0)
 ; CHECK-NEXT:    sd t6, 0(t5)
 ; CHECK-NEXT:  .LBB0_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vmv.v.i v30, 0
-; CHECK-NEXT:    vmv1r.v v12, v8
+; CHECK-NEXT:    vmv2r.v v22, v18
+; CHECK-NEXT:    vmv1r.v v21, v20
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, tu, ma
-; CHECK-NEXT:    vle64.v v30, (a4)
-; CHECK-NEXT:    vmv1r.v v28, v8
-; CHECK-NEXT:    vle32.v v12, (t4)
-; CHECK-NEXT:    vmv1r.v v29, v8
-; CHECK-NEXT:    vle32.v v28, (t1)
-; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vle32.v v29, (t2)
-; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vle32.v v9, (t3)
-; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vle32.v v10, (a6)
-; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vle32.v v9, (a7)
-; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vle32.v v10, (a5)
-; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vle32.v v11, (a2)
-; CHECK-NEXT:    vle32.v v10, (a3)
-; CHECK-NEXT:    csrr t5, vlenb
-; CHECK-NEXT:    add t5, sp, t5
-; CHECK-NEXT:    addi t5, t5, 16
-; CHECK-NEXT:    vl1r.v v1, (t5) # vscale x 8-byte Folded Reload
-; CHECK-NEXT:    csrr t6, vlenb
-; CHECK-NEXT:    add t5, t5, t6
-; CHECK-NEXT:    vl2r.v v2, (t5) # vscale x 16-byte Folded Reload
-; CHECK-NEXT:    slli t6, t6, 1
-; CHECK-NEXT:    add t5, t5, t6
-; CHECK-NEXT:    vl1r.v v4, (t5) # vscale x 8-byte Folded Reload
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vsseg4e32.v v1, (zero)
-; CHECK-NEXT:    vmv4r.v v0, v12
-; CHECK-NEXT:    vmv4r.v v4, v16
-; CHECK-NEXT:    vmv1r.v v2, v9
-; CHECK-NEXT:    vmv1r.v v0, v12
-; CHECK-NEXT:    vsseg8e32.v v0, (a1)
+; CHECK-NEXT:    vle64.v v22, (a4)
+; CHECK-NEXT:    vmv1r.v v24, v20
+; CHECK-NEXT:    vle32.v v21, (t4)
+; CHECK-NEXT:    vmv1r.v v25, v20
+; CHECK-NEXT:    vle32.v v24, (t1)
+; CHECK-NEXT:    vmv1r.v v24, v20
+; CHECK-NEXT:    vle32.v v25, (t2)
+; CHECK-NEXT:    vmv1r.v v25, v20
+; CHECK-NEXT:    vle32.v v24, (t3)
+; CHECK-NEXT:    vmv1r.v v24, v20
+; CHECK-NEXT:    vle32.v v25, (a6)
+; CHECK-NEXT:    vmv1r.v v25, v20
+; CHECK-NEXT:    vle32.v v24, (a7)
+; CHECK-NEXT:    vmv1r.v v30, v20
+; CHECK-NEXT:    vle32.v v25, (a5)
+; CHECK-NEXT:    vmv1r.v v9, v20
+; CHECK-NEXT:    vle32.v v30, (a2)
+; CHECK-NEXT:    vle32.v v9, (a3)
 ; CHECK-NEXT:    addi t5, sp, 16
-; CHECK-NEXT:    vl1r.v v12, (t5) # vscale x 8-byte Folded Reload
-; CHECK-NEXT:    vmv1r.v v9, v12
-; CHECK-NEXT:    vmv1r.v v0, v12
+; CHECK-NEXT:    vl1r.v v25, (t5) # vscale x 8-byte Folded Reload
+; CHECK-NEXT:    csrr t6, vlenb
+; CHECK-NEXT:    add t5, t5, t6
+; CHECK-NEXT:    vl2r.v v26, (t5) # vscale x 16-byte Folded Reload
+; CHECK-NEXT:    slli t6, t6, 1
+; CHECK-NEXT:    add t5, t5, t6
+; CHECK-NEXT:    vl1r.v v28, (t5) # vscale x 8-byte Folded Reload
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg4e32.v v25, (zero)
+; CHECK-NEXT:    vmv2r.v v2, v10
+; CHECK-NEXT:    vmv4r.v v4, v12
+; CHECK-NEXT:    vmv1r.v v8, v16
+; CHECK-NEXT:    vmv1r.v v3, v24
+; CHECK-NEXT:    vmv1r.v v1, v21
+; CHECK-NEXT:    vsseg8e32.v v1, (a1)
+; CHECK-NEXT:    vmclr.m v8
+; CHECK-NEXT:    vmv.v.v v17, v8
+; CHECK-NEXT:    vmv.v.v v0, v8
 ; CHECK-NEXT:    csrr t5, vlenb
-; CHECK-NEXT:    slli t6, t5, 2
-; CHECK-NEXT:    add t5, t6, t5
+; CHECK-NEXT:    slli t5, t5, 2
 ; CHECK-NEXT:    add t5, sp, t5
 ; CHECK-NEXT:    addi t5, t5, 16
-; CHECK-NEXT:    vl2r.v v2, (t5) # vscale x 16-byte Folded Reload
+; CHECK-NEXT:    vl4r.v v24, (t5) # vscale x 32-byte Folded Reload
+; CHECK-NEXT:    vsetvli zero, t0, e64, m2, ta, ma
+; CHECK-NEXT:    vsseg2e64.v v24, (zero)
+; CHECK-NEXT:    vsetvli t5, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vmv.v.i v24, 0
+; CHECK-NEXT:    vsetivli zero, 0, e64, m2, ta, mu
+; CHECK-NEXT:    vmflt.vv v17, v22, v18, v0.t
+; CHECK-NEXT:    vmv2r.v v26, v24
+; CHECK-NEXT:    vmv1r.v v0, v17
+; CHECK-NEXT:    vmv2r.v v28, v24
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vssub.vv v9, v20, v30, v0.t
+; CHECK-NEXT:    vmv2r.v v30, v24
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vsseg4e64.v v24, (zero), v0.t
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg8e32.v v9, (a0)
+; CHECK-NEXT:    csrr t5, vlenb
+; CHECK-NEXT:    slli t5, t5, 3
+; CHECK-NEXT:    add t5, sp, t5
+; CHECK-NEXT:    addi t5, t5, 16
+; CHECK-NEXT:    vl2r.v v22, (t5) # vscale x 16-byte Folded Reload
 ; CHECK-NEXT:    csrr t6, vlenb
 ; CHECK-NEXT:    slli t6, t6, 1
 ; CHECK-NEXT:    add t5, t5, t6
-; CHECK-NEXT:    vl2r.v v4, (t5) # vscale x 16-byte Folded Reload
-; CHECK-NEXT:    vsetvli zero, t0, e64, m2, ta, ma
-; CHECK-NEXT:    vsseg2e64.v v2, (zero)
-; CHECK-NEXT:    vsetivli zero, 0, e64, m2, ta, mu
-; CHECK-NEXT:    vmv.v.i v28, 0
-; CHECK-NEXT:    vmflt.vv v9, v30, v28, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v9
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
-; CHECK-NEXT:    vssub.vv v10, v8, v11, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v12
+; CHECK-NEXT:    vl4r.v v24, (t5) # vscale x 32-byte Folded Reload
+; CHECK-NEXT:    slli t6, t6, 1
+; CHECK-NEXT:    add t5, t5, t6
+; CHECK-NEXT:    vl2r.v v28, (t5) # vscale x 16-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vsseg4e64.v v20, (zero), v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vsseg8e32.v v10, (a0)
-; CHECK-NEXT:    csrr t5, vlenb
-; CHECK-NEXT:    slli t6, t5, 3
-; CHECK-NEXT:    add t5, t6, t5
-; CHECK-NEXT:    add t5, sp, t5
-; CHECK-NEXT:    addi t5, t5, 16
-; CHECK-NEXT:    vl8r.v v0, (t5) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vsseg4e64.v v0, (zero)
+; CHECK-NEXT:    vsseg4e64.v v22, (zero)
 ; CHECK-NEXT:    j .LBB0_1
 entry:
   store double 0.000000e+00, ptr %var_117, align 8
