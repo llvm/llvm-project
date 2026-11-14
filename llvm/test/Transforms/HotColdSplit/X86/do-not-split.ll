@@ -142,6 +142,8 @@ entry:
 
 if.then:                                          ; preds = %entry
   call void @sink()
+  call void @sink()
+  call void @sink()
   ret void
 
 if.end:                                           ; preds = %entry
