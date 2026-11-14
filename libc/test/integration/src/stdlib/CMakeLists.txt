@@ -88,6 +88,27 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.src.unistd.environ
   )
 
+  if(TARGET libc.src.threads.thrd_create AND
+     (NOT LIBC_CONF_THREAD_MODE OR
+      LIBC_CONF_THREAD_MODE STREQUAL "LIBC_THREAD_MODE_PLATFORM"))
+    add_integration_test(
+      env_thread_test
+      SUITE
+        libc-stdlib-integration-tests
+      SRCS
+        env_thread_test.cpp
+      DEPENDS
+        libc.include.threads
+        libc.src.__support.CPP.atomic
+        libc.src.__support.CPP.string_view
+        libc.src.stdlib.getenv
+        libc.src.stdlib.setenv
+        libc.src.stdlib.unsetenv
+        libc.src.threads.thrd_create
+        libc.src.threads.thrd_join
+    )
+  endif()
+
   add_integration_test(
     abort_test
     SUITE

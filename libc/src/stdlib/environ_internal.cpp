@@ -13,18 +13,81 @@
 
 #include "src/stdlib/environ_internal.h"
 #include "config/app.h"
+#include "src/__support/CPP/mutex.h"
 #include "src/__support/CPP/new.h"
+#include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/checked_ptr.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/sanitizer.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/memory_utils/inline_strcmp.h"
 #ifdef LIBC_COPT_SUPPORT_ENVIRON
 #include "src/unistd/environ.h"
 #endif
 
+#if defined(LIBC_COPT_ENVIRON_LOCKING) &&                                      \
+    (LIBC_THREAD_MODE == LIBC_THREAD_MODE_PLATFORM)
+#include "src/__support/CPP/atomic.h"
+#include "src/__support/threads/mutex.h"
+#define LIBC_ENVIRON_USE_LOCKING 1
+#else
+#define LIBC_ENVIRON_USE_LOCKING 0
+#endif
+
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
+
+namespace {
+
+// Synchronization policy for EnvironmentManager.  When platform mutex support
+// is available, uses a recursive mutex (to avoid self-deadlock when setenv()
+// triggers allocator calls that re-enter getenv()) and atomic double-checked
+// initialization.  Otherwise, locking and initialization checks degrade to
+// zero-overhead no-ops so environment APIs remain available without threads.
+template <bool Enabled> struct EnvSync;
+
+template <> struct EnvSync<false> {
+  struct NoOpMutex {
+    LIBC_INLINE constexpr NoOpMutex() = default;
+    LIBC_INLINE void lock() {}
+    LIBC_INLINE void unlock() {}
+  };
+
+  NoOpMutex lock{};
+  bool initialized = false;
+
+  LIBC_INLINE constexpr EnvSync() = default;
+  LIBC_INLINE bool is_initialized() { return initialized; }
+  LIBC_INLINE bool is_initialized_relaxed() { return initialized; }
+  LIBC_INLINE void mark_initialized() { initialized = true; }
+};
+
+#if LIBC_ENVIRON_USE_LOCKING
+template <> struct EnvSync<true> {
+  Mutex lock;
+  cpp::Atomic<bool> initialized{false};
+
+  LIBC_INLINE constexpr EnvSync()
+      : lock(/*is_priority_inherit=*/false, /*is_recursive=*/true,
+             /*is_robust=*/false, /*is_pshared=*/false),
+        initialized(false) {}
+  LIBC_INLINE bool is_initialized() {
+    return initialized.load(cpp::MemoryOrder::ACQUIRE);
+  }
+  LIBC_INLINE bool is_initialized_relaxed() {
+    return initialized.load(cpp::MemoryOrder::RELAXED);
+  }
+  LIBC_INLINE void mark_initialized() {
+    initialized.store(true, cpp::MemoryOrder::RELEASE);
+  }
+};
+#endif
+
+LIBC_CONSTINIT EnvSync<static_cast<bool>(LIBC_ENVIRON_USE_LOCKING)> env_sync;
+
+} // namespace
 
 // Minimum initial capacity for the environment array when first allocated.
 // This avoids frequent reallocations for small environments.
@@ -36,7 +99,11 @@ constexpr size_t MIN_ENVIRON_CAPACITY = 32;
 constexpr size_t ENVIRON_GROWTH_FACTOR = 2;
 
 void EnvironmentManager::init_once() {
-  if (initialized)
+  if (env_sync.is_initialized())
+    return;
+
+  cpp::lock_guard lock(env_sync.lock);
+  if (env_sync.is_initialized_relaxed())
     return;
 
   // Count entries in the startup environ.
@@ -48,11 +115,11 @@ void EnvironmentManager::init_once() {
     count = c;
   }
 
-  initialized = true;
+  env_sync.mark_initialized();
 }
 
 EnvironmentManager &EnvironmentManager::get_instance() {
-  static EnvironmentManager mgr;
+  static LIBC_CONSTINIT EnvironmentManager mgr;
   mgr.init_once();
   return mgr;
 }
@@ -63,16 +130,25 @@ char **EnvironmentManager::get_array() {
   return reinterpret_cast<char **>(app.env_ptr);
 }
 
-EnvironmentManager::iterator EnvironmentManager::begin() { return get_array(); }
+EnvironmentManager::iterator EnvironmentManager::begin() {
+  cpp::lock_guard lock(env_sync.lock);
+  return get_array();
+}
 
 EnvironmentManager::iterator EnvironmentManager::end() {
+  cpp::lock_guard lock(env_sync.lock);
   char **env_array = get_array();
   return env_array ? env_array + count : nullptr;
 }
 
-size_t EnvironmentManager::size() const { return count; }
+size_t EnvironmentManager::size() {
+  cpp::lock_guard lock(env_sync.lock);
+  return count;
+}
 
 char *EnvironmentManager::get(cpp::string_view name) {
+  cpp::lock_guard lock(env_sync.lock);
+
   cpp::optional<size_t> idx = find_var(name);
   if (!idx)
     return nullptr;
@@ -139,8 +215,11 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
   new_storage[count] = nullptr;
 
   if (is_ours) {
-    delete[] storage;
+    // Old storage is intentionally retained so callers holding a reference
+    // to the previous environ array do not encounter use-after-free.
+    // We free ownership since it is internal to EnvironmentManager.
     delete[] ownership;
+    LIBC_LSAN_IGNORE_OBJECT(storage);
   }
   storage = new_storage.release();
   ownership = new_ownership.release();
@@ -158,6 +237,8 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
 
 int EnvironmentManager::set(cpp::string_view name, cpp::string_view value,
                             bool overwrite) {
+  cpp::lock_guard lock(env_sync.lock);
+
   cpp::optional<size_t> idx = find_var(name);
 
   // If the variable exists and we're not overwriting, do nothing.
@@ -205,6 +286,11 @@ int EnvironmentManager::set(cpp::string_view name, cpp::string_view value,
 }
 
 int EnvironmentManager::unset(cpp::string_view name) {
+  cpp::lock_guard lock(env_sync.lock);
+  return unset_unlocked(name);
+}
+
+int EnvironmentManager::unset_unlocked(cpp::string_view name) {
   cpp::optional<size_t> idx = find_var(name);
   if (!idx)
     return 0; // Variable not found; POSIX defines this as success.
@@ -240,12 +326,14 @@ int EnvironmentManager::unset(cpp::string_view name) {
 }
 
 int EnvironmentManager::put(char *string) {
+  cpp::lock_guard lock(env_sync.lock);
+
   cpp::string_view sv(string);
   size_t eq_pos = sv.find_first_of('=');
 
   // No '=' found: treat as unset (POSIX behavior).
   if (eq_pos == cpp::string_view::npos)
-    return unset(sv);
+    return unset_unlocked(sv);
 
   cpp::string_view name = sv.substr(0, eq_pos);
 
@@ -276,10 +364,14 @@ int EnvironmentManager::put(char *string) {
 }
 
 int EnvironmentManager::clear() {
-  init_once();
+  cpp::lock_guard lock(env_sync.lock);
 
   // Free the pointer array, but leave the string buffers intact so that
   // existing getenv pointers remain valid.
+  if (storage) {
+    for (char *entry : cpp::span<char *>(storage, count))
+      LIBC_LSAN_IGNORE_OBJECT(entry);
+  }
   delete[] storage;
   delete[] ownership;
   storage = nullptr;
