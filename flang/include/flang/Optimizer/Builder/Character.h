@@ -63,11 +63,6 @@ public:
   void createAssign(const fir::ExtendedValue &lhs,
                     const fir::ExtendedValue &rhs);
 
-  /// Create lhs // rhs in a stack or heap temporary.
-  fir::CharBoxValue createConcatenate(const fir::CharBoxValue &lhs,
-                                      const fir::CharBoxValue &rhs,
-                                      bool useHeap = false);
-
   /// Create {max,min}(lhs,rhs) in a stack or heap temporary.
   fir::CharBoxValue createCharExtremum(bool predIsMin,
                                        llvm::ArrayRef<fir::CharBoxValue> opCBVs,
