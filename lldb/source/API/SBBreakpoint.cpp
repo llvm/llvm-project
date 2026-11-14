@@ -925,8 +925,7 @@ SBBreakpointList::SBBreakpointList(const SBBreakpointList &rhs)
   LLDB_INSTRUMENT_VA(this, rhs);
 }
 
-const SBBreakpointList &
-SBBreakpointList::operator=(const SBBreakpointList &rhs) {
+SBBreakpointList &SBBreakpointList::operator=(const SBBreakpointList &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs)

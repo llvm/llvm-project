@@ -33,7 +33,7 @@ SBQueueItem::SBQueueItem(const SBQueueItem &rhs)
   LLDB_INSTRUMENT_VA(this, rhs);
 }
 
-const SBQueueItem &SBQueueItem::operator=(const SBQueueItem &rhs) {
+SBQueueItem &SBQueueItem::operator=(const SBQueueItem &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs)

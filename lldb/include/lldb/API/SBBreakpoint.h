@@ -191,7 +191,7 @@ public:
 
   SBBreakpointList(const lldb::SBBreakpointList &rhs);
 
-  const lldb::SBBreakpointList &operator=(const lldb::SBBreakpointList &rhs);
+  lldb::SBBreakpointList &operator=(const lldb::SBBreakpointList &rhs);
 
   ~SBBreakpointList();
 

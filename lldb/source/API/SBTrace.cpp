@@ -29,7 +29,7 @@ SBTrace::SBTrace(const SBTrace &rhs)
   LLDB_INSTRUMENT_VA(this, rhs);
 }
 
-const SBTrace &SBTrace::operator=(const SBTrace &rhs) {
+SBTrace &SBTrace::operator=(const SBTrace &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs) {

@@ -24,7 +24,7 @@ public:
 
   SBQueueItem(const lldb::SBQueueItem &rhs);
 
-  const lldb::SBQueueItem &operator=(const lldb::SBQueueItem &rhs);
+  lldb::SBQueueItem &operator=(const lldb::SBQueueItem &rhs);
 
   ~SBQueueItem();
 

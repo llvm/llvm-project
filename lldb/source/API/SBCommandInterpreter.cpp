@@ -659,6 +659,8 @@ lldb::SBCommand SBCommandInterpreter::AddCommand(
   return lldb::SBCommand();
 }
 
+SBCommandPluginInterface::SBCommandPluginInterface() = default;
+
 SBCommandPluginInterface::~SBCommandPluginInterface() = default;
 
 SBCommand::SBCommand() { LLDB_INSTRUMENT_VA(this); }
@@ -667,7 +669,7 @@ SBCommand::SBCommand(const SBCommand &rhs) : m_opaque_sp(rhs.m_opaque_sp) {
   LLDB_INSTRUMENT_VA(this, rhs);
 }
 
-const SBCommand &SBCommand::operator=(const SBCommand &rhs) {
+SBCommand &SBCommand::operator=(const SBCommand &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs)

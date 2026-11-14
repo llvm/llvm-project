@@ -22,7 +22,7 @@ public:
 
   SBTrace(const lldb::SBTrace &rhs);
 
-  const lldb::SBTrace &operator=(const lldb::SBTrace &rhs);
+  lldb::SBTrace &operator=(const lldb::SBTrace &rhs);
 
   ~SBTrace();
 

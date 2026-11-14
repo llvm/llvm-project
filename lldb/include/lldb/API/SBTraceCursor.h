@@ -22,7 +22,7 @@ public:
 
   SBTraceCursor(const lldb::SBTraceCursor &rhs);
 
-  const lldb::SBTraceCursor &operator=(const lldb::SBTraceCursor &rhs);
+  lldb::SBTraceCursor &operator=(const lldb::SBTraceCursor &rhs);
 
   ~SBTraceCursor();
 

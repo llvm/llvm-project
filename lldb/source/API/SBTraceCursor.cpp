@@ -22,7 +22,7 @@ SBTraceCursor::SBTraceCursor(const SBTraceCursor &rhs)
   LLDB_INSTRUMENT_VA(this, rhs);
 }
 
-const SBTraceCursor &SBTraceCursor::operator=(const SBTraceCursor &rhs) {
+SBTraceCursor &SBTraceCursor::operator=(const SBTraceCursor &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs)

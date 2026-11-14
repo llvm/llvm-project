@@ -353,9 +353,11 @@ private:
 #ifndef SWIG
 class SBCommandPluginInterface {
 public:
+  SBCommandPluginInterface();
+
   // This must be a pure virtual so that it is not the key function of the
-  // class. Clients will emit the vtable and type info themselves.
-  // liblldb (built without RTTI) only provides the exported destructor body.
+  // class. Clients will emit the type info themselves. liblldb (built without
+  // RTTI) only provides the constructor and destructor bodies.
   virtual ~SBCommandPluginInterface() = 0;
 
   virtual bool DoExecute(lldb::SBDebugger /*debugger*/, char ** /*command*/,
@@ -370,7 +372,7 @@ public:
 
   SBCommand(const lldb::SBCommand &rhs);
 
-  const lldb::SBCommand &operator=(const lldb::SBCommand &rhs);
+  lldb::SBCommand &operator=(const lldb::SBCommand &rhs);
 
   ~SBCommand();
 
