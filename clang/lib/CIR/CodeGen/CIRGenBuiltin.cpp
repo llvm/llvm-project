@@ -632,7 +632,8 @@ static RValue emitTernaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
   mlir::Type ty = cgf.convertType(e.getType());
 
   auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1, arg2,
-                         cgf.getBuilder().getConstrainedFPAttr());
+                         cgf.getBuilder().getConstrainedFPAttr(),
+                         cgf.getBuilder().getFastMathFlagsAttr());
   return RValue::get(call->getResult(0));
 }
 
