@@ -30,6 +30,12 @@ static constexpr bool verboseDiagnostics = false;
 // This counter is used to generate unique thunk names.
 static uint64_t icfThunkCounter = 0;
 
+// Propagation mixes a self-referencing section's hash with itself, so mix(h, h)
+// must not be a constant.
+static uint64_t mix(uint64_t h, uint64_t v) {
+  return (h + v) * 0x9e3779b97f4a7c15;
+}
+
 class ICF {
 public:
   ICF(std::vector<ConcatInputSection *> &inputs);
@@ -47,6 +53,8 @@ public:
                       const ConcatInputSection *ib);
   bool equalsVariable(const ConcatInputSection *ia,
                       const ConcatInputSection *ib);
+  void hashRelocs(const ConcatInputSection &isec, uint64_t &h,
+                  SmallVectorImpl<uint32_t> &edges);
   void applySafeThunksToRange(size_t begin, size_t end);
 
   // ICF needs a copy of the inputs vector because its equivalence-class
@@ -305,6 +313,57 @@ bool ICF::equalsVariable(const ConcatInputSection *ia,
          db->unwindEntry()->icfEqClass[icfPass % 2];
 }
 
+// Hash what equalsConstant() compares, plus the class of a non-candidate
+// target, which never changes. Candidate targets are recorded as edges instead.
+void ICF::hashRelocs(const ConcatInputSection &isec, uint64_t &h,
+                     SmallVectorImpl<uint32_t> &edges) {
+  auto hashSec = [&](const ConcatInputSection *sec) {
+    if (sec->icfEqClass[0] & (1ull << 31))
+      edges.push_back(uint32_t(sec->icfEqClass[0]) & ~(1u << 31));
+    else
+      h = mix(h, sec->icfEqClass[0]);
+  };
+  for (const Relocation &r : isec.relocs) {
+    h = mix(h, r.type | (r.pcrel << 8) | (r.length << 9));
+    h = mix(h, r.offset);
+    if (auto *sym = dyn_cast_if_present<Symbol *>(r.referent)) {
+      h = mix(h, sym->kind());
+      if (auto *d = dyn_cast<Defined>(sym)) {
+        if (InputSection *referentIsec = d->isec()) {
+          if (auto *cisec = dyn_cast<ConcatInputSection>(referentIsec)) {
+            h = mix(h, d->value + r.getAddend());
+            hashSec(cisec);
+          } else {
+            h = mix(h, referentIsec->kind());
+            h = mix(h, r.getAddend());
+            h = mix(h, referentIsec->getOffset(d->value));
+          }
+        } else {
+          h = mix(h, d->value + r.getAddend());
+        }
+      } else {
+        // ICF runs before Undefined diags
+        assert(isa<Undefined>(sym) || isa<DylibSymbol>(sym));
+        h = mix(h, xxh3_64bits(sym->getName()));
+        h = mix(h, r.getAddend());
+      }
+    } else if (auto *referentIsec =
+                   dyn_cast_if_present<InputSection *>(r.referent)) {
+      if (auto *cisec = dyn_cast<ConcatInputSection>(referentIsec)) {
+        h = mix(h, r.getAddend());
+        hashSec(cisec);
+      } else {
+        h = mix(h, referentIsec->kind());
+        h = mix(h, referentIsec->getOffset(r.getAddend()));
+      }
+    }
+  }
+  auto hasUnwind = [](Defined *d) { return d->unwindEntry() != nullptr; };
+  const auto *it = llvm::find_if(isec.symbols, hasUnwind);
+  if (it != isec.symbols.end())
+    hashSec((*it)->unwindEntry());
+}
+
 // Find the first InputSection after BEGIN whose equivalence class differs
 size_t ICF::findBoundary(size_t begin, size_t end) {
   uint64_t beginHash = icfInputs[begin]->icfEqClass[icfPass % 2];
@@ -438,52 +497,79 @@ void ICF::forEachClass(llvm::function_ref<void(size_t, size_t)> func) {
 }
 
 void ICF::run() {
-  // Into each origin-section hash, combine all reloc referent section hashes.
-  for (icfPass = 0; icfPass < 2; ++icfPass) {
-    parallelForEach(icfInputs, [&](ConcatInputSection *isec) {
-      uint32_t hash = isec->icfEqClass[icfPass % 2];
-      for (const Relocation &r : isec->relocs) {
-        if (auto *sym = dyn_cast_if_present<Symbol *>(r.referent)) {
-          if (auto *defined = dyn_cast<Defined>(sym)) {
-            if (defined->isec()) {
-              if (auto *referentIsec =
-                      dyn_cast<ConcatInputSection>(defined->isec()))
-                hash += defined->value + referentIsec->icfEqClass[icfPass % 2];
-              else
-                hash += defined->isec()->kind() +
-                        defined->isec()->getOffset(defined->value);
-            } else {
-              hash += defined->value;
-            }
-          } else {
-            // ICF runs before Undefined diags
-            assert(isa<Undefined>(sym) || isa<DylibSymbol>(sym));
-          }
-        }
+  // Hash sections in blocks. An edge is a relocation or unwind entry
+  // referencing a candidate, recorded as the target's index. Each block
+  // appends its sections' edges to its own buffer; edgeEnd[i] is where
+  // section i's edges end within that buffer.
+  constexpr size_t blockSize = 1024;
+  size_t numInputs = icfInputs.size();
+  size_t numBlocks = divideCeil(numInputs, blockSize);
+  SmallVector<uint64_t, 0> hashes, nextHashes;
+  hashes.resize_for_overwrite(numInputs);
+  nextHashes.resize_for_overwrite(numInputs);
+  SmallVector<uint32_t, 0> edgeEnd;
+  edgeEnd.resize_for_overwrite(numInputs);
+  SmallVector<SmallVector<uint32_t, 0>, 0> blockEdges(numBlocks);
+  parallelFor(0, numBlocks, [&](size_t b) {
+    SmallVector<uint32_t, 0> edges;
+    SmallVector<uint8_t, 64> stackBuf;
+    size_t begin = b * blockSize, end = std::min(begin + blockSize, numInputs);
+    for (size_t i = begin; i != end; ++i) {
+      const ConcatInputSection *isec = icfInputs[i];
+      uint64_t h;
+      if (isFoldableIgnoringRelocatedBytes(isec)) {
+        getNormalizedData(isec, stackBuf);
+        h = xxh3_64bits(stackBuf);
+      } else {
+        h = xxh3_64bits(isec->data);
       }
-      // Set MSB to 1 to avoid collisions with non-hashed classes.
-      isec->icfEqClass[(icfPass + 1) % 2] = hash | (1ull << 31);
+      hashRelocs(*isec, h, edges);
+      hashes[i] = h;
+      edgeEnd[i] = edges.size();
+    }
+    blockEdges[b] = std::move(edges);
+  });
+
+  // Propagate hashes over edges for 7 rounds. Each round saves up to one
+  // segregate() pass. 7 is empirical: even Chromium then needs just two passes.
+  for (int round = 7; round--;) {
+    parallelFor(0, numBlocks, [&](size_t b) {
+      ArrayRef<uint32_t> edges = blockEdges[b];
+      size_t begin = b * blockSize,
+             end = std::min(begin + blockSize, numInputs), j = 0;
+      for (size_t i = begin; i != end; ++i) {
+        uint64_t h = hashes[i];
+        for (size_t e = edgeEnd[i]; j != e; ++j)
+          h = mix(h, hashes[edges[j]]);
+        nextHashes[i] = h;
+      }
     });
+    std::swap(hashes, nextHashes);
   }
+
   const bool useSafeThunks = config->icfLevel == ICFLevel::safe_thunks;
   // Sort by icfEqClass so that inputs in the same equivalence class are
   // consecutive. When using safe_thunks, also sort by keepUnique (descending)
   // within a class. This guarantees that within an equivalence class, the
   // keepUnique inputs are always first. The index in the low bits keeps the
   // order stable.
-  assert(icfInputs.size() <= (1u << 31));
-  SmallVector<uint64_t, 0> keys(icfInputs.size());
-  parallelFor(0, icfInputs.size(), [&](size_t i) {
-    uint64_t key = uint64_t(icfInputs[i]->icfEqClass[0]) << 32 | i;
+  SmallVector<uint64_t, 0> keys;
+  keys.resize_for_overwrite(numInputs);
+  parallelFor(0, numInputs, [&](size_t i) {
+    // mix()'s low bits depend only on the inputs' low bits. Fold the high half,
+    // and set MSB to 1 to avoid collisions with non-hash classes.
+    uint32_t h = (hashes[i] ^ hashes[i] >> 32) | (1u << 31);
+    icfInputs[i]->icfEqClass[0] = h;
+    uint64_t key = uint64_t(h) << 32 | i;
     if (useSafeThunks && !icfInputs[i]->keepUnique)
       key |= 1u << 31;
     keys[i] = key;
   });
   parallelSort(keys.begin(), keys.end());
-  std::vector<ConcatInputSection *> sorted;
-  sorted.reserve(keys.size());
-  for (uint64_t k : keys)
-    sorted.push_back(icfInputs[k & ((1u << 31) - 1)]);
+  std::vector<ConcatInputSection *> sorted(numInputs);
+  parallelFor(0, numInputs, [&](size_t i) {
+    sorted[i] = icfInputs[keys[i] & ((1u << 31) - 1)];
+  });
   icfInputs = std::move(sorted);
   forEachClass([&](size_t begin, size_t end) {
     segregate(begin, end, &ICF::equalsConstant);
@@ -644,6 +730,13 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
   uint64_t icfUniqueID = inputSections.size();
   // Reset the thunk counter for each run of ICF.
   icfThunkCounter = 0;
+  auto addFoldable = [&](ConcatInputSection *s) {
+    assert(s->icfEqClass[0] == 0); // don't overwrite a unique ID!
+    // Candidates hold their index, tagged with the MSB, until hashing
+    // completes.
+    s->icfEqClass[0] = foldable.size() | (1ull << 31);
+    foldable.push_back(s);
+  };
   for (ConcatInputSection *isec : inputSections) {
     bool isUnconditionallyCoalescedData = isCfStringSection(isec) ||
                                           isClassRefsSection(isec) ||
@@ -686,32 +779,18 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
       auto *obj = dyn_cast_or_null<ObjFile>(isec->getFile());
       if (!onlyCfStrings && obj && !obj->fdes.contains(isec) &&
           !isec->shouldOmitFromOutput())
-        foldable.push_back(isec);
+        addFoldable(isec);
     } else if (isFoldable) {
-      foldable.push_back(isec);
+      addFoldable(isec);
       for (Defined *d : isec->symbols)
         if (d->unwindEntry())
-          foldable.push_back(d->unwindEntry());
+          addFoldable(d->unwindEntry());
     } else {
       // Give a unique ID to everything else.
       isec->icfEqClass[0] = ++icfUniqueID;
     }
   }
-  parallelForEach(foldable, [](ConcatInputSection *isec) {
-    assert(isec->icfEqClass[0] == 0); // don't overwrite a unique ID!
-    uint64_t hash;
-    if (isFoldableIgnoringRelocatedBytes(isec)) {
-      SmallVector<uint8_t, 64> stackBuf;
-      getNormalizedData(isec, stackBuf);
-      hash = xxh3_64bits(stackBuf);
-    } else {
-      hash = xxh3_64bits(isec->data);
-    }
-    // Turn-on the top bit to guarantee that valid hashes have no collisions
-    // with the small-integer unique IDs for ICF-ineligible sections
-    isec->icfEqClass[0] = hash | (1ull << 31);
-  });
-  // Now that every input section is either hashed or marked as unique, run the
-  // segregation algorithm to detect foldable subsections.
+  assert(foldable.size() <= (1u << 31) && icfUniqueID < (1u << 31) &&
+         "the MSB marks a candidate and the low bits index foldable");
   ICF(foldable).run();
 }
