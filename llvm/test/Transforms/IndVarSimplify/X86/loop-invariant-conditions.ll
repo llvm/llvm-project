@@ -6,9 +6,9 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test1(i64 %start) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[START:%.*]], -1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[START:%.*]], -1
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_END:%.*]], label [[LOOP]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -30,9 +30,9 @@ define void @test1.next(i64 %start) {
 ; CHECK-LABEL: @test1.next(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[START:%.*]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[TMP0]], 0
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_END:%.*]], label [[LOOP]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -53,9 +53,9 @@ for.end:                                          ; preds = %if.end, %entry
 define void @test2(i64 %start) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sle i64 [[START:%.*]], -1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sle i64 [[START:%.*]], -1
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_END:%.*]], label [[LOOP]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -77,9 +77,9 @@ define void @test2.next(i64 %start) {
 ; CHECK-LABEL: @test2.next(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[START:%.*]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sle i64 [[TMP0]], 0
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sle i64 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_END:%.*]], label [[LOOP]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -375,9 +375,9 @@ define void @test7(i64 %start, ptr %inc_ptr) {
 ; CHECK-NEXT:    [[OK:%.*]] = icmp sge i64 [[INC]], 0
 ; CHECK-NEXT:    br i1 [[OK]], label [[LOOP_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       loop.preheader:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[START:%.*]], -1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[START:%.*]], -1
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_END_LOOPEXIT:%.*]], label [[LOOP]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]
@@ -407,9 +407,9 @@ define void @test7.next(i64 %start, ptr %inc_ptr) {
 ; CHECK-NEXT:    br i1 [[OK]], label [[LOOP_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INC]], [[START:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[TMP0]], 0
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_END_LOOPEXIT:%.*]], label [[LOOP]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]
@@ -650,9 +650,9 @@ define void @test9(i1 %cnd, i64 %start) {
 ; CHECK:       entry2:
 ; CHECK-NEXT:    br label [[LOOP_PREHEADER]]
 ; CHECK:       loop.preheader:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[START:%.*]], -1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[START:%.*]], -1
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_END:%.*]], label [[LOOP]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
