@@ -34,12 +34,14 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/VFABIDemangler.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -12252,6 +12254,145 @@ evaluateCDTSize(const FunctionDecl *FD,
   if (CDT->isRecordType() || CDT->isUnionType())
     CDT = C.IntTy;
   return C.getTypeSize(CDT);
+}
+
+/// Returns true if code built with \p Features can run vector functions of
+/// \p ISA.
+static bool isVFISASupported(llvm::VFISAKind ISA,
+                             const llvm::StringMap<bool> &Features) {
+  switch (ISA) {
+  case llvm::VFISAKind::SSE:
+    return Features.lookup("sse2");
+  case llvm::VFISAKind::AVX:
+    return Features.lookup("avx");
+  case llvm::VFISAKind::AVX2:
+    return Features.lookup("avx2");
+  case llvm::VFISAKind::AVX512:
+    return Features.lookup("avx512f");
+  case llvm::VFISAKind::AdvancedSIMD:
+    return Features.lookup("neon");
+  case llvm::VFISAKind::SVE:
+    return Features.lookup("sve");
+  case llvm::VFISAKind::RVV:
+    return Features.lookup("v");
+  case llvm::VFISAKind::LLVM:
+    // The LLVM ISA is target independent.
+    return true;
+  case llvm::VFISAKind::Unknown:
+    // Unrecognized ISA field; be conservative and drop the variant.
+    return false;
+  }
+  llvm_unreachable("Unhandled VFISAKind");
+}
+
+/// Returns the vector register width used by \p ISA, or 0 if the width is not
+/// fixed by the ISA.
+static unsigned getVFISARegisterWidth(llvm::VFISAKind ISA) {
+  switch (ISA) {
+  case llvm::VFISAKind::SSE:
+  case llvm::VFISAKind::AdvancedSIMD:
+    return 128;
+  case llvm::VFISAKind::AVX:
+  case llvm::VFISAKind::AVX2:
+    return 256;
+  case llvm::VFISAKind::AVX512:
+    return 512;
+  default:
+    return 0;
+  }
+}
+
+/// Returns how capable \p ISA is compared to the other ISA classes.
+static unsigned getVFISARank(llvm::VFISAKind ISA) {
+  switch (ISA) {
+  case llvm::VFISAKind::SSE:
+    return 1;
+  case llvm::VFISAKind::AVX:
+    return 2;
+  case llvm::VFISAKind::AVX2:
+    return 3;
+  case llvm::VFISAKind::AVX512:
+    return 4;
+  default:
+    return 0;
+  }
+}
+
+bool CGOpenMPRuntime::hasLibraryDeclareSimdVariants(const FunctionDecl *FD) {
+  if (!FD->hasAttr<OMPDeclareSimdDeclAttr>())
+    return false;
+
+  unsigned BuiltinID = FD->getBuiltinID();
+  return BuiltinID &&
+         FD->getASTContext().BuiltinInfo.isPredefinedLibFunction(BuiltinID);
+}
+
+std::string
+CGOpenMPRuntime::getDeclareSimdVariantMappings(CodeGenFunction &CGF,
+                                               llvm::Function *Fn) {
+  // Filter by the caller features: a function may have its own target
+  // features, and full LTO keeps a single declaration of the scalar function.
+  llvm::StringMap<bool> Features;
+  CGM.getContext().getFunctionFeatureMap(
+      Features, dyn_cast_or_null<FunctionDecl>(CGF.CurCodeDecl));
+
+  // Respect -mprefer-vector-width, otherwise the vectorizer can pick a variant
+  // wider than the preferred width, e.g. a 512-bit call with
+  // -mprefer-vector-width=256.
+  unsigned PreferWidth = 0;
+  StringRef PreferVectorWidth = CGM.getCodeGenOpts().PreferVectorWidth;
+  if (!PreferVectorWidth.empty() && PreferVectorWidth != "none")
+    (void)PreferVectorWidth.getAsInteger(10, PreferWidth);
+
+  struct Variant {
+    llvm::VFInfo Info;
+    std::string Name;
+  };
+  llvm::SmallVector<Variant, 8> Variants;
+  for (llvm::Attribute Attr : Fn->getAttributes().getFnAttrs()) {
+    if (!Attr.isStringAttribute())
+      continue;
+
+    StringRef VariantName = Attr.getKindAsString();
+    if (!VariantName.starts_with("_ZGV"))
+      continue;
+
+    std::optional<llvm::VFInfo> Info =
+        llvm::VFABI::tryDemangleForVFABI(VariantName, Fn->getFunctionType());
+    if (!Info || !isVFISASupported(Info->ISA, Features))
+      continue;
+
+    unsigned RegisterWidth = getVFISARegisterWidth(Info->ISA);
+    if (PreferWidth && RegisterWidth > PreferWidth)
+      continue;
+
+    Variants.push_back({*Info, std::string(VariantName)});
+  }
+
+  llvm::SmallVector<std::string, 8> Mappings;
+  for (const Variant &Var : Variants) {
+    // Keep only the most capable ISA class for a given vector shape. The
+    // mapping does not imply a preference order.
+    if (llvm::any_of(Variants, [&](const Variant &Other) {
+          return Other.Info.Shape == Var.Info.Shape &&
+                 getVFISARank(Other.Info.ISA) > getVFISARank(Var.Info.ISA);
+        }))
+      continue;
+
+    llvm::FunctionType *VectorTy =
+        llvm::VFABI::createFunctionType(Var.Info, Fn->getFunctionType());
+    llvm::Function *VecFn = llvm::cast<llvm::Function>(
+        Fn->getParent()
+            ->getOrInsertFunction(Var.Info.VectorName, VectorTy)
+            .getCallee());
+    // The mapping attribute is not a use, so keep the vector function in the
+    // module; otherwise GlobalOpt drops its declaration before vectorization.
+    if (DeclareSimdVariantDecls.insert(VecFn).second)
+      CGM.addCompilerUsedGlobal(VecFn);
+    Mappings.push_back(Var.Name);
+  }
+
+  return llvm::join(Mappings, ",");
 }
 
 // This are the Functions that are needed to mangle the name of the

@@ -3907,8 +3907,8 @@ void CodeGenModule::addUsedGlobal(llvm::GlobalValue *GV) {
 }
 
 void CodeGenModule::addCompilerUsedGlobal(llvm::GlobalValue *GV) {
-  assert(!GV->isDeclaration() &&
-         "Only globals with definition can force usage.");
+  assert((isa<llvm::Function>(GV) || !GV->isDeclaration()) &&
+         "Only functions can be used without a definition.");
   LLVMCompilerUsed.emplace_back(GV);
 }
 
