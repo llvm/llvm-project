@@ -984,10 +984,10 @@ define void @shl_add_ptr_combine_2use_max_lds_offset(i32 %idx) #0 {
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; CI-NEXT:    v_mov_b32_e32 v2, 9
 ; CI-NEXT:    s_mov_b32 m0, -1
-; CI-NEXT:    v_add_i32_e32 v1, vcc, 0x1fff0, v1
+; CI-NEXT:    v_add_i32_e32 v1, vcc, 0x10000, v1
 ; CI-NEXT:    ds_write_b32 v0, v2 offset:65528
 ; CI-NEXT:    v_mov_b32_e32 v0, 10
-; CI-NEXT:    ds_write_b32 v1, v0
+; CI-NEXT:    ds_write_b32 v1, v0 offset:65520
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -998,10 +998,10 @@ define void @shl_add_ptr_combine_2use_max_lds_offset(i32 %idx) #0 {
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; VI-NEXT:    v_mov_b32_e32 v2, 9
 ; VI-NEXT:    s_mov_b32 m0, -1
-; VI-NEXT:    v_add_u32_e32 v1, vcc, 0x1fff0, v1
+; VI-NEXT:    v_add_u32_e32 v1, vcc, 0x10000, v1
 ; VI-NEXT:    ds_write_b32 v0, v2 offset:65528
 ; VI-NEXT:    v_mov_b32_e32 v0, 10
-; VI-NEXT:    ds_write_b32 v1, v0
+; VI-NEXT:    ds_write_b32 v1, v0 offset:65520
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %idx.add = add nuw i32 %idx, 8191

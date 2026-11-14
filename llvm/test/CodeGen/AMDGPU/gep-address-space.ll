@@ -12,11 +12,8 @@ define amdgpu_kernel void @use_gep_address_space(ptr addrspace(3) %array) nounwi
 }
 
 ; CHECK-LABEL: {{^}}use_gep_address_space_large_offset:
-; The LDS offset will be 65536 bytes, which is larger than the size of LDS on
-; SI, which is why it is being OR'd with the base pointer.
-; SI: s_bitset1_b32
-; CI: s_add_i32
-; CHECK: ds_write_b32
+; CHECK: v_add_{{[iu]}}32_e32 [[BASE:v[0-9]+]], vcc, 0x10000, v{{[0-9]+}}
+; CHECK: ds_write_b32 [[BASE]],
 define amdgpu_kernel void @use_gep_address_space_large_offset(ptr addrspace(3) %array) nounwind {
   %p = getelementptr [1024 x i32], ptr addrspace(3) %array, i16 0, i16 16384
   store i32 99, ptr addrspace(3) %p

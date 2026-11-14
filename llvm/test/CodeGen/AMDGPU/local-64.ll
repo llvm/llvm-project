@@ -46,14 +46,11 @@ define amdgpu_kernel void @local_i8_load_i16_max_offset(ptr addrspace(1) %out, p
 ; SICIVI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; The LDS offset will be 65536 bytes, which is larger than the size of LDS on
-; SI, which is why it is being OR'd with the base pointer.
-; SI-DAG: s_bitset1_b32 [[ADDR:s[0-9]+]], 16
-; CI-DAG: s_add_i32 [[ADDR:s[0-9]+]], s{{[0-9]+}}, 0x10000
-; VI-DAG: s_add_i32 [[ADDR:s[0-9]+]], s{{[0-9]+}}, 0x10000
-; GFX9-DAG: s_add_i32 [[ADDR:s[0-9]+]], s{{[0-9]+}}, 0x10000
-
-; GCN-DAG: v_mov_b32_e32 [[VREGADDR:v[0-9]+]], [[ADDR]]
+; GCN: v_mov_b32_e32 [[VREGADDR:v[0-9]+]], s{{[0-9]+}}
+; SI: v_add_i32_e32 [[VREGADDR]], vcc, 0x10000, [[VREGADDR]]
+; CI: v_add_i32_e32 [[VREGADDR]], vcc, 0x10000, [[VREGADDR]]
+; VI: v_add_u32_e32 [[VREGADDR]], vcc, 0x10000, [[VREGADDR]]
+; GFX9: v_add_u32_e32 [[VREGADDR]], 0x10000, [[VREGADDR]]
 ; GCN: ds_read_u8 [[REG:v[0-9]+]], [[VREGADDR]]
 ; GCN: buffer_store_byte [[REG]],
 define amdgpu_kernel void @local_i8_load_over_i16_max_offset(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
