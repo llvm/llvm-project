@@ -47,6 +47,10 @@ def CanonicalizerPass : Pass<"canonicalize"> {
            "Max. iterations between applying patterns / simplifying regions">,
     Option<"maxNumRewrites", "max-num-rewrites", "int64_t", /*default=*/"-1",
            "Max. number of pattern rewrites within an iteration">,
+    Option<"deadCodeElimination", "dead-code-elimination", "bool",
+           /*default=*/"true",
+           "Erase trivially dead operations. Region simplification, unless "
+           "disabled, still removes dead values.">,
     Option<"testConvergence", "test-convergence", "bool", /*default=*/"false",
            "Test only: Fail pass on non-convergence to detect cyclic pattern">,
     Option<"cseBetweenIterations", "cse-between-iterations", "bool",

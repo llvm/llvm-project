@@ -37,6 +37,7 @@ struct Canonicalizer : public impl::CanonicalizerPassBase<Canonicalizer> {
     this->regionSimplifyLevel = config.getRegionSimplificationLevel();
     this->maxIterations = config.getMaxIterations();
     this->maxNumRewrites = config.getMaxNumRewrites();
+    this->deadCodeElimination = config.isDeadCodeEliminationEnabled();
     this->cseBetweenIterations = config.isCSEBetweenIterationsEnabled();
     this->disabledPatterns = disabledPatterns;
     this->enabledPatterns = enabledPatterns;
@@ -57,6 +58,7 @@ struct Canonicalizer : public impl::CanonicalizerPassBase<Canonicalizer> {
     config.setRegionSimplificationLevel(regionSimplifyLevel);
     config.setMaxIterations(maxIterations);
     config.setMaxNumRewrites(maxNumRewrites);
+    config.enableDeadCodeElimination(deadCodeElimination);
     config.enableCSEBetweenIterations(cseBetweenIterations);
 
     llvm::DenseSet<TypeID> allowedDialects;

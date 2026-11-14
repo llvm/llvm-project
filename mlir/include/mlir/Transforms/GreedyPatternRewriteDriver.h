@@ -130,6 +130,15 @@ public:
     return *this;
   }
 
+  /// Whether trivially dead operations are erased while greedily rewriting.
+  /// When disabled, an operation is erased only by a pattern or by folding it
+  /// away. Region simplification, if enabled, still removes dead values.
+  bool isDeadCodeEliminationEnabled() const { return deadCodeElimination; }
+  GreedyRewriteConfig &enableDeadCodeElimination(bool enable = true) {
+    deadCodeElimination = enable;
+    return *this;
+  }
+
   /// If set to "true", constants are CSE'd (even across multiple regions that
   /// are in a parent-ancestor relationship).
   bool isConstantCSEEnabled() const { return cseConstants; }
@@ -171,6 +180,7 @@ private:
   GreedyRewriteStrictness strictness = GreedyRewriteStrictness::AnyOp;
   RewriterBase::Listener *listener = nullptr;
   bool fold = true;
+  bool deadCodeElimination = true;
   bool cseConstants = true;
   bool cseBetweenIterations = false;
 };
