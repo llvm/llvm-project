@@ -1405,6 +1405,11 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
       int64_t Stride = getPtrStride(PSE, ElementTy, Ptr, TheLoop, *DT, Strides,
                                     /*ShouldCheckWrap=*/false, Predicates)
                            .value_or(0);
+      // The interleave analysis takes strides as int (isStrided,
+      // createInterleaveGroup, InterleaveGroup); treat strides that do not
+      // fit as unknown.
+      if (!isInt<32>(Stride))
+        Stride = 0;
 
       const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, TheLoop, Strides, Ptr);
       AccessStrideInfo[&I] = StrideDescriptor(Stride, Scev, Size,
@@ -1636,11 +1641,13 @@ void InterleavedAccessInfo::analyzeInterleaving(
 
       // The index of A is the index of B plus A's distance to B in multiples
       // of the size.
-      int IndexA =
+      int64_t IndexA =
           GroupB->getIndex(B) + DistanceToB / static_cast<int64_t>(DesB.Size);
 
-      // Try to insert A into B's group.
-      if (GroupB->insertMember(A, IndexA, DesA.Alignment)) {
+      // Try to insert A into B's group. insertMember takes an int32_t index, so
+      // reject A if IndexA does not fit.
+      if (isInt<32>(IndexA) &&
+          GroupB->insertMember(A, IndexA, DesA.Alignment)) {
         LLVM_DEBUG(dbgs() << "LV: Inserted:" << *A << '\n'
                           << "    into the interleave group with" << *B
                           << '\n');
