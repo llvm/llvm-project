@@ -32,6 +32,11 @@ private:
   BugType Bug;
   mutable BugReporter *BR;
   mutable llvm::DenseSet<const ObjCIvarDecl *> IvarDeclsToIgnore;
+  // Maps a template instantiation to the enclosing template instantiation
+  // whose instantiation caused it.
+  mutable llvm::DenseMap<const Decl *, const Decl *> InstantiationCauses;
+  // Template instantiations referenced by template definitions themselves.
+  mutable llvm::DenseSet<const Decl *> NonDependentUses;
 
 protected:
   const std::unique_ptr<PtrRefSafetyModel> Model;
@@ -49,17 +54,35 @@ public:
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
                     BugReporter &BRArg) const {
     BR = &BRArg;
+    InstantiationCauses.clear();
+    NonDependentUses.clear();
 
     // The calls to checkAST* from AnalysisConsumer don't
     // visit template instantiations or lambda classes. We
     // want to visit those, so we make our own RecursiveASTVisitor.
     struct LocalVisitor : ConstDynamicRecursiveASTVisitor {
       const RawPtrRefMemberChecker *Checker;
+      // Template instantiations are checked after the traversal so that we
+      // know which enclosing template instantiation caused each of them.
+      llvm::SmallVector<const CXXRecordDecl *> Instantiations;
+      // The enclosing classes and functions of the node being visited.
+      llvm::SmallVector<const Decl *> Contexts;
+
       explicit LocalVisitor(const RawPtrRefMemberChecker *Checker)
           : Checker(Checker) {
         assert(Checker);
         ShouldVisitTemplateInstantiations = true;
         ShouldVisitImplicitCode = false;
+      }
+
+      bool TraverseDecl(const Decl *D) override {
+        bool IsContext = isa_and_nonnull<CXXRecordDecl, FunctionDecl>(D);
+        if (IsContext)
+          Contexts.push_back(D);
+        bool Result = ConstDynamicRecursiveASTVisitor::TraverseDecl(D);
+        if (IsContext)
+          Contexts.pop_back();
+        return Result;
       }
 
       bool VisitTypedefDecl(const TypedefDecl *TD) override {
@@ -69,12 +92,32 @@ public:
       }
 
       bool VisitRecordDecl(const RecordDecl *RD) override {
-        Checker->visitRecordDecl(RD);
+        auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
+        if (CXXRD && getEnclosingInstantiation(CXXRD))
+          Instantiations.push_back(CXXRD);
+        else
+          Checker->visitRecordDecl(RD);
         return true;
       }
 
       bool VisitObjCContainerDecl(const ObjCContainerDecl *CD) override {
         Checker->visitObjCDecl(CD);
+        return true;
+      }
+
+      bool VisitTypeLoc(TypeLoc TL) override {
+        if (!TL.getType().isNull())
+          Checker->recordUse(TL.getType()->getAsCXXRecordDecl(), Contexts);
+        return true;
+      }
+
+      bool VisitDeclRefExpr(const DeclRefExpr *E) override {
+        Checker->recordUse(E->getDecl(), Contexts);
+        return true;
+      }
+
+      bool VisitMemberExpr(const MemberExpr *E) override {
+        Checker->recordUse(E->getMemberDecl(), Contexts);
         return true;
       }
     };
@@ -83,17 +126,134 @@ public:
     if (auto *RTC = Model->retainTypeChecker())
       RTC->visitTranslationUnitDecl(TUD);
     visitor.TraverseDecl(TUD);
+    for (auto *RD : visitor.Instantiations)
+      visitRecordDecl(RD);
   }
 
   void visitRecordDecl(const RecordDecl *RD) const {
     if (shouldSkipDecl(RD))
       return;
 
-    for (auto *Member : RD->fields())
+    const CXXRecordDecl *Pattern = nullptr;
+    SourceLocation InstantiationLoc;
+    if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+      if (auto *Instantiation = getEnclosingInstantiation(CXXRD)) {
+        Pattern = Instantiation->getTemplateInstantiationPattern();
+        InstantiationLoc = getReportLocation(Instantiation);
+      }
+    }
+
+    for (auto *Member : RD->fields()) {
+      if (Pattern) {
+        // Members whose type doesn't depend on template parameters are
+        // diagnosed in the template definition itself.
+        if (!isDependentInPattern(Member, Pattern))
+          continue;
+        if (InstantiationLoc.isValid()) {
+          visitMember(Member, RD, InstantiationLoc);
+          continue;
+        }
+      }
       visitMember(Member, RD);
+    }
   }
 
-  void visitMember(const FieldDecl *Member, const RecordDecl *RD) const {
+  static bool isDependentInPattern(const FieldDecl *Member,
+                                   const CXXRecordDecl *Pattern) {
+    if (!Pattern || !Member->getDeclName())
+      return true;
+    // Members of anonymous structs and unions are found in the enclosing
+    // record as IndirectFieldDecls.
+    for (auto *Found : Pattern->lookup(Member->getDeclName())) {
+      const FieldDecl *PatternField = dyn_cast<FieldDecl>(Found);
+      if (auto *Indirect = dyn_cast<IndirectFieldDecl>(Found))
+        PatternField = Indirect->getAnonField();
+      if (PatternField)
+        return PatternField->getType()->isDependentType();
+    }
+    return true;
+  }
+
+  // Returns RD if it's a template instantiation. Anonymous structs and unions
+  // don't have their own template specialization kind, so returns their
+  // enclosing record if it's a template instantiation.
+  static const CXXRecordDecl *
+  getEnclosingInstantiation(const CXXRecordDecl *RD) {
+    while (RD && RD->isAnonymousStructOrUnion())
+      RD = dyn_cast<CXXRecordDecl>(RD->getDeclContext());
+    return RD && isInstantiation(RD) ? RD : nullptr;
+  }
+
+  static bool isInstantiation(const Decl *D) {
+    if (auto *RD = dyn_cast<CXXRecordDecl>(D))
+      return isTemplateInstantiation(RD->getTemplateSpecializationKind());
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      return isTemplateInstantiation(FD->getTemplateSpecializationKind());
+    return false;
+  }
+
+  static const Decl *getInstantiationPattern(const Decl *D) {
+    if (auto *RD = dyn_cast<CXXRecordDecl>(D))
+      return RD->getTemplateInstantiationPattern();
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      return FD->getTemplateInstantiationPattern();
+    return nullptr;
+  }
+
+  static SourceLocation getPointOfInstantiation(const Decl *D) {
+    if (auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(D))
+      return Spec->getPointOfInstantiation();
+    if (auto *RD = dyn_cast<CXXRecordDecl>(D)) {
+      if (auto *Info = RD->getMemberSpecializationInfo())
+        return Info->getPointOfInstantiation();
+    }
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      return FD->getPointOfInstantiation();
+    return SourceLocation();
+  }
+
+  // Records that Used is referenced from the innermost template instantiation
+  // or template definition in Contexts.
+  void recordUse(const Decl *Used, ArrayRef<const Decl *> Contexts) const {
+    if (!Used || !isInstantiation(Used))
+      return;
+    for (auto *Context : llvm::reverse(Contexts)) {
+      if (Context == Used)
+        return;
+      if (isInstantiation(Context)) {
+        // If Used was instantiated from within the definition of the template
+        // Context was instantiated from, Context caused its instantiation.
+        auto *Pattern = getInstantiationPattern(Context);
+        auto &SM = BR->getSourceManager();
+        auto Loc = getPointOfInstantiation(Used);
+        if (Pattern && Loc.isValid() &&
+            SM.isPointWithin(Loc, Pattern->getBeginLoc(), Pattern->getEndLoc()))
+          InstantiationCauses.try_emplace(Used, Context);
+        return;
+      }
+      if (cast<DeclContext>(Context)->isDependentContext()) {
+        // The template definition itself refers to this instantiation.
+        NonDependentUses.insert(Used);
+        return;
+      }
+    }
+  }
+
+  // Returns where the outermost template instantiation which (transitively)
+  // caused D to be instantiated is instantiated.
+  SourceLocation getReportLocation(const Decl *D) const {
+    llvm::SmallPtrSet<const Decl *, 4> Visited;
+    while (Visited.insert(D).second && !NonDependentUses.contains(D)) {
+      auto It = InstantiationCauses.find(D);
+      if (It == InstantiationCauses.end())
+        break;
+      D = It->second;
+    }
+    return getPointOfInstantiation(D);
+  }
+
+  void visitMember(const FieldDecl *Member, const RecordDecl *RD,
+                   SourceLocation ReportLoc = SourceLocation()) const {
     auto QT = Member->getType();
     const Type *MemberType = QT.getTypePtrOrNull();
 
@@ -111,9 +271,9 @@ public:
       return;
 
     if (auto *MemberCXXRD = MemberType->getPointeeCXXRecordDecl())
-      reportBug(Member, MemberType, MemberCXXRD, RD);
+      reportBug(Member, MemberType, MemberCXXRD, RD, ReportLoc);
     else if (auto *ObjCDecl = getObjCDeclFromObjCPtr(MemberType))
-      reportBug(Member, MemberType, ObjCDecl, RD);
+      reportBug(Member, MemberType, ObjCDecl, RD, ReportLoc);
   }
 
   void visitObjCDecl(const ObjCContainerDecl *CD) const {
@@ -265,8 +425,8 @@ public:
 
   template <typename DeclType, typename PointeeType, typename ParentDeclType>
   void reportBug(const DeclType *Member, const Type *MemberType,
-                 const PointeeType *Pointee,
-                 const ParentDeclType *ClassCXXRD) const {
+                 const PointeeType *Pointee, const ParentDeclType *ClassCXXRD,
+                 SourceLocation ReportLoc = SourceLocation()) const {
     assert(Member);
     assert(MemberType);
     assert(Pointee);
@@ -296,10 +456,15 @@ public:
     } else
       printQuotedQualifiedName(Os, Pointee);
 
-    PathDiagnosticLocation BSLoc(Member->getSourceRange().getBegin(),
-                                 BR->getSourceManager());
+    // Members of template instantiations are reported where the template is
+    // instantiated since the template definition itself may be fine.
+    bool IsInstantiation = ReportLoc.isValid();
+    if (!IsInstantiation)
+      ReportLoc = Member->getSourceRange().getBegin();
+    PathDiagnosticLocation BSLoc(ReportLoc, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
-    Report->addRange(Member->getSourceRange());
+    if (!IsInstantiation)
+      Report->addRange(Member->getSourceRange());
     if (auto *EnclosingCtx = Member->getDeclContext())
       Report->setDeclWithIssue(Decl::castFromDeclContext(EnclosingCtx));
     BR->emitReport(std::move(Report));

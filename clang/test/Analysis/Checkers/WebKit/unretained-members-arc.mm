@@ -35,11 +35,11 @@ namespace members {
   struct FooTmpl {
     T* x;
     S y;
-// expected-warning@-1{{Member variable 'y' (of 'members::FooTmpl<SomeObj, __CFArray *, NSObject<OS_dispatch_queue> *>') is a raw pointer to RetainPtr-capable type}}
     R z;
   };
 
   void forceTmplToInstantiate(FooTmpl<SomeObj, CFMutableArrayRef, dispatch_queue_t>) {}
+  // expected-warning@-1{{Member variable 'y' (of 'members::FooTmpl<SomeObj, __CFArray *, NSObject<OS_dispatch_queue> *>') is a raw pointer to RetainPtr-capable type}}
 
   struct [[clang::suppress]] FooSuppressed {
   private:
@@ -59,10 +59,10 @@ namespace ptr_to_ptr_to_retained {
   struct TemplateList {
     T* elements1;
     S* elements2;
-    // expected-warning@-1{{Member variable 'elements2' (of 'ptr_to_ptr_to_retained::TemplateList<SomeObj, __CFArray *, NSObject<OS_dispatch_queue> *>') contains a raw pointer to RetainPtr-capable type '__CFArray'}}
     R* elements3;
   };
   TemplateList<SomeObj, CFMutableArrayRef, dispatch_queue_t> list;
+  // expected-warning@-1{{Member variable 'elements2' (of 'ptr_to_ptr_to_retained::TemplateList<SomeObj, __CFArray *, NSObject<OS_dispatch_queue> *>') contains a raw pointer to RetainPtr-capable type '__CFArray'}}
 
   struct SafeList {
     RetainPtr<SomeObj>* elements1;
