@@ -782,7 +782,8 @@ spirv.mlir.loop {
 
 ## Decorations conversion
 
-**Note: these conversions have not been implemented yet**
+**Note: apart from function parameter alignment, these conversions have not
+been implemented yet**
 
 ## GLSL extended instruction set
 
@@ -860,6 +861,10 @@ Inline                             | `alwaysinline`
 DontInline                         | `noinline`
 Pure                               | `readonly`
 Const                              | `readnone`
+
+A nonzero `spirv.alignment` parameter attribute is mapped to `llvm.align` with
+its largest power-of-two divisor. `spirv.max_byte_offset` bounds accesses but does not guarantee
+dereferenceability, so it is not converted.
 
 ### `spirv.Return` and `spirv.ReturnValue`
 
