@@ -185,8 +185,8 @@ s_barrier_wait 0x1234
 s_monitor_sleep 0
 // GFX13: s_monitor_sleep 0                       ; encoding: [0x00,0x00,0xac,0xbf]
 
-s_monitor_sleep 0x1234
-// GFX13: s_monitor_sleep 0x1234                  ; encoding: [0x34,0x12,0xac,0xbf]
+s_monitor_sleep 0x7f
+// GFX13: s_monitor_sleep 0x7f                    ; encoding: [0x7f,0x00,0xac,0xbf]
 
 s_delay_alu 0
 // GFX13: s_delay_alu 0                           ; encoding: [0x00,0x00,0xae,0xbf]

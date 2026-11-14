@@ -1,5 +1,9 @@
+// NOTE: Do not autogenerate. -verify checks target-specific diagnostics.
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu12.50-- -verify -S -o - %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu12.50s-amd-amdhsa -verify -S -o - %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu13-amd-amdhsa -verify -S -o - %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu13.10-amd-amdhsa -verify -S -o - %s
 
 typedef unsigned int uint;
 typedef unsigned short int ushort;
@@ -34,6 +38,14 @@ void test_bitop3_args(global uint* out, uint a, uint b, uint c) {
 
 void test_s_monitor_sleep(short a) {
   __builtin_amdgcn_s_monitor_sleep(a); // expected-error {{'__builtin_amdgcn_s_monitor_sleep' must be a constant integer}}
+}
+
+void test_s_monitor_sleep_range() {
+  __builtin_amdgcn_s_monitor_sleep(0);
+  __builtin_amdgcn_s_monitor_sleep(127);
+  __builtin_amdgcn_s_monitor_sleep(128); // expected-error {{argument value 128 is outside the valid range}}
+  __builtin_amdgcn_s_monitor_sleep(200); // expected-error {{argument value 200 is outside the valid range}}
+  __builtin_amdgcn_s_monitor_sleep(0x7fff); // expected-error {{argument value 32767 is outside the valid range}}
 }
 
 void test_s_wait_asynccnt(short a) {

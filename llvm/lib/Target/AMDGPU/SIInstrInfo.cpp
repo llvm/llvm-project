@@ -5605,6 +5605,26 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     return false;
   }
 
+  if (Opcode == AMDGPU::S_MONITOR_SLEEP ||
+      Opcode == AMDGPU::S_MONITOR_SLEEP_gfx12 ||
+      Opcode == AMDGPU::S_MONITOR_SLEEP_gfx13) {
+    const MachineOperand &Sleep = MI.getOperand(0);
+    if (!Sleep.isImm()) {
+      ErrInfo = "sleep duration must be an immediate";
+      return false;
+    }
+    int64_t Value = Sleep.getImm();
+    if (ST.hasNoSleepForever() && (Value & 0x8000)) {
+      ErrInfo = "sleep forever is unsupported on this target";
+      return false;
+    }
+
+    if ((!isInt<16>(Value) && !isUInt<16>(Value)) || (Value & 0x7fff) > 127) {
+      ErrInfo = "sleep duration must be in range [0, 127] on this target";
+      return false;
+    }
+  }
+
   if (MI.isInlineAsm()) {
     // Verify register classes for inlineasm constraints.
     for (unsigned I = InlineAsm::MIOp_FirstOperand, E = MI.getNumOperands();

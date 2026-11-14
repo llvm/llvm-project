@@ -2856,6 +2856,7 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureGWS, FeatureImageInsts, FeatureLdsBarrierArriveAtomic,
   FeatureLerpInst, FeatureLoadMonitorInsts, FeatureMAIInsts, FeatureMcastLoadInsts,
   FeatureMqsadInsts, FeatureMqsadPkInsts, FeatureMsadInsts,
+  FeatureNoSleepForever,
   FeatureOCPFP8ConversionInsts, FeaturePermlane16Insts, FeaturePermlane16Swap,
   FeaturePermlane32Swap, FeaturePkAddMinMaxInsts, FeaturePrngInst,
   FeatureQsadInsts, FeatureSMemRealTime, FeatureSMemTimeInst,
