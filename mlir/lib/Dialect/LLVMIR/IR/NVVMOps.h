@@ -5,29 +5,36 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This file defines the helpers that the source files of several op
+// partitions of the NVVM dialect use. Helpers used by one op partition are
+// defined in its source file only.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef MLIR_LIB_DIALECT_LLVMIR_IR_NVVMOPS_H
 #define MLIR_LIB_DIALECT_LLVMIR_IR_NVVMOPS_H
 
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-
-#include <optional>
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/LLVMIR/NVVMAttributes.h"
+#include "mlir/IR/Value.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/Support/Casting.h"
 
 namespace mlir::NVVM {
+/// The ID of no intrinsic, used in the intrinsic tables of the ops.
+constexpr unsigned notIntrinsic = llvm::Intrinsic::not_intrinsic;
 
-mlir::ParseResult parseCTAGroup(mlir::OpAsmParser &parser,
-                                mlir::NVVM::CTAGroupKindAttr &groupAttr);
-void printCTAGroup(mlir::OpAsmPrinter &printer, mlir::Operation *,
-                   mlir::NVVM::CTAGroupKindAttr groupAttr);
+/// Returns whether `ptr` is a pointer into the address space `targetAS`.
+inline bool isPtrInAddrSpace(mlir::Value ptr, NVVMMemorySpace targetAS) {
+  auto ptrTy = llvm::cast<LLVM::LLVMPointerType>(ptr.getType());
+  return ptrTy.getAddressSpace() == static_cast<unsigned>(targetAS);
+}
 
-void nvvmInferResultRanges(std::optional<mlir::LLVM::ConstantRangeAttr> range,
-                           mlir::Value result,
-                           mlir::ArrayRef<mlir::ConstantIntRanges> argRanges,
-                           mlir::SetIntRangeFn setResultRanges);
-mlir::LogicalResult
-verifyConstantRangeAttr(mlir::Operation *op,
-                        std::optional<mlir::LLVM::ConstantRangeAttr> rangeAttr);
-
+/// Returns whether `ptr` is a pointer into the shared memory of the CTA.
+inline bool isPtrInSharedCTASpace(mlir::Value ptr) {
+  return isPtrInAddrSpace(ptr, NVVMMemorySpace::Shared);
+}
 } // namespace mlir::NVVM
 
 #endif // MLIR_LIB_DIALECT_LLVMIR_IR_NVVMOPS_H

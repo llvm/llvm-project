@@ -68,8 +68,13 @@ mlir_tablegen(NVVMRequiresSMTraits.cpp.inc -gen-op-interface-defs)
 add_mlir_dialect_tablegen_target(MLIRNVVMRequiresSMTraitsIncGen)
 
 set(LLVM_TARGET_DEFINITIONS NVVMOps.td)
-mlir_tablegen(NVVMOps.h.inc -gen-op-decls -op-shard-count=8)
-mlir_tablegen(NVVMOps.cpp.inc -gen-op-defs -op-shard-count=8)
+foreach(partition Arith Convert IndexSReg Memory Misc MiscSReg Mma Sync Tcgen
+                  Warp)
+  mlir_tablegen(NVVM${partition}Ops.h.inc -gen-op-decls
+                -op-partition=${partition})
+  mlir_tablegen(NVVM${partition}Ops.cpp.inc -gen-op-defs
+                -op-partition=${partition})
+endforeach()
 mlir_tablegen(NVVMOpsTypes.h.inc -gen-typedef-decls -typedefs-dialect=nvvm)
 mlir_tablegen(NVVMOpsTypes.cpp.inc -gen-typedef-defs -typedefs-dialect=nvvm)
 mlir_tablegen(NVVMOpsDialect.h.inc -gen-dialect-decls -dialect=nvvm)

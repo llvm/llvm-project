@@ -23,6 +23,9 @@
 
 namespace mlir {
 namespace NVVM {
+// Shared memory has 128-bit alignment
+constexpr int kSharedMemoryAlignmentBit = 128;
+
 /// Utility functions to compare NVVMMemorySpace with unsigned values.
 inline bool operator==(unsigned as, NVVMMemorySpace memSpace) {
   return as == static_cast<unsigned>(memSpace);
