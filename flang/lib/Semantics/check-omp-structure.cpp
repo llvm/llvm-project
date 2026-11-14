@@ -6718,6 +6718,23 @@ void OmpStructureChecker::Enter(const parser::OmpClause::DynamicAllocators &x) {
   CheckAllowedRequiresClause(llvm::omp::Clause::OMPC_dynamic_allocators);
 }
 
+void OmpStructureChecker::Enter(const parser::OmpClause::NoOpenmp &clause) {
+  if (clause.v &&
+      GetContext().directive == llvm::omp::Directive::OMPD_assumes) {
+    context_.Say(GetContext().clauseSource,
+        "NO_OPENMP clause with an argument on ASSUMES directive is not yet supported"_err_en_US);
+    return;
+  }
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  llvm::omp::Version since{60};
+  if (clause.v && version < since) {
+    context_.Say(GetContext().clauseSource,
+        "An argument to %s is an %s feature, %s"_warn_en_US,
+        parser::omp::GetUpperName(llvm::omp::Clause::OMPC_no_openmp, version),
+        ThisVersion(since), TryVersion(since));
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OmpClause::ReverseOffload &x) {
   CheckAllowedRequiresClause(llvm::omp::Clause::OMPC_reverse_offload);
   if (IsAllowedClause(llvm::omp::Clause::OMPC_reverse_offload)) {

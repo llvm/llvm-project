@@ -1,8 +1,10 @@
 !RUN: split-file %s %t
 !RUN: %flang_fc1 -fopenmp-version=51 -fopenmp -fdebug-unparse-no-sema %t/bare.f90 | FileCheck --check-prefixes=UNPARSE,UNPARSE5X %s
 !RUN: %flang_fc1 -fopenmp-version=51 -fopenmp -fdebug-dump-parse-tree-no-sema %t/bare.f90 | FileCheck --check-prefix="PARSE-TREE" %s
+!RUN: %flang_fc1 -fopenmp-version=52 -fopenmp -fdebug-unparse-no-sema %t/bare.f90 | FileCheck --check-prefixes=UNPARSE,UNPARSE5X %s
+!RUN: %flang_fc1 -fopenmp-version=52 -fopenmp -fdebug-dump-parse-tree-no-sema %t/bare.f90 | FileCheck --check-prefix="PARSE-TREE" %s
 !RUN: %flang_fc1 -fopenmp-version=60 -fopenmp -fdebug-unparse-no-sema %s | FileCheck --check-prefixes=UNPARSE,UNPARSE60,CONDITIONAL %s
-!RUN: %flang_fc1 -fopenmp-version=60 -fopenmp -fdebug-dump-parse-tree-no-sema %s | FileCheck --check-prefixes=PARSE-TREE,CONDITIONAL-TREE %s
+!RUN: %flang_fc1 -fopenmp-version=60 -fopenmp -fdebug-dump-parse-tree-no-sema %s | FileCheck --check-prefixes=PARSE-TREE,PARSE-TREE60,CONDITIONAL-TREE %s
 
 !--- bare.f90
 subroutine sub1
@@ -140,6 +142,36 @@ end subroutine sub2
 !PARSE-TREE: | | OmpClauseList ->
 !PARSE-TREE: | | Flags = {}
 
+subroutine sub3(value)
+  integer :: value
+  !$omp assume no_openmp holds(value > 0)
+  block
+    value = 2
+  end block
+  !$omp assume holds(value > 0) no_openmp
+    value = 3
+  !$omp end assume
+end subroutine sub3
+
+!UNPARSE: SUBROUTINE sub3
+!UNPARSE: INTEGER value
+!UNPARSE: !$OMP ASSUME NO_OPENMP HOLDS(value>0)
+!UNPARSE: BLOCK
+!UNPARSE: value = 2
+!UNPARSE: END BLOCK
+!UNPARSE: !$OMP ASSUME HOLDS(value>0) NO_OPENMP
+!UNPARSE: value = 3
+!UNPARSE: !$OMP END ASSUME
+!UNPARSE: END SUBROUTINE sub3
+
+!PARSE-TREE: OmpAssumeDirective
+!PARSE-TREE: OmpClauseList -> OmpClause -> NoOpenmp
+!PARSE-TREE: OmpClause -> Holds -> OmpHoldsClause -> Expr -> GT
+!PARSE-TREE: BlockConstruct
+!PARSE-TREE: OmpAssumeDirective
+!PARSE-TREE: OmpClauseList -> OmpClause -> Holds -> OmpHoldsClause -> Expr -> GT
+!PARSE-TREE: OmpClause -> NoOpenmp
+
 program p
   !$omp assumes no_openmp
 end program p
@@ -200,6 +232,39 @@ end subroutine assumes_absent
 !PARSE-TREE: | Flags = {}
 
 !--- conditional.f90
+subroutine conditional_assumptions
+  logical, parameter :: enabled = .true.
+  !$omp assume no_openmp(enabled)
+  block
+  end block
+  !$omp assume no_openmp(.true.)
+  block
+  end block
+  !$omp assume no_openmp(.false.)
+  !$omp end assume
+end subroutine conditional_assumptions
+
+!UNPARSE60: SUBROUTINE conditional_assumptions
+!UNPARSE60: !$OMP ASSUME NO_OPENMP(enabled)
+!UNPARSE60: BLOCK
+!UNPARSE60: END BLOCK
+!UNPARSE60: !$OMP ASSUME NO_OPENMP(.TRUE.)
+!UNPARSE60: BLOCK
+!UNPARSE60: END BLOCK
+!UNPARSE60: !$OMP ASSUME NO_OPENMP(.FALSE.)
+!UNPARSE60: !$OMP END ASSUME
+!UNPARSE60: END SUBROUTINE conditional_assumptions
+
+!PARSE-TREE60: OmpAssumeDirective
+!PARSE-TREE60: OmpClause -> NoOpenmp -> OmpNoOpenMPClause
+!PARSE-TREE60: Expr -> Designator -> DataRef -> Name = 'enabled'
+!PARSE-TREE60: OmpAssumeDirective
+!PARSE-TREE60: OmpClause -> NoOpenmp -> OmpNoOpenMPClause
+!PARSE-TREE60: LogicalLiteralConstant
+!PARSE-TREE60: OmpAssumeDirective
+!PARSE-TREE60: OmpClause -> NoOpenmp -> OmpNoOpenMPClause
+!PARSE-TREE60: LogicalLiteralConstant
+
 subroutine conditional_parallelism
   !$omp assumes no_parallelism(.true.)
   !$omp assumes no_parallelism(.false.)

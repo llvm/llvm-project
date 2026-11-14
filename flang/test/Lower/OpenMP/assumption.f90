@@ -13,8 +13,10 @@
 ! RUN: FileCheck %s --check-prefix=FALSE-MODFILE --input-file=%t/conditional_false.mod
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp-simd -fopenmp-version=60 -module-dir %t -o - %s | FileCheck %s --check-prefix=SIMD
 
+!--- bare.f90
 ! SIMD: module
-! SIMD-NOT: "llvm.assume"
+! SIMD-NOT: llvm.assume
+! SIMD-NOT: llvm.intr.assume
 
 ! MODFILE60: module
 ! MODFILE60-NOT: !$omp assumes
@@ -33,7 +35,6 @@
 ! SYMBOLS-DAG: assumes_mixed_reverse (Subroutine): Subprogram{{.*}} OmpAssumptions:(no_openmp no_parallelism)
 ! SYMBOLS-DAG: scoped_assumes: Module OmpAssumptions:(absent(barrier, parallel) no_openmp no_parallelism)
 
-!--- bare.f90
 ! Lowering of the OpenMP ASSUME construct. The HOLDS clause asserts a scalar
 ! logical expression, which is lowered to an llvm.assume intrinsic. The block is
 ! always lowered.
@@ -54,6 +55,95 @@ subroutine assume_block(x)
     x = 2
   end block
 end subroutine assume_block
+
+! CHECK-LABEL: func.func {{.*}}assume_no_openmp
+! CHECK-NOT: llvm.passthrough
+subroutine assume_no_openmp(value)
+  integer :: value
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare
+  ! CHECK: fir.call {{.*}}external_helper
+  ! CHECK-NOT: default_func_attrs
+  call external_helper(value)
+  !$omp assume no_openmp
+  block
+    ! CHECK: %[[TWO:.*]] = arith.constant 2 : i32
+    ! CHECK: hlfir.assign %[[TWO]] to %[[DECL]]#0
+    value = 2
+    ! CHECK: fir.call {{.*}}external_helper
+    ! CHECK-SAME: default_func_attrs = {llvm.assume = "omp_no_openmp"}
+    call external_helper(value)
+  end block
+  !$omp end assume
+  ! CHECK: fir.call {{.*}}external_helper
+  ! CHECK-NOT: default_func_attrs
+  ! CHECK: return
+  call external_helper(value)
+end subroutine assume_no_openmp
+
+! CHECK-LABEL: func.func {{.*}}assume_no_openmp_loose
+! CHECK-NOT: llvm.passthrough
+subroutine assume_no_openmp_loose(value)
+  integer :: value
+  !$omp assume no_openmp holds(value > 0)
+    ! CHECK: llvm.intr.assume %{{.*}} : i1
+    ! CHECK: fir.call {{.*}}external_helper
+    ! CHECK-SAME: default_func_attrs = {llvm.assume = "omp_no_openmp"}
+    call external_helper(value)
+  !$omp end assume
+  ! CHECK: %[[THREE:.*]] = arith.constant 3 : i32
+  ! CHECK: hlfir.assign %[[THREE]]
+  ! CHECK: return
+  value = 3
+end subroutine assume_no_openmp_loose
+
+! CHECK-LABEL: func.func {{.*}}assume_no_openmp_holds_first
+! CHECK-NOT: llvm.passthrough
+subroutine assume_no_openmp_holds_first(value)
+  integer :: value
+  !$omp assume holds(value > 0) no_openmp
+  block
+    ! CHECK: llvm.intr.assume %{{.*}} : i1
+    ! CHECK: fir.call {{.*}}external_helper
+    ! CHECK-SAME: default_func_attrs = {llvm.assume = "omp_no_openmp"}
+    call external_helper(value)
+  end block
+  ! CHECK: return
+end subroutine assume_no_openmp_holds_first
+
+! CHECK-LABEL: func.func {{.*}}assume_no_openmp_nested
+! CHECK-NOT: llvm.passthrough
+subroutine assume_no_openmp_nested(callback, value)
+  integer :: value
+  interface
+    subroutine callback(value)
+      integer :: value
+    end subroutine callback
+  end interface
+  ! CHECK: fir.call %{{[^ (]+}}
+  ! CHECK-NOT: default_func_attrs
+  call callback(value)
+  !$omp assume no_openmp
+    ! CHECK: fir.call %{{[^ (]+}}
+    ! CHECK-SAME: default_func_attrs = {llvm.assume = "omp_no_openmp"}
+    call callback(value)
+    !$omp assume no_openmp
+    block
+      ! CHECK: fir.if %{{.*}} {
+      if (value > 0) then
+        ! CHECK: fir.call %{{[^ (]+}}
+        ! CHECK-SAME: default_func_attrs = {llvm.assume = "omp_no_openmp"}
+        call callback(value)
+      end if
+    end block
+    ! CHECK: fir.call %{{[^ (]+}}
+    ! CHECK-SAME: default_func_attrs = {llvm.assume = "omp_no_openmp"}
+    call callback(value)
+  !$omp end assume
+  ! CHECK: fir.call %{{[^ (]+}}
+  ! CHECK-NOT: default_func_attrs
+  ! CHECK: return
+  call callback(value)
+end subroutine assume_no_openmp_nested
 
 module assumes_module
   implicit none
@@ -139,7 +229,7 @@ subroutine assumes_no_openmp_local
   implicit none
   !$omp assumes no_openmp
   integer :: x
-  ! CHECK: fir.call {{.*}}assumes_modulePset_value(%{{.*}}) {{.*}} : (!fir.ref<i32>) -> ()
+  ! CHECK: fir.call {{.*}}assumes_modulePset_value(
   ! CHECK: return
   call set_value(x)
 end subroutine assumes_no_openmp_local
@@ -435,6 +525,53 @@ contains
 end submodule absent_use_child
 
 !--- conditional.f90
+! CONDITIONAL-LABEL: func.func {{.*}}assume_no_openmp_conditional(
+! CONDITIONAL-NOT: llvm.passthrough
+subroutine assume_no_openmp_conditional(callback, value)
+  integer :: value
+  interface
+    subroutine callback(value)
+      integer :: value
+    end subroutine callback
+  end interface
+  ! CONDITIONAL: fir.call {{.*}}external_helper
+  ! CONDITIONAL-NOT: default_func_attrs
+  call external_helper(value)
+  !$omp assume holds(value > 0) no_openmp(.true.)
+  block
+    ! CONDITIONAL: llvm.intr.assume
+    ! CONDITIONAL: fir.call {{.*}}external_helper
+    ! CONDITIONAL-SAME: default_func_attrs = {llvm.assume = "omp_no_openmp"}
+    call external_helper(value)
+    !$omp assume no_openmp(.false.)
+    block
+      ! CONDITIONAL: fir.call %{{[^ (]+}}
+      ! CONDITIONAL-SAME: default_func_attrs = {llvm.assume = "omp_no_openmp"}
+      call callback(value)
+    end block
+  end block
+  !$omp assume no_openmp(.false.) holds(value > 0)
+  block
+    ! CONDITIONAL: llvm.intr.assume
+    ! CONDITIONAL: fir.call {{.*}}external_helper
+    ! CONDITIONAL-NOT: default_func_attrs
+    call external_helper(value)
+    !$omp assume no_openmp(.not. .false._1)
+    block
+      ! CONDITIONAL: fir.call %{{[^ (]+}}
+      ! CONDITIONAL-SAME: default_func_attrs = {llvm.assume = "omp_no_openmp"}
+      call callback(value)
+    end block
+    ! CONDITIONAL: fir.call {{.*}}external_helper
+    ! CONDITIONAL-NOT: default_func_attrs
+    call external_helper(value)
+  end block
+  ! CONDITIONAL: fir.call {{.*}}external_helper
+  ! CONDITIONAL-NOT: default_func_attrs
+  ! CONDITIONAL: return
+  call external_helper(value)
+end subroutine assume_no_openmp_conditional
+
 ! CONDITIONAL-LABEL: func.func {{.*}}conditional_literal_true
 ! CONDITIONAL-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_parallelism"]]
 subroutine conditional_literal_true()
