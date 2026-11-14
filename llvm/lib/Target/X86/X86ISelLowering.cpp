@@ -62996,8 +62996,11 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
       ISD::isNormalLoad(SubVec.getNode()) &&
       DAG.areNonVolatileConsecutiveLoads(
           cast<LoadSDNode>(SubVec), cast<LoadSDNode>(Vec),
-          SubVec.getValueSizeInBits() / 8, IdxVal / SubVecNumElts))
+          SubVec.getValueSizeInBits() / 8, IdxVal / SubVecNumElts)) {
+    // Keep stores ordered after the subvector load when its value is removed.
+    DAG.makeEquivalentMemoryOrdering(cast<LoadSDNode>(SubVec), Vec);
     return Vec;
+  }
 
   return SDValue();
 }
