@@ -507,8 +507,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (Opts.UnsafeFPMath)
     Builder.defineMacro("__ARM_FP_FAST", "1");
 
-  Builder.defineMacro("__ARM_SIZEOF_WCHAR_T",
-                      Twine(Opts.WCharSize ? Opts.WCharSize : 4));
+  Builder.defineMacro("__ARM_SIZEOF_WCHAR_T", Twine(getWCharWidth() / 8));
 
   Builder.defineMacro("__ARM_SIZEOF_MINIMAL_ENUM", Opts.ShortEnums ? "1" : "4");
 
