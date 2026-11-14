@@ -511,6 +511,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### Improvements to Clang's diagnostics
 
+- Errors for invalid element types during instantiation of an `ext_vector_type`
+  now include a source location, including in alias templates. (#GH229300)
+
 - Fixed `-Wheader-guard` warnings pointing at `if` instead of the macro name
   in `#if !defined(...)` header guards.
 
