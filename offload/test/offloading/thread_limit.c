@@ -12,7 +12,9 @@ int main() {
   int n = 1 << 20;
   int th = 12;
   int te = n / th;
-// DEFAULT: 12 (MaxFlatWorkGroupSize:
+// The nested 'teams loop' is executed in generic mode, which adds a warp for
+// the main thread (64 or 32 threads).
+// DEFAULT: {{76|44}} (MaxFlatWorkGroupSize:
 #pragma omp target
 #pragma omp teams loop num_teams(te), thread_limit(th)
   for (int i = 0; i < n; i++) {
