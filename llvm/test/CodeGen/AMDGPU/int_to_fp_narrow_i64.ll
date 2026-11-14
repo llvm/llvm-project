@@ -2899,4 +2899,189 @@ define amdgpu_kernel void @s_uint_to_fp_trunc_nuw_v2i64_to_v2f32(ptr addrspace(1
   ret void
 }
 
+define half @v_uint_to_fp_zext_i32_to_f16(i32 %in) #0 {
+; GFX6-LABEL: v_uint_to_fp_zext_i32_to_f16:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_uint_to_fp_zext_i32_to_f16:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; GFX8-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: v_uint_to_fp_zext_i32_to_f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_uint_to_fp_zext_i32_to_f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX701-LABEL: v_uint_to_fp_zext_i32_to_f16:
+; GFX701:       ; %bb.0:
+; GFX701-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX701-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; GFX701-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX701-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX803-LABEL: v_uint_to_fp_zext_i32_to_f16:
+; GFX803:       ; %bb.0:
+; GFX803-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; GFX803-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX803-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-LABEL: v_uint_to_fp_zext_i32_to_f16:
+; GFX942:       ; %bb.0:
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; GFX942-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
+  %wide = zext i32 %in to i64
+  %result = uitofp i64 %wide to half
+  ret half %result
+}
+
+define float @v_uint_to_fp_zext_i32_to_f32(i32 %in) #0 {
+; GFX6-LABEL: v_uint_to_fp_zext_i32_to_f32:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_uint_to_fp_zext_i32_to_f32:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_uint_to_fp_zext_i32_to_f32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX701-LABEL: v_uint_to_fp_zext_i32_to_f32:
+; GFX701:       ; %bb.0:
+; GFX701-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX701-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; GFX701-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX803-LABEL: v_uint_to_fp_zext_i32_to_f32:
+; GFX803:       ; %bb.0:
+; GFX803-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; GFX803-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-LABEL: v_uint_to_fp_zext_i32_to_f32:
+; GFX942:       ; %bb.0:
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
+  %wide = zext i32 %in to i64
+  %result = uitofp i64 %wide to float
+  ret float %result
+}
+
+define double @v_uint_to_fp_zext_i32_to_f64(i32 %in) #0 {
+; GFX6-LABEL: v_uint_to_fp_zext_i32_to_f64:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_cvt_f64_u32_e32 v[0:1], v0
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_uint_to_fp_zext_i32_to_f64:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_cvt_f64_u32_e32 v[0:1], v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_uint_to_fp_zext_i32_to_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_cvt_f64_u32_e32 v[0:1], v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX701-LABEL: v_uint_to_fp_zext_i32_to_f64:
+; GFX701:       ; %bb.0:
+; GFX701-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX701-NEXT:    v_cvt_f64_u32_e32 v[0:1], v0
+; GFX701-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX803-LABEL: v_uint_to_fp_zext_i32_to_f64:
+; GFX803:       ; %bb.0:
+; GFX803-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    v_cvt_f64_u32_e32 v[0:1], v0
+; GFX803-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-LABEL: v_uint_to_fp_zext_i32_to_f64:
+; GFX942:       ; %bb.0:
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    v_cvt_f64_u32_e32 v[0:1], v0
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
+  %wide = zext i32 %in to i64
+  %result = uitofp i64 %wide to double
+  ret double %result
+}
+
+define <2 x float> @v_uint_to_fp_zext_v2i32_to_v2f32(<2 x i32> %in) #0 {
+; GFX6-LABEL: v_uint_to_fp_zext_v2i32_to_v2f32:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; GFX6-NEXT:    v_cvt_f32_u32_e32 v1, v1
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_uint_to_fp_zext_v2i32_to_v2f32:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; GFX8-NEXT:    v_cvt_f32_u32_e32 v1, v1
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_uint_to_fp_zext_v2i32_to_v2f32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; GFX11-NEXT:    v_cvt_f32_u32_e32 v1, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX701-LABEL: v_uint_to_fp_zext_v2i32_to_v2f32:
+; GFX701:       ; %bb.0:
+; GFX701-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX701-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; GFX701-NEXT:    v_cvt_f32_u32_e32 v1, v1
+; GFX701-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX803-LABEL: v_uint_to_fp_zext_v2i32_to_v2f32:
+; GFX803:       ; %bb.0:
+; GFX803-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; GFX803-NEXT:    v_cvt_f32_u32_e32 v1, v1
+; GFX803-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-LABEL: v_uint_to_fp_zext_v2i32_to_v2f32:
+; GFX942:       ; %bb.0:
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; GFX942-NEXT:    v_cvt_f32_u32_e32 v1, v1
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
+  %wide = zext <2 x i32> %in to <2 x i64>
+  %result = uitofp <2 x i64> %wide to <2 x float>
+  ret <2 x float> %result
+}
+
 attributes #0 = { nounwind }

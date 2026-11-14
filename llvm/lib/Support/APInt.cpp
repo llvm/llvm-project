@@ -1996,6 +1996,15 @@ APInt APInt::sdiv_ov(const APInt &RHS, bool &Overflow) const {
 }
 
 APInt APInt::smul_ov(const APInt &RHS, bool &Overflow) const {
+  assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
+  if (isSingleWord()) {
+    int64_t Product;
+    Overflow = MulOverflow(getSExtValue(), RHS.getSExtValue(), Product);
+    // The product can fit in 64 bits without fitting in BitWidth bits.
+    Overflow |= !llvm::isIntN(BitWidth, Product);
+    return APInt(BitWidth, Product, /*isSigned=*/true, /*implicitTrunc=*/true);
+  }
+
   APInt Res = *this * RHS;
 
   if (RHS != 0)

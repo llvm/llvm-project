@@ -173,7 +173,6 @@ PipelineTuningOptions PipelineTuningOptions::resolve(
     const cl::LibraryOptionsContext &LibraryOptions) const {
   const PassesOptions &Opts = LibraryOptions.get<PassesOptions>();
   PipelineTuningOptions R = *this;
-  R.LoopInterchange = LoopInterchange.value_or(Opts.enable_loopinterchange);
   R.ForgetAllSCEVInLoopUnroll = ForgetAllSCEVInLoopUnroll.value_or(
       getForgetSCEVInLoopUnroll(LibraryOptions));
   R.LicmMssaOptCap = LicmMssaOptCap.value_or(getLicmMssaOptCap(LibraryOptions));
@@ -1530,7 +1529,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   //        in the simplification pipeline.
   LPM.addPass(LoopDeletionPass());
 
-  if (*PTO.LoopInterchange)
+  if (PTO.LoopInterchange)
     LPM.addPass(LoopInterchangePass());
 
   OptimizePM.addPass(

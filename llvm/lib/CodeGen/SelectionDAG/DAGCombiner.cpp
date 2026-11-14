@@ -19939,6 +19939,11 @@ SDValue DAGCombiner::combineFMulOrFDivWithIntPow2(SDNode *N) {
 
     int MaxExpChange = Pow2OpKnownBits.countMaxActiveBits();
 
+    // The power of 2 must also be finite in VT. In half, (uitofp (shl 1, 16))
+    // is +inf, and C / +inf is 0, not C * 2^-16.
+    if (MaxExpChange - 1 > APFloat::semanticsMaxExponent(VT.getFltSemantics()))
+      return false;
+
     auto IsFPConstValid = [N, MaxExpChange, &Mantissa](ConstantFPSDNode *CFP) {
       if (CFP == nullptr)
         return false;
@@ -20999,11 +21004,6 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
 
     // Avoid creating an illegal vector type before type legalization.
     if ((LegalTypes || OpVT.isVector()) && !TLI.isTypeLegal(NarrowVT))
-      continue;
-
-    // Avoid undoing a target combine that widened the source operand.
-    if (N0.getOpcode() == ISD::ZERO_EXTEND &&
-        NarrowVT == N0.getOperand(0).getValueType())
       continue;
 
     SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, N0);

@@ -3278,13 +3278,13 @@ define bfloat @v_min3_bf16_minimumnum_minimumnum__v_v_v_0(bfloat %a, bfloat %b, 
 ; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v0
 ; GFX900-SDAG-NEXT:    v_cmp_u_f32_e32 vcc, v3, v3
-; GFX900-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 16, v1
+; GFX900-SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v1
 ; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; GFX900-SDAG-NEXT:    v_cmp_u_f32_e32 vcc, v4, v4
+; GFX900-SDAG-NEXT:    v_cmp_u_f32_e32 vcc, v3, v3
 ; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, v1, v0, vcc
-; GFX900-SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v0
-; GFX900-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 16, v1
-; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, v3, v4
+; GFX900-SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v1
+; GFX900-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 16, v0
+; GFX900-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, v4, v3
 ; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, v1, v0, vcc
 ; GFX900-SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v1
 ; GFX900-SDAG-NEXT:    s_movk_i32 s6, 0x8000
@@ -3314,15 +3314,15 @@ define bfloat @v_min3_bf16_minimumnum_minimumnum__v_v_v_0(bfloat %a, bfloat %b, 
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v0
 ; GFX950-SDAG-NEXT:    v_cmp_u_f32_e32 vcc, v3, v3
-; GFX950-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 16, v1
+; GFX950-SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v1
 ; GFX950-SDAG-NEXT:    s_movk_i32 s2, 0x8000
 ; GFX950-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; GFX950-SDAG-NEXT:    v_cmp_u_f32_e32 vcc, v4, v4
-; GFX950-SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v0
+; GFX950-SDAG-NEXT:    v_cmp_u_f32_e32 vcc, v3, v3
+; GFX950-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 16, v0
 ; GFX950-SDAG-NEXT:    v_cmp_eq_u16_e64 s[0:1], s2, v0
 ; GFX950-SDAG-NEXT:    v_cndmask_b32_e32 v1, v1, v0, vcc
-; GFX950-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 16, v1
-; GFX950-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, v3, v4
+; GFX950-SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v1
+; GFX950-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, v4, v3
 ; GFX950-SDAG-NEXT:    s_nop 1
 ; GFX950-SDAG-NEXT:    v_cndmask_b32_e32 v1, v1, v0, vcc
 ; GFX950-SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v1

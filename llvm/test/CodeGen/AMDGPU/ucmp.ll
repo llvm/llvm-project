@@ -871,8 +871,8 @@ define i32 @ucmp_i16_uniform(i16 inreg %a, i16 inreg %b) {
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    s_and_b32 s1, 0xffff, s1
-; GFX12-SDAG-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX12-SDAG-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX12-SDAG-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_cmp_gt_u32 s0, s1
 ; GFX12-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
@@ -1186,32 +1186,34 @@ define <4 x i32> @ucmp_v4i8_uniform(<4 x i8> inreg %a, <4 x i8> inreg %b) {
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    s_and_b32 s7, s16, 0xff
+; GFX12-SDAG-NEXT:    s_and_b32 s4, s16, 0xff
 ; GFX12-SDAG-NEXT:    s_and_b32 s0, s0, 0xff
-; GFX12-SDAG-NEXT:    s_and_b32 s4, s19, 0xff
-; GFX12-SDAG-NEXT:    s_and_b32 s3, s3, 0xff
-; GFX12-SDAG-NEXT:    s_and_b32 s5, s18, 0xff
-; GFX12-SDAG-NEXT:    s_and_b32 s2, s2, 0xff
-; GFX12-SDAG-NEXT:    s_and_b32 s6, s17, 0xff
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-SDAG-NEXT:    s_cmp_gt_u32 s0, s4
+; GFX12-SDAG-NEXT:    s_cselect_b32 s5, 1, 0
+; GFX12-SDAG-NEXT:    s_cmp_ge_u32 s0, s4
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-SDAG-NEXT:    s_cselect_b32 s0, s5, -1
+; GFX12-SDAG-NEXT:    s_and_b32 s4, s17, 0xff
 ; GFX12-SDAG-NEXT:    s_and_b32 s1, s1, 0xff
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-SDAG-NEXT:    s_cmp_gt_u32 s0, s7
-; GFX12-SDAG-NEXT:    s_cselect_b32 s8, 1, 0
-; GFX12-SDAG-NEXT:    s_cmp_ge_u32 s0, s7
+; GFX12-SDAG-NEXT:    s_cmp_gt_u32 s1, s4
+; GFX12-SDAG-NEXT:    s_cselect_b32 s5, 1, 0
+; GFX12-SDAG-NEXT:    s_cmp_ge_u32 s1, s4
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-SDAG-NEXT:    s_cselect_b32 s0, s8, -1
-; GFX12-SDAG-NEXT:    s_cmp_gt_u32 s1, s6
-; GFX12-SDAG-NEXT:    s_cselect_b32 s7, 1, 0
-; GFX12-SDAG-NEXT:    s_cmp_ge_u32 s1, s6
-; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-SDAG-NEXT:    s_cselect_b32 s1, s7, -1
-; GFX12-SDAG-NEXT:    s_cmp_gt_u32 s2, s5
+; GFX12-SDAG-NEXT:    s_cselect_b32 s1, s5, -1
+; GFX12-SDAG-NEXT:    s_and_b32 s4, s18, 0xff
+; GFX12-SDAG-NEXT:    s_and_b32 s2, s2, 0xff
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX12-SDAG-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-SDAG-NEXT:    s_cmp_ge_u32 s2, s5
+; GFX12-SDAG-NEXT:    s_cmp_gt_u32 s2, s4
+; GFX12-SDAG-NEXT:    s_cselect_b32 s5, 1, 0
+; GFX12-SDAG-NEXT:    s_cmp_ge_u32 s2, s4
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-SDAG-NEXT:    s_cselect_b32 s2, s6, -1
+; GFX12-SDAG-NEXT:    s_cselect_b32 s2, s5, -1
+; GFX12-SDAG-NEXT:    s_and_b32 s4, s19, 0xff
+; GFX12-SDAG-NEXT:    s_and_b32 s3, s3, 0xff
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_cmp_gt_u32 s3, s4
 ; GFX12-SDAG-NEXT:    s_cselect_b32 s5, 1, 0
 ; GFX12-SDAG-NEXT:    s_cmp_ge_u32 s3, s4

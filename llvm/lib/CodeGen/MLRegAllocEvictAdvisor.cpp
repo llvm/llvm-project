@@ -555,7 +555,7 @@ public:
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
              MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *Loops) override {
     if (!Runner)
-      return nullptr;
+      return std::make_unique<DefaultEvictionAdvisor>(MF, RA);
     if (Log && LastFunctionNumber != MF.getFunctionNumber()) {
       LastFunctionNumber = MF.getFunctionNumber();
       Log->switchContext(getContextName(MF));
@@ -1046,7 +1046,7 @@ int64_t DevelopmentModeEvictAdvisor::tryFindEvictionCandidatePosition(
         if (*I == PhysReg)
           break;
   }
-  if (TrainingLog.empty())
+  if (!Log)
     return Ret;
   // TODO(mtrofin): when we support optional rewards, this can go away. In the
   // meantime, we log the "pretend" reward (0) for the previous observation

@@ -297,9 +297,11 @@ void DeviceTy::unloadProgram(
 llvm::Error DeviceTy::releaseProgram(ProgramTy &Program) {
   llvm::Error Result = llvm::Error::success();
   if (ol_result_t Res = olDestroyProgram(Program.getHandle()))
-    Result = createError(ErrorCode::BackendFailure,
-                         "failed to destroy program on device %d: %s", DeviceID,
-                         Res->Details);
+    Result = llvm::joinErrors(
+        std::move(Result),
+        createError(ErrorCode::BackendFailure,
+                    "failed to destroy program on device %d: %s", DeviceID,
+                    Res->Details));
   // The kernels of the program are gone, so its indirect call table is dead.
   if (void *Table = Program.getIndirectCallTable()) {
     Program.setIndirectCallTable(nullptr);
