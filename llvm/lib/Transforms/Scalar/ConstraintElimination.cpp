@@ -630,16 +630,6 @@ static bool isKnownNoWrap(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
       return true;
   }
 
-  // A signed sum of operands with opposite signs cannot wrap.
-  if (Signed && Opcode == Instruction::Add) {
-    std::optional<bool> Op0Sign =
-        Info.getKnownSign(Op0, /*StrictlyNegative=*/false);
-    std::optional<bool> Op1Sign =
-        Info.getKnownSign(Op1, /*StrictlyNegative=*/false);
-    if (Op0Sign && Op1Sign && *Op0Sign != *Op1Sign)
-      return true;
-  }
-
   if (!Signed && (NoWrapFlags & OBO::NoSignedWrap) &&
       (Opcode == Instruction::Shl || Info.isKnownNonNegative(Op1)) &&
       Info.isKnownNonNegative(Op0))
@@ -647,15 +637,22 @@ static bool isKnownNoWrap(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
 
   // For a constant Op1, the ranges of Op0 for which the operation does not
   // wrap are known exactly; check if the systems imply one of them.
-  auto *C = dyn_cast<ConstantInt>(Op1);
-  if (!C)
-    return false;
+  if (auto *C = dyn_cast<ConstantInt>(Op1)) {
+    auto Range = ConstantRange::makeExactNoWrapRegion(
+        Opcode, C->getValue(),
+        Signed ? OBO::NoSignedWrap : OBO::NoUnsignedWrap);
+    return doesHoldInRange(Info, Op0, Range, Signed);
+  }
 
-  return doesHoldInRange(Info, Op0,
-                         ConstantRange::makeExactNoWrapRegion(
-                             Opcode, C->getValue(),
-                             Signed ? OBO::NoSignedWrap : OBO::NoUnsignedWrap),
-                         Signed);
+  // A signed sum of operands with opposite signs cannot wrap.
+  if (Signed && Opcode == Instruction::Add) {
+    if (auto Op0Sign = Info.getKnownSign(Op0, /*StrictlyNegative=*/false))
+      if (auto Op1Sign = Info.getKnownSign(Op1, /*StrictlyNegative=*/false))
+        if (*Op0Sign != *Op1Sign)
+          return true;
+  }
+
+  return false;
 }
 
 /// Returns true if \p V is known to not wrap in signed or unsigned, depending
@@ -1179,6 +1176,8 @@ bool ConstraintInfo::isKnownPositive(Value *V) {
 
 std::optional<bool> ConstraintInfo::getKnownSign(Value *V,
                                                  bool StrictlyNegative) {
+  if (auto *CI = dyn_cast<ConstantInt>(V))
+    return CI->isNegative();
   KnownBits Known = computeKnownBits(V, DL);
   if (Known.isNonNegative())
     return false;
