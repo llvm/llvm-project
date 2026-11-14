@@ -756,14 +756,52 @@ void WinCOFFWriter::assignSectionNumbers() {
     ++I;
   };
 
+  // Returns the section that an associative section is associated with, if it
+  // is in this object and has not been numbered yet.
+  auto GetUnnumberedParent = [&](const COFFSection &Section) -> COFFSection * {
+    const MCSymbol *Sym = Section.MCSection->getCOMDATSymbol();
+    if (!Sym || !Sym->isInSection())
+      return nullptr;
+    COFFSection *Parent = SectionMap.lookup(&Sym->getSection());
+    if (!Parent || Parent == &Section || Parent->Number != 0)
+      return nullptr;
+    return Parent;
+  };
+
+  // Number the sections in the order in which they were created, which is
+  // also their order in the assembly output. Linkers order the .CRT$XCU
+  // contributions of an object file, which point to dynamic initializers, by
+  // section number, so this order determines the order of initialization.
+  //
   // Although it is not explicitly requested by the Microsoft COFF spec,
   // we should avoid emitting forward associative section references,
-  // because MSVC link.exe as of 2017 cannot handle that.
+  // because MSVC link.exe as of 2017 cannot handle that. Defer an associative
+  // section whose associated section has not been numbered yet until right
+  // after that section.
+  DenseMap<COFFSection *, SmallVector<COFFSection *, 1>> Deferred;
+  SmallVector<COFFSection *, 4> Worklist;
+  for (const std::unique_ptr<COFFSection> &Section : Sections) {
+    if (isAssociative(*Section)) {
+      if (COFFSection *Parent = GetUnnumberedParent(*Section)) {
+        Deferred[Parent].push_back(Section.get());
+        continue;
+      }
+    }
+    Worklist.push_back(Section.get());
+    while (!Worklist.empty()) {
+      COFFSection *S = Worklist.pop_back_val();
+      Assign(*S);
+      auto It = Deferred.find(S);
+      if (It == Deferred.end())
+        continue;
+      Worklist.append(It->second.rbegin(), It->second.rend());
+      Deferred.erase(It);
+    }
+  }
+
+  // Only a cycle of associative sections, which is invalid, can be left over.
   for (const std::unique_ptr<COFFSection> &Section : Sections)
-    if (!isAssociative(*Section))
-      Assign(*Section);
-  for (const std::unique_ptr<COFFSection> &Section : Sections)
-    if (isAssociative(*Section))
+    if (Section->Number == 0)
       Assign(*Section);
 }
 

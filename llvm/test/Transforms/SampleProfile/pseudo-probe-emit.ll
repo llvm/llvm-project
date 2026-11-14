@@ -168,15 +168,8 @@ entry:
 ; CHECK-SEC-COFF-NEXT:      Name: .text
 ; CHECK-SEC-COFF:           Number: 5
 ; CHECK-SEC-COFF-NEXT:      Name: .text
-; CHECK-SEC-COFF:           Number: 6
-; CHECK-SEC-COFF-NEXT:      Name: .text
 ; CHECK-SEC-COFF:           Number: 7
-; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe_desc
-; CHECK-SEC-COFF:           Characteristics [
-; CHECK-SEC-COFF:             IMAGE_SCN_CNT_INITIALIZED_DATA
-; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_LNK_COMDAT
-; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_DISCARDABLE
-; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_READ
+; CHECK-SEC-COFF-NEXT:      Name: .text
 ; CHECK-SEC-COFF:           Number: 8
 ; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe_desc
 ; CHECK-SEC-COFF:           Characteristics [
@@ -185,6 +178,13 @@ entry:
 ; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_DISCARDABLE
 ; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_READ
 ; CHECK-SEC-COFF:           Number: 9
+; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe_desc
+; CHECK-SEC-COFF:           Characteristics [
+; CHECK-SEC-COFF:             IMAGE_SCN_CNT_INITIALIZED_DATA
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_LNK_COMDAT
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_DISCARDABLE
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_READ
+; CHECK-SEC-COFF:           Number: 10
 ; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe_desc
 ; CHECK-SEC-COFF:           Characteristics [
 ; CHECK-SEC-COFF:             IMAGE_SCN_CNT_INITIALIZED_DATA
@@ -221,18 +221,18 @@ entry:
 ; CHECK-SEC-COFF:           Section: .text (5)
 ; CHECK-SEC-COFF:         }
 ; CHECK-SEC-COFF:           Name: foo3
-; CHECK-SEC-COFF:           Section: .text (6)
+; CHECK-SEC-COFF:           Section: .text (7)
 ; CHECK-SEC-COFF:         }
 ; CHECK-SEC-COFF:           Name: .pseudo_probe_desc_foo.{{[0-9a-f]+}}
-; CHECK-SEC-COFF:           Section: .pseudo_probe_desc (7)
-; CHECK-SEC-COFF:           StorageClass: Static
-; CHECK-SEC-COFF:         }
-; CHECK-SEC-COFF:           Name: .pseudo_probe_desc_foo2.{{[0-9a-f]+}}
 ; CHECK-SEC-COFF:           Section: .pseudo_probe_desc (8)
 ; CHECK-SEC-COFF:           StorageClass: Static
 ; CHECK-SEC-COFF:         }
-; CHECK-SEC-COFF:           Name: .pseudo_probe_desc_foo3.{{[0-9a-f]+}}
+; CHECK-SEC-COFF:           Name: .pseudo_probe_desc_foo2.{{[0-9a-f]+}}
 ; CHECK-SEC-COFF:           Section: .pseudo_probe_desc (9)
+; CHECK-SEC-COFF:           StorageClass: Static
+; CHECK-SEC-COFF:         }
+; CHECK-SEC-COFF:           Name: .pseudo_probe_desc_foo3.{{[0-9a-f]+}}
+; CHECK-SEC-COFF:           Section: .pseudo_probe_desc (10)
 ; CHECK-SEC-COFF:           StorageClass: Static
 ; CHECK-SEC-COFF:         }
 ; Section symbols
@@ -252,7 +252,7 @@ entry:
 ; CHECK-SEC-COFF:           Section: .pseudo_probe (15)
 ; CHECK-SEC-COFF:           AuxSectionDef {
 ; CHECK-SEC-COFF:             Selection: Associative
-; CHECK-SEC-COFF-NEXT:        AssocSection: .text (6)
+; CHECK-SEC-COFF-NEXT:        AssocSection: .text (7)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10}
