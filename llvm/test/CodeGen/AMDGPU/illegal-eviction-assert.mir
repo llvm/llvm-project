@@ -13,7 +13,12 @@
     ret void
   }
 
+  define void @mixed() #1 {
+    ret void
+  }
+
   attributes #0 = { "amdgpu-waves-per-eu"="8,8" }
+  attributes #1 = { "amdgpu-num-vgpr"="6" }
 
 ...
 
@@ -32,6 +37,22 @@ body:             |
     S_NOP 0, implicit-def %0:vreg_512, implicit-def %1:vreg_256, implicit-def %2:vreg_128, implicit-def %3:vreg_128, implicit-def %4:vreg_128
 
     S_NOP 0, implicit %0, implicit %1, implicit %2, implicit %3, implicit %4
+    S_ENDPGM 0
+
+...
+---
+name:            mixed
+tracksRegLiveness: true
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+    S_NOP 0, implicit-def %0:vreg_64, implicit-def %1:vreg_64
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit-def %2:vreg_64, implicit-def %3:vreg_64_align2
+    S_NOP 0, implicit %0, implicit %1, implicit %2, implicit %3
     S_ENDPGM 0
 
 ...
