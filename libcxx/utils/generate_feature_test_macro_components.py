@@ -1590,12 +1590,6 @@ feature_test_macros = [
             "values": {"c++20": 201711},
             "headers": ["type_traits"],
         },
-        # {
-        #     "name": "__cpp_lib_replaceable_contract_violation_handler",
-        #     "values": {"c++26": 202603},
-        #     "headers": ["contracts"],
-        #     "unimplemented": True,
-        # },
         {
             "name": "__cpp_lib_result_of_sfinae",
             "values": {"c++14": 201210},
