@@ -1092,16 +1092,18 @@ tryEmitGlobalCompoundLiteral(ConstantEmitter &emitter,
   llvm::Constant *C = emitter.tryEmitForInitializer(E->getInitializer(),
                                                     addressSpace, E->getType());
   if (!C) {
-    assert(!E->isFileScope() &&
-           "file-scope compound literal did not have constant initializer!");
+    assert(!E->hasGlobalStorage() &&
+           "global compound literal did not have constant initializer!");
     return ConstantAddress::invalid();
   }
 
   auto GV = new llvm::GlobalVariable(
       CGM.getModule(), C->getType(),
-      E->getType().isConstantStorage(CGM.getContext(), true, false),
+      E->getType().isConstantStorage(CGM.getContext(), /*ExcludeCtor=*/true,
+                                     /*ExcludeDtor=*/false),
       llvm::GlobalValue::InternalLinkage, C, ".compoundliteral", nullptr,
-      llvm::GlobalVariable::NotThreadLocal,
+      E->hasThreadStorage() ? CGM.GetDefaultLLVMTLSModel()
+                            : llvm::GlobalVariable::NotThreadLocal,
       CGM.getContext().getTargetAddressSpace(addressSpace));
   emitter.finalize(GV);
   GV->setAlignment(Align.getAsAlign());
@@ -2794,7 +2796,7 @@ void CodeGenModule::setAddrOfConstantCompoundLiteral(
 
 ConstantAddress
 CodeGenModule::GetAddrOfConstantCompoundLiteral(const CompoundLiteralExpr *E) {
-  assert(E->isFileScope() && "not a file-scope compound literal expr");
+  assert(E->hasGlobalStorage() && "not a global compound literal expression");
   ConstantEmitter emitter(*this);
   return tryEmitGlobalCompoundLiteral(emitter, E);
 }
