@@ -1536,6 +1536,28 @@ static bool readASTAfterCompileModule(CompilerInstance &ImportingInstance,
   return false;
 }
 
+namespace {
+/// A buffer exposing a sub-range of an owned buffer.
+class SubMemoryBuffer : public llvm::MemoryBuffer {
+  std::unique_ptr<llvm::MemoryBuffer> Underlying;
+
+public:
+  SubMemoryBuffer(std::unique_ptr<llvm::MemoryBuffer> Underlying,
+                  StringRef Range)
+      : Underlying(std::move(Underlying)) {
+    init(Range.begin(), Range.end(), /*RequiresNullTerminator=*/false);
+  }
+
+  StringRef getBufferIdentifier() const override {
+    return Underlying->getBufferIdentifier();
+  }
+
+  BufferKind getBufferKind() const override {
+    return Underlying->getBufferKind();
+  }
+};
+} // namespace
+
 /// Compile a module in a separate compiler instance.
 /// Returns true on success, false on failure.
 static bool compileModuleImpl(CompilerInstance &ImportingInstance,
@@ -1582,15 +1604,13 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
     ImportingInstance.getModuleCache().updateModuleTimestamp(ModuleFileName);
   }
 
-  // This isn't strictly necessary, but it's more efficient to extract the AST
-  // file (which may be wrapped in an object file) now rather than doing so
-  // repeatedly in the readers.
+  // Readers use the module cache's view of the written PCM. Extracting the AST
+  // file (which may be wrapped in an object file) isn't strictly necessary, but
+  // it's more efficient to do so now rather than repeatedly in the readers.
   const PCHContainerReader &Rdr = ImportingInstance.getPCHContainerReader();
   StringRef ExtractedBuffer = Rdr.ExtractPCH(*Buffer);
-  // FIXME: Avoid the copy here by having InMemoryModuleCache accept both the
-  // owning buffer and the StringRef.
-  Buffer = llvm::MemoryBuffer::getMemBufferCopy(ExtractedBuffer);
-
+  Buffer =
+      std::make_unique<SubMemoryBuffer>(std::move(Buffer), ExtractedBuffer);
   ImportingInstance.getModuleCache().getInMemoryModuleCache().addBuiltPCM(
       ModuleFileName, std::move(Buffer), Size, ModTime);
 
