@@ -6061,6 +6061,23 @@ SDValue ARMTargetLowering::LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const{
   return DAG.getCopyFromReg(DAG.getEntryNode(), dl, Reg, VT);
 }
 
+SDValue ARMTargetLowering::LowerADDROFRETURNADDR(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  // The return address is in the frame record, at FP + 4. The flag makes
+  // determineCalleeSaves spill LR there, even in a leaf function.
+  const ARMBaseRegisterInfo &ARI =
+      *static_cast<const ARMBaseRegisterInfo *>(RegInfo);
+  MachineFunction &MF = DAG.getMachineFunction();
+  MF.getFrameInfo().setFrameAddressIsTaken(true);
+  MF.getInfo<ARMFunctionInfo>()->setAddressOfReturnAddressTaken(true);
+
+  EVT VT = Op.getValueType();
+  SDLoc dl(Op);
+  Register FrameReg = ARI.getFrameRegister(MF);
+  SDValue FrameAddr = DAG.getCopyFromReg(DAG.getEntryNode(), dl, FrameReg, VT);
+  return DAG.getNode(ISD::ADD, dl, VT, FrameAddr, DAG.getConstant(4, dl, VT));
+}
+
 SDValue ARMTargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
   const ARMBaseRegisterInfo &ARI =
     *static_cast<const ARMBaseRegisterInfo*>(RegInfo);
@@ -10405,6 +10422,8 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FCOPYSIGN:     return LowerFCOPYSIGN(Op, DAG);
   case ISD::RETURNADDR:    return LowerRETURNADDR(Op, DAG);
   case ISD::FRAMEADDR:     return LowerFRAMEADDR(Op, DAG);
+  case ISD::ADDROFRETURNADDR:
+    return LowerADDROFRETURNADDR(Op, DAG);
   case ISD::EH_SJLJ_SETJMP: return LowerEH_SJLJ_SETJMP(Op, DAG);
   case ISD::EH_SJLJ_LONGJMP: return LowerEH_SJLJ_LONGJMP(Op, DAG);
   case ISD::EH_SJLJ_SETUP_DISPATCH: return LowerEH_SJLJ_SETUP_DISPATCH(Op, DAG);

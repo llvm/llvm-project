@@ -1409,6 +1409,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   subsequent base; Clang now does the same.
   ([#210174](https://github.com/llvm/llvm-project/issues/210174))
 
+- `_AddressOfReturnAddress` is now available on 32-bit Arm.
+
 - Fixed ``/hotpatch`` with LTO, where objects were not marked as hotpatchable,
   so ``/FUNCTIONPADMIN`` didn't pad their functions.
 
