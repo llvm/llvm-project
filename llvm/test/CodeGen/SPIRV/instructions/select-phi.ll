@@ -62,3 +62,24 @@ exit: ; preds = %sw2, %sw1, %entry
   %r5 = icmp eq ptr %add.ptr, %retval.0
   ret void
 }
+
+; A call result selected with a local address keeps its OpFunctionCall type.
+; CHECK-LABEL: Begin function select_call_result
+; CHECK: %[[SelVar:.*]] = OpVariable %[[#]]
+; CHECK: %[[SelCall:.*]] = OpFunctionCall %[[#]]
+; CHECK: %[[SelBCast1:.*]] = OpBitcast %[[SelPtr:.*]] %[[SelCall]]
+; CHECK: %[[SelBCast2:.*]] = OpBitcast %[[SelPtr]] %[[SelCall]]
+; CHECK: %[[SelCast:.*]] = OpPtrCastToGeneric %[[SelPtr]] %[[SelVar]]
+; CHECK: %[[Sel:.*]] = OpSelect %[[SelPtr]] %[[#]] %[[SelCast]] %[[SelBCast1]]
+; CHECK: OpPtrEqual %[[#]] %[[Sel]] %[[SelBCast2]]
+
+declare spir_func ptr addrspace(4) @f()
+define spir_func i1 @select_call_result(i1 %c) {
+entry:
+  %a = alloca ptr addrspace(4), align 8
+  %x = call spir_func ptr addrspace(4) @f()
+  %ac = addrspacecast ptr %a to ptr addrspace(4)
+  %s = select i1 %c, ptr addrspace(4) %ac, ptr addrspace(4) %x
+  %r = icmp eq ptr addrspace(4) %s, %x
+  ret i1 %r
+}
