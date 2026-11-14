@@ -684,6 +684,27 @@ func.func @complex_log1p_opencl(%arg: complex<f32>) -> complex<f32> {
 
 // -----
 
+func.func @complex_atan2(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
+  %0 = complex.atan2 %lhs, %rhs : complex<f32>
+  return %0 : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_atan2
+//  CHECK-SAME: (%[[LHS:.+]]: complex<f32>, %[[RHS:.+]]: complex<f32>)
+//   CHECK-DAG:   %[[LV:.+]] = builtin.unrealized_conversion_cast %[[LHS]] : complex<f32> to vector<2xf32>
+//   CHECK-DAG:   %[[RV:.+]] = builtin.unrealized_conversion_cast %[[RHS]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[YRE:.+]] = spirv.CompositeExtract %[[LV]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[YIM:.+]] = spirv.CompositeExtract %[[LV]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[XRE:.+]] = spirv.CompositeExtract %[[RV]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[XIM:.+]] = spirv.CompositeExtract %[[RV]][1 : i32] : vector<2xf32>
+//       CHECK:   spirv.GL.Sqrt
+//       CHECK:   spirv.GL.Atan2
+//       CHECK:   spirv.GL.Log
+//       CHECK:   spirv.GL.Atan2
+//       CHECK:   spirv.CompositeConstruct
+
+// -----
+
 func.func @complex_pow(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
   %0 = complex.pow %lhs, %rhs : complex<f32>
   return %0 : complex<f32>
@@ -722,6 +743,18 @@ func.func @complex_pow(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
 module attributes {
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>>
 } {
+
+func.func @complex_atan2_opencl(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
+  %0 = complex.atan2 %lhs, %rhs : complex<f32>
+  return %0 : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_atan2_opencl
+//       CHECK:   spirv.CL.sqrt
+//       CHECK:   spirv.CL.atan2
+//       CHECK:   spirv.CL.log
+//       CHECK:   spirv.CL.atan2
+//       CHECK:   spirv.CompositeConstruct
 
 func.func @complex_pow_opencl(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
   %0 = complex.pow %lhs, %rhs : complex<f32>

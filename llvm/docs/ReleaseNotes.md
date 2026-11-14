@@ -179,10 +179,13 @@ Makes programs 10x faster by doing Special New Thing.
 * Added the `bitinsert` and `bitextract` instructions for bit-range
   manipulation on byte type values.
 
+* The verifier now rejects a `"wchar_size"` module flag whose value is not
+  positive.
+
 ### Changes to LLVM infrastructure
 
-* Removed `mc::RegisterMCTargetOptionsFlags`.
-  A tool that created it now passes `mc::getToolOptions()`, or `codegen::getToolOptions()` with `codegen::RegisterCodeGenFlags`, to `cl::parseCommandLineOptions`.
+* Removed `mc::RegisterMCTargetOptionsFlags` and `codegen::RegisterCodeGenFlags`.
+  A tool that created either now passes `mc::getToolOptions()` or `codegen::getToolOptions()` to `cl::parseCommandLineOptions`.
 
 * Removed `TargetOptions::FloatABIType`. The soft float ABI should be
   controlled by setting the `"float-abi"` module flag.

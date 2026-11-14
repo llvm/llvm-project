@@ -3367,10 +3367,10 @@ TEST(LlvmLibcSPrintfTest, FloatAutoFloat128Conv) {
   ASSERT_STREQ_LEN(written, buff, "0.1");
 
   written = LIBC_NAMESPACE::sprintf(buff, "%Qg", float128(1e1000L));
-  ASSERT_STREQ_LEN(written, big_buff, "1e+1000");
+  ASSERT_STREQ_LEN(written, buff, "1e+1000");
 
   written = LIBC_NAMESPACE::sprintf(buff, "%Qg", float128(1e4900L));
-  ASSERT_STREQ_LEN(written, big_buff, "1e+4900");
+  ASSERT_STREQ_LEN(written, buff, "1e+4900");
 }
 #endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
 

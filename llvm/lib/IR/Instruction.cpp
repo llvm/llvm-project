@@ -1257,19 +1257,7 @@ bool Instruction::isVolatile() const {
     return cast<AtomicCmpXchgInst>(this)->isVolatile();
   case Instruction::Call:
   case Instruction::Invoke:
-    // There are a very limited number of intrinsics with volatile flags.
-    if (auto *II = dyn_cast<IntrinsicInst>(this)) {
-      if (auto *MI = dyn_cast<MemIntrinsic>(II))
-        return MI->isVolatile();
-      switch (II->getIntrinsicID()) {
-      default: break;
-      case Intrinsic::matrix_column_major_load:
-        return cast<ConstantInt>(II->getArgOperand(2))->isOne();
-      case Intrinsic::matrix_column_major_store:
-        return cast<ConstantInt>(II->getArgOperand(3))->isOne();
-      }
-    }
-    return false;
+    return cast<CallBase>(this)->isVolatile();
   }
 }
 

@@ -42,6 +42,8 @@ const TargetRegisterClass *SparcInstrInfo::getInlineAsmMemoryOperandRegClass(
 bool SparcInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
                                           const MachineBasicBlock *MBB,
                                           const MachineFunction &MF) const {
+  if (MI.getFlag(MachineInstr::FrameDestroy))
+    return true;
   switch (MI.getOpcode()) {
   case SP::SAVErr:
   case SP::SAVEri:

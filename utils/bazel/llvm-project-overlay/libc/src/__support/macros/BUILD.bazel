@@ -1,0 +1,80 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_support_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_support_library(
+    name = "config",
+    hdrs = ["config.h"],
+    deps = [
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:compiler",
+    ],
+)
+
+libc_support_library(
+    name = "macro_utils",
+    hdrs = ["macro-utils.h"],
+)
+
+libc_support_library(
+    name = "is_defined",
+    hdrs = ["is_defined.h"],
+    deps = [
+        ":macro_utils",
+        "//libc/src/__support/CPP:string_view",
+    ],
+)
+
+libc_support_library(
+    name = "attributes",
+    hdrs = ["attributes.h"],
+    deps = [
+        ":config",
+        "//libc/src/__support/macros/properties:architectures",
+    ],
+)
+
+libc_support_library(
+    name = "hardening",
+    hdrs = ["hardening.h"],
+)
+
+libc_support_library(
+    name = "optimization",
+    hdrs = ["optimization.h"],
+    deps = [
+        ":attributes",
+        ":config",
+        "//libc/src/__support/macros/properties:compiler",
+    ],
+)
+
+libc_support_library(
+    name = "sanitizer",
+    hdrs = ["sanitizer.h"],
+    deps = [
+        ":config",
+    ],
+)
+
+libc_support_library(
+    name = "null_check",
+    hdrs = ["null_check.h"],
+    deps = [
+        ":config",
+        ":optimization",
+    ],
+)

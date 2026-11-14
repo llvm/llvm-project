@@ -5,6 +5,25 @@
 
 target triple = "wasm32-unknown-unknown"
 
+define <8 x i16> @trunc_extended_avgr(<8 x i8> %x, <8 x i8> %y) {
+; CHECK-LABEL: trunc_extended_avgr:
+; CHECK:         .functype trunc_extended_avgr (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.avgr_u
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u
+; CHECK-NEXT:    # fallthrough-return
+entry:
+  %x.ext = zext <8 x i8> %x to <8 x i32>
+  %y.ext = zext <8 x i8> %y to <8 x i32>
+  %sum = add nuw <8 x i32> %x.ext, %y.ext
+  %rounded = add nuw <8 x i32> %sum, splat (i32 1)
+  %average = lshr <8 x i32> %rounded, splat (i32 1)
+  %result = trunc <8 x i32> %average to <8 x i16>
+  ret <8 x i16> %result
+}
+
 define <16 x i8>  @trunc16i64_16i8(<16 x i64> %a) {
 ; CHECK-LABEL: trunc16i64_16i8:
 ; CHECK:         .functype trunc16i64_16i8 (v128, v128, v128, v128, v128, v128, v128, v128) -> (v128)

@@ -4522,13 +4522,9 @@ private:
           Fortran::semantics::GetExpr(caseValue.thing);
       if (isCharSelector)
         valueList.push_back(charValue(expr));
-      else if (isLogicalSelector)
+      else
         valueList.push_back(builder->createConvert(
             loc, selectType, createFIRExpr(toLocation(), expr, stmtCtx)));
-      else {
-        valueList.push_back(builder->createIntegerConstant(
-            loc, selectType, *Fortran::evaluate::ToInt64(*expr)));
-      }
     };
     for (Fortran::lower::pft::Evaluation *e = eval.controlSuccessor; e;
          e = e->controlSuccessor) {
@@ -6568,23 +6564,38 @@ private:
     const auto &langOptions = bridge.getSemanticsContext().langOptions();
     if (langOptions.OpenMPSimd)
       return;
+    bool noOpenmp = false;
+    bool noParallelism = false;
     const auto *assumptionScopeEnd =
         &Fortran::semantics::omp::GetProgramUnit(scope).parent();
-    bool noOpenmp = false;
-    std::set<llvm::omp::Directive> absent;
+    llvm::omp::Directives absent;
     for (const auto *assumptionScope = &scope;
          !assumptionScope->IsGlobal() && assumptionScope != assumptionScopeEnd;
          assumptionScope = &assumptionScope->parent()) {
-      if (const auto *symbol = assumptionScope->symbol();
-          symbol &&
-          symbol->test(Fortran::semantics::Symbol::Flag::OmpAssumesNoOpenmp))
-        noOpenmp = true;
-      const auto &directives = assumptionScope->ompAssumesAbsent();
-      absent.insert(directives.begin(), directives.end());
+      if (const auto *symbol = assumptionScope->symbol()) {
+        Fortran::common::visit(
+            [&](const auto &details) {
+              if constexpr (std::is_convertible_v<decltype(details),
+                                                  const Fortran::semantics::
+                                                      WithOmpDeclarative &>) {
+                noOpenmp |= details.ompAssumes().test(
+                    llvm::omp::Clause::OMPC_no_openmp);
+                noParallelism |= details.ompAssumes().test(
+                    llvm::omp::Clause::OMPC_no_parallelism);
+                absent |= details.ompAssumesAbsent();
+              }
+            },
+            symbol->details());
+      }
     }
-    if (!noOpenmp && absent.empty())
+    if (!noOpenmp && !noParallelism && absent.empty())
       return;
     std::string assumptions = noOpenmp ? "omp_no_openmp" : "";
+    if (noParallelism) {
+      if (!assumptions.empty())
+        assumptions += ',';
+      assumptions += "omp_no_parallelism";
+    }
     for (llvm::omp::Directive directive : absent) {
       if (!assumptions.empty())
         assumptions += ',';
