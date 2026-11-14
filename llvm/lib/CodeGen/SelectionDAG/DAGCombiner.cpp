@@ -32867,8 +32867,9 @@ bool DAGCombiner::parallelizeChainedStores(StoreSDNode *St) {
                    std::monostate{});
 
   while (StoreSDNode *Chain = dyn_cast<StoreSDNode>(STChain->getChain())) {
-    if (Chain->getMemoryVT().isScalableVector())
-      return false;
+    if (Chain->getMemoryVT().isScalableVector() ||
+        Chain->getMemoryVT().isZeroSized())
+      break;
 
     // If the chain has more than one use, then we can't reorder the mem ops.
     if (!SDValue(Chain, 0)->hasOneUse())
@@ -32884,14 +32885,8 @@ bool DAGCombiner::parallelizeChainedStores(StoreSDNode *St) {
     if (!BasePtr.equalBaseIndex(Ptr, DAG, Offset))
       break;
     int64_t Length = (Chain->getMemoryVT().getSizeInBits() + 7) / 8;
-    // Make sure we don't overlap with other intervals by checking the ones to
-    // the left or right before inserting.
-    auto I = Intervals.find(Offset);
-    // If there's a next interval, we should end before it.
-    if (I != Intervals.end() && I.start() < (Offset + Length))
-      break;
-    // If there's a previous interval, we should start after it.
-    if (I != Intervals.begin() && (--I).stop() <= Offset)
+    // Make sure we don't overlap with any already-collected store interval.
+    if (Intervals.overlaps(Offset, Offset + Length))
       break;
     Intervals.insert(Offset, Offset + Length, std::monostate{});
 
