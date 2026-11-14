@@ -20,7 +20,7 @@ define void @foo(i32 %m, i32 %n, ptr nocapture %A) #0 {
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][(sext i32 %n to i64)] with elements of 1 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.body3.lr.ph.us>][{0,+,1}<nuw><nsw><%for.body3.us>]
-; CHECK-NEXT:  Delinearization validation: Failed
+; CHECK-NEXT:  Delinearization validation: Succeeded
 ;
 entry:
   br label %entry.split

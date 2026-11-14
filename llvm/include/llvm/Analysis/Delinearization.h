@@ -14,6 +14,8 @@
 #ifndef LLVM_ANALYSIS_DELINEARIZATION_H
 #define LLVM_ANALYSIS_DELINEARIZATION_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
 
@@ -142,12 +144,28 @@ delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
                           SmallVectorImpl<const SCEV *> &Sizes,
                           const SCEV *ElementSize);
 
+/// Table for the range proofs, keyed on the (subscript, size) pair.
+using DelinearizationRangeCache =
+    DenseMap<std::pair<const SCEV *, const SCEV *>, bool>;
+
+/// Return true if the offset of \p Ptr from getPointerBase(getSCEV(Ptr)) is
+/// computed without signed overflow: by pointer arithmetic carrying `nusw`
+/// and indices that are themselves computed without signed overflow.
+LLVM_ABI bool hasNoSignedWrapOffsetFromBase(ScalarEvolution &SE, Value *Ptr);
+
 /// Check that each subscript in \p Subscripts is within the corresponding size
 /// in \p Sizes. For the outermost dimension, the subscript being negative is
 /// allowed.
-LLVM_ABI bool validateDelinearizationResult(ScalarEvolution &SE,
-                                            ArrayRef<const SCEV *> Sizes,
-                                            ArrayRef<const SCEV *> Subscripts);
+///
+/// \p Ptr is the original pointer access this delinearization came from. If
+/// its byte offset is computed without signed overflow by both the pointer
+/// arithmetic and the index computations feeding it that discharges the
+/// injectivity side condition directly. Otherwise, validation must prove that
+/// the product of the dimension sizes does not overflow.
+LLVM_ABI bool
+validateDelinearizationResult(ScalarEvolution &SE, ArrayRef<const SCEV *> Sizes,
+                              ArrayRef<const SCEV *> Subscripts, Value *Ptr,
+                              DelinearizationRangeCache *RangeCache = nullptr);
 
 /// Gathers the individual index expressions from a GEP instruction.
 ///
