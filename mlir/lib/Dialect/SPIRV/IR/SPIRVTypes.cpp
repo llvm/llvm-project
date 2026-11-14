@@ -47,7 +47,7 @@ public:
 
     TypeSwitch<SPIRVType>(type)
         .Case<CooperativeMatrixType, ImageType, PointerType, ScalarType,
-              TensorArmType>(
+              TensorArmType, UntypedPointerType>(
             [this](auto concreteType) { addConcrete(concreteType); })
         .Case<ArrayType, MatrixType, RuntimeArrayType, VectorType>(
             [this](auto concreteType) { add(concreteType.getElementType()); })
@@ -71,6 +71,7 @@ private:
   void addConcrete(PointerType type);
   void addConcrete(ScalarType type);
   void addConcrete(TensorArmType type);
+  void addConcrete(UntypedPointerType type);
 
   template <Extension... Es>
   void pushExts() {
@@ -104,7 +105,8 @@ public:
 
     TypeSwitch<SPIRVType>(type)
         .Case<CooperativeMatrixType, ImageType, MatrixType, PointerType,
-              RuntimeArrayType, ScalarType, TensorArmType, VectorType>(
+              RuntimeArrayType, ScalarType, TensorArmType, UntypedPointerType,
+              VectorType>(
             [this](auto concreteType) { addConcrete(concreteType); })
         .Case([this](ArrayType concreteType) {
           add(concreteType.getElementType());
@@ -133,6 +135,7 @@ private:
   void addConcrete(RuntimeArrayType type);
   void addConcrete(ScalarType type);
   void addConcrete(TensorArmType type);
+  void addConcrete(UntypedPointerType type);
   void addConcrete(VectorType type);
 
   template <Capability... Cs>
@@ -557,6 +560,47 @@ void TypeCapabilityVisitor::addConcrete(PointerType type) {
   add(type.getPointeeType());
   storage = oldStorageClass;
 
+  if (auto scCaps = spirv::getCapabilities(type.getStorageClass()))
+    capabilities.push_back(*scCaps);
+}
+
+//===----------------------------------------------------------------------===//
+// UntypedPointerType
+//===----------------------------------------------------------------------===//
+
+struct spirv::detail::UntypedPointerTypeStorage : public TypeStorage {
+  using KeyTy = StorageClass;
+
+  static UntypedPointerTypeStorage *construct(TypeStorageAllocator &allocator,
+                                              const KeyTy &key) {
+    return new (allocator.allocate<UntypedPointerTypeStorage>())
+        UntypedPointerTypeStorage(key);
+  }
+
+  bool operator==(const KeyTy &key) const { return key == storageClass; }
+
+  UntypedPointerTypeStorage(const KeyTy &key) : storageClass(key) {}
+
+  StorageClass storageClass;
+};
+
+UntypedPointerType UntypedPointerType::get(MLIRContext *context,
+                                           StorageClass storageClass) {
+  return Base::get(context, storageClass);
+}
+
+StorageClass UntypedPointerType::getStorageClass() const {
+  return getImpl()->storageClass;
+}
+
+void TypeExtensionVisitor::addConcrete(UntypedPointerType type) {
+  pushExts<Extension::SPV_KHR_untyped_pointers>();
+  if (auto scExts = spirv::getExtensions(type.getStorageClass()))
+    extensions.push_back(*scExts);
+}
+
+void TypeCapabilityVisitor::addConcrete(UntypedPointerType type) {
+  pushCaps<Capability::UntypedPointersKHR>();
   if (auto scCaps = spirv::getCapabilities(type.getStorageClass()))
     capabilities.push_back(*scCaps);
 }
@@ -1411,5 +1455,5 @@ TensorArmType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
 void SPIRVDialect::registerTypes() {
   addTypes<ArrayType, CooperativeMatrixType, ImageType, MatrixType,
            NamedBarrierType, PointerType, RuntimeArrayType, SampledImageType,
-           SamplerType, StructType, TensorArmType>();
+           SamplerType, StructType, TensorArmType, UntypedPointerType>();
 }

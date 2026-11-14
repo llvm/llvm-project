@@ -316,6 +316,18 @@ spirv.module Logical GLSL450 attributes {
   }
 }
 
+// CHECK: requires #spirv.vce<v1.0, [UntypedPointersKHR, Addresses, Kernel], [SPV_KHR_untyped_pointers]>
+spirv.module Physical64 OpenCL attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Kernel, Addresses, UntypedPointersKHR], [SPV_KHR_untyped_pointers]>,
+    #spirv.resource_limits<>
+  >
+} {
+  spirv.func @untyped_ptr(%arg0: !spirv.untyped_ptr<CrossWorkgroup>) "None" {
+    spirv.Return
+  }
+}
+
 // CHECK: requires #spirv.vce<v1.5, [GraphARM, Int8, TensorsARM, Float16, VulkanMemoryModel], [SPV_ARM_graph, SPV_ARM_tensors, SPV_KHR_vulkan_memory_model]>
 spirv.module Logical Vulkan attributes {
   spirv.target_env = #spirv.target_env<

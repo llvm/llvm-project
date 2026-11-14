@@ -809,6 +809,12 @@ LogicalResult Serializer::prepareBasicType(
     return success();
   }
 
+  if (auto untypedPtrType = dyn_cast<spirv::UntypedPointerType>(type)) {
+    typeEnum = spirv::Opcode::OpTypeUntypedPointerKHR;
+    operands.push_back(static_cast<uint32_t>(untypedPtrType.getStorageClass()));
+    return success();
+  }
+
   if (auto sampledImageType = dyn_cast<spirv::SampledImageType>(type)) {
     typeEnum = spirv::Opcode::OpTypeSampledImage;
     uint32_t imageTypeID = 0;
