@@ -13,9 +13,9 @@
 
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlowDialectInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/IR/Builders.h"
@@ -313,21 +313,18 @@ struct ForallLowering : public OpRewritePattern<mlir::scf::ForallOp> {
 
 } // namespace
 
-static void copyLLVMDialectAttrs(Operation *from, Operation *to) {
-  SmallVector<NamedAttribute> llvmAttrs;
-  llvm::copy_if(from->getDiscardableAttrs(), std::back_inserter(llvmAttrs),
-                [](auto attr) {
-                  return isa<LLVM::LLVMDialect>(attr.getValue().getDialect());
-                });
-  to->setDiscardableAttrs(llvmAttrs);
-}
-
-static void propagateLoopAttrs(Operation *scfOp, Operation *brOp) {
-  // Let the CondBranchOp carry the LLVM attributes from the ForOp, such as the
-  // llvm.loop_annotation attribute.
-  // LLVM requires the loop metadata to be attached on the "latch" block. Which
-  // is the back-edge to the header block (conditionBlock)
-  copyLLVMDialectAttrs(scfOp, brOp);
+static void propagateLoopAttrs(Operation *from, Operation *to) {
+  SmallVector<NamedAttribute> loopAttrs;
+  llvm::copy_if(
+      from->getDiscardableAttrs(), std::back_inserter(loopAttrs),
+      [](NamedAttribute attr) {
+        auto *interface =
+            attr.getValue()
+                .getDialect()
+                .getRegisteredInterface<SCFToControlFlowDialectInterface>();
+        return interface && interface->shouldPropagateLoopAttribute(attr);
+      });
+  to->setDiscardableAttrs(loopAttrs);
 }
 
 LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
@@ -545,11 +542,11 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
     rewriter.setInsertionPointToStart(forOp.getBody());
   }
 
-  // Serializing into the for nest would drop attributes such as
-  // llvm.loop_annotation. The loop above emits one scf.for per dimension, so
-  // the attributes go to the innermost one, which runs the body.
+  // Serializing into the for nest would drop loop annotations. The loop above
+  // emits one scf.for per dimension, so the attributes go to the innermost one,
+  // which runs the body.
   if (innermostForOp)
-    copyLLVMDialectAttrs(parallelOp, innermostForOp);
+    propagateLoopAttrs(parallelOp, innermostForOp);
 
   // First, merge reduction blocks into the main region.
   SmallVector<Value> yieldOperands;

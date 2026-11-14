@@ -14,6 +14,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 #include "IR/LLVMOps.h"
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlowDialectInterface.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Attributes.h"
@@ -4706,7 +4707,20 @@ Speculation::Speculatability SRemOp::getSpeculatability() {
 // LLVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 
+namespace {
+struct LLVMSCFToControlFlowInterface : SCFToControlFlowDialectInterface {
+  using SCFToControlFlowDialectInterface::SCFToControlFlowDialectInterface;
+
+  bool shouldPropagateLoopAttribute(NamedAttribute attr) const override {
+    // Preserve the existing policy of forwarding LLVM-valued attributes,
+    // including loop annotations, during SCF-to-CF conversion.
+    return true;
+  }
+};
+} // namespace
+
 void LLVMDialect::initialize() {
+  addInterfaces<LLVMSCFToControlFlowInterface>();
   registerAttributes();
 
   // clang-format off

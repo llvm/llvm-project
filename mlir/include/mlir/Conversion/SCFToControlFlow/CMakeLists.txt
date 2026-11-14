@@ -1,0 +1,3 @@
+set(LLVM_TARGET_DEFINITIONS SCFToControlFlowDialectInterface.td)
+mlir_tablegen(SCFToControlFlowDialectInterface.h.inc -gen-dialect-interface-decls)
+add_mlir_generic_tablegen_target(MLIRSCFToControlFlowDialectInterfaceIncGen)

@@ -5641,6 +5641,7 @@ cc_library(
         ":MemorySlotInterfaces",
         ":MemorySlotInterfacesIncGen",
         ":PtrDialect",
+        ":SCFToControlFlowDialectInterface",
         ":SideEffectInterfaces",
         ":Support",
         ":ViewLikeInterface",
@@ -8760,6 +8761,26 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "SCFToControlFlowDialectInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Conversion/SCFToControlFlow/SCFToControlFlowDialectInterface.h.inc": ["-gen-dialect-interface-decls"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Conversion/SCFToControlFlow/SCFToControlFlowDialectInterface.td",
+    deps = [":OpBaseTdFiles"],
+)
+
+cc_library(
+    name = "SCFToControlFlowDialectInterface",
+    hdrs = ["include/mlir/Conversion/SCFToControlFlow/SCFToControlFlowDialectInterface.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":SCFToControlFlowDialectInterfaceIncGen",
+    ],
+)
+
 cc_library(
     name = "SCFToControlFlow",
     srcs = ["lib/Conversion/SCFToControlFlow/SCFToControlFlow.cpp"],
@@ -8770,8 +8791,8 @@ cc_library(
         ":ControlFlowDialect",
         ":ConversionPassIncGen",
         ":IR",
-        ":LLVMDialect",
         ":SCFDialect",
+        ":SCFToControlFlowDialectInterface",
         ":SCFTransforms",
         ":TransformUtils",
         ":Transforms",
