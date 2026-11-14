@@ -1304,6 +1304,14 @@ def INIT_UNDEF : StandardPseudoInstruction {
   let hasSideEffects = false;
   let Size = 0;
 }
+def FREEZE : StandardPseudoInstruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src);
+  let AsmString = "";
+  let hasSideEffects = false;
+  let Size = 0;
+  let isMeta = true;
+}
 def SUBREG_TO_REG : StandardPseudoInstruction {
   let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins unknown:$subsrc, i32imm:$subidx);
