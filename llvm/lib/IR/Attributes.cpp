@@ -1539,23 +1539,6 @@ AttributeListImpl::AttributeListImpl(ArrayRef<AttributeSet> Sets) {
         AvailableSomewhereAttrs.addAttribute(I.getKindAsEnum());
 }
 
-bool AttributeListImpl::hasAttrSomewhere(Attribute::AttrKind Kind,
-                                        unsigned *Index) const {
-  if (!AvailableSomewhereAttrs.hasAttribute(Kind))
-    return false;
-
-  if (Index) {
-    for (unsigned I = 0, E = NumAttrSets; I != E; ++I) {
-      if (begin()[I].hasAttribute(Kind)) {
-        *Index = I - 1;
-        break;
-      }
-    }
-  }
-
-  return true;
-}
-
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void AttributeListImpl::dump() const {
@@ -1959,11 +1942,6 @@ AttributeList::intersectWith(LLVMContext &C, AttributeList Other) const {
 // AttributeList Accessor Methods
 //===----------------------------------------------------------------------===//
 
-bool AttributeList::hasAttributeAtIndex(unsigned Index,
-                                        Attribute::AttrKind Kind) const {
-  return getAttributes(Index).hasAttribute(Kind);
-}
-
 bool AttributeList::hasAttributeAtIndex(unsigned Index, StringRef Kind) const {
   return getAttributes(Index).hasAttribute(Kind);
 }
@@ -1977,19 +1955,17 @@ bool AttributeList::hasFnAttr(StringRef Kind) const {
   return hasAttributeAtIndex(AttributeList::FunctionIndex, Kind);
 }
 
-bool AttributeList::hasAttrSomewhere(Attribute::AttrKind Attr,
-                                     unsigned *Index) const {
-  return pImpl && getListImpl()->hasAttrSomewhere(Attr, Index);
-}
-
-Attribute AttributeList::getAttributeAtIndex(unsigned Index,
-                                             Attribute::AttrKind Kind) const {
-  return getAttributes(Index).getAttribute(Kind);
-}
-
 Attribute AttributeList::getAttributeAtIndex(unsigned Index,
                                              StringRef Kind) const {
   return getAttributes(Index).getAttribute(Kind);
+}
+
+unsigned AttributeList::getAttrSomewhereIndex(Attribute::AttrKind Kind) const {
+  for (unsigned I = 0, E = pImpl->getNumAttrSets(); I != E; ++I) {
+    if (pImpl->getAttrSets()[I].hasAttribute(Kind))
+      return I - 1;
+  }
+  llvm_unreachable("Expected an index with the attribute");
 }
 
 MaybeAlign AttributeList::getRetAlignment() const {
