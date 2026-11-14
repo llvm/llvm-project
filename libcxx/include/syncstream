@@ -265,7 +265,8 @@ public:
 
   explicit basic_syncbuf(streambuf_type* __obuf) : basic_syncbuf(__obuf, _Allocator()) {}
 
-  basic_syncbuf(streambuf_type* __obuf, _Allocator const& __alloc) : __wrapped_(__obuf), __str_(__alloc) {
+  basic_syncbuf(streambuf_type* __obuf, _Allocator const& __alloc)
+      : __syncbuf_base<_CharT, _Traits>(false), __wrapped_(__obuf), __str_(__alloc) {
     __inc_reference();
   }
 
@@ -317,7 +318,7 @@ public:
 
   // [syncstream.syncbuf.members], member functions
 
-  bool emit() { return emit(false); }
+  bool emit() { return __emit(false); }
 
   [[nodiscard]] streambuf_type* get_wrapped() const noexcept { return __wrapped_; }
 
@@ -330,7 +331,7 @@ protected:
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL
   int sync() override {
-    if (this->__emit_on_sync_ && !emit(true))
+    if (this->__emit_on_sync_ && !__emit(true))
       return -1;
     return 0;
   }
@@ -372,7 +373,7 @@ private:
 
   basic_string<_CharT, _Traits, _Allocator> __str_;
 
-  bool emit(bool __flush) {
+  bool __emit(bool __flush) override final {
     if (!__wrapped_)
       return false;
 
@@ -398,33 +399,32 @@ private:
     return __result;
   }
 
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL bool __emit() override { return emit(); }
-
   void __move_common(basic_syncbuf& __other) {
-    // Adjust the put area pointers to our buffer.
-    char_type* __p = static_cast<char_type*>(__str_.data());
-    this->setp(__p, __p + __str_.size());
-    this->pbump(__other.pptr() - __other.pbase());
+      // Adjust the put area pointers to our buffer.
+      char_type* __p = static_cast<char_type*>(__str_.data());
+  this->setp(__p, __p + __str_.size());
+  this->pbump(__other.pptr() - __other.pbase());
 
-    // Clear __other_ so the destructor will act as a NOP.
-    __other.setp(nullptr, nullptr);
-    __other.__wrapped_ = nullptr;
-  }
+  // Clear __other_ so the destructor will act as a NOP.
+  __other.setp(nullptr, nullptr);
+  __other.__wrapped_ = nullptr;
+}
 
   void __inc_reference() {
 #      if _LIBCPP_HAS_THREADS
-    if (__wrapped_)
-      __wrapped_streambuf_mutex::__instance().__inc_reference(__wrapped_);
+  if (__wrapped_)
+    __wrapped_streambuf_mutex::__instance().__inc_reference(__wrapped_);
 #      endif
-  }
+}
 
-  void __dec_reference() noexcept {
+void __dec_reference() noexcept {
 #      if _LIBCPP_HAS_THREADS
-    if (__wrapped_)
-      __wrapped_streambuf_mutex::__instance().__dec_reference(__wrapped_);
+  if (__wrapped_)
+    __wrapped_streambuf_mutex::__instance().__dec_reference(__wrapped_);
 #      endif
-  }
-};
+}
+}
+;
 
 using std::syncbuf;
 #      if _LIBCPP_HAS_WIDE_CHARACTERS

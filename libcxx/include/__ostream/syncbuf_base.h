@@ -20,19 +20,17 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
+#if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 
 template <class _CharT, class _Traits>
-class _LIBCPP_TEMPLATE_VIS __syncbuf_base : public basic_streambuf<_CharT, _Traits> {
-public:
-
+class __syncbuf_base : public basic_streambuf<_CharT, _Traits> {
 protected:
-  _LIBCPP_HIDE_FROM_ABI explicit __syncbuf_base(bool __b = false) : __emit_on_sync_(__b) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __syncbuf_base(bool __emit_on_sync) : __emit_on_sync_(__emit_on_sync) {}
 
 private:
-  bool __emit_on_sync_{false};
+  bool __emit_on_sync_;
 
-  virtual bool __emit() = 0;
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual bool __emit(bool __flush) = 0;
 
   template <class, class, class>
   friend class basic_syncbuf;
@@ -42,13 +40,13 @@ private:
 
 struct __syncbuf_base_access {
   template <class _CharT, class _Traits>
-  _LIBCPP_HIDE_FROM_ABI static void __set_emit_on_sync(__syncbuf_base<_CharT, _Traits>* __buf, bool __b) {
-    __buf->__emit_on_sync_ = __b;
+  _LIBCPP_HIDE_FROM_ABI static void __set_emit_on_sync(__syncbuf_base<_CharT, _Traits>* __buf, bool __emit_on_sync) {
+    __buf->__emit_on_sync_ = __emit_on_sync;
   }
 
   template <class _CharT, class _Traits>
   _LIBCPP_HIDE_FROM_ABI static bool __emit(__syncbuf_base<_CharT, _Traits>* __buf) {
-    return __buf->__emit();
+    return __buf->__emit(false);
   }
 };
 
@@ -85,7 +83,7 @@ _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>& flush_emit(basic_ostream<_
   return __os;
 }
 
-#endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
+#endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 
 _LIBCPP_END_NAMESPACE_STD
 
