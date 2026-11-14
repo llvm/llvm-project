@@ -30,6 +30,7 @@
 #include "llvm/Object/SymbolSize.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -227,6 +228,8 @@ ArrayRef<MCRegister> FunctionFiller::getRegistersSetUp() const {
 static std::unique_ptr<Module>
 createModule(const std::unique_ptr<LLVMContext> &Context,
              const TargetMachine &TM) {
+  if (const cl::LibraryOptionsContext *C = TM.Options.MCOptions.LibraryOptions)
+    Context->getLibraryOptions().assign(*C);
   auto Mod = std::make_unique<Module>(ModuleID, *Context);
   const Triple &TT = TM.getTargetTriple();
   Mod->setTargetTriple(TT);

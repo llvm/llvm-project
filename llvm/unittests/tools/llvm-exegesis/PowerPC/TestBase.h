@@ -13,6 +13,7 @@
 
 #include "LlvmState.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -25,8 +26,8 @@ void InitializePowerPCExegesisTarget();
 class PPCTestBase : public ::testing::Test {
 protected:
   PPCTestBase()
-      : State(cantFail(
-            LLVMState::Create("powerpc64le-unknown-linux", "ppc64le"))) {}
+      : State(cantFail(LLVMState::create(
+            LibraryOptions, "powerpc64le-unknown-linux", "ppc64le"))) {}
 
   static void SetUpTestCase() {
     LLVMInitializePowerPCTargetInfo();
@@ -35,6 +36,7 @@ protected:
     InitializePowerPCExegesisTarget();
   }
 
+  cl::LibraryOptionsContext LibraryOptions;
   const LLVMState State;
 };
 
