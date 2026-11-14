@@ -20,11 +20,6 @@ name:            store_v2p0
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -49,11 +44,6 @@ name:            load_v2p0
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):

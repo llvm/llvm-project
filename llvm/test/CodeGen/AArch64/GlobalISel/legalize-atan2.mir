@@ -6,10 +6,6 @@
 ---
 name:            test_v4f16.atan2
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.0:
     liveins: $d0, $d1
@@ -70,10 +66,6 @@ body:             |
 ---
 name:            test_v8f16.atan2
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -170,10 +162,6 @@ body:             |
 ---
 name:            test_v2f32.atan2
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.0:
     liveins: $d0, $d1
@@ -210,10 +198,6 @@ body:             |
 ---
 name:            test_v4f32.atan2
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -262,10 +246,6 @@ body:             |
 ---
 name:            test_v2f64.atan2
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -302,10 +282,6 @@ body:             |
 ---
 name:            test_atan2_half
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.0:
     liveins: $h0, $h1
@@ -331,3 +307,4 @@ body:             |
     %2:_(f16) = G_FATAN2 %0, %1
     $h0 = COPY %2(f16)
     RET_ReallyLR implicit $h0
+...

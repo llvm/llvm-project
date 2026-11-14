@@ -10,117 +10,198 @@
 // so there is no need have cleanup dest slot related code
 
 // CHECK-LIFETIME-LABEL: define dso_local i32 @test(
-// CHECK-LIFETIME-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] !dbg [[DBG5:![0-9]+]] {
+// CHECK-LIFETIME-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] !dbg [[DBG9:![0-9]+]] {
 // CHECK-LIFETIME-NEXT:  [[ENTRY:.*:]]
 // CHECK-LIFETIME-NEXT:    [[X:%.*]] = alloca i32, align 4
 // CHECK-LIFETIME-NEXT:    [[P:%.*]] = alloca ptr, align 8
-// CHECK-LIFETIME-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X]]) #[[ATTR2:[0-9]+]], !dbg [[DBG9:![0-9]+]]
-// CHECK-LIFETIME-NEXT:    store i32 3, ptr [[X]], align 4, !dbg [[DBG10:![0-9]+]], !tbaa [[INT_TBAA11:![0-9]+]]
-// CHECK-LIFETIME-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[P]]), !dbg [[DBG15:![0-9]+]]
-// CHECK-LIFETIME-NEXT:    store volatile ptr [[X]], ptr [[P]], align 8, !dbg [[DBG16:![0-9]+]], !tbaa [[INTPTR_TBAA17:![0-9]+]]
-// CHECK-LIFETIME-NEXT:    [[P_0_P_0_P_0_P_0_:%.*]] = load volatile ptr, ptr [[P]], align 8, !dbg [[DBG20:![0-9]+]], !tbaa [[INTPTR_TBAA17]]
-// CHECK-LIFETIME-NEXT:    [[TMP0:%.*]] = load i32, ptr [[P_0_P_0_P_0_P_0_]], align 4, !dbg [[DBG21:![0-9]+]], !tbaa [[INT_TBAA11]]
-// CHECK-LIFETIME-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[P]]), !dbg [[DBG22:![0-9]+]]
-// CHECK-LIFETIME-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X]]) #[[ATTR2]], !dbg [[DBG22]]
-// CHECK-LIFETIME-NEXT:    ret i32 [[TMP0]], !dbg [[DBG23:![0-9]+]]
+// CHECK-LIFETIME-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X]]), !dbg [[DBG13:![0-9]+]]
+// CHECK-LIFETIME-NEXT:    store i32 3, ptr [[X]], align 4, !dbg [[DBG14:![0-9]+]], !tbaa [[INT_TBAA15:![0-9]+]]
+// CHECK-LIFETIME-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[P]]), !dbg [[DBG16:![0-9]+]]
+// CHECK-LIFETIME-NEXT:    store volatile ptr [[X]], ptr [[P]], align 8, !dbg [[DBG17:![0-9]+]], !tbaa [[INTPTR_TBAA18:![0-9]+]]
+// CHECK-LIFETIME-NEXT:    [[P_0_P_0_P_0_P_0_:%.*]] = load volatile ptr, ptr [[P]], align 8, !dbg [[DBG21:![0-9]+]], !tbaa [[INTPTR_TBAA18]]
+// CHECK-LIFETIME-NEXT:    [[TMP0:%.*]] = load i32, ptr [[P_0_P_0_P_0_P_0_]], align 4, !dbg [[DBG22:![0-9]+]], !tbaa [[INT_TBAA15]]
+// CHECK-LIFETIME-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[P]]), !dbg [[DBG23:![0-9]+]]
+// CHECK-LIFETIME-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X]]), !dbg [[DBG23]]
+// CHECK-LIFETIME-NEXT:    ret i32 [[TMP0]], !dbg [[DBG24:![0-9]+]]
 //
 // CHECK-OPTNONE-LABEL: define dso_local i32 @test(
-// CHECK-OPTNONE-SAME: ) #[[ATTR0:[0-9]+]] !dbg [[DBG5:![0-9]+]] {
+// CHECK-OPTNONE-SAME: ) #[[ATTR0:[0-9]+]] !dbg [[DBG4:![0-9]+]] {
 // CHECK-OPTNONE-NEXT:  [[ENTRY:.*:]]
 // CHECK-OPTNONE-NEXT:    [[X:%.*]] = alloca i32, align 4
 // CHECK-OPTNONE-NEXT:    [[P:%.*]] = alloca ptr, align 8
-// CHECK-OPTNONE-NEXT:    store i32 3, ptr [[X]], align 4, !dbg [[DBG9:![0-9]+]]
-// CHECK-OPTNONE-NEXT:    store volatile ptr [[X]], ptr [[P]], align 8, !dbg [[DBG10:![0-9]+]]
-// CHECK-OPTNONE-NEXT:    [[TMP0:%.*]] = load volatile ptr, ptr [[P]], align 8, !dbg [[DBG11:![0-9]+]]
-// CHECK-OPTNONE-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4, !dbg [[DBG12:![0-9]+]]
-// CHECK-OPTNONE-NEXT:    ret i32 [[TMP1]], !dbg [[DBG13:![0-9]+]]
+// CHECK-OPTNONE-NEXT:    store i32 3, ptr [[X]], align 4, !dbg [[DBG8:![0-9]+]]
+// CHECK-OPTNONE-NEXT:    store volatile ptr [[X]], ptr [[P]], align 8, !dbg [[DBG9:![0-9]+]]
+// CHECK-OPTNONE-NEXT:    [[TMP0:%.*]] = load volatile ptr, ptr [[P]], align 8, !dbg [[DBG10:![0-9]+]]
+// CHECK-OPTNONE-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4, !dbg [[DBG11:![0-9]+]]
+// CHECK-OPTNONE-NEXT:    ret i32 [[TMP1]], !dbg [[DBG12:![0-9]+]]
 //
 // CHECK-MSAN-LABEL: define dso_local noundef i32 @test(
-// CHECK-MSAN-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] !dbg [[DBG6:![0-9]+]] {
+// CHECK-MSAN-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] !dbg [[DBG10:![0-9]+]] {
 // CHECK-MSAN-NEXT:  [[ENTRY:.*:]]
 // CHECK-MSAN-NEXT:    [[X:%.*]] = alloca i32, align 4
 // CHECK-MSAN-NEXT:    [[P:%.*]] = alloca ptr, align 8
-// CHECK-MSAN-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X]]) #[[ATTR3:[0-9]+]], !dbg [[DBG10:![0-9]+]]
-// CHECK-MSAN-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG10]]
-// CHECK-MSAN-NEXT:    [[TMP1:%.*]] = xor i64 [[TMP0]], 87960930222080, !dbg [[DBG10]]
-// CHECK-MSAN-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr, !dbg [[DBG10]]
-// CHECK-MSAN-NEXT:    store i32 0, ptr [[TMP2]], align 4, !dbg [[DBG11:![0-9]+]]
-// CHECK-MSAN-NEXT:    store i32 3, ptr [[X]], align 4, !dbg [[DBG11]], !tbaa [[INT_TBAA12:![0-9]+]]
-// CHECK-MSAN-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[P]]), !dbg [[DBG16:![0-9]+]]
-// CHECK-MSAN-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64, !dbg [[DBG16]]
-// CHECK-MSAN-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080, !dbg [[DBG16]]
-// CHECK-MSAN-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr, !dbg [[DBG16]]
-// CHECK-MSAN-NEXT:    store i64 0, ptr [[TMP5]], align 8, !dbg [[DBG17:![0-9]+]]
-// CHECK-MSAN-NEXT:    store volatile ptr [[X]], ptr [[P]], align 8, !dbg [[DBG17]], !tbaa [[INTPTR_TBAA18:![0-9]+]]
-// CHECK-MSAN-NEXT:    [[P_0_P_0_P_0_P_0_:%.*]] = load volatile ptr, ptr [[P]], align 8, !dbg [[DBG21:![0-9]+]], !tbaa [[INTPTR_TBAA18]]
-// CHECK-MSAN-NEXT:    [[_MSLD:%.*]] = load i64, ptr [[TMP5]], align 8, !dbg [[DBG21]]
-// CHECK-MSAN-NEXT:    [[_MSCMP_NOT:%.*]] = icmp eq i64 [[_MSLD]], 0, !dbg [[DBG22:![0-9]+]]
-// CHECK-MSAN-NEXT:    br i1 [[_MSCMP_NOT]], label %[[BB7:.*]], label %[[BB6:.*]], !dbg [[DBG22]], !prof [[PROF23:![0-9]+]]
+// CHECK-MSAN-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X]]), !dbg [[DBG14:![0-9]+]]
+// CHECK-MSAN-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG14]]
+// CHECK-MSAN-NEXT:    [[TMP1:%.*]] = xor i64 [[TMP0]], 87960930222080, !dbg [[DBG14]]
+// CHECK-MSAN-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr, !dbg [[DBG14]]
+// CHECK-MSAN-NEXT:    store i32 0, ptr [[TMP2]], align 4, !dbg [[DBG15:![0-9]+]]
+// CHECK-MSAN-NEXT:    store i32 3, ptr [[X]], align 4, !dbg [[DBG15]], !tbaa [[INT_TBAA16:![0-9]+]]
+// CHECK-MSAN-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[P]]), !dbg [[DBG17:![0-9]+]]
+// CHECK-MSAN-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64, !dbg [[DBG17]]
+// CHECK-MSAN-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080, !dbg [[DBG17]]
+// CHECK-MSAN-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr, !dbg [[DBG17]]
+// CHECK-MSAN-NEXT:    store i64 0, ptr [[TMP5]], align 8, !dbg [[DBG18:![0-9]+]]
+// CHECK-MSAN-NEXT:    store volatile ptr [[X]], ptr [[P]], align 8, !dbg [[DBG18]], !tbaa [[INTPTR_TBAA19:![0-9]+]]
+// CHECK-MSAN-NEXT:    [[P_0_P_0_P_0_P_0_:%.*]] = load volatile ptr, ptr [[P]], align 8, !dbg [[DBG22:![0-9]+]], !tbaa [[INTPTR_TBAA19]]
+// CHECK-MSAN-NEXT:    [[_MSLD:%.*]] = load i64, ptr [[TMP5]], align 8, !dbg [[DBG22]]
+// CHECK-MSAN-NEXT:    [[_MSCMP_NOT:%.*]] = icmp eq i64 [[_MSLD]], 0, !dbg [[DBG23:![0-9]+]]
+// CHECK-MSAN-NEXT:    br i1 [[_MSCMP_NOT]], label %[[BB7:.*]], label %[[BB6:.*]], !dbg [[DBG23]], !prof [[PROF24:![0-9]+]]
 // CHECK-MSAN:       [[BB6]]:
-// CHECK-MSAN-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4:[0-9]+]], !dbg [[DBG22]]
-// CHECK-MSAN-NEXT:    unreachable, !dbg [[DBG22]]
+// CHECK-MSAN-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3:[0-9]+]], !dbg [[DBG23]]
+// CHECK-MSAN-NEXT:    unreachable, !dbg [[DBG23]]
 // CHECK-MSAN:       [[BB7]]:
-// CHECK-MSAN-NEXT:    [[TMP8:%.*]] = load i32, ptr [[P_0_P_0_P_0_P_0_]], align 4, !dbg [[DBG22]], !tbaa [[INT_TBAA12]]
-// CHECK-MSAN-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[P_0_P_0_P_0_P_0_]] to i64, !dbg [[DBG22]]
-// CHECK-MSAN-NEXT:    [[TMP10:%.*]] = xor i64 [[TMP9]], 87960930222080, !dbg [[DBG22]]
-// CHECK-MSAN-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to ptr, !dbg [[DBG22]]
-// CHECK-MSAN-NEXT:    [[_MSLD1:%.*]] = load i32, ptr [[TMP11]], align 4, !dbg [[DBG22]]
-// CHECK-MSAN-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[P]]), !dbg [[DBG24:![0-9]+]]
-// CHECK-MSAN-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X]]) #[[ATTR3]], !dbg [[DBG24]]
-// CHECK-MSAN-NEXT:    [[_MSCMP2_NOT:%.*]] = icmp eq i32 [[_MSLD1]], 0, !dbg [[DBG25:![0-9]+]]
-// CHECK-MSAN-NEXT:    br i1 [[_MSCMP2_NOT]], label %[[BB13:.*]], label %[[BB12:.*]], !dbg [[DBG25]], !prof [[PROF23]]
+// CHECK-MSAN-NEXT:    [[TMP8:%.*]] = load i32, ptr [[P_0_P_0_P_0_P_0_]], align 4, !dbg [[DBG23]], !tbaa [[INT_TBAA16]]
+// CHECK-MSAN-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[P_0_P_0_P_0_P_0_]] to i64, !dbg [[DBG23]]
+// CHECK-MSAN-NEXT:    [[TMP10:%.*]] = xor i64 [[TMP9]], 87960930222080, !dbg [[DBG23]]
+// CHECK-MSAN-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to ptr, !dbg [[DBG23]]
+// CHECK-MSAN-NEXT:    [[_MSLD1:%.*]] = load i32, ptr [[TMP11]], align 4, !dbg [[DBG23]]
+// CHECK-MSAN-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[P]]), !dbg [[DBG25:![0-9]+]]
+// CHECK-MSAN-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X]]), !dbg [[DBG25]]
+// CHECK-MSAN-NEXT:    [[_MSCMP2_NOT:%.*]] = icmp eq i32 [[_MSLD1]], 0, !dbg [[DBG26:![0-9]+]]
+// CHECK-MSAN-NEXT:    br i1 [[_MSCMP2_NOT]], label %[[BB13:.*]], label %[[BB12:.*]], !dbg [[DBG26]], !prof [[PROF24]]
 // CHECK-MSAN:       [[BB12]]:
-// CHECK-MSAN-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]], !dbg [[DBG25]]
-// CHECK-MSAN-NEXT:    unreachable, !dbg [[DBG25]]
+// CHECK-MSAN-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]], !dbg [[DBG26]]
+// CHECK-MSAN-NEXT:    unreachable, !dbg [[DBG26]]
 // CHECK-MSAN:       [[BB13]]:
-// CHECK-MSAN-NEXT:    ret i32 [[TMP8]], !dbg [[DBG25]]
+// CHECK-MSAN-NEXT:    ret i32 [[TMP8]], !dbg [[DBG26]]
 //
 // CHECK-KMSAN-LABEL: define dso_local i32 @test(
-// CHECK-KMSAN-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] !dbg [[DBG6:![0-9]+]] {
+// CHECK-KMSAN-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] !dbg [[DBG10:![0-9]+]] {
 // CHECK-KMSAN-NEXT:  [[ENTRY:.*:]]
 // CHECK-KMSAN-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state() #[[ATTR2:[0-9]+]]
 // CHECK-KMSAN-NEXT:    [[X:%.*]] = alloca i32, align 4
 // CHECK-KMSAN-NEXT:    [[P:%.*]] = alloca ptr, align 8
-// CHECK-KMSAN-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X]]) #[[ATTR2]], !dbg [[DBG10:![0-9]+]]
-// CHECK-KMSAN-NEXT:    call void @__msan_poison_alloca(ptr nonnull [[X]], i64 4, ptr nonnull @[[GLOB0:[0-9]+]]) #[[ATTR2]], !dbg [[DBG10]]
-// CHECK-KMSAN-NEXT:    [[TMP1:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_4(ptr nonnull [[X]]) #[[ATTR2]], !dbg [[DBG11:![0-9]+]]
-// CHECK-KMSAN-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, ptr } [[TMP1]], 0, !dbg [[DBG11]]
-// CHECK-KMSAN-NEXT:    store i32 0, ptr [[TMP2]], align 4, !dbg [[DBG11]]
-// CHECK-KMSAN-NEXT:    store i32 3, ptr [[X]], align 4, !dbg [[DBG11]], !tbaa [[INT_TBAA12:![0-9]+]]
-// CHECK-KMSAN-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[P]]), !dbg [[DBG16:![0-9]+]]
-// CHECK-KMSAN-NEXT:    call void @__msan_poison_alloca(ptr nonnull [[P]], i64 8, ptr nonnull @[[GLOB1:[0-9]+]]) #[[ATTR2]], !dbg [[DBG16]]
-// CHECK-KMSAN-NEXT:    [[TMP3:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_8(ptr nonnull [[P]]) #[[ATTR2]], !dbg [[DBG17:![0-9]+]]
-// CHECK-KMSAN-NEXT:    [[TMP4:%.*]] = extractvalue { ptr, ptr } [[TMP3]], 0, !dbg [[DBG17]]
-// CHECK-KMSAN-NEXT:    store i64 0, ptr [[TMP4]], align 8, !dbg [[DBG17]]
-// CHECK-KMSAN-NEXT:    store volatile ptr [[X]], ptr [[P]], align 8, !dbg [[DBG17]], !tbaa [[INTPTR_TBAA18:![0-9]+]]
-// CHECK-KMSAN-NEXT:    [[P_0_P_0_P_0_P_0_:%.*]] = load volatile ptr, ptr [[P]], align 8, !dbg [[DBG21:![0-9]+]], !tbaa [[INTPTR_TBAA18]]
-// CHECK-KMSAN-NEXT:    [[TMP5:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_load_8(ptr nonnull [[P]]) #[[ATTR2]], !dbg [[DBG21]]
-// CHECK-KMSAN-NEXT:    [[TMP6:%.*]] = extractvalue { ptr, ptr } [[TMP5]], 0, !dbg [[DBG21]]
-// CHECK-KMSAN-NEXT:    [[_MSLD:%.*]] = load i64, ptr [[TMP6]], align 8, !dbg [[DBG21]]
-// CHECK-KMSAN-NEXT:    [[_MSCMP_NOT:%.*]] = icmp eq i64 [[_MSLD]], 0, !dbg [[DBG22:![0-9]+]]
-// CHECK-KMSAN-NEXT:    br i1 [[_MSCMP_NOT]], label %[[BB10:.*]], label %[[BB7:.*]], !dbg [[DBG22]], !prof [[PROF23:![0-9]+]]
+// CHECK-KMSAN-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X]]), !dbg [[DBG14:![0-9]+]]
+// CHECK-KMSAN-NEXT:    call void @__msan_poison_alloca(ptr nonnull [[X]], i64 4, ptr nonnull @[[GLOB0:[0-9]+]]) #[[ATTR2]], !dbg [[DBG14]]
+// CHECK-KMSAN-NEXT:    [[TMP1:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_4(ptr nonnull [[X]]) #[[ATTR2]], !dbg [[DBG15:![0-9]+]]
+// CHECK-KMSAN-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, ptr } [[TMP1]], 0, !dbg [[DBG15]]
+// CHECK-KMSAN-NEXT:    store i32 0, ptr [[TMP2]], align 4, !dbg [[DBG15]]
+// CHECK-KMSAN-NEXT:    store i32 3, ptr [[X]], align 4, !dbg [[DBG15]], !tbaa [[INT_TBAA16:![0-9]+]]
+// CHECK-KMSAN-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[P]]), !dbg [[DBG17:![0-9]+]]
+// CHECK-KMSAN-NEXT:    call void @__msan_poison_alloca(ptr nonnull [[P]], i64 8, ptr nonnull @[[GLOB1:[0-9]+]]) #[[ATTR2]], !dbg [[DBG17]]
+// CHECK-KMSAN-NEXT:    [[TMP3:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_8(ptr nonnull [[P]]) #[[ATTR2]], !dbg [[DBG18:![0-9]+]]
+// CHECK-KMSAN-NEXT:    [[TMP4:%.*]] = extractvalue { ptr, ptr } [[TMP3]], 0, !dbg [[DBG18]]
+// CHECK-KMSAN-NEXT:    store i64 0, ptr [[TMP4]], align 8, !dbg [[DBG18]]
+// CHECK-KMSAN-NEXT:    store volatile ptr [[X]], ptr [[P]], align 8, !dbg [[DBG18]], !tbaa [[INTPTR_TBAA19:![0-9]+]]
+// CHECK-KMSAN-NEXT:    [[P_0_P_0_P_0_P_0_:%.*]] = load volatile ptr, ptr [[P]], align 8, !dbg [[DBG22:![0-9]+]], !tbaa [[INTPTR_TBAA19]]
+// CHECK-KMSAN-NEXT:    [[TMP5:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_load_8(ptr nonnull [[P]]) #[[ATTR2]], !dbg [[DBG22]]
+// CHECK-KMSAN-NEXT:    [[TMP6:%.*]] = extractvalue { ptr, ptr } [[TMP5]], 0, !dbg [[DBG22]]
+// CHECK-KMSAN-NEXT:    [[_MSLD:%.*]] = load i64, ptr [[TMP6]], align 8, !dbg [[DBG22]]
+// CHECK-KMSAN-NEXT:    [[_MSCMP_NOT:%.*]] = icmp eq i64 [[_MSLD]], 0, !dbg [[DBG23:![0-9]+]]
+// CHECK-KMSAN-NEXT:    br i1 [[_MSCMP_NOT]], label %[[BB10:.*]], label %[[BB7:.*]], !dbg [[DBG23]], !prof [[PROF24:![0-9]+]]
 // CHECK-KMSAN:       [[BB7]]:
-// CHECK-KMSAN-NEXT:    [[TMP8:%.*]] = extractvalue { ptr, ptr } [[TMP5]], 1, !dbg [[DBG21]]
-// CHECK-KMSAN-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP8]], align 8, !dbg [[DBG21]]
-// CHECK-KMSAN-NEXT:    call void @__msan_warning(i32 [[TMP9]]) #[[ATTR3:[0-9]+]], !dbg [[DBG22]]
-// CHECK-KMSAN-NEXT:    br label %[[BB10]], !dbg [[DBG22]]
+// CHECK-KMSAN-NEXT:    [[TMP8:%.*]] = extractvalue { ptr, ptr } [[TMP5]], 1, !dbg [[DBG22]]
+// CHECK-KMSAN-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP8]], align 8, !dbg [[DBG22]]
+// CHECK-KMSAN-NEXT:    call void @__msan_warning(i32 [[TMP9]]) #[[ATTR3:[0-9]+]], !dbg [[DBG23]]
+// CHECK-KMSAN-NEXT:    br label %[[BB10]], !dbg [[DBG23]]
 // CHECK-KMSAN:       [[BB10]]:
 // CHECK-KMSAN-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4008
 // CHECK-KMSAN-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 800
-// CHECK-KMSAN-NEXT:    [[TMP11:%.*]] = load i32, ptr [[P_0_P_0_P_0_P_0_]], align 4, !dbg [[DBG22]], !tbaa [[INT_TBAA12]]
-// CHECK-KMSAN-NEXT:    [[TMP12:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_load_4(ptr nonnull [[P_0_P_0_P_0_P_0_]]) #[[ATTR2]], !dbg [[DBG22]]
-// CHECK-KMSAN-NEXT:    [[TMP13:%.*]] = extractvalue { ptr, ptr } [[TMP12]], 0, !dbg [[DBG22]]
-// CHECK-KMSAN-NEXT:    [[TMP14:%.*]] = extractvalue { ptr, ptr } [[TMP12]], 1, !dbg [[DBG22]]
-// CHECK-KMSAN-NEXT:    [[_MSLD1:%.*]] = load i32, ptr [[TMP13]], align 4, !dbg [[DBG22]]
-// CHECK-KMSAN-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP14]], align 4, !dbg [[DBG22]]
-// CHECK-KMSAN-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[P]]), !dbg [[DBG24:![0-9]+]]
-// CHECK-KMSAN-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X]]) #[[ATTR2]], !dbg [[DBG24]]
-// CHECK-KMSAN-NEXT:    store i32 [[_MSLD1]], ptr [[RETVAL_SHADOW]], align 8, !dbg [[DBG25:![0-9]+]]
-// CHECK-KMSAN-NEXT:    store i32 [[TMP15]], ptr [[RETVAL_ORIGIN]], align 4, !dbg [[DBG25]]
-// CHECK-KMSAN-NEXT:    ret i32 [[TMP11]], !dbg [[DBG25]]
+// CHECK-KMSAN-NEXT:    [[TMP11:%.*]] = load i32, ptr [[P_0_P_0_P_0_P_0_]], align 4, !dbg [[DBG23]], !tbaa [[INT_TBAA16]]
+// CHECK-KMSAN-NEXT:    [[TMP12:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_load_4(ptr nonnull [[P_0_P_0_P_0_P_0_]]) #[[ATTR2]], !dbg [[DBG23]]
+// CHECK-KMSAN-NEXT:    [[TMP13:%.*]] = extractvalue { ptr, ptr } [[TMP12]], 0, !dbg [[DBG23]]
+// CHECK-KMSAN-NEXT:    [[TMP14:%.*]] = extractvalue { ptr, ptr } [[TMP12]], 1, !dbg [[DBG23]]
+// CHECK-KMSAN-NEXT:    [[_MSLD1:%.*]] = load i32, ptr [[TMP13]], align 4, !dbg [[DBG23]]
+// CHECK-KMSAN-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP14]], align 4, !dbg [[DBG23]]
+// CHECK-KMSAN-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[P]]), !dbg [[DBG25:![0-9]+]]
+// CHECK-KMSAN-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X]]), !dbg [[DBG25]]
+// CHECK-KMSAN-NEXT:    store i32 [[_MSLD1]], ptr [[RETVAL_SHADOW]], align 8, !dbg [[DBG26:![0-9]+]]
+// CHECK-KMSAN-NEXT:    store i32 [[TMP15]], ptr [[RETVAL_ORIGIN]], align 4, !dbg [[DBG26]]
+// CHECK-KMSAN-NEXT:    ret i32 [[TMP11]], !dbg [[DBG26]]
 //
 int test(void) {
   int x = 3;
   int *volatile p = &x;
   return *p;
 }
+//.
+// CHECK-LIFETIME: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, nameTableKind: None)
+// CHECK-LIFETIME: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
+// CHECK-LIFETIME: [[META6:![0-9]+]] = !{!"int", [[META7:![0-9]+]], i64 0}
+// CHECK-LIFETIME: [[META7]] = !{!"omnipotent char", [[META8:![0-9]+]], i64 0}
+// CHECK-LIFETIME: [[META8]] = !{!"Simple C/C++ TBAA"}
+// CHECK-LIFETIME: [[DBG9]] = distinct !DISubprogram(name: "test", scope: [[META10:![0-9]+]], file: [[META10]], line: 122, type: [[META11:![0-9]+]], scopeLine: 122, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]])
+// CHECK-LIFETIME: [[META10]] = !DIFile(filename: "{{.*}}cleanup-destslot-simple.c", directory: {{.*}})
+// CHECK-LIFETIME: [[META11]] = !DISubroutineType(types: [[META12:![0-9]+]])
+// CHECK-LIFETIME: [[META12]] = !{}
+// CHECK-LIFETIME: [[DBG13]] = !DILocation(line: 123, column: 3, scope: [[DBG9]])
+// CHECK-LIFETIME: [[DBG14]] = !DILocation(line: 123, column: 7, scope: [[DBG9]])
+// CHECK-LIFETIME: [[INT_TBAA15]] = !{[[META6]], [[META6]], i64 0}
+// CHECK-LIFETIME: [[DBG16]] = !DILocation(line: 124, column: 3, scope: [[DBG9]])
+// CHECK-LIFETIME: [[DBG17]] = !DILocation(line: 124, column: 17, scope: [[DBG9]])
+// CHECK-LIFETIME: [[INTPTR_TBAA18]] = !{[[META19:![0-9]+]], [[META19]], i64 0}
+// CHECK-LIFETIME: [[META19]] = !{!"p1 int", [[META20:![0-9]+]], i64 0}
+// CHECK-LIFETIME: [[META20]] = !{!"any pointer", [[META7]], i64 0}
+// CHECK-LIFETIME: [[DBG21]] = !DILocation(line: 125, column: 11, scope: [[DBG9]])
+// CHECK-LIFETIME: [[DBG22]] = !DILocation(line: 125, column: 10, scope: [[DBG9]])
+// CHECK-LIFETIME: [[DBG23]] = !DILocation(line: 126, column: 1, scope: [[DBG9]])
+// CHECK-LIFETIME: [[DBG24]] = !DILocation(line: 125, column: 3, scope: [[DBG9]])
+//.
+// CHECK-OPTNONE: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, nameTableKind: None)
+// CHECK-OPTNONE: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
+// CHECK-OPTNONE: [[DBG4]] = distinct !DISubprogram(name: "test", scope: [[META5:![0-9]+]], file: [[META5]], line: 122, type: [[META6:![0-9]+]], scopeLine: 122, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META0]])
+// CHECK-OPTNONE: [[META5]] = !DIFile(filename: "{{.*}}cleanup-destslot-simple.c", directory: {{.*}})
+// CHECK-OPTNONE: [[META6]] = !DISubroutineType(types: [[META7:![0-9]+]])
+// CHECK-OPTNONE: [[META7]] = !{}
+// CHECK-OPTNONE: [[DBG8]] = !DILocation(line: 123, column: 7, scope: [[DBG4]])
+// CHECK-OPTNONE: [[DBG9]] = !DILocation(line: 124, column: 17, scope: [[DBG4]])
+// CHECK-OPTNONE: [[DBG10]] = !DILocation(line: 125, column: 11, scope: [[DBG4]])
+// CHECK-OPTNONE: [[DBG11]] = !DILocation(line: 125, column: 10, scope: [[DBG4]])
+// CHECK-OPTNONE: [[DBG12]] = !DILocation(line: 125, column: 3, scope: [[DBG4]])
+//.
+// CHECK-MSAN: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, nameTableKind: None)
+// CHECK-MSAN: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
+// CHECK-MSAN: [[META7:![0-9]+]] = !{!"int", [[META8:![0-9]+]], i64 0}
+// CHECK-MSAN: [[META8]] = !{!"omnipotent char", [[META9:![0-9]+]], i64 0}
+// CHECK-MSAN: [[META9]] = !{!"Simple C/C++ TBAA"}
+// CHECK-MSAN: [[DBG10]] = distinct !DISubprogram(name: "test", scope: [[META11:![0-9]+]], file: [[META11]], line: 122, type: [[META12:![0-9]+]], scopeLine: 122, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]])
+// CHECK-MSAN: [[META11]] = !DIFile(filename: "{{.*}}cleanup-destslot-simple.c", directory: {{.*}})
+// CHECK-MSAN: [[META12]] = !DISubroutineType(types: [[META13:![0-9]+]])
+// CHECK-MSAN: [[META13]] = !{}
+// CHECK-MSAN: [[DBG14]] = !DILocation(line: 123, column: 3, scope: [[DBG10]])
+// CHECK-MSAN: [[DBG15]] = !DILocation(line: 123, column: 7, scope: [[DBG10]])
+// CHECK-MSAN: [[INT_TBAA16]] = !{[[META7]], [[META7]], i64 0}
+// CHECK-MSAN: [[DBG17]] = !DILocation(line: 124, column: 3, scope: [[DBG10]])
+// CHECK-MSAN: [[DBG18]] = !DILocation(line: 124, column: 17, scope: [[DBG10]])
+// CHECK-MSAN: [[INTPTR_TBAA19]] = !{[[META20:![0-9]+]], [[META20]], i64 0}
+// CHECK-MSAN: [[META20]] = !{!"p1 int", [[META21:![0-9]+]], i64 0}
+// CHECK-MSAN: [[META21]] = !{!"any pointer", [[META8]], i64 0}
+// CHECK-MSAN: [[DBG22]] = !DILocation(line: 125, column: 11, scope: [[DBG10]])
+// CHECK-MSAN: [[DBG23]] = !DILocation(line: 125, column: 10, scope: [[DBG10]])
+// CHECK-MSAN: [[PROF24]] = !{!"branch_weights", i32 1048575, i32 1}
+// CHECK-MSAN: [[DBG25]] = !DILocation(line: 126, column: 1, scope: [[DBG10]])
+// CHECK-MSAN: [[DBG26]] = !DILocation(line: 125, column: 3, scope: [[DBG10]])
+//.
+// CHECK-KMSAN: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, nameTableKind: None)
+// CHECK-KMSAN: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
+// CHECK-KMSAN: [[META7:![0-9]+]] = !{!"int", [[META8:![0-9]+]], i64 0}
+// CHECK-KMSAN: [[META8]] = !{!"omnipotent char", [[META9:![0-9]+]], i64 0}
+// CHECK-KMSAN: [[META9]] = !{!"Simple C/C++ TBAA"}
+// CHECK-KMSAN: [[DBG10]] = distinct !DISubprogram(name: "test", scope: [[META11:![0-9]+]], file: [[META11]], line: 122, type: [[META12:![0-9]+]], scopeLine: 122, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]])
+// CHECK-KMSAN: [[META11]] = !DIFile(filename: "{{.*}}cleanup-destslot-simple.c", directory: {{.*}})
+// CHECK-KMSAN: [[META12]] = !DISubroutineType(types: [[META13:![0-9]+]])
+// CHECK-KMSAN: [[META13]] = !{}
+// CHECK-KMSAN: [[DBG14]] = !DILocation(line: 123, column: 3, scope: [[DBG10]])
+// CHECK-KMSAN: [[DBG15]] = !DILocation(line: 123, column: 7, scope: [[DBG10]])
+// CHECK-KMSAN: [[INT_TBAA16]] = !{[[META7]], [[META7]], i64 0}
+// CHECK-KMSAN: [[DBG17]] = !DILocation(line: 124, column: 3, scope: [[DBG10]])
+// CHECK-KMSAN: [[DBG18]] = !DILocation(line: 124, column: 17, scope: [[DBG10]])
+// CHECK-KMSAN: [[INTPTR_TBAA19]] = !{[[META20:![0-9]+]], [[META20]], i64 0}
+// CHECK-KMSAN: [[META20]] = !{!"p1 int", [[META21:![0-9]+]], i64 0}
+// CHECK-KMSAN: [[META21]] = !{!"any pointer", [[META8]], i64 0}
+// CHECK-KMSAN: [[DBG22]] = !DILocation(line: 125, column: 11, scope: [[DBG10]])
+// CHECK-KMSAN: [[DBG23]] = !DILocation(line: 125, column: 10, scope: [[DBG10]])
+// CHECK-KMSAN: [[PROF24]] = !{!"branch_weights", i32 1048575, i32 1}
+// CHECK-KMSAN: [[DBG25]] = !DILocation(line: 126, column: 1, scope: [[DBG10]])
+// CHECK-KMSAN: [[DBG26]] = !DILocation(line: 125, column: 3, scope: [[DBG10]])
+//.

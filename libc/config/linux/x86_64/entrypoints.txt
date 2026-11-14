@@ -275,7 +275,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.srand
     libc.src.stdlib.strfromd
     libc.src.stdlib.strfromf
-    libc.src.stdlib.strfromf128
     libc.src.stdlib.strfroml
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
@@ -556,6 +555,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.pause
     libc.src.unistd.pipe
     libc.src.unistd.pipe2
+    libc.src.unistd.posix_close
     libc.src.unistd.pread
     libc.src.unistd.pwrite
     libc.src.unistd.read
@@ -651,7 +651,15 @@ set(TARGET_LIBC_ENTRYPOINTS
 if(LLVM_LIBC_INCLUDE_SCUDO)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
     # malloc.h external entrypoints
+    libc.src.stdlib.mallinfo2
     libc.src.stdlib.mallopt
+  )
+endif()
+
+if (LIBC_TYPES_HAS_NATIVE_FLOAT128)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # stdlib.h _Float128 entrypoints
+    libc.src.stdlib.strfromf128
   )
 endif()
 
@@ -729,11 +737,13 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cosh
     libc.src.math.coshf
     libc.src.math.cospif
+    libc.src.math.daddf128
     libc.src.math.daddl
     libc.src.math.ddivl
     libc.src.math.dfmal
     libc.src.math.dmull
     libc.src.math.dsqrtl
+    libc.src.math.dsubf128
     libc.src.math.dsubl
     libc.src.math.erff
     libc.src.math.exp
@@ -1153,12 +1163,10 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     # math.h C23 _Float128 entrypoints
     libc.src.math.atan2l
     libc.src.math.canonicalizef80
-    libc.src.math.daddf128
     libc.src.math.ddivf128
     libc.src.math.dfmaf128
     libc.src.math.dmulf128
     libc.src.math.dsqrtf128
-    libc.src.math.dsubf128
     libc.src.math.faddf128
     libc.src.math.fdivf128
     libc.src.math.ffmaf128
@@ -1283,6 +1291,8 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.absr
     libc.src.stdfix.exphk
     libc.src.stdfix.expk
+    libc.src.stdfix.expuhk
+    libc.src.stdfix.expuk
     libc.src.stdfix.roundhk
     libc.src.stdfix.roundhr
     libc.src.stdfix.roundk
@@ -1647,6 +1657,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.signal.sigpending
     libc.src.signal.sigprocmask
     libc.src.signal.sigsuspend
+    libc.src.signal.sigtimedwait
+    libc.src.signal.sigwait
+    libc.src.signal.sigwaitinfo
 
     # spawn.h entrypoints
     libc.src.spawn.posix_spawn
@@ -1717,6 +1730,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.localtime
     libc.src.time.localtime_r
     libc.src.time.mktime
+    libc.src.time.clock_nanosleep
     libc.src.time.nanosleep
     libc.src.time.strftime
     libc.src.time.strftime_l
@@ -1804,6 +1818,10 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       # grp.h entrypoints
       libc.src.grp.initgroups
       libc.src.grp.setgroups
+
+      # ifaddrs.h entrypoints
+      libc.src.ifaddrs.freeifaddrs
+      libc.src.ifaddrs.getifaddrs
 
       # libintl.h entrypoints
       libc.src.libintl.bind_textdomain_codeset

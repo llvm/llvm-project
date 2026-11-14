@@ -10,7 +10,7 @@
   2:
     ret i32 0
   }
-
+...
 ---
 name:            square
 tracksRegLiveness: false
