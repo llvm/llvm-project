@@ -1321,7 +1321,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   v.push_back("wasm-ld (LLVM option parsing)");
   for (auto *arg : args.filtered(OPT_mllvm))
     v.push_back(arg->getValue());
-  cl::ResetAllOptionOccurrences();
   cl::parseCommandLineOptions(ctx.arg.libraryOptions, getToolOptions(), v);
 
   readConfigs(args);
