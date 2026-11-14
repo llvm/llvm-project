@@ -950,6 +950,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Fixed rejection of standard attributes following GNU attributes on
   declarations inside namespaces. (#GH240537)
+- Clang now accepts leading ``__declspec``, GNU, and standard attributes in any
+  order at global and namespace scope, and in linkage specifications.
 
 - Fixed a crash when using a zero-argument call to an undeclared
   `__CFStringMakeConstantString` as a format string. (#GH225034)
