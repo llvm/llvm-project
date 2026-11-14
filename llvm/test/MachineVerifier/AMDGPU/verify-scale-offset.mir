@@ -1,10 +1,10 @@
 # RUN: not --crash llc -mtriple=amdgpu12.00 -run-pass=none -o - %s 2>&1 | FileCheck --check-prefix=GFX1200 %s
 # RUN: not --crash llc -mtriple=amdgpu12.50 -run-pass=none -o - %s 2>&1 | FileCheck --check-prefix=GFX1250 %s
 
-# GFX1200-COUNT-2: *** Bad machine code: Subtarget does not support offset scaling ***
+# GFX1200-COUNT-2: *** Bad machine code: subtarget does not support offset scaling ***
 # GFX1200: LLVM ERROR: Found 2 machine code errors
 
-# GFX1250: *** Bad machine code: Instruction does not support offset scaling ***
+# GFX1250: *** Bad machine code: instruction does not support offset scaling ***
 # GFX1250: LLVM ERROR: Found 1 machine code error
 
 ---
