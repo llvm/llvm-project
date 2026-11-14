@@ -53,6 +53,13 @@ export namespace std {
   // [rand.util.canonical], function template generate_canonical
   using std::generate_canonical;
 
+#if _LIBCPP_STD_VER >= 26
+  namespace ranges {
+    // [alg.rand.generate], generate_random
+    using std::ranges::generate_random;
+  } // namespace ranges
+#endif // _LIBCPP_STD_VER >= 26
+
   // [rand.dist.uni.int], class template uniform_int_distribution
   using std::uniform_int_distribution;
 

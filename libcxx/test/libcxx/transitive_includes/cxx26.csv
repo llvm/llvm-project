@@ -760,6 +760,7 @@ random iosfwd
 random limits
 random numeric
 random ratio
+random span
 random stdexcept
 random string
 random string_view

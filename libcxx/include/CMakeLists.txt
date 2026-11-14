@@ -733,6 +733,7 @@ set(files
   __random/fisher_f_distribution.h
   __random/gamma_distribution.h
   __random/generate_canonical.h
+  __random/generate_random.h
   __random/geometric_distribution.h
   __random/independent_bits_engine.h
   __random/is_seed_sequence.h

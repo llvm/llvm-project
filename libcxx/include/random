@@ -441,6 +441,29 @@ public:
 template<class RealType, size_t bits, class URNG>
     RealType generate_canonical(URNG& g);
 
+namespace ranges {
+  // [alg.rand.generate], generate_random
+  template<class R, class G>
+    requires output_range<R, invoke_result_t<G&>> &&
+             uniform_random_bit_generator<remove_cvref_t<G>>
+    constexpr borrowed_iterator_t<R> generate_random(R&& r, G&& g);                  // Since C++26
+
+  template<class G, output_iterator<invoke_result_t<G&>> O, sentinel_for<O> S>
+    requires uniform_random_bit_generator<remove_cvref_t<G>>
+    constexpr O generate_random(O first, S last, G&& g);                             // Since C++26
+
+  template<class R, class G, class D>
+    requires output_range<R, invoke_result_t<D&, G&>> && invocable<D&, G&> &&
+             uniform_random_bit_generator<remove_cvref_t<G>> &&
+             is_arithmetic_v<invoke_result_t<D&, G&>>
+    constexpr borrowed_iterator_t<R> generate_random(R&& r, G&& g, D&& d);           // Since C++26
+
+  template<class G, class D, output_iterator<invoke_result_t<D&, G&>> O, sentinel_for<O> S>
+    requires invocable<D&, G&> && uniform_random_bit_generator<remove_cvref_t<G>> &&
+             is_arithmetic_v<invoke_result_t<D&, G&>>
+    constexpr O generate_random(O first, S last, G&& g, D&& d);                      // Since C++26
+}
+
 // Distributions
 
 template<class IntType = int>
@@ -1715,6 +1738,11 @@ class piecewise_linear_distribution
 #  include <__random/uniform_random_bit_generator.h>
 #  include <__random/uniform_real_distribution.h>
 #  include <__random/weibull_distribution.h>
+
+#  if _LIBCPP_STD_VER >= 26
+#    include <__random/generate_random.h>
+#  endif
+
 #  include <version>
 
 // standard-mandated includes

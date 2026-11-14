@@ -89,7 +89,7 @@
 "`LWG4064 <https://wg21.link/LWG4064>`__","Clarify that ``std::launder`` is not needed when using the result of ``std::memcpy``","2024-11 (Wrocław)","","","`#118344 <https://github.com/llvm/llvm-project/issues/118344>`__",""
 "`LWG4072 <https://wg21.link/LWG4072>`__","``std::optional`` comparisons: constrain harder","2024-11 (Wrocław)","|Complete|","24","`#118345 <https://github.com/llvm/llvm-project/issues/118345>`__",""
 "`LWG4084 <https://wg21.link/LWG4084>`__","``std::fixed`` ignores ``std::uppercase``","2024-11 (Wrocław)","|Complete|","","`#118346 <https://github.com/llvm/llvm-project/issues/118346>`__",""
-"`LWG4085 <https://wg21.link/LWG4085>`__","``ranges::generate_random``'s helper lambda should specify the return type","2024-11 (Wrocław)","","","`#118347 <https://github.com/llvm/llvm-project/issues/118347>`__",""
+"`LWG4085 <https://wg21.link/LWG4085>`__","``ranges::generate_random``'s helper lambda should specify the return type","2024-11 (Wrocław)","|Complete|","24","`#118347 <https://github.com/llvm/llvm-project/issues/118347>`__",""
 "`LWG4088 <https://wg21.link/LWG4088>`__","``println`` ignores the locale imbued in ``std::ostream``","2024-11 (Wrocław)","|Complete|","18","`#118348 <https://github.com/llvm/llvm-project/issues/118348>`__",""
 "`LWG4112 <https://wg21.link/LWG4112>`__","``has-arrow`` should required ``operator->()`` to be ``const``-qualified","2024-11 (Wrocław)","","","`#118349 <https://github.com/llvm/llvm-project/issues/118349>`__",""
 "`LWG4113 <https://wg21.link/LWG4113>`__","Disallow ``has_unique_object_representations<Incomplete[]>``","2024-11 (Wrocław)","|Complete|","6","`#118350 <https://github.com/llvm/llvm-project/issues/118350>`__",""

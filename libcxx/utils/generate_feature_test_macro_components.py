@@ -816,12 +816,6 @@ feature_test_macros = [
             "headers": ["numeric"],
         },
         {
-            "name": "__cpp_lib_generate_random",
-            "values": {"c++26": 202403}, # P1068R11: Vector API for random number generation
-            "headers": ["random"],
-            "unimplemented": True,
-        },
-        {
             "name": "__cpp_lib_generic_associative_lookup",
             "values": {"c++14": 201304},
             "headers": ["map", "set"],
@@ -1435,6 +1429,11 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_fold",
             "values": {"c++23": 202207},
             "headers": ["algorithm"],
+        },
+        {
+            "name": "__cpp_lib_ranges_generate_random",
+            "values": {"c++26": 202403},  # P1068R11: Vector API for random number generation
+            "headers": ["random"],
         },
         {
             "name": "__cpp_lib_ranges_indices",
