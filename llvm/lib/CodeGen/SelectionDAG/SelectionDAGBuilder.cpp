@@ -6437,7 +6437,7 @@ static SDValue expandDivFix(unsigned Opcode, const SDLoc &DL,
 // bitcasted, or split argument. Returns a list of <Register, size in bits>
 static void
 getUnderlyingArgRegs(SmallVectorImpl<std::pair<Register, TypeSize>> &Regs,
-                     const SDValue &N) {
+                     const SDValue &N, const DataLayout &DL) {
   switch (N.getOpcode()) {
   case ISD::CopyFromReg: {
     SDValue Op = N.getOperand(1);
@@ -6449,13 +6449,21 @@ getUnderlyingArgRegs(SmallVectorImpl<std::pair<Register, TypeSize>> &Regs,
   case ISD::AssertZext:
   case ISD::AssertSext:
   case ISD::TRUNCATE:
-    getUnderlyingArgRegs(Regs, N.getOperand(0));
+    getUnderlyingArgRegs(Regs, N.getOperand(0), DL);
     return;
   case ISD::BUILD_PAIR:
+    // Fragment offsets count from the lowest-addressed byte, so on
+    // big-endian targets the high half (operand 1) comes first.
+    if (DL.isBigEndian()) {
+      getUnderlyingArgRegs(Regs, N.getOperand(1), DL);
+      getUnderlyingArgRegs(Regs, N.getOperand(0), DL);
+      return;
+    }
+    [[fallthrough]];
   case ISD::BUILD_VECTOR:
   case ISD::CONCAT_VECTORS:
     for (SDValue Op : N->op_values())
-      getUnderlyingArgRegs(Regs, Op);
+      getUnderlyingArgRegs(Regs, Op, DL);
     return;
   default:
     return;
@@ -6583,7 +6591,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
 
   SmallVector<std::pair<Register, TypeSize>, 8> ArgRegsAndSizes;
   if (!Op && N.getNode()) {
-    getUnderlyingArgRegs(ArgRegsAndSizes, N);
+    getUnderlyingArgRegs(ArgRegsAndSizes, N, DAG.getDataLayout());
     Register Reg;
     if (ArgRegsAndSizes.size() == 1)
       Reg = ArgRegsAndSizes.front().first;
