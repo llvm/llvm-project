@@ -730,11 +730,9 @@ til::SExpr *SExprBuilder::translateUnaryOperator(const UnaryOperator *UO,
 
   case UO_AddrOf:
     if (CapabilityExprMode) {
-      // interpret &Graph::mu_ as an existential.
-      if (const auto *DRE = dyn_cast<DeclRefExpr>(UO->getSubExpr())) {
-        if (DRE->getDecl()->isCXXInstanceMember()) {
-          // This is a pointer-to-member expression, e.g. &MyClass::mu_.
-          // We interpret this syntax specially, as a wildcard.
+      // A pointer-to-member expression, &MyClass::mu_, is read as a wildcard.
+      if (UO->getType()->isMemberPointerType())
+        if (const auto *DRE = dyn_cast<DeclRefExpr>(UO->getSubExpr())) {
           // Name a member of an anonymous struct/union by its field, as a
           // projection of it does.
           const ValueDecl *D = DRE->getDecl();
@@ -743,7 +741,6 @@ til::SExpr *SExprBuilder::translateUnaryOperator(const UnaryOperator *UO,
           auto *W = new (Arena) til::Wildcard();
           return new (Arena) til::Project(W, D);
         }
-      }
     }
     // otherwise, & is a no-op
     return translate(UO->getSubExpr(), Ctx);
