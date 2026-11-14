@@ -29,10 +29,16 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
+#include <memory>
 #include <optional>
 
 namespace fir {
@@ -92,6 +98,14 @@ public:
     mlir::OpBuilder rewriter(&context);
 
     auto mod = getModule();
+    recipeUsers.reset();
+    symbolTables = std::make_shared<mlir::SymbolTableCollection>();
+    deviceUsedRecipes.clear();
+    recipesBeingChecked.clear();
+    auto offloadModule =
+        mlir::dyn_cast<mlir::omp::OffloadModuleInterface>(*mod);
+    skipHostABI = skipHostABIConversion && offloadModule &&
+                  offloadModule.getIsTargetDevice();
     if (!forcedTargetTriple.empty())
       fir::setTargetTriple(mod, forcedTargetTriple);
 
@@ -815,11 +829,121 @@ public:
            op->hasAttrOfType<mlir::StringAttr>(fir::getSymbolAttrName());
   }
 
+  bool needsTargetABI(mlir::Operation *op) {
+    if (!skipHostABI)
+      return true;
+
+    if (mlir::isa<mlir::gpu::LaunchFuncOp>(op) ||
+        op->getParentOfType<mlir::gpu::GPUModuleOp>())
+      return true;
+
+    // Direct calls and function addresses must agree with the callee's
+    // signature, even when used in host-only code.
+    mlir::SymbolRefAttr callee;
+    if (auto call = mlir::dyn_cast<fir::CallOp>(op))
+      callee = call.getCalleeAttr();
+    else if (auto addr = mlir::dyn_cast<fir::AddrOfOp>(op))
+      callee = addr.getSymbol();
+    if (callee) {
+      op = symbolTables->lookupNearestSymbolFrom(op, callee);
+      if (!op)
+        return true;
+    }
+
+    if (!mlir::isa<mlir::FunctionOpInterface>(op)) {
+      if (op->getParentOfType<mlir::omp::TargetOp>())
+        return true;
+      if (auto func = op->getParentOfType<mlir::FunctionOpInterface>())
+        op = func.getOperation();
+      else
+        return isDeviceUsedRecipe(op);
+    }
+
+    auto declareTarget = mlir::dyn_cast<mlir::omp::DeclareTargetInterface>(op);
+    auto attr = declareTarget ? declareTarget.getDeclareTarget() : nullptr;
+    return attr &&
+           attr.getDeviceType() != mlir::omp::DeclareTargetDeviceType::host;
+  }
+
+  bool isDeviceUsedRecipe(mlir::Operation *op) {
+    while (op) {
+      if (mlir::isa<mlir::accomp::RecipeInterface>(op))
+        break;
+      op = op->getParentOp();
+    }
+    if (!op)
+      return true;
+
+    // Build the use map once, retaining conservative handling of unknown users.
+    if (!recipeUsers)
+      recipeUsers =
+          std::make_shared<mlir::SymbolUserMap>(*symbolTables, getModule());
+    if (!recipeUsers->areAllUsesVisible(op))
+      return true;
+
+    auto cached = deviceUsedRecipes.find(op);
+    if (cached != deviceUsedRecipes.end())
+      return cached->second;
+    if (!recipesBeingChecked.insert(op).second)
+      return true;
+
+    bool deviceUsed = false;
+    for (mlir::Operation *user : recipeUsers->getUsers(op)) {
+      if (auto target = mlir::dyn_cast<mlir::omp::TargetOp>(user)) {
+        if (auto privateSyms = target.getPrivateSymsAttr()) {
+          for (mlir::Attribute attr : privateSyms) {
+            auto symbol = mlir::dyn_cast<mlir::SymbolRefAttr>(attr);
+            if (symbol &&
+                symbolTables->lookupNearestSymbolFrom(target, symbol) == op) {
+              deviceUsed = true;
+              break;
+            }
+          }
+        }
+        if (deviceUsed)
+          break;
+      }
+
+      if (user->getParentOfType<mlir::omp::TargetOp>()) {
+        deviceUsed = true;
+        break;
+      }
+
+      mlir::Operation *parent = user;
+      while (parent && !mlir::isa<mlir::FunctionOpInterface>(parent) &&
+             !mlir::isa<mlir::accomp::RecipeInterface>(parent))
+        parent = parent->getParentOp();
+
+      if (parent && mlir::isa<mlir::accomp::RecipeInterface>(parent)) {
+        if (isDeviceUsedRecipe(parent)) {
+          deviceUsed = true;
+          break;
+        }
+        continue;
+      }
+
+      auto declareTarget =
+          mlir::dyn_cast_or_null<mlir::omp::DeclareTargetInterface>(parent);
+      auto attr = declareTarget ? declareTarget.getDeclareTarget() : nullptr;
+      if (attr &&
+          attr.getDeviceType() != mlir::omp::DeclareTargetDeviceType::host) {
+        deviceUsed = true;
+        break;
+      }
+    }
+
+    recipesBeingChecked.erase(op);
+    deviceUsedRecipes[op] = deviceUsed;
+    return deviceUsed;
+  }
+
   /// If the signature does not need any special target-specific conversions,
   /// then it is considered portable for any target, and this function will
   /// return `true`. Otherwise, the signature is not portable and `false` is
   /// returned.
   bool hasPortableSignature(mlir::Type signature, mlir::Operation *op) {
+    if (!needsTargetABI(op))
+      return true;
     assert(mlir::isa<mlir::FunctionType>(signature));
     auto func = mlir::dyn_cast<mlir::FunctionType>(signature);
     bool hasCCallingConv = isFuncWithCCallingConvention(op);
@@ -860,6 +984,10 @@ public:
   /// the immediately subsequent target code gen.
   template <typename ReturnOpTy, typename FuncOpTy>
   void convertSignature(FuncOpTy func) {
+    // Host-only internal procedures may have host-association arguments, but
+    // their ABI is discarded by function filtering and must not be rewritten.
+    if (!needsTargetABI(func))
+      return;
     auto funcTy = mlir::cast<mlir::FunctionType>(func.getFunctionType());
     if (hasPortableSignature(funcTy, func) && !hasHostAssociations(func))
       return;
@@ -1391,5 +1519,11 @@ private:
   fir::CodeGenSpecifics *specifics = nullptr;
   mlir::OpBuilder *rewriter = nullptr;
   mlir::DataLayout *dataLayout = nullptr;
+  std::shared_ptr<mlir::SymbolTableCollection> symbolTables =
+      std::make_shared<mlir::SymbolTableCollection>();
+  std::shared_ptr<mlir::SymbolUserMap> recipeUsers;
+  llvm::DenseMap<mlir::Operation *, bool> deviceUsedRecipes;
+  llvm::SmallPtrSet<mlir::Operation *, 4> recipesBeingChecked;
+  bool skipHostABI = false;
 };
 } // namespace
