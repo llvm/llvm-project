@@ -304,6 +304,17 @@ int DwarfInstructions<A, R>::stepWithDwarf(
           else if (i == (int)cieInfo.returnAddressRegister)
             returnAddress = getSavedRegister(addressSpace, registers, cfa,
                                              prolog.savedRegisters[i]);
+#if defined(_LIBUNWIND_TARGET_PPC64)
+          else if (i >= UNW_PPC64_CR0 && i <= UNW_PPC64_CR7 &&
+                   prolog.savedRegisters[i].location ==
+                       CFI_Parser<A>::kRegisterInCFA)
+            // The condition register is saved as a 32-bit word (stw), so it
+            // has to be read back as one: a 64-bit load returns the saved
+            // word in the upper half on big-endian targets.
+            newRegisters.setRegister(
+                i, addressSpace.get32(cfa +
+                                      (pint_t)prolog.savedRegisters[i].value));
+#endif
           else if (registers.validRegister(i))
             newRegisters.setRegister(
                 i, getSavedRegister(addressSpace, registers, cfa,
