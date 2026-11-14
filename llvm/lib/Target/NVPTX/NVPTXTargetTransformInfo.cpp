@@ -509,6 +509,25 @@ NVPTXTTIImpl::getInstructionCost(const User *U,
   return BaseT::getInstructionCost(U, Operands, CostKind);
 }
 
+static bool isNativeV2F32(Type *Ty, const NVPTXSubtarget &ST) {
+  auto *VTy = dyn_cast<FixedVectorType>(Ty);
+  return ST.hasF32x2Instructions() && VTy && VTy->getNumElements() == 2 &&
+         VTy->getElementType()->isFloatTy();
+}
+
+InstructionCost NVPTXTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    TTI::VectorInstrContext VIC) const {
+  Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
+  if (CostKind == TTI::TCK_RecipThroughput && isNativeV2F32(DstTy, *ST) &&
+      Kind == TTI::SK_Broadcast)
+    return TTI::TCC_Free;
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index, SubTp,
+                               Args, CxtI);
+}
+
 InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
@@ -536,6 +555,43 @@ InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
                                          Op2Info);
   }
+}
+
+static InstructionCost getPackedBuildCost(unsigned NumRegs, MVT RegVT,
+                                          const APInt &DemandedElts) {
+  // Each v4i8 register is built with 3 PRMTs that merge four bytes into one
+  // 32-bit register, plus a zext for each demanded element. Other packed types
+  // are built with a single mov per register.
+  if (RegVT == MVT::v4i8) {
+    unsigned NumPRMT = 3 * NumRegs;
+    unsigned NumZExt = DemandedElts.popcount();
+    return (NumPRMT + NumZExt) * TTI::TCC_Basic;
+  }
+  return NumRegs * TTI::TCC_Basic;
+}
+
+InstructionCost NVPTXTTIImpl::getScalarizationOverhead(
+    VectorType *InTy, const APInt &DemandedElts, bool Insert, bool Extract,
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc, ArrayRef<Value *> VL,
+    TTI::VectorInstrContext VIC) const {
+  if (!isa<FixedVectorType>(InTy))
+    return InstructionCost::getInvalid();
+
+  auto NumElements = VL.size();
+  InstructionCost Cost = 0;
+  if (Insert && !VL.empty()) {
+    Insert &= any_of(seq(NumElements), [&](int Idx) {
+      return DemandedElts[Idx] && !isa<Constant>(VL[Idx]);
+    });
+  }
+  auto [NumRegs, RegVT] = getTypeLegalizationCost(InTy);
+  if (Insert && RegVT.is32BitVector() && NVPTX::isPackedVectorTy(RegVT)) {
+    Cost += getPackedBuildCost(NumRegs.getValue(), RegVT, DemandedElts);
+    Insert = false;
+  }
+  return Cost + BaseT::getScalarizationOverhead(InTy, DemandedElts, Insert,
+                                                Extract, CostKind, ForPoisonSrc,
+                                                VL, VIC);
 }
 
 void NVPTXTTIImpl::getUnrollingPreferences(
