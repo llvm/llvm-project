@@ -7614,6 +7614,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
   if (Kind == TTI::SK_Broadcast || Kind == TTI::SK_Transpose ||
       Kind == TTI::SK_Select || Kind == TTI::SK_PermuteSingleSrc ||
       Kind == TTI::SK_Reverse || Kind == TTI::SK_Splice) {
+    // clang-format off
     static const CostTblEntry ShuffleTbl[] = {
         // Broadcast shuffle kinds can be performed with 'dup'.
         {TTI::SK_Broadcast, MVT::v8i8, 1},
@@ -7647,7 +7648,15 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
         {TTI::SK_Transpose, MVT::v4f32, 1},
         {TTI::SK_Transpose, MVT::v2f64, 1},
         // Select shuffle kinds.
-        // TODO: handle vXi8/vXi16.
+        // vXi8/vXi16: movi or constant pool mask + bif.
+        {TTI::SK_Select, MVT::v8i8, 2},
+        {TTI::SK_Select, MVT::v16i8, 2},
+        {TTI::SK_Select, MVT::v4i16, 2},
+        {TTI::SK_Select, MVT::v8i16, 2},
+        {TTI::SK_Select, MVT::v4f16, 2},
+        {TTI::SK_Select, MVT::v8f16, 2},
+        {TTI::SK_Select, MVT::v4bf16, 2},
+        {TTI::SK_Select, MVT::v8bf16, 2},
         {TTI::SK_Select, MVT::v2i32, 1}, // mov.
         {TTI::SK_Select, MVT::v4i32, 2}, // rev+trn (or similar).
         {TTI::SK_Select, MVT::v2i64, 1}, // mov.
@@ -7736,7 +7745,13 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
         {TTI::SK_Reverse, MVT::nxv4i1, 1},
         {TTI::SK_Reverse, MVT::nxv2i1, 1},
     };
-    if (const auto *Entry = CostTableLookup(ShuffleTbl, Kind, LT.second))
+    // clang-format on
+    // An i1 select in 8 or 16 bit lanes also narrows the wider compare masks.
+    bool IsNarrowedI1Select = Kind == TTI::SK_Select &&
+                              SrcTy->isIntOrIntVectorTy(1) &&
+                              LT.second.getScalarSizeInBits() < 32;
+    if (const auto *Entry = CostTableLookup(ShuffleTbl, Kind, LT.second);
+        Entry && !IsNarrowedI1Select)
       return LT.first * Entry->Cost;
   }
 
