@@ -12,7 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "SIMachineScheduler.h"
+#include "GCNSubtarget.h"
 #include "SIInstrInfo.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
@@ -1850,13 +1852,18 @@ void SIScheduleDAGMI::schedule()
       IsHighLatencySU[i] = 1;
   }
 
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  const unsigned VGPRCriticalLimit =
+      ST.getMaxNumVGPRs(MFI->getOccupancy(), MFI->getDynamicVGPRBlockSize());
+
   SIScheduler Scheduler(this);
   Best = Scheduler.scheduleVariant(SISchedulerBlockCreatorVariant::LatenciesAlone,
                                    SISchedulerBlockSchedulerVariant::BlockLatencyRegUsage);
 
   // if VGPR usage is extremely high, try other good performing variants
   // which could lead to lower VGPR usage
-  if (Best.MaxVGPRUsage > 180) {
+  if (Best.MaxVGPRUsage > std::max(180u, VGPRCriticalLimit)) {
     static const std::pair<SISchedulerBlockCreatorVariant,
                            SISchedulerBlockSchedulerVariant>
         Variants[] = {
