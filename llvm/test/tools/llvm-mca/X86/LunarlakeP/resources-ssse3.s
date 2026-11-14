@@ -120,7 +120,7 @@ psignw      (%rax), %xmm2
 # CHECK-NEXT:  1      7     2.00    *                   pabsw	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        palignr	$1, %mm0, %mm2
 # CHECK-NEXT:  2      9     0.50    *                   palignr	$1, (%rax), %mm2
-# CHECK-NEXT:  1      1     0.33                        palignr	$1, %xmm0, %xmm2
+# CHECK-NEXT:  1      1     0.50                        palignr	$1, %xmm0, %xmm2
 # CHECK-NEXT:  2      7     2.00    *                   palignr	$1, (%rax), %xmm2
 # CHECK-NEXT:  3      3     1.00                        phaddd	%mm0, %mm2
 # CHECK-NEXT:  4      11    1.00    *                   phaddd	(%rax), %mm2
@@ -194,7 +194,7 @@ psignw      (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]
-# CHECK-NEXT:  -     3.00    -     3.00    -     3.00    -      -     27.33  27.33  27.33   -      -      -      -     36.50  24.50  28.00  28.00
+# CHECK-NEXT:  -     2.67    -     2.67    -     2.67    -      -     27.33  27.33  27.33   -      -      -      -     36.50  24.50  28.50  28.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   Instructions:
@@ -212,7 +212,7 @@ psignw      (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00   2.00   2.00    -      -      -      -     0.50   0.50    -      -     pabsw	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   palignr	$1, %mm0, %mm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     0.50   0.50   palignr	$1, (%rax), %mm2
-# CHECK-NEXT:  -     0.33    -     0.33    -     0.33    -      -      -      -      -      -      -      -      -      -      -      -      -     palignr	$1, %xmm0, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   palignr	$1, %xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00   2.00   2.00    -      -      -      -      -      -     0.50   0.50   palignr	$1, (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   1.25   1.25   phaddd	%mm0, %mm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -     0.25   0.25   1.25   1.25   phaddd	(%rax), %mm2

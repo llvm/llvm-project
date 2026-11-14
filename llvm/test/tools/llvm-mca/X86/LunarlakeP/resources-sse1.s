@@ -196,7 +196,7 @@ xorps       (%rax), %xmm2
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      3     0.50                        addps	%xmm0, %xmm2
 # CHECK-NEXT:  2      10    0.50    *                   addps	(%rax), %xmm2
-# CHECK-NEXT:  1      3     0.33                        addss	%xmm0, %xmm2
+# CHECK-NEXT:  1      2     0.50                        addss	%xmm0, %xmm2
 # CHECK-NEXT:  2      10    0.50    *                   addss	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.25                        andnps	%xmm0, %xmm2
 # CHECK-NEXT:  1      7     2.00    *                   andnps	(%rax), %xmm2
@@ -308,7 +308,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  4      100   3.00           *      U     stmxcsr	(%rax)
 # CHECK-NEXT:  1      3     0.50                        subps	%xmm0, %xmm2
 # CHECK-NEXT:  2      10    0.50    *                   subps	(%rax), %xmm2
-# CHECK-NEXT:  1      3     0.33                        subss	%xmm0, %xmm2
+# CHECK-NEXT:  1      2     0.50                        subss	%xmm0, %xmm2
 # CHECK-NEXT:  2      10    0.50    *                   subss	(%rax), %xmm2
 # CHECK-NEXT:  1      3     1.50                        ucomiss	%xmm0, %xmm1
 # CHECK-NEXT:  2      9     2.00    *                   ucomiss	(%rax), %xmm1
@@ -342,13 +342,13 @@ xorps       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]
-# CHECK-NEXT: 0.33   4.67   0.33   4.67   0.33   4.67   5.00   5.00   74.33  74.33  74.33  3.67   3.67   3.67    -     157.25 145.25 15.25  15.25
+# CHECK-NEXT: 0.33   4.00   0.33   4.00   0.33   4.00   5.00   5.00   74.33  74.33  74.33  3.67   3.67   3.67    -     157.25 145.25 16.25  16.25
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   Instructions:
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   addps	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     0.50   0.50   addps	(%rax), %xmm2
-# CHECK-NEXT:  -     0.33    -     0.33    -     0.33    -      -      -      -      -      -      -      -      -      -      -      -      -     addss	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   addss	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     0.50   0.50   addss	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   andnps	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00   2.00   2.00    -      -      -      -     0.25   0.25   0.25   0.25   andnps	(%rax), %xmm2
@@ -460,7 +460,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT: 0.33    -     0.33    -     0.33    -     0.50   0.50    -      -      -     0.33   0.33   0.33    -     3.00   3.00    -      -     stmxcsr	(%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   subps	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     0.50   0.50   subps	(%rax), %xmm2
-# CHECK-NEXT:  -     0.33    -     0.33    -     0.33    -      -      -      -      -      -      -      -      -      -      -      -      -     subss	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   subss	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     0.50   0.50   subss	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.50   1.50    -      -     ucomiss	%xmm0, %xmm1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00   2.00   2.00    -      -      -      -     1.50   1.50    -      -     ucomiss	(%rax), %xmm1
