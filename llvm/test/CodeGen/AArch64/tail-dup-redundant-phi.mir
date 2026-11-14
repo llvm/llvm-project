@@ -111,44 +111,6 @@ hasEHScopes:     false
 hasEHFunclets:   false
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: gpr64all, preferred-register: '' }
-  - { id: 1, class: gpr64all, preferred-register: '' }
-  - { id: 2, class: gpr64all, preferred-register: '' }
-  - { id: 3, class: gpr64, preferred-register: '' }
-  - { id: 4, class: gpr32, preferred-register: '' }
-  - { id: 5, class: gpr32, preferred-register: '' }
-  - { id: 6, class: gpr32, preferred-register: '' }
-  - { id: 7, class: gpr32, preferred-register: '' }
-  - { id: 8, class: gpr64all, preferred-register: '' }
-  - { id: 9, class: gpr64all, preferred-register: '' }
-  - { id: 10, class: gpr64all, preferred-register: '' }
-  - { id: 11, class: gpr64all, preferred-register: '' }
-  - { id: 12, class: gpr64all, preferred-register: '' }
-  - { id: 13, class: gpr64all, preferred-register: '' }
-  - { id: 14, class: gpr32, preferred-register: '' }
-  - { id: 15, class: gpr32, preferred-register: '' }
-  - { id: 16, class: gpr32, preferred-register: '' }
-  - { id: 17, class: gpr32, preferred-register: '' }
-  - { id: 18, class: gpr64all, preferred-register: '' }
-  - { id: 19, class: gpr64all, preferred-register: '' }
-  - { id: 20, class: gpr64all, preferred-register: '' }
-  - { id: 21, class: gpr64all, preferred-register: '' }
-  - { id: 22, class: gpr64all, preferred-register: '' }
-  - { id: 23, class: gpr64all, preferred-register: '' }
-  - { id: 24, class: gpr64all, preferred-register: '' }
-  - { id: 25, class: gpr64all, preferred-register: '' }
-  - { id: 26, class: gpr32, preferred-register: '' }
-  - { id: 27, class: gpr32, preferred-register: '' }
-  - { id: 28, class: gpr32, preferred-register: '' }
-  - { id: 29, class: gpr64all, preferred-register: '' }
-  - { id: 30, class: gpr64all, preferred-register: '' }
-  - { id: 31, class: gpr32, preferred-register: '' }
-  - { id: 32, class: gpr64all, preferred-register: '' }
-  - { id: 33, class: gpr64all, preferred-register: '' }
-  - { id: 34, class: gpr32, preferred-register: '' }
-  - { id: 35, class: gpr64all, preferred-register: '' }
-  - { id: 36, class: gpr32, preferred-register: '' }
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false

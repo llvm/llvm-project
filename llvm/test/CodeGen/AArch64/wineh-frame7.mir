@@ -85,7 +85,6 @@ regBankSelected: true
 selected:        true
 failedISel:      false
 hasWinCFI:       false
-registers:
 liveins:
 frameInfo:
   isFrameAddressTaken: false

@@ -3753,6 +3753,12 @@ public:
     return isOperationLegalOrCustom(Op, VT);
   }
 
+  /// Return true if an ISD::SINT_TO_FP or ISD::UINT_TO_FP of an i1 or i1 vector
+  /// to \p VT should be replaced by a select of the two exact results before
+  /// operation legalization. The DAGCombiner folds for scalar SETCC results do
+  /// not query this hook.
+  virtual bool shouldConvertBoolToFPWithSelect(EVT VT) const { return false; }
+
   /// Should we prefer selects to doing arithmetic on boolean types
   virtual bool preferSelectsOverBooleanArithmetic(EVT VT) const {
     return false;

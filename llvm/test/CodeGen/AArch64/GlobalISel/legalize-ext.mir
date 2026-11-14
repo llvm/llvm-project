@@ -292,9 +292,6 @@ body:             |
 ---
 name:            test_zext_v2s64_from_v2s32
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -316,9 +313,6 @@ body:             |
 ---
 name:            test_sext_v2s64_from_v2s32
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -340,9 +334,6 @@ body:             |
 ---
 name:            test_anyext_v2s64_from_v2s32
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 machineFunctionInfo: {}
 body:             |
   bb.0:
