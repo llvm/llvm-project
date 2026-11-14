@@ -48,6 +48,11 @@
 // FAST-VECTOR-UNALIGNED-ACCESS: "-target-feature" "+unaligned-vector-mem"
 // NO-FAST-VECTOR-UNALIGNED-ACCESS: "-target-feature" "-unaligned-vector-mem"
 
+// RUN: %clang --target=riscv32-unknown-elf -### %s -mfix-sifive-mal-9174 2>&1 | FileCheck %s -check-prefix=FIX-SIFIVE-MAL-9174
+// RUN: %clang --target=riscv32-unknown-elf -### %s -mno-fix-sifive-mal-9174 2>&1 | FileCheck %s -check-prefix=NO-FIX-SIFIVE-MAL-9174
+// FIX-SIFIVE-MAL-9174: "-target-feature" "+fix-sifive-mal-9174"
+// NO-FIX-SIFIVE-MAL-9174: "-target-feature" "-fix-sifive-mal-9174"
+
 // RUN: %clang --target=riscv32-unknown-elf -### %s 2>&1 | FileCheck %s -check-prefix=NOUWTABLE
 // RUN: %clang --target=riscv32-unknown-elf -fasynchronous-unwind-tables -### %s 2>&1 | FileCheck %s -check-prefix=UWTABLE
 // RUN: %clang --target=riscv64-unknown-elf -### %s 2>&1 | FileCheck %s -check-prefix=NOUWTABLE

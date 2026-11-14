@@ -178,6 +178,14 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     Features.push_back("+unaligned-vector-mem");
   }
 
+  if (const Arg *A = Args.getLastArg(options::OPT_mfix_sifive_mal_9174,
+                                     options::OPT_mno_fix_sifive_mal_9174)) {
+    if (A->getOption().matches(options::OPT_mfix_sifive_mal_9174))
+      Features.push_back("+fix-sifive-mal-9174");
+    else
+      Features.push_back("-fix-sifive-mal-9174");
+  }
+
   if (Triple.isRISCV32()) {
     // Handle `-mzilsd-word-align` and `-mzilsd-strict-align` on rv32. These
     // interact with the scalar alignment options - if unaligned scalar memory
