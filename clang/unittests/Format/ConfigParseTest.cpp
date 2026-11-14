@@ -1401,6 +1401,38 @@ TEST(ConfigParseTest, ParsesConfiguration) {
                            HexMinDigitsInsert, 5);
 }
 
+TEST(ConfigParseTest, ParseMacroRegex) {
+  FormatStyle Style = {};
+  Style.Language = FormatStyle::LK_Cpp;
+  EXPECT_EQ(parseConfiguration("ForEachMacros: [\"^FOREACH_.*$\"]", &Style),
+            ParseError::Success);
+  ASSERT_EQ(Style.ForEachMacros.size(), 1u);
+  EXPECT_EQ(Style.ForEachMacros[0], "^FOREACH_.*$");
+}
+
+TEST(ConfigParseTest, ReportsEveryInvalidMacroRegex) {
+  FormatStyle Style = {};
+  Style.Language = FormatStyle::LK_Cpp;
+  std::vector<std::string> Messages;
+  auto Handler = [](const llvm::SMDiagnostic &D, void *Ctx) {
+    static_cast<std::vector<std::string> *>(Ctx)->push_back(
+        D.getMessage().str());
+  };
+  EXPECT_EQ(parseConfiguration(
+                llvm::MemoryBufferRef("ForEachMacros: [\"a(\", \"b[\"]\n"
+                                      "IfMacros: [\"c(\"]",
+                                      "YAML"),
+                &Style, /*AllowUnknownOptions=*/false, Handler, &Messages),
+            std::make_error_code(std::errc::invalid_argument));
+  ASSERT_EQ(Messages.size(), 3u);
+  EXPECT_TRUE(StringRef(Messages[0])
+                  .starts_with("Invalid regex pattern in ForEachMacros: a("));
+  EXPECT_TRUE(StringRef(Messages[1])
+                  .starts_with("Invalid regex pattern in ForEachMacros: b["));
+  EXPECT_TRUE(StringRef(Messages[2])
+                  .starts_with("Invalid regex pattern in IfMacros: c("));
+}
+
 TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {
   FormatStyle Style = {};
   Style.Language = FormatStyle::LK_Cpp;

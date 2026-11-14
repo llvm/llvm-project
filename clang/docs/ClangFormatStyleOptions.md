@@ -2291,6 +2291,9 @@ the configuration (without a prefix: `Auto`).
   AttributeMacros: [__capability, __output, __unused]
   ```
 
+  Entries that are not plain identifiers are regular expressions matched
+  against identifiers, e.g. `DEBUG_WRITE.*`.
+
 (binpackarguments)=
 
 **BinPackArguments** (`Boolean`) {versionbadge}`clang-format 3.7` {ref}`¶ <BinPackArguments>`
@@ -4600,6 +4603,9 @@ the configuration (without a prefix: `Auto`).
 
   For example: BOOST_FOREACH.
 
+  Entries that are not plain identifiers are regular expressions matched
+  against identifiers, e.g. `DEBUG_WRITE.*`.
+
 (ifmacros)=
 
 **IfMacros** (`List of Strings`) {versionbadge}`clang-format 13` {ref}`¶ <IfMacros>`
@@ -4624,6 +4630,9 @@ the configuration (without a prefix: `Auto`).
 
   For example:
   [KJ_IF_MAYBE](https://github.com/capnproto/capnproto/blob/master/kjdoc/tour.md#maybes)
+
+  Entries that are not plain identifiers are regular expressions matched
+  against identifiers, e.g. `DEBUG_WRITE.*`.
 
 (includeblocks)=
 
@@ -5796,6 +5805,9 @@ the configuration (without a prefix: `Auto`).
   ```
 
   For example: TESTSUITE
+
+  Entries that are not plain identifiers are regular expressions matched
+  against identifiers, e.g. `DEBUG_WRITE.*`.
 
 (numericliteralcase)=
 
@@ -7989,6 +8001,9 @@ the configuration (without a prefix: `Auto`).
   emit signal(data); // Now it's fine again.
   ```
 
+  Entries that are not plain identifiers are regular expressions matched
+  against identifiers, e.g. `DEBUG_WRITE.*`.
+
 (statementmacros)=
 
 **StatementMacros** (`List of Strings`) {versionbadge}`clang-format 8` {ref}`¶ <StatementMacros>`
@@ -8000,6 +8015,9 @@ the configuration (without a prefix: `Auto`).
   of such cases.
 
   For example: Q_UNUSED
+
+  Entries that are not plain identifiers are regular expressions matched
+  against identifiers, e.g. `DEBUG_WRITE.*`.
 
 (tabwidth)=
 
@@ -8114,6 +8132,9 @@ the configuration (without a prefix: `Auto`).
 
   For example: OpenSSL STACK_OF, BSD LIST_ENTRY.
 
+  Entries that are not plain identifiers are regular expressions matched
+  against identifiers, e.g. `DEBUG_WRITE.*`.
+
 (usecrlf)=
 
 **UseCRLF** (`Boolean`) {versionbadge}`clang-format 10` {ref}`¶ <UseCRLF>`
@@ -8195,6 +8216,9 @@ the configuration (without a prefix: `Auto`).
   ```
 
   For example: BOOST_PP_STRINGIZE
+
+  Entries that are not plain identifiers are regular expressions matched
+  against identifiers, e.g. `DEBUG_WRITE.*`.
 
 (wrapnamespacebodywithemptylines)=
 

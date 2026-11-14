@@ -4672,6 +4672,56 @@ TEST_F(TokenAnnotatorTest, CSharpUtf8StringLiterals) {
   EXPECT_TOKEN(Tokens[4], tok::identifier, TT_Unknown);
 }
 
+TEST_F(TokenAnnotatorTest, MacroPatternBothMatch) {
+  auto Style = getLLVMStyle();
+  Style.TypenameMacros = {"typename.*"};
+
+  auto Tokens = annotate("my_typename_alpha", Style);
+  ASSERT_EQ(Tokens.size(), 2u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_TypenameMacro);
+}
+
+TEST_F(TokenAnnotatorTest, MacroPatternForEach) {
+  auto Style = getLLVMStyle();
+  Style.ForEachMacros = {"^FOREACH_.*$"};
+
+  auto Tokens = annotate("FOREACH_ITEM(a, b);", Style);
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_ForEachMacro);
+}
+
+TEST_F(TokenAnnotatorTest, MacroPatternExactNameWins) {
+  auto Style = getLLVMStyle();
+  Style.ForEachMacros = {"^.*_begin$"};
+  Style.StatementMacros = {"SPECIAL_begin"};
+
+  auto Tokens = annotate("SPECIAL_begin(x);", Style);
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_StatementMacro);
+
+  Tokens = annotate("OTHER_begin(x);", Style);
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_ForEachMacro);
+}
+
+TEST_F(TokenAnnotatorTest, MacroPatternIgnoresKeywords) {
+  auto Style = getLLVMStyle();
+  Style.ForEachMacros = {"^i.$"};
+
+  auto Tokens = annotate("if (x) {}", Style);
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_NE(Tokens[0]->getType(), TT_ForEachMacro);
+}
+
+TEST_F(TokenAnnotatorTest, MacroPatternSkipsDefineName) {
+  auto Style = getLLVMStyle();
+  Style.ForEachMacros = {"^FOREACH_.*$"};
+
+  auto Tokens = annotate("#define FOREACH_X(a) a", Style);
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_NE(Tokens[2]->getType(), TT_ForEachMacro);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
