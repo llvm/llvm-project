@@ -841,6 +841,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### Bug Fixes in This Version
 
+- Fixed duplicate mangled names when a translation unit imports multiple C++20
+  module partitions whose global module fragments define the same
+  internal-linkage function. (#GH195661)
 - Fixed an assertion failure when a token followed an `#embed` parameter whose
   expression evaluated `defined`, such as `#embed <f> limit(defined(x)),`.
   (#GH212075)
