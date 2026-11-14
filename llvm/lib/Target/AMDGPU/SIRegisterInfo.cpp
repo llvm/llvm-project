@@ -4314,19 +4314,24 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
 
 bool SIRegisterInfo::shouldApplyAntiHints(
     const MachineFunction &MF, unsigned NumAllocatedVGPRs,
-    unsigned &MaxVGPRsForCurrentOccupancy) const {
+    unsigned &MaxVGPRsForOccupancy) const {
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   unsigned DynamicVGPRBlockSize = MFI->getDynamicVGPRBlockSize();
   unsigned RecordedMaxOccupancy = MFI->getOccupancy();
   unsigned CurrentOccupancy =
       ST.getOccupancyWithNumVGPRs(NumAllocatedVGPRs, DynamicVGPRBlockSize);
-  MaxVGPRsForCurrentOccupancy =
-      ST.getMaxNumVGPRs(CurrentOccupancy, DynamicVGPRBlockSize);
+  unsigned LDSOccupancy = ST.getOccupancyWithWorkGroupSizes(MF).second;
+  // Extra VGPRs cannot lower occupancy already limited by LDS or workgroups.
+  MaxVGPRsForOccupancy =
+      std::max(ST.getMaxNumVGPRs(CurrentOccupancy, DynamicVGPRBlockSize),
+               ST.getMaxNumVGPRs(LDSOccupancy, DynamicVGPRBlockSize));
 
   LLVM_DEBUG(dbgs() << "anti-hints: VGPRs allocated = " << NumAllocatedVGPRs
                     << ", RecordedMaxOccupancy = " << RecordedMaxOccupancy
-                    << ", current occupancy = " << CurrentOccupancy << '\n');
+                    << ", current occupancy = " << CurrentOccupancy
+                    << ", LDS occupancy = " << LDSOccupancy
+                    << ", VGPR budget = " << MaxVGPRsForOccupancy << '\n');
 
   // If we are already at lowest occupancy, then there is no need to protect
   // against occupancy regression.
@@ -4336,14 +4341,13 @@ bool SIRegisterInfo::shouldApplyAntiHints(
   // Do not apply anti-hints if we are reaching close to the VGPR budget. For
   // recorded max occupancy, the 80% cutoff is a conservative: anti-hints are
   // disabled early enough that later registers still have headroom to stay at
-  // recorded max occupancy. For current occupancy, the 95% cutoff margin is
-  // used to not apply anti-hints close to the limit of the current occupancy
+  // recorded max occupancy. For the occupancy VGPR budget, the 95% cutoff
+  // margin is used to not apply anti-hints close to the limit of the occupancy
   // budget.
   unsigned MaxVGPRsCutOffForRecordedMaxOccupancy =
       (ST.getMaxNumVGPRs(RecordedMaxOccupancy, DynamicVGPRBlockSize) * 80) /
       100;
-  unsigned MaxVGPRsCutOffForCurrentOccupancy =
-      (MaxVGPRsForCurrentOccupancy * 95) / 100;
+  unsigned MaxVGPRsCutOffForOccupancy = (MaxVGPRsForOccupancy * 95) / 100;
 
   if (NumAllocatedVGPRs >= MaxVGPRsCutOffForRecordedMaxOccupancy) {
     LLVM_DEBUG(dbgs() << "anti-hints: not applied, at or above the "
@@ -4352,20 +4356,20 @@ bool SIRegisterInfo::shouldApplyAntiHints(
     return false;
   }
 
-  if (NumAllocatedVGPRs >= MaxVGPRsCutOffForCurrentOccupancy) {
+  if (NumAllocatedVGPRs >= MaxVGPRsCutOffForOccupancy) {
     LLVM_DEBUG(dbgs() << "anti-hints: not applied, at or above the "
-                      << MaxVGPRsCutOffForCurrentOccupancy
-                      << " VGPR cutoff for current occupancy\n");
+                      << MaxVGPRsCutOffForOccupancy
+                      << " VGPR cutoff for occupancy\n");
     return false;
   }
 
   return true;
 }
 
-// Returns true if Reg fits within the current occupancy VGPR budget.
+// Returns true if Reg fits within the occupancy VGPR budget.
 bool SIRegisterInfo::isRegWithinOccupancyBudget(
     MCPhysReg Reg, unsigned NumVGPRs, unsigned NumAGPRs,
-    unsigned MaxVGPRsForCurrentOccupancy) const {
+    unsigned MaxVGPRsForOccupancy) const {
   const TargetRegisterClass *RC = getPhysRegBaseClass(Reg);
 
   // No VGPR or AGPR usage.
@@ -4384,7 +4388,7 @@ bool SIRegisterInfo::isRegWithinOccupancyBudget(
     MaxVGPR = std::max(MaxVGPR, RegEndIndex);
 
   return AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), MaxAGPR, MaxVGPR) <=
-         MaxVGPRsForCurrentOccupancy;
+         MaxVGPRsForOccupancy;
 }
 
 void SIRegisterInfo::filterAndSortForAntiHintedRegs(
@@ -4421,8 +4425,8 @@ void SIRegisterInfo::filterAndSortForAntiHintedRegs(
       AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), NumAGPRs, NumVGPRs);
 
   // Early exit if we should not apply anti-hints.
-  unsigned MaxVGPRsForCurrentOccupancy = 0;
-  if (!shouldApplyAntiHints(MF, NumAllocatedVGPRs, MaxVGPRsForCurrentOccupancy))
+  unsigned MaxVGPRsForOccupancy = 0;
+  if (!shouldApplyAntiHints(MF, NumAllocatedVGPRs, MaxVGPRsForOccupancy))
     return;
 
   // Reorder all in-budget first so the anti-hinted partition covers
@@ -4430,7 +4434,7 @@ void SIRegisterInfo::filterAndSortForAntiHintedRegs(
   auto *BeyondBudgetStart = std::stable_partition(
       CustomOrder.begin(), CustomOrder.end(), [&](MCPhysReg Reg) {
         return isRegWithinOccupancyBudget(Reg, NumVGPRs, NumAGPRs,
-                                          MaxVGPRsForCurrentOccupancy);
+                                          MaxVGPRsForOccupancy);
       });
 
   [[maybe_unused]] auto *PartitionPoint = std::stable_partition(
@@ -4447,8 +4451,7 @@ void SIRegisterInfo::filterAndSortForAntiHintedRegs(
            << " non-anti-hinted registers first\n"
            << "Added " << AntiHintedCount
            << " anti-hinted registers at the end\n"
-           << "Beyond current occupancy budget, left: " << BeyondBudgetCount
-           << '\n';
+           << "Beyond occupancy budget, left: " << BeyondBudgetCount << '\n';
   });
 }
 
