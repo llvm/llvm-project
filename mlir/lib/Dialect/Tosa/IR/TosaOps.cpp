@@ -2617,8 +2617,6 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
     inferredReturnShapes.push_back(ShapedTypeComponents(fallback, inputType));
     return success();
   }
-  multiples = convertToMlirShape(multiples);
-
   ShapeAdaptor inputShape(adaptor.getInput1().getType());
   SmallVector<int64_t> outputShape;
   if (!inputShape.hasRank()) {
@@ -2633,7 +2631,9 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
   // Any non dynamic dimension can be multiplied to a known size.
   outputShape.reserve(multiples.size());
   for (int i = 0, s = inputShape.getRank(); i < s; i++) {
-    if (multiples[i] == ShapedType::kDynamic) {
+    // Conservatively infer a dynamic dimension for non-positive multiples.
+    // Leave their validation to tosa-validate.
+    if (multiples[i] <= 0) {
       outputShape.push_back(ShapedType::kDynamic);
     } else {
       int64_t dim = inputShape.getDimSize(i);
@@ -2672,12 +2672,6 @@ LogicalResult tosa::TileOp::verify() {
   } else if (outputType.hasRank() && outputType.getRank() != multiplesRank)
     return emitOpError("expect 'multiples' array to have length ")
            << outputType.getRank() << " but got " << multiplesRank << ".";
-
-  SmallVector<int64_t> multiples;
-  if (getConstantMultiples(multiples).succeeded() &&
-      llvm::any_of(multiples, [](int64_t v) { return v <= 0 && v != -1; }))
-    return emitOpError(
-        "expect element of 'multiples' to be positive integer or -1.");
 
   return success();
 }

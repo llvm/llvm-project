@@ -1386,6 +1386,23 @@ LogicalResult checkErrorIfPad(Operation *op) {
   return success();
 }
 
+LogicalResult checkErrorIfTile(Operation *op) {
+  auto tileOp = dyn_cast<tosa::TileOp>(op);
+  if (!tileOp)
+    return success();
+
+  SmallVector<int64_t> multiples;
+  if (failed(tileOp.getConstantMultiples(multiples)))
+    return success();
+
+  // Preserve the existing allowance for -1.
+  if (llvm::any_of(multiples, [](int64_t v) { return v <= 0 && v != -1; }))
+    return op->emitOpError("multiples values must be > 0 or -1, got [")
+           << multiples << "]";
+
+  return success();
+}
+
 LogicalResult checkErrorIfReshape(Operation *op) {
   auto reshapeOp = dyn_cast<tosa::ReshapeOp>(op);
   if (!reshapeOp)
@@ -1599,9 +1616,9 @@ LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
   if (failed(checkErrorIfResize(op, strictOpSpecAlignment)) ||
       failed(checkErrorIfMul(op)) || failed(checkErrorIfTable(op)) ||
       failed(checkErrorIfRescale(op)) || failed(checkErrorIfPad(op)) ||
-      failed(checkErrorIfReshape(op)) || failed(checkErrorIfSlice(op)) ||
-      failed(checkErrorIfCondIf(op)) || failed(checkErrorIfWhileLoop(op)) ||
-      failed(checkErrorIfScatter(op)))
+      failed(checkErrorIfTile(op)) || failed(checkErrorIfReshape(op)) ||
+      failed(checkErrorIfSlice(op)) || failed(checkErrorIfCondIf(op)) ||
+      failed(checkErrorIfWhileLoop(op)) || failed(checkErrorIfScatter(op)))
     return failure();
   return success();
 }

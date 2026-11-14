@@ -569,16 +569,6 @@ func.func @test_tile_invalid_multiples() {
 
 // -----
 
-func.func @test_tile_invalid_multiples_value() {
-  %0 = tensor.empty() : tensor<4x31xf32>
-  %multiples = tosa.const_shape values(dense<[2, -2]> : tensor<2xindex>) : () -> !tosa.shape<2>
-  // expected-error@+1 {{'tosa.tile' op expect element of 'multiples' to be positive integer or -1.}}
-  %1 = tosa.tile %0, %multiples : (tensor<4x31xf32>, !tosa.shape<2>) -> tensor<4x31xf32>
-  return
-}
-
-// -----
-
 func.func @test_tile_io_rank_mismatch() {
   %0 = tensor.empty() : tensor<4x31xf32>
   %multiples = tosa.const_shape values(dense<[2, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>

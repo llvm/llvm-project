@@ -2647,6 +2647,16 @@ struct TileConverter : public OpConversionPattern<tosa::TileOp> {
   LogicalResult
   matchAndRewrite(tosa::TileOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    SmallVector<int64_t> multiples;
+    if (failed(op.getConstantMultiples(multiples)))
+      return failure();
+
+    // Avoid constructing invalid tensor types when validation is skipped.
+    // Preserve the existing handling of -1 below.
+    if (llvm::any_of(multiples, [](int64_t v) { return v <= 0 && v != -1; }))
+      return rewriter.notifyMatchFailure(op,
+                                         "unsupported non-positive multiples");
+
     auto loc = op.getLoc();
     auto input = op.getInput1();
     auto inputTy = cast<ShapedType>(input.getType());
@@ -2654,10 +2664,6 @@ struct TileConverter : public OpConversionPattern<tosa::TileOp> {
     auto resultTy = cast<ShapedType>(op.getType());
     auto elementTy = inputTy.getElementType();
     int64_t rank = inputTy.getRank();
-
-    SmallVector<int64_t> multiples;
-    if (failed(op.getConstantMultiples(multiples)))
-      return failure();
 
     // Broadcast the newly added dimensions to their appropriate multiple.
     SmallVector<int64_t, 2> genericShape;
