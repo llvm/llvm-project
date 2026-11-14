@@ -9,7 +9,9 @@ module attributes {cir.lowering_options = #cir.lowering_options<
   cuda_is_device = true, hip = true, hlsl = true, sycl_is_device = true,
   gpu_rdc = true, openmp = true,
   openmp_is_target_device = true, clang_abi_compat = 9, long_double_size = 80,
-  enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 4,
+  sanitize_address = true, sanitize_kernel_address = true,
+  sanitize_hwaddress = true, enable_noundef_attrs = false,
+  no_trapping_math = true, ssp_buffer_size = 4,
   relative_cxx_abi_vtables = true>} {
 }
 
@@ -18,5 +20,7 @@ module attributes {cir.lowering_options = #cir.lowering_options<
 // CHECK-SAME: cuda_is_device = true, hip = true, hlsl = true, sycl_is_device = true,
 // CHECK-SAME: gpu_rdc = true, openmp = true,
 // CHECK-SAME: openmp_is_target_device = true, clang_abi_compat = 9, long_double_size = 80,
-// CHECK-SAME: enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 4,
+// CHECK-SAME: sanitize_address = true, sanitize_kernel_address = true,
+// CHECK-SAME: sanitize_hwaddress = true, enable_noundef_attrs = false,
+// CHECK-SAME: no_trapping_math = true, ssp_buffer_size = 4,
 // CHECK-SAME: relative_cxx_abi_vtables = true>

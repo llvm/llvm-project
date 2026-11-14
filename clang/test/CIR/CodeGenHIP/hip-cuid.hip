@@ -13,6 +13,18 @@
 // RUN:            -fcuda-is-device -emit-llvm %s -o %t.ogcg.ll
 // RUN: FileCheck --check-prefix=OGCG %s --input-file=%t.ogcg.ll
 
+// RUN: %clang_cc1 -triple=amdgpu-amd-amdhsa -x hip -fclangir \
+// RUN:            -fcuda-is-device -fsanitize=address -emit-cir %s -o %t.asan.cir
+// RUN: FileCheck --check-prefix=CIR-ASAN %s --input-file=%t.asan.cir
+
+// RUN: %clang_cc1 -triple=amdgpu-amd-amdhsa -x hip -fclangir \
+// RUN:            -fcuda-is-device -fsanitize=address -emit-llvm %s -o %t.asan.ll
+// RUN: FileCheck --check-prefix=LLVM-ASAN %s --input-file=%t.asan.ll
+
+// RUN: %clang_cc1 -triple=amdgpu-amd-amdhsa -x hip \
+// RUN:            -fcuda-is-device -fsanitize=address -emit-llvm %s -o %t.asan.ogcg.ll
+// RUN: FileCheck --check-prefix=OGCG-ASAN %s --input-file=%t.asan.ogcg.ll
+
 // Test that HIP compiler unit ID global is emitted
 
 // CIR: cir.global external target_address_space(1) @__hip_cuid_{{.*}} = #cir.int<0> : !u8i
@@ -22,5 +34,11 @@
 
 // OGCG: @__hip_cuid_{{.*}} = addrspace(1) global i8 0
 // OGCG: @llvm.compiler.used = {{.*}}@__hip_cuid_
+
+// CIR-ASAN: cir.global external target_address_space(1) @__hip_cuid_{{.*}} = #cir.int<0> : !u8i sanitizer_metadata<no_address = true>
+
+// LLVM-ASAN: @__hip_cuid_{{.*}} = addrspace(1) global i8 0, no_sanitize_address
+
+// OGCG-ASAN: @__hip_cuid_{{.*}} = addrspace(1) global i8 0, no_sanitize_address
 
 __global__ void kernel() {}

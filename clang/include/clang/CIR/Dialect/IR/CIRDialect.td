@@ -71,6 +71,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getWillReturnAttrName() { return "willreturn"; }
     static llvm::StringRef getModuleLevelAsmAttrName() { return "cir.module_asm"; }
     static llvm::StringRef getModuleFramePointerAttrName() { return "cir.frame_pointer"; }
+    static llvm::StringRef getSanitizerMetadataAttrName() { return "cir.sanitizer_metadata"; }
     static llvm::StringRef getGlobalCtorsAttrName() { return "cir.global_ctors"; }
     static llvm::StringRef getGlobalDtorsAttrName() { return "cir.global_dtors"; }
     static llvm::StringRef getOffloadContainerAttrName() { return "cir.offload.container"; }

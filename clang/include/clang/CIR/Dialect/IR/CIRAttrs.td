@@ -2519,6 +2519,30 @@ def CIR_DynamicInitGuardAttr : CIR_Attr<"DynamicInitGuard",
 }
 
 //===----------------------------------------------------------------------===//
+// SanitizerMetadataAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_SanitizerMetadataAttr : CIR_Attr<"SanitizerMetadata",
+                                         "sanitizer_metadata"> {
+  let summary = "Sanitizer instrumentation settings for a global variable";
+  let description = [{
+    Mirrors `llvm::GlobalValue::SanitizerMetadata`. `no_address` and
+    `no_hw_address` exclude the global from AddressSanitizer and
+    HWAddressSanitizer instrumentation respectively.
+
+    Example:
+    ```
+    cir.global external @g = #cir.int<0> : !s32i
+        sanitizer_metadata<no_address = true>
+    ```
+  }];
+  let parameters = (ins DefaultValuedParameter<"bool", "false">:$no_address,
+                        DefaultValuedParameter<"bool", "false">:$no_hw_address);
+  let assemblyFormat = "`<` struct(params) `>`";
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // ThreadLocalGlobalWrapperInitAttr
 //===----------------------------------------------------------------------===//
 
@@ -2766,6 +2790,8 @@ def CIR_LoweringOptionsAttr
     (see `clang/Basic/ABIVersions.def`), and the ordinal round-trips fine
     within a single toolchain. `no_trapping_math` is true when
     `LangOptions::getDefaultExceptionMode()` is `FPE_Ignore`.
+    `sanitize_address`, `sanitize_kernel_address` and `sanitize_hwaddress`
+    mirror the like-named bits of `LangOptions::Sanitize`.
     `relative_cxx_abi_vtables` mirrors `LangOptions::RelativeCXXABIVTables`
     (`-fexperimental-relative-c++-abi-vtables`), which selects the layout of the
     C++ vtables that lowering emits and reads. It is omitted when false.
@@ -2789,8 +2815,10 @@ def CIR_LoweringOptionsAttr
       exceptions = false, threadsafe_statics = true, cuda = false,
       cuda_is_device = false, hip = false, hlsl = false, sycl_is_device = false,
       gpu_rdc = false, openmp = false, openmp_is_target_device = false,
-      clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false,
-      no_trapping_math = true, ssp_buffer_size = 8>} { }
+      clang_abi_compat = 17, long_double_size = 0, sanitize_address = false,
+      sanitize_kernel_address = false, sanitize_hwaddress = false,
+      enable_noundef_attrs = false, no_trapping_math = true,
+      ssp_buffer_size = 8>} { }
     ```
   }];
 
@@ -2807,6 +2835,9 @@ def CIR_LoweringOptionsAttr
     "bool":$openmp_is_target_device,
     "int32_t":$clang_abi_compat,
     "int32_t":$long_double_size,
+    "bool":$sanitize_address,
+    "bool":$sanitize_kernel_address,
+    "bool":$sanitize_hwaddress,
     "bool":$enable_noundef_attrs,
     "bool":$no_trapping_math,
     "uint32_t":$ssp_buffer_size,
@@ -2817,7 +2848,8 @@ def CIR_LoweringOptionsAttr
     `<` struct($exceptions, $threadsafe_statics, $cuda, $cuda_is_device, $hip,
                $hlsl, $sycl_is_device, $gpu_rdc, $openmp,
                $openmp_is_target_device, $clang_abi_compat, $long_double_size,
-               $enable_noundef_attrs, $no_trapping_math,
+               $sanitize_address, $sanitize_kernel_address,
+               $sanitize_hwaddress, $enable_noundef_attrs, $no_trapping_math,
                $ssp_buffer_size, $relative_cxx_abi_vtables) `>`
   }];
 
