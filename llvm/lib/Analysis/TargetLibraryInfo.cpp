@@ -929,7 +929,7 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(const Triple &T,
                                              VectorLibrary VecLib)
     : IsErrnoFunctionCall(initializeIsErrnoFunctionCall(T)) {
   // Default to everything being available.
-  memset(AvailableArray, -1, sizeof(AvailableArray));
+  AvailableArray.fill(0xFF);
 
   initialize(*this, T, StandardNamesStrTable, VecLib);
 }
@@ -940,7 +940,7 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI)
       ShouldSignExtI32Param(TLI.ShouldSignExtI32Param),
       ShouldSignExtI32Return(TLI.ShouldSignExtI32Return),
       SizeOfInt(TLI.SizeOfInt), IsErrnoFunctionCall(TLI.IsErrnoFunctionCall) {
-  memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
+  AvailableArray = TLI.AvailableArray;
   VectorDescs = TLI.VectorDescs;
   ScalarDescs = TLI.ScalarDescs;
 }
@@ -952,8 +952,7 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(TargetLibraryInfoImpl &&TLI)
       ShouldSignExtI32Param(TLI.ShouldSignExtI32Param),
       ShouldSignExtI32Return(TLI.ShouldSignExtI32Return),
       SizeOfInt(TLI.SizeOfInt), IsErrnoFunctionCall(TLI.IsErrnoFunctionCall) {
-  std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
-            AvailableArray);
+  AvailableArray = std::move(TLI.AvailableArray);
   VectorDescs = TLI.VectorDescs;
   ScalarDescs = TLI.ScalarDescs;
 }
@@ -966,7 +965,7 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(const TargetLibraryInfoI
   ShouldSignExtI32Return = TLI.ShouldSignExtI32Return;
   SizeOfInt = TLI.SizeOfInt;
   IsErrnoFunctionCall = TLI.IsErrnoFunctionCall;
-  memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
+  AvailableArray = TLI.AvailableArray;
   return *this;
 }
 
@@ -978,8 +977,7 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(TargetLibraryInfoImpl &&
   ShouldSignExtI32Return = TLI.ShouldSignExtI32Return;
   SizeOfInt = TLI.SizeOfInt;
   IsErrnoFunctionCall = TLI.IsErrnoFunctionCall;
-  std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
-            AvailableArray);
+  AvailableArray = std::move(TLI.AvailableArray);
   return *this;
 }
 
@@ -1254,9 +1252,7 @@ LibFunc TargetLibraryInfoImpl::getLibFunc(unsigned int Opcode, Type *Ty) const {
   return Ty->isDoubleTy() ? LibFunc_fmod : LibFunc_fmodf;
 }
 
-void TargetLibraryInfoImpl::disableAllFunctions() {
-  memset(AvailableArray, 0, sizeof(AvailableArray));
-}
+void TargetLibraryInfoImpl::disableAllFunctions() { AvailableArray.fill(0); }
 
 static bool compareByScalarFnName(const VecDesc &LHS, const VecDesc &RHS) {
   return LHS.getScalarFnName() < RHS.getScalarFnName();

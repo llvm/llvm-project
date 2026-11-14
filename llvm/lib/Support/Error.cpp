@@ -191,7 +191,7 @@ void LLVMCantFail(LLVMErrorRef Err) {
 char *LLVMGetErrorMessage(LLVMErrorRef Err) {
   std::string Tmp = toString(unwrap(Err));
   char *ErrMsg = new char[Tmp.size() + 1];
-  memcpy(ErrMsg, Tmp.data(), Tmp.size());
+  llvm::copy(Tmp, ErrMsg);
   ErrMsg[Tmp.size()] = '\0';
   return ErrMsg;
 }
