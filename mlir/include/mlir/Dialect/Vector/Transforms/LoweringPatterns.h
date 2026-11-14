@@ -155,6 +155,12 @@ void populateVectorTransposeLoweringPatterns(
     VectorTransposeLowering vectorTransposeLowering,
     PatternBenefit benefit = 1);
 
+/// Populate patterns that lower fixed-size rank-2 `vector.transpose`
+/// operations to fixed-size `vector.interleave` or `vector.deinterleave`
+/// operations. One of the two transposed dimensions must be exactly 2.
+void populateVectorTransposeToInterleaveLoweringPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit = 1);
+
 /// Populate the pattern set with the following patterns:
 ///
 /// [TransferReadToVectorLoadLowering]

@@ -148,6 +148,9 @@ def enum_configurable_patterns():
         avx2_lowering_strategy=True,
     )
 
+    # CHECK: transform.apply_patterns.vector.lower_transpose_to_interleave
+    vector.ApplyLowerTransposeToInterleavePatternsOp()
+
     # CHECK: transform.apply_patterns.vector.split_transfer_full_partial
     vector.ApplySplitTransferFullPartialPatternsOp()
     # CHECK: transform.apply_patterns.vector.split_transfer_full_partial
