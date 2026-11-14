@@ -1382,6 +1382,28 @@ bool AMDGPUDAGToDAGISel::SelectDS1Addr1Offset(SDValue Addr, SDValue &Base,
       Offset = CurDAG->getTargetConstant(C1->getZExtValue(), DL, MVT::i16);
       return true;
     }
+
+    // Splitting at 64 KiB preserves alignment and allows a shared base.
+    int64_t ByteOffset = C1->getSExtValue();
+    if (ByteOffset > UINT16_MAX && !isa<ConstantSDNode>(N0)) {
+      unsigned Lo = static_cast<unsigned>(ByteOffset) & UINT16_MAX;
+      int64_t Hi = ByteOffset - Lo;
+      SDValue HiVal = CurDAG->getConstant(Hi, DL, MVT::i32);
+      SDValue NewBase = CurDAG->getNode(ISD::ADD, DL, MVT::i32, N0, HiVal);
+      if (isDSOffsetLegal(NewBase, Lo)) {
+        // Emit a machine node since selection won't visit a new generic ADD.
+        SDValue AddOffset = getMaterializedScalarImm32(Hi, DL);
+        SmallVector<SDValue, 3> Opnds = {AddOffset, N0};
+        unsigned AddOp = AMDGPU::V_ADD_CO_U32_e32;
+        if (Subtarget->hasAddNoCarryInsts()) {
+          AddOp = AMDGPU::V_ADD_U32_e64;
+          Opnds.push_back(CurDAG->getTargetConstant(0, DL, MVT::i1));
+        }
+        Base = SDValue(CurDAG->getMachineNode(AddOp, DL, MVT::i32, Opnds), 0);
+        Offset = CurDAG->getTargetConstant(Lo, DL, MVT::i16);
+        return true;
+      }
+    }
   } else if (Addr.getOpcode() == ISD::SUB) {
     // sub C, x -> add (sub 0, x), C
     if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(Addr.getOperand(0))) {
