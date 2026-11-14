@@ -29,6 +29,7 @@ Checks: [
   '-modernize-use-trailing-return-type',
   'performance-*',
   '-performance-enum-size',
+  '-performance-function-pointer-equality',
   '-performance-no-int-to-ptr',
   'readability-*',
   '-readability-avoid-nested-conditional-operator',

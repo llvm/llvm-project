@@ -14,6 +14,7 @@
 #include "CoroutineHostileRAIICheck.h"
 #include "DefinitionsInHeadersCheck.h"
 #include "ExplicitConstructorCheck.h"
+#include "FunctionPointerEqualityCheck.h"
 #include "HeaderIncludeCycleCheck.h"
 #include "IncludeCleanerCheck.h"
 #include "MisleadingBidirectionalCheck.h"
@@ -57,6 +58,8 @@ public:
         "misc-definitions-in-headers");
     CheckFactories.registerCheck<ExplicitConstructorCheck>(
         "misc-explicit-constructor");
+    CheckFactories.registerCheck<FunctionPointerEqualityCheck>(
+        "misc-function-pointer-equality");
     CheckFactories.registerCheck<HeaderIncludeCycleCheck>(
         "misc-header-include-cycle");
     CheckFactories.registerCheck<IncludeCleanerCheck>("misc-include-cleaner");
