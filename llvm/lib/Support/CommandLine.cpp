@@ -1732,10 +1732,9 @@ bool CommandLineParser::ParseCommandLineOptions(
                 lookupLibraryOption(ArgName.split('=').first)) {
           ArrayRef<const char *> Rest(argv + i, argc - i);
           unsigned N;
-          if (Error E = Context && L->isPerContext()
-                            ? Context->parse(*L, Rest, N)
-                            : parseLibraryOption(*L, L->global(), Rest, N,
-                                                 LibraryArgAlloc)) {
+          if (Error E = Context ? Context->parse(*L, Rest, N)
+                                : parseLibraryOption(*L, L->global(), Rest, N,
+                                                     LibraryArgAlloc)) {
             *Errs << ProgramName << ": " << toString(std::move(E)) << '\n';
             ErrorParsing = true;
           }
