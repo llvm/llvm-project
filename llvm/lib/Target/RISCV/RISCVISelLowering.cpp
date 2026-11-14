@@ -1705,6 +1705,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         }
 
         setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+        setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
         setOperationAction({ISD::MASKED_UDIV, ISD::MASKED_SDIV,
                             ISD::MASKED_UREM, ISD::MASKED_SREM},
                            VT, Custom);
@@ -1731,7 +1732,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
                             ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
                             ISD::EXTRACT_SUBVECTOR, ISD::VECTOR_REVERSE,
-                            ISD::VECTOR_SHUFFLE, ISD::VECTOR_COMPRESS},
+                            ISD::VECTOR_SHUFFLE, ISD::VECTOR_SHUFFLE_VAR,
+                            ISD::VECTOR_COMPRESS},
                            VT, Custom);
         setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
         setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
@@ -9447,6 +9449,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerMaskedStore(Op, DAG);
   case ISD::VECTOR_COMPRESS:
     return lowerVectorCompress(Op, DAG);
+  case ISD::VECTOR_SHUFFLE_VAR:
+    return lowerVECTOR_SHUFFLE_VAR(Op, DAG);
   case ISD::SELECT_CC: {
     // This occurs because we custom legalize SETGT and SETUGT for setcc. That
     // causes LegalizeDAG to think we need to custom legalize select_cc. Expand
@@ -16247,6 +16251,42 @@ SDValue RISCVTargetLowering::lowerVectorCompress(SDValue Op,
     Res = convertFromScalableVector(VT, Res, DAG, Subtarget);
 
   return Res;
+}
+
+SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE_VAR(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue V = Op.getOperand(0);
+  SDValue Mask = Op.getOperand(1);
+  MVT VT = Op.getSimpleValueType();
+  assert(VT.isFixedLengthVector() && "Scalable vectors are not supported yet");
+  unsigned NumElts = VT.getVectorNumElements();
+
+  // At SEW=8, vrgather.vv can only index elements 0-255. Longer vectors whose
+  // mask can exceed that need vrgatherei16.vv, if its i16 index type (twice
+  // the data LMUL) is legal.
+  unsigned GatherOpc = RISCVISD::VRGATHER_VV_VL;
+  MVT IndexVT = VT.changeVectorElementTypeToInteger();
+  if (VT.getScalarSizeInBits() == 8 && NumElts > 256 &&
+      Mask.getScalarValueSizeInBits() > 8) {
+    GatherOpc = RISCVISD::VRGATHEREI16_VV_VL;
+    IndexVT = MVT::getVectorVT(MVT::i16, NumElts);
+    if (!IndexVT.isValid() || !isTypeLegal(IndexVT))
+      return SDValue();
+  }
+
+  // Out-of-range indices, including ones truncation wraps into range, only
+  // affect poison lanes, so no clamping is needed.
+  SDValue Idx = DAG.getZExtOrTrunc(Mask, DL, IndexVT);
+
+  MVT ContainerVT = getContainerForFixedLengthVector(VT);
+  MVT IndexContainerVT = getContainerForFixedLengthVector(IndexVT);
+  V = convertToScalableVector(ContainerVT, V, DAG, Subtarget);
+  Idx = convertToScalableVector(IndexContainerVT, Idx, DAG, Subtarget);
+  auto [TrueMask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  SDValue Res = DAG.getNode(GatherOpc, DL, ContainerVT, V, Idx,
+                            DAG.getUNDEF(ContainerVT), TrueMask, VL);
+  return convertFromScalableVector(VT, Res, DAG, Subtarget);
 }
 
 SDValue RISCVTargetLowering::lowerVectorStrictFSetcc(SDValue Op,
