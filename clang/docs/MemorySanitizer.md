@@ -17,7 +17,7 @@ Here is a non-exhaustive list of cases when MemorySanitizer will report an error
 
 ## How to build
 
-Build LLVM/Clang with [CMake](https://llvm.org/docs/CMake.html).
+Build LLVM/Clang with [CMake](inv:llvm:std:doc#CMake).
 
 ## Usage
 
