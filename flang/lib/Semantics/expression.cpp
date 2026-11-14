@@ -1103,24 +1103,6 @@ static void WarnForNumericStorageSize(
   }
 }
 
-class NumericStorageSizeWarningVisitor {
-public:
-  explicit NumericStorageSizeWarningVisitor(
-      semantics::SemanticsContext &context)
-      : context_{context} {}
-  template <typename A> bool Pre(const A &) { return true; }
-  bool Pre(const parser::Name &name) {
-    if (!context_.HasError(name.symbol)) {
-      WarnForNumericStorageSize(context_, name);
-    }
-    return false;
-  }
-  template <typename A> void Post(const A &) {}
-
-private:
-  semantics::SemanticsContext &context_;
-};
-
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
   auto restorer{GetContextualMessages().SetLocation(n.source)};
   if (std::optional<int> kind{IsImpliedDo(n.source)}) {
@@ -1130,9 +1112,10 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
   if (context_.HasError(n.symbol)) { // includes case of no symbol
     return std::nullopt;
   } else {
-    // Most expression references are diagnosed here. Analyze(Expr) below
-    // performs the same check explicitly when returning a saved typed
-    // expression, since that path does not call Analyze(Name).
+    // Expression references are diagnosed here.  A saved typed expression
+    // needs no further check when Analyze(Expr) returns it later: unless an
+    // error stopped it early, the analysis that produced it has already been
+    // through here for its names.
     WarnForNumericStorageSize(context_, n);
     const Symbol &ultimate{n.symbol->GetUltimate()};
     if (ultimate.has<semantics::TypeParamDetails>()) {
@@ -4880,10 +4863,6 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr &expr) {
   MaybeExpr result;
   if (useSavedTypedExprs_) {
     if (expr.typedExpr) {
-      // Returning a saved typed expression bypasses Analyze(Name), so walk the
-      // original expression to perform its numeric_storage_size checks.
-      NumericStorageSizeWarningVisitor visitor{context_};
-      parser::Walk(expr, visitor);
       return expr.typedExpr->v;
     }
     if (!wasIterativelyAnalyzing) {
