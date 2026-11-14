@@ -16,11 +16,15 @@
 #include <atomic>
 #include <cassert>
 #include <condition_variable>
+#include <cstdlib>
 #include <functional>
 #include <iostream>
 #include <mutex>
 #include <thread>
 #include <vector>
+#ifdef _WIN32
+#include <malloc.h>
+#endif
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ThreadPool.h"
@@ -250,6 +254,27 @@ extern "C" AsyncValue *mlirAsyncRuntimeCreateValue(int64_t size) {
 extern "C" AsyncGroup *mlirAsyncRuntimeCreateGroup(int64_t size) {
   AsyncGroup *group = new AsyncGroup(getDefaultAsyncRuntime(), size);
   return group;
+}
+
+extern "C" void *mlirAsyncRuntimeAlignedAlloc(int64_t alignment, int64_t size) {
+#ifdef _WIN32
+  return _aligned_malloc(size, alignment);
+#elif defined(__APPLE__)
+  // aligned_alloc was added in macOS 10.15.
+  void *result = nullptr;
+  (void)::posix_memalign(&result, alignment, size);
+  return result;
+#else
+  return ::aligned_alloc(alignment, size);
+#endif
+}
+
+extern "C" void mlirAsyncRuntimeAlignedFree(void *ptr) {
+#ifdef _WIN32
+  _aligned_free(ptr);
+#else
+  ::free(ptr);
+#endif
 }
 
 extern "C" int64_t mlirAsyncRuntimeAddTokenToGroup(AsyncToken *token,
@@ -511,6 +536,10 @@ void __mlir_execution_engine_init(llvm::StringMap<void *> &exportSymbols) {
                &mlir::runtime::mlirAsyncRuntimeAwaitAllInGroup);
   exportSymbol("mlirAsyncRuntimeAwaitAllInGroupAndExecute",
                &mlir::runtime::mlirAsyncRuntimeAwaitAllInGroupAndExecute);
+  exportSymbol("mlirAsyncRuntimeAlignedAlloc",
+               &mlir::runtime::mlirAsyncRuntimeAlignedAlloc);
+  exportSymbol("mlirAsyncRuntimeAlignedFree",
+               &mlir::runtime::mlirAsyncRuntimeAlignedFree);
   exportSymbol("mlirAsyncRuntimGetNumWorkerThreads",
                &mlir::runtime::mlirAsyncRuntimGetNumWorkerThreads);
   exportSymbol("mlirAsyncRuntimePrintCurrentThreadId",
