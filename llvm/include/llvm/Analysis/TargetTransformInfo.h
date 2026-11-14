@@ -1789,6 +1789,18 @@ public:
   LLVM_ABI InstructionCost getInsertExtractValueCost(
       unsigned Opcode, TTI::TargetCostKind CostKind) const;
 
+  /// \return The expected cost of a bitinsert of a value of type \p Val into a
+  /// byte value of type \p Base. \p OffsetInfo describes the offset operand.
+  LLVM_ABI InstructionCost getBitInsertCost(Type *Base, Type *Val,
+                                            TTI::TargetCostKind CostKind,
+                                            OperandValueInfo OffsetInfo) const;
+
+  /// \return The expected cost of a bitextract of a value of type \p Dst from
+  /// a byte value of type \p Src. \p OffsetInfo describes the offset operand.
+  LLVM_ABI InstructionCost getBitExtractCost(Type *Dst, Type *Src,
+                                             TTI::TargetCostKind CostKind,
+                                             OperandValueInfo OffsetInfo) const;
+
   /// \return The cost of replication shuffle of \p VF elements typed \p EltTy
   /// \p ReplicationFactor times.
   ///
