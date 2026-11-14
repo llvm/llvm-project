@@ -749,11 +749,10 @@ define void @shift_trunc_volatile_store(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    shrn.4h v0, v0, #16
-; CHECK-NEXT:    uzp1.8b v1, v0, v0
-; CHECK-NEXT:    mov h0, v0[2]
-; CHECK-NEXT:    ushll.4s v1, v1, #0
-; CHECK-NEXT:    stur b0, [x1, #2]
-; CHECK-NEXT:    str h1, [x1]
+; CHECK-NEXT:    mov h1, v0[2]
+; CHECK-NEXT:    uzp1.8b v0, v0, v0
+; CHECK-NEXT:    stur b1, [x1, #2]
+; CHECK-NEXT:    str h0, [x1]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
 ;
@@ -899,7 +898,6 @@ define void @store_trunc_v3i64_to_v3i8(ptr %p, <3 x i64> %x) {
 ; CHECK-NEXT:    stur b1, [x0, #2]
 ; CHECK-NEXT:    xtn.4h v0, v0
 ; CHECK-NEXT:    uzp1.8b v0, v0, v0
-; CHECK-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-NEXT:    str h0, [x0]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
