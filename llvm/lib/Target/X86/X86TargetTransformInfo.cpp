@@ -5105,6 +5105,23 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::abs:
     ISD = ISD::ABS;
     break;
+  case Intrinsic::get_active_lane_mask: {
+    VectorType *VT = dyn_cast<VectorType>(ICA.getReturnType());
+    if (!VT)
+      break;
+
+    EVT EVT = TLI->getValueType(DL, VT);
+    if (TLI->shouldExpandGetActiveLaneMaskUsingScalar(EVT)) {
+      if (CostKind == TTI::TCK_CodeSize)
+        return InstructionCost(4);
+      Type *IndexTy = ICA.getArgTypes()[0];
+      // Model ~5 scalar ALU ops for bitmask calculation plus 1 GPR-to-mask
+      // transfer (kmov).
+      return 5 * getArithmeticInstrCost(Instruction::Sub, IndexTy, CostKind) +
+             1;
+    }
+    break;
+  }
   case Intrinsic::bitreverse:
     ISD = ISD::BITREVERSE;
     break;
