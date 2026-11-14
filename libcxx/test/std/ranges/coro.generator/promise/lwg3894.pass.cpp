@@ -16,32 +16,30 @@
 
 #include <cassert>
 #include <cstddef>
-#include <initializer_list>
-#include <memory>
 #include <ranges>
 #include <utility>
 
 enum class Failure { Begin, End, IteratorMove, SentinelCopy, Dereference, Increment };
 struct Error {};
 
+template <Failure failure>
 struct Iterator {
   using value_type      = int;
   using difference_type = std::ptrdiff_t;
   int* ptr;
-  Failure failure;
-  Iterator(int* p, Failure f) : ptr(p), failure(f) {}
-  Iterator(Iterator&& other) : ptr(other.ptr), failure(other.failure) {
-    if (failure == Failure::IteratorMove)
+  explicit Iterator(int* p) : ptr(p) {}
+  Iterator(Iterator&& other) noexcept(failure != Failure::IteratorMove) : ptr(other.ptr) {
+    if constexpr (failure == Failure::IteratorMove)
       throw Error{};
   }
   Iterator& operator=(Iterator&&) = default;
-  int& operator*() const {
-    if (failure == Failure::Dereference)
+  int& operator*() const noexcept(failure != Failure::Dereference) {
+    if constexpr (failure == Failure::Dereference)
       throw Error{};
     return *ptr;
   }
-  Iterator& operator++() {
-    if (failure == Failure::Increment)
+  Iterator& operator++() noexcept(failure != Failure::Increment) {
+    if constexpr (failure == Failure::Increment)
       throw Error{};
     ++ptr;
     return *this;
@@ -49,40 +47,37 @@ struct Iterator {
   void operator++(int) { ++*this; }
 };
 
+template <Failure failure>
 struct Sentinel {
-  int* ptr        = nullptr;
-  Failure failure = Failure::Begin;
-  Sentinel()      = default;
-  Sentinel(int* p, Failure f) : ptr(p), failure(f) {}
-  Sentinel(const Sentinel& other) : ptr(other.ptr), failure(other.failure) {
-    if (failure == Failure::SentinelCopy)
+  int* ptr   = nullptr;
+  Sentinel() = default;
+  explicit Sentinel(int* p) : ptr(p) {}
+  Sentinel(const Sentinel& other) noexcept(failure != Failure::SentinelCopy) : ptr(other.ptr) {
+    if constexpr (failure == Failure::SentinelCopy)
       throw Error{};
   }
   Sentinel& operator=(const Sentinel&) = default;
-  friend bool operator==(const Iterator& i, const Sentinel& s) { return i.ptr == s.ptr; }
+  friend bool operator==(const Iterator<failure>& i, const Sentinel& s) noexcept { return i.ptr == s.ptr; }
 };
 
+template <Failure failure>
 struct Range {
   int value = 42;
-  Failure failure;
-  Iterator begin() {
-    if (failure == Failure::Begin)
+  Iterator<failure> begin() {
+    if constexpr (failure == Failure::Begin)
       throw Error{};
-    return Iterator(&value, failure);
+    return Iterator<failure>(&value);
   }
-  Sentinel end() {
-    if (failure == Failure::End)
+  Sentinel<failure> end() {
+    if constexpr (failure == Failure::End)
       throw Error{};
-    return Sentinel(&value + 1, failure);
+    return Sentinel<failure>(&value + 1);
   }
 };
-static_assert(std::ranges::input_range<Range>);
 
-using Promise = std::generator<const int&>::promise_type;
-static_assert(!noexcept(std::declval<Promise&>().yield_value(std::ranges::elements_of(std::declval<Range&>()))));
-
-std::generator<const int&> generate(Failure failure, bool& caught) {
-  Range range{42, failure};
+template <Failure failure>
+std::generator<const int&> generate(bool& caught) {
+  Range<failure> range;
   try {
     co_yield std::ranges::elements_of(range);
     assert(false);
@@ -92,25 +87,30 @@ std::generator<const int&> generate(Failure failure, bool& caught) {
   co_yield 99; // The parent can continue after a failure to initialize or iterate the nested range.
 }
 
-int main(int, char**) {
-  for (Failure failure :
-       {Failure::Begin,
-        Failure::End,
-        Failure::IteratorMove,
-        Failure::SentinelCopy,
-        Failure::Dereference,
-        Failure::Increment}) {
-    bool caught = false;
-    auto g      = generate(failure, caught);
-    auto i      = g.begin();
-    if (failure == Failure::Increment) {
-      assert(*i == 42 && !caught);
-      ++i;
-    }
-    assert(*i == 99 && caught);
+template <Failure failure>
+void test() {
+  using R       = Range<failure>;
+  using Promise = std::generator<const int&>::promise_type;
+  static_assert(std::ranges::input_range<R>);
+  static_assert(!noexcept(std::declval<Promise&>().yield_value(std::ranges::elements_of(std::declval<R&>()))));
+  bool caught = false;
+  auto g      = generate<failure>(caught);
+  auto i      = g.begin();
+  if constexpr (failure == Failure::Increment) {
+    assert(*i == 42 && !caught);
     ++i;
-    assert(i == g.end());
   }
+  assert(*i == 99 && caught);
+  ++i;
+  assert(i == g.end());
+}
 
+int main(int, char**) {
+  test<Failure::Begin>();
+  test<Failure::End>();
+  test<Failure::IteratorMove>();
+  test<Failure::SentinelCopy>();
+  test<Failure::Dereference>();
+  test<Failure::Increment>();
   return 0;
 }
