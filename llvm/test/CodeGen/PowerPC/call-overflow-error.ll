@@ -25,7 +25,7 @@ entry:
   ret i32 %call
 }
 
-; ERROR: error: branch target out of range (-33554736 not between -33554432 and 33554428)
+; ERROR: error: branch target out of range (-33554736 not between -33554432 and 33554428) to '.bar' at ..text..+0x2000160
 ; CHECK: 2000170: 49 ff fe d1   bl 0x4000040
 ; CHECK:                        02000170:  R_RBR        .bar
 ; CHECK: 200017c: 49 ff fe 85   bl 0x4000000
