@@ -45,6 +45,7 @@
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -1678,11 +1679,15 @@ void PDBLinker::addSections(ArrayRef<uint8_t> sectionTable) {
   // Add section contributions. They must be ordered by ascending RVA.
   for (OutputSection *os : ctx.outputSections) {
     addLinkerModuleSectionSymbol(linkerModule, *os, ctx.config.mingw);
-    for (Chunk *c : os->chunks) {
-      pdb::SectionContrib sc =
-          createSectionContrib(ctx, c, linkerModule.getModuleIndex());
+
+    std::vector<pdb::SectionContrib> contribs(os->chunks.size());
+    parallelFor(0, os->chunks.size(), [&](size_t i) {
+      contribs[i] = createSectionContrib(ctx, os->chunks[i],
+                                         linkerModule.getModuleIndex());
+    });
+
+    for (auto &sc : contribs)
       builder.getDbiBuilder().addSectionContrib(sc);
-    }
   }
 
   // The * Linker * first section contrib is only used along with /INCREMENTAL,
