@@ -135,9 +135,11 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -1579,6 +1581,18 @@ StackOffset ARMFrameLowering::getFrameIndexReference(const MachineFunction &MF,
   return StackOffset::getFixed(ResolveFrameIndexReference(MF, FI, FrameReg, 0));
 }
 
+/// The Windows EH tables use offsets from SP at function entry.
+StackOffset
+ARMFrameLowering::getFrameIndexReferencePreferSP(const MachineFunction &MF,
+                                                 int FI, Register &FrameReg,
+                                                 bool IgnoreSPUpdates) const {
+  if (IgnoreSPUpdates) {
+    FrameReg = ARM::SP;
+    return StackOffset::getFixed(MF.getFrameInfo().getObjectOffset(FI));
+  }
+  return getFrameIndexReference(MF, FI, FrameReg);
+}
+
 StackOffset
 ARMFrameLowering::getNonLocalFrameIndexReference(const MachineFunction &MF,
                                                  int FI) const {
@@ -1621,8 +1635,9 @@ int ARMFrameLowering::ResolveFrameIndexReference(const MachineFunction &MF,
     return Offset;
   }
 
-  // If there is a frame pointer, use it when we can.
-  if (hasFP(MF) && AFI->hasStackFrame()) {
+  // If there is a frame pointer, use it when we can. Funclets can only reach
+  // the parent frame through the base pointer; see hasBasePointer().
+  if (hasFP(MF) && AFI->hasStackFrame() && !MF.hasEHFunclets()) {
     // Use frame pointer to reference fixed objects. Use it for locals if
     // there are VLAs (and thus the SP isn't reliable as a base).
     if (isFixed || (hasMovingSP && !RegInfo->hasBasePointer(MF))) {
@@ -2740,10 +2755,26 @@ static bool canSpillOnFrameIndexAccess(const MachineFunction &MF,
   return false;
 }
 
+static bool hasWinCXXEHFunclets(const MachineFunction &MF) {
+  return MF.hasEHFunclets() &&
+         classifyEHPersonality(MF.getFunction().getPersonalityFn()) ==
+             EHPersonality::MSVC_CXX;
+}
+
 void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                             BitVector &SavedRegs,
                                             RegScavenger *RS) const {
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+
+  // Create UnwindHelp here so that the frame size estimate below includes it.
+  // ShrinkWrap calls this too, so it can already exist.
+  if (hasWinCXXEHFunclets(MF)) {
+    WinEHFuncInfo &EHInfo = *MF.getWinEHFuncInfo();
+    if (EHInfo.UnwindHelpFrameIdx == std::numeric_limits<int>::max())
+      EHInfo.UnwindHelpFrameIdx = MF.getFrameInfo().CreateStackObject(
+          8, Align(8), /*isSpillSlot=*/false);
+  }
+
   // This tells PEI to spill the FP as if it is any other callee-save register
   // to take advantage the eliminateFrameIndex machinery. This also ensures it
   // is spilled in the order specified by getCalleeSavedRegs() to make it easier
@@ -3316,6 +3347,38 @@ void ARMFrameLowering::processFunctionBeforeFrameFinalized(
     MachineFunction &MF, RegScavenger *RS) const {
   TargetFrameLowering::processFunctionBeforeFrameFinalized(MF, RS);
   updateLRRestored(MF);
+
+  if (!hasWinCXXEHFunclets(MF))
+    return;
+
+  assert(!STI.getRegisterInfo()->hasStackRealignment(MF) &&
+         "ARMWinEHFrame should have prevented realignment");
+  assert(STI.isThumb2() && "Windows on Arm is Thumb-2 only");
+  int UnwindHelpFI = MF.getWinEHFuncInfo()->UnwindHelpFrameIdx;
+
+  // Store -2 into both words of UnwindHelp before the first call that can
+  // unwind through this frame.
+  MachineBasicBlock &MBB = MF.front();
+  MachineBasicBlock::iterator MBBI = MBB.begin();
+  while (MBBI != MBB.end() && MBBI->getFlag(MachineInstr::FrameSetup))
+    ++MBBI;
+  RS->enterBasicBlockEnd(MBB);
+  RS->backward(MBBI);
+  Register Tmp = RS->FindUnusedReg(&ARM::tcGPRRegClass);
+  assert(Tmp && "There must be a free register after frame setup");
+
+  const TargetInstrInfo &TII = *STI.getInstrInfo();
+  DebugLoc DL;
+  BuildMI(MBB, MBBI, DL, TII.get(ARM::t2MVNi), Tmp)
+      .addImm(1)
+      .add(predOps(ARMCC::AL))
+      .add(condCodeOp());
+  for (int Off : {0, 4})
+    BuildMI(MBB, MBBI, DL, TII.get(ARM::t2STRi12))
+        .addReg(Tmp, getKillRegState(Off == 4))
+        .addFrameIndex(UnwindHelpFI)
+        .addImm(Off)
+        .add(predOps(ARMCC::AL));
 }
 
 void ARMFrameLowering::getCalleeSaves(const MachineFunction &MF,

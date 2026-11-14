@@ -13,22 +13,39 @@
 ;     a();
 ; }
 
-; Check that the changes in PR #184953 forcing r6 indexing in SEH funclets does not affect C++ EH.
+; A C++ cleanup in a frame with an alignas(64) local. The frame is not realigned:
+; the local is at a 64-byte aligned address in an over-sized block, and the
+; cleanup funclet reaches it and the byval argument through r6.
+; CHECK-LABEL: f:
+; CHECK:       .seh_handler __CxxFrameHandler3, %unwind, %except
+; CHECK:       sub sp, #[[#ARGS:]]
+; CHECK:       push {r6, lr}
+; CHECK:       sub sp, #[[#SUB:]]
+; CHECK:       .seh_endprologue
+; CHECK-NEXT:  mov r6, sp
+; CHECK:       mvn [[T:r[0-9]+]], #1
+; CHECK:       str.w [[T]], [r6]
+; CHECK-NEXT:  str.w [[T]], [r6, #4]
+; CHECK:       add.w [[P:r[0-9]+]], r6, #{{[0-9]+}}
+; CHECK-NEXT:  adds [[P]], #56
+; CHECK-NEXT:  bic [[P]], [[P]], #56
+; CHECK:       str [[P]], [r6, #[[#SLOT:]]]
+; CHECK:       blx
+; CHECK-LABEL: "?dtor$2@?0?f@4HA":
+; CHECK:       .seh_endprologue
+; CHECK-NEXT:  add.w r0, r6, #[[#SUB + 8]]
+; CHECK-NEXT:  ldr r1, [r6, #[[#SLOT]]]
+; CHECK-NEXT:  adds r0, #44
+; CHECK-NEXT:  bl g
+; CHECK:       $cppxdata$f:
+; CHECK:       .long [[#%d,0 - SUB - 8 - ARGS]] @ UnwindHelp
+; CHECK-NEXT:  .long 0 @ ESTypeList
+; CHECK-NEXT:  .long 1 @ EHFlags
 
 %struct.X = type { [100 x i32] }
 
 define dso_local arm_aapcs_vfpcc void @f(ptr noundef byval(%struct.X) align 4 %0, ptr noundef %1) personality ptr @__CxxFrameHandler3 {
 entry:
-; CHECK-LABEL: f:
-; CHECK: .seh_proc f
-; CHECK: .seh_handler __CxxFrameHandler3, %unwind, %except
-; CHECK: push.w {r11, lr}
-; CHECK: mov r11, sp
-; CHECK: .seh_save_sp r11
-; CHECK: .seh_endprologue
-; CHECK: bfc [[REG1:r[0-9]+]], #0, #6
-; CHECK: mov sp, [[REG1]]
-
   %aligned = alloca i32, align 64
   invoke arm_aapcs_vfpcc void %1()
           to label %invoke.cont unwind label %ehcleanup
@@ -40,17 +57,6 @@ invoke.cont:                                      ; preds = %entry
 
 ehcleanup:                                        ; preds = %entry
   %cp = cleanuppad within none []
-; CHECK: .seh_proc {{.*}}dtor{{.*}}
-; CHECK: push.w {r11, lr}
-; CHECK: mov r11, sp
-; CHECK: .seh_save_sp r11
-; CHECK: .seh_endprologue
-; CHECK: bfc [[REG2:r[0-9]+]], #0, #6
-; CHECK: mov sp, [[REG2]]
-; CHECK: add.w r0, r11, #{{[0-9]+}}
-; CHECK: adds r0, #44
-; CHECK: bl g
-
   %gep.unwind = getelementptr inbounds i8, ptr %0, i32 44
   call arm_aapcs_vfpcc void @g(ptr noundef nonnull %gep.unwind, ptr noundef nonnull %aligned) [ "funclet"(token %cp) ]
   cleanupret from %cp unwind to caller

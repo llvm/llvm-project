@@ -1,7 +1,13 @@
 ; RUN: llc < %s | FileCheck %s
 
 ; CHECK: "??1field@@AAA@XZ":
+; CHECK: .seh_endprologue
+; CHECK-NEXT: mov r6, sp
+; CHECK-NEXT: mvn [[T:r[0-9]+]], #1
+; CHECK-NEXT: str [[T]], [r6]
+; CHECK-NEXT: str [[T]], [r6, #4]
 ; CHECK: bl free
+; CHECK: .long -24 @ UnwindHelp
 
 ; C++ source:
 ; class field { ~field(); };
