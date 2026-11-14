@@ -180,6 +180,13 @@ functions:
     arguments:
       - type: struct timespec *
       - type: int
+  - name: timespec_getres
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: struct timespec *
+      - type: int
   - name: timer_create
     standards:
       - posix

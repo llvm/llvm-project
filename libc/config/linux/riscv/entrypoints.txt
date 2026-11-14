@@ -1732,6 +1732,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.strftime_l
     libc.src.time.time
     libc.src.time.timespec_get
+    libc.src.time.timespec_getres
     libc.src.time.timer_create
     libc.src.time.timer_delete
     libc.src.time.timer_getoverrun
