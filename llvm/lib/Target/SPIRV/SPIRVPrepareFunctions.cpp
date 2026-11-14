@@ -732,10 +732,6 @@ SPIRVPrepareFunctionsImpl::removeAggregateTypesFromSignature(Function *F) {
       NewF->getParent()->getOrInsertNamedMetadata("spv.cloned_funcs"),
       std::move(ChangedTypes), NewF->getName());
 
-  for (User *U : F->users()) {
-    if (auto *CB = dyn_cast<CallBase>(U); CB && CB->getCalledFunction() == F)
-      CB->mutateFunctionType(NewF->getFunctionType());
-  }
   // NewF keeps F's address space, so their pointer types match and
   // RAUW is safe despite the differing signatures.
   assert(F->getType() == NewF->getType() &&
@@ -872,9 +868,11 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
     if (auto *CB = dyn_cast<CallBase>(&I)) {
       if (!CB->getCalledOperand() || CB->getCalledFunction())
         continue;
-      if (CB->getType()->isAggregateType() ||
-          any_of(CB->args(),
-                 [](auto &&Arg) { return Arg->getType()->isAggregateType(); }))
+      // A cloned caller passes its aggregate arguments as i32 already, so
+      // check the call's own function type.
+      FunctionType *FTy = CB->getFunctionType();
+      if (FTy->getReturnType()->isAggregateType() ||
+          any_of(FTy->params(), [](Type *T) { return T->isAggregateType(); }))
         Calls.emplace_back(CB, nullptr);
     }
   }
@@ -895,12 +893,12 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
       RetTy = B.getInt32Ty();
     }
 
-    for (auto &&Arg : CB->args()) {
-      if (Arg->getType()->isAggregateType()) {
+    for (auto [Idx, ParamTy] : enumerate(CB->getFunctionType()->params())) {
+      if (ParamTy->isAggregateType()) {
         NewArgTypes.push_back(B.getInt32Ty());
-        ChangedTypes.emplace_back(Arg.getOperandNo(), Arg->getType());
+        ChangedTypes.emplace_back(Idx, ParamTy);
       } else {
-        NewArgTypes.push_back(Arg->getType());
+        NewArgTypes.push_back(ParamTy);
       }
     }
     NewFnTy = FunctionType::get(RetTy, NewArgTypes,
@@ -985,18 +983,32 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
     Changed |= substituteAbortKHRCalls(&F);
     Changed |= substituteIntrinsicCalls(&F);
     Changed |= sortBlocks(F);
-    Changed |= removeAggregateTypesFromCalls(&F);
     FuncsWorklist.push_back(&F);
   }
 
+  // Clone every signature first, then retype the calls: a retyped call leaves
+  // its aggregate users ill-typed, and cloning such a select or PHI asserts.
+  SmallVector<std::pair<Function *, FunctionType *>> NewFuncs;
   for (auto *F : FuncsWorklist) {
+    FunctionType *OldFTy = F->getFunctionType();
     Function *NewF = removeAggregateTypesFromSignature(F);
 
     if (NewF != F) {
       F->eraseFromParent();
+      NewFuncs.emplace_back(NewF, OldFTy);
       Changed = true;
     }
   }
+  // A direct call has its callee's old type until now: getCalledFunction()
+  // no longer matches it, so compare the callee operand and the old type.
+  for (const auto &[NewF, OldFTy] : NewFuncs)
+    for (User *U : NewF->users())
+      if (auto *CB = dyn_cast<CallBase>(U); CB &&
+                                            CB->getCalledOperand() == NewF &&
+                                            CB->getFunctionType() == OldFTy)
+        CB->mutateFunctionType(NewF->getFunctionType());
+  for (Function &F : M)
+    Changed |= removeAggregateTypesFromCalls(&F);
   return Changed;
 }
 
