@@ -46,6 +46,16 @@ static ParseResult parseSourceLanguage(AsmParser &parser,
 static void printSourceLanguage(AsmPrinter &printer,
                                 DISourceLanguageNameAttr language);
 
+/// Parses an integer value and signless integer type, with an optional trailing
+/// "unsigned" keyword.
+static ParseResult parseWidthAPInt(AsmParser &parser, APInt &value,
+                                   bool &isUnsigned);
+
+/// Prints an integer value and its signless width type, followed by "unsigned"
+/// if set.
+static void printWidthAPInt(AsmPrinter &printer, const APInt &value,
+                            bool isUnsigned);
+
 #include "mlir/Dialect/LLVMIR/LLVMAttrInterfaces.cpp.inc"
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.cpp.inc"
 #define GET_ATTRDEF_CLASSES
@@ -202,14 +212,14 @@ AliasScopeAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 //===----------------------------------------------------------------------===//
 
 bool DINodeAttr::classof(Attribute attr) {
-  return llvm::isa<
-      DIBasicTypeAttr, DICommonBlockAttr, DICompileUnitAttr,
-      DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr, DIGenericSubrangeAttr,
-      DIGlobalVariableAttr, DIImportedEntityAttr, DILabelAttr,
-      DILexicalBlockAttr, DILexicalBlockFileAttr, DILocalVariableAttr,
-      DIModuleAttr, DINamespaceAttr, DINullTypeAttr, DIAnnotationAttr,
-      DIStringTypeAttr, DISubprogramAttr, DISubrangeAttr, DISubroutineTypeAttr>(
-      attr);
+  return llvm::isa<DIBasicTypeAttr, DICommonBlockAttr, DICompileUnitAttr,
+                   DICompositeTypeAttr, DIDerivedTypeAttr, DIEnumeratorAttr,
+                   DIFileAttr, DIGenericSubrangeAttr, DIGlobalVariableAttr,
+                   DIImportedEntityAttr, DILabelAttr, DILexicalBlockAttr,
+                   DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
+                   DINamespaceAttr, DINullTypeAttr, DIAnnotationAttr,
+                   DIStringTypeAttr, DISubprogramAttr, DISubrangeAttr,
+                   DISubroutineTypeAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -757,4 +767,53 @@ MDAddrSpaceCastAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                           "#llvm.md_addrspacecast operand, but got "
                        << arg;
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DIEnumeratorAttr
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseWidthAPInt(AsmParser &parser, APInt &value,
+                                   bool &isUnsigned) {
+  SMLoc loc = parser.getCurrentLocation();
+  APInt parsedValue;
+  if (parser.parseInteger(parsedValue) || parser.parseColon())
+    return failure();
+
+  SMLoc typeLoc = parser.getCurrentLocation();
+  Type type;
+  if (parser.parseType(type))
+    return failure();
+
+  auto intType = dyn_cast<IntegerType>(type);
+  if (!intType || !intType.isSignless() || intType.getWidth() == 0)
+    return parser.emitError(typeLoc,
+                            "expected non-zero width signless integer type");
+
+  isUnsigned = succeeded(parser.parseOptionalKeyword("unsigned"));
+  unsigned width = intType.getWidth();
+
+  if (isUnsigned) {
+    if (parsedValue.isNegative())
+      return parser.emitError(loc,
+                              "negative integer cannot have an unsigned type");
+    if (parsedValue.getActiveBits() > width)
+      return parser.emitError(loc,
+                              "integer value too large for the given type");
+    value = parsedValue.zextOrTrunc(width);
+  } else {
+    if (parsedValue.getSignificantBits() > width)
+      return parser.emitError(loc,
+                              "integer value out of range for the given type");
+    value = parsedValue.sextOrTrunc(width);
+  }
+  return success();
+}
+
+static void printWidthAPInt(AsmPrinter &printer, const APInt &value,
+                            bool isUnsigned) {
+  value.print(printer.getStream(), /*isSigned=*/!isUnsigned);
+  printer.getStream() << " : i" << value.getBitWidth();
+  if (isUnsigned)
+    printer.getStream() << " unsigned";
 }

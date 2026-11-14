@@ -980,6 +980,21 @@ def LLVM_DICommonBlockAttr : LLVM_Attr<"DICommonBlock", "di_common_block",
 }
 
 //===----------------------------------------------------------------------===//
+// DIEnumeratorAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DIEnumeratorAttr : LLVM_Attr<"DIEnumerator", "di_enumerator",
+                                      /*traits=*/[], "DINodeAttr"> {
+  let parameters = (ins
+    OptionalParameter<"StringAttr">:$name,
+    APIntParameter<"">:$value,
+    DefaultValuedParameter<"bool", "false">:$isUnsigned
+  );
+  let assemblyFormat =
+      "`<` (`name` `=` $name^ `,` ` `)? custom<WidthAPInt>($value, $isUnsigned) `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // DIGenericSubrangeAttr
 //===----------------------------------------------------------------------===//
 
