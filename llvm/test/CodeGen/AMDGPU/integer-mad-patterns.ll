@@ -407,7 +407,7 @@ define signext i16 @clpeak_imad_pat_i16(i16 signext %x, i16 signext %y) {
 ; GFX11-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.h, v0.l, v0.h
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.l, v0.h, v0.l
-; GFX11-SDAG-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX11-SDAG-TRUE16-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-FAKE16-LABEL: clpeak_imad_pat_i16:
@@ -419,7 +419,7 @@ define signext i16 @clpeak_imad_pat_i16(i16 signext %x, i16 signext %y) {
 ; GFX11-SDAG-FAKE16-NEXT:    v_mad_u16 v0, v1, v0, v1
 ; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_mad_u16 v0, v0, v1, v0
-; GFX11-SDAG-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX11-SDAG-FAKE16-NEXT:    v_cvt_i32_i16_e32 v0, v0
 ; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-TRUE16-LABEL: clpeak_imad_pat_i16:
@@ -436,7 +436,7 @@ define signext i16 @clpeak_imad_pat_i16(i16 signext %x, i16 signext %y) {
 ; GFX11-GISEL-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v1.l
 ; GFX11-GISEL-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v0.h
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX11-GISEL-TRUE16-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-FAKE16-LABEL: clpeak_imad_pat_i16:
@@ -453,7 +453,7 @@ define signext i16 @clpeak_imad_pat_i16(i16 signext %x, i16 signext %y) {
 ; GFX11-GISEL-FAKE16-NEXT:    v_mad_u16 v1, v2, v3, 1
 ; GFX11-GISEL-FAKE16-NEXT:    v_mul_lo_u16 v0, v0, v1
 ; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX11-GISEL-FAKE16-NEXT:    v_cvt_i32_i16_e32 v0, v0
 ; GFX11-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1200-SDAG-TRUE16-LABEL: clpeak_imad_pat_i16:
@@ -469,7 +469,7 @@ define signext i16 @clpeak_imad_pat_i16(i16 signext %x, i16 signext %y) {
 ; GFX1200-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.h, v0.l, v0.h
 ; GFX1200-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.l, v0.h, v0.l
-; GFX1200-SDAG-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1200-SDAG-TRUE16-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
 ; GFX1200-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1200-SDAG-FAKE16-LABEL: clpeak_imad_pat_i16:
@@ -485,7 +485,7 @@ define signext i16 @clpeak_imad_pat_i16(i16 signext %x, i16 signext %y) {
 ; GFX1200-SDAG-FAKE16-NEXT:    v_mad_u16 v0, v1, v0, v1
 ; GFX1200-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-SDAG-FAKE16-NEXT:    v_mad_u16 v0, v0, v1, v0
-; GFX1200-SDAG-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1200-SDAG-FAKE16-NEXT:    v_cvt_i32_i16_e32 v0, v0
 ; GFX1200-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1200-GISEL-TRUE16-LABEL: clpeak_imad_pat_i16:
@@ -506,7 +506,7 @@ define signext i16 @clpeak_imad_pat_i16(i16 signext %x, i16 signext %y) {
 ; GFX1200-GISEL-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v1.l
 ; GFX1200-GISEL-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v0.h
 ; GFX1200-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1200-GISEL-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1200-GISEL-TRUE16-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
 ; GFX1200-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1200-GISEL-FAKE16-LABEL: clpeak_imad_pat_i16:
@@ -527,7 +527,7 @@ define signext i16 @clpeak_imad_pat_i16(i16 signext %x, i16 signext %y) {
 ; GFX1200-GISEL-FAKE16-NEXT:    v_mad_u16 v1, v2, v3, 1
 ; GFX1200-GISEL-FAKE16-NEXT:    v_mul_lo_u16 v0, v0, v1
 ; GFX1200-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1200-GISEL-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1200-GISEL-FAKE16-NEXT:    v_cvt_i32_i16_e32 v0, v0
 ; GFX1200-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: clpeak_imad_pat_i16:
@@ -540,7 +540,7 @@ define signext i16 @clpeak_imad_pat_i16(i16 signext %x, i16 signext %y) {
 ; GFX1250-SDAG-FAKE16-NEXT:    v_mad_u16 v0, v1, v0, v1
 ; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-SDAG-FAKE16-NEXT:    v_mad_u16 v0, v0, v1, v0
-; GFX1250-SDAG-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_i32_i16_e32 v0, v0
 ; GFX1250-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: clpeak_imad_pat_i16:
@@ -558,7 +558,7 @@ define signext i16 @clpeak_imad_pat_i16(i16 signext %x, i16 signext %y) {
 ; GFX1250-GISEL-FAKE16-NEXT:    v_mad_u16 v1, v2, v3, 1
 ; GFX1250-GISEL-FAKE16-NEXT:    v_mul_lo_u16 v0, v0, v1
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_i32_i16_e32 v0, v0
 ; GFX1250-GISEL-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-SDAG-REAL16-LABEL: clpeak_imad_pat_i16:
@@ -571,7 +571,7 @@ define signext i16 @clpeak_imad_pat_i16(i16 signext %x, i16 signext %y) {
 ; GFX1250-SDAG-REAL16-NEXT:    v_mad_u16 v0.l, v0.h, v0.l, v0.h
 ; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-SDAG-REAL16-NEXT:    v_mad_u16 v0.l, v0.l, v0.h, v0.l
-; GFX1250-SDAG-REAL16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1250-SDAG-REAL16-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
 ; GFX1250-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-REAL16-LABEL: clpeak_imad_pat_i16:
@@ -589,7 +589,7 @@ define signext i16 @clpeak_imad_pat_i16(i16 signext %x, i16 signext %y) {
 ; GFX1250-GISEL-REAL16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v1.l
 ; GFX1250-GISEL-REAL16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v0.h
 ; GFX1250-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-REAL16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1250-GISEL-REAL16-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
 ; GFX1250-GISEL-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 ; GFX1250-GISEL-LABEL: clpeak_imad_pat_i16:
 ; GFX1250-GISEL:       ; %bb.0: ; %entry
@@ -10131,7 +10131,7 @@ define signext i16 @clpeak_imad_pat_i16_x2(i16 signext %x, i16 signext %y) {
 ; GFX11-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.h, v0.l, v0.h
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.l, v0.h, v0.l
-; GFX11-SDAG-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX11-SDAG-TRUE16-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-FAKE16-LABEL: clpeak_imad_pat_i16_x2:
@@ -10149,7 +10149,7 @@ define signext i16 @clpeak_imad_pat_i16_x2(i16 signext %x, i16 signext %y) {
 ; GFX11-SDAG-FAKE16-NEXT:    v_mad_u16 v0, v1, v0, v1
 ; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_mad_u16 v0, v0, v1, v0
-; GFX11-SDAG-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX11-SDAG-FAKE16-NEXT:    v_cvt_i32_i16_e32 v0, v0
 ; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-TRUE16-LABEL: clpeak_imad_pat_i16_x2:
@@ -10176,7 +10176,7 @@ define signext i16 @clpeak_imad_pat_i16_x2(i16 signext %x, i16 signext %y) {
 ; GFX11-GISEL-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v1.l
 ; GFX11-GISEL-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v0.h
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX11-GISEL-TRUE16-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-FAKE16-LABEL: clpeak_imad_pat_i16_x2:
@@ -10203,7 +10203,7 @@ define signext i16 @clpeak_imad_pat_i16_x2(i16 signext %x, i16 signext %y) {
 ; GFX11-GISEL-FAKE16-NEXT:    v_mad_u16 v1, v2, v3, 1
 ; GFX11-GISEL-FAKE16-NEXT:    v_mul_lo_u16 v0, v0, v1
 ; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX11-GISEL-FAKE16-NEXT:    v_cvt_i32_i16_e32 v0, v0
 ; GFX11-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1200-SDAG-TRUE16-LABEL: clpeak_imad_pat_i16_x2:
@@ -10225,7 +10225,7 @@ define signext i16 @clpeak_imad_pat_i16_x2(i16 signext %x, i16 signext %y) {
 ; GFX1200-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.h, v0.l, v0.h
 ; GFX1200-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.l, v0.h, v0.l
-; GFX1200-SDAG-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1200-SDAG-TRUE16-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
 ; GFX1200-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1200-SDAG-FAKE16-LABEL: clpeak_imad_pat_i16_x2:
@@ -10247,7 +10247,7 @@ define signext i16 @clpeak_imad_pat_i16_x2(i16 signext %x, i16 signext %y) {
 ; GFX1200-SDAG-FAKE16-NEXT:    v_mad_u16 v0, v1, v0, v1
 ; GFX1200-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-SDAG-FAKE16-NEXT:    v_mad_u16 v0, v0, v1, v0
-; GFX1200-SDAG-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1200-SDAG-FAKE16-NEXT:    v_cvt_i32_i16_e32 v0, v0
 ; GFX1200-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1200-GISEL-TRUE16-LABEL: clpeak_imad_pat_i16_x2:
@@ -10278,7 +10278,7 @@ define signext i16 @clpeak_imad_pat_i16_x2(i16 signext %x, i16 signext %y) {
 ; GFX1200-GISEL-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v1.l
 ; GFX1200-GISEL-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v0.h
 ; GFX1200-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1200-GISEL-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1200-GISEL-TRUE16-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
 ; GFX1200-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1200-GISEL-FAKE16-LABEL: clpeak_imad_pat_i16_x2:
@@ -10309,7 +10309,7 @@ define signext i16 @clpeak_imad_pat_i16_x2(i16 signext %x, i16 signext %y) {
 ; GFX1200-GISEL-FAKE16-NEXT:    v_mad_u16 v1, v2, v3, 1
 ; GFX1200-GISEL-FAKE16-NEXT:    v_mul_lo_u16 v0, v0, v1
 ; GFX1200-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1200-GISEL-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1200-GISEL-FAKE16-NEXT:    v_cvt_i32_i16_e32 v0, v0
 ; GFX1200-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: clpeak_imad_pat_i16_x2:
@@ -10328,7 +10328,7 @@ define signext i16 @clpeak_imad_pat_i16_x2(i16 signext %x, i16 signext %y) {
 ; GFX1250-SDAG-FAKE16-NEXT:    v_mad_u16 v0, v1, v0, v1
 ; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-SDAG-FAKE16-NEXT:    v_mad_u16 v0, v0, v1, v0
-; GFX1250-SDAG-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_i32_i16_e32 v0, v0
 ; GFX1250-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: clpeak_imad_pat_i16_x2:
@@ -10356,7 +10356,7 @@ define signext i16 @clpeak_imad_pat_i16_x2(i16 signext %x, i16 signext %y) {
 ; GFX1250-GISEL-FAKE16-NEXT:    v_mad_u16 v1, v2, v3, 1
 ; GFX1250-GISEL-FAKE16-NEXT:    v_mul_lo_u16 v0, v0, v1
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_i32_i16_e32 v0, v0
 ; GFX1250-GISEL-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-SDAG-REAL16-LABEL: clpeak_imad_pat_i16_x2:
@@ -10375,7 +10375,7 @@ define signext i16 @clpeak_imad_pat_i16_x2(i16 signext %x, i16 signext %y) {
 ; GFX1250-SDAG-REAL16-NEXT:    v_mad_u16 v0.l, v0.h, v0.l, v0.h
 ; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-SDAG-REAL16-NEXT:    v_mad_u16 v0.l, v0.l, v0.h, v0.l
-; GFX1250-SDAG-REAL16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1250-SDAG-REAL16-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
 ; GFX1250-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-REAL16-LABEL: clpeak_imad_pat_i16_x2:
@@ -10403,7 +10403,7 @@ define signext i16 @clpeak_imad_pat_i16_x2(i16 signext %x, i16 signext %y) {
 ; GFX1250-GISEL-REAL16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v1.l
 ; GFX1250-GISEL-REAL16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v0.h
 ; GFX1250-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-REAL16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1250-GISEL-REAL16-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
 ; GFX1250-GISEL-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 ; GFX1250-GISEL-LABEL: clpeak_imad_pat_i16_x2:
 ; GFX1250-GISEL:       ; %bb.0: ; %entry

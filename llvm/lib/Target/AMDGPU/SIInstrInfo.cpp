@@ -6408,7 +6408,11 @@ unsigned SIInstrInfo::getVALUOp(unsigned Opc) const {
   case AMDGPU::S_LSHR_B32: return AMDGPU::V_LSHR_B32_e32;
   case AMDGPU::S_LSHR_B64: return AMDGPU::V_LSHR_B64_e64;
   case AMDGPU::S_SEXT_I32_I8: return AMDGPU::V_BFE_I32_e64;
-  case AMDGPU::S_SEXT_I32_I16: return AMDGPU::V_BFE_I32_e64;
+  case AMDGPU::S_SEXT_I32_I16:
+    if (!ST.hasTrue16BitInsts())
+      return AMDGPU::V_BFE_I32_e64;
+    return ST.useRealTrue16Insts() ? AMDGPU::V_CVT_I32_I16_t16_e64
+                                   : AMDGPU::V_CVT_I32_I16_fake16_e64;
   case AMDGPU::S_BFE_U32: return AMDGPU::V_BFE_U32_e64;
   case AMDGPU::S_BFE_I32: return AMDGPU::V_BFE_I32_e64;
   case AMDGPU::S_BFM_B32: return AMDGPU::V_BFM_B32_e64;
@@ -9047,7 +9051,8 @@ void SIInstrInfo::moveToVALUImpl(
       NewInstr->addOperand(Src);
     }
 
-    if (Opcode == AMDGPU::S_SEXT_I32_I8 || Opcode == AMDGPU::S_SEXT_I32_I16) {
+    if (NewOpcode == AMDGPU::V_BFE_I32_e64 &&
+        (Opcode == AMDGPU::S_SEXT_I32_I8 || Opcode == AMDGPU::S_SEXT_I32_I16)) {
       // We are converting these to a BFE, so we need to add the missing
       // operands for the size and offset.
       unsigned Size = (Opcode == AMDGPU::S_SEXT_I32_I8) ? 8 : 16;

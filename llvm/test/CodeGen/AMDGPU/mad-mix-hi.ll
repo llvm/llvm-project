@@ -382,14 +382,23 @@ define i32 @v_mad_mixhi_f16_f16lo_f16lo_f16lo_intpack_sext(half %src0, half %src
 ; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GISEL-GFX11-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_intpack_sext:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_fma_mixlo_f16 v0, v0, v1, v2 op_sel_hi:[1,1,1]
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_bfe_i32 v0, v0, 0, 16
-; GISEL-GFX11-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GISEL-GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GISEL-GFX11-TRUE16-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_intpack_sext:
+; GISEL-GFX11-TRUE16:       ; %bb.0:
+; GISEL-GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX11-TRUE16-NEXT:    v_fma_mixlo_f16 v0, v0, v1, v2 op_sel_hi:[1,1,1]
+; GISEL-GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GISEL-GFX11-TRUE16-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
+; GISEL-GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GISEL-GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-GFX11-FAKE16-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_intpack_sext:
+; GISEL-GFX11-FAKE16:       ; %bb.0:
+; GISEL-GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX11-FAKE16-NEXT:    v_fma_mixlo_f16 v0, v0, v1, v2 op_sel_hi:[1,1,1]
+; GISEL-GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GISEL-GFX11-FAKE16-NEXT:    v_cvt_i32_i16_e32 v0, v0
+; GISEL-GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GISEL-GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX9-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_intpack_sext:
 ; GISEL-GFX9:       ; %bb.0:

@@ -551,12 +551,19 @@ define i32 @v_bswap_i16_sext_to_i32(i16 %src) {
 ; GFX9-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10PLUS-LABEL: v_bswap_i16_sext_to_i32:
-; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    v_perm_b32 v0, 0, v0, 0xc0c0001
-; GFX10PLUS-NEXT:    v_bfe_i32 v0, v0, 0, 16
-; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-LABEL: v_bswap_i16_sext_to_i32:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_perm_b32 v0, 0, v0, 0xc0c0001
+; GFX10-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_bswap_i16_sext_to_i32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_perm_b32 v0, 0, v0, 0xc0c0001
+; GFX11-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call i16 @llvm.bswap.i16(i16 %src)
   %zext = sext i16 %bswap to i32
   ret i32 %zext

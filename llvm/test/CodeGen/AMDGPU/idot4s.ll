@@ -3373,7 +3373,7 @@ define amdgpu_kernel void @idot4_nonstandard_signed(ptr addrspace(1) %src1,
 ; GFX11-DL-TRUE16-NEXT:    v_mad_u16 v0.l, v2.l, v1.l, v0.l
 ; GFX11-DL-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-DL-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX11-DL-TRUE16-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
 ; GFX11-DL-TRUE16-NEXT:    global_store_b32 v1, v0, s[4:5]
 ; GFX11-DL-TRUE16-NEXT:    s_endpgm
 ;
@@ -3410,7 +3410,7 @@ define amdgpu_kernel void @idot4_nonstandard_signed(ptr addrspace(1) %src1,
 ; GFX11-DL-FAKE16-NEXT:    v_mad_u16 v0, v1, v0, v2
 ; GFX11-DL-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-DL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-DL-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX11-DL-FAKE16-NEXT:    v_cvt_i32_i16_e32 v0, v0
 ; GFX11-DL-FAKE16-NEXT:    global_store_b32 v1, v0, s[4:5]
 ; GFX11-DL-FAKE16-NEXT:    s_endpgm
                                        ptr addrspace(1) %src2,
