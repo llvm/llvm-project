@@ -44,6 +44,13 @@ StringRef getRuntimeFunctionName(RuntimeFunction fn);
 LLVM::LLVMFunctionType getRuntimeFunctionType(MLIRContext *ctx,
                                               RuntimeFunction fn);
 
+/// Status returned by the runtime entry points that report whether they
+/// completed. The values are part of the runtime ABI.
+enum class RuntimeResult : int32_t {
+  Success = 0,
+  Error = 1,
+};
+
 /// IDs for the argument descriptors of the OpenACC data entry points, declared
 /// in OpenACCRuntimeDescriptors.def.
 enum class DataDescriptor {
@@ -64,6 +71,21 @@ template <typename FieldEnum>
 int64_t getDataDescriptorFieldIndex(FieldEnum field) {
   return static_cast<int64_t>(field);
 }
+
+/// Fields of the argument struct passed to `__tgt_acc_kernel`, in declaration
+/// order. Declared in OpenACCRuntimeKernelArgs.def.
+enum class KernelArgumentField : int64_t {
+#define ACC_KERNEL_ARG_FIELD(Field, TypeToken) Field,
+#include "mlir/Dialect/OpenACC/OpenACCRuntimeKernelArgs.def"
+};
+
+/// The index an insert of \p field addresses.
+inline int64_t getKernelArgumentFieldIndex(KernelArgumentField field) {
+  return static_cast<int64_t>(field);
+}
+
+/// The LLVM type of the argument struct passed to `__tgt_acc_kernel`.
+LLVM::LLVMStructType getKernelArgumentType(MLIRContext *ctx);
 
 /// Returns the name of the runtime type \p desc materializes.
 StringRef getDataDescriptorName(DataDescriptor desc);
@@ -139,6 +161,12 @@ public:
   void setDeclareBinaryDescriptorFn(DeclareBinaryDescriptorFn fn);
   Value createDeclareBinaryDescriptor(Location loc, OpBuilder &builder) const;
 
+  /// Materialize the target-specific binary descriptor passed to
+  /// `__tgt_acc_kernel`. The default is a null pointer.
+  using KernelBinaryDescriptorFn = std::function<Value(Location, OpBuilder &)>;
+  void setKernelBinaryDescriptorFn(KernelBinaryDescriptorFn fn);
+  Value createKernelBinaryDescriptor(Location loc, OpBuilder &builder) const;
+
 private:
   DenseMap<RuntimeFunction, std::string> overrides;
   DenseMap<DeviceType, int64_t> deviceTypeRuntimeValues;
@@ -146,6 +174,7 @@ private:
   FunctionDisplayNameFn functionDisplayNameFn;
   MapFlagsPostProcessFn mapFlagsPostProcessFn;
   DeclareBinaryDescriptorFn declareBinaryDescriptorFn;
+  KernelBinaryDescriptorFn kernelBinaryDescriptorFn;
   // Default to the encodings used by openacc.h (`acc_async_sync` /
   // `acc_async_noval`).
   int64_t asyncSyncRuntimeValue = -1;

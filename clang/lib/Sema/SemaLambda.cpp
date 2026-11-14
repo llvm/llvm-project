@@ -519,7 +519,11 @@ void Sema::handleLambdaNumbering(
 
   CXXRecordDecl::LambdaNumbering Numbering;
   if (!MCtx && (getLangOpts().CUDA || getLangOpts().SYCLIsDevice ||
-                getLangOpts().SYCLIsHost)) {
+                getLangOpts().SYCLIsHost ||
+                (getLangOpts().OpenMP &&
+                 (getLangOpts().OpenMPIsTargetDevice ||
+                  !getLangOpts().OMPTargetTriples.empty()) &&
+                 !Class->getDeclContext()->getNonClosureAncestor()))) {
     // Force lambda numbering in CUDA/HIP as we need to name lambdas following
     // ODR. Both device- and host-compilation need to have a consistent naming
     // on kernel functions. As lambdas are potential part of these `__global__`
@@ -527,6 +531,8 @@ void Sema::handleLambdaNumbering(
     // Also force for SYCL, since we need this for the
     // __builtin_sycl_unique_stable_name implementation, which depends on lambda
     // mangling.
+    // Also force for OpenMP offloading outside of functions, where target
+    // regions are named after the closure on both host and device.
     MCtx = getMangleNumberingContext(Class, ContextDecl);
     assert(MCtx && "Retrieving mangle numbering context failed!");
     Numbering.HasKnownInternalLinkage = true;
@@ -1141,6 +1147,16 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
 
   // Determine if we're within a context where we know that the lambda will
   // be dependent, because there are template parameters in scope.
+  //
+  // FIXME: A lambda in the noexcept specifier of an abbreviated function
+  // template (e.g. `auto&&`) is not marked dependent when it captures
+  // a dependent entity. See:
+  // * clang/unittests/AST/LambdaDependencyTest.cpp
+  // * https://github.com/llvm/llvm-project/issues/232874
+  // * https://github.com/llvm/llvm-project/issues/233102
+  // A temporary guard in PaddingChecker::shouldSkipDecl skips fields of
+  // dependent type as a workaround; remove it together with this FIXME
+  // once the bug is fixed.
   CXXRecordDecl::LambdaDependencyKind LambdaDependencyKind =
       CXXRecordDecl::LDK_Unknown;
   if (CurScope->getTemplateParamParent() != nullptr) {
@@ -1488,7 +1504,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     const auto &FTI = ParamInfo.getFunctionTypeInfo();
     LSI->ExplicitParams = FTI.getLParenLoc().isValid();
     if (!FTIHasSingleVoidParameter(FTI)) {
-      Params.reserve(Params.size());
+      Params.reserve(FTI.NumParams);
       for (unsigned I = 0; I < FTI.NumParams; ++I) {
         auto *Param = cast<ParmVarDecl>(FTI.Params[I].Param);
         Param->setScopeInfo(0, Params.size());

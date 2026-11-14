@@ -433,10 +433,12 @@ Matrix<T>::splitByBitset(ArrayRef<int> indicator) {
   return {rowsForOne, rowsForZero};
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 template <typename T>
 void Matrix<T>::dump() const {
   print(llvm::errs());
 }
+#endif
 
 template <typename T>
 bool Matrix<T>::hasConsistentState() const {

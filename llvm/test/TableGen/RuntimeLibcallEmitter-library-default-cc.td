@@ -28,7 +28,7 @@ def FooLib : LibcallLibrary<"foo", (add
   LibcallImpls<(add some_impl), isAAPCS>,
   LibcallsWithCC<(add other_impl), FooDefaultOrAAPCS>)>;
 
-def FooSystem : SystemRuntimeLibrary<isFoo, (add FooLib)> {
+def FooSystem : SystemRuntimeLibrary<isFoo, ["foo"]> {
   let DefaultLibcallCallingConv
     = LibcallCallingConv<[{FloatABI == FloatABI::Hard ? CallingConv::ARM_AAPCS_VFP : CallingConv::ARM_AAPCS}]>;
 }
@@ -42,7 +42,19 @@ def FooSystem : SystemRuntimeLibrary<isFoo, (add FooLib)> {
 
 // The dispatcher computes the whole-table DefaultCC and passes it down.
 
-// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(
-// CHECK: const CallingConv::ID DefaultCC = FloatABI == FloatABI::Hard ? CallingConv::ARM_AAPCS_VFP : CallingConv::ARM_AAPCS;
-// CHECK: if (isLibraryAvailable("foo"))
-// CHECK-NEXT: setAvailableLibFuncs_foo(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, DefaultCC);
+// CHECK-LABEL: CallingConv::ID llvm::RTLIB::RuntimeLibcallsInfo::getDefaultLibcallCallingConv(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
+// CHECK-NEXT:   if (TT.getArch() == Triple::arm) {
+// CHECK-NEXT:     return FloatABI == FloatABI::Hard ? CallingConv::ARM_AAPCS_VFP : CallingConv::ARM_AAPCS;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   return CallingConv::C;
+// CHECK-NEXT: }
+
+// CHECK-LABEL: ArrayRef<RTLIB::RuntimeLibrary> llvm::RTLIB::RuntimeLibcallsInfo::getDefaultRuntimeLibraries(const llvm::Triple &TT) {
+// CHECK-NEXT:   if (TT.getArch() == Triple::arm) {
+// CHECK-NEXT:     static constexpr RTLIB::RuntimeLibrary Libs[] = {
+// CHECK-NEXT:       RTLIB::RuntimeLibrary::foo,
+// CHECK-NEXT:     };
+// CHECK-NEXT:     return Libs;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   return {};
+// CHECK-NEXT: }

@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 
 #include "llvm/ADT/APInt.h"
@@ -39,6 +40,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Assumptions.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -262,7 +264,8 @@ static bool isDenselyPacked(Type *Ty, const DataLayout &DL) {
     StartPos += DL.getTypeAllocSizeInBits(ElTy);
   }
 
-  return true;
+  // Check for tail padding.
+  return StartPos == Layout->getSizeInBits();
 }
 
 /// Get pointer operand of memory accessing instruction. If \p I is
@@ -300,8 +303,8 @@ static Value *constructPointer(Value *Ptr, int64_t Offset,
                     << "-bytes\n");
 
   if (Offset)
-    Ptr = IRB.CreatePtrAdd(Ptr, IRB.getInt64(Offset),
-                           Ptr->getName() + ".b" + Twine(Offset));
+    Ptr = IRB.CreatePtrAddWithSignedOffset(
+        Ptr, Offset, Ptr->getName() + ".b" + Twine(Offset));
   return Ptr;
 }
 
@@ -418,7 +421,6 @@ struct AAReturnedFromReturnedValues : public BaseType {
   AAReturnedFromReturnedValues(const IRPosition &IRP, Attributor &A)
       : BaseType(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     StateType S(StateType::getBestState(this->getState()));
     clampReturnedValueStates<AAType, StateType, IRAttributeKind,
@@ -539,7 +541,6 @@ struct AAArgumentFromCallSiteArguments : public BaseType {
   AAArgumentFromCallSiteArguments(const IRPosition &IRP, Attributor &A)
       : BaseType(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     StateType S = StateType::getBestState(this->getState());
 
@@ -568,7 +569,6 @@ template <typename AAType, typename BaseType,
 struct AACalleeToCallSite : public BaseType {
   AACalleeToCallSite(const IRPosition &IRP, Attributor &A) : BaseType(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     auto IRPKind = this->getIRPosition().getPositionKind();
     assert((IRPKind == IRPosition::IRP_CALL_SITE_RETURNED ||
@@ -585,6 +585,11 @@ struct AACalleeToCallSite : public BaseType {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     auto CalleePred = [&](ArrayRef<const Function *> Callees) {
       for (const Function *Callee : Callees) {
+        // The returned position of the callee does not describe the call if
+        // the call uses a different return type.
+        if (IRPKind == IRPosition::IRP_CALL_SITE_RETURNED &&
+            Callee->getReturnType() != CB.getType())
+          return false;
         IRPosition FnPos =
             IRPKind == llvm::IRPosition::IRP_CALL_SITE_RETURNED
                 ? IRPosition::returned(*Callee,
@@ -782,19 +787,15 @@ struct AA::PointerInfo::State : public AbstractState {
 
   const State &getAssumed() const { return *this; }
 
-  /// See AbstractState::isValidState().
   bool isValidState() const override { return BS.isValidState(); }
 
-  /// See AbstractState::isAtFixpoint().
   bool isAtFixpoint() const override { return BS.isAtFixpoint(); }
 
-  /// See AbstractState::indicateOptimisticFixpoint().
   ChangeStatus indicateOptimisticFixpoint() override {
     BS.indicateOptimisticFixpoint();
     return ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractState::indicatePessimisticFixpoint().
   ChangeStatus indicatePessimisticFixpoint() override {
     BS.indicatePessimisticFixpoint();
     return ChangeStatus::CHANGED;
@@ -1001,7 +1002,6 @@ struct AAPointerInfoImpl
   using BaseTy = StateWrapper<AA::PointerInfo::State, AAPointerInfo>;
   AAPointerInfoImpl(const IRPosition &IRP, Attributor &A) : BaseTy(IRP) {}
 
-  /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     return std::string("PointerInfo ") +
            (isValidState() ? (std::string("#") +
@@ -1016,7 +1016,6 @@ struct AAPointerInfoImpl
                 : "");
   }
 
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     return AAPointerInfo::manifest(A);
   }
@@ -1398,7 +1397,6 @@ struct AAPointerInfoImpl
   }
 
   /// Statistic tracking for all AAPointerInfo implementations.
-  /// See AbstractAttribute::trackStatistics().
   void trackPointerInfoStatistics(const IRPosition &IRP) const {}
 
   /// Dump the state into \p O.
@@ -1465,7 +1463,8 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
       int64_t ElementSize = DL.getTypeStoreSize(ElementType).getFixedValue();
       auto *ConstContent = cast<Constant>(*Content);
       Type *Int32Ty = Type::getInt32Ty(ElementType->getContext());
-      SmallVector<int64_t> ElementOffsets(Offsets.begin(), Offsets.end());
+      SmallVector<int64_t> ElementOffsets(OffsetsSorted.begin(),
+                                          OffsetsSorted.end());
 
       for (int i = 0, e = VT->getElementCount().getFixedValue(); i != e; ++i) {
         Value *ElementContent = ConstantExpr::getExtractElement(
@@ -1483,7 +1482,6 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
     return true;
   };
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override;
 
   /// If the indices to \p GEP can be traced to constants, incorporate all
@@ -1494,7 +1492,6 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
                               OffsetInfo &UsrOI, const OffsetInfo &PtrOI,
                               const GEPOperator *GEP);
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     AAPointerInfoImpl::trackPointerInfoStatistics(getIRPosition());
   }
@@ -1603,15 +1600,12 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     assert(!OffsetInfoMap[CurPtr].isUnassigned() &&
            "Current pointer should be assigned");
 
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Usr)) {
-      if (CE->isCast())
-        return HandlePassthroughUser(Usr, CurPtr, Follow);
-      if (!isa<GEPOperator>(CE)) {
-        LLVM_DEBUG(dbgs() << "[AAPointerInfo] Unhandled constant user " << *CE
-                          << "\n");
-        return false;
-      }
-    }
+    // Only address space casts are followed; other casts of a pointer (e.g.,
+    // ptrtoint, ptrtoaddr, or a bitcast to a byte type) do not produce a
+    // pointer that can be tracked.
+    if (isa<AddrSpaceCastOperator>(Usr))
+      return HandlePassthroughUser(Usr, CurPtr, Follow);
+
     if (auto *GEP = dyn_cast<GEPOperator>(Usr)) {
       // Note the order here, the Usr access might change the map, CurPtr is
       // already in it though.
@@ -1630,9 +1624,7 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
       Follow = collectConstantsForGEP(A, DL, UsrOI, PtrOI, GEP);
       return true;
     }
-    if (isa<PtrToIntInst>(Usr))
-      return false;
-    if (isa<CastInst>(Usr) || isa<SelectInst>(Usr))
+    if (isa<SelectInst>(Usr))
       return HandlePassthroughUser(Usr, CurPtr, Follow);
     // Returns are allowed if they are in the associated functions. Users can
     // then check the call site return. Returns from other functions can't be
@@ -1947,12 +1939,10 @@ struct AAPointerInfoReturned final : AAPointerInfoImpl {
   AAPointerInfoReturned(const IRPosition &IRP, Attributor &A)
       : AAPointerInfoImpl(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     return indicatePessimisticFixpoint();
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     AAPointerInfoImpl::trackPointerInfoStatistics(getIRPosition());
   }
@@ -1962,7 +1952,6 @@ struct AAPointerInfoArgument final : AAPointerInfoFloating {
   AAPointerInfoArgument(const IRPosition &IRP, Attributor &A)
       : AAPointerInfoFloating(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     AAPointerInfoImpl::trackPointerInfoStatistics(getIRPosition());
   }
@@ -1972,7 +1961,6 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
   AAPointerInfoCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AAPointerInfoFloating(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     using namespace AA::PointerInfo;
     // We handle memory intrinsics explicitly, at least the first (=
@@ -2033,7 +2021,6 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
                      nullptr);
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     AAPointerInfoImpl::trackPointerInfoStatistics(getIRPosition());
   }
@@ -2043,7 +2030,6 @@ struct AAPointerInfoCallSiteReturned final : AAPointerInfoFloating {
   AAPointerInfoCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : AAPointerInfoFloating(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     AAPointerInfoImpl::trackPointerInfoStatistics(getIRPosition());
   }
@@ -2056,7 +2042,6 @@ namespace {
 struct AANoUnwindImpl : AANoUnwind {
   AANoUnwindImpl(const IRPosition &IRP, Attributor &A) : AANoUnwind(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     bool IsKnown;
     assert(!AA::hasAssumedIRAttr<Attribute::NoUnwind>(
@@ -2068,7 +2053,6 @@ struct AANoUnwindImpl : AANoUnwind {
     return getAssumed() ? "nounwind" : "may-unwind";
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     auto Opcodes = {
         (unsigned)Instruction::Invoke,      (unsigned)Instruction::CallBr,
@@ -2101,7 +2085,6 @@ struct AANoUnwindFunction final : public AANoUnwindImpl {
   AANoUnwindFunction(const IRPosition &IRP, Attributor &A)
       : AANoUnwindImpl(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_FN_ATTR(nounwind) }
 };
 
@@ -2111,7 +2094,6 @@ struct AANoUnwindCallSite final
   AANoUnwindCallSite(const IRPosition &IRP, Attributor &A)
       : AACalleeToCallSite<AANoUnwind, AANoUnwindImpl>(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(nounwind); }
 };
 } // namespace
@@ -2176,7 +2158,6 @@ namespace {
 struct AANoSyncImpl : AANoSync {
   AANoSyncImpl(const IRPosition &IRP, Attributor &A) : AANoSync(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     bool IsKnown;
     assert(!AA::hasAssumedIRAttr<Attribute::NoSync>(A, nullptr, getIRPosition(),
@@ -2188,7 +2169,6 @@ struct AANoSyncImpl : AANoSync {
     return getAssumed() ? "nosync" : "may-sync";
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override;
 };
 
@@ -2229,7 +2209,6 @@ struct AANoSyncFunction final : public AANoSyncImpl {
   AANoSyncFunction(const IRPosition &IRP, Attributor &A)
       : AANoSyncImpl(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_FN_ATTR(nosync) }
 };
 
@@ -2238,7 +2217,6 @@ struct AANoSyncCallSite final : AACalleeToCallSite<AANoSync, AANoSyncImpl> {
   AANoSyncCallSite(const IRPosition &IRP, Attributor &A)
       : AACalleeToCallSite<AANoSync, AANoSyncImpl>(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(nosync); }
 };
 } // namespace
@@ -2249,7 +2227,6 @@ namespace {
 struct AANoFreeImpl : public AANoFree {
   AANoFreeImpl(const IRPosition &IRP, Attributor &A) : AANoFree(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     bool IsKnown;
     assert(!AA::hasAssumedIRAttr<Attribute::NoFree>(A, nullptr, getIRPosition(),
@@ -2257,7 +2234,6 @@ struct AANoFreeImpl : public AANoFree {
     (void)IsKnown;
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     auto CheckForNoFree = [&](Instruction &I) {
       if (auto *CB = dyn_cast<CallBase>(&I)) {
@@ -2281,7 +2257,6 @@ struct AANoFreeImpl : public AANoFree {
     return ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     return getAssumed() ? "nofree" : "may-free";
   }
@@ -2291,7 +2266,6 @@ struct AANoFreeFunction final : public AANoFreeImpl {
   AANoFreeFunction(const IRPosition &IRP, Attributor &A)
       : AANoFreeImpl(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_FN_ATTR(nofree) }
 };
 
@@ -2300,7 +2274,6 @@ struct AANoFreeCallSite final : AACalleeToCallSite<AANoFree, AANoFreeImpl> {
   AANoFreeCallSite(const IRPosition &IRP, Attributor &A)
       : AACalleeToCallSite<AANoFree, AANoFreeImpl>(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(nofree); }
 };
 
@@ -2309,7 +2282,6 @@ struct AANoFreeFloating : AANoFreeImpl {
   AANoFreeFloating(const IRPosition &IRP, Attributor &A)
       : AANoFreeImpl(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override{STATS_DECLTRACK_FLOATING_ATTR(nofree)}
 
   /// See Abstract Attribute::updateImpl(...).
@@ -2382,7 +2354,6 @@ struct AANoFreeArgument final : AANoFreeFloating {
   AANoFreeArgument(const IRPosition &IRP, Attributor &A)
       : AANoFreeFloating(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_ARG_ATTR(nofree) }
 };
 
@@ -2391,7 +2362,6 @@ struct AANoFreeCallSiteArgument final : AANoFreeFloating {
   AANoFreeCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AANoFreeFloating(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     // TODO: Once we have call site specific value information we can provide
     //       call site specific liveness information and then it makes
@@ -2408,7 +2378,6 @@ struct AANoFreeCallSiteArgument final : AANoFreeFloating {
     return indicatePessimisticFixpoint();
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CSARG_ATTR(nofree) };
 };
 
@@ -2419,17 +2388,14 @@ struct AANoFreeReturned final : AANoFreeFloating {
     llvm_unreachable("NoFree is not applicable to function returns!");
   }
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     llvm_unreachable("NoFree is not applicable to function returns!");
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     llvm_unreachable("NoFree is not applicable to function returns!");
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
 };
 
@@ -2441,7 +2407,6 @@ struct AANoFreeCallSiteReturned final : AANoFreeFloating {
   ChangeStatus manifest(Attributor &A) override {
     return ChangeStatus::UNCHANGED;
   }
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CSRET_ATTR(nofree) }
 };
 } // namespace
@@ -2526,11 +2491,19 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
   const DataLayout &DL = A.getInfoCache().getDL();
   if (const auto *CB = dyn_cast<CallBase>(I)) {
     if (CB->isBundleOperand(U)) {
-      if (RetainedKnowledge RK = getKnowledgeFromUse(
-              U, {Attribute::NonNull, Attribute::Dereferenceable})) {
-        IsNonNull |=
-            (RK.AttrKind == Attribute::NonNull || !NullPointerIsDefined);
-        return RK.ArgValue;
+      auto OBU = CB->getOperandBundleForOperand(U->getOperandNo());
+      switch (getBundleAttrFromOBU(OBU)) {
+      case BundleAttr::NonNull:
+        IsNonNull = true;
+        break;
+      case BundleAttr::Dereferenceable: {
+        IsNonNull |= !NullPointerIsDefined;
+        Value *Count = getAssumeDereferenceableInfo(OBU).Count;
+        if (auto *CI = dyn_cast<ConstantInt>(Count))
+          return CI->getZExtValue();
+      } break;
+      default:
+        break;
       }
       return 0;
     }
@@ -2582,7 +2555,6 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
 struct AANonNullImpl : AANonNull {
   AANonNullImpl(const IRPosition &IRP, Attributor &A) : AANonNull(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     Value &V = *getAssociatedValue().stripPointerCasts();
     if (isa<ConstantPointerNull>(V)) {
@@ -2605,7 +2577,6 @@ struct AANonNullImpl : AANonNull {
     return TrackUse;
   }
 
-  /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     return getAssumed() ? "nonnull" : "may-null";
   }
@@ -2616,7 +2587,6 @@ struct AANonNullFloating : public AANonNullImpl {
   AANonNullFloating(const IRPosition &IRP, Attributor &A)
       : AANonNullImpl(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     auto CheckIRP = [&](const IRPosition &IRP) {
       bool IsKnownNonNull;
@@ -2670,7 +2640,6 @@ struct AANonNullFloating : public AANonNullImpl {
     return ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_FNRET_ATTR(nonnull) }
 };
 
@@ -2683,12 +2652,10 @@ struct AANonNullReturned final
                                      false, Attribute::NonNull, false>(IRP, A) {
   }
 
-  /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     return getAssumed() ? "nonnull" : "may-null";
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_FNRET_ATTR(nonnull) }
 };
 
@@ -2698,7 +2665,6 @@ struct AANonNullArgument final
   AANonNullArgument(const IRPosition &IRP, Attributor &A)
       : AAArgumentFromCallSiteArguments<AANonNull, AANonNullImpl>(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_ARG_ATTR(nonnull) }
 };
 
@@ -2706,7 +2672,6 @@ struct AANonNullCallSiteArgument final : AANonNullFloating {
   AANonNullCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AANonNullFloating(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CSARG_ATTR(nonnull) }
 };
 
@@ -2716,7 +2681,6 @@ struct AANonNullCallSiteReturned final
   AANonNullCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : AACalleeToCallSite<AANonNull, AANonNullImpl>(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CSRET_ATTR(nonnull) }
 };
 } // namespace
@@ -2727,7 +2691,6 @@ struct AAMustProgressImpl : public AAMustProgress {
   AAMustProgressImpl(const IRPosition &IRP, Attributor &A)
       : AAMustProgress(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     bool IsKnown;
     assert(!AA::hasAssumedIRAttr<Attribute::MustProgress>(
@@ -2735,7 +2698,6 @@ struct AAMustProgressImpl : public AAMustProgress {
     (void)IsKnown;
   }
 
-  /// See AbstractAttribute::getAsStr()
   const std::string getAsStr(Attributor *A) const override {
     return getAssumed() ? "mustprogress" : "may-not-progress";
   }
@@ -2745,7 +2707,6 @@ struct AAMustProgressFunction final : AAMustProgressImpl {
   AAMustProgressFunction(const IRPosition &IRP, Attributor &A)
       : AAMustProgressImpl(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     bool IsKnown;
     if (AA::hasAssumedIRAttr<Attribute::WillReturn>(
@@ -2772,7 +2733,6 @@ struct AAMustProgressFunction final : AAMustProgressImpl {
     return ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_FN_ATTR(mustprogress)
   }
@@ -2783,7 +2743,6 @@ struct AAMustProgressCallSite final : AAMustProgressImpl {
   AAMustProgressCallSite(const IRPosition &IRP, Attributor &A)
       : AAMustProgressImpl(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     // TODO: Once we have call site specific value information we can provide
     //       call site specific liveness information and then it makes
@@ -2797,7 +2756,6 @@ struct AAMustProgressCallSite final : AAMustProgressImpl {
     return ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_CS_ATTR(mustprogress);
   }
@@ -2810,7 +2768,6 @@ namespace {
 struct AANoRecurseImpl : public AANoRecurse {
   AANoRecurseImpl(const IRPosition &IRP, Attributor &A) : AANoRecurse(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     bool IsKnown;
     assert(!AA::hasAssumedIRAttr<Attribute::NoRecurse>(
@@ -2818,7 +2775,6 @@ struct AANoRecurseImpl : public AANoRecurse {
     (void)IsKnown;
   }
 
-  /// See AbstractAttribute::getAsStr()
   const std::string getAsStr(Attributor *A) const override {
     return getAssumed() ? "norecurse" : "may-recurse";
   }
@@ -2828,7 +2784,6 @@ struct AANoRecurseFunction final : AANoRecurseImpl {
   AANoRecurseFunction(const IRPosition &IRP, Attributor &A)
       : AANoRecurseImpl(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
 
     // If all live call sites are known to be no-recurse, we are as well.
@@ -2871,7 +2826,6 @@ struct AANoRecurseCallSite final
   AANoRecurseCallSite(const IRPosition &IRP, Attributor &A)
       : AACalleeToCallSite<AANoRecurse, AANoRecurseImpl>(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(norecurse); }
 };
 } // namespace
@@ -2883,7 +2837,6 @@ struct AANonConvergentImpl : public AANonConvergent {
   AANonConvergentImpl(const IRPosition &IRP, Attributor &A)
       : AANonConvergent(IRP, A) {}
 
-  /// See AbstractAttribute::getAsStr()
   const std::string getAsStr(Attributor *A) const override {
     return getAssumed() ? "non-convergent" : "may-be-convergent";
   }
@@ -2893,7 +2846,6 @@ struct AANonConvergentFunction final : AANonConvergentImpl {
   AANonConvergentFunction(const IRPosition &IRP, Attributor &A)
       : AANonConvergentImpl(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     // If all function calls are known to not be convergent, we are not
     // convergent.
@@ -2958,8 +2910,6 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
     UBInfo(Kind K, std::optional<unsigned> ArgNo) : K(K), ArgNo(ArgNo) {}
   };
 
-  /// See AbstractAttribute::updateImpl(...).
-  // through a pointer (i.e. also branches etc.)
   ChangeStatus updateImpl(Attributor &A) override {
     const size_t UBPrevSize = KnownUBInsts.size();
     const size_t NoUBPrevSize = AssumedNoUBInsts.size();
@@ -3238,7 +3188,6 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
     return ChangeStatus::CHANGED;
   }
 
-  /// See AbstractAttribute::getAsStr()
   const std::string getAsStr(Attributor *A) const override {
     return getAssumed() ? "undefined-behavior" : "no-ub";
   }
@@ -3314,7 +3263,6 @@ struct AAUndefinedBehaviorFunction final : AAUndefinedBehaviorImpl {
   AAUndefinedBehaviorFunction(const IRPosition &IRP, Attributor &A)
       : AAUndefinedBehaviorImpl(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECL(UndefinedBehaviorInstruction, Instruction,
                "Number of instructions known to have UB");
@@ -3361,7 +3309,6 @@ struct AAWillReturnImpl : public AAWillReturn {
   AAWillReturnImpl(const IRPosition &IRP, Attributor &A)
       : AAWillReturn(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     bool IsKnown;
     assert(!AA::hasAssumedIRAttr<Attribute::WillReturn>(
@@ -3380,7 +3327,6 @@ struct AAWillReturnImpl : public AAWillReturn {
     return false;
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     if (isImpliedByMustprogressAndReadonly(A, /* KnownOnly */ false))
       return ChangeStatus::UNCHANGED;
@@ -3419,7 +3365,6 @@ struct AAWillReturnImpl : public AAWillReturn {
     return ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::getAsStr()
   const std::string getAsStr(Attributor *A) const override {
     return getAssumed() ? "willreturn" : "may-noreturn";
   }
@@ -3429,7 +3374,6 @@ struct AAWillReturnFunction final : AAWillReturnImpl {
   AAWillReturnFunction(const IRPosition &IRP, Attributor &A)
       : AAWillReturnImpl(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     AAWillReturnImpl::initialize(A);
 
@@ -3439,7 +3383,6 @@ struct AAWillReturnFunction final : AAWillReturnImpl {
       indicatePessimisticFixpoint();
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_FN_ATTR(willreturn) }
 };
 
@@ -3449,7 +3392,6 @@ struct AAWillReturnCallSite final
   AAWillReturnCallSite(const IRPosition &IRP, Attributor &A)
       : AACalleeToCallSite<AAWillReturn, AAWillReturnImpl>(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     if (isImpliedByMustprogressAndReadonly(A, /* KnownOnly */ false))
       return ChangeStatus::UNCHANGED;
@@ -3457,7 +3399,6 @@ struct AAWillReturnCallSite final
     return AACalleeToCallSite::updateImpl(A);
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(willreturn); }
 };
 } // namespace
@@ -3540,10 +3481,8 @@ struct CachedReachabilityAA : public BaseTy {
 
   CachedReachabilityAA(const IRPosition &IRP, Attributor &A) : BaseTy(IRP, A) {}
 
-  /// See AbstractAttribute::isQueryAA.
   bool isQueryAA() const override { return true; }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     for (unsigned u = 0, e = QueryVector.size(); u < e; ++u) {
@@ -3775,7 +3714,6 @@ struct AAIntraFnReachabilityFunction final
                           IsTemporaryRQI);
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
 
 private:
@@ -3839,13 +3777,11 @@ struct AANoAliasFloating final : AANoAliasImpl {
   AANoAliasFloating(const IRPosition &IRP, Attributor &A)
       : AANoAliasImpl(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     // TODO: Implement this.
     return indicatePessimisticFixpoint();
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_FLOATING_ATTR(noalias)
   }
@@ -3857,7 +3793,6 @@ struct AANoAliasArgument final
   using Base = AAArgumentFromCallSiteArguments<AANoAlias, AANoAliasImpl>;
   AANoAliasArgument(const IRPosition &IRP, Attributor &A) : Base(IRP, A) {}
 
-  /// See AbstractAttribute::update(...).
   ChangeStatus updateImpl(Attributor &A) override {
     // We have to make sure no-alias on the argument does not break
     // synchronization when this is a callback argument, see also [1] below.
@@ -3893,7 +3828,6 @@ struct AANoAliasArgument final
     return indicatePessimisticFixpoint();
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_ARG_ATTR(noalias) }
 };
 
@@ -4035,7 +3969,6 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
     return true;
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     // If the argument is readnone we are done as there are no accesses via the
     // argument.
@@ -4066,7 +3999,6 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
     return indicatePessimisticFixpoint();
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CSARG_ATTR(noalias) }
 };
 
@@ -4075,7 +4007,6 @@ struct AANoAliasReturned final : AANoAliasImpl {
   AANoAliasReturned(const IRPosition &IRP, Attributor &A)
       : AANoAliasImpl(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
 
     auto CheckReturnValue = [&](Value &RV) -> bool {
@@ -4109,7 +4040,6 @@ struct AANoAliasReturned final : AANoAliasImpl {
     return ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_FNRET_ATTR(noalias) }
 };
 
@@ -4119,7 +4049,6 @@ struct AANoAliasCallSiteReturned final
   AANoAliasCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : AACalleeToCallSite<AANoAlias, AANoAliasImpl>(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CSRET_ATTR(noalias); }
 };
 } // namespace
@@ -4130,29 +4059,22 @@ namespace {
 struct AAIsDeadValueImpl : public AAIsDead {
   AAIsDeadValueImpl(const IRPosition &IRP, Attributor &A) : AAIsDead(IRP, A) {}
 
-  /// See AAIsDead::isAssumedDead().
   bool isAssumedDead() const override { return isAssumed(IS_DEAD); }
 
-  /// See AAIsDead::isKnownDead().
   bool isKnownDead() const override { return isKnown(IS_DEAD); }
 
-  /// See AAIsDead::isAssumedDead(BasicBlock *).
   bool isAssumedDead(const BasicBlock *BB) const override { return false; }
 
-  /// See AAIsDead::isKnownDead(BasicBlock *).
   bool isKnownDead(const BasicBlock *BB) const override { return false; }
 
-  /// See AAIsDead::isAssumedDead(Instruction *I).
   bool isAssumedDead(const Instruction *I) const override {
     return I == getCtxI() && isAssumedDead();
   }
 
-  /// See AAIsDead::isKnownDead(Instruction *I).
   bool isKnownDead(const Instruction *I) const override {
     return isAssumedDead(I) && isKnownDead();
   }
 
-  /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     return isAssumedDead() ? "assumed-dead" : "assumed-live";
   }
@@ -4213,7 +4135,6 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
   AAIsDeadFloating(const IRPosition &IRP, Attributor &A)
       : AAIsDeadValueImpl(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     AAIsDeadValueImpl::initialize(A);
 
@@ -4287,7 +4208,6 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
     });
   }
 
-  /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     Instruction *I = dyn_cast<Instruction>(&getAssociatedValue());
     if (isa_and_nonnull<StoreInst>(I))
@@ -4299,7 +4219,6 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
     return AAIsDeadValueImpl::getAsStr(A);
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     Instruction *I = dyn_cast<Instruction>(&getAssociatedValue());
     if (auto *SI = dyn_cast_or_null<StoreInst>(I)) {
@@ -4321,7 +4240,6 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
     return isAssumed(IS_REMOVABLE) && isa<StoreInst>(&getAssociatedValue());
   }
 
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     Value &V = getAssociatedValue();
     if (auto *I = dyn_cast<Instruction>(&V)) {
@@ -4356,7 +4274,6 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
     return ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_FLOATING_ATTR(IsDead)
   }
@@ -4370,7 +4287,6 @@ struct AAIsDeadArgument : public AAIsDeadFloating {
   AAIsDeadArgument(const IRPosition &IRP, Attributor &A)
       : AAIsDeadFloating(IRP, A) {}
 
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     Argument &Arg = *getAssociatedArgument();
     if (A.isValidFunctionSignatureRewrite(Arg, /* ReplacementTypes */ {}))
@@ -4383,7 +4299,6 @@ struct AAIsDeadArgument : public AAIsDeadFloating {
     return ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_ARG_ATTR(IsDead) }
 };
 
@@ -4391,14 +4306,12 @@ struct AAIsDeadCallSiteArgument : public AAIsDeadValueImpl {
   AAIsDeadCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AAIsDeadValueImpl(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     AAIsDeadValueImpl::initialize(A);
     if (isa<UndefValue>(getAssociatedValue()))
       indicatePessimisticFixpoint();
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     // TODO: Once we have call site specific value information we can provide
     //       call site specific liveness information and then it makes
@@ -4414,7 +4327,6 @@ struct AAIsDeadCallSiteArgument : public AAIsDeadValueImpl {
     return clampStateAndIndicateChange(getState(), ArgAA->getState());
   }
 
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     CallBase &CB = cast<CallBase>(getAnchorValue());
     Use &U = CB.getArgOperandUse(getCallSiteArgNo());
@@ -4426,7 +4338,6 @@ struct AAIsDeadCallSiteArgument : public AAIsDeadValueImpl {
     return ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CSARG_ATTR(IsDead) }
 };
 
@@ -4434,12 +4345,10 @@ struct AAIsDeadCallSiteReturned : public AAIsDeadFloating {
   AAIsDeadCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : AAIsDeadFloating(IRP, A) {}
 
-  /// See AAIsDead::isAssumedDead().
   bool isAssumedDead() const override {
     return AAIsDeadFloating::isAssumedDead() && IsAssumedSideEffectFree;
   }
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     AAIsDeadFloating::initialize(A);
     if (isa<UndefValue>(getAssociatedValue())) {
@@ -4451,7 +4360,6 @@ struct AAIsDeadCallSiteReturned : public AAIsDeadFloating {
     IsAssumedSideEffectFree = isAssumedSideEffectFree(A, getCtxI());
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     if (IsAssumedSideEffectFree && !isAssumedSideEffectFree(A, getCtxI())) {
@@ -4463,7 +4371,6 @@ struct AAIsDeadCallSiteReturned : public AAIsDeadFloating {
     return Changed;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     if (IsAssumedSideEffectFree)
       STATS_DECLTRACK_CSRET_ATTR(IsDead)
@@ -4471,7 +4378,6 @@ struct AAIsDeadCallSiteReturned : public AAIsDeadFloating {
       STATS_DECLTRACK_CSRET_ATTR(UnusedResult)
   }
 
-  /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     return isAssumedDead()
                ? "assumed-dead"
@@ -4486,7 +4392,6 @@ struct AAIsDeadReturned : public AAIsDeadValueImpl {
   AAIsDeadReturned(const IRPosition &IRP, Attributor &A)
       : AAIsDeadValueImpl(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
 
     bool UsedAssumedInformation = false;
@@ -4506,7 +4411,6 @@ struct AAIsDeadReturned : public AAIsDeadValueImpl {
     return ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     // TODO: Rewrite the signature to return void?
     bool AnyChange = false;
@@ -4523,14 +4427,12 @@ struct AAIsDeadReturned : public AAIsDeadValueImpl {
     return AnyChange ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_FNRET_ATTR(IsDead) }
 };
 
 struct AAIsDeadFunction : public AAIsDead {
   AAIsDeadFunction(const IRPosition &IRP, Attributor &A) : AAIsDead(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     Function *F = getAnchorScope();
     assert(F && "Did expect an anchor function");
@@ -4543,12 +4445,17 @@ struct AAIsDeadFunction : public AAIsDead {
   bool isAssumedDeadInternalFunction(Attributor &A) {
     if (!getAnchorScope()->hasLocalLinkage())
       return false;
+    // An AA that will not be updated is fixed pessimistically right after
+    // initialization, so an assumed-dead result would be discarded. Checking
+    // the call sites recursively initializes the liveness of every internal
+    // caller, which in CGSCC cleanup repeats for each callee SCC.
+    if (!A.shouldUpdateAA<AAIsDead>(getIRPosition()))
+      return false;
     bool UsedAssumedInformation = false;
     return A.checkForAllCallSites([](AbstractCallSite) { return false; }, *this,
                                   true, UsedAssumedInformation);
   }
 
-  /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     return "Live[#BB " + std::to_string(AssumedLiveBlocks.size()) + "/" +
            std::to_string(getAnchorScope()->size()) + "][#TBEP " +
@@ -4556,7 +4463,6 @@ struct AAIsDeadFunction : public AAIsDead {
            std::to_string(KnownDeadEnds.size()) + "]";
   }
 
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     assert(getState().isValidState() &&
            "Attempted to manifest an invalid state!");
@@ -4605,7 +4511,6 @@ struct AAIsDeadFunction : public AAIsDead {
     return HasChanged;
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override;
 
   bool isEdgeDead(const BasicBlock *From, const BasicBlock *To) const override {
@@ -4615,16 +4520,13 @@ struct AAIsDeadFunction : public AAIsDead {
     return isValidState() && !AssumedLiveEdges.count(std::make_pair(From, To));
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
 
   /// Returns true if the function is assumed dead.
   bool isAssumedDead() const override { return false; }
 
-  /// See AAIsDead::isKnownDead().
   bool isKnownDead() const override { return false; }
 
-  /// See AAIsDead::isAssumedDead(BasicBlock *).
   bool isAssumedDead(const BasicBlock *BB) const override {
     assert(BB->getParent() == getAnchorScope() &&
            "BB must be in the same anchor scope function.");
@@ -4634,12 +4536,10 @@ struct AAIsDeadFunction : public AAIsDead {
     return !AssumedLiveBlocks.count(BB);
   }
 
-  /// See AAIsDead::isKnownDead(BasicBlock *).
   bool isKnownDead(const BasicBlock *BB) const override {
     return getKnown() && isAssumedDead(BB);
   }
 
-  /// See AAIsDead::isAssumed(Instruction *I).
   bool isAssumedDead(const Instruction *I) const override {
     assert(I->getParent()->getParent() == getAnchorScope() &&
            "Instruction must be in the same anchor scope function.");
@@ -4662,7 +4562,6 @@ struct AAIsDeadFunction : public AAIsDead {
     return false;
   }
 
-  /// See AAIsDead::isKnownDead(Instruction *I).
   bool isKnownDead(const Instruction *I) const override {
     return getKnown() && isAssumedDead(I);
   }
@@ -4962,7 +4861,6 @@ struct AAIsDeadCallSite final : AAIsDeadFunction {
   AAIsDeadCallSite(const IRPosition &IRP, Attributor &A)
       : AAIsDeadFunction(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     // TODO: Once we have call site specific value information we can provide
     //       call site specific liveness information and then it makes
@@ -4972,12 +4870,10 @@ struct AAIsDeadCallSite final : AAIsDeadFunction {
                      "supported for call sites yet!");
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     return indicatePessimisticFixpoint();
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
 };
 } // namespace
@@ -4990,7 +4886,6 @@ struct AADereferenceableImpl : AADereferenceable {
       : AADereferenceable(IRP, A) {}
   using StateType = DerefState;
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     Value &V = *getAssociatedValue().stripPointerCasts();
     SmallVector<Attribute, 4> Attrs;
@@ -5013,11 +4908,8 @@ struct AADereferenceableImpl : AADereferenceable {
       followUsesInMBEC(*this, A, getState(), *CtxI);
   }
 
-  /// See AbstractAttribute::getState()
-  /// {
   StateType &getState() override { return *this; }
   const StateType &getState() const override { return *this; }
-  /// }
 
   /// Helper function for collecting accessed bytes in must-be-executed-context
   void addAccessedBytesForUse(Attributor &A, const Use *U, const Instruction *I,
@@ -5052,7 +4944,6 @@ struct AADereferenceableImpl : AADereferenceable {
     return TrackUse;
   }
 
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     ChangeStatus Change = AADereferenceable::manifest(A);
     bool IsKnownNonNull;
@@ -5080,7 +4971,6 @@ struct AADereferenceableImpl : AADereferenceable {
           Ctx, getAssumedDereferenceableBytes()));
   }
 
-  /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     if (!getAssumedDereferenceableBytes())
       return "unknown-dereferenceable";
@@ -5103,7 +4993,6 @@ struct AADereferenceableFloating : AADereferenceableImpl {
   AADereferenceableFloating(const IRPosition &IRP, Attributor &A)
       : AADereferenceableImpl(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     bool Stripped;
     bool UsedAssumedInformation = false;
@@ -5180,7 +5069,6 @@ struct AADereferenceableFloating : AADereferenceableImpl {
     return clampStateAndIndicateChange(getState(), T);
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_FLOATING_ATTR(dereferenceable)
   }
@@ -5194,7 +5082,6 @@ struct AADereferenceableReturned final
   AADereferenceableReturned(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_FNRET_ATTR(dereferenceable)
   }
@@ -5209,7 +5096,6 @@ struct AADereferenceableArgument final
   AADereferenceableArgument(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_ARG_ATTR(dereferenceable)
   }
@@ -5220,7 +5106,6 @@ struct AADereferenceableCallSiteArgument final : AADereferenceableFloating {
   AADereferenceableCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AADereferenceableFloating(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_CSARG_ATTR(dereferenceable)
   }
@@ -5233,7 +5118,6 @@ struct AADereferenceableCallSiteReturned final
   AADereferenceableCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_CS_ATTR(dereferenceable);
   }
@@ -5342,7 +5226,6 @@ static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
 struct AAAlignImpl : AAAlign {
   AAAlignImpl(const IRPosition &IRP, Attributor &A) : AAAlign(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     SmallVector<Attribute, 4> Attrs;
     A.getAttrs(getIRPosition(), {Attribute::Alignment}, Attrs);
@@ -5356,7 +5239,6 @@ struct AAAlignImpl : AAAlign {
       followUsesInMBEC(*this, A, getState(), *CtxI);
   }
 
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     ChangeStatus InstrChanged = ChangeStatus::UNCHANGED;
 
@@ -5417,7 +5299,6 @@ struct AAAlignImpl : AAAlign {
   //       the existing manifest method and a new one for AAAlignImpl that value
   //       to avoid making the alignment explicit if it did not improve.
 
-  /// See AbstractAttribute::getDeducedAttributes
   void getDeducedAttributes(Attributor &A, LLVMContext &Ctx,
                             SmallVectorImpl<Attribute> &Attrs) const override {
     if (getAssumedAlign() > 1)
@@ -5437,7 +5318,6 @@ struct AAAlignImpl : AAAlign {
     return TrackUse;
   }
 
-  /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     return "align<" + std::to_string(getKnownAlign().value()) + "-" +
            std::to_string(getAssumedAlign().value()) + ">";
@@ -5448,7 +5328,6 @@ struct AAAlignImpl : AAAlign {
 struct AAAlignFloating : AAAlignImpl {
   AAAlignFloating(const IRPosition &IRP, Attributor &A) : AAAlignImpl(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     const DataLayout &DL = A.getDataLayout();
 
@@ -5508,7 +5387,6 @@ struct AAAlignFloating : AAAlignImpl {
     return clampStateAndIndicateChange(getState(), T);
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_FLOATING_ATTR(align) }
 };
 
@@ -5518,7 +5396,6 @@ struct AAAlignReturned final
   using Base = AAReturnedFromReturnedValues<AAAlign, AAAlignImpl>;
   AAAlignReturned(const IRPosition &IRP, Attributor &A) : Base(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_FNRET_ATTR(aligned) }
 };
 
@@ -5528,7 +5405,6 @@ struct AAAlignArgument final
   using Base = AAArgumentFromCallSiteArguments<AAAlign, AAAlignImpl>;
   AAAlignArgument(const IRPosition &IRP, Attributor &A) : Base(IRP, A) {}
 
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     // If the associated argument is involved in a must-tail call we give up
     // because we would need to keep the argument alignments of caller and
@@ -5538,7 +5414,6 @@ struct AAAlignArgument final
     return Base::manifest(A);
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_ARG_ATTR(aligned) }
 };
 
@@ -5546,7 +5421,6 @@ struct AAAlignCallSiteArgument final : AAAlignFloating {
   AAAlignCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AAAlignFloating(IRP, A) {}
 
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     // If the associated argument is involved in a must-tail call we give up
     // because we would need to keep the argument alignments of caller and
@@ -5562,7 +5436,6 @@ struct AAAlignCallSiteArgument final : AAAlignFloating {
     return Changed;
   }
 
-  /// See AbstractAttribute::updateImpl(Attributor &A).
   ChangeStatus updateImpl(Attributor &A) override {
     ChangeStatus Changed = AAAlignFloating::updateImpl(A);
     if (Argument *Arg = getAssociatedArgument()) {
@@ -5576,7 +5449,6 @@ struct AAAlignCallSiteArgument final : AAAlignFloating {
     return Changed;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CSARG_ATTR(aligned) }
 };
 
@@ -5637,7 +5509,6 @@ struct AAAlignCallSiteReturned final
     }
     return Base::updateImpl(A);
   };
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(align); }
 };
 } // namespace
@@ -5647,7 +5518,6 @@ namespace {
 struct AANoReturnImpl : public AANoReturn {
   AANoReturnImpl(const IRPosition &IRP, Attributor &A) : AANoReturn(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     bool IsKnown;
     assert(!AA::hasAssumedIRAttr<Attribute::NoReturn>(
@@ -5655,12 +5525,10 @@ struct AANoReturnImpl : public AANoReturn {
     (void)IsKnown;
   }
 
-  /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     return getAssumed() ? "noreturn" : "may-return";
   }
 
-  /// See AbstractAttribute::updateImpl(Attributor &A).
   ChangeStatus updateImpl(Attributor &A) override {
     auto CheckForNoReturn = [](Instruction &) { return false; };
     bool UsedAssumedInformation = false;
@@ -5676,7 +5544,6 @@ struct AANoReturnFunction final : AANoReturnImpl {
   AANoReturnFunction(const IRPosition &IRP, Attributor &A)
       : AANoReturnImpl(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_FN_ATTR(noreturn) }
 };
 
@@ -5686,7 +5553,6 @@ struct AANoReturnCallSite final
   AANoReturnCallSite(const IRPosition &IRP, Attributor &A)
       : AACalleeToCallSite<AANoReturn, AANoReturnImpl>(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(noreturn); }
 };
 } // namespace
@@ -5699,7 +5565,6 @@ struct AAInstanceInfoImpl : public AAInstanceInfo {
   AAInstanceInfoImpl(const IRPosition &IRP, Attributor &A)
       : AAInstanceInfo(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     Value &V = getAssociatedValue();
     if (auto *C = dyn_cast<Constant>(&V)) {
@@ -5726,7 +5591,6 @@ struct AAInstanceInfoImpl : public AAInstanceInfo {
     }
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
 
@@ -5802,12 +5666,10 @@ struct AAInstanceInfoImpl : public AAInstanceInfo {
     return Changed;
   }
 
-  /// See AbstractState::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     return isAssumedUniqueForAnalysis() ? "<unique [fAa]>" : "<unknown>";
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
 };
 
@@ -5828,7 +5690,6 @@ struct AAInstanceInfoCallSiteArgument final : AAInstanceInfoImpl {
   AAInstanceInfoCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AAInstanceInfoImpl(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     // TODO: Once we have call site specific value information we can provide
     //       call site specific liveness information and then it makes
@@ -5853,12 +5714,10 @@ struct AAInstanceInfoReturned final : AAInstanceInfoImpl {
     llvm_unreachable("InstanceInfo is not applicable to function returns!");
   }
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     llvm_unreachable("InstanceInfo is not applicable to function returns!");
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     llvm_unreachable("InstanceInfo is not applicable to function returns!");
   }
@@ -5936,11 +5795,13 @@ void AANoCapture::determineFunctionCaptureCapabilities(const IRPosition &IRP,
   // TODO: Once we have memory behavior attributes we should use them here.
 
   // If we know we cannot communicate or write to memory, we do not care about
-  // ptr2int anymore.
+  // ptr2int anymore. The value can still be captured by whether the function
+  // returns.
   bool ReadOnly = F.onlyReadsMemory();
   bool NoThrow = F.doesNotThrow();
+  bool WillReturn = F.willReturn();
   bool IsVoidReturn = F.getReturnType()->isVoidTy();
-  if (ReadOnly && NoThrow && IsVoidReturn) {
+  if (ReadOnly && NoThrow && WillReturn && IsVoidReturn) {
     State.addKnownBits(NO_CAPTURE);
     return;
   }
@@ -5966,7 +5827,7 @@ void AANoCapture::determineFunctionCaptureCapabilities(const IRPosition &IRP,
     if (F.hasParamAttribute(U, Attribute::Returned)) {
       if (U == unsigned(ArgNo))
         State.removeAssumedBits(NOT_CAPTURED_IN_RET);
-      else if (ReadOnly)
+      else if (ReadOnly && WillReturn)
         State.addKnownBits(NO_CAPTURE);
       else
         State.addKnownBits(NOT_CAPTURED_IN_RET);
@@ -5979,7 +5840,6 @@ namespace {
 struct AANoCaptureImpl : public AANoCapture {
   AANoCaptureImpl(const IRPosition &IRP, Attributor &A) : AANoCapture(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     bool IsKnown;
     assert(!AA::hasAssumedIRAttr<Attribute::Captures>(
@@ -5987,10 +5847,8 @@ struct AANoCaptureImpl : public AANoCapture {
     (void)IsKnown;
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override;
 
-  /// see AbstractAttribute::isAssumedNoCaptureMaybeReturned(...).
   void getDeducedAttributes(Attributor &A, LLVMContext &Ctx,
                             SmallVectorImpl<Attribute> &Attrs) const override {
     if (!isAssumedNoCaptureMaybeReturned())
@@ -6004,7 +5862,6 @@ struct AANoCaptureImpl : public AANoCapture {
     }
   }
 
-  /// See AbstractState::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     if (isKnownNoCapture())
       return "known not-captured";
@@ -6149,11 +6006,16 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
     bool UsedAssumedInformation = false;
     if (IsVoidTy || CheckReturnedArgs(UsedAssumedInformation)) {
       T.addKnownBits(NOT_CAPTURED_IN_RET);
-      if (T.isKnown(NOT_CAPTURED_IN_MEM))
+      // If the function only reads memory and does not return the value, the
+      // value can still be captured by whether the function returns.
+      bool IsKnownWillReturn;
+      bool IsAssumedWillReturn = AA::hasAssumedIRAttr<Attribute::WillReturn>(
+          A, this, FnPos, DepClassTy::OPTIONAL, IsKnownWillReturn);
+      if (IsAssumedWillReturn && T.isKnown(NOT_CAPTURED_IN_MEM))
         return ChangeStatus::UNCHANGED;
       if (IsKnownNoUnwind && (IsVoidTy || !UsedAssumedInformation)) {
         addKnownBits(NOT_CAPTURED_IN_RET);
-        if (isKnown(NOT_CAPTURED_IN_MEM))
+        if (IsKnownWillReturn && isKnown(NOT_CAPTURED_IN_MEM))
           return indicateOptimisticFixpoint();
       }
     }
@@ -6188,7 +6050,6 @@ struct AANoCaptureArgument final : AANoCaptureImpl {
   AANoCaptureArgument(const IRPosition &IRP, Attributor &A)
       : AANoCaptureImpl(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_ARG_ATTR(nocapture) }
 };
 
@@ -6197,7 +6058,6 @@ struct AANoCaptureCallSiteArgument final : AANoCaptureImpl {
   AANoCaptureCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AANoCaptureImpl(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     // TODO: Once we have call site specific value information we can provide
     //       call site specific liveness information and then it makes
@@ -6218,7 +6078,6 @@ struct AANoCaptureCallSiteArgument final : AANoCaptureImpl {
     return clampStateAndIndicateChange(getState(), ArgAA->getState());
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_CSARG_ATTR(nocapture)
   };
@@ -6229,7 +6088,6 @@ struct AANoCaptureFloating final : AANoCaptureImpl {
   AANoCaptureFloating(const IRPosition &IRP, Attributor &A)
       : AANoCaptureImpl(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_FLOATING_ATTR(nocapture)
   }
@@ -6242,17 +6100,14 @@ struct AANoCaptureReturned final : AANoCaptureImpl {
     llvm_unreachable("NoCapture is not applicable to function returns!");
   }
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     llvm_unreachable("NoCapture is not applicable to function returns!");
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     llvm_unreachable("NoCapture is not applicable to function returns!");
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
 };
 
@@ -6261,14 +6116,12 @@ struct AANoCaptureCallSiteReturned final : AANoCaptureImpl {
   AANoCaptureCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : AANoCaptureImpl(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     const Function *F = getAnchorScope();
     // Check what state the associated function can actually capture.
     determineFunctionCaptureCapabilities(getIRPosition(), *F, *this);
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_CSRET_ATTR(nocapture)
   }
@@ -6299,7 +6152,6 @@ struct AAValueSimplifyImpl : AAValueSimplify {
   AAValueSimplifyImpl(const IRPosition &IRP, Attributor &A)
       : AAValueSimplify(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     if (getAssociatedValue().getType()->isVoidTy())
       indicatePessimisticFixpoint();
@@ -6307,7 +6159,6 @@ struct AAValueSimplifyImpl : AAValueSimplify {
       indicatePessimisticFixpoint();
   }
 
-  /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     LLVM_DEBUG({
       dbgs() << "SAV: " << (bool)SimplifiedAssociatedValue << " ";
@@ -6318,10 +6169,8 @@ struct AAValueSimplifyImpl : AAValueSimplify {
                           : "not-simple";
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
 
-  /// See AAValueSimplify::getAssumedSimplifiedValue()
   std::optional<Value *>
   getAssumedSimplifiedValue(Attributor &A) const override {
     return SimplifiedAssociatedValue;
@@ -6469,7 +6318,6 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     return false;
   }
 
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     for (auto &U : getAssociatedValue().uses()) {
@@ -6489,7 +6337,6 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     return Changed | AAValueSimplify::manifest(A);
   }
 
-  /// See AbstractState::indicatePessimisticFixpoint(...).
   ChangeStatus indicatePessimisticFixpoint() override {
     SimplifiedAssociatedValue = &getAssociatedValue();
     return AAValueSimplify::indicatePessimisticFixpoint();
@@ -6509,7 +6356,6 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
       indicatePessimisticFixpoint();
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     // Byval is only replacable if it is readonly otherwise we would write into
     // the replaced value and not the copy that byval creates implicitly.
@@ -6568,7 +6414,6 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
                                                : ChangeStatus ::CHANGED;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_ARG_ATTR(value_simplify)
   }
@@ -6578,7 +6423,6 @@ struct AAValueSimplifyReturned : AAValueSimplifyImpl {
   AAValueSimplifyReturned(const IRPosition &IRP, Attributor &A)
       : AAValueSimplifyImpl(IRP, A) {}
 
-  /// See AAValueSimplify::getAssumedSimplifiedValue()
   std::optional<Value *>
   getAssumedSimplifiedValue(Attributor &A) const override {
     if (!isValidState())
@@ -6586,7 +6430,6 @@ struct AAValueSimplifyReturned : AAValueSimplifyImpl {
     return SimplifiedAssociatedValue;
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     auto Before = SimplifiedAssociatedValue;
 
@@ -6614,7 +6457,6 @@ struct AAValueSimplifyReturned : AAValueSimplifyImpl {
     return ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_FNRET_ATTR(value_simplify)
   }
@@ -6624,7 +6466,6 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
   AAValueSimplifyFloating(const IRPosition &IRP, Attributor &A)
       : AAValueSimplifyImpl(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     AAValueSimplifyImpl::initialize(A);
     Value &V = getAnchorValue();
@@ -6634,7 +6475,6 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
       indicatePessimisticFixpoint();
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     auto Before = SimplifiedAssociatedValue;
     if (!askSimplifiedValueForOtherAAs(A))
@@ -6645,7 +6485,6 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
                                                : ChangeStatus ::CHANGED;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_FLOATING_ATTR(value_simplify)
   }
@@ -6655,17 +6494,14 @@ struct AAValueSimplifyFunction : AAValueSimplifyImpl {
   AAValueSimplifyFunction(const IRPosition &IRP, Attributor &A)
       : AAValueSimplifyImpl(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     SimplifiedAssociatedValue = nullptr;
     indicateOptimisticFixpoint();
   }
-  /// See AbstractAttribute::initialize(...).
   ChangeStatus updateImpl(Attributor &A) override {
     llvm_unreachable(
         "AAValueSimplify(Function|CallSite)::updateImpl will not be called");
   }
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_FN_ATTR(value_simplify)
   }
@@ -6674,7 +6510,6 @@ struct AAValueSimplifyFunction : AAValueSimplifyImpl {
 struct AAValueSimplifyCallSite : AAValueSimplifyFunction {
   AAValueSimplifyCallSite(const IRPosition &IRP, Attributor &A)
       : AAValueSimplifyFunction(IRP, A) {}
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_CS_ATTR(value_simplify)
   }
@@ -6702,7 +6537,6 @@ struct AAValueSimplifyCallSiteReturned : AAValueSimplifyImpl {
     }
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     return indicatePessimisticFixpoint();
   }
@@ -6716,7 +6550,6 @@ struct AAValueSimplifyCallSiteArgument : AAValueSimplifyFloating {
   AAValueSimplifyCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AAValueSimplifyFloating(IRP, A) {}
 
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     // TODO: We should avoid simplification duplication to begin with.
@@ -6740,6 +6573,22 @@ struct AAValueSimplifyCallSiteArgument : AAValueSimplifyFloating {
   }
 };
 } // namespace
+
+/// Collect the non-musttail tail calls in the function of \p QueryingAA. Tail
+/// calls cannot access allocas of the caller.
+/// TODO: Be smarter about new allocas escaping into tail calls.
+static bool collectTailCalls(Attributor &A, const AbstractAttribute &QueryingAA,
+                             SmallVectorImpl<CallInst *> &TailCalls) {
+  bool UsedAssumedInformation = false;
+  return A.checkForAllInstructions(
+      [&](Instruction &I) {
+        auto &CI = cast<CallInst>(I);
+        if (CI.isTailCall() && !CI.isMustTailCall())
+          TailCalls.push_back(&CI);
+        return true;
+      },
+      QueryingAA, {Instruction::Call}, UsedAssumedInformation);
+}
 
 /// ----------------------- Heap-To-Stack Conversion ---------------------------
 namespace {
@@ -6861,7 +6710,6 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
            std::to_string(NumInvalidMallocs);
   }
 
-  /// See AbstractAttribute::trackStatistics().
   void trackStatistics() const override {
     STATS_DECL(
         MallocCalls, Function,
@@ -6902,6 +6750,15 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
     ChangeStatus HasChanged = ChangeStatus::UNCHANGED;
     Function *F = getAnchorScope();
     const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
+
+    // The new allocas may escape into tail calls.
+    SmallVector<CallInst *, 16> TailCalls;
+    if (any_of(AllocationInfos,
+               [](const std::pair<CallBase *, AllocationInfo *> &It) {
+                 return It.second->Status != AllocationInfo::INVALID;
+               }) &&
+        !collectTailCalls(A, *this, TailCalls))
+      return ChangeStatus::UNCHANGED;
 
     for (auto &It : AllocationInfos) {
       AllocationInfo &AI = *It.second;
@@ -6991,6 +6848,9 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       }
       HasChanged = ChangeStatus::CHANGED;
     }
+
+    for (CallInst *CI : TailCalls)
+      CI->setTailCall(false);
 
     return HasChanged;
   }
@@ -7199,6 +7059,14 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
         return true;
       }
       if (auto *CB = dyn_cast<CallBase>(UserI)) {
+        // A musttail call cannot access allocas of the caller, and its marker
+        // cannot be removed.
+        if (CB->isMustTailCall()) {
+          LLVM_DEBUG(dbgs() << "[H2S] musttail user: " << *UserI << "\n");
+          ValidUsesOnly = false;
+          return true;
+        }
+
         if (!CB->isArgOperand(&U) || CB->isLifetimeStartOrEnd())
           return true;
         if (DeallocationInfos.count(CB)) {
@@ -7385,7 +7253,6 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
   AAPrivatizablePtrArgument(const IRPosition &IRP, Attributor &A)
       : AAPrivatizablePtrImpl(IRP, A) {}
 
-  /// See AAPrivatizablePtrImpl::identifyPrivatizableType(...)
   std::optional<Type *> identifyPrivatizableType(Attributor &A) override {
     // If this is a byval argument and we know all the call sites (so we can
     // rewrite them), there is no need to check them explicitly.
@@ -7453,7 +7320,6 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     return Ty;
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     PrivatizableType = identifyPrivatizableType(A);
     if (!PrivatizableType)
@@ -7721,26 +7587,10 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     }
   }
 
-  /// See AbstractAttribute::manifest(...)
   ChangeStatus manifest(Attributor &A) override {
     if (!PrivatizableType)
       return ChangeStatus::UNCHANGED;
     assert(*PrivatizableType && "Expected privatizable type!");
-
-    // Collect all tail calls in the function as we cannot allow new allocas to
-    // escape into tail recursion.
-    // TODO: Be smarter about new allocas escaping into tail calls.
-    SmallVector<CallInst *, 16> TailCalls;
-    bool UsedAssumedInformation = false;
-    if (!A.checkForAllInstructions(
-            [&](Instruction &I) {
-              CallInst &CI = cast<CallInst>(I);
-              if (CI.isTailCall())
-                TailCalls.push_back(&CI);
-              return true;
-            },
-            *this, {Instruction::Call}, UsedAssumedInformation))
-      return ChangeStatus::UNCHANGED;
 
     Argument *Arg = getAssociatedArgument();
     // Query AAAlign attribute for alignment of associated argument to
@@ -7768,8 +7618,13 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
                 AI, Arg->getType(), "", IP);
           Arg->replaceAllUsesWith(AI);
 
-          for (CallInst *CI : TailCalls)
-            CI->setTailCall(false);
+          // The new alloca may escape into tail calls. Find them here, as calls
+          // may have been replaced or deleted since manifest.
+          for (Instruction &I : instructions(ReplacementFn)) {
+            auto *CI = dyn_cast<CallInst>(&I);
+            if (CI && CI->isTailCall() && !CI->isMustTailCall())
+              CI->setTailCall(false);
+          }
         };
 
     // Callback to repair a call site of the associated function. The elements
@@ -7800,7 +7655,6 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     return ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_ARG_ATTR(privatizable_ptr);
   }
@@ -7810,7 +7664,6 @@ struct AAPrivatizablePtrFloating : public AAPrivatizablePtrImpl {
   AAPrivatizablePtrFloating(const IRPosition &IRP, Attributor &A)
       : AAPrivatizablePtrImpl(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     // TODO: We can privatize more than arguments.
     indicatePessimisticFixpoint();
@@ -7821,7 +7674,6 @@ struct AAPrivatizablePtrFloating : public AAPrivatizablePtrImpl {
                      "updateImpl will not be called");
   }
 
-  /// See AAPrivatizablePtrImpl::identifyPrivatizableType(...)
   std::optional<Type *> identifyPrivatizableType(Attributor &A) override {
     Value *Obj = getUnderlyingObject(&getAssociatedValue());
     if (!Obj) {
@@ -7846,7 +7698,6 @@ struct AAPrivatizablePtrFloating : public AAPrivatizablePtrImpl {
     return nullptr;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_FLOATING_ATTR(privatizable_ptr);
   }
@@ -7857,13 +7708,11 @@ struct AAPrivatizablePtrCallSiteArgument final
   AAPrivatizablePtrCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AAPrivatizablePtrFloating(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     if (A.hasAttr(getIRPosition(), Attribute::ByVal))
       indicateOptimisticFixpoint();
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     PrivatizableType = identifyPrivatizableType(A);
     if (!PrivatizableType)
@@ -7896,7 +7745,6 @@ struct AAPrivatizablePtrCallSiteArgument final
     return ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_CSARG_ATTR(privatizable_ptr);
   }
@@ -7907,13 +7755,11 @@ struct AAPrivatizablePtrCallSiteReturned final
   AAPrivatizablePtrCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : AAPrivatizablePtrFloating(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     // TODO: We can privatize more than arguments.
     indicatePessimisticFixpoint();
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_CSRET_ATTR(privatizable_ptr);
   }
@@ -7923,13 +7769,11 @@ struct AAPrivatizablePtrReturned final : public AAPrivatizablePtrFloating {
   AAPrivatizablePtrReturned(const IRPosition &IRP, Attributor &A)
       : AAPrivatizablePtrFloating(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     // TODO: We can privatize more than arguments.
     indicatePessimisticFixpoint();
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_FNRET_ATTR(privatizable_ptr);
   }
@@ -7944,7 +7788,6 @@ struct AAMemoryBehaviorImpl : public AAMemoryBehavior {
   AAMemoryBehaviorImpl(const IRPosition &IRP, Attributor &A)
       : AAMemoryBehavior(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     intersectAssumedBits(BEST_STATE);
     getKnownStateFromValue(A, getIRPosition(), getState());
@@ -7973,15 +7816,22 @@ struct AAMemoryBehaviorImpl : public AAMemoryBehavior {
       }
     }
 
-    if (auto *I = dyn_cast<Instruction>(&IRP.getAnchorValue())) {
-      if (!I->mayReadFromMemory())
-        State.addKnownBits(NO_READS);
-      if (!I->mayWriteToMemory())
-        State.addKnownBits(NO_WRITES);
+    // Only a call site anchor performs the accesses of the position. A floating
+    // value is only defined by its anchor, e.g., a loaded pointer may be
+    // written through even though the load does not write.
+    IRPosition::Kind Kind = IRP.getPositionKind();
+    if (Kind == IRPosition::IRP_CALL_SITE ||
+        Kind == IRPosition::IRP_CALL_SITE_ARGUMENT) {
+      if (auto *CB = dyn_cast<CallBase>(&IRP.getAnchorValue())) {
+        ModRefInfo MR = CB->getMemoryEffects().getModRef();
+        if (!isRefSet(MR))
+          State.addKnownBits(NO_READS);
+        if (!isModSet(MR))
+          State.addKnownBits(NO_WRITES);
+      }
     }
   }
 
-  /// See AbstractAttribute::getDeducedAttributes(...).
   void getDeducedAttributes(Attributor &A, LLVMContext &Ctx,
                             SmallVectorImpl<Attribute> &Attrs) const override {
     assert(Attrs.size() == 0);
@@ -7994,7 +7844,6 @@ struct AAMemoryBehaviorImpl : public AAMemoryBehavior {
     assert(Attrs.size() <= 1);
   }
 
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     const IRPosition &IRP = getIRPosition();
 
@@ -8021,7 +7870,6 @@ struct AAMemoryBehaviorImpl : public AAMemoryBehavior {
     return IRAttribute::manifest(A);
   }
 
-  /// See AbstractState::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     if (isAssumedReadNone())
       return "readnone";
@@ -8044,10 +7892,8 @@ struct AAMemoryBehaviorFloating : AAMemoryBehaviorImpl {
   AAMemoryBehaviorFloating(const IRPosition &IRP, Attributor &A)
       : AAMemoryBehaviorImpl(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override;
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     if (isAssumedReadNone())
       STATS_DECLTRACK_FLOATING_ATTR(readnone)
@@ -8072,7 +7918,6 @@ struct AAMemoryBehaviorArgument : AAMemoryBehaviorFloating {
   AAMemoryBehaviorArgument(const IRPosition &IRP, Attributor &A)
       : AAMemoryBehaviorFloating(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     intersectAssumedBits(BEST_STATE);
     const IRPosition &IRP = getIRPosition();
@@ -8101,7 +7946,6 @@ struct AAMemoryBehaviorArgument : AAMemoryBehaviorFloating {
     return AAMemoryBehaviorFloating::manifest(A);
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     if (isAssumedReadNone())
       STATS_DECLTRACK_ARG_ATTR(readnone)
@@ -8116,7 +7960,6 @@ struct AAMemoryBehaviorCallSiteArgument final : AAMemoryBehaviorArgument {
   AAMemoryBehaviorCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AAMemoryBehaviorArgument(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     // If we don't have an associated attribute this is either a variadic call
     // or an indirect call, either way, nothing to do here.
@@ -8135,7 +7978,6 @@ struct AAMemoryBehaviorCallSiteArgument final : AAMemoryBehaviorArgument {
       indicatePessimisticFixpoint();
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     // TODO: Once we have call site specific value information we can provide
     //       call site specific liveness liveness information and then it makes
@@ -8150,7 +7992,6 @@ struct AAMemoryBehaviorCallSiteArgument final : AAMemoryBehaviorArgument {
     return clampStateAndIndicateChange(getState(), ArgAA->getState());
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     if (isAssumedReadNone())
       STATS_DECLTRACK_CSARG_ATTR(readnone)
@@ -8166,17 +8007,14 @@ struct AAMemoryBehaviorCallSiteReturned final : AAMemoryBehaviorFloating {
   AAMemoryBehaviorCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : AAMemoryBehaviorFloating(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     AAMemoryBehaviorImpl::initialize(A);
   }
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     // We do not annotate returned values.
     return ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
 };
 
@@ -8185,10 +8023,8 @@ struct AAMemoryBehaviorFunction final : public AAMemoryBehaviorImpl {
   AAMemoryBehaviorFunction(const IRPosition &IRP, Attributor &A)
       : AAMemoryBehaviorImpl(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(Attributor &A).
   ChangeStatus updateImpl(Attributor &A) override;
 
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     // TODO: It would be better to merge this with AAMemoryLocation, so that
     // we could determine read/write per location. This would also have the
@@ -8211,7 +8047,6 @@ struct AAMemoryBehaviorFunction final : public AAMemoryBehaviorImpl {
                            Attribute::getWithMemoryEffects(F.getContext(), ME));
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     if (isAssumedReadNone())
       STATS_DECLTRACK_FN_ATTR(readnone)
@@ -8228,7 +8063,6 @@ struct AAMemoryBehaviorCallSite final
   AAMemoryBehaviorCallSite(const IRPosition &IRP, Attributor &A)
       : AACalleeToCallSite<AAMemoryBehavior, AAMemoryBehaviorImpl>(IRP, A) {}
 
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     // TODO: Deduplicate this with AAMemoryBehaviorFunction.
     CallBase &CB = cast<CallBase>(getAnchorValue());
@@ -8250,7 +8084,6 @@ struct AAMemoryBehaviorCallSite final
         getIRPosition(), Attribute::getWithMemoryEffects(CB.getContext(), ME));
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     if (isAssumedReadNone())
       STATS_DECLTRACK_CS_ATTR(readnone)
@@ -8514,7 +8347,6 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
         AS->~AccessSet();
   }
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     intersectAssumedBits(BEST_STATE);
     getKnownStateFromValue(A, getIRPosition(), getState());
@@ -8581,7 +8413,6 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
     }
   }
 
-  /// See AbstractAttribute::getDeducedAttributes(...).
   void getDeducedAttributes(Attributor &A, LLVMContext &Ctx,
                             SmallVectorImpl<Attribute> &Attrs) const override {
     // TODO: We can map Attributor locations to MemoryEffects more precisely.
@@ -8603,7 +8434,6 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
     assert(Attrs.size() <= 1);
   }
 
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     // TODO: If AAMemoryLocation and AAMemoryBehavior are merged, we could
     // provide per-location modref information here.
@@ -8619,7 +8449,6 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
                                     IRP.getAnchorValue().getContext(), ME));
   }
 
-  /// See AAMemoryLocation::checkForAllAccessesToMemoryKind(...).
   bool checkForAllAccessesToMemoryKind(
       function_ref<bool(const Instruction *, const Value *, AccessKind,
                         MemoryLocationsKind)>
@@ -8788,9 +8617,10 @@ void AAMemoryLocationImpl::categorizePtrValue(
         MLK = NO_GLOBAL_INTERNAL_MEM;
       else
         MLK = NO_GLOBAL_EXTERNAL_MEM;
-    } else if (isa<ConstantPointerNull>(&Obj) &&
-               (!NullPointerIsDefined(getAssociatedFunction(), AccessAS) ||
-                !NullPointerIsDefined(getAssociatedFunction(), ObjectAS))) {
+    } else if (isa<ConstantPointerNull>(&Obj) && ObjectAS == AccessAS &&
+               !NullPointerIsDefined(getAssociatedFunction(), AccessAS)) {
+      // Accessing null is undefined, but not accessing a null pointer cast to
+      // another address space, which may be a valid address there.
       return true;
     } else if (isa<AllocaInst>(&Obj)) {
       MLK = NO_LOCAL_MEM;
@@ -8951,7 +8781,6 @@ struct AAMemoryLocationFunction final : public AAMemoryLocationImpl {
   AAMemoryLocationFunction(const IRPosition &IRP, Attributor &A)
       : AAMemoryLocationImpl(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(Attributor &A).
   ChangeStatus updateImpl(Attributor &A) override {
 
     const auto *MemBehaviorAA =
@@ -8988,7 +8817,6 @@ struct AAMemoryLocationFunction final : public AAMemoryLocationImpl {
     return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     if (isAssumedReadNone())
       STATS_DECLTRACK_FN_ATTR(readnone)
@@ -9006,7 +8834,20 @@ struct AAMemoryLocationCallSite final : AAMemoryLocationImpl {
   AAMemoryLocationCallSite(const IRPosition &IRP, Attributor &A)
       : AAMemoryLocationImpl(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
+  void initialize(Attributor &A) override {
+    AAMemoryLocationImpl::initialize(A);
+
+    // Volatile calls may also access inaccessible memory, which the callee's
+    // attributes do not say.
+    auto &CB = cast<CallBase>(getAnchorValue());
+    if (CB.isVolatile()) {
+      bool Changed = false;
+      removeKnownBits(NO_INACCESSIBLE_MEM);
+      updateStateAndAccessesMap(getState(), NO_INACCESSIBLE_MEM, &CB, nullptr,
+                                Changed, getAccessKindFromInst(&CB));
+    }
+  }
+
   ChangeStatus updateImpl(Attributor &A) override {
     // TODO: Once we have call site specific value information we can provide
     //       call site specific liveness liveness information and then it makes
@@ -9030,7 +8871,6 @@ struct AAMemoryLocationCallSite final : AAMemoryLocationImpl {
     return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     if (isAssumedReadNone())
       STATS_DECLTRACK_CS_ATTR(readnone)
@@ -9140,7 +8980,6 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
   AAValueConstantRangeImpl(const IRPosition &IRP, Attributor &A)
       : AAValueConstantRange(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(..).
   void initialize(Attributor &A) override {
     if (A.hasSimplificationCallback(getIRPosition())) {
       indicatePessimisticFixpoint();
@@ -9154,7 +8993,6 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
     intersectKnown(getConstantRangeFromLVI(A, getCtxI()));
   }
 
-  /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     std::string Str;
     llvm::raw_string_ostream OS(Str);
@@ -9256,7 +9094,6 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
     return true;
   }
 
-  /// See AAValueConstantRange::getAssumedConstantRange(..).
   ConstantRange
   getAssumedConstantRange(Attributor &A,
                           const Instruction *CtxI = nullptr) const override {
@@ -9340,7 +9177,6 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
     return false;
   }
 
-  /// See AbstractAttribute::manifest()
   ChangeStatus manifest(Attributor &A) override {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     ConstantRange AssumedConstantRange = getAssumedConstantRange(A);
@@ -9376,7 +9212,6 @@ struct AAValueConstantRangeArgument final
   AAValueConstantRangeArgument(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_ARG_ATTR(value_range)
   }
@@ -9395,13 +9230,11 @@ struct AAValueConstantRangeReturned
   AAValueConstantRangeReturned(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     if (!A.isFunctionIPOAmendable(*getAssociatedFunction()))
       indicatePessimisticFixpoint();
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_FNRET_ATTR(value_range)
   }
@@ -9411,7 +9244,6 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
   AAValueConstantRangeFloating(const IRPosition &IRP, Attributor &A)
       : AAValueConstantRangeImpl(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     AAValueConstantRangeImpl::initialize(A);
     if (isAtFixpoint())
@@ -9626,7 +9458,6 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     return T.isValidState();
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
 
     IntegerRangeState T(getBitWidth());
@@ -9708,7 +9539,6 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     return ChangeStatus::CHANGED;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_FLOATING_ATTR(value_range)
   }
@@ -9725,13 +9555,11 @@ struct AAValueConstantRangeFunction : AAValueConstantRangeImpl {
   AAValueConstantRangeFunction(const IRPosition &IRP, Attributor &A)
       : AAValueConstantRangeImpl(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   ChangeStatus updateImpl(Attributor &A) override {
     llvm_unreachable("AAValueConstantRange(Function|CallSite)::updateImpl will "
                      "not be called");
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_FN_ATTR(value_range) }
 };
 
@@ -9739,7 +9567,6 @@ struct AAValueConstantRangeCallSite : AAValueConstantRangeFunction {
   AAValueConstantRangeCallSite(const IRPosition &IRP, Attributor &A)
       : AAValueConstantRangeFunction(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(value_range) }
 };
 
@@ -9752,7 +9579,6 @@ struct AAValueConstantRangeCallSiteReturned
                            AAValueConstantRangeImpl::StateType,
                            /* IntroduceCallBaseContext */ true>(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     // If it is a call instruction with range attribute, use the range.
     if (CallInst *CI = dyn_cast<CallInst>(&getAssociatedValue())) {
@@ -9763,7 +9589,6 @@ struct AAValueConstantRangeCallSiteReturned
     AAValueConstantRangeImpl::initialize(A);
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_CSRET_ATTR(value_range)
   }
@@ -9772,12 +9597,10 @@ struct AAValueConstantRangeCallSiteArgument : AAValueConstantRangeFloating {
   AAValueConstantRangeCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AAValueConstantRangeFloating(IRP, A) {}
 
-  /// See AbstractAttribute::manifest()
   ChangeStatus manifest(Attributor &A) override {
     return ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_CSARG_ATTR(value_range)
   }
@@ -9793,7 +9616,6 @@ struct AAPotentialConstantValuesImpl : AAPotentialConstantValues {
   AAPotentialConstantValuesImpl(const IRPosition &IRP, Attributor &A)
       : AAPotentialConstantValues(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(..).
   void initialize(Attributor &A) override {
     if (A.hasSimplificationCallback(getIRPosition()))
       indicatePessimisticFixpoint();
@@ -9841,7 +9663,6 @@ struct AAPotentialConstantValuesImpl : AAPotentialConstantValues {
     return true;
   }
 
-  /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     std::string Str;
     llvm::raw_string_ostream OS(Str);
@@ -9849,7 +9670,6 @@ struct AAPotentialConstantValuesImpl : AAPotentialConstantValues {
     return Str;
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     return indicatePessimisticFixpoint();
   }
@@ -9865,7 +9685,6 @@ struct AAPotentialConstantValuesArgument final
   AAPotentialConstantValuesArgument(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_ARG_ATTR(potential_values)
   }
@@ -9885,7 +9704,6 @@ struct AAPotentialConstantValuesReturned
     Base::initialize(A);
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_FNRET_ATTR(potential_values)
   }
@@ -9895,7 +9713,6 @@ struct AAPotentialConstantValuesFloating : AAPotentialConstantValuesImpl {
   AAPotentialConstantValuesFloating(const IRPosition &IRP, Attributor &A)
       : AAPotentialConstantValuesImpl(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(..).
   void initialize(Attributor &A) override {
     AAPotentialConstantValuesImpl::initialize(A);
     if (isAtFixpoint())
@@ -10213,7 +10030,6 @@ struct AAPotentialConstantValuesFloating : AAPotentialConstantValuesImpl {
                                          : ChangeStatus::CHANGED;
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     Value &V = getAssociatedValue();
     Instruction *I = dyn_cast<Instruction>(&V);
@@ -10236,7 +10052,6 @@ struct AAPotentialConstantValuesFloating : AAPotentialConstantValuesImpl {
     return indicatePessimisticFixpoint();
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_FLOATING_ATTR(potential_values)
   }
@@ -10246,14 +10061,12 @@ struct AAPotentialConstantValuesFunction : AAPotentialConstantValuesImpl {
   AAPotentialConstantValuesFunction(const IRPosition &IRP, Attributor &A)
       : AAPotentialConstantValuesImpl(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   ChangeStatus updateImpl(Attributor &A) override {
     llvm_unreachable(
         "AAPotentialConstantValues(Function|CallSite)::updateImpl will "
         "not be called");
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_FN_ATTR(potential_values)
   }
@@ -10263,7 +10076,6 @@ struct AAPotentialConstantValuesCallSite : AAPotentialConstantValuesFunction {
   AAPotentialConstantValuesCallSite(const IRPosition &IRP, Attributor &A)
       : AAPotentialConstantValuesFunction(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_CS_ATTR(potential_values)
   }
@@ -10277,7 +10089,6 @@ struct AAPotentialConstantValuesCallSiteReturned
       : AACalleeToCallSite<AAPotentialConstantValues,
                            AAPotentialConstantValuesImpl>(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_CSRET_ATTR(potential_values)
   }
@@ -10289,7 +10100,6 @@ struct AAPotentialConstantValuesCallSiteArgument
                                             Attributor &A)
       : AAPotentialConstantValuesFloating(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(..).
   void initialize(Attributor &A) override {
     AAPotentialConstantValuesImpl::initialize(A);
     if (isAtFixpoint())
@@ -10310,7 +10120,6 @@ struct AAPotentialConstantValuesCallSiteArgument
     }
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     Value &V = getAssociatedValue();
     auto AssumedBefore = getAssumed();
@@ -10324,7 +10133,6 @@ struct AAPotentialConstantValuesCallSiteArgument
                                          : ChangeStatus::CHANGED;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_CSARG_ATTR(potential_values)
   }
@@ -10356,7 +10164,6 @@ namespace {
 struct AANoUndefImpl : AANoUndef {
   AANoUndefImpl(const IRPosition &IRP, Attributor &A) : AANoUndef(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     Value &V = getAssociatedValue();
     if (isa<UndefValue>(V))
@@ -10384,7 +10191,6 @@ struct AANoUndefImpl : AANoUndef {
     return TrackUse;
   }
 
-  /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     return getAssumed() ? "noundef" : "may-undef-or-poison";
   }
@@ -10412,7 +10218,6 @@ struct AANoUndefFloating : public AANoUndefImpl {
   AANoUndefFloating(const IRPosition &IRP, Attributor &A)
       : AANoUndefImpl(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     AANoUndefImpl::initialize(A);
     if (!getState().isAtFixpoint() && getAnchorScope() &&
@@ -10421,7 +10226,6 @@ struct AANoUndefFloating : public AANoUndefImpl {
         followUsesInMBEC(*this, A, getState(), *CtxI);
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     auto VisitValueCB = [&](const IRPosition &IRP) -> bool {
       bool IsKnownNoUndef;
@@ -10458,7 +10262,6 @@ struct AANoUndefFloating : public AANoUndefImpl {
     return ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_FNRET_ATTR(noundef) }
 };
 
@@ -10467,7 +10270,20 @@ struct AANoUndefReturned final
   AANoUndefReturned(const IRPosition &IRP, Attributor &A)
       : AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl>(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
+  void initialize(Attributor &A) override {
+    AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl>::initialize(A);
+    if (isAtFixpoint())
+      return;
+
+    // Returning a value that violates a return attribute, e.g., nonnull, is
+    // poison.
+    AttributeMask AM = AttributeFuncs::getPoisonGeneratingAttributes();
+    AttributeSet RetAttrs =
+        getAssociatedFunction()->getAttributes().getRetAttrs();
+    if (any_of(RetAttrs, [&](Attribute Attr) { return AM.contains(Attr); }))
+      indicatePessimisticFixpoint();
+  }
+
   void trackStatistics() const override { STATS_DECLTRACK_FNRET_ATTR(noundef) }
 };
 
@@ -10476,7 +10292,6 @@ struct AANoUndefArgument final
   AANoUndefArgument(const IRPosition &IRP, Attributor &A)
       : AAArgumentFromCallSiteArguments<AANoUndef, AANoUndefImpl>(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_ARG_ATTR(noundef) }
 };
 
@@ -10484,7 +10299,6 @@ struct AANoUndefCallSiteArgument final : AANoUndefFloating {
   AANoUndefCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AANoUndefFloating(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CSARG_ATTR(noundef) }
 };
 
@@ -10493,7 +10307,6 @@ struct AANoUndefCallSiteReturned final
   AANoUndefCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : AACalleeToCallSite<AANoUndef, AANoUndefImpl>(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CSRET_ATTR(noundef) }
 };
 
@@ -10581,7 +10394,6 @@ struct AANoFPClassFloating : public AANoFPClassImpl {
   AANoFPClassFloating(const IRPosition &IRP, Attributor &A)
       : AANoFPClassImpl(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     SmallVector<AA::ValueAndContext> Values;
     bool UsedAssumedInformation = false;
@@ -10611,7 +10423,6 @@ struct AANoFPClassFloating : public AANoFPClassImpl {
     return clampStateAndIndicateChange(getState(), T);
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_FNRET_ATTR(nofpclass)
   }
@@ -10626,7 +10437,6 @@ struct AANoFPClassReturned final
                                      AANoFPClassImpl::StateType, false,
                                      Attribute::None, false>(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_FNRET_ATTR(nofpclass)
   }
@@ -10637,7 +10447,6 @@ struct AANoFPClassArgument final
   AANoFPClassArgument(const IRPosition &IRP, Attributor &A)
       : AAArgumentFromCallSiteArguments<AANoFPClass, AANoFPClassImpl>(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_ARG_ATTR(nofpclass) }
 };
 
@@ -10645,7 +10454,6 @@ struct AANoFPClassCallSiteArgument final : AANoFPClassFloating {
   AANoFPClassCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AANoFPClassFloating(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_CSARG_ATTR(nofpclass)
   }
@@ -10656,7 +10464,6 @@ struct AANoFPClassCallSiteReturned final
   AANoFPClassCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : AACalleeToCallSite<AANoFPClass, AANoFPClassImpl>(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_CSRET_ATTR(nofpclass)
   }
@@ -10683,6 +10490,15 @@ struct AACallEdgesImpl : public AACallEdges {
   void trackStatistics() const override {}
 
 protected:
+  /// Return the callee of \p CB if it is a direct call whose callee has no
+  /// callback metadata. Such a call only calls its callee.
+  static Function *getOnlyCallee(const CallBase &CB) {
+    auto *Callee = dyn_cast<Function>(CB.getCalledOperand());
+    if (Callee && !Callee->hasMetadata(LLVMContext::MD_callback))
+      return Callee;
+    return nullptr;
+  }
+
   void addCalledFunction(Function *Fn, ChangeStatus &Change) {
     if (CalledFunctions.insert(Fn)) {
       Change = ChangeStatus::CHANGED;
@@ -10714,7 +10530,16 @@ private:
 struct AACallEdgesCallSite : public AACallEdgesImpl {
   AACallEdgesCallSite(const IRPosition &IRP, Attributor &A)
       : AACallEdgesImpl(IRP, A) {}
-  /// See AbstractAttribute::updateImpl(...).
+
+  void initialize(Attributor &A) override {
+    // The only callee of a direct call without callbacks never changes.
+    if (Function *Callee = getOnlyCallee(cast<CallBase>(getAnchorValue()))) {
+      ChangeStatus Change = ChangeStatus::UNCHANGED;
+      addCalledFunction(Callee, Change);
+      indicateOptimisticFixpoint();
+    }
+  }
+
   ChangeStatus updateImpl(Attributor &A) override {
     ChangeStatus Change = ChangeStatus::UNCHANGED;
 
@@ -10783,13 +10608,21 @@ struct AACallEdgesFunction : public AACallEdgesImpl {
   AACallEdgesFunction(const IRPosition &IRP, Attributor &A)
       : AACallEdgesImpl(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     ChangeStatus Change = ChangeStatus::UNCHANGED;
+    bool AllCallsDirect = true;
 
     auto ProcessCallInst = [&](Instruction &Inst) {
       CallBase &CB = cast<CallBase>(Inst);
 
+      // A direct call without callbacks only calls its callee; there is no
+      // need for a call site attribute.
+      if (Function *Callee = getOnlyCallee(CB)) {
+        addCalledFunction(Callee, Change);
+        return true;
+      }
+
+      AllCallsDirect = false;
       auto *CBEdges = A.getAAFor<AACallEdges>(
           *this, IRPosition::callsite_function(CB), DepClassTy::REQUIRED);
       if (!CBEdges)
@@ -10814,6 +10647,10 @@ struct AACallEdgesFunction : public AACallEdgesImpl {
       // are unknown callees.
       setHasUnknownCallee(true, Change);
     }
+
+    // The callees of direct calls in code known to be live do not change.
+    if (AllCallsDirect && !UsedAssumedInformation)
+      indicateOptimisticFixpoint();
 
     return Change;
   }
@@ -10966,7 +10803,6 @@ struct AAPotentialValuesImpl : AAPotentialValues {
   AAPotentialValuesImpl(const IRPosition &IRP, Attributor &A)
       : AAPotentialValues(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(..).
   void initialize(Attributor &A) override {
     if (A.hasSimplificationCallback(getIRPosition())) {
       indicatePessimisticFixpoint();
@@ -10982,7 +10818,6 @@ struct AAPotentialValuesImpl : AAPotentialValues {
     AAPotentialValues::initialize(A);
   }
 
-  /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     std::string Str;
     llvm::raw_string_ostream OS(Str);
@@ -11100,7 +10935,6 @@ struct AAPotentialValuesImpl : AAPotentialValues {
     getState() = NewS;
   }
 
-  /// See AbstractState::indicatePessimisticFixpoint(...).
   ChangeStatus indicatePessimisticFixpoint() override {
     getState() = StateType::getBestState(getState());
     getState().unionAssumed({{getAssociatedValue(), getCtxI()}, AA::AnyScope});
@@ -11108,12 +10942,10 @@ struct AAPotentialValuesImpl : AAPotentialValues {
     return ChangeStatus::CHANGED;
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     return indicatePessimisticFixpoint();
   }
 
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     SmallVector<AA::ValueAndContext> Values;
     for (AA::ValueScope S : {AA::Interprocedural, AA::Intraprocedural}) {
@@ -11161,7 +10993,6 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
   AAPotentialValuesFloating(const IRPosition &IRP, Attributor &A)
       : AAPotentialValuesImpl(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     auto AssumedBefore = getAssumed();
 
@@ -11590,7 +11421,6 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
         A.recordDependence(*It.second.LivenessAA, *this, DepClassTy::OPTIONAL);
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_FLOATING_ATTR(potential_values)
   }
@@ -11601,14 +11431,12 @@ struct AAPotentialValuesArgument final : AAPotentialValuesImpl {
   AAPotentialValuesArgument(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(..).
   void initialize(Attributor &A) override {
     auto &Arg = cast<Argument>(getAssociatedValue());
     if (Arg.hasPointeeInMemoryValueAttr())
       indicatePessimisticFixpoint();
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     auto AssumedBefore = getAssumed();
 
@@ -11663,7 +11491,6 @@ struct AAPotentialValuesArgument final : AAPotentialValuesImpl {
                                            : ChangeStatus::CHANGED;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_ARG_ATTR(potential_values)
   }
@@ -11674,7 +11501,6 @@ struct AAPotentialValuesReturned : public AAPotentialValuesFloating {
   AAPotentialValuesReturned(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(..).
   void initialize(Attributor &A) override {
     Function *F = getAssociatedFunction();
     if (!F || F->isDeclaration() || F->getReturnType()->isVoidTy()) {
@@ -11697,7 +11523,6 @@ struct AAPotentialValuesReturned : public AAPotentialValuesFloating {
     }
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     auto AssumedBefore = getAssumed();
     bool UsedAssumedInformation = false;
@@ -11798,7 +11623,6 @@ struct AAPotentialValuesReturned : public AAPotentialValuesFloating {
     return AAPotentialValues::indicatePessimisticFixpoint();
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override{
       STATS_DECLTRACK_FNRET_ATTR(potential_values)}
 
@@ -11810,13 +11634,11 @@ struct AAPotentialValuesFunction : AAPotentialValuesImpl {
   AAPotentialValuesFunction(const IRPosition &IRP, Attributor &A)
       : AAPotentialValuesImpl(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     llvm_unreachable("AAPotentialValues(Function|CallSite)::updateImpl will "
                      "not be called");
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_FN_ATTR(potential_values)
   }
@@ -11826,7 +11648,6 @@ struct AAPotentialValuesCallSite : AAPotentialValuesFunction {
   AAPotentialValuesCallSite(const IRPosition &IRP, Attributor &A)
       : AAPotentialValuesFunction(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_CS_ATTR(potential_values)
   }
@@ -11836,7 +11657,6 @@ struct AAPotentialValuesCallSiteReturned : AAPotentialValuesImpl {
   AAPotentialValuesCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : AAPotentialValuesImpl(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     auto AssumedBefore = getAssumed();
 
@@ -11892,7 +11712,6 @@ struct AAPotentialValuesCallSiteReturned : AAPotentialValuesImpl {
     return AAPotentialValues::indicatePessimisticFixpoint();
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_CSRET_ATTR(potential_values)
   }
@@ -11902,7 +11721,6 @@ struct AAPotentialValuesCallSiteArgument : AAPotentialValuesFloating {
   AAPotentialValuesCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AAPotentialValuesFloating(IRP, A) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_CSARG_ATTR(potential_values)
   }
@@ -11916,7 +11734,6 @@ struct AAAssumptionInfoImpl : public AAAssumptionInfo {
                        const DenseSet<StringRef> &Known)
       : AAAssumptionInfo(IRP, A, Known) {}
 
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     // Don't manifest a universal set if it somehow made it here.
     if (getKnown().isUniversal())
@@ -11937,7 +11754,6 @@ struct AAAssumptionInfoImpl : public AAAssumptionInfo {
     return isValidState() && setContains(Assumption);
   }
 
-  /// See AbstractAttribute::getAsStr()
   const std::string getAsStr(Attributor *A) const override {
     const SetContents &Known = getKnown();
     const SetContents &Assumed = getAssumed();
@@ -11971,7 +11787,6 @@ struct AAAssumptionInfoFunction final : AAAssumptionInfoImpl {
       : AAAssumptionInfoImpl(IRP, A,
                              getAssumptions(*IRP.getAssociatedFunction())) {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     bool Changed = false;
 
@@ -12007,13 +11822,11 @@ struct AAAssumptionInfoCallSite final : AAAssumptionInfoImpl {
   AAAssumptionInfoCallSite(const IRPosition &IRP, Attributor &A)
       : AAAssumptionInfoImpl(IRP, A, getInitialAssumptions(IRP)) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     const IRPosition &FnPos = IRPosition::function(*getAnchorScope());
     A.getAAFor<AAAssumptionInfo>(*this, FnPos, DepClassTy::REQUIRED);
   }
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     const IRPosition &FnPos = IRPosition::function(*getAnchorScope());
     auto *AssumptionAA =
@@ -12024,7 +11837,6 @@ struct AAAssumptionInfoCallSite final : AAAssumptionInfoImpl {
     return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
 
 private:
@@ -12057,7 +11869,6 @@ struct AAUnderlyingObjectsImpl
   using BaseTy = StateWrapper<BooleanState, AAUnderlyingObjects>;
   AAUnderlyingObjectsImpl(const IRPosition &IRP, Attributor &A) : BaseTy(IRP) {}
 
-  /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     if (!isValidState())
       return "<invalid>";
@@ -12079,10 +11890,8 @@ struct AAUnderlyingObjectsImpl
     return Str;
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
 
-  /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     auto &Ptr = getAssociatedValue();
 
@@ -12241,7 +12050,6 @@ struct AAGlobalValueInfoFloating : public AAGlobalValueInfo {
   AAGlobalValueInfoFloating(const IRPosition &IRP, Attributor &A)
       : AAGlobalValueInfo(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {}
 
   bool checkUse(Attributor &A, const Use &U, bool &Follow,
@@ -12345,12 +12153,10 @@ struct AAGlobalValueInfoFloating : public AAGlobalValueInfo {
     return !isValidState() || Uses.contains(&U);
   }
 
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     return ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     return "[" + std::to_string(Uses.size()) + " uses]";
   }
@@ -12371,7 +12177,6 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
   AAIndirectCallInfoCallSite(const IRPosition &IRP, Attributor &A)
       : AAIndirectCallInfo(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     auto *MD = getCtxI()->getMetadata(LLVMContext::MD_callees);
     if (!MD && !A.isClosedWorldModule())
@@ -12496,7 +12301,6 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     return ChangeStatus::CHANGED;
   }
 
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     // If we can't specialize at all, give up now.
     if (!AllCalleesKnown && AssumedCallees.empty())
@@ -12651,7 +12455,6 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     return Changed;
   }
 
-  /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     return std::string(AllCalleesKnown ? "eliminate" : "specialize") +
            " indirect call site with " + std::to_string(AssumedCallees.size()) +
@@ -12789,14 +12592,12 @@ struct AAInvariantLoadPointerImpl
     return Changed;
   }
 
-  /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *) const override {
     if (isKnownInvariant())
       return "load-invariant pointer";
     return "non-invariant pointer";
   }
 
-  /// See AbstractAttribute::trackStatistics().
   void trackStatistics() const override {}
 
 private:
@@ -12986,8 +12787,12 @@ struct AAInvariantLoadPointerCallSiteReturned final
       : AAInvariantLoadPointerImpl(IRP, A) {}
 
   void initialize(Attributor &A) override {
+    // Nothing is known about the result of an indirect call.
     const Function *F = getAssociatedFunction();
-    assert(F && "no associated function for return from call");
+    if (!F) {
+      indicatePessimisticFixpoint();
+      return;
+    }
 
     if (!F->isDeclaration() && !F->isIntrinsic())
       return AAInvariantLoadPointerImpl::initialize(A);
@@ -13069,7 +12874,6 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
     return AssumedAddressSpace;
   }
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     assert(getAssociatedType()->isPtrOrPtrVectorTy() &&
            "Associated value is not a pointer");
@@ -13133,7 +12937,6 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
                                                   : ChangeStatus::CHANGED;
   }
 
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     unsigned NewAS = getAddressSpace();
 
@@ -13187,7 +12990,6 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
     return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     if (!isValidState())
       return "addrspace(<invalid>)";
@@ -13239,7 +13041,6 @@ struct AAAddressSpaceReturned final : AAAddressSpaceImpl {
   AAAddressSpaceReturned(const IRPosition &IRP, Attributor &A)
       : AAAddressSpaceImpl(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     // TODO: we don't rewrite function argument for now because it will need to
     // rewrite the function signature and all call sites.
@@ -13271,7 +13072,6 @@ struct AAAddressSpaceCallSiteArgument final : AAAddressSpaceImpl {
   AAAddressSpaceCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AAAddressSpaceImpl(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     // TODO: we don't rewrite call site argument for now because it will need to
     // rewrite the function signature of the callee.
@@ -13343,7 +13143,6 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
                                       : ChangeStatus::CHANGED;
   }
 
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     unsigned FlatAS = A.getInfoCache().getFlatAddressSpace().value();
 
@@ -13391,7 +13190,6 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
     return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     if (!isValidState())
       return "<invalid>";
@@ -13568,7 +13366,6 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
     return ChangeStatus::CHANGED;
   }
 
-  /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
 
     assert(isValidState() &&
@@ -13609,7 +13406,6 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
     return ChangeStatus::UNCHANGED;
   }
 
-  /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     if (!isValidState())
       return "allocationinfo(<invalid>)";
@@ -13648,7 +13444,6 @@ struct AAAllocationInfoReturned : AAAllocationInfoImpl {
   AAAllocationInfoReturned(const IRPosition &IRP, Attributor &A)
       : AAAllocationInfoImpl(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     // TODO: we don't rewrite function argument for now because it will need to
     // rewrite the function signature and all call sites
@@ -13682,7 +13477,6 @@ struct AAAllocationInfoCallSiteArgument : AAAllocationInfoImpl {
   AAAllocationInfoCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AAAllocationInfoImpl(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
 
     (void)indicatePessimisticFixpoint();

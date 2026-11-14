@@ -938,8 +938,11 @@ void GISelValueTracking::computeKnownBits(Register R, KnownBits &Known,
                          Depth + 1);
     computeKnownBitsImpl(MI.getOperand(3).getReg(), WidthKnown, DemandedElts,
                          Depth + 1);
-    OffsetKnown = OffsetKnown.sext(BitWidth);
-    WidthKnown = WidthKnown.sext(BitWidth);
+    // The offset and width are unsigned and can have a different type than the
+    // source. extractBits reads both as unsigned values of any width. The
+    // width is also used below in a subtraction of BitWidth type. A valid width
+    // is at most BitWidth, so it fits in BitWidth bits.
+    WidthKnown = WidthKnown.zextOrTrunc(BitWidth);
     Known = extractBits(BitWidth, SrcOpKnown, OffsetKnown, WidthKnown);
     // Sign extend the extracted value using shift left and arithmetic shift
     // right.
@@ -1324,7 +1327,15 @@ void GISelValueTracking::computeKnownFPClassForFPTrunc(
   KnownFPClass KnownSrc;
   computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
                       Depth + 1);
-  Known = KnownFPClass::fptrunc(KnownSrc);
+
+  const fltSemantics &DstSem = getFltSemanticForLLT(
+      MRI.getType(MI.getOperand(0).getReg()).getScalarType());
+  const fltSemantics &SrcSem =
+      getFltSemanticForLLT(MRI.getType(Val).getScalarType());
+
+  Known = KnownFPClass::fptrunc(KnownSrc, DstSem, SrcSem,
+                                MF.getDenormalMode(DstSem),
+                                MF.getDenormalMode(SrcSem));
 }
 
 void GISelValueTracking::computeKnownFPClass(Register R,
@@ -1354,26 +1365,14 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   if (auto Cst = GFConstant::getConstant(R, MRI)) {
     switch (Cst->getKind()) {
     case GFConstant::GFConstantKind::Scalar: {
-      auto APF = Cst->getScalarValue();
-      Known.setKnownFPClasses(APF.classify());
-      Known.setSignBit(APF.isNegative());
+      Known = KnownFPClass(Cst->getScalarValue());
       break;
     }
     case GFConstant::GFConstantKind::FixedVector: {
-      Known.setKnownFPClasses(fcNone);
-      bool SignBitAllZero = true;
-      bool SignBitAllOne = true;
+      Known = KnownFPClass::getEmpty();
 
-      for (auto C : *Cst) {
-        Known.setKnownFPClasses(Known.getKnownFPClasses() | C.classify());
-        if (C.isNegative())
-          SignBitAllZero = false;
-        else
-          SignBitAllOne = false;
-      }
-
-      if (SignBitAllOne != SignBitAllZero)
-        Known.setSignBit(SignBitAllOne);
+      for (const APFloat &C : *Cst)
+        Known |= KnownFPClass(C);
 
       break;
     }
@@ -1484,10 +1483,11 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FMA:
-  case TargetOpcode::G_STRICT_FMA:
   case TargetOpcode::G_FMAD: {
-    if ((InterestedClasses & fcNegative) == fcNone)
+    if ((InterestedClasses & (fcNegative | fcNan)) == fcNone)
       break;
+
+    const bool IsFMA = Opcode == TargetOpcode::G_FMA;
 
     Register A = MI.getOperand(1).getReg();
     Register B = MI.getOperand(2).getReg();
@@ -1497,17 +1497,26 @@ void GISelValueTracking::computeKnownFPClass(Register R,
         MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
 
     if (A == B && isGuaranteedNotToBeUndef(A, MRI, Depth + 1)) {
-      // x * x + y
+      FPClassTest InterestedSquared = InterestedClasses;
+      FPClassTest InterestedAddend = InterestedClasses;
+      // Only fma(+inf, +inf, -inf) and fma(-inf, -inf, -inf) produce NaN when
+      // squaring.
+      if (InterestedClasses & fcQNan) {
+        InterestedSquared |= fcSNan | fcInf;
+        InterestedAddend |= fcSNan | fcNegInf;
+      }
+
       KnownFPClass KnownSrc, KnownAddend;
-      computeKnownFPClass(C, DemandedElts, InterestedClasses, KnownAddend,
+      computeKnownFPClass(C, DemandedElts, InterestedAddend, KnownAddend,
                           Depth + 1);
-      computeKnownFPClass(A, DemandedElts, InterestedClasses, KnownSrc,
+      computeKnownFPClass(A, DemandedElts, InterestedSquared, KnownSrc,
                           Depth + 1);
       if (KnownNotFromFlags) {
         KnownSrc.knownNot(KnownNotFromFlags);
         KnownAddend.knownNot(KnownNotFromFlags);
       }
-      Known = KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode);
+      Known = IsFMA ? KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode)
+                    : KnownFPClass::fmuladd_square(KnownSrc, KnownAddend, Mode);
     } else {
       KnownFPClass KnownSrc[3];
       computeKnownFPClass(A, DemandedElts, InterestedClasses, KnownSrc[0],
@@ -1527,7 +1536,10 @@ void GISelValueTracking::computeKnownFPClass(Register R,
         KnownSrc[1].knownNot(KnownNotFromFlags);
         KnownSrc[2].knownNot(KnownNotFromFlags);
       }
-      Known = KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode);
+      Known =
+          IsFMA ? KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode)
+                : KnownFPClass::fmuladd(KnownSrc[0], KnownSrc[1], KnownSrc[2],
+                                        Mode);
     }
     break;
   }
@@ -1535,8 +1547,11 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   case TargetOpcode::G_STRICT_FSQRT: {
     KnownFPClass KnownSrc;
     FPClassTest InterestedSrcs = InterestedClasses;
-    if (InterestedClasses & fcNan)
-      InterestedSrcs |= KnownFPClass::OrderedLessThanZeroMask;
+    if (InterestedClasses & fcQNan)
+      InterestedSrcs |= KnownFPClass::OrderedLessThanZeroMask | fcSNan;
+    // Subnormals may flush to zero.
+    if (InterestedClasses & fcZero)
+      InterestedSrcs |= fcSubnormal;
 
     Register Val = MI.getOperand(1).getReg();
     computeKnownFPClass(Val, DemandedElts, InterestedSrcs, KnownSrc, Depth + 1);
@@ -1767,9 +1782,20 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     DenormalMode Mode = MF->getDenormalMode(FltSem);
     const bool IsMultiUnitFPType = &FltSem == &APFloat::PPCDoubleDouble();
 
-    const bool IsTrunc = Opcode == TargetOpcode::G_INTRINSIC_TRUNC;
-    Known = KnownFPClass::roundToIntegral(KnownSrc, IsTrunc, IsMultiUnitFPType,
-                                          Mode);
+    switch (Opcode) {
+    case TargetOpcode::G_INTRINSIC_TRUNC:
+      Known = KnownFPClass::trunc(KnownSrc, Mode);
+      break;
+    case TargetOpcode::G_FFLOOR:
+      Known = KnownFPClass::floor(KnownSrc, IsMultiUnitFPType, Mode);
+      break;
+    case TargetOpcode::G_FCEIL:
+      Known = KnownFPClass::ceil(KnownSrc, IsMultiUnitFPType, Mode);
+      break;
+    default:
+      Known = KnownFPClass::roundToIntegral(KnownSrc, IsMultiUnitFPType, Mode);
+      break;
+    }
     break;
   }
   case TargetOpcode::G_FEXP:
@@ -1885,8 +1911,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     Known = KnownFPClass::powi(KnownSrc, ExponentKnownBits);
     break;
   }
-  case TargetOpcode::G_FLDEXP:
-  case TargetOpcode::G_STRICT_FLDEXP: {
+  case TargetOpcode::G_FLDEXP: {
     Register Val = MI.getOperand(1).getReg();
     KnownFPClass KnownSrc;
     computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
@@ -1909,13 +1934,10 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FADD:
-  case TargetOpcode::G_STRICT_FADD:
-  case TargetOpcode::G_FSUB:
-  case TargetOpcode::G_STRICT_FSUB: {
+  case TargetOpcode::G_FSUB: {
     Register LHS = MI.getOperand(1).getReg();
     Register RHS = MI.getOperand(2).getReg();
-    bool IsAdd = (Opcode == TargetOpcode::G_FADD ||
-                  Opcode == TargetOpcode::G_STRICT_FADD);
+    bool IsAdd = Opcode == TargetOpcode::G_FADD;
     bool WantNegative =
         IsAdd &&
         (InterestedClasses & KnownFPClass::OrderedLessThanZeroMask) != fcNone;
@@ -1962,8 +1984,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       Known = KnownFPClass::fsub(KnownLHS, KnownRHS, Mode);
     break;
   }
-  case TargetOpcode::G_FMUL:
-  case TargetOpcode::G_STRICT_FMUL: {
+  case TargetOpcode::G_FMUL: {
     Register LHS = MI.getOperand(1).getReg();
     Register RHS = MI.getOperand(2).getReg();
     DenormalMode Mode =
@@ -2031,7 +2052,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     computeKnownFPClass(RHS, DemandedElts, fcAllFlags, KnownRHS, Depth + 1);
 
     bool KnowSomethingUseful =
-        KnownRHS.isKnownNeverNaN() ||
+        KnownRHS.isKnownNever(fcSNan) ||
         KnownRHS.isKnownNever(fcNegNormal | fcNegSubnormal) ||
         KnownRHS.isKnownNever(fcPosNormal | fcPosSubnormal);
 
@@ -2041,7 +2062,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     Known = KnownFPClass::fdiv(KnownLHS, KnownRHS, Mode);
     break;
   }
-  case TargetOpcode::G_FREM: {
+  case TargetOpcode::G_FREM:
+  case TargetOpcode::G_STRICT_FREM: {
     FPClassTest InterestedLHS = fcNone;
     FPClassTest InterestedRHS = fcNone;
 
@@ -2137,7 +2159,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     LLT SrcTy = MRI.getType(Src).getScalarType();
     const fltSemantics &SrcSem = getFltSemanticForLLT(SrcTy);
 
-    Known = KnownFPClass::fpext(KnownSrc, DstSem, SrcSem);
+    Known = KnownFPClass::fpext(KnownSrc, DstSem, SrcSem,
+                                MF->getDenormalMode(DstSem),
+                                MF->getDenormalMode(SrcSem));
     break;
   }
   case TargetOpcode::G_FPTRUNC:
@@ -2289,7 +2313,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       if (Known.isUnknown())
         break;
     } else {
-      Known.setKnownFPClasses(fcNone);
+      Known = KnownFPClass::getEmpty();
     }
 
     // Do we need anymore elements from Vec?
@@ -2328,7 +2352,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       if (Known.isUnknown())
         break;
     } else {
-      Known.setKnownFPClasses(fcNone);
+      Known = KnownFPClass::getEmpty();
     }
 
     if (!!DemandedRHS) {
@@ -2451,7 +2475,9 @@ bool GISelValueTracking::isKnownNeverNaN(Register Val, bool SNaN) {
     case TargetOpcode::G_FMUL:
     case TargetOpcode::G_STRICT_FMUL:
     case TargetOpcode::G_FDIV:
+    case TargetOpcode::G_STRICT_FDIV:
     case TargetOpcode::G_FREM:
+    case TargetOpcode::G_STRICT_FREM:
     case TargetOpcode::G_FMA:
     case TargetOpcode::G_STRICT_FMA:
     case TargetOpcode::G_FMAD:

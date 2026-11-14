@@ -102,7 +102,6 @@ class PHIEliminationImpl {
 
   void computeLiveOutSets(const MachineFunction &MF);
 
-  bool isLiveIn(Register Reg, const MachineBasicBlock *MBB);
   bool isLiveOutPastPHIs(Register Reg, const MachineBasicBlock *MBB);
 
   using BBVRegPair = std::pair<unsigned, Register>;
@@ -294,6 +293,23 @@ bool PHIEliminationImpl::run(MachineFunction &MF) {
   return Changed;
 }
 
+/// Move debug instructions preceding \p Position to immediately after it.
+static void moveDebugInstructionsAfter(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator Position) {
+  MachineBasicBlock::iterator InsertPt = std::next(Position);
+  for (auto I = MBB.begin(); I != Position;) {
+    if (!I->isDebugInstr()) {
+      ++I;
+      continue;
+    }
+
+    auto DebugBegin = I;
+    I = skipDebugInstructionsForward(I, Position,
+                                     /*SkipPseudoOp=*/false);
+    MBB.splice(InsertPt, &MBB, DebugBegin, I);
+  }
+}
+
 /// EliminatePHINodes - Eliminate phi nodes by inserting copy instructions in
 /// predecessor basic blocks.
 bool PHIEliminationImpl::EliminatePHINodes(MachineFunction &MF,
@@ -301,9 +317,14 @@ bool PHIEliminationImpl::EliminatePHINodes(MachineFunction &MF,
   if (MBB.empty() || !MBB.front().isPHI())
     return false; // Quick exit for basic blocks without PHIs.
 
-  // Get an iterator to the last PHI node.
+  // Ignore debug instructions when choosing the destination-copy position.
+  // Move any skipped debug instructions after that position so they remain
+  // after the destination copies. Do not change pseudo-probe placement.
   MachineBasicBlock::iterator LastPHIIt =
-      std::prev(MBB.SkipPHIsAndLabels(MBB.begin()));
+      prev_nodbg(MBB.SkipPHIsLabelsAndDebug(MBB.begin(), /*Reg=*/Register(),
+                                            /*SkipPseudoOp=*/false),
+                 MBB.begin(), /*SkipPseudoOp=*/false);
+  moveDebugInstructionsAfter(MBB, LastPHIIt);
 
   // If all incoming edges are critical, we try to deduplicate identical PHIs so
   // that we generate fewer copies. If at any edge is non-critical, we either
@@ -482,10 +503,9 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
       assert(DestVNI && "PHI destination should be live at its definition.");
       DestVNI->def = NewStart;
     }
-  }
 
-  // Adjust the VRegPHIUseCount map to account for the removal of this PHI node.
-  if (LIS) {
+    // Adjust the VRegPHIUseCount map to account for the removal of this PHI
+    // node.
     for (unsigned i = 1; i != MPhi->getNumOperands(); i += 2) {
       if (!MPhi->getOperand(i).isUndef()) {
         --VRegPHIUseCount[BBVRegPair(
@@ -714,7 +734,8 @@ bool PHIEliminationImpl::SplitPHIEdges(MachineFunction &MF,
       // is likely to be left after coalescing. If we are looking at a loop
       // exiting edge, split it so we won't insert code in the loop, otherwise
       // don't bother.
-      ShouldSplit = ShouldSplit && !isLiveIn(Reg, &MBB);
+      ShouldSplit =
+          ShouldSplit && !LIS->isLiveInToMBB(LIS->getInterval(Reg), &MBB);
 
       // Check for a loop exiting edge.
       if (!ShouldSplit && CurLoop != PreLoop) {
@@ -770,20 +791,14 @@ void PHIEliminationImpl::computeLiveOutSets(const MachineFunction &MF) {
   }
 }
 
-bool PHIEliminationImpl::isLiveIn(Register Reg, const MachineBasicBlock *MBB) {
-  assert(LIS && "isLiveIn() requires LiveIntervals");
-  return LIS->isLiveInToMBB(LIS->getInterval(Reg), MBB);
-}
-
 bool PHIEliminationImpl::isLiveOutPastPHIs(Register Reg,
                                            const MachineBasicBlock *MBB) {
-  assert(LIS && "isLiveOutPastPHIs() requires LiveIntervals");
   // LiveIntervals considers uses in PHIs to be on the edge rather than in the
   // predecessor basic block, so that a register used only in a PHI is live out
   // of the block.
   const LiveInterval &LI = LIS->getInterval(Reg);
   for (const MachineBasicBlock *SI : MBB->successors())
-    if (LI.liveAt(LIS->getMBBStartIdx(SI)))
+    if (LIS->isLiveInToMBB(LI, SI))
       return true;
   return false;
 }

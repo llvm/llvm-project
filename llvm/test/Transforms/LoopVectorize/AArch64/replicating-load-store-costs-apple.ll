@@ -266,9 +266,9 @@ define void @test_load_gep_widen_induction(ptr noalias %dst, ptr noalias %dst2) 
 ; CHECK-NEXT:    store ptr null, ptr [[TMP23]], align 8
 ; CHECK-NEXT:    store ptr null, ptr [[TMP28]], align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr ptr, ptr [[DST2]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr ptr, ptr [[TMP12]], i64 2
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr ptr, ptr [[TMP12]], i64 4
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr ptr, ptr [[TMP12]], i64 6
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP12]], i64 16
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[TMP12]], i64 32
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[TMP12]], i64 48
 ; CHECK-NEXT:    store <2 x ptr> [[TMP10]], ptr [[TMP12]], align 8
 ; CHECK-NEXT:    store <2 x ptr> [[TMP14]], ptr [[TMP24]], align 8
 ; CHECK-NEXT:    store <2 x ptr> [[TMP18]], ptr [[TMP25]], align 8
@@ -627,9 +627,9 @@ define void @test_prefer_vector_addressing(ptr %start, ptr %ms, ptr noalias %src
 ; CHECK-LABEL: define void @test_prefer_vector_addressing(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[MS:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[GEP_START:%.*]] = getelementptr i8, ptr [[START]], i64 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoaddr ptr [[MS]] to i64
 ; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
+; CHECK-NEXT:    [[GEP_START:%.*]] = getelementptr i8, ptr [[START]], i64 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[START2]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP10]], i64 [[TMP0]])
 ; CHECK-NEXT:    [[TMP25:%.*]] = add i64 [[TMP1]], -3

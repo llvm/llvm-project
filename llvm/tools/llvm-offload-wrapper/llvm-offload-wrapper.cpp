@@ -18,13 +18,10 @@
 #include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/TargetParser/Host.h"
 
@@ -39,12 +36,14 @@ static cl::opt<object::OffloadKind> Kind(
     cl::values(clEnumValN(object::OFK_OpenMP, "openmp", "Wrap OpenMP binaries"),
                clEnumValN(object::OFK_Cuda, "cuda", "Wrap CUDA binaries"),
                clEnumValN(object::OFK_HIP, "hip", "Wrap HIP binaries"),
-               clEnumValN(object::OFK_SYCL, "sycl", "Wrap SYCL binaries")));
+               clEnumValN(object::OFK_SYCL, "sycl", "Wrap SYCL binaries"),
+               clEnumValN(object::OFK_OpenACC, "openacc",
+                          "Wrap OpenACC binaries")));
 
-static cl::opt<bool> Relocatable(
-    "relocatable",
-    cl::desc("Wrap for a relocatable offloading application (OpenMP only)"),
-    cl::cat(OffloadWrapeprCategory));
+static cl::opt<bool>
+    Relocatable("relocatable",
+                cl::desc("Wrap for a relocatable offloading application"),
+                cl::cat(OffloadWrapeprCategory));
 
 static cl::opt<std::string> OutputFile("o", cl::desc("Write output to <file>."),
                                        cl::value_desc("file"),
@@ -77,6 +76,12 @@ static Error wrapImages(ArrayRef<ArrayRef<char>> BuffersToWrap) {
             /*Suffix=*/"", /*Relocatable=*/Relocatable))
       return Err;
     break;
+  case llvm::object::OFK_OpenACC:
+    if (Error Err = offloading::wrapOpenACCBinaries(
+            M, BuffersToWrap, offloading::getOffloadEntryArray(M),
+            /*Relocatable=*/Relocatable))
+      return Err;
+    break;
   case llvm::object::OFK_Cuda:
     if (Error Err = offloading::wrapCudaBinary(
             M, BuffersToWrap.front(), offloading::getOffloadEntryArray(M),
@@ -89,7 +94,9 @@ static Error wrapImages(ArrayRef<ArrayRef<char>> BuffersToWrap) {
       return Err;
     break;
   case llvm::object::OFK_SYCL:
-    if (Error Err = offloading::wrapSYCLBinaries(M, BuffersToWrap.front()))
+    if (Error Err = offloading::wrapSYCLBinaries(
+            M, BuffersToWrap.front(), offloading::SYCLJITOptions(),
+            /*IsFinalizedImage=*/Relocatable))
       return Err;
     break;
   default:

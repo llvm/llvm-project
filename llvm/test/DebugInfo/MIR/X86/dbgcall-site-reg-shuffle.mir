@@ -44,7 +44,7 @@ name:            move_around_args
 liveins:
   - { reg: '$edi' }
 callSites:
-  - { bb: 0, offset: 12, fwdArgRegs:
+  - { bb: '%bb.0', offset: 12, fwdArgRegs:
       - { arg: 0, reg: '$edi' }
       - { arg: 1, reg: '$esi' } }
 body:             |

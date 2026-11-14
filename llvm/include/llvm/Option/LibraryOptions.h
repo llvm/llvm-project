@@ -27,6 +27,7 @@
 #include "llvm/Support/Compiler.h"
 #include <optional>
 #include <type_traits>
+#include <utility>
 
 namespace llvm {
 namespace opt {
@@ -118,23 +119,38 @@ public:
   ~LibraryOptTable() override;
 };
 
-/// Connects an options struct to cl::ParseCommandLineOptions.
+/// Connects options struct T to cl::parseCommandLineOptions and
+/// cl::LibraryOptionsContext.
 class LLVM_ABI LibraryOptionsParser final : public cl::LibraryOptions {
 public:
-  using ApplyFn = bool (*)(const Arg &, BumpPtrAllocator &);
-  using TableFn = const OptTable &(*)();
-  LibraryOptionsParser(TableFn Table, ApplyFn Apply, void (*Reset)())
-      : Table(Table), Apply(Apply), Reset(Reset) {}
+  template <typename T>
+  constexpr explicit LibraryOptionsParser(std::in_place_type_t<T>)
+      : Table(T::optTable), Global(&T::Global), Default(&T::Default),
+        Apply([](void *Opts, const Arg &A, BumpPtrAllocator &Alloc) {
+          return static_cast<T *>(Opts)->apply(A, Alloc);
+        }),
+        Copy([](BumpPtrAllocator &Alloc) -> void * {
+          return new (Alloc) T(T::Default);
+        }),
+        Reset([] { T::Global = T(); }) {}
 
   void forEachOption(
       function_ref<void(StringRef, StringRef, StringRef)> Fn) const override;
-  Error parse(ArrayRef<const char *> Args, unsigned &Consumed,
-              BumpPtrAllocator &Alloc) override;
-  void reset() override { Reset(); }
+  Error parse(void *Opts, ArrayRef<const char *> Args, unsigned &Consumed,
+              BumpPtrAllocator &Alloc) const override;
+  void *global() const override { return Global; }
+  const void *getDefault() const override { return Default; }
+  void *copyDefault(BumpPtrAllocator &Alloc) const override {
+    return Copy(Alloc);
+  }
+  void reset() const override { Reset(); }
 
 private:
-  TableFn Table;
-  ApplyFn Apply;
+  const OptTable &(*Table)();
+  void *Global;
+  const void *Default;
+  bool (*Apply)(void *Opts, const Arg &A, BumpPtrAllocator &Alloc);
+  void *(*Copy)(BumpPtrAllocator &Alloc);
   void (*Reset)();
 };
 
@@ -144,11 +160,7 @@ private:
 template <typename T> class RegisterLibraryOptions {
   static_assert(std::is_trivially_destructible_v<T>,
                 "an options struct must not need an exit-time destructor");
-  LibraryOptionsParser Parser{T::optTable,
-                              [](const Arg &A, BumpPtrAllocator &Alloc) {
-                                return T::Global.apply(A, Alloc);
-                              },
-                              [] { T::Global = T(); }};
+  LibraryOptionsParser Parser{std::in_place_type<T>};
 
 public:
   RegisterLibraryOptions() { cl::addLibraryOptions(Parser); }
@@ -156,5 +168,21 @@ public:
 
 } // namespace opt
 } // namespace llvm
+
+/// Defines the file-scope registration of options struct T for a library that
+/// has no initialization function to register it from, exempting this static
+/// constructor from -Wglobal-constructors.
+// clang-format off
+#ifdef __clang__
+#define LLVM_REGISTER_LIBRARY_OPTIONS(T)                                       \
+  _Pragma("clang diagnostic push")                                             \
+  _Pragma("clang diagnostic ignored \"-Wglobal-constructors\"")                \
+  static llvm::opt::RegisterLibraryOptions<T> Registration;                    \
+  _Pragma("clang diagnostic pop")
+#else
+#define LLVM_REGISTER_LIBRARY_OPTIONS(T)                                       \
+  static llvm::opt::RegisterLibraryOptions<T> Registration;
+#endif
+// clang-format on
 
 #endif // LLVM_OPTION_LIBRARYOPTIONS_H

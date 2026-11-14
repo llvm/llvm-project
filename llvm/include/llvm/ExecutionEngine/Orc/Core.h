@@ -24,6 +24,7 @@
 #include "llvm/ExecutionEngine/Orc/MaterializationUnit.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
+#include "llvm/ExecutionEngine/Orc/Shared/JITDylibLookupFlags.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SymbolNameSpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ExecutionEngine/Orc/SymbolLookupSet.h"
@@ -123,14 +124,6 @@ public:
   virtual void handleTransferResources(JITDylib &JD, ResourceKey DstK,
                                        ResourceKey SrcK) = 0;
 };
-
-/// Lookup flags that apply to each dylib in the search order for a lookup.
-///
-/// If MatchHiddenSymbolsOnly is used (the default) for a given dylib, then
-/// only symbols in that Dylib's interface will be searched. If
-/// MatchHiddenSymbols is used then symbols with hidden visibility will match
-/// as well.
-enum class JITDylibLookupFlags { MatchExportedSymbolsOnly, MatchAllSymbols };
 
 /// Describes the kind of lookup being performed. The lookup kind is passed to
 /// symbol generators (if they're invoked) to help them determine what
@@ -560,7 +553,6 @@ class AsynchronousSymbolQuery {
   friend class ExecutionSession;
   friend class InProgressFullLookupState;
   friend class JITDylib;
-  friend class JITSymbolResolverAdapter;
   friend class MaterializationResponsibility;
 
 public:
@@ -988,10 +980,6 @@ private:
   void detachQueryHelper(AsynchronousSymbolQuery &Q,
                          const SymbolNameSet &QuerySymbols);
 
-  void transferEmittedNodeDependencies(MaterializingInfo &DependantMI,
-                                       const SymbolStringPtr &DependantName,
-                                       MaterializingInfo &EmittedMI);
-
   Expected<SymbolFlagsMap>
   defineMaterializing(MaterializationResponsibility &FromMR,
                       SymbolFlagsMap SymbolFlags);
@@ -1004,9 +992,6 @@ private:
            SymbolStringPtr InitSymbol);
 
   SymbolNameSet getRequestedSymbols(const SymbolFlagsMap &SymbolFlags) const;
-
-  void addDependencies(const SymbolStringPtr &Name,
-                       const SymbolDependenceMap &Dependants);
 
   Error resolve(MaterializationResponsibility &MR, const SymbolMap &Resolved);
 

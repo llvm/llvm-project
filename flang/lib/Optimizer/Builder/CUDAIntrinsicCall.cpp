@@ -687,8 +687,11 @@ static mlir::Value genAtomBinOp(fir::FirOpBuilder &builder, mlir::Location &loc,
                                 mlir::Value arg1) {
   auto llvmPointerType = mlir::LLVM::LLVMPointerType::get(builder.getContext());
   arg0 = builder.createConvert(loc, llvmPointerType, arg0);
-  return mlir::LLVM::AtomicRMWOp::create(builder, loc, binOp, arg0, arg1,
-                                         mlir::LLVM::AtomicOrdering::seq_cst);
+  bool ignoreDenormalMode = binOp == mlir::LLVM::AtomicBinOp::fadd;
+  return mlir::LLVM::AtomicRMWOp::create(
+      builder, loc, binOp, arg0, arg1, mlir::LLVM::AtomicOrdering::seq_cst,
+      /*syncscope=*/llvm::StringRef(), /*alignment=*/0, /*isVolatile=*/false,
+      /*ignoreDenormalMode=*/ignoreDenormalMode);
 }
 
 // ATOMICADD
@@ -991,7 +994,8 @@ CUDAIntrinsicLibrary::genBarrierArrive(mlir::Type resultType,
   mlir::Value barrier = convertPtrToNVVMSpace(
       builder, loc, args[0], mlir::NVVM::NVVMMemorySpace::Shared);
   return mlir::NVVM::MBarrierArriveOp::create(builder, loc, resultType, barrier,
-                                              /*count=*/nullptr)
+                                              /*count=*/nullptr,
+                                              /*multicastMask=*/nullptr)
       .getResult(0);
 }
 

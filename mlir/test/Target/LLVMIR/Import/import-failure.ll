@@ -40,8 +40,10 @@ define dso_local void @tbaa(ptr %0) {
 
 ; // -----
 
-; CHECK:      import-failure.ll
-; CHECK-SAME: error: has cycle in TBAA graph: ![[ID:.*]] = distinct !{![[ID]], i64 4, !"int"}
+; CHECK:      Cycle detected in access type parent chain
+; CHECK-NEXT:   store i32 1, ptr %{{.*}}, align 4, !tbaa ![[TAG:[0-9]+]]
+; CHECK-NEXT: ![[TAG]] = !{![[ID:[0-9]+]], ![[ID]], i64 0, i64 4}
+; CHECK-NEXT: ![[ID]] = distinct !{![[ID]], i64 4, !"int"}
 define dso_local void @tbaa(ptr %0) {
   store i32 1, ptr %0, align 4, !tbaa !2
   ret void
@@ -644,3 +646,52 @@ define void @reuse_b(ptr %q) {
 
 !0 = distinct !{!0, i32 42}
 !1 = distinct !{!1, i32 43}
+
+; // -----
+
+; A call stack id wider than 64 bits has no dense i64 slot, so the whole
+; `!callsite` node is dropped with a warning instead of being imported.
+; CHECK: warning: unhandled metadata: !{{[0-9]+}} = !{i128 1} on {{.*}}%p = call ptr @alloc(i64 16)
+define ptr @wide_callsite_id() {
+  %p = call ptr @alloc(i64 16), !callsite !0
+  ret ptr %p
+}
+
+declare ptr @alloc(i64)
+
+!0 = !{i128 1}
+; // -----
+
+; Only aggregate copies carry tbaa_struct; on any other instruction the node is
+; declined, and the import keeps going.
+; CHECK:      <unknown>
+; CHECK-SAME: warning: unhandled metadata: ![[ST:[0-9]+]] = !{i64 0, i64 4, ![[TAG:[0-9]+]]}
+define i32 @tbaa_struct_on_load(ptr %p) {
+  %v = load i32, ptr %p, !tbaa.struct !7
+  ret i32 %v
+}
+
+!5 = !{!"Simple C++ TBAA"}
+!0 = !{!"omnipotent char", !5, i64 0}
+!1 = !{!"int", !0, i64 0}
+!2 = !{!1, !1, i64 0}
+!7 = !{i64 0, i64 4, !2}
+
+; // -----
+
+; Offsets and sizes are int64 in the attribute; a wider constant cannot be
+; represented, so the node is declined instead of crashing.
+; CHECK:      <unknown>
+; CHECK-SAME: warning: unhandled metadata: ![[ST:[0-9]+]] = !{i128 18446744073709551616, i64 4, ![[TAG:[0-9]+]]}
+declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
+
+define void @tbaa_struct_wide_offset(ptr %d, ptr %s) {
+  call void @llvm.memcpy.p0.p0.i64(ptr %d, ptr %s, i64 12, i1 false), !tbaa.struct !8
+  ret void
+}
+
+!5 = !{!"Simple C++ TBAA"}
+!0 = !{!"omnipotent char", !5, i64 0}
+!1 = !{!"int", !0, i64 0}
+!2 = !{!1, !1, i64 0}
+!8 = !{i128 18446744073709551616, i64 4, !2}

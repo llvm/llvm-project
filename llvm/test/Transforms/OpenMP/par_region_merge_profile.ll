@@ -96,7 +96,7 @@ declare void @__kmpc_barrier(ptr, i32) local_unnamed_addr
 ;
 ;
 ; CHECK-LABEL: define internal void @merge_profile..omp_par(
-; CHECK-SAME: ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] !prof [[PROF14:![0-9]+]] {
+; CHECK-SAME: ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] !prof [[PROF14:![0-9]+]] {
 ; CHECK-NEXT:  [[OMP_PAR_ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEP_A_ADDR:%.*]] = getelementptr { ptr, ptr }, ptr [[TMP0]], i32 0, i32 0
 ; CHECK-NEXT:    [[LOADGEP_COND_ADDR:%.*]] = load ptr, ptr [[GEP_A_ADDR]], align 8, !align [[META15:![0-9]+]]

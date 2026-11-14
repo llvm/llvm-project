@@ -74,7 +74,7 @@ class TestData {
   static const int kSize = 64;
   typedef u64 T;
   MutexType *mtx_;
-  char pad_[kCacheLineSize];
+  [[maybe_unused]] char pad_[kCacheLineSize];
   T data_[kSize];
 };
 

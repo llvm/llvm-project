@@ -99,7 +99,7 @@ public:
     if (CallDescription{CDM::SimpleFunc, {"error"}, 0}.matches(Call)) {
       if (C.getState()->get<ErrorPrevented>())
         return;
-      const ExplodedNode *N = C.generateErrorNode();
+      const ExplodedNode *N = C.addSink();
       if (!N)
         return;
       auto R =

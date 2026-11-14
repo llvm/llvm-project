@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MetadataLoader.h"
+#include "BitReaderOptions.h"
 #include "ValueList.h"
 
 #include "llvm/ADT/APInt.h"
@@ -40,7 +41,6 @@
 #include "llvm/IR/TrackingMDRef.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -65,17 +65,6 @@ using namespace llvm;
 STATISTIC(NumMDStringLoaded, "Number of MDStrings loaded");
 STATISTIC(NumMDNodeTemporary, "Number of MDNode::Temporary created");
 STATISTIC(NumMDRecordLoaded, "Number of Metadata records loaded");
-
-/// Flag whether we need to import full type definitions for ThinLTO.
-/// Currently needed for Darwin and LLDB.
-static cl::opt<bool> ImportFullTypeDefinitions(
-    "import-full-type-definitions", cl::init(false), cl::Hidden,
-    cl::desc("Import full type definitions for ThinLTO."));
-
-static cl::opt<bool> DisableLazyLoading(
-    "disable-ondemand-mds-loading", cl::init(false), cl::Hidden,
-    cl::desc("Force disable the lazy-loading on-demand of metadata when "
-             "loading bitcode for importing."));
 
 namespace {
 
@@ -335,65 +324,6 @@ Metadata *BitcodeReaderMetadataList::resolveTypeArray(Metadata *MaybeTuple) {
   return MDTuple::get(Context, Ops);
 }
 
-/// Rebuild the alias scope or domain \p Old with \p Ops, keeping its identity:
-/// a self reference has to point at the replacement, and a distinct node must
-/// not be uniqued. The first operand of both a scope and a domain is its name,
-/// which is either a string or a self reference.
-static MDNode *rebuildScopeOrDomainNode(MDNode *Old,
-                                        SmallVectorImpl<Metadata *> &Ops) {
-  LLVMContext &Context = Old->getContext();
-  if (Ops[0] != Old)
-    return Old->isDistinct() ? MDNode::getDistinct(Context, Ops)
-                             : MDNode::get(Context, Ops);
-
-  Ops[0] = nullptr;
-  MDNode *New = MDNode::getDistinct(Context, Ops);
-  New->replaceOperandWith(0, New);
-  return New;
-}
-
-static MDNode *upgradeAliasScopeDomain(MDNode *Domain,
-                                       DenseMap<MDNode *, MDNode *> &Upgraded) {
-  unsigned NumOperands = Domain->getNumOperands();
-  bool HadDescription = NumOperands == 2;
-  // Already upgraded, or invalid and left to the verifier.
-  if (NumOperands == 0 || NumOperands > 2 ||
-      (HadDescription && mdconst::hasa<ConstantInt>(Domain->getOperand(1))))
-    return Domain;
-
-  MDNode *&Upgrade = Upgraded[Domain];
-  if (Upgrade)
-    return Upgrade;
-
-  LLVMContext &Context = Domain->getContext();
-  SmallVector<Metadata *, 3> Ops = {
-      Domain->getOperand(0),
-      ConstantAsMetadata::get(ConstantInt::getFalse(Context))};
-  if (HadDescription)
-    Ops.push_back(Domain->getOperand(1));
-
-  Upgrade = rebuildScopeOrDomainNode(Domain, Ops);
-  return Upgrade;
-}
-
-static MDNode *upgradeAliasScope(MDNode *Scope,
-                                 DenseMap<MDNode *, MDNode *> &Upgraded) {
-  if (MDNode *Upgrade = Upgraded.lookup(Scope))
-    return Upgrade;
-
-  auto *Domain = cast<MDNode>(Scope->getOperand(1));
-
-  MDNode *UpgradedDomain = upgradeAliasScopeDomain(Domain, Upgraded);
-  if (UpgradedDomain == Domain)
-    return Scope;
-
-  SmallVector<Metadata *, 3> Ops(Scope->op_begin(), Scope->op_end());
-  Ops[1] = UpgradedDomain;
-  MDNode *Upgrade = rebuildScopeOrDomainNode(Scope, Ops);
-  Upgraded[Scope] = Upgrade;
-  return Upgrade;
-}
-
 namespace {
 
 class PlaceholderQueue {
@@ -455,6 +385,7 @@ static Error error(const Twine &Message) {
 }
 
 class MetadataLoader::MetadataLoaderImpl {
+  const BitReaderOptions &Opts;
   BitcodeReaderMetadataList MetadataList;
   BitcodeReaderValueList &ValueList;
   BitstreamCursor &Stream;
@@ -829,7 +760,8 @@ public:
   MetadataLoaderImpl(BitstreamCursor &Stream, Module &TheModule,
                      BitcodeReaderValueList &ValueList,
                      MetadataLoaderCallbacks Callbacks, bool IsImporting)
-      : MetadataList(TheModule.getContext(), Stream.SizeInBytes()),
+      : Opts(getBitReaderOptions(TheModule.getContext())),
+        MetadataList(TheModule.getContext(), Stream.SizeInBytes()),
         ValueList(ValueList), Stream(Stream), Context(TheModule.getContext()),
         TheModule(TheModule), Callbacks(std::move(Callbacks)),
         IsImporting(IsImporting) {}
@@ -861,27 +793,8 @@ public:
 
   bool hasSeenOldLoopTags() const { return HasSeenOldLoopTags; }
 
-  /// Mark any domains in \p ScopeList that don't have a disjointness
-  /// flag as non-disjoint. Returns the original list if there are no changes.
   MDNode *upgradeAliasScopeList(MDNode *ScopeList) {
-    if (MDNode *Upgrade = UpgradedAliasScopes.lookup(ScopeList))
-      return Upgrade;
-
-    SmallVector<Metadata *, 4> Ops;
-    bool Changed = false;
-    for (const MDOperand &Op : ScopeList->operands()) {
-      Metadata *Scope = Op;
-      if (auto *ScopeNode = dyn_cast<MDNode>(Op))
-        Scope = upgradeAliasScope(ScopeNode, UpgradedAliasScopes);
-      Changed |= Scope != Op.get();
-      Ops.push_back(Scope);
-    }
-    if (!Changed)
-      return ScopeList;
-
-    MDNode *Upgrade = MDNode::get(ScopeList->getContext(), Ops);
-    UpgradedAliasScopes[ScopeList] = Upgrade;
-    return Upgrade;
+    return UpgradeAliasScopeList(*ScopeList, UpgradedAliasScopes);
   }
 
   Error parseMetadataAttachment(Function &F,
@@ -1204,7 +1117,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
   // We lazy-load module-level metadata: we build an index for each record, and
   // then load individual record as needed, starting with the named metadata.
   if (ModuleLevel && IsImporting && MetadataList.empty() &&
-      !DisableLazyLoading) {
+      Opts.ondemand_mds_loading) {
     auto SuccessOrErr = lazyLoadModuleMetadataBlock();
     if (!SuccessOrErr)
       return SuccessOrErr.takeError();
@@ -1919,7 +1832,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     // We always import full definitions for anonymous composite types,
     // as without a name, debuggers cannot easily resolve a declaration
     // to its definition.
-    if (IsImporting && !ImportFullTypeDefinitions && Identifier && Name &&
+    if (IsImporting && !Opts.import_full_type_definitions && Identifier &&
+        Name &&
         (Tag == dwarf::DW_TAG_enumeration_type ||
          Tag == dwarf::DW_TAG_class_type ||
          Tag == dwarf::DW_TAG_structure_type ||

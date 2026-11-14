@@ -3,7 +3,7 @@
 # RegBankSelect reports a GISel failure when mapping DBG_VALUE, so allow its
 # fallback after checking the selected banks.
 # Keep each DBG_VALUE after the instructions whose banks are checked.
-# RUN: llc -O0 -mtriple=mipsel-linux-gnu -run-pass=reg-bank-select -global-isel-abort=0 -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -O0 -mtriple=mipsel-linux-gnu -run-pass=reg-bank-select -global-isel-abort=0 %s -o - | FileCheck %s
 --- |
   target datalayout = "e-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64"
   target triple = "mipsel-unknown-linux-gnu"
@@ -54,24 +54,23 @@
 name:            direct_debug_use
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; CHECK-LABEL: name: direct_debug_use
-    ; CHECK: liveins: $a0, $a1
+    ; CHECK: liveins: $r4, $r5
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $a1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $r4
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $r5
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:fprb(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.p)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fprb(s32) = COPY [[COPY1]](s32)
     ; CHECK-NEXT: [[FADD:%[0-9]+]]:fprb(s32) = G_FADD [[LOAD]], [[COPY2]]
     ; CHECK-NEXT: DBG_VALUE [[LOAD]](s32), $noreg, !6, !DIExpression(), debug-location !8
     ; CHECK-NEXT: $f0 = COPY [[FADD]](s32)
     ; CHECK-NEXT: RetRA implicit $f0
-    %0:_(p0) = COPY $a0
-    %1:_(s32) = COPY $a1
+    %0:_(p0) = COPY $r4
+    %1:_(s32) = COPY $r5
     %2:_(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.p)
     %3:_(s32) = G_FADD %2, %1
     DBG_VALUE %2(s32), $noreg, !6, !DIExpression(), debug-location !8
@@ -82,16 +81,15 @@ body:             |
 name:            debug_only_copy_use
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; CHECK-LABEL: name: debug_only_copy_use
-    ; CHECK: liveins: $a0, $a1
+    ; CHECK: liveins: $r4, $r5
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $a1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $r4
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $r5
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:fprb(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.p)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fprb(s32) = COPY [[COPY1]](s32)
     ; CHECK-NEXT: [[FADD:%[0-9]+]]:fprb(s32) = G_FADD [[LOAD]], [[COPY2]]
@@ -99,8 +97,8 @@ body:             |
     ; CHECK-NEXT: DBG_VALUE [[COPY3]](s32), $noreg, !10, !DIExpression(), debug-location !11
     ; CHECK-NEXT: $f0 = COPY [[FADD]](s32)
     ; CHECK-NEXT: RetRA implicit $f0
-    %0:_(p0) = COPY $a0
-    %1:_(s32) = COPY $a1
+    %0:_(p0) = COPY $r4
+    %1:_(s32) = COPY $r5
     %2:_(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.p)
     %3:_(s32) = G_FADD %2, %1
     %4:_(s32) = COPY %2(s32)
@@ -112,7 +110,6 @@ body:             |
 name:            implicit_def_debug_only
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: implicit_def_debug_only

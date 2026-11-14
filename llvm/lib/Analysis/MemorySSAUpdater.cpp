@@ -1469,9 +1469,7 @@ void MemorySSAUpdater::removeBlocks(
     const SmallSetVector<BasicBlock *, 8> &DeadBlocks) {
   // First delete all uses of BB in MemoryPhis.
   for (BasicBlock *BB : DeadBlocks) {
-    Instruction *TI = BB->getTerminator();
-    assert(TI && "Basic block expected to have a terminator instruction");
-    for (BasicBlock *Succ : successors(TI))
+    for (BasicBlock *Succ : successors(BB))
       if (!DeadBlocks.count(Succ))
         if (MemoryPhi *MP = MSSA->getMemoryAccess(Succ)) {
           MP->unorderedDeleteIncomingBlock(BB);

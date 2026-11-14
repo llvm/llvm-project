@@ -546,7 +546,10 @@ static bool unswitchTrivialBranch(const ScalarOptions &Opts, Loop &L,
   std::optional<int> LatchIdx = std::nullopt;
   auto *LoopLatch = L.getLoopLatch();
   auto *ULExit = LI.getUniqueLatchExitBlock(L);
-  if (SE && FullUnswitch && ULExit) {
+  if (SE && FullUnswitch && ULExit &&
+      // Make sure we do not unswitch a branch when both of its successors are
+      // the loop latch. The branch is actually unconditional.
+      BI.getSuccessor(0) != BI.getSuccessor(1)) {
     if (BI.getSuccessor(0) == LoopLatch && L.contains(BI.getSuccessor(1)))
       LatchIdx = 0;
     else if (BI.getSuccessor(1) == LoopLatch && L.contains(BI.getSuccessor(0)))
@@ -770,6 +773,14 @@ static bool unswitchTrivialBranch(const ScalarOptions &Opts, Loop &L,
   if (FullUnswitch)
     hoistLoopToNewParent(L, *NewPH, DT, LI, MSSAU, SE);
 
+  // If UnswitchedBB was split off LoopExitBB, it is reached from both the old
+  // preheader and LoopExitBB. For enclosing loops that contain the old
+  // preheader but not UnswitchedBB, it is now a non-dedicated exit.
+  for (Loop *ParentL = LI.getLoopFor(OldPH);
+       ParentL && !ParentL->contains(UnswitchedBB);
+       ParentL = ParentL->getParentLoop())
+    formDedicatedExitBlocks(ParentL, &DT, &LI, MSSAU, /*PreserveLCSSA*/ true);
+
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
 
@@ -835,7 +846,7 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     // instruction in the block.
     auto *TI = BBToCheck.getTerminator();
     bool isUnreachable = isa<UnreachableInst>(TI);
-    return !isUnreachable || &*BBToCheck.getFirstNonPHIOrDbg() != TI;
+    return !isUnreachable || &*BBToCheck.getFirstNonPHIIt() != TI;
   };
 
   SmallVector<int, 4> ExitCaseIndices;
@@ -1142,7 +1153,7 @@ static bool unswitchAllTrivialConditions(const ScalarOptions &Opts, Loop &L,
           if (const auto *CB = dyn_cast<CallBase>(&I))
             if (CB->isConvergent())
               return true;
-          return I.mayHaveSideEffects();
+          return I.mayHaveSideEffects() && !I.isDroppable();
         }))
       return Changed;
 
@@ -3385,7 +3396,7 @@ static bool unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI,
                          TargetTransformInfo &TTI, bool Trivial,
                          bool NonTrivial, ScalarEvolution *SE,
                          MemorySSAUpdater *MSSAU, LPMUpdater &LoopUpdater) {
-  const ScalarOptions &Opts = ScalarOptions::Global;
+  const ScalarOptions &Opts = getScalarOptions(L);
   assert(L.isRecursivelyLCSSAForm(DT, LI) &&
          "Loops must be in LCSSA form before unswitching.");
 

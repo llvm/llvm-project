@@ -23,14 +23,18 @@
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace unittests {
 
-inline llvm::object::OffloadBinary::OffloadingImage createSYCLImage(
-    llvm::StringRef SymbolsBlob,
-    llvm::object::ImageKind ImageKind = llvm::object::IMG_SPIRV,
-    llvm::object::OffloadKind OffloadKind = llvm::object::OFK_SYCL) {
+/// The triple clang-sycl-linker records in SYCL offload images.
+inline constexpr llvm::StringRef DefaultImageTriple = "spirv64-unknown-unknown";
+
+inline llvm::object::OffloadBinary::OffloadingImage
+createSYCLImage(llvm::StringRef SymbolsBlob,
+                llvm::object::ImageKind ImageKind = llvm::object::IMG_SPIRV,
+                llvm::object::OffloadKind OffloadKind = llvm::object::OFK_SYCL,
+                llvm::StringRef Triple = DefaultImageTriple) {
   llvm::object::OffloadBinary::OffloadingImage Image;
   Image.TheImageKind = ImageKind;
   Image.TheOffloadKind = OffloadKind;
-  Image.StringData["triple"] = sycl::detail::DeviceBinaryTripleSPIRV64;
+  Image.StringData["triple"] = Triple;
   Image.StringData["symbols"] = SymbolsBlob;
   static constexpr char DummyImageData[] = "dummy image data";
   Image.Image = llvm::MemoryBuffer::getMemBufferCopy(
@@ -41,12 +45,13 @@ inline llvm::object::OffloadBinary::OffloadingImage createSYCLImage(
 inline llvm::SmallString<0> createSYCLDeviceBinary(
     llvm::ArrayRef<llvm::StringRef> KernelNames,
     llvm::object::ImageKind ImageKind = llvm::object::IMG_SPIRV,
-    llvm::object::OffloadKind OffloadKind = llvm::object::OFK_SYCL) {
+    llvm::object::OffloadKind OffloadKind = llvm::object::OFK_SYCL,
+    llvm::StringRef Triple = DefaultImageTriple) {
   llvm::SmallString<0> SymbolsBlob;
   llvm::offloading::sycl::writeSymbolTable(KernelNames, SymbolsBlob);
 
   llvm::object::OffloadBinary::OffloadingImage Image =
-      createSYCLImage(SymbolsBlob, ImageKind, OffloadKind);
+      createSYCLImage(SymbolsBlob, ImageKind, OffloadKind, Triple);
   return llvm::object::OffloadBinary::write(Image);
 }
 

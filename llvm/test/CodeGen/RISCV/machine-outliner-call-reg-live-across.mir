@@ -92,7 +92,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 noPhis:          true
 isSSA:           false
@@ -107,7 +106,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: true
-registers:       []
 liveins:
   - { reg: '$x10', virtual-reg: '' }
   - { reg: '$x13', virtual-reg: '' }
@@ -226,7 +224,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 noPhis:          true
 isSSA:           false
@@ -241,7 +238,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: true
-registers:       []
 liveins:
   - { reg: '$x10', virtual-reg: '' }
   - { reg: '$x13', virtual-reg: '' }

@@ -177,9 +177,7 @@ public:
                BuiltinType::ArraySection) &&
            "array section shouldn't make it to recipe creation");
 
-    mlir::ModuleOp mod = builder.getBlock()
-                             ->getParent()
-                             ->template getParentOfType<mlir::ModuleOp>();
+    mlir::ModuleOp mod = cgf.cgm.getModule();
 
     std::string recipeName = getRecipeName(varRef->getSourceRange(), baseType,
                                            numBounds, reductionOp);

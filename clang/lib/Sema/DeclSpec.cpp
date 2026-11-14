@@ -774,15 +774,6 @@ bool DeclSpec::SetTypeSpecType(TST T, SourceLocation TagKwLoc,
   TSTLoc = TagKwLoc;
   TSTNameLoc = TagNameLoc;
   TypeSpecOwned = false;
-
-  if (T == TST_typename_pack_indexing) {
-    // we got there from a an annotation. Reconstruct the type
-    // Ugly...
-    QualType QT = Rep.get();
-    const PackIndexingType *LIT = cast<PackIndexingType>(QT);
-    TypeRep = ParsedType::make(LIT->getPattern());
-    PackIndexingExpr = LIT->getIndexExpr();
-  }
   return false;
 }
 
@@ -914,6 +905,7 @@ bool DeclSpec::SetTypePipe(bool isPipe, SourceLocation Loc,
 
   if (isPipe) {
     TypeSpecPipe = static_cast<unsigned>(TypeSpecifiersPipe::Pipe);
+    TQ_pipeLoc = Loc;
   }
   return false;
 }
@@ -1388,6 +1380,13 @@ void DeclSpec::CheckTypeSpec(Sema &S, const PrintingPolicy &Policy) {
   // _Thread_local can only appear with the 'static' and 'extern' storage class
   // specifiers. We also allow __private_extern__ as an extension.
   if (ThreadStorageClassSpec != TSCS_unspecified) {
+    if (S.getLangOpts().C23 &&
+        getConstexprSpecifier() == ConstexprSpecKind::Constexpr) {
+      S.Diag(ConstexprLoc, diag::err_invalid_decl_spec_combination)
+          << DeclSpec::getSpecifierName(getThreadStorageClassSpec())
+          << SourceRange(getThreadStorageClassSpecLoc());
+    }
+
     switch (StorageClassSpec) {
     case SCS_unspecified:
     case SCS_extern:
@@ -1409,12 +1408,6 @@ void DeclSpec::CheckTypeSpec(Sema &S, const PrintingPolicy &Policy) {
       // Discard the thread storage class specifier to recover.
       ThreadStorageClassSpec = TSCS_unspecified;
       ThreadStorageClassSpecLoc = SourceLocation();
-    }
-    if (S.getLangOpts().C23 &&
-        getConstexprSpecifier() == ConstexprSpecKind::Constexpr) {
-      S.Diag(ConstexprLoc, diag::err_invalid_decl_spec_combination)
-          << DeclSpec::getSpecifierName(getThreadStorageClassSpec())
-          << SourceRange(getThreadStorageClassSpecLoc());
     }
   }
 
@@ -1443,7 +1436,7 @@ void DeclSpec::CheckTypeSpec(Sema &S, const PrintingPolicy &Policy) {
       TypeSpecType == TST_auto)
     S.Diag(TSTLoc, diag::ext_auto_type_specifier) << /*C++*/ 0;
   if (S.getLangOpts().HLSL &&
-      S.getLangOpts().getHLSLVersion() < LangOptions::HLSL_202y &&
+      S.getLangOpts().getHLSLVersion() < LangOptions::HLSL_202x &&
       TypeSpecType == TST_auto)
     S.Diag(TSTLoc, diag::ext_hlsl_auto_type_specifier) << /*HLSL*/ 1;
   if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11 &&

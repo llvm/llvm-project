@@ -484,11 +484,19 @@ public:
   }
 
   /// Same as above, but without the attributes.
-  template <typename... ArgsTy>
+  template <typename... ArgsTy, typename = std::enable_if_t<std::conjunction_v<
+                                    std::is_convertible<ArgsTy, Type *>...>>>
   FunctionCallee getOrInsertFunction(StringRef Name, Type *RetTy,
                                      ArgsTy... Args) {
     return getOrInsertFunction(Name, AttributeList{}, RetTy, Args...);
   }
+
+  /// Look up the specified function in the module symbol table. If it does not
+  /// exist, insert a declaration of the function and invoke a callback to
+  /// initialize it. \p Name must not be empty or start with "llvm.".
+  FunctionCallee
+  getOrInsertFunction(StringRef Name, FunctionType *T,
+                      function_ref<void(Function &)> InitCallback);
 
   // Avoid an incorrect ordering that'd otherwise compile incorrectly.
   template <typename... ArgsTy>
@@ -1062,7 +1070,14 @@ public:
 
   /// Set the code model (tiny, small, kernel, medium or large)
   void setCodeModel(CodeModel::Model CL);
+
   /// @}
+  /// @name Utility functions for querying the size of wchar_t
+  /// @{
+
+  /// Returns the size of the wchar_t type from the "wchar_size" module flag,
+  /// or the triple default when the flag is absent.
+  unsigned getWCharSize() const;
 
   /// @}
   /// @name Utility functions for querying the long double format
@@ -1100,10 +1115,22 @@ public:
   /// @{
 
   /// Returns the exception model recorded by the "exception-model" module flag,
-  /// or ExceptionHandling::Default when the flag is absent (meaning
-  /// unspecified; callers with a TargetMachine should fall back to its
-  /// exception model).
+  /// or the target's default exception model (from the target triple) when the
+  /// flag is absent. Never returns ExceptionHandling::Default.
   ExceptionHandling getExceptionModel() const;
+  /// @}
+
+  /// @}
+  /// @name Utility function for querying and setting the debugger tuning
+  /// @{
+
+  /// Returns the debugger tuning recorded by the "debugger-tuning" module flag,
+  /// or the target's default debugger tuning (from the target triple) when the
+  /// flag is absent. Never returns DebuggerKind::Default.
+  DebuggerKind getDebuggerTuning() const;
+
+  /// Set the debugger tuning.
+  void setDebuggerTuning(DebuggerKind Tuning);
   /// @}
 
   /// @}

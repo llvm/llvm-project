@@ -11,7 +11,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "copyprof_allocator.h"
+#include "copyprof_interceptors.h"
 #include "copyprof_interface_internal.h"
+#include "copyprof_per_object_state.h"
 #include "copyprof_reporting.h"
 #include "copyprof_shadow.h"
 #include "copyprof_state.h"
@@ -38,15 +41,21 @@ static void CheckUnwind() {
 static void Initialize() {
   if (LIKELY(copyprof_is_initialized))
     return;
+  SanitizerToolName = "CopyProf";
   CHECK(!copyprof_init_is_running &&
         "BUG: CopyProf Initialize() must not call itself.");
   copyprof_init_is_running = true;
   CacheBinaryName();
+  // CopyProf uses interception so ensure we're not statically linked.
+  __interception::DoesNotSupportStaticLinking();
   SetCheckUnwindCallback(&CheckUnwind);
   InitializePlatformEarly();
   SetCommonFlagsDefaults();
   InitializeCommonFlags();
+  InitializeInterceptors();
   InitializeShadowMemory();
+  InitializePerObjectTracking();
+  InitializeCopyProfAllocator();
   copyprof_init_is_running = false;
   copyprof_is_initialized = true;
 }
@@ -74,12 +83,26 @@ static void UpdateShadow(const void* addr, uptr size) {
                         __copyprof_state.smf_context == SmfContext::COPY);
 }
 
+// Marks the shadow memory of an object that is being constructed. Unlike for
+// stores, this also happens in `DTOR` context (see `SmfContext`).
+static void MarkConstructedObject(const void* this_ptr, uptr obj_size) {
+  MarkApplicationMemory(
+      this_ptr, obj_size,
+      ShouldMarkNewMemoryAsCopy(__copyprof_state.smf_context));
+}
+
 static void CopyMemberFunctionEnter(const void* this_ptr, uptr obj_size) {
   MaybeUpdateSmfContext(SmfContext::COPY);
-  if (__copyprof_state.copy_nesting_level++ == 0) {
+  // Currently, only top-level copies are reported, so only top-level objects
+  // get per-object state which is then removed when the corresponding top-level
+  // d'tor exits. A nested object copy is not individually marked as a copy and
+  // is typically destroyed by a nested d'tor, so its state would never be
+  // removed (from the object state map).
+  if (__copyprof_state.copy_nesting_level++ == 0 &&
+      __copyprof_state.smf_context == SmfContext::COPY) {
+    InitPerObjectState(this_ptr, obj_size);
     __copyprof_state.current_this_ptr = this_ptr;
   }
-  UpdateShadow(this_ptr, obj_size);
 }
 
 static void CopyMemberFunctionExit(const void* this_ptr, uptr obj_size) {
@@ -94,7 +117,7 @@ void __copyprof_init_once() { Initialize(); }
 void __copyprof_ctor_enter_callback(const void* this_ptr, uptr obj_size) {
   MaybeUpdateSmfContext(SmfContext::CTOR);
   ++__copyprof_state.construct_nesting_level;
-  UpdateShadow(this_ptr, obj_size);
+  MarkConstructedObject(this_ptr, obj_size);
 }
 
 void __copyprof_ctor_exit_callback(const void* this_ptr, uptr obj_size) {
@@ -105,6 +128,7 @@ void __copyprof_ctor_exit_callback(const void* this_ptr, uptr obj_size) {
 void __copyprof_copy_ctor_enter_callback(const void* this_ptr,
                                          const void* other_ptr, uptr obj_size) {
   CopyMemberFunctionEnter(this_ptr, obj_size);
+  MarkConstructedObject(this_ptr, obj_size);
 }
 
 void __copyprof_copy_ctor_exit_callback(const void* this_ptr,
@@ -116,6 +140,9 @@ void __copyprof_copy_assign_op_enter_callback(const void* this_ptr,
                                               const void* other_ptr,
                                               uptr obj_size) {
   CopyMemberFunctionEnter(this_ptr, obj_size);
+  // Unlike a c'tor, a copy assignment overwrites an existing object, so it is
+  // treated like a store.
+  UpdateShadow(this_ptr, obj_size);
 }
 
 void __copyprof_copy_assign_op_exit_callback(const void* this_ptr,
@@ -143,10 +170,13 @@ void __copyprof_dtor_exit_callback(const void* this_ptr, uptr obj_size) {
   __copyprof_state.is_transitive_copy &= IsMarkedAsCopy(this_ptr, obj_size);
   if (__copyprof_state.destruct_nesting_level == 0 &&
       __copyprof_state.is_transitive_copy) {
-    // TODO: Dynamic allocation tracking via malloc/new interception will be
-    // added in a subsequent patch. For now, did_allocate is set to true.
-    LogCopyProfReport(GET_CALLER_PC(), GET_CURRENT_FRAME(), obj_size,
-                      /*did_allocate=*/true);
+    LogCopyProfReport(GET_CALLER_PC(), GET_CURRENT_FRAME(),
+                      GetPerObjectTrackedSize(this_ptr),
+                      GetPerObjectDidAllocate(this_ptr));
+  }
+  // Clean up per-object state when top-level destructor exits.
+  if (__copyprof_state.destruct_nesting_level == 0) {
+    RemovePerObjectState(this_ptr);
   }
 }
 

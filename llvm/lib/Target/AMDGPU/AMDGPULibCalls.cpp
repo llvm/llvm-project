@@ -13,6 +13,7 @@
 
 #include "AMDGPU.h"
 #include "AMDGPULibFunc.h"
+#include "AMDGPUSubtarget.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -27,11 +28,6 @@
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
-
-static cl::opt<bool> EnablePreLink("amdgpu-prelink",
-  cl::desc("Enable pre-link mode optimizations"),
-  cl::init(false),
-  cl::Hidden);
 
 static cl::list<std::string> UseNative("amdgpu-use-native",
   cl::desc("Comma separated list of functions to replace with native, or all"),
@@ -49,6 +45,7 @@ namespace llvm {
 
 class AMDGPULibCalls {
 private:
+  const AMDGPUOptions &CLOpts;
   SimplifyQuery SQ;
 
   using FuncInfo = llvm::AMDGPULibFunc;
@@ -418,8 +415,8 @@ FunctionCallee AMDGPULibCalls::getFunction(Module *M, const FuncInfo &fInfo) {
   // If we are doing PreLinkOpt, the function is external. So it is safe to
   // use getOrInsertFunction() at this stage.
 
-  return EnablePreLink ? AMDGPULibFunc::getOrInsertFunction(M, fInfo)
-                       : AMDGPULibFunc::getFunction(M, fInfo);
+  return CLOpts.prelink ? AMDGPULibFunc::getOrInsertFunction(M, fInfo)
+                        : AMDGPULibFunc::getFunction(M, fInfo);
 }
 
 FunctionCallee AMDGPULibCalls::getFloatFastVariant(
@@ -454,7 +451,8 @@ bool AMDGPULibCalls::canIncreasePrecisionOfConstantFold(
 }
 
 AMDGPULibCalls::AMDGPULibCalls(Function &F, FunctionAnalysisManager &FAM)
-    : SQ(F.getDataLayout(), &FAM.getResult<TargetLibraryAnalysis>(F),
+    : CLOpts(F.getContext().getLibraryOptions().get<AMDGPUOptions>()),
+      SQ(F.getDataLayout(), &FAM.getResult<TargetLibraryAnalysis>(F),
          FAM.getCachedResult<DominatorTreeAnalysis>(F),
          &FAM.getResult<AssumptionAnalysis>(F)) {}
 
@@ -557,7 +555,7 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
   if (!PacketSize || !PacketAlign)
     return false;
 
-  unsigned Size = PacketSize->getZExtValue();
+  uint64_t Size = PacketSize->getZExtValue();
   Align Alignment = PacketAlign->getAlignValue();
   if (Alignment != Size)
     return false;
@@ -1154,7 +1152,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   nval = Exp2Call;
 
   if (needcopysign) {
-    Type* nTyS = B.getIntNTy(eltType->getPrimitiveSizeInBits());
+    Type *nTyS =
+        B.getIntNTy(static_cast<unsigned>(eltType->getPrimitiveSizeInBits()));
     Type *nTy = FPOp->getType()->getWithNewType(nTyS);
     Value *opr_n = FPOp->getOperand(1);
     if (opr_n->getType()->getScalarType()->isIntegerTy())
@@ -1748,12 +1747,12 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
   SmallVector<CallInst *> SinCosCalls;
   FuncInfo PartnerInfo(isSin ? AMDGPULibFunc::EI_COS : AMDGPULibFunc::EI_SIN,
                        fInfo);
-  const std::string PairName = PartnerInfo.mangle();
+  const std::string PairName = PartnerInfo.mangle(CLOpts);
 
   StringRef SinName = isSin ? CI->getCalledFunction()->getName() : PairName;
   StringRef CosName = isSin ? PairName : CI->getCalledFunction()->getName();
-  const std::string SinCosPrivateName = SinCosLibFuncPrivate.mangle();
-  const std::string SinCosGenericName = SinCosLibFuncGeneric.mangle();
+  const std::string SinCosPrivateName = SinCosLibFuncPrivate.mangle(CLOpts);
+  const std::string SinCosGenericName = SinCosLibFuncGeneric.mangle(CLOpts);
 
   // Intersect the two sets of flags.
   FastMathFlags FMF = FPOp->getFastMathFlags();

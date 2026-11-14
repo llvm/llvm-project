@@ -43,7 +43,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -52,20 +51,6 @@ using namespace llvm;
 #define DEBUG_TYPE "asm-printer"
 
 namespace {
-enum class SPIRVFPContractMode { On, Off, Fast };
-
-static cl::opt<SPIRVFPContractMode> SPIRVFPContract(
-    "spirv-fp-contract",
-    cl::desc("Override FP contraction policy for SPIR-V kernel entry points"),
-    cl::values(
-        clEnumValN(SPIRVFPContractMode::On, "on",
-                   "Follow IR metadata (default)"),
-        clEnumValN(SPIRVFPContractMode::Off, "off",
-                   "Force ContractionOff on all kernel entry points"),
-        clEnumValN(SPIRVFPContractMode::Fast, "fast",
-                   "Suppress ContractionOff on all kernel entry points")),
-    cl::init(SPIRVFPContractMode::On));
-
 class SPIRVAsmPrinter : public AsmPrinter {
   unsigned NLabels = 0;
   SmallPtrSet<const MachineBasicBlock *, 8> LabeledMBB;
@@ -673,10 +658,11 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
     }
     // --spirv-fp-contract=off forces to emit ContractionOff for this kernel
     // entry point, --spirv-fp-contract=fast suppresses it.
+    SPIRVFPContractMode FPContract = ST->getCLOpts().fp_contract;
     bool EmitContractionOff =
         ST->isKernel() && !M.getNamedMetadata("spirv.ExecutionMode") &&
-        SPIRVFPContract != SPIRVFPContractMode::Fast &&
-        (SPIRVFPContract == SPIRVFPContractMode::Off ||
+        FPContract != SPIRVFPContractMode::Fast &&
+        (FPContract == SPIRVFPContractMode::Off ||
          !M.getNamedMetadata("opencl.enable.FP_CONTRACT"));
     if (EmitContractionOff) {
       if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
@@ -898,11 +884,9 @@ void SPIRVAsmPrinter::outputModuleSections() {
   MAI = GetMAI();
   assert(ST && TII && MAI && M && "Module analysis is required");
 
-  if (!AuxDataHandler) {
-    auto Handler = std::make_unique<SPIRVAuxDataHandler>(*this, *M);
-    if (Handler->hasWork())
-      AuxDataHandler = std::move(Handler);
-  }
+  if (!AuxDataHandler &&
+      spirvPreserveAuxData(ST->getCLOpts(), M->getTargetTriple()))
+    AuxDataHandler = std::make_unique<SPIRVAuxDataHandler>(*this, *M);
 
   // Let the NSDI handler add its extension and ext inst import entry to MAI
   // before the module header sections are emitted.

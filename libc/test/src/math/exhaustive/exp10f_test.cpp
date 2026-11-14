@@ -1,14 +1,23 @@
-//===-- Exhaustive test for exp10f ----------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Exhaustive test for exp10f.
+///
+//===----------------------------------------------------------------------===//
 
+#include "hdr/stdint_proxy.h"
+#include "src/__support/math/exp10f_double_eval.h"
 #include "src/__support/math/exp10f_float_eval.h"
+#include "src/__support/math/exp10f_integer_eval.h"
 #include "src/math/exp10f.h"
 #include "test/src/math/exhaustive/exhaustive_test.h"
+#include "test/src/math/exhaustive/exhaustive_test_static_rounding.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
@@ -41,7 +50,7 @@ static float exp10f_float_eval(float x) {
 
 using LlvmLibcExp10fFloatExhaustiveTest =
     LlvmLibcUnaryOpAgainstBaselineExhaustiveMathTest<
-        float, LIBC_NAMESPACE::exp10f, exp10f_float_eval, 1>;
+        float, LIBC_NAMESPACE::math::double_eval::exp10f, exp10f_float_eval, 1>;
 
 TEST_F(LlvmLibcExp10fFloatExhaustiveTest, PositiveRange) {
   test_full_range(mpfr::RoundingMode::Nearest, POS_START, POS_STOP);
@@ -49,4 +58,19 @@ TEST_F(LlvmLibcExp10fFloatExhaustiveTest, PositiveRange) {
 
 TEST_F(LlvmLibcExp10fFloatExhaustiveTest, NegativeRange) {
   test_full_range(mpfr::RoundingMode::Nearest, NEG_START, NEG_STOP);
+}
+
+// Statically rounded implementation: tested against double_eval across all
+// roundings.
+using LlvmLibcExp10fStaticRoundingExhaustiveTest =
+    LlvmLibcStaticallyRoundedUnaryOpExhaustiveMathTest<
+        float, LIBC_NAMESPACE::math::double_eval::exp10f,
+        LIBC_NAMESPACE::math::static_rounding::exp10f>;
+
+TEST_F(LlvmLibcExp10fStaticRoundingExhaustiveTest, PositiveRange) {
+  test_full_range_all_roundings(POS_START, POS_STOP);
+}
+
+TEST_F(LlvmLibcExp10fStaticRoundingExhaustiveTest, NegativeRange) {
+  test_full_range_all_roundings(NEG_START, NEG_STOP);
 }

@@ -158,3 +158,26 @@ TEST_F(OptionParserTest, PrintHelpAlignmentWithShortFlags) {
 
   EXPECT_EQ(LogFlagCol, PortFlagCol);
 }
+
+TEST_F(OptionParserTest, HelpDescribesPositionalsGenericallyByDefault) {
+  std::string Result = Parser.formatHelp("appname");
+  EXPECT_EQ(
+      Result.rfind("Usage: appname [options] [positional arguments]\n", 0), 0u);
+  EXPECT_EQ(Result.back(), '\n') << "nothing follows the options by default";
+  EXPECT_NE(Result.find("Enable verbose logging\n"), std::string::npos);
+}
+
+TEST_F(OptionParserTest, HelpUsesPositionalUsageAndEpilogue) {
+  Parser.setPositionalUsage("<input-file>").setEpilogue("INPUT FILES:\n  x\n");
+  std::string Result = Parser.formatHelp("appname");
+
+  EXPECT_EQ(Result.rfind("Usage: appname [options] <input-file>\n", 0), 0u);
+
+  // The epilogue follows the options, after a blank line.
+  size_t LastOpt = Result.find("Enable verbose logging\n");
+  ASSERT_NE(LastOpt, std::string::npos);
+  EXPECT_EQ(Result.substr(LastOpt), "Enable verbose logging\n"
+                                    "\n"
+                                    "INPUT FILES:\n"
+                                    "  x\n");
+}

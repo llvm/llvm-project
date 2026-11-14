@@ -1521,7 +1521,6 @@ define i32 @atomic_load_zext_i8(ptr addrspace(2) %ptr) {
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_waitcnt expcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: atomic_load_zext_i8:
@@ -1534,7 +1533,6 @@ define i32 @atomic_load_zext_i8(ptr addrspace(2) %ptr) {
 ; GFX10-NEXT:    buffer_gl1_inv
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_waitcnt expcnt(0)
-; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-LABEL: atomic_load_zext_i8:
@@ -1560,7 +1558,6 @@ define i32 @atomic_load_zext_i8(ptr addrspace(2) %ptr) {
 ; GFX11-FAKE16-NEXT:    buffer_gl1_inv
 ; GFX11-FAKE16-NEXT:    buffer_gl0_inv
 ; GFX11-FAKE16-NEXT:    s_waitcnt expcnt(0)
-; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %load = load atomic i8, ptr addrspace(2) %ptr seq_cst, align 1
   %ext = zext i8 %load to i32
@@ -1662,7 +1659,6 @@ define i32 @atomic_load_zext_i16(ptr addrspace(2) %ptr) {
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_waitcnt expcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: atomic_load_zext_i16:
@@ -1675,7 +1671,6 @@ define i32 @atomic_load_zext_i16(ptr addrspace(2) %ptr) {
 ; GFX10-NEXT:    buffer_gl1_inv
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_waitcnt expcnt(0)
-; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-LABEL: atomic_load_zext_i16:
@@ -1701,7 +1696,6 @@ define i32 @atomic_load_zext_i16(ptr addrspace(2) %ptr) {
 ; GFX11-FAKE16-NEXT:    buffer_gl1_inv
 ; GFX11-FAKE16-NEXT:    buffer_gl0_inv
 ; GFX11-FAKE16-NEXT:    s_waitcnt expcnt(0)
-; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %load = load atomic i16, ptr addrspace(2) %ptr seq_cst, align 2
   %ext = zext i16 %load to i32

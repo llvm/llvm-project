@@ -115,7 +115,7 @@ struct InlineAsmIdentifierInfo;
 namespace clang {
 class ADLResult;
 class APValue;
-struct ASTConstraintSatisfaction;
+class ASTConstraintSatisfaction;
 class ASTConsumer;
 class ASTContext;
 class ASTDeclReader;
@@ -188,7 +188,6 @@ class SemaX86;
 class StandardConversionSequence;
 class TemplateArgument;
 class TemplateArgumentLoc;
-class TemplateInstantiationCallback;
 class TemplatePartialOrderingContext;
 class TemplateSpecCandidateSet;
 class Token;
@@ -1468,6 +1467,18 @@ public:
   /// OpenMP, and SYCL.
   SemaDiagnosticBuilder::DeferredDiagnosticsType DeviceDeferredDiags;
 
+  /// An inverse call graph, mapping known-emitted functions to their
+  /// known-emitted callers (plus the location of the call).  It is populated
+  /// while emitting deferred diagnostics and is used to print call stack notes
+  /// for all offload languages.
+  ///
+  /// Functions that we can tell a priori must be emitted aren't added to this
+  /// map. A function may have multiple callers that force it into device
+  /// context, so we store all of them to produce complete diagnostics.
+  llvm::DenseMap</* Callee = */ CanonicalDeclPtr<const FunctionDecl>,
+                 /* Callers = */ llvm::SmallVector<FunctionDeclAndLoc, 1>>
+      DeviceKnownEmittedFns;
+
   /// CurContext - This is the current declaration context of parsing.
   DeclContext *CurContext;
 
@@ -2137,9 +2148,13 @@ public:
     bool ShouldAct;
   };
 
-  /// Last section used with #pragma init_seg.
-  StringLiteral *CurInitSeg;
-  SourceLocation CurInitSegLoc;
+  /// Used for #pragma init_seg.
+  struct InitSegPragmaState {
+    SourceLocation PragmaLocation;
+    StringLiteral *Segment = nullptr;
+    FunctionDecl *Func = nullptr;
+  };
+  InitSegPragmaState CurInitSeg;
 
   /// Sections used with #pragma alloc_text.
   llvm::StringMap<std::tuple<StringRef, SourceLocation>> FunctionToSectionMap;
@@ -2310,8 +2325,10 @@ public:
                             StringLiteral *SegmentName);
 
   /// Called on well-formed \#pragma init_seg().
+  /// If a function name is provided (", func-name"), it is passed via Func.
   void ActOnPragmaMSInitSeg(SourceLocation PragmaLocation,
-                            StringLiteral *SegmentName);
+                            StringLiteral *SegmentName,
+                            IdentifierLoc *Func = nullptr);
 
   /// Called on well-formed \#pragma alloc_text().
   void ActOnPragmaMSAllocText(
@@ -2475,6 +2492,8 @@ public:
                                     bool SkipArgCountCheck = false);
   bool checkCommonAttributeFeatures(const Stmt *S, const ParsedAttr &A,
                                     bool SkipArgCountCheck = false);
+  bool checkCommonAttributeFeatures(QualType T, const ParsedAttr &A,
+                                    bool SkipArgCountCheck = false);
 
   ///@}
 
@@ -2521,6 +2540,50 @@ public:
   /// Implementations are in SemaBoundsSafety.cpp
   ///@{
 public:
+  struct BoundsAttrFlags {
+    bool CountInBytes = false;
+    bool OrNull = false;
+    bool IsEndedBy = false;
+
+    /// Return the flags for a bounds attribute of kind \p K.
+    static BoundsAttrFlags get(AttributeCommonInfo::Kind K);
+  };
+  static BoundsAttributedType::BoundsAttrKind
+  getBoundsAttrKind(const BoundsAttrFlags &);
+
+  /// Check the type shape for counted_by, sized_by and their _or_null variants.
+  /// The caller checks declaration context, count expressions, flexible array
+  /// member eligibility and nesting.
+  ///
+  /// \p Flags selects the attribute variant. For void pointers, counted_by is
+  /// treated as a byte count outside the -fbounds-safety attribute model. Set
+  /// \c Flags.CountInBytes in this case if \p UpdateFlags is true.
+  /// \p AttrSpelling, \p AllowRedecl and \p AttrArg are reserved for that model
+  /// (see LangOptions::hasBoundsSafetyAttributes).
+  ///
+  /// \returns false after diagnosing an attribute that must be dropped. Returns
+  /// true if the shape is valid, after the warning for an array of structs with
+  /// flexible array members, and, under the -fbounds-safety attribute model,
+  /// after an error on a pointer, with \c Flags.CountInBytes set so that type
+  /// construction can recover.
+  bool ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
+                                   SourceRange AttrRange,
+                                   BoundsAttrFlags &Flags,
+                                   StringRef AttrSpelling = {},
+                                   bool AllowRedecl = false,
+                                   Expr *AttrArg = nullptr,
+                                   bool UpdateFlags = true);
+
+  /// Check a counted_by-family attribute in type position and initialize
+  /// \p Flags from \p AttrKind. \p PointerNestLevel counts the pointer, array
+  /// and function declarator chunks enclosing the attribute.
+  ///
+  /// \returns false after diagnosing an attribute that must be dropped (see
+  /// ValidateBoundsAttrTypeShape).
+  bool ValidateBoundsAttrTypeForTypePosition(
+      QualType Ty, AttributeCommonInfo::Kind AttrKind, SourceLocation AttrLoc,
+      SourceRange AttrRange, unsigned PointerNestLevel, BoundsAttrFlags &Flags);
+
   /// Check if applying the specified attribute variant from the "counted by"
   /// family of attributes to FieldDecl \p FD is semantically valid. If
   /// semantically invalid diagnostics will be emitted explaining the problems.
@@ -2557,10 +2620,15 @@ public:
     return RejectedLateParsedBoundsTypes.contains(BATy);
   }
 
+  /// Validate the late-parsed type attribute \p LA and wrap \p QT in a
+  /// CountAttributedType with no count yet, recorded on \p LA for later
+  /// completion. Returns false if \p LA is invalid.
+  bool ProcessLateParsedTypeAttr(LateParsedTypeAttrInfo &LA, QualType &QT);
+
   /// Supply the parsed argument of a late-parsed bounds attribute to the type
-  /// built for it by ActOnLateParsedTypeAttr, and run the checks that need the
-  /// owning declaration. \p FD is the field the type belongs to. Returns false
-  /// if the attribute was rejected.
+  /// built for it by ProcessLateParsedTypeAttr, and run the checks that need
+  /// the owning declaration. \p FD is the field the type belongs to. Returns
+  /// false if the attribute was rejected.
   bool ActOnLateParsedTypeAttrArgument(BoundsAttributedType *BATy,
                                        FieldDecl *FD, Expr *Arg);
 
@@ -3505,10 +3573,9 @@ public:
   bool ActOnCXXNestedNameSpecifierDecltype(CXXScopeSpec &SS, const DeclSpec &DS,
                                            SourceLocation ColonColonLoc);
 
-  bool ActOnCXXNestedNameSpecifierIndexedPack(CXXScopeSpec &SS,
-                                              const DeclSpec &DS,
-                                              SourceLocation ColonColonLoc,
-                                              QualType Type);
+  ParsedType ActOnCXXNestedNameSpecifierIndexedPack(
+      CXXScopeSpec &SS, const DeclSpec &DS, TypeSourceInfo *PatternLoc,
+      SourceLocation ColonColonLoc, QualType Type);
 
   /// IsInvalidUnlessNestedName - This method is used for error recovery
   /// purposes to determine whether the specified identifier is only valid as
@@ -4560,6 +4627,14 @@ public:
 
   /// Push the parameters of D, which must be a function, into scope.
   void ActOnReenterFunctionContext(Scope *S, Decl *D);
+
+  /// Add \p Params to scope, so a late-parsed attribute can name them.
+  void ActOnReenterFunctionPrototypeParams(Scope *S,
+                                           ArrayRef<ParmVarDecl *> Params);
+  /// Undo the above, for when \p S outlives the attribute so no scope pop
+  /// removes them.
+  void ActOnExitFunctionPrototypeParams(Scope *S,
+                                        ArrayRef<ParmVarDecl *> Params);
   void ActOnExitFunctionContext();
 
   /// Add this decl to the scope shadowed decl chains.
@@ -4775,7 +4850,6 @@ public:
   NamedDecl *findLocallyScopedExternCDecl(DeclarationName Name);
 
   void deduceOpenCLAddressSpace(VarDecl *decl);
-  void deduceHLSLAddressSpace(VarDecl *decl);
 
   /// Adjust the \c DeclContext for a function or variable that might be a
   /// function-local external declaration.
@@ -5303,10 +5377,9 @@ public:
     // In C++ the implicit 'this' function parameter also counts.
     // Parameters are counted from one.
     bool HP = hasFunctionProto(D);
-    bool HasImplicitThisParam = hasImplicitObjectParameter(D);
     bool IV = HP && isFunctionOrMethodVariadic(D);
     unsigned NumParams =
-        (HP ? getFunctionOrMethodNumParams(D) : 0) + HasImplicitThisParam;
+        HP ? getFunctionOrMethodNumParams(D, /*IncludeThis=*/true) : 0;
 
     std::optional<llvm::APSInt> IdxInt;
     if (IdxExpr->isTypeDependent() ||
@@ -5325,7 +5398,7 @@ public:
           << &AI << AttrArgNum << IdxExpr->getSourceRange();
       return false;
     }
-    if (HasImplicitThisParam && !CanIndexImplicitThis) {
+    if (hasImplicitObjectParameter(D) && !CanIndexImplicitThis) {
       if (IdxSource == 1) {
         Diag(getAttrLoc(AI), diag::err_attribute_invalid_implicit_this_argument)
             << &AI << IdxExpr->getSourceRange();
@@ -6242,6 +6315,21 @@ public:
   void DefineDefaultedComparison(SourceLocation Loc, FunctionDecl *FD,
                                  DefaultedComparisonKind DCK);
 
+  /// Check a defaulted postfix increment or decrement operator function
+  /// (C++2d [over.inc.default]), defining it as deleted if necessary.
+  ///
+  /// \param S The scope in which the function is defaulted, used to perform
+  /// the unqualified name lookups needed by the implicit definition, or
+  /// \c nullptr if those lookups have already been performed.
+  ///
+  /// \returns \c true if the function is ill-formed.
+  bool CheckExplicitlyDefaultedPostfixOperator(Scope *S, FunctionDecl *FD,
+                                               PostfixOperatorKind Kind);
+  /// Synthesize the body of a defaulted postfix increment or decrement
+  /// operator function (C++2d [over.inc.default]p3).
+  void DefineDefaultedPostfixOperator(SourceLocation Loc, FunctionDecl *FD,
+                                      PostfixOperatorKind Kind);
+
   void CheckExplicitObjectMemberFunction(Declarator &D, DeclarationName Name,
                                          QualType R, bool IsLambda,
                                          DeclContext *DC = nullptr);
@@ -6559,10 +6647,17 @@ public:
   void ActOnPureSpecifier(Decl *D, SourceLocation PureSpecLoc);
   void SetDeclDeleted(Decl *dcl, SourceLocation DelLoc,
                       StringLiteral *Message = nullptr);
-  void SetDeclDefaulted(Decl *dcl, SourceLocation DefaultLoc);
+  /// Mark the given declaration as explicitly defaulted.
+  ///
+  /// \param S The scope in which the function is defaulted, if it is
+  /// available. It is used to perform the unqualified name lookups needed by
+  /// the implicit definition of an out-of-class defaulted function.
+  void SetDeclDefaulted(Decl *dcl, SourceLocation DefaultLoc,
+                        Scope *S = nullptr);
 
   void SetFunctionBodyKind(Decl *D, SourceLocation Loc, FnBodyKind BodyKind,
-                           StringLiteral *DeletedMessage = nullptr);
+                           StringLiteral *DeletedMessage = nullptr,
+                           Scope *S = nullptr);
   void ActOnStartTrailingRequiresClause(Scope *S, Declarator &D);
   ExprResult ActOnFinishTrailingRequiresClause(ExprResult ConstraintExpr);
   ExprResult ActOnRequiresClause(ExprResult ConstraintExpr);
@@ -7559,8 +7654,10 @@ public:
                            bool AllowRecovery = false);
 
   /// BuildBuiltinCallExpr - Create a call to a builtin function specified by Id
-  //  with the specified CallArgs
-  Expr *BuildBuiltinCallExpr(SourceLocation Loc, Builtin::ID Id,
+  /// with the specified CallArgs. Id is unsigned rather than Builtin::ID, so
+  /// that it can also be a target-specific builtin ID, which is not in
+  /// Builtin::ID, e.g., BPF::BI__builtin_preserve_enum_value.
+  Expr *BuildBuiltinCallExpr(SourceLocation Loc, unsigned Id,
                              MultiExprArg CallArgs);
 
   using ADLCallKind = CallExpr::ADLCallKind;
@@ -8956,9 +9053,6 @@ public:
   concepts::TypeRequirement *BuildTypeRequirement(
       concepts::Requirement::SubstitutionDiagnostic *SubstDiag);
   concepts::NestedRequirement *BuildNestedRequirement(Expr *E);
-  concepts::NestedRequirement *
-  BuildNestedRequirement(StringRef InvalidConstraintEntity,
-                         const ASTConstraintSatisfaction &Satisfaction);
   ExprResult ActOnRequiresExpr(SourceLocation RequiresKWLoc,
                                RequiresExprBodyDecl *Body,
                                SourceLocation LParenLoc,
@@ -9132,6 +9226,11 @@ public:
       AggregateDeductionCandidates;
 
   bool IsStringInit(Expr *Init, const ArrayType *AT);
+
+  /// The initializers of \p ILE with each multi-element EmbedExpr split into
+  /// one EmbedExpr per embedded element; \p Storage is used only if needed.
+  MultiExprArg getInitsWithEmbedExpanded(InitListExpr *ILE,
+                                         SmallVectorImpl<Expr *> &Storage);
 
   /// Determine whether we can perform aggregate initialization for the purposes
   /// of overload resolution.
@@ -13029,6 +13128,11 @@ public:
       const DefaultArguments &DefaultArgs, SourceLocation ArgLoc,
       bool PartialOrdering, bool *StrictPackMatch);
 
+  /// Determine the declared type of the constant template parameter that \p Arg
+  /// names, if any.
+  static QualType
+  getTypeOfConstantTemplateParameter(const TemplateArgument &Arg);
+
   /// Mark which template parameters are used in a given expression.
   ///
   /// \param E the expression from which template parameters will be deduced.
@@ -13940,21 +14044,43 @@ public:
                           FunctionProtoType::ExceptionSpecInfo &ESI,
                           SmallVectorImpl<QualType> &ExceptionStorage,
                           const MultiLevelTemplateArgumentList &Args);
+  /// An attribute whose instantiation is deferred, together with the
+  /// instantiation scope to instantiate it in.
+  struct LateInstantiatedAttribute {
+    const Attr *TmplAttr;
+    LocalInstantiationScope *Scope;
+    Decl *NewDecl;
+
+    LateInstantiatedAttribute(const Attr *A, LocalInstantiationScope *S,
+                              Decl *D)
+        : TmplAttr(A), Scope(S), NewDecl(D) {}
+  };
+  typedef SmallVector<LateInstantiatedAttribute, 1> LateInstantiatedAttrVec;
+
+  /// Substitute into a function parameter. If \p LateAttrs is given, its
+  /// late-parsed attributes are deferred there, since they may name a
+  /// parameter that is not substituted yet; see \ref InstantiateLateAttrs.
   ParmVarDecl *
   SubstParmVarDecl(ParmVarDecl *D,
                    const MultiLevelTemplateArgumentList &TemplateArgs,
                    int indexAdjustment, UnsignedOrNone NumExpansions,
-                   bool ExpectParameterPack, bool EvaluateConstraints = true);
+                   bool ExpectParameterPack, bool EvaluateConstraints = true,
+                   LateInstantiatedAttrVec *LateAttrs = nullptr);
 
   /// Substitute the given template arguments into the given set of
   /// parameters, producing the set of parameter types that would be generated
-  /// from such a substitution.
+  /// from such a substitution. If there is a parameter with no ParmVarDecl to
+  /// substitute (a null entry of \p Params, as from a typedef'd function
+  /// type), its type needs to come from \p OldParamTypes instead, which must
+  /// then be passed, and \p OutParams gets null for it.
   bool SubstParmTypes(SourceLocation Loc, ArrayRef<ParmVarDecl *> Params,
                       const FunctionProtoType::ExtParameterInfo *ExtParamInfos,
                       const MultiLevelTemplateArgumentList &TemplateArgs,
                       SmallVectorImpl<QualType> &ParamTypes,
                       SmallVectorImpl<ParmVarDecl *> *OutParams,
-                      ExtParameterInfoBuilder &ParamInfos);
+                      ExtParameterInfoBuilder &ParamInfos,
+                      const QualType *OldParamTypes = nullptr,
+                      bool EvaluateConstraints = true);
 
   /// Substitute the given template arguments into the default argument.
   bool SubstDefaultArgument(SourceLocation Loc, ParmVarDecl *Param,
@@ -14306,17 +14432,6 @@ public:
   ExplicitSpecifier instantiateExplicitSpecifier(
       const MultiLevelTemplateArgumentList &TemplateArgs, ExplicitSpecifier ES);
 
-  struct LateInstantiatedAttribute {
-    const Attr *TmplAttr;
-    LocalInstantiationScope *Scope;
-    Decl *NewDecl;
-
-    LateInstantiatedAttribute(const Attr *A, LocalInstantiationScope *S,
-                              Decl *D)
-        : TmplAttr(A), Scope(S), NewDecl(D) {}
-  };
-  typedef SmallVector<LateInstantiatedAttribute, 1> LateInstantiatedAttrVec;
-
   /// Recheck instantiated thread-safety attributes that could not be validated
   /// on the dependent pattern declaration.
   bool checkInstantiatedThreadSafetyAttrs(const Decl *D, const Attr *A);
@@ -14325,6 +14440,14 @@ public:
                         const Decl *Pattern, Decl *Inst,
                         LateInstantiatedAttrVec *LateAttrs = nullptr,
                         LocalInstantiationScope *OuterMostScope = nullptr);
+
+  /// Instantiate the attributes that \ref InstantiateAttrs deferred to \p
+  /// LateAttrs, and attach them to their declarations. They are instantiated
+  /// in the scopes saved with them, which extend \p OuterMostScope, the
+  /// current scope.
+  void InstantiateLateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
+                            LateInstantiatedAttrVec &LateAttrs,
+                            LocalInstantiationScope *OuterMostScope);
 
   /// Update instantiation attributes after template was late parsed.
   ///
@@ -15214,7 +15337,7 @@ private:
   /// The key is based on the unsubstituted expression and the parameter
   /// mapping. This lets us not substituting the mapping more than once,
   /// which is (very!) expensive.
-  llvm::DenseMap<llvm::FoldingSetNodeID,
+  llvm::DenseMap<llvm::FoldingSetNodeIDRef,
                  UnsubstitutedConstraintSatisfactionCacheResult>
       UnsubstitutedConstraintSatisfactionCache;
 
@@ -15222,7 +15345,7 @@ private:
   /// concepts. Substituting into normalized concepts can be extremely expensive
   /// due to the redundancy of template parameters. This cache is intended for
   /// use by TemplateInstantiator to avoid redundant semantic checking.
-  llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc>
+  llvm::DenseMap<llvm::FoldingSetNodeIDRef, TemplateArgumentLoc>
       *CurrentCachedTemplateArgs = nullptr;
 
   /// Caches pairs of template-like decls whose associated constraints were
@@ -15239,7 +15362,7 @@ private:
 
   /// Cache whether the associated constraint of a declaration
   /// is satisfied.
-  llvm::ContextualFoldingSet<ConstraintSatisfaction, const ASTContext &>
+  llvm::DenseMap<llvm::FoldingSetNodeIDRef, ConstraintSatisfaction *>
       SatisfactionCache;
 
   // The current stack of constraint satisfactions, so we can exit-early.
@@ -15615,10 +15738,9 @@ public:
   QualType BuildDecltypeType(Expr *E, bool AsUnevaluated = true);
 
   QualType ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
-                                 SourceLocation Loc,
-                                 SourceLocation EllipsisLoc);
+                                 SourceLocation Loc);
   QualType BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
-                                 SourceLocation Loc, SourceLocation EllipsisLoc,
+                                 SourceLocation Loc,
                                  bool FullySubstituted = false,
                                  ArrayRef<QualType> Expansions = {});
 

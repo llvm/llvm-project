@@ -114,7 +114,7 @@ void InvalidatedIteratorChecker::verifyAccess(CheckerContext &C,
   auto State = C.getState();
   const auto *Pos = getIteratorPosition(State, Val);
   if (Pos && !Pos->isValid()) {
-    auto *N = C.generateErrorNode(State);
+    auto *N = C.addSink(State);
     if (!N) {
       return;
     }

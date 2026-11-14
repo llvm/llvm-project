@@ -1342,8 +1342,9 @@ TYPE_PARSER(construct<OmpDefaultClause::DataSharingAttribute>(
 TYPE_PARSER(construct<OmpDefaultClause>(
     Parser<OmpDefaultClause::DataSharingAttribute>{}))
 
-TYPE_PARSER(construct<OmpDefaultVariantClause>(
-    indirect(OmpDirectiveSpecificationParser(/*allowCommas=*/false))))
+TYPE_PARSER(construct<OmpDefaultVariantClause>( //
+    indirect(OmpStylizedInstanceCreator(
+        OmpDirectiveSpecificationParser(/*allowCommas=*/false)))))
 
 TYPE_PARSER(construct<OmpDynGroupprivateClause>(
     maybe(nonemptyList(Parser<OmpDynGroupprivateClause::Modifier>{}) / ":"),
@@ -1456,7 +1457,8 @@ TYPE_PARSER(construct<OmpIterationOffset>(
     Parser<DefinedOperator>{}, scalarIntConstantExpr))
 
 // iteration -> iteration-variable [+/- nonnegative-scalar-integer-constant]
-TYPE_PARSER(construct<OmpIteration>(name, maybe(Parser<OmpIterationOffset>{})))
+TYPE_PARSER(
+    sourced(construct<OmpIteration>(name, maybe(Parser<OmpIterationOffset>{}))))
 
 TYPE_PARSER(construct<OmpIterationVector>(nonemptyList(Parser<OmpIteration>{})))
 
@@ -1571,8 +1573,9 @@ TYPE_PARSER(construct<OmpOrderClause>(
 TYPE_PARSER(construct<OmpMatchClause>(
     Parser<traits::OmpContextSelectorSpecification>{}))
 
-TYPE_PARSER(construct<OmpOtherwiseClause>(
-    maybe(indirect(OmpDirectiveSpecificationParser(/*allowCommas=*/false)))))
+TYPE_PARSER(construct<OmpOtherwiseClause>( //
+    maybe(indirect(OmpStylizedInstanceCreator(
+        OmpDirectiveSpecificationParser(/*allowCommas=*/false))))))
 
 TYPE_PARSER(construct<OmpWhenClause>(
     maybe(nonemptyList(Parser<OmpWhenClause::Modifier>{}) / ":"),
@@ -1819,7 +1822,8 @@ TYPE_PARSER( //
     "NO_OPENMP_ROUTINES" >>
         construct<OmpClause>(construct<OmpClause::NoOpenmpRoutines>()) ||
     "NO_PARALLELISM" >>
-        construct<OmpClause>(construct<OmpClause::NoParallelism>()) ||
+        construct<OmpClause>(construct<OmpClause::NoParallelism>(
+            maybe(parenthesized(scalarLogicalConstantExpr)))) ||
     "NUM_TASKS" >> construct<OmpClause>(construct<OmpClause::NumTasks>(
                        parenthesized(Parser<OmpNumTasksClause>{}))) ||
     "NUM_TEAMS" >> construct<OmpClause>(construct<OmpClause::NumTeams>(

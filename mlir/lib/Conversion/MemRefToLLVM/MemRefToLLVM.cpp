@@ -559,6 +559,12 @@ public:
       allocatedPtr = MemRefDescriptor(adaptor.getMemref())
                          .allocatedPtr(rewriter, op.getLoc());
     }
+    // `free` takes a pointer in the default address space. Undo the cast that
+    // the alloc lowering inserts for memrefs in another address space.
+    Type freeArgTy = getPtrType();
+    if (allocatedPtr.getType() != freeArgTy)
+      allocatedPtr = LLVM::AddrSpaceCastOp::create(rewriter, op.getLoc(),
+                                                   freeArgTy, allocatedPtr);
     rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, freeFunc.value(),
                                               allocatedPtr);
     return success();
@@ -771,11 +777,9 @@ struct GenericAtomicRMWOpLowering
       mapping.map(nestedOp.getResults(), clone->getResults());
     }
 
+    // Values defined outside the region are not in the mapping.
     Value result =
-        mapping.lookupOrNull(entryBlock.getTerminator()->getOperand(0));
-    if (!result) {
-      return atomicOp.emitError("result not defined in region");
-    }
+        mapping.lookupOrDefault(entryBlock.getTerminator()->getOperand(0));
     if (needsBitcast)
       result = LLVM::BitcastOp::create(rewriter, loc, cmpxchgType, result);
 

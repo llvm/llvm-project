@@ -9,8 +9,8 @@ define void @test_drop(i8 %a) !prof !0 {
 ; CHECK-NEXT:    br label %[[HEADER:.*]]
 ; CHECK:       [[HEADER]]:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 0
-; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 true, i1 [[CMP]], i1 false
-; CHECK-NEXT:    br i1 [[OR_COND]], label %[[EXIT:.*]], label %[[HEADER_BACKEDGE:.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 true, i1 [[CMP]], i1 false, !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label %[[EXIT:.*]], label %[[HEADER_BACKEDGE:.*]], !prof [[PROF2]]
 ; CHECK:       [[HEADER_BACKEDGE]]:
 ; CHECK-NEXT:    br label %[[HEADER]]
 ; CHECK:       [[EXIT]]:
@@ -36,4 +36,5 @@ exit:
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF1]] = !{!"unknown", !"LoopInfo"}
+; CHECK: [[PROF2]] = !{!"unknown", !"simplifycfg"}
 ;.

@@ -1,5 +1,6 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 %s -triple i386-apple-darwin10 -fasm-blocks -emit-llvm -o - | opt -passes=strip -S | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple i386-apple-darwin10 -fasm-blocks -emit-llvm -o - | opt -passes=strip -S | FileCheck %s %}
 
 // Some test cases for MS inline asm support from Mozilla code base.
 

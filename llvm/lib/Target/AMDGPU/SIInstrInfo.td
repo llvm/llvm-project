@@ -270,7 +270,7 @@ class SDGlobalAtomicNoRtn<string opcode, ValueType ty> : SDNode <opcode,
 >;
 
 def SIpc_add_rel_offset : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET",
-  SDTypeProfile<1, 2, [SDTCisVT<0, iPTR>, SDTCisSameAs<0,1>, SDTCisSameAs<0,2>]>
+  SDTypeProfile<1, 2, [SDTCisVT<0, iPTR>, SDTCisVT<1, i32>, SDTCisVT<2, i32>]>
 >;
 
 def SIpc_add_rel_offset64 : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET64",
@@ -923,23 +923,6 @@ def cond_as_i32imm: SDNodeXForm<cond, [{
   return CurDAG->getTargetConstant(N->get(), SDLoc(N), MVT::i32);
 }]>;
 
-// Copied from the AArch64 backend:
-def bitcast_fpimm_to_i16 : SDNodeXForm<fpimm, [{
-return CurDAG->getTargetConstant(
-  N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i16);
-}]>;
-
-def bitcast_fpimm_to_i32 : SDNodeXForm<fpimm, [{
-return CurDAG->getTargetConstant(
-  N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i32);
-}]>;
-
-// Copied from the AArch64 backend:
-def bitcast_fpimm_to_i64 : SDNodeXForm<fpimm, [{
-return CurDAG->getTargetConstant(
-  N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i64);
-}]>;
-
 def as_hw_round_mode : SDNodeXForm<timm, [{
   // "round.towardzero" -> TowardZero 0        -> FP_ROUND_ROUND_TO_ZERO 3
   // "round.tonearest"  -> NearestTiesToEven 1 -> FP_ROUND_ROUND_TO_NEAREST 0
@@ -1083,7 +1066,7 @@ def extract_cpol : SDNodeXForm<timm, [{
       N->getZExtValue() & (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12
                                ? AMDGPU::CPol::ALL
                                : AMDGPU::CPol::ALL_pregfx12),
-      SDLoc(N), MVT::i8);
+      SDLoc(N), MVT::i16);
 }]>;
 
 def extract_swz : SDNodeXForm<timm, [{
@@ -1098,7 +1081,7 @@ def extract_cpol_set_glc : SDNodeXForm<timm, [{
   const uint32_t cpol = N->getZExtValue() & (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12
                                ? AMDGPU::CPol::ALL
                                : AMDGPU::CPol::ALL_pregfx12);
-  return CurDAG->getTargetConstant(cpol | AMDGPU::CPol::GLC, SDLoc(N), MVT::i8);
+  return CurDAG->getTargetConstant(cpol | AMDGPU::CPol::GLC, SDLoc(N), MVT::i16);
 }]>;
 
 //===----------------------------------------------------------------------===//
@@ -1771,9 +1754,17 @@ def VOP3ModsNonCanonicalizing : ComplexPattern<untyped, 2,
 
 def VOP3NoMods : ComplexPattern<untyped, 1, "SelectVOP3NoMods">;
 
+def VOP3NoOpSelMods : ComplexPattern<untyped, 1, "SelectVOP3NoOpSelMods">;
+
 def VOP3OMods : ComplexPattern<untyped, 3, "SelectVOP3OMods">;
 
 def VOP3PMods  : ComplexPattern<untyped, 2, "SelectVOP3PMods">;
+
+def VOP3PModsPkFmaOpSel0 :
+    ComplexPattern<untyped, 2, "SelectVOP3PModsPkFmaOpSel0">;
+
+def VOP3PModsPkAddMulOpSel0 :
+    ComplexPattern<untyped, 2, "SelectVOP3PModsPkAddMulOpSel0">;
 
 def VOP3PModsDOT  : ComplexPattern<untyped, 2, "SelectVOP3PModsDOT">;
 def VOP3PNoModsDOT  : ComplexPattern<untyped, 1, "SelectVOP3PNoModsDOT">;
@@ -2754,11 +2745,11 @@ class getEquivalentAGPROperand<RegisterOperand RC> {
   defvar Size = !cast<SIRegisterClassLike>(RC.RegClass).Size;
   RegisterOperand ret =
     !cond(!eq(Size, 32)   : RegisterOperand<AGPR_32>,
-          !eq(Size, 64)   : RegisterOperand<AReg_64>,
-          !eq(Size, 96)   : RegisterOperand<AReg_96>,
-          !eq(Size, 128)  : RegisterOperand<AReg_128>,
-          !eq(Size, 160)  : RegisterOperand<AReg_160>,
-          !eq(Size, 1024) : RegisterOperand<AReg_1024>);
+          !eq(Size, 64)   : RegisterOperand<AReg_64_Align2>,
+          !eq(Size, 96)   : RegisterOperand<AReg_96_Align2>,
+          !eq(Size, 128)  : RegisterOperand<AReg_128_Align2>,
+          !eq(Size, 160)  : RegisterOperand<AReg_160_Align2>,
+          !eq(Size, 1024) : RegisterOperand<AReg_1024_Align2>);
 }
 
 class getEquivalentVGPROperand<RegisterOperand RC> {
@@ -2900,6 +2891,10 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
 
   field bit IsPacked = Src0VT.isVector;
   field bit HasOpSel = IsPacked;
+  // The instruction has no op_sel_hi field, so encode those bits as 0. Note
+  // that some VOP3P instructions may reuse the op_sel_hi bits for other
+  // purposes (for example, IsDOT), and thus should not be forced to 0.
+  field bit HasNoOpSelHi = 0;
   field bit HasOMod = !if(IsVOP3P, 0, DstVT.isFP);
   field bit HasSDWAOMod = DstVT.isFP;
 
@@ -3002,13 +2997,21 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field string AsmVOP3Base = getAsmVOP3Base<NumSrcArgs, HasDst, HasClamp,
    HasOpSel, HasOMod, IsVOP3P, HasNeg, HasSrc0FloatMods, HasSrc1FloatMods,
    HasSrc2FloatMods, DstVT, HasFP8ByteSel, HasBitOp3>.ret;
-  field string Asm64 = AsmVOP3Base;
+  // Instructions without operands have no $vdst for printVOPDst to print the
+  // encoding suffix with, so put it in the asm string. {_e64|} limits it to
+  // the AsmWriter; the matcher variants get the bare mnemonic.
+  field bit HasNoOperands = !and(!not(HasDst), !eq(NumSrcArgs, 0));
+  field string Asm64 = !if(!and(HasNoOperands, !not(IsSingle)), "{_e64|}",
+                           AsmVOP3Base);
   field string AsmVOP3P = getAsmVOP3P<HasDst, NumSrcArgs, HasNeg, HasClamp, HasOpSel>.ret;
   field string AsmVOP3DPP = getAsmVOP3DPP<AsmVOP3Base>.ret;
   field string AsmVOP3DPP16 = getAsmVOP3DPP16<AsmVOP3Base>.ret;
   field string AsmVOP3DPP8 = getAsmVOP3DPP8<AsmVOP3Base>.ret;
-  field string AsmSDWA = getAsmSDWA<HasDst, NumSrcArgs, DstVT>.ret;
-  field string AsmSDWA9 = getAsmSDWA9<HasDst, HasSDWAOMod, NumSrcArgs, DstVT>.ret;
+  field string AsmSDWA = !if(HasNoOperands, "{_sdwa|}",
+                             getAsmSDWA<HasDst, NumSrcArgs, DstVT>.ret);
+  field string AsmSDWA9 =
+      !if(HasNoOperands, "{_sdwa|}",
+          getAsmSDWA9<HasDst, HasSDWAOMod, NumSrcArgs, DstVT>.ret);
   field string AsmVOPDX = getAsmVOPDPart<NumSrcArgs, "X">.ret;
   field string AsmVOPDY = getAsmVOPDPart<NumSrcArgs, "Y">.ret;
   field string AsmVOPD3X = getAsmVOPDPart<NumSrcArgs, "X", HasVOPD3Src2, HasModifiers>.ret;
@@ -3657,6 +3660,12 @@ def lo16_to_vgpr32 : OutPatFrag<(ops node:$op),
 
 def hi16_to_vgpr32 : OutPatFrag<(ops node:$op),
   (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, $op, hi16)>;
+
+def vgpr32_lo16 : OutPatFrag<(ops node:$op),
+  (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $op, VGPR_32)), lo16)>;
+
+def vgpr32_hi16 : OutPatFrag<(ops node:$op),
+  (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $op, VGPR_32)), hi16)>;
 
 // Direct lookup table for VOPDXY eligibility, indexed by the packed
 // (VOPDOp << 5) | (Subtarget << 1) | VOPD3 key.

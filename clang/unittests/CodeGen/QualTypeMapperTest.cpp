@@ -52,6 +52,12 @@ protected:
     return dyn_cast<llvm::abi::TupleType>(Mapper.convertType(QT));
   }
 
+  /// Maps \p QT and returns it as an ABI opaque 8-bit float type, or null if
+  /// it did not map to one.
+  const llvm::abi::OpaqueFloat8Type *mapToOpaqueFloat8(QualType QT) {
+    return dyn_cast<llvm::abi::OpaqueFloat8Type>(Mapper.convertType(QT));
+  }
+
   /// Returns the underlying type of the file-scope typedef named \p Name.
   QualType lookupTypedef(StringRef Name) {
     for (Decl *D : context().getTranslationUnitDecl()->decls())
@@ -214,6 +220,20 @@ TEST_F(QualTypeMapperSVETest, RepresentativeTypes) {
   ASSERT_NE(SVBool, nullptr);
   EXPECT_EQ(SVBool->getNumElements(), llvm::ElementCount::getScalable(16));
   EXPECT_EQ(SVBool->getSizeInBits(), llvm::TypeSize::getScalable(16));
+}
+
+// The __mfp8 scalar is an opaque 8-bit float, distinct from both an
+// integer and a one-element vector.
+TEST_F(QualTypeMapperSVETest, MFloat8ScalarIsOpaqueFloat8) {
+  const llvm::abi::OpaqueFloat8Type *MFP8 =
+      mapToOpaqueFloat8(context().MFloat8Ty);
+  ASSERT_NE(MFP8, nullptr);
+  EXPECT_TRUE(MFP8->isOpaqueFloat8());
+  EXPECT_FALSE(MFP8->isFloat());
+  EXPECT_FALSE(MFP8->isInteger());
+  EXPECT_FALSE(MFP8->isVector());
+  EXPECT_EQ(MFP8->getSizeInBits(), llvm::TypeSize::getFixed(8));
+  EXPECT_EQ(MFP8->getAlignment(), llvm::Align(1));
 }
 
 // __mfp8 has no floating-point semantics, so mfloat8 vectors use an 8-bit

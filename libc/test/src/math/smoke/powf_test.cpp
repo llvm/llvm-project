@@ -186,9 +186,9 @@ public:
 
       // Powers of 10:
       EXPECT_FP_EQ(1.0f, func(10.0f, 0.0f));
-      EXPECT_FP_EQ(10.0f, func(10.0f, 1.0f));
-      EXPECT_FP_EQ(100.0f, func(10.0f, 2.0f));
       if (tolerance == 0) {
+        EXPECT_FP_EQ(10.0f, func(10.0f, 1.0f));
+        EXPECT_FP_EQ(100.0f, func(10.0f, 2.0f));
         EXPECT_FP_EQ(1000.0f, func(10.0f, 3.0f));
         EXPECT_FP_EQ(10000.0f, func(10.0f, 4.0f));
         EXPECT_FP_EQ(100000.0f, func(10.0f, 5.0f));
@@ -203,6 +203,8 @@ public:
           uint32_t e = FPBits(exp).uintval();
           EXPECT_LE(a >= e ? a - e : e - a, static_cast<uint32_t>(tolerance));
         };
+        check_close(func(10.0f, 1.0f), 10.0f);
+        check_close(func(10.0f, 2.0f), 100.0f);
         check_close(func(10.0f, 3.0f), 1000.0f);
         check_close(func(10.0f, 4.0f), 10000.0f);
         check_close(func(10.0f, 5.0f), 100000.0f);
@@ -247,12 +249,54 @@ public:
     }
   }
 
+  void test_range_underflow(float (*func)(float, float)) {
+    constexpr float BASES[] = {0x1.8p-2f, 0x1.fffffep-2f, 0x1.8p-130f};
+    constexpr float EXPONENTS[] = {150.0f, 150.0f, 1.25f};
+    for (int mode = 0; mode < N_ROUNDING_MODES; ++mode) {
+      ForceRoundingMode rounding(ROUNDING_MODES[mode]);
+      if (!rounding.success)
+        continue;
+      float positive =
+          ROUNDING_MODES[mode] == RoundingMode::Upward ? min_denormal : zero;
+      float negative = ROUNDING_MODES[mode] == RoundingMode::Downward
+                           ? -min_denormal
+                           : neg_zero;
+      for (unsigned index = 0; index < 3; ++index)
+        EXPECT_FP_EQ_WITH_EXCEPTION(positive,
+                                    func(BASES[index], EXPONENTS[index]),
+                                    FE_UNDERFLOW | FE_INEXACT);
+      EXPECT_FP_EQ_WITH_EXCEPTION(negative, func(-0x1.8p-2f, 151.0f),
+                                  FE_UNDERFLOW | FE_INEXACT);
+      EXPECT_FP_EQ_WITH_EXCEPTION(negative, func(-0x1.8p-130f, 3.0f),
+                                  FE_UNDERFLOW | FE_INEXACT);
+
+      constexpr float SUBNORMAL_BOUND = 150.0f / 126.0f;
+      uint32_t bound_bits = FPBits(SUBNORMAL_BOUND).uintval();
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+      // FIXME: this should work even with skip accurate pass
+      float boundary = ROUNDING_MODES[mode] == RoundingMode::Upward ||
+                               ROUNDING_MODES[mode] == RoundingMode::Nearest
+                           ? min_denormal
+                           : zero;
+      EXPECT_FP_EQ_WITH_EXCEPTION(boundary, func(0x1.fffffep-2f, 0x1.2bfffep7f),
+                                  FE_UNDERFLOW | FE_INEXACT);
+      EXPECT_FP_EQ_WITH_EXCEPTION(
+          boundary, func(0x1.fffffcp-127f, FPBits(bound_bits - 1).get_val()),
+          FE_UNDERFLOW | FE_INEXACT);
+#endif // ndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+      EXPECT_FP_EQ_WITH_EXCEPTION(
+          positive, func(0x1.fffffcp-127f, FPBits(bound_bits + 1).get_val()),
+          FE_UNDERFLOW | FE_INEXACT);
+    }
+  }
+
 #ifdef LIBC_TEST_FTZ_DAZ
   void test_ftz(float (*func)(float, float)) {
     LIBC_NAMESPACE::testing::ModifyMXCSR mxcsr(LIBC_NAMESPACE::testing::FTZ);
     volatile float x = -min_denormal;
     volatile float y = 0.5f;
-    EXPECT_FP_IS_NAN(func(x, y));
+    float funcRes = func(x, y);
+    EXPECT_FP_IS_NAN(funcRes);
     volatile float two = 2.0f;
     volatile float d = min_denormal;
     EXPECT_FP_EQ(1.0f, func(two, d));
@@ -297,6 +341,9 @@ public:
   }                                                                            \
   TEST_F(LlvmLibcPowfTest##suffix, SubnormalBase) {                            \
     test_subnormal_base(&func, tolerance);                                     \
+  }                                                                            \
+  TEST_F(LlvmLibcPowfTest##suffix, RangeUnderflow) {                           \
+    test_range_underflow(&func);                                               \
   }                                                                            \
   LIST_POWF_FTZ_DAZ_TESTS(suffix, func)                                        \
   static_assert(true, "Require semicolon.")

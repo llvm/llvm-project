@@ -1,4 +1,6 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=52
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=60
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=61
 ! Test for parsing confusion between array indexing and string subscripts
 
 ! This is okay: selects the whole substring
@@ -48,9 +50,10 @@ subroutine substring_5(c)
   !$omp end task
 end
 
-! This is okay: interpreted as indexing the array
+! This is an array section, so DEPEND forbids the explicit stride.
 subroutine substring_5b(c)
   character(:), pointer :: c(:)
+  !ERROR: 'c' in DEPEND clause must not specify a stride
   !$omp task depend(out:c(1:20:5))
   !$omp end task
 end

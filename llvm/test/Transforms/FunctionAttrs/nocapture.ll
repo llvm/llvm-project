@@ -370,8 +370,8 @@ define void @readonly_nounwind_not_willreturn(ptr %p) {
 ;
 ; ATTRIBUTOR: Function Attrs: nosync nounwind memory(read)
 ; ATTRIBUTOR-LABEL: define void @readonly_nounwind_not_willreturn
-; ATTRIBUTOR-SAME: (ptr readonly captures(none) [[P:%.*]]) #[[ATTR7:[0-9]+]] {
-; ATTRIBUTOR-NEXT:    call void @external_not_willreturn(ptr readonly captures(none) [[P]]) #[[ATTR4]]
+; ATTRIBUTOR-SAME: (ptr readonly [[P:%.*]]) #[[ATTR7:[0-9]+]] {
+; ATTRIBUTOR-NEXT:    call void @external_not_willreturn(ptr [[P]]) #[[ATTR4]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   call void @external_not_willreturn(ptr %p)
@@ -441,7 +441,7 @@ define void @self_readonly_nounwind_not_willreturn(ptr %p) readonly nounwind {
 ;
 ; ATTRIBUTOR: Function Attrs: nosync nounwind memory(read)
 ; ATTRIBUTOR-LABEL: define void @self_readonly_nounwind_not_willreturn
-; ATTRIBUTOR-SAME: (ptr captures(none) [[P:%.*]]) #[[ATTR7]] {
+; ATTRIBUTOR-SAME: (ptr [[P:%.*]]) #[[ATTR7]] {
 ; ATTRIBUTOR-NEXT:    call void @capture(ptr [[P]])
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -1423,3 +1423,51 @@ define void @captures_metadata_provenance(ptr %x, ptr %y) {
 }
 
 declare ptr @llvm.launder.invariant.group.p0(ptr)
+
+; %p is captured through @scc_capture_b, which is not the first use of %p in
+; the argument SCC.
+declare void @capture_unknown(ptr)
+
+define void @scc_capture_a(ptr %p, i1 %c) {
+; COMMON-LABEL: define void @scc_capture_a
+; COMMON-SAME: (ptr [[P:%.*]], i1 [[C:%.*]]) {
+; COMMON-NEXT:    br i1 [[C]], label [[T:%.*]], label [[E:%.*]]
+; COMMON:       t:
+; COMMON-NEXT:    call void @scc_capture_c(ptr [[P]], i1 [[C]])
+; COMMON-NEXT:    ret void
+; COMMON:       e:
+; COMMON-NEXT:    call void @scc_capture_b(ptr [[P]])
+; COMMON-NEXT:    ret void
+;
+  br i1 %c, label %t, label %e
+
+t:
+  call void @scc_capture_c(ptr %p, i1 %c)
+  ret void
+
+e:
+  call void @scc_capture_b(ptr %p)
+  ret void
+}
+
+define void @scc_capture_b(ptr %p) {
+; COMMON-LABEL: define void @scc_capture_b
+; COMMON-SAME: (ptr [[P:%.*]]) {
+; COMMON-NEXT:    call void @scc_capture_c(ptr null, i1 false)
+; COMMON-NEXT:    call void @capture_unknown(ptr [[P]])
+; COMMON-NEXT:    ret void
+;
+  call void @scc_capture_c(ptr null, i1 false)
+  call void @capture_unknown(ptr %p)
+  ret void
+}
+
+define void @scc_capture_c(ptr %p, i1 %c) {
+; COMMON-LABEL: define void @scc_capture_c
+; COMMON-SAME: (ptr [[P:%.*]], i1 [[C:%.*]]) {
+; COMMON-NEXT:    call void @scc_capture_a(ptr [[P]], i1 [[C]])
+; COMMON-NEXT:    ret void
+;
+  call void @scc_capture_a(ptr %p, i1 %c)
+  ret void
+}

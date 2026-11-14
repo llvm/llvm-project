@@ -638,3 +638,200 @@ bool AMDGPUCombinerHelper::matchBinopWith32BitMask(Register X,
     return false;
   return matchConstantIs32BitMask(X) || matchConstantIs32BitMask(Y);
 }
+
+bool AMDGPUCombinerHelper::isCarryLikeBool(Register Reg, unsigned Depth) const {
+  constexpr unsigned MaxDepth = 6;
+  const MachineInstr *Def = MRI.getVRegDef(Reg);
+  if (!Def || Depth > MaxDepth)
+    return false;
+
+  switch (Def->getOpcode()) {
+  case TargetOpcode::G_ICMP:
+  case TargetOpcode::G_FCMP:
+  case TargetOpcode::G_IS_FPCLASS:
+    return true;
+  case TargetOpcode::G_INTRINSIC:
+    return cast<GIntrinsic>(Def)->is(Intrinsic::amdgcn_class);
+  case TargetOpcode::G_UADDO:
+  case TargetOpcode::G_UADDE:
+  case TargetOpcode::G_USUBO:
+  case TargetOpcode::G_USUBE:
+    return Def->getOperand(1).getReg() == Reg;
+  case TargetOpcode::G_XOR:
+    // A not of a carry-like boolean.
+    if (mi_match(Def->getOperand(2).getReg(), MRI, m_AllOnesInt()))
+      return isCarryLikeBool(Def->getOperand(1).getReg(), Depth + 1);
+    [[fallthrough]];
+  case TargetOpcode::G_AND:
+  case TargetOpcode::G_OR:
+    return isCarryLikeBool(Def->getOperand(1).getReg(), Depth + 1) &&
+           isCarryLikeBool(Def->getOperand(2).getReg(), Depth + 1);
+  default:
+    return false;
+  }
+}
+
+static bool isBoolType(LLT Ty) { return Ty.isScalar(1); }
+
+bool AMDGPUCombinerHelper::isFoldableCarryExt(Register Reg, Register *Carry,
+                                              bool *IsSExt) const {
+  Register Src;
+  bool SExt;
+  // The high bits of an anyext are undefined, so it can be treated as a zext.
+  if (mi_match(Reg, MRI, m_any_of(m_GZExt(m_Reg(Src)), m_GAnyExt(m_Reg(Src)))))
+    SExt = false;
+  else if (mi_match(Reg, MRI, m_GSExt(m_Reg(Src))))
+    SExt = true;
+  else
+    return false;
+
+  // Any other boolean must first be copied to SCC or VCC, which costs about
+  // as much as the extension.
+  if (!isBoolType(MRI.getType(Src)) || !MRI.hasOneNonDBGUse(Reg) ||
+      !isCarryLikeBool(Src))
+    return false;
+  if (Carry)
+    *Carry = Src;
+  if (IsSExt)
+    *IsSExt = SExt;
+  return true;
+}
+
+bool AMDGPUCombinerHelper::matchConditionalCarryOp(
+    MachineInstr &MI, ConditionalCarryOp &MatchInfo) const {
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  if (!Ty.isScalar() || Ty.isFloat())
+    return false;
+  unsigned Size = Ty.getSizeInBits();
+  // Most 16/32-bit cases come from div/rem legalization, and the legalizer
+  // splits a 64-bit add on most subtargets, hiding the x +/- 1 operand.
+  if (isPreLegalize() ? Size != 64 : (Size != 16 && Size != 32))
+    return false;
+
+  // A uniform 64-bit add or select does not clobber SCC on a subtarget with
+  // 64-bit scalar adds, but the two carry ops that replace it do, so a
+  // condition with other users would have to be saved and restored.
+  // Uniformity is not known before legalization, so a condition with other
+  // users is rejected for all 64-bit types on such a subtarget.
+  bool NeedsSingleUseCarry = Size == 64 && STI.hasScalarAddSub64();
+
+  // The base is folded into the add/sub-with-carry, so a known zero base is
+  // better left to the identity combines.
+  auto IsZero = [&](Register Reg) {
+    return mi_match(Reg, MRI, m_SpecificICst(0));
+  };
+
+  // Ext is a zext or sext of a boolean that is used as an addend of an add
+  // (IsAddRoot) or as the subtrahend of a sub.
+  auto MatchExt = [&](Register Ext, Register Base, bool IsAddRoot) {
+    Register Carry;
+    bool IsSExt;
+    if (IsZero(Base) || !isFoldableCarryExt(Ext, &Carry, &IsSExt) ||
+        (NeedsSingleUseCarry && !MRI.hasOneNonDBGUse(Carry)))
+      return false;
+    MatchInfo = {IsAddRoot != IsSExt, /*K=*/0, Base, Carry};
+    return true;
+  };
+
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_ADD: {
+    Register LHS = MI.getOperand(1).getReg();
+    Register RHS = MI.getOperand(2).getReg();
+    // When both operands are carries, fold only the right one, so that the
+    // two carries do not have to be live at the same time.
+    return MatchExt(RHS, LHS, /*IsAddRoot=*/true) ||
+           MatchExt(LHS, RHS, /*IsAddRoot=*/true);
+  }
+  case TargetOpcode::G_SUB:
+    return MatchExt(MI.getOperand(2).getReg(), MI.getOperand(1).getReg(),
+                    /*IsAddRoot=*/false);
+  case TargetOpcode::G_SELECT: {
+    Register Cond = MI.getOperand(1).getReg();
+    Register TrueReg = MI.getOperand(2).getReg();
+    Register FalseReg = MI.getOperand(3).getReg();
+    if (!isBoolType(MRI.getType(Cond)) ||
+        (NeedsSingleUseCarry && !MRI.hasOneNonDBGUse(Cond)))
+      return false;
+
+    // The select already needs its condition in SCC or VCC, which is the
+    // form that the carry-in operand needs, so any condition is accepted.
+    // Unlike in SelectionDAG, a uniform condition with other users is
+    // already saved in an SGPR and copied back to SCC for each user, so a
+    // 16-bit or 32-bit carry op does not add a save and restore.
+    auto MatchStep = [&](Register Step, Register Base, bool StepIfTrue) {
+      if (!MRI.hasOneNonDBGUse(Step))
+        return false;
+      int64_t Imm;
+      Register Narrow;
+      if (mi_match(Step, MRI, m_GAnyExt(m_Reg(Narrow)))) {
+        // A narrow select that was widened by the legalizer:
+        //   (select c, (anyext (add (trunc x), Imm)), x)
+        // The high bits of the anyext are undefined, so x + Imm can replace
+        // the step.
+        if (!MRI.hasOneNonDBGUse(Narrow) ||
+            !mi_match(Narrow, MRI,
+                      m_GAdd(m_GTrunc(m_SpecificReg(Base)), m_ICst(Imm))))
+          return false;
+      } else if (!mi_match(Step, MRI,
+                           m_GAdd(m_SpecificReg(Base), m_ICst(Imm)))) {
+        return false;
+      }
+      if (Imm != 1 && Imm != -1)
+        return false;
+      // (select c, x + Imm, x) = x + Imm * c
+      // (select c, x, x + Imm) = x + Imm - Imm * c
+      if (StepIfTrue)
+        MatchInfo = {Imm == 1, /*K=*/0, Base, Cond};
+      else
+        MatchInfo = {Imm == -1, /*K=*/-1, Base, Cond};
+      return true;
+    };
+    return MatchStep(TrueReg, FalseReg, /*StepIfTrue=*/true) ||
+           MatchStep(FalseReg, TrueReg, /*StepIfTrue=*/false);
+  }
+  default:
+    return false;
+  }
+}
+
+void AMDGPUCombinerHelper::applyConditionalCarryOp(
+    MachineInstr &MI, const ConditionalCarryOp &MatchInfo) const {
+  assert((MatchInfo.K == 0 || MatchInfo.K == -1) &&
+         "unexpected conditional carry op constant");
+  Builder.setInstrAndDebugLoc(MI);
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+  LLT Ty32 = Ty.changeElementSize(32);
+  LLT CarryTy = MRI.getType(MatchInfo.Carry);
+  unsigned Opc =
+      MatchInfo.IsAdd ? TargetOpcode::G_UADDE : TargetOpcode::G_USUBE;
+  Register K = Builder.buildConstant(Ty32, MatchInfo.K).getReg(0);
+
+  switch (Ty.getSizeInBits()) {
+  case 16: {
+    // Only the low 16 bits of the 32-bit result are used.
+    auto Base = Builder.buildAnyExt(Ty32, MatchInfo.Base);
+    auto Op =
+        Builder.buildInstr(Opc, {Ty32, CarryTy}, {Base, K, MatchInfo.Carry});
+    Builder.buildTrunc(Dst, Op.getReg(0));
+    break;
+  }
+  case 32:
+    Builder.buildInstr(Opc, {Dst, CarryTy},
+                       {MatchInfo.Base, K, MatchInfo.Carry});
+    break;
+  case 64: {
+    // K is 0 or -1, so both halves of the 64-bit constant are K.
+    auto Base = Builder.buildUnmerge(Ty32, MatchInfo.Base);
+    auto Lo = Builder.buildInstr(Opc, {Ty32, CarryTy},
+                                 {Base.getReg(0), K, MatchInfo.Carry});
+    auto Hi = Builder.buildInstr(Opc, {Ty32, CarryTy},
+                                 {Base.getReg(1), K, Lo.getReg(1)});
+    Builder.buildMergeLikeInstr(Dst, {Lo.getReg(0), Hi.getReg(0)});
+    break;
+  }
+  default:
+    llvm_unreachable("unexpected conditional carry op type");
+  }
+  MI.eraseFromParent();
+}

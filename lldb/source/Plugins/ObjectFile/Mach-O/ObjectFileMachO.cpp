@@ -11,10 +11,10 @@
 
 #include <algorithm>
 
-#include "Plugins/Process/Utility/RegisterContextDarwin_arm.h"
-#include "Plugins/Process/Utility/RegisterContextDarwin_arm64.h"
-#include "Plugins/Process/Utility/RegisterContextDarwin_riscv32.h"
-#include "Plugins/Process/Utility/RegisterContextDarwin_x86_64.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_arm.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_arm64.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_riscv32.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_x86_64.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -22,6 +22,7 @@
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -48,6 +49,8 @@
 #include "lldb/Host/SafeMachO.h"
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/Compression.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -2617,73 +2620,86 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     UndefinedNameToDescMap undefined_name_to_desc;
     SymbolIndexToName reexport_shlib_needs_fixup;
 
-    dyld_for_each_installed_shared_cache(^(dyld_shared_cache_t shared_cache) {
-      uuid_t cache_uuid;
-      dyld_shared_cache_copy_uuid(shared_cache, &cache_uuid);
-      if (found_image)
+    // Compute the size of the string table. We need to ask dyld for a
+    // new SPI to avoid this step.
+    auto nlist_extraction_block = ^(const void *nlistStart, uint64_t nlistCount,
+                                    const char *stringTable) {
+      if (!nlistStart || !nlistCount)
         return;
 
-        if (process_shared_cache_uuid.IsValid() &&
-          process_shared_cache_uuid != UUID(&cache_uuid, 16))
+      // The buffers passed here are valid only inside the block.
+      // Use vm_read to make a cheap copy of them available for our
+      // processing later.
+      kern_return_t ret = vm_read(mach_task_self(), (vm_address_t)nlistStart,
+                                  nlist_byte_size * nlistCount,
+                                  &vm_nlist_memory, &vm_nlist_bytes_read);
+      if (ret != KERN_SUCCESS)
+        return;
+      assert(vm_nlist_bytes_read == nlist_byte_size * nlistCount);
+
+      // We don't know the size of the string table. It's cheaper
+      // to map the whole VM region than to determine the size by
+      // parsing all the nlist entries.
+      vm_address_t string_address = (vm_address_t)stringTable;
+      vm_size_t region_size;
+      mach_msg_type_number_t info_count = VM_REGION_BASIC_INFO_COUNT_64;
+      vm_region_basic_info_data_t info;
+      memory_object_name_t object;
+      ret = vm_region_64(mach_task_self(), &string_address, &region_size,
+                         VM_REGION_BASIC_INFO_64, (vm_region_info_t)&info,
+                         &info_count, &object);
+      if (ret != KERN_SUCCESS)
         return;
 
-      dyld_shared_cache_for_each_image(shared_cache, ^(dyld_image_t image) {
-        uuid_t dsc_image_uuid;
+      ret = vm_read(mach_task_self(), (vm_address_t)stringTable,
+                    region_size - ((vm_address_t)stringTable - string_address),
+                    &vm_string_memory, &vm_string_bytes_read);
+      if (ret != KERN_SUCCESS)
+        return;
+
+      nlist_buffer = (void *)vm_nlist_memory;
+      string_table = (char *)vm_string_memory;
+      nlist_count = nlistCount;
+    };
+
+    // The shared-cache-binary-loading setting only exists for hosts without
+    // the indexing SPIs.
+    SharedCacheImageInfo image_info = HostInfo::GetSharedCacheImageInfo(
+        image_uuid, process_shared_cache_uuid,
+        eSymbolSharedCacheUseHostAndInferiorSharedCache);
+    if (void *image = image_info.GetImageBaton()) {
+      found_image = true;
+      dyld_image_local_nlist_content_4Symbolication((dyld_image_t)image,
+                                                    nlist_extraction_block);
+    }
+
+    // Images outside the indexed caches need the much slower enumeration.
+    if (!found_image) {
+      dyld_for_each_installed_shared_cache(^(dyld_shared_cache_t shared_cache) {
+        uuid_t cache_uuid;
+        dyld_shared_cache_copy_uuid(shared_cache, &cache_uuid);
         if (found_image)
           return;
 
-        dyld_image_copy_uuid(image, &dsc_image_uuid);
-        if (image_uuid != UUID(dsc_image_uuid, 16))
+        if (process_shared_cache_uuid.IsValid() &&
+            process_shared_cache_uuid != UUID(&cache_uuid, 16))
           return;
 
-        found_image = true;
+        dyld_shared_cache_for_each_image(shared_cache, ^(dyld_image_t image) {
+          uuid_t dsc_image_uuid;
+          if (found_image)
+            return;
 
-        // Compute the size of the string table. We need to ask dyld for a
-        // new SPI to avoid this step.
-        dyld_image_local_nlist_content_4Symbolication(
-            image, ^(const void *nlistStart, uint64_t nlistCount,
-                     const char *stringTable) {
-              if (!nlistStart || !nlistCount)
-                return;
+          dyld_image_copy_uuid(image, &dsc_image_uuid);
+          if (image_uuid != UUID(dsc_image_uuid, 16))
+            return;
 
-              // The buffers passed here are valid only inside the block.
-              // Use vm_read to make a cheap copy of them available for our
-              // processing later.
-              kern_return_t ret =
-                  vm_read(mach_task_self(), (vm_address_t)nlistStart,
-                          nlist_byte_size * nlistCount, &vm_nlist_memory,
-                          &vm_nlist_bytes_read);
-              if (ret != KERN_SUCCESS)
-                return;
-              assert(vm_nlist_bytes_read == nlist_byte_size * nlistCount);
-
-              // We don't know the size of the string table. It's cheaper
-              // to map the whole VM region than to determine the size by
-              // parsing all the nlist entries.
-              vm_address_t string_address = (vm_address_t)stringTable;
-              vm_size_t region_size;
-              mach_msg_type_number_t info_count = VM_REGION_BASIC_INFO_COUNT_64;
-              vm_region_basic_info_data_t info;
-              memory_object_name_t object;
-              ret = vm_region_64(mach_task_self(), &string_address,
-                                 &region_size, VM_REGION_BASIC_INFO_64,
-                                 (vm_region_info_t)&info, &info_count, &object);
-              if (ret != KERN_SUCCESS)
-                return;
-
-              ret = vm_read(mach_task_self(), (vm_address_t)stringTable,
-                            region_size -
-                                ((vm_address_t)stringTable - string_address),
-                            &vm_string_memory, &vm_string_bytes_read);
-              if (ret != KERN_SUCCESS)
-                return;
-
-              nlist_buffer = (void *)vm_nlist_memory;
-              string_table = (char *)vm_string_memory;
-              nlist_count = nlistCount;
-            });
+          found_image = true;
+          dyld_image_local_nlist_content_4Symbolication(image,
+                                                        nlist_extraction_block);
+        });
       });
-    });
+    }
     if (nlist_buffer) {
       DataExtractor dsc_local_symbols_data(nlist_buffer,
                                            nlist_count * nlist_byte_size,
@@ -2926,7 +2942,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                             const char *so_path = sym[sym_idx - 1]
                                                       .GetMangled()
                                                       .GetDemangledName()
-                                                      .AsCString();
+                                                      .AsCString(nullptr);
                             if (so_path && so_path[0]) {
                               std::string full_so_path(so_path);
                               const size_t double_slash_pos =
@@ -3268,7 +3284,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                               } else {
                                 type = eSymbolTypeData;
                               }
-                            } else if (symbol_sect_name.starts_with("__IMPORT")) 
+                            } else if (symbol_sect_name.starts_with(
+                                           "__IMPORT")) {
                               type = eSymbolTypeTrampoline;
                             } else if (symbol_section->IsDescendant(
                                            objc_section_sp.get())) {
@@ -5385,6 +5402,54 @@ bool ObjectFileMachO::GetCorefileThreadExtraInfos(
   return false;
 }
 
+/// Return the payload of an LC_NOTE, decompressing it if needed.
+///
+/// A payload is either stored as is, or compressed in the layout of a GNU
+/// .zdebug section:
+///
+///   offset  size  contents
+///        0     4  magic "ZLIB"
+///        4     8  uncompressed size, big-endian uint64_t
+///       12     n  RFC 1950 zlib stream
+///
+/// The size is big-endian regardless of the corefile's byte order. An
+/// uncompressed payload must not start with the magic.
+static llvm::Expected<std::string> ReadLCNotePayload(const DataExtractor &data,
+                                                     lldb::offset_t offset,
+                                                     uint64_t size) {
+  const uint8_t *bytes = data.PeekData(offset, size);
+  if (!bytes)
+    return llvm::createStringError(
+        "payload of %" PRIu64 " bytes is out of bounds", size);
+  llvm::ArrayRef<uint8_t> payload(bytes, size);
+
+  constexpr llvm::StringLiteral magic = "ZLIB";
+  constexpr size_t header_size = magic.size() + sizeof(uint64_t);
+  if (!llvm::toStringRef(payload).starts_with(magic))
+    return llvm::toStringRef(payload).str();
+  if (payload.size() < header_size)
+    return llvm::createStringError("compressed payload header is truncated");
+
+  uint64_t uncompressed_size =
+      llvm::support::endian::read64be(payload.data() + magic.size());
+  llvm::ArrayRef<uint8_t> compressed = payload.drop_front(header_size);
+  // Deflate cannot exceed a 1032:1 ratio. A larger claimed size is corrupt and
+  // must not size the allocation.
+  if (uncompressed_size / 1032 > compressed.size())
+    return llvm::createStringError("uncompressed size %" PRIu64
+                                   " is impossible for %zu compressed bytes",
+                                   uncompressed_size, compressed.size());
+  if (!llvm::compression::zlib::isAvailable())
+    return llvm::createStringError(
+        "payload is zlib-compressed but LLDB was built without zlib");
+
+  llvm::SmallVector<uint8_t, 0> uncompressed;
+  if (llvm::Error err = llvm::compression::zlib::decompress(
+          compressed, uncompressed, uncompressed_size))
+    return err;
+  return llvm::toStringRef(uncompressed).str();
+}
+
 StructuredData::ObjectSP ObjectFileMachO::GetCorefileProcessMetadata() {
   ModuleSP module_sp(GetModule());
   if (!module_sp)
@@ -5401,18 +5466,16 @@ StructuredData::ObjectSP ObjectFileMachO::GetCorefileProcessMetadata() {
         log,
         "Multiple 'process metadata' LC_NOTEs found, only using the first.");
 
-  auto [payload_offset, strsize] = lc_notes[0];
-  std::string buf(strsize, '\0');
-  if (m_data_nsp->CopyData(payload_offset, strsize, buf.data()) != strsize) {
-    LLDB_LOGF(log,
-              "Unable to read %" PRIu64
-              " bytes of 'process metadata' LC_NOTE JSON contents",
-              strsize);
+  auto [payload_offset, payload_size] = lc_notes[0];
+  llvm::Expected<std::string> json =
+      ReadLCNotePayload(*m_data_nsp, payload_offset, payload_size);
+  if (!json) {
+    LLDB_LOG_ERROR(log, json.takeError(),
+                   "Unable to read 'process metadata' LC_NOTE: {0}");
     return {};
   }
-  while (buf.back() == '\0')
-    buf.resize(buf.size() - 1);
-  StructuredData::ObjectSP object_sp = StructuredData::ParseJSON(buf);
+  StructuredData::ObjectSP object_sp =
+      StructuredData::ParseJSON(llvm::StringRef(*json).rtrim('\0'));
   if (!object_sp) {
     LLDB_LOGF(log, "Unable to read 'process metadata' LC_NOTE, did not "
                    "parse as valid JSON.");

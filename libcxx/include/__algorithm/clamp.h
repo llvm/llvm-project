@@ -22,7 +22,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Compare>
-[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&
+[[nodiscard]] inline constexpr const _Tp&
 clamp(_LIBCPP_LIFETIMEBOUND const _Tp& __v,
       _LIBCPP_LIFETIMEBOUND const _Tp& __lo,
       _LIBCPP_LIFETIMEBOUND const _Tp& __hi,
@@ -32,7 +32,7 @@ clamp(_LIBCPP_LIFETIMEBOUND const _Tp& __v,
 }
 
 template <class _Tp>
-[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&
+[[nodiscard]] inline constexpr const _Tp&
 clamp(_LIBCPP_LIFETIMEBOUND const _Tp& __v,
       _LIBCPP_LIFETIMEBOUND const _Tp& __lo,
       _LIBCPP_LIFETIMEBOUND const _Tp& __hi) {

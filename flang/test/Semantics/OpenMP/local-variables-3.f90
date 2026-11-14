@@ -121,3 +121,65 @@ subroutine block04()
     !$omp end task
   end block
 end subroutine
+
+!CHECK-LABEL: !DEF: /block05 (Subroutine) Subprogram
+!CHECK: subroutine block05
+!CHECK: !$omp parallel default(private)
+!CHECK:  block
+!CHECK:   !DEF: /block05/OtherConstruct1/BlockConstruct1/cnt ObjectEntity INTEGER(4)
+!CHECK:   integer cnt
+!CHECK:   !REF: /block05/OtherConstruct1/BlockConstruct1/cnt
+!CHECK:   cnt = 0
+!CHECK: !$omp single
+!CHECK:   !REF: /block05/OtherConstruct1/BlockConstruct1/cnt
+!CHECK:   cnt = cnt+1
+!CHECK: !$omp end single
+!CHECK:  end block
+!CHECK: !$omp end parallel
+!CHECK: end subroutine
+
+subroutine block05()
+  !$omp parallel default(private)
+  block
+    integer :: cnt
+    cnt = 0
+    !$omp single
+    cnt = cnt + 1
+    !$omp end single
+  end block
+  !$omp end parallel
+end subroutine
+
+!CHECK-LABEL: !DEF: /block06 (Subroutine) Subprogram
+!CHECK: subroutine block06
+!CHECK: !$omp parallel default(private)
+!CHECK:  block
+!CHECK:   !DEF: /block06/OtherConstruct1/BlockConstruct1/auto ObjectEntity INTEGER(4)
+!CHECK:   integer auto
+!CHECK:   !DEF: /block06/OtherConstruct1/BlockConstruct1/s SAVE ObjectEntity INTEGER(4)
+!CHECK:   integer, save :: s
+!CHECK:   !REF: /block06/OtherConstruct1/BlockConstruct1/auto
+!CHECK:   auto = 1
+!CHECK: !$omp task
+!CHECK:   !DEF: /block06/OtherConstruct1/BlockConstruct1/OtherConstruct1/auto (OmpFirstPrivate, OmpImplicit) HostAssoc INTEGER(4)
+!CHECK:   auto = 2
+!CHECK:   !DEF: /block06/OtherConstruct1/BlockConstruct1/OtherConstruct1/s (OmpShared) HostAssoc INTEGER(4)
+!CHECK:   s = 3
+!CHECK: !$omp end task
+!CHECK:  end block
+!CHECK: !$omp end parallel
+!CHECK: end subroutine
+
+subroutine block06()
+  !$omp parallel default(private)
+  block
+    integer :: auto
+    integer, save :: s
+    auto = 1
+    !$omp task
+      auto = 2
+      s = 3
+    !$omp end task
+  end block
+  !$omp end parallel
+end subroutine

@@ -213,6 +213,9 @@ static bool builtinIsSupported(const llvm::StringTable &Strings,
   /* C2y unsupported */
   if (!LangOpts.C2y && BuiltinInfo.Langs == C2Y_LANG)
     return false;
+  /* Reflection unsupported */
+  if (!LangOpts.Reflection && (BuiltinInfo.Langs & REFLECTION_LANG))
+    return false;
   return true;
 }
 
@@ -446,6 +449,29 @@ bool Builtin::Context::isNonNull(unsigned ID, llvm::SmallVectorImpl<int> &Indxs,
   parseCommaSeparatedIndices(AttrPos, Indxs);
 
   return true;
+}
+
+void Builtin::Context::getArgRanges(
+    unsigned ID, llvm::SmallVectorImpl<ArgRange> &Ranges) const {
+  StringRef Attrs = getAttributesString(ID);
+  size_t Pos = Attrs.find('R');
+  if (Pos == StringRef::npos)
+    return;
+
+  StringRef Str = Attrs.drop_front(Pos + 1);
+  if (!Str.consume_front("<"))
+    llvm_unreachable("Expected '<' to start range list");
+
+  do {
+    ArgRange Range;
+    if (Str.consumeInteger(10, Range.Index) || !Str.consume_front(":") ||
+        Str.consumeInteger(10, Range.Lower) || !Str.consume_front(":") ||
+        Str.consumeInteger(10, Range.Upper))
+      llvm_unreachable("Malformed argument range");
+    Ranges.push_back(Range);
+  } while (Str.consume_front(","));
+
+  assert(Str.starts_with('>') && "Range list must end with '>'");
 }
 
 bool Builtin::Context::performsCallback(unsigned ID,

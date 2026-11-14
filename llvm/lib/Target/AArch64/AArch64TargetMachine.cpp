@@ -117,8 +117,9 @@ LLVMInitializeAArch64Target() {
 }
 
 bool AArch64TargetMachine::isGlobalISelOptNone() const {
-  const bool GlobalISelFlag = getCGPassBuilderOption().EnableGlobalISelOption ==
-                              cl::boolOrDefault::BOU_TRUE;
+  const bool GlobalISelFlag =
+      getCGPassBuilderOption(*this).EnableGlobalISelOption ==
+      cl::boolOrDefault::BOU_TRUE;
 
   return getOptLevel() == CodeGenOptLevel::None ||
          (static_cast<unsigned>(getOptLevel()) >
@@ -128,7 +129,7 @@ bool AArch64TargetMachine::isGlobalISelOptNone() const {
 
 void AArch64TargetMachine::reset() {
   SubtargetMap.clear();
-  LastSubtarget = nullptr;
+  LastSubtarget.clear();
 }
 
 //===----------------------------------------------------------------------===//
@@ -151,8 +152,8 @@ static StringRef computeDefaultCPU(const Triple &TT, StringRef CPU) {
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
                                            std::optional<Reloc::Model> RM) {
-  // AArch64 Darwin and Windows are always PIC.
-  if (TT.isOSDarwin() || TT.isOSWindows())
+  // AArch64 Darwin, Windows and UEFI are always PIC.
+  if (TT.isOSDarwin() || TT.isOSWindowsOrUEFI())
     return Reloc::PIC_;
   // On ELF platforms the default static relocation model has a smart enough
   // linker to cope with referencing external symbols defined in a shared
@@ -198,23 +199,14 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     : CodeGenTargetMachineImpl(T, TT, computeDefaultCPU(TT, CPU), FS, Options,
                                getEffectiveRelocModel(TT, RM),
                                getEffectiveAArch64CodeModel(TT, CM, JIT), OL),
-      CLOpts(AArch64Options::Global), TLOF(createTLOF(getTargetTriple())),
-      isLittle(LittleEndian) {
+      CLOpts(cl::LibraryOptionsContext::get<AArch64Options>(
+          Options.MCOptions.LibraryOptions)),
+      TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian) {
   initAsmInfo();
 
   if (TT.isOSBinFormatMachO()) {
     this->Options.TrapUnreachable = true;
     this->Options.NoTrapAfterNoreturn = true;
-  }
-
-  if (getMCAsmInfo().usesWindowsCFI()) {
-    // Unwinding can get confused if the last instruction in an
-    // exception-handling region (function, funclet, try block, etc.)
-    // is a call.
-    //
-    // FIXME: We could elide the trap if the next instruction would be in
-    // the same region anyway.
-    this->Options.TrapUnreachable = true;
   }
 
   if (this->Options.TLSSize == 0) // default
@@ -233,8 +225,9 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
       TT.getEnvironment() != Triple::GNUILP32 &&
       !(getCodeModel() == CodeModel::Large && TT.isOSBinFormatMachO());
 
-  const bool GlobalISelFlag = getCGPassBuilderOption().EnableGlobalISelOption ==
-                              cl::boolOrDefault::BOU_TRUE;
+  const bool GlobalISelFlag =
+      getCGPassBuilderOption(*this).EnableGlobalISelOption ==
+      cl::boolOrDefault::BOU_TRUE;
 
   // Enable GlobalISel at or below EnableGlobalISelAt0, unless this is
   // MachO/CodeModel::Large, which GlobalISel does not support.
@@ -257,8 +250,8 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
   setSupportsDebugEntryValues(true);
 
   // AArch64 supports fixing up the DWARF unwind information.
-  if (!getMCAsmInfo().usesWindowsCFI())
-    setCFIFixup(true);
+  // enableCFIFixup() checks per function for DWARF unwinding.
+  setCFIFixup(true);
 }
 
 unsigned AArch64TargetMachine::getEnableGlobalISelAtO() const {
@@ -269,30 +262,39 @@ AArch64TargetMachine::~AArch64TargetMachine() = default;
 
 const AArch64Subtarget *
 AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
-  // Constructing the subtarget key is not cheap, avoid rebuilding it for
-  // repeated queries with the same function attributes.
   AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
-  if (LastSubtarget && LastSubtargetAttrs == FnAttrs)
-    return LastSubtarget;
+  const Module *M = F.getParent();
+  if (const AArch64Subtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
 
-  Attribute CPUAttr = F.getFnAttribute("target-cpu");
-  Attribute TuneAttr = F.getFnAttribute("tune-cpu");
-  Attribute FSAttr = F.getFnAttribute("target-features");
+  SubtargetAttrs Attrs;
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.TuneCPU = FnAttrs.getAttribute("tune-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+  Attrs.SMEnabled = FnAttrs.getAttribute("aarch64_pstate_sm_enabled");
+  Attrs.SMBody = FnAttrs.getAttribute("aarch64_pstate_sm_body");
+  Attrs.SMCompatible = FnAttrs.getAttribute("aarch64_pstate_sm_compatible");
+  Attrs.MinSize = FnAttrs.getAttribute(Attribute::MinSize);
+  Attrs.VScaleRange = FnAttrs.getAttribute(Attribute::VScaleRange);
 
-  StringRef CPU = CPUAttr.isValid() ? CPUAttr.getValueAsString() : TargetCPU;
-  StringRef TuneCPU = TuneAttr.isValid() ? TuneAttr.getValueAsString() : CPU;
-  StringRef FS = FSAttr.isValid() ? FSAttr.getValueAsString() : TargetFS;
-  bool HasMinSize = F.hasMinSize();
+  if (const AArch64Subtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
 
-  bool IsStreaming = CLOpts.force_streaming ||
-                     F.hasFnAttribute("aarch64_pstate_sm_enabled") ||
-                     F.hasFnAttribute("aarch64_pstate_sm_body");
-  bool IsStreamingCompatible = CLOpts.force_streaming_compatible ||
-                               F.hasFnAttribute("aarch64_pstate_sm_compatible");
+  StringRef CPU =
+      Attrs.CPU.isValid() ? Attrs.CPU.getValueAsString() : TargetCPU;
+  StringRef TuneCPU =
+      Attrs.TuneCPU.isValid() ? Attrs.TuneCPU.getValueAsString() : CPU;
+  StringRef FS = Attrs.FS.isValid() ? Attrs.FS.getValueAsString() : TargetFS;
+  bool HasMinSize = Attrs.MinSize.isValid();
+
+  bool IsStreaming = CLOpts.force_streaming || Attrs.SMEnabled.isValid() ||
+                     Attrs.SMBody.isValid();
+  bool IsStreamingCompatible =
+      CLOpts.force_streaming_compatible || Attrs.SMCompatible.isValid();
 
   unsigned MinSVEVectorSize = 0;
   unsigned MaxSVEVectorSize = 0;
-  if (F.hasFnAttribute(Attribute::VScaleRange)) {
+  if (Attrs.VScaleRange.isValid()) {
     ConstantRange CR = getVScaleRange(&F, 64);
     MinSVEVectorSize = CR.getUnsignedMin().getZExtValue() * 128;
     MaxSVEVectorSize = CR.getUnsignedMax().getZExtValue() * 128;
@@ -342,9 +344,8 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   if (IsStreaming && !I->hasSME())
     reportFatalUsageError("streaming SVE functions require SME");
 
-  LastSubtargetAttrs = FnAttrs;
-  LastSubtarget = I.get();
-  return LastSubtarget;
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
+  return I.get();
 }
 
 // Encourage placing FORM_TRANSPOSED_REG immediately before the instruction that
@@ -468,7 +469,7 @@ void AArch64TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         if (Level != OptimizationLevel::O0)
           LPM.addPass(LoopIdiomVectorizePass());
       });
-  if (getTargetTriple().isOSWindows())
+  if (getTargetTriple().isOSWindowsOrUEFI())
     PB.registerPipelineEarlySimplificationEPCallback(
         [](ModulePassManager &PM, OptimizationLevel, ThinOrFullLTOPhase) {
           PM.addPass(LowerIFuncPass());
@@ -494,6 +495,7 @@ void AArch64PassConfig::addIRPasses() {
   addPass(createAtomicExpandLegacyPass());
 
   if (getOptLevel() >= CodeGenOptLevel::Default &&
+      CLOpts.enable_subreg_liveness_tracking &&
       CLOpts.enable_predicate_as_counter_loop_rewrites)
     addPass(createAArch64PredicateAsCounterLoopRewritesPass());
 
@@ -540,7 +542,7 @@ void AArch64PassConfig::addIRPasses() {
     addPass(createSelectOptimizePass());
 
   addPass(createAArch64StackTaggingPass(
-      /*IsOptNone=*/TM->getOptLevel() == CodeGenOptLevel::None));
+      CLOpts, /*IsOptNone=*/TM->getOptLevel() == CodeGenOptLevel::None));
 
   // Try to use tbl in place of other shuffling operations if doing so would
   // reduce the total number of instructions. Shuffle masks for big endian may
@@ -617,7 +619,6 @@ bool AArch64PassConfig::addIRTranslator() {
 void AArch64PassConfig::addPreLegalizeMachineIR() {
   if (getAArch64TargetMachine().isGlobalISelOptNone()) {
     addPass(createAArch64O0PreLegalizerCombiner());
-    addPass(new LocalizerLegacy());
   } else {
     addPass(createAArch64PreLegalizerCombiner());
     addPass(new LocalizerLegacy());
@@ -712,8 +713,6 @@ void AArch64PassConfig::addPreRegAlloc() {
     // be register coalescer friendly.
     addPass(&PeepholeOptimizerLegacyID);
   }
-  if (TM->getOptLevel() != CodeGenOptLevel::None && CLOpts.enable_pipeliner)
-    addPass(&MachinePipelinerID);
 }
 
 void AArch64PassConfig::addPostRewrite() {
@@ -776,7 +775,7 @@ void AArch64PassConfig::addPreEmitPass() {
 
   if (TM->getTargetTriple().isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.
-    addPass(createCFGuardLongjmpPass());
+    addPass(createCFGuardLongjmpLegacyPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
     addPass(createEHContGuardTargetsLegacy());
   }
@@ -808,7 +807,7 @@ void AArch64PassConfig::addPostBBSections() {
 
 void AArch64PassConfig::addPreEmitPass2() {
   // Insert pseudo probe annotation for callsite profiling
-  addPass(createPseudoProbeInserter());
+  addPass(createPseudoProbeInserterLegacyPass());
 
   // SVE bundles move prefixes with destructive operations. BLR_RVMARKER pseudo
   // instructions are lowered to bundles as well.

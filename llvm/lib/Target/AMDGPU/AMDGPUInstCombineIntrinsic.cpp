@@ -552,34 +552,16 @@ static APInt defaultComponentBroadcast(Value *V) {
   return DemandedElts;
 }
 
-static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
-                                                    IntrinsicInst &II,
-                                                    APInt DemandedElts,
-                                                    int DMaskIdx = -1,
-                                                    bool IsLoad = true);
+static Value *
+simplifyAMDGCNMemoryIntrinsicDemanded(const GCNSubtarget &ST, InstCombiner &IC,
+                                      IntrinsicInst &II, APInt DemandedElts,
+                                      int DMaskIdx = -1, bool IsLoad = true);
 
 /// Return true if it's legal to contract llvm.amdgcn.rcp(llvm.sqrt)
 static bool canContractSqrtToRsq(const FPMathOperator *SqrtOp) {
   return (SqrtOp->getType()->isFloatTy() &&
           (SqrtOp->hasApproxFunc() || SqrtOp->getFPAccuracy() >= 1.0f)) ||
          SqrtOp->getType()->isHalfTy();
-}
-
-/// Return true if we can easily prove that use U is uniform.
-static bool isTriviallyUniform(const Use &U) {
-  Value *V = U.get();
-  if (isa<Constant>(V))
-    return true;
-  if (const auto *A = dyn_cast<Argument>(V))
-    return AMDGPU::isArgPassedInSGPR(A);
-  if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
-    if (!AMDGPU::isIntrinsicAlwaysUniform(II->getIntrinsicID()))
-      return false;
-    // If II and U are in different blocks then there is a possibility of
-    // temporal divergence.
-    return II->getParent() == cast<Instruction>(U.getUser())->getParent();
-  }
-  return false;
 }
 
 /// Simplify a lane index operand (e.g. llvm.amdgcn.readlane src1).
@@ -613,6 +595,26 @@ bool GCNTTIImpl::simplifyDemandedLaneMaskArg(InstCombiner &IC,
   return false;
 }
 
+/// Simplify the f32 scale operand of a V_CVT_SCALEF32_* conversion, of which
+/// only the exponent field is read.
+static bool simplifyExponentOnlyScaleArg(InstCombiner &IC, IntrinsicInst &II,
+                                         unsigned ScaleArgIdx) {
+  Value *Scale = II.getArgOperand(ScaleArgIdx);
+  Value *StrippedSign = InstCombiner::stripSignOnlyFPOps(Scale);
+  if (StrippedSign != Scale) {
+    IC.replaceOperand(II, ScaleArgIdx, StrippedSign);
+    return true;
+  }
+
+  auto *BC = dyn_cast<BitCastInst>(Scale);
+  if (!BC || !BC->hasOneUse() || !BC->getSrcTy()->isIntegerTy(32))
+    return false;
+
+  KnownBits Known(32);
+  return IC.SimplifyDemandedBits(
+      BC, 0, AMDGPU::getExponentOnlyScaleDemandedBits(), Known);
+}
+
 static CallInst *rewriteCall(IRBuilderBase &B, CallInst &Old,
                              Function &NewCallee, ArrayRef<Value *> Ops) {
   SmallVector<OperandBundleDef, 2> OpBundles;
@@ -639,7 +641,23 @@ static bool isThreadID(const GCNSubtarget &ST, Value *V) {
   if (ST.isWave64() && match(V, W64Pred))
     return true;
 
-  return false;
+  // Case 2:
+  //   workitem.id.x & (wavefront size - 1), or bare workitem.id.x when the
+  //   workgroup is one wave long or less.
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I || !ST.isWaveSizeKnown())
+    return false;
+
+  const Function &F = *I->getFunction();
+  if (!ST.hasWavefrontsEvenlySplittingXDim(F, /*RequiresUniformYZ=*/true))
+    return false;
+
+  unsigned WaveSize = ST.getWavefrontSize();
+  auto TidX = m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>();
+  if (match(V, m_c_And(TidX, m_SpecificInt(WaveSize - 1))))
+    return true;
+
+  return match(V, TidX) && ST.getMaxWorkitemID(F, 0) < WaveSize;
 }
 
 Instruction *
@@ -715,9 +733,9 @@ GCNTTIImpl::hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
   if (isa<BinaryOperator>(OpInst)) {
     // FIXME: If we had access to UniformityInfo here we could just check
     // if the operand is uniform.
-    if (isTriviallyUniform(OpInst->getOperandUse(0)))
+    if (AMDGPU::isTriviallyUniform(OpInst->getOperandUse(0)))
       return DoIt(1, II.getCalledFunction());
-    if (isTriviallyUniform(OpInst->getOperandUse(1)))
+    if (AMDGPU::isTriviallyUniform(OpInst->getOperandUse(1)))
       return DoIt(0, II.getCalledFunction());
   }
 
@@ -726,7 +744,7 @@ GCNTTIImpl::hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
 
 /// Evaluate V as a function of the lane ID and return its value on Lane, or
 /// std::nullopt if V is not a closed-form expression of the lane ID.
-static std::optional<unsigned> evalLaneExpr(Value *V, unsigned Lane,
+static std::optional<uint64_t> evalLaneExpr(Value *V, unsigned Lane,
                                             const GCNSubtarget &ST,
                                             const DataLayout &DL,
                                             unsigned Depth = 0) {
@@ -748,11 +766,11 @@ static std::optional<unsigned> evalLaneExpr(Value *V, unsigned Lane,
   if (!BO)
     return std::nullopt;
 
-  std::optional<unsigned> LHS =
+  std::optional<uint64_t> LHS =
       evalLaneExpr(BO->getOperand(0), Lane, ST, DL, Depth + 1);
   if (!LHS)
     return std::nullopt;
-  std::optional<unsigned> RHS =
+  std::optional<uint64_t> RHS =
       evalLaneExpr(BO->getOperand(1), Lane, ST, DL, Depth + 1);
   if (!RHS)
     return std::nullopt;
@@ -761,7 +779,7 @@ static std::optional<unsigned> evalLaneExpr(Value *V, unsigned Lane,
   Constant *Ops[] = {ConstantInt::get(Ty, *LHS), ConstantInt::get(Ty, *RHS)};
   auto *CI =
       dyn_cast_or_null<ConstantInt>(ConstantFoldInstOperands(BO, Ops, DL));
-  return CI ? std::optional<unsigned>(CI->getZExtValue()) : std::nullopt;
+  return CI ? std::optional<uint64_t>(CI->getZExtValue()) : std::nullopt;
 }
 
 /// Build the per-lane shuffle map by evaluating Index for every lane in the
@@ -772,10 +790,10 @@ static bool tryBuildShuffleMap(Value *Index, const GCNSubtarget &ST,
   unsigned WaveSize = ST.getWavefrontSize();
   Ids.resize(WaveSize);
   for (unsigned Lane : seq(WaveSize)) {
-    std::optional<unsigned> Val = evalLaneExpr(Index, Lane, ST, DL);
+    std::optional<uint64_t> Val = evalLaneExpr(Index, Lane, ST, DL);
     if (!Val || *Val >= WaveSize)
       return false;
-    Ids[Lane] = *Val;
+    Ids[Lane] = static_cast<uint8_t>(*Val);
   }
   return true;
 }
@@ -785,7 +803,7 @@ static bool tryBuildShuffleMap(Value *Index, const GCNSubtarget &ST,
 template <unsigned Period>
 static bool hasPeriodicLayout(ArrayRef<uint8_t> Ids) {
   static_assert(isPowerOf2_32(Period), "Period must be a power of two");
-  for (unsigned I = Period, E = Ids.size(); I < E; ++I)
+  for (size_t I = Period, E = Ids.size(); I < E; ++I)
     if (Ids[I] != Ids[I % Period] + (I & ~(Period - 1)))
       return false;
   return true;
@@ -922,7 +940,7 @@ matchDsSwizzleBitmaskPattern(ArrayRef<uint8_t> Ids) {
   unsigned AndMask = 0, OrMask = 0, XorMask = 0;
   for (unsigned B = 0; B < 5; ++B) {
     unsigned Bit0 = (Ids[0] >> B) & 1;
-    unsigned Bit1 = (Ids[1u << B] >> B) & 1;
+    unsigned Bit1 = (Ids[1ull << B] >> B) & 1;
     if (Bit0 != Bit1) {
       AndMask |= 1u << B;
       XorMask |= Bit0 << B;
@@ -1129,10 +1147,10 @@ tryOptimizeShufflePattern(InstCombiner &IC, IntrinsicInst &II,
   if (IsBpermute) {
     Ids.resize(WaveSize);
     for (unsigned Lane : seq(WaveSize)) {
-      std::optional<unsigned> Val = evalLaneExpr(Index, Lane, ST, DL);
+      std::optional<uint64_t> Val = evalLaneExpr(Index, Lane, ST, DL);
       if (!Val || (*Val & 3) || (*Val >> 2) >= WaveSize)
         return std::nullopt;
-      Ids[Lane] = *Val >> 2;
+      Ids[Lane] = static_cast<uint8_t>(*Val >> 2);
     }
   } else {
     if (!tryBuildShuffleMap(Index, ST, Ids, DL))
@@ -1146,12 +1164,11 @@ tryOptimizeShufflePattern(InstCombiner &IC, IntrinsicInst &II,
   return IC.replaceInstUsesWith(II, Result);
 }
 
-/// Try to fold a constant addition into the accumulator when saturation is
-/// disabled.
-static Instruction *foldConstantIntoDotAccumulator(IntrinsicInst &II,
-                                                   unsigned AccIdx,
-                                                   unsigned ClampIdx,
-                                                   InstCombiner &IC) {
+/// Try to fold an addition into the accumulator when saturation is disabled.
+static Instruction *foldAddIntoDotAccumulator(IntrinsicInst &II,
+                                              unsigned AccIdx,
+                                              unsigned ClampIdx,
+                                              InstCombiner &IC) {
   // Reassociating across a saturating accumulation is not valid.
   if (!match(II.getArgOperand(ClampIdx), m_Zero()) || !II.hasOneUse())
     return nullptr;
@@ -1164,15 +1181,27 @@ static Instruction *foldConstantIntoDotAccumulator(IntrinsicInst &II,
   if (!AccumUser)
     return nullptr;
 
-  const APInt *AccumDelta = nullptr;
-  if (!match(AccumUser, m_c_Add(m_Specific(&II), m_APInt(AccumDelta))))
+  Value *AccumDelta = nullptr;
+  if (!match(AccumUser, m_c_Add(m_Specific(&II), m_Value(AccumDelta))))
     return nullptr;
 
-  Constant *NewAcc = ConstantInt::get(II.getType(), *Acc + *AccumDelta);
+  Value *NewAcc = nullptr;
+  const APInt *AccumDeltaC = nullptr;
+  if (Acc->isZero())
+    NewAcc = AccumDelta;
+  else if (match(AccumDelta, m_APInt(AccumDeltaC)))
+    NewAcc = ConstantInt::get(II.getType(), *Acc + *AccumDeltaC);
+  else
+    return nullptr;
 
-  IC.replaceInstUsesWith(*AccumUser, &II);
+  Instruction *NewII =
+      IC.InsertNewInstWith(II.clone(), AccumUser->getIterator());
+  NewII->setOperand(AccIdx, NewAcc);
+  NewII->dropPoisonGeneratingAnnotations();
+  NewII->dropUBImplyingAttrsAndMetadata();
+  IC.replaceInstUsesWith(*AccumUser, NewII);
   IC.eraseInstFromFunction(*AccumUser);
-  return IC.replaceOperand(II, AccIdx, NewAcc);
+  return &II;
 }
 
 std::optional<Instruction *>
@@ -1479,7 +1508,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return IC.replaceInstUsesWith(II, Src);
     }
 
-    unsigned Width;
+    uint64_t Width;
     Type *Ty = II.getType();
     unsigned IntSize = Ty->getIntegerBitWidth();
 
@@ -1497,7 +1526,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       }
     }
 
-    unsigned Offset;
+    uint64_t Offset;
     ConstantInt *COffset = dyn_cast<ConstantInt>(II.getArgOperand(1));
     if (COffset) {
       Offset = COffset->getZExtValue();
@@ -1538,7 +1567,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::amdgcn_exp_row:
   case Intrinsic::amdgcn_exp_compr: {
     ConstantInt *En = cast<ConstantInt>(II.getArgOperand(1));
-    unsigned EnBits = En->getZExtValue();
+    uint64_t EnBits = En->getZExtValue();
     if (EnBits == 0xf)
       break; // All inputs enabled.
 
@@ -1751,7 +1780,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return nullptr;
 
     // TODO: Can raise lower bound by inspecting first argument.
-    ConstantRange MbcntRange(APInt(32, 0), APInt(32, 32 + 1));
+    // Wave64 mbcnt_lo adds at most 32. Otherwise these add at most 31.
+    unsigned MaxCount =
+        IID == Intrinsic::amdgcn_mbcnt_lo && ST->isWave64() ? 32 : 31;
+    ConstantRange MbcntRange(APInt(32, 0), APInt(32, MaxCount + 1));
     ConstantRange ComputedRange = AccRange.add(MbcntRange);
     if (ComputedRange.isFullSet())
       return nullptr;
@@ -1825,7 +1857,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     auto *MsgImm = cast<ConstantInt>(II.getArgOperand(0));
     uint16_t MsgId, OpId, StreamId;
-    decodeMsg(MsgImm->getZExtValue(), MsgId, OpId, StreamId, *ST);
+    decodeMsg(static_cast<unsigned>(MsgImm->getZExtValue()), MsgId, OpId,
+              StreamId, *ST);
 
     if (!msgDoesNotUseM0(MsgId, *ST))
       break;
@@ -1884,7 +1917,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // If the data argument is uniform these intrinsics return it unchanged.
     unsigned SrcIdx = IID == Intrinsic::amdgcn_ds_bpermute ? 1 : 0;
     const Use &Src = II.getArgOperandUse(SrcIdx);
-    if (isTriviallyUniform(Src))
+    if (AMDGPU::isTriviallyUniform(Src))
       return IC.replaceInstUsesWith(II, Src.get());
 
     if (IID == Intrinsic::amdgcn_readlane &&
@@ -1896,7 +1929,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // readlane is AlwaysUniform.
     if (IID == Intrinsic::amdgcn_ds_bpermute) {
       const Use &Lane = II.getArgOperandUse(0);
-      if (isTriviallyUniform(Lane)) {
+      if (AMDGPU::isTriviallyUniform(Lane)) {
         Value *NewLane = IC.Builder.CreateLShr(Lane, 2);
         Function *NewDecl = Intrinsic::getOrInsertDeclaration(
             II.getModule(), Intrinsic::amdgcn_readlane, II.getType());
@@ -1918,7 +1951,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::amdgcn_wave_match_b32: {
     const Use &Src0 = II.getArgOperandUse(0);
     const Use &Src1 = II.getArgOperandUse(1);
-    if (Src0.get() == Src1.get() && isTriviallyUniform(Src0)) {
+    if (Src0.get() == Src1.get() && AMDGPU::isTriviallyUniform(Src0)) {
       Function *NewF = Intrinsic::getOrInsertDeclaration(
           II.getModule(), Intrinsic::amdgcn_ballot, II.getType());
       CallInst *NewCall =
@@ -1972,8 +2005,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       break;
     }
 
-    unsigned Exponent = FSrcInt.extractBitsAsZExtValue(11, 52);
-    unsigned SegmentVal = Cseg->getValue().trunc(5).getZExtValue();
+    unsigned Exponent =
+        static_cast<unsigned>(FSrcInt.extractBitsAsZExtValue(11, 52));
+    unsigned SegmentVal =
+        static_cast<unsigned>(Cseg->getValue().trunc(5).getZExtValue());
     unsigned Shift = SegmentVal * 53;
     if (Exponent > 1077)
       Shift += Exponent - 1077;
@@ -2029,7 +2064,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (match(Src1, m_Zero()))
       return IC.replaceInstUsesWith(II, II.getArgOperand(2));
 
-    if (Instruction *I = foldConstantIntoDotAccumulator(II, 2, 3, IC))
+    if (Instruction *I = foldAddIntoDotAccumulator(II, 2, 3, IC))
       return I;
 
     break;
@@ -2054,7 +2089,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (match(Src1, m_Zero()))
       return IC.replaceInstUsesWith(II, II.getArgOperand(4));
 
-    if (Instruction *I = foldConstantIntoDotAccumulator(II, 4, 5, IC))
+    if (Instruction *I = foldAddIntoDotAccumulator(II, 4, 5, IC))
       return I;
 
     break;
@@ -2155,9 +2190,13 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     return IC.replaceInstUsesWith(II, NewCall);
   }
   case Intrinsic::amdgcn_raw_buffer_store_format:
+  case Intrinsic::amdgcn_raw_ptr_buffer_store_format:
   case Intrinsic::amdgcn_struct_buffer_store_format:
+  case Intrinsic::amdgcn_struct_ptr_buffer_store_format:
   case Intrinsic::amdgcn_raw_tbuffer_store:
+  case Intrinsic::amdgcn_raw_ptr_tbuffer_store:
   case Intrinsic::amdgcn_struct_tbuffer_store:
+  case Intrinsic::amdgcn_struct_ptr_tbuffer_store:
   case Intrinsic::amdgcn_image_store_1d:
   case Intrinsic::amdgcn_image_store_1darray:
   case Intrinsic::amdgcn_image_store_2d:
@@ -2184,8 +2223,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       break;
 
     int DMaskIdx = getAMDGPUImageDMaskIntrinsic(II.getIntrinsicID()) ? 1 : -1;
-    if (simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts, DMaskIdx,
-                                              false)) {
+    if (simplifyAMDGCNMemoryIntrinsicDemanded(*ST, IC, II, DemandedElts,
+                                              DMaskIdx, false)) {
       return IC.eraseInstFromFunction(II);
     }
 
@@ -2207,7 +2246,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     auto *Src0Ty = cast<FixedVectorType>(Src0->getType());
     auto *Src1Ty = cast<FixedVectorType>(Src1->getType());
 
-    auto getFormatNumRegs = [](unsigned FormatVal) {
+    auto getFormatNumRegs = [](uint64_t FormatVal) {
       switch (FormatVal) {
       case AMDGPU::MFMAScaleFormats::FP6_E2M3:
       case AMDGPU::MFMAScaleFormats::FP6_E3M2:
@@ -2302,6 +2341,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
             AMDGPU::getImageDimIntrinsicInfo(II.getIntrinsicID())) {
     return simplifyAMDGCNImageIntrinsic(ST, ImageDimIntr, II, IC);
   }
+  if (std::optional<unsigned> ScaleArgIdx =
+          AMDGPU::getExponentOnlyScaleArgIdx(IID)) {
+    if (simplifyExponentOnlyScaleArg(IC, II, *ScaleArgIdx))
+      return &II;
+  }
   return std::nullopt;
 }
 
@@ -2312,7 +2356,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 /// image and buffer loads.
 /// Note: This only supports non-TFE/LWE image intrinsic calls; those have
 ///       struct returns.
-static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
+static Value *simplifyAMDGCNMemoryIntrinsicDemanded(const GCNSubtarget &ST,
+                                                    InstCombiner &IC,
                                                     IntrinsicInst &II,
                                                     APInt DemandedElts,
                                                     int DMaskIdx, bool IsLoad) {
@@ -2329,6 +2374,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
 
   // Assume the arguments are unchanged and later override them, if needed.
   SmallVector<Value *, 16> Args(II.args());
+  uint64_t OffsetAdd = 0;
 
   if (DMaskIdx < 0) {
     // Buffer case.
@@ -2345,6 +2391,8 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
       static const unsigned InvalidOffsetIdx = 0xf;
 
       unsigned OffsetIdx;
+      // Set for tbuffer loads, whose component size comes from the format.
+      unsigned FormatBitsPerComp = 0;
       switch (II.getIntrinsicID()) {
       case Intrinsic::amdgcn_raw_buffer_load:
       case Intrinsic::amdgcn_raw_ptr_buffer_load:
@@ -2364,8 +2412,42 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
       case Intrinsic::amdgcn_struct_ptr_buffer_load:
         OffsetIdx = 2;
         break;
+      case Intrinsic::amdgcn_raw_tbuffer_load:
+      case Intrinsic::amdgcn_raw_ptr_tbuffer_load:
+      case Intrinsic::amdgcn_struct_tbuffer_load:
+      case Intrinsic::amdgcn_struct_ptr_tbuffer_load: {
+        // The struct intrinsic variants add a vindex operand before the offset.
+        const bool HasVIndex =
+            II.getIntrinsicID() == Intrinsic::amdgcn_struct_tbuffer_load ||
+            II.getIntrinsicID() == Intrinsic::amdgcn_struct_ptr_tbuffer_load;
+        OffsetIdx = HasVIndex ? 2 : 1;
+        const unsigned FormatIdx = OffsetIdx + 2;
+
+        // The format describes the whole element, so also drop the leading
+        // components from it to keep the element ending at the same byte.
+        // Lanes past the end of the format are filled in by the hardware
+        // rather than loaded; leave such loads alone.
+        const AMDGPU::GcnBufferFormatInfo *OldFormat =
+            AMDGPU::getGcnBufferFormatInfo(
+                cast<ConstantInt>(Args[FormatIdx])->getZExtValue(), ST);
+        const AMDGPU::GcnBufferFormatInfo *NewFormat = nullptr;
+        if (OldFormat && ActiveBits <= OldFormat->NumComponents)
+          NewFormat = AMDGPU::getGcnBufferFormatInfo(
+              OldFormat->BitsPerComp,
+              OldFormat->NumComponents - UnusedComponentsAtFront,
+              OldFormat->NumFormat, ST);
+        if (!NewFormat) {
+          OffsetIdx = InvalidOffsetIdx;
+          break;
+        }
+        Args[FormatIdx] =
+            ConstantInt::get(Args[FormatIdx]->getType(), NewFormat->Format);
+        FormatBitsPerComp = OldFormat->BitsPerComp;
+        break;
+      }
       default:
-        // TODO: handle tbuffer* intrinsics.
+        // buffer_load_format takes its format from the resource, which is
+        // unknown here.
         OffsetIdx = InvalidOffsetIdx;
         break;
       }
@@ -2374,10 +2456,11 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
         // Clear demanded bits and update the offset.
         DemandedElts &= ~((1 << UnusedComponentsAtFront) - 1);
         auto *Offset = Args[OffsetIdx];
-        unsigned SingleComponentSizeInBits =
-            IC.getDataLayout().getTypeSizeInBits(EltTy);
-        unsigned OffsetAdd =
-            UnusedComponentsAtFront * SingleComponentSizeInBits / 8;
+        uint64_t SingleComponentSizeInBits =
+            FormatBitsPerComp
+                ? FormatBitsPerComp
+                : IC.getDataLayout().getTypeSizeInBits(EltTy).getFixedValue();
+        OffsetAdd = UnusedComponentsAtFront * SingleComponentSizeInBits / 8;
         auto *OffsetAddVal = ConstantInt::get(Offset->getType(), OffsetAdd);
         Args[OffsetIdx] = IC.Builder.CreateAdd(Offset, OffsetAddVal);
       }
@@ -2451,6 +2534,18 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
   NewCall->copyMetadata(II);
   AttributeList OldAttrList = II.getAttributes();
   NewCall->setAttributes(OldAttrList);
+
+  if (OffsetAdd != 0) {
+    unsigned RsrcArg =
+        AMDGPU::lookupRsrcIntrinsic(II.getIntrinsicID())->RsrcArg;
+    if (MaybeAlign RsrcAlign = NewCall->getParamAlign(RsrcArg)) {
+      NewCall->removeParamAttr(RsrcArg, Attribute::Alignment);
+      NewCall->addParamAttr(
+          RsrcArg,
+          Attribute::getWithAlignment(NewCall->getContext(),
+                                      commonAlignment(*RsrcAlign, OffsetAdd)));
+    }
+  }
 
   if (IsLoad) {
     if (NewNumElts == 1) {
@@ -2564,10 +2659,11 @@ std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
   case Intrinsic::amdgcn_struct_ptr_buffer_load_format:
   case Intrinsic::amdgcn_struct_tbuffer_load:
   case Intrinsic::amdgcn_struct_ptr_tbuffer_load:
-    return simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts);
+    return simplifyAMDGCNMemoryIntrinsicDemanded(*ST, IC, II, DemandedElts);
   default: {
     if (getAMDGPUImageDMaskIntrinsic(II.getIntrinsicID())) {
-      return simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts, 0);
+      return simplifyAMDGCNMemoryIntrinsicDemanded(*ST, IC, II, DemandedElts,
+                                                   0);
     }
     break;
   }

@@ -22,7 +22,6 @@
 # CHECK-NEXT: WAIT
 # CHECK-NEXT: FSTENVm
 name:            fnstenv
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $eax
@@ -39,7 +38,6 @@ body:             |
 # CHECK-NEXT: WAIT
 # CHECK-NEXT: FSAVEm
 name:            fnsave
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $eax
@@ -59,7 +57,6 @@ body:             |
 # CHECK:      ADD_Fp80
 # CHECK-NEXT: WAIT
 name:            dbg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $eax

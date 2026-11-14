@@ -68,7 +68,7 @@ namespace llvm::RISCV {
 RISCVInstrInfo::RISCVInstrInfo(const RISCVSubtarget &STI)
     : RISCVGenInstrInfo(STI, RegInfo, RISCV::ADJCALLSTACKDOWN,
                         RISCV::ADJCALLSTACKUP),
-      RegInfo(STI.getHwMode()), STI(STI) {}
+      RegInfo(STI.getHwMode(), STI.getUserReservedXRegs()), STI(STI) {}
 
 #define GET_INSTRINFO_HELPERS
 #include "RISCVGenInstrInfo.inc"
@@ -492,21 +492,12 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  const DebugLoc &DL, Register DstReg,
                                  Register SrcReg, bool KillSrc,
                                  bool RenamableDest, bool RenamableSrc) const {
-  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
+  const RISCVRegisterInfo *TRI = STI.getRegisterInfo();
   RegState KillFlag = getKillRegState(KillSrc);
 
   if (RISCV::GPRRegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI), DstReg)
         .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc))
-        .addImm(0);
-    return;
-  }
-
-  // Extracting from X0_Pair may create copies from DUMMY_REG_PAIR_WITH_X0.
-  if (SrcReg == RISCV::DUMMY_REG_PAIR_WITH_X0 &&
-      RISCV::GPRRegClass.contains(DstReg)) {
-    BuildMI(MBB, MBBI, DL, get(RISCV::ADDI), DstReg)
-        .addReg(RISCV::X0)
         .addImm(0);
     return;
   }
@@ -543,11 +534,7 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       }
     }
 
-    MCRegister EvenReg = TRI->getSubReg(SrcReg, RISCV::sub_gpr_even);
-    MCRegister OddReg = TRI->getSubReg(SrcReg, RISCV::sub_gpr_odd);
-    // We need to correct the odd register of X0_Pair.
-    if (OddReg == RISCV::DUMMY_REG_PAIR_WITH_X0)
-      OddReg = RISCV::X0;
+    auto [EvenReg, OddReg] = TRI->getGPRPairSubRegs(SrcReg);
     assert(DstReg != RISCV::X0_Pair && "Cannot write to X0_Pair");
 
     // Emit an ADDI for both parts of GPRPair.
@@ -602,6 +589,22 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   if (RISCV::FPR64RegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::FSGNJ_D), DstReg)
         .addReg(SrcReg, KillFlag)
+        .addReg(SrcReg, KillFlag);
+    return;
+  }
+
+  if (RISCV::FPR16RegClass.contains(DstReg) &&
+      RISCV::GPRRegClass.contains(SrcReg)) {
+    assert(STI.hasHalfFPLoadStoreMove() && "Unexpected extensions");
+    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_H_X), DstReg)
+        .addReg(SrcReg, KillFlag);
+    return;
+  }
+
+  if (RISCV::GPRRegClass.contains(DstReg) &&
+      RISCV::FPR16RegClass.contains(SrcReg)) {
+    assert(STI.hasHalfFPLoadStoreMove() && "Unexpected extensions");
+    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_X_H), DstReg)
         .addReg(SrcReg, KillFlag);
     return;
   }
@@ -1712,9 +1715,6 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
           .add(RHS)
           .addReg(RegZ)
           .addMBB(TBB);
-      // We might extend the live range of Z, clear its kill flag to
-      // account for this.
-      MRI.clearKillFlags(RegZ);
       MI.eraseFromParent();
       return true;
     }
@@ -1733,9 +1733,6 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
           .addReg(RegZ)
           .add(LHS)
           .addMBB(TBB);
-      // We might extend the live range of Z, clear its kill flag to
-      // account for this.
-      MRI.clearKillFlags(RegZ);
       MI.eraseFromParent();
       return true;
     }
@@ -2972,22 +2969,11 @@ static void combineFPFusedMultiply(MachineInstr &Root, MachineInstr &Prev,
   DebugLoc MergedLoc =
       DILocation::getMergedLocation(Root.getDebugLoc(), Prev.getDebugLoc());
 
-  bool Mul1IsKill = Mul1.isKill();
-  bool Mul2IsKill = Mul2.isKill();
-  bool AddendIsKill = Addend.isKill();
-
-  // We need to clear kill flags since we may be extending the live range past
-  // a kill. If the mul had kill flags, we can preserve those since we know
-  // where the previous range stopped.
-  MRI.clearKillFlags(Mul1.getReg());
-  MRI.clearKillFlags(Mul2.getReg());
-
-  MachineInstrBuilder MIB =
-      BuildMI(*MF, MergedLoc, TII->get(FusedOpc), DstReg)
-          .addReg(Mul1.getReg(), getKillRegState(Mul1IsKill))
-          .addReg(Mul2.getReg(), getKillRegState(Mul2IsKill))
-          .addReg(Addend.getReg(), getKillRegState(AddendIsKill))
-          .setMIFlags(IntersectedFlags);
+  MachineInstrBuilder MIB = BuildMI(*MF, MergedLoc, TII->get(FusedOpc), DstReg)
+                                .addReg(Mul1.getReg())
+                                .addReg(Mul2.getReg())
+                                .addReg(Addend.getReg())
+                                .setMIFlags(IntersectedFlags);
 
   InsInstrs.push_back(MIB);
   if (MRI.hasOneNonDBGUse(Prev.getOperand(0).getReg()))
@@ -3042,12 +3028,12 @@ genShXAddAddShift(MachineInstr &Root, unsigned AddOpIdx,
   Register NewVR = MRI.createVirtualRegister(&RISCV::GPRRegClass);
 
   auto MIB1 = BuildMI(*MF, MIMetadata(Root), TII->get(InnerOpc), NewVR)
-                  .addReg(Y.getReg(), getKillRegState(Y.isKill()))
-                  .addReg(Z.getReg(), getKillRegState(Z.isKill()));
+                  .addReg(Y.getReg())
+                  .addReg(Z.getReg());
   auto MIB2 = BuildMI(*MF, MIMetadata(Root), TII->get(Root.getOpcode()),
                       Root.getOperand(0).getReg())
-                  .addReg(NewVR, RegState::Kill)
-                  .addReg(X.getReg(), getKillRegState(X.isKill()));
+                  .addReg(NewVR)
+                  .addReg(X.getReg());
 
   InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
   InsInstrs.push_back(MIB1);
@@ -3737,22 +3723,6 @@ RISCVInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
   };
   return ArrayRef(TargetFlags);
 }
-bool RISCVInstrInfo::isFunctionSafeToOutlineFrom(
-    MachineFunction &MF, bool OutlineFromLinkOnceODRs) const {
-  const Function &F = MF.getFunction();
-
-  // Can F be deduplicated by the linker? If it can, don't outline from it.
-  if (!OutlineFromLinkOnceODRs && F.hasLinkOnceODRLinkage())
-    return false;
-
-  // Don't outline from functions with section markings; the program could
-  // expect that all the code is in the named section.
-  if (F.hasSection())
-    return false;
-
-  // It's safe to outline from MF.
-  return true;
-}
 
 bool RISCVInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
                                             unsigned &Flags) const {
@@ -3886,7 +3856,8 @@ bool RISCVInstrInfo::analyzeCandidate(outliner::Candidate &C) const {
     return false;
 
   // Otherwise, try to save X5 into t1-t6 (MachineOutlinerRegSave).
-  if (STI.getCLOpts().outliner_regsave && findRegisterToSaveX5To(C, RegInfo))
+  if (STI.getCLOpts().outliner_regsave && !C.getMF()->isOutlined() &&
+      findRegisterToSaveX5To(C, RegInfo))
     return false;
 
   return true;
@@ -5123,7 +5094,7 @@ void RISCVInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
         .addImm(ShiftAmount)
         .setMIFlag(Flag);
   } else if (int ShXAmount, ShiftAmount;
-             STI.hasShlAdd(3) &&
+             STI.hasStdExtZba() &&
              (ShXAmount = isShifted359(Amount, ShiftAmount)) != 0) {
     // We can use Zba SHXADD+SLLI instructions for multiply in some cases.
     unsigned Opc;

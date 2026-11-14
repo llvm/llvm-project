@@ -164,6 +164,34 @@ class BadStepProvider(BaseFrameProvider):
         return None
 
 
+class PrioritizedStepProvider(CorrectStepProvider):
+    """CorrectStepProvider, with a priority so it runs before PassThroughProvider."""
+
+    @staticmethod
+    def get_priority():
+        return 10
+
+
+class PassThroughProvider(BaseFrameProvider):
+    """
+    Passes every input frame through by index, so LLDB borrows the frames of
+    the provider below it, including their step plans.
+    """
+
+    @staticmethod
+    def get_description():
+        return "Provider that passes every frame through"
+
+    @staticmethod
+    def get_priority():
+        return 20
+
+    def get_frame_at_index(self, idx):
+        if idx < len(self.input_frames):
+            return idx
+        return None
+
+
 class StepTwice(ScriptedThreadPlan):
     """This thread plan does whatever it is asked to do twice."""
 

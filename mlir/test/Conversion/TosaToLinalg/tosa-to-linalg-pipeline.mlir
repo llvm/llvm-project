@@ -90,3 +90,25 @@ func.func @rescale_inexactround(%arg0: tensor<8x9x7x14xi32>) -> tensor<8x9x7x14x
   %4 = tosa.rescale %arg0, %0, %1, %2, %3 scale32(true) rounding_mode<INEXACT_ROUND> per_channel(true) input_unsigned(false) output_unsigned(false) : (tensor<8x9x7x14xi32>, tensor<14xi32>, tensor<14xi8>, tensor<1xi32>, tensor<1xi8>) -> tensor<8x9x7x14xi8>
   return %4 : tensor<8x9x7x14xi8>
 }
+
+// -----
+
+// Check that the named pass defers nonzero MATMUL_T zero points to the generic
+// pass in the full pipeline.
+// CHECK-LABEL: func.func @matmul_t_nonzero_zero_points(
+func.func @matmul_t_nonzero_zero_points(%arg0: tensor<5x3xi8>, %arg1: tensor<6x3xi8>) -> tensor<5x6xi32> {
+  // CHECK: %[[RESULT:.+]] = linalg.generic
+  // CHECK-SAME: iterator_types = ["parallel", "parallel", "reduction"]
+  // CHECK: %[[EXT_A:.+]] = arith.extsi %{{.+}} : i8 to i32
+  // CHECK: %[[EXT_B:.+]] = arith.extsi %{{.+}} : i8 to i32
+  // CHECK: %[[AZP:.+]] = arith.constant 1 : i32
+  // CHECK: %[[BZP:.+]] = arith.constant 2 : i32
+  // CHECK: %[[ADJUSTED_A:.+]] = arith.subi %[[EXT_A]], %[[AZP]] : i32
+  // CHECK: %[[ADJUSTED_B:.+]] = arith.subi %[[EXT_B]], %[[BZP]] : i32
+  // CHECK: arith.muli %[[ADJUSTED_A]], %[[ADJUSTED_B]] : i32
+  // CHECK: return %[[RESULT]] : tensor<5x6xi32>
+  %a_zp = "tosa.const"() <{values = dense<1> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %b_zp = "tosa.const"() <{values = dense<2> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %0 = tosa.matmul_t %arg0, %arg1, %a_zp, %b_zp : (tensor<5x3xi8>, tensor<6x3xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<5x6xi32>
+  return %0 : tensor<5x6xi32>
+}

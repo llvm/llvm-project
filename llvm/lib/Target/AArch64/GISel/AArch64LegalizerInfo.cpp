@@ -294,6 +294,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_SMULH, G_UMULH})
       .legalFor({i64, v16i8, v8i16, v4i32})
+      .clampMaxNumElements(0, s8, 16)
+      .clampMaxNumElements(0, s16, 8)
+      .clampMaxNumElements(0, s32, 4)
       .lower();
 
   getActionDefinitionsBuilder(
@@ -980,13 +983,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       // Handle types larger than i64 by scalarizing/lowering.
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .scalarizeIf(scalarOrEltWiderThan(1, 64), 1)
-      // The range of a fp16 value fits into an i17, so we can lower the width
-      // to i64.
-      .narrowScalarIf(
-          [=](const LegalityQuery &Query) {
-            return Query.Types[1] == f16 && Query.Types[0].getSizeInBits() > 64;
-          },
-          changeTo(0, i64))
+      // NOTE: narrowScalarIf is invalid for the saturating conversions,
+      // infinities need the full width of the target integer type.
       .lowerIf(::any(scalarWiderThan(0, 64), scalarWiderThan(1, 64)), 0)
       .moreElementsToNextPow2(0)
       .widenScalarToNextPow2(0, /*MinSize=*/32)
@@ -1307,6 +1305,20 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .minScalarSameAs(1, 0);
 
   getActionDefinitionsBuilder(G_BUILD_VECTOR_TRUNC).lower();
+
+  getActionDefinitionsBuilder(G_SPLAT_VECTOR)
+      .legalFor({{v8s8, s8},
+                 {v8s8, s32},
+                 {v16s8, s8},
+                 {v16s8, s32},
+                 {v4s16, s16},
+                 {v4s16, s32},
+                 {v8s16, s16},
+                 {v8s16, s32},
+                 {v2s32, s32},
+                 {v4s32, s32},
+                 {v2s64, s64},
+                 {v2p0, p0}});
 
   getActionDefinitionsBuilder(G_SHUFFLE_VECTOR)
       .legalIf([=](const LegalityQuery &Query) {
@@ -1839,13 +1851,10 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
   switch (IntrinsicID) {
   case Intrinsic::vacopy: {
-    unsigned PtrSize = ST->isTargetILP32() ? 4 : 8;
-    unsigned VaListSize =
-      (ST->isTargetDarwin() || ST->isTargetWindows())
-          ? PtrSize
-          : ST->isTargetILP32() ? 20 : 32;
-
     MachineFunction &MF = *MI.getMF();
+    const DataLayout &DL = MF.getDataLayout();
+    unsigned PtrSize = DL.getPointerSize();
+    unsigned VaListSize = ST->getTargetLowering()->getVaListSizeInBits(DL) / 8;
     auto Val = MF.getRegInfo().createGenericVirtualRegister(
         LLT::integer(VaListSize * 8));
     MIB.buildLoad(Val, MI.getOperand(2),
@@ -2230,7 +2239,7 @@ bool AArch64LegalizerInfo::legalizeLoadStore(
     AtomicOrdering Ordering = (*MI.memoperands_begin())->getSuccessOrdering();
     bool IsLoad = MI.getOpcode() == TargetOpcode::G_LOAD;
     bool IsLoadAcquire = IsLoad && Ordering == AtomicOrdering::Acquire;
-    bool IsStoreRelease = !IsLoad && Ordering == AtomicOrdering::Release;
+    bool IsStoreRelease = !IsLoad && isReleaseOrStronger(Ordering);
     bool IsRcpC3 =
         ST->hasLSE2() && ST->hasRCPC3() && (IsLoadAcquire || IsStoreRelease);
 

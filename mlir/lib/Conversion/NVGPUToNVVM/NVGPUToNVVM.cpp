@@ -319,9 +319,9 @@ struct MmaLdMatrixOpToNVVM : public ConvertOpToLLVMPattern<nvgpu::LdMatrixOp> {
 static FailureOr<NVVM::MMATypes> getNvvmMmaType(Type t) {
   Type elType = getElementTypeOrSelf(t);
   if (elType.isInteger(8))
-    return NVVM::MMATypes::s8;
+    return elType.isUnsignedInteger() ? NVVM::MMATypes::u8 : NVVM::MMATypes::s8;
   if (elType.isInteger(4))
-    return NVVM::MMATypes::s4;
+    return elType.isUnsignedInteger() ? NVVM::MMATypes::u4 : NVVM::MMATypes::s4;
   if (elType.isF16())
     return NVVM::MMATypes::f16;
   if (elType.isBF16())
@@ -864,7 +864,8 @@ struct NVGPUMBarrierArriveLowering
     Value barrier =
         getMbarrierPtr(b, op.getBarriers().getType(), adaptor.getBarriers(),
                        adaptor.getMbarId(), rewriter);
-    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveOp>(op, barrier, Value{});
+    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveOp>(
+        op, barrier, /*count=*/Value{}, /*multicastMask=*/Value{});
     return success();
   }
 };
@@ -922,10 +923,8 @@ struct NVGPUMBarrierArriveExpectTxLowering
                        adaptor.getMbarId(), rewriter);
     Value txcount = truncToI32(b, adaptor.getTxcount());
     NVVM::MBarrierArriveExpectTxOp::create(
-        rewriter, op->getLoc(), barrier, txcount, // barrier and txcount
-        NVVM::MemScopeKind::CTA,                  // default scope is CTA
-        false,                                    // relaxed-semantics is false
-        adaptor.getPredicate());
+        rewriter, op->getLoc(), barrier, txcount, /*multicastMask=*/Value{},
+        NVVM::MemScopeKind::CTA, /*relaxed=*/false, adaptor.getPredicate());
     rewriter.eraseOp(op);
     return success();
   }
@@ -1207,7 +1206,7 @@ struct NVGPUWarpgroupMmaOpLowering
   /// This is a helper class to generate required NVVM Ops for warp-group level
   /// matrix multiplication.
   /// When the given GEMM shape is larger than the shape of
-  /// a wgmma instrution in PTX, it can generate multiple NVVM::WgmmaMmaAsyncOp
+  /// a wgmma instruction in PTX, it can generate multiple NVVM::WgmmaMmaAsyncOp
   /// Op(s), group and execute them asynchronously. The class also handles
   /// waiting for completion and iterates through WarpgroupMatrixDescriptor to
   /// create descriptors for each instruction.
@@ -1844,7 +1843,8 @@ template <typename ConvertOp, typename... Args>
 static Value convertFromF32Pair(ImplicitLocOpBuilder &b, Value srcI32Vec,
                                 int srcBaseIdx, Type resultTy, Args &&...args) {
   auto [lo, hi] = extractF32Pair(b, srcI32Vec, srcBaseIdx);
-  return b.create<ConvertOp>(resultTy, hi, lo, std::forward<Args>(args)...);
+  return b.create<ConvertOp>(resultTy, hi, lo, /*scale_factor=*/Value(),
+                             std::forward<Args>(args)...);
 }
 
 /// Create a sub-byte conversion from a packed f16x2/bf16x2 source and return
@@ -1855,7 +1855,8 @@ static Value convertFromPacked(ImplicitLocOpBuilder &b, Value srcI32Vec,
                                Args &&...args) {
   Value src = extractAndBitcast(b, srcI32Vec, srcBaseIdx,
                                 VectorType::get(2, srcElemTy));
-  return b.create<ConvertOp>(resultTy, src, std::forward<Args>(args)...);
+  return b.create<ConvertOp>(resultTy, src, /*scale_factor=*/Value(),
+                             std::forward<Args>(args)...);
 }
 
 /// Create a typed NVVM truncation conversion.
@@ -1896,7 +1897,8 @@ static Value createTruncConversion(
         b, srcI32Vec, srcBaseIdx, i8Ty, reluAttr, dstTyAttr);
   case FPTruncConvOp::F16x2_TO_F8x2:
     return convertFromPacked<NVVM::ConvertF16x2ToF8x2Op>(
-        b, srcI32Vec, srcBaseIdx, b.getF16Type(), i16Ty, reluAttr, dstTyAttr);
+        b, srcI32Vec, srcBaseIdx, b.getF16Type(), i16Ty, /*sat=*/nullptr,
+        reluAttr, dstTyAttr);
   case FPTruncConvOp::F16x2_TO_F6x2:
     return convertFromPacked<NVVM::ConvertF16x2ToF6x2Op>(
         b, srcI32Vec, srcBaseIdx, b.getF16Type(), i16Ty, reluAttr,

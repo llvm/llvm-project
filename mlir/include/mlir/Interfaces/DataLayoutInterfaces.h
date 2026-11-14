@@ -16,7 +16,6 @@
 #define MLIR_INTERFACES_DATALAYOUTINTERFACES_H
 
 #include "mlir/IR/Attributes.h"
-#include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
@@ -186,6 +185,10 @@ public:
 
   /// Returns the size in bits of the given type in the current scope.
   llvm::TypeSize getTypeSizeInBits(Type t) const;
+
+  /// Returns the offset in bytes between successive objects of the given type
+  /// in the current scope, that is, its size rounded up to its ABI alignment.
+  llvm::TypeSize getTypeAllocSize(Type t) const;
 
   /// Returns the required alignment of the given type in the current scope.
   uint64_t getTypeABIAlignment(Type t) const;

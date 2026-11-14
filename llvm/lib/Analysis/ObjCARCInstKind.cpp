@@ -118,6 +118,10 @@ ARCInstKind llvm::objcarc::GetFunctionClass(const Function *F) {
     return ARCInstKind::FusedRetainAutoreleaseRV;
   case Intrinsic::objc_retainAutoreleasedReturnValue:
     return ARCInstKind::RetainRV;
+  case Intrinsic::objc_claimAutoreleasedReturnValue:
+    // ClaimRV returns its argument at +1 just like RetainRV; it only differs
+    // in not requiring the marker instruction after the call.
+    return ARCInstKind::RetainRV;
   case Intrinsic::objc_retainBlock:
     return ARCInstKind::RetainBlock;
   case Intrinsic::objc_storeStrong:
@@ -181,10 +185,6 @@ static bool isInertIntrinsic(unsigned ID) {
   case Intrinsic::lifetime_end:
   case Intrinsic::invariant_start:
   case Intrinsic::invariant_end:
-  // Don't let dbg info affect our results.
-  case Intrinsic::dbg_declare:
-  case Intrinsic::dbg_value:
-  case Intrinsic::dbg_label:
     // Short cut: Some intrinsics obviously don't use ObjC pointers.
     return true;
   default:

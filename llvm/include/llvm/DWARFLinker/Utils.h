@@ -13,6 +13,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -20,6 +21,7 @@
 
 namespace llvm {
 class DWARFDie;
+class DWARFFormValue;
 
 namespace dwarf_linker {
 
@@ -27,6 +29,29 @@ namespace dwarf_linker {
 /// but only uses to compute the variable's value, for example
 /// DW_OP_addr DW_OP_stack_value.
 LLVM_ABI bool hasImplicitAddressLocation(const DWARFDie &Die);
+
+/// Test if the DW_TAG_member \p Die is a DWARF 2-4 style static data member: a
+/// declaration with no storage in the record. DWARF 5 uses a DW_TAG_variable
+/// instead.
+LLVM_ABI bool isStaticDataMember(const DWARFDie &Die);
+
+/// Test if an unnamed type with tag \p Tag is identified by its children, which
+/// tell it apart from other unnamed types declared on the same line. Other
+/// unnamed types, like pointer types, have no such children.
+LLVM_ABI bool isIdentifiedByChildren(dwarf::Tag Tag);
+
+/// Test if \p Die is a child that identifies its unnamed parent type.
+LLVM_ABI bool isIdentifyingChild(const DWARFDie &Die);
+
+/// Hash the fully qualified name of type \p Die for the Apple accelerator
+/// tables. \p ResolveRef returns the DIE that a DW_AT_specification or
+/// DW_AT_abstract_origin of its first argument refers to, or an invalid DIE.
+/// A DW_TAG_module ends the name like the unit does, because LLDB leaves
+/// modules out of the qualified names it looks up.
+LLVM_ABI uint32_t hashFullyQualifiedName(
+    DWARFDie Die,
+    function_ref<DWARFDie(const DWARFDie &, const DWARFFormValue &)>
+        ResolveRef);
 
 /// Build a map from an input DW_AT_LLVM_stmt_sequence byte offset to
 /// the first-row index (in \p LT.Rows) of the corresponding line-table

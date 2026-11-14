@@ -101,6 +101,9 @@ struct ModuleDeps {
 
   /// A collection of absolute paths to module map files that this module needs
   /// to know about. The ordering is significant.
+
+  /// TODO: Track these as `FileEntryRef`s, so they can be
+  /// compared by file identity instead of by looking up their paths.
   std::vector<std::string> ModuleMapFileDeps;
 
   /// A collection of prebuilt modular dependencies this module directly depends

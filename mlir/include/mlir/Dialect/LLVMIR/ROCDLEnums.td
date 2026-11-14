@@ -161,6 +161,31 @@ def ROCDL_SchedGroupMask : ROCDL_I32BitEnum<"SchedGroupMask",
   let printBitEnumQuoted = 0;
 }
 
+// Mirrors llvm::AMDGPU::AsyncStages. The
+// zero mask names every stage rather than none.
+def ROCDL_AsyncStagesAll : I32BitEnumCaseNone<"all">;
+def ROCDL_AsyncStagesTensor : I32BitEnumCaseBit<"tensor", 0>;
+def ROCDL_AsyncStagesGlobalLoadAsyncToLDS
+    : I32BitEnumCaseBit<"global_load_async_to_lds", 1>;
+def ROCDL_AsyncStagesGlobalLoadAsyncToLDSMcast
+    : I32BitEnumCaseBit<"global_load_async_to_lds_mcast", 2>;
+def ROCDL_AsyncStagesGlobalStoreAsyncFromLDS
+    : I32BitEnumCaseBit<"global_store_async_from_lds", 3>;
+def ROCDL_AsyncStagesBufferGlobalLoad
+    : I32BitEnumCaseBit<"buffer_global_load", 5>;
+def ROCDL_AsyncStages : ROCDL_I32BitEnum<"AsyncStages",
+    "async stage mask for asyncmark and wait.asyncmark",
+    [
+      ROCDL_AsyncStagesAll,
+      ROCDL_AsyncStagesTensor,
+      ROCDL_AsyncStagesGlobalLoadAsyncToLDS,
+      ROCDL_AsyncStagesGlobalLoadAsyncToLDSMcast,
+      ROCDL_AsyncStagesGlobalStoreAsyncFromLDS,
+      ROCDL_AsyncStagesBufferGlobalLoad
+    ]> {
+  let printBitEnumQuoted = 0;
+}
+
 def ROCDL_PreGfx12CachePolicyNone : I32BitEnumCaseNone<"none">;
 def ROCDL_PreGfx12CachePolicyGLC : I32BitEnumCaseBit<"glc", 0>;
 def ROCDL_PreGfx12CachePolicySLC : I32BitEnumCaseBit<"slc", 1>;

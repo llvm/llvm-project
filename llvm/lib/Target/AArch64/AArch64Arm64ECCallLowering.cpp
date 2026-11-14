@@ -71,6 +71,7 @@ public:
   bool runOnModule(Module &M) override;
 
 private:
+  const AArch64Options *CLOpts = nullptr;
   ControlFlowGuardMode CFGuardModuleFlag = ControlFlowGuardMode::Disabled;
   FunctionType *GuardFnType = nullptr;
   FunctionType *DispatchFnType = nullptr;
@@ -205,7 +206,7 @@ void AArch64Arm64ECCallLowering::getThunkArgTypes(
     Align ParamAlign = AttrList.getParamAlignment(I).valueOrOne();
 #else
     uint64_t ArgSizeBytes = 0;
-    Align ParamAlign = Align();
+    Align ParamAlign = M->getDataLayout().getABITypeAlign(FT->getParamType(I));
 #endif
     auto [Arm64Ty, X64Ty, ArgTranslation] =
         canonicalizeThunkType(FT->getParamType(I), ParamAlign,
@@ -599,7 +600,7 @@ Function *AArch64Arm64ECCallLowering::buildEntryThunk(Function *F) {
     // The EC thunk CC will assign any argument marked as InReg to x4.
     Thunk->addParamAttr(5, Attribute::InReg);
     Value *Arg = Thunk->getArg(5);
-    Arg = IRB.CreatePtrAdd(Arg, IRB.getInt64(0x20));
+    Arg = IRB.CreatePtrAddWithUnsignedOffset(Arg, 0x20);
     Args.push_back(Arg);
 
     // Pass in a zero variadic argument size (in x5).
@@ -820,7 +821,8 @@ void AArch64Arm64ECCallLowering::lowerCall(CallBase *CB) {
 }
 
 bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
-  if (!AArch64Options::Global.arm64ec_generate_thunks)
+  CLOpts = &Mod.getContext().getLibraryOptions().get<AArch64Options>();
+  if (!CLOpts->arm64ec_generate_thunks)
     return false;
 
   M = &Mod;
@@ -1032,9 +1034,8 @@ bool AArch64Arm64ECCallLowering::processFunction(
       // FIXME: getCalledFunction() fails if there's a bitcast (e.g.
       // unprototyped functions in C)
       if (Function *F = CB->getCalledFunction()) {
-        if (!AArch64Options::Global.arm64ec_lower_direct_to_indirect ||
-            F->hasLocalLinkage() || F->isIntrinsic() ||
-            !F->isDeclarationForLinker())
+        if (!CLOpts->arm64ec_lower_direct_to_indirect || F->hasLocalLinkage() ||
+            F->isIntrinsic() || !F->isDeclarationForLinker())
           continue;
 
         DirectCalledFns.insert(F);

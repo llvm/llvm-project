@@ -50,6 +50,13 @@ static cl::opt<unsigned> MaxThunkChainLength(
     "max-thunk-chain-length",
     cl::desc("maximum number of B-only thunks to use for call relaxation"),
     cl::init(1), cl::Hidden, cl::cat(BoltOptCategory));
+
+static cl::opt<bool> DeprecatedRelaxPLT(
+    "relax-plt", cl::desc("deprecated, has no effect"), cl::init(true),
+    cl::callback([](const bool &) {
+      errs() << "BOLT-WARNING: '-relax-plt' is deprecated and has no effect\n";
+    }),
+    cl::Hidden, cl::cat(BoltOptCategory));
 }
 
 namespace llvm {
@@ -1511,19 +1518,20 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
     return IsForward ? FC.getEndOffset() : FC.StartOffset;
   };
 
-  auto isWithinClusterRange = [&](Position Source, Position Target) {
-    const uint64_t Distance = Source.Offset <= Target.Offset
-                                  ? Target.Offset - Source.Offset
-                                  : Source.Offset - Target.Offset;
+  auto isWithinClusterRange = [&](uint64_t SourceOffset,
+                                  uint64_t TargetOffset) {
+    const uint64_t Distance = SourceOffset <= TargetOffset
+                                  ? TargetOffset - SourceOffset
+                                  : SourceOffset - TargetOffset;
     // A hop across a full adjacent cluster can be exactly this far. The
     // remaining branch range covers emitted thunks and output alignment.
     return Distance <= opts::MaxClusterSize;
   };
 
   SmallVector<unsigned> ThunkClusters;
-  Position Current{0, Ref.SourceOffset};
+  uint64_t CurrentOffset = Ref.SourceOffset;
   unsigned NextHop = 0;
-  while (!isWithinClusterRange(Current, {NumHops, Ref.TargetOffset})) {
+  while (!isWithinClusterRange(CurrentOffset, Ref.TargetOffset)) {
     // Stop if the chain would exceed the configured thunk budget.
     if (ThunkClusters.size() == MaxThunks)
       return nullptr;
@@ -1531,7 +1539,7 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
     unsigned BestHop = -1u;
     for (unsigned Hop = NextHop; Hop < NumHops; ++Hop) {
       const unsigned Cluster = getClusterAtHop(Hop);
-      if (!isWithinClusterRange(Current, {Hop, getThunkOffset(Cluster)}))
+      if (!isWithinClusterRange(CurrentOffset, getThunkOffset(Cluster)))
         break;
       BestHop = Hop;
     }
@@ -1541,8 +1549,8 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
 
     const unsigned BestCluster = getClusterAtHop(BestHop);
     ThunkClusters.push_back(BestCluster);
+    CurrentOffset = getThunkOffset(BestCluster);
     NextHop = BestHop + 1;
-    Current = {BestHop, getThunkOffset(BestCluster)};
   }
 
   BinaryFunction *FirstThunk = nullptr;

@@ -14,7 +14,6 @@
 #include "Function.h"
 #include "InitMap.h"
 #include "Integral.h"
-#include "InterpBlock.h"
 #include "MemberPointer.h"
 #include "PrimType.h"
 #include "Record.h"
@@ -35,9 +34,7 @@ static bool validType(QualType T) {
          !T->isIncompleteType();
 }
 
-Pointer::Pointer(Block *Pointee)
-    : Pointer(Pointee, Pointee->getMetadataSize(), Pointee->getMetadataSize()) {
-}
+Pointer::Pointer(Block *Pointee) : Pointer(Pointee, 0, 0) {}
 
 Pointer::Pointer(Block *Pointee, uint64_t BaseAndOffset)
     : Pointer(Pointee, BaseAndOffset, BaseAndOffset) {}
@@ -46,7 +43,6 @@ Pointer::Pointer(Block *Pointee, unsigned Base, uint64_t Offset)
     : Offset(Offset), StorageKind(Storage::Block) {
   assert(Pointee);
   assert(Base % alignof(void *) == 0 && "wrong base");
-  assert(Base >= Pointee->getMetadataSize());
 
   BS = {Pointee, Base, nullptr, nullptr};
   Pointee->addPointer(this);
@@ -731,12 +727,11 @@ bool PtrView::isElementInitialized(unsigned Index) const {
   const Descriptor *Desc = getFieldDesc();
   assert(Desc);
 
-  if (Pointee->isStatic() && Base == 0)
-    return true;
-
-  if (isRoot() && Base == sizeof(GlobalInlineDescriptor) && Offset == Base) {
-    const auto &GD = Pointee->getBlockDesc<GlobalInlineDescriptor>();
-    return GD.InitState == GlobalInitState::Initialized;
+  if (Offset == 0) {
+    if (Pointee->isGlobal()) {
+      const auto &GD = Pointee->getBlockDesc<GlobalInlineDescriptor>();
+      return GD.InitState == GlobalInitState::Initialized;
+    }
   }
 
   if (Desc->isPrimitiveArray()) {
@@ -766,10 +761,17 @@ bool Pointer::isElementAlive(unsigned Index) const {
 }
 
 Lifetime PtrView::getLifetime() const {
-  if (Base < sizeof(InlineDescriptor))
+  if (Offset == 0) {
+    if (Pointee->isLocal()) {
+      auto &LD = Pointee->getBlockDesc<LocalInlineDescriptor>();
+      return LD.getLifetime();
+    }
     return Lifetime::Started;
+  }
 
-  if (inArray() && !isArrayRoot()) {
+  const Descriptor *Desc = getFieldDesc();
+  assert(Desc);
+  if (Offset != Base && Desc->isPrimitiveArray()) {
     InitMapPtr &IM = getInitMap();
 
     if (!IM.hasInitMap()) {
@@ -781,16 +783,22 @@ Lifetime PtrView::getLifetime() const {
     return IM->isElementAlive(getIndex()) ? Lifetime::Started : Lifetime::Ended;
   }
 
-  return getInlineDesc()->LifeState;
+  return getDescriptor(Offset)->LifeState;
 }
 
 void PtrView::setLifeState(Lifetime L) const {
-  if (Base < sizeof(InlineDescriptor))
+  if (Offset == 0) {
+    if (Pointee->isLocal()) {
+      auto &LD = Pointee->getBlockDesc<LocalInlineDescriptor>();
+      LD.setLifetime(L);
+    }
     return;
+  }
 
-  if (inArray() && !isArrayRoot()) {
+  const Descriptor *Desc = getFieldDesc();
+  assert(Desc);
+  if (Offset != Base && Desc->isPrimitiveArray()) {
     assert(L == Lifetime::Started || L == Lifetime::Ended);
-    const Descriptor *Desc = getFieldDesc();
     InitMapPtr &IM = getInitMap();
     if (!IM.hasInitMap())
       IM.setInitMap(new InitMap(Desc->getNumElems(), IM.allInitialized()));
@@ -803,48 +811,38 @@ void PtrView::setLifeState(Lifetime L) const {
     return;
   }
 
-  getInlineDesc()->LifeState = L;
+  getDescriptor(Offset)->LifeState = L;
 }
 
 void PtrView::initialize() const {
-  // FIXME: This happens when the control flow jumps right into a scope, e.g. in
-  // switch_into_init_stmt in constant-expression-cxx2a.cpp. I.e. we have never
-  // initialized the scope via an InitScope op.
-  if (LLVM_UNLIKELY(!Pointee->isInitialized()))
-    Pointee->invokeCtor();
-
-  if (isRoot() && Base == sizeof(GlobalInlineDescriptor) && Offset == Base) {
-    auto &GD = Pointee->getBlockDesc<GlobalInlineDescriptor>();
-    GD.InitState = GlobalInitState::Initialized;
+  if (Offset == 0) {
+    if (Pointee->isGlobal()) {
+      auto &GD = Pointee->getBlockDesc<GlobalInlineDescriptor>();
+      GD.InitState = GlobalInitState::Initialized;
+    } else if (Pointee->isLocal()) {
+      auto &LD = Pointee->getBlockDesc<LocalInlineDescriptor>();
+      LD.IsInitialized = true;
+      LD.setLifetime(Lifetime::Started);
+    }
     return;
   }
 
   const Descriptor *Desc = getFieldDesc();
   assert(Desc);
-  if (Desc->isPrimitiveArray()) {
+  if (Offset != Base && Desc->isPrimitiveArray()) {
     if (Desc->getNumElems() != 0)
       initializeElement(getIndex());
     return;
   }
 
   // Field has its bit in an inline descriptor.
-  assert(Base != 0 && "Only composite fields can be initialised");
-  getInlineDesc()->IsInitialized = true;
-  getInlineDesc()->LifeState = Lifetime::Started;
+  assert(Offset != 0 && "Only composite fields can be initialised");
+  getDescriptor(Offset)->IsInitialized = true;
+  getDescriptor(Offset)->LifeState = Lifetime::Started;
 }
 
 void PtrView::initializeElement(unsigned Index) const {
-  // Primitive global arrays don't have an initmap.
-  if (Pointee->isStatic() && Base == 0)
-    return;
-
   assert(Index < getFieldDesc()->getNumElems());
-
-  // FIXME: This happens when the control flow jumps right into a scope, e.g. in
-  // switch_into_init_stmt in constant-expression-cxx2a.cpp. I.e. we have never
-  // initialized the scope via an InitScope op.
-  if (LLVM_UNLIKELY(!Pointee->isInitialized()))
-    Pointee->invokeCtor();
 
   InitMapPtr &IM = getInitMap();
   if (IM.allInitialized())
@@ -871,13 +869,8 @@ bool PtrView::allElementsInitialized() const {
   assert(getFieldDesc()->isPrimitiveArray());
   assert(isArrayRoot());
 
-  if (Pointee->isStatic() && Base == 0)
-    return true;
-
-  if (isRoot() && Base == sizeof(GlobalInlineDescriptor) && Offset == Base) {
-    const auto &GD = Pointee->getBlockDesc<GlobalInlineDescriptor>();
-    return GD.InitState == GlobalInitState::Initialized;
-  }
+  if (Offset == 0)
+    return isInitialized();
 
   InitMapPtr IM = getInitMap();
   return IM.allInitialized();
@@ -887,11 +880,8 @@ bool Pointer::allElementsAlive() const {
   assert(getFieldDesc()->isPrimitiveArray());
   assert(isArrayRoot());
 
-  if (isStatic() && BS.Base == 0)
-    return true;
-
-  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
-      Offset == BS.Base) {
+  if (Offset == 0) {
+    assert(block()->isGlobal());
     const auto &GD = block()->getBlockDesc<GlobalInlineDescriptor>();
     return GD.InitState == GlobalInitState::Initialized;
   }
@@ -901,10 +891,7 @@ bool Pointer::allElementsAlive() const {
 }
 
 void PtrView::activate() const {
-  // Field has its bit in an inline descriptor.
-  assert(Base != 0 && "Only composite fields can be activated");
-
-  if (isRoot() && Base == sizeof(GlobalInlineDescriptor))
+  if (isRoot())
     return;
   if (!getInlineDesc()->InUnion)
     return;
@@ -1415,19 +1402,21 @@ OpaquePointer::computeLayoutOffset(const ASTContext &ASTCtx) const {
   for (const PointerPathEntry &Entry : path()) {
     switch (Entry.Kind) {
     case PointerPathEntry::Base: {
-      const RecordDecl *RD = CurType->getAsRecordDecl();
+      const CXXRecordDecl *RD = CurType->castAsCXXRecordDecl();
       if (!ASTContext::hasLayout(RD))
+        return std::nullopt;
+
+      const CXXRecordDecl *BaseDecl = Entry.RD.getPointer();
+      if (!RD->isDerivedFrom(BaseDecl))
         return std::nullopt;
 
       const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(RD);
       if (Entry.RD.getInt())
-        Offset +=
-            Layout.getVBaseClassOffset(Entry.RD.getPointer()).getQuantity();
+        Offset += Layout.getVBaseClassOffset(BaseDecl).getQuantity();
       else
-        Offset +=
-            Layout.getBaseClassOffset(Entry.RD.getPointer()).getQuantity();
+        Offset += Layout.getBaseClassOffset(BaseDecl).getQuantity();
 
-      CurType = ASTCtx.getCanonicalTagType(Entry.RD.getPointer());
+      CurType = ASTCtx.getCanonicalTagType(BaseDecl);
     } break;
 
     case PointerPathEntry::Field: {

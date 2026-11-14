@@ -281,7 +281,7 @@ TEST_F(LlvmLibcLxattrTest, GetCrashesOnNullBufferNonZeroSize) {
       WITH_SIGNAL(-1));
 }
 
-TEST(LlvmLibcLxattrTest, ListCrashesOnNullPath) {
+TEST_F(LlvmLibcLxattrTest, ListCrashesOnNullPath) {
   EXPECT_DEATH(
       [] {
         constexpr size_t BUFFER_SIZE = 32;

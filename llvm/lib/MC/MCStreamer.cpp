@@ -177,15 +177,21 @@ void MCStreamer::emitValue(const MCExpr *Value, unsigned Size, SMLoc Loc) {
   emitValueImpl(Value, Size, Loc);
 }
 
-void MCStreamer::emitSymbolValue(const MCSymbol *Sym, unsigned Size,
-                                 bool IsSectionRelative) {
-  assert((!IsSectionRelative || Size == 4) &&
-         "SectionRelative value requires 4-bytes");
+void MCStreamer::emitSymbolValue(const MCSymbol *Sym, unsigned Size) {
+  emitValueImpl(MCSymbolRefExpr::create(Sym, getContext()), Size);
+}
 
-  if (!IsSectionRelative)
-    emitValueImpl(MCSymbolRefExpr::create(Sym, getContext()), Size);
-  else
-    emitCOFFSecRel32(Sym, /*Offset=*/0);
+void MCStreamer::emitDwarfSectionOffset(const MCSymbol *Sym, uint64_t Offset,
+                                        unsigned Size) {
+  const MCAsmInfo &MAI = getContext().getAsmInfo();
+  if (MAI.needsDwarfSectionOffsetDirective()) {
+    emitCOFFSecRel32(Sym, Offset);
+    if (Size > 4)
+      emitZeros(Size - 4);
+    return;
+  }
+
+  emitValueImpl(MAI.getDwarfSectionOffsetExpr(Sym, Offset, getContext()), Size);
 }
 
 /// Emit NumBytes bytes worth of the value specified by FillValue.
@@ -230,6 +236,13 @@ void MCStreamer::emitCFIMTETaggedFrame() {
   if (!CurFrame)
     return;
   CurFrame->IsMTETaggedFrame = true;
+}
+
+void MCStreamer::emitCFINonHintPAuthFrame() {
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->IsNonHintPAuthFrame = true;
 }
 
 void MCStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
@@ -583,17 +596,22 @@ void MCStreamer::emitCFIRememberState(SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
+  ++CurFrame->RememberStateDepth;
   CurFrame->Instructions.push_back(std::move(Instruction));
 }
 
 void MCStreamer::emitCFIRestoreState(SMLoc Loc) {
-  // FIXME: Error if there is no matching cfi_remember_state.
   MCSymbol *Label = emitCFILabel();
   MCCFIInstruction Instruction =
       MCCFIInstruction::createRestoreState(Label, Loc);
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
+  if (!CurFrame->RememberStateDepth) {
+    getContext().reportError(Loc, "no matching .cfi_remember_state");
+    return;
+  }
+  --CurFrame->RememberStateDepth;
   CurFrame->Instructions.push_back(std::move(Instruction));
 }
 

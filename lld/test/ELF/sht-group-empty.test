@@ -5,6 +5,18 @@
 # CHECK:     Name: .text.foo
 # CHECK:     Name: .rela.text.foo
 
+## A section group may have any name, even one that lld handles specially for
+## other section types.
+# RUN: yaml2obj -DNAME=.note.GNU-stack %s -o %t1.o
+# RUN: ld.lld %t1.o -o %t1 -r
+# RUN: llvm-readelf -g %t1 | FileCheck %s --check-prefix=NOTE
+
+# NOTE:      COMDAT group section [{{.*}}] `.note.GNU-stack' [foo] contains 3 sections:
+# NOTE-NEXT:    [Index]    Name
+# NOTE-NEXT:    [{{.*}}]   .text.foo
+# NOTE-NEXT:    [{{.*}}]   .text.bar
+# NOTE-NEXT:    [{{.*}}]   .note
+
 --- !ELF
 FileHeader:
   Class:           ELFCLASS64
@@ -12,7 +24,7 @@ FileHeader:
   Type:            ET_REL
   Machine:         EM_X86_64
 Sections:
-  - Name:            .group
+  - Name:            [[NAME=.group]]
     Type:            SHT_GROUP
     Link:            .symtab
     Info:            foo

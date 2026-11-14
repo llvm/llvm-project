@@ -12,7 +12,9 @@
 
 #include "CIRGenModule.h"
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/MLIRContext.h"
@@ -50,16 +52,23 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
   // MLIR multithreading stays enabled; the CIRDiagnosticHandler is only ever
   // invoked from a single thread.
   cir::registerAllDialects(*mlirContext);
-  mlirContext->loadDialect<mlir::DLTIDialect, cir::CIRDialect>();
-  mlirContext->getOrLoadDialect<mlir::acc::OpenACCDialect>();
-  mlirContext->getOrLoadDialect<mlir::omp::OpenMPDialect>();
+  mlirContext->loadDialect<mlir::DLTIDialect, mlir::LLVM::LLVMDialect,
+                           cir::CIRDialect>();
+  const LangOptions &langOpts = astContext.getLangOpts();
+  // OpenACC lowering emits Arith constants for bounds and clause operands.
+  if (langOpts.OpenACC)
+    mlirContext
+        ->loadDialect<mlir::acc::OpenACCDialect, mlir::arith::ArithDialect>();
+  if (langOpts.OpenMP)
+    mlirContext->getOrLoadDialect<mlir::omp::OpenMPDialect>();
 
   cgm = std::make_unique<clang::CIRGen::CIRGenModule>(
       *mlirContext.get(), astContext, codeGenOpts, diags);
   mlir::ModuleOp mod = cgm->getModule();
   llvm::DataLayout layout =
       llvm::DataLayout(astContext.getTargetInfo().getDataLayoutString());
-  cir::setMLIRDataLayout(mod, layout);
+  cir::setMLIRDataLayout(mod, layout,
+                         astContext.getTargetInfo().getBitIntMaxAlign());
 }
 
 bool CIRGenerator::verifyModule() const { return cgm->verifyModule(); }

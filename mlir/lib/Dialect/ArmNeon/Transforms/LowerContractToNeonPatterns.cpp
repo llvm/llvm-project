@@ -395,7 +395,7 @@ public:
                                  rewriter);
 
     // Initialize parameters for unrolling.
-    iterationBounds = *op.getShapeForUnroll();
+    iterationBounds = *op.getIterationShapeToUnroll();
     if (iterationBounds.size() == 3)
       subTileShape = SmallVector<int64_t>({dimM == 1 ? 1 : 2, 2, 8});
     else
@@ -436,7 +436,7 @@ public:
     acc = op.getAcc();
 
     // Initialize parameters for unrolling.
-    iterationBounds = *op.getShapeForUnroll();
+    iterationBounds = *op.getIterationShapeToUnroll();
     if (iterationBounds.size() == 3)
       subTileShape = SmallVector<int64_t>({dimM == 1 ? 1 : 2, 2, 4});
     else

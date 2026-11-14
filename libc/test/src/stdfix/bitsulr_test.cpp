@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "BitsFxTest.h"
+#include "test/src/stdfix/BitsFxTest.h"
 
-#include "llvm-libc-types/uint_ulr_t.h" // uint_ulr_t
+#include "include/llvm-libc-types/uint_ulr_t.h" // uint_ulr_t
 #include "src/stdfix/bitsulr.h"
 
 LIST_BITSFX_TESTS(ulr, unsigned long fract, uint_ulr_t,

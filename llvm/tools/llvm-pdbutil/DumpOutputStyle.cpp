@@ -46,9 +46,7 @@
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PublicsStream.h"
-#include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/DebugInfo/PDB/Native/SymbolStream.h"
-#include "llvm/DebugInfo/PDB/Native/TpiHashing.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/BinaryStreamReader.h"
@@ -1577,7 +1575,6 @@ Error DumpOutputStyle::dumpGSIRecords() {
   Pipeline.addCallbackToPipeline(Dumper);
   CVSymbolVisitor Visitor(Pipeline);
 
-  BinaryStreamRef SymStream = Records.getSymbolArray().getUnderlyingStream();
   if (auto E = Visitor.visitSymbolStream(Records.getSymbolArray(), 0))
     return E;
   return Error::success();

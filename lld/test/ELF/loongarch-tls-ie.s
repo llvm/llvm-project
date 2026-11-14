@@ -7,24 +7,24 @@
 ## LA32 IE
 # RUN: ld.lld -shared %t/32.o -o %t/32.so
 # RUN: llvm-readobj -r -d %t/32.so | FileCheck --check-prefix=IE32-REL %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t/32.so | FileCheck --check-prefixes=IE32 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/32.so | FileCheck --check-prefixes=IE32 %s
 
 ## LA32 IE -> LE
 # RUN: ld.lld %t/32.o -o %t/32
 # RUN: llvm-readelf -r %t/32 | FileCheck --check-prefix=NOREL %s
 # RUN: llvm-readelf -x .got %t/32 2>&1 | FileCheck --check-prefix=LE32-GOT %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t/32 | FileCheck --check-prefixes=LE32 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/32 | FileCheck --check-prefixes=LE32 %s
 
 ## LA64 IE
 # RUN: ld.lld -shared %t/64.o -o %t/64.so
 # RUN: llvm-readobj -r -d %t/64.so | FileCheck --check-prefix=IE64-REL %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t/64.so | FileCheck --check-prefixes=IE64 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/64.so | FileCheck --check-prefixes=IE64 %s
 
 ## LA64 IE -> LE
 # RUN: ld.lld %t/64.o -o %t/64
 # RUN: llvm-readelf -r %t/64 | FileCheck --check-prefix=NOREL %s
 # RUN: llvm-readelf -x .got %t/64 2>&1 | FileCheck --check-prefix=LE64-GOT %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t/64 | FileCheck --check-prefixes=LE64 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/64 | FileCheck --check-prefixes=LE64 %s
 
 # IE32-REL:      FLAGS STATIC_TLS
 # IE32-REL:      .rela.dyn {

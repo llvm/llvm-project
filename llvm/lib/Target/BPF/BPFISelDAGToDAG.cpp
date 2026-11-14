@@ -193,6 +193,19 @@ void BPFDAGToDAGISel::Select(SDNode *Node) {
   switch (Opcode) {
   default:
     break;
+  case ISD::POISON:
+  case ISD::UNDEF: {
+    // IMPLICIT_DEF leaves the register as it is. The verifier rejects a read
+    // of a register that was not written, no matter what is done with the
+    // value.
+    EVT VT = Node->getValueType(0);
+    if (VT != MVT::i64 && VT != MVT::i32)
+      break;
+    CurDAG->SelectNodeTo(Node, VT == MVT::i64 ? BPF::MOV_ri : BPF::MOV_ri_32,
+                         VT, CurDAG->getTargetConstant(0, SDLoc(Node), VT));
+    return;
+  }
+
   case BPFISD::LOAD_STACK_ARG: {
     SDValue Chain = Node->getOperand(0);
     auto *CN = cast<ConstantSDNode>(Node->getOperand(1));
@@ -308,7 +321,12 @@ void BPFDAGToDAGISel::PreprocessLoad(SDNode *Node,
 
   LLVM_DEBUG(dbgs() << "Replacing load of size " << size << " with constant "
                     << val << '\n');
-  SDValue NVal = CurDAG->getConstant(val, DL, LD->getValueType(0));
+  EVT VT = LD->getValueType(0);
+  APInt MemVal(size * 8, val);
+  SDValue NVal = CurDAG->getConstant(LD->getExtensionType() == ISD::SEXTLOAD
+                                         ? MemVal.sext(VT.getSizeInBits())
+                                         : MemVal.zext(VT.getSizeInBits()),
+                                     DL, VT);
 
   // After replacement, the current node is dead, we need to
   // go backward one step to make iterator still work

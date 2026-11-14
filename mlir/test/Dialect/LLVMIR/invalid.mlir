@@ -183,6 +183,27 @@ func.func @load_unaligned_atomic(%ptr : !llvm.ptr) {
 
 // -----
 
+func.func @load_range_non_integer(%ptr : !llvm.ptr) {
+  // expected-error@below {{expected range bitwidth to match the integer (element) result type}}
+  %1 = llvm.load %ptr range<i32, 0, 10> : !llvm.ptr -> f32
+}
+
+// -----
+
+func.func @load_range_bitwidth_mismatch(%ptr : !llvm.ptr) {
+  // expected-error@below {{expected range bitwidth to match the integer (element) result type}}
+  %1 = llvm.load %ptr range<i64, 0, 10> : !llvm.ptr -> i32
+}
+
+// -----
+
+func.func @load_range_empty_or_full(%ptr : !llvm.ptr) {
+  // expected-error@below {{expected range to be neither empty nor full}}
+  %1 = llvm.load %ptr range<i32, 5, 5> : !llvm.ptr -> i32
+}
+
+// -----
+
 func.func @store_syncscope(%val : f32, %ptr : !llvm.ptr) {
   // expected-error@below {{expected syncscope to be null for non-atomic access}}
   "llvm.store"(%val, %ptr) <{syncscope = "singlethread"}> : (f32, !llvm.ptr) -> ()
@@ -2453,6 +2474,11 @@ llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_
 
 // -----
 
+// expected-error@+1 {{'llvm.mlir.ifunc' op must have a function resolver}}
+llvm.mlir.ifunc private @ifunc : !llvm.func<f32 (i64)>, !llvm.ptr @missing_resolver
+
+// -----
+
 llvm.func external @resolve_foo() -> !llvm.ptr
 // expected-error@+1 {{'llvm.mlir.ifunc' op 'common' linkage not supported in ifuncs}}
 llvm.mlir.ifunc common @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_foo dso_local
@@ -2597,5 +2623,74 @@ llvm.func @md_addrspacecast_int_operand() {
 llvm.func @nvvm_duplicate_fp_modifier(%a: f32, %b: f32) {
   // expected-error@+1 {{`ftz` clause can appear at most once in the expansion of the oilist directive}}
   %0 = nvvm.addf %a, %b ftz = true ftz = true : f32
+  llvm.return
+}
+
+// -----
+
+// expected-error@+1 {{expected '>'}}
+#loop_align_typed = #llvm.loop_annotation<align = 32 : i64>
+
+// -----
+
+// expected-error@+2 {{integer value too large}}
+// expected-error@+1 {{failed to parse LoopAnnotationAttr parameter 'align' which is to be a `uint32_t`}}
+#loop_align_too_large = #llvm.loop_annotation<align = 4294967296>
+
+// -----
+
+llvm.func @rocdl_asyncmark_unknown_stage() {
+  // expected-error@+1 {{custom op 'rocdl.asyncmark' expected string or keyword containing one of the following enum values for attribute 'stages' [all, tensor, global_load_async_to_lds, global_load_async_to_lds_mcast, global_store_async_from_lds, buffer_global_load]}}
+  rocdl.asyncmark stages = not_a_stage
+  llvm.return
+}
+
+// -----
+#tbaa_root = #llvm.tbaa_root<id = "Simple C++ TBAA">
+#tbaa_type_desc = #llvm.tbaa_type_desc<id = "omnipotent char", members = {<#tbaa_root, 0>}>
+#tbaa_type_desc1 = #llvm.tbaa_type_desc<id = "int", members = {<#tbaa_type_desc, 0>}>
+#tbaa_tag = #llvm.tbaa_tag<base_type = #tbaa_type_desc1, access_type = #tbaa_type_desc1, offset = 0>
+llvm.func @tbaa_struct_equal_offsets(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
+  %0 = llvm.mlir.constant(12 : i64) : i64
+  // Equal offsets are allowed: the rule is non-decreasing, not increasing.
+  "llvm.intr.memcpy"(%arg0, %arg1, %0) <{isVolatile = false, tbaa_struct = [#llvm.tbaa_struct_field<offset = 8, size = 4, tag = #tbaa_tag>, #llvm.tbaa_struct_field<offset = 8, size = 4, tag = #tbaa_tag>]}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
+  llvm.return
+}
+
+// -----
+
+#tbaa_root = #llvm.tbaa_root<id = "Simple C++ TBAA">
+#tbaa_type_desc = #llvm.tbaa_type_desc<id = "omnipotent char", members = {<#tbaa_root, 0>}>
+#tbaa_type_desc1 = #llvm.tbaa_type_desc<id = "int", members = {<#tbaa_type_desc, 0>}>
+#tbaa_tag = #llvm.tbaa_tag<base_type = #tbaa_type_desc1, access_type = #tbaa_type_desc1, offset = 0>
+llvm.func @tbaa_struct_decreasing_memcpy(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
+  %0 = llvm.mlir.constant(12 : i64) : i64
+  // expected-error@+1 {{tbaa.struct field offsets must be non-decreasing}}
+  "llvm.intr.memcpy"(%arg0, %arg1, %0) <{isVolatile = false, tbaa_struct = [#llvm.tbaa_struct_field<offset = 8, size = 4, tag = #tbaa_tag>, #llvm.tbaa_struct_field<offset = 0, size = 4, tag = #tbaa_tag>]}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
+  llvm.return
+}
+
+// -----
+
+#tbaa_root = #llvm.tbaa_root<id = "Simple C++ TBAA">
+#tbaa_type_desc = #llvm.tbaa_type_desc<id = "omnipotent char", members = {<#tbaa_root, 0>}>
+#tbaa_type_desc1 = #llvm.tbaa_type_desc<id = "int", members = {<#tbaa_type_desc, 0>}>
+#tbaa_tag = #llvm.tbaa_tag<base_type = #tbaa_type_desc1, access_type = #tbaa_type_desc1, offset = 0>
+llvm.func @tbaa_struct_decreasing_memmove(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
+  %0 = llvm.mlir.constant(12 : i64) : i64
+  // expected-error@+1 {{tbaa.struct field offsets must be non-decreasing}}
+  "llvm.intr.memmove"(%arg0, %arg1, %0) <{isVolatile = false, tbaa_struct = [#llvm.tbaa_struct_field<offset = 8, size = 4, tag = #tbaa_tag>, #llvm.tbaa_struct_field<offset = 0, size = 4, tag = #tbaa_tag>]}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
+  llvm.return
+}
+
+// -----
+
+#tbaa_root = #llvm.tbaa_root<id = "Simple C++ TBAA">
+#tbaa_type_desc = #llvm.tbaa_type_desc<id = "omnipotent char", members = {<#tbaa_root, 0>}>
+#tbaa_type_desc1 = #llvm.tbaa_type_desc<id = "int", members = {<#tbaa_type_desc, 0>}>
+#tbaa_tag = #llvm.tbaa_tag<base_type = #tbaa_type_desc1, access_type = #tbaa_type_desc1, offset = 0>
+llvm.func @tbaa_struct_decreasing_memcpy_inline(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
+  // expected-error@+1 {{tbaa.struct field offsets must be non-decreasing}}
+  "llvm.intr.memcpy.inline"(%arg0, %arg1) <{isVolatile = false, len = 12 : i64, tbaa_struct = [#llvm.tbaa_struct_field<offset = 8, size = 4, tag = #tbaa_tag>, #llvm.tbaa_struct_field<offset = 0, size = 4, tag = #tbaa_tag>]}> : (!llvm.ptr, !llvm.ptr) -> ()
   llvm.return
 }

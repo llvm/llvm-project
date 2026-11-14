@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFFORMVALUE_H
 
 #include "DWARFDataExtractor.h"
+#include "lldb/Core/dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include <optional>
 

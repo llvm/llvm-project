@@ -30,6 +30,16 @@
 ; RUN: %python %S/../../../lib/Analysis/models/log_reader.py %t3.log > %t3.readable
 ; RUN: FileCheck --input-file %t3.readable %s --check-prefixes=CHECK-TWO-FCTS
 
+; RUN: not llc -o /dev/null -mtriple=x86_64-linux-unknown -regalloc=greedy \
+; RUN:   -regalloc-enable-advisor=development < %S/Inputs/input.ll 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=ERR
+; ERR: error: Regalloc development mode should be requested with at least logging enabled and/or a training model
+
+; RUN: not llc -o /dev/null -mtriple=x86_64-linux-unknown -regalloc=greedy \
+; RUN:   -regalloc-enable-advisor=development -regalloc-training-log=%t.nodir/log \
+; RUN:   < %S/Inputs/input.ll 2>&1 | FileCheck %s --check-prefix=ERR-LOG
+; ERR-LOG: error: {{.*}}.nodir/log
+
 ; CHECK-NOT: nan
 ; CHECK-LABEL: context: SyFgets
 ; CHECK-NEXT: observation: 0
@@ -40,8 +50,8 @@
 ; CHECK-NEXT: mask:
 ; NOML:      observation: 15
 ; ML:      observation: 80
-; ML: reward: 38.90
-; NOML: reward: 37.60
+; ML: reward: 38.36
+; NOML: reward: 37.06
 
 
 ; CHECK-TWO-FCTS: context: SyFgets
@@ -49,10 +59,10 @@
 ; CHECK-TWO-FCTS-NEXT: mask: 0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
 ; CHECK-TWO-FCTS: index_to_evict: 32
 ; CHECK-TWO-FCTS: observation: 15
-; CHECK-TWO-FCTS: reward: 37.60
+; CHECK-TWO-FCTS: reward: 37.06
 ; CHECK-TWO-FCTS: context: SyFgetsCopy
 ; CHECK-TWO-FCTS-NEXT: observation: 0
 ; CHECK-TWO-FCTS-NEXT: mask: 0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
 ; CHECK-TWO-FCTS: index_to_evict: 32
 ; CHECK-TWO-FCTS: observation: 15
-; CHECK-TWO-FCTS: reward: 37.60
+; CHECK-TWO-FCTS: reward: 37.06

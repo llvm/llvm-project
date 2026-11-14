@@ -5,6 +5,7 @@ import platform
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 
 import lit.formats
@@ -357,6 +358,8 @@ if config.enable_bindings_python:
         append_path=True,
     )
 
+config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
+
 if config.enable_assertions:
     config.available_features.add("asserts")
 else:
@@ -397,6 +400,9 @@ if config.run_nvptx_tests:
 
 if config.run_rocm_tests:
     config.available_features.add("host-supports-amdgpu")
+
+if config.run_xevm_tests:
+    config.available_features.add("host-supports-spirv")
 
 if config.arm_emulator_executable:
     config.available_features.add("arm-emulator")
