@@ -274,6 +274,12 @@ public:
   GetBitSize(lldb::opaque_compiler_type_t type,
              ExecutionContextScope *exe_scope) override;
 
+  std::optional<uint64_t>
+  GetByteStride(lldb::opaque_compiler_type_t type,
+                ExecutionContextScope *exe_scope) override {
+    return std::nullopt;
+  }
+
   lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type) override {
     return lldb::eEncodingInvalid;
   }

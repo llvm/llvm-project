@@ -864,6 +864,13 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig,
         data.Push(llvm::APSInt::get(size));
         break;
       }
+      case sel_get_byte_stride: {
+        TYPE_CHECK(Type);
+        auto type = data.Pop<CompilerType>();
+        uint64_t stride = type.GetByteStride(nullptr).value_or(0);
+        data.Push(llvm::APSInt::get(stride));
+        break;
+      }
       case sel_create_child_at_offset: {
         TYPE_CHECK(Object, String, Integer, Type);
         auto type = data.Pop<CompilerType>();
