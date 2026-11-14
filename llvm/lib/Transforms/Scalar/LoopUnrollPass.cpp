@@ -460,7 +460,9 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
         // FIXME: With a proper cost model we should be able to do it.
         if (auto *CI = dyn_cast<CallInst>(&I)) {
           const Function *Callee = CI->getCalledFunction();
-          if (!Callee || TTI.isLoweredToCall(Callee)) {
+          // Inline asm's are handled through cost model.
+          if (!isa<InlineAsm>(CI->getCalledOperand()) &&
+              (!Callee || TTI.isLoweredToCall(Callee))) {
             LLVM_DEBUG(dbgs().indent(3)
                        << "Can't analyze cost of loop with call\n");
             return std::nullopt;
