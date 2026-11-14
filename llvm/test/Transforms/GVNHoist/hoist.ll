@@ -63,7 +63,7 @@ define float @readsAndScalarsHoisting(float %d, ptr %min, ptr %max, ptr %a) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[DIV]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[MIN:%.*]], i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[TMP0:%.*]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[MAX:%.*]], align 4
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SUB]], [[DIV]]
@@ -71,10 +71,8 @@ define float @readsAndScalarsHoisting(float %d, ptr %min, ptr %max, ptr %a) {
 ; CHECK-NEXT:    [[MUL2:%.*]] = fmul float [[SUB1]], [[DIV]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[A:%.*]] = getelementptr float, ptr [[MIN]], i32 1
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[B:%.*]] = getelementptr float, ptr [[MIN]], i32 1
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[TMAX_0:%.*]] = phi float [ [[MUL2]], [[IF_THEN]] ], [ [[MUL]], [[IF_ELSE]] ]
@@ -740,9 +738,8 @@ define void @hoistStores(ptr %s, ptr %coord, i1 zeroext %delta) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[FROMBOOL]] to i1
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_FOO:%.*]], ptr [[S:%.*]], i32 0, i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_FOO]], ptr [[S]], i32 0, i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 1
-; CHECK-NEXT:    store ptr [[TMP3]], ptr [[TMP2]], align 8
+; CHECK-NEXT:    store ptr [[TMP3]], ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[COORD:%.*]], align 4
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i16 [[TMP4]] to i32
@@ -750,15 +747,11 @@ define void @hoistStores(ptr %s, ptr %coord, i1 zeroext %delta) {
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[COORD]], align 4
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [[STRUCT_FOO]], ptr [[S]], i32 0, i32 0
-; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 1
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds [[STRUCT_FOO]], ptr [[S]], i32 0, i32 0
-; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[P1]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[INCDEC_PTR6:%.*]] = getelementptr inbounds i16, ptr [[TMP6]], i32 1
-; CHECK-NEXT:    store ptr [[INCDEC_PTR6]], ptr [[P1]], align 8
+; CHECK-NEXT:    store ptr [[INCDEC_PTR6]], ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i16, ptr [[TMP6]], align 2
 ; CHECK-NEXT:    [[CONV7:%.*]] = zext i16 [[TMP7]] to i32
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[CONV7]], 8

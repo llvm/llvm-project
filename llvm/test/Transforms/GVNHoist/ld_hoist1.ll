@@ -15,8 +15,8 @@ for.body.lr.ph:                                   ; preds = %entry
 
 ; CHECK-LABEL: for.body
 ; CHECK: load
-; CHECK:  %2 = getelementptr inbounds i32, ptr %in, i64 %indvars.iv
-; CHECK:  %3 = load i32, ptr %2, align 4
+; CHECK:  [[GEP:%.*]] = getelementptr inbounds i32, ptr %in, i64 %indvars.iv
+; CHECK:  {{%.*}} = load i32, ptr [[GEP]], align 4
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.inc
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.inc ]
