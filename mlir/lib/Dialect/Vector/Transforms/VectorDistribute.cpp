@@ -18,6 +18,7 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/SetVector.h"
@@ -199,8 +200,90 @@ static Operation *cloneOpWithOperandsAndTypes(RewriterBase &rewriter,
   return rewriter.create(res);
 }
 
-namespace {
+/// Reuse an args buffer from `buffers` to transit a value of `targetType`, or
+/// return null if none fits.
+static Value tryReuseArgBuffer(SmallVectorImpl<std::pair<Value, bool>> &buffers,
+                               Type targetType, Location loc,
+                               RewriterBase &rewriter) {
+  auto targetVecType = dyn_cast<VectorType>(targetType);
+  if (!targetVecType || !targetVecType.hasStaticShape())
+    return Value();
 
+  for (auto &entry : buffers) {
+    if (entry.second)
+      continue;
+    Value candidate = entry.first;
+    auto candidateMemref = dyn_cast<MemRefType>(candidate.getType());
+    if (!candidateMemref || !candidateMemref.hasStaticShape())
+      continue;
+    if (candidateMemref.getElementType() != targetVecType.getElementType())
+      continue;
+    // Skip rank mismatch up-front to avoid guessing a reshape.
+    if (candidateMemref.getRank() != targetVecType.getRank())
+      continue;
+    // The candidate must be at least as large as the target in every
+    // dimension, otherwise the leading subview below would run out of bounds.
+    // This also guarantees that the candidate has enough elements in total.
+    if (!llvm::all_of(llvm::seq<unsigned>(0, targetVecType.getRank()),
+                      [&](unsigned i) {
+                        return candidateMemref.getDimSize(i) >=
+                               targetVecType.getDimSize(i);
+                      }))
+      continue;
+
+    // All checks passed: claim the buffer.
+    entry.second = true;
+
+    // Same shape: reuse directly.
+    if (candidateMemref.getShape() == targetVecType.getShape())
+      return candidate;
+
+    // Larger candidate: take a leading subview of the target shape.
+    int64_t candidateRank = candidateMemref.getRank();
+    SmallVector<OpFoldResult> offsets(candidateRank, rewriter.getIndexAttr(0));
+    SmallVector<OpFoldResult> strides(candidateRank, rewriter.getIndexAttr(1));
+    SmallVector<OpFoldResult> sizes;
+    sizes.reserve(candidateRank);
+    for (int64_t dim : targetVecType.getShape())
+      sizes.push_back(rewriter.getIndexAttr(dim));
+
+    return memref::SubViewOp::create(rewriter, loc, candidate, offsets, sizes,
+                                     strides);
+  }
+  return Value();
+}
+
+/// Return true if `block` is part of a CFG cycle, which
+/// `LoopLikeOpInterface` does not cover.
+static bool isBlockInCFGLoop(Block *block) {
+  llvm::SmallSetVector<Block *, 4> visited;
+  SmallVector<Block *> worklist(block->getSuccessors().begin(),
+                                block->getSuccessors().end());
+  while (!worklist.empty()) {
+    Block *current = worklist.pop_back_val();
+    if (current == block)
+      return true;
+    if (!visited.insert(current))
+      continue;
+    for (Block *succ : current->getSuccessors())
+      worklist.push_back(succ);
+  }
+  return false;
+}
+
+/// Return true if `block` or any of its ancestor blocks is part of a CFG
+/// cycle, which `LoopLikeOpInterface` does not cover.
+static bool isInCFGLoop(Block *block) {
+  while (block) {
+    if (isBlockInCFGLoop(block))
+      return true;
+    Operation *parent = block->getParentOp();
+    block = parent ? parent->getBlock() : nullptr;
+  }
+  return false;
+}
+
+namespace {
 /// Rewrite a WarpExecuteOnLane0Op into a predicated scf.if op where the single
 /// thread `laneId` executes the entirety of the computation.
 ///
@@ -257,6 +340,16 @@ struct WarpOpToScfIfPattern : public WarpDistributionPattern {
     // Step 2: insert appropriate (alloc, write)-pairs before the scf.if and
     // reads within the scf.if to transit the values captured from above.
     SmallVector<Value> bbArgReplacements;
+    // Pool of args buffers paired with a "consumed" flag, so Step 5 can try
+    // to reuse them for yielded values' transit buffers. Skip reuse inside a
+    // loop (structured or CFG): thread convergence is only guaranteed within
+    // a barrier, so the next iteration's arg stores could race with this
+    // iteration's result loads.
+    SmallVector<std::pair<Value, /*consumed=*/bool>> reusableArgBuffers;
+    bool canReuseArgBuffers = !warpOp->getParentOfType<LoopLikeOpInterface>() &&
+                              !isInCFGLoop(warpOp->getBlock());
+    if (canReuseArgBuffers)
+      reusableArgBuffers.reserve(warpOp.getArgs().size());
     for (const auto &it : llvm::enumerate(warpOp.getArgs())) {
       Value sequentialVal = warpOpBody->getArgument(it.index());
       Value distributedVal = it.value();
@@ -267,6 +360,8 @@ struct WarpOpToScfIfPattern : public WarpDistributionPattern {
       rewriter.setInsertionPoint(ifOp);
       Value buffer = options.warpAllocationFn(loc, rewriter, warpOp,
                                               sequentialVal.getType());
+      if (canReuseArgBuffers)
+        reusableArgBuffers.emplace_back(buffer, /*consumed=*/false);
       // Store distributed vector into buffer, before the ifOp.
       helper.buildStore(rewriter, loc, distributedVal, buffer);
       // Load sequential vector from buffer, inside the ifOp.
@@ -286,7 +381,7 @@ struct WarpOpToScfIfPattern : public WarpDistributionPattern {
 
     // Step 5. Insert appropriate writes within scf.if and reads after the
     // scf.if to transit the values returned by the op.
-    // TODO: at this point, we can reuse the shared memory from previous
+    // The args buffers from Step 2 are unused by now, try to reuse previous
     // buffers.
     SmallVector<Value> replacements;
     auto yieldOp = cast<gpu::YieldOp>(ifOp.thenBlock()->getTerminator());
@@ -297,10 +392,13 @@ struct WarpOpToScfIfPattern : public WarpDistributionPattern {
       DistributedLoadStoreHelper helper(sequentialVal, distributedVal,
                                         warpOp.getLaneid(), c0);
 
-      // Create buffer before the ifOp.
+      // Reuse an args buffer if possible, otherwise allocate.
       rewriter.setInsertionPoint(ifOp);
-      Value buffer = options.warpAllocationFn(loc, rewriter, warpOp,
-                                              sequentialVal.getType());
+      Value buffer = tryReuseArgBuffer(reusableArgBuffers,
+                                       sequentialVal.getType(), loc, rewriter);
+      if (!buffer)
+        buffer = options.warpAllocationFn(loc, rewriter, warpOp,
+                                          sequentialVal.getType());
 
       // Store yielded value into buffer, inside the ifOp, before the
       // terminator.
@@ -2380,7 +2478,6 @@ struct WarpOpReduction : public WarpDistributionPattern {
 private:
   DistributedReductionFn distributedReductionFn;
 };
-
 } // namespace
 
 void mlir::vector::populateWarpExecuteOnLane0OpToScfForPattern(
