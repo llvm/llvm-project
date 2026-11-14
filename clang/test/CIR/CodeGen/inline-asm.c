@@ -930,3 +930,45 @@ void t35(int i) {
   int g;
   __asm__ volatile("" :: "r"(i), "m"(g));
 }
+
+// A _Complex output with a register constraint is returned by value as an
+// integer of the same size.
+//      CIR: cir.func{{.*}}@t36
+//      CIR: {"" "=r,~{dirflag},~{fpsr},~{flags}"})
+// LLVM: define{{.*}}@t36
+// LLVM: call i64 asm "", "=r,~{dirflag},~{fpsr},~{flags}"()
+void t36(void) {
+  _Complex float c;
+  __asm__("" : "=r"(c));
+}
+
+// A 128-bit _Complex input that has to be in registers is loaded by value.
+//      CIR: cir.func{{.*}}@t37
+//      CIR: {"" "r,~{dirflag},~{fpsr},~{flags}"}) side_effects
+// LLVM: define{{.*}}@t37
+// LLVM: call void asm sideeffect "", "r,~{dirflag},~{fpsr},~{flags}"(i128
+void t37(_Complex double *p) {
+  __asm__ volatile("" :: "r"(*p));
+}
+
+// One that can be in memory is passed by its address.
+//      CIR: cir.func{{.*}}@t38
+//      CIR: {"" "*rm,~{dirflag},~{fpsr},~{flags}"}) side_effects
+// LLVM: define{{.*}}@t38
+// LLVM: call void asm sideeffect "", "*rm,~{dirflag},~{fpsr},~{flags}"(ptr elementtype({ double, double })
+void t38(_Complex double *p) {
+  __asm__ volatile("" :: "rm"(*p));
+}
+
+// A tied input narrower than a _Complex output is widened to the output's
+// integer type. As for a scalar output, CIR sign-extends it and classic
+// codegen zero-extends it; the asm doesn't define the top bits either way.
+//      CIR: cir.func{{.*}}@t39
+//      CIR: {"" "=r,0,~{dirflag},~{fpsr},~{flags}"})
+// LLVM: define{{.*}}@t39
+// CIRLLVMONLY: sext i32 %{{.*}} to i64
+// LLVMONLY: zext i32 %{{.*}} to i64
+// LLVM: call i64 asm "", "=r,0,~{dirflag},~{fpsr},~{flags}"(i64
+void t39(_Complex float *p, int x) {
+  __asm__("" : "=r"(*p) : "0"(x));
+}
