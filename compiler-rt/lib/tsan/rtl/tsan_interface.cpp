@@ -11,10 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "tsan_interface.h"
-#include "tsan_interface_ann.h"
-#include "tsan_rtl.h"
+
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_ptrauth.h"
+#include "tsan_interface_ann.h"
+#include "tsan_rtl.h"
+#include "tsan_simulate.h"
 
 #define CALLERPC ((uptr)__builtin_return_address(0))
 
@@ -82,6 +84,10 @@ void __tsan_set_fiber_name(void *fiber, const char *name) {
   ThreadSetName(static_cast<ThreadState *>(fiber), name);
 }
 }  // extern "C"
+
+int __tsan_simulate(void (*callback)(void* arg), void* arg) {
+  return SimulateRun(callback, arg);
+}
 
 void __tsan_acquire(void *addr) {
   Acquire(cur_thread(), CALLERPC, (uptr)addr);

@@ -22,6 +22,7 @@
 #include "tsan_platform.h"
 #include "tsan_report.h"
 #include "tsan_rtl.h"
+#include "tsan_simulate.h"
 
 #define CALLERPC ((uptr)__builtin_return_address(0))
 
@@ -364,6 +365,10 @@ void __tsan_mutex_destroy(void *m, unsigned flagz) {
 INTERFACE_ATTRIBUTE
 void __tsan_mutex_pre_lock(void *m, unsigned flagz) {
   SCOPED_ANNOTATION(__tsan_mutex_pre_lock);
+  if (UNLIKELY(SimulateIsActive())) {
+    SimulateReportUnsupported("__tsan_mutex_pre_lock");
+    return;
+  }
   if (!(flagz & MutexFlagTryLock)) {
     if (flagz & MutexFlagReadLock)
       MutexPreReadLock(thr, pc, (uptr)m);
@@ -378,6 +383,10 @@ void __tsan_mutex_pre_lock(void *m, unsigned flagz) {
 INTERFACE_ATTRIBUTE
 void __tsan_mutex_post_lock(void *m, unsigned flagz, int rec) {
   SCOPED_ANNOTATION(__tsan_mutex_post_lock);
+  if (UNLIKELY(SimulateIsActive())) {
+    SimulateReportUnsupported("__tsan_mutex_post_lock");
+    return;
+  }
   ThreadIgnoreSyncEnd(thr);
   ThreadIgnoreEnd(thr);
   if (!(flagz & MutexFlagTryLockFailed)) {
@@ -391,6 +400,10 @@ void __tsan_mutex_post_lock(void *m, unsigned flagz, int rec) {
 INTERFACE_ATTRIBUTE
 int __tsan_mutex_pre_unlock(void *m, unsigned flagz) {
   SCOPED_ANNOTATION_RET(__tsan_mutex_pre_unlock, 0);
+  if (UNLIKELY(SimulateIsActive())) {
+    SimulateReportUnsupported("__tsan_mutex_pre_unlock");
+    return 0;
+  }
   int ret = 0;
   if (flagz & MutexFlagReadLock) {
     CHECK(!(flagz & MutexFlagRecursiveUnlock));
@@ -407,6 +420,10 @@ INTERFACE_ATTRIBUTE
 void __tsan_mutex_post_unlock(void *m, unsigned flagz) {
   AdaptiveDelay::SyncOp();
   SCOPED_ANNOTATION(__tsan_mutex_post_unlock);
+  if (UNLIKELY(SimulateIsActive())) {
+    SimulateReportUnsupported("__tsan_mutex_post_unlock");
+    return;
+  }
   ThreadIgnoreSyncEnd(thr);
   ThreadIgnoreEnd(thr);
 }
