@@ -171,8 +171,6 @@ class NVPTXAsmPrinter : public AsmPrinter {
         : Size(Size), buffer(Size), curpos(0), AP(AP),
           EmitGeneric(AP.EmitGeneric) {}
 
-    unsigned getBufferSize() const { return Size; }
-
     // Number of bytes written so far.
     unsigned getCurpos() const { return curpos; }
 
@@ -309,7 +307,6 @@ private:
   void printFPConstant(const ConstantFP *Fp, raw_ostream &O) const;
   void bufferLEByte(const Constant *CPV, int Bytes, AggBuffer *aggBuffer);
   void bufferAggregateConstant(const Constant *CV, AggBuffer *aggBuffer);
-  void bufferAggregateConstVec(const ConstantVector *CV, AggBuffer *aggBuffer);
 
   void emitLinkageDirective(const GlobalValue *V, raw_ostream &O);
   void emitDeclarations(const Module &, raw_ostream &O);
@@ -2026,13 +2023,15 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
   case Type::ArrayTyID:
   case Type::FixedVectorTyID:
   case Type::StructTyID: {
-    if (isa<ConstantAggregate>(CPV) || isa<ConstantDataSequential>(CPV)) {
+    if (isa<ConstantAggregate, ConstantDataSequential, ConstantInt, ConstantFP>(
+            CPV)) {
       // bufferAggregateConstant doesn't emit tail-padding, i.e. it writes
       // `store_size` bytes, not `alloc_size` bytes.  Do it ourselves here.
       unsigned StartPos = AggBuffer->getCurpos();
       bufferAggregateConstant(CPV, AggBuffer);
       unsigned Written = AggBuffer->getCurpos() - StartPos;
       unsigned SlotSize = std::max<int>(Bytes, AllocSize);
+      assert(Written <= SlotSize && "Constant overflows its slot");
       if (SlotSize > Written)
         AggBuffer->addZeros(SlotSize - Written);
     } else if (isa<ConstantAggregateZero>(CPV))
@@ -2059,11 +2058,26 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
     }
   };
 
-  // Integer or floating point vector splats.
-  if (isa<ConstantInt, ConstantFP>(CPV)) {
-    if (auto *VTy = dyn_cast<FixedVectorType>(CPV->getType())) {
-      for (unsigned I : llvm::seq(VTy->getNumElements()))
-        bufferLEByte(CPV->getAggregateElement(I), 0, aggBuffer);
+  if (auto *VTy = dyn_cast<FixedVectorType>(CPV->getType())) {
+    // Elements that aren't a whole number of bytes are bit-packed, so buffer
+    // the vector as one integer.
+    if (!DL.typeSizeEqualsStoreSize(VTy->getElementType())) {
+      Type *IntTy =
+          IntegerType::get(CPV->getContext(), VTy->getPrimitiveSizeInBits());
+      auto *Packed = dyn_cast<ConstantInt>(ConstantFoldConstant(
+          ConstantExpr::getBitCast(const_cast<Constant *>(CPV), IntTy), DL));
+      if (!Packed)
+        report_fatal_error(
+            "Cannot lower vector global with unusual element type");
+      ExtendBuffer(Packed->getValue(), aggBuffer);
+      return;
+    }
+
+    // Integer or floating point vector splats.
+    if (isa<ConstantInt, ConstantFP>(CPV)) {
+      Constant *Splat = CPV->getSplatValue();
+      for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I)
+        bufferLEByte(Splat, 0, aggBuffer);
       return;
     }
   }
@@ -2084,16 +2098,10 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
     }
   }
 
-  // Buffer arrays one element at a time.
-  if (isa<ConstantArray>(CPV)) {
+  // Buffer arrays and vectors one element at a time.
+  if (isa<ConstantArray, ConstantVector>(CPV)) {
     for (const auto &Op : CPV->operands())
       bufferLEByte(cast<Constant>(Op), 0, aggBuffer);
-    return;
-  }
-
-  // Constant vectors
-  if (const auto *CVec = dyn_cast<ConstantVector>(CPV)) {
-    bufferAggregateConstVec(CVec, aggBuffer);
     return;
   }
 
@@ -2118,77 +2126,6 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
     return;
   }
   llvm_unreachable("unsupported constant type in printAggregateConstant()");
-}
-
-void NVPTXAsmPrinter::bufferAggregateConstVec(const ConstantVector *CV,
-                                              AggBuffer *aggBuffer) {
-  unsigned NumElems = CV->getType()->getNumElements();
-  const unsigned BuffSize = aggBuffer->getBufferSize();
-
-  // Buffer one element at a time if we have allocated enough buffer space.
-  if (BuffSize >= NumElems) {
-    for (const auto &Op : CV->operands())
-      bufferLEByte(cast<Constant>(Op), 0, aggBuffer);
-    return;
-  }
-
-  // Sub-byte datatypes will have more elements than bytes allocated for the
-  // buffer. Merge consecutive elements to form a full byte. We expect that 8 %
-  // sub-byte-elem-size should be 0 and current expected usage is for i4 (for
-  // e2m1-fp4 types).
-  Type *ElemTy = CV->getType()->getElementType();
-  assert(ElemTy->isIntegerTy() && "Expected integer data type.");
-  unsigned ElemTySize = ElemTy->getPrimitiveSizeInBits();
-  assert(ElemTySize < 8 && "Expected sub-byte data type.");
-  assert(8 % ElemTySize == 0 && "Element type size must evenly divide a byte.");
-  // Number of elements to merge to form a full byte.
-  unsigned NumElemsPerByte = 8 / ElemTySize;
-  unsigned NumCompleteBytes = NumElems / NumElemsPerByte;
-  unsigned NumTailElems = NumElems % NumElemsPerByte;
-
-  // Helper lambda to constant-fold sub-vector of sub-byte type elements into
-  // i8. Start and end indices of the sub-vector is provided, along with number
-  // of padding zeros if required.
-  auto ConvertSubCVtoInt8 = [this, &ElemTy](const ConstantVector *CV,
-                                            unsigned Start, unsigned End,
-                                            unsigned NumPaddingZeros = 0) {
-    // Collect elements to create sub-vector.
-    SmallVector<Constant *, 8> SubCVElems;
-    for (unsigned I : llvm::seq(Start, End))
-      SubCVElems.push_back(CV->getAggregateElement(I));
-
-    // Optionally pad with zeros.
-    if (NumPaddingZeros)
-      SubCVElems.append(NumPaddingZeros, ConstantInt::getNullValue(ElemTy));
-
-    auto SubCV = ConstantVector::get(SubCVElems);
-    Type *Int8Ty = IntegerType::get(SubCV->getContext(), 8);
-
-    // Merge elements of the sub-vector using ConstantFolding.
-    ConstantInt *MergedElem =
-        dyn_cast_or_null<ConstantInt>(ConstantFoldConstant(
-            ConstantExpr::getBitCast(const_cast<Constant *>(SubCV), Int8Ty),
-            getDataLayout()));
-
-    if (!MergedElem)
-      report_fatal_error(
-          "Cannot lower vector global with unusual element type");
-
-    return MergedElem;
-  };
-
-  // Iterate through elements of vector one chunk at a time and buffer that
-  // chunk.
-  for (unsigned ByteIdx : llvm::seq(NumCompleteBytes))
-    bufferLEByte(ConvertSubCVtoInt8(CV, ByteIdx * NumElemsPerByte,
-                                    (ByteIdx + 1) * NumElemsPerByte),
-                 0, aggBuffer);
-
-  // For unevenly sized vectors add tail padding zeros.
-  if (NumTailElems > 0)
-    bufferLEByte(ConvertSubCVtoInt8(CV, NumElems - NumTailElems, NumElems,
-                                    NumElemsPerByte - NumTailElems),
-                 0, aggBuffer);
 }
 
 /// lowerConstantForGV - Return an MCExpr for the given Constant.  This is mostly

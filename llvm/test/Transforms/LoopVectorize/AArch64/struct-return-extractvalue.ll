@@ -30,13 +30,13 @@ define void @extractvalue_sunk_apart_from_scalarized_call(ptr noalias %a, ptr no
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x i1> poison, i1 [[TMP11]], i64 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i1> [[TMP13]], i1 [[TMP12]], i64 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i64, ptr [[TMP15]], i64 2
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP15]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP15]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i64>, ptr [[TMP16]], align 8
 ; CHECK-NEXT:    [[TMP17:%.*]] = zext <2 x i1> [[TMP10]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP18:%.*]] = zext <2 x i1> [[TMP14]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i64, ptr [[TMP19]], i64 2
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[TMP19]], i64 16
 ; CHECK-NEXT:    store <2 x i64> [[TMP17]], ptr [[TMP19]], align 8
 ; CHECK-NEXT:    store <2 x i64> [[TMP18]], ptr [[TMP20]], align 8
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp sgt <2 x i64> [[WIDE_LOAD]], zeroinitializer
@@ -130,16 +130,16 @@ define void @extractvalue_of_hoisted_scalarized_call(ptr noalias %a, ptr noalias
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[TMP7]], i64 2
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP7]], i64 16
 ; CHECK-NEXT:    store <2 x i64> [[TMP6]], ptr [[TMP7]], align 8
 ; CHECK-NEXT:    store <2 x i64> [[TMP6]], ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP1]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[A]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[TMP10]], i64 2
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP10]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i64>, ptr [[TMP11]], align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i64, ptr [[C]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[TMP12]], i64 2
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP12]], i64 16
 ; CHECK-NEXT:    store <2 x i64> [[WIDE_LOAD]], ptr [[TMP12]], align 8
 ; CHECK-NEXT:    store <2 x i64> [[WIDE_LOAD1]], ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -258,7 +258,7 @@ define void @extractvalues_sunk_with_scalarized_call(ptr noalias %a, ptr noalias
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE7:.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[TMP1]], i64 2
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i64>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <2 x i64> [[WIDE_LOAD]], zeroinitializer

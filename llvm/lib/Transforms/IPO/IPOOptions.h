@@ -9,12 +9,15 @@
 #ifndef LLVM_LIB_TRANSFORMS_IPO_IPOOPTIONS_H
 #define LLVM_LIB_TRANSFORMS_IPO_IPOOPTIONS_H
 
+#include "llvm/Analysis/ReplayInlineAdvisor.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include <limits>
 #include <optional>
 
 namespace llvm {
+enum class ExpandVariadicsMode;
 enum class PassSummaryAction;
 
 /// Mechanism to add runtime checking of devirtualization decisions, optionally

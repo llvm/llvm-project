@@ -978,13 +978,37 @@ bool VPSCEVExpander::canExpandInIR(const SCEV *S) {
          SE.isGuaranteedNotToCauseUB(S);
 }
 
+/// Returns the sums of the operands of \p S invariant in \p L and of the
+/// remaining operands, if there are at least 2 invariant and 1 variant
+/// operands.
+static std::pair<const SCEV *, const SCEV *>
+splitInvariantSum(const SCEVAddExpr *S, const Loop *L, ScalarEvolution &SE) {
+  if (!L)
+    return {nullptr, nullptr};
+  SmallVector<SCEVUse> InvOps, VarOps;
+  for (SCEVUse Op : S->operands())
+    (SE.isLoopInvariant(Op, L) ? InvOps : VarOps).push_back(Op);
+  if (InvOps.size() < 2 || VarOps.empty())
+    return {nullptr, nullptr};
+  return {SE.getAddExpr(InvOps), SE.getAddExpr(VarOps)};
+}
+
 VPValue *VPSCEVExpander::expandAsPtrAdd(const SCEVNAryExpr *S) {
-  VPValue *Base = expand(SE.getPointerBase(S));
-  VPValue *Offset = expand(SE.removePointerBase(S));
+  const SCEV *Base = SE.getPointerBase(S);
+  const SCEV *Offset = SE.removePointerBase(S);
+  // If the pointer is invariant in HoistOutOf, use the sum of all invariant
+  // operands as base, so it is hoisted whole.
+  if (auto *AddE = dyn_cast<SCEVAddExpr>(S)) {
+    auto [InvS, VarS] = splitInvariantSum(AddE, HoistOutOf, SE);
+    if (InvS && InvS->getType()->isPointerTy() && canExpandInIR(InvS))
+      std::tie(Base, Offset) = std::tie(InvS, VarS);
+  }
   GEPNoWrapFlags GEPFlags = S->hasNoUnsignedWrap()
                                 ? GEPNoWrapFlags::noUnsignedWrap()
                                 : GEPNoWrapFlags::none();
-  return Builder.createNoWrapPtrAdd(Base, Offset, GEPFlags, DL);
+  VPValue *BaseV = expand(Base);
+  VPValue *OffsetV = expand(Offset);
+  return Builder.createNoWrapPtrAdd(BaseV, OffsetV, GEPFlags, DL);
 }
 
 VPValue *VPSCEVExpander::expandAddOps(ArrayRef<const SCEV *> Operands,
@@ -1074,6 +1098,10 @@ VPValue *VPSCEVExpander::expandImpl(const SCEV *S) {
 
     // Iterate in reverse so that constants are emitted last.
     SmallVector<const SCEV *, 2> SCEVOps(reverse(AddE->operands()));
+    // Sum the invariant operands separately, so the sum can be hoisted.
+    auto [InvS, VarS] = splitInvariantSum(AddE, HoistOutOf, SE);
+    if (InvS && canExpandInIR(InvS))
+      SCEVOps = {InvS, VarS};
     return expandAddOps(SCEVOps, WrapFlags);
   }
   case scMulExpr: {
@@ -1492,7 +1520,14 @@ VPIRValue *vputils::tryToFoldLiveIns(VPSingleDefRecipe &R,
         // Optimizing WideALM can only happen after the Plan is unrolled.
         if (!Plan.isUnrolled())
           return nullptr;
+
         Multiplier = cast<ConstantInt>(Ops[2])->getZExtValue();
+
+        // TODO: We can't fold if any users expect require a wide value.
+        if (Multiplier != 1 &&
+            !all_of(R.users(), match_fn(m_ExtractVectorForPart())))
+          return nullptr;
+
         Ops.pop_back();
       }
 

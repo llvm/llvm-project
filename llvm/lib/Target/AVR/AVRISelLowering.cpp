@@ -140,13 +140,13 @@ AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
 
   // Atomic operations which must be lowered to rtlib calls
   for (MVT VT : MVT::integer_valuetypes()) {
-    setOperationAction(ISD::ATOMIC_SWAP, VT, Expand);
-    setOperationAction(ISD::ATOMIC_CMP_SWAP, VT, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_NAND, VT, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_MAX, VT, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_MIN, VT, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_UMAX, VT, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_UMIN, VT, Expand);
+    setOperationAction(ISD::ATOMIC_SWAP, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_CMP_SWAP, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_NAND, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_MAX, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_MIN, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_UMAX, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_UMIN, VT, LibCall);
   }
 
   // Division/remainder
