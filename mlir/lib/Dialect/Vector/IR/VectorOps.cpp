@@ -34,6 +34,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/RegionKindInterface.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
@@ -8762,11 +8763,46 @@ struct SelectBroadcastCondition : OpRewritePattern<arith::SelectOp> {
     return success();
   }
 };
+
+/// Fold select(mask, maskedload(base, mask, old), new) by using the select's
+/// false value as the load's passthrough.
+struct FoldSelectIntoMaskedLoad final : OpRewritePattern<arith::SelectOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(arith::SelectOp select,
+                                PatternRewriter &rewriter) const override {
+    auto load = select.getTrueValue().getDefiningOp<MaskedLoadOp>();
+    if (!load || !load.getResult().hasOneUse() ||
+        select.getCondition() != load.getMask())
+      return failure();
+
+    // A rewrite scoped to the select's region cannot update an enclosing load.
+    if (load->getParentRegion() != select->getParentRegion())
+      return failure();
+
+    // Keep the load in place so it cannot cross a write to the same memory.
+    // Check availability within the load's block to avoid building a dominator
+    // tree during canonicalization.
+    Value passthru = select.getFalseValue();
+    if (passthru.getParentBlock() != load->getBlock() ||
+        mayBeGraphRegion(*load->getParentRegion()))
+      return failure();
+    if (Operation *def = passthru.getDefiningOp();
+        def && !def->isBeforeInBlock(load))
+      return failure();
+
+    rewriter.modifyOpInPlace(
+        load, [&] { load.getPassThruMutable().assign(passthru); });
+    rewriter.replaceOp(select, load.getResult());
+    return success();
+  }
+};
 } // namespace
 
 void VectorDialect::getCanonicalizationPatterns(
     RewritePatternSet &results) const {
-  results.add<SelectBroadcastCondition>(getContext());
+  // Fold a shared vector mask before scalarizing the select's condition.
+  results.add<FoldSelectIntoMaskedLoad, SelectBroadcastCondition>(getContext());
 }
 
 //===----------------------------------------------------------------------===//
