@@ -16,6 +16,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -13325,6 +13326,114 @@ void SelectionDAGBuilder::visitVectorSplice(const CallInst &I) {
   setValue(&I, DAG.getVectorShuffle(VT, DL, V1, V2, Mask));
 }
 
+/// Read each physical register that \p V copies from at the top of \p MBB, an
+/// indirect target of a callbr, and make \p V use those reads.
+///
+/// The registers carry the asm's outputs across the edge into \p MBB, so, like
+/// an EH pad's exception registers, they're live-in and have to be read before
+/// anything in the block clobbers them. A CopyFromReg in the DAG doesn't ensure
+/// that: the scheduler can put an instruction that sets EFLAGS, for example,
+/// ahead of the read of an x86 flag output. A COPY emitted at the top of the
+/// block, before the DAG's instructions, does.
+static void readPhysRegsAtBlockEntry(SDValue &V, MachineBasicBlock &MBB,
+                                     SelectionDAG &DAG, const SDLoc &DL) {
+  // Find the reads of physical registers that V depends on. These are reads of
+  // the registers an output is in, or of one that the target's lowering picks,
+  // such as EFLAGS for an x86 flag output ("=@ccz").
+  SmallVector<SDNode *, 4> Worklist = {V.getNode()};
+  SmallPtrSet<SDNode *, 4> Visited;
+  SmallVector<SDNode *, 4> PhysRegReads;
+  while (!Worklist.empty()) {
+    SDNode *N = Worklist.pop_back_val();
+    if (!Visited.insert(N).second)
+      continue;
+
+    if (N->getOpcode() == ISD::CopyFromReg) {
+      if (cast<RegisterSDNode>(N->getOperand(1))->getReg().isPhysical())
+        PhysRegReads.push_back(N);
+      continue;
+    }
+
+    // Follow only the operands that the value depends on. The chain leads to
+    // the rest of the block, not to what this output reads.
+    for (SDValue Op : N->op_values())
+      if (Op.getValueType() != MVT::Other)
+        Worklist.push_back(Op.getNode());
+  }
+
+  // V may itself be one of the reads, such as for an output in one register,
+  // so keep track of it while they're replaced.
+  HandleSDNode Handle(V);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  const TargetRegisterInfo *TRI = DAG.getSubtarget().getRegisterInfo();
+
+  // The walk found the reads last operand first. Copy them in operand order,
+  // which is the order of an output's registers.
+  for (SDNode *N : reverse(PhysRegReads)) {
+    assert(N->getNumOperands() == 2 && "Unexpected glue on a callbr output");
+    MCRegister PhysReg =
+        cast<RegisterSDNode>(N->getOperand(1))->getReg().asMCReg();
+    MVT VT = N->getSimpleValueType(0);
+
+    // Copy a register that can't be copied directly, such as EFLAGS, through
+    // the class that the target copies it to. The use of the copy then
+    // restores it, which the target lowers. Otherwise, use VT's class, which
+    // leaves the register allocator the most choice, if VT has one and it
+    // contains PhysReg. An Untyped register pair, such as an i128 on SystemZ,
+    // has none, so it keeps the pair's own class.
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(PhysReg);
+    bool CrossCopy = RC->expensiveOrImpossibleToCopy();
+    if (CrossCopy)
+      RC = TRI->getCrossCopyRegClass(RC);
+    else if (TLI.isTypeLegal(VT) && TLI.getRegClassFor(VT)->contains(PhysReg))
+      RC = TLI.getRegClassFor(VT);
+
+    // This marks PhysReg live-in, once, and reuses the copy if another output
+    // reads the same register, such as a second flag output.
+    Register VReg = MBB.addLiveIn(PhysReg, RC);
+
+    // The copy kills PhysReg. When nothing clobbers PhysReg before the
+    // restore, the peephole optimizer removes the restore, so the read after
+    // it then uses PhysReg past that kill.
+    if (CrossCopy)
+      DAG.getMachineFunction()
+          .getRegInfo()
+          .getVRegDef(VReg)
+          ->clearRegisterKills(PhysReg, TRI);
+
+    SDValue Read = DAG.getCopyFromReg(N->getOperand(0), DL, VReg, VT);
+    DAG.ReplaceAllUsesWith(N, Read.getNode());
+  }
+
+  V = Handle.getValue();
+}
+
+/// Return which of a callbr's \p NumOutputs outputs its landing pad \p I uses.
+static SmallBitVector getUsedCallBrOutputs(const CallInst &I,
+                                           unsigned NumOutputs) {
+  SmallBitVector Used(NumOutputs);
+  if (!I.getType()->isStructTy()) {
+    if (!I.use_empty())
+      Used.set();
+
+    return Used;
+  }
+
+  for (const User *U : I.users()) {
+    const auto *EV = dyn_cast<ExtractValueInst>(U);
+    if (!EV || EV->getIndices().empty() || EV->getIndices()[0] >= NumOutputs) {
+      Used.set();
+      return Used;
+    }
+
+    // Unoptimized IR can extract an output and not use it.
+    if (!EV->use_empty())
+      Used.set(EV->getIndices()[0]);
+  }
+
+  return Used;
+}
+
 // Read the outputs again from the registers that the INLINEASM_BR defines them
 // in, as visitInlineAsm() did, rather than with the simpler
 //   setValue(&I, getCopyFromRegs(CBR, CBR->getType()));
@@ -13336,17 +13445,28 @@ void SelectionDAGBuilder::visitCallBrLandingPad(const CallInst &I) {
   auto It = CallBrOutputs.find(CBR);
   assert(It != CallBrOutputs.end() && "callbr asm wasn't lowered");
 
-  SDValue Chain = DAG.getRoot();
-  SmallVector<SDValue, 8> OutputValues;
-  for (const CallBrOutput &Output : It->second) {
-    RegsForValue Regs(Output.Regs, Output.RegVT, Output.ValueVT);
-    for (Register Reg : Regs.Regs)
-      if (Reg.isPhysical())
-        FuncInfo.MBB->addLiveIn(Reg);
+  // Read only the outputs that this block uses, which are the only ones live
+  // into it. The asm's block may clobber an unused one's registers after the
+  // asm, such as EFLAGS, which a live-in would contradict. An unused one can
+  // still be exported, such as at -O0, so it gets an undefined value instead.
+  SmallBitVector Used = getUsedCallBrOutputs(I, It->second.size());
 
+  SmallVector<SDValue, 8> OutputValues;
+  for (auto [Idx, Output] : enumerate(It->second)) {
+    RegsForValue Regs(Output.Regs, Output.RegVT, Output.ValueVT);
+
+    // Each output's reads only follow the block's entry, so that an unused
+    // output's reads have no users left.
+    SDValue Chain = DAG.getRoot();
     SDValue Glue;
-    OutputValues.push_back(getInlineAsmOutput(
-        Output.OpInfo, Regs, *CBR, Chain, Glue, getCurSDLoc(), FuncInfo, DAG));
+    SDValue V = getInlineAsmOutput(Output.OpInfo, Regs, *CBR, Chain, Glue,
+                                   getCurSDLoc(), FuncInfo, DAG);
+    if (Used[Idx])
+      readPhysRegsAtBlockEntry(V, *FuncInfo.MBB, DAG, getCurSDLoc());
+    else
+      V = DAG.getUNDEF(V.getValueType());
+
+    OutputValues.push_back(V);
   }
 
   setValue(&I, getInlineAsmResult(*CBR, OutputValues, getCurSDLoc(), DAG));
