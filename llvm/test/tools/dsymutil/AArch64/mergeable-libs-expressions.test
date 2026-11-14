@@ -1,0 +1,86 @@
+Merging a library clones the expressions of its debug info, which can change
+the size of their operations. Check that the relocation map follows each
+address in them, through three levels of merging: libexpressions is merged
+into libexpressions_mid, itself merged into libexpressions_top.
+
+- In loclist.c, the location list of p holds DW_OP_addrx g1, then
+  DW_OP_addrx g2. The operations keep indexing .debug_addr, whose entries
+  carry the relocations.
+- In hash.c, the location of secret computes an offset with DW_OP_convert
+  operations, then adds the address of kSecret.
+
+Instructions to reproduce
+-------------------------
+
+The clang is one built from this repository, as Xcode's does not emit such
+location lists yet. Linking needs ld64, for -make_mergeable.
+
+$ cd llvm/test/tools/dsymutil
+$ I=Inputs/mergeable-libs
+$ D=$I/dwarf5
+$ CC="clang -target arm64-apple-macos15 -isysroot / -g -gdwarf-5 -O2 \
+    -mllvm -accel-tables=Disable -fdebug-compilation-dir=/tmp \
+    -fdebug-prefix-map=$(clang -print-resource-dir)=/clang"
+$ LINK="xcrun clang -target arm64-apple-macos15 -dynamiclib \
+    -Wl,-oso_prefix,$(pwd -P)/ -Wl,-segalign,0x1000"
+$ for f in loclist hash expressions_mid expressions_top; do
+    $CC -c $I/$f.c -o $D/$f.o
+  done
+$ ZERO_AR_DATE=1 $LINK -Wl,-make_mergeable \
+    -install_name /path/to/libexpressions.dylib $D/loclist.o $D/hash.o \
+    -o $D/libexpressions.dylib
+$ ZERO_AR_DATE=1 $LINK -Wl,-make_mergeable \
+    -install_name /path/to/libexpressions_mid.dylib $D/expressions_mid.o \
+    -Wl,-merge_library,$D/libexpressions.dylib -o $D/libexpressions_mid.dylib
+$ ZERO_AR_DATE=1 $LINK $D/expressions_top.o \
+    -Wl,-merge_library,$D/libexpressions_mid.dylib -o $D/libexpressions_top.dylib
+
+The accelerator tables are disabled as clang omits the base types of
+DW_OP_convert from them, which fails the input verification of dsymutil.
+
+DEFINE: %{l1} =
+DEFINE: %{l2} =
+DEFINE: %{l3} =
+DEFINE: %{in} = %p/../Inputs/mergeable-libs/dwarf5
+DEFINE: %{out} = %t/%{l1}-%{l2}-%{l3}
+DEFINE: %{dsymutil} = dsymutil -oso-prepend-path=%p/..
+DEFINE: %{link} = \
+DEFINE:   mkdir -p %{out}/l1 %{out}/l2 \
+DEFINE:   && %{dsymutil} --linker %{l1} %{in}/libexpressions.dylib \
+DEFINE:        -o %{out}/l1/libexpressions.dylib.dSYM 2>&1 | count 0 \
+DEFINE:   && %{dsymutil} --linker %{l2} -D %{out}/l1 \
+DEFINE:        %{in}/libexpressions_mid.dylib \
+DEFINE:        -o %{out}/l2/libexpressions_mid.dylib.dSYM 2>&1 | count 0 \
+DEFINE:   && %{dsymutil} --linker %{l3} -D %{out}/l2 \
+DEFINE:        %{in}/libexpressions_top.dylib \
+DEFINE:        -o %{out}/libexpressions_top.dylib.dSYM 2>&1 | count 0 \
+DEFINE:   && llvm-dwarfdump --debug-info --debug-addr \
+DEFINE:        %{out}/libexpressions_top.dylib.dSYM | FileCheck %s
+
+RUN: rm -rf %t
+REDEFINE: %{l1} = classic
+REDEFINE: %{l2} = classic
+REDEFINE: %{l3} = classic
+RUN: %{link}
+
+The addresses are those of libexpressions_top.
+
+CHECK:      DW_AT_name ("Inputs/mergeable-libs/loclist.c")
+CHECK:      DW_AT_location (0x{{[0-9a-f]+}}:
+CHECK-NEXT:   [0x00000000000004a8, 0x00000000000004ac): DW_OP_addrx 0x4, DW_OP_stack_value
+CHECK-NEXT:   [0x00000000000004ac, 0x00000000000004b4): DW_OP_addrx 0x5, DW_OP_stack_value)
+CHECK-NEXT: DW_AT_name ("p")
+
+CHECK:      DW_AT_name ("Inputs/mergeable-libs/hash.c")
+CHECK:      DW_AT_location ({{.*}}, DW_OP_convert {{.*}}, DW_OP_addr 0x56c, DW_OP_plus, DW_OP_stack_value)
+CHECK-NEXT: DW_AT_abstract_origin ({{.*}} "secret")
+
+The entries 4 and 5 of the address table of loclist.c are g1 and g2.
+
+CHECK:      .debug_addr contents:
+CHECK:      0x0000000000000484
+CHECK-NEXT: 0x00000000000004a0
+CHECK-NEXT: 0x00000000000004ac
+CHECK-NEXT: 0x00000000000004b0
+CHECK-NEXT: 0x000000000000100c
+CHECK-NEXT: 0x0000000000001008

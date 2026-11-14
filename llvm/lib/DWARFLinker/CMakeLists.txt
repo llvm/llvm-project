@@ -1,5 +1,6 @@
 add_llvm_component_library(LLVMDWARFLinker
   DWARFLinkerBase.cpp
+  RelocationFixups.cpp
   Utils.cpp
 
   ADDITIONAL_HEADER_DIRS
