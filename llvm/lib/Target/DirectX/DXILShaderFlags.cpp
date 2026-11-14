@@ -198,6 +198,15 @@ bool checkIfStatusIsExtracted(const IntrinsicInst &II) {
   return false;
 }
 
+/// Returns true if the instruction LOD clamp of \p II, its last argument, may
+/// clamp the LOD: it is neither a constant zero nor undef.
+static bool hasLODClamp(const IntrinsicInst &II) {
+  const Value *Clamp = II.getArgOperand(II.arg_size() - 1);
+  if (const auto *C = dyn_cast<ConstantFP>(Clamp))
+    return !C->isZero();
+  return !isa<UndefValue>(Clamp);
+}
+
 /// Update the shader flags mask based on the given instruction.
 /// \param CSF Shader flags mask to update.
 /// \param I Instruction to check.
@@ -322,6 +331,13 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
         CSF.TiledResources = true;
       break;
     }
+    case Intrinsic::dx_resource_sample_clamp:
+    case Intrinsic::dx_resource_samplebias_clamp:
+    case Intrinsic::dx_resource_samplegrad_clamp:
+      // DXIL validator 1.7 does not expect TiledResources for LOD clamps.
+      if (!CSF.TiledResources && MMDI.ValidatorVersion >= VersionTuple(1, 8))
+        CSF.TiledResources = hasLODClamp(*II);
+      break;
     case Intrinsic::dx_resource_atomic_binop:
     case Intrinsic::dx_resource_atomic_compare_exchange: {
       if (II->getType()->isIntegerTy(64)) {
