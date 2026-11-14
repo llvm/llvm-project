@@ -490,11 +490,15 @@ define <2 x i64> @neg_v2i64_from_i256(i256 %x) {
 }
 
 define <2 x i8> @v2i8_from_v8i8_per_elt(<8 x i8> %v) {
-; CHECK-LABEL: define <2 x i8> @v2i8_from_v8i8_per_elt(
-; CHECK-SAME: <8 x i8> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <8 x i8> [[V]] to <2 x b32>
-; CHECK-NEXT:    [[R:%.*]] = bitextract <2 x i8>, <2 x b32> [[B]], <2 x i32> <i32 8, i32 24>
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; LE-LABEL: define <2 x i8> @v2i8_from_v8i8_per_elt(
+; LE-SAME: <8 x i8> [[V:%.*]]) {
+; LE-NEXT:    [[R:%.*]] = shufflevector <8 x i8> [[V]], <8 x i8> poison, <2 x i32> <i32 1, i32 7>
+; LE-NEXT:    ret <2 x i8> [[R]]
+;
+; BE-LABEL: define <2 x i8> @v2i8_from_v8i8_per_elt(
+; BE-SAME: <8 x i8> [[V:%.*]]) {
+; BE-NEXT:    [[R:%.*]] = shufflevector <8 x i8> [[V]], <8 x i8> poison, <2 x i32> <i32 2, i32 4>
+; BE-NEXT:    ret <2 x i8> [[R]]
 ;
   %b = bitcast <8 x i8> %v to <2 x b32>
   %r = bitextract <2 x i8>, <2 x b32> %b, <2 x i32> <i32 8, i32 24>
@@ -502,11 +506,15 @@ define <2 x i8> @v2i8_from_v8i8_per_elt(<8 x i8> %v) {
 }
 
 define <2 x i8> @v2i8_from_v8i8_splat_per_elt(<8 x i8> %v) {
-; CHECK-LABEL: define <2 x i8> @v2i8_from_v8i8_splat_per_elt(
-; CHECK-SAME: <8 x i8> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <8 x i8> [[V]] to <2 x b32>
-; CHECK-NEXT:    [[R:%.*]] = bitextract <2 x i8>, <2 x b32> [[B]], <2 x i32> splat (i32 16)
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; LE-LABEL: define <2 x i8> @v2i8_from_v8i8_splat_per_elt(
+; LE-SAME: <8 x i8> [[V:%.*]]) {
+; LE-NEXT:    [[R:%.*]] = shufflevector <8 x i8> [[V]], <8 x i8> poison, <2 x i32> <i32 2, i32 6>
+; LE-NEXT:    ret <2 x i8> [[R]]
+;
+; BE-LABEL: define <2 x i8> @v2i8_from_v8i8_splat_per_elt(
+; BE-SAME: <8 x i8> [[V:%.*]]) {
+; BE-NEXT:    [[R:%.*]] = shufflevector <8 x i8> [[V]], <8 x i8> poison, <2 x i32> <i32 1, i32 5>
+; BE-NEXT:    ret <2 x i8> [[R]]
 ;
   %b = bitcast <8 x i8> %v to <2 x b32>
   %r = bitextract <2 x i8>, <2 x b32> %b, <2 x i32> splat (i32 16)
@@ -514,11 +522,17 @@ define <2 x i8> @v2i8_from_v8i8_splat_per_elt(<8 x i8> %v) {
 }
 
 define <2 x i8> @v2i8_from_v4i16_splat_per_elt(<4 x i16> %x) {
-; CHECK-LABEL: define <2 x i8> @v2i8_from_v4i16_splat_per_elt(
-; CHECK-SAME: <4 x i16> [[X:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x i16> [[X]] to <2 x b32>
-; CHECK-NEXT:    [[R:%.*]] = bitextract <2 x i8>, <2 x b32> [[B]], <2 x i32> splat (i32 16)
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; LE-LABEL: define <2 x i8> @v2i8_from_v4i16_splat_per_elt(
+; LE-SAME: <4 x i16> [[X:%.*]]) {
+; LE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[X]] to <8 x i8>
+; LE-NEXT:    [[R:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <2 x i32> <i32 2, i32 6>
+; LE-NEXT:    ret <2 x i8> [[R]]
+;
+; BE-LABEL: define <2 x i8> @v2i8_from_v4i16_splat_per_elt(
+; BE-SAME: <4 x i16> [[X:%.*]]) {
+; BE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[X]] to <8 x i8>
+; BE-NEXT:    [[R:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <2 x i32> <i32 1, i32 5>
+; BE-NEXT:    ret <2 x i8> [[R]]
 ;
   %b = bitcast <4 x i16> %x to <2 x b32>
   %r = bitextract <2 x i8>, <2 x b32> %b, <2 x i32> <i32 16, i32 16>
@@ -526,11 +540,17 @@ define <2 x i8> @v2i8_from_v4i16_splat_per_elt(<4 x i16> %x) {
 }
 
 define <2 x i16> @v2i16_from_v4i32_per_elt(<4 x i32> %v) {
-; CHECK-LABEL: define <2 x i16> @v2i16_from_v4i32_per_elt(
-; CHECK-SAME: <4 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x i32> [[V]] to <2 x b64>
-; CHECK-NEXT:    [[R:%.*]] = bitextract <2 x i16>, <2 x b64> [[B]], <2 x i32> <i32 0, i32 48>
-; CHECK-NEXT:    ret <2 x i16> [[R]]
+; LE-LABEL: define <2 x i16> @v2i16_from_v4i32_per_elt(
+; LE-SAME: <4 x i32> [[V:%.*]]) {
+; LE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[V]] to <8 x i16>
+; LE-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <2 x i32> <i32 0, i32 7>
+; LE-NEXT:    ret <2 x i16> [[R]]
+;
+; BE-LABEL: define <2 x i16> @v2i16_from_v4i32_per_elt(
+; BE-SAME: <4 x i32> [[V:%.*]]) {
+; BE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[V]] to <8 x i16>
+; BE-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <2 x i32> <i32 3, i32 4>
+; BE-NEXT:    ret <2 x i16> [[R]]
 ;
   %b = bitcast <4 x i32> %v to <2 x b64>
   %r = bitextract <2 x i16>, <2 x b64> %b, <2 x i32> <i32 0, i32 48>
@@ -539,11 +559,15 @@ define <2 x i16> @v2i16_from_v4i32_per_elt(<4 x i32> %v) {
 
 ; A poison or out of range offset only makes its own element poison.
 define <3 x i8> @v3i8_from_v12i8_poison_per_elt(<12 x i8> %v) {
-; CHECK-LABEL: define <3 x i8> @v3i8_from_v12i8_poison_per_elt(
-; CHECK-SAME: <12 x i8> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <12 x i8> [[V]] to <3 x b32>
-; CHECK-NEXT:    [[R:%.*]] = bitextract <3 x i8>, <3 x b32> [[B]], <3 x i32> <i32 8, i32 poison, i32 32>
-; CHECK-NEXT:    ret <3 x i8> [[R]]
+; LE-LABEL: define <3 x i8> @v3i8_from_v12i8_poison_per_elt(
+; LE-SAME: <12 x i8> [[V:%.*]]) {
+; LE-NEXT:    [[R:%.*]] = shufflevector <12 x i8> [[V]], <12 x i8> poison, <3 x i32> <i32 1, i32 poison, i32 poison>
+; LE-NEXT:    ret <3 x i8> [[R]]
+;
+; BE-LABEL: define <3 x i8> @v3i8_from_v12i8_poison_per_elt(
+; BE-SAME: <12 x i8> [[V:%.*]]) {
+; BE-NEXT:    [[R:%.*]] = shufflevector <12 x i8> [[V]], <12 x i8> poison, <3 x i32> <i32 2, i32 poison, i32 poison>
+; BE-NEXT:    ret <3 x i8> [[R]]
 ;
   %b = bitcast <12 x i8> %v to <3 x b32>
   %r = bitextract <3 x i8>, <3 x b32> %b, <3 x i32> <i32 8, i32 poison, i32 32>
@@ -551,11 +575,17 @@ define <3 x i8> @v3i8_from_v12i8_poison_per_elt(<12 x i8> %v) {
 }
 
 define <2 x ptr> @v2ptr_from_v4b64_per_elt(<4 x b64> %v) {
-; CHECK-LABEL: define <2 x ptr> @v2ptr_from_v4b64_per_elt(
-; CHECK-SAME: <4 x b64> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x b64> [[V]] to <2 x b128>
-; CHECK-NEXT:    [[R:%.*]] = bitextract <2 x ptr>, <2 x b128> [[B]], <2 x i32> <i32 64, i32 0>
-; CHECK-NEXT:    ret <2 x ptr> [[R]]
+; LE-LABEL: define <2 x ptr> @v2ptr_from_v4b64_per_elt(
+; LE-SAME: <4 x b64> [[V:%.*]]) {
+; LE-NEXT:    [[TMP1:%.*]] = bitcast <4 x b64> [[V]] to <4 x ptr>
+; LE-NEXT:    [[R:%.*]] = shufflevector <4 x ptr> [[TMP1]], <4 x ptr> poison, <2 x i32> <i32 1, i32 2>
+; LE-NEXT:    ret <2 x ptr> [[R]]
+;
+; BE-LABEL: define <2 x ptr> @v2ptr_from_v4b64_per_elt(
+; BE-SAME: <4 x b64> [[V:%.*]]) {
+; BE-NEXT:    [[TMP1:%.*]] = bitcast <4 x b64> [[V]] to <4 x ptr>
+; BE-NEXT:    [[R:%.*]] = shufflevector <4 x ptr> [[TMP1]], <4 x ptr> poison, <2 x i32> <i32 0, i32 3>
+; BE-NEXT:    ret <2 x ptr> [[R]]
 ;
   %b = bitcast <4 x b64> %v to <2 x b128>
   %r = bitextract <2 x ptr>, <2 x b128> %b, <2 x i32> <i32 64, i32 0>
@@ -563,12 +593,15 @@ define <2 x ptr> @v2ptr_from_v4b64_per_elt(<4 x b64> %v) {
 }
 
 define <4 x i8> @v4i8_from_v8i8_bitcast_user_per_elt(<8 x i8> %v) {
-; CHECK-LABEL: define <4 x i8> @v4i8_from_v8i8_bitcast_user_per_elt(
-; CHECK-SAME: <8 x i8> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <8 x i8> [[V]] to <2 x b32>
-; CHECK-NEXT:    [[E:%.*]] = bitextract <2 x b16>, <2 x b32> [[B]], <2 x i32> <i32 0, i32 16>
-; CHECK-NEXT:    [[R:%.*]] = bitcast <2 x b16> [[E]] to <4 x i8>
-; CHECK-NEXT:    ret <4 x i8> [[R]]
+; LE-LABEL: define <4 x i8> @v4i8_from_v8i8_bitcast_user_per_elt(
+; LE-SAME: <8 x i8> [[V:%.*]]) {
+; LE-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[V]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; LE-NEXT:    ret <4 x i8> [[TMP1]]
+;
+; BE-LABEL: define <4 x i8> @v4i8_from_v8i8_bitcast_user_per_elt(
+; BE-SAME: <8 x i8> [[V:%.*]]) {
+; BE-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[V]], <8 x i8> poison, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
+; BE-NEXT:    ret <4 x i8> [[TMP1]]
 ;
   %b = bitcast <8 x i8> %v to <2 x b32>
   %e = bitextract <2 x b16>, <2 x b32> %b, <2 x i32> <i32 0, i32 16>
@@ -577,13 +610,21 @@ define <4 x i8> @v4i8_from_v8i8_bitcast_user_per_elt(<8 x i8> %v) {
 }
 
 define <2 x i8> @v2i8_from_v8i8_multi_use_per_elt(<8 x i8> %v, ptr %p) {
-; CHECK-LABEL: define <2 x i8> @v2i8_from_v8i8_multi_use_per_elt(
-; CHECK-SAME: <8 x i8> [[V:%.*]], ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <8 x i8> [[V]] to <2 x b32>
-; CHECK-NEXT:    [[E:%.*]] = bitextract <2 x b16>, <2 x b32> [[B]], <2 x i32> <i32 0, i32 16>
-; CHECK-NEXT:    store <2 x b16> [[E]], ptr [[P]], align 4
-; CHECK-NEXT:    [[R:%.*]] = bitextract <2 x i8>, <2 x b32> [[B]], <2 x i32> <i32 8, i32 24>
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; LE-LABEL: define <2 x i8> @v2i8_from_v8i8_multi_use_per_elt(
+; LE-SAME: <8 x i8> [[V:%.*]], ptr [[P:%.*]]) {
+; LE-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[V]] to <4 x b16>
+; LE-NEXT:    [[E:%.*]] = shufflevector <4 x b16> [[TMP1]], <4 x b16> poison, <2 x i32> <i32 0, i32 3>
+; LE-NEXT:    store <2 x b16> [[E]], ptr [[P]], align 4
+; LE-NEXT:    [[R:%.*]] = shufflevector <8 x i8> [[V]], <8 x i8> poison, <2 x i32> <i32 1, i32 7>
+; LE-NEXT:    ret <2 x i8> [[R]]
+;
+; BE-LABEL: define <2 x i8> @v2i8_from_v8i8_multi_use_per_elt(
+; BE-SAME: <8 x i8> [[V:%.*]], ptr [[P:%.*]]) {
+; BE-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[V]] to <4 x b16>
+; BE-NEXT:    [[E:%.*]] = shufflevector <4 x b16> [[TMP1]], <4 x b16> poison, <2 x i32> <i32 1, i32 2>
+; BE-NEXT:    store <2 x b16> [[E]], ptr [[P]], align 4
+; BE-NEXT:    [[R:%.*]] = shufflevector <8 x i8> [[V]], <8 x i8> poison, <2 x i32> <i32 2, i32 4>
+; BE-NEXT:    ret <2 x i8> [[R]]
 ;
   %b = bitcast <8 x i8> %v to <2 x b32>
   %e = bitextract <2 x b16>, <2 x b32> %b, <2 x i32> <i32 0, i32 16>
@@ -593,11 +634,15 @@ define <2 x i8> @v2i8_from_v8i8_multi_use_per_elt(<8 x i8> %v, ptr %p) {
 }
 
 define <3 x i8> @v3i8_from_v12i8_undef_per_elt(<12 x i8> %v) {
-; CHECK-LABEL: define <3 x i8> @v3i8_from_v12i8_undef_per_elt(
-; CHECK-SAME: <12 x i8> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <12 x i8> [[V]] to <3 x b32>
-; CHECK-NEXT:    [[R:%.*]] = bitextract <3 x i8>, <3 x b32> [[B]], <3 x i32> <i32 8, i32 undef, i32 24>
-; CHECK-NEXT:    ret <3 x i8> [[R]]
+; LE-LABEL: define <3 x i8> @v3i8_from_v12i8_undef_per_elt(
+; LE-SAME: <12 x i8> [[V:%.*]]) {
+; LE-NEXT:    [[R:%.*]] = shufflevector <12 x i8> [[V]], <12 x i8> poison, <3 x i32> <i32 1, i32 poison, i32 11>
+; LE-NEXT:    ret <3 x i8> [[R]]
+;
+; BE-LABEL: define <3 x i8> @v3i8_from_v12i8_undef_per_elt(
+; BE-SAME: <12 x i8> [[V:%.*]]) {
+; BE-NEXT:    [[R:%.*]] = shufflevector <12 x i8> [[V]], <12 x i8> poison, <3 x i32> <i32 2, i32 poison, i32 8>
+; BE-NEXT:    ret <3 x i8> [[R]]
 ;
   %b = bitcast <12 x i8> %v to <3 x b32>
   %r = bitextract <3 x i8>, <3 x b32> %b, <3 x i32> <i32 8, i32 undef, i32 24>
@@ -606,12 +651,15 @@ define <3 x i8> @v3i8_from_v12i8_undef_per_elt(<12 x i8> %v) {
 
 ; The second element is out of range, so its whole range is poison.
 define <4 x i8> @v4i8_from_v8i8_bitcast_user_poison_per_elt(<8 x i8> %v) {
-; CHECK-LABEL: define <4 x i8> @v4i8_from_v8i8_bitcast_user_poison_per_elt(
-; CHECK-SAME: <8 x i8> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <8 x i8> [[V]] to <2 x b32>
-; CHECK-NEXT:    [[E:%.*]] = bitextract <2 x b16>, <2 x b32> [[B]], <2 x i32> <i32 0, i32 32>
-; CHECK-NEXT:    [[R:%.*]] = bitcast <2 x b16> [[E]] to <4 x i8>
-; CHECK-NEXT:    ret <4 x i8> [[R]]
+; LE-LABEL: define <4 x i8> @v4i8_from_v8i8_bitcast_user_poison_per_elt(
+; LE-SAME: <8 x i8> [[V:%.*]]) {
+; LE-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[V]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; LE-NEXT:    ret <4 x i8> [[TMP1]]
+;
+; BE-LABEL: define <4 x i8> @v4i8_from_v8i8_bitcast_user_poison_per_elt(
+; BE-SAME: <8 x i8> [[V:%.*]]) {
+; BE-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[V]], <8 x i8> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+; BE-NEXT:    ret <4 x i8> [[TMP1]]
 ;
   %b = bitcast <8 x i8> %v to <2 x b32>
   %e = bitextract <2 x b16>, <2 x b32> %b, <2 x i32> <i32 0, i32 32>
