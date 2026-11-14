@@ -22,16 +22,10 @@ define ptr @foo() #0 personality ptr @__gxx_personality_sj0 {
 ; CHECK-NEXT:    add r0, pc
 ; CHECK-NEXT:    ldr r0, [r0]
 ; CHECK-NEXT:    ldr r0, [r0]
-; CHECK-NEXT:    movw r0, :lower16:(L___stack_chk_guard$non_lazy_ptr-(LPC0_3+4))
-; CHECK-NEXT:    movt r0, :upper16:(L___stack_chk_guard$non_lazy_ptr-(LPC0_3+4))
-; CHECK-NEXT:  LPC0_3:
-; CHECK-NEXT:    add r0, pc
-; CHECK-NEXT:    ldr r0, [r0]
-; CHECK-NEXT:    ldr r0, [r0]
 ; CHECK-NEXT:    str r0, [sp, #92]
-; CHECK-NEXT:    movw r0, :lower16:(L___gxx_personality_sj0$non_lazy_ptr-(LPC0_4+4))
-; CHECK-NEXT:    movt r0, :upper16:(L___gxx_personality_sj0$non_lazy_ptr-(LPC0_4+4))
-; CHECK-NEXT:  LPC0_4:
+; CHECK-NEXT:    movw r0, :lower16:(L___gxx_personality_sj0$non_lazy_ptr-(LPC0_3+4))
+; CHECK-NEXT:    movt r0, :upper16:(L___gxx_personality_sj0$non_lazy_ptr-(LPC0_3+4))
+; CHECK-NEXT:  LPC0_3:
 ; CHECK-NEXT:    add r0, pc
 ; CHECK-NEXT:    ldr r0, [r0]
 ; CHECK-NEXT:    str r0, [sp, #36]
@@ -39,7 +33,8 @@ define ptr @foo() #0 personality ptr @__gxx_personality_sj0 {
 ; CHECK-NEXT:  LPC0_0:
 ; CHECK-NEXT:    add r0, pc
 ; CHECK-NEXT:    str r0, [sp, #40]
-; CHECK-NEXT:    str r7, [sp, #44]
+; CHECK-NEXT:    mov r0, r7
+; CHECK-NEXT:    str r0, [sp, #44]
 ; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    str r0, [sp, #52]
 ; CHECK-NEXT:    ldr r0, LCPI0_1
@@ -51,6 +46,38 @@ define ptr @foo() #0 personality ptr @__gxx_personality_sj0 {
 ; CHECK-NEXT:    bl __Unwind_SjLj_Register
 ; CHECK-NEXT:    movs r0, #1
 ; CHECK-NEXT:    str r0, [sp, #16]
+; CHECK-NEXT:  Ltmp0: @ EH_LABEL
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    bl _foo2
+; CHECK-NEXT:  Ltmp1: @ EH_LABEL
+; CHECK-NEXT:    b LBB0_1
+; CHECK-NEXT:  LBB0_1:
+; CHECK-NEXT:    movs r0, #2
+; CHECK-NEXT:    str r0, [sp, #16]
+; CHECK-NEXT:    movw r0, :lower16:(L___stack_chk_guard$non_lazy_ptr-(LPC0_4+4))
+; CHECK-NEXT:    movt r0, :upper16:(L___stack_chk_guard$non_lazy_ptr-(LPC0_4+4))
+; CHECK-NEXT:  LPC0_4:
+; CHECK-NEXT:    add r0, pc
+; CHECK-NEXT:    ldr r0, [r0]
+; CHECK-NEXT:    ldr r0, [r0]
+; CHECK-NEXT:    ldr r1, [sp, #92]
+; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    bne LBB0_6
+; CHECK-NEXT:  @ %bb.2: @ %SP_return
+; CHECK-NEXT:  Ltmp2: @ EH_LABEL
+; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    mov r1, r2
+; CHECK-NEXT:    bl _foo3
+; CHECK-NEXT:  Ltmp3: @ EH_LABEL
+; CHECK-NEXT:    b LBB0_5
+; CHECK-NEXT:  LBB0_3:
+; CHECK-NEXT:  Ltmp4: @ EH_LABEL
+; CHECK-NEXT:    ldr r0, [sp, #20]
+; CHECK-NEXT:    ldr r0, [sp, #24]
+; CHECK-NEXT:    add r0, sp, #12
+; CHECK-NEXT:    bl __Unwind_SjLj_Unregister
 ; CHECK-NEXT:    movw r0, :lower16:(L___stack_chk_guard$non_lazy_ptr-(LPC0_5+4))
 ; CHECK-NEXT:    movt r0, :upper16:(L___stack_chk_guard$non_lazy_ptr-(LPC0_5+4))
 ; CHECK-NEXT:  LPC0_5:
@@ -59,50 +86,8 @@ define ptr @foo() #0 personality ptr @__gxx_personality_sj0 {
 ; CHECK-NEXT:    ldr r0, [r0]
 ; CHECK-NEXT:    ldr r1, [sp, #92]
 ; CHECK-NEXT:    cmp r0, r1
-; CHECK-NEXT:    bne LBB0_7
-; CHECK-NEXT:  @ %bb.1: @ %SP_return
-; CHECK-NEXT:  Ltmp0:
-; CHECK-NEXT:    movs r1, #0
-; CHECK-NEXT:    mov r0, r1
-; CHECK-NEXT:    bl _foo2
-; CHECK-NEXT:  Ltmp1:
-; CHECK-NEXT:    b LBB0_2
-; CHECK-NEXT:  LBB0_2:
-; CHECK-NEXT:    movs r0, #2
-; CHECK-NEXT:    str r0, [sp, #16]
-; CHECK-NEXT:    movw r0, :lower16:(L___stack_chk_guard$non_lazy_ptr-(LPC0_6+4))
-; CHECK-NEXT:    movt r0, :upper16:(L___stack_chk_guard$non_lazy_ptr-(LPC0_6+4))
-; CHECK-NEXT:  LPC0_6:
-; CHECK-NEXT:    add r0, pc
-; CHECK-NEXT:    ldr r0, [r0]
-; CHECK-NEXT:    ldr r0, [r0]
-; CHECK-NEXT:    ldr r1, [sp, #92]
-; CHECK-NEXT:    cmp r0, r1
-; CHECK-NEXT:    bne LBB0_7
-; CHECK-NEXT:  @ %bb.3: @ %SP_return2
-; CHECK-NEXT:  Ltmp2:
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    mov r0, r2
-; CHECK-NEXT:    mov r1, r2
-; CHECK-NEXT:    bl _foo3
-; CHECK-NEXT:  Ltmp3:
-; CHECK-NEXT:    b LBB0_6
-; CHECK-NEXT:  LBB0_4:
-; CHECK-NEXT:  Ltmp4:
-; CHECK-NEXT:    ldr r0, [sp, #20]
-; CHECK-NEXT:    ldr r0, [sp, #24]
-; CHECK-NEXT:    add r0, sp, #12
-; CHECK-NEXT:    bl __Unwind_SjLj_Unregister
-; CHECK-NEXT:    movw r0, :lower16:(L___stack_chk_guard$non_lazy_ptr-(LPC0_7+4))
-; CHECK-NEXT:    movt r0, :upper16:(L___stack_chk_guard$non_lazy_ptr-(LPC0_7+4))
-; CHECK-NEXT:  LPC0_7:
-; CHECK-NEXT:    add r0, pc
-; CHECK-NEXT:    ldr r0, [r0]
-; CHECK-NEXT:    ldr r0, [r0]
-; CHECK-NEXT:    ldr r1, [sp, #92]
-; CHECK-NEXT:    cmp r0, r1
-; CHECK-NEXT:    bne LBB0_7
-; CHECK-NEXT:  @ %bb.5: @ %SP_return3
+; CHECK-NEXT:    bne LBB0_6
+; CHECK-NEXT:  @ %bb.4: @ %SP_return2
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    add r4, sp, #96
 ; CHECK-NEXT:    vld1.64 {d8, d9, d10, d11}, [r4:128]!
@@ -111,32 +96,32 @@ define ptr @foo() #0 personality ptr @__gxx_personality_sj0 {
 ; CHECK-NEXT:    mov sp, r4
 ; CHECK-NEXT:    pop.w {r8, r10, r11}
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
-; CHECK-NEXT:  LBB0_6:
+; CHECK-NEXT:  LBB0_5:
 ; CHECK-NEXT:    trap
-; CHECK-NEXT:  LBB0_7: @ %CallStackCheckFailBlk
+; CHECK-NEXT:  LBB0_6: @ %CallStackCheckFailBlk
 ; CHECK-NEXT:    bl ___stack_chk_fail
-; CHECK-NEXT:  LBB0_8:
+; CHECK-NEXT:  LBB0_7:
 ; CHECK-NEXT:    ldr r0, [sp, #16]
 ; CHECK-NEXT:    str r0, [sp, #8] @ 4-byte Spill
 ; CHECK-NEXT:    cmp r0, #2
-; CHECK-NEXT:    bhi LBB0_12
-; CHECK-NEXT:  @ %bb.9:
+; CHECK-NEXT:    bhi LBB0_11
+; CHECK-NEXT:  @ %bb.8:
 ; CHECK-NEXT:    ldr r1, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:  LCPI0_2:
 ; CHECK-NEXT:    tbb [pc, r1]
-; CHECK-NEXT:  @ %bb.10:
+; CHECK-NEXT:  @ %bb.9:
 ; CHECK-NEXT:  LJTI0_0:
 ; CHECK-NEXT:    .data_region jt8
-; CHECK-NEXT:    .byte (LBB0_11-(LCPI0_2+4))/2
-; CHECK-NEXT:    .byte (LBB0_11-(LCPI0_2+4))/2
+; CHECK-NEXT:    .byte (LBB0_10-(LCPI0_2+4))/2
+; CHECK-NEXT:    .byte (LBB0_10-(LCPI0_2+4))/2
 ; CHECK-NEXT:    .end_data_region
 ; CHECK-NEXT:    .p2align 1
+; CHECK-NEXT:  LBB0_10:
+; CHECK-NEXT:    b LBB0_3
 ; CHECK-NEXT:  LBB0_11:
-; CHECK-NEXT:    b LBB0_4
-; CHECK-NEXT:  LBB0_12:
 ; CHECK-NEXT:    trap
 ; CHECK-NEXT:    .p2align 2
-; CHECK-NEXT:  @ %bb.13:
+; CHECK-NEXT:  @ %bb.12:
   %1 = alloca [14 x i8], align 16
   %2 = invoke i32 @"foo2"(ptr null, ptr null) #1
           to label %3 unwind label %4

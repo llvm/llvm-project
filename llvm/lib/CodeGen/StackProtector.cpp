@@ -620,23 +620,26 @@ bool InsertStackProtectors(const TargetLowering &TLI,
     if (&BB == FailBB)
       continue;
     Instruction *CheckLoc = dyn_cast<ReturnInst>(BB.getTerminator());
-    if (!CheckLoc && !DisableCheckNoReturn)
+    if (!CheckLoc && !DisableCheckNoReturn) {
+      Instruction *SjLjCallSite = nullptr;
       for (auto &Inst : BB) {
         if (IntrinsicInst *IB = dyn_cast<IntrinsicInst>(&Inst);
             IB && (IB->getIntrinsicID() == Intrinsic::eh_sjlj_callsite)) {
-          // eh_sjlj_callsite has to be in same BB as the
-          // bb terminator. Don't insert within this range.
-          CheckLoc = IB;
-          break;
+          SjLjCallSite = IB;
+          continue;
         }
-        if (auto *CB = dyn_cast<CallBase>(&Inst))
+        if (auto *CB = dyn_cast<CallBase>(&Inst)) {
           // Do stack check before noreturn calls that aren't nounwind (e.g:
           // __cxa_throw).
           if (CB->doesNotReturn() && !CB->doesNotThrow()) {
-            CheckLoc = CB;
+            // eh_sjlj_callsite has to be in same BB as the call it marks.
+            // Don't insert within this range.
+            CheckLoc = SjLjCallSite ? SjLjCallSite : CB;
             break;
           }
+        }
       }
+    }
 
     if (!CheckLoc)
       continue;
@@ -648,10 +651,17 @@ bool InsertStackProtectors(const TargetLowering &TLI,
           CreatePrologue(F, M, CheckLoc, &TLI, Libcalls, AI);
     }
 
-    // SelectionDAG based code generation. Nothing else needs to be done here.
-    // The epilogue instrumentation is postponed to SelectionDAG.
-    if (SupportsSelectionDAGSP)
-      break;
+    // SelectionDAG based code generation. The epilogue instrumentation of the
+    // returns is postponed to SelectionDAG (or GlobalISel), so nothing else
+    // needs to be done for them here. The other check locations are
+    // instrumented in IR below, unless the target mixes the frame pointer into
+    // the guard value (see above): then nothing else needs to be done at all.
+    if (SupportsSelectionDAGSP) {
+      if (TLI.useStackGuardMixFP())
+        break;
+      if (isa<ReturnInst>(CheckLoc))
+        continue;
+    }
 
     // Find the stack guard slot if the prologue was not created by this pass
     // itself via a previous call to CreatePrologue().
@@ -661,10 +671,12 @@ bool InsertStackProtectors(const TargetLowering &TLI,
       AI = cast<AllocaInst>(SPCall->getArgOperand(1));
     }
 
-    // Set HasIRCheck to true, so that SelectionDAG will not generate its own
-    // version. SelectionDAG called 'shouldEmitSDCheck' to check whether
-    // instrumentation has already been generated.
-    HasIRCheck = true;
+    // If the returns are checked in IR, set HasIRCheck to true, so that
+    // SelectionDAG will not generate its own version. SelectionDAG calls
+    // 'shouldEmitSDCheck' to check whether instrumentation has already been
+    // generated.
+    if (!SupportsSelectionDAGSP)
+      HasIRCheck = true;
 
     // If we're instrumenting a block with a tail call, the check has to be
     // inserted before the call rather than between it and the return.
