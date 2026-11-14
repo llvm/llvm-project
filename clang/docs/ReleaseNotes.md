@@ -1252,6 +1252,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   serialized PCH/AST files and `-Wunused-local-typedef` diagnostics
   non-reproducible across runs. (#GH209639)
 
+- Fixed temporaries in a default argument being destroyed too late when the
+  default argument was instantiated in one module or PCH and used from another.
+  (#GH68702)
+
 - `FunctionDecl::getReturnTypeSourceRange()` now returns correct source
   location of a trailing return type. (#GH162649)
 
