@@ -34,6 +34,7 @@ add_lld_library(lldELF
   Arch/RISCV.cpp
   Arch/SPARCV9.cpp
   Arch/SystemZ.cpp
+  Arch/SuperH.cpp
   Arch/X86.cpp
   Arch/X86_64.cpp
   ARMErrataFix.cpp
