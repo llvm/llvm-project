@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
@@ -177,6 +178,15 @@ public:
 
     return AVI->second;
   }
+
+  /// Access the list of assume bundles which affect V.
+  bool assumeBundlesFor(
+      const Value *V,
+      function_ref<bool(BundleAttr, OperandBundleUse, AssumeInst *)>);
+
+  /// Access all assume bundles of type Bundle which affect V.
+  bool assumeBundlesOfKind(BundleAttr Bundle, const Value *V,
+                           function_ref<bool(OperandBundleUse, AssumeInst *)>);
 
   /// Determine which values are affected by this assume operand bundle.
   LLVM_ABI static void

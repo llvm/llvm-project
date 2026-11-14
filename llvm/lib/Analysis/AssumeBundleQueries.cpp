@@ -141,12 +141,3 @@ llvm::getKnowledgeForValue(const Value *V,
 
   return RetainedKnowledge::none();
 }
-
-RetainedKnowledge llvm::getKnowledgeValidInContext(
-    const Value *V, ArrayRef<Attribute::AttrKind> AttrKinds,
-    AssumptionCache &AC, const Instruction *CtxI, const DominatorTree *DT) {
-  return getKnowledgeForValue(V, AttrKinds, AC,
-                              [&](auto, Instruction *I, auto) {
-                                return isValidAssumeForContext(I, CtxI, DT);
-                              });
-}
