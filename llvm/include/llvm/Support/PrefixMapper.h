@@ -22,7 +22,6 @@
 #include <optional>
 
 namespace llvm {
-class StringSaver;
 
 struct MappedPrefix {
   std::string Old;
@@ -37,6 +36,7 @@ struct MappedPrefix {
   bool operator==(const MappedPrefix &RHS) const {
     return Old == RHS.Old && New == RHS.New;
   }
+
   bool operator!=(const MappedPrefix &RHS) const { return !(*this == RHS); }
 
   LLVM_ABI static std::optional<MappedPrefix>
@@ -59,8 +59,20 @@ struct MappedPrefix {
 
 /// Remap path prefixes.
 ///
-/// FIXME: The StringSaver should be optional. Only APIs returning StringRef
-/// need it, and those could assert/crash if one is not configured.
+/// Mappings are tried in order and the first match wins. A mapping only
+/// matches whole path components: \c Old must be followed by a separator or
+/// the end of the path, unless \c Old itself ends with a separator. For
+/// example, "/old=/new" remaps "/old" and "/old/a" but not "/old-a", and
+/// "/=/new" remaps every absolute path. With a Windows path style, matching is
+/// case- and separator-insensitive.
+///
+/// The rest of the path is joined to \c New with \a sys::path::append(): a
+/// separator is added if neither side has one, and leading separators are
+/// dropped from the rest if \c New ends with one. For example, "/old/a" maps to
+/// "/new/a" with either "/old=/new" or "/old/=/new/".
+///
+/// Paths are not canonicalized, so "/old/../a" maps to "/new/../a", "/old//a"
+/// maps to "/new//a", and "//old" is not matched by "/old".
 class LLVM_ABI PrefixMapper {
 public:
   virtual ~PrefixMapper() = default;
@@ -69,31 +81,31 @@ public:
   ///
   /// \pre \p Path is not a reference into \p NewPath.
   /// \returns true if \c NewPath was mapped.
-  bool map(StringRef Path, SmallVectorImpl<char> &NewPath);
+  bool map(StringRef Path, SmallVectorImpl<char> &NewPath) const;
   /// Map \p Path, and saving the new (or existing) path in \p NewPath.
   ///
   /// \pre \p Path is not a reference into \p NewPath.
   /// \returns true if \c NewPath was mapped.
-  bool map(StringRef Path, std::string &NewPath);
+  bool map(StringRef Path, std::string &NewPath) const;
 
   /// Map \p Path, returning \a std::string.
-  std::string mapToString(StringRef Path);
+  std::string mapToString(StringRef Path) const;
 
   /// Map \p Path in place.
   /// \returns true if the path was modified.
-  bool mapInPlace(SmallVectorImpl<char> &Path);
+  bool mapInPlace(SmallVectorImpl<char> &Path) const;
 
   /// Map \p Path in place.
   /// \returns true if the path was modified.
-  bool mapInPlace(std::string &Path);
+  bool mapInPlace(std::string &Path) const;
 
 protected:
   /// Map (or unmap) \p Path. On a match, fills \p Storage with the mapped path
   /// unless it's an exact match.
   ///
   /// \pre \p Path is not a reference into \p Storage.
-  virtual std::optional<StringRef> mapImpl(StringRef Path,
-                                           SmallVectorImpl<char> &Storage);
+  virtual std::optional<StringRef>
+  mapImpl(StringRef Path, SmallVectorImpl<char> &Storage) const;
 
 public:
   virtual void add(const MappedPrefix &MP) { Mappings.push_back(MP); }
@@ -108,8 +120,6 @@ public:
   ///
   /// FIXME: Should probably be done implicitly, maybe by moving to a std::set
   /// or std::map.
-  ///
-  /// TODO: Test.
   void sort();
 
   template <class RangeT> void addRange(const RangeT &Mappings) {

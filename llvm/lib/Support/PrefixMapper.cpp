@@ -14,8 +14,6 @@
 #include "llvm/Support/PrefixMapper.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/Support/StringSaver.h"
 
 using namespace llvm;
 
@@ -110,8 +108,8 @@ static bool startsWith(StringRef Path, StringRef Prefix,
   return true;
 }
 
-std::optional<StringRef> PrefixMapper::mapImpl(StringRef Path,
-                                               SmallVectorImpl<char> &Storage) {
+std::optional<StringRef>
+PrefixMapper::mapImpl(StringRef Path, SmallVectorImpl<char> &Storage) const {
   for (const MappedPrefix &Map : Mappings) {
     StringRef Old = Map.Old;
     StringRef New = Map.New;
@@ -122,18 +120,20 @@ std::optional<StringRef> PrefixMapper::mapImpl(StringRef Path,
       return New; // Exact match.
 
     // Don't remap "/old-suffix" with mapping "/old=/new".
-    if (!llvm::sys::path::is_separator(Suffix.front(), PathStyle))
+    bool OldEndsWithSeparator =
+        !Old.empty() && sys::path::is_separator(Old.back(), PathStyle);
+    if (!OldEndsWithSeparator &&
+        !sys::path::is_separator(Suffix.front(), PathStyle))
       continue;
 
-    // Drop the separator, append, and return.
     Storage.assign(New.begin(), New.end());
-    llvm::sys::path::append(Storage, PathStyle, Suffix.drop_front());
+    sys::path::append(Storage, PathStyle, Suffix);
     return StringRef(Storage.begin(), Storage.size());
   }
   return std::nullopt;
 }
 
-bool PrefixMapper::map(StringRef Path, SmallVectorImpl<char> &NewPath) {
+bool PrefixMapper::map(StringRef Path, SmallVectorImpl<char> &NewPath) const {
   NewPath.clear();
   std::optional<StringRef> Mapped = mapImpl(Path, NewPath);
   if (!NewPath.empty())
@@ -145,20 +145,20 @@ bool PrefixMapper::map(StringRef Path, SmallVectorImpl<char> &NewPath) {
   return Modified;
 }
 
-bool PrefixMapper::map(StringRef Path, std::string &NewPath) {
+bool PrefixMapper::map(StringRef Path, std::string &NewPath) const {
   SmallString<256> Storage;
   std::optional<StringRef> Mapped = mapImpl(Path, Storage);
   NewPath = Mapped ? Mapped->str() : Path.str();
   return Mapped.has_value();
 }
 
-std::string PrefixMapper::mapToString(StringRef Path) {
+std::string PrefixMapper::mapToString(StringRef Path) const {
   SmallString<256> Storage;
   std::optional<StringRef> Mapped = mapImpl(Path, Storage);
   return Mapped ? Mapped->str() : Path.str();
 }
 
-bool PrefixMapper::mapInPlace(SmallVectorImpl<char> &Path) {
+bool PrefixMapper::mapInPlace(SmallVectorImpl<char> &Path) const {
   SmallString<256> Storage;
   std::optional<StringRef> Mapped =
       mapImpl(StringRef(Path.begin(), Path.size()), Storage);
@@ -171,7 +171,7 @@ bool PrefixMapper::mapInPlace(SmallVectorImpl<char> &Path) {
   return true;
 }
 
-bool PrefixMapper::mapInPlace(std::string &Path) {
+bool PrefixMapper::mapInPlace(std::string &Path) const {
   SmallString<256> Storage;
   std::optional<StringRef> Mapped = mapImpl(Path, Storage);
   if (!Mapped)

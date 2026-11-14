@@ -12,8 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/PrefixMapper.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/Support/StringSaver.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -29,11 +28,8 @@ namespace {
 
 struct PrefixMapperWrapper {
   PrefixMapper PM;
-  BumpPtrAllocator Alloc;
-  StringSaver Saver;
 
-  PrefixMapperWrapper(sys::path::Style PathStyle)
-      : PM(PathStyle), Saver(Alloc) {}
+  PrefixMapperWrapper(sys::path::Style PathStyle) : PM(PathStyle) {}
 
   void add(const MappedPrefix &Mapping) { return PM.add(Mapping); }
 
@@ -41,10 +37,10 @@ struct PrefixMapperWrapper {
     return PM.addRange(Mappings);
   }
 
-  StringRef map(StringRef Path) {
+  std::string map(StringRef Path) {
     SmallString<256> PathBuf;
     PM.map(Path, PathBuf);
-    return Saver.save(PathBuf.str());
+    return std::string(PathBuf);
   }
 };
 
@@ -184,6 +180,45 @@ TEST(PrefixMapperTest, addRange) {
   EXPECT_EQ(RangeRef, PM.getMappings().drop_front().drop_back());
 }
 
+TEST(PrefixMapperTest, addInverseRange) {
+  PrefixMapper PM(sys::path::Style::posix);
+
+  PM.add(MappedPrefix{"/old/before", "/new/before"});
+  MappedPrefix Range[] = {
+      {"/new/1", "/old/1"},
+      {"/new/2", "/old/2"},
+      {"/new/3", "/old/3"},
+  };
+  PM.addInverseRange(ArrayRef(Range));
+  PM.add(MappedPrefix{"/old/after", "/new/after"});
+
+  MappedPrefix Expected[] = {
+      {"/old/before", "/new/before"}, {"/old/1", "/new/1"},
+      {"/old/2", "/new/2"},           {"/old/3", "/new/3"},
+      {"/old/after", "/new/after"},
+  };
+  EXPECT_EQ(ArrayRef(Expected), PM.getMappings());
+}
+
+TEST(PrefixMapperTest, sort) {
+  PrefixMapper PM(sys::path::Style::posix);
+  MappedPrefix Mappings[] = {
+      {"/a", "/1"},   {"/a/b/c", "/2"}, {"/b", "/3"},
+      {"/a/b", "/4"}, {"/a-b", "/5"},   {"/a", "/6"},
+  };
+  PM.addRange(ArrayRef(Mappings));
+  EXPECT_EQ("/1/b/x", PM.mapToString("/a/b/x"));
+
+  // Deeper paths come first, and the sort is stable.
+  PM.sort();
+  MappedPrefix Expected[] = {
+      {"/b", "/3"},   {"/a/b/c", "/2"}, {"/a/b", "/4"},
+      {"/a-b", "/5"}, {"/a", "/1"},     {"/a", "/6"},
+  };
+  EXPECT_EQ(ArrayRef(Expected), PM.getMappings());
+  EXPECT_EQ("/4/x", PM.mapToString("/a/b/x"));
+}
+
 static void checkPosix(sys::path::Style PathStyle) {
   PrefixMapperWrapper PM(PathStyle);
   MappedPrefix Mappings[] = {
@@ -266,7 +301,7 @@ static void checkWindows(sys::path::Style PathStyle) {
   EXPECT_EQ("c:\\new\\..\\x\\y", PM.map("c:\\old\\..\\x\\y"));
   EXPECT_EQ("c:\\UPPER\\new", PM.map("C:\\UPPER\\old"));
   EXPECT_EQ("C:/forward/new", PM.map("C:/forward/old"));
-  EXPECT_EQ("C:/forward/new\\x/y", PM.map("C:/forward/old/x/y"));
+  EXPECT_EQ("C:/forward/new/x/y", PM.map("C:/forward/old/x/y"));
   EXPECT_EQ("relative\\new", PM.map("relative\\old"));
   EXPECT_EQ("c:\\this\\is\\longer", PM.map("c:\\shorter"));
   EXPECT_EQ("c:\\this\\is\\longer\\a", PM.map("c:\\shorter\\a"));
@@ -289,6 +324,63 @@ TEST(PrefixMapperTest, mapNative) {
     checkPosix(sys::path::Style::native);
   else
     checkWindows(sys::path::Style::native);
+}
+
+struct SeparatorTest {
+  MappedPrefix Mapping;
+  StringRef Path;
+  StringRef Expected;
+};
+
+static void checkSeparators(sys::path::Style PathStyle,
+                            ArrayRef<SeparatorTest> Tests) {
+  for (const SeparatorTest &T : Tests) {
+    PrefixMapperWrapper PM(PathStyle);
+    PM.add(T.Mapping);
+    EXPECT_EQ(T.Expected, PM.map(T.Path))
+        << "mapping '" << T.Mapping.Old << "=" << T.Mapping.New << "'";
+  }
+}
+
+TEST(PrefixMapperTest, mapSeparatorsPosix) {
+  SeparatorTest Tests[] = {
+      // Root.
+      {{"/", "/new"}, "/", "/new"},
+      {{"/", "/new"}, "/a", "/new/a"},
+      {{"/", "/new/"}, "/a", "/new/a"},
+      {{"/", "/"}, "/a", "/a"},
+      {{"/", "/new"}, "a", "a"},
+
+      // Trailing separators on Old and New.
+      {{"/old/", "/new"}, "/old/a", "/new/a"},
+      {{"/old", "/new/"}, "/old/a", "/new/a"},
+      {{"/old/", "/new/"}, "/old/a", "/new/a"},
+      {{"/old/", "/new"}, "/old/", "/new"},
+      {{"/old/", "/new"}, "/old", "/old"},
+      {{"/old", "/new/"}, "/old", "/new/"},
+
+      // Repeated separators are kept, unless New ends with a separator.
+      {{"/old", "/new"}, "/old//a", "/new//a"},
+      {{"/old", "/new/"}, "/old//a", "/new/a"},
+      {{"/old", "/new"}, "//old/a", "//old/a"},
+
+      // Empty New.
+      {{"/old", ""}, "/old", ""},
+      {{"/old", ""}, "/old/a", "/a"},
+      {{"/old/", ""}, "/old/a", "a"},
+  };
+  checkSeparators(sys::path::Style::posix, Tests);
+}
+
+TEST(PrefixMapperTest, mapSeparatorsWindows) {
+  SeparatorTest Tests[] = {
+      {{"c:\\", "d:\\"}, "c:\\a", "d:\\a"},
+      {{"c:\\", "d:\\"}, "C:/a", "d:\\a"},
+      {{"c:/old/", "d:\\new"}, "C:\\old\\a", "d:\\new\\a"},
+      {{"c:\\old", "d:\\new"}, "c:\\old/a\\b", "d:\\new/a\\b"},
+      {{"c:\\old", "d:\\new\\"}, "c:\\old\\\\a", "d:\\new\\a"},
+  };
+  checkSeparators(sys::path::Style::windows, Tests);
 }
 
 TEST(PrefixMapperTest, mapTwoArgs) {
