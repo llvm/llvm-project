@@ -81,27 +81,29 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
   const GCNSubtarget *getST() const { return ST; }
   const SITargetLowering *getTLI() const { return TLI; }
 
-  static inline int getFullRateInstrCost() {
+  static inline InstructionCost getFullRateInstrCost() {
     return TargetTransformInfo::TCC_Basic;
   }
 
-  static inline int getHalfRateInstrCost(TTI::TargetCostKind CostKind) {
+  static inline InstructionCost
+  getHalfRateInstrCost(TTI::TargetCostKind CostKind) {
     return CostKind == TTI::TCK_CodeSize ? 2
                                          : 2 * TargetTransformInfo::TCC_Basic;
   }
 
   // TODO: The size is usually 8 bytes, but takes 4x as many cycles. Maybe
   // should be 2 or 4.
-  static inline int getQuarterRateInstrCost(TTI::TargetCostKind CostKind) {
+  static inline InstructionCost
+  getQuarterRateInstrCost(TTI::TargetCostKind CostKind) {
     return CostKind == TTI::TCK_CodeSize ? 2
                                          : 4 * TargetTransformInfo::TCC_Basic;
   }
 
-  int getTransInstrCost(TTI::TargetCostKind CostKind) const;
+  InstructionCost getTransInstrCost(TTI::TargetCostKind CostKind) const;
 
   // On some parts, normal fp64 operations are half rate, and others
   // quarter. This also applies to some integer operations.
-  int get64BitInstrCost(TTI::TargetCostKind CostKind) const;
+  InstructionCost get64BitInstrCost(TTI::TargetCostKind CostKind) const;
 
   std::pair<InstructionCost, MVT> getTypeLegalizationCost(Type *Ty) const;
 
