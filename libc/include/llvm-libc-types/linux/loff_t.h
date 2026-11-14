@@ -14,8 +14,11 @@
 #ifndef LLVM_LIBC_TYPES_LINUX_LOFF_T_H
 #define LLVM_LIBC_TYPES_LINUX_LOFF_T_H
 
-#include <asm/posix_types.h>
+#include "../off_t.h"
 
-typedef __kernel_loff_t loff_t;
+// The name for an offset which is wide whatever the machine. off_t here is
+// already that, and the two have to be the same type or a call which takes
+// one will not take a pointer to the other. glibc makes them the same too.
+typedef off_t loff_t;
 
 #endif // LLVM_LIBC_TYPES_LINUX_LOFF_T_H
