@@ -69,42 +69,42 @@ define <32 x i16> @vec_v32i16(<32 x i16> %x, <32 x i16> %y) nounwind {
 ; X64-AVX2-NEXT:    vpunpckhwd {{.*#+}} ymm5 = ymm2[4],ymm4[4],ymm2[5],ymm4[5],ymm2[6],ymm4[6],ymm2[7],ymm4[7],ymm2[12],ymm4[12],ymm2[13],ymm4[13],ymm2[14],ymm4[14],ymm2[15],ymm4[15]
 ; X64-AVX2-NEXT:    vpunpckhwd {{.*#+}} ymm6 = ymm4[4],ymm0[4],ymm4[5],ymm0[5],ymm4[6],ymm0[6],ymm4[7],ymm0[7],ymm4[12],ymm0[12],ymm4[13],ymm0[13],ymm4[14],ymm0[14],ymm4[15],ymm0[15]
 ; X64-AVX2-NEXT:    vpsllvd %ymm5, %ymm6, %ymm6
+; X64-AVX2-NEXT:    vpsrld $16, %ymm6, %ymm7
 ; X64-AVX2-NEXT:    vpunpcklwd {{.*#+}} ymm2 = ymm2[0],ymm4[0],ymm2[1],ymm4[1],ymm2[2],ymm4[2],ymm2[3],ymm4[3],ymm2[8],ymm4[8],ymm2[9],ymm4[9],ymm2[10],ymm4[10],ymm2[11],ymm4[11]
-; X64-AVX2-NEXT:    vpunpcklwd {{.*#+}} ymm7 = ymm4[0],ymm0[0],ymm4[1],ymm0[1],ymm4[2],ymm0[2],ymm4[3],ymm0[3],ymm4[8],ymm0[8],ymm4[9],ymm0[9],ymm4[10],ymm0[10],ymm4[11],ymm0[11]
-; X64-AVX2-NEXT:    vpsllvd %ymm2, %ymm7, %ymm7
-; X64-AVX2-NEXT:    vpsrld $16, %ymm6, %ymm6
-; X64-AVX2-NEXT:    vpsrld $16, %ymm7, %ymm7
-; X64-AVX2-NEXT:    vpackusdw %ymm6, %ymm7, %ymm6
-; X64-AVX2-NEXT:    vpunpckhwd {{.*#+}} ymm7 = ymm4[4],ymm6[4],ymm4[5],ymm6[5],ymm4[6],ymm6[6],ymm4[7],ymm6[7],ymm4[12],ymm6[12],ymm4[13],ymm6[13],ymm4[14],ymm6[14],ymm4[15],ymm6[15]
-; X64-AVX2-NEXT:    vpsrlvd %ymm5, %ymm7, %ymm5
+; X64-AVX2-NEXT:    vpunpcklwd {{.*#+}} ymm8 = ymm4[0],ymm0[0],ymm4[1],ymm0[1],ymm4[2],ymm0[2],ymm4[3],ymm0[3],ymm4[8],ymm0[8],ymm4[9],ymm0[9],ymm4[10],ymm0[10],ymm4[11],ymm0[11]
+; X64-AVX2-NEXT:    vpsllvd %ymm2, %ymm8, %ymm8
+; X64-AVX2-NEXT:    vpblendw {{.*#+}} ymm6 = ymm4[0],ymm6[1],ymm4[2],ymm6[3],ymm4[4],ymm6[5],ymm4[6],ymm6[7],ymm4[8],ymm6[9],ymm4[10],ymm6[11],ymm4[12],ymm6[13],ymm4[14],ymm6[15]
+; X64-AVX2-NEXT:    vpsrlvd %ymm5, %ymm6, %ymm5
+; X64-AVX2-NEXT:    vpsrld $16, %ymm8, %ymm6
+; X64-AVX2-NEXT:    vpackusdw %ymm7, %ymm6, %ymm6
 ; X64-AVX2-NEXT:    vpsrld $16, %ymm5, %ymm5
-; X64-AVX2-NEXT:    vpunpcklwd {{.*#+}} ymm7 = ymm4[0],ymm6[0],ymm4[1],ymm6[1],ymm4[2],ymm6[2],ymm4[3],ymm6[3],ymm4[8],ymm6[8],ymm4[9],ymm6[9],ymm4[10],ymm6[10],ymm4[11],ymm6[11]
+; X64-AVX2-NEXT:    vpblendw {{.*#+}} ymm7 = ymm4[0],ymm8[1],ymm4[2],ymm8[3],ymm4[4],ymm8[5],ymm4[6],ymm8[7],ymm4[8],ymm8[9],ymm4[10],ymm8[11],ymm4[12],ymm8[13],ymm4[14],ymm8[15]
 ; X64-AVX2-NEXT:    vpsrlvd %ymm2, %ymm7, %ymm2
 ; X64-AVX2-NEXT:    vpsrld $16, %ymm2, %ymm2
 ; X64-AVX2-NEXT:    vpackusdw %ymm5, %ymm2, %ymm2
 ; X64-AVX2-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm0
-; X64-AVX2-NEXT:    vpunpckhwd {{.*#+}} ymm2 = ymm3[4],ymm4[4],ymm3[5],ymm4[5],ymm3[6],ymm4[6],ymm3[7],ymm4[7],ymm3[12],ymm4[12],ymm3[13],ymm4[13],ymm3[14],ymm4[14],ymm3[15],ymm4[15]
-; X64-AVX2-NEXT:    vpunpckhwd {{.*#+}} ymm5 = ymm4[4],ymm1[4],ymm4[5],ymm1[5],ymm4[6],ymm1[6],ymm4[7],ymm1[7],ymm4[12],ymm1[12],ymm4[13],ymm1[13],ymm4[14],ymm1[14],ymm4[15],ymm1[15]
-; X64-AVX2-NEXT:    vpsllvd %ymm2, %ymm5, %ymm5
-; X64-AVX2-NEXT:    vpunpcklwd {{.*#+}} ymm3 = ymm3[0],ymm4[0],ymm3[1],ymm4[1],ymm3[2],ymm4[2],ymm3[3],ymm4[3],ymm3[8],ymm4[8],ymm3[9],ymm4[9],ymm3[10],ymm4[10],ymm3[11],ymm4[11]
-; X64-AVX2-NEXT:    vpunpcklwd {{.*#+}} ymm7 = ymm4[0],ymm1[0],ymm4[1],ymm1[1],ymm4[2],ymm1[2],ymm4[3],ymm1[3],ymm4[8],ymm1[8],ymm4[9],ymm1[9],ymm4[10],ymm1[10],ymm4[11],ymm1[11]
-; X64-AVX2-NEXT:    vpsllvd %ymm3, %ymm7, %ymm7
-; X64-AVX2-NEXT:    vpsrld $16, %ymm5, %ymm5
-; X64-AVX2-NEXT:    vpsrld $16, %ymm7, %ymm7
-; X64-AVX2-NEXT:    vpackusdw %ymm5, %ymm7, %ymm5
-; X64-AVX2-NEXT:    vpunpckhwd {{.*#+}} ymm7 = ymm4[4],ymm5[4],ymm4[5],ymm5[5],ymm4[6],ymm5[6],ymm4[7],ymm5[7],ymm4[12],ymm5[12],ymm4[13],ymm5[13],ymm4[14],ymm5[14],ymm4[15],ymm5[15]
-; X64-AVX2-NEXT:    vpsrlvd %ymm2, %ymm7, %ymm2
-; X64-AVX2-NEXT:    vpcmpeqd %ymm7, %ymm7, %ymm7
-; X64-AVX2-NEXT:    vpxor %ymm7, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; X64-AVX2-NEXT:    vpunpckhwd {{.*#+}} ymm5 = ymm3[4],ymm4[4],ymm3[5],ymm4[5],ymm3[6],ymm4[6],ymm3[7],ymm4[7],ymm3[12],ymm4[12],ymm3[13],ymm4[13],ymm3[14],ymm4[14],ymm3[15],ymm4[15]
+; X64-AVX2-NEXT:    vpunpckhwd {{.*#+}} ymm7 = ymm4[4],ymm1[4],ymm4[5],ymm1[5],ymm4[6],ymm1[6],ymm4[7],ymm1[7],ymm4[12],ymm1[12],ymm4[13],ymm1[13],ymm4[14],ymm1[14],ymm4[15],ymm1[15]
+; X64-AVX2-NEXT:    vpsllvd %ymm5, %ymm7, %ymm7
+; X64-AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vpor %ymm6, %ymm0, %ymm0
-; X64-AVX2-NEXT:    vpsrld $16, %ymm2, %ymm2
-; X64-AVX2-NEXT:    vpunpcklwd {{.*#+}} ymm4 = ymm4[0],ymm5[0],ymm4[1],ymm5[1],ymm4[2],ymm5[2],ymm4[3],ymm5[3],ymm4[8],ymm5[8],ymm4[9],ymm5[9],ymm4[10],ymm5[10],ymm4[11],ymm5[11]
+; X64-AVX2-NEXT:    vpsrld $16, %ymm7, %ymm6
+; X64-AVX2-NEXT:    vpunpcklwd {{.*#+}} ymm3 = ymm3[0],ymm4[0],ymm3[1],ymm4[1],ymm3[2],ymm4[2],ymm3[3],ymm4[3],ymm3[8],ymm4[8],ymm3[9],ymm4[9],ymm3[10],ymm4[10],ymm3[11],ymm4[11]
+; X64-AVX2-NEXT:    vpunpcklwd {{.*#+}} ymm8 = ymm4[0],ymm1[0],ymm4[1],ymm1[1],ymm4[2],ymm1[2],ymm4[3],ymm1[3],ymm4[8],ymm1[8],ymm4[9],ymm1[9],ymm4[10],ymm1[10],ymm4[11],ymm1[11]
+; X64-AVX2-NEXT:    vpsllvd %ymm3, %ymm8, %ymm8
+; X64-AVX2-NEXT:    vpblendw {{.*#+}} ymm7 = ymm4[0],ymm7[1],ymm4[2],ymm7[3],ymm4[4],ymm7[5],ymm4[6],ymm7[7],ymm4[8],ymm7[9],ymm4[10],ymm7[11],ymm4[12],ymm7[13],ymm4[14],ymm7[15]
+; X64-AVX2-NEXT:    vpsrlvd %ymm5, %ymm7, %ymm5
+; X64-AVX2-NEXT:    vpsrld $16, %ymm8, %ymm7
+; X64-AVX2-NEXT:    vpackusdw %ymm6, %ymm7, %ymm6
+; X64-AVX2-NEXT:    vpsrld $16, %ymm5, %ymm5
+; X64-AVX2-NEXT:    vpblendw {{.*#+}} ymm4 = ymm4[0],ymm8[1],ymm4[2],ymm8[3],ymm4[4],ymm8[5],ymm4[6],ymm8[7],ymm4[8],ymm8[9],ymm4[10],ymm8[11],ymm4[12],ymm8[13],ymm4[14],ymm8[15]
 ; X64-AVX2-NEXT:    vpsrlvd %ymm3, %ymm4, %ymm3
 ; X64-AVX2-NEXT:    vpsrld $16, %ymm3, %ymm3
-; X64-AVX2-NEXT:    vpackusdw %ymm2, %ymm3, %ymm2
-; X64-AVX2-NEXT:    vpcmpeqw %ymm2, %ymm1, %ymm1
-; X64-AVX2-NEXT:    vpxor %ymm7, %ymm1, %ymm1
-; X64-AVX2-NEXT:    vpor %ymm5, %ymm1, %ymm1
+; X64-AVX2-NEXT:    vpackusdw %ymm5, %ymm3, %ymm3
+; X64-AVX2-NEXT:    vpcmpeqw %ymm3, %ymm1, %ymm1
+; X64-AVX2-NEXT:    vpxor %ymm2, %ymm1, %ymm1
+; X64-AVX2-NEXT:    vpor %ymm6, %ymm1, %ymm1
 ; X64-AVX2-NEXT:    retq
 ;
 ; X64-AVX512BWDQ-LABEL: vec_v32i16:

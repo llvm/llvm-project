@@ -822,9 +822,9 @@ define <2 x i64> @clmul_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 define <16 x i8> @clmulr_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; SSE2-LABEL: clmulr_v16i8:
 ; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; SSE2-NEXT:    movdqa %xmm1, %xmm4
 ; SSE2-NEXT:    psrlw $4, %xmm4
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; SSE2-NEXT:    pand %xmm2, %xmm4
 ; SSE2-NEXT:    pand %xmm2, %xmm1
 ; SSE2-NEXT:    psllw $4, %xmm1
@@ -2392,9 +2392,9 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 define <16 x i8> @clmulh_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; SSE2-LABEL: clmulh_v16i8:
 ; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; SSE2-NEXT:    movdqa %xmm1, %xmm4
 ; SSE2-NEXT:    psrlw $4, %xmm4
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; SSE2-NEXT:    pand %xmm2, %xmm4
 ; SSE2-NEXT:    pand %xmm2, %xmm1
 ; SSE2-NEXT:    psllw $4, %xmm1

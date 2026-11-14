@@ -33,7 +33,13 @@ define <16 x i8> @avg_v16i8_mask(<16 x i8> %a, <16 x i8> %b, <16 x i8> %src, i16
 define <16 x i8> @avg_v16i8_maskz(<16 x i8> %a, <16 x i8> %b, i16 %mask) nounwind {
 ; AVX512F-LABEL: avg_v16i8_maskz:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpavgb %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm1 = ~zmm1
+; AVX512F-NEXT:    vpsubw %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpsrlw $1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512F-NEXT:    kmovw %edi, %k1
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} {z} = -1
 ; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
@@ -94,7 +100,23 @@ define <32 x i8> @avg_v32i8_maskz(<32 x i8> %a, <32 x i8> %b, i32 %mask) nounwin
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    kmovw %edi, %k1
 ; AVX512F-NEXT:    shrl $16, %edi
-; AVX512F-NEXT:    vpavgb %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero,xmm2[8],zero,xmm2[9],zero,xmm2[10],zero,xmm2[11],zero,xmm2[12],zero,xmm2[13],zero,xmm2[14],zero,xmm2[15],zero
+; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm3
+; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm3 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero,xmm3[4],zero,xmm3[5],zero,xmm3[6],zero,xmm3[7],zero,xmm3[8],zero,xmm3[9],zero,xmm3[10],zero,xmm3[11],zero,xmm3[12],zero,xmm3[13],zero,xmm3[14],zero,xmm3[15],zero
+; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm1 = ~zmm1
+; AVX512F-NEXT:    vpsubw %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm3 = ~zmm3
+; AVX512F-NEXT:    vpsubw %ymm3, %ymm2, %ymm1
+; AVX512F-NEXT:    vpsrlw $1, %ymm1, %ymm1
+; AVX512F-NEXT:    vpsrlw $1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
+; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
+; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    kmovw %edi, %k2
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} {z} = -1
 ; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
@@ -177,11 +199,43 @@ define <64 x i8> @avg_v64i8_maskz(<64 x i8> %a, <64 x i8> %b, i64 %mask) nounwin
 ; AVX512F-NEXT:    shrq $32, %rdi
 ; AVX512F-NEXT:    shrq $48, %rax
 ; AVX512F-NEXT:    shrl $16, %ecx
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
-; AVX512F-NEXT:    vpavgb %ymm2, %ymm3, %ymm2
-; AVX512F-NEXT:    vpavgb %ymm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero,xmm2[8],zero,xmm2[9],zero,xmm2[10],zero,xmm2[11],zero,xmm2[12],zero,xmm2[13],zero,xmm2[14],zero,xmm2[15],zero
+; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm3 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm4
+; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm4 = xmm4[0],zero,xmm4[1],zero,xmm4[2],zero,xmm4[3],zero,xmm4[4],zero,xmm4[5],zero,xmm4[6],zero,xmm4[7],zero,xmm4[8],zero,xmm4[9],zero,xmm4[10],zero,xmm4[11],zero,xmm4[12],zero,xmm4[13],zero,xmm4[14],zero,xmm4[15],zero
+; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm5
+; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm5 = xmm5[0],zero,xmm5[1],zero,xmm5[2],zero,xmm5[3],zero,xmm5[4],zero,xmm5[5],zero,xmm5[6],zero,xmm5[7],zero,xmm5[8],zero,xmm5[9],zero,xmm5[10],zero,xmm5[11],zero,xmm5[12],zero,xmm5[13],zero,xmm5[14],zero,xmm5[15],zero
+; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm6 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
+; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm7
+; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm7 = xmm7[0],zero,xmm7[1],zero,xmm7[2],zero,xmm7[3],zero,xmm7[4],zero,xmm7[5],zero,xmm7[6],zero,xmm7[7],zero,xmm7[8],zero,xmm7[9],zero,xmm7[10],zero,xmm7[11],zero,xmm7[12],zero,xmm7[13],zero,xmm7[14],zero,xmm7[15],zero
+; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm1 = ~zmm1
+; AVX512F-NEXT:    vpsubw %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm7 = ~zmm7
+; AVX512F-NEXT:    vpsubw %ymm7, %ymm4, %ymm1
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm6 = ~zmm6
+; AVX512F-NEXT:    vpsubw %ymm6, %ymm3, %ymm3
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm5 = ~zmm5
+; AVX512F-NEXT:    vpsubw %ymm5, %ymm2, %ymm2
+; AVX512F-NEXT:    vpsrlw $1, %ymm2, %ymm2
+; AVX512F-NEXT:    vpsrlw $1, %ymm3, %ymm3
+; AVX512F-NEXT:    vpsrlw $1, %ymm1, %ymm1
+; AVX512F-NEXT:    vpsrlw $1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
+; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
+; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm3[0],zero,ymm3[1],zero,ymm3[2],zero,ymm3[3],zero,ymm3[4],zero,ymm3[5],zero,ymm3[6],zero,ymm3[7],zero,ymm3[8],zero,ymm3[9],zero,ymm3[10],zero,ymm3[11],zero,ymm3[12],zero,ymm3[13],zero,ymm3[14],zero,ymm3[15],zero
+; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm2 = ymm2[0],zero,ymm2[1],zero,ymm2[2],zero,ymm2[3],zero,ymm2[4],zero,ymm2[5],zero,ymm2[6],zero,ymm2[7],zero,ymm2[8],zero,ymm2[9],zero,ymm2[10],zero,ymm2[11],zero,ymm2[12],zero,ymm2[13],zero,ymm2[14],zero,ymm2[15],zero
+; AVX512F-NEXT:    vpmovdb %zmm2, %xmm2
+; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    kmovw %ecx, %k2
 ; AVX512F-NEXT:    kmovw %eax, %k3
 ; AVX512F-NEXT:    kmovw %edi, %k4
@@ -246,7 +300,12 @@ define <8 x i16> @avg_v8i16_mask(<8 x i16> %a, <8 x i16> %b, <8 x i16> %src, i8 
 define <8 x i16> @avg_v8i16_maskz(<8 x i16> %a, <8 x i16> %b, i8 %mask) nounwind {
 ; AVX512F-LABEL: avg_v8i16_maskz:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpavgw %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm1 = ~zmm1
+; AVX512F-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpsrld $1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512F-NEXT:    kmovw %edi, %k1
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} {z} = -1
 ; AVX512F-NEXT:    vpmovdw %zmm1, %ymm1
@@ -363,11 +422,21 @@ define <32 x i16> @avg_v32i16_maskz(<32 x i16> %a, <32 x i16> %b, i32 %mask) nou
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    kmovw %edi, %k1
 ; AVX512F-NEXT:    shrl $16, %edi
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
-; AVX512F-NEXT:    vpavgw %ymm2, %ymm3, %ymm2
-; AVX512F-NEXT:    vpavgw %ymm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm2 = ymm2[0],zero,ymm2[1],zero,ymm2[2],zero,ymm2[3],zero,ymm2[4],zero,ymm2[5],zero,ymm2[6],zero,ymm2[7],zero,ymm2[8],zero,ymm2[9],zero,ymm2[10],zero,ymm2[11],zero,ymm2[12],zero,ymm2[13],zero,ymm2[14],zero,ymm2[15],zero
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm3
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm3 = ymm3[0],zero,ymm3[1],zero,ymm3[2],zero,ymm3[3],zero,ymm3[4],zero,ymm3[5],zero,ymm3[6],zero,ymm3[7],zero,ymm3[8],zero,ymm3[9],zero,ymm3[10],zero,ymm3[11],zero,ymm3[12],zero,ymm3[13],zero,ymm3[14],zero,ymm3[15],zero
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm1 = ~zmm1
+; AVX512F-NEXT:    vpsubd %zmm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm3 = ~zmm3
+; AVX512F-NEXT:    vpsubd %zmm3, %zmm2, %zmm1
+; AVX512F-NEXT:    vpsrld $1, %zmm1, %zmm1
+; AVX512F-NEXT:    vpsrld $1, %zmm0, %zmm0
+; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512F-NEXT:    vpmovdw %zmm1, %ymm1
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    kmovw %edi, %k2
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} {z} = -1
 ; AVX512F-NEXT:    vpmovdw %zmm1, %ymm1
