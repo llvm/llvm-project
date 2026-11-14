@@ -1,0 +1,28 @@
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -verify-machineinstrs -stats %s -o /dev/null 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# An invisible instruction between illegal instructions must not cause a second
+# separator to be inserted between the two legal ranges.
+# CHECK: 2 machine-outliner - Unoutlinable instructions mapped + number of sentinel values
+# CHECK: 1 machine-outliner - Non-debug invisible instructions skipped during mapping
+# CHECK: 5 machine-outliner - Outlinable instructions mapped
+# CHECK: 1 machine-outliner - Sentinel values inserted during mapping
+# CHECK: 7 machine-outliner - Total number of instructions mapped and saved to mapping vector
+
+---
+name: redundant_separators
+tracksRegLiveness: true
+machineFunctionInfo:
+  hasRedZone: false
+body: |
+  bb.0:
+    liveins: $lr
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 1
+    $lr = ORRXri $lr, 4
+    $w9 = IMPLICIT_DEF
+    $lr = ORRXri $lr, 4
+    $w2 = ORRWri $wzr, 1
+    $w3 = ORRWri $wzr, 1
+    RET undef $lr
+...

@@ -1,0 +1,94 @@
+# RUN: split-file %s %t
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -verify-machineinstrs -stats %t/illegal.mir -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -verify-machineinstrs -stats %t/invisible.mir -o /dev/null 2>&1 | FileCheck %s --check-prefixes=CHECK,INVISIBLE
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -verify-machineinstrs -stats %t/block-end.mir -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -verify-machineinstrs -stats %t/legal-terminator.mir -o /dev/null 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Each case has exactly one two-instruction legal range. Isolated legal
+# instructions must not contribute to the mapping statistics.
+# INVISIBLE: 1 machine-outliner - Non-debug invisible instructions skipped during mapping
+# CHECK: 2 machine-outliner - Outlinable instructions mapped
+
+#--- illegal.mir
+# An illegal instruction discards a pending legal instruction. The final RET
+# is also an isolated legal instruction and must be discarded at block end.
+---
+name: illegal
+tracksRegLiveness: true
+machineFunctionInfo:
+  hasRedZone: false
+body: |
+  bb.0:
+    liveins: $lr
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 1
+    $lr = ORRXri $lr, 4
+    $w2 = ORRWri $wzr, 1
+    $lr = ORRXri $lr, 4
+    RET undef $lr
+...
+
+#--- invisible.mir
+# An invisible instruction preserves the pending instruction, so the two ORRs
+# form a legal range even though they are not adjacent in the MIR.
+---
+name: invisible
+tracksRegLiveness: true
+machineFunctionInfo:
+  hasRedZone: false
+body: |
+  bb.0:
+    liveins: $lr
+    $w0 = ORRWri $wzr, 1
+    $w9 = IMPLICIT_DEF
+    $w1 = ORRWri $wzr, 1
+    $lr = ORRXri $lr, 4
+    RET undef $lr
+...
+
+#--- block-end.mir
+# Pending instructions must not be paired across a basic block boundary.
+---
+name: block_end
+tracksRegLiveness: true
+machineFunctionInfo:
+  hasRedZone: false
+body: |
+  bb.0:
+    successors: %bb.1
+    liveins: $lr
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 1
+    $lr = ORRXri $lr, 4
+    $w2 = ORRWri $wzr, 1
+
+  bb.1:
+    liveins: $lr
+    $w3 = ORRWri $wzr, 1
+    $lr = ORRXri $lr, 4
+    RET undef $lr
+...
+
+#--- legal-terminator.mir
+# Calls to an unknown callee terminate legal ranges. Discard a standalone call,
+# but retain a call paired with its preceding instruction. Neither call may
+# start a range with the following instruction.
+--- |
+  declare void @callee()
+  define void @legal_terminator() { unreachable }
+...
+---
+name: legal_terminator
+tracksRegLiveness: true
+machineFunctionInfo:
+  hasRedZone: false
+body: |
+  bb.0:
+    BL @callee, csr_aarch64_aapcs, implicit-def $lr, implicit $sp
+    $w0 = ORRWri $wzr, 1
+    BL @callee, csr_aarch64_aapcs, implicit-def $lr, implicit $sp
+    $w1 = ORRWri $wzr, 1
+    $lr = ORRXri $lr, 4
+    RET undef $lr
+...

@@ -565,14 +565,6 @@ body:             |
 # CHECK-NEXT:  early-clobber $sp, $lr = LDRXpost $sp, 16
 # CHECK-NEXT:  RET $lr
 
-# CHECK:       name:            [[SUB_FUNC]]
-# CHECK:       early-clobber $sp = STRXpre $lr, $sp, -16
-# CHECK-NEXT:  BL @callee
-# CHECK-NEXT:  $x15 = SUBXri $sp, 32, 0
-# CHECK-NEXT:  $x15 = SUBXri $sp, 32, 0
-# CHECK-NEXT:  early-clobber $sp, $lr = LDRXpost $sp, 16
-# CHECK-NEXT:  RET $lr
-
 # CHECK:       name:            [[SHIFTED_SUB_FUNC]]
 # CHECK:       early-clobber $sp = STRXpre $lr, $sp, -16
 # CHECK-NEXT:  BL @callee
@@ -589,10 +581,12 @@ body:             |
 # CHECK-NEXT:  early-clobber $sp, $lr = LDRXpost $sp, 16
 # CHECK-NEXT:  RET $lr
 
-# CHECK:       name:            [[SP_WRITE_FUNC]]
-# CHECK-NOT:   STRXpre
-# CHECK:       $sp = SUBXri $sp, 16, 0
-# CHECK-NEXT:  $sp = ADDXri $sp, 16, 0
+# CHECK:       name:            [[SUB_FUNC]]
+# CHECK:       early-clobber $sp = STRXpre $lr, $sp, -16
+# CHECK-NEXT:  BL @callee
+# CHECK-NEXT:  $x15 = SUBXri $sp, 32, 0
+# CHECK-NEXT:  $x15 = SUBXri $sp, 32, 0
+# CHECK-NEXT:  early-clobber $sp, $lr = LDRXpost $sp, 16
 # CHECK-NEXT:  RET $lr
 
 # CHECK:       name:            [[OVERFLOW_FUNC]]
@@ -605,4 +599,10 @@ body:             |
 # CHECK-NOT:   STRXpre
 # CHECK:       $x15 = ADDXri $sp, 1, 12
 # CHECK-NEXT:  $x15 = ADDXri $sp, 1, 12
+# CHECK-NEXT:  RET $lr
+
+# CHECK:       name:            [[SP_WRITE_FUNC]]
+# CHECK-NOT:   STRXpre
+# CHECK:       $sp = SUBXri $sp, 16, 0
+# CHECK-NEXT:  $sp = ADDXri $sp, 16, 0
 # CHECK-NEXT:  RET $lr
