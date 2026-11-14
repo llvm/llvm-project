@@ -265,6 +265,7 @@ class RawPtrRefLocalVarsChecker
     : public Checker<check::ASTDecl<TranslationUnitDecl>> {
   BugType Bug;
   EnsureFunctionAnalysis EFA;
+  CastOfThisFunctionAnalysis CTFA;
 
 protected:
   mutable BugReporter *BR;
@@ -511,6 +512,15 @@ public:
 
           if (EFA.isACallToEnsureFn(InitArgOrigin))
             return true;
+
+          if (CTFA.isACallToCastOfThisFn(InitArgOrigin)) {
+            auto *MCE = dyn_cast<CXXMemberCallExpr>(InitArgOrigin);
+            assert(MCE);
+            const Expr *ReceiverOrigin = nullptr;
+            if (isPtrOriginSafe(V, MCE->getImplicitObjectArgument(),
+                                DeclWithIssue, ReceiverOrigin, SinkType))
+              return true;
+          }
 
           if (Model->isSafeExpr(InitArgOrigin, PtrIsLifetimeBoundToOrigin,
                                 SinkType, /*SinkMayEscape=*/false))
