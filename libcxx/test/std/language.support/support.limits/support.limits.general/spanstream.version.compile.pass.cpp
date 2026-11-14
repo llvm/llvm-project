@@ -53,7 +53,7 @@
 #    error "__cpp_lib_spanstream should have the value 202106L in c++23"
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  ifndef __cpp_lib_spanstream
 #    error "__cpp_lib_spanstream should be defined in c++26"
@@ -62,6 +62,15 @@
 #    error "__cpp_lib_spanstream should have the value 202106L in c++26"
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  ifndef __cpp_lib_spanstream
+#    error "__cpp_lib_spanstream should be defined in c++29"
+#  endif
+#  if __cpp_lib_spanstream != 202106L
+#    error "__cpp_lib_spanstream should have the value 202106L in c++29"
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on
