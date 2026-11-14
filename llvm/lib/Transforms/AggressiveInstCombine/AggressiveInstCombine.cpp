@@ -1798,6 +1798,16 @@ static bool foldConsecutiveStores(BasicBlock &BB, const DataLayout &DL,
   return MadeChange;
 }
 
+static MemoryAccess *getClobberBefore(const Instruction &I,
+                                      const MemoryLocation &Loc,
+                                      MemorySSA &MSSA) {
+  auto *Access = MSSA.getMemoryAccess(&I);
+  if (!Access)
+    return nullptr;
+  return MSSA.getWalker()->getClobberingMemoryAccess(
+      Access->getDefiningAccess(), Loc);
+}
+
 struct MaskedStore {
   StoreInst *Store;
   Value *Insert;
@@ -1843,17 +1853,15 @@ matchMaskedStore(StoreInst &SI, AliasAnalysis &AA, DominatorTree &DT,
   if (!MSSA)
     MSSA = std::make_unique<MemorySSA>(*SI.getFunction(), &AA, &DT);
   auto *LoadAccess = MSSA->getMemoryAccess(LI);
-  auto *StoreAccess = dyn_cast_or_null<MemoryDef>(MSSA->getMemoryAccess(&SI));
-  if (!LoadAccess || !StoreAccess)
+  if (!LoadAccess)
     return std::nullopt;
 
   // The wide store writes back the preserved bytes from LI. Conservatively
   // prove that the entire word is unchanged by checking that the clobber
   // immediately before SI dominates LI. Start before SI's own MemoryDef.
   MemoryLocation Loc = MemoryLocation::get(LI).getWithoutAATags();
-  MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
-      StoreAccess->getDefiningAccess(), Loc);
-  if (!MSSA->dominates(Clobber, LoadAccess))
+  MemoryAccess *Clobber = getClobberBefore(SI, Loc, *MSSA);
+  if (!Clobber || !MSSA->dominates(Clobber, LoadAccess))
     return std::nullopt;
 
   const DataLayout &DL = SI.getDataLayout();
@@ -1885,6 +1893,52 @@ static bool narrowMatchedStores(ArrayRef<MaskedStore> Stores) {
     SI.eraseFromParent();
   }
   return true;
+}
+
+static StoreInst *getClobberingStore(MemoryAccess *Clobber) {
+  auto *Def = dyn_cast_if_present<MemoryDef>(Clobber);
+  return Def ? dyn_cast_or_null<StoreInst>(Def->getMemoryInst()) : nullptr;
+}
+
+struct ChainedStore {
+  StoreInst *Store;
+  uint64_t Offset;
+};
+
+/// Find the preceding simple store whose entire byte range is written by SI.
+/// The chain is local to this block, with no intervening clobber of SI's range.
+/// A consumer must separately check whether either store can be changed.
+[[maybe_unused]] static std::optional<ChainedStore>
+findChainedStore(StoreInst &SI,
+                                                    MemorySSA &MSSA) {
+  MemoryLocation Loc = MemoryLocation::get(&SI).getWithoutAATags();
+  if (!Loc.Size.isPrecise() || Loc.Size.isScalable())
+    return std::nullopt;
+
+  auto *First = getClobberingStore(getClobberBefore(SI, Loc, MSSA));
+  if (!First || !First->isSimple() || First->getParent() != SI.getParent() ||
+      !First->comesBefore(&SI) ||
+      First->getPointerAddressSpace() != SI.getPointerAddressSpace())
+    return std::nullopt;
+
+  MemoryLocation FirstLoc = MemoryLocation::get(First).getWithoutAATags();
+  LocationSize FirstSize = FirstLoc.Size;
+  if (!FirstSize.isPrecise() || FirstSize.isScalable() || FirstSize.isZero())
+    return std::nullopt;
+
+  AliasResult Alias = MSSA.getAA().alias(Loc, FirstLoc);
+  int64_t Offset = 0;
+  if (Alias != AliasResult::MustAlias) {
+    if (Alias != AliasResult::PartialAlias || !Alias.hasOffset())
+      return std::nullopt;
+    Offset = Alias.getOffset();
+  }
+  uint64_t FirstBytes = FirstSize.getValue().getFixedValue();
+  uint64_t LastBytes = Loc.Size.getValue().getFixedValue();
+  if (Offset < 0 || FirstBytes > LastBytes ||
+      uint64_t(Offset) > LastBytes - FirstBytes)
+    return std::nullopt;
+  return ChainedStore{First, uint64_t(Offset)};
 }
 
 static bool narrowMaskedStores(BasicBlock &BB, DominatorTree &DT,
