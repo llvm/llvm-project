@@ -14,6 +14,24 @@
 // DLL-SAME: "-defaultlib:libcmt" "-defaultlib:oldnames"
 // DLL-SAME: "-nologo" "-dll"
 
+// RUN: %clang --target=i686-pc-windows-msvc -fms-runtime-lib=dll -fuse-ld=link -### %s 2>&1 | FileCheck --check-prefix=RUNTIME-DLL %s
+// RUNTIME-DLL:      link.exe"
+// RUNTIME-DLL-SAME: "-defaultlib:msvcrt" "-defaultlib:oldnames"
+
+// RUN: %clang --target=i686-pc-windows-msvc -fms-runtime-lib=dll_dbg -fuse-ld=link -### %s 2>&1 | FileCheck --check-prefix=RUNTIME-DLL-DBG %s
+// RUNTIME-DLL-DBG:      link.exe"
+// RUNTIME-DLL-DBG-SAME: "-defaultlib:msvcrtd" "-defaultlib:oldnames"
+
+// RUN: %clang --target=i686-pc-windows-msvc -fms-runtime-lib=static_dbg -fuse-ld=link -### %s 2>&1 | FileCheck --check-prefix=RUNTIME-STATIC-DBG %s
+// RUNTIME-STATIC-DBG:      link.exe"
+// RUNTIME-STATIC-DBG-SAME: "-defaultlib:libcmtd" "-defaultlib:oldnames"
+
+// RUN: %clang --target=i686-pc-windows-msvc -nodefaultlibs -fuse-ld=link -### %s 2>&1 | FileCheck --check-prefix=NODEFAULTLIBS %s
+// RUN: %clang --target=i686-pc-windows-msvc -fms-omit-default-lib -fuse-ld=link -### %s 2>&1 | FileCheck --check-prefix=NODEFAULTLIBS %s
+// NODEFAULTLIBS:     link.exe"
+// NODEFAULTLIBS-NOT: "-defaultlib:
+
+
 // RUN: %clang_cl /Brepro -fuse-ld=link -### -- %s 2>&1 | FileCheck --check-prefix=REPRO %s
 // REPRO:      link.exe"
 // REPRO-SAME: "-out:msvc-link.exe"

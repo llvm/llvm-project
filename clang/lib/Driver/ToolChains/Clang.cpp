@@ -5215,7 +5215,8 @@ static void ProcessVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
   if (Args.hasArg(options::OPT_fms_omit_default_lib)) {
     CmdArgs.push_back("-D_VC_NODEFAULTLIB");
   } else {
-    CmdArgs.push_back(FlagForCRT.data());
+    if (!FlagForCRT.empty())
+      CmdArgs.push_back(FlagForCRT.data());
 
     // This provides POSIX compatibility (maps 'open' to '_open'), which most
     // users want.  The /Za flag to cl.exe turns this off, but it's not
@@ -7750,7 +7751,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(MSAnonOpt);
 
   if (Triple.isWindowsMSVCEnvironment() && !D.IsCLMode() &&
-      Args.hasArg(options::OPT_fms_runtime_lib_EQ))
+      Args.hasArg(options::OPT_fms_runtime_lib_EQ,
+                  options::OPT_fms_omit_default_lib))
     ProcessVSRuntimeLibrary(getToolChain(), Args, CmdArgs);
 
   // Handle -fgcc-version, if present.
