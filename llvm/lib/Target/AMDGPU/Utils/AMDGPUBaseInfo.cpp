@@ -2587,7 +2587,7 @@ uint32_t getTotalNumVGPRs(bool has90AInsts, uint32_t ArgNumAGPR,
 
 bool isSGPR(MCRegister Reg, const MCRegisterInfo *TRI) {
   const MCRegisterClass &SGPRClass =
-      TRI->getRegClass(AMDGPU::SReg_32RegClassID);
+      TRI->getRegClass(AMDGPU::SReg_32_EncodableRegClassID);
   const MCRegister FirstSubReg = TRI->getSubReg(Reg, AMDGPU::sub0);
   return SGPRClass.contains(FirstSubReg != 0 ? FirstSubReg : Reg) ||
          Reg == AMDGPU::SCC;
@@ -2771,12 +2771,14 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::VS_32RegClassID:
   case AMDGPU::AV_32RegClassID:
   case AMDGPU::SReg_32RegClassID:
+  case AMDGPU::SReg_32_EncodableRegClassID:
   case AMDGPU::SReg_32_XM0RegClassID:
   case AMDGPU::SRegOrLds_32RegClassID:
     return 32;
   case AMDGPU::SGPR_64RegClassID:
   case AMDGPU::VS_64RegClassID:
   case AMDGPU::SReg_64RegClassID:
+  case AMDGPU::SReg_64_EncodableRegClassID:
   case AMDGPU::VReg_64RegClassID:
   case AMDGPU::AReg_64RegClassID:
   case AMDGPU::SReg_64_XEXECRegClassID:

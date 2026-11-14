@@ -10894,6 +10894,13 @@ unsigned AMDGPUAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
     return Operand.isInterpAttr() ? Match_Success : Match_InvalidOperand;
   case MCK_InterpAttrChan:
     return Operand.isInterpAttrChan() ? Match_Success : Match_InvalidOperand;
+  case MCK_SReg_64_Encodable:
+    // src_flat_scratch_base_lo names the 64-bit src_flat_scratch_base when used
+    // as a 64-bit operand.
+    if (Operand.isRegKind() &&
+        Operand.getReg() == AMDGPU::SRC_FLAT_SCRATCH_BASE_LO)
+      return Match_Success;
+    [[fallthrough]];
   case MCK_SReg_64:
   case MCK_SReg_64_XEXEC:
     // Null is defined as a 32-bit register but

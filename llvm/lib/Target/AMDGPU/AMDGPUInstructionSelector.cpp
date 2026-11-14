@@ -4529,11 +4529,14 @@ bool AMDGPUInstructionSelector::selectWriteRegister(MachineInstr &MI) const {
 
   Register PhysReg = Subtarget->getTargetLowering()->getRegisterByName(
       RegStr->getString().data(), Ty, *MF);
-  if (!PhysReg) {
+  // Read-only registers such as src_flat_scratch_base can be read, but cannot
+  // be encoded as an instruction destination.
+  if (!PhysReg || TRI.isReadOnlySourceReg(PhysReg)) {
     const Function &Fn = MF->getFunction();
     Fn.getContext().diagnose(DiagnosticInfoGenericWithLoc(
-        "invalid register \"" + Twine(RegStr->getString()) +
-            "\" for llvm.write_register",
+        Twine(PhysReg ? "cannot write to read-only register \""
+                      : "invalid register \"") +
+            RegStr->getString() + "\" for llvm.write_register",
         Fn, MI.getDebugLoc()));
     MI.eraseFromParent();
     return true;

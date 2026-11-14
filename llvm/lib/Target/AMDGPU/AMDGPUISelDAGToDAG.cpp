@@ -3505,11 +3505,14 @@ void AMDGPUDAGToDAGISel::SelectWRITE_REGISTER(SDNode *N) {
   Register Reg = TLI->getRegisterByName(RegStr->getString().data(),
                                         getLLTForMVT(VT.getSimpleVT()),
                                         CurDAG->getMachineFunction());
-  if (!Reg) {
+  // Read-only registers such as src_flat_scratch_base can be read, but cannot
+  // be encoded as an instruction destination.
+  if (!Reg || Subtarget->getRegisterInfo()->isReadOnlySourceReg(Reg)) {
     const Function &Fn = CurDAG->getMachineFunction().getFunction();
     Fn.getContext().diagnose(DiagnosticInfoGenericWithLoc(
-        "invalid register \"" + Twine(RegStr->getString()) +
-            "\" for llvm.write_register",
+        Twine(Reg ? "cannot write to read-only register \""
+                  : "invalid register \"") +
+            RegStr->getString() + "\" for llvm.write_register",
         Fn, N->getDebugLoc()));
     ReplaceUses(SDValue(N, 0), N->getOperand(0));
     CurDAG->RemoveDeadNode(N);

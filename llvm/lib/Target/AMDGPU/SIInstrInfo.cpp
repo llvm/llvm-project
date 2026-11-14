@@ -768,7 +768,7 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII, MachineBasicBlock &MBB,
           !TII.getSubtarget().hasGFX90AInsts()) &&
          "Expected GFX908 subtarget.");
 
-  assert((AMDGPU::SReg_32RegClass.contains(SrcReg) ||
+  assert((AMDGPU::SReg_32_EncodableRegClass.contains(SrcReg) ||
           AMDGPU::AGPR_32RegClass.contains(SrcReg)) &&
          "Source register of the copy should be either an SGPR or an AGPR.");
 
@@ -857,7 +857,7 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII, MachineBasicBlock &MBB,
   if (AMDGPU::AGPR_32RegClass.contains(SrcReg)) {
     TmpCopyOp = AMDGPU::V_ACCVGPR_READ_B32_e64;
   } else {
-    assert(AMDGPU::SReg_32RegClass.contains(SrcReg));
+    assert(AMDGPU::SReg_32_EncodableRegClass.contains(SrcReg));
   }
 
   MachineInstrBuilder UseBuilder = BuildMI(MBB, MI, DL, TII.get(TmpCopyOp), Tmp)
@@ -956,7 +956,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (RC == &AMDGPU::VGPR_32RegClass) {
     assert(AMDGPU::VGPR_32RegClass.contains(SrcReg) ||
-           AMDGPU::SReg_32RegClass.contains(SrcReg) ||
+           AMDGPU::SReg_32_EncodableRegClass.contains(SrcReg) ||
            AMDGPU::AGPR_32RegClass.contains(SrcReg));
     unsigned Opc = AMDGPU::AGPR_32RegClass.contains(SrcReg) ?
                      AMDGPU::V_ACCVGPR_READ_B32_e64 : AMDGPU::V_MOV_B32_e32;
@@ -974,7 +974,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       return;
     }
 
-    if (!AMDGPU::SReg_32RegClass.contains(SrcReg)) {
+    if (!AMDGPU::SReg_32_EncodableRegClass.contains(SrcReg)) {
       if (DestReg == AMDGPU::VCC_LO) {
         // FIXME: Hack until VReg_1 removed.
         assert(AMDGPU::VGPR_32RegClass.contains(SrcReg));
@@ -1023,7 +1023,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   if (DestReg == AMDGPU::SCC) {
     // Copying 64-bit or 32-bit sources to SCC barely makes sense,
     // but SelectionDAG emits such copies for i1 sources.
-    if (AMDGPU::SReg_64RegClass.contains(SrcReg)) {
+    if (AMDGPU::SReg_64_EncodableRegClass.contains(SrcReg)) {
       // This copy can only be produced by patterns
       // with explicit SCC, which are known to be enabled
       // only for subtargets with S_CMP_LG_U64 present.
@@ -1032,7 +1032,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
           .addReg(SrcReg, getKillRegState(KillSrc))
           .addImm(0);
     } else {
-      assert(AMDGPU::SReg_32RegClass.contains(SrcReg));
+      assert(AMDGPU::SReg_32_EncodableRegClass.contains(SrcReg));
       BuildMI(MBB, MI, DL, get(AMDGPU::S_CMP_LG_U32))
           .addReg(SrcReg, getKillRegState(KillSrc))
           .addImm(0);
@@ -1043,7 +1043,8 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (RC == &AMDGPU::AGPR_32RegClass) {
     if (AMDGPU::VGPR_32RegClass.contains(SrcReg) ||
-        (ST.hasGFX90AInsts() && AMDGPU::SReg_32RegClass.contains(SrcReg))) {
+        (ST.hasGFX90AInsts() &&
+         AMDGPU::SReg_32_EncodableRegClass.contains(SrcReg))) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_ACCVGPR_WRITE_B32_e64), DestReg)
         .addReg(SrcReg, getKillRegState(KillSrc));
       return;
@@ -5472,8 +5473,8 @@ bool SIInstrInfo::physRegUsesConstantBus(const MachineOperand &RegOp) const {
     return Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO || Reg == AMDGPU::M0;
 
   // SGPRs use the constant bus
-  return AMDGPU::SReg_32RegClass.contains(Reg) ||
-         AMDGPU::SReg_64RegClass.contains(Reg);
+  return AMDGPU::SReg_32_EncodableRegClass.contains(Reg) ||
+         AMDGPU::SReg_64_EncodableRegClass.contains(Reg);
 }
 
 bool SIInstrInfo::regUsesConstantBus(const MachineOperand &RegOp,
@@ -5572,6 +5573,20 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   uint32_t Opcode = MI.getOpcode();
   const MachineFunction *MF = MI.getMF();
   const MachineRegisterInfo &MRI = MF->getRegInfo();
+
+  // Read-only source registers cannot be encoded as a destination. Inline asm
+  // clobbers of them are harmless, so only check other instructions.
+  if (!MI.isInlineAsm()) {
+    for (const MachineOperand &MO : MI.operands()) {
+      if (!MO.isReg() || !MO.isDef() || MO.isImplicit())
+        continue;
+      Register Reg = MO.getReg();
+      if (Reg.isPhysical() && RI.isReadOnlySourceReg(Reg)) {
+        ErrInfo = "Illegal write to read-only register";
+        return false;
+      }
+    }
+  }
 
   // FIXME: At this point the COPY verify is done only for non-ssa forms.
   // Find a better property to recognize the point where instruction selection

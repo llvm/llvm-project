@@ -69,3 +69,20 @@ s_setreg_b32 hwreg(HW_REG_XNACK_MASK), s1
 s_setreg_b32 hwreg(HW_REG_IB_STS2), s1
 // GFX1200-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
 // GFX1250: encoding: [0x1c,0xf8,0x01,0xb9]
+
+// The s_movrels_b64 source is an SGPR index that must be even, so read-only
+// source registers are not accepted.
+
+s_movrels_b64 s[0:1], src_shared_base
+// GFX1200-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1250-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
+
+s_movrels_b64 s[0:1], src_flat_scratch_base_lo
+// GFX1200-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: src_flat_scratch_base_lo register not available on this GPU
+// GFX1250-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
+
+// Only the low half names the 64-bit src_flat_scratch_base.
+
+s_set_pc_i64 src_flat_scratch_base_hi
+// GFX1200-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU (gfx1200): s_set_pc_i64
+// GFX1250-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction

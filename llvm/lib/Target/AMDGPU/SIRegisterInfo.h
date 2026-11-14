@@ -447,6 +447,11 @@ public:
   // \returns NoRegister otherwise.
   MCRegister get32BitRegister(MCRegister Reg) const;
 
+  // \returns true if \p Reg is a read-only source register such as
+  // src_shared_base or src_scc. These can be read, but cannot be encoded as an
+  // instruction destination.
+  bool isReadOnlySourceReg(MCRegister Reg) const;
+
   // Returns true if a given register class is properly aligned for
   // the subtarget.
   bool isProperlyAlignedRC(const TargetRegisterClass &RC) const;

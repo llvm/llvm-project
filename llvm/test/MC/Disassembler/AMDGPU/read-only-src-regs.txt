@@ -1,0 +1,37 @@
+# RUN: not llvm-mc -triple=amdgpu11.00 -disassemble -show-encoding < %s 2>/dev/null | FileCheck -check-prefix=CHECK %s
+# RUN: not llvm-mc -triple=amdgpu12.00 -disassemble -show-encoding < %s 2>/dev/null | FileCheck -check-prefix=CHECK %s
+# RUN: not llvm-mc -triple=amdgpu12.50 -disassemble -show-encoding < %s 2>/dev/null | FileCheck -check-prefixes=CHECK,FSB %s
+# RUN: not llvm-mc -triple=amdgpu11.00 -disassemble < %s 2>&1 >/dev/null | FileCheck -check-prefixes=WARN,NOFSB-WARN --implicit-check-not=warning: %s
+# RUN: not llvm-mc -triple=amdgpu12.00 -disassemble < %s 2>&1 >/dev/null | FileCheck -check-prefixes=WARN,NOFSB-WARN --implicit-check-not=warning: %s
+# RUN: not llvm-mc -triple=amdgpu12.50 -disassemble < %s 2>&1 >/dev/null | FileCheck -check-prefixes=WARN --implicit-check-not=warning: %s
+
+# Read-only source registers must only be decoded where the assembler accepts
+# them, so that the disassembly can be assembled again. The NOFSB targets do
+# not have src_flat_scratch_base_lo/hi (encodings 230 and 231).
+
+# CHECK: s_movrels_b32 s0, src_scc ; encoding: [0xfd,0x40,0x80,0xbe]
+[0xfd,0x40,0x80,0xbe]
+
+# NOFSB-WARN: :[[@LINE+2]]:2: warning: invalid instruction encoding
+# FSB: s_movrels_b32 s0, src_flat_scratch_base_lo ; encoding: [0xe6,0x40,0x80,0xbe]
+[0xe6,0x40,0x80,0xbe]
+
+# NOFSB-WARN: :[[@LINE+2]]:2: warning: invalid instruction encoding
+# FSB: s_movrels_b32 s0, src_flat_scratch_base_hi ; encoding: [0xe7,0x40,0x80,0xbe]
+[0xe7,0x40,0x80,0xbe]
+
+# The 32-bit aperture registers have no assembler syntax as the source of
+# s_movrels_b32: src_shared_base and src_shared_limit name the 64-bit registers.
+# WARN: :[[@LINE+1]]:2: warning: invalid instruction encoding
+[0xeb,0x40,0x80,0xbe]
+
+# WARN: :[[@LINE+1]]:2: warning: invalid instruction encoding
+[0xec,0x40,0x80,0xbe]
+
+# NOFSB-WARN: :[[@LINE+2]]:2: warning: invalid instruction encoding
+# FSB: s_set_pc_i64 src_flat_scratch_base_lo ; encoding: [0xe6,0x48,0x80,0xbe]
+[0xe6,0x48,0x80,0xbe]
+
+# NOFSB-WARN: :[[@LINE+2]]:2: warning: invalid instruction encoding
+# FSB: v_mov_b32_e32 v0, src_flat_scratch_base_lo ; encoding: [0xe6,0x02,0x00,0x7e]
+[0xe6,0x02,0x00,0x7e]

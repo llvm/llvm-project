@@ -4561,7 +4561,7 @@ MCRegister SIRegisterInfo::get32BitRegister(MCRegister Reg) const {
   assert(getRegSizeInBits(*getPhysRegBaseClass(Reg)) <= 32);
 
   for (const TargetRegisterClass *RC :
-       {&AMDGPU::VGPR_32RegClass, &AMDGPU::SReg_32RegClass,
+       {&AMDGPU::VGPR_32RegClass, &AMDGPU::SReg_32_EncodableRegClass,
         &AMDGPU::AGPR_32RegClass}) {
     if (MCRegister Super = getMatchingSuperReg(Reg, AMDGPU::lo16, RC))
       return Super;
@@ -4572,6 +4572,15 @@ MCRegister SIRegisterInfo::get32BitRegister(MCRegister Reg) const {
   }
 
   return AMDGPU::NoRegister;
+}
+
+bool SIRegisterInfo::isReadOnlySourceReg(MCRegister Reg) const {
+  if (AMDGPU::SReg_LO16RegClass.contains(Reg))
+    Reg = get32BitRegister(Reg);
+  return (AMDGPU::SReg_32_EncodableRegClass.contains(Reg) &&
+          !AMDGPU::SReg_32RegClass.contains(Reg)) ||
+         (AMDGPU::SReg_64_EncodableRegClass.contains(Reg) &&
+          !AMDGPU::SReg_64RegClass.contains(Reg));
 }
 
 bool SIRegisterInfo::isProperlyAlignedRC(const TargetRegisterClass &RC) const {
