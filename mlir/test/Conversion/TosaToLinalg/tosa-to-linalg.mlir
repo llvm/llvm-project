@@ -2891,17 +2891,18 @@ func.func @argmax_nan_ignore(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> 
   // CHECK: [[IDX_ZERO:%.+]] = arith.constant 0 : i32
   // CHECK: [[IDX_FILL:%.+]] = linalg.fill ins([[IDX_ZERO]] : i32) outs([[IDX_INIT]] : tensor<4xi32>)
   // CHECK: [[VAL_INIT:%.+]] = tensor.empty() : tensor<4xf32>
-  // FINITE: [[VAL_MIN:%.+]] = arith.constant -3.40282347E+38 : f32
-  // NONFINITE: [[VAL_MIN:%.+]] = arith.constant 0xFF800000 : f32
-  // CHECK: [[VAL_FILL:%.+]] = linalg.fill ins([[VAL_MIN]] : f32) outs([[VAL_INIT]] : tensor<4xf32>)
+  // CHECK: [[VAL_NAN:%.+]] = arith.constant 0x7FC00000 : f32
+  // CHECK: [[VAL_FILL:%.+]] = linalg.fill ins([[VAL_NAN]] : f32) outs([[VAL_INIT]] : tensor<4xf32>)
   // CHECK: linalg.generic
   // CHECK-SAME: ins([[INPUT]] : tensor<5x4xf32>) outs([[IDX_FILL]], [[VAL_FILL]] : tensor<4xi32>, tensor<4xf32>)
   // CHECK: ^bb0([[NEW_VALUE:%.+]]: f32, [[OLD_INDEX:%.+]]: i32, [[OLD_VALUE:%.+]]: f32):
   // CHECK:   [[IDX:%.+]] = linalg.index 0
   // CHECK:   [[CAST:%.+]] = arith.index_cast [[IDX]] : index to i32
-  // CHECK:   [[CMP:%.+]] = arith.cmpf ogt, [[NEW_VALUE]], [[OLD_VALUE]] : f32
-  // CHECK:   [[SELECT_VAL:%.+]] = arith.select [[CMP]], [[NEW_VALUE]], [[OLD_VALUE]] : f32
-  // CHECK:   [[SELECT_IDX:%.+]] = arith.select [[CMP]], [[CAST]], [[OLD_INDEX]] : i32
+  // CHECK:   [[CMP:%.+]] = arith.cmpf ugt, [[NEW_VALUE]], [[OLD_VALUE]] : f32
+  // CHECK:   [[NON_NAN:%.+]] = arith.cmpf ord, [[NEW_VALUE]], [[NEW_VALUE]] : f32
+  // CHECK:   [[PRED:%.+]] = arith.andi [[CMP]], [[NON_NAN]] : i1
+  // CHECK:   [[SELECT_VAL:%.+]] = arith.select [[PRED]], [[NEW_VALUE]], [[OLD_VALUE]] : f32
+  // CHECK:   [[SELECT_IDX:%.+]] = arith.select [[PRED]], [[CAST]], [[OLD_INDEX]] : i32
   // CHECK:   linalg.yield [[SELECT_IDX]], [[SELECT_VAL]] : i32, f32
   %12 = tosa.argmax %arg0 axis(0) nan_mode<IGNORE> : (tensor<5x4xf32>)  -> tensor<4xi32>
   return
@@ -2973,17 +2974,18 @@ func.func @argmin_nan_ignore(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> 
   // CHECK: [[IDX_ZERO:%.+]] = arith.constant 0 : i32
   // CHECK: [[IDX_FILL:%.+]] = linalg.fill ins([[IDX_ZERO]] : i32) outs([[IDX_INIT]] : tensor<4xi32>)
   // CHECK: [[VAL_INIT:%.+]] = tensor.empty() : tensor<4xf32>
-  // FINITE: [[VAL_MAX:%.+]] = arith.constant 3.40282347E+38 : f32
-  // NONFINITE: [[VAL_MAX:%.+]] = arith.constant 0x7F800000 : f32
-  // CHECK: [[VAL_FILL:%.+]] = linalg.fill ins([[VAL_MAX]] : f32) outs([[VAL_INIT]] : tensor<4xf32>)
+  // CHECK: [[VAL_NAN:%.+]] = arith.constant 0x7FC00000 : f32
+  // CHECK: [[VAL_FILL:%.+]] = linalg.fill ins([[VAL_NAN]] : f32) outs([[VAL_INIT]] : tensor<4xf32>)
   // CHECK: linalg.generic
   // CHECK-SAME: ins([[INPUT]] : tensor<5x4xf32>) outs([[IDX_FILL]], [[VAL_FILL]] : tensor<4xi32>, tensor<4xf32>)
   // CHECK: ^bb0([[NEW_VALUE:%.+]]: f32, [[OLD_INDEX:%.+]]: i32, [[OLD_VALUE:%.+]]: f32):
   // CHECK:   [[IDX:%.+]] = linalg.index 0
   // CHECK:   [[CAST:%.+]] = arith.index_cast [[IDX]] : index to i32
-  // CHECK:   [[CMP:%.+]] = arith.cmpf olt, [[NEW_VALUE]], [[OLD_VALUE]] : f32
-  // CHECK:   [[SELECT_VAL:%.+]] = arith.select [[CMP]], [[NEW_VALUE]], [[OLD_VALUE]] : f32
-  // CHECK:   [[SELECT_IDX:%.+]] = arith.select [[CMP]], [[CAST]], [[OLD_INDEX]] : i32
+  // CHECK:   [[CMP:%.+]] = arith.cmpf ult, [[NEW_VALUE]], [[OLD_VALUE]] : f32
+  // CHECK:   [[NON_NAN:%.+]] = arith.cmpf ord, [[NEW_VALUE]], [[NEW_VALUE]] : f32
+  // CHECK:   [[PRED:%.+]] = arith.andi [[CMP]], [[NON_NAN]] : i1
+  // CHECK:   [[SELECT_VAL:%.+]] = arith.select [[PRED]], [[NEW_VALUE]], [[OLD_VALUE]] : f32
+  // CHECK:   [[SELECT_IDX:%.+]] = arith.select [[PRED]], [[CAST]], [[OLD_INDEX]] : i32
   // CHECK:   linalg.yield [[SELECT_IDX]], [[SELECT_VAL]] : i32, f32
   %12 = tosa.argmin %arg0 axis(0) nan_mode<IGNORE> : (tensor<5x4xf32>)  -> tensor<4xi32>
   return

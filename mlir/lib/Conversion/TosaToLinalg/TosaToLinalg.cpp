@@ -2773,6 +2773,14 @@ public:
     if (!fillValueAttr)
       return rewriter.notifyMatchFailure(argOp, "unsupported element type");
 
+    // In IGNORE mode, use NaN as the initial value so the first non-NaN
+    // input is selected even if it is a finite limit or infinity.
+    if (auto floatTy = dyn_cast<FloatType>(inElementTy);
+        floatTy && argOp.getNanMode() == NanPropagationMode::IGNORE) {
+      fillValueAttr = rewriter.getFloatAttr(
+          floatTy, APFloat::getQNaN(floatTy.getFloatSemantics()));
+    }
+
     auto fillValue = arith::ConstantOp::create(rewriter, loc, fillValueAttr);
     auto filledTensorValue =
         linalg::FillOp::create(rewriter, loc, ValueRange{fillValue},
@@ -2814,10 +2822,16 @@ public:
             if (argOp.getNanMode() == NanPropagationMode::IGNORE) {
               // Only update index & value for non NaN values. If all
               // values are NaNs, the initial index will be return which is 0.
-              predicate = arith::CmpFOp::create(
+              Value comparison = arith::CmpFOp::create(
                   rewriter, nestedLoc,
-                  isMin ? arith::CmpFPredicate::OLT : arith::CmpFPredicate::OGT,
+                  isMin ? arith::CmpFPredicate::ULT : arith::CmpFPredicate::UGT,
                   newValue, oldValue);
+              Value newNonNaN = arith::CmpFOp::create(rewriter, nestedLoc,
+                                                      arith::CmpFPredicate::ORD,
+                                                      newValue, newValue);
+              predicate = arith::AndIOp::create(rewriter, nestedLoc,
+                                                rewriter.getI1Type(),
+                                                comparison, newNonNaN);
             } else {
               // Update value if either of the following is true:
               // - new value is smaller/bigger
