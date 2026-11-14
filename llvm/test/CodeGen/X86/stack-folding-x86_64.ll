@@ -130,6 +130,7 @@ define i32 @stack_fold_bsr_i32(i32 %a0) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    bsrl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Folded Reload
 ; CHECK-NEXT:    xorl $31, %eax
 ; CHECK-NEXT:    popq %rbx
@@ -176,6 +177,7 @@ define i64 @stack_fold_bsr_i64(i64 %a0) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    bsrq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Folded Reload
 ; CHECK-NEXT:    xorq $63, %rax
 ; CHECK-NEXT:    popq %rbx
