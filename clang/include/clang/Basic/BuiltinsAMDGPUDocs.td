@@ -67,6 +67,13 @@ on all AMDGCN targets unless otherwise noted.
 }];
 }
 
+def DocCatAMDGPUCacheControl : DocumentationCategory<"Cache Control Builtins"> {
+  let Content = [{
+These builtins provide access to AMDGPU cache invalidation and writeback
+instructions.
+}];
+}
+
 def DocCatAMDGPUConversion : DocumentationCategory<"Conversion Builtins"> {
   let Content = [{
 These builtins provide access to AMDGPU conversion instructions, including conversions
@@ -85,6 +92,28 @@ def DocCatAMDGPUPrefetch : DocumentationCategory<"Prefetch Builtins"> {
   let Content = [{
 These builtins provide access to AMDGPU prefetch instructions, including instructions
 for prefetching data and instructions.
+}];
+}
+
+//===----------------------------------------------------------------------===//
+// Cache Control Builtins — Documentation records
+//===----------------------------------------------------------------------===//
+
+def DocBufferInv : Documentation {
+  let Category = DocCatAMDGPUCacheControl;
+  let Content = [{
+Invalidates caches according to ``cpol``, a compile-time cache-policy
+bitfield. Available on gfx942 and gfx950. ``cpol`` may set any combination of
+bit 0 (sc0) and bit 4 (sc1); any other bit is an error. The supported values
+behave as follows:
+
+- ``0`` (sc0 = sc1 = 0): no cache invalidation.
+- ``1`` (sc0 = 1): in threadgroup-split mode, invalidates the CU (L1) cache;
+  otherwise a no-op.
+- ``16`` (sc1 = 1): invalidates the CU cache and, if there is more than one L2
+  cache, invalidates non-coherently cached L2 lines.
+- ``17`` (sc0 = sc1 = 1): invalidates the CU cache and non-coherently cached
+  L2 lines.
 }];
 }
 

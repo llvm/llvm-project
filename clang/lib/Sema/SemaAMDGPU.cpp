@@ -21,6 +21,7 @@
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -181,6 +182,22 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
                        diag::err_amdgcn_prefetch_reserved_th)
         << ArgExpr->getSourceRange();
     return true;
+  }
+  case AMDGPU::BI__builtin_amdgcn_buffer_inv: {
+    Expr *ArgExpr = TheCall->getArg(0);
+    if (ArgExpr->isInstantiationDependent())
+      return false;
+
+    // _Constant: CheckBuiltinFunctionCall already verified this is an ICE.
+    uint64_t CPol =
+        ArgExpr->getIntegerConstantExpr(getASTContext())->getZExtValue();
+
+    // BUFFER_INV only supports the SC0 (1) and SC1 (16) cache-policy bits.
+    if (!llvm::is_contained({0u, 1u, 16u, 17u}, CPol))
+      return Diag(ArgExpr->getExprLoc(),
+                  diag::err_amdgcn_buffer_inv_invalid_cpol)
+             << ArgExpr->getSourceRange();
+    return false;
   }
   case AMDGPU::BI__builtin_amdgcn_s_wait_event: {
     llvm::APSInt Result;

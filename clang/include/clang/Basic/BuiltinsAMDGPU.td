@@ -157,6 +157,10 @@ def __builtin_amdgcn_sched_group_barrier : AMDGPUBuiltin<"void(_Constant int, _C
 def __builtin_amdgcn_iglp_opt : AMDGPUBuiltin<"void(_Constant int)">;
 def __builtin_amdgcn_s_dcache_inv : AMDGPUBuiltin<"void()">;
 def __builtin_amdgcn_buffer_wbinvl1 : AMDGPUBuiltin<"void()">;
+def __builtin_amdgcn_buffer_inv : AMDGPUBuiltin<"void(_Constant int)", [], "buffer-inv-inst"> {
+  let Documentation = [DocBufferInv];
+  let ArgNames = ["cpol"];
+}
 def __builtin_amdgcn_fence : AMDGPUBuiltin<"void(unsigned int, char const *, ...)">;
 def __builtin_amdgcn_groupstaticsize : AMDGPUBuiltin<"unsigned int()">;
 def __builtin_amdgcn_wavefrontsize : AMDGPUBuiltin<"unsigned int()", [Const]>;
