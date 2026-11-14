@@ -169,6 +169,10 @@ struct TranslationParser : public llvm::cl::parser<const Translation *> {
 /// Register command-line options used by the translation registry.
 void registerTranslationCLOptions();
 
+/// Return the LLVM library options that mlirTranslateMain parses, for
+/// translations that create an llvm::LLVMContext.
+llvm::cl::LibraryOptionsContext &getTranslationLibraryOptions();
+
 } // namespace mlir
 
 #endif // MLIR_TOOLS_MLIRTRANSLATE_TRANSLATION_H
