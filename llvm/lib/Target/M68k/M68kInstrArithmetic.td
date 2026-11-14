@@ -1177,6 +1177,12 @@ foreach S = [8, 16, 32] in {
 }
 
 // Left shift 16 bits lowers to: swap dn -> clr.w dn
-def : Pat<(shl i32:$src, (i32 16)),
-  (SUBREG_TO_REG (CLR16dd (EXTRACT_SUBREG (SWAP MxDRD32:$src),
-  MxSubRegIndex16Lo)), MxSubRegIndex16Lo)>;
+// clr.w on a data register only changes the low word, so model it as a
+// read-modify-write of the whole 32-bit register.
+let Defs = [CCR], Constraints = "$src = $dst", isCodeGenOnly = 1 in
+def CLR16d32 : MxInst<(outs MxDRD32:$dst), (ins MxDRD32:$src), "clr.w\t$dst",
+                      []> {
+  let Inst = (descend 0b01000010, MxEncSize16.Value, 0b00, (operand "$dst", 4));
+}
+
+def : Pat<(shl i32:$src, (i32 16)), (CLR16d32 (SWAP MxDRD32:$src))>;

@@ -28,3 +28,20 @@ define zeroext i32 @bswap32(i32 zeroext %a) nounwind {
   %1 = tail call i32 @llvm.bswap.i32(i32 %a)
   ret i32 %1
 }
+
+; The source is still live after the bswap, so the bswap must be done on a
+; copy of the whole register, not just of its low word.
+define i32 @bswap32_src_live(i32 %a) nounwind {
+; CHECK-LABEL: bswap32_src_live:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    move.l (4,%sp), %d1
+; CHECK-NEXT:    move.l %d1, %d0
+; CHECK-NEXT:    rol.w #8, %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    rol.w #8, %d0
+; CHECK-NEXT:    eor.l %d1, %d0
+; CHECK-NEXT:    rts
+  %1 = tail call i32 @llvm.bswap.i32(i32 %a)
+  %2 = xor i32 %1, %a
+  ret i32 %2
+}

@@ -121,8 +121,15 @@ def : Pat<(rotr i32:$src, (i32 16)), (SWAP MxDRD32:$src)>;
 // lowers to: rol.w #8,dn -> swap dn -> rol.w #8,dn
 // LLVM's intrinsic expansion of bswap uses a shifting/masking algorithm that
 // strictly operates on the i32. But we can do much better by operating
-// in-place on the 16-bit subregister and casting back to the 32-bit register.
+// in-place on the low word of the register. rol.w on a data register only
+// changes the low word, so model it as a read-modify-write of the whole 32-bit
+// register.
+let Defs = [CCR], Constraints = "$src = $dst", isCodeGenOnly = 1 in
+def ROL16di32 : MxInst<(outs MxDRD32:$dst), (ins MxDRD32:$src, Mxi16imm:$opd),
+                       "rol.w\t$opd, $dst", []> {
+  let Inst = MxSREncoding<MxROKind_I, "opd", "dst", MxRODI_L, MxROOP_RO,
+                          MxEncSize16>.Value;
+}
+
 def : Pat<(bswap i32:$src),
-  (SUBREG_TO_REG (ROL16di (EXTRACT_SUBREG (SWAP (SUBREG_TO_REG (ROL16di
-  (EXTRACT_SUBREG $src, MxSubRegIndex16Lo), 8), MxSubRegIndex16Lo)),
-  MxSubRegIndex16Lo), 8), MxSubRegIndex16Lo)>;
+          (ROL16di32 (SWAP (ROL16di32 MxDRD32:$src, 8)), 8)>;
