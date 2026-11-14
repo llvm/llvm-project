@@ -13609,6 +13609,10 @@ void OverloadCandidateSet::NoteCandidates(
     ArrayRef<Expr *> Args, StringRef Opc, SourceLocation OpLoc,
     llvm::function_ref<bool(OverloadCandidate &)> Filter) {
 
+  if (S.Diags.hasFatalErrorOccurred())
+    return; // Return to avoid stack overflow by formatting diagnostic text
+            // after hitting template-depth error
+
   auto Cands = CompleteCandidates(S, OCD, Args, OpLoc, Filter);
 
   {
