@@ -277,27 +277,62 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCvtF32UByteN(
     MachineInstr &MI, CvtF32UByteMatchInfo &MatchInfo) const {
   Register SrcReg = MI.getOperand(1).getReg();
 
+  const unsigned ByteOffset =
+      8 * (MI.getOpcode() - AMDGPU::G_AMDGPU_CVT_F32_UBYTE0);
+
+  // Look through G_AND if the mask preserves the byte consumed
+  // by the conversion.
+  Register AndSrc;
+  APInt AndMask;
+  bool IsAnd = mi_match(SrcReg, MRI, m_GAnd(m_Reg(AndSrc), m_ICst(AndMask)));
+
+  if (IsAnd) {
+    if (ByteOffset + 8 > AndMask.getBitWidth())
+      return false;
+
+    APInt DemandedMask =
+        APInt::getBitsSet(AndMask.getBitWidth(), ByteOffset, ByteOffset + 8);
+
+    if (!DemandedMask.isSubsetOf(AndMask))
+      return false;
+
+    SrcReg = AndSrc;
+  }
+
   // Look through G_ZEXT.
   bool IsShr = mi_match(SrcReg, MRI, m_GZExt(m_Reg(SrcReg)));
 
   Register Src0;
   int64_t ShiftAmt;
   IsShr = mi_match(SrcReg, MRI, m_GLShr(m_Reg(Src0), m_ICst(ShiftAmt)));
-  if (IsShr || mi_match(SrcReg, MRI, m_GShl(m_Reg(Src0), m_ICst(ShiftAmt)))) {
-    const unsigned Offset = MI.getOpcode() - AMDGPU::G_AMDGPU_CVT_F32_UBYTE0;
 
-    unsigned ShiftOffset = 8 * Offset;
+  if (IsShr || mi_match(SrcReg, MRI, m_GShl(m_Reg(Src0), m_ICst(ShiftAmt)))) {
+    unsigned ShiftOffset = ByteOffset;
+
     if (IsShr)
       ShiftOffset += ShiftAmt;
     else
       ShiftOffset -= ShiftAmt;
 
-    MatchInfo.CvtVal = Src0;
-    MatchInfo.ShiftOffset = ShiftOffset;
-    return ShiftOffset < 32 && ShiftOffset >= 8 && (ShiftOffset % 8) == 0;
+    if (ShiftOffset < 32 && ShiftOffset >= 8 && (ShiftOffset % 8) == 0) {
+      MatchInfo.CvtVal = Src0;
+      MatchInfo.ShiftOffset = ShiftOffset;
+      return true;
+    }
+    // Shift didn't land on a byte boundary we can use. Fall through
+    // if we matched an AND above, it may still be safe to drop on its
+    // own (handled below), rather than bailing out entirely here.
   }
 
-  // TODO: Simplify demanded bits.
+  // If we matched an AND but couldn't find a shift, we can still
+  // eliminate the AND, either because there was no shift at all, or
+  // because the shift we found wasn't usable.
+  if (IsAnd) {
+    MatchInfo.CvtVal = AndSrc;
+    MatchInfo.ShiftOffset = ByteOffset;
+    return true;
+  }
+
   return false;
 }
 
@@ -308,12 +343,15 @@ void AMDGPUPostLegalizerCombinerImpl::applyCvtF32UByteN(
   const LLT S32 = LLT::scalar(32);
   Register CvtSrc = MatchInfo.CvtVal;
   LLT SrcTy = MRI.getType(MatchInfo.CvtVal);
+
   if (SrcTy != S32) {
     assert(SrcTy.isScalar() && SrcTy.getSizeInBits() >= 8);
     CvtSrc = B.buildAnyExt(S32, CvtSrc).getReg(0);
   }
 
-  assert(MI.getOpcode() != NewOpc);
+  assert((MI.getOpcode() != NewOpc || MI.getOperand(1).getReg() != CvtSrc) &&
+         "combine should make forward progress");
+
   B.buildInstr(NewOpc, {MI.getOperand(0)}, {CvtSrc}, MI.getFlags());
   MI.eraseFromParent();
 }
