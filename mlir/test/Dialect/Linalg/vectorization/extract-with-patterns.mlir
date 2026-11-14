@@ -241,7 +241,8 @@ func.func @vectorize_nd_tensor_extract_index_from_tensor(%arg0: tensor<3x3xf32>,
 // CHECK:    %[[ADDI:.*]] = arith.addi %[[CAST_1]], %[[MULI]] : vector<4x3xindex>
 // CHECK:    %[[B:.*]] = vector.broadcast %[[ADDI]] : vector<4x3xindex> to vector<7x2x4x3xindex>
 // CHECK:    %[[T:.*]] = vector.transpose %[[B]], [2, 0, 3, 1] : vector<7x2x4x3xindex> to vector<4x7x3x2xindex>
-// CHECK:    %[[GATHER:.*]] = vector.gather %[[ARG0]][%[[C0]], %[[C0]]] [%[[T]]], %[[CST_1]], %[[PASSTHRU]] : tensor<3x3xf32>, vector<4x7x3x2xindex>, vector<4x7x3x2xi1>, vector<4x7x3x2xf32> into vector<4x7x3x2xf32>
+// CHECK:    %[[COLLAPSED:.*]] = tensor.collapse_shape %[[ARG0]] {{\[\[}}0, 1]] : tensor<3x3xf32> into tensor<9xf32>
+// CHECK:    %[[GATHER:.*]] = vector.gather %[[COLLAPSED]][%[[C0]]] [%[[T]]], %[[CST_1]], %[[PASSTHRU]] : tensor<9xf32>, vector<4x7x3x2xindex>, vector<4x7x3x2xi1>, vector<4x7x3x2xf32> into vector<4x7x3x2xf32>
 // CHECK:    vector.transfer_write %[[GATHER]], %[[ARG4]][%[[C0]], %[[C0]], %[[C0]], %[[C0]]] {in_bounds = [true, true, true, true]} : vector<4x7x3x2xf32>, tensor<4x7x3x2xf32>
 
 // -----
@@ -278,7 +279,8 @@ func.func @vectorize_nd_tensor_extract_load_1d_column_vector_using_gather_load(%
 // CHECK: %[[T:.*]] = vector.transpose %[[B1]], [1, 0] : vector<1x8xindex> to vector<8x1xindex>
 // CHECK: %[[B2:.*]] = vector.broadcast %[[ADDI_ARG1]] : index to vector<8x1xindex>
 // CHECK: %[[ADDI:.*]] = arith.addi %[[B2]], %[[T]] : vector<8x1xindex>
-// CHECK: %[[GATHER:.*]] = vector.gather %[[ARG0]][%[[C0]], %[[C0]], %[[C0]]] [%[[ADDI]]], %[[CST_0]], %[[PASSTHRU]] : tensor<8x128x768xf32>, vector<8x1xindex>, vector<8x1xi1>, vector<8x1xf32> into vector<8x1xf32>
+// CHECK: %[[COLLAPSED:.*]] = tensor.collapse_shape %[[ARG0]] {{\[\[}}0, 1, 2]] : tensor<8x128x768xf32> into tensor<786432xf32>
+// CHECK: %[[GATHER:.*]] = vector.gather %[[COLLAPSED]][%[[C0]]] [%[[ADDI]]], %[[CST_0]], %[[PASSTHRU]] : tensor<786432xf32>, vector<8x1xindex>, vector<8x1xi1>, vector<8x1xf32> into vector<8x1xf32>
 // CHECK: vector.transfer_write %[[GATHER]], %[[EMPTY]][%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<8x1xf32>, tensor<8x1xf32>
 
 // -----
@@ -311,7 +313,8 @@ func.func @index_from_output_column_vector_gather_load(%src: tensor<8x128xf32>) 
 // CHECK:           %[[OUT:.*]] = tensor.empty() : tensor<8x1xf32>
 // CHECK:           %[[B:.*]] = vector.broadcast %[[IDX_VEC]] : vector<8xindex> to vector<1x8xindex>
 // CHECK:           %[[TR:.*]] = vector.transpose %[[B]], [1, 0] : vector<1x8xindex> to vector<8x1xindex>
-// CHECK:           %[[GATHER:.*]] = vector.gather %[[SRC]]{{\[}}%[[C0]], %[[C0]]] {{\[}}%[[TR]]], %[[MASK]], %[[PASS_THRU]] : tensor<8x128xf32>, vector<8x1xindex>, vector<8x1xi1>, vector<8x1xf32> into vector<8x1xf32>
+// CHECK:           %[[COLLAPSED:.*]] = tensor.collapse_shape %[[SRC]] {{\[\[}}0, 1]] : tensor<8x128xf32> into tensor<1024xf32>
+// CHECK:           %[[GATHER:.*]] = vector.gather %[[COLLAPSED]][%[[C0]]] {{\[}}%[[TR]]], %[[MASK]], %[[PASS_THRU]] : tensor<1024xf32>, vector<8x1xindex>, vector<8x1xi1>, vector<8x1xf32> into vector<8x1xf32>
 // CHECK:           %[[RES:.*]] = vector.transfer_write %[[GATHER]], %[[OUT]]{{\[}}%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<8x1xf32>, tensor<8x1xf32>
 // CHECK:           return %[[RES]] : tensor<8x1xf32>
 
@@ -347,7 +350,8 @@ func.func @index_from_output_column_vector_contiguous_load(%src: tensor<8x128xf3
 // CHECK:           %[[OUT:.*]] = tensor.empty() : tensor<8x1xf32>
 // CHECK:           %[[B:.*]] = vector.broadcast %[[IDX_VEC]] : vector<8xindex> to vector<1x8xindex>
 // CHECK:           %[[TR:.*]] = vector.transpose %[[B]], [1, 0] : vector<1x8xindex> to vector<8x1xindex>
-// CHECK:           %[[GATHER:.*]] = vector.gather %[[SRC]]{{\[}}%[[C0]], %[[C0]]] {{\[}}%[[TR]]], %[[MASK]], %[[PASS_THRU]] : tensor<8x128xf32>, vector<8x1xindex>, vector<8x1xi1>, vector<8x1xf32> into vector<8x1xf32>
+// CHECK:           %[[COLLAPSED:.*]] = tensor.collapse_shape %[[SRC]] {{\[\[}}0, 1]] : tensor<8x128xf32> into tensor<1024xf32>
+// CHECK:           %[[GATHER:.*]] = vector.gather %[[COLLAPSED]][%[[C0]]] {{\[}}%[[TR]]], %[[MASK]], %[[PASS_THRU]] : tensor<1024xf32>, vector<8x1xindex>, vector<8x1xi1>, vector<8x1xf32> into vector<8x1xf32>
 // CHECK:           %[[RES:.*]] = vector.transfer_write %[[GATHER]], %[[OUT]]{{\[}}%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<8x1xf32>, tensor<8x1xf32>
 // CHECK:           return %[[RES]] : tensor<8x1xf32>
 
@@ -419,7 +423,8 @@ func.func @vectorize_nd_tensor_extract_with_affine_apply_gather(%6: tensor<80x16
 // CHECK:           %[[VAL_10:.*]] = arith.muli %[[VAL_9]], %[[VAL_7]] : vector<4xindex>
 // CHECK:           %[[VAL_11:.*]] = arith.addi %[[VAL_10]], %[[VAL_7]] : vector<4xindex>
 // CHECK:           %[[VAL_12:.*]] = vector.broadcast %[[VAL_11]] : vector<4xindex> to vector<1x4xindex>
-// CHECK:           %[[VAL_13:.*]] = vector.gather %[[VAL_0]]{{\[}}%[[VAL_6]], %[[VAL_6]]] {{\[}}%[[VAL_12]]], %[[VAL_4]], %[[VAL_5]] : tensor<80x16xf32>, vector<1x4xindex>, vector<1x4xi1>, vector<1x4xf32> into vector<1x4xf32>
+// CHECK:           %[[COLLAPSED:.*]] = tensor.collapse_shape %[[VAL_0]] {{\[\[}}0, 1]] : tensor<80x16xf32> into tensor<1280xf32>
+// CHECK:           %[[VAL_13:.*]] = vector.gather %[[COLLAPSED]][%[[VAL_6]]] {{\[}}%[[VAL_12]]], %[[VAL_4]], %[[VAL_5]] : tensor<1280xf32>, vector<1x4xindex>, vector<1x4xi1>, vector<1x4xf32> into vector<1x4xf32>
 // CHECK:           %[[VAL_14:.*]] = vector.transfer_write %[[VAL_13]], %[[VAL_2]]{{\[}}%[[VAL_6]], %[[VAL_6]]] {in_bounds = [true, true]} : vector<1x4xf32>, tensor<1x4xf32>
 // CHECK:           return %[[VAL_14]] : tensor<1x4xf32>
 // CHECK:         }
@@ -448,7 +453,8 @@ func.func @vectorize_nd_tensor_extract_with_maxsi_gather(%arg0: tensor<80x16xf32
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant dense<0.000000e+00> : vector<1x4xf32>
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_7:.*]] = vector.broadcast %[[VAL_2]] : vector<4xindex> to vector<1x4xindex>
-// CHECK:           %[[VAL_9:.*]] = vector.gather %[[VAL_0]]{{\[}}%[[VAL_6]], %[[VAL_6]]] {{\[}}%[[VAL_7]]], %[[VAL_4]], %[[VAL_5]] : tensor<80x16xf32>, vector<1x4xindex>, vector<1x4xi1>, vector<1x4xf32> into vector<1x4xf32>
+// CHECK:           %[[COLLAPSED:.*]] = tensor.collapse_shape %[[VAL_0]] {{\[\[}}0, 1]] : tensor<80x16xf32> into tensor<1280xf32>
+// CHECK:           %[[VAL_9:.*]] = vector.gather %[[COLLAPSED]][%[[VAL_6]]] {{\[}}%[[VAL_7]]], %[[VAL_4]], %[[VAL_5]] : tensor<1280xf32>, vector<1x4xindex>, vector<1x4xi1>, vector<1x4xf32> into vector<1x4xf32>
 // CHECK:           %[[VAL_10:.*]] = vector.transfer_write %[[VAL_9]], %[[VAL_1]]{{\[}}%[[VAL_6]], %[[VAL_6]]] {in_bounds = [true, true]} : vector<1x4xf32>, tensor<1x4xf32>
 // CHECK:           return %[[VAL_10]] : tensor<1x4xf32>
 // CHECK:         }
@@ -481,7 +487,8 @@ func.func @vectorize_nd_tensor_extract_block_arg(%arg0: tensor<5x6xf32>, %arg1: 
 // CHECK:           %[[VAL_8:.*]] = vector.transfer_read %[[VAL_1]]{{\[}}%[[VAL_2]]], %[[PAD]] {in_bounds = [true]} : tensor<5xindex>, vector<5xindex>
 // CHECK:           %[[VAL_9:.*]] = arith.muli %[[VAL_8]], %[[VAL_6]] : vector<5xindex>
 // CHECK:           %[[VAL_10:.*]] = arith.addi %[[VAL_9]], %[[VAL_3]] : vector<5xindex>
-// CHECK:           %[[VAL_11:.*]] = vector.gather %[[VAL_0]]{{\[}}%[[VAL_2]], %[[VAL_2]]] {{\[}}%[[VAL_10]]], %[[VAL_4]], %[[VAL_5]] : tensor<5x6xf32>, vector<5xindex>, vector<5xi1>, vector<5xf32> into vector<5xf32>
+// CHECK:           %[[COLLAPSED:.*]] = tensor.collapse_shape %[[VAL_0]] {{\[\[}}0, 1]] : tensor<5x6xf32> into tensor<30xf32>
+// CHECK:           %[[VAL_11:.*]] = vector.gather %[[COLLAPSED]][%[[VAL_2]]] {{\[}}%[[VAL_10]]], %[[VAL_4]], %[[VAL_5]] : tensor<30xf32>, vector<5xindex>, vector<5xi1>, vector<5xf32> into vector<5xf32>
 // CHECK:           %[[VAL_12:.*]] = vector.transfer_write %[[VAL_11]], %[[VAL_7]]{{\[}}%[[VAL_2]]] {in_bounds = [true]} : vector<5xf32>, tensor<5xf32>
 // CHECK:           return %[[VAL_12]] : tensor<5xf32>
 // CHECK:         }
@@ -519,7 +526,8 @@ func.func @vectorize_reverse_like_tensor_extract(%arg0: tensor<1x2x3xf32>, %arg1
 // CHECK:        %[[T1:.+]] = vector.broadcast %[[T0]] : index to vector<3xindex>
 // CHECK:        %[[T2:.+]] = arith.addi %[[T1]], %[[INIT_IDX]] : vector<3xindex>
 // CHECK:        %[[T3:.+]] = vector.broadcast %[[T2]] : vector<3xindex> to vector<1x1x3xindex>
-// CHECK:        %[[GATHER:.*]] = vector.gather %[[ARG0]][%[[C0]], %[[C0]], %[[C0]]] [%[[T3]]], %[[MASK]], %[[PASSTHRU]]
+// CHECK:        %[[COLLAPSED:.*]] = tensor.collapse_shape %[[ARG0]] {{\[\[}}0, 1, 2]] : tensor<1x2x3xf32> into tensor<6xf32>
+// CHECK:        %[[GATHER:.*]] = vector.gather %[[COLLAPSED]][%[[C0]]] [%[[T3]]], %[[MASK]], %[[PASSTHRU]]
 // CHECK:        vector.transfer_write %[[GATHER]]
 
 //===----------------------------------------------------------------------===//
@@ -720,3 +728,31 @@ func.func @rank0_tensor_extract_data_dependent_index(
 // CHECK:           %[[READ_VAL:.*]] = vector.transfer_read %[[SRC]][%[[INDEX]]], %{{.*}} : tensor<2xi64>, vector<i64>
 // CHECK:           %[[WRITE:.*]] = vector.transfer_write %[[READ_VAL]], %[[INIT]][] : vector<i64>, tensor<i64>
 // CHECK:           return %[[WRITE]] : tensor<i64>
+
+// -----
+
+#sparse = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 : dense, d1 : compressed)
+}>
+
+// The collapsed type must not retain an encoding tied to the source rank.
+func.func @gather_from_encoded_source(
+    %src: tensor<3x2xf32, #sparse>, %out: tensor<3xf32>) -> tensor<3xf32> {
+  %c1 = arith.constant 1 : index
+  %result = linalg.generic {
+    indexing_maps = [affine_map<(i) -> (i)>],
+    iterator_types = ["parallel"]
+  } outs(%out : tensor<3xf32>) {
+  ^bb0(%unused: f32):
+    %i = linalg.index 0 : index
+    %value = tensor.extract %src[%i, %c1] : tensor<3x2xf32, #sparse>
+    linalg.yield %value : f32
+  } -> tensor<3xf32>
+  return %result : tensor<3xf32>
+}
+
+// CHECK-LABEL: func.func @gather_from_encoded_source(
+// CHECK-SAME: %[[SRC:.*]]: tensor<3x2xf32,
+// CHECK: %[[ZERO:.*]] = arith.constant 0 : index
+// CHECK: %[[COLLAPSED:.*]] = tensor.collapse_shape %[[SRC]] {{\[\[}}0, 1]] : tensor<3x2xf32, {{.*}}> into tensor<6xf32>
+// CHECK: vector.gather %[[COLLAPSED]][%[[ZERO]]] {{.*}} : tensor<6xf32>,

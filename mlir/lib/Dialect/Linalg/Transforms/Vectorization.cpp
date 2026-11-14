@@ -868,6 +868,17 @@ tensorExtractVectorizationPrecondition(Operation *op, bool vectorizeNDExtract) {
   if (extractOp.getIndices().size() != 1 && !vectorizeNDExtract)
     return failure();
 
+  // Gathers need a representable flattened extent. Conservatively reject static
+  // ND sources whose element count overflows, including contiguous and
+  // broadcast accesses, to avoid classifying the access here.
+  RankedTensorType sourceType = extractOp.getTensor().getType();
+  if (extractOp.getIndices().size() > 1 && sourceType.hasStaticShape() &&
+      !ShapedType::tryGetNumElements(sourceType.getShape())) {
+    LDBG() << "Tensor extract source element count overflows int64: "
+           << extractOp;
+    return failure();
+  }
+
   // Check the index type, but only for non 0-d tensors (for which we do need
   // access indices).
   if (not extractOp.getIndices().empty()) {
@@ -1188,18 +1199,29 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
   auto passThruConstantOp = arith::ConstantOp::create(
       rewriter, loc, rewriter.getZeroAttr(resultType));
 
-  // Base indices are currently set to 0. We will need to re-visit if more
-  // generic scenarios are to be supported.
-  SmallVector<Value> baseIndices(
-      extractOp.getIndices().size(),
-      arith::ConstantIndexOp::create(rewriter, loc, 0));
-
   VectorMemoryAccessKind memAccessKind =
       getTensorExtractMemoryAccessPattern(extractOp, linalgOp, resultType);
 
   // 1. Handle gather access
   if (memAccessKind == VectorMemoryAccessKind::Gather) {
+    // Gather offsets are linearized, so the base has a single zero index.
+    Value baseIndex = arith::ConstantIndexOp::create(rewriter, loc, 0);
     Value offset = calculateGatherOffset(rewriter, state, extractOp, bvm);
+
+    // vector.gather adds each element of its index vector to the innermost
+    // base coordinate. Flatten the source to match the linearized indices.
+    Value source = extractOp.getTensor();
+    auto sourceType = extractOp.getTensor().getType();
+    if (sourceType.getRank() > 1) {
+      ReassociationIndices reassociation =
+          llvm::to_vector<2>(llvm::seq<int64_t>(0, sourceType.getRank()));
+      // Infer the type without an encoding that may depend on the source rank.
+      auto collapsedType = tensor::CollapseShapeOp::inferCollapsedType(
+          sourceType, {reassociation});
+      source = tensor::CollapseShapeOp::create(
+          rewriter, loc, collapsedType, source,
+          ArrayRef<ReassociationIndices>{reassociation});
+    }
 
     // vector.gather is not maskable, so the iteration space mask (if any) is
     // passed as its mask operand.
@@ -1207,10 +1229,9 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
     if (!mask)
       mask = maskConstantOp;
 
-    // Generate the gather load
     Operation *gatherOp = vector::GatherOp::create(
-        rewriter, loc, resultType, extractOp.getTensor(), baseIndices, offset,
-        mask, passThruConstantOp);
+        rewriter, loc, resultType, source, ValueRange{baseIndex}, offset, mask,
+        passThruConstantOp);
 
     LDBG() << "Vectorised as gather load: " << extractOp;
     return VectorizationHookResult{VectorizationHookStatus::NewOp, gatherOp};
