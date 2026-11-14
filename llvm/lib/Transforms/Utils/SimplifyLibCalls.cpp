@@ -32,6 +32,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/IR/VFABIDemangler.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
@@ -2099,7 +2100,8 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilderBase &B,
                                bool isBinary, const TargetLibraryInfo *TLI,
                                bool isPrecise = false) {
   Function *CalleeFn = CI->getCalledFunction();
-  if (!CI->getType()->isDoubleTy() || !CalleeFn)
+  if (!CI->getType()->isDoubleTy() || !CalleeFn ||
+      CI->hasFnAttr(VFABI::MappingsAttrName))
     return nullptr;
 
   // If not all the uses of the function are converted to float, then bail out.
@@ -3177,6 +3179,9 @@ static Value *optimizeSymmetricCall(CallInst *CI, bool IsEven,
   if (match(Src, m_OneUse(m_FNegOrFSubNegZero(m_Value(X)))) &&
       (IsEven || !mayFlushDenormalsToPositiveZero(CI))) {
     auto *Call = B.CreateCall(CI->getCalledFunction(), {X}, /*FMFSource=*/CI);
+    if (Attribute A = CI->getAttributes().getFnAttr(VFABI::MappingsAttrName);
+        A.isValid())
+      Call->addFnAttr(A);
     auto *CallInst = copyFlags(*CI, Call);
     if (IsEven) {
       // Even function: f(-x) = f(x)
@@ -3190,6 +3195,9 @@ static Value *optimizeSymmetricCall(CallInst *CI, bool IsEven,
   if (IsEven && (match(Src, m_FAbs(m_Value(X))) ||
                  match(Src, m_CopySign(m_Value(X), m_Value())))) {
     auto *Call = B.CreateCall(CI->getCalledFunction(), {X}, /*FMFSource=*/CI);
+    if (Attribute A = CI->getAttributes().getFnAttr(VFABI::MappingsAttrName);
+        A.isValid())
+      Call->addFnAttr(A);
     return copyFlags(*CI, Call);
   }
 
@@ -4227,6 +4235,9 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   if (CI->isStrictFP())
     return nullptr;
 
+  // Replacing the call with an intrinsic would drop its VFABI mappings.
+  bool HasVectorMappings = CI->hasFnAttr(VFABI::MappingsAttrName);
+
   if (Value *V = optimizeSymmetric(CI, Func, Builder))
     return V;
 
@@ -4239,12 +4250,12 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
     return optimizeSinCosPi(CI, /*IsSin*/false, Builder);
   case LibFunc_sinf:
   case LibFunc_sinl:
-    if (CI->doesNotAccessMemory())
+    if (CI->doesNotAccessMemory() && !HasVectorMappings)
       return replaceUnaryCall(CI, Builder, Intrinsic::sin);
     return nullptr;
   case LibFunc_cosf:
   case LibFunc_cosl:
-    if (CI->doesNotAccessMemory())
+    if (CI->doesNotAccessMemory() && !HasVectorMappings)
       return replaceUnaryCall(CI, Builder, Intrinsic::cos);
     return nullptr;
   case LibFunc_powf:
@@ -4352,7 +4363,7 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
         hasFloatVersion(M, CI->getCalledFunction()->getName()))
       if (Value *V = optimizeUnaryDoubleFP(CI, Builder, TLI, true))
         return V;
-    if (CI->doesNotAccessMemory())
+    if (CI->doesNotAccessMemory() && !HasVectorMappings)
       return replaceUnaryCall(
           CI, Builder, Func == LibFunc_sin ? Intrinsic::sin : Intrinsic::cos);
     return nullptr;

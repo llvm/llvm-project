@@ -3959,7 +3959,10 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
   if (LangOpts.Sanitize.has(SanitizerKind::KCFI))
     setKCFIType(FD, F);
 
-  if (getLangOpts().OpenMP && FD->hasAttr<OMPDeclareSimdDeclAttr>())
+  if (getLangOpts().OpenMP &&
+      llvm::any_of(FD->redecls(), [](const FunctionDecl *Redecl) {
+        return Redecl->hasAttr<OMPDeclareSimdDeclAttr>();
+      }))
     getOpenMPRuntime().emitDeclareSimdFunction(FD, F);
 
   if (CodeGenOpts.InlineMaxStackSize != UINT_MAX)
@@ -3990,8 +3993,8 @@ void CodeGenModule::addUsedGlobal(llvm::GlobalValue *GV) {
 }
 
 void CodeGenModule::addCompilerUsedGlobal(llvm::GlobalValue *GV) {
-  assert(!GV->isDeclaration() &&
-         "Only globals with definition can force usage.");
+  assert((isa<llvm::Function>(GV) || !GV->isDeclaration()) &&
+         "Only functions can be used without a definition.");
   LLVMCompilerUsed.emplace_back(GV);
 }
 

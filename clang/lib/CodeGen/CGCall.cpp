@@ -18,6 +18,7 @@
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
 #include "CGDebugInfo.h"
+#include "CGOpenMPRuntime.h"
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
@@ -52,6 +53,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/VFABIDemangler.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <optional>
 using namespace clang;
@@ -6569,6 +6571,27 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       if (A->getGuard() == CFGuardAttr::GuardArg::nocf &&
           !CI->getCalledFunction())
         Attrs = Attrs.addFnAttribute(getLLVMContext(), "guard_nocf");
+    }
+  }
+
+  // The mapping goes on the call, so that each caller only gets the vector
+  // variants it can run. Check hasLibraryDeclareSimdVariants() before building
+  // the "no-builtin-<name>" attribute name, since FD may not have a simple
+  // identifier (e.g. a constructor).
+  if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
+      getLangOpts().OpenMP && FD && isa<llvm::CallInst>(CI) &&
+      CGOpenMPRuntime::hasLibraryDeclareSimdVariants(FD) &&
+      !Attrs.hasFnAttr(llvm::Attribute::NoBuiltin) &&
+      !CurFn->hasFnAttribute("no-builtins") &&
+      !CurFn->hasFnAttribute(("no-builtin-" + FD->getName()).str())) {
+    if (llvm::Function *F = CI->getCalledFunction();
+        F && !F->hasFnAttribute(llvm::Attribute::NoBuiltin) &&
+        F->getFunctionType() == CI->getFunctionType()) {
+      std::string Mappings =
+          CGM.getOpenMPRuntime().getDeclareSimdVariantMappings(*this, F);
+      if (!Mappings.empty())
+        Attrs = Attrs.addFnAttribute(getLLVMContext(),
+                                     llvm::VFABI::MappingsAttrName, Mappings);
     }
   }
 

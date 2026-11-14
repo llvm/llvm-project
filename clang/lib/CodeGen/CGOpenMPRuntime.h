@@ -309,6 +309,9 @@ public:
 protected:
   CodeGenModule &CGM;
 
+  /// Vector variant declarations that have been added to llvm.compiler.used.
+  llvm::SmallPtrSet<llvm::Function *, 8> DeclareSimdVariantDecls;
+
   /// An OpenMP-IR-Builder instance.
   llvm::OpenMPIRBuilder OMPBuilder;
 
@@ -1553,6 +1556,15 @@ public:
   /// attributes.
   virtual void emitDeclareSimdFunction(const FunctionDecl *FD,
                                        llvm::Function *Fn);
+
+  /// Returns true if the vector variants named by the declare simd directives
+  /// of \p FD are provided by the C library.
+  static bool hasLibraryDeclareSimdVariants(const FunctionDecl *FD);
+
+  /// Returns the vector variant mappings of \p Fn that the function emitted by
+  /// \p CGF can call.
+  std::string getDeclareSimdVariantMappings(CodeGenFunction &CGF,
+                                            llvm::Function *Fn);
 
   /// Emit initialization for doacross loop nesting support.
   /// \param D Loop-based construct used in doacross nesting construct.
