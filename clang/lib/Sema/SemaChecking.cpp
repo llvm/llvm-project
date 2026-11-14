@@ -17,6 +17,7 @@
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/AttrIterator.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -2847,7 +2848,7 @@ static bool CheckMaskedBuiltinArgs(Sema &S, Expr *MaskArg, Expr *PtrArg,
   return false;
 }
 
-static bool ConvertMaskedBuiltinArgs(Sema &S, CallExpr *TheCall) {
+static bool ConvertBuiltinArgs(Sema &S, CallExpr *TheCall) {
   bool TypeDependent = false;
   for (unsigned Arg = 0, E = TheCall->getNumArgs(); Arg != E; ++Arg) {
     ExprResult Converted =
@@ -2867,7 +2868,7 @@ static ExprResult BuiltinMaskedLoad(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCountRange(TheCall, 2, 3))
     return ExprError();
 
-  if (ConvertMaskedBuiltinArgs(S, TheCall))
+  if (ConvertBuiltinArgs(S, TheCall))
     return ExprError();
 
   Expr *MaskArg = TheCall->getArg(0);
@@ -2903,7 +2904,7 @@ static ExprResult BuiltinMaskedStore(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCount(TheCall, 3))
     return ExprError();
 
-  if (ConvertMaskedBuiltinArgs(S, TheCall))
+  if (ConvertBuiltinArgs(S, TheCall))
     return ExprError();
 
   Expr *MaskArg = TheCall->getArg(0);
@@ -2952,7 +2953,7 @@ static ExprResult BuiltinMaskedGather(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCountRange(TheCall, 3, 4))
     return ExprError();
 
-  if (ConvertMaskedBuiltinArgs(S, TheCall))
+  if (ConvertBuiltinArgs(S, TheCall))
     return ExprError();
 
   Expr *MaskArg = TheCall->getArg(0);
@@ -3002,7 +3003,7 @@ static ExprResult BuiltinMaskedScatter(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCount(TheCall, 4))
     return ExprError();
 
-  if (ConvertMaskedBuiltinArgs(S, TheCall))
+  if (ConvertBuiltinArgs(S, TheCall))
     return ExprError();
 
   Expr *MaskArg = TheCall->getArg(0);
@@ -3051,6 +3052,79 @@ static ExprResult BuiltinMaskedScatter(Sema &S, CallExpr *TheCall) {
                                     TheCall->getArg(1)->getEndLoc()));
 
   TheCall->setType(S.Context.VoidTy);
+  return TheCall;
+}
+
+static ExprResult BuiltinSpeculativeLoad(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCountAtLeast(TheCall, 3))
+    return ExprError();
+
+  if (ConvertBuiltinArgs(S, TheCall))
+    return ExprError();
+
+  Expr *PtrArg = TheCall->getArg(0);
+  QualType PtrTy = PtrArg->getType();
+  if (!PtrTy->isPointerType())
+    return S.Diag(PtrArg->getExprLoc(),
+                  diag::err_typecheck_indirection_requires_pointer)
+           << PtrTy << PtrArg->getSourceRange();
+
+  QualType PointeeTy = PtrTy->getPointeeType();
+  TheCall->setType(PointeeTy.getUnqualifiedType());
+
+  const auto *VT = PointeeTy->getAs<VectorType>();
+  if (!VT || !VT->getElementType()->isIntegerType())
+    return S.Diag(PtrArg->getExprLoc(),
+                  diag::err_speculative_load_not_a_vector_of_integers);
+
+  InitializedEntity Entity = InitializedEntity::InitializeParameter(
+      S.Context, S.Context.BoolTy, /*consume=f*/ false);
+  ExprResult FromEnd =
+      S.PerformCopyInitialization(Entity, SourceLocation(), TheCall->getArg(1));
+  if (FromEnd.isInvalid())
+    return ExprError();
+  TheCall->setArg(1, FromEnd.get());
+  llvm::APSInt Val;
+  if (S.BuiltinConstantArg(TheCall, 1, Val))
+    return ExprError();
+
+  Expr *OracleFnArg = TheCall->getArg(2);
+  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(
+      OracleFnArg->getAsBuiltinConstantDeclRef(S.getASTContext()));
+  if (!FD)
+    return S.Diag(OracleFnArg->getBeginLoc(),
+                  diag::err_speculative_load_third_arg_must_be_function);
+
+  if (!FD->hasAttr<OracleFunctionAttr>())
+    return S.Diag(OracleFnArg->getBeginLoc(),
+                  diag::err_speculative_load_function_oracle_attr);
+
+  if (TheCall->getNumArgs() - 3 != FD->getNumParams())
+    return S.Diag(TheCall->getBeginLoc(),
+                  diag::err_speculative_load_arg_oracle_param_count_mismatch)
+           << FD->getNumParams() << TheCall->getNumArgs() - 3;
+
+  for (unsigned I = 0, N = FD->getNumParams(); I != N; ++I) {
+    ParmVarDecl *Param = const_cast<ParmVarDecl *>(FD->getParamDecl(I));
+    Expr *Arg = TheCall->getArg(3 + I);
+
+    if (S.RequireCompleteType(Arg->getBeginLoc(), Param->getType(),
+                              diag::err_call_incomplete_argument, Arg))
+      return ExprError();
+
+    InitializedEntity Entity =
+        InitializedEntity::InitializeParameter(S.Context, Param);
+    ExprResult ArgRes =
+        S.PerformCopyInitialization(Entity, SourceLocation(), Arg);
+    if (ArgRes.isInvalid())
+      return ExprError();
+    TheCall->setArg(3 + I, ArgRes.get());
+  }
+
+  if (!S.checkAddressOfFunctionIsAvailable(FD, /*Complain=*/true,
+                                           TheCall->getBeginLoc()))
+    return ExprError();
+
   return TheCall;
 }
 
@@ -3354,6 +3428,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     return BuiltinMaskedGather(*this, TheCall);
   case Builtin::BI__builtin_masked_scatter:
     return BuiltinMaskedScatter(*this, TheCall);
+  case Builtin::BI__builtin_speculative_load:
+    return BuiltinSpeculativeLoad(*this, TheCall);
   case Builtin::BI__builtin_invoke:
     return BuiltinInvoke(*this, TheCall);
   case Builtin::BI__builtin_prefetch:

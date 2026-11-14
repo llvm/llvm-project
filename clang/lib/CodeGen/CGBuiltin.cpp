@@ -26,6 +26,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGenUtils/TargetUtils.h"
@@ -4744,6 +4745,28 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     Builder.CreateMaskedScatter(Val, PtrVec, Align.getAsAlign(), Mask);
     return RValue();
+  }
+  case Builtin::BI__builtin_speculative_load: {
+    llvm::Value *Ptr = EmitScalarExpr(E->getArg(0));
+    llvm::Value *FromEnd = Builder.getInt1(
+        E->getArg(1)->EvaluateKnownConstInt(getContext()).getBoolValue());
+    llvm::Value *OracleFn = EmitScalarExpr(E->getArg(2));
+    llvm::SmallVector<llvm::Value *> OracleFnParams;
+    for (unsigned I = 3; I < E->getNumArgs(); ++I) {
+      OracleFnParams.push_back(EmitScalarExpr(E->getArg(I)));
+    }
+
+    llvm::Type *RetTy = CGM.getTypes().ConvertType(E->getType());
+
+    Function *F = CGM.getIntrinsic(Intrinsic::speculative_load,
+                                   {RetTy, Builder.getPtrTy()});
+
+    SmallVector<llvm::Value *> SpeculativeLoadCallArgs = {Ptr, FromEnd,
+                                                          OracleFn};
+    SpeculativeLoadCallArgs.append(OracleFnParams);
+    llvm::Value *Result = Builder.CreateCall(F, SpeculativeLoadCallArgs);
+
+    return RValue::get(Result);
   }
   case Builtin::BI__builtin_isinf_sign: {
     // isinf_sign(x) -> fabs(x) == infinity ? (signbit(x) ? -1 : 1) : 0
