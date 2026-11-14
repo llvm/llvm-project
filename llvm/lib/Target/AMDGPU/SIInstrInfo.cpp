@@ -2633,6 +2633,25 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     break;
   }
 
+  case AMDGPU::A_SCHEDULE_AGPR_B32:
+  case AMDGPU::A_SCHEDULE_AGPR_B64:
+  case AMDGPU::A_SCHEDULE_AGPR_B128:
+  case AMDGPU::A_SCHEDULE_AGPR_B256:
+  case AMDGPU::A_SCHEDULE_AGPR_B512: {
+    // Strict AGPR pins are kept through RA so the operand class stays AGPR.
+    // The immediates have already been consumed as allocation hints.
+    Register Dst = MI.getOperand(0).getReg();
+    Register Src = MI.getOperand(1).getReg();
+    if (unsigned DstSub = MI.getOperand(0).getSubReg())
+      Dst = RI.getSubReg(Dst, DstSub);
+    if (unsigned SrcSub = MI.getOperand(1).getSubReg())
+      Src = RI.getSubReg(Src, SrcSub);
+    if (Dst != Src)
+      copyPhysReg(MBB, MI, DL, Dst, Src, MI.getOperand(1).isKill());
+    MI.eraseFromParent();
+    break;
+  }
+
   case AMDGPU::GET_STACK_BASE:
     // The stack starts at offset 0 unless we need to reserve some space at the
     // bottom.

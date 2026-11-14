@@ -3394,6 +3394,93 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
   case Intrinsic::amdgcn_interp_p1_f16:
     SelectInterpP1F16(N);
     return;
+  case Intrinsic::amdgcn_sched_vgpr:
+  case Intrinsic::amdgcn_sched_sgpr:
+  case Intrinsic::amdgcn_sched_agpr: {
+    SDValue Src = N->getOperand(1);
+    auto *RegNumC = dyn_cast<ConstantSDNode>(N->getOperand(2));
+    auto *StrictC = dyn_cast<ConstantSDNode>(N->getOperand(3));
+    if (!RegNumC || !StrictC) {
+      SelectCode(N);
+      return;
+    }
+    unsigned Bits = N->getValueType(0).getSizeInBits();
+    unsigned PseudoOpc;
+    if (IntrID == Intrinsic::amdgcn_sched_vgpr) {
+      switch (Bits) {
+      case 32:
+        PseudoOpc = AMDGPU::V_SCHEDULE_VGPR_B32;
+        break;
+      case 64:
+        PseudoOpc = AMDGPU::V_SCHEDULE_VGPR_B64;
+        break;
+      case 128:
+        PseudoOpc = AMDGPU::V_SCHEDULE_VGPR_B128;
+        break;
+      case 256:
+        PseudoOpc = AMDGPU::V_SCHEDULE_VGPR_B256;
+        break;
+      case 512:
+        PseudoOpc = AMDGPU::V_SCHEDULE_VGPR_B512;
+        break;
+      default:
+        ReplaceUses(SDValue(N, 0), Src);
+        CurDAG->RemoveDeadNode(N);
+        return;
+      }
+    } else if (IntrID == Intrinsic::amdgcn_sched_sgpr) {
+      switch (Bits) {
+      case 32:
+        PseudoOpc = AMDGPU::S_SCHEDULE_SGPR_B32;
+        break;
+      case 64:
+        PseudoOpc = AMDGPU::S_SCHEDULE_SGPR_B64;
+        break;
+      case 128:
+        PseudoOpc = AMDGPU::S_SCHEDULE_SGPR_B128;
+        break;
+      case 256:
+        PseudoOpc = AMDGPU::S_SCHEDULE_SGPR_B256;
+        break;
+      case 512:
+        PseudoOpc = AMDGPU::S_SCHEDULE_SGPR_B512;
+        break;
+      default:
+        ReplaceUses(SDValue(N, 0), Src);
+        CurDAG->RemoveDeadNode(N);
+        return;
+      }
+    } else {
+      switch (Bits) {
+      case 32:
+        PseudoOpc = AMDGPU::A_SCHEDULE_AGPR_B32;
+        break;
+      case 64:
+        PseudoOpc = AMDGPU::A_SCHEDULE_AGPR_B64;
+        break;
+      case 128:
+        PseudoOpc = AMDGPU::A_SCHEDULE_AGPR_B128;
+        break;
+      case 256:
+        PseudoOpc = AMDGPU::A_SCHEDULE_AGPR_B256;
+        break;
+      case 512:
+        PseudoOpc = AMDGPU::A_SCHEDULE_AGPR_B512;
+        break;
+      default:
+        ReplaceUses(SDValue(N, 0), Src);
+        CurDAG->RemoveDeadNode(N);
+        return;
+      }
+    }
+    SDValue RegNumImm =
+        CurDAG->getTargetConstant(RegNumC->getZExtValue(), SDLoc(N), MVT::i32);
+    SDValue StrictImm =
+        CurDAG->getTargetConstant(StrictC->getZExtValue(), SDLoc(N), MVT::i32);
+    CurDAG->SelectNodeTo(N, PseudoOpc, N->getVTList(),
+                         {Src, RegNumImm, StrictImm});
+    return;
+  }
   case Intrinsic::amdgcn_permlane16_swap:
   case Intrinsic::amdgcn_permlane32_swap: {
     if ((IntrID == Intrinsic::amdgcn_permlane16_swap &&
@@ -4868,6 +4955,44 @@ SDValue AMDGPUDAGToDAGISel::getHi16Elt(SDValue In) const {
     return Src;
 
   return SDValue();
+}
+
+/// Return true if \p N is a strict llvm.amdgcn.sched.agpr, either still as the
+/// intrinsic or already selected to A_SCHEDULE_AGPR_B*.
+static bool isStrictSchedAGPR(const SDNode *N) {
+  if (N->isMachineOpcode()) {
+    switch (N->getMachineOpcode()) {
+    case AMDGPU::A_SCHEDULE_AGPR_B32:
+    case AMDGPU::A_SCHEDULE_AGPR_B64:
+    case AMDGPU::A_SCHEDULE_AGPR_B128:
+    case AMDGPU::A_SCHEDULE_AGPR_B256:
+    case AMDGPU::A_SCHEDULE_AGPR_B512:
+      // Operands: src, regnum, strict.
+      return N->getConstantOperandVal(2) != 0;
+    default:
+      return false;
+    }
+  }
+  if (N->getOpcode() != ISD::INTRINSIC_WO_CHAIN ||
+      N->getConstantOperandVal(0) != Intrinsic::amdgcn_sched_agpr)
+    return false;
+  // Operands: intrinsic id, src, regnum, strict.
+  auto *StrictC = dyn_cast<ConstantSDNode>(N->getOperand(3));
+  return StrictC && !StrictC->isZero();
+}
+
+/// An MFMA whose src2 or result is strictly pinned to AGPRs gains nothing from
+/// the VGPR form: selecting it would only add AGPR<->VGPR copies around the
+/// MFMA for AMDGPURewriteAGPRCopyMFMA to undo after RA, and that rewrite may
+/// leave src2 in a different AGPR than dst.
+bool AMDGPUDAGToDAGISel::isStrictAGPRPinnedMFMA(const SDNode *N) const {
+  // MFMA intrinsic operands: intrinsic id, src0, src1, src2, ...
+  if (N->getNumOperands() > 3 && isStrictSchedAGPR(N->getOperand(3).getNode()))
+    return true;
+  for (const SDNode *U : N->users())
+    if (isStrictSchedAGPR(U))
+      return true;
+  return false;
 }
 
 bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
