@@ -16,7 +16,7 @@ define float @sinf(float %x) {
 ; CHECK: declare void @__atomic_load(i64, ptr captures(none), ptr writeonly captures(none), i32) [[ATOMIC_ATTRS:#[0-9]+]]
 ; CHECK: declare i32 @__atomic_load_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
 
-; CHECK: declare void @__llvm_memcpy_element_unordered_atomic_1(ptr noalias writeonly captures(none), ptr noalias readonly captures(none), i64) [[ARGMEM_ATTRS:#[0-9]+]]
+; CHECK: declare void @__llvm_memcpy_element_unordered_atomic_1(ptr noalias writeonly, ptr noalias readonly, i64) [[ARGMEM_ATTRS:#[0-9]+]]
 
 ; CHECK: declare ptr @__memcpy_chk(ptr, ptr, i64, i64)
 ; CHECK: declare ptr @__memmove_chk(ptr, ptr, i64, i64)
