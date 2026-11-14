@@ -8566,6 +8566,49 @@ static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
 // path. Restricting this to the uncommon IndirectBr case would minimize the
 // impact of potentially longer critical path, if any, and the impact on compile
 // time.
+/// Return true if `nuw` stays valid when the index `Index` of a GEP is rebased
+/// onto a base that already carries the byte offset of `BaseIndex`, as GEP
+/// unmerging does.
+///
+/// `nuw` constrains the unsigned byte arithmetic, not the sign of the index: a
+/// positive index can still make the byte offset wrap around the pointer index
+/// width once it is scaled by the element size.
+static bool isNUWFlagPreservedOnIndexRebase(const GetElementPtrInst &BaseGEP,
+                                            const APInt &BaseIndex,
+                                            const APInt &Index) {
+  assert(BaseIndex.getBitWidth() == Index.getBitWidth() &&
+         "expected indices of the same type");
+  const DataLayout &DL = BaseGEP.getModule()->getDataLayout();
+  unsigned PtrIndexBits = DL.getIndexTypeSizeInBits(BaseGEP.getType());
+  // A wider index would additionally require the truncation to the pointer
+  // index width to preserve the unsigned value, which is not checked here.
+  if (Index.getBitWidth() > PtrIndexBits)
+    return false;
+
+  TypeSize AllocSize = DL.getTypeAllocSize(BaseGEP.getSourceElementType());
+  if (AllocSize.isScalable())
+    return false;
+  uint64_t Size = AllocSize.getFixedValue();
+  APInt SizeValue(PtrIndexBits, Size);
+  // A size that does not fit in the pointer index width cannot be scaled
+  // without wrapping.
+  if (SizeValue.getZExtValue() != Size)
+    return false;
+
+  bool MulOverflow;
+  APInt NewByteOffset =
+      Index.sext(PtrIndexBits).umul_ov(SizeValue, MulOverflow);
+  if (MulOverflow)
+    return false;
+
+  // BaseGEP's `nuw` requires its own byte offset not to wrap, so computing it
+  // here is safe even if the multiplication would overflow on its own.
+  APInt BaseByteOffset = BaseIndex.sext(PtrIndexBits) * SizeValue;
+  bool AddOverflow;
+  BaseByteOffset = BaseByteOffset.uadd_ov(NewByteOffset, AddOverflow);
+  return !AddOverflow;
+}
+
 static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
                                              const TargetTransformInfo *TTI) {
   const DataLayout &DL = GEPI->getDataLayout();
@@ -8648,8 +8691,11 @@ static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
     // Intersect flags to avoid UB in updated GEP.
     auto TargetFlags =
         UGEPI->getNoWrapFlags().intersectForOffsetAdd(SourceFlags);
-    // If UGEPI now has a negative index, drop the nuw flag.
-    if (NewIdx.isNegative() && TargetFlags.hasNoUnsignedWrap())
+    // `nuw` constrains the unsigned byte offsets, not the sign of the index:
+    // even a positive index can make the byte offset wrap once it is scaled by
+    // the element size. Drop `nuw` when that happens.
+    if (TargetFlags.hasNoUnsignedWrap() &&
+        !isNUWFlagPreservedOnIndexRebase(*GEPI, GEPIIdx->getValue(), NewIdx))
       TargetFlags = TargetFlags.withoutNoUnsignedWrap();
     UGEPI->setNoWrapFlags(TargetFlags);
   }
