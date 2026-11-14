@@ -6959,13 +6959,46 @@ bool llvm::canIgnoreSignBitOfNaN(const Use &U) {
       case Intrinsic::maximumnum:
       case Intrinsic::minimumnum:
       case Intrinsic::canonicalize:
+      case Intrinsic::fptrunc_round:
       case Intrinsic::fma:
       case Intrinsic::fmuladd:
+      case Intrinsic::ldexp:
+      case Intrinsic::frexp:
+      case Intrinsic::modf:
       case Intrinsic::sqrt:
+      case Intrinsic::exp:
+      case Intrinsic::exp2:
+      case Intrinsic::exp10:
+      case Intrinsic::log:
+      case Intrinsic::log2:
+      case Intrinsic::log10:
       case Intrinsic::pow:
       case Intrinsic::powi:
+      case Intrinsic::sin:
+      case Intrinsic::cos:
+      case Intrinsic::sincos:
+      case Intrinsic::sincospi:
+      case Intrinsic::tan:
+      case Intrinsic::asin:
+      case Intrinsic::acos:
+      case Intrinsic::atan:
+      case Intrinsic::atan2:
+      case Intrinsic::sinh:
+      case Intrinsic::cosh:
+      case Intrinsic::tanh:
+      case Intrinsic::trunc:
+      case Intrinsic::floor:
+      case Intrinsic::ceil:
+      case Intrinsic::round:
+      case Intrinsic::roundeven:
+      case Intrinsic::nearbyint:
+      case Intrinsic::rint:
       case Intrinsic::fptoui_sat:
       case Intrinsic::fptosi_sat:
+      case Intrinsic::lround:
+      case Intrinsic::llround:
+      case Intrinsic::lrint:
+      case Intrinsic::llrint:
       case Intrinsic::is_fpclass:
         return true;
       default:
