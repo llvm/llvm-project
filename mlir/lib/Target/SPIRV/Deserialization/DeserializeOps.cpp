@@ -808,6 +808,32 @@ LogicalResult Deserializer::processOp<spirv::GenericCastToPtrExplicitOp>(
   return success();
 }
 
+template <>
+LogicalResult
+Deserializer::processOp<spirv::KHRAbortOp>(ArrayRef<uint32_t> words) {
+  if (words.size() != 2)
+    return emitError(unknownLoc, "OpAbortKHR must have two operands");
+
+  Type messageType = getType(words[0]);
+  if (!messageType)
+    return emitError(unknownLoc, "unknown type <id> : ") << words[0];
+
+  Value message = getValue(words[1]);
+  if (!message)
+    return emitError(unknownLoc, "unknown <id> : ") << words[1];
+
+  // Only the case where Message Type is the type of Message is modeled.
+  if (message.getType() != messageType)
+    return emitError(unknownLoc, "OpAbortKHR Message Type ")
+           << messageType << " differs from the type of Message "
+           << message.getType();
+
+  spirv::KHRAbortOp::create(opBuilder, createFileLineColLoc(opBuilder),
+                            message);
+  clearDebugLine();
+  return success();
+}
+
 // Pull in auto-generated Deserializer::dispatchToAutogenDeserialization() and
 // various Deserializer::processOp<...>() specializations.
 #define GET_DESERIALIZATION_FNS

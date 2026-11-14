@@ -15,6 +15,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/InterleavedRange.h"
 
 #include "SPIRVOpUtils.h"
@@ -302,6 +303,50 @@ Block *SwitchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
     return getDefaultTarget();
   }
   return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.KHR.Abort
+//===----------------------------------------------------------------------===//
+
+/// Returns true if `type` is a numerical scalar, physical pointer, vector,
+/// matrix, or an aggregate recursively containing only such types. Without an
+/// enclosing `module` any pointer is accepted.
+static bool isConcreteType(Type type, spirv::ModuleOp module) {
+  return TypeSwitch<Type, bool>(type)
+      .Case([&](spirv::PointerType pointerType) {
+        if (!module)
+          return true;
+        spirv::AddressingModel addressingModel = module.getAddressingModel();
+        if (addressingModel == spirv::AddressingModel::Logical)
+          return false;
+        return addressingModel !=
+                   spirv::AddressingModel::PhysicalStorageBuffer64 ||
+               pointerType.getStorageClass() ==
+                   spirv::StorageClass::PhysicalStorageBuffer;
+      })
+      .Case(
+          [](spirv::ScalarType scalarType) { return !scalarType.isInteger(1); })
+      .Case<VectorType, spirv::ArrayType, spirv::MatrixType>(
+          [&](auto compositeType) {
+            return isConcreteType(compositeType.getElementType(), module);
+          })
+      .Case([&](spirv::StructType structType) {
+        return llvm::all_of(structType.getElementTypes(),
+                            [&](Type elementType) {
+                              return isConcreteType(elementType, module);
+                            });
+      })
+      .Default(false);
+}
+
+LogicalResult KHRAbortOp::verify() {
+  if (!isConcreteType(getMessage().getType(),
+                      (*this)->getParentOfType<spirv::ModuleOp>()))
+    return emitOpError("message must be of a concrete type (numerical scalar, "
+                       "physical pointer, vector, matrix, or aggregate of such "
+                       "types)");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

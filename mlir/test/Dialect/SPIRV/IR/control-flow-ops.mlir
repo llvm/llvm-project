@@ -1069,6 +1069,65 @@ func.func @unreachable() {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.KHR.Abort
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func @abort_i32
+func.func @abort_i32(%arg0: i32) {
+  // CHECK: spirv.KHR.Abort %{{.*}} : i32
+  spirv.KHR.Abort %arg0 : i32
+}
+
+// CHECK-LABEL: func @abort_struct
+func.func @abort_struct(%arg0: !spirv.struct<(!spirv.array<4 x i8>, vector<2xf16>, !spirv.matrix<2 x vector<2xf32>>, !spirv.ptr<i32, CrossWorkgroup>)>) {
+  // CHECK: spirv.KHR.Abort %{{.*}} : !spirv.struct<(!spirv.array<4 x i8>, vector<2xf16>, !spirv.matrix<2 x vector<2xf32>>, !spirv.ptr<i32, CrossWorkgroup>)>
+  spirv.KHR.Abort %arg0 : !spirv.struct<(!spirv.array<4 x i8>, vector<2xf16>, !spirv.matrix<2 x vector<2xf32>>, !spirv.ptr<i32, CrossWorkgroup>)>
+}
+
+// -----
+
+func.func @abort_bool(%arg0: i1) {
+  // expected-error @+1 {{message must be of a concrete type}}
+  spirv.KHR.Abort %arg0 : i1
+}
+
+// -----
+
+func.func @abort_struct_with_bool_vector(%arg0: !spirv.struct<(i32, vector<2xi1>)>) {
+  // expected-error @+1 {{message must be of a concrete type}}
+  spirv.KHR.Abort %arg0 : !spirv.struct<(i32, vector<2xi1>)>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.func @abort_logical_ptr(%arg0: !spirv.ptr<i32, StorageBuffer>) "None" {
+    // expected-error @+1 {{message must be of a concrete type}}
+    spirv.KHR.Abort %arg0 : !spirv.ptr<i32, StorageBuffer>
+  }
+}
+
+// -----
+
+spirv.module PhysicalStorageBuffer64 GLSL450 {
+  spirv.func @abort_psb_ptr(%arg0: !spirv.ptr<i32, PhysicalStorageBuffer> { spirv.decoration = #spirv.decoration<Aliased> }) "None" {
+    // CHECK: spirv.KHR.Abort %{{.*}} : !spirv.ptr<i32, PhysicalStorageBuffer>
+    spirv.KHR.Abort %arg0 : !spirv.ptr<i32, PhysicalStorageBuffer>
+  }
+}
+
+// -----
+
+spirv.module PhysicalStorageBuffer64 GLSL450 {
+  spirv.func @abort_psb64_storage_buffer_ptr(%arg0: !spirv.ptr<i32, StorageBuffer>) "None" {
+    // expected-error @+1 {{message must be of a concrete type}}
+    spirv.KHR.Abort %arg0 : !spirv.ptr<i32, StorageBuffer>
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.Kill
 //===----------------------------------------------------------------------===//
 

@@ -1204,6 +1204,21 @@ LogicalResult Serializer::processOp<spirv::GenericCastToPtrExplicitOp>(
   return success();
 }
 
+template <>
+LogicalResult Serializer::processOp<spirv::KHRAbortOp>(spirv::KHRAbortOp op) {
+  Value message = op.getMessage();
+  uint32_t messageTypeID = 0;
+  if (failed(processType(op.getLoc(), message.getType(), messageTypeID)))
+    return failure();
+  uint32_t messageID = getValueID(message);
+  assert(messageID && "use before def!");
+  if (failed(emitDebugLine(functionBody, op.getLoc())))
+    return failure();
+  encodeInstructionInto(functionBody, spirv::Opcode::OpAbortKHR,
+                        {messageTypeID, messageID});
+  return success();
+}
+
 // Pull in auto-generated Serializer::dispatchToAutogenSerialization() and
 // various Serializer::processOp<...>() specializations.
 #define GET_SERIALIZATION_FNS
