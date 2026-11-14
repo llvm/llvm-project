@@ -15,6 +15,7 @@
 #include "lldb/lldb-private.h"
 #include <map>
 #include <mutex>
+#include <optional>
 #include <vector>
 
 namespace lldb_private {
@@ -40,6 +41,48 @@ public:
   Symbol *Resize(size_t count);
   uint32_t AddSymbol(const Symbol &symbol);
   size_t GetNumSymbols() const;
+
+  /// Set whether this symbol table has a debug map.
+  ///
+  /// A debug map is a set of symbols that refer to object files containing
+  /// the debug information, such as the N_OSO entries in a Mach-O symbol
+  /// table. Object file plug-ins whose formats have debug maps set this when
+  /// they parse the symbol table, so clients can find out if it is worth
+  /// searching the symbol table for those symbols without needing to iterate
+  /// over all of the symbols themselves. This value is saved in the symbol
+  /// table cache.
+  ///
+  /// AddSymbol() doesn't change this value, so code that adds debug map
+  /// symbols after the symbol table is parsed, such as a SymbolFile's
+  /// AddSymbols(), must call this as well.
+  void SetHasDebugMap(bool has_debug_map);
+
+  /// Check if this symbol table has a debug map, see SetHasDebugMap().
+  ///
+  /// \return
+  ///   True if the object file plug-in found a debug map when it parsed this
+  ///   symbol table, false otherwise.
+  bool HasDebugMap() const;
+
+  /// Set whether this symbol table contains any source file symbols.
+  ///
+  /// Object file plug-ins that know this when they parse the symbol table
+  /// can set it, so HasSourceFiles() doesn't need to iterate over all of the
+  /// symbols. This value is saved in the symbol table cache.
+  void SetHasSourceFiles(bool has_source_files);
+
+  /// Check if this symbol table contains any source file symbols.
+  ///
+  /// If the object file plug-in didn't set this value with
+  /// SetHasSourceFiles(), it is calculated the first time it is requested and
+  /// then cached. AddSymbol() updates the value, and Resize() clears it so it
+  /// is calculated again. Modifying symbols directly, through the pointer
+  /// returned by Resize() or SymbolAtIndex(), does not update the value.
+  ///
+  /// \return
+  ///   True if any symbol is an eSymbolTypeSourceFile symbol, false otherwise.
+  bool HasSourceFiles() const;
+
   void SectionFileAddressesChanged();
   void
   Dump(Stream *s, Target *target, SortOrder sort_type,
@@ -129,10 +172,6 @@ public:
   static void DumpSymbolHeader(Stream *s);
 
   void Finalize();
-
-  void AppendSymbolNamesToMap(const IndexCollection &indexes,
-                              bool add_demangled, bool add_mangled,
-                              NameToIndexMap &name_to_index_map) const;
 
   ObjectFile *GetObjectFile() const { return m_objfile; }
 
@@ -274,6 +313,7 @@ protected:
       FileRangeToIndexMap;
   void InitNameIndexes();
   void InitAddressIndexes();
+  void CalculateHasSourceFiles() const;
 
   /// Provide thread safety for this symbol table.
   mutable std::recursive_mutex m_mutex;
@@ -287,6 +327,14 @@ protected:
       m_name_to_symbol_indices;
   bool m_file_addr_to_index_computed = false;
   bool m_name_indexes_computed = false;
+
+  /// Set by the object file plug-in, see SetHasDebugMap().
+  bool m_has_debug_map = false;
+
+  /// Set by the object file plug-in, or calculated and cached by
+  /// HasSourceFiles(). Unset when neither has happened yet.
+  mutable std::optional<bool> m_has_source_files;
+
   /// A bitmask of lldb::SymtabState flags.
   uint32_t m_state = lldb::eSymtabStateNone;
 

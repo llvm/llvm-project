@@ -298,6 +298,11 @@ void SymbolFileDWARFDebugMap::InitOSO() {
   if (!symtab)
     return;
 
+  // Avoid searching all of the symbols for N_OSO entries when the object file
+  // didn't find a debug map while parsing the symbol table.
+  if (!symtab->HasDebugMap())
+    return;
+
   Log *log = GetLog(DWARFLog::DebugMap);
 
   std::vector<uint32_t> oso_indexes;

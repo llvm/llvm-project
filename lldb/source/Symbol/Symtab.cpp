@@ -56,6 +56,9 @@ Symbol *Symtab::Resize(size_t count) {
   // Clients should grab the mutex from this symbol table and lock it manually
   // when calling this function to avoid performance issues.
   m_symbols.resize(count);
+  // Callers fill in the symbols through the returned pointer, so calculate
+  // this again when it is requested unless the object file plug-in sets it.
+  m_has_source_files.reset();
   return m_symbols.empty() ? nullptr : &m_symbols[0];
 }
 
@@ -69,12 +72,42 @@ uint32_t Symtab::AddSymbol(const Symbol &symbol) {
   m_symbols.push_back(symbol);
   m_file_addr_to_index_computed = false;
   m_name_indexes_computed = false;
+  if (symbol.GetType() == eSymbolTypeSourceFile)
+    m_has_source_files = true;
   return symbol_idx;
 }
 
 size_t Symtab::GetNumSymbols() const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   return m_symbols.size();
+}
+
+void Symtab::CalculateHasSourceFiles() const {
+  m_has_source_files = llvm::any_of(m_symbols, [](const Symbol &symbol) {
+    return symbol.GetType() == eSymbolTypeSourceFile;
+  });
+}
+
+void Symtab::SetHasDebugMap(bool has_debug_map) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  m_has_debug_map = has_debug_map;
+}
+
+bool Symtab::HasDebugMap() const {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  return m_has_debug_map;
+}
+
+void Symtab::SetHasSourceFiles(bool has_source_files) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  m_has_source_files = has_source_files;
+}
+
+bool Symtab::HasSourceFiles() const {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  if (!m_has_source_files)
+    CalculateHasSourceFiles();
+  return *m_has_source_files;
 }
 
 void Symtab::SectionFileAddressesChanged() {
@@ -445,34 +478,6 @@ void Symtab::RegisterBacklogEntry(
 void Symtab::PreloadSymbols() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   InitNameIndexes();
-}
-
-void Symtab::AppendSymbolNamesToMap(const IndexCollection &indexes,
-                                    bool add_demangled, bool add_mangled,
-                                    NameToIndexMap &name_to_index_map) const {
-  LLDB_SCOPED_TIMER();
-  if (add_demangled || add_mangled) {
-    std::lock_guard<std::recursive_mutex> guard(m_mutex);
-
-    // Create the name index vector to be able to quickly search by name
-    const size_t num_indexes = indexes.size();
-    for (size_t i = 0; i < num_indexes; ++i) {
-      uint32_t value = indexes[i];
-      assert(i < m_symbols.size());
-      const Symbol *symbol = &m_symbols[value];
-
-      const Mangled &mangled = symbol->GetMangled();
-      if (add_demangled) {
-        if (ConstString name = mangled.GetDemangledName())
-          name_to_index_map.Append(name, value);
-      }
-
-      if (add_mangled) {
-        if (ConstString name = mangled.GetMangledName())
-          name_to_index_map.Append(name, value);
-      }
-    }
-  }
 }
 
 uint32_t Symtab::AppendSymbolIndexesWithType(SymbolType symbol_type,
@@ -1219,7 +1224,11 @@ bool DecodeCStrMap(const DataExtractor &data, lldb::offset_t *offset_ptr,
 }
 
 constexpr llvm::StringLiteral kIdentifierSymbolTable("SYMB");
-constexpr uint32_t CURRENT_CACHE_VERSION = 4;
+constexpr uint32_t CURRENT_CACHE_VERSION = 5;
+
+// Bits in the flags byte of the encoded symbol table.
+constexpr uint8_t kSymtabFlagHasDebugMap = 1u << 0;
+constexpr uint8_t kSymtabFlagHasSourceFiles = 1u << 1;
 
 // If the size of the Symbol object changes, the serialized
 // format likely also needs to change so the
@@ -1236,6 +1245,7 @@ static_assert(
 /// ConstStringTable strtab;
 /// Identifier four character code: 'SYMB'
 /// uint32_t version;
+/// uint8_t flags; // kSymtabFlagHasDebugMap, kSymtabFlagHasSourceFiles
 /// uint32_t num_symbols;
 /// Symbol symbols[num_symbols];
 /// uint8_t num_cstr_maps;
@@ -1258,6 +1268,14 @@ bool Symtab::Encode(DataEncoder &encoder) const {
   symtab_encoder.AppendData(kIdentifierSymbolTable);
   // Encode the symtab data version.
   symtab_encoder.AppendU32(CURRENT_CACHE_VERSION);
+  // Encode the values the object file plug-in found when it parsed the symbol
+  // table, so they don't need to be calculated after decoding.
+  uint8_t symtab_flags = 0;
+  if (m_has_debug_map)
+    symtab_flags |= kSymtabFlagHasDebugMap;
+  if (HasSourceFiles())
+    symtab_flags |= kSymtabFlagHasSourceFiles;
+  symtab_encoder.AppendU8(symtab_flags);
   // Encode the number of symbols.
   symtab_encoder.AppendU32(m_symbols.size());
   // Encode the symbol data for all symbols.
@@ -1292,6 +1310,9 @@ bool Symtab::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
   signature_mismatch = false;
   CacheSignature signature;
   StringTableReader strtab;
+  // Only set these once the symbol table has been decoded successfully.
+  bool has_debug_map = false;
+  bool has_source_files = false;
   { // Scope for "elapsed" object below so it can measure the time parse.
     ElapsedTime elapsed(m_objfile->GetModule()->GetSymtabParseTime());
     if (!signature.Decode(data, offset_ptr))
@@ -1311,9 +1332,15 @@ bool Symtab::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
     const uint32_t version = data.GetU32(offset_ptr);
     if (version != CURRENT_CACHE_VERSION)
       return false;
+    const uint8_t symtab_flags = data.GetU8(offset_ptr);
+    has_debug_map = (symtab_flags & kSymtabFlagHasDebugMap) != 0;
+    has_source_files = (symtab_flags & kSymtabFlagHasSourceFiles) != 0;
     const uint32_t num_symbols = data.GetU32(offset_ptr);
-    if (num_symbols == 0)
+    if (num_symbols == 0) {
+      m_has_debug_map = has_debug_map;
+      m_has_source_files = has_source_files;
       return true;
+    }
     m_symbols.resize(num_symbols);
     SectionList *sections = m_objfile->GetModule()->GetSectionList();
     for (uint32_t i=0; i<num_symbols; ++i) {
@@ -1345,6 +1372,8 @@ bool Symtab::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
     }
     m_name_indexes_computed = true;
   }
+  m_has_debug_map = has_debug_map;
+  m_has_source_files = has_source_files;
   return true;
 }
 

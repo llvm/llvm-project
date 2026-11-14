@@ -2106,6 +2106,20 @@ ParseNList(DataExtractor &nlist_data, lldb::offset_t &nlist_data_offset,
   return nlist;
 }
 
+/// Note whether a symbol of type \a type, added to the symbol table from
+/// \a nlist, is a source file (N_SO) or an object file in a DWARF + debug map
+/// (N_OSO with an n_desc of 1, see SymbolFileDWARFDebugMap::InitOSO()).
+static void UpdateHasSourceFilesAndDebugMap(SymbolType type,
+                                            const struct nlist_64 &nlist,
+                                            bool &has_source_files,
+                                            bool &has_debug_map) {
+  if (type == eSymbolTypeSourceFile)
+    has_source_files = true;
+  else if (type == eSymbolTypeObjectFile && nlist.n_type == N_OSO &&
+           nlist.n_desc == 1)
+    has_debug_map = true;
+}
+
 enum { DebugSymbols = true, NonDebugSymbols = false };
 
 void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
@@ -2235,6 +2249,12 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   SectionList *section_list = GetSectionList();
   if (section_list == nullptr)
     return;
+
+  // Whether we add any source file symbols, or any symbols for object files
+  // in a DWARF + debug map, so we can tell the symbol table without it having
+  // to search all of the symbols.
+  bool has_source_files = false;
+  bool has_debug_map = false;
 
   const uint32_t addr_byte_size = m_data_nsp->GetAddressByteSize();
   const ByteOrder byte_order = m_data_nsp->GetByteOrder();
@@ -3464,6 +3484,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                             sym[sym_idx].GetAddress().GetFileAddress());
                       }
                       sym[sym_idx].SetFlags(nlist.n_type << 16 | nlist.n_desc);
+                      UpdateHasSourceFilesAndDebugMap(
+                          type, nlist, has_source_files, has_debug_map);
 
                       if (demangled_is_synthesized)
                         sym[sym_idx].SetDemangledNameIsSynthesized(true);
@@ -4199,6 +4221,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
           add_symbol_addr(sym[sym_idx].GetAddress().GetFileAddress());
       }
       sym[sym_idx].SetFlags(nlist.n_type << 16 | nlist.n_desc);
+      UpdateHasSourceFilesAndDebugMap(type, nlist, has_source_files,
+                                      has_debug_map);
       if (nlist.n_desc & N_WEAK_REF)
         sym[sym_idx].SetIsWeak(true);
 
@@ -4470,6 +4494,11 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       }
     }
   }
+
+  // Set these after the last Resize(), which clears whether the symbol table
+  // has source files.
+  symtab.SetHasSourceFiles(has_source_files);
+  symtab.SetHasDebugMap(has_debug_map);
 }
 
 void ObjectFileMachO::Dump(Stream *s) {
