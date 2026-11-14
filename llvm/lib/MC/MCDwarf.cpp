@@ -110,7 +110,7 @@ void MCDwarfLineEntry::make(MCStreamer *MCOS, MCSection *Section) {
   MCOS->getContext()
       .getMCDwarfLineTable(MCOS->getContext().getDwarfCompileUnitID())
       .getMCLineSections()
-      .addLineEntry(LineEntry, Section);
+      .addLineEntry(LineEntry, Section, MCOS->getCurrentSection().second);
 }
 
 //
@@ -156,6 +156,10 @@ void MCLineSection::addEndEntry(MCSymbol *EndLabel) {
   // LineStreamLabel.
   EndEntry.LineStreamLabel = nullptr;
   EndEntry.setEndLabel(EndLabel);
+  // EndEntry is cloned from the last entry, which may be in a higher-numbered
+  // subsection, e.g. from a .loc in inline asm. EndLabel is a CU range end
+  // label, which the code generator emits in subsection 0.
+  EndEntry.Subsection = 0;
   Entries.push_back(EndEntry);
 }
 
@@ -165,7 +169,21 @@ void MCLineSection::addEndEntry(MCSymbol *EndLabel) {
 //
 void MCDwarfLineTable::emitOne(
     MCStreamer *MCOS, MCSection *Section,
-    const MCLineSection::MCDwarfLineEntryCollection &LineEntries) {
+    const MCLineSection::MCDwarfLineEntryCollection &Entries) {
+  // Entries are recorded in emission order, but subsections are laid out after
+  // subsection 0 in increasing order of their numbers. Emit the entries in
+  // layout order so that addresses only increase within a sequence. Sort a
+  // copy only if needed.
+  auto BySubsection = [](const MCDwarfLineEntry &A, const MCDwarfLineEntry &B) {
+    return A.Subsection < B.Subsection;
+  };
+  ArrayRef<MCDwarfLineEntry> LineEntries = Entries;
+  MCLineSection::MCDwarfLineEntryCollection Sorted;
+  if (!llvm::is_sorted(Entries, BySubsection)) {
+    Sorted = Entries;
+    llvm::stable_sort(Sorted, BySubsection);
+    LineEntries = Sorted;
+  }
 
   unsigned FileNum, LastLine, Column, Flags, Isa, Discriminator;
   bool IsAtStartSeq;
@@ -183,7 +201,6 @@ void MCDwarfLineTable::emitOne(
   init();
 
   // Loop through each MCDwarfLineEntry and encode the dwarf line number table.
-  bool EndEntryEmitted = false;
   for (auto It = LineEntries.begin(); It != LineEntries.end(); ++It) {
     auto LineEntry = *It;
     MCSymbol *CurrLabel = LineEntry.getLabel();
@@ -212,7 +229,6 @@ void MCDwarfLineTable::emitOne(
       MCOS->emitDwarfAdvanceLineAddr(INT64_MAX, PrevLabel, CurrLabel,
                                      asmInfo.getCodePointerSize());
       init();
-      EndEntryEmitted = true;
       continue;
     }
 
@@ -267,10 +283,11 @@ void MCDwarfLineTable::emitOne(
 
   // Generate DWARF line end entry.
   // We do not need this for DwarfDebug that explicitly terminates the line
-  // table using ranges whenever CU or section changes. However, the MC path
-  // does not track ranges nor terminate the line table. In that case,
+  // table using ranges whenever CU or section changes, unless entries from a
+  // higher-numbered subsection follow the last explicit end entry. The MC path
+  // does not track ranges nor terminate the line table. In those cases,
   // conservatively use the section end symbol to end the line table.
-  if (!EndEntryEmitted && !IsAtStartSeq)
+  if (!IsAtStartSeq)
     MCOS->emitDwarfLineEndEntry(Section, PrevLabel);
 }
 
@@ -287,7 +304,8 @@ void MCDwarfLineTable::endCurrentSeqAndEmitLineStreamLabel(MCStreamer *MCOS,
   // won't actually emit any line information, it will reset the line table
   // sequence and emit a label at the start of the new line table sequence.
   MCDwarfLineEntry LineEntry(LineSym, DwarfLoc, LineStreamLabel, DefLoc);
-  getMCLineSections().addLineEntry(LineEntry, MCOS->getCurrentSectionOnly());
+  getMCLineSections().addLineEntry(LineEntry, MCOS->getCurrentSectionOnly(),
+                                   MCOS->getCurrentSection().second);
 }
 
 //

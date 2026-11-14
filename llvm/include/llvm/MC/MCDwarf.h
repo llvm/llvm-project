@@ -216,6 +216,9 @@ public:
   // This indicates the line entry is synthesized for an end entry.
   bool IsEndEntry = false;
 
+  // The subsection that Label belongs to, used to emit entries in layout order.
+  unsigned Subsection = 0;
+
   // Override the label with the given EndLabel.
   void setEndLabel(MCSymbol *EndLabel) {
     // If we're setting this to be an end entry, make sure we don't have
@@ -237,9 +240,13 @@ public:
 /// table for a section.
 class MCLineSection {
 public:
-  // Add an entry to this MCLineSection's line entries.
-  void addLineEntry(const MCDwarfLineEntry &LineEntry, MCSection *Sec) {
-    MCLineDivisions[Sec].push_back(LineEntry);
+  // Add an entry to this MCLineSection's line entries. Subsection is the
+  // subsection of Sec that the entry's label belongs to.
+  void addLineEntry(const MCDwarfLineEntry &LineEntry, MCSection *Sec,
+                    unsigned Subsection = 0) {
+    auto &Entries = MCLineDivisions[Sec];
+    Entries.push_back(LineEntry);
+    Entries.back().Subsection = Subsection;
   }
 
   // Add an end entry by cloning the last entry, if exists, for the section
