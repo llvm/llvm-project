@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_INCLUDE_LLVM_LIBC_TYPES_ERRNO_T_H
-#define LLVM_LIBC_INCLUDE_LLVM_LIBC_TYPES_ERRNO_T_H
 
 #include "../llvm-libc-macros/annex-k-macros.h"
 
@@ -18,6 +17,7 @@
 // library unless Annex K is enabled, we must guard any code that uses it with
 // LIBC_HAS_ANNEX_K.
 #ifdef LIBC_HAS_ANNEX_K
+#define LLVM_LIBC_INCLUDE_LLVM_LIBC_TYPES_ERRNO_T_H
 
 typedef int errno_t;
 
