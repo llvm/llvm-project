@@ -127,6 +127,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !s32i
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -141,6 +142,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -155,6 +157,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -169,6 +172,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -185,6 +189,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.bool>, !cir.bool
 // CHECK-NEXT: %[[RHS_CAST:.*]] = cir.cast bool_to_int %[[RHS_LOAD]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_CAST]], %[[RHS_CAST]] : !s32i
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.bool>, !cir.bool
 // CHECK-NEXT: %[[RES_CAST:.*]] = cir.cast bool_to_int %[[RESULT]] : !cir.bool -> !s32i
@@ -215,6 +220,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !s32i
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -229,6 +235,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -243,6 +250,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -257,6 +265,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -273,6 +282,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.bool>, !cir.bool
 // CHECK-NEXT: %[[RHS_CAST:.*]] = cir.cast bool_to_int %[[RHS_LOAD]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_CAST]], %[[RHS_CAST]] : !s32i
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.bool>, !cir.bool
 // CHECK-NEXT: %[[RES_CAST:.*]] = cir.cast bool_to_int %[[RESULT]] : !cir.bool -> !s32i
@@ -466,13 +476,16 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_GET_B:.*]] = cir.get_member %[[LHSARG]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[RHS_GET_B:.*]] = cir.get_member %[[RHSARG]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[LHS_GET_B]] : !cir.ptr<!cir.bool>, !cir.bool
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[LHS_LOAD]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[LHS_LOAD]], true {
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[RHS_GET_B]] : !cir.ptr<!cir.bool>, !cir.bool
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[RHS_LOAD]] : !cir.bool -> !s32i
 // CHECK-NEXT: cir.yield %[[RHS_LOAD]] : !cir.bool
 // CHECK-NEXT: }, false {
 // CHECK-NEXT: %[[FALSE:.*]] = cir.const #false
 // CHECK-NEXT: cir.yield %[[FALSE]]
 // CHECK-NEXT: }) : (!cir.bool) -> !cir.bool
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[TERNARY]] : !cir.bool -> !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[TERNARY]], %[[LHS_GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: }
@@ -553,13 +566,16 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_GET_B:.*]] = cir.get_member %[[LHSARG]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[RHS_GET_B:.*]] = cir.get_member %[[RHSARG]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[LHS_GET_B]] : !cir.ptr<!cir.bool>, !cir.bool
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[LHS_LOAD]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[LHS_LOAD]], true {
 // CHECK-NEXT: %[[TRUE:.*]] = cir.const #true
 // CHECK-NEXT: cir.yield %[[TRUE]]
 // CHECK-NEXT: }, false {
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[RHS_GET_B]] : !cir.ptr<!cir.bool>, !cir.bool
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[RHS_LOAD]] : !cir.bool -> !s32i
 // CHECK-NEXT: cir.yield %[[RHS_LOAD]] : !cir.bool
 // CHECK-NEXT: }) : (!cir.bool) -> !cir.bool
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[TERNARY]] : !cir.bool -> !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[TERNARY]], %[[LHS_GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: }
@@ -734,6 +750,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !s32i
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -748,6 +765,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -762,6 +780,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -776,6 +795,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -792,6 +812,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.bool>, !cir.bool
 // CHECK-NEXT: %[[RHS_CAST:.*]] = cir.cast bool_to_int %[[RHS_LOAD]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_CAST]], %[[RHS_CAST]] : !s32i
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.bool>, !cir.bool
 // CHECK-NEXT: %[[RES_CAST:.*]] = cir.cast bool_to_int %[[RESULT]] : !cir.bool -> !s32i
@@ -844,6 +865,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !s32i
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -858,6 +880,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -872,6 +895,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -886,6 +910,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -902,6 +927,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.bool>, !cir.bool
 // CHECK-NEXT: %[[RHS_CAST:.*]] = cir.cast bool_to_int %[[RHS_LOAD]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_CAST]], %[[RHS_CAST]] : !s32i
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.bool>, !cir.bool
 // CHECK-NEXT: %[[RES_CAST:.*]] = cir.cast bool_to_int %[[RESULT]] : !cir.bool -> !s32i
@@ -1187,13 +1213,16 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_GET_B:.*]] = cir.get_member %[[LHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[RHS_GET_B:.*]] = cir.get_member %[[RHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[LHS_GET_B]] : !cir.ptr<!cir.bool>, !cir.bool
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[LHS_LOAD]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[LHS_LOAD]], true {
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[RHS_GET_B]] : !cir.ptr<!cir.bool>, !cir.bool
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[RHS_LOAD]] : !cir.bool -> !s32i
 // CHECK-NEXT: cir.yield %[[RHS_LOAD]] : !cir.bool
 // CHECK-NEXT: }, false {
 // CHECK-NEXT: %[[FALSE:.*]] = cir.const #false
 // CHECK-NEXT: cir.yield %[[FALSE]]
 // CHECK-NEXT: }) : (!cir.bool) -> !cir.bool
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[TERNARY]] : !cir.bool -> !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[TERNARY]], %[[LHS_GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: cir.yield
@@ -1298,13 +1327,16 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_GET_B:.*]] = cir.get_member %[[LHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[RHS_GET_B:.*]] = cir.get_member %[[RHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[LHS_GET_B]] : !cir.ptr<!cir.bool>, !cir.bool
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[LHS_LOAD]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[LHS_LOAD]], true {
 // CHECK-NEXT: %[[TRUE:.*]] = cir.const #true
 // CHECK-NEXT: cir.yield %[[TRUE]]
 // CHECK-NEXT: }, false {
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[RHS_GET_B]] : !cir.ptr<!cir.bool>, !cir.bool
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[RHS_LOAD]] : !cir.bool -> !s32i
 // CHECK-NEXT: cir.yield %[[RHS_LOAD]] : !cir.bool
 // CHECK-NEXT: }) : (!cir.bool) -> !cir.bool
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[TERNARY]] : !cir.bool -> !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[TERNARY]], %[[LHS_GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: cir.yield
@@ -1600,6 +1632,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !s32i
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -1614,6 +1647,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -1628,6 +1662,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -1642,6 +1677,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -1658,6 +1694,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.bool>, !cir.bool
 // CHECK-NEXT: %[[RHS_CAST:.*]] = cir.cast bool_to_int %[[RHS_LOAD]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_CAST]], %[[RHS_CAST]] : !s32i
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.bool>, !cir.bool
 // CHECK-NEXT: %[[RES_CAST:.*]] = cir.cast bool_to_int %[[RESULT]] : !cir.bool -> !s32i
@@ -1752,6 +1789,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !s32i
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -1766,6 +1804,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -1780,6 +1819,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -1794,6 +1834,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: cir.yield %[[RESULT]]
@@ -1810,6 +1851,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.bool>, !cir.bool
 // CHECK-NEXT: %[[RHS_CAST:.*]] = cir.cast bool_to_int %[[RHS_LOAD]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp lt %[[LHS_CAST]], %[[RHS_CAST]] : !s32i
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[CMP]], true {
 // CHECK-NEXT: %[[RESULT:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.bool>, !cir.bool
 // CHECK-NEXT: %[[RES_CAST:.*]] = cir.cast bool_to_int %[[RESULT]] : !cir.bool -> !s32i
@@ -2228,13 +2270,16 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_GET_B:.*]] = cir.get_member %[[LHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[RHS_GET_B:.*]] = cir.get_member %[[RHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[LHS_GET_B]] : !cir.ptr<!cir.bool>, !cir.bool
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[LHS_LOAD]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[LHS_LOAD]], true {
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[RHS_GET_B]] : !cir.ptr<!cir.bool>, !cir.bool
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[RHS_LOAD]] : !cir.bool -> !s32i
 // CHECK-NEXT: cir.yield %[[RHS_LOAD]] : !cir.bool
 // CHECK-NEXT: }, false {
 // CHECK-NEXT: %[[FALSE:.*]] = cir.const #false
 // CHECK-NEXT: cir.yield %[[FALSE]]
 // CHECK-NEXT: }) : (!cir.bool) -> !cir.bool
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[TERNARY]] : !cir.bool -> !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[TERNARY]], %[[LHS_GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: cir.yield
@@ -2377,13 +2422,16 @@ void acc_compute() {
 // CHECK-NEXT: %[[LHS_GET_B:.*]] = cir.get_member %[[LHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[RHS_GET_B:.*]] = cir.get_member %[[RHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[LHS_GET_B]] : !cir.ptr<!cir.bool>, !cir.bool
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[LHS_LOAD]] : !cir.bool -> !s32i
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[LHS_LOAD]], true {
 // CHECK-NEXT: %[[TRUE:.*]] = cir.const #true
 // CHECK-NEXT: cir.yield %[[TRUE]]
 // CHECK-NEXT: }, false {
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[RHS_GET_B]] : !cir.ptr<!cir.bool>, !cir.bool
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[RHS_LOAD]] : !cir.bool -> !s32i
 // CHECK-NEXT: cir.yield %[[RHS_LOAD]] : !cir.bool
 // CHECK-NEXT: }) : (!cir.bool) -> !cir.bool
+// CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[TERNARY]] : !cir.bool -> !s32i
 // CHECK-NEXT: cir.store {{.*}} %[[TERNARY]], %[[LHS_GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: cir.yield

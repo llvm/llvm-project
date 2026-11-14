@@ -1,0 +1,40 @@
+// RUN: cir-opt %s -cir-canonicalize=test-convergence -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  // Dead operations are kept, while folding still replaces the uses of a
+  // foldable operation.
+  // CHECK-LABEL: cir.func @dead_ops
+  cir.func @dead_ops(%arg0: !cir.ptr<!s32i>) -> !s32i {
+    // CHECK-NEXT: cir.alloca "unused"
+    %0 = cir.alloca "unused" align(4) : !cir.ptr<!s32i>
+    // CHECK-NEXT: %[[LOAD:.*]] = cir.load %arg0
+    %1 = cir.load %arg0 : !cir.ptr<!s32i>, !s32i
+    // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+    %2 = cir.const #cir.int<1> : !s32i
+    // CHECK-NEXT: cir.add %[[LOAD]], %[[ONE]] : !s32i
+    %3 = cir.add %1, %2 : !s32i
+    // CHECK-NEXT: %[[NEG:.*]] = cir.const #cir.int<-1> : !s32i
+    %4 = cir.minus %2 : !s32i
+    // CHECK-NEXT: cir.return %[[NEG]] : !s32i
+    cir.return %4 : !s32i
+  }
+
+  // A block that starts with a label is reached through cir.goto only, which
+  // is not a CFG edge, so it must not be erased as unreachable.
+  // CHECK-LABEL: cir.func @goto_target
+  cir.func @goto_target(%arg0: !cir.bool) {
+    cir.brcond %arg0 ^bb1, ^bb2
+  ^bb1:
+    // CHECK: cir.goto "L"
+    cir.goto "L"
+  ^bb2:
+    cir.return
+  ^bb3:
+    // CHECK: cir.label "L"
+    cir.label "L"
+    // CHECK-NEXT: cir.return
+    cir.return
+  }
+}

@@ -118,6 +118,7 @@ void shouldGenerateUnionAccess(union U2 u) {
 // CIR-NEXT:   %[[CAST:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_U2>
 // CIR-NEXT:   %[[U:.*]] = cir.alloca "u" align(8) init : !cir.ptr<!rec_U2>
 // CIR-NEXT:   cir.copy %[[CAST]] align(8) to %[[U]] align(8) : !cir.ptr<!rec_U2>
+// CIR-NEXT:   %{{.+}} = cir.const #cir.int<0> : !s32i
 // CIR-NEXT:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s8i
 // CIR-NEXT:   %[[B_PTR:.*]] = cir.get_member %[[U]][0] {name = "b"} : !cir.ptr<!rec_U2> -> !cir.ptr<!s8i>
 // CIR-NEXT:   cir.store{{.*}} %[[ZERO]], %[[B_PTR]] : !s8i, !cir.ptr<!s8i>
@@ -180,8 +181,10 @@ void f3(union U3 u) {
 // CIR-NEXT:   %[[CAST:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!cir.int<u, 40>> -> !cir.ptr<!rec_U3>
 // CIR-NEXT:   %[[U:.*]] = cir.alloca "u" align(1) init : !cir.ptr<!rec_U3>
 // CIR-NEXT:   cir.copy %[[CAST]] align(8) to %[[U]] align(1) : !cir.ptr<!rec_U3>
+// CIR-NEXT:   %{{.+}} = cir.const #cir.int<0> : !s32i
 // CIR-NEXT:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s8i
 // CIR-NEXT:   %[[C_PTR:.*]] = cir.get_member %[[U]][0] {name = "c"} : !cir.ptr<!rec_U3> -> !cir.ptr<!cir.array<!s8i x 5>>
+// CIR-NEXT:   %{{.+}} = cir.const #cir.int<2> : !s32i
 // CIR-NEXT:   %[[IDX:.*]] = cir.const #cir.int<2> : !s64i
 // CIR-NEXT:   %[[ELEM_PTR:.*]] = cir.get_element %[[C_PTR]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s8i x 5>> -> !cir.ptr<!s8i>
 // CIR-NEXT:   cir.store{{.*}} %[[ZERO]], %[[ELEM_PTR]] : !s8i, !cir.ptr<!s8i>
@@ -214,8 +217,10 @@ void f5(union U4 u) {
 // CIR-NEXT:   %[[CAST:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_U4>
 // CIR-NEXT:   %[[U:.*]] = cir.alloca "u" align(4) init : !cir.ptr<!rec_U4>
 // CIR-NEXT:   cir.copy %[[CAST]] align(8) to %[[U]] align(4) : !cir.ptr<!rec_U4>
+// CIR-NEXT:   %{{.+}} = cir.const #cir.int<65> : !s32i
 // CIR-NEXT:   %[[CHAR_VAL:.*]] = cir.const #cir.int<65> : !s8i
 // CIR-NEXT:   %[[C_PTR:.*]] = cir.get_member %[[U]][0] {name = "c"} : !cir.ptr<!rec_U4> -> !cir.ptr<!cir.array<!s8i x 5>>
+// CIR-NEXT:   %{{.+}} = cir.const #cir.int<4> : !s32i
 // CIR-NEXT:   %[[IDX:.*]] = cir.const #cir.int<4> : !s64i
 // CIR-NEXT:   %[[ELEM_PTR:.*]] = cir.get_element %[[C_PTR]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s8i x 5>> -> !cir.ptr<!s8i>
 // CIR-NEXT:   cir.store{{.*}} %[[CHAR_VAL]], %[[ELEM_PTR]] : !s8i, !cir.ptr<!s8i>

@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -mmlir -mlir-print-ir-before=cir-canonicalize -Wno-unused-value -Wno-constant-conversion -Wno-literal-conversion -fclangir -emit-cir %s -o %t.cir 2> %t-before.cir
 // Note: The "before" check intentionally uses the same CIR check prefixes to
 //       verify that the IR is folded during code generation and not during
-//       canonicalization. In a few cases, it is necessary to match an unused
-//       duplicate constant that will be erased during canonicalization.
-// RUN: FileCheck --input-file=%t-before.cir %s -check-prefixes=CIR,CIR-DUP,ALL
+//       canonicalization. In a few cases, an unused duplicate constant is
+//       matched explicitly; canonicalization does not erase it.
+// RUN: FileCheck --input-file=%t-before.cir %s -check-prefixes=CIR,ALL
 // RUN: FileCheck --input-file=%t.cir %s -check-prefixes=CIR,ALL
 // RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -Wno-unused-value -Wno-constant-conversion -Wno-literal-conversion -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefixes=LLVM_OGCG,ALL
@@ -133,7 +133,7 @@ void fold_int_minus() {
   // LLVM_OGCG: store i32 -2, ptr %{{.*}}
 
   n = -(-3);
-  // CIR-DUP: %[[UNUSED_THREE:.*]] = cir.const #cir.int<3> : !s32i
+  // CIR: %[[UNUSED_THREE:.*]] = cir.const #cir.int<3> : !s32i
   // CIR: %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
   // CIR-NOT: cir.minus
   // CIR: cir.store{{.*}} %[[THREE]], %{{.*}}
@@ -158,7 +158,7 @@ void fold_int_minus() {
   // LLVM_OGCG: store i16 -2, ptr %{{.*}}
 
   s = -(-3);
-  // CIR-DUP: %[[UNUSED_THREE:.*]] = cir.const #cir.int<3> : !s32i
+  // CIR: %[[UNUSED_THREE:.*]] = cir.const #cir.int<3> : !s32i
   // CIR: %[[THREE:.*]] = cir.const #cir.int<3> : !s16i
   // CIR-NOT: cir.minus
   // CIR: cir.store{{.*}} %[[THREE]], %{{.*}}
@@ -183,7 +183,7 @@ void fold_int_minus() {
   // LLVM_OGCG: store i32 -2, ptr %{{.*}}
 
   u = -(-3);
-  // CIR-DUP: %[[UNUSED_THREE:.*]] = cir.const #cir.int<3> : !s32i
+  // CIR: %[[UNUSED_THREE:.*]] = cir.const #cir.int<3> : !s32i
   // CIR: %[[THREE:.*]] = cir.const #cir.int<3> : !u32i
   // CIR-NOT: cir.minus
   // CIR: cir.store{{.*}} %[[THREE]], %{{.*}}
@@ -238,7 +238,7 @@ void fold_float_minus() {
   // LLVM_OGCG: store float -2.000000e+00, ptr %{{.*}}
 
   f = -(-3.0f);
-  // CIR-DUP: %[[UNUSED_THREE:.*]] = cir.const #cir.fp<3.000000e+00> : !cir.float
+  // CIR: %[[UNUSED_THREE:.*]] = cir.const #cir.fp<3.000000e+00> : !cir.float
   // CIR: %[[THREE:.*]] = cir.const #cir.fp<3.000000e+00> : !cir.float
   // CIR-NOT: cir.minus
   // CIR: cir.store{{.*}} %[[THREE]], %{{.*}}
@@ -251,7 +251,7 @@ void fold_float_minus() {
   // LLVM_OGCG: store double -2.000000e+00, ptr %{{.*}}
 
   d = -(-3.0);
-  // CIR-DUP: %[[UNUSED_THREE:.*]] = cir.const #cir.fp<3.000000e+00> : !cir.double
+  // CIR: %[[UNUSED_THREE:.*]] = cir.const #cir.fp<3.000000e+00> : !cir.double
   // CIR: %[[THREE:.*]] = cir.const #cir.fp<3.000000e+00> : !cir.double
   // CIR-NOT: cir.minus
   // CIR: cir.store{{.*}} %[[THREE]], %{{.*}}

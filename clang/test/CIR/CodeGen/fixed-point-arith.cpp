@@ -452,6 +452,7 @@ _Fract shr3(_Fract f, unsigned u) {
 // CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT: %{{.+}} = cir.const #cir.int<1> : !s32i
 // CIR-NEXT: %[[NEG_1:.*]] = cir.const #cir.int<-1> : !s32i
 // CIR-NEXT: %[[SHIFT_NUM:.*]] = cir.const #cir.int<15> : !s32i
 // CIR-NEXT: %[[SHIFT:.*]] = cir.shift(left, %[[NEG_1]] : !s32i, %[[SHIFT_NUM]] : !s32i) -> !s32i
@@ -473,6 +474,7 @@ _Accum inc(_Accum a) {
 // CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(2) : !cir.ptr<!s16i>
 // CIR-NEXT: %[[F:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!s16i>
 // CIR: %[[LOAD_F:.*]] = cir.load align(2) %[[F]] : !cir.ptr<!s16i>, !s16i
+// CIR-NEXT: %{{.+}} = cir.const #cir.int<1> : !s16i
 // CIR-NEXT: %[[NEG_1:.*]] = cir.const #cir.int<-1> : !s16i
 // CIR-NEXT: %[[SHIFT_NUM:.*]] = cir.const #cir.int<15> : !s16i
 // CIR-NEXT: %[[SHIFT:.*]] = cir.shift(left, %[[NEG_1:.*]] : !s16i, %[[SHIFT_NUM]] : !s16i) -> !s16i
@@ -494,6 +496,7 @@ _Fract inc2(_Fract f) {
 // CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT: %{{.+}} = cir.const #cir.int<1> : !s32i
 // CIR-NEXT: %[[NEG_1:.*]] = cir.const #cir.int<-1> : !s32i
 // CIR-NEXT: %[[SHIFT_NUM:.*]] = cir.const #cir.int<15> : !s32i
 // CIR-NEXT: %[[SHIFT:.*]] = cir.shift(left, %[[NEG_1]] : !s32i, %[[SHIFT_NUM]] : !s32i) -> !s32i
@@ -515,6 +518,7 @@ _Accum dec(_Accum a) {
 // CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(2) : !cir.ptr<!s16i>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(2) init : !cir.ptr<!s16i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(2) %[[A]] : !cir.ptr<!s16i>, !s16i
+// CIR-NEXT: %{{.+}} = cir.const #cir.int<1> : !s16i
 // CIR-NEXT: %[[NEG_1:.*]] = cir.const #cir.int<-1> : !s16i
 // CIR-NEXT: %[[SHIFT_NUM:.*]] = cir.const #cir.int<15> : !s16i
 // CIR-NEXT: %[[SHIFT:.*]] = cir.shift(left, %[[NEG_1]] : !s16i, %[[SHIFT_NUM]] : !s16i) -> !s16i
@@ -622,6 +626,8 @@ _Sat _Accum satDiv(_Sat _Accum a, _Sat _Accum b) {
 // CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT: %{{.+}} = cir.const #cir.int<2> : !s32i
+// CIR-NEXT: %{{.+}} = cir.const #cir.int<2> : !u32i
 // CIR-NEXT: %[[SHIFT_NUM:.*]] = cir.const #cir.int<2> : !s32i
 // CIR-NEXT: %[[SHIFT:.*]] = cir.call_llvm_intrinsic "sshl.sat" %[[LOAD_A]], %[[SHIFT_NUM]] : (!s32i, !s32i) -> !s32i
 // CIR-NEXT: cir.store %[[SHIFT]], %[[RET]] : !s32i, !cir.ptr<!s32i>
@@ -707,6 +713,8 @@ _Sat _Fract satShr2(_Sat _Fract f, int i) {
 // CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT: %{{.+}} = cir.const #cir.int<1> : !s32i
+// CIR-NEXT: %{{.+}} = cir.const #cir.int<-1> : !s32i
 // CIR-NEXT: %[[NEG_1:.*]] = cir.const #cir.int<-1> : !cir.int<s, 47>
 // CIR-NEXT: %[[SHIFT_NUM:.*]] = cir.const #cir.int<15> : !cir.int<s, 47>
 // CIR-NEXT: %[[SHIFT:.*]] = cir.shift(left, %[[NEG_1]] : !cir.int<s, 47>, %[[SHIFT_NUM]] : !cir.int<s, 47>) -> !cir.int<s, 47>
@@ -736,6 +744,8 @@ _Sat _Accum satInc(_Sat _Accum a) {
 // CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(2) : !cir.ptr<!s16i>
 // CIR-NEXT: %[[F:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!s16i>
 // CIR:      %[[LOAD_F:.*]] = cir.load align(2) %[[F]] : !cir.ptr<!s16i>, !s16i
+// CIR-NEXT: %{{.+}} = cir.const #cir.int<1> : !s16i
+// CIR-NEXT: %{{.+}} = cir.const #cir.int<-1> : !s16i
 // CIR-NEXT: %[[NEG_1:.*]] = cir.const #cir.int<-1> : !cir.int<s, 31>
 // CIR-NEXT: %[[SHIFT_NUM:.*]] = cir.const #cir.int<15> : !cir.int<s, 31>
 // CIR-NEXT: %[[SHIFT:.*]] = cir.shift(left, %[[NEG_1]] : !cir.int<s, 31>, %[[SHIFT_NUM]] : !cir.int<s, 31>) -> !cir.int<s, 31>
@@ -766,6 +776,7 @@ _Sat _Fract satDec(_Sat _Fract f) {
 // CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(2) : !cir.ptr<!u16i>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(2) init : !cir.ptr<!u16i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(2) %[[A]] : !cir.ptr<!u16i>, !u16i
+// CIR-NEXT: %{{.+}} = cir.const #cir.int<1> : !u16i
 // CIR-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR-NEXT: %[[SHIFT_NUM:.*]] = cir.const #cir.int<16> : !s32i
 // CIR-NEXT: %[[SHIFT:.*]] = cir.shift(left, %[[ONE]] : !s32i, %[[SHIFT_NUM]] : !s32i) -> !s32i

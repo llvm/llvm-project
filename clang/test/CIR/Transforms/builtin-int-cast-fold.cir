@@ -13,6 +13,7 @@ module {
   }
 
   // CHECK: cir.func{{.*}} @roundtrip(%[[ARG:.+]]: !s32i) -> !s32i {
+  // CHECK-NEXT:   %{{.+}} = cir.builtin_int_cast %[[ARG]] : !s32i -> i32
   // CHECK-NEXT:   cir.return %[[ARG]] : !s32i
   // CHECK-NEXT: }
 
