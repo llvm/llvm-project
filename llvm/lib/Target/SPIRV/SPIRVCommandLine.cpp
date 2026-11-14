@@ -188,7 +188,9 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
     {"SPV_KHR_compute_shader_derivatives",
      SPIRV::Extension::Extension::SPV_KHR_compute_shader_derivatives},
     {"SPV_KHR_relaxed_extended_instruction",
-     SPIRV::Extension::Extension::SPV_KHR_relaxed_extended_instruction}};
+     SPIRV::Extension::Extension::SPV_KHR_relaxed_extended_instruction},
+    {"SPV_INTEL_device_barrier",
+     SPIRV::Extension::Extension::SPV_INTEL_device_barrier}};
 
 Error SPIRVExtensionsParser::parse(StringRef ArgValue, ExtensionSet &Enabled,
                                    ExtensionSet &Disabled) {
