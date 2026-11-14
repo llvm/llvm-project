@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
+#include "AMDGPUMachineInstrs.h"
 #include "GCNHazardRecognizer.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
@@ -631,6 +632,22 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     if (DataOpIdx == -1) // LDS DMA
       return false;
     Width = LocationSize::precise(getOpSize(LdSt, DataOpIdx));
+    return true;
+  }
+
+  if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&LdSt)) {
+    // The movrel form's index is whatever M0 holds, which can change between
+    // accesses, so it has no base operand to report.
+    if (!LdStIdx->isGPRIdx())
+      return false;
+    BaseOp = &LdStIdx->getIdxOp();
+    OffsetOp = &LdStIdx->getOffsetOp();
+    if (!BaseOp->getReg().isVirtual())
+      return false;
+
+    BaseOps.push_back(BaseOp);
+    Offset = OffsetOp->getImm() * 4; // Offset has units of dwords.
+    Width = LocationSize::precise(LdStIdx->getBitWidth() / 8);
     return true;
   }
 
@@ -2095,7 +2112,89 @@ unsigned SIInstrInfo::getNumWaitStates(const MachineInstr &MI) {
   }
 }
 
+// Expand a VGPR "as memory" access into one indexed move per dword.
+static void expandLoadStoreIdx(const SIInstrInfo &TII, MachineInstr &MI) {
+  auto &LdSt = cast<AMDGPUMI::VLoadStoreIdxInst>(MI);
+  MachineBasicBlock &MBB = *MI.getParent();
+  MachineFunction &MF = *MBB.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+  const SIRegisterInfo &RI = TII.getRegisterInfo();
+  const bool IsStore = LdSt.mayStore();
+
+  Register Data = LdSt.getDataOp().getReg();
+  unsigned Offset = LdSt.getOffsetOp().getImm();
+  unsigned NumDwords = LdSt.getBitWidth() / 32;
+
+  const bool UseGPRIdxMode = LdSt.isGPRIdx();
+  assert(UseGPRIdxMode == TII.getSubtarget().useVGPRIndexMode());
+
+  MachineInstr *SetOn = nullptr;
+  if (UseGPRIdxMode) {
+    SetOn = BuildMI(MBB, MI, DL, TII.get(AMDGPU::S_SET_GPR_IDX_ON))
+                .add(LdSt.getIdxOp())
+                .addImm(IsStore ? AMDGPU::VGPRIndexMode::DST_ENABLE
+                                : AMDGPU::VGPRIndexMode::SRC0_ENABLE);
+  }
+
+  unsigned Opcode;
+  if (UseGPRIdxMode) {
+    Opcode = IsStore ? AMDGPU::V_MOV_B32_indirect_write
+                     : AMDGPU::V_MOV_B32_indirect_read;
+  } else {
+    Opcode =
+        IsStore ? AMDGPU::V_MOVRELD_B32_as_mem : AMDGPU::V_MOVRELS_B32_as_mem;
+  }
+
+  // A move touches its base plus the run-time index, which no operand can name,
+  // so the base is undef and the liveness of those registers is not expressed.
+  const RegState DataFlags = IsStore
+                                 ? getUndefRegState(LdSt.getDataOp().isUndef())
+                                 : RegState::NoFlags;
+  for (unsigned i = 0; i < NumDwords; ++i) {
+    Register Base = AMDGPU::VGPR_32RegClass.getRegister(Offset + i);
+    Register Sub = Data;
+    if (NumDwords != 1)
+      Sub = RI.getSubReg(Data, RI.getSubRegFromChannel(i));
+
+    MachineInstrBuilder Move;
+    if (IsStore) {
+      Move = BuildMI(MBB, MI, DL, TII.get(Opcode))
+                 .addReg(Base, RegState::Undef)
+                 .addReg(Sub, DataFlags);
+      // As in copyPhysReg, the implicit use of the whole tuple keeps a partly
+      // undefined value a valid operand.
+      if (NumDwords != 1)
+        Move.addReg(Data, RegState::Implicit | DataFlags);
+    } else {
+      Move = BuildMI(MBB, MI, DL, TII.get(Opcode), Sub)
+                 .addReg(Base, RegState::Undef);
+    }
+    // Each mode switch defines M0, which keeps the index-mode moves in order. A
+    // movrel move only reads M0, so it is a load or store, ordered by the
+    // memory operand of the dword it moves.
+    if (!UseGPRIdxMode) {
+      for (const MachineMemOperand *MMO : MI.memoperands())
+        Move.addMemOperand(MF.getMachineMemOperand(MMO, 4 * i, 4));
+    }
+  }
+
+  // Bundled so the post-RA scheduler keeps everything else out of the mode
+  // switch.
+  if (SetOn) {
+    MachineInstr *SetOff =
+        BuildMI(MBB, MI, DL, TII.get(AMDGPU::S_SET_GPR_IDX_OFF));
+    finalizeBundle(MBB, SetOn->getIterator(), std::next(SetOff->getIterator()));
+  }
+
+  MI.eraseFromParent();
+}
+
 bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
+  if (isa<AMDGPUMI::VLoadStoreIdxInst>(MI)) {
+    expandLoadStoreIdx(*this, MI);
+    return true;
+  }
+
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MBB.findDebugLoc(MI);
   const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
@@ -4352,6 +4451,15 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   if (MIa.isBundle() || MIb.isBundle())
     return false;
 
+  // These only alias each other, and only on overlapping dword ranges.
+  const bool IsLdStIdxA = isa<AMDGPUMI::VLoadStoreIdxInst>(MIa);
+  const bool IsLdStIdxB = isa<AMDGPUMI::VLoadStoreIdxInst>(MIb);
+  if (IsLdStIdxA || IsLdStIdxB) {
+    if (IsLdStIdxA && IsLdStIdxB)
+      return checkInstOffsetsDoNotOverlap(MIa, MIb);
+    return true;
+  }
+
   // TODO: Should we check the address space from the MachineMemOperand? That
   // would allow us to distinguish objects we know don't alias based on the
   // underlying address space, even if it was lowered to a different one,
@@ -5991,6 +6099,18 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     int64_t Mask = MI.getOperand(MI.getNumExplicitOperands() - 1).getImm();
     if (!AMDGPU::isValidAsyncStageMask(Mask)) {
       ErrInfo = "invalid asyncmark stage mask";
+      return false;
+    }
+  }
+
+  // An offset past the addressable VGPRs is an out-of-bounds access, which is
+  // allowed, but each dword must still be a VGPR.
+  if (const auto *LdSt = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
+    const MachineOperand &Offset = LdSt->getOffsetOp();
+    if (!Offset.isImm() || Offset.getImm() < 0 ||
+        Offset.getImm() + LdSt->getBitWidth() / 32 >
+            AMDGPU::VGPR_32RegClass.getNumRegs()) {
+      ErrInfo = "invalid VGPR address space offset";
       return false;
     }
   }
@@ -7918,6 +8038,17 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return CreatedBB;
   }
 
+  // The GPR_IDX form needs its index in an SGPR. For the movrel form, a
+  // divergent M0 write is waterfalled where the copy into M0 is lowered.
+  if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
+    if (!LdStIdx->isGPRIdx())
+      return CreatedBB;
+    MachineOperand *Idx = &LdStIdx->getIdxOp();
+    if (!RI.isSGPRReg(MRI, Idx->getReg()))
+      CreatedBB = generateWaterFallLoop(*this, MI, {Idx}, MDT);
+    return CreatedBB;
+  }
+
   // Legalize PHI
   // The register class of the operands must be the same type as the register
   // class of the output.
@@ -8403,26 +8534,79 @@ void SIInstrInfo::createReadFirstLaneFromCopyToPhysReg(
   }
 }
 
-void SIInstrInfo::handleCopyToPhysHelper(
-    SIInstrWorklist &Worklist, Register DstReg, MachineInstr &Inst,
-    MachineRegisterInfo &MRI,
-    DenseMap<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
-    DenseMap<MachineInstr *, bool> &V2SPhyCopiesToErase) const {
-  if (DstReg == AMDGPU::M0) {
-    createReadFirstLaneFromCopyToPhysReg(MRI, DstReg, Inst);
-    V2SPhyCopiesToErase.try_emplace(&Inst, true);
+// M0 holds one value, but the VGPR copied into it holds one per lane. A movrel
+// access adds M0 to its base register, so each one that reads the copy is
+// wrapped in a waterfall loop that puts the value of each group of lanes in M0
+// in turn. Every other reader gets the first lane, as all of them do when no
+// access reads the copy.
+static void lowerVGPRCopyToM0(const SIInstrInfo &TII, MachineInstr &Copy,
+                              ArrayRef<MachineInstr *> Readers,
+                              MachineRegisterInfo &MRI,
+                              MachineDominatorTree *MDT) {
+  auto IsMovrelAccess = [](const MachineInstr *MI) {
+    const auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(MI);
+    return LdStIdx && !LdStIdx->isGPRIdx();
+  };
+  if (none_of(Readers, IsMovrelAccess)) {
+    TII.createReadFirstLaneFromCopyToPhysReg(MRI, AMDGPU::M0, Copy);
     return;
   }
-  Register SrcReg = Inst.getOperand(1).getReg();
-  // Only search current block since phyreg's def & use cannot cross
-  // blocks when MF.NoPhi = false.
+
+  assert(!Copy.getOperand(1).getSubReg() &&
+         "selection copies a whole register into M0");
+  Register Idx = Copy.getOperand(1).getReg();
+  Register FirstLane;
+  for (MachineInstr *Reader : Readers) {
+    if (IsMovrelAccess(Reader)) {
+      MachineOperand *M0Use =
+          Reader->findRegisterUseOperand(AMDGPU::M0, &TII.getRegisterInfo());
+      M0Use->setReg(Idx);
+      generateWaterFallLoop(TII, *Reader, M0Use, MDT, nullptr, nullptr,
+                            {AMDGPU::M0});
+      continue;
+    }
+
+    if (!FirstLane) {
+      FirstLane = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+      BuildMI(*Copy.getParent(), Copy, Copy.getDebugLoc(),
+              TII.get(AMDGPU::V_READFIRSTLANE_B32), FirstLane)
+          .addReg(Idx);
+    }
+    BuildMI(*Reader->getParent(), Reader, Reader->getDebugLoc(),
+            TII.get(AMDGPU::COPY), AMDGPU::M0)
+        .addReg(FirstLane);
+  }
+}
+
+void SIInstrInfo::handleCopyToPhysHelper(
+    SIInstrWorklist &Worklist, Register DstReg, MachineInstr &Inst,
+    MachineRegisterInfo &MRI, MachineDominatorTree *MDT,
+    DenseMap<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
+    DenseMap<MachineInstr *, bool> &V2SPhyCopiesToErase) const {
+  // In SSA a copy into a physical register and its readers share a block, so
+  // only the rest of this block is searched.
+  SmallVector<MachineInstr *, 4> Readers;
   for (MachineInstr &MI :
        instructionsWithoutDebug(std::next(MachineBasicBlock::iterator(Inst)),
                                 Inst.getParent()->end())) {
+    if (MI.readsRegister(DstReg, &RI))
+      Readers.push_back(&MI);
+
+    if (MI.modifiesRegister(DstReg, &RI))
+      break;
+  }
+
+  if (DstReg == AMDGPU::M0) {
+    lowerVGPRCopyToM0(*this, Inst, Readers, MRI, MDT);
+    V2SPhyCopiesToErase.try_emplace(&Inst, true);
+    return;
+  }
+
+  Register SrcReg = Inst.getOperand(1).getReg();
+  for (MachineInstr *UseMI : Readers) {
     // For SI_CALL_ISEL users, replace the phys SGPR with the VGPR source
     // and record the operand for later waterfall loop generation.
-    if (MI.getOpcode() == AMDGPU::SI_CALL_ISEL) {
-      MachineInstr *UseMI = &MI;
+    if (UseMI->getOpcode() == AMDGPU::SI_CALL_ISEL) {
       for (unsigned i = 0; i < UseMI->getNumOperands(); ++i) {
         if (UseMI->getOperand(i).isReg() &&
             UseMI->getOperand(i).getReg() == DstReg) {
@@ -8434,17 +8618,15 @@ void SIInstrInfo::handleCopyToPhysHelper(
           V2SPhyCopiesToErase.try_emplace(&Inst, true);
         }
       }
-    } else if (MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG &&
-               MI.getOperand(0).isReg() &&
-               MI.getOperand(0).getReg() == DstReg) {
+    } else if (UseMI->getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG &&
+               UseMI->getOperand(0).isReg() &&
+               UseMI->getOperand(0).getReg() == DstReg) {
       createReadFirstLaneFromCopyToPhysReg(MRI, DstReg, Inst);
       V2SPhyCopiesToErase.try_emplace(&Inst, true);
-    } else if (MI.readsRegister(DstReg, &RI)) {
+    } else {
       // COPY cannot be erased if other type of inst uses it.
       V2SPhyCopiesToErase[&Inst] = false;
     }
-    if (MI.modifiesRegister(DstReg, &RI))
-      break;
   }
 }
 
@@ -8950,7 +9132,7 @@ void SIInstrInfo::moveToVALUImpl(
 
     if (Inst.isCopy() && DstReg.isPhysical() &&
         Inst.getOperand(1).getReg().isVirtual()) {
-      handleCopyToPhysHelper(Worklist, DstReg, Inst, MRI, WaterFalls,
+      handleCopyToPhysHelper(Worklist, DstReg, Inst, MRI, MDT, WaterFalls,
                              V2SPhyCopiesToErase);
       return;
     }
@@ -11422,9 +11604,14 @@ SIInstrInfo::getGenericValueUniformity(const MachineInstr &MI) const {
     return ValueUniformity::Default;
   }
 
+  // Each lane reads its own registers, however uniform the index.
+  if (Opcode == AMDGPU::G_AMDGPU_REG_LOAD)
+    return ValueUniformity::NeverUniform;
+
   // Loads from the private and flat address spaces are divergent, because
   // threads can execute the load instruction with the same inputs and get
-  // different results.
+  // different results. So are VGPR address space loads, before they become
+  // G_AMDGPU_REG_LOAD.
   //
   // All other loads are not divergent, because if threads issue loads with the
   // same arguments, they will always get the same result.
@@ -11435,7 +11622,8 @@ SIInstrInfo::getGenericValueUniformity(const MachineInstr &MI) const {
 
     if (llvm::any_of(MI.memoperands(), [](const MachineMemOperand *mmo) {
           return mmo->getAddrSpace() == AMDGPUAS::PRIVATE_ADDRESS ||
-                 mmo->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS;
+                 mmo->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS ||
+                 mmo->getAddrSpace() == AMDGPUAS::VGPR;
         })) {
       // At least one MMO in a non-global address space.
       return ValueUniformity::NeverUniform;

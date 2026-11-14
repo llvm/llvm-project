@@ -16,6 +16,7 @@
 #include "AMDGPUIGroupLP.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
+#include "AMDGPUMachineInstrs.h"
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPUSelectionDAGInfo.h"
 #include "AMDGPUTargetMachine.h"
@@ -291,6 +292,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::v16i64, MVT::v16i32, Expand);
 
   setOperationAction(ISD::GlobalAddress, {MVT::i32, MVT::i64}, Custom);
+
+  // Only for an alloca in the VGPR ("as memory") address space.
+  setOperationAction(ISD::FrameIndex, MVT::i32, Custom);
   setOperationAction(ISD::BlockAddress, {MVT::i32, MVT::i64}, Custom);
   setOperationAction(ISD::ExternalSymbol, {MVT::i32, MVT::i64}, Custom);
 
@@ -2413,6 +2417,19 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
     unsigned *IsFast) const {
   return allowsMisalignedMemoryAccessesImpl(VT.getSizeInBits(), AddrSpace,
+                                            Alignment, Flags, IsFast);
+}
+
+bool SITargetLowering::allowsMemoryAccess(LLVMContext &Context,
+                                          const DataLayout &DL, EVT VT,
+                                          unsigned AddrSpace, Align Alignment,
+                                          MachineMemOperand::Flags Flags,
+                                          unsigned *IsFast) const {
+  // Sub-dword accesses aren't lowered yet, so combines must not narrow an
+  // access to one.
+  if (AddrSpace == AMDGPUAS::VGPR && VT.getSizeInBits() < 32)
+    return false;
+  return TargetLowering::allowsMemoryAccess(Context, DL, VT, AddrSpace,
                                             Alignment, Flags, IsFast);
 }
 
@@ -7749,6 +7766,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerBRCOND(Op, DAG);
   case ISD::RETURNADDR:
     return LowerRETURNADDR(Op, DAG);
+  case ISD::FrameIndex:
+    return lowerFrameIndex(Op, DAG);
   case ISD::SPONENTRY:
     return LowerSPONENTRY(Op, DAG);
   case ISD::LOAD: {
@@ -9544,10 +9563,11 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
 
   SDValue FlatNullPtr = DAG.getConstant(0, SL, MVT::i64);
 
-  // flat -> local/private/barrier
+  // flat -> local/private/barrier/vgpr
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS) {
     if (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
-        DestAS == AMDGPUAS::PRIVATE_ADDRESS || DestAS == AMDGPUAS::BARRIER) {
+        DestAS == AMDGPUAS::PRIVATE_ADDRESS || DestAS == AMDGPUAS::BARRIER ||
+        DestAS == AMDGPUAS::VGPR) {
       SDValue Ptr = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Src);
 
       if (DestAS == AMDGPUAS::PRIVATE_ADDRESS &&
@@ -9574,10 +9594,11 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
     }
   }
 
-  // local/private/barrier -> flat
+  // local/private/barrier/vgpr -> flat
   if (DestAS == AMDGPUAS::FLAT_ADDRESS) {
     if (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
-        SrcAS == AMDGPUAS::PRIVATE_ADDRESS || SrcAS == AMDGPUAS::BARRIER) {
+        SrcAS == AMDGPUAS::PRIVATE_ADDRESS || SrcAS == AMDGPUAS::BARRIER ||
+        SrcAS == AMDGPUAS::VGPR) {
       SDValue CvtPtr;
       if (SrcAS == AMDGPUAS::PRIVATE_ADDRESS &&
           Subtarget->hasGloballyAddressableScratch()) {
@@ -10269,6 +10290,23 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
   return DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), GOTAddr, PtrInfo, Alignment,
                      MachineMemOperand::MODereferenceable |
                          MachineMemOperand::MOInvariant);
+}
+
+// An alloca in the VGPR ("as memory") address space has no registers to live
+// in, so its stack offset must not be taken for a register address. Every
+// other frame index keeps its default lowering.
+SDValue SITargetLowering::lowerFrameIndex(SDValue Op, SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  int FI = cast<FrameIndexSDNode>(Op)->getIndex();
+  const AllocaInst *Alloca = MF.getFrameInfo().getObjectAllocation(FI);
+  if (!Alloca || Alloca->getAddressSpace() != AMDGPUAS::VGPR)
+    return SDValue();
+
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      MF.getFunction(),
+      "unsupported alloca in VGPR 'as memory' address space (13)",
+      Alloca->getDebugLoc()));
+  return DAG.getPOISON(MVT::i32);
 }
 
 SDValue SITargetLowering::LowerExternalSymbol(SDValue Op,
@@ -13645,6 +13683,96 @@ static bool addressMayBeAccessedAsPrivate(const MachineMemOperand *MMO,
   if (Info.isEntryFunction())
     return Info.getUserSGPRInfo().hasFlatScratchInit();
   return true;
+}
+
+// Lower a VGPR ("as memory") load or store to a REG_LOAD / REG_STORE node
+// carrying the dword index. TODO: sub-dword accesses.
+SDValue SITargetLowering::lowerLoadStoreVGPR(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MemSDNode *MemOp = cast<MemSDNode>(Op);
+  EVT MemVT = MemOp->getMemoryVT();
+  unsigned BitWidth = MemVT.getSizeInBits();
+
+  // Each caller replaces the node, so this is diagnosed once.
+  auto reportUnsupported = [&]() -> SDValue {
+    const Function &F = DAG.getMachineFunction().getFunction();
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        F,
+        "unsupported access of VGPR 'as memory' address space (13); only "
+        "dword-aligned whole-dword loads and stores are implemented",
+        DL.getDebugLoc()));
+    SmallVector<EVT, 2> ResultTypes(Op->values());
+    return DAG.getErrorMergeValues(ResultTypes, MemOp->getChain(), DL);
+  };
+
+  if (BitWidth < 32)
+    return reportUnsupported();
+
+  // The index is the pointer >> 2, so an under-aligned access would silently
+  // reach the containing dword rather than the bytes asked for.
+  if (MemOp->getAlign() < Align(4))
+    return reportUnsupported();
+  auto *Store = dyn_cast<StoreSDNode>(MemOp);
+  if (Store && Store->isTruncatingStore())
+    return reportUnsupported();
+  // Only a width some VGPR tuple has is looked up. A whole-dword access of any
+  // other width is done as one of <N x i32>, which type legalization splits.
+  auto *Load = dyn_cast<LoadSDNode>(MemOp);
+  if (!Subtarget->getRegisterInfo()->getVGPRClassForBitWidth(BitWidth) ||
+      !AMDGPUMI::VLoadStoreIdxInst::isSupportedBitWidth(BitWidth)) {
+    if (BitWidth % 32 != 0)
+      return reportUnsupported();
+    EVT ViewVT = getEquivalentMemType(*DAG.getContext(), MemVT);
+    if (Store) {
+      if (MemVT == ViewVT)
+        return SDValue();
+      return DAG.getStore(Store->getChain(), DL,
+                          DAG.getBitcast(ViewVT, Store->getValue()),
+                          Store->getBasePtr(), Store->getMemOperand());
+    }
+    if (MemVT == ViewVT && Load->getExtensionType() == ISD::NON_EXTLOAD)
+      return SDValue();
+    // The range is for the elements of MemVT, not for dwords.
+    Load->getMemOperand()->clearRanges();
+    SDValue NewLoad = DAG.getLoad(ViewVT, DL, Load->getChain(),
+                                  Load->getBasePtr(), Load->getMemOperand());
+    SDValue Value = getLoadExtOrTrunc(DAG, Load->getExtensionType(),
+                                      DAG.getBitcast(MemVT, NewLoad), DL,
+                                      Load->getValueType(0));
+    return DAG.getMergeValues({Value, NewLoad.getValue(1)}, DL);
+  }
+
+  SDValue Chain = MemOp->getChain();
+  SDValue Index = DAG.getNode(ISD::SRL, DL, MVT::i32, MemOp->getBasePtr(),
+                              DAG.getConstant(2, DL, MVT::i32));
+
+  // View as i32 / <N x i32> when the memory type is not register legal.
+  EVT RegVT = MemVT;
+  if (!isTypeLegal(RegVT)) {
+    unsigned NumDwords = BitWidth / 32;
+    RegVT = NumDwords == 1
+                ? EVT(MVT::i32)
+                : EVT::getVectorVT(*DAG.getContext(), MVT::i32, NumDwords);
+  }
+
+  if (Store) {
+    SDValue Value = DAG.getBitcast(RegVT, Store->getValue());
+    return DAG.getMemIntrinsicNode(
+        AMDGPUISD::REG_STORE, DL, DAG.getVTList(MVT::Other),
+        {Chain, Value, Index}, MemVT, Store->getMemOperand());
+  }
+
+  SDValue NewLoad = DAG.getMemIntrinsicNode(
+      AMDGPUISD::REG_LOAD, DL, DAG.getVTList(RegVT, MVT::Other), {Chain, Index},
+      MemVT, Load->getMemOperand());
+  SDValue Value = DAG.getBitcast(MemVT, NewLoad);
+  // The combiner folds an extension of a whole-dword load into the load.
+  Value = getLoadExtOrTrunc(DAG, Load->getExtensionType(), Value, DL,
+                            Load->getValueType(0));
+  if (Value == NewLoad)
+    return NewLoad;
+  return DAG.getMergeValues({Value, NewLoad.getValue(1)}, DL);
 }
 
 SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
@@ -19475,6 +19603,17 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     if (auto Res = promoteUniformOpToI32(SDValue(N, 0), DCI))
       return Res;
     break;
+  case ISD::LOAD:
+  case ISD::STORE:
+    // TODO: Move this to LowerLOAD and LowerSTORE once the action of a
+    // non-extending load or non-truncating store can depend on the address
+    // space. Until then one whose action is Legal, such as i32, never reaches
+    // them.
+    if (cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::VGPR) {
+      if (SDValue V = lowerLoadStoreVGPR(SDValue(N, 0), DCI.DAG))
+        return V;
+    }
+    break;
   default:
     break;
   }
@@ -20974,9 +21113,14 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
   case ISD::LOAD: {
     const LoadSDNode *L = cast<LoadSDNode>(N);
     unsigned AS = L->getAddressSpace();
-    // A flat load may access private memory.
-    return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS;
+    // A flat load may access private memory, and a VGPR load reads each lane's
+    // own registers.
+    return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS ||
+           AS == AMDGPUAS::VGPR;
   }
+  // As above, after the pre-ISel combine.
+  case AMDGPUISD::REG_LOAD:
+    return true;
   case ISD::CALLSEQ_END:
     return true;
   case ISD::INTRINSIC_WO_CHAIN:
@@ -21245,6 +21389,11 @@ SITargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
   unsigned AS = RMW->getPointerAddressSpace();
   if (AS == AMDGPUAS::PRIVATE_ADDRESS)
     return getPrivateAtomicExpansionKind(*getSubtarget());
+
+  // Only the executing lane can access its view of the VGPRs, so as with
+  // private memory there is nothing to be atomic with respect to.
+  if (AS == AMDGPUAS::VGPR)
+    return AtomicExpansionKind::NotAtomic;
 
   // 64-bit flat atomics that dynamically reside in private memory will silently
   // be dropped.
@@ -21543,6 +21692,8 @@ SITargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
 
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+  if (LI->getPointerAddressSpace() == AMDGPUAS::VGPR)
+    return AtomicExpansionKind::NotAtomic;
   return LI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS
              ? getPrivateAtomicExpansionKind(*getSubtarget())
              : AtomicExpansionKind::None;
@@ -21550,6 +21701,8 @@ SITargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
 
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+  if (SI->getPointerAddressSpace() == AMDGPUAS::VGPR)
+    return AtomicExpansionKind::NotAtomic;
   return SI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS
              ? getPrivateAtomicExpansionKind(*getSubtarget())
              : AtomicExpansionKind::None;
@@ -21561,6 +21714,9 @@ SITargetLowering::shouldExpandAtomicCmpXchgInIR(
   unsigned AddrSpace = CmpX->getPointerAddressSpace();
   if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)
     return getPrivateAtomicExpansionKind(*getSubtarget());
+
+  if (AddrSpace == AMDGPUAS::VGPR)
+    return AtomicExpansionKind::NotAtomic;
 
   if (AddrSpace != AMDGPUAS::FLAT_ADDRESS || !flatInstrMayAccessPrivate(CmpX))
     return AtomicExpansionKind::None;

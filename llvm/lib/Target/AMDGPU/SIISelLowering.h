@@ -130,6 +130,7 @@ private:
 
   SDValue widenLoad(LoadSDNode *Ld, DAGCombinerInfo &DCI) const;
   SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerLoadStoreVGPR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFastUnsafeFDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFastUnsafeFDIV64(SDValue Op, SelectionDAG &DAG) const;
@@ -147,6 +148,7 @@ private:
   SDValue LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFrameIndex(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const;
   SDValue adjustLoadValueType(unsigned Opcode, MemSDNode *M, SelectionDAG &DAG,
                               ArrayRef<SDValue> Ops,
@@ -400,6 +402,11 @@ public:
       EVT VT, unsigned AS, Align Alignment,
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       unsigned *IsFast = nullptr) const override;
+
+  bool allowsMemoryAccess(LLVMContext &Context, const DataLayout &DL, EVT VT,
+                          unsigned AddrSpace, Align Alignment,
+                          MachineMemOperand::Flags Flags,
+                          unsigned *IsFast) const override;
 
   EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;

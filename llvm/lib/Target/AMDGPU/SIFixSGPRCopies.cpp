@@ -910,25 +910,13 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
   if (!DstReg.isVirtual()) {
-    // If the destination register is a physical register there isn't
-    // really much we can do to fix this.
-    // Some special instructions use M0 as an input. Some even only use
-    // the first lane. Insert a readfirstlane and hope for the best.
+    // moveToVALU lowers a VGPR copied into M0: each movrel access that reads it
+    // gets a waterfall loop, and every other reader the first lane.
     const TargetRegisterClass *SrcRC = MRI->getRegClass(SrcReg);
     if (DstReg == AMDGPU::M0 && TRI->hasVectorRegisters(SrcRC)) {
-      Register TmpReg =
-          MRI->createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
-
-      const MCInstrDesc &ReadFirstLaneDesc =
-          TII->get(AMDGPU::V_READFIRSTLANE_B32);
-      BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), ReadFirstLaneDesc, TmpReg)
-          .add(MI.getOperand(1));
-
+      const TargetRegisterClass *OpRC =
+          TII->getRegClass(TII->get(AMDGPU::V_READFIRSTLANE_B32), 1);
       unsigned SubReg = MI.getOperand(1).getSubReg();
-      MI.getOperand(1).setReg(TmpReg);
-      MI.getOperand(1).setSubReg(AMDGPU::NoSubRegister);
-
-      const TargetRegisterClass *OpRC = TII->getRegClass(ReadFirstLaneDesc, 1);
       const TargetRegisterClass *ConstrainRC =
           SubReg == AMDGPU::NoSubRegister
               ? OpRC
@@ -936,7 +924,7 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
 
       if (!MRI->constrainRegClass(SrcReg, ConstrainRC))
         llvm_unreachable("failed to constrain register");
-      return true;
+      return false;
     }
 
     if (tryMoveVGPRConstToSGPR(MI.getOperand(1), DstReg, MI.getParent(), MI,
