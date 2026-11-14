@@ -843,7 +843,15 @@ private:
       }
       PrevState = CurrState;
     }
-    bool onRegister(MCRegister Reg, StringRef &ErrMsg) {
+    bool onRegister(MCRegister Reg, bool IsScale, StringRef &ErrMsg) {
+      // Reject a second register in a product, including inside a
+      // parenthesized scale.
+      if (IsScale ||
+          (TmpReg && (State == IES_LPAREN || State == IES_MULTIPLY))) {
+        ErrMsg = "Register can't be multiplied with register!";
+        return true;
+      }
+
       IntelExprState CurrState = State;
       switch (State) {
       default:
@@ -862,11 +870,6 @@ private:
         break;
       case IES_LPAREN:
       case IES_MULTIPLY:
-        // A register already held in TmpReg means we are multiplying two reg
-        if (TmpReg) {
-          ErrMsg = "Register can't be multiplied with register!";
-          return true;
-        }
         State = IES_REGISTER;
         TmpReg = Reg;
         // Recognize this register as a scaled index register. This covers
@@ -2145,7 +2148,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End,
       MCRegister Reg;
       if (Tok.is(AsmToken::Identifier)) {
         if (!ParseRegister(Reg, IdentLoc, End, /*RestoreOnFailure=*/true)) {
-          if (SM.onRegister(Reg, ErrMsg))
+          if (SM.onRegister(Reg, IsScale, ErrMsg))
             return Error(SM.getErrorLoc(IdentLoc), ErrMsg);
           break;
         }
@@ -2156,7 +2159,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End,
           SMLoc IDEndLoc = SMLoc::getFromPointer(ID.data() + ID.size());
           if (!Field.empty() &&
               !MatchRegisterByName(Reg, ID, IdentLoc, IDEndLoc)) {
-            if (SM.onRegister(Reg, ErrMsg))
+            if (SM.onRegister(Reg, IsScale, ErrMsg))
               return Error(SM.getErrorLoc(IdentLoc), ErrMsg);
 
             AsmFieldInfo Info;
