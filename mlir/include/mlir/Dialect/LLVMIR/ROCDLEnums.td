@@ -47,6 +47,13 @@ def ROCDL_BufferOOBMode :
                   [ROCDL_BufferOOBModeAny, ROCDL_BufferOOBModeRelaxed,
                    ROCDL_BufferOOBModeStrict]>;
 
+// C/D policy exported as an AMDGPU string call-site attribute.
+def ROCDL_MFMACDRegClass : ROCDL_I32Enum<"MFMACDRegClass",
+    "MFMA C/D register-file constraint",
+    [I32EnumCase<"Auto", 0, "auto">,
+     I32EnumCase<"RequireAGPR", 1, "require_agpr">,
+     I32EnumCase<"RequireVGPR", 2, "require_vgpr">]>;
+
 def ROCDL_MFMAPermB : ROCDL_I32Enum<"MFMAPermB",
     "permutations of the lanes storing B in an MFMA",
     [

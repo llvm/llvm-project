@@ -359,14 +359,17 @@ public:
     OPFL_GlueInput = 2,  // Node has a glue input.
     OPFL_GlueOutput = 4, // Node has a glue output.
     OPFL_MemRefs = 8,    // Node gets accumulated MemRefs.
-    OPFL_Variadic0 = 1 << 4, // Node is variadic, root has 0 fixed inputs.
-    OPFL_Variadic1 = 2 << 4, // Node is variadic, root has 1 fixed inputs.
-    OPFL_Variadic2 = 3 << 4, // Node is variadic, root has 2 fixed inputs.
-    OPFL_Variadic3 = 4 << 4, // Node is variadic, root has 3 fixed inputs.
-    OPFL_Variadic4 = 5 << 4, // Node is variadic, root has 4 fixed inputs.
-    OPFL_Variadic5 = 6 << 4, // Node is variadic, root has 5 fixed inputs.
-    OPFL_Variadic6 = 7 << 4, // Node is variadic, root has 6 fixed inputs.
-    OPFL_Variadic7 = 8 << 4, // Node is variadic, root has 7 fixed inputs.
+    OPFL_Variadic0 = 1 << 4,   // Node is variadic, root has 0 fixed inputs.
+    OPFL_Variadic1 = 2 << 4,   // Node is variadic, root has 1 fixed inputs.
+    OPFL_Variadic2 = 3 << 4,   // Node is variadic, root has 2 fixed inputs.
+    OPFL_Variadic3 = 4 << 4,   // Node is variadic, root has 3 fixed inputs.
+    OPFL_Variadic4 = 5 << 4,   // Node is variadic, root has 4 fixed inputs.
+    OPFL_Variadic5 = 6 << 4,   // Node is variadic, root has 5 fixed inputs.
+    OPFL_Variadic6 = 7 << 4,   // Node is variadic, root has 6 fixed inputs.
+    OPFL_Variadic7 = 8 << 4,   // Node is variadic, root has 7 fixed inputs.
+    OPFL_Variadic8 = 9 << 4,   // Node is variadic, root has 8 fixed inputs.
+    OPFL_Variadic9 = 10 << 4,  // Node is variadic, root has 9 fixed inputs.
+    OPFL_Variadic10 = 11 << 4, // Node is variadic, root has 10 fixed inputs.
 
     OPFL_VariadicInfo = 15 << 4 // Mask for extracting the OPFL_VariadicN bits.
   };

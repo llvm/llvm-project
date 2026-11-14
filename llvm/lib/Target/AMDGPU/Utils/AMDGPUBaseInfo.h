@@ -48,6 +48,11 @@ class raw_ostream;
 
 namespace AMDGPU {
 
+inline constexpr StringLiteral MFMACDRegClassAttr = "amdgpu-mfma-cd-regclass";
+
+enum class MFMACDRegClass { Auto, AGPR, VGPR };
+std::optional<MFMACDRegClass> getMFMACDRegClass(const CallBase &Call);
+
 struct AMDGPUMCKernelCodeT;
 struct IsaVersion;
 
