@@ -715,6 +715,14 @@ public:
     ChosenTailFoldingStyle = Opts.force_tail_folding_style.value_or(
         TTI.getPreferredTailFoldingStyle());
 
+    // TODO: Support uncountable early exits w/ DataAndControlFlow. Both
+    // adjust the latch terminator structure.
+    if (ChosenTailFoldingStyle == TailFoldingStyle::DataAndControlFlow &&
+        Legal->hasUncountableEarlyExit()) {
+      ChosenTailFoldingStyle = TailFoldingStyle::None;
+      return;
+    }
+
     if (ChosenTailFoldingStyle != TailFoldingStyle::DataWithEVL)
       return;
     // Override EVL styles if needed.

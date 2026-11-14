@@ -1373,15 +1373,9 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan, DebugLoc DL) {
 }
 
 void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
-  assert(Plan.getExitBlocks().size() == 1 &&
-         "only a single-exit block is supported currently");
-  assert(Plan.getExitBlocks().front()->getSinglePredecessor() ==
-             Plan.getMiddleBlock() &&
-         "the exit block must have middle block as single predecessor");
-
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  assert(LoopRegion->getSingleSuccessor() == Plan.getMiddleBlock() &&
-         "The vector loop region must have the middle block as its single "
+  assert(LoopRegion->getSuccessors().back() == Plan.getMiddleBlock() &&
+         "The vector loop region must have the middle block as its "
          "successor for now");
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
@@ -1393,21 +1387,39 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   Builder.createNaryOp(VPInstruction::BranchOnCond, HeaderMask);
 
   VPBasicBlock *OrigLatch = LoopRegion->getExitingBasicBlock();
-  VPValue *IVInc = vputils::findCanonicalIVIncrement(Plan);
-  assert(IVInc &&
-         std::next(IVInc->getDefiningRecipe()->getIterator()) ==
-             OrigLatch->getTerminator()->getIterator() &&
+  VPInstruction *IVInc = vputils::findCanonicalIVIncrement(Plan);
+  assert(IVInc && "Expected a canonical iv increment");
+  [[maybe_unused]] auto NextIt = std::next(IVInc->getIterator());
+  assert((NextIt == OrigLatch->getTerminator()->getIterator() ||
+          (match(&*NextIt,
+                 m_SpecificICmp(CmpInst::ICMP_EQ, m_Specific(IVInc),
+                                m_Specific(&Plan.getVectorTripCount()))) &&
+           match(&*std::next(NextIt),
+                 m_BranchOnTwoConds(
+                     m_VPValue(), m_Specific(NextIt->getVPSingleValue()))))) &&
          "Unexpected canonical iv increment");
 
   // Split the latch at the IV update, and branch to it from the header mask.
-  VPBasicBlock *Latch =
-      OrigLatch->splitAt(IVInc->getDefiningRecipe()->getIterator());
+  VPBasicBlock *Latch = OrigLatch->splitAt(IVInc->getIterator());
   Latch->setName("vector.latch");
   VPBlockUtils::connectBlocks(Header, Latch);
 
+  // The early exit condition is false on the tail lanes. Sink the any-of to
+  // the new latch, operating on a phi that is false when the header mask is.
+  VPSingleDefRecipe *AnyOf;
+  VPValue *AllExitConds;
+  if (match(Latch->getTerminator(),
+            m_BranchOnTwoConds(m_CombineAnd(m_VPSingleDefRecipe(AnyOf),
+                                            m_AnyOf(m_VPValue(AllExitConds))),
+                               m_VPValue()))) {
+    Builder.setInsertPoint(Latch->begin());
+    VPPhi *Phi = Builder.createScalarPhi({AllExitConds, Plan.getFalse()});
+    AllExitConds->replaceUsesWithIf(Phi, not_equal_to(Phi));
+    AnyOf->moveBefore(IVInc->getIterator());
+  }
+
   // Collect any values defined in the loop that need a phi, that is header phis
-  // and any value defined n the loop and used in the middle block.
-  // TODO: Handle early exits via Plan.getExitBlocks()
+  // and any value defined in the loop and used after the loop region.
   MapVector<VPValue *, SmallVector<VPUser *>> NeedsPhi;
   auto CollectBypassedOperands = [&](VPRecipeBase &R) {
     for (VPValue *Op : R.operands()) {
@@ -1419,8 +1431,10 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   };
   for (VPRecipeBase &R : Header->phis())
     CollectBypassedOperands(R);
-  for (VPRecipeBase &R : *Plan.getMiddleBlock())
-    CollectBypassedOperands(R);
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(LoopRegion)))
+    for (VPRecipeBase &R : *VPBB)
+      CollectBypassedOperands(R);
 
   // Insert phis for values coming past the end of the tail.
   Builder.setInsertPoint(Latch->begin());
