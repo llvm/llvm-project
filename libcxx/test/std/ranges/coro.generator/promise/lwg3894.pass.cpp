@@ -16,6 +16,7 @@
 
 #include <cassert>
 #include <cstddef>
+#include <memory>
 #include <ranges>
 #include <utility>
 
