@@ -1175,6 +1175,26 @@ llvm::Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
   }
 }
 
+std::optional<lldb::addr_t>
+ProcessElfCore::FindNTFileAddressForFileOffset(lldb::addr_t elf_header_addr,
+                                               lldb::addr_t file_offset) {
+  // A file can be mapped more than once. The lowest matching address at or
+  // above the ELF header belongs to the same load of the file.
+  std::optional<lldb::addr_t> result;
+  for (const NT_FILE_Entry &entry : m_nt_file_entries) {
+    if (entry.start < elf_header_addr || entry.end <= entry.start)
+      continue;
+    if (file_offset < entry.original_file_offset ||
+        file_offset - entry.original_file_offset >= entry.end - entry.start)
+      continue;
+    const lldb::addr_t addr =
+        entry.start + (file_offset - entry.original_file_offset);
+    if (!result || addr < *result)
+      result = addr;
+  }
+  return result;
+}
+
 UUID ProcessElfCore::FindBuidIdInCoreMemory(lldb::addr_t address) {
   UUID invalid_uuid;
   const uint32_t addr_size = GetAddressByteSize();
@@ -1196,7 +1216,16 @@ UUID ProcessElfCore::FindBuidIdInCoreMemory(lldb::addr_t address) {
   elf::ELFHeader elf_header;
   elf_header.Parse(elf_header_data, &offset);
 
-  const lldb::addr_t ph_addr = address + elf_header.e_phoff;
+  // e_phoff is an offset in the file, not from the load address. They are
+  // the same when the program headers are in the first PT_LOAD, but tools
+  // such as patchelf can move them to a segment at the end of the file
+  // that is mapped elsewhere. Before the program headers are read, only
+  // NT_FILE maps file offsets to addresses.
+  std::optional<lldb::addr_t> ph_addr_or_none =
+      FindNTFileAddressForFileOffset(address, elf_header.e_phoff);
+  if (!ph_addr_or_none)
+    return invalid_uuid;
+  const lldb::addr_t ph_addr = *ph_addr_or_none;
 
   std::vector<uint8_t> ph_bytes;
   ph_bytes.resize(elf_header.e_phentsize);

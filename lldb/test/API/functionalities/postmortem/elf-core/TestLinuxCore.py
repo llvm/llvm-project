@@ -1446,6 +1446,30 @@ class LinuxCoreTestCase(TestBase):
 
     @skipIfLLVMTargetMissing("X86")
     @skipIfWindows
+    def test_build_id_with_moved_program_headers(self):
+        # /tmp/libmoved.so is mapped at 0x400000 and its e_phoff is 0x1000,
+        # but file offset 0x1000 is mapped at 0x600000, as happens after
+        # patchelf moves the program headers. 0x400000 + e_phoff is the start
+        # of /tmp/libother.so, whose bytes read as a PT_NOTE with a huge
+        # p_memsz. The build ID must come from the real program headers.
+        yaml_path = self.getSourcePath("elf-NT_FILE-moved-program-headers.yaml")
+        core_path = self.getBuildArtifact("elf-NT_FILE-moved-program-headers.core")
+        log_path = self.getBuildArtifact("elf-NT_FILE-moved-program-headers.log")
+        self.yaml2obj(yaml_path, core_path)
+        self.runCmd(f"log enable lldb process -f '{log_path}'")
+        self.addTearDownHook(lambda: self.runCmd("log disable lldb process"))
+        target = self.dbg.CreateTarget(None)
+        process = target.LoadCore(core_path)
+        self.assertTrue(process.IsValid())
+        with open(log_path, "r") as f:
+            self.assertIn(
+                '01020304-0506-0708-090A-0B0C0D0E0F10-11121314 "/tmp/libmoved.so"',
+                f.read(),
+            )
+        self.dbg.DeleteTarget(target)
+
+    @skipIfLLVMTargetMissing("X86")
+    @skipIfWindows
     def test_memory_region_name_from_nt_file(self):
         yaml_path = self.getSourcePath("elf-NT_FILE-memory-region.yaml")
         core_path = self.getBuildArtifact("elf-NT_FILE-memory-region.core")

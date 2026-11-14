@@ -18,6 +18,7 @@
 
 #include <functional>
 #include <list>
+#include <optional>
 #include <set>
 #include <unordered_map>
 #include <vector>
@@ -183,6 +184,12 @@ private:
 
   // Returns the value of certain type of note of a given start address
   lldb_private::UUID FindBuidIdInCoreMemory(lldb::addr_t address);
+
+  // Returns the address at which file_offset of the file whose ELF header is
+  // at elf_header_addr is mapped, using the NT_FILE mappings at or above it.
+  std::optional<lldb::addr_t>
+  FindNTFileAddressForFileOffset(lldb::addr_t elf_header_addr,
+                                 lldb::addr_t file_offset);
 
   // Parse a contiguous address range of the process from LOAD segment
   lldb::addr_t
