@@ -16,10 +16,13 @@
 #include <generator>
 
 #include <cassert>
+#include <initializer_list>
 #include <numeric>
 #include <ranges>
 #include <utility>
 #include <vector>
+
+#include "test_macros.h"
 
 std::generator<int> fib() {
   int a = 0;
@@ -91,7 +94,99 @@ bool test() {
   return true;
 }
 
-int main() {
+struct Lifetime {
+  int& live;
+  explicit Lifetime(int& count) : live(count) { ++live; }
+  ~Lifetime() { --live; }
+};
+
+enum class Failure { None, BeforeYield, AfterYield };
+
+std::generator<int> recursive_lifetime(int depth, int& live, Failure failure) {
+  Lifetime lifetime(live);
+  if (depth != 0) {
+    co_yield std::ranges::elements_of(recursive_lifetime(depth - 1, live, failure));
+  } else {
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    if (failure == Failure::BeforeYield)
+      throw 42;
+#endif
+    co_yield 1;
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    if (failure == Failure::AfterYield)
+      throw 42;
+#endif
+  }
+}
+
+void test_lifetime() {
+  int live = 0;
+  {
+    auto g = recursive_lifetime(8, live, Failure::None);
+    assert(live == 0);
+  }
+  assert(live == 0);
+  {
+    auto g = recursive_lifetime(8, live, Failure::None);
+    auto i = g.begin();
+    assert(*i == 1 && live == 9);
+    auto moved = std::move(g);
+    assert(*i == 1 && live == 9);
+    // Destroying the root while the leaf is suspended destroys the entire chain.
+  }
+  assert(live == 0);
+  {
+    auto g = recursive_lifetime(8, live, Failure::None);
+    auto i = g.begin();
+    ++i;
+    assert(i == g.end() && live == 0);
+  }
+}
+
+#ifndef TEST_HAS_NO_EXCEPTIONS
+std::generator<int> recover(int& live, Failure failure) {
+  try {
+    co_yield std::ranges::elements_of(recursive_lifetime(8, live, failure));
+    assert(false);
+  } catch (int value) {
+    assert(value == 42 && live == 0);
+  }
+  co_yield 2;
+}
+
+void test_exceptions() {
+  for (Failure failure : {Failure::BeforeYield, Failure::AfterYield}) {
+    for (int depth : {0, 8}) {
+      int live = 0;
+      try {
+        auto g = recursive_lifetime(depth, live, failure);
+        auto i = g.begin();
+        assert(failure == Failure::AfterYield && *i == 1);
+        ++i;
+        assert(false);
+      } catch (int value) {
+        assert(value == 42 && live == 0);
+      }
+    }
+    int live = 0;
+    auto g   = recover(live, failure);
+    auto i   = g.begin();
+    if (failure == Failure::AfterYield) {
+      assert(*i == 1 && live == 9);
+      ++i;
+    }
+    assert(*i == 2 && live == 0);
+    ++i;
+    assert(i == g.end());
+  }
+}
+#endif
+
+int main(int, char**) {
   test();
+  test_lifetime();
+#ifndef TEST_HAS_NO_EXCEPTIONS
+  test_exceptions();
+#endif
   return 0;
 }
