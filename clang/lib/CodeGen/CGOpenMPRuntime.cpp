@@ -17,6 +17,7 @@
 #include "CGDebugInfo.h"
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
+#include "RISCVLpadLabelGen.h"
 #include "TargetInfo.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/Attr.h"
@@ -1691,8 +1692,10 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
           CGM.getContext().VoidPtrTy, Args);
       llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FI);
       std::string Name = getName({"__kmpc_global_ctor_", ""});
-      llvm::Function *Fn =
-          CGM.CreateGlobalInitOrCleanUpFunction(FTy, Name, FI, Loc);
+      llvm::Function *Fn = CGM.CreateGlobalInitOrCleanUpFunction(
+          FTy, Name, FI, Loc, /*TLS=*/false,
+          llvm::GlobalVariable::InternalLinkage,
+          buildVoidPtrToVoidPtrSigTy(CGM.getContext()));
       CtorCGF.StartFunction(GlobalDecl(), CGM.getContext().VoidPtrTy, Fn, FI,
                             Args, Loc, Loc);
       llvm::Value *ArgVal = CtorCGF.EmitLoadOfScalar(
@@ -1722,8 +1725,10 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
           CGM.getContext().VoidTy, Args);
       llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FI);
       std::string Name = getName({"__kmpc_global_dtor_", ""});
-      llvm::Function *Fn =
-          CGM.CreateGlobalInitOrCleanUpFunction(FTy, Name, FI, Loc);
+      llvm::Function *Fn = CGM.CreateGlobalInitOrCleanUpFunction(
+          FTy, Name, FI, Loc, /*TLS=*/false,
+          llvm::GlobalVariable::InternalLinkage,
+          buildDtorSigTy(CGM.getContext()));
       auto NL = ApplyDebugLocation::CreateEmpty(DtorCGF);
       DtorCGF.StartFunction(GlobalDecl(), CGM.getContext().VoidTy, Fn, FI, Args,
                             Loc, Loc);

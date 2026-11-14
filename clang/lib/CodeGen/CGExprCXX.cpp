@@ -94,9 +94,20 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorCall(
   auto &FnInfo = CGM.getTypes().arrangeCXXMethodCall(
       Args, FPT, CallInfo.ReqArgs, CallInfo.PrefixSize,
       getCurrentFunctionDecl());
-  return EmitCall(FnInfo, Callee, ReturnValue, Args, CallOrInvoke,
-                  CE && CE == MustTailCall,
-                  CE ? CE->getExprLoc() : SourceLocation());
+
+  llvm::CallBase *LocalCallOrInvoke = nullptr;
+  RValue Call = EmitCall(FnInfo, Callee, ReturnValue, Args, &LocalCallOrInvoke,
+                         CE && CE == MustTailCall,
+                         CE ? CE->getExprLoc() : SourceLocation());
+
+  // Add RISC-V landing pad label metadata for zicfilp extension. A virtual
+  // call (CGCallee::forVirtual) lowers to an indirect call through the
+  // vtable.
+  CGM.setRISCVLpadCallSiteMetadata(LocalCallOrInvoke, MD);
+
+  if (CallOrInvoke)
+    *CallOrInvoke = LocalCallOrInvoke;
+  return Call;
 }
 
 RValue CodeGenFunction::EmitCXXDestructorCall(
@@ -120,10 +131,19 @@ RValue CodeGenFunction::EmitCXXDestructorCall(
   CallArgList Args;
   commonEmitCXXMemberOrOperatorCall(*this, Dtor, This, ImplicitParam,
                                     ImplicitParamTy, CE, Args, nullptr);
-  return EmitCall(CGM.getTypes().arrangeCXXStructorDeclaration(Dtor), Callee,
-                  ReturnValueSlot(), Args, CallOrInvoke,
-                  CE && CE == MustTailCall,
-                  CE ? CE->getExprLoc() : SourceLocation{});
+
+  llvm::CallBase *LocalCallOrInvoke = nullptr;
+  RValue RV = EmitCall(CGM.getTypes().arrangeCXXStructorDeclaration(Dtor),
+                       Callee, ReturnValueSlot(), Args, &LocalCallOrInvoke,
+                       CE && CE == MustTailCall,
+                       CE ? CE->getExprLoc() : SourceLocation{});
+
+  // Add RISC-V landing pad label metadata for zicfilp extension
+  CGM.setRISCVLpadCallSiteMetadata(LocalCallOrInvoke, DtorDecl);
+
+  if (CallOrInvoke)
+    *CallOrInvoke = LocalCallOrInvoke;
+  return RV;
 }
 
 RValue
@@ -496,11 +516,20 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
 
   // And the rest of the call args
   EmitCallArgs(Args, FPT, E->arguments());
-  return EmitCall(CGM.getTypes().arrangeCXXMethodCall(Args, FPT, required,
-                                                      /*PrefixSize=*/0,
-                                                      getCurrentFunctionDecl()),
-                  Callee, ReturnValue, Args, CallOrInvoke, E == MustTailCall,
-                  E->getExprLoc());
+  llvm::CallBase *LocalCallOrInvoke = nullptr;
+  RValue Call = EmitCall(CGM.getTypes().arrangeCXXMethodCall(
+                             Args, FPT, required,
+                             /*PrefixSize=*/0, getCurrentFunctionDecl()),
+                         Callee, ReturnValue, Args, &LocalCallOrInvoke,
+                         E == MustTailCall, E->getExprLoc());
+
+  // Add RISC-V landing pad label metadata for zicfilp extension
+  CGM.setRISCVLpadCallSiteMetadata(LocalCallOrInvoke, MemFnExpr->getType(),
+                                   E->getExprLoc());
+
+  if (CallOrInvoke)
+    *CallOrInvoke = LocalCallOrInvoke;
+  return Call;
 }
 
 RValue CodeGenFunction::EmitCXXOperatorMemberCallExpr(

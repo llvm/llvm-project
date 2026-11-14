@@ -7344,6 +7344,15 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   if (CallOrInvoke)
     *CallOrInvoke = LocalCallOrInvoke;
 
+  // Add RISC-V landing pad label metadata for zicfilp extension
+  // if Branch Label Scheme "func-sig" is not selected, the label is 0 instead.
+  // CFIUnchecked is applicable only for software-cfi, don't check it here.
+  if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl))
+    CGM.setRISCVLpadCallSiteMetadata(LocalCallOrInvoke, FD);
+  else
+    CGM.setRISCVLpadCallSiteMetadata(LocalCallOrInvoke, QualType(FnType, 0),
+                                     E ? E->getExprLoc() : SourceLocation());
+
   return Call;
 }
 

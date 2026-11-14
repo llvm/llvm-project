@@ -27,6 +27,7 @@
 #include "ConstantEmitter.h"
 #include "CoverageMappingGen.h"
 #include "QualTypeMapper.h"
+#include "RISCVLpadLabelGen.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
@@ -3924,6 +3925,11 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
   if (LangOpts.Sanitize.has(SanitizerKind::KCFI))
     setKCFIType(FD, F);
 
+  // If RISC-V Landing Pads are enabled, add the function Type ID to the
+  // function as an attribute to pass it to the backend. if Branch Label Scheme
+  // "func-sig" is not selected, the label is 0 instead.
+  setRISCVLpadFunctionAttr(F, FD);
+
   if (getLangOpts().OpenMP && FD->hasAttr<OMPDeclareSimdDeclAttr>())
     getOpenMPRuntime().emitDeclareSimdFunction(FD, F);
 
@@ -3946,6 +3952,78 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
                                                CalleeIdx, PayloadIndices,
                                                /* VarArgsArePassed */ false)}));
   }
+}
+
+void CodeGenModule::setRISCVLpadFunctionAttr(llvm::Function *Fn,
+                                             QualType FnTy) {
+  if (!(CodeGenOpts.CFProtectionBranch && getTriple().isRISCV()))
+    return;
+  uint32_t Label = 0;
+  if (getResolvedCFBranchLabelScheme() == CFBranchLabelSchemeKind::FuncSig)
+    Label = createRISCVLpadTypeId(
+        getContext(),
+        cast<ItaniumMangleContext>(getCXXABI().getMangleContext()), FnTy);
+  Fn->addFnAttr("cfi_type_hash", std::to_string(Label));
+}
+
+void CodeGenModule::setRISCVLpadFunctionAttr(llvm::Function *Fn,
+                                             const FunctionDecl *FD) {
+  if (!(CodeGenOpts.CFProtectionBranch && getTriple().isRISCV()))
+    return;
+  uint32_t Label = 0;
+  if (getResolvedCFBranchLabelScheme() == CFBranchLabelSchemeKind::FuncSig)
+    Label = createRISCVEntryLpadTypeId(
+        getContext(),
+        cast<ItaniumMangleContext>(getCXXABI().getMangleContext()), FD);
+  Fn->addFnAttr("cfi_type_hash", std::to_string(Label));
+}
+
+static bool needsRISCVLpadCallLabel(CodeGenModule &CGM,
+                                    llvm::CallBase *CallOrInvoke) {
+  // CFIUnchecked is applicable only for software-cfi, don't check it here.
+  return CallOrInvoke && CGM.getTriple().isRISCV() &&
+         CGM.getCodeGenOpts().CFProtectionBranch &&
+         !CallOrInvoke->getCalledFunction();
+}
+
+static void attachRISCVLpadCallLabel(CodeGenModule &CGM,
+                                     llvm::CallBase *CallOrInvoke,
+                                     uint32_t Label) {
+  CallOrInvoke->setMetadata(
+      "riscv_lpad_label",
+      llvm::MDNode::get(
+          CGM.getLLVMContext(),
+          llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+              llvm::Type::getInt32Ty(CGM.getLLVMContext()), Label))));
+}
+
+void CodeGenModule::setRISCVLpadCallSiteMetadata(llvm::CallBase *CallOrInvoke,
+                                                 const FunctionDecl *FD) {
+  if (!needsRISCVLpadCallLabel(*this, CallOrInvoke))
+    return;
+
+  uint32_t Label = 0;
+  if (getResolvedCFBranchLabelScheme() == CFBranchLabelSchemeKind::FuncSig)
+    Label = createRISCVCallSiteLpadTypeId(
+        getContext(),
+        cast<ItaniumMangleContext>(getCXXABI().getMangleContext()), FD);
+
+  attachRISCVLpadCallLabel(*this, CallOrInvoke, Label);
+}
+
+void CodeGenModule::setRISCVLpadCallSiteMetadata(llvm::CallBase *CallOrInvoke,
+                                                 QualType FnTy,
+                                                 SourceLocation Loc) {
+  if (!needsRISCVLpadCallLabel(*this, CallOrInvoke))
+    return;
+
+  uint32_t Label = 0;
+  if (getResolvedCFBranchLabelScheme() == CFBranchLabelSchemeKind::FuncSig)
+    Label = createRISCVLpadTypeId(
+        getContext(),
+        cast<ItaniumMangleContext>(getCXXABI().getMangleContext()), FnTy, Loc);
+
+  attachRISCVLpadCallLabel(*this, CallOrInvoke, Label);
 }
 
 void CodeGenModule::addUsedGlobal(llvm::GlobalValue *GV) {

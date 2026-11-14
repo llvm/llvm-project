@@ -4,6 +4,7 @@ add_clang_unittest(ClangCodeGenTests
   DemangleTrapReasonInDebugInfo.cpp
   TBAAMetadataTest.cpp
   CheckTargetFeaturesTest.cpp
+  RISCVLpadLabelGenTest.cpp
   QualTypeMapperTest.cpp
   CLANG_LIBS
   clangAST
