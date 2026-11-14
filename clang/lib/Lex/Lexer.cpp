@@ -1465,7 +1465,7 @@ SourceLocation Lexer::findLocationAfterToken(
   return TokenLoc.getLocWithOffset(Tok->getLength() + NumWhitespaceChars);
 }
 
-/// getCharAndSizeSlow - Peek a single 'character' from the specified buffer,
+/// Peek a single 'character' from the specified buffer,
 /// get its size, and return it.  This is tricky in several cases:
 ///   1. If currently at the start of a trigraph, we warn about the trigraph,
 ///      then either return the trigraph (skipping 3 chars) or the '?',
@@ -1474,13 +1474,14 @@ SourceLocation Lexer::findLocationAfterToken(
 ///      the backslash and newline), implicitly skip the newline and return
 ///      the char after it.
 ///
-/// This handles the slow/uncommon case of the getCharAndSize method.  Here we
-/// know that we can accumulate into Size, and that we have already incremented
-/// Ptr by Size bytes.
-///
-/// NOTE: When this method is updated, getCharAndSizeSlowNoWarn (below) should
-/// be updated to match.
-Lexer::SizedChar Lexer::getCharAndSizeSlow(const char *Ptr, Token *Tok) {
+/// Handle the slow/uncommon case of getCharAndSize and getCharAndSizeNoWarn.
+/// If Tok is non-null, set its NeedsCleaning flag as needed and use L to emit
+/// diagnostics outside raw mode.
+static Lexer::SizedChar getCharAndSizeSlowImpl(const char *Ptr,
+                                               const LangOptions &LangOpts,
+                                               Lexer *L, Token *Tok) {
+  assert((!Tok || L) && "Lexer is required when a token is provided");
+
   unsigned Size = 0;
   // If we have a slash, look for an escaped newline.
   if (Ptr[0] == '\\') {
@@ -1493,20 +1494,21 @@ Slash:
 
     // See if we have optional whitespace characters between the slash and
     // newline.
-    if (unsigned EscapedNewLineSize = getEscapedNewLineSize(Ptr)) {
+    if (unsigned EscapedNewLineSize = Lexer::getEscapedNewLineSize(Ptr)) {
       // Remember that this token needs to be cleaned.
-      if (Tok) Tok->setFlag(Token::NeedsCleaning);
+      if (Tok)
+        Tok->setFlag(Token::NeedsCleaning);
 
       // Warn if there was whitespace between the backslash and newline.
-      if (Ptr[0] != '\n' && Ptr[0] != '\r' && Tok && !isLexingRawMode())
-        Diag(Ptr, diag::backslash_newline_space);
+      if (Tok && Ptr[0] != '\n' && Ptr[0] != '\r' && !L->isLexingRawMode())
+        L->Diag(Ptr, diag::backslash_newline_space);
 
       // Found backslash<whitespace><newline>.  Parse the char after it.
       Size += EscapedNewLineSize;
       Ptr  += EscapedNewLineSize;
 
       // Use slow version to accumulate a correct size field.
-      auto CharAndSize = getCharAndSizeSlow(Ptr, Tok);
+      auto CharAndSize = getCharAndSizeSlowImpl(Ptr, LangOpts, L, Tok);
       CharAndSize.Size += Size;
       return CharAndSize;
     }
@@ -1516,13 +1518,14 @@ Slash:
   }
 
   // If this is a trigraph, process it.
-  if (Ptr[0] == '?' && Ptr[1] == '?') {
+  if ((Tok || LangOpts.Trigraphs) && Ptr[0] == '?' && Ptr[1] == '?') {
     // If this is actually a legal trigraph (not something like "??x"), emit
     // a trigraph warning.  If so, and if trigraphs are enabled, return it.
-    if (char C = DecodeTrigraphChar(Ptr + 2, Tok ? this : nullptr,
+    if (char C = DecodeTrigraphChar(Ptr + 2, Tok ? L : nullptr,
                                     LangOpts.Trigraphs)) {
       // Remember that this token needs to be cleaned.
-      if (Tok) Tok->setFlag(Token::NeedsCleaning);
+      if (Tok)
+        Tok->setFlag(Token::NeedsCleaning);
 
       Ptr += 3;
       Size += 3;
@@ -1535,55 +1538,16 @@ Slash:
   return {*Ptr, Size + 1u};
 }
 
-/// getCharAndSizeSlowNoWarn - Handle the slow/uncommon case of the
-/// getCharAndSizeNoWarn method.  Here we know that we can accumulate into Size,
-/// and that we have already incremented Ptr by Size bytes.
-///
-/// NOTE: When this method is updated, getCharAndSizeSlow (above) should
-/// be updated to match.
+/// Handle the slow/uncommon case of getCharAndSize.
+Lexer::SizedChar Lexer::getCharAndSizeSlow(const char *Ptr, Token *Tok) {
+  return getCharAndSizeSlowImpl(Ptr, LangOpts, this, Tok);
+}
+
+/// Handle the slow/uncommon case of getCharAndSizeNoWarn without diagnostics
+/// or token flag updates.
 Lexer::SizedChar Lexer::getCharAndSizeSlowNoWarn(const char *Ptr,
                                                  const LangOptions &LangOpts) {
-
-  unsigned Size = 0;
-  // If we have a slash, look for an escaped newline.
-  if (Ptr[0] == '\\') {
-    ++Size;
-    ++Ptr;
-Slash:
-    // Common case, backslash-char where the char is not whitespace.
-    if (!isWhitespace(Ptr[0]))
-      return {'\\', Size};
-
-    // See if we have optional whitespace characters followed by a newline.
-    if (unsigned EscapedNewLineSize = getEscapedNewLineSize(Ptr)) {
-      // Found backslash<whitespace><newline>.  Parse the char after it.
-      Size += EscapedNewLineSize;
-      Ptr  += EscapedNewLineSize;
-
-      // Use slow version to accumulate a correct size field.
-      auto CharAndSize = getCharAndSizeSlowNoWarn(Ptr, LangOpts);
-      CharAndSize.Size += Size;
-      return CharAndSize;
-    }
-
-    // Otherwise, this is not an escaped newline, just return the slash.
-    return {'\\', Size};
-  }
-
-  // If this is a trigraph, process it.
-  if (LangOpts.Trigraphs && Ptr[0] == '?' && Ptr[1] == '?') {
-    // If this is actually a legal trigraph (not something like "??x"), return
-    // it.
-    if (char C = GetTrigraphCharForLetter(Ptr[2])) {
-      Ptr += 3;
-      Size += 3;
-      if (C == '\\') goto Slash;
-      return {C, Size};
-    }
-  }
-
-  // If this is neither, return a single character.
-  return {*Ptr, Size + 1u};
+  return getCharAndSizeSlowImpl(Ptr, LangOpts, nullptr, nullptr);
 }
 
 //===----------------------------------------------------------------------===//
