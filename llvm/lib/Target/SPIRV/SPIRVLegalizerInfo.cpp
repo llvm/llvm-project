@@ -442,6 +442,9 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                            0, ElementCount::getFixed(MaxVectorSize)))
       .legalFor(allPtrsScalarsAndVectors)
       .legalIf(ExtendedPtrsScalarsAndVectors)
+      .legalIf([](const LegalityQuery &Query) {
+        return Query.Types[0].isPointerVector();
+      })
       .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder(G_BITCAST).legalIf(
