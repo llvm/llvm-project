@@ -509,4 +509,37 @@ leave:
   ret void
 }
 
+define void @phi_of_constants_bound_wraps_unsigned(i1 %c) {
+; CHECK-LABEL: 'phi_of_constants_bound_wraps_unsigned'
+; CHECK-NEXT:  Classifying expressions for: @phi_of_constants_bound_wraps_unsigned
+; CHECK-NEXT:    %n = phi i8 [ 1, %then ], [ -2, %entry ]
+; CHECK-NEXT:    --> %n U: [1,-1) S: [-2,2)
+; CHECK-NEXT:    %iv = phi i8 [ 0, %join ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,-2) S: [0,-2) Exits: (-1 + %n)<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i8 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,-1) S: [1,-1) Exits: %n LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @phi_of_constants_bound_wraps_unsigned
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %n)<nsw>
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -3
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %n)<nsw>
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  br i1 %c, label %then, label %join
 
+then:
+  br label %join
+
+join:
+  %n = phi i8 [ 1, %then ], [ -2, %entry ]
+  br label %loop
+
+loop:
+  %iv = phi i8 [ 0, %join ], [ %iv.next, %loop ]
+  %iv.next = add nuw i8 %iv, 1
+  %ec = icmp ult i8 %iv.next, %n
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}

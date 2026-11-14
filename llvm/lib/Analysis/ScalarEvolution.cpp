@@ -6859,7 +6859,7 @@ const ConstantRange &ScalarEvolution::getRangeRef(
 
         for (const auto &Op : Phi->operands()) {
           auto OpRange = getRangeRef(getSCEV(Op), SignHint, Depth + 1);
-          RangeFromOps = RangeFromOps.unionWith(OpRange);
+          RangeFromOps = RangeFromOps.unionWith(OpRange, RangeType);
           // No point to continue if we already have a full set.
           if (RangeFromOps.isFullSet())
             break;
