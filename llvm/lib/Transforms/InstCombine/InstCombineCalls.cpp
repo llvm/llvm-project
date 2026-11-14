@@ -3507,15 +3507,20 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *Exp = II->getArgOperand(1);
 
     // ldexp(x, K) -> fmul x, 2^K
-    uint64_t ConstExp;
-    if (match(Exp, m_ConstantInt(ConstExp))) {
+    // The exponent is signed and may be wider than scalbn's int argument.
+    const APInt *ConstExp;
+    if (match(Exp, m_APInt(ConstExp)) && ConstExp->isSignedIntN(32)) {
       const fltSemantics &FPTy =
           Src->getType()->getScalarType()->getFltSemantics();
 
-      APFloat Scaled = scalbn(APFloat::getOne(FPTy), static_cast<int>(ConstExp),
-                              APFloat::rmNearestTiesToEven);
-      if (!Scaled.isZero() && !Scaled.isInfinity()) {
-        // Skip overflow and underflow cases.
+      int SignedExp = static_cast<int>(ConstExp->sextOrTrunc(32).getSExtValue());
+      APFloat Scaled =
+          scalbn(APFloat::getOne(FPTy), SignedExp, APFloat::rmNearestTiesToEven);
+      if (!Scaled.isZero() && !Scaled.isInfinity() &&
+          (!Scaled.isDenormal() ||
+           !II->getFunction()->getDenormalMode(FPTy).inputsMayBeZero())) {
+        // Skip overflow and underflow cases, and do not introduce a
+        // subnormal input when the floating-point environment may flush it.
         Constant *FPConst = ConstantFP::get(Src->getType(), Scaled);
         return BinaryOperator::CreateFMulFMF(Src, FPConst, II);
       }
