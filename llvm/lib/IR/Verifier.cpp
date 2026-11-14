@@ -213,6 +213,10 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   TBAAVerifier TBAAVerifyHelper;
   ConvergenceVerifier ConvergenceVerifyHelper;
 
+  /// Kind IDs of target metadata checked on every instruction.
+  unsigned MDAMDGPUExpectedActiveLanes;
+  unsigned MDAMDGPUCFS;
+
   SmallVector<IntrinsicInst *, 4> NoAliasScopeDecls;
 
   void checkAtomicMemAccessSize(Type *Ty, const Instruction *I);
@@ -221,7 +225,10 @@ public:
   explicit Verifier(raw_ostream *OS, bool ShouldTreatBrokenDebugInfoAsError,
                     const Module &M)
       : VerifierSupport(OS, M), LandingPadResultTy(nullptr),
-        SawFrameEscape(false), TBAAVerifyHelper(this) {
+        SawFrameEscape(false), TBAAVerifyHelper(this),
+        MDAMDGPUExpectedActiveLanes(
+            M.getContext().getMDKindID("amdgpu.expected.active.lanes")),
+        MDAMDGPUCFS(M.getContext().getMDKindID("amdgpu.cfs")) {
     TreatBrokenDebugInfoAsError = ShouldTreatBrokenDebugInfoAsError;
   }
 
@@ -6324,7 +6331,7 @@ void Verifier::visitInstruction(Instruction &I) {
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_mem_cache_hint))
     visitMemCacheHintMetadata(I, MD);
 
-  if (MDNode *MD = I.getMetadata("amdgpu.expected.active.lanes")) {
+  if (MDNode *MD = I.getMetadata(MDAMDGPUExpectedActiveLanes)) {
     Check(MD->getNumOperands() == 1,
           "!amdgpu.expected.active.lanes must have exactly one operand", &I,
           MD);
@@ -6335,7 +6342,7 @@ void Verifier::visitInstruction(Instruction &I) {
           MD);
   }
 
-  if (MDNode *MD = I.getMetadata("amdgpu.cfs")) {
+  if (MDNode *MD = I.getMetadata(MDAMDGPUCFS)) {
     Check(MD->getNumOperands() == 1,
           "!amdgpu.cfs must have exactly one operand", &I, MD);
     ConstantInt *CI =
