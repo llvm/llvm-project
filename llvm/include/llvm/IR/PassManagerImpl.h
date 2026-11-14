@@ -188,6 +188,7 @@ inline void AnalysisManager<IRUnitT, ExtraArgTs...>::invalidate(
 
   // Now erase the results that were marked above as invalidated.
   if (AnyInvalidated) {
+    auto *PI = getCachedResult<PassInstrumentationAnalysis>(IR);
     size_t WriteIdx = 0;
     for (size_t ReadIdx = 0, E = ResultsList.size(); ReadIdx < E; ++ReadIdx) {
       if (States[ReadIdx] != ResultState::Invalid) {
@@ -198,7 +199,7 @@ inline void AnalysisManager<IRUnitT, ExtraArgTs...>::invalidate(
       }
 
       AnalysisKey *ID = ResultsList[ReadIdx].first;
-      if (auto *PI = getCachedResult<PassInstrumentationAnalysis>(IR))
+      if (PI)
         PI->runAnalysisInvalidated(this->lookUpPass(ID), IR);
 
       AnalysisResults.erase({ID, &IR});

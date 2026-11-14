@@ -5,13 +5,6 @@
 ---
 name:            whilewr_b8_s64
 alignment:       2
-registers:
-  - { id: 0, class: gpr64 }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: ppr }
-  - { id: 3, class: ppr }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32 }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
   - { reg: '$x1', virtual-reg: '%1' }
@@ -46,15 +39,6 @@ body:             |
 ---
 name:            whilewr_b16_s64
 alignment:       2
-registers:
-  - { id: 0, class: gpr64 }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: ppr }
-  - { id: 3, class: ppr }
-  - { id: 4, class: ppr }
-  - { id: 5, class: ppr }
-  - { id: 6, class: gpr32 }
-  - { id: 7, class: gpr32 }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
   - { reg: '$x1', virtual-reg: '%1' }
@@ -89,15 +73,6 @@ body:             |
 ---
 name:            whilewr_b32_s64
 alignment:       2
-registers:
-  - { id: 0, class: gpr64 }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: ppr }
-  - { id: 3, class: ppr }
-  - { id: 4, class: ppr }
-  - { id: 5, class: ppr }
-  - { id: 6, class: gpr32 }
-  - { id: 7, class: gpr32 }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
   - { reg: '$x1', virtual-reg: '%1' }
@@ -132,15 +107,6 @@ body:             |
 ---
 name:            whilewr_b64_s64
 alignment:       2
-registers:
-  - { id: 0, class: gpr64 }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: ppr }
-  - { id: 3, class: ppr }
-  - { id: 4, class: ppr }
-  - { id: 5, class: ppr }
-  - { id: 6, class: gpr32 }
-  - { id: 7, class: gpr32 }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
   - { reg: '$x1', virtual-reg: '%1' }
@@ -179,13 +145,6 @@ body:             |
 ---
 name:            whilewr_b8_s64_keep_ptest_not_all_active
 alignment:       2
-registers:
-  - { id: 0, class: gpr64 }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: ppr }
-  - { id: 3, class: ppr }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32 }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
   - { reg: '$x1', virtual-reg: '%1' }
@@ -225,13 +184,6 @@ body:             |
 ---
 name:            whilewr_b8_s64_keep_ptest_of_halfs
 alignment:       2
-registers:
-  - { id: 0, class: gpr64 }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: ppr }
-  - { id: 3, class: ppr }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32 }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
   - { reg: '$x1', virtual-reg: '%1' }
@@ -271,13 +223,6 @@ body:             |
 ---
 name:            whilewr_b8_s64_keep_ptest_of_words
 alignment:       2
-registers:
-  - { id: 0, class: gpr64 }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: ppr }
-  - { id: 3, class: ppr }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32 }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
   - { reg: '$x1', virtual-reg: '%1' }
@@ -317,13 +262,6 @@ body:             |
 ---
 name:            whilewr_b8_s64_keep_ptest_of_doublewords
 alignment:       2
-registers:
-  - { id: 0, class: gpr64 }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: ppr }
-  - { id: 3, class: ppr }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32 }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
   - { reg: '$x1', virtual-reg: '%1' }
