@@ -5281,6 +5281,16 @@ LogicalResult CriticalDeclareOp::verify() {
   return verifySynchronizationHint(*this, getHint());
 }
 
+void CriticalOp::build(OpBuilder &builder, OperationState &state,
+                       FlatSymbolRefAttr name,
+                       function_ref<void(OpBuilder &, Location)> bodyBuilder) {
+  assert(bodyBuilder && "expected a body builder callback");
+  build(builder, state, name);
+  OpBuilder::InsertionGuard guard(builder);
+  builder.createBlock(state.regions.front().get());
+  bodyBuilder(builder, state.location);
+}
+
 LogicalResult CriticalOp::verify() {
   SymbolRefAttr currentName = getNameAttr();
 
