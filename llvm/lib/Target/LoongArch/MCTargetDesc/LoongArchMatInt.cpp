@@ -32,15 +32,10 @@ LoongArchMatInt::InstSeq LoongArchMatInt::generateInstSeq(int64_t Val) {
     return Insts;
   }
 
-  // Values with lo32==0 and hi32 containing <=19 significant bits
-  // ("significant" as in "significant digits") can be loaded by SLLI.D-ing them
-  // into place.
-  // https://github.com/v8/v8/blob/cd5440417ebc15558b3fc626fb7c0cf1b6f97c66/src/codegen/loong64/macro-assembler-loong64.cc#L2083-L2085
   if ((Val & 0xFFFFFFFF) == 0) {
     const int32_t Hi32 = Val >> 32;
     const int TZC = llvm::countr_zero(static_cast<uint32_t>(Hi32));
-    const int LZC = llvm::countl_zero(static_cast<uint32_t>(Hi32));
-    if (TZC < 20 && ((TZC + LZC > 12) || (LZC == 0 && TZC + LZC >= 12))) {
+    if (TZC < 20 && isInt<20>(Hi32 >> TZC)) {
       Insts.push_back(Inst(LoongArch::LU12I_W, Hi32 >> TZC));
       Insts.push_back(Inst(LoongArch::SLLI_D, TZC + 20));
       return Insts;

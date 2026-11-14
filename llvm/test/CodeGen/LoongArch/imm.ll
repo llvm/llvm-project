@@ -268,9 +268,8 @@ define i64 @imm8000100000000000() {
 define i64 @immC000080000000000() {
 ; CHECK-LABEL: immC000080000000000:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ori $a0, $zero, 0
-; CHECK-NEXT:    lu32i.d $a0, 2048
-; CHECK-NEXT:    lu52i.d $a0, $a0, -1024
+; CHECK-NEXT:    lu12i.w $a0, -524287
+; CHECK-NEXT:    slli.d $a0, $a0, 31
 ; CHECK-NEXT:    ret
   ret i64 u0xC000080000000000
 }
