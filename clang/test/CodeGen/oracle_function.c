@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -disable-llvm-passes -femit-all-decls \
-// RUN:   -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -disable-llvm-passes \
+// RUN:   -femit-all-decls -emit-llvm -o - %s | FileCheck %s
 
-[[clang::oracle_function]] static void oracle() {
+[[clang::oracle_function]] static long oracle(void) {
 // CHECK: define {{.*}} void @oracle() [[ATTR1:#[0-9]+]]
 }
 
