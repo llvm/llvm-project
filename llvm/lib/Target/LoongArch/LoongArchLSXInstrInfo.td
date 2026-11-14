@@ -2746,20 +2746,22 @@ def : Pat<(vector_insert v2f64:$vd, (f64 (bitconvert i64:$rj)), uimm1:$imm),
 foreach imm = 0...3 in {
   defvar Imm = !shl(imm, 4);
   def : Pat<(vector_insert v4f32:$vd, FPR32:$fj, imm),
-            (VEXTRINS_W $vd, (SUBREG_TO_REG FPR32:$fj, sub_32), Imm)>;
+            (VEXTRINS_W $vd, (INSERT_SUBREG (IMPLICIT_DEF), FPR32:$fj, sub_32),
+                        Imm)>;
 }
 
 foreach imm = 0...1 in {
   defvar Imm = !shl(imm, 4);
   def : Pat<(vector_insert v2f64:$vd, FPR64:$fj, imm),
-            (VEXTRINS_D $vd, (SUBREG_TO_REG FPR64:$fj, sub_64), Imm)>;
+            (VEXTRINS_D $vd, (INSERT_SUBREG (IMPLICIT_DEF), FPR64:$fj, sub_64),
+                        Imm)>;
 }
 
 // scalar_to_vector
 def : Pat<(v4f32 (scalar_to_vector FPR32:$fj)),
-          (SUBREG_TO_REG FPR32:$fj, sub_32)>;
+          (INSERT_SUBREG (IMPLICIT_DEF), FPR32:$fj, sub_32)>;
 def : Pat<(v2f64 (scalar_to_vector FPR64:$fj)),
-          (SUBREG_TO_REG FPR64:$fj, sub_64)>;
+          (INSERT_SUBREG (IMPLICIT_DEF), FPR64:$fj, sub_64)>;
 
 // VPICKVE2GR_{B/H/W}[U]
 def : Pat<(loongarch_vpick_sext_elt v16i8:$vd, uimm4:$imm, i8),
@@ -2935,9 +2937,9 @@ def : Pat<(loongarch_vreplvei v2f64:$vj, immZExt1:$ui1),
 
 // VREPLVEI_{W/D}
 def : Pat<(lsxsplatf32 FPR32:$fj),
-          (VREPLVEI_W (SUBREG_TO_REG FPR32:$fj, sub_32), 0)>;
+          (VREPLVEI_W (INSERT_SUBREG (IMPLICIT_DEF), FPR32:$fj, sub_32), 0)>;
 def : Pat<(lsxsplatf64 FPR64:$fj),
-          (VREPLVEI_D (SUBREG_TO_REG FPR64:$fj, sub_64), 0)>;
+          (VREPLVEI_D (INSERT_SUBREG (IMPLICIT_DEF), FPR64:$fj, sub_64), 0)>;
 
 // VSTELM
 defm : VstelmPat<truncstorei8, v16i8, VSTELM_B, simm8, uimm4>;

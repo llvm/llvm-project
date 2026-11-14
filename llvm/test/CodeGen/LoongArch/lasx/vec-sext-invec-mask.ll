@@ -32,9 +32,9 @@ define void @zext_or_masks_v4i8_to_v4i64(ptr %ptr, ptr %dst) {
 define void @zext_or_masks_v4i16_to_v4i64(ptr %ptr, ptr %dst) {
 ; LA32-LABEL: zext_or_masks_v4i16_to_v4i64:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a2, $a0, 4
 ; LA32-NEXT:    fld.s $fa0, $a0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
+; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
 ; LA32-NEXT:    vrepli.h $vr1, 1
 ; LA32-NEXT:    vslt.h $vr1, $vr1, $vr0
 ; LA32-NEXT:    vseqi.h $vr0, $vr0, 0
@@ -69,9 +69,9 @@ define void @zext_or_masks_v4i16_to_v4i64(ptr %ptr, ptr %dst) {
 define void @zext_or_masks_v8i8_to_v8i32(ptr %ptr, ptr %dst) {
 ; LA32-LABEL: zext_or_masks_v8i8_to_v8i32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a2, $a0, 4
 ; LA32-NEXT:    fld.s $fa0, $a0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
+; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
 ; LA32-NEXT:    vrepli.b $vr1, 1
 ; LA32-NEXT:    vslt.b $vr1, $vr1, $vr0
 ; LA32-NEXT:    vseqi.b $vr0, $vr0, 0
@@ -126,9 +126,9 @@ define void @sext_or_masks_v4i8_to_v4i64(ptr %ptr, ptr %dst) {
 define void @sext_or_masks_v4i16_to_v4i64(ptr %ptr, ptr %dst) {
 ; LA32-LABEL: sext_or_masks_v4i16_to_v4i64:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a2, $a0, 4
 ; LA32-NEXT:    fld.s $fa0, $a0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
+; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
 ; LA32-NEXT:    vrepli.h $vr1, 1
 ; LA32-NEXT:    vslt.h $vr1, $vr1, $vr0
 ; LA32-NEXT:    vseqi.h $vr0, $vr0, 0
@@ -159,9 +159,9 @@ define void @sext_or_masks_v4i16_to_v4i64(ptr %ptr, ptr %dst) {
 define void @sext_or_masks_v8i8_to_v8i32(ptr %ptr, ptr %dst) {
 ; LA32-LABEL: sext_or_masks_v8i8_to_v8i32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a2, $a0, 4
 ; LA32-NEXT:    fld.s $fa0, $a0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
+; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
 ; LA32-NEXT:    vrepli.b $vr1, 1
 ; LA32-NEXT:    vslt.b $vr1, $vr1, $vr0
 ; LA32-NEXT:    vseqi.b $vr0, $vr0, 0
