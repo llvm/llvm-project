@@ -938,8 +938,11 @@ void GISelValueTracking::computeKnownBits(Register R, KnownBits &Known,
                          Depth + 1);
     computeKnownBitsImpl(MI.getOperand(3).getReg(), WidthKnown, DemandedElts,
                          Depth + 1);
-    OffsetKnown = OffsetKnown.sext(BitWidth);
-    WidthKnown = WidthKnown.sext(BitWidth);
+    // The offset and width are unsigned and can have a different type than the
+    // source. extractBits reads both as unsigned values of any width. The
+    // width is also used below in a subtraction of BitWidth type. A valid width
+    // is at most BitWidth, so it fits in BitWidth bits.
+    WidthKnown = WidthKnown.zextOrTrunc(BitWidth);
     Known = extractBits(BitWidth, SrcOpKnown, OffsetKnown, WidthKnown);
     // Sign extend the extracted value using shift left and arithmetic shift
     // right.

@@ -17050,6 +17050,13 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
   if (SDValue Res = tryToFoldExtendSelectLoad(N, TLI, DAG, DL, Level))
     return Res;
 
+  // The sign extensions of the low bits of the lanes may fold only after the
+  // operand chain of the extension is formed.
+  if (VT.isVector())
+    for (SDNode *User : N->users())
+      if (User->getOpcode() == ISD::SIGN_EXTEND_INREG)
+        AddToWorklist(User);
+
   return SDValue();
 }
 
@@ -17547,6 +17554,27 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
          DAG.ComputeMaxSignificantBits(N00) <= ExtVTBits) &&
         (!LegalOperations || TLI.isOperationLegal(ISD::SIGN_EXTEND, VT)))
       return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, N00);
+
+    // fold (sext_in_reg (sext (extract_subvector (aext x)))) ->
+    //      (sext (extract_subvector (sext x)))
+    // fold (sext_in_reg (aext (extract_subvector (aext x)))) ->
+    //      (sext (extract_subvector (sext x)))
+    // if x is small enough, since the extensions and the subvector extract
+    // keep the low bits of the lanes.
+    if (N00.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        N00.getOperand(0).getOpcode() == ISD::ANY_EXTEND) {
+      EVT InnerVT = N00.getOperand(0).getValueType();
+      SDValue X = N00.getOperand(0).getOperand(0);
+      if ((!LegalOperations ||
+           (TLI.isOperationLegal(ISD::SIGN_EXTEND, InnerVT) &&
+            TLI.isOperationLegal(ISD::SIGN_EXTEND, VT))) &&
+          DAG.ComputeMaxSignificantBits(X) <= ExtVTBits) {
+        SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND, DL, InnerVT, X);
+        Ext = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, N00.getValueType(), Ext,
+                          N00.getOperand(1));
+        return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Ext);
+      }
+    }
   }
 
   // fold (sext_in_reg (*_extend_vector_inreg x)) -> (sext_vector_inreg x)
@@ -19000,17 +19028,21 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
       E = N0;
     }
 
+    SmallVector<SDValue, 4> FMAChain;
     SDValue TmpFMA = FMA;
     while (E && isFusedOp(TmpFMA) && TmpFMA.hasOneUse()) {
+      FMAChain.push_back(TmpFMA);
       SDValue FMul = TmpFMA->getOperand(2);
       if (FMul.getOpcode() == ISD::FMUL && FMul.hasOneUse()) {
         SDValue C = FMul.getOperand(0);
         SDValue D = FMul.getOperand(1);
-        SDValue CDE = DAG.getNode(PreferredFusedOpcode, SL, VT, C, D, E);
-        DAG.ReplaceAllUsesOfValueWith(FMul, CDE);
-        // Replacing the inner FMul could cause the outer FMA to be simplified
-        // away.
-        return FMA.getOpcode() == ISD::DELETED_NODE ? SDValue(N, 0) : FMA;
+        SDValue Res = DAG.getNode(PreferredFusedOpcode, SL, VT, C, D, E);
+        // Rebuild the chain; mutating it in place could CSE N away.
+        for (SDValue Outer : reverse(FMAChain))
+          Res = DAG.getNode(Outer.getOpcode(), SDLoc(Outer), VT,
+                            Outer.getOperand(0), Outer.getOperand(1), Res,
+                            Outer->getFlags());
+        return Res;
       }
 
       TmpFMA = TmpFMA->getOperand(2);
@@ -19722,8 +19754,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
 
   // FADD -> FMA combines:
   if (SDValue Fused = visitFADDForFMACombine(N)) {
-    if (Fused.getOpcode() != ISD::DELETED_NODE)
-      AddToWorklist(Fused.getNode());
+    AddToWorklist(Fused.getNode());
     return Fused;
   }
   return SDValue();
@@ -20795,6 +20826,34 @@ static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   return Result;
 }
 
+/// Before operation legalization, fold (sint_to_fp x) -> (select x, -1.0, 0.0)
+/// and (uint_to_fp x) -> (select x, 1.0, 0.0) for an i1 or i1 vector x if the
+/// target prefers the select. Both results are exact, so no conversion or
+/// rounding is needed. After type legalization, this also catches the i1
+/// conversions created by splitting vectors.
+static SDValue foldBoolToFPWithSelect(SDNode *N, const SDLoc &DL,
+                                      SelectionDAG &DAG,
+                                      const TargetLowering &TLI,
+                                      bool LegalOperations) {
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  unsigned Opcode = N->getOpcode();
+  if (LegalOperations || N0.getValueType().getScalarType() != MVT::i1 ||
+      !TLI.shouldConvertBoolToFPWithSelect(VT))
+    return SDValue();
+
+  // Leave (int_to_fp (fp_to_int x)) round trips to foldFPToIntToFP, which can
+  // turn them into ftrunc, possibly only once the FP type has been promoted.
+  unsigned FPToIntOpc =
+      Opcode == ISD::SINT_TO_FP ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
+  if (N0.getOpcode() == FPToIntOpc && N0.getOperand(0).getValueType() == VT)
+    return SDValue();
+
+  double TrueVal = Opcode == ISD::SINT_TO_FP ? -1.0 : 1.0;
+  return DAG.getSelect(DL, VT, N0, DAG.getConstantFP(TrueVal, DL, VT),
+                       DAG.getConstantFP(0.0, DL, VT));
+}
+
 SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
@@ -20840,6 +20899,9 @@ SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
 
   if (SDValue FTrunc = foldFPToIntToFP(N, DL, DAG, TLI))
     return FTrunc;
+
+  if (SDValue Sel = foldBoolToFPWithSelect(N, DL, DAG, TLI, LegalOperations))
+    return Sel;
 
   // fold (sint_to_fp x) -> (sint_to_fp (trunc x)) when the value of x is known
   // to fit in a narrower type the target can convert from directly.
@@ -20913,6 +20975,9 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
 
   if (SDValue FTrunc = foldFPToIntToFP(N, DL, DAG, TLI))
     return FTrunc;
+
+  if (SDValue Sel = foldBoolToFPWithSelect(N, DL, DAG, TLI, LegalOperations))
+    return Sel;
 
   // fold (uint_to_fp x) -> (uint_to_fp (trunc x)) when the value of x is known
   // to fit in a narrower type the target can convert from directly.
@@ -21774,7 +21839,7 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
   // can be folded with this one. We should do this to avoid having to keep
   // a copy of the original base pointer.
   SmallVector<SDNode *, 16> OtherUses;
-  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
+  unsigned MaxSteps = DAG.getHasPredecessorMaxSteps();
   if (isa<ConstantSDNode>(Offset))
     for (SDUse &Use : BasePtr->uses()) {
       // Skip the use that is Ptr and uses of other results from BasePtr's
@@ -21935,7 +22000,7 @@ static bool shouldCombineToPostInc(SDNode *N, SDValue Ptr, SDNode *PtrUse,
     return false;
 
   SmallPtrSet<const SDNode *, 32> Visited;
-  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
+  unsigned MaxSteps = DAG.getHasPredecessorMaxSteps();
   for (SDNode *User : BasePtr->users()) {
     if (User == Ptr.getNode())
       continue;
@@ -21982,7 +22047,7 @@ static SDNode *getPostIndexedLoadStoreOp(SDNode *N, bool &IsLoad,
   // 2) Op must be independent of N, i.e. Op is neither a predecessor
   //    nor a successor of N. Otherwise, if Op is folded that would
   //    create a cycle.
-  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
+  unsigned MaxSteps = DAG.getHasPredecessorMaxSteps();
   for (SDUse &U : Ptr->uses()) {
     if (U.getResNo() != Ptr.getResNo())
       continue;
@@ -31619,6 +31684,9 @@ SDValue DAGCombiner::foldSelectOfBinops(SDNode *N) {
   unsigned BinOpc = N1.getOpcode();
   if (!TLI.isBinOp(BinOpc) || (N2.getOpcode() != BinOpc) ||
       (N1.getResNo() != N2.getResNo()))
+    return SDValue();
+
+  if (N1->getNumOperands() != 2 || N2->getNumOperands() != 2)
     return SDValue();
 
   // The use checks are intentionally on SDNode because we may be dealing

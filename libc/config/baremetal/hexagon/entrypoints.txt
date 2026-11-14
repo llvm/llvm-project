@@ -388,11 +388,13 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cosh
     libc.src.math.coshf
     libc.src.math.cospif
+    libc.src.math.daddf128
     libc.src.math.dfmal
     libc.src.math.dmull
     libc.src.math.dsqrtl
     libc.src.math.daddl
     libc.src.math.ddivl
+    libc.src.math.dsubf128
     libc.src.math.dsubl
     libc.src.math.erff
     libc.src.math.exp
@@ -758,12 +760,10 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.canonicalizef80
     libc.src.math.ceilf128
     libc.src.math.copysignf128
-    libc.src.math.daddf128
     libc.src.math.ddivf128
     libc.src.math.dfmaf128
     libc.src.math.dmulf128
     libc.src.math.dsqrtf128
-    libc.src.math.dsubf128
     libc.src.math.fabsf128
     libc.src.math.faddf128
     libc.src.math.fdimf128
@@ -933,6 +933,8 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.absr
     libc.src.stdfix.exphk
     libc.src.stdfix.expk
+    libc.src.stdfix.expuhk
+    libc.src.stdfix.expuk
     libc.src.stdfix.roundhk
     libc.src.stdfix.roundhr
     libc.src.stdfix.roundk

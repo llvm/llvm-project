@@ -585,6 +585,13 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(VersionTuple(1, 9), T.getDXILVersion());
 
+  T = Triple("dxilv1.10-unknown-shadermodel6.10-library");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::DXILSubArch_v1_10, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(VersionTuple(1, 10), T.getDXILVersion());
+
   T = Triple("x86_64-unknown-fuchsia");
   EXPECT_EQ(Triple::x86_64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
@@ -1356,6 +1363,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
 
+  T = Triple("dxilv1.10-unknown-unknown");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::DXILSubArch_v1_10, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+
   // Check specification of unknown SubArch results in
   // unknown architecture.
   T = Triple("dxilv1.999-unknown-unknown");
@@ -1706,7 +1719,7 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
             Triple("powerpcle-unknown-linux-gnu").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
             Triple("powerpcle-unknown-linux").getDefaultLongDoubleFormat());
-  // ... except on AIX, FreeBSD, OpenBSD, and Musl, which use IEEE double.
+  // ... except on AIX, FreeBSD, OpenBSD, SPE, and Musl, which use IEEE double.
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("powerpc-ibm-aix").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
@@ -1715,6 +1728,9 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
             Triple("powerpc64-unknown-freebsd").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("powerpc64-unknown-openbsd").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEdouble,
+      Triple("powerpcspe-unknown-linux-gnu").getDefaultLongDoubleFormat());
   EXPECT_EQ(
       LongDoubleFormat::IEEEdouble,
       Triple("powerpc64-unknown-linux-musl").getDefaultLongDoubleFormat());
@@ -1747,6 +1763,8 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
             Triple("i686-pc-windows-msvc").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("x86_64-unknown-uefi").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("i686-unknown-uefi").getDefaultLongDoubleFormat());
   // Android and OHOS use IEEE double on 32-bit and IEEE quad on 64-bit.
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("i686-unknown-linux-android").getDefaultLongDoubleFormat());
@@ -1773,6 +1791,8 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
   // ... except on Windows and Darwin, which use IEEE double.
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("aarch64-pc-windows-msvc").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("aarch64-unknown-uefi").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("arm64-apple-macosx").getDefaultLongDoubleFormat());
   EXPECT_EQ(
@@ -1819,6 +1839,9 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
             Triple("riscv32be-unknown-linux-gnu").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEquad,
             Triple("riscv64be-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEquad,
+      Triple("loongarch32-unknown-linux-gnu").getDefaultLongDoubleFormat());
   EXPECT_EQ(
       LongDoubleFormat::IEEEquad,
       Triple("loongarch64-unknown-linux-gnu").getDefaultLongDoubleFormat());
@@ -3795,16 +3818,16 @@ TEST(TripleTest, isArmMClass) {
   }
 }
 
-TEST(TripleTest, DXILNormaizeWithVersion) {
+TEST(TripleTest, DXILNormalizeWithVersion) {
   EXPECT_EQ("dxilv1.0-unknown-shadermodel6.0",
             Triple::normalize("dxilv1.0--shadermodel6.0"));
   EXPECT_EQ("dxilv1.0-unknown-shadermodel6.0",
             Triple::normalize("dxil--shadermodel6.0"));
   EXPECT_EQ("dxilv1.1-unknown-shadermodel6.1-library",
             Triple::normalize("dxil-shadermodel6.1-unknown-library"));
-  EXPECT_EQ("dxilv1.9-unknown-shadermodel6.x-unknown",
-            Triple::normalize("dxil-unknown-shadermodel6.x-unknown"));
-  EXPECT_EQ("dxilv1.9-unknown-shadermodel6.x-unknown",
+  EXPECT_EQ("dxilv1.9-unknown-shadermodel6.9-unknown",
+            Triple::normalize("dxil-unknown-shadermodel6.9-unknown"));
+  EXPECT_EQ("dxilv1.10-unknown-shadermodel6.x-unknown",
             Triple::normalize("dxil-unknown-shadermodel6.x-unknown"));
   EXPECT_EQ("dxil-unknown-unknown-unknown", Triple::normalize("dxil---"));
   EXPECT_EQ("dxilv1.0-pc-shadermodel5.0-compute",

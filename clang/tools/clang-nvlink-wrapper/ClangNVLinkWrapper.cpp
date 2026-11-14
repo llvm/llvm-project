@@ -103,9 +103,6 @@ static std::mutex TempFilesMutex;
 /// Temporary files to be cleaned up.
 static std::list<SmallString<128>> TempFiles;
 
-/// Codegen flags for LTO backend.
-static codegen::RegisterCodeGenFlags CodeGenFlags;
-
 namespace {
 // Must not overlap with llvm::opt::DriverFlag.
 enum WrapperFlags { WrapperOnlyOption = (1 << 4) };
@@ -398,7 +395,7 @@ createLTO(const cl::LibraryOptionsContext &LibraryOptions,
   Conf.RemarksFilename =
       Args.getLastArgValue(OPT_opt_remarks_filename, RemarksFilename);
   Conf.RemarksPasses =
-      Args.getLastArgValue(OPT_opt_remarks_filter, RemarksPasses);
+      Args.getLastArgValue(OPT_opt_remarks_passes, RemarksPasses);
   Conf.RemarksFormat =
       Args.getLastArgValue(OPT_opt_remarks_format, RemarksFormat);
 
@@ -406,7 +403,7 @@ createLTO(const cl::LibraryOptionsContext &LibraryOptions,
       Args.hasArg(OPT_opt_remarks_with_hotness) || RemarksWithHotness;
   Conf.RemarksHotnessThreshold = RemarksHotnessThreshold;
 
-  Conf.MAttrs = llvm::codegen::getMAttrs();
+  Conf.MAttrs = llvm::codegen::getMAttrs(LibraryOptions);
   std::optional<CodeGenOptLevel> CGOptLevelOrNone =
       CodeGenOpt::parseLevel(Args.getLastArgValue(OPT_O, "2")[0]);
   assert(CGOptLevelOrNone && "Invalid optimization level");
@@ -833,7 +830,8 @@ int main(int argc, char **argv) {
   for (const opt::Arg *Arg : Args.filtered(OPT_plugin_opt))
     NewArgv.push_back(Arg->getValue());
   cl::LibraryOptionsContext LibraryOptions;
-  cl::parseCommandLineOptions(LibraryOptions, NewArgv);
+  cl::parseCommandLineOptions(LibraryOptions, codegen::getToolOptions(),
+                              NewArgv);
 
   // Get the input files to pass to 'nvlink'.
   auto FilesOrErr = getInput(LibraryOptions, Args);

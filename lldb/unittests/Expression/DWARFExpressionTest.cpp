@@ -144,7 +144,7 @@ private:
   std::unordered_map<Request, std::vector<uint8_t>, Request::Hash> m_memory;
 };
 
-/// A Process whose `ReadMemory` override queries MockMemory.
+/// A Process whose `DoReadMemory` override queries MockMemory.
 struct MockProcess : Process {
   using addr_t = lldb::addr_t;
 
@@ -165,10 +165,7 @@ struct MockProcess : Process {
     std::memcpy(buf, expected_memory->data(), expected_memory->size());
     return size;
   }
-  size_t ReadMemory(const ProcessAddress &process_addr, void *buf, size_t size,
-                    Status &status) override {
-    return DoReadMemory(process_addr, buf, size, status);
-  }
+  bool ShouldUseMemoryCache(const ProcessAddress &) override { return false; }
   bool CanDebug(lldb::TargetSP, bool) override { return true; }
   Status DoDestroy() override { return Status(); }
   llvm::StringRef GetPluginName() override { return ""; }

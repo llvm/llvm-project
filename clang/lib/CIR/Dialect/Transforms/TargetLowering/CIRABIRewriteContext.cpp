@@ -85,6 +85,20 @@ cir::PointerType getIndirectPtrTy(mlir::Type pointee,
   return getPtrTyInAddrSpace(pointee, ac.indirectAddrSpace);
 }
 
+/// The struct a union is flattened as: its storage member, then its tail
+/// padding if it has any.  This matches the union's LLVM type.
+cir::StructType getUnionFlattenType(cir::UnionType unionTy,
+                                    const mlir::DataLayout &dl) {
+  SmallVector<mlir::Type, 2> fields;
+  if (mlir::Type storage = unionTy.getUnionStorageType(dl))
+    fields.push_back(storage);
+  if (mlir::Type padding = unionTy.getPadding())
+    fields.push_back(padding);
+  return cir::StructType::get(unionTy.getContext(), fields, unionTy.getPacked(),
+                              /*is_class=*/false,
+                              cir::RecordType::getAllDataKinds(fields));
+}
+
 /// Return the coerced RecordType for a Direct classification that should be
 /// flattened into individual scalar arguments, or a null type if the
 /// classification does not call for flattening.
@@ -92,15 +106,18 @@ cir::PointerType getIndirectPtrTy(mlir::Type pointee,
 /// Flattening applies when all four conditions hold:
 ///   1. The classification is Direct with a non-null coercedType.
 ///   2. canFlatten is set.
-///   3. The coercedType is a struct (not a union).
-///   4. The struct has more than one field (single-field structs are already
-///      scalar; flattening them produces no benefit and classic CodeGen skips
-///      them for the same reason).
-cir::RecordType getFlattenedCoercedType(const ArgClassification &ac) {
+///   3. The coercedType is a struct, or a union, which is flattened as the
+///      struct getUnionFlattenType returns.
+///   4. The struct has at least one field.  A struct of one field is passed as
+///      that field.
+cir::RecordType getFlattenedCoercedType(const ArgClassification &ac,
+                                        const mlir::DataLayout &dl) {
   if (ac.kind != ArgKind::Direct || !ac.coercedType || !ac.canFlatten)
     return {};
   auto recTy = dyn_cast<cir::RecordType>(ac.coercedType);
-  if (!recTy || !recTy.isStruct() || recTy.getNumElements() <= 1)
+  if (auto unionTy = dyn_cast_if_present<cir::UnionType>(recTy))
+    recTy = getUnionFlattenType(unionTy, dl);
+  if (!recTy || !recTy.isStruct() || recTy.getMembers().empty())
     return {};
   return recTy;
 }
@@ -121,11 +138,10 @@ bool isRecordExtend(const ArgClassification &ac, mlir::Type origTy) {
 /// (struct flattening) arguments.
 /// The sret return pointer, when present, is prepended by
 /// rewriteFunctionDefinition rather than here.
-mlir::LogicalResult
-buildNewArgTypes(ArrayRef<mlir::Type> oldArgTypes,
-                 const FunctionClassification &fc,
-                 SmallVectorImpl<mlir::Type> &newArgTypes,
-                 function_ref<mlir::InFlightDiagnostic()> emitError) {
+mlir::LogicalResult buildNewArgTypes(
+    ArrayRef<mlir::Type> oldArgTypes, const FunctionClassification &fc,
+    SmallVectorImpl<mlir::Type> &newArgTypes, const mlir::DataLayout &dl,
+    function_ref<mlir::InFlightDiagnostic()> emitError) {
   assert(newArgTypes.empty() && "expected an empty output vector");
   newArgTypes.reserve(oldArgTypes.size());
   for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
@@ -134,9 +150,7 @@ buildNewArgTypes(ArrayRef<mlir::Type> oldArgTypes,
     case ArgKind::Direct:
       // Direct with canFlatten and a struct coerced type: push one wire type
       // per field of the coerced struct rather than the struct itself.
-      // Single-field coerced structs fall through to the non-flatten path —
-      // the struct is already scalar-sized and flattening adds no value.
-      if (cir::RecordType flatTy = getFlattenedCoercedType(ac)) {
+      if (cir::RecordType flatTy = getFlattenedCoercedType(ac, dl)) {
         llvm::append_range(newArgTypes, flatTy.getMembers());
       } else {
         // Direct with a coerced type: the lowered signature uses the coerced
@@ -292,7 +306,7 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx, mlir::ModuleOp module,
                 builder.getI64IntegerAttr(ac.directAlign->value()));
       existing = attrs.getDictionary(ctx);
     }
-    if (cir::RecordType flatTy = getFlattenedCoercedType(ac)) {
+    if (cir::RecordType flatTy = getFlattenedCoercedType(ac, dl)) {
       // Direct + canFlatten: as in classic CodeGen, each flattened field
       // carries the attributes of the argument it came from.
       newArgAttrs.append(flatTy.getNumElements(), existing);
@@ -1251,14 +1265,13 @@ insertArgCoercion(mlir::FunctionOpInterface funcOp,
 
     mlir::BlockArgument blockArg = entry.getArgument(blockArgIdx);
 
-    if (cir::RecordType flatTy = getFlattenedCoercedType(ac)) {
+    if (cir::RecordType flatTy = getFlattenedCoercedType(ac, dl)) {
       // Direct + canFlatten: the coerced type is a struct whose fields are
       // passed as separate arguments.  As in the Expand path, the single block
       // arg becomes N scalar block args, and each is stored straight into a
       // slot sized and aligned for both the coerced struct and the original
       // argument type, which the body then reads.
       unsigned numFields = flatTy.getNumElements();
-      assert(numFields >= 2 && "getFlattenedCoercedType guarantees >1 fields");
       Type origTy = blockArg.getType();
       Location loc = funcOp.getLoc();
 
@@ -1296,6 +1309,11 @@ insertArgCoercion(mlir::FunctionOpInterface funcOp,
         flattenOps.insert(fieldPtr);
         auto storeOp = cir::StoreOp::create(
             builder, loc, entry.getArgument(blockArgIdx + f), fieldPtr);
+        // A packed slot can be less aligned than the field's own type.
+        uint64_t fieldAlign =
+            llvm::MinAlign(slot.getAlignment(), flatTy.getElementOffset(dl, f));
+        if (fieldAlign < dl.getTypeABIAlignment(fieldTy))
+          storeOp.setAlignment(fieldAlign);
         flattenOps.insert(storeOp);
       }
 
@@ -1949,7 +1967,7 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
          "CIR functions return zero or one value");
 
   SmallVector<mlir::Type> newArgTypes;
-  if (mlir::failed(buildNewArgTypes(oldArgTypes, fc, newArgTypes,
+  if (mlir::failed(buildNewArgTypes(oldArgTypes, fc, newArgTypes, dl,
                                     [&]() { return funcOp.emitOpError(); })))
     return mlir::failure();
 
@@ -2030,7 +2048,7 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
           entry.eraseArgument(blockArgIdx);
           continue;
         }
-        if (cir::RecordType flatTy = getFlattenedCoercedType(ac))
+        if (cir::RecordType flatTy = getFlattenedCoercedType(ac, dl))
           blockArgIdx += flatTy.getNumElements();
         else if (ac.kind == ArgKind::Expand)
           blockArgIdx += cast<cir::RecordType>(oldArgTypes[i]).getNumElements();
@@ -2171,7 +2189,7 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
     if (ac.kind == ArgKind::Ignore)
       continue;
     mlir::Value arg = argOperands[idx];
-    if (cir::RecordType flatTy = getFlattenedCoercedType(ac)) {
+    if (cir::RecordType flatTy = getFlattenedCoercedType(ac, dl)) {
       // Direct + canFlatten: pass one scalar call argument per field of the
       // ABI-coerced struct.  A non-atomic record load is read in place or
       // through a copy of its storage, as emitCoercedRecordLoad decides, and

@@ -105,4 +105,4 @@ struct S *f9(int i) {
   return &s[i];
 }
 // NOOPTLOCAL: attributes #[[ATTR1]] = { nomerge noreturn nounwind }
-// NOOPTARRAY: attributes #[[ATTR2]] = { nomerge noreturn nounwind }
+// NOOPTARRAY: attributes #[[ATTR2]] = { nomerge }
