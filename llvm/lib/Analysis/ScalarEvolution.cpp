@@ -16332,3 +16332,51 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr,
     Guards.collectPending();
   return Guards.rewrite(Expr);
 }
+
+const SCEV *
+SCEVUseParameterRewriter::visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
+  if (auto *Op = dyn_cast<SCEVUnknown>(Expr->getOperand())) {
+    if (SCEVUse Use = findSCEVUseForUnknown(Op)) {
+      const SCEV *Start, *Step;
+      const Loop *L;
+      if (match(Use,
+                m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step), m_Loop(L)))) {
+        auto *AR = cast<SCEVAddRecExpr>(Use);
+        bool HasNoUnsignedWrap =
+            Use.getNoWrapFlags(SCEVFlags::FlagNUW) != SCEVFlags::FlagNone;
+        if (HasNoUnsignedWrap) {
+          Start = getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Expr->getType(),
+                                                           &SE, /*Depth=*/0);
+          Step = SE.getZeroExtendExpr(Step, Expr->getType());
+          return SE.getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
+        }
+      }
+    }
+  }
+
+  return SCEVRewriteVisitor::visitZeroExtendExpr(Expr);
+}
+
+const SCEV *
+SCEVUseParameterRewriter::visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
+  if (auto *Op = dyn_cast<SCEVUnknown>(Expr->getOperand())) {
+    if (SCEVUse Use = findSCEVUseForUnknown(Op)) {
+      const SCEV *Start, *Step;
+      const Loop *L;
+      if (match(Use,
+                m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step), m_Loop(L)))) {
+        auto *AR = cast<SCEVAddRecExpr>(Use);
+        bool HasNoSignedWrap =
+            Use.getNoWrapFlags(SCEVFlags::FlagNSW) != SCEVFlags::FlagNone;
+        if (HasNoSignedWrap) {
+          Start = getExtendAddRecStart<SCEVSignExtendExpr>(AR, Expr->getType(),
+                                                           &SE, /*Depth=*/0);
+          Step = SE.getSignExtendExpr(Step, Expr->getType());
+          return SE.getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
+        }
+      }
+    }
+  }
+
+  return SCEVRewriteVisitor::visitSignExtendExpr(Expr);
+}

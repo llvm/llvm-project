@@ -971,6 +971,39 @@ private:
   ValueToSCEVMapTy &Map;
 };
 
+using ValueToSCEVUseMapTy = DenseMap<const Value *, SCEVUse>;
+
+// Similar to SCEVParameterRewriter but maps SCEVUnknown components to a SCEVUse
+// and uses the use-specific wrap flags to apply simplifications.
+class SCEVUseParameterRewriter
+    : public SCEVRewriteVisitor<SCEVUseParameterRewriter> {
+public:
+  SCEVUseParameterRewriter(ScalarEvolution &SE, ValueToSCEVUseMapTy &M)
+      : SCEVRewriteVisitor(SE), Map(M) {}
+
+  static const SCEV *rewrite(const SCEV *Scev, ScalarEvolution &SE,
+                             ValueToSCEVUseMapTy &Map) {
+    SCEVUseParameterRewriter Rewriter(SE, Map);
+    return Rewriter.visit(Scev);
+  }
+
+  const SCEV *visitUnknown(const SCEVUnknown *Expr) {
+    if (SCEVUse Use = findSCEVUseForUnknown(Expr))
+      return Use;
+    return Expr;
+  }
+
+  LLVM_ABI const SCEV *visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr);
+  LLVM_ABI const SCEV *visitSignExtendExpr(const SCEVSignExtendExpr *Expr);
+
+  SCEVUse findSCEVUseForUnknown(const SCEVUnknown *Expr) {
+    return Map.lookup(Expr->getValue());
+  }
+
+private:
+  ValueToSCEVUseMapTy &Map;
+};
+
 template <typename SCEVPtrT>
 inline SCEVUseT<SCEVPtrT>::SCEVUseT(SCEVPtrT S, SCEVFlags Flags) : Base(S, 0) {
   assert((Flags & SCEVFlags::FlagsNoWrapMask) == Flags &&

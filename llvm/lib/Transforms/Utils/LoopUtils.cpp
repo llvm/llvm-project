@@ -2558,16 +2558,17 @@ bool llvm::collectCompressedPtrs(
 
   const DataLayout &DL = SE.getDataLayout();
   const SCEV *ApproximatePhiSCEV = CondID.getUnconditionalAddRec(SE, L);
-  ValueToSCEVMapTy PhiMap{{CondID.getHeaderPHI(), ApproximatePhiSCEV}};
+
+  SCEVUse ApproximatePhiUse =
+      SCEVUse(ApproximatePhiSCEV, CondID.getSCEVNoWrapFlags());
+  ValueToSCEVUseMapTy PhiMap{{CondID.getHeaderPHI(), ApproximatePhiUse}};
 
   auto GetCompressedPtrSCEV = [&](Value *Ptr,
                                   Type *AccessTy) -> const SCEVAddRecExpr * {
     using namespace SCEVPatternMatch;
-    // TODO: Take into account the non-wrap flags of the MD when rewriting the
-    // SCEV expressions for pointers. This should allow folding away zext/sext
-    // operations.
+
     const SCEV *PtrSCEV =
-        SCEVParameterRewriter::rewrite(SE.getSCEV(Ptr), SE, PhiMap);
+        SCEVUseParameterRewriter::rewrite(SE.getSCEV(Ptr), SE, PhiMap);
 
     // Check the pointer is described by an add recurrence with a step matching
     // the access type size.
