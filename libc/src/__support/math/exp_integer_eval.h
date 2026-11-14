@@ -57,8 +57,8 @@ LIBC_ALWAYS_INLINE uint64_t exp_bits(uint64_t x_u,
           return is_neg ? ONE - 1 : ONE + 1;
       }
 
-      if (rounding == FE_TONEAREST && is_neg &&
-          x_abs > 0x3c90'0000'0000'0000) // |x| > 2^-54
+      // |x| > 2^-54
+      if (rounding == FE_TONEAREST && is_neg && x_abs > 0x3c90'0000'0000'0000)
         return ONE - 1;
 
 #ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
@@ -128,7 +128,7 @@ LIBC_ALWAYS_INLINE uint64_t exp_bits(uint64_t x_u,
   // final steps, which makes our life easier.
   //
   // This algorithm will be implemented in 2 paths: fast (64-bit) and accurate
-  // (128-bit) paths. The accurate path will only kicks in when it's hard to
+  // (128-bit) paths. The accurate path will only kick in when it's hard to
   // round.
 
   // Range reduction
