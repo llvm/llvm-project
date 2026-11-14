@@ -489,6 +489,175 @@ define <2 x i64> @neg_v2i64_from_i256(i256 %x) {
   ret <2 x i64> %r
 }
 
+define <2 x i8> @v2i8_from_v8i8_per_elt(<8 x i8> %v) {
+; CHECK-LABEL: define <2 x i8> @v2i8_from_v8i8_per_elt(
+; CHECK-SAME: <8 x i8> [[V:%.*]]) {
+; CHECK-NEXT:    [[B:%.*]] = bitcast <8 x i8> [[V]] to <2 x b32>
+; CHECK-NEXT:    [[R:%.*]] = bitextract <2 x i8>, <2 x b32> [[B]], <2 x i32> <i32 8, i32 24>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %b = bitcast <8 x i8> %v to <2 x b32>
+  %r = bitextract <2 x i8>, <2 x b32> %b, <2 x i32> <i32 8, i32 24>
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @v2i8_from_v8i8_splat_per_elt(<8 x i8> %v) {
+; CHECK-LABEL: define <2 x i8> @v2i8_from_v8i8_splat_per_elt(
+; CHECK-SAME: <8 x i8> [[V:%.*]]) {
+; CHECK-NEXT:    [[B:%.*]] = bitcast <8 x i8> [[V]] to <2 x b32>
+; CHECK-NEXT:    [[R:%.*]] = bitextract <2 x i8>, <2 x b32> [[B]], <2 x i32> splat (i32 16)
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %b = bitcast <8 x i8> %v to <2 x b32>
+  %r = bitextract <2 x i8>, <2 x b32> %b, <2 x i32> splat (i32 16)
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @v2i8_from_v4i16_splat_per_elt(<4 x i16> %x) {
+; CHECK-LABEL: define <2 x i8> @v2i8_from_v4i16_splat_per_elt(
+; CHECK-SAME: <4 x i16> [[X:%.*]]) {
+; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x i16> [[X]] to <2 x b32>
+; CHECK-NEXT:    [[R:%.*]] = bitextract <2 x i8>, <2 x b32> [[B]], <2 x i32> splat (i32 16)
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %b = bitcast <4 x i16> %x to <2 x b32>
+  %r = bitextract <2 x i8>, <2 x b32> %b, <2 x i32> <i32 16, i32 16>
+  ret <2 x i8> %r
+}
+
+define <2 x i16> @v2i16_from_v4i32_per_elt(<4 x i32> %v) {
+; CHECK-LABEL: define <2 x i16> @v2i16_from_v4i32_per_elt(
+; CHECK-SAME: <4 x i32> [[V:%.*]]) {
+; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x i32> [[V]] to <2 x b64>
+; CHECK-NEXT:    [[R:%.*]] = bitextract <2 x i16>, <2 x b64> [[B]], <2 x i32> <i32 0, i32 48>
+; CHECK-NEXT:    ret <2 x i16> [[R]]
+;
+  %b = bitcast <4 x i32> %v to <2 x b64>
+  %r = bitextract <2 x i16>, <2 x b64> %b, <2 x i32> <i32 0, i32 48>
+  ret <2 x i16> %r
+}
+
+; A poison or out of range offset only makes its own element poison.
+define <3 x i8> @v3i8_from_v12i8_poison_per_elt(<12 x i8> %v) {
+; CHECK-LABEL: define <3 x i8> @v3i8_from_v12i8_poison_per_elt(
+; CHECK-SAME: <12 x i8> [[V:%.*]]) {
+; CHECK-NEXT:    [[B:%.*]] = bitcast <12 x i8> [[V]] to <3 x b32>
+; CHECK-NEXT:    [[R:%.*]] = bitextract <3 x i8>, <3 x b32> [[B]], <3 x i32> <i32 8, i32 poison, i32 32>
+; CHECK-NEXT:    ret <3 x i8> [[R]]
+;
+  %b = bitcast <12 x i8> %v to <3 x b32>
+  %r = bitextract <3 x i8>, <3 x b32> %b, <3 x i32> <i32 8, i32 poison, i32 32>
+  ret <3 x i8> %r
+}
+
+define <2 x ptr> @v2ptr_from_v4b64_per_elt(<4 x b64> %v) {
+; CHECK-LABEL: define <2 x ptr> @v2ptr_from_v4b64_per_elt(
+; CHECK-SAME: <4 x b64> [[V:%.*]]) {
+; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x b64> [[V]] to <2 x b128>
+; CHECK-NEXT:    [[R:%.*]] = bitextract <2 x ptr>, <2 x b128> [[B]], <2 x i32> <i32 64, i32 0>
+; CHECK-NEXT:    ret <2 x ptr> [[R]]
+;
+  %b = bitcast <4 x b64> %v to <2 x b128>
+  %r = bitextract <2 x ptr>, <2 x b128> %b, <2 x i32> <i32 64, i32 0>
+  ret <2 x ptr> %r
+}
+
+define <4 x i8> @v4i8_from_v8i8_bitcast_user_per_elt(<8 x i8> %v) {
+; CHECK-LABEL: define <4 x i8> @v4i8_from_v8i8_bitcast_user_per_elt(
+; CHECK-SAME: <8 x i8> [[V:%.*]]) {
+; CHECK-NEXT:    [[B:%.*]] = bitcast <8 x i8> [[V]] to <2 x b32>
+; CHECK-NEXT:    [[E:%.*]] = bitextract <2 x b16>, <2 x b32> [[B]], <2 x i32> <i32 0, i32 16>
+; CHECK-NEXT:    [[R:%.*]] = bitcast <2 x b16> [[E]] to <4 x i8>
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %b = bitcast <8 x i8> %v to <2 x b32>
+  %e = bitextract <2 x b16>, <2 x b32> %b, <2 x i32> <i32 0, i32 16>
+  %r = bitcast <2 x b16> %e to <4 x i8>
+  ret <4 x i8> %r
+}
+
+define <2 x i8> @v2i8_from_v8i8_multi_use_per_elt(<8 x i8> %v, ptr %p) {
+; CHECK-LABEL: define <2 x i8> @v2i8_from_v8i8_multi_use_per_elt(
+; CHECK-SAME: <8 x i8> [[V:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[B:%.*]] = bitcast <8 x i8> [[V]] to <2 x b32>
+; CHECK-NEXT:    [[E:%.*]] = bitextract <2 x b16>, <2 x b32> [[B]], <2 x i32> <i32 0, i32 16>
+; CHECK-NEXT:    store <2 x b16> [[E]], ptr [[P]], align 4
+; CHECK-NEXT:    [[R:%.*]] = bitextract <2 x i8>, <2 x b32> [[B]], <2 x i32> <i32 8, i32 24>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %b = bitcast <8 x i8> %v to <2 x b32>
+  %e = bitextract <2 x b16>, <2 x b32> %b, <2 x i32> <i32 0, i32 16>
+  store <2 x b16> %e, ptr %p
+  %r = bitextract <2 x i8>, <2 x b32> %b, <2 x i32> <i32 8, i32 24>
+  ret <2 x i8> %r
+}
+
+define <3 x i8> @v3i8_from_v12i8_undef_per_elt(<12 x i8> %v) {
+; CHECK-LABEL: define <3 x i8> @v3i8_from_v12i8_undef_per_elt(
+; CHECK-SAME: <12 x i8> [[V:%.*]]) {
+; CHECK-NEXT:    [[B:%.*]] = bitcast <12 x i8> [[V]] to <3 x b32>
+; CHECK-NEXT:    [[R:%.*]] = bitextract <3 x i8>, <3 x b32> [[B]], <3 x i32> <i32 8, i32 undef, i32 24>
+; CHECK-NEXT:    ret <3 x i8> [[R]]
+;
+  %b = bitcast <12 x i8> %v to <3 x b32>
+  %r = bitextract <3 x i8>, <3 x b32> %b, <3 x i32> <i32 8, i32 undef, i32 24>
+  ret <3 x i8> %r
+}
+
+; The second element is out of range, so its whole range is poison.
+define <4 x i8> @v4i8_from_v8i8_bitcast_user_poison_per_elt(<8 x i8> %v) {
+; CHECK-LABEL: define <4 x i8> @v4i8_from_v8i8_bitcast_user_poison_per_elt(
+; CHECK-SAME: <8 x i8> [[V:%.*]]) {
+; CHECK-NEXT:    [[B:%.*]] = bitcast <8 x i8> [[V]] to <2 x b32>
+; CHECK-NEXT:    [[E:%.*]] = bitextract <2 x b16>, <2 x b32> [[B]], <2 x i32> <i32 0, i32 32>
+; CHECK-NEXT:    [[R:%.*]] = bitcast <2 x b16> [[E]] to <4 x i8>
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %b = bitcast <8 x i8> %v to <2 x b32>
+  %e = bitextract <2 x b16>, <2 x b32> %b, <2 x i32> <i32 0, i32 32>
+  %r = bitcast <2 x b16> %e to <4 x i8>
+  ret <4 x i8> %r
+}
+
+; The offset of the second element is not a multiple of 8.
+define <2 x i8> @neg_v2i8_from_v8i8_unaligned_per_elt(<8 x i8> %v) {
+; CHECK-LABEL: define <2 x i8> @neg_v2i8_from_v8i8_unaligned_per_elt(
+; CHECK-SAME: <8 x i8> [[V:%.*]]) {
+; CHECK-NEXT:    [[B:%.*]] = bitcast <8 x i8> [[V]] to <2 x b32>
+; CHECK-NEXT:    [[R:%.*]] = bitextract <2 x i8>, <2 x b32> [[B]], <2 x i32> <i32 8, i32 4>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %b = bitcast <8 x i8> %v to <2 x b32>
+  %r = bitextract <2 x i8>, <2 x b32> %b, <2 x i32> <i32 8, i32 4>
+  ret <2 x i8> %r
+}
+
+; The offset is not a constant.
+define <2 x i8> @neg_v2i8_from_v8i8_variable_offset_per_elt(<8 x i8> %v, <2 x i32> %off) {
+; CHECK-LABEL: define <2 x i8> @neg_v2i8_from_v8i8_variable_offset_per_elt(
+; CHECK-SAME: <8 x i8> [[V:%.*]], <2 x i32> [[OFF:%.*]]) {
+; CHECK-NEXT:    [[B:%.*]] = bitcast <8 x i8> [[V]] to <2 x b32>
+; CHECK-NEXT:    [[R:%.*]] = bitextract <2 x i8>, <2 x b32> [[B]], <2 x i32> [[OFF]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %b = bitcast <8 x i8> %v to <2 x b32>
+  %r = bitextract <2 x i8>, <2 x b32> %b, <2 x i32> %off
+  ret <2 x i8> %r
+}
+
+; Integers cannot be bitcast to pointers.
+define <2 x ptr> @neg_v2ptr_from_v4i64_per_elt(<4 x i64> %v) {
+; CHECK-LABEL: define <2 x ptr> @neg_v2ptr_from_v4i64_per_elt(
+; CHECK-SAME: <4 x i64> [[V:%.*]]) {
+; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x i64> [[V]] to <2 x b128>
+; CHECK-NEXT:    [[R:%.*]] = bitextract <2 x ptr>, <2 x b128> [[B]], <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x ptr> [[R]]
+;
+  %b = bitcast <4 x i64> %v to <2 x b128>
+  %r = bitextract <2 x ptr>, <2 x b128> %b, <2 x i32> zeroinitializer
+  ret <2 x ptr> %r
+}
+
 ; The bitextract only reads from a bitcast once the phi simplifies, which
 ; happens after its bitcast user is visited.
 define void @v2i64_from_v4i64_loop(<4 x i64> %v, i1 %cond) {
