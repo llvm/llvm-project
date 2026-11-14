@@ -27,6 +27,7 @@ def NeoverseV3AEModel : SchedMachineModel {
                                                      HasSVEBFSCALE,
                                                      HasCPA, HasCSSC, HasMOPS, HasMOPS_GO,
                                                      HasFPv2]);
+  let WarnRedundantInstRW = 0;
 }
 
 //===----------------------------------------------------------------------===//

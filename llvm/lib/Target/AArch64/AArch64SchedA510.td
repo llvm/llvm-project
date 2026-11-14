@@ -26,6 +26,7 @@ def CortexA510Model : SchedMachineModel {
 
   // FIXME: Remove when all errors have been fixed.
   let FullInstRWOverlapCheck = 0;
+  let WarnRedundantInstRW = 0;
 }
 
 

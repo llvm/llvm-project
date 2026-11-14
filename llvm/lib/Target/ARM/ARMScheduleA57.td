@@ -85,6 +85,7 @@ def CortexA57Model : SchedMachineModel {
 
   let UnsupportedFeatures = [HasV8_1MMainline, HasMVEInt, HasMVEFloat, IsMClass,
                              HasFPRegsV8_1M, HasFP16FML, HasMatMulInt8, HasBF16];
+  let WarnRedundantInstRW = 0;
 }
 
 //===----------------------------------------------------------------------===//

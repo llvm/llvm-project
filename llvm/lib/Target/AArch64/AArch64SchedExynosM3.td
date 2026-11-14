@@ -29,6 +29,7 @@ def ExynosM3Model : SchedMachineModel {
                                                     SMEUnsupported.F,
                                                     [HasMTE, HasCSSC, HasMOPS, HasMOPS_GO,
                                                      HasFPv2]);
+  let WarnRedundantInstRW = 0;
 }
 
 //===----------------------------------------------------------------------===//

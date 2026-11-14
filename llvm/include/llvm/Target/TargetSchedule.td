@@ -102,6 +102,10 @@ class SchedMachineModel {
   // enabled.
   bit FullInstRWOverlapCheck = true;
 
+  // Warn about InstRWs that resolve to the same entries as the base SchedRW.
+  // FIXME: Remove when all in tree targets are clean with the warning enabled.
+  bit WarnRedundantInstRW = true;
+
   // A processor may only implement part of published ISA, due to either new ISA
   // extensions, (e.g. Pentium 4 doesn't have AVX) or implementation
   // (ARM/MIPS/PowerPC/SPARC soft float cores).

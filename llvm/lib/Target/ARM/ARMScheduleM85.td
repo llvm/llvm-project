@@ -27,6 +27,7 @@ def CortexM85Model : SchedMachineModel {
   let MispredictPenalty = 4; // Mispredict cost for forward branches is 7,
                              // but 4 works better
   let CompleteModel = 0;
+  let WarnRedundantInstRW = 0;
 }
 
 let SchedModel = CortexM85Model in {

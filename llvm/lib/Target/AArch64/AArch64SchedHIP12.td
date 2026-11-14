@@ -24,6 +24,7 @@ def HIP12Model : SchedMachineModel {
                                                     [HasSVEB16B16, HasSVEBFSCALE, HasMTE,
                                                      HasCPA, HasCSSC, HasMOPS, HasMOPS_GO,
                                                      HasFPv2]);
+  let WarnRedundantInstRW = 0;
 }
 
 let SchedModel = HIP12Model in {

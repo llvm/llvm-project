@@ -30,6 +30,7 @@ def LunarlakePModel : SchedMachineModel {
   // This flag is set to allow the scheduler to assign a default model to
   // unrecognized opcodes.
   let CompleteModel = 0;
+  let WarnRedundantInstRW = 0;
 }
 
 let SchedModel = LunarlakePModel in {

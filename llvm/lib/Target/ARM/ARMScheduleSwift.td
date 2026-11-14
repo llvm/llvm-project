@@ -46,6 +46,7 @@ def SwiftModel : SchedMachineModel {
 
   // FIXME: Remove when all errors have been fixed.
   let FullInstRWOverlapCheck = 0;
+  let WarnRedundantInstRW = 0;
 }
 
 // Swift predicates.

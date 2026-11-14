@@ -30,6 +30,7 @@ def TSV110Model : SchedMachineModel {
                                                     SMEUnsupported.F,
                                                     [HasMTE, HasCSSC, HasMOPS, HasMOPS_GO,
                                                      HasFPv2]);
+  let WarnRedundantInstRW = 0;
 }
 
 // Define each kind of processor resource and number available on the TSV110,

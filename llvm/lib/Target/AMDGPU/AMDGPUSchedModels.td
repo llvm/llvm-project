@@ -27,7 +27,9 @@ class SISchedMachineModel : SchedMachineModel {
 
 def SIFullSpeedModel : SISchedMachineModel;
 def SIQuarterSpeedModel : SISchedMachineModel;
-def SIDPFullSpeedModel : SISchedMachineModel;
+def SIDPFullSpeedModel : SISchedMachineModel {
+  let WarnRedundantInstRW = 0;
+}
 def SIDPGFX942FullSpeedModel : SISchedMachineModel;
 def SIDPGFX950FullSpeedModel : SISchedMachineModel;
 def GFX10SpeedModel : SISchedMachineModel;

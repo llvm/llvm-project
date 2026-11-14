@@ -30,6 +30,7 @@ def OlympusModel : SchedMachineModel {
                                                      HasCPA, HasCSSC,
                                                      HasMatMulFP64, HasMOPS, HasMOPS_GO,
                                                      HasFPv2]);
+  let WarnRedundantInstRW = 0;
 }
 
 //===----------------------------------------------------------------------===//

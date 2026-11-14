@@ -28,6 +28,7 @@ def Ampere1Model : SchedMachineModel {
                                                     SMEUnsupported.F,
                                                     PAUnsupported.F,
                                                     [HasMTE, HasFPv2]);
+  let WarnRedundantInstRW = 0;
 }
 
 let SchedModel = Ampere1Model in {
