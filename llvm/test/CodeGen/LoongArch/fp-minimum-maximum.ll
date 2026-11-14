@@ -177,11 +177,12 @@ define double @minimum_f64(double %a, double %b) {
 ;
 ; LA64D-LABEL: minimum_f64:
 ; LA64D:       # %bb.0:
-; LA64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
-; LA64D-NEXT:    fld.d $fa2, $a0, %pc_lo12(.LCPI2_0)
 ; LA64D-NEXT:    fcmp.cun.d $fcc0, $fa0, $fa1
 ; LA64D-NEXT:    fmin.d $fa0, $fa0, $fa1
-; LA64D-NEXT:    fsel $fa0, $fa0, $fa2, $fcc0
+; LA64D-NEXT:    lu12i.w $a0, 4095
+; LA64D-NEXT:    slli.d $a0, $a0, 39
+; LA64D-NEXT:    movgr2fr.d $fa1, $a0
+; LA64D-NEXT:    fsel $fa0, $fa0, $fa1, $fcc0
 ; LA64D-NEXT:    ret
 ;
 ; LA32-SOFT-LABEL: minimum_f64:
@@ -246,11 +247,12 @@ define double @maximum_f64(double %a, double %b) {
 ;
 ; LA64D-LABEL: maximum_f64:
 ; LA64D:       # %bb.0:
-; LA64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; LA64D-NEXT:    fld.d $fa2, $a0, %pc_lo12(.LCPI3_0)
 ; LA64D-NEXT:    fcmp.cun.d $fcc0, $fa0, $fa1
 ; LA64D-NEXT:    fmax.d $fa0, $fa0, $fa1
-; LA64D-NEXT:    fsel $fa0, $fa0, $fa2, $fcc0
+; LA64D-NEXT:    lu12i.w $a0, 4095
+; LA64D-NEXT:    slli.d $a0, $a0, 39
+; LA64D-NEXT:    movgr2fr.d $fa1, $a0
+; LA64D-NEXT:    fsel $fa0, $fa0, $fa1, $fcc0
 ; LA64D-NEXT:    ret
 ;
 ; LA32-SOFT-LABEL: maximum_f64:
