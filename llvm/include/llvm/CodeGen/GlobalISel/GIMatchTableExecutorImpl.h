@@ -1160,6 +1160,51 @@ bool GIMatchTableExecutor::executeMatchTable(
       break;
     }
 
+    case GIR_BuildConstantInPlace: {
+      uint64_t InsnID = readULEB();
+      uint64_t OpIdx = readULEB();
+      uint64_t Imm = readU64();
+      initializeBuilder();
+      Builder.buildConstant(State.MIs[InsnID]->getOperand(OpIdx).getReg(), Imm);
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIR_BuildConstantInPlace(MIs["
+                             << InsnID << "][" << OpIdx << "], Imm=" << Imm
+                             << ")\n");
+      break;
+    }
+
+    case GIR_BuildFConstantInPlace: {
+      uint64_t InsnID = readULEB();
+      uint64_t OpIdx = readULEB();
+      uint64_t Bits = readU64();
+      initializeBuilder();
+      Register Reg = State.MIs[InsnID]->getOperand(OpIdx).getReg();
+      LLT Ty = MRI.getType(Reg).getScalarType();
+      unsigned Width = Ty.getScalarSizeInBits();
+      APInt BitPattern(Width, Bits, /*isSigned=*/false,
+                       /*implicitTrunc=*/true);
+      // A zero pattern is +0.0 in every FP format. A non-zero pattern cannot
+      // describe a type wider than the 64-bit immediate, or an s16, which
+      // could be either half or bfloat.
+      if (!BitPattern.isZero()) {
+        if (Width > 64)
+          report_fatal_error("GIR_BuildFConstantInPlace cannot represent a "
+                             "non-zero bit pattern for a scalar FP type wider "
+                             "than 64 bits");
+        if (Ty.isAnyScalar() && Width == 16)
+          report_fatal_error("GIR_BuildFConstantInPlace cannot represent a "
+                             "non-zero bit pattern for a 16-bit scalar type "
+                             "that does not distinguish half from bfloat");
+      }
+      APFloat Val(getFltSemanticForLLT(Ty), BitPattern);
+      Builder.buildFConstant(Reg, Val);
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIR_BuildFConstantInPlace(MIs["
+                             << InsnID << "][" << OpIdx << "], Bits=" << Bits
+                             << ")\n");
+      break;
+    }
+
     case GIR_RootToRootCopy:
     case GIR_Copy: {
       uint64_t NewInsnID =
