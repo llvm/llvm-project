@@ -3508,6 +3508,33 @@ TEST(APIntTest, smul_ov) {
         EXPECT_EQ(Wide.trunc(Bits), Narrow);
         EXPECT_EQ(Narrow.sext(2 * Bits) != Wide, Overflow);
       }
+
+  for (unsigned Bits : {8, 32, 63, 64, 65}) {
+    APInt Min = APInt::getSignedMinValue(Bits);
+    APInt Max = APInt::getSignedMaxValue(Bits);
+    const APInt Values[] = {APInt(Bits, 0),
+                            APInt(Bits, 1),
+                            APInt(Bits, -1, true),
+                            APInt(Bits, 2),
+                            APInt(Bits, -2, true),
+                            Min,
+                            Min + 1,
+                            Max - 1,
+                            Max};
+    for (const APInt &A : Values)
+      for (const APInt &B : Values) {
+        bool Overflow;
+        APInt Narrow = A.smul_ov(B, Overflow);
+        APInt Wide = A.sext(2 * Bits) * B.sext(2 * Bits);
+        EXPECT_EQ(Wide.trunc(Bits), Narrow);
+        EXPECT_EQ(Narrow.sext(2 * Bits) != Wide, Overflow);
+      }
+  }
+
+  APInt Zero = APInt::getZeroWidth();
+  bool Overflow = true;
+  EXPECT_EQ(Zero, Zero.smul_ov(Zero, Overflow));
+  EXPECT_FALSE(Overflow);
 }
 
 TEST(APIntTest, sfloordiv_ov) {
