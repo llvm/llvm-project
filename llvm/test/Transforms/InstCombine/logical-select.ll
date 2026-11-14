@@ -1702,7 +1702,54 @@ define <2 x i1> @neg_test_logical_and_trunc_nuw_nsw_vec(<2 x i1> %c, <2 x i8> no
   ret <2 x i1> %and
 }
 
+; or (select X, A, B), (select X, C, D) -> select X, (A|C), (B|D).
+; Both selects test X, so the new select keeps the first available weights.
+define i32 @test_or_of_selects(i1 %c, i32 %a, i32 %b, i32 %d, i32 %e) {
+; CHECK-LABEL: @test_or_of_selects(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[A:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[B:%.*]], [[E:%.*]]
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[C:%.*]], i32 [[TMP1]], i32 [[TMP2]], !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %lhs_select = select i1 %c, i32 %a, i32 %b, !prof !1
+  %rhs_select = select i1 %c, i32 %d, i32 %e, !prof !2
+  %result = or i32 %lhs_select, %rhs_select
+  ret i32 %result
+}
+
+; Op0 has no profile. Op1's weights describe the new select instead.
+define i32 @test_or_of_selects_second_has_profile(i1 %c, i32 %a, i32 %b, i32 %d, i32 %e) {
+; CHECK-LABEL: @test_or_of_selects_second_has_profile(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[A:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[B:%.*]], [[E:%.*]]
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[C:%.*]], i32 [[TMP1]], i32 [[TMP2]], !prof [[PROF3:![0-9]+]]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %lhs_select = select i1 %c, i32 %a, i32 %b
+  %rhs_select = select i1 %c, i32 %d, i32 %e, !prof !2
+  %result = or i32 %lhs_select, %rhs_select
+  ret i32 %result
+}
+
+; Neither select has a profile. Leave new select without profile.
+define i32 @test_or_of_selects_no_profile(i1 %c, i32 %a, i32 %b, i32 %d, i32 %e) !prof !0 {
+; CHECK-LABEL: @test_or_of_selects_no_profile(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[A:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[B:%.*]], [[E:%.*]]
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[C:%.*]], i32 [[TMP1]], i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %lhs_select = select i1 %c, i32 %a, i32 %b
+  %rhs_select = select i1 %c, i32 %d, i32 %e
+  %result = or i32 %lhs_select, %rhs_select
+  ret i32 %result
+}
+
 !0 = !{!"function_entry_count", i32 5260116}
+!1 = !{!"branch_weights", i32 38, i32 62}
+!2 = !{!"branch_weights", i32 41, i32 59}
 ;.
 ; CHECK: [[PROF1]] = !{!"unknown", !"instcombine"}
+; CHECK: [[PROF2]] = !{!"branch_weights", i32 38, i32 62}
+; CHECK: [[PROF3]] = !{!"branch_weights", i32 41, i32 59}
 ;.
