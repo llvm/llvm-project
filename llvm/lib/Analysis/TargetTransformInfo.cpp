@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -28,10 +29,6 @@ using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "tti"
-
-static cl::opt<bool> EnableReduxCost("costmodel-reduxcost", cl::init(false),
-                                     cl::Hidden,
-                                     cl::desc("Recognize reduction patterns."));
 
 static cl::opt<unsigned> CacheLineSize(
     "cache-line-size", cl::init(0), cl::Hidden,
@@ -179,11 +176,7 @@ bool HardwareLoopInfo::isHardwareLoopCandidate(ScalarEvolution &SE,
       continue;
 
     // Make sure this blocks ends with a conditional branch.
-    Instruction *TI = BB->getTerminator();
-    if (!TI)
-      continue;
-
-    if (CondBrInst *BI = dyn_cast<CondBrInst>(TI))
+    if (CondBrInst *BI = dyn_cast<CondBrInst>(BB->getTerminator()))
       ExitBranch = BI;
     else
       continue;
@@ -434,6 +427,11 @@ bool TargetTransformInfo::isLegalAddScalableImmediate(int64_t Imm) const {
 
 bool TargetTransformInfo::isLegalICmpImmediate(int64_t Imm) const {
   return TTIImpl->isLegalICmpImmediate(Imm);
+}
+
+bool TargetTransformInfo::preferLoopExitWithEqualityComparison(
+    const ICmpInst &Cond, const APInt &PostIncExitValue) const {
+  return TTIImpl->preferLoopExitWithEqualityComparison(Cond, PostIncExitValue);
 }
 
 bool TargetTransformInfo::isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
@@ -688,6 +686,30 @@ TargetTransformInfo::getVectorInstrContextHint(const Instruction *I) {
 }
 
 TargetTransformInfo::VectorInstrContext
+TargetTransformInfo::getVectorInstrContextHint(ArrayRef<Value *> VL,
+                                               const APInt &DemandedElts) {
+  VectorInstrContext VIC = VectorInstrContext::None;
+  for (unsigned I : seq(VL.size())) {
+    if (!DemandedElts[I])
+      continue;
+    Value *V = VL[I];
+    if (isa<UndefValue>(V))
+      continue;
+    auto *Inst = dyn_cast<Instruction>(V);
+    if (!Inst)
+      return VectorInstrContext::None;
+    VectorInstrContext IVIC = getVectorInstrContextHint(Inst);
+    if (VIC == VectorInstrContext::None) {
+      VIC = IVIC;
+      continue;
+    }
+    if (VIC != IVIC)
+      return VectorInstrContext::None;
+  }
+  return VIC;
+}
+
+TargetTransformInfo::VectorInstrContext
 TargetTransformInfo::getBuildVectorContextHint(
     ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
     function_ref<bool(SmallVectorImpl<BuildVectorUseOp> &)> GatherUseOps)
@@ -869,8 +891,8 @@ std::optional<unsigned> TargetTransformInfo::getVScaleForTuning() const {
 }
 
 bool TargetTransformInfo::shouldMaximizeVectorBandwidth(
-    TargetTransformInfo::RegisterKind K) const {
-  return TTIImpl->shouldMaximizeVectorBandwidth(K);
+    TargetTransformInfo::VectorKind K, Type *ElementTy) const {
+  return TTIImpl->shouldMaximizeVectorBandwidth(K, ElementTy);
 }
 
 ElementCount TargetTransformInfo::getMinimumVF(unsigned ElemWidth,
@@ -1078,7 +1100,7 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
     ArrayRef<const Value *> Args, const Instruction *CtxI,
     const TargetLibraryInfo *TLibInfo) const {
 
-  // Use call cost for frem intructions that have platform specific vector math
+  // Use call cost for frem instructions that have platform specific vector math
   // functions, as those will be replaced with calls later by SelectionDAG or
   // ReplaceWithVecLib pass.
   if (TLibInfo && Opcode == Instruction::FRem) {
@@ -1382,6 +1404,10 @@ uint64_t TargetTransformInfo::getMaxMemIntrinsicInlineSizeThreshold() const {
   return TTIImpl->getMaxMemIntrinsicInlineSizeThreshold();
 }
 
+uint64_t TargetTransformInfo::getMaxBoundedMemSetInlineSize() const {
+  return TTIImpl->getMaxBoundedMemSetInlineSize();
+}
+
 InstructionCost TargetTransformInfo::getArithmeticReductionCost(
     unsigned Opcode, VectorType *Ty, std::optional<FastMathFlags> FMF,
     TTI::TargetCostKind CostKind) const {
@@ -1618,8 +1644,9 @@ bool TargetTransformInfo::hasActiveVectorLength() const {
 }
 
 bool TargetTransformInfo::isProfitableToSinkOperands(
-    Instruction *I, SmallVectorImpl<Use *> &OpsToSink) const {
-  return TTIImpl->isProfitableToSinkOperands(I, OpsToSink);
+    Instruction *I, SmallVectorImpl<Use *> &OpsToSink,
+    const LoopInfo *LI) const {
+  return TTIImpl->isProfitableToSinkOperands(I, OpsToSink, LI);
 }
 
 bool TargetTransformInfo::isVectorShiftByScalarCheap(Type *Ty) const {

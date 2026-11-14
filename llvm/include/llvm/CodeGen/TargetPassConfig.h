@@ -150,6 +150,9 @@ protected:
   /// Enable LoopTermFold immediately after LSR
   bool EnableLoopTermFold = false;
 
+  /// Run loop strength reduction on optimized builds.
+  bool EnableLoopStrengthReduce = true;
+
   /// Add the actual instruction selection passes. This does not include
   /// preparation passes on IR.
   bool addCoreISelPasses();
@@ -399,6 +402,10 @@ protected:
   /// This method may be implemented by targets that want to run passes
   /// immediately before register allocation.
   virtual void addPreRegAlloc() { }
+
+  /// Return true if the MachinePipeliner should run before addPreRegAlloc by
+  /// default. -enable-pipeliner overrides this.
+  virtual bool isMachinePipelinerEnabled() const { return false; }
 
   /// createTargetRegisterAllocator - Create the register allocator pass for
   /// this target at the current optimization level.

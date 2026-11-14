@@ -344,6 +344,11 @@ static ConstantIntRanges inferDivSRange(const ConstantIntRanges &lhs,
                                         DivisionFixupFn fixup) {
   const APInt &lhsMin = lhs.smin(), &lhsMax = lhs.smax(), &rhsMin = rhs.smin(),
               &rhsMax = rhs.smax();
+  // An empty (min > max) divisor range can arise from poison, e.g. a
+  // saturated `nsw`/`nuw` subtraction. Don't trust its bounds.
+  unsigned width = rhsMin.getBitWidth();
+  if (rhsMin.sgt(rhsMax))
+    return ConstantIntRanges::maxRange(width);
   bool canDivide = rhsMin.isStrictlyPositive() || rhsMax.isNegative();
 
   if (canDivide) {
@@ -356,7 +361,18 @@ static ConstantIntRanges inferDivSRange(const ConstantIntRanges &lhs,
     return minMaxBy(sdiv, {lhsMin, lhsMax}, {rhsMin, rhsMax},
                     /*isSigned=*/true);
   }
-  return ConstantIntRanges::maxRange(rhsMin.getBitWidth());
+  // Zero divisors produce poison. Bound each nonzero interval separately.
+  std::optional<ConstantIntRanges> result;
+  if (rhsMin.isNegative())
+    result = inferDivSRange(
+        lhs, ConstantIntRanges::fromSigned(rhsMin, APInt::getAllOnes(width)),
+        fixup);
+  if (rhsMax.isStrictlyPositive()) {
+    ConstantIntRanges positive = inferDivSRange(
+        lhs, ConstantIntRanges::fromSigned(APInt(width, 1), rhsMax), fixup);
+    result = result ? result->rangeUnion(positive) : positive;
+  }
+  return result.value_or(ConstantIntRanges::maxRange(width));
 }
 
 ConstantIntRanges
@@ -397,6 +413,12 @@ mlir::intrange::inferCeilDivS(ArrayRef<ConstantIntRanges> argRanges) {
     auto newLhs = ConstantIntRanges::fromSigned(lhs.smin() + 1, lhs.smax());
     result = result.rangeUnion(inferDivSRange(newLhs, rhs, ceilDivSIFix));
   }
+  if (lhs.smin().isMinSignedValue() && rhs.smax().sgt(1) && rhs.smin().sle(2)) {
+    // The sign changes between divisors 1 and 2. Include the positive peak.
+    APInt two(lhs.smin().getBitWidth(), 2);
+    result =
+        result.rangeUnion(ConstantIntRanges::constant(-lhs.smin().sdiv(two)));
+  }
   return result;
 }
 
@@ -428,28 +450,26 @@ mlir::intrange::inferRemS(ArrayRef<ConstantIntRanges> argRanges) {
               &rhsMax = rhs.smax();
 
   unsigned width = rhsMax.getBitWidth();
-  APInt smin = APInt::getSignedMinValue(width);
-  APInt smax = APInt::getSignedMaxValue(width);
-  // No bounds if zero could be a divisor.
-  bool canBound = (rhsMin.isStrictlyPositive() || rhsMax.isNegative());
-  if (canBound) {
-    APInt maxDivisor = rhsMin.isStrictlyPositive() ? rhsMax : rhsMin.abs();
-    bool canNegativeDividend = lhsMin.isNegative();
-    bool canPositiveDividend = lhsMax.isStrictlyPositive();
-    APInt zero = APInt::getZero(maxDivisor.getBitWidth());
-    APInt maxPositiveResult = maxDivisor - 1;
-    APInt minNegativeResult = -maxPositiveResult;
-    smin = canNegativeDividend ? minNegativeResult : zero;
-    smax = canPositiveDividend ? maxPositiveResult : zero;
-    // Special case: sweeping out a contiguous range in N/[modulus].
-    if (rhsMin == rhsMax) {
-      if ((lhsMax - lhsMin).ult(maxDivisor)) {
-        APInt minRem = lhsMin.srem(maxDivisor);
-        APInt maxRem = lhsMax.srem(maxDivisor);
-        if (minRem.sle(maxRem)) {
-          smin = std::move(minRem);
-          smax = std::move(maxRem);
-        }
+  if (rhsMin.sgt(rhsMax) || (rhsMin.isZero() && rhsMax.isZero()))
+    return ConstantIntRanges::maxRange(width);
+
+  // Magnitudes are unsigned: abs(INT_MIN) is not a positive signed value.
+  APInt maxDivisor = llvm::APIntOps::umax(rhsMin.abs(), rhsMax.abs());
+  APInt zero = APInt::getZero(width);
+  APInt maxPositiveResult = maxDivisor - 1;
+  // Remainder has the dividend's sign and cannot exceed its magnitude.
+  APInt smin = llvm::APIntOps::smax(llvm::APIntOps::smin(lhsMin, zero),
+                                    -maxPositiveResult);
+  APInt smax = llvm::APIntOps::smin(llvm::APIntOps::smax(lhsMax, zero),
+                                    maxPositiveResult);
+  // Special case: sweeping out a contiguous range in N/[modulus].
+  if (rhsMin == rhsMax) {
+    if ((lhsMax - lhsMin).ult(maxDivisor)) {
+      APInt minRem = lhsMin.srem(maxDivisor);
+      APInt maxRem = lhsMax.srem(maxDivisor);
+      if (minRem.sle(maxRem)) {
+        smin = std::move(minRem);
+        smax = std::move(maxRem);
       }
     }
   }

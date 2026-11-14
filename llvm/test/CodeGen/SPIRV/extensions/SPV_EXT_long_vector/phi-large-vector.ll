@@ -1,6 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 --spirv-ext=+SPV_EXT_long_vector -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; spirv-val has a bug around validating OpVectorShuffle with large OpTypeVectorIdEXT operands, as it seems to incorrectly compute the combined size.
-; TODO: %if spirv-tools %{ llc -O0 --spirv-ext=+SPV_EXT_long_vector -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 --spirv-ext=+SPV_EXT_long_vector -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: %[[#I32:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#THIRTYTWO:]] = OpConstant %[[#I32]] 32

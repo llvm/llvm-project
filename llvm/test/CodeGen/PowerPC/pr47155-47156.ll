@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 
-; RUN: llc < %s -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -stop-after=postmisched -debug-only=machine-scheduler 2>&1 >/dev/null | FileCheck %s
 
 define void @pr47155() {

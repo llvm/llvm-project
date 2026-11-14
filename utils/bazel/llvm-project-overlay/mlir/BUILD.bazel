@@ -439,7 +439,6 @@ cc_library(
         "lib/IR/*.h",
         "lib/IR/PDL/*.cpp",
         "lib/Bytecode/Writer/*.h",
-        "include/mlir/Bytecode/*.h",
     ]) + [
         "include/mlir/IR/OpAsmDialectInterface.h.inc",
         "include/mlir/IR/OpAsmOpInterface.h.inc",
@@ -449,6 +448,7 @@ cc_library(
     ],
     hdrs = glob([
         "include/mlir/IR/*.h",
+        "include/mlir/Bytecode/*.h",
     ]) + [
         "include/mlir/Dialect/Utils/StaticValueUtils.h",
         "include/mlir/IR/PDLPatternMatch.h.inc",
@@ -1284,8 +1284,8 @@ cc_binary(
     includes = [
         "lib/Bindings/Python",
     ],
-    linkshared = 1,
-    linkstatic = 0,
+    linkshared = True,
+    linkstatic = False,
     deps = [
         ":MLIRBindingsPythonCore",
         ":MLIRBindingsPythonHeadersAndDeps",
@@ -1298,8 +1298,8 @@ cc_binary(
     srcs = ["lib/Bindings/Python/DialectIRDL.cpp"],
     copts = PYTHON_BINDINGS_COPTS,
     features = PYTHON_BINDINGS_FEATURES,
-    linkshared = 1,
-    linkstatic = 0,
+    linkshared = True,
+    linkstatic = False,
     deps = [
         ":CAPIIR",
         ":MLIRBindingsPythonNanobindHeadersAndDeps",
@@ -1315,8 +1315,8 @@ cc_binary(
     includes = [
         "lib/Bindings/Python",
     ],
-    linkshared = 1,
-    linkstatic = 0,
+    linkshared = True,
+    linkstatic = False,
     deps = [
         ":CAPIIR",
         ":CAPILinalg",
@@ -1330,8 +1330,8 @@ cc_binary(
     srcs = ["lib/Bindings/Python/DialectLLVM.cpp"],
     copts = PYTHON_BINDINGS_COPTS,
     features = PYTHON_BINDINGS_FEATURES,
-    linkshared = 1,
-    linkstatic = 0,
+    linkshared = True,
+    linkstatic = False,
     deps = [
         ":CAPIDebug",
         ":CAPIIR",
@@ -1348,8 +1348,8 @@ cc_binary(
     srcs = ["lib/Bindings/Python/DialectQuant.cpp"],
     copts = PYTHON_BINDINGS_COPTS,
     features = PYTHON_BINDINGS_FEATURES,
-    linkshared = 1,
-    linkstatic = 0,
+    linkshared = True,
+    linkstatic = False,
     deps = [
         ":CAPIDebug",
         ":CAPIIR",
@@ -1365,8 +1365,8 @@ cc_binary(
     srcs = ["lib/Bindings/Python/DialectSparseTensor.cpp"],
     copts = PYTHON_BINDINGS_COPTS,
     features = PYTHON_BINDINGS_FEATURES,
-    linkshared = 1,
-    linkstatic = 0,
+    linkshared = True,
+    linkstatic = False,
     deps = [
         ":CAPIDebug",
         ":CAPIIR",
@@ -1383,8 +1383,8 @@ cc_binary(
     srcs = ["lib/Bindings/Python/ExecutionEngineModule.cpp"],
     copts = PYTHON_BINDINGS_COPTS,
     features = PYTHON_BINDINGS_FEATURES,
-    linkshared = 1,
-    linkstatic = 0,
+    linkshared = True,
+    linkstatic = False,
     deps = [
         ":CAPIExecutionEngine",
         ":MLIRBindingsPythonNanobindHeadersAndDeps",
@@ -1399,8 +1399,8 @@ cc_binary(
     srcs = ["lib/Bindings/Python/LinalgPasses.cpp"],
     copts = PYTHON_BINDINGS_COPTS,
     features = PYTHON_BINDINGS_FEATURES,
-    linkshared = 1,
-    linkstatic = 0,
+    linkshared = True,
+    linkstatic = False,
     deps = [
         ":CAPILinalg",
         ":MLIRBindingsPythonNanobindHeadersAndDeps",
@@ -2666,9 +2666,13 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/X86/TransformOps/*.h"]),
     includes = ["include"],
     deps = [
+        ":AffineDialect",
+        ":ArithDialect",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
+        ":MathDialect",
+        ":MemRefDialect",
         ":TransformDialect",
         ":TransformDialectInterfaces",
         ":VectorDialect",
@@ -2704,11 +2708,13 @@ cc_library(
         ":ArithDialect",
         ":ControlFlowDialect",
         ":ConvertToLLVMInterface",
+        ":DialectUtils",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":LinalgDialect",
         ":LinalgInterfaces",
+        ":MathDialect",
         ":MemRefDialect",
         ":MemRefUtils",
         ":Pass",
@@ -4054,6 +4060,7 @@ cc_library(
         ":SCFTransforms",
         ":TransformUtils",
         ":VectorDialect",
+        ":VectorTransforms",
         ":XeGPUDialect",
         ":XeGPUuArch",
         ":XeVMDialect",
@@ -4541,6 +4548,7 @@ cc_library(
         ":VectorToArmSME",
         ":VectorToGPU",
         ":VectorToLLVM",
+        ":VectorToNVGPU",
         ":VectorToSCF",
         ":VectorToSPIRV",
         ":VectorToXeGPU",
@@ -4710,6 +4718,7 @@ cc_library(
         ":DataLayoutInterfaces",
         ":FunctionInterfaces",
         ":IR",
+        ":Support",
         "//llvm:ABI",
         "//llvm:Support",
     ],
@@ -5869,6 +5878,7 @@ cc_library(
         ":GPUCompilationAttrInterfacesIncGen",
         ":GPUOpsIncGen",
         ":IR",
+        ":InferIntRangeCommon",
         ":InferIntRangeInterface",
         ":InferTypeOpInterface",
         ":InliningUtils",
@@ -6600,6 +6610,7 @@ cc_library(
     deps = [
         ":ArithToLLVM",
         ":ConversionPassIncGen",
+        ":DataLayoutInterfaces",
         ":FuncDialect",
         ":FuncToLLVM",
         ":GPUDialect",
@@ -6725,11 +6736,13 @@ cc_library(
     name = "NVVMDialect",
     srcs = [
         "lib/Dialect/LLVMIR/IR/BasicPtxBuilderInterface.cpp",
+        "lib/Dialect/LLVMIR/IR/NVVMAttributes.cpp",
         "lib/Dialect/LLVMIR/IR/NVVMDialect.cpp",
         "lib/Dialect/LLVMIR/IR/NVVMRequiresSMTraits.cpp",
     ] + [":NVVMOpSrcs"],
     hdrs = [
         "include/mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h",
+        "include/mlir/Dialect/LLVMIR/NVVMAttributes.h",
         "include/mlir/Dialect/LLVMIR/NVVMDialect.h",
         "include/mlir/Dialect/LLVMIR/NVVMDialectDecl.h",
         "include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h",
@@ -6746,7 +6759,9 @@ cc_library(
         ":DialectUtils",
         ":GPUDialect",
         ":IR",
+        ":InferIntRangeCommon",
         ":InferIntRangeInterface",
+        ":InferTypeOpInterface",
         ":InliningUtils",
         ":LLVMDialect",
         ":NVVMOpSrcs__gentbl_cc_lib",
@@ -6868,6 +6883,7 @@ td_library(
     deps = [
         ":BasicPtxBuilderIntTdFiles",
         ":GPUOpsTdFiles",
+        ":InferTypeOpInterfaceTdFiles",
         ":LLVMOpsTdFiles",
         ":NVVMRequiresSMTraitsTdFiles",
         ":OpBaseTdFiles",
@@ -7007,7 +7023,9 @@ cc_library(
         ":BytecodeOpInterface",
         ":GPUDialect",
         ":IR",
+        ":InferIntRangeCommon",
         ":InferIntRangeInterface",
+        ":InferTypeOpInterface",
         ":InliningUtils",
         ":LLVMDialect",
         ":ROCDLOpsIncGen",
@@ -8931,6 +8949,7 @@ cc_library(
         ":UBDialect",
         ":VectorDialect",
         ":VectorToGPU",
+        ":VectorUtils",
         ":XeGPUDialect",
         ":XeGPUUtils",
         ":XeGPUuArch",
@@ -9295,6 +9314,7 @@ cc_library(
         "lib/Conversion/MathToEmitC",
     ],
     deps = [
+        ":ArithDialect",
         ":ConversionPassIncGen",
         ":ConvertToEmitCInterface",
         ":EmitCCommon",
@@ -9776,19 +9796,6 @@ cc_library(
 )
 
 cc_library(
-    name = "OpenMPCommon",
-    srcs = ["lib/Target/LLVMIR/Dialect/OpenMPCommon.cpp"],
-    hdrs = ["include/mlir/Target/LLVMIR/Dialect/OpenMPCommon.h"],
-    includes = ["include"],
-    deps = [
-        ":IR",
-        ":Support",
-        "//llvm:Core",
-        "//llvm:FrontendOpenMP",
-    ],
-)
-
-cc_library(
     name = "LLVMIRToLLVMTranslation",
     srcs = ["lib/Target/LLVMIR/Dialect/LLVMIR/LLVMIRToLLVMTranslation.cpp"],
     hdrs = ["include/mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMIRToLLVMTranslation.h"],
@@ -9824,14 +9831,15 @@ cc_library(
 cc_library(
     name = "OpenMPToLLVMIRTranslation",
     srcs = glob(["lib/Target/LLVMIR/Dialect/OpenMP/*.cpp"]),
-    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/OpenMP/*.h"]),
+    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/OpenMP/*.h"]) + [
+        "include/mlir/Target/LLVMIR/Dialect/OpenMPCommon.h",
+    ],
     includes = ["include"],
     deps = [
         ":Analysis",
         ":ArithDialect",
         ":IR",
         ":LLVMDialect",
-        ":OpenMPCommon",
         ":OpenMPDialect",
         ":OpenMPUtils",
         ":SideEffectInterfaces",
@@ -9845,6 +9853,11 @@ cc_library(
         "//llvm:TargetParser",
         "//llvm:TransformUtils",
     ],
+)
+
+alias(
+    name = "OpenMPCommon",
+    actual = ":OpenMPToLLVMIRTranslation",
 )
 
 cc_library(
@@ -10288,6 +10301,7 @@ cc_library(
     deps = [
         ":AffineTransformOps",
         ":AllExtensions",
+        ":ArithExtensions",
         ":ArithToEmitC",
         ":ArithToLLVM",
         ":ArmNeonTransformOps",
@@ -10308,6 +10322,7 @@ cc_library(
         ":GPUTransformOps",
         ":IndexToLLVM",
         ":LLVMToLLVMIRTranslation",
+        ":LinalgExtensions",
         ":LinalgTransformOps",
         ":MPIToLLVM",
         ":MathToEmitC",
@@ -10327,6 +10342,7 @@ cc_library(
         ":SparseTensorTransformOps",
         ":TensorExtensions",
         ":TensorTransformOps",
+        ":TosaExtensions",
         ":TransformDebugExtension",
         ":TransformIRDLExtension",
         ":TransformLoopExtension",
@@ -10446,6 +10462,7 @@ cc_binary(
         "//mlir/test:TestOpenACC",
         "//mlir/test:TestPDLL",
         "//mlir/test:TestPass",
+        "//mlir/test:TestPtr",
         "//mlir/test:TestReducer",
         "//mlir/test:TestRewrite",
         "//mlir/test:TestSCF",
@@ -11657,8 +11674,10 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":ConversionPassIncGen",
         ":ConvertToLLVMInterface",
+        ":DataLayoutInterfaces",
         ":IndexDialect",
         ":LLVMCommonConversion",
         ":LLVMDialect",
@@ -12277,6 +12296,29 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "LinalgExtensions",
+    srcs = glob(["lib/Dialect/Linalg/Extensions/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Linalg/Extensions/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":AffineDialect",
+        ":Analysis",
+        ":ArithDialect",
+        ":DialectUtils",
+        ":IR",
+        ":LinalgDialect",
+        ":LinalgInterfaces",
+        ":LinalgStructuredOpsIncGen",
+        ":SCFDialect",
+        ":ShardDialect",
+        ":ShardTransforms",
+        ":ShardingInterface",
+        ":TensorDialect",
+        "//llvm:Support",
+    ],
+)
+
 td_library(
     name = "ValueBoundsOpInterfaceTdFiles",
     srcs = ["include/mlir/Interfaces/ValueBoundsOpInterface.td"],
@@ -12610,13 +12652,35 @@ cc_library(
         ":ConversionPassIncGen",
         ":DialectUtils",
         ":IR",
+        ":LinalgDialect",
         ":LinalgInterfaces",
         ":MemRefDialect",
         ":Pass",
         ":SCFDialect",
         ":TransformUtils",
         ":VectorDialect",
+        ":VectorUtils",
         ":X86Dialect",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "VectorToGPUCommon",
+    srcs = glob([
+        "lib/Conversion/VectorToGPUCommon/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/VectorToGPUCommon/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":GPUDialect",
+        ":IR",
+        ":SCFDialect",
+        ":Support",
+        ":VectorDialect",
         "//llvm:Support",
     ],
 )
@@ -12638,17 +12702,42 @@ cc_library(
         ":DialectUtils",
         ":GPUDialect",
         ":IR",
-        ":LoopLikeInterface",
+        ":MemRefDialect",
+        ":Pass",
+        ":SCFDialect",
+        ":TransformUtils",
+        ":VectorDialect",
+        ":VectorToGPUCommon",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "VectorToNVGPU",
+    srcs = glob([
+        "lib/Conversion/VectorToNVGPU/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/VectorToNVGPU/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":AffineDialect",
+        ":Analysis",
+        ":ArithDialect",
+        ":ConversionPassIncGen",
+        ":DialectUtils",
+        ":GPUDialect",
+        ":IR",
         ":MemRefDialect",
         ":NVGPUDialect",
         ":NVGPUUtils",
         ":Pass",
         ":SCFDialect",
         ":TransformUtils",
-        ":Transforms",
         ":VectorDialect",
+        ":VectorToGPUCommon",
         ":VectorTransforms",
-        ":VectorUtils",
         "//llvm:Support",
     ],
 )
@@ -12813,6 +12902,21 @@ cc_library(
         ":TosaPassIncGen",
         ":TransformUtils",
         ":VectorInterfaces",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "TosaExtensions",
+    srcs = glob(["lib/Dialect/Tosa/Extensions/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Tosa/Extensions/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":ShardDialect",
+        ":ShardingInterface",
+        ":Support",
+        ":TosaDialect",
         "//llvm:Support",
     ],
 )
@@ -13803,6 +13907,20 @@ cc_library(
         ":TransformUtils",
         ":ValueBoundsOpInterface",
         ":VectorDialect",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "ArithExtensions",
+    srcs = glob(["lib/Dialect/Arith/Extensions/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Arith/Extensions/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":IR",
+        ":ShardDialect",
+        ":ShardingInterface",
         "//llvm:Support",
     ],
 )
@@ -15510,6 +15628,7 @@ cc_library(
         ":ArithDialect",
         ":ConversionPassIncGen",
         ":ConvertToLLVMInterface",
+        ":DialectUtils",
         ":GPUDialect",
         ":IR",
         ":IndexDialect",
@@ -15523,6 +15642,7 @@ cc_library(
         ":Support",
         ":TransformUtils",
         ":VectorDialect",
+        ":VectorTransforms",
         ":XeGPUDialect",
         ":XeGPUUtils",
         ":XeGPUuArch",

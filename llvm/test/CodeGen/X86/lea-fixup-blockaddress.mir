@@ -10,9 +10,10 @@
   2:
     ret i32 0
   }
-
+...
 ---
 name:            square
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: square
   ; CHECK: bb.0:

@@ -29,13 +29,10 @@
 ; CHECK-NEXT:      Shadow Stack GC Lowering
 ; CHECK-NEXT:      Remove unreachable blocks from the CFG
 ; CHECK-NEXT:      Cycle Info Analysis
-; CHECK-NEXT:      Post-Dominator Tree Construction
-; CHECK-NEXT:      Branch Probability Analysis
-; CHECK-NEXT:      Block Frequency Analysis
-; CHECK-NEXT:      Constant Hoisting
-; CHECK-NEXT:      Replace intrinsics with calls to vector library
 ; CHECK-NEXT:      Lazy Branch Probability Analysis
 ; CHECK-NEXT:      Lazy Block Frequency Analysis
+; CHECK-NEXT:      Constant Hoisting
+; CHECK-NEXT:      Replace intrinsics with calls to vector library
 ; CHECK-NEXT:      Optimization Remark Emitter
 ; CHECK-NEXT:      Partially inline calls to library functions
 ; CHECK-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
@@ -93,11 +90,9 @@
 ; CHECK-NEXT:      Remove dead machine instructions
 ; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      Machine Natural Loop Construction
-; CHECK-NEXT:      Machine Cycle Info Analysis
-; CHECK-NEXT:      Machine Block Frequency Analysis
+; CHECK-NEXT:      Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:      Machine Register Class Info Analysis
 ; CHECK-NEXT:      Early Machine Loop Invariant Code Motion
-; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      Machine Cycle Info Analysis
 ; CHECK-NEXT:      Machine Block Frequency Analysis
 ; CHECK-NEXT:      Machine Common Subexpression Elimination
@@ -111,7 +106,6 @@
 ; CHECK-NEXT:      Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:      Machine Optimization Remark Emitter
 ; CHECK-NEXT:      Modulo Software Pipelining
-; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      Machine Natural Loop Construction
 ; CHECK-NEXT:      ARM MVE TailPred and VPT Optimisation Pass
 ; CHECK-NEXT:      ARM MLA / MLS expansion pass
@@ -152,7 +146,6 @@
 ; CHECK-NEXT:      PostRA Machine Sink
 ; CHECK-NEXT:      Machine Cycle Info Analysis
 ; CHECK-NEXT:      Machine Block Frequency Analysis
-; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      MachinePostDominator Tree Construction
 ; CHECK-NEXT:      Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:      Machine Optimization Remark Emitter
@@ -166,7 +159,7 @@
 ; CHECK-NEXT:      Post-RA pseudo instruction expansion pass
 ; CHECK-NEXT:      ARM load / store optimization pass
 ; CHECK-NEXT:      Reaching Definitions Analysis
-; CHECK-NEXT:      ARM Execution Domain Fix
+; CHECK-NEXT:      Execution Domain Fix
 ; CHECK-NEXT:      BreakFalseDeps
 ; CHECK-NEXT:      ARM pseudo instruction expansion pass
 ; CHECK-NEXT:      Insert KCFI indirect call checks

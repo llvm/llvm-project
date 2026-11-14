@@ -9,6 +9,7 @@
     ret void
   }
   @bar = external protected local_unnamed_addr addrspace(4) externally_initialized global i32, align 4
+...
 ---
 name: foo
 tracksRegLiveness: true
@@ -21,3 +22,4 @@ body: |
       $vcc_lo = S_ADD_U32 internal $vcc_lo, target-flags(amdgpu-rel32-lo) @bar + 4, implicit-def $scc
       $vcc_hi = S_ADDC_U32 internal $vcc_hi, target-flags(amdgpu-rel32-hi) @bar + 12, implicit-def $scc, implicit internal $scc
     }
+...

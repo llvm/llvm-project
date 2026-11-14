@@ -1333,8 +1333,6 @@ void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
     if (FoldedOpc) {
       FalseReg = NewReg;
       Opc = FoldedOpc;
-      // Extend the live range of NewReg.
-      MRI.clearKillFlags(NewReg);
     }
   }
 
@@ -1550,6 +1548,7 @@ bool AArch64InstrInfo::isSEHInstruction(const MachineInstr &MI) {
   switch (Opc) {
     default:
       return false;
+    case AArch64::SEH_EndC:
     case AArch64::SEH_StackAlloc:
     case AArch64::SEH_SaveFPLR:
     case AArch64::SEH_SaveFPLR_X:
@@ -1570,6 +1569,8 @@ bool AArch64InstrInfo::isSEHInstruction(const MachineInstr &MI) {
     case AArch64::SEH_PACSignLR:
     case AArch64::SEH_SaveAnyRegI:
     case AArch64::SEH_SaveAnyRegIP:
+    case AArch64::SEH_SaveAnyRegQ:
+    case AArch64::SEH_SaveAnyRegQX:
     case AArch64::SEH_SaveAnyRegQP:
     case AArch64::SEH_SaveAnyRegQPX:
     case AArch64::SEH_AllocZ:
@@ -1648,6 +1649,10 @@ bool AArch64InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
     return true;
 
   switch (MI.getOpcode()) {
+  case AArch64::PAUTH_EPILOGUE:
+    // Keep authentication after the other epilogue instructions and close to
+    // the return, allowing them to combine into an authenticated return.
+    return true;
   case AArch64::HINT:
     // CSDB hints are scheduling barriers.
     if (MI.getOperand(0).getImm() == 0x14)
@@ -1664,8 +1669,10 @@ bool AArch64InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   }
   if (isSEHInstruction(MI))
     return true;
-  auto Next = std::next(MI.getIterator());
-  return Next != MBB->end() && Next->isCFIInstruction();
+  // Skip debug instructions and pseudo probes so they do not change
+  // scheduling regions.
+  auto Next = next_nodbg(MI.getIterator(), MBB->instr_end());
+  return Next != MBB->instr_end() && Next->isCFIInstruction();
 }
 
 /// analyzeCompare - For a comparison instruction, return the source registers
@@ -1744,7 +1751,7 @@ bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
   return false;
 }
 
-static bool UpdateOperandRegClass(MachineInstr &Instr) {
+static void updateOperandRegClass(MachineInstr &Instr) {
   MachineBasicBlock *MBB = Instr.getParent();
   assert(MBB && "Can't get MachineBasicBlock here");
   MachineFunction *MF = MBB->getParent();
@@ -1753,33 +1760,16 @@ static bool UpdateOperandRegClass(MachineInstr &Instr) {
   const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
   MachineRegisterInfo *MRI = &MF->getRegInfo();
 
-  for (unsigned OpIdx = 0, EndIdx = Instr.getNumOperands(); OpIdx < EndIdx;
-       ++OpIdx) {
-    MachineOperand &MO = Instr.getOperand(OpIdx);
-    const TargetRegisterClass *OpRegCstraints =
-        Instr.getRegClassConstraint(OpIdx, TII, TRI);
-
-    // If there's no constraint, there's nothing to do.
-    if (!OpRegCstraints)
+  for (const auto &[OpIdx, MO] : enumerate(Instr.operands())) {
+    if (!MO.isReg() || !MO.getReg().isVirtual())
       continue;
-    // If the operand is a frame index, there's nothing to do here.
-    // A frame index operand will resolve correctly during PEI.
-    if (MO.isFI())
-      continue;
-
-    assert(MO.isReg() &&
-           "Operand has register constraints without being a register!");
 
     Register Reg = MO.getReg();
-    if (Reg.isPhysical()) {
-      if (!OpRegCstraints->contains(Reg))
-        return false;
-    } else if (!OpRegCstraints->hasSubClassEq(MRI->getRegClass(Reg)) &&
-               !MRI->constrainRegClass(Reg, OpRegCstraints))
-      return false;
+    const TargetRegisterClass *NewRC = Instr.getRegClassConstraintEffect(
+        OpIdx, MRI->getRegClass(Reg), TII, TRI);
+    if (!NewRC || !MRI->constrainRegClass(Reg, NewRC))
+      llvm_unreachable("Operand register classes are incompatible");
   }
-
-  return true;
 }
 
 /// Return the opcode that does not set flags when possible - otherwise
@@ -2036,9 +2026,7 @@ bool AArch64InstrInfo::optimizePTestInstr(
   PTest->eraseFromParent();
   if (*NewOp != PredOpcode) {
     Pred->setDesc(get(*NewOp));
-    bool succeeded = UpdateOperandRegClass(*Pred);
-    (void)succeeded;
-    assert(succeeded && "Operands have incompatible register classes!");
+    updateOperandRegClass(*Pred);
     Pred->addRegisterDefined(AArch64::NZCV, TRI);
   }
 
@@ -2089,9 +2077,7 @@ bool AArch64InstrInfo::optimizeCompareInstr(
     const MCInstrDesc &MCID = get(NewOpc);
     CmpInstr.setDesc(MCID);
     CmpInstr.removeOperand(DeadNZCVIdx);
-    bool succeeded = UpdateOperandRegClass(CmpInstr);
-    (void)succeeded;
-    assert(succeeded && "Some operands reg class are incompatible!");
+    updateOperandRegClass(CmpInstr);
     return true;
   }
 
@@ -2440,9 +2426,7 @@ bool AArch64InstrInfo::substituteCmpToZero(
   // Update the instruction to set NZCV.
   MI->setDesc(get(NewOpc));
   CmpInstr.eraseFromParent();
-  bool succeeded = UpdateOperandRegClass(*MI);
-  (void)succeeded;
-  assert(succeeded && "Some operands reg class are incompatible!");
+  updateOperandRegClass(*MI);
   MI->addRegisterDefined(AArch64::NZCV, &TRI);
   return true;
 }
@@ -3712,6 +3696,8 @@ bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
     NumBytes = 8;
     break;
 
+  case AArch64::LDURSi:
+  case AArch64::STURSi:
   case AArch64::LDURWi:
   case AArch64::LDURSWi:
   case AArch64::STURWi:
@@ -3768,9 +3754,13 @@ bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
     OffsetScale = 8;
     break;
 
+  case AArch64::LDRSroX:
+  case AArch64::STRSroX:
   case AArch64::LDRWroX:
   case AArch64::LDRSWroX:
   case AArch64::STRWroX:
+  case AArch64::LDRSui:
+  case AArch64::STRSui:
   case AArch64::LDRWui:
   case AArch64::LDRSWui:
   case AArch64::STRWui:
@@ -4042,6 +4032,12 @@ static unsigned regOffsetOpcode(unsigned Opcode) {
   case AArch64::STURXi:
   case AArch64::STRXui:
     return AArch64::STRXroX;
+  case AArch64::LDURSi:
+  case AArch64::LDRSui:
+    return AArch64::LDRSroX;
+  case AArch64::STURSi:
+  case AArch64::STRSui:
+    return AArch64::STRSroX;
   case AArch64::LDURWi:
   case AArch64::LDRWui:
     return AArch64::LDRWroX;
@@ -4116,6 +4112,12 @@ unsigned scaledOffsetOpcode(unsigned Opcode, unsigned &Scale) {
   case AArch64::STURXi:
     Scale = 8;
     return AArch64::STRXui;
+  case AArch64::LDURSi:
+    Scale = 4;
+    return AArch64::LDRSui;
+  case AArch64::STURSi:
+    Scale = 4;
+    return AArch64::STRSui;
   case AArch64::LDURWi:
     Scale = 4;
     return AArch64::LDRWui;
@@ -4171,6 +4173,8 @@ unsigned scaledOffsetOpcode(unsigned Opcode, unsigned &Scale) {
   case AArch64::STRXui:
     Scale = 8;
     return Opcode;
+  case AArch64::LDRSui:
+  case AArch64::STRSui:
   case AArch64::LDRWui:
   case AArch64::LDRSWui:
   case AArch64::STRWui:
@@ -4209,6 +4213,8 @@ unsigned unscaledOffsetOpcode(unsigned Opcode) {
   case AArch64::STURDi:
   case AArch64::LDURXi:
   case AArch64::STURXi:
+  case AArch64::LDURSi:
+  case AArch64::STURSi:
   case AArch64::LDURWi:
   case AArch64::LDURSWi:
   case AArch64::STURWi:
@@ -4237,6 +4243,10 @@ unsigned unscaledOffsetOpcode(unsigned Opcode) {
     return AArch64::LDURXi;
   case AArch64::STRXui:
     return AArch64::STURXi;
+  case AArch64::LDRSui:
+    return AArch64::LDURSi;
+  case AArch64::STRSui:
+    return AArch64::STURSi;
   case AArch64::LDRWui:
     return AArch64::LDURWi;
   case AArch64::LDRSWui:
@@ -4303,6 +4313,14 @@ static unsigned offsetExtendOpcode(unsigned Opcode) {
   case AArch64::STURXi:
   case AArch64::STRXui:
     return AArch64::STRXroW;
+  case AArch64::LDRSroX:
+  case AArch64::LDURSi:
+  case AArch64::LDRSui:
+    return AArch64::LDRSroW;
+  case AArch64::STRSroX:
+  case AArch64::STURSi:
+  case AArch64::STRSui:
+    return AArch64::STRSroW;
   case AArch64::LDRWroX:
   case AArch64::LDURWi:
   case AArch64::LDRWui:
@@ -5561,6 +5579,8 @@ bool AArch64InstrInfo::hasBTISemantics(const MachineInstr &MI) {
   case AArch64::HLT:
   case AArch64::PACIASP:
   case AArch64::PACIBSP:
+  case AArch64::PACIASPPC:
+  case AArch64::PACIBSPPC:
     // Implicit BTI behavior.
     return true;
   case AArch64::PAUTH_PROLOGUE:
@@ -7799,7 +7819,16 @@ static bool getMaddPatterns(MachineInstr &Root,
     }
   };
 
+  const AArch64Subtarget &STI =
+      MBB.getParent()->getSubtarget<AArch64Subtarget>();
   auto setShfFound = [&](int Opcode, unsigned ZeroReg, unsigned Pattern) {
+    // TODO: Currently its not possible to reject the combine for Apple targets
+    // based on the scheduling model, because we have gaps in modeling and
+    // analysis. Once we fill the gaps, remove the subtarget feature and the
+    // associated check here.
+    if (STI.hasShiftMaddSlow())
+      return;
+
     unsigned ShiftImm = Root.getOperand(3).getImm();
     AArch64_AM::ShiftExtendType ShiftTy = AArch64_AM::getShiftType(ShiftImm);
 
@@ -8993,7 +9022,6 @@ genIndexedMultiply(MachineInstr &Root,
     Dup = MRI.getUniqueVRegDef(Dup->getOperand(1).getReg());
 
   Register DupSrcReg = Dup->getOperand(1).getReg();
-  MRI.clearKillFlags(DupSrcReg);
   MRI.constrainRegClass(DupSrcReg, RC);
 
   unsigned DupSrcLane = Dup->getOperand(2).getImm();
@@ -10555,6 +10583,25 @@ outliningCandidatesSigningKeyConsensus(const outliner::Candidate &a,
   return MFIa->shouldSignWithBKey() == MFIb->shouldSignWithBKey();
 }
 
+static bool outliningCandidatesPAuthLRConsensus(const outliner::Candidate &a,
+                                                const outliner::Candidate &b) {
+  const auto &MFIa = a.getMF()->getInfo<AArch64FunctionInfo>();
+  const auto &MFIb = b.getMF()->getInfo<AArch64FunctionInfo>();
+
+  const AArch64Subtarget &SubtargetA =
+      a.getMF()->getSubtarget<AArch64Subtarget>();
+  const AArch64Subtarget &SubtargetB =
+      b.getMF()->getSubtarget<AArch64Subtarget>();
+
+  // Return true only if branch-protection-pauth-lr attributes match
+  // and +pauth-lr feature is enabled for both.
+  if (MFIa->branchProtectionPAuthLR() != MFIb->branchProtectionPAuthLR())
+    return false;
+
+  return !MFIa->branchProtectionPAuthLR() ||
+         SubtargetA.hasPAuthLR() == SubtargetB.hasPAuthLR();
+}
+
 static bool outliningCandidatesV8_3OpsConsensus(const outliner::Candidate &a,
                                                 const outliner::Candidate &b) {
   const AArch64Subtarget &SubtargetA =
@@ -10562,6 +10609,73 @@ static bool outliningCandidatesV8_3OpsConsensus(const outliner::Candidate &a,
   const AArch64Subtarget &SubtargetB =
       b.getMF()->getSubtarget<AArch64Subtarget>();
   return SubtargetA.hasV8_3aOps() == SubtargetB.hasV8_3aOps();
+}
+
+namespace {
+struct SPAddSubImmEncoding {
+  unsigned Opcode;
+  int64_t Imm;
+  int64_t Shift;
+};
+} // namespace
+
+/// Returns true if \p MI is an ADD/SUBXri with an immediate offset that reads
+/// SP but does not write SP (e.g. "add x0, sp, #48").
+static bool isSPAddSubImm(const MachineInstr &MI) {
+  if (MI.getOpcode() != AArch64::ADDXri && MI.getOpcode() != AArch64::SUBXri)
+    return false;
+
+  assert(MI.getNumExplicitOperands() == 4 && "Wrong number of operands");
+  assert(MI.getOperand(0).isReg() && MI.getOperand(1).isReg() &&
+         MI.getOperand(3).isImm() && "Unexpected add/sub immediate operands");
+
+  if (MI.getOperand(0).getReg() == AArch64::SP)
+    return false;
+  if (MI.getOperand(1).getReg() != AArch64::SP)
+    return false;
+
+  return MI.getOperand(2).isImm();
+}
+
+/// Adjust the signed byte offset of \p MI, which must satisfy isSPAddSubImm,
+/// by \p Delta and re-encode the result. Returns std::nullopt if the adjusted
+/// offset is not encodable.
+static std::optional<SPAddSubImmEncoding>
+adjustSPAddSubImm(const MachineInstr &MI, int64_t Delta) {
+  assert(isSPAddSubImm(MI) && "Expected an SP-based add/sub immediate");
+  bool IsSub = MI.getOpcode() == AArch64::SUBXri;
+
+  // ADD/SUBXri encode a 12-bit unsigned immediate with an optional left shift
+  // which can only be 12.
+  int64_t ShiftImm = MI.getOperand(3).getImm();
+  assert(AArch64_AM::getShiftType(ShiftImm) == AArch64_AM::LSL &&
+         "Unexpected add/sub immediate shift type");
+  unsigned Shift = AArch64_AM::getShiftValue(ShiftImm);
+  assert((Shift == 0 || Shift == 12) && "Unexpected add/sub immediate shift");
+
+  int64_t Offset = MI.getOperand(2).getImm() << Shift;
+  if (IsSub)
+    Offset = -Offset;
+
+  // Apply the adjustment and try to re-encode.
+  int64_t NewOffset = Offset + Delta;
+  int64_t AbsOffset = std::abs(NewOffset);
+
+  SPAddSubImmEncoding Enc;
+  Enc.Opcode = NewOffset < 0 ? AArch64::SUBXri : AArch64::ADDXri;
+
+  // Try to encode as a 12-bit immediate with shift=0 first.
+  if (AbsOffset <= 0xfff) {
+    Enc.Imm = AbsOffset;
+    Enc.Shift = AArch64_AM::getShifterImm(AArch64_AM::LSL, 0);
+  } else if ((AbsOffset & 0xfff) == 0 && (AbsOffset >> 12) <= 0xfff) {
+    Enc.Imm = AbsOffset >> 12;
+    Enc.Shift = AArch64_AM::getShifterImm(AArch64_AM::LSL, 12);
+  } else {
+    return std::nullopt;
+  }
+
+  return Enc;
 }
 
 std::optional<std::unique_ptr<outliner::OutlinedFunction>>
@@ -10598,8 +10712,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
 
   // We only allow outlining for functions having exactly matching return
   // address signing attributes, i.e., all share the same value for the
-  // attribute "sign-return-address" and all share the same type of key they
-  // are signed with.
+  // attribute "sign-return-address", all share the same type of key they
+  // are signed with & all share the same pauth-lr attributes.
   // Additionally we require all functions to simultaneously either support
   // v8.3a features or not. Otherwise an outlined function could get signed
   // using dedicated v8.3 instructions and a call from a function that doesn't
@@ -10608,10 +10722,11 @@ AArch64InstrInfo::getOutliningCandidateInfo(
           RepeatedSequenceLocs.begin(), RepeatedSequenceLocs.end(),
           [](const outliner::Candidate &a, const outliner::Candidate &b) {
             // Return true if a and b are non-equal w.r.t. return address
-            // signing or support of v8.3a features
+            // signing, support of v8.3a features or support of pauth-lr
             if (outliningCandidatesSigningScopeConsensus(a, b) &&
                 outliningCandidatesSigningKeyConsensus(a, b) &&
-                outliningCandidatesV8_3OpsConsensus(a, b)) {
+                outliningCandidatesV8_3OpsConsensus(a, b) &&
+                outliningCandidatesPAuthLRConsensus(a, b)) {
               return false;
             }
             return true;
@@ -10818,9 +10933,11 @@ AArch64InstrInfo::getOutliningCandidateInfo(
       return true;
     }
 
-    // FIXME: Add handling for instructions like "add x0, sp, #8".
+    if (isSPAddSubImm(MI))
+      return adjustSPAddSubImm(MI, 16).has_value();
 
-    // We can't fix it up, so don't outline it.
+    // FIXME: Add handling for other SP-based address calculations that can be
+    // adjusted after outlining.
     return false;
   };
 
@@ -11027,6 +11144,8 @@ void AArch64InstrInfo::mergeOutliningCandidateAttributes(
     F.addFnAttr(CFn.getFnAttribute("ptrauth-returns"));
   if (CFn.hasFnAttribute("ptrauth-auth-traps"))
     F.addFnAttr(CFn.getFnAttribute("ptrauth-auth-traps"));
+  if (CFn.hasFnAttribute("branch-protection-pauth-lr"))
+    F.addFnAttr(CFn.getFnAttribute("branch-protection-pauth-lr"));
   // Since all candidates belong to the same module, just copy the
   // function-level attributes of an arbitrary function.
   if (CFn.hasFnAttribute("sign-return-address"))
@@ -11210,6 +11329,8 @@ AArch64InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
   case AArch64::PACIBSP:
   case AArch64::PACIASPPC:
   case AArch64::PACIBSPPC:
+  case AArch64::PACNBIASPPC:
+  case AArch64::PACNBIBSPPC:
   case AArch64::AUTIASP:
   case AArch64::AUTIBSP:
   case AArch64::AUTIASPPCi:
@@ -11225,6 +11346,7 @@ AArch64InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
   case AArch64::EMITBKEY:
   case AArch64::PAUTH_PROLOGUE:
   case AArch64::PAUTH_EPILOGUE:
+  case AArch64::PAUTH_EPILOGUE_ENTRY_SP:
     return outliner::InstrType::Illegal;
   }
 
@@ -11344,27 +11466,35 @@ void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
     bool OffsetIsScalable;
 
     // Is this a load or store with an immediate offset with SP as the base?
-    if (!MI.mayLoadOrStore() ||
-        !getMemOperandWithOffsetWidth(MI, Base, Offset, OffsetIsScalable,
-                                      Width) ||
-        (Base->isReg() && Base->getReg() != AArch64::SP))
+    if (MI.mayLoadOrStore() &&
+        getMemOperandWithOffsetWidth(MI, Base, Offset, OffsetIsScalable,
+                                     Width) &&
+        Base->isReg() && Base->getReg() == AArch64::SP) {
+      TypeSize Scale(0U, false);
+      int64_t Dummy1, Dummy2;
+
+      MachineOperand &StackOffsetOperand =
+          getMemOpBaseRegImmOfsOffsetOperand(MI);
+      assert(StackOffsetOperand.isImm() && "Stack offset wasn't immediate!");
+      getMemOpInfo(MI.getOpcode(), Scale, Width, Dummy1, Dummy2);
+      assert(Scale != 0 && "Unexpected opcode!");
+      assert(!OffsetIsScalable && "Expected offset to be a byte offset");
+
+      // We've pushed the return address to the stack, so add 16 to the offset.
+      // This is safe, since we already checked if it would overflow when we
+      // checked if this instruction was legal to outline.
+      int64_t NewImm = (Offset + 16) / (int64_t)Scale.getFixedValue();
+      StackOffsetOperand.setImm(NewImm);
       continue;
+    }
 
-    // It is, so we have to fix it up.
-    TypeSize Scale(0U, false);
-    int64_t Dummy1, Dummy2;
-
-    MachineOperand &StackOffsetOperand = getMemOpBaseRegImmOfsOffsetOperand(MI);
-    assert(StackOffsetOperand.isImm() && "Stack offset wasn't immediate!");
-    getMemOpInfo(MI.getOpcode(), Scale, Width, Dummy1, Dummy2);
-    assert(Scale != 0 && "Unexpected opcode!");
-    assert(!OffsetIsScalable && "Expected offset to be a byte offset");
-
-    // We've pushed the return address to the stack, so add 16 to the offset.
-    // This is safe, since we already checked if it would overflow when we
-    // checked if this instruction was legal to outline.
-    int64_t NewImm = (Offset + 16) / (int64_t)Scale.getFixedValue();
-    StackOffsetOperand.setImm(NewImm);
+    if (isSPAddSubImm(MI)) {
+      auto Enc = adjustSPAddSubImm(MI, 16);
+      assert(Enc && "Unencodable SP add/sub should not have been outlined");
+      MI.setDesc(get(Enc->Opcode));
+      MI.getOperand(2).setImm(Enc->Imm);
+      MI.getOperand(3).setImm(Enc->Shift);
+    }
   }
 }
 

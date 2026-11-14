@@ -26,11 +26,11 @@ namespace cir {
 struct MissingFeatures {
   // Address space related
   static bool addressSpace() { return false; }
+  static bool annotationConstantAddrSpace() { return false; }
   static bool spirvDefaultIsGenericAddrSpace() { return false; }
 
   // Unhandled global/linkage information.
   static bool opGlobalThreadLocal() { return false; }
-  static bool opGlobalWeakRef() { return false; }
   static bool opGlobalUnnamedAddr() { return false; }
   static bool opGlobalVisibility() { return false; }
   static bool opGlobalDLLImportExport() { return false; }
@@ -39,11 +39,9 @@ struct MissingFeatures {
   static bool opGlobalAnnotations() { return false; }
   static bool opGlobalCtorPriority() { return false; }
   static bool emitNVVMMetadata() { return false; }
-  static bool setDSOLocal() { return false; }
 
   static bool supportIFuncAttr() { return false; }
   static bool hiddenVisibility() { return false; }
-  static bool protectedVisibility() { return false; }
   static bool defaultVisibility() { return false; }
 
   // Load/store attributes
@@ -61,7 +59,6 @@ struct MissingFeatures {
   static bool opAllocaTLS() { return false; }
   static bool opAllocaOpenMPThreadPrivate() { return false; }
   static bool opAllocaEscapeByReference() { return false; }
-  static bool opAllocaAnnotations() { return false; }
   static bool opAllocaCaptureByInit() { return false; }
 
   // FuncOp handling
@@ -119,7 +116,6 @@ struct MissingFeatures {
   static bool noUniqueAddressLayout() { return false; }
 
   // Coroutines
-  static bool coroAwaitFullExprCleanups() { return false; }
   static bool coroOutsideFrameMD() { return false; }
   static bool coroGetRetObjManager() { return false; };
   static bool coroUnwindRegion() { return false; };
@@ -128,7 +124,6 @@ struct MissingFeatures {
   static bool cgmRelease() { return false; }
   static bool checkAliases() { return false; }
   static bool emitModuleLinkOptions() { return false; }
-  static bool shouldSkipAliasEmission() { return false; }
 
   // CXXABI
   static bool cxxABI() { return false; }
@@ -189,6 +184,7 @@ struct MissingFeatures {
   static bool asmGoto() { return false; }
   static bool asmLLVMAssume() { return false; }
   static bool asmMemoryEffects() { return false; }
+  static bool asmNoConvergent() { return false; }
   static bool asmUnwindClobber() { return false; }
   static bool asmVectorType() { return false; }
   static bool assignMemcpyizer() { return false; }
@@ -275,6 +271,7 @@ struct MissingFeatures {
   static bool openMP() { return false; }
   static bool openMPLastprivateConditional() { return false; }
   static bool openMPNontemporalDecl() { return false; }
+  static bool openMPRequiresUnifiedSharedMemory() { return false; }
   static bool sycl() { return false; }
   static bool opTBAA() { return false; }
   static bool peepholeProtection() { return false; }
@@ -306,7 +303,6 @@ struct MissingFeatures {
   static bool vlas() { return false; }
   static bool vtableEmitMetadata() { return false; }
   static bool vtableRelativeLayout() { return false; }
-  static bool weakRefReference() { return false; }
   static bool writebacks() { return false; }
   static bool msvcCXXPersonality() { return false; }
   static bool functionUsesSEHTry() { return false; }

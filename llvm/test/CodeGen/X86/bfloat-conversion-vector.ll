@@ -23,10 +23,10 @@ define <4 x bfloat> @fptrunc_v4f32(<4 x float> %x) nounwind {
 ; AVX-NEXT:    movq %rax, %rdx
 ; AVX-NEXT:    shrq $32, %rdx
 ; AVX-NEXT:    shrq $48, %rax
-; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm1
-; AVX-NEXT:    vpinsrw $0, %edx, %xmm0, %xmm2
+; AVX-NEXT:    vmovd %eax, %xmm1
+; AVX-NEXT:    vmovd %edx, %xmm2
 ; AVX-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
-; AVX-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm2
+; AVX-NEXT:    vmovd %ecx, %xmm2
 ; AVX-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; AVX-NEXT:    vzeroupper
@@ -53,10 +53,10 @@ define <4 x bfloat> @fptrunc_v4f32(<4 x float> %x) nounwind {
 ; AVX2-NEXT:    movq %rax, %rdx
 ; AVX2-NEXT:    shrq $32, %rdx
 ; AVX2-NEXT:    shrq $48, %rax
-; AVX2-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm1
-; AVX2-NEXT:    vpinsrw $0, %edx, %xmm0, %xmm2
+; AVX2-NEXT:    vmovd %eax, %xmm1
+; AVX2-NEXT:    vmovd %edx, %xmm2
 ; AVX2-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
-; AVX2-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm2
+; AVX2-NEXT:    vmovd %ecx, %xmm2
 ; AVX2-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; AVX2-NEXT:    vzeroupper
@@ -203,13 +203,7 @@ define <8 x bfloat> @insert_v8bf16(<8 x bfloat> %x, bfloat %y, i64 %idx) {
 ; AVX512F-O0-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; AVX512F-O0-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512F-O0-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
-; AVX512F-O0-NEXT:    vmovd %xmm0, %ecx
-; AVX512F-O0-NEXT:    btl $16, %ecx
-; AVX512F-O0-NEXT:    movl %ecx, %eax
-; AVX512F-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; AVX512F-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; AVX512F-O0-NEXT:    vucomiss %xmm0, %xmm0
-; AVX512F-O0-NEXT:    cmovpl %ecx, %eax
+; AVX512F-O0-NEXT:    vmovd %xmm0, %eax
 ; AVX512F-O0-NEXT:    shrl $16, %eax
 ; AVX512F-O0-NEXT:    movw %ax, %cx
 ; AVX512F-O0-NEXT:    movl %edi, %eax
@@ -243,30 +237,10 @@ define <8 x bfloat> @build_v8bf16(bfloat %x, bfloat %y) {
 ;
 ; AVX512F-O0-LABEL: build_v8bf16:
 ; AVX512F-O0:       # %bb.0:
-; AVX512F-O0-NEXT:    vmovss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; AVX512F-O0-NEXT:    vmovaps %xmm0, %xmm1
-; AVX512F-O0-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
-; AVX512F-O0-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; AVX512F-O0-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512F-O0-NEXT:    vpslld $16, %xmm1, %xmm1
-; AVX512F-O0-NEXT:    vmovd %xmm1, %eax
-; AVX512F-O0-NEXT:    btl $16, %eax
-; AVX512F-O0-NEXT:    movl %eax, %ecx
-; AVX512F-O0-NEXT:    adcl $32767, %ecx # imm = 0x7FFF
-; AVX512F-O0-NEXT:    orl $4194304, %eax # imm = 0x400000
-; AVX512F-O0-NEXT:    vucomiss %xmm1, %xmm1
-; AVX512F-O0-NEXT:    cmovpl %eax, %ecx
-; AVX512F-O0-NEXT:    vmovd %xmm0, %edx
-; AVX512F-O0-NEXT:    btl $16, %edx
-; AVX512F-O0-NEXT:    movl %edx, %eax
-; AVX512F-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; AVX512F-O0-NEXT:    orl $4194304, %edx # imm = 0x400000
-; AVX512F-O0-NEXT:    vucomiss %xmm0, %xmm0
-; AVX512F-O0-NEXT:    cmovpl %edx, %eax
-; AVX512F-O0-NEXT:    shrl $16, %eax
-; AVX512F-O0-NEXT:    vmovd %ecx, %xmm0
+; AVX512F-O0-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512F-O0-NEXT:    vpsrld $16, %xmm0, %xmm0
-; AVX512F-O0-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0
+; AVX512F-O0-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3,4,5,6,7]
 ; AVX512F-O0-NEXT:    retq
   %r0 = insertelement <8 x bfloat> poison, bfloat %x, i64 0
   %r1 = insertelement <8 x bfloat> %r0, bfloat %y, i64 1

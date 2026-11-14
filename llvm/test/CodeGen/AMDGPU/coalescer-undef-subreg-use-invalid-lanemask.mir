@@ -49,10 +49,10 @@ body:             |
 
   bb.2:
     undef %3.sub0:sgpr_128 = S_MOV_B32 0
-    %2:sgpr_128 = COPY killed %3
+    %2:sgpr_128 = COPY %3
 
   bb.3:
-    %4:sgpr_128 = COPY killed %2
+    %4:sgpr_128 = COPY %2
     %4.sub1:sgpr_128 = COPY undef %1.sub0
     S_ENDPGM 0, implicit %4
 

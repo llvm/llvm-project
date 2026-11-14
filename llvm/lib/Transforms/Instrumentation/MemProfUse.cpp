@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements the MemProfUsePass which reads memory profiling data
-// and uses it to add metadata to instructions to guide optimization.
+// and uses it to add metadata to instructions to guide profile-guided memory
+// optimization (MemPGO).
 //
 //===----------------------------------------------------------------------===//
 
@@ -46,7 +47,6 @@ using namespace llvm::memprof;
 
 namespace llvm {
 extern cl::opt<bool> NoPGOWarnMismatch;
-extern cl::opt<bool> AnnotateStringLiteralSectionPrefix;
 } // namespace llvm
 
 // Matching statistics
@@ -549,7 +549,7 @@ static void handleCallSite(const InstrumentationOptions &Opts, Instruction &I,
                            OptimizationRemarkEmitter &ORE) {
   auto &Ctx = M.getContext();
   // Set of Callee GUIDs to attach to indirect calls. We accumulate all of them
-  // to support cases where the instuction's inlined frames match multiple call
+  // to support cases where the instruction's inlined frames match multiple call
   // site entries, which can happen if the profile was collected from a binary
   // where this instruction was eventually inlined into multiple callers.
   SetVector<GlobalValue::GUID> CalleeGuids;
@@ -973,7 +973,7 @@ bool MemProfUsePass::annotateGlobalVariables(
     SymbolHandleRef Handle = SymbolHandleRef(Name);
     // Skip string literals as their mangled names don't stay stable across
     // binary releases.
-    if (!AnnotateStringLiteralSectionPrefix)
+    if (!shouldAnnotateStringLiteralSectionPrefix(GVar.getContext()))
       if (Name.starts_with(".str"))
         continue;
 

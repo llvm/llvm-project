@@ -45,7 +45,7 @@ UndefinedArraySubscriptChecker::checkPreStmt(const ArraySubscriptExpr *A,
     if (Ctor->isDefaulted())
       return;
 
-  ExplodedNode *N = C.generateErrorNode();
+  ExplodedNode *N = C.addSink();
   if (!N)
     return;
   // Generate a report for this bug.

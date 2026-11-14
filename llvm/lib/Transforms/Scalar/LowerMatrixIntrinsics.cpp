@@ -1170,6 +1170,7 @@ public:
       Value *Op2;
       MatrixTy Result;
       IRBuilder<> Builder(Inst);
+      Builder.disableGEPCanonicalization();
       if (auto *BinOp = dyn_cast<BinaryOperator>(Inst))
         Result = VisitBinaryOperator(BinOp, SI, Builder);
       else if (auto *Cast = dyn_cast<CastInst>(Inst))
@@ -1718,9 +1719,7 @@ public:
       Result = Builder.CreateAddReduce(Mul);
     else {
       Result = Builder.CreateFAddReduce(
-          ConstantFP::get(
-              cast<FixedVectorType>(LHS->getType())->getElementType(), 0.0),
-          Mul);
+          ConstantFP::getNegativeZero(ElementType), Mul);
       cast<Instruction>(Result)->setFastMathFlags(FMF);
     }
 
@@ -1855,15 +1854,19 @@ public:
     if (AA->isNoAlias(LoadLoc, StoreLoc))
       return {Load->getPointerOperand(), nullptr};
 
+    // Use an array type for the alloca, to avoid potentially huge alignment
+    // requirements for large vector types.
+    auto *VT = cast<FixedVectorType>(Load->getType());
+    auto *ArrayTy = ArrayType::get(VT->getElementType(), VT->getNumElements());
+    IRBuilder<> AllocaBuilder(&Func.getEntryBlock().front());
+    AllocaInst *Alloca =
+        AllocaBuilder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
+    // The fused loads use the original load's alignment.
+    Alloca->setAlignment(std::max(Alloca->getAlign(), Load->getAlign()));
+
     // If the pointers are in different address spaces, we cannot compare them
     // at runtime. Conservatively copy the load operand to a new buffer.
-    IRBuilder<> AllocaBuilder(&Func.getEntryBlock().front());
     if (Load->getPointerAddressSpace() != Store->getPointerAddressSpace()) {
-      auto *VT = cast<FixedVectorType>(Load->getType());
-      auto *ArrayTy =
-          ArrayType::get(VT->getElementType(), VT->getNumElements());
-      AllocaInst *Alloca =
-          AllocaBuilder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
       IRBuilder<> Builder(MatMul);
       Builder.CreateLifetimeStart(Alloca);
       Builder.CreateMemCpy(Alloca, Alloca->getAlign(),
@@ -1900,11 +1903,9 @@ public:
     IRBuilder<> Builder(MatMul);
     Check0->getTerminator()->eraseFromParent();
     Builder.SetInsertPoint(Check0);
-    Type *AddrTy = DL.getAddressType(Store->getPointerOperand()->getType());
     Value *StoreBegin = Store->getPointerOperand();
-    Value *StoreEnd = Builder.CreatePtrAdd(
-        StoreBegin, ConstantInt::get(AddrTy, StoreLoc.Size.getValue()),
-        "store.end",
+    Value *StoreEnd = Builder.CreatePtrAddWithUnsignedOffset(
+        StoreBegin, StoreLoc.Size.getValue(), "store.end",
         GEPNoWrapFlags::inBounds() | GEPNoWrapFlags::noUnsignedWrap());
     Value *LoadBegin = Load->getPointerOperand();
     CondBrInst *BR1 = Builder.CreateCondBr(
@@ -1916,18 +1917,10 @@ public:
     // overlap.
     Check1->getTerminator()->eraseFromParent();
     Builder.SetInsertPoint(Check1->begin());
-
-    auto *VT = cast<FixedVectorType>(Load->getType());
-    // Use an array type for the alloca, to avoid potentially huge alignment
-    // requirements for large vector types.
-    auto *ArrayTy = ArrayType::get(VT->getElementType(), VT->getNumElements());
-    AllocaInst *Alloca =
-        AllocaBuilder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
     Builder.CreateLifetimeStart(Alloca);
 
-    Value *LoadEnd = Builder.CreatePtrAdd(
-        LoadBegin, ConstantInt::get(AddrTy, LoadLoc.Size.getValue()),
-        "load.end",
+    Value *LoadEnd = Builder.CreatePtrAddWithUnsignedOffset(
+        LoadBegin, LoadLoc.Size.getValue(), "load.end",
         GEPNoWrapFlags::inBounds() | GEPNoWrapFlags::noUnsignedWrap());
     CondBrInst *BR2 = Builder.CreateCondBr(
         Builder.CreateICmpULT(StoreBegin, LoadEnd), Copy, Fusion);
@@ -2009,6 +2002,7 @@ public:
     BasicBlock *End =
         SplitBlock(InsertI->getParent(), InsertI, DT, LI, nullptr, "continue");
     IRBuilder<> Builder(MatMul);
+    Builder.disableGEPCanonicalization();
     BasicBlock *InnerBody = TI.CreateTiledLoops(Start, End, Builder, DTU, *LI);
 
     Type *TileVecTy = FixedVectorType::get(MatMul->getType()->getScalarType(),
@@ -2016,12 +2010,14 @@ public:
     MatrixTy TileResult(isColumnMajor());
     // Insert in the inner loop header.
     Builder.SetInsertPoint(TI.KLoop.Header->getTerminator());
+    Constant *Init = EltType->isFloatingPointTy()
+                         ? ConstantFP::getNegativeZero(TileVecTy)
+                         : Constant::getNullValue(TileVecTy);
     // Create PHI nodes for the result columns to accumulate across iterations.
     SmallVector<PHINode *, 4> ColumnPhis;
     for (unsigned I = 0; I < Opts.fuse_matrix_tile_size; I++) {
       auto *Phi = Builder.CreatePHI(TileVecTy, 2, "result.vec." + Twine(I));
-      Phi->addIncoming(ConstantAggregateZero::get(TileVecTy),
-                       TI.RowLoop.Header->getSingleSuccessor());
+      Phi->addIncoming(Init, TI.RowLoop.Header->getSingleSuccessor());
       TileResult.addVector(Phi);
       ColumnPhis.push_back(Phi);
     }
@@ -2089,6 +2085,7 @@ public:
       createTiledLoops(MatMul, APtr, LShape, BPtr, RShape, Store);
     else {
       IRBuilder<> Builder(Store);
+      Builder.disableGEPCanonicalization();
       for (unsigned J = 0; J < C; J += Opts.fuse_matrix_tile_size)
         for (unsigned I = 0; I < R; I += Opts.fuse_matrix_tile_size) {
           const unsigned TileR = std::min(R - I, Opts.fuse_matrix_tile_size);

@@ -106,8 +106,6 @@
 ---
 name:            insert_after_vdup_1
 alignment:       4
-tracksRegLiveness: true
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -245,8 +243,6 @@ body:             |
 ---
 name:            insert_after_vdup_2
 alignment:       4
-tracksRegLiveness: true
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }

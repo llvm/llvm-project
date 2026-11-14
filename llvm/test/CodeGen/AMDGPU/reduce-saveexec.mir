@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu6.00 -verify-machineinstrs -run-pass si-optimize-exec-masking %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgpu6.00 -run-pass si-optimize-exec-masking %s -o - | FileCheck -check-prefix=GCN %s
 
 ---
 # GCN-LABEL: name: reduce_and_saveexec
@@ -144,4 +144,3 @@ body:             |
     $exec = COPY killed $sgpr0_sgpr1
     S_ENDPGM 0
 ...
----

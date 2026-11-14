@@ -159,8 +159,38 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    (void)std::inclusive_scan(
+        pol, non_fwd, non_fwd, it);                  // expected-error@*:* {{static assertion failed: inclusive_scan}}
+    (void)std::inclusive_scan(pol, it, it, non_fwd); // expected-error@*:* {{static assertion failed: inclusive_scan}}
+    (void)std::inclusive_scan(
+        pol, non_fwd, non_fwd, it, func); // expected-error@*:* {{static assertion failed: inclusive_scan}}
+    (void)std::inclusive_scan(
+        pol, it, it, non_fwd, func); // expected-error@*:* {{static assertion failed: inclusive_scan}}
+    (void)std::inclusive_scan(
+        pol, non_fwd, non_fwd, it, func, val); // expected-error@*:* {{static assertion failed: inclusive_scan}}
+    (void)std::inclusive_scan(
+        pol, it, it, non_fwd, func, val); // expected-error@*:* {{static assertion failed: inclusive_scan}}
+  }
+
+  {
     (void)std::is_partitioned(
         pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: is_partitioned}}
+  }
+
+  {
+    (void)std::partition(pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: partition}}
+    (void)std::stable_partition(
+        pol, non_bidir, non_bidir, pred); // expected-error@*:* {{static assertion failed: stable_partition}}
+    (void)std::partition_copy(
+        pol, non_fwd, non_fwd, it, it, pred); // expected-error@*:* {{static assertion failed: partition_copy}}
+    (void)std::partition_copy(
+        pol, it, it, non_fwd, it, pred); // expected-error@*:* {{static assertion failed: partition_copy}}
+    (void)std::partition_copy(
+        pol, it, it, it, non_fwd, pred); // expected-error@*:* {{static assertion failed: partition_copy}}
+    (void)std::partition_copy(
+        pol, it, it, non_output, it, pred); // expected-error@*:* {{static assertion failed: partition_copy}}
+    (void)std::partition_copy(
+        pol, it, it, it, non_output, pred); // expected-error@*:* {{static assertion failed: partition_copy}}
   }
 
   {
@@ -364,6 +394,39 @@ void f(non_forward_iterator non_fwd,
     (void)std::transform(pol, it, it, it, non_fwd, func);  // expected-error@*:* {{static assertion failed: transform}}
     (void)std::transform(
         pol, it, it, it, non_output, func); // expected-error@*:* {{static assertion failed: transform}}
+  }
+
+  {
+    (void)std::transform_inclusive_scan(
+        pol,
+        non_fwd,
+        non_fwd,
+        it,
+        func,
+        func); // expected-error@*:* {{static assertion failed: transform_inclusive_scan}}
+    (void)std::transform_inclusive_scan(
+        pol,
+        it,
+        it,
+        non_fwd,
+        func,
+        func); // expected-error@*:* {{static assertion failed: transform_inclusive_scan}}
+    (void)std::transform_inclusive_scan(
+        pol,
+        non_fwd,
+        non_fwd,
+        it,
+        func,
+        func,
+        val); // expected-error@*:* {{static assertion failed: transform_inclusive_scan}}
+    (void)std::transform_inclusive_scan(
+        pol,
+        it,
+        it,
+        non_fwd,
+        func,
+        func,
+        val); // expected-error@*:* {{static assertion failed: transform_inclusive_scan}}
   }
 
   {

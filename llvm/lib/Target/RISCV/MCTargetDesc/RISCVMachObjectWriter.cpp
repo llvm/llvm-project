@@ -266,7 +266,7 @@ void RISCVMachObjectWriter::recordRelocation(
 
   // Only .word and %pcrel_lo instructions inline the pc-relative
   // offset in the instruction, but only if such offset fits the
-  // 12-bit immediate of an addi or an lw instrucion.
+  // 12-bit immediate of an addi or an lw instruction.
   if ((Type != MachO::RISCV_RELOC_UNSIGNED && Type != MachO::RISCV_RELOC_LO12 &&
        Type != MachO::RISCV_RELOC_GOT_LO12) ||
       RequireExtraAddend)

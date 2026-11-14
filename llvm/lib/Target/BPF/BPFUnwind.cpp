@@ -11,25 +11,24 @@
 //   ret                           exit
 //   invoke f() unwind pad         call f; unwind_goto pad
 //   resume                        r0 = 0; unwind_exit
-//   call _Unwind_RaiseException   r0 = 0; unwind_exit
-//   invoke _Unwind_RaiseException goto pad
+//   call llvm.bpf.unwind.exit     r0 = 0; unwind_exit
+//   invoke llvm.bpf.unwind.exit   goto pad
 // unwind_goto is taken when the callee left with unwind_exit. No register says
 // so: how one insn tells the other is up to the JIT. Otherwise unwind_exit is
 // exit, hence r0, and r2 as well in a function that returns more than 8 bytes.
 // A pad expects the exception object in r0. There is none, so a pad that looks
 // at it starts with r0 = 0.
 //
-// _Unwind_RaiseException() is how a language runtime starts an unwind with the
-// Itanium ABI, e.g. at the end of a panic handler. To start one and to carry
-// one on is the same thing here: leave the frame with unwind_exit, after its
-// own pad if it has one. It cannot fail, so it does not return.
+// There is no unwinder library. A runtime starts an unwind by calling
+// llvm.bpf.unwind.exit, which leaves the frame with unwind_exit. resume, which
+// continues an unwind into the caller, does the same, so BPFUnwindPrepare
+// replaces it with the intrinsic.
 //
 // There are no tables and nothing for a loader to do.
 //
 //===----------------------------------------------------------------------===//
 
 #include "BPF.h"
-#include "BPFInstrInfo.h"
 #include "BPFSubtarget.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SetVector.h"
@@ -40,14 +39,11 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
-
-/// On other targets it is a function of the unwinder library, which is why
-/// nothing else in LLVM knows the name.
-static constexpr StringLiteral UnwindRaise = "_Unwind_RaiseException";
 
 /// Not being nounwind is the default in IR, so that alone is not enough:
 /// uwtable is how a frontend asks for unwinding through a function to work.
@@ -57,15 +53,20 @@ static bool canUnwind(const Function &F) {
 
 namespace {
 
-/// Make every call that may unwind an invoke: it ends its block and has a pad.
+/// Turn resume into llvm.bpf.unwind.exit, and calls that may unwind into
+/// invokes.
 struct BPFUnwindPrepare : public ModulePass {
   static char ID;
   BPFUnwindPrepare() : ModulePass(ID) {}
   StringRef getPassName() const override { return "BPF Unwind Prepare"; }
 
-  static bool isRaise(const CallBase &CB) {
-    const auto *F = dyn_cast<Function>(CB.getCalledOperand());
-    return F && F->isDeclaration() && F->getName() == UnwindRaise;
+  Function *UnwindExit = nullptr;
+
+  Function *getUnwindExit(Module &M) {
+    if (!UnwindExit)
+      UnwindExit =
+          Intrinsic::getOrInsertDeclaration(&M, Intrinsic::bpf_unwind_exit);
+    return UnwindExit;
   }
 
   static bool mayUnwind(const Instruction &I) {
@@ -76,33 +77,31 @@ struct BPFUnwindPrepare : public ModulePass {
 
   bool runOnModule(Module &M) override {
     bool Changed = false;
+    LLVMContext &C = M.getContext();
+    UnwindExit = nullptr;
 
     for (Function &F : M) {
-      if (F.isDeclaration() || !canUnwind(F))
+      if (F.isDeclaration())
         continue;
 
-      LLVMContext &C = M.getContext();
-      SmallVector<CallInst *, 8> Calls;
-      for (Instruction &I : instructions(F)) {
-        auto *CB = dyn_cast<CallBase>(&I);
-        if (CB && isRaise(*CB)) {
-          // Nobody looks at the exception object.
-          for (Use &Arg : CB->args())
-            Arg.set(PoisonValue::get(Arg->getType()));
-          CB->setDoesNotReturn();
-          // Without a pad it leaves the frame.
-          if (isa<CallInst>(CB))
-            CB->setDoesNotThrow();
-          Changed = true;
-        } else if (isa<CallInst>(I) && mayUnwind(I)) {
-          Calls.push_back(cast<CallInst>(&I));
-        } else if (auto *RI = dyn_cast<ResumeInst>(&I)) {
-          // DwarfEHPrepare passes it to _Unwind_Resume(). Don't keep it alive
-          // over the pad for that.
-          RI->setOperand(0, PoisonValue::get(RI->getValue()->getType()));
+      // Replace resume even if F cannot unwind, so BPFUnwindLower reports it.
+      for (BasicBlock &BB : F) {
+        if (auto *RI = dyn_cast<ResumeInst>(BB.getTerminator())) {
+          CallInst::Create(getUnwindExit(M), "", RI->getIterator())
+              ->setDebugLoc(RI->getDebugLoc());
+          changeToUnreachable(RI);
           Changed = true;
         }
       }
+
+      if (!canUnwind(F))
+        continue;
+      SmallVector<CallInst *, 8> Calls;
+      for (Instruction &I : instructions(F)) {
+        if (isa<CallInst>(I) && mayUnwind(I))
+          Calls.push_back(cast<CallInst>(&I));
+      }
+
       if (Calls.empty())
         continue;
 
@@ -116,7 +115,8 @@ struct BPFUnwindPrepare : public ModulePass {
       LandingPadInst *LP = B.CreateLandingPad(
           StructType::get(PointerType::getUnqual(C), Type::getInt32Ty(C)), 0);
       LP->setCleanup(true);
-      B.CreateResume(PoisonValue::get(LP->getType()));
+      B.CreateCall(getUnwindExit(M));
+      B.CreateUnreachable();
       for (CallInst *CI : Calls)
         changeToInvokeAndSplitBasicBlock(CI, Pad);
       Changed = true;
@@ -125,24 +125,11 @@ struct BPFUnwindPrepare : public ModulePass {
   }
 };
 
-/// After register allocation, which took call -> pad for an EH edge and so
-/// keeps only r6-r9 and the stack alive over it, turn the edge into a branch.
+/// After register allocation, turn edges to landing pads into branches.
 struct BPFUnwindLower : public MachineFunctionPass {
   static char ID;
   BPFUnwindLower() : MachineFunctionPass(ID) {}
   StringRef getPassName() const override { return "BPF Unwind Lower"; }
-
-  /// What DwarfEHPrepare made of 'resume'.
-  StringRef UnwindResume;
-
-  bool leavesFrame(const MachineInstr &MI) const {
-    const MachineOperand &MO = MI.getOperand(0);
-    // A program that defines them gets what it defines.
-    if (!MO.isGlobal() || !MO.getGlobal()->isDeclaration())
-      return false;
-    StringRef Name = MO.getGlobal()->getName();
-    return Name == UnwindRaise || Name == UnwindResume;
-  }
 
   /// Nothing after \p MI in its block runs: \p Succ, if any, is what follows.
   static void endBlockAfter(MachineInstr &MI, MachineBasicBlock *Succ) {
@@ -177,45 +164,63 @@ struct BPFUnwindLower : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &MF) override {
     const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
     const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-    UnwindResume = MF.getSubtarget().getTargetLowering()->getLibcallName(
-        RTLIB::UNWIND_RESUME);
     DenseMap<MCSymbol *, MachineBasicBlock *> Begin;
     SmallVector<std::pair<MachineInstr *, MachineBasicBlock *>, 8> Sites;
     SmallVector<MachineInstr *, 8> Labels, Resumes;
     SmallSetVector<MachineBasicBlock *, 8> Pads;
 
-    if (const char *Msg = unsupported(MF)) {
+    const char *Msg = unsupported(MF);
+    if (Msg) {
       const Function &F = MF.getFunction();
       F.getContext().diagnose(DiagnosticInfoUnsupported(F, Msg));
-      return false;
     }
 
     for (const LandingPadInfo &LP : MF.getLandingPads())
       for (MCSymbol *Sym : LP.BeginLabels)
         Begin[Sym] = LP.LandingPadBlock;
 
+    // The call is not always in the block of the label: an argument that is
+    // a select is computed after the label and takes blocks of its own.
+    SmallPtrSet<MachineInstr *, 8> Invokes;
     for (MachineBasicBlock &MBB : MF) {
-      MachineBasicBlock *Pad = nullptr;
-      for (MachineInstr &MI : MBB) {
-        if (MI.isEHLabel()) {
-          Pad = Begin.lookup(MI.getOperand(0).getMCSymbol());
-          Labels.push_back(&MI);
-        } else if (MI.isCall() && Pad) {
-          Sites.push_back({&MI, Pad});
-        } else if (MI.isCall() && leavesFrame(MI)) {
-          Resumes.push_back(&MI);
+      for (MachineInstr &Label : MBB) {
+        if (!Label.isEHLabel())
+          continue;
+        Labels.push_back(&Label);
+        MachineBasicBlock *Pad =
+            Begin.lookup(Label.getOperand(0).getMCSymbol());
+        if (!Pad)
+          continue;
+        SmallVector<std::pair<MachineBasicBlock *, MachineBasicBlock::iterator>,
+                    4>
+            Work{{&MBB, std::next(Label.getIterator())}};
+        SmallPtrSet<MachineBasicBlock *, 4> Seen;
+        while (!Work.empty()) {
+          auto [Cur, I] = Work.pop_back_val();
+          // The next label ends the range.
+          for (; I != Cur->end() && !I->isEHLabel(); ++I)
+            if (I->isCall() && Invokes.insert(&*I).second)
+              Sites.push_back({&*I, Pad});
+          if (I != Cur->end())
+            continue;
+          for (MachineBasicBlock *Succ : Cur->successors())
+            if (!Succ->isEHPad() && Seen.insert(Succ).second)
+              Work.push_back({Succ, Succ->begin()});
         }
       }
     }
+    for (MachineBasicBlock &MBB : MF)
+      for (MachineInstr &MI : MBB)
+        if (MI.getOpcode() == BPF::UNWIND_EXIT_PSEUDO && !Invokes.count(&MI))
+          Resumes.push_back(&MI);
     if (Labels.empty() && Resumes.empty())
       return false;
     // There is no unwind_goto after the calls of it.
-    if (!Resumes.empty() && !canUnwind(MF.getFunction())) {
+    if (!Msg && !Resumes.empty() && !canUnwind(MF.getFunction())) {
       const Function &F = MF.getFunction();
       F.getContext().diagnose(DiagnosticInfoUnsupported(
           F, "BPF cannot unwind out of a function that is nounwind or has no "
              "uwtable"));
-      return false;
     }
     for (MachineInstr *MI : Labels)
       MI->eraseFromParent();
@@ -227,7 +232,7 @@ struct BPFUnwindLower : public MachineFunctionPass {
           dyn_cast_or_null<InvokeInst>(MBB->getBasicBlock()->getTerminator());
 
       Pads.insert(Pad);
-      if (leavesFrame(*Call)) {
+      if (Call->getOpcode() == BPF::UNWIND_EXIT_PSEUDO) {
         endBlockAfter(*Call, Pad);
         BuildMI(MBB, DL, TII.get(BPF::JMP)).addMBB(Pad);
         Call->eraseFromParent();
@@ -308,6 +313,11 @@ struct BPFUnwindLower : public MachineFunctionPass {
 
 char BPFUnwindPrepare::ID = 0;
 char BPFUnwindLower::ID = 0;
+
+INITIALIZE_PASS(BPFUnwindPrepare, "bpf-unwind-prepare", "BPF Unwind Prepare",
+                false, false)
+INITIALIZE_PASS(BPFUnwindLower, "bpf-unwind-lower", "BPF Unwind Lower", false,
+                false)
 
 ModulePass *llvm::createBPFUnwindPreparePass() {
   return new BPFUnwindPrepare();

@@ -1,7 +1,7 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=50
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=50 -Werror -Wno-experimental-option
 ! OpenMP Version 6.0
 ! workdistribute Construct
-! Unsuported OpenMP version
+! Unsupported OpenMP version
 
 subroutine teams_workdistribute()
   use iso_fortran_env

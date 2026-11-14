@@ -90,3 +90,33 @@ func.func @_QPtest_shape_of_user(%arg0: !fir.ref<!fir.array<10xf32>> {fir.bindc_
 // CHECK:         fir.save_result %[[CALL]] to %{{.*}}#0(%[[SHAPE]])
 // CHECK-NOT:     hlfir.eval_in_mem
 // CHECK-NOT:     hlfir.shape_of
+
+// A sibling internal call may read the captured assignment destination.
+// Keep a separate result buffer until the call has finished.
+fir.global internal @_QFcapturedEa : !fir.array<3xi32>
+
+func.func private @_QFcapturedPacc() attributes {fir.host_symbol = @_QPcaptured} {
+  %c3 = arith.constant 3 : index
+  %shape = fir.shape %c3 : (index) -> !fir.shape<1>
+  %addr = fir.address_of(@_QFcapturedEa) : !fir.ref<!fir.array<3xi32>>
+  %a:2 = hlfir.declare %addr(%shape) uniq_name("_QFcapturedEa") fortran_attrs<internal_assoc> : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi32>>, !fir.ref<!fir.array<3xi32>>)
+  %expr = hlfir.eval_in_mem shape %shape : (!fir.shape<1>) -> !hlfir.expr<3xi32> {
+  ^bb0(%result: !fir.ref<!fir.array<3xi32>>):
+    %value = fir.call @_QFcapturedPg() : () -> !fir.array<3xi32>
+    fir.save_result %value to %result(%shape) : !fir.array<3xi32>, !fir.ref<!fir.array<3xi32>>, !fir.shape<1>
+  }
+  hlfir.assign %expr to %a#0 : !hlfir.expr<3xi32>, !fir.ref<!fir.array<3xi32>>
+  hlfir.destroy %expr : !hlfir.expr<3xi32>
+  return
+}
+func.func private @_QFcapturedPg() -> !fir.array<3xi32> attributes {fir.host_symbol = @_QPcaptured}
+
+// CHECK-LABEL: func.func private @_QFcapturedPacc()
+// CHECK-DAG: %[[A:[^ ]+]]:2 = hlfir.declare {{.*}}uniq_name("_QFcapturedEa") fortran_attrs<internal_assoc>
+// CHECK-DAG: %[[TMP:[^ ]+]] = fir.alloca !fir.array<3xi32>
+// CHECK: %[[T:[^ ]+]]:2 = hlfir.declare %[[TMP]]
+// CHECK: %[[RESULT:[^ ]+]] = fir.call @_QFcapturedPg()
+// CHECK: fir.save_result %[[RESULT]] to %[[T]]#1
+// CHECK: %[[EXPR:[^ ]+]] = hlfir.as_expr %[[T]]#0
+// CHECK: hlfir.assign %[[EXPR]] to %[[A]]#0
+// CHECK: return

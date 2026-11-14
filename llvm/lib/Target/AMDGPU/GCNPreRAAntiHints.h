@@ -10,7 +10,6 @@
 #define LLVM_LIB_TARGET_AMDGPU_GCNPRERAANTIHINTS_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 
@@ -111,10 +110,9 @@ struct HazardSide {
 };
 
 // Length of a hazard window in wait states.
-// Precedence: OptWindowLength --> Fn --> WindowLength.
+// Precedence: Fn --> WindowLength.
 struct WindowSpec {
   unsigned WindowLength = 0;
-  const cl::opt<unsigned> *OptWindowLength = nullptr;
   unsigned (*Fn)(const MachineInstr &Producer, HazardClassMask ConsumerClass,
                  const HazardContext &Ctx) = nullptr;
 };

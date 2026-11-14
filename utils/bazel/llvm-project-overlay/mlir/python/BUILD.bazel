@@ -1659,6 +1659,35 @@ filegroup(
 # XEGPU dialect.
 ##---------------------------------------------------------------------------##
 
+td_library(
+    name = "XeGPUOpsPyTdFiles",
+    srcs = ["mlir/dialects/XeGPUOps.td"],
+    deps = [
+        "//mlir:ArithOpsTdFiles",
+        "//mlir:OpBaseTdFiles",
+        "//mlir:XeGPUTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "XeGPUOpsPyGen",
+    tbl_outs = {"mlir/dialects/_xegpu_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=xegpu",
+    ]},
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/XeGPUOps.td",
+    deps = [":XeGPUOpsPyTdFiles"],
+)
+
+filegroup(
+    name = "XeGPUOpsPyFiles",
+    srcs = [
+        "mlir/dialects/xegpu.py",
+        ":XeGPUOpsPyGen",
+    ],
+)
+
 gentbl_filegroup(
     name = "XeGPUTransformOpsPyGen",
     tbl_outs = {"mlir/dialects/_xegpu_transform_ops_gen.py": [

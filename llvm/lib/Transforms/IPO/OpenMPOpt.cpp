@@ -816,13 +816,10 @@ struct KernelInfoState : AbstractState {
       indicatePessimisticFixpoint();
   }
 
-  /// See AbstractState::isValidState(...)
   bool isValidState() const override { return true; }
 
-  /// See AbstractState::isAtFixpoint(...)
   bool isAtFixpoint() const override { return IsAtFixpoint; }
 
-  /// See AbstractState::indicatePessimisticFixpoint(...)
   ChangeStatus indicatePessimisticFixpoint() override {
     IsAtFixpoint = true;
     ParallelLevels.indicatePessimisticFixpoint();
@@ -834,7 +831,6 @@ struct KernelInfoState : AbstractState {
     return ChangeStatus::CHANGED;
   }
 
-  /// See AbstractState::indicateOptimisticFixpoint(...)
   ChangeStatus indicateOptimisticFixpoint() override {
     IsAtFixpoint = true;
     ParallelLevels.indicateOptimisticFixpoint();
@@ -2438,10 +2434,8 @@ struct AAICVTracker : public StateWrapper<BooleanState, AbstractAttribute> {
   // this array will only grow with time.
   InternalControlVar TrackableICVs[1] = {ICV_nthreads};
 
-  /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAICVTracker"; }
 
-  /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is AAICVTracker
@@ -2879,7 +2873,6 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
            " executed by initial thread / aligned";
   }
 
-  /// See AbstractAttribute::trackStatistics().
   void trackStatistics() const override {}
 
   ChangeStatus manifest(Attributor &A) override {
@@ -2982,7 +2975,6 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
   /// Accumulate information for the entry block in \p EntryBBED.
   bool handleCallees(Attributor &A, ExecutionDomainTy &EntryBBED);
 
-  /// See AbstractAttribute::updateImpl.
   ChangeStatus updateImpl(Attributor &A) override;
 
   /// Query interface, see AAExecutionDomain
@@ -3551,10 +3543,8 @@ struct AAHeapToShared : public StateWrapper<BooleanState, AbstractAttribute> {
   /// callsite to a free operation to be removed.
   virtual bool isAssumedHeapToSharedRemovedFree(CallBase &CB) const = 0;
 
-  /// See AbstractAttribute::getName().
   StringRef getName() const override { return "AAHeapToShared"; }
 
-  /// See AbstractAttribute::getIdAddr().
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
@@ -3576,7 +3566,6 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
            " malloc calls eligible.";
   }
 
-  /// See AbstractAttribute::trackStatistics().
   void trackStatistics() const override {}
 
   /// This functions finds free calls that will be removed by the
@@ -3777,7 +3766,6 @@ struct AAKernelInfo : public StateWrapper<KernelInfoState, AbstractAttribute> {
   /// Statistics are tracked as part of manifest for now.
   void trackStatistics() const override {}
 
-  /// See AbstractAttribute::getAsStr()
   const std::string getAsStr(Attributor *) const override {
     if (!isValidState())
       return "<invalid>";
@@ -3807,10 +3795,8 @@ struct AAKernelInfo : public StateWrapper<KernelInfoState, AbstractAttribute> {
   /// Create an abstract attribute biew for the position \p IRP.
   static AAKernelInfo &createForPosition(const IRPosition &IRP, Attributor &A);
 
-  /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAKernelInfo"; }
 
-  /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is AAKernelInfo
@@ -3890,7 +3876,6 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
 #undef KERNEL_ENVIRONMENT_CONFIGURATION_SETTER
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     // This is a high-level transform that might change the constant arguments
     // of the init and dinit calls. We need to tell the Attributor about this
@@ -5089,7 +5074,6 @@ struct AAKernelInfoCallSite : AAKernelInfo {
   AAKernelInfoCallSite(const IRPosition &IRP, Attributor &A)
       : AAKernelInfo(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     AAKernelInfo::initialize(A);
 
@@ -5443,10 +5427,8 @@ struct AAFoldRuntimeCall
   static AAFoldRuntimeCall &createForPosition(const IRPosition &IRP,
                                               Attributor &A);
 
-  /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAFoldRuntimeCall"; }
 
-  /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
@@ -5462,7 +5444,6 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
   AAFoldRuntimeCallCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : AAFoldRuntimeCall(IRP, A) {}
 
-  /// See AbstractAttribute::getAsStr()
   const std::string getAsStr(Attributor *) const override {
     if (!isValidState())
       return "<invalid>";
@@ -6119,8 +6100,7 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   // Optionally inline device functions for potentially better performance.
   if (AlwaysInlineDeviceFunctions && isOpenMPDevice(M))
     for (Function &F : M)
-      if (!F.isDeclaration() && !Kernels.contains(&F) &&
-          !F.hasFnAttribute(Attribute::NoInline))
+      if (!F.isDeclaration() && !Kernels.contains(&F) && !F.isNoInline())
         F.addFnAttr(Attribute::AlwaysInline);
 
   if (PrintModuleAfterOptimizations)

@@ -325,7 +325,7 @@ let isTerminator = 1, isBarrier = 1, SchedRW = [WriteBranch] in {
 let isBranch = 1, isIndirectBranch = 1 in {
 def S_SETPC_B64 : SOP1_1  <"s_setpc_b64">;
 
-let SubtargetPredicate = HasAddPC64Inst in
+let SubtargetPredicate = HasSAddPCI64Inst in
 def S_ADD_PC_I64 : SOP1_1_REGIMM64 <"s_add_pc_i64">;
 } // End isBranch = 1, isIndirectBranch = 1
 
@@ -997,6 +997,22 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
     // isCommutable = 1, AddedComplexity = 20
 } // End SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
   // Uses = [MODE], SchedRW = [WriteSFPU]
+
+def uniform_unscaled_div_fmas : PatFrag<
+  (ops node:$src0, node:$src1, node:$src2, node:$scale),
+  (unscaled_div_fmas node:$src0, node:$src1, node:$src2, node:$scale),
+  [{ return !N->isDivergent(); }]> {
+  // Uniformity is captured by the result register bank constraint in GlobalISel.
+  let GISelPredicateCode = [{ return true; }];
+}
+
+// Outrank the vector patterns, which include complex operand matchers.
+let SubtargetPredicate = HasSALUFloatInsts, AddedComplexity = 31 in
+def : GCNPat<
+  (f32 (uniform_unscaled_div_fmas SSrc_f32:$src0, SSrc_f32:$src1,
+                                 SReg_32:$src2, (i1 srcvalue))),
+  (S_FMAC_F32 $src0, $src1, $src2)
+>;
 
 // On GFX12 MIN/MAX instructions do not read MODE register.
 let SubtargetPredicate = isGFX12Plus, mayRaiseFPException = 1, isCommutable = 1,
@@ -1710,6 +1726,7 @@ let SubtargetPredicate = isGFX12Plus in {
   def S_WAIT_STORECNT_soft : SOPP_Pseudo <"s_soft_wait_storecnt", (ins s16imm:$simm16), "$simm16">;
 let OtherPredicates = [HasImageInsts] in {
   def S_WAIT_SAMPLECNT_soft : SOPP_Pseudo <"s_soft_wait_samplecnt", (ins s16imm:$simm16), "$simm16">;
+  let OtherPredicates = [HasImageInsts, HasAnyBVHInsts] in
   def S_WAIT_BVHCNT_soft : SOPP_Pseudo <"s_soft_wait_bvhcnt", (ins s16imm:$simm16), "$simm16">;
 } // End OtherPredicates = [HasImageInsts].
   def S_WAIT_DSCNT_soft : SOPP_Pseudo <"s_soft_wait_dscnt", (ins s16imm:$simm16), "$simm16">;
@@ -1728,13 +1745,13 @@ def S_WAITCNT_lds_direct : SPseudoInstSI<(outs), (ins)> {
 }
 
 let SubtargetPredicate = HasAsyncMark in {
-def ASYNCMARK : SPseudoInstSI<(outs), (ins),
-  [(int_amdgcn_asyncmark)]> {
+def ASYNCMARK : SPseudoInstSI<(outs), (ins i32imm:$stage),
+  [(int_amdgcn_asyncmark timm:$stage)]> {
    let maybeAtomic = 0;
    let isMeta = 1;
 }
-def WAIT_ASYNCMARK : SOPP_Pseudo <"", (ins s16imm:$simm16), "$simm16",
-    [(int_amdgcn_wait_asyncmark timm:$simm16)]> {
+def WAIT_ASYNCMARK : SOPP_Pseudo <"", (ins s16imm:$simm16, i32imm:$stage),
+    "$simm16", [(int_amdgcn_wait_asyncmark timm:$simm16, timm:$stage)]> {
     let maybeAtomic = 0;
     let Size = 0;
     let isMeta = 1;
@@ -1883,6 +1900,7 @@ let OtherPredicates = [HasImageInsts] in {
   def S_WAIT_SAMPLECNT :
     SOPP_Pseudo<"s_wait_samplecnt", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_wait_samplecnt timm:$simm16)]>;
+  let OtherPredicates = [HasImageInsts, HasAnyBVHInsts] in
   def S_WAIT_BVHCNT :
     SOPP_Pseudo<"s_wait_bvhcnt", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_wait_bvhcnt timm:$simm16)]>;
@@ -1925,7 +1943,7 @@ let SubtargetPredicate = HasWaitXcnt, hasSideEffects = 1 in {
     SOPP_Pseudo<"s_wait_xcnt", (ins s16imm:$simm16), "$simm16">;
 } // End SubtargetPredicate = hasWaitXcnt, hasSideEffects = 1
 
-let SubtargetPredicate = Has1024AddressableVGPRs in {
+let SubtargetPredicate = HasVGPRMSBs in {
   def S_SET_VGPR_MSB : SOPP_Pseudo<"s_set_vgpr_msb" , (ins i16imm:$simm16), "$simm16"> {
     let hasSideEffects = 1;
     let Defs = [MODE];

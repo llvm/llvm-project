@@ -40,10 +40,10 @@ struct ModuleCacheEntry {
     S_Read,
     S_Written,
   } State = S_Unknown;
-  /// The buffer we've read from disk, if any.
-  std::unique_ptr<llvm::MemoryBuffer> ReadBuffer;
-  /// The buffer we've written to module cache, if any.
-  std::unique_ptr<llvm::MemoryBuffer> WrittenBuffer;
+  /// The buffer we've read from disk or written to the module cache, if any.
+  /// Buffers returned from \c ModuleCache::read() share ownership of this, so
+  /// it can be replaced while readers still reference the previous contents.
+  std::shared_ptr<const llvm::MemoryBuffer> Buffer;
   /// The modification time of the entry.
   time_t ModTime = 0;
 };

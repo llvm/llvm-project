@@ -1,0 +1,56 @@
+; RUN: %if spirv-tools %{ spirv-as --target-env spv1.0 %s -o - | mlir-translate --deserialize-spirv - -o - | FileCheck %s %}
+
+; COM: Check that a selection header that is also the function entry block is
+; COM: split, so the entry block stays outside the selection region.
+
+; CHECK-LABEL: spirv.func @branch_conditional
+; CHECK-NEXT:    spirv.Branch ^[[HEADER:.+]]
+; CHECK-NEXT:  ^[[HEADER]]:
+; CHECK-NEXT:    spirv.mlir.selection {
+; CHECK-NEXT:      spirv.BranchConditional
+; CHECK:           spirv.mlir.merge
+; CHECK-NEXT:    }
+; CHECK-NEXT:    spirv.Return
+
+; CHECK-LABEL: spirv.func @switch
+; CHECK-NEXT:    spirv.Branch ^[[HEADER:.+]]
+; CHECK-NEXT:  ^[[HEADER]]:
+; CHECK-NEXT:    spirv.mlir.selection {
+; CHECK-NEXT:      spirv.Switch
+; CHECK:           spirv.mlir.merge
+; CHECK-NEXT:    }
+; CHECK-NEXT:    spirv.Return
+
+               OpCapability Shader
+               OpCapability Linkage
+               OpMemoryModel Logical GLSL450
+               OpName %branch_conditional "branch_conditional"
+               OpName %switch "switch"
+       %void = OpTypeVoid
+       %bool = OpTypeBool
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+     %fn_bool = OpTypeFunction %void %bool
+      %fn_int = OpTypeFunction %void %int
+%branch_conditional = OpFunction %void None %fn_bool
+       %cond = OpFunctionParameter %bool
+   %bc_entry = OpLabel
+               OpSelectionMerge %bc_merge None
+               OpBranchConditional %cond %bc_true %bc_merge
+    %bc_true = OpLabel
+     %bc_add = OpIAdd %int %int_1 %int_1
+               OpBranch %bc_merge
+   %bc_merge = OpLabel
+               OpReturn
+               OpFunctionEnd
+     %switch = OpFunction %void None %fn_int
+        %sel = OpFunctionParameter %int
+   %sw_entry = OpLabel
+               OpSelectionMerge %sw_merge None
+               OpSwitch %sel %sw_merge 1 %sw_case
+    %sw_case = OpLabel
+     %sw_add = OpIAdd %int %sel %sel
+               OpBranch %sw_merge
+   %sw_merge = OpLabel
+               OpReturn
+               OpFunctionEnd

@@ -25,8 +25,6 @@ namespace DefaultBufferSizes {
 constexpr unsigned DS = 16;
 } // namespace DefaultBufferSizes
 
-enum class CarriedLatency { Off, Fence, All };
-
 /// AMDGPU-specific scheduling decision reasons. These provide more granularity
 /// than the generic CandReason enum for debugging purposes.
 enum class AMDGPUSchedReason : uint8_t {
@@ -112,7 +110,7 @@ private:
 public:
   HardwareUnitInfo() {}
 
-  unsigned size() { return AllSUs.size(); }
+  size_t size() { return AllSUs.size(); }
 
   unsigned getTotalCycles() { return TotalCycles; }
 
@@ -149,7 +147,7 @@ public:
 
   /// \returns the most recently scheduled SU for this HardwareUnit.
   SUnit *getLastScheduledSU() {
-    unsigned ScheduledCount = ScheduledSUs.size();
+    size_t ScheduledCount = ScheduledSUs.size();
     if (!ScheduledCount)
       return nullptr;
 

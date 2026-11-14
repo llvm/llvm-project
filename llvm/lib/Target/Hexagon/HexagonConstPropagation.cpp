@@ -3017,7 +3017,6 @@ bool HexagonConstEvaluator::rewriteHexConstUses(MachineInstr &MI,
                     .addReg(R1.Reg, getRegState(Acc), R1.SubReg);
         }
         replaceAllRegUsesWith(DefR.Reg, NewR);
-        MRI->clearKillFlags(NewR);
         Changed = true;
         break;
       }
@@ -3083,7 +3082,6 @@ bool HexagonConstEvaluator::rewriteHexConstUses(MachineInstr &MI,
                   .addReg(SR.Reg, getRegState(SO), SR.SubReg);
       }
       replaceAllRegUsesWith(DefR.Reg, NewR);
-      MRI->clearKillFlags(NewR);
       Changed = true;
     }
     break;
@@ -3115,7 +3113,6 @@ bool HexagonConstEvaluator::rewriteHexConstUses(MachineInstr &MI,
                   .addReg(SR.Reg, getRegState(SO), SR.SubReg);
       }
       replaceAllRegUsesWith(DefR.Reg, NewR);
-      MRI->clearKillFlags(NewR);
       Changed = true;
     }
     break;

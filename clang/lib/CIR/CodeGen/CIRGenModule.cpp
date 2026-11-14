@@ -169,6 +169,14 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   getModule()->setAttr(cir::CIRDialect::getTargetABIAttrName(),
                        builder.getStringAttr(getTarget().getABI()));
 
+  // Assign the target-cpu and target-features as attributes to the module. This
+  // will allow subsequent passes to use this to ensure that 'generated'
+  // functions get the correct behavior for the model.
+  llvm::StringMap<std::string> defaultCPUAndFeatures;
+  if (getCPUAndFeaturesAttributes(GlobalDecl(), defaultCPUAndFeatures))
+    for (const auto &[key, val] : defaultCPUAndFeatures)
+      getModule()->setAttr(key, builder.getStringAttr(val));
+
   // If cxxabi was overridden via -fc++-abi, record it.
   if (langOpts.CXXABI)
     getModule()->setAttr(
@@ -189,12 +197,12 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   getModule()->setAttr(cir::CIRDialect::getIntTypeWidthAttrName(),
                        builder.getI32IntegerAttr(target.getIntWidth()));
 
-  // Serialize the lowering-relevant LangOptions onto the ModuleOp so a reloaded
-  // .cir is self-describing and lowers the same way it was compiled, without a
-  // live clang::LangOptions.
+  // Serialize the lowering-relevant LangOptions and CodeGenOptions onto the
+  // ModuleOp so a reloaded .cir is self-describing and lowers the same way it
+  // was compiled, without a live clang::LangOptions or clang::CodeGenOptions.
   getModule()->setAttr(
-      cir::CIRDialect::getLoweringLangOptionsAttrName(),
-      cir::LoweringLangOptionsAttr::get(
+      cir::CIRDialect::getLoweringOptionsAttrName(),
+      cir::LoweringOptionsAttr::get(
           &mlirContext,
           /*exceptions=*/langOpts.Exceptions,
           /*threadsafe_statics=*/langOpts.ThreadsafeStatics,
@@ -202,11 +210,18 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
           /*cuda_is_device=*/langOpts.CUDAIsDevice,
           /*hip=*/langOpts.HIP,
           /*hlsl=*/langOpts.HLSL,
+          /*sycl_is_device=*/langOpts.SYCLIsDevice,
           /*gpu_rdc=*/langOpts.GPURelocatableDeviceCode,
           /*openmp=*/langOpts.OpenMP != 0,
           /*openmp_is_target_device=*/langOpts.OpenMPIsTargetDevice,
           /*clang_abi_compat=*/
-          static_cast<int32_t>(langOpts.getClangABICompat())));
+          static_cast<int32_t>(langOpts.getClangABICompat()),
+          static_cast<int32_t>(langOpts.LongDoubleSize),
+          /*enable_noundef_attrs=*/cgo.EnableNoundefAttrs,
+          /*no_trapping_math=*/langOpts.getDefaultExceptionMode() ==
+              LangOptions::FPE_Ignore,
+          /*ssp_buffer_size=*/cgo.SSPBufferSize,
+          /*relative_cxx_abi_vtables=*/langOpts.RelativeCXXABIVTables));
 
   if (cgo.OptimizationLevel > 0 || cgo.OptimizeSize > 0)
     getModule()->setAttr(cir::CIRDialect::getOptInfoAttrName(),
@@ -497,7 +512,12 @@ void CIRGenModule::emitDeferred() {
   // emitted that then need those vtables.
   assert(deferredVTables.empty());
 
-  assert(!cir::MissingFeatures::cudaSupport());
+  // Emit CUDA/HIP static device variables referenced by host code only.
+  // Note we should not clear CUDADeviceVarODRUsedByHost since it is still
+  // needed for further handling.
+  if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice)
+    llvm::append_range(deferredDeclsToEmit,
+                       getASTContext().CUDADeviceVarODRUsedByHost);
 
   // Stop if we're out of both deferred vtables and deferred declarations.
   if (deferredDeclsToEmit.empty())
@@ -562,6 +582,38 @@ void CIRGenModule::printPostfixForExternalizedDecl(llvm::raw_ostream &os,
   }
 }
 
+static bool shouldSkipAliasEmission(const CIRGenModule &cgm,
+                                    const ValueDecl *global) {
+  const LangOptions &langOpts = cgm.getLangOpts();
+  if (!langOpts.OpenMPIsTargetDevice && !langOpts.CUDA)
+    return false;
+
+  const auto *aa = global->getAttr<AliasAttr>();
+  GlobalDecl aliaseeGD;
+
+  // Check if the aliasee exists, if the aliasee is not found, skip the alias
+  // emission. This is executed for both the host and device.
+  if (!cgm.lookupRepresentativeDecl(aa->getAliasee(), aliaseeGD))
+    return true;
+
+  const auto *aliaseeDecl = dyn_cast<ValueDecl>(aliaseeGD.getDecl());
+  if (langOpts.OpenMPIsTargetDevice)
+    return !aliaseeDecl ||
+           !OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(aliaseeDecl);
+
+  // CUDA / HIP
+  const bool hasDeviceAttr = global->hasAttr<CUDADeviceAttr>();
+  const bool aliaseeHasDeviceAttr =
+      aliaseeDecl && aliaseeDecl->hasAttr<CUDADeviceAttr>();
+
+  if (langOpts.CUDAIsDevice)
+    return !hasDeviceAttr || !aliaseeHasDeviceAttr;
+
+  // CUDA / HIP Host
+  // we know that the aliasee exists from above, so we know to emit
+  return false;
+}
+
 void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
   if (const auto *cd = dyn_cast<clang::OpenACCConstructDecl>(gd.getDecl())) {
     emitGlobalOpenACCDecl(cd);
@@ -577,9 +629,8 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
   // If this is an alias definition (which otherwise looks like a declaration)
   // emit it now.
   if (global->hasAttr<AliasAttr>()) {
-    // Classic codegen calls shouldSkipAliasEmission here to skip alias
-    // emission for OpenMP target device and CUDA configurations.
-    assert(!cir::MissingFeatures::shouldSkipAliasEmission());
+    if (shouldSkipAliasEmission(*this, global))
+      return;
     emitAliasDefinition(gd);
     return;
   }
@@ -1244,26 +1295,31 @@ void CIRGenModule::replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV) {
 /// 3. If \p isForDefinition is true, it is guaranteed that an actual global
 /// with type \p ty will be returned, not conversion of a variable with the same
 /// mangled name but some other type.
-cir::GlobalOp
-CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
-                                   LangAS langAS, const VarDecl *d,
-                                   ForDefinition_t isForDefinition) {
+cir::GlobalOp CIRGenModule::getOrCreateCIRGlobal(
+    StringRef mangledName, mlir::Type ty, LangAS langAS, mlir::Location loc,
+    const VarDecl *d, ForDefinition_t isForDefinition) {
 
   // Lookup the entry, lazily creating it if necessary.
   cir::GlobalOp entry;
   if (mlir::Operation *v = getGlobalValue(mangledName)) {
-    if (!isa<cir::GlobalOp>(v))
-      errorNYI(d->getSourceRange(),
-               "getOrCreateCIRGlobal: global with non-GlobalOp type");
+    if (!isa<cir::GlobalOp>(v)) {
+      errorNYI(loc, "getOrCreateCIRGlobal: global with non-GlobalOp type");
+      return nullptr;
+    }
     entry = cast<cir::GlobalOp>(v);
   }
 
   if (entry) {
     mlir::ptr::MemorySpaceAttrInterface entryCIRAS = entry.getAddrSpaceAttr();
-    assert(!cir::MissingFeatures::opGlobalWeakRef());
+
+    // A weakref's target is only weak until something else names it.
+    if (weakRefReferences.erase(entry) && d && !d->hasAttr<WeakAttr>())
+      entry.setLinkage(cir::GlobalLinkageKind::ExternalLinkage);
 
     assert(!cir::MissingFeatures::setDLLStorageClass());
-    assert(!cir::MissingFeatures::openMP());
+
+    if (langOpts.OpenMP && !langOpts.OpenMPSimd && d)
+      getOpenMPRuntime().registerTargetGlobalVariable(d);
 
     if (entry.getSymType() == ty &&
         cir::normalizeDefaultAddressSpace(entryCIRAS) ==
@@ -1277,8 +1333,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
     // recognizing the global as a declaration, for now only check if
     // initializer is present.
     if (isForDefinition && !entry.isDeclaration()) {
-      errorNYI(d->getSourceRange(),
-               "getOrCreateCIRGlobal: global with conflicting type");
+      errorNYI(loc, "getOrCreateCIRGlobal: global with conflicting type");
     }
 
     // Address space check removed because it is unnecessary because CIR records
@@ -1289,8 +1344,6 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
     if (!isForDefinition)
       return entry;
   }
-
-  mlir::Location loc = getLoc(d->getSourceRange());
 
   // Calculate constant storage flag before creating the global. This was moved
   // from after the global creation to ensure the constant flag is set correctly
@@ -1339,8 +1392,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
   // Handle things which are present even on external declarations.
   if (d) {
     if (langOpts.OpenMP && !langOpts.OpenMPSimd)
-      errorNYI(d->getSourceRange(),
-               "getOrCreateCIRGlobal: OpenMP target global variable");
+      getOpenMPRuntime().registerTargetGlobalVariable(d);
 
     gv.setAlignmentAttr(getSize(astContext.getDeclAlign(d)));
 
@@ -1394,6 +1446,50 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
   return gv;
 }
 
+mlir::Operation *CIRGenModule::getWeakRefReference(const ValueDecl *vd) {
+  const auto *aa = vd->getAttr<AliasAttr>();
+  assert(aa && "No alias?");
+
+  // See if there is already something with the target's name in the module.
+  if (mlir::Operation *entry = getGlobalValue(aa->getAliasee())) {
+    // Classic codegen is able to just treat whatever value it gets as the
+    // 'right' type.  This needs to introduce SOME sort of conversion it seems.
+    // For now, reject any cases that don't match.
+    if (const auto *fd = dyn_cast<FunctionDecl>(vd)) {
+      auto fn = dyn_cast<cir::FuncOp>(entry);
+
+      if (fn && fn.getFunctionType() == convertType(fd->getType()))
+        return fn;
+    } else if (auto gv = dyn_cast<cir::GlobalOp>(entry)) {
+      if (gv.getSymType() == getTypes().convertTypeForMem(vd->getType()))
+        return gv;
+    }
+
+    errorNYI(vd->getSourceRange(),
+             "weakref target already declared with a different type");
+    return nullptr;
+  }
+
+  mlir::Operation *aliasee;
+  if (const auto *fd = dyn_cast<FunctionDecl>(vd)) {
+    cir::FuncOp fn =
+        getOrCreateCIRFunction(aa->getAliasee(), convertType(fd->getType()),
+                               GlobalDecl(fd), /*forVTable=*/false);
+    fn.setLinkage(cir::GlobalLinkageKind::ExternalWeakLinkage);
+    aliasee = fn;
+  } else {
+    cir::GlobalOp gv = getOrCreateCIRGlobal(
+        aa->getAliasee(), getTypes().convertTypeForMem(vd->getType()),
+        LangAS::Default, getLoc(vd->getSourceRange()), /*d=*/nullptr,
+        NotForDefinition);
+    gv.setLinkage(cir::GlobalLinkageKind::ExternalWeakLinkage);
+    aliasee = gv;
+  }
+
+  weakRefReferences.insert(aliasee);
+  return aliasee;
+}
+
 cir::GlobalOp
 CIRGenModule::getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
                                    ForDefinition_t isForDefinition) {
@@ -1403,8 +1499,8 @@ CIRGenModule::getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
     ty = getTypes().convertTypeForMem(astTy);
 
   StringRef mangledName = getMangledName(d);
-  return getOrCreateCIRGlobal(mangledName, ty, getGlobalVarAddressSpace(d), d,
-                              isForDefinition);
+  return getOrCreateCIRGlobal(mangledName, ty, getGlobalVarAddressSpace(d),
+                              getLoc(d->getSourceRange()), d, isForDefinition);
 }
 
 /// Return the mlir::Value for the address of the given global variable. If
@@ -1486,20 +1582,24 @@ static void emitUsed(CIRGenModule &cgm, StringRef name,
 
   CIRGenBuilderTy &builder = cgm.getBuilder();
   mlir::Location loc = builder.getUnknownLoc();
+  cir::PointerType voidPtrTy = builder.getVoidPtrTy(
+      cgm.getTypes().getPointerAddressSpace(cgm.getASTContext().VoidTy));
+
   llvm::SmallVector<mlir::Attribute> usedArray;
   usedArray.resize(list.size());
   for (auto [i, op] : llvm::enumerate(list)) {
     usedArray[i] = cir::GlobalViewAttr::get(
-        cgm.voidPtrTy, mlir::FlatSymbolRefAttr::get(op.getNameAttr()));
+        voidPtrTy, mlir::FlatSymbolRefAttr::get(op.getNameAttr()));
   }
 
-  cir::ArrayType arrayTy = cir::ArrayType::get(cgm.voidPtrTy, usedArray.size());
+  cir::ArrayType arrayTy = cir::ArrayType::get(voidPtrTy, usedArray.size());
 
   cir::ConstArrayAttr initAttr = cir::ConstArrayAttr::get(
       arrayTy, mlir::ArrayAttr::get(&cgm.getMLIRContext(), usedArray));
 
-  cir::GlobalOp gv = cgm.createGlobalOp(loc, name, arrayTy,
-                                        /*isConstant=*/false);
+  cir::GlobalOp gv = cgm.createGlobalOp(
+      loc, name, arrayTy, /*isConstant=*/false,
+      cgm.getDataLayout().getDefaultGlobalsAddrSpace(&cgm.getMLIRContext()));
   gv.setLinkage(cir::GlobalLinkageKind::AppendingLinkage);
   gv.setInitialValueAttr(initAttr);
   gv.setSectionAttr(builder.getStringAttr("llvm.metadata"));
@@ -1688,6 +1788,10 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
       gv.setConstant(true);
   }
 
+  // The global may have been created without a declaration, e.g. as the target
+  // of a weakref, so make sure the alignment comes from the definition.
+  gv.setAlignmentAttr(getSize(astContext.getDeclAlign(vd)));
+
   // Set CIR linkage and DLL storage class.
   gv.setLinkage(linkage);
   // FIXME(cir): setLinkage should likely set MLIR's visibility automatically.
@@ -1753,7 +1857,18 @@ bool CIRGenModule::shouldEmitFunction(GlobalDecl gd) {
   if (const Module *m = fd->getOwningModule();
       m && m->getTopLevelModule()->isNamedModule() &&
       getASTContext().getCurrentNamedModule() != m->getTopLevelModule()) {
-    errorNYI(fd->getSourceRange(), "should emit function in a named module");
+    // There are practices to mark template member function as always-inline
+    // and mark the template as extern explicit instantiation but not give
+    // the definition for member function. So we have to emit the function
+    // from explicitly instantiation with always-inline.
+    //
+    // See https://github.com/llvm/llvm-project/issues/86893 for details.
+    //
+    // TODO: Maybe it is better to give it a warning if we call a non-inline
+    // function from other module units which is marked as always-inline.
+    if (!fd->isTemplateInstantiation() || !fd->hasAttr<AlwaysInlineAttr>()) {
+      return false;
+    }
   }
 
   if (fd->hasAttr<NoInlineAttr>())
@@ -1878,9 +1993,9 @@ void CIRGenModule::addReplacement(StringRef name, mlir::Operation *op) {
 }
 
 #ifndef NDEBUG
-static bool verifyPointerTypeArgs(cir::FuncOp oldF, cir::FuncOp newF,
-                                  mlir::SymbolUserMap &userMap) {
-  for (mlir::Operation *user : userMap.getUsers(oldF)) {
+static bool verifyPointerTypeArgs(llvm::ArrayRef<mlir::Operation *> users,
+                                  cir::FuncOp newF) {
+  for (mlir::Operation *user : users) {
     auto call = mlir::dyn_cast<cir::CallOp>(user);
     if (!call)
       continue;
@@ -1900,11 +2015,38 @@ void CIRGenModule::applyReplacements() {
   if (replacements.empty())
     return;
 
-  // Build a symbol user map once — this walks the module O(M) one time.
-  // Previously, each replaceAllSymbolUses call walked the entire module,
-  // giving O(R × M) quadratic behavior for R replacements.
-  mlir::SymbolTableCollection symbolTableCollection;
-  mlir::SymbolUserMap userMap(symbolTableCollection, getModule());
+  // Collect the users of the functions being replaced in one walk. Skip CIR
+  // types. None can hold a symbol reference (see CIRTypes.td), and walking
+  // them descends into every nested struct of every signature.
+  llvm::DenseMap<mlir::StringAttr, llvm::SetVector<mlir::Operation *>> users;
+  for (auto &i : replacements)
+    users.try_emplace(mlir::StringAttr::get(&getMLIRContext(), i.first));
+
+  mlir::ModuleOp module = getModule();
+  module->walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *op) {
+    auto collect = [&](mlir::Attribute attr) {
+      attr.walk<mlir::WalkOrder::PreOrder>(
+          [&](mlir::SymbolRefAttr ref) {
+            auto it = users.find(ref.getRootReference());
+            if (it != users.end())
+              it->second.insert(op);
+            return mlir::WalkResult::skip();
+          },
+          [&](mlir::Type type) {
+            return mlir::isa<cir::CIRDialect>(type.getDialect())
+                       ? mlir::WalkResult::skip()
+                       : mlir::WalkResult::advance();
+          });
+    };
+    collect(op->getRawDictionaryAttrs());
+    op->getName().walkInherentAttrs(
+        op, [&](llvm::StringRef, mlir::Attribute &attr) { collect(attr); });
+    // Like mlir::SymbolUserMap, don't look into nested symbol tables.
+    if (op != module.getOperation() &&
+        op->hasTrait<mlir::OpTrait::SymbolTable>())
+      return mlir::WalkResult::skip();
+    return mlir::WalkResult::advance();
+  });
 
   for (auto &i : replacements) {
     StringRef mangledName = i.first;
@@ -1921,12 +2063,21 @@ void CIRGenModule::applyReplacements() {
       continue;
     }
 
-    assert(verifyPointerTypeArgs(oldF, newF, userMap) &&
+    auto oldIt = users.find(oldF.getSymNameAttr());
+    assert(oldIt != users.end() && "replaced function was not collected");
+    llvm::ArrayRef<mlir::Operation *> oldUsers = oldIt->second.getArrayRef();
+    assert(verifyPointerTypeArgs(oldUsers, newF) &&
            "call argument types do not match replacement function");
 
-    // Replace old with new, but keep the old order.  Uses
-    // SymbolUserMap to touch only actual users, not the whole module.
-    userMap.replaceAllUsesWith(oldF, newF.getSymNameAttr());
+    // Replace old with new, but keep the old order.
+    for (mlir::Operation *user : oldUsers)
+      (void)mlir::SymbolTable::replaceAllSymbolUses(oldF, newF.getSymNameAttr(),
+                                                    user);
+    // These users now name newF. Keep them in case newF is replaced later.
+    auto newIt = users.find(newF.getSymNameAttr());
+    if (newIt != users.end())
+      newIt->second.set_union(oldIt->second);
+
     newF->moveBefore(oldF);
     eraseGlobalSymbol(oldF);
     oldF->erase();
@@ -2149,7 +2300,9 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
       // canonicalizer.
       mlir::Value res = getGlobalOp.getAddr();
       const mlir::Type oldResTy = res.getType();
-      const auto newPtrTy = cir::PointerType::get(newFn.getFunctionType());
+      const auto newPtrTy = cir::PointerType::get(
+          newFn.getFunctionType(),
+          mlir::cast<cir::PointerType>(oldResTy).getAddrSpace());
       if (oldResTy != newPtrTy) {
         res.setType(newPtrTy);
         builder.setInsertionPointAfter(getGlobalOp.getOperation());
@@ -2206,7 +2359,7 @@ generateStringLiteral(mlir::Location loc, mlir::TypedAttr c,
   gv.setLinkageAttr(
       cir::GlobalLinkageKindAttr::get(cgm.getBuilder().getContext(), lt));
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
-  assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
+  gv.setUnnamedAddr(true);
   CIRGenModule::setInitializer(gv, c);
   if (gv.isWeakForLinker()) {
     assert(cgm.supportsCOMDAT() && "Only COFF uses weak string literals");
@@ -2834,13 +2987,12 @@ static std::string getMangledNameImpl(CIRGenModule &cgm, GlobalDecl gd,
                    "getMangledName: multi-version functions");
     }
   }
-  // SYCL does not externalize file-scope statics, so RDC does not change the
-  // mangled name.
-  if (cgm.getLangOpts().GPURelocatableDeviceCode &&
-      !cgm.getLangOpts().isSYCL()) {
-    cgm.errorNYI(nd->getSourceRange(),
-                 "getMangledName: GPU relocatable device code");
-  }
+  // Make unique name for device side static file-scope variable for HIP.
+  if (cgm.getASTContext().shouldExternalize(nd) &&
+      cgm.getLangOpts().GPURelocatableDeviceCode)
+    if (cgm.getLangOpts().CUDA)
+      cgm.errorNYI(nd->getSourceRange(),
+                   "getMangledName: GPU relocatable device code");
 
   return std::string(out.str());
 }
@@ -2950,8 +3102,16 @@ void CIRGenModule::emitTentativeDefinition(const VarDecl *d) {
   // If we already have a definition, not declaration, with the same mangled
   // name, emitting of declaration is not required (and would actually overwrite
   // the emitted definition).
-  if (gv && !mlir::cast<cir::GlobalOp>(gv).isDeclaration())
-    return;
+  if (gv) {
+    auto gvOp = dyn_cast<cir::GlobalOp>(gv);
+    if (!gvOp) {
+      errorNYI(d->getSourceRange(),
+               "emitTentativeDefinition: name already used by a non-global");
+      return;
+    }
+    if (!gvOp.isDeclaration())
+      return;
+  }
 
   // If we have not seen a reference to this variable yet, place it into the
   // deferred declarations table to be emitted if needed later.
@@ -3083,7 +3243,8 @@ static bool shouldAssumeDSOLocal(const CIRGenModule &cgm,
     // -fsemantic-interposition nor -fhalf-no-semantic-interposition. Set
     // dso_local on the function if using a local alias is preferable (can avoid
     // PLT indirection).
-    if (!(isa<cir::FuncOp>(gv) && gv.canBenefitFromLocalAlias()))
+    auto func = dyn_cast<cir::FuncOp>(gv.getOperation());
+    if (!func || func.getAliasee() || !gv.canBenefitFromLocalAlias())
       return false;
     return !(lOpts.SemanticInterposition || lOpts.HalfNoSemanticInterposition);
   }
@@ -3355,6 +3516,12 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
     func->setAttr(cir::CIRDialect::getNoBuiltinAttrName(),
                   mlir::UnitAttr::get(&getMLIRContext()));
   }
+
+  if (isa<CXXConstructorDecl>(funcDecl) || isa<CXXDestructorDecl>(funcDecl))
+    func.setUnnamedAddr(true);
+  else if (const auto *md = dyn_cast<CXXMethodDecl>(funcDecl))
+    if (md->isVirtual())
+      func.setUnnamedAddr(true);
 }
 
 void CIRGenModule::setCIRFunctionAttributesForDefinition(
@@ -3665,7 +3832,13 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
   if (entry) {
     assert(mlir::isa<cir::FuncOp>(entry));
 
-    assert(!cir::MissingFeatures::weakRefReference());
+    // A weakref's target is only weak until something else names it.
+    if (weakRefReferences.erase(entry)) {
+      const auto *fd = cast_or_null<FunctionDecl>(d);
+      if (fd && !fd->hasAttr<WeakAttr>())
+        cast<cir::FuncOp>(entry).setLinkage(
+            cir::GlobalLinkageKind::ExternalLinkage);
+    }
 
     // Handle dropped DLL attributes.
     if (d && !d->hasAttr<DLLImportAttr>() && !d->hasAttr<DLLExportAttr>()) {
@@ -3960,6 +4133,8 @@ cir::FuncOp CIRGenModule::createRuntimeFunction(cir::FuncType ty,
   if (assumeConvergent)
     errorNYI("createRuntimeFunction: assumeConvergent");
 
+  extraAttrs.set(cir::CIRDialect::getRuntimeFuncAttrName(),
+                 mlir::UnitAttr::get(&getMLIRContext()));
   cir::FuncOp entry = getOrCreateCIRFunction(name, ty, GlobalDecl(),
                                              /*forVtable=*/false, extraAttrs);
 
@@ -4196,10 +4371,11 @@ void CIRGenModule::emitAliasDefinition(GlobalDecl gd) {
   assert(!cir::MissingFeatures::generateDebugInfo());
 }
 
-void CIRGenModule::emitAliasForGlobal(StringRef mangledName,
-                                      mlir::Operation *op, GlobalDecl aliasGD,
-                                      cir::FuncOp aliasee,
-                                      cir::GlobalLinkageKind linkage) {
+cir::FuncOp CIRGenModule::emitAliasForGlobal(StringRef mangledName,
+                                             mlir::Operation *op,
+                                             GlobalDecl aliasGD,
+                                             cir::FuncOp aliasee,
+                                             cir::GlobalLinkageKind linkage) {
 
   auto *aliasFD = dyn_cast<FunctionDecl>(aliasGD.getDecl());
   assert(aliasFD && "expected FunctionDecl");
@@ -4222,9 +4398,6 @@ void CIRGenModule::emitAliasForGlobal(StringRef mangledName,
   mlir::SymbolTable::setSymbolVisibility(
       alias, mlir::SymbolTable::Visibility::Private);
 
-  // Alias constructors and destructors are always unnamed_addr.
-  assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
-
   if (op) {
     // Any existing users of the existing function declaration will be
     // referencing the function by flat symbol reference (i.e. the name), so
@@ -4241,6 +4414,7 @@ void CIRGenModule::emitAliasForGlobal(StringRef mangledName,
 
   // Finally, set up the alias with its proper name and attributes.
   setCommonAttributes(aliasGD, alias);
+  return alias;
 }
 
 mlir::Type CIRGenModule::convertType(QualType type) {
@@ -4500,6 +4674,7 @@ cir::GlobalOp CIRGenModule::getAddrOfUnnamedGlobalConstantDecl(
 
   CharUnits alignment = getASTContext().getTypeAlignInChars(gcd->getType());
   globalOp.setAlignment(alignment.getAsAlign().value());
+  globalOp.setUnnamedAddr(true);
   CIRGenModule::setInitializer(globalOp, init);
 
   emitter.finalize(globalOp);

@@ -1,7 +1,9 @@
 // Test crc32 target attribute on x86
 
 // RUN: %clang_cc1 -triple i386-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple i386-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s %}
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s %}
 
 // CHECK: define{{.*}} i32 @test1({{.*}}) [[TEST1_ATTRS:#[0-9]+]]
 // CHECK: call i32 @llvm.x86.sse42.crc32.32.8(i32 %{{.*}}, i8 %{{.*}})

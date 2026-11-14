@@ -32,6 +32,7 @@
 ...
 ---
 name:            fun0
+tracksRegLiveness: false
 body:             |
   bb.0:
 

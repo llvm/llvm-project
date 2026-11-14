@@ -12,6 +12,7 @@
 
 include "llvm/CodeGen/ValueTypes.td"
 include "llvm/CodeGen/SDNodeProperties.td"
+include "llvm/IR/Attributes.td"
 
 //===----------------------------------------------------------------------===//
 //  Properties we keep track of for intrinsics.
@@ -19,6 +20,12 @@ include "llvm/CodeGen/SDNodeProperties.td"
 
 class IntrinsicProperty<bit is_default = false> {
   bit IsDefault = is_default;
+}
+
+// IntrinsicFnAttr - A property that adds the function attribute Attr.
+class IntrinsicFnAttr<EnumAttr attr, bit is_default = false>
+    : IntrinsicProperty<is_default> {
+  EnumAttr Attr = attr;
 }
 
 // Intr*Mem - Memory properties.  If no property is set, the worst case
@@ -92,49 +99,44 @@ class AttrIndex<int idx> {
 def RetIndex : AttrIndex<0>;
 class ArgIndex<int argNo> : AttrIndex<!add(argNo, 1)>;
 
+// IntrinsicArgAttr - A property that adds the attribute Attr to the return
+// value or argument at index idx. Value is the integer value of an IntAttr.
+class IntrinsicArgAttr<AttrIndex idx, Attr attr, int value = 0>
+    : IntrinsicProperty {
+  int ArgNo = idx.Value;
+  Attr Attr = attr;
+  int Value = value;
+}
+
 // Note: Properties that are applicable either to arguments or return values
 // use AttrIndex. Properties applicable only to arguments use ArgIndex. Please
 // refer to Attributes.td.
 
 // NoCapture - The specified argument pointer is not captured by the intrinsic.
-class NoCapture<ArgIndex idx> : IntrinsicProperty {
-  int ArgNo = idx.Value;
-}
+class NoCapture<ArgIndex idx> : IntrinsicArgAttr<idx, Captures, 0>;
 
 // NoAlias - The return value or the specified argument pointer is not aliasing
 // other "noalias" pointer arguments of the intrinsic wrt. the intrinsic scope.
-class NoAlias<AttrIndex idx> : IntrinsicProperty {
-  int ArgNo = idx.Value;
-}
+class NoAlias<AttrIndex idx> : IntrinsicArgAttr<idx, NoAlias>;
 
 // NoUndef - The return value or specified argument is neither undef nor poison.
-class NoUndef<AttrIndex idx> : IntrinsicProperty {
-  int ArgNo = idx.Value;
-}
+class NoUndef<AttrIndex idx> : IntrinsicArgAttr<idx, NoUndef>;
 
 // NonNull - The return value or specified argument is not null.
-class NonNull<AttrIndex idx> : IntrinsicProperty {
-  int ArgNo = idx.Value;
-}
+class NonNull<AttrIndex idx> : IntrinsicArgAttr<idx, NonNull>;
 
 // Align - Alignment for return value or the specified argument.
-class Align<AttrIndex idx, int align> : IntrinsicProperty {
-  int ArgNo = idx.Value;
-  int Align = align;
-}
+class Align<AttrIndex idx, int align>
+    : IntrinsicArgAttr<idx, Alignment, align>;
 
 // Dereferenceable -- Return value or the specified argument is dereferenceable
 // upto `bytes` bytes in size.
-class Dereferenceable<AttrIndex idx, int bytes> : IntrinsicProperty {
-  int ArgNo = idx.Value;
-  int Bytes = bytes;
-}
+class Dereferenceable<AttrIndex idx, int bytes>
+    : IntrinsicArgAttr<idx, Dereferenceable, bytes>;
 
 // Returned - The specified argument is always the return value of the
 // intrinsic.
-class Returned<ArgIndex idx> : IntrinsicProperty {
-  int ArgNo = idx.Value;
-}
+class Returned<ArgIndex idx> : IntrinsicArgAttr<idx, Returned>;
 
 // Default value for a trailing ImmArg, materialized by AutoUpgrade.
 class DefaultValue<int val> {
@@ -148,28 +150,22 @@ def NoDefault : DefaultValue<0> {
 
 // ImmArg - The specified argument must be an immediate. The optional
 // second template parameter specifies a default value for AutoUpgrade.
-class ImmArg<ArgIndex idx, DefaultValue val = NoDefault> : IntrinsicProperty {
-  int ArgNo = idx.Value;
+class ImmArg<ArgIndex idx, DefaultValue val = NoDefault>
+    : IntrinsicArgAttr<idx, ImmArg> {
   DefaultValue Default = val;
 }
 
 // ReadOnly - The specified argument pointer is not written to through the
 // pointer by the intrinsic.
-class ReadOnly<ArgIndex idx> : IntrinsicProperty {
-  int ArgNo = idx.Value;
-}
+class ReadOnly<ArgIndex idx> : IntrinsicArgAttr<idx, ReadOnly>;
 
 // WriteOnly - The intrinsic does not read memory through the specified
 // argument pointer.
-class WriteOnly<ArgIndex idx> : IntrinsicProperty {
-  int ArgNo = idx.Value;
-}
+class WriteOnly<ArgIndex idx> : IntrinsicArgAttr<idx, WriteOnly>;
 
 // ReadNone - The specified argument pointer is not dereferenced by the
 // intrinsic.
-class ReadNone<ArgIndex idx> : IntrinsicProperty {
-  int ArgNo = idx.Value;
-}
+class ReadNone<ArgIndex idx> : IntrinsicArgAttr<idx, ReadNone>;
 
 // A RangeSet specifies a union of ordered and disjoint closed ranges that an
 // immediate argument must be in.
@@ -192,16 +188,14 @@ class RangeSet<ArgIndex idx, list<list<int>> ranges> : IntrinsicProperty {
 
 // The return value or argument is in the range [lower, upper),
 // where lower and upper are interpreted as signed integers.
-class Range<AttrIndex idx, int lower, int upper> : IntrinsicProperty {
-  int ArgNo = idx.Value;
+class Range<AttrIndex idx, int lower, int upper>
+    : IntrinsicArgAttr<idx, Range> {
   int Lower = lower;
   int Upper = upper;
 }
 
 // The underlying object of the argument/return can not be freed.
-class NoFreeObj<AttrIndex idx> : IntrinsicProperty {
-  int ArgNo = idx.Value;
-}
+class NoFreeObj<AttrIndex idx> : IntrinsicArgAttr<idx, NoFreeObj>;
 
 // ArgProperty - Base class for argument properties that can be specified in
 // ArgInfo.
@@ -224,40 +218,40 @@ class ArgInfo<ArgIndex idx, list<ArgProperty> properties> : IntrinsicProperty {
   list<ArgProperty> Properties = properties;
 }
 
-def IntrNoReturn : IntrinsicProperty;
+def IntrNoReturn : IntrinsicFnAttr<NoReturn>;
 
 // Applied by default.
-def IntrNoCallback : IntrinsicProperty<1>;
+def IntrNoCallback : IntrinsicFnAttr<NoCallback, true>;
 
 // IntrNoSync - Threads executing the intrinsic will not synchronize using
 // memory or other means. Applied by default.
-def IntrNoSync : IntrinsicProperty<1>;
+def IntrNoSync : IntrinsicFnAttr<NoSync, true>;
 
 // Applied by default.
-def IntrNoFree : IntrinsicProperty<1>;
+def IntrNoFree : IntrinsicFnAttr<NoFree, true>;
 
 // Applied by default.
-def IntrWillReturn : IntrinsicProperty<1>;
+def IntrWillReturn : IntrinsicFnAttr<WillReturn, true>;
 
 // IntrCold - Calls to this intrinsic are cold.
 // Parallels the cold attribute on LLVM IR functions.
-def IntrCold : IntrinsicProperty;
+def IntrCold : IntrinsicFnAttr<Cold>;
 
 // IntrNoDuplicate - Calls to this intrinsic cannot be duplicated.
 // Parallels the noduplicate attribute on LLVM IR functions.
-def IntrNoDuplicate : IntrinsicProperty;
+def IntrNoDuplicate : IntrinsicFnAttr<NoDuplicate>;
 
 // IntrNoMerge - Calls to this intrinsic cannot be merged
 // Parallels the nomerge attribute on LLVM IR functions.
-def IntrNoMerge : IntrinsicProperty;
+def IntrNoMerge : IntrinsicFnAttr<NoMerge>;
 
 // IntrConvergent - Calls to this intrinsic are convergent and may not be made
 // control-dependent on any additional values.
 // Parallels the convergent attribute on LLVM IR functions.
-def IntrConvergent : IntrinsicProperty;
+def IntrConvergent : IntrinsicFnAttr<Convergent>;
 
 // This property indicates that the intrinsic is safe to speculate.
-def IntrSpeculatable : IntrinsicProperty;
+def IntrSpeculatable : IntrinsicFnAttr<Speculatable>;
 
 // This property can be used to override the 'has no other side effects'
 // language of the IntrNoMem, IntrReadMem, IntrWriteMem, and IntrArgMemOnly
@@ -270,7 +264,7 @@ def IntrHasSideEffects : IntrinsicProperty;
 
 // Result will not be undef or poison if all arguments are not undef and not
 // poison.
-def IntrNoCreateUndefOrPoison : IntrinsicProperty;
+def IntrNoCreateUndefOrPoison : IntrinsicFnAttr<NoCreateUndefOrPoison>;
 
 // This property indicates that the intrinsic is trivially scalarizable.
 def IntrTriviallyScalarizable : IntrinsicProperty;
@@ -689,6 +683,7 @@ def llvm_v16i16_ty     : LLVMType<v16i16>;    //   16 x i16
 def llvm_v32i16_ty     : LLVMType<v32i16>;    //   32 x i16
 def llvm_v64i16_ty     : LLVMType<v64i16>;    //   64 x i16
 def llvm_v128i16_ty    : LLVMType<v128i16>;   //  128 x i16
+def llvm_v1024i16_ty   : LLVMType<v1024i16>;  // 1024 x i16
 def llvm_v4096i16_ty   : LLVMType<v4096i16>;  // 4096 x i16
 
 def llvm_v1i32_ty      : LLVMType<v1i32>;     //    1 x i32
@@ -703,6 +698,7 @@ def llvm_v32i32_ty     : LLVMType<v32i32>;    //   32 x i32
 def llvm_v64i32_ty     : LLVMType<v64i32>;    //   64 x i32
 def llvm_v128i32_ty    : LLVMType<v128i32>;   //  128 x i32
 def llvm_v256i32_ty    : LLVMType<v256i32>;   //  256 x i32
+def llvm_v1024i32_ty   : LLVMType<v1024i32>;  // 1024 x i32
 def llvm_v2048i32_ty   : LLVMType<v2048i32>;  // 2048 x i32
 def llvm_v4096i32_ty   : LLVMType<v4096i32>;  // 4096 x i32
 
@@ -1395,7 +1391,7 @@ def int_is_fpclass
 
 /// IntrStrictFP - The intrinsic is allowed to be used in an alternate
 /// floating point environment.
-def IntrStrictFP : IntrinsicProperty;
+def IntrStrictFP : IntrinsicFnAttr<StrictFP>;
 
 let IntrProperties = [IntrInaccessibleMemOnly, IntrStrictFP] in {
   def int_experimental_constrained_fadd : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
@@ -2013,10 +2009,12 @@ def int_coro_free : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_ptr_ty],
                                ReadOnly<ArgIndex<1>>,
                                NoCapture<ArgIndex<1>>]>;
 def int_coro_dead : Intrinsic<[], [llvm_ptr_ty], [IntrNoMem]>;
-def int_coro_end : Intrinsic<[], [llvm_ptr_ty, llvm_i1_ty, llvm_token_ty], []>;
+def int_coro_end : Intrinsic<[], [llvm_ptr_ty, llvm_i1_ty, llvm_token_ty],
+                             [ImmArg<ArgIndex<1>>]>;
 def int_coro_end_results : Intrinsic<[llvm_token_ty], [llvm_vararg_ty]>;
 def int_coro_end_async
-    : Intrinsic<[], [llvm_ptr_ty, llvm_i1_ty, llvm_vararg_ty], []>;
+    : Intrinsic<[], [llvm_ptr_ty, llvm_i1_ty, llvm_vararg_ty],
+                [ImmArg<ArgIndex<1>>]>;
 
 def int_coro_frame : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
 def int_coro_is_in_ramp : Intrinsic<[llvm_i1_ty], [], [IntrNoMem],
@@ -2105,12 +2103,14 @@ def int_allow_sanitize_hwaddress
                             [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>;
 
 // Support for dynamic deoptimization (or de-specialization)
-def int_experimental_deoptimize : Intrinsic<[llvm_any_ty], [llvm_vararg_ty],
-                                            [Throws]>;
+def int_experimental_deoptimize
+    : Intrinsic<[llvm_any_ty], [llvm_vararg_ty],
+                [Throws, IntrWrite<[InaccessibleMem]>]>;
 
 // Support for speculative runtime guards
-def int_experimental_guard : Intrinsic<[], [llvm_i1_ty, llvm_vararg_ty],
-                                       [Throws]>;
+def int_experimental_guard
+    : Intrinsic<[], [llvm_i1_ty, llvm_vararg_ty],
+                [Throws, IntrWrite<[InaccessibleMem]>]>;
 
 // Supports widenable conditions for guards represented as explicit branches.
 def int_experimental_widenable_condition : DefaultAttrsIntrinsic<[llvm_i1_ty],
@@ -2788,6 +2788,11 @@ def int_vector_splice_left
 def int_vector_splice_right
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                             [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
+                            [IntrNoMem, IntrSpeculatable]>;
+
+def int_vector_shuffle
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, llvm_any_vector_int_ty],
                             [IntrNoMem, IntrSpeculatable]>;
 
 //===---------- Intrinsics to query properties of scalable vectors --------===//
