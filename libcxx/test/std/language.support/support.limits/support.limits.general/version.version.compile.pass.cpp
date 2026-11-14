@@ -32,6 +32,10 @@
 #    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_algorithm_iterator_requirements
+#    error "__cpp_lib_algorithm_iterator_requirements should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_aligned_accessor
 #    error "__cpp_lib_aligned_accessor should not be defined before c++26"
 #  endif
@@ -468,6 +472,10 @@
 #    error "__cpp_lib_generate_random should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_generator
+#    error "__cpp_lib_generator should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_generic_associative_lookup
 #    error "__cpp_lib_generic_associative_lookup should not be defined before c++14"
 #  endif
@@ -840,6 +848,10 @@
 #    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_cartesian_product
+#    error "__cpp_lib_ranges_cartesian_product should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_chunk
 #    error "__cpp_lib_ranges_chunk should not be defined before c++23"
 #  endif
@@ -1192,6 +1204,10 @@
 
 #  ifdef __cpp_lib_algorithm_default_value_type
 #    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_algorithm_iterator_requirements
+#    error "__cpp_lib_algorithm_iterator_requirements should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_aligned_accessor
@@ -1639,6 +1655,10 @@
 #    error "__cpp_lib_generate_random should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_generator
+#    error "__cpp_lib_generator should not be defined before c++23"
+#  endif
+
 #  ifndef __cpp_lib_generic_associative_lookup
 #    error "__cpp_lib_generic_associative_lookup should be defined in c++14"
 #  endif
@@ -2047,6 +2067,10 @@
 #    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_cartesian_product
+#    error "__cpp_lib_ranges_cartesian_product should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_chunk
 #    error "__cpp_lib_ranges_chunk should not be defined before c++23"
 #  endif
@@ -2435,6 +2459,10 @@
 
 #  ifdef __cpp_lib_algorithm_default_value_type
 #    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_algorithm_iterator_requirements
+#    error "__cpp_lib_algorithm_iterator_requirements should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_aligned_accessor
@@ -2939,6 +2967,10 @@
 #    error "__cpp_lib_generate_random should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_generator
+#    error "__cpp_lib_generator should not be defined before c++23"
+#  endif
+
 #  ifndef __cpp_lib_generic_associative_lookup
 #    error "__cpp_lib_generic_associative_lookup should be defined in c++17"
 #  endif
@@ -3422,6 +3454,10 @@
 #    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_cartesian_product
+#    error "__cpp_lib_ranges_cartesian_product should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_chunk
 #    error "__cpp_lib_ranges_chunk should not be defined before c++23"
 #  endif
@@ -3867,6 +3903,10 @@
 
 #  ifdef __cpp_lib_algorithm_default_value_type
 #    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_algorithm_iterator_requirements
+#    error "__cpp_lib_algorithm_iterator_requirements should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_aligned_accessor
@@ -4506,6 +4546,10 @@
 #    error "__cpp_lib_generate_random should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_generator
+#    error "__cpp_lib_generator should not be defined before c++23"
+#  endif
+
 #  ifndef __cpp_lib_generic_associative_lookup
 #    error "__cpp_lib_generic_associative_lookup should be defined in c++20"
 #  endif
@@ -5064,6 +5108,10 @@
 #    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_cartesian_product
+#    error "__cpp_lib_ranges_cartesian_product should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_chunk
 #    error "__cpp_lib_ranges_chunk should not be defined before c++23"
 #  endif
@@ -5566,6 +5614,19 @@
 
 #  ifdef __cpp_lib_algorithm_default_value_type
 #    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_algorithm_iterator_requirements
+#      error "__cpp_lib_algorithm_iterator_requirements should be defined in c++23"
+#    endif
+#    if __cpp_lib_algorithm_iterator_requirements != 202207L
+#      error "__cpp_lib_algorithm_iterator_requirements should have the value 202207L in c++23"
+#    endif
+#  else
+#    ifdef __cpp_lib_algorithm_iterator_requirements
+#      error "__cpp_lib_algorithm_iterator_requirements should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifdef __cpp_lib_aligned_accessor
@@ -6268,6 +6329,19 @@
 #    error "__cpp_lib_generate_random should not be defined before c++26"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_generator
+#      error "__cpp_lib_generator should be defined in c++23"
+#    endif
+#    if __cpp_lib_generator != 202207L
+#      error "__cpp_lib_generator should have the value 202207L in c++23"
+#    endif
+#  else
+#    ifdef __cpp_lib_generator
+#      error "__cpp_lib_generator should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_generic_associative_lookup
 #    error "__cpp_lib_generic_associative_lookup should be defined in c++23"
 #  endif
@@ -6881,6 +6955,19 @@
 
 #  ifdef __cpp_lib_ranges_cache_latest
 #    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_cartesian_product
+#      error "__cpp_lib_ranges_cartesian_product should be defined in c++23"
+#    endif
+#    if __cpp_lib_ranges_cartesian_product != 202207L
+#      error "__cpp_lib_ranges_cartesian_product should have the value 202207L in c++23"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_cartesian_product
+#      error "__cpp_lib_ranges_cartesian_product should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -7507,6 +7594,19 @@
 #  else
 #    ifdef __cpp_lib_algorithm_default_value_type
 #      error "__cpp_lib_algorithm_default_value_type should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_algorithm_iterator_requirements
+#      error "__cpp_lib_algorithm_iterator_requirements should be defined in c++26"
+#    endif
+#    if __cpp_lib_algorithm_iterator_requirements != 202207L
+#      error "__cpp_lib_algorithm_iterator_requirements should have the value 202207L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_algorithm_iterator_requirements
+#      error "__cpp_lib_algorithm_iterator_requirements should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 
@@ -8507,6 +8607,19 @@
 #    endif
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_generator
+#      error "__cpp_lib_generator should be defined in c++26"
+#    endif
+#    if __cpp_lib_generator != 202207L
+#      error "__cpp_lib_generator should have the value 202207L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_generator
+#      error "__cpp_lib_generator should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_generic_associative_lookup
 #    error "__cpp_lib_generic_associative_lookup should be defined in c++26"
 #  endif
@@ -9432,6 +9545,19 @@
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_cartesian_product
+#      error "__cpp_lib_ranges_cartesian_product should be defined in c++26"
+#    endif
+#    if __cpp_lib_ranges_cartesian_product != 202207L
+#      error "__cpp_lib_ranges_cartesian_product should have the value 202207L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_cartesian_product
+#      error "__cpp_lib_ranges_cartesian_product should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_ranges_chunk
 #      error "__cpp_lib_ranges_chunk should be defined in c++26"
 #    endif
@@ -10184,6 +10310,19 @@
 #  else
 #    ifdef __cpp_lib_algorithm_default_value_type
 #      error "__cpp_lib_algorithm_default_value_type should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_algorithm_iterator_requirements
+#      error "__cpp_lib_algorithm_iterator_requirements should be defined in c++29"
+#    endif
+#    if __cpp_lib_algorithm_iterator_requirements != 202207L
+#      error "__cpp_lib_algorithm_iterator_requirements should have the value 202207L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_algorithm_iterator_requirements
+#      error "__cpp_lib_algorithm_iterator_requirements should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 
@@ -11184,6 +11323,19 @@
 #    endif
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_generator
+#      error "__cpp_lib_generator should be defined in c++29"
+#    endif
+#    if __cpp_lib_generator != 202207L
+#      error "__cpp_lib_generator should have the value 202207L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_generator
+#      error "__cpp_lib_generator should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_generic_associative_lookup
 #    error "__cpp_lib_generic_associative_lookup should be defined in c++29"
 #  endif
@@ -12132,6 +12284,19 @@
 #  else
 #    ifdef __cpp_lib_ranges_cache_latest
 #      error "__cpp_lib_ranges_cache_latest should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_cartesian_product
+#      error "__cpp_lib_ranges_cartesian_product should be defined in c++29"
+#    endif
+#    if __cpp_lib_ranges_cartesian_product != 202207L
+#      error "__cpp_lib_ranges_cartesian_product should have the value 202207L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_cartesian_product
+#      error "__cpp_lib_ranges_cartesian_product should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 
