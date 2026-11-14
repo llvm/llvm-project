@@ -1,11 +1,17 @@
-//===-- Exhaustive test for exp2f -----------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Exhaustive test for exp2f.
+///
+//===----------------------------------------------------------------------===//
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/math/exp2f_double_eval.h"
 #include "src/__support/math/exp2f_float_eval.h"
 #include "src/__support/math/exp2f_integer_eval.h"

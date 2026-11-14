@@ -1192,6 +1192,17 @@ libc_support_library(
     ],
 )
 
+libc_support_library(
+    name = "__support_math_static_rounding_exp10f",
+    hdrs = ["shared/math/static_rounding/exp10f.h"],
+    deps = [
+        ":shared_libc_common",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/math:exp10f_integer_eval",
+    ],
+)
+
 ############################### complex targets ################################
 
 alias(

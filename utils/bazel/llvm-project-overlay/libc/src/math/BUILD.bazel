@@ -901,6 +901,7 @@ libc_math_function(
 libc_math_function(
     name = "exp10f",
     additional_deps = [
+        "//libc:__support_math_static_rounding_exp10f",
         "//libc/src/__support/math:exp10f",
     ],
 )
