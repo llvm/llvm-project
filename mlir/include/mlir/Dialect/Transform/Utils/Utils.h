@@ -13,6 +13,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
 class OpAsmPrinter;
@@ -72,7 +73,8 @@ inline void printPackedOrDynamicIndexList(OpAsmPrinter &printer, Operation *op,
 ///   custom<PackedOrDynamicIndexList>($packed, type($packed), $values,
 ///       type($values), $integers)
 ///
-/// See `printPackedOrDynamicIndexList` for details.
+/// See `printPackedOrDynamicIndexList` for details. Overloads that do not
+/// return scalable flags reject scalable indices.
 ParseResult parsePackedOrDynamicIndexList(
     OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &packed,
     Type &packedType, SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
@@ -83,8 +85,14 @@ inline ParseResult parsePackedOrDynamicIndexList(
     Type &packedType, SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
     SmallVectorImpl<Type> *valueTypes, DenseI64ArrayAttr &integers) {
   DenseBoolArrayAttr scalableFlags;
-  return parsePackedOrDynamicIndexList(parser, packed, packedType, values,
-                                       scalableFlags, valueTypes, integers);
+  if (failed(parsePackedOrDynamicIndexList(parser, packed, packedType, values,
+                                           scalableFlags, valueTypes,
+                                           integers)))
+    return failure();
+  if (llvm::is_contained(scalableFlags.asArrayRef(), true))
+    return parser.emitError(parser.getNameLoc())
+           << "scalable indices are not supported";
+  return success();
 }
 inline ParseResult parsePackedOrDynamicIndexList(
     OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &packed,
@@ -105,9 +113,9 @@ inline ParseResult parsePackedOrDynamicIndexList(
     OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &packed,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
     DenseI64ArrayAttr &integers) {
-  DenseBoolArrayAttr scalableFlags;
-  return parsePackedOrDynamicIndexList(parser, packed, values, scalableFlags,
-                                       integers);
+  Type packedType;
+  return parsePackedOrDynamicIndexList(parser, packed, packedType, values,
+                                       /*valueTypes=*/nullptr, integers);
 }
 } // namespace transform
 } // namespace mlir

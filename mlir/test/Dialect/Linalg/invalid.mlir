@@ -1,5 +1,21 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
+func.func @pack_scalable_inner_tile(%source: tensor<16x16xf32>, %dest: tensor<2x4x8x4xf32>) {
+  // expected-error@below {{scalable indices are not supported}}
+  %0 = linalg.pack %source inner_dims_pos = [0, 1] inner_tiles = [[8], 4] into %dest : tensor<16x16xf32> -> tensor<2x4x8x4xf32>
+  return
+}
+
+// -----
+
+func.func @unpack_scalable_inner_tile(%source: tensor<2x4x8x4xf32>, %dest: tensor<16x16xf32>) {
+  // expected-error@below {{scalable indices are not supported}}
+  %0 = linalg.unpack %source inner_dims_pos = [0, 1] inner_tiles = [[8], 4] into %dest : tensor<2x4x8x4xf32> -> tensor<16x16xf32>
+  return
+}
+
+// -----
+
 func.func @load_number_of_indices(%v : memref<f32>) {
   // expected-error @+2 {{invalid number of indices for accessed memref, expected 0 but got 1}}
   %c0 = arith.constant 0 : index

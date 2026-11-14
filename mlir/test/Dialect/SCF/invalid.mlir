@@ -1,5 +1,41 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -verify-diagnostics
 
+func.func @forall_scalable_normalized_upper_bound() {
+  // expected-error@below {{scalable indices are not supported}}
+  scf.forall (%i, %j) in ([8], 4) {
+  }
+  return
+}
+
+// -----
+
+func.func @forall_scalable_lower_bound() {
+  // expected-error@below {{scalable indices are not supported}}
+  scf.forall (%i, %j) = ([2], 0) to (8, 4) step (1, 1) {
+  }
+  return
+}
+
+// -----
+
+func.func @forall_scalable_upper_bound() {
+  // expected-error@below {{scalable indices are not supported}}
+  scf.forall (%i, %j) = (0, 0) to ([8], 4) step (1, 1) {
+  }
+  return
+}
+
+// -----
+
+func.func @forall_scalable_step() {
+  // expected-error@below {{scalable indices are not supported}}
+  scf.forall (%i, %j) = (0, 0) to (8, 4) step ([2], 1) {
+  }
+  return
+}
+
+// -----
+
 func.func @loop_for_lb(%arg0: f32, %arg1: index) {
   // expected-error@+1 {{operand #0 must be signless integer or index}}
   "scf.for"(%arg0, %arg1, %arg1) ({}) : (f32, index, index) -> ()
