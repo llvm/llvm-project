@@ -399,7 +399,8 @@ bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
       MachineOperand ImmOp = Curr->getOperand(1);
       if (ImmOp.getTargetFlags() != LoongArchII::MO_None)
         return false;
-      const int64_t Imm = SignExtend64<32>(ImmOp.getImm() << 12);
+      const int64_t Imm =
+          SignExtend64<32>(static_cast<uint64_t>(ImmOp.getImm()) << 12);
       Offset += (static_cast<uint64_t>(Imm) << Shift) & Mask;
       Reg = LoongArch::R0;
       Instrs.push_back(Curr);
@@ -409,7 +410,8 @@ bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
       MachineOperand ImmOp = Curr->getOperand(2);
       if (ImmOp.getTargetFlags() != LoongArchII::MO_None || !Lo20)
         return false;
-      const int64_t Imm = SignExtend64<52>(ImmOp.getImm() << 32);
+      const int64_t Imm =
+          SignExtend64<52>(static_cast<uint64_t>(ImmOp.getImm()) << 32);
       Offset += (static_cast<uint64_t>(Imm) << Shift) & Mask;
       Mask &= ~(0xFFFFFFFF00000000ULL << Shift);
       Reg = Curr->getOperand(1).getReg();
@@ -420,7 +422,8 @@ bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
       MachineOperand ImmOp = Curr->getOperand(2);
       if (ImmOp.getTargetFlags() != LoongArchII::MO_None || !Hi12)
         return false;
-      const int64_t Imm = ImmOp.getImm() << 52;
+      const int64_t Imm =
+          static_cast<int64_t>(static_cast<uint64_t>(ImmOp.getImm()) << 52);
       Offset += (static_cast<uint64_t>(Imm) << Shift) & Mask;
       Mask &= ~(0xFFF0000000000000ULL << Shift);
       Reg = Curr->getOperand(1).getReg();
