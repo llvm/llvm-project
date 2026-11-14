@@ -34,26 +34,36 @@ class DwarfLinkerForBinaryRelocationMap {
 public:
   void init(DWARFContext &Context);
 
-  bool isInitialized() {
-    return StoredValidDebugInfoRelocsMap.getMemorySize() != 0;
-  }
+  bool isInitialized() { return !Units.empty(); }
 
-  void addValidRelocs(RelocationMap &RM);
+  /// Add the saved relocations to \p RM. With \p OnlyPlacedUnits, skip the
+  /// units which were never placed with setUnitOffsets().
+  void addValidRelocs(RelocationMap &RM, bool OnlyPlacedUnits);
 
-  void updateAndSaveValidRelocs(bool IsDWARF5,
-                                std::vector<ValidReloc> &InRelocs,
+  /// Save \p InRelocs, moved by \p LinkedOffset into \p OutSection, for the
+  /// unit at \p UnitOffset in the input.
+  void updateAndSaveValidRelocs(RelocSectionKind OutSection,
+                                const std::vector<ValidReloc> &InRelocs,
                                 uint64_t UnitOffset, int64_t LinkedOffset);
 
-  void updateRelocationsWithUnitOffset(uint64_t OriginalUnitOffset,
-                                       uint64_t OutputUnitOffset);
-
-  /// Map compilation unit offset to the valid relocations to store
-  /// @{
-  DenseMap<uint64_t, std::vector<ValidReloc>> StoredValidDebugInfoRelocsMap;
-  DenseMap<uint64_t, std::vector<ValidReloc>> StoredValidDebugAddrRelocsMap;
-  /// @}
+  /// Record where the output of the unit at \p UnitOffset in the input starts
+  /// in .debug_info and .debug_addr, for the relocations saved relative to it.
+  void setUnitOffsets(uint64_t UnitOffset, uint64_t DebugInfoOffset,
+                      uint64_t DebugAddrOffset);
 
   DwarfLinkerForBinaryRelocationMap() = default;
+
+private:
+  struct UnitRelocs {
+    std::vector<ValidReloc> DebugInfo;
+    std::vector<ValidReloc> DebugAddr;
+    /// Where the unit starts in each output section, if its relocations are
+    /// relative to it.
+    std::optional<std::pair<uint64_t, uint64_t>> Offsets;
+  };
+
+  /// Map compilation unit offset to the valid relocations to store.
+  DenseMap<uint64_t, UnitRelocs> Units;
 };
 
 struct ObjectWithRelocMap {
@@ -160,18 +170,27 @@ private:
         DebugMapObjectType = MachO::N_LIB;
         LibInstallName.emplace(DMO.getInstallName().value());
         const RelocationMap &RM = DMO.getRelocationMap().value();
-        for (const auto &Reloc : RM.relocations()) {
-          const auto *DebugMapEntry = DMO.lookupSymbol(Reloc.SymbolName);
-          if (!DebugMapEntry)
-            continue;
-          std::optional<uint64_t> ObjAddress;
-          ObjAddress.emplace(DebugMapEntry->getValue().ObjectAddress.value());
-          ValidDebugInfoRelocs.emplace_back(
-              Reloc.Offset, Reloc.Size, Reloc.Addend, Reloc.SymbolName,
-              SymbolMapping(ObjAddress, DebugMapEntry->getValue().BinaryAddress,
-                            DebugMapEntry->getValue().Size));
-          // FIXME: Support relocations debug_addr.
-        }
+        auto AddRelocs =
+            [&](iterator_range<RelocationMap::const_iterator> Relocs,
+                std::vector<ValidReloc> &ValidRelocs) {
+              for (const auto &Reloc : Relocs) {
+                const auto *DebugMapEntry = DMO.lookupSymbol(Reloc.SymbolName);
+                if (!DebugMapEntry)
+                  continue;
+                std::optional<uint64_t> ObjAddress;
+                ObjAddress.emplace(
+                    DebugMapEntry->getValue().ObjectAddress.value());
+                ValidRelocs.emplace_back(
+                    Reloc.Offset, Reloc.Size, Reloc.Addend, Reloc.SymbolName,
+                    SymbolMapping(ObjAddress,
+                                  DebugMapEntry->getValue().BinaryAddress,
+                                  DebugMapEntry->getValue().Size));
+              }
+              // The lookups walk the relocations by offset.
+              llvm::sort(ValidRelocs);
+            };
+        AddRelocs(RM.debugInfoRelocations(), ValidDebugInfoRelocs);
+        AddRelocs(RM.debugAddrRelocations(), ValidDebugAddrRelocs);
       } else {
         findValidRelocsInDebugSections(Obj, DMO);
       }
@@ -239,12 +258,11 @@ private:
 
     bool needToSaveValidRelocs() override { return true; }
 
-    void updateAndSaveValidRelocs(bool IsDWARF5, uint64_t OriginalUnitOffset,
+    bool updateAndSaveValidRelocs(RelocSectionKind InSection,
+                                  RelocSectionKind OutSection,
+                                  uint64_t OriginalUnitOffset,
                                   int64_t LinkedOffset, uint64_t StartOffset,
                                   uint64_t EndOffset) override;
-
-    void updateRelocationsWithUnitOffset(uint64_t OriginalUnitOffset,
-                                         uint64_t OutputUnitOffset) override;
 
     void clear() override {
       ValidDebugInfoRelocs.clear();

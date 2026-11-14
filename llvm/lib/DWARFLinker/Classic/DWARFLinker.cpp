@@ -1242,10 +1242,29 @@ unsigned DWARFLinker::DIECloner::cloneDieReferenceAttribute(
 void DWARFLinker::DIECloner::cloneExpression(
     DataExtractor &Data, DWARFExpression Expression, const DWARFFile &File,
     CompileUnit &Unit, SmallVectorImpl<uint8_t> &OutputBuffer,
-    int64_t AddrRelocAdjustment, bool IsLittleEndian) {
+    int64_t AddrRelocAdjustment, bool IsLittleEndian,
+    RelocationFixups::ClonedExpression *Cloned, bool KeepAddrIndices) {
   using Encoding = DWARFExpression::Operation::Encoding;
 
   uint8_t OrigAddressByteSize = Unit.getOrigUnit().getAddressByteSize();
+
+  auto NoteDebugAddrOperand = [&](const DWARFExpression::Operation &Op) {
+    if (!Cloned)
+      return;
+    std::optional<uint64_t> AddrOffset =
+        Unit.getOrigUnit().getIndexedAddressOffset(Op.getRawOperand(0));
+    if (AddrOffset)
+      Cloned->noteDebugAddrOperand(*AddrOffset, OrigAddressByteSize,
+                                   OutputBuffer.size());
+  };
+
+  auto RelocateAddress = [&](const DWARFExpression::Operation &Op,
+                             uint64_t Address) {
+    std::optional<int64_t> Adjustment =
+        File.Addresses->getAddrIndexRelocAdjustment(Unit.getOrigUnit(), Op,
+                                                    Linker.Options.Verbose);
+    return Address + Adjustment.value_or(AddrRelocAdjustment);
+  };
 
   uint64_t OpOffset = 0;
   for (auto &Op : Expression) {
@@ -1259,6 +1278,9 @@ void DWARFLinker::DIECloner::cloneExpression(
           "unmodified.",
           File);
       StringRef Bytes = Data.getData().substr(OpOffset);
+      if (Cloned)
+        Cloned->noteCopiedBytes(OpOffset, OpOffset + Bytes.size(),
+                                OutputBuffer.size());
       OutputBuffer.append(Bytes.begin(), Bytes.end());
       return;
     }
@@ -1312,6 +1334,26 @@ void DWARFLinker::DIECloner::cloneExpression(
       assert(RealSize == ULEBsize && "padding failed");
       ArrayRef<uint8_t> ULEBbytes(ULEB, ULEBsize);
       OutputBuffer.append(ULEBbytes.begin(), ULEBbytes.end());
+    } else if (KeepAddrIndices && (Op.getCode() == dwarf::DW_OP_addrx ||
+                                   Op.getCode() == dwarf::DW_OP_constx)) {
+      std::optional<object::SectionedAddress> SA =
+          Unit.getOrigUnit().getAddrOffsetSectionItem(Op.getRawOperand(0));
+      if (SA) {
+        uint64_t Index =
+            AddrPool.getValueIndex(RelocateAddress(Op, SA->Address));
+        OutputBuffer.push_back(Op.getCode());
+        uint8_t ULEB[16];
+        unsigned ULEBSize = encodeULEB128(Index, ULEB);
+        OutputBuffer.append(ULEB, ULEB + ULEBSize);
+        std::optional<uint64_t> AddrOffset =
+            Unit.getOrigUnit().getIndexedAddressOffset(Op.getRawOperand(0));
+        if (AddrOffset)
+          RelocFixups.noteDebugAddrEntry({*AddrOffset, Index});
+      } else
+        Linker.reportWarning("cannot read " +
+                                 dwarf::OperationEncodingString(Op.getCode()) +
+                                 " operand.",
+                             File);
     } else if (!Linker.Options.Update && Op.getCode() == dwarf::DW_OP_addrx) {
       if (std::optional<object::SectionedAddress> SA =
               Unit.getOrigUnit().getAddrOffsetSectionItem(
@@ -1321,17 +1363,13 @@ void DWARFLinker::DIECloner::cloneExpression(
         // Argument of DW_OP_addrx should be relocated here as it is not
         // processed by applyValidRelocs.
         OutputBuffer.push_back(dwarf::DW_OP_addr);
-        uint64_t LinkedAddress =
-            SA->Address +
-            File.Addresses
-                ->getAddrIndexRelocAdjustment(Unit.getOrigUnit(), Op,
-                                              Linker.Options.Verbose)
-                .value_or(AddrRelocAdjustment);
+        uint64_t LinkedAddress = RelocateAddress(Op, SA->Address);
         if (IsLittleEndian != sys::IsLittleEndianHost)
           sys::swapByteOrder(LinkedAddress);
         ArrayRef<uint8_t> AddressBytes(
             reinterpret_cast<const uint8_t *>(&LinkedAddress),
             OrigAddressByteSize);
+        NoteDebugAddrOperand(Op);
         OutputBuffer.append(AddressBytes.begin(), AddressBytes.end());
       } else
         Linker.reportWarning("cannot read DW_OP_addrx operand.", File);
@@ -1360,17 +1398,13 @@ void DWARFLinker::DIECloner::cloneExpression(
 
         if (OutOperandKind) {
           OutputBuffer.push_back(*OutOperandKind);
-          uint64_t LinkedAddress =
-              SA->Address +
-              File.Addresses
-                  ->getAddrIndexRelocAdjustment(Unit.getOrigUnit(), Op,
-                                                Linker.Options.Verbose)
-                  .value_or(AddrRelocAdjustment);
+          uint64_t LinkedAddress = RelocateAddress(Op, SA->Address);
           if (IsLittleEndian != sys::IsLittleEndianHost)
             sys::swapByteOrder(LinkedAddress);
           ArrayRef<uint8_t> AddressBytes(
               reinterpret_cast<const uint8_t *>(&LinkedAddress),
               OrigAddressByteSize);
+          NoteDebugAddrOperand(Op);
           OutputBuffer.append(AddressBytes.begin(), AddressBytes.end());
         }
       } else
@@ -1378,6 +1412,9 @@ void DWARFLinker::DIECloner::cloneExpression(
     } else {
       // Copy over everything else unmodified.
       StringRef Bytes = Data.getData().slice(OpOffset, Op.getEndOffset());
+      if (Cloned)
+        Cloned->noteCopiedBytes(OpOffset, Op.getEndOffset(),
+                                OutputBuffer.size());
       OutputBuffer.append(Bytes.begin(), Bytes.end());
     }
     OpOffset = Op.getEndOffset();
@@ -1387,7 +1424,7 @@ void DWARFLinker::DIECloner::cloneExpression(
 unsigned DWARFLinker::DIECloner::cloneBlockAttribute(
     DIE &Die, const DWARFDie &InputDIE, const DWARFFile &File,
     CompileUnit &Unit, AttributeSpec AttrSpec, const DWARFFormValue &Val,
-    bool IsLittleEndian) {
+    AttributesInfo &Info, bool IsLittleEndian) {
   DIEValueList *Attr;
   DIEValue Value;
   DIELoc *Loc = nullptr;
@@ -1413,8 +1450,12 @@ unsigned DWARFLinker::DIECloner::cloneBlockAttribute(
     DataExtractor Data(Bytes, IsLittleEndian);
     DWARFExpression Expr(Data, OrigUnit.getAddressByteSize(),
                          OrigUnit.getFormParams().Format);
+    if (ObjFile.Addresses->needToSaveValidRelocs())
+      Info.Source.Expression.emplace(Bytes.size());
     cloneExpression(Data, Expr, File, Unit, Buffer,
-                    Unit.getInfo(InputDIE).AddrAdjust, IsLittleEndian);
+                    Unit.getInfo(InputDIE).AddrAdjust, IsLittleEndian,
+                    Info.Source.Expression ? &*Info.Source.Expression
+                                           : nullptr);
     Bytes = Buffer;
   }
   for (auto Byte : Bytes)
@@ -1446,7 +1487,11 @@ unsigned DWARFLinker::DIECloner::cloneBlockAttribute(
                      dwarf::Form(AttrSpec.Form), Block);
   }
 
-  return Die.addValue(DIEAlloc, Value)->sizeOf(OrigUnit.getFormParams());
+  unsigned AttrSize =
+      Die.addValue(DIEAlloc, Value)->sizeOf(OrigUnit.getFormParams());
+  if (Info.Source.Expression)
+    Info.Source.Expression->addOutputPrefix(AttrSize - Bytes.size());
+  return AttrSize;
 }
 
 /// Returns \p InputDIE's DW_AT_high_pc value \p HighPC, constrained so the code
@@ -1529,6 +1574,12 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
   }
 
   auto AddrIndex = AddrPool.getValueIndex(*Addr);
+
+  std::optional<uint64_t> InputOffset =
+      Unit.getOrigUnit().getIndexedAddressOffset(Val.getRawUValue());
+  if (InputOffset)
+    Info.Source.Entry =
+        RelocationFixups::DebugAddrEntry{*InputOffset, AddrIndex};
 
   return Die
       .addValue(DIEAlloc, static_cast<dwarf::Attribute>(AttrSpec.Attr),
@@ -1741,7 +1792,7 @@ unsigned DWARFLinker::DIECloner::cloneAttribute(
   case dwarf::DW_FORM_block2:
   case dwarf::DW_FORM_block4:
   case dwarf::DW_FORM_exprloc:
-    return cloneBlockAttribute(Die, InputDIE, File, Unit, AttrSpec, Val,
+    return cloneBlockAttribute(Die, InputDIE, File, Unit, AttrSpec, Val, Info,
                                IsLittleEndian);
   case dwarf::DW_FORM_addr:
   case dwarf::DW_FORM_addrx:
@@ -1824,12 +1875,6 @@ shouldSkipAttribute(bool Update,
     return !Update && SkipPC;
   }
 }
-
-struct AttributeLinkedOffsetFixup {
-  int64_t LinkedOffsetFixupVal;
-  uint64_t InputAttrStartOffset;
-  uint64_t InputAttrEndOffset;
-};
 
 DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
                                       const DWARFFile &File, CompileUnit &Unit,
@@ -1920,7 +1965,6 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
 
   std::optional<StringRef> LibraryInstallName =
       ObjFile.Addresses->getLibraryInstallName();
-  SmallVector<AttributeLinkedOffsetFixup> AttributesFixups;
   for (const auto &AttrSpec : Abbrev->attributes()) {
     if (shouldSkipAttribute(Update, AttrSpec, Flags & TF_SkipPC)) {
       DWARFFormValue::skipValue(AttrSpec.Form, Data, &Offset,
@@ -1928,22 +1972,21 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
       continue;
     }
 
-    AttributeLinkedOffsetFixup CurAttrFixup;
-    CurAttrFixup.InputAttrStartOffset = InputDIE.getOffset() + Offset;
-    CurAttrFixup.LinkedOffsetFixupVal =
-        Unit.getStartOffset() + OutOffset - CurAttrFixup.InputAttrStartOffset;
-
+    uint64_t InputStart = InputDIE.getOffset() + Offset;
     DWARFFormValue Val = AttrSpec.getFormValue();
     uint64_t AttrSize = Offset;
     Val.extractValue(Data, &Offset, U.getFormParams(), &U);
-    CurAttrFixup.InputAttrEndOffset = InputDIE.getOffset() + Offset;
+    uint64_t InputEnd = InputDIE.getOffset() + Offset;
     AttrSize = Offset - AttrSize;
 
     uint64_t FinalAttrSize =
         cloneAttribute(*Die, InputDIE, File, Unit, Val, AttrSpec, AttrSize,
                        AttrInfo, IsLittleEndian);
     if (FinalAttrSize != 0 && ObjFile.Addresses->needToSaveValidRelocs())
-      AttributesFixups.push_back(CurAttrFixup);
+      RelocFixups.noteAttribute(InputDIE.getTag(), AttrSpec.Attr, InputStart,
+                                InputEnd, Unit.getStartOffset() + OutOffset,
+                                AttrInfo.Source);
+    AttrInfo.Source.clear();
 
     OutOffset += FinalAttrSize;
   }
@@ -2063,14 +2106,7 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
   // Add the size of the abbreviation number to the output offset.
   OutOffset += AbbrevNumberSize;
 
-  // Update fixups with the size of the abbreviation number
-  for (AttributeLinkedOffsetFixup &F : AttributesFixups)
-    F.LinkedOffsetFixupVal += AbbrevNumberSize;
-
-  for (AttributeLinkedOffsetFixup &F : AttributesFixups)
-    ObjFile.Addresses->updateAndSaveValidRelocs(
-        Unit.getOrigUnit().getVersion() >= 5, Unit.getOrigUnit().getOffset(),
-        F.LinkedOffsetFixupVal, F.InputAttrStartOffset, F.InputAttrEndOffset);
+  RelocFixups.finishDIE(AbbrevNumberSize);
 
   if (!HasChildren) {
     // Update our size.
@@ -2238,7 +2274,7 @@ static void patchAddrBase(DIE &Die, DIEInteger Offset) {
 }
 
 Error DWARFLinker::DIECloner::emitDebugAddrSection(
-    CompileUnit &Unit, const uint16_t DwarfVersion) const {
+    CompileUnit &Unit, const uint16_t DwarfVersion) {
 
   if (LLVM_UNLIKELY(Linker.Options.Update))
     return Error::success();
@@ -2263,6 +2299,7 @@ Error DWARFLinker::DIECloner::emitDebugAddrSection(
   Emitter->emitDwarfDebugAddrs(AddrPool.getValues(),
                                Unit.getOrigUnit().getAddressByteSize());
   Emitter->emitDwarfDebugAddrsFooter(Unit, EndLabel);
+  RelocFixups.setDebugAddrTableOffset(AddrOffset);
 
   return Error::success();
 }
@@ -2892,6 +2929,7 @@ Expected<uint64_t> DWARFLinker::DIECloner::cloneAllCompileUnits(
     const uint32_t UnitHeaderSize = DwarfVersion >= 5 ? 12 : 11;
     auto InputDIE = CurrentUnit->getOrigUnit().getUnitDIE();
     CurrentUnit->setStartOffset(OutputDebugInfoSize);
+    RelocFixups.clear();
     if (!InputDIE) {
       OutputDebugInfoSize = CurrentUnit->computeNextUnitOffset(DwarfVersion);
       continue;
@@ -2929,13 +2967,16 @@ Expected<uint64_t> DWARFLinker::DIECloner::cloneAllCompileUnits(
                         DWARFExpression(Data, OrigUnit.getAddressByteSize(),
                                         OrigUnit.getFormParams().Format),
                         File, *CurrentUnit, OutBytes, RelocAdjustment,
-                        IsLittleEndian);
+                        IsLittleEndian, /*Cloned=*/nullptr,
+                        File.Addresses->needToSaveValidRelocs());
       };
       if (Error E = generateUnitLocations(*CurrentUnit, File, ProcessExpr))
         return E;
       if (Error E = emitDebugAddrSection(*CurrentUnit, DwarfVersion))
         return E;
     }
+    RelocFixups.save(*File.Addresses, CurrentUnit->getOrigUnit().getOffset(),
+                     CurrentUnit->getOrigUnit().getAddressByteSize());
     AddrPool.clear();
   }
 
