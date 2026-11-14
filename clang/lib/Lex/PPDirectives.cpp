@@ -164,21 +164,14 @@ static bool isLanguageDefinedBuiltin(const SourceManager &SourceMgr,
   // defined.
   if (MI->isBuiltinMacro())
     return true;
-  // Builtin macros are defined in the builtin file
-  if (!SourceMgr.isWrittenInBuiltinFile(MI->getDefinitionLoc()))
+  // C uses __STDC* macros; C++ uses __cplusplus and __cpp* feature macros.
+  // Others aren't language-defined. Checking names is cheaper than finding
+  // files.
+  if (!MacroName.starts_with("__STDC") && MacroName != "__cplusplus" &&
+      !MacroName.starts_with("__cpp"))
     return false;
-  // C defines macros starting with __STDC, and C++ defines macros starting with
-  // __STDCPP
-  if (MacroName.starts_with("__STDC"))
-    return true;
-  // C++ defines the __cplusplus macro
-  if (MacroName == "__cplusplus")
-    return true;
-  // C++ defines various feature-test macros starting with __cpp
-  if (MacroName.starts_with("__cpp"))
-    return true;
-  // Anything else isn't language-defined
-  return false;
+  // Builtin macros are defined in the builtin file
+  return SourceMgr.isWrittenInBuiltinFile(MI->getDefinitionLoc());
 }
 
 static bool isReservedCXXAttributeName(Preprocessor &PP, IdentifierInfo *II) {
