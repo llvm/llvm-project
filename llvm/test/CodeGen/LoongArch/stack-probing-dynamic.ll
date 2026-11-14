@@ -259,9 +259,8 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; LA64-NEXT:    st.d $zero, $sp, 0
 ; LA64-NEXT:    move $t1, $sp
 ; LA64-NEXT:    bstrins.d $t1, $zero, 12, 0
-; LA64-NEXT:    lu12i.w $t2, 1
 ; LA64-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    sub.d $sp, $sp, $t2
+; LA64-NEXT:    addi.d $sp, $sp, -2048
 ; LA64-NEXT:    st.d $zero, $sp, 0
 ; LA64-NEXT:    bltu $t1, $sp, .LBB3_1
 ; LA64-NEXT:  # %bb.2:
@@ -315,9 +314,8 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    move $t1, $sp
 ; LA32-NEXT:    bstrins.w $t1, $zero, 12, 0
-; LA32-NEXT:    lu12i.w $t2, 1
 ; LA32-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    sub.w $sp, $sp, $t2
+; LA32-NEXT:    addi.w $sp, $sp, -2048
 ; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    bltu $t1, $sp, .LBB3_1
 ; LA32-NEXT:  # %bb.2:

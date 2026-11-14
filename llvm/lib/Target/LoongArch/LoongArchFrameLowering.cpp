@@ -188,6 +188,44 @@ void LoongArchFrameLowering::processFunctionBeforeFrameFinalized(
   }
 }
 
+// Return a general-purpose register that is free at MBBI: not live there, not
+// reserved and not callee-saved (it may not have been saved). Prefer
+// PreferredReg. Return no register if there is none.
+static Register
+findScratchNonCalleeSaveRegister(const MachineBasicBlock &MBB,
+                                 MachineBasicBlock::const_iterator MBBI,
+                                 Register PreferredReg) {
+  const MachineFunction &MF = *MBB.getParent();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  LivePhysRegs LiveRegs(*MF.getSubtarget().getRegisterInfo());
+  LiveRegs.addLiveOuts(MBB);
+  for (MachineBasicBlock::const_iterator I = MBB.end(); I != MBBI;)
+    LiveRegs.stepBackward(*--I);
+  for (const MCPhysReg *CSR = MRI.getCalleeSavedRegs(); *CSR; ++CSR)
+    LiveRegs.addReg(*CSR);
+
+  if (LiveRegs.available(MRI, PreferredReg))
+    return PreferredReg;
+  for (MCPhysReg Reg : LoongArch::GPRRegClass)
+    if (LiveRegs.available(MRI, Reg))
+      return Reg;
+  return Register();
+}
+
+// Return true if the prologue realigns SP with a probing loop: with inline
+// stack probing, when realigning may move SP down by the probe size or more.
+static bool realignsWithProbeLoop(const MachineFunction &MF) {
+  const auto &STI = MF.getSubtarget<LoongArchSubtarget>();
+  const LoongArchTargetLowering *TLI = STI.getTargetLowering();
+  const Align StackAlign = STI.getFrameLowering()->getStackAlign();
+  const Align MaxAlign = MF.getFrameInfo().getMaxAlign();
+  return TLI->hasInlineStackProbe(MF) &&
+         STI.getRegisterInfo()->hasStackRealignment(MF) &&
+         MaxAlign > StackAlign &&
+         MaxAlign.value() - StackAlign.value() >=
+             TLI->getStackProbeSize(MF, StackAlign);
+}
+
 // Allocate stack space and probe it if necessary. When probing, at most
 // StackProbeMaxUnprobedStack bytes above the new SP are left unprobed, and none
 // if FollowupAllocs is set, so that later allocations start from a probed SP.
@@ -405,12 +443,22 @@ void LoongArchFrameLowering::emitPrologue(MachineFunction &MF,
       assert(Align > 0 && "The stack realignment size is invalid!");
       const unsigned BstrinsOpc =
           IsLA64 ? LoongArch::BSTRINS_D : LoongArch::BSTRINS_W;
+      // The stack may be realigned to less than its alignment (stackrealign).
       const uint64_t RealignPadding =
-          MFI.getMaxAlign().value() - getStackAlign().value();
-      if (NeedProbe && RealignPadding >= ProbeSize) {
+          MFI.getMaxAlign() > getStackAlign()
+              ? MFI.getMaxAlign().value() - getStackAlign().value()
+              : 0;
+      if (realignsWithProbeLoop(MF)) {
         // Realigning may move SP down by the probe size or more: compute the
-        // aligned SP and move SP down to it with a probing loop.
-        const Register TargetReg = LoongArch::R13;
+        // aligned SP in a free register and move SP down to it with a probing
+        // loop. Without a free register, use BP, saved above and set below.
+        // canUseAsPrologue keeps the prologue out of blocks with neither; the
+        // entry block has a free register if there is no BP.
+        Register TargetReg =
+            findScratchNonCalleeSaveRegister(MBB, MBBI, LoongArch::R13);
+        if (!TargetReg.isValid() && hasBP(MF))
+          TargetReg = LoongArchABI::getBPReg();
+        assert(TargetReg.isValid() && "No free register to realign the stack");
         // move TargetReg, $sp
         BuildMI(MBB, MBBI, DL, TII->get(LoongArch::OR), TargetReg)
             .addReg(SPReg)
@@ -507,7 +555,9 @@ void LoongArchFrameLowering::emitEpilogue(MachineFunction &MF,
 
 // Synthesize the probe loop. With IsVar, TargetReg need not be a multiple of
 // the probe size below SP; as for dynamic allocations, the last probe may then
-// be below TargetReg, and SP is set to TargetReg after the loop.
+// be below TargetReg, and SP is set to TargetReg after the loop. That loop uses
+// no register but TargetReg: it moves SP down by at most 2048 bytes, what one
+// ADDI can subtract, between probes.
 static void emitStackProbeInline(MachineBasicBlock::iterator MBBI, DebugLoc DL,
                                  Register TargetReg, bool IsVar) {
   assert(TargetReg != LoongArch::R3 &&
@@ -533,16 +583,26 @@ static void emitStackProbeInline(MachineBasicBlock::iterator MBBI, DebugLoc DL,
   const Register ScratchReg = LoongArch::R14;
   const MachineInstr::MIFlag Flags = MachineInstr::FrameSetup;
 
-  // ScratchReg = ProbeSize
-  TII->movImm(MBB, MBBI, DL, ScratchReg, ProbeSize, Flags);
+  if (IsVar) {
+    // LoopTest:
+    //   addi.{w/d} $sp, $sp, -min(ProbeSize, 2048)
+    BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL,
+            TII->get(IsLA64 ? LoongArch::ADDI_D : LoongArch::ADDI_W), SPReg)
+        .addReg(SPReg)
+        .addImm(-static_cast<int64_t>(std::min<uint64_t>(ProbeSize, 2048)))
+        .setMIFlag(Flags);
+  } else {
+    // ScratchReg = ProbeSize
+    TII->movImm(MBB, MBBI, DL, ScratchReg, ProbeSize, Flags);
 
-  // LoopTest:
-  //   sub.{w/d} $sp, $sp, ScratchReg
-  BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL,
-          TII->get(IsLA64 ? LoongArch::SUB_D : LoongArch::SUB_W), SPReg)
-      .addReg(SPReg)
-      .addReg(ScratchReg)
-      .setMIFlag(Flags);
+    // LoopTest:
+    //   sub.{w/d} $sp, $sp, ScratchReg
+    BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL,
+            TII->get(IsLA64 ? LoongArch::SUB_D : LoongArch::SUB_W), SPReg)
+        .addReg(SPReg)
+        .addReg(ScratchReg)
+        .setMIFlag(Flags);
+  }
 
   //   st.{w/d} $zero, $sp, 0
   BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL,
@@ -783,4 +843,14 @@ bool LoongArchFrameLowering::enableShrinkWrapping(
     return false;
 
   return true;
+}
+
+bool LoongArchFrameLowering::canUseAsPrologue(
+    const MachineBasicBlock &MBB) const {
+  // Realigning SP with a probing loop needs a free register, or BP.
+  const MachineFunction &MF = *MBB.getParent();
+  if (!realignsWithProbeLoop(MF) || hasBP(MF))
+    return true;
+  return findScratchNonCalleeSaveRegister(MBB, MBB.begin(), LoongArch::R13)
+      .isValid();
 }
