@@ -12395,6 +12395,24 @@ def warn_omp_declare_target_local_nohost
     : Warning<"'device_type(nohost)' is not yet supported with 'local' clause; "
               "treating as 'device_type(any)'">,
       InGroup<OpenMPTarget>;
+def warn_omp_lock_not_lane_serialized : Warning<
+  "'omp_set_lock' may be reached by several threads of a warp at once, but "
+  "they cannot be made to take the lock one at a time because "
+  // The cases follow OMPLockSequenceRejection.
+  "%select{no matching 'omp_unset_lock' follows it in the same block|"
+  "control can enter or leave the locked code other than at its ends|"
+  "the locked code uses a lock routine other than in properly nested "
+  "set/unset pairs|"
+  "the locked code contains an OpenMP directive|"
+  "the locked code declares a variable|"
+  "the lock expression has side effects|"
+  "the call is labelled; put the locked code in a block of its own|"
+  "the call is not a statement of its own in a block}0; threads of a warp "
+  "that contend for the lock will trap or hang">,
+  InGroup<OpenMPLockstepLock>;
+def note_omp_lock_lockstep_context : Note<
+  "threads of a warp may execute this '#pragma omp %0' region together; use "
+  "'single', 'masked' or 'critical' to run code on one thread at a time">;
 def warn_omp_not_in_target_context : Warning<
   "declaration is not declared in any declare target region">,
   InGroup<OpenMPTarget>;

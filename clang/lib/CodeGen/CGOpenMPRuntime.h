@@ -804,6 +804,16 @@ public:
                    OpenMPSeverityClauseKind Severity = OMPC_SEVERITY_fatal,
                    const Expr *Message = nullptr);
 
+  /// Called while emitting the statements of a compound statement in device
+  /// code, with \p Stmts the statements not yet emitted. If a sequence of them
+  /// starting with the first needs to be emitted as a whole, emits it and
+  /// returns the number of statements emitted; otherwise returns 0 and emits
+  /// nothing.
+  virtual unsigned emitStmtSequence(CodeGenFunction &CGF,
+                                    ArrayRef<Stmt *> Stmts) {
+    return 0;
+  }
+
   /// Emits a critical region.
   /// \param CriticalName Name of the critical region.
   /// \param CriticalOpGen Generator for the statement associated with the given

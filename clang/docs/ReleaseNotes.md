@@ -1708,6 +1708,14 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   another lane of the same wavefront spins for it; `omp_set_lock` traps in
   that case rather than hang.
 
+- On GPUs, whose threads of a warp may run in lockstep, where
+  `omp_set_lock(lock)` and the matching `omp_unset_lock(lock)` are in the same
+  block, with code between them that can only be entered at the start and left
+  at the end, the threads of a warp now run that sequence one at a time. This
+  makes the common pattern of every thread taking the same lock work. When an
+  `omp_set_lock` cannot be handled this way and several threads of a warp may
+  reach it together, a new warning `-Wopenmp-lockstep-lock` explains the reason.
+
 ### SYCL Support
 
 - On a `spirv32-unknown-unknown` or `spirv64-unknown-unknown` offload target,

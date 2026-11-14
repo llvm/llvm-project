@@ -29,6 +29,7 @@
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include <array>
@@ -75,6 +76,12 @@ public:
   SemaDiagnosticBuilder diagIfOpenMPDeviceCode(SourceLocation Loc,
                                                unsigned DiagID,
                                                const FunctionDecl *FD);
+
+  /// Where the threads of a warp run in lockstep on the device, warns about
+  /// each call to omp_set_lock in the compound statement \p CS that several
+  /// threads of a warp may reach together, but that does not begin a sequence
+  /// they can be made to run one at a time (see OpenMPLockSequence.h).
+  void diagnoseLockstepLocks(const CompoundStmt *CS);
 
   /// Creates a SemaDiagnosticBuilder that emits the diagnostic if the current
   /// context is "used as host code".
@@ -1541,6 +1548,11 @@ public:
 
 private:
   void *VarDataSharingAttributesStack;
+
+  /// Locations of calls to omp_set_lock already diagnosed by
+  /// diagnoseLockstepLocks, so that each template instantiation does not
+  /// repeat the warning.
+  llvm::DenseSet<SourceLocation> DiagnosedLockstepLockCalls;
 
   /// Number of nested '#pragma omp declare target' directives.
   SmallVector<DeclareTargetContextInfo, 4> DeclareTargetNesting;

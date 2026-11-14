@@ -290,6 +290,12 @@ public:
                           SourceLocation Loc,
                           const Expr *Hint = nullptr) override;
 
+  /// Where the threads of a warp run in lockstep, emits a sequence starting
+  /// omp_set_lock(L) and ending with the matching omp_unset_lock(L) so that
+  /// the threads of a warp run through it one at a time.
+  unsigned emitStmtSequence(CodeGenFunction &CGF,
+                            ArrayRef<Stmt *> Stmts) override;
+
   /// Emit a code for reduction clause.
   ///
   /// \param Privates List of private copies for original reduction arguments.
