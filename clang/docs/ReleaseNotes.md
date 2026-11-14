@@ -1457,6 +1457,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### CUDA Support
 
+- Fixed argument-dependent lookup for CUDA and HIP kernel launches, including
+  calls to kernels declared as hidden friends. (#GH45327)
+
 - Fixed missing diagnostics for wrong-side functions reached through constructor
   and member initializers, as well as inherited constructors. (#GH118415)
 

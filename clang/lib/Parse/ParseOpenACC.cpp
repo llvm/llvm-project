@@ -1377,10 +1377,10 @@ ExprResult Parser::ParseOpenACCIDExpression() {
     Name.setIdentifier(FuncName.getIdentifierInfo(), ConsumeToken());
 
     // Ensure this is a valid identifier. We don't accept causing implicit
-    // function declarations per the spec, so always claim to not have trailing
-    // L Paren.
+    // function declarations per the spec, so always claim that this isn't
+    // a call.
     Res = Actions.ActOnIdExpression(getCurScope(), ScopeSpec, TemplateKWLoc,
-                                    Name, /*HasTrailingLParen=*/false,
+                                    Name, /*IsCall=*/false,
                                     /*isAddressOfOperand=*/false);
   }
 

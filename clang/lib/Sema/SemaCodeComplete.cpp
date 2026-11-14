@@ -8543,7 +8543,7 @@ void SemaCodeCompletion::CodeCompleteObjCSuperMessage(
       id.setIdentifier(Super, SuperLoc);
       ExprResult SuperExpr =
           SemaRef.ActOnIdExpression(S, SS, TemplateKWLoc, id,
-                                    /*HasTrailingLParen=*/false,
+                                    /*IsCall=*/false,
                                     /*IsAddressOfOperand=*/false);
       return CodeCompleteObjCInstanceMessage(S, (Expr *)SuperExpr.get(),
                                              SelIdents, AtArgumentExpression);
