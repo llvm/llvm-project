@@ -2013,6 +2013,12 @@ void StmtPrinter::VisitAddrLabelExpr(AddrLabelExpr *Node) {
   OS << "&&" << Node->getLabel()->getName();
 }
 
+void StmtPrinter::VisitOverflowGotoExpr(OverflowGotoExpr *Node) {
+  OS << "__builtin_overflow_goto(";
+  PrintExpr(Node->getSubExpr());
+  OS << ", " << Node->getLabel()->getName() << ")";
+}
+
 void StmtPrinter::VisitStmtExpr(StmtExpr *E) {
   OS << "(";
   PrintRawCompoundStmt(E->getSubStmt());
