@@ -92,17 +92,19 @@ bool SILowerWWMCopies::isSCCLiveAtMI(const MachineInstr &MI) {
   return LR.liveAt(Idx);
 }
 
-// If \p Reg is assigned with a physical VGPR, add the latter into wwm-spills
-// for preserving its entire lanes at function prolog/epilog.
+// Preserve the inactive lanes of a WWM copy destination at function entry/exit.
+// Fast register allocation has already rewritten virtual registers here.
 void SILowerWWMCopies::addToWWMSpills(MachineFunction &MF, Register Reg) {
-  if (Reg.isPhysical())
-    return;
+  Register PhysReg = Reg;
+  if (Reg.isVirtual()) {
+    assert(VRM && "expected VirtRegMap after WWM register allocation");
+    PhysReg = VRM->getPhys(Reg);
+    assert(PhysReg && "should have allocated a physical register");
+  }
 
-  // FIXME: VRM may be null here.
-  MCRegister PhysReg = VRM->getPhys(Reg);
-  assert(PhysReg && "should have allocated a physical register");
-
-  MFI->allocateWWMSpill(MF, PhysReg);
+  const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(PhysReg);
+  MFI->allocateWWMSpill(MF, PhysReg, TRI->getSpillSize(*RC),
+                        TRI->getSpillAlign(*RC));
 }
 
 bool SILowerWWMCopiesLegacy::runOnMachineFunction(MachineFunction &MF) {
