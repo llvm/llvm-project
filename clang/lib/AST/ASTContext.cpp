@@ -5906,6 +5906,8 @@ QualType ASTContext::getOverflowBehaviorType(
 
   OverflowBehaviorType *Ty = new (*this, alignof(OverflowBehaviorType))
       OverflowBehaviorType(*this, Canonical, Underlying, Kind);
+  if (Kind == OverflowBehaviorType::OverflowBehaviorKind::Trap)
+    HasTrapOverflowBehaviorType = true;
 
   Types.push_back(Ty);
   OverflowBehaviorTypes.insert(Ty, Token);

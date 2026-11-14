@@ -532,6 +532,10 @@ public:
   /// If none is specified, abort (GCC-compatible behaviour).
   std::string OverflowHandler;
 
+  /// The name of the label that overflowing trap overflow behavior type
+  /// arithmetic branches to when such a label is visible.
+  std::string OverflowBehaviorLabel;
+
   /// The module currently being compiled as specified by -fmodule-name.
   std::string ModuleName;
 
