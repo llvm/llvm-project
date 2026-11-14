@@ -324,4 +324,14 @@ features = [
         name="has-splitfile",
         when=lambda cfg: runScriptExitCode(cfg, ["split-file --version"]) == 0,
     ),
+    Feature(
+        name="can-build-shared-libraries",
+        when=lambda cfg: sourceBuilds(
+            cfg,
+            """
+            void* f() { return new int; }
+            """,
+            ["-fPIC", "-shared"],
+        ),
+    ),
 ]

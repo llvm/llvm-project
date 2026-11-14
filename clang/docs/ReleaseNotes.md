@@ -163,6 +163,11 @@ features cannot lower the translation-unit ABI level;
   accesses to these fields. `__attribute__((packed))` on the field or the
   enclosing record still reduces the alignment. (#GH208256)
 
+- Fixed RTTI name for internal-linkage types lacking '*', fixed breaking
+  type_info::operator== and dynamic_cast with libstdc++. Fixed libc++ NonUnique
+  implementation incorrectly comparing internal-linkage types equal via strcmp.
+  (#GH34255)
+
 - On 32-bit Arm Windows, the C++ throw information (`ThrowInfo`,
   `CatchableTypeArray` and `CatchableType`) is now image-relative, as the MSVC
   runtime expects.
