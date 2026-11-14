@@ -1237,6 +1237,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Fixed a bug where Clang could ignore lambda constraints in return-type
   requirements.
+  
+- Fixed a crash with generic lambdas in default arguments of functions with `auto` parameters. (#GH48768)
 
 - Fixed a crash when the operand of `__builtin_addressof` is an overload set.
   A function template specialization such as `f<int>` is now resolved like the
