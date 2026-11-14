@@ -646,9 +646,10 @@ public:
   /// Get a bitmask of lldb::SymtabState flags describing the object file's
   /// symbol table state.
   ///
-  /// This does not cause the symbol table to be created. If it hasn't been
-  /// created yet, or no state has been recorded for it, lldb::eSymtabStateNone
-  /// is returned.
+  /// This does not cause the object file or its symbol table to be created,
+  /// and doesn't wait for a symbol table being parsed on another thread to be
+  /// finished. If the symbol table hasn't been created yet, or no state has
+  /// been recorded for it, lldb::eSymtabStateNone is returned.
   uint32_t GetSymtabState();
 
   /// Get a reference to the UUID value contained in this object.

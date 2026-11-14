@@ -610,6 +610,7 @@ void ObjectFile::ClearSymtab() {
     // Since we need to clear the symbol table, we need a new llvm::once_flag
     // instance so we can safely create another symbol table
     m_symtab_once_up.reset(new llvm::once_flag());
+    std::lock_guard<std::mutex> guard(m_symtab_up_mutex);
     m_symtab_up.reset();
   }
 }
@@ -803,15 +804,19 @@ Symtab *ObjectFile::GetSymtab(bool can_create) {
     llvm::call_once(*m_symtab_once_up, [&]() {
       Symtab *symtab = new Symtab(this);
       std::lock_guard<std::recursive_mutex> symtab_guard(symtab->GetMutex());
-      m_symtab_up.reset(symtab);
-      if (!m_symtab_up->LoadFromCache()) {
+      {
+        std::lock_guard<std::mutex> guard(m_symtab_up_mutex);
+        m_symtab_up.reset(symtab);
+      }
+      if (!symtab->LoadFromCache()) {
         ElapsedTime elapsed(module_sp->GetSymtabParseTime());
-        ParseSymtab(*m_symtab_up);
-        m_symtab_up->SetWasParsedFromObjectFile();
-        m_symtab_up->Finalize();
+        ParseSymtab(*symtab);
+        symtab->SetWasParsedFromObjectFile();
+        symtab->Finalize();
       }
     });
   }
+  std::lock_guard<std::mutex> guard(m_symtab_up_mutex);
   return m_symtab_up.get();
 }
 

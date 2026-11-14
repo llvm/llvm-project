@@ -23,6 +23,8 @@
 #include "lldb/Utility/DataEncoder.h"
 #include "lldb/Utility/DataExtractor.h"
 
+#include <chrono>
+#include <future>
 #include <memory>
 
 #include "gtest/gtest.h"
@@ -1732,4 +1734,53 @@ LinkEditData:
   EncodeDecode(*zero_module_symtab);
   EncodeDecode(*nonzero_module_symtab);
   EncodeDecode(*split_module_symtab);
+}
+
+TEST_F(SymtabTest, TestGetSymtabState) {
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000400180
+    AddressAlign:    0x0000000000000010
+    Content:         554889E58B042500106000890425041060005DC3
+Symbols:
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000400180
+    Size:            0x0000000000000014
+    Binding:         STB_GLOBAL
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+  auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
+
+  // Getting the state doesn't create the symbol table.
+  EXPECT_EQ(module_sp->GetSymtabState(), eSymtabStateNone);
+  ObjectFile *objfile = module_sp->GetObjectFile();
+  ASSERT_NE(objfile, nullptr);
+  EXPECT_EQ(objfile->GetSymtab(/*can_create=*/false), nullptr);
+  EXPECT_EQ(module_sp->GetSymtabState(), eSymtabStateNone);
+
+  Symtab *symtab = objfile->GetSymtab();
+  ASSERT_NE(symtab, nullptr);
+  EXPECT_EQ(module_sp->GetSymtabState(), eSymtabStateParsedFromObjectFile);
+
+  // Getting the state doesn't wait for the symbol table's mutex, which is held
+  // while the symbol table is being parsed.
+  std::unique_lock<std::recursive_mutex> lock(symtab->GetMutex());
+  std::future<uint32_t> state = std::async(
+      std::launch::async, [&] { return module_sp->GetSymtabState(); });
+  std::future_status status = state.wait_for(std::chrono::seconds(30));
+  lock.unlock();
+  ASSERT_EQ(status, std::future_status::ready);
+  EXPECT_EQ(state.get(), eSymtabStateParsedFromObjectFile);
 }
