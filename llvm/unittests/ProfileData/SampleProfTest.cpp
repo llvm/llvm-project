@@ -10,6 +10,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/LLVMContext.h"
@@ -717,6 +718,42 @@ TEST_F(SampleProfTest, roundtrip_raw_binary_profile) {
 
 TEST_F(SampleProfTest, roundtrip_ext_binary_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, false);
+}
+
+TEST_F(SampleProfTest, ExtBinaryModuleFilteredNameTableLookup) {
+  TempFile ProfileFile("profile", "", "", /*Unique=*/true);
+  createWriter(SampleProfileFormat::SPF_Ext_Binary, ProfileFile.path());
+
+  std::vector<std::string> ProfileNames;
+  ProfileNames.reserve(64);
+  SampleProfileMap Profiles;
+  for (unsigned I = 0; I != 64; ++I) {
+    ProfileNames.push_back((Twine("profile_function_") + Twine(I)).str());
+    FunctionSamples Samples;
+    Samples.setFunction(FunctionId(ProfileNames.back()));
+    Samples.addTotalSamples(1);
+    Profiles[StringRef(ProfileNames.back())] = std::move(Samples);
+  }
+
+  ASSERT_TRUE(NoError(Writer->write(Profiles)));
+  Writer->getOutputStream().flush();
+
+  Module M("my_module", Context);
+  FunctionType *FnType = FunctionType::get(Type::getVoidTy(Context), {}, false);
+  M.getOrInsertFunction("profile_function_0.llvm.123", FnType);
+  M.getOrInsertFunction("module_only_function.llvm.456", FnType);
+
+  readProfile(M, ProfileFile.path());
+  ASSERT_TRUE(NoError(Reader->read()));
+
+  // Exercise the module-filtered lookup using the canonical names collected
+  // from a present and an absent module function.
+  EXPECT_TRUE(Reader->contains("profile_function_0"));
+  EXPECT_FALSE(Reader->contains("module_only_function"));
+
+  // Queries outside the module must retain the unrestricted reader semantics.
+  EXPECT_TRUE(Reader->contains("profile_function_1"));
+  EXPECT_FALSE(Reader->contains("not_in_profile_or_module"));
 }
 
 // Verify the full ExtBinary round trip through composite profile sections.
