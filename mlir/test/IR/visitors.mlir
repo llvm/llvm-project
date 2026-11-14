@@ -470,3 +470,24 @@ module attributes {gpu.container_module, llvm.data_layout = ""} {
     }
   }
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/231136: 
+// a value from the first block is used inside a region nested in a 
+// later block. erasing the first block must not crash.
+// CHECK-LABEL: Block post-order erasures (no skip)
+// CHECK-NEXT: Erasing block ^bb0 from region 0 from operation 'func.func'
+// CHECK-NEXT: Erasing block ^bb0 from region 0 from operation 'scf.if'
+// CHECK-NEXT: Erasing block ^bb0 from region 0 from operation 'func.func'
+// CHECK-NEXT: Erasing block ^bb0 from region 0 from operation 'builtin.module'
+
+func.func @issue231136(%cond: i1) {
+    %c0 = arith.constant 0 : i32
+    cf.br ^bb1
+^bb1:
+    scf.if %cond {
+        %0 = arith.addi %c0, %c0 : i32
+    }
+    return
+}
