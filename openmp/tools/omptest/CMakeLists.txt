@@ -107,9 +107,7 @@ if ((NOT LIBOMPTEST_BUILD_STANDALONE) OR LIBOMPTEST_BUILD_UNITTESTS)
 else()
   message(STATUS "omptest build mode: standalone")
 
-  # Add 'standalone' compile definitions
-  target_compile_definitions(omptest PRIVATE
-    -DOPENMP_LIBOMPTEST_BUILD_STANDALONE)
+  set(OPENMP_LIBOMPTEST_BUILD_STANDALONE ON)
 
   # Add 'standalone' source files
   target_sources(omptest PRIVATE
@@ -130,9 +128,13 @@ endif()
 
 openmp_register_meta_dep(omptest)
 
+configure_file(./include/OmptestConfig.h.cmake
+               ${CMAKE_CURRENT_BINARY_DIR}/include/OmptestConfig.h)
+
 # Add common include directories.
 target_include_directories(omptest PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${LIBOMP_HEADERS_INSTALL_PATH}/omptest>
 )
 
@@ -157,6 +159,8 @@ if(LIBOMPTEST_INSTALL_COMPONENTS)
   install(DIRECTORY ./include/
           DESTINATION "${OMPTEST_HEADER_INSTALL_DIR}"
           FILES_MATCHING PATTERN "*.h")
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/OmptestConfig.h
+          DESTINATION "${OMPTEST_HEADER_INSTALL_DIR}")
 
   # Install library and export targets.
   # Note: find_package(omptest) may require setting of PATH_SUFFIXES
