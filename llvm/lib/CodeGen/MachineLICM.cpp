@@ -217,7 +217,7 @@ namespace {
     void HoistPostRA(MachineInstr *MI, Register Def, MachineLoop *CurLoop);
 
     void ProcessMI(MachineInstr *MI, BitVector &RUDefs, BitVector &RUClobbers,
-                   SmallDenseSet<int> &StoredFIs,
+                   BitVector &RegMaskClobbers, SmallDenseSet<int> &StoredFIs,
                    SmallVectorImpl<CandidateInfo> &Candidates,
                    MachineLoop *CurLoop);
 
@@ -458,63 +458,11 @@ static bool InstructionStoresToFI(const MachineInstr *MI, int FI) {
   return false;
 }
 
-static void applyBitsNotInRegMaskToRegUnitsMask(const TargetRegisterInfo &TRI,
-                                                BitVector &RUs,
-                                                const uint32_t *Mask) {
-  // FIXME: This intentionally works in reverse due to some issues with the
-  // Register Units infrastructure.
-  //
-  // This is used to apply callee-saved-register masks to the clobbered regunits
-  // mask.
-  //
-  // The right way to approach this is to start with a BitVector full of ones,
-  // then reset all the bits of the regunits of each register that is set in the
-  // mask (registers preserved), then OR the resulting bits with the Clobbers
-  // mask. This correctly prioritizes the saved registers, so if a RU is shared
-  // between a register that is preserved, and one that is NOT preserved, that
-  // RU will not be set in the output vector (the clobbers).
-  //
-  // What we have to do for now is the opposite: we have to assume that the
-  // regunits of all registers that are NOT preserved are clobbered, even if
-  // those regunits are preserved by another register. So if a RU is shared
-  // like described previously, that RU will be set.
-  //
-  // This is to work around an issue which appears in AArch64, but isn't
-  // exclusive to that target: AArch64's Qn registers (128 bits) have Dn
-  // register (lower 64 bits). A few Dn registers are preserved by some calling
-  // conventions, but Qn and Dn share exactly the same reg units.
-  //
-  // If we do this the right way, Qn will be marked as NOT clobbered even though
-  // its upper 64 bits are NOT preserved. The conservative approach handles this
-  // correctly at the cost of some missed optimizations on other targets.
-  //
-  // This is caused by how RegUnits are handled within TableGen. Ideally, Qn
-  // should have an extra RegUnit to model the "unknown" bits not covered by the
-  // subregs.
-  BitVector RUsFromRegsNotInMask(TRI.getNumRegUnits());
-  const unsigned NumRegs = TRI.getNumRegs();
-  const unsigned MaskWords = (NumRegs + 31) / 32;
-  for (unsigned K = 0; K < MaskWords; ++K) {
-    const uint32_t Word = Mask[K];
-    for (unsigned Bit = 0; Bit < 32; ++Bit) {
-      const unsigned PhysReg = (K * 32) + Bit;
-      if (PhysReg == NumRegs)
-        break;
-
-      if (PhysReg && !((Word >> Bit) & 1)) {
-        for (MCRegUnit Unit : TRI.regunits(PhysReg))
-          RUsFromRegsNotInMask.set(static_cast<unsigned>(Unit));
-      }
-    }
-  }
-
-  RUs |= RUsFromRegsNotInMask;
-}
-
 /// Examine the instruction for potential LICM candidate. Also
 /// gather register def and frame object update information.
 void MachineLICMImpl::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
                                 BitVector &RUClobbers,
+                                BitVector &RegMaskClobbers,
                                 SmallDenseSet<int> &StoredFIs,
                                 SmallVectorImpl<CandidateInfo> &Candidates,
                                 MachineLoop *CurLoop) {
@@ -536,7 +484,7 @@ void MachineLICMImpl::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
     // We can't hoist an instruction defining a physreg that is clobbered in
     // the loop.
     if (MO.isRegMask()) {
-      applyBitsNotInRegMaskToRegUnitsMask(*TRI, RUClobbers, MO.getRegMask());
+      RegMaskClobbers.setBitsNotInMask(MO.getRegMask());
       continue;
     }
 
@@ -548,6 +496,7 @@ void MachineLICMImpl::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
     assert(Reg.isPhysical() && "Not expecting virtual register!");
 
     if (!MO.isDef()) {
+      HasNonInvariantUse |= RegMaskClobbers.test(Reg);
       if (!HasNonInvariantUse) {
         for (MCRegUnit Unit : TRI->regunits(Reg)) {
           // If it's using a non-loop-invariant register, then it's obviously
@@ -562,6 +511,9 @@ void MachineLICMImpl::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
       continue;
     }
 
+    if (RegMaskClobbers.test(Reg))
+      RuledOut = true;
+
     // FIXME: For now, avoid instructions with multiple defs, unless it's dead.
     if (!MO.isDead()) {
       if (Def)
@@ -572,7 +524,7 @@ void MachineLICMImpl::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
 
     // If we have already seen another instruction that defines the same
     // register, then this is not safe.  Two defs is indicated by setting a
-    // PhysRegClobbers bit.
+    // RUClobbers bit.
     for (MCRegUnit Unit : TRI->regunits(Reg)) {
       if (RUDefs.test(static_cast<unsigned>(Unit))) {
         RUClobbers.set(static_cast<unsigned>(Unit));
@@ -607,6 +559,9 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
   unsigned NumRegUnits = TRI->getNumRegUnits();
   BitVector RUDefs(NumRegUnits);     // RUs defined once in the loop.
   BitVector RUClobbers(NumRegUnits); // RUs defined more than once.
+  // Keep regmask clobbers separate: overlapping registers can be preserved
+  // differently, so mapping them to register units would lose precision.
+  BitVector RegMaskClobbers(TRI->getNumRegs());
 
   SmallVector<CandidateInfo, 32> Candidates;
   SmallDenseSet<int> StoredFIs;
@@ -629,7 +584,7 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
 
     // Funclet entry blocks will clobber all registers
     if (const uint32_t *Mask = BB->getBeginClobberMask(TRI))
-      applyBitsNotInRegMaskToRegUnitsMask(*TRI, RUClobbers, Mask);
+      RegMaskClobbers.setBitsNotInMask(Mask);
 
     // EH landing pads clobber exception pointer/selector registers.
     if (BB->isEHPad()) {
@@ -647,7 +602,8 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
 
     GuaranteedToExecute.clear();
     for (MachineInstr &MI : *BB)
-      ProcessMI(&MI, RUDefs, RUClobbers, StoredFIs, Candidates, CurLoop);
+      ProcessMI(&MI, RUDefs, RUClobbers, RegMaskClobbers, StoredFIs, Candidates,
+                CurLoop);
   }
 
   // Gather the registers read / clobbered by the terminator.
@@ -679,6 +635,9 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
       continue;
 
     Register Def = Candidate.Def;
+    if (RegMaskClobbers.test(Def))
+      continue;
+
     bool Safe = true;
     for (MCRegUnit Unit : TRI->regunits(Def)) {
       if (RUClobbers.test(static_cast<unsigned>(Unit)) ||
@@ -695,6 +654,10 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
     for (const MachineOperand &MO : MI->all_uses()) {
       if (!MO.getReg())
         continue;
+      if (RegMaskClobbers.test(MO.getReg())) {
+        Safe = false;
+        break;
+      }
       for (MCRegUnit Unit : TRI->regunits(MO.getReg())) {
         if (RUDefs.test(static_cast<unsigned>(Unit)) ||
             RUClobbers.test(static_cast<unsigned>(Unit))) {

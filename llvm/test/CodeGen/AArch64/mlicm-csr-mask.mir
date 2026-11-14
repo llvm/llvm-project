@@ -46,3 +46,137 @@ body: |
     $q0 = COPY $q10
     $q1 = COPY $q11
 ...
+
+# D8 and D9 are preserved even though their Q and Z super-registers are not.
+# Check definitions both before and after the call.
+---
+name: preserved_subregs
+body: |
+  ; CHECK-LABEL: name: preserved_subregs
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $x19
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $d8 = FMOVDi 112
+  ; CHECK-NEXT:   $d9 = FMOVDi 120
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $x19, $d8, $d9
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   BL &callee, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp
+  ; CHECK-NEXT:   CBNZX $x19, %bb.1
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   liveins: $d8, $d9
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $d0 = COPY $d8
+  ; CHECK-NEXT:   $d1 = COPY $d9
+  bb.0:
+    liveins: $x19
+    B %bb.1
+
+  bb.1:
+    liveins: $x19
+    $d8 = FMOVDi 112
+    BL &callee, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp
+    $d9 = FMOVDi 120
+    CBNZX $x19, %bb.1
+    B %bb.2
+
+  bb.2:
+    liveins: $d8, $d9
+    $d0 = COPY $d8
+    $d1 = COPY $d9
+...
+
+# A preserved destination can only be hoisted if its source is preserved too.
+# Check uses both before and after the call, including a source whose D
+# sub-register is preserved but whose full Q register is clobbered.
+# Use undef sources to isolate regmask handling from live-in definitions.
+---
+name: preserved_and_clobbered_uses
+body: |
+  ; CHECK-LABEL: name: preserved_and_clobbered_uses
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $x28
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $x19 = COPY undef $d8
+  ; CHECK-NEXT:   $x20 = COPY undef $d9
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $x28, $x19, $x20
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $x21 = COPY undef $d0
+  ; CHECK-NEXT:   $x23 = UMOVvi64 undef $q14, 1
+  ; CHECK-NEXT:   BL &callee, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp
+  ; CHECK-NEXT:   $x22 = COPY undef $d1
+  ; CHECK-NEXT:   CBNZX $x28, %bb.1
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   liveins: $x19, $x20, $x21, $x22, $x23
+  bb.0:
+    liveins: $x28
+    B %bb.1
+
+  bb.1:
+    liveins: $x28
+    $x19 = COPY undef $d8
+    $x21 = COPY undef $d0
+    $x23 = UMOVvi64 undef $q14, 1
+    BL &callee, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp
+    $x20 = COPY undef $d9
+    $x22 = COPY undef $d1
+    CBNZX $x28, %bb.1
+    B %bb.2
+
+  bb.2:
+    liveins: $x19, $x20, $x21, $x22, $x23
+...
+
+# The second mask preserves X0, but the first call still clobbers it.
+---
+name: multiple_masks
+body: |
+  ; CHECK-LABEL: name: multiple_masks
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $x19
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $d8 = FMOVDi 112
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $x19, $d8
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $x0 = MOVi64imm 42
+  ; CHECK-NEXT:   BL &callee, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp
+  ; CHECK-NEXT:   BL &callee, csr_aarch64_aapcs_thisreturn, implicit-def dead $lr, implicit $sp
+  ; CHECK-NEXT:   CBNZX $x19, %bb.1
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   liveins: $x0, $d8
+  bb.0:
+    liveins: $x19
+    B %bb.1
+
+  bb.1:
+    liveins: $x19
+    $x0 = MOVi64imm 42
+    $d8 = FMOVDi 112
+    BL &callee, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp
+    BL &callee, csr_aarch64_aapcs_thisreturn, implicit-def dead $lr, implicit $sp
+    CBNZX $x19, %bb.1
+    B %bb.2
+
+  bb.2:
+    liveins: $x0, $d8
+...
