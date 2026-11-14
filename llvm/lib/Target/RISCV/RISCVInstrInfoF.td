@@ -113,8 +113,9 @@ def any_fma_nsz : PatFrag<(ops node:$rs1, node:$rs2, node:$rs3),
 
 def GPRAsFPR32 : AsmOperandClass {
   let Name = "GPRAsFPR32";
-  let ParserMethod = "parseGPRAsFPR";
-  let RenderMethod = "addRegOperands";
+  let PredicateMethod = "isGPRForFP";
+  let PredicateUsesSubtarget = true;
+  let RenderMethod = "addGPRAsFPR32Operands";
   let DiagnosticString = "register must be a GPR when used as an FP operand";
 }
 
