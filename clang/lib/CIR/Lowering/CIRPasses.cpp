@@ -26,6 +26,9 @@ static CallConvTarget getCallConvTarget(const llvm::Triple &triple) {
   // Windows is not supported.  UEFI shares its convention.
   if (triple.getArch() == llvm::Triple::x86_64 && !triple.isOSWindowsOrUEFI())
     return CallConvTarget::X86_64;
+  // AMDGCN-flavored SPIR-V follows the AMDGPU ABI.
+  if (triple.isSPIRV() && triple.getVendor() == llvm::Triple::AMD)
+    return CallConvTarget::AMDGPU;
   return CallConvTarget::None;
 }
 

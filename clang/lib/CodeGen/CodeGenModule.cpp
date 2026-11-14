@@ -350,6 +350,12 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   return *TheTargetCodeGenInfo;
 }
 
+/// AMDGCN, and the AMDGCN-flavoured SPIR-V that lowers to it, share one
+/// classifier.
+static bool usesAMDGPUABI(const llvm::Triple &T) {
+  return T.isAMDGCN() || (T.isSPIRV() && T.getVendor() == llvm::Triple::AMD);
+}
+
 bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   if (!CodeGenOpts.ExperimentalABILowering)
     return false;
@@ -358,10 +364,12 @@ bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   if (T.isBPF())
     return true;
 
-  // AMDGCN-flavored SPIR-V follows the AMDGPU ABI instead. HLSL's integer
-  // promotion rules and resource types are not modeled yet.
+  if (usesAMDGPUABI(T))
+    return true;
+
+  // HLSL's integer promotion rules and resource types are not modeled yet.
   if (T.isSPIRV())
-    return T.getVendor() != llvm::Triple::AMD && !getLangOpts().HLSL;
+    return !getLangOpts().HLSL;
 
   if (T.getArch() == llvm::Triple::aarch64 ||
       T.getArch() == llvm::Triple::aarch64_32 ||
@@ -421,6 +429,19 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
     return *TheLLVMABITargetInfo;
 
   const llvm::Triple &T = getTriple();
+
+  if (usesAMDGPUABI(T)) {
+    llvm::abi::AMDGPUABIOptions Opts;
+    Opts.PrivateAddrSpace =
+        getContext().getTargetAddressSpace(LangAS::opencl_private);
+    Opts.ConstantAddrSpace =
+        getContext().getTargetAddressSpace(LangAS::opencl_constant);
+    Opts.GenericAddrSpace = getContext().getTargetAddressSpace(LangAS::Default);
+    Opts.CoerceGenericPtrArgToGlobal =
+        T.isSPIRV() ? getLangOpts().isTargetDevice() : getLangOpts().HIP;
+    TheLLVMABITargetInfo = llvm::abi::createAMDGPUTargetInfo(TB, Opts);
+    return *TheLLVMABITargetInfo;
+  }
 
   switch (T.getArch()) {
   default:

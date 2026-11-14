@@ -14,6 +14,7 @@
 #include "CIRABIClassifier.h"
 
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace mlir;
 using namespace mlir::abi;
@@ -46,9 +47,19 @@ const llvm::abi::TargetInfo &AMDGPUABIClassifier::getTargetInfo(cir::FuncOp) {
     // HIP passes a generic pointer kernel argument as a global one.
     auto langOpts = modOp->getAttrOfType<cir::LoweringOptionsAttr>(
         cir::CIRDialect::getLoweringOptionsAttrName());
-    target = llvm::abi::createAMDGPUTargetInfo(
-        typeMapper.getTypeBuilder(),
-        /*CoerceGenericPtrArgToGlobal=*/langOpts && langOpts.getHip());
+    llvm::abi::AMDGPUABIOptions opts;
+    opts.CoerceGenericPtrArgToGlobal = langOpts && langOpts.getHip();
+    // AMDGCN-flavored SPIR-V uses the Function, UniformConstant and Generic
+    // storage classes.
+    auto triple = mlir::dyn_cast_if_present<mlir::StringAttr>(
+        modOp->getAttr(cir::CIRDialect::getTripleAttrName()));
+    if (triple && llvm::Triple(triple.getValue()).isSPIRV()) {
+      opts.PrivateAddrSpace = 0;
+      opts.ConstantAddrSpace = 2;
+      opts.GenericAddrSpace = 4;
+    }
+    target =
+        llvm::abi::createAMDGPUTargetInfo(typeMapper.getTypeBuilder(), opts);
   }
   return *target;
 }

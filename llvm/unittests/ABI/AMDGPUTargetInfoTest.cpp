@@ -24,6 +24,7 @@ using namespace llvm;
 
 using ABIType = llvm::abi::Type;
 using llvm::abi::ABICompatInfo;
+using llvm::abi::AMDGPUABIOptions;
 using llvm::abi::ArgInfo;
 using llvm::abi::createAMDGPUTargetInfo;
 using llvm::abi::FieldInfo;
@@ -63,8 +64,9 @@ protected:
   /// A target configured like a HIP compilation: generic scalar-pointer kernel
   /// arguments are coerced to the global address space.
   std::unique_ptr<TargetInfo> hipTarget() const {
-    return createAMDGPUTargetInfo(const_cast<TypeBuilder &>(TB),
-                                  /*CoerceGenericPtrArgToGlobal=*/true);
+    AMDGPUABIOptions Opts;
+    Opts.CoerceGenericPtrArgToGlobal = true;
+    return createAMDGPUTargetInfo(const_cast<TypeBuilder &>(TB), Opts);
   }
 
   /// The classification a kernel argument gets on target \p TI.
