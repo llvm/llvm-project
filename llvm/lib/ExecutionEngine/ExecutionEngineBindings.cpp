@@ -16,6 +16,7 @@
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/CodeGenCWrappers.h"
 #include "llvm/Target/TargetOptions.h"
@@ -104,9 +105,12 @@ LLVMBool LLVMCreateExecutionEngineForModule(LLVMExecutionEngineRef *OutEE,
                                             LLVMModuleRef M,
                                             char **OutError) {
   std::string Error;
+  TargetOptions TO;
+  TO.MCOptions.LibraryOptions = &cl::getCAPILibraryOptions();
   EngineBuilder builder(std::unique_ptr<Module>(unwrap(M)));
   builder.setEngineKind(EngineKind::Either)
-         .setErrorStr(&Error);
+      .setErrorStr(&Error)
+      .setTargetOptions(TO);
   if (ExecutionEngine *EE = builder.create()){
     *OutEE = wrap(EE);
     return 0;
@@ -135,10 +139,13 @@ LLVMBool LLVMCreateJITCompilerForModule(LLVMExecutionEngineRef *OutJIT,
                                         unsigned OptLevel,
                                         char **OutError) {
   std::string Error;
+  TargetOptions TO;
+  TO.MCOptions.LibraryOptions = &cl::getCAPILibraryOptions();
   EngineBuilder builder(std::unique_ptr<Module>(unwrap(M)));
   builder.setEngineKind(EngineKind::JIT)
       .setErrorStr(&Error)
-      .setOptLevel((CodeGenOptLevel)OptLevel);
+      .setOptLevel((CodeGenOptLevel)OptLevel)
+      .setTargetOptions(TO);
   if (ExecutionEngine *JIT = builder.create()) {
     *OutJIT = wrap(JIT);
     return 0;
@@ -180,6 +187,7 @@ LLVMBool LLVMCreateMCJITCompilerForModule(
 
   TargetOptions targetOptions;
   targetOptions.EnableFastISel = options.EnableFastISel;
+  targetOptions.MCOptions.LibraryOptions = &cl::getCAPILibraryOptions();
   std::unique_ptr<Module> Mod(unwrap(M));
 
   if (Mod)

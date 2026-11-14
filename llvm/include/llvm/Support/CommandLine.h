@@ -93,7 +93,7 @@ LLVM_ABI bool parseCommandLineOptions(
     vfs::FileSystem *VFS = nullptr, const char *EnvVar = nullptr);
 
 // The library options that LLVMParseCommandLineOptions sets, which contexts
-// created through the C API start with.
+// and target machines created through the C API use.
 LLVM_ABI LibraryOptionsContext &getCAPILibraryOptions();
 
 // Function pointer type for printing version information.

@@ -19,6 +19,7 @@
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -768,6 +769,7 @@ LLVMErrorRef LLVMOrcJITTargetMachineBuilderDetectHost(
     Result = nullptr;
     return wrap(JTMB.takeError());
   }
+  JTMB->getOptions().MCOptions.LibraryOptions = &cl::getCAPILibraryOptions();
 
   *Result = wrap(new JITTargetMachineBuilder(std::move(*JTMB)));
   return LLVMErrorSuccess;
@@ -928,6 +930,17 @@ LLVMErrorRef LLVMOrcCreateLLJIT(LLVMOrcLLJITRef *Result,
 
   if (!Builder)
     Builder = LLVMOrcCreateLLJITBuilder();
+
+  // Without a JITTargetMachineBuilder, LLJITBuilder detects the host itself.
+  if (!unwrap(Builder)->getJITTargetMachineBuilder()) {
+    LLVMOrcJITTargetMachineBuilderRef JTMB;
+    if (LLVMErrorRef Err = LLVMOrcJITTargetMachineBuilderDetectHost(&JTMB)) {
+      LLVMOrcDisposeLLJITBuilder(Builder);
+      Result = nullptr;
+      return Err;
+    }
+    LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(Builder, JTMB);
+  }
 
   auto J = unwrap(Builder)->create();
   LLVMOrcDisposeLLJITBuilder(Builder);

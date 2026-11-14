@@ -18,6 +18,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/CodeGenCWrappers.h"
@@ -202,6 +203,7 @@ LLVMCreateTargetMachineWithOptions(LLVMTargetRef T, const char *TripleStr,
   auto *Opt = unwrap(Options);
   TargetOptions TO;
   TO.MCOptions.ABIName = Opt->ABI;
+  TO.MCOptions.LibraryOptions = &cl::getCAPILibraryOptions();
   return wrap(unwrap(T)->createTargetMachine(Triple(TripleStr), Opt->CPU,
                                              Opt->Features, TO, Opt->RM,
                                              Opt->CM, Opt->OL, Opt->JIT));
