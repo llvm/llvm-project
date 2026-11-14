@@ -150,6 +150,10 @@ void LiveRegMatrix::unassign(const LiveInterval &VirtReg,
 
   ++NumUnassigned;
   LLVM_DEBUG(dbgs() << '\n');
+  // Snapshot: a listener must not drop the others if it unregisters itself.
+  SmallVector<UnassignListener, 2> Listeners = UnassignListeners;
+  for (const UnassignListener &L : Listeners)
+    L.Fn(L.Ctx, VirtReg, PhysReg.asMCReg(), ClearAllReferencingSegments);
 }
 
 bool LiveRegMatrix::isPhysRegUsed(MCRegister PhysReg) const {
