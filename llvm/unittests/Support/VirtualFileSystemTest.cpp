@@ -1072,6 +1072,36 @@ TEST(ProxyFileSystemTest, Basic) {
   EXPECT_FALSE(Local);
 }
 
+TEST(VirtualFileSystemTest, FindFileInParentDirectories) {
+  vfs::InMemoryFileSystem FS;
+  for (StringRef Path :
+       {"/.cfg", "/a/b/.cfg", "/a/b/_cfg", "/a/b/c/.other", "/a/b/c/.dir/x"})
+    FS.addFile(Path, 0, MemoryBuffer::getMemBuffer(""));
+  auto Find = [&](StringRef Dir, ArrayRef<StringRef> FileNames) {
+    return vfs::findFileInParentDirectories(FS, Dir, FileNames);
+  };
+  auto PathTo = [](StringRef Dir, StringRef FileName) {
+    SmallString<128> Path(Dir);
+    sys::path::append(Path, FileName);
+    return std::string(Path);
+  };
+
+  // The closest file wins, including the one in the directory itself.
+  EXPECT_EQ(Find("/a/b", {".cfg"}), PathTo("/a/b", ".cfg"));
+  EXPECT_EQ(Find("/a/b/c/d", {".cfg"}), PathTo("/a/b", ".cfg"));
+  EXPECT_EQ(Find("/a", {".cfg"}), PathTo("/", ".cfg"));
+
+  // The names are tried in order in each directory, but a closer directory
+  // takes precedence over the order of the names.
+  EXPECT_EQ(Find("/a/b/c", {".cfg", "_cfg"}), PathTo("/a/b", ".cfg"));
+  EXPECT_EQ(Find("/a/b/c", {"_cfg", ".cfg"}), PathTo("/a/b", "_cfg"));
+  EXPECT_EQ(Find("/a/b/c", {".cfg", ".other"}), PathTo("/a/b/c", ".other"));
+
+  // Only regular files are found.
+  EXPECT_EQ(Find("/a/b/c", {".dir"}), std::nullopt);
+  EXPECT_EQ(Find("/a/b/c", {".missing"}), std::nullopt);
+}
+
 class InMemoryFileSystemTest : public ::testing::Test {
 protected:
   llvm::vfs::InMemoryFileSystem FS;

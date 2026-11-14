@@ -449,6 +449,22 @@ std::unique_ptr<FileSystem> vfs::createPhysicalFileSystem() {
   return std::make_unique<RealFileSystem>(false);
 }
 
+std::optional<std::string>
+vfs::findFileInParentDirectories(FileSystem &FS, StringRef Dir,
+                                 ArrayRef<StringRef> FileNames) {
+  SmallString<256> Path;
+  for (; !Dir.empty(); Dir = sys::path::parent_path(Dir)) {
+    for (StringRef FileName : FileNames) {
+      Path = Dir;
+      sys::path::append(Path, FileName);
+      ErrorOr<Status> S = FS.status(Path);
+      if (S && S->isRegularFile())
+        return std::string(Path);
+    }
+  }
+  return std::nullopt;
+}
+
 namespace {
 
 class RealFSDirIter : public llvm::vfs::detail::DirIterImpl {
