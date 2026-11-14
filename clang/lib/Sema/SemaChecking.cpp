@@ -5482,6 +5482,15 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     }
   }
 
+  if (AtomTy.getPointerAuth()) {
+    bool IsByte = Form == TestAndSetByte || Form == ClearByte;
+    if (IsByte || Form == Arithmetic) {
+      Diag(ExprRange.getBegin(), diag::err_atomic_op_needs_non_ptrauth_pointer)
+          << (IsByte ? 2 : 1) << Ptr->getType() << Ptr->getSourceRange();
+      return ExprError();
+    }
+  }
+
   if (Form != TestAndSetByte && Form != ClearByte) {
     // Pointer to object of size zero is not allowed.
     if (RequireCompleteType(Ptr->getBeginLoc(), AtomTy,
@@ -5506,7 +5515,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     ValType = AtomTy;
   }
 
-  PointerAuthQualifier PointerAuth = AtomTy.getPointerAuth();
+  PointerAuthQualifier PointerAuth =
+      AtomTy->isArrayType() ? PointerAuthQualifier() : AtomTy.getPointerAuth();
   if (PointerAuth && PointerAuth.isAddressDiscriminated()) {
     Diag(ExprRange.getBegin(),
          diag::err_atomic_op_needs_non_address_discriminated_pointer)
@@ -5591,8 +5601,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   // 'A'.  We shouldn't let the volatile-ness of the pointee-type inject itself
   // into the result or the other operands. Similarly atomic_load takes a
   // pointer to a const 'A'.
-  ValType.removeLocalVolatile();
-  ValType.removeLocalConst();
+  ValType = ValType.getUnqualifiedType();
   QualType ResultType = ValType;
   if (Form == Copy || Form == LoadCopy || Form == GNUXchg || Form == Init ||
       Form == ClearByte)
@@ -5692,8 +5701,11 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
                   ValArg->getType()->getAs<PointerType>()) {
             AS = PtrTy->getPointeeType().getAddressSpace();
           }
-          Ty = Context.getPointerType(
-              Context.getAddrSpaceQualType(ValType.getUnqualifiedType(), AS));
+          QualType Pointee = ValType.getUnqualifiedType();
+          if (PointerAuth)
+            Pointee = Context.getPointerAuthType(Pointee, PointerAuth);
+          Ty =
+              Context.getPointerType(Context.getAddrSpaceQualType(Pointee, AS));
         }
         break;
       case 2:
@@ -5893,11 +5905,9 @@ ExprResult Sema::BuiltinAtomicOverloaded(ExprResult TheCallResult) {
         << FirstArg->getType() << 0 << FirstArg->getSourceRange();
     return ExprError();
   }
-  PointerAuthQualifier PointerAuth = ValType.getPointerAuth();
-  if (PointerAuth && PointerAuth.isAddressDiscriminated()) {
-    Diag(FirstArg->getBeginLoc(),
-         diag::err_atomic_op_needs_non_address_discriminated_pointer)
-        << 1 << ValType << FirstArg->getSourceRange();
+  if (ValType.getPointerAuth()) {
+    Diag(FirstArg->getBeginLoc(), diag::err_atomic_op_needs_non_ptrauth_pointer)
+        << 0 << FirstArg->getType() << FirstArg->getSourceRange();
     return ExprError();
   }
 

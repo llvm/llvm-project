@@ -9710,6 +9710,13 @@ def err_atomic_op_needs_non_const_pointer : Error<
 def err_atomic_op_needs_non_address_discriminated_pointer : Error<
   "address argument to %select{atomic|__sync}0 operation must be a pointer to a non address discriminated "
   "type (%1 invalid)">;
+def err_atomic_op_needs_non_ptrauth_pointer : Error<
+  "address argument to %select{__sync|atomic arithmetic|atomic test-and-set or "
+  "clear}0 operation must not be a pointer to a '__ptrauth'-qualified type (%1 "
+  "invalid)">;
+def err_ptrauth_atomic_rmw : Error<
+  "atomic %select{increment|decrement|compound assignment}0 of "
+  "'__ptrauth'-qualified type %1 is not supported">;
 def err_atomic_op_needs_trivial_copy : Error<
   "address argument to atomic operation must be a pointer to a "
   "trivially-copyable type (%0 invalid)">;
