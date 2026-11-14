@@ -509,4 +509,90 @@ leave:
   ret void
 }
 
+define void @select_of_constants_bound(i1 %c) {
+; CHECK-LABEL: 'select_of_constants_bound'
+; CHECK-NEXT:  Classifying expressions for: @select_of_constants_bound
+; CHECK-NEXT:    %n = select i1 %c, i64 5, i64 2
+; CHECK-NEXT:    --> %n U: [2,6) S: [2,6)
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,5) S: [0,5) Exits: (-1 + %n)<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,6) S: [1,6) Exits: %n LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @select_of_constants_bound
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %n)<nsw>
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %n)<nsw>
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %n = select i1 %c, i64 5, i64 2
+  br label %loop
 
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp ult i64 %iv.next, %n
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+
+define void @select_of_constants_bound_wraps_unsigned(i1 %c) {
+; CHECK-LABEL: 'select_of_constants_bound_wraps_unsigned'
+; CHECK-NEXT:  Classifying expressions for: @select_of_constants_bound_wraps_unsigned
+; CHECK-NEXT:    %n = select i1 %c, i8 1, i8 -2
+; CHECK-NEXT:    --> %n U: [1,-1) S: [-2,2)
+; CHECK-NEXT:    %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,-2) S: [0,-2) Exits: (-1 + %n)<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i8 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,-1) S: [1,-1) Exits: %n LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @select_of_constants_bound_wraps_unsigned
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %n)<nsw>
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -3
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %n)<nsw>
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %n = select i1 %c, i8 1, i8 -2
+  br label %loop
+
+loop:
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nuw i8 %iv, 1
+  %ec = icmp ult i8 %iv.next, %n
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @select_of_constants_bound_wraps_signed(i1 %c) {
+; CHECK-LABEL: 'select_of_constants_bound_wraps_signed'
+; CHECK-NEXT:  Classifying expressions for: @select_of_constants_bound_wraps_signed
+; CHECK-NEXT:    %n = select i1 %c, i8 -100, i8 100
+; CHECK-NEXT:    --> %n U: [100,-99) S: [-100,101)
+; CHECK-NEXT:    %iv = phi i8 [ -128, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {-128,+,1}<nsw><%loop> U: [-128,100) S: [-128,100) Exits: (-1 + %n)<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nsw i8 %iv, 1
+; CHECK-NEXT:    --> {-127,+,1}<nsw><%loop> U: [-127,101) S: [-127,101) Exits: %n LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @select_of_constants_bound_wraps_signed
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (127 + %n)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -29
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (127 + %n)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 4
+;
+entry:
+  %n = select i1 %c, i8 -100, i8 100
+  br label %loop
+
+loop:
+  %iv = phi i8 [ -128, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nsw i8 %iv, 1
+  %ec = icmp slt i8 %iv.next, %n
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
