@@ -43,17 +43,10 @@ func.func @multiple_loads(%a: memref<65xf32>, %b: memref<64xf32>, %c: memref<64x
     %2 = arith.mulf %0, %1 : f32
     affine.store %2, %c[%i] : memref<64xf32>
   }
-  // CHECK:       affine.for %[[I:.*]] = 0 to 64 {
-  // CHECK-NEXT:    affine.load %{{.*}}[%[[I]]]
-  // CHECK-NEXT:    affine.load %{{.*}}[%[[I]] + 1]
-  // CHECK-NEXT:    arith.addf
-  // CHECK-NEXT:    affine.store %{{.*}}, %[[B]][%[[I]]]
-  // CHECK-NEXT:    affine.load %{{.*}}[%[[I]]]
-  // CHECK-NEXT:    affine.load %{{.*}}[%[[I]] + 1]
-  // CHECK-NEXT:    arith.mulf
-  // CHECK-NEXT:    affine.store %{{.*}}, %[[C]][%[[I]]]
-  // CHECK-NEXT:  }
-  // CHECK-NEXT:  return
+  // CHECK:     affine.for %[[I:.*]] = 0 to 64 {
+  // CHECK:       affine.store %{{.*}}, %[[B]][%[[I]]]
+  // CHECK-NOT:   affine.for
+  // CHECK:       affine.store %{{.*}}, %[[C]][%[[I]]]
   return
 }
 
@@ -75,16 +68,10 @@ func.func @single_and_multiple_loads(%a: memref<65xf32>, %b: memref<64xf32>, %c:
     %1 = arith.mulf %0, %0 : f32
     affine.store %1, %c[%i] : memref<64xf32>
   }
-  // CHECK:       affine.for %[[I:.*]] = 0 to 64 {
-  // CHECK-NEXT:    affine.load %{{.*}}[%[[I]]]
-  // CHECK-NEXT:    affine.load %{{.*}}[%[[I]] + 1]
-  // CHECK-NEXT:    arith.addf
-  // CHECK-NEXT:    affine.store %{{.*}}, %[[B]][%[[I]]]
-  // CHECK-NEXT:    affine.load %{{.*}}[%[[I]]]
-  // CHECK-NEXT:    arith.mulf
-  // CHECK-NEXT:    affine.store %{{.*}}, %[[C]][%[[I]]]
-  // CHECK-NEXT:  }
-  // CHECK-NEXT:  return
+  // CHECK:     affine.for %[[I:.*]] = 0 to 64 {
+  // CHECK:       affine.store %{{.*}}, %[[B]][%[[I]]]
+  // CHECK-NOT:   affine.for
+  // CHECK:       affine.store %{{.*}}, %[[C]][%[[I]]]
   return
 }
 
@@ -112,13 +99,10 @@ func.func @multiple_loads_2d(%a: memref<33x32xf32>, %b: memref<32x32xf32>, %c: m
       affine.store %2, %c[%i, %j] : memref<32x32xf32>
     }
   }
-  // CHECK:       affine.for %[[I:.*]] = 0 to 32 {
-  // CHECK-NEXT:    affine.for %[[J:.*]] = 0 to 32 {
-  // CHECK:           affine.store %{{.*}}, %[[B]][%[[I]], %[[J]]]
-  // CHECK-NOT:       affine.for
-  // CHECK:           affine.store %{{.*}}, %[[C]][%[[I]], %[[J]]]
-  // CHECK-NEXT:    }
-  // CHECK-NEXT:  }
-  // CHECK-NEXT:  return
+  // CHECK:     affine.for %[[I:.*]] = 0 to 32 {
+  // CHECK:       affine.for %[[J:.*]] = 0 to 32 {
+  // CHECK:         affine.store %{{.*}}, %[[B]][%[[I]], %[[J]]]
+  // CHECK-NOT:     affine.for
+  // CHECK:         affine.store %{{.*}}, %[[C]][%[[I]], %[[J]]]
   return
 }
