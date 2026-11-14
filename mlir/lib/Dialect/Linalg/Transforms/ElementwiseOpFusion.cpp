@@ -180,6 +180,19 @@ bool mlir::linalg::areElementwiseOpsFusable(OpOperand *fusedOperand) {
   if (!producerResultIndexMap.isPermutation())
     return false;
 
+  auto preservedProducerResults =
+      getPreservedProducerResults(producer, consumer, fusedOperand);
+  if (!preservedProducerResults.empty()) {
+    // Broadcasting a preserved result would introduce repeated writes.
+    if (!consumerIndexMap.isPermutation())
+      return false;
+
+    // The producer has only parallel loops. Fusion would lose parallelism
+    // along the consumer's reduction dimensions.
+    if (consumer.getNumReductionLoops())
+      return false;
+  }
+
   // Ensure that the fusion does not remove size information required to
   // get the loop bounds. For non-reduction generics, this is trivially the
   // case due to the output operand. For reductions, we need to check that after
