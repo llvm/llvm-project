@@ -20,6 +20,7 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <optional>
 
@@ -60,10 +61,10 @@ struct WrongDestruction {
 };
 } // namespace
 
-// Storage reused by placement new -> type of the new object.
-REGISTER_MAP_WITH_PROGRAMSTATE(PlacedObjectTypes, const MemRegion *, QualType)
 // Memory from a non-placement new, which holds an original object.
 REGISTER_SET_WITH_PROGRAMSTATE(ObjectsAllocatedByNew, const MemRegion *)
+// Storage of an original object reused by placement new.
+REGISTER_SET_WITH_PROGRAMSTATE(ReusedStorages, const MemRegion *)
 // Found inside std; reported on return to user code.
 REGISTER_MAP_WITH_PROGRAMSTATE(PendingDestructions, const MemRegion *,
                                WrongDestruction)
@@ -88,20 +89,14 @@ public:
 };
 } // namespace
 
-// An array is keyed by its first element, the object its destructor gets.
-static const MemRegion *getStorageRegion(SVal V, CheckerContext &C) {
-  const MemRegion *R = V.getAsRegion();
-  if (!R)
-    return nullptr;
-  R = R->StripCasts();
-  ASTContext &Ctx = C.getASTContext();
-  while (const auto *TR = dyn_cast<TypedValueRegion>(R)) {
-    const ArrayType *AT = Ctx.getAsArrayType(TR->getValueType());
-    if (!AT)
-      break;
-    R = C.getStoreManager().GetElementZeroRegion(TR, AT->getElementType());
-  }
-  return R;
+// The type of the object known to occupy the storage, if it is exact.
+static std::optional<QualType> getPlacedType(const DynamicTypeInfo &DTI) {
+  if (!DTI.isValid() || DTI.canBeASubClass())
+    return std::nullopt;
+  QualType T = DTI.getType();
+  if (T->isPointerType() || T->isReferenceType())
+    T = T->getPointeeType();
+  return T.getUnqualifiedType();
 }
 
 // Storage obtained as raw memory has no original object to be replaced.
@@ -111,8 +106,10 @@ static bool holdsOriginalObject(ProgramStateRef State, const MemRegion *R) {
   const auto *TR = dyn_cast<TypedValueRegion>(R);
   if (!TR)
     return false;
+  ASTContext &Ctx = State->getStateManager().getContext();
   // Placement new into a union starts the lifetime of one of its members.
-  const CXXRecordDecl *RD = TR->getValueType()->getAsCXXRecordDecl();
+  const CXXRecordDecl *RD =
+      Ctx.getBaseElementType(TR->getValueType())->getAsCXXRecordDecl();
   return RD && !RD->isUnion() && RD->hasNonTrivialDestructor();
 }
 
@@ -121,41 +118,16 @@ static bool isSameRecord(QualType T, const CXXRecordDecl *RD) {
   return TD && TD->getCanonicalDecl() == RD->getCanonicalDecl();
 }
 
-static QualType getStorageType(const MemRegion *R) {
+static const CXXRecordDecl *getStorageRecord(const MemRegion *R,
+                                             ASTContext &Ctx) {
+  QualType T;
   if (const auto *TR = dyn_cast<TypedValueRegion>(R))
-    return TR->getValueType();
-  if (const auto *SR = dyn_cast<SymbolicRegion>(R))
-    return SR->getPointeeStaticType();
-  return {};
-}
-
-// A field and a byte offset from its parent are different regions, but we want
-// to recognize that they refer to the same location.
-static bool isSameLocation(const MemRegion *A, const MemRegion *B) {
-  if (A == B)
-    return true;
-  RegionOffset OA = A->getAsOffset();
-  RegionOffset OB = B->getAsOffset();
-  return OA.isValid() && !OA.hasSymbolicOffset() && OA == OB;
-}
-
-static ProgramStateRef forgetPlacedTypes(ProgramStateRef State,
-                                         const MemRegion *R) {
-  for (const MemRegion *Key :
-       llvm::make_first_range(State->get<PlacedObjectTypes>()))
-    if (Key->isSubRegionOf(R) || isSameLocation(Key, R))
-      State = State->remove<PlacedObjectTypes>(Key);
-  return State;
-}
-
-static SmallVector<const MemRegion *, 1>
-getPlacementStorages(const CXXNewExpr *NE, CheckerContext &C) {
-  SmallVector<const MemRegion *, 1> Storages;
-  for (const Expr *Arg : NE->placement_arguments())
-    if (Arg->getType()->isPointerType())
-      if (const MemRegion *R = getStorageRegion(C.getSVal(Arg), C))
-        Storages.push_back(R);
-  return Storages;
+    T = TR->getValueType();
+  else if (const auto *SR = dyn_cast<SymbolicRegion>(R))
+    T = SR->getPointeeStaticType();
+  if (T.isNull())
+    return nullptr;
+  return Ctx.getBaseElementType(T)->getAsCXXRecordDecl();
 }
 
 static bool isInStdFrame(CheckerContext &C) {
@@ -178,42 +150,15 @@ void DestroyedAsWrongTypeChecker::reportBug(const MemRegion *R,
 
 void DestroyedAsWrongTypeChecker::checkPostStmt(const CXXNewExpr *NE,
                                                 CheckerContext &C) const {
-  const FunctionDecl *OperatorNew = NE->getOperatorNew();
-  if (!OperatorNew)
-    return;
-
-  const MemRegion *Result = getStorageRegion(C.getSVal(NE), C);
-  if (!Result)
-    return;
-
   ProgramStateRef State = C.getState();
-  SmallVector<const MemRegion *, 1> Storages = getPlacementStorages(NE, C);
-  if (OperatorNew->isReservedGlobalPlacementOperator() && Storages.empty())
-    return;
-  // The result may be typed as the new object, so use the storage argument.
-  const MemRegion *R = nullptr;
-  for (const MemRegion *Storage : Storages)
-    if (OperatorNew->isReservedGlobalPlacementOperator() ||
-        isSameLocation(Storage, Result))
-      R = Storage;
+  const MemRegion *R = getPlacementNewStorage(State, NE, C.getStackFrame());
   if (!R) {
-    // An operator new that is not inlined may have placed the object there.
-    for (const MemRegion *Storage : Storages)
-      State = forgetPlacedTypes(State, Storage);
-    C.addTransition(State->add<ObjectsAllocatedByNew>(Result));
+    if (const MemRegion *Result = C.getSVal(NE).getAsRegion())
+      C.addTransition(State->add<ObjectsAllocatedByNew>(Result->StripCasts()));
     return;
   }
-
-  if (NE->isArray()) {
-    const auto *ER = dyn_cast<ElementRegion>(R);
-    C.addTransition(forgetPlacedTypes(State, ER ? ER->getSuperRegion() : R));
+  if (NE->isArray() || !holdsOriginalObject(State, R))
     return;
-  }
-  State = forgetPlacedTypes(State, R);
-  if (!holdsOriginalObject(State, R)) {
-    C.addTransition(State);
-    return;
-  }
 
   QualType Placed = NE->getAllocatedType().getUnqualifiedType();
   std::string Note = "Object of type '" +
@@ -225,7 +170,7 @@ void DestroyedAsWrongTypeChecker::checkPostStmt(const CXXNewExpr *NE,
           return "";
         return Note;
       });
-  C.addTransition(State->set<PlacedObjectTypes>(R, Placed), Tag);
+  C.addTransition(State->add<ReusedStorages>(R), Tag);
 }
 
 static bool isDerivedFrom(QualType Placed, const CXXRecordDecl *Base) {
@@ -249,18 +194,37 @@ void DestroyedAsWrongTypeChecker::reportOrDefer(const MemRegion *R,
   reportBug(R, W, C);
 }
 
-static const MemRegion *getDestroyedRegion(const CallEvent &Call,
-                                           CheckerContext &C) {
+static const MemRegion *getDestroyedRegion(const CallEvent &Call) {
   const auto *Instance = dyn_cast<CXXInstanceCall>(&Call);
-  return Instance ? getStorageRegion(Instance->getCXXThisVal(), C) : nullptr;
+  if (!Instance)
+    return nullptr;
+  const MemRegion *R = Instance->getCXXThisVal().getAsRegion();
+  if (!R)
+    return nullptr;
+  return R->StripCasts();
+}
+
+// The array of which R is an element, or R itself if it is an array.
+static const MemRegion *getEnclosingArray(const MemRegion *R, ASTContext &Ctx) {
+  if (const auto *ER = dyn_cast<ElementRegion>(R))
+    return ER->getSuperRegion();
+  const auto *TR = dyn_cast<TypedValueRegion>(R);
+  if (!TR || !Ctx.getAsArrayType(TR->getValueType()))
+    return nullptr;
+  return R;
 }
 
 static std::optional<WrongDestruction>
 findWrongDestruction(const CallEvent &Call, const CXXDestructorDecl *Dtor,
                      const MemRegion *R, ProgramStateRef State) {
-  const QualType *Placed = State->get<PlacedObjectTypes>(R);
+  const DynamicTypeInfo *DTI = getRawDynamicTypeInfo(State, R);
+  if (!DTI)
+    return std::nullopt;
+  std::optional<QualType> Placed = getPlacedType(*DTI);
   const CXXRecordDecl *DtorClass = Dtor->getParent();
-  if (!Placed || isSameRecord(*Placed, DtorClass))
+  // An object placed at the address of a union may be its member.
+  if (!Placed || DtorClass->isUnion() || isSameRecord(*Placed, DtorClass) ||
+      !State->contains<ReusedStorages>(R))
     return std::nullopt;
 
   const auto *Implicit = dyn_cast<CXXDestructorCall>(&Call);
@@ -287,18 +251,31 @@ findWrongDestruction(const CallEvent &Call, const CXXDestructorDecl *Dtor,
   return WrongDestruction{*Placed, DtorClass, DE};
 }
 
+// Members of a union are not destroyed with it.
+static bool isInUnion(const MemRegion *R, const MemRegion *Scope) {
+  while (R != Scope) {
+    const auto *SR = dyn_cast<SubRegion>(R);
+    if (!SR)
+      return false;
+    R = SR->getSuperRegion();
+    const auto *TR = dyn_cast<TypedValueRegion>(R);
+    if (TR && TR->getValueType()->isUnionType())
+      return true;
+  }
+  return false;
+}
+
 // Finds a wrong destruction of storage within Scope other than R itself.
 static std::optional<std::pair<const MemRegion *, WrongDestruction>>
 findHiddenWrongDestruction(const MemRegion *R, const MemRegion *Scope,
-                           ProgramStateRef State) {
-  for (const auto &[Key, Placed] : State->get<PlacedObjectTypes>()) {
-    QualType StorageType = getStorageType(Key);
-    if (StorageType.isNull())
-      continue;
-    const CXXRecordDecl *RD = StorageType->getAsCXXRecordDecl();
-    if (RD && Key != R && Key->isSubRegionOf(Scope) &&
-        !isSameRecord(Placed, RD))
-      return std::make_pair(Key, WrongDestruction{Placed, RD, nullptr});
+                           ProgramStateRef State, ASTContext &Ctx) {
+  for (const auto &[Key, DTI] : getDynamicTypeInfoWithin(State, Scope)) {
+    std::optional<QualType> Placed = getPlacedType(DTI);
+    const CXXRecordDecl *RD = getStorageRecord(Key, Ctx);
+    if (Placed && RD && !RD->isUnion() && Key != R &&
+        !isSameRecord(*Placed, RD) && State->contains<ReusedStorages>(Key) &&
+        !isInUnion(Key, Scope))
+      return std::make_pair(Key, WrongDestruction{*Placed, RD, nullptr});
   }
   return std::nullopt;
 }
@@ -313,7 +290,7 @@ void DestroyedAsWrongTypeChecker::checkPreCall(const CallEvent &Call,
   if (Implicit && Implicit->isBaseDestructor())
     return;
 
-  const MemRegion *R = getDestroyedRegion(Call, C);
+  const MemRegion *R = getDestroyedRegion(Call);
   if (!R)
     return;
   ProgramStateRef State = C.getState();
@@ -325,12 +302,16 @@ void DestroyedAsWrongTypeChecker::checkPreCall(const CallEvent &Call,
   // The analyzer may destroy an array with a single call on its last element,
   // and does not show the destruction of members by a destructor without a
   // body, so check these here.
-  const MemRegion *Scope = R;
-  if (const auto *ER = dyn_cast<ElementRegion>(R); ER && Implicit)
-    Scope = ER->getSuperRegion();
-  else if (Call.getRuntimeDefinition().getDecl())
-    return;
-  if (auto Hidden = findHiddenWrongDestruction(R, Scope, State))
+  const MemRegion *Scope = nullptr;
+  if (Implicit)
+    Scope = getEnclosingArray(R, C.getASTContext());
+  if (!Scope) {
+    if (Call.getRuntimeDefinition().getDecl())
+      return;
+    Scope = R;
+  }
+  if (auto Hidden =
+          findHiddenWrongDestruction(R, Scope, State, C.getASTContext()))
     reportOrDefer(Hidden->first, Hidden->second, C);
 }
 
@@ -346,13 +327,12 @@ void DestroyedAsWrongTypeChecker::checkPostCall(const CallEvent &Call,
 void DestroyedAsWrongTypeChecker::checkDeadSymbols(SymbolReaper &SR,
                                                    CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  for (const MemRegion *R :
-       llvm::make_first_range(State->get<PlacedObjectTypes>()))
-    if (!SR.isLiveRegion(R))
-      State = State->remove<PlacedObjectTypes>(R);
   for (const MemRegion *R : State->get<ObjectsAllocatedByNew>())
     if (!SR.isLiveRegion(R))
       State = State->remove<ObjectsAllocatedByNew>(R);
+  for (const MemRegion *R : State->get<ReusedStorages>())
+    if (!SR.isLiveRegion(R))
+      State = State->remove<ReusedStorages>(R);
   C.addTransition(State);
 }
 

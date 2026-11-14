@@ -24,6 +24,9 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 
 namespace clang {
+class CXXNewExpr;
+class StackFrame;
+
 namespace ento {
 
 /// Get dynamic type information for the region \p MR.
@@ -68,6 +71,22 @@ ProgramStateRef setDynamicTypeAndCastInfo(ProgramStateRef State,
                                           QualType CastFromTy,
                                           QualType CastToTy,
                                           bool IsCastSucceeds);
+
+/// Remove dynamic type and cast information of the objects in the storage of
+/// \p MR, including its subregions and regions at the same location.
+ProgramStateRef removeDynamicTypeInfoWithin(ProgramStateRef State,
+                                            const MemRegion *MR);
+
+/// Get the regions within \p MR, including \p MR itself, that have dynamic
+/// type information.
+SmallVector<std::pair<const MemRegion *, DynamicTypeInfo>, 4>
+getDynamicTypeInfoWithin(ProgramStateRef State, const MemRegion *MR);
+
+/// Get the storage in which the placement new expression \p NE created its
+/// object, or null if it is not known.
+const MemRegion *getPlacementNewStorage(ProgramStateRef State,
+                                        const CXXNewExpr *NE,
+                                        const StackFrame *SF);
 
 /// Removes the dead type informations from \p State.
 ProgramStateRef removeDeadTypes(ProgramStateRef State, SymbolReaper &SR);

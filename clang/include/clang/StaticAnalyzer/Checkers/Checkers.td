@@ -647,6 +647,7 @@ def ArrayDeleteChecker : Checker<"ArrayDelete">,
 def DestroyedAsWrongTypeChecker : Checker<"DestroyedAsWrongType">,
   HelpText<"Check for objects destroyed or deleted as a type that their "
            "storage no longer holds after placement new">,
+  Dependencies<[DynamicTypePropagation]>,
   Documentation<HasDocumentation>;
 
 def InnerPointerChecker : Checker<"InnerPointer">,

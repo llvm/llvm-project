@@ -46,6 +46,11 @@ void delete_through_base_without_virtual_dtor() {
   // expected-note@-2    {{Deleting an object of type 'Derived' through a pointer to 'Base'}}
 }
 
+void new_derived_deleted_through_base_without_virtual_dtor() {
+  Base *p = new Derived;
+  delete p; // no-warning
+}
+
 struct Holder {
   // expected-warning@-1 {{Destructor of 'B' is called on storage that holds an object of type 'A'}}
   // expected-note@-2    {{Destructor of 'B' is called on storage that holds an object of type 'A'}}
@@ -176,6 +181,27 @@ void raw_local_buffer() {
   alignas(B) unsigned char Buf[sizeof(B)];
   B *P = new (Buf) B;
   P->~B();
+} // no-warning
+
+void raw_local_buffer_destroyed_as_other_type() {
+  alignas(B) unsigned char Buf[sizeof(B)];
+  new (Buf) A;
+  reinterpret_cast<B *>(Buf)->~B();
+} // no-warning
+
+struct CtorBase {
+  CtorBase() {}
+};
+struct WithCtor : CtorBase {
+  WithCtor(int) {}
+  ~WithCtor();
+};
+struct InheritsCtor : WithCtor {
+  using WithCtor::WithCtor;
+};
+
+void inherited_constructor() {
+  InheritsCtor I(0);
 } // no-warning
 
 union OneOf {
