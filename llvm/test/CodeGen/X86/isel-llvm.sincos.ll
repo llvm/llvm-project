@@ -331,19 +331,19 @@ define void @can_fold_with_call_in_chain(float %x, ptr noalias %a, ptr noalias %
 ; SDAG-X86-NEXT:    subl $20, %esp
 ; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SDAG-X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; SDAG-X86-NEXT:    movl %edi, (%esp)
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; SDAG-X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    movl %esi, (%esp)
 ; SDAG-X86-NEXT:    calll foo@PLT
 ; SDAG-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SDAG-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; SDAG-X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
 ; SDAG-X86-NEXT:    fstps (%esp)
 ; SDAG-X86-NEXT:    calll sincosf
 ; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
-; SDAG-X86-NEXT:    fstps (%esi)
+; SDAG-X86-NEXT:    fstps (%edi)
 ; SDAG-X86-NEXT:    addl $20, %esp
 ; SDAG-X86-NEXT:    popl %esi
 ; SDAG-X86-NEXT:    popl %edi

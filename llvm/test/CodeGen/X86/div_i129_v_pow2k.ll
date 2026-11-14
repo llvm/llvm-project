@@ -56,28 +56,28 @@ define i129 @v_sdiv_i129_v_pow2k(i129 %lhs) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %ebx
-; X86-NEXT:    andl $1, %ebx
-; X86-NEXT:    negl %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %ebx, %edi
+; X86-NEXT:    movl %ecx, %edi
 ; X86-NEXT:    andl $1, %edi
-; X86-NEXT:    addl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    negl %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %edi, %ebp
+; X86-NEXT:    andl $1, %ebp
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %ebp
 ; X86-NEXT:    adcl $0, %esi
 ; X86-NEXT:    adcl $0, %edx
 ; X86-NEXT:    adcl $0, %ecx
 ; X86-NEXT:    movl %ecx, %ebx
 ; X86-NEXT:    andl $1, %ebx
-; X86-NEXT:    movl %ebx, %ebp
-; X86-NEXT:    negl %ebp
+; X86-NEXT:    movl %ebx, %edi
+; X86-NEXT:    negl %edi
 ; X86-NEXT:    shldl $31, %edx, %ecx
 ; X86-NEXT:    shldl $31, %esi, %edx
-; X86-NEXT:    shldl $31, %edi, %esi
+; X86-NEXT:    shldl $31, %ebp, %esi
 ; X86-NEXT:    movl %esi, (%eax)
 ; X86-NEXT:    movl %edx, 4(%eax)
 ; X86-NEXT:    movl %ecx, 8(%eax)
-; X86-NEXT:    movl %ebp, 12(%eax)
+; X86-NEXT:    movl %edi, 12(%eax)
 ; X86-NEXT:    movb %bl, 16(%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
