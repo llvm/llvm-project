@@ -5012,38 +5012,48 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
       return Idx == 0 || (RegWidth != 0 && (Idx * EltSz) % RegWidth == 0);
     };
 
+    // Check if this ExtractElement will extract from lane 0.
+    auto IsLaneZeroExtract = [&](const ExtractElementInst *EE) {
+      const auto *IdxOp = dyn_cast<ConstantInt>(EE->getIndexOperand());
+      if (!IdxOp)
+        return false;
+      return IsExtractLaneEquivalentToZero(
+          IdxOp->getValue().getZExtValue(),
+          EE->getType()->getScalarSizeInBits());
+    };
+
     // Check if the type constraints on input vector type and result scalar type
     // of extractelement instruction are satisfied.
     if (!isa<FixedVectorType>(Ty) || !IsAllowedScalarTy(Ty->getScalarType()))
       return false;
 
     if (Scalar) {
-      DenseMap<User *, unsigned> UserToExtractIdx;
-      for (auto *U : Scalar->users()) {
-        if (!IsUserFMulScalarTy(U))
-          return false;
-        // Recording entry for the user is important. Index value is not
-        // important.
-        UserToExtractIdx[U];
-      }
-      if (UserToExtractIdx.empty())
-        return false;
       for (auto &[S, U, L] : ScalarUserAndIdx) {
-        for (auto *U : S->users()) {
-          if (UserToExtractIdx.contains(U)) {
-            auto *FMul = cast<BinaryOperator>(U);
-            auto *Op0 = FMul->getOperand(0);
-            auto *Op1 = FMul->getOperand(1);
-            if ((Op0 == S && Op1 == S) || Op0 != S || Op1 != S) {
-              UserToExtractIdx[U] = L;
-              break;
-            }
-          }
+        if (!IsUserFMulScalarTy(U)) {
+          // Every user of Scalar must be suitable FMul
+          if (S == Scalar)
+            return false;
+          // Non-FMul uses of other values aren't relevant here (and the FMul
+          // uses are only relevant if they have Scalar as one of their
+          // operands, which is checked below).
+          continue;
         }
-      }
-      for (auto &[U, L] : UserToExtractIdx) {
-        if (!IsExtractLaneEquivalentToZero(Index, Ty->getScalarSizeInBits()) &&
-            !IsExtractLaneEquivalentToZero(L, Ty->getScalarSizeInBits()))
+        auto *FMul = cast<BinaryOperator>(U);
+        auto *Op0 = FMul->getOperand(0);
+        auto *Op1 = FMul->getOperand(1);
+        // If there's a different value used in an FMul that Scalar is used
+        // in, then if that also has nonzero lane then we need an extract.
+        if (S != Scalar && L != 0 && (Op0 == Scalar || Op1 == Scalar))
+          return false;
+
+        // We need an extract if both operands are the Scalar
+        if (Op0 == Scalar && Op1 == Scalar)
+          return false;
+        // If the other operand is an extract with nonzero lane then we'll
+        // need an extract.
+        const auto *OtherEE =
+            dyn_cast<ExtractElementInst>(Op0 == Scalar ? Op1 : Op0);
+        if (OtherEE && !IsLaneZeroExtract(OtherEE))
           return false;
       }
     } else {
@@ -5054,25 +5064,16 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
         return false;
 
       return !EE->users().empty() && all_of(EE->users(), [&](const User *U) {
+        // Every user of this extract must be a suitable FMul
         if (!IsUserFMulScalarTy(U))
           return false;
 
-        // Check if the other operand of extractelement is also extractelement
-        // from lane equivalent to 0.
+        // If the other operand of this mul is an extractelement then it must
+        // be an extract from a lane equivalent to 0.
         const auto *BO = cast<BinaryOperator>(U);
         const auto *OtherEE = dyn_cast<ExtractElementInst>(
             BO->getOperand(0) == EE ? BO->getOperand(1) : BO->getOperand(0));
-        if (OtherEE) {
-          const auto *IdxOp = dyn_cast<ConstantInt>(OtherEE->getIndexOperand());
-          if (!IdxOp)
-            return false;
-          return IsExtractLaneEquivalentToZero(
-              cast<ConstantInt>(OtherEE->getIndexOperand())
-                  ->getValue()
-                  .getZExtValue(),
-              OtherEE->getType()->getScalarSizeInBits());
-        }
-        return true;
+        return !OtherEE || IsLaneZeroExtract(OtherEE);
       });
     }
     return true;

@@ -54,13 +54,10 @@ define void @test(ptr %p, ptr %dst, float %alpha, ptr %mattep, i32 %n) {
 ; POW2-NEXT:    [[P_ADDR_021:%.*]] = phi ptr [ [[ADD_PTR:%.*]], [[IF_END]] ], [ [[P:%.*]], [[ENTRY]] ]
 ; POW2-NEXT:    [[DST_ADDR_020:%.*]] = phi ptr [ [[ADD_PTR16:%.*]], [[IF_END]] ], [ [[DST:%.*]], [[ENTRY]] ]
 ; POW2-NEXT:    tail call void @CallMe(ptr noundef [[DST_ADDR_020]])
-; POW2-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[P_ADDR_021]], i64 2
 ; POW2-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i8, ptr [[DST_ADDR_020]], i64 4
 ; POW2-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds nuw i8, ptr [[DST_ADDR_020]], i64 8
 ; POW2-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P_ADDR_021]], align 2
-; POW2-NEXT:    [[TMP1:%.*]] = load i16, ptr [[ARRAYIDX1]], align 2
 ; POW2-NEXT:    [[TMP2:%.*]] = uitofp <4 x i16> [[TMP0]] to <4 x float>
-; POW2-NEXT:    [[CONV2:%.*]] = uitofp i16 [[TMP1]] to float
 ; POW2-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 2, i32 1, i32 0, i32 3>
 ; POW2-NEXT:    store <4 x float> [[TMP3]], ptr [[DST_ADDR_020]], align 4
 ; POW2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[MATTEP:%.*]], align 4
@@ -70,6 +67,7 @@ define void @test(ptr %p, ptr %dst, float %alpha, ptr %mattep, i32 %n) {
 ; POW2-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP2]], i64 2
 ; POW2-NEXT:    [[MUL:%.*]] = fmul float [[ALPHA:%.*]], [[TMP5]]
 ; POW2-NEXT:    store float [[MUL]], ptr [[DST_ADDR_020]], align 4
+; POW2-NEXT:    [[CONV2:%.*]] = extractelement <4 x float> [[TMP2]], i64 1
 ; POW2-NEXT:    [[MUL12:%.*]] = fmul float [[ALPHA]], [[CONV2]]
 ; POW2-NEXT:    store float [[MUL12]], ptr [[ARRAYIDX8]], align 4
 ; POW2-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP2]], i64 0
