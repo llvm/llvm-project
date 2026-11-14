@@ -638,6 +638,8 @@ static bool doesHoldInRange(ConstraintInfo &Info, Value *Op,
   return true;
 }
 
+enum class SignedBound { Upper, Lower };
+
 /// Splits the first signed min/max result in \p D (of type \p Ty, if provided)
 /// across its operands, and returns whether \p IsKnown holds for the
 /// substituted decompositions, or std::nullopt if \p D has no such min/max.
@@ -650,7 +652,7 @@ static bool doesHoldInRange(ConstraintInfo &Info, Value *Op,
 /// holds on both sides, and a lower bound if it holds on either side.
 static std::optional<bool>
 splitSignedMinMax(const Decomposition &D, ConstraintInfo &Info, Type *Ty,
-                  bool Upper,
+                  SignedBound Bound,
                   function_ref<bool(const Decomposition &)> IsKnown) {
   for (const DecompEntry &E : D.Vars) {
     auto *MM = dyn_cast<MinMaxIntrinsic>(E.Variable);
@@ -659,7 +661,7 @@ splitSignedMinMax(const Decomposition &D, ConstraintInfo &Info, Type *Ty,
 
     bool IsMax =
         (MM->getIntrinsicID() == Intrinsic::smax) == (E.Coefficient > 0);
-    bool IsAnd = Upper == IsMax;
+    bool IsAnd = (Bound == SignedBound::Upper) == IsMax;
     auto IsOperandKnown = [&](Value *V) {
       auto Side = D.substitute(E.Variable, V, Info);
       return Side && !Side->canonicalize() && IsKnown(*Side);
@@ -689,8 +691,6 @@ Decomposition::substitute(Value *Variable, Value *Replacement,
   return Result;
 }
 
-enum class SignedBound { Upper, Lower };
-
 /// Returns true if \p Info implies that the value of \p D does not exceed the
 /// signed maximum of \p Ty (if \p Bound is Upper) or is not below the signed
 /// minimum of \p Ty (if \p Bound is Lower).
@@ -707,8 +707,7 @@ static bool isKnownWithinSignedRange(const Decomposition &D, SignedBound Bound,
                                      unsigned Depth) {
   if (Depth != 0) {
     if (auto Known = splitSignedMinMax(
-            D, Info, Ty, /*Upper=*/Bound == SignedBound::Upper,
-            [&](const Decomposition &Side) {
+            D, Info, Ty, Bound, [&](const Decomposition &Side) {
               return isKnownWithinSignedRange(Side, Bound, Ty, Info, Depth - 1);
             }))
       return *Known;
