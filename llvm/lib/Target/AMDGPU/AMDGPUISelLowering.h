@@ -246,11 +246,6 @@ public:
   bool isCheapToSpeculateCttz(Type *Ty) const override;
   bool isCheapToSpeculateCtlz(Type *Ty) const override;
 
-  // An add/compare/select update beats the mul_hi-based constant expansion.
-  bool shouldIncrementURemByConstantInLoop(Type *Ty) const override {
-    return true;
-  }
-
   bool isSDNodeAlwaysUniform(const SDNode *N) const override;
 
   // FIXME: This hook should not exist

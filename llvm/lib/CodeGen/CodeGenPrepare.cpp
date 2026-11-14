@@ -2067,9 +2067,7 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
 //
 // Step must be 1 unless RemAmtLoopInvariant is a constant greater than Step.
 static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
-                                    const LoopInfo *LI,
-                                    const TargetLowering *TLI,
-                                    DominatorTree &DT,
+                                    const LoopInfo *LI, DominatorTree &DT,
                                     SmallPtrSet<BasicBlock *, 32> &FreshBBs,
                                     bool IsHuge) {
   Value *AddOffset, *RemAmt, *AddInst;
@@ -2083,8 +2081,7 @@ static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
   Type *Ty = Rem->getType();
 
   // `urem` of a constant ends up as `mul` + `shift` + `sub`, so the extra IV
-  // is only worth it if the target says so and the `urem` runs every
-  // iteration.
+  // is only worth it if the `urem` runs every iteration.
   //
   // Potential TODO: Should we have a check for how "nested" a non-constant
   // remainder operation is? The new code runs every iteration so if the
@@ -2094,7 +2091,6 @@ static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
   if (match(RemAmt, m_ImmConstant())) {
     // A power-of-2 `urem` is a single mask.
     if (!IsConstRem || cast<ConstantInt>(RemAmt)->getValue().isPowerOf2() ||
-        !TLI || !TLI->shouldIncrementURemByConstantInLoop(Ty) ||
         !DT.dominates(Rem->getParent(), L->getLoopLatch()))
       return false;
   }
@@ -2167,7 +2163,7 @@ static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
 }
 
 bool CodeGenPrepare::optimizeURem(Instruction *Rem) {
-  if (foldURemOfLoopIncrement(Rem, DL, LI, TLI, getDT(), FreshBBs, IsHugeFunc))
+  if (foldURemOfLoopIncrement(Rem, DL, LI, getDT(), FreshBBs, IsHugeFunc))
     return true;
   return false;
 }
