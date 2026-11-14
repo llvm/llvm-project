@@ -305,6 +305,11 @@ def mhraccu_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t, uint32_t)">;
 def mhaccsu_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, uint32_t)">;
 def mhraccsu_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, uint32_t)">;
 
+def mhacc_h0_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, _Vector<2, short>)">;
+def mhacc_h1_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, _Vector<2, short>)">;
+def mhaccsu_h0_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, _Vector<2, unsigned short>)">;
+def mhaccsu_h1_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, _Vector<2, unsigned short>)">;
+
 // Scalar "Q-format" Multiplication
 def mulq_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
 def mulqr_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;

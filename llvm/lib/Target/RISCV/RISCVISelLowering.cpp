@@ -12622,15 +12622,19 @@ static unsigned getRVPMulHighAccumulateOpcode(unsigned IntNo) {
 static unsigned getRVPMulHighAccumulateHalfOpcode(unsigned IntNo) {
   switch (IntNo) {
   default:
-    llvm_unreachable("Unexpected RISC-V packed multiply high accumulate half "
+    llvm_unreachable("Unexpected RISC-V multiply high accumulate half "
                      "intrinsic");
   case Intrinsic::riscv_pmhacc_half_0:
+  case Intrinsic::riscv_mhacc_h0:
     return RISCVISD::MHACC_HALF_0;
   case Intrinsic::riscv_pmhacc_half_1:
+  case Intrinsic::riscv_mhacc_h1:
     return RISCVISD::MHACC_HALF_1;
   case Intrinsic::riscv_pmhaccsu_half_0:
+  case Intrinsic::riscv_mhaccsu_h0:
     return RISCVISD::MHACCSU_HALF_0;
   case Intrinsic::riscv_pmhaccsu_half_1:
+  case Intrinsic::riscv_mhaccsu_h1:
     return RISCVISD::MHACCSU_HALF_1;
   }
 }
@@ -13640,6 +13644,20 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
 
     return DAG.getNode(MulOpc, DL, VT, Rd, Rs1, Rs2);
+  }
+  case Intrinsic::riscv_mhacc_h0:
+  case Intrinsic::riscv_mhacc_h1:
+  case Intrinsic::riscv_mhaccsu_h0:
+  case Intrinsic::riscv_mhaccsu_h1: {
+    // The scalar mhacc.h0/h1 forms exist only on RV32; RV64 goes via
+    // ReplaceNodeResults using the packed pmhacc.w.h0/h1 form.
+    EVT VT = Op.getValueType();
+    if (VT != MVT::i32 || Subtarget.is64Bit())
+      return SDValue();
+
+    unsigned Opc = getRVPMulHighAccumulateHalfOpcode(IntNo);
+    return DAG.getNode(Opc, DL, VT, Op.getOperand(1), Op.getOperand(2),
+                       Op.getOperand(3));
   }
   case Intrinsic::riscv_pmhacc_half_0:
   case Intrinsic::riscv_pmhacc_half_1:
@@ -18204,6 +18222,30 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
                                 WideVT, Rd, Rs1, Rs2);
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
       return;
+    }
+    case Intrinsic::riscv_mhacc_h0:
+    case Intrinsic::riscv_mhacc_h1:
+    case Intrinsic::riscv_mhaccsu_h0:
+    case Intrinsic::riscv_mhaccsu_h1: {
+      // The scalar mhacc.h0/h1 forms exist only on RV32; RV64 has to build
+      // the packed word form here and extract the low word.
+      MVT VT = N->getSimpleValueType(0);
+      MVT SrcVT = N->getOperand(3).getSimpleValueType();
+      if (Subtarget.hasStdExtP() && Subtarget.is64Bit() && VT == MVT::i32 &&
+          SrcVT == MVT::v2i16) {
+        SDValue Rd = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32,
+                                 N->getOperand(1));
+        SDValue Rs1 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32,
+                                  N->getOperand(2));
+        SDValue Rs2 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16,
+                                  N->getOperand(3), DAG.getUNDEF(MVT::v2i16));
+        SDValue Res = DAG.getNode(getRVPMulHighAccumulateHalfOpcode(IntNo), DL,
+                                  MVT::v2i32, Rd, Rs1, Rs2);
+        Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
+        return;
+      }
+      reportFatalUsageError(
+          "unsupported llvm.riscv multiply-high-accumulate-half intrinsic");
     }
     case Intrinsic::riscv_pm4add:
     case Intrinsic::riscv_pm2add:
