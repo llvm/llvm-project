@@ -31,7 +31,7 @@ define void @test_iv_trunc_crash(ptr %a, ptr %b, i32 %n) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i32 8, i32 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP3]], [[TMP11]]
-; CHECK-NEXT:    [[DOTCAST:%.*]] = sitofp i32 [[N_VEC]] to double
+; CHECK-NEXT:    [[DOTCAST:%.*]] = uitofp i32 [[N_VEC]] to double
 ; CHECK-NEXT:    [[TMP12:%.*]] = fmul reassoc double [[X]], [[DOTCAST]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = fadd reassoc double [[SUM_0]], [[TMP12]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -41,7 +41,7 @@ define void @test_iv_trunc_crash(ptr %a, ptr %b, i32 %n) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[DOTCAST2:%.*]] = sitofp i32 [[INDEX]] to double
+; CHECK-NEXT:    [[DOTCAST2:%.*]] = uitofp i32 [[INDEX]] to double
 ; CHECK-NEXT:    [[TMP14:%.*]] = fmul reassoc double [[X]], [[DOTCAST2]]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = fadd reassoc double [[SUM_0]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = fmul reassoc double 7.000000e+00, [[X]]

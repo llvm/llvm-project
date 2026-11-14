@@ -1867,7 +1867,7 @@ define float @not_vectorized_select_float_induction_icmp(ptr %a, ptr %b, float %
 ; CHECK-VF4IC1:       [[VECTOR_PH]]:
 ; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF4IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; CHECK-VF4IC1-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to float
+; CHECK-VF4IC1-NEXT:    [[DOTCAST:%.*]] = uitofp i64 [[N_VEC]] to float
 ; CHECK-VF4IC1-NEXT:    [[TMP3:%.*]] = fmul float 1.000000e+00, [[DOTCAST]]
 ; CHECK-VF4IC1-NEXT:    [[TMP13:%.*]] = fadd float 0.000000e+00, [[TMP3]]
 ; CHECK-VF4IC1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[RDX_START]], i64 0
@@ -1926,7 +1926,7 @@ define float @not_vectorized_select_float_induction_icmp(ptr %a, ptr %b, float %
 ; CHECK-VF4IC4:       [[VECTOR_PH]]:
 ; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; CHECK-VF4IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; CHECK-VF4IC4-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to float
+; CHECK-VF4IC4-NEXT:    [[DOTCAST:%.*]] = uitofp i64 [[N_VEC]] to float
 ; CHECK-VF4IC4-NEXT:    [[TMP3:%.*]] = fmul float 1.000000e+00, [[DOTCAST]]
 ; CHECK-VF4IC4-NEXT:    [[TMP13:%.*]] = fadd float 0.000000e+00, [[TMP3]]
 ; CHECK-VF4IC4-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[RDX_START]], i64 0

@@ -3348,7 +3348,7 @@ InstructionCost VPDerivedIVRecipe::computeCost(ElementCount VF,
     Type *StepTy = getStepValue()->getScalarType();
     Type *IndexTy = getIndex()->getScalarType();
     InstructionCost Cost =
-        Ctx.TTI.getCastInstrCost(Instruction::SIToFP, StepTy, IndexTy,
+        Ctx.TTI.getCastInstrCost(Instruction::UIToFP, StepTy, IndexTy,
                                  TTI::CastContextHint::None, Ctx.CostKind);
 
     // If the step is 1.0, the multiply is an exact identity and gets folded
