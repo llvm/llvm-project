@@ -96,6 +96,8 @@ void populateVectorMultiReductionFlatteningPatterns(
 /// dimension, unroll the outer dimension to obtain a sequence of extract +
 /// vector.reduction + insert. This can further lower to horizontal reduction
 /// ops.
+///
+/// Both 2-D patterns bail out if the outer (unrolled) dimension is scalable.
 void populateVectorMultiReductionUnrollingPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit = 1);

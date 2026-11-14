@@ -316,7 +316,8 @@ private:
 
 /// Lowers 2D vector.multi_reduction to a squence of Arith Ops
 ///
-/// The reduction dimension must be the outer-most dimension.
+/// The reduction dimension must be the outer-most dimension. The outer
+/// dimension is unrolled, so it must not be scalable.
 ///
 /// BEFORE:
 ///
@@ -356,6 +357,14 @@ struct TwoDimMultiReductionToElementWise
     if (multiReductionOp.isReducedDim(1) || !multiReductionOp.isReducedDim(0))
       return failure();
 
+    // The outer dim is unrolled using its static size as the trip count. For
+    // a scalable dim that is only the minimum size (vscale = 1), so lanes
+    // would be silently dropped when vscale > 1.
+    // TODO: Support scalable outer dims.
+    if (multiReductionOp.getSourceVectorType().getScalableDims()[0])
+      return rewriter.notifyMatchFailure(
+          multiReductionOp, "cannot scalarize a scalable outer dimension");
+
     Value mask = maskingOp ? maskingOp.getMask() : Value();
 
     auto loc = multiReductionOp.getLoc();
@@ -380,7 +389,8 @@ struct TwoDimMultiReductionToElementWise
 
 /// Lowers 2D vector.multi_reduction to a sequence of vector.reduction Ops.
 ///
-/// The reduction dimension must be the inner-most dimension.
+/// The reduction dimension must be the inner-most dimension. The outer
+/// dimension is unrolled, so it must not be scalable.
 ///
 /// BEFORE:
 ///  vector.multi_reduction <mul>, %src, %acc [1] : vector<2x4xf32> to
@@ -413,6 +423,14 @@ struct TwoDimMultiReductionToReduction
 
     if (multiReductionOp.isReducedDim(0) || !multiReductionOp.isReducedDim(1))
       return failure();
+
+    // The outer dim is unrolled using its static size as the trip count. For
+    // a scalable dim that is only the minimum size (vscale = 1), so lanes
+    // would be silently dropped when vscale > 1.
+    // TODO: Support scalable outer dims.
+    if (multiReductionOp.getSourceVectorType().getScalableDims()[0])
+      return rewriter.notifyMatchFailure(
+          multiReductionOp, "cannot scalarize a scalable outer dimension");
 
     Value mask = maskingOp ? maskingOp.getMask() : nullptr;
 
