@@ -356,6 +356,20 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   };
 
   if (TI->hasOneUse() || FI->hasOneUse()) {
+    // Sink a common vector insert through a scalar select.
+    // select C, (inselt V, X, N), (inselt V, Y, N)
+    //   -> inselt V, (select C, X, Y), N
+    if (isa<InsertElementInst>(TI) && TI->hasOneUse() && FI->hasOneUse() &&
+        CondTy->isIntegerTy(1) && TI->getOperand(0) == FI->getOperand(0) &&
+        TI->getOperand(2) == FI->getOperand(2) &&
+        isa<ConstantInt>(TI->getOperand(2))) {
+      Value *NewSel = Builder.CreateSelectFMF(
+          Cond, TI->getOperand(1), FI->getOperand(1),
+          SI.getFastMathFlagsOrNone(), SI.getName() + ".scalar", &SI);
+      return InsertElementInst::Create(TI->getOperand(0), NewSel,
+                                       TI->getOperand(2));
+    }
+
     // Cond ? -X : -Y --> -(Cond ? X : Y)
     Value *X, *Y;
     // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
