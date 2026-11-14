@@ -281,9 +281,10 @@ MachineCombinerImpl::getLatency(MachineInstr *Root, MachineInstr *NewRoot,
     if (!MO.getReg().isVirtual())
       continue;
     // Get the first instruction that uses MO
-    MachineRegisterInfo::reg_iterator RI = MRI->reg_begin(MO.getReg());
+    MachineRegisterInfo::reg_nodbg_iterator RI =
+        MRI->reg_nodbg_begin(MO.getReg());
     RI++;
-    if (RI == MRI->reg_end())
+    if (RI == MRI->reg_nodbg_end())
       continue;
     MachineInstr *UseMO = RI->getParent();
     unsigned LatencyOp = 0;
