@@ -38,6 +38,8 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
@@ -619,6 +621,24 @@ static bool LinearizeExprTree(Instruction *I,
   return Changed;
 }
 
+// Find the value that this record supersedes within its basic block. This is
+// used to reconstruct the variable view only for instructions moved within the
+// block; cross-block moves retain the pre-existing salvage behavior.
+static DbgVariableRecord *findPreviousDbgValue(DbgVariableRecord &DVR) {
+  DbgVariableRecord *Previous = nullptr;
+  DebugVariable Variable(&DVR);
+  for (Instruction &I : *DVR.getParent()) {
+    for (DbgVariableRecord &CurrentDVR : filterDbgVars(I.getDbgRecordRange())) {
+      if (&CurrentDVR == &DVR)
+        return Previous;
+      if (CurrentDVR.isValueOfVariable() &&
+          DebugVariable(&CurrentDVR) == Variable)
+        Previous = &CurrentDVR;
+    }
+  }
+  return nullptr;
+}
+
 /// Now that the operands for this expression tree are
 /// linearized and optimized, emit them in-order.
 void ReassociatePass::RewriteExprTree(BinaryOperator *I,
@@ -661,6 +681,28 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
   // ExpressionChangedEnd inclusive.
   BinaryOperator *ExpressionChangedStart = nullptr,
                  *ExpressionChangedEnd = nullptr;
+  struct TrackedDbgUser {
+    DbgVariableRecord *Record;
+    DbgVariableRecord *Previous;
+  };
+  DenseMap<Instruction *, SmallVector<TrackedDbgUser, 1>> AdjacentDbgUsers;
+  // Remember adjacent variable updates and the values they supersede in case
+  // the rewritten instructions move later within the block.
+  auto TrackAdjacentDbgUsers = [&](Instruction &I) {
+    auto [It, Inserted] = AdjacentDbgUsers.try_emplace(&I);
+    if (!Inserted)
+      return;
+
+    SmallVector<DbgVariableRecord *, 1> DbgUsers;
+    findDbgUsers(&I, DbgUsers);
+    DbgMarker *NextMarker = I.getParent()->getNextMarker(&I);
+    for (DbgVariableRecord *DVR : DbgUsers) {
+      if (!DVR->isValueOfVariable() || DVR->getMarker() != NextMarker)
+        continue;
+
+      It->second.push_back({DVR, findPreviousDbgValue(*DVR)});
+    }
+  };
   for (unsigned i = 0; ; ++i) {
     // The last operation (which comes earliest in the IR) is special as both
     // operands will come from Ops, rather than just one with the other being
@@ -692,6 +734,7 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
         BinaryOperator *BO = isReassociableOp(OldLHS, Opcode);
         if (BO && !NotRewritable.count(BO))
           NodesToRewrite.push_back(BO);
+        TrackAdjacentDbgUsers(*Op);
         salvageDebugInfo(*Op);
         Op->setOperand(0, NewLHS);
       }
@@ -699,6 +742,7 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
         BinaryOperator *BO = isReassociableOp(OldRHS, Opcode);
         if (BO && !NotRewritable.count(BO))
           NodesToRewrite.push_back(BO);
+        TrackAdjacentDbgUsers(*Op);
         salvageDebugInfo(*Op);
         Op->setOperand(1, NewRHS);
       }
@@ -727,6 +771,7 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
         BinaryOperator *BO = isReassociableOp(Op->getOperand(1), Opcode);
         if (BO && !NotRewritable.count(BO))
           NodesToRewrite.push_back(BO);
+        TrackAdjacentDbgUsers(*Op);
         salvageDebugInfo(*Op);
         Op->setOperand(1, NewRHS);
         ExpressionChangedStart = Op;
@@ -766,6 +811,7 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
     }
 
     LLVM_DEBUG(dbgs() << "RA: " << *Op << '\n');
+    TrackAdjacentDbgUsers(*Op);
     salvageDebugInfo(*Op);
     Op->setOperand(0, NewOp);
     LLVM_DEBUG(dbgs() << "TO: " << *Op << '\n');
@@ -782,6 +828,17 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
   // the operators to just before the expression root to guarantee that the
   // expression tree is dominated by all of Ops.
   if (ExpressionChangedStart) {
+    // Source locations may be reordered within a block, but adjacent variable
+    // updates should remain at their original program points. Remember the
+    // moved chain so its variable view can be restored around the new range.
+    SmallVector<BinaryOperator *, 4> MovedExprs;
+    bool MovesWithinBlock = true;
+    for (BinaryOperator *Moved = ExpressionChangedStart; Moved != I;
+         Moved = cast<BinaryOperator>(*Moved->user_begin())) {
+      MovedExprs.push_back(Moved);
+      MovesWithinBlock &= Moved->getParent() == I->getParent();
+    }
+
     bool ClearFlags = true;
     do {
       // Preserve flags.
@@ -802,6 +859,38 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
       ExpressionChangedStart =
           cast<BinaryOperator>(*ExpressionChangedStart->user_begin());
     } while (true);
+
+    if (MovesWithinBlock && !MovedExprs.empty()) {
+      // Keep updates at their original source program points, but restore each
+      // previous value while executing the moved expression.
+      SmallSet<DebugVariable, 4> RestoredVariables;
+      for (BinaryOperator *Moved : MovedExprs) {
+        auto DbgUsersIt = AdjacentDbgUsers.find(Moved);
+        if (DbgUsersIt == AdjacentDbgUsers.end())
+          continue;
+        for (const TrackedDbgUser &DbgUser : DbgUsersIt->second) {
+          if (!RestoredVariables.insert(DebugVariable(DbgUser.Record)).second)
+            continue;
+          DbgVariableRecord *Restore = DbgUser.Previous
+                                           ? DbgUser.Previous->clone()
+                                           : DbgUser.Record->clone();
+          if (!DbgUser.Previous)
+            Restore->setKillLocation();
+          I->getParent()->insertDbgRecordBefore(
+              Restore, MovedExprs.front()->getIterator());
+        }
+      }
+
+      // Reapply salvaged updates after the instructions they originally
+      // followed, restoring the source-level variable view after the move.
+      for (BinaryOperator *Moved : MovedExprs) {
+        auto DbgUsersIt = AdjacentDbgUsers.find(Moved);
+        if (DbgUsersIt == AdjacentDbgUsers.end())
+          continue;
+        for (const TrackedDbgUser &DbgUser : reverse(DbgUsersIt->second))
+          I->getParent()->insertDbgRecordAfter(DbgUser.Record->clone(), Moved);
+      }
+    }
   }
 
   // Throw away any left over nodes from the original expression.
