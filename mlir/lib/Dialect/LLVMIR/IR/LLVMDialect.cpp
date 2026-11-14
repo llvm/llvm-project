@@ -474,6 +474,42 @@ LogicalResult AllocaOp::canonicalize(AllocaOp op, PatternRewriter &rewriter) {
 // LLVM::BrOp
 //===----------------------------------------------------------------------===//
 
+LogicalResult BrOp::canonicalize(BrOp op, PatternRewriter &rewriter) {
+  // Merge a branch to a block that has a single predecessor, the same
+  // transform as cf::BranchOp; the successor block is inlined into the
+  // branch block and the branch is erased.
+  Block *succ = op.getDest();
+  Block *opParent = op->getBlock();
+  if (succ == opParent || !llvm::hasSingleElement(succ->getPredecessors()))
+    return failure();
+
+  // If any branch operand is itself a block argument of the successor,
+  // merging would replace uses of that argument with itself and leave
+  // dangling uses after the successor block is erased.
+  for (Value operand : op.getDestOperands())
+    if (auto arg = dyn_cast<BlockArgument>(operand))
+      if (arg.getOwner() == succ)
+        return failure();
+
+  // The successor must be mergeable. A landing pad must stay the first
+  // operation of its block, a block tag means the block address is taken,
+  // and merging would silently drop a loop annotation on the branch.
+  if (!succ->empty()) {
+    if (isa<LandingpadOp>(succ->front()))
+      return failure();
+    if (llvm::any_of(succ->without_terminator(),
+                     [](Operation &inner) { return isa<BlockTagOp>(inner); }))
+      return failure();
+  }
+  if (op.getLoopAnnotationAttr())
+    return failure();
+
+  SmallVector<Value> brOperands(op.getDestOperands());
+  rewriter.eraseOp(op);
+  rewriter.mergeBlocks(succ, opParent, brOperands);
+  return success();
+}
+
 SuccessorOperands BrOp::getSuccessorOperands(unsigned index) {
   assert(index == 0 && "invalid successor index");
   return SuccessorOperands(getDestOperandsMutable());
