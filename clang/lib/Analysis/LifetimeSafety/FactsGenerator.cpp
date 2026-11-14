@@ -1414,8 +1414,10 @@ llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
     if (!List)
       continue;
     const Loan *L = FactMgr.getLoanMgr().createPlaceholderLoan(PVD);
+    OriginList *Target =
+        isReferenceToPointer(PVD->getType()) ? List->peelOuterOrigin() : List;
     PlaceholderLoanFacts.push_back(
-        FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
+        FactMgr.createFact<IssueFact>(L->getID(), Target->getOuterOriginID()));
   }
   return PlaceholderLoanFacts;
 }
