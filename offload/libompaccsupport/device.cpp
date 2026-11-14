@@ -73,7 +73,7 @@ DeviceTy::DeviceTy(int32_t DeviceID, ol_platform_handle_t Platform,
       PM(PM), MappingInfo(*this) {}
 
 DeviceTy::~DeviceTy() {
-  if (DeviceID == -1 || !(getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE))
+  if (DeviceID == -1 || !INFO_VERBOSITY(OMP_INFOTYPE_DUMP_TABLE))
     return;
 
   ident_t Loc = {0, 0, 0, 0, ";libomptarget;libomptarget;0;0;;"};
@@ -692,7 +692,7 @@ int32_t DeviceTy::submitDataImpl(void *TgtPtrBegin, void *HstPtrBegin,
                                  HostDataToTargetTy *Entry,
                                  MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
                                  const ident_t *Loc, const char *Name) {
-  if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER)
+  if (INFO_VERBOSITY(OMP_INFOTYPE_DATA_TRANSFER))
     MappingInfo.printCopyInfo(TgtPtrBegin, HstPtrBegin, Size, /*H2D=*/true,
                               Entry, HDTTMapPtr, Loc, Name);
 
@@ -741,7 +741,7 @@ int32_t DeviceTy::retrieveDataImpl(void *HstPtrBegin, void *TgtPtrBegin,
                                    HostDataToTargetTy *Entry,
                                    MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
                                    const ident_t *Loc) {
-  if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER)
+  if (INFO_VERBOSITY(OMP_INFOTYPE_DATA_TRANSFER))
     MappingInfo.printCopyInfo(TgtPtrBegin, HstPtrBegin, Size, /*H2D=*/false,
                               Entry, HDTTMapPtr, Loc);
 
@@ -1505,13 +1505,13 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
     return OFFLOAD_FAIL;
   }
 
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceID,
-       "Launching kernel %s with [%u,%u,%u] blocks and [%u,%u,%u] threads in "
-       "%s mode with tripcount %" PRIu64 "\n",
-       KernelLaunchInfo.Name, Config.Size.NumGroups.x, Config.Size.NumGroups.y,
-       Config.Size.NumGroups.z, Config.Size.GroupSize.x,
-       Config.Size.GroupSize.y, Config.Size.GroupSize.z,
-       KernelLaunchInfo.getExecutionModeName(), KernelArgs.Tripcount);
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceID)
+      << "Launching kernel " << KernelLaunchInfo.Name << " with ["
+      << Config.Size.NumGroups.x << "," << Config.Size.NumGroups.y << ","
+      << Config.Size.NumGroups.z << "] blocks and [" << Config.Size.GroupSize.x
+      << "," << Config.Size.GroupSize.y << "," << Config.Size.GroupSize.z
+      << "] threads in " << KernelLaunchInfo.getExecutionModeName()
+      << " mode with tripcount " << KernelArgs.Tripcount;
 
   // Record the kernel prologue data before the launch.
   RecordReplayTy::HandleTy RRHandle;
