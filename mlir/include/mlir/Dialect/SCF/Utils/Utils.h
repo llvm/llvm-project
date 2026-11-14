@@ -239,19 +239,24 @@ bool isPerfectlyNestedForLoops(MutableArrayRef<LoopLikeOpInterface> loops);
 /// 'ivRemapFn' to remap 'iv' for each unrolled body. If specified, annotates
 /// the Ops in each unrolled iteration using annotateFn. If provided,
 /// 'clonedToSrcOpsMap' is populated with the mappings from the cloned ops to
-/// the original op.
+/// the original op. If provided, the values yielded by each additional copy of
+/// the loop body are appended to 'unrolledYieldedValues', in order.
 void generateUnrolledLoop(
     Block *loopBodyBlock, Value iv, uint64_t unrollFactor,
     function_ref<Value(unsigned, Value, OpBuilder)> ivRemapFn,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn,
     ValueRange iterArgs, ValueRange yieldedValues,
-    IRMapping *clonedToSrcOpsMap = nullptr);
+    IRMapping *clonedToSrcOpsMap = nullptr,
+    SmallVectorImpl<SmallVector<Value>> *unrolledYieldedValues = nullptr);
 
 /// Unroll this scf::Parallel loop by the specified unroll factors. Returns the
 /// unrolled loop if the unroll succeded; otherwise returns failure if the loop
 /// cannot be unrolled either due to restrictions or to invalid unroll factors.
-/// Requires positive loop bounds and step. If specified, annotates the Ops in
-/// each unrolled iteration by applying `annotateFn`.
+/// Requires positive loop bounds and step. The values reduced by the unrolled
+/// iterations are combined with the reduction functions, which are assumed to
+/// be associative; returns failure if a reduction function uses a value
+/// defined in the loop. If specified, annotates the Ops in each unrolled
+/// iteration by applying `annotateFn`.
 /// If provided, 'clonedToSrcOpsMap' is populated with the mappings from the
 /// cloned ops to the original op.
 FailureOr<scf::ParallelOp> parallelLoopUnrollByFactors(
