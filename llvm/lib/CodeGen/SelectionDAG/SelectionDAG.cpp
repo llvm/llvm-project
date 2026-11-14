@@ -58,6 +58,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/MemCacheHint.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
@@ -10379,9 +10380,9 @@ SDValue SelectionDAG::getMemcpy(
   // Check to see if we should lower the memcpy to loads and stores first.
   // For cases within the target-specified limits, this is the best choice.
   const MDNode *DstMemCacheHint =
-      CI ? getMemCacheHintMetadata(*CI, /*OperandNo=*/0) : nullptr;
+      CI ? getMemCacheHint(*CI, /*OperandNo=*/0) : nullptr;
   const MDNode *SrcMemCacheHint =
-      CI ? getMemCacheHintMetadata(*CI, /*OperandNo=*/1) : nullptr;
+      CI ? getMemCacheHint(*CI, /*OperandNo=*/1) : nullptr;
 
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
   if (ConstantSize) {
