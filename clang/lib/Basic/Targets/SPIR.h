@@ -210,7 +210,8 @@ public:
         // AS as generic.
         (getTriple().isSPIRV() &&
          (Opts.CUDAIsDevice ||
-          getTriple().getVendor() == llvm::Triple::Intel)));
+          getTriple().getVendor() == llvm::Triple::Intel)) ||
+        Opts.SPIRVDefaultAddrSpaceIsGeneric);
   }
 
   void setSupportedOpenCLOpts() override {
