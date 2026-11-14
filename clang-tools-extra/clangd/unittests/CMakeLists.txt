@@ -120,6 +120,7 @@ add_unittest(ClangdUnitTests ClangdTests
   support/TraceTests.cpp
 
   tweaks/AddUsingTests.cpp
+  tweaks/AddUsingReplaceAllTests.cpp
   tweaks/AnnotateHighlightingsTests.cpp
   tweaks/DefineInlineTests.cpp
   tweaks/DefineOutlineTests.cpp
