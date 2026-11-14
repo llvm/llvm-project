@@ -441,7 +441,7 @@ list of canonicalizations that are implemented in InstCombine:
 | Original Pattern             | Canonical Form             | Condition                     |
 |------------------------------|----------------------------|-------------------------------|
 | `icmp spred X, Y`            | `icmp samesign upred X, Y` | `sign(X) == sign(Y)`          |
-| `icmp eq/ne X, 0`            | `(not) trunc X to i1`      | `X in [0, 1]`                 |
+| `icmp eq/ne X, 0`            | `(not) trunc nuw X to i1`  | `X in [0, 1]`                 |
 | `smin/smax X, Y`             | `umin/umax X, Y`           | `sign(X) == sign(Y)`          |
 | `sext X`                     | `zext nneg X`              | `X >=s 0`                     |
 | `sitofp X`                   | `uitofp nneg X`            | `X >=s 0`                     |
@@ -655,7 +655,7 @@ guidelines.
    potential phase-ordering issues. For example, if the motivating transform holds for
    `add`, it also holds for `or disjoint`. See the canonicalization list above for details.
    In most cases, it can be easily implemented with matchers like
-   `m_AddLike/m_SExtLike/m_LogicalAnd/m_LogicalOr`.
+   `m_AddLike/m_SExtLike/m_LogicalAnd/m_LogicalOr/m_ICmpLike`.
 
 ## Guidelines for reviewers
 
