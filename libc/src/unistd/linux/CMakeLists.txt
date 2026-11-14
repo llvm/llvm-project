@@ -481,6 +481,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  gethostid
+  SRCS
+    gethostid.cpp
+  HDRS
+    ../gethostid.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
   getpgid
   SRCS
     getpgid.cpp

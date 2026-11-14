@@ -391,6 +391,12 @@ functions:
     arguments:
       - type: int
       - type: gid_t *
+  - name: gethostid
+    standards:
+      - posix
+    return_type: long
+    arguments:
+      - type: void
   - name: gethostname
     standards:
       - posix

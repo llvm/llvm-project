@@ -866,6 +866,18 @@ add_libc_test(
 )
 
 add_libc_test(
+  gethostid_test
+  SUITE
+    libc-unistd-tests
+  SRCS
+    gethostid_test.cpp
+  DEPENDS
+    libc.src.__support.libc_errno
+    libc.src.unistd.gethostid
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
   gethostname_test
   SUITE
     libc-unistd-tests
