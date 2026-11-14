@@ -47,6 +47,18 @@
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp \
 ! RUN:   -fopenmp-version=52 -o - %t/later-clause-external.f90 2>&1 | \
 ! RUN:   FileCheck %t/later-clause-external.f90
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp \
+! RUN:   -fopenmp-version=52 -fopenmp-targets=amdgcn-amd-amdhsa \
+! RUN:   -o - %t/allocatable-member.f90 2>&1 | \
+! RUN:   FileCheck %t/allocatable-member.f90
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp \
+! RUN:   -fopenmp-version=52 -fopenmp-targets=amdgcn-amd-amdhsa \
+! RUN:   -o - %t/pointer-parent.f90 2>&1 | \
+! RUN:   FileCheck %t/pointer-parent.f90
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp \
+! RUN:   -fopenmp-version=52 -fopenmp-targets=amdgcn-amd-amdhsa \
+! RUN:   -o - %t/character-member.f90 2>&1 | \
+! RUN:   FileCheck %t/character-member.f90
 
 ! Unsupported iterator locators inside declare mapper.
 
@@ -270,3 +282,47 @@ module declare_mapper_iterator_later_clause_external
   !$omp declare mapper(m: t :: v) &
   !$omp& map(iterator(i=1:1), to: v%a(i)) map(to: tbl(1))
 end module
+
+!--- allocatable-member.f90
+! The iterated map entry carries only the element's data address; the
+! descriptor and an attach entry for the component are not emitted yet.
+! CHECK: not yet implemented: iterator modifier with ALLOCATABLE or POINTER
+! CHECK-SAME: component in declare mapper
+
+subroutine declare_mapper_iterator_allocatable_member
+  type :: t
+    integer, allocatable :: b(:)
+  end type
+
+  !$omp declare mapper(m: t :: v) map(iterator(i=1:2), tofrom: v%b(i))
+end subroutine
+
+!--- pointer-parent.f90
+! A POINTER higher up the component path also needs an attach entry.
+! CHECK: not yet implemented: iterator modifier with ALLOCATABLE or POINTER
+! CHECK-SAME: component in declare mapper
+
+subroutine declare_mapper_iterator_pointer_parent
+  type :: inner
+    integer :: a(4)
+  end type
+  type :: t
+    type(inner), pointer :: p
+  end type
+
+  !$omp declare mapper(m: t :: v) map(iterator(i=1:4), tofrom: v%p%a(i))
+end subroutine
+
+!--- character-member.f90
+! Element offsets of CHARACTER arrays are computed without the character
+! length, so the elements would map at the wrong addresses.
+! CHECK: not yet implemented: iterator modifier with CHARACTER component in
+! CHECK-SAME: declare mapper
+
+subroutine declare_mapper_iterator_character_member
+  type :: t
+    character(len=5) :: c(4)
+  end type
+
+  !$omp declare mapper(m: t :: v) map(iterator(i=1:4), tofrom: v%c(i))
+end subroutine

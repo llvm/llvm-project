@@ -297,6 +297,10 @@ void collectEnclosingConstructTraits(
 /// its offload targets are AMDGPU devices.
 bool hasOnlyAMDGCNTargets(mlir::ModuleOp module);
 
+/// Return true when \p module is the host side of an offload compilation, i.e.
+/// the compilation that emits mapper functions.
+bool isHostOffloadCompilation(mlir::ModuleOp module);
+
 /// In host offload compilation, report not yet implemented if the implicit
 /// default mapper for \p typeSpec would skip a component type's default mapper
 /// that has iterator map entries.

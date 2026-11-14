@@ -2143,6 +2143,23 @@ void ClauseProcessor::processMapObjectsWithIterator(
       if (const auto *symbol{object.sym()};
           symbol && semantics::IsOptional(*symbol))
         TODO(clauseLocation, "iterator modifier with optional locator");
+      // The mapper function is only emitted in host offload compilation; its
+      // per-iteration map entry carries the element's data address only.
+      if (declareMapper && isHostOffloadCompilation(converter.getModuleOp())) {
+        // An ALLOCATABLE or POINTER anywhere on the component path also needs
+        // the descriptor mapped and an attach entry for its base address.
+        if (isMemberOrParentAllocatableOrPointer(object, semaCtx))
+          TODO(clauseLocation, "iterator modifier with ALLOCATABLE or POINTER "
+                               "component in declare mapper");
+        // Element offsets of CHARACTER arrays are computed in bytes without
+        // the character length, so the elements would map at the wrong
+        // addresses.
+        if (const auto *symbol{object.sym()};
+            symbol && symbol->GetType() &&
+            symbol->GetType()->category() == semantics::DeclTypeSpec::Character)
+          TODO(clauseLocation,
+               "iterator modifier with CHARACTER component in declare mapper");
+      }
       result.mapIterated.push_back(buildIteratedMapEntry(
           converter, semaCtx, clauseLocation, objectRanges, object,
           *analysis.arrayRef, mapperIdNameRef, mapTypeBits, directive));
@@ -2204,6 +2221,54 @@ static bool hasIteratorModifier(const List<Clause> &clauses) {
            hasIterator(std::get_if<omp::clause::To>(&clause.u)) ||
            hasIterator(std::get_if<omp::clause::From>(&clause.u));
   });
+}
+
+// When a declare mapper variable is given an explicit mapper (e.g.
+// `map(mapper(other): v)`) and also has members produced by an iterator
+// modifier (e.g. `map(iterator(i=1:4): v%a(i))`), that mapper would
+// otherwise also remap those same elements, duplicating the mapping at
+// runtime. This mirrors the equivalent exclusivity rule already applied to
+// ordinary (non-iterator) members in insertChildMapInfoIntoParent, which
+// mapIterated locators bypass since they never populate memberMap.
+static void reconcileDeclareMapperIteratedMembers(
+    lower::AbstractConverter &converter,
+    mlir::omp::DeclareMapperOp declareMapper,
+    llvm::ArrayRef<mlir::Value> mapIterated,
+    llvm::SmallVectorImpl<mlir::Value> &mapVars,
+    llvm::SmallVectorImpl<Object> &mapObjects) {
+  if (!declareMapper || mapIterated.empty())
+    return;
+
+  for (auto [mapVal, object] : llvm::zip_equal(mapVars, mapObjects)) {
+    if (!isDeclareMapperVariable(converter, declareMapper, object.sym()))
+      continue;
+    auto mapOp = mapVal.getDefiningOp<mlir::omp::MapInfoOp>();
+    if (!mapOp)
+      continue;
+
+    if (mapOp.getMapperIdAttr())
+      mapOp.setMapperIdAttr(nullptr);
+
+    // If the mapper variable's own map does not request close mapping,
+    // close mapping on its iterator-produced members must be ignored, the
+    // same as for ordinary members.
+    if ((mapOp.getMapType() & mlir::omp::ClauseMapFlags::close) ==
+        mlir::omp::ClauseMapFlags::close)
+      continue;
+    for (mlir::Value iterVal : mapIterated) {
+      auto itersOp = iterVal.getDefiningOp<mlir::omp::IteratorOp>();
+      if (!itersOp)
+        continue;
+      mlir::omp::YieldOp yieldOp = itersOp.getYieldOp();
+      auto iteratedMapOp =
+          yieldOp.getResults()[0].getDefiningOp<mlir::omp::MapInfoOp>();
+      if (iteratedMapOp &&
+          (iteratedMapOp.getMapType() & mlir::omp::ClauseMapFlags::close) ==
+              mlir::omp::ClauseMapFlags::close)
+        iteratedMapOp.setMapType(iteratedMapOp.getMapType() &
+                                 ~mlir::omp::ClauseMapFlags::close);
+    }
+  }
 }
 
 bool ClauseProcessor::processMap(
@@ -2326,6 +2391,9 @@ bool ClauseProcessor::processMap(
   bool clauseFound = findRepeatableClause<omp::clause::Map>(process);
   insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
                                result.mapVars, *ptrMapObjects);
+  reconcileDeclareMapperIteratedMembers(
+      converter, getEnclosingDeclareMapper(converter), result.mapIterated,
+      result.mapVars, *ptrMapObjects);
 
   return clauseFound;
 }

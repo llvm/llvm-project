@@ -1242,7 +1242,7 @@ findMapperIfTypeMatch(Fortran::lower::AbstractConverter &converter,
   return "__implicit_mapper";
 }
 
-static bool isHostOffloadCompilation(mlir::ModuleOp module) {
+bool isHostOffloadCompilation(mlir::ModuleOp module) {
   auto offloadModule =
       llvm::cast<mlir::omp::OffloadModuleInterface>(module.getOperation());
   return !offloadModule.getIsTargetDevice() &&
