@@ -7369,6 +7369,80 @@ foreach NumSrc = SPNumSrcs in {
 } // NumSrc
 
 //
+// tcgen05.ld{.red}.spcompress
+//
+
+// mdata = ceil(num / 32);
+// cdata = num / 2.
+class Tcgen05LdSPCompressLayout<int RepeatFactor, bit IsRed> {
+  int MetadataSize = SPCeilDiv<RepeatFactor, 32>.Value;
+  int CompressedDataSize = !div(RepeatFactor, 2);
+  int NumResultRegs =
+      !add(MetadataSize, CompressedDataSize, !if(IsRed, 1, 0));
+  // taddr, rowop, abs, [nan], idx_size
+  int NumOperands = !if(IsRed, 5, 4);
+}
+
+class Tcgen05LdSPCompressSDNode<int RepeatFactor, bit IsRed,
+                                Tcgen05LdSPCompressLayout Layout =
+                                    Tcgen05LdSPCompressLayout<RepeatFactor,
+                                                              IsRed>>
+    : SDNode<"NVPTXISD::TCGEN05_LD" # !if(IsRed, "_RED", "")
+                 # "_SPCOMPRESS_X" # RepeatFactor,
+             SDTypeProfile<Layout.NumResultRegs, Layout.NumOperands,
+                           !foreach(OpIdx,
+                                    !range(!add(Layout.NumResultRegs,
+                                                Layout.NumOperands)),
+                                    SDTCisVT<OpIdx, i32>)>,
+             [SDNPHasChain, SDNPSideEffect, SDNPMemOperand]>;
+
+class Tcgen05LdSPCompressInst<int RepeatFactor, string RowOp, bit Abs,
+                              bit IsRed, bit Nan>
+    : NVPTXInst<(outs), (ins), "?", []> {
+  defvar Layout = Tcgen05LdSPCompressLayout<RepeatFactor, IsRed>;
+  defvar Results = SPRegList<Layout.NumResultRegs, "r">;
+  defvar Opcode = Tcgen05LdSPCompressSDNode<RepeatFactor, IsRed>;
+  defvar Args =
+      !listconcat([SPRegList<Layout.MetadataSize, "r">.Asm,
+                   SPRegList<Layout.CompressedDataSize, "r",
+                             Layout.MetadataSize>.Asm],
+                  !if(IsRed, ["$r" # !sub(Layout.NumResultRegs, 1)], []),
+                  ["[$taddr]"]);
+  defvar RowOpVal = !cond(!eq(RowOp, "min") : 0, !eq(RowOp, "max") : 1);
+  defvar AbsVal = !if(Abs, 1, 0);
+  defvar NanVal = !if(Nan, 1, 0);
+
+  // The pattern only matches the qualifiers this instruction prints.
+  dag IntrinsicPattern =
+      !con((Opcode i32:$taddr, (i32 RowOpVal), (i32 AbsVal)),
+           !if(IsRed, (Opcode (i32 NanVal)), (Opcode)),
+           (Opcode (i32 2)));
+
+  let OutOperandList = Results.Outs;
+  let InOperandList = (ins B32:$taddr);
+  let AsmString = "tcgen05.ld" # !if(IsRed, ".red", "")
+                  # ".spcompress.sync.aligned.32x32b.x" # RepeatFactor
+                  # "." # RowOp # ".sp::2:4"
+                  # !if(Abs, ".abs", "") # !if(Nan, ".NaN", "")
+                  # ".f32.b2 " # !interleave(Args, ", ") # ";";
+  let Pattern = [!con(Results.Set, (set IntrinsicPattern))];
+  let Predicates = [hasSPCompress];
+}
+
+let isConvergent = true in {
+  foreach RepeatFactor = [4, 8, 16, 32, 64, 128] in {
+    foreach RowOp = ["min", "max"] in {
+      foreach Abs = [0, 1] in {
+        def : Tcgen05LdSPCompressInst<RepeatFactor, RowOp, Abs, false, false>;
+        // .NaN only applies to the reduction.
+        foreach Nan = [0, 1] in
+          def : Tcgen05LdSPCompressInst<RepeatFactor, RowOp, Abs, true, Nan>;
+      } // Abs
+    } // RowOp
+  } // RepeatFactor
+} // isConvergent
+
+//
 // tensormap.replace Instructions
 //
 
