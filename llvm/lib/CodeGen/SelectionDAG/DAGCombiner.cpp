@@ -18632,10 +18632,14 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
       SDValue X = DAG.getBitcast(IntXVT, N0.getOperand(1));
       AddToWorklist(X.getNode());
 
-      // If X has a different width than the result/lhs, sext it or truncate it.
+      // If X has a different width than the result, extend or truncate it.
       unsigned VTWidth = VT.getSizeInBits();
       if (OrigXWidth < VTWidth) {
-        X = DAG.getNode(ISD::SIGN_EXTEND, SDLoc(N), VT, X);
+        SDLoc DL(X);
+        X = DAG.getNode(ISD::ANY_EXTEND, DL, VT, X);
+        X = DAG.getNode(
+            ISD::SHL, DL, VT, X,
+            DAG.getShiftAmountConstant(VTWidth - OrigXWidth, VT, DL));
         AddToWorklist(X.getNode());
       } else if (OrigXWidth > VTWidth) {
         // To get the sign bit in the right place, we have to shift it right
