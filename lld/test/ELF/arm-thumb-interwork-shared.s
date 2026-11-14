@@ -37,7 +37,7 @@ sym1:
 // CHECK: Disassembly of section .plt:
 // CHECK-EMPTY:
 // CHECK-NEXT: <.plt>:
-// CHECK-NEXT:     10210: str     lr, [sp, #-4]!
+// CHECK-NEXT:     10210: push    {lr}
 // CHECK-NEXT:           add     lr, pc, #0, #12
 // CHECK-NEXT:           add     lr, lr, #32
 // CHECK-NEXT:           ldr     pc, [lr, #148]!
