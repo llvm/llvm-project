@@ -191,8 +191,7 @@ TEST_F(BackgroundIndexTest, IndexTwoFiles) {
   MemoryShardStorage MSS(Storage, CacheHits);
   OverlayCDB CDB(/*Base=*/nullptr);
   BackgroundIndex::Options Opts;
-  BackgroundIndex Idx(
-      FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
+  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
 
   tooling::CompileCommand Cmd;
   Cmd.Filename = testPath("root/A.cc");
@@ -353,6 +352,66 @@ TEST_F(BackgroundIndexTest, ConstructorForwardingMultiFile) {
                        fileURI("unittest:///root/second.cpp")}));
 }
 
+TEST_F(BackgroundIndexTest, TemplateInstantiationBaseOfMultiFile) {
+  // The BaseOf chain First -> Inherit<First> -> Battler relies on the
+  // instantiation Inherit<First> being visited while traversing header.hpp.
+  // Declarations in header.hpp are only traversed by the first TU that indexes
+  // it, so instantiations that exist only in later TUs are never recorded.
+  MockFS FS;
+  FS.Files[testPath("root/header.hpp")] = R"cpp(
+    class First {};
+    template <typename T> struct Inherit : T {};
+  )cpp";
+  FS.Files[testPath("root/first.cpp")] = R"cpp(
+    #include "header.hpp"
+  )cpp";
+  FS.Files[testPath("root/second.cpp")] = R"cpp(
+    #include "header.hpp"
+    class Battler : Inherit<First> {};
+  )cpp";
+
+  llvm::StringMap<std::string> Storage;
+  size_t CacheHits = 0;
+  MemoryShardStorage MSS(Storage, CacheHits);
+  OverlayCDB CDB(/*Base=*/nullptr);
+  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; },
+                      /*Opts=*/{});
+
+  auto IndexTUsInOrder = [&](llvm::ArrayRef<llvm::StringRef> Files) {
+    for (llvm::StringRef File : Files) {
+      tooling::CompileCommand Cmd;
+      Cmd.Filename = testPath(File);
+      Cmd.Directory = testPath("root");
+      Cmd.CommandLine = {"clang++", testPath(File)};
+      CDB.setCompileCommand(testPath(File), Cmd);
+      // Finish each TU before starting the next, so the order is fixed.
+      EXPECT_TRUE(Idx.blockUntilIdleForTest());
+    }
+  };
+
+  auto FindImplementations = [&](llvm::StringRef BaseName) {
+    std::vector<std::string> Names;
+    RelationsRequest Req;
+    Req.Predicate = RelationKind::BaseOf;
+    Req.Subjects.insert(findSymbol(runFuzzyFind(Idx, BaseName), BaseName).ID);
+    llvm::DenseSet<SymbolID> Seen;
+    while (!Req.Subjects.empty()) {
+      llvm::DenseSet<SymbolID> Next;
+      Idx.relations(Req, [&](const SymbolID &, const Symbol &Object) {
+        if (Seen.insert(Object.ID).second) {
+          Next.insert(Object.ID);
+          Names.push_back(Object.Name.str());
+        }
+      });
+      Req.Subjects = std::move(Next);
+    }
+    return Names;
+  };
+
+  IndexTUsInOrder({"root/first.cpp", "root/second.cpp"});
+  EXPECT_THAT(FindImplementations("First"), Contains("Battler"));
+}
+
 TEST_F(BackgroundIndexTest, MainFileRefs) {
   MockFS FS;
   FS.Files[testPath("root/A.h")] = R"cpp(
@@ -366,8 +425,7 @@ TEST_F(BackgroundIndexTest, MainFileRefs) {
   MemoryShardStorage MSS(Storage, CacheHits);
   OverlayCDB CDB(/*Base=*/nullptr);
   BackgroundIndex::Options Opts;
-  BackgroundIndex Idx(
-      FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
+  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
 
   tooling::CompileCommand Cmd;
   Cmd.Filename = testPath("root/A.cc");
