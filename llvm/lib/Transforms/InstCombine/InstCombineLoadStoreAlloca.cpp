@@ -1313,6 +1313,14 @@ static Value *likeBitCastFromVector(InstCombinerImpl &IC, Value *V) {
   if (DL.getTypeStoreSizeInBits(UT) != DL.getTypeStoreSizeInBits(VT)) {
     return nullptr;
   }
+  // The lanes of the vector are bit-packed, while the elements of the
+  // aggregate are laid out with their alloc size. If the element type has
+  // padding (For example, i31 has 31 bits of data but a 32-bit alloc size), the lane
+  // stride and the element stride differ, so the layouts are not isomorphic.
+  Type *EltTy = UT->getElementType();
+  if (DL.getTypeSizeInBits(EltTy) != DL.getTypeAllocSizeInBits(EltTy) &&
+      cast<FixedVectorType>(UT)->getNumElements() != 1)
+    return nullptr;
   if (auto *AT = dyn_cast<ArrayType>(VT)) {
     if (AT->getNumElements() != cast<FixedVectorType>(UT)->getNumElements())
       return nullptr;
