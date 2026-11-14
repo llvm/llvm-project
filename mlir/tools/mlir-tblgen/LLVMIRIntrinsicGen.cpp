@@ -77,6 +77,12 @@ static IndicesTy getOverloadableTypeIdxs(const Record &record,
   auto results = record.getValueAsListOfDefs(listName);
   IndicesTy overloadedOps(results.size());
   for (const auto &r : llvm::enumerate(results)) {
+    // Partially dependent types are assigned their own overload index and
+    // therefore count as overloaded types.
+    if (r.value()->isSubClassOf("LLVMPartiallyDependentType")) {
+      overloadedOps.set(r.index());
+      continue;
+    }
     llvm::MVT::SimpleValueType vt = getValueType(r.value());
     switch (vt) {
     case llvm::MVT::iAny:

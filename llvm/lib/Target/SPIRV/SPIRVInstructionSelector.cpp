@@ -1709,15 +1709,7 @@ bool SPIRVInstructionSelector::selectLdexp(Register ResVReg,
   Register ExpReg = I.getOperand(2).getReg();
 
   // Both OpenCL.std ldexp and GLSL.std.450 Ldexp require the exponent to have
-  // the same number of components as the result, but G_FLDEXP's exponent is
-  // scalar even for vector operands. Splat it when the result is a vector.
-  SPIRVTypeInst ExpType = GR.getSPIRVTypeForVReg(ExpReg);
-  if (ResType->getOpcode() == SPIRV::OpTypeVector &&
-      ExpType->getOpcode() != SPIRV::OpTypeVector) {
-    unsigned NumElts = ResType->getOperand(2).getImm();
-    ExpReg = buildVectorSplat(ExpReg, NumElts, I);
-  }
-
+  // the same number of components as the result.
   return selectExtInst(ResVReg, ResType, I, CL::ldexp, GL::Ldexp,
                        /*setMIFlags=*/true, /*useMISrc=*/false, {XReg, ExpReg});
 }
