@@ -1070,7 +1070,7 @@ ConstraintTy ConstraintInfo::getConstraintForSolving(CmpInst::Predicate Pred,
 
 std::optional<bool>
 ConstraintTy::isImpliedBy(const ConstraintSystem &CS) const {
-  const auto &[SubCS, NewCoefficients] = CS.getSubSystem(Coefficients);
+  auto [SubCS, NewCoefficients] = CS.getSubSystem(Coefficients);
   bool IsConditionImplied = SubCS.isConditionImplied(NewCoefficients);
 
   if (IsEq || IsNe) {
@@ -1090,7 +1090,8 @@ ConstraintTy::isImpliedBy(const ConstraintSystem &CS) const {
 
     auto StrictLessThan = ConstraintSystem::toStrictLessThan(NewCoefficients);
     bool IsStrictLessThanImplied =
-        !StrictLessThan.empty() && SubCS.isConditionImplied(StrictLessThan);
+        !StrictLessThan.empty() &&
+        std::move(SubCS).isConditionImplied(std::move(StrictLessThan));
 
     // In order to check that `%a != %b` is true (non-equality), either
     // condition `%a > %b` or `%a < %b` must hold true. When checking for
@@ -1106,7 +1107,9 @@ ConstraintTy::isImpliedBy(const ConstraintSystem &CS) const {
     return true;
 
   auto Negated = ConstraintSystem::negate(NewCoefficients);
-  auto IsNegatedImplied = !Negated.empty() && SubCS.isConditionImplied(Negated);
+  auto IsNegatedImplied =
+      !Negated.empty() &&
+      std::move(SubCS).isConditionImplied(std::move(Negated));
   if (IsNegatedImplied)
     return false;
 

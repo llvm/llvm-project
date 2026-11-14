@@ -226,4 +226,39 @@ TEST(ConstraintSolverTest, NormalizeByGCD) {
   int64_t Min = std::numeric_limits<int64_t>::min();
   EXPECT_THAT(Normalize({7, Min, 2}), ElementsAre(7, Min, 2));
 }
+
+TEST(ConstraintSolverTest, TestInPlaceSolveGivesSameAnswerAsCopy) {
+  ConstraintSystem CS;
+  // x + y <= 10, x >= 5, y >= 6
+  addVariableRow(CS, {10, 1, 1});
+  addVariableRow(CS, {-5, -1, 0});
+  addVariableRow(CS, {-6, 0, -1});
+  for (ArrayRef<int64_t> Query :
+       {ArrayRef<int64_t>{3, 1, 1}, {10, 1, 0}, {4, 1, 0}, {0, 0, 0}}) {
+    bool Expected = CS.isConditionImplied(toRow(Query));
+    ConstraintSystem Copy = CS;
+    EXPECT_EQ(Expected, std::move(Copy).isConditionImplied(toRow(Query)));
+  }
+}
+
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+TEST(ConstraintSolverDeathTest, TestUseAfterInPlaceSolveAsserts) {
+  ConstraintSystem CS;
+  addVariableRow(CS, {10, 1, 1});
+  addVariableRow(CS, {-5, -1, 0});
+  EXPECT_DEATH(
+      {
+        (void)std::move(CS).isConditionImplied(toRow({0, 0, 0}));
+        (void)CS.size();
+      },
+      "consumed by an in-place solve");
+  EXPECT_DEATH(
+      {
+        ConstraintSystem Other = CS;
+        (void)std::move(Other).isConditionImplied(toRow({3, 1, 1}));
+        (void)Other.isConditionImplied(toRow({3, 1, 1}));
+      },
+      "consumed by an in-place solve");
+}
+#endif
 } // namespace
