@@ -126,7 +126,7 @@ define <vscale x 16 x i1> @reinterpret_ptrue() {
   ret <vscale x 16 x i1> %out
 }
 
-; Reinterpreting a comparison not introduce an `and` instruction.
+; Reinterpreting a comparison should not introduce an `and` instruction.
 define <vscale x 16 x i1> @reinterpret_cmpgt(<vscale x 8 x i1> %p, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: reinterpret_cmpgt:
 ; CHECK:       // %bb.0:
@@ -135,6 +135,28 @@ define <vscale x 16 x i1> @reinterpret_cmpgt(<vscale x 8 x i1> %p, <vscale x 8 x
   %1 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.cmpgt.nxv8i16(<vscale x 8 x i1> %p, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   %2 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %1)
   ret <vscale x 16 x i1> %2
+}
+
+; These FP comparisons remain intrinsic DAG nodes when the predicate is
+; converted, so isZeroingInactiveLanes must recognize their zeroing behavior.
+define <vscale x 16 x i1> @reinterpret_facgt(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: reinterpret_facgt:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    facgt p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %cmp = call <vscale x 4 x i1> @llvm.aarch64.sve.facgt.nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b)
+  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %cmp)
+  ret <vscale x 16 x i1> %out
+}
+
+define <vscale x 16 x i1> @reinterpret_facge(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: reinterpret_facge:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    facge p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %cmp = call <vscale x 4 x i1> @llvm.aarch64.sve.facge.nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b)
+  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %cmp)
+  ret <vscale x 16 x i1> %out
 }
 
 ; The first reinterpret should prevent the second one from being simplified as a nop

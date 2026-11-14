@@ -1,4 +1,4 @@
-set(LLVM_LINK_COMPONENTS Support)
+set(LLVM_LINK_COMPONENTS Support TargetParser)
 
 add_tablegen(clang-tblgen CLANG
   DESTINATION "${CLANG_TOOLS_INSTALL_DIR}"

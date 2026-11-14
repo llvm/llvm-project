@@ -1191,21 +1191,6 @@ define <vscale x 2 x double> @dup_ld1rd_double_passthruundef_nxv2f64(<vscale x 2
     %res = call <vscale x 2 x double> @llvm.aarch64.sve.dup.nxv2f64(<vscale x 2 x double> poison, <vscale x 2 x i1> %pg, double %ld)
     ret <vscale x 2 x double> %res
 }
-define <vscale x 4 x half> @dup_ld1rh_half_passthruundef_nxv4f16(<vscale x 4 x i1> %pg, ptr %addr) {
-; CHECK-LD1R-LABEL: dup_ld1rh_half_passthruundef_nxv4f16:
-; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ld1rh { z0.s }, p0/z, [x0]
-; CHECK-LD1R-NEXT:    ret
-;
-; CHECK-NO-LD1R-LABEL: dup_ld1rh_half_passthruundef_nxv4f16:
-; CHECK-NO-LD1R:       // %bb.0:
-; CHECK-NO-LD1R-NEXT:    ldr h0, [x0]
-; CHECK-NO-LD1R-NEXT:    mov z0.h, p0/m, h0
-; CHECK-NO-LD1R-NEXT:    ret
-    %ld = load half, ptr %addr
-    %res = call <vscale x 4 x half> @llvm.aarch64.sve.dup.nxv4f16(<vscale x 4 x half> poison, <vscale x 4 x i1> %pg, half %ld)
-    ret <vscale x 4 x half> %res
-}
 define <vscale x 16 x i8> @dup_ld1rb_i8_passthruzero_nxv16i8(<vscale x 16 x i1> %pg, ptr %addr) {
 ; CHECK-LABEL: dup_ld1rb_i8_passthruzero_nxv16i8:
 ; CHECK:       // %bb.0:
@@ -1289,54 +1274,6 @@ define <vscale x 2 x double> @dup_ld1rd_double_passthruzero_nxv2f64(<vscale x 2 
     %ld = load double, ptr %addr
     %res = call <vscale x 2 x double> @llvm.aarch64.sve.dup.nxv2f64(<vscale x 2 x double> zeroinitializer, <vscale x 2 x i1> %pg, double %ld)
     ret <vscale x 2 x double> %res
-}
-define <vscale x 4 x half> @dup_ld1rh_half_passthruzero_nxv4f16(<vscale x 4 x i1> %pg, ptr %addr) {
-; CHECK-LD1R-LABEL: dup_ld1rh_half_passthruzero_nxv4f16:
-; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ld1rh { z0.s }, p0/z, [x0]
-; CHECK-LD1R-NEXT:    ret
-;
-; CHECK-NO-LD1R-LABEL: dup_ld1rh_half_passthruzero_nxv4f16:
-; CHECK-NO-LD1R:       // %bb.0:
-; CHECK-NO-LD1R-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NO-LD1R-NEXT:    ldr h1, [x0]
-; CHECK-NO-LD1R-NEXT:    mov z0.h, p0/m, h1
-; CHECK-NO-LD1R-NEXT:    ret
-    %ld = load half, ptr %addr
-    %res = call <vscale x 4 x half> @llvm.aarch64.sve.dup.nxv4f16(<vscale x 4 x half> zeroinitializer, <vscale x 4 x i1> %pg, half %ld)
-    ret <vscale x 4 x half> %res
-}
-define <vscale x 2 x half> @dup_ld1rh_half_passthruzero_nxv2f16(<vscale x 2 x i1> %pg, ptr %addr) {
-; CHECK-LD1R-LABEL: dup_ld1rh_half_passthruzero_nxv2f16:
-; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ld1rh { z0.d }, p0/z, [x0]
-; CHECK-LD1R-NEXT:    ret
-;
-; CHECK-NO-LD1R-LABEL: dup_ld1rh_half_passthruzero_nxv2f16:
-; CHECK-NO-LD1R:       // %bb.0:
-; CHECK-NO-LD1R-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NO-LD1R-NEXT:    ldr h1, [x0]
-; CHECK-NO-LD1R-NEXT:    mov z0.h, p0/m, h1
-; CHECK-NO-LD1R-NEXT:    ret
-    %ld = load half, ptr %addr
-    %res = call <vscale x 2 x half> @llvm.aarch64.sve.dup.nxv2f16(<vscale x 2 x half> zeroinitializer, <vscale x 2 x i1> %pg, half %ld)
-    ret <vscale x 2 x half> %res
-}
-define <vscale x 2 x float> @dup_ld1rs_float_passthruzero_nxv2f32(<vscale x 2 x i1> %pg, ptr %addr) {
-; CHECK-LD1R-LABEL: dup_ld1rs_float_passthruzero_nxv2f32:
-; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ld1rw { z0.d }, p0/z, [x0]
-; CHECK-LD1R-NEXT:    ret
-;
-; CHECK-NO-LD1R-LABEL: dup_ld1rs_float_passthruzero_nxv2f32:
-; CHECK-NO-LD1R:       // %bb.0:
-; CHECK-NO-LD1R-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NO-LD1R-NEXT:    ldr s1, [x0]
-; CHECK-NO-LD1R-NEXT:    mov z0.s, p0/m, s1
-; CHECK-NO-LD1R-NEXT:    ret
-    %ld = load float, ptr %addr
-    %res = call <vscale x 2 x float> @llvm.aarch64.sve.dup.nxv2f32(<vscale x 2 x float> zeroinitializer, <vscale x 2 x i1> %pg, float %ld)
-    ret <vscale x 2 x float> %res
 }
 define <vscale x 16 x i8> @negtest_dup_ld1rb_i8_passthru_nxv16i8(<vscale x 16 x i8> %pt, <vscale x 16 x i1> %pg, ptr %addr) {
 ; CHECK-LABEL: negtest_dup_ld1rb_i8_passthru_nxv16i8:

@@ -98,6 +98,7 @@
 ; CHECK-NEXT:       SJLJ Exception Handling preparation
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Exception handling preparation
+; CHECK-NEXT:       AArch64 Intrinsics Verifier
 ; CHECK-NEXT:     AArch64 Promote Constant
 ; CHECK-NEXT:       FunctionPass Manager
 ; CHECK-NEXT:         Dominator Tree Construction

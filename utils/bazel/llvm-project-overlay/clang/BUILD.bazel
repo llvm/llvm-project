@@ -54,6 +54,7 @@ cc_binary(
         ":support",
         "//llvm:Support",
         "//llvm:TableGen",
+        "//llvm:TargetParser",
         "//llvm:config",
     ],
 )
@@ -134,9 +135,26 @@ td_library(
         "include/clang/Basic/arm_immcheck_incl.td",
         "include/clang/Basic/arm_mve_defs.td",
         "include/clang/Basic/arm_neon_incl.td",
+        "include/clang/Basic/arm_sme.td",
+        "include/clang/Basic/arm_sve.td",
         "include/clang/Basic/arm_sve_sme_incl.td",
     ],
-    includes = ["include"],
+    includes = [
+        "include",
+        "/clang/include/clang/Basic",
+    ],
+)
+
+td_library(
+    name = "ArmSveIntrinsicGuardsTdFiles",
+    srcs = ["include/clang/Basic/arm_sve_intrinsic_guards.td"],
+    deps = [":ArmTdFiles", "//llvm:CommonTargetTdFiles"],
+)
+
+td_library(
+    name = "ArmSmeIntrinsicGuardsTdFiles",
+    srcs = ["include/clang/Basic/arm_sme_intrinsic_guards.td"],
+    deps = [":ArmTdFiles", "//llvm:CommonTargetTdFiles"],
 )
 
 gentbl_cc_library(
@@ -175,8 +193,8 @@ gentbl_cc_library(
     name = "basic_arm_sve_builtin_cg_gen",
     tbl_outs = {"include/clang/Basic/arm_sve_builtin_cg.inc": ["-gen-arm-sve-builtin-codegen"]},
     tblgen = ":clang-tblgen",
-    td_file = "include/clang/Basic/arm_sve.td",
-    deps = [":ArmTdFiles"],
+    td_file = "include/clang/Basic/arm_sve_intrinsic_guards.td",
+    deps = [":ArmSveIntrinsicGuardsTdFiles"],
 )
 
 gentbl_cc_library(
@@ -223,8 +241,8 @@ gentbl_cc_library(
     name = "basic_arm_sme_builtin_cg_gen",
     tbl_outs = {"include/clang/Basic/arm_sme_builtin_cg.inc": ["-gen-arm-sme-builtin-codegen"]},
     tblgen = ":clang-tblgen",
-    td_file = "include/clang/Basic/arm_sme.td",
-    deps = [":ArmTdFiles"],
+    td_file = "include/clang/Basic/arm_sme_intrinsic_guards.td",
+    deps = [":ArmSmeIntrinsicGuardsTdFiles"],
 )
 
 gentbl_cc_library(
