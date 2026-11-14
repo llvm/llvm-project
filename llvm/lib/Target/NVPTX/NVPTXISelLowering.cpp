@@ -7076,7 +7076,7 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
     return SDValue();
 
   // Don't mess with undef values as sra may be simplified to 0, not undef.
-  if (Vector->isUndef() || ISD::allOperandsUndef(Vector.getNode()))
+  if (Vector->isUndef() || ISD::allOperandsUndef(Vector))
     return SDValue();
 
   uint64_t VectorBits = VectorVT.getSizeInBits();

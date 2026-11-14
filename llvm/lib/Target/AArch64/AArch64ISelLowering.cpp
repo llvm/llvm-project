@@ -3740,19 +3740,19 @@ static SDValue getPredicateForScalableVector(SelectionDAG &DAG, SDLoc &DL,
                                              EVT VT);
 static SDValue getSVEPredicateBitCast(EVT VT, SDValue Op, SelectionDAG &DAG);
 
-/// isZerosVector - Check whether SDNode N is a zero-filled vector.
-static bool isZerosVector(const SDNode *N) {
+/// isZerosVector - Check whether V is a zero-filled vector.
+static bool isZerosVector(SDValue V) {
   // Look through a bit convert.
-  while (N->getOpcode() == ISD::BITCAST)
-    N = N->getOperand(0).getNode();
+  while (V.getOpcode() == ISD::BITCAST)
+    V = V.getOperand(0);
 
-  if (ISD::isConstantSplatVectorAllZeros(N))
+  if (ISD::isConstantSplatVectorAllZeros(V))
     return true;
 
-  if (N->getOpcode() != AArch64ISD::DUP)
+  if (V.getOpcode() != AArch64ISD::DUP)
     return false;
 
-  auto Opnd0 = N->getOperand(0);
+  auto Opnd0 = V.getOperand(0);
   return isNullConstant(Opnd0) || isNullFPConstant(Opnd0);
 }
 
@@ -6141,11 +6141,10 @@ static unsigned selectUmullSmull(SDValue &N0, SDValue &N1, SelectionDAG &DAG,
 //           x * -0x8800 --> -((x << 15) + (x << 11))
 //           x * -0xf800 --> -((x << 16) - (x << 11)) ; (x << 11) - (x << 16)
 static SDValue convertMulToShlAdd(SDNode *N, SelectionDAG &DAG) {
-  const SDNode *Operand = N->getOperand(1).getNode();
   APInt SplatValue;
 
   // Not a constant splat so should just stay as a multiplication operation
-  if (!ISD::isConstantSplatVector(Operand, SplatValue) ||
+  if (!ISD::isConstantSplatVector(N->getOperand(1), SplatValue) ||
       !SplatValue.getBoolValue())
     return SDValue();
 
@@ -7529,7 +7528,7 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
 
   // SVE supports zero (and so undef) passthrough values only, everything else
   // must be handled manually by an explicit select on the load's output.
-  if (!PassThru->isUndef() && !isZerosVector(PassThru.getNode())) {
+  if (!PassThru->isUndef() && !isZerosVector(PassThru)) {
     SDValue Ops[] = {Chain, DAG.getUNDEF(VT), Mask, BasePtr, Index, Scale};
     SDValue Load =
         DAG.getMaskedGather(MGT->getVTList(), MemVT, DL, Ops,
@@ -7706,7 +7705,7 @@ SDValue AArch64TargetLowering::LowerMLOAD(SDValue Op, SelectionDAG &DAG) const {
   SDValue Mask = LoadNode->getMask();
 
   if (!LoadNode->isExpandingLoad()) {
-    if (PassThru->isUndef() || isZerosVector(PassThru.getNode()))
+    if (PassThru->isUndef() || isZerosVector(PassThru))
       return Op;
 
     SDValue Load = DAG.getMaskedLoad(
@@ -7754,7 +7753,7 @@ SDValue AArch64TargetLowering::LowerMLOAD(SDValue Op, SelectionDAG &DAG) const {
   Result = getSVESafeBitCast(VT, Result, DAG);
 
   // Copy the passthrough value unless zero/undef.
-  if (!PassThru->isUndef() && !isZerosVector(PassThru.getNode()))
+  if (!PassThru->isUndef() && !isZerosVector(PassThru))
     Result = DAG.getSelect(DL, VT, Mask, Result, PassThru);
 
   return DAG.getMergeValues({Result, Load.getValue(1)}, DL);
@@ -8248,8 +8247,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
       Vec);
 
   // compact fills with 0s, so if our passthru is all 0s, do nothing here.
-  if (Passthru.isUndef() ||
-      ISD::isConstantSplatVectorAllZeros(Passthru.getNode()))
+  if (Passthru.isUndef() || ISD::isConstantSplatVectorAllZeros(Passthru))
     return Compressed;
 
   SDValue CntActive = DAG.getNode(
@@ -15440,8 +15438,8 @@ static SDValue isSlideWithZerosMask(ArrayRef<int> M, EVT VT, SDValue V1,
   unsigned NumElts = VT.getVectorNumElements();
   unsigned EltSize = VT.getScalarSizeInBits();
 
-  bool V1IsZeros = ISD::isBuildVectorAllZeros(V1.getNode());
-  bool V2IsZeros = ISD::isBuildVectorAllZeros(V2.getNode());
+  bool V1IsZeros = ISD::isBuildVectorAllZeros(V1);
+  bool V2IsZeros = ISD::isBuildVectorAllZeros(V2);
 
   // Exactly one operand must be zeros
   if (V1IsZeros == V2IsZeros)
@@ -15648,7 +15646,7 @@ static SDValue GenerateTBL(SDValue Op, ArrayRef<int> ShuffleMask,
   unsigned BytesPerElt = EltVT.getSizeInBits() / 8;
 
   bool Swap = false;
-  if (V1.isUndef() || isZerosVector(V1.getNode())) {
+  if (V1.isUndef() || isZerosVector(V1)) {
     std::swap(V1, V2);
     Swap = true;
   }
@@ -15656,7 +15654,7 @@ static SDValue GenerateTBL(SDValue Op, ArrayRef<int> ShuffleMask,
   // If the V2 source is undef or zero then we can use a tbl1, as tbl1 will fill
   // out of range values with 0s. We do need to make sure that any out-of-range
   // values are really out-of-range for a v16i8 vector.
-  bool IsUndefOrZero = V2.isUndef() || isZerosVector(V2.getNode());
+  bool IsUndefOrZero = V2.isUndef() || isZerosVector(V2);
   MVT IndexVT = MVT::v8i8;
   unsigned IndexLen = 8;
   if (Op.getValueSizeInBits() == 128) {
@@ -16649,7 +16647,7 @@ static bool isAllInactivePredicate(SDValue N) {
   while (N.getOpcode() == AArch64ISD::REINTERPRET_CAST)
     N = N.getOperand(0);
 
-  return ISD::isConstantSplatVectorAllZeros(N.getNode());
+  return ISD::isConstantSplatVectorAllZeros(N);
 }
 
 static bool isAllActivePredicate(const SelectionDAG &DAG, SDValue N) {
@@ -16664,7 +16662,7 @@ static bool isAllActivePredicate(const SelectionDAG &DAG, SDValue N) {
       return false;
   }
 
-  if (ISD::isConstantSplatVectorAllOnes(N.getNode()))
+  if (ISD::isConstantSplatVectorAllOnes(N))
     return true;
 
   // "ptrue p.<ty>, all" can be considered all active when <ty> is the same size
@@ -16732,7 +16730,7 @@ static SDValue tryLowerToSLI(SDNode *N, SelectionDAG &DAG) {
     if (!isAllActivePredicate(DAG, Shift.getOperand(0)))
       return SDValue();
     APInt C;
-    if (!ISD::isConstantSplatVector(Shift.getOperand(2).getNode(), C))
+    if (!ISD::isConstantSplatVector(Shift.getOperand(2), C))
       return SDValue();
     C2 = C.getZExtValue();
   } else if (ConstantSDNode *C2node =
@@ -16745,7 +16743,7 @@ static SDValue tryLowerToSLI(SDNode *N, SelectionDAG &DAG) {
   unsigned ElemSizeInBits = VT.getScalarSizeInBits();
   if (IsAnd) {
     // Is the and mask vector all constant?
-    if (!ISD::isConstantSplatVector(And.getOperand(1).getNode(), C1AsAPInt))
+    if (!ISD::isConstantSplatVector(And.getOperand(1), C1AsAPInt))
       return SDValue();
   } else {
     // Reconstruct the corresponding AND immediate from the two BICi immediates.
@@ -16816,11 +16814,11 @@ static SDValue tryLowerToBSL(SDValue N, SelectionDAG &DAG) {
       } else
         continue;
 
-      if (!ISD::isConstantSplatVectorAllZeros(Sub.getOperand(0).getNode()))
+      if (!ISD::isConstantSplatVectorAllZeros(Sub.getOperand(0)))
         continue;
 
       // Constant ones is always righthand operand of the Add.
-      if (!ISD::isConstantSplatVectorAllOnes(Add.getOperand(1).getNode()))
+      if (!ISD::isConstantSplatVectorAllOnes(Add.getOperand(1)))
         continue;
 
       if (Sub.getOperand(1) != Add.getOperand(0))
@@ -16838,8 +16836,8 @@ static SDValue tryLowerToBSL(SDValue N, SelectionDAG &DAG) {
     for (int j = 1; j >= 0; --j) {
       APInt Val1, Val2;
 
-      if (ISD::isConstantSplatVector(N0->getOperand(i).getNode(), Val1) &&
-          ISD::isConstantSplatVector(N1->getOperand(j).getNode(), Val2) &&
+      if (ISD::isConstantSplatVector(N0->getOperand(i), Val1) &&
+          ISD::isConstantSplatVector(N1->getOperand(j), Val2) &&
           ~Val1.trunc(Bits) == Val2.trunc(Bits)) {
         return DAG.getNode(AArch64ISD::BSP, DL, VT, N0->getOperand(i),
                            N0->getOperand(1 - i), N1->getOperand(1 - j));
@@ -20803,7 +20801,7 @@ static SDValue foldVectorXorShiftIntoCmp(SDNode *N, SelectionDAG &DAG,
   SDValue Shift = N->getOperand(0);
   SDValue Ones = N->getOperand(1);
   if (Shift.getOpcode() != AArch64ISD::VASHR || !Shift.hasOneUse() ||
-      !ISD::isBuildVectorAllOnes(Ones.getNode()))
+      !ISD::isBuildVectorAllOnes(Ones))
     return SDValue();
 
   // The shift should be smearing the sign bit across each vector element.
@@ -21660,9 +21658,9 @@ static SDValue performMulVectorCmpZeroCombine(SDNode *N, SelectionDAG &DAG) {
   SDValue Srl = And.getOperand(0);
 
   APInt V1, V2, V3;
-  if (!ISD::isConstantSplatVector(N->getOperand(1).getNode(), V1) ||
-      !ISD::isConstantSplatVector(And.getOperand(1).getNode(), V2) ||
-      !ISD::isConstantSplatVector(Srl.getOperand(1).getNode(), V3))
+  if (!ISD::isConstantSplatVector(N->getOperand(1), V1) ||
+      !ISD::isConstantSplatVector(And.getOperand(1), V2) ||
+      !ISD::isConstantSplatVector(Srl.getOperand(1), V3))
     return SDValue();
 
   unsigned HalfSize = VT.getScalarSizeInBits() / 2;
@@ -22290,7 +22288,7 @@ static SDValue tryCombineToREV(SDNode *N, SelectionDAG &DAG,
       return SDValue();
 
     APInt ShAmt;
-    if (!ISD::isConstantSplatVector(N0.getOperand(2).getNode(), ShAmt) ||
+    if (!ISD::isConstantSplatVector(N0.getOperand(2), ShAmt) ||
         EltSize / 2 != ShAmt)
       return SDValue();
 
@@ -23177,7 +23175,7 @@ static SDValue performConcatVectorsCombine(SDNode *N,
       N->isOnlyUserOf(N1.getNode())) {
     auto isBitwiseVectorNegate = [](SDValue V) {
       return V->getOpcode() == ISD::XOR &&
-             ISD::isConstantSplatVectorAllOnes(V.getOperand(1).getNode());
+             ISD::isConstantSplatVectorAllOnes(V.getOperand(1));
     };
     SDValue N00 = N0->getOperand(0);
     SDValue N10 = N1->getOperand(0);
@@ -23765,7 +23763,7 @@ static SDValue performAddDotCombine(SDNode *N, SelectionDAG &DAG) {
     return (Dot.getOpcode() == AArch64ISD::UDOT ||
             Dot.getOpcode() == AArch64ISD::SDOT ||
             Dot.getOpcode() == AArch64ISD::USDOT) &&
-           isZerosVector(Dot.getOperand(0).getNode());
+           isZerosVector(Dot.getOperand(0));
   };
   if (!isZeroDot(Dot))
     std::swap(Dot, A);
@@ -24670,7 +24668,7 @@ static SDValue performExtBinopLoadFold(SDNode *N, SelectionDAG &DAG) {
     std::swap(Shift, Other);
   APInt ShiftAmt;
   if (Shift.getOpcode() != ISD::SHL || !Shift.hasOneUse() ||
-      !ISD::isConstantSplatVector(Shift.getOperand(1).getNode(), ShiftAmt))
+      !ISD::isConstantSplatVector(Shift.getOperand(1), ShiftAmt))
     return SDValue();
 
   if (!ISD::isExtOpcode(Shift.getOperand(0).getOpcode()) ||
@@ -24890,7 +24888,7 @@ static SDValue performSubNegAndOneCombine(SDNode *N, SelectionDAG &DAG) {
 
   SDValue Zero = N->getOperand(0);
   SDValue And = N->getOperand(1);
-  if (!isZerosVector(Zero.getNode()) || And.getOpcode() != ISD::AND ||
+  if (!isZerosVector(Zero) || And.getOpcode() != ISD::AND ||
       !isOneVector(And.getOperand(1)))
     return SDValue();
 
@@ -25691,7 +25689,7 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_neon_tbx2:
   case Intrinsic::aarch64_neon_tbx3:
   case Intrinsic::aarch64_neon_tbx4: {
-    if (ISD::isBuildVectorAllZeros(N->getOperand(1).getNode())) {
+    if (ISD::isBuildVectorAllZeros(N->getOperand(1))) {
       SDLoc DL(N);
       unsigned TblIID = 0;
       switch (IID) {
@@ -26087,7 +26085,7 @@ static SDValue performIntrinsicCombine(SDNode *N,
 static bool isCheapToExtend(const SDValue &N) {
   unsigned OC = N->getOpcode();
   return OC == ISD::LOAD || OC == ISD::MLOAD ||
-         ISD::isConstantSplatVectorAllZeros(N.getNode());
+         ISD::isConstantSplatVectorAllZeros(N);
 }
 
 static SDValue
@@ -26223,7 +26221,7 @@ static SDValue performZExtUZPCombine(SDNode *N, SelectionDAG &DAG) {
     Mask = Mask.lshr(Shift);
   }
   if (Op.getOpcode() == ISD::AND &&
-      ISD::isConstantSplatVector(Op.getOperand(1).getNode(), Mask)) {
+      ISD::isConstantSplatVector(Op.getOperand(1), Mask)) {
     Op = Op.getOperand(0);
     Mask = Mask.zext(VT.getScalarSizeInBits());
   } else if (Op.getOpcode() == AArch64ISD::BICi) {
@@ -26954,8 +26952,7 @@ static SDValue performUnpackCombine(SDNode *N, SelectionDAG &DAG,
 
     if (MLD->isUnindexed() && MLD->getExtensionType() != ISD::SEXTLOAD &&
         SDValue(MLD, 0).hasOneUse() && Mask->getOpcode() == AArch64ISD::PTRUE &&
-        (MLD->getPassThru()->isUndef() ||
-         isZerosVector(MLD->getPassThru().getNode()))) {
+        (MLD->getPassThru()->isUndef() || isZerosVector(MLD->getPassThru()))) {
       unsigned MinSVESize = Subtarget->getMinSVEVectorSizeInBits();
       unsigned PgPattern = Mask->getConstantOperandVal(0);
       EVT VT = N->getValueType(0);
@@ -28360,7 +28357,7 @@ static SDValue performSTORECombine(SDNode *N,
       return SDValue();
 
     // Propagate zero constants (applying this fold may miss optimizations).
-    if (ISD::isConstantSplatVectorAllZeros(Vector.getNode())) {
+    if (ISD::isConstantSplatVectorAllZeros(Vector)) {
       SDValue ZeroElt = DAG.getConstant(0, DL, ValueVT);
       DAG.ReplaceAllUsesWith(Value, ZeroElt);
       return SDValue();
@@ -28924,7 +28921,7 @@ static bool findMoreOptimalIndexType(const MaskedGatherScatterSDNode *N,
   // will later be re-extended to 64 bits in legalization
   if (DataVT.isFixedLengthVector() && DataVT.getScalarSizeInBits() == 64)
     return Changed;
-  if (ISD::isVectorShrinkable(Index.getNode(), 32, N->isIndexSigned())) {
+  if (ISD::isVectorShrinkable(Index, 32, N->isIndexSigned())) {
     EVT NewIndexVT =
         IndexVT.changeVectorElementType(*DAG.getContext(), MVT::i32);
     Index = DAG.getNode(ISD::TRUNCATE, SDLoc(N), NewIndexVT, Index);
@@ -30005,7 +30002,7 @@ static SDValue tryToWidenSetCCOperands(SDNode *Op, SelectionDAG &DAG) {
     return SDValue();
 
   APInt V;
-  if (!ISD::isConstantSplatVector(Op->getOperand(1).getNode(), V))
+  if (!ISD::isConstantSplatVector(Op->getOperand(1), V))
     return SDValue();
 
   SDLoc DL(Op);
@@ -30128,16 +30125,14 @@ static SDValue performSETCCCombine(SDNode *N,
   // splat(1) across all the NEON types during isel.
   APInt SplatLHSVal;
   if (CmpVT.isInteger() && Cond == ISD::SETGT &&
-      ISD::isConstantSplatVector(LHS.getNode(), SplatLHSVal) &&
-      SplatLHSVal.isOne())
+      ISD::isConstantSplatVector(LHS, SplatLHSVal) && SplatLHSVal.isOne())
     return DAG.getSetCC(DL, VT, DAG.getConstant(0, DL, CmpVT), RHS, ISD::SETGE);
 
   // Fold setcc(and(X, Y), 0, seteq) --> NOT(AArch64ISD::CMTST(X, Y)).
   // SETNE will have been legalized to SETEQ by this point.
   // The NOT folds away when the result feeds a BSP.
   if (DCI.isAfterLegalizeDAG() && CmpVT.isFixedLengthVector() &&
-      Cond == ISD::SETEQ && LHS.getOpcode() == ISD::AND &&
-      isZerosVector(RHS.getNode())) {
+      Cond == ISD::SETEQ && LHS.getOpcode() == ISD::AND && isZerosVector(RHS)) {
     SDValue CMTSTNode = DAG.getNode(AArch64ISD::CMTST, DL, CmpVT,
                                     LHS.getOperand(0), LHS.getOperand(1));
     return DAG.getNOT(DL, CMTSTNode, CmpVT);
@@ -30269,7 +30264,7 @@ static SDValue performSetCCPunpkCombine(SDNode *N, SelectionDAG &DAG) {
   SDValue RHS = N->getOperand(2);
   ISD::CondCode Cond = N->getOperandCondCode(3);
 
-  if (Cond != ISD::SETNE || !isZerosVector(RHS.getNode()) ||
+  if (Cond != ISD::SETNE || !isZerosVector(RHS) ||
       LHS->getOpcode() != ISD::SIGN_EXTEND)
     return SDValue();
 
@@ -30323,7 +30318,7 @@ performSetccMergeZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   if (SDValue V = performSetCCPunpkCombine(N, DAG))
     return V;
 
-  if (Cond == ISD::SETNE && isZerosVector(RHS.getNode()) &&
+  if (Cond == ISD::SETNE && isZerosVector(RHS) &&
       LHS->getOpcode() == ISD::SIGN_EXTEND &&
       LHS->getOperand(0)->getValueType(0) == N->getValueType(0)) {
     //    setcc_merge_zero(
@@ -30357,7 +30352,7 @@ performSetccMergeZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   // => setcc_merge_zero(
   //       pred, insert_subvector(undef, x, 0), != splat(0))
   // iff it can be proven that x is already sign-extended.
-  if (Cond == ISD::SETNE && isZerosVector(RHS.getNode()) &&
+  if (Cond == ISD::SETNE && isZerosVector(RHS) &&
       LHS->getOpcode() == ISD::INSERT_SUBVECTOR && LHS.hasOneUse()) {
     SDValue L0 = LHS->getOperand(0);
     SDValue L1 = LHS->getOperand(1);
@@ -30579,11 +30574,11 @@ static SDValue performVselectPowCombine(SDNode *N,
 // condition code the setcc has to be using.
 static SDValue matchZeroSelectArm(SDValue TVal, SDValue FVal,
                                   ISD::CondCode &RequiredCC) {
-  if (ISD::isConstantSplatVectorAllZeros(FVal.getNode())) {
+  if (ISD::isConstantSplatVectorAllZeros(FVal)) {
     RequiredCC = ISD::SETULT;
     return TVal;
   }
-  if (ISD::isConstantSplatVectorAllZeros(TVal.getNode())) {
+  if (ISD::isConstantSplatVectorAllZeros(TVal)) {
     RequiredCC = ISD::SETUGE;
     return FVal;
   }
@@ -31509,7 +31504,7 @@ static SDValue removeRedundantInsertVectorElt(SDNode *N) {
   if (!isNullConstant(InsertIdx))
     return SDValue();
   // ...of a zero'd vector...
-  if (!ISD::isConstantSplatVectorAllZeros(InsertVec.getNode()))
+  if (!ISD::isConstantSplatVectorAllZeros(InsertVec))
     return SDValue();
   // ...where the inserted data was previously extracted...
   if (InsertElt.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
@@ -32146,7 +32141,7 @@ static SDValue performVectorDeinterleaveCombine(
           !MaskedLoad->isSimple() || !ISD::isNormalMaskedLoad(MaskedLoad) ||
           !MaskedLoad->getOffset().isUndef() ||
           (!MaskedLoad->getPassThru()->isUndef() &&
-           !isZerosVector(MaskedLoad->getPassThru().getNode())))
+           !isZerosVector(MaskedLoad->getPassThru())))
         return SDValue();
 
       // Now prove that the mask is an interleave of identical masks.
@@ -34962,7 +34957,7 @@ static SDValue convertFixedMaskToScalableVector(SDValue Mask,
   EVT ContainerVT = getContainerForFixedLengthVector(DAG, InVT);
   SDValue Pg = getPredicateForFixedLengthVector(DAG, DL, InVT);
 
-  if (ISD::isBuildVectorAllOnes(Mask.getNode()))
+  if (ISD::isBuildVectorAllOnes(Mask))
     return Pg;
 
   bool InvertCond = false;
@@ -35022,7 +35017,7 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorMLoadToSVE(
       PassThru = DAG.getConstant(0, DL, ContainerVT);
     else
       PassThru = DAG.getConstantFP(0, DL, ContainerVT);
-    if (isZerosVector(Load->getPassThru().getNode()))
+    if (isZerosVector(Load->getPassThru()))
       IsPassThruZeroOrUndef = true;
   }
 

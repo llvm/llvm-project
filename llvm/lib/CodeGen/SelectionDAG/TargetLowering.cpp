@@ -1030,7 +1030,7 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
       // if we don't care about FP signed-zero. The use of SETLT with FP means
       // that we don't care about NaNs.
       if (CC == ISD::SETLT && Op1.getValueType().isInteger() &&
-          (isNullConstant(Op1) || ISD::isBuildVectorAllZeros(Op1.getNode())))
+          (isNullConstant(Op1) || ISD::isBuildVectorAllZeros(Op1)))
         return Op0;
     }
     break;
@@ -1793,7 +1793,7 @@ bool TargetLowering::SimplifyDemandedBits(
     // iff 'C' is Undef/Constant and AND(X,M) == X (for DemandedBits).
     if (Op0.getOpcode() == ISD::INSERT_SUBVECTOR && !VT.isScalableVector() &&
         (Op0.getOperand(0).isUndef() ||
-         ISD::isBuildVectorOfConstantSDNodes(Op0.getOperand(0).getNode())) &&
+         ISD::isBuildVectorOfConstantSDNodes(Op0.getOperand(0))) &&
         Op0->hasOneUse()) {
       unsigned NumSubElts =
           Op0.getOperand(1).getValueType().getVectorNumElements();
@@ -14213,8 +14213,7 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
 
   SDValue LastWriteVal;
   APInt PassthruSplatVal;
-  bool IsSplatPassthru =
-      ISD::isConstantSplatVector(Passthru.getNode(), PassthruSplatVal);
+  bool IsSplatPassthru = ISD::isConstantSplatVector(Passthru, PassthruSplatVal);
 
   if (IsSplatPassthru) {
     // As we do not know which position we wrote to last, we cannot simply

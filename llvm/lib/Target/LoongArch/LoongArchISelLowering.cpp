@@ -717,7 +717,7 @@ static SDValue isNOT(SDValue V, SelectionDAG &DAG) {
 
   // Match not(xor X, -1) -> X.
   if (V.getOpcode() == ISD::XOR &&
-      (ISD::isBuildVectorAllOnes(V.getOperand(1).getNode()) ||
+      (ISD::isBuildVectorAllOnes(V.getOperand(1)) ||
        isAllOnesConstant(V.getOperand(1))))
     return V.getOperand(0);
 
@@ -952,7 +952,7 @@ SDValue LoongArchTargetLowering::lowerVSELECT(SDValue Op,
   // build_vector condition will be handled. NOTE: On 32-bit platform, vselect
   // with v2i64/v4i64 type condition will never enter this because of the extra
   // bitcast. It can be considered separately later.
-  if (ISD::isBuildVectorOfConstantSDNodes(Cond.getNode())) {
+  if (ISD::isBuildVectorOfConstantSDNodes(Cond)) {
     BuildVectorSDNode *BVN = cast<BuildVectorSDNode>(Cond.getNode());
     APInt SplatValue, SplatUndef;
     unsigned SplatBitSize;
@@ -1876,8 +1876,8 @@ static void computeZeroableShuffleElements(ArrayRef<int> Mask, SDValue V1,
   V1 = peekThroughBitcasts(V1);
   V2 = peekThroughBitcasts(V2);
 
-  bool V1IsZero = ISD::isBuildVectorAllZeros(V1.getNode());
-  bool V2IsZero = ISD::isBuildVectorAllZeros(V2.getNode());
+  bool V1IsZero = ISD::isBuildVectorAllZeros(V1);
+  bool V2IsZero = ISD::isBuildVectorAllZeros(V2);
 
   int VectorSizeInBits = V1.getValueSizeInBits();
   int ScalarSizeInBits = VectorSizeInBits / Size;
@@ -4052,7 +4052,7 @@ SDValue LoongArchTargetLowering::lowerCONCAT_VECTORS(SDValue Op,
     SDValue SubVec = Op.getOperand(i);
     if (SubVec.isUndef())
       continue;
-    if (ISD::isFreezeUndef(SubVec.getNode())) {
+    if (ISD::isFreezeUndef(SubVec)) {
       // If the freeze(undef) has multiple uses then we must fold to zero.
       if (SubVec.hasOneUse()) {
         ++NumFreezeUndef;
@@ -4060,7 +4060,7 @@ SDValue LoongArchTargetLowering::lowerCONCAT_VECTORS(SDValue Op,
         ++NumZero;
         Undefs.insert(SubVec);
       }
-    } else if (ISD::isBuildVectorAllZeros(SubVec.getNode()))
+    } else if (ISD::isBuildVectorAllZeros(SubVec))
       ++NumZero;
     else {
       assert(i < sizeof(NonZeros) * CHAR_BIT); // Ensure the shift is in range.
@@ -7026,8 +7026,7 @@ static bool checkBitcastSrcVectorSize(SDValue Src, unsigned Size,
            checkBitcastSrcVectorSize(Src.getOperand(1), Size, Depth + 1) &&
            checkBitcastSrcVectorSize(Src.getOperand(2), Size, Depth + 1);
   case ISD::BUILD_VECTOR:
-    return ISD::isBuildVectorAllZeros(Src.getNode()) ||
-           ISD::isBuildVectorAllOnes(Src.getNode());
+    return ISD::isBuildVectorAllZeros(Src) || ISD::isBuildVectorAllOnes(Src);
   }
   return false;
 }
@@ -7089,36 +7088,36 @@ performSETCC_BITCASTCombine(SDNode *N, SelectionDAG &DAG,
     break;
   case ISD::SETEQ:
     // x == 0 => not (vmsknez.b x)
-    if (ISD::isBuildVectorAllZeros(SrcN1.getNode()) && EltVT == MVT::i8)
+    if (ISD::isBuildVectorAllZeros(SrcN1) && EltVT == MVT::i8)
       Opc = UseLASX ? LoongArchISD::XVMSKEQZ : LoongArchISD::VMSKEQZ;
     break;
   case ISD::SETGT:
     // x > -1 => vmskgez.b x
-    if (ISD::isBuildVectorAllOnes(SrcN1.getNode()) && EltVT == MVT::i8)
+    if (ISD::isBuildVectorAllOnes(SrcN1) && EltVT == MVT::i8)
       Opc = UseLASX ? LoongArchISD::XVMSKGEZ : LoongArchISD::VMSKGEZ;
     break;
   case ISD::SETGE:
     // x >= 0 => vmskgez.b x
-    if (ISD::isBuildVectorAllZeros(SrcN1.getNode()) && EltVT == MVT::i8)
+    if (ISD::isBuildVectorAllZeros(SrcN1) && EltVT == MVT::i8)
       Opc = UseLASX ? LoongArchISD::XVMSKGEZ : LoongArchISD::VMSKGEZ;
     break;
   case ISD::SETLT:
     // x < 0 => vmskltz.{b,h,w,d} x
-    if (ISD::isBuildVectorAllZeros(SrcN1.getNode()) &&
+    if (ISD::isBuildVectorAllZeros(SrcN1) &&
         (EltVT == MVT::i8 || EltVT == MVT::i16 || EltVT == MVT::i32 ||
          EltVT == MVT::i64))
       Opc = UseLASX ? LoongArchISD::XVMSKLTZ : LoongArchISD::VMSKLTZ;
     break;
   case ISD::SETLE:
     // x <= -1 => vmskltz.{b,h,w,d} x
-    if (ISD::isBuildVectorAllOnes(SrcN1.getNode()) &&
+    if (ISD::isBuildVectorAllOnes(SrcN1) &&
         (EltVT == MVT::i8 || EltVT == MVT::i16 || EltVT == MVT::i32 ||
          EltVT == MVT::i64))
       Opc = UseLASX ? LoongArchISD::XVMSKLTZ : LoongArchISD::VMSKLTZ;
     break;
   case ISD::SETNE:
     // x != 0 => vmsknez.b x
-    if (ISD::isBuildVectorAllZeros(SrcN1.getNode()) && EltVT == MVT::i8)
+    if (ISD::isBuildVectorAllZeros(SrcN1) && EltVT == MVT::i8)
       Opc = UseLASX ? LoongArchISD::XVMSKNEZ : LoongArchISD::VMSKNEZ;
     break;
   }
@@ -8775,15 +8774,15 @@ static SDValue performVANDNCombine(SDNode *N, SelectionDAG &DAG,
     return DAG.getConstant(0, DL, VT);
 
   // VANDN(0, x) -> x
-  if (ISD::isBuildVectorAllZeros(N0.getNode()))
+  if (ISD::isBuildVectorAllZeros(N0))
     return N1;
 
   // VANDN(x, 0) -> 0
-  if (ISD::isBuildVectorAllZeros(N1.getNode()))
+  if (ISD::isBuildVectorAllZeros(N1))
     return DAG.getConstant(0, DL, VT);
 
   // VANDN(x, -1) -> NOT(x) -> XOR(x, -1)
-  if (ISD::isBuildVectorAllOnes(N1.getNode()))
+  if (ISD::isBuildVectorAllOnes(N1))
     return DAG.getNOT(DL, N0, VT);
 
   // Turn VANDN back to AND if input is inverted.
@@ -8801,7 +8800,7 @@ static SDValue performVANDNCombine(SDNode *N, SelectionDAG &DAG,
     if (Shl.getOpcode() == ISD::SHL && ShlVT.isVector() && ShlVT.isInteger() &&
         ShlVT != VT && ShlVT.getSizeInBits() == VT.getSizeInBits() &&
         DAG.getTargetLoweringInfo().isTypeLegal(ShlVT) &&
-        ISD::isConstantSplatVector(Shl.getOperand(0).getNode(), SplatVal) &&
+        ISD::isConstantSplatVector(Shl.getOperand(0), SplatVal) &&
         SplatVal.isOne()) {
       SDValue V = DAG.getNode(LoongArchISD::VANDN, DL, ShlVT, Shl,
                               DAG.getBitcast(ShlVT, N1));
@@ -9222,7 +9221,7 @@ static SDValue performVSELECTCombine(SDNode *N, SelectionDAG &DAG,
   if (Cond.getOpcode() != ISD::SETCC)
     return SDValue();
 
-  if (!ISD::isConstantSplatVectorAllZeros(Cond.getOperand(1).getNode()))
+  if (!ISD::isConstantSplatVectorAllZeros(Cond.getOperand(1)))
     return SDValue();
 
   if (Cond.getOperandCondCode(2) != ISD::SETEQ)
@@ -9310,7 +9309,7 @@ static SDValue performVSELECTCombine(SDNode *N, SelectionDAG &DAG,
   if (ShiftMinus1.getOperand(0) != Shift)
     return SDValue();
 
-  if (!ISD::isConstantSplatVectorAllOnes(ShiftMinus1.getOperand(1).getNode()))
+  if (!ISD::isConstantSplatVectorAllOnes(ShiftMinus1.getOperand(1)))
     return SDValue();
 
   // We matched a rounded right shift pattern and can lower it

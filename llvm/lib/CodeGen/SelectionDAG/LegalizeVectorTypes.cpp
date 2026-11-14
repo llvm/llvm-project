@@ -3277,9 +3277,8 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
 
   auto &&IsConstant = [](const SDValue &N) {
     APInt SplatValue;
-    return N.getResNo() == 0 &&
-           (ISD::isConstantSplatVector(N.getNode(), SplatValue) ||
-            ISD::isBuildVectorOfConstantSDNodes(N.getNode()));
+    return N.getResNo() == 0 && (ISD::isConstantSplatVector(N, SplatValue) ||
+                                 ISD::isBuildVectorOfConstantSDNodes(N));
   };
   auto &&BuildVector = [NewElts, &DAG = DAG, NewVT, &DL](SDValue &Input1,
                                                          SDValue &Input2,
@@ -7382,8 +7381,7 @@ static inline bool isSETCCorConvertedSETCC(SDValue N) {
     return isSETCCorConvertedSETCC(N.getOperand(0)) &&
            isSETCCorConvertedSETCC(N.getOperand(1));
 
-  return (isSETCCOp(N.getOpcode()) ||
-          ISD::isBuildVectorOfConstantSDNodes(N.getNode()));
+  return (isSETCCOp(N.getOpcode()) || ISD::isBuildVectorOfConstantSDNodes(N));
 }
 #endif
 
@@ -7554,9 +7552,9 @@ DAGTypeLegalizer::convertMaskTreeImpl(SDValue V, EVT ToVT, unsigned Depth) {
 
   // Base case: all-zeros or all-ones BUILD_VECTOR. Type-lenient since these are
   // invariant under sign-extend/truncate.
-  if (ISD::isBuildVectorAllZeros(V.getNode()))
+  if (ISD::isBuildVectorAllZeros(V))
     return {DAG.getConstant(0, DL, ToVT), /*IsTypeLenient=*/true};
-  if (ISD::isBuildVectorAllOnes(V.getNode()))
+  if (ISD::isBuildVectorAllOnes(V))
     return {DAG.getAllOnesConstant(DL, ToVT), /*IsTypeLenient=*/true};
 
   // Logical operations (AND/OR/XOR): try picking the best fitting width out
