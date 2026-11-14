@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -21627,6 +21628,31 @@ static SDValue canonicalizeMaskForVLPredicate(
   if (!StepVector || !StepVector->second.isOne())
     return SDValue();
   const APInt &Start = StepVector->first;
+
+  const unsigned NumElts = LHS.getValueType().getVectorNumElements();
+
+
+
+  // isArithmeticSequence matches modulo 2^EltBits so if Start + (NumElts - 1)
+  // overflows the transformation cannot be applied as the assumption that Start
+  // + i is exact breaks. We also check that (NumElts - 1) doesn't overflow.
+
+  const unsigned LastLane = NumElts - 1;
+  if (IsSigned ? !isIntN(ElementSize, LastLane) : !isUIntN(ElementSize, LastLane))
+      return SDValue();
+
+  APInt LastLaneOffset(ElementSize, NumElts - 1);
+
+  bool Overflow = false;
+
+  if (IsSigned) {
+    (void)Start.sadd_ov(LastLaneOffset, Overflow);
+  } else {
+    (void)Start.uadd_ov(LastLaneOffset, Overflow);
+  }
+
+  if (Overflow)
+    return SDValue();
 
   Boundary = DAG.getExtOrTrunc(IsSigned, Boundary, DL, ElementVT);
   BaseIndex = DAG.getExtOrTrunc(IsSigned, BaseIndex, DL, ElementVT);
