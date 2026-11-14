@@ -145,6 +145,16 @@ bool addEmuTlsVar(Module &M, const GlobalVariable *GV) {
   if (!GV->hasInitializer())
     return true;
 
+  // __emutls_v.* replaces GV as the COMDAT key; move the other members.
+  if (const Comdat *OldC = GV->getComdat();
+      OldC && OldC->getName() == GV->getName()) {
+    Comdat *NewC = EmuTlsVar->getComdat();
+    assert(NewC && "copyLinkageVisibility gives __emutls_v.* a COMDAT");
+    for (GlobalObject *GO : to_vector(OldC->getUsers()))
+      if (GO != GV)
+        GO->setComdat(NewC);
+  }
+
   Type *GVType = GV->getValueType();
   Align GVAlignment = GV->getPointerAlignment(DL);
 
