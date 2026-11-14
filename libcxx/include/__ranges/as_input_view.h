@@ -95,18 +95,6 @@ public:
   {
     return ranges::size(__base_);
   }
-
-  // TODO: Implement when P2846R6 is available.
-  // constexpr auto reserve_hint()
-  //   requires approximately_sized_range<_View>
-  // {
-  //   return ranges::reserve_hint(__base_);
-  // }
-  // constexpr auto reserve_hint() const
-  //   requires approximately_sized_range<const _View>
-  // {
-  //   return ranges::reserve_hint(__base_);
-  // }
 };
 
 template <class _Range>
