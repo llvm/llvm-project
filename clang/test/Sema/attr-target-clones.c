@@ -4,6 +4,9 @@
 void __attribute__((target_clones("sse4.2", "arch=sandybridge")))
 no_default(void);
 
+// expected-warning@+1 {{unsupported 'sse4' in the 'target_clones' attribute string; 'target_clones' attribute ignored}}
+void __attribute__((target_clones("sse4"))) invalid_target(void);
+
 // expected-error@+2 {{'target_clones' and 'target' attributes are not compatible}}
 // expected-note@+1 {{conflicting attribute is here}}
 void __attribute__((target("sse4.2"), target_clones("arch=sandybridge")))
