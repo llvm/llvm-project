@@ -34,6 +34,11 @@ class MCSymbolGOFF;
 class SystemZHLASMAsmStreamer final : public MCAsmBaseStreamer {
   constexpr static size_t InstLimit = 80;
   constexpr static size_t ContIndicatorColumn = 72;
+  // Number of leading blanks before the operation field of a statement without
+  // a name field. Must be at least 1, since column 1 is reserved for the name.
+  constexpr static size_t Indent = 10;
+  static_assert(Indent >= 1 && Indent < ContIndicatorColumn,
+                "Indent must leave the name field empty and fit the line");
   constexpr static size_t ContStartColumn = 15;
   constexpr static size_t ContLen = ContIndicatorColumn - ContStartColumn;
   constexpr static size_t MaxXLLen = 256;
