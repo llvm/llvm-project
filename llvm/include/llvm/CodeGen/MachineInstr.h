@@ -663,7 +663,7 @@ public:
   /// Returns true if the instruction has implicit definition.
   bool hasImplicitDef() const {
     for (const MachineOperand &MO : implicit_operands())
-      if (MO.isDef())
+      if (MO.isReg() && MO.isDef())
         return true;
     return false;
   }
