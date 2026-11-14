@@ -1156,59 +1156,77 @@ namespace {
 /// A util to collect info needed to convert delayed privatizers from MLIR to
 /// LLVM.
 struct PrivateVarsInfo {
-  struct AllocatorPrivateInfo {
+  /// Per-variable data for a single delayed privatizer.
+  struct VarInfo {
+    BlockArgument blockArg;
+    mlir::Value mlirVar;
+    omp::PrivateClauseOp privatizer;
+    llvm::Value *llvmVar = nullptr;
+  };
+
+  struct AllocatorInfo {
     llvm::Value *allocatedPtr;
     llvm::Value *allocator;
   };
 
   template <typename OP>
-  PrivateVarsInfo(OP op)
-      : blockArgs(llvm::to_vector(
-            cast<omp::BlockArgOpenMPOpInterface>(*op).getPrivateBlockArgs())) {
-    mlirVars.reserve(blockArgs.size());
-    llvmVars.reserve(blockArgs.size());
-    collectPrivatizationDecls<OP>(op);
+  PrivateVarsInfo(OP op) {
+    MutableArrayRef<BlockArgument> blockArgs =
+        cast<omp::BlockArgOpenMPOpInterface>(*op).getPrivateBlockArgs();
+    SmallVector<omp::PrivateClauseOp> privatizers;
 
-    for (mlir::Value privateVar : op.getPrivateVars())
-      mlirVars.push_back(privateVar);
+    collectPrivatizationDecls<OP>(op, op.getPrivateSyms(), privatizers);
+    collectPrivatizationInfo(blockArgs, op.getPrivateVars(), privatizers);
+    numPrivateVars = vars.size();
   }
 
   /// Adds the linear variables of `op`, which are privatized by their
   /// `linear` privatizers, after the private variables.
   template <typename OP>
   void addLinearVars(OP op) {
-    numPrivateVars = blockArgs.size();
-    llvm::append_range(
-        blockArgs,
-        cast<omp::BlockArgOpenMPOpInterface>(*op).getLinearBlockArgs());
-    llvm::append_range(mlirVars, op.getLinearVars());
-    if (std::optional<ArrayAttr> attr = op.getLinearSyms())
-      for (auto symbolRef : attr->getAsRange<SymbolRefAttr>())
-        privatizers.push_back(findPrivatizer(op, symbolRef));
+    MutableArrayRef<BlockArgument> blockArgs =
+        cast<omp::BlockArgOpenMPOpInterface>(*op).getLinearBlockArgs();
+    SmallVector<omp::PrivateClauseOp> privatizers;
+
+    collectPrivatizationDecls<OP>(op, op.getLinearSyms(), privatizers);
+    collectPrivatizationInfo(blockArgs, op.getLinearVars(), privatizers);
   }
 
   /// Number of private variables before the linear ones.
   size_t numPrivateVars = 0;
-  SmallVector<BlockArgument> blockArgs;
-  SmallVector<mlir::Value> mlirVars;
-  SmallVector<llvm::Value *> llvmVars;
-  SmallVector<omp::PrivateClauseOp> privatizers;
+  SmallVector<VarInfo> vars;
   llvm::DenseMap<Value, llvm::Value *> convertedAllocators;
-  SmallVector<AllocatorPrivateInfo> allocatorPrivates;
+  SmallVector<AllocatorInfo> allocatorPrivates;
+
+  SmallVector<llvm::Value *> getLlvmVars() const {
+    return llvm::map_to_vector(vars,
+                               [](const VarInfo &v) { return v.llvmVar; });
+  }
 
 private:
-  /// Populates `privatizations` with privatization declarations used for the
-  /// given op.
+  /// Adds the provided privatization information to `vars`.
+  void collectPrivatizationInfo(
+      MutableArrayRef<BlockArgument> blockArgs, OperandRange privateVars,
+      const SmallVectorImpl<omp::PrivateClauseOp> &privatizers) {
+    vars.reserve(vars.size() + blockArgs.size());
+    for (auto [blockArg, mlirVar, privatizer] :
+         llvm::zip_equal(blockArgs, privateVars, privatizers))
+      vars.push_back({blockArg, mlirVar, privatizer});
+  }
+
+  /// Populates `privatizers` with privatization declarations the provided
+  /// `symsAttr` points to.
   template <class OP>
-  void collectPrivatizationDecls(OP op) {
-    std::optional<ArrayAttr> attr = op.getPrivateSyms();
-    if (!attr)
+  void collectPrivatizationDecls(
+      OP op, std::optional<ArrayAttr> symsAttr,
+      SmallVectorImpl<omp::PrivateClauseOp> &privatizers) {
+    if (!symsAttr)
       return;
 
-    privatizers.reserve(privatizers.size() + attr->size());
-    for (auto symbolRef : attr->getAsRange<SymbolRefAttr>()) {
-      privatizers.push_back(findPrivatizer(op, symbolRef));
-    }
+    privatizers.reserve(privatizers.size() + symsAttr->size());
+    llvm::transform(
+        symsAttr->getAsRange<SymbolRefAttr>(), std::back_inserter(privatizers),
+        [&](SymbolRefAttr symbolRef) { return findPrivatizer(op, symbolRef); });
   }
 };
 } // namespace
@@ -2108,25 +2126,22 @@ initPrivateVars(llvm::IRBuilderBase &builder,
                 LLVM::ModuleTranslation &moduleTranslation,
                 PrivateVarsInfo &privateVarsInfo,
                 llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
-  if (privateVarsInfo.blockArgs.empty())
+  if (privateVarsInfo.vars.empty())
     return llvm::Error::success();
 
   llvm::BasicBlock *privInitBlock = splitBB(builder, true, "omp.private.init");
   setInsertPointForPossiblyEmptyBlock(builder, privInitBlock);
 
-  for (auto [idx, zip] : llvm::enumerate(llvm::zip_equal(
-           privateVarsInfo.privatizers, privateVarsInfo.mlirVars,
-           privateVarsInfo.blockArgs, privateVarsInfo.llvmVars))) {
-    auto [privDecl, mlirPrivVar, blockArg, llvmPrivateVar] = zip;
+  for (PrivateVarsInfo::VarInfo &var : privateVarsInfo.vars) {
     llvm::Expected<llvm::Value *> privVarOrErr = initPrivateVar(
-        builder, moduleTranslation, privDecl, mlirPrivVar, blockArg,
-        llvmPrivateVar, privInitBlock, mappedPrivateVars);
+        builder, moduleTranslation, var.privatizer, var.mlirVar, var.blockArg,
+        var.llvmVar, privInitBlock, mappedPrivateVars);
 
     if (!privVarOrErr)
       return privVarOrErr.takeError();
 
-    llvmPrivateVar = privVarOrErr.get();
-    moduleTranslation.mapValue(blockArg, llvmPrivateVar);
+    var.llvmVar = privVarOrErr.get();
+    moduleTranslation.mapValue(var.blockArg, var.llvmVar);
 
     setInsertPointForPossiblyEmptyBlock(builder);
   }
@@ -2215,8 +2230,7 @@ static llvm::Expected<llvm::BasicBlock *> allocatePrivateVars(
                                ->getDataLayout()
                                .getProgramAddressSpace();
 
-  SmallVector<int64_t> allocateItemForPrivate(privateVarsInfo.blockArgs.size(),
-                                              -1);
+  SmallVector<int64_t> allocateItemForPrivate(privateVarsInfo.vars.size(), -1);
   ValueRange allocatorVars;
   DenseI64ArrayAttr allocateAlignments;
   if constexpr (std::is_same_v<T, omp::ParallelOp> ||
@@ -2229,12 +2243,9 @@ static llvm::Expected<llvm::BasicBlock *> allocatePrivateVars(
         allocateItemForPrivate[privateIndex] = allocateIndex;
   }
 
-  for (auto [privateIndex, tuple] : llvm::enumerate(llvm::zip_equal(
-           privateVarsInfo.privatizers, privateVarsInfo.mlirVars,
-           privateVarsInfo.blockArgs))) {
-    auto [privDecl, mlirPrivVar, blockArg] = tuple;
+  for (auto [privateIndex, var] : llvm::enumerate(privateVarsInfo.vars)) {
     llvm::Type *llvmAllocType =
-        moduleTranslation.convertType(privDecl.getType());
+        moduleTranslation.convertType(var.privatizer.getType());
     llvm::Value *llvmPrivateVar = nullptr;
     int64_t allocateIndex = allocateItemForPrivate[privateIndex];
     builder.SetInsertPoint(allocateIndex >= 0 && allocatorTerminator
@@ -2294,7 +2305,7 @@ static llvm::Expected<llvm::BasicBlock *> allocatePrivateVars(
       privateVarsInfo.allocatorPrivates.push_back(
           {llvmPrivateVar, allocator->second});
     } else if (mightUseDeviceSharedMem &&
-               omp::allocaUsesRequireSharedMem(blockArg)) {
+               omp::allocaUsesRequireSharedMem(var.blockArg)) {
       llvmPrivateVar = ompBuilder->createOMPAllocShared(builder, llvmAllocType);
     } else {
       llvmPrivateVar = builder.CreateAlloca(
@@ -2304,7 +2315,7 @@ static llvm::Expected<llvm::BasicBlock *> allocatePrivateVars(
             llvmPrivateVar, builder.getPtrTy(defaultAS));
     }
 
-    privateVarsInfo.llvmVars.push_back(llvmPrivateVar);
+    var.llvmVar = llvmPrivateVar;
   }
 
   return afterAllocatorAllocations ? afterAllocatorAllocations : afterAllocas;
@@ -2340,17 +2351,32 @@ emitPrivatizationBarrier(mlir::Operation *op, llvm::IRBuilderBase &builder,
   return handleError(res, *op);
 }
 
+/// Applies the firstprivate copy region for each variable, pairing the mold
+/// values with the private allocations and privatizer declarations from
+/// `privateVarsInfo`, and emits a barrier if requested.
+///
+/// `moldVars` and `llvmPrivateVars` are optional overrides that, if empty,
+/// are read directly from `privateVarsInfo`. `mappedPrivateVars` is only
+/// consulted while materializing mold values from `privateVarsInfo` (i.e. empty
+/// `moldVars`).
 static LogicalResult
 completePrivateVars(mlir::Operation *op, llvm::IRBuilderBase &builder,
                     LLVM::ModuleTranslation &moduleTranslation,
-                    SmallVectorImpl<llvm::Value *> &moldVars,
-                    ArrayRef<llvm::Value *> llvmPrivateVars,
-                    SmallVectorImpl<omp::PrivateClauseOp> &privateDecls,
-                    bool insertBarrier,
-                    llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
+                    const PrivateVarsInfo &privateVarsInfo, bool insertBarrier,
+                    ArrayRef<llvm::Value *> moldVars = {},
+                    ArrayRef<llvm::Value *> llvmPrivateVars = {},
+                    DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
+  assert((moldVars.empty() || moldVars.size() == privateVarsInfo.vars.size()) &&
+         "expected one mold value per variable when provided");
+  assert((llvmPrivateVars.empty() ||
+          llvmPrivateVars.size() == privateVarsInfo.vars.size()) &&
+         "expected one private allocation per variable when provided");
+
   // Apply copy region for firstprivate.
-  bool needsFirstprivate =
-      llvm::any_of(privateDecls, [](omp::PrivateClauseOp &privOp) {
+  bool needsFirstprivate = llvm::any_of(
+      privateVarsInfo.vars, [](const PrivateVarsInfo::VarInfo &var) {
+        // Copy the op handle so the non-const accessor can be called.
+        omp::PrivateClauseOp privOp = var.privatizer;
         return privOp.getDataSharingType() ==
                omp::DataSharingClauseType::FirstPrivate;
       });
@@ -2360,12 +2386,34 @@ completePrivateVars(mlir::Operation *op, llvm::IRBuilderBase &builder,
                ? emitPrivatizationBarrier(op, builder, moduleTranslation)
                : success();
 
+  // Materialize the mold values from the MLIR variables when the caller didn't
+  // supply explicit locations.
+  SmallVector<llvm::Value *> materializedMoldVars;
+  if (moldVars.empty()) {
+    materializedMoldVars.reserve(privateVarsInfo.vars.size());
+    for (const PrivateVarsInfo::VarInfo &var : privateVarsInfo.vars) {
+      // map copyRegion rhs arg
+      llvm::Value *moldVar = findAssociatedValue(
+          var.mlirVar, builder, moduleTranslation, mappedPrivateVars);
+      assert(moldVar);
+      materializedMoldVars.push_back(moldVar);
+    }
+    moldVars = materializedMoldVars;
+  }
+
   llvm::BasicBlock *copyBlock =
       splitBB(builder, /*CreateBranch=*/true, "omp.private.copy");
   setInsertPointForPossiblyEmptyBlock(builder, copyBlock);
 
-  for (auto [decl, moldVar, llvmVar] :
-       llvm::zip_equal(privateDecls, moldVars, llvmPrivateVars)) {
+  unsigned varIdx = 0;
+  for (auto [var, moldVar] : llvm::zip_equal(privateVarsInfo.vars, moldVars)) {
+    // The private allocation defaults to the one tracked in `privateVarsInfo`,
+    // unless the caller overrode it with an explicit location.
+    llvm::Value *llvmVar =
+        llvmPrivateVars.empty() ? var.llvmVar : llvmPrivateVars[varIdx];
+    ++varIdx;
+
+    omp::PrivateClauseOp decl = var.privatizer;
     if (decl.getDataSharingType() != omp::DataSharingClauseType::FirstPrivate)
       continue;
 
@@ -2402,27 +2450,6 @@ completePrivateVars(mlir::Operation *op, llvm::IRBuilderBase &builder,
              : success();
 }
 
-static LogicalResult
-completePrivateVars(mlir::Operation *op, llvm::IRBuilderBase &builder,
-                    LLVM::ModuleTranslation &moduleTranslation,
-                    SmallVectorImpl<mlir::Value> &mlirPrivateVars,
-                    ArrayRef<llvm::Value *> llvmPrivateVars,
-                    SmallVectorImpl<omp::PrivateClauseOp> &privateDecls,
-                    bool insertBarrier,
-                    llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
-  llvm::SmallVector<llvm::Value *> moldVars(mlirPrivateVars.size());
-  llvm::transform(mlirPrivateVars, moldVars.begin(), [&](mlir::Value mlirVar) {
-    // map copyRegion rhs arg
-    llvm::Value *moldVar = findAssociatedValue(
-        mlirVar, builder, moduleTranslation, mappedPrivateVars);
-    assert(moldVar);
-    return moldVar;
-  });
-  return completePrivateVars(op, builder, moduleTranslation, moldVars,
-                             llvmPrivateVars, privateDecls, insertBarrier,
-                             mappedPrivateVars);
-}
-
 template <typename T>
 static LogicalResult
 cleanupPrivateVars(T op, llvm::IRBuilderBase &builder,
@@ -2430,15 +2457,16 @@ cleanupPrivateVars(T op, llvm::IRBuilderBase &builder,
                    PrivateVarsInfo &privateVarsInfo) {
   // private variable deallocation
   SmallVector<Region *> privateCleanupRegions;
-  llvm::transform(privateVarsInfo.privatizers,
+  llvm::transform(privateVarsInfo.vars,
                   std::back_inserter(privateCleanupRegions),
-                  [](omp::PrivateClauseOp privatizer) {
-                    return &privatizer.getDeallocRegion();
+                  [](PrivateVarsInfo::VarInfo &var) {
+                    return &var.privatizer.getDeallocRegion();
                   });
 
-  if (failed(inlineOmpRegionCleanup(privateCleanupRegions,
-                                    privateVarsInfo.llvmVars, moduleTranslation,
-                                    builder, "omp.private.dealloc",
+  SmallVector<llvm::Value *> llvmPrivVars = privateVarsInfo.getLlvmVars();
+  if (failed(inlineOmpRegionCleanup(privateCleanupRegions, llvmPrivVars,
+                                    moduleTranslation, builder,
+                                    "omp.private.dealloc",
                                     /*shouldLoadCleanupRegionArg=*/false)))
     return mlir::emitError(loc, "failed to inline `dealloc` region of an "
                                 "`omp.private` op in");
@@ -2446,18 +2474,17 @@ cleanupPrivateVars(T op, llvm::IRBuilderBase &builder,
 
   llvm::OpenMPIRBuilder *ompBuilder = getOpenMPBuilder(moduleTranslation);
   bool mightUseDeviceSharedMem = omp::opInSharedDeviceContext(*op);
-  for (auto [privDecl, llvmPrivVar, blockArg] :
-       llvm::zip_equal(privateVarsInfo.privatizers, privateVarsInfo.llvmVars,
-                       privateVarsInfo.blockArgs)) {
-    if (mightUseDeviceSharedMem && omp::allocaUsesRequireSharedMem(blockArg)) {
+  for (PrivateVarsInfo::VarInfo &var : privateVarsInfo.vars) {
+    if (mightUseDeviceSharedMem &&
+        omp::allocaUsesRequireSharedMem(var.blockArg)) {
       ompBuilder->createOMPFreeShared(
-          builder, llvmPrivVar,
-          moduleTranslation.convertType(privDecl.getType()));
+          builder, var.llvmVar,
+          moduleTranslation.convertType(var.privatizer.getType()));
     }
   }
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
-  for (const PrivateVarsInfo::AllocatorPrivateInfo &allocation :
+  for (const PrivateVarsInfo::AllocatorInfo &allocation :
        llvm::reverse(privateVarsInfo.allocatorPrivates))
     ompBuilder->createOMPFree(ompLoc, allocation.allocatedPtr,
                               allocation.allocator);
@@ -2709,10 +2736,9 @@ convertOmpScope(omp::ScopeOp &scopeOp, llvm::IRBuilderBase &builder,
             .failed())
       return llvm::make_error<PreviouslyReportedError>();
 
-    if (failed(completePrivateVars(
-            scopeOp, builder, moduleTranslation, privateVarsInfo.mlirVars,
-            privateVarsInfo.llvmVars, privateVarsInfo.privatizers,
-            scopeOp.getPrivateNeedsBarrier())))
+    if (failed(completePrivateVars(scopeOp, builder, moduleTranslation,
+                                   privateVarsInfo,
+                                   scopeOp.getPrivateNeedsBarrier())))
       return llvm::make_error<PreviouslyReportedError>();
 
     return convertOmpOpRegions(scopeOp.getRegion(), "omp.scope.region", builder,
@@ -2998,14 +3024,14 @@ class TaskContextStructManager {
 public:
   TaskContextStructManager(llvm::IRBuilderBase &builder,
                            LLVM::ModuleTranslation &moduleTranslation,
-                           MutableArrayRef<omp::PrivateClauseOp> privateDecls)
+                           const PrivateVarsInfo &privateVarsInfo)
       : builder{builder}, moduleTranslation{moduleTranslation},
-        privateDecls{privateDecls} {}
+        privateVarsInfo{privateVarsInfo} {}
 
   /// Creates a heap allocated struct containing space for each private
-  /// variable. Invariant: privateVarTypes, privateDecls, and the elements of
-  /// the structure should all have the same order (although privateDecls which
-  /// do not read from the mold argument are skipped).
+  /// variable. Invariant: privateVarTypes, privateVarsInfo.vars, and the
+  /// elements of the structure should all have the same order (although
+  /// privatizers which do not read from the mold argument are skipped).
   void generateTaskContextStruct();
 
   /// Create GEPs to access each member of the structure representing a private
@@ -3033,7 +3059,7 @@ public:
 private:
   llvm::IRBuilderBase &builder;
   LLVM::ModuleTranslation &moduleTranslation;
-  MutableArrayRef<omp::PrivateClauseOp> privateDecls;
+  const PrivateVarsInfo &privateVarsInfo;
 
   /// The type of each member of the structure, in order.
   SmallVector<llvm::Type *> privateVarTypes;
@@ -3123,11 +3149,12 @@ public:
 } // namespace
 
 void TaskContextStructManager::generateTaskContextStruct() {
-  if (privateDecls.empty())
+  if (privateVarsInfo.vars.empty())
     return;
-  privateVarTypes.reserve(privateDecls.size());
+  privateVarTypes.reserve(privateVarsInfo.vars.size());
 
-  for (omp::PrivateClauseOp &privOp : privateDecls) {
+  for (const PrivateVarsInfo::VarInfo &var : privateVarsInfo.vars) {
+    omp::PrivateClauseOp privOp = var.privatizer;
     // Skip private variables which can safely be allocated and initialised
     // inside of the task
     if (!privOp.readsFromMold())
@@ -3158,10 +3185,11 @@ SmallVector<llvm::Value *> TaskContextStructManager::createGEPsToPrivateVars(
   SmallVector<llvm::Value *> ret;
 
   // Create GEPs for each struct member
-  ret.reserve(privateDecls.size());
+  ret.reserve(privateVarsInfo.vars.size());
   llvm::Value *zero = builder.getInt32(0);
   unsigned i = 0;
-  for (auto privDecl : privateDecls) {
+  for (const PrivateVarsInfo::VarInfo &var : privateVarsInfo.vars) {
+    omp::PrivateClauseOp privDecl = var.privatizer;
     if (!privDecl.readsFromMold()) {
       // Handle this inside of the task so we don't pass unnessecary vars in
       ret.push_back(nullptr);
@@ -3559,7 +3587,7 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
 
   PrivateVarsInfo privateVarsInfo(taskOp);
   TaskContextStructManager taskStructMgr{builder, moduleTranslation,
-                                         privateVarsInfo.privatizers};
+                                         privateVarsInfo};
 
   // Allocate and copy private variables before creating the task. This avoids
   // accessing invalid memory if (after this scope ends) the private variables
@@ -3617,19 +3645,17 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
   // scope.
   taskStructMgr.createGEPsToPrivateVars();
 
-  for (auto [privDecl, mlirPrivVar, blockArg, llvmPrivateVarAlloc] :
-       llvm::zip_equal(privateVarsInfo.privatizers, privateVarsInfo.mlirVars,
-                       privateVarsInfo.blockArgs,
-                       taskStructMgr.getLLVMPrivateVarGEPs())) {
+  for (auto [var, llvmPrivateVarAlloc] : llvm::zip_equal(
+           privateVarsInfo.vars, taskStructMgr.getLLVMPrivateVarGEPs())) {
     // To be handled inside the task.
-    if (!privDecl.readsFromMold())
+    if (!var.privatizer.readsFromMold())
       continue;
     assert(llvmPrivateVarAlloc &&
            "reads from mold so shouldn't have been skipped");
 
     llvm::Expected<llvm::Value *> privateVarOrErr =
-        initPrivateVar(builder, moduleTranslation, privDecl, mlirPrivVar,
-                       blockArg, llvmPrivateVarAlloc, initBlock);
+        initPrivateVar(builder, moduleTranslation, var.privatizer, var.mlirVar,
+                       var.blockArg, llvmPrivateVarAlloc, initBlock);
     if (!privateVarOrErr)
       return handleError(privateVarOrErr, *taskOp.getOperation());
 
@@ -3642,14 +3668,14 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
     // allocation to match the type expected by region block arguments.
     [[maybe_unused]] llvm::Value *llvmPrivateVar = llvmPrivateVarAlloc;
     if ((privateVarOrErr.get() != llvmPrivateVarAlloc) &&
-        !mlir::isa<LLVM::LLVMPointerType>(blockArg.getType())) {
+        !mlir::isa<LLVM::LLVMPointerType>(var.blockArg.getType())) {
       builder.CreateStore(privateVarOrErr.get(), llvmPrivateVarAlloc);
       // Load it so we have the value pointed to by the GEP
       llvmPrivateVar = builder.CreateLoad(privateVarOrErr.get()->getType(),
                                           llvmPrivateVarAlloc);
     }
     assert(llvmPrivateVar->getType() ==
-           moduleTranslation.convertType(blockArg.getType()));
+           moduleTranslation.convertType(var.blockArg.getType()));
 
     // Mapping blockArg -> llvmPrivateVarAlloc is done inside the body callback
     // so that OpenMPIRBuilder doesn't try to pass each GEP address through a
@@ -3659,9 +3685,9 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
   // firstprivate copy region
   setInsertPointForPossiblyEmptyBlock(builder, copyBlock);
   if (failed(completePrivateVars(
-          taskOp, builder, moduleTranslation, privateVarsInfo.mlirVars,
-          taskStructMgr.getLLVMPrivateVarGEPs(), privateVarsInfo.privatizers,
-          taskOp.getPrivateNeedsBarrier())))
+          taskOp, builder, moduleTranslation, privateVarsInfo,
+          taskOp.getPrivateNeedsBarrier(),
+          /*moldVars=*/{}, taskStructMgr.getLLVMPrivateVarGEPs())))
     return llvm::failure();
 
   llvm::OpenMPIRBuilder::AffinityData ad;
@@ -3699,58 +3725,52 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
     builder.restoreIP(codegenIP);
 
     llvm::BasicBlock *privInitBlock = nullptr;
-    privateVarsInfo.llvmVars.resize(privateVarsInfo.blockArgs.size());
-    for (auto [i, zip] : llvm::enumerate(llvm::zip_equal(
-             privateVarsInfo.blockArgs, privateVarsInfo.privatizers,
-             privateVarsInfo.mlirVars))) {
-      auto [blockArg, privDecl, mlirPrivVar] = zip;
+    for (PrivateVarsInfo::VarInfo &var : privateVarsInfo.vars) {
       // This is handled before the task executes
-      if (privDecl.readsFromMold())
+      if (var.privatizer.readsFromMold())
         continue;
 
       llvm::IRBuilderBase::InsertPointGuard guard(builder);
       llvm::Type *llvmAllocType =
-          moduleTranslation.convertType(privDecl.getType());
+          moduleTranslation.convertType(var.privatizer.getType());
       builder.SetInsertPoint(allocaIP.getNodeParent()->getTerminator());
       llvm::Value *llvmPrivateVar = builder.CreateAlloca(
           llvmAllocType, /*ArraySize=*/nullptr, "omp.private.alloc");
 
-      llvm::Expected<llvm::Value *> privateVarOrError =
-          initPrivateVar(builder, moduleTranslation, privDecl, mlirPrivVar,
-                         blockArg, llvmPrivateVar, privInitBlock);
+      llvm::Expected<llvm::Value *> privateVarOrError = initPrivateVar(
+          builder, moduleTranslation, var.privatizer, var.mlirVar, var.blockArg,
+          llvmPrivateVar, privInitBlock);
       if (!privateVarOrError)
         return privateVarOrError.takeError();
-      moduleTranslation.mapValue(blockArg, privateVarOrError.get());
-      privateVarsInfo.llvmVars[i] = privateVarOrError.get();
+      moduleTranslation.mapValue(var.blockArg, privateVarOrError.get());
+      var.llvmVar = privateVarOrError.get();
     }
 
     taskStructMgr.createGEPsToPrivateVars();
     for (auto [i, llvmPrivVar] :
          llvm::enumerate(taskStructMgr.getLLVMPrivateVarGEPs())) {
       if (!llvmPrivVar) {
-        assert(privateVarsInfo.llvmVars[i] &&
+        assert(privateVarsInfo.vars[i].llvmVar &&
                "This is added in the loop above");
         continue;
       }
-      privateVarsInfo.llvmVars[i] = llvmPrivVar;
+      privateVarsInfo.vars[i].llvmVar = llvmPrivVar;
     }
 
     // Find and map the addresses of each variable within the task context
     // structure
-    for (auto [blockArg, llvmPrivateVar, privateDecl] :
-         llvm::zip_equal(privateVarsInfo.blockArgs, privateVarsInfo.llvmVars,
-                         privateVarsInfo.privatizers)) {
+    for (PrivateVarsInfo::VarInfo &var : privateVarsInfo.vars) {
       // This was handled above.
-      if (!privateDecl.readsFromMold())
+      if (!var.privatizer.readsFromMold())
         continue;
       // Fix broken pass-by-value case for Fortran character boxes
-      if (!mlir::isa<LLVM::LLVMPointerType>(blockArg.getType())) {
-        llvmPrivateVar = builder.CreateLoad(
-            moduleTranslation.convertType(blockArg.getType()), llvmPrivateVar);
+      if (!mlir::isa<LLVM::LLVMPointerType>(var.blockArg.getType())) {
+        var.llvmVar = builder.CreateLoad(
+            moduleTranslation.convertType(var.blockArg.getType()), var.llvmVar);
       }
-      assert(llvmPrivateVar->getType() ==
-             moduleTranslation.convertType(blockArg.getType()));
-      moduleTranslation.mapValue(blockArg, llvmPrivateVar);
+      assert(var.llvmVar->getType() ==
+             moduleTranslation.convertType(var.blockArg.getType()));
+      moduleTranslation.mapValue(var.blockArg, var.llvmVar);
     }
 
     // Map in_reduction block arguments to the per-task private storage returned
@@ -4065,7 +4085,7 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
   SmallVector<llvm::Value *> llvmFirstPrivateVars;
   PrivateVarsInfo privateVarsInfo(contextOp);
   TaskContextStructManager taskStructMgr{builder, moduleTranslation,
-                                         privateVarsInfo.privatizers};
+                                         privateVarsInfo};
 
   llvm::SmallVector<llvm::BasicBlock *> deallocBlocks;
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
@@ -4094,21 +4114,20 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
   taskStructMgr.generateTaskContextStruct();
   taskStructMgr.createGEPsToPrivateVars();
 
-  llvmFirstPrivateVars.resize(privateVarsInfo.blockArgs.size());
+  llvmFirstPrivateVars.resize(privateVarsInfo.vars.size());
 
   for (auto [i, zip] : llvm::enumerate(llvm::zip_equal(
-           privateVarsInfo.privatizers, privateVarsInfo.mlirVars,
-           privateVarsInfo.blockArgs, taskStructMgr.getLLVMPrivateVarGEPs()))) {
-    auto [privDecl, mlirPrivVar, blockArg, llvmPrivateVarAlloc] = zip;
+           privateVarsInfo.vars, taskStructMgr.getLLVMPrivateVarGEPs()))) {
+    auto &[var, llvmPrivateVarAlloc] = zip;
     // To be handled inside the taskloop.
-    if (!privDecl.readsFromMold())
+    if (!var.privatizer.readsFromMold())
       continue;
     assert(llvmPrivateVarAlloc &&
            "reads from mold so shouldn't have been skipped");
 
     llvm::Expected<llvm::Value *> privateVarOrErr =
-        initPrivateVar(builder, moduleTranslation, privDecl, mlirPrivVar,
-                       blockArg, llvmPrivateVarAlloc, initBlock);
+        initPrivateVar(builder, moduleTranslation, var.privatizer, var.mlirVar,
+                       var.blockArg, llvmPrivateVarAlloc, initBlock);
     if (!privateVarOrErr)
       return handleError(privateVarOrErr, *contextOp.getOperation());
 
@@ -4119,22 +4138,22 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
 
     [[maybe_unused]] llvm::Value *llvmPrivateVar = llvmPrivateVarAlloc;
     if ((privateVarOrErr.get() != llvmPrivateVarAlloc) &&
-        !mlir::isa<LLVM::LLVMPointerType>(blockArg.getType())) {
+        !mlir::isa<LLVM::LLVMPointerType>(var.blockArg.getType())) {
       builder.CreateStore(privateVarOrErr.get(), llvmPrivateVarAlloc);
       // Load it so we have the value pointed to by the GEP
       llvmPrivateVar = builder.CreateLoad(privateVarOrErr.get()->getType(),
                                           llvmPrivateVarAlloc);
     }
     assert(llvmPrivateVar->getType() ==
-           moduleTranslation.convertType(blockArg.getType()));
+           moduleTranslation.convertType(var.blockArg.getType()));
   }
 
   // firstprivate copy region
   setInsertPointForPossiblyEmptyBlock(builder, copyBlock);
   if (failed(completePrivateVars(
-          contextOp, builder, moduleTranslation, privateVarsInfo.mlirVars,
-          taskStructMgr.getLLVMPrivateVarGEPs(), privateVarsInfo.privatizers,
-          contextOp.getPrivateNeedsBarrier())))
+          contextOp, builder, moduleTranslation, privateVarsInfo,
+          contextOp.getPrivateNeedsBarrier(),
+          /*moldVars=*/{}, taskStructMgr.getLLVMPrivateVarGEPs())))
     return llvm::failure();
 
   // Resolve and validate reduction / in_reduction declarations up front.
@@ -4219,58 +4238,52 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
     builder.restoreIP(codegenIP);
 
     llvm::BasicBlock *privInitBlock = nullptr;
-    privateVarsInfo.llvmVars.resize(privateVarsInfo.blockArgs.size());
-    for (auto [i, zip] : llvm::enumerate(llvm::zip_equal(
-             privateVarsInfo.blockArgs, privateVarsInfo.privatizers,
-             privateVarsInfo.mlirVars))) {
-      auto [blockArg, privDecl, mlirPrivVar] = zip;
+    for (PrivateVarsInfo::VarInfo &var : privateVarsInfo.vars) {
       // This is handled before the task executes
-      if (privDecl.readsFromMold())
+      if (var.privatizer.readsFromMold())
         continue;
 
       llvm::IRBuilderBase::InsertPointGuard guard(builder);
       llvm::Type *llvmAllocType =
-          moduleTranslation.convertType(privDecl.getType());
+          moduleTranslation.convertType(var.privatizer.getType());
       builder.SetInsertPoint(allocaIP.getNodeParent()->getTerminator());
       llvm::Value *llvmPrivateVar = builder.CreateAlloca(
           llvmAllocType, /*ArraySize=*/nullptr, "omp.private.alloc");
 
-      llvm::Expected<llvm::Value *> privateVarOrError =
-          initPrivateVar(builder, moduleTranslation, privDecl, mlirPrivVar,
-                         blockArg, llvmPrivateVar, privInitBlock);
+      llvm::Expected<llvm::Value *> privateVarOrError = initPrivateVar(
+          builder, moduleTranslation, var.privatizer, var.mlirVar, var.blockArg,
+          llvmPrivateVar, privInitBlock);
       if (!privateVarOrError)
         return privateVarOrError.takeError();
-      moduleTranslation.mapValue(blockArg, privateVarOrError.get());
-      privateVarsInfo.llvmVars[i] = privateVarOrError.get();
+      moduleTranslation.mapValue(var.blockArg, privateVarOrError.get());
+      var.llvmVar = privateVarOrError.get();
     }
 
     taskStructMgr.createGEPsToPrivateVars();
     for (auto [i, llvmPrivVar] :
          llvm::enumerate(taskStructMgr.getLLVMPrivateVarGEPs())) {
       if (!llvmPrivVar) {
-        assert(privateVarsInfo.llvmVars[i] &&
+        assert(privateVarsInfo.vars[i].llvmVar &&
                "This is added in the loop above");
         continue;
       }
-      privateVarsInfo.llvmVars[i] = llvmPrivVar;
+      privateVarsInfo.vars[i].llvmVar = llvmPrivVar;
     }
 
     // Find and map the addresses of each variable within the taskloop context
     // structure
-    for (auto [blockArg, llvmPrivateVar, privateDecl] :
-         llvm::zip_equal(privateVarsInfo.blockArgs, privateVarsInfo.llvmVars,
-                         privateVarsInfo.privatizers)) {
+    for (PrivateVarsInfo::VarInfo &var : privateVarsInfo.vars) {
       // This was handled above.
-      if (!privateDecl.readsFromMold())
+      if (!var.privatizer.readsFromMold())
         continue;
       // Fix broken pass-by-value case for Fortran character boxes
-      if (!mlir::isa<LLVM::LLVMPointerType>(blockArg.getType())) {
-        llvmPrivateVar = builder.CreateLoad(
-            moduleTranslation.convertType(blockArg.getType()), llvmPrivateVar);
+      if (!mlir::isa<LLVM::LLVMPointerType>(var.blockArg.getType())) {
+        var.llvmVar = builder.CreateLoad(
+            moduleTranslation.convertType(var.blockArg.getType()), var.llvmVar);
       }
-      assert(llvmPrivateVar->getType() ==
-             moduleTranslation.convertType(blockArg.getType()));
-      moduleTranslation.mapValue(blockArg, llvmPrivateVar);
+      assert(var.llvmVar->getType() ==
+             moduleTranslation.convertType(var.blockArg.getType()));
+      moduleTranslation.mapValue(var.blockArg, var.llvmVar);
     }
 
     // Map reduction and in_reduction block arguments to the per-task private
@@ -4378,7 +4391,7 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
 
     TaskContextStructManager &srcStructMgr = taskStructMgr;
     TaskContextStructManager destStructMgr(builder, moduleTranslation,
-                                           privateVarsInfo.privatizers);
+                                           privateVarsInfo);
     destStructMgr.generateTaskContextStruct();
     llvm::Value *dest = destStructMgr.getStructPtr();
     dest->setName("omp.taskloop.context.dest");
@@ -4390,19 +4403,18 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
         destStructMgr.createGEPsToPrivateVars(dest);
 
     // Inline init regions.
-    for (auto [privDecl, mold, blockArg, llvmPrivateVarAlloc] :
-         llvm::zip_equal(privateVarsInfo.privatizers, srcGEPs,
-                         privateVarsInfo.blockArgs, destGEPs)) {
+    for (auto [var, mold, llvmPrivateVarAlloc] :
+         llvm::zip_equal(privateVarsInfo.vars, srcGEPs, destGEPs)) {
       // To be handled inside task body.
-      if (!privDecl.readsFromMold())
+      if (!var.privatizer.readsFromMold())
         continue;
       assert(llvmPrivateVarAlloc &&
              "reads from mold so shouldn't have been skipped");
 
       llvm::Value *moldArg = materializeRegionArgValue(
-          builder, moduleTranslation, privDecl.getInitMoldArg(), mold);
+          builder, moduleTranslation, var.privatizer.getInitMoldArg(), mold);
       llvm::Expected<llvm::Value *> privateVarOrErr = initPrivateVar(
-          builder, moduleTranslation, privDecl, moldArg, blockArg,
+          builder, moduleTranslation, var.privatizer, moldArg, var.blockArg,
           llvmPrivateVarAlloc, builder.GetInsertBlock());
       if (!privateVarOrErr)
         return privateVarOrErr.takeError();
@@ -4416,14 +4428,14 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
       // allocation to match the type expected by region block arguments.
       [[maybe_unused]] llvm::Value *llvmPrivateVar = llvmPrivateVarAlloc;
       if ((privateVarOrErr.get() != llvmPrivateVarAlloc) &&
-          !mlir::isa<LLVM::LLVMPointerType>(blockArg.getType())) {
+          !mlir::isa<LLVM::LLVMPointerType>(var.blockArg.getType())) {
         builder.CreateStore(privateVarOrErr.get(), llvmPrivateVarAlloc);
         // Load it so we have the value pointed to by the GEP
         llvmPrivateVar = builder.CreateLoad(privateVarOrErr.get()->getType(),
                                             llvmPrivateVarAlloc);
       }
       assert(llvmPrivateVar->getType() ==
-             moduleTranslation.convertType(blockArg.getType()));
+             moduleTranslation.convertType(var.blockArg.getType()));
 
       // Mapping blockArg -> llvmPrivateVarAlloc is done inside the body
       // callback so that OpenMPIRBuilder doesn't try to pass each GEP address
@@ -4431,9 +4443,9 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
     }
 
     if (failed(completePrivateVars(contextOp.getOperation(), builder,
-                                   moduleTranslation, srcGEPs, destGEPs,
-                                   privateVarsInfo.privatizers,
-                                   contextOp.getPrivateNeedsBarrier())))
+                                   moduleTranslation, privateVarsInfo,
+                                   contextOp.getPrivateNeedsBarrier(), srcGEPs,
+                                   destGEPs)))
       return llvm::make_error<PreviouslyReportedError>();
 
     return builder.saveIP();
@@ -5033,10 +5045,9 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
           .failed())
     return failure();
 
-  if (failed(completePrivateVars(
-          wsloopOp, builder, moduleTranslation, privateVarsInfo.mlirVars,
-          privateVarsInfo.llvmVars, privateVarsInfo.privatizers,
-          wsloopOp.getPrivateNeedsBarrier())))
+  if (failed(completePrivateVars(wsloopOp, builder, moduleTranslation,
+                                 privateVarsInfo,
+                                 wsloopOp.getPrivateNeedsBarrier())))
     return failure();
 
   assert(afterAllocas.get()->getSinglePredecessor());
@@ -5090,9 +5101,9 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     for (auto [idx, linearVar] : llvm::enumerate(wsloopOp.getLinearVars())) {
       size_t privIdx = privateVarsInfo.numPrivateVars + idx;
       linearClauseProcessor.createLinearVar(
-          builder, allocaIP, privateVarsInfo.privatizers[privIdx],
+          builder, allocaIP, privateVarsInfo.vars[privIdx].privatizer,
           moduleTranslation.lookupValue(linearVar),
-          privateVarsInfo.llvmVars[privIdx], idx);
+          privateVarsInfo.vars[privIdx].llvmVar, idx);
     }
     for (mlir::Value linearStep : wsloopOp.getLinearStepVars())
       linearClauseProcessor.initLinearStep(moduleTranslation, linearStep);
@@ -5256,10 +5267,9 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
             .failed())
       return llvm::make_error<PreviouslyReportedError>();
 
-    if (failed(completePrivateVars(
-            opInst, builder, moduleTranslation, privateVarsInfo.mlirVars,
-            privateVarsInfo.llvmVars, privateVarsInfo.privatizers,
-            opInst.getPrivateNeedsBarrier())))
+    if (failed(completePrivateVars(opInst, builder, moduleTranslation,
+                                   privateVarsInfo,
+                                   opInst.getPrivateNeedsBarrier())))
       return llvm::make_error<PreviouslyReportedError>();
 
     if (failed(
@@ -5479,9 +5489,9 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
     for (auto [idx, linearVar] : llvm::enumerate(simdOp.getLinearVars())) {
       size_t privIdx = privateVarsInfo.numPrivateVars + idx;
       linearClauseProcessor.createLinearVar(
-          builder, allocaIP, privateVarsInfo.privatizers[privIdx],
+          builder, allocaIP, privateVarsInfo.vars[privIdx].privatizer,
           moduleTranslation.lookupValue(linearVar),
-          privateVarsInfo.llvmVars[privIdx], idx);
+          privateVarsInfo.vars[privIdx].llvmVar, idx);
     }
     for (mlir::Value linearStep : simdOp.getLinearStepVars())
       linearClauseProcessor.initLinearStep(moduleTranslation, linearStep);
@@ -9261,8 +9271,7 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
       return llvm::make_error<PreviouslyReportedError>();
 
     if (failed(completePrivateVars(distributeOp, builder, moduleTranslation,
-                                   privVarsInfo.mlirVars, privVarsInfo.llvmVars,
-                                   privVarsInfo.privatizers,
+                                   privVarsInfo,
                                    distributeOp.getPrivateNeedsBarrier())))
       return llvm::make_error<PreviouslyReportedError>();
 
@@ -10147,9 +10156,9 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
       return llvm::make_error<PreviouslyReportedError>();
 
     if (failed(completePrivateVars(
-            targetOp, builder, moduleTranslation, privateVarsInfo.mlirVars,
-            privateVarsInfo.llvmVars, privateVarsInfo.privatizers,
-            targetOp.getPrivateNeedsBarrier(), &mappedPrivateVars)))
+            targetOp, builder, moduleTranslation, privateVarsInfo,
+            targetOp.getPrivateNeedsBarrier(), /*moldVars=*/{},
+            /*llvmPrivateVars=*/{}, &mappedPrivateVars)))
       return llvm::make_error<PreviouslyReportedError>();
 
     // The target body accesses each in_reduction variable through its
