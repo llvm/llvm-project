@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements support for context disambiguation of allocation
-// calls for profile guided heap optimization. Specifically, it uses Memprof
-// profiles which indicate context specific allocation behavior (currently
-// distinguishing cold vs hot memory allocations). Cloning is performed to
-// expose the cold allocation call contexts, and the allocation calls are
-// subsequently annotated with an attribute for later transformation.
+// calls for profile-guided memory optimization (MemPGO). Specifically, it uses
+// MemProf profiles which indicate context specific allocation behavior
+// (currently distinguishing cold vs hot memory allocations). Cloning is
+// performed to expose the cold allocation call contexts, and the allocation
+// calls are subsequently annotated with an attribute for later transformation.
 //
 // The transformations can be performed either directly on IR (regular LTO), or
 // on a ThinLTO index (and later applied to the IR during the ThinLTO backend).
@@ -690,11 +690,11 @@ public:
                                        DenseSet<const ContextNode *> &Visited);
 
 protected:
-  /// Get a list of nodes corresponding to the stack ids in the given callsite
-  /// context.
+  /// Get the list of context nodes for the stack ids in the given callsite
+  /// context, stopping at the first stack id that does not have a node.
   template <class NodeT, class IteratorT>
-  std::vector<uint64_t>
-  getStackIdsWithContextNodes(CallStack<NodeT, IteratorT> &CallsiteContext);
+  std::vector<ContextNode *>
+  getStackNodesForCallsite(CallStack<NodeT, IteratorT> &CallsiteContext);
 
   /// Adds nodes for the given allocation and any stack ids on its memprof MIB
   /// metadata (or summary).
@@ -773,8 +773,12 @@ private:
   struct CallContextInfo {
     // The callsite we're trying to match.
     CallTy Call;
-    // The callsites stack ids that have a context node in the graph.
-    std::vector<uint64_t> StackIds;
+    // The context nodes for the callsite's stack ids that have one, saved to
+    // avoid repeatedly looking them up. The stack ids are available via the
+    // nodes' OrigStackOrAllocId. Since each stack id has its own node, and the
+    // stack id to node map is not modified while matching calls, two calls
+    // have the same stack ids iff they have the same nodes.
+    std::vector<ContextNode *> StackNodes;
     // The function containing this callsite.
     const FuncTy *Func;
     // Initially empty, if needed this will be updated to contain the context
@@ -858,11 +862,10 @@ private:
     return static_cast<DerivedCCG *>(this)->sameCallee(Call1, Call2);
   }
 
-  /// Get a list of nodes corresponding to the stack ids in the given
-  /// callsite's context.
-  std::vector<uint64_t> getStackIdsWithContextNodesForCall(CallTy Call) {
-    return static_cast<DerivedCCG *>(this)->getStackIdsWithContextNodesForCall(
-        Call);
+  /// Get the list of context nodes for the stack ids in the given callsite's
+  /// context, stopping at the first stack id that does not have a node.
+  std::vector<ContextNode *> getStackNodesForCall(CallTy Call) {
+    return static_cast<DerivedCCG *>(this)->getStackNodesForCall(Call);
   }
 
   /// Get the last stack id in the context for callsite.
@@ -1084,9 +1087,9 @@ private:
   DenseMap<uint32_t, ImportantContextInfo> ImportantContextIdInfo;
 
   // For each important context id found in Node (if any), records the list of
-  // stack ids that corresponded to the given callsite Node. There can be more
-  // than one in the case of inlining.
-  void recordStackNode(std::vector<uint64_t> &StackIds, ContextNode *Node,
+  // stack ids (those of the given StackNodes) that corresponded to the given
+  // callsite Node. There can be more than one in the case of inlining.
+  void recordStackNode(ArrayRef<ContextNode *> StackNodes, ContextNode *Node,
                        // We pass in the Node's context ids to avoid the
                        // overhead of computing them as the caller already has
                        // them in some cases.
@@ -1100,6 +1103,10 @@ private:
         set_intersection(NodeContextIds, ImportantContextIds);
     if (Ids.empty())
       return;
+    std::vector<uint64_t> StackIds;
+    StackIds.reserve(StackNodes.size());
+    for (const ContextNode *N : StackNodes)
+      StackIds.push_back(N->OrigStackOrAllocId);
     auto Size = StackIds.size();
     for (auto Id : Ids) {
       auto &Entry = ImportantContextIdInfo[Id];
@@ -1215,7 +1222,7 @@ private:
       std::vector<std::pair<Instruction *, Function *>> &FoundCalleeChain,
       bool &FoundMultipleCalleeChains);
   uint64_t getLastStackId(Instruction *Call);
-  std::vector<uint64_t> getStackIdsWithContextNodesForCall(Instruction *Call);
+  std::vector<ContextNode *> getStackNodesForCall(Instruction *Call);
   void updateAllocationCall(CallInfo &Call, AllocationType AllocType);
   AllocationType getAllocationCallType(const CallInfo &Call) const;
   void updateCall(CallInfo &CallerCall, FuncInfo CalleeFunc);
@@ -1310,7 +1317,7 @@ private:
       std::vector<std::pair<ValueInfo, FunctionSummary *>> &FoundCalleeChain,
       bool &FoundMultipleCalleeChains);
   uint64_t getLastStackId(IndexCall &Call);
-  std::vector<uint64_t> getStackIdsWithContextNodesForCall(IndexCall &Call);
+  std::vector<ContextNode *> getStackNodesForCall(IndexCall &Call);
   void updateAllocationCall(CallInfo &Call, AllocationType AllocType);
   AllocationType getAllocationCallType(const CallInfo &Call) const;
   void updateCall(CallInfo &CallerCall, FuncInfo CalleeFunc);
@@ -1833,11 +1840,13 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::connectNewNode(
       NewNode->CallerEdges.push_back(NewEdge);
       NewEdge->Caller->CalleeEdges.push_back(NewEdge);
     }
-    // Remove old edge if context ids empty.
+    // Remove old edge if context ids empty, otherwise update its alloc type to
+    // reflect the removed context ids.
     if (Edge->getContextIds().empty()) {
       removeEdgeFromGraph(Edge.get(), &EI, TowardsCallee);
       continue;
     }
+    Edge->AllocTypes = computeAllocType(Edge->getContextIds());
     ++EI;
   }
 }
@@ -1946,17 +1955,18 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   // In this case there is no need to create any new context nodes, simply
   // assign the context node for stack id to this Call.
   if (Calls.size() == 1) {
-    auto &[Call, Ids, Func, SavedContextIds] = Calls[0];
-    if (Ids.size() == 1) {
+    auto &[Call, StackNodes, Func, SavedContextIds] = Calls[0];
+    if (StackNodes.size() == 1) {
       assert(SavedContextIds.empty());
       // It should be this Node
-      assert(Node == getNodeForStackId(Ids[0]));
+      assert(Node == StackNodes[0]);
       if (Node->Recursive)
         return;
       Node->setCall(Call);
       NonAllocationCallToContextNodeMap[Call] = Node;
       NodeToCallingFunc[Node] = Func;
-      recordStackNode(Ids, Node, Node->getContextIds(), ImportantContextIds);
+      recordStackNode(StackNodes, Node, Node->getContextIds(),
+                      ImportantContextIds);
       return;
     }
   }
@@ -1982,7 +1992,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   for (unsigned I = 0; I < Calls.size();
        I++, PrevIterCreatedNode = CreatedNode) {
     CreatedNode = false;
-    auto &[Call, Ids, Func, SavedContextIds] = Calls[I];
+    auto &[Call, StackNodes, Func, SavedContextIds] = Calls[I];
     // Skip any for which we didn't assign any ids, these don't get a node in
     // the graph.
     if (SavedContextIds.empty()) {
@@ -2005,7 +2015,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
       continue;
     }
 
-    assert(LastId == Ids.back());
+    assert(LastNode == StackNodes.back());
 
     // Recompute the context ids for this stack id sequence (the
     // intersection of the context ids of the corresponding nodes).
@@ -2016,11 +2026,11 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     set_intersect(SavedContextIds, LastNodeContextIds);
     ContextNode *PrevNode = LastNode;
     bool Skip = false;
-    // Iterate backwards through the stack Ids, starting after the last Id
+    // Iterate backwards through the stack nodes, starting after the last one
     // in the list, which was handled once outside for all Calls.
-    for (auto IdIter = Ids.rbegin() + 1; IdIter != Ids.rend(); IdIter++) {
-      auto Id = *IdIter;
-      ContextNode *CurNode = getNodeForStackId(Id);
+    for (auto NodeIter = StackNodes.rbegin() + 1; NodeIter != StackNodes.rend();
+         NodeIter++) {
+      ContextNode *CurNode = *NodeIter;
       // We should only have kept stack ids that had nodes and weren't
       // recursive.
       assert(CurNode);
@@ -2052,7 +2062,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     CreatedNode = true;
     NewNode->AllocTypes = computeAllocType(SavedContextIds);
 
-    ContextNode *FirstNode = getNodeForStackId(Ids[0]);
+    ContextNode *FirstNode = StackNodes[0];
     assert(FirstNode);
 
     // Connect to callees of innermost stack frame in inlined call chain.
@@ -2068,8 +2078,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     // Now we need to remove context ids from edges/nodes between First and
     // Last Node.
     PrevNode = nullptr;
-    for (auto Id : Ids) {
-      ContextNode *CurNode = getNodeForStackId(Id);
+    for (ContextNode *CurNode : StackNodes) {
       // We should only have kept stack ids that had nodes.
       assert(CurNode);
 
@@ -2086,6 +2095,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
         set_subtract(PrevEdge->getContextIds(), SavedContextIds);
         if (PrevEdge->getContextIds().empty())
           removeEdgeFromGraph(PrevEdge);
+        else
+          PrevEdge->AllocTypes = computeAllocType(PrevEdge->getContextIds());
       }
       // Since we update the edges from leaf to tail, only look at the callee
       // edges. This isn't an alloc node, so if there are no callee edges, the
@@ -2096,12 +2107,11 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
       PrevNode = CurNode;
     }
 
-    recordStackNode(Ids, NewNode, SavedContextIds, ImportantContextIds);
+    recordStackNode(StackNodes, NewNode, SavedContextIds, ImportantContextIds);
 
     if (VerifyNodes) {
       checkNode<DerivedCCG, FuncTy, CallTy>(NewNode, /*CheckEdges=*/true);
-      for (auto Id : Ids) {
-        ContextNode *CurNode = getNodeForStackId(Id);
+      for (ContextNode *CurNode : StackNodes) {
         // We should only have kept stack ids that had nodes.
         assert(CurNode);
         checkNode<DerivedCCG, FuncTy, CallTy>(CurNode, /*CheckEdges=*/true);
@@ -2231,8 +2241,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
   // Map of stack id to all calls with that as the last (outermost caller)
   // callsite id that has a context node (some might not due to trimming
   // performed during matching of the allocation profile contexts).
-  // The CallContextInfo contains the Call and a list of its stack ids with
-  // ContextNodes, the function containing Call, and the set of context ids
+  // The CallContextInfo contains the Call and a list of the context nodes for
+  // its stack ids, the function containing Call, and the set of context ids
   // the analysis will eventually identify for use in any new node created
   // for that callsite.
   DenseMap<uint64_t, std::vector<CallContextInfo>> StackIdToMatchingCalls;
@@ -2241,16 +2251,16 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       // Ignore allocations, already handled.
       if (AllocationCallToContextNodeMap.count(Call))
         continue;
-      auto StackIdsWithContextNodes =
-          getStackIdsWithContextNodesForCall(Call.call());
+      std::vector<ContextNode *> StackNodes = getStackNodesForCall(Call.call());
       // If there were no nodes created for MIBs on allocs (maybe this was in
       // the unambiguous part of the MIB stack that was trimmed), ignore.
-      if (StackIdsWithContextNodes.empty())
+      if (StackNodes.empty())
         continue;
-      // Otherwise, record this Call along with the list of ids for the last
+      // Otherwise, record this Call along with the list of nodes for the last
       // (outermost caller) stack id with a node.
-      StackIdToMatchingCalls[StackIdsWithContextNodes.back()].push_back(
-          {Call.call(), StackIdsWithContextNodes, Func, {}});
+      uint64_t LastId = StackNodes.back()->OrigStackOrAllocId;
+      StackIdToMatchingCalls[LastId].push_back(
+          {Call.call(), std::move(StackNodes), Func, {}});
     }
   }
 
@@ -2269,40 +2279,50 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
     auto &Calls = It.getSecond();
     // Skip single calls with a single stack id. These don't need a new node.
     if (Calls.size() == 1) {
-      auto &Ids = Calls[0].StackIds;
-      if (Ids.size() == 1)
+      auto &StackNodes = Calls[0].StackNodes;
+      if (StackNodes.size() == 1)
         continue;
     }
     // In order to do the best and maximal matching of inlined calls to context
-    // node sequences we will sort the vectors of stack ids in descending order
-    // of length, and within each length, lexicographically by stack id. The
-    // latter is so that we can specially handle calls that have identical stack
-    // id sequences (either due to cloning or artificially because of the MIB
-    // context trimming). Those with the same Ids are then sorted by function to
-    // facilitate efficiently mapping them to the same context node.
+    // node sequences we will sort the vectors of stack nodes in descending
+    // order of length, and within each length, lexicographically by stack id.
+    // The latter is so that we can specially handle calls that have identical
+    // stack id sequences (either due to cloning or artificially because of the
+    // MIB context trimming). Those with the same stack ids are then sorted by
+    // function to facilitate efficiently mapping them to the same context node.
     // Because the functions are pointers, to ensure a stable sort first assign
     // each function pointer to its first index in the Calls array, and then use
     // that to sort by.
     DenseMap<const FuncTy *, unsigned> FuncToIndex;
     for (const auto &[Idx, CallCtxInfo] : enumerate(Calls))
       FuncToIndex.insert({CallCtxInfo.Func, Idx});
-    llvm::stable_sort(
-        Calls,
-        [&FuncToIndex](const CallContextInfo &A, const CallContextInfo &B) {
-          return A.StackIds.size() > B.StackIds.size() ||
-                 (A.StackIds.size() == B.StackIds.size() &&
-                  (A.StackIds < B.StackIds ||
-                   (A.StackIds == B.StackIds &&
-                    FuncToIndex[A.Func] < FuncToIndex[B.Func])));
-        });
+    auto StackIdsLess = [](ArrayRef<ContextNode *> A,
+                           ArrayRef<ContextNode *> B) {
+      return std::lexicographical_compare(
+          A.begin(), A.end(), B.begin(), B.end(),
+          [](const ContextNode *X, const ContextNode *Y) {
+            return X->OrigStackOrAllocId < Y->OrigStackOrAllocId;
+          });
+    };
+    auto CallLess = [&FuncToIndex, &StackIdsLess](const CallContextInfo &A,
+                                                  const CallContextInfo &B) {
+      return A.StackNodes.size() > B.StackNodes.size() ||
+             (A.StackNodes.size() == B.StackNodes.size() &&
+              (StackIdsLess(A.StackNodes, B.StackNodes) ||
+               (A.StackNodes == B.StackNodes &&
+                FuncToIndex[A.Func] < FuncToIndex[B.Func])));
+    };
+    llvm::stable_sort(Calls, CallLess);
 
     // Find the node for the last stack id, which should be the same
     // across all calls recorded for this id, and is the id for this
     // entry in the StackIdToMatchingCalls map.
     uint64_t LastId = It.getFirst();
-    ContextNode *LastNode = getNodeForStackId(LastId);
+    // All calls in this entry share the same last node.
+    ContextNode *LastNode = Calls[0].StackNodes.back();
     // We should only have kept stack ids that had nodes.
     assert(LastNode);
+    assert(LastNode == getNodeForStackId(LastId));
 
     if (LastNode->Recursive)
       continue;
@@ -2321,14 +2341,14 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
 #endif
 
     for (unsigned I = 0; I < Calls.size(); I++) {
-      auto &[Call, Ids, Func, SavedContextIds] = Calls[I];
+      auto &[Call, StackNodes, Func, SavedContextIds] = Calls[I];
       assert(SavedContextIds.empty());
-      assert(LastId == Ids.back());
+      assert(LastNode == StackNodes.back());
 
 #ifndef NDEBUG
       // If this call has a different set of ids than the last one, clear the
       // set used to ensure they are sorted properly.
-      if (I > 0 && Ids != Calls[I - 1].StackIds)
+      if (I > 0 && StackNodes != Calls[I - 1].StackNodes)
         MatchingIdsFuncSet.clear();
 #endif
 
@@ -2342,11 +2362,11 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       ContextNode *CurNode = LastNode;
       bool Skip = false;
 
-      // Iterate backwards through the stack Ids, starting after the last Id
-      // in the list, which was handled once outside for all Calls.
-      for (auto IdIter = Ids.rbegin() + 1; IdIter != Ids.rend(); IdIter++) {
-        auto Id = *IdIter;
-        CurNode = getNodeForStackId(Id);
+      // Iterate backwards through the stack nodes, starting after the last
+      // one in the list, which was handled once outside for all Calls.
+      for (auto NodeIter = StackNodes.rbegin() + 1;
+           NodeIter != StackNodes.rend(); NodeIter++) {
+        CurNode = *NodeIter;
         // We should only have kept stack ids that had nodes.
         assert(CurNode);
 
@@ -2389,7 +2409,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       // beyond these nodes. Otherwise we would be matching part of unrelated /
       // not fully matching stack contexts. To do this, subtract any context ids
       // found in caller nodes of the last node found above.
-      if (Ids.back() != getLastStackId(Call)) {
+      if (LastId != getLastStackId(Call)) {
         for (const auto &PE : LastNode->CallerEdges) {
           set_subtract(StackSequenceContextIds, PE->getContextIds());
           if (StackSequenceContextIds.empty())
@@ -2414,12 +2434,13 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       // Check if the next set of stack ids is the same (since the Calls vector
       // of tuples is sorted by the stack ids we can just look at the next one).
       // If so, save them in the CallToMatchingCall map so that they get
-      // assigned to the same context node, and skip them.
+      // assigned to the same context node, and skip them. Comparing the stack
+      // nodes is equivalent to comparing the stack ids, as each stack id has
+      // its own node and the stack id to node map is not modified here.
       bool DuplicateContextIds = false;
       for (unsigned J = I + 1; J < Calls.size(); J++) {
         auto &CallCtxInfo = Calls[J];
-        auto &NextIds = CallCtxInfo.StackIds;
-        if (NextIds != Ids)
+        if (CallCtxInfo.StackNodes != StackNodes)
           break;
         auto *NextFunc = CallCtxInfo.Func;
         if (NextFunc != Func) {
@@ -2497,18 +2518,12 @@ uint64_t IndexCallsiteContextGraph::getLastStackId(IndexCall &Call) {
   return Index.getStackIdAtIndex(CallsiteContext.back());
 }
 
-static const std::string MemProfCloneSuffix = ".memprof.";
-
 static std::string getMemProfFuncName(Twine Base, unsigned CloneNo) {
   // We use CloneNo == 0 to refer to the original version, which doesn't get
   // renamed with a suffix.
   if (!CloneNo)
     return Base.str();
   return (Base + MemProfCloneSuffix + Twine(CloneNo)).str();
-}
-
-static bool isMemProfClone(const GlobalValue &GV) {
-  return GV.getName().contains(MemProfCloneSuffix);
 }
 
 // Return the clone number of the given function by extracting it from the
@@ -2609,39 +2624,38 @@ void IndexCallsiteContextGraph::populateFunctionsWithCallers() {
   }
 }
 
-std::vector<uint64_t>
-ModuleCallsiteContextGraph::getStackIdsWithContextNodesForCall(
-    Instruction *Call) {
+std::vector<ModuleCallsiteContextGraph::ContextNode *>
+ModuleCallsiteContextGraph::getStackNodesForCall(Instruction *Call) {
   CallStack<MDNode, MDNode::op_iterator> CallsiteContext(
       Call->getMetadata(LLVMContext::MD_callsite));
-  return getStackIdsWithContextNodes<MDNode, MDNode::op_iterator>(
-      CallsiteContext);
+  return getStackNodesForCallsite<MDNode, MDNode::op_iterator>(CallsiteContext);
 }
 
-std::vector<uint64_t>
-IndexCallsiteContextGraph::getStackIdsWithContextNodesForCall(IndexCall &Call) {
+std::vector<IndexCallsiteContextGraph::ContextNode *>
+IndexCallsiteContextGraph::getStackNodesForCall(IndexCall &Call) {
   assert(isa<CallsiteInfo *>(Call));
   CallStack<CallsiteInfo, SmallVector<unsigned>::const_iterator>
       CallsiteContext(dyn_cast_if_present<CallsiteInfo *>(Call));
-  return getStackIdsWithContextNodes<CallsiteInfo,
-                                     SmallVector<unsigned>::const_iterator>(
+  return getStackNodesForCallsite<CallsiteInfo,
+                                  SmallVector<unsigned>::const_iterator>(
       CallsiteContext);
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 template <class NodeT, class IteratorT>
-std::vector<uint64_t>
-CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::getStackIdsWithContextNodes(
+std::vector<
+    typename CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode *>
+CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::getStackNodesForCallsite(
     CallStack<NodeT, IteratorT> &CallsiteContext) {
-  std::vector<uint64_t> StackIds;
+  std::vector<ContextNode *> StackNodes;
   for (auto IdOrIndex : CallsiteContext) {
     auto StackId = getStackId(IdOrIndex);
     ContextNode *Node = getNodeForStackId(StackId);
     if (!Node)
       break;
-    StackIds.push_back(StackId);
+    StackNodes.push_back(Node);
   }
-  return StackIds;
+  return StackNodes;
 }
 
 ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
@@ -4977,6 +4991,10 @@ ModuleCallsiteContextGraph::cloneFunctionForCallsite(
   // Use existing LLVM facilities for cloning and obtaining Call in clone
   ValueToValueMapTy VMap;
   auto *NewFunc = CloneFunction(Func.func(), VMap);
+  // Clones are only called directly and never have their address taken, so
+  // strip !kcfi_type to avoid emitting KCFI type preambles/symbols on them or
+  // making them valid KCFI indirect-call targets.
+  NewFunc->setMetadata(LLVMContext::MD_kcfi_type, nullptr);
   std::string Name = getMemProfFuncName(Func.func()->getName(), CloneNo);
   assert(!Func.func()->getParent()->getFunction(Name));
   NewFunc->setName(Name);
@@ -6662,6 +6680,8 @@ static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
     auto *NewF = CloneFunction(&F, *VMaps.back());
     HashToFunc[Hash] = {NewF, I};
     FunctionClonesThinBackend++;
+    // Strip !kcfi_type (see comment in cloneFunctionForCallsite).
+    NewF->setMetadata(LLVMContext::MD_kcfi_type, nullptr);
     // Strip memprof and callsite metadata from clone as they are no longer
     // needed.
     for (auto &BB : *NewF) {

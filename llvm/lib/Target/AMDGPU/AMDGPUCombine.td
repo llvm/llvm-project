@@ -162,6 +162,13 @@ def fold_fabs_fptrunc : GICombineRule<
          [{ return Helper.matchFoldFAbsFptrunc(*${fabs}, *${fptrunc}); }]),
   (apply [{ Helper.applyFoldFAbsFptrunc(*${fabs}, *${fptrunc}); }])>;
 
+// Utilize 24-bit v_mul instructions
+def mul24 : GICombineRule<
+  (defs root:$mul),
+  (match (G_MUL $dst, $src0, $src1):$mul,
+         [{ return matchCombine_mul24(*${mul}); }]),
+  (apply [{ applyCombine_mul24(*${mul}); }])>;
+
 // Detects s_mul_u64 instructions whose higher bits are zero/sign extended.
 def smulu64 : GICombineRule<
   (defs root:$smul, unsigned_matchinfo:$matchinfo),
@@ -292,25 +299,51 @@ def trunc_lshr16_to_unmerge : GICombineGroup<[
   trunc_lshr16_unmerge_bf16
 ]>;
 
-// (add x, (zext carry:i1))  -> (uadde x, 0, carry)
-// (sub x, (zext carry:i1))  -> (usube x, 0, carry)
-class fold_carry_into_addsub<dag addsubPat, Instruction carryOpcode,
-                             bit CheckRHS = 0> : GICombineRule<
+// Fold a conditional increment or decrement into an add/sub-with-carry. See
+// AMDGPUCombinerHelper::matchConditionalCarryOp for the matched forms.
+def conditional_carry_op_matchdata
+    : GIDefMatchData<"AMDGPUCombinerHelper::ConditionalCarryOp">;
+
+class fold_conditional_carry_op<dag pat> : GICombineRule<
+  (defs root:$root, conditional_carry_op_matchdata:$matchinfo),
+  (match pat:$root,
+         [{ return Helper.matchConditionalCarryOp(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyConditionalCarryOp(*${root}, ${matchinfo}); }])>;
+
+def fold_conditional_carry_ops : GICombineGroup<[
+  fold_conditional_carry_op<(G_ADD $dst, $a, $b)>,
+  fold_conditional_carry_op<(G_SUB $dst, $a, $b)>,
+  fold_conditional_carry_op<(G_SELECT $dst, $c, $t, $f)>
+]>;
+
+// (add x, (uadde y, 0, carry)) -> (uadde x, y, carry)
+//
+// This is not done if x is an extended carry that fold_conditional_carry_ops
+// can fold, because x would then have to be materialized.
+class fold_add_into_uadde<dag addPat> : GICombineRule<
   (defs root:$dst),
-  (match (G_ZEXT i32:$zext, i1:$carry),
-         addsubPat,
-         !strconcat(
-           [{ return MRI.hasOneNonDBGUse(${zext}.getReg()) &&
-                     isCarryOut(${carry}.getReg()) }],
-           !if(CheckRHS, [{ && shouldFoldCarryIntoAdd(${src}.getReg()) }], ""),
-           [{;}])),
-  (apply (carryOpcode $dst, GITypeOf<"$carry">:$carry_out,
-                      $src, (GITypeOf<"$dst"> 0), $carry))>;
+  (match (G_UADDE $sum, $sum_carry_out, $y, 0, $carry),
+         addPat,
+         [{ return MRI.hasOneNonDBGUse(${sum}.getReg()) &&
+                   MRI.use_nodbg_empty(${sum_carry_out}.getReg()) &&
+                   !Helper.isFoldableCarryExt(${x}.getReg()); }]),
+  (apply (G_UADDE $dst, GITypeOf<"$carry">:$carry_out, $x, $y, $carry))>;
+
+// (sub (usube x, 0, carry), y) -> (usube x, y, carry)
+def fold_sub_into_usube : GICombineRule<
+  (defs root:$dst),
+  (match (G_USUBE $diff, $diff_carry_out, $x, 0, $carry),
+         (G_SUB i32:$dst, $diff, $y),
+         [{ return MRI.hasOneNonDBGUse(${diff}.getReg()) &&
+                   MRI.use_nodbg_empty(${diff_carry_out}.getReg()) &&
+                   !Helper.isFoldableCarryExt(${y}.getReg()); }]),
+  (apply (G_USUBE $dst, GITypeOf<"$carry">:$carry_out, $x, $y, $carry))>;
 
 def fold_carry_into_addsub_combines : GICombineGroup<[
-  fold_carry_into_addsub<(G_ADD i32:$dst, i32:$src, $zext), G_UADDE>,
-  fold_carry_into_addsub<(G_ADD i32:$dst, $zext, i32:$src), G_UADDE, CheckRHS = 1>,
-  fold_carry_into_addsub<(G_SUB i32:$dst, i32:$src, $zext), G_USUBE>
+  fold_conditional_carry_ops,
+  fold_add_into_uadde<(G_ADD i32:$dst, $x, $sum)>,
+  fold_add_into_uadde<(G_ADD i32:$dst, $sum, $x)>,
+  fold_sub_into_usube
 ]>;
 
 let Predicates = [Has16BitInsts, NotHasMed3_16] in {
@@ -344,7 +377,8 @@ def AMDGPUPreLegalizerCombiner: GICombiner<
   [all_combines, combine_fmul_with_select_to_fldexp, clamp_i64_to_i16,
    foldable_fneg, fold_fabs_fptrunc, combine_shuffle_vector,
    combine_shuffle_vector_to_build_vector, trunc_lshr16_to_unmerge,
-   binop_s64_with_s32_mask_combines, combine_or_s64_s32]> {
+   binop_s64_with_s32_mask_combines, combine_or_s64_s32,
+   fold_conditional_carry_ops]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
@@ -367,6 +401,6 @@ def AMDGPURegBankCombiner : GICombiner<
    identity_combines, redundant_and, constant_fold_cast_op,
    cast_of_cast_combines, sext_trunc, zext_of_shift_amount_combines,
    d16_load, minmax_to_minmax3_combines, redundant_sext_inreg,
-   redundant_zext_sext_inreg, redundant_aext_sext_inreg]> {
+   redundant_zext_sext_inreg, redundant_aext_sext_inreg, mul24]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }

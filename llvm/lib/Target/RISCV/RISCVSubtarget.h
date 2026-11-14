@@ -124,7 +124,9 @@ private:
   unsigned RVVVectorBitsMax;
   uint8_t MaxInterleaveFactor = 2;
   RISCVABI::ABI TargetABI = RISCVABI::ABI::Unknown;
-  std::bitset<RISCV::NUM_TARGET_REGS> UserReservedRegister;
+  // Set by the reserve-xN subtarget features, indexed by N. RISCVRegisterInfo
+  // expands this to include aliases.
+  std::bitset<32> UserReservedXRegs;
   const RISCVTuneInfoTable::RISCVTuneInfo *TuneInfo;
 
   RISCVFrameLowering FrameLowering;
@@ -295,9 +297,14 @@ public:
 
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
   bool isSoftFPABI() const { return RISCVABI::isSoftFP(TargetABI); }
+  /// Returns the X registers reserved by the reserve-xN features, indexed by N.
+  /// Aliases of these registers are not included.
+  const std::bitset<32> &getUserReservedXRegs() const {
+    return UserReservedXRegs;
+  }
   bool isRegisterReservedByUser(Register i) const override {
     assert(i.id() < RISCV::NUM_TARGET_REGS && "Register out of range");
-    return UserReservedRegister[i.id()];
+    return getRegisterInfo()->isRegisterReservedByUser(i.id());
   }
 
   TargetRegisterClass const *getLargestFPRegClass() const {

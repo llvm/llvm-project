@@ -10,7 +10,6 @@
 #define MLIR_DIALECT_LLVMIR_XEVMDIALECT_H_
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
 #include "mlir/Dialect/LLVMIR/XeVMOpsEnums.h.inc"

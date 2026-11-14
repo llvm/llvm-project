@@ -1553,7 +1553,8 @@ bool hasPrivateApertureRegs(const MCSubtargetInfo &STI);
 bool hasVOPD(const MCSubtargetInfo &STI);
 bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI);
 
-int getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR, int32_t ArgNumVGPR);
+uint32_t getTotalNumVGPRs(bool has90AInsts, uint32_t ArgNumAGPR,
+                          uint32_t ArgNumVGPR);
 unsigned hasKernargPreload(const MCSubtargetInfo &STI);
 bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST);
 
@@ -1787,6 +1788,12 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 
 /// \returns true if the intrinsic is uniform
 bool isIntrinsicAlwaysUniform(unsigned IntrID);
+
+/// Return true if we can easily prove that \p V is uniform at \p CtxI.
+bool isTriviallyUniform(const Value *V, const Instruction *CtxI);
+
+/// Return true if we can easily prove that use \p U is uniform.
+bool isTriviallyUniform(const Use &U);
 
 /// \returns true if the intrinsic executes an LDSDMA operation
 bool isLDSDMAIntrinsic(unsigned IntrID);

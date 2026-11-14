@@ -176,6 +176,15 @@ void test_cmdline_defaults(float x, float y, float z, int i, double d) {
 // LLVM-STRICT-RND: call float @llvm.experimental.constrained.pow.f32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
 // LLVM-DEFAULT: call float @llvm.pow.f32
 // LLVM-DEFAULT-RND: call float @llvm.experimental.constrained.pow.f32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  sf = __builtin_ldexpf(x, i);
+// CIR-STRICT: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+// CIR-STRICT-RND: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = unknown, except_mode = unknown, strict_except = true>
+// CIR-DEFAULT: cir.ldexp {{.*}} : !cir.float, !s32i loc
+// CIR-DEFAULT-RND: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = unknown, except_mode = masked, strict_except = false>
+// LLVM-STRICT: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// LLVM-STRICT-RND: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
+// LLVM-DEFAULT: call float @llvm.ldexp.f32.i32
+// LLVM-DEFAULT-RND: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.ignore")
   sf = __builtin_fmaf(x, y, z);
 // CIR-STRICT: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 // CIR-STRICT-RND: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = unknown, except_mode = unknown, strict_except = true>
@@ -251,6 +260,9 @@ void test_global_fenv_access_on(float x, float y, float z, int i, double d) {
   sf = __builtin_powf(x, y);
 // CIR: cir.pow {{.*}} : !cir.float fenv<dynamic_rounding_mode = unknown, except_mode = unknown, strict_except = true>
 // LLVM: call float @llvm.experimental.constrained.pow.f32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  sf = __builtin_ldexpf(x, i);
+// CIR: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = unknown, except_mode = unknown, strict_except = true>
+// LLVM: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
   sf = __builtin_fmaf(x, y, z);
 // CIR: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = unknown, except_mode = unknown, strict_except = true>
 // LLVM-STRICT: call float @llvm.experimental.constrained.fma.f32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -311,6 +323,9 @@ void test_except_off_fenv_access_off(float x, float y, float z, int i, double d)
   sf = __builtin_powf(x, y);
 // CIR: cir.pow {{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = masked, strict_except = false>
 // LLVM: call float @llvm.experimental.constrained.pow.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  sf = __builtin_ldexpf(x, i);
+// CIR: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = tonearest, except_mode = masked, strict_except = false>
+// LLVM: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   sf = __builtin_fmaf(x, y, z);
 // CIR: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = masked, strict_except = false>
 // LLVM-STRICT: call float @llvm.experimental.constrained.fma.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -369,6 +384,9 @@ void test_fenv_access_on_after_local_off(float x, float y, float z, int i, doubl
   sf = __builtin_powf(x, y);
 // CIR: cir.pow {{.*}} : !cir.float fenv<dynamic_rounding_mode = unknown, except_mode = unknown, strict_except = true>
 // LLVM: call float @llvm.experimental.constrained.pow.f32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  sf = __builtin_ldexpf(x, i);
+// CIR: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = unknown, except_mode = unknown, strict_except = true>
+// LLVM: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
   sf = __builtin_fmaf(x, y, z);
 // CIR: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = unknown, except_mode = unknown, strict_except = true>
 // LLVM-STRICT: call float @llvm.experimental.constrained.fma.f32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -496,6 +514,15 @@ void test_float_control_except_off(float x, float y, float z, int i, double d) {
 // LLVM-STRICT-RND: call float @llvm.experimental.constrained.pow.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.ignore")
 // LLVM-DEFAULT: call float @llvm.pow.f32
 // LLVM-DEFAULT-RND: call float @llvm.pow.f32
+  sf = __builtin_ldexpf(x, i);
+// CIR-STRICT: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = tonearest, except_mode = masked, strict_except = false>
+// CIR-STRICT-RND: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = tonearest, except_mode = masked, strict_except = false>
+// CIR-DEFAULT: cir.ldexp {{.*}} : !cir.float, !s32i loc
+// CIR-DEFAULT-RND: cir.ldexp {{.*}} : !cir.float, !s32i loc
+// LLVM-STRICT: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+// LLVM-STRICT-RND: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+// LLVM-DEFAULT: call float @llvm.ldexp.f32.i32
+// LLVM-DEFAULT-RND: call float @llvm.ldexp.f32.i32
   sf = __builtin_fmaf(x, y, z);
 // CIR-STRICT: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = masked, strict_except = false>
 // CIR-STRICT-RND: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = masked, strict_except = false>
@@ -570,6 +597,9 @@ void test_float_control_except_on(float x, float y, float z, int i, double d) {
   sf = __builtin_powf(x, y);
 // CIR: cir.pow {{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 // LLVM: call float @llvm.experimental.constrained.pow.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  sf = __builtin_ldexpf(x, i);
+// CIR: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+// LLVM: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   sf = __builtin_fmaf(x, y, z);
 // CIR: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 // LLVM-STRICT: call float @llvm.experimental.constrained.fma.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
@@ -629,6 +659,9 @@ void test_local_fenv_access_on(float x, float y, float z, int i, double d) {
   sf = __builtin_powf(x, y);
 // CIR: cir.pow {{.*}} : !cir.float fenv<dynamic_rounding_mode = unknown, except_mode = unknown, strict_except = true>
 // LLVM: call float @llvm.experimental.constrained.pow.f32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  sf = __builtin_ldexpf(x, i);
+// CIR: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = unknown, except_mode = unknown, strict_except = true>
+// LLVM: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
   sf = __builtin_fmaf(x, y, z);
 // CIR: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = unknown, except_mode = unknown, strict_except = true>
 // LLVM-STRICT: call float @llvm.experimental.constrained.fma.f32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -754,6 +787,15 @@ void test_float_control_except_off_after_on(float x, float y, float z, int i, do
 // LLVM-STRICT-RND: call float @llvm.experimental.constrained.pow.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.ignore")
 // LLVM-DEFAULT: call float @llvm.pow.f32
 // LLVM-DEFAULT-RND: call float @llvm.pow.f32
+  sf = __builtin_ldexpf(x, i);
+// CIR-STRICT: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = tonearest, except_mode = masked, strict_except = false>
+// CIR-STRICT-RND: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = tonearest, except_mode = masked, strict_except = false>
+// CIR-DEFAULT: cir.ldexp {{.*}} : !cir.float, !s32i loc
+// CIR-DEFAULT-RND: cir.ldexp {{.*}} : !cir.float, !s32i loc
+// LLVM-STRICT: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+// LLVM-STRICT-RND: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+// LLVM-DEFAULT: call float @llvm.ldexp.f32.i32
+// LLVM-DEFAULT-RND: call float @llvm.ldexp.f32.i32
   sf = __builtin_fmaf(x, y, z);
 // CIR-STRICT: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = masked, strict_except = false>
 // CIR-STRICT-RND: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = masked, strict_except = false>
@@ -841,6 +883,9 @@ void test_fenv_round_upward(float x, float y, float z, int i, double d) {
   sf = __builtin_powf(x, y);
 // CIR: cir.pow {{.*}} : !cir.float fenv<dynamic_rounding_mode = upward, except_mode = unknown, strict_except = true>
 // LLVM: call float @llvm.experimental.constrained.pow.f32({{.*}}, metadata !"round.upward", metadata !"fpexcept.strict")
+  sf = __builtin_ldexpf(x, i);
+// CIR: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = upward, except_mode = unknown, strict_except = true>
+// LLVM: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.upward", metadata !"fpexcept.strict")
   sf = __builtin_fmaf(x, y, z);
 // CIR: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = upward, except_mode = unknown, strict_except = true>
 // LLVM-STRICT: call float @llvm.experimental.constrained.fma.f32({{.*}}, metadata !"round.upward", metadata !"fpexcept.strict")
@@ -901,6 +946,9 @@ void test_fenv_round_tonearest(float x, float y, float z, int i, double d) {
   sf = __builtin_powf(x, y);
 // CIR: cir.pow {{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 // LLVM: call float @llvm.experimental.constrained.pow.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  sf = __builtin_ldexpf(x, i);
+// CIR: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+// LLVM: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   sf = __builtin_fmaf(x, y, z);
 // CIR: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 // LLVM-STRICT: call float @llvm.experimental.constrained.fma.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
@@ -962,6 +1010,9 @@ void test_fenv_round_tonearest_except_ignore(float x, float y, float z, int i, d
   sf = __builtin_powf(x, y);
 // CIR: cir.pow {{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = masked, strict_except = false>
 // LLVM: call float @llvm.experimental.constrained.pow.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  sf = __builtin_ldexpf(x, i);
+// CIR: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = tonearest, except_mode = masked, strict_except = false>
+// LLVM: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   sf = __builtin_fmaf(x, y, z);
 // CIR: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = masked, strict_except = false>
 // LLVM-STRICT: call float @llvm.experimental.constrained.fma.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.ignore")
@@ -1089,6 +1140,15 @@ void test_fenv_round_tonearest_except_ignore_fenv_off(float x, float y, float z,
 // LLVM-STRICT-RND: call float @llvm.experimental.constrained.pow.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.ignore")
 // LLVM-DEFAULT: call float @llvm.pow.f32
 // LLVM-DEFAULT-RND: call float @llvm.pow.f32
+  sf = __builtin_ldexpf(x, i);
+// CIR-STRICT: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = tonearest, except_mode = masked, strict_except = false>
+// CIR-STRICT-RND: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = tonearest, except_mode = masked, strict_except = false>
+// CIR-DEFAULT: cir.ldexp {{.*}} : !cir.float, !s32i loc
+// CIR-DEFAULT-RND: cir.ldexp {{.*}} : !cir.float, !s32i loc
+// LLVM-STRICT: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+// LLVM-STRICT-RND: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+// LLVM-DEFAULT: call float @llvm.ldexp.f32.i32
+// LLVM-DEFAULT-RND: call float @llvm.ldexp.f32.i32
   sf = __builtin_fmaf(x, y, z);
 // CIR-STRICT: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = masked, strict_except = false>
 // CIR-STRICT-RND: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = masked, strict_except = false>
@@ -1164,6 +1224,9 @@ void test_fp_exceptions_maytrap(float x, float y, float z, int i, double d) {
   sf = __builtin_powf(x, y);
 // CIR: cir.pow {{.*}} : !cir.float fenv<dynamic_rounding_mode = unknown, except_mode = unknown, strict_except = false>
 // LLVM: call float @llvm.experimental.constrained.pow.f32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+  sf = __builtin_ldexpf(x, i);
+// CIR: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = unknown, except_mode = unknown, strict_except = false>
+// LLVM: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   sf = __builtin_fmaf(x, y, z);
 // CIR: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = unknown, except_mode = unknown, strict_except = false>
 // LLVM-STRICT: call float @llvm.experimental.constrained.fma.f32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
@@ -1225,6 +1288,9 @@ void test_fp_exceptions_maytrap_round_upward(float x, float y, float z, int i, d
   sf = __builtin_powf(x, y);
 // CIR: cir.pow {{.*}} : !cir.float fenv<dynamic_rounding_mode = upward, except_mode = unknown, strict_except = false>
 // LLVM: call float @llvm.experimental.constrained.pow.f32({{.*}}, metadata !"round.upward", metadata !"fpexcept.maytrap")
+  sf = __builtin_ldexpf(x, i);
+// CIR: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = upward, except_mode = unknown, strict_except = false>
+// LLVM: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.upward", metadata !"fpexcept.maytrap")
   sf = __builtin_fmaf(x, y, z);
 // CIR: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = upward, except_mode = unknown, strict_except = false>
 // LLVM-STRICT: call float @llvm.experimental.constrained.fma.f32({{.*}}, metadata !"round.upward", metadata !"fpexcept.maytrap")
@@ -1358,6 +1424,9 @@ void test_fenv_round_dynamic_with_fenv_access(float x, float y, float z, int i, 
   sf = __builtin_powf(x, y);
 // CIR: cir.pow {{.*}} : !cir.float fenv<dynamic_rounding_mode = unknown, except_mode = unknown, strict_except = true>
 // LLVM: call float @llvm.experimental.constrained.pow.f32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  sf = __builtin_ldexpf(x, i);
+// CIR: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = unknown, except_mode = unknown, strict_except = true>
+// LLVM: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
   sf = __builtin_fmaf(x, y, z);
 // CIR: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = unknown, except_mode = unknown, strict_except = true>
 // LLVM-STRICT: call float @llvm.experimental.constrained.fma.f32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -1483,6 +1552,15 @@ void test_fenv_round_dynamic_without_fenv_access(float x, float y, float z, int 
 // LLVM-STRICT-RND: call float @llvm.experimental.constrained.pow.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // LLVM-DEFAULT: call float @llvm.pow.f32
 // LLVM-DEFAULT-RND: call float @llvm.pow.f32
+  sf = __builtin_ldexpf(x, i);
+// CIR-STRICT: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+// CIR-STRICT-RND: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+// CIR-DEFAULT: cir.ldexp {{.*}} : !cir.float, !s32i loc
+// CIR-DEFAULT-RND: cir.ldexp {{.*}} : !cir.float, !s32i loc
+// LLVM-STRICT: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// LLVM-STRICT-RND: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// LLVM-DEFAULT: call float @llvm.ldexp.f32.i32
+// LLVM-DEFAULT-RND: call float @llvm.ldexp.f32.i32
   sf = __builtin_fmaf(x, y, z);
 // CIR-STRICT: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 // CIR-STRICT-RND: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
@@ -1557,6 +1635,9 @@ void test_file_scope_fenv_access_on(float x, float y, float z, int i, double d) 
   sf = __builtin_powf(x, y);
 // CIR: cir.pow {{.*}} : !cir.float fenv<dynamic_rounding_mode = unknown, except_mode = unknown, strict_except = true>
 // LLVM: call float @llvm.experimental.constrained.pow.f32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  sf = __builtin_ldexpf(x, i);
+// CIR: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = unknown, except_mode = unknown, strict_except = true>
+// LLVM: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
   sf = __builtin_fmaf(x, y, z);
 // CIR: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = unknown, except_mode = unknown, strict_except = true>
 // LLVM-STRICT: call float @llvm.experimental.constrained.fma.f32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -1682,6 +1763,15 @@ void test_file_scope_fenv_access_off(float x, float y, float z, int i, double d)
 // LLVM-STRICT-RND: call float @llvm.experimental.constrained.pow.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // LLVM-DEFAULT: call float @llvm.pow.f32
 // LLVM-DEFAULT-RND: call float @llvm.pow.f32
+  sf = __builtin_ldexpf(x, i);
+// CIR-STRICT: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+// CIR-STRICT-RND: cir.ldexp {{.*}} : !cir.float, !s32i fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+// CIR-DEFAULT: cir.ldexp {{.*}} : !cir.float, !s32i loc
+// CIR-DEFAULT-RND: cir.ldexp {{.*}} : !cir.float, !s32i loc
+// LLVM-STRICT: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// LLVM-STRICT-RND: call float @llvm.experimental.constrained.ldexp.f32.i32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// LLVM-DEFAULT: call float @llvm.ldexp.f32.i32
+// LLVM-DEFAULT-RND: call float @llvm.ldexp.f32.i32
   sf = __builtin_fmaf(x, y, z);
 // CIR-STRICT: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 // CIR-STRICT-RND: cir.fma {{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>

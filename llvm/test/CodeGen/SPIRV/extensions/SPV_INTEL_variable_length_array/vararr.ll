@@ -101,6 +101,24 @@ exit:
   ret void
 }
 
+; Lifetime markers on a VLA (non-static alloca) are dropped.
+; CHECK-COMMON: Begin function vla_lifetime
+; CHECK-SPIRV: OpVariableLengthArrayINTEL %[[IntPtr]]
+; CHECK-SPIRV-UNTYPED: OpUntypedVariableLengthArrayINTEL %[[CharPtr]] %[[Int]]
+; CHECK-COMMON-NOT: OpLifetimeStart
+; CHECK-COMMON-NOT: OpLifetimeStop
+; CHECK-COMMON: OpFunctionEnd
+define spir_func void @vla_lifetime(i64 %n) {
+entry:
+  %stack = call ptr @llvm.stacksave.p0()
+  %vla = alloca i32, i64 %n, align 4
+  call void @llvm.lifetime.start.p0(i64 -1, ptr nonnull %vla)
+  store volatile i32 1, ptr %vla, align 4
+  call void @llvm.lifetime.end.p0(i64 -1, ptr nonnull %vla)
+  call void @llvm.stackrestore.p0(ptr %stack)
+  ret void
+}
+
 declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 declare ptr @llvm.stacksave.p0()
 declare void @llvm.stackrestore.p0(ptr)

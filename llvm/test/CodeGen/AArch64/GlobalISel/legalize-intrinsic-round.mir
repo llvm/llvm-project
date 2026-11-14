@@ -7,7 +7,6 @@
 ---
 name:            test_f16.round
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -39,7 +38,6 @@ body:             |
 ---
 name:            test_f32.round
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -69,7 +67,6 @@ body:             |
 ---
 name:            test_f64.round
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -99,7 +96,6 @@ body:             |
 ---
 name:            test_v8f16.round
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -136,10 +132,6 @@ body:             |
 ---
 name:            test_v4f16.round
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -171,10 +163,6 @@ body:             |
 ---
 name:            test_v2f32.round
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -204,10 +192,6 @@ body:             |
 ---
 name:            test_v4f32.round
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -237,10 +221,6 @@ body:             |
 ---
 name:            test_v2f64.round
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -265,3 +245,4 @@ body:             |
     %1:_(<2 x f64>) = G_INTRINSIC_ROUND %0
     $q0 = COPY %1(<2 x f64>)
     RET_ReallyLR implicit $q0
+...

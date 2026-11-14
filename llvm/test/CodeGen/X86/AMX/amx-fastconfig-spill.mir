@@ -7,7 +7,6 @@
 ---
 name:            foo
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr16 }
   - { id: 1, class: gr16 }
@@ -86,7 +85,6 @@ body:             |
 ---
 name:            copy
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr16 }
   - { id: 1, class: gr16 }
@@ -162,7 +160,6 @@ body:             |
 ---
 name:            two_uses
 alignment:       16
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    16
 stack:

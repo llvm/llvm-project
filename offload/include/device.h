@@ -13,6 +13,8 @@
 #ifndef _OMPTARGET_DEVICE_H
 #define _OMPTARGET_DEVICE_H
 
+#include "llvm/ADT/MapVector.h"
+
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -34,13 +36,11 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
 
-#include "GlobalHandler.h"
 #include "OffloadAPI.h"
-#include "PluginInterface.h"
 #include "Program.h"
 
-using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
 
 // Forward declarations.
 struct __tgt_bin_desc;
@@ -50,7 +50,7 @@ struct __tgt_target_table;
 struct KernelLaunchInfoTy {
   const char *Name = nullptr;
   /// The program this kernel belongs to.
-  ProgramTy Program;
+  const ProgramTy *Program = nullptr;
   uint32_t MaxNumThreads = 0;
   uint32_t PreferredNumThreads = 0;
   uint32_t ReductionDataSize = 0;
@@ -114,11 +114,13 @@ struct DeviceGeometryPropsTy {
 };
 
 struct PluginManager;
+namespace llvm::omp::target::rr {
+struct RecordReplayTy;
+} // namespace llvm::omp::target::rr
+using RecordReplayTy = llvm::omp::target::rr::RecordReplayTy;
 
 struct DeviceTy {
   int32_t DeviceID;
-  GenericPluginTy *RTL = nullptr;
-  int32_t RTLDeviceID = -1;
   ol_platform_handle_t Platform;
   ol_device_handle_t DeviceHandle;
   PluginManager *PM;
@@ -152,6 +154,36 @@ struct DeviceTy {
   /// Load \p Img onto the device and return the resulting program.
   llvm::Expected<ProgramTy> loadBinary(__tgt_device_image *Img);
 
+  /// Take ownership of \p Program, the program loaded for the library
+  /// identified by \p Key. It is destroyed by unloadProgram or deinit.
+  ProgramTy &addProgram(const void *Key, ProgramTy Program);
+
+  /// Destroy \p Program and release the device resources it owns. The
+  /// program must not be used afterwards.
+  llvm::Error releaseProgram(ProgramTy &Program);
+
+  /// Destroy the program loaded for the library identified by \p Key, if any,
+  /// forget the launch info of its kernels in \p Entries, and drop the
+  /// mappings of its declare-target globals.
+  void unloadProgram(const void *Key,
+                     llvm::ArrayRef<llvm::offloading::EntryTy> Entries,
+                     llvm::ArrayRef<llvm::offloading::EntryTy> HostEntries);
+
+  /// Enable kernel record (\p IsRecord) or replay on this device by reserving
+  /// \p MemorySize bytes of device memory at \p VAddr. While active, device
+  /// allocations are served from that region.
+  llvm::Error activateRecordReplay(uint64_t MemorySize, void *VAddr,
+                                   bool IsRecord, bool IsNative,
+                                   bool SaveOutput, bool EmitReport,
+                                   const char *ReportFilename,
+                                   const char *OutputDirPath);
+
+  /// The active record/replay state, or null if neither is enabled.
+  RecordReplayTy *getRecordReplay() { return RecordReplay.get(); }
+
+  /// Whether allocations must currently be served by record/replay.
+  bool isRecordingOrReplaying() const;
+
   /// Resolve the device address of the global variable \p Name in \p Program,
   /// recording it for kernel record/replay if recording is currently active.
   llvm::Expected<void *> getAndRecordGlobalAddress(const ProgramTy &Program,
@@ -171,9 +203,9 @@ struct DeviceTy {
                   int32_t Kind = TARGET_ALLOC_DEFAULT);
 
   /// Deallocates memory which \p TgtPtrBegin points at and returns
-  /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails. p Kind dictates what
-  /// allocator should be used (host, shared, device).
-  int32_t deleteData(void *TgtPtrBegin, int32_t Kind = TARGET_ALLOC_DEFAULT);
+  /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails. The kind of the
+  /// allocation is resolved by the runtime from the pointer.
+  int32_t deleteData(void *TgtPtrBegin);
 
   /// Allocate \p Size bytes of \p Type memory in the device's context, which,
   /// unlike allocData, caches the allocation for reuse. \p Type must be
@@ -388,6 +420,15 @@ private:
   /// Launch-geometry properties for each kernel registered on this device.
   using KernelLaunchInfoMapTy = llvm::DenseMap<void *, KernelLaunchInfoTy>;
   ProtectedObj<KernelLaunchInfoMapTy> KernelLaunchInfoMap;
+
+  /// Programs loaded on this device, by the library they were loaded for.
+  /// Kept in load order so programs can be destroyed in reverse order.
+  using ProgramMapTy =
+      llvm::MapVector<const void *, std::unique_ptr<ProgramTy>>;
+  ProtectedObj<ProgramMapTy> Programs;
+
+  /// Kernel record/replay state, if enabled.
+  std::unique_ptr<RecordReplayTy> RecordReplay;
 
   /// The backend of this device.
   ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;

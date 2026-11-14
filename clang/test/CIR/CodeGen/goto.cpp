@@ -30,9 +30,7 @@ err:
 // LLVM: define dso_local noundef i32 @_Z21shouldNotGenBranchReti
 // LLVM:   [[COND:%.*]] = load i32, ptr {{.*}}, align 4
 // LLVM:   [[CMP:%.*]] = icmp sgt i32 [[COND]], 5
-// LLVM:   br i1 [[CMP]], label %[[IFTHEN:.*]], label %[[IFEND:.*]]
-// LLVM: [[IFTHEN]]:
-// LLVM:   br label %[[ERR:.*]]
+// LLVM:   br i1 [[CMP]], label %[[ERR:.*]], label %[[IFEND:.*]]
 // LLVM: [[IFEND]]:
 // LLVM:   store i32 0, ptr %[[RETVAL:.*]], align 4
 // LLVM:   [[RET:%.*]] = load i32, ptr %[[RETVAL]], align 4
@@ -71,8 +69,6 @@ err:
 // LLVM: [[IFTHEN]]:
 // LLVM:   br label %[[ERR:.*]]
 // LLVM: [[IFEND]]:
-// LLVM:   br label %[[BB9:.*]]
-// LLVM: [[BB9]]:
 // LLVM:   br label %[[ERR]]
 // LLVM: [[ERR]]:
 // LLVM:   ret i32 [[RET:%.*]]
@@ -221,14 +217,10 @@ extern "C" void case_follow_label(int v) {
 // LLVM:   br label %[[CASE2]]
 // LLVM: [[CASE2]]:
 // LLVM:   call void @action1()
-// LLVM:   br label %[[BREAK:.*]]
-// LLVM: [[BREAK]]:
-// LLVM:   br label %[[END:.*]]
+// LLVM:   br label %[[RET:.*]]
 // LLVM: [[SWDEFAULT]]:
 // LLVM:   call void @action2()
 // LLVM:   br label %[[LABEL]]
-// LLVM: [[END]]:
-// LLVM:   br label %[[RET:.*]]
 // LLVM: [[RET]]:
 // LLVM:   ret void
 
@@ -272,22 +264,20 @@ extern "C" void default_follow_label(int v) {
 // CIR:   cir.goto "label"
 
 // LLVM: define dso_local void @default_follow_label
-// LLVM: [[CASE1:.*]]:
-// LLVM:   br label %[[BB8:.*]]
-// LLVM: [[BB8]]:
-// LLVM:   br label %[[CASE2:.*]]
+// LLVM:  switch i32 {{.*}}, label %[[SWDEFAULT:.*]] [
+// LLVM:    i32 1, label %[[CASE1:.*]]
+// LLVM:    i32 2, label %[[CASE2:.*]]
+// LLVM:  ]
+// LLVM: [[CASE1]]:
+// LLVM:   br label %[[CASE2]]
 // LLVM: [[CASE2]]:
 // LLVM:   call void @action1()
-// LLVM:   br label %[[BREAK:.*]]
+// LLVM:   br label %[[RET:.*]]
 // LLVM: [[LABEL:.*]]:
-// LLVM:   br label %[[SWDEFAULT:.*]]
+// LLVM:   br label %[[SWDEFAULT]]
 // LLVM: [[SWDEFAULT]]:
 // LLVM:   call void @action2()
-// LLVM:   br label %[[BB9:.*]]
-// LLVM: [[BB9]]:
 // LLVM:   br label %[[LABEL]]
-// LLVM: [[BREAK]]:
-// LLVM:   br label %[[RET:.*]]
 // LLVM: [[RET]]:
 // LLVM:   ret void
 

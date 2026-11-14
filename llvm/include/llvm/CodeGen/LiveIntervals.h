@@ -30,9 +30,11 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/LaneBitmask.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Recycler.h"
 #include <cassert>
 #include <cstdint>
 #include <utility>
@@ -64,6 +66,10 @@ class LiveIntervals {
 
   /// Special pool allocator for VNInfo's (LiveInterval val#).
   VNInfo::Allocator VNInfoAllocator;
+
+  BumpPtrAllocator RangeAllocator;
+  Recycler<LiveInterval> IntervalRecycler;
+  Recycler<LiveRange> RegUnitRangeRecycler;
 
   /// Live interval pointers for all the virtual registers.
   IndexedMap<LiveInterval *, VirtReg2IndexFunctor> VirtRegIntervals;
@@ -192,8 +198,10 @@ public:
 
   /// Interval removal.
   void removeInterval(Register Reg) {
-    auto &Interval = VirtRegIntervals[Reg];
-    delete Interval;
+    LiveInterval *&Interval = VirtRegIntervals[Reg];
+    assert(Interval && "removing a nonexistent interval");
+    Interval->~LiveInterval();
+    IntervalRecycler.Deallocate(RangeAllocator, Interval);
     Interval = nullptr;
   }
 
@@ -468,8 +476,12 @@ public:
   /// Remove computed live range for register unit \p Unit. Subsequent uses
   /// should rely on on-demand recomputation.
   void removeRegUnit(MCRegUnit Unit) {
-    delete RegUnitRanges[static_cast<unsigned>(Unit)];
-    RegUnitRanges[static_cast<unsigned>(Unit)] = nullptr;
+    LiveRange *&LR = RegUnitRanges[static_cast<unsigned>(Unit)];
+    if (!LR)
+      return;
+    LR->~LiveRange();
+    RegUnitRangeRecycler.Deallocate(RangeAllocator, LR);
+    LR = nullptr;
   }
 
   /// Remove associated live ranges for the register units associated with \p
@@ -527,8 +539,8 @@ private:
   bool computeDeadValues(LiveInterval &LI,
                          SmallVectorImpl<MachineInstr *> *dead);
 
-  LLVM_ABI static LiveInterval *createInterval(Register Reg);
-  LLVM_ABI static LiveRange *createRegUnitRange();
+  LLVM_ABI LiveInterval *createInterval(Register Reg);
+  LLVM_ABI LiveRange *createRegUnitRange();
 
   void printInstrs(raw_ostream &O) const;
   void dumpInstrs() const;

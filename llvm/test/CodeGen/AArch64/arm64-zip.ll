@@ -443,7 +443,7 @@ define <4 x i32> @shuffle_zip2(<4 x i32> %arg) {
 ; CHECK-GI-NEXT:    dup.2s v0, v0[0]
 ; CHECK-GI-NEXT:    dup.2s v1, v1[0]
 ; CHECK-GI-NEXT:    mov.d v1[1], v0[0]
-; CHECK-GI-NEXT:    and.16b v0, v2, v1
+; CHECK-GI-NEXT:    and.16b v0, v1, v2
 ; CHECK-GI-NEXT:    ret
 bb:
   %inst = icmp ult <4 x i32> zeroinitializer, %arg
@@ -472,7 +472,7 @@ define <4 x i32> @shuffle_zip3(<4 x i32> %arg) {
 ; CHECK-GI-NEXT:    dup.2s v0, v0[0]
 ; CHECK-GI-NEXT:    dup.2s v2, v2[0]
 ; CHECK-GI-NEXT:    mov.d v2[1], v0[0]
-; CHECK-GI-NEXT:    and.16b v0, v1, v2
+; CHECK-GI-NEXT:    and.16b v0, v2, v1
 ; CHECK-GI-NEXT:    ret
 bb:
   %inst = icmp slt <4 x i32> zeroinitializer, %arg

@@ -1,0 +1,361 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_support_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_support_library(
+    name = "math_macros",
+    hdrs = ["math_macros.h"],
+)
+
+libc_support_library(
+    name = "fenv_macros",
+    hdrs = ["fenv_macros.h"],
+)
+
+libc_support_library(
+    name = "fcntl_macros",
+    hdrs = ["fcntl_macros.h"],
+    deps = select({
+        "//libc:full_build": [
+            "//libc:llvm_libc_macros_fcntl_macros",
+        ],
+        "//conditions:default": [":fcntl_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "fcntl_overlay",
+    hdrs = ["fcntl_overlay.h"],
+    target_compatible_with = select({
+        "//libc:full_build": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "poll_overlay",
+    hdrs = ["poll_overlay.h"],
+    target_compatible_with = select({
+        "//libc:full_build": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "sys_socket_overlay",
+    hdrs = ["sys_socket_overlay.h"],
+    target_compatible_with = select({
+        "//libc:full_build": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "netinet_in_macros",
+    hdrs = ["netinet_in_macros.h"],
+)
+
+libc_support_library(
+    name = "netinet_tcp_macros",
+    hdrs = ["netinet_tcp_macros.h"],
+    deps = select({
+        "//libc:full_build": [
+            "//libc:llvm_libc_macros_netinet_tcp_macros",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "offsetof_macros",
+    hdrs = ["offsetof_macros.h"],
+    deps = select({
+        "//libc:full_build": [
+            "//libc:llvm_libc_macros_offsetof_macro",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "pthread_macros",
+    hdrs = ["pthread_macros.h"],
+    deps = select({
+        "//libc:full_build": [
+            "//libc:llvm_libc_macros_pthread_macros",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "signal_macros",
+    hdrs = ["signal_macros.h"],
+    deps = select({
+        "//libc:full_build": [
+            "//libc:llvm_libc_macros_signal_macros",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "sched_macros",
+    hdrs = ["sched_macros.h"],
+    deps = select({
+        "//libc:full_build": [
+            "//libc:llvm_libc_macros_sched_macros",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "sys_epoll_macros",
+    hdrs = ["sys_epoll_macros.h"],
+)
+
+libc_support_library(
+    name = "sys_ioctl_macros",
+    hdrs = ["sys_ioctl_macros.h"],
+)
+
+libc_support_library(
+    name = "sys_mman_macros",
+    hdrs = ["sys_mman_macros.h"],
+)
+
+libc_support_library(
+    name = "sys_ipc_macros",
+    hdrs = ["sys_ipc_macros.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_macros_sys_ipc_macros"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "sys_sem_macros",
+    hdrs = ["sys_sem_macros.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_macros_sys_sem_macros"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "sys_socket_macros",
+    hdrs = ["sys_socket_macros.h"],
+    deps = select({
+        "//libc:full_build": [
+            "//libc:llvm_libc_macros_sys_socket_macros",
+        ],
+        "//conditions:default": [":sys_socket_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "sys_stat_macros",
+    hdrs = ["sys_stat_macros.h"],
+    deps = [
+        "//libc:llvm_libc_macros_sys_stat_macros",
+    ],
+)
+
+libc_support_library(
+    name = "inet_address_macros",
+    hdrs = ["inet-address-macros.h"],
+    deps = [
+        "//libc:llvm_libc_macros_inet_address_macros",
+    ],
+)
+
+libc_support_library(
+    name = "errno_macros",
+    hdrs = ["errno_macros.h"],
+    deps = select({
+        "//libc:full_build": [
+            "//libc:llvm_libc_macros_error_number_macros",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "time_macros",
+    hdrs = ["time_macros.h"],
+)
+
+libc_support_library(
+    name = "float_macros",
+    hdrs = ["float_macros.h"],
+    deps = select({
+        "//libc:full_build": [
+            "//libc:llvm_libc_macros_float_macros",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "stdio_macros",
+    hdrs = ["stdio_macros.h"],
+    deps = select({
+        "//libc:full_build": [
+            "//libc:llvm_libc_macros_file_seek_macros",
+            "//libc:llvm_libc_macros_stdio_macros",
+        ],
+        "//conditions:default": [
+            ":stdio_overlay",
+        ],
+    }),
+)
+
+libc_support_library(
+    name = "unistd_macros",
+    hdrs = ["unistd_macros.h"],
+    deps = select({
+        "//libc:full_build": [
+            "//libc:llvm_libc_macros_unistd_macros",
+        ],
+        "//conditions:default": [
+            ":unistd_overlay",
+        ],
+    }),
+)
+
+libc_support_library(
+    name = "limits_macros",
+    hdrs = ["limits_macros.h"],
+    deps = select({
+        "//libc:full_build": [
+            "//libc:llvm_libc_macros_limits_macros",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "stdio_overlay",
+    hdrs = ["stdio_overlay.h"],
+    target_compatible_with = select({
+        "//libc:full_build": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "stdlib_macros",
+    hdrs = ["stdlib_macros.h"],
+    deps = select({
+        "//libc:full_build": [],
+        "//conditions:default": [":stdlib_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "stdlib_overlay",
+    hdrs = ["stdlib_overlay.h"],
+    target_compatible_with = select({
+        "//libc:full_build": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "unistd_overlay",
+    hdrs = ["unistd_overlay.h"],
+    target_compatible_with = select({
+        "//libc:full_build": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "wchar_macros",
+    hdrs = ["wchar_macros.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_macros_wchar_macros"],
+        "//conditions:default": [":wchar_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "wchar_overlay",
+    hdrs = ["wchar_overlay.h"],
+    target_compatible_with = select({
+        "//libc:full_build": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "uchar_overlay",
+    hdrs = ["uchar_overlay.h"],
+    target_compatible_with = select({
+        "//libc:full_build": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "wctype_overlay",
+    hdrs = ["wctype_overlay.h"],
+    target_compatible_with = select({
+        "//libc:full_build": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "stdint_proxy",
+    hdrs = ["stdint_proxy.h"],
+)
+
+libc_support_library(
+    name = "sys_auxv_macros",
+    hdrs = ["sys_auxv_macros.h"],
+)
+
+libc_support_library(
+    name = "sys_resource_macros",
+    hdrs = ["sys_resource_macros.h"],
+)
+
+libc_support_library(
+    name = "sys_wait_macros",
+    hdrs = ["sys_wait_macros.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_macros_sys_wait_macros"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "elf_proxy",
+    hdrs = ["elf_proxy.h"],
+    textual_hdrs = ["//libc:include_llvm-libc-proxy_elf_proxy_h"],
+)
+
+libc_support_library(
+    name = "elf_macros",
+    hdrs = ["elf_macros.h"],
+)
+
+libc_support_library(
+    name = "link_macros",
+    hdrs = ["link_macros.h"],
+)

@@ -236,6 +236,9 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
   emission.addr = address;
   setAddrOfLocalVar(&d, address);
 
+  if (d.hasAttr<AnnotateAttr>() && haveInsertPoint())
+    emitVarAnnotations(&d, address.getPointer());
+
   // The lifetime marker must reference the original alloca, so peel any
   // address-space cast back to it.
   if (emission.useLifetimeMarkers)
@@ -805,7 +808,7 @@ Address CIRGenModule::createUnnamedGlobalFrom(const VarDecl &d,
         cir::GlobalLinkageKind::PrivateLinkage));
     gv.setInitialValueAttr(constAttr);
     gv.setAlignment(align.getAsAlign().value());
-    // TODO(cir): Set unnamed address attribute when available in CIR
+    gv.setUnnamedAddr(true);
 
     cacheEntry = gv;
   } else if (cacheEntry.getAlignment() <

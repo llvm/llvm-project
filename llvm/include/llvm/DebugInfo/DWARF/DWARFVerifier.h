@@ -216,6 +216,17 @@ private:
   /// \returns Number of errors that occurred during verification.
   unsigned verifyDebugInfoSubprogram(const DWARFDie &Die);
 
+  /// Verifies that a concrete subprogram instance (an out-of-line
+  /// DW_TAG_subprogram or a DW_TAG_inlined_subroutine with
+  /// DW_AT_abstract_origin) does not define its own local types or imported
+  /// entities.
+  ///
+  /// These entities are shared by all instances and belong to the abstract
+  /// origin. Concrete instances may refer to them via DW_AT_abstract_origin,
+  /// but an entity defined only in a one concrete instance is not visible to
+  /// the others. Reports a warning for each such entity.
+  void verifyDebugInfoLocalEntities(const DWARFDie &Die);
+
   /// Verify that all Die ranges are valid.
   ///
   /// This function currently checks for:

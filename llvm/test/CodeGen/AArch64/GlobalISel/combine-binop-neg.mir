@@ -3,7 +3,6 @@
 
 ---
 name:            binop_with_neg_or
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -32,7 +31,6 @@ body: |
 ...
 ---
 name:            binop_with_neg_or_commuted
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -61,7 +59,6 @@ body: |
 ...
 ---
 name:            binop_with_neg_xor
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -90,7 +87,6 @@ body: |
 ...
 ---
 name:            binop_with_neg_xor_commuted
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -119,7 +115,6 @@ body: |
 ...
 ---
 name:            binop_with_neg_and
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -148,7 +143,6 @@ body: |
 ...
 ---
 name:            binop_with_neg_and_commuted_and
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -177,7 +171,6 @@ body: |
 ...
 ---
 name:            binop_with_neg_and_commuted_add
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -206,7 +199,6 @@ body: |
 ...
 ---
 name:            binop_with_neg_and_one_use
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -237,7 +229,6 @@ body: |
 ...
 ---
 name:            binop_with_neg_sub_and
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -267,7 +258,6 @@ body: |
 ---
 # This test should not transform
 name:            binop_with_neg_sub_and_commuted
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $x1, $x2, $x3

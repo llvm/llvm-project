@@ -1156,6 +1156,40 @@ define i64 @llrint_poison_op0() #0 {
   ret i64 %r
 }
 
+define i32 @lround_poison_op0() #0 {
+; CHECK-LABEL: @lround_poison_op0(
+; CHECK-NEXT:    ret i32 poison
+;
+  %r = call i32 @llvm.experimental.constrained.lround.i32.f32(float poison, metadata !"fpexcept.ignore")
+  ret i32 %r
+}
+
+define i32 @lround_poison_op0_strict() #0 {
+; CHECK-LABEL: @lround_poison_op0_strict(
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.experimental.constrained.lround.i32.f32(float poison, metadata !"fpexcept.strict")
+; CHECK-NEXT:    ret i32 poison
+;
+  %r = call i32 @llvm.experimental.constrained.lround.i32.f32(float poison, metadata !"fpexcept.strict")
+  ret i32 %r
+}
+
+define i64 @llround_poison_op0() #0 {
+; CHECK-LABEL: @llround_poison_op0(
+; CHECK-NEXT:    ret i64 poison
+;
+  %r = call i64 @llvm.experimental.constrained.llround.i64.f32(float poison, metadata !"fpexcept.ignore")
+  ret i64 %r
+}
+
+define i64 @llround_poison_op0_strict() #0 {
+; CHECK-LABEL: @llround_poison_op0_strict(
+; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.experimental.constrained.llround.i64.f32(float poison, metadata !"fpexcept.strict")
+; CHECK-NEXT:    ret i64 poison
+;
+  %r = call i64 @llvm.experimental.constrained.llround.i64.f32(float poison, metadata !"fpexcept.strict")
+  ret i64 %r
+}
+
 declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
 declare float @llvm.experimental.constrained.fsub.f32(float, float, metadata, metadata)
 declare float @llvm.experimental.constrained.fmul.f32(float, float, metadata, metadata)

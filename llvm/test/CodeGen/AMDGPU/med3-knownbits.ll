@@ -51,7 +51,6 @@ define i32 @v_known_signbits_smed3(i16 %a, i16 %b) {
 ; SI-SDAG-NEXT:    v_rcp_f32_e32 v1, v1
 ; SI-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 1, v0
 ; SI-SDAG-NEXT:    v_mul_f32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    v_trunc_f32_e32 v0, v0
 ; SI-SDAG-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -81,15 +80,13 @@ define i32 @v_known_signbits_smed3(i16 %a, i16 %b) {
 ; SI-GISEL-NEXT:    v_add_i32_e32 v3, vcc, v3, v5
 ; SI-GISEL-NEXT:    v_mul_hi_u32 v3, v0, v3
 ; SI-GISEL-NEXT:    v_mul_lo_u32 v5, v3, v1
-; SI-GISEL-NEXT:    v_add_i32_e32 v6, vcc, 1, v3
 ; SI-GISEL-NEXT:    v_sub_i32_e32 v0, vcc, v0, v5
 ; SI-GISEL-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v1
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v3, v3, v6, vcc
 ; SI-GISEL-NEXT:    v_sub_i32_e64 v5, s[4:5], v0, v1
 ; SI-GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v5, vcc
-; SI-GISEL-NEXT:    v_add_i32_e32 v5, vcc, 1, v3
+; SI-GISEL-NEXT:    v_addc_u32_e64 v3, s[4:5], 0, v3, vcc
 ; SI-GISEL-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v1
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v0, v3, v5, vcc
+; SI-GISEL-NEXT:    v_addc_u32_e32 v0, vcc, 0, v3, vcc
 ; SI-GISEL-NEXT:    v_xor_b32_e32 v1, v4, v2
 ; SI-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v1
 ; SI-GISEL-NEXT:    v_sub_i32_e32 v0, vcc, v0, v1
