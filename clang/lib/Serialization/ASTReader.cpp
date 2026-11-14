@@ -6623,7 +6623,7 @@ Module *ASTReader::getSubmodule(uint32_t GlobalID) {
       // Clear out data that will be replaced by what is in the module file.
       CurrentModule->LinkLibraries.clear();
       CurrentModule->ConfigMacros.clear();
-      CurrentModule->UnresolvedConflicts.clear();
+      CurrentModule->clearUnresolvedConflicts();
       CurrentModule->Conflicts.clear();
 
       // The module is available unless it's missing a requirement; relevant
@@ -6632,7 +6632,7 @@ Module *ASTReader::getSubmodule(uint32_t GlobalID) {
       // make it unavailable -- if we got this far, this must be an explicitly
       // imported module file.
       CurrentModule->Requirements.clear();
-      CurrentModule->MissingHeaders.clear();
+      CurrentModule->clearMissingHeaders();
       CurrentModule->IsUnimportable =
           ParentModule && ParentModule->IsUnimportable;
       CurrentModule->IsAvailable = !CurrentModule->IsUnimportable;
@@ -6714,7 +6714,7 @@ Module *ASTReader::getSubmodule(uint32_t GlobalID) {
 
       // Once we've loaded the set of exports, there's no reason to keep
       // the parsed, unresolved exports around.
-      CurrentModule->UnresolvedExports.clear();
+      CurrentModule->clearUnresolvedExports();
       break;
 
     case SUBMODULE_REQUIRES:

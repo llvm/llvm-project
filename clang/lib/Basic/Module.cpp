@@ -184,8 +184,8 @@ bool Module::isAvailable(const LangOptions &LangOpts, const TargetInfo &Target,
   // FIXME: All missing headers are listed on the top-level module. Should we
   // just look there?
   for (const Module *Current = this; Current; Current = Current->Parent) {
-    if (!Current->MissingHeaders.empty()) {
-      MissingHeader = Current->MissingHeaders.front();
+    if (!Current->getMissingHeaders().empty()) {
+      MissingHeader = Current->getMissingHeaders().front();
       return false;
     }
   }
@@ -552,8 +552,8 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
          << " mtime " << H.Entry.getModificationTime() << " }\n";
     }
   }
-  for (auto *Unresolved : {&UnresolvedHeaders, &MissingHeaders}) {
-    for (auto &U : *Unresolved) {
+  for (auto Unresolved : {getUnresolvedHeaders(), getMissingHeaders()}) {
+    for (auto &U : Unresolved) {
       OS.indent(Indent + 2);
       OS << Kinds[U.Kind].Prefix << "header \"";
       OS.write_escaped(U.FileName);
@@ -596,12 +596,12 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
     OS << "\n";
   }
 
-  for (unsigned I = 0, N = UnresolvedExports.size(); I != N; ++I) {
+  for (const UnresolvedExportDecl &UE : getUnresolvedExports()) {
     OS.indent(Indent + 2);
     OS << "export ";
-    printModuleId(OS, UnresolvedExports[I].Id);
-    if (UnresolvedExports[I].Wildcard)
-      OS << (UnresolvedExports[I].Id.empty() ? "*" : ".*");
+    printModuleId(OS, UE.Id);
+    if (UE.Wildcard)
+      OS << (UE.Id.empty() ? "*" : ".*");
     OS << "\n";
   }
 
@@ -619,10 +619,10 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
     OS << "\n";
   }
 
-  for (unsigned I = 0, N = UnresolvedDirectUses.size(); I != N; ++I) {
+  for (const ModuleId &UDU : getUnresolvedDirectUses()) {
     OS.indent(Indent + 2);
     OS << "use ";
-    printModuleId(OS, UnresolvedDirectUses[I]);
+    printModuleId(OS, UDU);
     OS << "\n";
   }
 
@@ -636,12 +636,12 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
     OS << "\"";
   }
 
-  for (unsigned I = 0, N = UnresolvedConflicts.size(); I != N; ++I) {
+  for (const UnresolvedConflict &UC : getUnresolvedConflicts()) {
     OS.indent(Indent + 2);
     OS << "conflict ";
-    printModuleId(OS, UnresolvedConflicts[I].Id);
+    printModuleId(OS, UC.Id);
     OS << ", \"";
-    OS.write_escaped(UnresolvedConflicts[I].Message);
+    OS.write_escaped(UC.Message);
     OS << "\"\n";
   }
 
