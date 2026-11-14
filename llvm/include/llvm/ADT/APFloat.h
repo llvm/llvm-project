@@ -39,6 +39,7 @@ struct fltSemantics;
 class APSInt;
 class StringRef;
 class APFloat;
+class FloatRepr;
 class raw_ostream;
 
 template <typename T> class Expected;
@@ -299,37 +300,55 @@ private:
   friend class APFloat;
 
 public:
-  static const fltSemantics &IEEEhalf() { return semIEEEhalf; }
-  static const fltSemantics &BFloat() { return semBFloat; }
-  static const fltSemantics &IEEEsingle() { return semIEEEsingle; }
-  static const fltSemantics &IEEEdouble() { return semIEEEdouble; }
-  static const fltSemantics &IEEEquad() { return semIEEEquad; }
-  static const fltSemantics &x87DoubleExtended() {
+  static constexpr const fltSemantics &IEEEhalf() { return semIEEEhalf; }
+  static constexpr const fltSemantics &BFloat() { return semBFloat; }
+  static constexpr const fltSemantics &IEEEsingle() { return semIEEEsingle; }
+  static constexpr const fltSemantics &IEEEdouble() { return semIEEEdouble; }
+  static constexpr const fltSemantics &IEEEquad() { return semIEEEquad; }
+  static constexpr const fltSemantics &x87DoubleExtended() {
     return semX87DoubleExtended;
   }
-  static const fltSemantics &PPCDoubleDouble() { return semPPCDoubleDouble; }
-  static const fltSemantics &PPCDoubleDoubleLegacy() {
+  static constexpr const fltSemantics &PPCDoubleDouble() {
+    return semPPCDoubleDouble;
+  }
+  static constexpr const fltSemantics &PPCDoubleDoubleLegacy() {
     return semPPCDoubleDoubleLegacy;
   }
-  static const fltSemantics &Float8E5M2() { return semFloat8E5M2; }
-  static const fltSemantics &Float8E5M2FNUZ() { return semFloat8E5M2FNUZ; }
-  static const fltSemantics &Float8E4M3() { return semFloat8E4M3; }
-  static const fltSemantics &Float8E4M3FN() { return semFloat8E4M3FN; }
-  static const fltSemantics &Float8E4M3FNUZ() { return semFloat8E4M3FNUZ; }
-  static const fltSemantics &Float8E4M3B11FNUZ() {
+  static constexpr const fltSemantics &Float8E5M2() { return semFloat8E5M2; }
+  static constexpr const fltSemantics &Float8E5M2FNUZ() {
+    return semFloat8E5M2FNUZ;
+  }
+  static constexpr const fltSemantics &Float8E4M3() { return semFloat8E4M3; }
+  static constexpr const fltSemantics &Float8E4M3FN() {
+    return semFloat8E4M3FN;
+  }
+  static constexpr const fltSemantics &Float8E4M3FNUZ() {
+    return semFloat8E4M3FNUZ;
+  }
+  static constexpr const fltSemantics &Float8E4M3B11FNUZ() {
     return semFloat8E4M3B11FNUZ;
   }
-  static const fltSemantics &Float8E3M4() { return semFloat8E3M4; }
-  static const fltSemantics &FloatTF32() { return semFloatTF32; }
-  static const fltSemantics &Float8E8M0FNU() { return semFloat8E8M0FNU; }
-  static const fltSemantics &Float8E5M3FNU() { return semFloat8E5M3FNU; }
-  static const fltSemantics &Float6E3M2FN() { return semFloat6E3M2FN; }
-  static const fltSemantics &Float6E2M3FN() { return semFloat6E2M3FN; }
-  static const fltSemantics &Float4E2M1FN() { return semFloat4E2M1FN; }
+  static constexpr const fltSemantics &Float8E3M4() { return semFloat8E3M4; }
+  static constexpr const fltSemantics &FloatTF32() { return semFloatTF32; }
+  static constexpr const fltSemantics &Float8E8M0FNU() {
+    return semFloat8E8M0FNU;
+  }
+  static constexpr const fltSemantics &Float8E5M3FNU() {
+    return semFloat8E5M3FNU;
+  }
+  static constexpr const fltSemantics &Float6E3M2FN() {
+    return semFloat6E3M2FN;
+  }
+  static constexpr const fltSemantics &Float6E2M3FN() {
+    return semFloat6E2M3FN;
+  }
+  static constexpr const fltSemantics &Float4E2M1FN() {
+    return semFloat4E2M1FN;
+  }
 
   /// A Pseudo fltsemantic used to construct APFloats that cannot conflict with
   /// anything real.
-  static const fltSemantics &Bogus() { return semBogus; }
+  static constexpr const fltSemantics &Bogus() { return semBogus; }
 
   // Returns true if any number described by this semantics can be precisely
   // represented by the specified semantics. Does not take into account
@@ -709,6 +728,7 @@ private:
   integerPart *significandParts();
   const integerPart *significandParts() const;
   LLVM_ABI unsigned int partCount() const;
+  static unsigned int partCountForSemantic(APFloatBase::Semantics E);
 
   /// @}
 
@@ -777,49 +797,18 @@ private:
 
   /// @}
 
-  template <const fltSemantics &S> APInt convertIEEEFloatToAPInt() const;
-  APInt convertHalfAPFloatToAPInt() const;
-  APInt convertBFloatAPFloatToAPInt() const;
-  APInt convertFloatAPFloatToAPInt() const;
-  APInt convertDoubleAPFloatToAPInt() const;
-  APInt convertQuadrupleAPFloatToAPInt() const;
-  APInt convertF80LongDoubleAPFloatToAPInt() const;
-  APInt convertPPCDoubleDoubleLegacyAPFloatToAPInt() const;
-  APInt convertFloat8E5M2APFloatToAPInt() const;
-  APInt convertFloat8E5M2FNUZAPFloatToAPInt() const;
-  APInt convertFloat8E4M3APFloatToAPInt() const;
-  APInt convertFloat8E4M3FNAPFloatToAPInt() const;
-  APInt convertFloat8E4M3FNUZAPFloatToAPInt() const;
-  APInt convertFloat8E4M3B11FNUZAPFloatToAPInt() const;
-  APInt convertFloat8E3M4APFloatToAPInt() const;
-  APInt convertFloatTF32APFloatToAPInt() const;
-  APInt convertFloat8E8M0FNUAPFloatToAPInt() const;
-  APInt convertFloat8E5M3FNUAPFloatToAPInt() const;
-  APInt convertFloat6E3M2FNAPFloatToAPInt() const;
-  APInt convertFloat6E2M3FNAPFloatToAPInt() const;
-  APInt convertFloat4E2M1FNAPFloatToAPInt() const;
+  static IEEEFloat &fromRepr(const FloatRepr &R);
+
+  template <APFloatBase::Semantics S>
+  friend APInt bitcastForSemantics(const FloatRepr &R);
+
+  template <APFloatBase::Semantics E> APInt convertIEEEFloatToAPInt() const;
+
+  template <APFloatBase::Semantics S>
+  friend void initFromAPIntForSemantics(FloatRepr &, const APInt &);
+
   void initFromAPInt(const fltSemantics *Sem, const APInt &api);
-  template <const fltSemantics &S> void initFromIEEEAPInt(const APInt &api);
-  void initFromHalfAPInt(const APInt &api);
-  void initFromBFloatAPInt(const APInt &api);
-  void initFromFloatAPInt(const APInt &api);
-  void initFromDoubleAPInt(const APInt &api);
-  void initFromQuadrupleAPInt(const APInt &api);
-  void initFromF80LongDoubleAPInt(const APInt &api);
-  void initFromPPCDoubleDoubleLegacyAPInt(const APInt &api);
-  void initFromFloat8E5M2APInt(const APInt &api);
-  void initFromFloat8E5M2FNUZAPInt(const APInt &api);
-  void initFromFloat8E4M3APInt(const APInt &api);
-  void initFromFloat8E4M3FNAPInt(const APInt &api);
-  void initFromFloat8E4M3FNUZAPInt(const APInt &api);
-  void initFromFloat8E4M3B11FNUZAPInt(const APInt &api);
-  void initFromFloat8E3M4APInt(const APInt &api);
-  void initFromFloatTF32APInt(const APInt &api);
-  void initFromFloat8E8M0FNUAPInt(const APInt &api);
-  void initFromFloat8E5M3FNUAPInt(const APInt &api);
-  void initFromFloat6E3M2FNAPInt(const APInt &api);
-  void initFromFloat6E2M3FNAPInt(const APInt &api);
-  void initFromFloat4E2M1FNAPInt(const APInt &api);
+  template <APFloatBase::Semantics E> void initFromIEEEAPInt(const APInt &api);
 
   void assign(const IEEEFloat &);
   void copySignificand(const IEEEFloat &);
@@ -850,6 +839,7 @@ private:
   unsigned int sign : 1;
 
   friend class IEEEFloatUnitTestHelper;
+  friend class llvm::FloatRepr;
 };
 
 LLVM_ABI hash_code hash_value(const IEEEFloat &Arg);
@@ -1019,6 +1009,42 @@ enum class fltNanEncoding {
   NegativeZero,
 };
 
+/// Interface for fltSemantics callbacks to access the internal data of
+/// APFloat/IEEEFloat.
+///
+/// Used to let user provided callback functions in fltSemantics access the
+/// internals of APFloat without making them public and to hide the concrete
+/// class used in APFloat
+class FloatRepr {
+  detail::IEEEFloat *Repr;
+
+  friend class detail::IEEEFloat;
+  explicit FloatRepr(detail::IEEEFloat &F) : Repr(&F) {}
+
+public:
+  /// Set the semantics and allocate storage for the significand. Must be
+  /// called exactly once before any setter when initializing from bits.
+  LLVM_ABI void initialize(const fltSemantics &Sem);
+
+  LLVM_ABI const fltSemantics &getSemantics() const;
+
+  LLVM_ABI APFloatBase::fltCategory getCategory() const;
+  /// Exponent and significand are only meaningful for fcNormal and fcNaN.
+  LLVM_ABI void setCategory(APFloatBase::fltCategory Category);
+
+  LLVM_ABI bool isNegative() const;
+  LLVM_ABI void setNegative(bool Negative);
+
+  LLVM_ABI APFloatBase::ExponentType getExponent() const;
+  /// - The exponent is unbiased. Denormals use the semantics' minExponent and
+  ///   have the integer bit cleared.
+  LLVM_ABI void setExponent(APFloatBase::ExponentType Exponent);
+
+  LLVM_ABI APInt getSignificand() const;
+  /// The significand is precision bits wide and includes the integer bit.
+  LLVM_ABI void setSignificand(const APInt &Significand);
+};
+
 /* Represents floating point arithmetic semantics.  */
 struct fltSemantics {
   /* The largest E such that 2^E is representable; this matches the
@@ -1067,6 +1093,9 @@ struct fltSemantics {
      - exponent = 0, integer bit 1 ("pseudodenormal")
      The first three are treated as NaNs, the last one as Normal */
   bool hasExplicitIntegerBit = false;
+
+  void (*initFromAPInt)(FloatRepr &, const APInt &) = nullptr;
+  APInt (*bitcastToAPInt)(const FloatRepr &) = nullptr;
 };
 
 // This is a interface class that is currently forwarding functionalities from
