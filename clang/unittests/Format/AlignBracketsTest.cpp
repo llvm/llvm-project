@@ -366,6 +366,76 @@ TEST_F(AlignBracketsTest, AlignAfterOpenBracketBlockIndent) {
                Style);
 }
 
+TEST_F(AlignBracketsTest, AlignAfterOpenBracketBlockIndentNestedCall) {
+  auto Style = getLLVMStyle();
+  Style.BreakAfterOpenBracketFunction = true;
+  Style.BreakBeforeCloseBracketFunction = true;
+  Style.ColumnLimit = 90;
+  Style.ContinuationIndentWidth = 2;
+
+  // A break directly after an opening bracket indents the contents one level
+  // relative to the enclosing indentation, so that they line up with the
+  // closing bracket. The contents used to be indented to a column-aligned
+  // position instead, once the nested call was part of a member access chain.
+  // https://github.com/llvm/llvm-project/issues/220327
+  // FIXME: the trailing `.count()` still lines up with the opening parenthesis
+  // of the cast, see https://github.com/llvm/llvm-project/issues/242373.
+  verifyFormat("void f() {\n"
+               "  auto const nowMs =\n"
+               "    static_cast<std::uint64_t>(std::chrono::duration_cast<std::"
+               "chrono::milliseconds>(\n"
+               "      std::chrono::system_clock::now().time_since_epoch()\n"
+               "    )\n"
+               "                                 .count());\n"
+               "  (void)nowMs;\n"
+               "}",
+               "void f() {\n"
+               "  auto const nowMs = static_cast<std::uint64_t>(std::chrono::"
+               "duration_cast<std::chrono::milliseconds>(std::chrono::"
+               "system_clock::now().time_since_epoch()).count());\n"
+               "  (void)nowMs;\n"
+               "}",
+               Style);
+
+  // The same break inside a plain call, without a cast.
+  Style.ColumnLimit = 80;
+  verifyFormat("void f() {\n"
+               "  auto const nowMs = std::chrono::duration_cast<std::chrono::"
+               "milliseconds>(\n"
+               "    std::chrono::system_clock::now().time_since_epoch()\n"
+               "  )\n"
+               "                       .count();\n"
+               "  (void)nowMs;\n"
+               "}",
+               "void f() {\n"
+               "  auto const nowMs = std::chrono::duration_cast<std::chrono::"
+               "milliseconds>(std::chrono::system_clock::now()."
+               "time_since_epoch()).count();\n"
+               "  (void)nowMs;\n"
+               "}",
+               Style);
+
+  // A zero continuation indent must not produce a negative indent.
+  Style.ColumnLimit = 90;
+  Style.ContinuationIndentWidth = 0;
+  verifyFormat("void f() {\n"
+               "  auto const nowMs =\n"
+               "  static_cast<std::uint64_t>(std::chrono::duration_cast<std::"
+               "chrono::milliseconds>(\n"
+               "  std::chrono::system_clock::now().time_since_epoch()\n"
+               "  )\n"
+               "                             .count());\n"
+               "  (void)nowMs;\n"
+               "}",
+               "void f() {\n"
+               "  auto const nowMs = static_cast<std::uint64_t>(std::chrono::"
+               "duration_cast<std::chrono::milliseconds>(std::chrono::"
+               "system_clock::now().time_since_epoch()).count());\n"
+               "  (void)nowMs;\n"
+               "}",
+               Style);
+}
+
 TEST_F(AlignBracketsTest, AlignAfterOpenBracketBlockIndentIfStatement) {
   auto Style = getLLVMStyle();
 
