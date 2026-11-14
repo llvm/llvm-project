@@ -324,6 +324,7 @@ void DeviceAddressSanitizer::collect(Instruction &I,
   };
 
   // Collect every interesting instruction that touches memory.
+  // TODO: Handle other intrinsics with memory effects.
   if (auto *LI = dyn_cast<LoadInst>(&I))
     AddTyped(LI->getPointerOperand(), LI->getType(), LI->getAlign(), false);
   else if (auto *SI = dyn_cast<StoreInst>(&I))
