@@ -174,3 +174,20 @@ void num_threads_parallel() {
   // CHECK-NEXT: omp.terminator
   // CHECK-NEXT: }
 }
+
+void shared_parallel() {
+  // CHECK: cir.func{{.*}}@shared_parallel
+  int a;
+  // CHECK-NEXT: %[[A_ADDR:.*]] = cir.alloca "a"
+#pragma omp parallel shared(a)
+  {
+    a = a + 1;
+  }
+  // CHECK-NEXT: omp.parallel {
+  // CHECK-NEXT: %[[A_LOAD:.*]] = cir.load align(4) %[[A_ADDR]]
+  // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT: %[[ADD:.*]] = cir.add nsw %[[A_LOAD]], %[[ONE]] : !s32i
+  // CHECK-NEXT: cir.store align(4) %[[ADD]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+}

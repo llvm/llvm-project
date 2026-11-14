@@ -13,7 +13,6 @@ void do_things() {
   // A leaf that reports a not-yet-implemented clause emits no op at all, rather
   // than one that silently ignores the clause.
   int a, b;
-  // expected-error@+2{{ClangIR code gen Not Yet Implemented: OpenMP PARALLEL 'shared' clause}}
   // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP PARALLEL 'firstprivate' clause}}
 #pragma omp parallel shared(a) firstprivate(b)
   {}

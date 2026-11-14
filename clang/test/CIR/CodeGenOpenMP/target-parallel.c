@@ -57,3 +57,20 @@ void target_parallel_proc_bind(int x) {
     use(x);
   }
 }
+
+// 'target parallel' routes the shared clause to the parallel leaf.
+void target_parallel_shared(int x) {
+  // CIR-HOST: cir.func{{.*}}@target_parallel_shared
+  // CIR-HOST: omp.target kernel_type(generic) map_entries({{.*}} -> %[[ARG:.*]] : !cir.ptr<!s32i>) {
+  // CIR-HOST: omp.parallel {
+  // CIR-HOST: %[[LOAD:.*]] = cir.load align(4) %[[ARG]]
+  // CIR-HOST: cir.call @use(%[[LOAD]])
+  // CIR-HOST: omp.terminator
+  // CIR-HOST: }
+  // CIR-HOST: omp.terminator
+  // CIR-HOST: } {omp.combined}
+#pragma omp target parallel shared(x) map(tofrom : x)
+  {
+    use(x);
+  }
+}
