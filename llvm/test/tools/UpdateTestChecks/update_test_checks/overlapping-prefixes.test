@@ -1,0 +1,162 @@
+# RUN: split-file %s %t
+# RUN: sed 's/^; CMD:/; RUN:/' %t/input.ll > %t/test.ll
+# RUN: cp %t/test.ll %t/test.generated.ll
+# RUN: %update_test_checks %t/test.ll
+# RUN: opt -S < %t/test.ll | FileCheck %t/test.ll --check-prefixes=COMMON,A
+# RUN: opt -S < %t/test.ll | FileCheck %t/test.ll --check-prefixes=B,COMMON
+# RUN: FileCheck %s --check-prefix=COMMON-LABELS < %t/test.ll
+# RUN: cp %t/test.ll %t/before.ll
+# RUN: %update_test_checks %t/test.ll
+# RUN: diff -u %t/before.ll %t/test.ll
+
+# RUN: %update_test_checks --include-generated-funcs %t/test.generated.ll
+# RUN: opt -S < %t/test.generated.ll | FileCheck %t/test.generated.ll --check-prefixes=COMMON,A
+# RUN: opt -S < %t/test.generated.ll | FileCheck %t/test.generated.ll --check-prefixes=B,COMMON
+# RUN: FileCheck %s --check-prefix=COMMON-LABELS < %t/test.generated.ll
+# RUN: cp %t/test.generated.ll %t/before.ll
+# RUN: %update_test_checks --include-generated-funcs %t/test.generated.ll
+# RUN: diff -u %t/before.ll %t/test.generated.ll
+
+# RUN: sed 's/^; CMD:/; RUN:/;s/COMMON,A/COMMON1,COMMON2,A/;s/B,COMMON/COMMON2,COMMON1,B/' %t/input.ll > %t/shared.ll
+# RUN: cp %t/shared.ll %t/shared.generated.ll
+# RUN: %update_test_checks %t/shared.ll
+# RUN: opt -S < %t/shared.ll | FileCheck %t/shared.ll --check-prefixes=COMMON1,COMMON2,A
+# RUN: opt -S < %t/shared.ll | FileCheck %t/shared.ll --check-prefixes=COMMON2,COMMON1,B
+# RUN: FileCheck %s --check-prefix=SHARED-LABELS < %t/shared.ll
+# RUN: cp %t/shared.ll %t/before.ll
+# RUN: %update_test_checks %t/shared.ll
+# RUN: diff -u %t/before.ll %t/shared.ll
+
+# RUN: %update_test_checks --include-generated-funcs %t/shared.generated.ll
+# RUN: opt -S < %t/shared.generated.ll | FileCheck %t/shared.generated.ll --check-prefixes=COMMON1,COMMON2,A
+# RUN: opt -S < %t/shared.generated.ll | FileCheck %t/shared.generated.ll --check-prefixes=COMMON2,COMMON1,B
+# RUN: FileCheck %s --check-prefix=SHARED-LABELS < %t/shared.generated.ll
+# RUN: cp %t/shared.generated.ll %t/before.ll
+# RUN: %update_test_checks --include-generated-funcs %t/shared.generated.ll
+# RUN: diff -u %t/before.ll %t/shared.generated.ll
+
+# RUN: sed 's/^; CMD:/; RUN:/;s/COMMON,A/A,COMMON/;s/B,COMMON/COMMON,B/' %t/input.ll > %t/overlap.ll
+# RUN: cp %t/overlap.ll %t/overlap.generated.ll
+# RUN: %update_test_checks %t/overlap.ll
+# RUN: opt -S < %t/overlap.ll | FileCheck %t/overlap.ll --check-prefixes=A,COMMON
+# RUN: opt -S < %t/overlap.ll | FileCheck %t/overlap.ll --check-prefixes=COMMON,B
+# RUN: FileCheck %s --check-prefix=SEPARATE-LABELS < %t/overlap.ll
+# RUN: cp %t/overlap.ll %t/before.ll
+# RUN: %update_test_checks %t/overlap.ll
+# RUN: diff -u %t/before.ll %t/overlap.ll
+
+# RUN: %update_test_checks --include-generated-funcs %t/overlap.generated.ll
+# RUN: opt -S < %t/overlap.generated.ll | FileCheck %t/overlap.generated.ll --check-prefixes=A,COMMON
+# RUN: opt -S < %t/overlap.generated.ll | FileCheck %t/overlap.generated.ll --check-prefixes=COMMON,B
+# RUN: FileCheck %s --check-prefix=SEPARATE-LABELS < %t/overlap.generated.ll
+# RUN: cp %t/overlap.generated.ll %t/before.ll
+# RUN: %update_test_checks --include-generated-funcs %t/overlap.generated.ll
+# RUN: diff -u %t/before.ll %t/overlap.generated.ll
+
+# RUN: sed 's/^; CMD:/; RUN:/;s/COMMON,A/A/;s/B,COMMON/B/' %t/input.ll > %t/independent.ll
+# RUN: cp %t/independent.ll %t/independent.generated.ll
+# RUN: %update_test_checks %t/independent.ll
+# RUN: opt -S < %t/independent.ll | FileCheck %t/independent.ll --check-prefixes=A
+# RUN: opt -S < %t/independent.ll | FileCheck %t/independent.ll --check-prefixes=B
+# RUN: FileCheck %s --check-prefix=SEPARATE-LABELS < %t/independent.ll
+# RUN: cp %t/independent.ll %t/before.ll
+# RUN: %update_test_checks %t/independent.ll
+# RUN: diff -u %t/before.ll %t/independent.ll
+
+# RUN: %update_test_checks --include-generated-funcs %t/independent.generated.ll
+# RUN: opt -S < %t/independent.generated.ll | FileCheck %t/independent.generated.ll --check-prefixes=A
+# RUN: opt -S < %t/independent.generated.ll | FileCheck %t/independent.generated.ll --check-prefixes=B
+# RUN: FileCheck %s --check-prefix=SEPARATE-LABELS < %t/independent.generated.ll
+# RUN: cp %t/independent.generated.ll %t/before.ll
+# RUN: %update_test_checks --include-generated-funcs %t/independent.generated.ll
+# RUN: diff -u %t/before.ll %t/independent.generated.ll
+
+# RUN: sed 's/^; CMD:/; RUN:/;s/B,COMMON/COMMON,B/' %t/input.ll > %t/ordered.ll
+# RUN: cp %t/ordered.ll %t/ordered.generated.ll
+# RUN: %update_test_checks %t/ordered.ll
+# RUN: opt -S < %t/ordered.ll | FileCheck %t/ordered.ll --check-prefixes=COMMON,A
+# RUN: opt -S < %t/ordered.ll | FileCheck %t/ordered.ll --check-prefixes=COMMON,B
+# RUN: FileCheck %s --check-prefix=COMMON-LABELS < %t/ordered.ll
+# RUN: cp %t/ordered.ll %t/before.ll
+# RUN: %update_test_checks %t/ordered.ll
+# RUN: diff -u %t/before.ll %t/ordered.ll
+
+# RUN: %update_test_checks --include-generated-funcs %t/ordered.generated.ll
+# RUN: opt -S < %t/ordered.generated.ll | FileCheck %t/ordered.generated.ll --check-prefixes=COMMON,A
+# RUN: opt -S < %t/ordered.generated.ll | FileCheck %t/ordered.generated.ll --check-prefixes=COMMON,B
+# RUN: FileCheck %s --check-prefix=COMMON-LABELS < %t/ordered.generated.ll
+# RUN: cp %t/ordered.generated.ll %t/before.ll
+# RUN: %update_test_checks --include-generated-funcs %t/ordered.generated.ll
+# RUN: diff -u %t/before.ll %t/ordered.generated.ll
+
+# RUN: sed 's/^; CMD:/; RUN:/' %t/greedy.txt > %t/greedy.ll
+# RUN: sed '/^; CMD:/d' %t/input.ll >> %t/greedy.ll
+# RUN: cp %t/greedy.ll %t/greedy.generated.ll
+# RUN: %update_test_checks %t/greedy.ll
+# RUN: opt -S < %t/greedy.ll | FileCheck %t/greedy.ll --check-prefixes=A,B
+# RUN: opt -S < %t/greedy.ll | FileCheck %t/greedy.ll --check-prefixes=A,C
+# RUN: FileCheck %s --check-prefix=GREEDY --implicit-check-not=B-LABEL: --implicit-check-not=C-LABEL: < %t/greedy.ll
+# RUN: cp %t/greedy.ll %t/before.ll
+# RUN: %update_test_checks %t/greedy.ll
+# RUN: diff -u %t/before.ll %t/greedy.ll
+
+# RUN: %update_test_checks --include-generated-funcs %t/greedy.generated.ll
+# RUN: opt -S < %t/greedy.generated.ll | FileCheck %t/greedy.generated.ll --check-prefixes=A,B
+# RUN: opt -S < %t/greedy.generated.ll | FileCheck %t/greedy.generated.ll --check-prefixes=A,C
+# RUN: FileCheck %s --check-prefix=GREEDY --implicit-check-not=B-LABEL: --implicit-check-not=C-LABEL: < %t/greedy.generated.ll
+# RUN: cp %t/greedy.generated.ll %t/before.ll
+# RUN: %update_test_checks --include-generated-funcs %t/greedy.generated.ll
+# RUN: diff -u %t/before.ll %t/greedy.generated.ll
+
+# RUN: sed 's/^; CMD:/; RUN:/' %t/conflict.txt > %t/conflict.ll
+# RUN: sed '/^; CMD:/d' %t/input.ll >> %t/conflict.ll
+# RUN: cp %t/conflict.ll %t/conflict.generated.ll
+# RUN: %update_test_checks %t/conflict.ll 2>&1 | FileCheck %s --check-prefix=CONFLICT-WARN
+# RUN: FileCheck %s --check-prefix=CONFLICT --implicit-check-not=COMMON-LABEL: < %t/conflict.ll
+# RUN: cp %t/conflict.ll %t/before.ll
+# RUN: %update_test_checks %t/conflict.ll
+# RUN: diff -u %t/before.ll %t/conflict.ll
+
+# RUN: %update_test_checks --include-generated-funcs %t/conflict.generated.ll 2>&1 | FileCheck %s --check-prefix=CONFLICT-WARN
+# RUN: FileCheck %s --check-prefix=CONFLICT --implicit-check-not=COMMON-LABEL: < %t/conflict.generated.ll
+# RUN: cp %t/conflict.generated.ll %t/before.ll
+# RUN: %update_test_checks --include-generated-funcs %t/conflict.generated.ll
+# RUN: diff -u %t/before.ll %t/conflict.generated.ll
+
+# COMMON-LABELS: COMMON-LABEL: @f(
+# COMMON-LABELS: COMMON-LABEL: @g(
+# SHARED-LABELS: COMMON1-LABEL: @f(
+# SHARED-LABELS: COMMON1-LABEL: @g(
+# SEPARATE-LABELS-DAG: A-LABEL: @f(
+# SEPARATE-LABELS-DAG: A-LABEL: @g(
+# SEPARATE-LABELS-DAG: B-LABEL: @f(
+# SEPARATE-LABELS-DAG: B-LABEL: @g(
+
+# GREEDY: A-LABEL: @f(
+# GREEDY: A-LABEL: @g(
+# CONFLICT-WARN: WARNING: For function 'f', the following RUN lines will not generate checks due to conflicting output:
+# CONFLICT-WARN: WARNING: For function 'g', the following RUN lines will not generate checks due to conflicting output:
+# CONFLICT: define i32 @f()
+# CONFLICT: define i32 @g()
+
+#--- input.ll
+; CMD: opt -S < %s | FileCheck %s --check-prefixes=COMMON,A
+; CMD: opt -S < %s | FileCheck %s --check-prefixes=B,COMMON
+
+define i32 @f() {
+  ret i32 1
+}
+
+define i32 @g() {
+  ret i32 2
+}
+
+#--- greedy.txt
+; CMD: opt -S < %s | FileCheck %s --check-prefixes=A,B
+; CMD: opt -S < %s | FileCheck %s --check-prefixes=A,C
+; CMD: opt -S < %s | FileCheck %s --check-prefix=B
+; CMD: opt -S < %s | FileCheck %s --check-prefix=C
+
+#--- conflict.txt
+; CMD: opt -S < %s | FileCheck %s --check-prefix=COMMON
+; CMD: sed 's/ret i32 [12]/ret i32 3/' %s | opt -S | FileCheck %s --check-prefix=COMMON
