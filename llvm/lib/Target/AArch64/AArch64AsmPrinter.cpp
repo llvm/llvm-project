@@ -4166,6 +4166,16 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
                                 MI->getOperand(1).getImm());
     return;
 
+  case AArch64::SEH_SaveVGSM:
+    assert(MI->getOperand(0).getImm() >= 0 &&
+           "SaveVGSM SEH opcode offset must be non-negative");
+    assert(MI->getOperand(0).getImm() <= 2040 &&
+           "SaveVGSM SEH opcode offset must fit into 8 bits");
+    assert(MI->getOperand(0).getImm() % 8 == 0 &&
+           "SaveVGSM SEH opcode offset must be 8-byte aligned");
+    TS->emitARM64WinCFISaveVGSM(MI->getOperand(0).getImm());
+    return;
+
   case AArch64::BLR:
   case AArch64::BR: {
     recordIfImportCall(MI);

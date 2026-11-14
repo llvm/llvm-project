@@ -65,7 +65,8 @@ void AArch64WinCOFFStreamer::finishImpl() {
 // belong to both prolog and epilog.
 // There are three types of Windows ARM64 SEH codes.  They can
 // 1) take no operands: SEH_Nop, SEH_PrologEnd, SEH_EpilogStart, SEH_EpilogEnd
-// 2) take an offset: SEH_StackAlloc, SEH_SaveFPLR, SEH_SaveFPLR_X
+// 2) take an offset: SEH_StackAlloc, SEH_SaveFPLR, SEH_SaveFPLR_X,
+//    SEH_SaveVGSM
 // 3) take a register and an offset/size: all others
 void AArch64TargetWinCOFFStreamer::emitARM64WinUnwindCode(unsigned UnwindCode,
                                                           int Reg, int Offset) {
@@ -316,6 +317,10 @@ void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveZReg(unsigned Reg,
 void AArch64TargetWinCOFFStreamer::emitARM64WinCFISavePReg(unsigned Reg,
                                                            int Offset) {
   emitARM64WinUnwindCode(Win64EH::UOP_SavePReg, Reg, Offset);
+}
+
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveVGSM(int Offset) {
+  emitARM64WinUnwindCode(Win64EH::UOP_SaveVGSM, -1, Offset);
 }
 
 MCStreamer *

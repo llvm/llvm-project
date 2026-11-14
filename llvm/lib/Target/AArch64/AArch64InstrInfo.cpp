@@ -1576,6 +1576,7 @@ bool AArch64InstrInfo::isSEHInstruction(const MachineInstr &MI) {
     case AArch64::SEH_AllocZ:
     case AArch64::SEH_SaveZReg:
     case AArch64::SEH_SavePReg:
+    case AArch64::SEH_SaveVGSM:
       return true;
   }
 }

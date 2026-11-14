@@ -577,6 +577,16 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
       RegInfo->hasStackRealignment(MF))
     return true;
 
+  // Windows unwind codes cannot describe scalable local allocations after a
+  // .seh_save_vg_sm in the prologue. Force a frame pointer so locals aren't
+  // described in the unwind. (We could optimize this by specifically checking
+  // whether there are any scalable local variables or spill slot, but we
+  // currently don't track that.  We could rearrange the prologue so we
+  // emit the .seh_save_vg_sm after we emit the .seh_allocz, but that's a lot
+  // more complicated.)
+  if (MF.needsWinCFI() && requiresSaveVG(MF))
+    return true;
+
   // If we:
   //
   //   1. Have streaming mode changes
@@ -1188,7 +1198,11 @@ AArch64FrameLowering::insertSEH(MachineBasicBlock::iterator MBBI,
 
 bool AArch64FrameLowering::requiresSaveVG(const MachineFunction &MF) const {
   const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  if (!AFI->needsDwarfUnwindInfo(MF) || !AFI->hasStreamingModeChanges())
+  if (!AFI->hasStreamingModeChanges())
+    return false;
+  if (MF.needsWinCFI())
+    return true;
+  if (!AFI->needsDwarfUnwindInfo(MF))
     return false;
   // For Darwin platforms we don't save VG for non-SVE functions, even if SME
   // is enabled with streaming mode changes.
@@ -2163,23 +2177,60 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       break;
     }
 
+    auto EmitSEHNop = [&] {
+      if (NeedsWinCFI)
+        BuildMI(MBB, MI, DL, TII.get(AArch64::SEH_Nop))
+            .setMIFlag(MachineInstr::FrameSetup);
+    };
     Register X0Scratch;
     llvm::scope_exit RestoreX0([&] {
-      if (X0Scratch.isValid())
+      if (X0Scratch.isValid()) {
         BuildMI(MBB, MI, DL, TII.get(TargetOpcode::COPY), AArch64::X0)
             .addReg(X0Scratch)
             .setMIFlag(MachineInstr::FrameSetup);
+        EmitSEHNop();
+      }
     });
 
     if (Reg1 == AArch64::VG) {
+      if (NeedsWinCFI && !Subtarget.hasSME()) {
+        reportFatalUsageError(
+            "streaming-compatible functions without the SME feature are not "
+            "currently supported on Windows");
+      }
       // Find an available register to store value of VG to.
-      Reg1 = findScratchNonCalleeSaveRegister(&MBB, true);
-      assert(Reg1.isValid());
+      LivePhysRegs LiveRegs(*TRI);
+      getLiveRegsForEntryMBB(LiveRegs, MBB);
+      auto FindCallPreservedScratch = [&]() -> Register {
+        if (&MF.front() == &MBB && LiveRegs.available(MRI, AArch64::X9)) {
+          LiveRegs.addReg(AArch64::X9);
+          return Register(AArch64::X9);
+        }
+        static const unsigned short CallAvailableRegs[] = {
+            AArch64::X1,  AArch64::X2,  AArch64::X3,  AArch64::X4,
+            AArch64::X5,  AArch64::X6,  AArch64::X7,  AArch64::X8,
+            AArch64::X9,  AArch64::X10, AArch64::X11, AArch64::X12,
+            AArch64::X13, AArch64::X14, AArch64::X15};
+        for (unsigned Reg : Subtarget.hasSVE()
+                                ? iterator_range(AArch64::GPR64RegClass)
+                                : iterator_range(CallAvailableRegs)) {
+          if (LiveRegs.available(MRI, Reg)) {
+            LiveRegs.addReg(Reg);
+            return Register(Reg);
+          }
+        }
+
+        reportFatalInternalError(
+            "Unable to find scratch register for save_vg_sm");
+      };
+
       if (MF.getSubtarget<AArch64Subtarget>().hasSVE()) {
+        Reg1 = FindCallPreservedScratch();
         BuildMI(MBB, MI, DL, TII.get(AArch64::CNTD_XPiI), Reg1)
             .addImm(31)
             .addImm(1)
             .setMIFlag(MachineInstr::FrameSetup);
+        EmitSEHNop();
       } else {
         const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
         if (any_of(MBB.liveins(),
@@ -2187,10 +2238,12 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
                      return STI.getRegisterInfo()->isSuperOrSubRegisterEq(
                          AArch64::X0, LiveIn.PhysReg);
                    })) {
+          Reg1 = FindCallPreservedScratch();
           X0Scratch = Reg1;
           BuildMI(MBB, MI, DL, TII.get(TargetOpcode::COPY), X0Scratch)
               .addReg(AArch64::X0)
               .setMIFlag(MachineInstr::FrameSetup);
+          EmitSEHNop();
         }
 
         RTLIB::Libcall LC = RTLIB::SMEABI_GET_CURRENT_VG;
@@ -2201,7 +2254,23 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
             .addRegMask(RegMask)
             .addReg(AArch64::X0, RegState::ImplicitDefine)
             .setMIFlag(MachineInstr::FrameSetup);
+        EmitSEHNop();
         Reg1 = AArch64::X0;
+      }
+      if (NeedsWinCFI) {
+        Register SMReg = FindCallPreservedScratch();
+        BuildMI(MBB, MI, DL, TII.get(AArch64::MRS), SMReg)
+            .addImm(AArch64SysReg::SVCR)
+            .addReg(AArch64::VG, RegState::Implicit)
+            .setMIFlag(MachineInstr::FrameSetup);
+        EmitSEHNop();
+        BuildMI(MBB, MI, DL, TII.get(AArch64::BFMXri), Reg1)
+            .addReg(Reg1)
+            .addReg(SMReg)
+            .addImm(1)
+            .addImm(0)
+            .setMIFlag(MachineInstr::FrameSetup);
+        EmitSEHNop();
       }
     }
 
@@ -2270,8 +2339,15 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
           .addImm(RGI.Offset) // [sp, #offset*vscale],
                               // where factor*vscale is implicit
           .setMIFlag(MachineInstr::FrameSetup);
-      if (NeedsWinCFI)
-        insertSEH(MIB, TII, MachineInstr::FrameSetup);
+      if (NeedsWinCFI) {
+        if (RGI.Type == RegGroupInfo::VG) {
+          BuildMI(MBB, MI, DL, TII.get(AArch64::SEH_SaveVGSM))
+              .addImm(RGI.Offset * 8)
+              .setMIFlag(MachineInstr::FrameSetup);
+        } else {
+          insertSEH(MIB, TII, MachineInstr::FrameSetup);
+        }
+      }
     }
 
     // Handle the StackIDs.
@@ -3046,9 +3122,6 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   if (IsWindows)
     std::reverse(CSI.begin(), CSI.end());
 
-  if (CSI.empty())
-    return true; // Early exit if no callee saved registers are modified!
-
   // Now that we know which registers need to be saved and restored, allocate
   // stack slots for them.
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -3064,6 +3137,9 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     else
       CSI.push_back(VGInfo);
   }
+
+  if (CSI.empty())
+    return true; // Early exit if no callee saved registers are modified!
 
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   if (!IsWindows && enableMultiVectorSpillFill(Subtarget, MF))
