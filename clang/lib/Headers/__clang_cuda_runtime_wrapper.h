@@ -292,15 +292,18 @@ static inline __device__ void __brkpt(int __c) { __brkpt(); }
 #pragma push_macro("__isShared")
 #pragma push_macro("__isConstant")
 #pragma push_macro("__isLocal")
+#pragma push_macro("__isGridConstant")
 #define __isGlobal __ignored_cuda___isGlobal
 #define __isShared __ignored_cuda___isShared
 #define __isConstant __ignored_cuda___isConstant
 #define __isLocal __ignored_cuda___isLocal
+#define __isGridConstant __ignored_cuda___isGridConstant
 #include "sm_20_intrinsics.hpp"
 #pragma pop_macro("__isGlobal")
 #pragma pop_macro("__isShared")
 #pragma pop_macro("__isConstant")
 #pragma pop_macro("__isLocal")
+#pragma pop_macro("__isGridConstant")
 #pragma push_macro("__DEVICE__")
 #define __DEVICE__ static __device__ __forceinline__ __attribute__((const))
 __DEVICE__ unsigned int __isGlobal(const void *p) {
@@ -315,6 +318,11 @@ __DEVICE__ unsigned int __isConstant(const void *p) {
 __DEVICE__ unsigned int __isLocal(const void *p) {
   return __nvvm_isspacep_local(p);
 }
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 700)
+__DEVICE__ unsigned int __isGridConstant(const void *p) {
+  return __nvvm_isspacep_grid_const(p);
+}
+#endif
 #pragma pop_macro("__DEVICE__")
 #include "sm_32_atomic_functions.hpp"
 

@@ -1415,6 +1415,7 @@ let Attributes = [NoThrow, Const] in {
   def __nvvm_isspacep_global : NVPTXBuiltin<"bool(void const *)">;
   def __nvvm_isspacep_local : NVPTXBuiltin<"bool(void const *)">;
   def __nvvm_isspacep_shared : NVPTXBuiltin<"bool(void const *)">;
+  def __nvvm_isspacep_grid_const : NVPTXBuiltinSMAndPTX<"bool(void const *)", SM_70, PTX77>;
   def __nvvm_isspacep_shared_cluster : NVPTXBuiltinSMAndPTX<"bool(void const *)", SM_90, PTX78>;
 }
 
