@@ -717,18 +717,18 @@ constantFoldAndGroupOps(const AnalysisOptions &Opts, ScalarEvolution &SE,
                         SmallVectorImpl<SCEVUse> &Ops, FoldT Fold,
                         IsIdentityT IsIdentity, IsAbsorberT IsAbsorber) {
   const SCEVConstant *Folded = nullptr;
-  for (unsigned Idx = 0; Idx < Ops.size();) {
-    const SCEV *Op = Ops[Idx];
-    if (const auto *C = dyn_cast<SCEVConstant>(Op)) {
-      if (!Folded)
-        Folded = C;
-      else
-        Folded = cast<SCEVConstant>(
-            SE.getConstant(Fold(Folded->getAPInt(), C->getAPInt())));
-      Ops.erase(Ops.begin() + Idx);
+  for (auto *It = Ops.begin(); It != Ops.end();) {
+    const auto *C = dyn_cast<SCEVConstant>((*It).getPointer());
+    if (!C) {
+      ++It;
       continue;
     }
-    ++Idx;
+    if (!Folded)
+      Folded = C;
+    else
+      Folded = cast<SCEVConstant>(
+          SE.getConstant(Fold(Folded->getAPInt(), C->getAPInt())));
+    It = Ops.erase(It);
   }
 
   if (Ops.empty()) {
