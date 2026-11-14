@@ -726,6 +726,10 @@ function(cxx_add_windows_flags target)
                                  # Use the ISO conforming behaviour for conversion
                                  # in printf, scanf.
                                  _CRT_STDIO_ISO_WIDE_SPECIFIERS)
+    get_target_property(target_type ${target} TYPE)
+    if("${target_type}" STREQUAL "STATIC_LIBRARY")
+      target_add_compile_flags_if_supported(${target} PRIVATE -fms-omit-default-lib)
+    endif()
   endif()
 endfunction()
 
