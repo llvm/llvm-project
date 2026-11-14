@@ -6363,6 +6363,12 @@ InstructionCost X86TTIImpl::getPartialReductionCost(
       !TLI->isPartialReduceMLALegalOrCustom(Opc, AccLT.second, InputLT.second))
     return ExpandCost();
 
+  // Without VNNI, the signed i16 dot product is a PMADDWD and an ADD, which
+  // cost about the same.
+  if (Opc == ISD::PARTIAL_REDUCE_SMLA && InputTypeA->isIntegerTy(16) &&
+      !ST->hasVNNI() && !ST->hasAVXVNNI())
+    return 2 * getArithmeticInstrCost(Instruction::Add, AccVecTy, CostKind);
+
   return AccLT.first;
 }
 
