@@ -783,3 +783,57 @@ define void @test_divv_16i32_sext16(ptr %dst, ptr %x, ptr %y) nounwind {
   store <16 x i16> %t, ptr %dst
   ret void
 }
+
+define <64 x i8> @test_divv_64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
+; AVX-LABEL: test_divv_64i8:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
+; AVX-NEXT:    vpmovsxbd %xmm2, %zmm3
+; AVX-NEXT:    vcvtdq2ps %zmm3, %zmm3
+; AVX-NEXT:    vrcp14ps %zmm3, %zmm3
+; AVX-NEXT:    vbroadcastss {{.*#+}} zmm4 = [1.00048828E+0,1.00048828E+0,1.00048828E+0,1.00048828E+0,1.00048828E+0,1.00048828E+0,1.00048828E+0,1.00048828E+0,1.00048828E+0,1.00048828E+0,1.00048828E+0,1.00048828E+0,1.00048828E+0,1.00048828E+0,1.00048828E+0,1.00048828E+0]
+; AVX-NEXT:    vmulps %zmm4, %zmm3, %zmm3
+; AVX-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
+; AVX-NEXT:    vpmovsxbd %xmm5, %zmm6
+; AVX-NEXT:    vcvtdq2ps %zmm6, %zmm6
+; AVX-NEXT:    vmulps %zmm3, %zmm6, %zmm3
+; AVX-NEXT:    vcvttps2dq %zmm3, %zmm3
+; AVX-NEXT:    vpmovdb %zmm3, %xmm3
+; AVX-NEXT:    vextracti128 $1, %ymm2, %xmm2
+; AVX-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX-NEXT:    vcvtdq2ps %zmm2, %zmm2
+; AVX-NEXT:    vrcp14ps %zmm2, %zmm2
+; AVX-NEXT:    vmulps %zmm4, %zmm2, %zmm2
+; AVX-NEXT:    vextracti128 $1, %ymm5, %xmm5
+; AVX-NEXT:    vpmovsxbd %xmm5, %zmm5
+; AVX-NEXT:    vcvtdq2ps %zmm5, %zmm5
+; AVX-NEXT:    vmulps %zmm2, %zmm5, %zmm2
+; AVX-NEXT:    vcvttps2dq %zmm2, %zmm2
+; AVX-NEXT:    vpmovdb %zmm2, %xmm2
+; AVX-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm2
+; AVX-NEXT:    vpmovsxbd %xmm1, %zmm3
+; AVX-NEXT:    vcvtdq2ps %zmm3, %zmm3
+; AVX-NEXT:    vrcp14ps %zmm3, %zmm3
+; AVX-NEXT:    vmulps %zmm4, %zmm3, %zmm3
+; AVX-NEXT:    vpmovsxbd %xmm0, %zmm5
+; AVX-NEXT:    vcvtdq2ps %zmm5, %zmm5
+; AVX-NEXT:    vmulps %zmm3, %zmm5, %zmm3
+; AVX-NEXT:    vcvttps2dq %zmm3, %zmm3
+; AVX-NEXT:    vpmovdb %zmm3, %xmm3
+; AVX-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; AVX-NEXT:    vpmovsxbd %xmm1, %zmm1
+; AVX-NEXT:    vcvtdq2ps %zmm1, %zmm1
+; AVX-NEXT:    vrcp14ps %zmm1, %zmm1
+; AVX-NEXT:    vmulps %zmm4, %zmm1, %zmm1
+; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; AVX-NEXT:    vcvtdq2ps %zmm0, %zmm0
+; AVX-NEXT:    vmulps %zmm1, %zmm0, %zmm0
+; AVX-NEXT:    vcvttps2dq %zmm0, %zmm0
+; AVX-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX-NEXT:    vinserti128 $1, %xmm0, %ymm3, %ymm0
+; AVX-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX-NEXT:    retq
+  %res = sdiv <64 x i8> %a, %b
+  ret <64 x i8> %res
+}

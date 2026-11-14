@@ -8334,6 +8334,42 @@ bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
     return !Ops.empty();
   }
 
+  // Division whose operands fit in 8 bits goes through a reciprocal estimate
+  // of the divisor, and a uniform divisor only needs one. Sink the splat so
+  // SDAG can see it. This mirrors the operand checks in combineIntDivRem.
+  if (ST->hasSSE2() && (I->getOpcode() == Instruction::UDiv ||
+                        I->getOpcode() == Instruction::SDiv ||
+                        I->getOpcode() == Instruction::URem ||
+                        I->getOpcode() == Instruction::SRem)) {
+    auto *Shuf = dyn_cast<ShuffleVectorInst>(I->getOperand(1));
+    if (!Shuf || getSplatIndex(Shuf->getShuffleMask()) < 0 ||
+        VTy->getNumElements() == 1 ||
+        I->getFunction()->hasFnAttribute(Attribute::StrictFP))
+      return false;
+    // i64 lanes need the AVX512DQ converts.
+    unsigned EltBits = VTy->getScalarSizeInBits();
+    if (EltBits > 32 &&
+        (EltBits != 64 || !ST->hasDQI() || !ST->useAVX512Regs()))
+      return false;
+    bool IsSigned = I->getOpcode() == Instruction::SDiv ||
+                    I->getOpcode() == Instruction::SRem;
+    const DataLayout &DL = I->getDataLayout();
+    auto FitsI8 = [&](const Value *V) {
+      if (IsSigned)
+        return ComputeNumSignBits(V, DL, /*AC=*/nullptr, I) + 8 > EltBits;
+      return computeKnownBits(V, DL, /*AC=*/nullptr, I).countMaxActiveBits() <=
+             8;
+    };
+    if (!FitsI8(I->getOperand(0)) || !FitsI8(Shuf))
+      return false;
+    // The poison lanes of an insertelement left behind would hide the known
+    // bits of the inserted scalar from SDAG, so sink that too.
+    if (isa<InsertElementInst>(Shuf->getOperand(0)))
+      Ops.push_back(&Shuf->getOperandUse(0));
+    Ops.push_back(&I->getOperandUse(1));
+    return true;
+  }
+
   // A uniform shift amount in a vector shift or funnel shift may be much
   // cheaper than a generic variable vector shift, so make that pattern visible
   // to SDAG by sinking the shuffle instruction next to the shift.

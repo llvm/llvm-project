@@ -2128,6 +2128,60 @@ define <8 x i64> @udiv_v8i64_prefer256(<8 x i64> %x, <8 x i64> %y) nounwind "min
   ret <8 x i64> %r
 }
 
+define <32 x i8> @udiv_v32i8_prefer256(<32 x i8> %x, <32 x i8> %y) nounwind "min-legal-vector-width"="256" {
+; CHECK-LABEL: udiv_v32i8_prefer256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} ymm2 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; CHECK-NEXT:    vcvtdq2ps %ymm2, %ymm2
+; CHECK-NEXT:    vrcp14ps %ymm2, %ymm2
+; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.00048828E+0,1.00048828E+0,1.00048828E+0,1.00048828E+0,1.00048828E+0,1.00048828E+0,1.00048828E+0,1.00048828E+0]
+; CHECK-NEXT:    vmulps %ymm3, %ymm2, %ymm2
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} ymm4 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
+; CHECK-NEXT:    vcvtdq2ps %ymm4, %ymm4
+; CHECK-NEXT:    vmulps %ymm2, %ymm4, %ymm2
+; CHECK-NEXT:    vcvttps2dq %ymm2, %ymm2
+; CHECK-NEXT:    vpmovdw %ymm2, %xmm2
+; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm4
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} ymm5 = xmm4[0],zero,zero,zero,xmm4[1],zero,zero,zero,xmm4[2],zero,zero,zero,xmm4[3],zero,zero,zero,xmm4[4],zero,zero,zero,xmm4[5],zero,zero,zero,xmm4[6],zero,zero,zero,xmm4[7],zero,zero,zero
+; CHECK-NEXT:    vcvtdq2ps %ymm5, %ymm5
+; CHECK-NEXT:    vrcp14ps %ymm5, %ymm5
+; CHECK-NEXT:    vmulps %ymm3, %ymm5, %ymm5
+; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm6
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} ymm7 = xmm6[0],zero,zero,zero,xmm6[1],zero,zero,zero,xmm6[2],zero,zero,zero,xmm6[3],zero,zero,zero,xmm6[4],zero,zero,zero,xmm6[5],zero,zero,zero,xmm6[6],zero,zero,zero,xmm6[7],zero,zero,zero
+; CHECK-NEXT:    vcvtdq2ps %ymm7, %ymm7
+; CHECK-NEXT:    vmulps %ymm5, %ymm7, %ymm5
+; CHECK-NEXT:    vcvttps2dq %ymm5, %ymm5
+; CHECK-NEXT:    vpmovdw %ymm5, %xmm5
+; CHECK-NEXT:    vinserti128 $1, %xmm5, %ymm2, %ymm2
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} ymm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; CHECK-NEXT:    vcvtdq2ps %ymm1, %ymm1
+; CHECK-NEXT:    vrcp14ps %ymm1, %ymm1
+; CHECK-NEXT:    vmulps %ymm3, %ymm1, %ymm1
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
+; CHECK-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; CHECK-NEXT:    vmulps %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vcvttps2dq %ymm0, %ymm0
+; CHECK-NEXT:    vpmovdw %ymm0, %xmm0
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm4[2,3,2,3]
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} ymm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; CHECK-NEXT:    vcvtdq2ps %ymm1, %ymm1
+; CHECK-NEXT:    vrcp14ps %ymm1, %ymm1
+; CHECK-NEXT:    vmulps %ymm3, %ymm1, %ymm1
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm3 = xmm6[2,3,2,3]
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} ymm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero,xmm3[2],zero,zero,zero,xmm3[3],zero,zero,zero,xmm3[4],zero,zero,zero,xmm3[5],zero,zero,zero,xmm3[6],zero,zero,zero,xmm3[7],zero,zero,zero
+; CHECK-NEXT:    vcvtdq2ps %ymm3, %ymm3
+; CHECK-NEXT:    vmulps %ymm1, %ymm3, %ymm1
+; CHECK-NEXT:    vcvttps2dq %ymm1, %ymm1
+; CHECK-NEXT:    vpmovdw %ymm1, %xmm1
+; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpackuswb %ymm0, %ymm2, %ymm0
+; CHECK-NEXT:    retq
+  %r = udiv <32 x i8> %x, %y
+  ret <32 x i8> %r
+}
+
 define <8 x i64> @udiv_v8i64_512(<8 x i64> %x, <8 x i64> %y) nounwind "min-legal-vector-width"="512" {
 ; CHECK-LABEL: udiv_v8i64_512:
 ; CHECK:       # %bb.0:
