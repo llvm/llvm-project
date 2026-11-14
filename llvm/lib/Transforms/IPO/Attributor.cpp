@@ -3270,6 +3270,18 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
   return Changed;
 }
 
+/// The opcodes of the instructions recorded in FunctionInfo::OpcodeInstMap.
+static constexpr unsigned InterestingOpcodes[] = {
+    Instruction::Call,          Instruction::CallBr,
+    Instruction::Invoke,        Instruction::CleanupRet,
+    Instruction::CatchSwitch,   Instruction::AtomicRMW,
+    Instruction::AtomicCmpXchg, Instruction::UncondBr,
+    Instruction::CondBr,        Instruction::Resume,
+    Instruction::Ret,           Instruction::Load,
+    Instruction::Store,         Instruction::Alloca,
+    Instruction::AddrSpaceCast,
+};
+
 void InformationCache::initializeInformationCache(const Function &CF,
                                                   FunctionInfo &FI) {
   // As we do not modify the function here we can remove the const
@@ -3329,6 +3341,8 @@ void InformationCache::initializeInformationCache(const Function &CF,
       IsInterestingOpcode = true;
     }
     if (IsInterestingOpcode) {
+      assert(is_contained(InterestingOpcodes, I.getOpcode()) &&
+             "Interesting opcode missing from InterestingOpcodes");
       auto *&Insts = FI.OpcodeInstMap[I.getOpcode()];
       if (!Insts)
         Insts = new (Allocator) InstructionVectorTy();
@@ -3383,8 +3397,8 @@ void InformationCache::collectAssumeOnlyValues(FunctionInfo &FI) {
 InformationCache::FunctionInfo::~FunctionInfo() {
   // The instruction vectors are allocated using a BumpPtrAllocator, we need to
   // manually destroy them.
-  for (InstructionVectorTy *Insts : OpcodeInstMap) {
-    if (Insts)
+  for (unsigned Opcode : InterestingOpcodes) {
+    if (InstructionVectorTy *Insts = OpcodeInstMap[Opcode])
       Insts->~InstructionVectorTy();
   }
 }
