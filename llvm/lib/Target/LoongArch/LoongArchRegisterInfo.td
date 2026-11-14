@@ -176,7 +176,9 @@ let RegAltNameIndices = [RegAliasName] in {
 
 // The order of registers represents the preferred allocation sequence.
 def FPR32 : RegisterClass<"LoongArch", [f32], 32, (sequence "F%u", 0, 31)>;
-def FPR64 : RegisterClass<"LoongArch", [f64], 64, (sequence "F%u_64", 0, 31)>;
+def FPR64 : RegisterClass<"LoongArch", [f64], 64, (sequence "F%u_64", 0, 31)> {
+  let CoerceFromRegClass = FPR32;
+}
 
 // Condition flag registers
 
