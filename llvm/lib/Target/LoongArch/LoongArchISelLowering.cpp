@@ -7227,6 +7227,39 @@ static SDValue performBITCASTCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getBitcast(VT, V);
 }
 
+// OP(bitcast(shl(splat(1), y)), x) -> bitcast(OP(shl(splat(1), y), bitcast(x)))
+// for OP in {or, xor}. Perform the bitwise operation in the element type of
+// the shift so that it can be selected as [x]vbitset.{b/h/w/d} or
+// [x]vbitrev.{b/h/w/d}.
+static SDValue combineVectorBitOpOfBitcastShl(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!VT.isVector() || !TLI.isTypeLegal(VT))
+    return SDValue();
+
+  for (unsigned I = 0; I < 2; ++I) {
+    SDValue N0 = N->getOperand(I);
+    SDValue N1 = N->getOperand(1 - I);
+    if (N0.getOpcode() != ISD::BITCAST || !N0.hasOneUse())
+      continue;
+    SDValue Shl = N0.getOperand(0);
+    EVT ShlVT = Shl.getValueType();
+    APInt SplatVal;
+    if (Shl.getOpcode() == ISD::SHL && ShlVT.isVector() && ShlVT.isInteger() &&
+        ShlVT != VT && ShlVT.getSizeInBits() == VT.getSizeInBits() &&
+        TLI.isTypeLegal(ShlVT) &&
+        ISD::isConstantSplatVector(Shl.getOperand(0).getNode(), SplatVal) &&
+        SplatVal.isOne()) {
+      SDLoc DL(N);
+      SDValue V = DAG.getNode(N->getOpcode(), DL, ShlVT, Shl,
+                              DAG.getBitcast(ShlVT, N1));
+      return DAG.getBitcast(VT, V);
+    }
+  }
+
+  return SDValue();
+}
+
 static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
                                 TargetLowering::DAGCombinerInfo &DCI,
                                 const LoongArchSubtarget &Subtarget) {
@@ -7239,6 +7272,9 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
   unsigned MaskIdx0, MaskLen0, MaskIdx1, MaskLen1;
   unsigned Shamt;
   bool SwapAndRetried = false;
+
+  if (SDValue V = combineVectorBitOpOfBitcastShl(N, DAG))
+    return V;
 
   // BSTRPICK requires the 32S feature.
   if (!Subtarget.has32S())
@@ -7453,6 +7489,9 @@ Retry2:
 
 static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
                                  const LoongArchSubtarget &Subtarget) {
+  if (SDValue V = combineVectorBitOpOfBitcastShl(N, DAG))
+    return V;
+
   EVT VT = N->getValueType(0);
   // LA64 promotes i32 integer operations to GPR-width operations during
   // legalization. Match the idiom before that promotion as well as after
