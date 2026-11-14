@@ -3961,6 +3961,13 @@ bool InstCombinerImpl::SimplifyDemandedFPClass(Instruction *I, unsigned OpNo,
   if (Instruction *OpInst = dyn_cast<Instruction>(U))
     salvageDebugInfo(*OpInst);
 
+  // Do not break up the canonical self forms such as fadd(x, x). Replace both
+  // matching operands together to preserve stronger deductions for the self
+  // forms.
+  if (I->getOpcode() == Instruction::FAdd &&
+      I->getOperand(0) == I->getOperand(1))
+    replaceUse(I->getOperandUse(OpNo == 0 ? 1 : 0), NewVal);
+
   replaceUse(U, NewVal);
   return true;
 }
