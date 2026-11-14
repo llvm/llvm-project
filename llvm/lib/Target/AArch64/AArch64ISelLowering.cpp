@@ -33905,6 +33905,10 @@ AArch64TargetLowering::shouldCastAtomicLoadInIR(LoadInst *LI) const {
     case AtomicOrdering::Unordered:
     case AtomicOrdering::Monotonic:
       return AtomicExpansionKind::None;
+    case AtomicOrdering::Acquire:
+      if (Subtarget->hasRCPC3() && Subtarget->isNeonAvailable())
+        return AtomicExpansionKind::None;
+      break;
     default:
       break;
     }
@@ -33926,6 +33930,11 @@ AArch64TargetLowering::shouldCastAtomicStoreInIR(StoreInst *SI) const {
     case AtomicOrdering::Unordered:
     case AtomicOrdering::Monotonic:
       return AtomicExpansionKind::None;
+    case AtomicOrdering::Release:
+    case AtomicOrdering::SequentiallyConsistent:
+      if (Subtarget->hasRCPC3() && Subtarget->isNeonAvailable())
+        return AtomicExpansionKind::None;
+      break;
     default:
       break;
     }

@@ -327,14 +327,14 @@ define dso_local half @load_atomic_half_aligned_monotonic_const(ptr readonly %pt
 
 define dso_local half @load_atomic_half_aligned_acquire(ptr %ptr) {
 ; CHECK-LABEL: load_atomic_half_aligned_acquire:
-; CHECK:    ldaprh w8, [x0]
+; CHECK:    ldapur h0, [x0]
     %r = load atomic half, ptr %ptr acquire, align 2
     ret half %r
 }
 
 define dso_local half @load_atomic_half_aligned_acquire_const(ptr readonly %ptr) {
 ; CHECK-LABEL: load_atomic_half_aligned_acquire_const:
-; CHECK:    ldaprh w8, [x0]
+; CHECK:    ldapur h0, [x0]
     %r = load atomic half, ptr %ptr acquire, align 2
     ret half %r
 }
@@ -383,14 +383,14 @@ define dso_local bfloat @load_atomic_bfloat_aligned_monotonic_const(ptr readonly
 
 define dso_local bfloat @load_atomic_bfloat_aligned_acquire(ptr %ptr) {
 ; CHECK-LABEL: load_atomic_bfloat_aligned_acquire:
-; CHECK:    ldaprh w8, [x0]
+; CHECK:    ldapur h0, [x0]
     %r = load atomic bfloat, ptr %ptr acquire, align 2
     ret bfloat %r
 }
 
 define dso_local bfloat @load_atomic_bfloat_aligned_acquire_const(ptr readonly %ptr) {
 ; CHECK-LABEL: load_atomic_bfloat_aligned_acquire_const:
-; CHECK:    ldaprh w8, [x0]
+; CHECK:    ldapur h0, [x0]
     %r = load atomic bfloat, ptr %ptr acquire, align 2
     ret bfloat %r
 }
@@ -439,14 +439,14 @@ define dso_local float @load_atomic_float_aligned_monotonic_const(ptr readonly %
 
 define dso_local float @load_atomic_float_aligned_acquire(ptr %ptr) {
 ; CHECK-LABEL: load_atomic_float_aligned_acquire:
-; CHECK:    ldapr w8, [x0]
+; CHECK:    ldapur s0, [x0]
     %r = load atomic float, ptr %ptr acquire, align 4
     ret float %r
 }
 
 define dso_local float @load_atomic_float_aligned_acquire_const(ptr readonly %ptr) {
 ; CHECK-LABEL: load_atomic_float_aligned_acquire_const:
-; CHECK:    ldapr w8, [x0]
+; CHECK:    ldapur s0, [x0]
     %r = load atomic float, ptr %ptr acquire, align 4
     ret float %r
 }
@@ -495,14 +495,14 @@ define dso_local double @load_atomic_double_aligned_monotonic_const(ptr readonly
 
 define dso_local double @load_atomic_double_aligned_acquire(ptr %ptr) {
 ; CHECK-LABEL: load_atomic_double_aligned_acquire:
-; CHECK:    ldapr x8, [x0]
+; CHECK:    ldapur d0, [x0]
     %r = load atomic double, ptr %ptr acquire, align 8
     ret double %r
 }
 
 define dso_local double @load_atomic_double_aligned_acquire_const(ptr readonly %ptr) {
 ; CHECK-LABEL: load_atomic_double_aligned_acquire_const:
-; CHECK:    ldapr x8, [x0]
+; CHECK:    ldapur d0, [x0]
     %r = load atomic double, ptr %ptr acquire, align 8
     ret double %r
 }
