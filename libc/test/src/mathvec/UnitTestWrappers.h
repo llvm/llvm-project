@@ -52,10 +52,11 @@ struct UnaryOp {
 namespace internal {
 
 template <typename Op>
-LIBC_INLINE typename Op::VectorType
-make_input(typename Op::ScalarType x, typename Op::ScalarType control) {
+LIBC_INLINE typename Op::VectorType make_input(typename Op::ScalarType x,
+                                               typename Op::ScalarType control,
+                                               size_t control_lane) {
   typename Op::VectorType input(x);
-  input[0] = control;
+  input[control_lane] = control;
   return input;
 }
 
@@ -63,8 +64,9 @@ make_input(typename Op::ScalarType x, typename Op::ScalarType control) {
 
 template <typename Op>
 LIBC_INLINE typename Op::VectorType wrap_ref(typename Op::ScalarType x,
-                                             typename Op::ScalarType control) {
-  return Op::eval_scalar(internal::make_input<Op>(x, control));
+                                             typename Op::ScalarType control,
+                                             size_t control_lane = 0) {
+  return Op::eval_scalar(internal::make_input<Op>(x, control, control_lane));
 }
 
 template <typename Op>
@@ -73,9 +75,10 @@ LIBC_INLINE typename Op::VectorType wrap_ref(typename Op::ScalarType x) {
 }
 
 template <typename Op>
-LIBC_INLINE typename Op::VectorType
-wrap_vector(typename Op::ScalarType x, typename Op::ScalarType control) {
-  return Op::eval_vector(internal::make_input<Op>(x, control));
+LIBC_INLINE typename Op::VectorType wrap_vector(typename Op::ScalarType x,
+                                                typename Op::ScalarType control,
+                                                size_t control_lane = 0) {
+  return Op::eval_vector(internal::make_input<Op>(x, control, control_lane));
 }
 
 template <typename Op>
@@ -84,32 +87,56 @@ LIBC_INLINE typename Op::VectorType wrap_vector(typename Op::ScalarType x) {
 }
 
 // A helper macro to test a variety of cases for a given input and operation.
-// Passes in various edge cases as the control input to ensure that vectorized
-// implementations behaves correctly across different input types.
+// Rotate edge-case control inputs through every lane.
 #define TEST_VARIED_CASES(x, Op)                                               \
   do {                                                                         \
-    EXPECT_SIMD_EQ(wrap_ref<Op>((x), -(x)), wrap_vector<Op>((x), -(x)));       \
-    EXPECT_SIMD_EQ(wrap_ref<Op>(-(x), (x)), wrap_vector<Op>(-(x), (x)));       \
-    EXPECT_SIMD_EQ(wrap_ref<Op>((x), aNaN), wrap_vector<Op>((x), aNaN));       \
-    EXPECT_SIMD_EQ(wrap_ref<Op>((x), inf), wrap_vector<Op>((x), inf));         \
-    EXPECT_SIMD_EQ(wrap_ref<Op>((x), neg_inf), wrap_vector<Op>((x), neg_inf)); \
-    EXPECT_SIMD_EQ(wrap_ref<Op>((x), 0.0), wrap_vector<Op>((x), 0.0));         \
-    EXPECT_SIMD_EQ(wrap_ref<Op>((x), -0.0), wrap_vector<Op>((x), -0.0));       \
-    EXPECT_SIMD_EQ(wrap_ref<Op>((x), 1.0), wrap_vector<Op>((x), 1.0));         \
+    for (size_t control_lane = 0;                                              \
+         control_lane < LIBC_NAMESPACE::cpp::internal::native_vector_size<     \
+                            typename Op::ScalarType>;                          \
+         ++control_lane) {                                                     \
+      EXPECT_SIMD_EQ(wrap_ref<Op>((x), -(x), control_lane),                    \
+                     wrap_vector<Op>((x), -(x), control_lane));                \
+      EXPECT_SIMD_EQ(wrap_ref<Op>(-(x), (x), control_lane),                    \
+                     wrap_vector<Op>(-(x), (x), control_lane));                \
+      EXPECT_SIMD_EQ(wrap_ref<Op>((x), aNaN, control_lane),                    \
+                     wrap_vector<Op>((x), aNaN, control_lane));                \
+      EXPECT_SIMD_EQ(wrap_ref<Op>((x), inf, control_lane),                     \
+                     wrap_vector<Op>((x), inf, control_lane));                 \
+      EXPECT_SIMD_EQ(wrap_ref<Op>((x), neg_inf, control_lane),                 \
+                     wrap_vector<Op>((x), neg_inf, control_lane));             \
+      EXPECT_SIMD_EQ(wrap_ref<Op>((x), 0.0, control_lane),                     \
+                     wrap_vector<Op>((x), 0.0, control_lane));                 \
+      EXPECT_SIMD_EQ(wrap_ref<Op>((x), -0.0, control_lane),                    \
+                     wrap_vector<Op>((x), -0.0, control_lane));                \
+      EXPECT_SIMD_EQ(wrap_ref<Op>((x), 1.0, control_lane),                     \
+                     wrap_vector<Op>((x), 1.0, control_lane));                 \
+    }                                                                          \
   } while (0)
 
 // Use the same control inputs with an allowed difference in output ULPs.
 #define TEST_VARIED_CASES_TOL(x, Op, TOL)                                      \
   do {                                                                         \
-    EXPECT_SIMD_EQ(wrap_ref<Op>((x), -(x)), wrap_vector<Op>((x), -(x)), TOL);  \
-    EXPECT_SIMD_EQ(wrap_ref<Op>(-(x), (x)), wrap_vector<Op>(-(x), (x)), TOL);  \
-    EXPECT_SIMD_EQ(wrap_ref<Op>((x), aNaN), wrap_vector<Op>((x), aNaN), TOL);  \
-    EXPECT_SIMD_EQ(wrap_ref<Op>((x), inf), wrap_vector<Op>((x), inf), TOL);    \
-    EXPECT_SIMD_EQ(wrap_ref<Op>((x), neg_inf), wrap_vector<Op>((x), neg_inf),  \
-                   TOL);                                                       \
-    EXPECT_SIMD_EQ(wrap_ref<Op>((x), 0.0), wrap_vector<Op>((x), 0.0), TOL);    \
-    EXPECT_SIMD_EQ(wrap_ref<Op>((x), -0.0), wrap_vector<Op>((x), -0.0), TOL);  \
-    EXPECT_SIMD_EQ(wrap_ref<Op>((x), 1.0), wrap_vector<Op>((x), 1.0), TOL);    \
+    for (size_t control_lane = 0;                                              \
+         control_lane < LIBC_NAMESPACE::cpp::internal::native_vector_size<     \
+                            typename Op::ScalarType>;                          \
+         ++control_lane) {                                                     \
+      EXPECT_SIMD_EQ(wrap_ref<Op>((x), -(x), control_lane),                    \
+                     wrap_vector<Op>((x), -(x), control_lane), TOL);           \
+      EXPECT_SIMD_EQ(wrap_ref<Op>(-(x), (x), control_lane),                    \
+                     wrap_vector<Op>(-(x), (x), control_lane), TOL);           \
+      EXPECT_SIMD_EQ(wrap_ref<Op>((x), aNaN, control_lane),                    \
+                     wrap_vector<Op>((x), aNaN, control_lane), TOL);           \
+      EXPECT_SIMD_EQ(wrap_ref<Op>((x), inf, control_lane),                     \
+                     wrap_vector<Op>((x), inf, control_lane), TOL);            \
+      EXPECT_SIMD_EQ(wrap_ref<Op>((x), neg_inf, control_lane),                 \
+                     wrap_vector<Op>((x), neg_inf, control_lane), TOL);        \
+      EXPECT_SIMD_EQ(wrap_ref<Op>((x), 0.0, control_lane),                     \
+                     wrap_vector<Op>((x), 0.0, control_lane), TOL);            \
+      EXPECT_SIMD_EQ(wrap_ref<Op>((x), -0.0, control_lane),                    \
+                     wrap_vector<Op>((x), -0.0, control_lane), TOL);           \
+      EXPECT_SIMD_EQ(wrap_ref<Op>((x), 1.0, control_lane),                     \
+                     wrap_vector<Op>((x), 1.0, control_lane), TOL);            \
+    }                                                                          \
   } while (0)
 
 // A helper macro to test a full range of float values, from 0 to 0x7f800000.
