@@ -131,9 +131,12 @@ foo(/*Pi=*/3.14159);
 ```
 
 ```{option} CommentIntegerLiterals
-When `true`, the check will add argument comments in the format
-`/*ParameterName=*/` right before the integer literal argument.
-Default is `false`.
+When `All`, the check will add argument comments in the format
+`/*ParameterName=*/` right before every integer literal argument. When
+`ZeroOnly`, it adds them before integer literal arguments with the value zero,
+such as `0`, `0x0` and `0UL`, which often stand for "none" or "default". When
+`None`, it adds no comments before integer literal arguments. The values `true`
+and `false` mean `All` and `None`. Default is `None`.
 ```
 
 Before:
@@ -144,12 +147,30 @@ void foo(int MeaningOfLife);
 foo(42);
 ```
 
-After:
+After, with `All`:
 
 ```c++
 void foo(int MeaningOfLife);
 
 foo(/*MeaningOfLife=*/42);
+```
+
+Before:
+
+```c
+int open_file(const char *Path, int Flags);
+
+open_file(Path, 0);
+open_file(Path, 1);
+```
+
+After, with `ZeroOnly`:
+
+```c
+int open_file(const char *Path, int Flags);
+
+open_file(Path, /*Flags=*/0);
+open_file(Path, 1);
 ```
 
 ```{option} CommentNullPtrs

@@ -6134,6 +6134,23 @@ static DecodeStatus checkDecodedInstruction(MCInst &MI, uint64_t &Size,
           MI.getOperand(1).getReg() != ARM::SP)
         return MCDisassembler::SoftFail;
       return Result;
+    case ARM::t2STRi12:
+    case ARM::t2STRi8:
+    case ARM::t2STRs:
+      // Rt == PC is UNPREDICTABLE.
+      if (MI.getOperand(0).getReg() == ARM::PC)
+        return MCDisassembler::SoftFail;
+      return Result;
+    case ARM::t2STR_PRE:
+    case ARM::t2STR_POST:
+    case ARM::t2STRB_PRE:
+    case ARM::t2STRB_POST:
+    case ARM::t2STRH_PRE:
+    case ARM::t2STRH_POST:
+      // Here Rt is operand 1.
+      if (MI.getOperand(1).getReg() == ARM::PC)
+        return MCDisassembler::SoftFail;
+      return Result;
     default: return Result;
   }
 }

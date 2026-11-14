@@ -195,7 +195,6 @@ define <2 x i16> @pnclipr_v2i16_32(<2 x i32> %x) {
 ;
 ; RV64-LABEL: pnclipr_v2i16_32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    psslai.w a0, a0, 0
 ; RV64-NEXT:    pnclipp.h a0, a0, zero
 ; RV64-NEXT:    ret
   %r = call <2 x i16> @llvm.riscv.pnclipr.v2i16.v2i32(<2 x i32> %x, i32 32)
@@ -210,7 +209,6 @@ define <4 x i8> @pnclipu_v4i8_0(<4 x i16> %x) {
 ;
 ; RV64-LABEL: pnclipu_v4i8_0:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    psrli.h a0, a0, 0
 ; RV64-NEXT:    pnclipup.b a0, a0, zero
 ; RV64-NEXT:    ret
   %r = call <4 x i8> @llvm.riscv.pnclipu.v4i8.v4i16(<4 x i16> %x, i32 0)

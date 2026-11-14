@@ -667,6 +667,11 @@ public:
   StmtResult ActOnOpenMPTargetParallelGenericLoopDirective(
       ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
       SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA);
+  /// Called on well-formed '\#pragma omp target loop' after parsing of the
+  /// associated statement.
+  StmtResult ActOnOpenMPTargetGenericLoopDirective(
+      ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+      SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA);
   /// Called on well-formed '\#pragma omp cancellation point'.
   StmtResult
   ActOnOpenMPCancellationPointDirective(SourceLocation StartLoc,

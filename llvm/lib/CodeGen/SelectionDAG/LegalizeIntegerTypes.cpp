@@ -3381,26 +3381,21 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
 std::pair <SDValue, SDValue> DAGTypeLegalizer::ExpandAtomic(SDNode *Node) {
   unsigned Opc = Node->getOpcode();
   MVT VT = cast<AtomicSDNode>(Node)->getMemoryVT().getSimpleVT();
+  assert(TLI.getOperationAction(Opc, VT) == TargetLowering::LibCall &&
+         "expanded atomic requires a libcall action for the memory type");
   AtomicOrdering order = cast<AtomicSDNode>(Node)->getMergedOrdering();
-  // Lower to outline atomic libcall if outline atomics enabled,
-  // or to sync libcall otherwise
-  RTLIB::Libcall LC = RTLIB::getOUTLINE_ATOMIC(Opc, order, VT);
+  RTLIB::AtomicLibcall LC =
+      RTLIB::selectAtomicLibcall(DAG.getLibcalls(), Opc, order, VT);
   EVT RetVT = Node->getValueType(0);
   TargetLowering::MakeLibCallOptions CallOptions;
   SmallVector<SDValue, 4> Ops;
-
-  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
-  if (LCImpl != RTLIB::Unsupported) {
+  if (LC.IsOutline) {
     Ops.append(Node->op_begin() + 2, Node->op_end());
     Ops.push_back(Node->getOperand(1));
   } else {
-    LC = RTLIB::getSYNC(Opc, VT);
-    assert(LC != RTLIB::UNKNOWN_LIBCALL &&
-           "Unexpected atomic op or value type!");
     Ops.append(Node->op_begin() + 1, Node->op_end());
-    LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
   }
-  return TLI.makeLibCall(DAG, LCImpl, RetVT, Ops, CallOptions, SDLoc(Node),
+  return TLI.makeLibCall(DAG, LC.Impl, RetVT, Ops, CallOptions, SDLoc(Node),
                          Node->getOperand(0));
 }
 

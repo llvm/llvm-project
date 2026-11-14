@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++2a -triple x86_64-elf-gnu %s -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -std=c++2a -triple x86_64-elf-gnu %s -emit-llvm -o - | FileCheck %s %}
 
 consteval int immediate() { return 0;}
 static int ext();
@@ -28,7 +29,7 @@ void test_member() {
 }
 
 // CHECK: define {{.*}} void @_ZN1AC2Ev{{.*}}
-// CHECK: %call = call noundef i32 @_ZL13not_immediatev()
+// CHECK: call noundef i32 @_ZL13not_immediatev()
 
 int never_referenced() {return 42;};
 

@@ -3,7 +3,6 @@
 
 ---
 name: Cst
-tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @Cst
@@ -16,7 +15,6 @@ body: |
 ...
 ---
 name: PartialKnown
-tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @PartialKnown
@@ -33,7 +31,6 @@ body: |
 ...
 ---
 name: Exact
-tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @Exact
@@ -46,9 +43,9 @@ body: |
 ...
 ---
 name: Unknown
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @Unknown
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -59,9 +56,9 @@ body: |
 ...
 ---
 name: EvenDivisor
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @EvenDivisor
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -76,9 +73,9 @@ body: |
 ...
 ---
 name: RangeKnownOnes
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @RangeKnownOnes
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0

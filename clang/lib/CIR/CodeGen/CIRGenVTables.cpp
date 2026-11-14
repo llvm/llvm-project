@@ -355,6 +355,10 @@ cir::GlobalOp CIRGenVTables::generateConstructionVTable(
   // Set properties only after the initializer has been set to ensure that the
   // GV is treated as definition and not declaration.
   assert(!vtable.isDeclaration() && "Shouldn't set properties on declaration");
+  // The global was created as a declaration, which MLIR requires to be private,
+  // so the visibility has to follow the linkage of the definition.
+  mlir::SymbolTable::setSymbolVisibility(
+      vtable, CIRGenModule::getMLIRVisibility(vtable));
   cgm.setGVProperties(vtable, rd);
 
   assert(!cir::MissingFeatures::vtableEmitMetadata());

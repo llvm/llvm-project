@@ -154,6 +154,12 @@ struct SiginfoTest {
   }
 };
 
+// The kernel hands a handler 128 bytes of siginfo_t, its SI_MAX_SIZE, whatever
+// the target, and gives waitid and sigtimedwait no more room than that.
+TEST(LlvmLibcSigaction, SiginfoIsTheKernelsSize) {
+  EXPECT_EQ(sizeof(siginfo_t), size_t(128));
+}
+
 // Verify that SA_SIGINFO invokes the sa_sigaction handler with siginfo_t.
 TEST(LlvmLibcSigaction, Siginfo) {
   SiginfoTest::received = false;
