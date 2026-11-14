@@ -22,7 +22,7 @@ define void @scalarselect(i1 %cond) {
   %6 = add nsw i32 %5, %3
   %7 = getelementptr inbounds [2048 x i32], ptr @a, i64 0, i64 %indvars.iv
 
-; CHECK: cost of 1 for VF 1 {{.*}}  select i1 %cond, i32 %6, i32 0
+; CHECK: Cost of 1 for VF 1: EMIT ir<%sel> = select ir<%cond>, ir<%6>, ir<0>
 ; CHECK: Cost of 2 for VF 2: WIDEN ir<%sel> = select ir<%cond>, ir<%6>, ir<0>
 ; CHECK: Cost of 2 for VF 4: WIDEN ir<%sel> = select ir<%cond>, ir<%6>, ir<0>
 
@@ -51,7 +51,7 @@ define void @vectorselect(i1 %cond) {
   %7 = getelementptr inbounds [2048 x i32], ptr @a, i64 0, i64 %indvars.iv
   %8 = icmp ult i64 %indvars.iv, 8
 
-; CHECK: cost of 1 for VF 1 {{.*}}  select i1 %8, i32 %6, i32 0
+; CHECK: Cost of 1 for VF 1: EMIT ir<%sel> = select ir<%8>, ir<%6>, ir<0>
 ; CHECK: Cost of 2 for VF 2: WIDEN ir<%sel> = select ir<%8>, ir<%6>, ir<0>
 ; CHECK: Cost of 2 for VF 4: WIDEN ir<%sel> = select ir<%8>, ir<%6>, ir<0>
 

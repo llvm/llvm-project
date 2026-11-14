@@ -7,10 +7,10 @@
 ; This must also be propagated to its already visited operand %index.1.
 
 ; CHECK-LABEL: LV: Checking a loop in 'interleave_pointer_becomes_scalar_dead'
-; CHECK:      LV: Found an estimated cost of 1 for VF 1 For instruction:   %iv = phi i64
-; CHECK-NEXT: LV: Found an estimated cost of 1 for VF 1 For instruction:   %iv.next = add nuw i64 %iv, 1
-; CHECK-NEXT: LV: Found an estimated cost of 1 for VF 1 For instruction:   %ec = icmp eq i64 %iv.next, %n
-; CHECK-NEXT: LV: Found an estimated cost of 1 for VF 1 For instruction:   br i1 %ec, label %exit, label %loop
+; CHECK:      Cost of 1 for VF 1: EMIT-SCALAR ir<%iv> = phi
+; CHECK-NEXT: Cost of 1 for VF 1: EMIT ir<%iv.next> = add nuw ir<%iv>, ir<1>
+; CHECK-NEXT: Cost of 1 for VF 1: EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<%n>
+; CHECK-NEXT: Cost of 1 for VF 1: EMIT branch-on-cond ir<%ec>
 ; CHECK-NEXT: LV: Scalar loop costs: 4.
 
 define void @interleave_pointer_becomes_scalar_dead(ptr noalias %src, i64 %n) {

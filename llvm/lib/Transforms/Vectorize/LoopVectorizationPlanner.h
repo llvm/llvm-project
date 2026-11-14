@@ -914,6 +914,9 @@ class LoopVectorizationPlanner {
 
   SmallVector<VPlanPtr, 4> VPlans;
 
+  /// Copy of scalar VPlan0; used for scalar cost computation.
+  VPlanPtr VPlan0;
+
   /// Profitable vector factors.
   SmallVector<VectorizationFactor, 8> ProfitableVFs;
 
