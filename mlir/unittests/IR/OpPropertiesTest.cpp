@@ -30,7 +30,7 @@ struct TestProperties {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestProperties)
 };
 
-bool operator==(const TestProperties &lhs, TestProperties &rhs) {
+bool operator==(const TestProperties &lhs, const TestProperties &rhs) {
   return lhs.a == rhs.a && lhs.b == rhs.b && lhs.array == rhs.array &&
          lhs.label == rhs.label;
 }
