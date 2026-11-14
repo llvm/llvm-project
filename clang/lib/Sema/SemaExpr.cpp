@@ -55,9 +55,11 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
+#include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaFixItUtils.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "clang/Sema/SemaHexagon.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaOpenMP.h"
@@ -3686,6 +3688,8 @@ ExprResult Sema::BuildDeclarationNameExpr(
   // diagnostics).
   if (VD->isInvalidDecl() && E)
     return CreateRecoveryExpr(E->getBeginLoc(), E->getEndLoc(), {E});
+  if (isa<EnumConstantDecl>(VD) && Context.getTargetInfo().getTriple().isBPF())
+    return BPF().BuildPreserveAIEnumeratorRef(E);
   return E;
 }
 
@@ -5553,6 +5557,10 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
                          << LHSExp->getSourceRange()
                          << RHSExp->getSourceRange());
       ResultType = BTy->getSveEltType(Context);
+    } else if (Hexagon().isHLXVectorType(LHSTy)) {
+      // There is no HLX vector element extract.
+      return ExprError(Diag(LLoc, diag::err_subscript_hlx)
+                       << LHSExp->getSourceRange() << RHSExp->getSourceRange());
     } else {
       const VectorType *VTy = LHSTy->getAs<VectorType>();
       ResultType = VTy->getElementType();
@@ -7245,7 +7253,7 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
                                ExecConfig, IsExecConfig);
 }
 
-Expr *Sema::BuildBuiltinCallExpr(SourceLocation Loc, Builtin::ID Id,
+Expr *Sema::BuildBuiltinCallExpr(SourceLocation Loc, unsigned Id,
                                  MultiExprArg CallArgs) {
   std::string Name = Context.BuiltinInfo.getName(Id);
   LookupResult R(*this, &Context.Idents.get(Name), Loc,
@@ -11061,11 +11069,7 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
       if (VecType->getVectorKind() == VectorKind::SveFixedLengthData ||
           VecType->getVectorKind() == VectorKind::SveFixedLengthPredicate)
         return true;
-      if (VecType->getVectorKind() == VectorKind::RVVFixedLengthData ||
-          VecType->getVectorKind() == VectorKind::RVVFixedLengthMask ||
-          VecType->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
-          VecType->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
-          VecType->getVectorKind() == VectorKind::RVVFixedLengthMask_4) {
+      if (isRVVFixedLengthVectorKind(VecType->getVectorKind())) {
         SVEorRVV = 1;
         return true;
       }
@@ -11096,14 +11100,7 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
             SecondVecType->getVectorKind() ==
                 VectorKind::SveFixedLengthPredicate)
           return true;
-        if (SecondVecType->getVectorKind() == VectorKind::RVVFixedLengthData ||
-            SecondVecType->getVectorKind() == VectorKind::RVVFixedLengthMask ||
-            SecondVecType->getVectorKind() ==
-                VectorKind::RVVFixedLengthMask_1 ||
-            SecondVecType->getVectorKind() ==
-                VectorKind::RVVFixedLengthMask_2 ||
-            SecondVecType->getVectorKind() ==
-                VectorKind::RVVFixedLengthMask_4) {
+        if (isRVVFixedLengthVectorKind(SecondVecType->getVectorKind())) {
           SVEorRVV = 1;
           return true;
         }
@@ -15596,6 +15593,12 @@ static QualType CheckIndirectionOperand(Sema &S, Expr *Op, ExprValueKind &VK,
           << OpTy << Op->getSourceRange();
   }
 
+  // HLX has no vector pair loads or stores.
+  if (S.Hexagon().isHLXVectorType(Result) &&
+      S.Context.getTypeSizeInChars(Result).getQuantity() == 4096)
+    S.Diag(OpLoc, diag::err_typecheck_indirection_hlx_vectorpair_pointer)
+        << OpTy << Op->getSourceRange();
+
   // Dereferences are usually l-values...
   VK = VK_LValue;
 
@@ -19446,9 +19449,12 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
       }
 
       if (Func->isDefaulted() && !Func->isDeleted()) {
-        DefaultedComparisonKind DCK = Func->getDefaultedComparisonKind();
-        if (DCK != DefaultedComparisonKind::None)
-          DefineDefaultedComparison(Loc, Func, DCK);
+        FunctionDecl::DefaultedFunctionKind DFK =
+            Func->getDefaultedFunctionKind();
+        if (DFK.isComparison())
+          DefineDefaultedComparison(Loc, Func, DFK.asComparison());
+        else if (DFK.isPostfixOperator())
+          DefineDefaultedPostfixOperator(Loc, Func, DFK.asPostfixOperator());
       }
 
       // Implicit instantiation of function templates and member functions of

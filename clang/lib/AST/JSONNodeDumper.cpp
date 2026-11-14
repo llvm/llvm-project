@@ -750,14 +750,14 @@ void JSONNodeDumper::VisitVectorType(const VectorType *VT) {
   case VectorKind::SveFixedLengthPredicate:
     JOS.attribute("vectorKind", "fixed-length sve predicate vector");
     break;
-  case VectorKind::RVVFixedLengthData:
-    JOS.attribute("vectorKind", "fixed-length rvv data vector");
-    break;
-  case VectorKind::RVVFixedLengthMask:
-  case VectorKind::RVVFixedLengthMask_1:
-  case VectorKind::RVVFixedLengthMask_2:
-  case VectorKind::RVVFixedLengthMask_4:
-    JOS.attribute("vectorKind", "fixed-length rvv mask vector");
+  default:
+    assert(isRVVFixedLengthVectorKind(VT->getVectorKind()) &&
+           "unexpected vector kind");
+    JOS.attribute("vectorKind",
+                  (isRVVFixedLengthMaskVectorKind(VT->getVectorKind())
+                       ? "fixed-length rvv mask vector ratio "
+                       : "fixed-length rvv data vector lmul ") +
+                      getRVVFixedLengthString(VT->getVectorKind()).str());
     break;
   }
 }

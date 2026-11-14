@@ -1091,16 +1091,21 @@ struct UnrollCreateMaskPattern : public OpRewritePattern<vector::CreateMaskOp> {
         *createMaskOp.getIterationShapeToUnroll();
     Location loc = createMaskOp.getLoc();
 
+    // `targetShape` may have a smaller rank than the op - pad with leading unit
+    // dims.
+    SmallVector<int64_t> adjustedTargetShape(originalSize.size(), 1);
+    llvm::copy(*targetShape, adjustedTargetShape.end() - targetShape->size());
+
     Value result = arith::ConstantOp::create(rewriter, loc, resultType,
                                              rewriter.getZeroAttr(resultType));
     VectorType targetVectorType =
-        VectorType::get(*targetShape, rewriter.getI1Type());
-    SmallVector<int64_t> strides(targetShape->size(), 1);
+        VectorType::get(adjustedTargetShape, rewriter.getI1Type());
+    SmallVector<int64_t> strides(adjustedTargetShape.size(), 1);
 
     // In each dimension (d), each unrolled vector computes its mask size as:
     // min(max(originalMaskOperands[d] - offset[d], 0), unrolledDimSize[d]).
     for (SmallVector<int64_t> offsets :
-         StaticTileOffsetRange(originalSize, *targetShape)) {
+         StaticTileOffsetRange(originalSize, adjustedTargetShape)) {
       SmallVector<Value> unrolledOperands;
 
       for (auto [i, originalMaskOperand] :
@@ -1110,8 +1115,8 @@ struct UnrollCreateMaskPattern : public OpRewritePattern<vector::CreateMaskOp> {
         Value adjustedMaskSize = rewriter.createOrFold<arith::SubIOp>(
             loc, originalMaskOperand, offsetVal);
         Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
-        Value unrolledDimSize =
-            arith::ConstantIndexOp::create(rewriter, loc, (*targetShape)[i]);
+        Value unrolledDimSize = arith::ConstantIndexOp::create(
+            rewriter, loc, adjustedTargetShape[i]);
         Value nonNegative =
             rewriter.createOrFold<arith::MaxSIOp>(loc, adjustedMaskSize, zero);
         Value unrolledOperand = rewriter.createOrFold<arith::MinSIOp>(
@@ -1184,16 +1189,21 @@ struct UnrollConstantMaskPattern
         *constantMaskOp.getIterationShapeToUnroll();
     Location loc = constantMaskOp.getLoc();
 
+    // `targetShape` may have a smaller rank than the op - pad with leading unit
+    // dims.
+    SmallVector<int64_t> adjustedTargetShape(originalSize.size(), 1);
+    llvm::copy(*targetShape, adjustedTargetShape.end() - targetShape->size());
+
     Value result = arith::ConstantOp::create(rewriter, loc, resultType,
                                              rewriter.getZeroAttr(resultType));
     VectorType targetVectorType =
-        VectorType::get(*targetShape, rewriter.getI1Type());
-    SmallVector<int64_t> strides(targetShape->size(), 1);
+        VectorType::get(adjustedTargetShape, rewriter.getI1Type());
+    SmallVector<int64_t> strides(adjustedTargetShape.size(), 1);
 
     // In each dimension (d), each unrolled vector computes its mask size as:
     // min(max(originalMaskDim[d] - offset[d], 0), unrolledDimSize[d]).
     for (const SmallVector<int64_t> &offsets :
-         StaticTileOffsetRange(originalSize, *targetShape)) {
+         StaticTileOffsetRange(originalSize, adjustedTargetShape)) {
       SmallVector<int64_t> unrolledMaskDims;
 
       for (auto [i, originalMaskDim] :
@@ -1203,9 +1213,15 @@ struct UnrollConstantMaskPattern
         int64_t adjustedMaskSize =
             std::max(originalMaskDim - offsets[i], static_cast<int64_t>(0));
         int64_t unrolledMaskDim =
-            std::min(adjustedMaskSize, static_cast<int64_t>((*targetShape)[i]));
+            std::min(adjustedMaskSize, adjustedTargetShape[i]);
         unrolledMaskDims.push_back(unrolledMaskDim);
       }
+
+      // If any of 'unrolledMaskDims' is zero, then the mask is effectively ALL
+      // FALSE and we can set all dims to zero (masked region is a conjunction
+      // of mask dim intervals).
+      if (llvm::is_contained(unrolledMaskDims, 0))
+        unrolledMaskDims.assign(unrolledMaskDims.size(), 0);
 
       auto unrolledMask = rewriter.createOrFold<vector::ConstantMaskOp>(
           loc, targetVectorType, unrolledMaskDims);
@@ -1714,10 +1730,10 @@ struct UnrollDeinterleavePattern
           vector::DeinterleaveOp::create(rewriter, loc, sourceSlice);
 
       resultOdd = rewriter.createOrFold<vector::InsertStridedSliceOp>(
-          loc, deinterleaveSlice.getRes1(), resultOdd, resultOffsets,
+          loc, deinterleaveSlice.getResultEven(), resultOdd, resultOffsets,
           resultStrides);
       resultEven = rewriter.createOrFold<vector::InsertStridedSliceOp>(
-          loc, deinterleaveSlice.getRes2(), resultEven, resultOffsets,
+          loc, deinterleaveSlice.getResultOdd(), resultEven, resultOffsets,
           resultStrides);
     }
 

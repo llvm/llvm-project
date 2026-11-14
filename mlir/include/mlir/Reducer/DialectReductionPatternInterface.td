@@ -29,6 +29,7 @@ def DialectReductionPatternInterface : DialectInterface<"DialectReductionPattern
       }
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Reducer/ReductionPatternInterface.h"];
 
   let methods = [
     PureVirtualInterfaceMethod<[{

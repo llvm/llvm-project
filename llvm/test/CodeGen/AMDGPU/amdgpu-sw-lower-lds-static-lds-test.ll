@@ -50,10 +50,12 @@ define amdgpu_kernel void @k0() sanitize_address {
 ; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i64 24), align 4
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.k0, i32 [[TMP17]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = ptrtoint ptr addrspace(3) [[TMP18]] to i32
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP19]], i32 [[TMP26]]
+; CHECK-NEXT:    [[TMP28:%.*]] = sext i32 [[TMP26]] to i64
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP19]], i64 [[TMP28]]
 ; CHECK-NEXT:    store i8 7, ptr addrspace(1) [[TMP27]], align 4
 ; CHECK-NEXT:    [[TMP43:%.*]] = ptrtoint ptr addrspace(3) [[TMP24]] to i32
-; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP19]], i32 [[TMP43]]
+; CHECK-NEXT:    [[TMP30:%.*]] = sext i32 [[TMP43]] to i64
+; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP19]], i64 [[TMP30]]
 ; CHECK-NEXT:    store i32 8, ptr addrspace(1) [[TMP44]], align 2
 ; CHECK-NEXT:    br label [[CONDFREE1:%.*]]
 ; CHECK:       CondFree:

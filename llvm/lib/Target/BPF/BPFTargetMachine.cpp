@@ -57,6 +57,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
   initializeBPFDAGToDAGISelLegacyPass(PR);
   initializeBPFMISimplifyPatchableLegacyPass(PR);
   initializeBPFMIPreEmitCheckingLegacyPass(PR);
+  initializeBPFUnwindPreparePass(PR);
+  initializeBPFUnwindLowerPass(PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {

@@ -6,7 +6,6 @@
 
 ---
 name:            implicit_def_live_out_no_use
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: implicit_def_live_out_no_use
   ; CHECK: bb.0:
@@ -29,7 +28,6 @@ body:             |
 
 ---
 name:            implicit_def_live_out_with_use
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: implicit_def_live_out_with_use
   ; CHECK: bb.0:

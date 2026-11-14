@@ -24,8 +24,7 @@ namespace math {
 using LIBC_NAMESPACE::fputil::Float80;
 
 LIBC_INLINE constexpr int iscanonicalf80(Float80 x) {
-  Float80 temp{};
-  return fputil::canonicalize(temp, x) == 0;
+  return fputil::iscanonical_impl(x);
 }
 
 } // namespace math

@@ -14,12 +14,13 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SINHBF16_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_SINHBF16_H
 
-#include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/FPUtil/cast.h"
+#include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
@@ -69,22 +70,7 @@ LIBC_INLINE bfloat16 sinhbf16(bfloat16 x) {
       return x;
     }
 
-#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-    int rounding = fputil::quick_get_round();
-    if (x_bits.is_neg()) {
-      if (LIBC_UNLIKELY(rounding == FE_UPWARD || rounding == FE_TOWARDZERO))
-        return -FPBits::max_normal().get_val();
-    } else {
-      if (LIBC_UNLIKELY(rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO))
-        return FPBits::max_normal().get_val();
-    }
-#endif // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-
-    fputil::set_errno_if_required(ERANGE);
-    fputil::raise_overflow_except_if_required<float>();
-
-    uint16_t inf_bits = (x_u & 0x8000) | 0x7f80;
-    return fputil::FPBits<bfloat16>(inf_bits).get_val();
+    return fputil::set_overflow<bfloat16>(x_bits.sign());
   }
 
   float xf = static_cast<float>(x);

@@ -488,6 +488,12 @@ public:
   /// profitable to inline the call.
   LLVM_ABI uint64_t getMaxMemIntrinsicInlineSizeThreshold() const;
 
+  /// Returns the maximum length in bytes for which a memset with a
+  /// non-constant length, known to be bounded by that value, is preferably
+  /// expanded inline instead of calling the library. Zero disables the
+  /// expansion.
+  LLVM_ABI uint64_t getMaxBoundedMemSetInlineSize() const;
+
   /// \return The estimated number of case clusters when lowering \p 'SI'.
   /// \p JTSize Set a jump table size only when \p SI is suitable for a jump
   /// table.
@@ -1153,6 +1159,11 @@ public:
   LLVM_ABI static VectorInstrContext
   getVectorInstrContextHint(const Instruction *I);
 
+  /// Calculates a VectorInstrContext from the values in \p VL at indices in
+  /// \p DemandedElts.
+  LLVM_ABI static VectorInstrContext
+  getVectorInstrContextHint(ArrayRef<Value *> VL, const APInt &DemandedElts);
+
   /// Calculates a VectorInstrContext for buildvector-like gather sequences.
   ///
   /// \p GatherUserOps must collect all users of \p Scalars relevant for
@@ -1450,15 +1461,18 @@ public:
   /// \return the value of vscale to tune the cost model for.
   LLVM_ABI std::optional<unsigned> getVScaleForTuning() const;
 
+  enum class VectorKind { FixedOrScalable, FixedWidth, Scalable };
+
   /// \return True if the vectorization factor should be chosen to
   /// make the vector of the smallest element type match the size of a
   /// vector register. For wider element types, this could result in
   /// creating vectors that span multiple vector registers.
   /// If false, the vectorization factor will be chosen based on the
-  /// size of the widest element type.
-  /// \p K Register Kind for vectorization.
-  LLVM_ABI bool
-  shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K) const;
+  /// size of the widest element type. The optional \p ElementTy parameter
+  /// allows targets to avoid maximizing bandwidth for specific element types
+  /// (e.g. `i1s`). \p K VectorKind for vectorization.
+  LLVM_ABI bool shouldMaximizeVectorBandwidth(VectorKind K,
+                                              Type *ElementTy = nullptr) const;
 
   /// \return The minimum vectorization factor for types of given element
   /// bit width, or 0 if there is no minimum VF. The returned value only

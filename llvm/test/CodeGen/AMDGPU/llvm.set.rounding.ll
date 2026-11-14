@@ -1873,8 +1873,7 @@ define amdgpu_gfx void @s_set_rounding_select_2_1(i32 inreg %cond) {
 ; GFX678-GISEL:       ; %bb.0:
 ; GFX678-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX678-GISEL-NEXT:    s_cmp_eq_u32 s4, 0
-; GFX678-GISEL-NEXT:    s_cselect_b32 s34, 1, 0
-; GFX678-GISEL-NEXT:    s_add_i32 s34, s34, 1
+; GFX678-GISEL-NEXT:    s_addc_u32 s34, 1, 0
 ; GFX678-GISEL-NEXT:    s_lshl_b32 s34, s34, 2
 ; GFX678-GISEL-NEXT:    s_lshr_b32 s34, 0xa50f, s34
 ; GFX678-GISEL-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 0, 4), s34
@@ -1893,8 +1892,7 @@ define amdgpu_gfx void @s_set_rounding_select_2_1(i32 inreg %cond) {
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_cmp_eq_u32 s4, 0
-; GFX9-GISEL-NEXT:    s_cselect_b32 s34, 1, 0
-; GFX9-GISEL-NEXT:    s_add_i32 s34, s34, 1
+; GFX9-GISEL-NEXT:    s_addc_u32 s34, 1, 0
 ; GFX9-GISEL-NEXT:    s_lshl_b32 s34, s34, 2
 ; GFX9-GISEL-NEXT:    s_lshr_b32 s34, 0xa50f, s34
 ; GFX9-GISEL-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 0, 4), s34
@@ -1913,8 +1911,7 @@ define amdgpu_gfx void @s_set_rounding_select_2_1(i32 inreg %cond) {
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    s_cmp_eq_u32 s4, 0
-; GFX10-GISEL-NEXT:    s_cselect_b32 s34, 1, 0
-; GFX10-GISEL-NEXT:    s_add_i32 s34, s34, 1
+; GFX10-GISEL-NEXT:    s_addc_u32 s34, 1, 0
 ; GFX10-GISEL-NEXT:    s_lshl_b32 s34, s34, 2
 ; GFX10-GISEL-NEXT:    s_lshr_b32 s34, 0xa50f, s34
 ; GFX10-GISEL-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 0, 4), s34
@@ -1933,8 +1930,7 @@ define amdgpu_gfx void @s_set_rounding_select_2_1(i32 inreg %cond) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_cmp_eq_u32 s4, 0
-; GFX11-GISEL-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX11-GISEL-NEXT:    s_add_i32 s0, s0, 1
+; GFX11-GISEL-NEXT:    s_addc_u32 s0, 1, 0
 ; GFX11-GISEL-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX11-GISEL-NEXT:    s_lshr_b32 s0, 0xa50f, s0
 ; GFX11-GISEL-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 0, 4), s0
@@ -1959,8 +1955,7 @@ define amdgpu_gfx void @s_set_rounding_select_1_2(i32 inreg %cond) {
 ; GFX678-GISEL:       ; %bb.0:
 ; GFX678-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX678-GISEL-NEXT:    s_cmp_eq_u32 s4, 0
-; GFX678-GISEL-NEXT:    s_cselect_b32 s34, -1, 0
-; GFX678-GISEL-NEXT:    s_add_i32 s34, s34, 2
+; GFX678-GISEL-NEXT:    s_subb_u32 s34, 2, 0
 ; GFX678-GISEL-NEXT:    s_add_i32 s35, s34, -4
 ; GFX678-GISEL-NEXT:    s_min_u32 s34, s34, s35
 ; GFX678-GISEL-NEXT:    s_lshl_b32 s36, s34, 2
@@ -1983,8 +1978,7 @@ define amdgpu_gfx void @s_set_rounding_select_1_2(i32 inreg %cond) {
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_cmp_eq_u32 s4, 0
-; GFX9-GISEL-NEXT:    s_cselect_b32 s34, -1, 0
-; GFX9-GISEL-NEXT:    s_add_i32 s34, s34, 2
+; GFX9-GISEL-NEXT:    s_subb_u32 s34, 2, 0
 ; GFX9-GISEL-NEXT:    s_add_i32 s35, s34, -4
 ; GFX9-GISEL-NEXT:    s_min_u32 s34, s34, s35
 ; GFX9-GISEL-NEXT:    s_lshl_b32 s36, s34, 2
@@ -2007,8 +2001,7 @@ define amdgpu_gfx void @s_set_rounding_select_1_2(i32 inreg %cond) {
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    s_cmp_eq_u32 s4, 0
-; GFX10-GISEL-NEXT:    s_cselect_b32 s34, -1, 0
-; GFX10-GISEL-NEXT:    s_add_i32 s34, s34, 2
+; GFX10-GISEL-NEXT:    s_subb_u32 s34, 2, 0
 ; GFX10-GISEL-NEXT:    s_add_i32 s35, s34, -4
 ; GFX10-GISEL-NEXT:    s_min_u32 s34, s34, s35
 ; GFX10-GISEL-NEXT:    s_mov_b32 s35, 0xb73e62d9
@@ -2031,8 +2024,7 @@ define amdgpu_gfx void @s_set_rounding_select_1_2(i32 inreg %cond) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_cmp_eq_u32 s4, 0
-; GFX11-GISEL-NEXT:    s_cselect_b32 s0, -1, 0
-; GFX11-GISEL-NEXT:    s_add_i32 s0, s0, 2
+; GFX11-GISEL-NEXT:    s_subb_u32 s0, 2, 0
 ; GFX11-GISEL-NEXT:    s_add_i32 s1, s0, -4
 ; GFX11-GISEL-NEXT:    s_min_u32 s0, s0, s1
 ; GFX11-GISEL-NEXT:    s_mov_b32 s1, 0xb73e62d9

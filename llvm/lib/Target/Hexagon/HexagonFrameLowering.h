@@ -89,6 +89,9 @@ public:
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;
 
+  void processFunctionBeforeFrameFinalized(
+      MachineFunction &MF, RegScavenger *RS = nullptr) const override;
+
   const SpillSlot *getCalleeSavedSpillSlots(unsigned &NumEntries)
       const override {
     static const SpillSlot Offsets[] = {
@@ -140,6 +143,8 @@ private:
       BitVector &DoneT, BitVector &DoneF, BitVector &Path) const;
   void insertCFIInstructionsAt(MachineBasicBlock &MBB,
       MachineBasicBlock::iterator At) const;
+  void computeVTCMStackOffsets(MachineFunction &MF) const;
+  Align getMaxStackAlign(const MachineFunction &MF) const;
 
   bool expandCopy(MachineBasicBlock &B, MachineBasicBlock::iterator It,
       MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,
@@ -163,11 +168,13 @@ private:
       MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,
       SmallVectorImpl<Register> &NewRegs) const;
   bool expandStoreVec2(MachineBasicBlock &B, MachineBasicBlock::iterator It,
-      MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,
-      SmallVectorImpl<Register> &NewRegs) const;
+                       MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,
+                       SmallVectorImpl<Register> &NewRegs,
+                       bool IsHLX = false) const;
   bool expandLoadVec2(MachineBasicBlock &B, MachineBasicBlock::iterator It,
-      MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,
-      SmallVectorImpl<Register> &NewRegs) const;
+                      MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,
+                      SmallVectorImpl<Register> &NewRegs,
+                      bool IsHLX = false) const;
   bool expandStoreVec(MachineBasicBlock &B, MachineBasicBlock::iterator It,
       MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,
       SmallVectorImpl<Register> &NewRegs) const;

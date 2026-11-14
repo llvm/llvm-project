@@ -64,23 +64,44 @@ public:
   }
 
   void test_overflow() {
-    EXPECT_FP_EQ_WITH_EXCEPTION(
-        inf, LIBC_NAMESPACE::sinhbf16(FPBits(uint16_t(0x42b3)).get_val()),
-        FE_OVERFLOW);
-    EXPECT_MATH_ERRNO(ERANGE);
+    using LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
+    using LIBC_NAMESPACE::fputil::testing::RoundingMode;
 
-    EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::sinhbf16(max_normal),
-                                FE_OVERFLOW);
-    EXPECT_MATH_ERRNO(ERANGE);
+    const bfloat16 pos_overflow_inputs[] = {FPBits(uint16_t(0x42b3)).get_val(),
+                                            max_normal};
+    const bfloat16 neg_overflow_inputs[] = {FPBits(uint16_t(0xc2b3)).get_val(),
+                                            neg_max_normal};
+    const RoundingMode modes[] = {RoundingMode::Nearest, RoundingMode::Upward,
+                                  RoundingMode::Downward,
+                                  RoundingMode::TowardZero};
 
-    EXPECT_FP_EQ_WITH_EXCEPTION(
-        neg_inf, LIBC_NAMESPACE::sinhbf16(FPBits(uint16_t(0xc2b3)).get_val()),
-        FE_OVERFLOW);
-    EXPECT_MATH_ERRNO(ERANGE);
+    for (RoundingMode mode : modes) {
+      ForceRoundingMode r(mode);
+      if (!r.success)
+        continue;
 
-    EXPECT_FP_EQ_WITH_EXCEPTION(
-        neg_inf, LIBC_NAMESPACE::sinhbf16(neg_max_normal), FE_OVERFLOW);
-    EXPECT_MATH_ERRNO(ERANGE);
+      bfloat16 expected_pos =
+          (mode == RoundingMode::Downward || mode == RoundingMode::TowardZero)
+              ? max_normal
+              : inf;
+      for (bfloat16 x : pos_overflow_inputs) {
+        libc_errno = 0;
+        EXPECT_FP_EQ_WITH_EXCEPTION(expected_pos, LIBC_NAMESPACE::sinhbf16(x),
+                                    FE_OVERFLOW | FE_INEXACT);
+        EXPECT_MATH_ERRNO(ERANGE);
+      }
+
+      bfloat16 expected_neg =
+          (mode == RoundingMode::Upward || mode == RoundingMode::TowardZero)
+              ? neg_max_normal
+              : neg_inf;
+      for (bfloat16 x : neg_overflow_inputs) {
+        libc_errno = 0;
+        EXPECT_FP_EQ_WITH_EXCEPTION(expected_neg, LIBC_NAMESPACE::sinhbf16(x),
+                                    FE_OVERFLOW | FE_INEXACT);
+        EXPECT_MATH_ERRNO(ERANGE);
+      }
+    }
   }
 };
 

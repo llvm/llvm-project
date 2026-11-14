@@ -3119,8 +3119,6 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.HasSkippedBody = false;
   FunctionDeclBits.WillHaveBody = false;
   FunctionDeclBits.IsMultiVersion = false;
-  FunctionDeclBits.DeductionCandidateKind =
-      static_cast<unsigned char>(DeductionCandidate::Normal);
   FunctionDeclBits.HasODRHash = false;
   FunctionDeclBits.FriendConstraintRefersToEnclosingTemplate = false;
 
@@ -3326,7 +3324,20 @@ FunctionDecl::getDefaultedFunctionKind() const {
       return CXXSpecialMemberKind::Destructor;
   }
 
+  // Only the postfix forms of ++ and -- can be defaulted. They are
+  // distinguished from the prefix forms by their trailing 'int' parameter, so
+  // they have exactly two parameters including implicit or explicit 'this'.
   switch (getDeclName().getCXXOverloadedOperator()) {
+  case OO_PlusPlus:
+    if (getNumParamsIncludingThis() == 2)
+      return PostfixOperatorKind::Increment;
+    break;
+
+  case OO_MinusMinus:
+    if (getNumParamsIncludingThis() == 2)
+      return PostfixOperatorKind::Decrement;
+    break;
+
   case OO_EqualEqual:
     return DefaultedComparisonKind::Equal;
 
@@ -4960,6 +4971,34 @@ const FieldDecl *FieldDecl::findCountedByField() const {
     CountDecl = IFD->getAnonField();
 
   return dyn_cast<FieldDecl>(CountDecl);
+}
+
+static bool initializationHasSideEffects(const FieldDecl &FD) {
+  const Type *T = FD.getType()->getBaseElementTypeUnsafe();
+  // FIXME: Destruction of ObjC lifetime types has side-effects.
+  if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
+    return !RD->isCompleteDefinition() || !RD->hasTrivialDefaultConstructor() ||
+           !RD->hasTrivialDestructor();
+  return false;
+}
+
+template <typename AttrType> static bool hasAttribute(QualType T) {
+  if (const TagDecl *TD = T->getAsTagDecl())
+    return TD->hasAttr<AttrType>();
+  if (const TypedefType *TDT = T->getAs<TypedefType>())
+    return TDT->getDecl()->hasAttr<AttrType>();
+  return false;
+}
+
+bool FieldDecl::isUnusedPrivateField() const {
+  if (isImplicit() || !getDeclName() || getAccess() != AS_private ||
+      hasAttr<UnusedAttr>() || getParent()->isDependentContext())
+    return false;
+
+  QualType FieldType = getType();
+  return !hasAttribute<UnusedAttr>(FieldType) &&
+         (hasAttribute<WarnUnusedAttr>(FieldType) ||
+          !initializationHasSideEffects(*this));
 }
 
 //===----------------------------------------------------------------------===//

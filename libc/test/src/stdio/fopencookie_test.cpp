@@ -1,9 +1,14 @@
-//===-- Unittests for the fopencookie function ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for the fopencookie function.
+///
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/clearerr.h"
@@ -19,9 +24,11 @@
 #include "test/UnitTest/MemoryMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#include "hdr/errno_macros.h"
 #include "hdr/stdio_macros.h"
 #include "hdr/types/off_t.h"
 #include "hdr/types/size_t.h"
+#include "hdr/types/ssize_t.h"
 #include "src/__support/libc_errno.h"
 
 using LlvmLibcFOpenCookieTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
@@ -246,4 +253,41 @@ TEST_F(LlvmLibcFOpenCookieTest, WriteUpdateCookieTest) {
 
   ASSERT_EQ(LIBC_NAMESPACE::fclose(f), 0);
   free(ss);
+}
+
+ssize_t failing_read(void *, char *, size_t) { return -1; }
+
+ssize_t failing_write(void *, const char *, size_t) { return -1; }
+
+int failing_seek(void *, off_t *, int) { return -1; }
+
+TEST_F(LlvmLibcFOpenCookieTest, FailingCallbacksAreErrors) {
+  constexpr cookie_io_functions_t FAILING_FUNCS = {
+      &failing_read, &failing_write, &failing_seek, nullptr};
+
+  ::FILE *f = LIBC_NAMESPACE::fopencookie(nullptr, "r", FAILING_FUNCS);
+  ASSERT_TRUE(f != nullptr);
+  char data[4];
+  // A read of -1 is an error, not a count, so nothing is taken from the
+  // buffer, now or on the next read.
+  ASSERT_EQ(size_t(0), LIBC_NAMESPACE::fread(data, 1, sizeof(data), f));
+  ASSERT_NE(LIBC_NAMESPACE::ferror(f), 0);
+  ASSERT_ERRNO_EQ(EIO);
+  LIBC_NAMESPACE::clearerr(f);
+  ASSERT_EQ(size_t(0), LIBC_NAMESPACE::fread(data, 1, 1, f));
+  ASSERT_NE(LIBC_NAMESPACE::ferror(f), 0);
+  ASSERT_ERRNO_EQ(EIO);
+
+  ASSERT_EQ(-1, LIBC_NAMESPACE::fseek(f, 0, SEEK_SET));
+  ASSERT_ERRNO_EQ(EIO);
+  ASSERT_EQ(0, LIBC_NAMESPACE::fclose(f));
+
+  f = LIBC_NAMESPACE::fopencookie(nullptr, "w", FAILING_FUNCS);
+  ASSERT_TRUE(f != nullptr);
+  ASSERT_EQ(sizeof(data), LIBC_NAMESPACE::fwrite(data, 1, sizeof(data), f));
+  ASSERT_EQ(EOF, LIBC_NAMESPACE::fflush(f));
+  ASSERT_NE(LIBC_NAMESPACE::ferror(f), 0);
+  ASSERT_ERRNO_EQ(EIO);
+  LIBC_NAMESPACE::fclose(f);
+  libc_errno = 0;
 }

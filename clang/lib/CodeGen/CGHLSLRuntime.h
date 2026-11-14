@@ -123,9 +123,6 @@ public:
   //===----------------------------------------------------------------------===//
   // Start of reserved area for HLSL intrinsic getters.
   //===----------------------------------------------------------------------===//
-
-  GENERATE_HLSL_INTRINSIC_FUNCTION(All, all)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(Any, any)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Frac, frac)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FlattenedThreadIdInGroup,
                                    flattened_thread_id_in_group)
@@ -149,6 +146,27 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveBitOr, wave_reduce_or)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveBitXor, wave_reduce_xor)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveBitAnd, wave_reduce_and)
+  GENERATE_HLSL_INTRINSIC_FUNCTION_BASE(WaveMultiPrefixBitAnd,
+                                        wave_multi_prefix_bit_and,
+                                        subgroup_multi_prefix_bit_and)
+  GENERATE_HLSL_INTRINSIC_FUNCTION_BASE(WaveMultiPrefixBitOr,
+                                        wave_multi_prefix_bit_or,
+                                        subgroup_multi_prefix_bit_or)
+  GENERATE_HLSL_INTRINSIC_FUNCTION_BASE(WaveMultiPrefixBitXor,
+                                        wave_multi_prefix_bit_xor,
+                                        subgroup_multi_prefix_bit_xor)
+  GENERATE_HLSL_INTRINSIC_FUNCTION_BASE(WaveMultiPrefixProduct,
+                                        wave_multi_prefix_product,
+                                        subgroup_multi_prefix_product)
+  GENERATE_HLSL_INTRINSIC_FUNCTION_BASE(WaveMultiPrefixUProduct,
+                                        wave_multi_prefix_uproduct,
+                                        subgroup_multi_prefix_product)
+  GENERATE_HLSL_INTRINSIC_FUNCTION_BASE(WaveMultiPrefixSum,
+                                        wave_multi_prefix_sum,
+                                        subgroup_multi_prefix_sum)
+  GENERATE_HLSL_INTRINSIC_FUNCTION_BASE(WaveMultiPrefixUSum,
+                                        wave_multi_prefix_usum,
+                                        subgroup_multi_prefix_sum)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveMax, wave_reduce_max)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveUMax, wave_reduce_umax)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveMin, wave_reduce_min)
@@ -159,6 +177,7 @@ public:
                                         subgroup_size)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneAt, wave_readlane)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneFirst, wave_readlane_first)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(QuadAll, quad_all)
   GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossX, quad_read_across_x)
   GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossY, quad_read_across_y)
   GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossDiagonal,

@@ -18,7 +18,7 @@ define void @gather_i32(ptr noalias %src, ptr noalias %offsets.addr, ptr noalias
 ; GATHER-SCATTER-ENABLED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; GATHER-SCATTER-ENABLED-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[OFFSETS_ADDR]], i64 [[INDEX]]
 ; GATHER-SCATTER-ENABLED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP0]], align 8
-; GATHER-SCATTER-ENABLED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[SRC]], <4 x i64> [[WIDE_LOAD]]
+; GATHER-SCATTER-ENABLED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [4 x i8], ptr [[SRC]], <4 x i64> [[WIDE_LOAD]]
 ; GATHER-SCATTER-ENABLED-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 [[TMP1]], <4 x i1> splat (i1 true), <4 x float> poison)
 ; GATHER-SCATTER-ENABLED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[INDEX]]
 ; GATHER-SCATTER-ENABLED-NEXT:    store <4 x float> [[WIDE_MASKED_GATHER]], ptr [[TMP2]], align 4
@@ -99,7 +99,7 @@ define void @scatter_i32(ptr noalias %src, ptr noalias %offsets.addr, ptr noalia
 ; GATHER-SCATTER-ENABLED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP0]], align 8
 ; GATHER-SCATTER-ENABLED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[INDEX]]
 ; GATHER-SCATTER-ENABLED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
-; GATHER-SCATTER-ENABLED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[DST]], <4 x i64> [[WIDE_LOAD]]
+; GATHER-SCATTER-ENABLED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], ptr [[DST]], <4 x i64> [[WIDE_LOAD]]
 ; GATHER-SCATTER-ENABLED-NEXT:    call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> [[WIDE_LOAD1]], <4 x ptr> align 4 [[TMP2]], <4 x i1> splat (i1 true))
 ; GATHER-SCATTER-ENABLED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; GATHER-SCATTER-ENABLED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
