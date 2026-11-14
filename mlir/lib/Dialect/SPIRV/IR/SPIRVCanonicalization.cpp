@@ -1223,6 +1223,26 @@ spirv::BitwiseXorOp::fold(spirv::BitwiseXorOp::FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.SpecConstantOperation
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::SpecConstantOperationOp::fold(FoldAdaptor /*adaptor*/) {
+  Operation &enclosedOp = getBody().front().front();
+  if (enclosedOp.getNumResults() != 1 ||
+      enclosedOp.getResult(0).getType() != getType())
+    return {};
+
+  SmallVector<OpFoldResult, 1> results;
+  if (failed(enclosedOp.fold(results)))
+    return {};
+
+  if (results.empty())
+    return getResult();
+
+  return results.front();
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.mlir.selection
 //===----------------------------------------------------------------------===//
 
