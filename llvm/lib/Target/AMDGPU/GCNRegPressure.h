@@ -307,6 +307,9 @@ public:
     RP -= SaveRP;
   }
 
+  /// Adds a total pressure of \p AddedRP.
+  void addRP(const GCNRegPressure &AddedRP) { RP += AddedRP; }
+
   /// Whether \p TestRP is at or below the defined pressure target.
   bool satisfied(const GCNRegPressure &TestRP) const;
   /// Whether the current RP is at or below the defined pressure target.

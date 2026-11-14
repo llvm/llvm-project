@@ -1,0 +1,66 @@
+# NOTE: Assertions are hand-written; they check -debug-only output, which
+# NOTE: utils/update_mir_test_checks.py does not generate.
+# REQUIRES: asserts
+# RUN: llc -mtriple=amdgpu9.08 -run-pass=machine-scheduler -amdgpu-disable-unclustered-high-rp-reschedule -amdgpu-remat-extend-deps -verify-machineinstrs %S/machine-scheduler-remat-extend-deps.mir -o /dev/null -debug-only=machine-scheduler,gcn-rematerialization-strategy 2>&1 | FileCheck -check-prefix=EXTEND %s
+# RUN: llc -mtriple=amdgpu9.08 -run-pass=machine-scheduler -amdgpu-disable-unclustered-high-rp-reschedule -amdgpu-remat-extend-deps=false -verify-machineinstrs %S/machine-scheduler-remat-extend-deps.mir -o /dev/null -debug-only=machine-scheduler,gcn-rematerialization-strategy 2>&1 | FileCheck -check-prefix=NOEXTEND %s
+
+# Shows how the pre-RA rematerialization stage reaches its pressure target in
+# machine-scheduler-remat-extend-deps.mir. The final MIR only shows the
+# rematerialized registers; the intermediate steps are only visible in the
+# stage's debug output.
+#
+# In extend_shared_base, region 1 starts at 15/12 VGPRs. Each rematerialized
+# address saves one VGPR. The first one extends the live range of %base through
+# regions 0 to 2, which costs one VGPR in each of them; this is charged to the
+# RP targets right away. The four addresses therefore reach the 12/12 target in
+# a single round, without the estimate being too optimistic.
+#
+# In wide_dep_narrow_users, each 32-bit address would only save one VGPR while
+# extending the 64-bit %base costs two, so the addresses are not candidates.
+
+# EXTEND-LABEL: In function @extend_shared_base: rematerializing to reduce spilling
+# EXTEND:       [1] Actual/Target: {{.*}}, 15/12 ArchVGPRs
+# EXTEND:       NEW REMAT ROUND
+# EXTEND:       ** REMAT {{.*}}%addr0:vgpr_32 = V_ADD_U32_e32 0, %base
+# EXTEND-NEXT:    [0] Extending %base
+# EXTEND-NEXT:    [1] Extending %base
+# EXTEND-NEXT:    [2] Extending %base
+# EXTEND-NEXT:  ** REMAT {{.*}}%addr1:vgpr_32 = V_ADD_U32_e32 16, %base
+# EXTEND-NEXT:  ** REMAT {{.*}}%addr2:vgpr_32 = V_ADD_U32_e32 32, %base
+# EXTEND-NEXT:  ** REMAT {{.*}}%addr3:vgpr_32 = V_ADD_U32_e32 48, %base
+# EXTEND-NEXT:    [1] Target reached!
+# EXTEND-NOT:   Incorrect RP estimation
+# EXTEND-NOT:   NEW REMAT ROUND
+# EXTEND:       Objectives achieved!
+# EXTEND:       REMAT RESULTS
+# EXTEND:       [1] Achieved occupancy {{[0-9]+}}
+
+# EXTEND-LABEL: In function @no_extend_across_blocks: rematerializing to reduce spilling
+# EXTEND:       [0] Actual/Target: {{.*}}, 15/12 ArchVGPRs
+# EXTEND-NOT:   ** REMAT
+# EXTEND:       Stop on exhausted rematerialization candidates
+
+# EXTEND-LABEL: In function @wide_dep_narrow_users: rematerializing to reduce spilling
+# EXTEND-NEXT:  Not extending dependencies of {{.*}}%addr0{{.*}}: their pressure exceeds the save
+# EXTEND-NEXT:  Not extending dependencies of {{.*}}%addr1{{.*}}: their pressure exceeds the save
+# EXTEND-NEXT:  Not extending dependencies of {{.*}}%addr2{{.*}}: their pressure exceeds the save
+# EXTEND-NEXT:  Not extending dependencies of {{.*}}%addr3{{.*}}: their pressure exceeds the save
+# EXTEND:       [1] Actual/Target: {{.*}}, 15/12 ArchVGPRs
+# EXTEND-NOT:   ** REMAT
+# EXTEND:       Stop on exhausted rematerialization candidates
+
+# NOEXTEND-LABEL: In function @extend_shared_base: rematerializing to reduce spilling
+# NOEXTEND:       [1] Actual/Target: {{.*}}, 15/12 ArchVGPRs
+# NOEXTEND-NOT:   ** REMAT
+# NOEXTEND:       Stop on exhausted rematerialization candidates
+
+# NOEXTEND-LABEL: In function @no_extend_across_blocks: rematerializing to reduce spilling
+# NOEXTEND:       [0] Actual/Target: {{.*}}, 15/12 ArchVGPRs
+# NOEXTEND-NOT:   ** REMAT
+# NOEXTEND:       Stop on exhausted rematerialization candidates
+
+# NOEXTEND-LABEL: In function @wide_dep_narrow_users: rematerializing to reduce spilling
+# NOEXTEND-NOT:   Not extending
+# NOEXTEND:       [1] Actual/Target: {{.*}}, 15/12 ArchVGPRs
+# NOEXTEND-NOT:   ** REMAT
+# NOEXTEND:       Stop on exhausted rematerialization candidates
