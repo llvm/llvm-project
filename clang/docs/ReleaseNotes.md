@@ -238,6 +238,13 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### C++2d Feature Support
 
+- Clang now supports [P3540R3](https://wg21.link/p3540r3) (`#embed` offset
+  parameter): the standard `offset` spelling of the existing `clang::offset`
+  embed parameter is accepted, and `__cpp_pp_embed` is bumped to `202606L` in
+  C++2d mode. In earlier C++ language modes the unprefixed spelling is
+  diagnosed as a C++2d extension under `-Wc++2d-extensions`, and in C under
+  `-Wembed-offset-extension`.
+
 - Clang now supports [P3658R1](https://wg21.link/p3658r1) (Adjust identifier
   following new Unicode recommendations), applied as a DR to all C++ language
   modes.
