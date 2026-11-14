@@ -48,6 +48,10 @@ public:
   Preprocessor &preprocessor() { return preprocessor_; }
   common::LanguageFeatureControl &features() { return features_; }
 
+  Prescanner &set_preprocessingEnabled(bool yes) {
+    preprocessingEnabled_ = yes;
+    return *this;
+  }
   Prescanner &set_preprocessingOnly(bool yes) {
     preprocessingOnly_ = yes;
     return *this;
@@ -64,7 +68,7 @@ public:
     encoding_ = code;
     return *this;
   }
-  Prescanner &set_fixedFormColumnLimit(int limit) {
+  Prescanner &set_fixedFormColumnLimit(std::optional<int> limit) {
     fixedFormColumnLimit_ = limit;
     return *this;
   }
@@ -208,6 +212,9 @@ private:
             std::strcmp(directiveSentinel_, "$omx") == 0 ||
             std::strcmp(directiveSentinel_, "$ompx") == 0);
   }
+  bool IsPastFixedFormColumnLimit(int column) const {
+    return fixedFormColumnLimit_ && column > *fixedFormColumnLimit_;
+  }
   bool InFixedFormSource() const {
     return inFixedForm_ && !inPreprocessorDirective_ && !InCompilerDirective();
   }
@@ -228,7 +235,7 @@ private:
   void NextChar();
   // True when input flowed to a continuation line
   bool SkipToNextSignificantCharacter();
-  void SkipCComments();
+  void SkipCComments(bool reportUnterminated);
   void WarnCComment(const char *at);
   void SkipSpaces();
   static const char *SkipWhiteSpace(const char *);
@@ -250,7 +257,8 @@ private:
   std::optional<std::size_t> IsIncludeLine(const char *) const;
   void FortranInclude(const char *quote);
   const char *IsPreprocessorDirectiveLine(const char *) const;
-  const char *FixedFormContinuationLine(bool atNewline);
+  const char *FixedFormContinuationLine(
+      bool atNewline, const char *&cComment, const char *&unterminatedCComment);
   const char *GetFreeFormContinuationLine(bool ampersand, const char *p);
   const char *FreeFormContinuationLine(bool ampersand);
   bool IsImplicitContinuation() const;
@@ -275,12 +283,13 @@ private:
   Preprocessor &preprocessor_;
   AllSources &allSources_;
   common::LanguageFeatureControl features_;
+  bool preprocessingEnabled_{false};
   bool preprocessingOnly_{false};
   bool expandIncludeLines_{true};
   bool isNestedInIncludeDirective_{false};
   bool backslashFreeFormContinuation_{false};
   bool inFixedForm_{false};
-  int fixedFormColumnLimit_{72};
+  std::optional<int> fixedFormColumnLimit_{72};
   Encoding encoding_{Encoding::UTF_8};
   int parenthesisNesting_{0};
   int prescannerNesting_{0};

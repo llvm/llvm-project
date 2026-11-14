@@ -16,7 +16,6 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LoopPass.h"
-#include "llvm/Analysis/RegionPass.h"
 #include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -62,16 +61,28 @@
 #include <algorithm>
 #include <memory>
 #include <optional>
+
+#define HANDLE_EXTENSION(Ext)                                                  \
+  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
+#include "llvm/Support/Extension.def"
+
 using namespace llvm;
 using namespace opt_tool;
 
-static codegen::RegisterCodeGenFlags CFG;
-static codegen::RegisterMTuneFlag MTF;
-static codegen::RegisterSaveStatsFlag SSF;
+static bool shouldPinPassToLegacyPM(StringRef Pass);
 
-// The OptimizationList is automatically populated with registered Passes by the
-// PassNameParser.
-static cl::list<const PassInfo *, bool, PassNameParser> PassList(cl::desc(
+namespace {
+// Register only the passes that the legacy pipeline accepts, so other pass
+// names do not occupy option spellings.
+struct PinnedPassNameParser : PassNameParser {
+  using PassNameParser::PassNameParser;
+  bool ignorablePassImpl(const PassInfo *P) const override {
+    return !shouldPinPassToLegacyPM(P->getPassArgument());
+  }
+};
+} // namespace
+
+static cl::list<const PassInfo *, bool, PinnedPassNameParser> PassList(cl::desc(
     "Optimizations available (use \"-passes=\" for the new pass manager)"));
 
 // This flag specifies a textual description of the optimization pass pipeline
@@ -285,6 +296,11 @@ static cl::list<std::string>
     PassPlugins("load-pass-plugin",
                 cl::desc("Load passes from plugin library"));
 
+static cl::list<std::string>
+    PluginArgs("plugin-arg",
+               cl::desc("Pass <arg> to the pass plugin named <plugin>"),
+               cl::value_desc("plugin>,<arg"));
+
 //===----------------------------------------------------------------------===//
 // CodeGen-related helper functions.
 //
@@ -384,14 +400,12 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
   return llvm::is_contained(PassNameExact, Pass);
 }
 
-// For use in NPM transition.
-static bool shouldForceLegacyPM() {
-  for (const PassInfo *P : PassList) {
-    StringRef Arg = P->getPassArgument();
-    if (shouldPinPassToLegacyPM(Arg))
-      return true;
-  }
-  return false;
+static void printPassNameSyntaxError() {
+  errs() << "The `opt -passname` syntax for the new pass manager is "
+            "not supported, please use `opt -passes=<pipeline>` (or the `-p` "
+            "alias for a more concise version).\n";
+  errs() << "See https://llvm.org/docs/NewPassManager.html#invoking-opt "
+            "for more details on the pass pipeline syntax.\n\n";
 }
 
 //===----------------------------------------------------------------------===//
@@ -421,7 +435,6 @@ optMain(int argc, char **argv,
   // For codegen passes, only passes that do IR to IR transformation are
   // supported.
   initializeExpandIRInstsLegacyPassPass(Registry);
-  initializeScalarizeMaskedMemIntrinLegacyPassPass(Registry);
   initializeSelectOptimizePass(Registry);
   initializeInlineAsmPreparePass(Registry);
   initializeCodeGenPrepareLegacyPassPass(Registry);
@@ -435,7 +448,6 @@ optMain(int argc, char **argv,
   initializeIndirectBrExpandLegacyPassPass(Registry);
   initializeInterleavedLoadCombinePass(Registry);
   initializeInterleavedAccessPass(Registry);
-  initializePostInlineEntryExitInstrumenterPass(Registry);
   initializeUnreachableBlockElimLegacyPassPass(Registry);
   initializeExpandReductionsPass(Registry);
   initializeWasmEHPreparePass(Registry);
@@ -443,36 +455,48 @@ optMain(int argc, char **argv,
   initializeReplaceWithVeclibLegacyPass(Registry);
   initializeJMCInstrumenterPass(Registry);
 
-  SmallVector<PassPlugin, 1> PluginList;
-  PassPlugins.setCallback([&](const std::string &PluginPath) {
-    auto Plugin = PassPlugin::Load(PluginPath);
-    if (!Plugin)
-      reportFatalUsageError(Plugin.takeError());
-    PluginList.emplace_back(Plugin.get());
-  });
-
   // Register the Target and CPU printer for --version.
   cl::AddExtraVersionPrinter(sys::printDefaultTargetAndDetectedCPU);
 
-  cl::ParseCommandLineOptions(
-      argc, argv, "llvm .bc -> .bc modular optimizer and analysis printer\n");
-
   LLVMContext Context;
-
-  // TODO: remove shouldForceLegacyPM().
-  const bool UseNPM =
-      !shouldForceLegacyPM() || PassPipeline.getNumOccurrences() > 0;
-
-  if (UseNPM && !PassList.empty()) {
-    errs() << "The `opt -passname` syntax for the new pass manager is "
-              "not supported, please use `opt -passes=<pipeline>` (or the `-p` "
-              "alias for a more concise version).\n";
-    errs() << "See https://llvm.org/docs/NewPassManager.html#invoking-opt "
-              "for more details on the pass pipeline syntax.\n\n";
+  if (!cl::parseCommandLineOptions(
+          Context.getLibraryOptions(), codegen::getToolOptions(),
+          ArrayRef(argv, argc),
+          "llvm .bc -> .bc modular optimizer and analysis printer\n",
+          &errs())) {
+    // Unpinned pass names are not options; point `opt -passname` users to
+    // -passes.
+    if (any_of(ArrayRef(argv + 1, argc - 1), [&](StringRef Arg) {
+          if (!Arg.consume_front("-"))
+            return false;
+          Arg.consume_front("-");
+          Arg = Arg.split('=').first;
+          return Registry.getPassInfo(Arg) && !shouldPinPassToLegacyPM(Arg);
+        }))
+      printPassNameSyntaxError();
     return 1;
   }
 
-  if (!UseNPM && PluginList.size()) {
+  SmallVector<PassPluginLibraryInfo, 0> Extensions;
+  for (const std::string &Path : PassPlugins) {
+    auto Plugin = PassPlugin::load(Path);
+    if (!Plugin)
+      reportFatalUsageError(Plugin.takeError());
+    Extensions.push_back(Plugin->getInfo());
+  }
+#define HANDLE_EXTENSION(Ext) Extensions.push_back(get##Ext##PluginInfo());
+#include "llvm/Support/Extension.def"
+  if (Error E = passPluginArguments(Extensions, PluginArgs))
+    reportFatalUsageError(std::move(E));
+
+  const bool UseNPM = PassList.empty() || PassPipeline.getNumOccurrences() > 0;
+
+  if (UseNPM && !PassList.empty()) {
+    printPassNameSyntaxError();
+    return 1;
+  }
+
+  if (!UseNPM && !PassPlugins.empty()) {
     errs() << argv[0] << ": " << PassPlugins.ArgStr
            << " specified with legacy PM.\n";
     return 1;
@@ -482,14 +506,14 @@ optMain(int argc, char **argv,
   // construct the PassBuilder before parsing IR so we can reuse the same
   // PassBuilder for print passes.
   if (PrintPasses) {
-    printPasses(outs());
+    printPasses(Context, outs());
     return 0;
   }
 
   // If user just wants to list available options, skip module loading.
-  auto MAttrs = codegen::getMAttrs();
-  std::string CPUStr = codegen::getCPUStr();
-  std::string TuneCPUStr = codegen::getTuneCPUStr();
+  auto MAttrs = codegen::getMAttrs(Context.getLibraryOptions());
+  std::string CPUStr = codegen::getCPUStr(Context.getLibraryOptions());
+  std::string TuneCPUStr = codegen::getTuneCPUStr(Context.getLibraryOptions());
   bool SkipModule =
       CPUStr == "help" || TuneCPUStr == "help" || is_contained(MAttrs, "help");
   if (SkipModule) {
@@ -500,8 +524,8 @@ optMain(int argc, char **argv,
       TheTriple = Triple(sys::getDefaultTargetTriple());
 
     std::string Error;
-    const Target *TheTarget =
-        TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
+    const Target *TheTarget = TargetRegistry::lookupTarget(
+        codegen::getMArch(Context.getLibraryOptions()), TheTriple, Error);
     if (!TheTarget) {
       errs() << argv[0] << ": " << Error << "\n";
       return 1;
@@ -510,12 +534,14 @@ optMain(int argc, char **argv,
     // Pass "help" as CPU for -mtune=help
     std::string SkipModuleCPU = (TuneCPUStr == "help" ? "help" : CPUStr);
     TargetOptions Options =
-        codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
+        codegen::getTargetOptions(Context.getLibraryOptions(), TheTriple);
     // Create the target machine just to print the help info. Use unique_ptr
     // to avoid a memory leak.
     std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
-        TheTriple, SkipModuleCPU, codegen::getFeaturesStr(), Options,
-        codegen::getExplicitRelocModel(), codegen::getExplicitCodeModel(),
+        TheTriple, SkipModuleCPU,
+        codegen::getFeaturesStr(Context.getLibraryOptions()), Options,
+        codegen::getExplicitRelocModel(Context.getLibraryOptions()),
+        codegen::getExplicitCodeModel(Context.getLibraryOptions()),
         GetCodeGenOptLevel()));
     if (!TM) {
       errs() << argv[0] << ": could not allocate target machine\n";
@@ -546,9 +572,10 @@ optMain(int argc, char **argv,
   }
   LLVMRemarkFileHandle RemarksFile = std::move(*RemarksFileOrErr);
 
-  codegen::MaybeEnableStatistics();
+  codegen::maybeEnableStatistics(Context.getLibraryOptions());
 
-  StringRef ABIName = mc::getABIName(); // FIXME: Handle module flag.
+  StringRef ABIName =
+      mc::getABIName(Context.getLibraryOptions()); // FIXME: Handle module flag.
 
   // Load the input module...
   auto SetDataLayout = [&](StringRef IRTriple,
@@ -680,12 +707,12 @@ optMain(int argc, char **argv,
   std::string FeaturesStr;
   std::unique_ptr<TargetMachine> TM;
   if (ModuleTriple.getArch()) {
-    CPUStr = codegen::getCPUStr();
-    TuneCPUStr = codegen::getTuneCPUStr();
-    FeaturesStr = codegen::getFeaturesStr();
+    CPUStr = codegen::getCPUStr(Context.getLibraryOptions());
+    TuneCPUStr = codegen::getTuneCPUStr(Context.getLibraryOptions());
+    FeaturesStr = codegen::getFeaturesStr(Context.getLibraryOptions());
     Expected<std::unique_ptr<TargetMachine>> ExpectedTM =
-        codegen::createTargetMachineForTriple(ModuleTriple,
-                                              GetCodeGenOptLevel());
+        codegen::createTargetMachineForTriple(
+            Context.getLibraryOptions(), ModuleTriple, GetCodeGenOptLevel());
     if (auto E = ExpectedTM.takeError()) {
       errs() << argv[0] << ": WARNING: failed to create target machine for '"
              << ModuleTriple.str() << "': " << toString(std::move(E)) << "\n";
@@ -703,7 +730,7 @@ optMain(int argc, char **argv,
   const TargetOptions *Options = TM ? &TM->Options : &CodeGenFlagsOptions;
   if (!TM) {
     CodeGenFlagsOptions =
-        codegen::InitTargetOptionsFromCodeGenFlags(ModuleTriple);
+        codegen::getTargetOptions(Context.getLibraryOptions(), ModuleTriple);
   }
 
   // Override function attributes based on CPUStr, TuneCPUStr, FeaturesStr, and
@@ -800,13 +827,14 @@ optMain(int argc, char **argv,
     // layer.
     if (!runPassPipeline(
             argv[0], *M, TM.get(), &TLII, Out.get(), ThinLinkOut.get(),
-            RemarksFile.get(), Pipeline, PluginList, PassBuilderCallbacks, OK,
+            RemarksFile.get(), Pipeline, Extensions, PassBuilderCallbacks, OK,
             VK, /* ShouldPreserveAssemblyUseListOrder */ false,
             /* ShouldPreserveBitcodeUseListOrder */ true, EmitSummaryIndex,
             EmitModuleHash, EnableDebugify, VerifyDebugInfoPreserve,
             EnableProfileVerification, UnifiedLTO))
       return 1;
-    return codegen::MaybeSaveStatistics(OutputFilename, "opt");
+    return codegen::maybeSaveStatistics(Context.getLibraryOptions(),
+                                        OutputFilename, "opt");
   }
 
   if (OptLevelO0 || OptLevelO1 || OptLevelO2 || OptLevelOs || OptLevelOz ||
@@ -992,5 +1020,6 @@ optMain(int argc, char **argv,
   if (ThinLinkOut)
     ThinLinkOut->keep();
 
-  return codegen::MaybeSaveStatistics(OutputFilename, "opt");
+  return codegen::maybeSaveStatistics(Context.getLibraryOptions(),
+                                      OutputFilename, "opt");
 }

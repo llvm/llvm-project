@@ -1,0 +1,31 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "AnalysisOptions.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/IR2Vec.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/Utils/ImportedFunctionsInliningStatistics.h"
+#include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Option/LibraryOptions.h"
+
+#define OPTIONS_STRUCT_DEFS
+#include "AnalysisOptions.inc"
+
+using namespace llvm;
+
+LLVM_REGISTER_LIBRARY_OPTIONS(llvm::AnalysisOptions)
+
+const AnalysisOptions &llvm::getAnalysisOptions(const Module &M) {
+  return getAnalysisOptions(M.getContext());
+}
+
+const AnalysisOptions &llvm::getAnalysisOptions(const Loop &L) {
+  return getAnalysisOptions(L.getHeader()->getContext());
+}

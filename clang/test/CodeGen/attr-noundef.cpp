@@ -18,7 +18,7 @@ void pass_trivial(Trivial e) {}
 // CHECK-INTEL: [[DEF:define( dso_local)?]] i32 @{{.*}}ret_trivial
 // CHECK-AARCH: [[DEF:define( dso_local)?]] i32 @{{.*}}ret_trivial
 // CHECK-INTEL: [[DEF]] void @{{.*}}pass_trivial{{.*}}(i32 %
-// CHECK-AARCH: [[DEF]] void @{{.*}}pass_trivial{{.*}}(i64 %
+// CHECK-AARCH: [[DEF]] void @{{.*}}pass_trivial{{.*}}(i32 %
 
 struct NoCopy {
   int a;
@@ -51,7 +51,7 @@ void pass_trivial(Trivial e) {}
 // CHECK-INTEL: [[DEF]] i32 @{{.*}}ret_trivial
 // CHECK-AARCH: [[DEF]] i32 @{{.*}}ret_trivial
 // CHECK-INTEL: [[DEF]] void @{{.*}}pass_trivial{{.*}}(i32 %
-// CHECK-AARCH: [[DEF]] void @{{.*}}pass_trivial{{.*}}(i64 %
+// CHECK-AARCH: [[DEF]] void @{{.*}}pass_trivial{{.*}}(i32 %
 
 union NoCopy {
   int a;
@@ -158,7 +158,7 @@ void pass_large_BitInt(_BitInt(127) e) {
 // CHECK: [[DEF]] ptr @{{.*}}ret_npt{{.*}}()
 // CHECK: [[DEF]] void @{{.*}}pass_npt{{.*}}(ptr %
 
-// CHECK-INTEL: [[DEF]] noundef signext i3 @{{.*}}ret_BitInt{{.*}}()
+// CHECK-INTEL: [[DEF]] noundef i3 @{{.*}}ret_BitInt{{.*}}()
 // CHECK-AARCH: [[DEF]] noundef i3 @{{.*}}ret_BitInt{{.*}}()
 // CHECK-INTEL: [[DEF]] void @{{.*}}pass_BitInt{{.*}}(i3 noundef signext %
 // CHECK-AARCH: [[DEF]] void @{{.*}}pass_BitInt{{.*}}(i3 noundef %

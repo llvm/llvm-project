@@ -99,9 +99,9 @@ void AnyValue::print(Context &Ctx, raw_ostream &OS) const {
     // exponential notation if it is lossless, otherwise output it in
     // hexadecimal notation.
     SmallString<16> StrVal;
-    FloatVal.toString(StrVal, /*FormatPrecision=*/6, /*FormatMaxPadding=*/0,
-                      /*TruncateZero=*/false);
-    if (APFloat(FloatVal.getSemantics(), StrVal).bitwiseIsEqual(FloatVal)) {
+    if (FloatVal.toStringRoundTrip(StrVal, /*FormatPrecision=*/6,
+                                   /*FormatMaxPadding=*/0,
+                                   /*TruncateZero=*/false)) {
       OS << StrVal;
     } else {
       StrVal.clear();
@@ -342,7 +342,7 @@ ByteValue ByteValue::zero(uint32_t BitWidth, bool IsLittleEndian) {
 ByteValue ByteValue::poison(uint32_t BitWidth, bool IsLittleEndian) {
   return ByteValue(BitWidth,
                    std::vector<Byte>(divideCeil(BitWidth, 8), Byte::poison()),
-                   IsLittleEndian, /*ImplicitClearHighBits=*/true);
+                   IsLittleEndian, ByteValue::CanonicalizeMode::Canonical);
 }
 
 void ByteValue::print(Context &Ctx, raw_ostream &OS) const {

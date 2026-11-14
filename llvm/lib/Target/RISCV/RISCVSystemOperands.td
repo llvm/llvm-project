@@ -574,6 +574,12 @@ foreach i = 0 - 3 in {
 }
 } // FeatureVendorXqciint
 
+// Xqccmi
+let FeaturesRequired = [{ {RISCV::FeatureVendorXqccmi} }] in {
+def : SysReg<"qc.itba", 0x800, RV32Only=true>;
+def : SysReg<"qc.itdec", 0x801, RV32Only=true>;
+}
+
 // XAIFET
 let FeaturesRequired = [{ {RISCV::FeatureVendorXAIFET} }] in {
   def : SysReg<"aif.cache_invalidate", 0x7d0>;

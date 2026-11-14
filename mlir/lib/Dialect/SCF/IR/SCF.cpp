@@ -31,6 +31,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DebugLog.h"
 #include <optional>
@@ -737,8 +738,7 @@ LogicalResult scf::ForallOp::promoteIfSingleIteration(RewriterBase &rewriter) {
       return failure();
   }
 
-  promote(rewriter, *this);
-  return success();
+  return promote(rewriter, *this);
 }
 
 Block::BlockArgListType ForallOp::getRegionIterArgs() {
@@ -750,15 +750,44 @@ MutableArrayRef<OpOperand> ForallOp::getInitsMutable() {
 }
 
 /// Promotes the loop body of a scf::ForallOp to its containing block.
-void mlir::scf::promote(RewriterBase &rewriter, scf::ForallOp forallOp) {
+LogicalResult mlir::scf::promote(RewriterBase &rewriter,
+                                 scf::ForallOp forallOp) {
   OpBuilder::InsertionGuard g(rewriter);
   scf::InParallelOp terminator = forallOp.getTerminator();
+
+  // Check that all combining ops can be promoted before modifying the IR,
+  // including materializing the lower bounds below.
+  for (Operation &op : terminator.getYieldingOps()) {
+    if (!isa<tensor::ParallelInsertSliceOp>(op))
+      return rewriter.notifyMatchFailure(forallOp, [&](Diagnostic &diag) {
+        diag << "unsupported parallel combining op: " << op.getName();
+      });
+  }
 
   // Replace block arguments with lower bounds (replacements for IVs) and
   // outputs.
   SmallVector<Value> bbArgReplacements = forallOp.getLowerBound(rewriter);
   bbArgReplacements.append(forallOp.getOutputs().begin(),
                            forallOp.getOutputs().end());
+
+  // Collect combining ops in shared output order before inlining replaces the
+  // output block arguments. Keep a separate list for each output.
+  SmallVector<SmallVector<ParallelCombiningOpInterface, 1>> yieldingOps;
+  yieldingOps.reserve(forallOp.getNumResults());
+
+  for (BlockArgument outputArg : forallOp.getRegionIterArgs()) {
+    auto &outputOps = yieldingOps.emplace_back();
+
+    for (Operation *op : forallOp.getCombiningOps(outputArg)) {
+      auto combiningOp = cast<ParallelCombiningOpInterface>(op);
+      // Supported tensor.parallel_insert_slice ops have a single destination.
+      if (combiningOp->getParentOp() != terminator.getOperation() ||
+          combiningOp.getUpdatedDestinations()[0].get() != outputArg)
+        continue;
+
+      outputOps.push_back(combiningOp);
+    }
+  }
 
   // Move the loop body operations to the loop's containing block.
   rewriter.inlineBlockBefore(forallOp.getBody(), forallOp->getBlock(),
@@ -768,31 +797,28 @@ void mlir::scf::promote(RewriterBase &rewriter, scf::ForallOp forallOp) {
   rewriter.setInsertionPointAfter(forallOp);
   SmallVector<Value> results;
   results.reserve(forallOp.getResults().size());
-  for (auto &yieldingOp : terminator.getYieldingOps()) {
-    auto parallelInsertSliceOp =
-        dyn_cast<tensor::ParallelInsertSliceOp>(yieldingOp);
-    if (!parallelInsertSliceOp)
-      continue;
+  for (auto [output, combiningOps] :
+       llvm::zip_equal(forallOp.getOutputs(), yieldingOps)) {
+    Value result = output;
 
-    Value dst = parallelInsertSliceOp.getDest();
-    Value src = parallelInsertSliceOp.getSource();
-    if (llvm::isa<TensorType>(src.getType())) {
-      results.push_back(tensor::InsertSliceOp::create(
-          rewriter, forallOp.getLoc(), dst.getType(), src, dst,
-          parallelInsertSliceOp.getOffsets(), parallelInsertSliceOp.getSizes(),
-          parallelInsertSliceOp.getStrides(),
-          parallelInsertSliceOp.getStaticOffsets(),
-          parallelInsertSliceOp.getStaticSizes(),
-          parallelInsertSliceOp.getStaticStrides()));
-    } else {
-      llvm_unreachable("unsupported terminator");
+    for (ParallelCombiningOpInterface combiningOp : combiningOps) {
+      auto insertOp = cast<tensor::ParallelInsertSliceOp>(combiningOp);
+      result = tensor::InsertSliceOp::create(
+          rewriter, forallOp.getLoc(), result.getType(), insertOp.getSource(),
+          result, insertOp.getOffsets(), insertOp.getSizes(),
+          insertOp.getStrides(), insertOp.getStaticOffsets(),
+          insertOp.getStaticSizes(), insertOp.getStaticStrides());
     }
+
+    results.push_back(result);
   }
+
   rewriter.replaceAllUsesWith(forallOp.getResults(), results);
 
   // Erase the old terminator and the loop.
   rewriter.eraseOp(terminator);
   rewriter.eraseOp(forallOp);
+  return success();
 }
 
 LoopNest mlir::scf::buildLoopNest(
@@ -949,6 +975,31 @@ mlir::scf::replaceAndCastForOpIterArg(RewriterBase &rewriter, scf::ForOp forOp,
   return newResults;
 }
 
+bool mlir::scf::isShapePreserving(ForOp forOp, int64_t arg) {
+  assert(arg < static_cast<int64_t>(forOp.getNumResults()) &&
+         "arg is out of bounds");
+  Value value = forOp.getYieldedValues()[arg];
+  while (value) {
+    if (value == forOp.getRegionIterArgs()[arg])
+      return true;
+    OpResult opResult = dyn_cast<OpResult>(value);
+    if (!opResult)
+      return false;
+
+    value = llvm::TypeSwitch<Operation *, Value>(opResult.getOwner())
+                .Case([&](DestinationStyleOpInterface op) {
+                  return op.getTiedOpOperand(opResult)->get();
+                })
+                .Case([&](ForOp forOp) {
+                  return isShapePreserving(forOp, opResult.getResultNumber())
+                             ? forOp.getInitArgs()[opResult.getResultNumber()]
+                             : Value();
+                })
+                .Default(nullptr);
+  }
+  return false;
+}
+
 namespace {
 /// Fold scf.for iter_arg/result pairs that go through incoming/ougoing
 /// a tensor.cast op pair so as to pull the tensor.cast inside the scf.for:
@@ -957,8 +1008,9 @@ namespace {
 ///   %0 = tensor.cast %t0 : tensor<32x1024xf32> to tensor<?x?xf32>
 ///   %1 = scf.for %i = %c0 to %c1024 step %c32 iter_args(%iter_t0 = %0)
 ///      -> (tensor<?x?xf32>) {
-///     %2 = call @do(%iter_t0) : (tensor<?x?xf32>) -> tensor<?x?xf32>
-///     scf.yield %2 : tensor<?x?xf32>
+///     %2 = call @do(%iter_t0) : (tensor<?x?xf32>) -> tensor<32x1024xf32>
+///     %3 = tensor.cast %2 : tensor<32x1024xf32> to tensor<?x?xf32>
+///     scf.yield %3 : tensor<?x?xf32>
 ///   }
 ///   use_of(%1)
 /// ```
@@ -969,9 +1021,8 @@ namespace {
 ///   %0 = scf.for %arg2 = %c0 to %c1024 step %c32 iter_args(%arg3 = %arg0)
 ///       -> (tensor<32x1024xf32>) {
 ///     %2 = tensor.cast %arg3 : tensor<32x1024xf32> to tensor<?x?xf32>
-///     %3 = call @do(%2) : (tensor<?x?xf32>) -> tensor<?x?xf32>
-///     %4 = tensor.cast %3 : tensor<?x?xf32> to tensor<32x1024xf32>
-///     scf.yield %4 : tensor<32x1024xf32>
+///     %3 = call @do(%2) : (tensor<?x?xf32>) -> tensor<32x1024xf32>
+///     scf.yield %3 : tensor<32x1024xf32>
 ///   }
 ///   %1 = tensor.cast %0 : tensor<32x1024xf32> to tensor<?x?xf32>
 ///   use_of(%1)
@@ -994,6 +1045,18 @@ struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
               incomingCast.getSource().getType()))
         continue;
       if (!std::get<1>(it).hasOneUse())
+        continue;
+      // The fold casts the yielded value to the cast's source type, which is
+      // only valid if every iteration yields a value of that type. A dynamic
+      // dimension of that type stays dynamic, so its size may still change
+      // between iterations; only the static sizes are asserted.
+      int64_t resultNumber = std::get<1>(it).getResultNumber();
+      auto yieldedCast =
+          op.getYieldedValues()[resultNumber].getDefiningOp<tensor::CastOp>();
+      bool yieldsStaticType =
+          yieldedCast && yieldedCast.getSource().getType() ==
+                             incomingCast.getSource().getType();
+      if (!yieldsStaticType && !isShapePreserving(op, resultNumber))
         continue;
 
       // Create a new ForOp with that iter operand replaced.
@@ -1625,7 +1688,7 @@ struct ForallOpSingleOrZeroIterationDimsFolder
     // Compute new loop bounds that omit all single-iteration loop dimensions.
     SmallVector<OpFoldResult> newMixedLowerBounds, newMixedUpperBounds,
         newMixedSteps;
-    IRMapping mapping;
+    SmallVector<std::pair<Value, OpFoldResult>> singleIterationIVs;
     for (auto [lb, ub, step, iv] :
          llvm::zip(op.getMixedLowerBound(), op.getMixedUpperBound(),
                    op.getMixedStep(), op.getInductionVars())) {
@@ -1640,7 +1703,7 @@ struct ForallOpSingleOrZeroIterationDimsFolder
         // Replace the loop induction variable by the lower bound if the loop
         // performs a single iteration. Otherwise, copy the loop bounds.
         if (*numIterations == 1) {
-          mapping.map(iv, getValueOrCreateConstantIndexOp(rewriter, loc, lb));
+          singleIterationIVs.emplace_back(iv, lb);
           continue;
         }
       }
@@ -1650,16 +1713,20 @@ struct ForallOpSingleOrZeroIterationDimsFolder
     }
 
     // All of the loop dimensions perform a single iteration. Inline loop body.
-    if (newMixedLowerBounds.empty()) {
-      promote(rewriter, op);
-      return success();
-    }
+    if (newMixedLowerBounds.empty())
+      return promote(rewriter, op);
 
     // Exit if none of the loop dimensions perform a single iteration.
     if (newMixedLowerBounds.size() == static_cast<unsigned>(op.getRank())) {
       return rewriter.notifyMatchFailure(
           op, "no dimensions have 0 or 1 iterations");
     }
+
+    // Materialize lower bounds only after all failure paths, including
+    // promotion above, so that failed rewrites leave the IR unchanged.
+    IRMapping mapping;
+    for (auto [iv, lb] : singleIterationIVs)
+      mapping.map(iv, getValueOrCreateConstantIndexOp(rewriter, loc, lb));
 
     // Replace the loop by a lower-dimensional loop.
     ForallOp newOp;
@@ -2335,8 +2402,29 @@ struct ConditionPropagation : public OpRewritePattern<IfOp> {
                                  [&]() { use.set(constantFalse); });
         break;
       }
-      case Parent::None:
+      case Parent::None: {
+        auto selectOp = dyn_cast<arith::SelectOp>(use.getOwner());
+        if (!selectOp || use.getOperandNumber() != 0)
+          break;
+
+        // Refine captured select results only at uses in the matching branch.
+        // Uses outside the if must retain the select result.
+        changed |= rewriter.replaceUsesWithIf(
+            selectOp.getResult(), selectOp.getTrueValue(),
+            [&](OpOperand &selectUse) {
+              return getParentType(
+                         selectUse.getOwner()->getParentRegion(), op, cache,
+                         op.getCondition().getParentRegion()) == Parent::Then;
+            });
+        changed |= rewriter.replaceUsesWithIf(
+            selectOp.getResult(), selectOp.getFalseValue(),
+            [&](OpOperand &selectUse) {
+              return getParentType(
+                         selectUse.getOwner()->getParentRegion(), op, cache,
+                         op.getCondition().getParentRegion()) == Parent::Else;
+            });
         break;
+      }
       }
     }
 
@@ -2753,11 +2841,15 @@ void ParallelOp::build(
     OpBuilder &builder, OperationState &result, ValueRange lowerBounds,
     ValueRange upperBounds, ValueRange steps, ValueRange initVals,
     function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>
-        bodyBuilderFn) {
+        bodyBuilderFn,
+    bool unsignedCmp) {
   result.addOperands(lowerBounds);
   result.addOperands(upperBounds);
   result.addOperands(steps);
   result.addOperands(initVals);
+  if (unsignedCmp)
+    result.addAttribute(getUnsignedCmpAttrName(result.name),
+                        builder.getUnitAttr());
   result.addAttribute(
       ParallelOp::getOperandSegmentSizeAttr(),
       builder.getDenseI32ArrayAttr({static_cast<int32_t>(lowerBounds.size()),
@@ -2787,7 +2879,8 @@ void ParallelOp::build(
 void ParallelOp::build(
     OpBuilder &builder, OperationState &result, ValueRange lowerBounds,
     ValueRange upperBounds, ValueRange steps,
-    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilderFn) {
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilderFn,
+    bool unsignedCmp) {
   // Only pass a non-null wrapper if bodyBuilderFn is non-null itself. Make sure
   // we don't capture a reference to a temporary by constructing the lambda at
   // function level.
@@ -2800,8 +2893,8 @@ void ParallelOp::build(
   if (bodyBuilderFn)
     wrapper = wrappedBuilderFn;
 
-  build(builder, result, lowerBounds, upperBounds, steps, ValueRange(),
-        wrapper);
+  build(builder, result, lowerBounds, upperBounds, steps, ValueRange(), wrapper,
+        unsignedCmp);
 }
 
 LogicalResult ParallelOp::verify() {
@@ -2869,6 +2962,10 @@ LogicalResult ParallelOp::verify() {
 
 ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
   auto &builder = parser.getBuilder();
+  if (succeeded(parser.parseOptionalKeyword("unsigned")))
+    result.addAttribute(getUnsignedCmpAttrName(result.name),
+                        builder.getUnitAttr());
+
   // Parse an opening `(` followed by induction variables followed by `)`
   SmallVector<OpAsmParser::Argument, 4> ivs;
   if (parser.parseArgumentList(ivs, OpAsmParser::Delimiter::Paren))
@@ -2935,6 +3032,8 @@ ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void ParallelOp::print(OpAsmPrinter &p) {
+  if (getUnsignedCmp())
+    p << " unsigned";
   p << " (" << getBody()->getArguments() << ") = (" << getLowerBound()
     << ") to (" << getUpperBound() << ") step (" << getStep() << ")";
   if (!getInitVals().empty())
@@ -2988,8 +3087,8 @@ struct ParallelOpSingleOrZeroIterationDimsFolder
     for (auto [lb, ub, step, iv] :
          llvm::zip(op.getLowerBound(), op.getUpperBound(), op.getStep(),
                    op.getInductionVars())) {
-      auto numIterations =
-          constantTripCount(lb, ub, step, /*isSigned=*/true, computeUbMinusLb);
+      auto numIterations = constantTripCount(lb, ub, step, !op.getUnsignedCmp(),
+                                             computeUbMinusLb);
       if (numIterations.has_value()) {
         // Remove the loop if it performs zero iterations.
         if (*numIterations == 0) {
@@ -3037,9 +3136,9 @@ struct ParallelOpSingleOrZeroIterationDimsFolder
       return success();
     }
     // Replace the parallel loop by lower-dimensional parallel loop.
-    auto newOp =
-        ParallelOp::create(rewriter, op.getLoc(), newLowerBounds,
-                           newUpperBounds, newSteps, op.getInitVals(), nullptr);
+    auto newOp = ParallelOp::create(rewriter, op.getLoc(), newLowerBounds,
+                                    newUpperBounds, newSteps, op.getInitVals(),
+                                    nullptr, op.getUnsignedCmp());
     // Erase the empty block that was inserted by the builder.
     rewriter.eraseBlock(newOp.getBody());
     // Clone the loop body and remap the block arguments of the collapsed loops
@@ -3062,6 +3161,9 @@ struct MergeNestedParallelLoops : public OpRewritePattern<ParallelOp> {
 
     auto innerOp = dyn_cast<ParallelOp>(outerBody.front());
     if (!innerOp)
+      return failure();
+
+    if (op.getUnsignedCmp() != innerOp.getUnsignedCmp())
       return failure();
 
     for (auto val : outerBody.getArguments())
@@ -3661,7 +3763,7 @@ static bool hasDuplicates(ValueRange args) {
 /// args and op result values accordingly.
 /// Needed to simplify `scf.while` -> `scf.for` uplifting.
 struct WhileOpAlignBeforeArgs : public OpRewritePattern<WhileOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(WhileOp loop,
                                 PatternRewriter &rewriter) const override {

@@ -359,7 +359,7 @@ static Value *generateUnsignedDivisionCode(Value *Dividend, Value *Divisor,
   // ; end:                                 ; preds = %loop-exit, %special-cases
   // ;   %q_5 = phi i32 [ %q_4, %loop-exit ], [ %retVal, %special-cases ]
   // ;   ret i32 %q_5
-  Builder.SetInsertPoint(End, End->begin());
+  Builder.SetInsertPoint(End->begin());
   PHINode *Q_5 = Builder.CreatePHI(DivTy, 2);
 
   // Populate the Phis, since all values have now been created. Our Phis were:
@@ -491,7 +491,7 @@ bool llvm::expandDivision(BinaryOperator *Div) {
 /// Generate code to compute the remainder of two integers of bitwidth up to
 /// 32 bits. Uses the above routines and extends the inputs/truncates the
 /// outputs to operate in 32 bits; that is, these routines are good for targets
-/// that have no or very little suppport for smaller than 32 bit integer
+/// that have no or very little support for smaller than 32 bit integer
 /// arithmetic.
 ///
 /// Replace Rem with emulation code.

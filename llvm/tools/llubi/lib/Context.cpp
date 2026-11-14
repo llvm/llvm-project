@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Context.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/MathExtras.h"
@@ -27,7 +28,9 @@ bool Context::initGlobalValues() {
   // Register all function and block targets that may be used by indirect calls
   // and branches.
   for (Function &F : M) {
-    if (F.hasAddressTaken()) {
+    if (F.hasAddressTaken(nullptr,
+                          /*IgnoreCallbackUses=*/false,
+                          /*IgnoreAssumeLikeCalls=*/false)) {
       // TODO: Use precise alignment for function pointers if it is necessary.
       auto FuncObj = allocate(0, F.getPointerAlignment(DL).value(), F.getName(),
                               DL.getProgramAddressSpace(), MemInitKind::Zeroed,
@@ -518,8 +521,15 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
     if (IsTagValid) {
       assert((LogicalByte.TagMask & LogicalByte.ConcreteMask) ==
              LogicalByte.TagMask);
-      if ((LogicalByte.TagMask & Mask) == Mask) {
-        uint8_t ActualTagBits = LogicalByte.TagValue & Mask;
+      // Only the pointer value bits in this chunk need tags; padding bits are
+      // not part of the pointer.
+      uint32_t ValueBitsInByte = std::min(NumBitsInByte, NumBits - I);
+      uint8_t TagBitsMask =
+          ValueBitsInByte == 8
+              ? 255
+              : static_cast<uint8_t>((1U << ValueBitsInByte) - 1);
+      if ((LogicalByte.TagMask & TagBitsMask) == TagBitsMask) {
+        uint8_t ActualTagBits = LogicalByte.TagValue & TagBitsMask;
         RawTagBits[I / WordBits] |= static_cast<APInt::WordType>(ActualTagBits)
                                     << (I % WordBits);
       } else {
@@ -533,18 +543,16 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
   if (IsByteType) {
     assert(!CheckPaddingBits &&
            "Non-vector-element cases should be handled by the fast path.");
-    if (NumBits & 7) {
-      uint8_t Mask = static_cast<uint8_t>((~0U) << (NumBits & 7));
-      LogicalBytes.back().zeroBits(Mask);
-    }
     if (DL.isBigEndian())
       std::reverse(LogicalBytes.begin(), LogicalBytes.end());
-    return ByteValue(NumBits, std::move(LogicalBytes), DL.isLittleEndian());
+    return ByteValue(NumBits, std::move(LogicalBytes), DL.isLittleEndian(),
+                     ByteValue::CanonicalizeMode::PaddingFromValue);
   }
 
   APInt Bits(NumBitsToExtract, RawBits);
 
-  // Padding bits for non-byte-sized scalar types must be zero.
+  // Padding bits are not part of the value. If any padding bit is non-zero,
+  // the result is poison.
   if (NeedsPadding) {
     if (!Bits.isIntN(NumBits)) {
       if (ContainsUndefinedBits)
@@ -561,7 +569,7 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
   assert(Ty->isPointerTy() && "Expect a pointer type");
   // Try to recover provenance from the tag.
   if (IsTagValid) {
-    APInt Tag(NumBitsToExtract, RawTagBits);
+    APInt Tag(NumBits, RawTagBits);
     if (auto Prov = TaggedProvenances.lookup(Tag))
       return Pointer(std::move(Prov), Bits);
   }
@@ -577,23 +585,16 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
                      /*CheckPaddingBits=*/true, ContainsUndefinedBits);
   if (Ty->isByteTy()) {
     unsigned BitWidth = Ty->getByteBitWidth();
-    if (BitWidth & 7) {
-      if (!(DL.isLittleEndian() ? Bytes.back() : Bytes.front())
-               .areHighBitsZExtd(BitWidth & 7)) {
-        if (ContainsUndefinedBits)
-          *ContainsUndefinedBits = true;
-        return ByteValue::poison(BitWidth, DL.isLittleEndian());
-      }
-    }
-    ByteValue Res(BitWidth, Bytes, DL.isLittleEndian());
+    ByteValue Res(BitWidth, Bytes, DL.isLittleEndian(),
+                  ByteValue::CanonicalizeMode::FlushNonCanonicalToPoison);
     bool HasUndefinedBits = false;
     for (Byte &V : Res.mutableBytes()) {
       if (V.ConcreteMask != 255)
         HasUndefinedBits = true;
       V.poisonBits(~V.ConcreteMask);
     }
-    if (ContainsUndefinedBits)
-      *ContainsUndefinedBits = HasUndefinedBits;
+    if (ContainsUndefinedBits && HasUndefinedBits)
+      *ContainsUndefinedBits = true;
     return AnyValue(std::move(Res));
   }
 
@@ -604,17 +605,28 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
     // Check padding bits. <N x iM> acts as if an integer type with N * M bits.
     uint32_t VecBits = ElemBits * NumElements;
     uint32_t AlignedVecBits = alignTo(VecBits, 8);
-    ConstBytesView View(Bytes, DL);
+    // Temporarily modify the padding byte in place to avoid copying Bytes; it
+    // is restored after reading the elements.
+    Byte *Data = const_cast<Byte *>(Bytes.data());
+    uint32_t PaddingByteIndex = DL.isLittleEndian() ? Bytes.size() - 1 : 0;
+    Byte SavedPaddingByte;
+    bool ModifiedPaddingByte = false;
+    llvm::scope_exit RestorePaddingByte([&] {
+      if (ModifiedPaddingByte)
+        Data[PaddingByteIndex] = SavedPaddingByte;
+    });
     if (VecBits != AlignedVecBits) {
-      const Byte &PaddingByte = View[Bytes.size() - 1];
-      uint32_t Mask = (~0U << (VecBits % 8)) & 255U;
-      // Make sure all high padding bits are zero.
-      if ((PaddingByte.ConcreteMask & ~PaddingByte.Value & Mask) != Mask) {
+      uint8_t PaddingMask = static_cast<uint8_t>((~0U) << (VecBits & 7));
+      Byte &PaddingByte = Data[PaddingByteIndex];
+      if (!PaddingByte.isCanonicalPaddingByte(PaddingMask)) {
+        SavedPaddingByte = PaddingByte;
+        PaddingByte = Byte::poison();
+        ModifiedPaddingByte = true;
         if (ContainsUndefinedBits)
           *ContainsUndefinedBits = true;
-        return AnyValue::getPoisonValue(*this, Ty);
       }
     }
+    ConstBytesView View(Bytes, DL);
 
     std::vector<AnyValue> ValVec;
     ValVec.reserve(NumElements);
@@ -701,11 +713,12 @@ void Context::toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
   };
   if (Val.isPoison()) {
     for (uint32_t I = 0, E = NewOffsetInBits - OffsetInBits; I < E;) {
-      uint32_t NumBitsInByte = std::min(8 - (OffsetInBits + I) % 8, E - I);
-      assert(((OffsetInBits ^ (OffsetInBits + NumBitsInByte - 1)) & ~7) == 0 &&
+      uint32_t BitsStart = OffsetInBits + I;
+      uint32_t NumBitsInByte = std::min(8 - BitsStart % 8, E - I);
+      assert(((BitsStart ^ (BitsStart + NumBitsInByte - 1)) & ~7) == 0 &&
              "Across byte boundary.");
-      Bytes[(OffsetInBits + I) / 8].poisonBits(static_cast<uint8_t>(
-          ((1U << NumBitsInByte) - 1) << ((OffsetInBits + I) % 8)));
+      Bytes[BitsStart / 8].poisonBits(
+          static_cast<uint8_t>(((1U << NumBitsInByte) - 1) << (BitsStart % 8)));
       I += NumBitsInByte;
     }
   } else if (Ty->isIntegerTy()) {
@@ -771,15 +784,9 @@ void Context::toBytes(const AnyValue &Val, Type *Ty,
     Type *ElemTy = VecTy->getElementType();
     uint32_t ElemBits = DL.getTypeSizeInBits(ElemTy).getFixedValue();
     uint32_t NumElements = getEVL(VecTy->getElementCount());
-    // Zero padding bits. <N x iM> acts as if an integer type with N * M bits.
     uint32_t VecBits = ElemBits * NumElements;
     uint32_t AlignedVecBits = alignTo(VecBits, 8);
     MutableBytesView View(Bytes, DL);
-    if (VecBits != AlignedVecBits) {
-      Byte &PaddingByte = View[Bytes.size() - 1];
-      uint32_t Mask = (~0U << (VecBits % 8)) & 255U;
-      PaddingByte.zeroBits(Mask);
-    }
     // For little endian element zero is put in the least significant bits of
     // the integer, and for big endian element zero is put in the most
     // significant bits.
@@ -789,6 +796,16 @@ void Context::toBytes(const AnyValue &Val, Type *Ty,
     } else {
       for (const auto &[I, Val] : enumerate(reverse(Val.asAggregate())))
         toBytes(Val, ElemTy, ElemBits * I, View, /*PaddingBits=*/false);
+    }
+    // The padding bits are poison only if all non-padding bits in the padding
+    // byte are poison; otherwise, they are zero.
+    if (VecBits != AlignedVecBits) {
+      Byte &PaddingByte = View[Bytes.size() - 1];
+      uint8_t Mask = static_cast<uint8_t>((~0U) << (VecBits & 7));
+      if ((PaddingByte.ConcreteMask & ~Mask) == 0)
+        PaddingByte.poisonBits(Mask);
+      else
+        PaddingByte.zeroBits(Mask);
     }
     return;
   }
@@ -826,6 +843,26 @@ void Context::toBytes(const AnyValue &Val, Type *Ty,
   }
 
   llvm_unreachable("Unsupported first class type.");
+}
+
+AnyValue Context::extractBits(const ByteValue &Src, uint32_t OffsetInBits,
+                              Type *Ty) {
+  assert(OffsetInBits + DL.getTypeSizeInBits(Ty).getFixedValue() <=
+             Src.getBitWidth() &&
+         "Bit range out of bounds");
+  return fromBytes(ConstBytesView(Src.bytes(), DL), Ty, OffsetInBits,
+                   /*CheckPaddingBits=*/false,
+                   /*ContainsUndefinedBits=*/nullptr);
+}
+
+void Context::insertBits(ByteValue &Base, uint32_t OffsetInBits,
+                         const AnyValue &Val, Type *Ty) {
+  assert(OffsetInBits + DL.getTypeSizeInBits(Ty).getFixedValue() <=
+             Base.getBitWidth() &&
+         "Bit range out of bounds");
+  toBytes(Val, Ty, OffsetInBits, MutableBytesView(Base.mutableBytes(), DL),
+          /*PaddingBits=*/false);
+  Base.canonicalize(ByteValue::CanonicalizeMode::PaddingFromValue);
 }
 
 AnyValue Context::load(MemoryObject &MO, uint64_t Offset, Type *ValTy,
@@ -875,7 +912,8 @@ void Context::freeze(AnyValue &Val, Type *Ty) {
     return;
   }
   if (Val.isByte()) {
-    for (Byte &V : Val.asMutableByte().mutableBytes()) {
+    MutableArrayRef<Byte> Bytes = Val.asMutableByte().mutableBytes();
+    for (Byte &V : Bytes) {
       if (V.ConcreteMask == 255)
         continue;
       uint8_t OldMask = V.ConcreteMask;
@@ -884,6 +922,8 @@ void Context::freeze(AnyValue &Val, Type *Ty) {
       if (mayUseNonDeterminism())
         V.Value |= (Rng() & 255) & ~OldMask;
     }
+    Val.asMutableByte().canonicalize(
+        ByteValue::CanonicalizeMode::PaddingFromValue);
     return;
   }
   if (Val.isAggregate()) {
@@ -932,7 +972,7 @@ AnyValue Context::computePtrAdd(const Pointer &Ptr, const APInt &Offset,
     MO = checkProvenance(
         Ptr, [](const Provenance &) { return true; },
         /*HasSideEffect=*/false);
-    if (!MO || !MO->inBounds(NewAddr))
+    if (!MO || !MO->inBounds(Ptr.address()) || !MO->inBounds(NewAddr))
       return AnyValue::poison();
   }
 
@@ -1057,7 +1097,8 @@ Context::computeGEP(GEPOperator &GEP,
 
     // Handle a struct index, which adds its field offset to the pointer.
     if (StructType *STy = GTI.getStructTypeOrNull()) {
-      unsigned ElementIdx = cast<ConstantInt>(V)->getZExtValue();
+      unsigned ElementIdx =
+          cast<Constant>(V)->getUniqueInteger().getZExtValue();
       const StructLayout *SL = DL.getStructLayout(STy);
       // Element offset is in bytes.
       ApplyScaledOffset(APInt(IndexBitWidth, SL->getElementOffset(ElementIdx),
@@ -1103,12 +1144,18 @@ IntrusiveRefCntPtr<MemoryObject>
 Context::allocate(uint64_t Size, uint64_t Align, StringRef Name, unsigned AS,
                   MemInitKind InitKind, MemAllocKind AllocKind,
                   bool IsIRGlobalValue) {
+  if (exceedsMaxObjectSize(Size, AS))
+    return nullptr;
   // Even if the memory object is zero-sized, it still occupies a byte to obtain
   // a unique address.
   uint64_t AllocateSize = std::max(Size, (uint64_t)1);
   if (SaturatingAdd(UsedMem, AllocateSize) >= MaxMem)
     return nullptr;
   uint64_t AlignedAddr = alignTo(AllocationBase, Align);
+  unsigned AddressBW = DL.getAddressSizeInBits(AS);
+  // Make sure the address can be represented.
+  if (!isUIntN(AddressBW, AlignedAddr))
+    return nullptr;
   auto MemObj = makeIntrusiveRefCnt<MemoryObject>(
       AlignedAddr, Size, Name, AS, InitKind, AllocKind, IsIRGlobalValue);
   MemoryObjects[AlignedAddr] = MemObj;
@@ -1150,7 +1197,7 @@ void Context::exposeProvenance(Provenance &Prov) {
   if (Prov.Wildcard)
     return;
   MemoryObject *Obj = Prov.getMemoryObject();
-  if (!Obj)
+  if (!Obj || Obj->State != MemoryObjectState::Alive)
     return;
   uint64_t Address = Obj->getAddress();
   ExposedProvenanceSet &Set = ExposedProvenances[Address];

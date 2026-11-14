@@ -16,6 +16,7 @@
 # runtime without them.
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@bazel_skylib//rules:run_binary.bzl", "run_binary")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(
@@ -185,35 +186,25 @@ expand_template(
 # (see message-converter.py:414: Windows path), so we pass --target-system-override
 # on Windows to ensure we get a Windows-formatted catalog even when generating
 # the inc files on another host.
-_i18n_target_system_arg = select({
-    "@platforms//os:windows": "--target-system-override=Windows ",
-    "//conditions:default": "",
+_i18n_target_system_args = select({
+    "@platforms//os:windows": ["--target-system-override=Windows"],
+    "//conditions:default": [],
 })
 
-genrule(
+run_binary(
     name = "kmp_i18n_id_inc_gen",
-    srcs = [
-        "i18n/en_US.txt",
-        "//openmp/runtime/tools:message-converter.py",
-        "//openmp/runtime/tools:libomputils.py",
-    ],
+    srcs = ["i18n/en_US.txt"],
     outs = ["kmp_i18n_id.inc"],
-    cmd = "PYTHONPATH=$$(dirname $(location //openmp/runtime/tools:libomputils.py)) " +
-          "python3 $(location //openmp/runtime/tools:message-converter.py) " +
-          "--enum=$@ " + _i18n_target_system_arg + "$(location i18n/en_US.txt)",
+    args = ["--enum=$(execpath kmp_i18n_id.inc)"] + _i18n_target_system_args + ["$(execpath i18n/en_US.txt)"],
+    tool = "//openmp/runtime/tools:message-converter",
 )
 
-genrule(
+run_binary(
     name = "kmp_i18n_default_inc_gen",
-    srcs = [
-        "i18n/en_US.txt",
-        "//openmp/runtime/tools:message-converter.py",
-        "//openmp/runtime/tools:libomputils.py",
-    ],
+    srcs = ["i18n/en_US.txt"],
     outs = ["kmp_i18n_default.inc"],
-    cmd = "PYTHONPATH=$$(dirname $(location //openmp/runtime/tools:libomputils.py)) " +
-          "python3 $(location //openmp/runtime/tools:message-converter.py) " +
-          "--default=$@ " + _i18n_target_system_arg + "$(location i18n/en_US.txt)",
+    args = ["--default=$(execpath kmp_i18n_default.inc)"] + _i18n_target_system_args + ["$(execpath i18n/en_US.txt)"],
+    tool = "//openmp/runtime/tools:message-converter",
 )
 
 # ---------------------------------------------------------------------------
@@ -235,6 +226,7 @@ cc_library(
         "kmp_collapse.h",
         "kmp_config.h",
         "kmp_debug.h",
+        "kmp_device_env.h",
         "kmp_dispatch.h",
         "kmp_dispatch_hier.h",
         "kmp_environment.h",
@@ -312,6 +304,7 @@ cc_library(
         "kmp_collapse.cpp",
         "kmp_csupport.cpp",
         "kmp_debug.cpp",
+        "kmp_device_env.cpp",
         "kmp_dispatch.cpp",
         "kmp_environment.cpp",
         "kmp_error.cpp",
@@ -373,6 +366,10 @@ cc_library(
             "-lm",
         ],
     }),
+    local_defines = [
+        "KMP_SPEC_DATE=201611",
+        "KMP_SPEC_VERSION=5.0",
+    ],
     deps = [
         ":omp_headers",
     ],

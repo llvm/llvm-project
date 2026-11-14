@@ -21,12 +21,12 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/ClassUtils.h"
+#include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -513,30 +513,7 @@ struct CallBaseDtor final : EHScopeStack::Cleanup {
   }
 };
 
-/// A visitor which checks whether an initializer uses 'this' in a
-/// way which requires the vtable to be properly set.
-struct DynamicThisUseChecker
-    : ConstEvaluatedExprVisitor<DynamicThisUseChecker> {
-  typedef ConstEvaluatedExprVisitor<DynamicThisUseChecker> super;
-
-  bool UsesThis;
-
-  DynamicThisUseChecker(const ASTContext &C) : super(C), UsesThis(false) {}
-
-  // Black-list all explicit and implicit references to 'this'.
-  //
-  // Do we need to worry about external references to 'this' derived
-  // from arbitrary code?  If so, then anything which runs arbitrary
-  // external code might potentially access the vtable.
-  void VisitCXXThisExpr(const CXXThisExpr *E) { UsesThis = true; }
-};
 } // end anonymous namespace
-
-static bool BaseInitializerUsesThis(ASTContext &C, const Expr *Init) {
-  DynamicThisUseChecker Checker(C);
-  Checker.Visit(Init);
-  return Checker.UsesThis;
-}
 
 static void EmitBaseInitializer(CodeGenFunction &CGF,
                                 const CXXRecordDecl *ClassDecl,
@@ -552,7 +529,8 @@ static void EmitBaseInitializer(CodeGenFunction &CGF,
   // If the initializer for the base (other than the constructor
   // itself) accesses 'this' in any way, we need to initialize the
   // vtables.
-  if (BaseInitializerUsesThis(CGF.getContext(), BaseInit->getInit()))
+  if (CodeGenUtils::baseInitializerUsesThis(CGF.getContext(),
+                                            BaseInit->getInit()))
     CGF.InitializeVTablePointers(ClassDecl);
 
   // We can pretend to be a complete class because it only matters for
@@ -904,7 +882,7 @@ public:
   }
 
   void addMemcpyableField(FieldDecl *F) {
-    if (isEmptyFieldForLayout(CGF.getContext(), F))
+    if (CodeGenUtils::isEmptyFieldForLayout(CGF.getContext(), F))
       return;
     if (!FirstField)
       addInitialField(F);
@@ -929,6 +907,12 @@ public:
     // Give the subclass a chance to bail out if it feels the memcpy isn't
     // worth it (e.g. Hasn't aggregated enough data).
     if (!FirstField) {
+      return;
+    }
+
+    // Unreachable, e.g. after a noreturn member copy; drop it like EmitStmt.
+    if (!CGF.HaveInsertPoint()) {
+      reset();
       return;
     }
 
@@ -1885,7 +1869,7 @@ public:
                              const CXXDestructorDecl *DD)
       : Context(Context), EHStack(EHStack), DD(DD), StartIndex(std::nullopt) {}
   void PushCleanupForField(const FieldDecl *Field) {
-    if (isEmptyFieldForLayout(Context, Field))
+    if (CodeGenUtils::isEmptyFieldForLayout(Context, Field))
       return;
     unsigned FieldIndex = Field->getFieldIndex();
     if (CodeGenUtils::fieldHasTrivialDestructorBody(Context, Field)) {
@@ -2938,21 +2922,42 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
       !CGM.HasHiddenLTOVisibility(RD))
     return;
 
-  auto [M, SSK] = SanitizerInfoFromCFICheckKind(TCK);
-
-  std::string TypeName = RD->getQualifiedNameAsString();
+  auto [M, _] = SanitizerInfoFromCFICheckKind(TCK);
   if (getContext().getNoSanitizeList().containsType(
-          SanitizerMask::bitPosToMask(M), TypeName))
+          SanitizerMask::bitPosToMask(M), RD->getQualifiedNameAsString()))
     return;
-
-  EmitSanitizerStatReport(SSK);
 
   CanQualType T = CGM.getContext().getCanonicalTagType(RD);
   llvm::Metadata *MD = CGM.CreateMetadataIdentifierForType(T);
   llvm::Value *TypeId = llvm::MetadataAsValue::get(getLLVMContext(), MD);
-
   llvm::Value *TypeTest = Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::type_test), {VTable, TypeId});
+
+  EmitVTableCheck(TCK, T, MD, VTable, TypeTest, Loc,
+                  CGM.getCodeGenOpts().SanitizeCfiCrossDso);
+}
+
+void CodeGenFunction::EmitVTableCheck(CFITypeCheckKind TCK, CanQualType T,
+                                      llvm::Metadata *MD, llvm::Value *VTable,
+                                      llvm::Value *TypeTest, SourceLocation Loc,
+                                      bool UseCrossDsoSlowPath) {
+  assert(IsSanitizerScope);
+  auto [M, SSK] = SanitizerInfoFromCFICheckKind(TCK);
+  EmitSanitizerStatReport(SSK);
+
+  llvm::ConstantInt *CrossDsoTypeId =
+      UseCrossDsoSlowPath ? CGM.CreateCrossDsoCfiTypeId(MD) : nullptr;
+  if (!CrossDsoTypeId && (CGM.getCodeGenOpts().SanitizeTrap.has(M) ||
+                          CGM.getCodeGenOpts().SanitizeMinimalRuntime)) {
+    EmitCheck(std::make_pair(TypeTest, M), SanitizerHandler::CFICheckFail, {},
+              {});
+    return;
+  }
+
+  if (CGM.getCodeGenOpts().SanitizeTrap.has(M)) {
+    EmitCfiSlowPathCheck(M, TypeTest, CrossDsoTypeId, VTable, {});
+    return;
+  }
 
   llvm::Constant *StaticData[] = {
       llvm::ConstantInt::get(Int8Ty, TCK),
@@ -2960,15 +2965,8 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
       EmitCheckTypeDescriptor(T),
   };
 
-  auto CrossDsoTypeId = CGM.CreateCrossDsoCfiTypeId(MD);
-  if (CGM.getCodeGenOpts().SanitizeCfiCrossDso && CrossDsoTypeId) {
+  if (CrossDsoTypeId) {
     EmitCfiSlowPathCheck(M, TypeTest, CrossDsoTypeId, VTable, StaticData);
-    return;
-  }
-
-  if (CGM.getCodeGenOpts().SanitizeTrap.has(M)) {
-    bool NoMerge = !CGM.getCodeGenOpts().SanitizeMergeHandlers.has(M);
-    EmitTrapCheck(TypeTest, SanitizerHandler::CFICheckFail, NoMerge);
     return;
   }
 
@@ -2982,9 +2980,8 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
 }
 
 bool CodeGenFunction::ShouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *RD) {
-  if ((!CGM.getCodeGenOpts().WholeProgramVTables ||
-       !CGM.HasHiddenLTOVisibility(RD)) &&
-      !CGM.getCodeGenOpts().DevirtualizeSpeculatively)
+  if (!CGM.getCodeGenOpts().WholeProgramVTables ||
+      !CGM.HasHiddenLTOVisibility(RD))
     return false;
 
   if (CGM.getCodeGenOpts().VirtualFunctionElimination)
@@ -3001,12 +2998,10 @@ bool CodeGenFunction::ShouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *RD) {
 
 llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
     const CXXRecordDecl *RD, llvm::Value *VTable, llvm::Type *VTableTy,
-    uint64_t VTableByteOffset) {
+    uint64_t VTableByteOffset, SourceLocation /*Loc*/) {
   auto CheckOrdinal = SanitizerKind::SO_CFIVCall;
   auto CheckHandler = SanitizerHandler::CFICheckFail;
   SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
-
-  EmitSanitizerStatReport(llvm::SanStat_CFI_VCall);
 
   CanQualType T = CGM.getContext().getCanonicalTagType(RD);
   llvm::Metadata *MD = CGM.CreateMetadataIdentifierForType(T);
@@ -3025,6 +3020,7 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
   if (SanOpts.has(SanitizerKind::CFIVCall) &&
       !getContext().getNoSanitizeList().containsType(SanitizerKind::CFIVCall,
                                                      TypeName)) {
+    EmitSanitizerStatReport(llvm::SanStat_CFI_VCall);
     EmitCheck(std::make_pair(CheckResult, CheckOrdinal), CheckHandler, {}, {});
   }
 

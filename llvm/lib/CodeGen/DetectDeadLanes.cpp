@@ -515,7 +515,8 @@ DetectDeadLanes::modifySubRegisterOperandStatus(const DeadLaneDetector &DLD,
         }
         if (MO.readsReg()) {
           bool CrossCopy = false;
-          if (isUndefRegAtInput(MO, RegInfo)) {
+          if (isUndefRegAtInput(MO, RegInfo) &&
+              !OpMI.hasTiedAndOtherReadOf(Reg, MO.getSubReg())) {
             LLVM_DEBUG(dbgs() << "Marking operand '" << MO << "' as undef in "
                               << OpMI);
             MO.setIsUndef();

@@ -60,27 +60,10 @@ public:
                                  MultiExprArg ExecConfig,
                                  SourceLocation GGGLoc);
 
-  /// A pair of a canonical FunctionDecl and a SourceLocation.  When used as the
-  /// key in a hashtable, both the FD and location are hashed.
-  struct FunctionDeclAndLoc {
-    CanonicalDeclPtr<const FunctionDecl> FD;
-    SourceLocation Loc;
-  };
-
   /// FunctionDecls and SourceLocations for which CheckCall has emitted a
   /// (maybe deferred) "bad call" diagnostic.  We use this to avoid emitting the
   /// same deferred diag twice.
   llvm::DenseSet<FunctionDeclAndLoc> LocsWithCUDACallDiags;
-
-  /// An inverse call graph, mapping known-emitted functions to their
-  /// known-emitted callers (plus the location of the call).
-  ///
-  /// Functions that we can tell a priori must be emitted aren't added to this
-  /// map. A function may have multiple callers that force it into device
-  /// context, so we store all of them to produce complete diagnostics.
-  llvm::DenseMap</* Callee = */ CanonicalDeclPtr<const FunctionDecl>,
-                 /* Callers = */ llvm::SmallVector<FunctionDeclAndLoc, 1>>
-      DeviceKnownEmittedFns;
 
   /// Creates a SemaDiagnosticBuilder that emits the diagnostic if the current
   /// context is "used as device code".
@@ -106,6 +89,15 @@ public:
   ///
   /// Same as DiagIfDeviceCode, with "host" and "device" switched.
   SemaDiagnosticBuilder DiagIfHostCode(SourceLocation Loc, unsigned DiagID);
+
+  /// Diagnoses a use of RTTI at \p Loc if it is in device function or the
+  /// initializer of a device variable, where RTTI is not available.
+  void checkRTTIUse(SourceLocation Loc, StringRef Op);
+
+  /// Diagnoses a use of RTTI in \p Init, the default argument or default
+  /// member initializer of \p D if it is used at \p UseLoc in device code.
+  void checkRTTIInDefaultInit(const ValueDecl *D, const Expr *Init,
+                              SourceLocation UseLoc);
 
   /// Determines whether the given function is a CUDA device/host/kernel/etc.
   /// function.
@@ -290,30 +282,18 @@ public:
 private:
   unsigned ForceHostDeviceDepth = 0;
 
+  /// Whether the current context is the initializer of a device variable.
+  bool isDeviceVarInit() const;
+
+  /// The default arguments and default member initializers, paired with the
+  /// function using them.
+  llvm::DenseSet<std::pair<const ValueDecl *, const FunctionDecl *>>
+      RTTICheckedDefaultInits;
+
   friend class ASTReader;
   friend class ASTWriter;
 };
 
 } // namespace clang
-
-namespace llvm {
-// Hash a FunctionDeclAndLoc by looking at both its FunctionDecl and its
-// SourceLocation.
-template <> struct DenseMapInfo<clang::SemaCUDA::FunctionDeclAndLoc> {
-  using FunctionDeclAndLoc = clang::SemaCUDA::FunctionDeclAndLoc;
-  using FDBaseInfo =
-      DenseMapInfo<clang::CanonicalDeclPtr<const clang::FunctionDecl>>;
-
-  static unsigned getHashValue(const FunctionDeclAndLoc &FDL) {
-    return hash_combine(FDBaseInfo::getHashValue(FDL.FD),
-                        FDL.Loc.getHashValue());
-  }
-
-  static bool isEqual(const FunctionDeclAndLoc &LHS,
-                      const FunctionDeclAndLoc &RHS) {
-    return LHS.FD == RHS.FD && LHS.Loc == RHS.Loc;
-  }
-};
-} // namespace llvm
 
 #endif // LLVM_CLANG_SEMA_SEMACUDA_H

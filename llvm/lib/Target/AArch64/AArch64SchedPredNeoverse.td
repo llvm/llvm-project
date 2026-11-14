@@ -18,6 +18,14 @@ def NeoverseNoLSL : MCSchedPredicate<
                       CheckAll<[CheckShiftLSL,
                                 CheckShiftBy0]>>;
 
+// Check for LSL|LSR|ASR|ROR shift == 0
+def NeoverseShift0 : MCSchedPredicate<
+                      CheckAll<[CheckAny<[CheckShiftLSL,
+					  CheckShiftLSR,
+					  CheckShiftASR,
+					  CheckShiftROR]>,
+                                CheckShiftBy0]>>;
+
 // Identify LDR/STR H/Q-form scaled (and potentially extended) FP instructions
 def NeoverseHQForm : MCSchedPredicate<
                        CheckAll<[
@@ -29,6 +37,12 @@ def NeoverseQForm : MCSchedPredicate<
                        CheckAll<[
                          CheckAny<[CheckQForm]>,
                          CheckImmOperand<4, 1>]>>;
+
+// W Form of extend ADD/SUB
+def IsRealArithExtendW : MCSchedPredicate<
+  CheckAll<[CheckOpcode<[ADDWrx, SUBWrx, ADDSWrx, SUBSWrx]>,
+            CheckAny<[CheckExtUXTB, CheckExtUXTH,
+                      CheckExtSXTB, CheckExtSXTH, CheckExtSXTW]>]>>;
 
 // Check if <Pd> == <Pg>
 def NeoversePdIsPgFn : TIIPredicate<
@@ -106,3 +120,13 @@ def NeoverseAllActivePredicate : MCSchedPredicate<
                                    ]>>;
 
 
+// Identify a load or store using the register offset addressing mode
+// with a scaled register.
+def NeoverseScaledIdxFn       : TIIPredicate<"isNeoverseScaledAddr",
+                                     MCOpcodeSwitchStatement<
+                                       [MCOpcodeSwitchCase<
+                                          IsLoadStoreRegOffsetOp.ValidOpcodes,
+                                          MCReturnStatement<
+                                            CheckAny<[CheckMemScaled]>>>],
+                                       MCReturnStatement<FalsePred>>>;
+def NeoverseScaledIdxPred     : MCSchedPredicate<NeoverseScaledIdxFn>;

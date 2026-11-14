@@ -795,6 +795,45 @@ static bool hasAccessingPromiseBeforeCB(const DominatorTree &DT,
            isa<BitCastInst>(Inst);
   });
 }
+
+// Collect pointers into the promise alloca that are created before CoroBegin
+// and used after it, with their offsets, so that insertSpills can recreate
+// them from the frame. SROA, for example, may place GEPs of the promise at the
+// end of the entry block.
+static SmallMapVector<Instruction *, std::optional<APInt>, 4>
+collectPromiseAliasesBeforeCB(const DominatorTree &DT,
+                              const coro::Shape &Shape) {
+  SmallMapVector<Instruction *, std::optional<APInt>, 4> Aliases;
+  auto *PA = Shape.SwitchLowering.PromiseAlloca;
+  const DataLayout &DL = PA->getDataLayout();
+  unsigned IdxWidth = DL.getIndexTypeSizeInBits(PA->getType());
+  SmallVector<std::pair<Instruction *, APInt>> Worklist;
+  Worklist.emplace_back(PA, APInt(IdxWidth, 0));
+  while (!Worklist.empty()) {
+    auto [Ptr, Offset] = Worklist.pop_back_val();
+    for (User *U : Ptr->users()) {
+      auto *I = dyn_cast<Instruction>(U);
+      if (!I || DT.dominates(Shape.CoroBegin, I))
+        continue;
+      APInt NewOffset = Offset;
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
+        APInt GEPOffset(IdxWidth, 0);
+        if (!GEP->accumulateConstantOffset(DL, GEPOffset))
+          report_fatal_error("Unable to handle an alias with unknown offset "
+                             "created before CoroBegin.");
+        NewOffset += GEPOffset;
+      } else if (!isa<BitCastInst>(I)) {
+        continue;
+      }
+      if (any_of(I->uses(),
+                 [&](Use &U) { return DT.dominates(Shape.CoroBegin, U); }))
+        Aliases[I] = NewOffset;
+      Worklist.emplace_back(I, NewOffset);
+    }
+  }
+  return Aliases;
+}
+
 // Build the coroutine frame type as a byte array.
 // The frame layout includes:
 //   - Resume function pointer at offset 0 (Switch ABI only)
@@ -853,10 +892,9 @@ static void buildFrameLayout(Function &F, const DominatorTree &DT,
   // `performOptimizedStructLayout`
   // 2. it is processed in insertSpills.
   if (Shape.ABI == coro::ABI::Switch && PromiseAlloca) {
-    // We assume that no alias will be create before CoroBegin.
-    FrameData.Allocas.emplace_back(
-        PromiseAlloca, DenseMap<Instruction *, std::optional<APInt>>{},
-        hasAccessingPromiseBeforeCB(DT, Shape));
+    FrameData.Allocas.emplace_back(PromiseAlloca,
+                                   collectPromiseAliasesBeforeCB(DT, Shape),
+                                   hasAccessingPromiseBeforeCB(DT, Shape));
   }
   // Create an entry for every spilled value.
   for (auto &S : FrameData.Spills) {
@@ -943,20 +981,19 @@ static Type *extractByvalIfArgument(Value *MaybeArgument) {
 static void createStoreIntoFrame(IRBuilder<> &Builder, Value *Def,
                                  Type *ByValTy, const coro::Shape &Shape,
                                  const FrameDataInfo &FrameData) {
-  LLVMContext &Ctx = Shape.CoroBegin->getContext();
   uint64_t Offset = FrameData.getOffset(Def);
 
   Value *G = Shape.FramePtr;
   if (Offset != 0) {
-    auto *OffsetVal = ConstantInt::get(Type::getInt64Ty(Ctx), Offset);
-    G = Builder.CreateInBoundsPtrAdd(G, OffsetVal,
-                                     Def->getName() + Twine(".spill.addr"));
+    G = Builder.CreatePtrAddWithUnsignedOffset(
+        G, Offset, Def->getName() + Twine(".spill.addr"),
+        GEPNoWrapFlags::inBounds());
   }
   auto SpillAlignment = Align(FrameData.getAlign(Def));
 
   // For byval arguments, copy the pointed-to value to the frame.
   if (ByValTy) {
-    auto &DL = Builder.GetInsertBlock()->getDataLayout();
+    auto &DL = Builder.getDataLayout();
     auto Size = DL.getTypeStoreSize(ByValTy);
     // Def is a pointer to the byval argument
     Builder.CreateMemCpy(G, SpillAlignment, Def, SpillAlignment, Size);
@@ -970,10 +1007,9 @@ static void createStoreIntoFrame(IRBuilder<> &Builder, Value *Def,
 static Value *createGEPToFramePointer(const FrameDataInfo &FrameData,
                                       IRBuilder<> &Builder, coro::Shape &Shape,
                                       Value *Orig) {
-  LLVMContext &Ctx = Shape.CoroBegin->getContext();
   uint64_t Offset = FrameData.getOffset(Orig);
-  auto *OffsetVal = ConstantInt::get(Type::getInt64Ty(Ctx), Offset);
-  Value *Ptr = Builder.CreateInBoundsPtrAdd(Shape.FramePtr, OffsetVal);
+  Value *Ptr = Builder.CreatePtrAddWithUnsignedOffset(
+      Shape.FramePtr, Offset, "", GEPNoWrapFlags::inBounds());
 
   if (auto *AI = dyn_cast<AllocaInst>(Orig)) {
     if (FrameData.getDynamicAlign(Orig) != 0) {
@@ -1065,7 +1101,7 @@ static void handleAccessBeforeCoroBegin(const FrameDataInfo &FrameData,
 static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
   LLVMContext &C = Shape.CoroBegin->getContext();
   Function *F = Shape.CoroBegin->getFunction();
-  IRBuilder<> Builder(C);
+  IRBuilder<> Builder(*F->getParent());
   DominatorTree DT(*F);
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
 
@@ -1098,8 +1134,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
       // reference provided with the frame GEP.
       if (CurrentBlock != U->getParent()) {
         CurrentBlock = U->getParent();
-        Builder.SetInsertPoint(CurrentBlock,
-                               CurrentBlock->getFirstInsertionPt());
+        Builder.SetInsertPoint(CurrentBlock->getFirstInsertionPt());
 
         auto *GEP = createGEPToFramePointer(FrameData, Builder, Shape, E.first);
         GEP->setName(E.first->getName() + Twine(".reload.addr"));
@@ -1194,7 +1229,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
   if (Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce ||
       Shape.ABI == coro::ABI::Async) {
     // If we found any allocas, replace all of their remaining uses with Geps.
-    Builder.SetInsertPoint(SpillBlock, SpillBlock->begin());
+    Builder.SetInsertPoint(SpillBlock->begin());
     for (const auto &P : FrameData.Allocas) {
       AllocaInst *Alloca = P.Alloca;
       auto *G = createGEPToFramePointer(FrameData, Builder, Shape, Alloca);
@@ -1220,8 +1255,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
   // dbg.declares and dbg.values with the reload from the frame.
   // Note: We cannot replace the alloca with GEP instructions indiscriminately,
   // as some of the uses may not be dominated by CoroBegin.
-  Builder.SetInsertPoint(Shape.AllocaSpillBlock,
-                         Shape.AllocaSpillBlock->begin());
+  Builder.SetInsertPoint(Shape.AllocaSpillBlock->begin());
   SmallVector<Instruction *, 4> UsersToUpdate;
   for (const auto &A : FrameData.Allocas) {
     AllocaInst *Alloca = A.Alloca;
@@ -1266,10 +1300,13 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
     for (const auto &Alias : A.Aliases) {
       auto *FramePtr =
           createGEPToFramePointer(FrameData, Builder, Shape, Alloca);
-      auto &Value = *Alias.second;
-      auto ITy = IntegerType::get(C, Value.getBitWidth());
-      auto *AliasPtr =
-          Builder.CreateInBoundsPtrAdd(FramePtr, ConstantInt::get(ITy, Value));
+      auto &Offset = *Alias.second;
+      auto ITy = IntegerType::get(C, Offset.getBitWidth());
+      Value *AliasPtr =
+          Builder.CreateInBoundsPtrAdd(FramePtr, ConstantInt::get(ITy, Offset));
+      if (auto *CI = dyn_cast<CastInst>(Alias.first);
+          CI && !CI->getType()->isPtrOrPtrVectorTy())
+        AliasPtr = Builder.CreateCast(CI->getOpcode(), AliasPtr, CI->getType());
       Alias.first->replaceUsesWithIf(
           AliasPtr, [&](Use &U) { return DT.dominates(Shape.CoroBegin, U); });
     }
@@ -1639,7 +1676,8 @@ static Value *emitSetAndGetSwiftErrorValueAround(Instruction *Call,
     Builder.SetInsertPoint(Call->getNextNode());
   } else {
     auto Invoke = cast<InvokeInst>(Call);
-    Builder.SetInsertPoint(Invoke->getNormalDest()->getFirstNonPHIOrDbg());
+    Builder.SetInsertPoint(
+        Invoke->getNormalDest()->getFirstNonPHIOrPseudoProbe());
   }
 
   // Get the current swifterror value and store it to the alloca.
@@ -1680,8 +1718,7 @@ static void eliminateSwiftErrorAlloca(Function &F, AllocaInst *Alloca,
 static void eliminateSwiftErrorArgument(Function &F, Argument &Arg,
                                         coro::Shape &Shape,
                              SmallVectorImpl<AllocaInst*> &AllocasToPromote) {
-  IRBuilder<> Builder(&F.getEntryBlock(),
-                      F.getEntryBlock().getFirstNonPHIOrDbg());
+  IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrPseudoProbe());
 
   auto ArgTy = cast<PointerType>(Arg.getType());
   auto ValueTy = PointerType::getUnqual(F.getContext());
@@ -1833,11 +1870,10 @@ static std::optional<std::pair<Value &, DIExpression &>>
 salvageDebugInfoImpl(SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
                      bool UseEntryValue, Function *F, Value *Storage,
                      DIExpression *Expr, bool SkipOutermostLoad) {
-  IRBuilder<> Builder(F->getContext());
   auto InsertPt = F->getEntryBlock().getFirstInsertionPt();
   while (isa<IntrinsicInst>(InsertPt))
     ++InsertPt;
-  Builder.SetInsertPoint(&F->getEntryBlock(), InsertPt);
+  IRBuilder<> Builder(InsertPt);
 
   while (auto *Inst = dyn_cast_or_null<Instruction>(Storage)) {
     if (auto *LdInst = dyn_cast<LoadInst>(Inst)) {

@@ -1,5 +1,6 @@
 # RUN: llvm-mc -triple=hexagon -mhvx --filetype=asm %s -o - 2>&1 | FileCheck %s
 # RUN: llvm-mc --no-warn -triple=hexagon -mhvx --filetype=obj %s -o - | llvm-objdump -d - | FileCheck --check-prefix=CHECK-NOWARN %s
+# RUN: llvm-mc -W -triple=hexagon -mhvx --filetype=null %s 2>&1 | count 0
 # RUN: not llvm-mc --fatal-warnings -triple=hexagon -mhvx --filetype=asm %s 2>&1 | FileCheck --check-prefix=CHECK-FATAL-WARN %s
 
 	.text

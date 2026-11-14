@@ -5,9 +5,12 @@
 ! the scope of the module, with a linkage name, and visible outside this compile
 ! unit.
 
-! CHECK-DAG: ![[FILE:.*]] = !DIFile(filename: {{.*}}debug-module-constant.f90{{.*}})
-! CHECK-DAG: ![[CU:.*]] = distinct !DICompileUnit({{.*}}file: ![[FILE]]{{.*}})
-! CHECK-DAG: ![[MOD:.*]] = !DIModule(scope: ![[CU]], name: "helper"{{.*}})
+! More than one DIFile can name this source, so take the one the module is
+! described in from the module itself rather than trying to tell them apart by
+! how each spells the path.
+! CHECK-DAG: ![[CU:.*]] = distinct !DICompileUnit({{.*}})
+! CHECK-DAG: ![[MOD:.*]] = !DIModule(scope: ![[CU]], name: "helper", file: ![[FILE:[0-9]+]]{{.*}})
+! CHECK-DAG: ![[FILE]] = !DIFile(filename: "debug-module-constant.f90"{{.*}})
 ! CHECK-DAG: ![[I4:.*]] = !DIBasicType(name: "integer(kind=4)", size: 32, encoding: DW_ATE_signed)
 ! CHECK-DAG: ![[R4:.*]] = !DIBasicType(name: "real(kind=4)", size: 32, encoding: DW_ATE_float)
 
@@ -26,7 +29,7 @@ module helper
   integer, parameter :: primes(3) = [2, 3, 5]
 
 ! CHECK-DAG: ![[TAG:.*]] = distinct !DIGlobalVariable(name: "tag", linkageName: "_QMhelperECtag", scope: ![[MOD]], file: ![[FILE]], line: [[@LINE+3]], type: ![[STR:.*]], isLocal: false, isDefinition: true)
-! CHECK-DAG: ![[STR]] = !DIStringType(size: 40, encoding: DW_ATE_ASCII)
+! CHECK-DAG: ![[STR]] = !DIStringType(size: 40, encoding: DW_ATE_ASCII, charType: !{{.*}})
 ! CHECK-DAG: !DIGlobalVariableExpression(var: ![[TAG]], expr: !DIExpression())
   character(len=5), parameter :: tag = "hello"
 end module helper

@@ -38,20 +38,8 @@ using namespace llvm;
 using namespace llvm::AMDGPU;
 using namespace llvm::PatternMatch;
 
-/// Wrapper for querying uniformity info that first checks locally tracked
-/// instructions.
-static bool
-isDivergentUseWithNew(const Use &U, const UniformityInfo &UI,
-                      const ValueMap<const Value *, bool> &Tracker) {
-  Value *V = U.get();
-  if (auto It = Tracker.find(V); It != Tracker.end())
-    return !It->second; // divergent if marked false
-  return UI.isDivergentAtUse(U);
-}
-
 /// Optimizes uniform intrinsics calls if their operand can be proven uniform.
-static bool optimizeUniformIntrinsic(IntrinsicInst &II, UniformityInfo &UI,
-                                     ValueMap<const Value *, bool> &Tracker) {
+static bool optimizeUniformIntrinsic(IntrinsicInst &II, UniformityInfo &UI) {
   llvm::Intrinsic::ID IID = II.getIntrinsicID();
   /// We deliberately do not simplify readfirstlane with a uniform argument, so
   /// that frontends can use it to force a copy to SGPR and thereby prevent the
@@ -60,7 +48,7 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II, UniformityInfo &UI,
   case Intrinsic::amdgcn_permlane64:
   case Intrinsic::amdgcn_readlane: {
     Value *Src = II.getArgOperand(0);
-    if (isDivergentUseWithNew(II.getOperandUse(0), UI, Tracker))
+    if (UI.isDivergentAtUse(II.getOperandUse(0)))
       return false;
     LLVM_DEBUG(dbgs() << "Replacing " << II << " with " << *Src << '\n');
     II.replaceAllUsesWith(Src);
@@ -70,7 +58,7 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II, UniformityInfo &UI,
   }
   case Intrinsic::amdgcn_ballot: {
     Value *Src = II.getArgOperand(0);
-    if (isDivergentUseWithNew(II.getOperandUse(0), UI, Tracker))
+    if (UI.isDivergentAtUse(II.getOperandUse(0)))
       return false;
     LLVM_DEBUG(dbgs() << "Found uniform ballot intrinsic: " << II << '\n');
 
@@ -86,7 +74,6 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II, UniformityInfo &UI,
           // Case: (icmp eq %ballot, 0) -> xor %ballot_arg, 1
           Instruction *NotOp =
               BinaryOperator::CreateNot(Src, "", ICmp->getIterator());
-          Tracker[NotOp] = true; // NOT preserves uniformity
           LLVM_DEBUG(dbgs() << "Replacing ICMP_EQ: " << *NotOp << '\n');
           ICmp->replaceAllUsesWith(NotOp);
           Changed = true;
@@ -112,7 +99,7 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II, UniformityInfo &UI,
     Use &Idx = II.getOperandUse(1);
 
     // Like with readlane, if Value is uniform then just propagate it
-    if (!isDivergentUseWithNew(Val, UI, Tracker)) {
+    if (!UI.isDivergentAtUse(Val)) {
       II.replaceAllUsesWith(Val);
       UI.forgetValue(&II);
       II.eraseFromParent();
@@ -120,7 +107,7 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II, UniformityInfo &UI,
     }
 
     // Otherwise, when Index is uniform, this is just a readlane operation
-    if (isDivergentUseWithNew(Idx, UI, Tracker))
+    if (UI.isDivergentAtUse(Idx))
       return false;
 
     // The readlane intrinsic we want to call has the exact same function
@@ -136,16 +123,44 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II, UniformityInfo &UI,
   return false;
 }
 
-/// Iterates over intrinsic calls in the Function to optimize.
+/// Fold `icmp pred (readfirstlane X), X` when X is uniform at that use.
+static bool optimizeUniformCmpReadFirstLane(ICmpInst &Cmp, UniformityInfo &UI) {
+  Value *X;
+  IntrinsicInst *RFL;
+  if (!match(&Cmp,
+             m_c_ICmp(m_CombineAnd(m_Intrinsic<Intrinsic::amdgcn_readfirstlane>(
+                                       m_Value(X)),
+                                   m_AnyIntrinsic(RFL)),
+                      m_Deferred(X))))
+    return false;
+
+  if (UI.isDivergentAtUse(RFL->getArgOperandUse(0)))
+    return false;
+
+  // If readfirstlane's operand is uniform then we know we are comparing two
+  // identical values.
+  bool Holds = ICmpInst::isTrueWhenEqual(Cmp.getPredicate());
+  LLVM_DEBUG(dbgs() << "Uniform readfirstlane operand, replacing " << Cmp
+                    << " with " << (Holds ? "true" : "false") << '\n');
+  Cmp.replaceAllUsesWith(ConstantInt::get(Cmp.getType(), Holds));
+  UI.forgetValue(&Cmp);
+  Cmp.eraseFromParent();
+  return true;
+}
+
+/// Iterates over the Function, optimizing uniform intrinsic calls and
+/// comparisons against a readfirstlane of a uniform value.
 static bool runUniformIntrinsicCombine(Function &F, UniformityInfo &UI) {
   bool IsChanged = false;
-  ValueMap<const Value *, bool> Tracker;
-
   for (Instruction &I : make_early_inc_range(instructions(F))) {
+    if (auto *Cmp = dyn_cast<ICmpInst>(&I)) {
+      IsChanged |= optimizeUniformCmpReadFirstLane(*Cmp, UI);
+      continue;
+    }
     auto *II = dyn_cast<IntrinsicInst>(&I);
     if (!II)
       continue;
-    IsChanged |= optimizeUniformIntrinsic(*II, UI, Tracker);
+    IsChanged |= optimizeUniformIntrinsic(*II, UI);
   }
   return IsChanged;
 }

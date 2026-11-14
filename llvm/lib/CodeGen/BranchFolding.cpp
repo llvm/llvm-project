@@ -1001,13 +1001,7 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
 
   // Sort by hash value so that blocks with identical end sequences sort
   // together.
-#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
-  // If origin-tracking is enabled then MergePotentialElt is no longer a POD
-  // type, so we need std::sort instead.
-  std::sort(MergePotentials.begin(), MergePotentials.end());
-#else
-  array_pod_sort(MergePotentials.begin(), MergePotentials.end());
-#endif
+  llvm::sort(MergePotentials);
 
   // Walk through equivalence sets looking for actual exact matches.
   while (MergePotentials.size() > 1) {
@@ -1586,7 +1580,8 @@ ReoptimizeBlock:
     // If we have a block that consists of a single conditional branch
     // instruction that is exactly identical to the terminator in the previous
     // block, we can remove this block.
-    if (MBB->size() == 1 && PrevBB.canFallThrough() && CurTBB == PriorTBB &&
+    if (MBB->getFirstNonDebugInstr() == MBB->getLastNonDebugInstr() &&
+        PrevBB.canFallThrough() && CurTBB == PriorTBB &&
         areConditionalsEqual(CurCond, PriorCond)) {
       // We remove the branch from the previous basic block rather than this
       // one in case there are other blocks that specifically branch to this
@@ -2261,9 +2256,4 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
 
   ++NumHoist;
   return true;
-}
-
-FunctionPass *llvm::createBranchFolder(bool EnableCommonHoist,
-                                       bool EnableBasicBlockReordering) {
-  return new BranchFolderLegacy(EnableCommonHoist, EnableBasicBlockReordering);
 }

@@ -230,7 +230,7 @@ defm warn_missing_subsections_via_symbols : BB<"warn-missing-subsections-via-sym
 
 // Flags<[HelpHidden]> marks options that are not yet ported to lld,
 // and serve as a scoreboard for annotating our progress toward
-// implementing ld64 options in lld. As you add implementions to
+// implementing ld64 options in lld. As you add implementations to
 // Driver.cpp, please remove the hidden flag here.
 
 def grp_kind : OptionGroup<"kind">, HelpText<"OUTPUT KIND">;
@@ -694,7 +694,8 @@ def whyload : Flag<["-"], "whyload">,
     Group<grp_introspect>;
 def why_live : Separate<["-"], "why_live">,
     MetaVarName<"<symbol>">,
-    HelpText<"Log a chain of references to <symbol>, for use with -dead_strip">,
+    HelpText<"Log a chain of references to <symbol>, for use with -dead_strip. "
+             "The chain is deterministic only with --threads=1">,
     Group<grp_introspect>;
 def print_statistics : Flag<["-"], "print_statistics">,
     HelpText<"Log the linker's memory and CPU usage">,

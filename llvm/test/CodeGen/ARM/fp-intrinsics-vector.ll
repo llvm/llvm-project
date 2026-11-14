@@ -294,20 +294,20 @@ define <4 x float> @rint_v4f32(<4 x float> %x) #0 {
 ; CHECK-NEXT:    push {r11, lr}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-NEXT:    vorr q5, q0, q0
-; CHECK-NEXT:    vmov.f32 s0, s23
+; CHECK-NEXT:    vorr q4, q0, q0
+; CHECK-NEXT:    vmov.f32 s0, s19
 ; CHECK-NEXT:    bl rintf
-; CHECK-NEXT:    vmov.f32 s19, s0
-; CHECK-NEXT:    vmov.f32 s0, s22
+; CHECK-NEXT:    vmov.f32 s23, s0
+; CHECK-NEXT:    vmov.f32 s0, s18
 ; CHECK-NEXT:    bl rintf
-; CHECK-NEXT:    vmov.f32 s18, s0
-; CHECK-NEXT:    vmov.f32 s0, s21
+; CHECK-NEXT:    vmov.f32 s22, s0
+; CHECK-NEXT:    vmov.f32 s0, s17
 ; CHECK-NEXT:    bl rintf
-; CHECK-NEXT:    vmov.f32 s17, s0
-; CHECK-NEXT:    vmov.f32 s0, s20
+; CHECK-NEXT:    vmov.f32 s21, s0
+; CHECK-NEXT:    vmov.f32 s0, s16
 ; CHECK-NEXT:    bl rintf
-; CHECK-NEXT:    vmov.f32 s16, s0
-; CHECK-NEXT:    vorr q0, q4, q4
+; CHECK-NEXT:    vmov.f32 s20, s0
+; CHECK-NEXT:    vorr q0, q5, q5
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    pop {r11, pc}
   %val = call <4 x float> @llvm.experimental.constrained.rint.v4f32(<4 x float> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -321,20 +321,20 @@ define <4 x float> @nearbyint_v4f32(<4 x float> %x) #0 {
 ; CHECK-NEXT:    push {r11, lr}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-NEXT:    vorr q5, q0, q0
-; CHECK-NEXT:    vmov.f32 s0, s23
+; CHECK-NEXT:    vorr q4, q0, q0
+; CHECK-NEXT:    vmov.f32 s0, s19
 ; CHECK-NEXT:    bl nearbyintf
-; CHECK-NEXT:    vmov.f32 s19, s0
-; CHECK-NEXT:    vmov.f32 s0, s22
+; CHECK-NEXT:    vmov.f32 s23, s0
+; CHECK-NEXT:    vmov.f32 s0, s18
 ; CHECK-NEXT:    bl nearbyintf
-; CHECK-NEXT:    vmov.f32 s18, s0
-; CHECK-NEXT:    vmov.f32 s0, s21
+; CHECK-NEXT:    vmov.f32 s22, s0
+; CHECK-NEXT:    vmov.f32 s0, s17
 ; CHECK-NEXT:    bl nearbyintf
-; CHECK-NEXT:    vmov.f32 s17, s0
-; CHECK-NEXT:    vmov.f32 s0, s20
+; CHECK-NEXT:    vmov.f32 s21, s0
+; CHECK-NEXT:    vmov.f32 s0, s16
 ; CHECK-NEXT:    bl nearbyintf
-; CHECK-NEXT:    vmov.f32 s16, s0
-; CHECK-NEXT:    vorr q0, q4, q4
+; CHECK-NEXT:    vmov.f32 s20, s0
+; CHECK-NEXT:    vorr q0, q5, q5
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    pop {r11, pc}
   %val = call <4 x float> @llvm.experimental.constrained.nearbyint.v4f32(<4 x float> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -412,20 +412,20 @@ define <4 x float> @ceil_v4f32(<4 x float> %x) #0 {
 ; CHECK-NEXT:    push {r11, lr}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-NEXT:    vorr q5, q0, q0
-; CHECK-NEXT:    vmov.f32 s0, s23
+; CHECK-NEXT:    vorr q4, q0, q0
+; CHECK-NEXT:    vmov.f32 s0, s19
 ; CHECK-NEXT:    bl ceilf
-; CHECK-NEXT:    vmov.f32 s19, s0
-; CHECK-NEXT:    vmov.f32 s0, s22
+; CHECK-NEXT:    vmov.f32 s23, s0
+; CHECK-NEXT:    vmov.f32 s0, s18
 ; CHECK-NEXT:    bl ceilf
-; CHECK-NEXT:    vmov.f32 s18, s0
-; CHECK-NEXT:    vmov.f32 s0, s21
+; CHECK-NEXT:    vmov.f32 s22, s0
+; CHECK-NEXT:    vmov.f32 s0, s17
 ; CHECK-NEXT:    bl ceilf
-; CHECK-NEXT:    vmov.f32 s17, s0
-; CHECK-NEXT:    vmov.f32 s0, s20
+; CHECK-NEXT:    vmov.f32 s21, s0
+; CHECK-NEXT:    vmov.f32 s0, s16
 ; CHECK-NEXT:    bl ceilf
-; CHECK-NEXT:    vmov.f32 s16, s0
-; CHECK-NEXT:    vorr q0, q4, q4
+; CHECK-NEXT:    vmov.f32 s20, s0
+; CHECK-NEXT:    vorr q0, q5, q5
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    pop {r11, pc}
   %val = call <4 x float> @llvm.experimental.constrained.ceil.v4f32(<4 x float> %x, metadata !"fpexcept.strict") #0
@@ -439,20 +439,20 @@ define <4 x float> @floor_v4f32(<4 x float> %x) #0 {
 ; CHECK-NEXT:    push {r11, lr}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-NEXT:    vorr q5, q0, q0
-; CHECK-NEXT:    vmov.f32 s0, s23
+; CHECK-NEXT:    vorr q4, q0, q0
+; CHECK-NEXT:    vmov.f32 s0, s19
 ; CHECK-NEXT:    bl floorf
-; CHECK-NEXT:    vmov.f32 s19, s0
-; CHECK-NEXT:    vmov.f32 s0, s22
+; CHECK-NEXT:    vmov.f32 s23, s0
+; CHECK-NEXT:    vmov.f32 s0, s18
 ; CHECK-NEXT:    bl floorf
-; CHECK-NEXT:    vmov.f32 s18, s0
-; CHECK-NEXT:    vmov.f32 s0, s21
+; CHECK-NEXT:    vmov.f32 s22, s0
+; CHECK-NEXT:    vmov.f32 s0, s17
 ; CHECK-NEXT:    bl floorf
-; CHECK-NEXT:    vmov.f32 s17, s0
-; CHECK-NEXT:    vmov.f32 s0, s20
+; CHECK-NEXT:    vmov.f32 s21, s0
+; CHECK-NEXT:    vmov.f32 s0, s16
 ; CHECK-NEXT:    bl floorf
-; CHECK-NEXT:    vmov.f32 s16, s0
-; CHECK-NEXT:    vorr q0, q4, q4
+; CHECK-NEXT:    vmov.f32 s20, s0
+; CHECK-NEXT:    vorr q0, q5, q5
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    pop {r11, pc}
   %val = call <4 x float> @llvm.experimental.constrained.floor.v4f32(<4 x float> %x, metadata !"fpexcept.strict") #0
@@ -466,20 +466,20 @@ define <4 x float> @round_v4f32(<4 x float> %x) #0 {
 ; CHECK-NEXT:    push {r11, lr}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-NEXT:    vorr q5, q0, q0
-; CHECK-NEXT:    vmov.f32 s0, s23
+; CHECK-NEXT:    vorr q4, q0, q0
+; CHECK-NEXT:    vmov.f32 s0, s19
 ; CHECK-NEXT:    bl roundf
-; CHECK-NEXT:    vmov.f32 s19, s0
-; CHECK-NEXT:    vmov.f32 s0, s22
+; CHECK-NEXT:    vmov.f32 s23, s0
+; CHECK-NEXT:    vmov.f32 s0, s18
 ; CHECK-NEXT:    bl roundf
-; CHECK-NEXT:    vmov.f32 s18, s0
-; CHECK-NEXT:    vmov.f32 s0, s21
+; CHECK-NEXT:    vmov.f32 s22, s0
+; CHECK-NEXT:    vmov.f32 s0, s17
 ; CHECK-NEXT:    bl roundf
-; CHECK-NEXT:    vmov.f32 s17, s0
-; CHECK-NEXT:    vmov.f32 s0, s20
+; CHECK-NEXT:    vmov.f32 s21, s0
+; CHECK-NEXT:    vmov.f32 s0, s16
 ; CHECK-NEXT:    bl roundf
-; CHECK-NEXT:    vmov.f32 s16, s0
-; CHECK-NEXT:    vorr q0, q4, q4
+; CHECK-NEXT:    vmov.f32 s20, s0
+; CHECK-NEXT:    vorr q0, q5, q5
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    pop {r11, pc}
   %val = call <4 x float> @llvm.experimental.constrained.round.v4f32(<4 x float> %x, metadata !"fpexcept.strict") #0
@@ -493,20 +493,20 @@ define <4 x float> @roundeven_v4f32(<4 x float> %x) #0 {
 ; CHECK-NEXT:    push {r11, lr}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-NEXT:    vorr q5, q0, q0
-; CHECK-NEXT:    vmov.f32 s0, s23
+; CHECK-NEXT:    vorr q4, q0, q0
+; CHECK-NEXT:    vmov.f32 s0, s19
 ; CHECK-NEXT:    bl roundevenf
-; CHECK-NEXT:    vmov.f32 s19, s0
-; CHECK-NEXT:    vmov.f32 s0, s22
+; CHECK-NEXT:    vmov.f32 s23, s0
+; CHECK-NEXT:    vmov.f32 s0, s18
 ; CHECK-NEXT:    bl roundevenf
-; CHECK-NEXT:    vmov.f32 s18, s0
-; CHECK-NEXT:    vmov.f32 s0, s21
+; CHECK-NEXT:    vmov.f32 s22, s0
+; CHECK-NEXT:    vmov.f32 s0, s17
 ; CHECK-NEXT:    bl roundevenf
-; CHECK-NEXT:    vmov.f32 s17, s0
-; CHECK-NEXT:    vmov.f32 s0, s20
+; CHECK-NEXT:    vmov.f32 s21, s0
+; CHECK-NEXT:    vmov.f32 s0, s16
 ; CHECK-NEXT:    bl roundevenf
-; CHECK-NEXT:    vmov.f32 s16, s0
-; CHECK-NEXT:    vorr q0, q4, q4
+; CHECK-NEXT:    vmov.f32 s20, s0
+; CHECK-NEXT:    vorr q0, q5, q5
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    pop {r11, pc}
   %val = call <4 x float> @llvm.experimental.constrained.roundeven.v4f32(<4 x float> %x, metadata !"fpexcept.strict") #0
@@ -520,20 +520,20 @@ define <4 x float> @trunc_v4f32(<4 x float> %x) #0 {
 ; CHECK-NEXT:    push {r11, lr}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-NEXT:    vorr q5, q0, q0
-; CHECK-NEXT:    vmov.f32 s0, s23
+; CHECK-NEXT:    vorr q4, q0, q0
+; CHECK-NEXT:    vmov.f32 s0, s19
 ; CHECK-NEXT:    bl truncf
-; CHECK-NEXT:    vmov.f32 s19, s0
-; CHECK-NEXT:    vmov.f32 s0, s22
+; CHECK-NEXT:    vmov.f32 s23, s0
+; CHECK-NEXT:    vmov.f32 s0, s18
 ; CHECK-NEXT:    bl truncf
-; CHECK-NEXT:    vmov.f32 s18, s0
-; CHECK-NEXT:    vmov.f32 s0, s21
+; CHECK-NEXT:    vmov.f32 s22, s0
+; CHECK-NEXT:    vmov.f32 s0, s17
 ; CHECK-NEXT:    bl truncf
-; CHECK-NEXT:    vmov.f32 s17, s0
-; CHECK-NEXT:    vmov.f32 s0, s20
+; CHECK-NEXT:    vmov.f32 s21, s0
+; CHECK-NEXT:    vmov.f32 s0, s16
 ; CHECK-NEXT:    bl truncf
-; CHECK-NEXT:    vmov.f32 s16, s0
-; CHECK-NEXT:    vorr q0, q4, q4
+; CHECK-NEXT:    vmov.f32 s20, s0
+; CHECK-NEXT:    vorr q0, q5, q5
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    pop {r11, pc}
   %val = call <4 x float> @llvm.experimental.constrained.trunc.v4f32(<4 x float> %x, metadata !"fpexcept.strict") #0

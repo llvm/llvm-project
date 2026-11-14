@@ -6,6 +6,7 @@
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@bazel_skylib//lib:selects.bzl", "selects")
+load("@bazel_skylib//rules:run_binary.bzl", "run_binary")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load(":libc_configure_options.bzl", "LIBC_CONFIGURE_OPTIONS")
 load(":libc_namespace.bzl", "LIBC_NAMESPACE")
@@ -75,49 +76,48 @@ def libc_release_copts():
     })
     return copts + platform_copts
 
-# Allowlisted sets of copts that may be used for a single libc library target.
-# Adding copts here is discouraged, as it complicates the build.
-_LIBC_LIBRARY_COPT_SETS = {
-    "startup_object": [
-        "-ffreestanding",
-        "-fno-builtin",
-        "-fno-omit-frame-pointer",
-        "-fno-stack-protector",
-    ],
-    "threading": [
-        "-fno-omit-frame-pointer",
-        "-Wno-frame-address",
-    ],
-}
-
 def _libc_library(
         name,
         deps = [],
-        copt_sets = [],
+        copts = [],
+        target_compatible_with = [],
+        full_build_only = False,
         **kwargs):
     """Internal macro to serve as a base for all other libc library rules.
 
     Args:
       name: Target name.
       deps: cc_library deps.
-      copt_sets: Which sets of allow-listed copts to include.
+      copts: copts for cc_library, only allowed if full_build_only is True.
+      target_compatible_with: target_compatible_with for the cc_library rule.
+      full_build_only: Whether this target is only used in full-build mode.
       **kwargs: All other attributes relevant for the cc_library rule.
     """
 
-    for attr in ["copts", "local_defines"]:
+    for attr in ["local_defines"]:
         if attr in kwargs:
             fail("disallowed attribute: '{}' in rule: '{}'".format(attr, name))
 
-    copts = []
-    for feature in copt_sets:
-        copts.extend(_LIBC_LIBRARY_COPT_SETS[feature])
+    # Allow copts if the target is only for full-builds. Startup or threading
+    # code necessitate copts, but LLVM-libc's build rules should prefer to
+    # avoid copts when possible as per-file-copts are not compatible with
+    # libc_release_library's method of aggregating sources into one cc_library.
+    if copts and not full_build_only:
+        fail("copts disallowed in overlay-compatible rule: '{}'".format(name))
+
+    if full_build_only:
+        target_compatible_with = target_compatible_with + select({
+            Label(":full_build"): [],
+            "//conditions:default": ["@platforms//:incompatible"],
+        })
 
     cc_library(
         name = name,
         copts = libc_common_copts() + copts,
         local_defines = LIBC_CONFIGURE_OPTIONS,
         deps = deps + libc_common_deps(),
-        linkstatic = 1,
+        linkstatic = True,
+        target_compatible_with = target_compatible_with,
         **kwargs
     )
 
@@ -137,7 +137,13 @@ def libc_startup_library(name, **kwargs):
 
     _libc_library(
         name = name,
-        copt_sets = ["startup_object"],
+        full_build_only = True,
+        copts = [
+            "-ffreestanding",
+            "-fno-builtin",
+            "-fno-omit-frame-pointer",
+            "-fno-stack-protector",
+        ],
         **kwargs
     )
 
@@ -335,18 +341,12 @@ def libc_generated_header(name, hdr, yaml_template, other_srcs = [], proxy = Fal
     """Generates a libc header file from YAML template.
 
     Args:
-      name: Name of the genrule target.
+      name: Name of the target.
       hdr: Path of the header file to generate.
       yaml_template: Path of the YAML template file.
       other_srcs: Other files required to generate the header, if any.
       proxy: Whether this is a proxy header with slightly different generation results.
     """
-    hdrgen = "//libc:hdrgen"
-    cmd = "$(location {hdrgen}) $(location {yaml}) -o $@".format(
-        hdrgen = hdrgen,
-        yaml = yaml_template,
-    ) + (" --proxy" if proxy else "")
-
     if not hdr.startswith("staging/"):
         fail(
             "Generated headers should be placed in a 'staging/' directory " +
@@ -354,12 +354,16 @@ def libc_generated_header(name, hdr, yaml_template, other_srcs = [], proxy = Fal
             "when bootstrapping builds.",
         )
 
-    native.genrule(
+    run_binary(
         name = name,
-        outs = [hdr],
         srcs = [yaml_template] + other_srcs,
-        cmd = cmd,
-        tools = [hdrgen],
+        outs = [hdr],
+        args = [
+            "$(execpath %s)" % yaml_template,
+            "-o",
+            "$(execpath %s)" % hdr,
+        ] + (["--proxy"] if proxy else []),
+        tool = "//libc:hdrgen",
     )
 
 def libc_header_info(
@@ -389,24 +393,24 @@ def libc_math_function(
 
     #TODO(michaelrj): Fix the floating point dependencies
     OLD_FPUTIL_DEPS = [
-        ":__support_fputil_basic_operations",
-        ":__support_fputil_division_and_remainder_operations",
-        ":__support_fputil_fenv_impl",
-        ":__support_fputil_fp_bits",
-        ":__support_fputil_hypot",
-        ":__support_fputil_manipulation_functions",
-        ":__support_fputil_nearest_integer_operations",
-        ":__support_fputil_normal_float",
-        ":__support_math_extras",
-        ":__support_fputil_except_value_utils",
+        "//libc/src/__support:math_extras",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:division_and_remainder_operations",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:hypot",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/FPUtil:normal_float",
     ]
     libc_function(
         name = name,
-        srcs = ["src/math/generic/" + name + ".cpp"],
-        hdrs = ["src/math/" + name + ".h"],
+        srcs = ["//libc/src/math:generic/{}.cpp".format(name)],
+        hdrs = ["//libc/src/math:{}.h".format(name)],
         deps = [
-            ":__support_common",
-            ":__support_macros_config",
-            ":__support_macros_properties_types",
+            "//libc/src/__support:common",
+            "//libc/src/__support/macros:config",
+            "//libc/src/__support/macros/properties:types",
         ] + OLD_FPUTIL_DEPS + additional_deps,
     )

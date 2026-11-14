@@ -18,6 +18,9 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 - Removed the standalone build mode. It is redundant with the runtimes default
   build.
 
+- `LIBOMPTARGET_INFO` and offloading error messages now report the full path to
+  the source file instead of only the base filename
+
 ### Device Runtime
 
 - Changed the OpenMP DeviceRTL to use 'generic' IR. The

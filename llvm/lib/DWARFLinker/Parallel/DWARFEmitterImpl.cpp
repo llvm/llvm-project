@@ -12,7 +12,6 @@
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/FormattedStream.h"
 
@@ -39,7 +38,6 @@ Error DwarfEmitterImpl::init(Triple TheTriple,
                              "no register info for target %s",
                              TripleName.c_str());
 
-  MCOptions = mc::InitMCTargetOptionsFromFlags();
   MCOptions.AsmVerbose = true;
   MCOptions.MCUseDwarfDirectory = MCTargetOptions::EnableDwarfDirectory;
   MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
@@ -139,7 +137,9 @@ void DwarfEmitterImpl::emitCompileUnitHeader(DwarfUnit &Unit) {
   Asm->emitInt16(Unit.getVersion());
 
   if (Unit.getVersion() >= 5) {
-    Asm->emitInt8(dwarf::DW_UT_compile);
+    dwarf::Tag RootTag = Unit.getTag();
+    Asm->emitInt8(RootTag == dwarf::DW_TAG_partial_unit ? dwarf::DW_UT_partial
+                                                        : dwarf::DW_UT_compile);
     Asm->emitInt8(Unit.getFormParams().AddrSize);
     // Proper offset to the abbreviations table will be set later.
     Asm->emitInt32(0);
@@ -168,7 +168,7 @@ void DwarfEmitterImpl::emitDebugNames(DWARF5AccelTable &Table,
   dwarf::Form Form =
       DIEInteger::BestForm(/*IsSigned*/ false, (uint64_t)CUidToIdx.size() - 1);
   // FIXME: add support for type units + .debug_names. For now the behavior is
-  // unsuported.
+  // unsupported.
   emitDWARF5AccelTable(
       Asm.get(), Table, CUOffsets,
       [&](const DWARF5AccelTableData &Entry)

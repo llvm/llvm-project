@@ -1996,6 +1996,15 @@ APInt APInt::sdiv_ov(const APInt &RHS, bool &Overflow) const {
 }
 
 APInt APInt::smul_ov(const APInt &RHS, bool &Overflow) const {
+  assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
+  if (isSingleWord()) {
+    int64_t Product;
+    Overflow = MulOverflow(getSExtValue(), RHS.getSExtValue(), Product);
+    // The product can fit in 64 bits without fitting in BitWidth bits.
+    Overflow |= !llvm::isIntN(BitWidth, Product);
+    return APInt(BitWidth, Product, /*isSigned=*/true, /*implicitTrunc=*/true);
+  }
+
   APInt Res = *this * RHS;
 
   if (RHS != 0)
@@ -3152,6 +3161,16 @@ APInt APIntOps::avgCeilS(const APInt &C1, const APInt &C2) {
 APInt APIntOps::avgCeilU(const APInt &C1, const APInt &C2) {
   // Return ceil((C1 + C2) / 2)
   return (C1 | C2) - (C1 ^ C2).lshr(1);
+}
+
+APInt APIntOps::avgSubFloorS(const APInt &C1, const APInt &C2) {
+  // Return floor((C1 - C2) / 2), using C1 - C2 == (C1 ^ C2) - 2 * (~C1 & C2).
+  return (C1 ^ C2).ashr(1) - (~C1 & C2);
+}
+
+APInt APIntOps::avgSubFloorU(const APInt &C1, const APInt &C2) {
+  // Return floor((C1 - C2) / 2), using C1 - C2 == (C1 ^ C2) - 2 * (~C1 & C2).
+  return (C1 ^ C2).lshr(1) - (~C1 & C2);
 }
 
 APInt APIntOps::mulhs(const APInt &C1, const APInt &C2) {

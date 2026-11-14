@@ -5,9 +5,9 @@
 name:            test_icmp_and_icmp
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: test_icmp_and_icmp
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: %one:_(i64) = G_CONSTANT i64 1
@@ -30,9 +30,9 @@ body:             |
 name:            multi_use_test_icmp_and_icmp
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: multi_use_test_icmp_and_icmp
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: %one:_(i64) = G_CONSTANT i64 1
@@ -62,9 +62,9 @@ body:             |
 name:            test_icmp_and_icmp_with_add
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: test_icmp_and_icmp_with_add
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: %one:_(i64) = G_CONSTANT i64 1
@@ -88,9 +88,9 @@ body:             |
 name:            test_icmp_or_icmp_with_add_2000
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: test_icmp_or_icmp_with_add_2000
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: %one:_(i64) = G_CONSTANT i64 -100
@@ -113,9 +113,9 @@ body:             |
 name:            test_icmp_or_icmp
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: test_icmp_or_icmp
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: %two:_(i64) = G_CONSTANT i64 2000
@@ -138,9 +138,9 @@ body:             |
 name:            test_icmp_or_icmp_offset
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: test_icmp_or_icmp_offset
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 -2001
@@ -165,9 +165,9 @@ body:             |
 name:            test_icmp_or_icmp_with_add_and_add
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: test_icmp_or_icmp_with_add_and_add
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
@@ -219,9 +219,9 @@ body:             |
 name:            test_icmp_and_icmp_with_vectors
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7
     ; CHECK-LABEL: name: test_icmp_and_icmp_with_vectors
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
@@ -382,13 +382,12 @@ body:             |
 name:            test_fcmp_and_fcmp_with_vectors
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $x0, $x1, $x2, $x3
     ; CHECK-LABEL: name: test_fcmp_and_fcmp_with_vectors
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $x0, $x1, $x2, $x3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i1>) = G_BUILD_VECTOR [[C]](i1), [[C]](i1)
-    ; CHECK-NEXT: %zext:_(<2 x i64>) = G_ZEXT [[BUILD_VECTOR]](<2 x i1>)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %zext:_(<2 x i64>) = G_BUILD_VECTOR [[C]](i64), [[C]](i64)
     ; CHECK-NEXT: $q0 = COPY %zext(<2 x i64>)
     %0:_(f64) = COPY $x0
     %1:_(f64) = COPY $x1

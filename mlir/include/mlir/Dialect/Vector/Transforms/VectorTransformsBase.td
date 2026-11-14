@@ -70,10 +70,9 @@ def VectorTransferSplit_None: I32EnumAttrCase<"None", 0, "none">;
 // Split using in-bounds + out-of-bounds vector.transfer operations.
 def VectorTransferSplit_VectorTransfer:
   I32EnumAttrCase<"VectorTransfer", 1, "vector-transfer">;
-// Split using an in-bounds vector.transfer + linalg.fill + linalg.copy
-// operations.
-def VectorTransferSplit_LinalgCopy:
-  I32EnumAttrCase<"LinalgCopy", 2, "linalg-copy">;
+// Split using an in-bounds vector.transfer + memref.copy operations.
+def VectorTransferSplit_MemRefCopy:
+  I32EnumAttrCase<"MemRefCopy", 2, "memref-copy">;
 // Do not split vector transfer operation but instead mark it as "in-bounds".
 def VectorTransferSplit_ForceInBounds:
   I32EnumAttrCase<"ForceInBounds", 3, "force-in-bounds">;
@@ -82,7 +81,7 @@ def VectorTransferSplitAttr: I32EnumAttr<
     "control the splitting of `vector.transfer` operations into in-bounds"
     " and out-of-bounds variants.",
   [VectorTransferSplit_None, VectorTransferSplit_VectorTransfer,
-   VectorTransferSplit_LinalgCopy, VectorTransferSplit_ForceInBounds]> {
+   VectorTransferSplit_MemRefCopy, VectorTransferSplit_ForceInBounds]> {
   let cppNamespace = "::mlir::vector";
 }
 #endif

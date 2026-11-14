@@ -380,7 +380,7 @@ ImplicitNullChecksImpl::isSuitableMemoryOp(const MachineInstr &MI,
 
   if (!MI.mayLoadOrStore() || MI.isPredicable())
     return SR_Unsuitable;
-  auto AM = TII->getAddrModeFromMemoryOp(MI, TRI);
+  auto AM = TII->getAddrModeFromMemoryOp(MI);
   if (!AM || AM->Form != ExtAddrMode::Formula::Basic)
     return SR_Unsuitable;
   auto AddrMode = *AM;
@@ -683,7 +683,13 @@ bool ImplicitNullChecksImpl::analyzeBlockForNullChecks(
 
   SmallVector<MachineInstr *, 8> InstsSeenSoFar;
 
-  for (auto &MI : *NotNullSucc) {
+  // Skip debug instructions and pseudo probes: neither has execution
+  // semantics, so neither can be the faulting operation nor consume
+  // MaxInstsToConsider.  PSEUDO_PROBE is marked as having side effects to keep
+  // it from being dropped, so canHandle() would otherwise reject the block.
+  // Only the faulting operation is hoisted; the probes stay in place.
+  for (MachineInstr &MI :
+       instructionsWithoutDebug(NotNullSucc->begin(), NotNullSucc->end())) {
     if (!canHandle(&MI) || InstsSeenSoFar.size() >= MaxInstsToConsider)
       return false;
 
@@ -700,7 +706,7 @@ bool ImplicitNullChecksImpl::analyzeBlockForNullChecks(
 
     // If MI re-defines the PointerReg in a way that changes the value of
     // PointerReg if it was null, then we cannot move further.
-    if (!TII->preservesZeroValueInReg(&MI, PointerReg, TRI))
+    if (!TII->preservesZeroValueInReg(&MI, PointerReg))
       return false;
     InstsSeenSoFar.push_back(&MI);
   }

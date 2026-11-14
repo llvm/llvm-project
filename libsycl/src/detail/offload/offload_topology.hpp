@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL_OFFLOAD_TOPOLOGY
-#define _LIBSYCL_OFFLOAD_TOPOLOGY
+#ifndef _LIBSYCL_SRC_DETAIL_OFFLOAD_OFFLOAD_TOPOLOGY_HPP
+#define _LIBSYCL_SRC_DETAIL_OFFLOAD_OFFLOAD_TOPOLOGY_HPP
 
 #include <sycl/__impl/detail/config.hpp>
 
@@ -42,22 +42,23 @@ struct OffloadPlatformGroup {
 
 /// Storage of platform driver groups and their device handles for a backend.
 struct OffloadTopology {
-  OffloadTopology() : MBackend(OL_PLATFORM_BACKEND_UNKNOWN) {}
-  OffloadTopology(ol_platform_backend_t OlBackend) : MBackend(OlBackend) {}
+  OffloadTopology() = default;
+  explicit OffloadTopology(ol_platform_backend_t OLBackend)
+      : MBackend(OLBackend) {}
 
   /// Updates backend for this topology.
   ///
-  /// \param B new backend value.
-  void setBackend(ol_platform_backend_t B) { MBackend = B; }
+  /// \param Backend new backend value.
+  void setBackend(ol_platform_backend_t Backend) { MBackend = Backend; }
 
   /// Queries backend of this topology.
   ///
-  /// \returns backend of this topology.
+  /// \return backend of this topology.
   ol_platform_backend_t getBackend() const { return MBackend; }
 
   /// Returns all platform driver groups associated with this topology.
   ///
-  /// \returns platform driver groups associated with this topology.
+  /// \return platform driver groups associated with this topology.
   const std::vector<OffloadPlatformGroup> &getPlatformGroups() const {
     return MPlatformGroups;
   }
@@ -81,4 +82,4 @@ void discoverOffloadDevices();
 
 _LIBSYCL_END_NAMESPACE_SYCL
 
-#endif // _LIBSYCL_OFFLOAD_TOPOLOGY
+#endif // _LIBSYCL_SRC_DETAIL_OFFLOAD_OFFLOAD_TOPOLOGY_HPP

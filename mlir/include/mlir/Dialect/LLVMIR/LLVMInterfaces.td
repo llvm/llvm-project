@@ -306,6 +306,43 @@ def AliasAnalysisOpInterface : OpInterface<"AliasAnalysisOpInterface"> {
   ];
 }
 
+def TBAAStructOpInterface : OpInterface<"TBAAStructOpInterface"> {
+  let description = [{
+    An interface for memory operations that can carry tbaa.struct metadata.
+    It provides setters and getters for the operation's tbaa.struct
+    attribute. The default implementations of the interface methods expect
+    the operation to have an attribute of type ArrayAttr named tbaa_struct.
+  }];
+
+  let cppNamespace = "::mlir::LLVM";
+  let verify = [{ return detail::verifyTBAAStructOpInterface($_op); }];
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/        "Returns the tbaa.struct attribute or nullptr",
+      /*returnType=*/  "::mlir::ArrayAttr",
+      /*methodName=*/  "getTBAAStructOrNull",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        return op.getTbaaStructAttr();
+      }]
+      >,
+    InterfaceMethod<
+      /*desc=*/        "Sets the tbaa.struct attribute",
+      /*returnType=*/  "void",
+      /*methodName=*/  "setTBAAStruct",
+      /*args=*/        (ins "const ::mlir::ArrayAttr":$attr),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        op.setTbaaStructAttr(attr);
+      }]
+      >,
+  ];
+}
+
 def DereferenceableOpInterface : OpInterface<"DereferenceableOpInterface"> {
   let description = [{
     An interface for memory operations that can carry dereferenceable metadata.
@@ -338,6 +375,41 @@ def DereferenceableOpInterface : OpInterface<"DereferenceableOpInterface"> {
       /*defaultImpl=*/ [{
         auto op = cast<ConcreteOp>(this->getOperation());
         op.setDereferenceableAttr(attr);
+      }]
+      >
+  ];
+}
+
+def RangeOpInterface : OpInterface<"RangeOpInterface"> {
+  let description = [{
+    An interface for operations that can carry range metadata. The default
+    implementations expect a ConstantRangeAttr named `range`.
+  }];
+
+  let cppNamespace = "::mlir::LLVM";
+  let verify = [{ return detail::verifyRangeOpInterface($_op); }];
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/        "Returns the range attribute or nullptr",
+      /*returnType=*/  "::mlir::LLVM::ConstantRangeAttr",
+      /*methodName=*/  "getRangeOrNull",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        return op.getRangeAttr();
+      }]
+      >,
+    InterfaceMethod<
+      /*desc=*/        "Sets the range attribute",
+      /*returnType=*/  "void",
+      /*methodName=*/  "setRange",
+      /*args=*/        (ins "::mlir::LLVM::ConstantRangeAttr":$attr),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        op.setRangeAttr(attr);
       }]
       >
   ];

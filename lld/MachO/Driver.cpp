@@ -30,6 +30,7 @@
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Reproduce.h"
+#include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -170,23 +171,10 @@ getSearchPaths(unsigned optionCode, InputArgList &args,
                const SmallVector<StringRef, 2> &systemPaths) {
   std::vector<StringRef> paths;
   StringRef optionLetter{optionCode == OPT_F ? "F" : "L"};
-  for (StringRef path : args::getStrings(args, optionCode)) {
-    // NOTE: only absolute paths are re-rooted to syslibroot(s)
-    bool found = false;
-    if (path::is_absolute(path, path::Style::posix)) {
-      for (StringRef root : roots) {
-        SmallString<261> buffer(root);
-        path::append(buffer, path);
-        // Do not warn about paths that are computed via the syslib roots
-        if (fs::is_directory(buffer)) {
-          paths.push_back(saver().save(buffer.str()));
-          found = true;
-        }
-      }
-    }
-    if (!found && warnIfNotDirectory(optionLetter, path))
-      paths.push_back(path);
-  }
+  for (StringRef path : args::getStrings(args, optionCode))
+    for (StringRef searchPath : getRerootedSearchPaths(path, roots))
+      if (searchPath != path || warnIfNotDirectory(optionLetter, searchPath))
+        paths.push_back(searchPath);
 
   // `-Z` suppresses the standard "system" search paths.
   if (args.hasArg(OPT_Z))
@@ -850,20 +838,29 @@ static void replaceCommonSymbols() {
 
 static void initializeSectionRenameMap() {
   if (config->dataConst) {
-    SmallVector<StringRef> v{section_names::got,
-                             section_names::authGot,
+    SmallVector<StringRef> v{section_names::authGot,
                              section_names::authPtr,
-                             section_names::nonLazySymbolPtr,
-                             section_names::const_,
                              section_names::cfString,
+                             section_names::const_,
+                             section_names::constCfObj2,
+                             section_names::got,
                              section_names::moduleInitFunc,
                              section_names::moduleTermFunc,
-                             section_names::objcClassList,
-                             section_names::objcNonLazyClassList,
+                             section_names::nonLazySymbolPtr,
+                             section_names::objcArrayData,
+                             section_names::objcArrayObj,
                              section_names::objcCatList,
+                             section_names::objcCatList2,
+                             section_names::objcClassList,
+                             section_names::objcDateObj,
+                             section_names::objcDictObj,
+                             section_names::objcDoubleObj,
+                             section_names::objcFloatObj,
+                             section_names::objCImageInfo,
+                             section_names::objcIntObj,
                              section_names::objcNonLazyCatList,
-                             section_names::objcProtoList,
-                             section_names::objCImageInfo};
+                             section_names::objcNonLazyClassList,
+                             section_names::objcProtoList};
     for (StringRef s : v)
       config->sectionRenameMap[{segment_names::data, s}] = {
           segment_names::dataConst, s};
@@ -997,6 +994,8 @@ static TargetInfo *createTargetInfo(InputArgList &args) {
   case CPU_TYPE_X86_64:
     return createX86_64TargetInfo();
   case CPU_TYPE_ARM64:
+    if (config->arch() == AK_arm64e)
+      return createARM64eTargetInfo();
     return createARM64TargetInfo();
   case CPU_TYPE_ARM64_32:
     return createARM64_32TargetInfo();
@@ -1137,7 +1136,8 @@ static void parseClangOption(StringRef opt, const Twine &msg) {
   raw_string_ostream os(err);
 
   const char *argv[] = {"lld", opt.data()};
-  if (cl::ParseCommandLineOptions(2, argv, "", &os))
+  if (cl::parseCommandLineOptions(config->libraryOptions, getToolOptions(),
+                                  argv, "", &os))
     return;
   error(msg + ": " + StringRef(err).trim());
 }
@@ -1289,8 +1289,15 @@ static bool dataConstDefault(const InputArgList &args) {
 
 static bool shouldEmitChainedFixups(const InputArgList &args) {
   const Arg *arg = args.getLastArg(OPT_fixup_chains, OPT_no_fixup_chains);
-  if (arg && arg->getOption().matches(OPT_no_fixup_chains))
-    return false;
+  if (arg && arg->getOption().matches(OPT_no_fixup_chains)) {
+    if (config->arch() != AK_arm64e)
+      return false;
+    // Authenticated pointers can only be encoded as chained fixups.
+    warn("bind opcodes are no longer supported with arm64e, switching to "
+         "chained fixups");
+    config->noFixupChainsIgnored = true;
+    return true;
+  }
 
   bool requested = arg && arg->getOption().matches(OPT_fixup_chains);
   if (!config->isPic) {
@@ -1300,7 +1307,8 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
     return false;
   }
 
-  if (!is_contained({AK_x86_64, AK_x86_64h, AK_arm64}, config->arch())) {
+  if (!is_contained({AK_x86_64, AK_x86_64h, AK_arm64, AK_arm64e},
+                    config->arch())) {
     if (requested)
       error("-fixup_chains is only supported on x86_64 and arm64 targets");
 
@@ -1314,7 +1322,7 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
     return false;
   }
 
-  if (requested)
+  if (requested || config->arch() == AK_arm64e)
     return true;
 
   static const MinVersions<9> minVersion = {{
@@ -1329,6 +1337,28 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
       {PLATFORM_XROS_SIMULATOR, VersionTuple(1, 0)},
   }};
   return greaterEqMinVersion(minVersion, false);
+}
+
+static uint16_t getChainedFixupsPointerFormat() {
+  // FIXME: Use DYLD_CHAINED_PTR_64_OFFSET on newer OS versions.
+  if (config->arch() != AK_arm64e)
+    return DYLD_CHAINED_PTR_64;
+  // Like ld64, keep the original format if -no_fixup_chains was given.
+  if (config->noFixupChainsIgnored)
+    return DYLD_CHAINED_PTR_ARM64E;
+  // The releases from which arm64e uses DYLD_CHAINED_PTR_ARM64E_USERLAND24.
+  static const MinVersions<7> minVersion = {{
+      {PLATFORM_MACOS, VersionTuple(12, 0)},
+      {PLATFORM_IOS, VersionTuple(15, 0)},
+      {PLATFORM_MACCATALYST, VersionTuple(15, 0)},
+      {PLATFORM_TVOS, VersionTuple(15, 0)},
+      {PLATFORM_WATCHOS, VersionTuple(8, 0)},
+      {PLATFORM_XROS, VersionTuple(1, 0)},
+      {PLATFORM_DRIVERKIT, VersionTuple(21, 0)},
+  }};
+  return greaterEqMinVersion(minVersion, true)
+             ? DYLD_CHAINED_PTR_ARM64E_USERLAND24
+             : DYLD_CHAINED_PTR_ARM64E;
 }
 
 static bool shouldEmitRelativeMethodLists(const InputArgList &args) {
@@ -1575,7 +1605,7 @@ static void codegenDataGenerate() {
     }
   }
 
-  globalMergeRecord.finalize();
+  globalMergeRecord.finalize(config->libraryOptions);
 
   CodeGenDataWriter Writer;
   if (!globalOutlineRecord.empty())
@@ -1604,13 +1634,41 @@ static void foldIdenticalLiterals() {
   in.wordLiteralSection->finalizeContents();
 }
 
-static void addSynthenticMethnames() {
+static void prepareObjCStubs() {
   std::string &data = *make<std::string>();
   llvm::raw_string_ostream os(data);
-  for (Symbol *sym : symtab->getSymbols())
-    if (isa<Undefined>(sym))
-      if (ObjCStubsSection::isObjCStubSymbol(sym))
-        os << ObjCStubsSection::getMethname(sym) << '\0';
+  // Iterate by index: resolving a class symbol may extract an archive member,
+  // which appends new symbols, including more stubs, to the symbol table.
+  for (size_t i = 0; i < symtab->getSymbols().size(); ++i) {
+    Symbol *sym = symtab->getSymbols()[i];
+    if (!isa<Undefined>(sym))
+      continue;
+    if (ObjCStubsSection::isObjCMsgSendStubSymbol(sym)) {
+      os << ObjCStubsSection::getMethname(sym) << '\0';
+      continue;
+    }
+    if (!ObjCStubsSection::isObjCClassStubSymbol(sym) ||
+        !target->supportsObjCClassStubs())
+      continue;
+    std::optional<ObjCStubsSection::ObjCClassStubNames> names =
+        ObjCStubsSection::parseObjCClassStubSymbol(sym);
+    if (!names)
+      continue;
+    os << names->selectorName << '\0';
+
+    Symbol *classSym = symtab->find(names->classSymbolName);
+    bool needsEarlyUndefinedClassRef =
+        !classSym || isa<LazyArchive>(classSym) || isa<LazyObject>(classSym);
+    // Missing symbols need a placeholder for diagnostics, and lazy symbols need
+    // extraction before markLive(). Do not call addUndefined() for DylibSymbol
+    // here: live stubs reference them later in ObjCStubsSection::addEntry(),
+    // and adding them here would mark real dylib symbols referenced before dead
+    // stripping.
+    if (needsEarlyUndefinedClassRef)
+      classSym = symtab->addUndefined(names->classSymbolName, /*file=*/nullptr,
+                                      /*isWeakRef=*/false);
+    in.objcStubs->recordClassSymbol(sym, classSym);
+  }
 
   if (data.empty())
     return;
@@ -2041,8 +2099,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->emitDataInCodeInfo =
       args.hasFlag(OPT_data_in_code_info, OPT_no_data_in_code_info, true);
   config->emitChainedFixups = shouldEmitChainedFixups(args);
+  config->chainedFixupsPointerFormat = getChainedFixupsPointerFormat();
   config->emitInitOffsets =
-      config->emitChainedFixups || args.hasArg(OPT_init_offsets);
+      (config->emitChainedFixups && !config->noFixupChainsIgnored) ||
+      args.hasArg(OPT_init_offsets);
   config->emitRelativeMethodLists = shouldEmitRelativeMethodLists(args);
   config->icfLevel = getICFLevel(args);
   config->keepICFStabs = args.hasArg(OPT_keep_icf_stabs);
@@ -2456,7 +2516,6 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
     createSyntheticSections();
     createSyntheticSymbols();
-    addSynthenticMethnames();
 
     createAliases();
     // If we are in "explicit exports" mode, hide everything that isn't
@@ -2473,6 +2532,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     // compileBitcodeFiles, so we are done if that's the case.
     if (config->thinLTOIndexOnly || config->emitLLVM)
       return errorCount() == 0;
+
+    prepareObjCStubs();
 
     // LTO may emit a non-hidden (extern) object file symbol even if the
     // corresponding bitcode symbol is hidden. In particular, this happens for
@@ -2506,6 +2567,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       inputFiles.insert(make<OpaqueFile>(MemoryBufferRef(), segName, sectName));
     }
 
+    parseDeferredRelocations();
+
     gatherInputSections();
 
     if (!config->codegenDataGeneratePath.empty())
@@ -2530,8 +2593,14 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     // Category merging uses "->live = false" to erase old category data, so
     // it has to run after dead-stripping (markLive).
     if (args.hasFlag(OPT_objc_category_merging, OPT_no_objc_category_merging,
-                     false))
-      objc::mergeCategories();
+                     false)) {
+      // FIXME: Merge arm64e categories too, as ld64 does by default. Merging
+      // doesn't preserve the signing schemas in arm64e category data yet.
+      if (config->arch() == AK_arm64e)
+        warn("-objc_category_merging is not supported on arm64e, ignoring");
+      else
+        objc::mergeCategories();
+    }
 
     computeColdness();
 

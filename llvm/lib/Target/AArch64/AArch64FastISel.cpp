@@ -335,7 +335,7 @@ CCAssignFn *AArch64FastISel::CCAssignFnForCall(CallingConv::ID CC) const {
     return CC_AArch64_Win64_CFGuard_Check;
   if (Subtarget->isTargetDarwin())
     return CC_AArch64_DarwinPCS;
-  if (Subtarget->isTargetWindows())
+  if (Subtarget->isTargetWindowsOrUEFI())
     return CC_AArch64_Win64PCS;
   return CC_AArch64_AAPCS;
 }
@@ -410,9 +410,9 @@ Register AArch64FastISel::materializeFP(const ConstantFP *CFP, MVT VT) {
         .addImm(CFP->getValueAPF().bitcastToAPInt().getZExtValue());
 
     Register ResultReg = createResultReg(TLI.getRegClassFor(VT));
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), ResultReg)
-        .addReg(TmpReg, getKillRegState(true));
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
+        .addReg(TmpReg);
 
     return ResultReg;
   }
@@ -484,7 +484,7 @@ Register AArch64FastISel::materializeGV(const GlobalValue *GV) {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(TargetOpcode::SUBREG_TO_REG))
         .addDef(Result64)
-        .addReg(ResultReg, RegState::Kill)
+        .addReg(ResultReg)
         .addImm(AArch64::sub_32);
     return Result64;
   } else {
@@ -1873,7 +1873,7 @@ Register AArch64FastISel::emitLoad(MVT VT, MVT RetVT, Address Addr,
     Register Reg64 = createResultReg(&AArch64::GPR64RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(AArch64::SUBREG_TO_REG), Reg64)
-        .addReg(ResultReg, getKillRegState(true))
+        .addReg(ResultReg)
         .addImm(AArch64::sub_32);
     ResultReg = Reg64;
   }
@@ -2590,7 +2590,7 @@ bool AArch64FastISel::selectCmp(const Instruction *I) {
         .addImm(CondCodes[0]);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AArch64::CSINCWr),
             ResultReg)
-        .addReg(TmpReg1, getKillRegState(true))
+        .addReg(TmpReg1)
         .addReg(AArch64::WZR, getKillRegState(true))
         .addImm(CondCodes[1]);
 
@@ -2999,9 +2999,9 @@ bool AArch64FastISel::fastLowerArguments() {
     // Without this, EmitLiveInCopies may eliminate the livein if its only
     // use is a bitcast (which isn't turned into an instruction).
     Register ResultReg = createResultReg(RC);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), ResultReg)
-        .addReg(DstReg, getKillRegState(true));
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
+        .addReg(DstReg);
     updateValueMap(&Arg, ResultReg);
   }
   return true;
@@ -3161,6 +3161,14 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   if (IsTailCall)
     return false;
 
+  // On Windows, callers of functions that pop their own stack arguments need a
+  // frame pointer. Allow SelectionDAG isel to handle these calls, as that is
+  // where it gets requested.
+  if (Subtarget->isTargetWindows() &&
+      (CC == CallingConv::Tail || CC == CallingConv::SwiftTail ||
+       (CC == CallingConv::Fast && TM.Options.GuaranteedTailCallOpt)))
+    return false;
+
   // FIXME: we could and should support this, but for now correctness at -O0 is
   // more important.
   if (Subtarget->isTargetILP32())
@@ -3218,7 +3226,7 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   // The weak function target may be zero; in that case we must use indirect
   // addressing via a stub on windows as it may be out of range for a
   // PC-relative jump.
-  if (Subtarget->isTargetWindows() && Addr.getGlobalValue() &&
+  if (Subtarget->isTargetWindowsOrUEFI() && Addr.getGlobalValue() &&
       Addr.getGlobalValue()->hasExternalWeakLinkage())
     return false;
 
@@ -3849,6 +3857,9 @@ bool AArch64FastISel::selectRet(const Instruction *I) {
   const Function &F = *I->getParent()->getParent();
 
   if (!FuncInfo.CanLowerReturn)
+    return false;
+
+  if (FuncInfo.MF->getInfo<AArch64FunctionInfo>()->getSRetReturnReg())
     return false;
 
   if (F.isVarArg())
@@ -4503,7 +4514,7 @@ bool AArch64FastISel::optimizeIntExtLoad(const Instruction *I, MVT RetVT,
     Register Reg64 = createResultReg(&AArch64::GPR64RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(AArch64::SUBREG_TO_REG), Reg64)
-        .addReg(Reg, getKillRegState(true))
+        .addReg(Reg)
         .addImm(AArch64::sub_32);
     Reg = Reg64;
   } else {

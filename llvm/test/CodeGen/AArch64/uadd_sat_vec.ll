@@ -192,9 +192,8 @@ define void @v2i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-NEXT:    movi d2, #0x00ffff0000ffff
 ; CHECK-SD-NEXT:    uaddl v0.4s, v0.4h, v1.4h
 ; CHECK-SD-NEXT:    umin v0.2s, v0.2s, v2.2s
-; CHECK-SD-NEXT:    mov s1, v0.s[1]
-; CHECK-SD-NEXT:    str h0, [x2]
-; CHECK-SD-NEXT:    str h1, [x2, #2]
+; CHECK-SD-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    str s0, [x2]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v2i16:
@@ -323,7 +322,7 @@ define <16 x i4> @v16i4(<16 x i4> %x, <16 x i4> %y) nounwind {
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    cmhi v1.16b, v1.16b, v3.16b
 ; CHECK-GI-NEXT:    eor v3.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    and v1.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ret
@@ -345,7 +344,7 @@ define <16 x i1> @v16i1(<16 x i1> %x, <16 x i1> %y) nounwind {
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    cmhi v1.16b, v1.16b, v3.16b
 ; CHECK-GI-NEXT:    eor v3.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    and v1.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ret

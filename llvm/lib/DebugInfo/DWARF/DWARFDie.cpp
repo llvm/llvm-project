@@ -15,7 +15,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpressionUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypePrinter.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
@@ -84,6 +84,19 @@ static void dumpLocationList(raw_ostream &OS, const DWARFFormValue &FormValue,
   }
   U->getLocationTable().dumpLocationList(
       &Offset, OS, U->getBaseAddress(), Ctx.getDWARFObj(), U, DumpOpts, Indent);
+}
+
+static void dumpDWARFAddressSpace(raw_ostream &OS,
+                                  const DWARFFormValue &FormValue,
+                                  const DIDumpOptions &DumpOpts) {
+  FormValue.dump(OS, DumpOpts);
+
+  std::optional<uint64_t> AddressSpace = FormValue.getAsUnsignedConstant();
+  if (AddressSpace) {
+    StringRef ASName = DumpOpts.getNameForDWARFAddressSpace(*AddressSpace);
+    if (!ASName.empty())
+      OS << " \"" << ASName << "\"";
+  }
 }
 
 static void dumpLocationExpr(raw_ostream &OS, const DWARFFormValue &FormValue,
@@ -234,6 +247,8 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
             FormValue.isFormClass(DWARFFormValue::FC_Block)))
     dumpLocationExpr(OS, FormValue, U, sizeof(BaseIndent) + Indent + 4,
                      DumpOpts);
+  else if (Attr == dwarf::DW_AT_LLVM_address_space)
+    dumpDWARFAddressSpace(OS, FormValue, DumpOpts);
   else
     FormValue.dump(OS, DumpOpts);
 

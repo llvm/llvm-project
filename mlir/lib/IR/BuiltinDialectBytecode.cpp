@@ -13,13 +13,13 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Location.h"
 #include "mlir/Support/LLVM.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include <cstdint>
 
 using namespace mlir;
@@ -543,9 +543,11 @@ static void writeDenseTypedElementsAttr(DialectBytecodeWriter &writer,
 
   writer.writeOwnedBlob(attr.getRawData());
 }
+} // namespace
 
 #include "mlir/IR/BuiltinDialectBytecode.cpp.inc"
 
+namespace {
 /// This class implements the bytecode interface for the builtin dialect.
 struct BuiltinDialectBytecodeInterface : public BytecodeDialectInterface {
   BuiltinDialectBytecodeInterface(Dialect *dialect)
@@ -578,13 +580,38 @@ struct BuiltinDialectBytecodeInterface : public BytecodeDialectInterface {
   //===--------------------------------------------------------------------===//
   // Version
 
+  std::unique_ptr<DialectVersion>
+  parseVersion(StringRef version) const override {
+    int64_t parsedVersion;
+    if (version.getAsInteger(10, parsedVersion) || parsedVersion < 0 ||
+        parsedVersion > BuiltinDialectVersion::getCurrentVersion().getVersion())
+      return nullptr;
+    return std::make_unique<BuiltinDialectVersion>(parsedVersion);
+  }
+
+  LogicalResult verifyVersion(Operation *topLevelOp,
+                              const DialectVersion &version) const override {
+    if (static_cast<const BuiltinDialectVersion &>(version).getVersion() >= 1)
+      return success();
+    WalkResult result = topLevelOp->walk([](ModuleOp module) {
+      if (!module.getDltiAttr())
+        return WalkResult::advance();
+      module.emitOpError("cannot emit builtin dialect version 0 with a 'dlti' "
+                         "property");
+      return WalkResult::interrupt();
+    });
+    return failure(result.wasInterrupted());
+  }
+
   void writeVersion(DialectBytecodeWriter &writer) const override {
     auto configVersion = writer.getDialectVersion(getDialect()->getNamespace());
     // Write version set in config.
     if (succeeded(configVersion)) {
       auto *version =
           static_cast<const BuiltinDialectVersion *>(*configVersion);
-      writer.writeVarInt(static_cast<uint64_t>(version->getVersion()));
+      // Version 0 predates dialect version metadata. Preserve its encoding.
+      if (version->getVersion() > 0)
+        writer.writeVarInt(static_cast<uint64_t>(version->getVersion()));
       return;
     }
     // Else, write current set version version if not 0.

@@ -116,8 +116,7 @@ define void @call_custom_varg({i32, i1} %a, [2 x i7] %b) {
   ; CHECK: [[B1:%.*]] = extractvalue [2 x i8] [[B]], 1
   ; CHECK: [[B01:%.*]] = or i8 [[B0]], [[B1]]
   ; CHECK: store i8 [[B01]], ptr [[V0]], align 1
-  ; CHECK: [[V:%.*]] = getelementptr inbounds nuw [1 x i8], ptr %labelva, i32 0, i32 0
-  ; CHECK: call void ({ i32, i1 }, i8, ptr, ...) @__dfsw_custom_varg({ i32, i1 } %a, i8 zeroext [[A01]], ptr [[V]], [2 x i7] %b)
+  ; CHECK: call void ({ i32, i1 }, i8, ptr, ...) @__dfsw_custom_varg({ i32, i1 } %a, i8 zeroext [[A01]], ptr %labelva, [2 x i7] %b)
 
   call void ({i32, i1}, ...) @custom_varg({i32, i1} %a, [2 x i7] %b)
   ret void
@@ -241,8 +240,8 @@ define void @custom_varg({i32, i1} %a, ...) {
   ret void
 }
 
-; CHECK: declare { i1, i7 } @__dfsw_custom_with_ret({ i32, i1 }, [2 x i7], i8, i8, ptr)
-; CHECK: declare void @__dfsw_custom_without_ret({ i32, i1 }, [2 x i7], i8, i8)
-; CHECK: declare void @__dfsw_custom_varg({ i32, i1 }, i8, ptr, ...)
+; CHECK: declare { i1, i7 } @__dfsw_custom_with_ret({ i32, i1 }, [2 x i7], i8 zeroext, i8 zeroext, ptr)
+; CHECK: declare void @__dfsw_custom_without_ret({ i32, i1 }, [2 x i7], i8 zeroext, i8 zeroext)
+; CHECK: declare void @__dfsw_custom_varg({ i32, i1 }, i8 zeroext, ptr, ...)
 
-; CHECK: declare { i1, i7 } @__dfsw_custom_cb(ptr, { i32, i1 }, [2 x i7], i8, i8, i8, ptr)
+; CHECK: declare { i1, i7 } @__dfsw_custom_cb(ptr, { i32, i1 }, [2 x i7], i8 zeroext, i8 zeroext, i8 zeroext, ptr)

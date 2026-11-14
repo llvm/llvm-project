@@ -29,7 +29,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_fp_cond_sections
 ! Seed store before the region: struct value field = original x.
-! CHECK:         %[[XD:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QF{{.*}}Ex"}
+! CHECK:         %[[XD:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QF{{.*}}Ex")
 ! CHECK:         fir.coordinate_of %[[S:.*]], $x
 ! CHECK:         %[[MX:.*]] = fir.coordinate_of %[[S]], x
 ! CHECK:         %[[SEED:.*]] = fir.load %[[XD]]#0

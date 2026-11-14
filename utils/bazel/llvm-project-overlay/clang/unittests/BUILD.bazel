@@ -40,7 +40,7 @@ cc_test(
 
 cc_library(
     name = "ast_matchers_tests_hdrs",
-    testonly = 1,
+    testonly = True,
     hdrs = glob(
         ["ASTMatchers/*.h"],
         allow_empty = False,
@@ -98,7 +98,7 @@ cc_test(
 
 cc_library(
     name = "dataflow_testing_support",
-    testonly = 1,
+    testonly = True,
     srcs = ["Analysis/FlowSensitive/TestingSupport.cpp"],
     hdrs = ["Analysis/FlowSensitive/TestingSupport.h"],
     deps = [
@@ -117,14 +117,14 @@ cc_library(
 
 cc_library(
     name = "dataflow_mock_headers",
-    testonly = 1,
+    testonly = True,
     srcs = ["Analysis/FlowSensitive/MockHeaders.cpp"],
     hdrs = ["Analysis/FlowSensitive/MockHeaders.h"],
 )
 
 cc_library(
     name = "dataflow_solver_test",
-    testonly = 1,
+    testonly = True,
     hdrs = ["Analysis/FlowSensitive/SolverTest.h"],
     deps = [
         ":dataflow_testing_support",
@@ -164,7 +164,7 @@ cc_test(
 
 cc_library(
     name = "unchecked_statusor_access_model_test_fixture",
-    testonly = 1,
+    testonly = True,
     srcs = ["Analysis/FlowSensitive/UncheckedStatusOrAccessModelTestFixture.cpp"],
     hdrs = ["Analysis/FlowSensitive/UncheckedStatusOrAccessModelTestFixture.h"],
     deps = [
@@ -186,6 +186,7 @@ cc_library(
 
 cc_test(
     name = "analysis_flow_sensitive_tests",
+    size = "medium",
     srcs = glob(
         [
             "Analysis/FlowSensitive/*.cpp",
@@ -193,6 +194,7 @@ cc_test(
         ],
         allow_empty = False,
     ),
+    shard_count = 20,
     deps = [
         "//clang:analysis",
         "//clang:ast",
@@ -308,6 +310,7 @@ cc_test(
         "//clang:serialization",
         "//clang:static_analyzer_core_options",
         "//clang:tooling",
+        "//llvm:Core",
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:TargetParser",
@@ -389,7 +392,7 @@ cc_test(
 
 cc_library(
     name = "static_analyzer_test_headers",
-    testonly = 1,
+    testonly = True,
     hdrs = glob(
         ["StaticAnalyzer/*.h"],
         allow_empty = False,
@@ -437,7 +440,7 @@ cc_test(
 
 cc_library(
     name = "tooling_tests_hdrs",
-    testonly = 1,
+    testonly = True,
     hdrs = glob(
         ["Tooling/*.h"],
         allow_empty = False,
@@ -494,7 +497,7 @@ cc_test(
 # expected by the `tooling_recursive_ast_visitor_tests`.
 cc_library(
     name = "tooling_recursive_ast_visitor_tests_tooling_hdrs",
-    testonly = 1,
+    testonly = True,
     hdrs = glob(
         ["Tooling/*.h"],
         allow_empty = False,
@@ -737,7 +740,9 @@ cc_test(
         "//clang:lex",
         "//clang:parse",
         "//clang:sema",
+        "//llvm:BitWriter",
         "//llvm:LineEditor",
+        "//llvm:Linker",
         "//llvm:MC",
         "//llvm:OrcJIT",
         "//llvm:OrcShared",
@@ -759,6 +764,7 @@ cc_test(
         allow_empty = False,
     ),
     deps = [
+        "//clang:ast",
         "//clang:ast_matchers",
         "//clang:basic",
         "//clang:driver",

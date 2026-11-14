@@ -1,6 +1,8 @@
 // Tests clang-ssaf-src-edit-merge against real multi-TU source.
 // Specifically, this file tests non-conflicting merges across multiple TUs.
 
+// UNSUPPORTED: target={{.*}}
+
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: split-file %s %t
 

@@ -7,56 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "LowerToLLVMOpenCLMetadata.h"
+#include "LowerToLLVMMetadata.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace cir {
 namespace direct {
 
 namespace {
-class LLVMMetadataNodeBuilder {
-public:
-  explicit LLVMMetadataNodeBuilder(mlir::MLIRContext *ctx) : ctx(ctx) {}
-
-  mlir::LLVM::MDConstantAttr getI32(unsigned value) const {
-    mlir::IntegerType intTy = mlir::IntegerType::get(ctx, 32);
-    mlir::IntegerAttr intAttr = mlir::IntegerAttr::get(intTy, value);
-    return mlir::LLVM::MDConstantAttr::get(ctx, intAttr);
-  }
-
-  mlir::LLVM::MDStringAttr getString(llvm::StringRef value) const {
-    return mlir::LLVM::MDStringAttr::get(ctx,
-                                         mlir::StringAttr::get(ctx, value));
-  }
-
-  mlir::LLVM::MDNodeAttr
-  getNode(llvm::ArrayRef<mlir::Attribute> metadata) const {
-    return mlir::LLVM::MDNodeAttr::get(ctx, metadata);
-  }
-
-  mlir::LLVM::MDNodeAttr getI32Node(llvm::ArrayRef<unsigned> values) const {
-    llvm::SmallVector<mlir::Attribute> metadata;
-    for (unsigned value : values)
-      metadata.push_back(getI32(value));
-    return getNode(metadata);
-  }
-
-  mlir::LLVM::MDNodeAttr getStringNode(mlir::ArrayAttr attrs) const {
-    llvm::SmallVector<mlir::Attribute> metadata;
-    for (mlir::StringAttr attr : attrs.getAsRange<mlir::StringAttr>())
-      metadata.push_back(getString(attr.getValue()));
-    return getNode(metadata);
-  }
-
-private:
-  mlir::MLIRContext *ctx;
-};
-
 using KernelArgStringMetadataGetter =
     mlir::ArrayAttr (cir::OpenCLKernelArgMetadataAttr::*)() const;
 
@@ -106,7 +68,7 @@ static void addOpenCLKernelArgFunctionMetadata(
 
 } // namespace
 
-static void convertOpenCLKernelArgMetadata(
+void lowerOpenCLKernelArgMetadata(
     cir::OpenCLKernelArgMetadataAttr clArgMetadata,
     llvm::SmallVectorImpl<mlir::Attribute> &entries) {
   mlir::MLIRContext *ctx = clArgMetadata.getContext();
@@ -139,38 +101,6 @@ static void convertOpenCLKernelArgMetadata(
   }
 }
 
-OpenCLFunctionMetadataLowering::OpenCLFunctionMetadataLowering(
-    mlir::MLIRContext *ctx)
-    : ctx(ctx) {}
-
-bool OpenCLFunctionMetadataLowering::lower(mlir::NamedAttribute attr,
-                                           bool includeFunctionOnlyAttrs) {
-  return llvm::TypeSwitch<mlir::Attribute, bool>(attr.getValue())
-      .Case<cir::OpenCLKernelArgMetadataAttr>(
-          [&](cir::OpenCLKernelArgMetadataAttr clArgMetadata) {
-            if (!includeFunctionOnlyAttrs)
-              return true;
-            lower(clArgMetadata);
-            return true;
-          })
-      .Default(false);
-}
-
-void OpenCLFunctionMetadataLowering::appendAttrs(
-    llvm::SmallVectorImpl<mlir::NamedAttribute> &result) const {
-  if (!functionMetadata.empty()) {
-    result.push_back(mlir::NamedAttribute(
-        mlir::LLVM::LLVMFuncOp::getFunctionMetadataAttrName(mlir::OperationName(
-            mlir::LLVM::LLVMFuncOp::getOperationName(), ctx)),
-        mlir::ArrayAttr::get(ctx, functionMetadata)));
-  }
-}
-
-void OpenCLFunctionMetadataLowering::lower(
-    cir::OpenCLKernelArgMetadataAttr clArgMetadata) {
-  convertOpenCLKernelArgMetadata(clArgMetadata, functionMetadata);
-}
-
 static void createOpenCLVersionNamedMetadata(mlir::ModuleOp module,
                                              llvm::StringRef name,
                                              mlir::LLVM::MDNodeAttr node) {
@@ -188,8 +118,9 @@ static void emitOpenCLVersionMetadata(mlir::ModuleOp module,
   mlir::MLIRContext *ctx = module.getContext();
   LLVMMetadataNodeBuilder metadataBuilder(ctx);
 
-  unsigned versionMetadata[] = {static_cast<unsigned>(version.getMajor()),
-                                static_cast<unsigned>(version.getMinor())};
+  unsigned versionMetadata[] = {
+      static_cast<unsigned>(version.getMajorVersion()),
+      static_cast<unsigned>(version.getMinorVersion())};
   createOpenCLVersionNamedMetadata(module, metadataName,
                                    metadataBuilder.getI32Node(versionMetadata));
 }
@@ -203,6 +134,7 @@ void lowerOpenCLModuleMetadataAttrs(mlir::ModuleOp module) {
   const OpenCLModuleMetadataMapping moduleMetadataMappings[] = {
       {cir::CIRDialect::getOpenCLVersionAttrName(), "opencl.ocl.version"},
       {cir::CIRDialect::getOpenCLCXXVersionAttrName(), "opencl.cxx.version"},
+      {cir::CIRDialect::getOpenCLSPIRVersionAttrName(), "opencl.spir.version"},
   };
 
   for (const OpenCLModuleMetadataMapping &mapping : moduleMetadataMappings) {

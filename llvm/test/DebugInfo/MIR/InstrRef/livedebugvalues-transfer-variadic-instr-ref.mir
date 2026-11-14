@@ -1,5 +1,5 @@
 # RUN: llc %s -o - -experimental-debug-variable-locations=true \
-# RUN:     -run-pass=livedebugvalues  | \
+# RUN:     -run-pass=live-debug-values  | \
 # RUN: FileCheck %s --implicit-check-not=DBG_VALUE
 #
 ## Check that LiveDebugValues can track and join DBG_INSTR_REFs that use

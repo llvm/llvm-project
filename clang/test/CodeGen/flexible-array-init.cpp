@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple i386-unknown-unknown -x c++ -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple i386-unknown-unknown -x c++ -emit-llvm -o - %s | FileCheck %s %}
 
 union _u { char a[]; } u = {};
 union _u0 { char a[]; } u0 = {0};

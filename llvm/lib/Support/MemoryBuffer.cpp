@@ -372,11 +372,6 @@ static bool shouldUseMmap(sys::fs::file_t FD,
                           bool RequiresNullTerminator,
                           int PageSize,
                           bool IsVolatile) {
-#if defined(__MVS__)
-  // zOS Enhanced ASCII auto convert does not support mmap.
-  return false;
-#endif
-
   // mmap may leave the buffer without null terminator if the file size changed
   // by the time the last page is mapped in, so avoid it if the file size is
   // likely to change.
@@ -396,10 +391,10 @@ static bool shouldUseMmap(sys::fs::file_t FD,
   // FIXME: this chunk of code is duplicated, but it avoids a fstat when
   // RequiresNullTerminator = false and MapSize != -1.
   if (FileSize == size_t(-1)) {
-    sys::fs::file_status Status;
-    if (sys::fs::status(FD, Status))
+    ErrorOr<uint64_t> FS = sys::fs::file_size(FD);
+    if (!FS)
       return false;
-    FileSize = Status.getSize();
+    FileSize = *FS;
   }
 
   // If we need a null terminator and the end of the map is inside the file,
@@ -512,6 +507,19 @@ getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
     MapSize = FileSize;
   }
 
+#ifdef __MVS__
+  ErrorOr<bool> NeedsConversion = needConversion(Filename, FD);
+  if (std::error_code EC = NeedsConversion.getError())
+    return EC;
+  // File size may increase due to EBCDIC -> UTF-8 conversion, therefore we
+  // cannot trust the file size and we create the memory buffer by copying
+  // off the stream.
+  // Note: This only works with the assumption of reading a full file (i.e,
+  // Offset == 0 and MapSize == FileSize). Reading a file slice does not work.
+  if (*NeedsConversion && Offset == 0 && MapSize == FileSize)
+    return getMemoryBufferForStream(FD, Filename);
+#endif
+
   if (shouldUseMmap(FD, FileSize, MapSize, Offset, RequiresNullTerminator,
                     PageSize, IsVolatile)) {
     std::error_code EC;
@@ -527,19 +535,6 @@ getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
         return std::move(Result);
     }
   }
-
-#ifdef __MVS__
-  ErrorOr<bool> NeedsConversion = needConversion(Filename, FD);
-  if (std::error_code EC = NeedsConversion.getError())
-    return EC;
-  // File size may increase due to EBCDIC -> UTF-8 conversion, therefore we
-  // cannot trust the file size and we create the memory buffer by copying
-  // off the stream.
-  // Note: This only works with the assumption of reading a full file (i.e,
-  // Offset == 0 and MapSize == FileSize). Reading a file slice does not work.
-  if (*NeedsConversion && Offset == 0 && MapSize == FileSize)
-    return getMemoryBufferForStream(FD, Filename);
-#endif
 
   auto Buf =
       WritableMemoryBuffer::getNewUninitMemBuffer(MapSize, Filename, Alignment);

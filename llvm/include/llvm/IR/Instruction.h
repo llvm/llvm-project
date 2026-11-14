@@ -556,6 +556,7 @@ public:
 
   /// Fetch the debug location for this node, unless this is a debug intrinsic,
   /// in which case fetch the debug location of the next non-debug node.
+  LLVM_DEPRECATED_WITH_FIXIT("Use getDebugLoc() instead", "getDebugLoc")
   LLVM_ABI const DebugLoc &getStableDebugLoc() const;
 
   /// Set or clear the nuw flag on this instruction, which must be an operator
@@ -860,9 +861,7 @@ public:
   LLVM_ABI bool mayReadFromMemory() const LLVM_READONLY;
 
   /// Return true if this instruction may read or write memory.
-  bool mayReadOrWriteMemory() const {
-    return mayReadFromMemory() || mayWriteToMemory();
-  }
+  LLVM_ABI bool mayReadOrWriteMemory() const LLVM_READONLY;
 
   /// Return true if this instruction has an AtomicOrdering of unordered or
   /// higher.
@@ -950,13 +949,6 @@ public:
   /// Return true if the instruction is a llvm.lifetime.start or
   /// llvm.lifetime.end marker.
   LLVM_ABI bool isLifetimeStartOrEnd() const LLVM_READONLY;
-
-  /// Return true if the instruction is a llvm.launder.invariant.group or
-  /// llvm.strip.invariant.group.
-  LLVM_ABI bool isLaunderOrStripInvariantGroup() const LLVM_READONLY;
-
-  /// Return true if the instruction is a DbgInfoIntrinsic or PseudoProbeInst.
-  LLVM_ABI bool isDebugOrPseudoInst() const LLVM_READONLY;
 
   /// Create a copy of 'this' instruction that is identical in all ways except
   /// the following:

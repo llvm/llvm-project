@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -triple i686-windows -emit-llvm-only -fcoverage-mapping -dump-coverage-mapping -fprofile-instrument=clang %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -mllvm -emptyline-comment-coverage=false -triple i686-windows -emit-llvm-only -fcoverage-mapping -dump-coverage-mapping -fprofile-instrument=clang %s | FileCheck %s %}
 
 struct A {
   virtual ~A();

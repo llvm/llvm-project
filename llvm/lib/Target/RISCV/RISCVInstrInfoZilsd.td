@@ -26,16 +26,12 @@ def riscv_st_rv32 : RVSDNode<"SD_RV32", SDT_RISCV_SD_RV32,
                              [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 //===----------------------------------------------------------------------===//
-// Instruction Class Templates
-//===----------------------------------------------------------------------===//
-
-//===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZilsd, IsRV32], DecoderNamespace = "RV32Only" in {
-def LD_RV32 : Load_ri<0b011, "ld", GPRPairRV32>, Sched<[WriteLDD, ReadMemBase]>;
-def SD_RV32 : Store_rri<0b011, "sd", GPRPairRV32>,
+def LD_RV32 : Load_ri<0b011, "ld", GPRPair>, Sched<[WriteLDD, ReadMemBase]>;
+def SD_RV32 : Store_rri<0b011, "sd", GPRPair>,
               Sched<[WriteSTD, ReadStoreData, ReadMemBase]>;
 } // Predicates = [HasStdExtZilsd, IsRV32], DecoderNamespace = "RV32Only"
 
@@ -44,8 +40,8 @@ def SD_RV32 : Store_rri<0b011, "sd", GPRPairRV32>,
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZilsd, IsRV32] in {
-def PseudoLD_RV32 : PseudoLoad<"ld", GPRPairRV32>;
-def PseudoSD_RV32 : PseudoStore<"sd", GPRPairRV32>;
+def PseudoLD_RV32 : PseudoLoad<"ld", GPRPairNoX0>;
+def PseudoSD_RV32 : PseudoStore<"sd", GPRPair>;
 
 // Pseudo instructions for load/store optimization with 2 separate registers
 def PseudoLD_RV32_OPT :

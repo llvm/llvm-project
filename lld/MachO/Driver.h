@@ -11,9 +11,11 @@
 
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Option/OptTable.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <optional>
 
@@ -28,7 +30,7 @@ namespace lld::macho {
 class DylibFile;
 class InputFile;
 
-class MachOOptTable : public llvm::opt::GenericOptTable {
+class MachOOptTable : public llvm::opt::OptTable {
 public:
   MachOOptTable();
   llvm::opt::InputArgList parse(CommonLinkerContext &ctx,
@@ -48,6 +50,9 @@ enum {
 void parseLCLinkerOption(llvm::SmallVectorImpl<StringRef> &LCLinkerOptions,
                          InputFile *f, unsigned argc, StringRef data);
 void resolveLCLinkerOptions();
+
+SmallVector<StringRef> getRerootedSearchPaths(StringRef path,
+                                              ArrayRef<StringRef> roots);
 
 std::string createResponseFile(const llvm::opt::InputArgList &args);
 
@@ -71,6 +76,7 @@ findPathCombination(const llvm::Twine &name,
 llvm::StringRef rerootPath(llvm::StringRef path);
 
 uint32_t getModTime(llvm::StringRef path);
+uint32_t getModTime(const llvm::sys::fs::file_status &stat);
 
 void printArchiveMemberLoad(StringRef reason, const InputFile *);
 

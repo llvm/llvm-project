@@ -11,7 +11,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "llvm/Support/ErrorExtras.h"
 #include <cstring>
@@ -132,16 +131,17 @@ ProcessWasm::GetFallbackFrameIndex(uint32_t module_id) {
     return llvm::createStringError(
         "the global belongs to no known module instance");
 
-  ThreadSP thread = GetThreadList().GetSelectedThread();
-  StackFrameSP frame =
-      thread ? thread->GetSelectedFrame(DoNoSelectMostRelevantFrame) : nullptr;
-  if (frame) {
-    // A frame can only stand in for the module the stub reports it executing.
-    const uint32_t frame_index = frame->GetConcreteFrameIndex();
+  // Use the real thread list in case an OS plugin is providing threads.
+  if (ThreadSP thread = m_thread_list_real.GetSelectedThread()) {
     ThreadWasm &wasm_thread = static_cast<ThreadWasm &>(*thread);
-    if (GetWasmModuleID(wasm_thread.GetConcreteFramePC(frame_index)) ==
-        module_id)
-      return frame_index;
+    // A frame can only stand in for the module the stub reports it executing.
+    for (uint32_t frame_index = 0;; ++frame_index) {
+      lldb::addr_t pc = wasm_thread.GetConcreteFramePC(frame_index);
+      if (pc == LLDB_INVALID_ADDRESS)
+        break;
+      if (GetWasmModuleID(pc) == module_id)
+        return frame_index;
+    }
   }
 
   return llvm::createStringErrorV(
@@ -150,19 +150,31 @@ ProcessWasm::GetFallbackFrameIndex(uint32_t module_id) {
       module_id);
 }
 
-size_t ProcessWasm::ReadMemory(const ProcessAddress &process_addr, void *buf,
-                               size_t size, Status &error) {
-  // A caller may reuse one error across reads, as the overridden
-  // Process::ReadMemory allows.
-  error.Clear();
+bool ProcessWasm::ShouldUseMemoryCache(const ProcessAddress &process_addr) {
+  wasm_addr_t wasm_addr(process_addr.GetValue());
 
+  switch (wasm_addr.GetType()) {
+  case WasmAddressType::Memory:
+  case WasmAddressType::Object:
+    return ProcessGDBRemote::ShouldUseMemoryCache(process_addr);
+  case WasmAddressType::Global:
+  case WasmAddressType::Invalid:
+    // A global's address holds an index, not an offset into addressable
+    // storage, so the cache's aligned reads would name a different global.
+    return false;
+  }
+  llvm_unreachable("Fully covered switch above!");
+}
+
+size_t ProcessWasm::DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                                 size_t size, Status &error) {
   lldb::addr_t vm_addr = process_addr.GetValue();
   wasm_addr_t wasm_addr(vm_addr);
 
   switch (wasm_addr.GetType()) {
   case WasmAddressType::Memory:
   case WasmAddressType::Object:
-    return ProcessGDBRemote::ReadMemory(vm_addr, buf, size, error);
+    return ProcessGDBRemote::DoReadMemory(vm_addr, buf, size, error);
   case WasmAddressType::Global:
     return ReadGlobal(wasm_addr.GetModuleID(), wasm_addr.GetOffset(), buf, size,
                       error);

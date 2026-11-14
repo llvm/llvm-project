@@ -9,7 +9,7 @@
 func.func @test_modref_() {
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.alloca f32 {bindc_name = "xx", uniq_name = "_QFtest_modrefExx"}
-  %2 = fir.declare %1 {test.ptr = "xx", uniq_name = "_QFtest_modrefExx"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %2 = fir.declare %1 uniq_name("_QFtest_modrefExx") {test.ptr = "xx"} : (!fir.ref<f32>) -> !fir.ref<f32>
   fir.call @callee_() {test.ptr = "callee_procedure"} : () -> ()
   return
 }

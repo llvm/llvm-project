@@ -15,6 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "IROptions.h"
 #include "LLVMContextImpl.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -88,28 +89,6 @@
 #include <vector>
 
 using namespace llvm;
-
-// See https://llvm.org/docs/DebuggingLLVM.html for why these flags are useful.
-
-static cl::opt<bool>
-    PrintInstAddrs("print-inst-addrs", cl::Hidden,
-                   cl::desc("Print addresses of instructions when dumping"));
-
-static cl::opt<bool> PrintInstDebugLocs(
-    "print-inst-debug-locs", cl::Hidden,
-    cl::desc("Pretty print debug locations of instructions when dumping"));
-
-static cl::opt<bool> PrintProfData(
-    "print-prof-data", cl::Hidden,
-    cl::desc("Pretty print perf data (branch weights, etc) when dumping"));
-
-static cl::opt<bool> PreserveAssemblyUseListOrder(
-    "preserve-ll-uselistorder", cl::Hidden, cl::init(false),
-    cl::desc("Preserve use-list order when writing LLVM assembly."));
-
-static cl::opt<bool> PrintAddrspaceName("print-addrspace-name", cl::Hidden,
-                                        cl::init(false),
-                                        cl::desc("Print address space names"));
 
 // Make virtual table appear in this compilation unit.
 AssemblyAnnotationWriter::~AssemblyAnnotationWriter() = default;
@@ -419,6 +398,9 @@ static void printCallingConv(unsigned cc, raw_ostream &Out) {
     Out << "amdgpu_gfx_whole_wave";
     break;
   case CallingConv::M68k_RTD:      Out << "m68k_rtdcc"; break;
+  case CallingConv::WASM_EmscriptenInvoke:
+    Out << "wasm_emscripten_invokecc";
+    break;
   case CallingConv::RISCV_VectorCall:
     Out << "riscv_vector_cc";
     break;
@@ -642,8 +624,9 @@ static void printAddressSpace(const Module *M, unsigned AS, raw_ostream &OS,
   if (AS == 0 && !ForcePrint)
     return;
   OS << Prefix << "addrspace(";
-  StringRef ASName =
-      PrintAddrspaceName && M ? M->getDataLayout().getAddressSpaceName(AS) : "";
+  StringRef ASName = M && getIROptions(M->getContext()).print_addrspace_name
+                         ? M->getDataLayout().getAddressSpaceName(AS)
+                         : "";
   if (!ASName.empty())
     OS << "\"" << ASName << "\"";
   else
@@ -2185,6 +2168,29 @@ static void writeDILocation(raw_ostream &Out, const DILocation *DL,
                     /* Default */ false);
   Printer.printInt("atomGroup", DL->getAtomGroup());
   Printer.printInt<unsigned>("atomRank", DL->getAtomRank());
+  Printer.printMetadata("irlayers", DL->getRawIRLayers());
+  Out << ")";
+}
+
+static void writeDILayerLoc(raw_ostream &Out, const DILayerLoc *N,
+                            AsmWriterContext &WriterCtx) {
+  Out << "!DILayerLoc(";
+  MDFieldPrinter Printer(Out, WriterCtx);
+  Printer.printInt("line", N->getLine(), /* ShouldSkipZero */ false);
+  Printer.printInt("column", N->getColumn());
+  Printer.printMetadata("file", N->getRawFile(), /* ShouldSkipNull */ false);
+  Printer.printString("kind", N->getKind(), /* ShouldSkipEmpty */ false);
+  Out << ")";
+}
+
+static void writeDILayerLocList(raw_ostream &Out, const DILayerLocList *N,
+                                AsmWriterContext &WriterCtx) {
+  Out << "!DILayerLocList(";
+  ListSeparator FS;
+  for (const MDOperand &Op : N->operands()) {
+    Out << FS;
+    writeMetadataAsOperand(Out, Op, WriterCtx);
+  }
   Out << ")";
 }
 
@@ -2339,6 +2345,7 @@ static void writeDIStringType(raw_ostream &Out, const DIStringType *N,
   Printer.printInt("align", N->getAlignInBits());
   Printer.printDwarfEnum("encoding", N->getEncoding(),
                          dwarf::AttributeEncodingString);
+  Printer.printMetadata("charType", N->getRawCharType());
   Out << ")";
 }
 
@@ -2952,6 +2959,7 @@ static void writeAsOperandInternal(raw_ostream &Out, const Metadata *MD,
 namespace {
 
 class AssemblyWriter {
+  const IROptions &Opts;
   formatted_raw_ostream &Out;
   const Module *TheModule = nullptr;
   const ModuleSummaryIndex *TheIndex = nullptr;
@@ -2969,7 +2977,8 @@ class AssemblyWriter {
 
 public:
   /// Construct an AssemblyWriter with an external SlotTracker
-  AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac, const Module *M,
+  AssemblyWriter(const IROptions &Opts, formatted_raw_ostream &o,
+                 SlotTracker &Mac, const Module *M,
                  AssemblyAnnotationWriter *AAW, bool IsForDebug,
                  bool ShouldPreserveUseListOrder = false);
 
@@ -3058,21 +3067,28 @@ private:
 
 } // end anonymous namespace
 
-AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
-                               const Module *M, AssemblyAnnotationWriter *AAW,
-                               bool IsForDebug, bool ShouldPreserveUseListOrder)
-    : Out(o), TheModule(M), Machine(Mac), TypePrinter(M), AnnotationWriter(AAW),
-      IsForDebug(IsForDebug),
+// The options of what has no LLVMContext: a summary index or a detached debug
+// record.
+constexpr IROptions DefaultOptions;
+
+static const IROptions &getOptions(const Module *M) {
+  return M ? getIROptions(M->getContext()) : DefaultOptions;
+}
+
+AssemblyWriter::AssemblyWriter(const IROptions &Opts, formatted_raw_ostream &o,
+                               SlotTracker &Mac, const Module *M,
+                               AssemblyAnnotationWriter *AAW, bool IsForDebug,
+                               bool ShouldPreserveUseListOrder)
+    : Opts(Opts), Out(o), TheModule(M), Machine(Mac), TypePrinter(M),
+      AnnotationWriter(AAW), IsForDebug(IsForDebug),
       ShouldPreserveUseListOrder(
-          PreserveAssemblyUseListOrder.getNumOccurrences()
-              ? PreserveAssemblyUseListOrder
-              : ShouldPreserveUseListOrder) {}
+          valueOr(Opts.preserve_ll_uselistorder, ShouldPreserveUseListOrder)) {}
 
 AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
                                const ModuleSummaryIndex *Index, bool IsForDebug)
-    : Out(o), TheIndex(Index), Machine(Mac), TypePrinter(/*Module=*/nullptr),
-      IsForDebug(IsForDebug),
-      ShouldPreserveUseListOrder(PreserveAssemblyUseListOrder) {}
+    : Opts(DefaultOptions), Out(o), TheIndex(Index), Machine(Mac),
+      TypePrinter(/*Module=*/nullptr), IsForDebug(IsForDebug),
+      ShouldPreserveUseListOrder(false) {}
 
 void AssemblyWriter::writeOperand(const Value *Operand, bool PrintType) {
   if (!Operand) {
@@ -3342,7 +3358,9 @@ void AssemblyWriter::printModuleSummaryIndex() {
   // Print the TypeIdMap entries.
   for (const auto &TID : TheIndex->typeIds()) {
     Out << "^" << Machine.getTypeIdSlot(TID.second.first)
-        << " = typeid: (name: \"" << TID.second.first << "\"";
+        << " = typeid: (name: \"";
+    printEscapedString(TID.second.first, Out);
+    Out << "\"";
     printTypeIdSummary(TID.second.second);
     Out << ") ; guid = " << TID.first << "\n";
   }
@@ -3351,10 +3369,30 @@ void AssemblyWriter::printModuleSummaryIndex() {
   for (auto &TId : TheIndex->typeIdCompatibleVtableMap()) {
     auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(TId.first);
     Out << "^" << Machine.getTypeIdCompatibleVtableSlot(TId.first)
-        << " = typeidCompatibleVTable: (name: \"" << TId.first << "\"";
+        << " = typeidCompatibleVTable: (name: \"";
+    printEscapedString(TId.first, Out);
+    Out << "\"";
     printTypeIdCompatibleVtableSummary(TId.second);
     Out << ") ; guid = " << GUID << "\n";
   }
+
+  // Print the CFI function entries (the names of the functions with jump
+  // table entries, with the GUIDs that ThinLTO uses for them).
+  auto PrintCfiFunctions = [&](const CfiFunctionIndex &CfiIndex,
+                               StringRef EntryName) {
+    if (CfiIndex.empty())
+      return;
+    Out << "^" << NumSlots++ << " = " << EntryName << ": (";
+    ListSeparator FS;
+    for (const auto &[Name, GUID] : CfiIndex.getSortedSymbols()) {
+      Out << FS << "(guid: " << GUID << ", name: \"";
+      printEscapedString(Name, Out);
+      Out << "\")";
+    }
+    Out << ")\n";
+  };
+  PrintCfiFunctions(TheIndex->cfiFunctionDefs(), "cfiFunctionDefs");
+  PrintCfiFunctions(TheIndex->cfiFunctionDecls(), "cfiFunctionDecls");
 
   // Don't emit flags when it's not really needed (value is zero by default).
   if (TheIndex->getFlags()) {
@@ -3469,8 +3507,11 @@ void AssemblyWriter::printWPDRes(const WholeProgramDevirtResolution &WPDRes) {
   Out << "wpdRes: (kind: ";
   Out << getWholeProgDevirtResKindName(WPDRes.TheKind);
 
-  if (WPDRes.TheKind == WholeProgramDevirtResolution::SingleImpl)
-    Out << ", singleImplName: \"" << WPDRes.SingleImplName << "\"";
+  if (WPDRes.TheKind == WholeProgramDevirtResolution::SingleImpl) {
+    Out << ", singleImplName: \"";
+    printEscapedString(WPDRes.SingleImplName, Out);
+    Out << "\"";
+  }
 
   if (!WPDRes.ResByArg.empty()) {
     Out << ", resByArg: (";
@@ -3621,6 +3662,8 @@ void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
       // emit if true to avoid unnecessary verbosity and test churn.
       if (Call.second.HasTailCall)
         Out << ", tail: 1";
+      if (Call.second.HasIndirectCall)
+        Out << ", indirect: 1";
       Out << ")";
     }
     Out << ")";
@@ -3641,6 +3684,9 @@ void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
       return "cold";
     case (uint8_t)AllocationType::Hot:
       return "hot";
+    case (uint8_t)AllocationType::NotCold | (uint8_t)AllocationType::Cold:
+      // The contexts reaching the allocation could not be disambiguated.
+      return "ambiguous";
     }
     llvm_unreachable("Unexpected alloc type");
   };
@@ -3872,10 +3918,13 @@ void AssemblyWriter::printSummary(const GlobalValueSummary &Summary) {
 
 void AssemblyWriter::printSummaryInfo(unsigned Slot, const ValueInfo &VI) {
   Out << "^" << Slot << " = gv: (";
-  if (VI.hasName() && !VI.name().empty())
-    Out << "name: \"" << VI.name() << "\"";
-  else
+  if (VI.hasName() && !VI.name().empty()) {
+    Out << "name: \"";
+    printEscapedString(VI.name(), Out);
+    Out << "\"";
+  } else {
     Out << "guid: " << VI.getGUID();
+  }
   if (!VI.getSummaryList().empty()) {
     Out << ", summaries: (";
     ListSeparator FS;
@@ -4341,7 +4390,7 @@ void AssemblyWriter::printFunction(const Function *F) {
     writeOperand(F->getPersonalityFn(), /*PrintType=*/true);
   }
 
-  if (PrintProfData) {
+  if (Opts.print_prof_data) {
     if (auto *MDProf = F->getMetadata(LLVMContext::MD_prof)) {
       Out << " ";
       MDProf->print(Out, TheModule, /*IsForDebug=*/true);
@@ -4469,7 +4518,7 @@ void AssemblyWriter::printInfoComment(const Value &V, bool isMaterializable) {
   if (AnnotationWriter && !isMaterializable)
     AnnotationWriter->printInfoComment(V, Out);
 
-  if (PrintInstDebugLocs) {
+  if (Opts.print_inst_debug_locs) {
     if (auto *I = dyn_cast<Instruction>(&V)) {
       if (I->getDebugLoc()) {
         Out << " ; ";
@@ -4477,7 +4526,7 @@ void AssemblyWriter::printInfoComment(const Value &V, bool isMaterializable) {
       }
     }
   }
-  if (PrintProfData) {
+  if (Opts.print_prof_data) {
     if (auto *I = dyn_cast<Instruction>(&V)) {
       if (auto *MD = I->getMetadata(LLVMContext::MD_prof)) {
         Out << " ; ";
@@ -4486,7 +4535,7 @@ void AssemblyWriter::printInfoComment(const Value &V, bool isMaterializable) {
     }
   }
 
-  if (PrintInstAddrs)
+  if (Opts.print_inst_addrs)
     Out << " ; " << &V;
 }
 
@@ -4900,9 +4949,9 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
       Out << ' ';
       TypePrinter.print(GEP->getSourceElementType(), Out);
       Out << ',';
-    } else if (const auto *LI = dyn_cast<LoadInst>(&I)) {
+    } else if (isa<BitExtractInst>(I) || isa<LoadInst>(I)) {
       Out << ' ';
-      TypePrinter.print(LI->getType(), Out);
+      TypePrinter.print(I.getType(), Out);
       Out << ',';
     }
 
@@ -5177,8 +5226,8 @@ void Function::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
                      bool ShouldPreserveUseListOrder, bool IsForDebug) const {
   SlotTracker SlotTable(this);
   formatted_raw_ostream OS(ROS);
-  AssemblyWriter W(OS, SlotTable, this->getParent(), AAW, IsForDebug,
-                   ShouldPreserveUseListOrder);
+  AssemblyWriter W(getIROptions(getContext()), OS, SlotTable, this->getParent(),
+                   AAW, IsForDebug, ShouldPreserveUseListOrder);
   W.printFunction(this);
 }
 
@@ -5187,8 +5236,8 @@ void BasicBlock::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
                      bool IsForDebug) const {
   SlotTracker SlotTable(this->getParent());
   formatted_raw_ostream OS(ROS);
-  AssemblyWriter W(OS, SlotTable, this->getModule(), AAW, IsForDebug,
-                   ShouldPreserveUseListOrder);
+  AssemblyWriter W(getIROptions(getContext()), OS, SlotTable, this->getModule(),
+                   AAW, IsForDebug, ShouldPreserveUseListOrder);
   W.printBasicBlock(this);
 }
 
@@ -5196,15 +5245,16 @@ void Module::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
                    bool ShouldPreserveUseListOrder, bool IsForDebug) const {
   SlotTracker SlotTable(this, /*ShouldTrackMetadataDefinitions=*/true);
   formatted_raw_ostream OS(ROS);
-  AssemblyWriter W(OS, SlotTable, this, AAW, IsForDebug,
-                   ShouldPreserveUseListOrder);
+  AssemblyWriter W(getIROptions(getContext()), OS, SlotTable, this, AAW,
+                   IsForDebug, ShouldPreserveUseListOrder);
   W.printModule(this);
 }
 
 void NamedMDNode::print(raw_ostream &ROS, bool IsForDebug) const {
   SlotTracker SlotTable(getParent());
   formatted_raw_ostream OS(ROS);
-  AssemblyWriter W(OS, SlotTable, getParent(), nullptr, IsForDebug);
+  AssemblyWriter W(getOptions(getParent()), OS, SlotTable, getParent(), nullptr,
+                   IsForDebug);
   W.printNamedMDNode(this);
 }
 
@@ -5220,7 +5270,8 @@ void NamedMDNode::print(raw_ostream &ROS, ModuleSlotTracker &MST,
   }
 
   formatted_raw_ostream OS(ROS);
-  AssemblyWriter W(OS, *SlotTable, getParent(), nullptr, IsForDebug);
+  AssemblyWriter W(getOptions(getParent()), OS, *SlotTable, getParent(),
+                   nullptr, IsForDebug);
   W.printNamedMDNode(this);
 }
 
@@ -5285,7 +5336,8 @@ void DbgMarker::print(raw_ostream &ROS, ModuleSlotTracker &MST,
   const Function *F = getParent() ? getParent()->getParent() : nullptr;
   if (F)
     MST.incorporateFunction(*F);
-  AssemblyWriter W(OS, SlotTable, getModuleFromDPI(this), nullptr, IsForDebug);
+  const Module *M = getModuleFromDPI(this);
+  AssemblyWriter W(getOptions(M), OS, SlotTable, M, nullptr, IsForDebug);
   W.printDbgMarker(*this);
 }
 
@@ -5306,7 +5358,8 @@ void DbgVariableRecord::print(raw_ostream &ROS, ModuleSlotTracker &MST,
                           : nullptr;
   if (F)
     MST.incorporateFunction(*F);
-  AssemblyWriter W(OS, SlotTable, getModuleFromDPI(this), nullptr, IsForDebug);
+  const Module *M = getModuleFromDPI(this);
+  AssemblyWriter W(getOptions(M), OS, SlotTable, M, nullptr, IsForDebug);
   W.printDbgVariableRecord(*this);
 }
 
@@ -5321,7 +5374,8 @@ void DbgLabelRecord::print(raw_ostream &ROS, ModuleSlotTracker &MST,
   if (F)
     MST.incorporateFunction(*F);
 
-  AssemblyWriter W(OS, SlotTable, getModuleFromDPI(this), nullptr, IsForDebug);
+  const Module *M = getModuleFromDPI(this);
+  AssemblyWriter W(getOptions(M), OS, SlotTable, M, nullptr, IsForDebug);
   W.printDbgLabelRecord(*this);
 }
 
@@ -5352,14 +5406,17 @@ void Value::print(raw_ostream &ROS, ModuleSlotTracker &MST,
 
   if (const auto *I = dyn_cast<Instruction>(this)) {
     IncorporateFunction(I->getParent() ? I->getParent()->getParent() : nullptr);
-    AssemblyWriter W(OS, SlotTable, getModuleFromVal(I), nullptr, IsForDebug);
+    AssemblyWriter W(getIROptions(getContext()), OS, SlotTable,
+                     getModuleFromVal(I), nullptr, IsForDebug);
     W.printInstruction(*I);
   } else if (const auto *BB = dyn_cast<BasicBlock>(this)) {
     IncorporateFunction(BB->getParent());
-    AssemblyWriter W(OS, SlotTable, getModuleFromVal(BB), nullptr, IsForDebug);
+    AssemblyWriter W(getIROptions(getContext()), OS, SlotTable,
+                     getModuleFromVal(BB), nullptr, IsForDebug);
     W.printBasicBlock(BB);
   } else if (const auto *GV = dyn_cast<GlobalValue>(this)) {
-    AssemblyWriter W(OS, SlotTable, GV->getParent(), nullptr, IsForDebug);
+    AssemblyWriter W(getIROptions(getContext()), OS, SlotTable, GV->getParent(),
+                     nullptr, IsForDebug);
     if (const auto *V = dyn_cast<GlobalVariable>(GV))
       W.printGlobal(V);
     else if (const auto *F = dyn_cast<Function>(GV))

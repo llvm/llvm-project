@@ -6,10 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// TargetParser metadata attached to processor records for the
-// -gen-amdgpu-target-def backend.
+// TargetParser metadata for the -gen-amdgpu-target-def backend.
 //
 //===----------------------------------------------------------------------===//
+
+// A generic target may use this feature if at least one covered GPU has it.
+// These features participate in validation even when not frontend-visible.
+// Other frontend-visible features must be present on every covered GPU.
+// Implied features are checked according to their own classes.
+// This checks feature membership, not numeric ordering of feature values.
+class AMDGPUGenericAnyFeature<string name, string fieldName, string value,
+                              string description,
+                              list<SubtargetFeature> implies = [],
+                              InlineBehavior ib = InlineDefault>
+    : SubtargetFeature<name, fieldName, value, description, implies, ib>;
 
 // Marks a Processor/ProcessorModel record as a canonical GPU.
 //
@@ -18,9 +28,8 @@
 class AMDGPUGPUInfo<list<int> isa = []> {
   list<int> IsaVersion = isa;
 
-  // List of targets which are compatible with this target. This
-  // should be used for a "gfxN-generic" targets only, and empty for
-  // individual GPUs.
+  // For a "gfxN-generic" target, this must contain at least one compatible
+  // concrete AMDGPU GPU. For individual GPUs and pseudo targets, it must be empty.
   list<Processor> CoveredGPUs = [];
 
   // A pseudo target ("generic"/"generic-hsa") that represents no

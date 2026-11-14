@@ -666,7 +666,8 @@ HoverInfo getHoverContents(const NamedDecl *D, const PrintingPolicy &PP,
   HoverInfo HI;
   auto &Ctx = D->getASTContext();
 
-  HI.AccessSpecifier = getAccessSpelling(D->getAccess()).str();
+  if (Ctx.getLangOpts().CPlusPlus)
+    HI.AccessSpecifier = getAccessSpelling(D->getAccess()).str();
   HI.NamespaceScope = getNamespaceScope(D);
   if (!HI.NamespaceScope->empty())
     HI.NamespaceScope->append("::");

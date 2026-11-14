@@ -81,7 +81,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include <array>
@@ -253,7 +252,7 @@ struct SVEShuffleOpts : public LoopPass {
     const Function *F = L->getHeader()->getParent();
     const AArch64Subtarget &ST = *TM.getSubtargetImpl(*F);
 
-    return processLoop(*L, ST, F->getParent()->getDataLayout());
+    return processLoop(*L, ST, F->getDataLayout());
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -279,7 +278,7 @@ AArch64SVEShuffleOptsPass::run(Loop &L, LoopAnalysisManager &AM,
   const Function *F = L.getHeader()->getParent();
   const AArch64Subtarget &ST = *TM.getSubtargetImpl(*F);
 
-  if (processLoop(L, ST, F->getParent()->getDataLayout())) {
+  if (processLoop(L, ST, F->getDataLayout())) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
     PA.preserve<TargetIRAnalysis>();

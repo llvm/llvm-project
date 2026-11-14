@@ -107,11 +107,11 @@ static cl::opt<unsigned> SecondaryCandidateQueueSize("pull-up-sec-queue-size",
                                                      cl::Hidden, cl::init(2));
 
 static cl::opt<bool> PostPullUpOpt(
-    "post-pull-up-opt", cl::Hidden, cl::Optional, cl::init(true),
+    "post-pull-up-opt", cl::Hidden, cl::init(true),
     cl::desc("Enable opt. exposed by pull-up e.g., remove redundant jumps"));
 
 static cl::opt<bool> SpeculateNonPredInsn(
-    "speculate-non-pred-insn", cl::Hidden, cl::Optional, cl::init(true),
+    "speculate-non-pred-insn", cl::Hidden, cl::init(true),
     cl::desc("Speculate non-predicable instructions in parent BB"));
 
 static cl::opt<bool>
@@ -431,8 +431,6 @@ private:
   bool canAddMIToThisPacket(
       MachineInstr *MI,
       SmallVector<MachineInstr *, HEXAGON_PACKET_SIZE> &Bundle);
-
-  bool CanPromoteToDotNew(MachineInstr *MI, unsigned Reg);
 
   bool pullUpPeelBBLoop(MachineBasicBlock *PredBB, MachineBasicBlock *LoopBB);
 
@@ -4154,8 +4152,7 @@ bool HexagonGlobalSchedulerImpl::pullUpPeelBBLoop(MachineBasicBlock *PredBB,
   MachineInstr *RegMI = &*FMI;
   if (RegMI->isBundle())
     return false;
-  int TfrOpcode = RegMI->getOpcode();
-  if (TfrOpcode != Hexagon::A2_tfr && TfrOpcode != Hexagon::A2_tfr)
+  if (RegMI->getOpcode() != Hexagon::A2_tfr)
     return false;
   if (!(RegMI->getOperand(0).isReg() && RegMI->getOperand(1).isReg()))
     return false;

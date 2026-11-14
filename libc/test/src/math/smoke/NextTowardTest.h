@@ -227,9 +227,9 @@ public:
   }
 };
 
-#define LIST_NEXTTOWARD_TESTS(T, func)                                         \
-  using LlvmLibcNextTowardTest = NextTowardTestTemplate<T>;                    \
-  TEST_F(LlvmLibcNextTowardTest, TestNaN) { testNaN(&func); }                  \
-  TEST_F(LlvmLibcNextTowardTest, TestBoundaries) { testBoundaries(&func); }
+#define LIST_NEXTTOWARD_TESTS(Name, T, func)                                   \
+  using LlvmLibc##Name##Test = NextTowardTestTemplate<T>;                      \
+  TEST_F(LlvmLibc##Name##Test, TestNaN) { testNaN(&func); }                    \
+  TEST_F(LlvmLibc##Name##Test, TestBoundaries) { testBoundaries(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_NEXTTOWARDTEST_H

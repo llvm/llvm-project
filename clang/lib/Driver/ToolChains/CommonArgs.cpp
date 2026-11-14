@@ -211,10 +211,10 @@ static bool mustMaintainValidFrameChain(const llvm::opt::ArgList &Args,
     return false;
 
   case llvm::Triple::aarch64:
-    // Arm64 Windows requires that the frame chain is valid, as there is no
-    // way to indicate during a stack walk that a frame has used the frame
-    // pointer as a general purpose register.
-    return Triple.isOSWindows();
+    // Arm64 Windows (and UEFI, which follows the same ABI) requires that the
+    // frame chain is valid, as there is no way to indicate during a stack walk
+    // that a frame has used the frame pointer as a general purpose register.
+    return Triple.isOSWindowsOrUEFI();
   }
 }
 
@@ -678,6 +678,13 @@ void tools::addLinkerCompressDebugSectionsOption(
       TC.getDriver().Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << V;
   }
+}
+
+bool tools::useMachORelocatableDwarf(const llvm::Triple &T,
+                                     unsigned DwarfVersion) {
+  return T.isOSBinFormatMachO() && DwarfVersion >= 5 &&
+         !(T.isMacOSX() || T.isiOS() || T.isWatchOS() || T.isXROS() ||
+           T.isDriverKit());
 }
 
 void tools::renderDebugInfoCompressionArgs(const ArgList &Args,
@@ -1203,6 +1210,14 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
                                          ParallelismOpt + Parallelism));
 
+  // Forward the loop vectorization preference to the LTO backend by toggling
+  // the existing -vectorize-loops cl::opt, which the pass honors directly.
+  if (Arg *A =
+          Args.getLastArg(options::OPT_fvectorize, options::OPT_fno_vectorize))
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine(PluginOptPrefix) + "-vectorize-loops=" +
+        (A->getOption().matches(options::OPT_fvectorize) ? "1" : "0")));
+
   // Forward the SLP vectorization preference to the LTO backend by toggling
   // the existing -vectorize-slp cl::opt, which the pass honors directly. This
   // avoids minting dedicated linker options for what is only pipeline tuning.
@@ -1220,23 +1235,6 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(
         Twine(PluginOptPrefix) + "-global-isel=" +
         (A->getOption().matches(options::OPT_fglobal_isel) ? "1" : "0")));
-  }
-
-  // If an explicit debugger tuning argument appeared, pass it along.
-  if (Arg *A =
-          Args.getLastArg(options::OPT_gTune_Group, options::OPT_ggdbN_Group)) {
-    if (A->getOption().matches(options::OPT_glldb))
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine(PluginOptPrefix) + "-debugger-tune=lldb"));
-    else if (A->getOption().matches(options::OPT_gsce))
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine(PluginOptPrefix) + "-debugger-tune=sce"));
-    else if (A->getOption().matches(options::OPT_gdbx))
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine(PluginOptPrefix) + "-debugger-tune=dbx"));
-    else
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine(PluginOptPrefix) + "-debugger-tune=gdb"));
   }
 
   if (IsOSAIX) {
@@ -1303,7 +1301,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                                 options::OPT_fno_split_machine_functions)) {
     if (A->getOption().matches(options::OPT_fsplit_machine_functions))
       CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
-                                           "-split-machine-functions"));
+                                           "-function-splitting=all"));
   }
 
   if (auto *A =
@@ -1658,8 +1656,9 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
     CmdArgs.push_back("-lresolv");
 }
 
-// Host interceptor library for offload UBSan.
-static bool hostNeedsUbsanOffloadRt(Compilation &C, const ToolChain &HostTC) {
+static bool hostNeedsOffloadRt(
+    Compilation &C, const ToolChain &HostTC,
+    llvm::function_ref<bool(const SanitizerArgs &)> NeedsRuntime) {
   if (HostTC.getTriple().isGPU())
     return false;
 
@@ -1677,12 +1676,23 @@ static bool hostNeedsUbsanOffloadRt(Compilation &C, const ToolChain &HostTC) {
            C.getDriver().getOffloadArchs(C, C.getArgs(), Kind, *DevTC)) {
         const ArgList &DevArgs = C.getArgsForToolChain(DevTC, BA, Kind);
         SanitizerArgs DevSan = DevTC->getSanitizerArgs(DevArgs, BA, Kind);
-        if (DevSan.needsUbsanRt() && !DevSan.requiresMinimalRuntime())
+        if (NeedsRuntime(DevSan))
           return true;
       }
     }
   }
   return false;
+}
+
+static bool hostNeedsUbsanOffloadRt(Compilation &C, const ToolChain &HostTC) {
+  return hostNeedsOffloadRt(C, HostTC, [](const SanitizerArgs &S) {
+    return S.needsUbsanRt() && !S.requiresMinimalRuntime();
+  });
+}
+
+static bool hostNeedsCsanOffloadRt(Compilation &C, const ToolChain &HostTC) {
+  return hostNeedsOffloadRt(
+      C, HostTC, [](const SanitizerArgs &S) { return S.needsCsanRt(); });
 }
 
 static void
@@ -1695,8 +1705,10 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
                          SmallVectorImpl<StringRef> &RequiredSymbols) {
   assert(!TC.getTriple().isOSDarwin() && "it's not used by Darwin");
   const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
-  const bool NeedsOffloadRt = hostNeedsUbsanOffloadRt(C, TC);
-  const bool NeedsUbsanRt = SanArgs.needsUbsanRt() || NeedsOffloadRt;
+  const bool NeedsUbsanOffloadRt = hostNeedsUbsanOffloadRt(C, TC);
+  const bool NeedsCsanOffloadRt = hostNeedsCsanOffloadRt(C, TC);
+  const bool NeedsUbsanRt = SanArgs.needsUbsanRt() || NeedsUbsanOffloadRt;
+  const bool NeedsCsanRt = SanArgs.needsCsanRt() || NeedsCsanOffloadRt;
   // Collect shared runtimes.
   if (SanArgs.needsSharedRt()) {
     if (SanArgs.needsAsanRt()) {
@@ -1722,6 +1734,8 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
     }
     if (SanArgs.needsTsanRt())
       SharedRuntimes.push_back("tsan");
+    if (NeedsCsanRt)
+      SharedRuntimes.push_back("csan");
     if (SanArgs.needsTysanRt())
       SharedRuntimes.push_back("tysan");
     if (SanArgs.needsHwasanRt()) {
@@ -1744,17 +1758,30 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
   if (SanArgs.needsAsanRt())
     HelperStaticRuntimes.push_back("asan_static");
 
-  // Offloading images can live in DSOs, the host interceptors must follow.
-  if (NeedsOffloadRt) {
+  // Offloading images can live in DSOs, the host interceptors must follow. The
+  // shared runtimes already contain them.
+  if (NeedsUbsanOffloadRt && !SanArgs.needsSharedRt()) {
     NonWholeStaticRuntimes.push_back("ubsan_offload");
     RequiredSymbols.push_back("__ubsan_offload_init");
   }
+  if (NeedsUbsanOffloadRt && !Args.hasArg(options::OPT_shared))
+    HelperStaticRuntimes.push_back("ubsan_offload-preinit");
+  if (NeedsCsanOffloadRt && !SanArgs.needsSharedRt()) {
+    NonWholeStaticRuntimes.push_back("csan_offload");
+    RequiredSymbols.push_back("__csan_offload_init");
+  }
+  if (NeedsCsanOffloadRt && !Args.hasArg(options::OPT_shared))
+    HelperStaticRuntimes.push_back("csan_offload-preinit");
 
   // Collect static runtimes.
   if (Args.hasArg(options::OPT_shared)) {
     // Don't link static runtimes into DSOs.
-    if (NeedsOffloadRt && !SanArgs.needsSharedRt() && !SanArgs.needsUbsanRt())
+    if (NeedsUbsanOffloadRt && !SanArgs.needsSharedRt() &&
+        !SanArgs.needsUbsanRt())
       StaticRuntimes.push_back("ubsan_standalone");
+    if (NeedsCsanOffloadRt && !SanArgs.needsSharedRt() &&
+        !SanArgs.needsCsanRt())
+      StaticRuntimes.push_back("csan");
     return;
   }
 
@@ -1792,6 +1819,11 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
     StaticRuntimes.push_back("dfsan");
   if (SanArgs.needsLsanRt())
     StaticRuntimes.push_back("lsan");
+  if (SanArgs.needsCopyProfRt()) {
+    StaticRuntimes.push_back("copyprof");
+    if (SanArgs.linkCXXRuntimes())
+      StaticRuntimes.push_back("copyprof_cxx");
+  }
   if (SanArgs.needsMsanRt()) {
     StaticRuntimes.push_back("msan");
     if (SanArgs.linkCXXRuntimes())
@@ -1813,6 +1845,8 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
       StaticRuntimes.push_back("ubsan_standalone");
     }
   }
+  if (!SanArgs.needsSharedRt() && NeedsCsanRt)
+    StaticRuntimes.push_back("csan");
   if (SanArgs.needsSafeStackRt()) {
     NonWholeStaticRuntimes.push_back("safestack");
     RequiredSymbols.push_back("__safestack_init");
@@ -1838,7 +1872,7 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
       StaticRuntimes.push_back("scudo_standalone_cxx");
   }
   if (SanArgs.needsUbsanLoopDetectRt())
-    NonWholeStaticRuntimes.push_back("ubsan_loop_detect");
+    StaticRuntimes.push_back("ubsan_loop_detect");
 }
 
 // Should be called before we add system libraries (C++ ABI, libstdc++/libc++,
@@ -2932,7 +2966,7 @@ bool tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
       CC1Args.push_back(DriverArgs.MakeArgString(LibclcFile));
       return true;
     }
-    D.Diag(diag::err_drv_libclc_not_found) << LibclcFile;
+    D.Diag(diag::err_drv_device_lib_not_found) << "libclc" << LibclcFile;
     return false;
   }
 
@@ -2999,7 +3033,7 @@ bool tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
       return true;
   }
 
-  D.Diag(diag::err_drv_libclc_not_found) << "libclc.bc";
+  D.Diag(diag::err_drv_device_lib_not_found) << "libclc" << "libclc.bc";
   return false;
 }
 
@@ -3029,15 +3063,24 @@ void tools::addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
 }
 
 void tools::addOffloadCompressArgs(const llvm::opt::ArgList &TCArgs,
-                                   llvm::opt::ArgStringList &CmdArgs) {
+                                   llvm::opt::ArgStringList &CmdArgs,
+                                   bool EmitCompressionFormat) {
   if (TCArgs.hasFlag(options::OPT_offload_compress,
                      options::OPT_no_offload_compress, false))
     CmdArgs.push_back("--compress");
-  if (TCArgs.hasArg(options::OPT_v))
-    CmdArgs.push_back("--verbose");
-  if (auto *Arg = TCArgs.getLastArg(options::OPT_offload_compression_level_EQ))
+  if (auto *Arg =
+          TCArgs.getLastArg(options::OPT_offload_compression_level_EQ)) {
+    // llvm-offload-binary rejects a level unless the format is named. Pick the
+    // same default the tool would: zstd, or zlib when zstd is not built.
+    if (EmitCompressionFormat) {
+      const char *Format =
+          llvm::compression::zstd::isAvailable() ? "zstd" : "zlib";
+      CmdArgs.push_back(
+          TCArgs.MakeArgString(Twine("--compression-format=") + Format));
+    }
     CmdArgs.push_back(
         TCArgs.MakeArgString(Twine("--compression-level=") + Arg->getValue()));
+  }
 }
 
 void tools::addMCModel(const Driver &D, const llvm::opt::ArgList &Args,

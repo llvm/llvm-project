@@ -1027,14 +1027,11 @@ public:
   using GetEdgeKindNameFunction = const char *(*)(Edge::Kind);
 
   LinkGraph(std::string Name, std::shared_ptr<orc::SymbolStringPool> SSP,
-            Triple TT, SubtargetFeatures Features,
+            Triple TT, unsigned PointerSize, SubtargetFeatures Features,
             GetEdgeKindNameFunction GetEdgeKindName)
       : Name(std::move(Name)), SSP(std::move(SSP)), TT(std::move(TT)),
-        Features(std::move(Features)),
-        GetEdgeKindName(std::move(GetEdgeKindName)) {
-    assert(!(Triple::getArchPointerBitWidth(this->TT.getArch()) % 8) &&
-           "Arch bitwidth is not a multiple of 8");
-  }
+        PointerSize(PointerSize), Features(std::move(Features)),
+        GetEdgeKindName(std::move(GetEdgeKindName)) {}
 
   LinkGraph(const LinkGraph &) = delete;
   LinkGraph &operator=(const LinkGraph &) = delete;
@@ -1053,7 +1050,7 @@ public:
   const SubtargetFeatures &getFeatures() const { return Features; }
 
   /// Returns the pointer size for use in this graph.
-  unsigned getPointerSize() const { return TT.getArchPointerBitWidth() / 8; }
+  unsigned getPointerSize() const { return PointerSize; }
 
   /// Returns the endianness of content in this graph.
   llvm::endianness getEndianness() const {
@@ -1678,6 +1675,7 @@ private:
   std::string Name;
   std::shared_ptr<orc::SymbolStringPool> SSP;
   Triple TT;
+  unsigned PointerSize;
   SubtargetFeatures Features;
   GetEdgeKindNameFunction GetEdgeKindName = nullptr;
   DenseMap<StringRef, std::unique_ptr<Section>> Sections;
@@ -1958,7 +1956,17 @@ public:
   /// Called by JITLink to resolve external symbols. This method is passed a
   /// lookup continutation which it must call with a result to continue the
   /// linking process.
-  virtual void lookup(const LookupMap &Symbols,
+  ///
+  /// The lookup continuation may destroy the LinkGraph, and with it the
+  /// SymbolStringPool that owns the elements of Symbols if the graph holds the
+  /// only reference to the pool. Implementations must not hold any
+  /// SymbolStringPtrs from the pool (including the elements of Symbols) across
+  /// the call to the continuation unless they ensure that the pool outlives
+  /// that call, e.g. by holding a reference to it. The LinkGraph is not passed
+  /// to this method, so implementations that need such a reference should
+  /// obtain one earlier (e.g. via LinkGraph::getSymbolStringPool in
+  /// modifyPassConfig), or from whatever owns the pool.
+  virtual void lookup(LookupMap Symbols,
                       std::unique_ptr<JITLinkAsyncLookupContinuation> LC) = 0;
 
   /// Called by JITLink once all defined symbols in the graph have been assigned

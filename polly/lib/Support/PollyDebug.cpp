@@ -24,4 +24,4 @@ bool polly::getPollyDebugFlag() { return PollyDebugFlag; }
 static cl::opt<bool, true>
     PollyDebug("polly-debug",
                cl::desc("Enable debug output for only polly passes."),
-               cl::Hidden, cl::location(PollyDebugFlag), cl::ZeroOrMore);
+               cl::Hidden, cl::location(PollyDebugFlag));

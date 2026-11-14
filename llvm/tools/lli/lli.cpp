@@ -56,6 +56,7 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -86,8 +87,6 @@
 #endif
 
 using namespace llvm;
-
-static codegen::RegisterCodeGenFlags CGF;
 
 #define DEBUG_TYPE "lli"
 
@@ -375,11 +374,11 @@ private:
 // an empty '__main' function.
 static void addCygMingExtraModule(ExecutionEngine &EE, LLVMContext &Context,
                                   const Triple &TargetTriple) {
-  IRBuilder<> Builder(Context);
-
   // Create a new module.
   std::unique_ptr<Module> M = std::make_unique<Module>("CygMingHelper", Context);
   M->setTargetTriple(TargetTriple);
+
+  IRBuilder<> Builder(*M);
 
   // Create an empty function named "__main".
   Type *ReturnTy;
@@ -413,7 +412,8 @@ static CodeGenOptLevel getOptLevel() {
 }
 
 static Error loadDylibs();
-static int runOrcJIT(const char *ProgName);
+static int runOrcJIT(const cl::LibraryOptionsContext &LibraryOptions,
+                     const char *ProgName);
 static void disallowOrcOptions();
 static Expected<std::unique_ptr<orc::ExecutorProcessControl>> launchRemote();
 
@@ -432,7 +432,9 @@ int main(int argc, char **argv, char * const *envp) {
   InitializeNativeTargetAsmPrinter();
   InitializeNativeTargetAsmParser();
 
-  cl::ParseCommandLineOptions(argc, argv,
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(LibraryOptions, codegen::getToolOptions(),
+                              ArrayRef(argv, argc),
                               "llvm interpreter & dynamic compiler\n");
 
   if (HostJITTriple) {
@@ -455,10 +457,11 @@ int main(int argc, char **argv, char * const *envp) {
   if (UseJITKind == JITKind::MCJIT || ForceInterpreter)
     disallowOrcOptions();
   else
-    return runOrcJIT(argv[0]);
+    return runOrcJIT(LibraryOptions, argv[0]);
 
   // Old lli implementation based on ExecutionEngine and MCJIT.
   LLVMContext Context;
+  Context.getLibraryOptions().assign(LibraryOptions);
 
   // Load the bitcode...
   SMDiagnostic Err;
@@ -483,12 +486,12 @@ int main(int argc, char **argv, char * const *envp) {
 
   std::string ErrorMsg;
   EngineBuilder builder(std::move(Owner));
-  builder.setMArch(codegen::getMArch());
-  builder.setMCPU(codegen::getCPUStr());
-  builder.setMAttrs(codegen::getFeatureList());
-  if (auto RM = codegen::getExplicitRelocModel())
+  builder.setMArch(codegen::getMArch(LibraryOptions));
+  builder.setMCPU(codegen::getCPUStr(LibraryOptions));
+  builder.setMAttrs(codegen::getFeatureList(LibraryOptions));
+  if (auto RM = codegen::getExplicitRelocModel(LibraryOptions))
     builder.setRelocationModel(*RM);
-  if (auto CM = codegen::getExplicitCodeModel())
+  if (auto CM = codegen::getExplicitCodeModel(LibraryOptions))
     builder.setCodeModel(*CM);
   builder.setErrorStr(&ErrorMsg);
   builder.setEngineKind(ForceInterpreter
@@ -520,9 +523,9 @@ int main(int argc, char **argv, char * const *envp) {
   builder.setOptLevel(getOptLevel());
 
   TargetOptions Options =
-      codegen::InitTargetOptionsFromCodeGenFlags(Triple(TargetTriple));
+      codegen::getTargetOptions(LibraryOptions, Triple(TargetTriple));
 
-  if (FloatABI::ABIType ABI = codegen::getFloatABIForCalls();
+  if (FloatABI::ABIType ABI = codegen::getFloatABIForCalls(LibraryOptions);
       ABI != FloatABI::Default && !Mod->getModuleFlag("float-abi")) {
     Mod->addModuleFlag(Module::Error, "float-abi",
                        MDString::get(Context, FloatABI::getABITypeName(ABI)));
@@ -933,11 +936,14 @@ static Error tryEnableDebugSupport(orc::LLJIT &J) {
   return Error::success();
 }
 
-static int runOrcJIT(const char *ProgName) {
+static int runOrcJIT(const cl::LibraryOptionsContext &LibraryOptions,
+                     const char *ProgName) {
   // Start setting up the JIT environment.
 
   // Parse the main module.
-  orc::ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
+  auto Context = std::make_unique<LLVMContext>();
+  Context->getLibraryOptions().assign(LibraryOptions);
+  orc::ThreadSafeContext TSCtx(std::move(Context));
   auto MainModule = ExitOnErr(loadModule(InputFile, TSCtx));
 
   // Get TargetTriple and DataLayout from the main module if they're explicitly
@@ -961,15 +967,19 @@ static int runOrcJIT(const char *ProgName) {
   if (DL)
     Builder.setDataLayout(DL);
 
-  if (!codegen::getMArch().empty())
+  if (!codegen::getMArch(LibraryOptions).empty())
     Builder.getJITTargetMachineBuilder()->getTargetTriple().setArchName(
-        codegen::getMArch());
+        codegen::getMArch(LibraryOptions));
 
   Builder.getJITTargetMachineBuilder()
-      ->setCPU(codegen::getCPUStr())
-      .addFeatures(codegen::getFeatureList())
-      .setRelocationModel(codegen::getExplicitRelocModel())
-      .setCodeModel(codegen::getExplicitCodeModel());
+      ->setCPU(codegen::getCPUStr(LibraryOptions))
+      .addFeatures(codegen::getFeatureList(LibraryOptions))
+      .setRelocationModel(codegen::getExplicitRelocModel(LibraryOptions))
+      .setCodeModel(codegen::getExplicitCodeModel(LibraryOptions));
+
+  if (auto EmulatedTLS = codegen::getExplicitEmulatedTLS(LibraryOptions))
+    Builder.getJITTargetMachineBuilder()->getOptions().EmulatedTLS =
+        *EmulatedTLS;
 
   // Link process symbols unless NoProcessSymbols is set.
   Builder.setLinkProcessSymbolsByDefault(!NoProcessSymbols);

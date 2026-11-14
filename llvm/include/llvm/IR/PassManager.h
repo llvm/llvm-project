@@ -88,7 +88,8 @@ struct PassInfoMixin : detail::InfoMixin<DerivedT> {
   }
 };
 
-bool shouldSkipOptimizationForOptBisect(IRUnitRef IR, StringRef PassName);
+LLVM_ABI bool shouldSkipOptimizationForOptBisect(IRUnitRef IR,
+                                                 StringRef PassName);
 } // namespace detail
 
 class Function;
@@ -353,43 +354,47 @@ public:
   private:
     friend class AnalysisManager;
 
+    /// Invalidation state of each entry in the results list of the IR unit.
+    enum class ResultState : uint8_t { Unknown, InProgress, Valid, Invalid };
+
     template <typename ResultT = ResultConceptT>
     bool invalidateImpl(AnalysisKey *ID, IRUnitT &IR,
                         const PreservedAnalyses &PA) {
-      // If we've already visited this pass, return true if it was invalidated
-      // and false otherwise.
-      auto IMapI = IsResultInvalidated.find(ID);
-      if (IMapI != IsResultInvalidated.end())
-        return IMapI->second;
-
-      // Otherwise look up the result object.
-      auto RI = Results.find({ID, &IR});
-      assert(RI != Results.end() &&
+      assert(&IR == &IRUnit && "Invalidating a result of another IR unit");
+      auto RI = llvm::find_if(ResultsList, [ID](const auto &IDAndResult) {
+        return IDAndResult.first == ID;
+      });
+      assert(RI != ResultsList.end() &&
              "Trying to invalidate a dependent result that isn't in the "
              "manager's cache is always an error, likely due to a stale result "
              "handle!");
-
-      auto &Result = static_cast<ResultT &>(*RI->second);
-
-      // Insert into the map whether the result should be invalidated and return
-      // that. Note that we cannot reuse IMapI and must do a fresh insert here,
-      // as calling invalidate could (recursively) insert things into the map,
-      // making any iterator or reference invalid.
-      bool Inserted;
-      std::tie(IMapI, Inserted) =
-          IsResultInvalidated.insert({ID, Result.invalidate(IR, PA, *this)});
-      (void)Inserted;
-      assert(Inserted && "Should not have already inserted this ID, likely "
-                         "indicates a dependency cycle!");
-      return IMapI->second;
+      return invalidateResult<ResultT>(RI - ResultsList.begin(), PA);
     }
 
-    Invalidator(SmallDenseMap<AnalysisKey *, bool, 8> &IsResultInvalidated,
-                const AnalysisResultMapT &Results)
-        : IsResultInvalidated(IsResultInvalidated), Results(Results) {}
+    /// Invalidate the result at index \p Idx of the results list if that
+    /// hasn't been done yet, and return whether it was invalidated.
+    template <typename ResultT = ResultConceptT>
+    bool invalidateResult(size_t Idx, const PreservedAnalyses &PA) {
+      if (States[Idx] != ResultState::Unknown) {
+        assert(States[Idx] != ResultState::InProgress &&
+               "Dependency cycle between analysis results");
+        return States[Idx] == ResultState::Invalid;
+      }
 
-    SmallDenseMap<AnalysisKey *, bool, 8> &IsResultInvalidated;
-    const AnalysisResultMapT &Results;
+      States[Idx] = ResultState::InProgress;
+      auto &Result = static_cast<ResultT &>(*ResultsList[Idx].second);
+      bool Invalidated = Result.invalidate(IRUnit, PA, *this);
+      States[Idx] = Invalidated ? ResultState::Invalid : ResultState::Valid;
+      return Invalidated;
+    }
+
+    Invalidator(IRUnitT &IR, const AnalysisResultListT &ResultsList,
+                SmallVectorImpl<ResultState> &States)
+        : IRUnit(IR), ResultsList(ResultsList), States(States) {}
+
+    IRUnitT &IRUnit;
+    const AnalysisResultListT &ResultsList;
+    SmallVectorImpl<ResultState> &States;
   };
 
   /// Construct an empty analysis manager.
@@ -470,8 +475,13 @@ public:
   template <typename PassT>
   void verifyNotInvalidated(IRUnitT &IR, typename PassT::Result *Result) const {
     PreservedAnalyses PA = PreservedAnalyses::none();
-    SmallDenseMap<AnalysisKey *, bool, 8> IsResultInvalidated;
-    Invalidator Inv(IsResultInvalidated, AnalysisResults);
+    auto ResultsListI = AnalysisResultLists.find(&IR);
+    assert(ResultsListI != AnalysisResultLists.end() &&
+           "Result is not cached for this IR unit");
+    const AnalysisResultListT &ResultsList = ResultsListI->second;
+    SmallVector<typename Invalidator::ResultState, 32> States(
+        ResultsList.size(), Invalidator::ResultState::Unknown);
+    Invalidator Inv(IR, ResultsList, States);
     assert(!Result->invalidate(IR, PA, Inv) &&
            "Cached result cannot be invalidated");
   }

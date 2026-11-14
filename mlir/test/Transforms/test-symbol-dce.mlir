@@ -57,14 +57,14 @@ module attributes {test.no_dce_non_hidden_parent} {
     func.func nested @nested_function()
   }
   // NESTED: module @nested_module
-  module @nested_module attributes { sym_visibility = "nested" } {
+  module @nested_module <sym_visibility = "nested"> {
     // NESTED: func nested @nested_function
     func.func nested @nested_function()
   }
 
   // Only private modules can be assumed to be hidden.
   // NESTED: module @private_module
-  module @private_module attributes { sym_visibility = "private" } {
+  module @private_module <sym_visibility = "private"> {
     // NESTED-NOT: func nested @nested_function
     func.func nested @nested_function()
   }

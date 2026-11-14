@@ -112,11 +112,12 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
         convertLayoutOp.getEffectiveInputLayout().getEffectiveInstDataAsInt();
     auto targetInstData =
         convertLayoutOp.getTargetLayout().getEffectiveInstDataAsInt();
-    // return the one with larger size
-    if (computeProduct(inputInstData) >= computeProduct(targetInstData))
-      return inputInstData;
-    else
-      return targetInstData;
+    assert(inputInstData.size() == targetInstData.size() &&
+           "convert_layout layouts must both carry inst_data of the same rank");
+    SmallVector<int64_t> tile(inputInstData.size());
+    for (size_t i = 0; i < tile.size(); ++i)
+      tile[i] = std::max(inputInstData[i], targetInstData[i]);
+    return tile;
   }
 
   if (isa<xegpu::StoreScatterOp>(op))

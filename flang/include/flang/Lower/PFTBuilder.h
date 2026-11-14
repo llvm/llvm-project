@@ -28,6 +28,7 @@
 #include "flang/Semantics/symbol.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 
 namespace Fortran::lower::pft {
 
@@ -322,6 +323,54 @@ struct Evaluation : EvaluationVariant {
   /// Return the FunctionLikeUnit containing this evaluation (or nullptr).
   FunctionLikeUnit *getOwningProcedure() const;
 
+  /// How this evaluation's control flow is lowered. Ordered by how much it
+  /// constrains lowering so that classification can only strengthen; see
+  /// markControlFlow.
+  enum class ControlFlow {
+    /// Lowered structurally
+    Structured,
+    /// Lowered structurally, but the body holds unstructured control flow
+    /// confined to it. Lowering folds that body -- not the construct, and not
+    /// the loop control -- into a parent region, so the structured op's
+    /// single-block region stays well formed.
+    ///
+    /// For now, this only applies to DO constructs.
+    StructuredWithUnstructuredInternals,
+    /// Lowered as unstructured blocks.
+    Unstructured,
+  };
+
+  /// Strengthen the classification to \p kind; it never weakens. This is what
+  /// makes the analysis order-independent: a construct marked Unstructured by
+  /// any one child stays Unstructured whatever its siblings contribute.
+  void markControlFlow(ControlFlow kind) {
+    controlFlow = std::max(controlFlow, kind);
+  }
+
+  void markUnstructured() { markControlFlow(ControlFlow::Unstructured); }
+
+  /// Lower the classification to \p kind. Only for an analysis that has proven
+  /// a stronger classification unnecessary; every other caller wants
+  /// markControlFlow, which never weakens.
+  void weakenControlFlow(ControlFlow kind) {
+    controlFlow = std::min(controlFlow, kind);
+  }
+
+  /// True only for fully unstructured control flow, which is lowered as raw
+  /// CFG blocks.
+  bool isUnstructured() const {
+    return controlFlow == ControlFlow::Unstructured;
+  }
+
+  bool hasUnstructuredInternals() const {
+    return controlFlow == ControlFlow::StructuredWithUnstructuredInternals;
+  }
+
+  /// True when this construct is lowered structurally, yet its body holds
+  /// unstructured control flow that has to be folded into an
+  /// scf.execute_region.
+  bool lowerBodyAsWrappedRegion() const;
+
   bool lowerAsStructured() const;
   bool lowerAsUnstructured() const;
   bool forceAsUnstructured() const;
@@ -339,11 +388,11 @@ struct Evaluation : EvaluationVariant {
   // from anywhere within the construct.
   //
   // An unstructured construct is one that contains some form of goto. This
-  // is indicated by the isUnstructured member flag, which may be set on a
-  // statement and propagated to enclosing constructs. This distinction allows
-  // a structured IF or DO statement to be materialized with custom structured
-  // FIR operations. An unstructured statement is materialized as mlir
-  // operation sequences that include explicit branches.
+  // is indicated by the controlFlow member, which may be set on a statement and
+  // propagated to enclosing constructs. This distinction allows a structured IF
+  // or DO statement to be materialized with custom structured FIR operations.
+  // An unstructured statement is materialized as mlir operation sequences that
+  // include explicit branches.
   //
   // The block member is set for statements that begin a new block. This
   // block is the target of any branch to the statement. Statements may have
@@ -374,7 +423,7 @@ struct Evaluation : EvaluationVariant {
   llvm::SmallVector<Evaluation *, 0> extraControlSuccessors;
   Evaluation *constructExit{nullptr};    // set for constructs
   bool isNewBlock{false};                // evaluation begins a new basic block
-  bool isUnstructured{false};  // evaluation has unstructured control flow
+  ControlFlow controlFlow{ControlFlow::Structured};
   bool negateCondition{false}; // If[Then]Stmt condition must be negated
   bool activeConstruct{false}; // temporarily set for some constructs
   // The enclosing evaluation-list traversal should skip this evaluation once
@@ -458,6 +507,8 @@ struct Variable {
     bool isGlobal() const { return isGlobalAggregate; }
     /// Get offset of the aggregate inside its scope.
     std::size_t getOffset() const { return std::get<0>(interval); }
+    /// Get byte alignment required by the members.
+    std::size_t getAlignment() const { return alignment; }
     /// Returns symbols holding the aggregate initial value if any.
     const semantics::Symbol *getInitialValueSymbol() const {
       return initialValueSymbol;
@@ -476,6 +527,8 @@ struct Variable {
     const semantics::Symbol *initialValueSymbol = nullptr;
     /// Is this a global aggregate?
     bool isGlobalAggregate;
+    /// Byte alignment of the most strictly aligned member, 0 if unknown.
+    std::size_t alignment = 0;
   };
 
   explicit Variable(const Fortran::semantics::Symbol &sym, bool global = false,
@@ -701,7 +754,7 @@ struct FunctionLikeUnit : public ProgramUnit {
 
   void setHostAssociatedSymbols(
       const llvm::SetVector<const semantics::Symbol *> &symbols) {
-    hostAssociations.addSymbolsToBind(symbols, getScope());
+    hostAssociations.addSymbolsToBind(symbols);
   }
 
   /// Return the host associations, if any, from the parent (host) procedure.
@@ -733,6 +786,11 @@ struct FunctionLikeUnit : public ProgramUnit {
   const semantics::Scope *scope;
   LabelEvalMap labelEvaluationMap;
   SymbolLabelMap assignSymbolLabelMap;
+  /// Evaluations that branch to a given evaluation. A construct transferring
+  /// control between its own statements is not a branch (F2023 11.2.1 p1), so
+  /// the control successors analyzeBranches sets for CASE, ELSE IF, ELSE,
+  /// SELECT RANK and a DO statement and its EndDoStmt are not recorded here.
+  IncomingBranchMap incomingBranches;
   ContainedUnitList containedUnitList;
   EvaluationList evaluationList;
   /// <Symbol, Evaluation> pairs for each entry point. The pair at index 0
@@ -846,13 +904,15 @@ struct Program {
 private:
   std::list<Units> units;
   semantics::CommonBlockList commonBlocks;
-  ScopeVariableListMap scopeVariableListMap; // module and submodule scopes
+  // Module and submodule lists last until lowering ends. A host's list is kept
+  // only while lowering that host and all its internal procedures.
+  ScopeVariableListMap scopeVariableListMap;
 };
 
 /// Helper to get location from FunctionLikeUnit/ModuleLikeUnit begin/end
 /// statements.
 template <typename T>
-static parser::CharBlock stmtSourceLoc(const T &stmt) {
+parser::CharBlock stmtSourceLoc(const T &stmt) {
   return stmt.visit(common::visitors{[](const auto &x) { return x.source; }});
 }
 

@@ -27,6 +27,8 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -61,6 +63,37 @@ class Value;
 class ValueRange;
 template <typename ValueRangeT>
 class ValueTypeRange;
+
+namespace detail {
+/// Append a present attribute-backed property to a dictionary's attributes.
+void appendAttributeProperty(llvm::SmallVectorImpl<NamedAttribute> &attrs,
+                             StringRef name, Attribute attr);
+
+/// Route legacy builder attributes to either the operation's properties or
+/// its discardable attribute dictionary. The callback handles conversion and
+/// diagnostics for the operation-specific properties.
+void splitPropertiesAndDiscardableAttributes(
+    OperationState &state, ArrayRef<NamedAttribute> attributes,
+    ArrayRef<StringRef> inherentNames,
+    llvm::function_ref<LogicalResult(DictionaryAttr)> setProperties);
+
+/// Assign a generated attribute-backed property after checking its type.
+/// Keep the conversion out of each operation's generated property setter.
+template <typename AttrT>
+LLVM_ATTRIBUTE_NOINLINE LogicalResult
+setAttributeProperty(AttrT &storage, Attribute attr, StringRef name,
+                     llvm::function_ref<InFlightDiagnostic()> emitError) {
+  if (!attr)
+    return success();
+  if (auto converted = llvm::dyn_cast<AttrT>(attr)) {
+    storage = converted;
+    return success();
+  }
+  emitError() << "Invalid attribute `" << name
+              << "` in property conversion: " << attr;
+  return failure();
+}
+} // namespace detail
 
 //===----------------------------------------------------------------------===//
 // PropertyRef
@@ -508,7 +541,9 @@ public:
   StringAttr getIdentifier() const { return getImpl()->getName(); }
 
   void print(raw_ostream &os) const;
-  void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
   /// Represent the operation name as an opaque pointer. (Used to support
   /// PointerLikeTypeTraits).
@@ -797,8 +832,8 @@ std::pair<IteratorT, bool> findAttrSorted(IteratorT first, IteratorT last,
 template <typename IteratorT>
 std::pair<IteratorT, bool> findAttrSorted(IteratorT first, IteratorT last,
                                           StringAttr name) {
-  constexpr unsigned kSmallAttributeList = 16;
-  if (std::distance(first, last) > kSmallAttributeList)
+  constexpr size_t kSmallAttributeList = 16;
+  if (static_cast<size_t>(std::distance(first, last)) > kSmallAttributeList)
     return findAttrSorted(first, last, name.strref());
   return findAttrUnsorted(first, last, name);
 }
@@ -1006,12 +1041,10 @@ struct OperationState {
 
 private:
   /// The deleter and setter are non-null whenever `properties` is, and are
-  /// only called after checking it. Coverity misses this invariant and flags
-  /// the empty `function_ref`s as uninitialized.
-  // coverity[uninit_member]
+  /// only called after checking it.
   PropertyRef properties;
-  llvm::function_ref<void(PropertyRef)> propertiesDeleter;
-  llvm::function_ref<void(PropertyRef, const PropertyRef)> propertiesSetter;
+  void (*propertiesDeleter)(PropertyRef) = nullptr;
+  void (*propertiesSetter)(PropertyRef, const PropertyRef) = nullptr;
   friend class Operation;
 
 public:
@@ -1264,6 +1297,13 @@ public:
   /// Print SSA IDs using their NameLoc, if provided, as prefix.
   OpPrintingFlags &printNameLocAsPrefix(bool enable = true);
 
+  /// Always use aliases even for non top-level ops. When set, printing any
+  /// op initializes aliases and prints via the top-level path, so dumps of
+  /// nested ops (e.g. per-function pass instrumentation) use type and
+  /// attribute aliases instead of expanding them. Takes precedence over
+  /// local scope.
+  OpPrintingFlags &alwaysUseAliases(bool enable = true);
+
   /// Return if the given ElementsAttr should be elided.
   bool shouldElideElementsAttr(ElementsAttr attr) const;
 
@@ -1293,6 +1333,9 @@ public:
 
   /// Return if operation verification should be skipped.
   bool shouldAssumeVerified() const;
+
+  /// Return if aliases should always be used.
+  bool shouldAlwaysUseAliases() const;
 
   /// Return if the printer should use local scope when dumping the IR.
   bool shouldUseLocalScope() const;
@@ -1331,6 +1374,9 @@ private:
 
   /// Skip operation verification.
   bool assumeVerifiedFlag : 1;
+
+  /// Always use aliases even for non top-level ops.
+  bool alwaysUseAliasesFlag : 1;
 
   /// Print operations with numberings local to the current operation.
   bool printLocalScope : 1;

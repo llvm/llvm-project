@@ -12,6 +12,10 @@ define void @test_dependence_with_non_constant_offset_and_other_accesses_to_noal
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            %l.2 = load i8, ptr %gep.B.1, align 1 ->
+; CHECK-NEXT:            store i8 %l.2, ptr %gep.B, align 1
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
@@ -65,6 +69,10 @@ define void @test_dependence_with_non_constant_offset_and_other_accesses_to_maya
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            %l.2 = load i8, ptr %gep.B.1, align 1 ->
+; CHECK-NEXT:            store i8 %l.2, ptr %gep.B, align 1
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:

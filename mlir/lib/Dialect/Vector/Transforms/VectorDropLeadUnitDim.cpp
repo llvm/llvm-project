@@ -22,9 +22,11 @@
 using namespace mlir;
 using namespace mlir::vector;
 
-// Trims leading one dimensions from `oldType` and returns the result type.
-// Returns `vector<1xT>` if `oldType` only has one element.
-static VectorType trimLeadingUnitDims(VectorType oldType) {
+// Trims leading one dimensions (fixed-width) from `oldType` and returns the
+// result type. Returns `vector<1xT>` if `oldType` only has one element.
+static VectorType trimLeadingUnitDims(VectorType oldType,
+                                      bool trimOnlyOneDim = false,
+                                      bool allowRank0 = false) {
   ArrayRef<int64_t> oldShape = oldType.getShape();
   ArrayRef<int64_t> newShape = oldShape;
 
@@ -35,14 +37,26 @@ static VectorType trimLeadingUnitDims(VectorType oldType) {
          !newScalableDims.front()) {
     newShape = newShape.drop_front(1);
     newScalableDims = newScalableDims.drop_front(1);
+
+    if (trimOnlyOneDim)
+      break;
   }
 
   // Make sure we have at least 1 dimension per vector type requirements.
-  if (newShape.empty()) {
+  if (newShape.empty() && !allowRank0) {
     newShape = oldShape.take_back();
     newScalableDims = oldType.getScalableDims().take_back();
   }
   return VectorType::get(newShape, oldType.getElementType(), newScalableDims);
+}
+
+// Returns true if one of the leading `numDims` dims of `xferOp` may be out of
+// bounds. Dropping such a dim would make it a non-vector dim, and those must be
+// in bounds.
+static bool isLeadingDimOutOfBounds(VectorTransferOpInterface xferOp,
+                                    int64_t numDims) {
+  return llvm::any_of(llvm::seq<int64_t>(numDims),
+                      [&](int64_t dim) { return !xferOp.isDimInBounds(dim); });
 }
 
 /// Return a smallVector of size `rank` containing all zeros.
@@ -243,6 +257,9 @@ struct CastAwayTransferReadLeadingOneDim
     if (newType == oldType)
       return failure();
 
+    if (isLeadingDimOutOfBounds(read, oldType.getRank() - newType.getRank()))
+      return rewriter.notifyMatchFailure(read, "dropped dim is out of bounds");
+
     AffineMap oldMap = read.getPermutationMap();
     ArrayRef<AffineExpr> newResults =
         oldMap.getResults().take_back(newType.getRank());
@@ -295,6 +312,9 @@ struct CastAwayTransferWriteLeadingOneDim
     if (newType == oldType)
       return failure();
 
+    if (isLeadingDimOutOfBounds(write, oldType.getRank() - newType.getRank()))
+      return rewriter.notifyMatchFailure(write, "dropped dim is out of bounds");
+
     AffineMap oldMap = write.getPermutationMap();
     ArrayRef<AffineExpr> newResults =
         oldMap.getResults().take_back(newType.getRank());
@@ -328,6 +348,41 @@ struct CastAwayTransferWriteLeadingOneDim
 
 } // namespace
 
+// Takes `oldVal` and "drops" the leading unit dim with either ShapeCastOp or
+// ExtractOp. The latter is used for rank-1 vectors to make sure that a scalar
+// (as opposed to rank-0 vector) is generated. This is a requirement of e.g.
+// ContractOp.
+static Value dropLeadingUnitDimViaShapeCastOrExtract(RewriterBase &rewriter,
+                                                     Location loc,
+                                                     mlir::Value oldVal) {
+  auto oldValTy = cast<VectorType>(oldVal.getType());
+  if (oldValTy.getRank() == 1) {
+    return rewriter.createOrFold<ExtractOp>(loc, oldVal, 0);
+  }
+
+  return rewriter.createOrFold<ShapeCastOp>(
+      loc,
+      trimLeadingUnitDims(oldValTy,
+                          /*trimOnlyOneDim=*/true,
+                          /*allowRank0=*/true),
+      oldVal);
+}
+
+// Takes `oldVal` and "adds" leading unit dim with either ShapeCastOp or
+// BroadcastOp. The latter is used for scalar inputs as ShapeCastOp cannot
+// "broadcast" from a scalar. Scalars are used (instead of rank-0 vectors) as
+// ContractOp operands.
+static Value restoreLeadingUnitDimViaShapeCastOrBcast(RewriterBase &rewriter,
+                                                      Location loc,
+                                                      mlir::Value oldVal,
+                                                      mlir::Type newTy) {
+  if (!isa<VectorType>(oldVal.getType())) {
+    return rewriter.createOrFold<BroadcastOp>(loc, newTy, oldVal);
+  }
+
+  return rewriter.createOrFold<ShapeCastOp>(loc, newTy, oldVal);
+}
+
 FailureOr<Value>
 mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
                                                MaskingOpInterface maskingOp,
@@ -337,11 +392,8 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
     return failure();
   if (oldAccType.getRank() < 1)
     return failure();
-  if (oldAccType.getShape()[0] != 1)
+  if (oldAccType.getShape()[0] != 1 || oldAccType.getScalableDims()[0])
     return failure();
-  // currently we support only dropping one dim but the pattern can be applied
-  // greedily to drop more.
-  int64_t dropDim = 1;
 
   auto oldIndexingMaps = contractOp.getIndexingMapsArray();
   SmallVector<AffineMap> newIndexingMaps;
@@ -349,6 +401,7 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
   auto oldIteratorTypes = contractOp.getIteratorTypes();
   SmallVector<Attribute> newIteratorTypes;
 
+  // 0-th dim from the accumulator
   int64_t dimToDrop = oldIndexingMaps[2].getDimPosition(0);
 
   if (!isParallelIterator(oldIteratorTypes[dimToDrop]))
@@ -418,6 +471,13 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
         map = AffineMap::get(map.getNumDims(), 0, transposeResults,
                              contractOp.getContext());
         if (transposeNonOuterUnitDims) {
+          // TODO: While the discussion on the validity of folding
+          // TransposeOp into ShapeCastOp continues, see e.g.
+          //  * https://github.com/llvm/llvm-project/pull/219611,
+          // keep the explicit TransposeOp here. Note that existing TransposeOp
+          // folders already turn it into a ShapeCastOp, as demonstrated by the
+          // tests. Revisit this and consider inserting ShapeCastOp directly
+          // once the discussion progresses.
           operands[it.index()] = rewriter.createOrFold<vector::TransposeOp>(
               loc, operands[it.index()], perm);
         }
@@ -443,11 +503,11 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
                                              contractOp.getContext()));
     // Extract if its a valid extraction, otherwise use the operand
     // without extraction.
-    newOperands.push_back(validExtract
-                              ? vector::ExtractOp::create(rewriter, loc,
-                                                          operands[it.index()],
-                                                          splatZero(dropDim))
-                              : operands[it.index()]);
+    auto oldVal = operands[it.index()];
+    newOperands.push_back(
+        validExtract
+            ? dropLeadingUnitDimViaShapeCastOrExtract(rewriter, loc, oldVal)
+            : oldVal);
   }
 
   // Depending on whether this vector.contract is masked, the replacing Op
@@ -455,27 +515,34 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
   Operation *newOp = vector::ContractionOp::create(
       rewriter, loc, newOperands[0], newOperands[1], newOperands[2],
       rewriter.getAffineMapArrayAttr(newIndexingMaps),
-      rewriter.getArrayAttr(newIteratorTypes), contractOp.getKind());
+      rewriter.getArrayAttr(newIteratorTypes), contractOp.getKind(),
+      contractOp.getFastmath());
 
   if (maskingOp) {
-    auto newMask = vector::ExtractOp::create(rewriter, loc, maskingOp.getMask(),
-                                             splatZero(dropDim));
+    auto newMask = rewriter.createOrFold<ShapeCastOp>(
+        loc,
+        trimLeadingUnitDims(cast<VectorType>(maskingOp.getMask().getType()),
+                            /*trimOnlyOneDim=*/true, /*allowRank0=*/true),
+        maskingOp.getMask());
 
     newOp = mlir::vector::maskOperation(rewriter, newOp, newMask);
   }
 
-  return vector::BroadcastOp::create(rewriter, loc,
-                                     contractOp->getResultTypes()[0],
-                                     newOp->getResults()[0])
-      .getResult();
+  return restoreLeadingUnitDimViaShapeCastOrBcast(
+      rewriter, loc, newOp->getResult(0), contractOp->getResultTypes()[0]);
 }
 
 namespace {
 
 /// Turns vector.contract on vector with leading 1 dimensions into
-/// vector.extract followed by vector.contract on vector without leading
-/// 1 dimensions. Also performs transpose of lhs and rhs operands if required
-/// prior to extract.
+/// vector.shape_cast followed by vector.contract on vector without leading
+/// 1 dimensions. Also performs transpose of lhs and rhs operands if required.
+///
+/// TODO: While the discussion on the validity of folding TransposeOp into
+/// ShapeCastOp continues, see e.g.
+///  * https://github.com/llvm/llvm-project/pull/219611,
+/// keep the explicit TransposeOp here. Once the discussion settles, revisit and
+/// consider replacing TransposeOp with ShapeCastOp.
 struct CastAwayContractionLeadingOneDim
     : public MaskableOpRewritePattern<vector::ContractionOp> {
   using MaskableOpRewritePattern::MaskableOpRewritePattern;

@@ -14,7 +14,7 @@ define i1 @zot(i32 %arg) {
 ; CHECK-NEXT:    br i1 %0, label %switch.lookup, label %bb6
 ; CHECK:       switch.lookup:
 ; CHECK-NEXT:    %1 = zext nneg i32 %arg to i64
-; CHECK-NEXT:    %switch.gep = getelementptr inbounds [3 x ptr], ptr @switch.table.zot, i64 0, i64 %1
+; CHECK-NEXT:    %switch.gep = getelementptr inbounds [8 x i8], ptr @switch.table.zot, i64 %1
 ; CHECK-NEXT:    %switch.load = load ptr, ptr %switch.gep, align 8
 ; CHECK-NEXT:    br label %bb6
 ; CHECK:       bb6:
