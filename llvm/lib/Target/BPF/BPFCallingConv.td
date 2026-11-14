@@ -41,6 +41,10 @@ def CC_BPF32 : CallingConv<[
   CCIfType<[i64], CCAssignToRegWithShadow<[R1, R2, R3, R4, R5],
                                           [W1, W2, W3, W4, W5]>>,
 
+  // Stack slots are 64-bit; the caller extends to the full slot, as in
+  // CC_BPF64.
+  CCIfType<[i32], CCPromoteToType<i64>>,
+
   // Could be assigned to the stack in 8-byte aligned units, but unsupported
   CCAssignToStack<8, 8>
 ]>;

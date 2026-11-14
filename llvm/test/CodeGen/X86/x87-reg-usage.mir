@@ -64,7 +64,6 @@
 ---
 name:            f1
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -90,7 +89,6 @@ body:             |
 ---
 name:            f2
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -116,7 +114,6 @@ body:             |
 ---
 name:            f3
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -144,7 +141,6 @@ body:             |
 ---
 name:            f4
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -170,7 +166,6 @@ body:             |
 ---
 name:            f5
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -194,7 +189,6 @@ body:             |
 ---
 name:            f6
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -224,7 +218,6 @@ body:             |
 ---
 name:            f7
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
 frameInfo:

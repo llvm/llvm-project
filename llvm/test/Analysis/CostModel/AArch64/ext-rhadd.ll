@@ -1,5 +1,5 @@
-; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s -check-prefix=SVE
-; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple aarch64-linux-gnu -mattr=+sve2 < %s | FileCheck %s --check-prefix=SVE2
+; RUN: opt -passes="print<cost-model>" -disable-output -mtriple aarch64-linux-gnu -mattr=+sve < %s 2>&1 | FileCheck %s -check-prefix=SVE
+; RUN: opt -passes="print<cost-model>" -disable-output -mtriple aarch64-linux-gnu -mattr=+sve2 < %s 2>&1 | FileCheck %s --check-prefix=SVE2
 
 ; SRHADD
 

@@ -8,6 +8,7 @@ def OpAsmDialectInterface : DialectInterface<"OpAsmDialectInterface"> {
     Dialect OpAsm interface
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/OpImplementation.h"];
   let extraClassDeclaration = [{
     using AliasResult = OpAsmAliasResult;
   }];

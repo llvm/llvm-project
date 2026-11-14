@@ -4,8 +4,11 @@
 name:            test_modf_f16
 body:             |
   bb.0.entry:
+    liveins: $h0
     ; CHECK-LABEL: name: test_modf_f16
-    ; CHECK: [[COPY:%[0-9]+]]:_(f16) = COPY $h0
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(f16) = COPY $h0
     ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(f32) = G_FPEXT [[COPY]](f16)
     ; CHECK-NEXT: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
@@ -30,8 +33,11 @@ body:             |
 name:            test_modf_f16_only_use_fractional_part
 body:             |
   bb.0.entry:
+    liveins: $h0
     ; CHECK-LABEL: name: test_modf_f16_only_use_fractional_part
-    ; CHECK: [[COPY:%[0-9]+]]:_(f16) = COPY $h0
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(f16) = COPY $h0
     ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(f32) = G_FPEXT [[COPY]](f16)
     ; CHECK-NEXT: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
@@ -52,8 +58,11 @@ body:             |
 name:            test_modf_v2f16
 body:             |
   bb.0.entry:
+    liveins: $d0
     ; CHECK-LABEL: name: test_modf_v2f16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x f16>) = COPY $d0
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x f16>) = COPY $d0
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(f16), [[UV1:%[0-9]+]]:_(f16), [[UV2:%[0-9]+]]:_(f16), [[UV3:%[0-9]+]]:_(f16) = G_UNMERGE_VALUES [[COPY]](<4 x f16>)
     ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(f32) = G_FPEXT [[UV]](f16)
     ; CHECK-NEXT: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
@@ -99,8 +108,11 @@ body:             |
 name:            test_modf_v3f32
 body:             |
   bb.0.entry:
+    liveins: $q0
     ; CHECK-LABEL: name: test_modf_v3f32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $q0
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $q0
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY]](<2 x f64>)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32), [[UV2:%[0-9]+]]:_(f32), [[UV3:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[BITCAST]](<4 x f32>)
     ; CHECK-NEXT: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.2
@@ -151,8 +163,11 @@ body:             |
 name:            test_modf_v2f64
 body:             |
   bb.0.entry:
+    liveins: $q0
     ; CHECK-LABEL: name: test_modf_v2f64
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $q0
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $q0
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(f64), [[UV1:%[0-9]+]]:_(f64) = G_UNMERGE_VALUES [[COPY]](<2 x f64>)
     ; CHECK-NEXT: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
@@ -185,8 +200,11 @@ body:             |
 name:            test_modf_fp128
 body:             |
   bb.0.entry:
+    liveins: $q0
     ; CHECK-LABEL: name: test_modf_fp128
-    ; CHECK: [[COPY:%[0-9]+]]:_(f128) = COPY $q0
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(f128) = COPY $q0
     ; CHECK-NEXT: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $q0 = COPY [[COPY]](f128)

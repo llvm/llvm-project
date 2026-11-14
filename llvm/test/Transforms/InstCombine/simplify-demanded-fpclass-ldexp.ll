@@ -488,6 +488,262 @@ define nofpclass(snan) float @qnan_result_demands_snan_src(i1 %cond, float %unkn
   ret float %ldexp
 }
 
+define nofpclass(inf norm nsub nzero) float @demand_pzero_select_nsub_source__ldexp__dynamic_dynamic(i1 %cond, float %unknown, i32 %unknown.int) #0 {
+; CHECK-LABEL: define nofpclass(inf nzero nsub norm) float @demand_pzero_select_nsub_source__ldexp__dynamic_dynamic(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], i32 [[UNKNOWN_INT:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[NSUB:%.*]] = call float @returns_nsub()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = call ninf float @llvm.ldexp.f32.i32(float [[SELECT]], i32 [[UNKNOWN_INT]])
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %nsub = call float @returns_nsub()
+  %select = select i1 %cond, float %nsub, float %unknown
+  %ldexp = call float @llvm.ldexp.f32.i32(float %select, i32 %unknown.int)
+  ret float %ldexp
+}
+
+define nofpclass(inf norm nsub nzero) float @demand_pzero_select_nnorm_source__ldexp__dynamic_dynamic(i1 %cond, float %unknown, i32 %unknown.int) #0 {
+; CHECK-LABEL: define nofpclass(inf nzero nsub norm) float @demand_pzero_select_nnorm_source__ldexp__dynamic_dynamic(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], i32 [[UNKNOWN_INT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[NNORM:%.*]] = call float @returns_nnorm()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NNORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = call ninf float @llvm.ldexp.f32.i32(float [[SELECT]], i32 [[UNKNOWN_INT]])
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %nnorm = call float @returns_nnorm()
+  %select = select i1 %cond, float %nnorm, float %unknown
+  %ldexp = call float @llvm.ldexp.f32.i32(float %select, i32 %unknown.int)
+  ret float %ldexp
+}
+
+define nofpclass(inf norm nsub nzero) float @demand_pzero_select_nsub_source__ldexp__ieee_dynamic(i1 %cond, float %unknown, i32 %unknown.int) #3 {
+; CHECK-LABEL: define nofpclass(inf nzero nsub norm) float @demand_pzero_select_nsub_source__ldexp__ieee_dynamic(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], i32 [[UNKNOWN_INT:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    [[NSUB:%.*]] = call float @returns_nsub()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = call ninf float @llvm.ldexp.f32.i32(float [[SELECT]], i32 [[UNKNOWN_INT]])
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %nsub = call float @returns_nsub()
+  %select = select i1 %cond, float %nsub, float %unknown
+  %ldexp = call float @llvm.ldexp.f32.i32(float %select, i32 %unknown.int)
+  ret float %ldexp
+}
+
+define nofpclass(inf norm nsub nzero) float @demand_pzero_select_nnorm_source__ldexp__ieee_dynamic(i1 %cond, float %unknown, i32 %unknown.int) #3 {
+; CHECK-LABEL: define nofpclass(inf nzero nsub norm) float @demand_pzero_select_nnorm_source__ldexp__ieee_dynamic(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], i32 [[UNKNOWN_INT:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[NNORM:%.*]] = call float @returns_nnorm()
+; CHECK-NEXT:    [[LDEXP:%.*]] = call ninf float @llvm.ldexp.f32.i32(float [[UNKNOWN]], i32 [[UNKNOWN_INT]])
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %nnorm = call float @returns_nnorm()
+  %select = select i1 %cond, float %nnorm, float %unknown
+  %ldexp = call float @llvm.ldexp.f32.i32(float %select, i32 %unknown.int)
+  ret float %ldexp
+}
+
+define nofpclass(inf norm nsub nzero) float @demand_pzero_select_nsub_source__ldexp__ieee_dapz(i1 %cond, float %unknown, i32 %unknown.int) #5 {
+; CHECK-LABEL: define nofpclass(inf nzero nsub norm) float @demand_pzero_select_nsub_source__ldexp__ieee_dapz(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], i32 [[UNKNOWN_INT:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    [[NSUB:%.*]] = call float @returns_nsub()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = call ninf float @llvm.ldexp.f32.i32(float [[SELECT]], i32 [[UNKNOWN_INT]])
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %nsub = call float @returns_nsub()
+  %select = select i1 %cond, float %nsub, float %unknown
+  %ldexp = call float @llvm.ldexp.f32.i32(float %select, i32 %unknown.int)
+  ret float %ldexp
+}
+
+define nofpclass(inf norm nsub nzero) float @demand_pzero_select_nnorm_source__ldexp__ieee_dapz(i1 %cond, float %unknown, i32 %unknown.int) #5 {
+; CHECK-LABEL: define nofpclass(inf nzero nsub norm) float @demand_pzero_select_nnorm_source__ldexp__ieee_dapz(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], i32 [[UNKNOWN_INT:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[NNORM:%.*]] = call float @returns_nnorm()
+; CHECK-NEXT:    [[LDEXP:%.*]] = call ninf float @llvm.ldexp.f32.i32(float [[UNKNOWN]], i32 [[UNKNOWN_INT]])
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %nnorm = call float @returns_nnorm()
+  %select = select i1 %cond, float %nnorm, float %unknown
+  %ldexp = call float @llvm.ldexp.f32.i32(float %select, i32 %unknown.int)
+  ret float %ldexp
+}
+
+define nofpclass(inf norm nsub nzero) float @demand_pzero_select_nsub_source__ldexp__dynamic_ieee(i1 %cond, float %unknown, i32 %unknown.int) #6 {
+; CHECK-LABEL: define nofpclass(inf nzero nsub norm) float @demand_pzero_select_nsub_source__ldexp__dynamic_ieee(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], i32 [[UNKNOWN_INT:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:    [[NSUB:%.*]] = call float @returns_nsub()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = call ninf float @llvm.ldexp.f32.i32(float [[SELECT]], i32 [[UNKNOWN_INT]])
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %nsub = call float @returns_nsub()
+  %select = select i1 %cond, float %nsub, float %unknown
+  %ldexp = call float @llvm.ldexp.f32.i32(float %select, i32 %unknown.int)
+  ret float %ldexp
+}
+
+define nofpclass(inf norm nsub nzero) float @demand_pzero_select_nnorm_source__ldexp__dynamic_ieee(i1 %cond, float %unknown, i32 %unknown.int) #6 {
+; CHECK-LABEL: define nofpclass(inf nzero nsub norm) float @demand_pzero_select_nnorm_source__ldexp__dynamic_ieee(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], i32 [[UNKNOWN_INT:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[NNORM:%.*]] = call float @returns_nnorm()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NNORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = call ninf float @llvm.ldexp.f32.i32(float [[SELECT]], i32 [[UNKNOWN_INT]])
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %nnorm = call float @returns_nnorm()
+  %select = select i1 %cond, float %nnorm, float %unknown
+  %ldexp = call float @llvm.ldexp.f32.i32(float %select, i32 %unknown.int)
+  ret float %ldexp
+}
+
+define nofpclass(inf norm nsub nzero) float @demand_pzero_select_nsub_source__ldexp__ftpz_ieee(i1 %cond, float %unknown, i32 %unknown.int) #7 {
+; CHECK-LABEL: define nofpclass(inf nzero nsub norm) float @demand_pzero_select_nsub_source__ldexp__ftpz_ieee(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], i32 [[UNKNOWN_INT:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-NEXT:    [[NSUB:%.*]] = call float @returns_nsub()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = call ninf float @llvm.ldexp.f32.i32(float [[SELECT]], i32 [[UNKNOWN_INT]])
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %nsub = call float @returns_nsub()
+  %select = select i1 %cond, float %nsub, float %unknown
+  %ldexp = call float @llvm.ldexp.f32.i32(float %select, i32 %unknown.int)
+  ret float %ldexp
+}
+
+define nofpclass(inf norm nsub nzero) float @demand_pzero_select_nnorm_source__ldexp__ftpz_ieee(i1 %cond, float %unknown, i32 %unknown.int) #7 {
+; CHECK-LABEL: define nofpclass(inf nzero nsub norm) float @demand_pzero_select_nnorm_source__ldexp__ftpz_ieee(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], i32 [[UNKNOWN_INT:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[NNORM:%.*]] = call float @returns_nnorm()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NNORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = call ninf float @llvm.ldexp.f32.i32(float [[SELECT]], i32 [[UNKNOWN_INT]])
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %nnorm = call float @returns_nnorm()
+  %select = select i1 %cond, float %nnorm, float %unknown
+  %ldexp = call float @llvm.ldexp.f32.i32(float %select, i32 %unknown.int)
+  ret float %ldexp
+}
+
+define nofpclass(inf norm nsub nzero) float @demand_pzero_select_nsub_source__ldexp__ftpz_dapz(i1 %cond, float %unknown, i32 %unknown.int) #2 {
+; CHECK-LABEL: define nofpclass(inf nzero nsub norm) float @demand_pzero_select_nsub_source__ldexp__ftpz_dapz(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], i32 [[UNKNOWN_INT:%.*]]) #[[ATTR5:[0-9]+]] {
+; CHECK-NEXT:    [[NSUB:%.*]] = call float @returns_nsub()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = call ninf float @llvm.ldexp.f32.i32(float [[SELECT]], i32 [[UNKNOWN_INT]])
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %nsub = call float @returns_nsub()
+  %select = select i1 %cond, float %nsub, float %unknown
+  %ldexp = call float @llvm.ldexp.f32.i32(float %select, i32 %unknown.int)
+  ret float %ldexp
+}
+
+define nofpclass(inf norm nsub nzero) float @demand_pzero_select_nnorm_source__ldexp__ftpz_dapz(i1 %cond, float %unknown, i32 %unknown.int) #2 {
+; CHECK-LABEL: define nofpclass(inf nzero nsub norm) float @demand_pzero_select_nnorm_source__ldexp__ftpz_dapz(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], i32 [[UNKNOWN_INT:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    [[NNORM:%.*]] = call float @returns_nnorm()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NNORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = call ninf float @llvm.ldexp.f32.i32(float [[SELECT]], i32 [[UNKNOWN_INT]])
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %nnorm = call float @returns_nnorm()
+  %select = select i1 %cond, float %nnorm, float %unknown
+  %ldexp = call float @llvm.ldexp.f32.i32(float %select, i32 %unknown.int)
+  ret float %ldexp
+}
+
+define nofpclass(inf norm nsub nzero) float @demand_pzero_select_nsub_source__ldexp__ftz_daz(i1 %cond, float %unknown, i32 %unknown.int) #1 {
+; CHECK-LABEL: define nofpclass(inf nzero nsub norm) float @demand_pzero_select_nsub_source__ldexp__ftz_daz(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], i32 [[UNKNOWN_INT:%.*]]) #[[ATTR6:[0-9]+]] {
+; CHECK-NEXT:    [[NSUB:%.*]] = call float @returns_nsub()
+; CHECK-NEXT:    [[LDEXP:%.*]] = call ninf float @llvm.ldexp.f32.i32(float [[UNKNOWN]], i32 [[UNKNOWN_INT]])
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %nsub = call float @returns_nsub()
+  %select = select i1 %cond, float %nsub, float %unknown
+  %ldexp = call float @llvm.ldexp.f32.i32(float %select, i32 %unknown.int)
+  ret float %ldexp
+}
+
+define nofpclass(inf norm nsub nzero) float @demand_pzero_select_nnorm_source__ldexp__ftz_daz(i1 %cond, float %unknown, i32 %unknown.int) #1 {
+; CHECK-LABEL: define nofpclass(inf nzero nsub norm) float @demand_pzero_select_nnorm_source__ldexp__ftz_daz(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], i32 [[UNKNOWN_INT:%.*]]) #[[ATTR6]] {
+; CHECK-NEXT:    [[NNORM:%.*]] = call float @returns_nnorm()
+; CHECK-NEXT:    [[LDEXP:%.*]] = call ninf float @llvm.ldexp.f32.i32(float [[UNKNOWN]], i32 [[UNKNOWN_INT]])
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %nnorm = call float @returns_nnorm()
+  %select = select i1 %cond, float %nnorm, float %unknown
+  %ldexp = call float @llvm.ldexp.f32.i32(float %select, i32 %unknown.int)
+  ret float %ldexp
+}
+
+define nofpclass(inf norm nsub nzero) float @demand_pzero_select_psub_source__ldexp_positive_exp__ieee_daz(i1 %cond, float %unknown, i32 %exp) #4 {
+; CHECK-LABEL: define nofpclass(inf nzero nsub norm) float @demand_pzero_select_psub_source__ldexp_positive_exp__ieee_daz(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], i32 [[EXP:%.*]]) #[[ATTR7:[0-9]+]] {
+; CHECK-NEXT:    [[EXP_POS:%.*]] = and i32 [[EXP]], 255
+; CHECK-NEXT:    [[PSUB:%.*]] = call float @returns_psub()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[PSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = call ninf float @llvm.ldexp.f32.i32(float [[SELECT]], i32 [[EXP_POS]])
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %exp.pos = and i32 %exp, 255
+  %psub = call float @returns_psub()
+  %select = select i1 %cond, float %psub, float %unknown
+  %ldexp = call float @llvm.ldexp.f32.i32(float %select, i32 %exp.pos)
+  ret float %ldexp
+}
+
+define nofpclass(inf norm nsub nzero) float @demand_pzero_select_nsub_source__ldexp_negative_exp__ieee_dapz(i1 %cond, float %unknown, i32 %exp) #5 {
+; CHECK-LABEL: define nofpclass(inf nzero nsub norm) float @demand_pzero_select_nsub_source__ldexp_negative_exp__ieee_dapz(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], i32 [[EXP:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[EXP_NEG:%.*]] = or i32 [[EXP]], -256
+; CHECK-NEXT:    [[NSUB:%.*]] = call float @returns_nsub()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = call ninf float @llvm.ldexp.f32.i32(float [[SELECT]], i32 [[EXP_NEG]])
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %exp.neg = or i32 %exp, -256
+  %nsub = call float @returns_nsub()
+  %select = select i1 %cond, float %nsub, float %unknown
+  %ldexp = call float @llvm.ldexp.f32.i32(float %select, i32 %exp.neg)
+  ret float %ldexp
+}
+
+define nofpclass(inf norm nsub nzero) float @demand_pzero_select_nsub_source__ldexp_negative_exp__dynamic(i1 %cond, float %unknown, i32 %exp) #0 {
+; CHECK-LABEL: define nofpclass(inf nzero nsub norm) float @demand_pzero_select_nsub_source__ldexp_negative_exp__dynamic(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], i32 [[EXP:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXP_NEG:%.*]] = or i32 [[EXP]], -256
+; CHECK-NEXT:    [[NSUB:%.*]] = call float @returns_nsub()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NSUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = call ninf float @llvm.ldexp.f32.i32(float [[SELECT]], i32 [[EXP_NEG]])
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %exp.neg = or i32 %exp, -256
+  %nsub = call float @returns_nsub()
+  %select = select i1 %cond, float %nsub, float %unknown
+  %ldexp = call float @llvm.ldexp.f32.i32(float %select, i32 %exp.neg)
+  ret float %ldexp
+}
+
+define nofpclass(inf norm nsub nzero) float @demand_pzero_select_nnorm_source__ldexp_negative_exp__dynamic(i1 %cond, float %unknown, i32 %exp) #0 {
+; CHECK-LABEL: define nofpclass(inf nzero nsub norm) float @demand_pzero_select_nnorm_source__ldexp_negative_exp__dynamic(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], i32 [[EXP:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXP_NEG:%.*]] = or i32 [[EXP]], -256
+; CHECK-NEXT:    [[NNORM:%.*]] = call float @returns_nnorm()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NNORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = call ninf float @llvm.ldexp.f32.i32(float [[SELECT]], i32 [[EXP_NEG]])
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %exp.neg = or i32 %exp, -256
+  %nnorm = call float @returns_nnorm()
+  %select = select i1 %cond, float %nnorm, float %unknown
+  %ldexp = call float @llvm.ldexp.f32.i32(float %select, i32 %exp.neg)
+  ret float %ldexp
+}
+
 ; Make sure there's no assertion from trying to query
 ; getIntegerBitWidth on the vector type.
 define <2 x float> @ldexp_v2f32_v2i32_fmul_crash(<2 x i32> %exp) {
@@ -501,3 +757,12 @@ define <2 x float> @ldexp_v2f32_v2i32_fmul_crash(<2 x i32> %exp) {
   %mul = fmul <2 x float> %ldexp, zeroinitializer
   ret <2 x float> %mul
 }
+
+attributes #0 = { denormal_fpenv(dynamic) }
+attributes #1 = { denormal_fpenv(preservesign) }
+attributes #2 = { denormal_fpenv(positivezero) }
+attributes #3 = { denormal_fpenv(ieee|dynamic) }
+attributes #4 = { denormal_fpenv(ieee|preservesign) }
+attributes #5 = { denormal_fpenv(ieee|positivezero) }
+attributes #6 = { denormal_fpenv(dynamic|ieee) }
+attributes #7 = { denormal_fpenv(positivezero|ieee) }

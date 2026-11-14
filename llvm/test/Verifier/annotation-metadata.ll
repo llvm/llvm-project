@@ -1,4 +1,4 @@
-; RUN: not llvm-as -disable-output < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as -disable-output < %s 2>&1 | FileCheck %s
 
 define void @test1(ptr %a) {
 entry:
@@ -11,3 +11,8 @@ entry:
 
 !0 = !{}
 !1 = !{i32 10}
+
+; CHECK-NEXT: operands must be a string or a tuple of strings
+define void @func_non_string() !annotation !1 {
+  ret void
+}

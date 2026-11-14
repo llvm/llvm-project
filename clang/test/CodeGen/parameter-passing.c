@@ -6,8 +6,11 @@
 // corner cases.
 
 // RUN: %clang_cc1 %s -triple i386-unknown-unknown -O3 -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple i386-unknown-unknown -O3 -emit-llvm -o - | FileCheck %s %}
 // RUN: %clang_cc1 %s -triple x86_64-unknown-unknown -O3 -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple x86_64-unknown-unknown -O3 -emit-llvm -o - | FileCheck %s %}
 // RUN: %clang_cc1 %s -triple powerpc-unknown-unknown -O3 -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple powerpc-unknown-unknown -O3 -emit-llvm -o - | FileCheck %s %}
 // CHECK-NOT: @g0
 
 typedef _Bool BoolTy;

@@ -23,6 +23,7 @@ def BytecodeOpInterface : OpInterface<"BytecodeOpInterface"> {
     properties.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Bytecode/BytecodeOpInterface.h"];
 
   let methods = [
     StaticInterfaceMethod<[{

@@ -13,11 +13,13 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Unicode.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
@@ -752,10 +754,54 @@ void Output::scalarString(StringRef &S, QuotingType MustQuote) {
   outputUpToEndOfLine("");
 }
 
+/// A literal block scalar has no escapes, so it can only hold printable
+/// characters, tab and line feed. That rules out C1 controls, and NEL, LS and
+/// PS, which YAML 1.1 readers take as line breaks. Invalid UTF-8 stays in the
+/// block, since yaml::escape would drop it. Readers take the indentation from
+/// the first non-empty line, so that line cannot start with a space.
+static bool canUseBlockScalar(StringRef S) {
+  if (S.ltrim('\n').starts_with(' '))
+    return false;
+  const UTF8 *Ptr = S.bytes_begin(), *End = S.bytes_end();
+  while (Ptr != End) {
+    if (isASCII(*Ptr)) {
+      if (!isPrint(*Ptr) && *Ptr != '\t' && *Ptr != '\n')
+        return false;
+      ++Ptr;
+      continue;
+    }
+    const UTF8 *Start = Ptr;
+    UTF32 CodePoint;
+    if (convertUTF8Sequence(&Ptr, End, &CodePoint, strictConversion) !=
+        conversionOK) {
+      Ptr = Start + 1;
+      continue;
+    }
+    if (!sys::unicode::isPrintable(CodePoint))
+      return false;
+  }
+  return true;
+}
+
 void Output::blockScalarString(StringRef &S) {
+  // Fall back to a double-quoted scalar, which escapes everything. Input
+  // accepts either form for a block scalar value.
+  if (!canUseBlockScalar(S)) {
+    scalarString(S, QuotingType::Double);
+    return;
+  }
   if (!StateStack.empty())
     newLineCheck();
   output(" |");
+  // The default chomping keeps exactly one trailing line break, so strip or
+  // keep them explicitly to preserve the value.
+  if (!S.empty()) {
+    size_t LineBreaks = S.size() - S.rtrim('\n').size();
+    if (LineBreaks == 0)
+      output("-");
+    else if (LineBreaks > 1)
+      output("+");
+  }
 
   unsigned Indent = StateStack.empty() ? 1 : StateStack.size();
 

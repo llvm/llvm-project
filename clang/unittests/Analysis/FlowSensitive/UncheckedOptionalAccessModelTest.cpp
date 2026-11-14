@@ -12,6 +12,8 @@
 #include "TestingSupport.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Frontend/TextDiagnostic.h"
 #include "clang/Tooling/Tooling.h"
@@ -47,11 +49,13 @@ static void ReplaceAllOccurrences(std::string &S, const std::string &Pattern,
 struct OptionalTypeIdentifier {
   std::string NamespaceName;
   std::string TypeName;
+  BoolModelKind BoolModel = BoolModelKind::SAT;
 };
 
 static raw_ostream &operator<<(raw_ostream &OS,
                                const OptionalTypeIdentifier &TypeId) {
-  OS << TypeId.NamespaceName << "::" << TypeId.TypeName;
+  OS << TypeId.NamespaceName << "::" << TypeId.TypeName << " ("
+     << (TypeId.BoolModel == BoolModelKind::SAT ? "SAT" : "Simple") << ")";
   return OS;
 }
 
@@ -97,6 +101,9 @@ protected:
                             bool IgnoreSmartPointerDereference) {
     ReplaceAllOccurrences(SourceCode, "$ns", GetParam().NamespaceName);
     ReplaceAllOccurrences(SourceCode, "$optional", GetParam().TypeName);
+    ReplaceAllOccurrences(
+        SourceCode, "$unsafe_if_simple",
+        GetParam().BoolModel == BoolModelKind::Simple ? "// [[unsafe]]" : "");
 
     auto Headers = getMockHeaders();
     Headers.emplace_back("unchecked_optional_access_test.h", R"(
@@ -119,6 +126,9 @@ protected:
             [](ASTContext &Ctx, Environment &Env) {
               return UncheckedOptionalAccessModel(Ctx, Env);
             })
+            .withBuiltinOptions({/*ContextSensitiveOpts=*/std::nullopt,
+                                 /*Logger=*/nullptr,
+                                 /*BoolModel=*/GetParam().BoolModel})
             .withDiagnosisCallbacks(
                 {/*Before=*/[&Diagnostics,
                              Diagnoser =
@@ -179,11 +189,16 @@ protected:
 
 INSTANTIATE_TEST_SUITE_P(
     UncheckedOptionalUseTestInst, UncheckedOptionalAccessTest,
-    ::testing::Values(OptionalTypeIdentifier{"std", "optional"},
-                      OptionalTypeIdentifier{"absl", "optional"},
-                      OptionalTypeIdentifier{"base", "Optional"}),
+    ::testing::Values(
+        OptionalTypeIdentifier{"std", "optional", BoolModelKind::SAT},
+        OptionalTypeIdentifier{"std", "optional", BoolModelKind::Simple},
+        OptionalTypeIdentifier{"absl", "optional", BoolModelKind::SAT},
+        OptionalTypeIdentifier{"absl", "optional", BoolModelKind::Simple},
+        OptionalTypeIdentifier{"base", "Optional", BoolModelKind::SAT},
+        OptionalTypeIdentifier{"base", "Optional", BoolModelKind::Simple}),
     [](const ::testing::TestParamInfo<OptionalTypeIdentifier> &Info) {
-      return Info.param.NamespaceName;
+      return Info.param.NamespaceName + "_" +
+             (Info.param.BoolModel == BoolModelKind::SAT ? "SAT" : "Simple");
     });
 
 // Verifies that similarly-named types are ignored.
@@ -1821,14 +1836,16 @@ TEST_P(UncheckedOptionalAccessTest, AssignThroughLvalueReferencePtr) {
   )");
 }
 
-TEST_P(UncheckedOptionalAccessTest, CorrelatedBranches) {
+TEST_P(UncheckedOptionalAccessTest, CorrelatedBranchesShortCircuit) {
+  // `SimpleBoolModel` does not retain disjunctive formulas across
+  // short-circuit `||`, so it cannot prove `opt.has_value()`.
   ExpectDiagnosticsFor(R"code(
     #include "unchecked_optional_access_test.h"
 
     void target(bool b, $ns::$optional<int> opt) {
       if (b || opt.has_value()) {
         if (!b) {
-          opt.value();
+          opt.value(); $unsafe_if_simple
         }
       }
     }
@@ -1840,11 +1857,13 @@ TEST_P(UncheckedOptionalAccessTest, CorrelatedBranches) {
     void target(bool b, $ns::$optional<int> opt) {
       if (b && !opt.has_value()) return;
       if (b) {
-        opt.value();
+        opt.value(); $unsafe_if_simple
       }
     }
   )code");
+}
 
+TEST_P(UncheckedOptionalAccessTest, CorrelatedBranchesMutatedCondition) {
   ExpectDiagnosticsFor(
       R"code(
     #include "unchecked_optional_access_test.h"
@@ -1864,11 +1883,14 @@ TEST_P(UncheckedOptionalAccessTest, CorrelatedBranches) {
       if (b) return;
       if (opt.has_value()) b = true;
       if (b) {
-        opt.value();
+        opt.value(); $unsafe_if_simple
       }
     }
   )code");
+}
 
+TEST_P(UncheckedOptionalAccessTest,
+       CorrelatedBranchesNoShortCircuitNoMutation) {
   ExpectDiagnosticsFor(R"(
     #include "unchecked_optional_access_test.h"
 
@@ -1892,7 +1914,9 @@ TEST_P(UncheckedOptionalAccessTest, CorrelatedBranches) {
       }
     }
   )");
+}
 
+TEST_P(UncheckedOptionalAccessTest, CorrelatedBranchesDeadCode) {
   ExpectDiagnosticsFor(R"(
     #include "unchecked_optional_access_test.h"
 
@@ -2638,7 +2662,9 @@ TEST_P(UncheckedOptionalAccessTest, SmartPointerAccessorMixed) {
                        /*IgnoreSmartPointerDereference=*/false);
 }
 
-TEST_P(UncheckedOptionalAccessTest, ConstBoolAccessor) {
+TEST_P(UncheckedOptionalAccessTest, ConstBoolAccessorCorrelatedBranches) {
+  // `SimpleBoolModel` does not track path-conditioned correlations across the
+  // join after `if (a.isFoo()) { opt = 1; }`.
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
 
@@ -2653,7 +2679,7 @@ TEST_P(UncheckedOptionalAccessTest, ConstBoolAccessor) {
         opt = 1;
       }
       if (a.isFoo()) {
-        opt.value();
+        opt.value(); $unsafe_if_simple
       }
     }
   )cc");

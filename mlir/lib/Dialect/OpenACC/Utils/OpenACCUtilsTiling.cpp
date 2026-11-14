@@ -179,14 +179,16 @@ mlir::acc::tileACCLoops(mlir::acc::LoopOp tileLoop,
   }
 
   // Scale each tiled dimension's step by its tile size to form the tile group
-  // loop steps.
+  // loop steps. The tile sizes are in clause order, so the first one belongs
+  // to the innermost tiled IV.
   rewriter.setInsertionPoint(tileLoop);
   llvm::SmallVector<mlir::Value, 3> scaledSteps;
   llvm::SmallVector<mlir::Value, 3> tileLoopSteps;
   for (unsigned i = 0; i < numIVs; ++i) {
     if (i < tileCount) {
-      mlir::Value tileSize = resolveAndCastTileSize(
-          tileSizes[i], defaultTileSize, origSteps[i].getType(), rewriter, loc);
+      mlir::Value tileSize =
+          resolveAndCastTileSize(tileSizes[tileCount - 1 - i], defaultTileSize,
+                                 origSteps[i].getType(), rewriter, loc);
       mlir::Value scaled =
           mlir::arith::MulIOp::create(rewriter, loc, origSteps[i], tileSize);
       scaledSteps.push_back(scaled);

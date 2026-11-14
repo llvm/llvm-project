@@ -207,6 +207,7 @@ patterns:
             \\binteldialect\\b|\
             \\binternal\\b|\
             \\bjumptable\\b|\
+            \\blikely_module_local\\b|\
             \\blinkonce\\b|\
             \\blinkonce_odr\\b|\
             \\blocal_unnamed_addr\\b|\

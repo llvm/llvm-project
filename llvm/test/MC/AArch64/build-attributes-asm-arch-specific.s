@@ -1,3 +1,4 @@
+// RUN: llvm-mc -triple=aarch64 -filetype=obj %s | llvm-readelf --arch-specific -
 // RUN: llvm-mc -triple=aarch64 -filetype=obj %s | llvm-readelf --arch-specific - | FileCheck %s --check-prefix=ASM
 
 // ASM: BuildAttributes {
@@ -24,11 +25,11 @@
 // ASM-NEXT:    }
 // ASM-NEXT:  }
 // ASM-NEXT:  Section 4 {
-// ASM-NEXT:    SectionLength: 26
+// ASM-NEXT:    SectionLength: 29
 // ASM-NEXT:    VendorName: aeabi_pauthabi Optionality: required Type: uleb128
 // ASM-NEXT:    Attributes {
 // ASM-NEXT:      Tag_PAuth_Platform: 9
-// ASM-NEXT:      Tag_PAuth_Schema: 777
+// ASM-NEXT:      Tag_PAuth_Schema: 8589934592
 // ASM-NEXT:    }
 // ASM-NEXT:  }
 // ASM-NEXT:  Section 5 {
@@ -48,7 +49,7 @@
 .aeabi_subsection subsection_b, required, uleb128
 .aeabi_subsection aeabi_pauthabi, required, uleb128
 .aeabi_attribute Tag_PAuth_Platform, 7
-.aeabi_attribute Tag_PAuth_Schema, 777
+.aeabi_attribute Tag_PAuth_Schema, 8589934592
 .aeabi_attribute Tag_PAuth_Platform, 9
 .aeabi_subsection aeabi_feature_and_bits, optional, uleb128
 .aeabi_attribute Tag_Feature_BTI, 1

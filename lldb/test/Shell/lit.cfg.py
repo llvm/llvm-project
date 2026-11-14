@@ -55,9 +55,10 @@ if config.llvm_use_sanitizer:
     tsan_suppressions = os.path.join(
         os.path.dirname(config.test_source_root), "tsan-suppressions.txt"
     )
-    config.environment["TSAN_OPTIONS"] = (
-        "halt_on_error=1:suppressions=" + tsan_suppressions
-    )
+    tsan_options = "halt_on_error=1:suppressions=" + tsan_suppressions
+    if config.lldb_test_extra_tsan_options:
+        tsan_options += ":" + config.lldb_test_extra_tsan_options
+    config.environment["TSAN_OPTIONS"] = tsan_options
     config.environment["MallocNanoZone"] = "0"
 
 if config.lldb_platform_url and config.cmake_sysroot and config.enable_remote:

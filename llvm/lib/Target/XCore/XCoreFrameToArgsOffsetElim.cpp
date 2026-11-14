@@ -14,34 +14,43 @@
 #include "XCoreInstrInfo.h"
 #include "XCoreSubtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/Pass.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
 namespace {
-  struct XCoreFTAOElim : public MachineFunctionPass {
-    static char ID;
-    XCoreFTAOElim() : MachineFunctionPass(ID) {}
+struct XCoreFrameToArgsOffsetEliminationLegacy : public MachineFunctionPass {
+  static char ID;
+  XCoreFrameToArgsOffsetEliminationLegacy() : MachineFunctionPass(ID) {}
 
-    bool runOnMachineFunction(MachineFunction &Fn) override;
-    MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().setNoVRegs();
-    }
+  bool runOnMachineFunction(MachineFunction &Fn) override;
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
 
-    StringRef getPassName() const override {
-      return "XCore FRAME_TO_ARGS_OFFSET Elimination";
-    }
-  };
-  char XCoreFTAOElim::ID = 0;
+  StringRef getPassName() const override {
+    return "XCore FRAME_TO_ARGS_OFFSET Elimination";
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+char XCoreFrameToArgsOffsetEliminationLegacy::ID = 0;
 }
 
 /// createXCoreFrameToArgsOffsetEliminationPass - returns an instance of the
 /// Frame to args offset elimination pass
-FunctionPass *llvm::createXCoreFrameToArgsOffsetEliminationPass() {
-  return new XCoreFTAOElim();
+FunctionPass *llvm::createXCoreFrameToArgsOffsetEliminationLegacyPass() {
+  return new XCoreFrameToArgsOffsetEliminationLegacy();
 }
 
-bool XCoreFTAOElim::runOnMachineFunction(MachineFunction &MF) {
+static bool runFrameToArgOffsetElimination(MachineFunction &MF) {
   const XCoreInstrInfo &TII =
       *static_cast<const XCoreInstrInfo *>(MF.getSubtarget().getInstrInfo());
   unsigned StackSize = MF.getFrameInfo().getStackSize();
@@ -57,4 +66,17 @@ bool XCoreFTAOElim::runOnMachineFunction(MachineFunction &MF) {
     }
   }
   return true;
+}
+
+bool XCoreFrameToArgsOffsetEliminationLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  return runFrameToArgOffsetElimination(MF);
+}
+
+PreservedAnalyses XCoreFrameToArgsOffsetEliminationPass::run(
+    MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
+  return runFrameToArgOffsetElimination(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

@@ -9,6 +9,7 @@
 
 typedef __attribute__(( ext_vector_type(2) )) int int2;
 typedef __attribute__(( ext_vector_type(4) )) int int4;
+typedef __attribute__(( ext_vector_type(4) )) unsigned int uint4;
 typedef __attribute__(( ext_vector_type(4) )) float float4;
 
 int4 vec_ternary(int4 c, int4 a, int4 b) {
@@ -71,6 +72,36 @@ float4 vec_ternary_f4(int4 c, float4 a, float4 b) {
 // LLVM: %[[IS_NEG:.*]] = icmp slt <4 x i32> %[[COND:.*]], zeroinitializer
 // LLVM: %[[RESULT:.*]] = select <4 x i1> %[[IS_NEG]], <4 x float> %[[A:.*]], <4 x float> %[[B:.*]]
 // LLVM: ret <4 x float> %[[RESULT]]
+
+uint4 vec_ternary_u4(int4 c, uint4 a, uint4 b) {
+  return c ? a : b;
+}
+
+// CIR: cir.func {{.*}} @vec_ternary_u4
+// CIR: %[[C_CMP:.*]] = cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+// CIR: %[[C_CMP_NOT:.*]] = cir.not %[[C_CMP]] : !cir.vector<4 x !s32i>
+// CIR: %[[TMP_B_VI4:.*]] = cir.cast bitcast %{{.*}} : !cir.vector<4 x !u32i> -> !cir.vector<4 x !s32i>
+// CIR: %[[TMP_A_VI4:.*]] = cir.cast bitcast %{{.*}} : !cir.vector<4 x !u32i> -> !cir.vector<4 x !s32i>
+// CIR: %[[TMP_1:.*]] = cir.and %[[TMP_B_VI4]], %[[C_CMP_NOT]] : !cir.vector<4 x !s32i>
+// CIR: %[[TMP_2:.*]] = cir.and %[[TMP_A_VI4]], %[[C_CMP]] : !cir.vector<4 x !s32i>
+// CIR: %[[TMP_1_1_OR:.*]] = cir.or %[[TMP_1]], %[[TMP_2]] : !cir.vector<4 x !s32i>
+// CIR: %{{.*}} = cir.cast bitcast %[[TMP_1_1_OR]] : !cir.vector<4 x !s32i> -> !cir.vector<4 x !u32i>
+
+// LLVM: %[[IS_NEG:.*]] = icmp slt <4 x i32> %[[COND:.*]], zeroinitializer
+// LLVM: %[[RESULT:.*]] = select <4 x i1> %[[IS_NEG]], <4 x i32> %[[A:.*]], <4 x i32> %[[B:.*]]
+// LLVM: ret <4 x i32> %[[RESULT]]
+
+uint4 vec_ternary_ucond(uint4 c, uint4 a, uint4 b) {
+  return c ? a : b;
+}
+
+// CIR: cir.func {{.*}} @vec_ternary_ucond
+// CIR: %[[C_S:.*]] = cir.cast bitcast %{{.*}} : !cir.vector<4 x !u32i> -> !cir.vector<4 x !s32i>
+// CIR: %{{.*}} = cir.vec.cmp(lt, %[[C_S]], %{{.*}}) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+
+// LLVM: %[[IS_NEG:.*]] = icmp slt <4 x i32> %[[COND:.*]], zeroinitializer
+// LLVM: %[[RESULT:.*]] = select <4 x i1> %[[IS_NEG]], <4 x i32> %[[A:.*]], <4 x i32> %[[B:.*]]
+// LLVM: ret <4 x i32> %[[RESULT]]
 
 int4 vec_unary_inc(int4 a) {
   ++a;

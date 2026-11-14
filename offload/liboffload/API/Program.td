@@ -70,3 +70,50 @@ def olDestroyProgram : Function {
     ];
     let returns = [];
 }
+
+def ol_program_info_t : Enum {
+  let desc = "Supported program info.";
+  let is_typed = 1;
+  let etors = [
+    TaggedEtor<"IMAGE_BASE", "void *", "Start of the host-side image loaded for this program. For IR inputs that were compiled by the platform this is the compiled image.">,
+    TaggedEtor<"IMAGE_SIZE", "size_t", "Size in bytes of the image described by `OL_PROGRAM_INFO_IMAGE_BASE`.">,
+  ];
+}
+
+def olGetProgramInfo : Function {
+  let desc = "Queries the given property of the program.";
+  let details = [
+    "`olGetProgramInfoSize` can be used to query the storage size "
+    "required for the given query.",
+    "Returned image pointers are owned by the program and remain valid until it is destroyed."
+  ];
+  let params = [
+    Param<"ol_program_handle_t", "Program", "handle of the program", PARAM_IN>,
+    Param<"ol_program_info_t", "PropName", "type of the info to retrieve", PARAM_IN>,
+    Param<"size_t", "PropSize", "the number of bytes pointed to by PropValue.", PARAM_IN>,
+    TypeTaggedParam<"void*", "PropValue", "array of bytes holding the info. "
+      "If PropSize is not equal to or greater to the real number of bytes needed to return the info "
+      "then the OL_ERRC_INVALID_SIZE error is returned and PropValue is not used.", PARAM_OUT,
+      TypeInfo<"PropName" , "PropSize">>
+  ];
+  let returns = [
+    Return<"OL_ERRC_INVALID_SIZE", [
+      "`PropSize == 0`",
+      "If `PropSize` is less than the real number of bytes needed to return the info."
+    ]>,
+    Return<"OL_ERRC_INVALID_NULL_HANDLE">
+  ];
+}
+
+def olGetProgramInfoSize : Function {
+  let desc = "Returns the storage size of the given program query.";
+  let details = [];
+  let params = [
+    Param<"ol_program_handle_t", "Program", "handle of the program", PARAM_IN>,
+    Param<"ol_program_info_t", "PropName", "type of the info to query", PARAM_IN>,
+    Param<"size_t*", "PropSizeRet", "pointer to the number of bytes required to store the query", PARAM_OUT>
+  ];
+  let returns = [
+    Return<"OL_ERRC_INVALID_NULL_HANDLE">
+  ];
+}

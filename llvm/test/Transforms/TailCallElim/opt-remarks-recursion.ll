@@ -1,5 +1,5 @@
-; RUN: opt %s -passes=tailcallelim -verify-dom-info -pass-remarks=tailcallelim -o /dev/null 2>&1 | FileCheck %s
-; RUN: opt %s -o /dev/null -passes='require<opt-remark-emit>,tailcallelim' -pass-remarks=tailcallelim 2>&1 | FileCheck %s
+; RUN: opt %s -passes=tailcallelim -verify-dom-info -pass-remarks=tailcallelim -disable-output 2>&1 | FileCheck %s
+; RUN: opt %s -disable-output -passes='require<opt-remark-emit>,tailcallelim' -pass-remarks=tailcallelim 2>&1 | FileCheck %s
 
 ; CHECK: /home/davide/pat.c:2:20: transforming tail recursion into loop
 define i32 @fib(i32 %n) nounwind ssp {

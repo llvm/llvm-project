@@ -93,7 +93,7 @@ dummy data objects) with a `semantics::ArraySpec` that encodes the
 `semantics::AssocEntityDetails` (associated entity in the RANK DEFAULT case).
 
 Inside a select rank, a `semantics::Symbol` is created for the associated
-entity with `semantics::AssocEntityDetails` that points to the the selector
+entity with `semantics::AssocEntityDetails` that points to the selector
 and holds the rank outside of the RANK DEFAULT case.
 
 Assumed-rank dummies are also represented in the

@@ -21,9 +21,9 @@ define i64 @penultimate_iv_live_out(ptr %dst, i64 %N) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[TMP0]], i64 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[TMP0]], i64 8
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[TMP0]], i64 12
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 16
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 32
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i64 48
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP2]], align 4
@@ -102,9 +102,9 @@ define i64 @penultimate_and_postinc_iv_live_out(ptr %dst, i64 %N) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[TMP0]], i64 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[TMP0]], i64 8
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[TMP0]], i64 12
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 16
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 32
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i64 48
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP2]], align 4
@@ -190,9 +190,9 @@ define i64 @penultimate_iv_non_zero_start(ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add nuw i64 10, [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[DST]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[TMP2]], i64 4
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[TMP2]], i64 8
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP2]], i64 12
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP2]], i64 16
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP2]], i64 32
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP2]], i64 48
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP4]], align 4
@@ -226,10 +226,10 @@ define i64 @penultimate_iv_non_zero_start(ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[CMP_N6:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N6]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL7:%.*]] = phi i64 [ [[TMP7]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP1]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 10, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP7]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP1]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 10, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL7]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[DST]], i64 [[IV]]
 ; CHECK-NEXT:    store i32 0, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
@@ -279,9 +279,9 @@ define i64 @non_unit_step_iv_live_out(ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add <4 x i32> [[STEP_ADD]], splat (i32 12)
 ; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add <4 x i32> [[STEP_ADD_2]], splat (i32 12)
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[TMP2]], i64 4
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[TMP2]], i64 8
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP2]], i64 12
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP2]], i64 16
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP2]], i64 32
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP2]], i64 48
 ; CHECK-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[STEP_ADD]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[STEP_ADD_2]], ptr [[TMP4]], align 4

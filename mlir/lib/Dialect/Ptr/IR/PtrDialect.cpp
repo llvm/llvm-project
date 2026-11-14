@@ -11,12 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Ptr/IR/PtrOps.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::ptr;
@@ -465,10 +462,9 @@ LogicalResult ToPtrOp::verify() {
 //===----------------------------------------------------------------------===//
 
 llvm::TypeSize TypeOffsetOp::getTypeSize(std::optional<DataLayout> layout) {
-  if (layout)
-    return layout->getTypeSize(getElementType());
-  DataLayout dl = DataLayout::closest(*this);
-  return dl.getTypeSize(getElementType());
+  if (!layout)
+    layout.emplace(DataLayout::closest(*this));
+  return layout->getTypeAllocSize(getElementType());
 }
 
 //===----------------------------------------------------------------------===//

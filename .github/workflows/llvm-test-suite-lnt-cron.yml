@@ -1,0 +1,63 @@
+# This file defines a workflow that periodically runs the LLVM test-suite using the Clang / LLVM
+# on the tip of main and submits the results to LNT.
+#
+# It dispatches llvm-test-suite-lnt-pipeline.yml once for every machine defined in
+# .ci/lnt/llvm-test-suite/machines.json, all at the same commit.
+
+name: "[LLVM] Request LNT runs of the LLVM Test Suite"
+
+permissions:
+  contents: read
+
+on:
+  schedule:
+    # Trigger twice a day, off the hour boundary to avoid popular times.
+    - cron: '17 2,14 * * *'
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Report what would be requested, but request nothing'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  request-runs:
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: write # to dispatch llvm-test-suite-lnt-pipeline.yml
+    steps:
+      - name: Checkout the machine definitions
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Disabling cone mode allows checking out exactly the single file we need.
+          sparse-checkout: .ci/lnt/llvm-test-suite/machines.json
+          sparse-checkout-cone-mode: false
+
+      - name: Request the runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ inputs.dry-run || 'false' }}
+        run: |
+          # Resolve main once, so that all the machines benchmark the same commit even if main moves
+          # while we're dispatching.
+          sha=$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)
+          echo "Requesting runs for ${sha}"
+
+          jq -r '.[]["lnt-machine"]' .ci/lnt/llvm-test-suite/machines.json | while read -r machine; do
+            if [ "${DRY_RUN}" = "true" ]; then
+              echo "Would request ${sha} on ${machine}"
+              continue
+            fi
+            gh workflow run llvm-test-suite-lnt-pipeline.yml --repo "${GITHUB_REPOSITORY}" --ref main \
+              -f commit="${sha}" -f lnt-machine="${machine}" -f submit-lnt=true
+            echo "Requested ${sha} on ${machine}"
+          done

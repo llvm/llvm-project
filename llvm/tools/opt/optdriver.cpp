@@ -69,13 +69,20 @@
 using namespace llvm;
 using namespace opt_tool;
 
-static codegen::RegisterCodeGenFlags CFG;
-static codegen::RegisterMTuneFlag MTF;
-static codegen::RegisterSaveStatsFlag SSF;
+static bool shouldPinPassToLegacyPM(StringRef Pass);
 
-// The OptimizationList is automatically populated with registered Passes by the
-// PassNameParser.
-static cl::list<const PassInfo *, bool, PassNameParser> PassList(cl::desc(
+namespace {
+// Register only the passes that the legacy pipeline accepts, so other pass
+// names do not occupy option spellings.
+struct PinnedPassNameParser : PassNameParser {
+  using PassNameParser::PassNameParser;
+  bool ignorablePassImpl(const PassInfo *P) const override {
+    return !shouldPinPassToLegacyPM(P->getPassArgument());
+  }
+};
+} // namespace
+
+static cl::list<const PassInfo *, bool, PinnedPassNameParser> PassList(cl::desc(
     "Optimizations available (use \"-passes=\" for the new pass manager)"));
 
 // This flag specifies a textual description of the optimization pass pipeline
@@ -393,14 +400,12 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
   return llvm::is_contained(PassNameExact, Pass);
 }
 
-// For use in NPM transition.
-static bool shouldForceLegacyPM() {
-  for (const PassInfo *P : PassList) {
-    StringRef Arg = P->getPassArgument();
-    if (shouldPinPassToLegacyPM(Arg))
-      return true;
-  }
-  return false;
+static void printPassNameSyntaxError() {
+  errs() << "The `opt -passname` syntax for the new pass manager is "
+            "not supported, please use `opt -passes=<pipeline>` (or the `-p` "
+            "alias for a more concise version).\n";
+  errs() << "See https://llvm.org/docs/NewPassManager.html#invoking-opt "
+            "for more details on the pass pipeline syntax.\n\n";
 }
 
 //===----------------------------------------------------------------------===//
@@ -454,9 +459,23 @@ optMain(int argc, char **argv,
   cl::AddExtraVersionPrinter(sys::printDefaultTargetAndDetectedCPU);
 
   LLVMContext Context;
-  cl::parseCommandLineOptions(
-      Context.getLibraryOptions(), ArrayRef(argv, argc),
-      "llvm .bc -> .bc modular optimizer and analysis printer\n");
+  if (!cl::parseCommandLineOptions(
+          Context.getLibraryOptions(), codegen::getToolOptions(),
+          ArrayRef(argv, argc),
+          "llvm .bc -> .bc modular optimizer and analysis printer\n",
+          &errs())) {
+    // Unpinned pass names are not options; point `opt -passname` users to
+    // -passes.
+    if (any_of(ArrayRef(argv + 1, argc - 1), [&](StringRef Arg) {
+          if (!Arg.consume_front("-"))
+            return false;
+          Arg.consume_front("-");
+          Arg = Arg.split('=').first;
+          return Registry.getPassInfo(Arg) && !shouldPinPassToLegacyPM(Arg);
+        }))
+      printPassNameSyntaxError();
+    return 1;
+  }
 
   SmallVector<PassPluginLibraryInfo, 0> Extensions;
   for (const std::string &Path : PassPlugins) {
@@ -470,16 +489,10 @@ optMain(int argc, char **argv,
   if (Error E = passPluginArguments(Extensions, PluginArgs))
     reportFatalUsageError(std::move(E));
 
-  // TODO: remove shouldForceLegacyPM().
-  const bool UseNPM =
-      !shouldForceLegacyPM() || PassPipeline.getNumOccurrences() > 0;
+  const bool UseNPM = PassList.empty() || PassPipeline.getNumOccurrences() > 0;
 
   if (UseNPM && !PassList.empty()) {
-    errs() << "The `opt -passname` syntax for the new pass manager is "
-              "not supported, please use `opt -passes=<pipeline>` (or the `-p` "
-              "alias for a more concise version).\n";
-    errs() << "See https://llvm.org/docs/NewPassManager.html#invoking-opt "
-              "for more details on the pass pipeline syntax.\n\n";
+    printPassNameSyntaxError();
     return 1;
   }
 
@@ -498,9 +511,9 @@ optMain(int argc, char **argv,
   }
 
   // If user just wants to list available options, skip module loading.
-  auto MAttrs = codegen::getMAttrs();
-  std::string CPUStr = codegen::getCPUStr();
-  std::string TuneCPUStr = codegen::getTuneCPUStr();
+  auto MAttrs = codegen::getMAttrs(Context.getLibraryOptions());
+  std::string CPUStr = codegen::getCPUStr(Context.getLibraryOptions());
+  std::string TuneCPUStr = codegen::getTuneCPUStr(Context.getLibraryOptions());
   bool SkipModule =
       CPUStr == "help" || TuneCPUStr == "help" || is_contained(MAttrs, "help");
   if (SkipModule) {
@@ -511,8 +524,8 @@ optMain(int argc, char **argv,
       TheTriple = Triple(sys::getDefaultTargetTriple());
 
     std::string Error;
-    const Target *TheTarget =
-        TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
+    const Target *TheTarget = TargetRegistry::lookupTarget(
+        codegen::getMArch(Context.getLibraryOptions()), TheTriple, Error);
     if (!TheTarget) {
       errs() << argv[0] << ": " << Error << "\n";
       return 1;
@@ -521,12 +534,14 @@ optMain(int argc, char **argv,
     // Pass "help" as CPU for -mtune=help
     std::string SkipModuleCPU = (TuneCPUStr == "help" ? "help" : CPUStr);
     TargetOptions Options =
-        codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
+        codegen::getTargetOptions(Context.getLibraryOptions(), TheTriple);
     // Create the target machine just to print the help info. Use unique_ptr
     // to avoid a memory leak.
     std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
-        TheTriple, SkipModuleCPU, codegen::getFeaturesStr(), Options,
-        codegen::getExplicitRelocModel(), codegen::getExplicitCodeModel(),
+        TheTriple, SkipModuleCPU,
+        codegen::getFeaturesStr(Context.getLibraryOptions()), Options,
+        codegen::getExplicitRelocModel(Context.getLibraryOptions()),
+        codegen::getExplicitCodeModel(Context.getLibraryOptions()),
         GetCodeGenOptLevel()));
     if (!TM) {
       errs() << argv[0] << ": could not allocate target machine\n";
@@ -557,9 +572,10 @@ optMain(int argc, char **argv,
   }
   LLVMRemarkFileHandle RemarksFile = std::move(*RemarksFileOrErr);
 
-  codegen::MaybeEnableStatistics();
+  codegen::maybeEnableStatistics(Context.getLibraryOptions());
 
-  StringRef ABIName = mc::getABIName(); // FIXME: Handle module flag.
+  StringRef ABIName =
+      mc::getABIName(Context.getLibraryOptions()); // FIXME: Handle module flag.
 
   // Load the input module...
   auto SetDataLayout = [&](StringRef IRTriple,
@@ -691,9 +707,9 @@ optMain(int argc, char **argv,
   std::string FeaturesStr;
   std::unique_ptr<TargetMachine> TM;
   if (ModuleTriple.getArch()) {
-    CPUStr = codegen::getCPUStr();
-    TuneCPUStr = codegen::getTuneCPUStr();
-    FeaturesStr = codegen::getFeaturesStr();
+    CPUStr = codegen::getCPUStr(Context.getLibraryOptions());
+    TuneCPUStr = codegen::getTuneCPUStr(Context.getLibraryOptions());
+    FeaturesStr = codegen::getFeaturesStr(Context.getLibraryOptions());
     Expected<std::unique_ptr<TargetMachine>> ExpectedTM =
         codegen::createTargetMachineForTriple(
             Context.getLibraryOptions(), ModuleTriple, GetCodeGenOptLevel());
@@ -714,7 +730,7 @@ optMain(int argc, char **argv,
   const TargetOptions *Options = TM ? &TM->Options : &CodeGenFlagsOptions;
   if (!TM) {
     CodeGenFlagsOptions =
-        codegen::InitTargetOptionsFromCodeGenFlags(ModuleTriple);
+        codegen::getTargetOptions(Context.getLibraryOptions(), ModuleTriple);
   }
 
   // Override function attributes based on CPUStr, TuneCPUStr, FeaturesStr, and
@@ -817,7 +833,8 @@ optMain(int argc, char **argv,
             EmitModuleHash, EnableDebugify, VerifyDebugInfoPreserve,
             EnableProfileVerification, UnifiedLTO))
       return 1;
-    return codegen::MaybeSaveStatistics(OutputFilename, "opt");
+    return codegen::maybeSaveStatistics(Context.getLibraryOptions(),
+                                        OutputFilename, "opt");
   }
 
   if (OptLevelO0 || OptLevelO1 || OptLevelO2 || OptLevelOs || OptLevelOz ||
@@ -1003,5 +1020,6 @@ optMain(int argc, char **argv,
   if (ThinLinkOut)
     ThinLinkOut->keep();
 
-  return codegen::MaybeSaveStatistics(OutputFilename, "opt");
+  return codegen::maybeSaveStatistics(Context.getLibraryOptions(),
+                                      OutputFilename, "opt");
 }

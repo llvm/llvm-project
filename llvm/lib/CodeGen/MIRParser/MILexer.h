@@ -153,6 +153,7 @@ struct MIToken {
     kw_unknown_address,
     kw_ir_block_address_taken,
     kw_machine_block_address_taken,
+    kw_label_must_be_emitted,
     kw_call_frame_size,
     kw_max_bytes_for_alignment,
     kw_noconvergent,

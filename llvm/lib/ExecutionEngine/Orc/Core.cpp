@@ -482,7 +482,6 @@ ReExportsMaterializationUnit::extractFlags(const SymbolAliasMap &Aliases) {
 
 Expected<SymbolAliasMap>
 buildSimpleReexportsAliasMap(JITDylib &SourceJD, const SymbolNameSet &Symbols) {
-  SymbolLookupSet LookupSet(Symbols);
   auto Flags = SourceJD.getExecutionSession().lookupFlags(
       LookupKind::Static, {{&SourceJD, JITDylibLookupFlags::MatchAllSymbols}},
       SymbolLookupSet(std::move(Symbols)));

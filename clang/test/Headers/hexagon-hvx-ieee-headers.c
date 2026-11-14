@@ -4,6 +4,7 @@
 // RUN:   -triple hexagon-unknown-elf -target-cpu hexagonv68  \
 // RUN:   -target-feature +hvx-length128b -target-feature +hvxv68 \
 // RUN:   -target-feature +hvx-ieee-fp -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -internal-isystem %S/../../lib/Headers/   -triple hexagon-unknown-elf -target-cpu hexagonv68   -target-feature +hvx-length128b -target-feature +hvxv68   -target-feature +hvx-ieee-fp -emit-llvm %s -o - | FileCheck %s %}
 
 // RUN: not %clang_cc1 -internal-isystem %S/../../lib/Headers/ \
 // RUN:   -triple hexagon-unknown-elf -target-cpu hexagonv68 \

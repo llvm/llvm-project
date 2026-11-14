@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=x86_64 -target-feature +avx10.2 \
 // RUN: -emit-llvm -o - -Wno-invalid-feature-combination -Wall -Werror | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -flax-vector-conversions=none -ffreestanding -triple=x86_64 -target-feature +avx10.2 -emit-llvm -o - -Wno-invalid-feature-combination -Wall -Werror | FileCheck %s %}
 // RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=i386 -target-feature +avx10.2 \
 // RUN: -emit-llvm -o - -Wno-invalid-feature-combination -Wall -Werror | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -flax-vector-conversions=none -ffreestanding -triple=i386 -target-feature +avx10.2 -emit-llvm -o - -Wno-invalid-feature-combination -Wall -Werror | FileCheck %s %}
 
 #include <immintrin.h>
 
@@ -32,13 +34,13 @@ __m512h test_mm512_cvtx_round2ps_ph(__m512 __A, __m512 __B) {
 __m512h test_mm512_mask_cvtx_round2ps_ph(__m512h __W, __mmask32 __U, __m512 __A, __m512 __B) {
 // CHECK-LABEL: @test_mm512_mask_cvtx_round2ps_ph(
 // CHECK: call <32 x half> @llvm.x86.avx10.mask.vcvt2ps2phx.512
-  return _mm512_mask_cvtx_round2ps_ph(__W, __U, __A, __B, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+  return _mm512_mask_cvtx_round2ps_ph(__W, __U, __A, __B, _MM_FROUND_TO_NEAREST_TIES_EVEN | _MM_FROUND_NO_EXC);
 }
 
 __m512h test_mm512_maskz_cvtx_round2ps_ph(__mmask32 __U, __m512 __A, __m512 __B) {
 // CHECK-LABEL: @test_mm512_maskz_cvtx_round2ps_ph(
 // CHECK: call <32 x half> @llvm.x86.avx10.mask.vcvt2ps2phx.512
-  return _mm512_maskz_cvtx_round2ps_ph(__U, __A, __B, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+  return _mm512_maskz_cvtx_round2ps_ph(__U, __A, __B, _MM_FROUND_TO_NEAREST_TIES_EVEN | _MM_FROUND_NO_EXC);
 }
 
 __m256i test_mm512_cvtbiasph_bf8(__m512i __A, __m512h __B) {

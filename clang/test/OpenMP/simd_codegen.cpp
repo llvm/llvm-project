@@ -714,8 +714,11 @@ void linear(float *a) {
 // CHECK-NEXT: store i64 [[LIN0_2]], ptr [[K_REF]]
 //
   #pragma omp simd linear(uval(k) : 3)
+// CHECK: [[UVAL_REF:%.+]] = load ptr, ptr [[K_ADDR]],
+// CHECK: store ptr [[UVAL_REF]], ptr [[K_ADDR_REF:%.+]],
 // CHECK: store i32 0, ptr [[OMP_IV:%[^,]+]]
-// CHECK: [[K0LOAD:%.+]] = load i64, ptr [[VAL_ADDR]]
+// CHECK: [[K_REF:%.+]] = load ptr, ptr [[K_ADDR_REF]],
+// CHECK: [[K0LOAD:%.+]] = load i64, ptr [[K_REF]]
 // CHECK-NEXT: store i64 [[K0LOAD]], ptr [[LIN0:%[^,]+]]
 
 // CHECK: [[IV:%.+]] = load i32, ptr [[OMP_IV]]{{.*}}!llvm.access.group
@@ -747,8 +750,11 @@ void linear(float *a) {
 // CHECK: [[SIMPLE_LOOP_END]]:
 //
 // Update linear vars after loop, as the loop was operating on a private version.
+// CHECK: [[K_REF:%.+]] = load ptr, ptr [[K_ADDR_REF]],
+// CHECK: store ptr [[K_REF]], ptr [[K_PRIV_REF:%.+]],
 // CHECK: [[LIN0_2:%.+]] = load i64, ptr [[K_PRIVATIZED]]
-// CHECK-NEXT: store i64 [[LIN0_2]], ptr [[VAL_ADDR]]
+// CHECK-NEXT: [[K_REF:%.+]] = load ptr, ptr [[K_PRIV_REF]],
+// CHECK-NEXT: store i64 [[LIN0_2]], ptr [[K_REF]]
 //
 }
 

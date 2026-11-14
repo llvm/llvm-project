@@ -151,6 +151,13 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ModuleFileHomeIsCwd : 1;
 
+  /// Serialize precompiled header input paths relative to the current working
+  /// directory. Relative paths resolve against the consumer's working
+  /// directory; unlike relocatable PCHs, no base directory is stored or
+  /// re-rooted at load.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned PCHBaseDirIsCwd : 1;
+
   /// Also search for prebuilt implicit modules in the prebuilt module cache
   /// path.
   LLVM_PREFERRED_TYPE(bool)
@@ -299,9 +306,10 @@ public:
   HeaderSearchOptions(StringRef _Sysroot = "/")
       : Sysroot(_Sysroot), ModuleFormat("raw"), DisableModuleHash(false),
         ImplicitModuleMaps(false), ModuleMapFileHomeIsCwd(false),
-        ModuleFileHomeIsCwd(false), EnablePrebuiltImplicitModules(false),
-        UseBuiltinIncludes(true), UseStandardSystemIncludes(true),
-        UseStandardCXXIncludes(true), UseLibcxx(false), Verbose(false),
+        ModuleFileHomeIsCwd(false), PCHBaseDirIsCwd(false),
+        EnablePrebuiltImplicitModules(false), UseBuiltinIncludes(true),
+        UseStandardSystemIncludes(true), UseStandardCXXIncludes(true),
+        UseLibcxx(false), Verbose(false),
         ModulesValidateOncePerBuildSession(false),
         ModulesValidateSystemHeaders(false),
         ModulesForceValidateUserHeaders(true),

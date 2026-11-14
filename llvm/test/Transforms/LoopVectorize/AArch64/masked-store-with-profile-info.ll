@@ -3,7 +3,7 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-define void @cond_store(ptr noalias %a, ptr noalias %b, i64 %n) {
+define void @cond_store(ptr noalias %a, ptr noalias %b, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: define void @cond_store(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK:  [[ENTRY:.*:]]

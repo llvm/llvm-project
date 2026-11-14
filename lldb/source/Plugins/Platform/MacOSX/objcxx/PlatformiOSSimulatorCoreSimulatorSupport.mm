@@ -73,14 +73,6 @@ CoreSimulatorSupport::DeviceType::DeviceType(id d)
 
 CoreSimulatorSupport::DeviceType::operator bool() { return m_dev != nil; }
 
-ConstString CoreSimulatorSupport::DeviceType::GetIdentifier() {
-  return ConstString([[m_dev identifier] UTF8String]);
-}
-
-ConstString CoreSimulatorSupport::DeviceType::GetProductFamily() {
-  return ConstString([[m_dev productFamily] UTF8String]);
-}
-
 CoreSimulatorSupport::DeviceType::ProductFamilyID
 CoreSimulatorSupport::DeviceType::GetProductFamilyID() {
   return ProductFamilyID([m_dev productFamilyID]);

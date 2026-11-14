@@ -1,7 +1,7 @@
 # REQUIRES: asserts
 # RUN: llc --mtriple=hexagon -mcpu=hexagonv68 %s -run-pass=pipeliner \
 # RUN: -debug-only=pipeliner -window-sched=force -filetype=null \
-# RUN: -verify-machineinstrs 2>&1 | FileCheck %s
+# RUN: 2>&1 | FileCheck %s
 
 # This is the SHA-512 message-schedule loop from llvm.org/PR209946. Each
 # iteration advances the base pointer %1 by 32 bytes and stores to offsets
@@ -149,7 +149,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 noPhis:          false
 isSSA:           true
@@ -278,10 +277,10 @@ body:             |
     %13:doubleregs = S6_rol_i_p_xacc %12, %11, 3
     %14:doubleregs = S2_lsr_i_p_xacc %13, %11, 6
     %15:doubleregs = L2_loadrd_io %1, -80 :: (load (s64) from %ir.cgep22, !tbaa !9)
-    %16:doubleregs = A2_addp killed %10, killed %15
+    %16:doubleregs = A2_addp %10, %15
     %17:doubleregs = L2_loadrd_io %1, -8 :: (load (s64) from %ir.cgep23, !tbaa !9)
-    %18:doubleregs = A2_addp killed %16, killed %17
-    %19:doubleregs = A2_addp killed %18, killed %14
+    %18:doubleregs = A2_addp %16, %17
+    %19:doubleregs = A2_addp %18, %14
     S2_storerd_io %1, 48, %19 :: (store (s64) into %ir.cgep19, !tbaa !9)
     %20:doubleregs = L2_loadrd_io %1, -64 :: (load (s64) from %ir.cgep25, !tbaa !9)
     %21:doubleregs = S6_rol_i_p %20, 63
@@ -291,10 +290,10 @@ body:             |
     %25:doubleregs = S6_rol_i_p %24, 45
     %26:doubleregs = S6_rol_i_p_xacc %25, %24, 3
     %27:doubleregs = S2_lsr_i_p_xacc %26, %24, 6
-    %28:doubleregs = A2_addp killed %23, %7
+    %28:doubleregs = A2_addp %23, %7
     %29:doubleregs = L2_loadrd_io %1, 0 :: (load (s64) from %ir.lsr.iv1, !tbaa !9)
-    %30:doubleregs = A2_addp killed %28, killed %29
-    %31:doubleregs = A2_addp killed %30, killed %27
+    %30:doubleregs = A2_addp %28, %29
+    %31:doubleregs = A2_addp %30, %27
     S2_storerd_io %1, 56, %31 :: (store (s64) into %ir.cgep24, !tbaa !9)
     %32:doubleregs = L2_loadrd_io %1, -56 :: (load (s64) from %ir.cgep28, !tbaa !9)
     %33:doubleregs = S6_rol_i_p %32, 63
@@ -303,11 +302,11 @@ body:             |
     %36:doubleregs = S6_rol_i_p %19, 45
     %37:doubleregs = S6_rol_i_p_xacc %36, %19, 3
     %38:doubleregs = S2_lsr_i_p_xacc %37, %19, 6
-    %39:doubleregs = A2_addp killed %35, %20
+    %39:doubleregs = A2_addp %35, %20
     %40:doubleregs = L2_loadrd_io %1, 8 :: (load (s64) from %ir.cgep29, !tbaa !9)
-    %41:doubleregs = A2_addp killed %39, killed %40
-    %42:doubleregs = A2_addp killed %41, killed %38
-    S2_storerd_io %1, 64, killed %42 :: (store (s64) into %ir.cgep27, !tbaa !9)
+    %41:doubleregs = A2_addp %39, %40
+    %42:doubleregs = A2_addp %41, %38
+    S2_storerd_io %1, 64, %42 :: (store (s64) into %ir.cgep27, !tbaa !9)
     %43:doubleregs = L2_loadrd_io %1, -48 :: (load (s64) from %ir.cgep31, !tbaa !9)
     %44:doubleregs = S6_rol_i_p %43, 63
     %45:doubleregs = S6_rol_i_p_xacc %44, %43, 56
@@ -315,11 +314,11 @@ body:             |
     %47:doubleregs = S6_rol_i_p %31, 45
     %48:doubleregs = S6_rol_i_p_xacc %47, %31, 3
     %49:doubleregs = S2_lsr_i_p_xacc %48, %31, 6
-    %50:doubleregs = A2_addp killed %46, %32
+    %50:doubleregs = A2_addp %46, %32
     %51:doubleregs = L2_loadrd_io %1, 16 :: (load (s64) from %ir.cgep32, !tbaa !9)
-    %52:doubleregs = A2_addp killed %50, killed %51
-    %53:doubleregs = A2_addp killed %52, killed %49
-    S2_storerd_io %1, 72, killed %53 :: (store (s64) into %ir.cgep30, !tbaa !9)
+    %52:doubleregs = A2_addp %50, %51
+    %53:doubleregs = A2_addp %52, %49
+    S2_storerd_io %1, 72, %53 :: (store (s64) into %ir.cgep30, !tbaa !9)
     ENDLOOP0 %bb.2, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
     J2_jump %bb.1, implicit-def $pc
 ...

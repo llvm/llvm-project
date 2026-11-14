@@ -13,7 +13,7 @@
 ;;!1 = !{!"branch_weights", i32 1, i32 2, i32 3}
 
 ; RUN: llvm-dis %S/Inputs/branch-weight.bc -o - | FileCheck %s
-; CHECK: !prof !0
-; CHECK: !0 = !{!"branch_weights", i32 1, i32 2}
-; CHECK-NOT: !prof !1
-; CHECK-NOT: !1 = !{!"branch_weights", i32 1, i32 2, i32 3}
+; CHECK: !prof ![[PROF:[0-9]+]]
+; CHECK-NOT: !prof
+; CHECK: ![[PROF]] = !{!"branch_weights", i32 1, i32 2}
+; CHECK-NOT: !{!"branch_weights", i32 1, i32 2, i32 3}

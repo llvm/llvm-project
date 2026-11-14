@@ -999,12 +999,9 @@ define i64 @abd_select_known_order_i64(i64 %a, i64 %b) nounwind {
 ; X64-LABEL: abd_select_known_order_i64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    shrq %rdi
-; X64-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
-; X64-NEXT:    orq %rsi, %rcx
-; X64-NEXT:    movq %rcx, %rax
+; X64-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
+; X64-NEXT:    orq %rsi, %rax
 ; X64-NEXT:    subq %rdi, %rax
-; X64-NEXT:    subq %rcx, %rdi
-; X64-NEXT:    cmovaeq %rdi, %rax
 ; X64-NEXT:    retq
   %l = lshr i64 %a, 1
   %r = or i64 %b, -9223372036854775808

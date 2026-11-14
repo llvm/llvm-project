@@ -73,3 +73,30 @@ entry:
   %obit = extractvalue {i32, i1} %t, 1
   ret i1 %obit
 }
+
+define {i64, i1} @uaddo_i64(i64 %v1, i64 %v2) nounwind {
+; CHECK-LABEL: uaddo_i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    suba.l #4, %sp
+; CHECK-NEXT:    movem.l %d2, (0,%sp) ; 8-byte Folded Spill
+; CHECK-NEXT:    move.l (8,%sp), %a0
+; CHECK-NEXT:    move.l (12,%sp), %d0
+; CHECK-NEXT:    move.l (20,%sp), %d1
+; CHECK-NEXT:    move.l (16,%sp), %d2
+; CHECK-NEXT:    add.l (24,%sp), %d2
+; CHECK-NEXT:    addx.l %d0, %d1
+; CHECK-NEXT:    scs %d0
+; CHECK-NEXT:    move.l %d2, (4,%a0)
+; CHECK-NEXT:    move.l %d1, (%a0)
+; CHECK-NEXT:    and.b #1, %d0
+; CHECK-NEXT:    move.b %d0, (8,%a0)
+; CHECK-NEXT:    move.l %a0, %d0
+; CHECK-NEXT:    movem.l (0,%sp), %d2 ; 8-byte Folded Reload
+; CHECK-NEXT:    adda.l #4, %sp
+; CHECK-NEXT:    move.l (%sp), %a1
+; CHECK-NEXT:    adda.l #4, %sp
+; CHECK-NEXT:    move.l %a1, (%sp)
+; CHECK-NEXT:    rts
+  %t = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %v1, i64 %v2)
+  ret {i64, i1} %t
+}

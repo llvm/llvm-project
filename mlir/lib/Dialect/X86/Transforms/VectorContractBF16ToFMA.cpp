@@ -218,16 +218,12 @@ getSubviewFromVectorInput(Location loc, PatternRewriter &rewriter, Value prodOp,
 //   %4 = x86.avx.cvt.packed.odd.indexed_to_f32 %m2 -> vector<8xf32>
 //   %5 = vector.fma %1, %4, %arg2
 //   scf.yield %3, %5
-struct VectorContractBF16ToFMA
-    : public OpRewritePattern<vector::ContractionOp> {
-  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+struct VectorContractBF16ToFMA : public AddContractionOpRewritePattern {
+  using AddContractionOpRewritePattern::AddContractionOpRewritePattern;
 
-  LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
-                                PatternRewriter &rewriter) const override {
-
-    if (contractOp.getKind() != vector::CombiningKind::ADD)
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Expects add combining kind.");
+  LogicalResult
+  matchAndRewriteAddContractOp(vector::ContractionOp contractOp,
+                               PatternRewriter &rewriter) const override {
 
     // TODO: Move this validation to a common utility folder. Planned to
     // do once (code refactoring), all architecture specific nanokernel

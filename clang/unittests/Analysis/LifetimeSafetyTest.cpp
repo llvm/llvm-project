@@ -1207,7 +1207,7 @@ TEST_F(LifetimeAnalysisTest, LifetimeboundTemplateFunctionReturnVal) {
   EXPECT_THAT(Origin("v2"), HasLoansTo({"b"}, "p2"));
   EXPECT_THAT(Origin("v3"), HasLoansTo({"v2"}, "p2"));
   // View temporary on RHS is lifetime-extended.
-  EXPECT_THAT(Origin("v4"), HasLoansTo({}, "p2"));
+  EXPECT_THAT(Origin("v4"), HasLoanToATemporary("p2"));
 }
 
 TEST_F(LifetimeAnalysisTest, LifetimeboundConversionOperator) {
@@ -1408,6 +1408,71 @@ TEST_F(LifetimeAnalysisTest, LivenessOutsideLoop) {
   )");
   EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p2"));
   EXPECT_THAT(Origins({"p"}), MaybeLiveAt("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, LivenessInInfiniteLoop) {
+  SetupTest(R"(
+    void target() {
+      MyObj s;
+      MyObj* p = &s;
+      POINT(p1);
+      for (;;) {
+        use(*p);
+        POINT(p2);
+      }
+    }
+  )");
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p1"));
+  // The loop's latch block is analyzed before its successors, which demotes the
+  // liveness in the loop body.
+  EXPECT_THAT(Origins({"p"}), MaybeLiveAt("p2"));
+}
+
+TEST_F(LifetimeAnalysisTest, LivenessInInfiniteLoopConditional) {
+  SetupTest(R"(
+    void target(bool c) {
+      MyObj s;
+      MyObj* p = &s;
+      for (;;) {
+        POINT(p1);
+        if (c)
+          use(*p);
+      }
+    }
+  )");
+  EXPECT_THAT(Origins({"p"}), MaybeLiveAt("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, LivenessInInfiniteLoopOnOneBranch) {
+  SetupTest(R"(
+    void target(bool c) {
+      MyObj s;
+      MyObj* p = &s;
+      POINT(p1);
+      if (c)
+        for (;;)
+          use(*p);
+    }
+  )");
+  EXPECT_THAT(Origins({"p"}), MaybeLiveAt("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, LivenessInInfiniteLoopsOnBothBranches) {
+  SetupTest(R"(
+    void target(bool c) {
+      MyObj s;
+      MyObj* p = &s;
+      POINT(p1);
+      if (c) {
+        for (;;)
+          use(*p);
+      } else {
+        for (;;)
+          use(*p);
+      }
+    }
+  )");
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p1"));
 }
 
 // A use is an access through an lvalue: an lvalue-to-rvalue conversion or a

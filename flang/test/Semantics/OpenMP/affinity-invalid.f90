@@ -123,3 +123,14 @@ subroutine affinity_section_step_zero()
   !$omp task affinity(a(1:10:0))
   !$omp end task
 end subroutine
+
+! An invalid explicit stride should not also produce a zero-size diagnostic.
+subroutine affinity_empty_section_stride()
+  integer :: a(10)
+  !ERROR: 'a' in AFFINITY clause must not specify a stride
+  !$omp task affinity(a(2:2:1))
+  !$omp end task
+  !ERROR: 'a' in AFFINITY clause must not specify a stride
+  !$omp task affinity(a(2:1:1))
+  !$omp end task
+end subroutine

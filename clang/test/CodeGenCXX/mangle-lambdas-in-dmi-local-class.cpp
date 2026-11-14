@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu %s -emit-llvm -I%S -std=c++20 -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux-gnu %s -emit-llvm -I%S -std=c++20 -o - | FileCheck %s %}
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fclang-abi-compat=22 %s -emit-llvm -I%S -std=c++20 -o - | FileCheck --check-prefix=ABICOMPAT22 %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux-gnu -fclang-abi-compat=22 %s -emit-llvm -I%S -std=c++20 -o - | FileCheck --check-prefix=ABICOMPAT22 %s %}
 
 // Ensure that local classes mangled with <local-name> while mangling a lamda
 // in default member initializer.

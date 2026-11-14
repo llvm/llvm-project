@@ -1,10 +1,10 @@
 ; RUN: rm -rf %t && split-file %s %t
 
-; RUN: not llvm-as < %t/not_a_constant.ll -o /dev/null 2>&1 | FileCheck -check-prefix=NOT_A_CONSTANT %s
-; RUN: not llvm-as < %t/not_a_sclar.ll -o /dev/null 2>&1 | FileCheck -check-prefix=NOT_A_SCALAR %s
-; RUN: not llvm-as < %t/not_a_vector.ll -o /dev/null 2>&1 | FileCheck -check-prefix=NOT_A_VECTOR %s
-; RUN: not llvm-as < %t/wrong_explicit_type.ll -o /dev/null 2>&1 | FileCheck -check-prefix=WRONG_EXPLICIT_TYPE %s
-; RUN: not llvm-as < %t/wrong_implicit_type.ll -o /dev/null 2>&1 | FileCheck -check-prefix=WRONG_IMPLICIT_TYPE %s
+; RUN: not llvm-as < %t/not_a_constant.ll -disable-output 2>&1 | FileCheck -check-prefix=NOT_A_CONSTANT %s
+; RUN: not llvm-as < %t/not_a_sclar.ll -disable-output 2>&1 | FileCheck -check-prefix=NOT_A_SCALAR %s
+; RUN: not llvm-as < %t/not_a_vector.ll -disable-output 2>&1 | FileCheck -check-prefix=NOT_A_VECTOR %s
+; RUN: not llvm-as < %t/wrong_explicit_type.ll -disable-output 2>&1 | FileCheck -check-prefix=WRONG_EXPLICIT_TYPE %s
+; RUN: not llvm-as < %t/wrong_implicit_type.ll -disable-output 2>&1 | FileCheck -check-prefix=WRONG_IMPLICIT_TYPE %s
 
 ;--- not_a_constant.ll
 ; NOT_A_CONSTANT: error: expected instruction opcode

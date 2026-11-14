@@ -797,24 +797,31 @@ static void initDispatchSerializationFn(StringRef opVar, raw_ostream &os) {
       "LogicalResult Serializer::dispatchToAutogenSerialization(Operation "
       "*{0}) {{\n",
       opVar);
+  os << "  using DispatchFn = LogicalResult (*)(Serializer &, Operation *);\n";
+  os << "  static const llvm::DenseMap<TypeID, DispatchFn> dispatchTable = {\n";
 }
 
-/// Generates the body of the dispatch function. This function generates the
-/// check that if satisfied, will call the serialization function generated for
-/// the `op`.
+/// Generates the dispatch table entry that maps the TypeID of `op` to a call
+/// of the serialization function generated for it.
 static void emitSerializationDispatch(const Operator &op, StringRef tabs,
                                       StringRef opVar, raw_ostream &os) {
   os << tabs
-     << formatv("if (isa<{0}>({1})) {{\n", op.getQualCppClassName(), opVar);
-  os << tabs
-     << formatv("  return processOp(cast<{0}>({1}));\n",
+     << formatv("{{TypeID::get<{0}>(), [](Serializer &s, Operation *{1}) {{\n",
                 op.getQualCppClassName(), opVar);
-  os << tabs << "}\n";
+  os << tabs
+     << formatv("   return s.processOp(cast<{0}>({1}));\n",
+                op.getQualCppClassName(), opVar);
+  os << tabs << " }},\n";
 }
 
 /// Generates the epilogue for the function that dispatches the serialization of
 /// the operation.
 static void finalizeDispatchSerializationFn(StringRef opVar, raw_ostream &os) {
+  os << "  };\n";
+  os << formatv("  if (DispatchFn fn = "
+                "dispatchTable.lookup({0}->getName().getTypeID()))\n",
+                opVar);
+  os << formatv("    return fn(*this, {0});\n", opVar);
   os << formatv(
       "  return {0}->emitError(\"unhandled operation serialization\");\n",
       opVar);

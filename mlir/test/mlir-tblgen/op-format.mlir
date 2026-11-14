@@ -228,6 +228,15 @@ test.format_optional_default_enum_attr case10
 // CHECK-NOT: case5
 test.format_optional_default_enum_attr case5
 
+// CHECK: test.format_optional_default_enum_props case10 read, write{{$}}
+test.format_optional_default_enum_props case10 read, write
+
+// CHECK: test.format_optional_default_enum_props write{{$}}
+test.format_optional_default_enum_props case5 write
+
+// CHECK: test.format_optional_default_enum_props{{$}}
+test.format_optional_default_enum_props case5 none
+
 //===----------------------------------------------------------------------===//
 // Format optional operands and results
 //===----------------------------------------------------------------------===//

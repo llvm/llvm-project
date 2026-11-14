@@ -1570,7 +1570,7 @@ private:
   bool isInstUnsupported(const LegalityQuery &Query) const {
     using namespace LegalizeActions;
     auto Step = LI.getAction(Query);
-    return Step.Action == Unsupported || Step.Action == NotFound;
+    return Step.Action == Unsupported;
   }
 
   bool isInstLegal(const LegalityQuery &Query) const {

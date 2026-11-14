@@ -21,7 +21,8 @@ FatArchs:
     size:            15380
     align:           12
 Slices:          
-  - FileHeader:      
+  - IsLittleEndian:  true
+    FileHeader:      
       magic:           0xFEEDFACE
       cputype:         0x00000007
       cpusubtype:      0x00000003
@@ -29,7 +30,8 @@ Slices:
       ncmds:           0
       sizeofcmds:      0
       flags:           0x01218085
-  - FileHeader:      
+  - IsLittleEndian:  true
+    FileHeader:      
       magic:           0xFEEDFACF
       cputype:         0x01000007
       cpusubtype:      0x80000003
@@ -97,7 +99,8 @@ FatArchs:
     size:       0
     align:      0
 Slices:
-  - FileHeader:
+  - IsLittleEndian:  true
+    FileHeader:
       magic:      0xFEEDFACE
       cputype:    0x00000007
       cpusubtype: 0x00000003
@@ -105,7 +108,8 @@ Slices:
       ncmds:      0
       sizeofcmds: 0
       flags:      0x00000000
-  - FileHeader:
+  - IsLittleEndian:  true
+    FileHeader:
       magic:      0xFEEDFACE
       cputype:    0x00000007
       cpusubtype: 0x00000003

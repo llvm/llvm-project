@@ -14,5 +14,6 @@ unittest("DWARFLinkerParallelTests") {
     "DIEInfoPlacementTest.cpp",
     "DWARFLinkerTest.cpp",
     "StringPoolTest.cpp",
+    "TypePoolTest.cpp",
   ]
 }

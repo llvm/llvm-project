@@ -44,6 +44,7 @@ def ShapeDialect : Dialect {
 }
 
 class Shape_Type<string name, string typeMnemonic> : TypeDef<ShapeDialect, name> {
+  let cppIncludes = ["mlir/Dialect/Shape/IR/Shape.h"];
   let mnemonic = typeMnemonic;
 }
 

@@ -19,7 +19,7 @@ extern "C" void construct() {
   WithCtor c(2,5);
 }
 
-// CIR: cir.global "private" constant cir_private @__const.construct.tmp = #cir.const_record<{#cir.int<4> : !s32i, #cir.zero : !cir.array<!u8i x 4>, #cir.int<10> : !s64i, #cir.const_record<{#cir.int<5> : !s32i}> : !rec_HasVal, #cir.zero : !cir.array<!u8i x 4>}> : !rec_WithCtor
+// CIR: cir.global "private" constant cir_private unnamed_addr @__const.construct.tmp = #cir.const_record<{#cir.int<4> : !s32i, #cir.zero : !cir.array<!u8i x 4>, #cir.int<10> : !s64i, #cir.const_record<{#cir.int<5> : !s32i}> : !rec_HasVal, #cir.zero : !cir.array<!u8i x 4>}> : !rec_WithCtor
 // CIR-LABEL: construct()
 // CIR-NEXT: %[[WC_ALLOCA:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!rec_WithCtor>
 // CIR-NEXT: %[[TMP_ALLOCA:.*]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!rec_WithCtor>
@@ -28,7 +28,7 @@ extern "C" void construct() {
 // CIR-NEXT: cir.copy %[[TMP_ALLOCA]] align(8) to %[[WC_ALLOCA]] align(8) skip_tail_padding : !cir.ptr<!rec_WithCtor>
 // CIR-NEXT: cir.return
 
-// LLVM: @__const.construct.tmp = private constant %struct.WithCtor <{ i32 4, [4 x i8] zeroinitializer, i64 10, %struct.HasVal { i32 5 }, [4 x i8] zeroinitializer }>
+// LLVM: @__const.construct.tmp = private unnamed_addr constant %struct.WithCtor <{ i32 4, [4 x i8] zeroinitializer, i64 10, %struct.HasVal { i32 5 }, [4 x i8] zeroinitializer }>
 // LLVM-LABEL: construct()
 // LLVM-NEXT: %[[WC_ALLOCA:.*]] = alloca %struct.WithCtor
 // LLVM-NEXT: %[[TMP_ALLOCA:.*]] = alloca %struct.WithCtor

@@ -13,7 +13,6 @@
 #ifndef MLIR_DIALECT_PTR_IR_MEMORYSPACEINTERFACES_H
 #define MLIR_DIALECT_PTR_IR_MEMORYSPACEINTERFACES_H
 
-#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpDefinition.h"
 

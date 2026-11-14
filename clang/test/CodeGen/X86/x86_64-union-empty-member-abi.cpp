@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-unknown-linux-gnu -std=c++17 -emit-llvm %s -o - | FileCheck %s %}
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -emit-llvm -fexperimental-abi-lowering %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-unknown-linux-gnu -std=c++17 -emit-llvm -fexperimental-abi-lowering %s -o - | FileCheck %s %}
 
 struct Empty {};
 struct alignas(16) EmptyAligned {};

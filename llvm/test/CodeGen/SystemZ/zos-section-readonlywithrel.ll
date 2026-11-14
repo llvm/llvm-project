@@ -9,7 +9,11 @@
 ; per-symbol C_WSA64 PR section (ESD_LB_Deferred) rather than C_CODE64
 ; (ESD_LB_Initial, read-only/executable).
 ;
+; Check that requested relocation models are ignored and DynamicNoPIC behavior
+; is retained in all cases:
 ; RUN: llc < %s -mtriple=s390x-ibm-zos | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-ibm-zos -relocation-model=pic | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-ibm-zos -relocation-model=static | FileCheck %s
 
 @_ZTV4Base = hidden constant [2 x ptr] [ptr null, ptr @_ZTI4Base], align 8
 @_ZTI4Base = external hidden global ptr

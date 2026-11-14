@@ -13,13 +13,10 @@
 #ifndef MLIR_DIALECT_CONTROLFLOW_IR_CONTROLFLOWOPS_H
 #define MLIR_DIALECT_CONTROLFLOW_IR_CONTROLFLOWOPS_H
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 namespace mlir {
 class PatternRewriter;

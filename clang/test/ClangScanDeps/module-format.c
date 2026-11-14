@@ -2,9 +2,7 @@
 // obj format, and that the scanner can read obj format from PCH and modules
 // imported by PCH.
 
-// Unsupported on AIX because we don't support the requisite "__clangast"
-// section in XCOFF yet.
-// UNSUPPORTED: target={{.*}}-aix{{.*}}
+// REQUIRES: object-wrapped-module
 
 // RUN: rm -rf %t && mkdir %t
 // RUN: cp %S/Inputs/modules-pch/* %t

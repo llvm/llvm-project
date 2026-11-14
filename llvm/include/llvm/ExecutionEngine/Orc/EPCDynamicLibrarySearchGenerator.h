@@ -39,10 +39,10 @@ public:
   /// If \p AddAbsoluteSymbols is provided, it is used to add the symbols to the
   /// \c JITDylib; otherwise it uses JD.define(absoluteSymbols(...)).
   EPCDynamicLibrarySearchGenerator(
-      ExecutionSession &ES, DylibManager &DylibMgr, tpctypes::DylibHandle H,
+      DylibManager &DylibMgr, tpctypes::DylibHandle H,
       SymbolPredicate Allow = SymbolPredicate(),
       AddAbsoluteSymbolsFn AddAbsoluteSymbols = nullptr)
-      : ES(ES), DylibMgr(DylibMgr), H(H), Allow(std::move(Allow)),
+      : DylibMgr(DylibMgr), H(H), Allow(std::move(Allow)),
         AddAbsoluteSymbols(std::move(AddAbsoluteSymbols)) {}
 
   /// Create an EPCDynamicLibrarySearchGenerator that resolves all symbols
@@ -53,9 +53,9 @@ public:
   /// "missing symbol" behavior in ORC. This distinction shouldn't matter for
   /// most use-cases).
   EPCDynamicLibrarySearchGenerator(
-      ExecutionSession &ES, DylibManager &DylibMgr, SymbolPredicate Allow,
+      DylibManager &DylibMgr, SymbolPredicate Allow,
       AddAbsoluteSymbolsFn AddAbsoluteSymbols = nullptr)
-      : ES(ES), DylibMgr(DylibMgr), Allow(std::move(Allow)),
+      : DylibMgr(DylibMgr), Allow(std::move(Allow)),
         AddAbsoluteSymbols(std::move(AddAbsoluteSymbols)) {}
 
   /// Permanently loads the library at the given path and, on success, returns
@@ -63,17 +63,17 @@ public:
   /// definitions in the library. On failure returns the reason the library
   /// failed to load.
   static Expected<std::unique_ptr<EPCDynamicLibrarySearchGenerator>>
-  Load(ExecutionSession &ES, DylibManager &DylibMgr, const char *LibraryPath,
+  Load(DylibManager &DylibMgr, const char *LibraryPath,
        SymbolPredicate Allow = SymbolPredicate(),
        AddAbsoluteSymbolsFn AddAbsoluteSymbols = nullptr);
 
   /// Creates a EPCDynamicLibrarySearchGenerator that searches for symbols in
   /// the target process.
   static Expected<std::unique_ptr<EPCDynamicLibrarySearchGenerator>>
-  GetForTargetProcess(ExecutionSession &ES, DylibManager &DylibMgr,
+  GetForTargetProcess(DylibManager &DylibMgr,
                       SymbolPredicate Allow = SymbolPredicate(),
                       AddAbsoluteSymbolsFn AddAbsoluteSymbols = nullptr) {
-    return Load(ES, DylibMgr, nullptr, std::move(Allow),
+    return Load(DylibMgr, nullptr, std::move(Allow),
                 std::move(AddAbsoluteSymbols));
   }
 
@@ -84,7 +84,6 @@ public:
 private:
   Error addAbsolutes(JITDylib &JD, SymbolMap Symbols);
 
-  ExecutionSession &ES;
   DylibManager &DylibMgr;
   std::optional<tpctypes::DylibHandle> H;
   SymbolPredicate Allow;

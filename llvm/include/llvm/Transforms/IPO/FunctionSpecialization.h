@@ -149,7 +149,10 @@ struct Spec {
       : F(F), Sig(S), Score(Score), CodeSize(CodeSize) {}
 };
 
+struct IPOOptions;
+
 class InstCostVisitor : public InstVisitor<InstCostVisitor, Constant *> {
+  const IPOOptions &Opts;
   std::function<BlockFrequencyInfo &(Function &)> GetBFI;
   Function *F;
   const DataLayout &DL;
@@ -170,10 +173,11 @@ class InstCostVisitor : public InstVisitor<InstCostVisitor, Constant *> {
   ConstMap::iterator LastVisited;
 
 public:
-  InstCostVisitor(std::function<BlockFrequencyInfo &(Function &)> GetBFI,
+  InstCostVisitor(const IPOOptions &Opts,
+                  std::function<BlockFrequencyInfo &(Function &)> GetBFI,
                   Function *F, const DataLayout &DL, TargetTransformInfo &TTI,
                   SCCPSolver &Solver)
-      : GetBFI(GetBFI), F(F), DL(DL), TTI(TTI), Solver(Solver) {}
+      : Opts(Opts), GetBFI(GetBFI), F(F), DL(DL), TTI(TTI), Solver(Solver) {}
 
   bool isBlockExecutable(BasicBlock *BB) const {
     return Solver.isBlockExecutable(BB) && !DeadBlocks.contains(BB);
@@ -229,6 +233,7 @@ private:
 };
 
 class FunctionSpecializer {
+  const IPOOptions &Opts;
 
   /// The IPSCCP Solver.
   SCCPSolver &Solver;
@@ -251,14 +256,12 @@ class FunctionSpecializer {
   unsigned NGlobals = 0;
 
 public:
-  FunctionSpecializer(
+  LLVM_ABI FunctionSpecializer(
       SCCPSolver &Solver, Module &M, FunctionAnalysisManager *FAM,
       std::function<BlockFrequencyInfo &(Function &)> GetBFI,
       std::function<const TargetLibraryInfo &(Function &)> GetTLI,
       std::function<TargetTransformInfo &(Function &)> GetTTI,
-      std::function<AssumptionCache &(Function &)> GetAC)
-      : Solver(Solver), M(M), FAM(FAM), GetBFI(GetBFI), GetTLI(GetTLI),
-        GetTTI(GetTTI), GetAC(GetAC) {}
+      std::function<AssumptionCache &(Function &)> GetAC);
 
   LLVM_ABI ~FunctionSpecializer();
 
@@ -266,7 +269,7 @@ public:
 
   InstCostVisitor getInstCostVisitorFor(Function *F) {
     auto &TTI = GetTTI(*F);
-    return InstCostVisitor(GetBFI, F, M.getDataLayout(), TTI, Solver);
+    return InstCostVisitor(Opts, GetBFI, F, M.getDataLayout(), TTI, Solver);
   }
 
   bool isDeadFunction(Function *F) { return DeadFunctions.contains(F); }

@@ -14,7 +14,6 @@
 ---
 name:            f
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0', virtual-reg: '' }
 frameInfo:

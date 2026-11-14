@@ -64,9 +64,8 @@ define i64 @caller_double_in_gpr_exhausted_fprs() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    ori $a0, $zero, 0
-; CHECK-NEXT:    lu32i.d $a0, 131072
-; CHECK-NEXT:    lu52i.d $a0, $a0, 1026
+; CHECK-NEXT:    lu12i.w $a0, 8209
+; CHECK-NEXT:    slli.d $a0, $a0, 37
 ; CHECK-NEXT:    vldi $vr0, -912
 ; CHECK-NEXT:    vldi $vr1, -1024
 ; CHECK-NEXT:    vldi $vr2, -1016

@@ -562,7 +562,7 @@ define bfloat @from_f8e5m2_to_bf16() {
 ; CHECK-NEXT:    movl $1065353216, %ecx # imm = 0x3F800000
 ; CHECK-NEXT:    cmovpl %eax, %ecx
 ; CHECK-NEXT:    shrl $16, %ecx
-; CHECK-NEXT:    pinsrw $0, %ecx, %xmm0
+; CHECK-NEXT:    movd %ecx, %xmm0
 ; CHECK-NEXT:    retq
   %r = call bfloat @llvm.convert.from.arbitrary.fp.bf16.i8(i8 60, metadata !"Float8E5M2")
   ret bfloat %r
@@ -699,7 +699,7 @@ define bfloat @from_f8e5m2_bf16(i8 %x) {
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
 ; CHECK-NEXT:    cmovnpl %eax, %ecx
 ; CHECK-NEXT:    shrl $16, %ecx
-; CHECK-NEXT:    pinsrw $0, %ecx, %xmm0
+; CHECK-NEXT:    movd %ecx, %xmm0
 ; CHECK-NEXT:    retq
   %r = call bfloat @llvm.convert.from.arbitrary.fp.bf16.i8(i8 %x, metadata !"Float8E5M2")
   ret bfloat %r
@@ -757,7 +757,7 @@ define bfloat @from_f8e4m3fn_bf16(i8 %x) {
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
 ; CHECK-NEXT:    cmovnpl %ecx, %eax
 ; CHECK-NEXT:    shrl $16, %eax
-; CHECK-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    retq
   %r = call bfloat @llvm.convert.from.arbitrary.fp.bf16.i8(i8 %x, metadata !"Float8E4M3FN")
   ret bfloat %r
@@ -871,8 +871,8 @@ define <2 x bfloat> @from_f8e5m2_v2bf16(<2 x i8> %x) {
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
 ; CHECK-NEXT:    cmovnpl %ecx, %r8d
 ; CHECK-NEXT:    shrl $16, %r8d
-; CHECK-NEXT:    pinsrw $0, %r8d, %xmm0
-; CHECK-NEXT:    pinsrw $0, %eax, %xmm1
+; CHECK-NEXT:    movd %r8d, %xmm0
+; CHECK-NEXT:    movd %eax, %xmm1
 ; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8

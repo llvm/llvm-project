@@ -159,6 +159,7 @@ target(tsan_target_type, "rtl") {
       "-Wl,-U,___sanitizer_symbolize_flush",
       "-Wl,-U,___sanitizer_symbolize_set_demangle",
       "-Wl,-U,___sanitizer_symbolize_set_inline_frames",
+      "-Wl,-U,__dyld_get_dyld_header",
 
       # FIXME: better
       "-Wl,-install_name,@rpath/libclang_rt.tsan_osx_dynamic.dylib",

@@ -32,11 +32,11 @@ NeedsCtor Holder::first;
 
 // CIR: cir.global external @p = #cir.global_view<@_ZN6Holder5firstE> : !cir.ptr<!rec_NeedsCtor>
 // CIR: cir.global external @_ZN6Holder6secondE = #cir.zero : !rec_NeedsCtor
-// CIR: cir.func internal private @__cxx_global_var_init() {
+// CIR: cir.func internal private @__cxx_global_var_init(){{.*}} {
 // CIR:   %[[SECOND:.*]] = cir.get_global @_ZN6Holder6secondE : !cir.ptr<!rec_NeedsCtor>
 // CIR:   cir.call @_ZN9NeedsCtorC1Ev(%[[SECOND]])
 // CIR: cir.global external @_ZN6Holder5firstE = #cir.zero : !rec_NeedsCtor
-// CIR: cir.func internal private @__cxx_global_var_init.1() {
+// CIR: cir.func internal private @__cxx_global_var_init.1(){{.*}} {
 // CIR:   %[[FIRST:.*]] = cir.get_global @_ZN6Holder5firstE : !cir.ptr<!rec_NeedsCtor>
 // CIR:   cir.call @_ZN9NeedsCtorC1Ev(%[[FIRST]])
 

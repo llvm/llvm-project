@@ -9,6 +9,7 @@
 ---
 
 name: need_skip_vperm_pk16
+tracksRegLiveness: false
 body: |
   ; GFX1250-LABEL: name: need_skip_vperm_pk16
   ; GFX1250: bb.0:
@@ -50,6 +51,7 @@ body: |
 ---
 
 name: remove_skip_without_vperm_pk16
+tracksRegLiveness: false
 body: |
   ; GFX1250-LABEL: name: remove_skip_without_vperm_pk16
   ; GFX1250: bb.0:

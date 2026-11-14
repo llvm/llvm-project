@@ -13,57 +13,37 @@ define void @copyable_mask_lane(ptr %r, ptr %x, ptr %y, i32 %n, ptr %out) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[AY3:%.*]] = phi float [ [[SY3:%.*]], %[[LOOP]] ], [ 0.000000e+00, %[[ENTRY]] ]
-; CHECK-NEXT:    [[AY2:%.*]] = phi float [ [[SY2:%.*]], %[[LOOP]] ], [ 0.000000e+00, %[[ENTRY]] ]
-; CHECK-NEXT:    [[AY1:%.*]] = phi float [ [[SY1:%.*]], %[[LOOP]] ], [ 0.000000e+00, %[[ENTRY]] ]
-; CHECK-NEXT:    [[AY0:%.*]] = phi float [ [[SY0:%.*]], %[[LOOP]] ], [ 0.000000e+00, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x float> [ [[TMP20:%.*]], %[[LOOP]] ], [ zeroinitializer, %[[ENTRY]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi <4 x float> [ [[TMP23:%.*]], %[[LOOP]] ], [ zeroinitializer, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[PR0:%.*]] = getelementptr inbounds nuw i8, ptr [[R]], i64 [[IV]]
 ; CHECK-NEXT:    [[IV1:%.*]] = or disjoint i64 [[IV]], 1
 ; CHECK-NEXT:    [[C1:%.*]] = icmp samesign ult i64 [[IV1]], [[N64]]
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> poison, i64 [[IV]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP8]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP25:%.*]] = or disjoint <2 x i64> [[TMP4]], <i64 2, i64 3>
-; CHECK-NEXT:    [[IV2:%.*]] = or disjoint i64 [[IV]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp samesign ult <2 x i64> [[TMP25]], [[TMP6]]
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> poison, i64 [[IV]], i64 0
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <2 x i64> [[TMP4]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = or disjoint <2 x i64> [[TMP15]], <i64 2, i64 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp samesign ult <2 x i64> [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    [[PX0:%.*]] = getelementptr inbounds nuw float, ptr [[X]], i64 [[IV]]
 ; CHECK-NEXT:    [[PY0:%.*]] = getelementptr inbounds nuw float, ptr [[Y]], i64 [[IV]]
-; CHECK-NEXT:    [[Y0:%.*]] = load float, ptr [[PY0]], align 4
-; CHECK-NEXT:    [[PY1:%.*]] = getelementptr inbounds nuw float, ptr [[Y]], i64 [[IV1]]
-; CHECK-NEXT:    [[Y1:%.*]] = load float, ptr [[PY1]], align 4
-; CHECK-NEXT:    [[PY2:%.*]] = getelementptr inbounds nuw float, ptr [[Y]], i64 [[IV2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load <4 x i8>, ptr [[PR0]], align 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <4 x i8> [[TMP9]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i1> <i1 true, i1 poison, i1 poison, i1 poison>, i1 [[C1]], i64 1
-; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <2 x i1> [[TMP7]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i1> [[TMP5]], <4 x i1> [[TMP26]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i1> [[TMP8]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i1> [[TMP5]], <4 x i1> [[TMP12]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP14:%.*]] = and <4 x i1> [[TMP13]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = load <4 x float>, ptr [[PX0]], align 4
 ; CHECK-NEXT:    [[TMP19:%.*]] = select <4 x i1> [[TMP14]], <4 x float> [[TMP18]], <4 x float> zeroinitializer
 ; CHECK-NEXT:    [[TMP20]] = fadd fast <4 x float> [[TMP19]], [[TMP3]]
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i1> [[TMP10]], i64 0
-; CHECK-NEXT:    [[CY0:%.*]] = select fast i1 [[TMP17]], float [[Y0]], float 0.000000e+00
-; CHECK-NEXT:    [[SY0]] = fadd fast float [[CY0]], [[AY0]]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP14]], i64 1
-; CHECK-NEXT:    [[CY1:%.*]] = select fast i1 [[TMP11]], float [[Y1]], float 0.000000e+00
-; CHECK-NEXT:    [[SY1]] = fadd fast float [[CY1]], [[AY1]]
-; CHECK-NEXT:    [[TMP12:%.*]] = load <2 x float>, ptr [[PY2]], align 4
-; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <4 x i1> [[TMP14]], <4 x i1> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[TMP24:%.*]] = select <2 x i1> [[TMP23]], <2 x float> [[TMP12]], <2 x float> zeroinitializer
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x float> [[TMP24]], i64 0
-; CHECK-NEXT:    [[SY2]] = fadd fast float [[TMP15]], [[AY2]]
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[TMP24]], i64 1
-; CHECK-NEXT:    [[SY3]] = fadd fast float [[TMP16]], [[AY3]]
+; CHECK-NEXT:    [[TMP24:%.*]] = load <4 x float>, ptr [[PY0]], align 4
+; CHECK-NEXT:    [[TMP25:%.*]] = select <4 x i1> [[TMP14]], <4 x float> [[TMP24]], <4 x float> zeroinitializer
+; CHECK-NEXT:    [[TMP23]] = fadd fast <4 x float> [[TMP25]], [[TMP11]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 4
 ; CHECK-NEXT:    [[CMP_LOOP:%.*]] = icmp samesign ult i64 [[IV_NEXT]], [[N64]]
 ; CHECK-NEXT:    br i1 [[CMP_LOOP]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[TMP21:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP20]])
 ; CHECK-NEXT:    store volatile float [[TMP21]], ptr [[OUT]], align 4
-; CHECK-NEXT:    [[RY0:%.*]] = fadd fast float [[SY1]], [[SY0]]
-; CHECK-NEXT:    [[RY1:%.*]] = fadd fast float [[RY0]], [[SY2]]
-; CHECK-NEXT:    [[TMP22:%.*]] = fadd fast float [[RY1]], [[SY3]]
+; CHECK-NEXT:    [[TMP22:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP23]])
 ; CHECK-NEXT:    [[OUT1:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 4
 ; CHECK-NEXT:    store volatile float [[TMP22]], ptr [[OUT1]], align 4
 ; CHECK-NEXT:    ret void

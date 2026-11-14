@@ -106,7 +106,7 @@ static void embedSYCLDeviceBinary(CompilerInstance &CI, llvm::Module &M) {
 
 // Emits the output requested by \p Action for \p MlirModule, a CIR module that
 // has been through the CIR-to-CIR pipeline. Language facts are read from the
-// module's #cir.lowering_lang_options and target facts from \p CI, so this
+// module's #cir.lowering_options and target facts from \p CI, so this
 // does not need an ASTContext and can also run on CIR loaded from a file.
 // \p AddFunctionSourceLocations, if set, runs on the lowered LLVM module
 // before linking.
@@ -156,8 +156,8 @@ static void emitCIRModuleOutput(
 
     // Read the lowering facts before lowering rewrites the module. Without the
     // attribute (e.g. hand-written CIR) every fact defaults to off.
-    auto LangOptsAttr = MlirModule->getAttrOfType<cir::LoweringLangOptionsAttr>(
-        cir::CIRDialect::getLoweringLangOptionsAttrName());
+    auto LangOptsAttr = MlirModule->getAttrOfType<cir::LoweringOptionsAttr>(
+        cir::CIRDialect::getLoweringOptionsAttrName());
     const bool EnableOpenMP = LangOptsAttr && LangOptsAttr.getOpenmp();
 
     // Route LLVM backend diagnostics (optimization remarks, unsupported

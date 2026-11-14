@@ -14,8 +14,6 @@
 #ifndef OPENACC_MP_COMMON_INTERFACES_OPSINTERFACES_H_
 #define OPENACC_MP_COMMON_INTERFACES_OPSINTERFACES_H_
 
-#include "mlir/IR/OpDefinition.h"
-
 #include "mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.h.inc"
 
 #endif // OPENACC_MP_COMMON_INTERFACES_OPSINTERFACES_H_

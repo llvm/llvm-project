@@ -1,0 +1,106 @@
+## Tests stale block matching with pseudo probes that are not stored in probe
+## index order, which happens when the block layout differs from the source
+## order.
+
+# REQUIRES: system-linux
+# RUN: split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %t/main.s -o %t.o
+# RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib
+# RUN: llvm-bolt %t.exe -o %t.out --data %t/yaml -v=2 \
+# RUN:   --print-cfg --funcs=main --infer-stale-profile \
+# RUN:   --stale-matching-with-pseudo-probes 2>&1 | FileCheck %s
+
+## The entry and return blocks get 100, the "else" block (movl) 10 and the
+## "then" block (xorl) 90. The return block is laid out before both of them.
+# CHECK:      .LBB00 (
+# CHECK-NEXT:   Entry Point
+# CHECK-NEXT:   Exec Count : 100
+# CHECK:      .Ltmp2 (
+# CHECK-NEXT:   Exec Count : 100
+# CHECK:      .Ltmp1 (
+# CHECK-NEXT:   Exec Count : 10
+# CHECK:        movl $0x1, %eax
+# CHECK:      .Ltmp0 (
+# CHECK-NEXT:   Exec Count : 90
+# CHECK:        xorl %eax, %eax
+# CHECK: BOLT-INFO: inference found an exact pseudo probe match for 100.00% of basic blocks (4 out of 4 stale)
+
+#--- main.s
+  .text
+  .globl  main
+  .p2align        4, 0x90
+  .type   main,@function
+main:
+# %bb.0:
+  pushq   %rbp
+  movq    %rsp, %rbp
+  .pseudoprobe    15822663052811949562 1 0 0 main
+  testl   %edi, %edi
+  jne     .Lthen
+  jmp     .Lelse
+## Probe 4 (return) is laid out before probes 3 (else) and 2 (then), so the
+## probes are stored in the order 1, 4, 3, 2.
+.Lreturn:
+  .pseudoprobe    15822663052811949562 4 0 0 main
+  popq    %rbp
+  retq
+.Lelse:
+  .pseudoprobe    15822663052811949562 3 0 0 main
+  movl    $1, %eax
+  jmp     .Lreturn
+.Lthen:
+  .pseudoprobe    15822663052811949562 2 0 0 main
+  xorl    %eax, %eax
+  jmp     .Lreturn
+.Lfunc_end0:
+  .size   main, .Lfunc_end0-main
+  .section        .pseudo_probe_desc,"",@progbits
+  .quad   -2624081020897602054
+  .quad   4294967295
+  .byte   4
+  .ascii  "main"
+
+#--- yaml
+---
+header:
+  profile-version: 1
+  binary-name:     'match-blocks-with-pseudo-probes-unordered.test.tmp.exe'
+  binary-build-id: '<unknown>'
+  profile-flags:   [ lbr ]
+  profile-origin:  branch profile reader
+  profile-events:  ''
+  dfs-order:       false
+  hash-func:       xxh3
+functions:
+  - name:                   main
+    fid:                    0
+    hash:                   0x0000000000000001
+    exec:                   100
+    nblocks:                4
+    blocks:
+      - bid:             0
+        hash:            0xFFFFFFFFFFFFFFF1
+        insns:           4
+        exec:            100
+        succ:            [ { bid: 1, cnt: 90 }, { bid: 2, cnt: 10 } ]
+        probes:          [ { blk: [ 1 ] } ]
+      - bid:             1
+        hash:            0xFFFFFFFFFFFFFFF2
+        insns:           2
+        exec:            90
+        probes:          [ { blk: [ 2 ] } ]
+      - bid:             2
+        hash:            0xFFFFFFFFFFFFFFF3
+        insns:           2
+        exec:            10
+        probes:          [ { blk: [ 3 ] } ]
+      - bid:             3
+        hash:            0xFFFFFFFFFFFFFFF4
+        insns:           2
+        exec:            100
+        probes:          [ { blk: [ 4 ] } ]
+    inline_tree:         [ { g: 0 } ]
+pseudo_probe_desc:
+  gs:              [ 0xDB956436E78DD5FA ]
+  gh:              [ 0 ]
+  hs:              [ 0xFFFFFFFF ]

@@ -347,7 +347,8 @@ bool HexagonTTIImpl::isLegalMaskedStore(Type *DataType, Align /*Alignment*/,
                                         TTI::MaskKind /*MaskKind*/) const {
   // This function is called from scalarize-masked-mem-intrin, which runs
   // in pre-isel. Use ST directly instead of calling isHVXVectorType.
-  return HexagonMaskedVMem && ST.isTypeForHVX(DataType);
+  return HexagonMaskedVMem &&
+         (ST.isTypeForHVX(DataType) || ST.isTypeForHLX(DataType));
 }
 
 bool HexagonTTIImpl::isLegalMaskedLoad(Type *DataType, Align /*Alignment*/,
@@ -355,7 +356,8 @@ bool HexagonTTIImpl::isLegalMaskedLoad(Type *DataType, Align /*Alignment*/,
                                        TTI::MaskKind /*MaskKind*/) const {
   // This function is called from scalarize-masked-mem-intrin, which runs
   // in pre-isel. Use ST directly instead of calling isHVXVectorType.
-  return HexagonMaskedVMem && ST.isTypeForHVX(DataType);
+  return HexagonMaskedVMem &&
+         (ST.isTypeForHVX(DataType) || ST.isTypeForHLX(DataType));
 }
 
 bool HexagonTTIImpl::isLegalMaskedGather(Type *Ty, Align Alignment) const {

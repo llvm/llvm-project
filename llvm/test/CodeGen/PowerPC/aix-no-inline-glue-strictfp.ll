@@ -1,7 +1,7 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc-ibm-aix-xcoff \
+; RUN: llc -mcpu=pwr8 -mtriple powerpc-ibm-aix-xcoff \
 ; RUN:   -stop-after=finalize-isel -mattr=+use-ptrgl-helper < %s | FileCheck %s
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc64-ibm-aix-xcoff \
+; RUN: llc -mcpu=pwr8 -mtriple powerpc64-ibm-aix-xcoff \
 ; RUN:   -stop-after=finalize-isel -mattr=+use-ptrgl-helper < %s | \
 ; RUN:  FileCheck --check-prefix=CHECK64 %s
 

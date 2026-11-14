@@ -140,3 +140,73 @@ subroutine s8
  !REF: /s8/one
  data (y(i),i=1,10),(z(i),i=1,10),x/21*one/
 end subroutine
+
+! A locality-spec on a nested DO CONCURRENT does not inherit the locality of
+! the enclosing construct's entity: tmp is only LocalityReduce, w only
+! LocalityLocal.
+!DEF: /s9 (Subroutine) Subprogram
+!DEF: /s9/n ObjectEntity INTEGER(4)
+!DEF: /s9/x ObjectEntity INTEGER(4)
+subroutine s9 (n, x)
+ !REF: /s9/n
+ !REF: /s9/x
+ !DEF: /s9/j ObjectEntity INTEGER(4)
+ !DEF: /s9/k ObjectEntity INTEGER(4)
+ !DEF: /s9/tmp ObjectEntity INTEGER(4)
+ !DEF: /s9/w ObjectEntity INTEGER(4)
+ integer n, x(n), j, k, tmp, w
+ !DEF: /s9/Forall1/k ObjectEntity INTEGER(4)
+ !REF: /s9/n
+ !DEF: /s9/Forall1/tmp (LocalityLocal) HostAssoc INTEGER(4)
+ !DEF: /s9/Forall1/w (LocalityLocalInit) HostAssoc INTEGER(4)
+ do concurrent(k=1:n)local(tmp)local_init(w)
+  !DEF: /s9/Forall1/Forall1/j ObjectEntity INTEGER(4)
+  !REF: /s9/n
+  !DEF: /s9/Forall1/Forall1/tmp (LocalityReduce) HostAssoc INTEGER(4)
+  !DEF: /s9/Forall1/Forall1/w (LocalityLocal) HostAssoc INTEGER(4)
+  do concurrent(j=1:n)reduce(+:tmp)local(w)
+   !REF: /s9/Forall1/Forall1/tmp
+   !REF: /s9/Forall1/Forall1/j
+   tmp = tmp+j
+   !REF: /s9/Forall1/Forall1/w
+   !REF: /s9/Forall1/Forall1/j
+   w = j
+  end do
+  !REF: /s9/x
+  !REF: /s9/Forall1/k
+  !REF: /s9/Forall1/tmp
+  !REF: /s9/Forall1/w
+  x(k) = tmp+w
+ end do
+end subroutine
+
+! A host-associated name of a LOCAL entity, here from a VOLATILE statement in
+! a BLOCK, does not inherit its locality.
+!DEF: /s10 (Subroutine) Subprogram
+!DEF: /s10/n ObjectEntity INTEGER(4)
+!DEF: /s10/x ObjectEntity INTEGER(4)
+subroutine s10 (n, x)
+ !REF: /s10/n
+ !REF: /s10/x
+ !DEF: /s10/k ObjectEntity INTEGER(4)
+ !DEF: /s10/t ObjectEntity INTEGER(4)
+ integer n, x(n), k, t
+ !DEF: /s10/Forall1/k ObjectEntity INTEGER(4)
+ !REF: /s10/n
+ !DEF: /s10/Forall1/t (LocalityLocal) HostAssoc INTEGER(4)
+ do concurrent(k=1:n)local(t)
+  !REF: /s10/Forall1/t
+  !REF: /s10/Forall1/k
+  t = k
+  block
+   !DEF: /s10/Forall1/BlockConstruct1/t VOLATILE HostAssoc INTEGER(4)
+   volatile :: t
+   !REF: /s10/Forall1/BlockConstruct1/t
+   t = t+1
+  end block
+  !REF: /s10/x
+  !REF: /s10/Forall1/k
+  !REF: /s10/Forall1/t
+  x(k) = t
+ end do
+end subroutine

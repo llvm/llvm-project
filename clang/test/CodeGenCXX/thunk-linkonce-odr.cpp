@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple i386-unknown-unknown -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple i386-unknown-unknown -emit-llvm -o - | FileCheck %s %}
 
 struct A {
   virtual int f() { return 1; }

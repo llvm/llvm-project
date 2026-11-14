@@ -19,6 +19,7 @@
 # CHECK-NEXT: ]
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACE
   cputype:         0xC

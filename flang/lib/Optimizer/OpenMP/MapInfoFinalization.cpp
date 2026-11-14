@@ -66,10 +66,6 @@ class MapInfoFinalizationPass
     size_t index;
   };
 
-  using MapperPath =
-      std::pair<mlir::Operation *, llvm::SmallVector<int64_t, 4>>;
-  using MapperPathStack = llvm::SmallVector<MapperPath, 8>;
-
   /// Tracks any intermediate function/subroutine local allocations we
   /// generate for the descriptors of box type dummy arguments, so that
   /// we can retrieve it for subsequent reuses within the functions
@@ -89,238 +85,6 @@ class MapInfoFinalizationPass
   /// descriptors within a parent, currently used to
   /// prevent incorrect member index generation.
   llvm::DenseMap<mlir::Operation *, llvm::DenseSet<uint64_t>> expandedBaseAddr;
-
-  /// Return true if the given path exists in a list of paths.
-  static bool
-  containsPath(const llvm::SmallVectorImpl<llvm::SmallVector<int64_t>> &paths,
-               llvm::ArrayRef<int64_t> path) {
-    return llvm::any_of(paths, [&](const llvm::SmallVector<int64_t> &p) {
-      return p.size() == path.size() &&
-             std::equal(p.begin(), p.end(), path.begin());
-    });
-  }
-
-  /// Find a member MapInfoOp by its index path.
-  /// \param op The parent MapInfoOp to search in
-  /// \param indexPath The index path to find
-  /// \return The member MapInfoOp if found, or null MapInfoOp if not found
-  static mlir::omp::MapInfoOp
-  findMemberByIndexPath(mlir::omp::MapInfoOp op,
-                        llvm::ArrayRef<int64_t> indexPath) {
-    mlir::ArrayAttr attr = op.getMembersIndexAttr();
-    if (!attr)
-      return mlir::omp::MapInfoOp();
-
-    size_t memberIdx = 0;
-    for (mlir::Attribute list : attr) {
-      auto listAttr = mlir::cast<mlir::ArrayAttr>(list);
-      if (listAttr.size() == indexPath.size()) {
-        bool allEq = true;
-        for (size_t j = 0; j < listAttr.size(); ++j) {
-          auto indexAttr = mlir::cast<mlir::IntegerAttr>(listAttr[j]);
-          if (indexAttr.getInt() != indexPath[j]) {
-            allEq = false;
-            break;
-          }
-        }
-        if (allEq) {
-          if (auto memberOp = mlir::dyn_cast_if_present<mlir::omp::MapInfoOp>(
-                  op.getMembers()[memberIdx].getDefiningOp()))
-            return memberOp;
-        }
-      }
-      ++memberIdx;
-    }
-    return mlir::omp::MapInfoOp();
-  }
-
-  /// Return true if the given path is already present in
-  /// op.getMembersIndexAttr().
-  static bool mappedIndexPathExists(mlir::omp::MapInfoOp op,
-                                    llvm::ArrayRef<int64_t> indexPath) {
-    return findMemberByIndexPath(op, indexPath) != nullptr;
-  }
-
-  static bool mapperCoversIndexPath(mlir::Operation *symbolTableAnchor,
-                                    mlir::FlatSymbolRefAttr mapperId,
-                                    llvm::ArrayRef<int64_t> indexPath,
-                                    MapperPathStack &activeMapperPaths) {
-    mlir::omp::DeclareMapperOp symbol =
-        mlir::SymbolTable::lookupNearestSymbolFrom<mlir::omp::DeclareMapperOp>(
-            symbolTableAnchor, mapperId);
-    if (!symbol)
-      return false;
-
-    mlir::Operation *symbolOp = symbol.getOperation();
-    if (llvm::any_of(activeMapperPaths, [&](const MapperPath &entry) {
-          return entry.first == symbolOp &&
-                 entry.second.size() == indexPath.size() &&
-                 std::equal(entry.second.begin(), entry.second.end(),
-                            indexPath.begin());
-        }))
-      return false;
-    activeMapperPaths.emplace_back(
-        symbolOp,
-        llvm::SmallVector<int64_t, 4>(indexPath.begin(), indexPath.end()));
-
-    mlir::omp::DeclareMapperInfoOp mapperInfo = symbol.getDeclareMapperInfo();
-    if (!mapperInfo) {
-      activeMapperPaths.pop_back();
-      return false;
-    }
-
-    bool covers = llvm::any_of(mapperInfo.getMapVars(), [&](mlir::Value v) {
-      mlir::omp::MapInfoOp map =
-          mlir::dyn_cast_if_present<mlir::omp::MapInfoOp>(v.getDefiningOp());
-      return map && !map.getMembers().empty() && map.getMembersIndexAttr() &&
-             mapInfoCoversIndexPath(map, indexPath, activeMapperPaths);
-    });
-    activeMapperPaths.pop_back();
-    return covers;
-  }
-
-  static bool mapInfoCoversIndexPath(mlir::omp::MapInfoOp map,
-                                     llvm::ArrayRef<int64_t> indexPath,
-                                     MapperPathStack &activeMapperPaths) {
-    if (mappedIndexPathExists(map, indexPath))
-      return true;
-
-    mlir::ArrayAttr memberIndices = map.getMembersIndexAttr();
-    if (!memberIndices)
-      return false;
-
-    // Match a mapped member whose index path is a prefix of the requested
-    // path, then continue the lookup through that member with the suffix.
-    for (auto [memberIdx, memberIndexAttr] : llvm::enumerate(memberIndices)) {
-      auto memberIndexPath = mlir::cast<mlir::ArrayAttr>(memberIndexAttr);
-      if (memberIndexPath.size() >= indexPath.size())
-        continue;
-
-      bool isPrefix = true;
-      for (auto [idx, attr] : llvm::enumerate(memberIndexPath)) {
-        if (mlir::cast<mlir::IntegerAttr>(attr).getInt() != indexPath[idx]) {
-          isPrefix = false;
-          break;
-        }
-      }
-      if (!isPrefix)
-        continue;
-
-      mlir::omp::MapInfoOp memberMap =
-          mlir::dyn_cast_if_present<mlir::omp::MapInfoOp>(
-              map.getMembers()[memberIdx].getDefiningOp());
-      if (!memberMap)
-        continue;
-
-      llvm::ArrayRef<int64_t> nestedIndexPath =
-          indexPath.drop_front(memberIndexPath.size());
-      if (!memberMap.getMembers().empty() &&
-          mapInfoCoversIndexPath(memberMap, nestedIndexPath, activeMapperPaths))
-        return true;
-
-      if (memberMap.getMapperIdAttr() &&
-          mapperCoversIndexPath(memberMap, memberMap.getMapperIdAttr(),
-                                nestedIndexPath, activeMapperPaths))
-        return true;
-    }
-
-    return false;
-  }
-
-  /// Get the map type of the nearest explicitly mapped parent for a member.
-  /// "Explicitly mapped" means the map type does NOT have the implicit flag.
-  ///
-  /// \param parentOp The parent MapInfoOp containing members
-  /// \param memberIndex The index path to the child member (e.g., [1, 2, 3])
-  /// \return The map type of the nearest explicitly mapped ancestor, or
-  ///         the parentOp's map type if no explicit ancestor is found.
-  static mlir::omp::ClauseMapFlags
-  getExplicitlyMappedParentMapType(mlir::omp::MapInfoOp parentOp,
-                                   llvm::ArrayRef<int64_t> memberIndex) {
-    llvm::SmallVector<int64_t> currentPath(memberIndex.begin(),
-                                           memberIndex.end());
-
-    while (!currentPath.empty()) {
-      if (auto memberOp = findMemberByIndexPath(parentOp, currentPath)) {
-        if (!bitEnumContainsAll(memberOp.getMapType(),
-                                mlir::omp::ClauseMapFlags::implicit))
-          return memberOp.getMapType();
-      }
-      currentPath.pop_back();
-    }
-
-    return parentOp.getMapType();
-  }
-
-  /// Build a compact string key for an index path for set-based
-  /// deduplication. Format: "N:v0,v1,..." where N is the length.
-  static void buildPathKey(llvm::ArrayRef<int64_t> path,
-                           llvm::SmallString<64> &outKey) {
-    outKey.clear();
-    llvm::raw_svector_ostream os(outKey);
-    os << path.size() << ':';
-    for (size_t i = 0; i < path.size(); ++i) {
-      if (i)
-        os << ',';
-      os << path[i];
-    }
-  }
-
-  /// Create the member map for coordRef and append it (and its index
-  /// path) to the provided new* vectors, if it is not already present.
-  void appendMemberMapIfNew(
-      mlir::omp::MapInfoOp op, fir::FirOpBuilder &builder, mlir::Location loc,
-      mlir::Value coordRef, llvm::ArrayRef<int64_t> indexPath,
-      llvm::StringRef memberName,
-      llvm::SmallVectorImpl<mlir::Value> &newMapOpsForFields,
-      llvm::SmallVectorImpl<llvm::SmallVector<int64_t>> &newMemberIndexPaths) {
-    // Local de-dup within this op invocation.
-    if (containsPath(newMemberIndexPaths, indexPath))
-      return;
-
-    // Global de-dup against already present member indices.
-    if (mappedIndexPathExists(op, indexPath))
-      return;
-
-    if (op.getMapperId()) {
-      MapperPathStack activeMapperPaths;
-      if (mapperCoversIndexPath(op, op.getMapperIdAttr(), indexPath,
-                                activeMapperPaths))
-        return;
-    }
-
-    builder.setInsertionPoint(op);
-    fir::factory::AddrAndBoundsInfo info = fir::factory::getDataOperandBaseAddr(
-        builder, coordRef, /*isOptional=*/false, loc);
-    llvm::SmallVector<mlir::Value> bounds = fir::factory::genImplicitBoundsOps<
-        mlir::omp::MapBoundsOp, mlir::omp::MapBoundsType>(
-        builder, info,
-        hlfir::translateToExtendedValue(loc, builder, hlfir::Entity{coordRef})
-            .first,
-        /*dataExvIsAssumedSize=*/false, loc);
-
-    // Get the map type from the nearest explicitly mapped parent, falling back
-    // to the top-level parent's map type if no explicit ancestor is found.
-    mlir::omp::ClauseMapFlags mapType =
-        getExplicitlyMappedParentMapType(op, indexPath);
-
-    mlir::omp::MapInfoOp fieldMapOp = mlir::omp::MapInfoOp::create(
-        builder, loc, coordRef.getType(), coordRef,
-        mlir::TypeAttr::get(fir::unwrapRefType(coordRef.getType())),
-        builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(mapType),
-        builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
-            mlir::omp::VariableCaptureKind::ByRef),
-        /*varPtrPtr=*/mlir::Value{}, /*varPtrPtr=*/mlir::TypeAttr{},
-        /*members=*/mlir::ValueRange{},
-        /*members_index=*/mlir::ArrayAttr{}, bounds,
-        /*mapperId=*/mlir::FlatSymbolRefAttr(),
-        builder.getStringAttr(op.getNameAttr().strref() + "." + memberName +
-                              ".implicit_map"),
-        /*partial_map=*/builder.getBoolAttr(false));
-
-    newMapOpsForFields.emplace_back(fieldMapOp);
-    newMemberIndexPaths.emplace_back(indexPath.begin(), indexPath.end());
-  }
 
   // Check if the declaration operation we have refers to a dummy
   // function argument.
@@ -1715,6 +1479,10 @@ class MapInfoFinalizationPass
     });
   }
 
+  static bool isNestedInIterator(mlir::omp::MapInfoOp op) {
+    return op->getParentOfType<mlir::omp::IteratorOp>() != nullptr;
+  }
+
   // This pass executes on omp::MapInfoOp's containing descriptor based types
   // (allocatables, pointers, assumed shape etc.) and expanding them into
   // multiple omp::MapInfoOp's for each pointer member contained within the
@@ -1745,19 +1513,26 @@ class MapInfoFinalizationPass
       deferrableDesc.clear();
       expandedBaseAddr.clear();
 
-      // Walk all of the existing maps for parents with child maps and then
-      // make sure to appropriately bind them to the target region that the
-      // parent is bound to. Necessary for the next implicit record member
-      // map step which depends on this canonicalization step. This step
-      // is executed again as the final step of this pass to maintain
-      // map to block argument consistency.
-      func->walk([&](mlir::omp::MapInfoOp op) {
+      // Iterator maps may depend on region-local values. Descriptor expansion
+      // and target operand updates must not expose those values outside the
+      // iterator region.
+      auto walkNonIteratedMapInfoOps = [&](auto &&callback) {
+        func->walk([&](mlir::omp::MapInfoOp op) {
+          if (!isNestedInIterator(op))
+            callback(op);
+        });
+      };
+
+      // Bind existing member maps to their parent's target region. Repeat after
+      // descriptor expansion to keep map operands and block arguments
+      // consistent.
+      walkNonIteratedMapInfoOps([&](mlir::omp::MapInfoOp op) {
         mlir::Operation *targetUser = getFirstTargetUser(op);
         assert(targetUser && "expected user of map operation was not found");
         addImplicitMembersToTarget(op, builder, targetUser);
       });
 
-      func->walk([&](mlir::omp::MapInfoOp op) {
+      walkNonIteratedMapInfoOps([&](mlir::omp::MapInfoOp op) {
         // NOTE: Currently only supports a single user for the MapInfoOp. This
         // is fine for the moment, as the Fortran frontend will generate a
         // new MapInfoOp with at most one user currently. In the case of
@@ -1827,7 +1602,7 @@ class MapInfoFinalizationPass
       // Wait until after we have generated all of our maps to add them onto
       // the target's block arguments, simplifying the process as there would be
       // no need to avoid accidental duplicate additions.
-      func->walk([&](mlir::omp::MapInfoOp op) {
+      walkNonIteratedMapInfoOps([&](mlir::omp::MapInfoOp op) {
         mlir::Operation *targetUser = getFirstTargetUser(op);
         assert(targetUser && "expected user of map operation was not found");
         addImplicitMembersToTarget(op, builder, targetUser);

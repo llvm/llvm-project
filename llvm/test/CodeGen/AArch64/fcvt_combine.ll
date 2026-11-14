@@ -356,12 +356,11 @@ define <8 x i16> @test_v8f16(<8 x half> %in) {
 ;
 ; CHECK-NO16-GI-LABEL: test_v8f16:
 ; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    movi v1.4h, #68, lsl #8
 ; CHECK-NO16-GI-NEXT:    fcvtl v2.4s, v0.4h
 ; CHECK-NO16-GI-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-NO16-GI-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-NO16-GI-NEXT:    fmul v2.4s, v2.4s, v1.4s
-; CHECK-NO16-GI-NEXT:    fmul v0.4s, v0.4s, v1.4s
+; CHECK-NO16-GI-NEXT:    fmov s1, #4.00000000
+; CHECK-NO16-GI-NEXT:    fmul v2.4s, v2.4s, v1.s[0]
+; CHECK-NO16-GI-NEXT:    fmul v0.4s, v0.4s, v1.s[0]
 ; CHECK-NO16-GI-NEXT:    fcvtn v1.4h, v2.4s
 ; CHECK-NO16-GI-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-NO16-GI-NEXT:    fcvtl v1.4s, v1.4h
@@ -394,10 +393,9 @@ define <4 x i16> @test_v4f16(<4 x half> %in) {
 ;
 ; CHECK-NO16-GI-LABEL: test_v4f16:
 ; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    movi v1.4h, #68, lsl #8
 ; CHECK-NO16-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-NO16-GI-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-NO16-GI-NEXT:    fmul v0.4s, v0.4s, v1.4s
+; CHECK-NO16-GI-NEXT:    fmov s1, #4.00000000
+; CHECK-NO16-GI-NEXT:    fmul v0.4s, v0.4s, v1.s[0]
 ; CHECK-NO16-GI-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-NO16-GI-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NO16-GI-NEXT:    fcvtzu v0.4s, v0.4s
@@ -429,10 +427,9 @@ define <4 x i32> @test_v4f16_i32(<4 x half> %in) {
 ;
 ; CHECK-NO16-GI-LABEL: test_v4f16_i32:
 ; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    movi v1.4h, #68, lsl #8
 ; CHECK-NO16-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-NO16-GI-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-NO16-GI-NEXT:    fmul v0.4s, v0.4s, v1.4s
+; CHECK-NO16-GI-NEXT:    fmov s1, #4.00000000
+; CHECK-NO16-GI-NEXT:    fmul v0.4s, v0.4s, v1.s[0]
 ; CHECK-NO16-GI-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-NO16-GI-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NO16-GI-NEXT:    fcvtzs v0.4s, v0.4s
@@ -470,10 +467,10 @@ define <8 x i16> @test_v8f16_nan(<8 x half> %a) {
 ;
 ; CHECK-NO16-GI-LABEL: test_v8f16_nan:
 ; CHECK-NO16-GI:       // %bb.0: // %entry
-; CHECK-NO16-GI-NEXT:    movi v1.4h, #126, lsl #8
+; CHECK-NO16-GI-NEXT:    mvni v1.4s, #63, msl #16
 ; CHECK-NO16-GI-NEXT:    fcvtl v2.4s, v0.4h
 ; CHECK-NO16-GI-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-NO16-GI-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-NO16-GI-NEXT:    fneg v1.4s, v1.4s
 ; CHECK-NO16-GI-NEXT:    fmul v2.4s, v2.4s, v1.4s
 ; CHECK-NO16-GI-NEXT:    fmul v0.4s, v0.4s, v1.4s
 ; CHECK-NO16-GI-NEXT:    fcvtn v1.4h, v2.4s
@@ -946,12 +943,11 @@ define <8 x i16> @test_v8f16_sat(<8 x half> %in) {
 ;
 ; CHECK-NO16-GI-LABEL: test_v8f16_sat:
 ; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    movi v1.4h, #68, lsl #8
 ; CHECK-NO16-GI-NEXT:    fcvtl v2.4s, v0.4h
+; CHECK-NO16-GI-NEXT:    fmov s1, #4.00000000
 ; CHECK-NO16-GI-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-NO16-GI-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-NO16-GI-NEXT:    fmul v2.4s, v2.4s, v1.4s
-; CHECK-NO16-GI-NEXT:    fmul v0.4s, v0.4s, v1.4s
+; CHECK-NO16-GI-NEXT:    fmul v2.4s, v2.4s, v1.s[0]
+; CHECK-NO16-GI-NEXT:    fmul v0.4s, v0.4s, v1.s[0]
 ; CHECK-NO16-GI-NEXT:    fcvtn v1.4h, v2.4s
 ; CHECK-NO16-GI-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-NO16-GI-NEXT:    fcvtl v1.4s, v1.4h
@@ -985,10 +981,9 @@ define <4 x i16> @test_v4f16_sat(<4 x half> %in) {
 ;
 ; CHECK-NO16-GI-LABEL: test_v4f16_sat:
 ; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    movi v1.4h, #68, lsl #8
 ; CHECK-NO16-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-NO16-GI-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-NO16-GI-NEXT:    fmul v0.4s, v0.4s, v1.4s
+; CHECK-NO16-GI-NEXT:    fmov s1, #4.00000000
+; CHECK-NO16-GI-NEXT:    fmul v0.4s, v0.4s, v1.s[0]
 ; CHECK-NO16-GI-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-NO16-GI-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NO16-GI-NEXT:    fcvtzu v0.4s, v0.4s
@@ -1020,10 +1015,9 @@ define <4 x i32> @test_v4f16_i32_sat(<4 x half> %in) {
 ;
 ; CHECK-NO16-GI-LABEL: test_v4f16_i32_sat:
 ; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    movi v1.4h, #68, lsl #8
 ; CHECK-NO16-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-NO16-GI-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-NO16-GI-NEXT:    fmul v0.4s, v0.4s, v1.4s
+; CHECK-NO16-GI-NEXT:    fmov s1, #4.00000000
+; CHECK-NO16-GI-NEXT:    fmul v0.4s, v0.4s, v1.s[0]
 ; CHECK-NO16-GI-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-NO16-GI-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NO16-GI-NEXT:    fcvtzs v0.4s, v0.4s

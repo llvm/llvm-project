@@ -1,10 +1,17 @@
 // RUN: %clang_cc1 -std=c++98 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | FileCheck %s --check-prefixes CHECK
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -std=c++98 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | FileCheck %s --check-prefixes CHECK %}
 // RUN: %clang_cc1 -std=c++11 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | FileCheck %s --check-prefixes CHECK
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -std=c++11 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | FileCheck %s --check-prefixes CHECK %}
 // RUN: %clang_cc1 -std=c++14 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | FileCheck %s --check-prefixes CHECK
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -std=c++14 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | FileCheck %s --check-prefixes CHECK %}
 // RUN: %clang_cc1 -std=c++17 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | FileCheck %s --check-prefixes CHECK
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -std=c++17 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | FileCheck %s --check-prefixes CHECK %}
 // RUN: %clang_cc1 -std=c++20 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | FileCheck %s --check-prefixes CHECK
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -std=c++20 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | FileCheck %s --check-prefixes CHECK %}
 // RUN: %clang_cc1 -std=c++23 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | FileCheck %s --check-prefixes CHECK
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -std=c++23 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | FileCheck %s --check-prefixes CHECK %}
 // RUN: %clang_cc1 -std=c++2c %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | FileCheck %s --check-prefixes CHECK
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -std=c++2c %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | FileCheck %s --check-prefixes CHECK %}
 
 #if __cplusplus == 199711L
 #define static_assert(expr) __extension__ _Static_assert(expr)

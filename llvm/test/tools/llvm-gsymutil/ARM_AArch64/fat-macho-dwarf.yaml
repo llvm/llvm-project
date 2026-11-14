@@ -50,6 +50,7 @@ FatArchs:
     align:           5
 Slices:
   - !mach-o
+    IsLittleEndian:  true
     FileHeader:
       magic:           0xFEEDFACE
       cputype:         0x0000000C
@@ -497,6 +498,7 @@ Slices:
               SubOpcode:       DW_LNE_end_sequence
               Data:            0
   - !mach-o
+    IsLittleEndian:  true
     FileHeader:
       magic:           0xFEEDFACF
       cputype:         0x0100000C

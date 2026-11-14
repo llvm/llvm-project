@@ -1,4 +1,4 @@
-; RUN: opt %s -dxil-pdb -o /dev/null
+; RUN: opt %s -dxil-container-pdb -disable-output
 ; RUN: llvm-pdbutil pdb2yaml --dxcontainer PDBPartsTest.pdb | FileCheck %s
 
 ; Check that PDB file contains only debug-info relevant parts.

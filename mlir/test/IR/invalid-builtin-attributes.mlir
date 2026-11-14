@@ -1,5 +1,54 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -verify-diagnostics
 
+func.func @mxi8_dense_wrong_width() -> () {
+  // expected-error @+1 {{incompatible attribute for element type}}
+  "foo"(){bar = dense<tensor<1xmxi8> : [1 : i16]>} : () -> ()
+}
+
+// -----
+
+func.func @mxi8_dense_signed_storage() -> () {
+  // expected-error @+1 {{incompatible attribute for element type}}
+  "foo"(){bar = dense<tensor<1xmxi8> : [1 : si8]>} : () -> ()
+}
+
+// -----
+
+func.func @mxi8_dense_float_storage() -> () {
+  // expected-error @+1 {{incompatible attribute for element type}}
+  "foo"(){bar = dense<tensor<1xmxi8> : [1.0 : f32]>} : () -> ()
+}
+
+// -----
+
+func.func @mxi8_dense_hex_wrong_size() -> () {
+  // expected-error @+1 {{elements hex data size is invalid for provided type}}
+  "foo"(){bar = dense<"0x807F"> : tensor<3xmxi8>} : () -> ()
+}
+
+// -----
+
+func.func @mxi8_sparse_hex_wrong_size() -> () {
+  // expected-error @+1 {{elements hex data size is invalid for provided type}}
+  "foo"(){bar = sparse<0, "0x807F"> : tensor<1xmxi8>} : () -> ()
+}
+
+// -----
+
+func.func @mxi8_sparse_out_of_range() -> () {
+  // expected-error @+1 {{integer constant out of range for type}}
+  "foo"(){bar = sparse<0, 256> : tensor<1xmxi8>} : () -> ()
+}
+
+// -----
+
+func.func @mxi8_sparse_float_value() -> () {
+  // expected-error @+1 {{expected integer elements, but parsed floating-point}}
+  "foo"(){bar = sparse<0, 1.0> : tensor<1xmxi8>} : () -> ()
+}
+
+// -----
+
 func.func @elementsattr_non_tensor_type() -> () {
   "foo"(){bar = dense<[4]> : i32} : () -> () // expected-error {{elements literal must be a shaped type}}
 }

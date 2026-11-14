@@ -98,6 +98,11 @@ int llvm_is_a_value_as_metadata(void) {
     LLVMMetadataRef StringMD =
         LLVMMDStringInContext2(Context, String, strlen(String));
     LLVMMetadataRef NodeMD = LLVMMDNodeInContext2(Context, &StringMD, 1);
+
+    char *MDStr = LLVMPrintMetadataToString(NodeMD);
+    assert(strcmp(MDStr, "!1 = !{!\"foo\"}") == 0);
+    LLVMDisposeMessage(MDStr);
+
     LLVMValueRef Value = LLVMMetadataAsValue(Context, NodeMD);
     assert(LLVMIsAValueAsMetadata(Value) == NULL);
     (void)Value;

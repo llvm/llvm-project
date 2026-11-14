@@ -252,6 +252,8 @@ static void fixupSEHOpcode(MachineBasicBlock::iterator MBBI,
   case AArch64::SEH_SaveFReg:
   case AArch64::SEH_SaveAnyRegI:
   case AArch64::SEH_SaveAnyRegIP:
+  case AArch64::SEH_SaveAnyRegQ:
+  case AArch64::SEH_SaveAnyRegQX:
   case AArch64::SEH_SaveAnyRegQP:
   case AArch64::SEH_SaveAnyRegQPX:
     ImmOpnd = &MBBI->getOperand(ImmIdx);

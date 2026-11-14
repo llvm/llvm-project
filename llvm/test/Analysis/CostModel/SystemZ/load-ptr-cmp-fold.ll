@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z13 | FileCheck %s
+; RUN: opt < %s -passes="print<cost-model>" -disable-output -mtriple=systemz-unknown -mcpu=z13 2>&1 | FileCheck %s
 
 ; Test that the cost heuristic for a folded load works also for a pointer operand.
 define void @fun0(ptr %lhs, ptr %rhs_ptr) {

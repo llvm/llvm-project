@@ -32,6 +32,16 @@ LoongArchMatInt::InstSeq LoongArchMatInt::generateInstSeq(int64_t Val) {
     return Insts;
   }
 
+  if ((Val & 0xFFFFFFFF) == 0) {
+    const int32_t Hi32 = Val >> 32;
+    const int TZC = llvm::countr_zero(static_cast<uint32_t>(Hi32));
+    if (TZC < 20 && isInt<20>(Hi32 >> TZC)) {
+      Insts.push_back(Inst(LoongArch::LU12I_W, Hi32 >> TZC));
+      Insts.push_back(Inst(LoongArch::SLLI_D, TZC + 20));
+      return Insts;
+    }
+  }
+
   // lo32
   if (Hi20 == 0)
     Insts.push_back(Inst(LoongArch::ORI, Lo12));

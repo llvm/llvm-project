@@ -55,7 +55,6 @@
 ---
 name:            foo
 alignment:       2
-tracksRegLiveness: false
 frameInfo:
   maxAlignment:    4096
 stack:

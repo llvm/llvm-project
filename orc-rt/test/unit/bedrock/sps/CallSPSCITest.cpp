@@ -30,7 +30,7 @@ static DirectCaller caller(orc_rt_WrapperFunction Fn) { return {nullptr, Fn}; }
 
 TEST(CallSPSCITest, Registration) {
   SimpleSymbolTable CI;
-  ASSERT_THAT_ERROR(sps_ci::addCall(CI), Succeeded());
+  ASSERT_THAT_ERROR(sps::ci::addCall(CI), Succeeded());
 
   EXPECT_TRUE(CI.count(SymbolNameSpec::c("orc_rt_ci_sps_call_void_void")));
   EXPECT_TRUE(CI.count(SymbolNameSpec::c("orc_rt_ci_sps_call_main")));

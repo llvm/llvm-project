@@ -991,15 +991,20 @@ void RewriteInstance::discoverFileObjects() {
     SymbolRef Symbol;
   };
   std::vector<SymbolInfo> SortedSymbols;
-  auto isSymbolInMemory = [this](const SymbolRef &Sym) {
+  auto isSymbolInMemory = [](const SymbolRef &Sym) {
     if (cantFail(Sym.getType()) == SymbolRef::ST_File)
       return false;
     if (cantFail(Sym.getFlags()) & SymbolRef::SF_Absolute)
       return true;
     if (cantFail(Sym.getFlags()) & SymbolRef::SF_Undefined)
       return false;
-    BinarySection Section(*BC, *cantFail(Sym.getSection()));
-    return Section.isAllocatable();
+    const ELFSectionRef Section(*cantFail(Sym.getSection()));
+    const uint64_t SectionFlags = Section.getFlags();
+    // Match BinarySection::isAllocatable(), without constructing a temporary
+    // BinarySection for every symbol.
+    return (SectionFlags & ELF::SHF_ALLOC) &&
+           !(Section.getType() == ELF::SHT_NOBITS &&
+             (SectionFlags & ELF::SHF_TLS));
   };
   auto checkSymbolInSection = [this](const SymbolInfo &S) {
     // Sometimes, we encounter symbols with addresses outside their section. If
@@ -1507,7 +1512,7 @@ void RewriteInstance::discoverFileObjects() {
   }
 
   if (BC->isAArch64()) {
-    const RelocationHandler &RH = BC->getRelocationHandler();
+    [[maybe_unused]] const RelocationHandler &RH = BC->getRelocationHandler();
     // Check for dynamic relocations that might be contained in
     // constant islands.
     for (const BinarySection &Section : BC->allocatableSections()) {
@@ -3359,8 +3364,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
 
   if (!IsFromCode && !IsWritable && (IsX86 || IsAArch64) &&
       RH.isPCRelative(RType)) {
-    BinaryData *BD = BC->getBinaryDataContainingAddress(Rel.getOffset());
-    if (BD && BD->isVTable()) {
+    if (BC->getVTableContainingAddress(Rel.getOffset())) {
       BinaryFunction *BF = BC->getBinaryFunctionContainingAddress(
           SymbolAddress, /*CheckPastEnd*/ false, /*UseMaxSize*/ true);
       if (BF) {

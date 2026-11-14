@@ -2,6 +2,7 @@
 ; Check that we accept functions with '$' in the name.
 
 ; RUN: llc -mtriple=wasm32-unknown-linux < %s | FileCheck %s
+; RUN: llc -mtriple=wasm32-unknown-linux -asm-verbose=false < %s | FileCheck %s --check-prefix=CHECK-NOVERBOSE
 
 define hidden i32 @"_Z54bar$ompvariant$bar"() {
 ; CHECK-LABEL: _Z54bar$ompvariant$bar:
@@ -9,6 +10,10 @@ define hidden i32 @"_Z54bar$ompvariant$bar"() {
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    i32.const 2
 ; CHECK-NEXT:    # fallthrough-return
+;
+; CHECK-NOVERBOSE-LABEL: _Z54bar$ompvariant$bar:
+; CHECK-NOVERBOSE:         .functype _Z54bar$ompvariant$bar () -> (i32)
+; CHECK-NOVERBOSE-NEXT:    i32.const 2
 entry:
   ret i32 2
 }

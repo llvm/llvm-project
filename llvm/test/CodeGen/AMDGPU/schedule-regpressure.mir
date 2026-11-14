@@ -31,16 +31,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: sgpr_128 }
-  - { id: 1, class: sgpr_64 }
-  - { id: 2, class: sreg_32_xm0 }
-  - { id: 3, class: sgpr_32 }
-  - { id: 4, class: vgpr_32 }
-  - { id: 5, class: sreg_32_xm0_xexec }
-  - { id: 6, class: vgpr_32 }
-  - { id: 7, class: vgpr_32 }
-  - { id: 8, class: vgpr_32 }
 liveins:
   - { reg: '$sgpr4_sgpr5', virtual-reg: '%1' }
 frameInfo:
@@ -61,11 +51,11 @@ body:             |
   bb.0:
     liveins: $sgpr4_sgpr5
 
-    %1 = COPY $sgpr4_sgpr5
-    %5 = S_LOAD_DWORD_IMM %1, 0, 0 :: (non-temporal dereferenceable invariant load (s32) from `ptr addrspace(4) poison`)
+    %1:sgpr_64 = COPY $sgpr4_sgpr5
+    %5:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %1, 0, 0 :: (non-temporal dereferenceable invariant load (s32) from `ptr addrspace(4) poison`)
     $m0 = S_MOV_B32 -1
-    %7 = COPY %5
-    %6 = DS_READ_B32 %7, 0, 0, implicit $m0, implicit $exec
+    %7:vgpr_32 = COPY %5
+    %6:vgpr_32 = DS_READ_B32 %7, 0, 0, implicit $m0, implicit $exec
     DS_WRITE_B32 %7, %6, 4, 0, implicit killed $m0, implicit $exec
     S_ENDPGM 0
 

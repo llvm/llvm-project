@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=lint -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=lint -disable-output 2>&1 | FileCheck %s --implicit-check-not "Undefined behavior"
 
 declare void @fn_nothing_i8(i8 %x)
 declare void @fn_zeroext(i8 zeroext %x)
@@ -17,8 +17,8 @@ define void @caller_zeroext(i8 %x) {
 ; CHECK:  call void @fn_zeroext(i8 %x)
   call void @fn_zeroext(i8 %x)
 
-; CHECK: Undefined behavior: ABI attribute zeroext not present on both function and call-site
-; CHECK:  call void @fn_nothing_i8(i8 zeroext %x)
+
+  ; Unnecessary extension at call-site is well-defined.
   call void @fn_nothing_i8(i8 zeroext %x)
   ret void
 }
@@ -28,8 +28,7 @@ define void @caller_signext(i8 %x) {
 ; CHECK:  call void @fn_signext(i8 %x)
   call void @fn_signext(i8 %x)
 
-; CHECK: Undefined behavior: ABI attribute signext not present on both function and call-site
-; CHECK:  call void @fn_nothing_i8(i8 signext %x)
+  ; Unnecessary extension at call-site is well-defined.
   call void @fn_nothing_i8(i8 signext %x)
   ret void
 }

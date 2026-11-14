@@ -253,7 +253,7 @@ arm::ReadTPMode arm::getReadTPMode(const Driver &D, const ArgList &Args,
   }
   // In auto mode we enable HW mode only if both the hardware supports it and
   // the thumb2 encoding. For example ARMV6T2 supports thumb2, but not hardware.
-  // ARMV6K has HW suport, but not thumb2. Otherwise we could enable it for
+  // ARMV6K has HW support, but not thumb2. Otherwise we could enable it for
   // ARMV6K in thumb mode.
   bool autoUseHWTPMode =
       isHardTPSupported(Triple) && supportsThumb2Encoding(Triple);

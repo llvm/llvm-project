@@ -801,9 +801,6 @@ void X86FlagsCopyLoweringImpl::rewriteSetCC(MachineBasicBlock &MBB,
     assert(MI.getOperand(0).isReg() &&
            "Cannot have a non-register defined operand to SETcc!");
     Register OldReg = MI.getOperand(0).getReg();
-    // Drop Kill flags on the old register before replacing. CondReg may have
-    // a longer live range.
-    MRI->clearKillFlags(OldReg);
     MRI->replaceRegWith(OldReg, CondReg);
     MI.eraseFromParent();
     return;
@@ -940,6 +937,6 @@ X86FlagsCopyLoweringPass::run(MachineFunction &MF,
   MachineDominatorTree *MDT =
       MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
   bool Changed = X86FlagsCopyLoweringImpl(MDT).runOnMachineFunction(MF);
-  return Changed ? PreservedAnalyses::all()
-                 : getMachineFunctionPassPreservedAnalyses();
+  return Changed ? getMachineFunctionPassPreservedAnalyses()
+                 : PreservedAnalyses::all();
 }

@@ -121,7 +121,6 @@
 ---
 name:            same_reg
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
 frameInfo:
@@ -167,7 +166,6 @@ body:             |
 ---
 name:            super_reg
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
 frameInfo:
@@ -213,7 +211,6 @@ body:             |
 ---
 name:            sub_reg
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$x1' }

@@ -645,6 +645,17 @@ class Array1D
     Array1D() {n1=0;size=0;dptr=nullptr;}
 };
 
+struct SPtrMem {
+  int x;
+  int *ptr;
+};
+
+template <typename T>
+struct SPtrMemT {
+  T x;
+  T *ptr;
+};
+
 template <typename T, int I> // expected-note {{declared here}}
 T tmain(T argc) {
   const T d = 5;
@@ -768,6 +779,12 @@ T tmain(T argc) {
 #pragma omp target data map(marr[10][0:2:2]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
   {}
 #pragma omp target data map(iarr[:2:d]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
+  {}
+
+  SPtrMemT<T> tpm, *tpmp = &tpm;
+  T SPtrMemT<T>::*txp = &SPtrMemT<T>::x;
+  T *SPtrMemT<T>::*tptrp = &SPtrMemT<T>::ptr;
+#pragma omp target map(tpmp->*txp, tpmp->*tptrp, (tpmp->*tptrp)[:I]) // lt50-error 6 {{expected expression containing only member accesses and/or array sections based on named variables}} ge50-error 6 {{expected addressable lvalue in 'map' clause}} ge60-error 6 {{expected addressable lvalue in 'map' clause}}
   {}
   return 0;
 }
@@ -970,9 +987,35 @@ int main(int argc, char **argv) {
   {}
 #pragma omp target map(**(*(*(&offset))+BB+*a)) // lt50-error {{expected expression containing only member accesses and/or array sections based on named variables}}
   {}
+#pragma omp target map(*(a - 1)) // lt50-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+  {}
+#pragma omp target map((a - 1)[:2]) // lt50-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+  {}
 #pragma omp target map(*(a+(a))) // expected-error {{invalid operands to binary expression ('int *' and 'int *')}}
   {}
 #pragma omp target map(*(1+*a+*a)) // expected-error {{indirection requires pointer operand ('int' invalid)}}
+  {}
+
+  SPtrMem spm, *spmp = &spm;
+  int SPtrMem::*xp = &SPtrMem::x;
+  int *SPtrMem::*ptrp = &SPtrMem::ptr;
+#pragma omp target map(spmp->*xp, spmp->*ptrp, (spmp->*ptrp)[:64]) // lt50-error 3 {{expected expression containing only member accesses and/or array sections based on named variables}} ge50-error 3 {{expected addressable lvalue in 'map' clause}} ge60-error 3 {{expected addressable lvalue in 'map' clause}}
+  {}
+#pragma omp target map(spm.*xp, spm.*ptrp, (spm.*ptrp)[:64]) // lt50-error 3 {{expected expression containing only member accesses and/or array sections based on named variables}} ge50-error 3 {{expected addressable lvalue in 'map' clause}} ge60-error 3 {{expected addressable lvalue in 'map' clause}}
+  {}
+#pragma omp target map(*(spmp->*ptrp + 1)) // lt50-error {{expected expression containing only member accesses and/or array sections based on named variables}} ge50-error {{expected addressable lvalue in 'map' clause}} ge60-error {{expected addressable lvalue in 'map' clause}}
+  {}
+#pragma omp target map(k = &x) // lt50-error {{expected expression containing only member accesses and/or array sections based on named variables}} ge50-error {{expected addressable lvalue in 'map' clause}} ge60-error {{expected addressable lvalue in 'map' clause}}
+  {}
+#pragma omp target map(k += 1) // lt50-error {{expected expression containing only member accesses and/or array sections based on named variables}} ge50-error {{expected addressable lvalue in 'map' clause}} ge60-error {{expected addressable lvalue in 'map' clause}}
+  {}
+#pragma omp target map(*(x++, k)) // lt50-error {{expected expression containing only member accesses and/or array sections based on named variables}} ge50-error {{expected addressable lvalue in 'map' clause}} ge60-error {{expected addressable lvalue in 'map' clause}}
+  {}
+#pragma omp target map(k - k) // lt50-error {{expected expression containing only member accesses and/or array sections based on named variables}} ge50-error {{expected addressable lvalue in 'map' clause}} ge60-error {{expected addressable lvalue in 'map' clause}}
+  {}
+#pragma omp target map(k << 1) // expected-error {{invalid operands to binary expression ('int *' and 'int')}}
+  {}
+#pragma omp target map(k * 2) // expected-error {{invalid operands to binary expression ('int *' and 'int')}}
   {}
 
 #pragma omp target map(delete: a) // expected-error {{map type 'delete' is not allowed for '#pragma omp target'}}

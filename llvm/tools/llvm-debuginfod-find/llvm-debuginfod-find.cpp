@@ -24,7 +24,6 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Driver.h"
-#include "llvm/Support/InitLLVM.h"
 
 using namespace llvm;
 

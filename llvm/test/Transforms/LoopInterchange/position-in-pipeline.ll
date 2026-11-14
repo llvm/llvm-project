@@ -1,4 +1,4 @@
-; RUN: opt -passes='default<O3>' -enable-loopinterchange -disable-output \
+; RUN: opt -passes='default<O3>' -disable-output \
 ; RUN:     -disable-verify -verify-analysis-invalidation=0 \
 ; RUN:     -debug-pass-manager=quiet %s 2>&1 | FileCheck %s
 

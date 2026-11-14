@@ -12,7 +12,7 @@
 ; CHECK: "instcombine.NumWorklistIterations":
 ; CHECK: }
 
-; INVALID_ARG: {{.*}}opt{{.*}}: for the --save-stats option: Cannot find option named 'invalid'!
+; INVALID_ARG: {{.*}}opt{{.*}}: invalid value 'invalid' in '--save-stats=invalid'
 define i32 @func() {
   ret i32 0
 }

@@ -1,5 +1,5 @@
 ; Test that we can parse blockcount summaries.
-; RUN: opt %s -o /dev/null
+; RUN: opt %s -disable-output
 
 define void @main() {
 entry:

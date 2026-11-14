@@ -28,8 +28,8 @@ void sink(FILE *f) {
 void f() {
   sink(fopen("input.txt", "w"));
   // expected-note@-1{{Stream opened here}}
-} // expected-warning{{Opened stream never closed. Potential resource leak [unix.Stream]}}
-// expected-note@-1{{Opened stream never closed. Potential resource leak}}
+} // expected-warning{{Opened stream never closed; potential resource leak [unix.Stream]}}
+// expected-note@-1{{Opened stream never closed; potential resource leak}}
 } // namespace stream_opened_in_fn_call
 
 namespace stream_passed_to_fn_call {
@@ -52,8 +52,8 @@ void f() {
     expectedClose(f); // expected-note{{Calling 'expectedClose'}}
                       // expected-note@-1{{Returning from 'expectedClose'}}
 
-    return; // expected-warning{{Opened stream never closed. Potential resource leak [unix.Stream]}}
-            // expected-note@-1{{Opened stream never closed. Potential resource leak}}
+    return; // expected-warning{{Opened stream never closed; potential resource leak [unix.Stream]}}
+            // expected-note@-1{{Opened stream never closed; potential resource leak}}
   }
   fclose(f);
 }
@@ -76,8 +76,8 @@ void foo() {
     return;
   sink(f); // expected-note {{Calling 'sink'}}
            // expected-note@-1 {{Returning from 'sink'}}
-} // expected-warning{{Opened stream never closed. Potential resource leak [unix.Stream]}}
-// expected-note@-1{{Opened stream never closed. Potential resource leak}}
+} // expected-warning{{Opened stream never closed; potential resource leak [unix.Stream]}}
+// expected-note@-1{{Opened stream never closed; potential resource leak}}
 
 } // namespace stream_shared_with_ptr_of_shorter_lifetime
 
@@ -100,8 +100,8 @@ void f(FILE *p) {
   if (!f) // expected-note{{'f' is non-null}}
           // expected-note@-1{{Taking false branch}}
     return;
-  expectedClose(p); // expected-warning{{Opened stream never closed. Potential resource leak [unix.Stream]}}
-                    // expected-note@-1{{Opened stream never closed. Potential resource leak}}
+  expectedClose(p); // expected-warning{{Opened stream never closed; potential resource leak [unix.Stream]}}
+                    // expected-note@-1{{Opened stream never closed; potential resource leak}}
 }
 } // namespace stream_not_passed_to_fn_call
 
@@ -120,8 +120,8 @@ void f() {
           // expected-note@-1{{Taking false branch}}
     return;
   expectedClose(f, &p);
-} // expected-warning{{Opened stream never closed. Potential resource leak [unix.Stream]}}
-  // expected-note@-1{{Opened stream never closed. Potential resource leak}}
+} // expected-warning{{Opened stream never closed; potential resource leak [unix.Stream]}}
+  // expected-note@-1{{Opened stream never closed; potential resource leak}}
 } // namespace stream_shared_with_ptr_of_same_lifetime
 
 namespace stream_passed_into_fn_that_doesnt_intend_to_free {
@@ -135,8 +135,8 @@ void f() {
     return;
   expectedClose(f);
 
-} // expected-warning{{Opened stream never closed. Potential resource leak [unix.Stream]}}
-  // expected-note@-1{{Opened stream never closed. Potential resource leak}}
+} // expected-warning{{Opened stream never closed; potential resource leak [unix.Stream]}}
+  // expected-note@-1{{Opened stream never closed; potential resource leak}}
 } // namespace stream_passed_into_fn_that_doesnt_intend_to_free
 
 namespace stream_passed_into_fn_that_doesnt_intend_to_free2 {
@@ -155,8 +155,8 @@ void f() {
     return;
   expectedClose(f);
 
-} // expected-warning{{Opened stream never closed. Potential resource leak [unix.Stream]}}
-  // expected-note@-1{{Opened stream never closed. Potential resource leak}}
+} // expected-warning{{Opened stream never closed; potential resource leak [unix.Stream]}}
+  // expected-note@-1{{Opened stream never closed; potential resource leak}}
 } // namespace stream_passed_into_fn_that_doesnt_intend_to_free2
 
 namespace streamstate_from_closed_to_open {
@@ -173,7 +173,7 @@ void use_ret() {
   v = fopenWrapper(); // expected-note {{Calling 'fopenWrapper'}}
                       // expected-note@-1{{Returning from 'fopenWrapper'}}
 
-} // expected-warning{{Opened stream never closed. Potential resource leak [unix.Stream]}}
-  // expected-note@-1{{Opened stream never closed. Potential resource leak}}
+} // expected-warning{{Opened stream never closed; potential resource leak [unix.Stream]}}
+  // expected-note@-1{{Opened stream never closed; potential resource leak}}
 
 } // namespace streamstate_from_closed_to_open

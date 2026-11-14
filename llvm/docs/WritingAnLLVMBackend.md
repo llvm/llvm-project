@@ -1115,10 +1115,6 @@ Here's a list of functions that are overridden for the SPARC implementation in
 
 * `loadRegFromStackSlot` --- Load a register value from a stack slot.
 
-* `storeRegToAddr` --- Store a register value to memory.
-
-* `loadRegFromAddr` --- Load a register value from memory.
-
 * `foldMemoryOperand` --- Attempt to combine instructions of any load or
   store instruction for the specified operand(s).
 

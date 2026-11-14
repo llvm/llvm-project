@@ -1,7 +1,10 @@
 // RUN: %clang_cc1 %s -triple "spir64-unknown-unknown" -emit-llvm -o - -cl-std=CL2.0 | FileCheck %s --check-prefix=CHECK-NO-CXX
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple "spir64-unknown-unknown" -emit-llvm -o - -cl-std=CL2.0 | FileCheck %s --check-prefix=CHECK-NO-CXX %}
 
 // RUN: %clang_cc1 %s -triple "spir64-unknown-unknown" -emit-llvm -o - -cl-std=clc++1.0 | FileCheck %s --check-prefix=CHECK-CXX100
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple "spir64-unknown-unknown" -emit-llvm -o - -cl-std=clc++1.0 | FileCheck %s --check-prefix=CHECK-CXX100 %}
 // RUN: %clang_cc1 %s -triple "spir64-unknown-unknown" -emit-llvm -o - -cl-std=clc++2021 | FileCheck %s --check-prefix=CHECK-CXX2021
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple "spir64-unknown-unknown" -emit-llvm -o - -cl-std=clc++2021 | FileCheck %s --check-prefix=CHECK-CXX2021 %}
 
 // This test checks that opencl.cxx.version metadata is emitted accordingly.
 // It avoids any C++ features to enable checking that the metadata is not emitted in non-C++ mode.

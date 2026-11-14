@@ -491,7 +491,7 @@ bool llvm::expandDivision(BinaryOperator *Div) {
 /// Generate code to compute the remainder of two integers of bitwidth up to
 /// 32 bits. Uses the above routines and extends the inputs/truncates the
 /// outputs to operate in 32 bits; that is, these routines are good for targets
-/// that have no or very little suppport for smaller than 32 bit integer
+/// that have no or very little support for smaller than 32 bit integer
 /// arithmetic.
 ///
 /// Replace Rem with emulation code.

@@ -1,5 +1,6 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 %s -fasm-blocks -triple i386-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -fasm-blocks -triple i386-apple-darwin10 -emit-llvm -o - | FileCheck %s %}
 
 int gVar;
 void t1() {

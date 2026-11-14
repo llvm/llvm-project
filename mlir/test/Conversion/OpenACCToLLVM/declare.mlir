@@ -59,6 +59,23 @@ func.func @unstructured_declare(%arg0: !llvm.ptr) {
 
 // -----
 
+// A `declare link` object is registered with the link map type (1 << 26), so
+// the runtime does not make it present until a data clause maps it.
+// CHECK-LABEL: llvm.func @unstructured_declare_link
+// CHECK: %[[LINK:.*]] = llvm.mlir.constant(67108864 : i64) : i64
+// CHECK: llvm.store %[[LINK]], %{{.*}} : i64, !llvm.ptr
+// CHECK: llvm.call @__tgt_acc_declare
+func.func @unstructured_declare_link(%arg0: !llvm.ptr) {
+  %size = arith.constant 4 : i64
+  %map = acc.map_info varPtr(%arg0 : !llvm.ptr) varType(i32)
+      size(%size : i64) elementSize(4) name("v")
+      descKind(none) mapFlags(link) -> !llvm.ptr
+  %token = acc.declare_enter dataOperands(%map : !llvm.ptr)
+  return
+}
+
+// -----
+
 // A recipe that runs after the host object is allocated only allocates the
 // device mirror of it.
 // CHECK-LABEL: llvm.func @alloc_recipe

@@ -18,7 +18,7 @@ llvm.func @taskwait_depend_iterator(%x: !llvm.ptr) {
 
   %ix = omp.iterator(%i: i64) = (%c1 to %c10 step %step) {
     omp.yield(%x : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
   omp.taskwait depend(taskdependin -> %ix : !omp.iterated<!llvm.ptr>)
   llvm.return
 }

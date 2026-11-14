@@ -23,7 +23,7 @@ define fp128 @f128_direct(fp128 %num) nounwind {
 ; SPARC32-NEXT:    ldd [%fp+-16], %f2
 ; SPARC32-NEXT:    std %f0, [%i0+8]
 ; SPARC32-NEXT:    std %f2, [%i0]
-; SPARC32-NEXT:    ret
+; SPARC32-NEXT:    jmp %i7+12
 ; SPARC32-NEXT:    restore
 ;
 ; SPARC64-LABEL: f128_direct:
@@ -66,8 +66,8 @@ define fp128 @f128_direct_spill(i32 %o0, i32 %o1, i32 %o2, i32 %o3, i32 %o4, i32
 ; SPARC32-NEXT:    ldd [%fp+-16], %f2
 ; SPARC32-NEXT:    std %f0, [%l0+8]
 ; SPARC32-NEXT:    std %f2, [%l0]
-; SPARC32-NEXT:    ret
-; SPARC32-NEXT:    restore
+; SPARC32-NEXT:    jmp %i7+12
+; SPARC32-NEXT:    restore %g0, %l0, %o0
 ;
 ; SPARC64-LABEL: f128_direct_spill:
 ; SPARC64:       ! %bb.0:

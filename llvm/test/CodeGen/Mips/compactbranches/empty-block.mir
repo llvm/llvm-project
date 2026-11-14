@@ -34,7 +34,7 @@
   if.end:                                           ; preds = %if.then, %entry
     ret void
   }
-
+...
 ---
 name:            l5
 alignment:       4
@@ -42,7 +42,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false

@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s -o /dev/null 2>&1
+; RUN: llvm-as < %s -disable-output 2>&1
 
 @a = global i32 1
 @b = global i32 2

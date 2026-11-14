@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "pthread_condattr_setclock.h"
+#include "hdr/errno_macros.h"
 #include "hdr/time_macros.h"     // CLOCK_MONOTONIC, CLOCK_REALTIME
 #include "hdr/types/clockid_t.h" // clockid_t
 #include "src/__support/common.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
 #include <pthread.h> // pthread_condattr_t

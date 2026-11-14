@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// SPS ProxySpecs for the CallProxies: each binds a Proxy to its
+// SPS ProxySpecs for the CallProxies: each is built from a
 // controller-interface descriptor in Shared/SPSCI/CallSPSCI.h, which supplies
 // the wrapper name and wire signature.
 //
@@ -23,24 +23,21 @@ namespace llvm::orc::sps {
 
 /// SPS proxy for CallMainProxy: runs a main-like function
 /// (int(int argc, char *argv[])) in the executor.
-using CallMainProxySpec = ProxySpec<CallMainProxy, rt::sps_ci::CallMain>;
+using CallMainProxySpec = ProxySpec<rt::sps_ci::CallMain>;
 
 /// SPS proxy for CallVoidVoidProxy: runs a void() function in the executor.
 /// WARNING: This Proxy is experimental and may be removed.
-using CallVoidVoidProxySpec =
-    ProxySpec<CallVoidVoidProxy, rt::sps_ci::CallVoidVoid>;
+using CallVoidVoidProxySpec = ProxySpec<rt::sps_ci::CallVoidVoid>;
 
 /// SPS proxy for CallInt32VoidProxy: runs an int32_t() function in the
 /// executor.
 /// WARNING: This Proxy is experimental and may be removed.
-using CallInt32VoidProxySpec =
-    ProxySpec<CallInt32VoidProxy, rt::sps_ci::CallInt32Void>;
+using CallInt32VoidProxySpec = ProxySpec<rt::sps_ci::CallInt32Void>;
 
 /// SPS proxy for CallInt32Int32Proxy: runs an int32_t(int32_t) function in
 /// the executor.
 /// WARNING: This Proxy is experimental and may be removed.
-using CallInt32Int32ProxySpec =
-    ProxySpec<CallInt32Int32Proxy, rt::sps_ci::CallInt32Int32>;
+using CallInt32Int32ProxySpec = ProxySpec<rt::sps_ci::CallInt32Int32>;
 
 } // namespace llvm::orc::sps
 

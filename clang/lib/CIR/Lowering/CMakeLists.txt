@@ -8,8 +8,8 @@ add_clang_library(clangCIRLoweringCommon
   LoweringHelpers.cpp
 
   DEPENDS
-  MLIRBuiltinLocationAttributesIncGen
-  MLIRBytecodeOpInterfaceIncGen
+  MLIRCIRPassIncGen
+  mlir-headers
 
   LINK_LIBS
   clangCIR

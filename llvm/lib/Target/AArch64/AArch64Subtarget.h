@@ -204,6 +204,7 @@ public:
     case AppleA17:
     case AppleM4:
     case AppleM5:
+    case AppleM6:
       return true;
     default:
       return false;

@@ -265,8 +265,7 @@ bool isIgnored(StringRef PassID) {
                        {"PassManager", "PassAdaptor", "AnalysisManagerProxy",
                         "DevirtSCCRepeatedPass", "ModuleInlinerWrapperPass",
                         "VerifierPass", "PrintModulePass", "PrintMIRPass",
-                        "PrintMIRPreparePass", "RequireAnalysisPass",
-                        "InvalidateAnalysisPass"});
+                        "RequireAnalysisPass", "InvalidateAnalysisPass"});
 }
 
 std::string makeHTMLReady(StringRef SR) {
@@ -2426,6 +2425,7 @@ StandardInstrumentations::StandardInstrumentations(
       PrintPass(DebugLogging, PrintPassOpts), OptNone(DebugLogging),
       OptPassGate(Opts, Context), PreservedCFGChecker(Opts),
       PrintChangedIR(Opts, PrintChanged == ChangePrinter::Verbose),
+      PseudoProbeVerification(Context),
       PrintChangedDiff(PrintChanged == ChangePrinter::DiffVerbose ||
                            PrintChanged == ChangePrinter::ColourDiffVerbose,
                        PrintChanged == ChangePrinter::ColourDiffVerbose ||

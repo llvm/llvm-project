@@ -28,7 +28,6 @@ function(check_entrypoint_deps entrypoint_deps)
   set(${entrypoint_deps} ${PUBLIC_DEPS} PARENT_SCOPE)
 endfunction()
 
-
 # Rule which is essentially a wrapper over add_library to compile a set of
 # sources to object files.
 # Usage:
@@ -151,7 +150,6 @@ function(add_object_library target_name)
     CREATE_TARGET create_object_library
     ${ARGN})
 endfunction()
-
 
 # A rule for entrypoint object targets.
 # Usage:

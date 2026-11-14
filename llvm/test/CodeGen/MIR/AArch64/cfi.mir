@@ -54,3 +54,4 @@ body: |
     CFI_INSTRUCTION llvm_set_ra_state 2, 0
     ; CHECK: CFI_INSTRUCTION llvm_set_ra_state 2, 0
     RET_ReallyLR
+...

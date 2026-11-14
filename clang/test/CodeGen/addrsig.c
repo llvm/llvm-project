@@ -1,7 +1,9 @@
 // REQUIRES: x86-registered-target
 
 // RUN: %clang_cc1 -triple=x86_64-unknown-linux -S %s -faddrsig -O -o - | FileCheck --check-prefix=ADDRSIG %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple=x86_64-unknown-linux -S %s -faddrsig -O -o - | FileCheck --check-prefix=ADDRSIG %s %}
 // RUN: %clang_cc1 -triple=x86_64-unknown-linux -S %s -O -o - | FileCheck --check-prefix=NO-ADDRSIG %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple=x86_64-unknown-linux -S %s -O -o - | FileCheck --check-prefix=NO-ADDRSIG %s %}
 
 // ADDRSIG: .addrsig
 // ADDRSIG: .addrsig_sym g1

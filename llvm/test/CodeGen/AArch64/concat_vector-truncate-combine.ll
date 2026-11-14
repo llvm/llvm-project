@@ -5,19 +5,6 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 ; Test the (concat_vectors (trunc), (trunc)) pattern.
 
-define <4 x i16> @test_concat_truncate_v2i64_to_v4i16(<2 x i64> %a, <2 x i64> %b) #0 {
-; CHECK-LABEL: test_concat_truncate_v2i64_to_v4i16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    ret
-entry:
-  %at = trunc <2 x i64> %a to <2 x i16>
-  %bt = trunc <2 x i64> %b to <2 x i16>
-  %shuffle = shufflevector <2 x i16> %at, <2 x i16> %bt, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  ret <4 x i16> %shuffle
-}
-
 define <4 x i32> @test_concat_truncate_v2i64_to_v4i32(<2 x i64> %a, <2 x i64> %b) #0 {
 ; CHECK-LABEL: test_concat_truncate_v2i64_to_v4i32:
 ; CHECK:       // %bb.0: // %entry
@@ -40,19 +27,6 @@ entry:
   %bt = trunc <2 x i32> %b to <2 x i16>
   %shuffle = shufflevector <2 x i16> %at, <2 x i16> %bt, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x i16> %shuffle
-}
-
-define <8 x i8> @test_concat_truncate_v4i32_to_v8i8(<4 x i32> %a, <4 x i32> %b) #0 {
-; CHECK-LABEL: test_concat_truncate_v4i32_to_v8i8:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    xtn v0.8b, v0.8h
-; CHECK-NEXT:    ret
-entry:
-  %at = trunc <4 x i32> %a to <4 x i8>
-  %bt = trunc <4 x i32> %b to <4 x i8>
-  %shuffle = shufflevector <4 x i8> %at, <4 x i8> %bt, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  ret <8 x i8> %shuffle
 }
 
 define <8 x i16> @test_concat_truncate_v4i32_to_v8i16(<4 x i32> %a, <4 x i32> %b) #0 {

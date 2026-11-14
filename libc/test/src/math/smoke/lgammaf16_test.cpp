@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
+#include "hdr/fenv_macros.h"
 #include "src/math/lgammaf16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -53,9 +54,47 @@ TEST_F(LlvmLibcLgammaf16Test, ExactValues) {
 }
 
 TEST_F(LlvmLibcLgammaf16Test, Overflow) {
-  // lgamma(8192) = 65623 > 65520 so it
-  // overflows to +Inf in round-to-nearest mode.
-  EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::lgammaf16(8192.0f16),
-                              FE_OVERFLOW | FE_INEXACT);
-  EXPECT_MATH_ERRNO(ERANGE);
+  using LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
+  using LIBC_NAMESPACE::fputil::testing::RoundingMode;
+
+  const RoundingMode modes[] = {RoundingMode::Nearest, RoundingMode::Upward,
+                                RoundingMode::Downward,
+                                RoundingMode::TowardZero};
+
+  // lgamma(8180) = 65513.694 lies in (65504, 65520), so it overflows only in
+  // FE_UPWARD and rounds to max_normal without overflow in other modes.
+  for (RoundingMode mode : modes) {
+    ForceRoundingMode r(mode);
+    if (!r.success)
+      continue;
+    libc_errno = 0;
+    if (mode == RoundingMode::Upward) {
+      EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::lgammaf16(8180.0f16),
+                                  FE_OVERFLOW | FE_INEXACT);
+      EXPECT_MATH_ERRNO(ERANGE);
+    } else {
+      EXPECT_FP_EQ_WITH_EXCEPTION(
+          max_normal, LIBC_NAMESPACE::lgammaf16(8180.0f16), FE_INEXACT);
+      EXPECT_MATH_ERRNO(0);
+    }
+  }
+
+  // For x >= 8184.0f16, lgamma(x) >= 65549.73 > 65520, overflowing in all
+  // rounding modes.
+  const float16 overflow_inputs[] = {8184.0f16, 8192.0f16, max_normal};
+  for (RoundingMode mode : modes) {
+    ForceRoundingMode r(mode);
+    if (!r.success)
+      continue;
+    float16 expected =
+        (mode == RoundingMode::Downward || mode == RoundingMode::TowardZero)
+            ? max_normal
+            : inf;
+    for (float16 x : overflow_inputs) {
+      libc_errno = 0;
+      EXPECT_FP_EQ_WITH_EXCEPTION(expected, LIBC_NAMESPACE::lgammaf16(x),
+                                  FE_OVERFLOW | FE_INEXACT);
+      EXPECT_MATH_ERRNO(ERANGE);
+    }
+  }
 }

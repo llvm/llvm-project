@@ -212,6 +212,7 @@ public:
   inline const SDValue &getOperand(unsigned i) const;
   inline uint64_t getConstantOperandVal(unsigned i) const;
   inline const APInt &getConstantOperandAPInt(unsigned i) const;
+  inline ISD::CondCode getOperandCondCode(unsigned i) const;
   inline bool isTargetOpcode() const;
   inline bool isMachineOpcode() const;
   inline bool isUndef() const;
@@ -1060,6 +1061,9 @@ public:
   /// Helper method returns the APInt value of a ConstantSDNode.
   inline const APInt &getAsAPIntVal() const;
 
+  /// Helper method returns the CondCode of a CondCodeSDNode.
+  inline ISD::CondCode getOperandCondCode(unsigned Num) const;
+
   inline std::optional<APInt> bitcastToAPInt() const;
 
   const SDValue &getOperand(unsigned Num) const {
@@ -1302,6 +1306,10 @@ inline uint64_t SDValue::getConstantOperandVal(unsigned i) const {
 
 inline const APInt &SDValue::getConstantOperandAPInt(unsigned i) const {
   return Node->getConstantOperandAPInt(i);
+}
+
+inline ISD::CondCode SDValue::getOperandCondCode(unsigned i) const {
+  return Node->getOperandCondCode(i);
 }
 
 inline bool SDValue::isTargetOpcode() const {
@@ -2634,6 +2642,10 @@ public:
   }
 };
 
+ISD::CondCode SDNode::getOperandCondCode(unsigned Num) const {
+  return cast<CondCodeSDNode>(getOperand(Num))->get();
+}
+
 /// This class is used to represent EVT's, which are used
 /// to parameterize some operations.
 class VTSDNode : public SDNode {
@@ -3495,20 +3507,21 @@ namespace ISD {
     return St && St->getAddressingMode() == ISD::UNINDEXED;
   }
 
-  /// Returns true if the specified node is a non-extending and unindexed
-  /// masked load.
+  /// Returns true if the specified node is a non-extending, non-expanding, and
+  /// unindexed masked load.
   inline bool isNormalMaskedLoad(const SDNode *N) {
     auto *Ld = dyn_cast<MaskedLoadSDNode>(N);
     return Ld && Ld->getExtensionType() == ISD::NON_EXTLOAD &&
-           Ld->getAddressingMode() == ISD::UNINDEXED;
+           Ld->getAddressingMode() == ISD::UNINDEXED && !Ld->isExpandingLoad();
   }
 
-  /// Returns true if the specified node is a non-extending and unindexed
-  /// masked store.
+  /// Returns true if the specified node is a non-extending, non-compressing,
+  /// and unindexed masked store.
   inline bool isNormalMaskedStore(const SDNode *N) {
     auto *St = dyn_cast<MaskedStoreSDNode>(N);
     return St && !St->isTruncatingStore() &&
-           St->getAddressingMode() == ISD::UNINDEXED;
+           St->getAddressingMode() == ISD::UNINDEXED &&
+           !St->isCompressingStore();
   }
 
   /// Attempt to match a unary predicate against a scalar/splat constant or

@@ -106,7 +106,7 @@ TEST(BootstrapInfoTest, CreateDefaultWithNoSymbolsBuilder) {
 TEST(BootstrapInfoTest, CreateDefaultWithCustomValuesBuilder) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   auto BI = BootstrapInfo::CreateDefault(
-      S, sps_ci::addAll, [](BootstrapInfo::ValueMap &Values) -> Error {
+      S, sps::ci::addAll, [](BootstrapInfo::ValueMap &Values) -> Error {
         Values["test_key"] = "test_value";
         return Error::success();
       });
@@ -126,7 +126,7 @@ TEST(BootstrapInfoTest, CreateDefaultSymbolsBuilderError) {
 TEST(BootstrapInfoTest, CreateDefaultValuesBuilderError) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   auto BI = BootstrapInfo::CreateDefault(
-      S, sps_ci::addAll, [](BootstrapInfo::ValueMap &) -> Error {
+      S, sps::ci::addAll, [](BootstrapInfo::ValueMap &) -> Error {
         return make_error<StringError>("values builder failed");
       });
   EXPECT_THAT_EXPECTED(BI,

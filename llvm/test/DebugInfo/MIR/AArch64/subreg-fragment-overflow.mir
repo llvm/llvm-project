@@ -26,9 +26,12 @@
   !1695 = !{}
   !1715 = !DILocalVariable(name: "__ret", scope: !1590, file: !1, line: 379, type: !1694)
   !1809 = !DILocation(line: 0, scope: !1590   )
+...
 ---
 name:            _f
 body:             |
   bb.0.entry:
+    liveins: $x15
     renamable $d16_d17_d18 = LD3Threev8b killed renamable $x15, debug-location !1809
     DBG_VALUE $d16_d17_d18, $noreg, !1715, !DIExpression(DW_OP_LLVM_fragment, 64, 64), debug-location !1809
+...

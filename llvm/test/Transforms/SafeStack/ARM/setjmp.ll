@@ -6,7 +6,7 @@
 
 define void @f(i32 %b) safestack {
 entry:
-; CHECK: %[[SPA:.*]] = call ptr @__safestack_pointer_address()
+; CHECK: %[[SPA:.*]] = call arm_aapcscc ptr @__safestack_pointer_address()
 ; CHECK: %[[USP:.*]] = load ptr, ptr %[[SPA]]
 ; CHECK: %[[USDP:.*]] = alloca ptr
 ; CHECK: store ptr %[[USP]], ptr %[[USDP]]

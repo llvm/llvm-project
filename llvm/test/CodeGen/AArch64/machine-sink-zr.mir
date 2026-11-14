@@ -4,13 +4,6 @@
 ...
 ---
 name:            sinkwzr
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr32 }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32sp }
-  - { id: 3, class: gpr32 }
-  - { id: 4, class: gpr32 }
 body:             |
   ; Check that WZR copy is sunk into the loop preheader.
   ; CHECK-LABEL: name: sinkwzr
@@ -19,8 +12,8 @@ body:             |
   bb.0:
     liveins: $w0
 
-    %0 = COPY $w0
-    %1 = COPY $wzr
+    %0:gpr32 = COPY $w0
+    %1:gpr32 = COPY $wzr
     CBZW %0, %bb.3
 
   ; CHECK-LABEL: bb.1:
@@ -30,10 +23,10 @@ body:             |
     B %bb.2
 
   bb.2:
-    %2 = PHI %0, %bb.1, %4, %bb.2
+    %2:gpr32sp = PHI %0, %bb.1, %4, %bb.2
     $w0 = COPY %1
-    %3 = SUBSWri %2, 1, 0, implicit-def dead $nzcv
-    %4 = COPY %3
+    %3:gpr32 = SUBSWri %2, 1, 0, implicit-def dead $nzcv
+    %4:gpr32 = COPY %3
     CBZW %3, %bb.3
     B %bb.2
 

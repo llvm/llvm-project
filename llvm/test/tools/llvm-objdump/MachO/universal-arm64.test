@@ -103,6 +103,7 @@ FatArchs:
     align:           12
 Slices:
   - !mach-o
+    IsLittleEndian:  true
     FileHeader:
       magic:           0xFEEDFACF
       cputype:         0x0100000C
@@ -113,6 +114,7 @@ Slices:
       flags:           0x00000000
       reserved:        0x00000000
   - !mach-o
+    IsLittleEndian:  true
     FileHeader:
       magic:           0xFEEDFACF
       cputype:         0x0100000C
@@ -123,6 +125,7 @@ Slices:
       flags:           0x00000000
       reserved:        0x00000000
   - !mach-o
+    IsLittleEndian:  true
     FileHeader:
       magic:           0xFEEDFACF
       cputype:         0x0100000C
@@ -133,6 +136,7 @@ Slices:
       flags:           0x00000000
       reserved:        0x00000000
   - !mach-o
+    IsLittleEndian:  true
     FileHeader:
       magic:           0xFEEDFACF
       cputype:         0x0100000C

@@ -11,7 +11,6 @@
 # CHECK: ExitSU: Bcc
 ---
 name: addswri
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -34,7 +33,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: addswrr
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -57,7 +55,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: addswrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -80,7 +77,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: no_fuse_positive_shift_addswrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -103,7 +99,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: andswri
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -126,7 +121,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: andswrr
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -149,7 +143,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: andswrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -172,7 +165,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: no_fuse_positive_shift_andswrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -195,7 +187,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: subswri
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -218,7 +209,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: subswrr
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -241,7 +231,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: subswrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -264,7 +253,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: no_fuse_positive_shift_subswrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -287,7 +275,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: bicswrr
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -310,7 +297,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: bicswrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -333,7 +319,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: no_fuse_positive_shift_bicswrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -356,7 +341,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: addsxri
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -379,7 +363,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: addsxrr
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -402,7 +385,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: addsxrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -425,7 +407,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: no_fuse_positive_shift_addsxrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -448,7 +429,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: andsxri
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -471,7 +451,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: andsxrr
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -494,7 +473,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: andsxrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -517,7 +495,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: no_fuse_positive_shift_andsxrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -540,7 +517,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: subsxri
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -563,7 +539,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: subsxrr
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -586,7 +561,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: subsxrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -609,7 +583,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: no_fuse_positive_shift_subsxrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -632,7 +605,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: bicsxrr
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -655,7 +627,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: bicsxrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -678,7 +649,6 @@ body: |
 # CHECK: ExitSU: Bcc
 ---
 name: no_fuse_positive_shift_bicsxrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |

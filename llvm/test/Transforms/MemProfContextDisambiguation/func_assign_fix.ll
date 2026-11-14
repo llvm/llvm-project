@@ -67,7 +67,9 @@ define void @F() {
 
 ; CHECK-LABEL: define void @G()
 define void @G() {
-  ; CHECK: call ptr @_Znwm(i64 0) #[[NOTCOLD]]
+  ;; G is reached by both cold and not cold contexts that could not be
+  ;; disambiguated, so its allocation keeps the ambiguous attribute.
+  ; CHECK: call ptr @_Znwm(i64 0) #[[AMBIGUOUS:[0-9]+]]
   %2 = call ptr @_Znwm(i64 0), !memprof !10, !callsite !15
   ret void
 }
@@ -105,8 +107,9 @@ define void @B1() {
 
 declare ptr @_Znwm(i64)
 
-; IR: attributes #[[NOTCOLD]] = { "memprof"="notcold" }
-; IR: attributes #[[COLD]] = { "memprof"="cold" }
+; CHECK: attributes #[[NOTCOLD]] = { "memprof"="notcold" }
+; CHECK: attributes #[[AMBIGUOUS]] = { "memprof"="ambiguous" }
+; CHECK: attributes #[[COLD]] = { "memprof"="cold" }
 
 !0 = !{i64 123}
 !1 = !{i64 234}

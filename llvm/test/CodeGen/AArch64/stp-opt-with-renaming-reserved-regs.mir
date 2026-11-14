@@ -1,9 +1,9 @@
 # RUN: llc -run-pass=aarch64-ldst-opt -aarch64-load-store-renaming=true -mattr=+reserve-x10 \
-# RUN:     -mattr=+reserve-x11 -mattr=+reserve-x15 -mtriple=arm64-apple-iphoneos -verify-machineinstrs \
+# RUN:     -mattr=+reserve-x11 -mattr=+reserve-x15 -mtriple=arm64-apple-iphoneos \
 # RUN:     -o - %s | FileCheck --check-prefix=CHECK --check-prefix=PRESERVED %s
 
 # RUN: llc -run-pass=aarch64-ldst-opt -aarch64-load-store-renaming=true -mtriple=arm64-apple-iphoneos \
-# RUN:     -verify-machineinstrs -o - %s | FileCheck --check-prefix=CHECK --check-prefix=NOPRES %s
+# RUN:     -o - %s | FileCheck --check-prefix=CHECK --check-prefix=NOPRES %s
 
 
 # Make sure we do not pick reserved registers. For test1, we would pick x10,
@@ -24,7 +24,6 @@
 
 name:            test1
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -63,7 +62,6 @@ body:             |
 #
 name:            test2
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -87,4 +85,3 @@ body:             |
     RET undef $lr
 
 ...
----

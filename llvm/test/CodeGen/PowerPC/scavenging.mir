@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=ppc64-- -run-pass scavenger-test -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=ppc64-- -run-pass scavenger-test -o - %s | FileCheck %s
 ---
 # CHECK-LABEL: name: noscav0
 name: noscav0

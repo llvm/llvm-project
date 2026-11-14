@@ -8,7 +8,6 @@ add_libc_test(
     waitpid_test.cpp
   DEPENDS
     libc.include.sys_wait
-    libc.src.errno.errno
     libc.src.sys.wait.waitpid
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
@@ -22,7 +21,6 @@ add_libc_test(
     wait4_test.cpp
   DEPENDS
     libc.include.sys_wait
-    libc.src.errno.errno
     libc.src.sys.wait.wait4
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
@@ -36,7 +34,6 @@ add_libc_test(
     waitid_test.cpp
   DEPENDS
     libc.include.sys_wait
-    libc.src.errno.errno
     libc.src.sys.wait.waitid
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher

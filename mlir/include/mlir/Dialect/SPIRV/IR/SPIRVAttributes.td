@@ -22,9 +22,12 @@
 #define MLIR_DIALECT_SPIRV_IR_TARGET_AND_ABI
 
 include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
+include "mlir/IR/BuiltinAttributeInterfaces.td"
 
-class SPIRV_Attr<string attrName, string attrMnemonic>
-    : AttrDef<SPIRV_Dialect, attrName> {
+class SPIRV_Attr<string attrName, string attrMnemonic,
+                 list<Trait> traits = []>
+    : AttrDef<SPIRV_Dialect, attrName, traits> {
+  let cppIncludes = ["mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"];
   let mnemonic = attrMnemonic;
 }
 
@@ -91,6 +94,18 @@ def SPIRV_CacheControlStoreINTELAttr :
   let parameters = (ins "unsigned":$cache_level,
                         "mlir::spirv::StoreCacheControl":$store_cache_control);
   let assemblyFormat = "`<` struct(params) `>`";
+}
+
+// Value of an OpConstantNull of pointer or composite type in spirv.Constant.
+def SPIRV_NullAttr : SPIRV_Attr<"Null", "null", [
+    DeclareAttrInterfaceMethods<TypedAttrInterface>]> {
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type);
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "Type":$type), [{
+      return $_get(type.getContext(), type);
+    }]>
+  ];
+  let assemblyFormat = "";
 }
 
 // This attribute specifies the limits for various resources on the target

@@ -1,14 +1,20 @@
+# tablegen_internal(project ofn ...) runs ${project}_TABLEGEN_EXE. It is the
+# shared implementation behind the project-specific wrappers such as
+# llvm_tablegen, clang_tablegen and mlir_tablegen; use those instead where
+# one exists.
 # LLVM_TARGET_DEFINITIONS must contain the name of the .td file to process,
 # while LLVM_TARGET_DEPENDS may contain additional file dependencies.
 # Extra parameters for `tblgen' may come after `ofn' parameter.
+# Files that the generator writes besides `ofn' may be listed after
+# EXTRA_OUTPUTS.
 # Adds the name of the generated file to TABLEGEN_OUTPUT.
 include(LLVMDistributionSupport)
 
 set(LLVM_TABLEGEN_LAUNCHER "" CACHE STRING
   "Semicolon-separated command prefix for TableGen invocations")
 
-function(tablegen project ofn)
-  cmake_parse_arguments(ARG "" "" "DEPENDS;EXTRA_INCLUDES" ${ARGN})
+function(tablegen_internal project ofn)
+  cmake_parse_arguments(ARG "" "" "DEPENDS;EXTRA_INCLUDES;EXTRA_OUTPUTS" ${ARGN})
 
   # Override ${project} with ${project}_TABLEGEN_PROJECT
   if(NOT "${${project}_TABLEGEN_PROJECT}" STREQUAL "")
@@ -56,27 +62,6 @@ function(tablegen project ofn)
     set(additional_cmdline
       -o ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
       )
-  endif()
-
-  if (LLVM_ENABLE_DAGISEL_COV AND "-gen-dag-isel" IN_LIST ARGN)
-    list(APPEND LLVM_TABLEGEN_FLAGS "-instrument-coverage")
-  endif()
-  if (LLVM_ENABLE_GISEL_COV AND "-gen-global-isel" IN_LIST ARGN)
-    list(APPEND LLVM_TABLEGEN_FLAGS "-instrument-gisel-coverage")
-    list(APPEND LLVM_TABLEGEN_FLAGS "-gisel-coverage-file=${LLVM_GISEL_COV_PREFIX}all")
-  endif()
-  if (LLVM_OMIT_DAGISEL_COMMENTS AND "-gen-dag-isel" IN_LIST ARGN)
-    list(APPEND LLVM_TABLEGEN_FLAGS "-omit-comments")
-  endif()
-
-  set(EXTRA_OUTPUTS)
-  if("-gen-register-info" IN_LIST ARGN)
-    cmake_path(GET ofn STEM OUTPUT_BASENAME)
-    list(APPEND EXTRA_OUTPUTS
-         ${CMAKE_CURRENT_BINARY_DIR}/${OUTPUT_BASENAME}Enums.inc
-         ${CMAKE_CURRENT_BINARY_DIR}/${OUTPUT_BASENAME}Header.inc
-         ${CMAKE_CURRENT_BINARY_DIR}/${OUTPUT_BASENAME}MCDesc.inc
-         ${CMAKE_CURRENT_BINARY_DIR}/${OUTPUT_BASENAME}TargetDesc.inc)
   endif()
 
   # MSVC can't support long string literals ("long" > 65534 bytes)[1], so if there's
@@ -148,7 +133,7 @@ function(tablegen project ofn)
     set(LLVM_TABLEGEN_JOB_POOL "")
   endif()
 
-  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn} ${EXTRA_OUTPUTS}
+  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn} ${ARG_EXTRA_OUTPUTS}
     COMMAND ${tablegen_launcher} ${tablegen_exe} ${ARG_UNPARSED_ARGUMENTS}
     ${tblgen_includes}
     ${LLVM_TABLEGEN_FLAGS}
@@ -174,10 +159,40 @@ function(tablegen project ofn)
     GENERATED 1)
 endfunction()
 
+# Invokes llvm-tblgen; see tablegen_internal() for the calling convention.
+function(llvm_tablegen ofn)
+  set(extra_flags)
+  if (LLVM_ENABLE_DAGISEL_COV AND "-gen-dag-isel" IN_LIST ARGN)
+    list(APPEND extra_flags "-instrument-coverage")
+  endif()
+  if (LLVM_ENABLE_GISEL_COV AND "-gen-global-isel" IN_LIST ARGN)
+    list(APPEND extra_flags "-instrument-gisel-coverage")
+    list(APPEND extra_flags "-gisel-coverage-file=${LLVM_GISEL_COV_PREFIX}all")
+  endif()
+  if (LLVM_OMIT_DAGISEL_COMMENTS AND "-gen-dag-isel" IN_LIST ARGN)
+    list(APPEND extra_flags "-omit-comments")
+  endif()
+
+  set(extra_outputs)
+  if("-gen-register-info" IN_LIST ARGN)
+    cmake_path(GET ofn STEM output_basename)
+    list(APPEND extra_outputs
+         ${CMAKE_CURRENT_BINARY_DIR}/${output_basename}Enums.inc
+         ${CMAKE_CURRENT_BINARY_DIR}/${output_basename}Header.inc
+         ${CMAKE_CURRENT_BINARY_DIR}/${output_basename}MCDesc.inc
+         ${CMAKE_CURRENT_BINARY_DIR}/${output_basename}TargetDesc.inc)
+  endif()
+
+  # Pass extra_flags before ARGN: after they could land in a trailing
+  # DEPENDS or EXTRA_INCLUDES list.
+  tablegen_internal(LLVM ${ofn} ${extra_flags} ${ARGN} EXTRA_OUTPUTS ${extra_outputs})
+  set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} PARENT_SCOPE)
+endfunction()
+
 # Creates a target for publicly exporting tablegen dependencies.
 function(add_public_tablegen_target target)
   if(NOT TABLEGEN_OUTPUT)
-    message(FATAL_ERROR "Requires tablegen() definitions as TABLEGEN_OUTPUT.")
+    message(FATAL_ERROR "Requires tablegen_internal() definitions as TABLEGEN_OUTPUT.")
   endif()
   add_custom_target(${target}
     DEPENDS ${TABLEGEN_OUTPUT})

@@ -138,21 +138,18 @@ ld64.lld \
 
 # Convert to YAML for the test
 echo "#--- a.o.yaml"
-obj2yaml a.o | sed '1a\
-IsLittleEndian: true'
+obj2yaml a.o
 echo ""
 echo "#--- b.o.yaml"
-obj2yaml b.o | sed '1a\
-IsLittleEndian: true'
+obj2yaml b.o
 echo ""
 echo "#--- stmt_seq_macho.exe.yaml"
-obj2yaml stmt_seq_macho.exe | sed '1a\
-IsLittleEndian: true'
+obj2yaml stmt_seq_macho.exe
 
 #--- stmt-seq-macho.yaml
 #--- a.o.yaml
 --- !mach-o
-IsLittleEndian: true
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C
@@ -688,7 +685,7 @@ DWARF:
 
 #--- b.o.yaml
 --- !mach-o
-IsLittleEndian: true
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C
@@ -1224,7 +1221,7 @@ DWARF:
 
 #--- stmt_seq_macho.exe.yaml
 --- !mach-o
-IsLittleEndian: true
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C

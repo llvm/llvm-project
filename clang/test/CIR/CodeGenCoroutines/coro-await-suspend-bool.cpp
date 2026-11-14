@@ -2,6 +2,8 @@
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: cir-opt --cir-flatten-cfg %t.cir -o %t.flat.cir
 // RUN: FileCheck --input-file=%t.flat.cir %s -check-prefix=CIR-FLAT --implicit-check-not=cir.coroutine --implicit-check-not=cir.await --implicit-check-not=cir.co_return --implicit-check-not=cir.coro.exit --implicit-check-not=cir.coro.suspend_point
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm -disable-llvm-passes -Wno-coroutine-missing-unhandled-exception %s -o %t-cir.ll
+// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-llvm -disable-llvm-passes -Wno-coroutine-missing-unhandled-exception %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
@@ -25,6 +27,7 @@ struct BoolAwaiter {
 
 // CIR-LABEL: cir.func coroutine {{.*}} @_Z15await_bool_vetov
 // CIR-FLAT-LABEL: cir.func flattened_coroutine {{.*}} @_Z15await_bool_vetov
+// LLVM-LABEL: define dso_local void @_Z15await_bool_vetov
 // OGCG-LABEL: define dso_local void @_Z15await_bool_vetov
 Task await_bool_veto() {
   // CIR: cir.await(user, ready : {
@@ -51,6 +54,21 @@ Task await_bool_veto() {
   // CIR-FLAT-NEXT:   ]
   // CIR-FLAT: ^[[RESUME]]:
   // CIR-FLAT-NEXT:   cir.call @_ZN11BoolAwaiter12await_resumeEv(%[[AWAITER]])
+
+  // LLVM:   %[[READY:.*]] = call noundef zeroext i1 @_ZN11BoolAwaiter11await_readyEv(ptr {{.*}} %[[AWAITER:[0-9]+]])
+  // LLVM-NEXT:   br i1 %[[READY]], label %[[RESUME:[0-9]+]], label %[[SUSPEND:[0-9]+]]
+  // LLVM: [[SUSPEND]]:
+  // LLVM-NEXT:   %[[SAVE:.*]] = call token @llvm.coro.save(ptr null)
+  // LLVM:   %[[SUSPEND_RET:.*]] = call noundef zeroext i1 @_ZN11BoolAwaiter13await_suspendESt16coroutine_handleIvE(ptr {{.*}} %[[AWAITER]])
+  // LLVM-NEXT:   br i1 %[[SUSPEND_RET]], label %[[DO_SUSPEND:[0-9]+]], label %[[RESUME]]
+  // LLVM: [[DO_SUSPEND]]:
+  // LLVM-NEXT:   %[[RES:.*]] = call i8 @llvm.coro.suspend(token %[[SAVE]], i1 false)
+  // LLVM-NEXT:   switch i8 %[[RES]], label %{{.*}} [
+  // LLVM-NEXT:     i8 0, label %[[RESUME]]
+  // LLVM-NEXT:     i8 1, label %{{.*}}
+  // LLVM-NEXT:   ]
+  // LLVM: [[RESUME]]:
+  // LLVM-NEXT:   call void @_ZN11BoolAwaiter12await_resumeEv(ptr {{.*}} %[[AWAITER]])
 
   // OGCG:   %[[READY_RES:.*]] = call noundef zeroext i1 @_ZN11BoolAwaiter11await_readyEv(ptr {{.*}})
   // OGCG:   br i1 %[[READY_RES]], label %[[AWAIT_READY_DEST:.*]], label %[[AWAIT_SUSPEND:.*]]

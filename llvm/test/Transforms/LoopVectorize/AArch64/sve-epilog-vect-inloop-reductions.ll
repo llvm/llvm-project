@@ -4,7 +4,7 @@
 ;
 ; In-loop integer and reduction
 ;
-define i64 @int_reduction_and(ptr noalias nocapture %a, i64 %N) {
+define i64 @int_reduction_and(ptr noalias nocapture %a, i64 %N) vscale_range(1,16) {
 ; CHECK-LABEL: @int_reduction_and(
 ; CHECK-NEXT:  iter.check:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 2
@@ -28,9 +28,9 @@ define i64 @int_reduction_and(ptr noalias nocapture %a, i64 %N) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw nsw i64 [[TMP4]], 3
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i64, ptr [[TMP10]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP10]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[TMP10]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP10]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP10]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP10]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 2 x i64>, ptr [[TMP15]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <vscale x 2 x i64>, ptr [[TMP8]], align 8

@@ -90,7 +90,7 @@ struct Header {
 };
 
 enum : uint32_t {
-  MAX_VLEN = 0xffff ///< Max # of struct/union/enum members or func args
+  MAX_VLEN = 0xffffff ///< Max # of struct/union/enum members or func args
 };
 
 enum TypeKinds : uint8_t {
@@ -109,12 +109,11 @@ struct CommonType {
   uint32_t NameOff;
 
   /// "Info" bits arrangement:
-  /// Bits  0-15: vlen (e.g. # of struct's members)
-  /// Bits 16-23: unused
-  /// Bits 24-28: kind (e.g. int, ptr, array...etc)
-  /// Bits 29-30: unused
+  /// Bits  0-23: vlen (e.g. # of struct's members)
+  /// Bits 24-30: kind (e.g. int, ptr, array...etc)
   /// Bit     31: kind_flag, currently used by
-  ///             struct, union and fwd
+  ///             struct, union, enum, fwd, enum64,
+  ///             decl_tag and type_tag
   uint32_t Info;
 
   /// "Size" is used by INT, ENUM, STRUCT and UNION.
@@ -128,8 +127,8 @@ struct CommonType {
     uint32_t Type;
   };
 
-  uint32_t getKind() const { return Info >> 24 & 0x1f; }
-  uint32_t getVlen() const { return Info & 0xffff; }
+  uint32_t getKind() const { return Info >> 24 & 0x7f; }
+  uint32_t getVlen() const { return Info & 0xffffff; }
 };
 
 // For some specific BTF_KIND, "struct CommonType" is immediately

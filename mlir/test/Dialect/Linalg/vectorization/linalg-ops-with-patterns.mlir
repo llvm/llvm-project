@@ -333,7 +333,11 @@ func.func @pack_with_padding(%arg0: tensor<32x7x15xf32>, %arg1: tensor<32x4x1x16
 // CHECK-SAME:      %[[VAL_1:.*]]: tensor<32x4x1x16x2xf32>) -> tensor<32x4x1x16x2xf32> {
 // CHECK:           %[[VAL_2:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = vector.transfer_read %[[VAL_0]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]]], %[[VAL_2]] {in_bounds = [true, false, false]} : tensor<32x7x15xf32>, vector<32x8x16xf32>
+// CHECK:           %[[VAL_C32:.*]] = arith.constant 32 : index
+// CHECK:           %[[VAL_C7:.*]] = arith.constant 7 : index
+// CHECK:           %[[VAL_C15:.*]] = arith.constant 15 : index
+// CHECK:           %[[VAL_MASK:.*]] = vector.create_mask %[[VAL_C32]], %[[VAL_C7]], %[[VAL_C15]] : vector<32x8x16xi1>
+// CHECK:           %[[VAL_4:.*]] = vector.mask %[[VAL_MASK]] { vector.transfer_read %[[VAL_0]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]]], %[[VAL_2]] {in_bounds = [true, true, true]} : tensor<32x7x15xf32>, vector<32x8x16xf32> } : vector<32x8x16xi1> -> vector<32x8x16xf32>
 // CHECK:           %[[VAL_5:.*]] = vector.shape_cast %[[VAL_4]] : vector<32x8x16xf32> to vector<32x4x2x1x16xf32>
 // CHECK:           %[[VAL_6:.*]] = vector.transpose %[[VAL_5]], [0, 1, 3, 4, 2] : vector<32x4x2x1x16xf32> to vector<32x4x1x16x2xf32>
 // CHECK:           %[[VAL_8:.*]] = vector.transfer_write %[[VAL_6]], %[[VAL_1]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]], %[[VAL_3]], %[[VAL_3]]] {in_bounds = [true, true, true, true, true]} : vector<32x4x1x16x2xf32>, tensor<32x4x1x16x2xf32>

@@ -166,6 +166,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case AppleA17:
   case AppleM4:
   case AppleM5:
+  case AppleM6:
     PrefetchDistance = 280;
     MinPrefetchStride = 2048;
     MaxPrefetchIterationsAhead = 3;
@@ -326,6 +327,10 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
       TLInfo(TM, *this) {
   if (AArch64::isX18ReservedByDefault(TT))
     ReserveXRegister.set(18);
+  if (isLFI()) {
+    ReserveXRegister.set(25, 29);
+    ReserveLRForRA = true;
+  }
 
   CallLoweringInfo.reset(new AArch64CallLowering(*getTargetLowering()));
   InlineAsmLoweringInfo.reset(new InlineAsmLowering(getTargetLowering()));

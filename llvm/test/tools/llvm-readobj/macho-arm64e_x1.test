@@ -6,6 +6,7 @@
 # CHECK: CpuSubType: CPU_SUBTYPE_ARM64E_X1 (0xC)
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x0100000C

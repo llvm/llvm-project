@@ -717,6 +717,7 @@ variables is defined below.
 > - `LIBOMPTARGET_JIT_SAVE_IMAGE_FILENAME=<out:Filename> (device image file)`
 > - `LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT=<Num> (default: 32)`
 > - `LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT=[TRUE/FALSE] (default TRUE)`
+> - `LIBOMPTARGET_TEAMS_REDUCTION_WAVES_PER_CU=<Num> (default: per device)`
 > - `OFFLOAD_TRACK_ALLOCATION_TRACES=[TRUE/FALSE] (default FALSE)`
 > - `OFFLOAD_TRACK_NUM_KERNEL_LAUNCH_TRACES=<Num> (default 0)`
 
@@ -1138,6 +1139,22 @@ be reduced below the value passed for this environment variable though.
 This environment variable can be used to control how the OpenMP runtime assigns
 blocks to loops with high trip counts. By default we reuse existing blocks
 rather than spawning new blocks.
+
+#### LIBOMPTARGET_TEAMS_REDUCTION_WAVES_PER_CU
+
+This environment variable sets the number of waves per compute unit for a
+kernel with a scalar cross-team reduction, e.g., `target teams distribute
+parallel for reduction(...)`. The number of blocks of a kernel with a
+cross-team reduction follows from the size of the reduction: if the data
+reduced per team is larger than 32 bytes, one block per compute unit;
+otherwise, as many blocks as fill this number of waves per compute unit, but
+at least one per compute unit. No more blocks are launched than the loop has
+iterations for. (A loop too short for one block per compute unit gets the same
+grid as a kernel without a reduction.) In Generic mode, only large reductions
+are sized this way. The `num_teams` clause sets the number of blocks, and
+`OMP_NUM_TEAMS` caps it. The default on AMDGPU devices is `16`. On other
+devices, the default is `0`: kernels with a cross-team reduction get the same
+number of blocks as other kernels.
 
 #### OFFLOAD_TRACK_ALLOCATION_TRACES
 

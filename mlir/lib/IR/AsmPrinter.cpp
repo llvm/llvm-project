@@ -59,7 +59,9 @@ using namespace mlir::detail;
 
 void OperationName::print(raw_ostream &os) const { os << getStringRef(); }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void OperationName::dump() const { print(llvm::errs()); }
+#endif
 
 //===--------------------------------------------------------------------===//
 // AsmParser
@@ -2296,8 +2298,10 @@ static void printFloatValue(const APFloat &apValue, raw_ostream &os,
   bool isNaN = apValue.isNaN();
   if (!isInf && !isNaN) {
     SmallString<128> strValue;
-    apValue.toString(strValue, /*FormatPrecision=*/6, /*FormatMaxPadding=*/0,
-                     /*TruncateZero=*/false);
+    bool isLossless = apValue.toStringRoundTrip(strValue,
+                                                /*FormatPrecision=*/6,
+                                                /*FormatMaxPadding=*/0,
+                                                /*TruncateZero=*/false);
 
     // Check to make sure that the stringized number is not some string like
     // "Inf" or NaN, that atof will accept, but the lexer will not.  Check
@@ -2307,9 +2311,8 @@ static void printFloatValue(const APFloat &apValue, raw_ostream &os,
              (strValue[1] >= '0' && strValue[1] <= '9'))) &&
            "[-+]?[0-9] regex does not match!");
 
-    // Parse back the stringized version and check that the value is equal
-    // (i.e., there is no precision loss).
-    if (APFloat(apValue.getSemantics(), strValue).bitwiseIsEqual(apValue)) {
+    // Lossless if it parses back to the same value.
+    if (isLossless) {
       os << strValue;
       return;
     }
@@ -2696,7 +2699,10 @@ void AsmPrinter::Impl::printDenseTypedElementsAttr(DenseTypedElementsAttr attr,
   auto elementType = type.getElementType();
 
   // Check to see if we should format this attribute as a hex string.
-  if (allowHex && printerFlags.shouldPrintElementsAttrWithHex(attr)) {
+  if (allowHex &&
+      (elementType.isIntOrIndexOrFloat() ||
+       llvm::isa<ComplexType>(elementType)) &&
+      printerFlags.shouldPrintElementsAttrWithHex(attr)) {
     ArrayRef<char> rawData = attr.getRawData();
     if (llvm::endianness::native == llvm::endianness::big) {
       // Convert endianess in big-endian(BE) machines. `rawData` is BE in BE
@@ -2743,6 +2749,12 @@ void AsmPrinter::Impl::printDenseTypedElementsAttr(DenseTypedElementsAttr attr,
     auto valueIt = attr.value_begin<APInt>();
     printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
       printDenseIntElement(*(valueIt + index), os, elementType);
+    });
+  } else if (llvm::isa<MXI8Type>(elementType)) {
+    auto valueIt = attr.value_begin<Attribute>();
+    printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
+      auto value = llvm::cast<IntegerAttr>(*(valueIt + index));
+      printDenseIntElement(value.getValue(), os, value.getType());
     });
   } else {
     assert(llvm::isa<FloatType>(elementType) && "unexpected element type");
@@ -2844,6 +2856,7 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
       .Case<Float64Type>([&](Type) { os << "f64"; })
       .Case<Float80Type>([&](Type) { os << "f80"; })
       .Case<Float128Type>([&](Type) { os << "f128"; })
+      .Case<MXI8Type>([&](Type) { os << "mxi8"; })
       .Case([&](IntegerType integerTy) {
         if (integerTy.isSigned())
           os << 's';
@@ -4084,10 +4097,12 @@ void Attribute::print(raw_ostream &os, AsmState &state, bool elideType) const {
                                        : AttrTypeElision::Never);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Attribute::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
+#endif
 
 void Attribute::printStripped(raw_ostream &os, AsmState &state) const {
   if (!*this) {
@@ -4133,6 +4148,7 @@ void Type::print(raw_ostream &os, AsmState &state) const {
   AsmPrinter::Impl(os, state.getImpl()).printType(*this);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Type::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
@@ -4147,6 +4163,7 @@ void IntegerSet::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
+#endif
 
 void AffineExpr::print(raw_ostream &os) const {
   if (!expr) {
@@ -4157,10 +4174,12 @@ void AffineExpr::print(raw_ostream &os) const {
   AsmPrinter::Impl(os, state.getImpl()).printAffineExpr(*this);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void AffineExpr::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
+#endif
 
 void AffineMap::print(raw_ostream &os) const {
   if (!map) {
@@ -4210,10 +4229,12 @@ raw_ostream &mlir::operator<<(raw_ostream &os, Value value) {
   return os;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Value::dump() const {
   print(llvm::errs(), OpPrintingFlags().useLocalScope());
   llvm::errs() << "\n";
 }
+#endif
 
 void Value::printAsOperand(raw_ostream &os, AsmState &state) const {
   // TODO: This doesn't necessarily capture all potential cases.
@@ -4278,10 +4299,12 @@ void Operation::print(raw_ostream &os, AsmState &state) {
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Operation::dump() {
   print(llvm::errs(), OpPrintingFlags().useLocalScope());
   llvm::errs() << "\n";
 }
+#endif
 
 void Operation::dumpPretty() {
   print(llvm::errs(), OpPrintingFlags().useLocalScope().assumeVerified());
@@ -4305,7 +4328,9 @@ void Block::print(raw_ostream &os, AsmState &state) {
   OperationPrinter(os, state.getImpl()).print(this);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Block::dump() { print(llvm::errs()); }
+#endif
 
 /// Print out the name of the block without printing its body.
 void Block::printAsOperand(raw_ostream &os, bool printType) {

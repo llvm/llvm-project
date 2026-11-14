@@ -1,6 +1,6 @@
 ; RUN: opt -p hexagon-loop-idiom -S -mtriple hexagon-unknown-elf \
 ; RUN:   -pass-remarks=hexagon-lir -pass-remarks-missed=hexagon-lir \
-; RUN:   %s -o /dev/null 2>&1 | FileCheck %s
+; RUN:   %s -disable-output 2>&1 | FileCheck %s
 
 ;; Test that HexagonLoopIdiomRecognition emits optimization remarks.
 

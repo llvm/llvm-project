@@ -115,3 +115,16 @@ std::map<View, int> map;
 // CHECK:       CXXMethodDecl {{.*}} operator[] 'int &(const View &)' implicit_instantiation
 // CHECK-NEXT:           ParmVarDecl {{.*}} p 'const View &'
 // CHECK-NEXT:               LifetimeCaptureByAttr {{.*}} Implicit
+
+// Verify that the attribute is inherited by a redeclaration, keeping the
+// resolved index even when the parameters are renamed.
+void captured(int &x [[clang::lifetime_capture_by(c)]], int &c);
+void captured(int &y, int &other);
+
+// CHECK:      FunctionDecl {{.*}} captured 'void (int &, int &)'
+// CHECK-NEXT:   ParmVarDecl {{.*}} x 'int &'
+// CHECK-NEXT:     LifetimeCaptureByAttr {{.*}} lifetime_capture_by 1
+// CHECK-NEXT:   ParmVarDecl {{.*}} c 'int &'
+// CHECK:      FunctionDecl {{.*}} prev {{.*}} captured 'void (int &, int &)'
+// CHECK-NEXT:   ParmVarDecl {{.*}} y 'int &'
+// CHECK-NEXT:     LifetimeCaptureByAttr {{.*}} Inherited lifetime_capture_by 1

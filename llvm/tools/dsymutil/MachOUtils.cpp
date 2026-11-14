@@ -12,14 +12,13 @@
 #include "LinkUtils.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Object/MachO.h"
-#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -442,9 +441,10 @@ bool generateDsymCompanion(
       memset(&Cmd, 0, sizeof(Cmd));
       Cmd = InputBinary.getBuildVersionLoadCommand(LCI);
       ++NumLoadCommands;
-      LoadCommandSize += sizeof(Cmd);
-      // LLDB doesn't care about the build tools for now.
-      Cmd.ntools = 0;
+      // Replace the input's build tools with dsymutil, the dSYM's producer.
+      Cmd.ntools = 1;
+      Cmd.cmdsize = sizeof(Cmd) + sizeof(MachO::build_tool_version);
+      LoadCommandSize += Cmd.cmdsize;
       BuildVersionCmd.push_back(Cmd);
       break;
     }
@@ -556,11 +556,14 @@ bool generateDsymCompanion(
   }
   for (auto Cmd : BuildVersionCmd) {
     Writer.W.write<uint32_t>(Cmd.cmd);
-    Writer.W.write<uint32_t>(sizeof(Cmd));
+    Writer.W.write<uint32_t>(Cmd.cmdsize);
     Writer.W.write<uint32_t>(Cmd.platform);
     Writer.W.write<uint32_t>(Cmd.minos);
     Writer.W.write<uint32_t>(Cmd.sdk);
     Writer.W.write<uint32_t>(Cmd.ntools);
+    Writer.W.write<uint32_t>(MachO::TOOL_DSYMUTIL);
+    Writer.W.write<uint32_t>((LLVM_VERSION_MAJOR << 16) |
+                             (LLVM_VERSION_MINOR << 8) | LLVM_VERSION_PATCH);
   }
   if (TargetTripleCmd.cmd != 0) {
     Writer.W.write<uint32_t>(TargetTripleCmd.cmd);

@@ -39,15 +39,6 @@ filegroup(
     ),
 )
 
-LIBCXX_SRCS_PSTL_LIBDISPATCH = [
-    "src/pstl/libdispatch.cpp",
-]
-
-filegroup(
-    name = "libcxx_srcs_pstl_libdispatch",
-    srcs = LIBCXX_SRCS_PSTL_LIBDISPATCH,
-)
-
 LIBCXX_SRCS_SUPPORT_IBM_PATTERNS = [
     "src/support/ibm/**/*.cpp",
 ]
@@ -81,7 +72,6 @@ filegroup(
 # Exclude platform-dependent patterns that are provided by per-target filegroups
 # above.
 LIBCXX_SRCS_TARGET_EXCLUDES = (
-    LIBCXX_SRCS_PSTL_LIBDISPATCH +
     LIBCXX_SRCS_SUPPORT_IBM_PATTERNS +
     LIBCXX_SRCS_SUPPORT_WIN32_PATTERNS +
     LIBCXX_SRCS_TZDB
@@ -117,7 +107,6 @@ filegroup(
     name = "libcxx_macos_srcs",
     srcs = [
         ":libcxx_srcs_generic",
-        # TODO: Include libdispatch sources here to enable that pstl backend.
     ],
 )
 

@@ -21,7 +21,6 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_SCFFORLOOPCANONICALIZATION
@@ -30,34 +29,6 @@ namespace mlir {
 
 using namespace mlir;
 using namespace mlir::scf;
-
-/// A simple, conservative analysis to determine if the loop is shape
-/// conserving. I.e., the type of the arg-th yielded value is the same as the
-/// type of the corresponding basic block argument of the loop.
-/// Note: This function handles only simple cases. Expand as needed.
-static bool isShapePreserving(ForOp forOp, int64_t arg) {
-  assert(arg < static_cast<int64_t>(forOp.getNumResults()) &&
-         "arg is out of bounds");
-  Value value = forOp.getYieldedValues()[arg];
-  while (value) {
-    if (value == forOp.getRegionIterArgs()[arg])
-      return true;
-    OpResult opResult = dyn_cast<OpResult>(value);
-    if (!opResult)
-      return false;
-
-    using tensor::InsertSliceOp;
-    value = llvm::TypeSwitch<Operation *, Value>(opResult.getOwner())
-                .Case([&](InsertSliceOp op) { return op.getDest(); })
-                .Case([&](ForOp forOp) {
-                  return isShapePreserving(forOp, opResult.getResultNumber())
-                             ? forOp.getInitArgs()[opResult.getResultNumber()]
-                             : Value();
-                })
-                .Default(nullptr);
-  }
-  return false;
-}
 
 namespace {
 /// Fold dim ops of iter_args to dim ops of their respective init args. E.g.:

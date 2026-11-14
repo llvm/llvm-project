@@ -8,6 +8,6 @@
 // NO-OPENMP-FLAGS-FOR-CUDA-DEVICE-NOT:  -fopenmp
 // NO-OPENMP-FLAGS-FOR-CUDA-DEVICE-NEXT: ptxas" "-m64"
 // NO-OPENMP-FLAGS-FOR-CUDA-DEVICE-NEXT: fatbinary"{{( "--cuda")?}} "-64"
-// NO-OPENMP-FLAGS-FOR-CUDA-DEVICE-NEXT: "-cc1" "-triple" "powerpc64le-unknown-linux-gnu"
+// NO-OPENMP-FLAGS-FOR-CUDA-DEVICE:      "-cc1" "-triple" "powerpc64le-unknown-linux-gnu"
 // NO-OPENMP-FLAGS-FOR-CUDA-DEVICE:      -fopenmp
 // NO-OPENMP-FLAGS-FOR-CUDA-DEVICE-NEXT: {{ld(.exe)?"}} {{.*}}"-m" "elf64lppc"

@@ -252,8 +252,9 @@ define void @atomic_store_i8_unordered(ptr %a, i8 %b) nounwind {
 ; XTENSA-LABEL: atomic_store_i8_unordered:
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    entry a1, 32
-; XTENSA-NEXT:    or a11, a3, a3
 ; XTENSA-NEXT:    or a10, a2, a2
+; XTENSA-NEXT:    movi a8, 255
+; XTENSA-NEXT:    and a11, a3, a8
 ; XTENSA-NEXT:    movi a12, 0
 ; XTENSA-NEXT:    l32r a8, .LCPI12_0
 ; XTENSA-NEXT:    callx8 a8
@@ -272,8 +273,9 @@ define void @atomic_store_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; XTENSA-LABEL: atomic_store_i8_monotonic:
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    entry a1, 32
-; XTENSA-NEXT:    or a11, a3, a3
 ; XTENSA-NEXT:    or a10, a2, a2
+; XTENSA-NEXT:    movi a8, 255
+; XTENSA-NEXT:    and a11, a3, a8
 ; XTENSA-NEXT:    movi a12, 0
 ; XTENSA-NEXT:    l32r a8, .LCPI13_0
 ; XTENSA-NEXT:    callx8 a8
@@ -292,8 +294,9 @@ define void @atomic_store_i8_release(ptr %a, i8 %b) nounwind {
 ; XTENSA-LABEL: atomic_store_i8_release:
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    entry a1, 32
-; XTENSA-NEXT:    or a11, a3, a3
 ; XTENSA-NEXT:    or a10, a2, a2
+; XTENSA-NEXT:    movi a8, 255
+; XTENSA-NEXT:    and a11, a3, a8
 ; XTENSA-NEXT:    movi a12, 3
 ; XTENSA-NEXT:    l32r a8, .LCPI14_0
 ; XTENSA-NEXT:    callx8 a8
@@ -313,8 +316,9 @@ define void @atomic_store_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; XTENSA-LABEL: atomic_store_i8_seq_cst:
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    entry a1, 32
-; XTENSA-NEXT:    or a11, a3, a3
 ; XTENSA-NEXT:    or a10, a2, a2
+; XTENSA-NEXT:    movi a8, 255
+; XTENSA-NEXT:    and a11, a3, a8
 ; XTENSA-NEXT:    movi a12, 5
 ; XTENSA-NEXT:    l32r a8, .LCPI15_0
 ; XTENSA-NEXT:    callx8 a8
@@ -335,10 +339,11 @@ define void @atomic_store_i16_unordered(ptr %a, i16 %b) nounwind {
 ; XTENSA-LABEL: atomic_store_i16_unordered:
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    entry a1, 32
-; XTENSA-NEXT:    or a11, a3, a3
 ; XTENSA-NEXT:    or a10, a2, a2
-; XTENSA-NEXT:    movi a12, 0
 ; XTENSA-NEXT:    l32r a8, .LCPI16_0
+; XTENSA-NEXT:    and a11, a3, a8
+; XTENSA-NEXT:    movi a12, 0
+; XTENSA-NEXT:    l32r a8, .LCPI16_1
 ; XTENSA-NEXT:    callx8 a8
 ; XTENSA-NEXT:    retw
 ;
@@ -355,10 +360,11 @@ define void @atomic_store_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; XTENSA-LABEL: atomic_store_i16_monotonic:
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    entry a1, 32
-; XTENSA-NEXT:    or a11, a3, a3
 ; XTENSA-NEXT:    or a10, a2, a2
-; XTENSA-NEXT:    movi a12, 0
 ; XTENSA-NEXT:    l32r a8, .LCPI17_0
+; XTENSA-NEXT:    and a11, a3, a8
+; XTENSA-NEXT:    movi a12, 0
+; XTENSA-NEXT:    l32r a8, .LCPI17_1
 ; XTENSA-NEXT:    callx8 a8
 ; XTENSA-NEXT:    retw
 ;
@@ -375,10 +381,11 @@ define void @atomic_store_i16_release(ptr %a, i16 %b) nounwind {
 ; XTENSA-LABEL: atomic_store_i16_release:
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    entry a1, 32
-; XTENSA-NEXT:    or a11, a3, a3
 ; XTENSA-NEXT:    or a10, a2, a2
-; XTENSA-NEXT:    movi a12, 3
 ; XTENSA-NEXT:    l32r a8, .LCPI18_0
+; XTENSA-NEXT:    and a11, a3, a8
+; XTENSA-NEXT:    movi a12, 3
+; XTENSA-NEXT:    l32r a8, .LCPI18_1
 ; XTENSA-NEXT:    callx8 a8
 ; XTENSA-NEXT:    retw
 ;
@@ -396,10 +403,11 @@ define void @atomic_store_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; XTENSA-LABEL: atomic_store_i16_seq_cst:
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    entry a1, 32
-; XTENSA-NEXT:    or a11, a3, a3
 ; XTENSA-NEXT:    or a10, a2, a2
-; XTENSA-NEXT:    movi a12, 5
 ; XTENSA-NEXT:    l32r a8, .LCPI19_0
+; XTENSA-NEXT:    and a11, a3, a8
+; XTENSA-NEXT:    movi a12, 5
+; XTENSA-NEXT:    l32r a8, .LCPI19_1
 ; XTENSA-NEXT:    callx8 a8
 ; XTENSA-NEXT:    retw
 ;

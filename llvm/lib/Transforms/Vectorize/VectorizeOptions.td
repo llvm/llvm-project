@@ -51,7 +51,7 @@ defm : BoolField<"force-target-supports-scalable-vectors", "false",
   "Pretend that scalable vectors are supported, even if the target does not support them. This flag should only be used for testing">;
 defm : BoolField<"prefer-inloop-reductions", "false",
   "Prefer in-loop vector reductions, overriding the targets preference">;
-defm : ValueField<"scalable-epilogue-vf-cost-scale-factor", "float", "2.0",
+defm : ValueField<"scalable-epilogue-vf-cost-scale-factor", "float", "2.0f",
   "Scale the cost of scalable epilogue VFs by this factor">;
 defm : OptionalBoolField<"vectorizer-consider-reg-pressure",
   "Discard VFs if their register pressure is too high">;
@@ -135,9 +135,9 @@ defm : ValueField<"vectorize-num-stores-pred", "unsigned", "1",
 defm : ValueField<"vectorize-scev-check-threshold", "unsigned", "16",
   "The maximum number of SCEV checks allowed">;
 // Loops with a known constant trip count below this number are vectorized only
-// if no scalar iteration overheads are incurred.
+// if no scalar epilogue is required.
 defm : ValueField<"vectorizer-min-trip-count", "unsigned", "16",
-  "Loops with a constant trip count that is smaller than this value are vectorized only if no scalar iteration overheads are incurred">;
+  "Loops with a constant trip count that is smaller than this value are vectorized only if no scalar epilogue is required">;
 // This flag enables the stress testing of the VPlan H-CFG construction in the
 // VPlan-native vectorization path. It must be used in conjuction with
 // -enable-vplan-native-path. -vplan-verify-hcfg can also be used to enable the
@@ -293,7 +293,7 @@ defm : ValueField<"slp-runtime-alias-checks-max-scalar-cost-percent", "unsigned"
 // Limits the size of scheduling regions in a block. It avoid long compile times
 // for _very_ large blocks where vector instructions are spread over a wide
 // range. This limit is way higher than needed by real-world functions.
-defm : ValueField<"slp-schedule-budget", "int", "100000",
+defm : ValueField<"slp-schedule-budget", "int", "200000",
   "Limit the size of the SLP scheduling region per block">;
 defm : BoolField<"slp-split-alternate-instructions", "true",
   "Improve the code quality by splitting alternate instructions">;

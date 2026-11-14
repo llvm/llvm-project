@@ -5,10 +5,9 @@
 ; RUN: %if ptxas-sm_100a && ptxas-isa-9.4 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_100a -mattr=+ptx94 | %ptxas-verify -arch=sm_100a %}
 
 ;
-; The mixed-precision f32x2 add and sub need the Rubin family. sm_100a has
-; packed f32x2 arithmetic but not the mixed forms, so it must fall back to a
-; separate cvt. One shape per instruction is enough: the fold is gated purely
-; on hasRubinFamilySupport, and the shapes themselves are covered elsewhere.
+; The mixed-precision f32x2 add, sub, fma and mul need the Rubin family.
+; sm_100a has packed f32x2 arithmetic but not the mixed forms, so it must fall
+; back to a separate cvt.
 ;
 
 ;
@@ -165,6 +164,84 @@ define <2 x float> @sub_f32x2_bf16x2(<2 x bfloat> %a, <2 x float> %b) {
   ret <2 x float> %r
 }
 
+define <2 x float> @fma_f32x2_f16x2(<2 x half> %a, <2 x float> %b, <2 x float> %c) {
+; SM107-LABEL: fma_f32x2_f16x2(
+; SM107:       {
+; SM107-NEXT:    .reg .b32 %r<3>;
+; SM107-NEXT:    .reg .b64 %rd<4>;
+; SM107-EMPTY:
+; SM107-NEXT:  // %bb.0:
+; SM107-NEXT:    ld.param::func.b32 %r1, [fma_f32x2_f16x2_param_0];
+; SM107-NEXT:    mul.rn.f16x2 %r2, %r1, %r1;
+; SM107-NEXT:    ld.param::func.b64 %rd1, [fma_f32x2_f16x2_param_1];
+; SM107-NEXT:    ld.param::func.b64 %rd2, [fma_f32x2_f16x2_param_2];
+; SM107-NEXT:    fma.rn.f32x2.f16x2.f32x2.f32x2 %rd3, %r2, %rd1, %rd2;
+; SM107-NEXT:    st.param::func.b64 [func_retval0], %rd3;
+; SM107-NEXT:    ret;
+;
+; SM100-LABEL: fma_f32x2_f16x2(
+; SM100:       {
+; SM100-NEXT:    .reg .b16 %rs<3>;
+; SM100-NEXT:    .reg .b32 %r<5>;
+; SM100-NEXT:    .reg .b64 %rd<5>;
+; SM100-EMPTY:
+; SM100-NEXT:  // %bb.0:
+; SM100-NEXT:    ld.param::func.b32 %r1, [fma_f32x2_f16x2_param_0];
+; SM100-NEXT:    mul.rn.f16x2 %r2, %r1, %r1;
+; SM100-NEXT:    ld.param::func.b64 %rd1, [fma_f32x2_f16x2_param_1];
+; SM100-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
+; SM100-NEXT:    cvt.f32.f16 %r3, %rs2;
+; SM100-NEXT:    cvt.f32.f16 %r4, %rs1;
+; SM100-NEXT:    mov.b64 %rd2, {%r4, %r3};
+; SM100-NEXT:    ld.param::func.b64 %rd3, [fma_f32x2_f16x2_param_2];
+; SM100-NEXT:    fma.rn.f32x2 %rd4, %rd2, %rd1, %rd3;
+; SM100-NEXT:    st.param::func.b64 [func_retval0], %rd4;
+; SM100-NEXT:    ret;
+  %x = fmul <2 x half> %a, %a
+  %e = fpext <2 x half> %x to <2 x float>
+  %r = call <2 x float> @llvm.nvvm.fma.v2f32(<2 x float> %e, <2 x float> %b, <2 x float> %c, /* rnd=rn */ i32 1)
+  ret <2 x float> %r
+}
+
+define <2 x float> @fma_f32x2_bf16x2(<2 x bfloat> %a, <2 x float> %b, <2 x float> %c) {
+; SM107-LABEL: fma_f32x2_bf16x2(
+; SM107:       {
+; SM107-NEXT:    .reg .b32 %r<3>;
+; SM107-NEXT:    .reg .b64 %rd<4>;
+; SM107-EMPTY:
+; SM107-NEXT:  // %bb.0:
+; SM107-NEXT:    ld.param::func.b32 %r1, [fma_f32x2_bf16x2_param_0];
+; SM107-NEXT:    mul.rn.bf16x2 %r2, %r1, %r1;
+; SM107-NEXT:    ld.param::func.b64 %rd1, [fma_f32x2_bf16x2_param_1];
+; SM107-NEXT:    ld.param::func.b64 %rd2, [fma_f32x2_bf16x2_param_2];
+; SM107-NEXT:    fma.rn.f32x2.bf16x2.f32x2.f32x2 %rd3, %r2, %rd1, %rd2;
+; SM107-NEXT:    st.param::func.b64 [func_retval0], %rd3;
+; SM107-NEXT:    ret;
+;
+; SM100-LABEL: fma_f32x2_bf16x2(
+; SM100:       {
+; SM100-NEXT:    .reg .b16 %rs<3>;
+; SM100-NEXT:    .reg .b32 %r<5>;
+; SM100-NEXT:    .reg .b64 %rd<5>;
+; SM100-EMPTY:
+; SM100-NEXT:  // %bb.0:
+; SM100-NEXT:    ld.param::func.b32 %r1, [fma_f32x2_bf16x2_param_0];
+; SM100-NEXT:    mul.rn.bf16x2 %r2, %r1, %r1;
+; SM100-NEXT:    ld.param::func.b64 %rd1, [fma_f32x2_bf16x2_param_1];
+; SM100-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
+; SM100-NEXT:    cvt.f32.bf16 %r3, %rs2;
+; SM100-NEXT:    cvt.f32.bf16 %r4, %rs1;
+; SM100-NEXT:    mov.b64 %rd2, {%r4, %r3};
+; SM100-NEXT:    ld.param::func.b64 %rd3, [fma_f32x2_bf16x2_param_2];
+; SM100-NEXT:    fma.rn.f32x2 %rd4, %rd2, %rd1, %rd3;
+; SM100-NEXT:    st.param::func.b64 [func_retval0], %rd4;
+; SM100-NEXT:    ret;
+  %x = fmul <2 x bfloat> %a, %a
+  %e = fpext <2 x bfloat> %x to <2 x float>
+  %r = call <2 x float> @llvm.nvvm.fma.v2f32(<2 x float> %e, <2 x float> %b, <2 x float> %c, /* rnd=rn */ i32 1)
+  ret <2 x float> %r
+}
+
 ;
 ;  Downconverting
 ;
@@ -299,6 +376,72 @@ define <2 x bfloat> @sub_rz_bf16x2_f32x2(<2 x float> %a, <2 x float> %b) {
   %sum = call <2 x float> @llvm.nvvm.fadd.v2f32(<2 x float> %a, <2 x float> %nb, i32 0)
   %lo = extractelement <2 x float> %sum, i32 0
   %hi = extractelement <2 x float> %sum, i32 1
+  %r = call <2 x bfloat> @llvm.nvvm.ff2bf16x2.rz(float %hi, float %lo, i1 false)
+  ret <2 x bfloat> %r
+}
+
+define <2 x half> @mul_rz_f16x2_f32x2(<2 x float> %a, <2 x float> %b) {
+; SM107-LABEL: mul_rz_f16x2_f32x2(
+; SM107:       {
+; SM107-NEXT:    .reg .b32 %r<2>;
+; SM107-NEXT:    .reg .b64 %rd<3>;
+; SM107-EMPTY:
+; SM107-NEXT:  // %bb.0:
+; SM107-NEXT:    ld.param::func.b64 %rd1, [mul_rz_f16x2_f32x2_param_0];
+; SM107-NEXT:    ld.param::func.b64 %rd2, [mul_rz_f16x2_f32x2_param_1];
+; SM107-NEXT:    mul.ftz.rz.f16x2.f32x2.f32x2 %r1, %rd1, %rd2;
+; SM107-NEXT:    st.param::func.b32 [func_retval0], %r1;
+; SM107-NEXT:    ret;
+;
+; SM100-LABEL: mul_rz_f16x2_f32x2(
+; SM100:       {
+; SM100-NEXT:    .reg .b32 %r<4>;
+; SM100-NEXT:    .reg .b64 %rd<4>;
+; SM100-EMPTY:
+; SM100-NEXT:  // %bb.0:
+; SM100-NEXT:    ld.param::func.b64 %rd1, [mul_rz_f16x2_f32x2_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd2, [mul_rz_f16x2_f32x2_param_1];
+; SM100-NEXT:    mul.rz.ftz.f32x2 %rd3, %rd1, %rd2;
+; SM100-NEXT:    mov.b64 {%r1, %r2}, %rd3;
+; SM100-NEXT:    cvt.rz.f16x2.f32 %r3, %r2, %r1;
+; SM100-NEXT:    st.param::func.b32 [func_retval0], %r3;
+; SM100-NEXT:    ret;
+  %prod = call <2 x float> @llvm.nvvm.fmul.ftz.v2f32(<2 x float> %a, <2 x float> %b, i32 0)
+  %lo = extractelement <2 x float> %prod, i32 0
+  %hi = extractelement <2 x float> %prod, i32 1
+  %r = call <2 x half> @llvm.nvvm.ff2f16x2.rz(float %hi, float %lo, i1 false)
+  ret <2 x half> %r
+}
+
+define <2 x bfloat> @mul_rz_bf16x2_f32x2(<2 x float> %a, <2 x float> %b) {
+; SM107-LABEL: mul_rz_bf16x2_f32x2(
+; SM107:       {
+; SM107-NEXT:    .reg .b32 %r<2>;
+; SM107-NEXT:    .reg .b64 %rd<3>;
+; SM107-EMPTY:
+; SM107-NEXT:  // %bb.0:
+; SM107-NEXT:    ld.param::func.b64 %rd1, [mul_rz_bf16x2_f32x2_param_0];
+; SM107-NEXT:    ld.param::func.b64 %rd2, [mul_rz_bf16x2_f32x2_param_1];
+; SM107-NEXT:    mul.rz.bf16x2.f32x2.f32x2 %r1, %rd1, %rd2;
+; SM107-NEXT:    st.param::func.b32 [func_retval0], %r1;
+; SM107-NEXT:    ret;
+;
+; SM100-LABEL: mul_rz_bf16x2_f32x2(
+; SM100:       {
+; SM100-NEXT:    .reg .b32 %r<4>;
+; SM100-NEXT:    .reg .b64 %rd<4>;
+; SM100-EMPTY:
+; SM100-NEXT:  // %bb.0:
+; SM100-NEXT:    ld.param::func.b64 %rd1, [mul_rz_bf16x2_f32x2_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd2, [mul_rz_bf16x2_f32x2_param_1];
+; SM100-NEXT:    mul.rz.f32x2 %rd3, %rd1, %rd2;
+; SM100-NEXT:    mov.b64 {%r1, %r2}, %rd3;
+; SM100-NEXT:    cvt.rz.bf16x2.f32 %r3, %r2, %r1;
+; SM100-NEXT:    st.param::func.b32 [func_retval0], %r3;
+; SM100-NEXT:    ret;
+  %prod = call <2 x float> @llvm.nvvm.fmul.v2f32(<2 x float> %a, <2 x float> %b, i32 0)
+  %lo = extractelement <2 x float> %prod, i32 0
+  %hi = extractelement <2 x float> %prod, i32 1
   %r = call <2 x bfloat> @llvm.nvvm.ff2bf16x2.rz(float %hi, float %lo, i1 false)
   ret <2 x bfloat> %r
 }

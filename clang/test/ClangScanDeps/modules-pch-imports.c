@@ -24,7 +24,9 @@
 // RUN:   -format experimental-full -mode preprocess-dependency-directives \
 // RUN:   > %t/deps.json
 
-// RUN: cat %t/deps.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
+// RUN: %scan-deps-filter %t/deps.json --fields=modules.clang-module-deps,modules.clang-modulemap-file,modules.command-line,modules.name \
+// RUN:   > %t/deps_filtered.json
+// RUN: sed 's:\\\\\?:/:g' %t/deps_filtered.json | FileCheck %s -DPREFIX=%/t
 
 // Verify that the only modular import in C is E and not the unrelated modules
 // A or B that come from the PCH.

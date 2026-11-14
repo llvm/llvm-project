@@ -11,7 +11,7 @@ define void @foo(ptr %a) nounwind uwtable safestack {
 entry:
   ; CHECK: %[[USP:.*]] = load ptr, ptr @__safestack_unsafe_stack_ptr
 
-  ; CHECK: %[[USST:.*]] = getelementptr i8, ptr %[[USP]], i32 -16
+  ; CHECK: %[[USST:.*]] = getelementptr i8, ptr %[[USP]], {{i32|i64}} -16
 
   ; CHECK: store ptr %[[USST]], ptr @__safestack_unsafe_stack_ptr
 
@@ -23,7 +23,7 @@ entry:
   store ptr %a, ptr %a.addr, align 8
 
   ; CHECK: %[[A2:.*]] = load ptr, ptr %[[AADDR]], align 8
-  ; CHECK: %[[BUFPTR:.*]] = getelementptr i8, ptr %[[USP]], i32 -16
+  ; CHECK: %[[BUFPTR:.*]] = getelementptr i8, ptr %[[USP]], {{i32|i64}} -16
   %a2 = load ptr, ptr %a.addr, align 8
 
   ; CHECK: call ptr @strcpy(ptr %[[BUFPTR]], ptr %[[A2]])

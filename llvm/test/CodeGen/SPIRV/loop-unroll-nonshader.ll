@@ -1,5 +1,7 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown -enable-new-pm %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown -enable-new-pm %s -o - -filetype=obj | spirv-val %}
 
 ; Test that OpLoopMerge is emitted for non-shader targets without requiring
 ; SPV_INTEL_unstructured_loop_controls.
@@ -92,14 +94,14 @@ for.end:
   ret void
 }
 
-; Test 5: Loop with multiple latches.
+; Test 5: Loop with multiple latches in an optnone function.
 ; The loop has two blocks branching back to the header; loop-simplify inserts
 ; a dedicated latch block so that getLoopLatch() returns a unique latch.
 ; CHECK: OpFunction
 ; CHECK: OpLoopMerge %[[#]] %[[#]] Unroll
 ; CHECK: OpFunctionEnd
 
-define spir_kernel void @test_multi_latch(ptr addrspace(1) %dst, i32 %flag) {
+define spir_kernel void @test_multi_latch(ptr addrspace(1) %dst, i32 %flag) #0 {
 entry:
   br label %header
 
@@ -366,6 +368,8 @@ early.out:
 ; CHECK-NOT: OpExtension "SPV_INTEL_unstructured_loop_controls"
 ; CHECK-NOT: OpCapability UnstructuredLoopControlsINTEL
 ; CHECK-NOT: OpLoopControlINTEL
+
+attributes #0 = { noinline optnone }
 
 !0 = distinct !{!0, !4}
 !1 = distinct !{!1, !5}

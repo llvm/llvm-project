@@ -4,7 +4,6 @@
 ---
 name:            foo
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  4

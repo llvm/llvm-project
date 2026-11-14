@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MakeMemberFunctionConstCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -14,12 +15,11 @@
 #include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::readability {
 
 namespace {
-
-AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
 
 AST_MATCHER(CXXMethodDecl, hasTrivialBody) { return Node.hasTrivialBody(); }
 

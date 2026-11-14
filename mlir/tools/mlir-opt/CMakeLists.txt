@@ -29,6 +29,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRShardTest
     MLIRNVGPUTestPasses
     MLIROpenACCTestPasses
+    MLIRPtrTestPasses
     MLIRSCFTestPasses
     MLIRShapeTestPasses
     MLIRSPIRVTestPasses

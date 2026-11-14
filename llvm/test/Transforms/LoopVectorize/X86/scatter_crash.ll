@@ -48,13 +48,13 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 8, i64 10, i64 12, i64 14, i64 16, i64 18, i64 20, i64 22, i64 24, i64 26, i64 28, i64 30, i64 32, i64 34, i64 36, i64 38>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND3:%.*]] = phi <16 x i64> [ <i64 0, i64 2, i64 4, i64 6, i64 8, i64 10, i64 12, i64 14, i64 16, i64 18, i64 20, i64 22, i64 24, i64 26, i64 28, i64 30>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub nsw <16 x i64> splat (i64 8), [[VEC_IND]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr @d, i64 0, <16 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [40 x i8], ptr @d, <16 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw <16 x i64> [[TMP10]], [[VEC_IND3]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [10 x i32], <16 x ptr> [[TMP11]], <16 x i64> [[TMP12]], i64 0
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [40 x i8], <16 x ptr> [[WIDE_GEP]], <16 x i64> [[TMP12]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> splat (i32 8), <16 x ptr> align 16 [[TMP13]], <16 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP14:%.*]] = or disjoint <16 x i64> [[VEC_IND3]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP15:%.*]] = add nsw <16 x i64> [[TMP10]], [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [10 x i32], <16 x ptr> [[TMP11]], <16 x i64> [[TMP15]], i64 0
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [40 x i8], <16 x ptr> [[WIDE_GEP]], <16 x i64> [[TMP15]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> splat (i32 8), <16 x ptr> align 8 [[TMP16]], <16 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <16 x i64> [[VEC_IND]], splat (i64 32)
@@ -87,13 +87,13 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[VEC_IND15:%.*]] = phi <8 x i64> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT14:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND20:%.*]] = phi <8 x i64> [ [[INDUCTION9]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT15:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP18:%.*]] = sub nsw <8 x i64> splat (i64 8), [[VEC_IND15]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr @d, i64 0, <8 x i64> [[VEC_IND15]]
+; CHECK-NEXT:    [[WIDE_GEP14:%.*]] = getelementptr inbounds [40 x i8], ptr @d, <8 x i64> [[VEC_IND15]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = add nsw <8 x i64> [[TMP18]], [[VEC_IND20]]
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [10 x i32], <8 x ptr> [[TMP19]], <8 x i64> [[TMP20]], i64 0
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [40 x i8], <8 x ptr> [[WIDE_GEP14]], <8 x i64> [[TMP20]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> splat (i32 8), <8 x ptr> align 16 [[TMP21]], <8 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP22:%.*]] = or disjoint <8 x i64> [[VEC_IND20]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP23:%.*]] = add nsw <8 x i64> [[TMP18]], [[TMP22]]
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [10 x i32], <8 x ptr> [[TMP19]], <8 x i64> [[TMP23]], i64 0
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [40 x i8], <8 x ptr> [[WIDE_GEP14]], <8 x i64> [[TMP23]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> splat (i32 8), <8 x ptr> align 8 [[TMP24]], <8 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT22]] = add nuw i64 [[INDEX14]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT14]] = add nuw nsw <8 x i64> [[VEC_IND15]], splat (i64 16)
@@ -130,13 +130,13 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[VEC_IND35:%.*]] = phi <16 x i64> [ <i64 8, i64 10, i64 12, i64 14, i64 16, i64 18, i64 20, i64 22, i64 24, i64 26, i64 28, i64 30, i64 32, i64 34, i64 36, i64 38>, %[[VECTOR_PH25]] ], [ [[VEC_IND_NEXT35:%.*]], %[[VECTOR_BODY30]] ]
 ; CHECK-NEXT:    [[VEC_IND37:%.*]] = phi <16 x i64> [ <i64 0, i64 2, i64 4, i64 6, i64 8, i64 10, i64 12, i64 14, i64 16, i64 18, i64 20, i64 22, i64 24, i64 26, i64 28, i64 30>, %[[VECTOR_PH25]] ], [ [[VEC_IND_NEXT36:%.*]], %[[VECTOR_BODY30]] ]
 ; CHECK-NEXT:    [[TMP30:%.*]] = sub nsw <16 x i64> splat (i64 8), [[VEC_IND35]]
-; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr @d, i64 0, <16 x i64> [[VEC_IND35]]
+; CHECK-NEXT:    [[WIDE_GEP34:%.*]] = getelementptr inbounds [40 x i8], ptr @d, <16 x i64> [[VEC_IND35]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = add nsw <16 x i64> [[TMP30]], [[VEC_IND37]]
-; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds [10 x i32], <16 x ptr> [[TMP31]], <16 x i64> [[TMP32]], i64 0
+; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds [40 x i8], <16 x ptr> [[WIDE_GEP34]], <16 x i64> [[TMP32]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> splat (i32 8), <16 x ptr> align 16 [[TMP33]], <16 x i1> [[TMP34]])
 ; CHECK-NEXT:    [[TMP49:%.*]] = or disjoint <16 x i64> [[VEC_IND37]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP36:%.*]] = add nsw <16 x i64> [[TMP30]], [[TMP49]]
-; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds [10 x i32], <16 x ptr> [[TMP31]], <16 x i64> [[TMP36]], i64 0
+; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds [40 x i8], <16 x ptr> [[WIDE_GEP34]], <16 x i64> [[TMP36]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> splat (i32 8), <16 x ptr> align 8 [[TMP37]], <16 x i1> [[TMP34]])
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> splat (i32 7), <16 x ptr> align 16 [[TMP33]], <16 x i1> [[BROADCAST_SPLAT]])
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> splat (i32 7), <16 x ptr> align 8 [[TMP37]], <16 x i1> [[BROADCAST_SPLAT]])
@@ -152,7 +152,7 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK50:%.*]] = icmp ult i64 [[N_MOD_VF31]], 8
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK50]], label %[[VEC_EPILOG_SCALAR_PH42]], label %[[VEC_EPILOG_PH45]], !prof [[PROF3]]
 ; CHECK:       [[VEC_EPILOG_PH45]]:
-; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL42:%.*]] = phi i64 [ [[N_VEC32]], %[[VEC_EPILOG_ITER_CHECK43]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK24]] ]
+; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL47:%.*]] = phi i64 [ [[N_VEC32]], %[[VEC_EPILOG_ITER_CHECK43]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK24]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL42:%.*]] = phi i64 [ [[IND_END41]], %[[VEC_EPILOG_ITER_CHECK43]] ], [ 8, %[[VECTOR_MAIN_LOOP_ITER_CHECK24]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL44:%.*]] = phi i64 [ [[TMP29]], %[[VEC_EPILOG_ITER_CHECK43]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK24]] ]
 ; CHECK-NEXT:    [[N_MOD_VF52:%.*]] = and i64 [[TMP28]], 7
@@ -170,17 +170,17 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[INDUCTION55:%.*]] = add nuw nsw <8 x i64> [[DOTSPLAT68]], <i64 0, i64 2, i64 4, i64 6, i64 8, i64 10, i64 12, i64 14>
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY56:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY56]]:
-; CHECK-NEXT:    [[INDEX61:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL42]], %[[VEC_EPILOG_PH45]] ], [ [[INDEX_NEXT74:%.*]], %[[VEC_EPILOG_VECTOR_BODY56]] ]
+; CHECK-NEXT:    [[INDEX61:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL47]], %[[VEC_EPILOG_PH45]] ], [ [[INDEX_NEXT74:%.*]], %[[VEC_EPILOG_VECTOR_BODY56]] ]
 ; CHECK-NEXT:    [[VEC_IND65:%.*]] = phi <8 x i64> [ [[INDUCTION52]], %[[VEC_EPILOG_PH45]] ], [ [[VEC_IND_NEXT61:%.*]], %[[VEC_EPILOG_VECTOR_BODY56]] ]
 ; CHECK-NEXT:    [[VEC_IND70:%.*]] = phi <8 x i64> [ [[INDUCTION55]], %[[VEC_EPILOG_PH45]] ], [ [[VEC_IND_NEXT62:%.*]], %[[VEC_EPILOG_VECTOR_BODY56]] ]
 ; CHECK-NEXT:    [[TMP44:%.*]] = sub nsw <8 x i64> splat (i64 8), [[VEC_IND65]]
-; CHECK-NEXT:    [[TMP45:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr @d, i64 0, <8 x i64> [[VEC_IND65]]
+; CHECK-NEXT:    [[WIDE_GEP63:%.*]] = getelementptr inbounds [40 x i8], ptr @d, <8 x i64> [[VEC_IND65]]
 ; CHECK-NEXT:    [[TMP46:%.*]] = add nsw <8 x i64> [[TMP44]], [[VEC_IND70]]
-; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [10 x i32], <8 x ptr> [[TMP45]], <8 x i64> [[TMP46]], i64 0
+; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [40 x i8], <8 x ptr> [[WIDE_GEP63]], <8 x i64> [[TMP46]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> splat (i32 8), <8 x ptr> align 16 [[TMP47]], <8 x i1> [[TMP48]])
 ; CHECK-NEXT:    [[TMP54:%.*]] = or disjoint <8 x i64> [[VEC_IND70]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP50:%.*]] = add nsw <8 x i64> [[TMP44]], [[TMP54]]
-; CHECK-NEXT:    [[TMP51:%.*]] = getelementptr inbounds [10 x i32], <8 x ptr> [[TMP45]], <8 x i64> [[TMP50]], i64 0
+; CHECK-NEXT:    [[TMP51:%.*]] = getelementptr inbounds [40 x i8], <8 x ptr> [[WIDE_GEP63]], <8 x i64> [[TMP50]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> splat (i32 8), <8 x ptr> align 8 [[TMP51]], <8 x i1> [[TMP48]])
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> splat (i32 7), <8 x ptr> align 16 [[TMP47]], <8 x i1> [[BROADCAST_SPLAT73]])
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> splat (i32 7), <8 x ptr> align 8 [[TMP51]], <8 x i1> [[BROADCAST_SPLAT73]])

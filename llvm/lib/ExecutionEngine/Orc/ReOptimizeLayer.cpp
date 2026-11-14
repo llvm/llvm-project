@@ -1,11 +1,21 @@
 #include "llvm/ExecutionEngine/Orc/ReOptimizeLayer.h"
-#include "llvm/ExecutionEngine/Orc/BindCallControllerHandlerSPS.h"
+#include "llvm/ExecutionEngine/Orc/BindCallControllerHandler.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
+#include "llvm/ExecutionEngine/Orc/SPSHandlerSpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 
 using namespace llvm;
 using namespace orc;
+
+// Spec for the call-controller handler that the ORC runtime calls to
+// request reoptimization.
+namespace llvm::orc::reoptimize_sps_handlers {
+struct Reoptimize : sps::HandlerSpec<shared::SPSError(uint64_t, uint32_t)> {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_reoptimize_tag");
+};
+} // namespace llvm::orc::reoptimize_sps_handlers
 
 bool ReOptimizeLayer::ReOptMaterializationUnitState::tryStartReoptimize() {
   std::unique_lock<std::mutex> Lock(Mutex);
@@ -30,10 +40,10 @@ void ReOptimizeLayer::ReOptMaterializationUnitState::reoptimizeFailed() {
 }
 
 static void orc_rt_lite_reoptimize_helper(
-    shared::CWrapperFunctionBuffer (*JITDispatch)(void *Ctx, void *Tag,
+    shared::CWrapperFunctionBuffer (*JITDispatch)(void *Ctx, const void *Tag,
                                                   const char *Data,
                                                   size_t Size),
-    void *JITDispatchCtx, void *Tag, uint64_t MUID, uint32_t CurVersion) {
+    void *JITDispatchCtx, const void *Tag, uint64_t MUID, uint32_t CurVersion) {
   // Serialize the arguments into a WrapperFunctionBuffer and call dispatch.
   using SPSArgs = shared::SPSArgList<uint64_t, uint32_t>;
   auto ArgBytes =
@@ -130,11 +140,10 @@ Error ReOptimizeLayer::addOrcRTLiteSupport(JITDylib &PlatformJD,
 }
 
 Error ReOptimizeLayer::registerRuntimeFunctions(JITDylib &PlatformJD) {
-  using ReoptimizeSPSSig = shared::SPSError(uint64_t, uint32_t);
   return ES.registerCallControllerHandlers(
-      PlatformJD, bindCallControllerHandlerSPS<ReoptimizeSPSSig>(
-                      SymbolNameSpec::c("__orc_rt_reoptimize_tag"), this,
-                      &ReOptimizeLayer::rt_reoptimize));
+      PlatformJD,
+      bindCallControllerHandler<reoptimize_sps_handlers::Reoptimize>(
+          this, &ReOptimizeLayer::rt_reoptimize));
 }
 
 void ReOptimizeLayer::emit(std::unique_ptr<MaterializationResponsibility> R,

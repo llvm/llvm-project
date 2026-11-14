@@ -432,3 +432,33 @@ entry:
   store i64 1, ptr %p, align 4
   ret void
 }
+
+; The first `memset` below uses `i8` for the length, which DSE used to use as
+; the type of the start offset GEP index, causing wrapping.
+define i32 @new_begin_wrapping(ptr %buf) {
+; CHECK-LABEL: @new_begin_wrapping(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [328 x i8], ptr [[BUF:%.*]], i64 0, i64 128
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 128
+; CHECK-NEXT:    call void @llvm.memset.p0.i8(ptr align 1 [[TMP0]], i8 42, i8 72, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i16(ptr [[P]], i8 13, i16 128, i1 false)
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 128
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[Q]], align 1
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[V]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %p = getelementptr inbounds [328 x i8], ptr %buf, i64 0, i64 128
+
+  ; %buf[128..328) = 42, this will be updated as
+  ; %buf[256..328) = 42 (memset length = 72)
+  call void @llvm.memset.p0.i8(ptr %p, i8 42, i8 200, i1 false)
+
+  ; %buf[128..256) = 13
+  call void @llvm.memset.p0.i16(ptr %p, i8 13, i16 128, i1 false)
+
+  %q = getelementptr inbounds i8, ptr %p, i64 128
+  %v = load i8, ptr %q, align 1
+  %r = zext i8 %v to i32
+  ret i32 %r
+}

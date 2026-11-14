@@ -156,3 +156,10 @@ TEST_P(olGetDeviceInfoNativeHandleTest, SuccessNativeHandle) {
   // value may legitimately be zero.
   ASSERT_NE(Handle, reinterpret_cast<void *>(~0ull));
 }
+
+TEST_P(olGetDeviceInfoNativeHandleTest, SuccessNativePlatformHandle) {
+  void *Handle = nullptr;
+  ASSERT_SUCCESS_OR_UNSUPPORTED(olGetDeviceInfo(
+      Device, OL_DEVICE_INFO_NATIVE_PLATFORM_HANDLE, sizeof(Handle), &Handle));
+  ASSERT_NE(Handle, nullptr);
+}

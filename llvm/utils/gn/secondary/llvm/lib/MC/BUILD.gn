@@ -5,10 +5,16 @@ tablegen("MCCLOptions") {
   args = [ "-gen-opt-parser-defs" ]
 }
 
+tablegen("MCToolOptions") {
+  visibility = [ ":MC" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 static_library("MC") {
   output_name = "LLVMMC"
   deps = [
     ":MCCLOptions",
+    ":MCToolOptions",
     "//llvm/include/llvm/Config:config",
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/DebugInfo/CodeView",

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple i386-unknown-unknown -O3 -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple i386-unknown-unknown -O3 -emit-llvm %s -o - | FileCheck %s %}
 // CHECK: ret i32 9
 
 struct s0 {

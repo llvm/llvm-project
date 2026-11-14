@@ -56,6 +56,7 @@
 !CHECK:     omp.terminator
 !CHECK:   }
 !CHECK:   omp.sections nowait {
+!CHECK:     fir.call @_QPfoo() fastmath<contract> : () -> ()
 !CHECK:     omp.terminator
 !CHECK:   }
 !CHECK:   return
@@ -75,8 +76,8 @@ program sample
             count = count * eta
             double_count = count - eta
     !$omp end sections
-
     !$omp sections
+        call foo()
     !$omp end sections nowait
 end program sample
 
@@ -87,9 +88,6 @@ end program sample
 !CHECK:   %[[TEMP:.*]] = fir.load %[[ARG_DECL]]#0 : !fir.ref<f32>
 !CHECK:   hlfir.assign %[[TEMP]] to %[[PRIVATE_ALPHA_DECL]]#0 : f32, !fir.ref<f32>
 !CHECK:   omp.sections {
-!CHECK:     omp.section  {
-!CHECK:       omp.terminator
-!CHECK:     }
 !CHECK:     omp.terminator
 !CHECK:   }
 !CHECK:   omp.sections {

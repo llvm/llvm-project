@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple "spir64-unknown-unknown" -emit-llvm -fno-delete-null-pointer-checks -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple "spir64-unknown-unknown" -emit-llvm -fno-delete-null-pointer-checks -o - | FileCheck %s %}
 
 // CHECK: target triple = "spir64-unknown-unknown"
 

@@ -400,7 +400,7 @@ def Ptr_PtrAddOp : Pointer_Op<"ptr_add", [
   let arguments = (ins
     Ptr_PtrLikeType:$base,
     Ptr_IntLikeType:$offset,
-    DefaultValuedProp<EnumProp<Ptr_PtrAddFlags>, "PtrAddFlags::none">:$flags);
+    DefaultValuedEnumProp<Ptr_PtrAddFlags, Ptr_PtrAddFlagsNone>:$flags);
   let results = (outs Ptr_PtrLikeType:$result);
   let assemblyFormat = [{
     ($flags^)? $base `,` $offset attr-dict `:` type($base) `,` type($offset)
@@ -457,7 +457,7 @@ def Ptr_PtrDiffOp : Pointer_Op<"ptr_diff", [
   }];
   let arguments = (ins
     Ptr_PtrLikeType:$lhs, Ptr_PtrLikeType:$rhs,
-    DefaultValuedProp<EnumProp<Ptr_PtrDiffFlags>, "PtrDiffFlags::none">:$flags
+    DefaultValuedEnumProp<Ptr_PtrDiffFlags, Ptr_PtrDiffFlagsNone>:$flags
   );
   let results = (outs Ptr_IntLikeType:$result);
   let assemblyFormat = [{

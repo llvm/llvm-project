@@ -1,0 +1,54 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_support_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_support_library(
+    name = "hex",
+    hdrs = ["hex.h"],
+    deps = [
+        "//libc/hdr/types:size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:ctype_utils",
+        "//libc/src/__support/CPP:optional",
+        "//libc/src/__support/CPP:string_view",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "address",
+    srcs = ["address.cpp"],
+    hdrs = ["address.h"],
+    deps = [
+        ":hex",
+        "//libc/hdr:inet_address_macros",
+        "//libc/hdr:stdint_proxy",
+        "//libc/hdr/types:in_addr_t",
+        "//libc/hdr/types:struct_in6_addr",
+        "//libc/hdr/types:struct_in_addr",
+        "//libc/src/__support:common",
+        "//libc/src/__support:ctype_utils",
+        "//libc/src/__support:fixedvector",
+        "//libc/src/__support:libc_assert",
+        "//libc/src/__support:str_to_integer",
+        "//libc/src/__support/CPP:optional",
+        "//libc/src/__support/CPP:span",
+        "//libc/src/__support/CPP:string_view",
+        "//libc/src/__support/macros:config",
+        "//libc/src/string/memory_utils",
+    ],
+)

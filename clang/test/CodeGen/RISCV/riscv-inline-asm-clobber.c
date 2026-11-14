@@ -2,8 +2,10 @@
 // REQUIRES: riscv-registered-target
 // RUN: %clang_cc1 -triple riscv32 -O2 -emit-llvm %s -o - \
 // RUN:     | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple riscv32 -O2 -emit-llvm %s -o -     | FileCheck %s %}
 // RUN: %clang_cc1 -triple riscv64 -O2 -emit-llvm %s -o - \
 // RUN:     | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple riscv64 -O2 -emit-llvm %s -o -     | FileCheck %s %}
 
 // Test RISC-V specific clobbered registers in inline assembly.
 

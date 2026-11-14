@@ -6,21 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: target={{x86_64-.+}}
-// UNSUPPORTED: target={{.*-windows.*}}, msan
+// REQUIRES: target={{x86_64-.*-freebsd.*}}
+// UNSUPPORTED: msan
 
 #undef NDEBUG
 #include <assert.h>
 #include <libunwind.h>
 #include <stdint.h>
 
-#if defined(__FreeBSD__)
 #include <machine/sysarch.h>
-#elif defined(__linux__)
-#include <asm/prctl.h>
-#include <sys/syscall.h>
-#include <unistd.h>
-#endif
 
 #define STRINGIFY_IMPL(x) #x
 #define STRINGIFY(x) STRINGIFY_IMPL(x)
@@ -64,17 +58,10 @@ int main(int, char **) {
   assert(unw_init_local(&cursor, &context) == UNW_ESUCCESS);
   assert(get(cursor, UNW_X86_64_RBX) == expected);
 
-#if defined(__FreeBSD__) || defined(__linux__)
   uintptr_t fs, gs;
-#if defined(__FreeBSD__)
   assert(sysarch(AMD64_GET_FSBASE, &fs) == 0);
   assert(sysarch(AMD64_GET_GSBASE, &gs) == 0);
-#else
-  assert(syscall(SYS_arch_prctl, ARCH_GET_FS, &fs) == 0);
-  assert(syscall(SYS_arch_prctl, ARCH_GET_GS, &gs) == 0);
-#endif
   assert(get(cursor, UNW_X86_64_FS_BASE) == fs);
   assert(get(cursor, UNW_X86_64_GS_BASE) == gs);
-#endif
   return 0;
 }

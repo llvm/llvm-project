@@ -1,4 +1,5 @@
 ; RUN: not llc -mtriple=bpfel -mcpu=v4 -filetype=asm -o - %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=bpfel -mcpu=v4 -filetype=obj -o /dev/null %s 2>&1 | FileCheck %s
 
 ; A filter that lets some types through needs type information at run time.
 ; The empty one is a catch-all and is accepted, see unwind.ll.

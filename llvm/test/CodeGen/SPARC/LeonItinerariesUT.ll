@@ -2,6 +2,7 @@
 ; RUN: llc < %s -O1 -mtriple=sparc -mcpu=leon2 | FileCheck %s -check-prefix=LEON2_ITIN
 ; RUN: llc < %s -O1 -mtriple=sparc -mcpu=leon3 | FileCheck %s -check-prefix=LEON3_4_ITIN
 ; RUN: llc < %s -O1 -mtriple=sparc -mcpu=leon4 | FileCheck %s -check-prefix=LEON3_4_ITIN
+; RUN: llc < %s -O1 -mtriple=sparc -mcpu=leon5 | FileCheck %s -check-prefix=LEON5
 
 ; NO_ITIN-LABEL: f32_ops:
 ; NO_ITIN:       ld
@@ -35,6 +36,17 @@
 ; LEON3_4_ITIN-NEXT:  fmuls
 ; LEON3_4_ITIN-NEXT:  retl
 ; LEON3_4_ITIN-NEXT:  fdivs
+
+; LEON5-LABEL: f32_ops:
+; LEON5:       ld
+; LEON5-NEXT:  ld
+; LEON5-NEXT:  ld
+; LEON5-NEXT:  fadds
+; LEON5-NEXT:  ld
+; LEON5-NEXT:  fsubs
+; LEON5-NEXT:  fmuls
+; LEON5-NEXT:  retl
+; LEON5-NEXT:  fdivs
 
 define float @f32_ops(ptr byval(float) %a, ptr byval(float) %b, ptr byval(float) %c, ptr byval(float) %d) {
 entry:

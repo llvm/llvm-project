@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -std=hlsl2018 -finclude-default-header -fnative-half-type %s -DERRORS -Wdouble-promotion -verify
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -fnative-half-type %s -ast-dump | FileCheck %s
 
-#if __HLSL_VERSION <= 2021
+#if __HLSL_VERSION < 2021
 // expected-warning@*{{support for HLSL language version hlsl2018 is incomplete, recommend using hlsl202x instead}}
 #endif
 

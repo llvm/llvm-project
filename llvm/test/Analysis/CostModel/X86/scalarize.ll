@@ -1,5 +1,5 @@
-; RUN: opt < %s  -passes="print<cost-model>" 2>&1 -disable-output -mtriple=i386 -mcpu=corei7-avx | FileCheck %s -check-prefix=CHECK32
-; RUN: opt < %s  -passes="print<cost-model>" 2>&1 -disable-output -mtriple=x86_64-apple-macosx10.8.0 -mcpu=corei7-avx | FileCheck %s -check-prefix=CHECK64
+; RUN: opt < %s  -passes="print<cost-model>" -disable-output -mtriple=i386 -mcpu=corei7-avx 2>&1 | FileCheck %s -check-prefix=CHECK32
+; RUN: opt < %s  -passes="print<cost-model>" -disable-output -mtriple=x86_64-apple-macosx10.8.0 -mcpu=corei7-avx 2>&1 | FileCheck %s -check-prefix=CHECK64
 
 %i4 = type <4 x i32>
 %i8 = type <2 x i64>

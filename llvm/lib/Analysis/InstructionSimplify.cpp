@@ -5378,19 +5378,21 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
             CanSimplify())
           return P;
 
-        // getelementptr V, (ashr (sub P, V), C) -> P if P points to a type of
-        // size 1 << C.
-        if (match(Indices[0], m_AShr(m_Sub(m_PtrToIntOrAddr(m_Value(P)),
-                                           m_PtrToIntOrAddr(m_Specific(Ptr))),
-                                     m_ConstantInt(C))) &&
+        // getelementptr V, (ashr exact (sub P, V), C) -> P if P points to a
+        // type of size 1 << C.
+        if (match(Indices[0],
+                  m_Exact(m_AShr(m_Sub(m_PtrToIntOrAddr(m_Value(P)),
+                                       m_PtrToIntOrAddr(m_Specific(Ptr))),
+                                 m_ConstantInt(C)))) &&
             TyAllocSize == 1ULL << C && CanSimplify())
           return P;
 
-        // getelementptr V, (sdiv (sub P, V), C) -> P if P points to a type of
-        // size C.
-        if (match(Indices[0], m_SDiv(m_Sub(m_PtrToIntOrAddr(m_Value(P)),
-                                           m_PtrToIntOrAddr(m_Specific(Ptr))),
-                                     m_SpecificInt(TyAllocSize))) &&
+        // getelementptr V, (sdiv exact (sub P, V), C) -> P if P points to a
+        // type of size C.
+        if (match(Indices[0],
+                  m_Exact(m_SDiv(m_Sub(m_PtrToIntOrAddr(m_Value(P)),
+                                       m_PtrToIntOrAddr(m_Specific(Ptr))),
+                                 m_SpecificInt(TyAllocSize)))) &&
             CanSimplify())
           return P;
       }
@@ -5635,8 +5637,8 @@ static bool isPoisonBitRange(Value *Offset, Type *Ty, Type *SrcTy,
   // Accessing bits past the end of the value is poison.
   uint64_t Off;
   return match(Offset, m_ConstantInt(Off)) &&
-         Off + Q.DL.getTypeSizeInBits(Ty).getFixedValue() >
-             Q.DL.getTypeSizeInBits(SrcTy).getFixedValue();
+         Off + Q.DL.getTypeSizeInBits(Ty->getScalarType()).getFixedValue() >
+             Q.DL.getTypeSizeInBits(SrcTy->getScalarType()).getFixedValue();
 }
 
 /// Given operands for a BitInsertInst, see if we can fold the result.
@@ -5786,10 +5788,8 @@ static Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
   // provenance.
   Value *Ptr, *X;
   if (CastOpc == Instruction::PtrToAddr &&
-      match(Op,
-            m_PtrAdd(m_Value(Ptr),
-                     m_Sub(m_Value(X), m_PtrToIntOrAddr(m_Deferred(Ptr))))) &&
-      X->getType() == Ty && Ty == Q.DL.getIndexType(Ptr->getType()))
+      match(Op, m_PtrAdd(Q.DL, m_Value(Ptr),
+                         m_Sub(m_Value(X), m_PtrToIntOrAddr(m_Deferred(Ptr))))))
     return X;
 
   // Fold a value-preserving zext/sext of a trunc back to the original value.
@@ -6013,7 +6013,8 @@ static Value *simplifyFNegInst(Value *Op, FastMathFlags FMF,
 
   Value *X;
   // fneg (fneg X) ==> X
-  if (match(Op, m_FNeg(m_Value(X))))
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+  if (match(Op, m_FNegOrFSubNegZero(m_Value(X))))
     return X;
 
   return nullptr;
@@ -6157,8 +6158,9 @@ simplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
         match(Op1, m_FSub(m_AnyZeroFP(), m_Specific(Op0))))
       return ConstantFP::getZero(Op0->getType());
 
-    if (match(Op0, m_FNeg(m_Specific(Op1))) ||
-        match(Op1, m_FNeg(m_Specific(Op0))))
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (match(Op0, m_FNegOrFSubNegZero(m_Specific(Op1))) ||
+        match(Op1, m_FNegOrFSubNegZero(m_Specific(Op0))))
       return ConstantFP::getZero(Op0->getType());
   }
 
@@ -6204,7 +6206,9 @@ simplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   // fsub -0.0, (fneg X) ==> X
   Value *X;
   if (canIgnoreSNaN(ExBehavior, FMF))
-    if (match(Op0, m_NegZeroFP()) && match(Op1, m_FNeg(m_Value(X))))
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (match(Op0, m_NegZeroFP()) &&
+        match(Op1, m_FNegOrFSubNegZero(m_Value(X))))
       return X;
 
   // fsub 0.0, (fsub 0.0, X) ==> X if signed zeros are ignored.
@@ -6659,11 +6663,6 @@ static Value *simplifyRelativeLoad(Constant *Ptr, Constant *Offset,
 // TODO: Need to pass in FastMathFlags
 static Value *simplifyLdexp(Value *Op0, Value *Op1, const SimplifyQuery &Q,
                             bool IsStrict) {
-  // ldexp(poison, x) -> poison
-  // ldexp(x, poison) -> poison
-  if (isa<PoisonValue>(Op0) || isa<PoisonValue>(Op1))
-    return Op0;
-
   // ldexp(undef, x) -> nan
   if (Q.isUndefValue(Op0))
     return ConstantFP::getNaN(Op0->getType());
@@ -7045,6 +7044,15 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
                                       const SimplifyQuery &Q) {
   unsigned BitWidth = ReturnType->getScalarSizeInBits();
   switch (IID) {
+  case Intrinsic::vector_shuffle:
+    // A poison mask selects poison in every lane.
+    if (isa<PoisonValue>(Op1))
+      return PoisonValue::get(ReturnType);
+    // The only in-range index into a one-element vector is 0, and other
+    // indices select poison, so the shuffle is its source.
+    if (cast<VectorType>(ReturnType)->getElementCount().isScalar())
+      return Op0;
+    break;
   case Intrinsic::get_active_lane_mask: {
     if (match(Op1, m_Zero()))
       return ConstantInt::getFalse(ReturnType);
@@ -7301,6 +7309,26 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     // X - 0 -> X
     if (match(Op1, m_Zero()))
       return Op0;
+    break;
+  case Intrinsic::ushl_sat:
+  case Intrinsic::sshl_sat:
+    if (isPoisonShift(Op1, Q))
+      return PoisonValue::get(ReturnType);
+    // X << 0 -> X
+    if (match(Op1, m_Zero()))
+      return Op0;
+    // 0 << Y -> 0
+    if (match(Op0, m_Zero()))
+      return Op0;
+    if (IID == Intrinsic::ushl_sat) {
+      // -1 u<< Y -> -1
+      if (match(Op0, m_AllOnes()))
+        return Op0;
+    } else {
+      // SINT_MAX s<< Y -> SINT_MAX, SINT_MIN s<< Y -> SINT_MIN
+      if (match(Op0, m_MaxSignedValue()) || match(Op0, m_SignMask()))
+        return Op0;
+    }
     break;
   case Intrinsic::load_relative:
     if (auto *C0 = dyn_cast<Constant>(Op0))
@@ -7743,9 +7771,11 @@ static Value *simplifyIntrinsic(CallBase *Call, ArrayRef<Value *> Args,
 static Value *tryConstantFoldCall(CallBase *Call, ArrayRef<Value *> Args,
                                   const SimplifyQuery &Q) {
   auto *F = Call->getCalledFunction();
-  if (!F || !canConstantFoldCallTo(Call, F, Q.TLI))
+  if (!F)
     return nullptr;
 
+  // Check for constant arguments before querying canConstantFoldCallTo.
+  // Checking arguments is cheaper than TLI classification and attribute checks.
   SmallVector<Constant *, 4> ConstantArgs;
   ConstantArgs.reserve(Args.size());
   for (Value *Arg : Args) {
@@ -7757,6 +7787,10 @@ static Value *tryConstantFoldCall(CallBase *Call, ArrayRef<Value *> Args,
     }
     ConstantArgs.push_back(C);
   }
+
+  // Check if this is a known library function that we know how to fold.
+  if (!canConstantFoldCallTo(Call, F, Q.TLI))
+    return nullptr;
 
   return ConstantFoldCall(Call, F, ConstantArgs, Q.TLI);
 }

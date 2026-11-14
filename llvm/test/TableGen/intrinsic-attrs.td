@@ -13,7 +13,7 @@ def int_deref_ptr_ret : Intrinsic<[llvm_ptr_ty], [], [Dereferenceable<RetIndex, 
 // CHECK-NEXT: default: llvm_unreachable("Invalid attribute set number");
 // CHECK-NEXT: case 0:
 // CHECK-NEXT:     return AttributeSet::get(C, {
-// CHECK-NEXT:       Attribute::get(C, Attribute::Dereferenceable, 16),
+// CHECK-NEXT:       Attribute::get(C, Attribute::Dereferenceable, uint64_t(16)),
 // CHECK-NEXT: });
 // CHECK-NEXT: }
 // CHECK-NEXT: }
@@ -26,7 +26,7 @@ def int_deref_ptr_ret : Intrinsic<[llvm_ptr_ty], [], [Dereferenceable<RetIndex, 
 
 // CHECK: static constexpr uint8_t IntrinsicsToAttributesMap[] = {
 // CHECK: 0 << 1 | 0, // llvm.deref.ptr.ret
-// CHECK: 1 << 1 | 1, // llvm.random.gen
+// CHECK: 0 << 1 | 1, // llvm.random.gen
 // CHECK: }; // IntrinsicsToAttributesMap
 
 // CHECK: static constexpr ArgNoAttrIDPair ArgAttrIdTable[] = {

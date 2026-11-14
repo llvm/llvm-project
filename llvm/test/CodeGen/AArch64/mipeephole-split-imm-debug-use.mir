@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=aarch64-mi-peephole-opt -o - -mtriple=aarch64-unknown-linux -verify-machineinstrs %s | FileCheck %s
+# RUN: llc -run-pass=aarch64-mi-peephole-opt -o - -mtriple=aarch64-unknown-linux %s | FileCheck %s
 
 # Debug uses of the MOV and SUBREG_TO_REG do not stop the immediate from being
 # split. They describe the immediate instead, except for an indirect one, which

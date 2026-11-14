@@ -37,14 +37,14 @@ entry:
 ; abs64:          add %i1, %hm(func1), %i1
 
 ; v8pic32-LABEL: test
-; v8pic32:        sethi %hi(func1), %i1
-; v8pic32:        add %i1, %lo(func1), %i1
-; v8pic32:        ld [%i0+%i1], %i0
+; v8pic32:        sethi %gdop_hix22(func1), %i1
+; v8pic32:        xor %i1, %gdop_lox10(func1), %i1
+; v8pic32:        ld [%i0+%i1], %i0, %gdop(func1)
 
 ; v9pic32-LABEL: test
-; v9pic32:        sethi %hi(func1), %i1
-; v9pic32:        add %i1, %lo(func1), %i1
-; v9pic32:        ldx [%i0+%i1], %i0
+; v9pic32:        sethi %gdop_hix22(func1), %i1
+; v9pic32:        xor %i1, %gdop_lox10(func1), %i1
+; v9pic32:        ldx [%i0+%i1], %i0, %gdop(func1)
 ; v9pic32:        call %i0
 
   ret void

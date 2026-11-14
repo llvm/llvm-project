@@ -1,7 +1,7 @@
 # REQUIRES: hexagon
 # RUN: rm -rf %t && split-file %s %t && cd %t
 # RUN: llvm-mc -filetype=obj -triple=hexagon-unknown-elf main.s -o main.o
-# RUN: ld.lld -shared main.o -o test.so
+# RUN: ld.lld -shared -T lds main.o -o test.so
 # RUN: llvm-objdump -d --no-show-raw-insn test.so | FileCheck %s
 
 ## Test thunk range scenarios for Hexagon R_HEX_GD_PLT_B22_PCREL relocations.
@@ -23,8 +23,7 @@ _start:
 
   jumpr r31
 
-.skip 0x400000
-
+.section .text_far,"ax",@progbits
 more_code:
   r0 = add(r2,##tls_var_distant@GDGOT)
   call tls_var_distant@GDPLT
@@ -46,22 +45,28 @@ tls_var_far:
 tls_var_distant:
   .word 0x9abc
 
+#--- lds
+SECTIONS {
+  .text 0x10000 : { *(.text) }
+  .text_far 0x410000 : { *(.text_far) }
+}
+
 # CHECK: Disassembly of section .text:
 # CHECK:     <_start>:
-# CHECK-NEXT:   102b0:  { immext(#0x420100)
-# CHECK-NEXT:      r2 = add(pc,##0x420104) }
-# CHECK-NEXT:    { immext(#0xfffeffc0)
-# CHECK-NEXT:      r0 = add(r2,##-0x10018) }
-# CHECK-NEXT:    { call 0x410310 <__tls_get_addr@plt> }
-# CHECK-NEXT:    { immext(#0xfffeffc0)
-# CHECK-NEXT:      r0 = add(r2,##-0x10010) }
-# CHECK-NEXT:    { call 0x410310 <__tls_get_addr@plt> }
+# CHECK-NEXT:   10000:  { immext(#0x4000c0)
+# CHECK-NEXT:      r2 = add(pc,##0x4000d4) }
+# CHECK-NEXT:    { immext(#0xffffffc0)
+# CHECK-NEXT:      r0 = add(r2,##-0x18) }
+# CHECK-NEXT:    { call 0x410030 <__tls_get_addr@plt> }
+# CHECK-NEXT:    { immext(#0xffffffc0)
+# CHECK-NEXT:      r0 = add(r2,##-0x10) }
+# CHECK-NEXT:    { call 0x410030 <__tls_get_addr@plt> }
 # CHECK-NEXT:    { jumpr r31 }
 
 # CHECK:     <more_code>:
-# CHECK-NEXT:   4102d4:  { immext(#0xfffeffc0)
-# CHECK-NEXT:      r0 = add(r2,##-0x10008) }
-# CHECK-NEXT:    { call 0x410310 <__tls_get_addr@plt> }
+# CHECK-NEXT:   410000:  { immext(#0xffffffc0)
+# CHECK-NEXT:      r0 = add(r2,##-0x8) }
+# CHECK-NEXT:    { call 0x410030 <__tls_get_addr@plt> }
 # CHECK-NEXT:    { jumpr r31 }
 
 ## Verify PLT entry is created for __tls_get_addr
@@ -69,8 +74,8 @@ tls_var_distant:
 ## PLT entries - only __tls_get_addr needs one.
 # CHECK: Disassembly of section .plt:
 # CHECK:      <.plt>:
-# CHECK-NEXT:   4102f0:  { immext(#0x200c0)
-# CHECK-NEXT:      r28 = add(pc,##0x200c4) }
+# CHECK-NEXT:   410010:  { immext(#0xc0)
+# CHECK-NEXT:      r28 = add(pc,##0xc4) }
 # CHECK-NEXT:    { r14 -= add(r28,#0x10)
 # CHECK-NEXT:      r15 = memw(r28+#0x8)
 # CHECK-NEXT:      r28 = memw(r28+#0x4) }
@@ -79,7 +84,7 @@ tls_var_distant:
 # CHECK-NEXT:    { trap0(#0xdb) }
 
 # CHECK:      <__tls_get_addr@plt>:
-# CHECK-NEXT:   410310: { immext(#0x20080)
-# CHECK-NEXT:      r14 = add(pc,##0x200b4) }
+# CHECK-NEXT:   410030: { immext(#0x80)
+# CHECK-NEXT:      r14 = add(pc,##0xb4) }
 # CHECK-NEXT:    { r28 = memw(r14+#0x0) }
 # CHECK-NEXT:    { jumpr r28 }

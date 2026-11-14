@@ -159,6 +159,11 @@ StringRef Interface::getCppNamespace() const {
   return def->getValueAsString("cppNamespace");
 }
 
+// Return the C++ headers declaring this interface.
+std::vector<StringRef> Interface::getCppIncludes() const {
+  return def->getValueAsListOfStrings("cppIncludes");
+}
+
 // Return the methods of this interface.
 ArrayRef<InterfaceMethod> Interface::getMethods() const { return methods; }
 

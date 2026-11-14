@@ -5,8 +5,11 @@
 name:            shl_i8
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: shl_i8
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
@@ -27,8 +30,11 @@ body:             |
 name:            shl_i15
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: shl_i15
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32767
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
@@ -49,8 +55,11 @@ body:             |
 name:            shl_i16
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: shl_i16
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 65535
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
@@ -71,8 +80,11 @@ body:             |
 name:            shl_i32
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: shl_i32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[SLLW:%[0-9]+]]:_(s64) = G_SLLW [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[SLLW]](s64)
@@ -91,8 +103,11 @@ body:             |
 name:            shl_i64
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: shl_i64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[COPY1]](s64)
     ; CHECK-NEXT: $x10 = COPY [[SHL]](s64)
@@ -108,8 +123,11 @@ body:             |
 name:            shl_i72
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12, $x13
     ; CHECK-LABEL: name: shl_i72
-    ; CHECK: %x00:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12, $x13
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x00:_(s64) = COPY $x10
     ; CHECK-NEXT: %x01:_(s64) = COPY $x11
     ; CHECK-NEXT: %y00:_(s64) = COPY $x12
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
@@ -149,8 +167,11 @@ body:             |
 name:            shl_i128
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12, $x13
     ; CHECK-LABEL: name: shl_i128
-    ; CHECK: %lo1:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12, $x13
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lo1:_(s64) = COPY $x10
     ; CHECK-NEXT: %hi1:_(s64) = COPY $x11
     ; CHECK-NEXT: %lo2:_(s64) = COPY $x12
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
@@ -187,8 +208,11 @@ body:             |
 name:            shl_i192
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12, $x13, $x14, $x15
     ; CHECK-LABEL: name: shl_i192
-    ; CHECK: %lo1:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12, $x13, $x14, $x15
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lo1:_(s64) = COPY $x10
     ; CHECK-NEXT: %mid1:_(s64) = COPY $x11
     ; CHECK-NEXT: %hi1:_(s64) = COPY $x12
     ; CHECK-NEXT: %lo2:_(s64) = COPY $x13
@@ -275,6 +299,29 @@ body:             |
     %4:_(s48) = G_SHL %0, %1(s48)
     %5:_(s64) = G_ANYEXT %4(s48)
     $x10 = COPY %5(s64)
+    PseudoRET implicit $x10
+
+...
+---
+name:            shl_i32_const_nuw_nsw
+body:             |
+  bb.0:
+    liveins: $x10
+
+    ; CHECK-LABEL: name: shl_i32_const_nuw_nsw
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
+    ; CHECK-NEXT: $x10 = COPY [[SHL]](s64)
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:_(s64) = COPY $x10
+    %1:_(s32) = G_TRUNC %0(s64)
+    %2:_(s32) = G_CONSTANT i32 5
+    %3:_(s32) = nuw nsw G_SHL %1, %2(s32)
+    %4:_(s64) = G_ANYEXT %3(s32)
+    $x10 = COPY %4(s64)
     PseudoRET implicit $x10
 
 ...

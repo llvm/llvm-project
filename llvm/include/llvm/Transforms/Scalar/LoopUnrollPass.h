@@ -19,10 +19,9 @@ namespace cl {
 class LibraryOptionsContext;
 } // namespace cl
 
-/// Returns -forget-scev-loop-unroll of LibraryOptions, or its global value if
-/// null.
+/// Return -forget-scev-loop-unroll.
 LLVM_ABI bool
-getForgetSCEVInLoopUnroll(const cl::LibraryOptionsContext *LibraryOptions);
+getForgetSCEVInLoopUnroll(const cl::LibraryOptionsContext &LibraryOptions);
 
 class Function;
 class Loop;

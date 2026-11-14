@@ -266,9 +266,9 @@ define void @test_load_gep_widen_induction(ptr noalias %dst, ptr noalias %dst2) 
 ; CHECK-NEXT:    store ptr null, ptr [[TMP23]], align 8
 ; CHECK-NEXT:    store ptr null, ptr [[TMP28]], align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr ptr, ptr [[DST2]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr ptr, ptr [[TMP12]], i64 2
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr ptr, ptr [[TMP12]], i64 4
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr ptr, ptr [[TMP12]], i64 6
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP12]], i64 16
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[TMP12]], i64 32
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[TMP12]], i64 48
 ; CHECK-NEXT:    store <2 x ptr> [[TMP10]], ptr [[TMP12]], align 8
 ; CHECK-NEXT:    store <2 x ptr> [[TMP14]], ptr [[TMP24]], align 8
 ; CHECK-NEXT:    store <2 x ptr> [[TMP18]], ptr [[TMP25]], align 8

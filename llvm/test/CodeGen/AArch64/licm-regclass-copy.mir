@@ -22,7 +22,6 @@
 ...
 ---
 name: gpr_to_fpr_virtual_copy_hoisted
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: gpr_to_fpr_virtual_copy_hoisted
   ; CHECK: bb.0:
@@ -81,7 +80,6 @@ body: |
 ...
 ---
 name: gpr_to_fpr_physical_copy_hoisted
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: gpr_to_fpr_physical_copy_hoisted
   ; CHECK: bb.0:
@@ -138,7 +136,6 @@ body: |
 ...
 ---
 name: fpr_to_gpr_virtual_copy_hoisted
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: fpr_to_gpr_virtual_copy_hoisted
   ; CHECK: bb.0:

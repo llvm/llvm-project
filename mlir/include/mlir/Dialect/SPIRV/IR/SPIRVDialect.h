@@ -13,7 +13,7 @@
 #ifndef MLIR_DIALECT_SPIRV_IR_SPIRVDIALECT_H_
 #define MLIR_DIALECT_SPIRV_IR_SPIRVDIALECT_H_
 
-#include "mlir/IR/Dialect.h"
+#include <cstdint>
 
 namespace mlir {
 namespace spirv {

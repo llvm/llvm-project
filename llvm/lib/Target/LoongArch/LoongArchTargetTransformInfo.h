@@ -51,8 +51,6 @@ public:
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const override;
 
   unsigned getCacheLineSize() const override;
-  unsigned getPrefetchDistance() const override;
-  bool enableWritePrefetching() const override;
 
   bool shouldExpandReduction(const IntrinsicInst *II) const override;
 
@@ -77,6 +75,12 @@ public:
                  const Instruction *CxtI = nullptr,
                  TTI::VectorInstrContext VIC =
                      TTI::VectorInstrContext::None) const override;
+
+  InstructionCost getMemoryOpCost(
+      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
+      const Instruction *I = nullptr) const override;
 
   TTI::MemCmpExpansionOptions
   enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const override;

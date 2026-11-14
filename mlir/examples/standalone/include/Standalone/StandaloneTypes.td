@@ -18,6 +18,7 @@ include "Standalone/StandaloneDialect.td"
 
 class Standalone_Type<string name, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<Standalone_Dialect, name, traits> {
+  let cppIncludes = ["Standalone/StandaloneTypes.h"];
   let mnemonic = typeMnemonic;
 }
 

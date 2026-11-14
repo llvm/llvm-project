@@ -405,13 +405,13 @@ define i32 @test_05(i32 %a, ptr %bp) {
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[OUTER_IV]], [[B]]
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp slt i32 [[IV]], [[B]]
 ; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[OUTER_IV]], [[B]]
 ; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
@@ -967,13 +967,13 @@ define i32 @test_06(i32 %a, ptr %bp) {
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[OUTER_MERGE:%.*]], [[OUTER_BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[OUTER_IV]], [[B]]
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp slt i32 [[IV]], [[B]]
 ; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[OUTER_IV]], [[B]]
 ; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
@@ -1035,6 +1035,7 @@ define i32 @test_07(i32 %a, ptr %bp) {
 ; CHECK-NEXT:    [[OUTER_COND_1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[OUTER_COND_1]], label [[INNER_PREHEADER:%.*]], label [[NO_INNER:%.*]]
 ; CHECK:       inner.preheader:
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[OUTER_IV]], [[B]]
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       no_inner:
 ; CHECK-NEXT:    [[OUTER_COND_2:%.*]] = call i1 @cond()
@@ -1044,7 +1045,6 @@ define i32 @test_07(i32 %a, ptr %bp) {
 ; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp slt i32 [[IV]], [[B]]
 ; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[OUTER_IV]], [[B]]
 ; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
@@ -1113,6 +1113,7 @@ define i32 @test_08(i32 %a, ptr %bp) {
 ; CHECK-NEXT:    [[OUTER_COND_1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[OUTER_COND_1]], label [[INNER_PREHEADER:%.*]], label [[NO_INNER:%.*]]
 ; CHECK:       inner.preheader:
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[OUTER_IV]], [[B]]
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       no_inner:
 ; CHECK-NEXT:    [[OUTER_COND_2:%.*]] = call i1 @cond()
@@ -1127,7 +1128,6 @@ define i32 @test_08(i32 %a, ptr %bp) {
 ; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp slt i32 [[IV]], [[B]]
 ; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[OUTER_IV]], [[B]]
 ; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1

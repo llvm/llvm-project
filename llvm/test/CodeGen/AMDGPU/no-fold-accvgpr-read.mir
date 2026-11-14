@@ -16,7 +16,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
-  ; CHECK-NEXT:   S_BITCMP0_B32 killed [[S_LOAD_DWORD_IMM]], 0, implicit-def $scc
+  ; CHECK-NEXT:   S_BITCMP0_B32 [[S_LOAD_DWORD_IMM]], 0, implicit-def $scc
   ; CHECK-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -37,20 +37,20 @@ body:             |
   ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE1]]
   ; CHECK-NEXT:   [[V_MFMA_F32_16X16X16F16_e64_:%[0-9]+]]:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 [[COPY1]], [[COPY1]], 0, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_MFMA_F32_16X16X16F16_e64_1:%[0-9]+]]:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 [[COPY1]], [[COPY1]], killed [[V_MFMA_F32_16X16X16F16_e64_]], 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_MFMA_F32_16X16X16F16_e64_2:%[0-9]+]]:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 [[COPY1]], [[COPY1]], killed [[V_MFMA_F32_16X16X16F16_e64_1]], 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_MFMA_F32_16X16X16F16_e64_3:%[0-9]+]]:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 [[COPY1]], [[COPY1]], killed [[V_MFMA_F32_16X16X16F16_e64_2]], 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MFMA_F32_16X16X16F16_e64_1:%[0-9]+]]:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 [[COPY1]], [[COPY1]], [[V_MFMA_F32_16X16X16F16_e64_]], 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MFMA_F32_16X16X16F16_e64_2:%[0-9]+]]:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 [[COPY1]], [[COPY1]], [[V_MFMA_F32_16X16X16F16_e64_1]], 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MFMA_F32_16X16X16F16_e64_3:%[0-9]+]]:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 [[COPY1]], [[COPY1]], [[V_MFMA_F32_16X16X16F16_e64_2]], 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_MFMA_F32_16X16X16F16_e64_3]].sub0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:agpr_32 = PHI [[V_ACCVGPR_WRITE_B32_e64_]], %bb.1, [[V_MFMA_F32_16X16X16F16_e64_3]].sub0, %bb.2
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[PHI]]
   ; CHECK-NEXT:   [[V_CVT_F16_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, [[COPY3]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_PACK_B32_F16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_PACK_B32_F16_e64 0, killed [[V_CVT_F16_F32_e64_]], 0, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_PACK_B32_F16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_PACK_B32_F16_e64 0, [[V_CVT_F16_F32_e64_]], 0, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_PACK_B32_F16_e64_]], %subreg.sub0, killed [[V_MOV_B32_e32_]], %subreg.sub1
+  ; CHECK-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_PACK_B32_F16_e64_]], %subreg.sub0, [[V_MOV_B32_e32_]], %subreg.sub1
   ; CHECK-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
-  ; CHECK-NEXT:   BUFFER_STORE_DWORDX2_OFFSET_exact [[REG_SEQUENCE2]], killed [[REG_SEQUENCE3]], 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s64) into `ptr addrspace(8) null`, align 1, addrspace 8)
+  ; CHECK-NEXT:   BUFFER_STORE_DWORDX2_OFFSET_exact [[REG_SEQUENCE2]], [[REG_SEQUENCE3]], 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s64) into `ptr addrspace(8) null`, align 1, addrspace 8)
   ; CHECK-NEXT:   S_ENDPGM 0
   ;
   ; COALESCE-LABEL: name: test
@@ -139,7 +139,7 @@ body:             |
     %0:sgpr_64(p4) = COPY $sgpr4_sgpr5
     %1:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0(p4), 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
     %2:sgpr_32 = S_MOV_B32 0
-    S_BITCMP0_B32 killed %1, 0, implicit-def $scc
+    S_BITCMP0_B32 %1, 0, implicit-def $scc
     S_CBRANCH_SCC0 %bb.2, implicit $scc
 
   bb.1:
@@ -161,22 +161,22 @@ body:             |
     %11:areg_128_align2 = REG_SEQUENCE %7, %subreg.sub0, %8, %subreg.sub1, %9, %subreg.sub2, %10, %subreg.sub3
     %12:sreg_64 = REG_SEQUENCE %5, %subreg.sub0, %5, %subreg.sub1
     %13:vreg_64_align2 = COPY %12
-    %14:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 %13, %13, killed %11, 0, 0, 0, implicit $mode, implicit $exec
-    %15:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 %13, %13, killed %14, 0, 0, 0, implicit $mode, implicit $exec
-    %16:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 %13, %13, killed %15, 0, 0, 0, implicit $mode, implicit $exec
-    %17:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 %13, %13, killed %16, 0, 0, 0, implicit $mode, implicit $exec
+    %14:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 %13, %13, %11, 0, 0, 0, implicit $mode, implicit $exec
+    %15:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 %13, %13, %14, 0, 0, 0, implicit $mode, implicit $exec
+    %16:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 %13, %13, %15, 0, 0, 0, implicit $mode, implicit $exec
+    %17:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 %13, %13, %16, 0, 0, 0, implicit $mode, implicit $exec
     %18:vgpr_32 = COPY %17.sub0
     %19:vgpr_32 = COPY %18
 
   bb.3:
     %20:vgpr_32 = PHI %4, %bb.1, %19, %bb.2
     %21:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, %20, 0, 0, implicit $mode, implicit $exec
-    %22:vgpr_32 = nofpexcept V_PACK_B32_F16_e64 0, killed %21, 0, %2, 0, 0, implicit $mode, implicit $exec
+    %22:vgpr_32 = nofpexcept V_PACK_B32_F16_e64 0, %21, 0, %2, 0, 0, implicit $mode, implicit $exec
     %23:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    %24:vreg_64_align2 = REG_SEQUENCE %22, %subreg.sub0, killed %23, %subreg.sub1
+    %24:vreg_64_align2 = REG_SEQUENCE %22, %subreg.sub0, %23, %subreg.sub1
     %25:sgpr_128 = REG_SEQUENCE %2, %subreg.sub0, %2, %subreg.sub1, %2, %subreg.sub2, %2, %subreg.sub3
     %26:vreg_64_align2 = COPY %24
-    BUFFER_STORE_DWORDX2_OFFSET_exact killed %26, killed %25, %2, 0, 0, 0, implicit $exec :: (dereferenceable store (s64) into `ptr addrspace(8) null`, align 1, addrspace 8)
+    BUFFER_STORE_DWORDX2_OFFSET_exact %26, %25, %2, 0, 0, 0, implicit $exec :: (dereferenceable store (s64) into `ptr addrspace(8) null`, align 1, addrspace 8)
     S_ENDPGM 0
 
 ...

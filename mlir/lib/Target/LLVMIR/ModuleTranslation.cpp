@@ -36,7 +36,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/TargetFolder.h"
-#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -803,9 +802,11 @@ ModuleTranslation::ModuleTranslation(Operation *module,
 }
 
 ModuleTranslation::~ModuleTranslation() {
-  if (ompBuilder && !ompBuilder->isFinalized())
-    ompBuilder->finalize();
+  // Destroy extensions while the rest of the translation state is still alive.
+  extensions.clear();
 }
+
+ModuleTranslation::Extension::~Extension() = default;
 
 void ModuleTranslation::forgetMapping(Region &region) {
   SmallVector<Region *> toProcess;
@@ -1571,10 +1572,11 @@ static llvm::MDNode *convertVecTypeHintToMDNode(llvm::LLVMContext &context,
 static llvm::MDNode *convertIntegerArrayToMDNode(llvm::LLVMContext &context,
                                                  ArrayRef<int32_t> values) {
   SmallVector<llvm::Metadata *> mdValues;
-  llvm::transform(
-      values, std::back_inserter(mdValues), [&context](int32_t value) {
-        return convertIntegerToMetadata(context, llvm::APInt(32, value));
-      });
+  llvm::transform(values, std::back_inserter(mdValues),
+                  [&context](int32_t value) {
+                    return convertIntegerToMetadata(
+                        context, llvm::APInt(32, value, /*isSigned=*/true));
+                  });
   return llvm::MDNode::get(context, mdValues);
 }
 
@@ -1780,6 +1782,7 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   for (Block *bb : blocks) {
     CapturingIRBuilder builder(*llvmModule,
                                llvm::TargetFolder(llvmModule->getDataLayout()));
+    builder.disableGEPCanonicalization();
     if (failed(convertBlockImpl(*bb, bb->isEntryBlock(), builder,
                                 /*recordInsertions=*/true)))
       return failure();
@@ -2416,6 +2419,25 @@ void ModuleTranslation::setTBAAMetadata(AliasAnalysisOpInterface op,
   inst->setMetadata(llvm::LLVMContext::MD_tbaa, node);
 }
 
+void ModuleTranslation::setTBAAStructMetadata(ArrayAttr fields,
+                                              llvm::Instruction *inst) {
+  if (!fields || fields.empty())
+    return;
+
+  // The node is a flat list of (offset, size, tag) triples, not a list of
+  // per-field nodes.
+  SmallVector<llvm::MDBuilder::TBAAStructField> structFields;
+  structFields.reserve(fields.size());
+  for (Attribute field : fields) {
+    auto fieldAttr = cast<TBAAStructFieldAttr>(field);
+    structFields.emplace_back(fieldAttr.getOffset(), fieldAttr.getSize(),
+                              getTBAANode(fieldAttr.getTag()));
+  }
+  inst->setMetadata(
+      llvm::LLVMContext::MD_tbaa_struct,
+      llvm::MDBuilder(getLLVMContext()).createTBAAStructNode(structFields));
+}
+
 void ModuleTranslation::setDereferenceableMetadata(
     DereferenceableOpInterface op, llvm::Instruction *inst) {
   DereferenceableAttr derefAttr = op.getDereferenceableOrNull();
@@ -2502,6 +2524,16 @@ LogicalResult ModuleTranslation::createTBAAMetadata() {
   mlirModule->walk([&](AliasAnalysisOpInterface analysisOpInterface) {
     if (auto attr = analysisOpInterface.getTBAATagsOrNull())
       walker.walk(attr);
+  });
+
+  // The tags inside a `tbaa_struct` are reachable from nowhere else, so without
+  // this walk they never get an MDNode and the exported node has null tags.
+  auto walkStructFields = [&](ArrayAttr fields) {
+    if (fields)
+      walker.walk(fields);
+  };
+  mlirModule->walk([&](TBAAStructOpInterface tbaaStructOp) {
+    walkStructFields(tbaaStructOp.getTBAAStructOrNull());
   });
 
   return success();
@@ -2593,32 +2625,6 @@ void ModuleTranslation::remapAllValuesWith(llvm::Value *oldValue,
   for (auto &entry : valueMapping)
     if (entry.second == oldValue)
       entry.second = newValue;
-}
-
-llvm::OpenMPIRBuilder *ModuleTranslation::getOpenMPBuilder() {
-  if (!ompBuilder) {
-    ompBuilder = std::make_unique<llvm::OpenMPIRBuilder>(*llvmModule);
-
-    // Flags represented as top-level OpenMP dialect attributes are set in
-    // `OpenMPDialectLLVMIRTranslationInterface::amendOperation()`. Here we set
-    // the default configuration.
-    llvm::OpenMPIRBuilderConfig config(
-        /* IsTargetDevice = */ false, /* IsGPU = */ false,
-        /* OpenMPOffloadMandatory = */ false,
-        /* HasRequiresReverseOffload = */ false,
-        /* HasRequiresUnifiedAddress = */ false,
-        /* HasRequiresUnifiedSharedMemory = */ false,
-        /* HasRequiresDynamicAllocators = */ false);
-    unsigned int defaultAS =
-        llvmModule->getDataLayout().getProgramAddressSpace();
-    config.setDefaultTargetAS(defaultAS);
-    config.setRuntimeCC(llvmModule->getTargetTriple().isSPIRV()
-                            ? llvm::CallingConv::SPIR_FUNC
-                            : llvm::CallingConv::C);
-    ompBuilder->setConfig(std::move(config));
-    ompBuilder->initialize();
-  }
-  return ompBuilder.get();
 }
 
 llvm::vfs::FileSystem &ModuleTranslation::getFileSystem() {
@@ -2790,9 +2796,12 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   // beforehand.
   translator.debugTranslation->addModuleFlagsIfNotPresent();
 
-  // Call the OpenMP IR Builder callbacks prior to verifying the module
-  if (auto *ompBuilder = translator.getOpenMPBuilder())
-    ompBuilder->finalize();
+  // Let dialect translations complete their pending work (e.g. OpenMP region
+  // outlining) prior to verifying the module. Index-based iteration tolerates
+  // extensions created during finalization.
+  for (size_t i = 0; i < translator.extensions.size(); ++i)
+    if (failed(translator.extensions.begin()[i].second->finalize()))
+      return nullptr;
 
   if (!disableVerification &&
       llvm::verifyModule(*translator.llvmModule, &llvm::errs()))

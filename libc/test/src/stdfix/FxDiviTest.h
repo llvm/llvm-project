@@ -1,16 +1,25 @@
-//===-- Utility class to test fxdivi functions ------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Utility class to test fxdivi functions.
+///
+//===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/type_traits/conditional.h"
+#ifndef LLVM_LIBC_TEST_SRC_STDFIX_FXDIVITEST_H
+#define LLVM_LIBC_TEST_SRC_STDFIX_FXDIVITEST_H
+
 #include "test/UnitTest/Test.h"
 
 #include "hdr/signal_macros.h"
+#include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/limits.h"
+#include "src/__support/CPP/type_traits/conditional.h"
 #include "src/__support/fixed_point/fx_rep.h"
 
 namespace cpp = LIBC_NAMESPACE::cpp;
@@ -213,6 +222,18 @@ public:
       constexpr IntType big_non_pow2 = big_pow2 + 7;
       EXPECT_TRUE(abs_diff(func(3, big_non_pow2), fx_zero) <= epsilon);
       EXPECT_EQ(func(big_non_pow2, big_non_pow2 << 1), one_half);
+
+      // Regression test for #241209: without an early saturation check,
+      // lrdivi(1L << 62, 3) truncates the 128-bit quotient to 64 bits before
+      // clamping, which flips the sign bit and saturates to MIN instead of MAX.
+      constexpr int digits = cpp::numeric_limits<IntType>::digits;
+      constexpr IntType huge = static_cast<IntType>(1) << (digits - 1);
+      EXPECT_EQ(func(huge, 3), fx_max);
+      if constexpr (is_signed) {
+        EXPECT_EQ(func(huge, -3), fx_min);
+        EXPECT_EQ(func(-huge, 3), fx_min);
+        EXPECT_EQ(func(-huge, -3), fx_max);
+      }
     }
   }
 
@@ -250,3 +271,5 @@ public:
   }                                                                            \
   static_assert(true, "Require semicolon.")
 #endif // LIBC_ADD_NULL_CHECKS
+
+#endif // LLVM_LIBC_TEST_SRC_STDFIX_FXDIVITEST_H

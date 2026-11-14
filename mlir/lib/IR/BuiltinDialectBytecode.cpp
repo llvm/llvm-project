@@ -20,7 +20,6 @@
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Location.h"
 #include "mlir/Support/LLVM.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include <cstdint>
 
 using namespace mlir;
@@ -544,9 +543,11 @@ static void writeDenseTypedElementsAttr(DialectBytecodeWriter &writer,
 
   writer.writeOwnedBlob(attr.getRawData());
 }
+} // namespace
 
 #include "mlir/IR/BuiltinDialectBytecode.cpp.inc"
 
+namespace {
 /// This class implements the bytecode interface for the builtin dialect.
 struct BuiltinDialectBytecodeInterface : public BytecodeDialectInterface {
   BuiltinDialectBytecodeInterface(Dialect *dialect)

@@ -486,3 +486,12 @@ namespace MostDerivedIsArrayElem {
   static_assert(d[8].n == 7);
   static_assert(d[8].k == 0);
 }
+
+namespace TemoprariesInVirtualBaseInitializer {
+  struct S {};
+  struct C {
+    C(C &, S s = S());
+  };
+  struct D : virtual C {};
+  void foo(D d) { D d2(d); };
+}

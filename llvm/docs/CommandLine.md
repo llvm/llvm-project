@@ -1568,7 +1568,8 @@ TODO: fill in this section
 ## Declaring a Library's Options in TableGen
 
 A library can declare its options in a `.td` file instead of as `cl::opt` globals.
-`llvm-tblgen -gen-opt-parser-defs` generates a struct with a member per option, the table that parses them, and the hooks through which `cl::ParseCommandLineOptions` parses them and `-help-hidden` lists them.
+`llvm-tblgen -gen-opt-parser-defs` generates a struct with a member per option, the table that parses them, and the hooks through which `cl::parseCommandLineOptions` parses them into a `cl::LibraryOptionsContext` and `-help-hidden` lists them.
+`cl::ParseCommandLineOptions`, which takes no context, does not recognize them.
 
 ```text
 include "llvm/Option/LibraryOptions.td"
@@ -1599,8 +1600,9 @@ Only `-help-hidden` lists the options, like `cl::Hidden`.
 A default is the member's C++ initializer, so `"\"-\""` initializes `foo_path` to `"-"`.
 An `OptionalValueField` or `OptionalEnumField` takes no default; its `std::optional` member stays `std::nullopt` unless the option is given, replacing `getNumOccurrences()`.
 The header declares the struct after including what the member defaults need, and one source file defines it and registers it with `cl::`.
+Options that only some tools accept, such as those that `mc::getMCTargetOptions` reads, are not registered: a function returns a function-local `opt::LibraryOptionsParser`, and each such tool passes it to the `cl::parseCommandLineOptions` overload that takes tool options.
 
 The library then lists `FooOptionsTableGen` under `DEPENDS` and `Option` under `LINK_COMPONENTS`.
-A library that otherwise needs only `llvm-min-tblgen` sets `LLVM_TABLEGEN_PROJECT` to `LLVM_HEADERS` before its `tablegen()` call, so that its sources need not wait for `llvm-tblgen`.
-Code reads `FooOptions::Global.enable_foo`, the instance the command line sets.
+A library that otherwise needs only `llvm-min-tblgen` sets `LLVM_TABLEGEN_PROJECT` to `LLVM_HEADERS` before its `llvm_tablegen()` call, so that its sources need not wait for `llvm-tblgen`.
+Code reads `C.get<FooOptions>().enable_foo` from the context `C` that the tool parsed its command line into, usually through an `LLVMContext`.
 Keep the header in `lib/`, as private as the `static cl::opt` it replaces; another library that needs a value calls a function or takes a parameter.

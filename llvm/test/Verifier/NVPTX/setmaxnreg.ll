@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
 
 declare void @llvm.nvvm.setmaxnreg.inc.sync.aligned.u32(i32 %reg_count)
 declare void @llvm.nvvm.setmaxnreg.dec.sync.aligned.u32(i32 %reg_count)

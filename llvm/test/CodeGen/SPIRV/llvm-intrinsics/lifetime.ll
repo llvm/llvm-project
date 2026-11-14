@@ -8,19 +8,14 @@
 ; FIXME(182779) ByVal attribute emitted for Vulkan.
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan1.3-compute %s -o - -filetype=obj | spirv-val %}
 
-; CL-DAG: %[[#Char:]] = OpTypeInt 8 0
-; CL-DAG: %[[#PtrChar:]] = OpTypePointer Function %[[#Char]]
-
 %tprange = type { %tparray }
 %tparray = type { [2 x i64] }
 
 ; CL:      OpFunction
 ; CL:      %[[#FooVar:]] = OpVariable
-; CL-NEXT: %[[#Casted1:]] = OpBitcast %[[#PtrChar]] %[[#FooVar]]
-; CL-NEXT: OpLifetimeStart %[[#Casted1]] 16
+; CL-NEXT: OpLifetimeStart %[[#FooVar]] 0
 ; CL: OpInBoundsPtrAccessChain
-; CL: %[[#Casted2:]] = OpBitcast %[[#PtrChar]] %[[#FooVar]]
-; CL-NEXT: OpLifetimeStop %[[#Casted2]] 16
+; CL: OpLifetimeStop %[[#FooVar]] 0
 
 ; VK:      OpFunction
 ; VK:      %[[#FooVar:]] = OpVariable
@@ -38,11 +33,9 @@ define spir_func void @foo(ptr noundef byval(%tprange) align 8 %_arg_UserRange) 
 
 ; CL: OpFunction
 ; CL: %[[#BarVar:]] = OpVariable
-; CL-NEXT: %[[#Casted1:]] = OpBitcast %[[#PtrChar]] %[[#BarVar]]
-; CL-NEXT: OpLifetimeStart %[[#Casted1]] 16
+; CL-NEXT: OpLifetimeStart %[[#BarVar]] 0
 ; CL: OpInBoundsPtrAccessChain
-; CL: %[[#Casted2:]] = OpBitcast %[[#PtrChar]] %[[#BarVar]]
-; CL-NEXT: OpLifetimeStop %[[#Casted2]] 16
+; CL: OpLifetimeStop %[[#BarVar]] 0
 
 ; VK:      OpFunction
 ; VK:      %[[#BarVar:]] = OpVariable
@@ -75,6 +68,39 @@ define spir_func void @test(ptr noundef align 8 %_arg) {
   %KernelFunc = getelementptr inbounds i8, ptr %var, i64 1
   store i8 0, ptr %KernelFunc, align 8
   call void @llvm.lifetime.end.p0(ptr nonnull %var)
+  ret void
+}
+
+; An array of i8 is not an i8 pointee, so Size must be 0.
+; CL: OpFunction
+; CL: %[[#ByteArrVar:]] = OpVariable
+; CL-NEXT: OpLifetimeStart %[[#ByteArrVar]] 0
+; CL: OpLifetimeStop %[[#ByteArrVar]] 0
+define spir_func void @byte_array() {
+  %var = alloca [16 x i8], align 1
+  call void @llvm.lifetime.start.p0(ptr nonnull %var)
+  store [16 x i8] zeroinitializer, ptr %var, align 1
+  call void @llvm.lifetime.end.p0(ptr nonnull %var)
+  ret void
+}
+
+; Lifetime markers on non-static allocas are dropped.
+; CL-LABEL: Begin function non_static_alloca
+; CL-NOT: OpLifetimeStart
+; CL-NOT: OpLifetimeStop
+; CL: OpFunctionEnd
+define spir_func void @non_static_alloca(i1 %cond) {
+entry:
+  br i1 %cond, label %then, label %exit
+
+then:
+  %var = alloca i32, align 4
+  call void @llvm.lifetime.start.p0(ptr nonnull %var)
+  store i32 0, ptr %var, align 4
+  call void @llvm.lifetime.end.p0(ptr nonnull %var)
+  br label %exit
+
+exit:
   ret void
 }
 

@@ -448,6 +448,7 @@ public:
   void addGlobalTypeImpl(const DIType *Ty, const DIE &Die,
                          const DIScope *Context) override;
   DwarfCompileUnit &getCU() override { return CU; }
+  DIE *getOrCreateContextDIE(const DIScope *Context) override;
 };
 } // end llvm namespace
 #endif

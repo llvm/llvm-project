@@ -784,7 +784,7 @@ define void @masked_load_v32f32(ptr %ap, ptr %bp, ptr %c) vscale_range(8,0) #0 {
 ; CHECK-LABEL: masked_load_v32f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    sub x9, sp, #288
+; CHECK-NEXT:    sub x9, sp, #160
 ; CHECK-NEXT:    stp x28, x27, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    stp x26, x25, [sp, #32] // 16-byte Folded Spill
@@ -919,17 +919,17 @@ define void @masked_load_v32f32(ptr %ap, ptr %bp, ptr %c) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    tbz w8, #0, .LBB5_2
 ; CHECK-NEXT:  // %bb.1: // %cond.load
 ; CHECK-NEXT:    ldr s0, [x0], #4
-; CHECK-NEXT:    stp xzr, xzr, [sp, #240]
-; CHECK-NEXT:    stp xzr, xzr, [sp, #224]
-; CHECK-NEXT:    add x9, sp, #128
-; CHECK-NEXT:    stp xzr, xzr, [sp, #208]
-; CHECK-NEXT:    stp xzr, xzr, [sp, #192]
-; CHECK-NEXT:    stp xzr, xzr, [sp, #176]
-; CHECK-NEXT:    stp xzr, xzr, [sp, #160]
-; CHECK-NEXT:    stp xzr, xzr, [sp, #144]
-; CHECK-NEXT:    str xzr, [sp, #136]
-; CHECK-NEXT:    str wzr, [sp, #132]
-; CHECK-NEXT:    str s0, [sp, #128]
+; CHECK-NEXT:    stp xzr, xzr, [sp, #112]
+; CHECK-NEXT:    stp xzr, xzr, [sp, #96]
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    stp xzr, xzr, [sp, #80]
+; CHECK-NEXT:    stp xzr, xzr, [sp, #64]
+; CHECK-NEXT:    stp xzr, xzr, [sp, #48]
+; CHECK-NEXT:    stp xzr, xzr, [sp, #32]
+; CHECK-NEXT:    stp xzr, xzr, [sp, #16]
+; CHECK-NEXT:    str xzr, [sp, #8]
+; CHECK-NEXT:    str wzr, [sp, #4]
+; CHECK-NEXT:    str s0, [sp]
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x9]
 ; CHECK-NEXT:    tbnz w8, #1, .LBB5_3
 ; CHECK-NEXT:    b .LBB5_4
@@ -1308,28 +1308,6 @@ define void @masked_load_v32f32(ptr %ap, ptr %bp, ptr %c) vscale_range(8,0) #0 {
 define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_load_v64f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x29, x30, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    sub x9, sp, #672
-; CHECK-NEXT:    stp x28, x27, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    stp x26, x25, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x24, x23, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x22, x21, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffff00
-; CHECK-NEXT:    .cfi_def_cfa w29, 96
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w21, -24
-; CHECK-NEXT:    .cfi_offset w22, -32
-; CHECK-NEXT:    .cfi_offset w23, -40
-; CHECK-NEXT:    .cfi_offset w24, -48
-; CHECK-NEXT:    .cfi_offset w25, -56
-; CHECK-NEXT:    .cfi_offset w26, -64
-; CHECK-NEXT:    .cfi_offset w27, -72
-; CHECK-NEXT:    .cfi_offset w28, -80
-; CHECK-NEXT:    .cfi_offset w30, -88
-; CHECK-NEXT:    .cfi_offset w29, -96
 ; CHECK-NEXT:    ptrue p0.s, vl64
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
@@ -1337,261 +1315,276 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    mov z3.b, z0.b[18]
-; CHECK-NEXT:    mov z4.b, z0.b[19]
-; CHECK-NEXT:    umov w12, v0.b[1]
-; CHECK-NEXT:    fmov w25, s0
-; CHECK-NEXT:    umov w3, v0.b[7]
-; CHECK-NEXT:    umov w5, v0.b[8]
-; CHECK-NEXT:    mov z5.b, z0.b[20]
-; CHECK-NEXT:    umov w13, v0.b[2]
-; CHECK-NEXT:    umov w4, v0.b[9]
-; CHECK-NEXT:    mov z6.b, z0.b[21]
-; CHECK-NEXT:    fmov w19, s3
-; CHECK-NEXT:    fmov w20, s4
-; CHECK-NEXT:    umov w18, v0.b[10]
-; CHECK-NEXT:    mov z7.b, z0.b[22]
-; CHECK-NEXT:    and x25, x25, #0x1
+; CHECK-NEXT:    umov w8, v0.b[1]
+; CHECK-NEXT:    fmov w10, s0
+; CHECK-NEXT:    umov w9, v0.b[2]
 ; CHECK-NEXT:    umov w11, v0.b[3]
-; CHECK-NEXT:    umov w1, v0.b[11]
-; CHECK-NEXT:    mov z16.b, z0.b[23]
-; CHECK-NEXT:    fmov w21, s5
-; CHECK-NEXT:    bfi x25, x12, #1, #1
-; CHECK-NEXT:    umov w16, v0.b[12]
-; CHECK-NEXT:    mov z17.b, z0.b[24]
-; CHECK-NEXT:    fmov w22, s6
-; CHECK-NEXT:    ubfiz x3, x3, #7, #1
-; CHECK-NEXT:    ubfiz x5, x5, #8, #1
-; CHECK-NEXT:    ubfiz x19, x19, #18, #1
-; CHECK-NEXT:    ubfiz x20, x20, #19, #1
-; CHECK-NEXT:    umov w10, v0.b[4]
-; CHECK-NEXT:    umov w17, v0.b[13]
-; CHECK-NEXT:    mov z18.b, z0.b[25]
-; CHECK-NEXT:    fmov w23, s7
-; CHECK-NEXT:    bfi x25, x13, #2, #1
-; CHECK-NEXT:    ubfiz x4, x4, #9, #1
-; CHECK-NEXT:    fmov w24, s16
-; CHECK-NEXT:    orr x3, x3, x5
-; CHECK-NEXT:    orr x19, x19, x20
-; CHECK-NEXT:    ubfiz x20, x21, #20, #1
-; CHECK-NEXT:    ubfiz x18, x18, #10, #1
-; CHECK-NEXT:    umov w14, v0.b[14]
-; CHECK-NEXT:    mov z19.b, z0.b[26]
-; CHECK-NEXT:    fmov w26, s17
-; CHECK-NEXT:    orr x3, x3, x4
-; CHECK-NEXT:    ubfiz x4, x22, #21, #1
-; CHECK-NEXT:    bfi x25, x11, #3, #1
-; CHECK-NEXT:    ubfiz x11, x1, #11, #1
-; CHECK-NEXT:    umov w9, v0.b[5]
-; CHECK-NEXT:    mov z20.b, z0.b[27]
-; CHECK-NEXT:    fmov w27, s18
-; CHECK-NEXT:    orr x19, x19, x20
-; CHECK-NEXT:    orr x18, x3, x18
-; CHECK-NEXT:    ubfiz x3, x23, #22, #1
-; CHECK-NEXT:    ubfiz x16, x16, #12, #1
-; CHECK-NEXT:    umov w15, v0.b[15]
 ; CHECK-NEXT:    mov z1.b, z0.b[16]
-; CHECK-NEXT:    mov z21.b, z0.b[28]
-; CHECK-NEXT:    orr x1, x19, x4
-; CHECK-NEXT:    orr x11, x18, x11
-; CHECK-NEXT:    ubfiz x18, x24, #23, #1
-; CHECK-NEXT:    bfi x25, x10, #4, #1
-; CHECK-NEXT:    ubfiz x10, x17, #13, #1
-; CHECK-NEXT:    umov w8, v0.b[6]
 ; CHECK-NEXT:    mov z2.b, z0.b[17]
-; CHECK-NEXT:    mov z4.b, z0.b[29]
-; CHECK-NEXT:    fmov w28, s19
-; CHECK-NEXT:    orr x1, x1, x3
-; CHECK-NEXT:    orr x11, x11, x16
-; CHECK-NEXT:    ubfiz x17, x26, #24, #1
-; CHECK-NEXT:    mov z5.b, z0.b[30]
-; CHECK-NEXT:    fmov w30, s20
-; CHECK-NEXT:    orr x16, x1, x18
-; CHECK-NEXT:    orr x10, x11, x10
-; CHECK-NEXT:    ubfiz x11, x14, #14, #1
-; CHECK-NEXT:    ubfiz x14, x27, #25, #1
-; CHECK-NEXT:    fmov w6, s1
-; CHECK-NEXT:    fmov w12, s21
-; CHECK-NEXT:    orr x16, x16, x17
-; CHECK-NEXT:    bfi x25, x9, #5, #1
-; CHECK-NEXT:    fmov w7, s2
-; CHECK-NEXT:    fmov w13, s4
-; CHECK-NEXT:    ubfiz x9, x15, #15, #1
-; CHECK-NEXT:    orr x10, x10, x11
-; CHECK-NEXT:    orr x11, x16, x14
-; CHECK-NEXT:    ubfiz x14, x28, #26, #1
-; CHECK-NEXT:    fmov w5, s5
-; CHECK-NEXT:    bfi x25, x8, #6, #1
-; CHECK-NEXT:    ubfiz x8, x30, #27, #1
-; CHECK-NEXT:    mov z3.b, z0.b[31]
-; CHECK-NEXT:    orr x9, x10, x9
-; CHECK-NEXT:    orr x10, x11, x14
-; CHECK-NEXT:    ubfiz x11, x6, #16, #1
-; CHECK-NEXT:    ubfiz x12, x12, #28, #1
-; CHECK-NEXT:    orr x8, x10, x8
-; CHECK-NEXT:    ubfiz x10, x7, #17, #1
-; CHECK-NEXT:    ubfiz x13, x13, #29, #1
-; CHECK-NEXT:    mov z2.b, z0.b[32]
-; CHECK-NEXT:    orr x9, x9, x11
-; CHECK-NEXT:    orr x8, x8, x12
-; CHECK-NEXT:    ubfiz x11, x5, #30, #1
-; CHECK-NEXT:    fmov w12, s3
-; CHECK-NEXT:    orr x9, x9, x10
-; CHECK-NEXT:    orr x8, x8, x13
-; CHECK-NEXT:    mov z1.b, z0.b[33]
-; CHECK-NEXT:    orr x9, x25, x9
-; CHECK-NEXT:    orr x8, x8, x11
-; CHECK-NEXT:    orr x8, x9, x8
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    and w8, w8, #0x1
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x10, x8, lsl #1
+; CHECK-NEXT:    umov w10, v0.b[4]
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #2
+; CHECK-NEXT:    umov w9, v0.b[5]
+; CHECK-NEXT:    orr x8, x8, x11, lsl #3
+; CHECK-NEXT:    umov w11, v0.b[6]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    orr x8, x8, x10, lsl #4
+; CHECK-NEXT:    umov w10, v0.b[7]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #5
+; CHECK-NEXT:    umov w9, v0.b[8]
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x11, lsl #6
+; CHECK-NEXT:    umov w11, v0.b[9]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    orr x8, x8, x10, lsl #7
+; CHECK-NEXT:    umov w10, v0.b[10]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #8
+; CHECK-NEXT:    umov w9, v0.b[11]
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x11, lsl #9
+; CHECK-NEXT:    umov w11, v0.b[12]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    orr x8, x8, x10, lsl #10
+; CHECK-NEXT:    umov w10, v0.b[13]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #11
+; CHECK-NEXT:    umov w9, v0.b[14]
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x11, lsl #12
+; CHECK-NEXT:    umov w11, v0.b[15]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    orr x8, x8, x10, lsl #13
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #14
+; CHECK-NEXT:    and w9, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #15
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[18]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #16
 ; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    lsl w10, w12, #31
-; CHECK-NEXT:    mov z2.b, z0.b[34]
-; CHECK-NEXT:    orr x8, x8, x10
+; CHECK-NEXT:    mov z2.b, z0.b[19]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #17
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[20]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #18
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[21]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #19
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[22]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #20
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[23]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #21
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[24]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #22
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[25]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #23
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[26]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #24
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[27]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #25
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[28]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #26
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[29]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #27
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[30]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #28
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[31]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #29
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[32]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #30
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[33]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #31
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[34]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #32
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[35]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[35]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #33
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[36]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[36]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #34
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[37]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[37]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #35
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[38]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[38]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #36
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[39]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[39]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #37
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[40]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[40]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #38
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[41]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[41]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #39
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[42]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[42]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #40
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[43]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[43]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #41
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[44]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[44]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #42
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[45]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[45]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #43
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[46]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[46]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #44
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[47]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[47]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #45
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[48]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[48]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #46
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[49]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[49]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #47
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[50]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[50]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #48
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[51]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[51]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #49
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[52]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[52]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #50
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[53]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[53]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #51
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[54]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[54]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #52
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[55]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[55]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #53
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[56]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[56]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #54
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[57]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[57]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #55
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[58]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[58]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #56
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[59]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[59]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #57
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[60]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[60]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #58
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[61]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    fmov w10, s1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #59
 ; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[62]
+; CHECK-NEXT:    mov z2.b, z0.b[61]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    fmov w10, s2
+; CHECK-NEXT:    orr x8, x8, x9, lsl #59
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[62]
 ; CHECK-NEXT:    mov z0.b, z0.b[63]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #60
 ; CHECK-NEXT:    and w9, w10, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #61
-; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    fmov w9, s1
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #62
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #63
 ; CHECK-NEXT:    tbz w8, #0, .LBB6_2
 ; CHECK-NEXT:  // %bb.1: // %cond.load
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #496
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffff00
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ldr s0, [x0], #4
-; CHECK-NEXT:    stp xzr, xzr, [sp, #496]
-; CHECK-NEXT:    stp xzr, xzr, [sp, #480]
-; CHECK-NEXT:    add x9, sp, #256
-; CHECK-NEXT:    stp xzr, xzr, [sp, #464]
-; CHECK-NEXT:    stp xzr, xzr, [sp, #448]
-; CHECK-NEXT:    stp xzr, xzr, [sp, #432]
-; CHECK-NEXT:    stp xzr, xzr, [sp, #416]
-; CHECK-NEXT:    stp xzr, xzr, [sp, #400]
-; CHECK-NEXT:    stp xzr, xzr, [sp, #384]
-; CHECK-NEXT:    stp xzr, xzr, [sp, #368]
-; CHECK-NEXT:    stp xzr, xzr, [sp, #352]
-; CHECK-NEXT:    stp xzr, xzr, [sp, #336]
-; CHECK-NEXT:    stp xzr, xzr, [sp, #320]
-; CHECK-NEXT:    stp xzr, xzr, [sp, #304]
-; CHECK-NEXT:    stp xzr, xzr, [sp, #288]
-; CHECK-NEXT:    stp xzr, xzr, [sp, #272]
-; CHECK-NEXT:    str xzr, [sp, #264]
-; CHECK-NEXT:    str wzr, [sp, #260]
-; CHECK-NEXT:    str s0, [sp, #256]
+; CHECK-NEXT:    stp xzr, xzr, [sp, #240]
+; CHECK-NEXT:    stp xzr, xzr, [sp, #224]
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    stp xzr, xzr, [sp, #208]
+; CHECK-NEXT:    stp xzr, xzr, [sp, #192]
+; CHECK-NEXT:    stp xzr, xzr, [sp, #176]
+; CHECK-NEXT:    stp xzr, xzr, [sp, #160]
+; CHECK-NEXT:    stp xzr, xzr, [sp, #144]
+; CHECK-NEXT:    stp xzr, xzr, [sp, #128]
+; CHECK-NEXT:    stp xzr, xzr, [sp, #112]
+; CHECK-NEXT:    stp xzr, xzr, [sp, #96]
+; CHECK-NEXT:    stp xzr, xzr, [sp, #80]
+; CHECK-NEXT:    stp xzr, xzr, [sp, #64]
+; CHECK-NEXT:    stp xzr, xzr, [sp, #48]
+; CHECK-NEXT:    stp xzr, xzr, [sp, #32]
+; CHECK-NEXT:    stp xzr, xzr, [sp, #16]
+; CHECK-NEXT:    str xzr, [sp, #8]
+; CHECK-NEXT:    str wzr, [sp, #4]
+; CHECK-NEXT:    str s0, [sp]
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x9]
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    tbnz w8, #1, .LBB6_3
 ; CHECK-NEXT:    b .LBB6_4
 ; CHECK-NEXT:  .LBB6_2:
@@ -1606,148 +1599,133 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:  .LBB6_4: // %else2
-; CHECK-NEXT:    tbnz w8, #2, .LBB6_68
+; CHECK-NEXT:    tbnz w8, #2, .LBB6_67
 ; CHECK-NEXT:  // %bb.5: // %else6
-; CHECK-NEXT:    tbnz w8, #3, .LBB6_69
+; CHECK-NEXT:    tbnz w8, #3, .LBB6_68
 ; CHECK-NEXT:  .LBB6_6: // %else10
-; CHECK-NEXT:    tbnz w8, #4, .LBB6_70
+; CHECK-NEXT:    tbnz w8, #4, .LBB6_69
 ; CHECK-NEXT:  .LBB6_7: // %else14
-; CHECK-NEXT:    tbnz w8, #5, .LBB6_71
+; CHECK-NEXT:    tbnz w8, #5, .LBB6_70
 ; CHECK-NEXT:  .LBB6_8: // %else18
-; CHECK-NEXT:    tbnz w8, #6, .LBB6_72
+; CHECK-NEXT:    tbnz w8, #6, .LBB6_71
 ; CHECK-NEXT:  .LBB6_9: // %else22
-; CHECK-NEXT:    tbnz w8, #7, .LBB6_73
+; CHECK-NEXT:    tbnz w8, #7, .LBB6_72
 ; CHECK-NEXT:  .LBB6_10: // %else26
-; CHECK-NEXT:    tbnz w8, #8, .LBB6_74
+; CHECK-NEXT:    tbnz w8, #8, .LBB6_73
 ; CHECK-NEXT:  .LBB6_11: // %else30
-; CHECK-NEXT:    tbnz w8, #9, .LBB6_75
+; CHECK-NEXT:    tbnz w8, #9, .LBB6_74
 ; CHECK-NEXT:  .LBB6_12: // %else34
-; CHECK-NEXT:    tbnz w8, #10, .LBB6_76
+; CHECK-NEXT:    tbnz w8, #10, .LBB6_75
 ; CHECK-NEXT:  .LBB6_13: // %else38
-; CHECK-NEXT:    tbnz w8, #11, .LBB6_77
+; CHECK-NEXT:    tbnz w8, #11, .LBB6_76
 ; CHECK-NEXT:  .LBB6_14: // %else42
-; CHECK-NEXT:    tbnz w8, #12, .LBB6_78
+; CHECK-NEXT:    tbnz w8, #12, .LBB6_77
 ; CHECK-NEXT:  .LBB6_15: // %else46
-; CHECK-NEXT:    tbnz w8, #13, .LBB6_79
+; CHECK-NEXT:    tbnz w8, #13, .LBB6_78
 ; CHECK-NEXT:  .LBB6_16: // %else50
-; CHECK-NEXT:    tbnz w8, #14, .LBB6_80
+; CHECK-NEXT:    tbnz w8, #14, .LBB6_79
 ; CHECK-NEXT:  .LBB6_17: // %else54
-; CHECK-NEXT:    tbnz w8, #15, .LBB6_81
+; CHECK-NEXT:    tbnz w8, #15, .LBB6_80
 ; CHECK-NEXT:  .LBB6_18: // %else58
-; CHECK-NEXT:    tbnz w8, #16, .LBB6_82
+; CHECK-NEXT:    tbnz w8, #16, .LBB6_81
 ; CHECK-NEXT:  .LBB6_19: // %else62
-; CHECK-NEXT:    tbnz w8, #17, .LBB6_83
+; CHECK-NEXT:    tbnz w8, #17, .LBB6_82
 ; CHECK-NEXT:  .LBB6_20: // %else66
-; CHECK-NEXT:    tbnz w8, #18, .LBB6_84
+; CHECK-NEXT:    tbnz w8, #18, .LBB6_83
 ; CHECK-NEXT:  .LBB6_21: // %else70
-; CHECK-NEXT:    tbnz w8, #19, .LBB6_85
+; CHECK-NEXT:    tbnz w8, #19, .LBB6_84
 ; CHECK-NEXT:  .LBB6_22: // %else74
-; CHECK-NEXT:    tbnz w8, #20, .LBB6_86
+; CHECK-NEXT:    tbnz w8, #20, .LBB6_85
 ; CHECK-NEXT:  .LBB6_23: // %else78
-; CHECK-NEXT:    tbnz w8, #21, .LBB6_87
+; CHECK-NEXT:    tbnz w8, #21, .LBB6_86
 ; CHECK-NEXT:  .LBB6_24: // %else82
-; CHECK-NEXT:    tbnz w8, #22, .LBB6_88
+; CHECK-NEXT:    tbnz w8, #22, .LBB6_87
 ; CHECK-NEXT:  .LBB6_25: // %else86
-; CHECK-NEXT:    tbnz w8, #23, .LBB6_89
+; CHECK-NEXT:    tbnz w8, #23, .LBB6_88
 ; CHECK-NEXT:  .LBB6_26: // %else90
-; CHECK-NEXT:    tbnz w8, #24, .LBB6_90
+; CHECK-NEXT:    tbnz w8, #24, .LBB6_89
 ; CHECK-NEXT:  .LBB6_27: // %else94
-; CHECK-NEXT:    tbnz w8, #25, .LBB6_91
+; CHECK-NEXT:    tbnz w8, #25, .LBB6_90
 ; CHECK-NEXT:  .LBB6_28: // %else98
-; CHECK-NEXT:    tbnz w8, #26, .LBB6_92
+; CHECK-NEXT:    tbnz w8, #26, .LBB6_91
 ; CHECK-NEXT:  .LBB6_29: // %else102
-; CHECK-NEXT:    tbnz w8, #27, .LBB6_93
+; CHECK-NEXT:    tbnz w8, #27, .LBB6_92
 ; CHECK-NEXT:  .LBB6_30: // %else106
-; CHECK-NEXT:    tbnz w8, #28, .LBB6_94
+; CHECK-NEXT:    tbnz w8, #28, .LBB6_93
 ; CHECK-NEXT:  .LBB6_31: // %else110
-; CHECK-NEXT:    tbnz w8, #29, .LBB6_95
+; CHECK-NEXT:    tbnz w8, #29, .LBB6_94
 ; CHECK-NEXT:  .LBB6_32: // %else114
-; CHECK-NEXT:    tbnz w8, #30, .LBB6_96
+; CHECK-NEXT:    tbnz w8, #30, .LBB6_95
 ; CHECK-NEXT:  .LBB6_33: // %else118
-; CHECK-NEXT:    tbnz w8, #31, .LBB6_97
+; CHECK-NEXT:    tbnz w8, #31, .LBB6_96
 ; CHECK-NEXT:  .LBB6_34: // %else122
-; CHECK-NEXT:    tbnz x8, #32, .LBB6_98
+; CHECK-NEXT:    tbnz x8, #32, .LBB6_97
 ; CHECK-NEXT:  .LBB6_35: // %else126
-; CHECK-NEXT:    tbnz x8, #33, .LBB6_99
+; CHECK-NEXT:    tbnz x8, #33, .LBB6_98
 ; CHECK-NEXT:  .LBB6_36: // %else130
-; CHECK-NEXT:    tbnz x8, #34, .LBB6_100
+; CHECK-NEXT:    tbnz x8, #34, .LBB6_99
 ; CHECK-NEXT:  .LBB6_37: // %else134
-; CHECK-NEXT:    tbnz x8, #35, .LBB6_101
+; CHECK-NEXT:    tbnz x8, #35, .LBB6_100
 ; CHECK-NEXT:  .LBB6_38: // %else138
-; CHECK-NEXT:    tbnz x8, #36, .LBB6_102
+; CHECK-NEXT:    tbnz x8, #36, .LBB6_101
 ; CHECK-NEXT:  .LBB6_39: // %else142
-; CHECK-NEXT:    tbnz x8, #37, .LBB6_103
+; CHECK-NEXT:    tbnz x8, #37, .LBB6_102
 ; CHECK-NEXT:  .LBB6_40: // %else146
-; CHECK-NEXT:    tbnz x8, #38, .LBB6_104
+; CHECK-NEXT:    tbnz x8, #38, .LBB6_103
 ; CHECK-NEXT:  .LBB6_41: // %else150
-; CHECK-NEXT:    tbnz x8, #39, .LBB6_105
+; CHECK-NEXT:    tbnz x8, #39, .LBB6_104
 ; CHECK-NEXT:  .LBB6_42: // %else154
-; CHECK-NEXT:    tbnz x8, #40, .LBB6_106
+; CHECK-NEXT:    tbnz x8, #40, .LBB6_105
 ; CHECK-NEXT:  .LBB6_43: // %else158
-; CHECK-NEXT:    tbnz x8, #41, .LBB6_107
+; CHECK-NEXT:    tbnz x8, #41, .LBB6_106
 ; CHECK-NEXT:  .LBB6_44: // %else162
-; CHECK-NEXT:    tbnz x8, #42, .LBB6_108
+; CHECK-NEXT:    tbnz x8, #42, .LBB6_107
 ; CHECK-NEXT:  .LBB6_45: // %else166
-; CHECK-NEXT:    tbnz x8, #43, .LBB6_109
+; CHECK-NEXT:    tbnz x8, #43, .LBB6_108
 ; CHECK-NEXT:  .LBB6_46: // %else170
-; CHECK-NEXT:    tbnz x8, #44, .LBB6_110
+; CHECK-NEXT:    tbnz x8, #44, .LBB6_109
 ; CHECK-NEXT:  .LBB6_47: // %else174
-; CHECK-NEXT:    tbnz x8, #45, .LBB6_111
+; CHECK-NEXT:    tbnz x8, #45, .LBB6_110
 ; CHECK-NEXT:  .LBB6_48: // %else178
-; CHECK-NEXT:    tbnz x8, #46, .LBB6_112
+; CHECK-NEXT:    tbnz x8, #46, .LBB6_111
 ; CHECK-NEXT:  .LBB6_49: // %else182
-; CHECK-NEXT:    tbnz x8, #47, .LBB6_113
+; CHECK-NEXT:    tbnz x8, #47, .LBB6_112
 ; CHECK-NEXT:  .LBB6_50: // %else186
-; CHECK-NEXT:    tbnz x8, #48, .LBB6_114
+; CHECK-NEXT:    tbnz x8, #48, .LBB6_113
 ; CHECK-NEXT:  .LBB6_51: // %else190
-; CHECK-NEXT:    tbnz x8, #49, .LBB6_115
+; CHECK-NEXT:    tbnz x8, #49, .LBB6_114
 ; CHECK-NEXT:  .LBB6_52: // %else194
-; CHECK-NEXT:    tbnz x8, #50, .LBB6_116
+; CHECK-NEXT:    tbnz x8, #50, .LBB6_115
 ; CHECK-NEXT:  .LBB6_53: // %else198
-; CHECK-NEXT:    tbnz x8, #51, .LBB6_117
+; CHECK-NEXT:    tbnz x8, #51, .LBB6_116
 ; CHECK-NEXT:  .LBB6_54: // %else202
-; CHECK-NEXT:    tbnz x8, #52, .LBB6_118
+; CHECK-NEXT:    tbnz x8, #52, .LBB6_117
 ; CHECK-NEXT:  .LBB6_55: // %else206
-; CHECK-NEXT:    tbnz x8, #53, .LBB6_119
+; CHECK-NEXT:    tbnz x8, #53, .LBB6_118
 ; CHECK-NEXT:  .LBB6_56: // %else210
-; CHECK-NEXT:    tbnz x8, #54, .LBB6_120
+; CHECK-NEXT:    tbnz x8, #54, .LBB6_119
 ; CHECK-NEXT:  .LBB6_57: // %else214
-; CHECK-NEXT:    tbnz x8, #55, .LBB6_121
+; CHECK-NEXT:    tbnz x8, #55, .LBB6_120
 ; CHECK-NEXT:  .LBB6_58: // %else218
-; CHECK-NEXT:    tbnz x8, #56, .LBB6_122
+; CHECK-NEXT:    tbnz x8, #56, .LBB6_121
 ; CHECK-NEXT:  .LBB6_59: // %else222
-; CHECK-NEXT:    tbnz x8, #57, .LBB6_123
+; CHECK-NEXT:    tbnz x8, #57, .LBB6_122
 ; CHECK-NEXT:  .LBB6_60: // %else226
-; CHECK-NEXT:    tbnz x8, #58, .LBB6_124
+; CHECK-NEXT:    tbnz x8, #58, .LBB6_123
 ; CHECK-NEXT:  .LBB6_61: // %else230
-; CHECK-NEXT:    tbnz x8, #59, .LBB6_125
+; CHECK-NEXT:    tbnz x8, #59, .LBB6_124
 ; CHECK-NEXT:  .LBB6_62: // %else234
-; CHECK-NEXT:    tbnz x8, #60, .LBB6_126
+; CHECK-NEXT:    tbnz x8, #60, .LBB6_125
 ; CHECK-NEXT:  .LBB6_63: // %else238
-; CHECK-NEXT:    tbnz x8, #61, .LBB6_127
+; CHECK-NEXT:    tbnz x8, #61, .LBB6_126
 ; CHECK-NEXT:  .LBB6_64: // %else242
-; CHECK-NEXT:    tbnz x8, #62, .LBB6_128
+; CHECK-NEXT:    tbnz x8, #62, .LBB6_127
 ; CHECK-NEXT:  .LBB6_65: // %else246
-; CHECK-NEXT:    tbz x8, #63, .LBB6_67
-; CHECK-NEXT:  .LBB6_66: // %cond.load249
-; CHECK-NEXT:    mov w8, #63 // =0x3f
-; CHECK-NEXT:    index z1.s, #0, #1
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    mov z2.s, w8
-; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
-; CHECK-NEXT:    ldr s1, [x0]
-; CHECK-NEXT:    mov z0.s, p2/m, s1
-; CHECK-NEXT:  .LBB6_67: // %else250
+; CHECK-NEXT:    tbnz x8, #63, .LBB6_128
+; CHECK-NEXT:  .LBB6_66: // %else250
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x2]
-; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x26, x25, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x28, x27, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x29, x30, [sp], #96 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB6_68: // %cond.load5
+; CHECK-NEXT:  .LBB6_67: // %cond.load5
 ; CHECK-NEXT:    mov w9, #2 // =0x2
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1756,7 +1734,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #3, .LBB6_6
-; CHECK-NEXT:  .LBB6_69: // %cond.load9
+; CHECK-NEXT:  .LBB6_68: // %cond.load9
 ; CHECK-NEXT:    mov w9, #3 // =0x3
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1765,7 +1743,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #4, .LBB6_7
-; CHECK-NEXT:  .LBB6_70: // %cond.load13
+; CHECK-NEXT:  .LBB6_69: // %cond.load13
 ; CHECK-NEXT:    mov w9, #4 // =0x4
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1774,7 +1752,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #5, .LBB6_8
-; CHECK-NEXT:  .LBB6_71: // %cond.load17
+; CHECK-NEXT:  .LBB6_70: // %cond.load17
 ; CHECK-NEXT:    mov w9, #5 // =0x5
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1783,7 +1761,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #6, .LBB6_9
-; CHECK-NEXT:  .LBB6_72: // %cond.load21
+; CHECK-NEXT:  .LBB6_71: // %cond.load21
 ; CHECK-NEXT:    mov w9, #6 // =0x6
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1792,7 +1770,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #7, .LBB6_10
-; CHECK-NEXT:  .LBB6_73: // %cond.load25
+; CHECK-NEXT:  .LBB6_72: // %cond.load25
 ; CHECK-NEXT:    mov w9, #7 // =0x7
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1801,7 +1779,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #8, .LBB6_11
-; CHECK-NEXT:  .LBB6_74: // %cond.load29
+; CHECK-NEXT:  .LBB6_73: // %cond.load29
 ; CHECK-NEXT:    mov w9, #8 // =0x8
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1810,7 +1788,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #9, .LBB6_12
-; CHECK-NEXT:  .LBB6_75: // %cond.load33
+; CHECK-NEXT:  .LBB6_74: // %cond.load33
 ; CHECK-NEXT:    mov w9, #9 // =0x9
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1819,7 +1797,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #10, .LBB6_13
-; CHECK-NEXT:  .LBB6_76: // %cond.load37
+; CHECK-NEXT:  .LBB6_75: // %cond.load37
 ; CHECK-NEXT:    mov w9, #10 // =0xa
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1828,7 +1806,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #11, .LBB6_14
-; CHECK-NEXT:  .LBB6_77: // %cond.load41
+; CHECK-NEXT:  .LBB6_76: // %cond.load41
 ; CHECK-NEXT:    mov w9, #11 // =0xb
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1837,7 +1815,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #12, .LBB6_15
-; CHECK-NEXT:  .LBB6_78: // %cond.load45
+; CHECK-NEXT:  .LBB6_77: // %cond.load45
 ; CHECK-NEXT:    mov w9, #12 // =0xc
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1846,7 +1824,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #13, .LBB6_16
-; CHECK-NEXT:  .LBB6_79: // %cond.load49
+; CHECK-NEXT:  .LBB6_78: // %cond.load49
 ; CHECK-NEXT:    mov w9, #13 // =0xd
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1855,7 +1833,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #14, .LBB6_17
-; CHECK-NEXT:  .LBB6_80: // %cond.load53
+; CHECK-NEXT:  .LBB6_79: // %cond.load53
 ; CHECK-NEXT:    mov w9, #14 // =0xe
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1864,7 +1842,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #15, .LBB6_18
-; CHECK-NEXT:  .LBB6_81: // %cond.load57
+; CHECK-NEXT:  .LBB6_80: // %cond.load57
 ; CHECK-NEXT:    mov w9, #15 // =0xf
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1873,7 +1851,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #16, .LBB6_19
-; CHECK-NEXT:  .LBB6_82: // %cond.load61
+; CHECK-NEXT:  .LBB6_81: // %cond.load61
 ; CHECK-NEXT:    mov w9, #16 // =0x10
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1882,7 +1860,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #17, .LBB6_20
-; CHECK-NEXT:  .LBB6_83: // %cond.load65
+; CHECK-NEXT:  .LBB6_82: // %cond.load65
 ; CHECK-NEXT:    mov w9, #17 // =0x11
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1891,7 +1869,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #18, .LBB6_21
-; CHECK-NEXT:  .LBB6_84: // %cond.load69
+; CHECK-NEXT:  .LBB6_83: // %cond.load69
 ; CHECK-NEXT:    mov w9, #18 // =0x12
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1900,7 +1878,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #19, .LBB6_22
-; CHECK-NEXT:  .LBB6_85: // %cond.load73
+; CHECK-NEXT:  .LBB6_84: // %cond.load73
 ; CHECK-NEXT:    mov w9, #19 // =0x13
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1909,7 +1887,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #20, .LBB6_23
-; CHECK-NEXT:  .LBB6_86: // %cond.load77
+; CHECK-NEXT:  .LBB6_85: // %cond.load77
 ; CHECK-NEXT:    mov w9, #20 // =0x14
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1918,7 +1896,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #21, .LBB6_24
-; CHECK-NEXT:  .LBB6_87: // %cond.load81
+; CHECK-NEXT:  .LBB6_86: // %cond.load81
 ; CHECK-NEXT:    mov w9, #21 // =0x15
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1927,7 +1905,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #22, .LBB6_25
-; CHECK-NEXT:  .LBB6_88: // %cond.load85
+; CHECK-NEXT:  .LBB6_87: // %cond.load85
 ; CHECK-NEXT:    mov w9, #22 // =0x16
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1936,7 +1914,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #23, .LBB6_26
-; CHECK-NEXT:  .LBB6_89: // %cond.load89
+; CHECK-NEXT:  .LBB6_88: // %cond.load89
 ; CHECK-NEXT:    mov w9, #23 // =0x17
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1945,7 +1923,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #24, .LBB6_27
-; CHECK-NEXT:  .LBB6_90: // %cond.load93
+; CHECK-NEXT:  .LBB6_89: // %cond.load93
 ; CHECK-NEXT:    mov w9, #24 // =0x18
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1954,7 +1932,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #25, .LBB6_28
-; CHECK-NEXT:  .LBB6_91: // %cond.load97
+; CHECK-NEXT:  .LBB6_90: // %cond.load97
 ; CHECK-NEXT:    mov w9, #25 // =0x19
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1963,7 +1941,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #26, .LBB6_29
-; CHECK-NEXT:  .LBB6_92: // %cond.load101
+; CHECK-NEXT:  .LBB6_91: // %cond.load101
 ; CHECK-NEXT:    mov w9, #26 // =0x1a
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1972,7 +1950,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #27, .LBB6_30
-; CHECK-NEXT:  .LBB6_93: // %cond.load105
+; CHECK-NEXT:  .LBB6_92: // %cond.load105
 ; CHECK-NEXT:    mov w9, #27 // =0x1b
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1981,7 +1959,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #28, .LBB6_31
-; CHECK-NEXT:  .LBB6_94: // %cond.load109
+; CHECK-NEXT:  .LBB6_93: // %cond.load109
 ; CHECK-NEXT:    mov w9, #28 // =0x1c
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1990,7 +1968,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #29, .LBB6_32
-; CHECK-NEXT:  .LBB6_95: // %cond.load113
+; CHECK-NEXT:  .LBB6_94: // %cond.load113
 ; CHECK-NEXT:    mov w9, #29 // =0x1d
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -1999,7 +1977,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #30, .LBB6_33
-; CHECK-NEXT:  .LBB6_96: // %cond.load117
+; CHECK-NEXT:  .LBB6_95: // %cond.load117
 ; CHECK-NEXT:    mov w9, #30 // =0x1e
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2008,7 +1986,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz w8, #31, .LBB6_34
-; CHECK-NEXT:  .LBB6_97: // %cond.load121
+; CHECK-NEXT:  .LBB6_96: // %cond.load121
 ; CHECK-NEXT:    mov w9, #31 // =0x1f
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2017,7 +1995,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #32, .LBB6_35
-; CHECK-NEXT:  .LBB6_98: // %cond.load125
+; CHECK-NEXT:  .LBB6_97: // %cond.load125
 ; CHECK-NEXT:    mov w9, #32 // =0x20
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2026,7 +2004,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #33, .LBB6_36
-; CHECK-NEXT:  .LBB6_99: // %cond.load129
+; CHECK-NEXT:  .LBB6_98: // %cond.load129
 ; CHECK-NEXT:    mov w9, #33 // =0x21
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2035,7 +2013,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #34, .LBB6_37
-; CHECK-NEXT:  .LBB6_100: // %cond.load133
+; CHECK-NEXT:  .LBB6_99: // %cond.load133
 ; CHECK-NEXT:    mov w9, #34 // =0x22
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2044,7 +2022,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #35, .LBB6_38
-; CHECK-NEXT:  .LBB6_101: // %cond.load137
+; CHECK-NEXT:  .LBB6_100: // %cond.load137
 ; CHECK-NEXT:    mov w9, #35 // =0x23
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2053,7 +2031,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #36, .LBB6_39
-; CHECK-NEXT:  .LBB6_102: // %cond.load141
+; CHECK-NEXT:  .LBB6_101: // %cond.load141
 ; CHECK-NEXT:    mov w9, #36 // =0x24
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2062,7 +2040,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #37, .LBB6_40
-; CHECK-NEXT:  .LBB6_103: // %cond.load145
+; CHECK-NEXT:  .LBB6_102: // %cond.load145
 ; CHECK-NEXT:    mov w9, #37 // =0x25
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2071,7 +2049,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #38, .LBB6_41
-; CHECK-NEXT:  .LBB6_104: // %cond.load149
+; CHECK-NEXT:  .LBB6_103: // %cond.load149
 ; CHECK-NEXT:    mov w9, #38 // =0x26
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2080,7 +2058,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #39, .LBB6_42
-; CHECK-NEXT:  .LBB6_105: // %cond.load153
+; CHECK-NEXT:  .LBB6_104: // %cond.load153
 ; CHECK-NEXT:    mov w9, #39 // =0x27
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2089,7 +2067,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #40, .LBB6_43
-; CHECK-NEXT:  .LBB6_106: // %cond.load157
+; CHECK-NEXT:  .LBB6_105: // %cond.load157
 ; CHECK-NEXT:    mov w9, #40 // =0x28
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2098,7 +2076,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #41, .LBB6_44
-; CHECK-NEXT:  .LBB6_107: // %cond.load161
+; CHECK-NEXT:  .LBB6_106: // %cond.load161
 ; CHECK-NEXT:    mov w9, #41 // =0x29
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2107,7 +2085,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #42, .LBB6_45
-; CHECK-NEXT:  .LBB6_108: // %cond.load165
+; CHECK-NEXT:  .LBB6_107: // %cond.load165
 ; CHECK-NEXT:    mov w9, #42 // =0x2a
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2116,7 +2094,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #43, .LBB6_46
-; CHECK-NEXT:  .LBB6_109: // %cond.load169
+; CHECK-NEXT:  .LBB6_108: // %cond.load169
 ; CHECK-NEXT:    mov w9, #43 // =0x2b
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2125,7 +2103,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #44, .LBB6_47
-; CHECK-NEXT:  .LBB6_110: // %cond.load173
+; CHECK-NEXT:  .LBB6_109: // %cond.load173
 ; CHECK-NEXT:    mov w9, #44 // =0x2c
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2134,7 +2112,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #45, .LBB6_48
-; CHECK-NEXT:  .LBB6_111: // %cond.load177
+; CHECK-NEXT:  .LBB6_110: // %cond.load177
 ; CHECK-NEXT:    mov w9, #45 // =0x2d
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2143,7 +2121,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #46, .LBB6_49
-; CHECK-NEXT:  .LBB6_112: // %cond.load181
+; CHECK-NEXT:  .LBB6_111: // %cond.load181
 ; CHECK-NEXT:    mov w9, #46 // =0x2e
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2152,7 +2130,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #47, .LBB6_50
-; CHECK-NEXT:  .LBB6_113: // %cond.load185
+; CHECK-NEXT:  .LBB6_112: // %cond.load185
 ; CHECK-NEXT:    mov w9, #47 // =0x2f
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2161,7 +2139,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #48, .LBB6_51
-; CHECK-NEXT:  .LBB6_114: // %cond.load189
+; CHECK-NEXT:  .LBB6_113: // %cond.load189
 ; CHECK-NEXT:    mov w9, #48 // =0x30
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2170,7 +2148,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #49, .LBB6_52
-; CHECK-NEXT:  .LBB6_115: // %cond.load193
+; CHECK-NEXT:  .LBB6_114: // %cond.load193
 ; CHECK-NEXT:    mov w9, #49 // =0x31
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2179,7 +2157,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #50, .LBB6_53
-; CHECK-NEXT:  .LBB6_116: // %cond.load197
+; CHECK-NEXT:  .LBB6_115: // %cond.load197
 ; CHECK-NEXT:    mov w9, #50 // =0x32
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2188,7 +2166,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #51, .LBB6_54
-; CHECK-NEXT:  .LBB6_117: // %cond.load201
+; CHECK-NEXT:  .LBB6_116: // %cond.load201
 ; CHECK-NEXT:    mov w9, #51 // =0x33
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2197,7 +2175,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #52, .LBB6_55
-; CHECK-NEXT:  .LBB6_118: // %cond.load205
+; CHECK-NEXT:  .LBB6_117: // %cond.load205
 ; CHECK-NEXT:    mov w9, #52 // =0x34
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2206,7 +2184,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #53, .LBB6_56
-; CHECK-NEXT:  .LBB6_119: // %cond.load209
+; CHECK-NEXT:  .LBB6_118: // %cond.load209
 ; CHECK-NEXT:    mov w9, #53 // =0x35
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2215,7 +2193,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #54, .LBB6_57
-; CHECK-NEXT:  .LBB6_120: // %cond.load213
+; CHECK-NEXT:  .LBB6_119: // %cond.load213
 ; CHECK-NEXT:    mov w9, #54 // =0x36
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2224,7 +2202,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #55, .LBB6_58
-; CHECK-NEXT:  .LBB6_121: // %cond.load217
+; CHECK-NEXT:  .LBB6_120: // %cond.load217
 ; CHECK-NEXT:    mov w9, #55 // =0x37
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2233,7 +2211,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #56, .LBB6_59
-; CHECK-NEXT:  .LBB6_122: // %cond.load221
+; CHECK-NEXT:  .LBB6_121: // %cond.load221
 ; CHECK-NEXT:    mov w9, #56 // =0x38
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2242,7 +2220,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #57, .LBB6_60
-; CHECK-NEXT:  .LBB6_123: // %cond.load225
+; CHECK-NEXT:  .LBB6_122: // %cond.load225
 ; CHECK-NEXT:    mov w9, #57 // =0x39
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2251,7 +2229,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #58, .LBB6_61
-; CHECK-NEXT:  .LBB6_124: // %cond.load229
+; CHECK-NEXT:  .LBB6_123: // %cond.load229
 ; CHECK-NEXT:    mov w9, #58 // =0x3a
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2260,7 +2238,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #59, .LBB6_62
-; CHECK-NEXT:  .LBB6_125: // %cond.load233
+; CHECK-NEXT:  .LBB6_124: // %cond.load233
 ; CHECK-NEXT:    mov w9, #59 // =0x3b
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2269,7 +2247,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #60, .LBB6_63
-; CHECK-NEXT:  .LBB6_126: // %cond.load237
+; CHECK-NEXT:  .LBB6_125: // %cond.load237
 ; CHECK-NEXT:    mov w9, #60 // =0x3c
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2278,7 +2256,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #61, .LBB6_64
-; CHECK-NEXT:  .LBB6_127: // %cond.load241
+; CHECK-NEXT:  .LBB6_126: // %cond.load241
 ; CHECK-NEXT:    mov w9, #61 // =0x3d
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2287,7 +2265,7 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    tbz x8, #62, .LBB6_65
-; CHECK-NEXT:  .LBB6_128: // %cond.load245
+; CHECK-NEXT:  .LBB6_127: // %cond.load245
 ; CHECK-NEXT:    mov w9, #62 // =0x3e
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
@@ -2295,8 +2273,17 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 ; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    mov z0.s, p2/m, s1
-; CHECK-NEXT:    tbnz x8, #63, .LBB6_66
-; CHECK-NEXT:    b .LBB6_67
+; CHECK-NEXT:    tbz x8, #63, .LBB6_66
+; CHECK-NEXT:  .LBB6_128: // %cond.load249
+; CHECK-NEXT:    mov w8, #63 // =0x3f
+; CHECK-NEXT:    index z1.s, #0, #1
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    mov z2.s, w8
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
+; CHECK-NEXT:    ldr s1, [x0]
+; CHECK-NEXT:    mov z0.s, p2/m, s1
+; CHECK-NEXT:    st1w { z0.s }, p0, [x2]
+; CHECK-NEXT:    ret
 ;
 ; CHECK-EXPAND-LABEL: masked_load_v64f32:
 ; CHECK-EXPAND:       // %bb.0:
@@ -2321,14 +2308,13 @@ define void @masked_load_v64f32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 
 define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_v64i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #112
-; VBITS_GE_256-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
-; VBITS_GE_256-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
-; VBITS_GE_256-NEXT:    stp x26, x25, [sp, #48] // 16-byte Folded Spill
-; VBITS_GE_256-NEXT:    stp x24, x23, [sp, #64] // 16-byte Folded Spill
-; VBITS_GE_256-NEXT:    stp x22, x21, [sp, #80] // 16-byte Folded Spill
-; VBITS_GE_256-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 112
+; VBITS_GE_256-NEXT:    stp x29, x30, [sp, #-96]! // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    stp x28, x27, [sp, #16] // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    stp x26, x25, [sp, #32] // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    stp x24, x23, [sp, #48] // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    stp x22, x21, [sp, #64] // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 96
 ; VBITS_GE_256-NEXT:    .cfi_offset w19, -8
 ; VBITS_GE_256-NEXT:    .cfi_offset w20, -16
 ; VBITS_GE_256-NEXT:    .cfi_offset w21, -24
@@ -2714,16 +2700,15 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    cmpeq p2.b, p1/z, z2.b, z3.b
 ; VBITS_GE_256-NEXT:    mov z1.b, p2/m, w8
 ; VBITS_GE_256-NEXT:  .LBB7_67: // %else250
-; VBITS_GE_256-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
 ; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
-; VBITS_GE_256-NEXT:    ldp x22, x21, [sp, #80] // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
 ; VBITS_GE_256-NEXT:    st1b { z1.b }, p0, [x2, x8]
-; VBITS_GE_256-NEXT:    ldp x24, x23, [sp, #64] // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
 ; VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x2]
-; VBITS_GE_256-NEXT:    ldp x26, x25, [sp, #48] // 16-byte Folded Reload
-; VBITS_GE_256-NEXT:    ldp x28, x27, [sp, #32] // 16-byte Folded Reload
-; VBITS_GE_256-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
-; VBITS_GE_256-NEXT:    add sp, sp, #112
+; VBITS_GE_256-NEXT:    ldp x26, x25, [sp, #32] // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    ldp x28, x27, [sp, #16] // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    ldp x29, x30, [sp], #96 // 16-byte Folded Reload
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB7_68: // %cond.load5
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
@@ -3214,260 +3199,246 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_v64i8:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #112
-; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x26, x25, [sp, #48] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x24, x23, [sp, #64] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x22, x21, [sp, #80] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 112
-; VBITS_GE_512-NEXT:    .cfi_offset w19, -8
-; VBITS_GE_512-NEXT:    .cfi_offset w20, -16
-; VBITS_GE_512-NEXT:    .cfi_offset w21, -24
-; VBITS_GE_512-NEXT:    .cfi_offset w22, -32
-; VBITS_GE_512-NEXT:    .cfi_offset w23, -40
-; VBITS_GE_512-NEXT:    .cfi_offset w24, -48
-; VBITS_GE_512-NEXT:    .cfi_offset w25, -56
-; VBITS_GE_512-NEXT:    .cfi_offset w26, -64
-; VBITS_GE_512-NEXT:    .cfi_offset w27, -72
-; VBITS_GE_512-NEXT:    .cfi_offset w28, -80
-; VBITS_GE_512-NEXT:    .cfi_offset w30, -88
-; VBITS_GE_512-NEXT:    .cfi_offset w29, -96
 ; VBITS_GE_512-NEXT:    ptrue p0.b, vl64
 ; VBITS_GE_512-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ld1b { z1.b }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p1.b, p0/z, z0.b, z1.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    ptrue p1.b
-; VBITS_GE_512-NEXT:    umov w11, v0.b[1]
-; VBITS_GE_512-NEXT:    fmov w22, s0
-; VBITS_GE_512-NEXT:    umov w12, v0.b[2]
-; VBITS_GE_512-NEXT:    umov w13, v0.b[3]
-; VBITS_GE_512-NEXT:    umov w14, v0.b[7]
-; VBITS_GE_512-NEXT:    umov w1, v0.b[8]
-; VBITS_GE_512-NEXT:    umov w16, v0.b[9]
-; VBITS_GE_512-NEXT:    mov z3.b, z0.b[18]
-; VBITS_GE_512-NEXT:    mov z5.b, z0.b[19]
-; VBITS_GE_512-NEXT:    and x22, x22, #0x1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[4]
-; VBITS_GE_512-NEXT:    umov w17, v0.b[10]
-; VBITS_GE_512-NEXT:    bfi x22, x11, #1, #1
-; VBITS_GE_512-NEXT:    mov z6.b, z0.b[20]
-; VBITS_GE_512-NEXT:    umov w3, v0.b[11]
-; VBITS_GE_512-NEXT:    mov z4.b, z0.b[21]
-; VBITS_GE_512-NEXT:    umov w9, v0.b[5]
-; VBITS_GE_512-NEXT:    mov z7.b, z0.b[22]
-; VBITS_GE_512-NEXT:    bfi x22, x12, #2, #1
-; VBITS_GE_512-NEXT:    fmov w19, s3
-; VBITS_GE_512-NEXT:    fmov w20, s5
-; VBITS_GE_512-NEXT:    ubfiz x14, x14, #7, #1
-; VBITS_GE_512-NEXT:    ubfiz x1, x1, #8, #1
-; VBITS_GE_512-NEXT:    umov w4, v0.b[12]
-; VBITS_GE_512-NEXT:    bfi x22, x13, #3, #1
-; VBITS_GE_512-NEXT:    mov z16.b, z0.b[23]
-; VBITS_GE_512-NEXT:    fmov w21, s6
-; VBITS_GE_512-NEXT:    ubfiz x16, x16, #9, #1
-; VBITS_GE_512-NEXT:    umov w8, v0.b[6]
-; VBITS_GE_512-NEXT:    umov w5, v0.b[13]
-; VBITS_GE_512-NEXT:    mov z17.b, z0.b[24]
-; VBITS_GE_512-NEXT:    fmov w23, s4
-; VBITS_GE_512-NEXT:    orr x14, x14, x1
-; VBITS_GE_512-NEXT:    bfi x22, x10, #4, #1
-; VBITS_GE_512-NEXT:    ubfiz x10, x17, #10, #1
-; VBITS_GE_512-NEXT:    mov z18.b, z0.b[25]
-; VBITS_GE_512-NEXT:    fmov w24, s7
-; VBITS_GE_512-NEXT:    ubfiz x13, x19, #18, #1
-; VBITS_GE_512-NEXT:    ubfiz x19, x20, #19, #1
-; VBITS_GE_512-NEXT:    orr x14, x14, x16
-; VBITS_GE_512-NEXT:    ubfiz x16, x3, #11, #1
-; VBITS_GE_512-NEXT:    umov w15, v0.b[14]
-; VBITS_GE_512-NEXT:    mov z19.b, z0.b[26]
-; VBITS_GE_512-NEXT:    fmov w25, s16
-; VBITS_GE_512-NEXT:    ubfiz x1, x21, #20, #1
-; VBITS_GE_512-NEXT:    orr x10, x14, x10
-; VBITS_GE_512-NEXT:    bfi x22, x9, #5, #1
-; VBITS_GE_512-NEXT:    mov z20.b, z0.b[27]
-; VBITS_GE_512-NEXT:    fmov w26, s17
-; VBITS_GE_512-NEXT:    orr x13, x13, x19
-; VBITS_GE_512-NEXT:    ubfiz x9, x4, #12, #1
-; VBITS_GE_512-NEXT:    orr x10, x10, x16
-; VBITS_GE_512-NEXT:    ubfiz x16, x23, #21, #1
-; VBITS_GE_512-NEXT:    umov w18, v0.b[15]
+; VBITS_GE_512-NEXT:    umov w8, v0.b[1]
+; VBITS_GE_512-NEXT:    fmov w10, s0
+; VBITS_GE_512-NEXT:    umov w9, v0.b[2]
+; VBITS_GE_512-NEXT:    umov w11, v0.b[3]
 ; VBITS_GE_512-NEXT:    mov z1.b, z0.b[16]
-; VBITS_GE_512-NEXT:    mov z21.b, z0.b[28]
-; VBITS_GE_512-NEXT:    fmov w11, s18
-; VBITS_GE_512-NEXT:    orr x13, x13, x1
-; VBITS_GE_512-NEXT:    ubfiz x14, x5, #13, #1
-; VBITS_GE_512-NEXT:    bfi x22, x8, #6, #1
-; VBITS_GE_512-NEXT:    ubfiz x8, x24, #22, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, z0.b[17]
-; VBITS_GE_512-NEXT:    mov z22.b, z0.b[29]
-; VBITS_GE_512-NEXT:    fmov w27, s19
-; VBITS_GE_512-NEXT:    orr x9, x10, x9
-; VBITS_GE_512-NEXT:    orr x10, x13, x16
-; VBITS_GE_512-NEXT:    ubfiz x13, x25, #23, #1
-; VBITS_GE_512-NEXT:    mov z5.b, z0.b[30]
-; VBITS_GE_512-NEXT:    fmov w28, s20
-; VBITS_GE_512-NEXT:    orr x9, x9, x14
-; VBITS_GE_512-NEXT:    orr x8, x10, x8
-; VBITS_GE_512-NEXT:    ubfiz x10, x15, #14, #1
-; VBITS_GE_512-NEXT:    ubfiz x14, x26, #24, #1
-; VBITS_GE_512-NEXT:    fmov w6, s1
-; VBITS_GE_512-NEXT:    fmov w29, s21
-; VBITS_GE_512-NEXT:    orr x8, x8, x13
-; VBITS_GE_512-NEXT:    ubfiz x11, x11, #25, #1
-; VBITS_GE_512-NEXT:    fmov w7, s2
-; VBITS_GE_512-NEXT:    fmov w30, s22
-; VBITS_GE_512-NEXT:    ubfiz x13, x18, #15, #1
-; VBITS_GE_512-NEXT:    orr x9, x9, x10
-; VBITS_GE_512-NEXT:    orr x8, x8, x14
-; VBITS_GE_512-NEXT:    ubfiz x10, x27, #26, #1
-; VBITS_GE_512-NEXT:    fmov w12, s5
-; VBITS_GE_512-NEXT:    orr x8, x8, x11
-; VBITS_GE_512-NEXT:    ubfiz x11, x28, #27, #1
-; VBITS_GE_512-NEXT:    mov z3.b, z0.b[31]
-; VBITS_GE_512-NEXT:    orr x9, x9, x13
-; VBITS_GE_512-NEXT:    orr x8, x8, x10
-; VBITS_GE_512-NEXT:    ubfiz x10, x6, #16, #1
-; VBITS_GE_512-NEXT:    ubfiz x13, x29, #28, #1
-; VBITS_GE_512-NEXT:    orr x8, x8, x11
-; VBITS_GE_512-NEXT:    ubfiz x11, x7, #17, #1
-; VBITS_GE_512-NEXT:    ubfiz x14, x30, #29, #1
-; VBITS_GE_512-NEXT:    mov z2.b, z0.b[32]
-; VBITS_GE_512-NEXT:    orr x9, x9, x10
-; VBITS_GE_512-NEXT:    orr x8, x8, x13
-; VBITS_GE_512-NEXT:    ubfiz x10, x12, #30, #1
-; VBITS_GE_512-NEXT:    fmov w12, s3
-; VBITS_GE_512-NEXT:    orr x9, x9, x11
-; VBITS_GE_512-NEXT:    orr x8, x8, x14
-; VBITS_GE_512-NEXT:    mov z1.b, z0.b[33]
-; VBITS_GE_512-NEXT:    orr x9, x22, x9
-; VBITS_GE_512-NEXT:    orr x8, x8, x10
-; VBITS_GE_512-NEXT:    orr x8, x9, x8
+; VBITS_GE_512-NEXT:    and w10, w10, #0x1
+; VBITS_GE_512-NEXT:    and w8, w8, #0x1
+; VBITS_GE_512-NEXT:    and w9, w9, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x10, x8, lsl #1
+; VBITS_GE_512-NEXT:    umov w10, v0.b[4]
+; VBITS_GE_512-NEXT:    and w11, w11, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #2
+; VBITS_GE_512-NEXT:    umov w9, v0.b[5]
+; VBITS_GE_512-NEXT:    orr x8, x8, x11, lsl #3
+; VBITS_GE_512-NEXT:    umov w11, v0.b[6]
+; VBITS_GE_512-NEXT:    and w10, w10, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x10, lsl #4
+; VBITS_GE_512-NEXT:    umov w10, v0.b[7]
+; VBITS_GE_512-NEXT:    and w9, w9, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #5
+; VBITS_GE_512-NEXT:    umov w9, v0.b[8]
+; VBITS_GE_512-NEXT:    and w11, w11, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x11, lsl #6
+; VBITS_GE_512-NEXT:    umov w11, v0.b[9]
+; VBITS_GE_512-NEXT:    and w10, w10, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x10, lsl #7
+; VBITS_GE_512-NEXT:    umov w10, v0.b[10]
+; VBITS_GE_512-NEXT:    and w9, w9, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #8
+; VBITS_GE_512-NEXT:    umov w9, v0.b[11]
+; VBITS_GE_512-NEXT:    and w11, w11, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x11, lsl #9
+; VBITS_GE_512-NEXT:    umov w11, v0.b[12]
+; VBITS_GE_512-NEXT:    and w10, w10, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x10, lsl #10
+; VBITS_GE_512-NEXT:    umov w10, v0.b[13]
+; VBITS_GE_512-NEXT:    and w9, w9, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #11
+; VBITS_GE_512-NEXT:    umov w9, v0.b[14]
+; VBITS_GE_512-NEXT:    and w11, w11, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x11, lsl #12
+; VBITS_GE_512-NEXT:    umov w11, v0.b[15]
+; VBITS_GE_512-NEXT:    and w10, w10, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x10, lsl #13
+; VBITS_GE_512-NEXT:    and w9, w9, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #14
+; VBITS_GE_512-NEXT:    and w9, w11, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #15
+; VBITS_GE_512-NEXT:    fmov w9, s1
+; VBITS_GE_512-NEXT:    mov z1.b, z0.b[18]
+; VBITS_GE_512-NEXT:    and w9, w9, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #16
 ; VBITS_GE_512-NEXT:    fmov w9, s2
-; VBITS_GE_512-NEXT:    lsl w10, w12, #31
-; VBITS_GE_512-NEXT:    mov z2.b, z0.b[34]
-; VBITS_GE_512-NEXT:    orr x8, x8, x10
+; VBITS_GE_512-NEXT:    mov z2.b, z0.b[19]
+; VBITS_GE_512-NEXT:    and w9, w9, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #17
+; VBITS_GE_512-NEXT:    fmov w9, s1
+; VBITS_GE_512-NEXT:    mov z1.b, z0.b[20]
+; VBITS_GE_512-NEXT:    and w9, w9, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #18
+; VBITS_GE_512-NEXT:    fmov w9, s2
+; VBITS_GE_512-NEXT:    mov z2.b, z0.b[21]
+; VBITS_GE_512-NEXT:    and w9, w9, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #19
+; VBITS_GE_512-NEXT:    fmov w9, s1
+; VBITS_GE_512-NEXT:    mov z1.b, z0.b[22]
+; VBITS_GE_512-NEXT:    and w9, w9, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #20
+; VBITS_GE_512-NEXT:    fmov w9, s2
+; VBITS_GE_512-NEXT:    mov z2.b, z0.b[23]
+; VBITS_GE_512-NEXT:    and w9, w9, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #21
+; VBITS_GE_512-NEXT:    fmov w9, s1
+; VBITS_GE_512-NEXT:    mov z1.b, z0.b[24]
+; VBITS_GE_512-NEXT:    and w9, w9, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #22
+; VBITS_GE_512-NEXT:    fmov w9, s2
+; VBITS_GE_512-NEXT:    mov z2.b, z0.b[25]
+; VBITS_GE_512-NEXT:    and w9, w9, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #23
+; VBITS_GE_512-NEXT:    fmov w9, s1
+; VBITS_GE_512-NEXT:    mov z1.b, z0.b[26]
+; VBITS_GE_512-NEXT:    and w9, w9, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #24
+; VBITS_GE_512-NEXT:    fmov w9, s2
+; VBITS_GE_512-NEXT:    mov z2.b, z0.b[27]
+; VBITS_GE_512-NEXT:    and w9, w9, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #25
+; VBITS_GE_512-NEXT:    fmov w9, s1
+; VBITS_GE_512-NEXT:    mov z1.b, z0.b[28]
+; VBITS_GE_512-NEXT:    and w9, w9, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #26
+; VBITS_GE_512-NEXT:    fmov w9, s2
+; VBITS_GE_512-NEXT:    mov z2.b, z0.b[29]
+; VBITS_GE_512-NEXT:    and w9, w9, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #27
+; VBITS_GE_512-NEXT:    fmov w9, s1
+; VBITS_GE_512-NEXT:    mov z1.b, z0.b[30]
+; VBITS_GE_512-NEXT:    and w9, w9, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #28
+; VBITS_GE_512-NEXT:    fmov w9, s2
+; VBITS_GE_512-NEXT:    mov z2.b, z0.b[31]
+; VBITS_GE_512-NEXT:    and w9, w9, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #29
+; VBITS_GE_512-NEXT:    fmov w9, s1
+; VBITS_GE_512-NEXT:    mov z1.b, z0.b[32]
+; VBITS_GE_512-NEXT:    and w9, w9, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #30
+; VBITS_GE_512-NEXT:    fmov w9, s2
+; VBITS_GE_512-NEXT:    mov z2.b, z0.b[33]
+; VBITS_GE_512-NEXT:    and w9, w9, #0x1
+; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #31
+; VBITS_GE_512-NEXT:    fmov w9, s1
+; VBITS_GE_512-NEXT:    mov z1.b, z0.b[34]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #32
-; VBITS_GE_512-NEXT:    fmov w9, s1
-; VBITS_GE_512-NEXT:    mov z1.b, z0.b[35]
+; VBITS_GE_512-NEXT:    fmov w9, s2
+; VBITS_GE_512-NEXT:    mov z2.b, z0.b[35]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #33
-; VBITS_GE_512-NEXT:    fmov w9, s2
-; VBITS_GE_512-NEXT:    mov z2.b, z0.b[36]
+; VBITS_GE_512-NEXT:    fmov w9, s1
+; VBITS_GE_512-NEXT:    mov z1.b, z0.b[36]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #34
-; VBITS_GE_512-NEXT:    fmov w9, s1
-; VBITS_GE_512-NEXT:    mov z1.b, z0.b[37]
+; VBITS_GE_512-NEXT:    fmov w9, s2
+; VBITS_GE_512-NEXT:    mov z2.b, z0.b[37]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #35
-; VBITS_GE_512-NEXT:    fmov w9, s2
-; VBITS_GE_512-NEXT:    mov z2.b, z0.b[38]
+; VBITS_GE_512-NEXT:    fmov w9, s1
+; VBITS_GE_512-NEXT:    mov z1.b, z0.b[38]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #36
-; VBITS_GE_512-NEXT:    fmov w9, s1
-; VBITS_GE_512-NEXT:    mov z1.b, z0.b[39]
+; VBITS_GE_512-NEXT:    fmov w9, s2
+; VBITS_GE_512-NEXT:    mov z2.b, z0.b[39]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #37
-; VBITS_GE_512-NEXT:    fmov w9, s2
-; VBITS_GE_512-NEXT:    mov z2.b, z0.b[40]
+; VBITS_GE_512-NEXT:    fmov w9, s1
+; VBITS_GE_512-NEXT:    mov z1.b, z0.b[40]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #38
-; VBITS_GE_512-NEXT:    fmov w9, s1
-; VBITS_GE_512-NEXT:    mov z1.b, z0.b[41]
+; VBITS_GE_512-NEXT:    fmov w9, s2
+; VBITS_GE_512-NEXT:    mov z2.b, z0.b[41]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #39
-; VBITS_GE_512-NEXT:    fmov w9, s2
-; VBITS_GE_512-NEXT:    mov z2.b, z0.b[42]
+; VBITS_GE_512-NEXT:    fmov w9, s1
+; VBITS_GE_512-NEXT:    mov z1.b, z0.b[42]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #40
-; VBITS_GE_512-NEXT:    fmov w9, s1
-; VBITS_GE_512-NEXT:    mov z1.b, z0.b[43]
+; VBITS_GE_512-NEXT:    fmov w9, s2
+; VBITS_GE_512-NEXT:    mov z2.b, z0.b[43]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #41
-; VBITS_GE_512-NEXT:    fmov w9, s2
-; VBITS_GE_512-NEXT:    mov z2.b, z0.b[44]
+; VBITS_GE_512-NEXT:    fmov w9, s1
+; VBITS_GE_512-NEXT:    mov z1.b, z0.b[44]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #42
-; VBITS_GE_512-NEXT:    fmov w9, s1
-; VBITS_GE_512-NEXT:    mov z1.b, z0.b[45]
+; VBITS_GE_512-NEXT:    fmov w9, s2
+; VBITS_GE_512-NEXT:    mov z2.b, z0.b[45]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #43
-; VBITS_GE_512-NEXT:    fmov w9, s2
-; VBITS_GE_512-NEXT:    mov z2.b, z0.b[46]
+; VBITS_GE_512-NEXT:    fmov w9, s1
+; VBITS_GE_512-NEXT:    mov z1.b, z0.b[46]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #44
-; VBITS_GE_512-NEXT:    fmov w9, s1
-; VBITS_GE_512-NEXT:    mov z1.b, z0.b[47]
+; VBITS_GE_512-NEXT:    fmov w9, s2
+; VBITS_GE_512-NEXT:    mov z2.b, z0.b[47]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #45
-; VBITS_GE_512-NEXT:    fmov w9, s2
-; VBITS_GE_512-NEXT:    mov z2.b, z0.b[48]
+; VBITS_GE_512-NEXT:    fmov w9, s1
+; VBITS_GE_512-NEXT:    mov z1.b, z0.b[48]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #46
-; VBITS_GE_512-NEXT:    fmov w9, s1
-; VBITS_GE_512-NEXT:    mov z1.b, z0.b[49]
+; VBITS_GE_512-NEXT:    fmov w9, s2
+; VBITS_GE_512-NEXT:    mov z2.b, z0.b[49]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #47
-; VBITS_GE_512-NEXT:    fmov w9, s2
-; VBITS_GE_512-NEXT:    mov z2.b, z0.b[50]
+; VBITS_GE_512-NEXT:    fmov w9, s1
+; VBITS_GE_512-NEXT:    mov z1.b, z0.b[50]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #48
-; VBITS_GE_512-NEXT:    fmov w9, s1
-; VBITS_GE_512-NEXT:    mov z1.b, z0.b[51]
+; VBITS_GE_512-NEXT:    fmov w9, s2
+; VBITS_GE_512-NEXT:    mov z2.b, z0.b[51]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #49
-; VBITS_GE_512-NEXT:    fmov w9, s2
-; VBITS_GE_512-NEXT:    mov z2.b, z0.b[52]
+; VBITS_GE_512-NEXT:    fmov w9, s1
+; VBITS_GE_512-NEXT:    mov z1.b, z0.b[52]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #50
-; VBITS_GE_512-NEXT:    fmov w9, s1
-; VBITS_GE_512-NEXT:    mov z1.b, z0.b[53]
+; VBITS_GE_512-NEXT:    fmov w9, s2
+; VBITS_GE_512-NEXT:    mov z2.b, z0.b[53]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #51
-; VBITS_GE_512-NEXT:    fmov w9, s2
-; VBITS_GE_512-NEXT:    mov z2.b, z0.b[54]
+; VBITS_GE_512-NEXT:    fmov w9, s1
+; VBITS_GE_512-NEXT:    mov z1.b, z0.b[54]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #52
-; VBITS_GE_512-NEXT:    fmov w9, s1
-; VBITS_GE_512-NEXT:    mov z1.b, z0.b[55]
+; VBITS_GE_512-NEXT:    fmov w9, s2
+; VBITS_GE_512-NEXT:    mov z2.b, z0.b[55]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #53
-; VBITS_GE_512-NEXT:    fmov w9, s2
-; VBITS_GE_512-NEXT:    mov z2.b, z0.b[56]
+; VBITS_GE_512-NEXT:    fmov w9, s1
+; VBITS_GE_512-NEXT:    mov z1.b, z0.b[56]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #54
-; VBITS_GE_512-NEXT:    fmov w9, s1
-; VBITS_GE_512-NEXT:    mov z1.b, z0.b[57]
+; VBITS_GE_512-NEXT:    fmov w9, s2
+; VBITS_GE_512-NEXT:    mov z2.b, z0.b[57]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #55
-; VBITS_GE_512-NEXT:    fmov w9, s2
-; VBITS_GE_512-NEXT:    mov z2.b, z0.b[58]
+; VBITS_GE_512-NEXT:    fmov w9, s1
+; VBITS_GE_512-NEXT:    mov z1.b, z0.b[58]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #56
-; VBITS_GE_512-NEXT:    fmov w9, s1
-; VBITS_GE_512-NEXT:    mov z1.b, z0.b[59]
+; VBITS_GE_512-NEXT:    fmov w9, s2
+; VBITS_GE_512-NEXT:    mov z2.b, z0.b[59]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #57
-; VBITS_GE_512-NEXT:    fmov w9, s2
-; VBITS_GE_512-NEXT:    mov z2.b, z0.b[60]
+; VBITS_GE_512-NEXT:    fmov w9, s1
+; VBITS_GE_512-NEXT:    mov z1.b, z0.b[60]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #58
-; VBITS_GE_512-NEXT:    fmov w9, s1
-; VBITS_GE_512-NEXT:    mov z1.b, z0.b[61]
-; VBITS_GE_512-NEXT:    and w9, w9, #0x1
-; VBITS_GE_512-NEXT:    fmov w10, s1
-; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #59
 ; VBITS_GE_512-NEXT:    fmov w9, s2
-; VBITS_GE_512-NEXT:    mov z2.b, z0.b[62]
+; VBITS_GE_512-NEXT:    mov z2.b, z0.b[61]
+; VBITS_GE_512-NEXT:    and w9, w9, #0x1
+; VBITS_GE_512-NEXT:    fmov w10, s2
+; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #59
+; VBITS_GE_512-NEXT:    fmov w9, s1
+; VBITS_GE_512-NEXT:    mov z1.b, z0.b[62]
 ; VBITS_GE_512-NEXT:    mov z0.b, z0.b[63]
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #60
 ; VBITS_GE_512-NEXT:    and w9, w10, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #61
-; VBITS_GE_512-NEXT:    fmov w9, s2
+; VBITS_GE_512-NEXT:    fmov w9, s1
 ; VBITS_GE_512-NEXT:    and w9, w9, #0x1
 ; VBITS_GE_512-NEXT:    orr x8, x8, x9, lsl #62
 ; VBITS_GE_512-NEXT:    fmov w9, s0
@@ -3491,147 +3462,133 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:  .LBB7_4: // %else2
-; VBITS_GE_512-NEXT:    tbnz w8, #2, .LBB7_68
+; VBITS_GE_512-NEXT:    tbnz w8, #2, .LBB7_67
 ; VBITS_GE_512-NEXT:  // %bb.5: // %else6
-; VBITS_GE_512-NEXT:    tbnz w8, #3, .LBB7_69
+; VBITS_GE_512-NEXT:    tbnz w8, #3, .LBB7_68
 ; VBITS_GE_512-NEXT:  .LBB7_6: // %else10
-; VBITS_GE_512-NEXT:    tbnz w8, #4, .LBB7_70
+; VBITS_GE_512-NEXT:    tbnz w8, #4, .LBB7_69
 ; VBITS_GE_512-NEXT:  .LBB7_7: // %else14
-; VBITS_GE_512-NEXT:    tbnz w8, #5, .LBB7_71
+; VBITS_GE_512-NEXT:    tbnz w8, #5, .LBB7_70
 ; VBITS_GE_512-NEXT:  .LBB7_8: // %else18
-; VBITS_GE_512-NEXT:    tbnz w8, #6, .LBB7_72
+; VBITS_GE_512-NEXT:    tbnz w8, #6, .LBB7_71
 ; VBITS_GE_512-NEXT:  .LBB7_9: // %else22
-; VBITS_GE_512-NEXT:    tbnz w8, #7, .LBB7_73
+; VBITS_GE_512-NEXT:    tbnz w8, #7, .LBB7_72
 ; VBITS_GE_512-NEXT:  .LBB7_10: // %else26
-; VBITS_GE_512-NEXT:    tbnz w8, #8, .LBB7_74
+; VBITS_GE_512-NEXT:    tbnz w8, #8, .LBB7_73
 ; VBITS_GE_512-NEXT:  .LBB7_11: // %else30
-; VBITS_GE_512-NEXT:    tbnz w8, #9, .LBB7_75
+; VBITS_GE_512-NEXT:    tbnz w8, #9, .LBB7_74
 ; VBITS_GE_512-NEXT:  .LBB7_12: // %else34
-; VBITS_GE_512-NEXT:    tbnz w8, #10, .LBB7_76
+; VBITS_GE_512-NEXT:    tbnz w8, #10, .LBB7_75
 ; VBITS_GE_512-NEXT:  .LBB7_13: // %else38
-; VBITS_GE_512-NEXT:    tbnz w8, #11, .LBB7_77
+; VBITS_GE_512-NEXT:    tbnz w8, #11, .LBB7_76
 ; VBITS_GE_512-NEXT:  .LBB7_14: // %else42
-; VBITS_GE_512-NEXT:    tbnz w8, #12, .LBB7_78
+; VBITS_GE_512-NEXT:    tbnz w8, #12, .LBB7_77
 ; VBITS_GE_512-NEXT:  .LBB7_15: // %else46
-; VBITS_GE_512-NEXT:    tbnz w8, #13, .LBB7_79
+; VBITS_GE_512-NEXT:    tbnz w8, #13, .LBB7_78
 ; VBITS_GE_512-NEXT:  .LBB7_16: // %else50
-; VBITS_GE_512-NEXT:    tbnz w8, #14, .LBB7_80
+; VBITS_GE_512-NEXT:    tbnz w8, #14, .LBB7_79
 ; VBITS_GE_512-NEXT:  .LBB7_17: // %else54
-; VBITS_GE_512-NEXT:    tbnz w8, #15, .LBB7_81
+; VBITS_GE_512-NEXT:    tbnz w8, #15, .LBB7_80
 ; VBITS_GE_512-NEXT:  .LBB7_18: // %else58
-; VBITS_GE_512-NEXT:    tbnz w8, #16, .LBB7_82
+; VBITS_GE_512-NEXT:    tbnz w8, #16, .LBB7_81
 ; VBITS_GE_512-NEXT:  .LBB7_19: // %else62
-; VBITS_GE_512-NEXT:    tbnz w8, #17, .LBB7_83
+; VBITS_GE_512-NEXT:    tbnz w8, #17, .LBB7_82
 ; VBITS_GE_512-NEXT:  .LBB7_20: // %else66
-; VBITS_GE_512-NEXT:    tbnz w8, #18, .LBB7_84
+; VBITS_GE_512-NEXT:    tbnz w8, #18, .LBB7_83
 ; VBITS_GE_512-NEXT:  .LBB7_21: // %else70
-; VBITS_GE_512-NEXT:    tbnz w8, #19, .LBB7_85
+; VBITS_GE_512-NEXT:    tbnz w8, #19, .LBB7_84
 ; VBITS_GE_512-NEXT:  .LBB7_22: // %else74
-; VBITS_GE_512-NEXT:    tbnz w8, #20, .LBB7_86
+; VBITS_GE_512-NEXT:    tbnz w8, #20, .LBB7_85
 ; VBITS_GE_512-NEXT:  .LBB7_23: // %else78
-; VBITS_GE_512-NEXT:    tbnz w8, #21, .LBB7_87
+; VBITS_GE_512-NEXT:    tbnz w8, #21, .LBB7_86
 ; VBITS_GE_512-NEXT:  .LBB7_24: // %else82
-; VBITS_GE_512-NEXT:    tbnz w8, #22, .LBB7_88
+; VBITS_GE_512-NEXT:    tbnz w8, #22, .LBB7_87
 ; VBITS_GE_512-NEXT:  .LBB7_25: // %else86
-; VBITS_GE_512-NEXT:    tbnz w8, #23, .LBB7_89
+; VBITS_GE_512-NEXT:    tbnz w8, #23, .LBB7_88
 ; VBITS_GE_512-NEXT:  .LBB7_26: // %else90
-; VBITS_GE_512-NEXT:    tbnz w8, #24, .LBB7_90
+; VBITS_GE_512-NEXT:    tbnz w8, #24, .LBB7_89
 ; VBITS_GE_512-NEXT:  .LBB7_27: // %else94
-; VBITS_GE_512-NEXT:    tbnz w8, #25, .LBB7_91
+; VBITS_GE_512-NEXT:    tbnz w8, #25, .LBB7_90
 ; VBITS_GE_512-NEXT:  .LBB7_28: // %else98
-; VBITS_GE_512-NEXT:    tbnz w8, #26, .LBB7_92
+; VBITS_GE_512-NEXT:    tbnz w8, #26, .LBB7_91
 ; VBITS_GE_512-NEXT:  .LBB7_29: // %else102
-; VBITS_GE_512-NEXT:    tbnz w8, #27, .LBB7_93
+; VBITS_GE_512-NEXT:    tbnz w8, #27, .LBB7_92
 ; VBITS_GE_512-NEXT:  .LBB7_30: // %else106
-; VBITS_GE_512-NEXT:    tbnz w8, #28, .LBB7_94
+; VBITS_GE_512-NEXT:    tbnz w8, #28, .LBB7_93
 ; VBITS_GE_512-NEXT:  .LBB7_31: // %else110
-; VBITS_GE_512-NEXT:    tbnz w8, #29, .LBB7_95
+; VBITS_GE_512-NEXT:    tbnz w8, #29, .LBB7_94
 ; VBITS_GE_512-NEXT:  .LBB7_32: // %else114
-; VBITS_GE_512-NEXT:    tbnz w8, #30, .LBB7_96
+; VBITS_GE_512-NEXT:    tbnz w8, #30, .LBB7_95
 ; VBITS_GE_512-NEXT:  .LBB7_33: // %else118
-; VBITS_GE_512-NEXT:    tbnz w8, #31, .LBB7_97
+; VBITS_GE_512-NEXT:    tbnz w8, #31, .LBB7_96
 ; VBITS_GE_512-NEXT:  .LBB7_34: // %else122
-; VBITS_GE_512-NEXT:    tbnz x8, #32, .LBB7_98
+; VBITS_GE_512-NEXT:    tbnz x8, #32, .LBB7_97
 ; VBITS_GE_512-NEXT:  .LBB7_35: // %else126
-; VBITS_GE_512-NEXT:    tbnz x8, #33, .LBB7_99
+; VBITS_GE_512-NEXT:    tbnz x8, #33, .LBB7_98
 ; VBITS_GE_512-NEXT:  .LBB7_36: // %else130
-; VBITS_GE_512-NEXT:    tbnz x8, #34, .LBB7_100
+; VBITS_GE_512-NEXT:    tbnz x8, #34, .LBB7_99
 ; VBITS_GE_512-NEXT:  .LBB7_37: // %else134
-; VBITS_GE_512-NEXT:    tbnz x8, #35, .LBB7_101
+; VBITS_GE_512-NEXT:    tbnz x8, #35, .LBB7_100
 ; VBITS_GE_512-NEXT:  .LBB7_38: // %else138
-; VBITS_GE_512-NEXT:    tbnz x8, #36, .LBB7_102
+; VBITS_GE_512-NEXT:    tbnz x8, #36, .LBB7_101
 ; VBITS_GE_512-NEXT:  .LBB7_39: // %else142
-; VBITS_GE_512-NEXT:    tbnz x8, #37, .LBB7_103
+; VBITS_GE_512-NEXT:    tbnz x8, #37, .LBB7_102
 ; VBITS_GE_512-NEXT:  .LBB7_40: // %else146
-; VBITS_GE_512-NEXT:    tbnz x8, #38, .LBB7_104
+; VBITS_GE_512-NEXT:    tbnz x8, #38, .LBB7_103
 ; VBITS_GE_512-NEXT:  .LBB7_41: // %else150
-; VBITS_GE_512-NEXT:    tbnz x8, #39, .LBB7_105
+; VBITS_GE_512-NEXT:    tbnz x8, #39, .LBB7_104
 ; VBITS_GE_512-NEXT:  .LBB7_42: // %else154
-; VBITS_GE_512-NEXT:    tbnz x8, #40, .LBB7_106
+; VBITS_GE_512-NEXT:    tbnz x8, #40, .LBB7_105
 ; VBITS_GE_512-NEXT:  .LBB7_43: // %else158
-; VBITS_GE_512-NEXT:    tbnz x8, #41, .LBB7_107
+; VBITS_GE_512-NEXT:    tbnz x8, #41, .LBB7_106
 ; VBITS_GE_512-NEXT:  .LBB7_44: // %else162
-; VBITS_GE_512-NEXT:    tbnz x8, #42, .LBB7_108
+; VBITS_GE_512-NEXT:    tbnz x8, #42, .LBB7_107
 ; VBITS_GE_512-NEXT:  .LBB7_45: // %else166
-; VBITS_GE_512-NEXT:    tbnz x8, #43, .LBB7_109
+; VBITS_GE_512-NEXT:    tbnz x8, #43, .LBB7_108
 ; VBITS_GE_512-NEXT:  .LBB7_46: // %else170
-; VBITS_GE_512-NEXT:    tbnz x8, #44, .LBB7_110
+; VBITS_GE_512-NEXT:    tbnz x8, #44, .LBB7_109
 ; VBITS_GE_512-NEXT:  .LBB7_47: // %else174
-; VBITS_GE_512-NEXT:    tbnz x8, #45, .LBB7_111
+; VBITS_GE_512-NEXT:    tbnz x8, #45, .LBB7_110
 ; VBITS_GE_512-NEXT:  .LBB7_48: // %else178
-; VBITS_GE_512-NEXT:    tbnz x8, #46, .LBB7_112
+; VBITS_GE_512-NEXT:    tbnz x8, #46, .LBB7_111
 ; VBITS_GE_512-NEXT:  .LBB7_49: // %else182
-; VBITS_GE_512-NEXT:    tbnz x8, #47, .LBB7_113
+; VBITS_GE_512-NEXT:    tbnz x8, #47, .LBB7_112
 ; VBITS_GE_512-NEXT:  .LBB7_50: // %else186
-; VBITS_GE_512-NEXT:    tbnz x8, #48, .LBB7_114
+; VBITS_GE_512-NEXT:    tbnz x8, #48, .LBB7_113
 ; VBITS_GE_512-NEXT:  .LBB7_51: // %else190
-; VBITS_GE_512-NEXT:    tbnz x8, #49, .LBB7_115
+; VBITS_GE_512-NEXT:    tbnz x8, #49, .LBB7_114
 ; VBITS_GE_512-NEXT:  .LBB7_52: // %else194
-; VBITS_GE_512-NEXT:    tbnz x8, #50, .LBB7_116
+; VBITS_GE_512-NEXT:    tbnz x8, #50, .LBB7_115
 ; VBITS_GE_512-NEXT:  .LBB7_53: // %else198
-; VBITS_GE_512-NEXT:    tbnz x8, #51, .LBB7_117
+; VBITS_GE_512-NEXT:    tbnz x8, #51, .LBB7_116
 ; VBITS_GE_512-NEXT:  .LBB7_54: // %else202
-; VBITS_GE_512-NEXT:    tbnz x8, #52, .LBB7_118
+; VBITS_GE_512-NEXT:    tbnz x8, #52, .LBB7_117
 ; VBITS_GE_512-NEXT:  .LBB7_55: // %else206
-; VBITS_GE_512-NEXT:    tbnz x8, #53, .LBB7_119
+; VBITS_GE_512-NEXT:    tbnz x8, #53, .LBB7_118
 ; VBITS_GE_512-NEXT:  .LBB7_56: // %else210
-; VBITS_GE_512-NEXT:    tbnz x8, #54, .LBB7_120
+; VBITS_GE_512-NEXT:    tbnz x8, #54, .LBB7_119
 ; VBITS_GE_512-NEXT:  .LBB7_57: // %else214
-; VBITS_GE_512-NEXT:    tbnz x8, #55, .LBB7_121
+; VBITS_GE_512-NEXT:    tbnz x8, #55, .LBB7_120
 ; VBITS_GE_512-NEXT:  .LBB7_58: // %else218
-; VBITS_GE_512-NEXT:    tbnz x8, #56, .LBB7_122
+; VBITS_GE_512-NEXT:    tbnz x8, #56, .LBB7_121
 ; VBITS_GE_512-NEXT:  .LBB7_59: // %else222
-; VBITS_GE_512-NEXT:    tbnz x8, #57, .LBB7_123
+; VBITS_GE_512-NEXT:    tbnz x8, #57, .LBB7_122
 ; VBITS_GE_512-NEXT:  .LBB7_60: // %else226
-; VBITS_GE_512-NEXT:    tbnz x8, #58, .LBB7_124
+; VBITS_GE_512-NEXT:    tbnz x8, #58, .LBB7_123
 ; VBITS_GE_512-NEXT:  .LBB7_61: // %else230
-; VBITS_GE_512-NEXT:    tbnz x8, #59, .LBB7_125
+; VBITS_GE_512-NEXT:    tbnz x8, #59, .LBB7_124
 ; VBITS_GE_512-NEXT:  .LBB7_62: // %else234
-; VBITS_GE_512-NEXT:    tbnz x8, #60, .LBB7_126
+; VBITS_GE_512-NEXT:    tbnz x8, #60, .LBB7_125
 ; VBITS_GE_512-NEXT:  .LBB7_63: // %else238
-; VBITS_GE_512-NEXT:    tbnz x8, #61, .LBB7_127
+; VBITS_GE_512-NEXT:    tbnz x8, #61, .LBB7_126
 ; VBITS_GE_512-NEXT:  .LBB7_64: // %else242
-; VBITS_GE_512-NEXT:    tbnz x8, #62, .LBB7_128
+; VBITS_GE_512-NEXT:    tbnz x8, #62, .LBB7_127
 ; VBITS_GE_512-NEXT:  .LBB7_65: // %else246
-; VBITS_GE_512-NEXT:    tbz x8, #63, .LBB7_67
-; VBITS_GE_512-NEXT:  .LBB7_66: // %cond.load249
-; VBITS_GE_512-NEXT:    mov w8, #63 // =0x3f
-; VBITS_GE_512-NEXT:    index z1.b, #0, #1
-; VBITS_GE_512-NEXT:    mov z2.b, w8
-; VBITS_GE_512-NEXT:    ldrb w8, [x0]
-; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
-; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w8
-; VBITS_GE_512-NEXT:  .LBB7_67: // %else250
-; VBITS_GE_512-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    tbnz x8, #63, .LBB7_128
+; VBITS_GE_512-NEXT:  .LBB7_66: // %else250
 ; VBITS_GE_512-NEXT:    st1b { z0.b }, p0, [x2]
-; VBITS_GE_512-NEXT:    ldp x22, x21, [sp, #80] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x24, x23, [sp, #64] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x26, x25, [sp, #48] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x28, x27, [sp, #32] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    add sp, sp, #112
 ; VBITS_GE_512-NEXT:    ret
-; VBITS_GE_512-NEXT:  .LBB7_68: // %cond.load5
+; VBITS_GE_512-NEXT:  .LBB7_67: // %cond.load5
 ; VBITS_GE_512-NEXT:    mov w9, #2 // =0x2
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3639,7 +3596,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #3, .LBB7_6
-; VBITS_GE_512-NEXT:  .LBB7_69: // %cond.load9
+; VBITS_GE_512-NEXT:  .LBB7_68: // %cond.load9
 ; VBITS_GE_512-NEXT:    mov w9, #3 // =0x3
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3647,7 +3604,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #4, .LBB7_7
-; VBITS_GE_512-NEXT:  .LBB7_70: // %cond.load13
+; VBITS_GE_512-NEXT:  .LBB7_69: // %cond.load13
 ; VBITS_GE_512-NEXT:    mov w9, #4 // =0x4
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3655,7 +3612,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #5, .LBB7_8
-; VBITS_GE_512-NEXT:  .LBB7_71: // %cond.load17
+; VBITS_GE_512-NEXT:  .LBB7_70: // %cond.load17
 ; VBITS_GE_512-NEXT:    mov w9, #5 // =0x5
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3663,7 +3620,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #6, .LBB7_9
-; VBITS_GE_512-NEXT:  .LBB7_72: // %cond.load21
+; VBITS_GE_512-NEXT:  .LBB7_71: // %cond.load21
 ; VBITS_GE_512-NEXT:    mov w9, #6 // =0x6
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3671,7 +3628,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #7, .LBB7_10
-; VBITS_GE_512-NEXT:  .LBB7_73: // %cond.load25
+; VBITS_GE_512-NEXT:  .LBB7_72: // %cond.load25
 ; VBITS_GE_512-NEXT:    mov w9, #7 // =0x7
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3679,7 +3636,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #8, .LBB7_11
-; VBITS_GE_512-NEXT:  .LBB7_74: // %cond.load29
+; VBITS_GE_512-NEXT:  .LBB7_73: // %cond.load29
 ; VBITS_GE_512-NEXT:    mov w9, #8 // =0x8
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3687,7 +3644,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #9, .LBB7_12
-; VBITS_GE_512-NEXT:  .LBB7_75: // %cond.load33
+; VBITS_GE_512-NEXT:  .LBB7_74: // %cond.load33
 ; VBITS_GE_512-NEXT:    mov w9, #9 // =0x9
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3695,7 +3652,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #10, .LBB7_13
-; VBITS_GE_512-NEXT:  .LBB7_76: // %cond.load37
+; VBITS_GE_512-NEXT:  .LBB7_75: // %cond.load37
 ; VBITS_GE_512-NEXT:    mov w9, #10 // =0xa
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3703,7 +3660,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #11, .LBB7_14
-; VBITS_GE_512-NEXT:  .LBB7_77: // %cond.load41
+; VBITS_GE_512-NEXT:  .LBB7_76: // %cond.load41
 ; VBITS_GE_512-NEXT:    mov w9, #11 // =0xb
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3711,7 +3668,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #12, .LBB7_15
-; VBITS_GE_512-NEXT:  .LBB7_78: // %cond.load45
+; VBITS_GE_512-NEXT:  .LBB7_77: // %cond.load45
 ; VBITS_GE_512-NEXT:    mov w9, #12 // =0xc
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3719,7 +3676,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #13, .LBB7_16
-; VBITS_GE_512-NEXT:  .LBB7_79: // %cond.load49
+; VBITS_GE_512-NEXT:  .LBB7_78: // %cond.load49
 ; VBITS_GE_512-NEXT:    mov w9, #13 // =0xd
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3727,7 +3684,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #14, .LBB7_17
-; VBITS_GE_512-NEXT:  .LBB7_80: // %cond.load53
+; VBITS_GE_512-NEXT:  .LBB7_79: // %cond.load53
 ; VBITS_GE_512-NEXT:    mov w9, #14 // =0xe
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3735,7 +3692,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #15, .LBB7_18
-; VBITS_GE_512-NEXT:  .LBB7_81: // %cond.load57
+; VBITS_GE_512-NEXT:  .LBB7_80: // %cond.load57
 ; VBITS_GE_512-NEXT:    mov w9, #15 // =0xf
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3743,7 +3700,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #16, .LBB7_19
-; VBITS_GE_512-NEXT:  .LBB7_82: // %cond.load61
+; VBITS_GE_512-NEXT:  .LBB7_81: // %cond.load61
 ; VBITS_GE_512-NEXT:    mov w9, #16 // =0x10
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3751,7 +3708,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #17, .LBB7_20
-; VBITS_GE_512-NEXT:  .LBB7_83: // %cond.load65
+; VBITS_GE_512-NEXT:  .LBB7_82: // %cond.load65
 ; VBITS_GE_512-NEXT:    mov w9, #17 // =0x11
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3759,7 +3716,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #18, .LBB7_21
-; VBITS_GE_512-NEXT:  .LBB7_84: // %cond.load69
+; VBITS_GE_512-NEXT:  .LBB7_83: // %cond.load69
 ; VBITS_GE_512-NEXT:    mov w9, #18 // =0x12
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3767,7 +3724,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #19, .LBB7_22
-; VBITS_GE_512-NEXT:  .LBB7_85: // %cond.load73
+; VBITS_GE_512-NEXT:  .LBB7_84: // %cond.load73
 ; VBITS_GE_512-NEXT:    mov w9, #19 // =0x13
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3775,7 +3732,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #20, .LBB7_23
-; VBITS_GE_512-NEXT:  .LBB7_86: // %cond.load77
+; VBITS_GE_512-NEXT:  .LBB7_85: // %cond.load77
 ; VBITS_GE_512-NEXT:    mov w9, #20 // =0x14
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3783,7 +3740,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #21, .LBB7_24
-; VBITS_GE_512-NEXT:  .LBB7_87: // %cond.load81
+; VBITS_GE_512-NEXT:  .LBB7_86: // %cond.load81
 ; VBITS_GE_512-NEXT:    mov w9, #21 // =0x15
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3791,7 +3748,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #22, .LBB7_25
-; VBITS_GE_512-NEXT:  .LBB7_88: // %cond.load85
+; VBITS_GE_512-NEXT:  .LBB7_87: // %cond.load85
 ; VBITS_GE_512-NEXT:    mov w9, #22 // =0x16
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3799,7 +3756,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #23, .LBB7_26
-; VBITS_GE_512-NEXT:  .LBB7_89: // %cond.load89
+; VBITS_GE_512-NEXT:  .LBB7_88: // %cond.load89
 ; VBITS_GE_512-NEXT:    mov w9, #23 // =0x17
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3807,7 +3764,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #24, .LBB7_27
-; VBITS_GE_512-NEXT:  .LBB7_90: // %cond.load93
+; VBITS_GE_512-NEXT:  .LBB7_89: // %cond.load93
 ; VBITS_GE_512-NEXT:    mov w9, #24 // =0x18
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3815,7 +3772,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #25, .LBB7_28
-; VBITS_GE_512-NEXT:  .LBB7_91: // %cond.load97
+; VBITS_GE_512-NEXT:  .LBB7_90: // %cond.load97
 ; VBITS_GE_512-NEXT:    mov w9, #25 // =0x19
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3823,7 +3780,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #26, .LBB7_29
-; VBITS_GE_512-NEXT:  .LBB7_92: // %cond.load101
+; VBITS_GE_512-NEXT:  .LBB7_91: // %cond.load101
 ; VBITS_GE_512-NEXT:    mov w9, #26 // =0x1a
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3831,7 +3788,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #27, .LBB7_30
-; VBITS_GE_512-NEXT:  .LBB7_93: // %cond.load105
+; VBITS_GE_512-NEXT:  .LBB7_92: // %cond.load105
 ; VBITS_GE_512-NEXT:    mov w9, #27 // =0x1b
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3839,7 +3796,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #28, .LBB7_31
-; VBITS_GE_512-NEXT:  .LBB7_94: // %cond.load109
+; VBITS_GE_512-NEXT:  .LBB7_93: // %cond.load109
 ; VBITS_GE_512-NEXT:    mov w9, #28 // =0x1c
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3847,7 +3804,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #29, .LBB7_32
-; VBITS_GE_512-NEXT:  .LBB7_95: // %cond.load113
+; VBITS_GE_512-NEXT:  .LBB7_94: // %cond.load113
 ; VBITS_GE_512-NEXT:    mov w9, #29 // =0x1d
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3855,7 +3812,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #30, .LBB7_33
-; VBITS_GE_512-NEXT:  .LBB7_96: // %cond.load117
+; VBITS_GE_512-NEXT:  .LBB7_95: // %cond.load117
 ; VBITS_GE_512-NEXT:    mov w9, #30 // =0x1e
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3863,7 +3820,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #31, .LBB7_34
-; VBITS_GE_512-NEXT:  .LBB7_97: // %cond.load121
+; VBITS_GE_512-NEXT:  .LBB7_96: // %cond.load121
 ; VBITS_GE_512-NEXT:    mov w9, #31 // =0x1f
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3871,7 +3828,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #32, .LBB7_35
-; VBITS_GE_512-NEXT:  .LBB7_98: // %cond.load125
+; VBITS_GE_512-NEXT:  .LBB7_97: // %cond.load125
 ; VBITS_GE_512-NEXT:    mov w9, #32 // =0x20
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3879,7 +3836,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #33, .LBB7_36
-; VBITS_GE_512-NEXT:  .LBB7_99: // %cond.load129
+; VBITS_GE_512-NEXT:  .LBB7_98: // %cond.load129
 ; VBITS_GE_512-NEXT:    mov w9, #33 // =0x21
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3887,7 +3844,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #34, .LBB7_37
-; VBITS_GE_512-NEXT:  .LBB7_100: // %cond.load133
+; VBITS_GE_512-NEXT:  .LBB7_99: // %cond.load133
 ; VBITS_GE_512-NEXT:    mov w9, #34 // =0x22
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3895,7 +3852,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #35, .LBB7_38
-; VBITS_GE_512-NEXT:  .LBB7_101: // %cond.load137
+; VBITS_GE_512-NEXT:  .LBB7_100: // %cond.load137
 ; VBITS_GE_512-NEXT:    mov w9, #35 // =0x23
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3903,7 +3860,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #36, .LBB7_39
-; VBITS_GE_512-NEXT:  .LBB7_102: // %cond.load141
+; VBITS_GE_512-NEXT:  .LBB7_101: // %cond.load141
 ; VBITS_GE_512-NEXT:    mov w9, #36 // =0x24
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3911,7 +3868,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #37, .LBB7_40
-; VBITS_GE_512-NEXT:  .LBB7_103: // %cond.load145
+; VBITS_GE_512-NEXT:  .LBB7_102: // %cond.load145
 ; VBITS_GE_512-NEXT:    mov w9, #37 // =0x25
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3919,7 +3876,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #38, .LBB7_41
-; VBITS_GE_512-NEXT:  .LBB7_104: // %cond.load149
+; VBITS_GE_512-NEXT:  .LBB7_103: // %cond.load149
 ; VBITS_GE_512-NEXT:    mov w9, #38 // =0x26
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3927,7 +3884,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #39, .LBB7_42
-; VBITS_GE_512-NEXT:  .LBB7_105: // %cond.load153
+; VBITS_GE_512-NEXT:  .LBB7_104: // %cond.load153
 ; VBITS_GE_512-NEXT:    mov w9, #39 // =0x27
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3935,7 +3892,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #40, .LBB7_43
-; VBITS_GE_512-NEXT:  .LBB7_106: // %cond.load157
+; VBITS_GE_512-NEXT:  .LBB7_105: // %cond.load157
 ; VBITS_GE_512-NEXT:    mov w9, #40 // =0x28
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3943,7 +3900,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #41, .LBB7_44
-; VBITS_GE_512-NEXT:  .LBB7_107: // %cond.load161
+; VBITS_GE_512-NEXT:  .LBB7_106: // %cond.load161
 ; VBITS_GE_512-NEXT:    mov w9, #41 // =0x29
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3951,7 +3908,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #42, .LBB7_45
-; VBITS_GE_512-NEXT:  .LBB7_108: // %cond.load165
+; VBITS_GE_512-NEXT:  .LBB7_107: // %cond.load165
 ; VBITS_GE_512-NEXT:    mov w9, #42 // =0x2a
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3959,7 +3916,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #43, .LBB7_46
-; VBITS_GE_512-NEXT:  .LBB7_109: // %cond.load169
+; VBITS_GE_512-NEXT:  .LBB7_108: // %cond.load169
 ; VBITS_GE_512-NEXT:    mov w9, #43 // =0x2b
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3967,7 +3924,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #44, .LBB7_47
-; VBITS_GE_512-NEXT:  .LBB7_110: // %cond.load173
+; VBITS_GE_512-NEXT:  .LBB7_109: // %cond.load173
 ; VBITS_GE_512-NEXT:    mov w9, #44 // =0x2c
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3975,7 +3932,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #45, .LBB7_48
-; VBITS_GE_512-NEXT:  .LBB7_111: // %cond.load177
+; VBITS_GE_512-NEXT:  .LBB7_110: // %cond.load177
 ; VBITS_GE_512-NEXT:    mov w9, #45 // =0x2d
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3983,7 +3940,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #46, .LBB7_49
-; VBITS_GE_512-NEXT:  .LBB7_112: // %cond.load181
+; VBITS_GE_512-NEXT:  .LBB7_111: // %cond.load181
 ; VBITS_GE_512-NEXT:    mov w9, #46 // =0x2e
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3991,7 +3948,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #47, .LBB7_50
-; VBITS_GE_512-NEXT:  .LBB7_113: // %cond.load185
+; VBITS_GE_512-NEXT:  .LBB7_112: // %cond.load185
 ; VBITS_GE_512-NEXT:    mov w9, #47 // =0x2f
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -3999,7 +3956,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #48, .LBB7_51
-; VBITS_GE_512-NEXT:  .LBB7_114: // %cond.load189
+; VBITS_GE_512-NEXT:  .LBB7_113: // %cond.load189
 ; VBITS_GE_512-NEXT:    mov w9, #48 // =0x30
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -4007,7 +3964,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #49, .LBB7_52
-; VBITS_GE_512-NEXT:  .LBB7_115: // %cond.load193
+; VBITS_GE_512-NEXT:  .LBB7_114: // %cond.load193
 ; VBITS_GE_512-NEXT:    mov w9, #49 // =0x31
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -4015,7 +3972,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #50, .LBB7_53
-; VBITS_GE_512-NEXT:  .LBB7_116: // %cond.load197
+; VBITS_GE_512-NEXT:  .LBB7_115: // %cond.load197
 ; VBITS_GE_512-NEXT:    mov w9, #50 // =0x32
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -4023,7 +3980,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #51, .LBB7_54
-; VBITS_GE_512-NEXT:  .LBB7_117: // %cond.load201
+; VBITS_GE_512-NEXT:  .LBB7_116: // %cond.load201
 ; VBITS_GE_512-NEXT:    mov w9, #51 // =0x33
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -4031,7 +3988,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #52, .LBB7_55
-; VBITS_GE_512-NEXT:  .LBB7_118: // %cond.load205
+; VBITS_GE_512-NEXT:  .LBB7_117: // %cond.load205
 ; VBITS_GE_512-NEXT:    mov w9, #52 // =0x34
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -4039,7 +3996,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #53, .LBB7_56
-; VBITS_GE_512-NEXT:  .LBB7_119: // %cond.load209
+; VBITS_GE_512-NEXT:  .LBB7_118: // %cond.load209
 ; VBITS_GE_512-NEXT:    mov w9, #53 // =0x35
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -4047,7 +4004,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #54, .LBB7_57
-; VBITS_GE_512-NEXT:  .LBB7_120: // %cond.load213
+; VBITS_GE_512-NEXT:  .LBB7_119: // %cond.load213
 ; VBITS_GE_512-NEXT:    mov w9, #54 // =0x36
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -4055,7 +4012,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #55, .LBB7_58
-; VBITS_GE_512-NEXT:  .LBB7_121: // %cond.load217
+; VBITS_GE_512-NEXT:  .LBB7_120: // %cond.load217
 ; VBITS_GE_512-NEXT:    mov w9, #55 // =0x37
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -4063,7 +4020,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #56, .LBB7_59
-; VBITS_GE_512-NEXT:  .LBB7_122: // %cond.load221
+; VBITS_GE_512-NEXT:  .LBB7_121: // %cond.load221
 ; VBITS_GE_512-NEXT:    mov w9, #56 // =0x38
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -4071,7 +4028,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #57, .LBB7_60
-; VBITS_GE_512-NEXT:  .LBB7_123: // %cond.load225
+; VBITS_GE_512-NEXT:  .LBB7_122: // %cond.load225
 ; VBITS_GE_512-NEXT:    mov w9, #57 // =0x39
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -4079,7 +4036,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #58, .LBB7_61
-; VBITS_GE_512-NEXT:  .LBB7_124: // %cond.load229
+; VBITS_GE_512-NEXT:  .LBB7_123: // %cond.load229
 ; VBITS_GE_512-NEXT:    mov w9, #58 // =0x3a
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -4087,7 +4044,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #59, .LBB7_62
-; VBITS_GE_512-NEXT:  .LBB7_125: // %cond.load233
+; VBITS_GE_512-NEXT:  .LBB7_124: // %cond.load233
 ; VBITS_GE_512-NEXT:    mov w9, #59 // =0x3b
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -4095,7 +4052,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #60, .LBB7_63
-; VBITS_GE_512-NEXT:  .LBB7_126: // %cond.load237
+; VBITS_GE_512-NEXT:  .LBB7_125: // %cond.load237
 ; VBITS_GE_512-NEXT:    mov w9, #60 // =0x3c
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -4103,7 +4060,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #61, .LBB7_64
-; VBITS_GE_512-NEXT:  .LBB7_127: // %cond.load241
+; VBITS_GE_512-NEXT:  .LBB7_126: // %cond.load241
 ; VBITS_GE_512-NEXT:    mov w9, #61 // =0x3d
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
@@ -4111,25 +4068,32 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz x8, #62, .LBB7_65
-; VBITS_GE_512-NEXT:  .LBB7_128: // %cond.load245
+; VBITS_GE_512-NEXT:  .LBB7_127: // %cond.load245
 ; VBITS_GE_512-NEXT:    mov w9, #62 // =0x3e
 ; VBITS_GE_512-NEXT:    index z1.b, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.b, w9
 ; VBITS_GE_512-NEXT:    ldrb w9, [x0], #1
 ; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w9
-; VBITS_GE_512-NEXT:    tbnz x8, #63, .LBB7_66
-; VBITS_GE_512-NEXT:    b .LBB7_67
+; VBITS_GE_512-NEXT:    tbz x8, #63, .LBB7_66
+; VBITS_GE_512-NEXT:  .LBB7_128: // %cond.load249
+; VBITS_GE_512-NEXT:    mov w8, #63 // =0x3f
+; VBITS_GE_512-NEXT:    index z1.b, #0, #1
+; VBITS_GE_512-NEXT:    mov z2.b, w8
+; VBITS_GE_512-NEXT:    ldrb w8, [x0]
+; VBITS_GE_512-NEXT:    cmpeq p2.b, p1/z, z1.b, z2.b
+; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w8
+; VBITS_GE_512-NEXT:    st1b { z0.b }, p0, [x2]
+; VBITS_GE_512-NEXT:    ret
 ;
 ; CHECK-EXPAND-LABEL: masked_load_v64i8:
 ; CHECK-EXPAND:       // %bb.0:
-; CHECK-EXPAND-NEXT:    sub sp, sp, #96
-; CHECK-EXPAND-NEXT:    stp x28, x27, [sp, #16] // 16-byte Folded Spill
-; CHECK-EXPAND-NEXT:    stp x26, x25, [sp, #32] // 16-byte Folded Spill
-; CHECK-EXPAND-NEXT:    stp x24, x23, [sp, #48] // 16-byte Folded Spill
-; CHECK-EXPAND-NEXT:    stp x22, x21, [sp, #64] // 16-byte Folded Spill
-; CHECK-EXPAND-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
-; CHECK-EXPAND-NEXT:    .cfi_def_cfa_offset 96
+; CHECK-EXPAND-NEXT:    stp x28, x27, [sp, #-80]! // 16-byte Folded Spill
+; CHECK-EXPAND-NEXT:    stp x26, x25, [sp, #16] // 16-byte Folded Spill
+; CHECK-EXPAND-NEXT:    stp x24, x23, [sp, #32] // 16-byte Folded Spill
+; CHECK-EXPAND-NEXT:    stp x22, x21, [sp, #48] // 16-byte Folded Spill
+; CHECK-EXPAND-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-EXPAND-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-EXPAND-NEXT:    .cfi_offset w19, -8
 ; CHECK-EXPAND-NEXT:    .cfi_offset w20, -16
 ; CHECK-EXPAND-NEXT:    .cfi_offset w21, -24
@@ -4253,15 +4217,14 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND-NEXT:    orr w8, w8, w9
 ; CHECK-EXPAND-NEXT:    fmov w9, s1
 ; CHECK-EXPAND-NEXT:    cmpeq p2.b, p0/z, z3.b, z0.b
-; CHECK-EXPAND-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
-; CHECK-EXPAND-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
+; CHECK-EXPAND-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-EXPAND-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
 ; CHECK-EXPAND-NEXT:    orr w8, w8, w9, lsl #31
-; CHECK-EXPAND-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
-; CHECK-EXPAND-NEXT:    ldp x26, x25, [sp, #32] // 16-byte Folded Reload
+; CHECK-EXPAND-NEXT:    ldp x24, x23, [sp, #32] // 16-byte Folded Reload
+; CHECK-EXPAND-NEXT:    ldp x26, x25, [sp, #16] // 16-byte Folded Reload
 ; CHECK-EXPAND-NEXT:    fmov s0, w8
 ; CHECK-EXPAND-NEXT:    cntp x9, p2, p2.b
 ; CHECK-EXPAND-NEXT:    cntp x8, p1, p1.b
-; CHECK-EXPAND-NEXT:    ldp x28, x27, [sp, #16] // 16-byte Folded Reload
 ; CHECK-EXPAND-NEXT:    cnt z0.s, p3/z, z0.s
 ; CHECK-EXPAND-NEXT:    fmov w10, s0
 ; CHECK-EXPAND-NEXT:    whilelo p3.b, xzr, x9
@@ -4272,7 +4235,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; CHECK-EXPAND-NEXT:    expand z1.b, p1, z1.b
 ; CHECK-EXPAND-NEXT:    st1b { z0.b }, p0, [x2, x11]
 ; CHECK-EXPAND-NEXT:    st1b { z1.b }, p0, [x2]
-; CHECK-EXPAND-NEXT:    add sp, sp, #96
+; CHECK-EXPAND-NEXT:    ldp x28, x27, [sp], #80 // 16-byte Folded Reload
 ; CHECK-EXPAND-NEXT:    ret
   %a = load <64 x i8>, ptr %ap
   %b = load <64 x i8>, ptr %bp
@@ -4285,8 +4248,6 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_v32i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_v32i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #16
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
@@ -4480,7 +4441,6 @@ define void @masked_load_v32i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x2]
 ; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x2, x8, lsl #1]
-; VBITS_GE_256-NEXT:    add sp, sp, #16
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB8_36: // %cond.load5
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
@@ -4715,14 +4675,13 @@ define void @masked_load_v32i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_v32i16:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #112
-; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x26, x25, [sp, #48] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x24, x23, [sp, #64] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x22, x21, [sp, #80] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 112
+; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #-96]! // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x28, x27, [sp, #16] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x26, x25, [sp, #32] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x24, x23, [sp, #48] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x22, x21, [sp, #64] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 96
 ; VBITS_GE_512-NEXT:    .cfi_offset w19, -8
 ; VBITS_GE_512-NEXT:    .cfi_offset w20, -16
 ; VBITS_GE_512-NEXT:    .cfi_offset w21, -24
@@ -4932,14 +4891,13 @@ define void @masked_load_v32i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.h, p1/z, z1.h, z2.h
 ; VBITS_GE_512-NEXT:    mov z0.h, p2/m, w8
 ; VBITS_GE_512-NEXT:  .LBB8_35: // %else122
-; VBITS_GE_512-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x2]
-; VBITS_GE_512-NEXT:    ldp x22, x21, [sp, #80] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x24, x23, [sp, #64] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x26, x25, [sp, #48] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x28, x27, [sp, #32] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    add sp, sp, #112
+; VBITS_GE_512-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x26, x25, [sp, #32] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x28, x27, [sp, #16] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x29, x30, [sp], #96 // 16-byte Folded Reload
 ; VBITS_GE_512-NEXT:    ret
 ; VBITS_GE_512-NEXT:  .LBB8_36: // %cond.load5
 ; VBITS_GE_512-NEXT:    mov w9, #2 // =0x2
@@ -6383,14 +6341,13 @@ define void @masked_load_passthru_v8f64(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_sext_v32i8i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_sext_v32i8i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #112
-; VBITS_GE_256-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
-; VBITS_GE_256-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
-; VBITS_GE_256-NEXT:    stp x26, x25, [sp, #48] // 16-byte Folded Spill
-; VBITS_GE_256-NEXT:    stp x24, x23, [sp, #64] // 16-byte Folded Spill
-; VBITS_GE_256-NEXT:    stp x22, x21, [sp, #80] // 16-byte Folded Spill
-; VBITS_GE_256-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 112
+; VBITS_GE_256-NEXT:    stp x29, x30, [sp, #-96]! // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    stp x28, x27, [sp, #16] // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    stp x26, x25, [sp, #32] // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    stp x24, x23, [sp, #48] // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    stp x22, x21, [sp, #64] // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 96
 ; VBITS_GE_256-NEXT:    .cfi_offset w19, -8
 ; VBITS_GE_256-NEXT:    .cfi_offset w20, -16
 ; VBITS_GE_256-NEXT:    .cfi_offset w21, -24
@@ -6602,17 +6559,16 @@ define void @masked_load_sext_v32i8i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    sunpklo z0.h, z0.b
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
-; VBITS_GE_256-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
 ; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
-; VBITS_GE_256-NEXT:    ldp x22, x21, [sp, #80] // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
 ; VBITS_GE_256-NEXT:    sunpklo z1.h, z1.b
-; VBITS_GE_256-NEXT:    ldp x24, x23, [sp, #64] // 16-byte Folded Reload
-; VBITS_GE_256-NEXT:    ldp x26, x25, [sp, #48] // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    ldp x26, x25, [sp, #32] // 16-byte Folded Reload
 ; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x2]
-; VBITS_GE_256-NEXT:    ldp x28, x27, [sp, #32] // 16-byte Folded Reload
-; VBITS_GE_256-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    ldp x28, x27, [sp, #16] // 16-byte Folded Reload
 ; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x2, x8, lsl #1]
-; VBITS_GE_256-NEXT:    add sp, sp, #112
+; VBITS_GE_256-NEXT:    ldp x29, x30, [sp], #96 // 16-byte Folded Reload
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB13_36: // %cond.load5
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
@@ -6850,14 +6806,13 @@ define void @masked_load_sext_v32i8i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_sext_v32i8i16:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #112
-; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x26, x25, [sp, #48] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x24, x23, [sp, #64] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x22, x21, [sp, #80] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 112
+; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #-96]! // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x28, x27, [sp, #16] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x26, x25, [sp, #32] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x24, x23, [sp, #48] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x22, x21, [sp, #64] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 96
 ; VBITS_GE_512-NEXT:    .cfi_offset w19, -8
 ; VBITS_GE_512-NEXT:    .cfi_offset w20, -16
 ; VBITS_GE_512-NEXT:    .cfi_offset w21, -24
@@ -7067,14 +7022,13 @@ define void @masked_load_sext_v32i8i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:  .LBB13_35: // %else122
 ; VBITS_GE_512-NEXT:    sunpklo z0.h, z0.b
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
-; VBITS_GE_512-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x22, x21, [sp, #80] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x24, x23, [sp, #64] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x26, x25, [sp, #48] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x26, x25, [sp, #32] // 16-byte Folded Reload
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x2]
-; VBITS_GE_512-NEXT:    ldp x28, x27, [sp, #32] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    add sp, sp, #112
+; VBITS_GE_512-NEXT:    ldp x28, x27, [sp, #16] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x29, x30, [sp], #96 // 16-byte Folded Reload
 ; VBITS_GE_512-NEXT:    ret
 ; VBITS_GE_512-NEXT:  .LBB13_36: // %cond.load5
 ; VBITS_GE_512-NEXT:    mov w9, #2 // =0x2
@@ -8483,14 +8437,13 @@ define void @masked_load_sext_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_zext_v32i8i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_zext_v32i8i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #112
-; VBITS_GE_256-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
-; VBITS_GE_256-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
-; VBITS_GE_256-NEXT:    stp x26, x25, [sp, #48] // 16-byte Folded Spill
-; VBITS_GE_256-NEXT:    stp x24, x23, [sp, #64] // 16-byte Folded Spill
-; VBITS_GE_256-NEXT:    stp x22, x21, [sp, #80] // 16-byte Folded Spill
-; VBITS_GE_256-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 112
+; VBITS_GE_256-NEXT:    stp x29, x30, [sp, #-96]! // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    stp x28, x27, [sp, #16] // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    stp x26, x25, [sp, #32] // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    stp x24, x23, [sp, #48] // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    stp x22, x21, [sp, #64] // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 96
 ; VBITS_GE_256-NEXT:    .cfi_offset w19, -8
 ; VBITS_GE_256-NEXT:    .cfi_offset w20, -16
 ; VBITS_GE_256-NEXT:    .cfi_offset w21, -24
@@ -8702,17 +8655,16 @@ define void @masked_load_zext_v32i8i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    uunpklo z0.h, z0.b
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
-; VBITS_GE_256-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
 ; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
-; VBITS_GE_256-NEXT:    ldp x22, x21, [sp, #80] // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
 ; VBITS_GE_256-NEXT:    uunpklo z1.h, z1.b
-; VBITS_GE_256-NEXT:    ldp x24, x23, [sp, #64] // 16-byte Folded Reload
-; VBITS_GE_256-NEXT:    ldp x26, x25, [sp, #48] // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    ldp x26, x25, [sp, #32] // 16-byte Folded Reload
 ; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x2]
-; VBITS_GE_256-NEXT:    ldp x28, x27, [sp, #32] // 16-byte Folded Reload
-; VBITS_GE_256-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    ldp x28, x27, [sp, #16] // 16-byte Folded Reload
 ; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x2, x8, lsl #1]
-; VBITS_GE_256-NEXT:    add sp, sp, #112
+; VBITS_GE_256-NEXT:    ldp x29, x30, [sp], #96 // 16-byte Folded Reload
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB19_36: // %cond.load5
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
@@ -8950,14 +8902,13 @@ define void @masked_load_zext_v32i8i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_zext_v32i8i16:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #112
-; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x26, x25, [sp, #48] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x24, x23, [sp, #64] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x22, x21, [sp, #80] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 112
+; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #-96]! // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x28, x27, [sp, #16] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x26, x25, [sp, #32] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x24, x23, [sp, #48] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x22, x21, [sp, #64] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 96
 ; VBITS_GE_512-NEXT:    .cfi_offset w19, -8
 ; VBITS_GE_512-NEXT:    .cfi_offset w20, -16
 ; VBITS_GE_512-NEXT:    .cfi_offset w21, -24
@@ -9167,14 +9118,13 @@ define void @masked_load_zext_v32i8i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:  .LBB19_35: // %else122
 ; VBITS_GE_512-NEXT:    uunpklo z0.h, z0.b
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
-; VBITS_GE_512-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x22, x21, [sp, #80] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x24, x23, [sp, #64] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x26, x25, [sp, #48] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x26, x25, [sp, #32] // 16-byte Folded Reload
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x2]
-; VBITS_GE_512-NEXT:    ldp x28, x27, [sp, #32] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    add sp, sp, #112
+; VBITS_GE_512-NEXT:    ldp x28, x27, [sp, #16] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x29, x30, [sp], #96 // 16-byte Folded Reload
 ; VBITS_GE_512-NEXT:    ret
 ; VBITS_GE_512-NEXT:  .LBB19_36: // %cond.load5
 ; VBITS_GE_512-NEXT:    mov w9, #2 // =0x2
@@ -10583,8 +10533,6 @@ define void @masked_load_zext_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_sext_v32i8i16_m16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_sext_v32i8i16_m16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #16
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x1]
@@ -10778,7 +10726,6 @@ define void @masked_load_sext_v32i8i16_m16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    sunpklo z1.h, z1.b
 ; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x2]
 ; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x2, x8, lsl #1]
-; VBITS_GE_256-NEXT:    add sp, sp, #16
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB25_36: // %cond.load5
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
@@ -11016,14 +10963,13 @@ define void @masked_load_sext_v32i8i16_m16(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_sext_v32i8i16_m16:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #112
-; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x26, x25, [sp, #48] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x24, x23, [sp, #64] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x22, x21, [sp, #80] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 112
+; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #-96]! // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x28, x27, [sp, #16] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x26, x25, [sp, #32] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x24, x23, [sp, #48] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x22, x21, [sp, #64] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 96
 ; VBITS_GE_512-NEXT:    .cfi_offset w19, -8
 ; VBITS_GE_512-NEXT:    .cfi_offset w20, -16
 ; VBITS_GE_512-NEXT:    .cfi_offset w21, -24
@@ -11234,14 +11180,13 @@ define void @masked_load_sext_v32i8i16_m16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w8
 ; VBITS_GE_512-NEXT:  .LBB25_35: // %else122
 ; VBITS_GE_512-NEXT:    sunpklo z0.h, z0.b
-; VBITS_GE_512-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x22, x21, [sp, #80] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x24, x23, [sp, #64] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x26, x25, [sp, #48] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x28, x27, [sp, #32] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x26, x25, [sp, #32] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x28, x27, [sp, #16] // 16-byte Folded Reload
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x2]
-; VBITS_GE_512-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    add sp, sp, #112
+; VBITS_GE_512-NEXT:    ldp x29, x30, [sp], #96 // 16-byte Folded Reload
 ; VBITS_GE_512-NEXT:    ret
 ; VBITS_GE_512-NEXT:  .LBB25_36: // %cond.load5
 ; VBITS_GE_512-NEXT:    mov w9, #2 // =0x2
@@ -12767,8 +12712,6 @@ define void @masked_load_sext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_zext_v32i8i16_m16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_zext_v32i8i16_m16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #16
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x1]
@@ -12962,7 +12905,6 @@ define void @masked_load_zext_v32i8i16_m16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    uunpklo z1.h, z1.b
 ; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x2]
 ; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x2, x8, lsl #1]
-; VBITS_GE_256-NEXT:    add sp, sp, #16
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB31_36: // %cond.load5
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
@@ -13200,14 +13142,13 @@ define void @masked_load_zext_v32i8i16_m16(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_zext_v32i8i16_m16:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #112
-; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x26, x25, [sp, #48] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x24, x23, [sp, #64] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x22, x21, [sp, #80] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 112
+; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #-96]! // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x28, x27, [sp, #16] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x26, x25, [sp, #32] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x24, x23, [sp, #48] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x22, x21, [sp, #64] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 96
 ; VBITS_GE_512-NEXT:    .cfi_offset w19, -8
 ; VBITS_GE_512-NEXT:    .cfi_offset w20, -16
 ; VBITS_GE_512-NEXT:    .cfi_offset w21, -24
@@ -13418,14 +13359,13 @@ define void @masked_load_zext_v32i8i16_m16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    mov z0.b, p2/m, w8
 ; VBITS_GE_512-NEXT:  .LBB31_35: // %else122
 ; VBITS_GE_512-NEXT:    uunpklo z0.h, z0.b
-; VBITS_GE_512-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x22, x21, [sp, #80] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x24, x23, [sp, #64] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x26, x25, [sp, #48] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x28, x27, [sp, #32] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x26, x25, [sp, #32] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp x28, x27, [sp, #16] // 16-byte Folded Reload
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x2]
-; VBITS_GE_512-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    add sp, sp, #112
+; VBITS_GE_512-NEXT:    ldp x29, x30, [sp], #96 // 16-byte Folded Reload
 ; VBITS_GE_512-NEXT:    ret
 ; VBITS_GE_512-NEXT:  .LBB31_36: // %cond.load5
 ; VBITS_GE_512-NEXT:    mov w9, #2 // =0x2
@@ -14952,1285 +14892,1271 @@ define void @masked_load_sext_v128i8i16(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-LABEL: masked_load_sext_v128i8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.b, vl128
+; CHECK-NEXT:    mov w12, #66 // =0x42
+; CHECK-NEXT:    mov w17, #70 // =0x46
 ; CHECK-NEXT:    ld1b { z0.b }, p1/z, [x1]
 ; CHECK-NEXT:    cmpeq p0.b, p1/z, z0.b, #0
 ; CHECK-NEXT:    mov z1.b, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    umov w9, v1.b[1]
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov z0.b, z1.b[18]
-; CHECK-NEXT:    umov w10, v1.b[7]
-; CHECK-NEXT:    umov w11, v1.b[8]
-; CHECK-NEXT:    mov z2.b, z1.b[19]
-; CHECK-NEXT:    umov w12, v1.b[2]
-; CHECK-NEXT:    umov w14, v1.b[9]
-; CHECK-NEXT:    umov w13, v1.b[3]
-; CHECK-NEXT:    and x8, x8, #0x1
-; CHECK-NEXT:    fmov w16, s0
-; CHECK-NEXT:    mov z0.b, z1.b[20]
-; CHECK-NEXT:    bfi x8, x9, #1, #1
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    umov w15, v1.b[10]
-; CHECK-NEXT:    ubfiz x10, x10, #7, #1
-; CHECK-NEXT:    ubfiz x11, x11, #8, #1
-; CHECK-NEXT:    mov z2.b, z1.b[21]
-; CHECK-NEXT:    bfi x8, x12, #2, #1
-; CHECK-NEXT:    fmov w12, s0
-; CHECK-NEXT:    ubfiz x16, x16, #18, #1
-; CHECK-NEXT:    ubfiz x9, x9, #19, #1
-; CHECK-NEXT:    ubfiz x14, x14, #9, #1
-; CHECK-NEXT:    orr x10, x10, x11
-; CHECK-NEXT:    umov w11, v1.b[11]
-; CHECK-NEXT:    mov z0.b, z1.b[22]
-; CHECK-NEXT:    ubfiz x15, x15, #10, #1
-; CHECK-NEXT:    ubfiz x12, x12, #20, #1
-; CHECK-NEXT:    orr x9, x16, x9
-; CHECK-NEXT:    orr x10, x10, x14
-; CHECK-NEXT:    fmov w14, s2
-; CHECK-NEXT:    bfi x8, x13, #3, #1
-; CHECK-NEXT:    orr x10, x10, x15
-; CHECK-NEXT:    orr x9, x9, x12
-; CHECK-NEXT:    umov w12, v1.b[12]
-; CHECK-NEXT:    fmov w13, s0
-; CHECK-NEXT:    ubfiz x11, x11, #11, #1
-; CHECK-NEXT:    umov w15, v1.b[13]
+; CHECK-NEXT:    umov w8, v1.b[1]
+; CHECK-NEXT:    fmov w10, s1
+; CHECK-NEXT:    umov w9, v1.b[2]
+; CHECK-NEXT:    umov w11, v1.b[3]
 ; CHECK-NEXT:    mov z0.b, z1.b[16]
-; CHECK-NEXT:    ubfiz x14, x14, #21, #1
 ; CHECK-NEXT:    mov z2.b, z1.b[17]
-; CHECK-NEXT:    umov w16, v1.b[4]
-; CHECK-NEXT:    ubfiz x13, x13, #22, #1
-; CHECK-NEXT:    orr x10, x10, x11
-; CHECK-NEXT:    umov w11, v1.b[14]
-; CHECK-NEXT:    orr x9, x9, x14
-; CHECK-NEXT:    ubfiz x12, x12, #12, #1
-; CHECK-NEXT:    umov w14, v1.b[5]
-; CHECK-NEXT:    orr x9, x9, x13
-; CHECK-NEXT:    umov w13, v1.b[15]
-; CHECK-NEXT:    ubfiz x15, x15, #13, #1
-; CHECK-NEXT:    orr x10, x10, x12
-; CHECK-NEXT:    fmov w12, s0
-; CHECK-NEXT:    mov z0.b, z1.b[23]
-; CHECK-NEXT:    ubfiz x11, x11, #14, #1
-; CHECK-NEXT:    orr x10, x10, x15
-; CHECK-NEXT:    fmov w15, s2
-; CHECK-NEXT:    mov z2.b, z1.b[24]
-; CHECK-NEXT:    bfi x8, x16, #4, #1
-; CHECK-NEXT:    umov w16, v1.b[6]
-; CHECK-NEXT:    ubfiz x13, x13, #15, #1
-; CHECK-NEXT:    orr x10, x10, x11
-; CHECK-NEXT:    fmov w11, s0
-; CHECK-NEXT:    mov z0.b, z1.b[25]
-; CHECK-NEXT:    ubfiz x12, x12, #16, #1
-; CHECK-NEXT:    bfi x8, x14, #5, #1
-; CHECK-NEXT:    orr x10, x10, x13
-; CHECK-NEXT:    fmov w13, s2
-; CHECK-NEXT:    mov z2.b, z1.b[26]
-; CHECK-NEXT:    ubfiz x11, x11, #23, #1
-; CHECK-NEXT:    orr x10, x10, x12
-; CHECK-NEXT:    ubfiz x14, x15, #17, #1
-; CHECK-NEXT:    fmov w12, s0
-; CHECK-NEXT:    mov z0.b, z1.b[27]
-; CHECK-NEXT:    bfi x8, x16, #6, #1
-; CHECK-NEXT:    ubfiz x13, x13, #24, #1
-; CHECK-NEXT:    orr x9, x9, x11
-; CHECK-NEXT:    fmov w11, s2
-; CHECK-NEXT:    mov z2.b, z1.b[28]
-; CHECK-NEXT:    orr x10, x10, x14
-; CHECK-NEXT:    orr x9, x9, x13
-; CHECK-NEXT:    ubfiz x12, x12, #25, #1
-; CHECK-NEXT:    fmov w13, s0
-; CHECK-NEXT:    mov z0.b, z1.b[29]
-; CHECK-NEXT:    ubfiz x11, x11, #26, #1
-; CHECK-NEXT:    orr x8, x8, x10
-; CHECK-NEXT:    orr x9, x9, x12
-; CHECK-NEXT:    fmov w12, s2
-; CHECK-NEXT:    mov z2.b, z1.b[30]
-; CHECK-NEXT:    orr x9, x9, x11
-; CHECK-NEXT:    ubfiz x11, x13, #27, #1
-; CHECK-NEXT:    fmov w13, s0
-; CHECK-NEXT:    mov z0.b, z1.b[31]
-; CHECK-NEXT:    orr x9, x9, x11
-; CHECK-NEXT:    ubfiz x12, x12, #28, #1
-; CHECK-NEXT:    ubfiz x11, x13, #29, #1
-; CHECK-NEXT:    fmov w13, s2
-; CHECK-NEXT:    orr x9, x9, x12
-; CHECK-NEXT:    mov z2.b, z1.b[32]
-; CHECK-NEXT:    fmov w10, s0
-; CHECK-NEXT:    mov z0.b, z1.b[33]
-; CHECK-NEXT:    orr x9, x9, x11
-; CHECK-NEXT:    ubfiz x12, x13, #30, #1
-; CHECK-NEXT:    lsl w10, w10, #31
-; CHECK-NEXT:    orr x9, x9, x12
-; CHECK-NEXT:    orr x8, x8, x9
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    and w8, w8, #0x1
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x10, x8, lsl #1
+; CHECK-NEXT:    umov w10, v1.b[4]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #2
+; CHECK-NEXT:    and w9, w11, #0x1
+; CHECK-NEXT:    umov w11, v1.b[5]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #3
+; CHECK-NEXT:    and w9, w10, #0x1
+; CHECK-NEXT:    umov w10, v1.b[6]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #4
+; CHECK-NEXT:    and w9, w11, #0x1
+; CHECK-NEXT:    umov w11, v1.b[7]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #5
+; CHECK-NEXT:    and w9, w10, #0x1
+; CHECK-NEXT:    umov w10, v1.b[8]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #6
+; CHECK-NEXT:    and w9, w11, #0x1
+; CHECK-NEXT:    umov w11, v1.b[9]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #7
+; CHECK-NEXT:    and w9, w10, #0x1
+; CHECK-NEXT:    umov w10, v1.b[10]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #8
+; CHECK-NEXT:    and w9, w11, #0x1
+; CHECK-NEXT:    umov w11, v1.b[11]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #9
+; CHECK-NEXT:    and w9, w10, #0x1
+; CHECK-NEXT:    umov w10, v1.b[12]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #10
+; CHECK-NEXT:    and w9, w11, #0x1
+; CHECK-NEXT:    umov w11, v1.b[13]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #11
+; CHECK-NEXT:    and w9, w10, #0x1
+; CHECK-NEXT:    umov w10, v1.b[14]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #12
+; CHECK-NEXT:    and w9, w11, #0x1
+; CHECK-NEXT:    umov w11, v1.b[15]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #13
+; CHECK-NEXT:    and w9, w10, #0x1
+; CHECK-NEXT:    mov w10, #65 // =0x41
+; CHECK-NEXT:    whilels p0.b, xzr, x10
+; CHECK-NEXT:    orr x8, x8, x9, lsl #14
+; CHECK-NEXT:    and w9, w11, #0x1
+; CHECK-NEXT:    mov w11, #64 // =0x40
+; CHECK-NEXT:    orr x8, x8, x9, lsl #15
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[18]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #16
 ; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[34]
-; CHECK-NEXT:    orr x8, x8, x10
+; CHECK-NEXT:    mov z2.b, z1.b[19]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #17
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[20]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #18
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[21]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #19
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[22]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #20
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[23]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #21
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[24]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #22
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[25]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #23
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[26]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #24
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[27]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #25
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[28]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #26
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[29]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #27
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[30]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #28
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[31]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #29
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[32]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #30
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[33]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #31
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[34]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #32
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[35]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[35]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #33
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[36]
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[36]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #34
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[37]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[37]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #35
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[38]
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[38]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #36
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[39]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[39]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #37
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[40]
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[40]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #38
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[41]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[41]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #39
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[42]
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[42]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #40
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[43]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[43]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #41
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[44]
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[44]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #42
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[45]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[45]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #43
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[46]
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[46]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #44
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[47]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[47]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #45
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[48]
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[48]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #46
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[49]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[49]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #47
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[50]
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[50]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #48
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[51]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[51]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #49
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[52]
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[52]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #50
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[53]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[53]
 ; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    fmov w10, s2
+; CHECK-NEXT:    mov z2.b, z1.b[55]
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #51
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[54]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #52
 ; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[55]
+; CHECK-NEXT:    mov z0.b, z1.b[54]
+; CHECK-NEXT:    and w10, w10, #0x1
 ; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #53
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[56]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #54
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[57]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #55
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[58]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #56
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[59]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #57
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[60]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #58
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[61]
-; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x9, x8, x9, lsl #52
+; CHECK-NEXT:    lastb w8, p0, z1.b
+; CHECK-NEXT:    orr x9, x9, x10, lsl #53
 ; CHECK-NEXT:    fmov w10, s0
+; CHECK-NEXT:    mov z0.b, z1.b[56]
+; CHECK-NEXT:    whilels p0.b, xzr, x11
+; CHECK-NEXT:    fmov w11, s2
+; CHECK-NEXT:    mov z2.b, z1.b[57]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    orr x10, x9, x10, lsl #54
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    lastb w9, p0, z1.b
+; CHECK-NEXT:    orr x10, x10, x11, lsl #55
+; CHECK-NEXT:    fmov w11, s0
+; CHECK-NEXT:    mov z0.b, z1.b[58]
+; CHECK-NEXT:    whilels p0.b, xzr, x12
+; CHECK-NEXT:    mov w12, #67 // =0x43
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x10, x10, x11, lsl #56
+; CHECK-NEXT:    fmov w11, s2
+; CHECK-NEXT:    mov z2.b, z1.b[59]
+; CHECK-NEXT:    lastb w13, p0, z1.b
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    whilels p0.b, xzr, x12
+; CHECK-NEXT:    mov w12, #68 // =0x44
+; CHECK-NEXT:    orr x10, x10, x11, lsl #57
+; CHECK-NEXT:    fmov w11, s0
+; CHECK-NEXT:    mov z0.b, z1.b[60]
+; CHECK-NEXT:    lastb w14, p0, z1.b
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    whilels p0.b, xzr, x12
+; CHECK-NEXT:    orr x10, x10, x11, lsl #58
+; CHECK-NEXT:    fmov w11, s2
+; CHECK-NEXT:    mov z2.b, z1.b[61]
+; CHECK-NEXT:    lastb w12, p0, z1.b
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    fmov w15, s2
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    orr x10, x10, x11, lsl #59
+; CHECK-NEXT:    fmov w11, s0
+; CHECK-NEXT:    mov z0.b, z1.b[62]
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x10, x10, x11, lsl #60
+; CHECK-NEXT:    and w11, w15, #0x1
+; CHECK-NEXT:    and w15, w8, #0x1
+; CHECK-NEXT:    orr x10, x10, x11, lsl #61
+; CHECK-NEXT:    fmov w11, s0
 ; CHECK-NEXT:    mov z0.b, z1.b[63]
-; CHECK-NEXT:    orr x8, x8, x9, lsl #59
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[62]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #60
-; CHECK-NEXT:    and w9, w10, #0x1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #61
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #62
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    orr x8, x8, x9, lsl #63
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    fmov w16, s0
+; CHECK-NEXT:    orr x10, x10, x11, lsl #62
+; CHECK-NEXT:    mov w11, #69 // =0x45
+; CHECK-NEXT:    whilels p2.b, xzr, x11
+; CHECK-NEXT:    and w11, w14, #0x1
+; CHECK-NEXT:    orr x8, x10, x16, lsl #63
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    mov w13, #71 // =0x47
 ; CHECK-NEXT:    tbz w8, #0, .LBB37_2
 ; CHECK-NEXT:  // %bb.1: // %cond.load
 ; CHECK-NEXT:    ld1rb { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    add x0, x0, #1
-; CHECK-NEXT:    tbnz w8, #1, .LBB37_3
-; CHECK-NEXT:    b .LBB37_4
+; CHECK-NEXT:    b .LBB37_3
 ; CHECK-NEXT:  .LBB37_2:
-; CHECK-NEXT:    adrp x9, .LCPI37_0
-; CHECK-NEXT:    add x9, x9, :lo12:.LCPI37_0
-; CHECK-NEXT:    ld1b { z0.b }, p1/z, [x9]
-; CHECK-NEXT:    tbz w8, #1, .LBB37_4
-; CHECK-NEXT:  .LBB37_3: // %cond.load1
-; CHECK-NEXT:    mov w9, #1 // =0x1
+; CHECK-NEXT:    adrp x14, .LCPI37_0
+; CHECK-NEXT:    add x14, x14, :lo12:.LCPI37_0
+; CHECK-NEXT:    ld1b { z0.b }, p1/z, [x14]
+; CHECK-NEXT:  .LBB37_3: // %else
+; CHECK-NEXT:    lastb w14, p2, z1.b
+; CHECK-NEXT:    orr x16, x9, x15, lsl #1
+; CHECK-NEXT:    and w9, w12, #0x1
+; CHECK-NEXT:    mov w12, #72 // =0x48
+; CHECK-NEXT:    whilels p1.b, xzr, x17
+; CHECK-NEXT:    tbz w8, #1, .LBB37_5
+; CHECK-NEXT:  // %bb.4: // %cond.load1
+; CHECK-NEXT:    mov w15, #1 // =0x1
 ; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:  .LBB37_4: // %else2
-; CHECK-NEXT:    tbnz w8, #2, .LBB37_181
-; CHECK-NEXT:  // %bb.5: // %else6
-; CHECK-NEXT:    tbnz w8, #3, .LBB37_182
-; CHECK-NEXT:  .LBB37_6: // %else10
-; CHECK-NEXT:    tbnz w8, #4, .LBB37_183
-; CHECK-NEXT:  .LBB37_7: // %else14
-; CHECK-NEXT:    tbnz w8, #5, .LBB37_184
-; CHECK-NEXT:  .LBB37_8: // %else18
-; CHECK-NEXT:    tbnz w8, #6, .LBB37_185
-; CHECK-NEXT:  .LBB37_9: // %else22
-; CHECK-NEXT:    tbnz w8, #7, .LBB37_186
-; CHECK-NEXT:  .LBB37_10: // %else26
-; CHECK-NEXT:    tbnz w8, #8, .LBB37_187
-; CHECK-NEXT:  .LBB37_11: // %else30
-; CHECK-NEXT:    tbnz w8, #9, .LBB37_188
-; CHECK-NEXT:  .LBB37_12: // %else34
-; CHECK-NEXT:    tbnz w8, #10, .LBB37_189
-; CHECK-NEXT:  .LBB37_13: // %else38
-; CHECK-NEXT:    tbnz w8, #11, .LBB37_190
-; CHECK-NEXT:  .LBB37_14: // %else42
-; CHECK-NEXT:    tbz w8, #12, .LBB37_16
-; CHECK-NEXT:  .LBB37_15: // %cond.load45
-; CHECK-NEXT:    mov w9, #12 // =0xc
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB37_5: // %else2
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x10, lsl #2
+; CHECK-NEXT:    and w10, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #73 // =0x49
+; CHECK-NEXT:    tbz w8, #2, .LBB37_7
+; CHECK-NEXT:  // %bb.6: // %cond.load5
+; CHECK-NEXT:    mov w14, #2 // =0x2
 ; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:  .LBB37_16: // %else46
-; CHECK-NEXT:    mov w12, #71 // =0x47
-; CHECK-NEXT:    mov w14, #72 // =0x48
-; CHECK-NEXT:    mov w9, #83 // =0x53
-; CHECK-NEXT:    mov w10, #84 // =0x54
-; CHECK-NEXT:    tbz w8, #13, .LBB37_18
-; CHECK-NEXT:  // %bb.17: // %cond.load49
-; CHECK-NEXT:    mov w11, #13 // =0xd
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_7: // %else6
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x11, lsl #3
+; CHECK-NEXT:    and w11, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #74 // =0x4a
+; CHECK-NEXT:    tbz w8, #3, .LBB37_9
+; CHECK-NEXT:  // %bb.8: // %cond.load9
+; CHECK-NEXT:    mov w15, #3 // =0x3
 ; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w11
-; CHECK-NEXT:    ldrb w11, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w11
-; CHECK-NEXT:  .LBB37_18: // %else50
-; CHECK-NEXT:    mov w11, #73 // =0x49
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB37_9: // %else10
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x9, lsl #4
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #75 // =0x4b
+; CHECK-NEXT:    tbz w8, #4, .LBB37_11
+; CHECK-NEXT:  // %bb.10: // %cond.load13
+; CHECK-NEXT:    mov w14, #4 // =0x4
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_11: // %else14
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x10, lsl #5
+; CHECK-NEXT:    and w10, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #76 // =0x4c
+; CHECK-NEXT:    tbz w8, #5, .LBB37_13
+; CHECK-NEXT:  // %bb.12: // %cond.load17
+; CHECK-NEXT:    mov w15, #5 // =0x5
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB37_13: // %else18
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x11, lsl #6
+; CHECK-NEXT:    and w11, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #77 // =0x4d
+; CHECK-NEXT:    tbz w8, #6, .LBB37_15
+; CHECK-NEXT:  // %bb.14: // %cond.load21
+; CHECK-NEXT:    mov w14, #6 // =0x6
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_15: // %else22
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x9, lsl #7
+; CHECK-NEXT:    and w9, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #78 // =0x4e
+; CHECK-NEXT:    tbz w8, #7, .LBB37_17
+; CHECK-NEXT:  // %bb.16: // %cond.load25
+; CHECK-NEXT:    mov w15, #7 // =0x7
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB37_17: // %else26
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x10, lsl #8
+; CHECK-NEXT:    and w10, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #79 // =0x4f
+; CHECK-NEXT:    tbz w8, #8, .LBB37_19
+; CHECK-NEXT:  // %bb.18: // %cond.load29
+; CHECK-NEXT:    mov w14, #8 // =0x8
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_19: // %else30
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x11, lsl #9
+; CHECK-NEXT:    and w11, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #80 // =0x50
+; CHECK-NEXT:    tbz w8, #9, .LBB37_21
+; CHECK-NEXT:  // %bb.20: // %cond.load33
+; CHECK-NEXT:    mov w15, #9 // =0x9
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB37_21: // %else34
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x9, lsl #10
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #81 // =0x51
+; CHECK-NEXT:    tbz w8, #10, .LBB37_23
+; CHECK-NEXT:  // %bb.22: // %cond.load37
+; CHECK-NEXT:    mov w14, #10 // =0xa
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_23: // %else38
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x10, lsl #11
+; CHECK-NEXT:    and w10, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #82 // =0x52
+; CHECK-NEXT:    tbz w8, #11, .LBB37_25
+; CHECK-NEXT:  // %bb.24: // %cond.load41
+; CHECK-NEXT:    mov w15, #11 // =0xb
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB37_25: // %else42
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x11, lsl #12
+; CHECK-NEXT:    and w11, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #83 // =0x53
+; CHECK-NEXT:    tbz w8, #12, .LBB37_27
+; CHECK-NEXT:  // %bb.26: // %cond.load45
+; CHECK-NEXT:    mov w14, #12 // =0xc
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_27: // %else46
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x9, lsl #13
+; CHECK-NEXT:    and w9, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #84 // =0x54
+; CHECK-NEXT:    tbz w8, #13, .LBB37_29
+; CHECK-NEXT:  // %bb.28: // %cond.load49
+; CHECK-NEXT:    mov w15, #13 // =0xd
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB37_29: // %else50
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x10, lsl #14
+; CHECK-NEXT:    and w10, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
 ; CHECK-NEXT:    mov w13, #85 // =0x55
-; CHECK-NEXT:    tbz w8, #14, .LBB37_20
-; CHECK-NEXT:  // %bb.19: // %cond.load53
-; CHECK-NEXT:    mov w15, #14 // =0xe
+; CHECK-NEXT:    tbz w8, #14, .LBB37_31
+; CHECK-NEXT:  // %bb.30: // %cond.load53
+; CHECK-NEXT:    mov w14, #14 // =0xe
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_31: // %else54
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x11, lsl #15
+; CHECK-NEXT:    and w11, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #86 // =0x56
+; CHECK-NEXT:    tbz w8, #15, .LBB37_33
+; CHECK-NEXT:  // %bb.32: // %cond.load57
+; CHECK-NEXT:    mov w15, #15 // =0xf
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB37_33: // %else58
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x9, lsl #16
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #87 // =0x57
+; CHECK-NEXT:    tbz w8, #16, .LBB37_35
+; CHECK-NEXT:  // %bb.34: // %cond.load61
+; CHECK-NEXT:    mov w14, #16 // =0x10
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_35: // %else62
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x10, lsl #17
+; CHECK-NEXT:    and w10, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #88 // =0x58
+; CHECK-NEXT:    tbz w8, #17, .LBB37_37
+; CHECK-NEXT:  // %bb.36: // %cond.load65
+; CHECK-NEXT:    mov w15, #17 // =0x11
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB37_37: // %else66
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x11, lsl #18
+; CHECK-NEXT:    and w11, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #89 // =0x59
+; CHECK-NEXT:    tbz w8, #18, .LBB37_39
+; CHECK-NEXT:  // %bb.38: // %cond.load69
+; CHECK-NEXT:    mov w14, #18 // =0x12
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_39: // %else70
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x9, lsl #19
+; CHECK-NEXT:    and w9, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #90 // =0x5a
+; CHECK-NEXT:    tbz w8, #19, .LBB37_41
+; CHECK-NEXT:  // %bb.40: // %cond.load73
+; CHECK-NEXT:    mov w15, #19 // =0x13
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB37_41: // %else74
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x10, lsl #20
+; CHECK-NEXT:    and w10, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #91 // =0x5b
+; CHECK-NEXT:    tbz w8, #20, .LBB37_43
+; CHECK-NEXT:  // %bb.42: // %cond.load77
+; CHECK-NEXT:    mov w14, #20 // =0x14
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_43: // %else78
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x11, lsl #21
+; CHECK-NEXT:    and w11, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #92 // =0x5c
+; CHECK-NEXT:    tbz w8, #21, .LBB37_45
+; CHECK-NEXT:  // %bb.44: // %cond.load81
+; CHECK-NEXT:    mov w15, #21 // =0x15
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB37_45: // %else82
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x9, lsl #22
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #93 // =0x5d
+; CHECK-NEXT:    tbz w8, #22, .LBB37_47
+; CHECK-NEXT:  // %bb.46: // %cond.load85
+; CHECK-NEXT:    mov w14, #22 // =0x16
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_47: // %else86
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x10, lsl #23
+; CHECK-NEXT:    and w10, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #94 // =0x5e
+; CHECK-NEXT:    tbz w8, #23, .LBB37_49
+; CHECK-NEXT:  // %bb.48: // %cond.load89
+; CHECK-NEXT:    mov w15, #23 // =0x17
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB37_49: // %else90
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x11, lsl #24
+; CHECK-NEXT:    and w11, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #95 // =0x5f
+; CHECK-NEXT:    tbz w8, #24, .LBB37_51
+; CHECK-NEXT:  // %bb.50: // %cond.load93
+; CHECK-NEXT:    mov w14, #24 // =0x18
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_51: // %else94
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x9, lsl #25
+; CHECK-NEXT:    and w9, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    tbz w8, #25, .LBB37_53
+; CHECK-NEXT:  // %bb.52: // %cond.load97
+; CHECK-NEXT:    mov w12, #25 // =0x19
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w12
+; CHECK-NEXT:    ldrb w12, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w12
+; CHECK-NEXT:  .LBB37_53: // %else98
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x10, x16, x10, lsl #26
+; CHECK-NEXT:    and w12, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #96 // =0x60
+; CHECK-NEXT:    tbz w8, #26, .LBB37_55
+; CHECK-NEXT:  // %bb.54: // %cond.load101
+; CHECK-NEXT:    mov w14, #26 // =0x1a
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_55: // %else102
+; CHECK-NEXT:    lastb w16, p1, z1.b
+; CHECK-NEXT:    orr x14, x10, x11, lsl #27
+; CHECK-NEXT:    and w10, w15, #0x1
+; CHECK-NEXT:    mov w11, #97 // =0x61
+; CHECK-NEXT:    tbz w8, #27, .LBB37_57
+; CHECK-NEXT:  // %bb.56: // %cond.load105
+; CHECK-NEXT:    mov w15, #27 // =0x1b
 ; CHECK-NEXT:    index z2.b, #0, #1
 ; CHECK-NEXT:    mov z3.b, w15
 ; CHECK-NEXT:    ldrb w15, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w15
-; CHECK-NEXT:  .LBB37_20: // %else54
-; CHECK-NEXT:    whilels p3.b, xzr, x12
-; CHECK-NEXT:    whilels p4.b, xzr, x14
-; CHECK-NEXT:    mov w14, #86 // =0x56
-; CHECK-NEXT:    whilels p1.b, xzr, x9
-; CHECK-NEXT:    mov w9, #74 // =0x4a
-; CHECK-NEXT:    whilels p2.b, xzr, x10
-; CHECK-NEXT:    tbz w8, #15, .LBB37_22
-; CHECK-NEXT:  // %bb.21: // %cond.load57
-; CHECK-NEXT:    mov w10, #15 // =0xf
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w10
-; CHECK-NEXT:    ldrb w10, [x0], #1
-; CHECK-NEXT:    cmpeq p5.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p5/m, w10
-; CHECK-NEXT:  .LBB37_22: // %else58
-; CHECK-NEXT:    lastb w10, p3, z1.b
-; CHECK-NEXT:    mov w1, #75 // =0x4b
-; CHECK-NEXT:    mov w17, #87 // =0x57
-; CHECK-NEXT:    lastb w12, p4, z1.b
-; CHECK-NEXT:    lastb w15, p1, z1.b
-; CHECK-NEXT:    lastb w16, p2, z1.b
-; CHECK-NEXT:    whilels p2.b, xzr, x11
+; CHECK-NEXT:  .LBB37_57: // %else106
+; CHECK-NEXT:    orr x14, x14, x9, lsl #28
 ; CHECK-NEXT:    whilels p1.b, xzr, x13
-; CHECK-NEXT:    tbz w8, #16, .LBB37_24
-; CHECK-NEXT:  // %bb.23: // %cond.load61
-; CHECK-NEXT:    mov w11, #16 // =0x10
+; CHECK-NEXT:    and w9, w16, #0x1
+; CHECK-NEXT:    mov w13, #98 // =0x62
+; CHECK-NEXT:    tbz w8, #28, .LBB37_59
+; CHECK-NEXT:  // %bb.58: // %cond.load109
+; CHECK-NEXT:    mov w15, #28 // =0x1c
 ; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w11
-; CHECK-NEXT:    ldrb w11, [x0], #1
-; CHECK-NEXT:    cmpeq p3.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p3/m, w11
-; CHECK-NEXT:  .LBB37_24: // %else62
-; CHECK-NEXT:    lastb w11, p2, z1.b
-; CHECK-NEXT:    mov w3, #76 // =0x4c
-; CHECK-NEXT:    mov w18, #88 // =0x58
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    whilels p2.b, xzr, x9
-; CHECK-NEXT:    whilels p1.b, xzr, x14
-; CHECK-NEXT:    tbz w8, #17, .LBB37_26
-; CHECK-NEXT:  // %bb.25: // %cond.load65
-; CHECK-NEXT:    mov w9, #17 // =0x11
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p3.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p3/m, w9
-; CHECK-NEXT:  .LBB37_26: // %else66
-; CHECK-NEXT:    lastb w9, p2, z1.b
-; CHECK-NEXT:    ubfiz x5, x10, #7, #1
-; CHECK-NEXT:    ubfiz x7, x12, #8, #1
-; CHECK-NEXT:    ubfiz x4, x15, #19, #1
-; CHECK-NEXT:    ubfiz x6, x16, #20, #1
-; CHECK-NEXT:    mov w15, #89 // =0x59
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    whilels p2.b, xzr, x1
-; CHECK-NEXT:    mov w1, #77 // =0x4d
-; CHECK-NEXT:    whilels p1.b, xzr, x17
-; CHECK-NEXT:    mov w17, #64 // =0x40
-; CHECK-NEXT:    tbz w8, #18, .LBB37_28
-; CHECK-NEXT:  // %bb.27: // %cond.load69
-; CHECK-NEXT:    mov w10, #18 // =0x12
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w10
-; CHECK-NEXT:    ldrb w10, [x0], #1
-; CHECK-NEXT:    cmpeq p3.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p3/m, w10
-; CHECK-NEXT:  .LBB37_28: // %else70
-; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    stp x24, x23, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w21, -24
-; CHECK-NEXT:    .cfi_offset w22, -32
-; CHECK-NEXT:    .cfi_offset w23, -40
-; CHECK-NEXT:    .cfi_offset w24, -48
-; CHECK-NEXT:    lastb w10, p2, z1.b
-; CHECK-NEXT:    orr x7, x5, x7
-; CHECK-NEXT:    ubfiz x5, x13, #21, #1
-; CHECK-NEXT:    mov w16, #65 // =0x41
-; CHECK-NEXT:    orr x19, x4, x6
-; CHECK-NEXT:    mov w4, #90 // =0x5a
-; CHECK-NEXT:    lastb w12, p1, z1.b
-; CHECK-NEXT:    whilels p2.b, xzr, x3
-; CHECK-NEXT:    ubfiz x3, x11, #9, #1
-; CHECK-NEXT:    whilels p1.b, xzr, x18
-; CHECK-NEXT:    mov w18, #78 // =0x4e
-; CHECK-NEXT:    tbz w8, #19, .LBB37_30
-; CHECK-NEXT:  // %bb.29: // %cond.load73
-; CHECK-NEXT:    mov w11, #19 // =0x13
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w11
-; CHECK-NEXT:    ldrb w11, [x0], #1
-; CHECK-NEXT:    cmpeq p3.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p3/m, w11
-; CHECK-NEXT:  .LBB37_30: // %else74
-; CHECK-NEXT:    lastb w11, p2, z1.b
-; CHECK-NEXT:    ubfiz x21, x9, #10, #1
-; CHECK-NEXT:    ubfiz x6, x14, #22, #1
-; CHECK-NEXT:    orr x7, x7, x3
-; CHECK-NEXT:    mov w3, #79 // =0x4f
-; CHECK-NEXT:    orr x20, x19, x5
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    mov w5, #91 // =0x5b
-; CHECK-NEXT:    whilels p3.b, xzr, x17
-; CHECK-NEXT:    mov w17, #66 // =0x42
-; CHECK-NEXT:    whilels p2.b, xzr, x1
-; CHECK-NEXT:    whilels p1.b, xzr, x15
-; CHECK-NEXT:    tbz w8, #20, .LBB37_32
-; CHECK-NEXT:  // %bb.31: // %cond.load77
-; CHECK-NEXT:    mov w9, #20 // =0x14
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p4.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p4/m, w9
-; CHECK-NEXT:  .LBB37_32: // %else78
-; CHECK-NEXT:    lastb w9, p3, z1.b
-; CHECK-NEXT:    orr x19, x7, x21
-; CHECK-NEXT:    ubfiz x21, x10, #11, #1
-; CHECK-NEXT:    ubfiz x7, x12, #23, #1
-; CHECK-NEXT:    mov w1, #67 // =0x43
-; CHECK-NEXT:    orr x22, x20, x6
-; CHECK-NEXT:    lastb w14, p2, z1.b
-; CHECK-NEXT:    mov w6, #92 // =0x5c
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB37_59: // %else110
 ; CHECK-NEXT:    lastb w15, p1, z1.b
-; CHECK-NEXT:    whilels p3.b, xzr, x16
-; CHECK-NEXT:    whilels p2.b, xzr, x18
-; CHECK-NEXT:    whilels p1.b, xzr, x4
-; CHECK-NEXT:    mov w4, #80 // =0x50
-; CHECK-NEXT:    tbz w8, #21, .LBB37_34
-; CHECK-NEXT:  // %bb.33: // %cond.load81
-; CHECK-NEXT:    mov w10, #21 // =0x15
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w10
-; CHECK-NEXT:    ldrb w10, [x0], #1
-; CHECK-NEXT:    cmpeq p4.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p4/m, w10
-; CHECK-NEXT:  .LBB37_34: // %else82
-; CHECK-NEXT:    lastb w10, p3, z1.b
-; CHECK-NEXT:    orr x20, x19, x21
-; CHECK-NEXT:    ubfiz x21, x11, #12, #1
-; CHECK-NEXT:    ubfiz x19, x13, #24, #1
-; CHECK-NEXT:    mov w18, #68 // =0x44
-; CHECK-NEXT:    orr x23, x22, x7
-; CHECK-NEXT:    lastb w12, p2, z1.b
-; CHECK-NEXT:    mov w7, #93 // =0x5d
-; CHECK-NEXT:    lastb w16, p1, z1.b
-; CHECK-NEXT:    whilels p3.b, xzr, x17
-; CHECK-NEXT:    whilels p2.b, xzr, x3
-; CHECK-NEXT:    whilels p1.b, xzr, x5
-; CHECK-NEXT:    mov w5, #81 // =0x51
-; CHECK-NEXT:    tbz w8, #22, .LBB37_36
-; CHECK-NEXT:  // %bb.35: // %cond.load85
-; CHECK-NEXT:    mov w11, #22 // =0x16
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w11
-; CHECK-NEXT:    ldrb w11, [x0], #1
-; CHECK-NEXT:    cmpeq p4.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p4/m, w11
-; CHECK-NEXT:  .LBB37_36: // %else86
-; CHECK-NEXT:    lastb w11, p3, z1.b
-; CHECK-NEXT:    orr x20, x20, x21
-; CHECK-NEXT:    ubfiz x21, x14, #13, #1
-; CHECK-NEXT:    ubfiz x22, x15, #25, #1
-; CHECK-NEXT:    and x9, x9, #0x1
-; CHECK-NEXT:    mov w3, #69 // =0x45
-; CHECK-NEXT:    lastb w13, p2, z1.b
-; CHECK-NEXT:    orr x24, x23, x19
-; CHECK-NEXT:    mov w19, #94 // =0x5e
-; CHECK-NEXT:    lastb w17, p1, z1.b
-; CHECK-NEXT:    whilels p3.b, xzr, x1
-; CHECK-NEXT:    whilels p2.b, xzr, x4
-; CHECK-NEXT:    mov w4, #82 // =0x52
-; CHECK-NEXT:    whilels p1.b, xzr, x6
-; CHECK-NEXT:    mov w6, #95 // =0x5f
-; CHECK-NEXT:    tbz w8, #23, .LBB37_38
-; CHECK-NEXT:  // %bb.37: // %cond.load89
-; CHECK-NEXT:    mov w14, #23 // =0x17
+; CHECK-NEXT:    orr x12, x14, x12, lsl #29
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #99 // =0x63
+; CHECK-NEXT:    tbz w8, #29, .LBB37_61
+; CHECK-NEXT:  // %bb.60: // %cond.load113
+; CHECK-NEXT:    mov w14, #29 // =0x1d
 ; CHECK-NEXT:    index z2.b, #0, #1
 ; CHECK-NEXT:    mov z3.b, w14
 ; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p4.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p4/m, w14
-; CHECK-NEXT:  .LBB37_38: // %else90
-; CHECK-NEXT:    lastb w14, p3, z1.b
-; CHECK-NEXT:    bfi x9, x10, #1, #1
-; CHECK-NEXT:    ubfiz x23, x16, #26, #1
-; CHECK-NEXT:    lastb w15, p2, z1.b
-; CHECK-NEXT:    lastb w1, p1, z1.b
-; CHECK-NEXT:    whilels p3.b, xzr, x18
-; CHECK-NEXT:    whilels p2.b, xzr, x5
-; CHECK-NEXT:    ubfiz x5, x12, #14, #1
-; CHECK-NEXT:    mov w12, #70 // =0x46
-; CHECK-NEXT:    whilels p1.b, xzr, x7
-; CHECK-NEXT:    orr x7, x20, x21
-; CHECK-NEXT:    orr x20, x24, x22
-; CHECK-NEXT:    tbz w8, #24, .LBB37_40
-; CHECK-NEXT:  // %bb.39: // %cond.load93
-; CHECK-NEXT:    mov w10, #24 // =0x18
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_61: // %else114
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x12, x10, lsl #30
+; CHECK-NEXT:    and w10, w15, #0x1
+; CHECK-NEXT:    mov w12, #100 // =0x64
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    tbz w8, #30, .LBB37_63
+; CHECK-NEXT:  // %bb.62: // %cond.load117
+; CHECK-NEXT:    mov w13, #30 // =0x1e
 ; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w10
-; CHECK-NEXT:    ldrb w10, [x0], #1
-; CHECK-NEXT:    cmpeq p4.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p4/m, w10
-; CHECK-NEXT:  .LBB37_40: // %else94
-; CHECK-NEXT:    lastb w10, p3, z1.b
-; CHECK-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    bfi x9, x11, #2, #1
-; CHECK-NEXT:    orr x5, x7, x5
-; CHECK-NEXT:    lastb w16, p2, z1.b
-; CHECK-NEXT:    lastb w18, p1, z1.b
-; CHECK-NEXT:    whilels p1.b, xzr, x19
-; CHECK-NEXT:    whilels p3.b, xzr, x6
-; CHECK-NEXT:    orr x6, x20, x23
-; CHECK-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    whilels p4.b, xzr, x3
-; CHECK-NEXT:    ldp x24, x23, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    whilels p2.b, xzr, x4
-; CHECK-NEXT:    ubfiz x3, x13, #15, #1
-; CHECK-NEXT:    ubfiz x4, x17, #27, #1
-; CHECK-NEXT:    add sp, sp, #64
-; CHECK-NEXT:    tbz w8, #25, .LBB37_42
-; CHECK-NEXT:  // %bb.41: // %cond.load97
-; CHECK-NEXT:    mov w11, #25 // =0x19
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB37_63: // %else118
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x16, x9, lsl #31
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #101 // =0x65
+; CHECK-NEXT:    tbz w8, #31, .LBB37_65
+; CHECK-NEXT:  // %bb.64: // %cond.load121
+; CHECK-NEXT:    mov w14, #31 // =0x1f
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_65: // %else122
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #32
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #102 // =0x66
+; CHECK-NEXT:    tbz x8, #32, .LBB37_67
+; CHECK-NEXT:  // %bb.66: // %cond.load125
+; CHECK-NEXT:    mov w13, #32 // =0x20
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB37_67: // %else126
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #33
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #103 // =0x67
+; CHECK-NEXT:    tbz x8, #33, .LBB37_69
+; CHECK-NEXT:  // %bb.68: // %cond.load129
+; CHECK-NEXT:    mov w14, #33 // =0x21
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_69: // %else130
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #34
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #104 // =0x68
+; CHECK-NEXT:    tbz x8, #34, .LBB37_71
+; CHECK-NEXT:  // %bb.70: // %cond.load133
+; CHECK-NEXT:    mov w13, #34 // =0x22
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB37_71: // %else134
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #35
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #105 // =0x69
+; CHECK-NEXT:    tbz x8, #35, .LBB37_73
+; CHECK-NEXT:  // %bb.72: // %cond.load137
+; CHECK-NEXT:    mov w14, #35 // =0x23
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_73: // %else138
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #36
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #106 // =0x6a
+; CHECK-NEXT:    tbz x8, #36, .LBB37_75
+; CHECK-NEXT:  // %bb.74: // %cond.load141
+; CHECK-NEXT:    mov w13, #36 // =0x24
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB37_75: // %else142
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #37
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #107 // =0x6b
+; CHECK-NEXT:    tbz x8, #37, .LBB37_77
+; CHECK-NEXT:  // %bb.76: // %cond.load145
+; CHECK-NEXT:    mov w14, #37 // =0x25
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_77: // %else146
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #38
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #108 // =0x6c
+; CHECK-NEXT:    tbz x8, #38, .LBB37_79
+; CHECK-NEXT:  // %bb.78: // %cond.load149
+; CHECK-NEXT:    mov w13, #38 // =0x26
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB37_79: // %else150
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #39
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #109 // =0x6d
+; CHECK-NEXT:    tbz x8, #39, .LBB37_81
+; CHECK-NEXT:  // %bb.80: // %cond.load153
+; CHECK-NEXT:    mov w14, #39 // =0x27
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_81: // %else154
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #40
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #110 // =0x6e
+; CHECK-NEXT:    tbz x8, #40, .LBB37_83
+; CHECK-NEXT:  // %bb.82: // %cond.load157
+; CHECK-NEXT:    mov w13, #40 // =0x28
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB37_83: // %else158
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #41
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #111 // =0x6f
+; CHECK-NEXT:    tbz x8, #41, .LBB37_85
+; CHECK-NEXT:  // %bb.84: // %cond.load161
+; CHECK-NEXT:    mov w14, #41 // =0x29
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_85: // %else162
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #42
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #112 // =0x70
+; CHECK-NEXT:    tbz x8, #42, .LBB37_87
+; CHECK-NEXT:  // %bb.86: // %cond.load165
+; CHECK-NEXT:    mov w13, #42 // =0x2a
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB37_87: // %else166
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #43
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #113 // =0x71
+; CHECK-NEXT:    tbz x8, #43, .LBB37_89
+; CHECK-NEXT:  // %bb.88: // %cond.load169
+; CHECK-NEXT:    mov w14, #43 // =0x2b
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_89: // %else170
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #44
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #114 // =0x72
+; CHECK-NEXT:    tbz x8, #44, .LBB37_91
+; CHECK-NEXT:  // %bb.90: // %cond.load173
+; CHECK-NEXT:    mov w13, #44 // =0x2c
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB37_91: // %else174
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #45
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #115 // =0x73
+; CHECK-NEXT:    tbz x8, #45, .LBB37_93
+; CHECK-NEXT:  // %bb.92: // %cond.load177
+; CHECK-NEXT:    mov w14, #45 // =0x2d
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_93: // %else178
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #46
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #116 // =0x74
+; CHECK-NEXT:    tbz x8, #46, .LBB37_95
+; CHECK-NEXT:  // %bb.94: // %cond.load181
+; CHECK-NEXT:    mov w13, #46 // =0x2e
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB37_95: // %else182
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #47
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #117 // =0x75
+; CHECK-NEXT:    tbz x8, #47, .LBB37_97
+; CHECK-NEXT:  // %bb.96: // %cond.load185
+; CHECK-NEXT:    mov w14, #47 // =0x2f
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_97: // %else186
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #48
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #118 // =0x76
+; CHECK-NEXT:    tbz x8, #48, .LBB37_99
+; CHECK-NEXT:  // %bb.98: // %cond.load189
+; CHECK-NEXT:    mov w13, #48 // =0x30
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB37_99: // %else190
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #49
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #119 // =0x77
+; CHECK-NEXT:    tbz x8, #49, .LBB37_101
+; CHECK-NEXT:  // %bb.100: // %cond.load193
+; CHECK-NEXT:    mov w14, #49 // =0x31
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_101: // %else194
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #50
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #120 // =0x78
+; CHECK-NEXT:    tbz x8, #50, .LBB37_103
+; CHECK-NEXT:  // %bb.102: // %cond.load197
+; CHECK-NEXT:    mov w13, #50 // =0x32
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB37_103: // %else198
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #51
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #121 // =0x79
+; CHECK-NEXT:    tbz x8, #51, .LBB37_105
+; CHECK-NEXT:  // %bb.104: // %cond.load201
+; CHECK-NEXT:    mov w14, #51 // =0x33
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_105: // %else202
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #52
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #122 // =0x7a
+; CHECK-NEXT:    tbz x8, #52, .LBB37_107
+; CHECK-NEXT:  // %bb.106: // %cond.load205
+; CHECK-NEXT:    mov w13, #52 // =0x34
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB37_107: // %else206
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #53
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #123 // =0x7b
+; CHECK-NEXT:    tbz x8, #53, .LBB37_109
+; CHECK-NEXT:  // %bb.108: // %cond.load209
+; CHECK-NEXT:    mov w14, #53 // =0x35
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_109: // %else210
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #54
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #124 // =0x7c
+; CHECK-NEXT:    tbz x8, #54, .LBB37_111
+; CHECK-NEXT:  // %bb.110: // %cond.load213
+; CHECK-NEXT:    mov w13, #54 // =0x36
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB37_111: // %else214
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #55
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #125 // =0x7d
+; CHECK-NEXT:    tbz x8, #55, .LBB37_113
+; CHECK-NEXT:  // %bb.112: // %cond.load217
+; CHECK-NEXT:    mov w14, #55 // =0x37
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB37_113: // %else218
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #56
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #126 // =0x7e
+; CHECK-NEXT:    tbz x8, #56, .LBB37_115
+; CHECK-NEXT:  // %bb.114: // %cond.load221
+; CHECK-NEXT:    mov w13, #56 // =0x38
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB37_115: // %else222
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #57
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    tbz x8, #57, .LBB37_117
+; CHECK-NEXT:  // %bb.116: // %cond.load225
+; CHECK-NEXT:    mov w11, #57 // =0x39
 ; CHECK-NEXT:    index z2.b, #0, #1
 ; CHECK-NEXT:    mov z3.b, w11
 ; CHECK-NEXT:    ldrb w11, [x0], #1
-; CHECK-NEXT:    cmpeq p5.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p5/m, w11
-; CHECK-NEXT:  .LBB37_42: // %else98
-; CHECK-NEXT:    lastb w11, p4, z1.b
-; CHECK-NEXT:    bfi x9, x14, #3, #1
-; CHECK-NEXT:    ubfiz x15, x15, #16, #1
-; CHECK-NEXT:    ubfiz x1, x1, #28, #1
-; CHECK-NEXT:    orr x3, x5, x3
-; CHECK-NEXT:    orr x4, x6, x4
-; CHECK-NEXT:    lastb w13, p2, z1.b
-; CHECK-NEXT:    mov w14, #96 // =0x60
-; CHECK-NEXT:    lastb w17, p1, z1.b
-; CHECK-NEXT:    lastb w7, p3, z1.b
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w11
+; CHECK-NEXT:  .LBB37_117: // %else226
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #58
+; CHECK-NEXT:    and w11, w13, #0x1
+; CHECK-NEXT:    mov w10, #127 // =0x7f
 ; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    tbz w8, #26, .LBB37_44
-; CHECK-NEXT:  // %bb.43: // %cond.load101
-; CHECK-NEXT:    mov w12, #26 // =0x1a
+; CHECK-NEXT:    tbz x8, #58, .LBB37_119
+; CHECK-NEXT:  // %bb.118: // %cond.load229
+; CHECK-NEXT:    mov w12, #58 // =0x3a
 ; CHECK-NEXT:    index z2.b, #0, #1
 ; CHECK-NEXT:    mov z3.b, w12
 ; CHECK-NEXT:    ldrb w12, [x0], #1
 ; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
 ; CHECK-NEXT:    mov z0.b, p2/m, w12
-; CHECK-NEXT:  .LBB37_44: // %else102
-; CHECK-NEXT:    lastb w12, p1, z1.b
-; CHECK-NEXT:    bfi x9, x10, #4, #1
-; CHECK-NEXT:    ubfiz x16, x16, #17, #1
-; CHECK-NEXT:    ubfiz x18, x18, #29, #1
-; CHECK-NEXT:    lsl w10, w7, #31
-; CHECK-NEXT:    orr x3, x3, x15
-; CHECK-NEXT:    orr x1, x4, x1
-; CHECK-NEXT:    mov w15, #97 // =0x61
-; CHECK-NEXT:    tbz w8, #27, .LBB37_46
-; CHECK-NEXT:  // %bb.45: // %cond.load105
-; CHECK-NEXT:    mov w4, #27 // =0x1b
+; CHECK-NEXT:  .LBB37_119: // %else230
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x12, x15, x9, lsl #59
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    tbz x8, #59, .LBB37_121
+; CHECK-NEXT:  // %bb.120: // %cond.load233
+; CHECK-NEXT:    mov w14, #59 // =0x3b
 ; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w4
-; CHECK-NEXT:    ldrb w4, [x0], #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w4
-; CHECK-NEXT:  .LBB37_46: // %else106
-; CHECK-NEXT:    bfi x9, x11, #5, #1
-; CHECK-NEXT:    ubfiz x13, x13, #18, #1
-; CHECK-NEXT:    ubfiz x17, x17, #30, #1
-; CHECK-NEXT:    whilels p1.b, xzr, x14
-; CHECK-NEXT:    orr x16, x3, x16
-; CHECK-NEXT:    orr x18, x1, x18
-; CHECK-NEXT:    mov w11, #98 // =0x62
-; CHECK-NEXT:    tbz w8, #28, .LBB37_48
-; CHECK-NEXT:  // %bb.47: // %cond.load109
-; CHECK-NEXT:    mov w14, #28 // =0x1c
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB37_48: // %else110
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    bfi x9, x12, #6, #1
-; CHECK-NEXT:    mov w12, #99 // =0x63
-; CHECK-NEXT:    whilels p1.b, xzr, x15
-; CHECK-NEXT:    orr x15, x16, x13
-; CHECK-NEXT:    orr x16, x18, x17
-; CHECK-NEXT:    tbz w8, #29, .LBB37_50
-; CHECK-NEXT:  // %bb.49: // %cond.load113
-; CHECK-NEXT:    mov w13, #29 // =0x1d
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB37_50: // %else114
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x9, x15
-; CHECK-NEXT:    orr x10, x16, x10
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #100 // =0x64
-; CHECK-NEXT:    tbz w8, #30, .LBB37_52
-; CHECK-NEXT:  // %bb.51: // %cond.load117
-; CHECK-NEXT:    mov w14, #30 // =0x1e
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB37_52: // %else118
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10
+; CHECK-NEXT:    mov z0.b, p1/m, w14
+; CHECK-NEXT:  .LBB37_121: // %else234
+; CHECK-NEXT:    orr x12, x12, x11, lsl #60
+; CHECK-NEXT:    whilels p1.b, xzr, x10
 ; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #101 // =0x65
-; CHECK-NEXT:    tbz w8, #31, .LBB37_54
-; CHECK-NEXT:  // %bb.53: // %cond.load121
-; CHECK-NEXT:    mov w13, #31 // =0x1f
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB37_54: // %else122
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #32
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #102 // =0x66
-; CHECK-NEXT:    tbz x8, #32, .LBB37_56
-; CHECK-NEXT:  // %bb.55: // %cond.load125
-; CHECK-NEXT:    mov w14, #32 // =0x20
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB37_56: // %else126
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #33
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #103 // =0x67
-; CHECK-NEXT:    tbz x8, #33, .LBB37_58
-; CHECK-NEXT:  // %bb.57: // %cond.load129
-; CHECK-NEXT:    mov w13, #33 // =0x21
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB37_58: // %else130
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #34
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #104 // =0x68
-; CHECK-NEXT:    tbz x8, #34, .LBB37_60
-; CHECK-NEXT:  // %bb.59: // %cond.load133
-; CHECK-NEXT:    mov w14, #34 // =0x22
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB37_60: // %else134
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #35
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #105 // =0x69
-; CHECK-NEXT:    tbz x8, #35, .LBB37_62
-; CHECK-NEXT:  // %bb.61: // %cond.load137
-; CHECK-NEXT:    mov w13, #35 // =0x23
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB37_62: // %else138
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #36
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #106 // =0x6a
-; CHECK-NEXT:    tbz x8, #36, .LBB37_64
-; CHECK-NEXT:  // %bb.63: // %cond.load141
-; CHECK-NEXT:    mov w14, #36 // =0x24
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB37_64: // %else142
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #37
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #107 // =0x6b
-; CHECK-NEXT:    tbz x8, #37, .LBB37_66
-; CHECK-NEXT:  // %bb.65: // %cond.load145
-; CHECK-NEXT:    mov w13, #37 // =0x25
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB37_66: // %else146
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #38
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #108 // =0x6c
-; CHECK-NEXT:    tbz x8, #38, .LBB37_68
-; CHECK-NEXT:  // %bb.67: // %cond.load149
-; CHECK-NEXT:    mov w14, #38 // =0x26
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB37_68: // %else150
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #39
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #109 // =0x6d
-; CHECK-NEXT:    tbz x8, #39, .LBB37_70
-; CHECK-NEXT:  // %bb.69: // %cond.load153
-; CHECK-NEXT:    mov w13, #39 // =0x27
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB37_70: // %else154
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #40
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #110 // =0x6e
-; CHECK-NEXT:    tbz x8, #40, .LBB37_72
-; CHECK-NEXT:  // %bb.71: // %cond.load157
-; CHECK-NEXT:    mov w14, #40 // =0x28
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB37_72: // %else158
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #41
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #111 // =0x6f
-; CHECK-NEXT:    tbz x8, #41, .LBB37_74
-; CHECK-NEXT:  // %bb.73: // %cond.load161
-; CHECK-NEXT:    mov w13, #41 // =0x29
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB37_74: // %else162
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #42
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #112 // =0x70
-; CHECK-NEXT:    tbz x8, #42, .LBB37_76
-; CHECK-NEXT:  // %bb.75: // %cond.load165
-; CHECK-NEXT:    mov w14, #42 // =0x2a
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB37_76: // %else166
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #43
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #113 // =0x71
-; CHECK-NEXT:    tbz x8, #43, .LBB37_78
-; CHECK-NEXT:  // %bb.77: // %cond.load169
-; CHECK-NEXT:    mov w13, #43 // =0x2b
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB37_78: // %else170
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #44
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #114 // =0x72
-; CHECK-NEXT:    tbz x8, #44, .LBB37_80
-; CHECK-NEXT:  // %bb.79: // %cond.load173
-; CHECK-NEXT:    mov w14, #44 // =0x2c
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB37_80: // %else174
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #45
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #115 // =0x73
-; CHECK-NEXT:    tbz x8, #45, .LBB37_82
-; CHECK-NEXT:  // %bb.81: // %cond.load177
-; CHECK-NEXT:    mov w13, #45 // =0x2d
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB37_82: // %else178
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #46
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #116 // =0x74
-; CHECK-NEXT:    tbz x8, #46, .LBB37_84
-; CHECK-NEXT:  // %bb.83: // %cond.load181
-; CHECK-NEXT:    mov w14, #46 // =0x2e
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB37_84: // %else182
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #47
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #117 // =0x75
-; CHECK-NEXT:    tbz x8, #47, .LBB37_86
-; CHECK-NEXT:  // %bb.85: // %cond.load185
-; CHECK-NEXT:    mov w13, #47 // =0x2f
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB37_86: // %else186
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #48
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #118 // =0x76
-; CHECK-NEXT:    tbz x8, #48, .LBB37_88
-; CHECK-NEXT:  // %bb.87: // %cond.load189
-; CHECK-NEXT:    mov w14, #48 // =0x30
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB37_88: // %else190
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #49
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #119 // =0x77
-; CHECK-NEXT:    tbz x8, #49, .LBB37_90
-; CHECK-NEXT:  // %bb.89: // %cond.load193
-; CHECK-NEXT:    mov w13, #49 // =0x31
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB37_90: // %else194
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #50
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #120 // =0x78
-; CHECK-NEXT:    tbz x8, #50, .LBB37_92
-; CHECK-NEXT:  // %bb.91: // %cond.load197
-; CHECK-NEXT:    mov w14, #50 // =0x32
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB37_92: // %else198
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #51
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #121 // =0x79
-; CHECK-NEXT:    tbz x8, #51, .LBB37_94
-; CHECK-NEXT:  // %bb.93: // %cond.load201
-; CHECK-NEXT:    mov w13, #51 // =0x33
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB37_94: // %else202
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #52
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #122 // =0x7a
-; CHECK-NEXT:    tbz x8, #52, .LBB37_96
-; CHECK-NEXT:  // %bb.95: // %cond.load205
-; CHECK-NEXT:    mov w14, #52 // =0x34
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB37_96: // %else206
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #53
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #123 // =0x7b
-; CHECK-NEXT:    tbz x8, #53, .LBB37_98
-; CHECK-NEXT:  // %bb.97: // %cond.load209
-; CHECK-NEXT:    mov w13, #53 // =0x35
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB37_98: // %else210
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #54
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #124 // =0x7c
-; CHECK-NEXT:    tbz x8, #54, .LBB37_100
-; CHECK-NEXT:  // %bb.99: // %cond.load213
-; CHECK-NEXT:    mov w14, #54 // =0x36
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB37_100: // %else214
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #55
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #125 // =0x7d
-; CHECK-NEXT:    tbz x8, #55, .LBB37_102
-; CHECK-NEXT:  // %bb.101: // %cond.load217
-; CHECK-NEXT:    mov w13, #55 // =0x37
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB37_102: // %else218
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #56
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #126 // =0x7e
-; CHECK-NEXT:    tbz x8, #56, .LBB37_104
-; CHECK-NEXT:  // %bb.103: // %cond.load221
-; CHECK-NEXT:    mov w14, #56 // =0x38
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB37_104: // %else222
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #57
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    tbz x8, #57, .LBB37_106
-; CHECK-NEXT:  // %bb.105: // %cond.load225
-; CHECK-NEXT:    mov w12, #57 // =0x39
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w12
-; CHECK-NEXT:    ldrb w12, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w12
-; CHECK-NEXT:  .LBB37_106: // %else226
-; CHECK-NEXT:    lastb w12, p1, z1.b
-; CHECK-NEXT:    orr x13, x15, x9, lsl #58
-; CHECK-NEXT:    mov w9, #127 // =0x7f
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    and w11, w14, #0x1
-; CHECK-NEXT:    tbz x8, #58, .LBB37_108
-; CHECK-NEXT:  // %bb.107: // %cond.load229
-; CHECK-NEXT:    mov w14, #58 // =0x3a
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB37_108: // %else230
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x13, x13, x10, lsl #59
-; CHECK-NEXT:    and w10, w12, #0x1
-; CHECK-NEXT:    tbz x8, #59, .LBB37_110
-; CHECK-NEXT:  // %bb.109: // %cond.load233
-; CHECK-NEXT:    mov w12, #59 // =0x3b
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w12
-; CHECK-NEXT:    ldrb w12, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w12
-; CHECK-NEXT:  .LBB37_110: // %else234
-; CHECK-NEXT:    orr x12, x13, x11, lsl #60
-; CHECK-NEXT:    whilels p1.b, xzr, x9
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    tbz x8, #60, .LBB37_112
-; CHECK-NEXT:  // %bb.111: // %cond.load237
+; CHECK-NEXT:    tbz x8, #60, .LBB37_123
+; CHECK-NEXT:  // %bb.122: // %cond.load237
 ; CHECK-NEXT:    mov w11, #60 // =0x3c
 ; CHECK-NEXT:    index z2.b, #0, #1
 ; CHECK-NEXT:    mov z3.b, w11
 ; CHECK-NEXT:    ldrb w11, [x0], #1
 ; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
 ; CHECK-NEXT:    mov z0.b, p2/m, w11
-; CHECK-NEXT:  .LBB37_112: // %else238
+; CHECK-NEXT:  .LBB37_123: // %else238
 ; CHECK-NEXT:    lastb w11, p1, z1.b
-; CHECK-NEXT:    orr x10, x12, x10, lsl #61
-; CHECK-NEXT:    tbnz x8, #61, .LBB37_191
-; CHECK-NEXT:  // %bb.113: // %else242
-; CHECK-NEXT:    orr x9, x10, x9, lsl #62
-; CHECK-NEXT:    tbnz x8, #62, .LBB37_192
-; CHECK-NEXT:  .LBB37_114: // %else246
+; CHECK-NEXT:    orr x9, x12, x9, lsl #61
+; CHECK-NEXT:    tbnz x8, #61, .LBB37_192
+; CHECK-NEXT:  // %bb.124: // %else242
+; CHECK-NEXT:    orr x9, x9, x10, lsl #62
+; CHECK-NEXT:    tbnz x8, #62, .LBB37_193
+; CHECK-NEXT:  .LBB37_125: // %else246
 ; CHECK-NEXT:    orr x9, x9, x11, lsl #63
-; CHECK-NEXT:    tbnz x8, #63, .LBB37_193
-; CHECK-NEXT:  .LBB37_115: // %else250
-; CHECK-NEXT:    tbnz w9, #0, .LBB37_194
-; CHECK-NEXT:  .LBB37_116: // %else254
-; CHECK-NEXT:    tbnz w9, #1, .LBB37_195
-; CHECK-NEXT:  .LBB37_117: // %else258
-; CHECK-NEXT:    tbnz w9, #2, .LBB37_196
-; CHECK-NEXT:  .LBB37_118: // %else262
-; CHECK-NEXT:    tbnz w9, #3, .LBB37_197
-; CHECK-NEXT:  .LBB37_119: // %else266
-; CHECK-NEXT:    tbnz w9, #4, .LBB37_198
-; CHECK-NEXT:  .LBB37_120: // %else270
-; CHECK-NEXT:    tbnz w9, #5, .LBB37_199
-; CHECK-NEXT:  .LBB37_121: // %else274
-; CHECK-NEXT:    tbnz w9, #6, .LBB37_200
-; CHECK-NEXT:  .LBB37_122: // %else278
-; CHECK-NEXT:    tbnz w9, #7, .LBB37_201
-; CHECK-NEXT:  .LBB37_123: // %else282
-; CHECK-NEXT:    tbnz w9, #8, .LBB37_202
-; CHECK-NEXT:  .LBB37_124: // %else286
-; CHECK-NEXT:    tbnz w9, #9, .LBB37_203
-; CHECK-NEXT:  .LBB37_125: // %else290
-; CHECK-NEXT:    tbnz w9, #10, .LBB37_204
-; CHECK-NEXT:  .LBB37_126: // %else294
-; CHECK-NEXT:    tbnz w9, #11, .LBB37_205
-; CHECK-NEXT:  .LBB37_127: // %else298
-; CHECK-NEXT:    tbnz w9, #12, .LBB37_206
-; CHECK-NEXT:  .LBB37_128: // %else302
-; CHECK-NEXT:    tbnz w9, #13, .LBB37_207
-; CHECK-NEXT:  .LBB37_129: // %else306
-; CHECK-NEXT:    tbnz w9, #14, .LBB37_208
-; CHECK-NEXT:  .LBB37_130: // %else310
-; CHECK-NEXT:    tbnz w9, #15, .LBB37_209
-; CHECK-NEXT:  .LBB37_131: // %else314
-; CHECK-NEXT:    tbnz w9, #16, .LBB37_210
-; CHECK-NEXT:  .LBB37_132: // %else318
-; CHECK-NEXT:    tbnz w9, #17, .LBB37_211
-; CHECK-NEXT:  .LBB37_133: // %else322
-; CHECK-NEXT:    tbnz w9, #18, .LBB37_212
-; CHECK-NEXT:  .LBB37_134: // %else326
-; CHECK-NEXT:    tbnz w9, #19, .LBB37_213
-; CHECK-NEXT:  .LBB37_135: // %else330
-; CHECK-NEXT:    tbnz w9, #20, .LBB37_214
-; CHECK-NEXT:  .LBB37_136: // %else334
-; CHECK-NEXT:    tbnz w9, #21, .LBB37_215
-; CHECK-NEXT:  .LBB37_137: // %else338
-; CHECK-NEXT:    tbnz w9, #22, .LBB37_216
-; CHECK-NEXT:  .LBB37_138: // %else342
-; CHECK-NEXT:    tbnz w9, #23, .LBB37_217
-; CHECK-NEXT:  .LBB37_139: // %else346
-; CHECK-NEXT:    tbnz w9, #24, .LBB37_218
-; CHECK-NEXT:  .LBB37_140: // %else350
-; CHECK-NEXT:    tbnz w9, #25, .LBB37_219
-; CHECK-NEXT:  .LBB37_141: // %else354
-; CHECK-NEXT:    tbnz w9, #26, .LBB37_220
-; CHECK-NEXT:  .LBB37_142: // %else358
-; CHECK-NEXT:    tbnz w9, #27, .LBB37_221
-; CHECK-NEXT:  .LBB37_143: // %else362
-; CHECK-NEXT:    tbnz w9, #28, .LBB37_222
-; CHECK-NEXT:  .LBB37_144: // %else366
-; CHECK-NEXT:    tbnz w9, #29, .LBB37_223
-; CHECK-NEXT:  .LBB37_145: // %else370
-; CHECK-NEXT:    tbnz w9, #30, .LBB37_224
-; CHECK-NEXT:  .LBB37_146: // %else374
-; CHECK-NEXT:    tbnz w9, #31, .LBB37_225
-; CHECK-NEXT:  .LBB37_147: // %else378
-; CHECK-NEXT:    tbnz x9, #32, .LBB37_226
-; CHECK-NEXT:  .LBB37_148: // %else382
-; CHECK-NEXT:    tbnz x9, #33, .LBB37_227
-; CHECK-NEXT:  .LBB37_149: // %else386
-; CHECK-NEXT:    tbnz x9, #34, .LBB37_228
-; CHECK-NEXT:  .LBB37_150: // %else390
-; CHECK-NEXT:    tbnz x9, #35, .LBB37_229
-; CHECK-NEXT:  .LBB37_151: // %else394
-; CHECK-NEXT:    tbnz x9, #36, .LBB37_230
-; CHECK-NEXT:  .LBB37_152: // %else398
-; CHECK-NEXT:    tbnz x9, #37, .LBB37_231
-; CHECK-NEXT:  .LBB37_153: // %else402
-; CHECK-NEXT:    tbnz x9, #38, .LBB37_232
-; CHECK-NEXT:  .LBB37_154: // %else406
-; CHECK-NEXT:    tbnz x9, #39, .LBB37_233
-; CHECK-NEXT:  .LBB37_155: // %else410
-; CHECK-NEXT:    tbnz x9, #40, .LBB37_234
-; CHECK-NEXT:  .LBB37_156: // %else414
-; CHECK-NEXT:    tbnz x9, #41, .LBB37_235
-; CHECK-NEXT:  .LBB37_157: // %else418
-; CHECK-NEXT:    tbnz x9, #42, .LBB37_236
-; CHECK-NEXT:  .LBB37_158: // %else422
-; CHECK-NEXT:    tbnz x9, #43, .LBB37_237
-; CHECK-NEXT:  .LBB37_159: // %else426
-; CHECK-NEXT:    tbnz x9, #44, .LBB37_238
-; CHECK-NEXT:  .LBB37_160: // %else430
-; CHECK-NEXT:    tbnz x9, #45, .LBB37_239
-; CHECK-NEXT:  .LBB37_161: // %else434
-; CHECK-NEXT:    tbnz x9, #46, .LBB37_240
-; CHECK-NEXT:  .LBB37_162: // %else438
-; CHECK-NEXT:    tbnz x9, #47, .LBB37_241
-; CHECK-NEXT:  .LBB37_163: // %else442
-; CHECK-NEXT:    tbnz x9, #48, .LBB37_242
-; CHECK-NEXT:  .LBB37_164: // %else446
-; CHECK-NEXT:    tbnz x9, #49, .LBB37_243
-; CHECK-NEXT:  .LBB37_165: // %else450
-; CHECK-NEXT:    tbnz x9, #50, .LBB37_244
-; CHECK-NEXT:  .LBB37_166: // %else454
-; CHECK-NEXT:    tbnz x9, #51, .LBB37_245
-; CHECK-NEXT:  .LBB37_167: // %else458
-; CHECK-NEXT:    tbnz x9, #52, .LBB37_246
-; CHECK-NEXT:  .LBB37_168: // %else462
-; CHECK-NEXT:    tbnz x9, #53, .LBB37_247
-; CHECK-NEXT:  .LBB37_169: // %else466
-; CHECK-NEXT:    tbnz x9, #54, .LBB37_248
-; CHECK-NEXT:  .LBB37_170: // %else470
-; CHECK-NEXT:    tbnz x9, #55, .LBB37_249
-; CHECK-NEXT:  .LBB37_171: // %else474
-; CHECK-NEXT:    tbnz x9, #56, .LBB37_250
-; CHECK-NEXT:  .LBB37_172: // %else478
-; CHECK-NEXT:    tbnz x9, #57, .LBB37_251
-; CHECK-NEXT:  .LBB37_173: // %else482
-; CHECK-NEXT:    tbnz x9, #58, .LBB37_252
-; CHECK-NEXT:  .LBB37_174: // %else486
-; CHECK-NEXT:    tbnz x9, #59, .LBB37_253
-; CHECK-NEXT:  .LBB37_175: // %else490
-; CHECK-NEXT:    tbnz x9, #60, .LBB37_254
-; CHECK-NEXT:  .LBB37_176: // %else494
-; CHECK-NEXT:    tbnz x9, #61, .LBB37_255
-; CHECK-NEXT:  .LBB37_177: // %else498
-; CHECK-NEXT:    tbnz x9, #62, .LBB37_256
-; CHECK-NEXT:  .LBB37_178: // %else502
-; CHECK-NEXT:    tbz x9, #63, .LBB37_180
-; CHECK-NEXT:  .LBB37_179: // %cond.load505
+; CHECK-NEXT:    tbnz x8, #63, .LBB37_194
+; CHECK-NEXT:  .LBB37_126: // %else250
+; CHECK-NEXT:    tbnz w9, #0, .LBB37_195
+; CHECK-NEXT:  .LBB37_127: // %else254
+; CHECK-NEXT:    tbnz w9, #1, .LBB37_196
+; CHECK-NEXT:  .LBB37_128: // %else258
+; CHECK-NEXT:    tbnz w9, #2, .LBB37_197
+; CHECK-NEXT:  .LBB37_129: // %else262
+; CHECK-NEXT:    tbnz w9, #3, .LBB37_198
+; CHECK-NEXT:  .LBB37_130: // %else266
+; CHECK-NEXT:    tbnz w9, #4, .LBB37_199
+; CHECK-NEXT:  .LBB37_131: // %else270
+; CHECK-NEXT:    tbnz w9, #5, .LBB37_200
+; CHECK-NEXT:  .LBB37_132: // %else274
+; CHECK-NEXT:    tbnz w9, #6, .LBB37_201
+; CHECK-NEXT:  .LBB37_133: // %else278
+; CHECK-NEXT:    tbnz w9, #7, .LBB37_202
+; CHECK-NEXT:  .LBB37_134: // %else282
+; CHECK-NEXT:    tbnz w9, #8, .LBB37_203
+; CHECK-NEXT:  .LBB37_135: // %else286
+; CHECK-NEXT:    tbnz w9, #9, .LBB37_204
+; CHECK-NEXT:  .LBB37_136: // %else290
+; CHECK-NEXT:    tbnz w9, #10, .LBB37_205
+; CHECK-NEXT:  .LBB37_137: // %else294
+; CHECK-NEXT:    tbnz w9, #11, .LBB37_206
+; CHECK-NEXT:  .LBB37_138: // %else298
+; CHECK-NEXT:    tbnz w9, #12, .LBB37_207
+; CHECK-NEXT:  .LBB37_139: // %else302
+; CHECK-NEXT:    tbnz w9, #13, .LBB37_208
+; CHECK-NEXT:  .LBB37_140: // %else306
+; CHECK-NEXT:    tbnz w9, #14, .LBB37_209
+; CHECK-NEXT:  .LBB37_141: // %else310
+; CHECK-NEXT:    tbnz w9, #15, .LBB37_210
+; CHECK-NEXT:  .LBB37_142: // %else314
+; CHECK-NEXT:    tbnz w9, #16, .LBB37_211
+; CHECK-NEXT:  .LBB37_143: // %else318
+; CHECK-NEXT:    tbnz w9, #17, .LBB37_212
+; CHECK-NEXT:  .LBB37_144: // %else322
+; CHECK-NEXT:    tbnz w9, #18, .LBB37_213
+; CHECK-NEXT:  .LBB37_145: // %else326
+; CHECK-NEXT:    tbnz w9, #19, .LBB37_214
+; CHECK-NEXT:  .LBB37_146: // %else330
+; CHECK-NEXT:    tbnz w9, #20, .LBB37_215
+; CHECK-NEXT:  .LBB37_147: // %else334
+; CHECK-NEXT:    tbnz w9, #21, .LBB37_216
+; CHECK-NEXT:  .LBB37_148: // %else338
+; CHECK-NEXT:    tbnz w9, #22, .LBB37_217
+; CHECK-NEXT:  .LBB37_149: // %else342
+; CHECK-NEXT:    tbnz w9, #23, .LBB37_218
+; CHECK-NEXT:  .LBB37_150: // %else346
+; CHECK-NEXT:    tbnz w9, #24, .LBB37_219
+; CHECK-NEXT:  .LBB37_151: // %else350
+; CHECK-NEXT:    tbnz w9, #25, .LBB37_220
+; CHECK-NEXT:  .LBB37_152: // %else354
+; CHECK-NEXT:    tbnz w9, #26, .LBB37_221
+; CHECK-NEXT:  .LBB37_153: // %else358
+; CHECK-NEXT:    tbnz w9, #27, .LBB37_222
+; CHECK-NEXT:  .LBB37_154: // %else362
+; CHECK-NEXT:    tbnz w9, #28, .LBB37_223
+; CHECK-NEXT:  .LBB37_155: // %else366
+; CHECK-NEXT:    tbnz w9, #29, .LBB37_224
+; CHECK-NEXT:  .LBB37_156: // %else370
+; CHECK-NEXT:    tbnz w9, #30, .LBB37_225
+; CHECK-NEXT:  .LBB37_157: // %else374
+; CHECK-NEXT:    tbnz w9, #31, .LBB37_226
+; CHECK-NEXT:  .LBB37_158: // %else378
+; CHECK-NEXT:    tbnz x9, #32, .LBB37_227
+; CHECK-NEXT:  .LBB37_159: // %else382
+; CHECK-NEXT:    tbnz x9, #33, .LBB37_228
+; CHECK-NEXT:  .LBB37_160: // %else386
+; CHECK-NEXT:    tbnz x9, #34, .LBB37_229
+; CHECK-NEXT:  .LBB37_161: // %else390
+; CHECK-NEXT:    tbnz x9, #35, .LBB37_230
+; CHECK-NEXT:  .LBB37_162: // %else394
+; CHECK-NEXT:    tbnz x9, #36, .LBB37_231
+; CHECK-NEXT:  .LBB37_163: // %else398
+; CHECK-NEXT:    tbnz x9, #37, .LBB37_232
+; CHECK-NEXT:  .LBB37_164: // %else402
+; CHECK-NEXT:    tbnz x9, #38, .LBB37_233
+; CHECK-NEXT:  .LBB37_165: // %else406
+; CHECK-NEXT:    tbnz x9, #39, .LBB37_234
+; CHECK-NEXT:  .LBB37_166: // %else410
+; CHECK-NEXT:    tbnz x9, #40, .LBB37_235
+; CHECK-NEXT:  .LBB37_167: // %else414
+; CHECK-NEXT:    tbnz x9, #41, .LBB37_236
+; CHECK-NEXT:  .LBB37_168: // %else418
+; CHECK-NEXT:    tbnz x9, #42, .LBB37_237
+; CHECK-NEXT:  .LBB37_169: // %else422
+; CHECK-NEXT:    tbnz x9, #43, .LBB37_238
+; CHECK-NEXT:  .LBB37_170: // %else426
+; CHECK-NEXT:    tbnz x9, #44, .LBB37_239
+; CHECK-NEXT:  .LBB37_171: // %else430
+; CHECK-NEXT:    tbnz x9, #45, .LBB37_240
+; CHECK-NEXT:  .LBB37_172: // %else434
+; CHECK-NEXT:    tbnz x9, #46, .LBB37_241
+; CHECK-NEXT:  .LBB37_173: // %else438
+; CHECK-NEXT:    tbnz x9, #47, .LBB37_242
+; CHECK-NEXT:  .LBB37_174: // %else442
+; CHECK-NEXT:    tbnz x9, #48, .LBB37_243
+; CHECK-NEXT:  .LBB37_175: // %else446
+; CHECK-NEXT:    tbnz x9, #49, .LBB37_244
+; CHECK-NEXT:  .LBB37_176: // %else450
+; CHECK-NEXT:    tbnz x9, #50, .LBB37_245
+; CHECK-NEXT:  .LBB37_177: // %else454
+; CHECK-NEXT:    tbnz x9, #51, .LBB37_246
+; CHECK-NEXT:  .LBB37_178: // %else458
+; CHECK-NEXT:    tbnz x9, #52, .LBB37_247
+; CHECK-NEXT:  .LBB37_179: // %else462
+; CHECK-NEXT:    tbnz x9, #53, .LBB37_248
+; CHECK-NEXT:  .LBB37_180: // %else466
+; CHECK-NEXT:    tbnz x9, #54, .LBB37_249
+; CHECK-NEXT:  .LBB37_181: // %else470
+; CHECK-NEXT:    tbnz x9, #55, .LBB37_250
+; CHECK-NEXT:  .LBB37_182: // %else474
+; CHECK-NEXT:    tbnz x9, #56, .LBB37_251
+; CHECK-NEXT:  .LBB37_183: // %else478
+; CHECK-NEXT:    tbnz x9, #57, .LBB37_252
+; CHECK-NEXT:  .LBB37_184: // %else482
+; CHECK-NEXT:    tbnz x9, #58, .LBB37_253
+; CHECK-NEXT:  .LBB37_185: // %else486
+; CHECK-NEXT:    tbnz x9, #59, .LBB37_254
+; CHECK-NEXT:  .LBB37_186: // %else490
+; CHECK-NEXT:    tbnz x9, #60, .LBB37_255
+; CHECK-NEXT:  .LBB37_187: // %else494
+; CHECK-NEXT:    tbnz x9, #61, .LBB37_256
+; CHECK-NEXT:  .LBB37_188: // %else498
+; CHECK-NEXT:    tbnz x9, #62, .LBB37_257
+; CHECK-NEXT:  .LBB37_189: // %else502
+; CHECK-NEXT:    tbz x9, #63, .LBB37_191
+; CHECK-NEXT:  .LBB37_190: // %cond.load505
 ; CHECK-NEXT:    mov w8, #127 // =0x7f
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0]
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:  .LBB37_180: // %else506
+; CHECK-NEXT:  .LBB37_191: // %else506
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    ptrue p0.h, vl128
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB37_181: // %cond.load5
-; CHECK-NEXT:    mov w9, #2 // =0x2
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:    tbz w8, #3, .LBB37_6
-; CHECK-NEXT:  .LBB37_182: // %cond.load9
-; CHECK-NEXT:    mov w9, #3 // =0x3
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:    tbz w8, #4, .LBB37_7
-; CHECK-NEXT:  .LBB37_183: // %cond.load13
-; CHECK-NEXT:    mov w9, #4 // =0x4
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:    tbz w8, #5, .LBB37_8
-; CHECK-NEXT:  .LBB37_184: // %cond.load17
-; CHECK-NEXT:    mov w9, #5 // =0x5
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:    tbz w8, #6, .LBB37_9
-; CHECK-NEXT:  .LBB37_185: // %cond.load21
-; CHECK-NEXT:    mov w9, #6 // =0x6
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:    tbz w8, #7, .LBB37_10
-; CHECK-NEXT:  .LBB37_186: // %cond.load25
-; CHECK-NEXT:    mov w9, #7 // =0x7
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:    tbz w8, #8, .LBB37_11
-; CHECK-NEXT:  .LBB37_187: // %cond.load29
-; CHECK-NEXT:    mov w9, #8 // =0x8
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:    tbz w8, #9, .LBB37_12
-; CHECK-NEXT:  .LBB37_188: // %cond.load33
-; CHECK-NEXT:    mov w9, #9 // =0x9
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:    tbz w8, #10, .LBB37_13
-; CHECK-NEXT:  .LBB37_189: // %cond.load37
-; CHECK-NEXT:    mov w9, #10 // =0xa
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:    tbz w8, #11, .LBB37_14
-; CHECK-NEXT:  .LBB37_190: // %cond.load41
-; CHECK-NEXT:    mov w9, #11 // =0xb
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:    tbnz w8, #12, .LBB37_15
-; CHECK-NEXT:    b .LBB37_16
-; CHECK-NEXT:  .LBB37_191: // %cond.load241
+; CHECK-NEXT:  .LBB37_192: // %cond.load241
 ; CHECK-NEXT:    mov w12, #61 // =0x3d
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w12
 ; CHECK-NEXT:    ldrb w12, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w12
-; CHECK-NEXT:    orr x9, x10, x9, lsl #62
-; CHECK-NEXT:    tbz x8, #62, .LBB37_114
-; CHECK-NEXT:  .LBB37_192: // %cond.load245
+; CHECK-NEXT:    orr x9, x9, x10, lsl #62
+; CHECK-NEXT:    tbz x8, #62, .LBB37_125
+; CHECK-NEXT:  .LBB37_193: // %cond.load245
 ; CHECK-NEXT:    mov w10, #62 // =0x3e
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w10
@@ -16238,520 +16164,520 @@ define void @masked_load_sext_v128i8i16(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w10
 ; CHECK-NEXT:    orr x9, x9, x11, lsl #63
-; CHECK-NEXT:    tbz x8, #63, .LBB37_115
-; CHECK-NEXT:  .LBB37_193: // %cond.load249
+; CHECK-NEXT:    tbz x8, #63, .LBB37_126
+; CHECK-NEXT:  .LBB37_194: // %cond.load249
 ; CHECK-NEXT:    mov w8, #63 // =0x3f
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #0, .LBB37_116
-; CHECK-NEXT:  .LBB37_194: // %cond.load253
+; CHECK-NEXT:    tbz w9, #0, .LBB37_127
+; CHECK-NEXT:  .LBB37_195: // %cond.load253
 ; CHECK-NEXT:    mov w8, #64 // =0x40
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #1, .LBB37_117
-; CHECK-NEXT:  .LBB37_195: // %cond.load257
+; CHECK-NEXT:    tbz w9, #1, .LBB37_128
+; CHECK-NEXT:  .LBB37_196: // %cond.load257
 ; CHECK-NEXT:    mov w8, #65 // =0x41
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #2, .LBB37_118
-; CHECK-NEXT:  .LBB37_196: // %cond.load261
+; CHECK-NEXT:    tbz w9, #2, .LBB37_129
+; CHECK-NEXT:  .LBB37_197: // %cond.load261
 ; CHECK-NEXT:    mov w8, #66 // =0x42
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #3, .LBB37_119
-; CHECK-NEXT:  .LBB37_197: // %cond.load265
+; CHECK-NEXT:    tbz w9, #3, .LBB37_130
+; CHECK-NEXT:  .LBB37_198: // %cond.load265
 ; CHECK-NEXT:    mov w8, #67 // =0x43
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #4, .LBB37_120
-; CHECK-NEXT:  .LBB37_198: // %cond.load269
+; CHECK-NEXT:    tbz w9, #4, .LBB37_131
+; CHECK-NEXT:  .LBB37_199: // %cond.load269
 ; CHECK-NEXT:    mov w8, #68 // =0x44
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #5, .LBB37_121
-; CHECK-NEXT:  .LBB37_199: // %cond.load273
+; CHECK-NEXT:    tbz w9, #5, .LBB37_132
+; CHECK-NEXT:  .LBB37_200: // %cond.load273
 ; CHECK-NEXT:    mov w8, #69 // =0x45
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #6, .LBB37_122
-; CHECK-NEXT:  .LBB37_200: // %cond.load277
+; CHECK-NEXT:    tbz w9, #6, .LBB37_133
+; CHECK-NEXT:  .LBB37_201: // %cond.load277
 ; CHECK-NEXT:    mov w8, #70 // =0x46
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #7, .LBB37_123
-; CHECK-NEXT:  .LBB37_201: // %cond.load281
+; CHECK-NEXT:    tbz w9, #7, .LBB37_134
+; CHECK-NEXT:  .LBB37_202: // %cond.load281
 ; CHECK-NEXT:    mov w8, #71 // =0x47
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #8, .LBB37_124
-; CHECK-NEXT:  .LBB37_202: // %cond.load285
+; CHECK-NEXT:    tbz w9, #8, .LBB37_135
+; CHECK-NEXT:  .LBB37_203: // %cond.load285
 ; CHECK-NEXT:    mov w8, #72 // =0x48
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #9, .LBB37_125
-; CHECK-NEXT:  .LBB37_203: // %cond.load289
+; CHECK-NEXT:    tbz w9, #9, .LBB37_136
+; CHECK-NEXT:  .LBB37_204: // %cond.load289
 ; CHECK-NEXT:    mov w8, #73 // =0x49
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #10, .LBB37_126
-; CHECK-NEXT:  .LBB37_204: // %cond.load293
+; CHECK-NEXT:    tbz w9, #10, .LBB37_137
+; CHECK-NEXT:  .LBB37_205: // %cond.load293
 ; CHECK-NEXT:    mov w8, #74 // =0x4a
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #11, .LBB37_127
-; CHECK-NEXT:  .LBB37_205: // %cond.load297
+; CHECK-NEXT:    tbz w9, #11, .LBB37_138
+; CHECK-NEXT:  .LBB37_206: // %cond.load297
 ; CHECK-NEXT:    mov w8, #75 // =0x4b
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #12, .LBB37_128
-; CHECK-NEXT:  .LBB37_206: // %cond.load301
+; CHECK-NEXT:    tbz w9, #12, .LBB37_139
+; CHECK-NEXT:  .LBB37_207: // %cond.load301
 ; CHECK-NEXT:    mov w8, #76 // =0x4c
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #13, .LBB37_129
-; CHECK-NEXT:  .LBB37_207: // %cond.load305
+; CHECK-NEXT:    tbz w9, #13, .LBB37_140
+; CHECK-NEXT:  .LBB37_208: // %cond.load305
 ; CHECK-NEXT:    mov w8, #77 // =0x4d
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #14, .LBB37_130
-; CHECK-NEXT:  .LBB37_208: // %cond.load309
+; CHECK-NEXT:    tbz w9, #14, .LBB37_141
+; CHECK-NEXT:  .LBB37_209: // %cond.load309
 ; CHECK-NEXT:    mov w8, #78 // =0x4e
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #15, .LBB37_131
-; CHECK-NEXT:  .LBB37_209: // %cond.load313
+; CHECK-NEXT:    tbz w9, #15, .LBB37_142
+; CHECK-NEXT:  .LBB37_210: // %cond.load313
 ; CHECK-NEXT:    mov w8, #79 // =0x4f
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #16, .LBB37_132
-; CHECK-NEXT:  .LBB37_210: // %cond.load317
+; CHECK-NEXT:    tbz w9, #16, .LBB37_143
+; CHECK-NEXT:  .LBB37_211: // %cond.load317
 ; CHECK-NEXT:    mov w8, #80 // =0x50
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #17, .LBB37_133
-; CHECK-NEXT:  .LBB37_211: // %cond.load321
+; CHECK-NEXT:    tbz w9, #17, .LBB37_144
+; CHECK-NEXT:  .LBB37_212: // %cond.load321
 ; CHECK-NEXT:    mov w8, #81 // =0x51
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #18, .LBB37_134
-; CHECK-NEXT:  .LBB37_212: // %cond.load325
+; CHECK-NEXT:    tbz w9, #18, .LBB37_145
+; CHECK-NEXT:  .LBB37_213: // %cond.load325
 ; CHECK-NEXT:    mov w8, #82 // =0x52
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #19, .LBB37_135
-; CHECK-NEXT:  .LBB37_213: // %cond.load329
+; CHECK-NEXT:    tbz w9, #19, .LBB37_146
+; CHECK-NEXT:  .LBB37_214: // %cond.load329
 ; CHECK-NEXT:    mov w8, #83 // =0x53
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #20, .LBB37_136
-; CHECK-NEXT:  .LBB37_214: // %cond.load333
+; CHECK-NEXT:    tbz w9, #20, .LBB37_147
+; CHECK-NEXT:  .LBB37_215: // %cond.load333
 ; CHECK-NEXT:    mov w8, #84 // =0x54
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #21, .LBB37_137
-; CHECK-NEXT:  .LBB37_215: // %cond.load337
+; CHECK-NEXT:    tbz w9, #21, .LBB37_148
+; CHECK-NEXT:  .LBB37_216: // %cond.load337
 ; CHECK-NEXT:    mov w8, #85 // =0x55
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #22, .LBB37_138
-; CHECK-NEXT:  .LBB37_216: // %cond.load341
+; CHECK-NEXT:    tbz w9, #22, .LBB37_149
+; CHECK-NEXT:  .LBB37_217: // %cond.load341
 ; CHECK-NEXT:    mov w8, #86 // =0x56
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #23, .LBB37_139
-; CHECK-NEXT:  .LBB37_217: // %cond.load345
+; CHECK-NEXT:    tbz w9, #23, .LBB37_150
+; CHECK-NEXT:  .LBB37_218: // %cond.load345
 ; CHECK-NEXT:    mov w8, #87 // =0x57
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #24, .LBB37_140
-; CHECK-NEXT:  .LBB37_218: // %cond.load349
+; CHECK-NEXT:    tbz w9, #24, .LBB37_151
+; CHECK-NEXT:  .LBB37_219: // %cond.load349
 ; CHECK-NEXT:    mov w8, #88 // =0x58
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #25, .LBB37_141
-; CHECK-NEXT:  .LBB37_219: // %cond.load353
+; CHECK-NEXT:    tbz w9, #25, .LBB37_152
+; CHECK-NEXT:  .LBB37_220: // %cond.load353
 ; CHECK-NEXT:    mov w8, #89 // =0x59
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #26, .LBB37_142
-; CHECK-NEXT:  .LBB37_220: // %cond.load357
+; CHECK-NEXT:    tbz w9, #26, .LBB37_153
+; CHECK-NEXT:  .LBB37_221: // %cond.load357
 ; CHECK-NEXT:    mov w8, #90 // =0x5a
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #27, .LBB37_143
-; CHECK-NEXT:  .LBB37_221: // %cond.load361
+; CHECK-NEXT:    tbz w9, #27, .LBB37_154
+; CHECK-NEXT:  .LBB37_222: // %cond.load361
 ; CHECK-NEXT:    mov w8, #91 // =0x5b
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #28, .LBB37_144
-; CHECK-NEXT:  .LBB37_222: // %cond.load365
+; CHECK-NEXT:    tbz w9, #28, .LBB37_155
+; CHECK-NEXT:  .LBB37_223: // %cond.load365
 ; CHECK-NEXT:    mov w8, #92 // =0x5c
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #29, .LBB37_145
-; CHECK-NEXT:  .LBB37_223: // %cond.load369
+; CHECK-NEXT:    tbz w9, #29, .LBB37_156
+; CHECK-NEXT:  .LBB37_224: // %cond.load369
 ; CHECK-NEXT:    mov w8, #93 // =0x5d
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #30, .LBB37_146
-; CHECK-NEXT:  .LBB37_224: // %cond.load373
+; CHECK-NEXT:    tbz w9, #30, .LBB37_157
+; CHECK-NEXT:  .LBB37_225: // %cond.load373
 ; CHECK-NEXT:    mov w8, #94 // =0x5e
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #31, .LBB37_147
-; CHECK-NEXT:  .LBB37_225: // %cond.load377
+; CHECK-NEXT:    tbz w9, #31, .LBB37_158
+; CHECK-NEXT:  .LBB37_226: // %cond.load377
 ; CHECK-NEXT:    mov w8, #95 // =0x5f
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #32, .LBB37_148
-; CHECK-NEXT:  .LBB37_226: // %cond.load381
+; CHECK-NEXT:    tbz x9, #32, .LBB37_159
+; CHECK-NEXT:  .LBB37_227: // %cond.load381
 ; CHECK-NEXT:    mov w8, #96 // =0x60
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #33, .LBB37_149
-; CHECK-NEXT:  .LBB37_227: // %cond.load385
+; CHECK-NEXT:    tbz x9, #33, .LBB37_160
+; CHECK-NEXT:  .LBB37_228: // %cond.load385
 ; CHECK-NEXT:    mov w8, #97 // =0x61
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #34, .LBB37_150
-; CHECK-NEXT:  .LBB37_228: // %cond.load389
+; CHECK-NEXT:    tbz x9, #34, .LBB37_161
+; CHECK-NEXT:  .LBB37_229: // %cond.load389
 ; CHECK-NEXT:    mov w8, #98 // =0x62
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #35, .LBB37_151
-; CHECK-NEXT:  .LBB37_229: // %cond.load393
+; CHECK-NEXT:    tbz x9, #35, .LBB37_162
+; CHECK-NEXT:  .LBB37_230: // %cond.load393
 ; CHECK-NEXT:    mov w8, #99 // =0x63
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #36, .LBB37_152
-; CHECK-NEXT:  .LBB37_230: // %cond.load397
+; CHECK-NEXT:    tbz x9, #36, .LBB37_163
+; CHECK-NEXT:  .LBB37_231: // %cond.load397
 ; CHECK-NEXT:    mov w8, #100 // =0x64
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #37, .LBB37_153
-; CHECK-NEXT:  .LBB37_231: // %cond.load401
+; CHECK-NEXT:    tbz x9, #37, .LBB37_164
+; CHECK-NEXT:  .LBB37_232: // %cond.load401
 ; CHECK-NEXT:    mov w8, #101 // =0x65
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #38, .LBB37_154
-; CHECK-NEXT:  .LBB37_232: // %cond.load405
+; CHECK-NEXT:    tbz x9, #38, .LBB37_165
+; CHECK-NEXT:  .LBB37_233: // %cond.load405
 ; CHECK-NEXT:    mov w8, #102 // =0x66
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #39, .LBB37_155
-; CHECK-NEXT:  .LBB37_233: // %cond.load409
+; CHECK-NEXT:    tbz x9, #39, .LBB37_166
+; CHECK-NEXT:  .LBB37_234: // %cond.load409
 ; CHECK-NEXT:    mov w8, #103 // =0x67
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #40, .LBB37_156
-; CHECK-NEXT:  .LBB37_234: // %cond.load413
+; CHECK-NEXT:    tbz x9, #40, .LBB37_167
+; CHECK-NEXT:  .LBB37_235: // %cond.load413
 ; CHECK-NEXT:    mov w8, #104 // =0x68
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #41, .LBB37_157
-; CHECK-NEXT:  .LBB37_235: // %cond.load417
+; CHECK-NEXT:    tbz x9, #41, .LBB37_168
+; CHECK-NEXT:  .LBB37_236: // %cond.load417
 ; CHECK-NEXT:    mov w8, #105 // =0x69
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #42, .LBB37_158
-; CHECK-NEXT:  .LBB37_236: // %cond.load421
+; CHECK-NEXT:    tbz x9, #42, .LBB37_169
+; CHECK-NEXT:  .LBB37_237: // %cond.load421
 ; CHECK-NEXT:    mov w8, #106 // =0x6a
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #43, .LBB37_159
-; CHECK-NEXT:  .LBB37_237: // %cond.load425
+; CHECK-NEXT:    tbz x9, #43, .LBB37_170
+; CHECK-NEXT:  .LBB37_238: // %cond.load425
 ; CHECK-NEXT:    mov w8, #107 // =0x6b
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #44, .LBB37_160
-; CHECK-NEXT:  .LBB37_238: // %cond.load429
+; CHECK-NEXT:    tbz x9, #44, .LBB37_171
+; CHECK-NEXT:  .LBB37_239: // %cond.load429
 ; CHECK-NEXT:    mov w8, #108 // =0x6c
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #45, .LBB37_161
-; CHECK-NEXT:  .LBB37_239: // %cond.load433
+; CHECK-NEXT:    tbz x9, #45, .LBB37_172
+; CHECK-NEXT:  .LBB37_240: // %cond.load433
 ; CHECK-NEXT:    mov w8, #109 // =0x6d
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #46, .LBB37_162
-; CHECK-NEXT:  .LBB37_240: // %cond.load437
+; CHECK-NEXT:    tbz x9, #46, .LBB37_173
+; CHECK-NEXT:  .LBB37_241: // %cond.load437
 ; CHECK-NEXT:    mov w8, #110 // =0x6e
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #47, .LBB37_163
-; CHECK-NEXT:  .LBB37_241: // %cond.load441
+; CHECK-NEXT:    tbz x9, #47, .LBB37_174
+; CHECK-NEXT:  .LBB37_242: // %cond.load441
 ; CHECK-NEXT:    mov w8, #111 // =0x6f
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #48, .LBB37_164
-; CHECK-NEXT:  .LBB37_242: // %cond.load445
+; CHECK-NEXT:    tbz x9, #48, .LBB37_175
+; CHECK-NEXT:  .LBB37_243: // %cond.load445
 ; CHECK-NEXT:    mov w8, #112 // =0x70
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #49, .LBB37_165
-; CHECK-NEXT:  .LBB37_243: // %cond.load449
+; CHECK-NEXT:    tbz x9, #49, .LBB37_176
+; CHECK-NEXT:  .LBB37_244: // %cond.load449
 ; CHECK-NEXT:    mov w8, #113 // =0x71
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #50, .LBB37_166
-; CHECK-NEXT:  .LBB37_244: // %cond.load453
+; CHECK-NEXT:    tbz x9, #50, .LBB37_177
+; CHECK-NEXT:  .LBB37_245: // %cond.load453
 ; CHECK-NEXT:    mov w8, #114 // =0x72
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #51, .LBB37_167
-; CHECK-NEXT:  .LBB37_245: // %cond.load457
+; CHECK-NEXT:    tbz x9, #51, .LBB37_178
+; CHECK-NEXT:  .LBB37_246: // %cond.load457
 ; CHECK-NEXT:    mov w8, #115 // =0x73
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #52, .LBB37_168
-; CHECK-NEXT:  .LBB37_246: // %cond.load461
+; CHECK-NEXT:    tbz x9, #52, .LBB37_179
+; CHECK-NEXT:  .LBB37_247: // %cond.load461
 ; CHECK-NEXT:    mov w8, #116 // =0x74
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #53, .LBB37_169
-; CHECK-NEXT:  .LBB37_247: // %cond.load465
+; CHECK-NEXT:    tbz x9, #53, .LBB37_180
+; CHECK-NEXT:  .LBB37_248: // %cond.load465
 ; CHECK-NEXT:    mov w8, #117 // =0x75
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #54, .LBB37_170
-; CHECK-NEXT:  .LBB37_248: // %cond.load469
+; CHECK-NEXT:    tbz x9, #54, .LBB37_181
+; CHECK-NEXT:  .LBB37_249: // %cond.load469
 ; CHECK-NEXT:    mov w8, #118 // =0x76
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #55, .LBB37_171
-; CHECK-NEXT:  .LBB37_249: // %cond.load473
+; CHECK-NEXT:    tbz x9, #55, .LBB37_182
+; CHECK-NEXT:  .LBB37_250: // %cond.load473
 ; CHECK-NEXT:    mov w8, #119 // =0x77
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #56, .LBB37_172
-; CHECK-NEXT:  .LBB37_250: // %cond.load477
+; CHECK-NEXT:    tbz x9, #56, .LBB37_183
+; CHECK-NEXT:  .LBB37_251: // %cond.load477
 ; CHECK-NEXT:    mov w8, #120 // =0x78
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #57, .LBB37_173
-; CHECK-NEXT:  .LBB37_251: // %cond.load481
+; CHECK-NEXT:    tbz x9, #57, .LBB37_184
+; CHECK-NEXT:  .LBB37_252: // %cond.load481
 ; CHECK-NEXT:    mov w8, #121 // =0x79
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #58, .LBB37_174
-; CHECK-NEXT:  .LBB37_252: // %cond.load485
+; CHECK-NEXT:    tbz x9, #58, .LBB37_185
+; CHECK-NEXT:  .LBB37_253: // %cond.load485
 ; CHECK-NEXT:    mov w8, #122 // =0x7a
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #59, .LBB37_175
-; CHECK-NEXT:  .LBB37_253: // %cond.load489
+; CHECK-NEXT:    tbz x9, #59, .LBB37_186
+; CHECK-NEXT:  .LBB37_254: // %cond.load489
 ; CHECK-NEXT:    mov w8, #123 // =0x7b
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #60, .LBB37_176
-; CHECK-NEXT:  .LBB37_254: // %cond.load493
+; CHECK-NEXT:    tbz x9, #60, .LBB37_187
+; CHECK-NEXT:  .LBB37_255: // %cond.load493
 ; CHECK-NEXT:    mov w8, #124 // =0x7c
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #61, .LBB37_177
-; CHECK-NEXT:  .LBB37_255: // %cond.load497
+; CHECK-NEXT:    tbz x9, #61, .LBB37_188
+; CHECK-NEXT:  .LBB37_256: // %cond.load497
 ; CHECK-NEXT:    mov w8, #125 // =0x7d
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #62, .LBB37_178
-; CHECK-NEXT:  .LBB37_256: // %cond.load501
+; CHECK-NEXT:    tbz x9, #62, .LBB37_189
+; CHECK-NEXT:  .LBB37_257: // %cond.load501
 ; CHECK-NEXT:    mov w8, #126 // =0x7e
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbnz x9, #63, .LBB37_179
-; CHECK-NEXT:    b .LBB37_180
+; CHECK-NEXT:    tbnz x9, #63, .LBB37_190
+; CHECK-NEXT:    b .LBB37_191
 ;
 ; CHECK-EXPAND-LABEL: masked_load_sext_v128i8i16:
 ; CHECK-EXPAND:       // %bb.0:
@@ -16775,259 +16701,245 @@ define void @masked_load_sext_v128i8i16(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 define void @masked_load_sext_v64i8i32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_load_sext_v64i8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x26, x25, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x24, x23, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x22, x21, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 112
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w21, -24
-; CHECK-NEXT:    .cfi_offset w22, -32
-; CHECK-NEXT:    .cfi_offset w23, -40
-; CHECK-NEXT:    .cfi_offset w24, -48
-; CHECK-NEXT:    .cfi_offset w25, -56
-; CHECK-NEXT:    .cfi_offset w26, -64
-; CHECK-NEXT:    .cfi_offset w27, -72
-; CHECK-NEXT:    .cfi_offset w28, -80
-; CHECK-NEXT:    .cfi_offset w30, -88
-; CHECK-NEXT:    .cfi_offset w29, -96
 ; CHECK-NEXT:    ptrue p1.b, vl64
 ; CHECK-NEXT:    ld1b { z0.b }, p1/z, [x1]
 ; CHECK-NEXT:    cmpeq p0.b, p1/z, z0.b, #0
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    umov w11, v0.b[1]
-; CHECK-NEXT:    fmov w22, s0
-; CHECK-NEXT:    umov w12, v0.b[2]
-; CHECK-NEXT:    umov w13, v0.b[3]
-; CHECK-NEXT:    umov w14, v0.b[7]
-; CHECK-NEXT:    umov w1, v0.b[8]
-; CHECK-NEXT:    umov w16, v0.b[9]
-; CHECK-NEXT:    mov z3.b, z0.b[18]
-; CHECK-NEXT:    mov z5.b, z0.b[19]
-; CHECK-NEXT:    and x22, x22, #0x1
-; CHECK-NEXT:    umov w10, v0.b[4]
-; CHECK-NEXT:    umov w17, v0.b[10]
-; CHECK-NEXT:    bfi x22, x11, #1, #1
-; CHECK-NEXT:    mov z6.b, z0.b[20]
-; CHECK-NEXT:    umov w3, v0.b[11]
-; CHECK-NEXT:    mov z4.b, z0.b[21]
-; CHECK-NEXT:    umov w9, v0.b[5]
-; CHECK-NEXT:    mov z7.b, z0.b[22]
-; CHECK-NEXT:    bfi x22, x12, #2, #1
-; CHECK-NEXT:    fmov w19, s3
-; CHECK-NEXT:    fmov w20, s5
-; CHECK-NEXT:    ubfiz x14, x14, #7, #1
-; CHECK-NEXT:    ubfiz x1, x1, #8, #1
-; CHECK-NEXT:    umov w4, v0.b[12]
-; CHECK-NEXT:    bfi x22, x13, #3, #1
-; CHECK-NEXT:    mov z16.b, z0.b[23]
-; CHECK-NEXT:    fmov w21, s6
-; CHECK-NEXT:    ubfiz x16, x16, #9, #1
-; CHECK-NEXT:    umov w8, v0.b[6]
-; CHECK-NEXT:    umov w5, v0.b[13]
-; CHECK-NEXT:    mov z17.b, z0.b[24]
-; CHECK-NEXT:    fmov w23, s4
-; CHECK-NEXT:    orr x14, x14, x1
-; CHECK-NEXT:    bfi x22, x10, #4, #1
-; CHECK-NEXT:    ubfiz x10, x17, #10, #1
-; CHECK-NEXT:    mov z18.b, z0.b[25]
-; CHECK-NEXT:    fmov w24, s7
-; CHECK-NEXT:    ubfiz x13, x19, #18, #1
-; CHECK-NEXT:    ubfiz x19, x20, #19, #1
-; CHECK-NEXT:    orr x14, x14, x16
-; CHECK-NEXT:    ubfiz x16, x3, #11, #1
-; CHECK-NEXT:    umov w15, v0.b[14]
-; CHECK-NEXT:    mov z19.b, z0.b[26]
-; CHECK-NEXT:    fmov w25, s16
-; CHECK-NEXT:    ubfiz x1, x21, #20, #1
-; CHECK-NEXT:    orr x10, x14, x10
-; CHECK-NEXT:    bfi x22, x9, #5, #1
-; CHECK-NEXT:    mov z20.b, z0.b[27]
-; CHECK-NEXT:    fmov w26, s17
-; CHECK-NEXT:    orr x13, x13, x19
-; CHECK-NEXT:    ubfiz x9, x4, #12, #1
-; CHECK-NEXT:    orr x10, x10, x16
-; CHECK-NEXT:    ubfiz x16, x23, #21, #1
-; CHECK-NEXT:    umov w18, v0.b[15]
+; CHECK-NEXT:    umov w8, v0.b[1]
+; CHECK-NEXT:    fmov w10, s0
+; CHECK-NEXT:    umov w9, v0.b[2]
+; CHECK-NEXT:    umov w11, v0.b[3]
 ; CHECK-NEXT:    mov z1.b, z0.b[16]
-; CHECK-NEXT:    mov z21.b, z0.b[28]
-; CHECK-NEXT:    fmov w11, s18
-; CHECK-NEXT:    orr x13, x13, x1
-; CHECK-NEXT:    ubfiz x14, x5, #13, #1
-; CHECK-NEXT:    bfi x22, x8, #6, #1
-; CHECK-NEXT:    ubfiz x8, x24, #22, #1
 ; CHECK-NEXT:    mov z2.b, z0.b[17]
-; CHECK-NEXT:    mov z22.b, z0.b[29]
-; CHECK-NEXT:    fmov w27, s19
-; CHECK-NEXT:    orr x9, x10, x9
-; CHECK-NEXT:    orr x10, x13, x16
-; CHECK-NEXT:    ubfiz x13, x25, #23, #1
-; CHECK-NEXT:    mov z5.b, z0.b[30]
-; CHECK-NEXT:    fmov w28, s20
-; CHECK-NEXT:    orr x9, x9, x14
-; CHECK-NEXT:    orr x8, x10, x8
-; CHECK-NEXT:    ubfiz x10, x15, #14, #1
-; CHECK-NEXT:    ubfiz x14, x26, #24, #1
-; CHECK-NEXT:    fmov w6, s1
-; CHECK-NEXT:    fmov w29, s21
-; CHECK-NEXT:    orr x8, x8, x13
-; CHECK-NEXT:    ubfiz x11, x11, #25, #1
-; CHECK-NEXT:    fmov w7, s2
-; CHECK-NEXT:    fmov w30, s22
-; CHECK-NEXT:    ubfiz x13, x18, #15, #1
-; CHECK-NEXT:    orr x9, x9, x10
-; CHECK-NEXT:    orr x8, x8, x14
-; CHECK-NEXT:    ubfiz x10, x27, #26, #1
-; CHECK-NEXT:    fmov w12, s5
-; CHECK-NEXT:    orr x8, x8, x11
-; CHECK-NEXT:    ubfiz x11, x28, #27, #1
-; CHECK-NEXT:    mov z3.b, z0.b[31]
-; CHECK-NEXT:    orr x9, x9, x13
-; CHECK-NEXT:    orr x8, x8, x10
-; CHECK-NEXT:    ubfiz x10, x6, #16, #1
-; CHECK-NEXT:    ubfiz x13, x29, #28, #1
-; CHECK-NEXT:    orr x8, x8, x11
-; CHECK-NEXT:    ubfiz x11, x7, #17, #1
-; CHECK-NEXT:    ubfiz x14, x30, #29, #1
-; CHECK-NEXT:    mov z2.b, z0.b[32]
-; CHECK-NEXT:    orr x9, x9, x10
-; CHECK-NEXT:    orr x8, x8, x13
-; CHECK-NEXT:    ubfiz x10, x12, #30, #1
-; CHECK-NEXT:    fmov w12, s3
-; CHECK-NEXT:    orr x9, x9, x11
-; CHECK-NEXT:    orr x8, x8, x14
-; CHECK-NEXT:    mov z1.b, z0.b[33]
-; CHECK-NEXT:    orr x9, x22, x9
-; CHECK-NEXT:    orr x8, x8, x10
-; CHECK-NEXT:    orr x8, x9, x8
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    and w8, w8, #0x1
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x10, x8, lsl #1
+; CHECK-NEXT:    umov w10, v0.b[4]
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #2
+; CHECK-NEXT:    umov w9, v0.b[5]
+; CHECK-NEXT:    orr x8, x8, x11, lsl #3
+; CHECK-NEXT:    umov w11, v0.b[6]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    orr x8, x8, x10, lsl #4
+; CHECK-NEXT:    umov w10, v0.b[7]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #5
+; CHECK-NEXT:    umov w9, v0.b[8]
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x11, lsl #6
+; CHECK-NEXT:    umov w11, v0.b[9]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    orr x8, x8, x10, lsl #7
+; CHECK-NEXT:    umov w10, v0.b[10]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #8
+; CHECK-NEXT:    umov w9, v0.b[11]
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x11, lsl #9
+; CHECK-NEXT:    umov w11, v0.b[12]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    orr x8, x8, x10, lsl #10
+; CHECK-NEXT:    umov w10, v0.b[13]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #11
+; CHECK-NEXT:    umov w9, v0.b[14]
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x11, lsl #12
+; CHECK-NEXT:    umov w11, v0.b[15]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    orr x8, x8, x10, lsl #13
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #14
+; CHECK-NEXT:    and w9, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #15
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[18]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #16
 ; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    lsl w10, w12, #31
-; CHECK-NEXT:    mov z2.b, z0.b[34]
-; CHECK-NEXT:    orr x8, x8, x10
+; CHECK-NEXT:    mov z2.b, z0.b[19]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #17
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[20]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #18
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[21]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #19
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[22]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #20
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[23]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #21
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[24]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #22
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[25]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #23
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[26]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #24
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[27]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #25
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[28]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #26
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[29]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #27
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[30]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #28
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[31]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #29
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[32]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #30
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[33]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #31
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[34]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #32
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[35]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[35]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #33
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[36]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[36]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #34
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[37]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[37]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #35
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[38]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[38]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #36
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[39]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[39]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #37
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[40]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[40]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #38
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[41]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[41]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #39
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[42]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[42]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #40
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[43]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[43]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #41
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[44]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[44]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #42
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[45]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[45]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #43
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[46]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[46]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #44
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[47]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[47]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #45
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[48]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[48]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #46
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[49]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[49]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #47
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[50]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[50]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #48
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[51]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[51]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #49
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[52]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[52]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #50
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[53]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[53]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #51
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[54]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[54]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #52
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[55]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[55]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #53
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[56]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[56]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #54
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[57]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[57]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #55
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[58]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[58]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #56
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[59]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[59]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #57
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[60]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[60]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #58
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[61]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    fmov w10, s1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #59
 ; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[62]
+; CHECK-NEXT:    mov z2.b, z0.b[61]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    fmov w10, s2
+; CHECK-NEXT:    orr x8, x8, x9, lsl #59
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[62]
 ; CHECK-NEXT:    mov z0.b, z0.b[63]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #60
 ; CHECK-NEXT:    and w9, w10, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #61
-; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    fmov w9, s1
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #62
 ; CHECK-NEXT:    fmov w9, s0
@@ -17184,15 +17096,8 @@ define void @masked_load_sext_v64i8i32(ptr %ap, ptr %bp, ptr %c) vscale_range(16
 ; CHECK-NEXT:  .LBB38_67: // %else250
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    ptrue p0.s, vl64
-; CHECK-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x22, x21, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x24, x23, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    ldp x26, x25, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x28, x27, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x2]
-; CHECK-NEXT:    add sp, sp, #112
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB38_68: // %cond.load5
 ; CHECK-NEXT:    mov w9, #2 // =0x2
@@ -17706,14 +17611,13 @@ define void @masked_load_sext_v64i8i32(ptr %ap, ptr %bp, ptr %c) vscale_range(16
 define void @masked_load_sext_v32i8i64(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_load_sext_v32i8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x26, x25, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x24, x23, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x22, x21, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 112
+; CHECK-NEXT:    stp x29, x30, [sp, #-96]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp x28, x27, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x26, x25, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x24, x23, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x22, x21, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
@@ -17923,16 +17827,15 @@ define void @masked_load_sext_v32i8i64(ptr %ap, ptr %bp, ptr %c) vscale_range(16
 ; CHECK-NEXT:  .LBB39_35: // %else122
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    ptrue p0.d, vl32
-; CHECK-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x22, x21, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x24, x23, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    ldp x26, x25, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x28, x27, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x26, x25, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x28, x27, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x2]
-; CHECK-NEXT:    add sp, sp, #112
+; CHECK-NEXT:    ldp x29, x30, [sp], #96 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB39_36: // %cond.load5
 ; CHECK-NEXT:    mov w9, #2 // =0x2
@@ -18190,260 +18093,246 @@ define void @masked_load_sext_v32i8i64(ptr %ap, ptr %bp, ptr %c) vscale_range(16
 define void @masked_load_sext_v64i16i32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_load_sext_v64i16i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x26, x25, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x24, x23, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x22, x21, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 112
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w21, -24
-; CHECK-NEXT:    .cfi_offset w22, -32
-; CHECK-NEXT:    .cfi_offset w23, -40
-; CHECK-NEXT:    .cfi_offset w24, -48
-; CHECK-NEXT:    .cfi_offset w25, -56
-; CHECK-NEXT:    .cfi_offset w26, -64
-; CHECK-NEXT:    .cfi_offset w27, -72
-; CHECK-NEXT:    .cfi_offset w28, -80
-; CHECK-NEXT:    .cfi_offset w30, -88
-; CHECK-NEXT:    .cfi_offset w29, -96
 ; CHECK-NEXT:    ptrue p1.h, vl64
 ; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x1]
 ; CHECK-NEXT:    cmpeq p0.h, p1/z, z0.h, #0
 ; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    umov w12, v0.b[1]
-; CHECK-NEXT:    fmov w22, s0
-; CHECK-NEXT:    mov z6.b, z0.b[18]
-; CHECK-NEXT:    mov z2.b, z0.b[19]
-; CHECK-NEXT:    umov w13, v0.b[2]
-; CHECK-NEXT:    umov w14, v0.b[7]
-; CHECK-NEXT:    umov w3, v0.b[8]
-; CHECK-NEXT:    mov z1.b, z0.b[20]
-; CHECK-NEXT:    umov w4, v0.b[9]
-; CHECK-NEXT:    mov z4.b, z0.b[21]
-; CHECK-NEXT:    and x22, x22, #0x1
+; CHECK-NEXT:    umov w8, v0.b[1]
+; CHECK-NEXT:    fmov w10, s0
+; CHECK-NEXT:    umov w9, v0.b[2]
 ; CHECK-NEXT:    umov w11, v0.b[3]
-; CHECK-NEXT:    umov w5, v0.b[10]
-; CHECK-NEXT:    mov z7.b, z0.b[22]
-; CHECK-NEXT:    fmov w19, s6
-; CHECK-NEXT:    fmov w20, s2
-; CHECK-NEXT:    bfi x22, x12, #1, #1
-; CHECK-NEXT:    mov z16.b, z0.b[23]
-; CHECK-NEXT:    fmov w21, s1
+; CHECK-NEXT:    mov z1.b, z0.b[16]
+; CHECK-NEXT:    mov z2.b, z0.b[17]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    and w8, w8, #0x1
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x10, x8, lsl #1
 ; CHECK-NEXT:    umov w10, v0.b[4]
-; CHECK-NEXT:    umov w15, v0.b[11]
-; CHECK-NEXT:    fmov w23, s4
-; CHECK-NEXT:    bfi x22, x13, #2, #1
-; CHECK-NEXT:    ubfiz x14, x14, #7, #1
-; CHECK-NEXT:    ubfiz x3, x3, #8, #1
-; CHECK-NEXT:    umov w17, v0.b[12]
-; CHECK-NEXT:    mov z17.b, z0.b[24]
-; CHECK-NEXT:    fmov w24, s7
-; CHECK-NEXT:    ubfiz x4, x4, #9, #1
-; CHECK-NEXT:    ubfiz x19, x19, #18, #1
-; CHECK-NEXT:    ubfiz x20, x20, #19, #1
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #2
 ; CHECK-NEXT:    umov w9, v0.b[5]
-; CHECK-NEXT:    umov w18, v0.b[13]
-; CHECK-NEXT:    mov z18.b, z0.b[25]
-; CHECK-NEXT:    fmov w25, s16
-; CHECK-NEXT:    orr x14, x14, x3
-; CHECK-NEXT:    ubfiz x3, x5, #10, #1
-; CHECK-NEXT:    ubfiz x5, x21, #20, #1
-; CHECK-NEXT:    bfi x22, x11, #3, #1
-; CHECK-NEXT:    umov w16, v0.b[14]
-; CHECK-NEXT:    mov z19.b, z0.b[26]
-; CHECK-NEXT:    orr x19, x19, x20
-; CHECK-NEXT:    orr x14, x14, x4
-; CHECK-NEXT:    ubfiz x4, x23, #21, #1
-; CHECK-NEXT:    umov w8, v0.b[6]
-; CHECK-NEXT:    umov w1, v0.b[15]
-; CHECK-NEXT:    mov z5.b, z0.b[17]
-; CHECK-NEXT:    mov z20.b, z0.b[27]
-; CHECK-NEXT:    fmov w26, s17
-; CHECK-NEXT:    orr x11, x14, x3
-; CHECK-NEXT:    orr x14, x19, x5
-; CHECK-NEXT:    ubfiz x15, x15, #11, #1
-; CHECK-NEXT:    ubfiz x3, x24, #22, #1
-; CHECK-NEXT:    bfi x22, x10, #4, #1
-; CHECK-NEXT:    mov z3.b, z0.b[16]
-; CHECK-NEXT:    mov z21.b, z0.b[28]
-; CHECK-NEXT:    fmov w12, s18
-; CHECK-NEXT:    orr x14, x14, x4
-; CHECK-NEXT:    ubfiz x10, x17, #12, #1
-; CHECK-NEXT:    ubfiz x17, x25, #23, #1
-; CHECK-NEXT:    mov z22.b, z0.b[29]
-; CHECK-NEXT:    fmov w27, s19
-; CHECK-NEXT:    orr x11, x11, x15
-; CHECK-NEXT:    orr x14, x14, x3
-; CHECK-NEXT:    ubfiz x15, x18, #13, #1
-; CHECK-NEXT:    bfi x22, x9, #5, #1
-; CHECK-NEXT:    fmov w7, s5
-; CHECK-NEXT:    mov z5.b, z0.b[30]
-; CHECK-NEXT:    fmov w28, s20
-; CHECK-NEXT:    orr x10, x11, x10
-; CHECK-NEXT:    orr x9, x14, x17
-; CHECK-NEXT:    ubfiz x11, x16, #14, #1
-; CHECK-NEXT:    ubfiz x14, x26, #24, #1
-; CHECK-NEXT:    fmov w6, s3
-; CHECK-NEXT:    fmov w29, s21
-; CHECK-NEXT:    orr x10, x10, x15
-; CHECK-NEXT:    bfi x22, x8, #6, #1
-; CHECK-NEXT:    ubfiz x8, x1, #15, #1
-; CHECK-NEXT:    ubfiz x12, x12, #25, #1
-; CHECK-NEXT:    fmov w30, s22
-; CHECK-NEXT:    orr x10, x10, x11
-; CHECK-NEXT:    orr x9, x9, x14
-; CHECK-NEXT:    ubfiz x11, x27, #26, #1
-; CHECK-NEXT:    fmov w13, s5
-; CHECK-NEXT:    orr x8, x10, x8
-; CHECK-NEXT:    orr x9, x9, x12
-; CHECK-NEXT:    ubfiz x10, x28, #27, #1
-; CHECK-NEXT:    mov z3.b, z0.b[31]
-; CHECK-NEXT:    orr x9, x9, x11
-; CHECK-NEXT:    ubfiz x11, x6, #16, #1
-; CHECK-NEXT:    ubfiz x12, x29, #28, #1
-; CHECK-NEXT:    orr x9, x9, x10
-; CHECK-NEXT:    ubfiz x10, x7, #17, #1
-; CHECK-NEXT:    ubfiz x14, x30, #29, #1
-; CHECK-NEXT:    mov z2.b, z0.b[32]
-; CHECK-NEXT:    orr x8, x8, x11
-; CHECK-NEXT:    orr x9, x9, x12
-; CHECK-NEXT:    ubfiz x11, x13, #30, #1
-; CHECK-NEXT:    fmov w12, s3
-; CHECK-NEXT:    orr x8, x8, x10
-; CHECK-NEXT:    orr x9, x9, x14
-; CHECK-NEXT:    mov z1.b, z0.b[33]
-; CHECK-NEXT:    orr x8, x22, x8
-; CHECK-NEXT:    orr x9, x9, x11
-; CHECK-NEXT:    orr x8, x8, x9
+; CHECK-NEXT:    orr x8, x8, x11, lsl #3
+; CHECK-NEXT:    umov w11, v0.b[6]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    orr x8, x8, x10, lsl #4
+; CHECK-NEXT:    umov w10, v0.b[7]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #5
+; CHECK-NEXT:    umov w9, v0.b[8]
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x11, lsl #6
+; CHECK-NEXT:    umov w11, v0.b[9]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    orr x8, x8, x10, lsl #7
+; CHECK-NEXT:    umov w10, v0.b[10]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #8
+; CHECK-NEXT:    umov w9, v0.b[11]
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x11, lsl #9
+; CHECK-NEXT:    umov w11, v0.b[12]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    orr x8, x8, x10, lsl #10
+; CHECK-NEXT:    umov w10, v0.b[13]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #11
+; CHECK-NEXT:    umov w9, v0.b[14]
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x11, lsl #12
+; CHECK-NEXT:    umov w11, v0.b[15]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    orr x8, x8, x10, lsl #13
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #14
+; CHECK-NEXT:    and w9, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #15
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[18]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #16
 ; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    lsl w10, w12, #31
-; CHECK-NEXT:    mov z2.b, z0.b[34]
-; CHECK-NEXT:    orr x8, x8, x10
+; CHECK-NEXT:    mov z2.b, z0.b[19]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #17
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[20]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #18
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[21]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #19
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[22]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #20
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[23]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #21
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[24]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #22
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[25]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #23
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[26]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #24
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[27]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #25
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[28]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #26
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[29]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #27
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[30]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #28
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[31]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #29
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[32]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #30
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[33]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #31
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[34]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #32
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[35]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[35]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #33
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[36]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[36]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #34
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[37]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[37]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #35
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[38]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[38]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #36
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[39]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[39]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #37
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[40]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[40]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #38
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[41]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[41]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #39
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[42]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[42]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #40
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[43]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[43]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #41
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[44]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[44]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #42
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[45]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[45]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #43
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[46]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[46]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #44
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[47]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[47]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #45
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[48]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[48]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #46
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[49]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[49]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #47
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[50]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[50]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #48
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[51]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[51]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #49
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[52]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[52]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #50
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[53]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[53]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #51
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[54]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[54]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #52
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[55]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[55]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #53
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[56]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[56]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #54
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[57]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[57]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #55
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[58]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[58]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #56
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[59]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[59]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #57
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[60]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[60]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #58
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[61]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    fmov w10, s1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #59
 ; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[62]
+; CHECK-NEXT:    mov z2.b, z0.b[61]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    fmov w10, s2
+; CHECK-NEXT:    orr x8, x8, x9, lsl #59
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[62]
 ; CHECK-NEXT:    mov z0.b, z0.b[63]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #60
 ; CHECK-NEXT:    and w9, w10, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #61
-; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    fmov w9, s1
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #62
 ; CHECK-NEXT:    fmov w9, s0
@@ -18600,14 +18489,7 @@ define void @masked_load_sext_v64i16i32(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:  .LBB40_67: // %else250
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    ptrue p0.s, vl64
-; CHECK-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x22, x21, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x24, x23, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x26, x25, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x2]
-; CHECK-NEXT:    ldp x28, x27, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #112
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB40_68: // %cond.load5
 ; CHECK-NEXT:    mov w9, #2 // =0x2
@@ -19121,14 +19003,13 @@ define void @masked_load_sext_v64i16i32(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 define void @masked_load_sext_v32i16i64(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_load_sext_v32i16i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x26, x25, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x24, x23, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x22, x21, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 112
+; CHECK-NEXT:    stp x29, x30, [sp, #-96]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp x28, x27, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x26, x25, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x24, x23, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x22, x21, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
@@ -19339,15 +19220,14 @@ define void @masked_load_sext_v32i16i64(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:  .LBB41_35: // %else122
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    ptrue p0.d, vl32
-; CHECK-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x22, x21, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x24, x23, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
-; CHECK-NEXT:    ldp x26, x25, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x28, x27, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x26, x25, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x28, x27, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x2]
-; CHECK-NEXT:    add sp, sp, #112
+; CHECK-NEXT:    ldp x29, x30, [sp], #96 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB41_36: // %cond.load5
 ; CHECK-NEXT:    mov w9, #2 // =0x2
@@ -19605,14 +19485,13 @@ define void @masked_load_sext_v32i16i64(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 define void @masked_load_sext_v32i32i64(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_load_sext_v32i32i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x26, x25, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x24, x23, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x22, x21, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 112
+; CHECK-NEXT:    stp x29, x30, [sp, #-96]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp x28, x27, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x26, x25, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x24, x23, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x22, x21, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
@@ -19824,14 +19703,13 @@ define void @masked_load_sext_v32i32i64(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:  .LBB42_35: // %else122
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    ptrue p0.d, vl32
-; CHECK-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x22, x21, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x24, x23, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x26, x25, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x26, x25, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x2]
-; CHECK-NEXT:    ldp x28, x27, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #112
+; CHECK-NEXT:    ldp x28, x27, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x29, x30, [sp], #96 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB42_36: // %cond.load5
 ; CHECK-NEXT:    mov w9, #2 // =0x2
@@ -20090,1285 +19968,1271 @@ define void @masked_load_zext_v128i8i16(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-LABEL: masked_load_zext_v128i8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.b, vl128
+; CHECK-NEXT:    mov w12, #66 // =0x42
+; CHECK-NEXT:    mov w17, #70 // =0x46
 ; CHECK-NEXT:    ld1b { z0.b }, p1/z, [x1]
 ; CHECK-NEXT:    cmpeq p0.b, p1/z, z0.b, #0
 ; CHECK-NEXT:    mov z1.b, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    umov w9, v1.b[1]
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov z0.b, z1.b[18]
-; CHECK-NEXT:    umov w10, v1.b[7]
-; CHECK-NEXT:    umov w11, v1.b[8]
-; CHECK-NEXT:    mov z2.b, z1.b[19]
-; CHECK-NEXT:    umov w12, v1.b[2]
-; CHECK-NEXT:    umov w14, v1.b[9]
-; CHECK-NEXT:    umov w13, v1.b[3]
-; CHECK-NEXT:    and x8, x8, #0x1
-; CHECK-NEXT:    fmov w16, s0
-; CHECK-NEXT:    mov z0.b, z1.b[20]
-; CHECK-NEXT:    bfi x8, x9, #1, #1
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    umov w15, v1.b[10]
-; CHECK-NEXT:    ubfiz x10, x10, #7, #1
-; CHECK-NEXT:    ubfiz x11, x11, #8, #1
-; CHECK-NEXT:    mov z2.b, z1.b[21]
-; CHECK-NEXT:    bfi x8, x12, #2, #1
-; CHECK-NEXT:    fmov w12, s0
-; CHECK-NEXT:    ubfiz x16, x16, #18, #1
-; CHECK-NEXT:    ubfiz x9, x9, #19, #1
-; CHECK-NEXT:    ubfiz x14, x14, #9, #1
-; CHECK-NEXT:    orr x10, x10, x11
-; CHECK-NEXT:    umov w11, v1.b[11]
-; CHECK-NEXT:    mov z0.b, z1.b[22]
-; CHECK-NEXT:    ubfiz x15, x15, #10, #1
-; CHECK-NEXT:    ubfiz x12, x12, #20, #1
-; CHECK-NEXT:    orr x9, x16, x9
-; CHECK-NEXT:    orr x10, x10, x14
-; CHECK-NEXT:    fmov w14, s2
-; CHECK-NEXT:    bfi x8, x13, #3, #1
-; CHECK-NEXT:    orr x10, x10, x15
-; CHECK-NEXT:    orr x9, x9, x12
-; CHECK-NEXT:    umov w12, v1.b[12]
-; CHECK-NEXT:    fmov w13, s0
-; CHECK-NEXT:    ubfiz x11, x11, #11, #1
-; CHECK-NEXT:    umov w15, v1.b[13]
+; CHECK-NEXT:    umov w8, v1.b[1]
+; CHECK-NEXT:    fmov w10, s1
+; CHECK-NEXT:    umov w9, v1.b[2]
+; CHECK-NEXT:    umov w11, v1.b[3]
 ; CHECK-NEXT:    mov z0.b, z1.b[16]
-; CHECK-NEXT:    ubfiz x14, x14, #21, #1
 ; CHECK-NEXT:    mov z2.b, z1.b[17]
-; CHECK-NEXT:    umov w16, v1.b[4]
-; CHECK-NEXT:    ubfiz x13, x13, #22, #1
-; CHECK-NEXT:    orr x10, x10, x11
-; CHECK-NEXT:    umov w11, v1.b[14]
-; CHECK-NEXT:    orr x9, x9, x14
-; CHECK-NEXT:    ubfiz x12, x12, #12, #1
-; CHECK-NEXT:    umov w14, v1.b[5]
-; CHECK-NEXT:    orr x9, x9, x13
-; CHECK-NEXT:    umov w13, v1.b[15]
-; CHECK-NEXT:    ubfiz x15, x15, #13, #1
-; CHECK-NEXT:    orr x10, x10, x12
-; CHECK-NEXT:    fmov w12, s0
-; CHECK-NEXT:    mov z0.b, z1.b[23]
-; CHECK-NEXT:    ubfiz x11, x11, #14, #1
-; CHECK-NEXT:    orr x10, x10, x15
-; CHECK-NEXT:    fmov w15, s2
-; CHECK-NEXT:    mov z2.b, z1.b[24]
-; CHECK-NEXT:    bfi x8, x16, #4, #1
-; CHECK-NEXT:    umov w16, v1.b[6]
-; CHECK-NEXT:    ubfiz x13, x13, #15, #1
-; CHECK-NEXT:    orr x10, x10, x11
-; CHECK-NEXT:    fmov w11, s0
-; CHECK-NEXT:    mov z0.b, z1.b[25]
-; CHECK-NEXT:    ubfiz x12, x12, #16, #1
-; CHECK-NEXT:    bfi x8, x14, #5, #1
-; CHECK-NEXT:    orr x10, x10, x13
-; CHECK-NEXT:    fmov w13, s2
-; CHECK-NEXT:    mov z2.b, z1.b[26]
-; CHECK-NEXT:    ubfiz x11, x11, #23, #1
-; CHECK-NEXT:    orr x10, x10, x12
-; CHECK-NEXT:    ubfiz x14, x15, #17, #1
-; CHECK-NEXT:    fmov w12, s0
-; CHECK-NEXT:    mov z0.b, z1.b[27]
-; CHECK-NEXT:    bfi x8, x16, #6, #1
-; CHECK-NEXT:    ubfiz x13, x13, #24, #1
-; CHECK-NEXT:    orr x9, x9, x11
-; CHECK-NEXT:    fmov w11, s2
-; CHECK-NEXT:    mov z2.b, z1.b[28]
-; CHECK-NEXT:    orr x10, x10, x14
-; CHECK-NEXT:    orr x9, x9, x13
-; CHECK-NEXT:    ubfiz x12, x12, #25, #1
-; CHECK-NEXT:    fmov w13, s0
-; CHECK-NEXT:    mov z0.b, z1.b[29]
-; CHECK-NEXT:    ubfiz x11, x11, #26, #1
-; CHECK-NEXT:    orr x8, x8, x10
-; CHECK-NEXT:    orr x9, x9, x12
-; CHECK-NEXT:    fmov w12, s2
-; CHECK-NEXT:    mov z2.b, z1.b[30]
-; CHECK-NEXT:    orr x9, x9, x11
-; CHECK-NEXT:    ubfiz x11, x13, #27, #1
-; CHECK-NEXT:    fmov w13, s0
-; CHECK-NEXT:    mov z0.b, z1.b[31]
-; CHECK-NEXT:    orr x9, x9, x11
-; CHECK-NEXT:    ubfiz x12, x12, #28, #1
-; CHECK-NEXT:    ubfiz x11, x13, #29, #1
-; CHECK-NEXT:    fmov w13, s2
-; CHECK-NEXT:    orr x9, x9, x12
-; CHECK-NEXT:    mov z2.b, z1.b[32]
-; CHECK-NEXT:    fmov w10, s0
-; CHECK-NEXT:    mov z0.b, z1.b[33]
-; CHECK-NEXT:    orr x9, x9, x11
-; CHECK-NEXT:    ubfiz x12, x13, #30, #1
-; CHECK-NEXT:    lsl w10, w10, #31
-; CHECK-NEXT:    orr x9, x9, x12
-; CHECK-NEXT:    orr x8, x8, x9
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    and w8, w8, #0x1
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x10, x8, lsl #1
+; CHECK-NEXT:    umov w10, v1.b[4]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #2
+; CHECK-NEXT:    and w9, w11, #0x1
+; CHECK-NEXT:    umov w11, v1.b[5]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #3
+; CHECK-NEXT:    and w9, w10, #0x1
+; CHECK-NEXT:    umov w10, v1.b[6]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #4
+; CHECK-NEXT:    and w9, w11, #0x1
+; CHECK-NEXT:    umov w11, v1.b[7]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #5
+; CHECK-NEXT:    and w9, w10, #0x1
+; CHECK-NEXT:    umov w10, v1.b[8]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #6
+; CHECK-NEXT:    and w9, w11, #0x1
+; CHECK-NEXT:    umov w11, v1.b[9]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #7
+; CHECK-NEXT:    and w9, w10, #0x1
+; CHECK-NEXT:    umov w10, v1.b[10]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #8
+; CHECK-NEXT:    and w9, w11, #0x1
+; CHECK-NEXT:    umov w11, v1.b[11]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #9
+; CHECK-NEXT:    and w9, w10, #0x1
+; CHECK-NEXT:    umov w10, v1.b[12]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #10
+; CHECK-NEXT:    and w9, w11, #0x1
+; CHECK-NEXT:    umov w11, v1.b[13]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #11
+; CHECK-NEXT:    and w9, w10, #0x1
+; CHECK-NEXT:    umov w10, v1.b[14]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #12
+; CHECK-NEXT:    and w9, w11, #0x1
+; CHECK-NEXT:    umov w11, v1.b[15]
+; CHECK-NEXT:    orr x8, x8, x9, lsl #13
+; CHECK-NEXT:    and w9, w10, #0x1
+; CHECK-NEXT:    mov w10, #65 // =0x41
+; CHECK-NEXT:    whilels p0.b, xzr, x10
+; CHECK-NEXT:    orr x8, x8, x9, lsl #14
+; CHECK-NEXT:    and w9, w11, #0x1
+; CHECK-NEXT:    mov w11, #64 // =0x40
+; CHECK-NEXT:    orr x8, x8, x9, lsl #15
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[18]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #16
 ; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[34]
-; CHECK-NEXT:    orr x8, x8, x10
+; CHECK-NEXT:    mov z2.b, z1.b[19]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #17
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[20]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #18
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[21]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #19
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[22]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #20
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[23]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #21
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[24]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #22
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[25]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #23
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[26]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #24
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[27]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #25
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[28]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #26
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[29]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #27
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[30]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #28
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[31]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #29
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[32]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #30
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[33]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #31
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[34]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #32
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[35]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[35]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #33
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[36]
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[36]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #34
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[37]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[37]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #35
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[38]
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[38]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #36
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[39]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[39]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #37
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[40]
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[40]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #38
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[41]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[41]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #39
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[42]
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[42]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #40
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[43]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[43]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #41
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[44]
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[44]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #42
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[45]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[45]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #43
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[46]
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[46]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #44
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[47]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[47]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #45
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[48]
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[48]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #46
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[49]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[49]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #47
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[50]
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[50]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #48
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[51]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[51]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #49
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[52]
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z0.b, z1.b[52]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #50
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[53]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z1.b[53]
 ; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    fmov w10, s2
+; CHECK-NEXT:    mov z2.b, z1.b[55]
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #51
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[54]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #52
 ; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[55]
+; CHECK-NEXT:    mov z0.b, z1.b[54]
+; CHECK-NEXT:    and w10, w10, #0x1
 ; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #53
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[56]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #54
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[57]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #55
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[58]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #56
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[59]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #57
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[60]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #58
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.b, z1.b[61]
-; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x9, x8, x9, lsl #52
+; CHECK-NEXT:    lastb w8, p0, z1.b
+; CHECK-NEXT:    orr x9, x9, x10, lsl #53
 ; CHECK-NEXT:    fmov w10, s0
+; CHECK-NEXT:    mov z0.b, z1.b[56]
+; CHECK-NEXT:    whilels p0.b, xzr, x11
+; CHECK-NEXT:    fmov w11, s2
+; CHECK-NEXT:    mov z2.b, z1.b[57]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    orr x10, x9, x10, lsl #54
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    lastb w9, p0, z1.b
+; CHECK-NEXT:    orr x10, x10, x11, lsl #55
+; CHECK-NEXT:    fmov w11, s0
+; CHECK-NEXT:    mov z0.b, z1.b[58]
+; CHECK-NEXT:    whilels p0.b, xzr, x12
+; CHECK-NEXT:    mov w12, #67 // =0x43
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x10, x10, x11, lsl #56
+; CHECK-NEXT:    fmov w11, s2
+; CHECK-NEXT:    mov z2.b, z1.b[59]
+; CHECK-NEXT:    lastb w13, p0, z1.b
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    whilels p0.b, xzr, x12
+; CHECK-NEXT:    mov w12, #68 // =0x44
+; CHECK-NEXT:    orr x10, x10, x11, lsl #57
+; CHECK-NEXT:    fmov w11, s0
+; CHECK-NEXT:    mov z0.b, z1.b[60]
+; CHECK-NEXT:    lastb w14, p0, z1.b
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    whilels p0.b, xzr, x12
+; CHECK-NEXT:    orr x10, x10, x11, lsl #58
+; CHECK-NEXT:    fmov w11, s2
+; CHECK-NEXT:    mov z2.b, z1.b[61]
+; CHECK-NEXT:    lastb w12, p0, z1.b
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    fmov w15, s2
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    orr x10, x10, x11, lsl #59
+; CHECK-NEXT:    fmov w11, s0
+; CHECK-NEXT:    mov z0.b, z1.b[62]
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x10, x10, x11, lsl #60
+; CHECK-NEXT:    and w11, w15, #0x1
+; CHECK-NEXT:    and w15, w8, #0x1
+; CHECK-NEXT:    orr x10, x10, x11, lsl #61
+; CHECK-NEXT:    fmov w11, s0
 ; CHECK-NEXT:    mov z0.b, z1.b[63]
-; CHECK-NEXT:    orr x8, x8, x9, lsl #59
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z1.b[62]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #60
-; CHECK-NEXT:    and w9, w10, #0x1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #61
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #62
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    orr x8, x8, x9, lsl #63
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    fmov w16, s0
+; CHECK-NEXT:    orr x10, x10, x11, lsl #62
+; CHECK-NEXT:    mov w11, #69 // =0x45
+; CHECK-NEXT:    whilels p2.b, xzr, x11
+; CHECK-NEXT:    and w11, w14, #0x1
+; CHECK-NEXT:    orr x8, x10, x16, lsl #63
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    mov w13, #71 // =0x47
 ; CHECK-NEXT:    tbz w8, #0, .LBB43_2
 ; CHECK-NEXT:  // %bb.1: // %cond.load
 ; CHECK-NEXT:    ld1rb { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    add x0, x0, #1
-; CHECK-NEXT:    tbnz w8, #1, .LBB43_3
-; CHECK-NEXT:    b .LBB43_4
+; CHECK-NEXT:    b .LBB43_3
 ; CHECK-NEXT:  .LBB43_2:
-; CHECK-NEXT:    adrp x9, .LCPI43_0
-; CHECK-NEXT:    add x9, x9, :lo12:.LCPI43_0
-; CHECK-NEXT:    ld1b { z0.b }, p1/z, [x9]
-; CHECK-NEXT:    tbz w8, #1, .LBB43_4
-; CHECK-NEXT:  .LBB43_3: // %cond.load1
-; CHECK-NEXT:    mov w9, #1 // =0x1
+; CHECK-NEXT:    adrp x14, .LCPI43_0
+; CHECK-NEXT:    add x14, x14, :lo12:.LCPI43_0
+; CHECK-NEXT:    ld1b { z0.b }, p1/z, [x14]
+; CHECK-NEXT:  .LBB43_3: // %else
+; CHECK-NEXT:    lastb w14, p2, z1.b
+; CHECK-NEXT:    orr x16, x9, x15, lsl #1
+; CHECK-NEXT:    and w9, w12, #0x1
+; CHECK-NEXT:    mov w12, #72 // =0x48
+; CHECK-NEXT:    whilels p1.b, xzr, x17
+; CHECK-NEXT:    tbz w8, #1, .LBB43_5
+; CHECK-NEXT:  // %bb.4: // %cond.load1
+; CHECK-NEXT:    mov w15, #1 // =0x1
 ; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:  .LBB43_4: // %else2
-; CHECK-NEXT:    tbnz w8, #2, .LBB43_181
-; CHECK-NEXT:  // %bb.5: // %else6
-; CHECK-NEXT:    tbnz w8, #3, .LBB43_182
-; CHECK-NEXT:  .LBB43_6: // %else10
-; CHECK-NEXT:    tbnz w8, #4, .LBB43_183
-; CHECK-NEXT:  .LBB43_7: // %else14
-; CHECK-NEXT:    tbnz w8, #5, .LBB43_184
-; CHECK-NEXT:  .LBB43_8: // %else18
-; CHECK-NEXT:    tbnz w8, #6, .LBB43_185
-; CHECK-NEXT:  .LBB43_9: // %else22
-; CHECK-NEXT:    tbnz w8, #7, .LBB43_186
-; CHECK-NEXT:  .LBB43_10: // %else26
-; CHECK-NEXT:    tbnz w8, #8, .LBB43_187
-; CHECK-NEXT:  .LBB43_11: // %else30
-; CHECK-NEXT:    tbnz w8, #9, .LBB43_188
-; CHECK-NEXT:  .LBB43_12: // %else34
-; CHECK-NEXT:    tbnz w8, #10, .LBB43_189
-; CHECK-NEXT:  .LBB43_13: // %else38
-; CHECK-NEXT:    tbnz w8, #11, .LBB43_190
-; CHECK-NEXT:  .LBB43_14: // %else42
-; CHECK-NEXT:    tbz w8, #12, .LBB43_16
-; CHECK-NEXT:  .LBB43_15: // %cond.load45
-; CHECK-NEXT:    mov w9, #12 // =0xc
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB43_5: // %else2
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x10, lsl #2
+; CHECK-NEXT:    and w10, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #73 // =0x49
+; CHECK-NEXT:    tbz w8, #2, .LBB43_7
+; CHECK-NEXT:  // %bb.6: // %cond.load5
+; CHECK-NEXT:    mov w14, #2 // =0x2
 ; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:  .LBB43_16: // %else46
-; CHECK-NEXT:    mov w12, #71 // =0x47
-; CHECK-NEXT:    mov w14, #72 // =0x48
-; CHECK-NEXT:    mov w9, #83 // =0x53
-; CHECK-NEXT:    mov w10, #84 // =0x54
-; CHECK-NEXT:    tbz w8, #13, .LBB43_18
-; CHECK-NEXT:  // %bb.17: // %cond.load49
-; CHECK-NEXT:    mov w11, #13 // =0xd
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_7: // %else6
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x11, lsl #3
+; CHECK-NEXT:    and w11, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #74 // =0x4a
+; CHECK-NEXT:    tbz w8, #3, .LBB43_9
+; CHECK-NEXT:  // %bb.8: // %cond.load9
+; CHECK-NEXT:    mov w15, #3 // =0x3
 ; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w11
-; CHECK-NEXT:    ldrb w11, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w11
-; CHECK-NEXT:  .LBB43_18: // %else50
-; CHECK-NEXT:    mov w11, #73 // =0x49
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB43_9: // %else10
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x9, lsl #4
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #75 // =0x4b
+; CHECK-NEXT:    tbz w8, #4, .LBB43_11
+; CHECK-NEXT:  // %bb.10: // %cond.load13
+; CHECK-NEXT:    mov w14, #4 // =0x4
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_11: // %else14
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x10, lsl #5
+; CHECK-NEXT:    and w10, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #76 // =0x4c
+; CHECK-NEXT:    tbz w8, #5, .LBB43_13
+; CHECK-NEXT:  // %bb.12: // %cond.load17
+; CHECK-NEXT:    mov w15, #5 // =0x5
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB43_13: // %else18
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x11, lsl #6
+; CHECK-NEXT:    and w11, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #77 // =0x4d
+; CHECK-NEXT:    tbz w8, #6, .LBB43_15
+; CHECK-NEXT:  // %bb.14: // %cond.load21
+; CHECK-NEXT:    mov w14, #6 // =0x6
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_15: // %else22
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x9, lsl #7
+; CHECK-NEXT:    and w9, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #78 // =0x4e
+; CHECK-NEXT:    tbz w8, #7, .LBB43_17
+; CHECK-NEXT:  // %bb.16: // %cond.load25
+; CHECK-NEXT:    mov w15, #7 // =0x7
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB43_17: // %else26
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x10, lsl #8
+; CHECK-NEXT:    and w10, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #79 // =0x4f
+; CHECK-NEXT:    tbz w8, #8, .LBB43_19
+; CHECK-NEXT:  // %bb.18: // %cond.load29
+; CHECK-NEXT:    mov w14, #8 // =0x8
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_19: // %else30
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x11, lsl #9
+; CHECK-NEXT:    and w11, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #80 // =0x50
+; CHECK-NEXT:    tbz w8, #9, .LBB43_21
+; CHECK-NEXT:  // %bb.20: // %cond.load33
+; CHECK-NEXT:    mov w15, #9 // =0x9
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB43_21: // %else34
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x9, lsl #10
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #81 // =0x51
+; CHECK-NEXT:    tbz w8, #10, .LBB43_23
+; CHECK-NEXT:  // %bb.22: // %cond.load37
+; CHECK-NEXT:    mov w14, #10 // =0xa
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_23: // %else38
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x10, lsl #11
+; CHECK-NEXT:    and w10, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #82 // =0x52
+; CHECK-NEXT:    tbz w8, #11, .LBB43_25
+; CHECK-NEXT:  // %bb.24: // %cond.load41
+; CHECK-NEXT:    mov w15, #11 // =0xb
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB43_25: // %else42
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x11, lsl #12
+; CHECK-NEXT:    and w11, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #83 // =0x53
+; CHECK-NEXT:    tbz w8, #12, .LBB43_27
+; CHECK-NEXT:  // %bb.26: // %cond.load45
+; CHECK-NEXT:    mov w14, #12 // =0xc
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_27: // %else46
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x9, lsl #13
+; CHECK-NEXT:    and w9, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #84 // =0x54
+; CHECK-NEXT:    tbz w8, #13, .LBB43_29
+; CHECK-NEXT:  // %bb.28: // %cond.load49
+; CHECK-NEXT:    mov w15, #13 // =0xd
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB43_29: // %else50
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x10, lsl #14
+; CHECK-NEXT:    and w10, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
 ; CHECK-NEXT:    mov w13, #85 // =0x55
-; CHECK-NEXT:    tbz w8, #14, .LBB43_20
-; CHECK-NEXT:  // %bb.19: // %cond.load53
-; CHECK-NEXT:    mov w15, #14 // =0xe
+; CHECK-NEXT:    tbz w8, #14, .LBB43_31
+; CHECK-NEXT:  // %bb.30: // %cond.load53
+; CHECK-NEXT:    mov w14, #14 // =0xe
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_31: // %else54
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x11, lsl #15
+; CHECK-NEXT:    and w11, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #86 // =0x56
+; CHECK-NEXT:    tbz w8, #15, .LBB43_33
+; CHECK-NEXT:  // %bb.32: // %cond.load57
+; CHECK-NEXT:    mov w15, #15 // =0xf
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB43_33: // %else58
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x9, lsl #16
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #87 // =0x57
+; CHECK-NEXT:    tbz w8, #16, .LBB43_35
+; CHECK-NEXT:  // %bb.34: // %cond.load61
+; CHECK-NEXT:    mov w14, #16 // =0x10
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_35: // %else62
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x10, lsl #17
+; CHECK-NEXT:    and w10, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #88 // =0x58
+; CHECK-NEXT:    tbz w8, #17, .LBB43_37
+; CHECK-NEXT:  // %bb.36: // %cond.load65
+; CHECK-NEXT:    mov w15, #17 // =0x11
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB43_37: // %else66
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x11, lsl #18
+; CHECK-NEXT:    and w11, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #89 // =0x59
+; CHECK-NEXT:    tbz w8, #18, .LBB43_39
+; CHECK-NEXT:  // %bb.38: // %cond.load69
+; CHECK-NEXT:    mov w14, #18 // =0x12
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_39: // %else70
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x9, lsl #19
+; CHECK-NEXT:    and w9, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #90 // =0x5a
+; CHECK-NEXT:    tbz w8, #19, .LBB43_41
+; CHECK-NEXT:  // %bb.40: // %cond.load73
+; CHECK-NEXT:    mov w15, #19 // =0x13
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB43_41: // %else74
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x10, lsl #20
+; CHECK-NEXT:    and w10, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #91 // =0x5b
+; CHECK-NEXT:    tbz w8, #20, .LBB43_43
+; CHECK-NEXT:  // %bb.42: // %cond.load77
+; CHECK-NEXT:    mov w14, #20 // =0x14
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_43: // %else78
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x11, lsl #21
+; CHECK-NEXT:    and w11, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #92 // =0x5c
+; CHECK-NEXT:    tbz w8, #21, .LBB43_45
+; CHECK-NEXT:  // %bb.44: // %cond.load81
+; CHECK-NEXT:    mov w15, #21 // =0x15
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB43_45: // %else82
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x9, lsl #22
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #93 // =0x5d
+; CHECK-NEXT:    tbz w8, #22, .LBB43_47
+; CHECK-NEXT:  // %bb.46: // %cond.load85
+; CHECK-NEXT:    mov w14, #22 // =0x16
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_47: // %else86
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x10, lsl #23
+; CHECK-NEXT:    and w10, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #94 // =0x5e
+; CHECK-NEXT:    tbz w8, #23, .LBB43_49
+; CHECK-NEXT:  // %bb.48: // %cond.load89
+; CHECK-NEXT:    mov w15, #23 // =0x17
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB43_49: // %else90
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x11, lsl #24
+; CHECK-NEXT:    and w11, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #95 // =0x5f
+; CHECK-NEXT:    tbz w8, #24, .LBB43_51
+; CHECK-NEXT:  // %bb.50: // %cond.load93
+; CHECK-NEXT:    mov w14, #24 // =0x18
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_51: // %else94
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x16, x9, lsl #25
+; CHECK-NEXT:    and w9, w15, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    tbz w8, #25, .LBB43_53
+; CHECK-NEXT:  // %bb.52: // %cond.load97
+; CHECK-NEXT:    mov w12, #25 // =0x19
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w12
+; CHECK-NEXT:    ldrb w12, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w12
+; CHECK-NEXT:  .LBB43_53: // %else98
+; CHECK-NEXT:    lastb w15, p1, z1.b
+; CHECK-NEXT:    orr x10, x16, x10, lsl #26
+; CHECK-NEXT:    and w12, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    mov w13, #96 // =0x60
+; CHECK-NEXT:    tbz w8, #26, .LBB43_55
+; CHECK-NEXT:  // %bb.54: // %cond.load101
+; CHECK-NEXT:    mov w14, #26 // =0x1a
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_55: // %else102
+; CHECK-NEXT:    lastb w16, p1, z1.b
+; CHECK-NEXT:    orr x14, x10, x11, lsl #27
+; CHECK-NEXT:    and w10, w15, #0x1
+; CHECK-NEXT:    mov w11, #97 // =0x61
+; CHECK-NEXT:    tbz w8, #27, .LBB43_57
+; CHECK-NEXT:  // %bb.56: // %cond.load105
+; CHECK-NEXT:    mov w15, #27 // =0x1b
 ; CHECK-NEXT:    index z2.b, #0, #1
 ; CHECK-NEXT:    mov z3.b, w15
 ; CHECK-NEXT:    ldrb w15, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w15
-; CHECK-NEXT:  .LBB43_20: // %else54
-; CHECK-NEXT:    whilels p3.b, xzr, x12
-; CHECK-NEXT:    whilels p4.b, xzr, x14
-; CHECK-NEXT:    mov w14, #86 // =0x56
-; CHECK-NEXT:    whilels p1.b, xzr, x9
-; CHECK-NEXT:    mov w9, #74 // =0x4a
-; CHECK-NEXT:    whilels p2.b, xzr, x10
-; CHECK-NEXT:    tbz w8, #15, .LBB43_22
-; CHECK-NEXT:  // %bb.21: // %cond.load57
-; CHECK-NEXT:    mov w10, #15 // =0xf
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w10
-; CHECK-NEXT:    ldrb w10, [x0], #1
-; CHECK-NEXT:    cmpeq p5.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p5/m, w10
-; CHECK-NEXT:  .LBB43_22: // %else58
-; CHECK-NEXT:    lastb w10, p3, z1.b
-; CHECK-NEXT:    mov w1, #75 // =0x4b
-; CHECK-NEXT:    mov w17, #87 // =0x57
-; CHECK-NEXT:    lastb w12, p4, z1.b
-; CHECK-NEXT:    lastb w15, p1, z1.b
-; CHECK-NEXT:    lastb w16, p2, z1.b
-; CHECK-NEXT:    whilels p2.b, xzr, x11
+; CHECK-NEXT:  .LBB43_57: // %else106
+; CHECK-NEXT:    orr x14, x14, x9, lsl #28
 ; CHECK-NEXT:    whilels p1.b, xzr, x13
-; CHECK-NEXT:    tbz w8, #16, .LBB43_24
-; CHECK-NEXT:  // %bb.23: // %cond.load61
-; CHECK-NEXT:    mov w11, #16 // =0x10
+; CHECK-NEXT:    and w9, w16, #0x1
+; CHECK-NEXT:    mov w13, #98 // =0x62
+; CHECK-NEXT:    tbz w8, #28, .LBB43_59
+; CHECK-NEXT:  // %bb.58: // %cond.load109
+; CHECK-NEXT:    mov w15, #28 // =0x1c
 ; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w11
-; CHECK-NEXT:    ldrb w11, [x0], #1
-; CHECK-NEXT:    cmpeq p3.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p3/m, w11
-; CHECK-NEXT:  .LBB43_24: // %else62
-; CHECK-NEXT:    lastb w11, p2, z1.b
-; CHECK-NEXT:    mov w3, #76 // =0x4c
-; CHECK-NEXT:    mov w18, #88 // =0x58
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    whilels p2.b, xzr, x9
-; CHECK-NEXT:    whilels p1.b, xzr, x14
-; CHECK-NEXT:    tbz w8, #17, .LBB43_26
-; CHECK-NEXT:  // %bb.25: // %cond.load65
-; CHECK-NEXT:    mov w9, #17 // =0x11
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p3.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p3/m, w9
-; CHECK-NEXT:  .LBB43_26: // %else66
-; CHECK-NEXT:    lastb w9, p2, z1.b
-; CHECK-NEXT:    ubfiz x5, x10, #7, #1
-; CHECK-NEXT:    ubfiz x7, x12, #8, #1
-; CHECK-NEXT:    ubfiz x4, x15, #19, #1
-; CHECK-NEXT:    ubfiz x6, x16, #20, #1
-; CHECK-NEXT:    mov w15, #89 // =0x59
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    whilels p2.b, xzr, x1
-; CHECK-NEXT:    mov w1, #77 // =0x4d
-; CHECK-NEXT:    whilels p1.b, xzr, x17
-; CHECK-NEXT:    mov w17, #64 // =0x40
-; CHECK-NEXT:    tbz w8, #18, .LBB43_28
-; CHECK-NEXT:  // %bb.27: // %cond.load69
-; CHECK-NEXT:    mov w10, #18 // =0x12
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w10
-; CHECK-NEXT:    ldrb w10, [x0], #1
-; CHECK-NEXT:    cmpeq p3.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p3/m, w10
-; CHECK-NEXT:  .LBB43_28: // %else70
-; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    stp x24, x23, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w21, -24
-; CHECK-NEXT:    .cfi_offset w22, -32
-; CHECK-NEXT:    .cfi_offset w23, -40
-; CHECK-NEXT:    .cfi_offset w24, -48
-; CHECK-NEXT:    lastb w10, p2, z1.b
-; CHECK-NEXT:    orr x7, x5, x7
-; CHECK-NEXT:    ubfiz x5, x13, #21, #1
-; CHECK-NEXT:    mov w16, #65 // =0x41
-; CHECK-NEXT:    orr x19, x4, x6
-; CHECK-NEXT:    mov w4, #90 // =0x5a
-; CHECK-NEXT:    lastb w12, p1, z1.b
-; CHECK-NEXT:    whilels p2.b, xzr, x3
-; CHECK-NEXT:    ubfiz x3, x11, #9, #1
-; CHECK-NEXT:    whilels p1.b, xzr, x18
-; CHECK-NEXT:    mov w18, #78 // =0x4e
-; CHECK-NEXT:    tbz w8, #19, .LBB43_30
-; CHECK-NEXT:  // %bb.29: // %cond.load73
-; CHECK-NEXT:    mov w11, #19 // =0x13
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w11
-; CHECK-NEXT:    ldrb w11, [x0], #1
-; CHECK-NEXT:    cmpeq p3.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p3/m, w11
-; CHECK-NEXT:  .LBB43_30: // %else74
-; CHECK-NEXT:    lastb w11, p2, z1.b
-; CHECK-NEXT:    ubfiz x21, x9, #10, #1
-; CHECK-NEXT:    ubfiz x6, x14, #22, #1
-; CHECK-NEXT:    orr x7, x7, x3
-; CHECK-NEXT:    mov w3, #79 // =0x4f
-; CHECK-NEXT:    orr x20, x19, x5
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    mov w5, #91 // =0x5b
-; CHECK-NEXT:    whilels p3.b, xzr, x17
-; CHECK-NEXT:    mov w17, #66 // =0x42
-; CHECK-NEXT:    whilels p2.b, xzr, x1
-; CHECK-NEXT:    whilels p1.b, xzr, x15
-; CHECK-NEXT:    tbz w8, #20, .LBB43_32
-; CHECK-NEXT:  // %bb.31: // %cond.load77
-; CHECK-NEXT:    mov w9, #20 // =0x14
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p4.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p4/m, w9
-; CHECK-NEXT:  .LBB43_32: // %else78
-; CHECK-NEXT:    lastb w9, p3, z1.b
-; CHECK-NEXT:    orr x19, x7, x21
-; CHECK-NEXT:    ubfiz x21, x10, #11, #1
-; CHECK-NEXT:    ubfiz x7, x12, #23, #1
-; CHECK-NEXT:    mov w1, #67 // =0x43
-; CHECK-NEXT:    orr x22, x20, x6
-; CHECK-NEXT:    lastb w14, p2, z1.b
-; CHECK-NEXT:    mov w6, #92 // =0x5c
+; CHECK-NEXT:    mov z3.b, w15
+; CHECK-NEXT:    ldrb w15, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w15
+; CHECK-NEXT:  .LBB43_59: // %else110
 ; CHECK-NEXT:    lastb w15, p1, z1.b
-; CHECK-NEXT:    whilels p3.b, xzr, x16
-; CHECK-NEXT:    whilels p2.b, xzr, x18
-; CHECK-NEXT:    whilels p1.b, xzr, x4
-; CHECK-NEXT:    mov w4, #80 // =0x50
-; CHECK-NEXT:    tbz w8, #21, .LBB43_34
-; CHECK-NEXT:  // %bb.33: // %cond.load81
-; CHECK-NEXT:    mov w10, #21 // =0x15
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w10
-; CHECK-NEXT:    ldrb w10, [x0], #1
-; CHECK-NEXT:    cmpeq p4.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p4/m, w10
-; CHECK-NEXT:  .LBB43_34: // %else82
-; CHECK-NEXT:    lastb w10, p3, z1.b
-; CHECK-NEXT:    orr x20, x19, x21
-; CHECK-NEXT:    ubfiz x21, x11, #12, #1
-; CHECK-NEXT:    ubfiz x19, x13, #24, #1
-; CHECK-NEXT:    mov w18, #68 // =0x44
-; CHECK-NEXT:    orr x23, x22, x7
-; CHECK-NEXT:    lastb w12, p2, z1.b
-; CHECK-NEXT:    mov w7, #93 // =0x5d
-; CHECK-NEXT:    lastb w16, p1, z1.b
-; CHECK-NEXT:    whilels p3.b, xzr, x17
-; CHECK-NEXT:    whilels p2.b, xzr, x3
-; CHECK-NEXT:    whilels p1.b, xzr, x5
-; CHECK-NEXT:    mov w5, #81 // =0x51
-; CHECK-NEXT:    tbz w8, #22, .LBB43_36
-; CHECK-NEXT:  // %bb.35: // %cond.load85
-; CHECK-NEXT:    mov w11, #22 // =0x16
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w11
-; CHECK-NEXT:    ldrb w11, [x0], #1
-; CHECK-NEXT:    cmpeq p4.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p4/m, w11
-; CHECK-NEXT:  .LBB43_36: // %else86
-; CHECK-NEXT:    lastb w11, p3, z1.b
-; CHECK-NEXT:    orr x20, x20, x21
-; CHECK-NEXT:    ubfiz x21, x14, #13, #1
-; CHECK-NEXT:    ubfiz x22, x15, #25, #1
-; CHECK-NEXT:    and x9, x9, #0x1
-; CHECK-NEXT:    mov w3, #69 // =0x45
-; CHECK-NEXT:    lastb w13, p2, z1.b
-; CHECK-NEXT:    orr x24, x23, x19
-; CHECK-NEXT:    mov w19, #94 // =0x5e
-; CHECK-NEXT:    lastb w17, p1, z1.b
-; CHECK-NEXT:    whilels p3.b, xzr, x1
-; CHECK-NEXT:    whilels p2.b, xzr, x4
-; CHECK-NEXT:    mov w4, #82 // =0x52
-; CHECK-NEXT:    whilels p1.b, xzr, x6
-; CHECK-NEXT:    mov w6, #95 // =0x5f
-; CHECK-NEXT:    tbz w8, #23, .LBB43_38
-; CHECK-NEXT:  // %bb.37: // %cond.load89
-; CHECK-NEXT:    mov w14, #23 // =0x17
+; CHECK-NEXT:    orr x12, x14, x12, lsl #29
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #99 // =0x63
+; CHECK-NEXT:    tbz w8, #29, .LBB43_61
+; CHECK-NEXT:  // %bb.60: // %cond.load113
+; CHECK-NEXT:    mov w14, #29 // =0x1d
 ; CHECK-NEXT:    index z2.b, #0, #1
 ; CHECK-NEXT:    mov z3.b, w14
 ; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p4.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p4/m, w14
-; CHECK-NEXT:  .LBB43_38: // %else90
-; CHECK-NEXT:    lastb w14, p3, z1.b
-; CHECK-NEXT:    bfi x9, x10, #1, #1
-; CHECK-NEXT:    ubfiz x23, x16, #26, #1
-; CHECK-NEXT:    lastb w15, p2, z1.b
-; CHECK-NEXT:    lastb w1, p1, z1.b
-; CHECK-NEXT:    whilels p3.b, xzr, x18
-; CHECK-NEXT:    whilels p2.b, xzr, x5
-; CHECK-NEXT:    ubfiz x5, x12, #14, #1
-; CHECK-NEXT:    mov w12, #70 // =0x46
-; CHECK-NEXT:    whilels p1.b, xzr, x7
-; CHECK-NEXT:    orr x7, x20, x21
-; CHECK-NEXT:    orr x20, x24, x22
-; CHECK-NEXT:    tbz w8, #24, .LBB43_40
-; CHECK-NEXT:  // %bb.39: // %cond.load93
-; CHECK-NEXT:    mov w10, #24 // =0x18
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_61: // %else114
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x16, x12, x10, lsl #30
+; CHECK-NEXT:    and w10, w15, #0x1
+; CHECK-NEXT:    mov w12, #100 // =0x64
+; CHECK-NEXT:    whilels p1.b, xzr, x13
+; CHECK-NEXT:    tbz w8, #30, .LBB43_63
+; CHECK-NEXT:  // %bb.62: // %cond.load117
+; CHECK-NEXT:    mov w13, #30 // =0x1e
 ; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w10
-; CHECK-NEXT:    ldrb w10, [x0], #1
-; CHECK-NEXT:    cmpeq p4.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p4/m, w10
-; CHECK-NEXT:  .LBB43_40: // %else94
-; CHECK-NEXT:    lastb w10, p3, z1.b
-; CHECK-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    bfi x9, x11, #2, #1
-; CHECK-NEXT:    orr x5, x7, x5
-; CHECK-NEXT:    lastb w16, p2, z1.b
-; CHECK-NEXT:    lastb w18, p1, z1.b
-; CHECK-NEXT:    whilels p1.b, xzr, x19
-; CHECK-NEXT:    whilels p3.b, xzr, x6
-; CHECK-NEXT:    orr x6, x20, x23
-; CHECK-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    whilels p4.b, xzr, x3
-; CHECK-NEXT:    ldp x24, x23, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    whilels p2.b, xzr, x4
-; CHECK-NEXT:    ubfiz x3, x13, #15, #1
-; CHECK-NEXT:    ubfiz x4, x17, #27, #1
-; CHECK-NEXT:    add sp, sp, #64
-; CHECK-NEXT:    tbz w8, #25, .LBB43_42
-; CHECK-NEXT:  // %bb.41: // %cond.load97
-; CHECK-NEXT:    mov w11, #25 // =0x19
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB43_63: // %else118
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x16, x9, lsl #31
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #101 // =0x65
+; CHECK-NEXT:    tbz w8, #31, .LBB43_65
+; CHECK-NEXT:  // %bb.64: // %cond.load121
+; CHECK-NEXT:    mov w14, #31 // =0x1f
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_65: // %else122
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #32
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #102 // =0x66
+; CHECK-NEXT:    tbz x8, #32, .LBB43_67
+; CHECK-NEXT:  // %bb.66: // %cond.load125
+; CHECK-NEXT:    mov w13, #32 // =0x20
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB43_67: // %else126
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #33
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #103 // =0x67
+; CHECK-NEXT:    tbz x8, #33, .LBB43_69
+; CHECK-NEXT:  // %bb.68: // %cond.load129
+; CHECK-NEXT:    mov w14, #33 // =0x21
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_69: // %else130
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #34
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #104 // =0x68
+; CHECK-NEXT:    tbz x8, #34, .LBB43_71
+; CHECK-NEXT:  // %bb.70: // %cond.load133
+; CHECK-NEXT:    mov w13, #34 // =0x22
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB43_71: // %else134
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #35
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #105 // =0x69
+; CHECK-NEXT:    tbz x8, #35, .LBB43_73
+; CHECK-NEXT:  // %bb.72: // %cond.load137
+; CHECK-NEXT:    mov w14, #35 // =0x23
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_73: // %else138
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #36
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #106 // =0x6a
+; CHECK-NEXT:    tbz x8, #36, .LBB43_75
+; CHECK-NEXT:  // %bb.74: // %cond.load141
+; CHECK-NEXT:    mov w13, #36 // =0x24
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB43_75: // %else142
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #37
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #107 // =0x6b
+; CHECK-NEXT:    tbz x8, #37, .LBB43_77
+; CHECK-NEXT:  // %bb.76: // %cond.load145
+; CHECK-NEXT:    mov w14, #37 // =0x25
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_77: // %else146
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #38
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #108 // =0x6c
+; CHECK-NEXT:    tbz x8, #38, .LBB43_79
+; CHECK-NEXT:  // %bb.78: // %cond.load149
+; CHECK-NEXT:    mov w13, #38 // =0x26
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB43_79: // %else150
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #39
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #109 // =0x6d
+; CHECK-NEXT:    tbz x8, #39, .LBB43_81
+; CHECK-NEXT:  // %bb.80: // %cond.load153
+; CHECK-NEXT:    mov w14, #39 // =0x27
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_81: // %else154
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #40
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #110 // =0x6e
+; CHECK-NEXT:    tbz x8, #40, .LBB43_83
+; CHECK-NEXT:  // %bb.82: // %cond.load157
+; CHECK-NEXT:    mov w13, #40 // =0x28
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB43_83: // %else158
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #41
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #111 // =0x6f
+; CHECK-NEXT:    tbz x8, #41, .LBB43_85
+; CHECK-NEXT:  // %bb.84: // %cond.load161
+; CHECK-NEXT:    mov w14, #41 // =0x29
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_85: // %else162
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #42
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #112 // =0x70
+; CHECK-NEXT:    tbz x8, #42, .LBB43_87
+; CHECK-NEXT:  // %bb.86: // %cond.load165
+; CHECK-NEXT:    mov w13, #42 // =0x2a
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB43_87: // %else166
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #43
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #113 // =0x71
+; CHECK-NEXT:    tbz x8, #43, .LBB43_89
+; CHECK-NEXT:  // %bb.88: // %cond.load169
+; CHECK-NEXT:    mov w14, #43 // =0x2b
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_89: // %else170
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #44
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #114 // =0x72
+; CHECK-NEXT:    tbz x8, #44, .LBB43_91
+; CHECK-NEXT:  // %bb.90: // %cond.load173
+; CHECK-NEXT:    mov w13, #44 // =0x2c
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB43_91: // %else174
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #45
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #115 // =0x73
+; CHECK-NEXT:    tbz x8, #45, .LBB43_93
+; CHECK-NEXT:  // %bb.92: // %cond.load177
+; CHECK-NEXT:    mov w14, #45 // =0x2d
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_93: // %else178
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #46
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #116 // =0x74
+; CHECK-NEXT:    tbz x8, #46, .LBB43_95
+; CHECK-NEXT:  // %bb.94: // %cond.load181
+; CHECK-NEXT:    mov w13, #46 // =0x2e
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB43_95: // %else182
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #47
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #117 // =0x75
+; CHECK-NEXT:    tbz x8, #47, .LBB43_97
+; CHECK-NEXT:  // %bb.96: // %cond.load185
+; CHECK-NEXT:    mov w14, #47 // =0x2f
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_97: // %else186
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #48
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #118 // =0x76
+; CHECK-NEXT:    tbz x8, #48, .LBB43_99
+; CHECK-NEXT:  // %bb.98: // %cond.load189
+; CHECK-NEXT:    mov w13, #48 // =0x30
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB43_99: // %else190
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #49
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #119 // =0x77
+; CHECK-NEXT:    tbz x8, #49, .LBB43_101
+; CHECK-NEXT:  // %bb.100: // %cond.load193
+; CHECK-NEXT:    mov w14, #49 // =0x31
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_101: // %else194
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #50
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #120 // =0x78
+; CHECK-NEXT:    tbz x8, #50, .LBB43_103
+; CHECK-NEXT:  // %bb.102: // %cond.load197
+; CHECK-NEXT:    mov w13, #50 // =0x32
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB43_103: // %else198
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #51
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #121 // =0x79
+; CHECK-NEXT:    tbz x8, #51, .LBB43_105
+; CHECK-NEXT:  // %bb.104: // %cond.load201
+; CHECK-NEXT:    mov w14, #51 // =0x33
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_105: // %else202
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #52
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #122 // =0x7a
+; CHECK-NEXT:    tbz x8, #52, .LBB43_107
+; CHECK-NEXT:  // %bb.106: // %cond.load205
+; CHECK-NEXT:    mov w13, #52 // =0x34
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB43_107: // %else206
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #53
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #123 // =0x7b
+; CHECK-NEXT:    tbz x8, #53, .LBB43_109
+; CHECK-NEXT:  // %bb.108: // %cond.load209
+; CHECK-NEXT:    mov w14, #53 // =0x35
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_109: // %else210
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #54
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #124 // =0x7c
+; CHECK-NEXT:    tbz x8, #54, .LBB43_111
+; CHECK-NEXT:  // %bb.110: // %cond.load213
+; CHECK-NEXT:    mov w13, #54 // =0x36
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB43_111: // %else214
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #55
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    mov w11, #125 // =0x7d
+; CHECK-NEXT:    tbz x8, #55, .LBB43_113
+; CHECK-NEXT:  // %bb.112: // %cond.load217
+; CHECK-NEXT:    mov w14, #55 // =0x37
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w14
+; CHECK-NEXT:  .LBB43_113: // %else218
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #56
+; CHECK-NEXT:    and w10, w13, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x12
+; CHECK-NEXT:    mov w12, #126 // =0x7e
+; CHECK-NEXT:    tbz x8, #56, .LBB43_115
+; CHECK-NEXT:  // %bb.114: // %cond.load221
+; CHECK-NEXT:    mov w13, #56 // =0x38
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    mov z3.b, w13
+; CHECK-NEXT:    ldrb w13, [x0], #1
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w13
+; CHECK-NEXT:  .LBB43_115: // %else222
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x9, lsl #57
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    whilels p1.b, xzr, x11
+; CHECK-NEXT:    tbz x8, #57, .LBB43_117
+; CHECK-NEXT:  // %bb.116: // %cond.load225
+; CHECK-NEXT:    mov w11, #57 // =0x39
 ; CHECK-NEXT:    index z2.b, #0, #1
 ; CHECK-NEXT:    mov z3.b, w11
 ; CHECK-NEXT:    ldrb w11, [x0], #1
-; CHECK-NEXT:    cmpeq p5.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p5/m, w11
-; CHECK-NEXT:  .LBB43_42: // %else98
-; CHECK-NEXT:    lastb w11, p4, z1.b
-; CHECK-NEXT:    bfi x9, x14, #3, #1
-; CHECK-NEXT:    ubfiz x15, x15, #16, #1
-; CHECK-NEXT:    ubfiz x1, x1, #28, #1
-; CHECK-NEXT:    orr x3, x5, x3
-; CHECK-NEXT:    orr x4, x6, x4
-; CHECK-NEXT:    lastb w13, p2, z1.b
-; CHECK-NEXT:    mov w14, #96 // =0x60
-; CHECK-NEXT:    lastb w17, p1, z1.b
-; CHECK-NEXT:    lastb w7, p3, z1.b
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
+; CHECK-NEXT:    mov z0.b, p2/m, w11
+; CHECK-NEXT:  .LBB43_117: // %else226
+; CHECK-NEXT:    lastb w14, p1, z1.b
+; CHECK-NEXT:    orr x15, x15, x10, lsl #58
+; CHECK-NEXT:    and w11, w13, #0x1
+; CHECK-NEXT:    mov w10, #127 // =0x7f
 ; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    tbz w8, #26, .LBB43_44
-; CHECK-NEXT:  // %bb.43: // %cond.load101
-; CHECK-NEXT:    mov w12, #26 // =0x1a
+; CHECK-NEXT:    tbz x8, #58, .LBB43_119
+; CHECK-NEXT:  // %bb.118: // %cond.load229
+; CHECK-NEXT:    mov w12, #58 // =0x3a
 ; CHECK-NEXT:    index z2.b, #0, #1
 ; CHECK-NEXT:    mov z3.b, w12
 ; CHECK-NEXT:    ldrb w12, [x0], #1
 ; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
 ; CHECK-NEXT:    mov z0.b, p2/m, w12
-; CHECK-NEXT:  .LBB43_44: // %else102
-; CHECK-NEXT:    lastb w12, p1, z1.b
-; CHECK-NEXT:    bfi x9, x10, #4, #1
-; CHECK-NEXT:    ubfiz x16, x16, #17, #1
-; CHECK-NEXT:    ubfiz x18, x18, #29, #1
-; CHECK-NEXT:    lsl w10, w7, #31
-; CHECK-NEXT:    orr x3, x3, x15
-; CHECK-NEXT:    orr x1, x4, x1
-; CHECK-NEXT:    mov w15, #97 // =0x61
-; CHECK-NEXT:    tbz w8, #27, .LBB43_46
-; CHECK-NEXT:  // %bb.45: // %cond.load105
-; CHECK-NEXT:    mov w4, #27 // =0x1b
+; CHECK-NEXT:  .LBB43_119: // %else230
+; CHECK-NEXT:    lastb w13, p1, z1.b
+; CHECK-NEXT:    orr x12, x15, x9, lsl #59
+; CHECK-NEXT:    and w9, w14, #0x1
+; CHECK-NEXT:    tbz x8, #59, .LBB43_121
+; CHECK-NEXT:  // %bb.120: // %cond.load233
+; CHECK-NEXT:    mov w14, #59 // =0x3b
 ; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w4
-; CHECK-NEXT:    ldrb w4, [x0], #1
+; CHECK-NEXT:    mov z3.b, w14
+; CHECK-NEXT:    ldrb w14, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w4
-; CHECK-NEXT:  .LBB43_46: // %else106
-; CHECK-NEXT:    bfi x9, x11, #5, #1
-; CHECK-NEXT:    ubfiz x13, x13, #18, #1
-; CHECK-NEXT:    ubfiz x17, x17, #30, #1
-; CHECK-NEXT:    whilels p1.b, xzr, x14
-; CHECK-NEXT:    orr x16, x3, x16
-; CHECK-NEXT:    orr x18, x1, x18
-; CHECK-NEXT:    mov w11, #98 // =0x62
-; CHECK-NEXT:    tbz w8, #28, .LBB43_48
-; CHECK-NEXT:  // %bb.47: // %cond.load109
-; CHECK-NEXT:    mov w14, #28 // =0x1c
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB43_48: // %else110
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    bfi x9, x12, #6, #1
-; CHECK-NEXT:    mov w12, #99 // =0x63
-; CHECK-NEXT:    whilels p1.b, xzr, x15
-; CHECK-NEXT:    orr x15, x16, x13
-; CHECK-NEXT:    orr x16, x18, x17
-; CHECK-NEXT:    tbz w8, #29, .LBB43_50
-; CHECK-NEXT:  // %bb.49: // %cond.load113
-; CHECK-NEXT:    mov w13, #29 // =0x1d
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB43_50: // %else114
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x9, x15
-; CHECK-NEXT:    orr x10, x16, x10
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #100 // =0x64
-; CHECK-NEXT:    tbz w8, #30, .LBB43_52
-; CHECK-NEXT:  // %bb.51: // %cond.load117
-; CHECK-NEXT:    mov w14, #30 // =0x1e
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB43_52: // %else118
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10
+; CHECK-NEXT:    mov z0.b, p1/m, w14
+; CHECK-NEXT:  .LBB43_121: // %else234
+; CHECK-NEXT:    orr x12, x12, x11, lsl #60
+; CHECK-NEXT:    whilels p1.b, xzr, x10
 ; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #101 // =0x65
-; CHECK-NEXT:    tbz w8, #31, .LBB43_54
-; CHECK-NEXT:  // %bb.53: // %cond.load121
-; CHECK-NEXT:    mov w13, #31 // =0x1f
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB43_54: // %else122
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #32
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #102 // =0x66
-; CHECK-NEXT:    tbz x8, #32, .LBB43_56
-; CHECK-NEXT:  // %bb.55: // %cond.load125
-; CHECK-NEXT:    mov w14, #32 // =0x20
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB43_56: // %else126
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #33
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #103 // =0x67
-; CHECK-NEXT:    tbz x8, #33, .LBB43_58
-; CHECK-NEXT:  // %bb.57: // %cond.load129
-; CHECK-NEXT:    mov w13, #33 // =0x21
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB43_58: // %else130
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #34
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #104 // =0x68
-; CHECK-NEXT:    tbz x8, #34, .LBB43_60
-; CHECK-NEXT:  // %bb.59: // %cond.load133
-; CHECK-NEXT:    mov w14, #34 // =0x22
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB43_60: // %else134
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #35
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #105 // =0x69
-; CHECK-NEXT:    tbz x8, #35, .LBB43_62
-; CHECK-NEXT:  // %bb.61: // %cond.load137
-; CHECK-NEXT:    mov w13, #35 // =0x23
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB43_62: // %else138
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #36
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #106 // =0x6a
-; CHECK-NEXT:    tbz x8, #36, .LBB43_64
-; CHECK-NEXT:  // %bb.63: // %cond.load141
-; CHECK-NEXT:    mov w14, #36 // =0x24
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB43_64: // %else142
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #37
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #107 // =0x6b
-; CHECK-NEXT:    tbz x8, #37, .LBB43_66
-; CHECK-NEXT:  // %bb.65: // %cond.load145
-; CHECK-NEXT:    mov w13, #37 // =0x25
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB43_66: // %else146
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #38
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #108 // =0x6c
-; CHECK-NEXT:    tbz x8, #38, .LBB43_68
-; CHECK-NEXT:  // %bb.67: // %cond.load149
-; CHECK-NEXT:    mov w14, #38 // =0x26
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB43_68: // %else150
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #39
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #109 // =0x6d
-; CHECK-NEXT:    tbz x8, #39, .LBB43_70
-; CHECK-NEXT:  // %bb.69: // %cond.load153
-; CHECK-NEXT:    mov w13, #39 // =0x27
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB43_70: // %else154
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #40
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #110 // =0x6e
-; CHECK-NEXT:    tbz x8, #40, .LBB43_72
-; CHECK-NEXT:  // %bb.71: // %cond.load157
-; CHECK-NEXT:    mov w14, #40 // =0x28
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB43_72: // %else158
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #41
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #111 // =0x6f
-; CHECK-NEXT:    tbz x8, #41, .LBB43_74
-; CHECK-NEXT:  // %bb.73: // %cond.load161
-; CHECK-NEXT:    mov w13, #41 // =0x29
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB43_74: // %else162
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #42
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #112 // =0x70
-; CHECK-NEXT:    tbz x8, #42, .LBB43_76
-; CHECK-NEXT:  // %bb.75: // %cond.load165
-; CHECK-NEXT:    mov w14, #42 // =0x2a
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB43_76: // %else166
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #43
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #113 // =0x71
-; CHECK-NEXT:    tbz x8, #43, .LBB43_78
-; CHECK-NEXT:  // %bb.77: // %cond.load169
-; CHECK-NEXT:    mov w13, #43 // =0x2b
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB43_78: // %else170
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #44
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #114 // =0x72
-; CHECK-NEXT:    tbz x8, #44, .LBB43_80
-; CHECK-NEXT:  // %bb.79: // %cond.load173
-; CHECK-NEXT:    mov w14, #44 // =0x2c
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB43_80: // %else174
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #45
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #115 // =0x73
-; CHECK-NEXT:    tbz x8, #45, .LBB43_82
-; CHECK-NEXT:  // %bb.81: // %cond.load177
-; CHECK-NEXT:    mov w13, #45 // =0x2d
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB43_82: // %else178
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #46
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #116 // =0x74
-; CHECK-NEXT:    tbz x8, #46, .LBB43_84
-; CHECK-NEXT:  // %bb.83: // %cond.load181
-; CHECK-NEXT:    mov w14, #46 // =0x2e
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB43_84: // %else182
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #47
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #117 // =0x75
-; CHECK-NEXT:    tbz x8, #47, .LBB43_86
-; CHECK-NEXT:  // %bb.85: // %cond.load185
-; CHECK-NEXT:    mov w13, #47 // =0x2f
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB43_86: // %else186
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #48
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #118 // =0x76
-; CHECK-NEXT:    tbz x8, #48, .LBB43_88
-; CHECK-NEXT:  // %bb.87: // %cond.load189
-; CHECK-NEXT:    mov w14, #48 // =0x30
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB43_88: // %else190
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #49
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #119 // =0x77
-; CHECK-NEXT:    tbz x8, #49, .LBB43_90
-; CHECK-NEXT:  // %bb.89: // %cond.load193
-; CHECK-NEXT:    mov w13, #49 // =0x31
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB43_90: // %else194
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #50
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #120 // =0x78
-; CHECK-NEXT:    tbz x8, #50, .LBB43_92
-; CHECK-NEXT:  // %bb.91: // %cond.load197
-; CHECK-NEXT:    mov w14, #50 // =0x32
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB43_92: // %else198
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #51
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #121 // =0x79
-; CHECK-NEXT:    tbz x8, #51, .LBB43_94
-; CHECK-NEXT:  // %bb.93: // %cond.load201
-; CHECK-NEXT:    mov w13, #51 // =0x33
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB43_94: // %else202
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #52
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #122 // =0x7a
-; CHECK-NEXT:    tbz x8, #52, .LBB43_96
-; CHECK-NEXT:  // %bb.95: // %cond.load205
-; CHECK-NEXT:    mov w14, #52 // =0x34
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB43_96: // %else206
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #53
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #123 // =0x7b
-; CHECK-NEXT:    tbz x8, #53, .LBB43_98
-; CHECK-NEXT:  // %bb.97: // %cond.load209
-; CHECK-NEXT:    mov w13, #53 // =0x35
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB43_98: // %else210
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #54
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #124 // =0x7c
-; CHECK-NEXT:    tbz x8, #54, .LBB43_100
-; CHECK-NEXT:  // %bb.99: // %cond.load213
-; CHECK-NEXT:    mov w14, #54 // =0x36
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB43_100: // %else214
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #55
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    mov w12, #125 // =0x7d
-; CHECK-NEXT:    tbz x8, #55, .LBB43_102
-; CHECK-NEXT:  // %bb.101: // %cond.load217
-; CHECK-NEXT:    mov w13, #55 // =0x37
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w13
-; CHECK-NEXT:    ldrb w13, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w13
-; CHECK-NEXT:  .LBB43_102: // %else218
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x9, lsl #56
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    mov w11, #126 // =0x7e
-; CHECK-NEXT:    tbz x8, #56, .LBB43_104
-; CHECK-NEXT:  // %bb.103: // %cond.load221
-; CHECK-NEXT:    mov w14, #56 // =0x38
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB43_104: // %else222
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x15, x15, x10, lsl #57
-; CHECK-NEXT:    and w10, w13, #0x1
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    tbz x8, #57, .LBB43_106
-; CHECK-NEXT:  // %bb.105: // %cond.load225
-; CHECK-NEXT:    mov w12, #57 // =0x39
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w12
-; CHECK-NEXT:    ldrb w12, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w12
-; CHECK-NEXT:  .LBB43_106: // %else226
-; CHECK-NEXT:    lastb w12, p1, z1.b
-; CHECK-NEXT:    orr x13, x15, x9, lsl #58
-; CHECK-NEXT:    mov w9, #127 // =0x7f
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    and w11, w14, #0x1
-; CHECK-NEXT:    tbz x8, #58, .LBB43_108
-; CHECK-NEXT:  // %bb.107: // %cond.load229
-; CHECK-NEXT:    mov w14, #58 // =0x3a
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w14
-; CHECK-NEXT:    ldrb w14, [x0], #1
-; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p2/m, w14
-; CHECK-NEXT:  .LBB43_108: // %else230
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    orr x13, x13, x10, lsl #59
-; CHECK-NEXT:    and w10, w12, #0x1
-; CHECK-NEXT:    tbz x8, #59, .LBB43_110
-; CHECK-NEXT:  // %bb.109: // %cond.load233
-; CHECK-NEXT:    mov w12, #59 // =0x3b
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w12
-; CHECK-NEXT:    ldrb w12, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w12
-; CHECK-NEXT:  .LBB43_110: // %else234
-; CHECK-NEXT:    orr x12, x13, x11, lsl #60
-; CHECK-NEXT:    whilels p1.b, xzr, x9
-; CHECK-NEXT:    and w9, w14, #0x1
-; CHECK-NEXT:    tbz x8, #60, .LBB43_112
-; CHECK-NEXT:  // %bb.111: // %cond.load237
+; CHECK-NEXT:    tbz x8, #60, .LBB43_123
+; CHECK-NEXT:  // %bb.122: // %cond.load237
 ; CHECK-NEXT:    mov w11, #60 // =0x3c
 ; CHECK-NEXT:    index z2.b, #0, #1
 ; CHECK-NEXT:    mov z3.b, w11
 ; CHECK-NEXT:    ldrb w11, [x0], #1
 ; CHECK-NEXT:    cmpeq p2.b, p0/z, z2.b, z3.b
 ; CHECK-NEXT:    mov z0.b, p2/m, w11
-; CHECK-NEXT:  .LBB43_112: // %else238
+; CHECK-NEXT:  .LBB43_123: // %else238
 ; CHECK-NEXT:    lastb w11, p1, z1.b
-; CHECK-NEXT:    orr x10, x12, x10, lsl #61
-; CHECK-NEXT:    tbnz x8, #61, .LBB43_191
-; CHECK-NEXT:  // %bb.113: // %else242
-; CHECK-NEXT:    orr x9, x10, x9, lsl #62
-; CHECK-NEXT:    tbnz x8, #62, .LBB43_192
-; CHECK-NEXT:  .LBB43_114: // %else246
+; CHECK-NEXT:    orr x9, x12, x9, lsl #61
+; CHECK-NEXT:    tbnz x8, #61, .LBB43_192
+; CHECK-NEXT:  // %bb.124: // %else242
+; CHECK-NEXT:    orr x9, x9, x10, lsl #62
+; CHECK-NEXT:    tbnz x8, #62, .LBB43_193
+; CHECK-NEXT:  .LBB43_125: // %else246
 ; CHECK-NEXT:    orr x9, x9, x11, lsl #63
-; CHECK-NEXT:    tbnz x8, #63, .LBB43_193
-; CHECK-NEXT:  .LBB43_115: // %else250
-; CHECK-NEXT:    tbnz w9, #0, .LBB43_194
-; CHECK-NEXT:  .LBB43_116: // %else254
-; CHECK-NEXT:    tbnz w9, #1, .LBB43_195
-; CHECK-NEXT:  .LBB43_117: // %else258
-; CHECK-NEXT:    tbnz w9, #2, .LBB43_196
-; CHECK-NEXT:  .LBB43_118: // %else262
-; CHECK-NEXT:    tbnz w9, #3, .LBB43_197
-; CHECK-NEXT:  .LBB43_119: // %else266
-; CHECK-NEXT:    tbnz w9, #4, .LBB43_198
-; CHECK-NEXT:  .LBB43_120: // %else270
-; CHECK-NEXT:    tbnz w9, #5, .LBB43_199
-; CHECK-NEXT:  .LBB43_121: // %else274
-; CHECK-NEXT:    tbnz w9, #6, .LBB43_200
-; CHECK-NEXT:  .LBB43_122: // %else278
-; CHECK-NEXT:    tbnz w9, #7, .LBB43_201
-; CHECK-NEXT:  .LBB43_123: // %else282
-; CHECK-NEXT:    tbnz w9, #8, .LBB43_202
-; CHECK-NEXT:  .LBB43_124: // %else286
-; CHECK-NEXT:    tbnz w9, #9, .LBB43_203
-; CHECK-NEXT:  .LBB43_125: // %else290
-; CHECK-NEXT:    tbnz w9, #10, .LBB43_204
-; CHECK-NEXT:  .LBB43_126: // %else294
-; CHECK-NEXT:    tbnz w9, #11, .LBB43_205
-; CHECK-NEXT:  .LBB43_127: // %else298
-; CHECK-NEXT:    tbnz w9, #12, .LBB43_206
-; CHECK-NEXT:  .LBB43_128: // %else302
-; CHECK-NEXT:    tbnz w9, #13, .LBB43_207
-; CHECK-NEXT:  .LBB43_129: // %else306
-; CHECK-NEXT:    tbnz w9, #14, .LBB43_208
-; CHECK-NEXT:  .LBB43_130: // %else310
-; CHECK-NEXT:    tbnz w9, #15, .LBB43_209
-; CHECK-NEXT:  .LBB43_131: // %else314
-; CHECK-NEXT:    tbnz w9, #16, .LBB43_210
-; CHECK-NEXT:  .LBB43_132: // %else318
-; CHECK-NEXT:    tbnz w9, #17, .LBB43_211
-; CHECK-NEXT:  .LBB43_133: // %else322
-; CHECK-NEXT:    tbnz w9, #18, .LBB43_212
-; CHECK-NEXT:  .LBB43_134: // %else326
-; CHECK-NEXT:    tbnz w9, #19, .LBB43_213
-; CHECK-NEXT:  .LBB43_135: // %else330
-; CHECK-NEXT:    tbnz w9, #20, .LBB43_214
-; CHECK-NEXT:  .LBB43_136: // %else334
-; CHECK-NEXT:    tbnz w9, #21, .LBB43_215
-; CHECK-NEXT:  .LBB43_137: // %else338
-; CHECK-NEXT:    tbnz w9, #22, .LBB43_216
-; CHECK-NEXT:  .LBB43_138: // %else342
-; CHECK-NEXT:    tbnz w9, #23, .LBB43_217
-; CHECK-NEXT:  .LBB43_139: // %else346
-; CHECK-NEXT:    tbnz w9, #24, .LBB43_218
-; CHECK-NEXT:  .LBB43_140: // %else350
-; CHECK-NEXT:    tbnz w9, #25, .LBB43_219
-; CHECK-NEXT:  .LBB43_141: // %else354
-; CHECK-NEXT:    tbnz w9, #26, .LBB43_220
-; CHECK-NEXT:  .LBB43_142: // %else358
-; CHECK-NEXT:    tbnz w9, #27, .LBB43_221
-; CHECK-NEXT:  .LBB43_143: // %else362
-; CHECK-NEXT:    tbnz w9, #28, .LBB43_222
-; CHECK-NEXT:  .LBB43_144: // %else366
-; CHECK-NEXT:    tbnz w9, #29, .LBB43_223
-; CHECK-NEXT:  .LBB43_145: // %else370
-; CHECK-NEXT:    tbnz w9, #30, .LBB43_224
-; CHECK-NEXT:  .LBB43_146: // %else374
-; CHECK-NEXT:    tbnz w9, #31, .LBB43_225
-; CHECK-NEXT:  .LBB43_147: // %else378
-; CHECK-NEXT:    tbnz x9, #32, .LBB43_226
-; CHECK-NEXT:  .LBB43_148: // %else382
-; CHECK-NEXT:    tbnz x9, #33, .LBB43_227
-; CHECK-NEXT:  .LBB43_149: // %else386
-; CHECK-NEXT:    tbnz x9, #34, .LBB43_228
-; CHECK-NEXT:  .LBB43_150: // %else390
-; CHECK-NEXT:    tbnz x9, #35, .LBB43_229
-; CHECK-NEXT:  .LBB43_151: // %else394
-; CHECK-NEXT:    tbnz x9, #36, .LBB43_230
-; CHECK-NEXT:  .LBB43_152: // %else398
-; CHECK-NEXT:    tbnz x9, #37, .LBB43_231
-; CHECK-NEXT:  .LBB43_153: // %else402
-; CHECK-NEXT:    tbnz x9, #38, .LBB43_232
-; CHECK-NEXT:  .LBB43_154: // %else406
-; CHECK-NEXT:    tbnz x9, #39, .LBB43_233
-; CHECK-NEXT:  .LBB43_155: // %else410
-; CHECK-NEXT:    tbnz x9, #40, .LBB43_234
-; CHECK-NEXT:  .LBB43_156: // %else414
-; CHECK-NEXT:    tbnz x9, #41, .LBB43_235
-; CHECK-NEXT:  .LBB43_157: // %else418
-; CHECK-NEXT:    tbnz x9, #42, .LBB43_236
-; CHECK-NEXT:  .LBB43_158: // %else422
-; CHECK-NEXT:    tbnz x9, #43, .LBB43_237
-; CHECK-NEXT:  .LBB43_159: // %else426
-; CHECK-NEXT:    tbnz x9, #44, .LBB43_238
-; CHECK-NEXT:  .LBB43_160: // %else430
-; CHECK-NEXT:    tbnz x9, #45, .LBB43_239
-; CHECK-NEXT:  .LBB43_161: // %else434
-; CHECK-NEXT:    tbnz x9, #46, .LBB43_240
-; CHECK-NEXT:  .LBB43_162: // %else438
-; CHECK-NEXT:    tbnz x9, #47, .LBB43_241
-; CHECK-NEXT:  .LBB43_163: // %else442
-; CHECK-NEXT:    tbnz x9, #48, .LBB43_242
-; CHECK-NEXT:  .LBB43_164: // %else446
-; CHECK-NEXT:    tbnz x9, #49, .LBB43_243
-; CHECK-NEXT:  .LBB43_165: // %else450
-; CHECK-NEXT:    tbnz x9, #50, .LBB43_244
-; CHECK-NEXT:  .LBB43_166: // %else454
-; CHECK-NEXT:    tbnz x9, #51, .LBB43_245
-; CHECK-NEXT:  .LBB43_167: // %else458
-; CHECK-NEXT:    tbnz x9, #52, .LBB43_246
-; CHECK-NEXT:  .LBB43_168: // %else462
-; CHECK-NEXT:    tbnz x9, #53, .LBB43_247
-; CHECK-NEXT:  .LBB43_169: // %else466
-; CHECK-NEXT:    tbnz x9, #54, .LBB43_248
-; CHECK-NEXT:  .LBB43_170: // %else470
-; CHECK-NEXT:    tbnz x9, #55, .LBB43_249
-; CHECK-NEXT:  .LBB43_171: // %else474
-; CHECK-NEXT:    tbnz x9, #56, .LBB43_250
-; CHECK-NEXT:  .LBB43_172: // %else478
-; CHECK-NEXT:    tbnz x9, #57, .LBB43_251
-; CHECK-NEXT:  .LBB43_173: // %else482
-; CHECK-NEXT:    tbnz x9, #58, .LBB43_252
-; CHECK-NEXT:  .LBB43_174: // %else486
-; CHECK-NEXT:    tbnz x9, #59, .LBB43_253
-; CHECK-NEXT:  .LBB43_175: // %else490
-; CHECK-NEXT:    tbnz x9, #60, .LBB43_254
-; CHECK-NEXT:  .LBB43_176: // %else494
-; CHECK-NEXT:    tbnz x9, #61, .LBB43_255
-; CHECK-NEXT:  .LBB43_177: // %else498
-; CHECK-NEXT:    tbnz x9, #62, .LBB43_256
-; CHECK-NEXT:  .LBB43_178: // %else502
-; CHECK-NEXT:    tbz x9, #63, .LBB43_180
-; CHECK-NEXT:  .LBB43_179: // %cond.load505
+; CHECK-NEXT:    tbnz x8, #63, .LBB43_194
+; CHECK-NEXT:  .LBB43_126: // %else250
+; CHECK-NEXT:    tbnz w9, #0, .LBB43_195
+; CHECK-NEXT:  .LBB43_127: // %else254
+; CHECK-NEXT:    tbnz w9, #1, .LBB43_196
+; CHECK-NEXT:  .LBB43_128: // %else258
+; CHECK-NEXT:    tbnz w9, #2, .LBB43_197
+; CHECK-NEXT:  .LBB43_129: // %else262
+; CHECK-NEXT:    tbnz w9, #3, .LBB43_198
+; CHECK-NEXT:  .LBB43_130: // %else266
+; CHECK-NEXT:    tbnz w9, #4, .LBB43_199
+; CHECK-NEXT:  .LBB43_131: // %else270
+; CHECK-NEXT:    tbnz w9, #5, .LBB43_200
+; CHECK-NEXT:  .LBB43_132: // %else274
+; CHECK-NEXT:    tbnz w9, #6, .LBB43_201
+; CHECK-NEXT:  .LBB43_133: // %else278
+; CHECK-NEXT:    tbnz w9, #7, .LBB43_202
+; CHECK-NEXT:  .LBB43_134: // %else282
+; CHECK-NEXT:    tbnz w9, #8, .LBB43_203
+; CHECK-NEXT:  .LBB43_135: // %else286
+; CHECK-NEXT:    tbnz w9, #9, .LBB43_204
+; CHECK-NEXT:  .LBB43_136: // %else290
+; CHECK-NEXT:    tbnz w9, #10, .LBB43_205
+; CHECK-NEXT:  .LBB43_137: // %else294
+; CHECK-NEXT:    tbnz w9, #11, .LBB43_206
+; CHECK-NEXT:  .LBB43_138: // %else298
+; CHECK-NEXT:    tbnz w9, #12, .LBB43_207
+; CHECK-NEXT:  .LBB43_139: // %else302
+; CHECK-NEXT:    tbnz w9, #13, .LBB43_208
+; CHECK-NEXT:  .LBB43_140: // %else306
+; CHECK-NEXT:    tbnz w9, #14, .LBB43_209
+; CHECK-NEXT:  .LBB43_141: // %else310
+; CHECK-NEXT:    tbnz w9, #15, .LBB43_210
+; CHECK-NEXT:  .LBB43_142: // %else314
+; CHECK-NEXT:    tbnz w9, #16, .LBB43_211
+; CHECK-NEXT:  .LBB43_143: // %else318
+; CHECK-NEXT:    tbnz w9, #17, .LBB43_212
+; CHECK-NEXT:  .LBB43_144: // %else322
+; CHECK-NEXT:    tbnz w9, #18, .LBB43_213
+; CHECK-NEXT:  .LBB43_145: // %else326
+; CHECK-NEXT:    tbnz w9, #19, .LBB43_214
+; CHECK-NEXT:  .LBB43_146: // %else330
+; CHECK-NEXT:    tbnz w9, #20, .LBB43_215
+; CHECK-NEXT:  .LBB43_147: // %else334
+; CHECK-NEXT:    tbnz w9, #21, .LBB43_216
+; CHECK-NEXT:  .LBB43_148: // %else338
+; CHECK-NEXT:    tbnz w9, #22, .LBB43_217
+; CHECK-NEXT:  .LBB43_149: // %else342
+; CHECK-NEXT:    tbnz w9, #23, .LBB43_218
+; CHECK-NEXT:  .LBB43_150: // %else346
+; CHECK-NEXT:    tbnz w9, #24, .LBB43_219
+; CHECK-NEXT:  .LBB43_151: // %else350
+; CHECK-NEXT:    tbnz w9, #25, .LBB43_220
+; CHECK-NEXT:  .LBB43_152: // %else354
+; CHECK-NEXT:    tbnz w9, #26, .LBB43_221
+; CHECK-NEXT:  .LBB43_153: // %else358
+; CHECK-NEXT:    tbnz w9, #27, .LBB43_222
+; CHECK-NEXT:  .LBB43_154: // %else362
+; CHECK-NEXT:    tbnz w9, #28, .LBB43_223
+; CHECK-NEXT:  .LBB43_155: // %else366
+; CHECK-NEXT:    tbnz w9, #29, .LBB43_224
+; CHECK-NEXT:  .LBB43_156: // %else370
+; CHECK-NEXT:    tbnz w9, #30, .LBB43_225
+; CHECK-NEXT:  .LBB43_157: // %else374
+; CHECK-NEXT:    tbnz w9, #31, .LBB43_226
+; CHECK-NEXT:  .LBB43_158: // %else378
+; CHECK-NEXT:    tbnz x9, #32, .LBB43_227
+; CHECK-NEXT:  .LBB43_159: // %else382
+; CHECK-NEXT:    tbnz x9, #33, .LBB43_228
+; CHECK-NEXT:  .LBB43_160: // %else386
+; CHECK-NEXT:    tbnz x9, #34, .LBB43_229
+; CHECK-NEXT:  .LBB43_161: // %else390
+; CHECK-NEXT:    tbnz x9, #35, .LBB43_230
+; CHECK-NEXT:  .LBB43_162: // %else394
+; CHECK-NEXT:    tbnz x9, #36, .LBB43_231
+; CHECK-NEXT:  .LBB43_163: // %else398
+; CHECK-NEXT:    tbnz x9, #37, .LBB43_232
+; CHECK-NEXT:  .LBB43_164: // %else402
+; CHECK-NEXT:    tbnz x9, #38, .LBB43_233
+; CHECK-NEXT:  .LBB43_165: // %else406
+; CHECK-NEXT:    tbnz x9, #39, .LBB43_234
+; CHECK-NEXT:  .LBB43_166: // %else410
+; CHECK-NEXT:    tbnz x9, #40, .LBB43_235
+; CHECK-NEXT:  .LBB43_167: // %else414
+; CHECK-NEXT:    tbnz x9, #41, .LBB43_236
+; CHECK-NEXT:  .LBB43_168: // %else418
+; CHECK-NEXT:    tbnz x9, #42, .LBB43_237
+; CHECK-NEXT:  .LBB43_169: // %else422
+; CHECK-NEXT:    tbnz x9, #43, .LBB43_238
+; CHECK-NEXT:  .LBB43_170: // %else426
+; CHECK-NEXT:    tbnz x9, #44, .LBB43_239
+; CHECK-NEXT:  .LBB43_171: // %else430
+; CHECK-NEXT:    tbnz x9, #45, .LBB43_240
+; CHECK-NEXT:  .LBB43_172: // %else434
+; CHECK-NEXT:    tbnz x9, #46, .LBB43_241
+; CHECK-NEXT:  .LBB43_173: // %else438
+; CHECK-NEXT:    tbnz x9, #47, .LBB43_242
+; CHECK-NEXT:  .LBB43_174: // %else442
+; CHECK-NEXT:    tbnz x9, #48, .LBB43_243
+; CHECK-NEXT:  .LBB43_175: // %else446
+; CHECK-NEXT:    tbnz x9, #49, .LBB43_244
+; CHECK-NEXT:  .LBB43_176: // %else450
+; CHECK-NEXT:    tbnz x9, #50, .LBB43_245
+; CHECK-NEXT:  .LBB43_177: // %else454
+; CHECK-NEXT:    tbnz x9, #51, .LBB43_246
+; CHECK-NEXT:  .LBB43_178: // %else458
+; CHECK-NEXT:    tbnz x9, #52, .LBB43_247
+; CHECK-NEXT:  .LBB43_179: // %else462
+; CHECK-NEXT:    tbnz x9, #53, .LBB43_248
+; CHECK-NEXT:  .LBB43_180: // %else466
+; CHECK-NEXT:    tbnz x9, #54, .LBB43_249
+; CHECK-NEXT:  .LBB43_181: // %else470
+; CHECK-NEXT:    tbnz x9, #55, .LBB43_250
+; CHECK-NEXT:  .LBB43_182: // %else474
+; CHECK-NEXT:    tbnz x9, #56, .LBB43_251
+; CHECK-NEXT:  .LBB43_183: // %else478
+; CHECK-NEXT:    tbnz x9, #57, .LBB43_252
+; CHECK-NEXT:  .LBB43_184: // %else482
+; CHECK-NEXT:    tbnz x9, #58, .LBB43_253
+; CHECK-NEXT:  .LBB43_185: // %else486
+; CHECK-NEXT:    tbnz x9, #59, .LBB43_254
+; CHECK-NEXT:  .LBB43_186: // %else490
+; CHECK-NEXT:    tbnz x9, #60, .LBB43_255
+; CHECK-NEXT:  .LBB43_187: // %else494
+; CHECK-NEXT:    tbnz x9, #61, .LBB43_256
+; CHECK-NEXT:  .LBB43_188: // %else498
+; CHECK-NEXT:    tbnz x9, #62, .LBB43_257
+; CHECK-NEXT:  .LBB43_189: // %else502
+; CHECK-NEXT:    tbz x9, #63, .LBB43_191
+; CHECK-NEXT:  .LBB43_190: // %cond.load505
 ; CHECK-NEXT:    mov w8, #127 // =0x7f
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0]
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:  .LBB43_180: // %else506
+; CHECK-NEXT:  .LBB43_191: // %else506
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    ptrue p0.h, vl128
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB43_181: // %cond.load5
-; CHECK-NEXT:    mov w9, #2 // =0x2
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:    tbz w8, #3, .LBB43_6
-; CHECK-NEXT:  .LBB43_182: // %cond.load9
-; CHECK-NEXT:    mov w9, #3 // =0x3
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:    tbz w8, #4, .LBB43_7
-; CHECK-NEXT:  .LBB43_183: // %cond.load13
-; CHECK-NEXT:    mov w9, #4 // =0x4
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:    tbz w8, #5, .LBB43_8
-; CHECK-NEXT:  .LBB43_184: // %cond.load17
-; CHECK-NEXT:    mov w9, #5 // =0x5
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:    tbz w8, #6, .LBB43_9
-; CHECK-NEXT:  .LBB43_185: // %cond.load21
-; CHECK-NEXT:    mov w9, #6 // =0x6
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:    tbz w8, #7, .LBB43_10
-; CHECK-NEXT:  .LBB43_186: // %cond.load25
-; CHECK-NEXT:    mov w9, #7 // =0x7
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:    tbz w8, #8, .LBB43_11
-; CHECK-NEXT:  .LBB43_187: // %cond.load29
-; CHECK-NEXT:    mov w9, #8 // =0x8
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:    tbz w8, #9, .LBB43_12
-; CHECK-NEXT:  .LBB43_188: // %cond.load33
-; CHECK-NEXT:    mov w9, #9 // =0x9
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:    tbz w8, #10, .LBB43_13
-; CHECK-NEXT:  .LBB43_189: // %cond.load37
-; CHECK-NEXT:    mov w9, #10 // =0xa
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:    tbz w8, #11, .LBB43_14
-; CHECK-NEXT:  .LBB43_190: // %cond.load41
-; CHECK-NEXT:    mov w9, #11 // =0xb
-; CHECK-NEXT:    index z2.b, #0, #1
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    ldrb w9, [x0], #1
-; CHECK-NEXT:    cmpeq p1.b, p0/z, z2.b, z3.b
-; CHECK-NEXT:    mov z0.b, p1/m, w9
-; CHECK-NEXT:    tbnz w8, #12, .LBB43_15
-; CHECK-NEXT:    b .LBB43_16
-; CHECK-NEXT:  .LBB43_191: // %cond.load241
+; CHECK-NEXT:  .LBB43_192: // %cond.load241
 ; CHECK-NEXT:    mov w12, #61 // =0x3d
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w12
 ; CHECK-NEXT:    ldrb w12, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w12
-; CHECK-NEXT:    orr x9, x10, x9, lsl #62
-; CHECK-NEXT:    tbz x8, #62, .LBB43_114
-; CHECK-NEXT:  .LBB43_192: // %cond.load245
+; CHECK-NEXT:    orr x9, x9, x10, lsl #62
+; CHECK-NEXT:    tbz x8, #62, .LBB43_125
+; CHECK-NEXT:  .LBB43_193: // %cond.load245
 ; CHECK-NEXT:    mov w10, #62 // =0x3e
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w10
@@ -21376,520 +21240,520 @@ define void @masked_load_zext_v128i8i16(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w10
 ; CHECK-NEXT:    orr x9, x9, x11, lsl #63
-; CHECK-NEXT:    tbz x8, #63, .LBB43_115
-; CHECK-NEXT:  .LBB43_193: // %cond.load249
+; CHECK-NEXT:    tbz x8, #63, .LBB43_126
+; CHECK-NEXT:  .LBB43_194: // %cond.load249
 ; CHECK-NEXT:    mov w8, #63 // =0x3f
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #0, .LBB43_116
-; CHECK-NEXT:  .LBB43_194: // %cond.load253
+; CHECK-NEXT:    tbz w9, #0, .LBB43_127
+; CHECK-NEXT:  .LBB43_195: // %cond.load253
 ; CHECK-NEXT:    mov w8, #64 // =0x40
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #1, .LBB43_117
-; CHECK-NEXT:  .LBB43_195: // %cond.load257
+; CHECK-NEXT:    tbz w9, #1, .LBB43_128
+; CHECK-NEXT:  .LBB43_196: // %cond.load257
 ; CHECK-NEXT:    mov w8, #65 // =0x41
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #2, .LBB43_118
-; CHECK-NEXT:  .LBB43_196: // %cond.load261
+; CHECK-NEXT:    tbz w9, #2, .LBB43_129
+; CHECK-NEXT:  .LBB43_197: // %cond.load261
 ; CHECK-NEXT:    mov w8, #66 // =0x42
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #3, .LBB43_119
-; CHECK-NEXT:  .LBB43_197: // %cond.load265
+; CHECK-NEXT:    tbz w9, #3, .LBB43_130
+; CHECK-NEXT:  .LBB43_198: // %cond.load265
 ; CHECK-NEXT:    mov w8, #67 // =0x43
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #4, .LBB43_120
-; CHECK-NEXT:  .LBB43_198: // %cond.load269
+; CHECK-NEXT:    tbz w9, #4, .LBB43_131
+; CHECK-NEXT:  .LBB43_199: // %cond.load269
 ; CHECK-NEXT:    mov w8, #68 // =0x44
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #5, .LBB43_121
-; CHECK-NEXT:  .LBB43_199: // %cond.load273
+; CHECK-NEXT:    tbz w9, #5, .LBB43_132
+; CHECK-NEXT:  .LBB43_200: // %cond.load273
 ; CHECK-NEXT:    mov w8, #69 // =0x45
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #6, .LBB43_122
-; CHECK-NEXT:  .LBB43_200: // %cond.load277
+; CHECK-NEXT:    tbz w9, #6, .LBB43_133
+; CHECK-NEXT:  .LBB43_201: // %cond.load277
 ; CHECK-NEXT:    mov w8, #70 // =0x46
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #7, .LBB43_123
-; CHECK-NEXT:  .LBB43_201: // %cond.load281
+; CHECK-NEXT:    tbz w9, #7, .LBB43_134
+; CHECK-NEXT:  .LBB43_202: // %cond.load281
 ; CHECK-NEXT:    mov w8, #71 // =0x47
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #8, .LBB43_124
-; CHECK-NEXT:  .LBB43_202: // %cond.load285
+; CHECK-NEXT:    tbz w9, #8, .LBB43_135
+; CHECK-NEXT:  .LBB43_203: // %cond.load285
 ; CHECK-NEXT:    mov w8, #72 // =0x48
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #9, .LBB43_125
-; CHECK-NEXT:  .LBB43_203: // %cond.load289
+; CHECK-NEXT:    tbz w9, #9, .LBB43_136
+; CHECK-NEXT:  .LBB43_204: // %cond.load289
 ; CHECK-NEXT:    mov w8, #73 // =0x49
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #10, .LBB43_126
-; CHECK-NEXT:  .LBB43_204: // %cond.load293
+; CHECK-NEXT:    tbz w9, #10, .LBB43_137
+; CHECK-NEXT:  .LBB43_205: // %cond.load293
 ; CHECK-NEXT:    mov w8, #74 // =0x4a
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #11, .LBB43_127
-; CHECK-NEXT:  .LBB43_205: // %cond.load297
+; CHECK-NEXT:    tbz w9, #11, .LBB43_138
+; CHECK-NEXT:  .LBB43_206: // %cond.load297
 ; CHECK-NEXT:    mov w8, #75 // =0x4b
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #12, .LBB43_128
-; CHECK-NEXT:  .LBB43_206: // %cond.load301
+; CHECK-NEXT:    tbz w9, #12, .LBB43_139
+; CHECK-NEXT:  .LBB43_207: // %cond.load301
 ; CHECK-NEXT:    mov w8, #76 // =0x4c
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #13, .LBB43_129
-; CHECK-NEXT:  .LBB43_207: // %cond.load305
+; CHECK-NEXT:    tbz w9, #13, .LBB43_140
+; CHECK-NEXT:  .LBB43_208: // %cond.load305
 ; CHECK-NEXT:    mov w8, #77 // =0x4d
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #14, .LBB43_130
-; CHECK-NEXT:  .LBB43_208: // %cond.load309
+; CHECK-NEXT:    tbz w9, #14, .LBB43_141
+; CHECK-NEXT:  .LBB43_209: // %cond.load309
 ; CHECK-NEXT:    mov w8, #78 // =0x4e
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #15, .LBB43_131
-; CHECK-NEXT:  .LBB43_209: // %cond.load313
+; CHECK-NEXT:    tbz w9, #15, .LBB43_142
+; CHECK-NEXT:  .LBB43_210: // %cond.load313
 ; CHECK-NEXT:    mov w8, #79 // =0x4f
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #16, .LBB43_132
-; CHECK-NEXT:  .LBB43_210: // %cond.load317
+; CHECK-NEXT:    tbz w9, #16, .LBB43_143
+; CHECK-NEXT:  .LBB43_211: // %cond.load317
 ; CHECK-NEXT:    mov w8, #80 // =0x50
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #17, .LBB43_133
-; CHECK-NEXT:  .LBB43_211: // %cond.load321
+; CHECK-NEXT:    tbz w9, #17, .LBB43_144
+; CHECK-NEXT:  .LBB43_212: // %cond.load321
 ; CHECK-NEXT:    mov w8, #81 // =0x51
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #18, .LBB43_134
-; CHECK-NEXT:  .LBB43_212: // %cond.load325
+; CHECK-NEXT:    tbz w9, #18, .LBB43_145
+; CHECK-NEXT:  .LBB43_213: // %cond.load325
 ; CHECK-NEXT:    mov w8, #82 // =0x52
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #19, .LBB43_135
-; CHECK-NEXT:  .LBB43_213: // %cond.load329
+; CHECK-NEXT:    tbz w9, #19, .LBB43_146
+; CHECK-NEXT:  .LBB43_214: // %cond.load329
 ; CHECK-NEXT:    mov w8, #83 // =0x53
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #20, .LBB43_136
-; CHECK-NEXT:  .LBB43_214: // %cond.load333
+; CHECK-NEXT:    tbz w9, #20, .LBB43_147
+; CHECK-NEXT:  .LBB43_215: // %cond.load333
 ; CHECK-NEXT:    mov w8, #84 // =0x54
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #21, .LBB43_137
-; CHECK-NEXT:  .LBB43_215: // %cond.load337
+; CHECK-NEXT:    tbz w9, #21, .LBB43_148
+; CHECK-NEXT:  .LBB43_216: // %cond.load337
 ; CHECK-NEXT:    mov w8, #85 // =0x55
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #22, .LBB43_138
-; CHECK-NEXT:  .LBB43_216: // %cond.load341
+; CHECK-NEXT:    tbz w9, #22, .LBB43_149
+; CHECK-NEXT:  .LBB43_217: // %cond.load341
 ; CHECK-NEXT:    mov w8, #86 // =0x56
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #23, .LBB43_139
-; CHECK-NEXT:  .LBB43_217: // %cond.load345
+; CHECK-NEXT:    tbz w9, #23, .LBB43_150
+; CHECK-NEXT:  .LBB43_218: // %cond.load345
 ; CHECK-NEXT:    mov w8, #87 // =0x57
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #24, .LBB43_140
-; CHECK-NEXT:  .LBB43_218: // %cond.load349
+; CHECK-NEXT:    tbz w9, #24, .LBB43_151
+; CHECK-NEXT:  .LBB43_219: // %cond.load349
 ; CHECK-NEXT:    mov w8, #88 // =0x58
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #25, .LBB43_141
-; CHECK-NEXT:  .LBB43_219: // %cond.load353
+; CHECK-NEXT:    tbz w9, #25, .LBB43_152
+; CHECK-NEXT:  .LBB43_220: // %cond.load353
 ; CHECK-NEXT:    mov w8, #89 // =0x59
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #26, .LBB43_142
-; CHECK-NEXT:  .LBB43_220: // %cond.load357
+; CHECK-NEXT:    tbz w9, #26, .LBB43_153
+; CHECK-NEXT:  .LBB43_221: // %cond.load357
 ; CHECK-NEXT:    mov w8, #90 // =0x5a
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #27, .LBB43_143
-; CHECK-NEXT:  .LBB43_221: // %cond.load361
+; CHECK-NEXT:    tbz w9, #27, .LBB43_154
+; CHECK-NEXT:  .LBB43_222: // %cond.load361
 ; CHECK-NEXT:    mov w8, #91 // =0x5b
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #28, .LBB43_144
-; CHECK-NEXT:  .LBB43_222: // %cond.load365
+; CHECK-NEXT:    tbz w9, #28, .LBB43_155
+; CHECK-NEXT:  .LBB43_223: // %cond.load365
 ; CHECK-NEXT:    mov w8, #92 // =0x5c
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #29, .LBB43_145
-; CHECK-NEXT:  .LBB43_223: // %cond.load369
+; CHECK-NEXT:    tbz w9, #29, .LBB43_156
+; CHECK-NEXT:  .LBB43_224: // %cond.load369
 ; CHECK-NEXT:    mov w8, #93 // =0x5d
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #30, .LBB43_146
-; CHECK-NEXT:  .LBB43_224: // %cond.load373
+; CHECK-NEXT:    tbz w9, #30, .LBB43_157
+; CHECK-NEXT:  .LBB43_225: // %cond.load373
 ; CHECK-NEXT:    mov w8, #94 // =0x5e
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz w9, #31, .LBB43_147
-; CHECK-NEXT:  .LBB43_225: // %cond.load377
+; CHECK-NEXT:    tbz w9, #31, .LBB43_158
+; CHECK-NEXT:  .LBB43_226: // %cond.load377
 ; CHECK-NEXT:    mov w8, #95 // =0x5f
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #32, .LBB43_148
-; CHECK-NEXT:  .LBB43_226: // %cond.load381
+; CHECK-NEXT:    tbz x9, #32, .LBB43_159
+; CHECK-NEXT:  .LBB43_227: // %cond.load381
 ; CHECK-NEXT:    mov w8, #96 // =0x60
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #33, .LBB43_149
-; CHECK-NEXT:  .LBB43_227: // %cond.load385
+; CHECK-NEXT:    tbz x9, #33, .LBB43_160
+; CHECK-NEXT:  .LBB43_228: // %cond.load385
 ; CHECK-NEXT:    mov w8, #97 // =0x61
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #34, .LBB43_150
-; CHECK-NEXT:  .LBB43_228: // %cond.load389
+; CHECK-NEXT:    tbz x9, #34, .LBB43_161
+; CHECK-NEXT:  .LBB43_229: // %cond.load389
 ; CHECK-NEXT:    mov w8, #98 // =0x62
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #35, .LBB43_151
-; CHECK-NEXT:  .LBB43_229: // %cond.load393
+; CHECK-NEXT:    tbz x9, #35, .LBB43_162
+; CHECK-NEXT:  .LBB43_230: // %cond.load393
 ; CHECK-NEXT:    mov w8, #99 // =0x63
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #36, .LBB43_152
-; CHECK-NEXT:  .LBB43_230: // %cond.load397
+; CHECK-NEXT:    tbz x9, #36, .LBB43_163
+; CHECK-NEXT:  .LBB43_231: // %cond.load397
 ; CHECK-NEXT:    mov w8, #100 // =0x64
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #37, .LBB43_153
-; CHECK-NEXT:  .LBB43_231: // %cond.load401
+; CHECK-NEXT:    tbz x9, #37, .LBB43_164
+; CHECK-NEXT:  .LBB43_232: // %cond.load401
 ; CHECK-NEXT:    mov w8, #101 // =0x65
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #38, .LBB43_154
-; CHECK-NEXT:  .LBB43_232: // %cond.load405
+; CHECK-NEXT:    tbz x9, #38, .LBB43_165
+; CHECK-NEXT:  .LBB43_233: // %cond.load405
 ; CHECK-NEXT:    mov w8, #102 // =0x66
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #39, .LBB43_155
-; CHECK-NEXT:  .LBB43_233: // %cond.load409
+; CHECK-NEXT:    tbz x9, #39, .LBB43_166
+; CHECK-NEXT:  .LBB43_234: // %cond.load409
 ; CHECK-NEXT:    mov w8, #103 // =0x67
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #40, .LBB43_156
-; CHECK-NEXT:  .LBB43_234: // %cond.load413
+; CHECK-NEXT:    tbz x9, #40, .LBB43_167
+; CHECK-NEXT:  .LBB43_235: // %cond.load413
 ; CHECK-NEXT:    mov w8, #104 // =0x68
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #41, .LBB43_157
-; CHECK-NEXT:  .LBB43_235: // %cond.load417
+; CHECK-NEXT:    tbz x9, #41, .LBB43_168
+; CHECK-NEXT:  .LBB43_236: // %cond.load417
 ; CHECK-NEXT:    mov w8, #105 // =0x69
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #42, .LBB43_158
-; CHECK-NEXT:  .LBB43_236: // %cond.load421
+; CHECK-NEXT:    tbz x9, #42, .LBB43_169
+; CHECK-NEXT:  .LBB43_237: // %cond.load421
 ; CHECK-NEXT:    mov w8, #106 // =0x6a
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #43, .LBB43_159
-; CHECK-NEXT:  .LBB43_237: // %cond.load425
+; CHECK-NEXT:    tbz x9, #43, .LBB43_170
+; CHECK-NEXT:  .LBB43_238: // %cond.load425
 ; CHECK-NEXT:    mov w8, #107 // =0x6b
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #44, .LBB43_160
-; CHECK-NEXT:  .LBB43_238: // %cond.load429
+; CHECK-NEXT:    tbz x9, #44, .LBB43_171
+; CHECK-NEXT:  .LBB43_239: // %cond.load429
 ; CHECK-NEXT:    mov w8, #108 // =0x6c
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #45, .LBB43_161
-; CHECK-NEXT:  .LBB43_239: // %cond.load433
+; CHECK-NEXT:    tbz x9, #45, .LBB43_172
+; CHECK-NEXT:  .LBB43_240: // %cond.load433
 ; CHECK-NEXT:    mov w8, #109 // =0x6d
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #46, .LBB43_162
-; CHECK-NEXT:  .LBB43_240: // %cond.load437
+; CHECK-NEXT:    tbz x9, #46, .LBB43_173
+; CHECK-NEXT:  .LBB43_241: // %cond.load437
 ; CHECK-NEXT:    mov w8, #110 // =0x6e
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #47, .LBB43_163
-; CHECK-NEXT:  .LBB43_241: // %cond.load441
+; CHECK-NEXT:    tbz x9, #47, .LBB43_174
+; CHECK-NEXT:  .LBB43_242: // %cond.load441
 ; CHECK-NEXT:    mov w8, #111 // =0x6f
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #48, .LBB43_164
-; CHECK-NEXT:  .LBB43_242: // %cond.load445
+; CHECK-NEXT:    tbz x9, #48, .LBB43_175
+; CHECK-NEXT:  .LBB43_243: // %cond.load445
 ; CHECK-NEXT:    mov w8, #112 // =0x70
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #49, .LBB43_165
-; CHECK-NEXT:  .LBB43_243: // %cond.load449
+; CHECK-NEXT:    tbz x9, #49, .LBB43_176
+; CHECK-NEXT:  .LBB43_244: // %cond.load449
 ; CHECK-NEXT:    mov w8, #113 // =0x71
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #50, .LBB43_166
-; CHECK-NEXT:  .LBB43_244: // %cond.load453
+; CHECK-NEXT:    tbz x9, #50, .LBB43_177
+; CHECK-NEXT:  .LBB43_245: // %cond.load453
 ; CHECK-NEXT:    mov w8, #114 // =0x72
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #51, .LBB43_167
-; CHECK-NEXT:  .LBB43_245: // %cond.load457
+; CHECK-NEXT:    tbz x9, #51, .LBB43_178
+; CHECK-NEXT:  .LBB43_246: // %cond.load457
 ; CHECK-NEXT:    mov w8, #115 // =0x73
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #52, .LBB43_168
-; CHECK-NEXT:  .LBB43_246: // %cond.load461
+; CHECK-NEXT:    tbz x9, #52, .LBB43_179
+; CHECK-NEXT:  .LBB43_247: // %cond.load461
 ; CHECK-NEXT:    mov w8, #116 // =0x74
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #53, .LBB43_169
-; CHECK-NEXT:  .LBB43_247: // %cond.load465
+; CHECK-NEXT:    tbz x9, #53, .LBB43_180
+; CHECK-NEXT:  .LBB43_248: // %cond.load465
 ; CHECK-NEXT:    mov w8, #117 // =0x75
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #54, .LBB43_170
-; CHECK-NEXT:  .LBB43_248: // %cond.load469
+; CHECK-NEXT:    tbz x9, #54, .LBB43_181
+; CHECK-NEXT:  .LBB43_249: // %cond.load469
 ; CHECK-NEXT:    mov w8, #118 // =0x76
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #55, .LBB43_171
-; CHECK-NEXT:  .LBB43_249: // %cond.load473
+; CHECK-NEXT:    tbz x9, #55, .LBB43_182
+; CHECK-NEXT:  .LBB43_250: // %cond.load473
 ; CHECK-NEXT:    mov w8, #119 // =0x77
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #56, .LBB43_172
-; CHECK-NEXT:  .LBB43_250: // %cond.load477
+; CHECK-NEXT:    tbz x9, #56, .LBB43_183
+; CHECK-NEXT:  .LBB43_251: // %cond.load477
 ; CHECK-NEXT:    mov w8, #120 // =0x78
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #57, .LBB43_173
-; CHECK-NEXT:  .LBB43_251: // %cond.load481
+; CHECK-NEXT:    tbz x9, #57, .LBB43_184
+; CHECK-NEXT:  .LBB43_252: // %cond.load481
 ; CHECK-NEXT:    mov w8, #121 // =0x79
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #58, .LBB43_174
-; CHECK-NEXT:  .LBB43_252: // %cond.load485
+; CHECK-NEXT:    tbz x9, #58, .LBB43_185
+; CHECK-NEXT:  .LBB43_253: // %cond.load485
 ; CHECK-NEXT:    mov w8, #122 // =0x7a
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #59, .LBB43_175
-; CHECK-NEXT:  .LBB43_253: // %cond.load489
+; CHECK-NEXT:    tbz x9, #59, .LBB43_186
+; CHECK-NEXT:  .LBB43_254: // %cond.load489
 ; CHECK-NEXT:    mov w8, #123 // =0x7b
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #60, .LBB43_176
-; CHECK-NEXT:  .LBB43_254: // %cond.load493
+; CHECK-NEXT:    tbz x9, #60, .LBB43_187
+; CHECK-NEXT:  .LBB43_255: // %cond.load493
 ; CHECK-NEXT:    mov w8, #124 // =0x7c
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #61, .LBB43_177
-; CHECK-NEXT:  .LBB43_255: // %cond.load497
+; CHECK-NEXT:    tbz x9, #61, .LBB43_188
+; CHECK-NEXT:  .LBB43_256: // %cond.load497
 ; CHECK-NEXT:    mov w8, #125 // =0x7d
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbz x9, #62, .LBB43_178
-; CHECK-NEXT:  .LBB43_256: // %cond.load501
+; CHECK-NEXT:    tbz x9, #62, .LBB43_189
+; CHECK-NEXT:  .LBB43_257: // %cond.load501
 ; CHECK-NEXT:    mov w8, #126 // =0x7e
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w8
 ; CHECK-NEXT:    ldrb w8, [x0], #1
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
 ; CHECK-NEXT:    mov z0.b, p1/m, w8
-; CHECK-NEXT:    tbnz x9, #63, .LBB43_179
-; CHECK-NEXT:    b .LBB43_180
+; CHECK-NEXT:    tbnz x9, #63, .LBB43_190
+; CHECK-NEXT:    b .LBB43_191
 ;
 ; CHECK-EXPAND-LABEL: masked_load_zext_v128i8i16:
 ; CHECK-EXPAND:       // %bb.0:
@@ -21913,259 +21777,245 @@ define void @masked_load_zext_v128i8i16(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 define void @masked_load_zext_v64i8i32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_load_zext_v64i8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x26, x25, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x24, x23, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x22, x21, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 112
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w21, -24
-; CHECK-NEXT:    .cfi_offset w22, -32
-; CHECK-NEXT:    .cfi_offset w23, -40
-; CHECK-NEXT:    .cfi_offset w24, -48
-; CHECK-NEXT:    .cfi_offset w25, -56
-; CHECK-NEXT:    .cfi_offset w26, -64
-; CHECK-NEXT:    .cfi_offset w27, -72
-; CHECK-NEXT:    .cfi_offset w28, -80
-; CHECK-NEXT:    .cfi_offset w30, -88
-; CHECK-NEXT:    .cfi_offset w29, -96
 ; CHECK-NEXT:    ptrue p1.b, vl64
 ; CHECK-NEXT:    ld1b { z0.b }, p1/z, [x1]
 ; CHECK-NEXT:    cmpeq p0.b, p1/z, z0.b, #0
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    umov w11, v0.b[1]
-; CHECK-NEXT:    fmov w22, s0
-; CHECK-NEXT:    umov w12, v0.b[2]
-; CHECK-NEXT:    umov w13, v0.b[3]
-; CHECK-NEXT:    umov w14, v0.b[7]
-; CHECK-NEXT:    umov w1, v0.b[8]
-; CHECK-NEXT:    umov w16, v0.b[9]
-; CHECK-NEXT:    mov z3.b, z0.b[18]
-; CHECK-NEXT:    mov z5.b, z0.b[19]
-; CHECK-NEXT:    and x22, x22, #0x1
-; CHECK-NEXT:    umov w10, v0.b[4]
-; CHECK-NEXT:    umov w17, v0.b[10]
-; CHECK-NEXT:    bfi x22, x11, #1, #1
-; CHECK-NEXT:    mov z6.b, z0.b[20]
-; CHECK-NEXT:    umov w3, v0.b[11]
-; CHECK-NEXT:    mov z4.b, z0.b[21]
-; CHECK-NEXT:    umov w9, v0.b[5]
-; CHECK-NEXT:    mov z7.b, z0.b[22]
-; CHECK-NEXT:    bfi x22, x12, #2, #1
-; CHECK-NEXT:    fmov w19, s3
-; CHECK-NEXT:    fmov w20, s5
-; CHECK-NEXT:    ubfiz x14, x14, #7, #1
-; CHECK-NEXT:    ubfiz x1, x1, #8, #1
-; CHECK-NEXT:    umov w4, v0.b[12]
-; CHECK-NEXT:    bfi x22, x13, #3, #1
-; CHECK-NEXT:    mov z16.b, z0.b[23]
-; CHECK-NEXT:    fmov w21, s6
-; CHECK-NEXT:    ubfiz x16, x16, #9, #1
-; CHECK-NEXT:    umov w8, v0.b[6]
-; CHECK-NEXT:    umov w5, v0.b[13]
-; CHECK-NEXT:    mov z17.b, z0.b[24]
-; CHECK-NEXT:    fmov w23, s4
-; CHECK-NEXT:    orr x14, x14, x1
-; CHECK-NEXT:    bfi x22, x10, #4, #1
-; CHECK-NEXT:    ubfiz x10, x17, #10, #1
-; CHECK-NEXT:    mov z18.b, z0.b[25]
-; CHECK-NEXT:    fmov w24, s7
-; CHECK-NEXT:    ubfiz x13, x19, #18, #1
-; CHECK-NEXT:    ubfiz x19, x20, #19, #1
-; CHECK-NEXT:    orr x14, x14, x16
-; CHECK-NEXT:    ubfiz x16, x3, #11, #1
-; CHECK-NEXT:    umov w15, v0.b[14]
-; CHECK-NEXT:    mov z19.b, z0.b[26]
-; CHECK-NEXT:    fmov w25, s16
-; CHECK-NEXT:    ubfiz x1, x21, #20, #1
-; CHECK-NEXT:    orr x10, x14, x10
-; CHECK-NEXT:    bfi x22, x9, #5, #1
-; CHECK-NEXT:    mov z20.b, z0.b[27]
-; CHECK-NEXT:    fmov w26, s17
-; CHECK-NEXT:    orr x13, x13, x19
-; CHECK-NEXT:    ubfiz x9, x4, #12, #1
-; CHECK-NEXT:    orr x10, x10, x16
-; CHECK-NEXT:    ubfiz x16, x23, #21, #1
-; CHECK-NEXT:    umov w18, v0.b[15]
+; CHECK-NEXT:    umov w8, v0.b[1]
+; CHECK-NEXT:    fmov w10, s0
+; CHECK-NEXT:    umov w9, v0.b[2]
+; CHECK-NEXT:    umov w11, v0.b[3]
 ; CHECK-NEXT:    mov z1.b, z0.b[16]
-; CHECK-NEXT:    mov z21.b, z0.b[28]
-; CHECK-NEXT:    fmov w11, s18
-; CHECK-NEXT:    orr x13, x13, x1
-; CHECK-NEXT:    ubfiz x14, x5, #13, #1
-; CHECK-NEXT:    bfi x22, x8, #6, #1
-; CHECK-NEXT:    ubfiz x8, x24, #22, #1
 ; CHECK-NEXT:    mov z2.b, z0.b[17]
-; CHECK-NEXT:    mov z22.b, z0.b[29]
-; CHECK-NEXT:    fmov w27, s19
-; CHECK-NEXT:    orr x9, x10, x9
-; CHECK-NEXT:    orr x10, x13, x16
-; CHECK-NEXT:    ubfiz x13, x25, #23, #1
-; CHECK-NEXT:    mov z5.b, z0.b[30]
-; CHECK-NEXT:    fmov w28, s20
-; CHECK-NEXT:    orr x9, x9, x14
-; CHECK-NEXT:    orr x8, x10, x8
-; CHECK-NEXT:    ubfiz x10, x15, #14, #1
-; CHECK-NEXT:    ubfiz x14, x26, #24, #1
-; CHECK-NEXT:    fmov w6, s1
-; CHECK-NEXT:    fmov w29, s21
-; CHECK-NEXT:    orr x8, x8, x13
-; CHECK-NEXT:    ubfiz x11, x11, #25, #1
-; CHECK-NEXT:    fmov w7, s2
-; CHECK-NEXT:    fmov w30, s22
-; CHECK-NEXT:    ubfiz x13, x18, #15, #1
-; CHECK-NEXT:    orr x9, x9, x10
-; CHECK-NEXT:    orr x8, x8, x14
-; CHECK-NEXT:    ubfiz x10, x27, #26, #1
-; CHECK-NEXT:    fmov w12, s5
-; CHECK-NEXT:    orr x8, x8, x11
-; CHECK-NEXT:    ubfiz x11, x28, #27, #1
-; CHECK-NEXT:    mov z3.b, z0.b[31]
-; CHECK-NEXT:    orr x9, x9, x13
-; CHECK-NEXT:    orr x8, x8, x10
-; CHECK-NEXT:    ubfiz x10, x6, #16, #1
-; CHECK-NEXT:    ubfiz x13, x29, #28, #1
-; CHECK-NEXT:    orr x8, x8, x11
-; CHECK-NEXT:    ubfiz x11, x7, #17, #1
-; CHECK-NEXT:    ubfiz x14, x30, #29, #1
-; CHECK-NEXT:    mov z2.b, z0.b[32]
-; CHECK-NEXT:    orr x9, x9, x10
-; CHECK-NEXT:    orr x8, x8, x13
-; CHECK-NEXT:    ubfiz x10, x12, #30, #1
-; CHECK-NEXT:    fmov w12, s3
-; CHECK-NEXT:    orr x9, x9, x11
-; CHECK-NEXT:    orr x8, x8, x14
-; CHECK-NEXT:    mov z1.b, z0.b[33]
-; CHECK-NEXT:    orr x9, x22, x9
-; CHECK-NEXT:    orr x8, x8, x10
-; CHECK-NEXT:    orr x8, x9, x8
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    and w8, w8, #0x1
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x10, x8, lsl #1
+; CHECK-NEXT:    umov w10, v0.b[4]
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #2
+; CHECK-NEXT:    umov w9, v0.b[5]
+; CHECK-NEXT:    orr x8, x8, x11, lsl #3
+; CHECK-NEXT:    umov w11, v0.b[6]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    orr x8, x8, x10, lsl #4
+; CHECK-NEXT:    umov w10, v0.b[7]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #5
+; CHECK-NEXT:    umov w9, v0.b[8]
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x11, lsl #6
+; CHECK-NEXT:    umov w11, v0.b[9]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    orr x8, x8, x10, lsl #7
+; CHECK-NEXT:    umov w10, v0.b[10]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #8
+; CHECK-NEXT:    umov w9, v0.b[11]
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x11, lsl #9
+; CHECK-NEXT:    umov w11, v0.b[12]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    orr x8, x8, x10, lsl #10
+; CHECK-NEXT:    umov w10, v0.b[13]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #11
+; CHECK-NEXT:    umov w9, v0.b[14]
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x11, lsl #12
+; CHECK-NEXT:    umov w11, v0.b[15]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    orr x8, x8, x10, lsl #13
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #14
+; CHECK-NEXT:    and w9, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #15
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[18]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #16
 ; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    lsl w10, w12, #31
-; CHECK-NEXT:    mov z2.b, z0.b[34]
-; CHECK-NEXT:    orr x8, x8, x10
+; CHECK-NEXT:    mov z2.b, z0.b[19]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #17
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[20]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #18
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[21]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #19
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[22]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #20
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[23]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #21
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[24]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #22
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[25]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #23
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[26]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #24
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[27]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #25
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[28]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #26
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[29]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #27
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[30]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #28
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[31]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #29
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[32]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #30
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[33]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #31
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[34]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #32
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[35]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[35]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #33
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[36]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[36]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #34
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[37]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[37]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #35
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[38]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[38]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #36
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[39]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[39]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #37
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[40]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[40]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #38
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[41]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[41]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #39
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[42]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[42]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #40
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[43]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[43]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #41
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[44]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[44]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #42
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[45]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[45]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #43
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[46]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[46]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #44
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[47]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[47]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #45
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[48]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[48]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #46
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[49]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[49]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #47
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[50]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[50]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #48
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[51]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[51]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #49
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[52]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[52]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #50
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[53]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[53]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #51
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[54]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[54]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #52
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[55]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[55]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #53
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[56]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[56]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #54
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[57]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[57]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #55
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[58]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[58]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #56
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[59]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[59]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #57
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[60]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[60]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #58
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[61]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    fmov w10, s1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #59
 ; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[62]
+; CHECK-NEXT:    mov z2.b, z0.b[61]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    fmov w10, s2
+; CHECK-NEXT:    orr x8, x8, x9, lsl #59
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[62]
 ; CHECK-NEXT:    mov z0.b, z0.b[63]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #60
 ; CHECK-NEXT:    and w9, w10, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #61
-; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    fmov w9, s1
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #62
 ; CHECK-NEXT:    fmov w9, s0
@@ -22322,15 +22172,8 @@ define void @masked_load_zext_v64i8i32(ptr %ap, ptr %bp, ptr %c) vscale_range(16
 ; CHECK-NEXT:  .LBB44_67: // %else250
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    ptrue p0.s, vl64
-; CHECK-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x22, x21, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x24, x23, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    ldp x26, x25, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x28, x27, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x2]
-; CHECK-NEXT:    add sp, sp, #112
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB44_68: // %cond.load5
 ; CHECK-NEXT:    mov w9, #2 // =0x2
@@ -22844,14 +22687,13 @@ define void @masked_load_zext_v64i8i32(ptr %ap, ptr %bp, ptr %c) vscale_range(16
 define void @masked_load_zext_v32i8i64(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_load_zext_v32i8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x26, x25, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x24, x23, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x22, x21, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 112
+; CHECK-NEXT:    stp x29, x30, [sp, #-96]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp x28, x27, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x26, x25, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x24, x23, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x22, x21, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
@@ -23061,16 +22903,15 @@ define void @masked_load_zext_v32i8i64(ptr %ap, ptr %bp, ptr %c) vscale_range(16
 ; CHECK-NEXT:  .LBB45_35: // %else122
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    ptrue p0.d, vl32
-; CHECK-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x22, x21, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x24, x23, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    ldp x26, x25, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x28, x27, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x26, x25, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x28, x27, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x2]
-; CHECK-NEXT:    add sp, sp, #112
+; CHECK-NEXT:    ldp x29, x30, [sp], #96 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB45_36: // %cond.load5
 ; CHECK-NEXT:    mov w9, #2 // =0x2
@@ -23328,260 +23169,246 @@ define void @masked_load_zext_v32i8i64(ptr %ap, ptr %bp, ptr %c) vscale_range(16
 define void @masked_load_zext_v64i16i32(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_load_zext_v64i16i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x26, x25, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x24, x23, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x22, x21, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 112
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w21, -24
-; CHECK-NEXT:    .cfi_offset w22, -32
-; CHECK-NEXT:    .cfi_offset w23, -40
-; CHECK-NEXT:    .cfi_offset w24, -48
-; CHECK-NEXT:    .cfi_offset w25, -56
-; CHECK-NEXT:    .cfi_offset w26, -64
-; CHECK-NEXT:    .cfi_offset w27, -72
-; CHECK-NEXT:    .cfi_offset w28, -80
-; CHECK-NEXT:    .cfi_offset w30, -88
-; CHECK-NEXT:    .cfi_offset w29, -96
 ; CHECK-NEXT:    ptrue p1.h, vl64
 ; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x1]
 ; CHECK-NEXT:    cmpeq p0.h, p1/z, z0.h, #0
 ; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    umov w12, v0.b[1]
-; CHECK-NEXT:    fmov w22, s0
-; CHECK-NEXT:    mov z6.b, z0.b[18]
-; CHECK-NEXT:    mov z2.b, z0.b[19]
-; CHECK-NEXT:    umov w13, v0.b[2]
-; CHECK-NEXT:    umov w14, v0.b[7]
-; CHECK-NEXT:    umov w3, v0.b[8]
-; CHECK-NEXT:    mov z1.b, z0.b[20]
-; CHECK-NEXT:    umov w4, v0.b[9]
-; CHECK-NEXT:    mov z4.b, z0.b[21]
-; CHECK-NEXT:    and x22, x22, #0x1
+; CHECK-NEXT:    umov w8, v0.b[1]
+; CHECK-NEXT:    fmov w10, s0
+; CHECK-NEXT:    umov w9, v0.b[2]
 ; CHECK-NEXT:    umov w11, v0.b[3]
-; CHECK-NEXT:    umov w5, v0.b[10]
-; CHECK-NEXT:    mov z7.b, z0.b[22]
-; CHECK-NEXT:    fmov w19, s6
-; CHECK-NEXT:    fmov w20, s2
-; CHECK-NEXT:    bfi x22, x12, #1, #1
-; CHECK-NEXT:    mov z16.b, z0.b[23]
-; CHECK-NEXT:    fmov w21, s1
+; CHECK-NEXT:    mov z1.b, z0.b[16]
+; CHECK-NEXT:    mov z2.b, z0.b[17]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    and w8, w8, #0x1
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x10, x8, lsl #1
 ; CHECK-NEXT:    umov w10, v0.b[4]
-; CHECK-NEXT:    umov w15, v0.b[11]
-; CHECK-NEXT:    fmov w23, s4
-; CHECK-NEXT:    bfi x22, x13, #2, #1
-; CHECK-NEXT:    ubfiz x14, x14, #7, #1
-; CHECK-NEXT:    ubfiz x3, x3, #8, #1
-; CHECK-NEXT:    umov w17, v0.b[12]
-; CHECK-NEXT:    mov z17.b, z0.b[24]
-; CHECK-NEXT:    fmov w24, s7
-; CHECK-NEXT:    ubfiz x4, x4, #9, #1
-; CHECK-NEXT:    ubfiz x19, x19, #18, #1
-; CHECK-NEXT:    ubfiz x20, x20, #19, #1
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #2
 ; CHECK-NEXT:    umov w9, v0.b[5]
-; CHECK-NEXT:    umov w18, v0.b[13]
-; CHECK-NEXT:    mov z18.b, z0.b[25]
-; CHECK-NEXT:    fmov w25, s16
-; CHECK-NEXT:    orr x14, x14, x3
-; CHECK-NEXT:    ubfiz x3, x5, #10, #1
-; CHECK-NEXT:    ubfiz x5, x21, #20, #1
-; CHECK-NEXT:    bfi x22, x11, #3, #1
-; CHECK-NEXT:    umov w16, v0.b[14]
-; CHECK-NEXT:    mov z19.b, z0.b[26]
-; CHECK-NEXT:    orr x19, x19, x20
-; CHECK-NEXT:    orr x14, x14, x4
-; CHECK-NEXT:    ubfiz x4, x23, #21, #1
-; CHECK-NEXT:    umov w8, v0.b[6]
-; CHECK-NEXT:    umov w1, v0.b[15]
-; CHECK-NEXT:    mov z5.b, z0.b[17]
-; CHECK-NEXT:    mov z20.b, z0.b[27]
-; CHECK-NEXT:    fmov w26, s17
-; CHECK-NEXT:    orr x11, x14, x3
-; CHECK-NEXT:    orr x14, x19, x5
-; CHECK-NEXT:    ubfiz x15, x15, #11, #1
-; CHECK-NEXT:    ubfiz x3, x24, #22, #1
-; CHECK-NEXT:    bfi x22, x10, #4, #1
-; CHECK-NEXT:    mov z3.b, z0.b[16]
-; CHECK-NEXT:    mov z21.b, z0.b[28]
-; CHECK-NEXT:    fmov w12, s18
-; CHECK-NEXT:    orr x14, x14, x4
-; CHECK-NEXT:    ubfiz x10, x17, #12, #1
-; CHECK-NEXT:    ubfiz x17, x25, #23, #1
-; CHECK-NEXT:    mov z22.b, z0.b[29]
-; CHECK-NEXT:    fmov w27, s19
-; CHECK-NEXT:    orr x11, x11, x15
-; CHECK-NEXT:    orr x14, x14, x3
-; CHECK-NEXT:    ubfiz x15, x18, #13, #1
-; CHECK-NEXT:    bfi x22, x9, #5, #1
-; CHECK-NEXT:    fmov w7, s5
-; CHECK-NEXT:    mov z5.b, z0.b[30]
-; CHECK-NEXT:    fmov w28, s20
-; CHECK-NEXT:    orr x10, x11, x10
-; CHECK-NEXT:    orr x9, x14, x17
-; CHECK-NEXT:    ubfiz x11, x16, #14, #1
-; CHECK-NEXT:    ubfiz x14, x26, #24, #1
-; CHECK-NEXT:    fmov w6, s3
-; CHECK-NEXT:    fmov w29, s21
-; CHECK-NEXT:    orr x10, x10, x15
-; CHECK-NEXT:    bfi x22, x8, #6, #1
-; CHECK-NEXT:    ubfiz x8, x1, #15, #1
-; CHECK-NEXT:    ubfiz x12, x12, #25, #1
-; CHECK-NEXT:    fmov w30, s22
-; CHECK-NEXT:    orr x10, x10, x11
-; CHECK-NEXT:    orr x9, x9, x14
-; CHECK-NEXT:    ubfiz x11, x27, #26, #1
-; CHECK-NEXT:    fmov w13, s5
-; CHECK-NEXT:    orr x8, x10, x8
-; CHECK-NEXT:    orr x9, x9, x12
-; CHECK-NEXT:    ubfiz x10, x28, #27, #1
-; CHECK-NEXT:    mov z3.b, z0.b[31]
-; CHECK-NEXT:    orr x9, x9, x11
-; CHECK-NEXT:    ubfiz x11, x6, #16, #1
-; CHECK-NEXT:    ubfiz x12, x29, #28, #1
-; CHECK-NEXT:    orr x9, x9, x10
-; CHECK-NEXT:    ubfiz x10, x7, #17, #1
-; CHECK-NEXT:    ubfiz x14, x30, #29, #1
-; CHECK-NEXT:    mov z2.b, z0.b[32]
-; CHECK-NEXT:    orr x8, x8, x11
-; CHECK-NEXT:    orr x9, x9, x12
-; CHECK-NEXT:    ubfiz x11, x13, #30, #1
-; CHECK-NEXT:    fmov w12, s3
-; CHECK-NEXT:    orr x8, x8, x10
-; CHECK-NEXT:    orr x9, x9, x14
-; CHECK-NEXT:    mov z1.b, z0.b[33]
-; CHECK-NEXT:    orr x8, x22, x8
-; CHECK-NEXT:    orr x9, x9, x11
-; CHECK-NEXT:    orr x8, x8, x9
+; CHECK-NEXT:    orr x8, x8, x11, lsl #3
+; CHECK-NEXT:    umov w11, v0.b[6]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    orr x8, x8, x10, lsl #4
+; CHECK-NEXT:    umov w10, v0.b[7]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #5
+; CHECK-NEXT:    umov w9, v0.b[8]
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x11, lsl #6
+; CHECK-NEXT:    umov w11, v0.b[9]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    orr x8, x8, x10, lsl #7
+; CHECK-NEXT:    umov w10, v0.b[10]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #8
+; CHECK-NEXT:    umov w9, v0.b[11]
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x11, lsl #9
+; CHECK-NEXT:    umov w11, v0.b[12]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    orr x8, x8, x10, lsl #10
+; CHECK-NEXT:    umov w10, v0.b[13]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #11
+; CHECK-NEXT:    umov w9, v0.b[14]
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x11, lsl #12
+; CHECK-NEXT:    umov w11, v0.b[15]
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    orr x8, x8, x10, lsl #13
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #14
+; CHECK-NEXT:    and w9, w11, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #15
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[18]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #16
 ; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    lsl w10, w12, #31
-; CHECK-NEXT:    mov z2.b, z0.b[34]
-; CHECK-NEXT:    orr x8, x8, x10
+; CHECK-NEXT:    mov z2.b, z0.b[19]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #17
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[20]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #18
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[21]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #19
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[22]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #20
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[23]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #21
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[24]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #22
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[25]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #23
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[26]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #24
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[27]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #25
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[28]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #26
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[29]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #27
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[30]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #28
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[31]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #29
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[32]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #30
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[33]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    orr x8, x8, x9, lsl #31
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[34]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #32
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[35]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[35]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #33
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[36]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[36]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #34
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[37]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[37]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #35
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[38]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[38]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #36
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[39]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[39]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #37
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[40]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[40]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #38
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[41]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[41]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #39
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[42]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[42]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #40
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[43]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[43]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #41
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[44]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[44]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #42
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[45]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[45]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #43
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[46]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[46]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #44
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[47]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[47]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #45
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[48]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[48]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #46
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[49]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[49]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #47
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[50]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[50]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #48
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[51]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[51]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #49
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[52]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[52]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #50
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[53]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[53]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #51
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[54]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[54]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #52
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[55]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[55]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #53
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[56]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[56]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #54
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[57]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[57]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #55
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[58]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[58]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #56
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[59]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.b, z0.b[59]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #57
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[60]
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[60]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #58
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.b, z0.b[61]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    fmov w10, s1
-; CHECK-NEXT:    orr x8, x8, x9, lsl #59
 ; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[62]
+; CHECK-NEXT:    mov z2.b, z0.b[61]
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    fmov w10, s2
+; CHECK-NEXT:    orr x8, x8, x9, lsl #59
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov z1.b, z0.b[62]
 ; CHECK-NEXT:    mov z0.b, z0.b[63]
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #60
 ; CHECK-NEXT:    and w9, w10, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #61
-; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    fmov w9, s1
 ; CHECK-NEXT:    and w9, w9, #0x1
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #62
 ; CHECK-NEXT:    fmov w9, s0
@@ -23738,14 +23565,7 @@ define void @masked_load_zext_v64i16i32(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:  .LBB46_67: // %else250
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    ptrue p0.s, vl64
-; CHECK-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x22, x21, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x24, x23, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x26, x25, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x2]
-; CHECK-NEXT:    ldp x28, x27, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #112
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB46_68: // %cond.load5
 ; CHECK-NEXT:    mov w9, #2 // =0x2
@@ -24259,14 +24079,13 @@ define void @masked_load_zext_v64i16i32(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 define void @masked_load_zext_v32i16i64(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_load_zext_v32i16i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x26, x25, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x24, x23, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x22, x21, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 112
+; CHECK-NEXT:    stp x29, x30, [sp, #-96]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp x28, x27, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x26, x25, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x24, x23, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x22, x21, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
@@ -24477,15 +24296,14 @@ define void @masked_load_zext_v32i16i64(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:  .LBB47_35: // %else122
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    ptrue p0.d, vl32
-; CHECK-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x22, x21, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x24, x23, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    ldp x26, x25, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x28, x27, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x26, x25, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x28, x27, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x2]
-; CHECK-NEXT:    add sp, sp, #112
+; CHECK-NEXT:    ldp x29, x30, [sp], #96 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB47_36: // %cond.load5
 ; CHECK-NEXT:    mov w9, #2 // =0x2
@@ -24743,14 +24561,13 @@ define void @masked_load_zext_v32i16i64(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 define void @masked_load_zext_v32i32i64(ptr %ap, ptr %bp, ptr %c) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_load_zext_v32i32i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x26, x25, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x24, x23, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x22, x21, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 112
+; CHECK-NEXT:    stp x29, x30, [sp, #-96]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp x28, x27, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x26, x25, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x24, x23, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x22, x21, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
@@ -24962,14 +24779,13 @@ define void @masked_load_zext_v32i32i64(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:  .LBB48_35: // %else122
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    ptrue p0.d, vl32
-; CHECK-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x22, x21, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x24, x23, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x26, x25, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x26, x25, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x2]
-; CHECK-NEXT:    ldp x28, x27, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #112
+; CHECK-NEXT:    ldp x28, x27, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x29, x30, [sp], #96 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB48_36: // %cond.load5
 ; CHECK-NEXT:    mov w9, #2 // =0x2

@@ -1748,7 +1748,8 @@ public:
   Record(const Record &O)
       : Name(O.Name), Locs(O.Locs), ValueReferenceLocs(O.ValueReferenceLocs),
         TemplateArgs(O.TemplateArgs), Values(O.Values),
-        Assertions(O.Assertions), DirectSuperClasses(O.DirectSuperClasses),
+        Assertions(O.Assertions), Dumps(O.Dumps),
+        DirectSuperClasses(O.DirectSuperClasses),
         TrackedRecords(O.TrackedRecords), ID(getNewUID(O.getRecords())),
         Kind(O.Kind) {}
 

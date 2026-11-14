@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - -std=c++11 | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple=x86_64-apple-darwin10 -emit-llvm -o - -std=c++11 | FileCheck %s %}
 // PR13424
 
 namespace Test1 {

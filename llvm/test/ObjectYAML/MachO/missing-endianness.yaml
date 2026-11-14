@@ -1,0 +1,42 @@
+## yaml2obj requires IsLittleEndian in every Mach-O document and fat slice,
+## instead of assuming the host's byte order.
+
+# RUN: not yaml2obj --docnum=1 %s 2>&1 | FileCheck %s
+# RUN: not yaml2obj --docnum=2 %s 2>&1 | FileCheck %s
+
+# CHECK: error: missing required key 'IsLittleEndian'
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           0
+  sizeofcmds:      0
+  flags:           0x00000000
+  reserved:        0x00000000
+...
+
+--- !fat-mach-o
+FatHeader:
+  magic:           0xCAFEBABE
+  nfat_arch:       1
+FatArchs:
+  - cputype:         0x01000007
+    cpusubtype:      0x00000003
+    offset:          0x0000000000001000
+    size:            32
+    align:           12
+Slices:
+  - !mach-o
+    FileHeader:
+      magic:           0xFEEDFACF
+      cputype:         0x01000007
+      cpusubtype:      0x00000003
+      filetype:        0x00000001
+      ncmds:           0
+      sizeofcmds:      0
+      flags:           0x00000000
+      reserved:        0x00000000
+...

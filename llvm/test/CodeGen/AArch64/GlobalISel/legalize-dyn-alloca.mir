@@ -38,7 +38,6 @@
 ---
 name:            test_simple_alloca
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
 frameInfo:
@@ -85,7 +84,6 @@ body:             |
 ---
 name:            test_aligned_alloca
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
 frameInfo:
@@ -134,7 +132,6 @@ body:             |
 ---
 name:            test_natural_alloca
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
 frameInfo:
@@ -181,7 +178,6 @@ body:             |
 ---
 name:            test_simple_alloca_stack_probing
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
 frameInfo:
@@ -228,7 +224,6 @@ body:             |
 ---
 name:            test_aligned_alloca_stack_probing
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
 frameInfo:
@@ -277,7 +272,6 @@ body:             |
 ---
 name:            test_natural_alloca_stack_probing
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
 frameInfo:

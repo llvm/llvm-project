@@ -33,6 +33,11 @@ mlir::Operation *getEnclosingComputeOp(mlir::Region &region);
 /// nullptr. Otherwise maps the block argument to its operand and returns it.
 mlir::Value getACCOperandForBlockArg(mlir::Value v);
 
+/// If `operand` is a `launch` or `ins` operand of an `acc.compute_region`,
+/// returns the body block argument it is threaded to; otherwise nullptr.
+/// Unlike `ComputeRegionOp::getBlockArg`, duplicate operands are distinguished.
+mlir::BlockArgument getACCBlockArgForOperand(mlir::OpOperand &operand);
+
 /// If `v` is not a block argument of an `acc.compute_region` body, returns
 /// nullptr. Otherwise maps the block argument to its operand and returns the
 /// defining operation if it is one of `ACC_DATA_ENTRY_OPS`.
@@ -97,8 +102,12 @@ bool isValidSymbolUse(mlir::Operation *user, mlir::SymbolRefAttr symbol,
 /// and whether the defining operation carries `acc.declare` with the deviceptr
 /// clause.
 /// \param val The value to check
+/// \param symbolTables Optional cache of symbol tables used to resolve global
+///        symbols. Callers that query many values should pass one: without it
+///        every lookup scans the whole module.
 /// \return true if the value is device data, false otherwise
-bool isDeviceAccessibleValue(mlir::Value val);
+bool isDeviceAccessibleValue(
+    mlir::Value val, mlir::SymbolTableCollection *symbolTables = nullptr);
 
 /// Check if a value is backed by memory that is residing in the current device,
 /// and therefore requires no runtime mapping or attach.
@@ -111,8 +120,11 @@ bool isDeviceAccessibleValue(mlir::Value val);
 /// on demand, so it is not in device memory: it must still be mapped so the
 /// runtime can attach rather than be treated as already resident.
 /// \param val The value to check
+/// \param symbolTables Optional cache of symbol tables used to resolve global
+///        symbols (see isDeviceAccessibleValue).
 /// \return true if the value is in device memory, false otherwise
-bool isInDeviceMemoryValue(mlir::Value val);
+bool isInDeviceMemoryValue(mlir::Value val,
+                           mlir::SymbolTableCollection *symbolTables = nullptr);
 
 /// Check if a value use is valid in an OpenACC region.
 /// This is true if:
@@ -121,8 +133,11 @@ bool isInDeviceMemoryValue(mlir::Value val);
 /// - The value is only used by private clauses in the region
 /// \param val The value to check
 /// \param region The OpenACC region
+/// \param symbolTables Optional cache of symbol tables used to resolve global
+///        symbols (see isDeviceAccessibleValue).
 /// \return true if the value use is valid, false otherwise
-bool isValidValueUse(mlir::Value val, mlir::Region &region);
+bool isValidValueUse(mlir::Value val, mlir::Region &region,
+                     mlir::SymbolTableCollection *symbolTables = nullptr);
 
 /// Collects all data clauses that dominate the compute construct.
 /// This includes data clauses from:

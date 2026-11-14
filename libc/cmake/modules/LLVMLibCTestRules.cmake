@@ -64,7 +64,7 @@ function(_get_common_test_compile_options_impl output_var c_test)
       # Only add -ffreestanding flag in full build mode.
       list(APPEND compile_options "-ffreestanding")
       if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
-        (LIBC_TARGET_ARCHITECTURE_IS_X86_64 OR LIBC_TARGET_ARCHITECTURE_IS_X86))
+          (LIBC_TARGET_ARCHITECTURE_IS_X86_64 OR LIBC_TARGET_ARCHITECTURE_IS_X86))
         list(APPEND compile_options "-D_MM_MALLOC_H_INCLUDED")
       endif()
       list(APPEND compile_options "-fno-exceptions")
@@ -109,6 +109,13 @@ function(_get_common_test_compile_options_impl output_var c_test)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       if(NOT c_test)
         list(APPEND compile_options "-fext-numeric-literals")
+        if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "11.0.0")
+          # AllocChecker's operator new overloads inline malloc/aligned_alloc
+          # while C++ forbids marking replaceable operator delete inline,
+          # causing GCC to report false-positive -Wmismatched-new-delete
+          # diagnostics.
+          list(APPEND compile_options "-Wno-mismatched-new-delete")
+        endif()
       endif()
     else()
       list(APPEND compile_options "-Wno-c99-extensions")
@@ -312,8 +319,8 @@ function(get_object_files_for_test result skipped_entrypoints_list)
           # object. External baremetal startup code can reference the public C exit
           # symbol, so use the public-packaging object for exit in this configuration.
           if(dep STREQUAL "libc.src.stdlib.exit" AND
-            NOT LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP AND
-            LIBC_TARGET_OS_IS_BAREMETAL)
+              NOT LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP AND
+              LIBC_TARGET_OS_IS_BAREMETAL)
             string(REPLACE ".__internal__" "" object_file_raw ${object_file_raw})
           endif()
           list(APPEND dep_obj ${object_file_raw})
@@ -354,8 +361,8 @@ endif()
 # that the driver selects the same multilib. GPU and UEFI targets do not link a
 # compiler runtime.
 if(LLVM_INCLUDE_TESTS AND LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU AND
-  NOT LIBC_TARGET_OS_IS_UEFI AND
-  NOT LIBC_TEST_BUILTINS_LIBRARY AND NOT LIBC_TEST_BUILTINS_TARGET)
+    NOT LIBC_TARGET_OS_IS_UEFI AND
+    NOT LIBC_TEST_BUILTINS_LIBRARY AND NOT LIBC_TEST_BUILTINS_TARGET)
   separate_arguments(libc_cxx_flags NATIVE_COMMAND "${CMAKE_CXX_FLAGS}")
   execute_process(
     COMMAND ${CMAKE_CXX_COMPILER} ${libc_cxx_flags}
@@ -413,6 +420,7 @@ endfunction()
 # needed to support code coverage profiling in hermetic/full-build mode.
 function(_get_libc_coverage_dependencies output_var)
   set(${output_var}
+    libc.src.errno.errno
     libc.src.stdio.fclose
     libc.src.stdio.fdopen
     libc.src.stdio.feof
@@ -459,6 +467,7 @@ endfunction()
 # entrypoints, subprocess support, and coverage dependencies.
 function(_get_libc_test_dependencies output_var user_depends startup_target_dep is_c_test is_fp_test is_integration_test)
   get_fq_deps_list(fq_deps_list ${user_depends})
+  list(APPEND fq_deps_list libc.src.errno.errno)
   if(is_integration_test)
     list(APPEND fq_deps_list
       generate-libc-headers
@@ -506,6 +515,7 @@ function(_get_libc_test_dependencies output_var user_depends startup_target_dep 
         list(APPEND fq_deps_list
           libc.src.poll.poll
           libc.src.signal.kill
+          libc.src.signal.signal
           libc.src.stdio.fflush
           libc.src.stdio.stderr
           libc.src.stdio.stdout
@@ -569,8 +579,8 @@ function(_link_libc_hermetic_test fq_target_name fq_build_target_name startup_ta
 
   set(compiler_runtime "")
   if(NOT LIBC_TARGET_ARCHITECTURE_IS_AMDGPU AND
-    NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX AND
-    NOT LIBC_CC_SUPPORTS_NOSTDLIBPP)
+      NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX AND
+      NOT LIBC_CC_SUPPORTS_NOSTDLIBPP)
     list(APPEND compiler_runtime ${LIBGCC_S_LOCATION})
   endif()
 
@@ -815,8 +825,7 @@ function(create_libc_test fq_target_name)
   )
 
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
-  target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-  target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_BUILD_DIR})
+  target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR} ${LIBC_BUILD_DIR})
 
   _get_common_test_compile_options(compile_options "${TEST_C_TEST}" "${TEST_FLAGS}")
   target_compile_options(${fq_build_target_name} PRIVATE ${compile_options} ${TEST_COMPILE_OPTIONS})
@@ -859,6 +868,9 @@ function(create_libc_test fq_target_name)
     ${fq_build_target_name}
     ${fq_deps_list}
   )
+  if(TARGET libc-headers)
+    add_dependencies(${fq_build_target_name} libc-headers)
+  endif()
 
   # 5. Add test runner target
   _add_libc_test_runner(
@@ -877,7 +889,6 @@ function(create_libc_test fq_target_name)
     "${TEST_BUILD_ONLY}"
   )
 endfunction()
-
 
 # Rule to add a fuzzer test.
 # Usage
@@ -907,9 +918,8 @@ function(add_libc_fuzzer target_name)
     list(APPEND link_libraries mpfr gmp)
   endif()
 
-
   get_fq_target_name(${target_name} fq_target_name)
-  get_fq_deps_list(fq_deps_list ${LIBC_FUZZER_DEPENDS})
+  get_fq_deps_list(fq_deps_list ${LIBC_FUZZER_DEPENDS} libc.src.errno.errno)
   get_object_files_for_test(
     link_object_files skipped_entrypoints_list ${fq_deps_list})
   if(skipped_entrypoints_list)
@@ -939,8 +949,8 @@ function(add_libc_fuzzer target_name)
   target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
 
   target_link_libraries(${fq_target_name} PRIVATE
-    ${link_object_files}
-    ${link_libraries}
+      ${link_object_files}
+      ${link_libraries}
   )
 
   set_target_properties(${fq_target_name}
@@ -957,7 +967,6 @@ function(add_libc_fuzzer target_name)
       ${LIBC_FUZZER_COMPILE_OPTIONS})
 
 endfunction()
-
 
 # A unified function to add a libc test.
 # FULL_BUILD_ONLY: skip test in overlay mode.

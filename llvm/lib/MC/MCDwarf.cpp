@@ -128,17 +128,6 @@ static inline const MCExpr *makeEndMinusStartExpr(MCContext &Ctx,
   return Res3;
 }
 
-//
-// This helper routine returns an expression of Start + IntVal .
-//
-static inline const MCExpr *
-makeStartPlusIntExpr(MCContext &Ctx, const MCSymbol &Start, int IntVal) {
-  const MCExpr *LHS = MCSymbolRefExpr::create(&Start, Ctx);
-  const MCExpr *RHS = MCConstantExpr::create(IntVal, Ctx);
-  const MCExpr *Res = MCBinaryExpr::create(MCBinaryExpr::Add, LHS, RHS, Ctx);
-  return Res;
-}
-
 void MCLineSection::addEndEntry(MCSymbol *EndLabel) {
   auto *Sec = &EndLabel->getSection();
   // The line table may be empty, which we should skip adding an end entry.
@@ -407,15 +396,9 @@ void MCDwarfLineStr::emitRef(MCStreamer *MCOS, StringRef Path) {
   int RefSize =
       dwarf::getDwarfOffsetByteSize(MCOS->getContext().getDwarfFormat());
   size_t Offset = addString(Path);
-  if (UseRelocs) {
-    MCContext &Ctx = MCOS->getContext();
-    if (Ctx.getAsmInfo().needsDwarfSectionOffsetDirective()) {
-      MCOS->emitCOFFSecRel32(LineStrLabel, Offset);
-    } else {
-      MCOS->emitValue(makeStartPlusIntExpr(Ctx, *LineStrLabel, Offset),
-                      RefSize);
-    }
-  } else
+  if (UseRelocs)
+    MCOS->emitDwarfSectionOffset(LineStrLabel, Offset, RefSize);
+  else
     MCOS->emitIntValue(Offset, RefSize);
 }
 
@@ -661,9 +644,10 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory, StringRef &FileName,
     trackMD5Usage(Checksum.has_value());
     HasAnySource |= Source.has_value();
   }
-  if (DwarfVersion >= 5 && isRootFile(RootFile, Directory, FileName, Checksum))
-    return 0;
   if (FileNumber == 0) {
+    if (DwarfVersion >= 5 &&
+        isRootFile(RootFile, Directory, FileName, Checksum))
+      return 0;
     // File numbers start with 1 and/or after any file numbers
     // allocated by inline-assembler .file directives.
     FileNumber = MCDwarfFiles.empty() ? 1 : MCDwarfFiles.size();
@@ -928,8 +912,7 @@ static void EmitGenDwarfAranges(MCStreamer *MCOS,
   // The 4 (8 for DWARF64) byte offset to the compile unit in the .debug_info
   // from the start of the .debug_info.
   if (InfoSectionSymbol)
-    MCOS->emitSymbolValue(InfoSectionSymbol, OffsetSize,
-                          asmInfo.needsDwarfSectionOffsetDirective());
+    MCOS->emitDwarfSectionOffset(InfoSectionSymbol, /*Offset=*/0, OffsetSize);
   else
     MCOS->emitIntValue(0, OffsetSize);
   // The 1 byte size of an address.
@@ -1007,8 +990,7 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
   // The 4 (8 for DWARF64) byte offset to the debug abbrevs from the start of
   // the .debug_abbrev.
   if (AbbrevSectionSymbol)
-    MCOS->emitSymbolValue(AbbrevSectionSymbol, OffsetSize,
-                          AsmInfo.needsDwarfSectionOffsetDirective());
+    MCOS->emitDwarfSectionOffset(AbbrevSectionSymbol, /*Offset=*/0, OffsetSize);
   else
     // Since the abbrevs are at the start of the section, the offset is zero.
     MCOS->emitIntValue(0, OffsetSize);
@@ -1023,8 +1005,7 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
   // DW_AT_stmt_list, a 4 (8 for DWARF64) byte offset from the start of the
   // .debug_line section.
   if (LineSectionSymbol)
-    MCOS->emitSymbolValue(LineSectionSymbol, OffsetSize,
-                          AsmInfo.needsDwarfSectionOffsetDirective());
+    MCOS->emitDwarfSectionOffset(LineSectionSymbol, /*Offset=*/0, OffsetSize);
   else
     // The line table is at the start of the section, so the offset is zero.
     MCOS->emitIntValue(0, OffsetSize);
@@ -1396,6 +1377,7 @@ namespace {
 class FrameEmitterImpl {
   int64_t CFAOffset = 0;
   int64_t InitialCFAOffset = 0;
+  SmallVector<int64_t, 0> SavedCFAOffsets;
   bool IsEH;
   MCObjectStreamer &Streamer;
 
@@ -1562,9 +1544,11 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
   }
   case MCCFIInstruction::OpRememberState:
     Streamer.emitInt8(dwarf::DW_CFA_remember_state);
+    SavedCFAOffsets.push_back(CFAOffset);
     return;
   case MCCFIInstruction::OpRestoreState:
     Streamer.emitInt8(dwarf::DW_CFA_restore_state);
+    CFAOffset = SavedCFAOffsets.pop_back_val();
     return;
   case MCCFIInstruction::OpSameValue: {
     unsigned Reg = Instr.getRegister();
@@ -1601,7 +1585,7 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     if (!IsEH)
       Reg = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg);
 
-    int Offset = Instr.getOffset();
+    int64_t Offset = Instr.getOffset();
     Offset = Offset / dataAlignmentFactor;
 
     if (Offset < 0) {
@@ -2036,6 +2020,7 @@ void FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
   const MCObjectFileInfo *MOFI = context.getObjectFileInfo();
 
   CFAOffset = InitialCFAOffset;
+  SavedCFAOffsets.clear();
 
   dwarf::DwarfFormat Format = IsEH ? dwarf::DWARF32 : context.getDwarfFormat();
   unsigned OffsetSize = dwarf::getDwarfOffsetByteSize(Format);
@@ -2061,8 +2046,7 @@ void FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
         makeEndMinusStartExpr(context, SectionStart, cieStart, 0);
     emitAbsValue(Streamer, offset, OffsetSize);
   } else {
-    Streamer.emitSymbolValue(&cieStart, OffsetSize,
-                             asmInfo.needsDwarfSectionOffsetDirective());
+    Streamer.emitDwarfSectionOffset(&cieStart, /*Offset=*/0, OffsetSize);
   }
 
   // PC Begin

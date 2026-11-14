@@ -13,7 +13,6 @@
 #include "mlir/Dialect/Quant/IR/QuantTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::quant;
@@ -52,9 +51,11 @@ static void writeOptionalSignedVarInt(DialectBytecodeWriter &writer,
   if (val.has_value())
     writer.writeSignedVarInt(*val);
 }
+} // namespace
 
 #include "mlir/Dialect/Quant/IR/QuantDialectBytecode.cpp.inc"
 
+namespace {
 /// This class implements the bytecode interface for the Quant dialect.
 struct QuantDialectBytecodeInterface : public BytecodeDialectInterface {
   QuantDialectBytecodeInterface(Dialect *dialect)

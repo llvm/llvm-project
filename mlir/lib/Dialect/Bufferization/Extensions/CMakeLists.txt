@@ -1,10 +1,10 @@
 set(LLVM_OPTIONAL_SOURCES
   AllExtensions.cpp
-  ShardingExtensions.cpp
+  ShardingInterfaceImpl.cpp
   )
 
-add_mlir_extension_library(MLIRBufferizationShardingExtensions
-  ShardingExtensions.cpp
+add_mlir_extension_library(MLIRBufferizationShardingInterfaceImpl
+  ShardingInterfaceImpl.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Bufferization/Extensions
@@ -22,5 +22,5 @@ add_mlir_extension_library(MLIRBufferizationAllExtensions
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Bufferization/Extensions
 
   LINK_LIBS PUBLIC
-  MLIRBufferizationShardingExtensions
+  MLIRBufferizationShardingInterfaceImpl
   )

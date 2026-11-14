@@ -215,3 +215,17 @@ MachineSDNode *WebAssembly::getTLSBase(SelectionDAG &DAG, const SDLoc &DL,
     return DAG.getMachineNode(Opcode, DL, {PtrVT, MVT::Other}, {Sym, Chain});
   return DAG.getMachineNode(Opcode, DL, PtrVT, Sym);
 }
+
+Register WebAssembly::getSwiftAsyncArgReg(const MachineFunction &MF) {
+  if (none_of(MF.getFunction().args(), [](const Argument &Arg) {
+        return Arg.hasAttribute(Attribute::SwiftAsync);
+      }))
+    return Register();
+  for (const MachineInstr &MI : MF.front()) {
+    if (!isArgument(MI.getOpcode()))
+      break;
+    if (MI.getOperand(1).getImm() == 0)
+      return MI.getOperand(0).getReg();
+  }
+  return Register();
+}

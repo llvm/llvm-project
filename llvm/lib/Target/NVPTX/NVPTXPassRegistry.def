@@ -20,6 +20,8 @@ MODULE_PASS("generic-to-nvvm", GenericToNVVMPass())
 MODULE_PASS("nvptx-asm-printer-begin", NVPTXAsmPrinterBeginPass())
 MODULE_PASS("nvptx-asm-printer-end", NVPTXAsmPrinterEndPass())
 MODULE_PASS("nvptx-assign-valid-global-names", NVPTXAssignValidGlobalNamesPass())
+MODULE_PASS("nvptx-canonicalize-dynamic-shared",
+            NVPTXCanonicalizeDynamicSharedPass())
 MODULE_PASS("nvptx-lower-args", NVPTXLowerArgsPass(*this))
 MODULE_PASS("nvptx-lower-ctor-dtor", NVPTXCtorDtorLoweringPass())
 MODULE_PASS("nvptx-promote-param-align", NVPTXPromoteParamAlignPass())

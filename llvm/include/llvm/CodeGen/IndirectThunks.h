@@ -65,7 +65,7 @@ class ThunkInserter {
   // inserted so far. InsertedThunksTy is usually a bool, but can be other types
   // to represent more than one type of thunk. Requires an |= operator to
   // accumulate results.
-  InsertedThunksTy InsertedThunks;
+  InsertedThunksTy InsertedThunks{};
 
 protected:
   // Interface for subclasses to use.
@@ -81,10 +81,6 @@ protected:
   // Interface for subclasses to implement.
   //
   // Note: all functions are non-virtual and are called via getDerived().
-  // Note: only doInitialization() has an implementation.
-
-  /// Initializes thunk inserter.
-  void doInitialization(Module &M) {}
 
   /// Returns common prefix for thunk function's names.
   const char *getThunkPrefix(); // undefined
@@ -107,10 +103,6 @@ protected:
   void populateThunk(MachineFunction &MF); // undefined
 
 public:
-  void init(Module &M) {
-    InsertedThunks = InsertedThunksTy{};
-    getDerived().doInitialization(M);
-  }
   // return `true` if `MMI` or `MF` was modified
   bool run(MachineModuleInfo &MMI, MachineFunction &MF);
 };
@@ -194,7 +186,7 @@ protected:
 
 public:
   bool doInitialization(Module &M) override {
-    initTIs(M, TIs);
+    TIs = {};
     return false;
   }
 
@@ -204,12 +196,6 @@ public:
   }
 
 private:
-  template <typename... ThunkInserterT>
-  static void initTIs(Module &M,
-                      std::tuple<ThunkInserterT...> &ThunkInserters) {
-    (..., std::get<ThunkInserterT>(ThunkInserters).init(M));
-  }
-
   template <typename... ThunkInserterT>
   static bool runTIs(MachineModuleInfo &MMI, MachineFunction &MF,
                      std::tuple<ThunkInserterT...> &ThunkInserters) {

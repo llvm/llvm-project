@@ -29,6 +29,7 @@ body: |
 name: ScalarVar
 body: |
   bb.0:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @ScalarVar
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -41,6 +42,7 @@ body: |
 name: ScalarZero
 body: |
   bb.0:
+    liveins: $b0
   ; CHECK-LABEL: name: @ScalarZero
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:00000000 SignBits:8 IsKnownNeverZero:0
@@ -53,6 +55,7 @@ body: |
 name: ScalarVarAbs
 body: |
   bb.0:
+    liveins: $b0
   ; CHECK-LABEL: name: @ScalarVarAbs
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0

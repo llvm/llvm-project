@@ -83,6 +83,18 @@ void store2(int *in, void *addr)
     struct foo s = { in[0], in[1], in[4], in[16], in[25], in[36], in[49], in[64] };
     __asm__ volatile ("st64b %0,[%1]" : : "r" (s), "r" (addr) : "memory" );
 }
+
+// CHECK-LABEL: define dso_local void @load_volatile(
+// CHECK-SAME: ptr nofree noundef captures(address) [[OUTPUT:%.*]], ptr noundef [[ADDR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i512 asm sideeffect "ld64b $0,[$1]", "=r,r,~{memory}"(ptr [[ADDR]]) #[[ATTR1]], !srcloc [[META13:![0-9]+]]
+// CHECK-NEXT:    store volatile i512 [[TMP0]], ptr [[OUTPUT]], align 8
+// CHECK-NEXT:    ret void
+//
+void load_volatile(volatile struct foo *output, void *addr)
+{
+    __asm__ volatile ("ld64b %0,[%1]" : "=r" (*output) : "r" (addr) : "memory");
+}
 //.
 // CHECK: [[META3:![0-9]+]] = !{!"int", [[META4:![0-9]+]], i64 0}
 // CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
@@ -91,4 +103,5 @@ void store2(int *in, void *addr)
 // CHECK: [[META7]] = !{i64 1382}
 // CHECK: [[INT_TBAA8]] = !{[[META3]], [[META3]], i64 0}
 // CHECK: [[META9]] = !{i64 6013}
+// CHECK: [[META13]] = !{i64 6616}
 //.

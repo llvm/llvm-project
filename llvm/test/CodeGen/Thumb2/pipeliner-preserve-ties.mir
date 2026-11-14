@@ -97,7 +97,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 callsEHReturn:   false
 callsUnwindInit: false
@@ -106,37 +105,6 @@ hasEHScopes:     false
 hasEHFunclets:   false
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: rgpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
-  - { id: 3, class: gpr, preferred-register: '' }
-  - { id: 4, class: gpr, preferred-register: '' }
-  - { id: 5, class: gpr, preferred-register: '' }
-  - { id: 6, class: rgpr, preferred-register: '' }
-  - { id: 7, class: rgpr, preferred-register: '' }
-  - { id: 8, class: rgpr, preferred-register: '' }
-  - { id: 9, class: rgpr, preferred-register: '' }
-  - { id: 10, class: rgpr, preferred-register: '' }
-  - { id: 11, class: rgpr, preferred-register: '' }
-  - { id: 12, class: rgpr, preferred-register: '' }
-  - { id: 13, class: rgpr, preferred-register: '' }
-  - { id: 14, class: rgpr, preferred-register: '' }
-  - { id: 15, class: rgpr, preferred-register: '' }
-  - { id: 16, class: rgpr, preferred-register: '' }
-  - { id: 17, class: gprnopc, preferred-register: '' }
-  - { id: 18, class: rgpr, preferred-register: '' }
-  - { id: 19, class: rgpr, preferred-register: '' }
-  - { id: 20, class: gprnopc, preferred-register: '' }
-  - { id: 21, class: rgpr, preferred-register: '' }
-  - { id: 22, class: rgpr, preferred-register: '' }
-  - { id: 23, class: gprnopc, preferred-register: '' }
-  - { id: 24, class: rgpr, preferred-register: '' }
-  - { id: 25, class: rgpr, preferred-register: '' }
-  - { id: 26, class: gprnopc, preferred-register: '' }
-  - { id: 27, class: rgpr, preferred-register: '' }
-  - { id: 28, class: rgpr, preferred-register: '' }
-  - { id: 29, class: gprnopc, preferred-register: '' }
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false
@@ -207,10 +175,10 @@ body:             |
   ; CHECK-NEXT: bb.4.do.body:
   ; CHECK-NEXT:   successors: %bb.5(0x04000000), %bb.4(0x7c000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr = PHI [[t2LDRSH_PRE1]], %bb.3, %48, %bb.4
-  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:rgpr = PHI [[COPY2]], %bb.3, %63, %bb.4
-  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:gpr = PHI [[t2LDRSH_PRE1]], %bb.3, %48, %bb.4
-  ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:rgpr = PHI [[t2SDIV]], %bb.3, %53, %bb.4
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr = PHI [[t2LDRSH_PRE1]], %bb.3, %42, %bb.4
+  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:rgpr = PHI [[COPY2]], %bb.3, %57, %bb.4
+  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:gpr = PHI [[t2LDRSH_PRE1]], %bb.3, %42, %bb.4
+  ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:rgpr = PHI [[t2SDIV]], %bb.3, %47, %bb.4
   ; CHECK-NEXT:   t2STRHi12 [[PHI3]], [[PHI2]], 12, 14 /* CC::al */, $noreg :: (store (s16) into %ir.uglygep3, !tbaa !6)
   ; CHECK-NEXT:   [[t2LDRSH_PRE2:%[0-9]+]]:rgpr, [[t2LDRSH_PRE3:%[0-9]+]]:gpr = t2LDRSH_PRE [[PHI]], 16, 14 /* CC::al */, $noreg :: (load unknown-size from %ir.uglygep1, align 2, !tbaa !0)
   ; CHECK-NEXT:   [[t2LDRSHi12_1:%[0-9]+]]:rgpr = t2LDRSHi12 [[t2LDRSH_PRE3]], 2, 14 /* CC::al */, $noreg :: (load unknown-size from %ir.uglygep2, align 2, !tbaa !5)
@@ -253,7 +221,7 @@ body:             |
     successors: %bb.1(0x80000000)
 
     %6:rgpr = t2MOVi32imm @bar
-    %7:rgpr = t2SUBri killed %6, 16, 14 /* CC::al */, $noreg, $noreg
+    %7:rgpr = t2SUBri %6, 16, 14 /* CC::al */, $noreg, $noreg
     %8:rgpr = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
     %5:gpr = COPY %8
     %4:gpr = COPY %7
@@ -272,20 +240,20 @@ body:             |
     %16:rgpr = t2UXTH %15, 0, 14 /* CC::al */, $noreg
     t2STRHi12 %15, %3, 14, 14 /* CC::al */, $noreg :: (store (s16) into %ir.uglygep4, !tbaa !7)
     %17:gprnopc = t2LDRHi12 %3, 4, 14 /* CC::al */, $noreg :: (load (s16) from %ir.uglygep5, !tbaa !8)
-    t2CMPrr killed %17, %14, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    t2CMPrr %17, %14, 14 /* CC::al */, $noreg, implicit-def $cpsr
     %19:rgpr = t2ADDri %1, 1, 1 /* CC::ne */, $cpsr, $noreg, implicit %1(tied-def 0)
     %20:gprnopc = t2LDRHi12 %3, 6, 14 /* CC::al */, $noreg :: (load (s16) from %ir.uglygep6, !tbaa !9)
-    t2CMPrr killed %20, %16, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    t2CMPrr %20, %16, 14 /* CC::al */, $noreg, implicit-def $cpsr
     %22:rgpr = t2ADDri %19, 1, 1 /* CC::ne */, $cpsr, $noreg, implicit %19(tied-def 0)
     %23:gprnopc = t2LDRHi12 %3, 8, 14 /* CC::al */, $noreg :: (load (s16) from %ir.uglygep7, !tbaa !10)
-    t2CMPrr killed %23, %14, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    t2CMPrr %23, %14, 14 /* CC::al */, $noreg, implicit-def $cpsr
     %25:rgpr = t2ADDri %22, 1, 1 /* CC::ne */, $cpsr, $noreg, implicit %22(tied-def 0)
     %26:gprnopc = t2LDRHi12 %3, 10, 14 /* CC::al */, $noreg :: (load (s16) from %ir.uglygep8, !tbaa !11)
-    t2CMPrr killed %26, %16, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    t2CMPrr %26, %16, 14 /* CC::al */, $noreg, implicit-def $cpsr
     %28:rgpr = t2ADDri %25, 1, 1 /* CC::ne */, $cpsr, $noreg, implicit %25(tied-def 0)
     %2:gpr = COPY %28
     %29:gprnopc = t2LDRHi12 %3, 18, 14 /* CC::al */, $noreg :: (load (s16) from %ir.uglygep9, !tbaa !5)
-    t2CMPri killed %29, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    t2CMPri %29, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
     t2Bcc %bb.1, 1 /* CC::ne */, $cpsr
     t2B %bb.2, 14 /* CC::al */, $noreg
 

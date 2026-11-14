@@ -86,11 +86,11 @@ define void @reorder_i8half(ptr addrspace(3) %in.ptr, i64 %in.idx0, i64 %in.idx1
 entry:
   %base = getelementptr i8, ptr addrspace(3) %in.ptr, i64 %in.idx0
   %idx0 = getelementptr half, ptr addrspace(3) %base, i64 %in.idx1
-  %const1 = getelementptr i8, ptr addrspace(3) %base, i64 256
+  %const1 = getelementptr i8, ptr addrspace(3) %base, i32 256
   %idx1 = getelementptr half, ptr addrspace(3) %const1, i64 %in.idx1
-  %const2 = getelementptr i8, ptr addrspace(3) %base, i64 512
+  %const2 = getelementptr i8, ptr addrspace(3) %base, i32 512
   %idx2 = getelementptr half, ptr addrspace(3) %const2, i64 %in.idx1
-  %const3 = getelementptr i8, ptr addrspace(3) %base, i64 768
+  %const3 = getelementptr i8, ptr addrspace(3) %base, i32 768
   %idx3 = getelementptr half, ptr addrspace(3) %const3, i64 %in.idx1
   ret void
 }
@@ -181,11 +181,11 @@ define void @bad_index(ptr addrspace(3) %in.ptr, i64 %in.idx0, i64 %in.idx1) {
 entry:
   %base = getelementptr half, ptr addrspace(3) %in.ptr, i64 %in.idx0
   %idx0 = getelementptr half, ptr addrspace(3) %base, i64 %in.idx1
-  %const1 = getelementptr i8, ptr addrspace(3) %base, i64 1
+  %const1 = getelementptr i8, ptr addrspace(3) %base, i32 1
   %idx1 = getelementptr half, ptr addrspace(3) %const1, i64 %in.idx1
-  %const2 = getelementptr i8, ptr addrspace(3) %base, i64 2
+  %const2 = getelementptr i8, ptr addrspace(3) %base, i32 2
   %idx2 = getelementptr half, ptr addrspace(3) %const2, i64 %in.idx1
-  %const3 = getelementptr i8, ptr addrspace(3) %base, i64 3
+  %const3 = getelementptr i8, ptr addrspace(3) %base, i32 3
   %idx3 = getelementptr half, ptr addrspace(3) %const3, i64 %in.idx1
   ret void
 }

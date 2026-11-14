@@ -1,6 +1,9 @@
 ; RUN: llc -mtriple=thumbv8.1m.main-arm-none-eabi -enable-machine-outliner < %s | \
-; RUN: FileCheck %s --check-prefix=BTI
-; RUN: llc -mtriple=thumbv8.1m.main-arm-none-eabi -enable-machine-outliner -mattr=+no-bti-at-return-twice < %s | FileCheck %s --check-prefix=NOBTI
+; RUN: FileCheck %s --check-prefixes=CHECK,BTI --implicit-check-not=OUTLINED_FUNCTION
+; RUN: llc -mtriple=thumbv8.1m.main-arm-none-eabi -enable-machine-outliner -mattr=+no-bti-at-return-twice < %s | \
+; RUN: FileCheck %s --check-prefixes=CHECK,NOBTI --implicit-check-not=OUTLINED_FUNCTION
+
+; Functions calling returns_twice are not outlined; setjmp retains its BTI when enabled.
 
 ; C source
 ; --------
@@ -25,12 +28,10 @@
 @buf = global [20 x i64] zeroinitializer, align 8
 
 define i32 @f(i32 %a, i32 %b, i32 %c, i32 %d) "branch-target-enforcement" {
-; BTI-LABEL: f:
-; BTI:       bl OUTLINED_FUNCTION_0
+; CHECK-LABEL: f:
+; CHECK:     bl setjmp
 ; BTI-NEXT:  bti
-; NOBTI-LABEL: f:
-; NOBTI:       bl OUTLINED_FUNCTION_0
-; NOBTI-NEXT:   cbz	r0, .LBB0_2
+; NOBTI-NEXT: cbz r0,
 entry:
   %a.addr = alloca i32, align 4
   store i32 %a, ptr %a.addr, align 4
@@ -54,12 +55,10 @@ return:                                           ; preds = %entry, %if.end
 }
 
 define i32 @g(i32 %a, i32 %b, i32 %c, i32 %d) "branch-target-enforcement" {
-; BTI-LABEL: g:
-; BTI:       bl OUTLINED_FUNCTION_0
+; CHECK-LABEL: g:
+; CHECK:     bl setjmp
 ; BTI-NEXT:  bti
-; NOBTI-LABEL: g:
-; NOBTI:       bl OUTLINED_FUNCTION_0
-; NOBTI-NEXT:  cbz	r0, .LBB1_2
+; NOBTI-NEXT: cbz r0,
 entry:
   %a.addr = alloca i32, align 4
   store i32 %a, ptr %a.addr, align 4

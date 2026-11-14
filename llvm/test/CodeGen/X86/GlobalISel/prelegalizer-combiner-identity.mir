@@ -3,7 +3,6 @@
 
 ---
 name:            right_ident_sub
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $eax
@@ -23,7 +22,6 @@ body:             |
 ...
 ---
 name:            right_ident_add
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $eax
@@ -43,7 +41,6 @@ body:             |
 
 ---
 name:            right_ident_or
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $eax
@@ -62,7 +59,6 @@ body:             |
 ...
 ---
 name:            right_ident_xor
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $eax
@@ -81,7 +77,6 @@ body:             |
 ...
 ---
 name:            right_ident_shl
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $eax
@@ -100,7 +95,6 @@ body:             |
 ...
 ---
 name:            right_ident_ashr
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $eax
@@ -119,7 +113,6 @@ body:             |
 ...
 ---
 name:            right_ident_lshr
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $eax
@@ -138,7 +131,6 @@ body:             |
 ...
 ---
 name:            right_ident_ptr_add
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $rax
@@ -157,7 +149,6 @@ body:             |
 ...
 ---
 name:            right_identity_rotl
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $eax, $ebx
@@ -175,7 +166,6 @@ body:             |
 ...
 ---
 name:            right_identity_rotr
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $eax, $ebx
@@ -190,4 +180,22 @@ body:             |
     %rot:_(s32) = G_ROTR %copy(s32), %zero(s32)
     $eax = COPY %rot(s32)
     RET implicit $eax
+...
+---
+name:            right_ident_fmul_fp80
+body:             |
+  bb.1.entry:
+    liveins: $fp0
+    ; Fold (x * 1.0) -> x
+    ; CHECK-LABEL: name: right_ident_fmul_fp80
+    ; CHECK: liveins: $fp0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s80) = COPY $fp0
+    ; CHECK-NEXT: $fp0 = COPY %x(s80)
+    ; CHECK-NEXT: RET 0, implicit $fp0
+    %x:_(s80) = COPY $fp0
+    %cst:_(s80) = G_FCONSTANT x86_fp80 0xK3FFF8000000000000000
+    %op:_(s80) = G_FMUL %x(s80), %cst
+    $fp0 = COPY %op(s80)
+    RET 0, implicit $fp0
 ...

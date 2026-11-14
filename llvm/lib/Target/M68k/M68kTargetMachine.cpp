@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/PassRegistry.h"
 #include <memory>
 #include <optional>
@@ -35,6 +36,7 @@ using namespace llvm;
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM68kTarget() {
   RegisterTargetMachine<M68kTargetMachine> X(getTheM68kTarget());
+  static opt::RegisterLibraryOptions<M68kOptions> O;
   auto *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
   initializeM68kAsmPrinterPass(*PR);
@@ -71,6 +73,8 @@ M68kTargetMachine::M68kTargetMachine(const Target &T, const Triple &TT,
     : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                ::getEffectiveCodeModel(CM, JIT), OL),
+      CLOpts(cl::LibraryOptionsContext::get<M68kOptions>(
+          Options.MCOptions.LibraryOptions)),
       TLOF(std::make_unique<M68kELFTargetObjectFile>()),
       Subtarget(TT, CPU, FS, *this) {
   initAsmInfo();

@@ -266,7 +266,7 @@ SemaCUDA::CUDAVariableTarget SemaCUDA::IdentifyTarget(const VarDecl *Var) {
   // attribute are emitted
   //  - on both sides in host device functions
   //  - on device side in device or global functions
-  if (auto *FD = dyn_cast<FunctionDecl>(Var->getDeclContext())) {
+  if (const FunctionDecl *FD = Var->getDeclContext()->getEnclosingFunction()) {
     switch (IdentifyTarget(FD)) {
     case CUDAFunctionTarget::HostDevice:
       return CVT_Both;
@@ -745,8 +745,7 @@ bool HasAllowedCUDADeviceStaticInitializer(SemaCUDA &S, VarDecl *VD,
 void SemaCUDA::checkAllowedInitializer(VarDecl *VD) {
   // Return early if VD is inside a non-instantiated template function since
   // the implicit constructor is not defined yet.
-  if (const FunctionDecl *FD =
-          dyn_cast_or_null<FunctionDecl>(VD->getDeclContext());
+  if (const FunctionDecl *FD = VD->getDeclContext()->getEnclosingFunction();
       FD && FD->isDependentContext())
     return;
 

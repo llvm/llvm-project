@@ -169,9 +169,9 @@ void TypeCategoryMap::Get(FormattersMatchData &match_data, ImplSP &retval) {
 
   if (log) {
     for (auto match : match_data.GetMatchesVector()) {
-      LLDB_LOGF(
-          log, "[%s] candidate match = %s %s %s %s ptr-stripped-depth=%u",
-          __FUNCTION__, match.GetTypeName().GetCString(),
+      LLDB_LOG(
+          log, "[{0}] candidate match = {1} {2} {3} {4} ptr-stripped-depth={5}",
+          __FUNCTION__, match.GetTypeName(),
           match.DidStripPointer() ? "strip-pointers" : "no-strip-pointers",
           match.DidStripReference() ? "strip-reference" : "no-strip-reference",
           match.DidStripTypedef() ? "strip-typedef" : "no-strip-typedef",

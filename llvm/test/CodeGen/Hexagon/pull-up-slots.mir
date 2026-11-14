@@ -163,7 +163,6 @@
 ---
 name:            test
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0' }
 fixedStack:

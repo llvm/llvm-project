@@ -64,6 +64,9 @@ defm s4_2ImmPred : ImmOpPred<[{ return isShiftedInt<4, 2>(N->getSExtValue());}]>
 def s4_3ImmOperand : AsmOperandClass { let Name = "s4_3Imm"; let RenderMethod = "addSignedImmOperands"; }
 def s4_3Imm : Operand<i32> { let ParserMatchClass = s4_3ImmOperand; let DecoderMethod = "s4_3ImmDecoder"; }
 defm s4_3ImmPred : ImmOpPred<[{ return isShiftedInt<4, 3>(N->getSExtValue());}]>;
+def s5_0ImmOperand : AsmOperandClass { let Name = "s5_0Imm"; let RenderMethod = "addSignedImmOperands"; }
+def s5_0Imm : Operand<i32> { let ParserMatchClass = s5_0ImmOperand; let DecoderMethod = "s5_0ImmDecoder"; }
+defm s5_0ImmPred : ImmOpPred<[{ return isShiftedInt<5, 0>(N->getSExtValue());}]>;
 def s6_3ImmOperand : AsmOperandClass { let Name = "s6_3Imm"; let RenderMethod = "addSignedImmOperands"; }
 def s6_3Imm : Operand<i32> { let ParserMatchClass = s6_3ImmOperand; let DecoderMethod = "s6_3ImmDecoder"; }
 defm s6_3ImmPred : ImmOpPred<[{ return isShiftedInt<6, 3>(N->getSExtValue());}]>;

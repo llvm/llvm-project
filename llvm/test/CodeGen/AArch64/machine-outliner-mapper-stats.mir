@@ -1,4 +1,4 @@
-# RUN: llc -mtriple aarch64 -stats -run-pass=machine-outliner -verify-machineinstrs %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple aarch64 -stats -run-pass=machine-outliner %s -o /dev/null 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
 # CHECK: 2 machine-outliner - Unoutlinable instructions mapped + number of sentinel values
@@ -9,7 +9,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 machineFunctionInfo:
   hasRedZone:      false
 body:             |
@@ -23,3 +22,4 @@ body:             |
     DBG_VALUE $x0, 0
     DBG_VALUE $x0, 0
     RET undef $lr
+...

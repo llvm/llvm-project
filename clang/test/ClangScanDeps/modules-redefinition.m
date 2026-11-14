@@ -30,7 +30,9 @@ module third {}
 
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full > %t/result.json
-// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
+// RUN: %scan-deps-filter %t/result.json --fields=modules.clang-module-deps,modules.clang-modulemap-file,modules.file-deps,modules.name \
+// RUN:   > %t/filtered.json
+// RUN: sed 's:\\\\\?:/:g' %t/filtered.json | FileCheck %s -DPREFIX=%/t
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
 // CHECK-NEXT:     {
@@ -41,15 +43,11 @@ module third {}
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/first/module.modulemap",
-// CHECK-NEXT:       "command-line": [
-// CHECK:            ],
-// CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         [[PREFIX]]/first/module.modulemap",
 // CHECK-NEXT:         [[PREFIX]]/first/first.h",
 // CHECK-NEXT:         [[PREFIX]]/third/module.modulemap"
 // CHECK-NEXT:       ],
-// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "first"
 // CHECK-NEXT:     }
 // CHECK:        ]

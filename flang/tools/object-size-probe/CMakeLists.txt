@@ -37,6 +37,16 @@ add_custom_command(
     VERBATIM)
 add_custom_target(flang-generated-object-sizes DEPENDS "${_object_sizes_h}")
 
+# Every target that includes flang/Evaluate/object-sizes.h must depend on the
+# generated header, directly or by linking to one of these libraries.
+# Otherwise it may be compiled with the fallback sizes.
 add_dependencies(FortranEvaluate flang-generated-object-sizes)
 add_dependencies(FortranSemantics flang-generated-object-sizes)
 add_dependencies(FortranLower flang-generated-object-sizes)
+
+# Due to layering violations: These libraries include
+# flang/Semantics/runtime-type-info.h and therefore indirectly include
+# object-sizes.h.
+add_dependencies(FIRTransforms flang-generated-object-sizes)
+add_dependencies(FIRCodeGen flang-generated-object-sizes)
+add_dependencies(FIROpenACCTransforms flang-generated-object-sizes)

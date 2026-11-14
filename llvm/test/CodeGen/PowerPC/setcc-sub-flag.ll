@@ -1,5 +1,4 @@
-; RUN: llc -mtriple=powerpc64le -simplify-mir -verify-machineinstrs \
-; RUN:   -stop-after=finalize-isel < %s | FileCheck %s
+; RUN: llc -mtriple=powerpc64le -simplify-mir -stop-after=finalize-isel < %s | FileCheck %s
 
 declare void @foo(i64)
 declare void @bar(i1)

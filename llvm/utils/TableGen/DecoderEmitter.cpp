@@ -13,7 +13,6 @@
 
 #include "Common/CodeGenHwModes.h"
 #include "Common/CodeGenInstruction.h"
-#include "Common/CodeGenRegisters.h"
 #include "Common/CodeGenTarget.h"
 #include "Common/InfoByHwMode.h"
 #include "Common/InstructionEncoding.h"
@@ -25,7 +24,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
@@ -36,10 +34,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -1119,7 +1115,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       while (true) {
         CaseValue = decodeULEB128AndIncUnsafe(Ptr);
         CaseSize = decodeULEB128AndIncUnsafe(Ptr);
-        if (FieldValue == CaseValue || !CaseSize)
+        if (FieldValue <= CaseValue || !CaseSize)
           break;
         Ptr += CaseSize;
       }

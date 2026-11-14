@@ -4,7 +4,6 @@
 
 ---
 name:            sdiv_0
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $eax
@@ -23,7 +22,6 @@ body:             |
 ...
 ---
 name:            udiv_0
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $eax

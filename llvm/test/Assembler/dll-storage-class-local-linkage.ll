@@ -2,21 +2,21 @@
 
 ; RUN: rm -rf %t && split-file %s %t
 
-; RUN: not llvm-as %t/internal_function_dllexport.ll -o /dev/null 2>&1 | FileCheck %s
-; RUN: not llvm-as %t/internal_variable_dllexport.ll -o /dev/null 2>&1 | FileCheck %s
-; RUN: not llvm-as %t/internal_alias_dllexport.ll -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %t/internal_function_dllexport.ll -disable-output 2>&1 | FileCheck %s
+; RUN: not llvm-as %t/internal_variable_dllexport.ll -disable-output 2>&1 | FileCheck %s
+; RUN: not llvm-as %t/internal_alias_dllexport.ll -disable-output 2>&1 | FileCheck %s
 
-; RUN: not llvm-as %t/private_function_dllexport.ll -o /dev/null 2>&1 | FileCheck %s
-; RUN: not llvm-as %t/private_variable_dllexport.ll -o /dev/null 2>&1 | FileCheck %s
-; RUN: not llvm-as %t/private_alias_dllexport.ll -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %t/private_function_dllexport.ll -disable-output 2>&1 | FileCheck %s
+; RUN: not llvm-as %t/private_variable_dllexport.ll -disable-output 2>&1 | FileCheck %s
+; RUN: not llvm-as %t/private_alias_dllexport.ll -disable-output 2>&1 | FileCheck %s
 
-; RUN: not llvm-as %t/internal_function_dllimport.ll -o /dev/null 2>&1 | FileCheck %s
-; RUN: not llvm-as %t/internal_variable_dllimport.ll -o /dev/null 2>&1 | FileCheck %s
-; RUN: not llvm-as %t/internal_alias_dllimport.ll -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %t/internal_function_dllimport.ll -disable-output 2>&1 | FileCheck %s
+; RUN: not llvm-as %t/internal_variable_dllimport.ll -disable-output 2>&1 | FileCheck %s
+; RUN: not llvm-as %t/internal_alias_dllimport.ll -disable-output 2>&1 | FileCheck %s
 
-; RUN: not llvm-as %t/private_function_dllimport.ll -o /dev/null 2>&1 | FileCheck %s
-; RUN: not llvm-as %t/private_variable_dllimport.ll -o /dev/null 2>&1 | FileCheck %s
-; RUN: not llvm-as %t/private_alias_dllimport.ll -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %t/private_function_dllimport.ll -disable-output 2>&1 | FileCheck %s
+; RUN: not llvm-as %t/private_variable_dllimport.ll -disable-output 2>&1 | FileCheck %s
+; RUN: not llvm-as %t/private_alias_dllimport.ll -disable-output 2>&1 | FileCheck %s
 
 
 ; CHECK: symbol with local linkage cannot have a DLL storage class

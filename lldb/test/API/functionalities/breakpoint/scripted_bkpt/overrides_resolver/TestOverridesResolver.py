@@ -28,6 +28,34 @@ class TestOverridesResolver(TestBase):
         self.build()
         self.do_test_bad_values()
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
+    def test_overrides_copied_from_dummy_target(self):
+        """An override on the dummy target applies to targets created later."""
+        self.build()
+        self.import_resolver_script()
+        extra_args = lldb.SBStructuredData()
+        extra_args.SetFromJSON('{"symbol": "stop_here_instead"}')
+        error = lldb.SBError()
+        self.dbg.GetDummyTarget().AddBreakpointOverride(
+            "bkpt_resolver.OverrideExample",
+            "dummy target override",
+            lldb.eResolverFileAndLine,
+            extra_args,
+            error,
+        )
+        self.assertSuccess(error)
+
+        target = self.createTestTarget()
+        self.expect("breakpoint override list", substrs=["dummy target override"])
+        bkpt = target.BreakpointCreateByLocation(
+            "main.c", line_number("main.c", "I am in the stop symbol")
+        )
+        self.assertEqual(bkpt.GetNumLocations(), 1)
+        self.assertEqual(
+            bkpt.GetLocationAtIndex(0).GetAddress().GetFunction().GetName(),
+            "stop_here_instead",
+        )
+
     def make_target_and_import(self):
         self.target = lldbutil.run_to_breakpoint_make_target(self)
         self.import_resolver_script()
@@ -103,6 +131,8 @@ class TestOverridesResolver(TestBase):
             override_id = int(result.GetOutput())
         else:
             self.assertFalse(result.Succeeded(), "We expected this to fail")
+            if error_string:
+                self.assertIn(error_string, result.GetError())
             return 0
 
         # Check the override listing, make sure our new entry is present:
@@ -280,18 +310,30 @@ class TestOverridesResolver(TestBase):
             expect_error=True,
             error_string="empty class name",
         )
-        # FIXME: We aren't currently returning a correct
-        # error when the class name doesn't exist.
         # And with a class name that doesn't exist:
-        # trivial_id = self.add_override_python(
-        #    trivial_help,
-        #    "NoModuleOfThisName.NoClassOfThisName",
-        #    lldb.eResolverName,
-        #    "test_key",
-        #    "test_value",
-        #    expect_error=True,
-        #    error_string=""
-        # )
+        missing_class = "NoModuleOfThisName.NoClassOfThisName"
+        missing_class_error = (
+            f'class for breakpoint override: "{missing_class}" does not exist'
+        )
+        trivial_id = self.add_override_python(
+            trivial_help,
+            missing_class,
+            lldb.eResolverName,
+            "test_key",
+            "test_value",
+            expect_error=True,
+            error_string=missing_class_error,
+        )
+        trivial_id = self.add_override_cmd(
+            trivial_help,
+            missing_class,
+            "-m name",
+            "",
+            "test_key",
+            "test_value",
+            expect_error=True,
+            error_string=missing_class_error,
+        )
 
         trivial_id = self.add_override_cmd(
             trivial_help,

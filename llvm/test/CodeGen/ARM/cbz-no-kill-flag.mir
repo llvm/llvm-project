@@ -7,7 +7,6 @@
 
 ---
 name:            cbz_no_kill_flag
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cbz_no_kill_flag
   ; CHECK: bb.0.entry:
@@ -47,7 +46,6 @@ body:             |
 # must not be folded into a CBZ/CBNZ.
 ---
 name:            cpsr_live_out
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cpsr_live_out
   ; CHECK: bb.0.entry:
@@ -92,7 +90,6 @@ body:             |
 # TODO: This is a missed optimization.
 ---
 name:            cpsr_live_out_branch_target
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cpsr_live_out_branch_target
   ; CHECK: bb.0.entry:

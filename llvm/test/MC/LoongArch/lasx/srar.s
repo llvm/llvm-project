@@ -1,7 +1,7 @@
 # RUN: llvm-mc --triple=loongarch64 --show-encoding %s | \
 # RUN:        FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 # RUN: llvm-mc --triple=loongarch64 --filetype=obj %s | \
-# RUN:        llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-INST
+# RUN:        llvm-objdump --no-print-imm-hex -d - | FileCheck %s --check-prefix=CHECK-INST
 
 xvsrar.b $xr9, $xr18, $xr11
 # CHECK-INST: xvsrar.b $xr9, $xr18, $xr11

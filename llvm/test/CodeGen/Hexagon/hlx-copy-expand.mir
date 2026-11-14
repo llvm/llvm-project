@@ -1,0 +1,22 @@
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv85 -mattr=+hlx -run-pass=post-ra-pseudos -verify-machineinstrs %s -o - | FileCheck %s
+
+# Check that HLX register copies and the LX_lo/LX_hi pseudos are expanded
+# after register allocation.
+
+# CHECK-LABEL: name: copy_hlx
+# CHECK: $l0 = LX_assign $l2
+# CHECK: $ll1 = LX_assign_w $ll3
+# CHECK: $l4 = LX_assign killed $l6
+# CHECK: $l5 = LX_assign $l15
+---
+name: copy_hlx
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $l2, $ll3, $ll7
+    $l0 = COPY $l2
+    $ll1 = COPY $ll3
+    $l4 = LX_lo killed $ll3
+    $l5 = LX_hi $ll7
+    PS_jmpret $r31, implicit-def $pc, implicit $l0, implicit $ll1, implicit $l4, implicit $l5
+...

@@ -1,0 +1,36 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+// A well-formed #cir.bitint_spec entry round-trips without diagnostics.
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+    !cir.int<u, 1, bitint> = #cir.bitint_spec<max_align = 128>>} {
+}
+
+// -----
+
+// The entry value must be a #cir.bitint_spec attribute.
+// expected-error @below {{expected layout attribute for '!cir.int<u, 1, bitint>' to be a #cir.bitint_spec attribute}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+    !cir.int<u, 1, bitint> = 64 : i64>} {
+}
+
+// -----
+
+// The entry is keyed on the _BitInt class, not on one width.
+// expected-error @below {{expected _BitInt data layout entry to be keyed on '!cir.int<u, 1, bitint>', got '!cir.int<s, 128, bitint>'}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+    !cir.int<s, 128, bitint> = #cir.bitint_spec<max_align = 64>>} {
+}
+
+// -----
+
+// expected-error @+2 {{max_align must be a power of two of at least 8}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+    !cir.int<u, 1, bitint> = #cir.bitint_spec<max_align = 4>>} {
+}
+
+// -----
+
+// expected-error @+2 {{max_align must be a power of two of at least 8}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+    !cir.int<u, 1, bitint> = #cir.bitint_spec<max_align = 24>>} {
+}

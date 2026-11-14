@@ -17,11 +17,10 @@ define x86_fp80 @foo(x86_fp80 %a) {
 ; CHECK-NEXT:    fcmovne %st(1), %st
 ; CHECK-NEXT:    fstp %st(1)
 ; CHECK-NEXT:    retq
-  %1 = tail call x86_fp80 @copysignl(x86_fp80 0xK7FFF8000000000000000, x86_fp80 %a) nounwind readnone
+  %1 = tail call x86_fp80 @llvm.copysign.f80(x86_fp80 0xK7FFF8000000000000000, x86_fp80 %a)
   ret x86_fp80 %1
 }
 
-declare x86_fp80 @copysignl(x86_fp80, x86_fp80) nounwind readnone
 
 ; This would crash:
 ; https://llvm.org/bugs/show_bug.cgi?id=26070
@@ -31,9 +30,8 @@ define float @pr26070() {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    retq
-  %c = call float @copysignf(float 1.0, float undef) readnone
+  %c = call float @llvm.copysign.f32(float 1.0, float undef)
   ret float %c
 }
 
-declare float @copysignf(float, float)
 

@@ -12,4 +12,4 @@
 #define OPTIONS_STRUCT_DEFS
 #include "IROptions.inc"
 
-static llvm::opt::RegisterLibraryOptions<llvm::IROptions> Registration;
+LLVM_REGISTER_LIBRARY_OPTIONS(llvm::IROptions)

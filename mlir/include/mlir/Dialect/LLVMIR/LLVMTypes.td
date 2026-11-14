@@ -18,6 +18,7 @@ include "mlir/Interfaces/MemorySlotInterfaces.td"
 /// Base class for all LLVM dialect types.
 class LLVMType<string typeName, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<LLVM_Dialect, typeName, traits> {
+  let cppIncludes = ["mlir/Dialect/LLVMIR/LLVMTypes.h"];
   let mnemonic = typeMnemonic;
 }
 

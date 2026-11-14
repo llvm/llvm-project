@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy -R .text3 -O binary %t %t2
-# RUN: od -Ax -v -t x1 %t2 | FileCheck %s
+# RUN: od -Ax -v -t x1 %t2 | FileCheck --ignore-case %s
 # RUN: wc -c %t2 | FileCheck %s --check-prefix=SIZE
 
 !ELF

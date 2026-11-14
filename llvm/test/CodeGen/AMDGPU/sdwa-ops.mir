@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgpu9.00 -verify-machineinstrs -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=GFX9 %s
-# RUN: llc -mtriple=amdgpu8.03 -verify-machineinstrs -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=GFX9 %s
+# RUN: llc -mtriple=amdgpu9.00 -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=GFX9 %s
+# RUN: llc -mtriple=amdgpu8.03 -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=GFX9 %s
 # RUN: llc -mtriple=amdgpu9.00 -passes=si-peephole-sdwa -o - %s | FileCheck -check-prefix=GFX9 %s
 # RUN: llc -mtriple=amdgpu8.03 -passes=si-peephole-sdwa -o - %s | FileCheck -check-prefix=GFX9 %s
 
@@ -14,8 +14,6 @@
 ---
 name:            test1_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -29,19 +27,19 @@ body:             |
     %3:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
     %4:vreg_64 = COPY $sgpr0_sgpr1
     %5:vgpr_32, %6:sreg_64_xexec = nsw V_ADD_CO_U32_e64 %4.sub0, %3, 0, implicit $exec
-    %7:vgpr_32, dead %8:sreg_64_xexec = nuw V_ADDC_U32_e64 %4.sub1, %0, killed %6, 0, implicit $exec
+    %7:vgpr_32, dead %8:sreg_64_xexec = nuw V_ADDC_U32_e64 %4.sub1, %0, %6, 0, implicit $exec
     %9:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %7, %subreg.sub1
     GLOBAL_STORE_DWORDX2_SADDR %4.sub0, %9, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
 
     %10:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
     %11:vgpr_32, %12:sreg_64_xexec = V_ADD_CO_U32_e64 %4.sub0, %10, 0, implicit $exec
-    %13:vgpr_32, dead %14:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, killed %12, 0, implicit $exec
+    %13:vgpr_32, dead %14:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, %12, 0, implicit $exec
     %15:vreg_64 = REG_SEQUENCE %11, %subreg.sub0, %13, %subreg.sub1
     GLOBAL_STORE_DWORDX2_SADDR %4.sub0, %15, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
 
     %16:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
     %17:vgpr_32, %18:sreg_64_xexec = V_ADD_CO_U32_e64 %4.sub0, %16, 0, implicit $exec
-    %19:vgpr_32, dead %20:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, killed %18, 0, implicit $exec
+    %19:vgpr_32, dead %20:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, %18, 0, implicit $exec
     %21:vreg_64 = REG_SEQUENCE %17, %subreg.sub0, %19, %subreg.sub1
     GLOBAL_STORE_DWORDX2_SADDR %4.sub0, %21, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
 
@@ -56,8 +54,6 @@ body:             |
 ---
 name:            test2_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -74,16 +70,16 @@ body:             |
 
     %7:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
     %8:vgpr_32, %9:sreg_64_xexec = V_ADD_CO_U32_e64 %4.sub0, %7, 0, implicit $exec
-    %10:vgpr_32, dead %11:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, killed %9, 0, implicit $exec
+    %10:vgpr_32, dead %11:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, %9, 0, implicit $exec
     %12:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %10, %subreg.sub1
 
-    %13:vgpr_32, dead %14:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, killed %6, 0, implicit $exec
+    %13:vgpr_32, dead %14:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, %6, 0, implicit $exec
     %15:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %13, %subreg.sub1
     GLOBAL_STORE_DWORDX2_SADDR %4.sub0, %15, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
 
     %7:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
     %8:vgpr_32, %9:sreg_64_xexec = V_ADD_CO_U32_e64 %4.sub0, %7, 0, implicit $exec
-    %10:vgpr_32, dead %11:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, killed %9, 0, implicit $exec
+    %10:vgpr_32, dead %11:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, %9, 0, implicit $exec
     %12:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %10, %subreg.sub1
     GLOBAL_STORE_DWORDX2_SADDR %4.sub0, %12, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
 
@@ -98,38 +94,6 @@ body:             |
 ---
 name:            test3_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
-liveins:
-  - { reg: '$vgpr0', virtual-reg: '%0' }
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
-body:             |
-  bb.0:
-    liveins: $vgpr0, $sgpr0_sgpr1
-
-    %1:sgpr_64 = COPY $sgpr0_sgpr1
-    %0:vgpr_32 = COPY $vgpr0
-    %2:sreg_32_xm0 = S_MOV_B32 255
-    %3:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
-    %4:vreg_64 = COPY $sgpr0_sgpr1
-    %5:vgpr_32, %6:sreg_64_xexec = V_ADD_CO_U32_e64 %4.sub0, %3, 0, implicit $exec
-    %7:vgpr_32, %8:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, killed %6, 0, implicit $exec
-    %9:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %8, %subreg.sub1
-    GLOBAL_STORE_DWORDX2_SADDR %4.sub0, %9, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
-
-...
-
-# test for CarryIn used more than once, should reject
-# GFX9-LABEL: name:            test4_add_co_sdwa
-# GFX9: V_ADD_CO_U32_e64
-# GFX9: V_ADDC_U32_e64
-# GFX9-NOT: V_ADD_CO_U32_sdwa
-# GFX9-NOT: V_ADDC_U32_e32
----
-name:            test4_add_co_sdwa
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -144,7 +108,37 @@ body:             |
     %4:vreg_64 = COPY $sgpr0_sgpr1
     %5:vgpr_32, %6:sreg_64_xexec = V_ADD_CO_U32_e64 %4.sub0, %3, 0, implicit $exec
     %7:vgpr_32, %8:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, %6, 0, implicit $exec
-    %9:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %6, %subreg.sub1
+    %9:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %7, %subreg.sub1
+    S_NOP 0, implicit %8
+    GLOBAL_STORE_DWORDX2_SADDR %4.sub0, %9, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
+
+...
+
+# test for CarryIn used more than once, should reject
+# GFX9-LABEL: name:            test4_add_co_sdwa
+# GFX9: V_ADD_CO_U32_e64
+# GFX9: V_ADDC_U32_e64
+# GFX9-NOT: V_ADD_CO_U32_sdwa
+# GFX9-NOT: V_ADDC_U32_e32
+---
+name:            test4_add_co_sdwa
+tracksRegLiveness: true
+liveins:
+  - { reg: '$vgpr0', virtual-reg: '%0' }
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $vgpr0, $sgpr0_sgpr1
+
+    %1:sgpr_64 = COPY $sgpr0_sgpr1
+    %0:vgpr_32 = COPY $vgpr0
+    %2:sreg_32_xm0 = S_MOV_B32 255
+    %3:vgpr_32 = V_AND_B32_e32 %2, %0, implicit $exec
+    %4:vreg_64 = COPY $sgpr0_sgpr1
+    %5:vgpr_32, %6:sreg_64_xexec = V_ADD_CO_U32_e64 %4.sub0, %3, 0, implicit $exec
+    %7:vgpr_32, %8:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, %6, 0, implicit $exec
+    %9:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %7, %subreg.sub1
+    S_NOP 0, implicit %6
     GLOBAL_STORE_DWORDX2_SADDR %4.sub0, %9, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
 
 
@@ -157,8 +151,6 @@ body:             |
 ---
 name:            test5_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -187,8 +179,6 @@ body:             |
 ---
 name:            test6_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -216,8 +206,6 @@ body:             |
 ---
 name:            test7_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -246,8 +234,6 @@ body:             |
 ---
 name:            test8_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -277,8 +263,6 @@ body:             |
 ---
 name:            test9_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -308,8 +292,6 @@ body:             |
 ---
 name:            test10_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -339,8 +321,6 @@ body:             |
 ---
 name:            test11_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -370,8 +350,6 @@ body:             |
 ---
 name:            test12_add_co_sdwa
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
@@ -420,7 +398,7 @@ body:             |
   bb.1:
     liveins: $vgpr0, $sgpr0_sgpr1
 
-    %7:vgpr_32, dead %8:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, killed %6, 0, implicit $exec
+    %7:vgpr_32, dead %8:sreg_64_xexec = V_ADDC_U32_e64 %4.sub1, %0, %6, 0, implicit $exec
     %9:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %7, %subreg.sub1
     GLOBAL_STORE_DWORDX2_SADDR %4.sub0, %9, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
     S_ENDPGM 0

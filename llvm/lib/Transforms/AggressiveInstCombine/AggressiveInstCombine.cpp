@@ -2100,7 +2100,8 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
     B.SetInsertPoint(BBSubs[i]);
     Value *VL =
         B.CreateZExt(B.CreateLoad(B.getInt8Ty(),
-                                  B.CreateInBoundsPtrAdd(Base, B.getInt64(i))),
+                                  B.CreatePtrAddWithUnsignedOffset(
+                                      Base, i, "", GEPNoWrapFlags::inBounds())),
                      CI->getType());
     Value *VR =
         ConstantInt::get(CI->getType(), static_cast<unsigned char>(RHS[i]));
@@ -2665,26 +2666,50 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
     // TODO: It would be more efficient if we removed dead instructions
     // iteratively in this loop rather than waiting until the end.
     for (Instruction &I : make_early_inc_range(llvm::reverse(BB))) {
-      MadeChange |= foldAnyOrAllBitsSet(I);
-      MadeChange |= foldGuardedFunnelShift(I, DT);
-      MadeChange |= foldSelectSplitCTLZCTTZ(I);
-      MadeChange |= tryToRecognizePopCount(I);
-      MadeChange |= tryToRecognizePopCount1(I);
-      MadeChange |= tryToRecognizePopCount2n3(I);
-      MadeChange |= tryToFPToSat(I, TTI);
-      MadeChange |= tryToRecognizeTableBasedPatterns(I, DL, TTI);
-      MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA, DT);
-      MadeChange |= foldPatternedLoads(I, DL);
-      MadeChange |= foldICmpOrChain(I, DL, TTI, AA, DT);
-      MadeChange |= foldMulHigh(I);
-      // These folds can erase the instruction `I`, so they need to be called
-      // at the end of this sequence.
-      if (foldLibCalls(I, TTI, TLI, AC, DT, DL, MadeCFGChange)) {
-        MadeChange = true;
-        continue;
+      switch (I.getOpcode()) {
+      case Instruction::And:
+        MadeChange |= foldAnyOrAllBitsSet(I);
+        MadeChange |= tryToRecognizePopCount2n3(I);
+        break;
+      case Instruction::Trunc:
+        MadeChange |= foldAnyOrAllBitsSet(I);
+        break;
+      case Instruction::PHI:
+        MadeChange |= foldGuardedFunnelShift(I, DT);
+        break;
+      case Instruction::Select:
+        MadeChange |= foldSelectSplitCTLZCTTZ(I);
+        break;
+      case Instruction::LShr:
+        MadeChange |= tryToRecognizePopCount(I);
+        break;
+      case Instruction::Add:
+        MadeChange |= tryToRecognizePopCount1(I);
+        MadeChange |= foldMulHigh(I);
+        break;
+      case Instruction::Load:
+        MadeChange |= tryToRecognizeTableBasedPatterns(I, DL, TTI);
+        MadeChange |= foldPatternedLoads(I, DL);
+        break;
+      case Instruction::Or:
+        MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA, DT);
+        break;
+      case Instruction::ICmp:
+        MadeChange |= foldICmpOrChain(I, DL, TTI, AA, DT);
+        break;
+      case Instruction::Call:
+        MadeChange |= tryToFPToSat(I, TTI);
+        // These folds can erase the instruction `I`, so they need to be called
+        // at the end of this sequence.
+        if (foldLibCalls(I, TTI, TLI, AC, DT, DL, MadeCFGChange)) {
+          MadeChange = true;
+          break;
+        }
+        if (foldMemSetZeroOrOneLength(I, DL, TLI, AC, DT, MadeCFGChange))
+          MadeChange = true;
+        break;
+      default:;
       }
-      if (foldMemSetZeroOrOneLength(I, DL, TLI, AC, DT, MadeCFGChange))
-        MadeChange = true;
     }
 
     // Do this separately to avoid redundantly scanning stores multiple times.

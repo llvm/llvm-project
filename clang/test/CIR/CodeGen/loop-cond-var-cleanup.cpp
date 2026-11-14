@@ -80,10 +80,8 @@ void while_cond_var(int n) {
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
 // LLVM:         %[[SEL:.*]] = load i32, ptr %[[DEST]]
 // LLVM:         switch i32 %[[SEL]], label %{{.*}}
-// LLVM:           i32 0, label %[[CONTINUE:.*]]
+// LLVM:           i32 0, label %[[BACKEDGE:.*]]
 // LLVM:           i32 1, label %[[BREAK:.*]]
-// LLVM:       [[CONTINUE]]:
-// LLVM:         br label %[[BACKEDGE:.*]]
 // LLVM:       [[BREAK]]:
 // LLVM:         br label %[[EXIT]]
 // LLVM:       [[LPAD]]:
@@ -502,10 +500,8 @@ void for_cond_var_continue() {
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
 // LLVM:         %[[SEL:.*]] = load i32, ptr %[[DEST]], align 4
 // LLVM:         switch i32 %[[SEL]], label %{{.*}}
-// LLVM:           i32 0, label %[[CONTINUE:.*]]
+// LLVM:           i32 0, label %[[BACKEDGE1:.*]]
 // LLVM:           i32 1, label %[[BREAK:.*]]
-// LLVM:       [[CONTINUE]]:
-// LLVM:         br label %[[BACKEDGE0:.*]]
 // LLVM:       [[BREAK]]:
 // LLVM:         br label %[[EXIT]]
 // LLVM:       [[LPAD]]:
@@ -517,8 +513,6 @@ void for_cond_var_continue() {
 // LLVM:       [[EHDTOR]]:
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
 // LLVM:         resume { ptr, i32 }
-// LLVM:       [[BACKEDGE0]]:
-// LLVM:         br label %[[BACKEDGE1:.*]]
 // LLVM:       [[BACKEDGE1]]:
 // LLVM:         br label %[[COND]]
 
@@ -616,10 +610,8 @@ void for_cond_var(int n) {
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
 // LLVM:         %[[SEL:.*]] = load i32, ptr %[[DEST]], align 4
 // LLVM:         switch i32 %[[SEL]], label %{{.*}}
-// LLVM:           i32 0, label %[[CONTINUE:.*]]
+// LLVM:           i32 0, label %[[BACKEDGE1:.*]]
 // LLVM:           i32 1, label %[[BREAK:.*]]
-// LLVM:       [[CONTINUE]]:
-// LLVM:         br label %[[BACKEDGE0:.*]]
 // LLVM:       [[BREAK]]:
 // LLVM:         br label %[[EXIT]]
 // LLVM:       [[LPAD]]:
@@ -631,8 +623,6 @@ void for_cond_var(int n) {
 // LLVM:       [[EHDTOR]]:
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
 // LLVM:         resume { ptr, i32 }
-// LLVM:       [[BACKEDGE0]]:
-// LLVM:         br label %[[BACKEDGE1:.*]]
 // LLVM:       [[BACKEDGE1]]:
 // LLVM:         br label %[[COND]]
 
@@ -749,10 +739,8 @@ void while_cond_var_temp(int n) {
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
 // LLVM:         %[[SEL:.*]] = load i32, ptr %[[DEST]], align 4
 // LLVM:         switch i32 %[[SEL]], label %{{.*}}
-// LLVM:           i32 0, label %[[CONTINUE:.*]]
+// LLVM:           i32 0, label %[[BACKEDGE:.*]]
 // LLVM:           i32 1, label %[[BREAK:.*]]
-// LLVM:       [[CONTINUE]]:
-// LLVM:         br label %[[BACKEDGE:.*]]
 // LLVM:       [[BREAK]]:
 // LLVM:         br label %[[EXIT]]
 // LLVM:       [[LPAD_OUTER]]:
@@ -875,7 +863,6 @@ void while_cond_var_nested(int n) {
 // LLVM:         br i1 true, label %{{.*}}, label %[[OUTER_EXIT:.*]]
 // LLVM:         store i8 0, ptr %[[FLAG_OUTER]], align 1
 // LLVM:         br label %{{.*}}
-// LLVM:         br label %{{.*}}
 // LLVM:         br label %[[INNER_COND:.*]]
 // LLVM:       [[INNER_COND]]:
 // LLVM:         br i1 true, label %{{.*}}, label %[[INNER_EXIT:.*]]
@@ -906,10 +893,8 @@ void while_cond_var_nested(int n) {
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[T]])
 // LLVM:         %[[ISEL:.*]] = load i32, ptr %[[DEST]], align 4
 // LLVM:         switch i32 %[[ISEL]], label %{{.*}}
-// LLVM:           i32 0, label %[[ICONTINUE:.*]]
+// LLVM:           i32 0, label %[[IBACKEDGE:.*]]
 // LLVM:           i32 1, label %[[IBREAK:.*]]
-// LLVM:       [[ICONTINUE]]:
-// LLVM:         br label %[[IBACKEDGE:.*]]
 // LLVM:       [[IBREAK]]:
 // LLVM:         br label %[[INNER_EXIT]]
 // LLVM:       [[INNER_LPAD]]:
@@ -947,10 +932,8 @@ void while_cond_var_nested(int n) {
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
 // LLVM:         %[[OSEL:.*]] = load i32, ptr %[[DEST]], align 4
 // LLVM:         switch i32 %[[OSEL]], label %{{.*}}
-// LLVM:           i32 0, label %[[OCONTINUE:.*]]
+// LLVM:           i32 0, label %[[OBACKEDGE:.*]]
 // LLVM:           i32 1, label %[[OBREAK:.*]]
-// LLVM:       [[OCONTINUE]]:
-// LLVM:         br label %[[OBACKEDGE:.*]]
 // LLVM:       [[OBREAK]]:
 // LLVM:         br label %[[OUTER_EXIT]]
 // LLVM:       [[OUTER_LPAD]]:

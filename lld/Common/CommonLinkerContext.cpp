@@ -10,8 +10,6 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 
-#include "llvm/CodeGen/CommandFlags.h"
-
 using namespace llvm;
 using namespace lld;
 
@@ -28,8 +26,6 @@ CommonLinkerContext::CommonLinkerContext() {
     return;
 
   lctx = this;
-  // Fire off the static initializations in CGF's constructor.
-  codegen::RegisterCodeGenFlags CGF;
 }
 
 CommonLinkerContext::~CommonLinkerContext() {

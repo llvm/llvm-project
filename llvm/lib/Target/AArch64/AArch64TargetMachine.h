@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/Target/LastSubtargetCache.h"
 #include <optional>
 
 namespace llvm {
@@ -28,8 +29,22 @@ class AArch64TargetMachine : public CodeGenTargetMachineImpl {
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<AArch64Subtarget>> SubtargetMap;
-  mutable AttributeSet LastSubtargetAttrs;
-  mutable const AArch64Subtarget *LastSubtarget = nullptr;
+
+  /// The attributes that select a subtarget.
+  struct SubtargetAttrs {
+    Attribute CPU, TuneCPU, FS, SMEnabled, SMBody, SMCompatible, MinSize,
+        VScaleRange;
+
+    bool operator==(const SubtargetAttrs &RHS) const {
+      return CPU == RHS.CPU && TuneCPU == RHS.TuneCPU && FS == RHS.FS &&
+             SMEnabled == RHS.SMEnabled && SMBody == RHS.SMBody &&
+             SMCompatible == RHS.SMCompatible && MinSize == RHS.MinSize &&
+             VScaleRange == RHS.VScaleRange;
+    }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
+  };
+  mutable LastSubtargetCache<AArch64Subtarget, SubtargetAttrs> LastSubtarget;
 
   /// Reset internal state.
   void reset() override;

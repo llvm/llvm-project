@@ -69,6 +69,7 @@ body:             |
 name:            ScalarVar
 body:             |
   bb.1:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @ScalarVar
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -81,6 +82,7 @@ body:             |
 name:            ScalarCst
 body:             |
   bb.1:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @ScalarCst
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -115,6 +117,7 @@ body:             |
 name:            VectorCst
 body:             |
   bb.1:
+    liveins: $d0, $d1
   ; CHECK-LABEL: name: @VectorCst
   ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
@@ -147,6 +150,7 @@ body:             |
 name:            VectorCst3unknown
 body:             |
   bb.1:
+    liveins: $d0, $d1
   ; CHECK-LABEL: name: @VectorCst3unknown
   ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
@@ -191,6 +195,7 @@ body:             |
 name:            FSHLless
 body:             |
   bb.1:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @FSHLless
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -209,6 +214,7 @@ body:             |
 name:            FSHLeq
 body:             |
   bb.1:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @FSHLeq
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -227,6 +233,7 @@ body:             |
 name:            FSHLmore
 body:             |
   bb.1:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @FSHLmore
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -245,6 +252,7 @@ body:             |
 name:            SignBitsThroughZext
 body:             |
   bb.1:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @SignBitsThroughZext
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0

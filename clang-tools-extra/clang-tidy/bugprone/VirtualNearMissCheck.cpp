@@ -7,22 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "VirtualNearMissCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::bugprone {
-
-namespace {
-AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
-
-AST_MATCHER(CXXMethodDecl, isOverloadedOperator) {
-  return Node.isOverloadedOperator();
-}
-} // namespace
 
 /// Finds out if the given method overrides some method.
 static bool isOverrideMethod(const CXXMethodDecl *MD) {

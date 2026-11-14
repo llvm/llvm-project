@@ -1,5 +1,7 @@
 // RUN: mlir-opt %s -scf-for-loop-peeling -canonicalize -split-input-file -verify-diagnostics | FileCheck %s
 // RUN: mlir-opt %s -scf-for-loop-peeling=skip-partial=false -canonicalize -split-input-file -verify-diagnostics | FileCheck %s -check-prefix=CHECK-NO-SKIP
+// RUN: mlir-opt %s -scf-for-loop-peeling=partial-as-if=true -canonicalize -split-input-file -verify-diagnostics | FileCheck %s -check-prefix=CHECK-IF
+// RUN: mlir-opt %s -scf-for-loop-peeling="partial-as-if=true skip-partial=false" -canonicalize -split-input-file -verify-diagnostics | FileCheck %s -check-prefix=CHECK-IF-NO-SKIP
 
 
 //  CHECK-DAG: #[[MAP1:.*]] = affine_map<(d0)[s0] -> (-d0 + s0)>
@@ -158,6 +160,25 @@ func.func @fully_static_bounds_integers() -> i32 {
 //      CHECK:     scf.yield %[[ADD2]]
 //      CHECK:   }
 //      CHECK:   return %[[RESULT]]
+
+// With partial-as-if, the partial iteration is an scf.if. Its body uses the
+// split bound as the induction variable, and the else branch forwards the
+// result of the main loop. The affine.min in it is still simplified.
+
+// CHECK-IF-LABEL: func @dynamic_upper_bound(
+//  CHECK-IF-SAME:     %[[UB:.*]]: index
+//       CHECK-IF:   %[[LOOP:.*]] = scf.for %{{.*}} = %{{.*}} to %[[NEW_UB:.*]] step %{{.*}} iter_args(%{{.*}}) -> (i32) {
+//       CHECK-IF:   }
+//       CHECK-IF:   %[[COND:.*]] = arith.cmpi slt, %[[NEW_UB]], %[[UB]] : index
+//       CHECK-IF:   %[[RESULT:.*]] = scf.if %[[COND]] -> (i32) {
+//       CHECK-IF:     %[[REM:.*]] = affine.apply #{{.*}}()[%[[UB]], %[[NEW_UB]]]
+//       CHECK-IF:     %[[CAST:.*]] = arith.index_cast %[[REM]]
+//       CHECK-IF:     %[[ADD:.*]] = arith.addi %[[LOOP]], %[[CAST]]
+//       CHECK-IF:     scf.yield %[[ADD]]
+//       CHECK-IF:   } else {
+//       CHECK-IF:     scf.yield %[[LOOP]]
+//       CHECK-IF:   }
+//       CHECK-IF:   return %[[RESULT]]
 #map = affine_map<(d0, d1)[s0] -> (s0, d0 - d1)>
 func.func @dynamic_upper_bound(%ub : index) -> i32 {
   %c0_i32 = arith.constant 0 : i32
@@ -330,6 +351,28 @@ func.func @test_affine_op_rewrite(%lb : index, %ub: index,
 //     CHECK-NO-SKIP:     scf.for {{.*}} {
 //     CHECK-NO-SKIP:     }
 //     CHECK-NO-SKIP:   }
+
+// With partial-as-if, skip-partial also skips the inner loop inside the
+// scf.if of the outer partial iteration.
+
+// CHECK-IF-LABEL: func @nested_loops
+//       CHECK-IF:   scf.for
+//       CHECK-IF:     scf.for
+//       CHECK-IF:     scf.if
+//       CHECK-IF:   scf.if
+//       CHECK-IF:     scf.for
+//   CHECK-IF-NOT:     scf.if
+//       CHECK-IF:   return
+
+// CHECK-IF-NO-SKIP-LABEL: func @nested_loops
+//       CHECK-IF-NO-SKIP:   scf.for
+//       CHECK-IF-NO-SKIP:     scf.for
+//       CHECK-IF-NO-SKIP:     scf.if
+//       CHECK-IF-NO-SKIP:   scf.if
+//       CHECK-IF-NO-SKIP:     scf.for
+//   CHECK-IF-NO-SKIP-NOT:   return
+//       CHECK-IF-NO-SKIP:     scf.if
+//       CHECK-IF-NO-SKIP:   return
 #map = affine_map<(d0, d1)[s0] -> (s0, d0 - d1)>
 func.func @nested_loops(%lb0: index, %lb1 : index, %ub0: index, %ub1: index,
                    %step: index) -> i32 {
@@ -426,6 +469,21 @@ func.func @non_index_loop_bounds(%init: i32, %n: i32) -> i32 {
 //      CHECK:     scf.yield %[[ADD2]] : i32
 //      CHECK:   }
 //      CHECK:   return %[[RES]] : i32
+
+// With partial-as-if, an unsigned loop gets an unsigned compare.
+
+// CHECK-IF-LABEL: func @unsigned_back_peel_dynamic(
+//  CHECK-IF-SAME:      %[[LB:.*]]: i32, %[[UB:.*]]: i32, %[[STEP:.*]]: i32
+//       CHECK-IF:   %[[MAIN:.*]] = scf.for unsigned %{{.*}} = %[[LB]] to %[[SPLIT:.*]] step %[[STEP]] iter_args(%{{.*}}) -> (i32) : i32 {
+//       CHECK-IF:   }
+//       CHECK-IF:   %[[COND:.*]] = arith.cmpi ult, %[[SPLIT]], %[[UB]] : i32
+//       CHECK-IF:   %[[RES:.*]] = scf.if %[[COND]] -> (i32) {
+//       CHECK-IF:     %[[ADD:.*]] = arith.addi %[[MAIN]], %[[SPLIT]] : i32
+//       CHECK-IF:     scf.yield %[[ADD]] : i32
+//       CHECK-IF:   } else {
+//       CHECK-IF:     scf.yield %[[MAIN]] : i32
+//       CHECK-IF:   }
+//       CHECK-IF:   return %[[RES]] : i32
 func.func @unsigned_back_peel_dynamic(%lb: i32, %ub: i32, %step: i32) -> i32 {
   %c0 = arith.constant 0 : i32
   %r = scf.for unsigned %iv = %lb to %ub step %step iter_args(%acc = %c0) -> (i32) : i32 {

@@ -1,4 +1,13 @@
 // RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm32-unknown-unknown -macquire-release-atomics \
+// RUN:   | FileCheck %s -check-prefix=ACQUIRE-RELEASE-ATOMICS
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm64-unknown-unknown -macquire-release-atomics \
+// RUN:   | FileCheck %s -check-prefix=ACQUIRE-RELEASE-ATOMICS
+//
+// ACQUIRE-RELEASE-ATOMICS: #define __wasm_acquire_release_atomics__ 1{{$}}
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target wasm32-unknown-unknown -matomics \
 // RUN:   | FileCheck %s -check-prefix=ATOMICS
 // RUN: %clang -E -dM %s -o - 2>&1 \
@@ -107,15 +116,6 @@
 // REFERENCE-TYPES: #define __wasm_reference_types__ 1{{$}}
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
-// RUN:     -target wasm32-unknown-unknown -mrelaxed-atomics \
-// RUN:   | FileCheck %s -check-prefix=RELAXED-ATOMICS
-// RUN: %clang -E -dM %s -o - 2>&1 \
-// RUN:     -target wasm64-unknown-unknown -mrelaxed-atomics \
-// RUN:   | FileCheck %s -check-prefix=RELAXED-ATOMICS
-//
-// RELAXED-ATOMICS: #define __wasm_relaxed_atomics__ 1{{$}}
-
-// RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target wasm32-unknown-unknown -mrelaxed-simd \
 // RUN:   | FileCheck %s -check-prefix=RELAXED-SIMD
 // RUN: %clang -E -dM %s -o - 2>&1 \
@@ -167,6 +167,7 @@
 // RUN:     -target wasm64-unknown-unknown -mcpu=mvp \
 // RUN:   | FileCheck %s -check-prefix=MVP
 //
+// MVP-NOT: #define __wasm_acquire_release_atomics__ 1{{$}}
 // MVP-NOT: #define __wasm_atomics__ 1{{$}}
 // MVP-NOT: #define __wasm_bulk_memory__ 1{{$}}
 // MVP-NOT: #define __wasm_exception_handling__ 1{{$}}
@@ -178,7 +179,6 @@
 // MVP-NOT: #define __wasm_mutable_globals__ 1{{$}}
 // MVP-NOT: #define __wasm_nontrapping_fptoint__ 1{{$}}
 // MVP-NOT: #define __wasm_reference_types__ 1{{$}}
-// MVP-NOT: #define __wasm_relaxed_atomics__ 1{{$}}
 // MVP-NOT: #define __wasm_relaxed_simd__ 1{{$}}
 // MVP-NOT: #define __wasm_sign_ext__ 1{{$}}
 // MVP-NOT: #define __wasm_simd128__ 1{{$}}
@@ -206,13 +206,13 @@
 // RUN:     -target wasm64-unknown-unknown -mcpu=generic \
 // RUN:   | FileCheck %s -check-prefix=GENERIC
 //
+// GENERIC-NOT: #define __wasm_acquire_release_atomics__ 1{{$}}
 // GENERIC-NOT: #define __wasm_atomics__ 1{{$}}
 // GENERIC-NOT: #define __wasm_exception_handling__ 1{{$}}
 // GENERIC-NOT: #define __wasm_extended_const__ 1{{$}}
 // GENERIC-NOT: #define __wasm__fp16__ 1{{$}}
 // GENERIC-NOT: #define __wasm_gc__ 1{{$}}
 // GENERIC-NOT: #define __wasm_multimemory__ 1{{$}}
-// GENERIC-NOT: #define __wasm_relaxed_atomics__ 1{{$}}
 // GENERIC-NOT: #define __wasm_relaxed_simd__ 1{{$}}
 // GENERIC-NOT: #define __wasm_simd128__ 1{{$}}
 // GENERIC-NOT: #define __wasm_tail_call__ 1{{$}}
@@ -226,6 +226,7 @@
 // RUN:     -target wasm64-unknown-unknown -mcpu=bleeding-edge \
 // RUN:   | FileCheck %s -check-prefix=BLEEDING-EDGE-INCLUDE
 //
+// BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_acquire_release_atomics__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_atomics__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_bulk_memory__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_exception_handling__ 1{{$}}
@@ -237,7 +238,6 @@
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_mutable_globals__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_nontrapping_fptoint__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_reference_types__ 1{{$}}
-// BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_relaxed_atomics__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_relaxed_simd__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_sign_ext__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_simd128__ 1{{$}}

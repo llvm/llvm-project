@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu11.00--amdpal -debug-only=regalloc -verify-machineinstrs -run-pass=liveintervals -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu11.00--amdpal -debug-only=regalloc -run-pass=liveintervals -o - %s 2>&1 | FileCheck %s
 # RUN: llc -mtriple=amdgpu11.00--amdpal -debug-only=regalloc --passes='print<live-intervals>' -o - %s 2>&1 | FileCheck %s
 # REQUIRES: asserts
 

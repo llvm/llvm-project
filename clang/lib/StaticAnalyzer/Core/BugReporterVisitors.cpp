@@ -1709,10 +1709,6 @@ PathDiagnosticPieceRef StoreSiteFinder::VisitNode(const ExplodedNode *Succ,
       !OriginSF->isParentOf(StoreSite->getStackFrame()))
     return nullptr;
 
-  // Okay, we've found the binding. Emit an appropriate message.
-  SmallString<256> sbuf;
-  llvm::raw_svector_ostream os(sbuf);
-
   StoreInfo SI = {StoreInfo::Assignment, // default kind
                   StoreSite,
                   InitE,

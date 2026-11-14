@@ -9,23 +9,23 @@ set(LLVM_LINK_COMPONENTS
   )
 
 set(LLVM_TARGET_DEFINITIONS ObjcopyOpts.td)
-tablegen(LLVM ObjcopyOpts.inc -gen-opt-parser-defs)
+llvm_tablegen(ObjcopyOpts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(ObjcopyOptsTableGen)
 
 set(LLVM_TARGET_DEFINITIONS InstallNameToolOpts.td)
-tablegen(LLVM InstallNameToolOpts.inc -gen-opt-parser-defs)
+llvm_tablegen(InstallNameToolOpts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(InstallNameToolOptsTableGen)
 
 set(LLVM_TARGET_DEFINITIONS BitcodeStripOpts.td)
-tablegen(LLVM BitcodeStripOpts.inc -gen-opt-parser-defs)
+llvm_tablegen(BitcodeStripOpts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(BitcodeStripOptsTableGen)
 
 set(LLVM_TARGET_DEFINITIONS StripOpts.td)
-tablegen(LLVM StripOpts.inc -gen-opt-parser-defs)
+llvm_tablegen(StripOpts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(StripOptsTableGen)
 
 set(LLVM_TARGET_DEFINITIONS ExtractBundleEntryOpts.td)
-tablegen(LLVM ExtractBundleEntryOpts.inc -gen-opt-parser-defs)
+llvm_tablegen(ExtractBundleEntryOpts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(ExtractBundleEntryOptsTableGen)
 
 add_llvm_tool(llvm-objcopy

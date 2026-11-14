@@ -10,6 +10,7 @@
 
 // REQUIRES: std-at-least-c++26, libcpp-has-abi-bounded-iterators-in-optional
 // REQUIRES: can-test-hardening-assertions-fast
+// UNSUPPORTED: libcpp-has-no-experimental-optional-iterator
 
 // Test that an assertion fires for invalid uses of the following operators on a bounded iterator:
 
@@ -27,9 +28,10 @@
 
 #include "check_assertion.h"
 
-int main(int, char**) {
+template <typename T>
+void test_bounded_iter() {
   { // operator++
-    std::optional<int> o{1};
+    std::optional<T> o{1};
     auto i = o.end();
 
     TEST_LIBCPP_ASSERT_FAILURE(++i, "__bounded_iter::operator++: Attempt to advance an iterator past the end");
@@ -37,7 +39,7 @@ int main(int, char**) {
   }
 
   { // operator--
-    std::optional<int> o{1};
+    std::optional<T> o{1};
     auto i = o.begin();
 
     TEST_LIBCPP_ASSERT_FAILURE(--i, "__bounded_iter::operator--: Attempt to rewind an iterator past the start");
@@ -45,14 +47,14 @@ int main(int, char**) {
   }
 
   { // operator*
-    std::optional<int> o;
+    std::optional<T> o;
     auto i = o.begin();
 
     TEST_LIBCPP_ASSERT_FAILURE(*i, "__bounded_iter::operator*: Attempt to dereference an iterator at the end");
   }
 
   { // operator[]
-    std::optional<int> o{1};
+    std::optional<T> o{1};
     auto i = o.begin();
 
     TEST_LIBCPP_ASSERT_FAILURE(i[1], "__bounded_iter::operator[]: Attempt to index an iterator at or past the end");
@@ -60,7 +62,7 @@ int main(int, char**) {
   }
 
   { // operator->
-    std::optional<int> o{1};
+    std::optional<T> o{1};
     auto i = o.end();
 
     TEST_LIBCPP_ASSERT_FAILURE(
@@ -68,7 +70,7 @@ int main(int, char**) {
   }
 
   { // operator+=
-    std::optional<int> o{1};
+    std::optional<T> o{1};
     auto i = o.begin();
 
     TEST_LIBCPP_ASSERT_FAILURE(i += 2, "__bounded_iter::operator+=: Attempt to advance an iterator past the end");
@@ -76,12 +78,17 @@ int main(int, char**) {
   }
 
   { // operator-=
-    std::optional<int> o{1};
+    std::optional<T> o{1};
     auto i = o.begin();
 
     TEST_LIBCPP_ASSERT_FAILURE(i -= 1, "__bounded_iter::operator-=: Attempt to rewind an iterator past the start");
     TEST_LIBCPP_ASSERT_FAILURE(i -= -2, "__bounded_iter::operator-=: Attempt to advance an iterator past the end");
   }
+}
+
+int main(int, char**) {
+  test_bounded_iter<char>();
+  test_bounded_iter<int>();
 
   return 0;
 }

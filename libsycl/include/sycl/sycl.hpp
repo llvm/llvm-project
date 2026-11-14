@@ -30,7 +30,9 @@
 #include <sycl/__impl/nd_item.hpp>
 #include <sycl/__impl/nd_range.hpp>
 #include <sycl/__impl/platform.hpp>
+#include <sycl/__impl/properties/queue_properties.hpp>
 #include <sycl/__impl/property_list.hpp>
+#include <sycl/__impl/property_traits.hpp>
 #include <sycl/__impl/queue.hpp>
 #include <sycl/__impl/sub_group.hpp>
 #include <sycl/__impl/usm_alloc_type.hpp>

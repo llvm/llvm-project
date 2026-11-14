@@ -235,7 +235,7 @@ define align 4 ptr @test7() #0 {
 ; CGSCC: Function Attrs: mustprogress nofree noinline nosync nounwind willreturn memory(none) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@test7
 ; CGSCC-SAME: () #[[ATTR1:[0-9]+]] {
-; CGSCC-NEXT:    [[C:%.*]] = tail call noundef nonnull align 8 dereferenceable(1) ptr @f1() #[[ATTR15:[0-9]+]]
+; CGSCC-NEXT:    [[C:%.*]] = tail call nonnull align 8 dereferenceable(1) ptr @f1() #[[ATTR15:[0-9]+]]
 ; CGSCC-NEXT:    ret ptr [[C]]
 ;
   %c = tail call ptr @f1(ptr align 8 dereferenceable(1) @a1)

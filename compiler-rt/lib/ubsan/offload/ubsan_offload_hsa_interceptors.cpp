@@ -6,12 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <dlfcn.h>
-
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
-#include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_offload.h"
 #include "sanitizer_common/sanitizer_platform.h"
@@ -65,25 +62,6 @@ void Initialize() {
   if (UNLIKELY(!Offload::Get().Ready()))                                       \
     return REAL(name)(__VA_ARGS__);
 
-static bool FromHsa(void *P) {
-  Dl_info Info = {};
-  if (!dladdr(P, &Info) || !Info.dli_fname)
-    return false;
-  return internal_strstr(Info.dli_fname, SANITIZER_HSA_LIBRARY);
-}
-
-// Callers bind to whichever 'hsa_init' comes first, if HSA was loaded before
-// the runtime the interceptors are bypassed.
-static void CheckInterposed() {
-  void *Sym = dlsym(RTLD_DEFAULT, "hsa_init");
-  if (!Sym || !FromHsa(Sym))
-    return;
-  Report("WARNING: %s: the runtime is loaded too late to intercept HSA, GPU "
-         "errors will not be reported. Link the runtime first or use "
-         "LD_PRELOAD.\n",
-         SanitizerToolName);
-}
-
 INTERCEPTOR(hsa_status_t, hsa_init, void) {
   UBSAN_HSA_ENTER(hsa_init);
 
@@ -123,5 +101,5 @@ extern "C" void __ubsan_offload_init() { __ubsan::Initialize(); }
 
 __attribute__((constructor(0))) static void UbsanOffloadDynInit() {
   __ubsan_offload_init();
-  CheckInterposed();
+  WarnIfHsaNotInterposed();
 }

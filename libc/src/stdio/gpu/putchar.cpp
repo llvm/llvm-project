@@ -21,7 +21,7 @@ LLVM_LIBC_FUNCTION(int, putchar, (int c)) {
   if (1 != written)
     return EOF;
 
-  return 0;
+  return static_cast<int>(uc);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

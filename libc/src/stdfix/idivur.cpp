@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "idivur.h"
+#include "src/stdfix/idivur.h"
 #include "include/llvm-libc-macros/stdfix-macros.h" // unsigned fract
 #include "src/__support/common.h"                   // LLVM_LIBC_FUNCTION
 #include "src/__support/fixed_point/fx_bits.h"      // fixed_point

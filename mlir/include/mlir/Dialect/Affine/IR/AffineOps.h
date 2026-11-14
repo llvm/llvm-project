@@ -21,13 +21,6 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpDefinition.h"
-#include "mlir/Interfaces/AlignmentAttrInterface.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/InferIntDivisibilityOpInterface.h"
-#include "mlir/Interfaces/InferIntRangeInterface.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Interfaces/MemorySlotInterfaces.h"
 
 namespace mlir {
 namespace affine {

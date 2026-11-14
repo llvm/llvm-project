@@ -41,7 +41,7 @@ void SARIFDiagnostic::emitDiagnosticMessage(
     StringRef Message, ArrayRef<clang::CharSourceRange> Ranges,
     DiagOrStoredDiag D) {
 
-  const auto *Diag = D.dyn_cast<const Diagnostic *>();
+  const auto *Diag = dyn_cast_if_present<const Diagnostic *>(D);
 
   if (!Diag)
     return;

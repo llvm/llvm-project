@@ -1005,10 +1005,9 @@ namespace cwg165 { // cwg165: no
     struct A { friend struct B; };
     void f() { void g(); }
   }
-  // FIXME: cwg1477 says this is ok, cwg165 says it's ill-formed
   struct N::B {};
-  // FIXME: cwg165 says this is ill-formed, but the argument in cwg1477 says it's ok
   void N::g() {}
+  // FIXME-error@-1 {{'g' is not nominable in 'N'}}
 } // namespace cwg165
 
 namespace cwg166 { // cwg166: 2.9

@@ -3,7 +3,6 @@
 
 ---
 name:            func_get_fpenv
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: func_get_fpenv
@@ -22,7 +21,6 @@ body:             |
 ...
 ---
 name:            func_set_fpenv
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -45,7 +43,6 @@ body:             |
 ...
 ---
 name:            func_reset
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: func_reset

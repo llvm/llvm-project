@@ -8,6 +8,7 @@
 
 ---
 name:            sdwa_opsel_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
@@ -33,6 +34,7 @@ body:            |
 
 ---
 name:            sdwa_lo_opsel_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
@@ -58,6 +60,7 @@ body:            |
 
 ---
 name:            opsel_sdwa_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
@@ -86,6 +89,7 @@ body:            |
 
 ---
 name:            opsel_no_sdwa_no_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
@@ -111,6 +115,7 @@ body:            |
 
 ---
 name:            no_opsel_sdwa_no_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
@@ -135,6 +140,7 @@ body:            |
 
 ---
 name:            opsel_opsel_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
@@ -162,6 +168,7 @@ body:            |
 
 ---
 name:            opsel_opsel_no_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
@@ -189,6 +196,7 @@ body:            |
 
 ---
 name:            sdwa_loadsel_no_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
@@ -213,6 +221,7 @@ body:            |
 
 ---
 name:            sdwa_sdwa_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
@@ -238,6 +247,7 @@ body:            |
 
 ---
 name:            cvt_sdwa_hazard_1
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
@@ -263,6 +273,7 @@ body:            |
 
 ---
 name:            cvt_sdwa_hazard_2
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
@@ -288,6 +299,7 @@ body:            |
 
 ---
 name:            cvt_sdwa_hazard_3
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
@@ -313,6 +325,7 @@ body:            |
 
 ---
 name:            cvt_sdwa_no_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
@@ -339,6 +352,7 @@ body:            |
 
 ---
 name:            sdwa_nosdwa_no_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
@@ -364,6 +378,7 @@ body:            |
 
 ---
 name:            inline_sdwa_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
@@ -389,6 +404,7 @@ body:            |
 
 ---
 name:            sdwa_inline_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
@@ -415,6 +431,7 @@ body:            |
 
 ---
 name:            inline_inline_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
@@ -446,6 +463,7 @@ body:            |
 
 ---
 name:            vop3p_opsel_no_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr2_vgpr3, $vgpr4_vgpr5, $exec, $mode
@@ -490,6 +508,7 @@ body:            |
 # Cover packed halfword selection and MIX input-type selection as well as
 # packed FP32 DWORD selection. None of these selects the destination position.
 name:            vop3p_f16_mix_no_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr2, $vgpr4, $vgpr6, $exec, $mode
@@ -520,6 +539,7 @@ body:            |
 
 ---
 name:            vop3p_raw_no_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $exec, $mode
@@ -544,6 +564,7 @@ body:            |
 
 ---
 name:            vop3p_waw_no_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $exec, $mode
@@ -568,6 +589,7 @@ body:            |
 
 ---
 name:            vop3p_inline_no_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr2_vgpr3, $vgpr4_vgpr5, $exec, $mode
@@ -598,6 +620,7 @@ body:            |
 
 ---
 name:            opsel_vop3p_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr1, $vgpr2, $vgpr4_vgpr5, $vgpr6, $exec, $mode
@@ -628,6 +651,7 @@ body:            |
 
 ---
 name:            mixhi_f16_src0_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $exec, $mode
@@ -652,6 +676,7 @@ body:            |
 
 ---
 name:            mixhi_f32_src0_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $exec, $mode
@@ -676,6 +701,7 @@ body:            |
 
 ---
 name:            mixlo_f16_src0_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $exec, $mode
@@ -700,6 +726,7 @@ body:            |
 
 ---
 name:            mixlo_f32_src0_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $exec, $mode
@@ -724,6 +751,7 @@ body:            |
 
 ---
 name:            mixhi_vop3p_consumer_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $exec, $mode

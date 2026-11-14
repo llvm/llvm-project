@@ -453,6 +453,10 @@ struct TestVectorReduceToContractPatternsPatterns
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
       TestVectorReduceToContractPatternsPatterns)
 
+  TestVectorReduceToContractPatternsPatterns() = default;
+  TestVectorReduceToContractPatternsPatterns(
+      const TestVectorReduceToContractPatternsPatterns &pass)
+      : PassWrapper(pass) {}
   StringRef getArgument() const final {
     return "test-vector-reduction-to-contract-patterns";
   }
@@ -460,9 +464,17 @@ struct TestVectorReduceToContractPatternsPatterns
     return "Test patterns to convert multireduce op to contract and combine "
            "broadcast/transpose to contract";
   }
+
+  Option<bool> allowFastMathFlagLoss{
+      *this, "allow-fast-math-flag-loss",
+      llvm::cl::desc("Convert even if the contract would drop fast-math "
+                     "flags of the multiply or the reduction"),
+      llvm::cl::init(true)};
+
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
-    populateVectorReductionToContractPatterns(patterns);
+    populateVectorReductionToContractPatterns(patterns, /*benefit=*/1,
+                                              allowFastMathFlagLoss);
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };

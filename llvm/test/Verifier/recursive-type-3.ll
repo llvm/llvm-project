@@ -1,4 +1,4 @@
-; RUN: llvm-as %s -o /dev/null 2>&1
+; RUN: llvm-as %s -disable-output 2>&1
 
 %rt2 = type { i32, { i8, ptr, i8 }, i32 }
 

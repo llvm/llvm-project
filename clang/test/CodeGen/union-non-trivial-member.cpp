@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 --std=c++17 -emit-llvm %s -o - -triple x86_64-unknown-linux-gnu | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir --std=c++17 -emit-llvm %s -o - -triple x86_64-unknown-linux-gnu | FileCheck %s %}
 
 struct non_trivial_constructor {
     constexpr non_trivial_constructor() : x(100) { }

@@ -9,9 +9,9 @@
 // RUN: llvm-mc -triple=amdgpu9.08-amd-amdhsa %t/sramecc.s 2>&1 | FileCheck --check-prefix=SRAMECC --implicit-check-not=warning %s
 // RUN: llvm-mc -triple=amdgpu9.08-amd-amdhsa %t/both.s 2>&1 | FileCheck --check-prefix=BOTH --implicit-check-not=warning %s
 
-// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx908 %t/xnack-legacy.s 2>&1 | FileCheck --check-prefix=XNACK-LEGACY --implicit-check-not=warning %s
-// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx908 %t/sramecc-legacy.s 2>&1 | FileCheck --check-prefix=SRAMECC-LEGACY --implicit-check-not=warning %s
-// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx908 %t/both-legacy.s 2>&1 | FileCheck --check-prefix=BOTH-LEGACY --implicit-check-not=warning %s
+// RUN: llvm-mc -triple=amdgpu9.08-amd-amdhsa %t/xnack-legacy.s 2>&1 | FileCheck --check-prefix=XNACK-LEGACY --implicit-check-not=warning %s
+// RUN: llvm-mc -triple=amdgpu9.08-amd-amdhsa %t/sramecc-legacy.s 2>&1 | FileCheck --check-prefix=SRAMECC-LEGACY --implicit-check-not=warning %s
+// RUN: llvm-mc -triple=amdgpu9.08-amd-amdhsa %t/both-legacy.s 2>&1 | FileCheck --check-prefix=BOTH-LEGACY --implicit-check-not=warning %s
 
 // When a single directive specifies modes and nothing conflicts, no warning is
 // emitted.
@@ -22,7 +22,7 @@
 // RUN: llvm-mc -triple=amdgpu9.08-amd-amdhsa -filetype=obj %t/noconflict.s -o %t/both.o
 // RUN: llvm-readobj --file-headers %t/both.o | FileCheck --check-prefix=OBJ %s
 
-// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx908 -filetype=obj %t/noconflict-legacy.s -o %t/both-legacy.o
+// RUN: llvm-mc -triple=amdgpu9.08-amd-amdhsa -filetype=obj %t/noconflict-legacy.s -o %t/both-legacy.o
 // RUN: llvm-readobj --file-headers %t/both-legacy.o | FileCheck --check-prefix=OBJ-LEGACY %s
 
 //--- xnack.s

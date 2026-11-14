@@ -274,3 +274,66 @@ define i1 @align_with_zero_offset_might_be_null(ptr %ptr) {
   %is_null = icmp eq ptr %ptr, null
   ret i1 %is_null
 }
+
+define i1 @cmp_zero_with_range_assume(i64 %x, i64 %y) {
+; CHECK-LABEL: @cmp_zero_with_range_assume(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[I:%.*]], i64 1, i64 0) ]
+; CHECK-NEXT:    ret i1 false
+;
+  call void @llvm.assume(i1 true) ["range"(i64 %x, i64 1, i64 0)]
+  %res = icmp eq i64 %x, 0
+  ret i1 %res
+}
+
+define i1 @cmp_zero_with_range_assume_in_range(i64 %x, i64 %y) {
+; CHECK-LABEL: @cmp_zero_with_range_assume_in_range(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[X:%.*]], i64 0, i64 2) ]
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  call void @llvm.assume(i1 true) ["range"(i64 %x, i64 0, i64 2)]
+  %res = icmp eq i64 %x, 0
+  ret i1 %res
+}
+
+define i1 @cmp_slt_zero_with_range_assume(i64 %x) {
+; CHECK-LABEL: @cmp_slt_zero_with_range_assume(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[X:%.*]], i64 0, i64 123) ]
+; CHECK-NEXT:    ret i1 false
+;
+  call void @llvm.assume(i1 true) ["range"(i64 %x, i64 0, i64 123)]
+  %res = icmp slt i64 %x, 0
+  ret i1 %res
+}
+
+define i1 @cmp_slt_zero_with_range_assume_in_range(i64 %x) {
+; CHECK-LABEL: @cmp_slt_zero_with_range_assume_in_range(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[X:%.*]], i64 -1, i64 123) ]
+; CHECK-NEXT:    [[RES:%.*]] = icmp slt i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  call void @llvm.assume(i1 true) ["range"(i64 %x, i64 -1, i64 123)]
+  %res = icmp slt i64 %x, 0
+  ret i1 %res
+}
+
+define i1 @cmp_slt_nonzero_with_range_assume(i64 %x) {
+; CHECK-LABEL: @cmp_slt_nonzero_with_range_assume(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[X:%.*]], i64 0, i64 123) ]
+; CHECK-NEXT:    ret i1 true
+;
+  call void @llvm.assume(i1 true) ["range"(i64 %x, i64 0, i64 123)]
+  %res = icmp slt i64 %x, 222
+  ret i1 %res
+}
+
+define i1 @cmp_slt_nonzero_with_range_assume_in_range(i64 %x) {
+; CHECK-LABEL: @cmp_slt_nonzero_with_range_assume_in_range(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[X:%.*]], i64 0, i64 123) ]
+; CHECK-NEXT:    [[RES:%.*]] = icmp samesign ult i64 [[X]], 55
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  call void @llvm.assume(i1 true) ["range"(i64 %x, i64 0, i64 123)]
+  %res = icmp slt i64 %x, 55
+  ret i1 %res
+}

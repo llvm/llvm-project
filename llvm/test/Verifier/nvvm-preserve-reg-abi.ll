@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
 
 ; CHECK: "nvvm.abi_preserve" takes an unsigned integer: foobar
 define void @not_an_integer() "nvvm.abi_preserve"="foobar" {

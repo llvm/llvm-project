@@ -76,8 +76,10 @@ def main(argv: List[str]) -> int:
              'this is read from standard input.')
     parser.add_argument('--lnt-url', type=str, required=True,
         help='The URL of the LNT instance holding the benchmark data.')
+    parser.add_argument('--project', type=str, required=True,
+        help='The LNT project of the test suite holding the benchmark data.')
     parser.add_argument('--test-suite', type=str, required=True,
-        help='The LNT test suite holding the benchmark data.')
+        help='The LNT test suite holding the benchmark data, in the project.')
     parser.add_argument('--machine', type=str, required=True,
         help='The LNT machine to plan work for.')
     parser.add_argument('--samples', type=common.at_least(1), default=3,
@@ -101,7 +103,7 @@ def main(argv: List[str]) -> int:
     if invalid:
         raise ValueError(f'expected full 40-character SHAs on the input, got {invalid[0]!r}')
 
-    have = common.benchmarked_commits(args.lnt_url, args.test_suite, args.machine)
+    have = common.benchmarked_commits(args.lnt_url, args.project, args.test_suite, args.machine)
     if have is None:
         logging.warning(f'{args.lnt_url} has no machine named {args.machine} yet: planning as if it had no data')
         have = {}
@@ -112,7 +114,7 @@ def main(argv: List[str]) -> int:
         unique = list(dict.fromkeys(requested))
         complete = sum(1 for c in unique if have.get(c, 0) >= args.samples)
         partial = sum(1 for c in unique if 0 < have.get(c, 0) < args.samples)
-        print(f'Machine: {args.machine}   Suite: {args.test_suite}   LNT: {args.lnt_url}', file=sys.stderr)
+        print(f'Machine: {args.machine}   Suite: {args.project}/{args.test_suite}   LNT: {args.lnt_url}', file=sys.stderr)
         print(f'Requested commits: {len(unique)}   '
               f'({len(unique) - complete - partial} with no data, {partial} partial, {complete} complete)',
               file=sys.stderr)

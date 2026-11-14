@@ -7,8 +7,8 @@
 
 
 ; Note that we need new pass manager to enable top-down processing for sample profile loader
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -sample-profile-cold-inline-threshold=200 -debug-only=sample-context-tracker -o /dev/null 2>&1 | FileCheck %s --check-prefix=INLINE-ALL
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-prioritized-inline=0 -sample-profile-inline-size=0 -debug-only=sample-context-tracker -o /dev/null 2>&1 | FileCheck %s --check-prefix=INLINE-HOT
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -sample-profile-cold-inline-threshold=200 -debug-only=sample-context-tracker -disable-output 2>&1 | FileCheck %s --check-prefix=INLINE-ALL
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-prioritized-inline=0 -sample-profile-inline-size=0 -debug-only=sample-context-tracker -disable-output 2>&1 | FileCheck %s --check-prefix=INLINE-HOT
 
 
 ; Test we inlined the following in top-down order and promot rest not inlined context profile into base profile

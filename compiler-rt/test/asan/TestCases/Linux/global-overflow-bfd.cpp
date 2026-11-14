@@ -1,6 +1,6 @@
 // Test that gc-sections-friendly instrumentation of globals does not introduce
 // false negatives with the BFD linker.
-// RUN: %clangxx_asan -fuse-ld=bfd -Wl,-gc-sections -ffunction-sections -fdata-sections -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan -fuse-ld=bfd -Wl,--allow-shlib-undefined -Wl,-gc-sections -ffunction-sections -fdata-sections -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 // Android does not use bfd.
 // UNSUPPORTED: android

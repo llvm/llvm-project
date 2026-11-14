@@ -736,9 +736,7 @@ bool HexagonLoadStoreWidening::createWideStores(InstrGroup &OG, InstrGroup &NG,
       MachineInstr *TfrI = BuildMI(*MF, DL, TfrD, VReg).addImm(LowerAcc);
       NG.push_back(TfrI);
       const MCInstrDesc &CombD = TII->get(Hexagon::A4_combineir);
-      CombI = BuildMI(*MF, DL, CombD, DReg)
-                  .addImm(UpperAcc)
-                  .addReg(VReg, RegState::Kill);
+      CombI = BuildMI(*MF, DL, CombD, DReg).addImm(UpperAcc).addReg(VReg);
     }
     // If immediates are 0, we do not need A2_tfrsi
     else {
@@ -747,8 +745,7 @@ bool HexagonLoadStoreWidening::createWideStores(InstrGroup &OG, InstrGroup &NG,
     }
     NG.push_back(CombI);
     const MCInstrDesc &StD = TII->get(Hexagon::S2_storerd_io);
-    StI =
-        BuildMI(*MF, DL, StD).add(MR).addImm(Off).addReg(DReg, RegState::Kill);
+    StI = BuildMI(*MF, DL, StD).add(MR).addImm(Off).addReg(DReg);
   } else if (Acc < 0x10000) {
     // Create mem[hw] = #Acc
     unsigned WOpc = (TotalSize == 2)   ? Hexagon::S4_storeirh_io
@@ -773,8 +770,7 @@ bool HexagonLoadStoreWidening::createWideStores(InstrGroup &OG, InstrGroup &NG,
     assert(WOpc && "Unexpected size");
 
     const MCInstrDesc &StD = TII->get(WOpc);
-    StI =
-        BuildMI(*MF, DL, StD).add(MR).addImm(Off).addReg(VReg, RegState::Kill);
+    StI = BuildMI(*MF, DL, StD).add(MR).addImm(Off).addReg(VReg);
   }
   StI->addMemOperand(*MF, NewM);
   NG.push_back(StI);

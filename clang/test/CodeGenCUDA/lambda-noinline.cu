@@ -1,9 +1,11 @@
 // RUN: %clang_cc1 -x hip -emit-llvm -std=c++11 %s -o - \
 // RUN:   -triple x86_64-linux-gnu \
 // RUN:   | FileCheck -check-prefix=HOST %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x hip -emit-llvm -std=c++11 %s -o -   -triple x86_64-linux-gnu   | FileCheck -check-prefix=HOST %s %}
 // RUN: %clang_cc1 -x hip -emit-llvm -std=c++11 %s -o - \
 // RUN:   -triple amdgpu-amd-amdhsa -fcuda-is-device \
 // RUN:   | FileCheck -check-prefix=DEV %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x hip -emit-llvm -std=c++11 %s -o -   -triple amdgpu-amd-amdhsa -fcuda-is-device   | FileCheck -check-prefix=DEV %s %}
 
 #include "Inputs/cuda.h"
 

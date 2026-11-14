@@ -90,7 +90,8 @@ define void @vp_sdiv_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) noun
 ; X86-LABEL: vp_sdiv_v4i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm2
+; X86-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; X86-NEXT:    vpmovsxbd {{.*#+}} xmm3 = [0,1,2,3]
 ; X86-NEXT:    vpmaxud %xmm3, %xmm2, %xmm2
 ; X86-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
@@ -185,7 +186,8 @@ define void @vp_udiv_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) noun
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm2
+; X86-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; X86-NEXT:    vpmovsxbd {{.*#+}} xmm3 = [0,1,2,3]
 ; X86-NEXT:    vpmaxud %xmm3, %xmm2, %xmm2
 ; X86-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
@@ -341,7 +343,8 @@ define void @vp_srem_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) noun
 ; X86-LABEL: vp_srem_v4i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm2
+; X86-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; X86-NEXT:    vpmovsxbd {{.*#+}} xmm3 = [0,1,2,3]
 ; X86-NEXT:    vpmaxud %xmm3, %xmm2, %xmm2
 ; X86-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
@@ -452,7 +455,8 @@ define void @vp_urem_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) noun
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm2
+; X86-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; X86-NEXT:    vpmovsxbd {{.*#+}} xmm3 = [0,1,2,3]
 ; X86-NEXT:    vpmaxud %xmm3, %xmm2, %xmm2
 ; X86-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2

@@ -273,6 +273,9 @@ endif()
 
 set(LLDB_TEST_SHELL_DISABLE_REMOTE OFF CACHE BOOL "Disable remote Shell tests execution")
 
+set(LLDB_TEST_EXTRA_TSAN_OPTIONS "" CACHE STRING
+  "Extra options appended to the TSAN_OPTIONS used in the LLDB tests")
+
 # On Windows, drive the tests through the lldb-server backend by default when
 # libxml2 is available (it is required to parse the gdb-remote target XML).
 # Without libxml2, fall back to the in-process Windows process plugin. This

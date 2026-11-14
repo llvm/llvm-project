@@ -2,15 +2,6 @@
 # RUN: llc -o - %s -mtriple=aarch64 -passes=aarch64-ccmp -aarch64-stress-ccmp | FileCheck %s
 ---
 name: ccmp-look-through-copy
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr64 }
-  - { id: 1, class: gpr64 }
-  - { id: 4, class: gpr64 }
-  - { id: 6, class: gpr64 }
-  - { id: 7, class: gpr64 }
-  - { id: 8, class: gpr64 }
-  - { id: 9, class: gpr64 }
 body: |
   bb.0:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)

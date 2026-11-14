@@ -82,7 +82,7 @@
 ; REMARKS: call in clone _Z1Ab marked with memprof allocation attribute notcold
 ; REMARKS: call in clone _Z1Ab.memprof.2 marked with memprof allocation attribute cold
 ; REMARKS: call in clone _Z1Ab.memprof.2 marked with memprof allocation attribute cold
-; REMARKS: call in clone _Z1Ab.memprof.1 marked with memprof allocation attribute notcold
+; REMARKS: call in clone _Z1Ab.memprof.1 marked with memprof allocation attribute ambiguous
 
 ;; Cold context 234 is cloned, and only the cloned context is Cold hinted
 ;; (the original doesn't full match with any IR due to inlining).
@@ -202,9 +202,12 @@ attributes #7 = { builtin }
 ; IR:   call {{.*}} @_Z1Mv.memprof.1()
 ; IR:   call {{.*}} @_Z3XZNv()
 ; IR:   call {{.*}} @_Z1Yv()
+;; The second allocation in this clone of _Z1Ab is reached by both cold and
+;; not cold contexts that could not be disambiguated (context 123 below), so
+;; it keeps the ambiguous attribute.
 ; IR: define {{.*}} @_Z1Ab.memprof.1(i1 noundef zeroext %b)
 ; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[COLD:[0-9]+]]
-; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[NOTCOLD]]
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[AMBIGUOUS:[0-9]+]]
 ;; Both allocations are cold in the version of _Z1Ab called by the clone of
 ;; _Z2XZv (see above).
 ; IR: define {{.*}} @_Z1Ab.memprof.2(i1 noundef zeroext %b)
@@ -218,8 +221,10 @@ attributes #7 = { builtin }
 ; IR: attributes #[[NOTCOLD]] = { builtin "memprof"="notcold" }
 ; IR: attributes #[[DEFAULT]] = { builtin }
 ; IR: attributes #[[COLD]] = { builtin "memprof"="cold" }
+; IR: attributes #[[AMBIGUOUS]] = { builtin "memprof"="ambiguous" }
 
+; STATS: 1 memprof-context-disambiguation - Number of ambiguous static allocations (possibly cloned)
 ; STATS: 3 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
-; STATS: 2 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned)
+; STATS: 1 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned)
 ; STATS: 4 memprof-context-disambiguation - Number of function clones created during whole program analysis
 ; STATS: 1 memprof-context-disambiguation - Number of callsite clones without an edge to a callee's clones assigned the callee function clone of their original node

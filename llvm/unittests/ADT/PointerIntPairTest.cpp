@@ -127,4 +127,35 @@ TEST(PointerIntPairTest, TypePunning) {
   EXPECT_EQ(Pair.getPointer(), IntPtr);
 }
 
+struct MaskedOnlyPointerTraits {
+  static inline const void *getAsVoidPointer(const int *P) { return P; }
+  static inline const int *getFromVoidPointer(const void *P) {
+    EXPECT_EQ(0U, reinterpret_cast<uintptr_t>(P) &
+                      ((1U << NumLowBitsAvailable) - 1));
+    return static_cast<const int *>(P);
+  }
+  static constexpr int NumLowBitsAvailable =
+      PointerLikeTypeTraits<const int *>::NumLowBitsAvailable;
+};
+
+TEST(PointerIntPairTest, GetFromOpaqueValueConstVoid) {
+  int Value = 42;
+  PointerIntPair<const int *, 1, unsigned, MaskedOnlyPointerTraits> Pair(&Value,
+                                                                         1U);
+  const void *Opaque = Pair.getOpaqueValue();
+  auto Restored = decltype(Pair)::getFromOpaqueValue(Opaque);
+  EXPECT_EQ(&Value, Restored.getPointer());
+  EXPECT_EQ(1U, Restored.getInt());
+
+  struct Polymorphic {
+    virtual ~Polymorphic() = default;
+  };
+  Polymorphic Poly;
+  PointerIntPair<const Polymorphic *, 1, unsigned> PolyPair(&Poly, 1U);
+  const void *PolyOpaque = PolyPair.getOpaqueValue();
+  auto PolyRestored = decltype(PolyPair)::getFromOpaqueValue(PolyOpaque);
+  EXPECT_EQ(&Poly, PolyRestored.getPointer());
+  EXPECT_EQ(1U, PolyRestored.getInt());
+}
+
 } // end anonymous namespace

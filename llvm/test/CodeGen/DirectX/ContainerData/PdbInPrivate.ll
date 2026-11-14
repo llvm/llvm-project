@@ -1,8 +1,8 @@
-; RUN: opt %s -dxil-pdb --dx-pdb-in-private -S -o - | FileCheck %s --check-prefix=CHECK-IR
-; RUN: opt %s -dxil-pdb --dx-pdb-in-private -o /dev/null
+; RUN: opt %s -dxil-container-pdb --dx-pdb-in-private -S -o - | FileCheck %s --check-prefix=CHECK-IR
+; RUN: opt %s -dxil-container-pdb --dx-pdb-in-private -disable-output
 ; RUN: llvm-pdbutil pdb2yaml --dxcontainer PdbInPrivateTest.pdb | FileCheck %s --check-prefix=CHECK-PDB
 
-;; Check that dxil-pdb pass emits a PRIV global when --dx-pdb-in-private is set.
+;; Check that dxil-container-pdb pass emits a PRIV global when --dx-pdb-in-private is set.
 ; CHECK-IR: @dx.priv = private constant {{.*}} section "PRIV"
 
 ; Check that the companion PDB file is still written when PDBNAME is present.

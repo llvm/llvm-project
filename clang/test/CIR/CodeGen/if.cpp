@@ -37,11 +37,9 @@ int if0(bool a) {
 // LLVM:   %9 = load i32, ptr %2, align 4
 // LLVM:   ret i32 %9
 // LLVM: [[END]]:
-// LLVM:   br label %[[LABEL4:.*]]
-// LLVM: [[LABEL4]]:
 // LLVM:   store i32 3, ptr %2, align 4
-// LLVM:   %12 = load i32, ptr %2, align 4
-// LLVM:   ret i32 %12
+// LLVM:   %11 = load i32, ptr %2, align 4
+// LLVM:   ret i32 %11
 
 // OGCG: define{{.*}} i32 @_Z3if0b(i1 noundef zeroext %a)
 // OGCG: entry:
@@ -101,8 +99,6 @@ void if1(int a) {
 // LLVM:   store i32 4, ptr %[[X]], align 4
 // LLVM:   br label %[[END]]
 // LLVM: [[END]]:
-// LLVM:   br label %[[EXIT:.*]]
-// LLVM: [[EXIT]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z3if1i(i32 noundef %[[A:.*]])
@@ -192,12 +188,8 @@ void if2(int a, bool b, bool c) {
 // LLVM:   store i32 8, ptr %[[VARX]], align 4
 // LLVM:   br label %[[IF_END2]]
 // LLVM: [[IF_END2]]:
-// LLVM:   br label %[[LABEL19:.*]]
-// LLVM: [[LABEL19]]:
 // LLVM:   br label %[[LABEL27:.*]]
 // LLVM: [[IF_ELSE]]:
-// LLVM:   br label %[[LABEL21:.*]]
-// LLVM: [[LABEL21]]:
 // LLVM:   %[[LOAD_C:.*]] = load i8, ptr %[[VARC]], align 1
 // LLVM:   %[[TRUNC_C:.*]] = trunc i8 %[[LOAD_C]] to i1
 // LLVM:   br i1 %[[TRUNC_C]], label %[[IF_THEN3:.*]], label %[[IF_END3:.*]]
@@ -205,13 +197,9 @@ void if2(int a, bool b, bool c) {
 // LLVM:   store i32 14, ptr %[[VARX]], align 4
 // LLVM:   br label %[[IF_END3]]
 // LLVM: [[IF_END3]]:
-// LLVM:   br label %[[LABEL26:.*]]
-// LLVM: [[LABEL26]]:
 // LLVM:   store i32 4, ptr %[[VARX]], align 4
 // LLVM:   br label %[[LABEL27]]
 // LLVM: [[LABEL27]]:
-// LLVM:   br label %[[LABEL28:.*]]
-// LLVM: [[LABEL28]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z3if2ibb(i32 noundef %[[A:.*]], i1 noundef zeroext %[[B:.*]], i1 noundef zeroext %[[C:.*]])
@@ -334,8 +322,7 @@ foo:
   } goto foo;
 }
 // CIR: cir.func{{.*}} @_Z3if3v()
-// CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CIR: %[[ZERO_BOOL:.*]] = cir.cast int_to_bool %[[ZERO]] : !s32i -> !cir.bool
+// CIR: %[[ZERO_BOOL:.*]] = cir.const #false
 // CIR: cir.if %[[ZERO_BOOL]]
 // CIR: cir.call @_Z7if_initv() : () -> (!s32i {llvm.noundef})
 
@@ -361,8 +348,7 @@ void if4(int a) {
 // CIR:  cir.switch(%[[LOAD_ARG]] : !s32i) {
 // CIR:  cir.case(equal, [#cir.int<0> : !s32i]) {
 // CIR:    cir.scope {
-// CIR:      %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CIR:      %[[ZERO_BOOL:.*]] = cir.cast int_to_bool %[[ZERO]] : !s32i -> !cir.bool
+// CIR:      %[[ZERO_BOOL:.*]] = cir.const #false
 // CIR:      cir.if %[[ZERO_BOOL]]
 // CIR:        cir.call @_Z3if0b(
 

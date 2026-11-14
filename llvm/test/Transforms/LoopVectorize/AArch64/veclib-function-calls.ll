@@ -21,7 +21,7 @@ target triple = "aarch64-unknown-linux-gnu"
 declare double @acos(double)
 declare float @acosf(float)
 
-define void @acos_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @acos_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @acos_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2v_acos(<2 x double> [[WIDE_LOAD:%.*]])
@@ -78,7 +78,7 @@ define void @acos_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @acos_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @acos_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @acos_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4v_acosf(<4 x float> [[WIDE_LOAD:%.*]])
@@ -138,7 +138,7 @@ define void @acos_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @acosh(double)
 declare float @acoshf(float)
 
-define void @acosh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @acosh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @acosh_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2v_acosh(<2 x double> [[WIDE_LOAD:%.*]])
@@ -195,7 +195,7 @@ define void @acosh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @acosh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @acosh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @acosh_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4v_acoshf(<4 x float> [[WIDE_LOAD:%.*]])
@@ -255,7 +255,7 @@ define void @acosh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @asin(double)
 declare float @asinf(float)
 
-define void @asin_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @asin_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @asin_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2v_asin(<2 x double> [[WIDE_LOAD:%.*]])
@@ -312,7 +312,7 @@ define void @asin_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @asin_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @asin_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @asin_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4v_asinf(<4 x float> [[WIDE_LOAD:%.*]])
@@ -372,7 +372,7 @@ define void @asin_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @asinh(double)
 declare float @asinhf(float)
 
-define void @asinh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @asinh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @asinh_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2v_asinh(<2 x double> [[WIDE_LOAD:%.*]])
@@ -429,7 +429,7 @@ define void @asinh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @asinh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @asinh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @asinh_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4v_asinhf(<4 x float> [[WIDE_LOAD:%.*]])
@@ -489,7 +489,7 @@ define void @asinh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @atan(double)
 declare float @atanf(float)
 
-define void @atan_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @atan_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @atan_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2v_atan(<2 x double> [[WIDE_LOAD:%.*]])
@@ -546,7 +546,7 @@ define void @atan_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @atan_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @atan_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @atan_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4v_atanf(<4 x float> [[WIDE_LOAD:%.*]])
@@ -606,7 +606,7 @@ define void @atan_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @atan2(double, double)
 declare float @atan2f(float, float)
 
-define void @atan2_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @atan2_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @atan2_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2vv_atan2(<2 x double> [[WIDE_LOAD:%.*]], <2 x double> [[WIDE_LOAD]])
@@ -663,7 +663,7 @@ define void @atan2_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @atan2_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @atan2_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @atan2_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4vv_atan2f(<4 x float> [[WIDE_LOAD:%.*]], <4 x float> [[WIDE_LOAD]])
@@ -723,7 +723,7 @@ define void @atan2_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @atanh(double)
 declare float @atanhf(float)
 
-define void @atanh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @atanh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @atanh_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2v_atanh(<2 x double> [[WIDE_LOAD:%.*]])
@@ -780,7 +780,7 @@ define void @atanh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @atanh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @atanh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @atanh_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4v_atanhf(<4 x float> [[WIDE_LOAD:%.*]])
@@ -840,7 +840,7 @@ define void @atanh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @cbrt(double)
 declare float @cbrtf(float)
 
-define void @cbrt_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @cbrt_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @cbrt_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2v_cbrt(<2 x double> [[WIDE_LOAD:%.*]])
@@ -897,7 +897,7 @@ define void @cbrt_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @cbrt_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @cbrt_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @cbrt_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4v_cbrtf(<4 x float> [[WIDE_LOAD:%.*]])
@@ -957,7 +957,7 @@ define void @cbrt_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @copysign(double, double)
 declare float @copysignf(float, float)
 
-define void @copysign_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @copysign_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @copysign_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call double @copysign(double [[IN:%.*]], double [[IN]])
@@ -1014,7 +1014,7 @@ define void @copysign_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @copysign_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @copysign_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @copysign_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call float @copysignf(float [[IN:%.*]], float [[IN]])
@@ -1074,7 +1074,7 @@ define void @copysign_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @cos(double)
 declare float @cosf(float)
 
-define void @cos_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @cos_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @cos_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2v_cos(<2 x double> [[WIDE_LOAD:%.*]])
@@ -1131,7 +1131,7 @@ define void @cos_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @cos_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @cos_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @cos_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4v_cosf(<4 x float> [[WIDE_LOAD:%.*]])
@@ -1191,7 +1191,7 @@ define void @cos_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @cosh(double)
 declare float @coshf(float)
 
-define void @cosh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @cosh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @cosh_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2v_cosh(<2 x double> [[WIDE_LOAD:%.*]])
@@ -1248,7 +1248,7 @@ define void @cosh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @cosh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @cosh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @cosh_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4v_coshf(<4 x float> [[WIDE_LOAD:%.*]])
@@ -1308,7 +1308,7 @@ define void @cosh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @cospi(double)
 declare float @cospif(float)
 
-define void @cospi_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @cospi_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @cospi_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call double @cospi(double [[IN:%.*]])
@@ -1365,7 +1365,7 @@ define void @cospi_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @cospi_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @cospi_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @cospi_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call float @cospif(float [[IN:%.*]])
@@ -1425,7 +1425,7 @@ define void @cospi_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @erf(double)
 declare float @erff(float)
 
-define void @erf_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @erf_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @erf_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2v_erf(<2 x double> [[WIDE_LOAD:%.*]])
@@ -1482,7 +1482,7 @@ define void @erf_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @erf_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @erf_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @erf_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4v_erff(<4 x float> [[WIDE_LOAD:%.*]])
@@ -1542,7 +1542,7 @@ define void @erf_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @erfc(double)
 declare float @erfcf(float)
 
-define void @erfc_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @erfc_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @erfc_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2v_erfc(<2 x double> [[WIDE_LOAD:%.*]])
@@ -1599,7 +1599,7 @@ define void @erfc_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @erfc_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @erfc_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @erfc_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4v_erfcf(<4 x float> [[WIDE_LOAD:%.*]])
@@ -1659,7 +1659,7 @@ define void @erfc_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @exp(double)
 declare float @expf(float)
 
-define void @exp_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @exp_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @exp_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2v_exp(<2 x double> [[WIDE_LOAD:%.*]])
@@ -1716,7 +1716,7 @@ define void @exp_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @exp_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @exp_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @exp_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4v_expf(<4 x float> [[WIDE_LOAD:%.*]])
@@ -1776,7 +1776,7 @@ define void @exp_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @exp10(double)
 declare float @exp10f(float)
 
-define void @exp10_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @exp10_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @exp10_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2v_exp10(<2 x double> [[WIDE_LOAD:%.*]])
@@ -1833,7 +1833,7 @@ define void @exp10_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @exp10_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @exp10_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @exp10_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4v_exp10f(<4 x float> [[WIDE_LOAD:%.*]])
@@ -1893,7 +1893,7 @@ define void @exp10_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @exp2(double)
 declare float @exp2f(float)
 
-define void @exp2_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @exp2_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @exp2_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2v_exp2(<2 x double> [[WIDE_LOAD:%.*]])
@@ -1950,7 +1950,7 @@ define void @exp2_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @exp2_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @exp2_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @exp2_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4v_exp2f(<4 x float> [[WIDE_LOAD:%.*]])
@@ -2010,7 +2010,7 @@ define void @exp2_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @expm1(double)
 declare float @expm1f(float)
 
-define void @expm1_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @expm1_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @expm1_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2v_expm1(<2 x double> [[WIDE_LOAD:%.*]])
@@ -2067,7 +2067,7 @@ define void @expm1_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @expm1_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @expm1_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @expm1_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4v_expm1f(<4 x float> [[WIDE_LOAD:%.*]])
@@ -2127,7 +2127,7 @@ define void @expm1_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @fdim(double, double)
 declare float @fdimf(float, float)
 
-define void @fdim_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @fdim_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @fdim_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call double @fdim(double [[IN:%.*]], double [[IN]])
@@ -2184,7 +2184,7 @@ define void @fdim_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @fdim_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @fdim_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @fdim_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call float @fdimf(float [[IN:%.*]], float [[IN]])
@@ -2244,7 +2244,7 @@ define void @fdim_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @fma(double, double, double)
 declare float @fmaf(float, float, float)
 
-define void @fma_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @fma_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @fma_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call double @fma(double [[IN:%.*]], double [[IN]], double [[IN]])
@@ -2301,7 +2301,7 @@ define void @fma_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @fma_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @fma_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @fma_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call float @fmaf(float [[IN:%.*]], float [[IN]], float [[IN]])
@@ -2361,7 +2361,7 @@ define void @fma_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @fmax(double, double)
 declare float @fmaxf(float, float)
 
-define void @fmax_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @fmax_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @fmax_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call double @fmax(double [[IN:%.*]], double [[IN]])
@@ -2418,7 +2418,7 @@ define void @fmax_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @fmax_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @fmax_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @fmax_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call float @fmaxf(float [[IN:%.*]], float [[IN]])
@@ -2478,7 +2478,7 @@ define void @fmax_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @fmin(double, double)
 declare float @fminf(float, float)
 
-define void @fmin_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @fmin_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @fmin_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call double @fmin(double [[IN:%.*]], double [[IN]])
@@ -2535,7 +2535,7 @@ define void @fmin_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @fmin_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @fmin_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @fmin_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call float @fminf(float [[IN:%.*]], float [[IN]])
@@ -2595,7 +2595,7 @@ define void @fmin_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @fmod(double, double)
 declare float @fmodf(float, float)
 
-define void @fmod_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @fmod_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @fmod_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call double @fmod(double [[IN:%.*]], double [[IN]])
@@ -2652,7 +2652,7 @@ define void @fmod_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @fmod_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @fmod_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @fmod_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call float @fmodf(float [[IN:%.*]], float [[IN]])
@@ -2712,7 +2712,7 @@ define void @fmod_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @hypot(double, double)
 declare float @hypotf(float, float)
 
-define void @hypot_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @hypot_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @hypot_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2vv_hypot(<2 x double> [[WIDE_LOAD:%.*]], <2 x double> [[WIDE_LOAD]])
@@ -2769,7 +2769,7 @@ define void @hypot_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @hypot_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @hypot_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @hypot_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4vv_hypotf(<4 x float> [[WIDE_LOAD:%.*]], <4 x float> [[WIDE_LOAD]])
@@ -2829,7 +2829,7 @@ define void @hypot_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare i32 @ilogb(double)
 declare i32 @ilogbf(float)
 
-define void @ilogb_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @ilogb_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @ilogb_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call i32 @ilogb(double [[IN:%.*]])
@@ -2886,7 +2886,7 @@ define void @ilogb_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @ilogb_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @ilogb_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @ilogb_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call i32 @ilogbf(float [[IN:%.*]])
@@ -2946,7 +2946,7 @@ define void @ilogb_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @ldexp(double, i32)
 declare float @ldexpf(float, i32)
 
-define void @ldexp_f64(ptr noalias %in1.ptr, ptr noalias %in2.ptr, ptr noalias %out.ptr) {
+define void @ldexp_f64(ptr noalias %in1.ptr, ptr noalias %in2.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @ldexp_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN1_PTR:%.*]], ptr noalias [[IN2_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call double @ldexp(double [[IN1:%.*]], i32 [[IN2:%.*]])
@@ -3005,7 +3005,7 @@ define void @ldexp_f64(ptr noalias %in1.ptr, ptr noalias %in2.ptr, ptr noalias %
   ret void
 }
 
-define void @ldexp_f32(ptr noalias %in1.ptr, ptr noalias %in2.ptr, ptr noalias %out.ptr) {
+define void @ldexp_f32(ptr noalias %in1.ptr, ptr noalias %in2.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @ldexp_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN1_PTR:%.*]], ptr noalias [[IN2_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call float @ldexpf(float [[IN1:%.*]], i32 [[IN2:%.*]])
@@ -3067,7 +3067,7 @@ define void @ldexp_f32(ptr noalias %in1.ptr, ptr noalias %in2.ptr, ptr noalias %
 declare double @lgamma(double)
 declare float @lgammaf(float)
 
-define void @lgamma_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @lgamma_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @lgamma_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call double @lgamma(double [[IN:%.*]])
@@ -3124,7 +3124,7 @@ define void @lgamma_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @lgamma_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @lgamma_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @lgamma_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call float @lgammaf(float [[IN:%.*]])
@@ -3184,7 +3184,7 @@ define void @lgamma_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @log(double)
 declare float @logf(float)
 
-define void @log_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @log_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @log_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2v_log(<2 x double> [[WIDE_LOAD:%.*]])
@@ -3241,7 +3241,7 @@ define void @log_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @log_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @log_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @log_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4v_logf(<4 x float> [[WIDE_LOAD:%.*]])
@@ -3301,7 +3301,7 @@ define void @log_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @log10(double)
 declare float @log10f(float)
 
-define void @log10_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @log10_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @log10_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2v_log10(<2 x double> [[WIDE_LOAD:%.*]])
@@ -3358,7 +3358,7 @@ define void @log10_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @log10_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @log10_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @log10_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4v_log10f(<4 x float> [[WIDE_LOAD:%.*]])
@@ -3418,7 +3418,7 @@ define void @log10_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @log1p(double)
 declare float @log1pf(float)
 
-define void @log1p_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @log1p_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @log1p_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2v_log1p(<2 x double> [[WIDE_LOAD:%.*]])
@@ -3475,7 +3475,7 @@ define void @log1p_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @log1p_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @log1p_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @log1p_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4v_log1pf(<4 x float> [[WIDE_LOAD:%.*]])
@@ -3535,7 +3535,7 @@ define void @log1p_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @log2(double)
 declare float @log2f(float)
 
-define void @log2_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @log2_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @log2_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2v_log2(<2 x double> [[WIDE_LOAD:%.*]])
@@ -3592,7 +3592,7 @@ define void @log2_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @log2_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @log2_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @log2_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4v_log2f(<4 x float> [[WIDE_LOAD:%.*]])
@@ -3655,7 +3655,7 @@ define void @log2_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @modf(double, ptr)
 declare float @modff(float, ptr)
 
-define void @modf_f64(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
+define void @modf_f64(ptr noalias %a, ptr noalias %b, ptr noalias %c) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @modf_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[DATA:%.*]] = call double @modf(double [[NUM:%.*]], ptr [[GEPB:%.*]])
@@ -3711,7 +3711,7 @@ for.cond.cleanup:
   ret void
 }
 
-define void @modf_f32(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
+define void @modf_f32(ptr noalias %a, ptr noalias %b, ptr noalias %c) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @modf_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[DATA:%.*]] = call float @modff(float [[NUM:%.*]], ptr [[GEPB:%.*]])
@@ -3770,7 +3770,7 @@ for.cond.cleanup:
 declare double @nextafter(double, double)
 declare float @nextafterf(float, float)
 
-define void @nextafter_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @nextafter_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @nextafter_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call double @nextafter(double [[IN:%.*]], double [[IN]])
@@ -3827,7 +3827,7 @@ define void @nextafter_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @nextafter_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @nextafter_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @nextafter_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call float @nextafterf(float [[IN:%.*]], float [[IN]])
@@ -3887,7 +3887,7 @@ define void @nextafter_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @pow(double, double)
 declare float @powf(float, float)
 
-define void @pow_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @pow_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @pow_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2vv_pow(<2 x double> [[WIDE_LOAD:%.*]], <2 x double> [[WIDE_LOAD]])
@@ -3944,7 +3944,7 @@ define void @pow_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @pow_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @pow_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @pow_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4vv_powf(<4 x float> [[WIDE_LOAD:%.*]], <4 x float> [[WIDE_LOAD]])
@@ -4004,7 +4004,7 @@ define void @pow_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @sin(double)
 declare float @sinf(float)
 
-define void @sin_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @sin_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @sin_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2v_sin(<2 x double> [[WIDE_LOAD:%.*]])
@@ -4061,7 +4061,7 @@ define void @sin_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @sin_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @sin_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @sin_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4v_sinf(<4 x float> [[WIDE_LOAD:%.*]])
@@ -4124,7 +4124,7 @@ define void @sin_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare void @sincos(double, ptr, ptr)
 declare void @sincosf(float, ptr, ptr)
 
-define void @sincos_f64(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
+define void @sincos_f64(ptr noalias %a, ptr noalias %b, ptr noalias %c) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @sincos_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    call void @sincos(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
@@ -4179,7 +4179,7 @@ for.cond.cleanup:
   ret void
 }
 
-define void @sincos_f32(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
+define void @sincos_f32(ptr noalias %a, ptr noalias %b, ptr noalias %c) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @sincos_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    call void @sincosf(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
@@ -4240,7 +4240,7 @@ for.cond.cleanup:
 declare void @sincospi(double, ptr, ptr)
 declare void @sincospif(float, ptr, ptr)
 
-define void @sincospi_f64(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
+define void @sincospi_f64(ptr noalias %a, ptr noalias %b, ptr noalias %c) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @sincospi_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    call void @sincospi(double [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
@@ -4295,7 +4295,7 @@ for.cond.cleanup:
   ret void
 }
 
-define void @sincospi_f32(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
+define void @sincospi_f32(ptr noalias %a, ptr noalias %b, ptr noalias %c) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @sincospi_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    call void @sincospif(float [[NUM:%.*]], ptr [[GEPB:%.*]], ptr [[GEPC:%.*]])
@@ -4353,7 +4353,7 @@ for.cond.cleanup:
 declare double @sinh(double)
 declare float @sinhf(float)
 
-define void @sinh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @sinh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @sinh_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2v_sinh(<2 x double> [[WIDE_LOAD:%.*]])
@@ -4410,7 +4410,7 @@ define void @sinh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @sinh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @sinh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @sinh_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4v_sinhf(<4 x float> [[WIDE_LOAD:%.*]])
@@ -4470,7 +4470,7 @@ define void @sinh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @sinpi(double)
 declare float @sinpif(float)
 
-define void @sinpi_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @sinpi_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @sinpi_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call double @sinpi(double [[IN:%.*]])
@@ -4527,7 +4527,7 @@ define void @sinpi_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @sinpi_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @sinpi_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @sinpi_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call float @sinpif(float [[IN:%.*]])
@@ -4587,7 +4587,7 @@ define void @sinpi_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @sqrt(double)
 declare float @sqrtf(float)
 
-define void @sqrt_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @sqrt_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @sqrt_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call double @sqrt(double [[IN:%.*]])
@@ -4644,7 +4644,7 @@ define void @sqrt_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @sqrt_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @sqrt_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @sqrt_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call float @sqrtf(float [[IN:%.*]])
@@ -4704,7 +4704,7 @@ define void @sqrt_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @tan(double)
 declare float @tanf(float)
 
-define void @tan_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @tan_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @tan_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2v_tan(<2 x double> [[WIDE_LOAD:%.*]])
@@ -4761,7 +4761,7 @@ define void @tan_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @tan_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @tan_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @tan_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4v_tanf(<4 x float> [[WIDE_LOAD:%.*]])
@@ -4821,7 +4821,7 @@ define void @tan_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @tanh(double)
 declare float @tanhf(float)
 
-define void @tanh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @tanh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @tanh_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2v_tanh(<2 x double> [[WIDE_LOAD:%.*]])
@@ -4878,7 +4878,7 @@ define void @tanh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @tanh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @tanh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @tanh_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4v_tanhf(<4 x float> [[WIDE_LOAD:%.*]])
@@ -4938,7 +4938,7 @@ define void @tanh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 declare double @tgamma(double)
 declare float @tgammaf(float)
 
-define void @tgamma_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @tgamma_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @tgamma_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call double @tgamma(double [[IN:%.*]])
@@ -4995,7 +4995,7 @@ define void @tgamma_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @tgamma_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @tgamma_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; LIBMVEC-NEON-LABEL: define void @tgamma_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
 ; LIBMVEC-NEON:    [[CALL:%.*]] = tail call float @tgammaf(float [[IN:%.*]])

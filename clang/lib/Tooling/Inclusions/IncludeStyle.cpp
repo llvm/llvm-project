@@ -26,6 +26,8 @@ void ScalarEnumerationTraits<IncludeStyle::IncludeBlocksStyle>::enumeration(
   IO.enumCase(Value, "Preserve", IncludeStyle::IBS_Preserve);
   IO.enumCase(Value, "Merge", IncludeStyle::IBS_Merge);
   IO.enumCase(Value, "Regroup", IncludeStyle::IBS_Regroup);
+  IO.enumCase(Value, "RegroupByDirectory",
+              IncludeStyle::IBS_RegroupByDirectory);
 }
 
 void ScalarEnumerationTraits<IncludeStyle::MainIncludeCharDiscriminator>::

@@ -108,6 +108,7 @@ class DefaultValuedAttr<Attr attr, string val> :
   let valueType = attr.valueType;
 
   let baseAttr = attr;
+  let cppIncludes = attr.cppIncludes;
 }
 
 // Decorates an optional attribute to have an (unvalidated) default value
@@ -126,6 +127,7 @@ class DefaultValuedOptionalAttr<Attr attr, string val> :
   let isOptional = 1;
 
   let baseAttr = attr;
+  let cppIncludes = attr.cppIncludes;
 }
 
 // Decorates an attribute as optional. The return type of the generated
@@ -141,6 +143,7 @@ class OptionalAttr<Attr attr> : Attr<attr.predicate, attr.summary> {
   let isOptional = 1;
 
   let baseAttr = attr;
+  let cppIncludes = attr.cppIncludes;
 }
 
 // Default-valued string-based attribute. Wraps the default value in escaped
@@ -162,6 +165,7 @@ class TypedAttrBase<Type attrValType, string attrKind, Pred condition,
   let constBuilderCall = "$_builder.get" # attrKind # "(" #
                          attrValType.builderCall # ", $0)";
   let storageType = "::mlir::" # attrKind;
+  let cppIncludes = ["mlir/IR/BuiltinAttributes.h"];
   let valueType = attrValType;
 }
 
@@ -185,11 +189,13 @@ class AnyAttrOf<list<Attr> allowedAttrs, string summary = "",
     let returnType = cppType;
     let convertFromStorage = fromStorage;
     list<Attr> allowedAttributes = allowedAttrs;
+    let cppIncludes = AllCppIncludes<allowedAttrs>.ret;
 }
 
 def LocationAttr : Attr<CPred<"::llvm::isa<::mlir::LocationAttr>($_self)">,
                         "location attribute"> {
   let storageType = [{ ::mlir::LocationAttr }];
+  let cppIncludes = ["mlir/IR/Location.h"];
   let returnType = [{ ::mlir::Location }];
   let convertFromStorage = "::mlir::Location($_self)";
   let constBuilderCall = "(::mlir::LocationAttr)$0";
@@ -199,12 +205,14 @@ def LocationAttr : Attr<CPred<"::llvm::isa<::mlir::LocationAttr>($_self)">,
 def AnyDistinctAttr : Attr<CPred<"::llvm::isa<::mlir::DistinctAttr>($_self)">,
                            "distinct attribute"> {
   let storageType = "::mlir::DistinctAttr";
+  let cppIncludes = ["mlir/IR/BuiltinAttributes.h"];
   let returnType = "::mlir::DistinctAttr";
   let convertFromStorage = "$_self";
 }
 
 def BoolAttr : Attr<CPred<"::llvm::isa<::mlir::BoolAttr>($_self)">, "bool attribute"> {
   let storageType = [{ ::mlir::BoolAttr }];
+  let cppIncludes = ["mlir/IR/BuiltinAttributes.h"];
   let returnType = [{ bool }];
   let valueType = I1;
   let constBuilderCall = "$_builder.getBoolAttr($0)";
@@ -242,6 +250,7 @@ def AnyI64Attr : AnyIntegerAttrBase<AnyI64, "64-bit integer attribute">;
 def APIntAttr : Attr<CPred<"::llvm::isa<::mlir::IntegerAttr>($_self)">,
                      "arbitrary integer attribute"> {
   let storageType = [{ ::mlir::IntegerAttr }];
+  let cppIncludes = ["mlir/IR/BuiltinAttributes.h"];
   let returnType = [{ ::mlir::APInt }];
 }
 
@@ -357,6 +366,7 @@ def BF16Attr : TypedAttrBase<BF16, "FloatAttr",
 class StringBasedAttr<Pred condition, string descr> : Attr<condition, descr> {
   let constBuilderCall = "$_builder.getStringAttr($0)";
   let storageType = [{ ::mlir::StringAttr }];
+  let cppIncludes = ["mlir/IR/BuiltinAttributes.h"];
   let returnType = [{ ::llvm::StringRef }];
   let valueType = NoneType;
 }
@@ -389,6 +399,7 @@ class TypeAttrBase<string retType, string summary,
                     "::llvm::cast<::mlir::TypeAttr>($_self).getValue()", typePred>]>,
     summary> {
   let storageType = [{ ::mlir::TypeAttr }];
+  let cppIncludes = ["mlir/IR/BuiltinAttributes.h"];
   let returnType = retType;
   let valueType = NoneType;
   let convertFromStorage = "::llvm::cast<" # retType # ">($_self.getValue())";
@@ -402,6 +413,9 @@ class TypeAttrOf<Type ty>
    : TypeAttrBase<ty.cppType, "type attribute of " # ty.summary,
                     ty.predicate> {
   let constBuilderCall = "::mlir::TypeAttr::get($0)";
+  // The accessors return the type stored in the `TypeAttr`.
+  let cppIncludes = !listconcat(["mlir/IR/BuiltinAttributes.h"],
+                               ty.cppIncludes);
 }
 
 // The mere presence of unit attributes has a meaning.  Therefore, unit
@@ -409,6 +423,7 @@ class TypeAttrOf<Type ty>
 // "true" if the attribute is present and "false" otherwise.
 def UnitAttr : Attr<CPred<"::llvm::isa<::mlir::UnitAttr>($_self)">, "unit attribute"> {
   let storageType = [{ ::mlir::UnitAttr }];
+  let cppIncludes = ["mlir/IR/BuiltinAttributes.h"];
   let constBuilderCall = "(($0) ? $_builder.getUnitAttr() : nullptr)";
   let convertFromStorage = "$_self != nullptr";
   let returnType = "bool";
@@ -424,6 +439,7 @@ def UnitAttr : Attr<CPred<"::llvm::isa<::mlir::UnitAttr>($_self)">, "unit attrib
 class DictionaryAttrBase<Pred condition, string summary> :
     Attr<condition, summary> {
   let storageType = [{ ::mlir::DictionaryAttr }];
+  let cppIncludes = ["mlir/IR/BuiltinAttributes.h"];
   let constBuilderCall = "$_builder.getDictionaryAttr($0)";
   let returnType = [{ ::mlir::DictionaryAttr }];
   let valueType = NoneType;
@@ -437,6 +453,7 @@ def DictionaryAttr
 class ElementsAttrBase<Pred condition, string summary> :
     Attr<condition, summary> {
   let storageType = [{ ::mlir::ElementsAttr }];
+  let cppIncludes = ["mlir/IR/BuiltinAttributeInterfaces.h"];
   let returnType = [{ ::mlir::ElementsAttr }];
   let convertFromStorage = "$_self";
 }
@@ -449,6 +466,7 @@ class IntElementsAttrBase<Pred condition, string summary> :
                           condition]>,
                      summary> {
   let storageType = [{ ::mlir::DenseIntElementsAttr }];
+  let cppIncludes = ["mlir/IR/BuiltinAttributes.h"];
   let returnType = [{ ::mlir::DenseIntElementsAttr }];
 
   let convertFromStorage = "$_self";
@@ -458,6 +476,7 @@ class DenseArrayAttrBase<string denseAttrName, string cppType, string summaryNam
     ElementsAttrBase<CPred<"::llvm::isa<::mlir::" # denseAttrName # ">($_self)">,
                      summaryName # " dense array attribute"> {
   let storageType = "::mlir::" # denseAttrName;
+  let cppIncludes = ["mlir/IR/BuiltinAttributes.h"];
   let returnType = "::llvm::ArrayRef<" # cppType # ">";
   let constBuilderCall = "$_builder.get" # denseAttrName # "($0)";
 }
@@ -531,6 +550,7 @@ class FloatElementsAttr<int width> : ElementsAttrBase<
   width # "-bit float elements attribute"> {
 
   let storageType = [{ ::mlir::DenseElementsAttr }];
+  let cppIncludes = ["mlir/IR/BuiltinAttributes.h"];
   let returnType = [{ ::mlir::DenseElementsAttr }];
 
   // Note that this is only constructing scalar elements attribute.
@@ -556,6 +576,7 @@ class RankedFloatElementsAttr<int width, list<int> dims> : ElementsAttrBase<
   !interleave(dims, ", ") # "]"> {
 
   let storageType = [{ ::mlir::DenseFPElementsAttr }];
+  let cppIncludes = ["mlir/IR/BuiltinAttributes.h"];
   let returnType = [{ ::mlir::DenseFPElementsAttr }];
 
   let constBuilderCall = "::llvm::cast<::mlir::DenseFPElementsAttr>("
@@ -574,6 +595,7 @@ def StringElementsAttr : ElementsAttrBase<
   "string elements attribute"> {
 
   let storageType = [{ ::mlir::DenseElementsAttr }];
+  let cppIncludes = ["mlir/IR/BuiltinAttributes.h"];
   let returnType = [{ ::mlir::DenseElementsAttr }];
 
   let convertFromStorage = "$_self";
@@ -583,6 +605,7 @@ def StringElementsAttr : ElementsAttrBase<
 def AffineMapAttr : Attr<
 CPred<"::llvm::isa<::mlir::AffineMapAttr>($_self)">, "AffineMap attribute"> {
   let storageType = [{::mlir::AffineMapAttr }];
+  let cppIncludes = ["mlir/IR/BuiltinAttributes.h", "mlir/IR/AffineMap.h"];
   let returnType = [{ ::mlir::AffineMap }];
   let valueType = Index;
   let constBuilderCall = "::mlir::AffineMapAttr::get($0)";
@@ -592,6 +615,7 @@ CPred<"::llvm::isa<::mlir::AffineMapAttr>($_self)">, "AffineMap attribute"> {
 def IntegerSetAttr : Attr<
 CPred<"::llvm::isa<::mlir::IntegerSetAttr>($_self)">, "IntegerSet attribute"> {
   let storageType = [{::mlir::IntegerSetAttr }];
+  let cppIncludes = ["mlir/IR/BuiltinAttributes.h", "mlir/IR/IntegerSet.h"];
   let returnType = [{ ::mlir::IntegerSet }];
   let valueType = NoneType;
   let constBuilderCall = "::mlir::IntegerSetAttr::get($0)";
@@ -600,6 +624,7 @@ CPred<"::llvm::isa<::mlir::IntegerSetAttr>($_self)">, "IntegerSet attribute"> {
 // Base class for array attributes.
 class ArrayAttrBase<Pred condition, string summary> : Attr<condition, summary> {
   let storageType = [{ ::mlir::ArrayAttr }];
+  let cppIncludes = ["mlir/IR/BuiltinAttributes.h"];
   let returnType = [{ ::mlir::ArrayAttr }];
   let valueType = NoneType;
   let convertFromStorage = "$_self";
@@ -677,6 +702,7 @@ def DictArrayAttr :
 def SymbolRefAttr : Attr<CPred<"::llvm::isa<::mlir::SymbolRefAttr>($_self)">,
                         "symbol reference attribute"> {
   let storageType = [{ ::mlir::SymbolRefAttr }];
+  let cppIncludes = ["mlir/IR/BuiltinAttributes.h"];
   let returnType = [{ ::mlir::SymbolRefAttr }];
   let valueType = NoneType;
   let constBuilderCall =
@@ -687,6 +713,7 @@ def SymbolRefAttr : Attr<CPred<"::llvm::isa<::mlir::SymbolRefAttr>($_self)">,
 def FlatSymbolRefAttr : Attr<CPred<"::llvm::isa<::mlir::FlatSymbolRefAttr>($_self)">,
                                    "flat symbol reference attribute"> {
   let storageType = [{ ::mlir::FlatSymbolRefAttr }];
+  let cppIncludes = ["mlir/IR/BuiltinAttributes.h"];
   let returnType = [{ ::llvm::StringRef }];
   let valueType = NoneType;
   let constBuilderCall =
@@ -785,6 +812,7 @@ class ConfinedAttr<Attr attr, list<AttrConstraint> constraints> : Attr<
   let isOptional = attr.isOptional;
 
   let baseAttr = attr;
+  let cppIncludes = attr.cppIncludes;
 
   list<AttrConstraint> attrConstraints = constraints;
 }

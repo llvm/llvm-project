@@ -23,31 +23,20 @@
 ...
 ---
 name:            f
-registers:
-  - { id: 43, class: gpr32, preferred-register: '' }
-  - { id: 44, class: gpr32, preferred-register: '' }
-  - { id: 46, class: gpr32, preferred-register: '' }
-  - { id: 47, class: gpr32, preferred-register: '' }
-  - { id: 48, class: gpr32common, preferred-register: '' }
-  - { id: 49, class: gpr32common, preferred-register: '' }
-  - { id: 50, class: gpr32, preferred-register: '' }
-  - { id: 51, class: gpr32, preferred-register: '' }
-  - { id: 52, class: gpr32, preferred-register: '' }
-  - { id: 53, class: gpr32, preferred-register: '' }
 body:             |
   bb.0:
     successors: %bb.0
 
-    %43 = MOVi32imm 1
-    %44 = MOVi32imm 1
-    %46 = MOVi32imm 1
-    %47 = MOVi32imm 1
-    %48 = nsw SUBSWrr killed %43, killed %46, implicit-def dead $nzcv
-    %49 = nsw SUBSWrr killed %44, killed %47, implicit-def dead $nzcv
-    %50 = SUBSWri %48, 0, 0, implicit-def $nzcv
-    %51 = CSNEGWr %48, %48, 5, implicit $nzcv
-    %52 = SUBSWri %49, 0, 0, implicit-def $nzcv
-    %53 = CSNEGWr %49, %49, 5, implicit $nzcv
+    %43:gpr32 = MOVi32imm 1
+    %44:gpr32 = MOVi32imm 1
+    %46:gpr32 = MOVi32imm 1
+    %47:gpr32 = MOVi32imm 1
+    %48:gpr32common = nsw SUBSWrr %43, %46, implicit-def dead $nzcv
+    %49:gpr32common = nsw SUBSWrr %44, %47, implicit-def dead $nzcv
+    %50:gpr32 = SUBSWri %48, 0, 0, implicit-def $nzcv
+    %51:gpr32 = CSNEGWr %48, %48, 5, implicit $nzcv
+    %52:gpr32 = SUBSWri %49, 0, 0, implicit-def $nzcv
+    %53:gpr32 = CSNEGWr %49, %49, 5, implicit $nzcv
     Bcc 1, %bb.0, implicit $nzcv
     RET_ReallyLR
 

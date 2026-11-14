@@ -421,10 +421,6 @@ protected:
   mutable DenseMap<hash_code, std::unique_ptr<const InstructionMapping>>
       MapOfInstructionMappings;
 
-  /// Getting the minimal register class of a physreg is expensive.
-  /// Cache this information as we get it.
-  mutable DenseMap<MCRegister, const TargetRegisterClass *> PhysRegMinimalRCs;
-
   /// Create a RegisterBankInfo that can accommodate up to \p NumRegBanks
   /// RegisterBank instances.
   RegisterBankInfo(const RegisterBank **RegBanks, unsigned NumRegBanks,
@@ -448,11 +444,6 @@ protected:
     assert(ID < getNumRegBanks() && "Accessing an unknown register bank");
     return *RegBanks[ID];
   }
-
-  /// Get the MinimalPhysRegClass for Reg.
-  /// \pre Reg is a physical register.
-  const TargetRegisterClass *
-  getMinimalPhysRegClass(MCRegister Reg, const TargetRegisterInfo &TRI) const;
 
   /// Try to get the mapping of \p MI.
   /// See getInstrMapping for more details on what a mapping represents.
@@ -749,15 +740,6 @@ public:
     // must be explicitly stated.
     applyMappingImpl(Builder, OpdMapper);
   }
-
-  /// Get the size in bits of \p Reg.
-  /// Utility method to get the size of any registers. Unlike
-  /// MachineRegisterInfo::getSize, the register does not need to be a
-  /// virtual register.
-  ///
-  /// \pre \p Reg != 0 (NoRegister).
-  TypeSize getSizeInBits(Register Reg, const MachineRegisterInfo &MRI,
-                         const TargetRegisterInfo &TRI) const;
 
   /// Check that information hold by this instance make sense for the
   /// given \p TRI.

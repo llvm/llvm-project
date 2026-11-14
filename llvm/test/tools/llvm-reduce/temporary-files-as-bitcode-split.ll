@@ -20,7 +20,7 @@ entry:
   ret void
 }
 define ptr @f() {
-  ; CHECK-ALL: ret ptr @g.{{([0-9a-f]{32})}}
+  ; CHECK-ALL: ret ptr @g.llvm.{{([0-9a-f]{32})}}
   ret ptr @g
 }
 

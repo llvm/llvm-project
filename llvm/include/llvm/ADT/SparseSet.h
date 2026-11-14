@@ -23,6 +23,7 @@
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/AllocatorBase.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
@@ -114,7 +115,7 @@ struct SparseSetValFunctor {
 ///
 template <typename ValueT, typename KeyT = unsigned,
           typename KeyFunctorT = identity, typename SparseT = uint8_t>
-class SparseSet {
+class LLVM_ATTRIBUTE_WARN_UNUSED SparseSet {
   static_assert(std::is_unsigned_v<SparseT>,
                 "SparseT must be an unsigned integer type");
 

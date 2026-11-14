@@ -15,8 +15,8 @@ define void @test(i32 %len) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_02:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    tail call void @f(i32 [[COND]])
-; CHECK-NEXT:    [[INC]] = add i32 [[I_02]], 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[INC]], [[COND]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_02]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ult i32 [[INC]], [[COND]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY]], label [[FOR_END]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void

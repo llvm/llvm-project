@@ -1,5 +1,12 @@
 include(LLVM-Build)
 
+# HAS_WERROR_GLOBAL_CTORS and LLVM_HAS_NOGLOBAL_CTOR_MUTEX are set by
+# lib/Support/CMakeLists.txt.
+if (HAS_WERROR_GLOBAL_CTORS AND LLVM_HAS_NOGLOBAL_CTOR_MUTEX)
+  set(LLVM_LIB_WERROR_GLOBAL_CTORS ON)
+  string(APPEND CMAKE_CXX_FLAGS " -Werror=global-constructors")
+endif()
+
 # `Demangle', `Support' and `TableGen' libraries are added on the top-level
 # CMakeLists.txt
 
@@ -35,7 +42,6 @@ add_subdirectory(Remarks)
 add_subdirectory(HTTP)
 add_subdirectory(Debuginfod)
 add_subdirectory(DebugInfo)
-add_subdirectory(DWARFCFIChecker)
 add_subdirectory(DWP)
 add_subdirectory(ExecutionEngine)
 add_subdirectory(Target)
@@ -55,6 +61,82 @@ if (LLVM_INCLUDE_TESTS)
 endif()
 add_subdirectory(WindowsDriver)
 add_subdirectory(WindowsManifest)
+
+# Libraries that still have static initializers. Remove a library once it has
+# none, so that it cannot regain them.
+if (LLVM_LIB_WERROR_GLOBAL_CTORS)
+  foreach(lib
+      LLVMAArch64CodeGen
+      LLVMAMDGPUCodeGen
+      LLVMAMDGPUDesc
+      LLVMAMDGPUUtils
+      LLVMARMAsmParser
+      LLVMARMCodeGen
+      LLVMAggressiveInstCombine
+      LLVMAnalysis
+      LLVMAsmParser
+      LLVMAsmPrinter
+      LLVMBPFCodeGen
+      LLVMBitReader
+      LLVMBitWriter
+      LLVMCGData
+      LLVMCodeGen
+      LLVMCore
+      LLVMCoroutines
+      LLVMDXILBitWriter
+      LLVMDebugInfoCodeView
+      LLVMDebugInfoLogicalView
+      LLVMDebuginfod
+      LLVMDirectXCodeGen
+      LLVMDirectXDesc
+      LLVMFrontendOpenMP
+      LLVMFuzzMutate
+      LLVMGlobalISel
+      LLVMHexagonAsmParser
+      LLVMHexagonCodeGen
+      LLVMHexagonDesc
+      LLVMInstCombine
+      LLVMInstrumentation
+      LLVMInterpreter
+      LLVMJITLink
+      LLVMLTO
+      LLVMLoongArchCodeGen
+      LLVMLoongArchDesc
+      LLVMM68kAsmParser
+      LLVMM68kCodeGen
+      LLVMMC
+      LLVMMCJIT
+      LLVMMCParser
+      LLVMMipsCodeGen
+      LLVMNVPTXCodeGen
+      LLVMObjCARCOpts
+      LLVMObject
+      LLVMOrcDebugging
+      LLVMOrcJIT
+      LLVMOrcShared
+      LLVMOrcTargetProcess
+      LLVMPasses
+      LLVMPowerPCCodeGen
+      LLVMPowerPCDesc
+      LLVMProfileData
+      LLVMRISCVCodeGen
+      LLVMRemarks
+      LLVMSPIRVCodeGen
+      LLVMScalarOpts
+      LLVMSelectionDAG
+      LLVMSystemZCodeGen
+      LLVMTarget
+      LLVMTransformUtils
+      LLVMVectorize
+      LLVMWebAssemblyCodeGen
+      LLVMX86CodeGen
+      LLVMipo
+      )
+    if (TARGET ${lib})
+      target_compile_options(${lib} PRIVATE -Wno-global-constructors)
+    endif()
+  endforeach()
+endif()
 
 set(LLVMCONFIGLIBRARYDEPENDENCIESINC "${LLVM_BINARY_DIR}/tools/llvm-config/LibraryDependencies.inc")
 

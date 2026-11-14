@@ -1,5 +1,7 @@
 ; RUN: llc -mtriple=x86_64-pc-win32 %s -o - | FileCheck %s --implicit-check-not="@IMGREL"
 ; RUN: not llc -mtriple=x86_64-pc-win32 -filetype=obj %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
+; RUN: llc -mtriple=x86_64-w64-mingw32 %s -o - | FileCheck %s --implicit-check-not="@IMGREL"
+; RUN: not llc -mtriple=x86_64-w64-mingw32 -filetype=obj %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
 
 ; Test that we reject forms of aliases that are not direct aliases to a GlobalObject
 ; (e.g. aliases with GEP/offsets, chained aliases, or aliases to thread-local globals),

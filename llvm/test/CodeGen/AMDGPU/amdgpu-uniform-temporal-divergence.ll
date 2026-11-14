@@ -89,11 +89,11 @@ define amdgpu_kernel void @temporal_divergence_ballot_chain(ptr addrspace(1) %ou
 ; COMB-CHECK-NEXT:    br label %[[H:.*]]
 ; COMB-CHECK:       [[H]]:
 ; COMB-CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[H]] ]
-; COMB-CHECK-NEXT:    [[INC]] = add i32 [[I]], 1
-; COMB-CHECK-NEXT:    [[DIV_EXITX:%.*]] = icmp ugt i32 [[INC]], [[TID]]
-; COMB-CHECK-NEXT:    br i1 [[DIV_EXITX]], label %[[EXIT:.*]], label %[[H]]
+; COMB-CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I]], 1
+; COMB-CHECK-NEXT:    [[DIV_EXITX_NOT:%.*]] = icmp samesign ult i32 [[I]], [[TID]]
+; COMB-CHECK-NEXT:    br i1 [[DIV_EXITX_NOT]], label %[[H]], label %[[EXIT:.*]]
 ; COMB-CHECK:       [[EXIT]]:
-; COMB-CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
+; COMB-CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[I]] to i64
 ; COMB-CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], ptr addrspace(1) [[DATA]], i64 [[TMP0]]
 ; COMB-CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(1) [[GEP]], align 4
 ; COMB-CHECK-NEXT:    [[X:%.*]] = icmp slt i32 [[V]], 1
@@ -161,11 +161,11 @@ define amdgpu_kernel void @temporal_divergence_ballot_user_outside(ptr addrspace
 ; COMB-CHECK-NEXT:    br label %[[H:.*]]
 ; COMB-CHECK:       [[H]]:
 ; COMB-CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[H]] ]
-; COMB-CHECK-NEXT:    [[INC]] = add i32 [[I]], 1
-; COMB-CHECK-NEXT:    [[DIV_EXITX:%.*]] = icmp ugt i32 [[INC]], [[TID]]
-; COMB-CHECK-NEXT:    br i1 [[DIV_EXITX]], label %[[EXIT:.*]], label %[[H]]
+; COMB-CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I]], 1
+; COMB-CHECK-NEXT:    [[DIV_EXITX_NOT:%.*]] = icmp samesign ult i32 [[I]], [[TID]]
+; COMB-CHECK-NEXT:    br i1 [[DIV_EXITX_NOT]], label %[[H]], label %[[EXIT:.*]]
 ; COMB-CHECK:       [[EXIT]]:
-; COMB-CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
+; COMB-CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[I]] to i64
 ; COMB-CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], ptr addrspace(1) [[DATA]], i64 [[TMP0]]
 ; COMB-CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(1) [[GEP]], align 4
 ; COMB-CHECK-NEXT:    [[X:%.*]] = icmp slt i32 [[V]], 1
@@ -232,11 +232,11 @@ define amdgpu_kernel void @temporal_divergence_readlane_of_not(ptr addrspace(1) 
 ; COMB-CHECK-NEXT:    br label %[[H:.*]]
 ; COMB-CHECK:       [[H]]:
 ; COMB-CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[H]] ]
-; COMB-CHECK-NEXT:    [[INC]] = add i32 [[I]], 1
-; COMB-CHECK-NEXT:    [[DIV_EXITX:%.*]] = icmp ugt i32 [[INC]], [[TID]]
-; COMB-CHECK-NEXT:    br i1 [[DIV_EXITX]], label %[[EXIT:.*]], label %[[H]]
+; COMB-CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I]], 1
+; COMB-CHECK-NEXT:    [[DIV_EXITX_NOT:%.*]] = icmp samesign ult i32 [[I]], [[TID]]
+; COMB-CHECK-NEXT:    br i1 [[DIV_EXITX_NOT]], label %[[H]], label %[[EXIT:.*]]
 ; COMB-CHECK:       [[EXIT]]:
-; COMB-CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
+; COMB-CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[I]] to i64
 ; COMB-CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], ptr addrspace(1) [[DATA]], i64 [[TMP0]]
 ; COMB-CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(1) [[GEP]], align 4
 ; COMB-CHECK-NEXT:    [[X:%.*]] = icmp slt i32 [[V]], 1

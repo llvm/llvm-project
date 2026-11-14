@@ -13,7 +13,6 @@
 ---
 name:            fun
 alignment:       2
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         false

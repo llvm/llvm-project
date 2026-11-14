@@ -1,0 +1,425 @@
+standard: iso-tr-18037
+family-note: 'Columns list the 12 fixed-point suffixes: `uhr`/`hr` (`unsigned`/`signed
+  short fract`), `ur`/`r` (`unsigned`/`signed fract`), `ulr`/`lr` (`unsigned`/`signed
+  long fract`), and `uhk`/`hk`, `uk`/`k`, `ulk`/`lk` for the corresponding `accum`
+  types.  See {doc}`../math/stdfix` for compiler requirements, precision macros, formatted
+  I/O specifiers, and ABI notes.'
+family-columns:
+- key: uhr
+  label: uhr
+- key: hr
+  label: hr
+- key: ur
+  label: ur
+- key: r
+  label: r
+- key: ulr
+  label: ulr
+- key: lr
+  label: lr
+- key: uhk
+  label: uhk
+- key: hk
+  label: hk
+- key: uk
+  label: uk
+- key: k
+  label: k
+- key: ulk
+  label: ulk
+- key: lk
+  label: lk
+families:
+  '*bits':
+    group: Fixed-point Arithmetics
+    variants:
+      uhr: uhrbits
+      hr: hrbits
+      ur: urbits
+      r: rbits
+      ulr: ulrbits
+      lr: lrbits
+      uhk: uhkbits
+      hk: hkbits
+      uk: ukbits
+      k: kbits
+      ulk: ulkbits
+      lk: lkbits
+    c-definition: TR 18037 7.18a.6.6
+  '*divi':
+    group: Fixed-point Arithmetics
+    variants:
+      ur: urdivi
+      r: rdivi
+      ulr: ulrdivi
+      lr: lrdivi
+      uk: ukdivi
+      k: kdivi
+      ulk: ulkdivi
+      lk: lkdivi
+    c-definition: TR 18037 7.18a.6.1
+  abs:
+    group: Fixed-point Arithmetics
+    variants:
+      hr: abshr
+      r: absr
+      lr: abslr
+      hk: abshk
+      k: absk
+      lk: abslk
+    c-definition: TR 18037 7.18a.6.2
+  bits*:
+    group: Fixed-point Arithmetics
+    variants:
+      uhr: bitsuhr
+      hr: bitshr
+      ur: bitsur
+      r: bitsr
+      ulr: bitsulr
+      lr: bitslr
+      uhk: bitsuhk
+      hk: bitshk
+      uk: bitsuk
+      k: bitsk
+      ulk: bitsulk
+      lk: bitslk
+    c-definition: TR 18037 7.18a.6.5
+  countls:
+    group: Fixed-point Arithmetics
+    variants:
+      uhr: countlsuhr
+      hr: countlshr
+      ur: countlsur
+      r: countlsr
+      ulr: countlsulr
+      lr: countlslr
+      uhk: countlsuhk
+      hk: countlshk
+      uk: countlsuk
+      k: countlsk
+      ulk: countlsulk
+      lk: countlslk
+    c-definition: TR 18037 7.18a.6.4
+  divi*:
+    group: Fixed-point Arithmetics
+    variants:
+      ur: diviur
+      r: divir
+      ulr: diviulr
+      lr: divilr
+      uk: diviuk
+      k: divik
+      ulk: diviulk
+      lk: divilk
+    c-definition: TR 18037 7.18a.6.1
+  idiv*:
+    group: Fixed-point Arithmetics
+    variants:
+      ur: idivur
+      r: idivr
+      ulr: idivulr
+      lr: idivlr
+      uk: idivuk
+      k: idivk
+      ulk: idivulk
+      lk: idivlk
+    c-definition: TR 18037 7.18a.6.1
+  muli*:
+    group: Fixed-point Arithmetics
+    variants:
+      ur: muliur
+      r: mulir
+      ulr: muliulr
+      lr: mulilr
+      uk: muliuk
+      k: mulik
+      ulk: muliulk
+      lk: mulilk
+    c-definition: TR 18037 7.18a.6.1
+  round:
+    group: Fixed-point Arithmetics
+    variants:
+      uhr: rounduhr
+      hr: roundhr
+      ur: roundur
+      r: roundr
+      ulr: roundulr
+      lr: roundlr
+      uhk: rounduhk
+      hk: roundhk
+      uk: rounduk
+      k: roundk
+      ulk: roundulk
+      lk: roundlk
+    c-definition: TR 18037 7.18a.6.3
+  cos:
+    group: Higher Math Functions
+    variants:
+      uhr: cosuhr
+      hr: coshr
+      ur: cosur
+      r: cosr
+      ulr: cosulr
+      lr: coslr
+      uhk: cosuhk
+      hk: coshk
+      uk: cosuk
+      k: cosk
+      ulk: cosulk
+      lk: coslk
+    extension: llvm-libc
+  exp:
+    group: Higher Math Functions
+    variants:
+      uhr: expuhr
+      hr: exphr
+      ur: expur
+      r: expr
+      ulr: expulr
+      lr: explr
+      uhk: expuhk
+      hk: exphk
+      uk: expuk
+      k: expk
+      ulk: expulk
+      lk: explk
+    extension: llvm-libc
+  log:
+    group: Higher Math Functions
+    variants:
+      uhr: loguhr
+      hr: loghr
+      ur: logur
+      r: logr
+      ulr: logulr
+      lr: loglr
+      uhk: loguhk
+      hk: loghk
+      uk: loguk
+      k: logk
+      ulk: logulk
+      lk: loglk
+    extension: llvm-libc
+  sin:
+    group: Higher Math Functions
+    variants:
+      uhr: sinuhr
+      hr: sinhr
+      ur: sinur
+      r: sinr
+      ulr: sinulr
+      lr: sinlr
+      uhk: sinuhk
+      hk: sinhk
+      uk: sinuk
+      k: sink
+      ulk: sinulk
+      lk: sinlk
+    extension: llvm-libc
+  sqrt:
+    group: Higher Math Functions
+    variants:
+      uhr: sqrtuhr
+      hr: sqrthr
+      ur: sqrtur
+      r: sqrtr
+      ulr: sqrtulr
+      lr: sqrtlr
+      uhk: sqrtuhk
+      hk: sqrthk
+      uk: sqrtuk
+      k: sqrtk
+      ulk: sqrtulk
+      lk: sqrtlk
+    extension: llvm-libc
+  tan:
+    group: Higher Math Functions
+    variants:
+      uhr: tanuhr
+      hr: tanhr
+      ur: tanur
+      r: tanr
+      ulr: tanulr
+      lr: tanlr
+      uhk: tanuhk
+      hk: tanhk
+      uk: tanuk
+      k: tank
+      ulk: tanulk
+      lk: tanlk
+    extension: llvm-libc
+  strtofx:
+    group: Conversion Functions
+    variants:
+      uhr: strtofxuhr
+      hr: strtofxhr
+      ur: strtofxur
+      r: strtofxr
+      ulr: strtofxulr
+      lr: strtofxlr
+      uhk: strtofxuhk
+      hk: strtofxhk
+      uk: strtofxuk
+      k: strtofxk
+      ulk: strtofxulk
+      lk: strtofxlk
+    c-definition: TR 18037 7.18a.6.8
+types:
+  int_hk_t:
+    c-definition: TR 18037 7.18a.2
+  int_hr_t:
+    c-definition: TR 18037 7.18a.2
+  int_k_t:
+    c-definition: TR 18037 7.18a.2
+  int_lk_t:
+    c-definition: TR 18037 7.18a.2
+  int_lr_t:
+    c-definition: TR 18037 7.18a.2
+  int_r_t:
+    c-definition: TR 18037 7.18a.2
+  uint_uhk_t:
+    c-definition: TR 18037 7.18a.2
+  uint_uhr_t:
+    c-definition: TR 18037 7.18a.2
+  uint_uk_t:
+    c-definition: TR 18037 7.18a.2
+  uint_ulk_t:
+    c-definition: TR 18037 7.18a.2
+  uint_ulr_t:
+    c-definition: TR 18037 7.18a.2
+  uint_ur_t:
+    c-definition: TR 18037 7.18a.2
+macros:
+  ACCUM_EPSILON:
+    c-definition: TR 18037 7.18a.3
+  ACCUM_FBIT:
+    c-definition: TR 18037 7.18a.3
+  ACCUM_IBIT:
+    c-definition: TR 18037 7.18a.3
+  ACCUM_MAX:
+    c-definition: TR 18037 7.18a.3
+  ACCUM_MIN:
+    c-definition: TR 18037 7.18a.3
+  FRACT_EPSILON:
+    c-definition: TR 18037 7.18a.3
+  FRACT_FBIT:
+    c-definition: TR 18037 7.18a.3
+  FRACT_MAX:
+    c-definition: TR 18037 7.18a.3
+  FRACT_MIN:
+    c-definition: TR 18037 7.18a.3
+  LACCUM_EPSILON:
+    c-definition: TR 18037 7.18a.3
+  LACCUM_FBIT:
+    c-definition: TR 18037 7.18a.3
+  LACCUM_IBIT:
+    c-definition: TR 18037 7.18a.3
+  LACCUM_MAX:
+    c-definition: TR 18037 7.18a.3
+  LACCUM_MIN:
+    c-definition: TR 18037 7.18a.3
+  LFRACT_EPSILON:
+    c-definition: TR 18037 7.18a.3
+  LFRACT_FBIT:
+    c-definition: TR 18037 7.18a.3
+  LFRACT_MAX:
+    c-definition: TR 18037 7.18a.3
+  LFRACT_MIN:
+    c-definition: TR 18037 7.18a.3
+  SACCUM_EPSILON:
+    c-definition: TR 18037 7.18a.3
+  SACCUM_FBIT:
+    c-definition: TR 18037 7.18a.3
+  SACCUM_IBIT:
+    c-definition: TR 18037 7.18a.3
+  SACCUM_MAX:
+    c-definition: TR 18037 7.18a.3
+  SACCUM_MIN:
+    c-definition: TR 18037 7.18a.3
+  SFRACT_EPSILON:
+    c-definition: TR 18037 7.18a.3
+  SFRACT_FBIT:
+    c-definition: TR 18037 7.18a.3
+  SFRACT_MAX:
+    c-definition: TR 18037 7.18a.3
+  SFRACT_MIN:
+    c-definition: TR 18037 7.18a.3
+  UACCUM_EPSILON:
+    c-definition: TR 18037 7.18a.3
+  UACCUM_FBIT:
+    c-definition: TR 18037 7.18a.3
+  UACCUM_IBIT:
+    c-definition: TR 18037 7.18a.3
+  UACCUM_MAX:
+    c-definition: TR 18037 7.18a.3
+  UACCUM_MIN:
+    c-definition: TR 18037 7.18a.3
+  UFRACT_EPSILON:
+    c-definition: TR 18037 7.18a.3
+  UFRACT_FBIT:
+    c-definition: TR 18037 7.18a.3
+  UFRACT_MAX:
+    c-definition: TR 18037 7.18a.3
+  UFRACT_MIN:
+    c-definition: TR 18037 7.18a.3
+  ULACCUM_EPSILON:
+    c-definition: TR 18037 7.18a.3
+  ULACCUM_FBIT:
+    c-definition: TR 18037 7.18a.3
+  ULACCUM_IBIT:
+    c-definition: TR 18037 7.18a.3
+  ULACCUM_MAX:
+    c-definition: TR 18037 7.18a.3
+  ULACCUM_MIN:
+    c-definition: TR 18037 7.18a.3
+  ULFRACT_EPSILON:
+    c-definition: TR 18037 7.18a.3
+  ULFRACT_FBIT:
+    c-definition: TR 18037 7.18a.3
+  ULFRACT_MAX:
+    c-definition: TR 18037 7.18a.3
+  ULFRACT_MIN:
+    c-definition: TR 18037 7.18a.3
+  USACCUM_EPSILON:
+    c-definition: TR 18037 7.18a.3
+  USACCUM_FBIT:
+    c-definition: TR 18037 7.18a.3
+  USACCUM_IBIT:
+    c-definition: TR 18037 7.18a.3
+  USACCUM_MAX:
+    c-definition: TR 18037 7.18a.3
+  USACCUM_MIN:
+    c-definition: TR 18037 7.18a.3
+  USFRACT_EPSILON:
+    c-definition: TR 18037 7.18a.3
+  USFRACT_FBIT:
+    c-definition: TR 18037 7.18a.3
+  USFRACT_MAX:
+    c-definition: TR 18037 7.18a.3
+  USFRACT_MIN:
+    c-definition: TR 18037 7.18a.3
+  absfx:
+    c-definition: TR 18037 7.18a.6.7
+  accum:
+    c-definition: TR 18037 7.18a.1
+  countlsfx:
+    c-definition: TR 18037 7.18a.6.7
+  divifx:
+    c-definition: TR 18037 7.18a.6.7
+  fract:
+    c-definition: TR 18037 7.18a.1
+  fxdivi:
+    c-definition: TR 18037 7.18a.6.7
+  idivfx:
+    c-definition: TR 18037 7.18a.6.7
+  mulifx:
+    c-definition: TR 18037 7.18a.6.7
+  roundfx:
+    c-definition: TR 18037 7.18a.6.7
+  sat:
+    c-definition: TR 18037 7.18a.1
+functions:
+  uhksqrtus:
+    extension: llvm-libc
+  uksqrtui:
+    extension: llvm-libc

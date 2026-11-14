@@ -22,7 +22,7 @@ int main(void) {
 // CIR:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:         cir.store %[[ZERO]], %[[RET]] : !s32i, !cir.ptr<!s32i>
 // CIR:         %[[LOAD:.*]] = cir.load %[[RET]] : !cir.ptr<!s32i>, !s32i
-// CIR:         cir.return %[[LOAD]] : !s32i
+// CIR:         cir.return implicit %[[LOAD]] : !s32i
 
 // LLVM-LABEL: define{{.*}} i32 @main(
 // LLVM:         %[[RET:.*]] = alloca i32
@@ -61,7 +61,7 @@ int main(void) {
 // CIR:           %[[EXPL:.*]] = cir.load %[[RET]] : !cir.ptr<!s32i>, !s32i
 // CIR:           cir.return %[[EXPL]] : !s32i
 // CIR:         %[[IMPL:.*]] = cir.load %[[RET]] : !cir.ptr<!s32i>, !s32i
-// CIR:         cir.return %[[IMPL]] : !s32i
+// CIR:         cir.return implicit %[[IMPL]] : !s32i
 
 // LLVM-LABEL: define{{.*}} i32 @main(
 // LLVM:         %[[RET:.*]] = alloca i32

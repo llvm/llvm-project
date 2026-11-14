@@ -3,7 +3,6 @@
 
 ---
 name: fcopysign_f32_from_f64
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -24,7 +23,6 @@ body: |
 
 ---
 name: fcopysign_f64_from_f32
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments

@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/IfConversion.h"
 #include "BranchFolding.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -26,10 +27,12 @@
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -37,6 +40,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -92,382 +96,388 @@ STATISTIC(NumUnpred,       "Number of true blocks of diamonds unpredicated");
 
 namespace {
 
-  class IfConverter : public MachineFunctionPass {
-    enum IfcvtKind {
-      ICNotClassfied,  // BB data valid, but not classified.
-      ICSimpleFalse,   // Same as ICSimple, but on the false path.
-      ICSimple,        // BB is entry of an one split, no rejoin sub-CFG.
-      ICTriangleFRev,  // Same as ICTriangleFalse, but false path rev condition.
-      ICTriangleRev,   // Same as ICTriangle, but true path rev condition.
-      ICTriangleFalse, // Same as ICTriangle, but on the false path.
-      ICTriangle,      // BB is entry of a triangle sub-CFG.
-      ICDiamond,       // BB is entry of a diamond sub-CFG.
-      ICForkedDiamond  // BB is entry of an almost diamond sub-CFG, with a
-                       // common tail that can be shared.
-    };
+class IfConverterImpl {
+  enum IfcvtKind {
+    ICNotClassfied,  // BB data valid, but not classified.
+    ICSimpleFalse,   // Same as ICSimple, but on the false path.
+    ICSimple,        // BB is entry of an one split, no rejoin sub-CFG.
+    ICTriangleFRev,  // Same as ICTriangleFalse, but false path rev condition.
+    ICTriangleRev,   // Same as ICTriangle, but true path rev condition.
+    ICTriangleFalse, // Same as ICTriangle, but on the false path.
+    ICTriangle,      // BB is entry of a triangle sub-CFG.
+    ICDiamond,       // BB is entry of a diamond sub-CFG.
+    ICForkedDiamond  // BB is entry of an almost diamond sub-CFG, with a
+                     // common tail that can be shared.
+  };
 
-    /// One per MachineBasicBlock, this is used to cache the result
-    /// if-conversion feasibility analysis. This includes results from
-    /// TargetInstrInfo::analyzeBranch() (i.e. TBB, FBB, and Cond), and its
-    /// classification, and common tail block of its successors (if it's a
-    /// diamond shape), its size, whether it's predicable, and whether any
-    /// instruction can clobber the 'would-be' predicate.
-    ///
-    /// IsDone          - True if BB is not to be considered for ifcvt.
-    /// IsBeingAnalyzed - True if BB is currently being analyzed.
-    /// IsAnalyzed      - True if BB has been analyzed (info is still valid).
-    /// IsEnqueued      - True if BB has been enqueued to be ifcvt'ed.
-    /// IsBrAnalyzable  - True if analyzeBranch() returns false.
-    /// HasFallThrough  - True if BB has fallthrough to the following BB.
-    ///                   Note that BB may have a fallthrough if both
-    ///                   !HasFallThrough and !IsBrAnalyzable is true. Also note
-    ///                   that blockNeverFallThrough() can be used to prove that
-    ///                   there is no fall through.
-    /// IsUnpredicable  - True if BB is known to be unpredicable.
-    /// ClobbersPred    - True if BB could modify predicates (e.g. has
-    ///                   cmp, call, etc.)
-    /// NonPredSize     - Number of non-predicated instructions.
-    /// ExtraCost       - Extra cost for multi-cycle instructions.
-    /// ExtraCost2      - Some instructions are slower when predicated
-    /// BB              - Corresponding MachineBasicBlock.
-    /// TrueBB / FalseBB- See analyzeBranch(), but note that FalseBB can be set
-    ///                   by AnalyzeBranches even if there is a fallthrough. So
-    ///                   it doesn't correspond exactly to the result from
-    ///                   TTI::analyzeBranch.
-    /// BrCond          - Conditions for end of block conditional branches.
-    /// Predicate       - Predicate used in the BB.
-    struct BBInfo {
-      bool IsDone          : 1;
-      bool IsBeingAnalyzed : 1;
-      bool IsAnalyzed      : 1;
-      bool IsEnqueued      : 1;
-      bool IsBrAnalyzable  : 1;
-      bool IsBrReversible  : 1;
-      bool HasFallThrough  : 1;
-      bool IsUnpredicable  : 1;
-      bool CannotBeCopied  : 1;
-      bool ClobbersPred    : 1;
-      unsigned NonPredSize = 0;
-      unsigned ExtraCost = 0;
-      unsigned ExtraCost2 = 0;
-      MachineBasicBlock *BB = nullptr;
-      MachineBasicBlock *TrueBB = nullptr;
-      MachineBasicBlock *FalseBB = nullptr;
-      SmallVector<MachineOperand, 4> BrCond;
-      SmallVector<MachineOperand, 4> Predicate;
+  /// One per MachineBasicBlock, this is used to cache the result
+  /// if-conversion feasibility analysis. This includes results from
+  /// TargetInstrInfo::analyzeBranch() (i.e. TBB, FBB, and Cond), and its
+  /// classification, and common tail block of its successors (if it's a
+  /// diamond shape), its size, whether it's predicable, and whether any
+  /// instruction can clobber the 'would-be' predicate.
+  ///
+  /// IsDone          - True if BB is not to be considered for ifcvt.
+  /// IsBeingAnalyzed - True if BB is currently being analyzed.
+  /// IsAnalyzed      - True if BB has been analyzed (info is still valid).
+  /// IsEnqueued      - True if BB has been enqueued to be ifcvt'ed.
+  /// IsBrAnalyzable  - True if analyzeBranch() returns false.
+  /// HasFallThrough  - True if BB has fallthrough to the following BB.
+  ///                   Note that BB may have a fallthrough if both
+  ///                   !HasFallThrough and !IsBrAnalyzable is true. Also note
+  ///                   that blockNeverFallThrough() can be used to prove that
+  ///                   there is no fall through.
+  /// IsUnpredicable  - True if BB is known to be unpredicable.
+  /// ClobbersPred    - True if BB could modify predicates (e.g. has
+  ///                   cmp, call, etc.)
+  /// NonPredSize     - Number of non-predicated instructions.
+  /// ExtraCost       - Extra cost for multi-cycle instructions.
+  /// ExtraCost2      - Some instructions are slower when predicated
+  /// BB              - Corresponding MachineBasicBlock.
+  /// TrueBB / FalseBB- See analyzeBranch(), but note that FalseBB can be set
+  ///                   by AnalyzeBranches even if there is a fallthrough. So
+  ///                   it doesn't correspond exactly to the result from
+  ///                   TTI::analyzeBranch.
+  /// BrCond          - Conditions for end of block conditional branches.
+  /// Predicate       - Predicate used in the BB.
+  struct BBInfo {
+    bool IsDone : 1;
+    bool IsBeingAnalyzed : 1;
+    bool IsAnalyzed : 1;
+    bool IsEnqueued : 1;
+    bool IsBrAnalyzable : 1;
+    bool IsBrReversible : 1;
+    bool HasFallThrough : 1;
+    bool IsUnpredicable : 1;
+    bool CannotBeCopied : 1;
+    bool ClobbersPred : 1;
+    unsigned NonPredSize = 0;
+    unsigned ExtraCost = 0;
+    unsigned ExtraCost2 = 0;
+    MachineBasicBlock *BB = nullptr;
+    MachineBasicBlock *TrueBB = nullptr;
+    MachineBasicBlock *FalseBB = nullptr;
+    SmallVector<MachineOperand, 4> BrCond;
+    SmallVector<MachineOperand, 4> Predicate;
 
-      BBInfo() : IsDone(false), IsBeingAnalyzed(false),
-                 IsAnalyzed(false), IsEnqueued(false), IsBrAnalyzable(false),
-                 IsBrReversible(false), HasFallThrough(false),
-                 IsUnpredicable(false), CannotBeCopied(false),
-                 ClobbersPred(false) {}
-    };
+    BBInfo()
+        : IsDone(false), IsBeingAnalyzed(false), IsAnalyzed(false),
+          IsEnqueued(false), IsBrAnalyzable(false), IsBrReversible(false),
+          HasFallThrough(false), IsUnpredicable(false), CannotBeCopied(false),
+          ClobbersPred(false) {}
+  };
 
-    /// Record information about pending if-conversions to attempt:
-    /// BBI             - Corresponding BBInfo.
-    /// Kind            - Type of block. See IfcvtKind.
-    /// NeedSubsumption - True if the to-be-predicated BB has already been
-    ///                   predicated.
-    /// NumDups      - Number of instructions that would be duplicated due
-    ///                   to this if-conversion. (For diamonds, the number of
-    ///                   identical instructions at the beginnings of both
-    ///                   paths).
-    /// NumDups2     - For diamonds, the number of identical instructions
-    ///                   at the ends of both paths.
-    struct IfcvtToken {
-      BBInfo &BBI;
-      IfcvtKind Kind;
-      unsigned NumDups;
-      unsigned NumDups2;
-      bool NeedSubsumption : 1;
-      bool TClobbersPred : 1;
-      bool FClobbersPred : 1;
+  /// Record information about pending if-conversions to attempt:
+  /// BBI             - Corresponding BBInfo.
+  /// Kind            - Type of block. See IfcvtKind.
+  /// NeedSubsumption - True if the to-be-predicated BB has already been
+  ///                   predicated.
+  /// NumDups      - Number of instructions that would be duplicated due
+  ///                   to this if-conversion. (For diamonds, the number of
+  ///                   identical instructions at the beginnings of both
+  ///                   paths).
+  /// NumDups2     - For diamonds, the number of identical instructions
+  ///                   at the ends of both paths.
+  struct IfcvtToken {
+    BBInfo &BBI;
+    IfcvtKind Kind;
+    unsigned NumDups;
+    unsigned NumDups2;
+    bool NeedSubsumption : 1;
+    bool TClobbersPred : 1;
+    bool FClobbersPred : 1;
 
-      IfcvtToken(BBInfo &b, IfcvtKind k, bool s, unsigned d, unsigned d2 = 0,
-                 bool tc = false, bool fc = false)
+    IfcvtToken(BBInfo &b, IfcvtKind k, bool s, unsigned d, unsigned d2 = 0,
+               bool tc = false, bool fc = false)
         : BBI(b), Kind(k), NumDups(d), NumDups2(d2), NeedSubsumption(s),
           TClobbersPred(tc), FClobbersPred(fc) {}
-    };
-
-    /// Results of if-conversion feasibility analysis indexed by basic block
-    /// number.
-    std::vector<BBInfo> BBAnalysis;
-    TargetSchedModel SchedModel;
-
-    const TargetLoweringBase *TLI = nullptr;
-    const TargetInstrInfo *TII = nullptr;
-    const TargetRegisterInfo *TRI = nullptr;
-    const MachineBranchProbabilityInfo *MBPI = nullptr;
-    MachineRegisterInfo *MRI = nullptr;
-
-    LivePhysRegs Redefs;
-
-    bool PreRegAlloc = true;
-    bool MadeChange = false;
-    int FnNum = -1;
-    std::function<bool(const MachineFunction &)> PredicateFtor;
-
-  public:
-    static char ID;
-
-    IfConverter(std::function<bool(const MachineFunction &)> Ftor = nullptr)
-        : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {}
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-      AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
-      AU.addRequired<ProfileSummaryInfoWrapperPass>();
-      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
-      MachineFunctionPass::getAnalysisUsage(AU);
-    }
-
-    bool runOnMachineFunction(MachineFunction &MF) override;
-
-    MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().setNoVRegs();
-    }
-
-  private:
-    bool reverseBranchCondition(BBInfo &BBI) const;
-    bool ValidSimple(BBInfo &TrueBBI, unsigned &Dups,
-                     BranchProbability Prediction) const;
-    bool ValidTriangle(BBInfo &TrueBBI, BBInfo &FalseBBI,
-                       bool FalseBranch, unsigned &Dups,
-                       BranchProbability Prediction) const;
-    bool CountDuplicatedInstructions(
-        MachineBasicBlock::iterator &TIB, MachineBasicBlock::iterator &FIB,
-        MachineBasicBlock::iterator &TIE, MachineBasicBlock::iterator &FIE,
-        unsigned &Dups1, unsigned &Dups2,
-        MachineBasicBlock &TBB, MachineBasicBlock &FBB,
-        bool SkipUnconditionalBranches) const;
-    bool ValidDiamond(BBInfo &TrueBBI, BBInfo &FalseBBI,
-                      unsigned &Dups1, unsigned &Dups2,
-                      BBInfo &TrueBBICalc, BBInfo &FalseBBICalc) const;
-    bool ValidForkedDiamond(BBInfo &TrueBBI, BBInfo &FalseBBI,
-                            unsigned &Dups1, unsigned &Dups2,
-                            BBInfo &TrueBBICalc, BBInfo &FalseBBICalc) const;
-    void AnalyzeBranches(BBInfo &BBI);
-    void ScanInstructions(BBInfo &BBI,
-                          MachineBasicBlock::iterator &Begin,
-                          MachineBasicBlock::iterator &End,
-                          bool BranchUnpredicable = false) const;
-    bool RescanInstructions(
-        MachineBasicBlock::iterator &TIB, MachineBasicBlock::iterator &FIB,
-        MachineBasicBlock::iterator &TIE, MachineBasicBlock::iterator &FIE,
-        BBInfo &TrueBBI, BBInfo &FalseBBI) const;
-    void AnalyzeBlock(MachineBasicBlock &MBB,
-                      std::vector<std::unique_ptr<IfcvtToken>> &Tokens);
-    bool FeasibilityAnalysis(BBInfo &BBI, SmallVectorImpl<MachineOperand> &Pred,
-                             bool isTriangle = false, bool RevBranch = false,
-                             bool hasCommonTail = false);
-    void AnalyzeBlocks(MachineFunction &MF,
-                       std::vector<std::unique_ptr<IfcvtToken>> &Tokens);
-    void InvalidatePreds(MachineBasicBlock &MBB);
-    bool IfConvertSimple(BBInfo &BBI, IfcvtKind Kind);
-    bool IfConvertTriangle(BBInfo &BBI, IfcvtKind Kind);
-    bool IfConvertDiamondCommon(BBInfo &BBI, BBInfo &TrueBBI, BBInfo &FalseBBI,
-                                unsigned NumDups1, unsigned NumDups2,
-                                bool TClobbersPred, bool FClobbersPred,
-                                bool RemoveBranch, bool MergeAddEdges);
-    bool IfConvertDiamond(BBInfo &BBI, IfcvtKind Kind,
-                          unsigned NumDups1, unsigned NumDups2,
-                          bool TClobbers, bool FClobbers);
-    bool IfConvertForkedDiamond(BBInfo &BBI, IfcvtKind Kind,
-                              unsigned NumDups1, unsigned NumDups2,
-                              bool TClobbers, bool FClobbers);
-    void PredicateBlock(BBInfo &BBI, MachineBasicBlock::iterator E,
-                        SmallVectorImpl<MachineOperand> &Cond,
-                        SmallSet<MCRegister, 4> *LaterRedefs = nullptr);
-    void CopyAndPredicateBlock(BBInfo &ToBBI, BBInfo &FromBBI,
-                               SmallVectorImpl<MachineOperand> &Cond,
-                               bool IgnoreBr = false);
-    void MergeBlocks(BBInfo &ToBBI, BBInfo &FromBBI, bool AddEdges = true);
-
-    bool MeetIfcvtSizeLimit(MachineBasicBlock &BB,
-                            unsigned Cycle, unsigned Extra,
-                            BranchProbability Prediction) const {
-      return Cycle > 0 && TII->isProfitableToIfCvt(BB, Cycle, Extra,
-                                                   Prediction);
-    }
-
-    bool MeetIfcvtSizeLimit(BBInfo &TBBInfo, BBInfo &FBBInfo,
-                            MachineBasicBlock &CommBB, unsigned Dups,
-                            BranchProbability Prediction, bool Forked) const {
-      const MachineFunction &MF = *TBBInfo.BB->getParent();
-      if (MF.getFunction().hasMinSize()) {
-        MachineBasicBlock::iterator TIB = TBBInfo.BB->begin();
-        MachineBasicBlock::iterator FIB = FBBInfo.BB->begin();
-        MachineBasicBlock::iterator TIE = TBBInfo.BB->end();
-        MachineBasicBlock::iterator FIE = FBBInfo.BB->end();
-
-        unsigned Dups1 = 0, Dups2 = 0;
-        if (!CountDuplicatedInstructions(TIB, FIB, TIE, FIE, Dups1, Dups2,
-                                         *TBBInfo.BB, *FBBInfo.BB,
-                                         /*SkipUnconditionalBranches*/ true))
-          llvm_unreachable("should already have been checked by ValidDiamond");
-
-        unsigned BranchBytes = 0;
-        unsigned CommonBytes = 0;
-
-        // Count common instructions at the start of the true and false blocks.
-        for (auto &I : make_range(TBBInfo.BB->begin(), TIB)) {
-          LLVM_DEBUG(dbgs() << "Common inst: " << I);
-          CommonBytes += TII->getInstSizeInBytes(I);
-        }
-        for (auto &I : make_range(FBBInfo.BB->begin(), FIB)) {
-          LLVM_DEBUG(dbgs() << "Common inst: " << I);
-          CommonBytes += TII->getInstSizeInBytes(I);
-        }
-
-        // Count instructions at the end of the true and false blocks, after
-        // the ones we plan to predicate. Analyzable branches will be removed
-        // (unless this is a forked diamond), and all other instructions are
-        // common between the two blocks.
-        for (auto &I : make_range(TIE, TBBInfo.BB->end())) {
-          if (I.isBranch() && TBBInfo.IsBrAnalyzable && !Forked) {
-            LLVM_DEBUG(dbgs() << "Saving branch: " << I);
-            BranchBytes += TII->predictBranchSizeForIfCvt(I);
-          } else {
-            LLVM_DEBUG(dbgs() << "Common inst: " << I);
-            CommonBytes += TII->getInstSizeInBytes(I);
-          }
-        }
-        for (auto &I : make_range(FIE, FBBInfo.BB->end())) {
-          if (I.isBranch() && FBBInfo.IsBrAnalyzable && !Forked) {
-            LLVM_DEBUG(dbgs() << "Saving branch: " << I);
-            BranchBytes += TII->predictBranchSizeForIfCvt(I);
-          } else {
-            LLVM_DEBUG(dbgs() << "Common inst: " << I);
-            CommonBytes += TII->getInstSizeInBytes(I);
-          }
-        }
-        for (auto &I : CommBB.terminators()) {
-          if (I.isBranch()) {
-            LLVM_DEBUG(dbgs() << "Saving branch: " << I);
-            BranchBytes += TII->predictBranchSizeForIfCvt(I);
-          }
-        }
-
-        // The common instructions in one branch will be eliminated, halving
-        // their code size.
-        CommonBytes /= 2;
-
-        // Count the instructions which we need to predicate.
-        unsigned NumPredicatedInstructions = 0;
-        for (auto &I : make_range(TIB, TIE)) {
-          if (!I.isDebugInstr()) {
-            LLVM_DEBUG(dbgs() << "Predicating: " << I);
-            NumPredicatedInstructions++;
-          }
-        }
-        for (auto &I : make_range(FIB, FIE)) {
-          if (!I.isDebugInstr()) {
-            LLVM_DEBUG(dbgs() << "Predicating: " << I);
-            NumPredicatedInstructions++;
-          }
-        }
-
-        // Even though we're optimising for size at the expense of performance,
-        // avoid creating really long predicated blocks.
-        if (NumPredicatedInstructions > 15)
-          return false;
-
-        // Some targets (e.g. Thumb2) need to insert extra instructions to
-        // start predicated blocks.
-        unsigned ExtraPredicateBytes = TII->extraSizeToPredicateInstructions(
-            MF, NumPredicatedInstructions);
-
-        LLVM_DEBUG(dbgs() << "MeetIfcvtSizeLimit(BranchBytes=" << BranchBytes
-                          << ", CommonBytes=" << CommonBytes
-                          << ", NumPredicatedInstructions="
-                          << NumPredicatedInstructions
-                          << ", ExtraPredicateBytes=" << ExtraPredicateBytes
-                          << ")\n");
-        return (BranchBytes + CommonBytes) > ExtraPredicateBytes;
-      } else {
-        unsigned TCycle = TBBInfo.NonPredSize + TBBInfo.ExtraCost - Dups;
-        unsigned FCycle = FBBInfo.NonPredSize + FBBInfo.ExtraCost - Dups;
-        bool Res = TCycle > 0 && FCycle > 0 &&
-                   TII->isProfitableToIfCvt(
-                       *TBBInfo.BB, TCycle, TBBInfo.ExtraCost2, *FBBInfo.BB,
-                       FCycle, FBBInfo.ExtraCost2, Prediction);
-        LLVM_DEBUG(dbgs() << "MeetIfcvtSizeLimit(TCycle=" << TCycle
-                          << ", FCycle=" << FCycle
-                          << ", TExtra=" << TBBInfo.ExtraCost2 << ", FExtra="
-                          << FBBInfo.ExtraCost2 << ") = " << Res << "\n");
-        return Res;
-      }
-    }
-
-    /// Returns true if Block ends without a terminator.
-    bool blockAlwaysFallThrough(BBInfo &BBI) const {
-      return BBI.IsBrAnalyzable && BBI.TrueBB == nullptr;
-    }
-
-    /// Returns true if Block is known not to fallthrough to the following BB.
-    bool blockNeverFallThrough(BBInfo &BBI) const {
-      // Trust "HasFallThrough" if we could analyze branches.
-      if (BBI.IsBrAnalyzable)
-        return !BBI.HasFallThrough;
-      // If this is the last MBB in the function, or if the textual successor
-      // isn't in the successor list, then there is no fallthrough.
-      MachineFunction::iterator PI = BBI.BB->getIterator();
-      MachineFunction::iterator I = std::next(PI);
-      if (I == BBI.BB->getParent()->end() || !PI->isSuccessor(&*I))
-        return true;
-      // Could not prove that there is no fallthrough.
-      return false;
-    }
-
-    /// Used to sort if-conversion candidates.
-    static bool IfcvtTokenCmp(const std::unique_ptr<IfcvtToken> &C1,
-                              const std::unique_ptr<IfcvtToken> &C2) {
-      int Incr1 = (C1->Kind == ICDiamond)
-        ? -(int)(C1->NumDups + C1->NumDups2) : (int)C1->NumDups;
-      int Incr2 = (C2->Kind == ICDiamond)
-        ? -(int)(C2->NumDups + C2->NumDups2) : (int)C2->NumDups;
-      if (Incr1 > Incr2)
-        return true;
-      else if (Incr1 == Incr2) {
-        // Favors subsumption.
-        if (!C1->NeedSubsumption && C2->NeedSubsumption)
-          return true;
-        else if (C1->NeedSubsumption == C2->NeedSubsumption) {
-          // Favors diamond over triangle, etc.
-          if ((unsigned)C1->Kind < (unsigned)C2->Kind)
-            return true;
-          else if (C1->Kind == C2->Kind)
-            return C1->BBI.BB->getNumber() < C2->BBI.BB->getNumber();
-        }
-      }
-      return false;
-    }
   };
+
+  /// Results of if-conversion feasibility analysis indexed by basic block
+  /// number.
+  std::vector<BBInfo> BBAnalysis;
+  TargetSchedModel SchedModel;
+
+  const TargetLoweringBase *TLI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
+  const MachineBranchProbabilityInfo *MBPI = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
+
+  LivePhysRegs Redefs;
+
+  bool PreRegAlloc = true;
+  bool MadeChange = false;
+  int FnNum = -1;
+
+  bool reverseBranchCondition(BBInfo &BBI) const;
+  bool ValidSimple(BBInfo &TrueBBI, unsigned &Dups,
+                   BranchProbability Prediction) const;
+  bool ValidTriangle(BBInfo &TrueBBI, BBInfo &FalseBBI, bool FalseBranch,
+                     unsigned &Dups, BranchProbability Prediction) const;
+  bool CountDuplicatedInstructions(
+      MachineBasicBlock::iterator &TIB, MachineBasicBlock::iterator &FIB,
+      MachineBasicBlock::iterator &TIE, MachineBasicBlock::iterator &FIE,
+      unsigned &Dups1, unsigned &Dups2, MachineBasicBlock &TBB,
+      MachineBasicBlock &FBB, bool SkipUnconditionalBranches) const;
+  bool ValidDiamond(BBInfo &TrueBBI, BBInfo &FalseBBI, unsigned &Dups1,
+                    unsigned &Dups2, BBInfo &TrueBBICalc,
+                    BBInfo &FalseBBICalc) const;
+  bool ValidForkedDiamond(BBInfo &TrueBBI, BBInfo &FalseBBI, unsigned &Dups1,
+                          unsigned &Dups2, BBInfo &TrueBBICalc,
+                          BBInfo &FalseBBICalc) const;
+  void AnalyzeBranches(BBInfo &BBI);
+  void ScanInstructions(BBInfo &BBI, MachineBasicBlock::iterator &Begin,
+                        MachineBasicBlock::iterator &End,
+                        bool BranchUnpredicable = false) const;
+  bool RescanInstructions(MachineBasicBlock::iterator &TIB,
+                          MachineBasicBlock::iterator &FIB,
+                          MachineBasicBlock::iterator &TIE,
+                          MachineBasicBlock::iterator &FIE, BBInfo &TrueBBI,
+                          BBInfo &FalseBBI) const;
+  void AnalyzeBlock(MachineBasicBlock &MBB,
+                    std::vector<std::unique_ptr<IfcvtToken>> &Tokens);
+  bool FeasibilityAnalysis(BBInfo &BBI, SmallVectorImpl<MachineOperand> &Pred,
+                           bool isTriangle = false, bool RevBranch = false,
+                           bool hasCommonTail = false);
+  void AnalyzeBlocks(MachineFunction &MF,
+                     std::vector<std::unique_ptr<IfcvtToken>> &Tokens);
+  void InvalidatePreds(MachineBasicBlock &MBB);
+  bool IfConvertSimple(BBInfo &BBI, IfcvtKind Kind);
+  bool IfConvertTriangle(BBInfo &BBI, IfcvtKind Kind);
+  bool IfConvertDiamondCommon(BBInfo &BBI, BBInfo &TrueBBI, BBInfo &FalseBBI,
+                              unsigned NumDups1, unsigned NumDups2,
+                              bool TClobbersPred, bool FClobbersPred,
+                              bool RemoveBranch, bool MergeAddEdges);
+  bool IfConvertDiamond(BBInfo &BBI, IfcvtKind Kind, unsigned NumDups1,
+                        unsigned NumDups2, bool TClobbers, bool FClobbers);
+  bool IfConvertForkedDiamond(BBInfo &BBI, IfcvtKind Kind, unsigned NumDups1,
+                              unsigned NumDups2, bool TClobbers,
+                              bool FClobbers);
+  void PredicateBlock(BBInfo &BBI, MachineBasicBlock::iterator E,
+                      SmallVectorImpl<MachineOperand> &Cond,
+                      SmallSet<MCRegister, 4> *LaterRedefs = nullptr);
+  void CopyAndPredicateBlock(BBInfo &ToBBI, BBInfo &FromBBI,
+                             SmallVectorImpl<MachineOperand> &Cond,
+                             bool IgnoreBr = false);
+  void MergeBlocks(BBInfo &ToBBI, BBInfo &FromBBI, bool AddEdges = true);
+
+  bool MeetIfcvtSizeLimit(MachineBasicBlock &BB, unsigned Cycle, unsigned Extra,
+                          BranchProbability Prediction) const {
+    return Cycle > 0 && TII->isProfitableToIfCvt(BB, Cycle, Extra, Prediction);
+  }
+
+  bool MeetIfcvtSizeLimit(BBInfo &TBBInfo, BBInfo &FBBInfo,
+                          MachineBasicBlock &CommBB, unsigned Dups,
+                          BranchProbability Prediction, bool Forked) const {
+    const MachineFunction &MF = *TBBInfo.BB->getParent();
+    if (MF.getFunction().hasMinSize()) {
+      MachineBasicBlock::iterator TIB = TBBInfo.BB->begin();
+      MachineBasicBlock::iterator FIB = FBBInfo.BB->begin();
+      MachineBasicBlock::iterator TIE = TBBInfo.BB->end();
+      MachineBasicBlock::iterator FIE = FBBInfo.BB->end();
+
+      unsigned Dups1 = 0, Dups2 = 0;
+      if (!CountDuplicatedInstructions(TIB, FIB, TIE, FIE, Dups1, Dups2,
+                                       *TBBInfo.BB, *FBBInfo.BB,
+                                       /*SkipUnconditionalBranches*/ true))
+        llvm_unreachable("should already have been checked by ValidDiamond");
+
+      unsigned BranchBytes = 0;
+      unsigned CommonBytes = 0;
+
+      // Count common instructions at the start of the true and false blocks.
+      for (auto &I : make_range(TBBInfo.BB->begin(), TIB)) {
+        LLVM_DEBUG(dbgs() << "Common inst: " << I);
+        CommonBytes += TII->getInstSizeInBytes(I);
+      }
+      for (auto &I : make_range(FBBInfo.BB->begin(), FIB)) {
+        LLVM_DEBUG(dbgs() << "Common inst: " << I);
+        CommonBytes += TII->getInstSizeInBytes(I);
+      }
+
+      // Count instructions at the end of the true and false blocks, after
+      // the ones we plan to predicate. Analyzable branches will be removed
+      // (unless this is a forked diamond), and all other instructions are
+      // common between the two blocks.
+      for (auto &I : make_range(TIE, TBBInfo.BB->end())) {
+        if (I.isBranch() && TBBInfo.IsBrAnalyzable && !Forked) {
+          LLVM_DEBUG(dbgs() << "Saving branch: " << I);
+          BranchBytes += TII->predictBranchSizeForIfCvt(I);
+        } else {
+          LLVM_DEBUG(dbgs() << "Common inst: " << I);
+          CommonBytes += TII->getInstSizeInBytes(I);
+        }
+      }
+      for (auto &I : make_range(FIE, FBBInfo.BB->end())) {
+        if (I.isBranch() && FBBInfo.IsBrAnalyzable && !Forked) {
+          LLVM_DEBUG(dbgs() << "Saving branch: " << I);
+          BranchBytes += TII->predictBranchSizeForIfCvt(I);
+        } else {
+          LLVM_DEBUG(dbgs() << "Common inst: " << I);
+          CommonBytes += TII->getInstSizeInBytes(I);
+        }
+      }
+      for (auto &I : CommBB.terminators()) {
+        if (I.isBranch()) {
+          LLVM_DEBUG(dbgs() << "Saving branch: " << I);
+          BranchBytes += TII->predictBranchSizeForIfCvt(I);
+        }
+      }
+
+      // The common instructions in one branch will be eliminated, halving
+      // their code size.
+      CommonBytes /= 2;
+
+      // Count the instructions which we need to predicate.
+      unsigned NumPredicatedInstructions = 0;
+      for (auto &I : make_range(TIB, TIE)) {
+        if (!I.isDebugInstr()) {
+          LLVM_DEBUG(dbgs() << "Predicating: " << I);
+          NumPredicatedInstructions++;
+        }
+      }
+      for (auto &I : make_range(FIB, FIE)) {
+        if (!I.isDebugInstr()) {
+          LLVM_DEBUG(dbgs() << "Predicating: " << I);
+          NumPredicatedInstructions++;
+        }
+      }
+
+      // Even though we're optimising for size at the expense of performance,
+      // avoid creating really long predicated blocks.
+      if (NumPredicatedInstructions > 15)
+        return false;
+
+      // Some targets (e.g. Thumb2) need to insert extra instructions to
+      // start predicated blocks.
+      unsigned ExtraPredicateBytes =
+          TII->extraSizeToPredicateInstructions(MF, NumPredicatedInstructions);
+
+      LLVM_DEBUG(
+          dbgs() << "MeetIfcvtSizeLimit(BranchBytes=" << BranchBytes
+                 << ", CommonBytes=" << CommonBytes
+                 << ", NumPredicatedInstructions=" << NumPredicatedInstructions
+                 << ", ExtraPredicateBytes=" << ExtraPredicateBytes << ")\n");
+      return (BranchBytes + CommonBytes) > ExtraPredicateBytes;
+    } else {
+      unsigned TCycle = TBBInfo.NonPredSize + TBBInfo.ExtraCost - Dups;
+      unsigned FCycle = FBBInfo.NonPredSize + FBBInfo.ExtraCost - Dups;
+      bool Res = TCycle > 0 && FCycle > 0 &&
+                 TII->isProfitableToIfCvt(
+                     *TBBInfo.BB, TCycle, TBBInfo.ExtraCost2, *FBBInfo.BB,
+                     FCycle, FBBInfo.ExtraCost2, Prediction);
+      LLVM_DEBUG(dbgs() << "MeetIfcvtSizeLimit(TCycle=" << TCycle << ", FCycle="
+                        << FCycle << ", TExtra=" << TBBInfo.ExtraCost2
+                        << ", FExtra=" << FBBInfo.ExtraCost2 << ") = " << Res
+                        << "\n");
+      return Res;
+    }
+  }
+
+  /// Returns true if Block ends without a terminator.
+  bool blockAlwaysFallThrough(BBInfo &BBI) const {
+    return BBI.IsBrAnalyzable && BBI.TrueBB == nullptr;
+  }
+
+  /// Returns true if Block is known not to fallthrough to the following BB.
+  bool blockNeverFallThrough(BBInfo &BBI) const {
+    // Trust "HasFallThrough" if we could analyze branches.
+    if (BBI.IsBrAnalyzable)
+      return !BBI.HasFallThrough;
+    // If this is the last MBB in the function, or if the textual successor
+    // isn't in the successor list, then there is no fallthrough.
+    MachineFunction::iterator PI = BBI.BB->getIterator();
+    MachineFunction::iterator I = std::next(PI);
+    if (I == BBI.BB->getParent()->end() || !PI->isSuccessor(&*I))
+      return true;
+    // Could not prove that there is no fallthrough.
+    return false;
+  }
+
+  /// Used to sort if-conversion candidates.
+  static bool IfcvtTokenCmp(const std::unique_ptr<IfcvtToken> &C1,
+                            const std::unique_ptr<IfcvtToken> &C2) {
+    int Incr1 = (C1->Kind == ICDiamond) ? -(int)(C1->NumDups + C1->NumDups2)
+                                        : (int)C1->NumDups;
+    int Incr2 = (C2->Kind == ICDiamond) ? -(int)(C2->NumDups + C2->NumDups2)
+                                        : (int)C2->NumDups;
+    if (Incr1 > Incr2)
+      return true;
+    else if (Incr1 == Incr2) {
+      // Favors subsumption.
+      if (!C1->NeedSubsumption && C2->NeedSubsumption)
+        return true;
+      else if (C1->NeedSubsumption == C2->NeedSubsumption) {
+        // Favors diamond over triangle, etc.
+        if ((unsigned)C1->Kind < (unsigned)C2->Kind)
+          return true;
+        else if (C1->Kind == C2->Kind)
+          return C1->BBI.BB->getNumber() < C2->BBI.BB->getNumber();
+      }
+    }
+    return false;
+  }
+
+public:
+  bool runOnMachineFunction(
+      MachineFunction &MF, function_ref<MachineBlockFrequencyInfo &()> GetMBFI,
+      function_ref<MachineBranchProbabilityInfo *()> GetMBPI,
+      function_ref<ProfileSummaryInfo *()> GetPSI,
+      function_ref<bool(const MachineFunction &MF)> PredicateFtor);
+};
+
+class IfConverterLegacy : public MachineFunctionPass {
+  std::function<bool(const MachineFunction &)> PredicateFtor;
+
+public:
+  static char ID;
+
+  IfConverterLegacy(std::function<bool(const MachineFunction &)> Ftor = nullptr)
+      : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+    AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+    AU.addRequired<ProfileSummaryInfoWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+};
 
 } // end anonymous namespace
 
-char IfConverter::ID = 0;
+char IfConverterLegacy::ID = 0;
 
-char &llvm::IfConverterID = IfConverter::ID;
+char &llvm::IfConverterID = IfConverterLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(IfConverter, DEBUG_TYPE, "If Converter", false, false)
+INITIALIZE_PASS_BEGIN(IfConverterLegacy, DEBUG_TYPE, "If Converter", false,
+                      false)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
-INITIALIZE_PASS_END(IfConverter, DEBUG_TYPE, "If Converter", false, false)
+INITIALIZE_PASS_END(IfConverterLegacy, DEBUG_TYPE, "If Converter", false, false)
 
-bool IfConverter::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()) || (PredicateFtor && !PredicateFtor(MF)))
+bool IfConverterImpl::runOnMachineFunction(
+    MachineFunction &MF, function_ref<MachineBlockFrequencyInfo &()> GetMBFI,
+    function_ref<MachineBranchProbabilityInfo *()> GetMBPI,
+    function_ref<ProfileSummaryInfo *()> GetPSI,
+    function_ref<bool(const MachineFunction &MF)> PredicateFtor) {
+  if (PredicateFtor(MF))
     return false;
 
   const TargetSubtargetInfo &ST = MF.getSubtarget();
   TLI = ST.getTargetLowering();
   TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
-  MBFIWrapper MBFI(
-      getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI());
-  MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
-  ProfileSummaryInfo *PSI =
-      &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  MBFIWrapper MBFI(GetMBFI());
+  MBPI = GetMBPI();
+  ProfileSummaryInfo *PSI = GetPSI();
   MRI = &MF.getRegInfo();
   SchedModel.init(&ST);
 
@@ -635,7 +645,7 @@ static MachineBasicBlock *findFalseBlock(MachineBasicBlock *BB,
 
 /// Reverse the condition of the end of the block branch. Swap block's 'true'
 /// and 'false' successors.
-bool IfConverter::reverseBranchCondition(BBInfo &BBI) const {
+bool IfConverterImpl::reverseBranchCondition(BBInfo &BBI) const {
   DebugLoc dl;  // FIXME: this is nowhere
   if (!TII->reverseBranchCondition(BBI.BrCond)) {
     TII->removeBranch(*BBI.BB);
@@ -659,8 +669,8 @@ static inline MachineBasicBlock *getNextBlock(MachineBasicBlock &MBB) {
 /// Returns true if the 'true' block (along with its predecessor) forms a valid
 /// simple shape for ifcvt. It also returns the number of instructions that the
 /// ifcvt would need to duplicate if performed in Dups.
-bool IfConverter::ValidSimple(BBInfo &TrueBBI, unsigned &Dups,
-                              BranchProbability Prediction) const {
+bool IfConverterImpl::ValidSimple(BBInfo &TrueBBI, unsigned &Dups,
+                                  BranchProbability Prediction) const {
   Dups = 0;
   if (TrueBBI.IsBeingAnalyzed || TrueBBI.IsDone)
     return false;
@@ -684,9 +694,9 @@ bool IfConverter::ValidSimple(BBInfo &TrueBBI, unsigned &Dups,
 /// true, it checks if 'true' block's false branch branches to the 'false' block
 /// rather than the other way around. It also returns the number of instructions
 /// that the ifcvt would need to duplicate if performed in 'Dups'.
-bool IfConverter::ValidTriangle(BBInfo &TrueBBI, BBInfo &FalseBBI,
-                                bool FalseBranch, unsigned &Dups,
-                                BranchProbability Prediction) const {
+bool IfConverterImpl::ValidTriangle(BBInfo &TrueBBI, BBInfo &FalseBBI,
+                                    bool FalseBranch, unsigned &Dups,
+                                    BranchProbability Prediction) const {
   Dups = 0;
   if (TrueBBI.BB == FalseBBI.BB)
     return false;
@@ -746,14 +756,11 @@ bool IfConverter::ValidTriangle(BBInfo &TrueBBI, BBInfo &FalseBBI,
 /// passed when the blocks are analyzable to allow for fallthrough to be
 /// handled.
 /// @return false if the shared portion prevents if conversion.
-bool IfConverter::CountDuplicatedInstructions(
-    MachineBasicBlock::iterator &TIB,
-    MachineBasicBlock::iterator &FIB,
-    MachineBasicBlock::iterator &TIE,
-    MachineBasicBlock::iterator &FIE,
-    unsigned &Dups1, unsigned &Dups2,
-    MachineBasicBlock &TBB, MachineBasicBlock &FBB,
-    bool SkipUnconditionalBranches) const {
+bool IfConverterImpl::CountDuplicatedInstructions(
+    MachineBasicBlock::iterator &TIB, MachineBasicBlock::iterator &FIB,
+    MachineBasicBlock::iterator &TIE, MachineBasicBlock::iterator &FIE,
+    unsigned &Dups1, unsigned &Dups2, MachineBasicBlock &TBB,
+    MachineBasicBlock &FBB, bool SkipUnconditionalBranches) const {
   while (TIB != TIE && FIB != FIE) {
     // Skip dbg_value instructions. These do not count.
     TIB = skipDebugInstructionsForward(TIB, TIE, false);
@@ -826,10 +833,12 @@ bool IfConverter::CountDuplicatedInstructions(
 /// @param FalseBBI - BBInfo to update for the false block.
 /// @returns - false if either block cannot be predicated or if both blocks end
 ///   with a predicate-clobbering instruction.
-bool IfConverter::RescanInstructions(
-    MachineBasicBlock::iterator &TIB, MachineBasicBlock::iterator &FIB,
-    MachineBasicBlock::iterator &TIE, MachineBasicBlock::iterator &FIE,
-    BBInfo &TrueBBI, BBInfo &FalseBBI) const {
+bool IfConverterImpl::RescanInstructions(MachineBasicBlock::iterator &TIB,
+                                         MachineBasicBlock::iterator &FIB,
+                                         MachineBasicBlock::iterator &TIE,
+                                         MachineBasicBlock::iterator &FIE,
+                                         BBInfo &TrueBBI,
+                                         BBInfo &FalseBBI) const {
   bool BranchUnpredicable = true;
   TrueBBI.IsUnpredicable = FalseBBI.IsUnpredicable = false;
   ScanInstructions(TrueBBI, TIB, TIE, BranchUnpredicable);
@@ -890,10 +899,10 @@ static void verifySameBranchInstructions(
 ///  FalseBB TrueBB FalseBB
 /// Currently only handles analyzable branches.
 /// Specifically excludes actual diamonds to avoid overlap.
-bool IfConverter::ValidForkedDiamond(
-    BBInfo &TrueBBI, BBInfo &FalseBBI,
-    unsigned &Dups1, unsigned &Dups2,
-    BBInfo &TrueBBICalc, BBInfo &FalseBBICalc) const {
+bool IfConverterImpl::ValidForkedDiamond(BBInfo &TrueBBI, BBInfo &FalseBBI,
+                                         unsigned &Dups1, unsigned &Dups2,
+                                         BBInfo &TrueBBICalc,
+                                         BBInfo &FalseBBICalc) const {
   Dups1 = Dups2 = 0;
   if (TrueBBI.IsBeingAnalyzed || TrueBBI.IsDone ||
       FalseBBI.IsBeingAnalyzed || FalseBBI.IsDone)
@@ -972,10 +981,10 @@ bool IfConverter::ValidForkedDiamond(
 
 /// ValidDiamond - Returns true if the 'true' and 'false' blocks (along
 /// with their common predecessor) forms a valid diamond shape for ifcvt.
-bool IfConverter::ValidDiamond(
-    BBInfo &TrueBBI, BBInfo &FalseBBI,
-    unsigned &Dups1, unsigned &Dups2,
-    BBInfo &TrueBBICalc, BBInfo &FalseBBICalc) const {
+bool IfConverterImpl::ValidDiamond(BBInfo &TrueBBI, BBInfo &FalseBBI,
+                                   unsigned &Dups1, unsigned &Dups2,
+                                   BBInfo &TrueBBICalc,
+                                   BBInfo &FalseBBICalc) const {
   Dups1 = Dups2 = 0;
   if (TrueBBI.IsBeingAnalyzed || TrueBBI.IsDone ||
       FalseBBI.IsBeingAnalyzed || FalseBBI.IsDone)
@@ -1035,7 +1044,7 @@ bool IfConverter::ValidDiamond(
 
 /// AnalyzeBranches - Look at the branches at the end of a block to determine if
 /// the block is predicable.
-void IfConverter::AnalyzeBranches(BBInfo &BBI) {
+void IfConverterImpl::AnalyzeBranches(BBInfo &BBI) {
   if (BBI.IsDone)
     return;
 
@@ -1071,10 +1080,10 @@ void IfConverter::AnalyzeBranches(BBInfo &BBI) {
 /// in the block are isPredicable(). Also checks if the block contains any
 /// instruction which can clobber a predicate (e.g. condition code register).
 /// If so, the block is not predicable unless it's the last instruction.
-void IfConverter::ScanInstructions(BBInfo &BBI,
-                                   MachineBasicBlock::iterator &Begin,
-                                   MachineBasicBlock::iterator &End,
-                                   bool BranchUnpredicable) const {
+void IfConverterImpl::ScanInstructions(BBInfo &BBI,
+                                       MachineBasicBlock::iterator &Begin,
+                                       MachineBasicBlock::iterator &End,
+                                       bool BranchUnpredicable) const {
   if (BBI.IsDone || BBI.IsUnpredicable)
     return;
 
@@ -1179,10 +1188,10 @@ void IfConverter::ScanInstructions(BBInfo &BBI,
 ///        case
 /// @param hasCommonTail true if BBI shares a tail with a sibling block that
 ///        contains any instruction that would make the block unpredicable.
-bool IfConverter::FeasibilityAnalysis(BBInfo &BBI,
-                                      SmallVectorImpl<MachineOperand> &Pred,
-                                      bool isTriangle, bool RevBranch,
-                                      bool hasCommonTail) {
+bool IfConverterImpl::FeasibilityAnalysis(BBInfo &BBI,
+                                          SmallVectorImpl<MachineOperand> &Pred,
+                                          bool isTriangle, bool RevBranch,
+                                          bool hasCommonTail) {
   // If the block is dead or unpredicable, then it cannot be predicated.
   // Two blocks may share a common unpredicable tail, but this doesn't prevent
   // them from being if-converted. The non-shared portion is assumed to have
@@ -1222,7 +1231,7 @@ bool IfConverter::FeasibilityAnalysis(BBInfo &BBI,
 
 /// Analyze the structure of the sub-CFG starting from the specified block.
 /// Record its successors and whether it looks like an if-conversion candidate.
-void IfConverter::AnalyzeBlock(
+void IfConverterImpl::AnalyzeBlock(
     MachineBasicBlock &MBB, std::vector<std::unique_ptr<IfcvtToken>> &Tokens) {
   struct BBState {
     BBState(MachineBasicBlock &MBB) : MBB(&MBB) {}
@@ -1443,7 +1452,7 @@ void IfConverter::AnalyzeBlock(
 }
 
 /// Analyze all blocks and find entries for all if-conversion candidates.
-void IfConverter::AnalyzeBlocks(
+void IfConverterImpl::AnalyzeBlocks(
     MachineFunction &MF, std::vector<std::unique_ptr<IfcvtToken>> &Tokens) {
   for (MachineBasicBlock &MBB : MF)
     AnalyzeBlock(MBB, Tokens);
@@ -1472,7 +1481,7 @@ static bool canFallThroughTo(MachineBasicBlock &MBB, MachineBasicBlock &ToMBB) {
 
 /// Invalidate predecessor BB info so it would be re-analyzed to determine if it
 /// can be if-converted. If predecessor is already enqueued, dequeue it!
-void IfConverter::InvalidatePreds(MachineBasicBlock &MBB) {
+void IfConverterImpl::InvalidatePreds(MachineBasicBlock &MBB) {
   for (const MachineBasicBlock *Predecessor : MBB.predecessors()) {
     BBInfo &PBBI = BBAnalysis[Predecessor->getNumber()];
     if (PBBI.IsDone || PBBI.BB == &MBB)
@@ -1535,7 +1544,7 @@ static void UpdatePredRedefs(MachineInstr &MI, LivePhysRegs &Redefs) {
 }
 
 /// If convert a simple (split, no rejoin) sub-CFG.
-bool IfConverter::IfConvertSimple(BBInfo &BBI, IfcvtKind Kind) {
+bool IfConverterImpl::IfConvertSimple(BBInfo &BBI, IfcvtKind Kind) {
   BBInfo &TrueBBI  = BBAnalysis[BBI.TrueBB->getNumber()];
   BBInfo &FalseBBI = BBAnalysis[BBI.FalseBB->getNumber()];
   BBInfo *CvtBBI = &TrueBBI;
@@ -1620,7 +1629,7 @@ bool IfConverter::IfConvertSimple(BBInfo &BBI, IfcvtKind Kind) {
 }
 
 /// If convert a triangle sub-CFG.
-bool IfConverter::IfConvertTriangle(BBInfo &BBI, IfcvtKind Kind) {
+bool IfConverterImpl::IfConvertTriangle(BBInfo &BBI, IfcvtKind Kind) {
   BBInfo &TrueBBI = BBAnalysis[BBI.TrueBB->getNumber()];
   BBInfo &FalseBBI = BBAnalysis[BBI.FalseBB->getNumber()];
   BBInfo *CvtBBI = &TrueBBI;
@@ -1773,10 +1782,9 @@ bool IfConverter::IfConvertTriangle(BBInfo &BBI, IfcvtKind Kind) {
 ///                   cases. The caller will replace the branch if necessary.
 /// \p MergeAddEdges - Add successor edges when merging blocks. Only false for
 ///                    unanalyzable fallthrough
-bool IfConverter::IfConvertDiamondCommon(
-    BBInfo &BBI, BBInfo &TrueBBI, BBInfo &FalseBBI,
-    unsigned NumDups1, unsigned NumDups2,
-    bool TClobbersPred, bool FClobbersPred,
+bool IfConverterImpl::IfConvertDiamondCommon(
+    BBInfo &BBI, BBInfo &TrueBBI, BBInfo &FalseBBI, unsigned NumDups1,
+    unsigned NumDups2, bool TClobbersPred, bool FClobbersPred,
     bool RemoveBranch, bool MergeAddEdges) {
 
   if (TrueBBI.IsDone || FalseBBI.IsDone ||
@@ -2004,10 +2012,11 @@ bool IfConverter::IfConvertDiamondCommon(
 
 /// If convert an almost-diamond sub-CFG where the true
 /// and false blocks share a common tail.
-bool IfConverter::IfConvertForkedDiamond(
-    BBInfo &BBI, IfcvtKind Kind,
-    unsigned NumDups1, unsigned NumDups2,
-    bool TClobbersPred, bool FClobbersPred) {
+bool IfConverterImpl::IfConvertForkedDiamond(BBInfo &BBI, IfcvtKind Kind,
+                                             unsigned NumDups1,
+                                             unsigned NumDups2,
+                                             bool TClobbersPred,
+                                             bool FClobbersPred) {
   BBInfo &TrueBBI  = BBAnalysis[BBI.TrueBB->getNumber()];
   BBInfo &FalseBBI = BBAnalysis[BBI.FalseBB->getNumber()];
 
@@ -2040,9 +2049,9 @@ bool IfConverter::IfConvertForkedDiamond(
 }
 
 /// If convert a diamond sub-CFG.
-bool IfConverter::IfConvertDiamond(BBInfo &BBI, IfcvtKind Kind,
-                                   unsigned NumDups1, unsigned NumDups2,
-                                   bool TClobbersPred, bool FClobbersPred) {
+bool IfConverterImpl::IfConvertDiamond(BBInfo &BBI, IfcvtKind Kind,
+                                       unsigned NumDups1, unsigned NumDups2,
+                                       bool TClobbersPred, bool FClobbersPred) {
   BBInfo &TrueBBI  = BBAnalysis[BBI.TrueBB->getNumber()];
   BBInfo &FalseBBI = BBAnalysis[BBI.FalseBB->getNumber()];
   MachineBasicBlock *TailBB = TrueBBI.TrueBB;
@@ -2130,9 +2139,9 @@ static bool MaySpeculate(const MachineInstr &MI,
 
 /// Predicate instructions from the start of the block to the specified end with
 /// the specified condition.
-void IfConverter::PredicateBlock(BBInfo &BBI, MachineBasicBlock::iterator E,
-                                 SmallVectorImpl<MachineOperand> &Cond,
-                                 SmallSet<MCRegister, 4> *LaterRedefs) {
+void IfConverterImpl::PredicateBlock(BBInfo &BBI, MachineBasicBlock::iterator E,
+                                     SmallVectorImpl<MachineOperand> &Cond,
+                                     SmallSet<MCRegister, 4> *LaterRedefs) {
   bool AnyUnpred = false;
   bool MaySpec = LaterRedefs != nullptr;
   for (MachineInstr &I : make_range(BBI.BB->begin(), E)) {
@@ -2172,9 +2181,9 @@ void IfConverter::PredicateBlock(BBInfo &BBI, MachineBasicBlock::iterator E,
 
 /// Copy and predicate instructions from source BB to the destination block.
 /// Skip end of block branches if IgnoreBr is true.
-void IfConverter::CopyAndPredicateBlock(BBInfo &ToBBI, BBInfo &FromBBI,
-                                        SmallVectorImpl<MachineOperand> &Cond,
-                                        bool IgnoreBr) {
+void IfConverterImpl::CopyAndPredicateBlock(
+    BBInfo &ToBBI, BBInfo &FromBBI, SmallVectorImpl<MachineOperand> &Cond,
+    bool IgnoreBr) {
   MachineFunction &MF = *ToBBI.BB->getParent();
 
   MachineBasicBlock &FromMBB = *FromBBI.BB;
@@ -2238,7 +2247,8 @@ void IfConverter::CopyAndPredicateBlock(BBInfo &ToBBI, BBInfo &FromBBI,
 /// to the end of the function.  If AddEdges is true, i.e., when FromBBI's
 /// branch is being moved, add those successor edges to ToBBI and remove the old
 /// edge from ToBBI to FromBBI.
-void IfConverter::MergeBlocks(BBInfo &ToBBI, BBInfo &FromBBI, bool AddEdges) {
+void IfConverterImpl::MergeBlocks(BBInfo &ToBBI, BBInfo &FromBBI,
+                                  bool AddEdges) {
   MachineBasicBlock &FromMBB = *FromBBI.BB;
   assert(!FromMBB.hasAddressTaken() &&
          "Removing a BB whose address is taken!");
@@ -2368,7 +2378,52 @@ void IfConverter::MergeBlocks(BBInfo &ToBBI, BBInfo &FromBBI, bool AddEdges) {
   FromBBI.IsAnalyzed = false;
 }
 
-FunctionPass *
-llvm::createIfConverter(std::function<bool(const MachineFunction &)> Ftor) {
-  return new IfConverter(std::move(Ftor));
+FunctionPass *llvm::createIfConverterLegacyPass(
+    std::function<bool(const MachineFunction &)> Ftor) {
+  return new IfConverterLegacy(std::move(Ftor));
+}
+
+bool IfConverterLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  IfConverterImpl Impl;
+  return Impl.runOnMachineFunction(
+      MF,
+      [&]() -> MachineBlockFrequencyInfo & {
+        return getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
+      },
+      [&]() {
+        return &getAnalysis<MachineBranchProbabilityInfoWrapperPass>()
+                    .getMBPI();
+      },
+      [&]() { return &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI(); },
+      [&](const MachineFunction &MF) {
+        return PredicateFtor && !PredicateFtor(MF);
+      });
+}
+
+PreservedAnalyses IfConverterPass::run(MachineFunction &MF,
+                                       MachineFunctionAnalysisManager &MFAM) {
+  IfConverterImpl Impl;
+  bool Changed = Impl.runOnMachineFunction(
+      MF,
+      [&]() -> MachineBlockFrequencyInfo & {
+        return MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+      },
+      [&]() { return &MFAM.getResult<MachineBranchProbabilityAnalysis>(MF); },
+      [&]() {
+        ProfileSummaryInfo *PSI =
+            MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+                .getCachedResult<ProfileSummaryAnalysis>(
+                    *MF.getFunction().getParent());
+        if (!PSI)
+          reportFatalUsageError("if-converter requires profile-summary");
+        return PSI;
+      },
+      [&](const MachineFunction &MF) {
+        return PredicateFtor && !PredicateFtor(MF);
+      });
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses();
 }

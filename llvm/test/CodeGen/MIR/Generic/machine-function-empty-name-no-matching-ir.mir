@@ -13,6 +13,7 @@
 ...
 ---
 name: ''
+...
 ---
 # CHECK: function '' isn't defined in the provided LLVM IR
 name: ''

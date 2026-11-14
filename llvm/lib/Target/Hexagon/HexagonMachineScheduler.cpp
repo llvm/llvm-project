@@ -49,12 +49,13 @@ int HexagonConvergingVLIWScheduler::SchedulingCost(ReadyQueue &Q, SUnit *SU,
   int ResCount =
       ConvergingVLIWScheduler::SchedulingCost(Q, SU, Candidate, Delta, verbose);
 
-  if (!SU || SU->isScheduled)
+  if (!SU || SU->isScheduled || !SU->isInstr())
     return ResCount;
 
   auto &QST = DAG->MF.getSubtarget<HexagonSubtarget>();
   auto &QII = *QST.getInstrInfo();
-  if (SU->isInstr() && QII.mayBeCurLoad(*SU->getInstr())) {
+  MachineInstr *MI = SU->getInstr();
+  if (QII.mayBeCurLoad(*MI)) {
     if (Q.getID() == TopQID &&
         Top.ResourceModel->isResourceAvailable(SU, true)) {
       ResCount += PriorityTwo;
@@ -63,6 +64,33 @@ int HexagonConvergingVLIWScheduler::SchedulingCost(ReadyQueue &Q, SUnit *SU,
                Bot.ResourceModel->isResourceAvailable(SU, false)) {
       ResCount += PriorityTwo;
       LLVM_DEBUG(if (verbose) dbgs() << "C|");
+    }
+    return ResCount;
+  }
+
+  // Keep HLX load uses and store definitions close to their pseudos so the
+  // packetizer can place each pair in the same packet.
+  if (Q.getID() == TopQID) {
+    if (QII.isNewStorePseudo(*MI)) {
+      ResCount += PriorityOne;
+    } else if (!QII.isTmpLoadPseudo(*MI)) {
+      for (const SDep &PredDep : SU->Preds) {
+        SUnit *Pred = PredDep.getSUnit();
+        if (PredDep.getKind() == SDep::Data && Pred->isInstr() &&
+            QII.isTmpLoadPseudo(*Pred->getInstr()) && Pred->NumSuccs < 3)
+          ResCount += PriorityOne;
+      }
+    }
+  } else if (Q.getID() == BotQID) {
+    if (QII.isTmpLoadPseudo(*MI) && SU->NumSuccs < 3) {
+      ResCount += PriorityOne;
+    } else if (!QII.isNewStorePseudo(*MI)) {
+      for (const SDep &SuccDep : SU->Succs) {
+        SUnit *Succ = SuccDep.getSUnit();
+        if (SuccDep.getKind() == SDep::Data && Succ->isInstr() &&
+            QII.isNewStorePseudo(*Succ->getInstr()))
+          ResCount += PriorityOne;
+      }
     }
   }
 

@@ -1,6 +1,6 @@
 set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
 set(LLVM_TARGET_DEFINITIONS VectorizeOptions.td)
-tablegen(LLVM VectorizeOptions.inc -gen-opt-parser-defs)
+llvm_tablegen(VectorizeOptions.inc -gen-opt-parser-defs)
 add_public_tablegen_target(VectorizeOptionsTableGen)
 
 add_llvm_component_library(LLVMVectorize

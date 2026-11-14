@@ -155,6 +155,18 @@ class AttrTypeConstraint<Pred pred, string summary = "",
   // The name of the C++ function that is generated for this constraint.
   // If empty, no C++ function is generated.
   string cppFunctionName = cppFunctionNameParam;
+
+  // The C++ headers declaring the C++ classes this constraint refers to
+  // as written in an `#include` directive. Generated declarations using
+  // this constraint include these headers. Type and attribute constraints
+  // default to the header of `::mlir::Type` and `::mlir::Attribute` respectively.
+  list<string> cppIncludes = [];
+}
+
+// Returns the `cppIncludes` headers of all `constraints`.
+class AllCppIncludes<list<AttrTypeConstraint> constraints> {
+  list<string> ret = !listflatten(!foreach(constraint, constraints,
+                                           constraint.cppIncludes));
 }
 
 // Subclasses used to differentiate different constraint kinds. These are used
@@ -169,12 +181,16 @@ class TypeConstraint<Pred predicate, string summary = "",
     AttrTypeConstraint<predicate, summary, cppFunctionNameParam> {
   // The name of the C++ Type class if known, or Type if not.
   string cppType = cppTypeParam;
+
+  let cppIncludes = ["mlir/IR/Types.h"];
 }
 
 // Subclass for constraints on an attribute.
 class AttrConstraint<Pred predicate, string summary = "",
                      string cppFunctionNameParam = ""> :
-    AttrTypeConstraint<predicate, summary, cppFunctionNameParam>;
+    AttrTypeConstraint<predicate, summary, cppFunctionNameParam> {
+  let cppIncludes = ["mlir/IR/Attributes.h"];
+}
 
 // Subclass for constraints on a property.
 class PropConstraint<Pred predicate, string summary = "", string interfaceTypeParam = ""> :

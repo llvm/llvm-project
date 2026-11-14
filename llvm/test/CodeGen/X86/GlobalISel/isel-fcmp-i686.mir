@@ -7,7 +7,6 @@ name:            fcmp_double_oeq
 alignment:       16
 exposesReturnsTwice: false
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 8, size: 8, alignment: 8, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
@@ -37,7 +36,6 @@ body:             |
 name:            fcmp_double_ogt
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 8, size: 8, alignment: 8, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
@@ -66,7 +64,6 @@ name:            fcmp_double_oge
 alignment:       16
 exposesReturnsTwice: false
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 8, size: 8, alignment: 8, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
@@ -94,7 +91,6 @@ name:            fcmp_double_olt
 alignment:       16
 exposesReturnsTwice: false
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 8, size: 8, alignment: 8, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
@@ -122,7 +118,6 @@ name:            fcmp_double_ole
 alignment:       16
 exposesReturnsTwice: false
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 8, size: 8, alignment: 8, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
@@ -150,7 +145,6 @@ name:            fcmp_double_one
 alignment:       16
 exposesReturnsTwice: false
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 8, size: 8, alignment: 8, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
@@ -177,7 +171,6 @@ name:            fcmp_double_ord
 alignment:       16
 exposesReturnsTwice: false
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 8, size: 8, alignment: 8, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
@@ -232,7 +225,6 @@ name:            fcmp_double_ueq
 alignment:       16
 exposesReturnsTwice: false
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 8, size: 8, alignment: 8, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
@@ -260,7 +252,6 @@ name:            fcmp_double_ugt
 alignment:       16
 exposesReturnsTwice: false
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 8, size: 8, alignment: 8, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
@@ -289,7 +280,6 @@ name:            fcmp_double_uge
 alignment:       16
 exposesReturnsTwice: false
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 8, size: 8, alignment: 8, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
@@ -317,7 +307,6 @@ name:            fcmp_double_ult
 alignment:       16
 exposesReturnsTwice: false
 legalized:       true
-tracksRegLiveness: true
 
 fixedStack:
   - { id: 0, type: default, offset: 8, size: 8, alignment: 8, stack-id: default,
@@ -346,7 +335,6 @@ name:            fcmp_double_ule
 alignment:       16
 exposesReturnsTwice: false
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 8, size: 8, alignment: 8, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
@@ -374,7 +362,6 @@ name:            fcmp_double_une
 alignment:       16
 exposesReturnsTwice: false
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 8, size: 8, alignment: 8, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,

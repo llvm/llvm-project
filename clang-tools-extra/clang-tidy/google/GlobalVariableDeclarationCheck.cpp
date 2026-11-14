@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "GlobalVariableDeclarationCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -14,14 +15,9 @@
 #include <string>
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::google::objc {
-
-namespace {
-
-AST_MATCHER(VarDecl, isLocalVariable) { return Node.isLocalVarDecl(); }
-
-} // namespace
 
 static FixItHint generateFixItHint(const VarDecl *Decl, bool IsConst) {
   if (IsConst && (Decl->getStorageClass() != SC_Static)) {
@@ -62,14 +58,14 @@ void GlobalVariableDeclarationCheck::registerMatchers(MatchFinder *Finder) {
   //
   // Note that hasGlobalStorage() matches static variables declared locally
   // inside a function or method, so we need to exclude those with
-  // isLocalVariable().
+  // isLocalVarDecl().
   Finder->addMatcher(
       varDecl(hasGlobalStorage(), unless(hasType(isConstQualified())),
-              unless(isLocalVariable()), unless(matchesName("::g[A-Z]")))
+              unless(isLocalVarDecl()), unless(matchesName("::g[A-Z]")))
           .bind("global_var"),
       this);
   Finder->addMatcher(varDecl(hasGlobalStorage(), hasType(isConstQualified()),
-                             unless(isLocalVariable()),
+                             unless(isLocalVarDecl()),
                              unless(matchesName("::(k[A-Z])|([A-Z][A-Z0-9])")))
                          .bind("global_const"),
                      this);

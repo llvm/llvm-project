@@ -48,8 +48,8 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_align4(ptr addrspace(1) %ptr, <2 x 
 ; CHECK-NEXT:    setne %cl
 ; CHECK-NEXT:    movl %eax, %edx
 ; CHECK-NEXT:    shrl $16, %eax
-; CHECK-NEXT:    pinsrw $0, %edx, %xmm0
-; CHECK-NEXT:    pinsrw $0, %eax, %xmm1
+; CHECK-NEXT:    movd %edx, %xmm0
+; CHECK-NEXT:    movd %eax, %xmm1
 ; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %atomicrmw.end

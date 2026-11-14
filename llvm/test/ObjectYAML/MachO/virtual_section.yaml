@@ -1,6 +1,7 @@
 # RUN: yaml2obj %s | obj2yaml | FileCheck %s
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACE
   cputype:         0x00000007

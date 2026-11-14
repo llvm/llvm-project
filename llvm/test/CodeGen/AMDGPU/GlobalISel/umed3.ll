@@ -155,15 +155,15 @@ define <2 x i16> @test_max_K0min_K1Val__v2u16(<2 x i16> %a) {
 ; GFX9-LABEL: test_max_K0min_K1Val__v2u16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_min_u16 v0, 17, v0 op_sel_hi:[0,1]
-; GFX9-NEXT:    v_pk_max_u16 v0, 12, v0 op_sel_hi:[0,1]
+; GFX9-NEXT:    v_pk_min_u16 v0, v0, 17 op_sel_hi:[1,0]
+; GFX9-NEXT:    v_pk_max_u16 v0, v0, 12 op_sel_hi:[1,0]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: test_max_K0min_K1Val__v2u16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_pk_min_u16 v0, 17, v0 op_sel_hi:[0,1]
-; GFX10-NEXT:    v_pk_max_u16 v0, 12, v0 op_sel_hi:[0,1]
+; GFX10-NEXT:    v_pk_min_u16 v0, v0, 17 op_sel_hi:[1,0]
+; GFX10-NEXT:    v_pk_max_u16 v0, v0, 12 op_sel_hi:[1,0]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %umin = call <2 x i16> @llvm.umin.v2i16(<2 x i16> <i16 17, i16 17>, <2 x i16> %a)
   %umed = call <2 x i16> @llvm.umax.v2i16(<2 x i16> <i16 12, i16 12>, <2 x i16> %umin)

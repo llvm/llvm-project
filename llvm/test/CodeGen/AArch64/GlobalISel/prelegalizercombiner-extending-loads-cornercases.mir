@@ -67,7 +67,6 @@
 ---
 name:            multiple_copies
 # CHECK-LABEL: name: multiple_copies
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x0, $w1
@@ -132,7 +131,6 @@ name:            sink_to_phi_trivially_dominating
 # This test currently tests that we don't sink if we would sink to a phi. This
 # is needed to avoid inserting into the middle of the leading G_PHI instructions
 # of a BB
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x0, $w1
@@ -170,7 +168,6 @@ body: |
 ---
 name:            sink_to_phi_nondominating
 # CHECK-LABEL: name: sink_to_phi_nondominating
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x0, $w1
@@ -230,7 +227,6 @@ body: |
 ---
 name:            sink_to_phi_emptyblock
 # CHECK-LABEL: name: sink_to_phi_emptyblock
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x0, $w1
@@ -282,7 +278,6 @@ name:            use_doesnt_def_anything
 # register. It would usually go on to make the right overall decision anyway but
 # would sometimes crash on things like (SOME_INTRINSIC imm). This test covers
 # the case that it would recover from.
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x0, $w1
@@ -297,7 +292,6 @@ body: |
 name:            op0_isnt_a_reg
 # CHECK-LABEL: name: op0_isnt_a_reg
 # This test covers the variant of use_doesnt_def_anything that would crash.
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x0, $w1

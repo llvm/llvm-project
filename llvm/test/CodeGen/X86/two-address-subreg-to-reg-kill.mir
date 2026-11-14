@@ -6,7 +6,6 @@
 # physical $eax, which allows IMUL32rm can use %eax.
 ---
 name: subreg_to_reg_kill_hoist
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64 }
   - { id: 1, class: gr32 }
@@ -30,14 +29,13 @@ body: |
     %0:gr64 = COPY killed $rdi
     %1:gr32 = COPY killed $esi
     dead %2:gr32 = IMUL32rm %1, %0, 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from `ptr undef`, align 4)
-    dead $rax = SUBREG_TO_REG killed %1, %subreg.sub_32bit
+    dead $rax = SUBREG_TO_REG %1, %subreg.sub_32bit
     RET 0
 ...
 ---
 # Negative case: subreg_to_reg with a vreg is not hoisted.
 # The pass keeps the IMUL32rm as is and MOV32rm + IMUL32rr is emitted instead.
 name: subreg_to_reg_virtual_dst_no_hoist
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64 }
   - { id: 1, class: gr32 }
@@ -63,13 +61,12 @@ body: |
     %0:gr64 = COPY killed $rdi
     %1:gr32 = COPY killed $esi
     dead %2:gr32 = IMUL32rm %1, %0, 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from `ptr undef`, align 4)
-    dead %3:gr64 = SUBREG_TO_REG killed %1, %subreg.sub_32bit
+    dead %3:gr64 = SUBREG_TO_REG %1, %subreg.sub_32bit
     RET 0
 ...
 ---
 # Positive case: COPY to a physical register is hoisted above IMUL32rm.
 name: copy_kill_hoist
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64 }
   - { id: 1, class: gr32 }
@@ -93,13 +90,12 @@ body: |
     %0:gr64 = COPY killed $rdi
     %1:gr32 = COPY killed $esi
     dead %2:gr32 = IMUL32rm %1, %0, 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from `ptr undef`, align 4)
-    dead $eax = COPY killed %1
+    dead $eax = COPY %1
     RET 0
 ...
 ---
 # Negative case: COPY with a vreg destination is not hoisted.
 name: copy_virtual_dst_no_hoist
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64 }
   - { id: 1, class: gr32 }
@@ -125,6 +121,6 @@ body: |
     %0:gr64 = COPY killed $rdi
     %1:gr32 = COPY killed $esi
     dead %2:gr32 = IMUL32rm %1, %0, 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from `ptr undef`, align 4)
-    dead %3:gr32 = COPY killed %1
+    dead %3:gr32 = COPY %1
     RET 0
 ...

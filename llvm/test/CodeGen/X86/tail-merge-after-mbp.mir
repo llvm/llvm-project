@@ -6,6 +6,7 @@
 # check loop bb.9 is not merged with bb.12
 
 name:            foo
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: foo
   ; CHECK: bb.0:

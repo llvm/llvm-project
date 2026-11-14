@@ -109,6 +109,10 @@ TEST(MLGOUtilsTest, IsReleaseModelValid) {
   OptChoice = TestModelChoice::Default;
   EXPECT_TRUE((isReleaseModelValid<NoopSavedModelImpl>("channel", OptChoice)));
   EXPECT_TRUE((isReleaseModelValid<MockAOTModel>("", OptChoice)));
+  // OptChoice lives on the stack, and cl::Option's destructor does not
+  // unregister it, leaving a pointer to the object in perpetuity, so remove
+  // it explicitly.
+  OptChoice.removeArgument();
 }
 
 TEST(MLGOUtilsTest, CreateReleaseModeModelRunnerModelSelection) {

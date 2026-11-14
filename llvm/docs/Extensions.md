@@ -434,7 +434,9 @@ Version 6 (newest): Capable of encoding the function GUID (as computed by
 (including functions with internal linkage) without requiring
 `-funique-internal-linkage-names`. This feature is enabled by the 9th bit of
 the feature entry. When enabled, the GUID is stored as an 8-byte value
-immediately after the feature entry.
+immediately after the feature entry. With the
+`-basic-block-address-map-emit-func-guid` flag, the GUID is emitted for
+functions with local linkage, whose symbol names may not be unique.
 
 Example:
 

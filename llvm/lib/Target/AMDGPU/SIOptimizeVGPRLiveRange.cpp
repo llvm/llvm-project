@@ -444,12 +444,6 @@ void SIOptimizeVGPRLiveRange::optimizeLiveRange(
       O.setReg(NewReg);
   }
 
-  // The new PHI is a def of NewReg and a use of Reg and UndefReg; the uses of
-  // Reg in the Else/Endif region were rewritten to NewReg. Kill flags moved
-  // with the rewritten operands may no longer mark the last use, so drop them
-  // and let the recomputed intervals be the source of truth.
-  MRI->clearKillFlags(Reg);
-  MRI->clearKillFlags(NewReg);
   LIS->InsertMachineInstrInMaps(*PHI);
   LIS->removeInterval(Reg);
   LIS->createAndComputeVirtRegInterval(Reg);

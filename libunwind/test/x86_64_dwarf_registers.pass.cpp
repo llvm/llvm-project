@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: target={{x86_64-.+}}
-// UNSUPPORTED: target={{.*-windows.*}}
+// REQUIRES: target={{x86_64-.*-freebsd.*}}
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBUNWIND_IS_NATIVE_ONLY
 
 // Disable internal tracing, which depends on private library symbols.
@@ -45,7 +44,7 @@ int main(int, char **) {
   for (unsigned i = 0; i != sizeof(regs) / sizeof(regs[0]); ++i) {
     assert(prolog.savedRegisters[regs[i]].location == Parser::kRegisterInCFA);
     assert(prolog.savedRegisters[regs[i]].value == -8 * int(i + 1));
-    // Also exercise the base fields on hosts without native base access.
+    // Also exercise the stored values for the extended registers.
     registers.setRegister(regs[i], i + 1);
     assert(registers.getRegister(regs[i]) == i + 1);
   }

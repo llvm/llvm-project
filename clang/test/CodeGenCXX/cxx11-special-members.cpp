@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -std=c++11 -emit-llvm -o - -triple=i686-linux-gnu | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -std=c++11 -emit-llvm -o - -triple=i686-linux-gnu | FileCheck %s %}
 
 struct A {
   A(const A&);

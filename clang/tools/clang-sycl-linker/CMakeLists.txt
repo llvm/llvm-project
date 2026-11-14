@@ -18,7 +18,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 set(LLVM_TARGET_DEFINITIONS SYCLLinkOpts.td)
-tablegen(LLVM SYCLLinkOpts.inc -gen-opt-parser-defs)
+llvm_tablegen(SYCLLinkOpts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(SYCLLinkerOpts)
 
 if(NOT CLANG_BUILT_STANDALONE)

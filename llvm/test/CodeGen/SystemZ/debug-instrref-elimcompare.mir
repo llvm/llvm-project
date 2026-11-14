@@ -17,7 +17,6 @@
 # CHECK-NEXT: constants:       []
 ---
 name:            foo
-tracksRegLiveness: true
 liveins:
   - { reg: '$r2l', virtual-reg: '' }
   - { reg: '$r3l', virtual-reg: '' }

@@ -23,7 +23,6 @@
 ---
 name:            atomic
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64 }
   - { id: 1, class: gr64 }
@@ -41,14 +40,14 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
     ; CHECK: CMP64mi32 [[COPY]], 1, $noreg, 0, $noreg, 0, implicit-def $eflags :: (load unordered (s64) from %ir.arg)
     ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
-    ; CHECK: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 killed [[SETCCr]]
+    ; CHECK: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[SETCCr]]
     ; CHECK: $eax = COPY [[MOVZX32rr8_]]
     ; CHECK: RET 0, $eax
     %0:gr64 = COPY $rdi
     %1:gr64 = MOV64rm %0, 1, $noreg, 0, $noreg :: (load unordered (s64) from %ir.arg)
     TEST64rr %1, %1, implicit-def $eflags
     %2:gr8 = SETCCr 4, implicit $eflags
-    %3:gr32 = MOVZX32rr8 killed %2
+    %3:gr32 = MOVZX32rr8 %2
     $eax = COPY %3
     RET 0, $eax
 
@@ -56,7 +55,6 @@ body:             |
 ---
 name:            nonatomic_unoptimized
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64 }
   - { id: 1, class: gr64 }
@@ -74,14 +72,14 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
     ; CHECK: CMP64mi32 [[COPY]], 1, $noreg, 0, $noreg, 0, implicit-def $eflags :: (load (s64) from %ir.arg)
     ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
-    ; CHECK: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 killed [[SETCCr]]
+    ; CHECK: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[SETCCr]]
     ; CHECK: $eax = COPY [[MOVZX32rr8_]]
     ; CHECK: RET 0, $eax
     %0:gr64 = COPY $rdi
     %1:gr64 = MOV64rm %0, 1, $noreg, 0, $noreg :: (load (s64) from %ir.arg)
     TEST64rr %1, %1, implicit-def $eflags
     %2:gr8 = SETCCr 4, implicit $eflags
-    %3:gr32 = MOVZX32rr8 killed %2
+    %3:gr32 = MOVZX32rr8 %2
     $eax = COPY %3
     RET 0, $eax
 

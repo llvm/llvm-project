@@ -25,6 +25,7 @@
 # Contents are removed, since they are not important for the test. We need a
 # small text segment (smaller than a page).
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C

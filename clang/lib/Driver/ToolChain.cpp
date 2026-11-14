@@ -179,6 +179,8 @@ bool ToolChain::loadMultilibsFromYAML(const llvm::opt::ArgList &Args,
                           std::string(FilePath));
     ++FileInsertPos;
     if (RuntimeDir) {
+      // The builtin runtime directories include the multilib path, as the
+      // compiler-rt library files come from a runtimes build.
       SmallString<128> LibPath(*RuntimeDir);
       llvm::sys::path::append(LibPath, M.gccSuffix());
       getLibraryPaths().insert(getLibraryPaths().begin() + LibInsertPos,
@@ -877,6 +879,8 @@ StringRef ToolChain::getOSLibName() const {
 std::string ToolChain::getCompilerRTPath() const {
   SmallString<128> Path(getDriver().ResourceDir);
   if (isBareMetal()) {
+    // The builtin compiler-rt directories include the multilib path, as the
+    // compiler-rt library files come from a runtimes build.
     llvm::sys::path::append(Path, "lib", getOSLibName());
     if (!SelectedMultilibs.empty()) {
       Path += SelectedMultilibs.back().gccSuffix();

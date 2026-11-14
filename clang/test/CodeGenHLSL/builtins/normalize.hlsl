@@ -53,6 +53,19 @@ half4 test_normalize_half4(half4 p0)
     return normalize(p0);
 }
 
+// CHECK-LABEL: test_normalize_half5
+// DXCHECK: [[DOT:%.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.dx.fdot.v5f16(<5 x half> %{{.*}}, <5 x half> %{{.*}})
+// DXCHECK-NEXT: [[LEN:%.*]] = call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) half @llvm.sqrt.f16(half [[DOT]])
+// SPVCHECK: [[LEN:%.*]] = call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) half @llvm.spv.length.v5f16(<5 x half> %{{.*}})
+// CHECK-NEXT: [[SPLATINSERT:%.*]] = insertelement <5 x half> poison, half [[LEN]], i64 0
+// CHECK-NEXT: [[SPLAT:%.*]] = shufflevector <5 x half> [[SPLATINSERT]], <5 x half> poison, <5 x i32> zeroinitializer
+// CHECK-NEXT: [[RET:%.*]] = fdiv reassoc nnan ninf nsz arcp afn <5 x half> %{{.*}}, [[SPLAT]]
+// CHECK-NEXT: ret <5 x half> [[RET]]
+vector<half, 5> test_normalize_half5(vector<half, 5> p0)
+{
+    return normalize(p0);
+}
+
 // CHECK-LABEL: test_normalize_float
 // CHECK: [[ABS:%.*]] = call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) float @llvm.fabs.f32(float %{{.*}})
 // CHECK-NEXT: [[RET:%.*]] = fdiv reassoc nnan ninf nsz arcp afn float %{{.*}}, [[ABS]]
@@ -97,6 +110,19 @@ float3 test_normalize_float3(float3 p0)
 // CHECK-NEXT: [[RET:%.*]] = fdiv reassoc nnan ninf nsz arcp afn <4 x float> %{{.*}}, [[SPLAT]]
 // CHECK-NEXT: ret <4 x float> [[RET]]
 float4 test_normalize_float4(float4 p0)
+{
+    return normalize(p0);
+}
+
+// CHECK-LABEL: test_normalize_float5
+// DXCHECK: [[DOT:%.*]] = call reassoc nnan ninf nsz arcp afn float @llvm.dx.fdot.v5f32(<5 x float> %{{.*}}, <5 x float> %{{.*}})
+// DXCHECK-NEXT: [[LEN:%.*]] = call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) float @llvm.sqrt.f32(float [[DOT]])
+// SPVCHECK: [[LEN:%.*]] = call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) float @llvm.spv.length.v5f32(<5 x float> %{{.*}})
+// CHECK-NEXT: [[SPLATINSERT:%.*]] = insertelement <5 x float> poison, float [[LEN]], i64 0
+// CHECK-NEXT: [[SPLAT:%.*]] = shufflevector <5 x float> [[SPLATINSERT]], <5 x float> poison, <5 x i32> zeroinitializer
+// CHECK-NEXT: [[RET:%.*]] = fdiv reassoc nnan ninf nsz arcp afn <5 x float> %{{.*}}, [[SPLAT]]
+// CHECK-NEXT: ret <5 x float> [[RET]]
+vector<float, 5> test_normalize_float5(vector<float, 5> p0)
 {
     return normalize(p0);
 }

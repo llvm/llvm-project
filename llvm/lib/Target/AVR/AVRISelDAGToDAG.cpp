@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -848,7 +849,11 @@ bool AVRDAGToDAGISel::trySelect(SDNode *N) {
   }
 }
 
-FunctionPass *llvm::createAVRISelDag(AVRTargetMachine &TM,
-                                     CodeGenOptLevel OptLevel) {
+AVRISelDAGToDAGPass::AVRISelDAGToDAGPass(AVRTargetMachine &TM,
+                                         CodeGenOptLevel OptLevel)
+    : SelectionDAGISelPass(std::make_unique<AVRDAGToDAGISel>(TM, OptLevel)) {}
+
+FunctionPass *llvm::createAVRISelDagLegacyPass(AVRTargetMachine &TM,
+                                               CodeGenOptLevel OptLevel) {
   return new AVRDAGToDAGISelLegacy(TM, OptLevel);
 }

@@ -55,6 +55,20 @@ module @TestFloat attributes {
 } {}
 
 //===----------------------------------------------------------------------===//
+// MXI8Type
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @TestMXI8
+module @TestMXI8 attributes {
+  // CHECK: bytecode.scalar = mxi8,
+  // CHECK: bytecode.tensor = tensor<4xmxi8>,
+  // CHECK: bytecode.vector = vector<2xmxi8>
+  bytecode.scalar = mxi8,
+  bytecode.tensor = tensor<4xmxi8>,
+  bytecode.vector = vector<2xmxi8>
+} {}
+
+//===----------------------------------------------------------------------===//
 // IntegerType
 //===----------------------------------------------------------------------===//
 

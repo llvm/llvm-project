@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs < %s | FileCheck %s --check-prefix=ASM
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=finalize-isel < %s | FileCheck %s --check-prefixes=MIR,ISEL
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=kcfi < %s | FileCheck %s --check-prefixes=MIR,KCFI
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -stop-after=finalize-isel < %s | FileCheck %s --check-prefixes=MIR,ISEL
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -stop-after=kcfi < %s | FileCheck %s --check-prefixes=MIR,KCFI
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -stop-after=kcfi -enable-new-pm < %s | FileCheck %s --check-prefixes=MIR,KCFI
 
 ; ASM:       .p2align 2
@@ -164,6 +164,16 @@ err:
 }
 
 attributes #0 = { "target-features"="+retpoline-indirect-branches,+retpoline-indirect-calls" }
+
+;; __cfi_<fn> has the same visibility as <fn>.
+; ASM:       .globl __cfi_f10
+; ASM-NEXT:  .hidden __cfi_f10
+; ASM-NEXT:  .type __cfi_f10,@function
+; ASM-LABEL: __cfi_f10:
+define hidden void @f10() !kcfi_type !1 {
+; ASM-LABEL: {{^}}f10:
+  ret void
+}
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 4, !"kcfi", i32 1}

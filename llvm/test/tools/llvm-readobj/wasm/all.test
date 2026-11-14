@@ -1,0 +1,19 @@
+## --all should print the supported WebAssembly information.
+# RUN: llvm-readobj --all %p/Inputs/trivial.obj.wasm > %t 2>&1
+# RUN: FileCheck %s --input-file=%t --match-full-lines
+
+# CHECK-NOT:  {{.}}
+# CHECK:      File: {{.*}}trivial.obj.wasm
+# CHECK-NEXT: Format: WASM
+# CHECK-NEXT: Arch: wasm32
+# CHECK-NEXT: AddressSize: 32bit
+# CHECK-NEXT: Version: 0x1
+# CHECK-NEXT: Sections [
+# CHECK:        Type: TYPE (0x1)
+# CHECK:        Name: linking
+# CHECK:      Relocations [
+# CHECK-NEXT:   Section (4) CODE {
+# CHECK-NEXT:     0x4 R_WASM_MEMORY_ADDR_SLEB .L.str 0
+# CHECK:      Symbols [
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: main

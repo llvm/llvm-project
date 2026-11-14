@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple spirv64-intel %s -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple spirv64-intel %s -emit-llvm -o - | FileCheck %s %}
 
 // Test that function pointer casts properly handle address space conversions
 // on targets like spirv64-intel that use a non-default program address space.

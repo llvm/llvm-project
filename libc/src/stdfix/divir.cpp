@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "divir.h"
+#include "src/stdfix/divir.h"
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/common.h"
 #include "src/__support/fixed_point/fx_bits.h"

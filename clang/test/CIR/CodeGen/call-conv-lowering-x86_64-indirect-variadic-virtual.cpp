@@ -16,8 +16,7 @@ struct Base {
 void call_it(Base *b, Big g) { b->log("%s", g); }
 
 // CIR-LABEL: cir.func {{.*}}@_Z7call_itP4Base3Big(%arg0: !cir.ptr<!rec_Base> {llvm.noundef} loc({{[^)]+}}), %arg1: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef} loc({{[^)]+}}))
-// CIR:   %[[SLOT:.*]] = cir.vtable.get_virtual_fn_addr %{{.+}}[0] : !cir.vptr -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>, !cir.ptr<!s8i>, ...)>>>
-// CIR:   %[[FN:.*]] = cir.load align(8) %[[SLOT]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>, !cir.ptr<!s8i>, ...)>>>, !cir.ptr<!cir.func<(!cir.ptr<!rec_Base>, !cir.ptr<!s8i>, ...)>>
+// CIR:   %[[FN:.*]] = cir.vtable.get_virtual_fn %{{.+}}[0] : !cir.vptr -> !cir.ptr<!cir.func<(!cir.ptr<!rec_Base>, !cir.ptr<!s8i>, ...)>>
 // CIR-NOT: cir.cast bitcast {{.*}}!cir.func
 // CIR:   cir.call %[[FN]](%{{.+}}, %{{.+}}, %{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>, !cir.ptr<!s8i>, ...)>>, !cir.ptr<!rec_Base> {llvm.align = 8 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef}, !cir.ptr<!s8i> {llvm.noundef}, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> ()
 

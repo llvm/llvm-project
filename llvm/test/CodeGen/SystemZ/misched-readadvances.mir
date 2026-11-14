@@ -17,7 +17,6 @@
 ---
 name:            Perl_do_sv_dump
 alignment:       16
-tracksRegLiveness: true
 body:             |
     bb.0 :
     %1:addr64bit = IMPLICIT_DEF

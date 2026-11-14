@@ -1,4 +1,5 @@
 // RUN: mlir-opt -convert-spirv-to-llvm %s | FileCheck %s
+// RUN: mlir-opt -convert-spirv-to-llvm='allow-pattern-rollback=0' %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // spirv.GL.Ceil
@@ -165,6 +166,17 @@ spirv.func @pow(%arg0: f32, %arg1: vector<3xf16>) "None" {
   %0 = spirv.GL.Pow %arg0, %arg0 : f32
   // CHECK: llvm.intr.pow(%{{.*}}, %{{.*}}) : (vector<3xf16>, vector<3xf16>) -> vector<3xf16>
   %1 = spirv.GL.Pow %arg1, %arg1 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Ldexp
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @ldexp
+spirv.func @ldexp(%arg0: f32, %arg1: i32) "None" {
+  // CHECK: llvm.intr.ldexp(%{{.*}}, %{{.*}}) : (f32, i32) -> f32
+  %0 = spirv.GL.Ldexp %arg0 : f32, %arg1 : i32 -> f32
   spirv.Return
 }
 
@@ -451,6 +463,42 @@ spirv.func @asin_acos_atan(%arg0: f32, %arg1: vector<3xf16>) "None" {
   %1 = spirv.GL.Acos %arg1 : vector<3xf16>
   // CHECK: llvm.intr.atan(%{{.*}}) : (f32) -> f32
   %2 = spirv.GL.Atan %arg0 : f32
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Atan2
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @atan2
+spirv.func @atan2(%arg0: f32, %arg1: f32, %arg2: vector<3xf16>, %arg3: vector<3xf16>) "None" {
+  // CHECK: llvm.intr.atan2(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  %0 = spirv.GL.Atan2 %arg0, %arg1 : f32
+  // CHECK: llvm.intr.atan2(%{{.*}}, %{{.*}}) : (vector<3xf16>, vector<3xf16>) -> vector<3xf16>
+  %1 = spirv.GL.Atan2 %arg2, %arg3 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Asinh, spirv.GL.Acosh
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @asinh_acosh
+spirv.func @asinh_acosh(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
+  // CHECK: %[[SQ:.*]] = llvm.fmul %[[X:.*]], %[[X]] : f32
+  // CHECK: %[[RAD:.*]] = llvm.fadd %[[SQ]], %[[ONE]] : f32
+  // CHECK: %[[ROOT:.*]] = llvm.intr.sqrt(%[[RAD]]) : (f32) -> f32
+  // CHECK: %[[SUM:.*]] = llvm.fadd %[[X]], %[[ROOT]] : f32
+  // CHECK: llvm.intr.log(%[[SUM]]) : (f32) -> f32
+  %0 = spirv.GL.Asinh %arg0 : f32
+  // CHECK: %[[MONE:.*]] = llvm.mlir.constant(dense<-1.000000e+00> : vector<3xf16>) : vector<3xf16>
+  // CHECK: %[[VSQ:.*]] = llvm.fmul %[[VX:.*]], %[[VX]] : vector<3xf16>
+  // CHECK: %[[VRAD:.*]] = llvm.fadd %[[VSQ]], %[[MONE]] : vector<3xf16>
+  // CHECK: %[[VROOT:.*]] = llvm.intr.sqrt(%[[VRAD]]) : (vector<3xf16>) -> vector<3xf16>
+  // CHECK: %[[VSUM:.*]] = llvm.fadd %[[VX]], %[[VROOT]] : vector<3xf16>
+  // CHECK: llvm.intr.log(%[[VSUM]]) : (vector<3xf16>) -> vector<3xf16>
+  %1 = spirv.GL.Acosh %arg1 : vector<3xf16>
   spirv.Return
 }
 

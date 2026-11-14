@@ -17,7 +17,7 @@ using namespace lldb_private;
 // Creates a dummy candidate with just a type name in order to test the string
 // matching (exact name match and regex match) paths.
 FormattersMatchCandidate CandidateFromTypeName(const char *type_name) {
-  return FormattersMatchCandidate(ConstString(type_name), nullptr, TypeImpl(),
+  return FormattersMatchCandidate(type_name, nullptr, TypeImpl(),
                                   FormattersMatchCandidate::Flags());
 }
 

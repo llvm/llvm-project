@@ -4,7 +4,7 @@
 ; This test needs to be target specific due to the cost estimate in the output.
 
 ; RUN: opt -passes='lower-matrix-intrinsics' -S < %s | FileCheck %s
-; RUN: opt -passes='lower-matrix-intrinsics' -S -o /dev/null -pass-remarks-output=%t < %s && FileCheck --input-file %t --check-prefix=REMARK %s
+; RUN: opt -passes='lower-matrix-intrinsics' -S -disable-output -pass-remarks-output=%t < %s && FileCheck --input-file %t --check-prefix=REMARK %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "aarch64-apple-ios"

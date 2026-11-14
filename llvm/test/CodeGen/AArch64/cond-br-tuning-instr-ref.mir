@@ -46,9 +46,11 @@
 name:            _ZN4llvmlsERNS_11raw_ostreamERKNS_5ErrorE
 body:             |
   bb.0.entry:
+    liveins: $x0
     %1:gpr64 = COPY $x0
     %2:gpr64common = ANDXri %1, 8190, debug-instr-number 1, debug-location !13
     DBG_INSTR_REF !9, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !14
     %0:gpr64sp = COPY %2, debug-location !13
     CBZX %2, %bb.2
   bb.2.if.else:
+...

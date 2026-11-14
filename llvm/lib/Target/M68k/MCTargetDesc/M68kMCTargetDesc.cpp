@@ -14,17 +14,19 @@
 #include "M68kMCTargetDesc.h"
 #include "M68kInstPrinter.h"
 #include "M68kMCAsmInfo.h"
+#include "M68kMCOptions.h"
 #include "TargetInfo/M68kTargetInfo.h"
 
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MachineLocation.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 
@@ -39,6 +41,9 @@ using namespace llvm;
 
 #define GET_REGINFO_MC_DESC
 #include "M68kGenRegisterInfo.inc"
+
+#define OPTIONS_STRUCT_DEFS
+#include "M68kMCOptions.inc"
 
 // TODO Implement feature set parsing logics
 static std::string ParseM68kTriple(const Triple &TT, StringRef CPU) {
@@ -107,7 +112,12 @@ static MCInstPrinter *createM68kMCInstPrinter(const Triple &T,
   return new M68kInstPrinter(MAI, MII, MRI);
 }
 
+static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
+  return new MCTargetStreamer(S);
+}
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM68kTargetMC() {
+  static opt::RegisterLibraryOptions<M68kMCOptions> O;
   Target &T = getTheM68kTarget();
 
   // Register the MC asm info.
@@ -133,4 +143,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM68kTargetMC() {
 
   // Register the asm backend.
   TargetRegistry::RegisterMCAsmBackend(T, createM68kAsmBackend);
+
+  TargetRegistry::RegisterNullTargetStreamer(T, createNullTargetStreamer);
 }

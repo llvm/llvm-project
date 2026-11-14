@@ -30,7 +30,6 @@ define void @perm_func(i32 %a, i32 %b, <2 x i32> %c, ptr %out) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_perm_pk16_b4_u4 v[0:1], v0, v1, v[2:3]
 ; GFX1310-NEXT:    flat_store_b64 v[4:5], v[0:1]

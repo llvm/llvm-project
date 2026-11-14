@@ -44,8 +44,8 @@ void unroll_unroll_partial_heuristic(float *a, float *b, float *c, float *d) {
 // CHECK-NEXT:    [[DOTCOUNT:%.*]] = load i32, ptr [[DOTCOUNT_ADDR]], align 4
 // CHECK-NEXT:    br label [[OMP_LOOP_PREHEADER:%.*]]
 // CHECK:       omp_loop.preheader:
-// CHECK-NEXT:    [[TMP3:%.*]] = udiv i32 [[DOTCOUNT]], 8
-// CHECK-NEXT:    [[TMP4:%.*]] = urem i32 [[DOTCOUNT]], 8
+// CHECK-NEXT:    [[TMP3:%.*]] = udiv i32 [[DOTCOUNT]], 2
+// CHECK-NEXT:    [[TMP4:%.*]] = urem i32 [[DOTCOUNT]], 2
 // CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i32 [[TMP4]], 0
 // CHECK-NEXT:    [[TMP6:%.*]] = zext i1 [[TMP5]] to i32
 // CHECK-NEXT:    [[OMP_FLOOR0_TRIPCOUNT:%.*]] = add nuw i32 [[TMP3]], [[TMP6]]
@@ -60,7 +60,7 @@ void unroll_unroll_partial_heuristic(float *a, float *b, float *c, float *d) {
 // CHECK-NEXT:    br i1 [[OMP_FLOOR0_CMP]], label [[OMP_FLOOR0_BODY:%.*]], label [[OMP_FLOOR0_EXIT:%.*]]
 // CHECK:       omp_floor0.body:
 // CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[OMP_FLOOR0_IV]], [[TMP3]]
-// CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 [[TMP4]], i32 8
+// CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 [[TMP4]], i32 2
 // CHECK-NEXT:    br label [[OMP_TILE0_PREHEADER:%.*]]
 // CHECK:       omp_tile0.preheader:
 // CHECK-NEXT:    br label [[OMP_TILE0_HEADER:%.*]]
@@ -71,7 +71,7 @@ void unroll_unroll_partial_heuristic(float *a, float *b, float *c, float *d) {
 // CHECK-NEXT:    [[OMP_TILE0_CMP:%.*]] = icmp ult i32 [[OMP_TILE0_IV]], [[TMP8]]
 // CHECK-NEXT:    br i1 [[OMP_TILE0_CMP]], label [[OMP_TILE0_BODY:%.*]], label [[OMP_TILE0_EXIT:%.*]]
 // CHECK:       omp_tile0.body:
-// CHECK-NEXT:    [[TMP9:%.*]] = mul nuw i32 8, [[OMP_FLOOR0_IV]]
+// CHECK-NEXT:    [[TMP9:%.*]] = mul nuw i32 2, [[OMP_FLOOR0_IV]]
 // CHECK-NEXT:    [[TMP10:%.*]] = add nuw i32 [[TMP9]], [[OMP_TILE0_IV]]
 // CHECK-NEXT:    br label [[OMP_LOOP_BODY:%.*]]
 // CHECK:       omp_loop.body:

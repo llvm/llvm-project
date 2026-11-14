@@ -432,9 +432,10 @@ LLVM_ABI void combineAAMetadata(Instruction *K, const Instruction *J);
 LLVM_ABI void copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source);
 
 /// Patch the replacement so that it is not more restrictive than the value
-/// being replaced. It assumes that the replacement does not get moved from
-/// its original position.
-LLVM_ABI void patchReplacementInstruction(Instruction *I, Value *Repl);
+/// being replaced. Unless DoesKMove is set, it assumes that the replacement
+/// does not get moved from its original position.
+LLVM_ABI void patchReplacementInstruction(Instruction *I, Value *Repl,
+                                          bool DoesKMove = false);
 
 // Replace each use of 'From' with 'To', if that use does not belong to basic
 // block where 'From' is defined. Returns the number of replacements made.

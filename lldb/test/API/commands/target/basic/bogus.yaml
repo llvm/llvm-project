@@ -20,6 +20,7 @@ FatArchs:
     align:           14
 Slices:
   - !mach-o
+    IsLittleEndian:  true
     FileHeader:
       magic:           0xFEEDFACE
       # Bogus
@@ -70,6 +71,7 @@ Slices:
         - _armv7_var
         - ''
   - !mach-o
+    IsLittleEndian:  true
     FileHeader:
       magic:           0xFEEDFACE
       # Bogus
@@ -119,6 +121,7 @@ Slices:
         - ''
         - _armv7s_var
   - !mach-o
+    IsLittleEndian:  true
     FileHeader:
       magic:           0xFEEDFACF
       # Bogus

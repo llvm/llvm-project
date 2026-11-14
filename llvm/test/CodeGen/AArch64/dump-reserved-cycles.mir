@@ -13,14 +13,13 @@
 # REQUIRES: asserts
 ---
 name: f
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
     $x3 = ADDXrr $x0, $x0
     $x4 = ADDXrr $x1, $x1
     $x5 = ADDXrr $x2, $x2
-
+...
 # It is enough to check the last one of the printout of the state of
 # the schedule boundary, just before the final schedule is printed.
 

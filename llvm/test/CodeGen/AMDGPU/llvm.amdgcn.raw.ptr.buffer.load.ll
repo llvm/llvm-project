@@ -4,8 +4,8 @@
 ;RUN: llc < %s -mtriple=amdgpu10.10 | FileCheck %s --check-prefixes=GFX10
 ;RUN: llc < %s -mtriple=amdgpu11.00 -amdgpu-enable-delay-alu=0 | FileCheck %s --check-prefixes=GFX11
 ;RUN: llc < %s -mtriple=amdgpu12.50 -amdgpu-enable-delay-alu=0 | FileCheck %s --check-prefixes=GFX1250
-;RUN: llc < %s -mtriple=amdgpu6.01 -verify-machineinstrs | FileCheck %s --check-prefixes=SI
-;RUN: llc < %s -mtriple=amdgpu8.02 -verify-machineinstrs | FileCheck %s --check-prefixes=VI
+;RUN: llc < %s -mtriple=amdgpu6.01 | FileCheck %s --check-prefixes=SI
+;RUN: llc < %s -mtriple=amdgpu8.02 | FileCheck %s --check-prefixes=VI
 
 define amdgpu_ps {<4 x float>, <4 x float>, <4 x float>} @buffer_load(ptr addrspace(8) inreg) {
 ; PREGFX10-LABEL: buffer_load:

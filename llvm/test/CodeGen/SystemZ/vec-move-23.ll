@@ -161,3 +161,52 @@ define void @fun9(ptr %Src, ptr %ptr) {
  store <10 x float> %conv, ptr %ptr
  ret void
 }
+
+define <4 x double> @fun10(<4 x i16> %Src) {
+; CHECK-LABEL: fun10:
+; CHECK:      vperm	%v0, %v0, %v24, %v0
+; CHECK-NEXT: vperm	%v1, %v1, %v24, %v1
+; CHECK-NEXT: vcdlgb	%v24, %v0, 0, 0
+; CHECK-NEXT: vcdlgb	%v26, %v1, 0, 0
+; CHECK-NEXT: br	%r14
+  %conv = uitofp <4 x i16> %Src to <4 x double>
+  ret <4 x double> %conv
+}
+
+define <4 x double> @fun11(<4 x i16> %Src) {
+; CHECK-LABEL: fun11:
+; CHECK:      vuphh	%v0, %v24
+; CHECK-NEXT: vuplf	%v1, %v0
+; CHECK-NEXT: vuphf	%v0, %v0
+; CHECK-NEXT: vcdgb	%v24, %v0, 0, 0
+; CHECK-NEXT: vcdgb	%v26, %v1, 0, 0
+; CHECK-NEXT: br	%r14
+  %conv = sitofp <4 x i16> %Src to <4 x double>
+  ret <4 x double> %conv
+}
+
+define <4 x double> @fun12(<4 x i64> %Src) {
+; CHECK-LABEL: fun12:
+; CHECK:      vgbm	%v0, 771
+; CHECK-NEXT: vn	%v1, %v26, %v0
+; CHECK-NEXT: vn	%v0, %v24, %v0
+; CHECK-NEXT: vcdlgb	%v24, %v0, 0, 0
+; CHECK-NEXT: vcdlgb	%v26, %v1, 0, 0
+; CHECK-NEXT: br	%r14
+  %m = and <4 x i64> %Src, splat (i64 65535)
+  %conv = uitofp <4 x i64> %m to <4 x double>
+  ret <4 x double> %conv
+}
+
+define <4 x double> @fun13(<4 x i64> %Src) {
+; CHECK-LABEL: fun13:
+; CHECK:      vgbm	%v0, 771
+; CHECK-NEXT: vn	%v1, %v26, %v0
+; CHECK-NEXT: vn	%v0, %v24, %v0
+; CHECK-NEXT: vcdgb	%v24, %v0, 0, 0
+; CHECK-NEXT: vcdgb	%v26, %v1, 0, 0
+; CHECK-NEXT: br	%r14
+  %m = and <4 x i64> %Src, splat (i64 65535)
+  %conv = sitofp <4 x i64> %m to <4 x double>
+  ret <4 x double> %conv
+}

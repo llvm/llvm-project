@@ -23,5 +23,6 @@ static_library("Parallel") {
     "DependencyTracker.cpp",
     "OutputSections.cpp",
     "SyntheticTypeNameBuilder.cpp",
+    "TypePool.cpp",
   ]
 }

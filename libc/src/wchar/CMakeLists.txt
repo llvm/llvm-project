@@ -246,7 +246,6 @@ add_entrypoint_object(
     libc.src.__support.libc_errno
 )
 
-
 add_entrypoint_object(
   mbrlen
   SRCS

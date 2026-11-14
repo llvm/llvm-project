@@ -328,7 +328,7 @@ declare void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace
 define void @specific(ptr addrspace(7) %bar, i32 %count) {
 ; CHECK-LABEL: define void @specific(
 ; CHECK-SAME: ptr addrspace(7) [[BAR:%.*]], i32 [[COUNT:%.*]]) {
-; CHECK-NEXT:    call void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7) [[BAR]], i32 [[COUNT]])
+; CHECK-NEXT:    call void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7) [[BAR]], i32 [[COUNT]], i32 0, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %bar, i32 %count)

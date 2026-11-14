@@ -1,6 +1,5 @@
 // Test C++ -gmodules debug info in the PCMs with local submodule visibility.
-// UNSUPPORTED: target={{.*}}-aix{{.*}}
-// REQUIRES: asserts
+// REQUIRES: asserts, object-wrapped-module
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++14 \
 // RUN:   -fmodules-local-submodule-visibility %s \
@@ -21,20 +20,23 @@
 // RUN: cat %t-mod.ll | FileCheck %s
 
 // ADT
-// CHECK: @__clang_ast =
+// CHECK: !llvm.raw.sections = !{[[ADT_SEC:![0-9]+]]}
+// CHECK: [[ADT_SEC]] = !{!"{{(__CLANG,)?(__)?}}clangast",
 
 // B
-// CHECK: @__clang_ast =
+// CHECK: !llvm.raw.sections = !{[[B_SEC:![0-9]+]]}
 
 // This type isn't anchored anywhere, expect a full definition.
 // CHECK: !DICompositeType({{.*}}, name: "AlignedCharArray<4U, 16U>",
 // CHECK-SAME:             elements:
+// CHECK: [[B_SEC]] = !{!"{{(__CLANG,)?(__)?}}clangast",
 
 // C
-// CHECK: @__clang_ast =
+// CHECK: !llvm.raw.sections = !{[[C_SEC:![0-9]+]]}
 
 // Here, too.
 // CHECK: !DICompositeType({{.*}}, name: "AlignedCharArray<4U, 16U>",
 // CHECK-SAME:             elements:
+// CHECK: [[C_SEC]] = !{!"{{(__CLANG,)?(__)?}}clangast",
 
 #include <B/B.h>

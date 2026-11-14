@@ -17,7 +17,7 @@ class Location;
 class OpBuilder;
 
 namespace memref {
-void registerMemorySlotOpInterfaceExternalModels(DialectRegistry &registry);
+void registerMemorySlotInterfacesExternalModels(DialectRegistry &registry);
 
 /// Returns whether `slotPtr` is a dynamic `memref.subview` that can be promoted
 /// as an alias of the whole parent vector.

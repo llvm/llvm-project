@@ -1,0 +1,131 @@
+standard: c23
+posix: posix-2024
+c-reference-root: types/limits
+macros:
+  BITINT_MAXWIDTH:
+    c-definition: 5.3.5.3.2
+  BOOL_MAX:
+    c-definition: 5.3.5.3.2
+  BOOL_WIDTH:
+    c-definition: 5.3.5.3.2
+  CHAR_BIT:
+    c-definition: 5.3.5.3.2
+    in-latest-posix: ''
+  CHAR_MAX:
+    c-definition: 5.3.5.3.2
+    in-latest-posix: ''
+  CHAR_MIN:
+    c-definition: 5.3.5.3.2
+    in-latest-posix: ''
+  CHAR_WIDTH:
+    c-definition: 5.3.5.3.2
+  HOST_NAME_MAX:
+    in-latest-posix: ''
+  INT_MAX:
+    c-definition: 5.3.5.3.2
+    in-latest-posix: ''
+  INT_MIN:
+    c-definition: 5.3.5.3.2
+    in-latest-posix: ''
+  INT_WIDTH:
+    c-definition: 5.3.5.3.2
+  IOV_MAX:
+    in-latest-posix: ''
+  LLONG_MAX:
+    c-definition: 5.3.5.3.2
+    in-latest-posix: ''
+  LLONG_MIN:
+    c-definition: 5.3.5.3.2
+    in-latest-posix: ''
+  LLONG_WIDTH:
+    c-definition: 5.3.5.3.2
+  LONG_MAX:
+    c-definition: 5.3.5.3.2
+    in-latest-posix: ''
+  LONG_MIN:
+    c-definition: 5.3.5.3.2
+    in-latest-posix: ''
+  LONG_WIDTH:
+    c-definition: 5.3.5.3.2
+  MB_LEN_MAX:
+    c-definition: 5.3.5.3.2
+    in-latest-posix: ''
+  NAME_MAX:
+    in-latest-posix: ''
+  NZERO:
+    in-latest-posix: ''
+  PATH_MAX:
+    in-latest-posix: ''
+  PTHREAD_DESTRUCTOR_ITERATIONS:
+    in-latest-posix: ''
+  SCHAR_MAX:
+    c-definition: 5.3.5.3.2
+    in-latest-posix: ''
+  SCHAR_MIN:
+    c-definition: 5.3.5.3.2
+    in-latest-posix: ''
+  SCHAR_WIDTH:
+    c-definition: 5.3.5.3.2
+  SEM_VALUE_MAX:
+    in-latest-posix: ''
+  SHRT_MAX:
+    c-definition: 5.3.5.3.2
+    in-latest-posix: ''
+  SHRT_MIN:
+    c-definition: 5.3.5.3.2
+    in-latest-posix: ''
+  SHRT_WIDTH:
+    c-definition: 5.3.5.3.2
+  SSIZE_MAX:
+    in-latest-posix: ''
+  UCHAR_MAX:
+    c-definition: 5.3.5.3.2
+    in-latest-posix: ''
+  UCHAR_MIN:
+    extension: llvm-libc
+  UCHAR_WIDTH:
+    c-definition: 5.3.5.3.2
+  UINT_MAX:
+    c-definition: 5.3.5.3.2
+    in-latest-posix: ''
+  UINT_MIN:
+    extension: llvm-libc
+  UINT_WIDTH:
+    c-definition: 5.3.5.3.2
+  ULLONG_MAX:
+    c-definition: 5.3.5.3.2
+    in-latest-posix: ''
+  ULLONG_MIN:
+    extension: llvm-libc
+  ULLONG_WIDTH:
+    c-definition: 5.3.5.3.2
+  ULONG_MAX:
+    c-definition: 5.3.5.3.2
+    in-latest-posix: ''
+  ULONG_MIN:
+    extension: llvm-libc
+  ULONG_WIDTH:
+    c-definition: 5.3.5.3.2
+  USHRT_MAX:
+    c-definition: 5.3.5.3.2
+    in-latest-posix: ''
+  USHRT_MIN:
+    extension: llvm-libc
+  USHRT_WIDTH:
+    c-definition: 5.3.5.3.2
+  _POSIX_ARG_MAX:
+    in-latest-posix: ''
+  _POSIX_HOST_NAME_MAX:
+    in-latest-posix: ''
+  _POSIX_MAX_CANON:
+    in-latest-posix: ''
+  _POSIX_MAX_INPUT:
+    in-latest-posix: ''
+  _POSIX_NAME_MAX:
+    in-latest-posix: ''
+  _POSIX_PATH_MAX:
+    in-latest-posix: ''
+  _POSIX_THREAD_DESTRUCTOR_ITERATIONS:
+    in-latest-posix: ''
+  __STDC_VERSION_LIMITS_H__:
+    c-definition: '7.10'

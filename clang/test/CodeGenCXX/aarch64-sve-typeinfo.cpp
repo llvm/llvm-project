@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu %s -emit-llvm -o - \
 // RUN:   | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -fclang-abi-compat=latest -triple aarch64-none-linux-gnu %s -emit-llvm -o -   | FileCheck %s %}
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu %s -emit-llvm -o - \
 // RUN:   -target-feature +sve,+bf16 | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -fclang-abi-compat=latest -triple aarch64-none-linux-gnu %s -emit-llvm -o -   -target-feature +sve,+bf16 | FileCheck %s %}
 
 namespace std { class type_info; };
 

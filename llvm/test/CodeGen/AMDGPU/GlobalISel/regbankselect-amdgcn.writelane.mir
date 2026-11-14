@@ -4,6 +4,7 @@
 ---
 name: writelane_sss
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -25,6 +26,7 @@ body: |
 ---
 name: writelane_ssv
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -45,6 +47,7 @@ body: |
 ---
 name: writelane_vsv
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -66,6 +69,7 @@ body: |
 ---
 name: writelane_vvv
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -88,6 +92,7 @@ body: |
 ---
 name: writelane_svv
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:

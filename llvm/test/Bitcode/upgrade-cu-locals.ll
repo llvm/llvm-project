@@ -44,23 +44,23 @@ attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memo
 ; CHECK: !24 = !DILexicalBlock(scope: !16, file: !7, line: 7, column: 35)
 ; CHECK: !25 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "t5", scope: !22,
 
-; CHECK: !27 = distinct !DISubprogram(name: "f1", linkageName: "_Z2f1v", scope: !1, file: !1, line: 3, type: !28, scopeLine: 3, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !30)
-; CHECK: !30 = !{!31, !34, !36}
-; CHECK: !31 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !27, entity: !32,
-; CHECK: !32 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "t1",
-; CHECK: !34 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !27, entity: !35,
-; CHECK: !35 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "t2",
-; CHECK: !36 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !27, entity: !37,
-; CHECK: !37 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "t3",
+; CHECK: !28 = distinct !DISubprogram(name: "f1", linkageName: "_Z2f1v", scope: !1, file: !1, line: 3, type: !29, scopeLine: 3, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !31)
+; CHECK: !31 = !{!32, !35, !37}
+; CHECK: !32 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !28, entity: !33,
+; CHECK: !33 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "t1",
+; CHECK: !35 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !28, entity: !36,
+; CHECK: !36 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "t2",
+; CHECK: !37 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !28, entity: !38,
+; CHECK: !38 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "t3",
 
-; CHECK: !42 = distinct !DISubprogram(name: "main2", scope: !7, file: !7, line: 10, type: !17, scopeLine: 10, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !6, retainedNodes: !43)
-; CHECK: !43 = !{!44, !46, !48, !49}
-; CHECK: !44 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !42, entity: !45,
-; CHECK: !45 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "t6"
-; CHECK: !46 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !42, entity: !47,
-; CHECK: !47 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "t7",
-; CHECK: !48 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "Enum", scope: !42, file: !7, line: 3, size: 8, align: 8, elements: !5)
-; CHECK: !49 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "Enum3", scope: !42, file: !7, line: 5, size: 8, align: 8, elements: !5)
+; CHECK: !43 = distinct !DISubprogram(name: "main2", scope: !7, file: !7, line: 10, type: !17, scopeLine: 10, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !6, retainedNodes: !44)
+; CHECK: !44 = !{!45, !47, !49, !50}
+; CHECK: !45 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !43, entity: !46,
+; CHECK: !46 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "t6"
+; CHECK: !47 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !43, entity: !48,
+; CHECK: !48 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "t7",
+; CHECK: !49 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "Enum", scope: !43, file: !7, line: 3, size: 8, align: 8, elements: !5)
+; CHECK: !50 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "Enum3", scope: !43, file: !7, line: 5, size: 8, align: 8, elements: !5)
 
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 14.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, imports: !2, nameTableKind: GNU)

@@ -107,8 +107,8 @@ Error L0KernelTy::setIndirectFlags(L0DeviceTy &L0Device,
                                    L0LaunchEnvTy &KEnv) const {
   // Set Kernel Indirect flags.
   ze_kernel_indirect_access_flags_t Flags = 0;
-  Flags |= L0Device.getMemAllocator(TARGET_ALLOC_HOST).getIndirectFlags();
-  Flags |= L0Device.getMemAllocator(TARGET_ALLOC_DEVICE).getIndirectFlags();
+  Flags |= L0Device.getMemAllocator(OL_ALLOC_TYPE_HOST).getIndirectFlags();
+  Flags |= L0Device.getMemAllocator(OL_ALLOC_TYPE_DEVICE).getIndirectFlags();
   // Allocations made through a liboffload context live in its own allocators.
   Flags |= UserCtx.getIndirectFlags();
 
@@ -128,7 +128,8 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                              uint32_t NumThreads[3], uint32_t NumBlocks[3],
                              uint32_t DynBlockMemSize,
                              KernelLaunchArgsTy &LaunchArgs,
-                             AsyncInfoWrapperTy &AsyncInfoWrapper) const {
+                             AsyncInfoWrapperTy &AsyncInfoWrapper,
+                             GenericProfilerTy *ProfilerPtr) const {
   if (DynBlockMemSize > 0)
     return Plugin::error(ErrorCode::UNSUPPORTED,
                          "dynamic shared memory is unsupported in L0 plugin");

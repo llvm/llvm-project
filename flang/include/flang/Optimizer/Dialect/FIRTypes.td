@@ -25,6 +25,7 @@ include "flang/Optimizer/Dialect/FIRDialect.td"
 class FIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
                string baseCppClass = "::mlir::Type">
     : TypeDef<FIROpsDialect, name, traits, baseCppClass> {
+  let cppIncludes = ["flang/Optimizer/Dialect/FIRType.h"];
   let mnemonic = typeMnemonic;
 }
 

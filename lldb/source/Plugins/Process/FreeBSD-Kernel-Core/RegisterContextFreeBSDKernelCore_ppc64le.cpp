@@ -24,7 +24,7 @@ RegisterContextFreeBSDKernelCore_ppc64le::
     RegisterContextFreeBSDKernelCore_ppc64le(
         Thread &thread, lldb_private::RegisterInfoInterface *register_info,
         lldb::addr_t pcb_addr)
-    : RegisterContextPOSIX_ppc64le(thread, 0, register_info),
+    : RegisterContextCore_ppc64le(thread, 0, register_info),
       m_pcb_addr(pcb_addr) {}
 
 bool RegisterContextFreeBSDKernelCore_ppc64le::ReadRegister(

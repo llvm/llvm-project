@@ -347,8 +347,6 @@ private:
     uint64_t __r14;
     uint64_t __r15;
     uint64_t __rip;
-    // RFLAGS bits 32-63 are reserved. Pack the selectors with the low flags
-    // word so the complete segment state fits the existing context ABI.
     uint32_t __rflags;
     uint16_t __cs;
     uint16_t __ss;
@@ -392,13 +390,10 @@ inline bool Registers_x86_64::validRegister(int regNum) const {
     return false;
   if (regNum <= UNW_X86_64_RIP)
     return true;
+  // Extended native register state is captured and restored only on FreeBSD.
+#if defined(__FreeBSD__) && !defined(_LIBUNWIND_IS_BAREMETAL)
   if (regNum >= UNW_X86_64_RFLAGS && regNum <= UNW_X86_64_GS)
     return true;
-  // Native base capture and restore need an OS interface. Cross unwinding
-  // can still represent bases recovered from DWARF on any host.
-#if (!defined(_LIBUNWIND_IS_BAREMETAL) &&                                      \
-     (defined(__linux__) || defined(__FreeBSD__))) ||                          \
-    !defined(_LIBUNWIND_IS_NATIVE_ONLY)
   if (regNum == UNW_X86_64_FS_BASE || regNum == UNW_X86_64_GS_BASE)
     return true;
 #endif

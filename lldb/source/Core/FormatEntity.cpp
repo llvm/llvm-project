@@ -14,6 +14,7 @@
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/Module.h"
 #include "lldb/DataFormatters/DataVisualization.h"
+#include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/DataFormatters/FormatClasses.h"
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/DataFormatters/TypeSummary.h"
@@ -1540,7 +1541,12 @@ bool FormatEntity::Formatter::Format(const Entry &entry, Stream &s,
           ValueObjectSP return_valobj_sp =
               StopInfo::GetReturnValueObject(stop_info_sp);
           if (return_valobj_sp) {
-            if (llvm::Error error = return_valobj_sp->Dump(s)) {
+            DumpValueObjectOptions options;
+            if (return_valobj_sp->IsDynamic())
+              options.SetUseDynamicType(eDynamicCanRunTarget);
+            if (return_valobj_sp->DoesProvideSyntheticValue())
+              options.SetUseSyntheticValue(true);
+            if (llvm::Error error = return_valobj_sp->Dump(s, options)) {
               s << "error: " << toString(std::move(error));
               return false;
             }

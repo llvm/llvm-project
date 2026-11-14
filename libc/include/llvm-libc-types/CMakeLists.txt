@@ -80,6 +80,7 @@ add_header(DIR HDR DIR.h)
 add_header(caddr_t HDR caddr_t.h)
 add_header(dev_t HDR dev_t.h)
 add_header(div_t HDR div_t.h)
+add_header(eventfd_t HDR eventfd_t.h)
 add_header(id_t HDR id_t.h)
 add_header(idtype_t HDR idtype_t.h)
 add_header(ino64_t HDR ino64_t.h)
@@ -160,6 +161,7 @@ add_header(pthread_t HDR pthread_t.h DEPENDS .__thread_type)
 add_header(pthread_id_np_t HDR pthread_id_np_t.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(rlim_t HDR rlim_t.h)
 add_header(sem_t HDR sem_t.h DEPENDS .__futex_word)
+add_header(shmatt_t HDR shmatt_t.h)
 add_header(time_t HDR time_t_64.h DEST_HDR time_t.h)
 add_header(timer_t HDR timer_t.h)
 add_header(sig_t HDR sig_t.h)
@@ -203,6 +205,16 @@ add_header(
   struct_semid_ds
   HDR struct_semid_ds.h
   DEPENDS
+    .struct_ipc_perm
+    .time_t
+)
+add_header(
+  struct_shmid_ds
+  HDR struct_shmid_ds.h
+  DEPENDS
+    .pid_t
+    .shmatt_t
+    .size_t
     .struct_ipc_perm
     .time_t
 )
@@ -305,6 +317,7 @@ add_type_header(
     struct_ifreq.h
 )
 add_header(struct_if_nameindex HDR struct_if_nameindex.h)
+add_header(struct_ifaddrs HDR struct_ifaddrs.h DEPENDS .struct_sockaddr)
 add_header(struct_iovec HDR struct_iovec.h DEPENDS .size_t)
 add_header(struct_linger HDR struct_linger.h)
 add_header(struct_ucred HDR struct_ucred.h DEPENDS .pid_t .uid_t .gid_t)
@@ -367,6 +380,7 @@ add_header(
 )
 add_header(locale_t HDR locale_t.h)
 add_header(struct_lconv HDR struct_lconv.h)
+add_header(struct_mallinfo2 HDR struct_mallinfo2.h DEPENDS .size_t)
 add_header(int_hk_t HDR int_hk_t.h)
 add_header(int_hr_t HDR int_hr_t.h)
 add_header(int_k_t HDR int_k_t.h)
@@ -707,6 +721,7 @@ add_header(EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL
     libc.include.llvm-libc-macros.EFIAPI_macros
     libc.include.llvm-libc-macros.stdint_macros
     .EFI_STATUS
+    .char16_t
     .size_t
 )
 

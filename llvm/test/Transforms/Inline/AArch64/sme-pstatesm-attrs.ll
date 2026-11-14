@@ -539,15 +539,33 @@ entry:
   ret i64 %res
 }
 
+; FIXME: This function should be inlined, but we're currently cautious around
+; inlining target intrinsics.
+define i64 @normal_callee_with_intrinsic_call_alwaysinline(<vscale x 4 x i32> %unused) alwaysinline {
+; CHECK-LABEL: define i64 @normal_callee_with_intrinsic_call_alwaysinline
+; CHECK-SAME: (<vscale x 4 x i32> [[UNUSED:%.*]]) #[[ATTR6:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.aarch64.sve.cntb(i32 4)
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+entry:
+  %res = call i64 @llvm.aarch64.sve.cntb(i32 4)
+  ret i64 %res
+}
+
 define i64 @streaming_caller_normal_callee_with_intrinsic_call_dont_inline()  "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define i64 @streaming_caller_normal_callee_with_intrinsic_call_dont_inline
 ; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @normal_callee_with_intrinsic_call()
+; CHECK-NEXT:    [[RES1:%.*]] = call i64 @normal_callee_with_intrinsic_call()
+; CHECK-NEXT:    [[RES2:%.*]] = call i64 @normal_callee_with_intrinsic_call_alwaysinline(<vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[RES:%.*]] = add i64 [[RES1]], [[RES2]]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
-  %res = call i64 @normal_callee_with_intrinsic_call()
+  %res1 = call i64 @normal_callee_with_intrinsic_call()
+  %res2 = call i64 @normal_callee_with_intrinsic_call_alwaysinline(<vscale x 4 x i32> zeroinitializer)
+  %res = add i64 %res1, %res2
   ret i64 %res
 }
 
@@ -654,7 +672,7 @@ define void @streaming_caller_to_nonstreaming_callee_with_single_streamingcompat
 
 define void @nonstreaming_caller_single_streaming_compatible_callee_alwaysinline() alwaysinline {
 ; CHECK-LABEL: define void @nonstreaming_caller_single_streaming_compatible_callee_alwaysinline
-; CHECK-SAME: () #[[ATTR6:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR6]] {
 ; CHECK-NEXT:    call void @streaming_compatible_body()
 ; CHECK-NEXT:    ret void
 ;
@@ -676,7 +694,7 @@ define void @streaming_caller_to_nonstreaming_alwaysinline_callee_with_single_st
 define void @invoke_opaque_fptr(ptr %fptr) alwaysinline personality ptr null {
 ; CHECK-LABEL: define void @invoke_opaque_fptr
 ; CHECK-SAME: (ptr [[FPTR:%.*]]) #[[ATTR6]] personality ptr null {
-; CHECK-NEXT:    invoke void [[FPTR]]() #[[ATTR15:[0-9]+]]
+; CHECK-NEXT:    invoke void [[FPTR]]() #[[ATTR24:[0-9]+]]
 ; CHECK-NEXT:            to label [[NORMAL_RETURN:%.*]] unwind label [[UNWIND_CLEANUP:%.*]]
 ; CHECK:       normal_return:
 ; CHECK-NEXT:    ret void
@@ -1096,6 +1114,104 @@ define <vscale x 2 x i64> @gather_scalable_length_caller(<vscale x 2 x ptr> %ptr
 ;
   %res = call <vscale x 2 x i64> @gather_scalable_length(<vscale x 2 x ptr> %ptrs)
   ret <vscale x 2 x i64> %res
+}
+
+;
+; Test that we can inline a compressstore into a streaming function with +sme2p2,
+; but not without +sme2p2.
+;
+
+define void @sme2p2_compress_store_scalable(<vscale x 2 x i64> %v, ptr %p) "target-features"="+sve,+sme2p2" {
+; CHECK-LABEL: define void @sme2p2_compress_store_scalable
+; CHECK-SAME: (<vscale x 2 x i64> [[V:%.*]], ptr [[P:%.*]]) #[[ATTR10:[0-9]+]] {
+; CHECK-NEXT:    call void @llvm.masked.compressstore.nxv2i64.p0(<vscale x 2 x i64> [[V]], ptr [[P]], <vscale x 2 x i1> splat (i1 true))
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.masked.compressstore(<vscale x 2 x i64> %v, ptr %p, <vscale x 2 x i1> splat(i1 true))
+  ret void
+}
+define void @sme2p2_compress_store_scalable_caller(<vscale x 2 x i64> %v, ptr %p) "aarch64_pstate_sm_enabled" "target-features"="+sve,+sme2p2" {
+; CHECK-LABEL: define void @sme2p2_compress_store_scalable_caller
+; CHECK-SAME: (<vscale x 2 x i64> [[V:%.*]], ptr [[P:%.*]]) #[[ATTR11:[0-9]+]] {
+; CHECK-NEXT:    call void @llvm.masked.compressstore.nxv2i64.p0(<vscale x 2 x i64> [[V]], ptr [[P]], <vscale x 2 x i1> splat (i1 true))
+; CHECK-NEXT:    ret void
+;
+  call void @sme2p2_compress_store_scalable(<vscale x 2 x i64> %v, ptr %p)
+  ret void
+}
+
+define void @sme_compress_store_scalable(<vscale x 2 x i64> %v, ptr %p) "target-features"="+sve,+sme" {
+; CHECK-LABEL: define void @sme_compress_store_scalable
+; CHECK-SAME: (<vscale x 2 x i64> [[V:%.*]], ptr [[P:%.*]]) #[[ATTR12:[0-9]+]] {
+; CHECK-NEXT:    call void @llvm.masked.compressstore.nxv2i64.p0(<vscale x 2 x i64> [[V]], ptr [[P]], <vscale x 2 x i1> splat (i1 true))
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.masked.compressstore(<vscale x 2 x i64> %v, ptr %p, <vscale x 2 x i1> splat(i1 true))
+  ret void
+}
+
+; Test the compressstore is *not* inlined, as the caller doesn't have +sme2p2.
+define void @sme_compress_store_scalable_caller(<vscale x 2 x i64> %v, ptr %p) "aarch64_pstate_sm_enabled" "target-features"="+sve,+sme" {
+; CHECK-LABEL: define void @sme_compress_store_scalable_caller
+; CHECK-SAME: (<vscale x 2 x i64> [[V:%.*]], ptr [[P:%.*]]) #[[ATTR13:[0-9]+]] {
+; CHECK-NEXT:    call void @sme_compress_store_scalable(<vscale x 2 x i64> [[V]], ptr [[P]])
+; CHECK-NEXT:    ret void
+;
+  call void @sme_compress_store_scalable(<vscale x 2 x i64> %v, ptr %p)
+  ret void
+}
+
+;
+; Test that histogram.add is not inlined, as HISTCNT not available in streaming mode.
+;
+
+define void @sme2_sve2_histcnt(<vscale x 2 x ptr> %ptrs, i64 %inc) "target-features"="+sve2,+sme2" {
+; CHECK-LABEL: define void @sme2_sve2_histcnt
+; CHECK-SAME: (<vscale x 2 x ptr> [[PTRS:%.*]], i64 [[INC:%.*]]) #[[ATTR14:[0-9]+]] {
+; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> [[PTRS]], i64 [[INC]], <vscale x 2 x i1> splat (i1 true))
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.experimental.vector.histogram.add(<vscale x 2 x ptr> %ptrs, i64 %inc, <vscale x 2 x i1> splat(i1 true))
+  ret void
+}
+
+define void @sme2_sve2_histcnt_caller(<vscale x 2 x ptr> %ptrs, i64 %inc) "aarch64_pstate_sm_enabled" "target-features"="+sve2,+sme2" {
+; CHECK-LABEL: define void @sme2_sve2_histcnt_caller
+; CHECK-SAME: (<vscale x 2 x ptr> [[PTRS:%.*]], i64 [[INC:%.*]]) #[[ATTR15:[0-9]+]] {
+; CHECK-NEXT:    call void @sme2_sve2_histcnt(<vscale x 2 x ptr> [[PTRS]], i64 [[INC]])
+; CHECK-NEXT:    ret void
+;
+  call void @sme2_sve2_histcnt(<vscale x 2 x ptr> %ptrs, i64 %inc)
+  ret void
+}
+
+;
+; Test that vector.match can be inlined.
+
+; Even thought MATCH is not available in streaming mode, it can be broken down
+; into a series of vector compares for each of the elements in the 'needle' vector,
+; see TargetLowering::expandVectorMatch.
+define <vscale x 4 x i1> @sme2_sve2_match(ptr %dataptr, <4 x i32> %needles) alwaysinline "target-features"="+sve2,+sme2" {
+; CHECK-LABEL: define <vscale x 4 x i1> @sme2_sve2_match
+; CHECK-SAME: (ptr [[DATAPTR:%.*]], <4 x i32> [[NEEDLES:%.*]]) #[[ATTR16:[0-9]+]] {
+; CHECK-NEXT:    [[DATA:%.*]] = load <vscale x 4 x i32>, ptr [[DATAPTR]], align 16
+; CHECK-NEXT:    [[MATCH:%.*]] = call <vscale x 4 x i1> @llvm.experimental.vector.match.nxv4i32.v4i32(<vscale x 4 x i32> [[DATA]], <4 x i32> [[NEEDLES]], <vscale x 4 x i1> splat (i1 true))
+; CHECK-NEXT:    ret <vscale x 4 x i1> [[MATCH]]
+;
+  %data = load <vscale x 4 x i32>, ptr %dataptr
+  %match = call <vscale x 4 x i1> @llvm.experimental.vector.match(<vscale x 4 x i32> %data, <4 x i32> %needles, <vscale x 4 x i1> splat(i1 true))
+  ret <vscale x 4 x i1> %match
+}
+
+define <vscale x 4 x i1> @sme2_sve2_match_caller(ptr %dataptr, <4 x i32> %needles) "aarch64_pstate_sm_enabled" "target-features"="+sve2,+sme2" {
+; CHECK-LABEL: define <vscale x 4 x i1> @sme2_sve2_match_caller
+; CHECK-SAME: (ptr [[DATAPTR:%.*]], <4 x i32> [[NEEDLES:%.*]]) #[[ATTR15]] {
+; CHECK-NEXT:    [[DATA_I:%.*]] = load <vscale x 4 x i32>, ptr [[DATAPTR]], align 16
+; CHECK-NEXT:    [[MATCH_I:%.*]] = call <vscale x 4 x i1> @llvm.experimental.vector.match.nxv4i32.v4i32(<vscale x 4 x i32> [[DATA_I]], <4 x i32> [[NEEDLES]], <vscale x 4 x i1> splat (i1 true))
+; CHECK-NEXT:    ret <vscale x 4 x i1> [[MATCH_I]]
+;
+  %match = call <vscale x 4 x i1> @sme2_sve2_match(ptr %dataptr, <4 x i32> %needles)
+  ret <vscale x 4 x i1> %match
 }
 
 ;

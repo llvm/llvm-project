@@ -28,8 +28,7 @@ rpc::RPCStatus handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
   switch (Port.get_opcode()) {
   case LIBC_MALLOC: {
     Port.recv_and_send([&](rpc::Buffer *Buffer, uint32_t) {
-      auto PtrOrErr =
-          Device.allocate(Buffer->data[0], nullptr, TARGET_ALLOC_DEVICE);
+      auto PtrOrErr = Device.allocate(Buffer->data[0], OL_ALLOC_TYPE_DEVICE);
       void *Ptr = nullptr;
       if (!PtrOrErr)
         llvm::consumeError(PtrOrErr.takeError());
@@ -42,7 +41,7 @@ rpc::RPCStatus handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
   case LIBC_FREE: {
     Port.recv([&](rpc::Buffer *Buffer, uint32_t) {
       if (auto Err = Device.free(reinterpret_cast<void *>(Buffer->data[0]),
-                                 TARGET_ALLOC_DEVICE))
+                                 OL_ALLOC_TYPE_DEVICE))
         llvm::consumeError(std::move(Err));
     });
     break;
@@ -214,7 +213,7 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
   if (!RPCBuffer) {
     auto RPCBufferOrErr = Device.allocate(
         rpc::Server::allocation_size(Device.getRPCNumLanes(), NumPorts),
-        nullptr, TARGET_ALLOC_HOST);
+        OL_ALLOC_TYPE_HOST);
     if (!RPCBufferOrErr)
       return RPCBufferOrErr.takeError();
 
@@ -259,7 +258,7 @@ Error RPCServerTy::deinitDevice(plugin::GenericDeviceTy &Device) {
   // Flush any requests the device may have pushed before being deinitialized.
   if (void *Buffer = Buffers[Device.getDeviceId()])
     flushServer(Device, Buffer, Callbacks);
-  if (auto Err = Device.free(Buffers[Device.getDeviceId()], TARGET_ALLOC_HOST))
+  if (auto Err = Device.free(Buffers[Device.getDeviceId()], OL_ALLOC_TYPE_HOST))
     return Err;
   Buffers[Device.getDeviceId()] = nullptr;
   Devices[Device.getDeviceId()] = nullptr;

@@ -1,9 +1,14 @@
-//===-- Unittests for gmtime ----------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for gmtime.
+///
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
@@ -436,6 +441,8 @@ TEST_F(LlvmLibcGmTime, KeyYears) {
   };
 
   TestCase cases[] = {
+      {-62198755200LL, -1, 5, "-0001-01-01 (before year zero)"},
+      {-62167219200LL, 0, 6, "0000-01-01 (leap year zero)"},
       {-2208988800, 1900, 1, "1900-01-01 Monday (non-leap century)"},
       {0, 1970, 4, "1970-01-01 Thursday (epoch)"},
       {915148800, 1999, 5, "1999-01-01 Friday"},

@@ -91,6 +91,20 @@ static void setLocation(Region &region, Location loc) {
   region.walk([&](Operation *op) { op->setLoc(loc); });
 }
 
+// Complex multiplication mixes the real and imaginary parts, so a reduction
+// of that operator cannot be lowered as two independent component reductions.
+// Keep unwrapping pointer-like types so a reference to a reference still
+// reports the element type.
+static bool isComplexReductionType(Type type) {
+  while (auto ptrTy = dyn_cast<acc::PointerLikeType>(type)) {
+    Type elementType = ptrTy.getElementType();
+    if (!elementType || elementType == type)
+      return false;
+    type = elementType;
+  }
+  return isa<ComplexType>(type);
+}
+
 static void saveVarName(StringRef name, Value dst) {
   if (name.empty())
     return;
@@ -362,6 +376,12 @@ LogicalResult ACCRecipeMaterialization::materialize(
       cloneDestroy(loc, recipe, block, std::prev(block->end()), destroyArgs);
     }
   } else if constexpr (std::is_same_v<OpTy, acc::ReductionOp>) {
+    if (recipe.getReductionOperator() == acc::ReductionOperator::AccMul &&
+        isComplexReductionType(recipe.getType())) {
+      (void)accSupport.emitNYI(loc, "reduction: complex multiply reduction");
+      return failure();
+    }
+
     auto cloneRegionIntoAccRegion = [&](Region *src, Region *dest,
                                         bool hasResult) {
       src->cloneInto(dest, mapping);

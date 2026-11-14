@@ -35,11 +35,6 @@ void populateExpansionPatterns(RewritePatternSet &patterns,
 
 void populateMathAlgebraicSimplificationPatterns(RewritePatternSet &patterns);
 
-struct MathPolynomialApproximationOptions {
-  // Enables the use of AVX2 intrinsics in some of the approximations.
-  bool enableAvx2 = false;
-};
-
 void populatePolynomialApproximateTanhPattern(RewritePatternSet &patterns);
 void populatePolynomialApproximateErfPattern(RewritePatternSet &patterns);
 void populatePolynomialApproximateErfcPattern(RewritePatternSet &patterns);
@@ -65,9 +60,7 @@ void populateMathPolynomialApproximationPatterns(
 // Prefer calling these functions directly:
 // * populateMathF32ExpansionPatterns(patterns, predicate)
 // * populateMathPolynomialApproximationPatterns(patterns, predicate)
-void populateMathPolynomialApproximationPatterns(
-    RewritePatternSet &patterns,
-    const MathPolynomialApproximationOptions &options = {});
+void populateMathPolynomialApproximationPatterns(RewritePatternSet &patterns);
 
 void populateUpliftToFMAPatterns(RewritePatternSet &patterns);
 

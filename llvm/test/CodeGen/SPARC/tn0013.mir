@@ -9,13 +9,14 @@
 # CHECK-NEXT: $f3 = FADDS $f1, $f2
 # CHECK-NEXT: $f0 = FDIVS $f4, $f5
 name:            er-8-1
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
-    $f0 = FSQRTS $f0
-    $f3 = FADDS $f1, $f2
-    $f3 = FADDS $f1, $f2
-    $f0 = FDIVS $f4, $f5
-
+    $f0 = FSQRTS $f0, implicit $fsr
+    $f3 = FADDS $f1, $f2, implicit $fsr
+    $f3 = FADDS $f1, $f2, implicit $fsr
+    $f0 = FDIVS $f4, $f5, implicit $fsr
+...
 ---
 # CHECK:      $f0 = FDIVS $f0, $f0
 # CHECK-NEXT: NOP
@@ -24,35 +25,38 @@ body:             |
 # CHECK-NEXT: $f3 = FADDS $f1, $f2
 # CHECK-NEXT: $f0 = FSQRTS $f4
 name:            er-8-2
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
-    $f0 = FDIVS $f0, $f0
-    $f3 = FADDS $f1, $f2
-    $f3 = FADDS $f1, $f2
-    $f3 = FADDS $f1, $f2
-    $f0 = FSQRTS $f4
-
+    $f0 = FDIVS $f0, $f0, implicit $fsr
+    $f3 = FADDS $f1, $f2, implicit $fsr
+    $f3 = FADDS $f1, $f2, implicit $fsr
+    $f3 = FADDS $f1, $f2, implicit $fsr
+    $f0 = FSQRTS $f4, implicit $fsr
+...
 ---
 # CHECK-NOT:  NOP
 name:            er-9
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
-    $f0 = FSQRTS $f0
-    $f3 = FADDS $f1, $f2
-    $f3 = FADDS $f0, $f2
-    $f3 = FADDS $f1, $f2
-    $f0 = FSQRTS $f0
-
+    $f0 = FSQRTS $f0, implicit $fsr
+    $f3 = FADDS $f1, $f2, implicit $fsr
+    $f3 = FADDS $f0, $f2, implicit $fsr
+    $f3 = FADDS $f1, $f2, implicit $fsr
+    $f0 = FSQRTS $f0, implicit $fsr
+...
 ---
 # CHECK-NOT:  NOP
 name:            er-10
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
-    $f0 = FSQRTS $f0
-    $f4 = FSQRTS $f4
-    $f3 = FADDS $f1, $f2
-    $f0 = FSQRTS $f0
-
+    $f0 = FSQRTS $f0, implicit $fsr
+    $f4 = FSQRTS $f4, implicit $fsr
+    $f3 = FADDS $f1, $f2, implicit $fsr
+    $f0 = FSQRTS $f0, implicit $fsr
+...
 ---
 # CHECK:      er-11
 # CHECK:      $f0 = FSQRTS $f0
@@ -60,16 +64,17 @@ body:             |
 # CHECK:      $f0 = FDIVS $f0, $f0
 # CHECK-NEXT: NOP
 name:            er-11
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     successors: %bb.3, %bb.1
-    $f0 = FSQRTS $f0
+    $f0 = FSQRTS $f0, implicit $fsr
     FBCOND %bb.3, 22, implicit $fcc0 {
       NOP
     }
   bb.1:
     successors: %bb.3, %bb.4
-    $f0 = FDIVS $f0, $f0
+    $f0 = FDIVS $f0, $f0, implicit $fsr
     BCOND %bb.4, 10, implicit $icc {
       NOP
     }
@@ -77,17 +82,18 @@ body:             |
     NOP
   bb.4:
     NOP
-
+...
 ---
 # CHECK:      $f1 = FDIVS $f0, $f1
 # CHECK-NEXT: NOP
 # CHECK-NEXT: STri $i6, -84, $i2
 name:            er-8-3
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
-    $f1 = FDIVS $f0, $f1
+    $f1 = FDIVS $f0, $f1, implicit $fsr
     STri $i6, -84, $i2
     $f0 = LDFri $i6, -84
-    $f0 = FITOS $f0
-    $f5 = FDIVS $f4, $f0
+    $f0 = FITOS $f0, implicit $fsr
+    $f5 = FDIVS $f4, $f0, implicit $fsr
 ...

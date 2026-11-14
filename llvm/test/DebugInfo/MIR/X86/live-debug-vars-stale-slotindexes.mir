@@ -135,7 +135,6 @@
 ---
 name:            yyparse
 alignment:       1
-tracksRegLiveness: true
 debugInstrRef:   true
 liveins:
   - { reg: '$rdi', virtual-reg: '%1' }
@@ -240,7 +239,6 @@ body:             |
 ---
 name:            accumulate_fit
 alignment:       1
-tracksRegLiveness: true
 debugInstrRef:   true
 liveins:
   - { reg: '$rdi', virtual-reg: '%20' }

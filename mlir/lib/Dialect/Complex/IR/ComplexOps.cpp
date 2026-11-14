@@ -8,7 +8,6 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
-#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/PatternMatch.h"
 
@@ -329,14 +328,14 @@ OpFoldResult NegOp::fold(FoldAdaptor adaptor) {
 OpFoldResult ExpOp::fold(FoldAdaptor adaptor) {
   // complex.exp(complex.log(a)) -> a
   // exp(log(a)) is only an approximation of a, so both ops need `reassoc`.
-  // log(a) is not finite for a zero or non-finite a, and its result depends
-  // on the sign of a zero, so the log also needs `nnan`, `ninf` and `nsz`.
+  // log(a) is not finite for a zero or non-finite a, so the log also needs
+  // `nnan` and `ninf`.
   if (arith::bitEnumContainsAll(getFastmath(), arith::FastMathFlags::reassoc))
     if (auto logOp = getOperand().getDefiningOp<LogOp>())
-      if (arith::bitEnumContainsAll(
-              logOp.getFastmath(),
-              arith::FastMathFlags::reassoc | arith::FastMathFlags::nnan |
-                  arith::FastMathFlags::ninf | arith::FastMathFlags::nsz))
+      if (arith::bitEnumContainsAll(logOp.getFastmath(),
+                                    arith::FastMathFlags::reassoc |
+                                        arith::FastMathFlags::nnan |
+                                        arith::FastMathFlags::ninf))
         return logOp.getOperand();
 
   return {};

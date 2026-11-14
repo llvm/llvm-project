@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
 
-define i32 @test_phi_iterator_invalidation(ptr %A, ptr noalias %B) {
+define i32 @test_phi_iterator_invalidation(ptr %A, ptr noalias %B) vscale_range(1,16) {
 ; CHECK-LABEL: @test_phi_iterator_invalidation(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]

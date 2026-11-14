@@ -1,6 +1,8 @@
 // REQUIRES: systemz-registered-target
 // RUN: %clang_cc1 -target-cpu z17 -triple s390x-ibm-linux -Wall -Wno-unused -Werror -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -target-cpu z17 -triple s390x-ibm-linux -Wall -Wno-unused -Werror -emit-llvm %s -o - | FileCheck %s %}
 // RUN: %clang_cc1 -target-cpu z17 -triple s390x-ibm-linux -Wall -Wno-unused -Werror -emit-llvm -x c++ %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -target-cpu z17 -triple s390x-ibm-linux -Wall -Wno-unused -Werror -emit-llvm -x c++ %s -o - | FileCheck %s %}
 
 unsigned long test_bdepg(unsigned long a, unsigned long b) {
 // CHECK-LABEL: test_bdepg

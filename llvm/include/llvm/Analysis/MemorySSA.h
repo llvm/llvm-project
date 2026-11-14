@@ -98,6 +98,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
@@ -108,6 +109,7 @@
 
 namespace llvm {
 
+struct AnalysisOptions;
 template <class GraphType> struct GraphTraits;
 class Function;
 class Loop;
@@ -316,10 +318,6 @@ public:
   MemoryUse(LLVMContext &C, MemoryAccess *DMA, Instruction *MI, BasicBlock *BB)
       : MemoryUseOrDef(C, DMA, MemoryUseVal, deleteMe, MI, BB, AllocMarker) {}
 
-  // allocate space for exactly one operand
-  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
-
   static bool classof(const Value *MA) {
     return MA->getValueID() == MemoryUseVal;
   }
@@ -380,10 +378,6 @@ public:
             unsigned Ver)
       : MemoryUseOrDef(C, DMA, MemoryDefVal, deleteMe, MI, BB, AllocMarker),
         ID(Ver) {}
-
-  // allocate space for exactly two operands
-  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   static bool classof(const Value *MA) {
     return MA->getValueID() == MemoryDefVal;
@@ -841,8 +835,13 @@ private:
   void prepareForMoveTo(MemoryAccess *, BasicBlock *);
   void verifyUseInDefs(MemoryAccess *, MemoryAccess *) const;
 
-  using AccessMap = DenseMap<const BasicBlock *, std::unique_ptr<AccessList>>;
-  using DefsMap = DenseMap<const BasicBlock *, std::unique_ptr<DefsList>>;
+  // The per-block lists live in UseOrDefAllocator, so only destroy them.
+  struct ListDeleter {
+    template <typename ListT> void operator()(ListT *L) const { L->~ListT(); }
+  };
+  template <typename ListT> using ListPtr = std::unique_ptr<ListT, ListDeleter>;
+  using AccessMap = DenseMap<const BasicBlock *, ListPtr<AccessList>>;
+  using DefsMap = DenseMap<const BasicBlock *, ListPtr<DefsList>>;
 
   void markUnreachableAsLiveOnEntry(BasicBlock *BB);
   MemoryPhi *createMemoryPhi(BasicBlock *BB);
@@ -859,10 +858,14 @@ private:
   AccessList *getOrCreateAccessList(const BasicBlock *);
   DefsList *getOrCreateDefsList(const BasicBlock *);
   void renumberBlock(const BasicBlock *) const;
+  const AnalysisOptions &Opts;
   AliasAnalysis *AA = nullptr;
   DominatorTree *DT;
   Function *F = nullptr;
   Loop *L = nullptr;
+
+  // Memory for MemoryUses, MemoryDefs and the per-block lists.
+  BumpPtrAllocatorImpl<MallocAllocator, 512, 512, 1> UseOrDefAllocator;
 
   // Memory SSA mappings
   DenseMap<const Value *, MemoryAccess *> ValueToMemoryAccess;

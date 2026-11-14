@@ -13,12 +13,6 @@
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/PatternMatch.h"
 
-namespace mlir {
-namespace gpu {
-class GpuOp;
-} // namespace gpu
-} // namespace mlir
-
 //===----------------------------------------------------------------------===//
 // GPU Transform Operations
 //===----------------------------------------------------------------------===//

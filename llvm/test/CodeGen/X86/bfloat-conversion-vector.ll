@@ -23,10 +23,10 @@ define <4 x bfloat> @fptrunc_v4f32(<4 x float> %x) nounwind {
 ; AVX-NEXT:    movq %rax, %rdx
 ; AVX-NEXT:    shrq $32, %rdx
 ; AVX-NEXT:    shrq $48, %rax
-; AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm1
-; AVX-NEXT:    vpinsrw $0, %edx, %xmm0, %xmm2
+; AVX-NEXT:    vmovd %eax, %xmm1
+; AVX-NEXT:    vmovd %edx, %xmm2
 ; AVX-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
-; AVX-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm2
+; AVX-NEXT:    vmovd %ecx, %xmm2
 ; AVX-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; AVX-NEXT:    vzeroupper
@@ -53,10 +53,10 @@ define <4 x bfloat> @fptrunc_v4f32(<4 x float> %x) nounwind {
 ; AVX2-NEXT:    movq %rax, %rdx
 ; AVX2-NEXT:    shrq $32, %rdx
 ; AVX2-NEXT:    shrq $48, %rax
-; AVX2-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm1
-; AVX2-NEXT:    vpinsrw $0, %edx, %xmm0, %xmm2
+; AVX2-NEXT:    vmovd %eax, %xmm1
+; AVX2-NEXT:    vmovd %edx, %xmm2
 ; AVX2-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
-; AVX2-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm2
+; AVX2-NEXT:    vmovd %ecx, %xmm2
 ; AVX2-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; AVX2-NEXT:    vzeroupper

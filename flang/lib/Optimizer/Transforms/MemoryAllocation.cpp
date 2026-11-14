@@ -15,6 +15,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace fir {
 #define GEN_PASS_DEF_MEMORYALLOCATIONOPT
@@ -25,6 +26,12 @@ namespace fir {
 
 // Number of elements in an array does not determine where it is allocated.
 static constexpr std::size_t unlimitedArraySize = ~static_cast<std::size_t>(0);
+
+static llvm::cl::opt<std::size_t> arrayStackAllocationThreshold(
+    "fstack-array-size",
+    llvm::cl::desc("place all array allocations more than <size> elements on "
+                   "the heap (memory-allocation-opt pass only)"),
+    llvm::cl::init(unlimitedArraySize), llvm::cl::Hidden);
 
 /// Return `true` if this allocation is to remain on the stack (`fir.alloca`).
 /// Otherwise the allocation should be moved to the heap (`fir.allocmem`).
@@ -104,6 +111,8 @@ public:
       options.dynamicArrayOnHeap = dynamicArrayOnHeap;
     if (maxStackArraySize != unlimitedArraySize)
       options.maxStackArraySize = maxStackArraySize;
+    else if (arrayStackAllocationThreshold != unlimitedArraySize)
+      options.maxStackArraySize = arrayStackAllocationThreshold;
   }
 
   void runOnOperation() override {

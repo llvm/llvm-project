@@ -1,8 +1,7 @@
-# RUN: llc -mtriple=aarch64 -run-pass machinelicm -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64 -run-pass machinelicm -o - %s | FileCheck %s
 # RUN: llc -mtriple=aarch64 -passes machinelicm -o - %s | FileCheck %s
 ---
 name: test
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 8, type: spill-slot }
 body: |
@@ -31,7 +30,6 @@ body: |
 
 ---
 name: test2
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 8, type: spill-slot }
 body: |

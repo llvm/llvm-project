@@ -15,7 +15,7 @@
 
 using namespace llvm;
 
-static llvm::opt::RegisterLibraryOptions<llvm::ScalarOptions> Registration;
+LLVM_REGISTER_LIBRARY_OPTIONS(llvm::ScalarOptions)
 
 const ScalarOptions &llvm::getScalarOptions(const Loop &L) {
   return getScalarOptions(L.getHeader()->getContext());

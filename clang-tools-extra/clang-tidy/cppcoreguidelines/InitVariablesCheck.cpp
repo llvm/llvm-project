@@ -9,6 +9,7 @@
 #include "InitVariablesCheck.h"
 
 #include "../utils/LexerUtils.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/Type.h"
@@ -17,11 +18,11 @@
 #include <optional>
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
 namespace {
-AST_MATCHER(VarDecl, isLocalVarDecl) { return Node.isLocalVarDecl(); }
 AST_MATCHER(Stmt, isObjCForCollectionStmt) {
   return isa<ObjCForCollectionStmt>(&Node);
 }

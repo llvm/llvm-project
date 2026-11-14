@@ -88,6 +88,10 @@
 #    error "__cpp_lib_atomic_min_max should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_atomic_reductions
+#    error "__cpp_lib_atomic_reductions should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_atomic_ref
 #    error "__cpp_lib_atomic_ref should not be defined before c++20"
 #  endif
@@ -188,6 +192,10 @@
 #    error "__cpp_lib_constexpr_algorithms should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_atomic
+#    error "__cpp_lib_constexpr_atomic should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_bitset
 #    error "__cpp_lib_constexpr_bitset should not be defined before c++23"
 #  endif
@@ -204,8 +212,16 @@
 #    error "__cpp_lib_constexpr_complex should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_deque
+#    error "__cpp_lib_constexpr_deque should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_dynamic_alloc
 #    error "__cpp_lib_constexpr_dynamic_alloc should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_exceptions
+#    error "__cpp_lib_constexpr_exceptions should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_flat_map
@@ -222,6 +238,10 @@
 
 #  ifdef __cpp_lib_constexpr_functional
 #    error "__cpp_lib_constexpr_functional should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_inplace_vector
+#    error "__cpp_lib_constexpr_inplace_vector should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_iterator
@@ -256,6 +276,10 @@
 #    error "__cpp_lib_constexpr_set should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_stack
+#    error "__cpp_lib_constexpr_stack should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_string
 #    error "__cpp_lib_constexpr_string should not be defined before c++20"
 #  endif
@@ -270,6 +294,14 @@
 
 #  ifdef __cpp_lib_constexpr_typeinfo
 #    error "__cpp_lib_constexpr_typeinfo should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_unordered_map
+#    error "__cpp_lib_constexpr_unordered_map should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_unordered_set
+#    error "__cpp_lib_constexpr_unordered_set should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_utility
@@ -288,12 +320,20 @@
 #    error "__cpp_lib_containers_ranges should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_contracts
+#    error "__cpp_lib_contracts should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_copyable_function
 #    error "__cpp_lib_copyable_function should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_coroutine
 #    error "__cpp_lib_coroutine should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_counting_scope
+#    error "__cpp_lib_counting_scope should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_debugging
@@ -318,6 +358,10 @@
 
 #  ifdef __cpp_lib_erase_if
 #    error "__cpp_lib_erase_if should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_exception_ptr_cast
+#    error "__cpp_lib_exception_ptr_cast should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_exchange_function
@@ -424,6 +468,82 @@
 #    error "__cpp_lib_generic_unordered_lookup should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_hardened_array
+#    error "__cpp_lib_hardened_array should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_basic_stacktrace
+#    error "__cpp_lib_hardened_basic_stacktrace should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_basic_string
+#    error "__cpp_lib_hardened_basic_string should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_basic_string_view
+#    error "__cpp_lib_hardened_basic_string_view should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_bitset
+#    error "__cpp_lib_hardened_bitset should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_common_iterator
+#    error "__cpp_lib_hardened_common_iterator should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_counted_iterator
+#    error "__cpp_lib_hardened_counted_iterator should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_deque
+#    error "__cpp_lib_hardened_deque should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_expected
+#    error "__cpp_lib_hardened_expected should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_forward_list
+#    error "__cpp_lib_hardened_forward_list should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_inplace_vector
+#    error "__cpp_lib_hardened_inplace_vector should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_list
+#    error "__cpp_lib_hardened_list should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_mdspan
+#    error "__cpp_lib_hardened_mdspan should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_optional
+#    error "__cpp_lib_hardened_optional should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_shared_ptr_array
+#    error "__cpp_lib_hardened_shared_ptr_array should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_span
+#    error "__cpp_lib_hardened_span should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_valarray
+#    error "__cpp_lib_hardened_valarray should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_vector
+#    error "__cpp_lib_hardened_vector should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_view_interface
+#    error "__cpp_lib_hardened_view_interface should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_hardware_interference_size
 #    error "__cpp_lib_hardware_interference_size should not be defined before c++17"
 #  endif
@@ -436,12 +556,20 @@
 #    error "__cpp_lib_hazard_pointer should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_hive
+#    error "__cpp_lib_hive should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_hypot
 #    error "__cpp_lib_hypot should not be defined before c++17"
 #  endif
 
 #  ifdef __cpp_lib_incomplete_container_elements
 #    error "__cpp_lib_incomplete_container_elements should not be defined before c++17"
+#  endif
+
+#  ifdef __cpp_lib_indirect
+#    error "__cpp_lib_indirect should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_initializer_list
@@ -632,6 +760,10 @@
 #    error "__cpp_lib_null_iterators should not be defined before c++14"
 #  endif
 
+#  ifdef __cpp_lib_observable_checkpoint
+#    error "__cpp_lib_observable_checkpoint should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_optional
 #    error "__cpp_lib_optional should not be defined before c++17"
 #  endif
@@ -648,12 +780,20 @@
 #    error "__cpp_lib_parallel_algorithm should not be defined before c++17"
 #  endif
 
+#  ifdef __cpp_lib_parallel_scheduler
+#    error "__cpp_lib_parallel_scheduler should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_philox_engine
 #    error "__cpp_lib_philox_engine should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_pointer_tag_pair
 #    error "__cpp_lib_pointer_tag_pair should not be defined before c++29"
+#  endif
+
+#  ifdef __cpp_lib_polymorphic
+#    error "__cpp_lib_polymorphic should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_polymorphic_allocator
@@ -676,8 +816,16 @@
 #    error "__cpp_lib_ranges_as_const should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_as_input
+#    error "__cpp_lib_ranges_as_input should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_ranges_as_rvalue
 #    error "__cpp_lib_ranges_as_rvalue should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_cache_latest
+#    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_chunk
@@ -722,6 +870,10 @@
 
 #  ifdef __cpp_lib_ranges_repeat
 #    error "__cpp_lib_ranges_repeat should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_reserve_hint
+#    error "__cpp_lib_ranges_reserve_hint should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_slide
@@ -904,6 +1056,10 @@
 #    error "__cpp_lib_syncbuf should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_task
+#    error "__cpp_lib_task should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_text_encoding
 #    error "__cpp_lib_text_encoding should not be defined before c++26"
 #  endif
@@ -1070,6 +1226,10 @@
 #    error "__cpp_lib_atomic_min_max should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_atomic_reductions
+#    error "__cpp_lib_atomic_reductions should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_atomic_ref
 #    error "__cpp_lib_atomic_ref should not be defined before c++20"
 #  endif
@@ -1176,6 +1336,10 @@
 #    error "__cpp_lib_constexpr_algorithms should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_atomic
+#    error "__cpp_lib_constexpr_atomic should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_bitset
 #    error "__cpp_lib_constexpr_bitset should not be defined before c++23"
 #  endif
@@ -1192,8 +1356,16 @@
 #    error "__cpp_lib_constexpr_complex should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_deque
+#    error "__cpp_lib_constexpr_deque should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_dynamic_alloc
 #    error "__cpp_lib_constexpr_dynamic_alloc should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_exceptions
+#    error "__cpp_lib_constexpr_exceptions should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_flat_map
@@ -1210,6 +1382,10 @@
 
 #  ifdef __cpp_lib_constexpr_functional
 #    error "__cpp_lib_constexpr_functional should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_inplace_vector
+#    error "__cpp_lib_constexpr_inplace_vector should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_iterator
@@ -1244,6 +1420,10 @@
 #    error "__cpp_lib_constexpr_set should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_stack
+#    error "__cpp_lib_constexpr_stack should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_string
 #    error "__cpp_lib_constexpr_string should not be defined before c++20"
 #  endif
@@ -1258,6 +1438,14 @@
 
 #  ifdef __cpp_lib_constexpr_typeinfo
 #    error "__cpp_lib_constexpr_typeinfo should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_unordered_map
+#    error "__cpp_lib_constexpr_unordered_map should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_unordered_set
+#    error "__cpp_lib_constexpr_unordered_set should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_utility
@@ -1276,12 +1464,20 @@
 #    error "__cpp_lib_containers_ranges should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_contracts
+#    error "__cpp_lib_contracts should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_copyable_function
 #    error "__cpp_lib_copyable_function should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_coroutine
 #    error "__cpp_lib_coroutine should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_counting_scope
+#    error "__cpp_lib_counting_scope should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_debugging
@@ -1306,6 +1502,10 @@
 
 #  ifdef __cpp_lib_erase_if
 #    error "__cpp_lib_erase_if should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_exception_ptr_cast
+#    error "__cpp_lib_exception_ptr_cast should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_exchange_function
@@ -1418,6 +1618,82 @@
 #    error "__cpp_lib_generic_unordered_lookup should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_hardened_array
+#    error "__cpp_lib_hardened_array should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_basic_stacktrace
+#    error "__cpp_lib_hardened_basic_stacktrace should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_basic_string
+#    error "__cpp_lib_hardened_basic_string should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_basic_string_view
+#    error "__cpp_lib_hardened_basic_string_view should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_bitset
+#    error "__cpp_lib_hardened_bitset should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_common_iterator
+#    error "__cpp_lib_hardened_common_iterator should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_counted_iterator
+#    error "__cpp_lib_hardened_counted_iterator should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_deque
+#    error "__cpp_lib_hardened_deque should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_expected
+#    error "__cpp_lib_hardened_expected should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_forward_list
+#    error "__cpp_lib_hardened_forward_list should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_inplace_vector
+#    error "__cpp_lib_hardened_inplace_vector should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_list
+#    error "__cpp_lib_hardened_list should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_mdspan
+#    error "__cpp_lib_hardened_mdspan should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_optional
+#    error "__cpp_lib_hardened_optional should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_shared_ptr_array
+#    error "__cpp_lib_hardened_shared_ptr_array should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_span
+#    error "__cpp_lib_hardened_span should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_valarray
+#    error "__cpp_lib_hardened_valarray should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_vector
+#    error "__cpp_lib_hardened_vector should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_view_interface
+#    error "__cpp_lib_hardened_view_interface should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_hardware_interference_size
 #    error "__cpp_lib_hardware_interference_size should not be defined before c++17"
 #  endif
@@ -1430,12 +1706,20 @@
 #    error "__cpp_lib_hazard_pointer should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_hive
+#    error "__cpp_lib_hive should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_hypot
 #    error "__cpp_lib_hypot should not be defined before c++17"
 #  endif
 
 #  ifdef __cpp_lib_incomplete_container_elements
 #    error "__cpp_lib_incomplete_container_elements should not be defined before c++17"
+#  endif
+
+#  ifdef __cpp_lib_indirect
+#    error "__cpp_lib_indirect should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_initializer_list
@@ -1650,6 +1934,10 @@
 #    error "__cpp_lib_null_iterators should have the value 201304L in c++14"
 #  endif
 
+#  ifdef __cpp_lib_observable_checkpoint
+#    error "__cpp_lib_observable_checkpoint should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_optional
 #    error "__cpp_lib_optional should not be defined before c++17"
 #  endif
@@ -1666,12 +1954,20 @@
 #    error "__cpp_lib_parallel_algorithm should not be defined before c++17"
 #  endif
 
+#  ifdef __cpp_lib_parallel_scheduler
+#    error "__cpp_lib_parallel_scheduler should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_philox_engine
 #    error "__cpp_lib_philox_engine should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_pointer_tag_pair
 #    error "__cpp_lib_pointer_tag_pair should not be defined before c++29"
+#  endif
+
+#  ifdef __cpp_lib_polymorphic
+#    error "__cpp_lib_polymorphic should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_polymorphic_allocator
@@ -1703,8 +1999,16 @@
 #    error "__cpp_lib_ranges_as_const should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_as_input
+#    error "__cpp_lib_ranges_as_input should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_ranges_as_rvalue
 #    error "__cpp_lib_ranges_as_rvalue should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_cache_latest
+#    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_chunk
@@ -1749,6 +2053,10 @@
 
 #  ifdef __cpp_lib_ranges_repeat
 #    error "__cpp_lib_ranges_repeat should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_reserve_hint
+#    error "__cpp_lib_ranges_reserve_hint should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_slide
@@ -1947,6 +2255,10 @@
 
 #  ifdef __cpp_lib_syncbuf
 #    error "__cpp_lib_syncbuf should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_task
+#    error "__cpp_lib_task should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_text_encoding
@@ -2151,6 +2463,10 @@
 #    error "__cpp_lib_atomic_min_max should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_atomic_reductions
+#    error "__cpp_lib_atomic_reductions should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_atomic_ref
 #    error "__cpp_lib_atomic_ref should not be defined before c++20"
 #  endif
@@ -2272,6 +2588,10 @@
 #    error "__cpp_lib_constexpr_algorithms should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_atomic
+#    error "__cpp_lib_constexpr_atomic should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_bitset
 #    error "__cpp_lib_constexpr_bitset should not be defined before c++23"
 #  endif
@@ -2288,8 +2608,16 @@
 #    error "__cpp_lib_constexpr_complex should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_deque
+#    error "__cpp_lib_constexpr_deque should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_dynamic_alloc
 #    error "__cpp_lib_constexpr_dynamic_alloc should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_exceptions
+#    error "__cpp_lib_constexpr_exceptions should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_flat_map
@@ -2306,6 +2634,10 @@
 
 #  ifdef __cpp_lib_constexpr_functional
 #    error "__cpp_lib_constexpr_functional should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_inplace_vector
+#    error "__cpp_lib_constexpr_inplace_vector should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_iterator
@@ -2340,6 +2672,10 @@
 #    error "__cpp_lib_constexpr_set should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_stack
+#    error "__cpp_lib_constexpr_stack should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_string
 #    error "__cpp_lib_constexpr_string should not be defined before c++20"
 #  endif
@@ -2354,6 +2690,14 @@
 
 #  ifdef __cpp_lib_constexpr_typeinfo
 #    error "__cpp_lib_constexpr_typeinfo should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_unordered_map
+#    error "__cpp_lib_constexpr_unordered_map should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_unordered_set
+#    error "__cpp_lib_constexpr_unordered_set should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_utility
@@ -2372,12 +2716,20 @@
 #    error "__cpp_lib_containers_ranges should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_contracts
+#    error "__cpp_lib_contracts should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_copyable_function
 #    error "__cpp_lib_copyable_function should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_coroutine
 #    error "__cpp_lib_coroutine should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_counting_scope
+#    error "__cpp_lib_counting_scope should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_debugging
@@ -2405,6 +2757,10 @@
 
 #  ifdef __cpp_lib_erase_if
 #    error "__cpp_lib_erase_if should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_exception_ptr_cast
+#    error "__cpp_lib_exception_ptr_cast should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_exchange_function
@@ -2538,6 +2894,82 @@
 #    error "__cpp_lib_generic_unordered_lookup should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_hardened_array
+#    error "__cpp_lib_hardened_array should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_basic_stacktrace
+#    error "__cpp_lib_hardened_basic_stacktrace should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_basic_string
+#    error "__cpp_lib_hardened_basic_string should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_basic_string_view
+#    error "__cpp_lib_hardened_basic_string_view should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_bitset
+#    error "__cpp_lib_hardened_bitset should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_common_iterator
+#    error "__cpp_lib_hardened_common_iterator should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_counted_iterator
+#    error "__cpp_lib_hardened_counted_iterator should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_deque
+#    error "__cpp_lib_hardened_deque should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_expected
+#    error "__cpp_lib_hardened_expected should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_forward_list
+#    error "__cpp_lib_hardened_forward_list should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_inplace_vector
+#    error "__cpp_lib_hardened_inplace_vector should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_list
+#    error "__cpp_lib_hardened_list should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_mdspan
+#    error "__cpp_lib_hardened_mdspan should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_optional
+#    error "__cpp_lib_hardened_optional should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_shared_ptr_array
+#    error "__cpp_lib_hardened_shared_ptr_array should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_span
+#    error "__cpp_lib_hardened_span should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_valarray
+#    error "__cpp_lib_hardened_valarray should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_vector
+#    error "__cpp_lib_hardened_vector should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_view_interface
+#    error "__cpp_lib_hardened_view_interface should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_hardware_interference_size
 #    error "__cpp_lib_hardware_interference_size should be defined in c++17"
 #  endif
@@ -2556,6 +2988,10 @@
 #    error "__cpp_lib_hazard_pointer should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_hive
+#    error "__cpp_lib_hive should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_hypot
 #    error "__cpp_lib_hypot should be defined in c++17"
 #  endif
@@ -2568,6 +3004,10 @@
 #  endif
 #  if __cpp_lib_incomplete_container_elements != 201505L
 #    error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++17"
+#  endif
+
+#  ifdef __cpp_lib_indirect
+#    error "__cpp_lib_indirect should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_initializer_list
@@ -2833,6 +3273,10 @@
 #    error "__cpp_lib_null_iterators should have the value 201304L in c++17"
 #  endif
 
+#  ifdef __cpp_lib_observable_checkpoint
+#    error "__cpp_lib_observable_checkpoint should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_optional
 #    error "__cpp_lib_optional should be defined in c++17"
 #  endif
@@ -2861,12 +3305,20 @@
 #    endif
 #  endif
 
+#  ifdef __cpp_lib_parallel_scheduler
+#    error "__cpp_lib_parallel_scheduler should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_philox_engine
 #    error "__cpp_lib_philox_engine should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_pointer_tag_pair
 #    error "__cpp_lib_pointer_tag_pair should not be defined before c++29"
+#  endif
+
+#  ifdef __cpp_lib_polymorphic
+#    error "__cpp_lib_polymorphic should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_polymorphic_allocator
@@ -2898,8 +3350,16 @@
 #    error "__cpp_lib_ranges_as_const should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_as_input
+#    error "__cpp_lib_ranges_as_input should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_ranges_as_rvalue
 #    error "__cpp_lib_ranges_as_rvalue should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_cache_latest
+#    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_chunk
@@ -2944,6 +3404,10 @@
 
 #  ifdef __cpp_lib_ranges_repeat
 #    error "__cpp_lib_ranges_repeat should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_reserve_hint
+#    error "__cpp_lib_ranges_reserve_hint should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_slide
@@ -3175,6 +3639,10 @@
 
 #  ifdef __cpp_lib_syncbuf
 #    error "__cpp_lib_syncbuf should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_task
+#    error "__cpp_lib_task should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_text_encoding
@@ -3415,6 +3883,10 @@
 #    error "__cpp_lib_atomic_min_max should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_atomic_reductions
+#    error "__cpp_lib_atomic_reductions should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_atomic_ref
 #    error "__cpp_lib_atomic_ref should be defined in c++20"
 #  endif
@@ -3596,6 +4068,10 @@
 #    error "__cpp_lib_constexpr_algorithms should have the value 201806L in c++20"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_atomic
+#    error "__cpp_lib_constexpr_atomic should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_bitset
 #    error "__cpp_lib_constexpr_bitset should not be defined before c++23"
 #  endif
@@ -3615,11 +4091,19 @@
 #    error "__cpp_lib_constexpr_complex should have the value 201711L in c++20"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_deque
+#    error "__cpp_lib_constexpr_deque should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_constexpr_dynamic_alloc
 #    error "__cpp_lib_constexpr_dynamic_alloc should be defined in c++20"
 #  endif
 #  if __cpp_lib_constexpr_dynamic_alloc != 201907L
 #    error "__cpp_lib_constexpr_dynamic_alloc should have the value 201907L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_exceptions
+#    error "__cpp_lib_constexpr_exceptions should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_flat_map
@@ -3639,6 +4123,10 @@
 #  endif
 #  if __cpp_lib_constexpr_functional != 201907L
 #    error "__cpp_lib_constexpr_functional should have the value 201907L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_inplace_vector
+#    error "__cpp_lib_constexpr_inplace_vector should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_iterator
@@ -3682,6 +4170,10 @@
 #    error "__cpp_lib_constexpr_set should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_stack
+#    error "__cpp_lib_constexpr_stack should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_constexpr_string
 #    error "__cpp_lib_constexpr_string should be defined in c++20"
 #  endif
@@ -3707,6 +4199,14 @@
 #    error "__cpp_lib_constexpr_typeinfo should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_unordered_map
+#    error "__cpp_lib_constexpr_unordered_map should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_unordered_set
+#    error "__cpp_lib_constexpr_unordered_set should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_constexpr_utility
 #    error "__cpp_lib_constexpr_utility should be defined in c++20"
 #  endif
@@ -3729,6 +4229,10 @@
 #    error "__cpp_lib_containers_ranges should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_contracts
+#    error "__cpp_lib_contracts should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_copyable_function
 #    error "__cpp_lib_copyable_function should not be defined before c++26"
 #  endif
@@ -3738,6 +4242,10 @@
 #  endif
 #  if __cpp_lib_coroutine != 201902L
 #    error "__cpp_lib_coroutine should have the value 201902L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_counting_scope
+#    error "__cpp_lib_counting_scope should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_debugging
@@ -3780,6 +4288,10 @@
 #  endif
 #  if __cpp_lib_erase_if != 202002L
 #    error "__cpp_lib_erase_if should have the value 202002L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_exception_ptr_cast
+#    error "__cpp_lib_exception_ptr_cast should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_exchange_function
@@ -3928,6 +4440,82 @@
 #    error "__cpp_lib_generic_unordered_lookup should have the value 201811L in c++20"
 #  endif
 
+#  ifdef __cpp_lib_hardened_array
+#    error "__cpp_lib_hardened_array should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_basic_stacktrace
+#    error "__cpp_lib_hardened_basic_stacktrace should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_basic_string
+#    error "__cpp_lib_hardened_basic_string should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_basic_string_view
+#    error "__cpp_lib_hardened_basic_string_view should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_bitset
+#    error "__cpp_lib_hardened_bitset should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_common_iterator
+#    error "__cpp_lib_hardened_common_iterator should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_counted_iterator
+#    error "__cpp_lib_hardened_counted_iterator should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_deque
+#    error "__cpp_lib_hardened_deque should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_expected
+#    error "__cpp_lib_hardened_expected should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_forward_list
+#    error "__cpp_lib_hardened_forward_list should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_inplace_vector
+#    error "__cpp_lib_hardened_inplace_vector should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_list
+#    error "__cpp_lib_hardened_list should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_mdspan
+#    error "__cpp_lib_hardened_mdspan should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_optional
+#    error "__cpp_lib_hardened_optional should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_shared_ptr_array
+#    error "__cpp_lib_hardened_shared_ptr_array should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_span
+#    error "__cpp_lib_hardened_span should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_valarray
+#    error "__cpp_lib_hardened_valarray should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_vector
+#    error "__cpp_lib_hardened_vector should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_view_interface
+#    error "__cpp_lib_hardened_view_interface should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_hardware_interference_size
 #    error "__cpp_lib_hardware_interference_size should be defined in c++20"
 #  endif
@@ -3946,6 +4534,10 @@
 #    error "__cpp_lib_hazard_pointer should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_hive
+#    error "__cpp_lib_hive should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_hypot
 #    error "__cpp_lib_hypot should be defined in c++20"
 #  endif
@@ -3958,6 +4550,10 @@
 #  endif
 #  if __cpp_lib_incomplete_container_elements != 201505L
 #    error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_indirect
+#    error "__cpp_lib_indirect should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_initializer_list
@@ -4283,6 +4879,10 @@
 #    error "__cpp_lib_null_iterators should have the value 201304L in c++20"
 #  endif
 
+#  ifdef __cpp_lib_observable_checkpoint
+#    error "__cpp_lib_observable_checkpoint should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_optional
 #    error "__cpp_lib_optional should be defined in c++20"
 #  endif
@@ -4311,12 +4911,20 @@
 #    endif
 #  endif
 
+#  ifdef __cpp_lib_parallel_scheduler
+#    error "__cpp_lib_parallel_scheduler should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_philox_engine
 #    error "__cpp_lib_philox_engine should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_pointer_tag_pair
 #    error "__cpp_lib_pointer_tag_pair should not be defined before c++29"
+#  endif
+
+#  ifdef __cpp_lib_polymorphic
+#    error "__cpp_lib_polymorphic should not be defined before c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
@@ -4360,8 +4968,16 @@
 #    error "__cpp_lib_ranges_as_const should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_as_input
+#    error "__cpp_lib_ranges_as_input should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_ranges_as_rvalue
 #    error "__cpp_lib_ranges_as_rvalue should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_cache_latest
+#    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_chunk
@@ -4406,6 +5022,10 @@
 
 #  ifdef __cpp_lib_ranges_repeat
 #    error "__cpp_lib_ranges_repeat should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_reserve_hint
+#    error "__cpp_lib_ranges_reserve_hint should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_slide
@@ -4678,6 +5298,10 @@
 #    endif
 #  endif
 
+#  ifdef __cpp_lib_task
+#    error "__cpp_lib_task should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_text_encoding
 #    error "__cpp_lib_text_encoding should not be defined before c++26"
 #  endif
@@ -4946,6 +5570,10 @@
 #    error "__cpp_lib_atomic_min_max should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_atomic_reductions
+#    error "__cpp_lib_atomic_reductions should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_atomic_ref
 #    error "__cpp_lib_atomic_ref should be defined in c++23"
 #  endif
@@ -5133,6 +5761,10 @@
 #    error "__cpp_lib_constexpr_algorithms should have the value 201806L in c++23"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_atomic
+#    error "__cpp_lib_constexpr_atomic should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_constexpr_bitset
 #    error "__cpp_lib_constexpr_bitset should be defined in c++23"
 #  endif
@@ -5167,11 +5799,19 @@
 #    error "__cpp_lib_constexpr_complex should have the value 201711L in c++23"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_deque
+#    error "__cpp_lib_constexpr_deque should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_constexpr_dynamic_alloc
 #    error "__cpp_lib_constexpr_dynamic_alloc should be defined in c++23"
 #  endif
 #  if __cpp_lib_constexpr_dynamic_alloc != 201907L
 #    error "__cpp_lib_constexpr_dynamic_alloc should have the value 201907L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_exceptions
+#    error "__cpp_lib_constexpr_exceptions should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_flat_map
@@ -5191,6 +5831,10 @@
 #  endif
 #  if __cpp_lib_constexpr_functional != 201907L
 #    error "__cpp_lib_constexpr_functional should have the value 201907L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_inplace_vector
+#    error "__cpp_lib_constexpr_inplace_vector should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_iterator
@@ -5234,6 +5878,10 @@
 #    error "__cpp_lib_constexpr_set should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_stack
+#    error "__cpp_lib_constexpr_stack should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_constexpr_string
 #    error "__cpp_lib_constexpr_string should be defined in c++23"
 #  endif
@@ -5262,6 +5910,14 @@
 #    error "__cpp_lib_constexpr_typeinfo should have the value 202106L in c++23"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_unordered_map
+#    error "__cpp_lib_constexpr_unordered_map should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_unordered_set
+#    error "__cpp_lib_constexpr_unordered_set should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_constexpr_utility
 #    error "__cpp_lib_constexpr_utility should be defined in c++23"
 #  endif
@@ -5287,6 +5943,10 @@
 #    error "__cpp_lib_containers_ranges should have the value 202202L in c++23"
 #  endif
 
+#  ifdef __cpp_lib_contracts
+#    error "__cpp_lib_contracts should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_copyable_function
 #    error "__cpp_lib_copyable_function should not be defined before c++26"
 #  endif
@@ -5296,6 +5956,10 @@
 #  endif
 #  if __cpp_lib_coroutine != 201902L
 #    error "__cpp_lib_coroutine should have the value 201902L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_counting_scope
+#    error "__cpp_lib_counting_scope should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_debugging
@@ -5338,6 +6002,10 @@
 #  endif
 #  if __cpp_lib_erase_if != 202002L
 #    error "__cpp_lib_erase_if should have the value 202002L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_exception_ptr_cast
+#    error "__cpp_lib_exception_ptr_cast should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_exchange_function
@@ -5510,6 +6178,82 @@
 #    error "__cpp_lib_generic_unordered_lookup should have the value 201811L in c++23"
 #  endif
 
+#  ifdef __cpp_lib_hardened_array
+#    error "__cpp_lib_hardened_array should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_basic_stacktrace
+#    error "__cpp_lib_hardened_basic_stacktrace should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_basic_string
+#    error "__cpp_lib_hardened_basic_string should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_basic_string_view
+#    error "__cpp_lib_hardened_basic_string_view should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_bitset
+#    error "__cpp_lib_hardened_bitset should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_common_iterator
+#    error "__cpp_lib_hardened_common_iterator should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_counted_iterator
+#    error "__cpp_lib_hardened_counted_iterator should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_deque
+#    error "__cpp_lib_hardened_deque should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_expected
+#    error "__cpp_lib_hardened_expected should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_forward_list
+#    error "__cpp_lib_hardened_forward_list should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_inplace_vector
+#    error "__cpp_lib_hardened_inplace_vector should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_list
+#    error "__cpp_lib_hardened_list should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_mdspan
+#    error "__cpp_lib_hardened_mdspan should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_optional
+#    error "__cpp_lib_hardened_optional should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_shared_ptr_array
+#    error "__cpp_lib_hardened_shared_ptr_array should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_span
+#    error "__cpp_lib_hardened_span should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_valarray
+#    error "__cpp_lib_hardened_valarray should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_vector
+#    error "__cpp_lib_hardened_vector should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_view_interface
+#    error "__cpp_lib_hardened_view_interface should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_hardware_interference_size
 #    error "__cpp_lib_hardware_interference_size should be defined in c++23"
 #  endif
@@ -5528,6 +6272,10 @@
 #    error "__cpp_lib_hazard_pointer should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_hive
+#    error "__cpp_lib_hive should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_hypot
 #    error "__cpp_lib_hypot should be defined in c++23"
 #  endif
@@ -5540,6 +6288,10 @@
 #  endif
 #  if __cpp_lib_incomplete_container_elements != 201505L
 #    error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_indirect
+#    error "__cpp_lib_indirect should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_initializer_list
@@ -5898,6 +6650,10 @@
 #    error "__cpp_lib_null_iterators should have the value 201304L in c++23"
 #  endif
 
+#  ifdef __cpp_lib_observable_checkpoint
+#    error "__cpp_lib_observable_checkpoint should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_optional
 #    error "__cpp_lib_optional should be defined in c++23"
 #  endif
@@ -5929,12 +6685,20 @@
 #    endif
 #  endif
 
+#  ifdef __cpp_lib_parallel_scheduler
+#    error "__cpp_lib_parallel_scheduler should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_philox_engine
 #    error "__cpp_lib_philox_engine should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_pointer_tag_pair
 #    error "__cpp_lib_pointer_tag_pair should not be defined before c++29"
+#  endif
+
+#  ifdef __cpp_lib_polymorphic
+#    error "__cpp_lib_polymorphic should not be defined before c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
@@ -5996,11 +6760,19 @@
 #    endif
 #  endif
 
+#  ifdef __cpp_lib_ranges_as_input
+#    error "__cpp_lib_ranges_as_input should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_ranges_as_rvalue
 #    error "__cpp_lib_ranges_as_rvalue should be defined in c++23"
 #  endif
 #  if __cpp_lib_ranges_as_rvalue != 202207L
 #    error "__cpp_lib_ranges_as_rvalue should have the value 202207L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_cache_latest
+#    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -6078,6 +6850,10 @@
 #  endif
 #  if __cpp_lib_ranges_repeat != 202207L
 #    error "__cpp_lib_ranges_repeat should have the value 202207L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_reserve_hint
+#    error "__cpp_lib_ranges_reserve_hint should not be defined before c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -6407,6 +7183,10 @@
 #    endif
 #  endif
 
+#  ifdef __cpp_lib_task
+#    error "__cpp_lib_task should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_text_encoding
 #    error "__cpp_lib_text_encoding should not be defined before c++26"
 #  endif
@@ -6705,6 +7485,19 @@
 #    error "__cpp_lib_atomic_min_max should have the value 202403L in c++26"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_atomic_reductions
+#      error "__cpp_lib_atomic_reductions should be defined in c++26"
+#    endif
+#    if __cpp_lib_atomic_reductions != 202506L
+#      error "__cpp_lib_atomic_reductions should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_atomic_reductions
+#      error "__cpp_lib_atomic_reductions should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_atomic_ref
 #    error "__cpp_lib_atomic_ref should be defined in c++26"
 #  endif
@@ -6898,6 +7691,19 @@
 #    error "__cpp_lib_constexpr_algorithms should have the value 202306L in c++26"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_atomic
+#      error "__cpp_lib_constexpr_atomic should be defined in c++26"
+#    endif
+#    if __cpp_lib_constexpr_atomic != 202411L
+#      error "__cpp_lib_constexpr_atomic should have the value 202411L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_atomic
+#      error "__cpp_lib_constexpr_atomic should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_constexpr_bitset
 #    error "__cpp_lib_constexpr_bitset should be defined in c++26"
 #  endif
@@ -6932,11 +7738,37 @@
 #    error "__cpp_lib_constexpr_complex should have the value 201711L in c++26"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_deque
+#      error "__cpp_lib_constexpr_deque should be defined in c++26"
+#    endif
+#    if __cpp_lib_constexpr_deque != 202502L
+#      error "__cpp_lib_constexpr_deque should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_deque
+#      error "__cpp_lib_constexpr_deque should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_constexpr_dynamic_alloc
 #    error "__cpp_lib_constexpr_dynamic_alloc should be defined in c++26"
 #  endif
 #  if __cpp_lib_constexpr_dynamic_alloc != 201907L
 #    error "__cpp_lib_constexpr_dynamic_alloc should have the value 201907L in c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_exceptions
+#      error "__cpp_lib_constexpr_exceptions should be defined in c++26"
+#    endif
+#    if __cpp_lib_constexpr_exceptions != 202411L
+#      error "__cpp_lib_constexpr_exceptions should have the value 202411L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_exceptions
+#      error "__cpp_lib_constexpr_exceptions should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_constexpr_flat_map
@@ -6965,6 +7797,19 @@
 #  endif
 #  if __cpp_lib_constexpr_functional != 201907L
 #    error "__cpp_lib_constexpr_functional should have the value 201907L in c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_inplace_vector
+#      error "__cpp_lib_constexpr_inplace_vector should be defined in c++26"
+#    endif
+#    if __cpp_lib_constexpr_inplace_vector != 202502L
+#      error "__cpp_lib_constexpr_inplace_vector should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_inplace_vector
+#      error "__cpp_lib_constexpr_inplace_vector should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_constexpr_iterator
@@ -7015,11 +7860,17 @@
 #    error "__cpp_lib_constexpr_numeric should have the value 201911L in c++26"
 #  endif
 
-#  ifndef __cpp_lib_constexpr_queue
-#    error "__cpp_lib_constexpr_queue should be defined in c++26"
-#  endif
-#  if __cpp_lib_constexpr_queue != 202502L
-#    error "__cpp_lib_constexpr_queue should have the value 202502L in c++26"
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_queue
+#      error "__cpp_lib_constexpr_queue should be defined in c++26"
+#    endif
+#    if __cpp_lib_constexpr_queue != 202502L
+#      error "__cpp_lib_constexpr_queue should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_queue
+#      error "__cpp_lib_constexpr_queue should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_constexpr_set
@@ -7027,6 +7878,19 @@
 #  endif
 #  if __cpp_lib_constexpr_set != 202502L
 #    error "__cpp_lib_constexpr_set should have the value 202502L in c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_stack
+#      error "__cpp_lib_constexpr_stack should be defined in c++26"
+#    endif
+#    if __cpp_lib_constexpr_stack != 202502L
+#      error "__cpp_lib_constexpr_stack should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_stack
+#      error "__cpp_lib_constexpr_stack should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_constexpr_string
@@ -7055,6 +7919,32 @@
 #  endif
 #  if __cpp_lib_constexpr_typeinfo != 202106L
 #    error "__cpp_lib_constexpr_typeinfo should have the value 202106L in c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_unordered_map
+#      error "__cpp_lib_constexpr_unordered_map should be defined in c++26"
+#    endif
+#    if __cpp_lib_constexpr_unordered_map != 202502L
+#      error "__cpp_lib_constexpr_unordered_map should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_unordered_map
+#      error "__cpp_lib_constexpr_unordered_map should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_unordered_set
+#      error "__cpp_lib_constexpr_unordered_set should be defined in c++26"
+#    endif
+#    if __cpp_lib_constexpr_unordered_set != 202502L
+#      error "__cpp_lib_constexpr_unordered_set should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_unordered_set
+#      error "__cpp_lib_constexpr_unordered_set should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_constexpr_utility
@@ -7086,6 +7976,19 @@
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_contracts
+#      error "__cpp_lib_contracts should be defined in c++26"
+#    endif
+#    if __cpp_lib_contracts != 202502L
+#      error "__cpp_lib_contracts should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_contracts
+#      error "__cpp_lib_contracts should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_copyable_function
 #      error "__cpp_lib_copyable_function should be defined in c++26"
 #    endif
@@ -7103,6 +8006,19 @@
 #  endif
 #  if __cpp_lib_coroutine != 201902L
 #    error "__cpp_lib_coroutine should have the value 201902L in c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_counting_scope
+#      error "__cpp_lib_counting_scope should be defined in c++26"
+#    endif
+#    if __cpp_lib_counting_scope != 202506L
+#      error "__cpp_lib_counting_scope should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_counting_scope
+#      error "__cpp_lib_counting_scope should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_DEBUGGING
@@ -7163,6 +8079,19 @@
 #  endif
 #  if __cpp_lib_erase_if != 202002L
 #    error "__cpp_lib_erase_if should have the value 202002L in c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_exception_ptr_cast
+#      error "__cpp_lib_exception_ptr_cast should be defined in c++26"
+#    endif
+#    if __cpp_lib_exception_ptr_cast != 202506L
+#      error "__cpp_lib_exception_ptr_cast should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_exception_ptr_cast
+#      error "__cpp_lib_exception_ptr_cast should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_exchange_function
@@ -7437,6 +8366,253 @@
 #    error "__cpp_lib_generic_unordered_lookup should have the value 201811L in c++26"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_array
+#      error "__cpp_lib_hardened_array should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_array != 202502L
+#      error "__cpp_lib_hardened_array should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_array
+#      error "__cpp_lib_hardened_array should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_basic_stacktrace
+#      error "__cpp_lib_hardened_basic_stacktrace should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_basic_stacktrace != 202506L
+#      error "__cpp_lib_hardened_basic_stacktrace should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_basic_stacktrace
+#      error "__cpp_lib_hardened_basic_stacktrace should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_basic_string
+#      error "__cpp_lib_hardened_basic_string should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_basic_string != 202502L
+#      error "__cpp_lib_hardened_basic_string should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_basic_string
+#      error "__cpp_lib_hardened_basic_string should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_basic_string_view
+#      error "__cpp_lib_hardened_basic_string_view should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_basic_string_view != 202502L
+#      error "__cpp_lib_hardened_basic_string_view should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_basic_string_view
+#      error "__cpp_lib_hardened_basic_string_view should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_bitset
+#      error "__cpp_lib_hardened_bitset should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_bitset != 202502L
+#      error "__cpp_lib_hardened_bitset should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_bitset
+#      error "__cpp_lib_hardened_bitset should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_common_iterator
+#      error "__cpp_lib_hardened_common_iterator should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_common_iterator != 202506L
+#      error "__cpp_lib_hardened_common_iterator should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_common_iterator
+#      error "__cpp_lib_hardened_common_iterator should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_counted_iterator
+#      error "__cpp_lib_hardened_counted_iterator should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_counted_iterator != 202506L
+#      error "__cpp_lib_hardened_counted_iterator should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_counted_iterator
+#      error "__cpp_lib_hardened_counted_iterator should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_deque
+#      error "__cpp_lib_hardened_deque should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_deque != 202502L
+#      error "__cpp_lib_hardened_deque should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_deque
+#      error "__cpp_lib_hardened_deque should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_expected
+#      error "__cpp_lib_hardened_expected should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_expected != 202502L
+#      error "__cpp_lib_hardened_expected should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_expected
+#      error "__cpp_lib_hardened_expected should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_forward_list
+#      error "__cpp_lib_hardened_forward_list should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_forward_list != 202502L
+#      error "__cpp_lib_hardened_forward_list should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_forward_list
+#      error "__cpp_lib_hardened_forward_list should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_inplace_vector
+#      error "__cpp_lib_hardened_inplace_vector should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_inplace_vector != 202502L
+#      error "__cpp_lib_hardened_inplace_vector should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_inplace_vector
+#      error "__cpp_lib_hardened_inplace_vector should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_list
+#      error "__cpp_lib_hardened_list should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_list != 202502L
+#      error "__cpp_lib_hardened_list should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_list
+#      error "__cpp_lib_hardened_list should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_mdspan
+#      error "__cpp_lib_hardened_mdspan should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_mdspan != 202502L
+#      error "__cpp_lib_hardened_mdspan should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_mdspan
+#      error "__cpp_lib_hardened_mdspan should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_optional
+#      error "__cpp_lib_hardened_optional should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_optional != 202502L
+#      error "__cpp_lib_hardened_optional should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_optional
+#      error "__cpp_lib_hardened_optional should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_shared_ptr_array
+#      error "__cpp_lib_hardened_shared_ptr_array should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_shared_ptr_array != 202506L
+#      error "__cpp_lib_hardened_shared_ptr_array should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_shared_ptr_array
+#      error "__cpp_lib_hardened_shared_ptr_array should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_span
+#      error "__cpp_lib_hardened_span should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_span != 202502L
+#      error "__cpp_lib_hardened_span should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_span
+#      error "__cpp_lib_hardened_span should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_valarray
+#      error "__cpp_lib_hardened_valarray should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_valarray != 202502L
+#      error "__cpp_lib_hardened_valarray should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_valarray
+#      error "__cpp_lib_hardened_valarray should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_vector
+#      error "__cpp_lib_hardened_vector should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_vector != 202502L
+#      error "__cpp_lib_hardened_vector should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_vector
+#      error "__cpp_lib_hardened_vector should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_view_interface
+#      error "__cpp_lib_hardened_view_interface should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_view_interface != 202506L
+#      error "__cpp_lib_hardened_view_interface should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_view_interface
+#      error "__cpp_lib_hardened_view_interface should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_hardware_interference_size
 #    error "__cpp_lib_hardware_interference_size should be defined in c++26"
 #  endif
@@ -7464,6 +8640,19 @@
 #    endif
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hive
+#      error "__cpp_lib_hive should be defined in c++26"
+#    endif
+#    if __cpp_lib_hive != 202502L
+#      error "__cpp_lib_hive should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hive
+#      error "__cpp_lib_hive should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_hypot
 #    error "__cpp_lib_hypot should be defined in c++26"
 #  endif
@@ -7476,6 +8665,19 @@
 #  endif
 #  if __cpp_lib_incomplete_container_elements != 201505L
 #    error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_indirect
+#      error "__cpp_lib_indirect should be defined in c++26"
+#    endif
+#    if __cpp_lib_indirect != 202502L
+#      error "__cpp_lib_indirect should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_indirect
+#      error "__cpp_lib_indirect should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_initializer_list
@@ -7873,6 +9075,19 @@
 #    error "__cpp_lib_null_iterators should have the value 201304L in c++26"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_observable_checkpoint
+#      error "__cpp_lib_observable_checkpoint should be defined in c++26"
+#    endif
+#    if __cpp_lib_observable_checkpoint != 202506L
+#      error "__cpp_lib_observable_checkpoint should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_observable_checkpoint
+#      error "__cpp_lib_observable_checkpoint should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_optional
 #    error "__cpp_lib_optional should be defined in c++26"
 #  endif
@@ -7914,6 +9129,19 @@
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_parallel_scheduler
+#      error "__cpp_lib_parallel_scheduler should be defined in c++26"
+#    endif
+#    if __cpp_lib_parallel_scheduler != 202506L
+#      error "__cpp_lib_parallel_scheduler should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_parallel_scheduler
+#      error "__cpp_lib_parallel_scheduler should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_philox_engine
 #      error "__cpp_lib_philox_engine should be defined in c++26"
 #    endif
@@ -7928,6 +9156,19 @@
 
 #  ifdef __cpp_lib_pointer_tag_pair
 #    error "__cpp_lib_pointer_tag_pair should not be defined before c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_polymorphic
+#      error "__cpp_lib_polymorphic should be defined in c++26"
+#    endif
+#    if __cpp_lib_polymorphic != 202502L
+#      error "__cpp_lib_polymorphic should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_polymorphic
+#      error "__cpp_lib_polymorphic should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
@@ -7989,11 +9230,37 @@
 #    endif
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_as_input
+#      error "__cpp_lib_ranges_as_input should be defined in c++26"
+#    endif
+#    if __cpp_lib_ranges_as_input != 202502L
+#      error "__cpp_lib_ranges_as_input should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_as_input
+#      error "__cpp_lib_ranges_as_input should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_ranges_as_rvalue
 #    error "__cpp_lib_ranges_as_rvalue should be defined in c++26"
 #  endif
 #  if __cpp_lib_ranges_as_rvalue != 202207L
 #    error "__cpp_lib_ranges_as_rvalue should have the value 202207L in c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_cache_latest
+#      error "__cpp_lib_ranges_cache_latest should be defined in c++26"
+#    endif
+#    if __cpp_lib_ranges_cache_latest != 202411L
+#      error "__cpp_lib_ranges_cache_latest should have the value 202411L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_cache_latest
+#      error "__cpp_lib_ranges_cache_latest should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -8077,6 +9344,19 @@
 #  endif
 #  if __cpp_lib_ranges_repeat != 202207L
 #    error "__cpp_lib_ranges_repeat should have the value 202207L in c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_reserve_hint
+#      error "__cpp_lib_ranges_reserve_hint should be defined in c++26"
+#    endif
+#    if __cpp_lib_ranges_reserve_hint != 202502L
+#      error "__cpp_lib_ranges_reserve_hint should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_reserve_hint
+#      error "__cpp_lib_ranges_reserve_hint should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -8292,8 +9572,8 @@
 #    ifndef __cpp_lib_simd
 #      error "__cpp_lib_simd should be defined in c++26"
 #    endif
-#    if __cpp_lib_simd != 202606L
-#      error "__cpp_lib_simd should have the value 202606L in c++26"
+#    if __cpp_lib_simd != 202411L
+#      error "__cpp_lib_simd should have the value 202411L in c++26"
 #    endif
 #  else
 #    ifdef __cpp_lib_simd
@@ -8313,8 +9593,8 @@
 #    ifndef __cpp_lib_simd_permutations
 #      error "__cpp_lib_simd_permutations should be defined in c++26"
 #    endif
-#    if __cpp_lib_simd_permutations != 202606L
-#      error "__cpp_lib_simd_permutations should have the value 202606L in c++26"
+#    if __cpp_lib_simd_permutations != 202506L
+#      error "__cpp_lib_simd_permutations should have the value 202506L in c++26"
 #    endif
 #  else
 #    ifdef __cpp_lib_simd_permutations
@@ -8469,6 +9749,19 @@
 #  else
 #    ifdef __cpp_lib_syncbuf
 #      error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM' is not met!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_task
+#      error "__cpp_lib_task should be defined in c++26"
+#    endif
+#    if __cpp_lib_task != 202506L
+#      error "__cpp_lib_task should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_task
+#      error "__cpp_lib_task should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 
@@ -8791,6 +10084,19 @@
 #    error "__cpp_lib_atomic_min_max should have the value 202403L in c++29"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_atomic_reductions
+#      error "__cpp_lib_atomic_reductions should be defined in c++29"
+#    endif
+#    if __cpp_lib_atomic_reductions != 202506L
+#      error "__cpp_lib_atomic_reductions should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_atomic_reductions
+#      error "__cpp_lib_atomic_reductions should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_atomic_ref
 #    error "__cpp_lib_atomic_ref should be defined in c++29"
 #  endif
@@ -8984,6 +10290,19 @@
 #    error "__cpp_lib_constexpr_algorithms should have the value 202306L in c++29"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_atomic
+#      error "__cpp_lib_constexpr_atomic should be defined in c++29"
+#    endif
+#    if __cpp_lib_constexpr_atomic != 202411L
+#      error "__cpp_lib_constexpr_atomic should have the value 202411L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_atomic
+#      error "__cpp_lib_constexpr_atomic should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_constexpr_bitset
 #    error "__cpp_lib_constexpr_bitset should be defined in c++29"
 #  endif
@@ -9018,11 +10337,37 @@
 #    error "__cpp_lib_constexpr_complex should have the value 201711L in c++29"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_deque
+#      error "__cpp_lib_constexpr_deque should be defined in c++29"
+#    endif
+#    if __cpp_lib_constexpr_deque != 202502L
+#      error "__cpp_lib_constexpr_deque should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_deque
+#      error "__cpp_lib_constexpr_deque should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_constexpr_dynamic_alloc
 #    error "__cpp_lib_constexpr_dynamic_alloc should be defined in c++29"
 #  endif
 #  if __cpp_lib_constexpr_dynamic_alloc != 201907L
 #    error "__cpp_lib_constexpr_dynamic_alloc should have the value 201907L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_exceptions
+#      error "__cpp_lib_constexpr_exceptions should be defined in c++29"
+#    endif
+#    if __cpp_lib_constexpr_exceptions != 202411L
+#      error "__cpp_lib_constexpr_exceptions should have the value 202411L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_exceptions
+#      error "__cpp_lib_constexpr_exceptions should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_constexpr_flat_map
@@ -9051,6 +10396,19 @@
 #  endif
 #  if __cpp_lib_constexpr_functional != 201907L
 #    error "__cpp_lib_constexpr_functional should have the value 201907L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_inplace_vector
+#      error "__cpp_lib_constexpr_inplace_vector should be defined in c++29"
+#    endif
+#    if __cpp_lib_constexpr_inplace_vector != 202502L
+#      error "__cpp_lib_constexpr_inplace_vector should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_inplace_vector
+#      error "__cpp_lib_constexpr_inplace_vector should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_constexpr_iterator
@@ -9101,11 +10459,17 @@
 #    error "__cpp_lib_constexpr_numeric should have the value 201911L in c++29"
 #  endif
 
-#  ifndef __cpp_lib_constexpr_queue
-#    error "__cpp_lib_constexpr_queue should be defined in c++29"
-#  endif
-#  if __cpp_lib_constexpr_queue != 202502L
-#    error "__cpp_lib_constexpr_queue should have the value 202502L in c++29"
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_queue
+#      error "__cpp_lib_constexpr_queue should be defined in c++29"
+#    endif
+#    if __cpp_lib_constexpr_queue != 202502L
+#      error "__cpp_lib_constexpr_queue should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_queue
+#      error "__cpp_lib_constexpr_queue should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_constexpr_set
@@ -9113,6 +10477,19 @@
 #  endif
 #  if __cpp_lib_constexpr_set != 202502L
 #    error "__cpp_lib_constexpr_set should have the value 202502L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_stack
+#      error "__cpp_lib_constexpr_stack should be defined in c++29"
+#    endif
+#    if __cpp_lib_constexpr_stack != 202502L
+#      error "__cpp_lib_constexpr_stack should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_stack
+#      error "__cpp_lib_constexpr_stack should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_constexpr_string
@@ -9141,6 +10518,32 @@
 #  endif
 #  if __cpp_lib_constexpr_typeinfo != 202106L
 #    error "__cpp_lib_constexpr_typeinfo should have the value 202106L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_unordered_map
+#      error "__cpp_lib_constexpr_unordered_map should be defined in c++29"
+#    endif
+#    if __cpp_lib_constexpr_unordered_map != 202502L
+#      error "__cpp_lib_constexpr_unordered_map should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_unordered_map
+#      error "__cpp_lib_constexpr_unordered_map should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_unordered_set
+#      error "__cpp_lib_constexpr_unordered_set should be defined in c++29"
+#    endif
+#    if __cpp_lib_constexpr_unordered_set != 202502L
+#      error "__cpp_lib_constexpr_unordered_set should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_unordered_set
+#      error "__cpp_lib_constexpr_unordered_set should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_constexpr_utility
@@ -9172,6 +10575,19 @@
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_contracts
+#      error "__cpp_lib_contracts should be defined in c++29"
+#    endif
+#    if __cpp_lib_contracts != 202502L
+#      error "__cpp_lib_contracts should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_contracts
+#      error "__cpp_lib_contracts should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_copyable_function
 #      error "__cpp_lib_copyable_function should be defined in c++29"
 #    endif
@@ -9189,6 +10605,19 @@
 #  endif
 #  if __cpp_lib_coroutine != 201902L
 #    error "__cpp_lib_coroutine should have the value 201902L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_counting_scope
+#      error "__cpp_lib_counting_scope should be defined in c++29"
+#    endif
+#    if __cpp_lib_counting_scope != 202506L
+#      error "__cpp_lib_counting_scope should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_counting_scope
+#      error "__cpp_lib_counting_scope should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_DEBUGGING
@@ -9249,6 +10678,19 @@
 #  endif
 #  if __cpp_lib_erase_if != 202002L
 #    error "__cpp_lib_erase_if should have the value 202002L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_exception_ptr_cast
+#      error "__cpp_lib_exception_ptr_cast should be defined in c++29"
+#    endif
+#    if __cpp_lib_exception_ptr_cast != 202506L
+#      error "__cpp_lib_exception_ptr_cast should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_exception_ptr_cast
+#      error "__cpp_lib_exception_ptr_cast should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_exchange_function
@@ -9523,6 +10965,253 @@
 #    error "__cpp_lib_generic_unordered_lookup should have the value 201811L in c++29"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_array
+#      error "__cpp_lib_hardened_array should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_array != 202502L
+#      error "__cpp_lib_hardened_array should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_array
+#      error "__cpp_lib_hardened_array should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_basic_stacktrace
+#      error "__cpp_lib_hardened_basic_stacktrace should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_basic_stacktrace != 202506L
+#      error "__cpp_lib_hardened_basic_stacktrace should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_basic_stacktrace
+#      error "__cpp_lib_hardened_basic_stacktrace should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_basic_string
+#      error "__cpp_lib_hardened_basic_string should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_basic_string != 202502L
+#      error "__cpp_lib_hardened_basic_string should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_basic_string
+#      error "__cpp_lib_hardened_basic_string should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_basic_string_view
+#      error "__cpp_lib_hardened_basic_string_view should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_basic_string_view != 202502L
+#      error "__cpp_lib_hardened_basic_string_view should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_basic_string_view
+#      error "__cpp_lib_hardened_basic_string_view should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_bitset
+#      error "__cpp_lib_hardened_bitset should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_bitset != 202502L
+#      error "__cpp_lib_hardened_bitset should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_bitset
+#      error "__cpp_lib_hardened_bitset should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_common_iterator
+#      error "__cpp_lib_hardened_common_iterator should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_common_iterator != 202506L
+#      error "__cpp_lib_hardened_common_iterator should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_common_iterator
+#      error "__cpp_lib_hardened_common_iterator should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_counted_iterator
+#      error "__cpp_lib_hardened_counted_iterator should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_counted_iterator != 202506L
+#      error "__cpp_lib_hardened_counted_iterator should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_counted_iterator
+#      error "__cpp_lib_hardened_counted_iterator should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_deque
+#      error "__cpp_lib_hardened_deque should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_deque != 202502L
+#      error "__cpp_lib_hardened_deque should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_deque
+#      error "__cpp_lib_hardened_deque should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_expected
+#      error "__cpp_lib_hardened_expected should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_expected != 202502L
+#      error "__cpp_lib_hardened_expected should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_expected
+#      error "__cpp_lib_hardened_expected should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_forward_list
+#      error "__cpp_lib_hardened_forward_list should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_forward_list != 202502L
+#      error "__cpp_lib_hardened_forward_list should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_forward_list
+#      error "__cpp_lib_hardened_forward_list should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_inplace_vector
+#      error "__cpp_lib_hardened_inplace_vector should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_inplace_vector != 202502L
+#      error "__cpp_lib_hardened_inplace_vector should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_inplace_vector
+#      error "__cpp_lib_hardened_inplace_vector should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_list
+#      error "__cpp_lib_hardened_list should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_list != 202502L
+#      error "__cpp_lib_hardened_list should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_list
+#      error "__cpp_lib_hardened_list should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_mdspan
+#      error "__cpp_lib_hardened_mdspan should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_mdspan != 202502L
+#      error "__cpp_lib_hardened_mdspan should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_mdspan
+#      error "__cpp_lib_hardened_mdspan should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_optional
+#      error "__cpp_lib_hardened_optional should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_optional != 202502L
+#      error "__cpp_lib_hardened_optional should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_optional
+#      error "__cpp_lib_hardened_optional should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_shared_ptr_array
+#      error "__cpp_lib_hardened_shared_ptr_array should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_shared_ptr_array != 202506L
+#      error "__cpp_lib_hardened_shared_ptr_array should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_shared_ptr_array
+#      error "__cpp_lib_hardened_shared_ptr_array should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_span
+#      error "__cpp_lib_hardened_span should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_span != 202502L
+#      error "__cpp_lib_hardened_span should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_span
+#      error "__cpp_lib_hardened_span should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_valarray
+#      error "__cpp_lib_hardened_valarray should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_valarray != 202502L
+#      error "__cpp_lib_hardened_valarray should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_valarray
+#      error "__cpp_lib_hardened_valarray should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_vector
+#      error "__cpp_lib_hardened_vector should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_vector != 202502L
+#      error "__cpp_lib_hardened_vector should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_vector
+#      error "__cpp_lib_hardened_vector should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_view_interface
+#      error "__cpp_lib_hardened_view_interface should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_view_interface != 202506L
+#      error "__cpp_lib_hardened_view_interface should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_view_interface
+#      error "__cpp_lib_hardened_view_interface should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_hardware_interference_size
 #    error "__cpp_lib_hardware_interference_size should be defined in c++29"
 #  endif
@@ -9550,6 +11239,19 @@
 #    endif
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hive
+#      error "__cpp_lib_hive should be defined in c++29"
+#    endif
+#    if __cpp_lib_hive != 202502L
+#      error "__cpp_lib_hive should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hive
+#      error "__cpp_lib_hive should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_hypot
 #    error "__cpp_lib_hypot should be defined in c++29"
 #  endif
@@ -9562,6 +11264,19 @@
 #  endif
 #  if __cpp_lib_incomplete_container_elements != 201505L
 #    error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_indirect
+#      error "__cpp_lib_indirect should be defined in c++29"
+#    endif
+#    if __cpp_lib_indirect != 202502L
+#      error "__cpp_lib_indirect should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_indirect
+#      error "__cpp_lib_indirect should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_initializer_list
@@ -9977,6 +11692,19 @@
 #    error "__cpp_lib_null_iterators should have the value 201304L in c++29"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_observable_checkpoint
+#      error "__cpp_lib_observable_checkpoint should be defined in c++29"
+#    endif
+#    if __cpp_lib_observable_checkpoint != 202506L
+#      error "__cpp_lib_observable_checkpoint should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_observable_checkpoint
+#      error "__cpp_lib_observable_checkpoint should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_optional
 #    error "__cpp_lib_optional should be defined in c++29"
 #  endif
@@ -10018,6 +11746,19 @@
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_parallel_scheduler
+#      error "__cpp_lib_parallel_scheduler should be defined in c++29"
+#    endif
+#    if __cpp_lib_parallel_scheduler != 202506L
+#      error "__cpp_lib_parallel_scheduler should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_parallel_scheduler
+#      error "__cpp_lib_parallel_scheduler should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_philox_engine
 #      error "__cpp_lib_philox_engine should be defined in c++29"
 #    endif
@@ -10040,6 +11781,19 @@
 #  else
 #    ifdef __cpp_lib_pointer_tag_pair
 #      error "__cpp_lib_pointer_tag_pair should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_polymorphic
+#      error "__cpp_lib_polymorphic should be defined in c++29"
+#    endif
+#    if __cpp_lib_polymorphic != 202502L
+#      error "__cpp_lib_polymorphic should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_polymorphic
+#      error "__cpp_lib_polymorphic should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 
@@ -10102,11 +11856,37 @@
 #    endif
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_as_input
+#      error "__cpp_lib_ranges_as_input should be defined in c++29"
+#    endif
+#    if __cpp_lib_ranges_as_input != 202502L
+#      error "__cpp_lib_ranges_as_input should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_as_input
+#      error "__cpp_lib_ranges_as_input should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_ranges_as_rvalue
 #    error "__cpp_lib_ranges_as_rvalue should be defined in c++29"
 #  endif
 #  if __cpp_lib_ranges_as_rvalue != 202207L
 #    error "__cpp_lib_ranges_as_rvalue should have the value 202207L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_cache_latest
+#      error "__cpp_lib_ranges_cache_latest should be defined in c++29"
+#    endif
+#    if __cpp_lib_ranges_cache_latest != 202411L
+#      error "__cpp_lib_ranges_cache_latest should have the value 202411L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_cache_latest
+#      error "__cpp_lib_ranges_cache_latest should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -10190,6 +11970,19 @@
 #  endif
 #  if __cpp_lib_ranges_repeat != 202207L
 #    error "__cpp_lib_ranges_repeat should have the value 202207L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_reserve_hint
+#      error "__cpp_lib_ranges_reserve_hint should be defined in c++29"
+#    endif
+#    if __cpp_lib_ranges_reserve_hint != 202502L
+#      error "__cpp_lib_ranges_reserve_hint should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_reserve_hint
+#      error "__cpp_lib_ranges_reserve_hint should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -10405,8 +12198,8 @@
 #    ifndef __cpp_lib_simd
 #      error "__cpp_lib_simd should be defined in c++29"
 #    endif
-#    if __cpp_lib_simd != 202606L
-#      error "__cpp_lib_simd should have the value 202606L in c++29"
+#    if __cpp_lib_simd != 202411L
+#      error "__cpp_lib_simd should have the value 202411L in c++29"
 #    endif
 #  else
 #    ifdef __cpp_lib_simd
@@ -10444,8 +12237,8 @@
 #    ifndef __cpp_lib_simd_permutations
 #      error "__cpp_lib_simd_permutations should be defined in c++29"
 #    endif
-#    if __cpp_lib_simd_permutations != 202606L
-#      error "__cpp_lib_simd_permutations should have the value 202606L in c++29"
+#    if __cpp_lib_simd_permutations != 202506L
+#      error "__cpp_lib_simd_permutations should have the value 202506L in c++29"
 #    endif
 #  else
 #    ifdef __cpp_lib_simd_permutations
@@ -10600,6 +12393,19 @@
 #  else
 #    ifdef __cpp_lib_syncbuf
 #      error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM' is not met!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_task
+#      error "__cpp_lib_task should be defined in c++29"
+#    endif
+#    if __cpp_lib_task != 202506L
+#      error "__cpp_lib_task should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_task
+#      error "__cpp_lib_task should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 

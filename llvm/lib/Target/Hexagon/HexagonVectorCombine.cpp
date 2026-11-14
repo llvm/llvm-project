@@ -755,7 +755,7 @@ auto AlignVectors::createAdjustedPointer(IRBuilderBase &Builder, Value *Ptr,
   if (auto *I = dyn_cast<Instruction>(Ptr))
     if (Instruction *New = CloneMap.lookup(I))
       Ptr = New;
-  return Builder.CreatePtrAdd(Ptr, HVC.getConstInt(Adjust), "gep");
+  return Builder.CreatePtrAddWithSignedOffset(Ptr, Adjust, "gep");
 }
 
 auto AlignVectors::createAlignedPointer(IRBuilderBase &Builder, Value *Ptr,

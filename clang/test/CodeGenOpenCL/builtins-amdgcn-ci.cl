@@ -1,8 +1,12 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgpu7.01-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -cl-std=CL2.0 -O0 -triple amdgpu7.01-unknown-unknown -emit-llvm -o - %s | FileCheck %s %}
 // RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgpu8.03-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -cl-std=CL2.0 -O0 -triple amdgpu8.03-unknown-unknown -emit-llvm -o - %s | FileCheck %s %}
 // RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgpu9.06-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -cl-std=CL2.0 -O0 -triple amdgpu9.06-unknown-unknown -emit-llvm -o - %s | FileCheck %s %}
 // RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgpu10.10-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -cl-std=CL2.0 -O0 -triple amdgpu10.10-unknown-unknown -emit-llvm -o - %s | FileCheck %s %}
 
 typedef unsigned int uint;
 typedef unsigned long ulong;

@@ -10,7 +10,6 @@
 
 ---
 name: rematerialize_super_register_into_subreg_def
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: rematerialize_super_register_into_subreg_def
   ; CHECK: bb.0:
@@ -65,7 +64,6 @@ body:             |
 # than the copy destination.
 ---
 name:            rematerialize_narrow_subregister_into_superreg_def
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: rematerialize_narrow_subregister_into_superreg_def
   ; CHECK: bb.0:
@@ -119,7 +117,6 @@ body:             |
 # super register def
 ---
 name:            rematerialize_subregister_into_superreg_def
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: rematerialize_subregister_into_superreg_def
   ; CHECK: bb.0:
@@ -173,7 +170,6 @@ body:             |
 # virtual super register into a physical register works.
 ---
 name:            rematerialize_subregister_into_superreg_def_with_impdef_physreg
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: rematerialize_subregister_into_superreg_def_with_impdef_physreg
   ; CHECK: bb.0:
@@ -237,8 +233,9 @@ body:             |
     $rsi = COPY %1
     $rdx = COPY %1
     FAKE_USE implicit killed $rsi, implicit killed $rdx
-    %4:gr8 = COPY killed %1.sub_8bit
-    $al = COPY killed %4
+    %4:gr8 = COPY %1.sub_8bit
+    $al = COPY %4
     FAKE_USE implicit killed $al
     $eax = MOV32r0 implicit-def dead $eflags
     RET 0, killed $eax
+...

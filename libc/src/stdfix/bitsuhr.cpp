@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "bitsuhr.h"
+#include "src/stdfix/bitsuhr.h"
 #include "include/llvm-libc-macros/stdfix-macros.h" // unsigned short fract
 #include "include/llvm-libc-types/uint_uhr_t.h"
 #include "src/__support/common.h"                   // LLVM_LIBC_FUNCTION

@@ -58,6 +58,7 @@ class MockAcceleratorPacketsTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         self.assertIn("accelerator-plugins", features)
         self.assertEqual(features["accelerator-plugins"], "+")
+        self.assertNotIn("lldb-settings", features)
 
     @add_test_categories(["llgs"])
     def test_jAcceleratorPluginInitialize_returns_breakpoints(self):

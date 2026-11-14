@@ -121,6 +121,7 @@ body: |
 name: Unknown_SAvgCeil
 body: |
   bb.0:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @Unknown_SAvgCeil
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -133,6 +134,7 @@ body: |
 name: SExtInReg_SAvgFloor
 body: |
   bb.0:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @SExtInReg_SAvgFloor
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:5 IsKnownNeverZero:0
@@ -149,6 +151,7 @@ body: |
 name: SExtInReg_SAvgCeil
 body: |
   bb.0:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @SExtInReg_SAvgCeil
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:5 IsKnownNeverZero:0
@@ -165,6 +168,7 @@ body: |
 name: SExtInRegMixed_SAvgFloor
 body: |
   bb.0:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @SExtInRegMixed_SAvgFloor
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:5 IsKnownNeverZero:0
@@ -181,6 +185,7 @@ body: |
 name: SExtInRegMixed_SAvgCeil
 body: |
   bb.0:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @SExtInRegMixed_SAvgCeil
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:5 IsKnownNeverZero:0
@@ -197,6 +202,7 @@ body: |
 name: UnknownOperand_SAvgFloor
 body: |
   bb.0:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @UnknownOperand_SAvgFloor
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -211,6 +217,7 @@ body: |
 name: UnknownOperand_SAvgCeil
 body: |
   bb.0:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @UnknownOperand_SAvgCeil
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -225,6 +232,7 @@ body: |
 name: UnknownOperand_SAvgFloor_Mirror
 body: |
   bb.0:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @UnknownOperand_SAvgFloor_Mirror
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -239,6 +247,7 @@ body: |
 name: AShr_SAvgFloor
 body: |
   bb.0:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @AShr_SAvgFloor
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:00000011 SignBits:6 IsKnownNeverZero:1

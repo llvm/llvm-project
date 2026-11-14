@@ -28,7 +28,9 @@ uint16_t getTargetMachine();
 /// Checks if the given \p Object is a valid ELF matching the e_machine value.
 llvm::Expected<bool> checkMachine(llvm::StringRef Object, uint16_t EMachine);
 
-/// Returns a pointer to the given \p Symbol inside of an ELF object.
+/// Returns a pointer to the given \p Symbol inside of an ELF object. Returns
+/// a null pointer if the symbol exists but has no contents in the file (its
+/// section is SHT_NOBITS, e.g. `.bss`).
 llvm::Expected<const void *>
 getSymbolAddress(const llvm::object::ELFSymbolRef &Symbol);
 

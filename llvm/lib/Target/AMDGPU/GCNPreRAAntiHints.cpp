@@ -28,67 +28,6 @@ using namespace llvm::AMDGPU;
 
 namespace HC = llvm::AMDGPU::HazardClass;
 
-enum class AntiHintRule {
-  None,
-  MFMAWAW,
-  MFMAWAR,
-  WMMAWARAB,
-  SWMMACWARIndex,
-  WMMAWAW,
-  TransWAR,
-  MemAddrWAR,
-  VAVdstWAR,
-  All,
-};
-
-static cl::list<AntiHintRule> AntiHintRuleSelection(
-    "amdgpu-anti-hints-rules", cl::Hidden, cl::CommaSeparated,
-    cl::desc("Anti-hints rules to select."),
-    cl::values(clEnumValN(AntiHintRule::None, "none", "Select no rules"),
-               clEnumValN(AntiHintRule::MFMAWAW, "mfma-waw",
-                          "MFMA destination write-after-write"),
-               clEnumValN(AntiHintRule::MFMAWAR, "mfma-war",
-                          "XDL MFMA src2 write-after-read"),
-               clEnumValN(AntiHintRule::WMMAWARAB, "wmma-war-ab",
-                          "XDL WMMA A/B source write-after-read"),
-               clEnumValN(AntiHintRule::SWMMACWARIndex, "swmmac-war-index",
-                          "XDL SWMMAC sparse index write-after-read"),
-               clEnumValN(AntiHintRule::WMMAWAW, "wmma-waw",
-                          "XDL WMMA destination write-after-write"),
-               clEnumValN(AntiHintRule::TransWAR, "trans-war",
-                          "TRANS source write-after-read"),
-               clEnumValN(AntiHintRule::MemAddrWAR, "mem-addr-war",
-                          "Memory address/data write-after-read (s_wait_xcnt)"),
-               clEnumValN(AntiHintRule::VAVdstWAR, "va-vdst-war",
-                          "VALU source write-after-read by a load "
-                          "(s_wait_alu va_vdst)"),
-               clEnumValN(AntiHintRule::All, "all",
-                          "Select all rules (default); per-rule "
-                          "-amdgpu-anti-hints-for-* still apply")));
-
-static cl::opt<bool>
-    EnableAntiHintsForAddr("amdgpu-anti-hints-for-addr", cl::Hidden,
-                           cl::desc("Enable Anti-Hints for memory address "
-                                    "operands and subsequent VGPR writes to "
-                                    "avoid wait xcnt."),
-                           cl::init(true));
-
-static cl::opt<bool>
-    EnableAntiHintsForVAVdst("amdgpu-anti-hints-for-va-vdst", cl::Hidden,
-                             cl::desc("Enable Anti-Hints for VA-VDST."),
-                             cl::init(false));
-
-static cl::opt<unsigned>
-    VAVDSTLookbackWindow("amdgpu-va-vdst-lookback-window", cl::Hidden,
-                         cl::desc("Lookback window for VA_VDST anti-hints."),
-                         cl::init(32));
-
-static cl::opt<unsigned>
-    AddrAntiHintWindow("amdgpu-addr-anti-hint-window", cl::Hidden,
-                       cl::desc("Number of later memory instructions an "
-                                "address anti-hint stays open."),
-                       cl::init(16));
-
 namespace {
 
 // Classify the MI into a HazardClassMask.
@@ -299,6 +238,14 @@ unsigned mfmaWarWindow(const MachineInstr &P, HazardClassMask,
                        const HazardContext &Ctx) {
   return mfmaWaitStates(P, MFMAHazardKind::WAR, HC::None, Ctx);
 }
+unsigned addrAntiHintWindow(const MachineInstr &, HazardClassMask,
+                            const HazardContext &Ctx) {
+  return Ctx.ST->getCLOpts().addr_anti_hint_window;
+}
+unsigned vaVdstLookbackWindow(const MachineInstr &, HazardClassMask,
+                              const HazardContext &Ctx) {
+  return Ctx.ST->getCLOpts().va_vdst_lookback_window;
+}
 
 constexpr unsigned NumWMMAHazardCategories = 7;
 unsigned wmmaHazardCategory(const MachineInstr &Producer,
@@ -355,46 +302,47 @@ bool hasGFX1250Insts(const HazardContext &Ctx) {
   return Ctx.ST->hasGFX1250Insts();
 }
 
-bool ruleSelected(AntiHintRule Rule) {
+bool ruleSelected(const HazardContext &Ctx, AntiHintRule Rule) {
+  ArrayRef<AntiHintRule> Selection = Ctx.ST->getCLOpts().anti_hints_rules;
   // No -amdgpu-anti-hints-rules on the command line selects every rule.
-  if (AntiHintRuleSelection.empty() ||
-      is_contained(AntiHintRuleSelection, AntiHintRule::All))
+  if (Selection.empty() || is_contained(Selection, AntiHintRule::All))
     return true;
-  return is_contained(AntiHintRuleSelection, Rule);
+  return is_contained(Selection, Rule);
 }
 
 bool isMFMAWAWRuleEnabled(const HazardContext &Ctx) {
-  return hasMFMAHazard(Ctx) && ruleSelected(AntiHintRule::MFMAWAW);
+  return hasMFMAHazard(Ctx) && ruleSelected(Ctx, AntiHintRule::MFMAWAW);
 }
 
 bool isMFMAWARRuleEnabled(const HazardContext &Ctx) {
-  return hasMFMAHazard(Ctx) && ruleSelected(AntiHintRule::MFMAWAR);
+  return hasMFMAHazard(Ctx) && ruleSelected(Ctx, AntiHintRule::MFMAWAR);
 }
 
 bool isWMMAWARABRuleEnabled(const HazardContext &Ctx) {
-  return hasWMMACoexecHazard(Ctx) && ruleSelected(AntiHintRule::WMMAWARAB);
+  return hasWMMACoexecHazard(Ctx) && ruleSelected(Ctx, AntiHintRule::WMMAWARAB);
 }
 
 bool isSWMMACWARIndexRuleEnabled(const HazardContext &Ctx) {
-  return hasWMMACoexecHazard(Ctx) && ruleSelected(AntiHintRule::SWMMACWARIndex);
+  return hasWMMACoexecHazard(Ctx) &&
+         ruleSelected(Ctx, AntiHintRule::SWMMACWARIndex);
 }
 
 bool isWMMAWAWRuleEnabled(const HazardContext &Ctx) {
-  return hasWMMACoexecHazard(Ctx) && ruleSelected(AntiHintRule::WMMAWAW);
+  return hasWMMACoexecHazard(Ctx) && ruleSelected(Ctx, AntiHintRule::WMMAWAW);
 }
 
 bool isTransWARRuleEnabled(const HazardContext &Ctx) {
-  return hasTransCoexecHazard(Ctx) && ruleSelected(AntiHintRule::TransWAR);
+  return hasTransCoexecHazard(Ctx) && ruleSelected(Ctx, AntiHintRule::TransWAR);
 }
 
 bool isAddrWARRuleEnabled(const HazardContext &Ctx) {
-  return EnableAntiHintsForAddr && hasGFX1250Insts(Ctx) &&
-         ruleSelected(AntiHintRule::MemAddrWAR);
+  return Ctx.ST->getCLOpts().anti_hints_for_addr && hasGFX1250Insts(Ctx) &&
+         ruleSelected(Ctx, AntiHintRule::MemAddrWAR);
 }
 
 bool isVAVdstWARRuleEnabled(const HazardContext &Ctx) {
-  return EnableAntiHintsForVAVdst && hasGFX1250Insts(Ctx) &&
-         ruleSelected(AntiHintRule::VAVdstWAR);
+  return Ctx.ST->getCLOpts().anti_hints_for_va_vdst && hasGFX1250Insts(Ctx) &&
+         ruleSelected(Ctx, AntiHintRule::VAVdstWAR);
 }
 
 bool isXDLMFMA(const MachineInstr &MI, const HazardContext &Ctx) {
@@ -415,9 +363,6 @@ bool isDSorVMEMLoad(const MachineInstr &MI, const HazardContext &Ctx) {
 
 unsigned resolveWindow(const ConsumerTarget &CT, const MachineInstr &MI,
                        const HazardContext &Ctx) {
-  // Explicity given window length overrides the computed one.
-  if (CT.Window.OptWindowLength)
-    return *CT.Window.OptWindowLength;
   if (CT.Window.Fn)
     return CT.Window.Fn(MI, CT.Side.Match.AnyOf, Ctx);
   return CT.Window.WindowLength;
@@ -483,13 +428,13 @@ SmallVector<HazardAntiHintRule, 0> buildAntiHintsRules() {
   HazardRuleSet S;
 
   // MFMA relevent windows and consumers
-  const WindowSpec MfmaWawWindow{0, nullptr, mfmaWawWindow};
-  const WindowSpec MfmaWarWindow{0, nullptr, mfmaWarWindow};
+  const WindowSpec MfmaWawWindow{0, mfmaWawWindow};
+  const WindowSpec MfmaWarWindow{0, mfmaWarWindow};
   const ClassMatch MfmaConsumers = {HC::DS | HC::VALU | HC::VMEM | HC::TRANS |
                                     HC::EXP};
 
   // WMMA relevent windows and consumers
-  const WindowSpec WmmaCoexecWindow{0, nullptr, wmmaCoexecWindow};
+  const WindowSpec WmmaCoexecWindow{0, wmmaCoexecWindow};
   const ClassMatch WmmaCoexecConsumers = {/*AnyOf=*/HC::VALU | HC::TRANS,
                                           /*AllOf=*/HC::None,
                                           /*NoneOf=*/HC::LDSDMA};
@@ -545,7 +490,7 @@ SmallVector<HazardAntiHintRule, 0> buildAntiHintsRules() {
   S.addRule()
       .enabledIf(isAddrWARRuleEnabled)
       .producer({HC::VMEM}, HO::AnyUse)
-      .consumer({HC::WritesVGPR}, HO::Def, {0, &AddrAntiHintWindow}, HC::VMEM,
+      .consumer({HC::WritesVGPR}, HO::Def, {0, addrAntiHintWindow}, HC::VMEM,
                 AntiHintDirection::Symmetric);
 
   // VA_VDST WAR.
@@ -553,7 +498,7 @@ SmallVector<HazardAntiHintRule, 0> buildAntiHintsRules() {
       .enabledIf(isVAVdstWARRuleEnabled)
       .lifetime(Lifetime::RegisterCount)
       .producer({HC::RawVALU}, HO::AnyUse)
-      .consumer({HC::Load}, HO::Def, {0, &VAVDSTLookbackWindow}, HC::None,
+      .consumer({HC::Load}, HO::Def, {0, vaVdstLookbackWindow}, HC::None,
                 AntiHintDirection::Symmetric, isDSorVMEMLoad);
 
   return S.buildRules();

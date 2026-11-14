@@ -58,7 +58,7 @@ define void @mixed_replacements(i32 %x) {
 ; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i32 [[X]], 8
 ; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i32 33620483, [[SWITCH_SHIFTAMT]]
 ; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i32 [[SWITCH_DOWNSHIFT]] to i8
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i16], ptr @switch.table.mixed_replacements, i32 0, i32 [[X]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [2 x i8], ptr @switch.table.mixed_replacements, i32 [[X]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i16, ptr [[SWITCH_GEP]], align 2
 ; CHECK-NEXT:    [[SWITCH_EXT:%.*]] = zext i16 [[SWITCH_LOAD]] to i32
 ; CHECK-NEXT:    br label %[[RETURN]]

@@ -5,6 +5,7 @@
 name:            lane0
 body:             |
   bb.1:
+    liveins: $h0, $h1
   ; CHECK-LABEL: name: @lane0
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -17,6 +18,7 @@ body:             |
 name:            zext_known
 body:             |
   bb.1:
+    liveins: $h0, $s1
   ; CHECK-LABEL: name: @zext_known
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
@@ -31,6 +33,7 @@ body:             |
 name:            zext_unknown
 body:             |
   bb.1:
+    liveins: $h0, $s1
   ; CHECK-LABEL: name: @zext_unknown
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
@@ -45,6 +48,7 @@ body:             |
 name:            sext_known
 body:             |
   bb.1:
+    liveins: $h0, $s1
   ; CHECK-LABEL: name: @sext_known
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
@@ -59,6 +63,7 @@ body:             |
 name:            sext_unknown
 body:             |
   bb.1:
+    liveins: $h0, $s1
   ; CHECK-LABEL: name: @sext_unknown
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0

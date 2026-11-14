@@ -82,7 +82,7 @@ void foo()
 // MEMORY-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
 // MEMORY-NEXT:    store i32 0, ptr [[TMP5]], align 4
 // MEMORY-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// MEMORY-NEXT:    call void @llvm.lifetime.start.p0(ptr [[X]]) #[[ATTR6:[0-9]+]]
+// MEMORY-NEXT:    call void @llvm.lifetime.start.p0(ptr [[X]])
 // MEMORY-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[X]] to i64
 // MEMORY-NEXT:    [[TMP7:%.*]] = xor i64 [[TMP6]], 87960930222080
 // MEMORY-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP7]] to ptr
@@ -92,8 +92,8 @@ void foo()
 // MEMORY-NEXT:    [[TMP10:%.*]] = xor i64 [[TMP9]], 87960930222080
 // MEMORY-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to ptr
 // MEMORY-NEXT:    [[_MSLD:%.*]] = load i8, ptr [[TMP11]], align 1
-// MEMORY-NEXT:    notail call void (...) @llvm.fake.use(i8 [[FAKE_USE]]) #[[ATTR6]]
-// MEMORY-NEXT:    call void @llvm.lifetime.end.p0(ptr [[X]]) #[[ATTR6]]
+// MEMORY-NEXT:    notail call void (...) @llvm.fake.use(i8 [[FAKE_USE]])
+// MEMORY-NEXT:    call void @llvm.lifetime.end.p0(ptr [[X]])
 // MEMORY-NEXT:    ret i32 0
 int main() {
   unsigned char x;

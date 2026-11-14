@@ -131,6 +131,28 @@ TEST_F(AMDGPUGISelMITest, TestVectorIsKnownToBeAPowerOfTwo) {
   EXPECT_FALSE(isKnownToBeAPowerOfTwo(CopyLShrNotSignMask, *MRI, &VT));
   EXPECT_FALSE(isKnownToBeAPowerOfTwo(CopyLShrSignMask, *MRI, &VT));
   EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyOrPow2, *MRI, &VT));
+
+  EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyZero, *MRI, &VT, /*OrNegative=*/false,
+                                     /*OrZero=*/true));
+  EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyOne, *MRI, &VT, /*OrNegative=*/false,
+                                     /*OrZero=*/true));
+  EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyTwo, *MRI, &VT, /*OrNegative=*/false,
+                                     /*OrZero=*/true));
+  EXPECT_FALSE(isKnownToBeAPowerOfTwo(CopyThree, *MRI, &VT,
+                                      /*OrNegative=*/false, /*OrZero=*/true));
+
+  EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyShl1, *MRI, &VT, /*OrNegative=*/false,
+                                     /*OrZero=*/true));
+  EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyShl2, *MRI, &VT, /*OrNegative=*/false,
+                                     /*OrZero=*/true));
+
+  EXPECT_FALSE(isKnownToBeAPowerOfTwo(CopyLShrNotSignMask, *MRI, &VT,
+                                      /*OrNegative=*/false, /*OrZero=*/true));
+  EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyLShrSignMask, *MRI, &VT,
+                                     /*OrNegative=*/false, /*OrZero=*/true));
+
+  EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyOrPow2, *MRI, &VT,
+                                     /*OrNegative=*/false, /*OrZero=*/true));
 }
 
 TEST_F(AArch64GISelMITest, TestVectorMetadata) {

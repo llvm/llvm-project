@@ -47,7 +47,7 @@ static void sigfpeHandler([[maybe_unused]] int sig) {
 
 #endif // TARGET_SUPPORTS_SIGNAL_CATCHING
 
-FPExceptMatcher::FPExceptMatcher(cpp::function<void(void)> func) {
+FPExceptMatcher::FPExceptMatcher(cpp::function_ref<void(void)> func) {
 #if TARGET_SUPPORTS_SIGNAL_CATCHING
   auto *oldSIGFPEHandler = signal(SIGFPE, &sigfpeHandler);
 #endif

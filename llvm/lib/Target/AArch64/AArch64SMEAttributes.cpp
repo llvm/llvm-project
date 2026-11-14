@@ -79,7 +79,7 @@ void SMEAttrs::addKnownFunctionAttrs(StringRef FuncName,
   if (Impl == RTLIB::Unsupported)
     return;
   unsigned KnownAttrs = SMEAttrs::Normal;
-  RTLIB::Libcall LC = RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl(Impl);
+  RTLIB::Libcall LC = RTLCI.getLibcallFromImpl(Impl);
   switch (LC) {
   case RTLIB::SMEABI_SME_STATE:
   case RTLIB::SMEABI_TPIDR2_SAVE:

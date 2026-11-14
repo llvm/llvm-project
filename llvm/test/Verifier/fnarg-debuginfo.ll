@@ -1,4 +1,4 @@
-; RUN: llvm-as -disable-output < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: llvm-as -disable-output < %s 2>&1 | FileCheck %s
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) 
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata)

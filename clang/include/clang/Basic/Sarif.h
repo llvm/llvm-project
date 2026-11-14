@@ -423,12 +423,6 @@ private:
   llvm::json::Object &getCurrentTool();
 
   /// \internal
-  /// Checks if there is a run associated with this document.
-  ///
-  /// \return true on success
-  bool hasRun() const;
-
-  /// \internal
   /// Reset portions of the internal state so that the document is ready to
   /// receive data for a new run.
   void reset();

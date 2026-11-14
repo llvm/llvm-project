@@ -1,3 +1,4 @@
+// REQUIRES: host-supports-cuda
 // Tests __device__ function calls
 // RUN: cat %s | clang-repl --cuda | FileCheck %s
 

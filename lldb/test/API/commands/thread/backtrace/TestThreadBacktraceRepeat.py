@@ -128,8 +128,6 @@ class TestThreadBacktracePage(TestBase):
     # the comments whether it was getting two threads to the same breakpoint that was
     # problematic, or the step-out part.  This test stops at the rendevous point so I'm
     # removing the skipIfLinux to see if we see any flakiness in just this part of the test.
-    @skipIfWindows  # This test will hang on windows llvm.org/pr21753
-    @expectedFailureAll(oslist=["windows"])
     @expectedFailureNetBSD
     def test_thread_backtrace_two_threads(self):
         """Test that repeat works even when backtracing on more than one thread."""

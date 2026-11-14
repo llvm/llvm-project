@@ -22,7 +22,6 @@ add_mlir_translation_library(MLIRTargetLLVMIRExport
   LoopAnnotationTranslation.cpp
   ModuleTranslation.cpp
   TypeToLLVM.cpp
-  Dialect/OpenMPCommon.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Target/LLVMIR
@@ -34,7 +33,6 @@ add_mlir_translation_library(MLIRTargetLLVMIRExport
   LINK_COMPONENTS
   Analysis
   Core
-  FrontendOpenMP
   TransformUtils
   TargetParser
 

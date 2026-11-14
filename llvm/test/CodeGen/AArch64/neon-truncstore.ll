@@ -262,3 +262,16 @@ define void @extract_v4i8_v8i8(<8 x i8> %a, ptr %p) {
   store <4 x i8> %c, ptr %p
   ret void
 }
+
+define void @store_concat_trunc_v4i16i8(<4 x i16> %a, <4 x i16> %b, ptr %dest) {
+; CHECK-LABEL: store_concat_trunc_v4i16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    ret
+  %ta = trunc <4 x i16> %a to <4 x i8>
+  %tb = trunc <4 x i16> %b to <4 x i8>
+  %c = shufflevector <4 x i8> %ta, <4 x i8> %tb, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  store <8 x i8> %c, ptr %dest
+  ret void
+}

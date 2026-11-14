@@ -44,8 +44,9 @@ void addCfgConversionPass(mlir::PassManager &pm,
 
 void addMemoryAllocationOpt(mlir::PassManager &pm) {
   addNestedPassConditionally<mlir::func::FuncOp>(pm, disableFirMao, [&]() {
-    return fir::createMemoryAllocationOpt(
-        {dynamicArrayStackToHeapAllocation, arrayStackAllocationThreshold});
+    fir::MemoryAllocationOptOptions options;
+    options.dynamicArrayOnHeap = dynamicArrayStackToHeapAllocation;
+    return fir::createMemoryAllocationOpt(options);
   });
 }
 
@@ -75,6 +76,22 @@ getEmissionKind(llvm::codegenoptions::DebugInfoKind kind) {
   }
 }
 
+static mlir::LLVM::DINameTableKind
+getNameTableKind(Fortran::frontend::CodeGenOptions::DebugNameTableKind kind) {
+  using NameTableKind = Fortran::frontend::CodeGenOptions::DebugNameTableKind;
+  switch (kind) {
+  case NameTableKind::None:
+    return mlir::LLVM::DINameTableKind::None;
+  case NameTableKind::Default:
+    return mlir::LLVM::DINameTableKind::Default;
+  case NameTableKind::GNU:
+    return mlir::LLVM::DINameTableKind::GNU;
+  case NameTableKind::Apple:
+    return mlir::LLVM::DINameTableKind::Apple;
+  }
+  llvm_unreachable("unknown debug name table kind");
+}
+
 void addDebugInfoPass(mlir::PassManager &pm,
                       const MLIRToLLVMPassPipelineConfig &config,
                       llvm::StringRef inputFilename) {
@@ -86,6 +103,7 @@ void addDebugInfoPass(mlir::PassManager &pm,
   options.dwarfVersion = config.DwarfVersion;
   options.splitDwarfFile = config.SplitDwarfFile;
   options.dwarfDebugFlags = config.DwarfDebugFlags;
+  options.nameTableKind = getNameTableKind(config.DebugNameTable);
   options.emitFakeUseForDebugVars =
       (config.OptLevel == llvm::OptimizationLevel::O0) &&
       !disableArgumentFakeUse;
@@ -214,12 +232,15 @@ void createDefaultFIRPreCFGOptimizerPassPipeline(
   pm.addPass(fir::createCudaHeapAllocPromotion(
       fir::CudaHeapAllocPromotionOptions{pc.StackArrays}));
 
-  if (enableAllocationPlacement)
+  if (enableAllocationPlacement) {
     pm.addPass(fir::createAllocationPlacement());
-  else if (pc.StackArrays)
-    pm.addPass(fir::createStackArrays());
-  else
-    fir::addMemoryAllocationOpt(pm);
+  } else if (pc.StackArrays || !disableFirMao) {
+    fir::AllocationPlacementOptions options;
+    options.legacy = true;
+    options.stackArrays = pc.StackArrays;
+    options.dynamicArrayOnHeap = dynamicArrayStackToHeapAllocation;
+    pm.addPass(fir::createAllocationPlacement(options));
+  }
 
   // FIR Inliner Callback
   pc.invokeFIRInlinerCallback(pm, pc.OptLevel);

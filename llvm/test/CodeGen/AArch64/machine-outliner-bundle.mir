@@ -1,5 +1,4 @@
-# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner \
-# RUN: -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner %s -o - | FileCheck %s
 
 # CHECK: name: OUTLINED_FUNCTION_0
 # CHECK-NOT: name:
@@ -11,7 +10,6 @@
 ---
 name:            bundled
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
   maxCallFrameSize: 0
@@ -33,7 +31,6 @@ body:             |
 ---
 name:            bundled_clone
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
   maxCallFrameSize: 0

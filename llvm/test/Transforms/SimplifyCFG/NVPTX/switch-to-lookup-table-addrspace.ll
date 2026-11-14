@@ -350,7 +350,7 @@ define ptr @shared_only_in_default(i32 %i) {
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[SWITCH_LOOKUP:.*]], label %[[RETURN:.*]]
 ; CHECK:       [[SWITCH_LOOKUP]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[I]] to i64
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x ptr], ptr @switch.table.shared_only_in_default, i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [8 x i8], ptr @switch.table.shared_only_in_default, i64 [[TMP1]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load ptr, ptr [[SWITCH_GEP]], align 8
 ; CHECK-NEXT:    br label %[[RETURN]]
 ; CHECK:       [[RETURN]]:
@@ -389,7 +389,7 @@ define i32 @int_table(i32 %i) {
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[SWITCH_LOOKUP:.*]], label %[[RETURN:.*]]
 ; CHECK:       [[SWITCH_LOOKUP]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[I]] to i64
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr @switch.table.int_table, i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds i8, ptr @switch.table.int_table, i64 [[TMP1]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
 ; CHECK-NEXT:    [[SWITCH_EXT:%.*]] = zext i8 [[SWITCH_LOAD]] to i32
 ; CHECK-NEXT:    br label %[[RETURN]]
@@ -429,7 +429,7 @@ define ptr addrspace(1) @global_table(i32 %i) {
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[SWITCH_LOOKUP:.*]], label %[[RETURN:.*]]
 ; CHECK:       [[SWITCH_LOOKUP]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[I]] to i64
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x ptr addrspace(1)], ptr @switch.table.global_table, i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [8 x i8], ptr @switch.table.global_table, i64 [[TMP1]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load ptr addrspace(1), ptr [[SWITCH_GEP]], align 8
 ; CHECK-NEXT:    br label %[[RETURN]]
 ; CHECK:       [[RETURN]]:
@@ -468,7 +468,7 @@ define ptr addrspace(4) @const_table(i32 %i) {
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[SWITCH_LOOKUP:.*]], label %[[RETURN:.*]]
 ; CHECK:       [[SWITCH_LOOKUP]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[I]] to i64
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x ptr addrspace(4)], ptr @switch.table.const_table, i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [8 x i8], ptr @switch.table.const_table, i64 [[TMP1]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load ptr addrspace(4), ptr [[SWITCH_GEP]], align 8
 ; CHECK-NEXT:    br label %[[RETURN]]
 ; CHECK:       [[RETURN]]:
@@ -507,7 +507,7 @@ define ptr @generic_global_table(i32 %i) {
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[SWITCH_LOOKUP:.*]], label %[[RETURN:.*]]
 ; CHECK:       [[SWITCH_LOOKUP]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[I]] to i64
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x ptr], ptr @switch.table.generic_global_table, i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [8 x i8], ptr @switch.table.generic_global_table, i64 [[TMP1]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load ptr, ptr [[SWITCH_GEP]], align 8
 ; CHECK-NEXT:    br label %[[RETURN]]
 ; CHECK:       [[RETURN]]:
@@ -574,7 +574,7 @@ define ptr @func_table(i32 %i) {
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[SWITCH_LOOKUP:.*]], label %[[RETURN:.*]]
 ; CHECK:       [[SWITCH_LOOKUP]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[I]] to i64
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x ptr], ptr @switch.table.func_table, i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [8 x i8], ptr @switch.table.func_table, i64 [[TMP1]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load ptr, ptr [[SWITCH_GEP]], align 8
 ; CHECK-NEXT:    br label %[[RETURN]]
 ; CHECK:       [[RETURN]]:

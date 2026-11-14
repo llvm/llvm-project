@@ -10,7 +10,7 @@
   entry:
     ret i64 0
   }
-
+...
 ---
 name:            fuse_shift_add_into_addr_mode
 body:             |
@@ -45,3 +45,4 @@ body:             |
     %10:gpr64common = ADDXrs %0, %1, 63
     %11:gpr64 = LDRXui %6, 0 :: (load (s64))
     RET_ReallyLR implicit $x0
+...

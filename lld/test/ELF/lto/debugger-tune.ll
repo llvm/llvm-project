@@ -1,7 +1,7 @@
 ; REQUIRES: x86
 ; RUN: llvm-as %s -o %t.o
 
-; Here we verify that -debugger-tune=<value> option is
+; Here we verify that the "debugger-tuning" module flag is
 ; handled by LLD. DWARF linkage name attributes are optional,
 ; they normally present, but are missing for SCE debugger tune.
 
@@ -9,7 +9,9 @@
 ; RUN: llvm-dwarfdump %t.exe | FileCheck %s
 ; CHECK: DW_AT_linkage_name ("name_of_foo")
 
-; RUN: ld.lld -plugin-opt=-debugger-tune=sce %t.o -o %t.exe
+; RUN: sed 's/TUNE_PLACEHOLDER/sce/' %s | \
+; RUN:   llvm-as -o %t.sce.o
+; RUN: ld.lld %t.sce.o -o %t.exe
 ; RUN: llvm-dwarfdump %t.exe | FileCheck --check-prefix=SCE %s
 ; SCE-NOT: name_of_foo
 
@@ -19,7 +21,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @foo = global i32 0, align 4, !dbg !0
 
 !llvm.dbg.cu = !{!5}
-!llvm.module.flags = !{!8, !9}
+!llvm.module.flags = !{!8, !9, !10}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "global_foo", linkageName: "name_of_foo", scope: !2,
@@ -33,3 +35,4 @@ target triple = "x86_64-unknown-linux-gnu"
 !7 = !{!0}
 !8 = !{i32 2, !"Dwarf Version", i32 4}
 !9 = !{i32 2, !"Debug Info Version", i32 3}
+!10 = !{i32 2, !"debugger-tuning", !"TUNE_PLACEHOLDER"}

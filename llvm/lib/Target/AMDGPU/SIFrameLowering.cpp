@@ -7,7 +7,6 @@
 //==-----------------------------------------------------------------------===//
 
 #include "SIFrameLowering.h"
-#include "AMDGPU.h"
 #include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -25,15 +24,16 @@ using namespace llvm;
 
 #define DEBUG_TYPE "frame-info"
 
-static cl::opt<bool> EnableSpillVGPRToAGPR(
-  "amdgpu-spill-vgpr-to-agpr",
-  cl::desc("Enable spilling VGPRs to AGPRs"),
-  cl::ReallyHidden,
-  cl::init(true));
-
 static constexpr unsigned SGPRBitSize = 32;
 static constexpr unsigned SGPRByteSize = SGPRBitSize / 8;
 static constexpr unsigned VGPRLaneBitSize = 32;
+
+// The DWARF register numbers of vcc_lo and vcc_hi (VCC_32_LO and VCC_32_HI) are
+// only defined in wave32. In wave64 both halves are described as part of
+// VCC_64.
+static bool isWave64VCCHalf(const GCNSubtarget &ST, MCRegister Reg) {
+  return ST.isWave64() && (Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC_HI);
+}
 
 // Find a register matching \p RC from \p LiveUnits which is unused and
 // available throughout the function. On failure, returns AMDGPU::NoRegister.
@@ -407,8 +407,14 @@ class PrologEpilogSGPRSpillBuilder {
         .setMIFlag(MachineInstr::FrameSetup);
     if (NeedsFrameMoves) {
       MCRegister CFISuperReg = getCFISuperReg();
-      TFI->buildCFIForSRegToSRegSpill(
-          MBB, MI, DL, CFISuperReg ? CFISuperReg : SuperReg.asMCReg(), DstReg);
+      if (!CFISuperReg)
+        CFISuperReg = SuperReg;
+      if (isWave64VCCHalf(ST, DstReg)) {
+        assert(NumSubRegs == 1 && "Expected a 32-bit SGPR");
+        TFI->buildCFIForSGPRToVCCHalfCopy(MBB, MI, DL, CFISuperReg, DstReg);
+      } else {
+        TFI->buildCFIForSRegToSRegSpill(MBB, MI, DL, CFISuperReg, DstReg);
+      }
     }
   }
 
@@ -1109,7 +1115,7 @@ void SIFrameLowering::emitPrologueEntryCFI(MachineBasicBlock &MBB,
   };
 
   // Emit CFI rules for caller saved Arch VGPRs which are clobbered
-  unsigned NumArchVGPRs = ST.hasVGPRMSBs() ? 1024 : 256;
+  unsigned NumArchVGPRs = ST.getAddressableNumArchVGPRs();
   for_each(AMDGPU::VGPR_32RegClass.getRegisters().take_front(NumArchVGPRs),
            ProcessReg);
 
@@ -1539,7 +1545,8 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
   // If we allow spilling to AGPRs we may have saved FP but then spill
   // everything into AGPRs instead of the stack.
-  assert((HasFP || !FPSaved || !SavesStackRegs || EnableSpillVGPRToAGPR) &&
+  assert((HasFP || !FPSaved || !SavesStackRegs ||
+          ST.getCLOpts().spill_vgpr_to_agpr) &&
          "Saved FP but didn't need it");
 
   bool BPSaved = FuncInfo->hasPrologEpilogSGPRSpillEntry(BasePtrReg);
@@ -1684,8 +1691,9 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
 
-  const bool SpillVGPRToAGPR = ST.hasMAIInsts() && FuncInfo->hasSpilledVGPRs()
-                               && EnableSpillVGPRToAGPR;
+  const bool SpillVGPRToAGPR = ST.hasMAIInsts() &&
+                               FuncInfo->hasSpilledVGPRs() &&
+                               ST.getCLOpts().spill_vgpr_to_agpr;
 
   if (SpillVGPRToAGPR) {
     // To track the spill frame indices handled in this pass.
@@ -2654,6 +2662,26 @@ void SIFrameLowering::buildCFIForSRegToSRegSpill(
     auto CFI = MCCFIInstruction::createUndefined(nullptr, DwarfRegs[I]);
     buildCFI(MBB, MBBI, DL, CFI);
   }
+}
+
+MachineInstr *SIFrameLowering::buildCFIForSGPRToVCCHalfCopy(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    const DebugLoc &DL, MCRegister SGPR, MCRegister VCCHalf) const {
+  const MachineFunction &MF = *MBB.getParent();
+  const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
+  assert(isWave64VCCHalf(MF.getSubtarget<GCNSubtarget>(), VCCHalf));
+
+  int DwarfSGPR = MCRI.getDwarfRegNum(SGPR, false);
+  int DwarfVCC = MCRI.getDwarfRegNum(AMDGPU::VCC, false);
+  assert(DwarfSGPR != -1 && DwarfVCC != -1);
+
+  // Describe the copy as one 32-bit lane of VCC_64: lane 0 is vcc_lo and lane 1
+  // is vcc_hi.
+  MCCFIInstruction::VectorRegisterWithLane Half{
+      unsigned(DwarfVCC), VCCHalf == AMDGPU::VCC_HI ? 1u : 0u, SGPRBitSize};
+  auto CFIInst =
+      MCCFIInstruction::createLLVMVectorRegisters(nullptr, DwarfSGPR, {Half});
+  return buildCFI(MBB, MBBI, DL, std::move(CFIInst));
 }
 
 MachineInstr *SIFrameLowering::buildCFIForSameValue(

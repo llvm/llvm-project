@@ -224,6 +224,11 @@ let mayLoad = 1, isAsmParserOnly = 1 in {
                            (load_gdop ADDRrr:$addr, tglobaladdr:$sym))]>;
 }
 
+def : Pat<(i64 (load_gdop ADDRrr:$addr, tconstpool:$sym)),
+          (GDOP_LDXrr ADDRrr:$addr, tconstpool:$sym)>;
+def : Pat<(i64 (load_gdop ADDRrr:$addr, tblockaddress:$sym)),
+          (GDOP_LDXrr ADDRrr:$addr, tblockaddress:$sym)>;
+
 // Sign-extending load of i32 into i64 is a new SPARC v9 instruction.
 defm LDSW   : LoadA<"ldsw", 0b001000, 0b011000, sextloadi32, I64Regs, i64>;
 
@@ -385,37 +390,37 @@ let Predicates = [HasV9], Constraints = "$f = $rd" in {
 // 64-bit Floating Point Conversions.
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasV9] in {
+let Predicates = [HasV9], Uses = [FSR], mayRaiseFPException = 1 in {
 
 def FXTOS : F3_3u<2, 0b110100, 0b010000100,
                  (outs FPRegs:$rd), (ins DFPRegs:$rs2),
                  "fxtos $rs2, $rd",
-                 [(set FPRegs:$rd, (SPxtof DFPRegs:$rs2))]>;
+                 [(set FPRegs:$rd, (SPany_xtof DFPRegs:$rs2))]>;
 def FXTOD : F3_3u<2, 0b110100, 0b010001000,
                  (outs DFPRegs:$rd), (ins DFPRegs:$rs2),
                  "fxtod $rs2, $rd",
-                 [(set DFPRegs:$rd, (SPxtof DFPRegs:$rs2))]>;
+                 [(set DFPRegs:$rd, (SPany_xtof DFPRegs:$rs2))]>;
 let append Predicates = [HasHardQuad] in
 def FXTOQ : F3_3u<2, 0b110100, 0b010001100,
                  (outs QFPRegs:$rd), (ins DFPRegs:$rs2),
                  "fxtoq $rs2, $rd",
-                 [(set QFPRegs:$rd, (SPxtof DFPRegs:$rs2))]>;
+                 [(set QFPRegs:$rd, (SPany_xtof DFPRegs:$rs2))]>;
 
 def FSTOX : F3_3u<2, 0b110100, 0b010000001,
                  (outs DFPRegs:$rd), (ins FPRegs:$rs2),
                  "fstox $rs2, $rd",
-                 [(set DFPRegs:$rd, (SPftox FPRegs:$rs2))]>;
+                 [(set DFPRegs:$rd, (SPany_ftox FPRegs:$rs2))]>;
 def FDTOX : F3_3u<2, 0b110100, 0b010000010,
                  (outs DFPRegs:$rd), (ins DFPRegs:$rs2),
                  "fdtox $rs2, $rd",
-                 [(set DFPRegs:$rd, (SPftox DFPRegs:$rs2))]>;
+                 [(set DFPRegs:$rd, (SPany_ftox DFPRegs:$rs2))]>;
 let append Predicates = [HasHardQuad] in
 def FQTOX : F3_3u<2, 0b110100, 0b010000011,
                  (outs DFPRegs:$rd), (ins QFPRegs:$rs2),
                  "fqtox $rs2, $rd",
-                 [(set DFPRegs:$rd, (SPftox QFPRegs:$rs2))]>;
+                 [(set DFPRegs:$rd, (SPany_ftox QFPRegs:$rs2))]>;
 
-} // Predicates = [HasV9]
+} // Predicates = [HasV9], Uses = [FSR], mayRaiseFPException = 1
 
 // Conditional move patterns.
 let Predicates = [Is64Bit] in {
@@ -481,6 +486,14 @@ def : Pat<(SPhi tglobaladdr:$in), (SETHIi tglobaladdr:$in)>;
 def : Pat<(SPlo tglobaladdr:$in), (ORri (i64 G0), tglobaladdr:$in)>;
 def : Pat<(SPhi tconstpool:$in), (SETHIi tconstpool:$in)>;
 def : Pat<(SPlo tconstpool:$in), (ORri (i64 G0), tconstpool:$in)>;
+
+// GOTDATA_OP hix22/lox10 pairs.
+def : Pat<(xor (SPhi tglobaladdr:$in1), (SPlo tglobaladdr:$in2)),
+          (XORri (SETHIi tglobaladdr:$in1), (tglobaladdr:$in2))>;
+def : Pat<(xor (SPhi tconstpool:$in1), (SPlo tconstpool:$in2)),
+          (XORri (SETHIi tconstpool:$in1), (tconstpool:$in2))>;
+def : Pat<(xor (SPhi tblockaddress:$in1), (SPlo tblockaddress:$in2)),
+          (XORri (SETHIi tblockaddress:$in1), (tblockaddress:$in2))>;
 
 // GlobalTLS addresses
 def : Pat<(SPhi tglobaltlsaddr:$in), (SETHIi tglobaltlsaddr:$in)>;

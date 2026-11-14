@@ -86,8 +86,6 @@
 ---
 name:            test_vmvn
 alignment:       2
-tracksRegLiveness: true
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -198,8 +196,6 @@ body:             |
 ---
 name:            test_vorn
 alignment:       2
-tracksRegLiveness: true
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }

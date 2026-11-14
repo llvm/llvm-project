@@ -45,7 +45,7 @@ class SendSignalTestCase(TestBase):
         launch_info.SetListener(process_listener)
         error = lldb.SBError()
         process = target.Launch(launch_info, error)
-        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertSuccess(error)
 
         self.runCmd("process handle -n False -p True -s True SIGUSR1")
 

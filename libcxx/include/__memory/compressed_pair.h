@@ -77,7 +77,7 @@ inline const bool __is_reference_or_unpadded_object<_Tp&&> = true;
 
 template <class _ToPad, bool _Empty = __is_reference_or_unpadded_object<_ToPad> >
 class __compressed_pair_padding {
-  char __padding_[sizeof(_ToPad) - __datasizeof_v<_ToPad>] = {};
+  [[__maybe_unused__]] char __padding_[sizeof(_ToPad) - __datasizeof_v<_ToPad>] = {};
 };
 
 template <class _ToPad>

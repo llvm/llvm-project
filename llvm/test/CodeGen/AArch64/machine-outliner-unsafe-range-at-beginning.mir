@@ -4,7 +4,6 @@
 ...
 ---
 name:           unsafe_range_at_beginning
-tracksRegLiveness: true
 machineFunctionInfo:
   hasRedZone:      false
 body:             |
@@ -50,3 +49,4 @@ body:             |
     $x2 = ADDXri $x0, 2, 0
     $x3 = ADDXri $x0, 3, 0
     RET undef $x9
+...

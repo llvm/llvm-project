@@ -9,6 +9,7 @@ def DialectFoldInterface : DialectInterface<"DialectFoldInterface"> {
     of the folding behavior for operations they define.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/FoldInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{

@@ -1396,8 +1396,11 @@ CompilerInstance::compileModule(SourceLocation ImportLoc, StringRef ModuleName,
       !Instance.getFrontendOpts().AllowPCMWithCompilerErrors)
     return nullptr;
 
+  // PCMs don't need to be null-terminated. Since the buffer typically has no
+  // spare capacity, adding the terminator would reallocate and copy it.
   return std::make_unique<llvm::SmallVectorMemoryBuffer>(
-      std::move(Buffer), Instance.getFrontendOpts().OutputFile);
+      std::move(Buffer), Instance.getFrontendOpts().OutputFile,
+      /*RequiresNullTerminator=*/false);
 }
 
 static OptionalFileEntryRef getPublicModuleMap(FileEntryRef File,

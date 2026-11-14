@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/PartialInlining.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -21,7 +22,6 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/InlineCost.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -46,7 +46,6 @@
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -72,76 +71,6 @@ STATISTIC(NumColdRegionsFound,
            "Number of cold single entry/exit regions found.");
 STATISTIC(NumColdRegionsOutlined,
            "Number of cold single entry/exit regions outlined.");
-
-// Command line option to disable partial-inlining. The default is false:
-static cl::opt<bool>
-    DisablePartialInlining("disable-partial-inlining", cl::init(false),
-                           cl::Hidden, cl::desc("Disable partial inlining"));
-// Command line option to disable multi-region partial-inlining. The default is
-// false:
-static cl::opt<bool> DisableMultiRegionPartialInline(
-    "disable-mr-partial-inlining", cl::init(false), cl::Hidden,
-    cl::desc("Disable multi-region partial inlining"));
-
-// Command line option to force outlining in regions with live exit variables.
-// The default is false:
-static cl::opt<bool>
-    ForceLiveExit("pi-force-live-exit-outline", cl::init(false), cl::Hidden,
-               cl::desc("Force outline regions with live exits"));
-
-// Command line option to enable marking outline functions with Cold Calling
-// Convention. The default is false:
-static cl::opt<bool>
-    MarkOutlinedColdCC("pi-mark-coldcc", cl::init(false), cl::Hidden,
-                       cl::desc("Mark outline function calls with ColdCC"));
-
-// This is an option used by testing:
-static cl::opt<bool> SkipCostAnalysis("skip-partial-inlining-cost-analysis",
-
-                                      cl::ReallyHidden,
-                                      cl::desc("Skip Cost Analysis"));
-// Used to determine if a cold region is worth outlining based on
-// its inlining cost compared to the original function.  Default is set at 10%.
-// ie. if the cold region reduces the inlining cost of the original function by
-// at least 10%.
-static cl::opt<float> MinRegionSizeRatio(
-    "min-region-size-ratio", cl::init(0.1), cl::Hidden,
-    cl::desc("Minimum ratio comparing relative sizes of each "
-             "outline candidate and original function"));
-// Used to tune the minimum number of execution counts needed in the predecessor
-// block to the cold edge. ie. confidence interval.
-cl::opt<unsigned>
-    MinBlockCounterExecution("min-block-execution", cl::init(100), cl::Hidden,
-                             cl::desc("Minimum block executions to consider "
-                                      "its BranchProbabilityInfo valid"));
-// Used to determine when an edge is considered cold. Default is set to 10%. ie.
-// if the branch probability is 10% or less, then it is deemed as 'cold'.
-static cl::opt<float> ColdBranchRatio(
-    "cold-branch-ratio", cl::init(0.1), cl::Hidden,
-    cl::desc("Minimum BranchProbability to consider a region cold."));
-
-static cl::opt<unsigned> MaxNumInlineBlocks(
-    "max-num-inline-blocks", cl::init(5), cl::Hidden,
-    cl::desc("Max number of blocks to be partially inlined"));
-
-// Command line option to set the maximum number of partial inlining allowed
-// for the module. The default value of -1 means no limit.
-static cl::opt<int> MaxNumPartialInlining(
-    "max-partial-inlining", cl::init(-1), cl::Hidden,
-    cl::desc("Max number of partial inlining. The default is unlimited"));
-
-// Used only when PGO or user annotated branch data is absent. It is
-// the least value that is used to weigh the outline region. If BFI
-// produces larger value, the BFI value will be used.
-static cl::opt<int>
-    OutlineRegionFreqPercent("outline-region-freq-percent", cl::init(75),
-                             cl::Hidden,
-                             cl::desc("Relative frequency of outline region to "
-                                      "the entry block"));
-
-static cl::opt<unsigned> ExtraOutliningPenalty(
-    "partial-inlining-extra-penalty", cl::init(0), cl::Hidden,
-    cl::desc("A debug option to add additional penalty to the computed one."));
 
 namespace {
 
@@ -187,13 +116,13 @@ struct FunctionOutliningMultiRegionInfo {
 struct PartialInlinerImpl {
 
   PartialInlinerImpl(
-      function_ref<AssumptionCache &(Function &)> GetAC,
+      const IPOOptions &Opts, function_ref<AssumptionCache &(Function &)> GetAC,
       function_ref<AssumptionCache *(Function &)> LookupAC,
       function_ref<TargetTransformInfo &(Function &)> GTTI,
       function_ref<const TargetLibraryInfo &(Function &)> GTLI,
       ProfileSummaryInfo &ProfSI,
       function_ref<BlockFrequencyInfo &(Function &)> GBFI = nullptr)
-      : GetAssumptionCache(GetAC), LookupAssumptionCache(LookupAC),
+      : Opts(Opts), GetAssumptionCache(GetAC), LookupAssumptionCache(LookupAC),
         GetTTI(GTTI), GetBFI(GBFI), GetTLI(GTLI), PSI(ProfSI) {}
 
   bool run(Module &M);
@@ -230,7 +159,7 @@ struct PartialInlinerImpl {
     void normalizeReturnBlock() const;
 
     // Do function outlining for cold regions.
-    bool doMultiRegionFunctionOutlining();
+    bool doMultiRegionFunctionOutlining(const IPOOptions &Opts);
     // Do function outlining for region after early return block(s).
     // NOTE: For vararg functions that do the vararg handling in the outlined
     //       function, we temporarily generate IR that does not properly
@@ -262,6 +191,7 @@ struct PartialInlinerImpl {
   };
 
 private:
+  const IPOOptions &Opts;
   int NumPartialInlining = 0;
   function_ref<AssumptionCache &(Function &)> GetAssumptionCache;
   function_ref<AssumptionCache *(Function &)> LookupAssumptionCache;
@@ -295,8 +225,8 @@ private:
                                 DenseMap<User *, uint64_t> &SiteCountMap) const;
 
   bool isLimitReached() const {
-    return (MaxNumPartialInlining != -1 &&
-            NumPartialInlining >= MaxNumPartialInlining);
+    return (Opts.max_partial_inlining != -1 &&
+            NumPartialInlining >= Opts.max_partial_inlining);
   }
 
   static CallBase *getSupportedCallBase(User *U) {
@@ -351,7 +281,6 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(
   DominatorTree DT(F);
   CycleInfo CI;
   CI.compute(F);
-  LoopInfo LI(DT);
   BranchProbabilityInfo BPI(F, CI);
   std::unique_ptr<BlockFrequencyInfo> ScopedBFI;
   BlockFrequencyInfo *BFI;
@@ -407,11 +336,11 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(
                     << "\n";);
 
   InstructionCost MinOutlineRegionCost = OverallFunctionCost.map(
-      [&](auto Cost) { return Cost * MinRegionSizeRatio; });
+      [&](auto Cost) { return Cost * Opts.min_region_size_ratio; });
 
   BranchProbability MinBranchProbability(
-      static_cast<int>(ColdBranchRatio * MinBlockCounterExecution),
-      MinBlockCounterExecution);
+      static_cast<int>(Opts.cold_branch_ratio * Opts.min_block_execution),
+      Opts.min_block_execution);
   bool ColdCandidateFound = false;
   BasicBlock *CurrEntry = EntryBlock;
   std::vector<BasicBlock *> DFS;
@@ -432,7 +361,7 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(
     // not-cold (default: part of the top 99.99% of all block counters)
     // AND greater than our minimum block execution count (default: 100).
     if (PSI.isColdBlock(ThisBB, BFI) ||
-        BBProfileCount(ThisBB) < MinBlockCounterExecution)
+        BBProfileCount(ThisBB) < Opts.min_block_execution)
       continue;
     for (auto SI = succ_begin(ThisBB); SI != succ_end(ThisBB); ++SI) {
       if (!VisitedSet.insert(*SI).second)
@@ -475,7 +404,8 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(
       LLVM_DEBUG(dbgs() << "OutlineRegionCost = " << OutlineRegionCost
                         << "\n";);
 
-      if (!SkipCostAnalysis && OutlineRegionCost < MinOutlineRegionCost) {
+      if (!Opts.skip_partial_inlining_cost_analysis &&
+          OutlineRegionCost < MinOutlineRegionCost) {
         ORE.emit([&]() {
           return OptimizationRemarkAnalysis(DEBUG_TYPE, "TooCostly",
                                             &SI->front())
@@ -556,9 +486,9 @@ PartialInlinerImpl::computeOutliningInfo(Function &F) const {
   bool CandidateFound = false;
   do {
     // The number of blocks to be inlined has already reached
-    // the limit. When MaxNumInlineBlocks is set to 0 or 1, this
+    // the limit. When -max-num-inline-blocks is set to 0 or 1, this
     // disables partial inlining for the function.
-    if (OutliningInfo->getNumInlinedBlocks() >= MaxNumInlineBlocks)
+    if (OutliningInfo->getNumInlinedBlocks() >= Opts.max_num_inline_blocks)
       break;
 
     if (succ_size(CurrEntry) != 2)
@@ -629,7 +559,7 @@ PartialInlinerImpl::computeOutliningInfo(Function &F) const {
 
   // Now further growing the candidate's inlining region by
   // peeling off dominating blocks from the outlining region:
-  while (OutliningInfo->getNumInlinedBlocks() < MaxNumInlineBlocks) {
+  while (OutliningInfo->getNumInlinedBlocks() < Opts.max_num_inline_blocks) {
     BasicBlock *Cand = OutliningInfo->NonReturnBlock;
     if (succ_size(Cand) != 2)
       break;
@@ -705,8 +635,9 @@ BranchProbability PartialInlinerImpl::getOutliningCallBBRelativeFreq(
   if (OutlineRegionRelFreq < BranchProbability(45, 100))
     return OutlineRegionRelFreq;
 
-  OutlineRegionRelFreq = std::max(
-      OutlineRegionRelFreq, BranchProbability(OutlineRegionFreqPercent, 100));
+  OutlineRegionRelFreq =
+      std::max(OutlineRegionRelFreq,
+               BranchProbability(Opts.outline_region_freq_percent, 100));
 
   return OutlineRegionRelFreq;
 }
@@ -719,17 +650,17 @@ bool PartialInlinerImpl::shouldPartialInline(
   Function *Callee = CB.getCalledFunction();
   assert(Callee == Cloner.ClonedFunc);
 
-  if (SkipCostAnalysis)
+  if (Opts.skip_partial_inlining_cost_analysis)
     return isInlineViable(*Callee).isSuccess();
 
   Function *Caller = CB.getCaller();
-  auto &CalleeTTI = GetTTI(*Callee);
+  auto &CallerTTI = GetTTI(*Caller);
   bool RemarksEnabled =
       Callee->getContext().getDiagHandlerPtr()->isMissedOptRemarkEnabled(
           DEBUG_TYPE);
-  InlineCost IC =
-      getInlineCost(CB, getInlineParams(), CalleeTTI, GetAssumptionCache,
-                    GetTLI, GetBFI, &PSI, RemarksEnabled ? &ORE : nullptr);
+  InlineCost IC = getInlineCost(CB, getInlineParams(CB.getContext()), CallerTTI,
+                                GetAssumptionCache, GetTLI, GetBFI, &PSI,
+                                RemarksEnabled ? &ORE : nullptr);
 
   if (IC.isAlways()) {
     ORE.emit([&]() {
@@ -763,7 +694,7 @@ bool PartialInlinerImpl::shouldPartialInline(
   const DataLayout &DL = Caller->getDataLayout();
 
   // The savings of eliminating the call:
-  int NonWeightedSavings = getCallsiteCost(CalleeTTI, CB, DL);
+  int NonWeightedSavings = getCallsiteCost(CallerTTI, CB, DL);
   BlockFrequency NormWeightedSavings(NonWeightedSavings);
 
   // Weighted saving is smaller than weighted cost, return false
@@ -801,7 +732,7 @@ PartialInlinerImpl::computeBBInlineCost(BasicBlock *BB,
                                         TargetTransformInfo *TTI) {
   InstructionCost InlineCost = 0;
   const DataLayout &DL = BB->getDataLayout();
-  int InstrCost = InlineConstants::getInstrCost();
+  int InstrCost = InlineConstants::getInstrCost(BB->getContext());
   for (Instruction &I : *BB) {
     // Skip free instructions.
     switch (I.getOpcode()) {
@@ -880,12 +811,13 @@ PartialInlinerImpl::computeOutliningCosts(FunctionCloner &Cloner) const {
   // additional unconditional branches. Those branches will be eliminated
   // later with bb layout. The cost should be adjusted accordingly:
   OutlinedFunctionCost -=
-      2 * InlineConstants::getInstrCost() * Cloner.OutlinedFunctions.size();
+      2 * InlineConstants::getInstrCost(Cloner.OrigFunc->getContext()) *
+      Cloner.OutlinedFunctions.size();
 
   InstructionCost OutliningRuntimeOverhead =
       OutliningFuncCallCost +
       (OutlinedFunctionCost - Cloner.OutlinedRegionCost) +
-      ExtraOutliningPenalty.getValue();
+      Opts.partial_inlining_extra_penalty;
 
   return std::make_tuple(OutliningFuncCallCost, OutliningRuntimeOverhead);
 }
@@ -1071,8 +1003,8 @@ void PartialInlinerImpl::FunctionCloner::normalizeReturnBlock() const {
     E->getTerminator()->replaceUsesOfWith(PreReturn, ClonedOI->ReturnBlock);
 }
 
-bool PartialInlinerImpl::FunctionCloner::doMultiRegionFunctionOutlining() {
-
+bool PartialInlinerImpl::FunctionCloner::doMultiRegionFunctionOutlining(
+    const IPOOptions &Opts) {
   auto ComputeRegionCost =
       [&](SmallVectorImpl<BasicBlock *> &Region) -> InstructionCost {
     InstructionCost Cost = 0;
@@ -1125,7 +1057,7 @@ bool PartialInlinerImpl::FunctionCloner::doMultiRegionFunctionOutlining() {
     });
 
     // Do not extract regions that have live exit variables.
-    if (Outputs.size() > 0 && !ForceLiveExit)
+    if (Outputs.size() > 0 && !Opts.pi_force_live_exit_outline)
       continue;
 
     if (Function *OutlinedFunc = CE.extractCodeRegion(CEAC)) {
@@ -1136,7 +1068,7 @@ bool PartialInlinerImpl::FunctionCloner::doMultiRegionFunctionOutlining() {
       NumColdRegionsOutlined++;
       OutlinedRegionCost += CurrentOutlinedRegionCost;
 
-      if (MarkOutlinedColdCC) {
+      if (Opts.pi_mark_coldcc) {
         OutlinedFunc->setCallingConv(CallingConv::Cold);
         OCS->setCallingConv(CallingConv::Cold);
       }
@@ -1238,7 +1170,7 @@ std::pair<bool, Function *> PartialInlinerImpl::unswitchFunction(Function &F) {
   if (F.hasFnAttribute(Attribute::AlwaysInline))
     return {false, nullptr};
 
-  if (F.hasFnAttribute(Attribute::NoInline))
+  if (F.isNoInline())
     return {false, nullptr};
 
   if (PSI.isFunctionEntryCold(&F))
@@ -1252,7 +1184,7 @@ std::pair<bool, Function *> PartialInlinerImpl::unswitchFunction(Function &F) {
   // Only try to outline cold regions if we have a profile summary, which
   // implies we have profiling information.
   if (PSI.hasProfileSummary() && F.hasProfileData() &&
-      !DisableMultiRegionPartialInline) {
+      Opts.mr_partial_inlining) {
     std::unique_ptr<FunctionOutliningMultiRegionInfo> OMRI =
         computeOutliningColdRegionsInfo(F, ORE);
     if (OMRI) {
@@ -1264,7 +1196,7 @@ std::pair<bool, Function *> PartialInlinerImpl::unswitchFunction(Function &F) {
                << "\n";
       });
 
-      bool DidOutline = Cloner.doMultiRegionFunctionOutlining();
+      bool DidOutline = Cloner.doMultiRegionFunctionOutlining(Opts);
 
       if (DidOutline) {
         LLVM_DEBUG({
@@ -1332,7 +1264,8 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
   // the original outlined region size(s), it does not increase the chances of
   // inlining the function with outlining (The inliner uses the size increase to
   // model the cost of inlining a callee).
-  if (!SkipCostAnalysis && Cloner.OutlinedRegionCost < SizeCost) {
+  if (!Opts.skip_partial_inlining_cost_analysis &&
+      Cloner.OutlinedRegionCost < SizeCost) {
     OptimizationRemarkEmitter OrigFuncORE(Cloner.OrigFunc);
     DebugLoc DLoc;
     BasicBlock *Block;
@@ -1424,7 +1357,7 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
 }
 
 bool PartialInlinerImpl::run(Module &M) {
-  if (DisablePartialInlining)
+  if (!Opts.partial_inlining)
     return false;
 
   std::vector<Function *> Worklist;
@@ -1476,8 +1409,8 @@ PreservedAnalyses PartialInlinerPass::run(Module &M,
 
   ProfileSummaryInfo &PSI = AM.getResult<ProfileSummaryAnalysis>(M);
 
-  if (PartialInlinerImpl(GetAssumptionCache, LookupAssumptionCache, GetTTI,
-                         GetTLI, PSI, GetBFI)
+  if (PartialInlinerImpl(getIPOOptions(M), GetAssumptionCache,
+                         LookupAssumptionCache, GetTTI, GetTLI, PSI, GetBFI)
           .run(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();

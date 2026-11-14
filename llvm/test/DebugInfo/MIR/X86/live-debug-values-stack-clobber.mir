@@ -104,7 +104,6 @@
 ...
 ---
 name:            f
-tracksRegLiveness: true
 debugInstrRef: true
 liveins:
   - { reg: '$rdi', virtual-reg: '' }

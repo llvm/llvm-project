@@ -15,6 +15,18 @@
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
+// has_sub_attr_or_type_v
+//===----------------------------------------------------------------------===//
+
+static_assert(!has_sub_attr_or_type_v<int64_t>);
+static_assert(!has_sub_attr_or_type_v<unsigned, ArrayRef<int64_t>>);
+static_assert(!has_sub_attr_or_type_v<std::tuple<unsigned, StringRef>>);
+static_assert(has_sub_attr_or_type_v<Type>);
+static_assert(has_sub_attr_or_type_v<unsigned, IntegerAttr>);
+static_assert(has_sub_attr_or_type_v<ArrayRef<NamedAttribute>>);
+static_assert(has_sub_attr_or_type_v<std::tuple<unsigned, ArrayRef<Type>>>);
+
+//===----------------------------------------------------------------------===//
 // CyclicAttrTypeReplacer
 //===----------------------------------------------------------------------===//
 

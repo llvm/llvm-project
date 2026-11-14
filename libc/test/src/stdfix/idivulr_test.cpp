@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "IdivFxTest.h"
+#include "test/src/stdfix/IdivFxTest.h"
 
-#include "llvm-libc-macros/stdfix-macros.h" // unsigned long fract
+#include "include/llvm-libc-macros/stdfix-macros.h" // unsigned long fract
 #include "src/stdfix/idivulr.h"
 
 LIST_IDIVFX_TESTS(ulr, unsigned long fract, unsigned long int,

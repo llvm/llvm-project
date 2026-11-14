@@ -17,7 +17,6 @@
 ...
 ---
 name:            test
-tracksRegLiveness: true
 noVRegs:         true
 body:             |
   bb.0:

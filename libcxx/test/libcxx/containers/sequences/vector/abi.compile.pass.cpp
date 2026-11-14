@@ -25,7 +25,7 @@ public:
   using iterator_category = std::random_access_iterator_tag;
 
 private:
-  std::uint16_t offset;
+  [[maybe_unused]] std::uint16_t offset;
 };
 
 template <class T>

@@ -1,4 +1,4 @@
-# RUN: llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu \
+# RUN: llc -mtriple=aarch64-none-linux-gnu \
 # RUN:     -start-before aarch64-sls-hardening \
 # RUN:     -stop-after aarch64-sls-hardening -o - %s \
 # RUN:   | FileCheck %s --check-prefixes=CHECK \
@@ -25,7 +25,6 @@
 ...
 ---
 name:            fn1
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: fn1
   bb.0.entry:

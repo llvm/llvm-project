@@ -1754,9 +1754,17 @@ def VOP3ModsNonCanonicalizing : ComplexPattern<untyped, 2,
 
 def VOP3NoMods : ComplexPattern<untyped, 1, "SelectVOP3NoMods">;
 
+def VOP3NoOpSelMods : ComplexPattern<untyped, 1, "SelectVOP3NoOpSelMods">;
+
 def VOP3OMods : ComplexPattern<untyped, 3, "SelectVOP3OMods">;
 
 def VOP3PMods  : ComplexPattern<untyped, 2, "SelectVOP3PMods">;
+
+def VOP3PModsPkFmaOpSel0 :
+    ComplexPattern<untyped, 2, "SelectVOP3PModsPkFmaOpSel0">;
+
+def VOP3PModsPkAddMulOpSel0 :
+    ComplexPattern<untyped, 2, "SelectVOP3PModsPkAddMulOpSel0">;
 
 def VOP3PModsDOT  : ComplexPattern<untyped, 2, "SelectVOP3PModsDOT">;
 def VOP3PNoModsDOT  : ComplexPattern<untyped, 1, "SelectVOP3PNoModsDOT">;
@@ -2737,11 +2745,11 @@ class getEquivalentAGPROperand<RegisterOperand RC> {
   defvar Size = !cast<SIRegisterClassLike>(RC.RegClass).Size;
   RegisterOperand ret =
     !cond(!eq(Size, 32)   : RegisterOperand<AGPR_32>,
-          !eq(Size, 64)   : RegisterOperand<AReg_64>,
-          !eq(Size, 96)   : RegisterOperand<AReg_96>,
-          !eq(Size, 128)  : RegisterOperand<AReg_128>,
-          !eq(Size, 160)  : RegisterOperand<AReg_160>,
-          !eq(Size, 1024) : RegisterOperand<AReg_1024>);
+          !eq(Size, 64)   : RegisterOperand<AReg_64_Align2>,
+          !eq(Size, 96)   : RegisterOperand<AReg_96_Align2>,
+          !eq(Size, 128)  : RegisterOperand<AReg_128_Align2>,
+          !eq(Size, 160)  : RegisterOperand<AReg_160_Align2>,
+          !eq(Size, 1024) : RegisterOperand<AReg_1024_Align2>);
 }
 
 class getEquivalentVGPROperand<RegisterOperand RC> {
@@ -2989,13 +2997,21 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field string AsmVOP3Base = getAsmVOP3Base<NumSrcArgs, HasDst, HasClamp,
    HasOpSel, HasOMod, IsVOP3P, HasNeg, HasSrc0FloatMods, HasSrc1FloatMods,
    HasSrc2FloatMods, DstVT, HasFP8ByteSel, HasBitOp3>.ret;
-  field string Asm64 = AsmVOP3Base;
+  // Instructions without operands have no $vdst for printVOPDst to print the
+  // encoding suffix with, so put it in the asm string. {_e64|} limits it to
+  // the AsmWriter; the matcher variants get the bare mnemonic.
+  field bit HasNoOperands = !and(!not(HasDst), !eq(NumSrcArgs, 0));
+  field string Asm64 = !if(!and(HasNoOperands, !not(IsSingle)), "{_e64|}",
+                           AsmVOP3Base);
   field string AsmVOP3P = getAsmVOP3P<HasDst, NumSrcArgs, HasNeg, HasClamp, HasOpSel>.ret;
   field string AsmVOP3DPP = getAsmVOP3DPP<AsmVOP3Base>.ret;
   field string AsmVOP3DPP16 = getAsmVOP3DPP16<AsmVOP3Base>.ret;
   field string AsmVOP3DPP8 = getAsmVOP3DPP8<AsmVOP3Base>.ret;
-  field string AsmSDWA = getAsmSDWA<HasDst, NumSrcArgs, DstVT>.ret;
-  field string AsmSDWA9 = getAsmSDWA9<HasDst, HasSDWAOMod, NumSrcArgs, DstVT>.ret;
+  field string AsmSDWA = !if(HasNoOperands, "{_sdwa|}",
+                             getAsmSDWA<HasDst, NumSrcArgs, DstVT>.ret);
+  field string AsmSDWA9 =
+      !if(HasNoOperands, "{_sdwa|}",
+          getAsmSDWA9<HasDst, HasSDWAOMod, NumSrcArgs, DstVT>.ret);
   field string AsmVOPDX = getAsmVOPDPart<NumSrcArgs, "X">.ret;
   field string AsmVOPDY = getAsmVOPDPart<NumSrcArgs, "Y">.ret;
   field string AsmVOPD3X = getAsmVOPDPart<NumSrcArgs, "X", HasVOPD3Src2, HasModifiers>.ret;

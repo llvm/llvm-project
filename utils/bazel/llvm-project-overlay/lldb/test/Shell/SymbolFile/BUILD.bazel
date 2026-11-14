@@ -1,0 +1,100 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//llvm:lit_test.bzl", "lit_test")
+
+licenses(["notice"])
+
+# Tests that read another test file through %S.
+_EXTRA_DATA = {
+    "DWARF/x86/inline-function-address-shared.test": [
+        "DWARF/x86/inline-function-address.ll",
+    ],
+}
+
+# Most tests here run lldb itself through %lldb, which sources the
+# lit-lldb-init-quiet file CMake writes into the test execution root. These are
+# the ones that only need lldb-test, clang and the LLVM tools.
+[
+    lit_test(
+        name = "%s.test" % src,
+        srcs = [src],
+        data = glob([
+            "**/Inputs/**",
+            "**/lit.local.cfg",
+        ]) + _EXTRA_DATA.get(src, []) + [
+            "//lldb/test/Shell:lit_data",
+        ],
+    )
+    for src in [
+        "DWARF/anon_class_w_and_wo_export_symbols.ll",
+        "DWARF/clang-ast-from-dwarf-objc-property.m",
+        "DWARF/clang-ast-from-dwarf-unamed-and-anon-structs.cpp",
+        "DWARF/clang-gmodules-type-lookup.c",
+        "DWARF/debug-types-mangled-name.ll",
+        "DWARF/find-type-in-function.cpp",
+        "DWARF/incomplete-member-beyond-parent-bounds.yaml",
+        "DWARF/member-beyond-parent-bounds.yaml",
+        "DWARF/member-on-parent-bounds.yaml",
+        "DWARF/union-types-no-member-location.yaml",
+        "DWARF/x86/apple-index-is-used.cpp",
+        "DWARF/x86/array-sizes.s",
+        "DWARF/x86/childless-compile-unit.s",
+        "DWARF/x86/compilercontext.ll",
+        "DWARF/x86/debug-names-compressed.cpp",
+        "DWARF/x86/debug-types-line-tables.s",
+        "DWARF/x86/dwarf5-index-is-used.cpp",
+        "DWARF/x86/dwarf5-partial-index.cpp",
+        "DWARF/x86/dwarf5_locations.s",
+        "DWARF/x86/find-basic-function.cpp",
+        "DWARF/x86/find-basic-namespace.cpp",
+        "DWARF/x86/find-basic-type.cpp",
+        "DWARF/x86/find-basic-variable.cpp",
+        "DWARF/x86/find-function-regex.cpp",
+        "DWARF/x86/find-inline-method.s",
+        "DWARF/x86/find-method-local-struct.cpp",
+        "DWARF/x86/find-method.cpp",
+        "DWARF/x86/find-qualified-variable.cpp",
+        "DWARF/x86/find-variable-dwo.cpp",
+        "DWARF/x86/find-variable-file.cpp",
+        "DWARF/x86/inline-function-address-shared.test",
+        "DWARF/x86/inline-function-address.ll",
+        "DWARF/x86/module-ownership.mm",
+        "DWARF/x86/static_scope.s",
+        "DWARF/zero-sized-member-in-parent-bounds.yaml",
+        "NativePDB/ast-lambdas-msvc.cpp",
+        "NativePDB/ast-lambdas.cpp",
+        "NativePDB/ast-restore.test",
+        "NativePDB/c-calling-conventions.cpp",
+        "NativePDB/calling-conventions-arm.test",
+        "NativePDB/calling-conventions-x86.test",
+        "NativePDB/class-layout.test",
+        "NativePDB/compilands.test",
+        "NativePDB/dedupe-exported-public-symbols.cpp",
+        "NativePDB/dynamic-types.cpp",
+        "NativePDB/enums-layout.test",
+        "NativePDB/find-functions.cpp",
+        "NativePDB/func-symbols.test",
+        "NativePDB/function-level-linking.test",
+        "NativePDB/function-nested-block.test",
+        "NativePDB/global-ctor-dtor.cpp",
+        "NativePDB/icf.cpp",
+        "NativePDB/invalid-field-list-reference.yaml",
+        "NativePDB/invalid-inlinee-not-in-ipi.yaml",
+        "NativePDB/invalid-type-refs.yaml",
+        "NativePDB/missing-type.s",
+        "NativePDB/pointers.test",
+        "NativePDB/public-symbol-offset-past-section-end.cpp",
+        "NativePDB/rust-unique-name.ll",
+        "NativePDB/simple-types.cpp",
+        "NativePDB/symtab.cpp",
+        "NativePDB/thread-locals.cpp",
+        "NativePDB/type-quals.test",
+        "NativePDB/typedefs.cpp",
+        "NativePDB/typedefs.test",
+        "NativePDB/unknown-udt-decl.ll",
+        "NativePDB/variables.test",
+        "PDB/func-symbols.test",
+    ]
+]

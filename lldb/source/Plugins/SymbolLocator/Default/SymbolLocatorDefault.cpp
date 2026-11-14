@@ -84,8 +84,9 @@ std::optional<ModuleSpec> SymbolLocatorDefault::LocateExecutableObjectFile(
   ModuleSpec matched_module_spec;
   if (!exec_fspec)
     return {};
-  ModuleSpecList module_specs =
-      ObjectFile::GetModuleSpecifications(exec_fspec, 0, 0);
+  ModuleSpecList module_specs = ObjectFile::GetModuleSpecifications(
+      exec_fspec, module_spec.GetObjectOffset(), module_spec.GetObjectSize(),
+      module_spec.GetExtractor());
   if (module_specs.FindMatchingModuleSpec(module_spec, matched_module_spec)) {
     ModuleSpec result;
     result.GetFileSpec() = exec_fspec;

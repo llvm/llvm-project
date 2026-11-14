@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-pc-linux -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-pc-linux -emit-llvm %s -o - | FileCheck %s %}
 // RUN: %clang_cc1 -triple msp430 -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple msp430 -emit-llvm %s -o - | FileCheck %s %}
 // RUN: %clang_cc1 -triple avr -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple avr -emit-llvm %s -o - | FileCheck %s %}
 
 // The hint operands of llvm.prefetch are i32 regardless of the type of the
 // corresponding C argument, which is narrower on targets with a 16-bit int and

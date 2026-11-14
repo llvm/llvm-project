@@ -1302,3 +1302,211 @@ define <vscale x 2 x double> @minimumnum_nxv2f64(<vscale x 2 x double> %a, <vsca
   %res = call <vscale x 2 x double> @llvm.minimumnum.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b)
   ret <vscale x 2 x double> %res
 }
+
+define <vscale x 8 x half> @ldexp_nxv8f16_nxv8i1(<vscale x 8 x half> %a, <vscale x 8 x i1> %b) {
+; CHECK-LABEL: ldexp_nxv8f16_nxv8i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fscale z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x half> @llvm.ldexp(<vscale x 8 x half> %a, <vscale x 8 x i1> %b)
+  ret <vscale x 8 x half> %res
+}
+
+define <vscale x 8 x half> @ldexp_nxv8f16_nxv8i16(<vscale x 8 x half> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: ldexp_nxv8f16_nxv8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fscale z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x half> @llvm.ldexp(<vscale x 8 x half> %a, <vscale x 8 x i16> %b)
+  ret <vscale x 8 x half> %res
+}
+
+define <vscale x 4 x half> @ldexp_nxv4f16_nxv4i1(<vscale x 4 x half> %a, <vscale x 4 x i1> %b) {
+; CHECK-LABEL: ldexp_nxv4f16_nxv4i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    mov z1.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    fcvt z0.s, p1/m, z0.h
+; CHECK-NEXT:    fscale z0.s, p1/m, z0.s, z1.s
+; CHECK-NEXT:    fcvt z0.h, p1/m, z0.s
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x half> @llvm.ldexp(<vscale x 4 x half> %a, <vscale x 4 x i1> %b)
+  ret <vscale x 4 x half> %res
+}
+
+define <vscale x 4 x half> @ldexp_nxv4f16_nxv4i32(<vscale x 4 x half> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: ldexp_nxv4f16_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcvt z0.s, p0/m, z0.h
+; CHECK-NEXT:    fscale z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    fcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x half> @llvm.ldexp(<vscale x 4 x half> %a, <vscale x 4 x i32> %b)
+  ret <vscale x 4 x half> %res
+}
+
+define <vscale x 2 x half> @ldexp_nxv2f16_nxv2i1(<vscale x 2 x half> %a, <vscale x 2 x i1> %b) {
+; CHECK-LABEL: ldexp_nxv2f16_nxv2i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    mov z1.d, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    fcvt z0.d, p1/m, z0.h
+; CHECK-NEXT:    fscale z0.d, p1/m, z0.d, z1.d
+; CHECK-NEXT:    fcvt z0.h, p1/m, z0.d
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x half> @llvm.ldexp(<vscale x 2 x half> %a, <vscale x 2 x i1> %b)
+  ret <vscale x 2 x half> %res
+}
+
+define <vscale x 2 x half> @ldexp_nxv2f16_nxv2i64(<vscale x 2 x half> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: ldexp_nxv2f16_nxv2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvt z0.d, p0/m, z0.h
+; CHECK-NEXT:    fscale z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    fcvt z0.h, p0/m, z0.d
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x half> @llvm.ldexp(<vscale x 2 x half> %a, <vscale x 2 x i64> %b)
+  ret <vscale x 2 x half> %res
+}
+
+define <vscale x 4 x float> @ldexp_nxv4f32_nxv4i1(<vscale x 4 x float> %a, <vscale x 4 x i1> %b) {
+; CHECK-LABEL: ldexp_nxv4f32_nxv4i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fscale z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x float> @llvm.ldexp(<vscale x 4 x float> %a, <vscale x 4 x i1> %b)
+  ret <vscale x 4 x float> %res
+}
+
+define <vscale x 4 x float> @ldexp_nxv4f32_nxv4i32(<vscale x 4 x float> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: ldexp_nxv4f32_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fscale z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x float> @llvm.ldexp(<vscale x 4 x float> %a, <vscale x 4 x i32> %b)
+  ret <vscale x 4 x float> %res
+}
+
+define <vscale x 2 x float> @ldexp_nxv2f32_nxv2i1(<vscale x 2 x float> %a, <vscale x 2 x i1> %b) {
+; CHECK-LABEL: ldexp_nxv2f32_nxv2i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    mov z1.d, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    fcvt z0.d, p1/m, z0.s
+; CHECK-NEXT:    fscale z0.d, p1/m, z0.d, z1.d
+; CHECK-NEXT:    fcvt z0.s, p1/m, z0.d
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x float> @llvm.ldexp(<vscale x 2 x float> %a, <vscale x 2 x i1> %b)
+  ret <vscale x 2 x float> %res
+}
+
+define <vscale x 2 x float> @ldexp_nxv2f32_nxv2i64(<vscale x 2 x float> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: ldexp_nxv2f32_nxv2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvt z0.d, p0/m, z0.s
+; CHECK-NEXT:    fscale z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    fcvt z0.s, p0/m, z0.d
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x float> @llvm.ldexp(<vscale x 2 x float> %a, <vscale x 2 x i64> %b)
+  ret <vscale x 2 x float> %res
+}
+
+define <vscale x 2 x double> @ldexp_nxv2f64_nxv2i1(<vscale x 2 x double> %a, <vscale x 2 x i1> %b) {
+; CHECK-LABEL: ldexp_nxv2f64_nxv2i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.d, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fscale z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x double> @llvm.ldexp(<vscale x 2 x double> %a, <vscale x 2 x i1> %b)
+  ret <vscale x 2 x double> %res
+}
+
+define <vscale x 2 x double> @ldexp_nxv2f64_nxv2i64(<vscale x 2 x double> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: ldexp_nxv2f64_nxv2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fscale z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x double> @llvm.ldexp(<vscale x 2 x double> %a, <vscale x 2 x i64> %b)
+  ret <vscale x 2 x double> %res
+}
+
+define <vscale x 2 x double> @ldexp_requires_type_promotion(<vscale x 2 x double> %a, <vscale x 2 x i8> %b) {
+; CHECK-LABEL: ldexp_requires_type_promotion:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    sxtb z1.d, p0/m, z1.d
+; CHECK-NEXT:    fscale z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x double> @llvm.ldexp(<vscale x 2 x double> %a, <vscale x 2 x i8> %b)
+  ret <vscale x 2 x double> %res
+}
+
+define <vscale x 3 x float> @ldexp_requires_type_widening(<vscale x 3 x float> %a, <vscale x 3 x i32> %b) {
+; CHECK-LABEL: ldexp_requires_type_widening:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fscale z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %res = call <vscale x 3 x float> @llvm.ldexp(<vscale x 3 x float> %a, <vscale x 3 x i32> %b)
+  ret <vscale x 3 x float> %res
+}
+
+define <vscale x 8 x half> @ldexp_requires_operand_splitting(<vscale x 8 x half> %a, <vscale x 8 x i64> %b) {
+; CHECK-LABEL: ldexp_requires_operand_splitting:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpkhi z5.s, z0.h
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    uunpkhi z6.d, z5.s
+; CHECK-NEXT:    uunpklo z5.d, z5.s
+; CHECK-NEXT:    uunpkhi z7.d, z0.s
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    fcvt z6.d, p0/m, z6.h
+; CHECK-NEXT:    fcvt z5.d, p0/m, z5.h
+; CHECK-NEXT:    fcvt z7.d, p0/m, z7.h
+; CHECK-NEXT:    fcvt z0.d, p0/m, z0.h
+; CHECK-NEXT:    fscale z6.d, p0/m, z6.d, z4.d
+; CHECK-NEXT:    fscale z5.d, p0/m, z5.d, z3.d
+; CHECK-NEXT:    fscale z7.d, p0/m, z7.d, z2.d
+; CHECK-NEXT:    fscale z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    fcvt z6.h, p0/m, z6.d
+; CHECK-NEXT:    fcvt z5.h, p0/m, z5.d
+; CHECK-NEXT:    fcvt z7.h, p0/m, z7.d
+; CHECK-NEXT:    fcvt z0.h, p0/m, z0.d
+; CHECK-NEXT:    uzp1 z1.s, z5.s, z6.s
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z7.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x half> @llvm.ldexp(<vscale x 8 x half> %a, <vscale x 8 x i64> %b)
+  ret <vscale x 8 x half> %res
+}
+
+define <vscale x 8 x double> @ldexp_requires_result_splitting(<vscale x 8 x double> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: ldexp_requires_result_splitting:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sunpklo z5.s, z4.h
+; CHECK-NEXT:    sunpkhi z4.s, z4.h
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    sunpkhi z6.d, z5.s
+; CHECK-NEXT:    sunpklo z5.d, z5.s
+; CHECK-NEXT:    sunpkhi z7.d, z4.s
+; CHECK-NEXT:    sunpklo z4.d, z4.s
+; CHECK-NEXT:    fscale z0.d, p0/m, z0.d, z5.d
+; CHECK-NEXT:    fscale z1.d, p0/m, z1.d, z6.d
+; CHECK-NEXT:    fscale z2.d, p0/m, z2.d, z4.d
+; CHECK-NEXT:    fscale z3.d, p0/m, z3.d, z7.d
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x double> @llvm.ldexp(<vscale x 8 x double> %a, <vscale x 8 x i16> %b)
+  ret <vscale x 8 x double> %res
+}

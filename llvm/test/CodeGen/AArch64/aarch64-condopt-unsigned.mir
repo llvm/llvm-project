@@ -20,7 +20,6 @@
 # True: cmp w0, #11; b.hi  (w0 > 11 unsigned)
 # Expected: One CMP adjusted to HS (>=)
 name:            cmp_cmp_hi_hi
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cmp_cmp_hi_hi
   ; CHECK: bb.0:
@@ -72,7 +71,6 @@ body:             |
 # True: cmp w0, #11; b.lo  (w0 < 11 unsigned)
 # Expected: One CMP adjusted to LS (<=)
 name:            cmp_cmp_lo_lo
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cmp_cmp_lo_lo
   ; CHECK: bb.0:
@@ -125,7 +123,6 @@ body:             |
 # This is the "a > 10 || a < 12" pattern -> always true for a == 11
 # Expected: Adjusted to use same immediate
 name:            cmp_cmp_hi_lo
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cmp_cmp_hi_lo
   ; CHECK: bb.0:
@@ -176,7 +173,6 @@ body:             |
 # Head: cmn w0, #1; b.hi  (w0 > -1 unsigned, i.e., w0 != 0xFFFFFFFF)
 # True: cmn w0, #2; b.hi  (w0 > -2 unsigned)
 name:            cmn_cmn_hi_hi
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cmn_cmn_hi_hi
   ; CHECK: bb.0:
@@ -225,7 +221,6 @@ body:             |
 ---
 # CSINC/CSINC with HI/HI (unsigned >): imm differs by 1
 name:            csinc_hi_hi_intrablock
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -253,7 +248,6 @@ body:             |
 ---
 # CSINC/CSINC with LO/LO (unsigned <): imm differs by 1
 name:            csinc_lo_lo_intrablock
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -284,7 +278,6 @@ body:             |
 # Second: cmp w0, #12; csinc ..., lo  (w0 < 12 unsigned)
 # Expected: Both adjusted to use immediate 11 with HS/LS respectively
 name:            csinc_hi_lo_intrablock
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -315,7 +308,6 @@ body:             |
 # True: cmp w0, #1; b.hi  (w0 > 1 unsigned)
 # Expected: Head adjusted to cmp #1; b.hs (w0 >= 1, equivalent to w0 > 0)
 name:            cmp_cmp_hi_hi_wrap
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cmp_cmp_hi_hi_wrap
   ; CHECK: bb.0:
@@ -369,7 +361,6 @@ body:             |
 # This tests the cmn 1 -> cmp 0 opcode flip for signed comparisons.
 # Condition codes: GT = 10 (signed >), GE = 11 (signed >=)
 name:            cmn_cmp_gt_gt_signed_boundary
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cmn_cmp_gt_gt_signed_boundary
   ; CHECK: bb.0:
@@ -420,7 +411,6 @@ body:             |
 # Head: cmp w0, #10; b.gt  (signed >)
 # True: cmp w0, #11; b.hi  (unsigned >)
 name:            cmp_cmp_gt_hi_no_opt
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cmp_cmp_gt_hi_no_opt
   ; CHECK: bb.0:
@@ -469,7 +459,6 @@ body:             |
 ---
 # 64-bit variant: CMP/CMP with HI/HI
 name:            cmp_cmp_hi_hi_64
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cmp_cmp_hi_hi_64
   ; CHECK: bb.0:

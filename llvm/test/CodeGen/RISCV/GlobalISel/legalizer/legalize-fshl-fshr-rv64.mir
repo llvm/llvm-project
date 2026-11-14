@@ -292,3 +292,69 @@ body:             |
     PseudoRET implicit $x10
 
 ...
+---
+name:            fshl_i64_undef_shift
+body:             |
+  bb.1:
+    liveins: $x10, $x11
+
+    ; CHECK-LABEL: name: fshl_i64_undef_shift
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+    ; CHECK-NEXT: $x10 = COPY [[DEF]](s64)
+    ; CHECK-NEXT: $x11 = COPY [[C]](s64)
+    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &__umoddi3, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[C]], [[COPY2]]
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[COPY2]](s64)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY1]], [[SUB]](s64)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[SHL]], [[LSHR]]
+    ; CHECK-NEXT: $x10 = COPY [[OR]](s64)
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64) = G_IMPLICIT_DEF
+    %3:_(s64) = G_FSHL %0, %1, %2(s64)
+    $x10 = COPY %3(s64)
+    PseudoRET implicit $x10
+
+...
+---
+name:            fshr_i64_undef_shift
+body:             |
+  bb.1:
+    liveins: $x10, $x11
+
+    ; CHECK-LABEL: name: fshr_i64_undef_shift
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+    ; CHECK-NEXT: $x10 = COPY [[DEF]](s64)
+    ; CHECK-NEXT: $x11 = COPY [[C]](s64)
+    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &__umoddi3, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[C]], [[COPY2]]
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[SUB]](s64)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY1]], [[COPY2]](s64)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[SHL]], [[LSHR]]
+    ; CHECK-NEXT: $x10 = COPY [[OR]](s64)
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64) = G_IMPLICIT_DEF
+    %3:_(s64) = G_FSHR %0, %1, %2(s64)
+    $x10 = COPY %3(s64)
+    PseudoRET implicit $x10
+
+...

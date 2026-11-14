@@ -1,0 +1,9 @@
+posix: posix-2024
+functions:
+  times:
+    in-latest-posix: ''
+types:
+  clock_t:
+    in-latest-posix: ''
+  struct tms:
+    in-latest-posix: ''

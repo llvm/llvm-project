@@ -18,17 +18,10 @@
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
 namespace {
-
-static cl::opt<bool> StressCalls(
-  "amdgpu-stress-function-calls",
-  cl::Hidden,
-  cl::desc("Force all functions to be noinline"),
-  cl::init(false));
 
 class AMDGPUAlwaysInline : public ModulePass {
   bool GlobalOpt;
@@ -87,6 +80,10 @@ recursivelyVisitUsers(GlobalValue &GV,
 }
 
 static bool alwaysInlineImpl(Module &M, bool GlobalOpt) {
+  bool StressCalls = M.getContext()
+                         .getLibraryOptions()
+                         .get<AMDGPUOptions>()
+                         .stress_function_calls;
   std::vector<GlobalAlias*> AliasesToRemove;
 
   bool Changed = false;

@@ -26,8 +26,6 @@ using namespace llvm::pdb;
 namespace {
 class FunctionArgEnumerator : public IPDBEnumChildren<PDBSymbolData> {
 public:
-  typedef ConcreteSymbolEnumerator<PDBSymbolData> ArgEnumeratorType;
-
   FunctionArgEnumerator(const IPDBSession &PDBSession,
                         const PDBSymbolFunc &PDBFunc)
       : Session(PDBSession), Func(PDBFunc) {

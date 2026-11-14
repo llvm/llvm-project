@@ -1,6 +1,6 @@
 // RUN: %clangxx -O0 -g %s -o %t && %run %t
 
-// UNSUPPORTED: target={{.*linux.*}}
+// UNSUPPORTED: target={{.*linux.*}} && !glibc-2.38
 
 #include <stdio.h>
 #include <stdlib.h>

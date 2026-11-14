@@ -22,18 +22,18 @@ int Derived::f(int x) { return x; }
 
 // The Middle-in-Derived construction vtable reaches Right::f through a virtual
 // thunk, and this translation unit only declares Right::f.
-// CIR: cir.global "private" constant external @_ZTCN23ConstructionVTableThunk7DerivedE0_NS_6MiddleE = #cir.vtable<{{{.*}}#cir.global_view<@_ZTv0_n24_N23ConstructionVTableThunk5Right1fEi>
+// CIR: cir.global constant external @_ZTCN23ConstructionVTableThunk7DerivedE0_NS_6MiddleE = #cir.vtable<{{{.*}}#cir.global_view<@_ZTv0_n24_N23ConstructionVTableThunk5Right1fEi>
 
 // Emitting that thunk creates the Right::f declaration on demand.  It must
 // become a sibling of the thunk rather than nesting inside its body, so the
 // declarations are pinned to the ops immediately following the thunk.
-// CIR-LABEL: cir.func alignment(2) available_externally @_ZTv0_n24_N23ConstructionVTableThunk5Right1fEi
+// CIR-LABEL: cir.func alignment(2) available_externally unnamed_addr @_ZTv0_n24_N23ConstructionVTableThunk5Right1fEi
 // CIR-NOT:     cir.func
 // CIR:         cir.call @_ZN23ConstructionVTableThunk5Right1fEi(
 // CIR:         cir.return %{{.+}} : !s32i
 // CIR-NEXT:  }
-// CIR-NEXT:  cir.func private @_ZN23ConstructionVTableThunk5Right1fEi(
-// CIR-NEXT:  cir.func private @_ZN23ConstructionVTableThunk4Base1fEi(
+// CIR-NEXT:  cir.func private unnamed_addr @_ZN23ConstructionVTableThunk5Right1fEi(
+// CIR-NEXT:  cir.func private unnamed_addr @_ZN23ConstructionVTableThunk4Base1fEi(
 
 // LLVM: define available_externally noundef i32 @_ZTv0_n24_N23ConstructionVTableThunk5Right1fEi(ptr noundef %{{.+}}, i32 noundef %{{.+}})
 // LLVM:   {{(tail )?}}call noundef i32 @_ZN23ConstructionVTableThunk5Right1fEi(ptr noundef nonnull align 8 dereferenceable(8) %{{.+}}, i32 noundef %{{.+}})

@@ -1246,6 +1246,14 @@ bool FastISel::lowerDbgValue(const Value *V, DIExpression *Expr,
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DL, II, false, 0U, Var, Expr);
     return true;
   }
+  if (auto *CE = dyn_cast<ConstantExpr>(V);
+      CE && CE->getOpcode() == Instruction::IntToPtr)
+    if (auto *Int = dyn_cast<ConstantInt>(CE->getOperand(0))) {
+      unsigned PtrSize =
+          FuncInfo.MF->getDataLayout().getPointerTypeSizeInBits(CE->getType());
+      V = ConstantInt::get(CE->getContext(),
+                           Int->getValue().zextOrTrunc(PtrSize));
+    }
   if (const auto *CI = dyn_cast<ConstantInt>(V)) {
     // See if there's an expression to constant-fold.
     if (Expr)
@@ -1262,6 +1270,14 @@ bool FastISel::lowerDbgValue(const Value *V, DIExpression *Expr,
           .addImm(0U)
           .addMetadata(Var)
           .addMetadata(Expr);
+    return true;
+  }
+  if (isa<ConstantPointerNull>(V)) {
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DL, II)
+        .addImm(0)
+        .addImm(0U)
+        .addMetadata(Var)
+        .addMetadata(Expr);
     return true;
   }
   if (const auto *CF = dyn_cast<ConstantFP>(V)) {

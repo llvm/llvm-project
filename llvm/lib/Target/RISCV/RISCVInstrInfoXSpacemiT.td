@@ -67,45 +67,45 @@ let DecoderNamespace = "XSMT" in {
       // Base VMADOT II instructions
       // Support smt.vmadot/smt.vmadotu/smt.vmadotus/smt.vmadotsu
       foreach a = VTypeEncodes in
-        def VMADOT#!toupper(a.Name) :
+        def SMT_VMADOT#!toupper(a.Name)#"vtype" :
             SMTVMADotII<a.Encoding, "smt.vmadot"#a.Name>, Sched<[]>;
 
       // VMADOT Slide
       foreach a = SlideEncodes in
         foreach b = VTypeEncodes in
-          def VMADOT#!toupper(a.Name)#!toupper(b.Name):
+          def SMT_VMADOT#!toupper(a.Name)#!toupper(b.Name)#"vtype":
               SMTVMADotSlideII<a.Encoding, b.Encoding, "smt.vmadot"#a.Name#b.Name>, Sched<[]>;
 
       // Support smt.vmadot.sp/smt.vmadotu.sp/smt.vmadotus.sp/smt.vmadotsu.sp
       foreach a = VTypeEncodes in
-        def VMADOT#!toupper(a.Name)#_SP :
+        def SMT_VMADOT#!toupper(a.Name)#_SP :
             SMTVMADOTSP<a.Encoding, "smt.vmadot"#a.Name#".sp",
                         "$vd, $vs1, $vs2, $vmask, $imm2$vtype">, Sched<[]>;
 
       // Support smt.vmadot.hp/smt.vmadotu.hp/smt.vmadotus.hp/smt.vmadotsu.hp
       foreach c = HPEncodes in
-        def VMADOT#!toupper(c.Name)#_HP :
+        def SMT_VMADOT#!toupper(c.Name)#_HP :
             SMTVMADOTHP<c.Encoding, "smt.vmadot"#c.Name#".hp",
                         "$vd, $vs1, $vs2, $vmask, $imm3$vtype">, Sched<[]>;
 
       let DestEEW = EEWSEWx2, Constraints = "$vd = $vd_wb" in {
         // VFWMADOT
-        def VFWMADOT :
+        def SMT_VFWMADOT :
             SMTVFWMADOT<0b100, (outs VRM2:$vd_wb),
                         (ins VRM2:$vd, VR:$vs1, VR:$vs2),
                         "smt.vfwmadot", "$vd, $vs1, $vs2">, Sched<[]>;
         // VFWMADOT Slide
-        def VFWMADOT1 : VFWMADTSLIDE_INSN<0b101, "smt.vfwmadot1">;
-        def VFWMADOT2 : VFWMADTSLIDE_INSN<0b110, "smt.vfwmadot2">;
-        def VFWMADOT3 : VFWMADTSLIDE_INSN<0b111, "smt.vfwmadot3">;
+        def SMT_VFWMADOT1 : VFWMADTSLIDE_INSN<0b101, "smt.vfwmadot1">;
+        def SMT_VFWMADOT2 : VFWMADTSLIDE_INSN<0b110, "smt.vfwmadot2">;
+        def SMT_VFWMADOT3 : VFWMADTSLIDE_INSN<0b111, "smt.vfwmadot3">;
       }
 
-      def VNPACK_VV : VNPACK_INSN<0b0110001, 0b0, "smt.vnpack.vv">;
-      def VNSPACK_VV : VNPACK_INSN<0b0110001, 0b1, "smt.vnspack.vv">;
-      def VNPACK4_VV : VNPACK_INSN<0b0100001, 0b0, "smt.vnpack4.vv">;
-      def VNSPACK4_VV : VNPACK_INSN<0b0100001, 0b1, "smt.vnspack4.vv">;
-      def VPACK_VV : VPACK_INSN<0b0110011, 0b0, "smt.vpack.vv">;
-      def VUPACK_VV : VPACK_INSN<0b0110011, 0b1, "smt.vupack.vv">;
+      def SMT_VNPACK_VV : VNPACK_INSN<0b0110001, 0b0, "smt.vnpack.vv">;
+      def SMT_VNSPACK_VV : VNPACK_INSN<0b0110001, 0b1, "smt.vnspack.vv">;
+      def SMT_VNPACK4_VV : VNPACK_INSN<0b0100001, 0b0, "smt.vnpack4.vv">;
+      def SMT_VNSPACK4_VV : VNPACK_INSN<0b0100001, 0b1, "smt.vnspack4.vv">;
+      def SMT_VPACK_VV : VPACK_INSN<0b0110011, 0b0, "smt.vpack.vv">;
+      def SMT_VUPACK_VV : VPACK_INSN<0b0110011, 0b1, "smt.vupack.vv">;
     }
   }
 } // DecoderNamespace = "XSMT"

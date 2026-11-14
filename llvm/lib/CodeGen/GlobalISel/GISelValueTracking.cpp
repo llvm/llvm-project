@@ -938,8 +938,11 @@ void GISelValueTracking::computeKnownBits(Register R, KnownBits &Known,
                          Depth + 1);
     computeKnownBitsImpl(MI.getOperand(3).getReg(), WidthKnown, DemandedElts,
                          Depth + 1);
-    OffsetKnown = OffsetKnown.sext(BitWidth);
-    WidthKnown = WidthKnown.sext(BitWidth);
+    // The offset and width are unsigned and can have a different type than the
+    // source. extractBits reads both as unsigned values of any width. The
+    // width is also used below in a subtraction of BitWidth type. A valid width
+    // is at most BitWidth, so it fits in BitWidth bits.
+    WidthKnown = WidthKnown.zextOrTrunc(BitWidth);
     Known = extractBits(BitWidth, SrcOpKnown, OffsetKnown, WidthKnown);
     // Sign extend the extracted value using shift left and arithmetic shift
     // right.
@@ -1362,26 +1365,14 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   if (auto Cst = GFConstant::getConstant(R, MRI)) {
     switch (Cst->getKind()) {
     case GFConstant::GFConstantKind::Scalar: {
-      auto APF = Cst->getScalarValue();
-      Known.setKnownFPClasses(APF.classify());
-      Known.setSignBit(APF.isNegative());
+      Known = KnownFPClass(Cst->getScalarValue());
       break;
     }
     case GFConstant::GFConstantKind::FixedVector: {
-      Known.setKnownFPClasses(fcNone);
-      bool SignBitAllZero = true;
-      bool SignBitAllOne = true;
+      Known = KnownFPClass::getEmpty();
 
-      for (auto C : *Cst) {
-        Known.setKnownFPClasses(Known.getKnownFPClasses() | C.classify());
-        if (C.isNegative())
-          SignBitAllZero = false;
-        else
-          SignBitAllOne = false;
-      }
-
-      if (SignBitAllOne != SignBitAllZero)
-        Known.setSignBit(SignBitAllOne);
+      for (const APFloat &C : *Cst)
+        Known |= KnownFPClass(C);
 
       break;
     }
@@ -1506,11 +1497,19 @@ void GISelValueTracking::computeKnownFPClass(Register R,
         MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
 
     if (A == B && isGuaranteedNotToBeUndef(A, MRI, Depth + 1)) {
-      // x * x + y
+      FPClassTest InterestedSquared = InterestedClasses;
+      FPClassTest InterestedAddend = InterestedClasses;
+      // Only fma(+inf, +inf, -inf) and fma(-inf, -inf, -inf) produce NaN when
+      // squaring.
+      if (InterestedClasses & fcQNan) {
+        InterestedSquared |= fcSNan | fcInf;
+        InterestedAddend |= fcSNan | fcNegInf;
+      }
+
       KnownFPClass KnownSrc, KnownAddend;
-      computeKnownFPClass(C, DemandedElts, InterestedClasses, KnownAddend,
+      computeKnownFPClass(C, DemandedElts, InterestedAddend, KnownAddend,
                           Depth + 1);
-      computeKnownFPClass(A, DemandedElts, InterestedClasses, KnownSrc,
+      computeKnownFPClass(A, DemandedElts, InterestedSquared, KnownSrc,
                           Depth + 1);
       if (KnownNotFromFlags) {
         KnownSrc.knownNot(KnownNotFromFlags);
@@ -1548,8 +1547,11 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   case TargetOpcode::G_STRICT_FSQRT: {
     KnownFPClass KnownSrc;
     FPClassTest InterestedSrcs = InterestedClasses;
-    if (InterestedClasses & fcNan)
-      InterestedSrcs |= KnownFPClass::OrderedLessThanZeroMask;
+    if (InterestedClasses & fcQNan)
+      InterestedSrcs |= KnownFPClass::OrderedLessThanZeroMask | fcSNan;
+    // Subnormals may flush to zero.
+    if (InterestedClasses & fcZero)
+      InterestedSrcs |= fcSubnormal;
 
     Register Val = MI.getOperand(1).getReg();
     computeKnownFPClass(Val, DemandedElts, InterestedSrcs, KnownSrc, Depth + 1);
@@ -2050,7 +2052,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     computeKnownFPClass(RHS, DemandedElts, fcAllFlags, KnownRHS, Depth + 1);
 
     bool KnowSomethingUseful =
-        KnownRHS.isKnownNeverNaN() ||
+        KnownRHS.isKnownNever(fcSNan) ||
         KnownRHS.isKnownNever(fcNegNormal | fcNegSubnormal) ||
         KnownRHS.isKnownNever(fcPosNormal | fcPosSubnormal);
 
@@ -2060,7 +2062,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     Known = KnownFPClass::fdiv(KnownLHS, KnownRHS, Mode);
     break;
   }
-  case TargetOpcode::G_FREM: {
+  case TargetOpcode::G_FREM:
+  case TargetOpcode::G_STRICT_FREM: {
     FPClassTest InterestedLHS = fcNone;
     FPClassTest InterestedRHS = fcNone;
 
@@ -2310,7 +2313,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       if (Known.isUnknown())
         break;
     } else {
-      Known.setKnownFPClasses(fcNone);
+      Known = KnownFPClass::getEmpty();
     }
 
     // Do we need anymore elements from Vec?
@@ -2349,7 +2352,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       if (Known.isUnknown())
         break;
     } else {
-      Known.setKnownFPClasses(fcNone);
+      Known = KnownFPClass::getEmpty();
     }
 
     if (!!DemandedRHS) {
@@ -2472,7 +2475,9 @@ bool GISelValueTracking::isKnownNeverNaN(Register Val, bool SNaN) {
     case TargetOpcode::G_FMUL:
     case TargetOpcode::G_STRICT_FMUL:
     case TargetOpcode::G_FDIV:
+    case TargetOpcode::G_STRICT_FDIV:
     case TargetOpcode::G_FREM:
+    case TargetOpcode::G_STRICT_FREM:
     case TargetOpcode::G_FMA:
     case TargetOpcode::G_STRICT_FMA:
     case TargetOpcode::G_FMAD:

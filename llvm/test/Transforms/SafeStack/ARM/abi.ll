@@ -4,7 +4,7 @@
 
 define void @foo() nounwind uwtable safestack {
 entry:
-; CHECK: %[[SPA:.*]] = call ptr @__safestack_pointer_address()
+; CHECK: %[[SPA:.*]] = call arm_aapcscc ptr @__safestack_pointer_address()
 ; CHECK: %[[USP:.*]] = load ptr, ptr %[[SPA]]
 ; CHECK: %[[USST:.*]] = getelementptr i8, ptr %[[USP]], i32 -16
 ; CHECK: store ptr %[[USST]], ptr %[[SPA]]

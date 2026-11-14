@@ -26,10 +26,11 @@ public:
   AMDGPUABIClassifier(const mlir::DataLayout &dl, mlir::ModuleOp modOp)
       : CIRABIClassifierCommon(dl, modOp) {}
 
-  std::optional<ArgClassification> classifyVAArg(cir::VAArgOp vaArg) override {
+  mlir::FailureOr<ArgClassification>
+  classifyVAArg(cir::VAArgOp vaArg) override {
     vaArg->emitOpError()
         << "not yet implemented in CallConvLowering for AMDGPU";
-    return std::nullopt;
+    return mlir::failure();
   }
 
 protected:
@@ -43,8 +44,8 @@ private:
 const llvm::abi::TargetInfo &AMDGPUABIClassifier::getTargetInfo(cir::FuncOp) {
   if (!target) {
     // HIP passes a generic pointer kernel argument as a global one.
-    auto langOpts = modOp->getAttrOfType<cir::LoweringLangOptionsAttr>(
-        cir::CIRDialect::getLoweringLangOptionsAttrName());
+    auto langOpts = modOp->getAttrOfType<cir::LoweringOptionsAttr>(
+        cir::CIRDialect::getLoweringOptionsAttrName());
     target = llvm::abi::createAMDGPUTargetInfo(
         typeMapper.getTypeBuilder(),
         /*CoerceGenericPtrArgToGlobal=*/langOpts && langOpts.getHip());

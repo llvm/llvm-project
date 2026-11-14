@@ -14,7 +14,6 @@
 ---
 name:            a
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo:
   hasRedZone:      false
 body:             |
@@ -33,7 +32,6 @@ body:             |
 ---
 name:            b
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo:
   hasRedZone:      false
 body:             |

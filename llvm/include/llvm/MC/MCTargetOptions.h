@@ -69,6 +69,9 @@ public:
 
   bool ImplicitMapSyms = false;
 
+  /// Use relocations for DWARF cross-section offsets in Mach-O.
+  bool MachORelocatableDwarf = false;
+
   // If true, prefer R_X86_64_[REX_]GOTPCRELX to R_X86_64_GOTPCREL on x86-64
   // ELF.
   bool X86RelaxRelocations = true;

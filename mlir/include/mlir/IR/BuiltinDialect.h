@@ -15,7 +15,6 @@
 #define MLIR_IR_BUILTINDIALECT_H_
 
 #include "mlir/Bytecode/BytecodeImplementation.h"
-#include "mlir/IR/Dialect.h"
 
 //===----------------------------------------------------------------------===//
 // BuiltinDialectVersion

@@ -1,7 +1,7 @@
 ; RUN: split-file %s %t
-; RUN: not llvm-as < %t/aarch64-svcount.ll -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-AARCH64-SVCOUNT %s
-; RUN: not llvm-as < %t/riscv-vector-tuple.ll -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-RISCV-VECTOR-TUPLE %s
-; RUN: not llvm-as < %t/amdgcn-named-barrier.ll -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-AMDGCN-NAMEDBARRIER %s
+; RUN: not llvm-as < %t/aarch64-svcount.ll -disable-output 2>&1 | FileCheck --check-prefix=CHECK-AARCH64-SVCOUNT %s
+; RUN: not llvm-as < %t/riscv-vector-tuple.ll -disable-output 2>&1 | FileCheck --check-prefix=CHECK-RISCV-VECTOR-TUPLE %s
+; RUN: not llvm-as < %t/amdgcn-named-barrier.ll -disable-output 2>&1 | FileCheck --check-prefix=CHECK-AMDGCN-NAMEDBARRIER %s
 ; RUN: not llvm-as < %t/amdgpu-stridemark-type-param.ll -disable-output 2>&1 | FileCheck --check-prefix=CHECK-AMDGPU-STRIDEMARK-TYPE %s
 ; RUN: not llvm-as < %t/amdgpu-stridemark-int-params.ll -disable-output 2>&1 | FileCheck --check-prefix=CHECK-AMDGPU-STRIDEMARK-INTS %s
 ; Check target extension type properties are verified in the assembler.

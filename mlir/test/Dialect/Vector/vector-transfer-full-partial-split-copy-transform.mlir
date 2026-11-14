@@ -16,6 +16,8 @@ func.func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: ind
   //  CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
   //  CHECK-DAG: %[[c4:.*]] = arith.constant 4 : index
   //  CHECK-DAG: %[[c8:.*]] = arith.constant 8 : index
+  //  CHECK-DAG: %[[pad:.*]] = arith.constant 0.000000e+00 : f32
+  //  CHECK-DAG: %[[pad_vec:.*]] = arith.constant dense<0.000000e+00> : vector<4x8xf32>
   // alloca for boundary full tile
   //      CHECK: %[[alloc:.*]] = memref.alloca() alignment = 32 : memref<4x8xf32>
   // %i + 4 <= dim(%A, 0)
@@ -32,7 +34,8 @@ func.func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: ind
   //      CHECK:   scf.yield %[[A]], %[[i]], %[[j]] : memref<?x8xf32>, index, index
   //      CHECK: } else {
   //               slow path, fill tmp alloc and yield a memref_casted version of it
-  //      CHECK:   linalg.fill ins(%cst : f32) outs(%[[alloc]] : memref<4x8xf32>)
+  //      CHECK:   %[[alloc_vec:.*]] = vector.type_cast %[[alloc]] : memref<4x8xf32> to memref<vector<4x8xf32>>
+  //      CHECK:   memref.store %[[pad_vec]], %[[alloc_vec]][] : memref<vector<4x8xf32>>
   //      CHECK:   %[[d0:.*]] = memref.dim %[[A]], %[[c0]] : memref<?x8xf32>
   //      CHECK:   %[[sv0:.*]] = affine.min #[[$bounds_map_4]](%[[d0]], %[[i]], %[[c4]])
   //      CHECK:   %[[sv1:.*]] = affine.min #[[$bounds_map_8]](%[[c8]], %[[j]], %[[c8]])
@@ -45,7 +48,7 @@ func.func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: ind
   //      CHECK:   scf.yield %[[yielded]], %[[c0]], %[[c0]] :
   // CHECK-SAME:     memref<?x8xf32>, index, index
   //      CHECK: }
-  //      CHECK: %[[res:.*]] = vector.transfer_read %[[ifres]]#0[%[[ifres]]#1, %[[ifres]]#2], %cst
+  //      CHECK: %[[res:.*]] = vector.transfer_read %[[ifres]]#0[%[[ifres]]#1, %[[ifres]]#2], %[[pad]]
   // CHECK-SAME:   {in_bounds = [true, true]} : memref<?x8xf32>, vector<4x8xf32>
   %1 = vector.transfer_read %A[%i, %j], %f0 : memref<?x8xf32>, vector<4x8xf32>
 
@@ -68,6 +71,7 @@ func.func @split_vector_transfer_read_strided_2d(
   //  CHECK-DAG: %[[c4:.*]] = arith.constant 4 : index
   //  CHECK-DAG: %[[c7:.*]] = arith.constant 7 : index
   //  CHECK-DAG: %[[c8:.*]] = arith.constant 8 : index
+  //  CHECK-DAG: %[[pad_vec:.*]] = arith.constant dense<0.000000e+00> : vector<4x8xf32>
   // alloca for boundary full tile
   //      CHECK: %[[alloc:.*]] = memref.alloca() alignment = 32 : memref<4x8xf32>
   // %i + 4 <= dim(%A, 0)
@@ -86,7 +90,8 @@ func.func @split_vector_transfer_read_strided_2d(
   // CHECK-SAME:     memref<?x8xf32, strided<[?, 1], offset: ?>>, index, index
   //      CHECK: } else {
   //               slow path, fill tmp alloc and yield a memref_casted version of it
-  //      CHECK:   linalg.fill ins(%cst : f32) outs(%[[alloc]] : memref<4x8xf32>)
+  //      CHECK:   %[[alloc_vec:.*]] = vector.type_cast %[[alloc]] : memref<4x8xf32> to memref<vector<4x8xf32>>
+  //      CHECK:   memref.store %[[pad_vec]], %[[alloc_vec]][] : memref<vector<4x8xf32>>
   //      CHECK:   %[[sv0:.*]] = affine.min #[[$bounds_map_4]](%[[c7]], %[[i]], %[[c4]])
   //      CHECK:   %[[sv1:.*]] = affine.min #[[$bounds_map_8]](%[[c8]], %[[j]], %[[c8]])
   //      CHECK:   %[[sv:.*]] = memref.subview %[[A]][%[[i]], %[[j]]] [%[[sv0]], %[[sv1]]] [1, 1]
@@ -106,11 +111,42 @@ func.func @split_vector_transfer_read_strided_2d(
   return %1 : vector<4x8xf32>
 }
 
+// CHECK-LABEL: split_vector_transfer_read_2d_non_constant_padding(
+//  CHECK-SAME: %[[A:[a-zA-Z0-9_]*]]: memref
+//  CHECK-SAME: %[[i:[a-zA-Z0-9_]*]]: index
+//  CHECK-SAME: %[[j:[a-zA-Z0-9_]*]]: index
+//  CHECK-SAME: %[[pad:[a-zA-Z0-9_]*]]: f32
+func.func @split_vector_transfer_read_2d_non_constant_padding(
+    %A: memref<?x8xf32>, %i: index, %j: index, %pad: f32) -> vector<4x8xf32> {
+  //      CHECK: %[[alloc:.*]] = memref.alloca() alignment = 32 : memref<4x8xf32>
+  //      CHECK: %[[ifres:.*]]:3 = scf.if %{{.*}} -> (memref<?x8xf32>, index, index) {
+  //      CHECK:   scf.yield %[[A]], %[[i]], %[[j]] : memref<?x8xf32>, index, index
+  //      CHECK: } else {
+  //               slow path, fill tmp alloc with the broadcasted padding value
+  //      CHECK:   %[[pad_vec:.*]] = vector.broadcast %[[pad]] : f32 to vector<4x8xf32>
+  //      CHECK:   %[[alloc_vec:.*]] = vector.type_cast %[[alloc]] : memref<4x8xf32> to memref<vector<4x8xf32>>
+  //      CHECK:   memref.store %[[pad_vec]], %[[alloc_vec]][] : memref<vector<4x8xf32>>
+  //      CHECK:   %[[sv:.*]] = memref.subview %[[A]][%[[i]], %[[j]]]
+  //      CHECK:   %[[alloc_view:.*]] = memref.subview %[[alloc]][0, 0]
+  //      CHECK:   memref.copy %[[sv]], %[[alloc_view]]
+  //      CHECK:   %[[yielded:.*]] = memref.cast %[[alloc]] :
+  // CHECK-SAME:     memref<4x8xf32> to memref<?x8xf32>
+  //      CHECK:   scf.yield %[[yielded]], %{{.*}}, %{{.*}} :
+  // CHECK-SAME:     memref<?x8xf32>, index, index
+  //      CHECK: }
+  //      CHECK: %[[res:.*]] = vector.transfer_read %[[ifres]]#0[%[[ifres]]#1, %[[ifres]]#2], %[[pad]]
+  // CHECK-SAME:   {in_bounds = [true, true]} : memref<?x8xf32>, vector<4x8xf32>
+  %1 = vector.transfer_read %A[%i, %j], %pad : memref<?x8xf32>, vector<4x8xf32>
+
+  // CHECK: return %[[res]] : vector<4x8xf32>
+  return %1 : vector<4x8xf32>
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
     %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op {
-      transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "linalg-copy"
+      transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "memref-copy"
     } : !transform.op<"func.func">
     transform.yield
   }
@@ -174,7 +210,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
     %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op {
-      transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "linalg-copy"
+      transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "memref-copy"
     } : !transform.op<"func.func">
     transform.yield
   }
@@ -245,7 +281,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
     %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op {
-      transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "linalg-copy"
+      transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "memref-copy"
     } : !transform.op<"func.func">
     transform.yield
   }

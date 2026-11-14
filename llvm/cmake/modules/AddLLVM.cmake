@@ -146,6 +146,34 @@ function(llvm_update_pch name)
   endif()
 endfunction()
 
+# llvm_update_abi_definitions(<name> [COMPONENT_LIB] [DISABLE_LLVM_LINK_LLVM_DYLIB])
+#
+# Add to target <name> the compile definitions that select how the export
+# annotations (LLVM_ABI, LLVM_C_ABI, ...) expand in its sources.
+#
+# The arguments (COMPONENT_LIB, DISABLE_LLVM_LINK_LLVM_DYLIB) are the same ones
+# used by add_llvm_library().
+function(llvm_update_abi_definitions name)
+  if(NOT WIN32 OR MINGW OR NOT LLVM_BUILD_LLVM_DYLIB)
+    # Nothing to do when not building a DLL for Windows with MSVC/clang-cl.
+    return()
+  endif()
+
+  cmake_parse_arguments(ARG "COMPONENT_LIB;DISABLE_LLVM_LINK_LLVM_DYLIB" "" ""
+    ${ARGN})
+  if(ARG_COMPONENT_LIB)
+    # This is a component library of LLVM, export its symbols.
+    set(definitions LLVM_EXPORTS LLVM_C_EXPORTS)
+  elseif(LLVM_LINK_LLVM_DYLIB AND NOT ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
+    # This target imports the annotated symbols from the shared library.
+    set(definitions "")
+  else()
+    # This target links the annotated symbols statically.
+    set(definitions LLVM_BUILD_STATIC)
+  endif()
+  target_compile_definitions(${name} PRIVATE ${definitions})
+endfunction()
+
 function(add_llvm_symbol_exports target_name export_file)
   cmake_parse_arguments(ARG "NO_TARGET_DEPENDENCY" "OUTPUT_FILE_VAR" "" ${ARGN})
 
@@ -698,10 +726,6 @@ function(llvm_add_library name)
         endif()
       endforeach()
     endif()
-
-    if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
-      target_compile_definitions(${obj_name} PRIVATE LLVM_BUILD_STATIC)
-    endif()
   endif()
 
   if(ARG_SHARED AND ARG_STATIC)
@@ -737,6 +761,12 @@ function(llvm_add_library name)
   endif()
   set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Libraries")
 
+  # Set the ABI definitions for the library and its object library.
+  llvm_update_abi_definitions(${name} ${ARGN})
+  if(TARGET obj.${name})
+    llvm_update_abi_definitions(obj.${name} ${ARGN})
+  endif()
+
   ## If were compiling with clang-cl use /Zc:dllexportInlines- to exclude inline
   ## class members from being dllexport'ed to reduce compile time.
   ## This will also keep us below the 64k exported symbol limit
@@ -752,9 +782,6 @@ function(llvm_add_library name)
 
   if(ARG_COMPONENT_LIB)
     set_target_properties(${name} PROPERTIES LLVM_COMPONENT TRUE)
-    if(LLVM_BUILD_LLVM_DYLIB OR BUILD_SHARED_LIBS)
-      target_compile_definitions(${name} PRIVATE LLVM_EXPORTS LLVM_C_EXPORTS)
-    endif()
 
     # When building shared objects for each target there are some internal APIs
     # that are used across shared objects which we can't hide.
@@ -870,9 +897,6 @@ function(llvm_add_library name)
     if (LLVM_LINK_LLVM_DYLIB AND NOT ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
       set(llvm_libs LLVM)
     else()
-      if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
-        target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
-      endif()
       llvm_map_components_to_libnames(llvm_libs
         ${LLVM_LINK_COMPONENTS}
        )
@@ -1281,8 +1305,10 @@ macro(add_llvm_executable name)
     export_executable_symbols(${name})
   endif()
 
-  if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB OR NOT LLVM_LINK_LLVM_DYLIB)
-    target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
+  # Set the ABI definitions for the executable and its object library.
+  llvm_update_abi_definitions(${name} ${ARGN})
+  if(TARGET obj.${name})
+    llvm_update_abi_definitions(obj.${name} ${ARGN})
   endif()
 
   if(LLVM_BUILD_LLVM_DYLIB_VIS AND NOT LLVM_DYLIB_EXPORT_INLINES AND MSVC)

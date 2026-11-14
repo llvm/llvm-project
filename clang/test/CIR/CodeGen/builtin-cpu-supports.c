@@ -15,7 +15,7 @@ extern void a(const char *);
 // CIR-NEXT:   %[[CPU_MODEL:.*]] = cir.get_global @__cpu_model : !cir.ptr<!rec_anon_struct>
 // CIR-NEXT:   %[[CPU_FEAT:.*]] = cir.get_member %[[CPU_MODEL]][3] {name = "__cpu_features"} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!cir.array<!u32i x 1>>
 // CIR-NEXT:   %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
-// CIR-NEXT:   %[[FEAT0:.*]] = cir.get_element %[[CPU_FEAT]][%[[ZERO]] : !u32i] : !cir.ptr<!cir.array<!u32i x 1>> -> !cir.ptr<!u32i>
+// CIR-NEXT:   %[[FEAT0:.*]] = cir.get_element inbounds %[[CPU_FEAT]][%[[ZERO]] : !u32i] : !cir.ptr<!cir.array<!u32i x 1>> -> !cir.ptr<!u32i>
 // CIR-NEXT:   %[[LOAD_FEAT0:.*]] = cir.load {{.*}} %[[FEAT0]] : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT:   %[[MASK:.*]] = cir.const #cir.int<256> : !u32i
 // CIR-NEXT:   %[[AND:.*]] = cir.and %[[LOAD_FEAT0]], %[[MASK]] : !u32i
@@ -29,7 +29,7 @@ extern void a(const char *);
 // CIR-NEXT: cir.scope {
 // CIR-NEXT:   %[[CPU_FEAT2:.*]] = cir.get_global @__cpu_features2 : !cir.ptr<!cir.array<!u32i x 3>>
 // CIR-NEXT:   %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
-// CIR-NEXT:   %[[FEAT2_0:.*]] = cir.get_element %[[CPU_FEAT2]][%[[ZERO]] : !u32i] : !cir.ptr<!cir.array<!u32i x 3>> -> !cir.ptr<!u32i>
+// CIR-NEXT:   %[[FEAT2_0:.*]] = cir.get_element inbounds %[[CPU_FEAT2]][%[[ZERO]] : !u32i] : !cir.ptr<!cir.array<!u32i x 3>> -> !cir.ptr<!u32i>
 // CIR-NEXT:   %[[LOAD_FEAT2_0:.*]] = cir.load {{.*}} %[[FEAT2_0]] : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT:   %[[MASK:.*]] = cir.const #cir.int<1> : !u32i
 // CIR-NEXT:   %[[AND:.*]] = cir.and %[[LOAD_FEAT2_0]], %[[MASK]] : !u32i
@@ -98,7 +98,7 @@ int main(void) {
 // CIR-NEXT: %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR-NEXT: %[[CPU_FEAT2:.*]] = cir.get_global @__cpu_features2 : !cir.ptr<!cir.array<!u32i x 3>>
 // CIR-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !u32i
-// CIR-NEXT: %[[FEAT2_ELT:.*]] = cir.get_element %[[CPU_FEAT2]][%[[ONE]] : !u32i] : !cir.ptr<!cir.array<!u32i x 3>> -> !cir.ptr<!u32i>
+// CIR-NEXT: %[[FEAT2_ELT:.*]] = cir.get_element inbounds %[[CPU_FEAT2]][%[[ONE]] : !u32i] : !cir.ptr<!cir.array<!u32i x 3>> -> !cir.ptr<!u32i>
 // CIR-NEXT: %[[FEAT2_ELT_LOAD:.*]] = cir.load {{.*}} %[[FEAT2_ELT]] : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT: %[[MASK:.*]] = cir.const #cir.int<2147483648> : !u32i
 // CIR-NEXT: %[[AND:.*]] = cir.and %[[FEAT2_ELT_LOAD]], %[[MASK]] : !u32i
@@ -132,7 +132,7 @@ int baseline() { return __builtin_cpu_supports("x86-64"); }
 // CIR-NEXT: %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR-NEXT: %[[CPU_FEAT2:.*]] = cir.get_global @__cpu_features2 : !cir.ptr<!cir.array<!u32i x 3>>
 // CIR-NEXT: %[[TWO:.*]] = cir.const #cir.int<2> : !u32i
-// CIR-NEXT: %[[FEAT2_ELT:.*]] = cir.get_element %[[CPU_FEAT2]][%[[TWO]] : !u32i] : !cir.ptr<!cir.array<!u32i x 3>> -> !cir.ptr<!u32i>
+// CIR-NEXT: %[[FEAT2_ELT:.*]] = cir.get_element inbounds %[[CPU_FEAT2]][%[[TWO]] : !u32i] : !cir.ptr<!cir.array<!u32i x 3>> -> !cir.ptr<!u32i>
 // CIR-NEXT: %[[FEAT2_ELT_LOAD:.*]] = cir.load {{.*}} %[[FEAT2_ELT]] : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT: %[[MASK:.*]] = cir.const #cir.int<1> : !u32i
 // CIR-NEXT: %[[AND:.*]] = cir.and %[[FEAT2_ELT_LOAD]], %[[MASK]] : !u32i
@@ -166,7 +166,7 @@ int v2() { return __builtin_cpu_supports("x86-64-v2"); }
 // CIR-NEXT: %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR-NEXT: %[[CPU_FEAT2:.*]] = cir.get_global @__cpu_features2 : !cir.ptr<!cir.array<!u32i x 3>>
 // CIR-NEXT: %[[TWO:.*]] = cir.const #cir.int<2> : !u32i
-// CIR-NEXT: %[[FEAT2_ELT:.*]] = cir.get_element %[[CPU_FEAT2]][%[[TWO]] : !u32i] : !cir.ptr<!cir.array<!u32i x 3>> -> !cir.ptr<!u32i>
+// CIR-NEXT: %[[FEAT2_ELT:.*]] = cir.get_element inbounds %[[CPU_FEAT2]][%[[TWO]] : !u32i] : !cir.ptr<!cir.array<!u32i x 3>> -> !cir.ptr<!u32i>
 // CIR-NEXT: %[[FEAT2_ELT_LOAD:.*]] = cir.load {{.*}} %[[FEAT2_ELT]] : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT: %[[MASK:.*]] = cir.const #cir.int<2> : !u32i
 // CIR-NEXT: %[[AND:.*]] = cir.and %[[FEAT2_ELT_LOAD]], %[[MASK]] : !u32i
@@ -200,7 +200,7 @@ int v3() { return __builtin_cpu_supports("x86-64-v3"); }
 // CIR-NEXT: %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR-NEXT: %[[CPU_FEAT2:.*]] = cir.get_global @__cpu_features2 : !cir.ptr<!cir.array<!u32i x 3>>
 // CIR-NEXT: %[[TWO:.*]] = cir.const #cir.int<2> : !u32i
-// CIR-NEXT: %[[FEAT2_ELT:.*]] = cir.get_element %[[CPU_FEAT2]][%[[TWO]] : !u32i] : !cir.ptr<!cir.array<!u32i x 3>> -> !cir.ptr<!u32i>
+// CIR-NEXT: %[[FEAT2_ELT:.*]] = cir.get_element inbounds %[[CPU_FEAT2]][%[[TWO]] : !u32i] : !cir.ptr<!cir.array<!u32i x 3>> -> !cir.ptr<!u32i>
 // CIR-NEXT: %[[FEAT2_ELT_LOAD:.*]] = cir.load {{.*}} %[[FEAT2_ELT]] : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT: %[[MASK:.*]] = cir.const #cir.int<4> : !u32i
 // CIR-NEXT: %[[AND:.*]] = cir.and %[[FEAT2_ELT_LOAD]], %[[MASK]] : !u32i

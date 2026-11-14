@@ -5,6 +5,7 @@
 !RUN: %flang -dM -E -o - -fopenmp -fopenmp-version=51 %s | FileCheck --check-prefix=V51 %s
 !RUN: %flang -dM -E -o - -fopenmp -fopenmp-version=52 %s | FileCheck --check-prefix=V52 %s
 !RUN: %flang -dM -E -o - -fopenmp -fopenmp-version=60 %s | FileCheck --check-prefix=V60 %s
+!RUN: %flang -dM -E -o - -fopenmp -fopenmp-version=61 %s | FileCheck --check-prefix=V61 %s
 
 !V31: #define _OPENMP 201107
 !V40: #define _OPENMP 201307
@@ -13,6 +14,7 @@
 !V51: #define _OPENMP 202011
 !V52: #define _OPENMP 202111
 !V60: #define _OPENMP 202411
+!V61: #define _OPENMP 202611
 
 
 !RUN: %flang -c -fopenmp -fopenmp-version=25 %s 2>&1 | FileCheck --check-prefix=WARN-ASSUMED %s
@@ -20,10 +22,10 @@
 
 
 !RUN: not %flang -c -fopenmp -fopenmp-version=29 %s 2>&1 | FileCheck --check-prefix=ERR-BAD %s
-!ERR-BAD: error: '29' is not a valid OpenMP version in '-fopenmp-version=29', valid versions are 31, 40, 45, 50, 51, 52, 60, 61
+!ERR-BAD: error: '29' is not a valid OpenMP version in '-fopenmp-version=29', valid versions are 31, 40, 45, 50, 51, 52, 60, 61, 70
 
-!RUN: %flang -c -fopenmp -fopenmp-version=61 %s 2>&1 | FileCheck --check-prefix=FUTURE %s
-!FUTURE: the specification for OpenMP version 61 is still under development; the syntax and semantics of new features may be subject to change [-Wexperimental-option]
+!RUN: %flang -c -fopenmp -fopenmp-version=70 %s 2>&1 | FileCheck --check-prefix=FUTURE %s
+!FUTURE: the specification for OpenMP version 70 is still under development; the syntax and semantics of new features may be subject to change [-Wexperimental-option]
 
-!RUN: %flang -c -fopenmp -fopenmp-version=60 %s 2>&1 | FileCheck --check-prefix=IMPL %s
-!IMPL: OpenMP support for version 60 in flang is still incomplete [-Wexperimental-option]
+!RUN: %flang -c -fopenmp -fopenmp-version=61 %s 2>&1 | FileCheck --check-prefix=IMPL %s
+!IMPL: OpenMP support for version 61 in flang is still incomplete [-Wexperimental-option]

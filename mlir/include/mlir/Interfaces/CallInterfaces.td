@@ -26,6 +26,7 @@ def ArgAndResultAttrsOpInterface : OpInterface<"ArgAndResultAttrsOpInterface"> {
     attributes of the operation.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/CallInterfaces.h"];
 
   list<InterfaceMethod> methods = [
     InterfaceMethod<[{
@@ -91,6 +92,7 @@ def CallOpInterface : OpInterface<"CallOpInterface",
     as consumed operands.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/CallInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -181,6 +183,7 @@ def CallableOpInterface : OpInterface<"CallableOpInterface",
     single region, or subroutine.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/CallInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{

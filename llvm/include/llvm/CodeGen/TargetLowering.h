@@ -1225,6 +1225,18 @@ public:
     }
   }
 
+  /// For vector types that are widened, this returns the type reached by
+  /// widening repeatedly, i.e. the first type whose action is not
+  /// TypeWidenVector. Unlike getLegalTypeToTransformTo, this does not follow
+  /// other actions, so the result may still be illegal (e.g. if it is split).
+  /// For vector types that are not widened, this is an identity function.
+  EVT getTypeToWidenTo(LLVMContext &Context, EVT VT) const {
+    assert(VT.isVector());
+    while (getTypeAction(Context, VT) == TypeWidenVector)
+      VT = getTypeToTransformTo(Context, VT);
+    return VT;
+  }
+
   /// Vector types are broken down into some number of legal first class types.
   /// For example, EVT::v8f32 maps to 2 EVT::v4f32 with Altivec or SSE1, or 8
   /// promoted EVT::f64 values with the X86 FP stack.  Similarly, EVT::v2i64
@@ -1314,6 +1326,12 @@ public:
     return FPImmAction::ConstantPool;
   }
 
+  /// \copydoc getFPImmAction(const APFloat&,EVT,bool) const
+  virtual FPImmAction getFPImmAction(const APFloat & /*Imm*/, LLT /*Ty*/,
+                                     bool ForCodeSize = false) const {
+    return FPImmAction::ConstantPool;
+  }
+
   /// Returns true if the specified FP immediate can be materialized without a
   /// load from the constant pool.
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
@@ -1328,12 +1346,6 @@ public:
   virtual bool isShuffleMaskLegal(ArrayRef<int> /*Mask*/, EVT /*VT*/) const {
     return true;
   }
-
-  /// Returns true if the operation can trap for the value type.
-  ///
-  /// VT must be a legal type. By default, we optimistically assume most
-  /// operations don't trap except for integer divide and remainder.
-  virtual bool canOpTrap(unsigned Op, EVT VT) const;
 
   /// Similar to isShuffleMaskLegal. Targets can use this to indicate if there
   /// is a suitable VECTOR_SHUFFLE that can be used to replace a VAND with a
@@ -1786,6 +1798,10 @@ public:
                                            EVT InputVT) const {
     assert(Opc == ISD::PARTIAL_REDUCE_SMLA || Opc == ISD::PARTIAL_REDUCE_UMLA ||
            Opc == ISD::PARTIAL_REDUCE_SUMLA || Opc == ISD::PARTIAL_REDUCE_FMLA);
+    // If the inputs aren't simple (e.g. non-power-of-two element type), just
+    // expand.
+    if (!AccVT.isSimple() || !InputVT.isSimple())
+      return Expand;
     PartialReduceActionTypes Key = {Opc, AccVT.getSimpleVT().SimpleTy,
                                     InputVT.getSimpleVT().SimpleTy};
     auto It = PartialReduceMLAActions.find(Key);
@@ -2249,10 +2265,17 @@ public:
                                   const LibcallLoweringInfo &Libcalls) const;
 
 protected:
-  Value *getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
-                                            bool UseTLS) const;
+  Value *
+  getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
+                                     const LibcallLoweringInfo &Libcalls) const;
 
 public:
+  /// Emits a call to the libcall returning the address of the unsafe stack
+  /// pointer. Returns nullptr if the libcall is unavailable.
+  Value *
+  getSafeStackPointerAddressCall(IRBuilderBase &IRB,
+                                 const LibcallLoweringInfo &Libcalls) const;
+
   /// Returns the target-specific address of the unsafe stack pointer.
   virtual Value *
   getSafeStackPointerLocation(IRBuilderBase &IRB,
@@ -3821,14 +3844,6 @@ public:
     return RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Call);
   }
 
-  RTLIB::LibcallImpl getMemcpyImpl() const { return Libcalls.getMemcpyImpl(); }
-
-  /// Get the CallingConv that should be used for the specified libcall
-  /// implementation.
-  CallingConv::ID getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
-    return Libcalls.getLibcallImplCallingConv(Call);
-  }
-
   /// Get the CallingConv that should be used for the specified libcall.
   // FIXME: Remove this wrapper and directly use the used LibcallImpl
   CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
@@ -4345,6 +4360,14 @@ public:
     return false;
   }
 
+  /// Return true if a function used as an inline asm address operand (e.g.
+  /// "p", or a call target that isInlineAsmTargetBranch() recognizes) can be
+  /// the bare function symbol, in an operand of kind InlineAsm::Kind::Func.
+  /// The target then has to select the symbol as an address and print it with
+  /// AsmPrinter::PrintAsmOperand(). Otherwise the function's address is
+  /// computed like that of any other global.
+  virtual bool supportsInlineAsmFuncOperands() const { return false; }
+
   bool isInTailCallPosition(SelectionDAG &DAG, SDNode *Node,
                             SDValue &Chain) const;
 
@@ -4385,10 +4408,7 @@ public:
                                           EVT RetVT, ArrayRef<SDValue> Ops,
                                           MakeLibCallOptions CallOptions,
                                           const SDLoc &dl,
-                                          SDValue Chain = SDValue()) const {
-    return makeLibCall(DAG, getLibcallImpl(LC), RetVT, Ops, CallOptions, dl,
-                       Chain);
-  }
+                                          SDValue Chain = SDValue()) const;
 
   /// Build a call argument list for \p FuncTy, taking the argument node values
   /// from \p Ops and the parameter types and ABI attributes from \p FuncTy and
@@ -6131,6 +6151,9 @@ public:
   /// Expand a vector VECTOR_COMPRESS into a sequence of extract element, store
   /// temporarily, advance store position, before re-loading the final vector.
   SDValue expandVECTOR_COMPRESS(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Expand a VECTOR_SHUFFLE_VAR into variable-index element extracts.
+  SDValue expandVECTOR_SHUFFLE_VAR(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Expand a CTTZ_ELTS or CTTZ_ELTS_ZERO_POISON by calculating (VL - i) for
   /// each active lane (i), getting the maximum and subtracting it from VL.

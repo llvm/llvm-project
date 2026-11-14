@@ -30,6 +30,7 @@ public:
                           const MCSpecifierExpr &Expr) const override;
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
                                  const MCAssembler *Asm) const override;
+  bool usesCompInstByteOrder(const MCSubtargetInfo &STI) const override;
 };
 
 class MipsCOFFMCAsmInfo : public MCAsmInfoGNUCOFF {

@@ -24,7 +24,7 @@
                                                (HandlerBuilder)(S));           \
   }
 
-namespace orc_rt::sps_ci {
+namespace orc_rt::sps::ci {
 
 namespace {
 
@@ -67,4 +67,4 @@ Error addSession(SimpleSymbolTable &ST) noexcept {
   return ST.addUnique(orc_rt_ci_Session_sps_interface);
 }
 
-} // namespace orc_rt::sps_ci
+} // namespace orc_rt::sps::ci

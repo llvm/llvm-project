@@ -170,7 +170,7 @@ define i1 @call1(ptr %obj) {
   %p = call i1 @llvm.type.test(ptr %vtable, metadata !"typeid")
   call void @llvm.assume(i1 %p)
   %fptr = load ptr, ptr %vtable
-  ; CHECK: [[VTGEP1:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 -1
+  ; CHECK: [[VTGEP1:%[^ ]*]] = getelementptr i8, ptr %vtable, i64 -1
   ; CHECK: [[VTLOAD1:%[^ ]*]] = load i8, ptr [[VTGEP1]]
   ; CHECK: [[VTAND1:%[^ ]*]] = and i8 [[VTLOAD1]], 1
   ; CHECK: [[VTCMP1:%[^ ]*]] = icmp ne i8 [[VTAND1]], 0
@@ -188,7 +188,7 @@ define i8 @call2(ptr %obj) {
   %fptr = load ptr, ptr %fptrptr
   %result = call i8 %fptr(ptr %obj)
   ret i8 %result
-  ; CHECK: [[VTGEP2:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 -2
+  ; CHECK: [[VTGEP2:%[^ ]*]] = getelementptr i8, ptr %vtable, i64 -2
   ; CHECK: [[VTLOAD:%[^ ]*]] = load i8, ptr [[VTGEP2]]
   ; CHECK: ret i8 [[VTLOAD]]
 }
@@ -230,7 +230,7 @@ define i64 @call5(ptr %obj) {
   %fptr = load ptr, ptr %fptrptr
   %result = call i64 %fptr(ptr %obj)
   ret i64 %result
-  ; CHECK: [[VTGEP2:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 -8
+  ; CHECK: [[VTGEP2:%[^ ]*]] = getelementptr i8, ptr %vtable, i64 -8
   ; CHECK: [[VTLOAD:%[^ ]*]] = load i64, ptr [[VTGEP2]]
   ; CHECK: ret i64 [[VTLOAD]]
 }
@@ -244,7 +244,7 @@ define i8 @call6(ptr %obj) {
   %fptr = load ptr, ptr %fptrptr
   %result = call i8 %fptr(ptr %obj)
   ret i8 %result
-  ; CHECK: [[VTGEP2:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 -9
+  ; CHECK: [[VTGEP2:%[^ ]*]] = getelementptr i8, ptr %vtable, i64 -9
   ; CHECK: [[VTLOAD:%[^ ]*]] = load i8, ptr [[VTGEP2]]
   ; CHECK: ret i8 [[VTLOAD]]
 }
@@ -282,7 +282,7 @@ define i8 @call6_rel(ptr %obj) {
   %fptr = call ptr @llvm.load.relative.i32(ptr %vtable, i32 4)
   %result = call i8 %fptr(ptr %obj)
   ret i8 %result
-  ; CHECK: [[VTGEP2:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 -1
+  ; CHECK: [[VTGEP2:%[^ ]*]] = getelementptr i8, ptr %vtable, i64 -1
   ; CHECK: [[VTLOAD:%[^ ]*]] = load i8, ptr [[VTGEP2]]
   ; CHECK: ret i8 [[VTLOAD]]
 }

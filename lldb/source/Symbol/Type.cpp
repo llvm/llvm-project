@@ -637,8 +637,9 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
         break;
 
       case eEncodingIsPointerUID:
-        m_compiler_type =
-            encoding_type->GetForwardCompilerType().GetPointerType();
+        m_compiler_type = encoding_type->GetForwardCompilerType()
+                              .AddAddressSpaceModifier(m_payload)
+                              .GetPointerType();
         break;
 
       case eEncodingIsLValueReferenceUID:
@@ -701,7 +702,9 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
           break;
 
         case eEncodingIsPointerUID:
-          m_compiler_type = void_compiler_type.GetPointerType();
+          m_compiler_type =
+              void_compiler_type.AddAddressSpaceModifier(m_payload)
+                  .GetPointerType();
           break;
 
         case eEncodingIsLValueReferenceUID:

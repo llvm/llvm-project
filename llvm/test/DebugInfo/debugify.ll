@@ -22,8 +22,8 @@
 ; RUN: opt -enable-debugify -S -o - < %s 2>&1 | FileCheck %s -check-prefix=PASS
 
 ; Verify that debugify can be safely used with piping
-; RUN: opt -enable-debugify -O1 < %s | opt -O2 -o /dev/null
-; RUN: opt -passes=debugify,mem2reg,check-debugify < %s | opt -O2 -o /dev/null
+; RUN: opt -enable-debugify -O1 < %s | opt -O2 -disable-output
+; RUN: opt -passes=debugify,mem2reg,check-debugify < %s | opt -O2 -disable-output
 
 ; CHECK-LABEL: define void @foo
 define void @foo() {

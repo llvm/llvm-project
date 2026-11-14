@@ -406,8 +406,8 @@ def ForallOp : SCF_Op<"forall", [
     // Sequential context.
     //
     %matmul_and_pointwise:2 = scf.forall (%thread_id_1, %thread_id_2) in
-        (%num_threads_1, %numthread_id_2) shared_outs(%o1 = %C, %o2 = %pointwise)
-      -> (tensor<?x?xT>, tensor<?xT>) {
+        (%num_threads_1, %num_threads_2) shared_outs(%o1 = %C, %o2 = %pointwise)
+      -> (tensor<?x?xT>, tensor<?x?xT>) {
       //
       // Parallel context, each thread with id = (%thread_id_1, %thread_id_2)
       // runs its version of the code.
@@ -420,18 +420,20 @@ def ForallOp : SCF_Op<"forall", [
         tensor<?x?xT> to tensor<?x?xT>
       %sD = linalg.matmul
         ins(%sA, %sB : tensor<?x?xT>, tensor<?x?xT>)
-        outs(%sC : tensor<?x?xT>)
+        outs(%sC : tensor<?x?xT>) -> tensor<?x?xT>
 
-      %spointwise = subtensor %o2[i((%thread_id_1, %thread_id_2))]:
-        tensor<?xT> to tensor<?xT>
-      %sE = linalg.add ins(%spointwise : tensor<?xT>) outs(%sD : tensor<?xT>)
+      %spointwise = tensor.extract_slice %o2[i((%thread_id_1, %thread_id_2))]:
+        tensor<?x?xT> to tensor<?x?xT>
+      %sE = linalg.add
+        ins(%sD, %spointwise : tensor<?x?xT>, tensor<?x?xT>)
+        outs(%spointwise : tensor<?x?xT>) -> tensor<?x?xT>
 
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %sD into %o1[h((%thread_id_1, %thread_id_2))]:
           tensor<?x?xT> into tensor<?x?xT>
 
-        tensor.parallel_insert_slice %spointwise into %o2[i((%thread_id_1, %thread_id_2))]:
-          tensor<?xT> into tensor<?xT>
+        tensor.parallel_insert_slice %sE into %o2[i((%thread_id_1, %thread_id_2))]:
+          tensor<?x?xT> into tensor<?x?xT>
       }
     }
     // Implicit synchronization point.
@@ -446,8 +448,8 @@ def ForallOp : SCF_Op<"forall", [
     // Sequential context.
     //
     %pointwise = scf.forall (%i, %j) = (0, 0) to (%dim1, %dim2)
-      step (%tileSize1, %tileSize2) shared_outs(%o1 = %out)
-      -> (tensor<?x?xT>, tensor<?xT>) {
+      step (%tileSize1, %tileSize2) shared_outs(%o = %out)
+      -> (tensor<?x?xT>) {
       //
       // Parallel context.
       //
@@ -458,7 +460,7 @@ def ForallOp : SCF_Op<"forall", [
       %sC = tensor.extract_slice %o[%i, %j][%tileSize1, %tileSize2][1, 1]
         : tensor<?x?xT> to tensor<?x?xT>
 
-      %add = linalg.map {"arith.addf"}
+      %add = linalg.map { arith.addf }
         ins(%sA, %sB : tensor<?x?xT>, tensor<?x?xT>)
         outs(%sC : tensor<?x?xT>)
 

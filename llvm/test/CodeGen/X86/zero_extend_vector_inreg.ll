@@ -7025,8 +7025,8 @@ define void @vec512_v32i16_to_v2i256_factor16(ptr %in.vec.base.ptr, ptr %in.vec.
 ;
 ; AVX512BW-FAST-LABEL: vec512_v32i16_to_v2i256_factor16:
 ; AVX512BW-FAST:       # %bb.0:
-; AVX512BW-FAST-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512BW-FAST-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
+; AVX512BW-FAST-NEXT:    vmovdqa64 (%rdi), %zmm0
+; AVX512BW-FAST-NEXT:    vpaddb (%rsi), %zmm0, %zmm0
 ; AVX512BW-FAST-NEXT:    vmovd {{.*#+}} xmm1 = [65535,0,0,0]
 ; AVX512BW-FAST-NEXT:    vpand %ymm0, %ymm1, %ymm1
 ; AVX512BW-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[2,3],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero

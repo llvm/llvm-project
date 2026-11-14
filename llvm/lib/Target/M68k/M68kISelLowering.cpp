@@ -120,12 +120,9 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
   for (auto OP : {ISD::SHL_PARTS, ISD::SRA_PARTS, ISD::SRL_PARTS})
     setOperationAction(OP, MVT::i32, Custom);
 
-  // Add/Sub overflow ops with MVT::Glues are lowered to CCR dependences.
   for (auto VT : {MVT::i8, MVT::i16, MVT::i32}) {
-    setOperationAction(ISD::ADDC, VT, Custom);
-    setOperationAction(ISD::ADDE, VT, Custom);
-    setOperationAction(ISD::SUBC, VT, Custom);
-    setOperationAction(ISD::SUBE, VT, Custom);
+    setOperationAction(ISD::UADDO_CARRY, VT, Custom);
+    setOperationAction(ISD::USUBO_CARRY, VT, Custom);
   }
 
   // SADDO and friends are legal with this setup, i hope
@@ -1418,11 +1415,9 @@ SDValue M68kTargetLowering::LowerOperation(SDValue Op,
     return LowerSELECT(Op, DAG);
   case ISD::BRCOND:
     return LowerBRCOND(Op, DAG);
-  case ISD::ADDC:
-  case ISD::ADDE:
-  case ISD::SUBC:
-  case ISD::SUBE:
-    return LowerADDC_ADDE_SUBC_SUBE(Op, DAG);
+  case ISD::UADDO_CARRY:
+  case ISD::USUBO_CARRY:
+    return LowerUADDO_USUBO_CARRY(Op, DAG);
   case ISD::ConstantPool:
     return LowerConstantPool(Op, DAG);
   case ISD::GlobalAddress:
@@ -1552,6 +1547,12 @@ bool M68kTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
   // add / shifts counterparts. But for 64-bits mul, it might be
   // safer to just leave it to compiler runtime implementations.
   return VT.bitsLE(MVT::i32) || Subtarget.atLeastM68020();
+}
+
+static SDValue getSETCC(M68k::CondCode Cond, SDValue CCR, const SDLoc &dl,
+                        SelectionDAG &DAG) {
+  return DAG.getNode(M68kISD::SETCC, dl, MVT::i8,
+                     DAG.getConstant(Cond, dl, MVT::i8), CCR);
 }
 
 static bool isOverflowArithmetic(unsigned Opcode) {
@@ -2254,66 +2255,10 @@ SDValue M68kTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       Cond = NewCond;
   }
 
-  // (select (x == 0), -1, y) -> (sign_bit (x - 1)) | y
-  // (select (x == 0), y, -1) -> ~(sign_bit (x - 1)) | y
-  // (select (x != 0), y, -1) -> (sign_bit (x - 1)) | y
-  // (select (x != 0), -1, y) -> ~(sign_bit (x - 1)) | y
-  if (Cond.getOpcode() == M68kISD::SETCC &&
-      Cond.getOperand(1).getOpcode() == M68kISD::CMP &&
-      isNullConstant(Cond.getOperand(1).getOperand(0))) {
-    SDValue Cmp = Cond.getOperand(1);
-
-    M68k::CondCode CondCode = M68k::CondCode(Cond.getConstantOperandVal(0));
-
-    if ((isAllOnesConstant(Op1) || isAllOnesConstant(Op2)) &&
-        (CondCode == M68k::COND_EQ || CondCode == M68k::COND_NE)) {
-      SDValue Y = isAllOnesConstant(Op2) ? Op1 : Op2;
-
-      SDValue CmpOp0 = Cmp.getOperand(1);
-      // Apply further optimizations for special cases
-      // (select (x != 0), -1, 0) -> neg & sbb
-      // (select (x == 0), 0, -1) -> neg & sbb
-      if (isNullConstant(Y) &&
-          (isAllOnesConstant(Op1) == (CondCode == M68k::COND_NE))) {
-
-        SDVTList VTs = DAG.getVTList(CmpOp0.getValueType(), MVT::i8);
-
-        SDValue Neg =
-            DAG.getNode(M68kISD::SUB, DL, VTs,
-                        DAG.getConstant(0, DL, CmpOp0.getValueType()), CmpOp0);
-
-        SDValue Res = DAG.getNode(M68kISD::SETCC_CARRY, DL, Op.getValueType(),
-                                  DAG.getConstant(M68k::COND_CS, DL, MVT::i8),
-                                  SDValue(Neg.getNode(), 1));
-        return Res;
-      }
-
-      Cmp = DAG.getNode(M68kISD::CMP, DL, MVT::i8,
-                        DAG.getConstant(1, DL, CmpOp0.getValueType()), CmpOp0);
-
-      SDValue Res = // Res = 0 or -1.
-          DAG.getNode(M68kISD::SETCC_CARRY, DL, Op.getValueType(),
-                      DAG.getConstant(M68k::COND_CS, DL, MVT::i8), Cmp);
-
-      if (isAllOnesConstant(Op1) != (CondCode == M68k::COND_EQ))
-        Res = DAG.getNOT(DL, Res, Res.getValueType());
-
-      if (!isNullConstant(Op2))
-        Res = DAG.getNode(ISD::OR, DL, Res.getValueType(), Res, Y);
-      return Res;
-    }
-  }
-
-  // Look past (and (setcc_carry (cmp ...)), 1).
-  if (Cond.getOpcode() == ISD::AND &&
-      Cond.getOperand(0).getOpcode() == M68kISD::SETCC_CARRY &&
-      isOneConstant(Cond.getOperand(1)))
-    Cond = Cond.getOperand(0);
-
   // If condition flag is set by a M68kISD::CMP, then use it as the condition
   // setting operand in place of the M68kISD::SETCC.
   unsigned CondOpcode = Cond.getOpcode();
-  if (CondOpcode == M68kISD::SETCC || CondOpcode == M68kISD::SETCC_CARRY) {
+  if (CondOpcode == M68kISD::SETCC) {
     CC = Cond.getOperand(0);
 
     SDValue Cmp = Cond.getOperand(1);
@@ -2353,25 +2298,6 @@ SDValue M68kTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   if (addTest) {
     CC = DAG.getConstant(M68k::COND_NE, DL, MVT::i8);
     Cond = EmitTest(Cond, M68k::COND_NE, DL, DAG);
-  }
-
-  // a <  b ? -1 :  0 -> RES = ~setcc_carry
-  // a <  b ?  0 : -1 -> RES = setcc_carry
-  // a >= b ? -1 :  0 -> RES = setcc_carry
-  // a >= b ?  0 : -1 -> RES = ~setcc_carry
-  if (Cond.getOpcode() == M68kISD::SUB) {
-    M68k::CondCode CondCode = M68k::CondCode(CC->getAsZExtVal());
-
-    if ((CondCode == M68k::COND_CC || CondCode == M68k::COND_CS) &&
-        (isAllOnesConstant(Op1) || isAllOnesConstant(Op2)) &&
-        (isNullConstant(Op1) || isNullConstant(Op2))) {
-      SDValue Res =
-          DAG.getNode(M68kISD::SETCC_CARRY, DL, Op.getValueType(),
-                      DAG.getConstant(M68k::COND_CS, DL, MVT::i8), Cond);
-      if (isAllOnesConstant(Op1) != (CondCode == M68k::COND_CS))
-        return DAG.getNOT(DL, Res, Res.getValueType());
-      return Res;
-    }
   }
 
   // M68k doesn't have an i8 cmov. If both operands are the result of a
@@ -2456,16 +2382,10 @@ SDValue M68kTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
-  // Look pass (and (setcc_carry (cmp ...)), 1).
-  if (Cond.getOpcode() == ISD::AND &&
-      Cond.getOperand(0).getOpcode() == M68kISD::SETCC_CARRY &&
-      isOneConstant(Cond.getOperand(1)))
-    Cond = Cond.getOperand(0);
-
   // If condition flag is set by a M68kISD::CMP, then use it as the condition
   // setting operand in place of the M68kISD::SETCC.
   unsigned CondOpcode = Cond.getOpcode();
-  if (CondOpcode == M68kISD::SETCC || CondOpcode == M68kISD::SETCC_CARRY) {
+  if (CondOpcode == M68kISD::SETCC) {
     CC = Cond.getOperand(0);
 
     SDValue Cmp = Cond.getOperand(1);
@@ -2587,41 +2507,27 @@ SDValue M68kTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
                      Cond);
 }
 
-SDValue M68kTargetLowering::LowerADDC_ADDE_SUBC_SUBE(SDValue Op,
-                                                     SelectionDAG &DAG) const {
-  MVT VT = Op.getNode()->getSimpleValueType(0);
+SDValue M68kTargetLowering::LowerUADDO_USUBO_CARRY(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  SDNode *N = Op.getNode();
+  MVT VT = N->getSimpleValueType(0);
+  SDLoc DL(N);
 
-  // Let legalize expand this if it isn't a legal type yet.
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
-    return SDValue();
+  // Set the X flag from the carry-in. ADD sets X and C; ADDX/SUBX read X.
+  SDValue Carry = Op.getOperand(2);
+  EVT CarryVT = Carry.getValueType();
+  SDValue Flags = DAG.getNode(M68kISD::ADD, DL, DAG.getVTList(CarryVT, MVT::i8),
+                              Carry, DAG.getAllOnesConstant(DL, CarryVT))
+                      .getValue(1);
 
-  SDVTList VTs = DAG.getVTList(VT, MVT::i8);
+  bool IsAdd = Op.getOpcode() == ISD::UADDO_CARRY;
+  SDValue Sum = DAG.getNode(IsAdd ? M68kISD::ADDX : M68kISD::SUBX, DL,
+                            DAG.getVTList(VT, MVT::i8), Op.getOperand(0),
+                            Op.getOperand(1), Flags);
 
-  unsigned Opc;
-  bool ExtraOp = false;
-  switch (Op.getOpcode()) {
-  default:
-    llvm_unreachable("Invalid code");
-  case ISD::ADDC:
-    Opc = M68kISD::ADD;
-    break;
-  case ISD::ADDE:
-    Opc = M68kISD::ADDX;
-    ExtraOp = true;
-    break;
-  case ISD::SUBC:
-    Opc = M68kISD::SUB;
-    break;
-  case ISD::SUBE:
-    Opc = M68kISD::SUBX;
-    ExtraOp = true;
-    break;
-  }
+  SDValue SetCC = getSETCC(M68k::COND_CS, Sum.getValue(1), DL, DAG);
 
-  if (!ExtraOp)
-    return DAG.getNode(Opc, SDLoc(Op), VTs, Op.getOperand(0), Op.getOperand(1));
-  return DAG.getNode(Opc, SDLoc(Op), VTs, Op.getOperand(0), Op.getOperand(1),
-                     Op.getOperand(2));
+  return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Sum, SetCC);
 }
 
 // ConstantPool, JumpTable, GlobalAddress, and ExternalSymbol are lowered as
@@ -3509,15 +3415,11 @@ SDValue M68kTargetLowering::LowerShiftRightParts(SDValue Op, SelectionDAG &DAG,
 // DAG Combine
 //===----------------------------------------------------------------------===//
 
-static SDValue getSETCC(M68k::CondCode Cond, SDValue CCR, const SDLoc &dl,
-                        SelectionDAG &DAG) {
-  return DAG.getNode(M68kISD::SETCC, dl, MVT::i8,
-                     DAG.getConstant(Cond, dl, MVT::i8), CCR);
-}
 // When legalizing carry, we create carries via add X, -1
 // If that comes from an actual carry, via setcc, we use the
-// carry directly.
-static SDValue combineCarryThroughADD(SDValue CCR) {
+// carry directly. If \p NeedX is set, the user reads the X flag rather than C,
+// so only use flags from nodes that set X to the same value as C.
+static SDValue combineCarryThroughADD(SDValue CCR, bool NeedX) {
   if (CCR.getOpcode() == M68kISD::ADD) {
     if (isAllOnesConstant(CCR.getOperand(1))) {
       SDValue Carry = CCR.getOperand(0);
@@ -3528,10 +3430,16 @@ static SDValue combineCarryThroughADD(SDValue CCR) {
              (Carry.getOpcode() == ISD::AND &&
               isOneConstant(Carry.getOperand(1))))
         Carry = Carry.getOperand(0);
-      if (Carry.getOpcode() == M68kISD::SETCC ||
-          Carry.getOpcode() == M68kISD::SETCC_CARRY) {
-        if (Carry.getConstantOperandVal(0) == M68k::COND_CS)
-          return Carry.getOperand(1);
+      if (Carry.getOpcode() == M68kISD::SETCC) {
+        if (Carry.getConstantOperandVal(0) == M68k::COND_CS) {
+          SDValue Flags = Carry.getOperand(1);
+          if (NeedX && Flags.getOpcode() != M68kISD::ADD &&
+              Flags.getOpcode() != M68kISD::SUB &&
+              Flags.getOpcode() != M68kISD::ADDX &&
+              Flags.getOpcode() != M68kISD::SUBX)
+            return SDValue();
+          return Flags;
+        }
       }
     }
   }
@@ -3546,7 +3454,7 @@ static SDValue combineSetCCCCR(SDValue CCR, M68k::CondCode &CC,
                                SelectionDAG &DAG,
                                const M68kSubtarget &Subtarget) {
   if (CC == M68k::COND_CS)
-    if (SDValue Flags = combineCarryThroughADD(CCR))
+    if (SDValue Flags = combineCarryThroughADD(CCR, /*NeedX=*/false))
       return Flags;
 
   return SDValue();
@@ -3584,7 +3492,8 @@ static SDValue combineM68kBrCond(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue combineSUBX(SDNode *N, SelectionDAG &DAG) {
-  if (SDValue Flags = combineCarryThroughADD(N->getOperand(2))) {
+  if (SDValue Flags =
+          combineCarryThroughADD(N->getOperand(2), /*NeedX=*/true)) {
     MVT VT = N->getSimpleValueType(0);
     SDVTList VTs = DAG.getVTList(VT, MVT::i8);
     return DAG.getNode(M68kISD::SUBX, SDLoc(N), VTs, N->getOperand(0),
@@ -3597,7 +3506,8 @@ static SDValue combineSUBX(SDNode *N, SelectionDAG &DAG) {
 // Optimize RES, CCR = M68kISD::ADDX LHS, RHS, CCR
 static SDValue combineADDX(SDNode *N, SelectionDAG &DAG,
                            TargetLowering::DAGCombinerInfo &DCI) {
-  if (SDValue Flags = combineCarryThroughADD(N->getOperand(2))) {
+  if (SDValue Flags =
+          combineCarryThroughADD(N->getOperand(2), /*NeedX=*/true)) {
     MVT VT = N->getSimpleValueType(0);
     SDVTList VTs = DAG.getVTList(VT, MVT::i8);
     return DAG.getNode(M68kISD::ADDX, SDLoc(N), VTs, N->getOperand(0),

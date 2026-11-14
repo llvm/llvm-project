@@ -48,7 +48,7 @@ std::optional<InlineCostFeatures> getInliningCostFeaturesForCall(CallBase &CB) {
   auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
     return FAM.getResult<AssumptionAnalysis>(F);
   };
-  auto &TIR = FAM.getResult<TargetIRAnalysis>(*CB.getFunction());
+  auto &TIR = FAM.getResult<TargetIRAnalysis>(*CB.getCaller());
 
   return getInliningCostFeatures(CB, TIR, GetAssumptionCache);
 }

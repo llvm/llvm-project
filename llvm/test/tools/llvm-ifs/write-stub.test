@@ -113,7 +113,7 @@ Symbols:
 # CHECK-NEXT:   ]
 # CHECK-NEXT:   Address:
 # CHECK-NEXT:   Offset:
-# CHECK-NEXT:   Size:
+# CHECK-NEXT:   Size: 24
 # CHECK-NEXT:   Link: 0
 # CHECK-NEXT:   Info: 0
 # CHECK-NEXT:   AddressAlignment: 1
@@ -153,7 +153,7 @@ Symbols:
 # CHECK-NEXT:   Tag                Type   Name/Value
 # CHECK-NEXT:   0x[[DYNTABZ]]0000006 SYMTAB
 # CHECK-NEXT:   0x[[DYNTABZ]]0000005 STRTAB
-# CHECK-NEXT:   0x[[DYNTABZ]]000000A STRSZ
+# CHECK-NEXT:   0x[[DYNTABZ]]000000A STRSZ  24 (bytes)
 # CHECK-NEXT:   0x[[DYNTABZ]]0000001 NEEDED Shared library: [libc.so.6]
 # CHECK-NEXT:   0x[[DYNTABZ]]0000000 NULL
 # CHECK-NEXT: ]

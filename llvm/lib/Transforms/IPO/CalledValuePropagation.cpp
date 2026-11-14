@@ -17,28 +17,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/CalledValuePropagation.h"
+#include "IPOOptions.h"
 #include "llvm/Analysis/SparsePropagation.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "called-value-propagation"
-
-/// The maximum number of functions to track per lattice value. Once the number
-/// of functions a call site can possibly target exceeds this threshold, it's
-/// lattice value becomes overdefined. The number of possible lattice values is
-/// bounded by Ch(F, M), where F is the number of functions in the module and M
-/// is MaxFunctionsPerValue. As such, this value should be kept very small. We
-/// likely can't do anything useful for call sites with a large number of
-/// possible targets, anyway.
-static cl::opt<unsigned> MaxFunctionsPerValue(
-    "cvp-max-functions-per-value", cl::Hidden, cl::init(4),
-    cl::desc("The maximum number of functions to track per lattice value"));
 
 namespace {
 /// To enable interprocedural analysis, we assign LLVM values to the following
@@ -100,7 +89,7 @@ private:
   /// Holds functions indicating the possible targets of call sites. This set
   /// is empty for lattice values in the undefined, overdefined, and untracked
   /// states. The maximum size of the set is controlled by
-  /// MaxFunctionsPerValue. Since most LLVM values are expected to be in
+  /// -cvp-max-functions-per-value. Since most LLVM values are expected to be in
   /// uninteresting states (i.e., overdefined), CVPLatticeVal objects should be
   /// small and efficiently copyable.
   // FIXME: This could be a TinyPtrVector and/or merge with LatticeState.
@@ -114,11 +103,14 @@ private:
 /// that change as a result of executing instructions.
 class CVPLatticeFunc
     : public AbstractLatticeFunction<CVPLatticeKey, CVPLatticeVal> {
+  const IPOOptions &Opts;
+
 public:
-  CVPLatticeFunc()
+  explicit CVPLatticeFunc(const IPOOptions &Opts)
       : AbstractLatticeFunction(CVPLatticeVal(CVPLatticeVal::Undefined),
                                 CVPLatticeVal(CVPLatticeVal::Overdefined),
-                                CVPLatticeVal(CVPLatticeVal::Untracked)) {}
+                                CVPLatticeVal(CVPLatticeVal::Untracked)),
+        Opts(Opts) {}
 
   /// Compute and return a CVPLatticeVal for the given CVPLatticeKey.
   CVPLatticeVal ComputeLatticeVal(CVPLatticeKey Key) override {
@@ -159,7 +151,7 @@ public:
     std::set_union(X.getFunctions().begin(), X.getFunctions().end(),
                    Y.getFunctions().begin(), Y.getFunctions().end(),
                    std::back_inserter(Union), CVPLatticeVal::Compare{});
-    if (Union.size() > MaxFunctionsPerValue)
+    if (Union.size() > Opts.cvp_max_functions_per_value)
       return getOverdefinedVal();
     return CVPLatticeVal(std::move(Union));
   }
@@ -374,7 +366,7 @@ template <> struct LatticeKeyInfo<CVPLatticeKey> {
 
 static bool runCVP(Module &M) {
   // Our custom lattice function and generic sparse propagation solver.
-  CVPLatticeFunc Lattice;
+  CVPLatticeFunc Lattice(getIPOOptions(M));
   SparseSolver<CVPLatticeKey, CVPLatticeVal> Solver(&Lattice);
 
   // For each function in the module, if we can't track its arguments, let the

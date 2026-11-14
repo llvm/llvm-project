@@ -14,6 +14,7 @@
 #ifndef LLVM_FUZZMUTATE_FUZZERCLI_H
 #define LLVM_FUZZMUTATE_FUZZERCLI_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include <stddef.h>
@@ -22,14 +23,17 @@ namespace llvm {
 
 class StringRef;
 namespace cl {
+class LibraryOptions;
 class LibraryOptionsContext;
 }
 
 /// Parse cl::opts from a fuzz target commandline.
 ///
 /// This handles all arguments after -ignore_remaining_args=1 as cl::opts.
-LLVM_ABI void parseFuzzerCLOpts(cl::LibraryOptionsContext &LibraryOptions,
-                                int ArgC, char *ArgV[]);
+LLVM_ABI void
+parseFuzzerCLOpts(cl::LibraryOptionsContext &LibraryOptions,
+                  ArrayRef<const cl::LibraryOptions *> ToolOptions, int ArgC,
+                  char *ArgV[]);
 
 /// Handle backend options that are encoded in the executable name.
 ///

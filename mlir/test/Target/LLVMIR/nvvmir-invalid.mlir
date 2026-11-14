@@ -197,7 +197,7 @@ llvm.func @nvvm_cvt_float_to_f8x2_pzo_not_supported_ue8m0(%a : f32, %b : f32) {
 // -----
 
 llvm.func @nvvm_cvt_f16x2_to_f8x2_invalid_type(%src : vector<2xf16>) {
-  // expected-error @below {{Only 'f8E4M3FN' and 'f8E5M2' types are supported for conversions from f16x2 to f8x2.}}
+  // expected-error @below {{Only 'f8E5M3FNU', 'f8E4M3FN', and 'f8E5M2' types are supported for conversions from f16x2 to f8x2.}}
   %res = nvvm.convert.f16x2.to.f8x2 %src : vector<2xf16> -> i16 (f8E8M0FNU)
   llvm.return
 }
@@ -221,7 +221,7 @@ llvm.func @nvvm_cvt_f32x2_to_f4x2_invalid_type(%a : f32, %b : f32) {
 // -----
 
 llvm.func @nvvm_cvt_f8x2_to_f16x2_invalid_type(%src : vector<2xi8>) {
-  // expected-error @below {{op attribute 'srcType' failed to satisfy constraint: type attribute of f8E4M3FN type or f8E5M2 type}}
+  // expected-error @below {{op attribute 'srcType' failed to satisfy constraint: type attribute of f8E4M3FN type or f8E5M2 type or f8E5M3FNU type}}
   %res = nvvm.convert.f8x2.to.f16x2 %src : vector<2xi8> (f8E4M3) -> vector<2xf16>
   llvm.return
 }
@@ -229,7 +229,7 @@ llvm.func @nvvm_cvt_f8x2_to_f16x2_invalid_type(%src : vector<2xi8>) {
 // -----
 
 llvm.func @nvvm_cvt_f8x2_to_bf16x2_invalid_type(%src : vector<2xi8>) {
-  // expected-error @below {{op attribute 'srcType' failed to satisfy constraint: type attribute of f8E8M0FNU type or f8E4M3FN type or f8E5M2 type}}
+  // expected-error @below {{op attribute 'srcType' failed to satisfy constraint: type attribute of f8E8M0FNU type or f8E4M3FN type or f8E5M2 type or f8E5M3FNU type}}
   %res = nvvm.convert.f8x2.to.bf16x2 %src : vector<2xi8> (f8E4M3) -> vector<2xbf16>
   llvm.return
 }
@@ -563,8 +563,48 @@ llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
 // -----
 
 llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
-  // expected-error@+1 {{'nvvm.ldmatrix' op expected element type to be b8x16.b4x16_p64 or b8x16.b6x16_p32 for 8x16 matrix}}
+  // expected-error@+1 {{'nvvm.ldmatrix' op expected element type to be b8x16.b4x16_p64, b8x16.b6x16_p32 or s8.s4 for 8x16 matrix}}
   %l = nvvm.ldmatrix %arg0 , num = 1, layout = <row>, shape = <m = 8, n = 16>, element_type = <b8> : (!llvm.ptr<3>) -> i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
+  // expected-error@+1 {{'nvvm.ldmatrix' op expected num attribute to be 1, 2 or 4 for 8x16 matrix}}
+  %l = nvvm.ldmatrix %arg0 , num = 3, layout = <row>, shape = <m = 8, n = 16>, element_type = <s8.s4> : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32)>
+  llvm.return
+}
+
+// -----
+
+llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
+  // expected-error@+1 {{'nvvm.ldmatrix' op expected layout to be row for 8x16 matrix}}
+  %l = nvvm.ldmatrix %arg0 , num = 1, layout = <col>, shape = <m = 8, n = 16>, element_type = <s8.s4> : (!llvm.ptr<3>) -> i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
+  // expected-error@+1 {{'nvvm.ldmatrix' op expected destination type is a structure of 2 elements of type i32}}
+  %l = nvvm.ldmatrix %arg0 , num = 2, layout = <row>, shape = <m = 8, n = 16>, element_type = <s8.s4> : (!llvm.ptr<3>) -> i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
+  // expected-error@+1 {{'nvvm.ldmatrix' op expected element type to be b8, b8x16.b4x16_p64 or b8x16.b6x16_p32 for 16x16 matrix}}
+  %l = nvvm.ldmatrix %arg0 , num = 1, layout = <col>, shape = <m = 16, n = 16>, element_type = <s8.s4> : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
+  llvm.return
+}
+
+// -----
+
+llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
+  // expected-error@+1 {{'nvvm.ldmatrix' op expected element type to be b16 for 8x8 matrix}}
+  %l = nvvm.ldmatrix %arg0 , num = 1, layout = <row>, shape = <m = 8, n = 8>, element_type = <s8.s4> : (!llvm.ptr<3>) -> i32
   llvm.return
 }
 
@@ -676,3 +716,11 @@ llvm.func @nvvm_wmma_load_a_f64(%arg0: !llvm.ptr, %arg1 : i32) {
 // expected-error @+2 {{'nvvm.barrier' op cannot be translated to LLVM IR without an active insertion point}}
 // expected-error @+1 {{LLVM Translation failed for operation: nvvm.barrier}}
 nvvm.barrier
+
+// -----
+
+llvm.func @st_matrix_s8_s4(%arg0: !llvm.ptr<3>, %r1: i32) {
+  // expected-error@+1 {{'nvvm.stmatrix' op expected element type to be B16 for 8x8 matrix}}
+  nvvm.stmatrix %arg0, %r1 layout = <row>, shape = <m = 8, n = 8>, element_type = <s8.s4> : !llvm.ptr<3>, i32
+  llvm.return
+}

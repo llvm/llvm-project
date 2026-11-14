@@ -4,13 +4,6 @@
 define i1 @foo(<vscale x 16 x i8> %x, i64 %y) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a2, a1, 4
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    bltu a0, a2, .LBB0_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    addi sp, sp, -80
 ; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
@@ -19,20 +12,24 @@ define i1 @foo(<vscale x 16 x i8> %x, i64 %y) {
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    addi s0, sp, 80
 ; CHECK-NEXT:    .cfi_def_cfa s0, 0
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 4
-; CHECK-NEXT:    sub sp, sp, a2
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 4
+; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    andi sp, sp, -64
-; CHECK-NEXT:    vsetvli a2, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vmerge.vim v24, v16, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    addi a2, sp, 64
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    add a1, a2, a1
-; CHECK-NEXT:    vs8r.v v24, (a1)
+; CHECK-NEXT:    slli a3, a1, 3
+; CHECK-NEXT:    add a3, a2, a3
+; CHECK-NEXT:    vs8r.v v24, (a3)
 ; CHECK-NEXT:    vmerge.vim v8, v16, 1, v0
+; CHECK-NEXT:    slli a1, a1, 4
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    add a0, a2, a0
 ; CHECK-NEXT:    vs8r.v v8, (a2)
 ; CHECK-NEXT:    lbu a0, 0(a0)

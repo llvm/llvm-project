@@ -38,9 +38,9 @@ define zeroext i8 @loadG() {
 
 ; v8pic32: loadG
 ; v8pic32: _GLOBAL_OFFSET_TABLE_
-; v8pic32: sethi %hi(G), %[[R1:[gilo][0-7]]]
-; v8pic32: add %[[R1]], %lo(G), %[[Goffs:[gilo][0-7]]]
-; v8pic32: ld [%[[GOT:[gilo][0-7]]]+%[[Goffs]]], %[[Gaddr:[gilo][0-7]]]
+; v8pic32: sethi %gdop_hix22(G), %[[R1:[gilo][0-7]]]
+; v8pic32: xor %[[R1]], %gdop_lox10(G), %[[Goffs:[gilo][0-7]]]
+; v8pic32: ld [%[[GOT:[gilo][0-7]]]+%[[Goffs]]], %[[Gaddr:[gilo][0-7]]], %gdop(G)
 ; v8pic32: ldub [%[[Gaddr]]], %i0
 ; v8pic32: ret
 ; v8pic32: restore
@@ -48,9 +48,9 @@ define zeroext i8 @loadG() {
 
 ; v9pic32: loadG
 ; v9pic32: _GLOBAL_OFFSET_TABLE_
-; v9pic32: sethi %hi(G), %[[R1:[gilo][0-7]]]
-; v9pic32: add %[[R1]], %lo(G), %[[Goffs:[gilo][0-7]]]
-; v9pic32: ldx [%[[GOT:[gilo][0-7]]]+%[[Goffs]]], %[[Gaddr:[gilo][0-7]]]
+; v9pic32: sethi %gdop_hix22(G), %[[R1:[gilo][0-7]]]
+; v9pic32: xor %[[R1]], %gdop_lox10(G), %[[Goffs:[gilo][0-7]]]
+; v9pic32: ldx [%[[GOT:[gilo][0-7]]]+%[[Goffs]]], %[[Gaddr:[gilo][0-7]]], %gdop(G)
 ; v9pic32: ldub [%[[Gaddr]]], %i0
 ; v9pic32: ret
 ; v9pic32: restore

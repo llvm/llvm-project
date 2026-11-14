@@ -16,7 +16,6 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Object/OffloadBinary.h"
 #include "llvm/Object/OffloadBundle.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"

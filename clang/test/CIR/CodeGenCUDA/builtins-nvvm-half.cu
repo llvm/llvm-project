@@ -39,97 +39,97 @@ extern "C" __device__ f16x2 test_ex2_approx_f16x2(f16x2 a0) {
 }
 
 // CIR-LABEL: @test_fma_rn_f16
-// CIR: cir.call_llvm_intrinsic "nvvm.fma.rn.f16" {{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
+// CIR: cir.call_llvm_intrinsic "nvvm.fma" {{.*}} : (!cir.f16, !cir.f16, !cir.f16, !s32i) -> !cir.f16
 // LLVM-LABEL: @test_fma_rn_f16(
-// LLVM: call{{.*}} half @llvm.nvvm.fma.rn.f16(half %{{.*}}, half %{{.*}}, half %{{.*}})
+// LLVM: call{{.*}} half @llvm.nvvm.fma.f16(half %{{.*}}, half %{{.*}}, half %{{.*}}, /* rnd=rn */ i32 1)
 extern "C" __device__ _Float16 test_fma_rn_f16(_Float16 a0, _Float16 a1, _Float16 a2) {
   return __nvvm_fma_rn_f16(a0, a1, a2);
 }
 
 // CIR-LABEL: @test_fma_rn_f16x2
-// CIR: cir.call_llvm_intrinsic "nvvm.fma.rn.f16x2" {{.*}} : (!cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>) -> !cir.vector<2 x !cir.f16>
+// CIR: cir.call_llvm_intrinsic "nvvm.fma" {{.*}} : (!cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>, !s32i) -> !cir.vector<2 x !cir.f16>
 // LLVM-LABEL: @test_fma_rn_f16x2(
-// LLVM: call{{.*}} <2 x half> @llvm.nvvm.fma.rn.f16x2(<2 x half> %{{.*}}, <2 x half> %{{.*}}, <2 x half> %{{.*}})
+// LLVM: call{{.*}} <2 x half> @llvm.nvvm.fma.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}}, <2 x half> %{{.*}}, /* rnd=rn */ i32 1)
 extern "C" __device__ f16x2 test_fma_rn_f16x2(f16x2 a0, f16x2 a1, f16x2 a2) {
   return __nvvm_fma_rn_f16x2(a0, a1, a2);
 }
 
 // CIR-LABEL: @test_fma_rn_ftz_f16
-// CIR: cir.call_llvm_intrinsic "nvvm.fma.rn.ftz.f16" {{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
+// CIR: cir.call_llvm_intrinsic "nvvm.fma.ftz" {{.*}} : (!cir.f16, !cir.f16, !cir.f16, !s32i) -> !cir.f16
 // LLVM-LABEL: @test_fma_rn_ftz_f16(
-// LLVM: call{{.*}} half @llvm.nvvm.fma.rn.ftz.f16(half %{{.*}}, half %{{.*}}, half %{{.*}})
+// LLVM: call{{.*}} half @llvm.nvvm.fma.ftz.f16(half %{{.*}}, half %{{.*}}, half %{{.*}}, /* rnd=rn */ i32 1)
 extern "C" __device__ _Float16 test_fma_rn_ftz_f16(_Float16 a0, _Float16 a1, _Float16 a2) {
   return __nvvm_fma_rn_ftz_f16(a0, a1, a2);
 }
 
 // CIR-LABEL: @test_fma_rn_ftz_f16x2
-// CIR: cir.call_llvm_intrinsic "nvvm.fma.rn.ftz.f16x2" {{.*}} : (!cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>) -> !cir.vector<2 x !cir.f16>
+// CIR: cir.call_llvm_intrinsic "nvvm.fma.ftz" {{.*}} : (!cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>, !s32i) -> !cir.vector<2 x !cir.f16>
 // LLVM-LABEL: @test_fma_rn_ftz_f16x2(
-// LLVM: call{{.*}} <2 x half> @llvm.nvvm.fma.rn.ftz.f16x2(<2 x half> %{{.*}}, <2 x half> %{{.*}}, <2 x half> %{{.*}})
+// LLVM: call{{.*}} <2 x half> @llvm.nvvm.fma.ftz.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}}, <2 x half> %{{.*}}, /* rnd=rn */ i32 1)
 extern "C" __device__ f16x2 test_fma_rn_ftz_f16x2(f16x2 a0, f16x2 a1, f16x2 a2) {
   return __nvvm_fma_rn_ftz_f16x2(a0, a1, a2);
 }
 
 // CIR-LABEL: @test_fma_rn_ftz_relu_f16
-// CIR: cir.call_llvm_intrinsic "nvvm.fma.rn.ftz.relu.f16" {{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
+// CIR: cir.call_llvm_intrinsic "nvvm.fma.ftz.relu" {{.*}} : (!cir.f16, !cir.f16, !cir.f16, !s32i) -> !cir.f16
 // LLVM-LABEL: @test_fma_rn_ftz_relu_f16(
-// LLVM: call{{.*}} half @llvm.nvvm.fma.rn.ftz.relu.f16(half %{{.*}}, half %{{.*}}, half %{{.*}})
+// LLVM: call{{.*}} half @llvm.nvvm.fma.ftz.relu.f16(half %{{.*}}, half %{{.*}}, half %{{.*}}, /* rnd=rn */ i32 1)
 extern "C" __device__ _Float16 test_fma_rn_ftz_relu_f16(_Float16 a0, _Float16 a1, _Float16 a2) {
   return __nvvm_fma_rn_ftz_relu_f16(a0, a1, a2);
 }
 
 // CIR-LABEL: @test_fma_rn_ftz_relu_f16x2
-// CIR: cir.call_llvm_intrinsic "nvvm.fma.rn.ftz.relu.f16x2" {{.*}} : (!cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>) -> !cir.vector<2 x !cir.f16>
+// CIR: cir.call_llvm_intrinsic "nvvm.fma.ftz.relu" {{.*}} : (!cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>, !s32i) -> !cir.vector<2 x !cir.f16>
 // LLVM-LABEL: @test_fma_rn_ftz_relu_f16x2(
-// LLVM: call{{.*}} <2 x half> @llvm.nvvm.fma.rn.ftz.relu.f16x2(<2 x half> %{{.*}}, <2 x half> %{{.*}}, <2 x half> %{{.*}})
+// LLVM: call{{.*}} <2 x half> @llvm.nvvm.fma.ftz.relu.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}}, <2 x half> %{{.*}}, /* rnd=rn */ i32 1)
 extern "C" __device__ f16x2 test_fma_rn_ftz_relu_f16x2(f16x2 a0, f16x2 a1, f16x2 a2) {
   return __nvvm_fma_rn_ftz_relu_f16x2(a0, a1, a2);
 }
 
 // CIR-LABEL: @test_fma_rn_ftz_sat_f16
-// CIR: cir.call_llvm_intrinsic "nvvm.fma.rn.ftz.sat.f16" {{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
+// CIR: cir.call_llvm_intrinsic "nvvm.fma.ftz.sat" {{.*}} : (!cir.f16, !cir.f16, !cir.f16, !s32i) -> !cir.f16
 // LLVM-LABEL: @test_fma_rn_ftz_sat_f16(
-// LLVM: call{{.*}} half @llvm.nvvm.fma.rn.ftz.sat.f16(half %{{.*}}, half %{{.*}}, half %{{.*}})
+// LLVM: call{{.*}} half @llvm.nvvm.fma.ftz.sat.f16(half %{{.*}}, half %{{.*}}, half %{{.*}}, /* rnd=rn */ i32 1)
 extern "C" __device__ _Float16 test_fma_rn_ftz_sat_f16(_Float16 a0, _Float16 a1, _Float16 a2) {
   return __nvvm_fma_rn_ftz_sat_f16(a0, a1, a2);
 }
 
 // CIR-LABEL: @test_fma_rn_ftz_sat_f16x2
-// CIR: cir.call_llvm_intrinsic "nvvm.fma.rn.ftz.sat.f16x2" {{.*}} : (!cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>) -> !cir.vector<2 x !cir.f16>
+// CIR: cir.call_llvm_intrinsic "nvvm.fma.ftz.sat" {{.*}} : (!cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>, !s32i) -> !cir.vector<2 x !cir.f16>
 // LLVM-LABEL: @test_fma_rn_ftz_sat_f16x2(
-// LLVM: call{{.*}} <2 x half> @llvm.nvvm.fma.rn.ftz.sat.f16x2(<2 x half> %{{.*}}, <2 x half> %{{.*}}, <2 x half> %{{.*}})
+// LLVM: call{{.*}} <2 x half> @llvm.nvvm.fma.ftz.sat.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}}, <2 x half> %{{.*}}, /* rnd=rn */ i32 1)
 extern "C" __device__ f16x2 test_fma_rn_ftz_sat_f16x2(f16x2 a0, f16x2 a1, f16x2 a2) {
   return __nvvm_fma_rn_ftz_sat_f16x2(a0, a1, a2);
 }
 
 // CIR-LABEL: @test_fma_rn_relu_f16
-// CIR: cir.call_llvm_intrinsic "nvvm.fma.rn.relu.f16" {{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
+// CIR: cir.call_llvm_intrinsic "nvvm.fma.relu" {{.*}} : (!cir.f16, !cir.f16, !cir.f16, !s32i) -> !cir.f16
 // LLVM-LABEL: @test_fma_rn_relu_f16(
-// LLVM: call{{.*}} half @llvm.nvvm.fma.rn.relu.f16(half %{{.*}}, half %{{.*}}, half %{{.*}})
+// LLVM: call{{.*}} half @llvm.nvvm.fma.relu.f16(half %{{.*}}, half %{{.*}}, half %{{.*}}, /* rnd=rn */ i32 1)
 extern "C" __device__ _Float16 test_fma_rn_relu_f16(_Float16 a0, _Float16 a1, _Float16 a2) {
   return __nvvm_fma_rn_relu_f16(a0, a1, a2);
 }
 
 // CIR-LABEL: @test_fma_rn_relu_f16x2
-// CIR: cir.call_llvm_intrinsic "nvvm.fma.rn.relu.f16x2" {{.*}} : (!cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>) -> !cir.vector<2 x !cir.f16>
+// CIR: cir.call_llvm_intrinsic "nvvm.fma.relu" {{.*}} : (!cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>, !s32i) -> !cir.vector<2 x !cir.f16>
 // LLVM-LABEL: @test_fma_rn_relu_f16x2(
-// LLVM: call{{.*}} <2 x half> @llvm.nvvm.fma.rn.relu.f16x2(<2 x half> %{{.*}}, <2 x half> %{{.*}}, <2 x half> %{{.*}})
+// LLVM: call{{.*}} <2 x half> @llvm.nvvm.fma.relu.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}}, <2 x half> %{{.*}}, /* rnd=rn */ i32 1)
 extern "C" __device__ f16x2 test_fma_rn_relu_f16x2(f16x2 a0, f16x2 a1, f16x2 a2) {
   return __nvvm_fma_rn_relu_f16x2(a0, a1, a2);
 }
 
 // CIR-LABEL: @test_fma_rn_sat_f16
-// CIR: cir.call_llvm_intrinsic "nvvm.fma.rn.sat.f16" {{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
+// CIR: cir.call_llvm_intrinsic "nvvm.fma.sat" {{.*}} : (!cir.f16, !cir.f16, !cir.f16, !s32i) -> !cir.f16
 // LLVM-LABEL: @test_fma_rn_sat_f16(
-// LLVM: call{{.*}} half @llvm.nvvm.fma.rn.sat.f16(half %{{.*}}, half %{{.*}}, half %{{.*}})
+// LLVM: call{{.*}} half @llvm.nvvm.fma.sat.f16(half %{{.*}}, half %{{.*}}, half %{{.*}}, /* rnd=rn */ i32 1)
 extern "C" __device__ _Float16 test_fma_rn_sat_f16(_Float16 a0, _Float16 a1, _Float16 a2) {
   return __nvvm_fma_rn_sat_f16(a0, a1, a2);
 }
 
 // CIR-LABEL: @test_fma_rn_sat_f16x2
-// CIR: cir.call_llvm_intrinsic "nvvm.fma.rn.sat.f16x2" {{.*}} : (!cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>) -> !cir.vector<2 x !cir.f16>
+// CIR: cir.call_llvm_intrinsic "nvvm.fma.sat" {{.*}} : (!cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>, !cir.vector<2 x !cir.f16>, !s32i) -> !cir.vector<2 x !cir.f16>
 // LLVM-LABEL: @test_fma_rn_sat_f16x2(
-// LLVM: call{{.*}} <2 x half> @llvm.nvvm.fma.rn.sat.f16x2(<2 x half> %{{.*}}, <2 x half> %{{.*}}, <2 x half> %{{.*}})
+// LLVM: call{{.*}} <2 x half> @llvm.nvvm.fma.sat.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}}, <2 x half> %{{.*}}, /* rnd=rn */ i32 1)
 extern "C" __device__ f16x2 test_fma_rn_sat_f16x2(f16x2 a0, f16x2 a1, f16x2 a2) {
   return __nvvm_fma_rn_sat_f16x2(a0, a1, a2);
 }

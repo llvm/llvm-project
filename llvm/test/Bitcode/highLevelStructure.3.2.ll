@@ -74,13 +74,13 @@ entry:
 }
 
 ; Named metadata Test
-; CHECK: !name = !{!0, !1, !2}
+; CHECK: !name = !{!1, !2, !3}
 !name = !{!0, !1, !2}
-; CHECK: !0 = !{!"zero"}
+; CHECK: !1 = !{!"zero"}
 !0 = metadata !{metadata !"zero"}
-; CHECK: !1 = !{!"one"}
+; CHECK: !2 = !{!"one"}
 !1 = metadata !{metadata !"one"}
-; CHECK: !2 = !{!"two"}
+; CHECK: !3 = !{!"two"}
 !2 = metadata !{metadata !"two"}
 
 

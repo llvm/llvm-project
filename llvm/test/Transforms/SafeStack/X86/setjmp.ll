@@ -14,7 +14,7 @@
 define i32 @foo() nounwind uwtable safestack {
 entry:
   ; CHECK: %[[SP:.*]] = load ptr, ptr @__safestack_unsafe_stack_ptr
-  ; CHECK: %[[STATICTOP:.*]] = getelementptr i8, ptr %[[SP]], i32 -16
+  ; CHECK: %[[STATICTOP:.*]] = getelementptr i8, ptr %[[SP]], {{i32|i64}} -16
   %retval = alloca i32, align 4
   %x = alloca i32, align 4
   store i32 0, ptr %retval

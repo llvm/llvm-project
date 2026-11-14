@@ -144,6 +144,9 @@ namespace llvm {
                         unsigned numArgs) const;
     SDValue LowerF128Compare(SDValue LHS, SDValue RHS, unsigned &SPCC,
                              const SDLoc &DL, SelectionDAG &DAG) const;
+    SDValue LowerF128StrictCompare(SDValue &Chain, SDValue LHS, SDValue RHS,
+                                   unsigned &SPCC, bool IsSignaling,
+                                   const SDLoc &DL, SelectionDAG &DAG) const;
 
     SDValue LowerBSWAP(SDValue Op, SelectionDAG &DAG) const;
 

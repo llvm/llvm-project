@@ -7,9 +7,6 @@ add_mlir_conversion_library(MLIRArithToSPIRV
   DEPENDS
   MLIRConversionPassIncGen
 
-  LINK_COMPONENTS
-  Core
-
   LINK_LIBS PUBLIC
   MLIRArithDialect
   MLIRFuncToSPIRV

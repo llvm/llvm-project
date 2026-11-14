@@ -18,14 +18,7 @@
 #include "mlir/Dialect/SCF/IR/SCFDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/RegionKindInterface.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/DestinationStyleOpInterface.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Interfaces/MemorySlotInterfaces.h"
-#include "mlir/Interfaces/ParallelCombiningOpInterface.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 
 namespace mlir {
@@ -113,6 +106,12 @@ SmallVector<Value> replaceAndCastForOpIterArg(RewriterBase &rewriter,
                                               OpOperand &operand,
                                               Value replacement,
                                               const ValueTypeCastFnTy &castFn);
+
+/// A simple, conservative analysis to determine if the loop is shape
+/// preserving. I.e., the arg-th yielded value has the same shape as the
+/// corresponding region iter_arg: it is the iter_arg, or derives from it
+/// through tied results of destination-style ops and of shape-preserving loops.
+bool isShapePreserving(ForOp forOp, int64_t arg);
 
 /// Helper function to compute the difference between two values. This is used
 /// by the loop implementations to compute the trip count.

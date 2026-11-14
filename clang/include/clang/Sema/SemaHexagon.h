@@ -23,6 +23,10 @@ public:
 
   bool CheckHexagonBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckHexagonBuiltinArgument(unsigned BuiltinID, CallExpr *TheCall);
+
+  /// Returns true if \p T is an HLX vector or vector pair type, or an array
+  /// of them, and HLX is enabled.
+  bool isHLXVectorType(QualType T) const;
 };
 } // namespace clang
 

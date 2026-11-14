@@ -43,9 +43,8 @@ define void @caller_no_musttail_indirect() nounwind {
 ;
 ; LA64-LABEL: caller_no_musttail_indirect:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a0, $zero, 0
-; LA64-NEXT:    lu32i.d $a0, -65536
-; LA64-NEXT:    lu52i.d $a1, $a0, 1023
+; LA64-NEXT:    lu12i.w $a0, 16383
+; LA64-NEXT:    slli.d $a1, $a0, 36
 ; LA64-NEXT:    move $a0, $zero
 ; LA64-NEXT:    pcaddu18i $t8, %call36(callee_musttail_indirect)
 ; LA64-NEXT:    jr $t8

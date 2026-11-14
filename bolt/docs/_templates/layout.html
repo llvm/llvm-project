@@ -1,0 +1,15 @@
+{% extends "!layout.html" %}
+
+{% if prev %}
+  {% set prev = dict(prev, title='Home' if prev.link == pathto(root_doc) else prev.title) %}
+{% endif %}
+{% if next %}
+  {% set next = dict(next, title='Home' if next.link == pathto(root_doc) else next.title) %}
+{% endif %}
+
+{% block content %}
+<div class="bolt-layout">
+  {% include "sidebar.html" %}
+  <div class="bolt-page{% if pagename == root_doc %} bolt-home{% endif %}">{{ super() }}</div>
+</div>
+{% endblock %}

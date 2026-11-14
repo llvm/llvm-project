@@ -350,5 +350,9 @@ let Attributes = [NoThrow, RequireDeclaration], Header = "intrin.h", Languages =
 	def _InterlockedDecrement64_acq 		: ARMNoPrefixTargetLibBuiltin<"long long int (long long int volatile *)">;
 	def _InterlockedDecrement64_nf 			: ARMNoPrefixTargetLibBuiltin<"long long int (long long int volatile *)">;
 	def _InterlockedDecrement64_rel 		: ARMNoPrefixTargetLibBuiltin<"long long int (long long int volatile *)">;
+
+	def _ReadWriteBarrier 					: ARMNoPrefixTargetLibBuiltin<"void ()">;
+	def _ReadBarrier 						: ARMNoPrefixTargetLibBuiltin<"void ()">;
+	def _WriteBarrier 						: ARMNoPrefixTargetLibBuiltin<"void ()">;
 }
 

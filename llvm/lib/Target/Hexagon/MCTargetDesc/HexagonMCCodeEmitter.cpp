@@ -742,7 +742,10 @@ HexagonMCCodeEmitter::getMachineOpValue(MCInst const &MI, MCOperand const &MO,
     }
   assert((OperandNumber != ~0U) && "Operand not found");
 
-  if (HexagonMCInstrInfo::isNewValue(MCII, MI) &&
+  // HLX uses the producing register number instead of the offset in the
+  // encoding.
+  if (!HexagonMCInstrInfo::isHLX(MCII, MI) &&
+      HexagonMCInstrInfo::isNewValue(MCII, MI) &&
       &MO == &HexagonMCInstrInfo::getNewValueOperand(MCII, MI)) {
     // Calculate the new value distance to the associated producer
     unsigned SOffset = 0;

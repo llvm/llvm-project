@@ -41,4 +41,14 @@ the sections that follow.
 
 ### tree
 
-{program}`diagtool` tree \[*diagnostic-group*\]
+{program}`diagtool` tree \[*options*\] \[*diagnostic-group*\]
+
+:::{option} --internal
+Print individual diagnostic names in addition to diagnostic groups.
+:::
+
+:::{option} --color [=<always|auto|never>]
+Specify whether to use color in output. Defaults to `auto`, which detects
+whether standard output supports color. Specifying `--color` alone is
+equivalent to `--color=always`.
+:::

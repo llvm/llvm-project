@@ -996,3 +996,31 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    // The custom syntax creates an empty block for the type converter region.
+    // expected-error @below {{expected exactly one op in default type converter region}}
+    transform.apply_conversion_patterns to %arg0 {
+    } with type_converter {
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// The type converter region may have no blocks at all, which is only
+// expressible in the generic form. This used to crash the verifier.
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    // expected-error @below {{expected exactly one op in default type converter region}}
+    "transform.apply_conversion_patterns"(%arg0) ({
+    }, {
+    }) : (!transform.any_op) -> ()
+    transform.yield
+  }
+}

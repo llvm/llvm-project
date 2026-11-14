@@ -84,7 +84,6 @@
 ---
 name:            merge_inl_and_non_inl
 alignment:       16
-tracksRegLiveness: true
 tracksDebugUserValues: true
 frameInfo:
   stackSize:       8

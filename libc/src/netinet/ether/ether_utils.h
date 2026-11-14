@@ -17,10 +17,13 @@
 #include "hdr/stdint_proxy.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/struct_ether_addr.h"
+#include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/span.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/net/hex.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace net {
@@ -42,6 +45,28 @@ LIBC_INLINE char *ether_ntoa_r(const struct ether_addr &addr,
     buf[pos++] = i < 5 ? ':' : '\0';
   }
   return buf.data();
+}
+
+/// Parses \p str as an Ethernet address in the colon-separated hexadecimal
+/// notation ("xx:xx:xx:xx:xx:xx"), where each octet consists of one or two
+/// hexadecimal digits. Like musl (but unlike glibc), trailing characters are
+/// not allowed. Returns nullopt if the string is not a valid address.
+LIBC_INLINE cpp::optional<struct ether_addr> ether_aton(cpp::string_view str) {
+  struct ether_addr addr;
+  for (size_t i = 0; i < 6; ++i) {
+    if (i > 0) {
+      if (!str.starts_with(':'))
+        return cpp::nullopt;
+      str.remove_prefix(1);
+    }
+    cpp::optional<uint8_t> octet = consume_hex<uint8_t>(str);
+    if (!octet)
+      return cpp::nullopt;
+    addr.ether_addr_octet[i] = *octet;
+  }
+  if (!str.empty())
+    return cpp::nullopt;
+  return addr;
 }
 
 } // namespace net

@@ -6,12 +6,6 @@
 name:            load_i64_zilsd
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo:
@@ -42,12 +36,6 @@ body:             |
 name:            store_i64_zilsd
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo:

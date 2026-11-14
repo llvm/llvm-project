@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 -triple amdgpu-- -emit-llvm-bc -o /dev/null \
 // RUN:   -mllvm -print-pipeline-passes \
 // RUN: %s 2>&1 | FileCheck --check-prefixes=DEFAULT %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu-- -emit-llvm-bc -o /dev/null   -mllvm -print-pipeline-passes %s 2>&1 | FileCheck --check-prefixes=DEFAULT %s %}
 
 // DEFAULT-NOT: LinkInModulesPass
 
@@ -12,6 +13,7 @@
 // RUN:   -mllvm -print-pipeline-passes \
 // RUN:   -mlink-builtin-bitcode-postopt \
 // RUN: %s 2>&1 | FileCheck --check-prefixes=OPTION-POSITIVE %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu-- -emit-llvm-bc -o /dev/null   -mllvm -print-pipeline-passes   -mlink-builtin-bitcode-postopt %s 2>&1 | FileCheck --check-prefixes=OPTION-POSITIVE %s %}
 
 // OPTION-POSITIVE: LinkInModulesPass,assign-guid
 
@@ -19,6 +21,7 @@
 // RUN:   -mllvm -print-pipeline-passes \
 // RUN:   -mno-link-builtin-bitcode-postopt \
 // RUN: %s 2>&1 | FileCheck --check-prefixes=OPTION-NEGATIVE %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu-- -emit-llvm-bc -o /dev/null   -mllvm -print-pipeline-passes   -mno-link-builtin-bitcode-postopt %s 2>&1 | FileCheck --check-prefixes=OPTION-NEGATIVE %s %}
 
 // OPTION-NEGATIVE-NOT: LinkInModulesPass
 
@@ -27,5 +30,6 @@
 // RUN:   -mlink-builtin-bitcode-postopt \
 // RUN:   -mno-link-builtin-bitcode-postopt \
 // RUN: %s 2>&1 | FileCheck --check-prefixes=OPTION-POSITIVE-NEGATIVE %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu-- -emit-llvm-bc -o /dev/null   -mllvm -print-pipeline-passes   -mlink-builtin-bitcode-postopt   -mno-link-builtin-bitcode-postopt %s 2>&1 | FileCheck --check-prefixes=OPTION-POSITIVE-NEGATIVE %s %}
 
 // OPTION-POSITIVE-NEGATIVE-NOT: LinkInModulesPass

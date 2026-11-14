@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
 ; RUN: llvm-as %s -data-layout=P200 -o - | llvm-dis - -o - | FileCheck %s -check-prefix PROGAS200
 
 

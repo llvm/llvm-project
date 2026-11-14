@@ -858,30 +858,30 @@ entry:
 define amdgpu_kernel void @maxnum_v4f16(
 ; SI-LABEL: maxnum_v4f16:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x9
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xd
-; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; SI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0xd
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_load_dwordx2 s[4:5], s[10:11], 0x0
-; SI-NEXT:    s_load_dwordx2 s[6:7], s[0:1], 0x0
-; SI-NEXT:    s_mov_b32 s1, s9
-; SI-NEXT:    s_mov_b32 s0, s8
+; SI-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
+; SI-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x0
+; SI-NEXT:    s_mov_b32 s5, s1
+; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_lshr_b32 s9, s5, 16
-; SI-NEXT:    s_lshr_b32 s10, s7, 16
+; SI-NEXT:    s_lshr_b32 s1, s3, 16
+; SI-NEXT:    s_lshr_b32 s10, s9, 16
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, s10
-; SI-NEXT:    v_cvt_f32_f16_e32 v1, s9
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, s7
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, s5
-; SI-NEXT:    s_lshr_b32 s8, s4, 16
-; SI-NEXT:    s_lshr_b32 s5, s6, 16
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, s1
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, s9
+; SI-NEXT:    v_cvt_f32_f16_e32 v3, s3
+; SI-NEXT:    s_lshr_b32 s0, s2, 16
+; SI-NEXT:    s_lshr_b32 s1, s8, 16
 ; SI-NEXT:    v_max_f32_e32 v0, v1, v0
 ; SI-NEXT:    v_max_f32_e32 v1, v3, v2
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, s5
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, s8
-; SI-NEXT:    v_cvt_f32_f16_e32 v4, s6
-; SI-NEXT:    v_cvt_f32_f16_e32 v5, s4
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, s1
+; SI-NEXT:    v_cvt_f32_f16_e32 v3, s0
+; SI-NEXT:    v_cvt_f32_f16_e32 v4, s8
+; SI-NEXT:    v_cvt_f32_f16_e32 v5, s2
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    v_max_f32_e32 v2, v3, v2
 ; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
@@ -892,40 +892,40 @@ define amdgpu_kernel void @maxnum_v4f16(
 ; SI-NEXT:    v_or_b32_e32 v1, v1, v0
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v2
 ; SI-NEXT:    v_or_b32_e32 v0, v3, v0
-; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: maxnum_v4f16:
 ; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x34
-; VI-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x24
-; VI-NEXT:    s_mov_b32 s3, 0xf000
-; VI-NEXT:    s_mov_b32 s2, -1
+; VI-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x34
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; VI-NEXT:    s_mov_b32 s7, 0xf000
+; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x0
-; VI-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
-; VI-NEXT:    s_mov_b32 s0, s4
-; VI-NEXT:    s_mov_b32 s1, s5
+; VI-NEXT:    s_load_dwordx2 s[8:9], s[8:9], 0x0
+; VI-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
+; VI-NEXT:    s_mov_b32 s4, s0
+; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_max_f16_e64 v0, s9, s9
-; VI-NEXT:    v_max_f16_e64 v1, s7, s7
-; VI-NEXT:    s_lshr_b32 s4, s9, 16
+; VI-NEXT:    v_max_f16_e64 v1, s3, s3
+; VI-NEXT:    s_lshr_b32 s0, s9, 16
 ; VI-NEXT:    v_max_f16_e32 v0, v1, v0
-; VI-NEXT:    v_max_f16_e64 v1, s4, s4
-; VI-NEXT:    s_lshr_b32 s4, s7, 16
-; VI-NEXT:    v_max_f16_e64 v2, s4, s4
+; VI-NEXT:    v_max_f16_e64 v1, s0, s0
+; VI-NEXT:    s_lshr_b32 s0, s3, 16
+; VI-NEXT:    v_max_f16_e64 v2, s0, s0
 ; VI-NEXT:    v_max_f16_sdwa v1, v2, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_e32 v1, v0, v1
 ; VI-NEXT:    v_max_f16_e64 v0, s8, s8
-; VI-NEXT:    v_max_f16_e64 v2, s6, s6
-; VI-NEXT:    s_lshr_b32 s4, s8, 16
+; VI-NEXT:    v_max_f16_e64 v2, s2, s2
+; VI-NEXT:    s_lshr_b32 s0, s8, 16
 ; VI-NEXT:    v_max_f16_e32 v0, v2, v0
-; VI-NEXT:    v_max_f16_e64 v2, s4, s4
-; VI-NEXT:    s_lshr_b32 s4, s6, 16
-; VI-NEXT:    v_max_f16_e64 v3, s4, s4
+; VI-NEXT:    v_max_f16_e64 v2, s0, s0
+; VI-NEXT:    s_lshr_b32 s0, s2, 16
+; VI-NEXT:    v_max_f16_e64 v3, s0, s0
 ; VI-NEXT:    v_max_f16_sdwa v2, v3, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v2
-; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: maxnum_v4f16:
@@ -1032,29 +1032,29 @@ define amdgpu_kernel void @fmax_v4f16_imm_a(
 ;
 ; VI-LABEL: fmax_v4f16_imm_a:
 ; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x4400
-; VI-NEXT:    s_mov_b32 s3, 0xf000
-; VI-NEXT:    s_mov_b32 s2, -1
+; VI-NEXT:    s_mov_b32 s7, 0xf000
+; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
-; VI-NEXT:    s_mov_b32 s0, s4
-; VI-NEXT:    s_mov_b32 s1, s5
+; VI-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
+; VI-NEXT:    s_mov_b32 s4, s0
+; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_lshr_b32 s4, s7, 16
-; VI-NEXT:    v_max_f16_e64 v1, s7, s7
-; VI-NEXT:    v_max_f16_e64 v3, s4, s4
-; VI-NEXT:    v_max_f16_e64 v2, s6, s6
+; VI-NEXT:    s_lshr_b32 s0, s3, 16
+; VI-NEXT:    v_max_f16_e64 v1, s3, s3
+; VI-NEXT:    v_max_f16_e64 v3, s0, s0
+; VI-NEXT:    v_max_f16_e64 v2, s2, s2
 ; VI-NEXT:    v_max_f16_e32 v1, 0x4200, v1
 ; VI-NEXT:    v_max_f16_sdwa v0, v3, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-NEXT:    s_lshr_b32 s4, s6, 16
+; VI-NEXT:    s_lshr_b32 s0, s2, 16
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v0
 ; VI-NEXT:    v_max_f16_e32 v0, 0x4800, v2
-; VI-NEXT:    v_max_f16_e64 v2, s4, s4
+; VI-NEXT:    v_max_f16_e64 v2, s0, s0
 ; VI-NEXT:    v_mov_b32_e32 v3, 0x4000
 ; VI-NEXT:    v_max_f16_sdwa v2, v2, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v2
-; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: fmax_v4f16_imm_a:

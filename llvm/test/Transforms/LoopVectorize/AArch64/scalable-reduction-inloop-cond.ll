@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=loop-vectorize -tail-folding-policy=dont-fold-tail -mtriple aarch64-unknown-linux-gnu \
 ; RUN:   -mattr=+sve -force-vector-interleave=1 -force-vector-width=4 -prefer-inloop-reductions -S | FileCheck %s
 
-define float @cond_fadd(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %cond, i64 %N){
+define float @cond_fadd(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %cond, i64 %N) vscale_range(1,16) {
 ; CHECK-LABEL: @cond_fadd(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -82,7 +82,7 @@ for.end:
   ret float %res
 }
 
-define float @cond_cmp_sel(ptr noalias %a, ptr noalias %cond, i64 %N) {
+define float @cond_cmp_sel(ptr noalias %a, ptr noalias %cond, i64 %N) vscale_range(1,16) {
 ; CHECK-LABEL: @cond_cmp_sel(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()

@@ -16,7 +16,6 @@
 name:            test
 # CHECK-LABEL: name: test
 alignment:       16
-tracksRegLiveness: true
 tracksDebugUserValues: true
 liveins:
   - { reg: '$rdi' }

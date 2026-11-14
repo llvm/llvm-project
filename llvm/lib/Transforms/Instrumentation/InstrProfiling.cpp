@@ -1143,7 +1143,7 @@ Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
 
   // Add Bias to Bitmaps and put it before the intrinsic.
   IRBuilder<> Builder(I);
-  return Builder.CreatePtrAdd(Bitmaps, BiasLI, "profbm_addr");
+  return Builder.CreatePtrAddWithSExtOrTrunc(Bitmaps, BiasLI, "profbm_addr");
 }
 
 void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
@@ -1351,8 +1351,8 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
 
   // Add byte offset to section base byte address.
   // %4 = getelementptr inbounds i8, ptr @__profbm_test, i32 %1
-  auto *BitmapByteAddr =
-      Builder.CreateInBoundsPtrAdd(BitmapAddr, BitmapByteOffset);
+  auto *BitmapByteAddr = Builder.CreatePtrAddWithZExtOrTrunc(
+      BitmapAddr, BitmapByteOffset, "", GEPNoWrapFlags::inBounds());
 
   // Calculate bit offset into bitmap byte by using div8 remainder (AND ~8)
   //  %5 = and i32 %mcdc.temp, 7

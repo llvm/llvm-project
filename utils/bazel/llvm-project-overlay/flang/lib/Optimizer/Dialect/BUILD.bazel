@@ -57,11 +57,13 @@ cc_library(
         "//mlir:InliningUtils",
         "//mlir:LLVMDialect",
         "//mlir:LLVMToLLVMIRTranslation",
+        "//mlir:MemRefDialect",
         "//mlir:OpenACCDialect",
         "//mlir:OpenACCUtils",
         "//mlir:OpenMPDialect",
         "//mlir:OpenMPToLLVMIRTranslation",
         "//mlir:Support",
         "//mlir:ToLLVMIRTranslation",
+        "//mlir:ViewLikeInterface",
     ],
 )

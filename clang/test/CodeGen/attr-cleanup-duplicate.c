@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -o - -triple x86_64-unknown-linux %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm -o - -triple x86_64-unknown-linux %s | FileCheck %s %}
 
 // Tests for issue #207785.
 

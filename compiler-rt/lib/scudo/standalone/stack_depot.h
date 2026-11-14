@@ -23,14 +23,14 @@ class MurMur2HashBuilder {
 
 public:
   explicit MurMur2HashBuilder(u32 Init = 0) { H = Seed ^ Init; }
-  void add(u32 K) {
+  __attribute__((no_sanitize("unsigned-integer-overflow"))) void add(u32 K) {
     K *= M;
     K ^= K >> R;
     K *= M;
     H *= M;
     H ^= K;
   }
-  u32 get() {
+  __attribute__((no_sanitize("unsigned-integer-overflow"))) u32 get() {
     u32 X = H;
     X ^= X >> 13;
     X *= M;

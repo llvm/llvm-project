@@ -1,4 +1,4 @@
-# RUN: llc -mtriple thumbv6m-arm-none-eabi -run-pass=machine-cse -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple thumbv6m-arm-none-eabi -run-pass=machine-cse -o - %s | FileCheck %s
 # RUN: llc -mtriple thumbv6m-arm-none-eabi -passes=machine-cse -o - %s | FileCheck %s
 
 --- |
@@ -19,7 +19,6 @@
 ...
 ---
 name:            funca
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$r1', virtual-reg: '%1' }
@@ -43,7 +42,7 @@ body:             |
     %3:tgpr, dead $cpsr = tADDrr %0, %2, 14, $noreg
     %4:tgpr = tLDRpci %const.1, 14, $noreg :: (load (s32) from constant-pool)
     %5:tgpr, $cpsr = tADDrr %0, %2, 14, $noreg
-    %6:tgpr, $cpsr = tADC %1, killed %4, 14, $noreg, implicit $cpsr
+    %6:tgpr, $cpsr = tADC %1, %4, 14, $noreg, implicit $cpsr
     tBcc %bb.2, 3, $cpsr
 
   bb.1.entry:
@@ -62,7 +61,6 @@ body:             |
 ...
 ---
 name:            funcb
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$r1', virtual-reg: '%1' }
@@ -86,7 +84,7 @@ body:             |
     %3:tgpr, dead $cpsr = tADDrr %0, %2, 14, $noreg
     %4:tgpr = tLDRpci %const.1, 14, $noreg :: (load (s32) from constant-pool)
     %5:tgpr, dead $cpsr = tADDrr %0, %2, 14, $noreg
-    %6:tgpr, $cpsr = tADDrr %1, killed %4, 14, $noreg
+    %6:tgpr, $cpsr = tADDrr %1, %4, 14, $noreg
     tBcc %bb.2, 3, $cpsr
 
   bb.1:

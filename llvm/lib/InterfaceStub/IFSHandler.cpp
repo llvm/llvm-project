@@ -217,7 +217,6 @@ Error ifs::writeIFSToOutputStream(raw_ostream &OS, const IFSStub &Stub) {
     CopyStub->Target.ArchString =
         std::string(ELF::convertEMachineToArchName(*Stub.Target.Arch));
   }
-  IFSTarget Target = Stub.Target;
 
   if (CopyStub->Target.Triple ||
       (!CopyStub->Target.ArchString && !CopyStub->Target.Endianness &&

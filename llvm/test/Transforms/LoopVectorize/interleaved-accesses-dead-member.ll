@@ -19,7 +19,7 @@ define void @dead_member_order(ptr noalias %src, ptr noalias %dst1, ptr noalias 
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [3 x i8], ptr [[SRC]], i32 [[INDEX]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP2]], i32 -1
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP2]], i64 -1
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <12 x i8>, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <12 x i8> [[WIDE_VEC]], <12 x i8> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <12 x i8> [[WIDE_VEC]], <12 x i8> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
@@ -85,7 +85,7 @@ define void @dead_member_metadata(ptr noalias %src, ptr noalias %dst, i32 %N) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [2 x i8], ptr [[SRC]], i32 [[INDEX]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP2]], i32 -1
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP2]], i64 -1
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i8>, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i8> [[WIDE_VEC]], <8 x i8> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i8> [[WIDE_VEC]], <8 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>

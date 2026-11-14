@@ -36,11 +36,13 @@ func.func @base_case(%i : index, %j : index, %M : memref<?x?x?x8xi8>) -> vector<
 
 // CHECK-LABEL:       @with_3d_vector
 // CHECK-SAME:          %[[I:.+]]: index, %[[J:.+]]: index, %[[M:.+]]:
+// CHECK-DAG:           %[[C16:.+]] = arith.constant 16 : index
 // CHECK-DAG:           %[[PAD:.+]] = arith.constant 123 : i8
 // CHECK-DAG:           %[[COLLAPSED:.+]] = memref.collapse_shape %[[M]]
 // CHECK-SAME{LITERAL}:   [[0], [1, 2, 3]]
 // CHECK-SAME:            : memref<?x?x2x8xi8> into memref<?x?xi8>
-// CHECK-NEXT:          %[[T0:.+]] = vector.transfer_read %[[COLLAPSED]][%[[I]], %[[J]]], %[[PAD]] {in_bounds = [true]}
+// CHECK-NEXT:          %[[IDX:.+]] = arith.muli %[[J]], %[[C16]] : index
+// CHECK-NEXT:          %[[T0:.+]] = vector.transfer_read %[[COLLAPSED]][%[[I]], %[[IDX]]], %[[PAD]] {in_bounds = [true]}
 // CHECK-SAME:            : memref<?x?xi8>, vector<[64]xi8>
 // CHECK-NEXT:          %[[T1:.+]] = vector.shape_cast %[[T0]] : vector<[64]xi8> to vector<[4]x2x8xi8>
 // CHECK-NEXT:          return %[[T1]] : vector<[4]x2x8xi8>

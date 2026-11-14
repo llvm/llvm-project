@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include <optional>
 
 using namespace llvm;
@@ -35,6 +36,8 @@ ARCTargetMachine::ARCTargetMachine(const Target &T, const Triple &TT,
                                    CodeGenOptLevel OL, bool JIT)
     : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options, getRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
+      CLOpts(cl::LibraryOptionsContext::get<ARCOptions>(
+          Options.MCOptions.LibraryOptions)),
       TLOF(std::make_unique<TargetLoweringObjectFileELF>()),
       Subtarget(TT, std::string(CPU), std::string(FS), *this) {
   initAsmInfo();
@@ -93,6 +96,7 @@ MachineFunctionInfo *ARCTargetMachine::createMachineFunctionInfo(
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARCTarget() {
   RegisterTargetMachine<ARCTargetMachine> X(getTheARCTarget());
+  static opt::RegisterLibraryOptions<ARCOptions> O;
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeARCAsmPrinterPass(PR);
   initializeARCDAGToDAGISelLegacyPass(PR);

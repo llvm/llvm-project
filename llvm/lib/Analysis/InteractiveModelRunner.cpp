@@ -9,19 +9,14 @@
 // A runner that communicates with an external agent via 2 file descriptors.
 //===----------------------------------------------------------------------===//
 #include "llvm/Analysis/InteractiveModelRunner.h"
+#include "AnalysisOptions.h"
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/Analysis/TensorSpec.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
-
-static cl::opt<bool> DebugReply(
-    "interactive-model-runner-echo-reply", cl::init(false), cl::Hidden,
-    cl::desc("The InteractiveModelRunner will echo back to stderr "
-             "the data received from the host (for debugging purposes)."));
 
 InteractiveModelRunner::InteractiveModelRunner(
     LLVMContext &Ctx, const std::vector<TensorSpec> &Inputs,
@@ -75,7 +70,7 @@ void *InteractiveModelRunner::evaluateUntyped() {
     }
     InsPoint += *ReadOrErr;
   }
-  if (DebugReply)
+  if (getAnalysisOptions(Ctx).interactive_model_runner_echo_reply)
     dbgs() << OutputSpec.name() << ": "
            << tensorValueToString(OutputBuffer.data(), OutputSpec) << "\n";
   return OutputBuffer.data();

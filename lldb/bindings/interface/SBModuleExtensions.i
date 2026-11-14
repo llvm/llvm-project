@@ -235,6 +235,7 @@ STRING_EXTENSION_OUTSIDE(SBModule)
         addr_size = property(GetAddressByteSize, None, doc='''A read only property that returns the size in bytes of an address for this module.''')
         triple = property(GetTriple, None, doc='''A read only property that returns the target triple (arch-vendor-os) for this module.''')
         num_symbols = property(GetNumSymbols, None, doc='''A read only property that returns number of symbols in the module symbol table as an integer.''')
+        symtab_state = property(GetSymtabState, None, doc='''A read only property that returns lldb.SymtabState flags (lldb.eSymtabStateLoadedFromCache, lldb.eSymtabStateParsedFromObjectFile, lldb.eSymtabStateSavedToCache, lldb.eSymtabStateSymbolFileAddedSymbols) describing the module's symbol table state.''')
         num_sections = property(GetNumSections, None, doc='''A read only property that returns number of sections in the module as an integer.''')
 
     %}

@@ -163,7 +163,7 @@ class ObjectContainerClangOffloadBundleTest : public ::testing::Test {
 } // namespace
 
 TEST_F(ObjectContainerClangOffloadBundleTest, FindsAndLoadsDeviceImage) {
-  constexpr llvm::StringLiteral BundleID = "hipv4-amdgpu-amd-amdhsa--gfx942";
+  constexpr llvm::StringLiteral BundleID = "hipv4-amdgcn-amd-amdhsa--gfx942";
   uint64_t entry_offset;
   uint64_t entry_size;
   auto bundled_file = MakeELFWithBundle(BundleID, entry_offset, entry_size);
@@ -222,7 +222,7 @@ TEST_F(ObjectContainerClangOffloadBundleTest,
                                     gpu_data->GetByteSize());
 
   std::vector<uint8_t> bundle =
-      MakeBundle("hipv4-amdgpu-amd-amdhsa--gfx942", gpu_bytes);
+      MakeBundle("hipv4-amdgcn-amd-amdhsa--gfx942", gpu_bytes);
   auto bundle_buffer = llvm::MemoryBuffer::getMemBufferCopy(llvm::StringRef(
       reinterpret_cast<const char *>(bundle.data()), bundle.size()));
   auto compressed = llvm::object::CompressedOffloadBundle::compress(
@@ -280,10 +280,10 @@ TEST_F(ObjectContainerClangOffloadBundleTest,
   DataExtractorSP gfx942_data = gfx942_file->moduleSpec().GetExtractor();
   std::array<BundleInput, 3> inputs = {{
       {"host-x86_64-unknown-linux-gnu", {}},
-      {"hipv4-amdgpu-amd-amdhsa--gfx908",
+      {"hipv4-amdgcn-amd-amdhsa--gfx908",
        {gfx908_data->GetDataStart(),
         static_cast<size_t>(gfx908_data->GetByteSize())}},
-      {"hipv4-amdgpu-amd-amdhsa--gfx942",
+      {"hipv4-amdgcn-amd-amdhsa--gfx942",
        {gfx942_data->GetDataStart(),
         static_cast<size_t>(gfx942_data->GetByteSize())}},
   }};

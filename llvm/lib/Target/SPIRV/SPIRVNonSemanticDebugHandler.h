@@ -38,6 +38,7 @@
 namespace llvm {
 
 class GlobalVariable;
+struct SPIRVOptions;
 class MachineDominatorTree;
 class SPIRVSubtarget;
 
@@ -60,6 +61,8 @@ class SPIRVSubtarget;
 ///   being printed, and the DebugDeclare and DebugValue anchored on it.
 /// - endFunctionImpl() resets per-function state.
 class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
+  const SPIRVOptions &CLOpts;
+
   static constexpr unsigned NSSet = static_cast<unsigned>(
       SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100);
 
@@ -73,6 +76,10 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   int64_t DwarfVersion = 0;
 
   SmallVector<const DIType *> DebugTypes;
+
+  // Compile unit whose enums list names each enum. DIBuilder gives a file-scope
+  // enum a null scope, so this list is the only record of its unit.
+  DenseMap<const DICompositeType *, const DICompileUnit *> EnumCompileUnits;
 
   // NonSemantic debug instruction result id per emitted scope.
   DenseMap<const DIScope *, MCRegister> DebugScopeRegs;
@@ -133,8 +140,20 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
     }
   };
 
+  // Used to track which scopes are in progress, and which operands are used by
+  // a forward references. Operands must be later defined even if the scope
+  // fails to emit.
+  struct InProgressScope {
+    MCRegister Id;
+    bool ForwardReferenced = false;
+  };
+
   // Types and scopes whose instruction is currently being built.
-  SmallPtrSet<const DIScope *, 8> ScopesInProgress;
+  SmallDenseMap<const DIScope *, InProgressScope, 8> ScopesInProgress;
+
+  // True when -spirv-debug-scope-forward-refs is set and prepareModuleOutput
+  // saw SPV_KHR_relaxed_extended_instruction.
+  bool HasRelaxedExtInst = false;
 
   // Types and scopes that are not supported.
   SmallPtrSet<const DIScope *, 8> FailedScopes;
@@ -167,8 +186,8 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // so declares referencing it are skipped rather than described wrongly.
   DenseMap<const DIExpression *, MCRegister> DebugExpressionRegs;
 
-  // Distinct DILexicalBlock and DINamespace scopes, parent-before-child
-  // order, collected in beginModule() for DebugLexicalBlock emission.
+  // Distinct DILexicalBlock, DINamespace, and DILexicalBlockFile scopes,
+  // parent-before-child order, collected in beginModule().
   SetVector<const DIScope *> LexicalBlocks;
 
   // DebugInlinedAt result id per DILocation used as an inlined-at chain link.
@@ -381,10 +400,16 @@ private:
                                 bool UseEmptyPathIfNullScope = false);
   MCRegister emitOpConstantI32(uint32_t Value, MCRegister I32TypeReg,
                                SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Mark in-progress scopes named by \p Operands. Return true when any
+  /// operand is such an id. A marked id needs a definition if that scope fails.
+  bool markForwardReferencedOperands(ArrayRef<MCRegister> Operands);
+
   MCRegister emitExtInst(SPIRV::NonSemanticExtInst::NonSemanticExtInst Opcode,
                          MCRegister VoidTypeReg, MCRegister ExtInstSetReg,
                          ArrayRef<MCRegister> Operands,
-                         SPIRV::ModuleAnalysisInfo &MAI);
+                         SPIRV::ModuleAnalysisInfo &MAI,
+                         std::optional<MCRegister> ResultReg = std::nullopt);
 
   /// Return OpTypeVoid id for this module (lazy lookup / emit, then cache).
   MCRegister getOrEmitOpTypeVoidReg(SPIRV::ModuleAnalysisInfo &MAI);
@@ -402,10 +427,13 @@ private:
 
   /// Return the id for the type or scope \p S, emitting it and the types and
   /// scopes it names first. One already in \c DebugScopeRegs is Emitted. A null
-  /// \p S or one in \c FailedScopes is Unsupported. One already in
-  /// \c ScopesInProgress is the back edge of a cycle and is InProgress; nothing
-  /// is emitted for that edge. An Unsupported result is recorded in
-  /// \c FailedScopes, an InProgress one is not.
+  /// \p S or one in \c FailedScopes is Unsupported. Entering a scope reserves
+  /// its result id. A back edge (\p S already in \c ScopesInProgress) returns
+  /// that id when \c HasRelaxedExtInst is set, and InProgress otherwise. If
+  /// emission fails after an emitted instruction used that id, it is defined as
+  /// DebugInfoNone. An id that nothing named stays undefined. An Unsupported
+  /// result is recorded in \c FailedScopes; an InProgress one is not, so a
+  /// later walk can retry it.
   EmitResult<MCRegister> getOrCreateDebugScope(const DIScope *S);
 
   /// Build the instruction for \p S. Only \c getOrCreateDebugScope calls this
@@ -500,14 +528,15 @@ private:
   /// survived codegen and in what form, and because an expression synthesized
   /// during lowering never appears in the IR at all. Must be called from
   /// module-scope emission, which is where the resulting \c DebugExpression
-  /// instructions have to be emitted; every \c MachineFunction is still
-  /// reachable at that point through \c MachineModuleInfo.
+  /// instructions have to be emitted. The debug values come from
+  /// \c SPIRVModuleAnalysis, which sees every \c MachineFunction.
   ///
   /// Deliberately independent of what the consumers can currently emit, so
   /// that adding an instruction that needs an expression (\c DebugValue) needs
   /// no change here. The cost is a \c DebugExpression that nothing references
   /// yet, for a debug value no instruction is emitted for.
-  void collectDebugExpressions(SetVector<const DIExpression *> &Out) const;
+  void collectDebugExpressions(const SPIRV::ModuleAnalysisInfo &MAI,
+                               SetVector<const DIExpression *> &Out) const;
 
   /// Emit one \c DebugOperation for \p Op, reusing a cached result id when the
   /// same opcode and arguments were already emitted.
@@ -651,6 +680,21 @@ private:
                          MCRegister I32TypeReg, MCRegister ExtInstSetReg,
                          SPIRV::ModuleAnalysisInfo &MAI);
 
+  /// Build \c DebugTypeEnum for the enumeration type \p ET. Operands: Name,
+  /// Underlying Type, Source, Line, Column, Parent, Size, Flags, then a Value
+  /// and Name pair per enumerator. Uses \c DebugInfoNone for Underlying Type
+  /// when \p ET has no base type, and drops an enumerator whose value does not
+  /// fit in a 32-bit integer.
+  ///
+  /// \returns An Emitted result when the operands are ready. An Unsupported
+  /// result, building nothing, if the size is 0 or does not fit in 32 bits.
+  /// If the base or Parent fail, it returns code for the one that failed.
+  EmitResult<PreparedScope> emitDebugTypeEnum(const DICompositeType *ET,
+                                              MCRegister VoidTypeReg,
+                                              MCRegister I32TypeReg,
+                                              MCRegister ExtInstSetReg,
+                                              SPIRV::ModuleAnalysisInfo &MAI);
+
   /// Build \c DebugTypedef for the typedef derived type \p TD (a \c
   /// DIDerivedType with \c DW_TAG_typedef). Operands: Name, Base Type, Source,
   /// Line, Column, Parent. Parent is the enclosing type when \c TD->getScope()
@@ -702,10 +746,14 @@ private:
   /// Map \p Scope to the NonSemantic debug id used as a \c Parent operand.
   ///
   /// A \c DIType, \c DILexicalBlock, \c DINamespace, or \c DISubprogram scope
-  /// is created through \c getOrCreateDebugScope. When \p Scope is null, a
-  /// \c DIFile, or another scope without a dedicated debug instruction, falls
-  /// back to \p FallbackCU or the first module \c DebugCompilationUnit recorded
-  /// in \c DebugScopeRegs; no such compile unit is Unsupported.
+  /// is created through \c getOrCreateDebugScope. When
+  /// \c -spirv-debug-lexical-block-discriminator-scope is enabled, a
+  /// \c DILexicalBlockFile is also created this way, becoming a
+  /// \c DebugLexicalBlockDiscriminator; otherwise it is unwrapped to its
+  /// enclosing scope first. When \p Scope is null, a \c DIFile, or another
+  /// scope without a dedicated debug instruction, it falls back to
+  /// \p FallbackCU or the first module \c DebugCompilationUnit recorded in
+  /// \c DebugScopeRegs; no such compile unit is Unsupported.
   EmitResult<MCRegister>
   resolveScope(const DIScope *Scope, const DICompileUnit *FallbackCU = nullptr);
 
@@ -720,6 +768,13 @@ private:
   emitDebugLexicalBlock(const DIScope *S, MCRegister VoidTypeReg,
                         MCRegister I32TypeReg, MCRegister ExtInstSetReg,
                         SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Build \c DebugLexicalBlockDiscriminator for \p LBF.
+  /// Operands are Source, Discriminator, and Parent (\c LBF->getScope()).
+  EmitResult<PreparedScope> emitDebugLexicalBlockDiscriminator(
+      const DILexicalBlockFile *LBF, MCRegister VoidTypeReg,
+      MCRegister I32TypeReg, MCRegister ExtInstSetReg,
+      SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Return a cached \c DebugInlinedAt id for \p IA, or emit one (recursing
   /// into \c IA->getInlinedAt() first for the optional Inlined operand, so

@@ -4,14 +4,14 @@
 # RUN: llvm-mc --filetype=obj --triple=loongarch32-unknown-elf %t/a.s -o %t/a.o
 
 # RUN: ld.lld %t/a.o --section-start=.text=0x20010 --section-start=.sec.foo=0x21020 -o %t/exe1
-# RUN: llvm-objdump --no-show-raw-insn -d %t/exe1 | FileCheck --match-full-lines %s --check-prefix=EXE1
+# RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d %t/exe1 | FileCheck --match-full-lines %s --check-prefix=EXE1
 ## hi20 = target - pc >> 12 = 0x21020 - 0x20010 >> 12 = 1
 ## lo12 = target - pc & (1 << 12) - 1 = 0x21020 - 0x20010 & 0xfff = 16
 # EXE1:      20010: pcaddu12i $t0, 1
 # EXE1-NEXT: 20014: jirl $zero, $t0, 16
 
 # RUN: ld.lld %t/a.o --section-start=.text=0x20010 --section-start=.sec.foo=0x21820 -o %t/exe2
-# RUN: llvm-objdump --no-show-raw-insn -d %t/exe2 | FileCheck --match-full-lines %s --check-prefix=EXE2
+# RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d %t/exe2 | FileCheck --match-full-lines %s --check-prefix=EXE2
 ## hi20 = target - pc >> 12 = 0x21820 - 0x20010 >> 12 = 1
 ## lo12 = target - pc & (1 << 12) - 1 = 0x21820 - 0x20010 & 0xfff = 2064
 # EXE2:      20010: pcaddu12i $t0, 1
@@ -19,7 +19,7 @@
 
 # RUN: ld.lld %t/a.o -shared -T %t/a.t -o %t/a.so
 # RUN: llvm-readelf -x .got.plt %t/a.so | FileCheck --check-prefix=GOTPLT %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t/a.so | FileCheck --check-prefix=SO %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/a.so | FileCheck --check-prefix=SO %s
 ## PLT should be present in this case.
 # SO:    Disassembly of section .plt:
 # SO:    <.plt>:

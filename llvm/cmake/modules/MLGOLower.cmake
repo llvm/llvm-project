@@ -1,6 +1,6 @@
 # Lower MLGO models to C++ headers via the MLIR-based pipeline.
 #
-# Each entry in ${models} has the form "cli-flag,path/to/model.{mlir,inc},type".
+# Each entry in ${models} has the form "cli-flag,path/to/model.{mlir,bc,inc},type".
 # In addition to user-provided models, ${test_inc_model} is unconditionally
 # registered as "_test_inc", and when LLVM_HAVE_MLIR_LOWERING is enabled,
 # ${test_mlir_model} is registered as "_test_mlir".
@@ -36,7 +36,7 @@ function(mlgo_lower_models models mlir_opt mlir_translate target_type
 
   foreach(model_info IN LISTS models)
     # Parse comma-separated fields (from the LLVM_MLGO_MODELS flag)
-    # cli-flag,path/to/model.mlir,type
+    # cli-flag,path/to/model.{mlir,bc,inc},type
     string(REPLACE "," ";" model_fields "${model_info}")
     list(GET model_fields 0 cli_flag)
     list(GET model_fields 1 model_path)
@@ -63,7 +63,7 @@ function(mlgo_lower_models models mlir_opt mlir_translate target_type
         DEPENDS ${model_path}
         VERBATIM
       )
-    elseif (model_ext STREQUAL ".mlir")
+    elseif (model_ext STREQUAL ".mlir" OR model_ext STREQUAL ".bc")
       if (mlir_opt STREQUAL "" OR mlir_translate STREQUAL "")
         message(FATAL_ERROR "LLVM_MLGO_MLIR_OPT and LLVM_MLGO_MLIR_TRANSLATE must be specified to lower '${model_path}'.")
       endif()
@@ -122,7 +122,7 @@ function(mlgo_lower_models models mlir_opt mlir_translate target_type
 
       set_source_files_properties(${emitc_mlir} PROPERTIES GENERATED 1)
     else()
-      message(FATAL_ERROR "Unsupported MLGO model file extension '${model_ext}' for '${model_path}'. Expected '.mlir' or '.inc'.")
+      message(FATAL_ERROR "Unsupported MLGO model file extension '${model_ext}' for '${model_path}'. Expected '.mlir', '.bc' or '.inc'.")
     endif()
 
     # Set properties so CMake knows these are generated during the build

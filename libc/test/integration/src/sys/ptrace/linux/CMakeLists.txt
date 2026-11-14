@@ -15,5 +15,4 @@ add_integration_test(
     libc.src.signal.kill
     libc.src.sys.wait.waitpid
     libc.src.stdlib.exit
-    libc.src.errno.errno
 )

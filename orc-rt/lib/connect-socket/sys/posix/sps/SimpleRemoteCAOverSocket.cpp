@@ -110,7 +110,7 @@ private:
   void connect(BootstrapInfo BI) override;
   void disconnect() override;
   void callController(OnControllerCallReturn OnComplete,
-                      orc_rt_ControllerHandlerTag T,
+                      orc_rt_ControllerHandlerTag *T,
                       WrapperFunctionBuffer ArgBytes) override;
   void sendWrapperResult(WrapperFunctionBuffer ResultBytes,
                          uint64_t CallId) override;
@@ -314,7 +314,7 @@ void SocketSimpleRemoteCA::disconnect() {
 }
 
 void SocketSimpleRemoteCA::callController(OnControllerCallReturn OnComplete,
-                                          orc_rt_ControllerHandlerTag T,
+                                          orc_rt_ControllerHandlerTag *T,
                                           WrapperFunctionBuffer ArgBytes) {
   {
     std::scoped_lock<std::mutex> Lock(M);

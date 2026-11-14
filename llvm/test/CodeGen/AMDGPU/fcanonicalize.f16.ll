@@ -2906,8 +2906,7 @@ define <4 x half> @v_test_canonicalize_reg_undef_undef_undef_v4f16(half %val) #1
 ; GFX9-LABEL: v_test_canonicalize_reg_undef_undef_undef_v4f16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX9-NEXT:    v_pack_b32_f16 v0, v0, 0
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7e007e00
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2934,10 +2933,8 @@ define <4 x half> @v_test_canonicalize_reg_undef_undef_undef_v4f16(half %val) #1
 ; GFX11-FAKE16-LABEL: v_test_canonicalize_reg_undef_undef_undef_v4f16:
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX11-FAKE16-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v1, 0x7e007e00
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, 0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %vec = insertelement <4 x half> poison, half %val, i32 0
   %canonicalized = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> %vec)
@@ -3016,9 +3013,8 @@ define <4 x half> @v_test_canonicalize_reg_undef_reg_reg_v4f16(half %val0, half 
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
 ; GFX9-NEXT:    v_perm_b32 v1, v2, v1, s4
-; GFX9-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX9-NEXT:    v_pk_max_f16 v1, v1, v1
-; GFX9-NEXT:    v_pack_b32_f16 v0, v0, 0
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; CI-LABEL: v_test_canonicalize_reg_undef_reg_reg_v4f16:
@@ -3050,10 +3046,9 @@ define <4 x half> @v_test_canonicalize_reg_undef_reg_reg_v4f16(half %val0, half 
 ; GFX11-FAKE16-LABEL: v_test_canonicalize_reg_undef_reg_reg_v4f16:
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX11-FAKE16-NEXT:    v_perm_b32 v1, v2, v1, 0x5040100
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, 0
+; GFX11-FAKE16-NEXT:    v_pk_max_f16 v0, v0, v0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-FAKE16-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = insertelement <4 x half> poison, half %val0, i32 0

@@ -15,7 +15,6 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
@@ -91,7 +90,7 @@ static Value createInBoundsCond(RewriterBase &b,
 ///      memref.cast %A: memref<A...> to compatibleMemRefType
 ///      scf.yield %view : compatibleMemRefType, index, index
 ///    } else {
-///      // slow path, not in-bounds vector.transfer or linalg.copy.
+///      // slow path, not in-bounds vector.transfer or memref.copy.
 ///      memref.cast %alloc: memref<B...> to compatibleMemRefType
 ///      scf.yield %4 : compatibleMemRefType, index, index
 //     }
@@ -234,17 +233,19 @@ createSubViewIntersection(RewriterBase &b, VectorTransferOpInterface xferOp,
 ///      %view = memref.cast %A: memref<A...> to compatibleMemRefType
 ///      scf.yield %view, ... : compatibleMemRefType, index, index
 ///    } else {
-///      %2 = linalg.fill(%pad, %alloc)
-///      %3 = subview %view [...][...][...]
-///      %4 = subview %alloc [0, 0] [...] [...]
-///      linalg.copy(%3, %4)
-///      %5 = memref.cast %alloc: memref<B...> to compatibleMemRefType
-///      scf.yield %5, ... : compatibleMemRefType, index, index
+///      %2 = vector.broadcast %pad : elt to vector<...>
+///      %3 = vector.type_cast %alloc : memref<B...> to memref<vector<...>>
+///      memref.store %2, %3[] : memref<vector<...>>
+///      %4 = subview %view [...][...][...]
+///      %5 = subview %alloc [0, 0] [...] [...]
+///      memref.copy %4, %5
+///      %6 = memref.cast %alloc: memref<B...> to compatibleMemRefType
+///      scf.yield %6, ... : compatibleMemRefType, index, index
 ///   }
 /// ```
 /// Return the produced scf::IfOp.
 static scf::IfOp
-createFullPartialLinalgCopy(RewriterBase &b, vector::TransferReadOp xferOp,
+createFullPartialMemRefCopy(RewriterBase &b, vector::TransferReadOp xferOp,
                             TypeRange returnTypes, Value inBoundsCond,
                             MemRefType compatibleMemRefType, Value alloc) {
   Location loc = xferOp.getLoc();
@@ -259,8 +260,14 @@ createFullPartialLinalgCopy(RewriterBase &b, vector::TransferReadOp xferOp,
         scf::YieldOp::create(b, loc, viewAndIndices);
       },
       [&](OpBuilder &b, Location loc) {
-        linalg::FillOp::create(b, loc, ValueRange{xferOp.getPadding()},
-                               ValueRange{alloc});
+        // Fill the whole buffer with the padding value. The buffer holds
+        // exactly one vector, so a single vector store covers it.
+        Value padding = vector::BroadcastOp::create(
+            b, loc, xferOp.getVectorType(), xferOp.getPadding());
+        memref::StoreOp::create(
+            b, loc, padding,
+            vector::TypeCastOp::create(
+                b, loc, MemRefType::get({}, padding.getType()), alloc));
         // Take partial subview of memref which guarantees no dimension
         // overflows.
         IRRewriter rewriter(b);
@@ -380,10 +387,10 @@ getLocationToWriteFullVec(RewriterBase &b, vector::TransferWriteOp xferOp,
 ///    scf.if (%notInBounds) {
 ///      %3 = subview %alloc [...][...][...]
 ///      %4 = subview %view [0, 0][...][...]
-///      linalg.copy(%3, %4)
+///      memref.copy %3, %4
 ///   }
 /// ```
-static void createFullPartialLinalgCopy(RewriterBase &b,
+static void createFullPartialMemRefCopy(RewriterBase &b,
                                         vector::TransferWriteOp xferOp,
                                         Value inBoundsCond, Value alloc) {
   Location loc = xferOp.getLoc();
@@ -469,7 +476,7 @@ static Operation *getAutomaticAllocationScope(Operation *op) {
 ///      memref.cast %A: memref<A...> to compatibleMemRefType
 ///      scf.yield %view : compatibleMemRefType, index, index
 ///    } else {
-///      // slowpath, not in-bounds vector.transfer or linalg.copy.
+///      // slowpath, not in-bounds vector.transfer or memref.copy.
 ///      memref.cast %alloc: memref<B...> to compatibleMemRefType
 ///      scf.yield %4 : compatibleMemRefType, index, index
 //     }
@@ -498,7 +505,7 @@ static Operation *getAutomaticAllocationScope(Operation *op) {
 ///    %0 = vector.transfer_write %arg, %1#0[%1#1, %1#2] {in_bounds = [true ...
 ///                                                                    true]}
 ///    scf.if (%notInBounds) {
-///      // slowpath: not in-bounds vector.transfer or linalg.copy.
+///      // slowpath: not in-bounds vector.transfer or memref.copy.
 ///    }
 /// ```
 /// where `alloc` is a top of the function alloca'ed buffer of one vector.
@@ -581,7 +588,7 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
             ? createFullPartialVectorTransferRead(b, xferReadOp, returnTypes,
                                                   inBoundsCond,
                                                   compatibleMemRefType, alloc)
-            : createFullPartialLinalgCopy(b, xferReadOp, returnTypes,
+            : createFullPartialMemRefCopy(b, xferReadOp, returnTypes,
                                           inBoundsCond, compatibleMemRefType,
                                           alloc);
     if (ifOp)
@@ -619,7 +626,7 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
   if (options.vectorTransferSplit == VectorTransferSplit::VectorTransfer)
     createFullPartialVectorTransferWrite(b, xferWriteOp, inBoundsCond, alloc);
   else
-    createFullPartialLinalgCopy(b, xferWriteOp, inBoundsCond, alloc);
+    createFullPartialMemRefCopy(b, xferWriteOp, inBoundsCond, alloc);
 
   b.eraseOp(xferOp);
 

@@ -163,7 +163,7 @@ def enum_configurable_patterns():
     # CHECK: transform.apply_patterns.vector.split_transfer_full_partial
     # This is the default mode, not printed.
     vector.ApplySplitTransferFullPartialPatternsOp(
-        split_transfer_strategy=vector.VectorTransferSplit.LinalgCopy
+        split_transfer_strategy=vector.VectorTransferSplit.MemRefCopy
     )
     # CHECK: transform.apply_patterns.vector.split_transfer_full_partial
     # CHECK-SAME: split_transfer_strategy = "force-in-bounds"

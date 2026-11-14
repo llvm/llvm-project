@@ -18,66 +18,113 @@
 #include "SystemZSubtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/IR/Analysis.h"
 using namespace llvm;
 
-#define DEBUG_TYPE "systemz-postrewrite"
+#define DEBUG_TYPE "systemz-post-rewrite"
 STATISTIC(MemFoldCopies, "Number of copies inserted before folded mem ops.");
 STATISTIC(LOCRMuxJumps, "Number of LOCRMux jump-sequences (lower is better)");
 
 namespace {
 
-class SystemZPostRewrite : public MachineFunctionPass {
+class SystemZPostRewriteLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  SystemZPostRewrite() : MachineFunctionPass(ID) {}
-
-  const SystemZInstrInfo *TII;
+  SystemZPostRewriteLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
-
-private:
-  void selectLOCRMux(MachineBasicBlock &MBB,
-                     MachineBasicBlock::iterator MBBI,
-                     MachineBasicBlock::iterator &NextMBBI,
-                     unsigned LowOpcode,
-                     unsigned HighOpcode);
-  void selectSELRMux(MachineBasicBlock &MBB,
-                     MachineBasicBlock::iterator MBBI,
-                     MachineBasicBlock::iterator &NextMBBI,
-                     unsigned LowOpcode,
-                     unsigned HighOpcode);
-  bool expandCondMove(MachineBasicBlock &MBB,
-                      MachineBasicBlock::iterator MBBI,
-                      MachineBasicBlock::iterator &NextMBBI);
-  bool selectMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                MachineBasicBlock::iterator &NextMBBI);
-  bool selectMBB(MachineBasicBlock &MBB);
 };
 
-char SystemZPostRewrite::ID = 0;
+char SystemZPostRewriteLegacy::ID = 0;
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(SystemZPostRewrite, "systemz-post-rewrite",
+INITIALIZE_PASS(SystemZPostRewriteLegacy, "systemz-post-rewrite",
                 "SystemZ Post Rewrite pass", false, false)
 
 /// Returns an instance of the Post Rewrite pass.
-FunctionPass *llvm::createSystemZPostRewritePass(SystemZTargetMachine &TM) {
-  return new SystemZPostRewrite();
+FunctionPass *
+llvm::createSystemZPostRewriteLegacyPass(SystemZTargetMachine &TM) {
+  return new SystemZPostRewriteLegacy();
+}
+
+// Replace MBBI by a branch sequence that performs a conditional move of
+// operand 2 to the destination register. Operand 1 is expected to be the
+// same register as the destination.
+static bool expandCondMove(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator MBBI,
+                           MachineBasicBlock::iterator &NextMBBI,
+                           const TargetInstrInfo *TII) {
+  MachineFunction &MF = *MBB.getParent();
+  const BasicBlock *BB = MBB.getBasicBlock();
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+  Register DestReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(2).getReg();
+  unsigned CCValid = MI.getOperand(3).getImm();
+  unsigned CCMask = MI.getOperand(4).getImm();
+  assert(DestReg == MI.getOperand(1).getReg() &&
+         "Expected destination and first source operand to be the same.");
+
+  LivePhysRegs LiveRegs(TII->getRegisterInfo());
+  LiveRegs.addLiveOuts(MBB);
+  for (auto I = std::prev(MBB.end()); I != MBBI; --I)
+    LiveRegs.stepBackward(*I);
+
+  // Splice MBB at MI, moving the rest of the block into RestMBB.
+  MachineBasicBlock *RestMBB = MF.CreateMachineBasicBlock(BB);
+  MF.insert(std::next(MachineFunction::iterator(MBB)), RestMBB);
+  RestMBB->splice(RestMBB->begin(), &MBB, MI, MBB.end());
+  RestMBB->transferSuccessors(&MBB);
+  for (MCPhysReg R : LiveRegs)
+    RestMBB->addLiveIn(R);
+
+  // Create a new block MoveMBB to hold the move instruction.
+  MachineBasicBlock *MoveMBB = MF.CreateMachineBasicBlock(BB);
+  MF.insert(std::next(MachineFunction::iterator(MBB)), MoveMBB);
+  MoveMBB->addLiveIn(SrcReg);
+  for (MCPhysReg R : LiveRegs)
+    MoveMBB->addLiveIn(R);
+
+  // At the end of MBB, create a conditional branch to RestMBB if the
+  // condition is false, otherwise fall through to MoveMBB.
+  BuildMI(&MBB, DL, TII->get(SystemZ::BRC))
+      .addImm(CCValid)
+      .addImm(CCMask ^ CCValid)
+      .addMBB(RestMBB);
+  MBB.addSuccessor(RestMBB);
+  MBB.addSuccessor(MoveMBB);
+
+  // In MoveMBB, emit an instruction to move SrcReg into DestReg,
+  // then fall through to RestMBB.
+  MachineInstr *CopyInst =
+      BuildMI(*MoveMBB, MoveMBB->end(), DL, TII->get(SystemZ::COPY), DestReg)
+          .addReg(MI.getOperand(2).getReg(), getRegState(MI.getOperand(2)));
+  // record the debug value substitution for CopyInst
+  MBB.getParent()->substituteDebugValuesForInst(*MBBI, *CopyInst, 1);
+  MoveMBB->addSuccessor(RestMBB);
+
+  NextMBBI = MBB.end();
+  MI.eraseFromParent();
+  LOCRMuxJumps++;
+  return true;
 }
 
 // MI is a load-register-on-condition pseudo instruction.  Replace it with
 // LowOpcode if source and destination are both low GR32s and HighOpcode if
 // source and destination are both high GR32s. Otherwise, a branch sequence
 // is created.
-void SystemZPostRewrite::selectLOCRMux(MachineBasicBlock &MBB,
-                                       MachineBasicBlock::iterator MBBI,
-                                       MachineBasicBlock::iterator &NextMBBI,
-                                       unsigned LowOpcode,
-                                       unsigned HighOpcode) {
+static void selectLOCRMux(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator MBBI,
+                          MachineBasicBlock::iterator &NextMBBI,
+                          unsigned LowOpcode, unsigned HighOpcode,
+                          const TargetInstrInfo *TII) {
   Register DestReg = MBBI->getOperand(0).getReg();
   Register SrcReg = MBBI->getOperand(2).getReg();
   bool DestIsHigh = SystemZ::isHighReg(DestReg);
@@ -88,17 +135,17 @@ void SystemZPostRewrite::selectLOCRMux(MachineBasicBlock &MBB,
   else if (DestIsHigh && SrcIsHigh)
     MBBI->setDesc(TII->get(HighOpcode));
   else
-    expandCondMove(MBB, MBBI, NextMBBI);
+    expandCondMove(MBB, MBBI, NextMBBI, TII);
 }
 
 // MI is a select pseudo instruction.  Replace it with LowOpcode if source
 // and destination are all low GR32s and HighOpcode if source and destination
 // are all high GR32s. Otherwise, a branch sequence is created.
-void SystemZPostRewrite::selectSELRMux(MachineBasicBlock &MBB,
-                                       MachineBasicBlock::iterator MBBI,
-                                       MachineBasicBlock::iterator &NextMBBI,
-                                       unsigned LowOpcode,
-                                       unsigned HighOpcode) {
+static void selectSELRMux(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator MBBI,
+                          MachineBasicBlock::iterator &NextMBBI,
+                          unsigned LowOpcode, unsigned HighOpcode,
+                          const TargetInstrInfo *TII) {
   Register DestReg = MBBI->getOperand(0).getReg();
   MachineOperand &Src1MO = MBBI->getOperand(1);
   MachineOperand &Src2MO = MBBI->getOperand(2);
@@ -161,73 +208,14 @@ void SystemZPostRewrite::selectSELRMux(MachineBasicBlock &MBB,
     MBBI->setDesc(TII->get(HighOpcode));
   else
     // Given the simplification above, we must already have a two-operand case.
-    expandCondMove(MBB, MBBI, NextMBBI);
-}
-
-// Replace MBBI by a branch sequence that performs a conditional move of
-// operand 2 to the destination register. Operand 1 is expected to be the
-// same register as the destination.
-bool SystemZPostRewrite::expandCondMove(MachineBasicBlock &MBB,
-                                        MachineBasicBlock::iterator MBBI,
-                                        MachineBasicBlock::iterator &NextMBBI) {
-  MachineFunction &MF = *MBB.getParent();
-  const BasicBlock *BB = MBB.getBasicBlock();
-  MachineInstr &MI = *MBBI;
-  DebugLoc DL = MI.getDebugLoc();
-  Register DestReg = MI.getOperand(0).getReg();
-  Register SrcReg = MI.getOperand(2).getReg();
-  unsigned CCValid = MI.getOperand(3).getImm();
-  unsigned CCMask = MI.getOperand(4).getImm();
-  assert(DestReg == MI.getOperand(1).getReg() &&
-         "Expected destination and first source operand to be the same.");
-
-  LivePhysRegs LiveRegs(TII->getRegisterInfo());
-  LiveRegs.addLiveOuts(MBB);
-  for (auto I = std::prev(MBB.end()); I != MBBI; --I)
-    LiveRegs.stepBackward(*I);
-
-  // Splice MBB at MI, moving the rest of the block into RestMBB.
-  MachineBasicBlock *RestMBB = MF.CreateMachineBasicBlock(BB);
-  MF.insert(std::next(MachineFunction::iterator(MBB)), RestMBB);
-  RestMBB->splice(RestMBB->begin(), &MBB, MI, MBB.end());
-  RestMBB->transferSuccessors(&MBB);
-  for (MCPhysReg R : LiveRegs)
-    RestMBB->addLiveIn(R);
-
-  // Create a new block MoveMBB to hold the move instruction.
-  MachineBasicBlock *MoveMBB = MF.CreateMachineBasicBlock(BB);
-  MF.insert(std::next(MachineFunction::iterator(MBB)), MoveMBB);
-  MoveMBB->addLiveIn(SrcReg);
-  for (MCPhysReg R : LiveRegs)
-    MoveMBB->addLiveIn(R);
-
-  // At the end of MBB, create a conditional branch to RestMBB if the
-  // condition is false, otherwise fall through to MoveMBB.
-  BuildMI(&MBB, DL, TII->get(SystemZ::BRC))
-    .addImm(CCValid).addImm(CCMask ^ CCValid).addMBB(RestMBB);
-  MBB.addSuccessor(RestMBB);
-  MBB.addSuccessor(MoveMBB);
-
-  // In MoveMBB, emit an instruction to move SrcReg into DestReg,
-  // then fall through to RestMBB.
-  MachineInstr *CopyInst =
-      BuildMI(*MoveMBB, MoveMBB->end(), DL, TII->get(SystemZ::COPY), DestReg)
-          .addReg(MI.getOperand(2).getReg(), getRegState(MI.getOperand(2)));
-  // record the debug value substitution for CopyInst
-  MBB.getParent()->substituteDebugValuesForInst(*MBBI, *CopyInst, 1);
-  MoveMBB->addSuccessor(RestMBB);
-
-  NextMBBI = MBB.end();
-  MI.eraseFromParent();
-  LOCRMuxJumps++;
-  return true;
+    expandCondMove(MBB, MBBI, NextMBBI, TII);
 }
 
 /// If MBBI references a pseudo instruction that should be selected here,
 /// do it and return true.  Otherwise return false.
-bool SystemZPostRewrite::selectMI(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator MBBI,
-                                  MachineBasicBlock::iterator &NextMBBI) {
+static bool selectMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                     MachineBasicBlock::iterator &NextMBBI,
+                     const TargetInstrInfo *TII) {
   MachineInstr &MI = *MBBI;
   unsigned Opcode = MI.getOpcode();
 
@@ -251,10 +239,10 @@ bool SystemZPostRewrite::selectMI(MachineBasicBlock &MBB,
 
   switch (Opcode) {
   case SystemZ::LOCRMux:
-    selectLOCRMux(MBB, MBBI, NextMBBI, SystemZ::LOCR, SystemZ::LOCFHR);
+    selectLOCRMux(MBB, MBBI, NextMBBI, SystemZ::LOCR, SystemZ::LOCFHR, TII);
     return true;
   case SystemZ::SELRMux:
-    selectSELRMux(MBB, MBBI, NextMBBI, SystemZ::SELR, SystemZ::SELFHR);
+    selectSELRMux(MBB, MBBI, NextMBBI, SystemZ::SELR, SystemZ::SELFHR, TII);
     return true;
   }
 
@@ -263,26 +251,37 @@ bool SystemZPostRewrite::selectMI(MachineBasicBlock &MBB,
 
 /// Iterate over the instructions in basic block MBB and select any
 /// pseudo instructions.  Return true if anything was modified.
-bool SystemZPostRewrite::selectMBB(MachineBasicBlock &MBB) {
+static bool selectMBB(MachineBasicBlock &MBB, const TargetInstrInfo *TII) {
   bool Modified = false;
 
   MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
   while (MBBI != E) {
     MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= selectMI(MBB, MBBI, NMBBI);
+    Modified |= selectMI(MBB, MBBI, NMBBI, TII);
     MBBI = NMBBI;
   }
 
   return Modified;
 }
 
-bool SystemZPostRewrite::runOnMachineFunction(MachineFunction &MF) {
-  TII = MF.getSubtarget<SystemZSubtarget>().getInstrInfo();
+static bool runPostRewriteOnMF(MachineFunction &MF) {
+  const TargetInstrInfo *TII =
+      MF.getSubtarget<SystemZSubtarget>().getInstrInfo();
 
   bool Modified = false;
   for (auto &MBB : MF)
-    Modified |= selectMBB(MBB);
+    Modified |= selectMBB(MBB, TII);
 
   return Modified;
 }
 
+bool SystemZPostRewriteLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return runPostRewriteOnMF(MF);
+}
+
+PreservedAnalyses
+SystemZPostRewritePass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  return runPostRewriteOnMF(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                : PreservedAnalyses::all();
+}

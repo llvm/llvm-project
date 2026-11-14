@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown  -target-feature +amx-fp8  \
 // RUN: -emit-llvm -o - -Werror -pedantic | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -ffreestanding -triple=x86_64-unknown-unknown  -target-feature +amx-fp8 -emit-llvm -o - -Werror -pedantic | FileCheck %s %}
 #include <immintrin.h>
 
 void test_amx(void *data) {

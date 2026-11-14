@@ -1,8 +1,8 @@
 // RUN: %clang_analyze_cc1 -triple x86_64-unknown-linux -std=c++14 -analyzer-checker=optin.performance -analyzer-config optin.performance.Padding:AllowedPad=2 -verify %s
 
 // expected-warning@+7{{\
-Excessive padding in 'struct IntSandwich' (6 padding bytes, where 2 is optimal). \
-Optimal fields order: \
+Excessive padding in 'struct IntSandwich' (6 padding bytes, where 2 is optimal), \
+optimal fields order: \
 i, \
 c1, \
 c2, \
@@ -14,8 +14,8 @@ struct IntSandwich {
 };
 
 // expected-warning@+7{{\
-Excessive padding in 'struct TurDuckHen' (6 padding bytes, where 2 is optimal). \
-Optimal fields order: \
+Excessive padding in 'struct TurDuckHen' (6 padding bytes, where 2 is optimal), \
+optimal fields order: \
 i, \
 c1, \
 c2, \
@@ -29,8 +29,8 @@ struct TurDuckHen {
 #pragma pack(push)
 #pragma pack(2)
 // expected-warning@+11{{\
-Excessive padding in 'struct SmallIntSandwich' (4 padding bytes, where 0 is optimal). \
-Optimal fields order: \
+Excessive padding in 'struct SmallIntSandwich' (4 padding bytes, where 0 is optimal), \
+optimal fields order: \
 i1, \
 i2, \
 i3, \
@@ -57,8 +57,8 @@ union SomeUnion { // no-warning
 };
 
 // expected-warning@+7{{\
-Excessive padding in 'struct HoldsAUnion' (6 padding bytes, where 2 is optimal). \
-Optimal fields order: \
+Excessive padding in 'struct HoldsAUnion' (6 padding bytes, where 2 is optimal), \
+optimal fields order: \
 u, \
 c1, \
 c2, \
@@ -78,8 +78,8 @@ struct MediumIntArray { // no-warning
 };
 
 // expected-warning@+7{{\
-Excessive padding in 'struct StructSandwich' (6 padding bytes, where 2 is optimal). \
-Optimal fields order: \
+Excessive padding in 'struct StructSandwich' (6 padding bytes, where 2 is optimal), \
+optimal fields order: \
 m, \
 s, \
 s2, \
@@ -91,8 +91,8 @@ struct StructSandwich {
 };
 
 // expected-warning@+7{{\
-Excessive padding in 'TypedefSandwich' (6 padding bytes, where 2 is optimal). \
-Optimal fields order: \
+Excessive padding in 'TypedefSandwich' (6 padding bytes, where 2 is optimal), \
+optimal fields order: \
 i, \
 c1, \
 c2, \
@@ -104,8 +104,8 @@ typedef struct {
 } TypedefSandwich;
 
 // expected-warning@+7{{\
-Excessive padding in 'struct StructAttrAlign' (10 padding bytes, where 2 is optimal). \
-Optimal fields order: \
+Excessive padding in 'struct StructAttrAlign' (10 padding bytes, where 2 is optimal), \
+optimal fields order: \
 i, \
 c1, \
 c2, \
@@ -117,8 +117,8 @@ struct StructAttrAlign {
 } __attribute__((aligned(8)));
 
 // expected-warning@+8{{\
-Excessive padding in 'struct OverlyAlignedChar' (8185 padding bytes, where 4089 is optimal). \
-Optimal fields order: \
+Excessive padding in 'struct OverlyAlignedChar' (8185 padding bytes, where 4089 is optimal), \
+optimal fields order: \
 c, \
 c1, \
 c2, \
@@ -132,8 +132,8 @@ struct OverlyAlignedChar {
 };
 
 // expected-warning@+7{{\
-Excessive padding in 'struct HoldsOverlyAlignedChar' (8190 padding bytes, where 4094 is optimal). \
-Optimal fields order: \
+Excessive padding in 'struct HoldsOverlyAlignedChar' (8190 padding bytes, where 4094 is optimal), \
+optimal fields order: \
 o, \
 c1, \
 c2, \
@@ -146,8 +146,8 @@ struct HoldsOverlyAlignedChar {
 
 void internalStructFunc() {
   // expected-warning@+7{{\
-Excessive padding in 'struct X' (6 padding bytes, where 2 is optimal). \
-Optimal fields order: \
+Excessive padding in 'struct X' (6 padding bytes, where 2 is optimal), \
+optimal fields order: \
 t, \
 c1, \
 c2, \
@@ -162,8 +162,8 @@ c2, \
 
 void typedefStructFunc() {
   // expected-warning@+7{{\
-Excessive padding in 'S' (6 padding bytes, where 2 is optimal). \
-Optimal fields order: \
+Excessive padding in 'S' (6 padding bytes, where 2 is optimal), \
+optimal fields order: \
 t, \
 c1, \
 c2, \
@@ -177,8 +177,8 @@ c2, \
 }
 
 // expected-warning@+7{{\
-Excessive padding in 'struct DefaultAttrAlign' (22 padding bytes, where 6 is optimal). \
-Optimal fields order: \
+Excessive padding in 'struct DefaultAttrAlign' (22 padding bytes, where 6 is optimal), \
+optimal fields order: \
 i, \
 c1, \
 c2, \
@@ -190,8 +190,8 @@ struct DefaultAttrAlign {
 } __attribute__((aligned));
 
 // expected-warning@+7{{\
-Excessive padding in 'struct SmallArrayShortSandwich' (2 padding bytes, where 0 is optimal). \
-Optimal fields order: \
+Excessive padding in 'struct SmallArrayShortSandwich' (2 padding bytes, where 0 is optimal), \
+optimal fields order: \
 s, \
 c1, \
 c2, \
@@ -203,8 +203,8 @@ struct SmallArrayShortSandwich {
 } ShortArray[20];
 
 // expected-warning@+7{{\
-Excessive padding in 'struct SmallArrayInFunc' (2 padding bytes, where 0 is optimal). \
-Optimal fields order: \
+Excessive padding in 'struct SmallArrayInFunc' (2 padding bytes, where 0 is optimal), \
+optimal fields order: \
 s, \
 c1, \
 c2, \
@@ -220,8 +220,8 @@ void arrayHolder() {
 }
 
 // expected-warning@+7{{\
-Excessive padding in 'class VirtualIntSandwich' (10 padding bytes, where 2 is optimal). \
-Optimal fields order: \
+Excessive padding in 'class VirtualIntSandwich' (10 padding bytes, where 2 is optimal), \
+optimal fields order: \
 i, \
 c1, \
 c2, \
@@ -235,8 +235,8 @@ class VirtualIntSandwich {
 
 // constructed so as not to have tail padding
 // expected-warning@+8{{\
-Excessive padding in 'class InnerPaddedB' (6 padding bytes, where 2 is optimal). \
-Optimal fields order: \
+Excessive padding in 'class InnerPaddedB' (6 padding bytes, where 2 is optimal), \
+optimal fields order: \
 i1, \
 i2, \
 c1, \
@@ -252,8 +252,8 @@ class InnerPaddedB {
 class Empty {}; // no-warning
 
 // expected-warning@+7{{\
-Excessive padding in 'class LotsOfSpace' (6 padding bytes, where 2 is optimal). \
-Optimal fields order: \
+Excessive padding in 'class LotsOfSpace' (6 padding bytes, where 2 is optimal), \
+optimal fields order: \
 i, \
 e1, \
 e2, \
@@ -265,8 +265,8 @@ class LotsOfSpace {
 };
 
 // expected-warning@+7{{\
-Excessive padding in 'struct TypedefSandwich2' (6 padding bytes, where 2 is optimal). \
-Optimal fields order: \
+Excessive padding in 'struct TypedefSandwich2' (6 padding bytes, where 2 is optimal), \
+optimal fields order: \
 t, \
 c1, \
 c2, \
@@ -274,8 +274,8 @@ c2, \
 typedef struct TypedefSandwich2 {
   char c1;
   // expected-warning@+7{{\
-Excessive padding in 'TypedefSandwich2::NestedTypedef' (6 padding bytes, where 2 is optimal). \
-Optimal fields order: \
+Excessive padding in 'TypedefSandwich2::NestedTypedef' (6 padding bytes, where 2 is optimal), \
+optimal fields order: \
 i, \
 c1, \
 c2, \
@@ -292,8 +292,8 @@ c2, \
 template <typename T>
 struct Foo {
   // expected-warning@+7{{\
-Excessive padding in 'struct Foo<int>::Nested' (6 padding bytes, where 2 is optimal). \
-Optimal fields order: \
+Excessive padding in 'struct Foo<int>::Nested' (6 padding bytes, where 2 is optimal), \
+optimal fields order: \
 t, \
 c1, \
 c2, \

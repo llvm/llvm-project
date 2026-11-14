@@ -44,7 +44,7 @@ Clang-format options:
                                    supported:
                                      CSharp: .cs
                                      Java: .java
-                                     JavaScript: .js .mjs .cjs .ts
+                                     JavaScript: .js .mjs .cjs .ts .mts .cts
                                      JSON: .json .ipynb
                                      Objective-C: .m .mm
                                      Proto: .proto .protodevel

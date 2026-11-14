@@ -199,7 +199,7 @@ class ScriptedProcesTestCase(TestBase):
 
         error = lldb.SBError()
         process = target.Launch(launch_info, error)
-        self.assertTrue(process and process.IsValid(), PROCESS_IS_VALID)
+        self.assertSuccess(error)
         # Fetching the frames is what wraps the Python frame objects.
         self.assertGreater(process.GetThreadAtIndex(0).GetNumFrames(), 0)
 
@@ -277,7 +277,7 @@ class ScriptedProcesTestCase(TestBase):
 
         error = lldb.SBError()
         process_0 = target_0.Launch(launch_info, error)
-        self.assertTrue(process_0 and process_0.IsValid(), PROCESS_IS_VALID)
+        self.assertSuccess(error)
         self.assertEqual(process_0.GetProcessID(), 42)
         self.assertEqual(process_0.GetNumThreads(), 1)
 

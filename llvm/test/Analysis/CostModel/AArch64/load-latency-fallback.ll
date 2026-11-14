@@ -3,10 +3,10 @@
 ; latency when the cpu has no scheduling model (carmel), or when the model's
 ; scheduling class for the load is invalid (oryon-1 integer loads, cortex-a53
 ; SVE loads) or variant (c1-ultra FP/vector loads).
-; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mcpu=carmel | FileCheck %s --check-prefix=CARMEL
-; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mcpu=oryon-1 | FileCheck %s --check-prefix=ORYON
-; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mcpu=c1-ultra | FileCheck %s --check-prefix=C1-ULTRA
-; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mcpu=cortex-a53 -mattr=+sve | FileCheck %s --check-prefix=A53-SVE
+; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all -disable-output -mcpu=carmel 2>&1 | FileCheck %s --check-prefix=CARMEL
+; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all -disable-output -mcpu=oryon-1 2>&1 | FileCheck %s --check-prefix=ORYON
+; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all -disable-output -mcpu=c1-ultra 2>&1 | FileCheck %s --check-prefix=C1-ULTRA
+; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all -disable-output -mcpu=cortex-a53 -mattr=+sve 2>&1 | FileCheck %s --check-prefix=A53-SVE
 
 target triple = "aarch64-unknown-linux-gnu"
 

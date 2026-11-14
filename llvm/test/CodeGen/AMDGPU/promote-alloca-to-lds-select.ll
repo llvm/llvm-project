@@ -19,9 +19,9 @@ define amdgpu_kernel void @lds_promote_alloca_select_two_derived_pointers(i32 %a
 ; CHECK-LABEL: define amdgpu_kernel void @lds_promote_alloca_select_two_derived_pointers(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call noalias nonnull dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP1]], i64 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[TMP2]], align 4, !invariant.load [[META0:![0-9]+]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP1]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP1]], i64 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(4) [[TMP4]], align 4, !range [[RNG1:![0-9]+]], !invariant.load [[META0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = lshr i32 [[TMP3]], 16
 ; CHECK-NEXT:    [[TMP7:%.*]] = call range(i32 0, 256) i32 @llvm.amdgcn.workitem.id.x()
@@ -32,7 +32,7 @@ define amdgpu_kernel void @lds_promote_alloca_select_two_derived_pointers(i32 %a
 ; CHECK-NEXT:    [[TMP12:%.*]] = mul nuw nsw i32 [[TMP8]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP13]], [[TMP9]]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [256 x [16 x i32]], ptr addrspace(3) @lds_promote_alloca_select_two_derived_pointers.alloca, i32 0, i32 [[TMP14]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(3) @lds_promote_alloca_select_two_derived_pointers.alloca, i32 [[TMP14]]
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(3) [[TMP15]], i32 0, i32 [[A]]
 ; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(3) [[TMP15]], i32 0, i32 [[B]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 poison, ptr addrspace(3) [[PTR0]], ptr addrspace(3) [[PTR1]]
@@ -74,9 +74,9 @@ define amdgpu_kernel void @lds_promote_alloca_select_two_derived_constant_pointe
 ; CHECK-LABEL: define amdgpu_kernel void @lds_promote_alloca_select_two_derived_constant_pointers(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call noalias nonnull dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP1]], i64 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[TMP2]], align 4, !invariant.load [[META0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP1]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP1]], i64 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(4) [[TMP4]], align 4, !range [[RNG1]], !invariant.load [[META0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = lshr i32 [[TMP3]], 16
 ; CHECK-NEXT:    [[TMP7:%.*]] = call range(i32 0, 256) i32 @llvm.amdgcn.workitem.id.x()
@@ -87,7 +87,7 @@ define amdgpu_kernel void @lds_promote_alloca_select_two_derived_constant_pointe
 ; CHECK-NEXT:    [[TMP12:%.*]] = mul nuw nsw i32 [[TMP8]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP13]], [[TMP9]]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [256 x [16 x i32]], ptr addrspace(3) @lds_promote_alloca_select_two_derived_constant_pointers.alloca, i32 0, i32 [[TMP14]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(3) @lds_promote_alloca_select_two_derived_constant_pointers.alloca, i32 [[TMP14]]
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(3) [[TMP15]], i32 0, i32 1
 ; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(3) [[TMP15]], i32 0, i32 3
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 poison, ptr addrspace(3) [[PTR0]], ptr addrspace(3) [[PTR1]]
@@ -172,9 +172,9 @@ define amdgpu_kernel void @select_null_rhs(ptr addrspace(1) nocapture %arg, i32 
 ; CHECK-SAME: ptr addrspace(1) captures(none) [[ARG:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call noalias nonnull dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP0]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP0]], i64 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[TMP1]], align 4, !invariant.load [[META0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP0]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP0]], i64 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(4) [[TMP3]], align 4, !range [[RNG2:![0-9]+]], !invariant.load [[META0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP2]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = call range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x()
@@ -185,7 +185,7 @@ define amdgpu_kernel void @select_null_rhs(ptr addrspace(1) nocapture %arg, i32 
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul nuw nsw i32 [[TMP7]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP10]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP12]], [[TMP8]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [1024 x double], ptr addrspace(3) @select_null_rhs.t, i32 0, i32 [[TMP13]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [8 x i8], ptr addrspace(3) @select_null_rhs.t, i32 [[TMP13]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr addrspace(3) [[TMP14]], align 8
 ; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[ARG1]], 0
 ; CHECK-NEXT:    [[T3:%.*]] = select i1 [[T2]], ptr addrspace(3) [[TMP14]], ptr addrspace(3) null
@@ -210,9 +210,9 @@ define amdgpu_kernel void @select_null_lhs(ptr addrspace(1) nocapture %arg, i32 
 ; CHECK-SAME: ptr addrspace(1) captures(none) [[ARG:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call noalias nonnull dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP0]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP0]], i64 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[TMP1]], align 4, !invariant.load [[META0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP0]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP0]], i64 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(4) [[TMP3]], align 4, !range [[RNG2]], !invariant.load [[META0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP2]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = call range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x()
@@ -223,7 +223,7 @@ define amdgpu_kernel void @select_null_lhs(ptr addrspace(1) nocapture %arg, i32 
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul nuw nsw i32 [[TMP7]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP10]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP12]], [[TMP8]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [1024 x double], ptr addrspace(3) @select_null_lhs.t, i32 0, i32 [[TMP13]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [8 x i8], ptr addrspace(3) @select_null_lhs.t, i32 [[TMP13]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr addrspace(3) [[TMP14]], align 8
 ; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[ARG1]], 0
 ; CHECK-NEXT:    [[T3:%.*]] = select i1 [[T2]], ptr addrspace(3) null, ptr addrspace(3) [[TMP14]]

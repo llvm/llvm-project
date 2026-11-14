@@ -16,9 +16,7 @@
 #include "mlir/Dialect/SCF/IR/SCFDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/CallInterfaces.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 #define GET_TYPEDEF_CLASSES
 #include "MyExtensionTypes.cpp.inc"

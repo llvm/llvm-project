@@ -21,11 +21,11 @@ ORC_RT_SPS_ALLOC_ACTION_DECL(
 ORC_RT_SPS_ALLOC_ACTION_DECL(
     orc_rt_ci_aa_sps_DWARFEHFrameRegistrar_deregisterSection)
 
-namespace orc_rt::sps_ci {
+namespace orc_rt::sps::ci {
 
 /// Add the DWARFEHFrameRegistrar SPS interface to the controller interface.
 Error addDWARFEHFrameRegistrar(SimpleSymbolTable &ST);
 
-} // namespace orc_rt::sps_ci
+} // namespace orc_rt::sps::ci
 
 #endif // ORC_RT_BEDROCK_SPS_DWARFEHFRAMEREGISTRARSPSCI_H

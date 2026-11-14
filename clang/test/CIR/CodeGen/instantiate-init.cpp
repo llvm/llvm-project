@@ -75,13 +75,9 @@ void init_vec_using_initalizer_list() {
 // LLVM:   %[[SIZE_SLOT:.*]] = getelementptr inbounds nuw { ptr, i64 }, ptr %[[AGG_ADDR]], i32 0, i32 1
 // LLVM:   %[[SIZE_ARG:.*]] = load i64, ptr %[[SIZE_SLOT]], align 8
 // LLVM:   call void @_ZN6VectorC1ESt16initializer_listIiE(ptr noundef nonnull align 1 dereferenceable(1) %[[VEC_ADDR]], ptr %[[DATA_ARG]], i64 %[[SIZE_ARG]])
-// LLVM:   br label %[[SCOPE_CONT:.*]]
-// LLVM: [[SCOPE_CONT]]:
 // LLVM:   br label %[[CLEANUP_START:.*]]
 // LLVM: [[CLEANUP_START]]:
 // LLVM:   call void @_ZN6VectorD1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[VEC_ADDR]])
-// LLVM:   br label %[[CLEANUP_CONT:.*]]
-// LLVM: [[CLEANUP_CONT]]:
 // LLVM:   br label %[[DONE:.*]]
 // LLVM: [[DONE]]:
 // LLVM:   ret void

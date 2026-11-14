@@ -15,7 +15,6 @@
 
 #include "mlir/Dialect/Vector/Interfaces/MaskingOpInterface.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/OpDefinition.h"
 
 // Include the generated interface declarations.
 #include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.h.inc"

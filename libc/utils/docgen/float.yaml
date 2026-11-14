@@ -1,3 +1,6 @@
+standard: c23
+posix: posix-2024
+c-reference-root: types/limits
 macros:
   DBL_DECIMAL_DIG:
     c-definition: 5.3.5.3.3
@@ -95,6 +98,7 @@ macros:
     in-latest-posix: ''
   INFINITY:
     c-definition: 5.3.5.3.3
+    c-reference: numeric/math/INFINITY
   LDBL_DECIMAL_DIG:
     c-definition: 5.3.5.3.3
     in-latest-posix: ''
@@ -138,6 +142,7 @@ macros:
     in-latest-posix: ''
   NAN:
     c-definition: 5.3.5.3.3
+    c-reference: numeric/math/NAN
   __STDC_VERSION_FLOAT_H__:
     c-definition: '7.7'
 

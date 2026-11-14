@@ -1,6 +1,9 @@
+set(LLVM_OPTIONAL_SOURCES
+  BufferizableOpInterfaceImpl.cpp
+  )
+
 add_mlir_dialect_library(MLIRSparseTensorTransforms
   # Rewriting.
-  BufferizableOpInterfaceImpl.cpp
   SparseAssembler.cpp
   SparseBufferRewriting.cpp
   SparseGPUCodegen.cpp
@@ -52,4 +55,16 @@ add_mlir_dialect_library(MLIRSparseTensorTransforms
   MLIRTensorDialect
   MLIRTransforms
   MLIRVectorDialect
+)
+
+add_mlir_dialect_library(MLIRSparseTensorBufferizableOpInterfaceImpl
+  BufferizableOpInterfaceImpl.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SparseTensor
+
+  LINK_LIBS PUBLIC
+  MLIRBufferizationDialect
+  MLIRIR
+  MLIRSparseTensorDialect
 )

@@ -95,23 +95,6 @@ static inline void __kmp_dephash_free(kmp_info_t *thread, kmp_dephash_t *h) {
 extern void __kmpc_give_task(kmp_task_t *ptask, kmp_int32 start);
 
 static inline void __kmp_release_deps(kmp_int32 gtid, kmp_taskdata_t *task) {
-
-#if OMP_TASKGRAPH_EXPERIMENTAL
-  if (task->is_taskgraph && !(__kmp_tdg_is_recording(task->tdg->tdg_status))) {
-    kmp_node_info_t *TaskInfo = &(task->tdg->record_map[task->td_tdg_task_id]);
-
-    for (int i = 0; i < TaskInfo->nsuccessors; i++) {
-      kmp_int32 successorNumber = TaskInfo->successors[i];
-      kmp_node_info_t *successor = &(task->tdg->record_map[successorNumber]);
-      kmp_int32 npredecessors = KMP_ATOMIC_DEC(&successor->npredecessors_counter) - 1;
-      if (successor->task != nullptr && npredecessors == 0) {
-        __kmp_omp_task(gtid, successor->task, false);
-      }
-    }
-    return;
-  }
-#endif
-
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_depnode_t *node = task->td_depnode;
 
@@ -139,13 +122,12 @@ static inline void __kmp_release_deps(kmp_int32 gtid, kmp_taskdata_t *task) {
   KA_TRACE(20, ("__kmp_release_deps: T#%d notifying successors of task %p.\n",
                 gtid, task));
 
+  // Order task body memory accesses before dn.task = NULL is observed
+  // by lock-free checks in __kmp_depnode_link_successor().
+  KMP_MB();
   KMP_ACQUIRE_DEPNODE(gtid, node);
-#if OMP_TASKGRAPH_EXPERIMENTAL
-  if (!task->is_taskgraph ||
-      (task->is_taskgraph && !__kmp_tdg_is_recording(task->tdg->tdg_status)))
-#endif
-    node->dn.task =
-        NULL; // mark this task as finished, so no new dependencies are generated
+  node->dn.task =
+      NULL; // mark this task as finished, so no new dependencies are generated
   KMP_RELEASE_DEPNODE(gtid, node);
 
   kmp_depnode_list_t *next;

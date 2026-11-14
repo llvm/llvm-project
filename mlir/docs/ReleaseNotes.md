@@ -10,6 +10,29 @@ specifically, it is a snapshot of the MLIR development at the time of the releas
 
 ## LLVM 24
 
+### Context Locking Without Parallel Execution
+
+Clients that access an `MLIRContext` from their own threads can enable
+thread-safe locking without creating a context-owned thread pool or enabling
+parallel execution within MLIR:
+
+```c++
+MLIRContext context(MLIRContext::Threading::DISABLED);
+context.enableThreadSafeLocking();
+```
+
+This enables locking for uniquing types, attributes, affine expressions, and
+operation names. Dialects must be loaded before accessing the context
+concurrently. `isMultithreadingEnabled()` remains false, so MLIR's parallel
+helpers execute sequentially. Enabling multithreading also enables locking;
+disabling multithreading disables locking, which can then be re-enabled
+independently. The `--mlir-disable-threading` debugging flag does not override
+explicit calls to `enableThreadSafeLocking()`.
+
+`StorageUniquer::disableMultithreading(disable)` has been renamed to
+`StorageUniquer::setThreadSafeLocking(!disable)` to reflect that it controls
+locking. The new setter takes an explicit boolean argument.
+
 ### Strict Property Assembly Formats
 
 Property-backed operations now use strict declarative assembly formats by

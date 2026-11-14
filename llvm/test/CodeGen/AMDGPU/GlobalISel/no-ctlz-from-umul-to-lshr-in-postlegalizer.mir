@@ -21,3 +21,4 @@ body: |
     %2:_(s32) = G_UMULH %0:_, %1:_
     $vgpr0 = COPY %2:_(s32)
     SI_RETURN implicit $vgpr0
+...

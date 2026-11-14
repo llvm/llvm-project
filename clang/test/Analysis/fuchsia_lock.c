@@ -45,7 +45,7 @@ void bad3(void) {
 void bad4(void) {
   spin_lock(&mtx1);
   spin_lock(&mtx2);
-  spin_unlock(&mtx1); // lor-warning {{This was not the most recently acquired lock. Possible lock order reversal}}
+  spin_unlock(&mtx1); // lor-warning {{This was not the most recently acquired lock; possible lock order reversal}}
   spin_unlock(&mtx2);
 }
 
@@ -94,7 +94,7 @@ void bad13(void) {
 void bad14(void) {
   sync_mutex_lock(&smtx1);
   sync_mutex_lock(&smtx2);
-  sync_mutex_unlock(&smtx1); // lor-warning {{This was not the most recently acquired lock. Possible lock order reversal}}
+  sync_mutex_unlock(&smtx1); // lor-warning {{This was not the most recently acquired lock; possible lock order reversal}}
   sync_mutex_unlock(&smtx2);
 }
 

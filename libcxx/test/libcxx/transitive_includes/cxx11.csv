@@ -512,6 +512,7 @@ optional compare
 optional cstdint
 optional cstring
 optional initializer_list
+optional limits
 optional version
 ostream bitset
 ostream cctype

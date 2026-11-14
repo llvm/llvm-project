@@ -13,6 +13,8 @@
 #ifndef MLIR_IR_REMARKS_H
 #define MLIR_IR_REMARKS_H
 
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Remarks/Remark.h"
@@ -24,6 +26,9 @@
 #include "mlir/IR/Value.h"
 
 #include <atomic>
+#include <mutex>
+#include <optional>
+#include <utility>
 
 namespace mlir::remark {
 
@@ -89,6 +94,7 @@ using namespace llvm;
 
 namespace detail {
 class InFlightRemark; // forward declaration
+class RemarkEngine;
 } // namespace detail
 
 /// Options to create a Remark
@@ -134,11 +140,74 @@ struct RemarkOpts {
     return copy;
   }
 
-  /// Link this remark to a related remark that is still in flight.
-  /// Extracts the ID from the InFlightRemark.
+  /// Link to an in-flight remark's ID. Final removes the link if the target is
+  /// replaced in the same batch.
   inline RemarkOpts relatedTo(const detail::InFlightRemark &r) const;
 };
 
+/// Exact-match criteria for searching emitted or pending remarks. Unspecified
+/// fields match any value; a specified empty string matches an empty field.
+/// Strings are owned by the query. Locations belong to their MLIRContext and
+/// must not outlive it. A location match does not imply operation identity.
+class RemarkQuery {
+public:
+  /// Construct a query matching the given remark name.
+  [[nodiscard]] static RemarkQuery named(StringRef value) {
+    return RemarkQuery().name(value);
+  }
+
+  [[nodiscard]] RemarkQuery name(StringRef value) const & {
+    return RemarkQuery(*this).name(value);
+  }
+  [[nodiscard]] RemarkQuery name(StringRef value) && {
+    remarkName = value.str();
+    return std::move(*this);
+  }
+  /// Match the base category, without the subcategory.
+  [[nodiscard]] RemarkQuery category(StringRef value) const & {
+    return RemarkQuery(*this).category(value);
+  }
+  [[nodiscard]] RemarkQuery category(StringRef value) && {
+    categoryName = value.str();
+    return std::move(*this);
+  }
+  [[nodiscard]] RemarkQuery subCategory(StringRef value) const & {
+    return RemarkQuery(*this).subCategory(value);
+  }
+  [[nodiscard]] RemarkQuery subCategory(StringRef value) && {
+    subCategoryName = value.str();
+    return std::move(*this);
+  }
+  [[nodiscard]] RemarkQuery function(StringRef value) const & {
+    return RemarkQuery(*this).function(value);
+  }
+  [[nodiscard]] RemarkQuery function(StringRef value) && {
+    functionName = value.str();
+    return std::move(*this);
+  }
+  [[nodiscard]] RemarkQuery kind(RemarkKind value) const & {
+    return RemarkQuery(*this).kind(value);
+  }
+  [[nodiscard]] RemarkQuery kind(RemarkKind value) && {
+    remarkKind = value;
+    return std::move(*this);
+  }
+  /// Match the complete location, including any wrapping locations.
+  [[nodiscard]] RemarkQuery at(Location value) const & {
+    return RemarkQuery(*this).at(value);
+  }
+  [[nodiscard]] RemarkQuery at(Location value) && {
+    location = value;
+    return std::move(*this);
+  }
+
+private:
+  friend class detail::RemarkEngine;
+  std::optional<std::string> remarkName, categoryName, subCategoryName,
+      functionName;
+  std::optional<RemarkKind> remarkKind;
+  std::optional<Location> location;
+};
 } // namespace mlir::remark
 
 namespace mlir::remark::detail {
@@ -172,6 +241,8 @@ public:
     /// Optional attribute storage for Attribute-based args. Allows streamers
     /// to access the original attribute for custom handling.
     std::optional<Attribute> attr;
+    /// Generated RelatedTo argument, distinct from a user-supplied argument.
+    bool isLink = false;
 
     Arg(llvm::StringRef m) : key("Remark"), val(m) {}
     Arg(llvm::StringRef k, llvm::StringRef v) : key(k), val(v) {}
@@ -218,7 +289,12 @@ public:
     return "<unknown function>";
   }
 
+  /// Return the stored function name, which may be empty.
+  StringRef getRawFunction() const { return functionName; }
+
   llvm::StringRef getCategoryName() const { return categoryName; }
+
+  llvm::StringRef getSubCategoryName() const { return subCategoryName; }
 
   llvm::StringRef getCombinedCategoryName() const {
     if (categoryName.empty() && subCategoryName.empty())
@@ -236,8 +312,12 @@ public:
     return remarkName;
   }
 
+  /// Return the stored remark name, which may be empty.
+  StringRef getRawRemarkName() const { return remarkName; }
+
   std::string getMsg() const;
 
+  /// Return arguments, owned until mutation or destruction.
   ArrayRef<Arg> getArgs() const { return args; }
 
   llvm::remarks::Type getRemarkType() const;
@@ -259,13 +339,17 @@ public:
   /// Get the list of related remark IDs.
   ArrayRef<RemarkId> getRelatedRemarkIds() const { return relatedRemarks; }
 
-  /// Add a reference to a related remark. Also adds it as an Arg for
-  /// serialization.
+  /// Replace the list of related remark IDs.
+  void setRelatedRemarkIds(ArrayRef<RemarkId> ids);
+
+  /// Add a related ID and its generated argument.
   void addRelatedRemark(RemarkId relatedId) {
-    if (relatedId) {
-      relatedRemarks.push_back(relatedId);
-      args.emplace_back("RelatedTo", llvm::utostr(relatedId.getValue()));
-    }
+    if (!relatedId)
+      return;
+    relatedRemarks.push_back(relatedId);
+    Arg &arg =
+        args.emplace_back("RelatedTo", llvm::utostr(relatedId.getValue()));
+    arg.isLink = true;
   }
 
   /// Check if this remark has any related remarks.
@@ -391,8 +475,10 @@ struct LazyTextBuild {
   std::function<std::string()> thunk;
 };
 
-/// A wrapper for linking remarks by query - searches the engine's registry
-/// at stream time and links to all matching remarks.
+/// Resolves a query when inserted into an in-flight remark.
+struct RelatedRemarkQuery {
+  RemarkQuery query;
+};
 
 /// InFlightRemark is a RAII class that holds a reference to a Remark
 /// instance and allows to build the remark using the << operator. The remark
@@ -415,9 +501,13 @@ public:
     return *this;
   }
 
-  // Generic path, but *not* for Lazy
-  template <typename T, typename = std::enable_if_t<
-                            !std::is_same_v<std::decay_t<T>, LazyTextBuild>>>
+  InFlightRemark &operator<<(const RelatedRemarkQuery &related);
+
+  // Generic path, excluding wrappers handled by dedicated overloads.
+  template <typename T,
+            typename = std::enable_if_t<
+                !std::is_same_v<std::decay_t<T>, LazyTextBuild> &&
+                !std::is_same_v<std::decay_t<T>, RelatedRemarkQuery>>>
   InFlightRemark &operator<<(T &&arg) {
     if (remark)
       *remark << std::forward<T>(arg);
@@ -481,14 +571,11 @@ public:
   virtual void reportRemark(const Remark &remark) = 0;
   virtual void finalize() = 0;
 
-  /// Find previously reported remarks matching the given criteria.
-  /// Default returns empty -- only policies that store remarks (like
-  /// PolicyFinal) override this to enable query-based linking.
-  virtual SmallVector<RemarkId>
-  findRemarks(const RemarkOpts &opts,
-              std::optional<RemarkKind> kind = std::nullopt) const {
-    return {};
-  }
+  /// Visit remarks retained for future emission. findRemarks calls this; do not
+  /// call findRemarks while holding the lock taken here. The callback must not
+  /// reenter the policy or retain references. The default visits nothing.
+  virtual void forEachPendingRemark(
+      llvm::function_ref<void(const Remark &)> callback) const {}
 };
 
 //===----------------------------------------------------------------------===//
@@ -506,6 +593,13 @@ private:
   std::optional<llvm::Regex> analysisFilter;
   /// The category for failed optimization remarks.
   std::optional<llvm::Regex> failedFilter;
+  /// History records metadata for remarks selected for emission by the policy.
+  /// Its mutex has a stable lifetime; retained storage is allocated on demand.
+  /// Declared before the streamer and the policy so that a policy destructor
+  /// that still reports finds them alive.
+  struct RemarkHistory;
+  std::unique_ptr<RemarkHistory> history;
+  std::atomic<bool> historyEnabled{false};
   /// The MLIR remark streamer that will be used to emit the remarks.
   std::unique_ptr<MLIRRemarkStreamerBase> remarkStreamer;
   /// The MLIR remark policy that will be used to emit the remarks.
@@ -597,12 +691,27 @@ public:
   }
 
   //===--------------------------------------------------------------------===//
-  // Remark Linking - query previously emitted remarks
+  // Remark Linking - query emitted and pending remarks
   //===--------------------------------------------------------------------===//
 
-  /// Find all remarks matching the given criteria. Delegates to the
-  /// emitting policy. Only works with policies that store remarks
-  /// (e.g. RemarkEmittingPolicyFinal); returns empty for PolicyAll.
+  /// Enable or disable history. Enabling records subsequent emissions and makes
+  /// pending policy remarks searchable; disabling discards the recorded
+  /// metadata and suppresses queries.
+  void enableHistory(bool enable = true);
+
+  /// Discard recorded metadata without changing whether history is enabled.
+  void clearHistory();
+
+  /// Find matching emitted remarks and pending candidates in ID order, each
+  /// once. Returns empty without history; otherwise scans all pending and
+  /// emitted remarks. Candidates may be replaced before emission. Queries may
+  /// overlap reports, but not Final::finalize(). Cross-function matches depend
+  /// on thread timing; scope queries with function().
+  SmallVector<RemarkId> findRemarks(const RemarkQuery &query) const;
+
+  /// Search using nonempty option fields as exact-match criteria. The related
+  /// ID in opts is ignored. Use RemarkQuery to match empty fields or a
+  /// location.
   SmallVector<RemarkId>
   findRemarks(const RemarkOpts &opts,
               std::optional<RemarkKind> kind = std::nullopt) const;
@@ -648,6 +757,12 @@ mlir::remark::RemarkOpts::relatedTo(const detail::InFlightRemark &r) const {
 }
 
 namespace mlir::remark {
+/// Link to all remarks matching the query, each once, when inserted into an
+/// in-flight remark. Requires history; no match adds no links. Final drops
+/// links to targets replaced in the same finalization batch.
+inline detail::RelatedRemarkQuery relatedTo(RemarkQuery query) {
+  return {std::move(query)};
+}
 
 //===----------------------------------------------------------------------===//
 // Remark Emitting Policies
@@ -666,26 +781,30 @@ public:
 };
 
 /// Policy that emits only the last remark reported for each identity, see
-/// DenseMapInfo<Remark>. Remarks are stored until finalize(), which emits them
-/// in creation order, so the output does not depend on hash order.
+/// DenseMapInfo<Remark>. Remarks are stored until finalize().
 class RemarkEmittingPolicyFinal : public detail::RemarkEmittingPolicyBase {
-private:
-  /// Remarks reported since the last finalize().
-  llvm::DenseSet<detail::Remark> postponedRemarks;
-
 public:
   RemarkEmittingPolicyFinal();
 
-  void reportRemark(const detail::Remark &remark) override {
-    postponedRemarks.erase(remark);
-    postponedRemarks.insert(remark);
-  }
+  void reportRemark(const detail::Remark &remark) override;
 
-  /// Emits and drains all stored remarks. Related remarks are printed right
-  /// after the remark that references them; a link only resolves when both
-  /// remarks are in the same call. A later call emits only remarks reported
-  /// since this one.
+  /// Visit pending candidates. Must not overlap finalize().
+  void forEachPendingRemark(
+      llvm::function_ref<void(const detail::Remark &)> callback) const override;
+
+  /// Emit each survivor once, grouping related remarks after their parents.
+  /// Visit roots with IDs in ID order, then ID-less roots in unspecified order.
+  /// Finally, start traversals from any unvisited remarks in ID order.
+  /// Links to IDs replaced in this batch are removed; IDs outside this batch
+  /// are preserved without validation. Call after reports and queries stop.
+  /// Callbacks must not reenter the policy. Later calls emit only new remarks.
   void finalize() override;
+
+private:
+  mutable std::mutex mutex;
+  llvm::DenseSet<detail::Remark> pendingRemarks;
+  /// IDs replaced in the current batch.
+  llvm::DenseSet<uint64_t> discardedIds;
 };
 
 /// Create a Reason with llvm::formatv formatting.

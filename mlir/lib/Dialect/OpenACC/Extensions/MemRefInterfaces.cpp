@@ -257,7 +257,8 @@ struct MemRefPointerLikeModel
     return {};
   }
 
-  bool isDeviceAccessible(Type pointer, Value var) const {
+  bool isDeviceAccessible(Type pointer, Value var,
+                          SymbolTableCollection *symbolTables) const {
     auto memrefTy = cast<T>(pointer);
     Attribute memSpace = memrefTy.getMemorySpace();
     return isa_and_nonnull<gpu::AddressSpaceAttr>(memSpace);

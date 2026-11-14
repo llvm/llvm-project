@@ -84,6 +84,10 @@ public:
   /// alloca/stack space).
   virtual unsigned getAllocaAddrSpace() const { return 0; }
 
+  /// Address space of the sret pointer of a record that cannot be passed in
+  /// registers (e.g. one with a non-trivial copy constructor or destructor).
+  virtual unsigned getSRetAddrSpace() const { return 0; }
+
   /// Whether the target has a 128-bit integer type. Default true.
   virtual bool hasInt128Type() const { return true; }
 
@@ -175,6 +179,10 @@ LLVM_ABI std::unique_ptr<TargetInfo> createBPFTargetInfo(TypeBuilder &TB);
 LLVM_ABI std::unique_ptr<TargetInfo>
 createAMDGPUTargetInfo(TypeBuilder &TB,
                        bool CoerceGenericPtrArgToGlobal = false);
+
+LLVM_ABI std::unique_ptr<TargetInfo>
+createSPIRVTargetInfo(TypeBuilder &TB, unsigned DefaultAddrSpace,
+                      bool KernelPassAggregatesIndirect = false);
 
 /// The AVX ABI level for X86 targets.
 enum class X86AVXABILevel {

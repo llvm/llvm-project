@@ -49,6 +49,7 @@ Sections:
 
 const char *SimpleFileMachOYAML = R"(
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

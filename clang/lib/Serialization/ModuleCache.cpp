@@ -18,6 +18,8 @@
 #include "llvm/Support/LockFileManager.h"
 #include "llvm/Support/Path.h"
 
+#include <chrono>
+
 using namespace clang;
 
 const ModuleCacheDirectory *ModuleCache::getDirectoryPtr(StringRef Path) {
@@ -185,6 +187,8 @@ std::error_code clang::writeImpl(StringRef Path, llvm::MemoryBufferRef Buffer,
   {
     llvm::raw_fd_ostream OS(FD, /*shouldClose=*/true);
     OS << Buffer.getBuffer();
+    // Make sure all contents reach the file before querying its status.
+    OS.flush();
     // Using the status from an open file descriptor ensures this is not racy.
     if ((EC = llvm::sys::fs::status(FD, Status)))
       return EC;
@@ -198,6 +202,32 @@ std::error_code clang::writeImpl(StringRef Path, llvm::MemoryBufferRef Buffer,
     return EC;
 
   return {};
+}
+
+/// The access time of a module file is only refreshed explicitly when it is
+/// older than this interval so we avoid frequent yet unnecessary updates.
+static constexpr std::chrono::seconds AccessTimeRefreshInterval(60);
+
+/// Record that the module file open as \p FD has just been used by setting its
+/// access time to now, if it is older than AccessTimeRefreshInterval. Module
+/// cache pruning goes by access time, and file systems don't reliably update it
+/// when a file is read (e.g., Linux relatime).
+static void
+refreshAccessTime([[maybe_unused]] llvm::sys::fs::file_t FD,
+                  [[maybe_unused]] const llvm::sys::fs::file_status &Status) {
+// FIXME: Support Windows. The handle (FD) is opened for reading only, and
+// SetFileTime needs one with FILE_WRITE_ATTRIBUTES access.
+#ifndef _WIN32
+  llvm::sys::TimePoint<> Now = std::chrono::system_clock::now();
+  if (Now - Status.getLastAccessedTime() <= AccessTimeRefreshInterval)
+    return;
+
+  // Keep the modification time: modules importing this one record it.
+  // Go through the descriptor so a module file replaced meanwhile is left
+  // alone.
+  (void)llvm::sys::fs::setLastAccessAndModificationTime(
+      FD.get(), Now, Status.getLastModificationTime());
+#endif
 }
 
 Expected<std::unique_ptr<llvm::MemoryBuffer>>
@@ -217,6 +247,7 @@ clang::readImpl(StringRef FileName, off_t &Size, time_t &ModTime) {
     return llvm::errorCodeToError(Buf.getError());
   Size = Status.getSize();
   ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
+  refreshAccessTime(*FD, Status);
   return std::move(*Buf);
 }
 

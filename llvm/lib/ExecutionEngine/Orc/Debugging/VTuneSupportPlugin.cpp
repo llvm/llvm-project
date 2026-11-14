@@ -40,8 +40,7 @@ VTuneSupportPlugin::VTuneSupportPlugin(ExecutorProcessControl &EPC,
                                        bool EmitDebugInfo)
     : EPC(EPC), RegisterVTuneImplAddr(RegisterImplAddr),
       UnregisterVTuneImpl(
-          sps::ProxySpec<Proxy<void(VTuneUnloadedMethodIDs)>,
-                         vtune_sps_ci::UnregisterVTuneImpl>::dispatch,
+          sps::ProxySpec<vtune_sps_ci::UnregisterVTuneImpl>::dispatch,
           UnregisterImplAddr),
       EmitDebugInfo(EmitDebugInfo) {}
 

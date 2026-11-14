@@ -17,7 +17,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 liveins:
   - { reg: '$edi' }
 body: |

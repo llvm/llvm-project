@@ -86,7 +86,7 @@ struct VectorTransformsOptions {
 ///      memref.cast %A: memref<A...> to compatibleMemRefType
 ///      scf.yield %view : compatibleMemRefType, index, index
 ///    } else {
-///      // slowpath, not in-bounds vector.transfer or linalg.copy.
+///      // slowpath, not in-bounds vector.transfer or memref.copy.
 ///      memref.cast %alloc: memref<B...> to compatibleMemRefType
 ///      scf.yield %4 : compatibleMemRefType, index, index
 //     }

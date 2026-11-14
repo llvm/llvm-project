@@ -19,7 +19,7 @@
 #include "src/sys/mman/pkey_set.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
-#include "test/UnitTest/LibcTest.h"
+#include "test/UnitTest/Test.h"
 #include "test/UnitTest/TestLogger.h"
 
 #include <linux/param.h> // For EXEC_PAGESIZE.

@@ -1,7 +1,11 @@
 // RUN: %clang_cc1 -triple powerpc64-unknown-unknown -target-feature +altivec -ffreestanding -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple powerpc64-unknown-unknown -target-feature +altivec -ffreestanding -emit-llvm -o - %s | FileCheck %s %}
 // RUN: %clang_cc1 -triple powerpc64-unknown-unknown -target-feature +altivec -ffreestanding -emit-llvm -flax-vector-conversions=none -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple powerpc64-unknown-unknown -target-feature +altivec -ffreestanding -emit-llvm -flax-vector-conversions=none -o - %s | FileCheck %s %}
 // RUN: %clang_cc1 -std=c89 -triple powerpc64-unknown-unknown -target-feature +altivec -ffreestanding -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -std=c89 -triple powerpc64-unknown-unknown -target-feature +altivec -ffreestanding -emit-llvm -o - %s | FileCheck %s %}
 // RUN: %clang_cc1 -triple powerpc64-unknown-unknown -target-feature +altivec -ffreestanding -emit-llvm -x c++ -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple powerpc64-unknown-unknown -target-feature +altivec -ffreestanding -emit-llvm -x c++ -o - %s | FileCheck %s %}
 
 #include <altivec.h>
 

@@ -20,7 +20,6 @@
 ...
 ---
 name: foo
-tracksRegLiveness: true
 stack:
   - { id: 0, stack-id: scalable-vector, offset: 0, size: 8, alignment: 8 }
 body: |
@@ -42,3 +41,4 @@ body: |
   bb.0:
   bb.1:
     PseudoRET
+...

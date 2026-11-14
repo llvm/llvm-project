@@ -26,6 +26,14 @@ llvm.func @nvvm_cvt_f32x2_to_f16x2_invalid_rbits_2(%a : f32, %b : f32, %rbits : 
 
 // -----
 
+llvm.func @nvvm_cvt_f32x2_to_f16x2_invalid_pzo(%a : f32, %b : f32, %rbits : i32) {
+  // expected-error @below {{pzo not supported for RS rounding mode.}}
+  %res = nvvm.convert.f32x2.to.f16x2 %a, %b random_bits = %rbits rnd = <rs> pzo = true : vector<2xf16>
+  llvm.return
+}
+
+// -----
+
 llvm.func @nvvm_cvt_f32x2_to_bf16x2_invalid_rounding(%a : f32, %b : f32) {
   // expected-error @below {{Only RN, RZ, and RS rounding modes are supported for conversions from f32x2 to bf16x2.}}
   %res = nvvm.convert.f32x2.to.bf16x2 %a, %b rnd = <rm> : vector<2xbf16>
@@ -43,5 +51,13 @@ llvm.func @nvvm_cvt_f32x2_to_bf16x2_invalid_rbits_1(%a : f32, %b : f32) {
 llvm.func @nvvm_cvt_f32x2_to_bf16x2_invalid_rbits_2(%a : f32, %b : f32, %rbits : i32) {
   // expected-error @below {{random_bits not supported for RN and RZ rounding modes.}}
   %res = nvvm.convert.f32x2.to.bf16x2 %a, %b random_bits = %rbits rnd = <rn> : vector<2xbf16>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_f32x2_to_bf16x2_invalid_pzo(%a : f32, %b : f32, %rbits : i32) {
+  // expected-error @below {{pzo not supported for RS rounding mode.}}
+  %res = nvvm.convert.f32x2.to.bf16x2 %a, %b random_bits = %rbits rnd = <rs> pzo = true : vector<2xbf16>
   llvm.return
 }

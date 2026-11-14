@@ -425,10 +425,10 @@ bool VPIntrinsic::canIgnoreVectorLengthParam() const {
   if (!VLParam)
     return true;
 
-  // Note that the VP intrinsic causes undefined behavior if the Explicit Vector
-  // Length parameter is strictly greater-than the number of vector elements of
-  // the operation. This function returns true when this is detected statically
-  // in the IR.
+  // Note that if the Explicit Vector Length parameter is strictly greater-than
+  // the number of vector elements of the operation, the result is poison (or
+  // the behavior is undefined for VP intrinsics that access memory). This
+  // function returns true when this is detected statically in the IR.
 
   // Check whether "W == vscale * EC.getKnownMinValue()"
   if (EC.isScalable()) {

@@ -341,6 +341,45 @@ define ptr @D98611_3(ptr %c1, i64 %offset) {
   ret ptr %gep
 }
 
+; Without exact, the byte distance may not be a multiple of the element size.
+define ptr @D98611_2_not_exact(ptr %c1, i64 %offset) {
+; CHECK-LABEL: @D98611_2_not_exact(
+; CHECK-NEXT:    [[C2:%.*]] = getelementptr inbounds i8, ptr [[C1:%.*]], i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[PTRTOINT1:%.*]] = ptrtoint ptr [[C1]] to i64
+; CHECK-NEXT:    [[PTRTOINT2:%.*]] = ptrtoint ptr [[C2]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[PTRTOINT2]], [[PTRTOINT1]]
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv i64 [[SUB]], 7
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[STRUCT_A:%.*]], ptr [[C1]], i64 [[SDIV]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %c2 = getelementptr inbounds i8, ptr %c1, i64 %offset
+  %ptrtoint1 = ptrtoint ptr %c1 to i64
+  %ptrtoint2 = ptrtoint ptr %c2 to i64
+  %sub = sub i64 %ptrtoint2, %ptrtoint1
+  %sdiv = sdiv i64 %sub, 7
+  %gep = getelementptr inbounds %struct.A, ptr %c1, i64 %sdiv
+  ret ptr %gep
+}
+
+define ptr @D98611_3_not_exact(ptr %c1, i64 %offset) {
+; CHECK-LABEL: @D98611_3_not_exact(
+; CHECK-NEXT:    [[C2:%.*]] = getelementptr inbounds i8, ptr [[C1:%.*]], i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[PTRTOINT1:%.*]] = ptrtoint ptr [[C1]] to i64
+; CHECK-NEXT:    [[PTRTOINT2:%.*]] = ptrtoint ptr [[C2]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[PTRTOINT2]], [[PTRTOINT1]]
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i64 [[SUB]], 2
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[C1]], i64 [[ASHR]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %c2 = getelementptr inbounds i8, ptr %c1, i64 %offset
+  %ptrtoint1 = ptrtoint ptr %c1 to i64
+  %ptrtoint2 = ptrtoint ptr %c2 to i64
+  %sub = sub i64 %ptrtoint2, %ptrtoint1
+  %ashr = ashr i64 %sub, 2
+  %gep = getelementptr inbounds i32, ptr %c1, i64 %ashr
+  ret ptr %gep
+}
+
 define <8 x ptr> @gep_vector_index_op2_poison(ptr %ptr) {
 ; CHECK-LABEL: @gep_vector_index_op2_poison(
 ; CHECK-NEXT:    ret <8 x ptr> poison

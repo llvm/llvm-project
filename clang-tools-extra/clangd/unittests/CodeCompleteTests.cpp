@@ -3529,6 +3529,67 @@ TEST(SignatureHelpTest, VariadicType) {
   }
 }
 
+TEST(SignatureHelpTest, StaticCallOperator) {
+  Annotations Code(R"cpp(
+    struct A { static void operator()(bool a); };
+    struct B { static void operator()(bool a, bool b); };
+    struct C { template <typename T> static void operator()(T a); };
+    struct D { template <typename T> static void operator()(T a, bool b); };
+    void test() {
+      A{}($a^);
+      B{}($b^);
+      B{}(true, $b2^);
+      C{}($c^);
+      D{}($d^);
+      D{}(true, $d2^);
+      B::operator()($static^);
+      B::operator()(true, $static2^);
+      D::operator()($staticTemplate^);
+      D::operator()(true, $staticTemplate2^);
+      auto Lambda = [](bool a, bool b) static {};
+      Lambda($lambda^);
+      Lambda(true, $lambda2^);
+      auto GenericLambda = []<typename T>(T a, bool b) static -> void {};
+      GenericLambda($genericLambda^);
+      GenericLambda(true, $genericLambda2^);
+    }
+  )cpp");
+  auto TU = TestTU::withCode(Code.code());
+  TU.ExtraArgs = {"-std=c++23"};
+  MockFS FS;
+  auto Inputs = TU.inputs(FS);
+  auto Preamble = TU.preamble();
+  ASSERT_TRUE(Preamble);
+
+  const struct {
+    const char *Point;
+    const char *Signature;
+    int ActiveParameter;
+  } Cases[] = {
+      {"a", "operator()([[bool a]]) -> void", 0},
+      {"b", "operator()([[bool a]], [[bool b]]) -> void", 0},
+      {"b2", "operator()([[bool a]], [[bool b]]) -> void", 1},
+      {"c", "operator()([[T a]]) -> void", 0},
+      {"d", "operator()([[T a]], [[bool b]]) -> void", 0},
+      {"d2", "operator()([[T a]], [[bool b]]) -> void", 1},
+      {"static", "operator()([[bool a]], [[bool b]]) -> void", 0},
+      {"static2", "operator()([[bool a]], [[bool b]]) -> void", 1},
+      {"staticTemplate", "operator()([[T a]], [[bool b]]) -> void", 0},
+      {"staticTemplate2", "operator()([[T a]], [[bool b]]) -> void", 1},
+      {"lambda", "operator()([[bool a]], [[bool b]]) -> void", 0},
+      {"lambda2", "operator()([[bool a]], [[bool b]]) -> void", 1},
+      {"genericLambda", "operator()([[T a]], [[bool b]]) -> void", 0},
+      {"genericLambda2", "operator()([[T a]], [[bool b]]) -> void", 1},
+  };
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Point);
+    auto Result = signatureHelp(testPath(TU.Filename), Code.point(Case.Point),
+                                *Preamble, Inputs, MarkupKind::PlainText);
+    EXPECT_THAT(Result.signatures, ElementsAre(sig(Case.Signature)));
+    EXPECT_EQ(Case.ActiveParameter, Result.activeParameter);
+  }
+}
+
 TEST(SignatureHelpTest, SkipExplicitObjectParameter) {
   Annotations Code(R"cpp(
     struct A {

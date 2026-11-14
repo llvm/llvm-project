@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s %}
 
 int printf(const char *fmt, ...)  __attribute__((modular_format(__modular_printf, "__printf", "float")));
 int myprintf(const char *fmt, ...)  __attribute__((modular_format(__modular_printf, "__printf", "float"), format(printf, 1, 2)));

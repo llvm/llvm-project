@@ -121,6 +121,28 @@ public:
     constexpr void operator++(int) {++(*this);}
 };
 
+// Not indirectly_readable: operator* is non-const. Postfix ++ returns void, so *it++ is ill-formed.
+template <class It>
+class non_const_deref_iterator {
+  It it_;
+
+public:
+  using value_type      = std::iter_value_t<It>;
+  using difference_type = std::iter_difference_t<It>;
+
+  friend constexpr It base(const non_const_deref_iterator& i) { return i.it_; }
+
+  explicit constexpr non_const_deref_iterator(It it) : it_(it) {}
+
+  constexpr decltype(auto) operator*() { return *it_; }
+
+  constexpr non_const_deref_iterator& operator++() {
+    ++it_;
+    return *this;
+  }
+  constexpr void operator++(int) { ++it_; }
+};
+
 template <class It>
 class comparable_iterator
 {

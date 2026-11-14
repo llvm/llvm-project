@@ -4,6 +4,10 @@
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -pic-level 2 -pic-is-pie -fclangir -emit-cir %s -o %t-pie.cir
+// RUN: FileCheck --check-prefix=CIR-PIE --input-file=%t-pie.cir %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -pic-level 2 -pic-is-pie -emit-llvm %s -o %t-pie.ll
+// RUN: FileCheck --check-prefix=OGCG-PIE --input-file=%t-pie.ll %s
 
 // Variable alias to a defined target.
 int alias_target = 42;
@@ -41,13 +45,18 @@ extern void weak_func_alias(void) __attribute__((weak, alias("weak_func_target")
 // CIR-DAG: cir.global external @prior_decl_var alias(@prior_decl_var_target) : !s32i
 // CIR-DAG: cir.global external @weak_var_target = #cir.int<9>
 // CIR-DAG: cir.global weak @weak_var_alias alias(@weak_var_target) : !s32i
-// CIR-DAG: cir.func{{.*}} @alias_func_target()
-// CIR-DAG: cir.func dso_local @alias_func() alias(@alias_func_target)
+// CIR-DAG: cir.func no_inline dso_local @alias_func_target()
+// CIR-DAG: cir.func @alias_func() alias(@alias_func_target)
 // CIR-DAG: cir.func{{.*}} @prior_decl_func_target()
-// CIR-DAG: cir.func dso_local @prior_decl_func() alias(@prior_decl_func_target)
+// CIR-DAG: cir.func @prior_decl_func() alias(@prior_decl_func_target)
 // CIR-DAG: cir.func{{.*}} @weak_func_target()
 // CIR-DAG: cir.func weak @weak_func_alias() alias(@weak_func_target)
-// CIR-DAG: cir.func dso_local @test13_alias(!u32i) alias(@test13)
+// CIR-DAG: cir.func @test13_alias(!u32i) alias(@test13)
+
+// CIR-PIE-DAG: cir.func dso_local @alias_func() alias(@alias_func_target)
+// CIR-PIE-DAG: cir.func dso_local @prior_decl_func() alias(@prior_decl_func_target)
+// CIR-PIE-DAG: cir.func weak dso_local @weak_func_alias() alias(@weak_func_target)
+// CIR-PIE-DAG: cir.func dso_local @test13_alias(!u32i) alias(@test13)
 
 // LLVM-DAG: @alias_target = global i32 42
 // LLVM-DAG: @prior_decl_var_target = global i32 7
@@ -72,6 +81,15 @@ extern void weak_func_alias(void) __attribute__((weak, alias("weak_func_target")
 // OGCG-DAG: @weak_func_alias = {{.*}}weak alias void (), ptr @weak_func_target
 // OGCG-DAG: @test13_alias = alias {}, ptr @test13
 // OGCG: define {{.*}}void @alias_func_target()
+
+// OGCG-PIE-DAG: @alias_var = dso_local alias i32, ptr @alias_target
+// OGCG-PIE-DAG: @prior_decl_var = dso_local alias i32, ptr @prior_decl_var_target
+// OGCG-PIE-DAG: @weak_var_alias = weak dso_local alias i32, ptr @weak_var_target
+// OGCG-PIE-DAG: @alias_func = dso_local alias void (), ptr @alias_func_target
+// OGCG-PIE-DAG: @prior_decl_func = dso_local alias void (), ptr @prior_decl_func_target
+// OGCG-PIE-DAG: @weak_func_alias = weak dso_local alias void (), ptr @weak_func_target
+// OGCG-PIE-DAG: @test13_alias = dso_local alias {}, ptr @test13
+// OGCG-PIE: define dso_local void @alias_func_target()
 
 // Test that a non visible (-Wvisibility) type doesn't assert.
 enum a_type { test13_a };

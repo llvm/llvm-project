@@ -15,6 +15,7 @@
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
@@ -107,6 +108,23 @@ TEST_F(SPIRVAPITest, checkTranslateOk) {
     EXPECT_TRUE(Status && Error.empty() && !Result.empty());
     EXPECT_EQ(identify_magic(Result), file_magic::spirv_object);
   }
+}
+
+TEST_F(SPIRVAPITest, checkTranslateNewPM) {
+  LLVMContext Context;
+  const char *Args[] = {"prog", "-force-new-pm-codegen"};
+  ASSERT_TRUE(cl::parseCommandLineOptions(Context.getLibraryOptions(), Args, "",
+                                          &nulls()));
+  SMDiagnostic ParseError;
+  std::unique_ptr<Module> M =
+      parseAssemblyString(OkAssembly, ParseError, Context);
+  ASSERT_TRUE(M);
+  std::string Result, Error;
+  bool Status =
+      SPIRVTranslate(M.get(), Result, Error, {}, CodeGenOptLevel::Default,
+                     Triple("spirv32-unknown-unknown"));
+  EXPECT_TRUE(Status && Error.empty() && !Result.empty());
+  EXPECT_EQ(identify_magic(Result), file_magic::spirv_object);
 }
 
 TEST_F(SPIRVAPITest, checkTranslateSupportExtensionByArg) {

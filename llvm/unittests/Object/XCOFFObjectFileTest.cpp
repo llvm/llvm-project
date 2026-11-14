@@ -560,3 +560,44 @@ TEST(XCOFFObjectFileTest, XCOFFTracebackTableErrorAtVecParameterType) {
                     FailedWithMessage("ParmsType encodes more than ParmsNum "
                                       "parameters in parseVectorParmsType."));
 }
+
+TEST(XCOFFObjectFileTest, XCOFFTracebackTableHasVectorInfoWithoutVectorParms) {
+  const uint8_t TBTableData[] = {
+      // Mandatory fields (8 bytes)
+      0x00, 0x00, 0x22, 0x40, // Version=0, Lang=C, +hasTBOffset, +isFP = 0x22,
+                              // +isFuncNamePresent = 0x40
+      0x00, 0x45, 0x07, 0x03, // +hasVectorInfo, GPRSaved=5 (0x45), FixedParms=7
+                              // (0x07), FPParms=1, +hasParmsOnStack (0x03)
+      // Optional fields
+      0x10, 0x00, 0x00,
+      0x00, // ParmsType (0x10000000: 'i', 'i', 'i', 'f', 'i', 'i', 'i', 'i')
+      0x00, 0x00, 0x03, 0xd8,                   // TraceBackTableOffset = 0x3d8
+      0x00, 0x07,                               // FunctionNameLen = 7
+      0x73, 0x73, 0x77, 0x61, 0x70, 0x5f, 0x6b, // FunctionName = "sswap_k"
+      // Vector info (6 bytes)
+      0x00, 0x01, // VRSaved=0, -isVRSavedOnStack, -hasVarArgs, VectorParms=0,
+                  // +hasVMXInstruction
+      0x00, 0x00, 0x00, 0x00, // VecParmsInfo
+      0x00, 0x00              // Padding (2 bytes)
+  };
+  uint64_t Size = sizeof(TBTableData);
+  Expected<XCOFFTracebackTable> TTOrErr =
+      XCOFFTracebackTable::create(TBTableData, Size);
+  ASSERT_THAT_EXPECTED(TTOrErr, Succeeded());
+  XCOFFTracebackTable TT = *TTOrErr;
+
+  EXPECT_EQ(TT.getNumberOfFixedParms(), 7);
+  EXPECT_EQ(TT.getNumberOfFPParms(), 1);
+  EXPECT_TRUE(TT.hasVectorInfo());
+
+  // Parameter types must be decoded using parseParmsType() rather than
+  // parseParmsTypeWithVecInfo() since there are no vector parameters.
+  ASSERT_TRUE(TT.getParmsType());
+  EXPECT_EQ(*TT.getParmsType(), "i, i, i, f, i, i, i, i");
+
+  ASSERT_TRUE(TT.getVectorExt());
+  TBVectorExt VecExt = *TT.getVectorExt();
+  EXPECT_EQ(VecExt.getNumberOfVectorParms(), 0u);
+  EXPECT_TRUE(VecExt.hasVMXInstruction());
+  EXPECT_EQ(VecExt.getNumberOfVRSaved(), 0);
+}

@@ -48,7 +48,6 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Base64.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
@@ -756,12 +755,6 @@ public:
 };
 
 } // end anonymous namespace
-
-namespace llvm {
-
-extern cl::opt<unsigned> AsmMacroMaxNestingDepth;
-
-} // end namespace llvm
 
 AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
                      const MCAsmInfo &MAI, unsigned CB = 0)
@@ -2835,7 +2828,7 @@ bool AsmParser::parseMacroArguments(const MCAsmMacro *M,
 bool AsmParser::handleMacroEntry(MCAsmMacro *M, SMLoc NameLoc) {
   // Arbitrarily limit macro nesting depth (default matches 'as'). We can
   // eliminate this, although we should protect against infinite loops.
-  unsigned MaxNestingDepth = AsmMacroMaxNestingDepth;
+  unsigned MaxNestingDepth = MAI.getAsmMacroMaxNestingDepth();
   if (ActiveMacros.size() == MaxNestingDepth) {
     std::ostringstream MaxNestingDepthError;
     MaxNestingDepthError << "macros cannot be nested more than "

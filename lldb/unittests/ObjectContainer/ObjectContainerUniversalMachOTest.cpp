@@ -57,6 +57,7 @@ FatArchs:
     reserved:        0x00000000
 Slices:
   - !mach-o
+    IsLittleEndian:  true
     FileHeader:
       magic:           0xFEEDFACF
       cputype:         0x01000007
@@ -101,6 +102,7 @@ FatArchs:
     align:           12
 Slices:
   - !mach-o
+    IsLittleEndian:  true
     FileHeader:
       magic:           0xFEEDFACF
       cputype:         0x00000007
@@ -144,6 +146,7 @@ FatArchs:
     align:           12
 Slices:
   - !mach-o
+    IsLittleEndian:  true
     FileHeader:
       magic:           0xFEEDFACF
       cputype:         0x01000007
@@ -236,6 +239,7 @@ TEST_F(ObjectContainerMachOFilesetTest, ZeroCmdSize) {
   // Reaching the assertion below is the regression check.
   auto ExpectedFile = TestFile::fromYaml(R"(
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

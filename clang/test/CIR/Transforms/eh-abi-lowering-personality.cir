@@ -1,0 +1,46 @@
+// RUN: cir-opt %s -cir-eh-abi-lowering -split-input-file -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+
+cir.func private @__gxx_personality_v0(...) -> !s32i
+
+cir.func @no_landing_pad() personality(@__gxx_personality_v0) {
+  cir.return
+}
+
+}
+
+// CHECK-NOT:   @__gxx_personality_v0
+// CHECK-LABEL: cir.func @no_landing_pad() {
+// CHECK-NOT:   @__gxx_personality_v0
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+
+cir.func private @_Z8externalv()
+cir.func private @__gxx_personality_v0(...) -> !s32i
+
+cir.func @no_landing_pad() personality(@__gxx_personality_v0) {
+  cir.return
+}
+
+cir.func @landing_pad() personality(@__gxx_personality_v0) {
+  cir.try_call @_Z8externalv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.return
+^bb2:
+  %0 = cir.eh.initiate cleanup : !cir.eh_token
+  cir.resume %0 : !cir.eh_token
+}
+
+}
+
+// CHECK:       cir.func private @__gxx_personality_v0(...)
+// CHECK-LABEL: cir.func @no_landing_pad() {
+// CHECK-LABEL: cir.func @landing_pad() personality(@__gxx_personality_v0)

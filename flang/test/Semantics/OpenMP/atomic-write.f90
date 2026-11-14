@@ -79,3 +79,30 @@ subroutine f07
   x = v
 end
 
+subroutine f08(c, d)
+  type t
+    integer :: i
+  end type
+  character :: c
+  type(t) :: d
+  interface
+    function pc(c)
+      character, pointer :: pc
+      character :: c
+    end
+    function pt()
+      import
+      type(t), pointer :: pt
+    end
+  end interface
+
+  ! For a function reference, the type of the function result is checked.
+  !$omp atomic write
+  !ERROR: ATOMIC operation requires an intrinsic scalar variable; 'pc' has the POINTER attribute
+  pc(c) = 'a'
+
+  !$omp atomic write
+  !ERROR: ATOMIC operation requires an intrinsic scalar variable; 'pt' has the POINTER attribute and derived type 't'
+  pt() = d
+end
+

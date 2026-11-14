@@ -6,6 +6,7 @@ name:            case11
 # CHECK-LABEL: name: case11
 body:             |
   bb.0:
+    liveins: $w1, $x0
     frame-setup STRWui $w1, $x0, 1 :: (store (s32))
     $w1 = frame-destroy LDRWui $x0, 1 :: (load (s32))
 
@@ -22,6 +23,7 @@ name:            case12
 # CHECK-LABEL: name: case12
 body:             |
   bb.0:
+    liveins: $w1, $x0
     frame-setup STRWui $w1, $x0, 1 :: (store (s32))
     $w2 = frame-destroy LDRHHui $x0, 2 :: (load (s16))
 
@@ -38,6 +40,7 @@ name:            case13
 # CHECK-LABEL: name: case13
 body:             |
   bb.0:
+    liveins: $w1, $x0
     frame-setup STRWui $w1, $x0, 1 :: (store (s32))
     $w2 = frame-destroy LDRHHui $x0, 3 :: (load (s16))
 
@@ -54,6 +57,7 @@ name:            case2
 # CHECK-LABEL: name: case2
 body:             |
   bb.0:
+    liveins: $x0
     frame-setup STRHHui $wzr, $x0, 0 :: (store (s32))
     frame-destroy STRHHui $wzr, $x0, 1 :: (store (s32))
 
@@ -66,6 +70,7 @@ name:            case3
 # CHECK-LABEL: name: case3
 body:             |
   bb.0:
+    liveins: $x2
 
     $x0 = frame-setup LDRXui $x2, 0 :: (load (s64))
     $x1 = frame-destroy LDRXui $x2, 1 :: (load (s64))

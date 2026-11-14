@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs \
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu \
 ; RUN:     -stop-after=xray-instrumentation < %s | FileCheck %s --check-prefix=MIR
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefix=ASM

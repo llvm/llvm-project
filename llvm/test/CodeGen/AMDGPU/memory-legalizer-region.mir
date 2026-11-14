@@ -6,6 +6,7 @@
 
 
 name:            load_singlethread_unordered
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: load_singlethread_unordered
@@ -34,6 +35,7 @@ body:             |
 
 
 name:            load_singlethread_monotonic
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: load_singlethread_monotonic
@@ -62,6 +64,7 @@ body:             |
 
 
 name:            load_singlethread_acquire
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: load_singlethread_acquire
@@ -90,6 +93,7 @@ body:             |
 
 
 name:            load_singlethread_seq_cst
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: load_singlethread_seq_cst
@@ -118,6 +122,7 @@ body:             |
 
 
 name:            load_wavefront_unordered
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: load_wavefront_unordered
@@ -146,6 +151,7 @@ body:             |
 
 
 name:            load_wavefront_monotonic
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: load_wavefront_monotonic
@@ -174,6 +180,7 @@ body:             |
 
 
 name:            load_wavefront_acquire
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: load_wavefront_acquire
@@ -202,6 +209,7 @@ body:             |
 
 
 name:            load_wavefront_seq_cst
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: load_wavefront_seq_cst
@@ -230,6 +238,7 @@ body:             |
 
 
 name:            load_workgroup_unordered
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: load_workgroup_unordered
@@ -258,6 +267,7 @@ body:             |
 
 
 name:            load_workgroup_monotonic
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: load_workgroup_monotonic
@@ -286,6 +296,7 @@ body:             |
 
 
 name:            load_workgroup_acquire
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: load_workgroup_acquire
@@ -314,6 +325,7 @@ body:             |
 
 
 name:            load_workgroup_seq_cst
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: load_workgroup_seq_cst
@@ -342,6 +354,7 @@ body:             |
 
 
 name:            load_agent_unordered
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: load_agent_unordered
@@ -370,6 +383,7 @@ body:             |
 
 
 name:            load_agent_monotonic
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: load_agent_monotonic
@@ -398,6 +412,7 @@ body:             |
 
 
 name:            load_agent_acquire
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: load_agent_acquire
@@ -426,6 +441,7 @@ body:             |
 
 
 name:            load_agent_seq_cst
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: load_agent_seq_cst
@@ -454,6 +470,7 @@ body:             |
 
 
 name:            load_system_unordered
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: load_system_unordered
@@ -482,6 +499,7 @@ body:             |
 
 
 name:            load_system_monotonic
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: load_system_monotonic
@@ -510,6 +528,7 @@ body:             |
 
 
 name:            load_system_acquire
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: load_system_acquire
@@ -538,6 +557,7 @@ body:             |
 
 
 name:            load_system_seq_cst
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: load_system_seq_cst
@@ -566,6 +586,7 @@ body:             |
 
 
 name:            store_singlethread_unordered
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: store_singlethread_unordered
@@ -590,6 +611,7 @@ body:             |
 
 
 name:            store_singlethread_monotonic
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: store_singlethread_monotonic
@@ -614,6 +636,7 @@ body:             |
 
 
 name:            store_singlethread_release
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: store_singlethread_release
@@ -638,6 +661,7 @@ body:             |
 
 
 name:            store_singlethread_seq_cst
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: store_singlethread_seq_cst
@@ -662,6 +686,7 @@ body:             |
 
 
 name:            store_wavefront_unordered
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: store_wavefront_unordered
@@ -686,6 +711,7 @@ body:             |
 
 
 name:            store_wavefront_monotonic
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: store_wavefront_monotonic
@@ -710,6 +736,7 @@ body:             |
 
 
 name:            store_wavefront_release
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: store_wavefront_release
@@ -734,6 +761,7 @@ body:             |
 
 
 name:            store_wavefront_seq_cst
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: store_wavefront_seq_cst
@@ -758,6 +786,7 @@ body:             |
 
 
 name:            store_workgroup_unordered
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: store_workgroup_unordered
@@ -782,6 +811,7 @@ body:             |
 
 
 name:            store_workgroup_monotonic
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: store_workgroup_monotonic
@@ -806,6 +836,7 @@ body:             |
 
 
 name:            store_workgroup_release
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: store_workgroup_release
@@ -830,6 +861,7 @@ body:             |
 
 
 name:            store_workgroup_seq_cst
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: store_workgroup_seq_cst
@@ -854,6 +886,7 @@ body:             |
 
 
 name:            store_agent_unordered
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: store_agent_unordered
@@ -878,6 +911,7 @@ body:             |
 
 
 name:            store_agent_monotonic
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: store_agent_monotonic
@@ -902,6 +936,7 @@ body:             |
 
 
 name:            store_agent_release
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: store_agent_release
@@ -926,6 +961,7 @@ body:             |
 
 
 name:            store_agent_seq_cst
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: store_agent_seq_cst
@@ -950,6 +986,7 @@ body:             |
 
 
 name:            store_system_unordered
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: store_system_unordered
@@ -974,6 +1011,7 @@ body:             |
 
 
 name:            store_system_monotonic
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: store_system_monotonic
@@ -998,6 +1036,7 @@ body:             |
 
 
 name:            store_system_release
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: store_system_release
@@ -1022,6 +1061,7 @@ body:             |
 
 
 name:            store_system_seq_cst
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: store_system_seq_cst
@@ -1046,6 +1086,7 @@ body:             |
 
 
 name:            atomicrmw_singlethread_unordered
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: atomicrmw_singlethread_unordered
@@ -1070,6 +1111,7 @@ body:             |
 
 
 name:            atomicrmw_singlethread_monotonic
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: atomicrmw_singlethread_monotonic
@@ -1094,6 +1136,7 @@ body:             |
 
 
 name:            atomicrmw_singlethread_acquire
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: atomicrmw_singlethread_acquire
@@ -1118,6 +1161,7 @@ body:             |
 
 
 name:            atomicrmw_singlethread_release
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: atomicrmw_singlethread_release
@@ -1142,6 +1186,7 @@ body:             |
 
 
 name:            atomicrmw_singlethread_acq_rel
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: atomicrmw_singlethread_acq_rel
@@ -1166,6 +1211,7 @@ body:             |
 
 
 name:            atomicrmw_singlethread_seq_cst
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: atomicrmw_singlethread_seq_cst

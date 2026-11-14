@@ -102,7 +102,9 @@ public:
   bool operator!=(const Identifier &other) const { return !isEqual(other); }
 
   void print(llvm::raw_ostream &os) const;
-  void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
 private:
   /// The value of the identifier.
@@ -311,7 +313,9 @@ public:
   void mergeAndAlignSymbols(PresburgerSpace &other);
 
   void print(llvm::raw_ostream &os) const;
-  void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
 protected:
   PresburgerSpace(unsigned numDomain, unsigned numRange, unsigned numSymbols,

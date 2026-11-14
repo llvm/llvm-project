@@ -29,6 +29,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/TypeRange.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "mlir/Support/LogicalResult.h"
 #include "llvm/Support/Error.h"
 
 namespace mlir {
@@ -59,12 +60,15 @@ FunctionClassification classify(TypeRange argTypes, Type returnType,
 ///
 /// Per-arg/return dictionary keys:
 ///   kind: StringAttr.  One of "direct", "extend", "indirect",
-///         "ignore", "expand".
+///         "indirect_aliased", "ignore", "expand".
 ///
 /// For kind = "direct" (all optional):
 ///   coerced_type:  TypeAttr.  ABI-coerced type, if different from the
 ///                  original.
 ///   can_flatten:   BoolAttr.  Defaults to true.
+///   direct_align:  IntegerAttr.  Stack-slot alignment in bytes when the
+///                  ABI sets one apart from the type's.  When set, the
+///                  rewriter emits llvm.alignstack.
 ///
 /// For kind = "extend" (coerced_type required, sign_extend optional):
 ///   coerced_type:  TypeAttr.  Required; the extended integer type.
@@ -78,6 +82,9 @@ FunctionClassification classify(TypeRange argTypes, Type returnType,
 ///   indirect_addr_space: IntegerAttr.  Target address space of the
 ///                        pointer.  Defaults to 0.
 ///
+/// For kind = "indirect_aliased": the same keys as "indirect" except byval,
+/// which it rejects.
+///
 /// For kind = "ignore" / "expand": no extra keys.
 ///
 /// Future schema additions tracked in projects/daily_log.md (Step 0c
@@ -90,11 +97,10 @@ FunctionClassification classify(TypeRange argTypes, Type returnType,
 ///
 /// \param attr   The dictionary attribute to parse.
 /// \param emitError  Diagnostic sink for parse errors.
-/// \returns The parsed classification, or std::nullopt on error.
-std::optional<FunctionClassification>
+/// \returns The parsed classification, or failure on error.
+FailureOr<FunctionClassification>
 parseClassificationAttr(DictionaryAttr attr,
                         function_ref<InFlightDiagnostic()> emitError);
-
 } // namespace test
 } // namespace abi
 } // namespace mlir

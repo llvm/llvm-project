@@ -20,9 +20,9 @@ add_entrypoint_object(
   HDRS
     thrd_create.h
   DEPENDS
-    libc.src.__support.threads.thread
+    libc.hdr.errno_macros
     libc.include.threads
-    libc.src.errno.errno
+    libc.src.__support.threads.thread
 )
 
 add_entrypoint_object(
@@ -111,6 +111,22 @@ add_entrypoint_object(
   DEPENDS
     libc.include.threads
     libc.src.__support.threads.mutex
+)
+
+add_entrypoint_object(
+  mtx_timedlock
+  SRCS
+    mtx_timedlock.cpp
+  HDRS
+    mtx_timedlock.h
+  DEPENDS
+    libc.hdr.types.struct_timespec
+    libc.include.threads
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.threads.mutex
+    libc.src.__support.time.abs_timeout
 )
 
 add_entrypoint_object(

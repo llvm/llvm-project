@@ -23,19 +23,23 @@
 #include "MipsSubtarget.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Target/TargetMachine.h"
 
-#define DEBUG_TYPE "mips-vr4300-mulmul-fix"
+#define DEBUG_TYPE "mips-mulmul-bug-fix"
 
 using namespace llvm;
 
 namespace {
 
-class MipsMulMulBugFix : public MachineFunctionPass {
+class MipsMulMulBugFixLegacy : public MachineFunctionPass {
 public:
-  MipsMulMulBugFix() : MachineFunctionPass(ID) {}
+  MipsMulMulBugFixLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return "Mips VR4300 mulmul bugfix"; }
 
@@ -45,30 +49,20 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  static char ID;
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
-private:
-  bool fixMulMulBB(MachineBasicBlock &MBB, const MipsInstrInfo &MipsII);
+  static char ID;
 };
 
 } // namespace
 
-INITIALIZE_PASS(MipsMulMulBugFix, "mips-vr4300-mulmul-fix",
+INITIALIZE_PASS(MipsMulMulBugFixLegacy, "mips-mulmul-bug-fix",
                 "Mips VR4300 mulmul bugfix", false, false)
 
-char MipsMulMulBugFix::ID = 0;
-
-bool MipsMulMulBugFix::runOnMachineFunction(MachineFunction &MF) {
-  const MipsInstrInfo &MipsII =
-      *static_cast<const MipsInstrInfo *>(MF.getSubtarget().getInstrInfo());
-
-  bool Modified = false;
-
-  for (auto &MBB : MF)
-    Modified |= fixMulMulBB(MBB, MipsII);
-
-  return Modified;
-}
+char MipsMulMulBugFixLegacy::ID = 0;
 
 static bool isFirstMul(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
@@ -102,8 +96,7 @@ static bool isSecondMulOrBranch(const MachineInstr &MI) {
   }
 }
 
-bool MipsMulMulBugFix::fixMulMulBB(MachineBasicBlock &MBB,
-                                   const MipsInstrInfo &MipsII) {
+static bool fixMulMulBB(MachineBasicBlock &MBB, const MipsInstrInfo &MipsII) {
   bool Modified = false;
 
   MachineBasicBlock::instr_iterator NextMII;
@@ -129,4 +122,30 @@ bool MipsMulMulBugFix::fixMulMulBB(MachineBasicBlock &MBB,
   return Modified;
 }
 
-FunctionPass *llvm::createMipsMulMulBugPass() { return new MipsMulMulBugFix(); }
+static bool fixMulMulBugInMF(MachineFunction &MF) {
+  const MipsInstrInfo &MipsII =
+      *static_cast<const MipsInstrInfo *>(MF.getSubtarget().getInstrInfo());
+
+  bool Modified = false;
+
+  for (auto &MBB : MF)
+    Modified |= fixMulMulBB(MBB, MipsII);
+
+  return Modified;
+}
+
+FunctionPass *llvm::createMipsMulMulBugFixLegacyPass() {
+  return new MipsMulMulBugFixLegacy();
+}
+
+bool MipsMulMulBugFixLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return fixMulMulBugInMF(MF);
+}
+
+PreservedAnalyses
+MipsMulMulBugFixPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  return fixMulMulBugInMF(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                    .preserveSet<CFGAnalyses>()
+                              : PreservedAnalyses::all();
+}

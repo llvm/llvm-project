@@ -13,9 +13,9 @@
 #ifdef ELF_MACHINE
 // ELF_MACHINE(EM_name, number, arch name, GNU name)
 // At the time of writing, the list of registered machine architectures is
-// at https://groups.google.com/g/generic-abi/c/0kORSDcyhTE/m/ZRf_PvcHAAAJ
-// Please refer to https://groups.google.com/g/generic-abi for any further
-// updates.
+// at https://gabi.xinuos.com/elf/a-emachine.html and in the v4.3 development
+// branch at https://github.com/xinuos/gabi.
+// Also refer to https://groups.google.com/g/generic-abi for further updates.
 ELF_MACHINE(EM_NONE,            0, "None", "None") // No machine
 ELF_MACHINE(EM_M32,             1, "m32", "WE32100") // AT&T WE 32100
 ELF_MACHINE(EM_SPARC,           2, "sparc", "Sparc")
@@ -154,8 +154,8 @@ ELF_MACHINE(EM_ECOG16,        176, "ecog16", "Cyan Technology eCOG16 family")
 ELF_MACHINE(EM_CR16,          177, "cr16", "National Semiconductor CompactRISC 16-bit processor")
 ELF_MACHINE(EM_ETPU,          178, "etpu", "Freescale Extended Time Processing Unit")
 ELF_MACHINE(EM_SLE9X,         179, "sle9x", "Infineon Technologies SLE9X core")
-ELF_MACHINE(EM_L10M,          180, "l10m", "EM_L10M") // Intel L10M
-ELF_MACHINE(EM_K10M,          181, "k10m", "EM_K10M") // Intel K10M
+ELF_MACHINE(EM_L10M,          180, "l10m", "Intel L10M")
+ELF_MACHINE(EM_K10M,          181, "k10m", "Intel K10M")
 ELF_MACHINE(EM_AARCH64,       183, "aarch64", "AArch64")
 ELF_MACHINE(EM_AVR32,         185, "avr32", "Atmel Corporation 32-bit microprocessor family")
 ELF_MACHINE(EM_STM8,          186, "stm8", "STMicroeletronics STM8 8-bit microcontroller")
@@ -164,40 +164,68 @@ ELF_MACHINE(EM_TILEPRO,       188, "tilepro", "Tilera TILEPro multicore architec
 ELF_MACHINE(EM_MICROBLAZE,    189, "microblaze", "Xilinx MicroBlaze 32-bit RISC soft processor core")
 ELF_MACHINE(EM_CUDA,          190, "cuda", "NVIDIA CUDA architecture")
 ELF_MACHINE(EM_TILEGX,        191, "tilegx", "Tilera TILE-Gx multicore architecture family")
-ELF_MACHINE(EM_CLOUDSHIELD,   192, "cloudshield", "EM_CLOUDSHIELD") // CloudShield architecture family
-ELF_MACHINE(EM_COREA_1ST,     193, "corea_1st", "EM_COREA_1ST") // KIPO-KAIST Core-A 1st generation processor family
-ELF_MACHINE(EM_COREA_2ND,     194, "corea_2nd", "EM_COREA_2ND") // KIPO-KAIST Core-A 2nd generation processor family
-ELF_MACHINE(EM_ARC_COMPACT2,  195, "arc_compact2", "EM_ARC_COMPACT2") // Synopsys ARCompact V2
-ELF_MACHINE(EM_OPEN8,         196, "open8", "EM_OPEN8") // Open8 8-bit RISC soft processor core
+ELF_MACHINE(EM_CLOUDSHIELD,   192, "cloudshield", "CloudShield architecture family")
+ELF_MACHINE(EM_COREA_1ST,     193, "corea_1st", "KIPO-KAIST Core-A 1st generation processor family")
+ELF_MACHINE(EM_COREA_2ND,     194, "corea_2nd", "KIPO-KAIST Core-A 2nd generation processor family")
+ELF_MACHINE(EM_ARC_COMPACT2,  195, "arc_compact2", "Synopsys ARCompact V2")
+ELF_MACHINE(EM_OPEN8,         196, "open8", "Open8 8-bit RISC soft processor core")
 ELF_MACHINE(EM_RL78,          197, "rl78", "Renesas RL78")
 ELF_MACHINE(EM_VIDEOCORE5,    198, "videocore5", "Broadcom VideoCore V processor")
-ELF_MACHINE(EM_78KOR,         199, "78kor", "EM_78KOR") // Renesas 78KOR family
-ELF_MACHINE(EM_56800EX,       200, "56800ex", "EM_56800EX") // Freescale 56800EX Digital Signal Controller (DSC)
-ELF_MACHINE(EM_AMDGPU,        224, "amdgpu", "EM_AMDGPU") // AMD GPU architecture
-ELF_MACHINE(EM_RISCV,         243, "riscv", "RISC-V")
-ELF_MACHINE(EM_LANAI,         244, "lanai", "EM_LANAI") // Lanai 32-bit processor
-ELF_MACHINE(EM_BPF,           247, "bpf", "EM_BPF") // Linux kernel bpf virtual machine
-ELF_MACHINE(EM_VE,            251, "ve", "NEC SX-Aurora Vector Engine") // NEC SX-Aurora VE
-ELF_MACHINE(EM_LOONGARCH,     258, "loongarch", "LoongArch")
-ELF_MACHINE(EM_BA1,           201, "ba1", "EM_BA1") // Beyond BA1 CPU architecture
-ELF_MACHINE(EM_BA2,           202, "ba2", "EM_BA2") // Beyond BA2 CPU architecture
-ELF_MACHINE(EM_XCORE,         203, "xcore", "EM_XCORE") // XMOS xCORE processor family
-ELF_MACHINE(EM_MCHP_PIC,      204, "mchp_pic", "EM_MCHP_PIC") // Microchip 8-bit PIC(r) family
+ELF_MACHINE(EM_78KOR,         199, "78kor", "Renesas 78KOR family")
+ELF_MACHINE(EM_56800EX,       200, "56800ex", "Freescale 56800EX Digital Signal Controller (DSC)")
+ELF_MACHINE(EM_BA1,           201, "ba1", "Beyond BA1 CPU architecture")
+ELF_MACHINE(EM_BA2,           202, "ba2", "Beyond BA2 CPU architecture")
+ELF_MACHINE(EM_XCORE,         203, "xcore", "XMOS xCORE processor family")
+ELF_MACHINE(EM_MCHP_PIC,      204, "mchp_pic", "Microchip 8-bit PIC(r) family")
 ELF_MACHINE(EM_INTELGT,       205, "intelgt", "Intel Graphics Technology")
 ELF_MACHINE(EM_INTEL206,      206, "intel206", "EM_INTEL206") // Reserved by Intel
 ELF_MACHINE(EM_INTEL207,      207, "intel207", "EM_INTEL207") // Reserved by Intel
 ELF_MACHINE(EM_INTEL208,      208, "intel208", "EM_INTEL208") // Reserved by Intel
 ELF_MACHINE(EM_INTEL209,      209, "intel209", "EM_INTEL209") // Reserved by Intel
-ELF_MACHINE(EM_KM32,          210, "km32", "EM_KM32") // KM211 KM32 32-bit processor
-ELF_MACHINE(EM_KMX32,         211, "kmx32", "EM_KMX32") // KM211 KMX32 32-bit processor
-ELF_MACHINE(EM_KMX16,         212, "kmx16", "EM_KMX16") // KM211 KMX16 16-bit processor
-ELF_MACHINE(EM_KMX8,          213, "kmx8", "EM_KMX8") // KM211 KMX8 8-bit processor
-ELF_MACHINE(EM_KVARC,         214, "kvarc", "EM_KVARC") // KM211 KVARC processor
-ELF_MACHINE(EM_CDP,           215, "cdp", "EM_CDP") // Paneve CDP architecture family
-ELF_MACHINE(EM_COGE,          216, "coge", "EM_COGE") // Cognitive Smart Memory Processor
-ELF_MACHINE(EM_COOL,          217, "cool", "EM_COOL") // iCelero CoolEngine
-ELF_MACHINE(EM_NORC,          218, "norc", "EM_NORC") // Nanoradio Optimized RISC
-ELF_MACHINE(EM_CSR_KALIMBA,   219, "csr_kalimba", "EM_CSR_KALIMBA") // CSR Kalimba architecture family
-ELF_MACHINE(EM_CSKY,          252, "csky", "EM_CSKY") // C-SKY 32-bit processor
+ELF_MACHINE(EM_KM32,          210, "km32", "KM211 KM32 32-bit processor")
+ELF_MACHINE(EM_KMX32,         211, "kmx32", "KM211 KMX32 32-bit processor")
+ELF_MACHINE(EM_KMX16,         212, "kmx16", "KM211 KMX16 16-bit processor")
+ELF_MACHINE(EM_KMX8,          213, "kmx8", "KM211 KMX8 8-bit processor")
+ELF_MACHINE(EM_KVARC,         214, "kvarc", "KM211 KVARC processor")
+ELF_MACHINE(EM_CDP,           215, "cdp", "Paneve CDP architecture family")
+ELF_MACHINE(EM_COGE,          216, "coge", "Cognitive Smart Memory Processor")
+ELF_MACHINE(EM_COOL,          217, "cool", "Bluechip Systems CoolEngine")
+ELF_MACHINE(EM_NORC,          218, "norc", "Nanoradio Optimized RISC")
+ELF_MACHINE(EM_CSR_KALIMBA,   219, "csr_kalimba", "CSR Kalimba architecture family")
+ELF_MACHINE(EM_Z80,           220, "z80", "Zilog Z80")
+ELF_MACHINE(EM_VISIUM,        221, "visium", "Controls and Data Services VISIUMcore processor")
+ELF_MACHINE(EM_FT32,          222, "ft32", "FTDI Chip FT32 high performance 32-bit RISC architecture")
+ELF_MACHINE(EM_MOXIE,         223, "moxie", "Moxie processor family")
+ELF_MACHINE(EM_AMDGPU,        224, "amdgpu", "AMD GPU architecture")
+ELF_MACHINE(EM_RISCV,         243, "riscv", "RISC-V")
+ELF_MACHINE(EM_LANAI,         244, "lanai", "Lanai processor")
+ELF_MACHINE(EM_CEVA,          245, "ceva", "CEVA Processor Architecture Family")
+ELF_MACHINE(EM_CEVA_X2,       246, "ceva_x2", "CEVA X2 Processor Family")
+ELF_MACHINE(EM_BPF,           247, "bpf", "Linux BPF – in-kernel virtual machine")
+ELF_MACHINE(EM_GRAPHCORE_IPU, 248, "graphcore_ipu", "Graphcore Intelligent Processing Unit")
+ELF_MACHINE(EM_IMG1,          249, "img1", "Imagination Technologies")
+ELF_MACHINE(EM_NFP,           250, "nfp", "Netronome Flow Processor (NFP)")
+ELF_MACHINE(EM_VE,            251, "ve", "NEC SX-Aurora Vector Engine")
+ELF_MACHINE(EM_CSKY,          252, "csky", "C-SKY processor family")
+ELF_MACHINE(EM_ARC_COMPACT3_64, 253, "arc_compact3_64", "Synopsys ARCv2.3 64-bit")
+ELF_MACHINE(EM_MCS6502,       254, "mcs6502", "MOS Technology MCS 6502 processor")
+ELF_MACHINE(EM_ARC_COMPACT3,  255, "arc_compact3", "Synopsys ARCv2.3 32-bit")
+ELF_MACHINE(EM_KVX,           256, "kvx", "Kalray VLIW core of the MPPA processor family")
+ELF_MACHINE(EM_65816,         257, "65816", "WDC 65816/65C816")
+ELF_MACHINE(EM_LOONGARCH,     258, "loongarch", "LoongArch")
+ELF_MACHINE(EM_KF32,          259, "kf32", "ChipON KungFu32")
+ELF_MACHINE(EM_U16_U8CORE,    260, "u16_u8core", "LAPIS nX-U16/U8")
+ELF_MACHINE(EM_TACHYUM,       261, "tachyum", "Reserved for Tachyum processor")
+ELF_MACHINE(EM_56800EF,       262, "56800ef", "NXP 56800EF Digital Signal Controller (DSC)")
+ELF_MACHINE(EM_SBF,           263, "sbf", "Solana Bytecode Format")
+ELF_MACHINE(EM_AIENGINE,      264, "aiengine", "AMD/Xilinx AIEngine architecture")
+ELF_MACHINE(EM_SIMA_MLA,      265, "sima_mla", "SiMa MLA")
+ELF_MACHINE(EM_BANG,          266, "bang", "Cambricon BANG")
+ELF_MACHINE(EM_LOONGGPU,      267, "loonggpu", "Loongson LoongGPU")
+ELF_MACHINE(EM_SW64,          268, "sw64", "Wuxi Institute of Advanced Technology SW64")
+ELF_MACHINE(EM_AIECTRLCODE,   269, "aiectrlcode", "AMD/Xilinx AIEngine ctrlcode")
+ELF_MACHINE(EM_PPU,           270, "ppu", "T-Head PPU")
+ELF_MACHINE(EM_LST,           271, "lst", "Lisuan Technology LST")
+ELF_MACHINE(EM_CHILI,         272, "chili", "OpenAI Chili architecture")
 #undef ELF_MACHINE
 #endif

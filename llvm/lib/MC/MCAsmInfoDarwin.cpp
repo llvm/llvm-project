@@ -15,6 +15,7 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCTargetOptions.h"
 
 using namespace llvm;
 
@@ -83,7 +84,7 @@ MCAsmInfoDarwin::MCAsmInfoDarwin(const MCTargetOptions &Options)
   HasDotTypeDotSizeDirective = false;
   HasNoDeadStrip = true;
 
-  DwarfUsesRelocationsAcrossSections = false;
+  DwarfUsesRelocationsAcrossSections = Options.MachORelocatableDwarf;
   SetDirectiveSuppressesReloc = true;
 }
 

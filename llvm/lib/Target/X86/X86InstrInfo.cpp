@@ -1260,17 +1260,17 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
   }
   CASE_NF(INC8r)
   CASE_NF(INC16r)
-    addRegOffset(MIB, InRegLEA, false, 1);
+    addRegOffset(MIB, InRegLEA, 1);
     break;
   CASE_NF(DEC8r)
   CASE_NF(DEC16r)
-    addRegOffset(MIB, InRegLEA, false, -1);
+    addRegOffset(MIB, InRegLEA, -1);
     break;
   CASE_NF(ADD8ri)
   CASE_NF(ADD16ri)
   case X86::ADD8ri_DB:
   case X86::ADD16ri_DB:
-    addRegOffset(MIB, InRegLEA, false, MI.getOperand(2).getImm());
+    addRegOffset(MIB, InRegLEA, MI.getOperand(2).getImm());
     break;
   CASE_NF(ADD8rr)
   CASE_NF(ADD16rr)
@@ -3695,6 +3695,15 @@ bool X86InstrInfo::canMakeTailCallConditional(
   if (TailCall.getOpcode() != X86::TCRETURNdi &&
       TailCall.getOpcode() != X86::TCRETURNdi64) {
     // Only direct calls can be done with a conditional branch.
+    return false;
+  }
+
+  if (TailCall.getCFIType()) {
+    // An indirect tail call that was lowered to a direct jump to an indirect
+    // thunk (e.g., __x86_indirect_thunk_r11 for retpolines) still carries a
+    // KCFI type, and must be preceded by a KCFI check of the call target. The
+    // check is emitted later, and cannot be made conditional, so folding the
+    // tail call into a conditional branch would silently drop it.
     return false;
   }
 
@@ -6465,11 +6474,13 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVUPSYmr),
                             get(X86::VEXTRACTF64X4Zmri), X86::sub_ymm);
   case X86::MOV32ri64: {
-    Register Reg = MIB.getReg(0);
-    Register Reg32 = RI.getSubReg(Reg, X86::sub_32bit);
+    MachineOperand &DefMO = MIB->getOperand(0);
+    Register Reg32 = RI.getSubReg(DefMO.getReg(), X86::sub_32bit);
     MI.setDesc(get(X86::MOV32ri));
-    MIB->getOperand(0).setReg(Reg32);
-    MIB.addReg(Reg, RegState::ImplicitDefine);
+    DefMO.setReg(Reg32);
+    DefMO.setIsDead(none_of(MI.all_defs(), [=](const MachineOperand &MO) {
+      return MO.getReg() == Reg32 && !MO.isDead();
+    }));
     return true;
   }
 
@@ -8822,9 +8833,8 @@ bool X86InstrInfo::unfoldMemoryOperand(
   // TODO: Check if 32-byte or greater accesses are slow too?
   if (!MI.hasOneMemOperand() && RC == &X86::VR128RegClass &&
       Subtarget.isUnalignedMem16Slow())
-    // Without memoperands, loadRegFromAddr and storeRegToStackSlot will
-    // conservatively assume the address is unaligned. That's bad for
-    // performance.
+    // Without memoperands, storeRegToStackSlot will conservatively
+    // assume the address is unaligned. That's bad for performance.
     return false;
   SmallVector<MachineOperand, X86::AddrNumOperands> AddrOps;
   SmallVector<MachineOperand, 2> BeforeOps;

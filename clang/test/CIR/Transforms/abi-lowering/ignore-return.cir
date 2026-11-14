@@ -20,7 +20,7 @@ module attributes {
 } {
 
   cir.func @callee() -> !s32i
-      attributes { test_classify = #ignore_return } {
+      requires_call_conv_lowering attributes { test_classify = #ignore_return } {
     %0 = cir.const #cir.int<42> : !s32i
     cir.return %0 : !s32i
   }
@@ -33,7 +33,7 @@ module attributes {
   // CHECK-NOT:    : !s32i
 
   cir.func @caller_uses_result() -> !s32i
-      attributes { test_classify = #ignore_return } {
+      requires_call_conv_lowering attributes { test_classify = #ignore_return } {
     %0 = cir.call @callee() : () -> !s32i
     cir.return %0 : !s32i
   }

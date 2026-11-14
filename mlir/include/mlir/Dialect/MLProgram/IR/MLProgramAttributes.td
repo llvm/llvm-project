@@ -16,6 +16,7 @@ include "mlir/Dialect/MLProgram/IR/MLProgramBase.td"
 // Base class for MLProgram dialect attributes.
 class MLProgram_Attr<string name, list<Trait> traits = []>
     : AttrDef<MLProgram_Dialect, name, traits> {
+  let cppIncludes = ["mlir/Dialect/MLProgram/IR/MLProgramAttributes.h"];
   let mnemonic = ?;
 }
 

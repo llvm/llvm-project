@@ -9,7 +9,6 @@
 ---
 name:            fold_with_physical_reg
 alignment:       1
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 frameInfo:

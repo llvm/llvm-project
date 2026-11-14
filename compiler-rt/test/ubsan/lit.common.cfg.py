@@ -108,3 +108,19 @@ if ubsan_lit_test_mode == "Standalone" and "ubsan_standalone" in config.gpu_runt
         config.available_features.add("ubsan-hip")
     if "openmp-offload" in config.available_features:
         config.available_features.add("ubsan-openmp-offload")
+
+
+def add_ubsan_substitution(name, base):
+    for pattern, replacement in config.substitutions:
+        if pattern == base:
+            config.substitutions.append(
+                (name, replacement.rstrip() + " -fsanitize=undefined ")
+            )
+            return
+    lit_config.fatal("Missing substitution %r" % base)
+
+
+if "ubsan-hip" in config.available_features:
+    add_ubsan_substitution("%clang_hip_ubsan ", "%clang_hip ")
+if "ubsan-openmp-offload" in config.available_features:
+    add_ubsan_substitution("%clang_omp_offload_ubsan ", "%clang_omp_offload ")

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple=x86_64-unknown-linux -emit-llvm -frandomize-layout-seed=1234567890abcdef < %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple=x86_64-unknown-linux -emit-llvm -frandomize-layout-seed=1234567890abcdef < %s | FileCheck %s %}
 // PR60349
 
 // Clang will add a forward declaration of "struct bar" and "enum qux" to the

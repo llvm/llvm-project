@@ -84,6 +84,48 @@ L:
   bar(&x, 1);
 }
 
+// CHECK-LABEL: @asm_goto_bypass
+void asm_goto_bypass(void) {
+  __asm__ goto("" : : : : l1);
+  char x;
+l1:
+  bar(&x, 1);
+}
+
+// CHECK-LABEL: @asm_goto_multi_label_bypass
+void asm_goto_multi_label_bypass(void) {
+  __asm__ goto("" : : : : l1, l2);
+l1:
+  return;
+  {
+    char x;
+  l2:
+    bar(&x, 1);
+  }
+}
+
+// CHECK-LABEL: @asm_goto_backward_bypass
+void asm_goto_backward_bypass(void) {
+  {
+    char x;
+  l1:
+    bar(&x, 1);
+  }
+  __asm__ goto("" : : : : l1);
+}
+
+// CHECK-LABEL: @no_asm_goto_bypass
+void no_asm_goto_bypass(void) {
+  __asm__("");
+  // O2: call void @llvm.lifetime.start.p0(
+  char x;
+  bar(&x, 1);
+  __asm__ goto("" : : : : l1);
+l1:
+  // O2: call void @llvm.lifetime.end.p0(
+  return;
+}
+
 extern void foo2(int p);
 
 // O2-LABEL: @jump_backward_over_declaration(

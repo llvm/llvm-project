@@ -32,14 +32,14 @@ template <__fmt_char_type _CharT>
 struct __formatter_pointer {
 public:
   template <class _ParseContext>
-  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+  constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
     typename _ParseContext::iterator __result = __parser_.__parse(__ctx, __format_spec::__fields_pointer);
     __format_spec::__process_display_type_pointer(__parser_.__type_, "a pointer");
     return __result;
   }
 
   template <class _FormatContext>
-  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator format(const void* __ptr, _FormatContext& __ctx) const {
+  typename _FormatContext::iterator format(const void* __ptr, _FormatContext& __ctx) const {
     __format_spec::__parsed_specifications<_CharT> __specs = __parser_.__get_parsed_std_specifications(__ctx);
     __specs.__std_.__alternate_form_                       = true;
     __specs.__std_.__type_ =

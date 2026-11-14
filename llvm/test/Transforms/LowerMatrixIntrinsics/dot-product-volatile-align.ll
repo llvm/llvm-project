@@ -12,7 +12,7 @@ define <1 x float> @dot_product_flatten_volatile_align(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = load volatile <4 x float>, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <4 x float> [[TMP0]], [[COL_LOAD]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <1 x float> poison, float [[TMP2]], i64 0
 ; CHECK-NEXT:    ret <1 x float> [[TMP3]]
 ;

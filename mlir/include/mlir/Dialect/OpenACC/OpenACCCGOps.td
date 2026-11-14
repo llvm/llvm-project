@@ -559,6 +559,7 @@ def OpenACC_GPUAsyncTokenType : Type<
 def OpenACC_ComputeRegionOp
     : OpenACC_Op<"compute_region",
                  [OffloadRegionOpInterface, AffineScope,
+                  AutomaticAllocationScope,
                   HasParallelRegion, RecursiveMemoryEffects,
                   SingleBlockImplicitTerminator<"YieldOp">,
                   IsolatedFromAbove, AttrSizedOperandSegments]> {
@@ -635,7 +636,9 @@ def OpenACC_ComputeRegionOp
     std::optional<mlir::Value> getKnownLaunchArg(
         ::mlir::acc::GPUParallelDimAttr parDim);
 
-    /// Get the known constant launch value for a dimension.
+    /// Get the known constant launch value for a dimension. Returns
+    /// std::nullopt when the value is not a constant or is negative, since a
+    /// negative value leaves the width to be chosen at launch.
     std::optional<uint64_t> getKnownConstantLaunchArg(
         ::mlir::acc::GPUParallelDimAttr parDim);
 

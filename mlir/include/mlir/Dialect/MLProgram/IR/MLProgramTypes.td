@@ -14,7 +14,9 @@ include "mlir/Dialect/MLProgram/IR/MLProgramBase.td"
 
 class MLProgram_Type<string name, list<Trait> traits = [],
                      string baseCppClass = "::mlir::Type">
-    : TypeDef<MLProgram_Dialect, name, traits, baseCppClass> {}
+    : TypeDef<MLProgram_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["mlir/Dialect/MLProgram/IR/MLProgramTypes.h"];
+}
 
 def MLProgram_TokenType : MLProgram_Type<"Token"> {
   let summary = "Token for establishing execution ordering in a graph";

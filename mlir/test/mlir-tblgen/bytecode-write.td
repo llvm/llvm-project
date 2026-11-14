@@ -15,14 +15,14 @@ def TestDialectTypes : DialectTypes<"Test"> {
   ];
 }
 
-// CHECK-LABEL: static LogicalResult write(Float64Type type, DialectBytecodeWriter &writer) {
+// CHECK-LABEL: static ::llvm::LogicalResult write(Float64Type type, ::mlir::DialectBytecodeWriter &writer) {
 // CHECK:         if (false) {
 // CHECK:           writer.writeVarInt(/* Float64Type */ 1);
-// CHECK:           return success();
+// CHECK:           return ::mlir::success();
 // CHECK:         }
-// CHECK:         return failure();
-// CHECK-LABEL: static LogicalResult writeType(Type type,
-// CHECK:         return TypeSwitch<Type, LogicalResult>(type)
+// CHECK:         return ::mlir::failure();
+// CHECK-LABEL: static ::llvm::LogicalResult writeType(::mlir::Type type,
+// CHECK:         return ::llvm::TypeSwitch<::mlir::Type, ::llvm::LogicalResult>(type)
 // CHECK-NEXT:       .Case([&](Float64Type t) {
 // CHECK-NEXT:         return write(t, writer);
 

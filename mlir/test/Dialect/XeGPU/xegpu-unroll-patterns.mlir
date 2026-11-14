@@ -341,5 +341,16 @@ gpu.module @test {
     gpu.return
   }
 
+
+//-----
+  // CHECK-LABEL: multi_reduction_2d_last_dim_fastmath
+  // CHECK-COUNT-4: arith.maximumf {{.*}} fastmath<nnan,nsz> : vector<16x16xf32>
+  // CHECK: vector.multi_reduction <maximumf>, {{.*}} fastmath<nnan,nsz> [1] : vector<16x16xf32> to vector<16xf32>
+  // CHECK-COUNT-4: arith.maximumf {{.*}} fastmath<nnan,nsz> : vector<16x16xf32>
+  // CHECK: vector.multi_reduction <maximumf>, {{.*}} fastmath<nnan,nsz> [1] : vector<16x16xf32> to vector<16xf32>
+  gpu.func @multi_reduction_2d_last_dim_fastmath(%src: vector<32x80xf32>, %acc: vector<32xf32>) -> vector<32xf32> {
+    %0 = vector.multi_reduction <maximumf>, %src, %acc fastmath<nnan,nsz> {layout_operand_0 = #xegpu.layout<inst_data = [16, 16]>} [1] : vector<32x80xf32> to vector<32xf32>
+    gpu.return %0 : vector<32xf32>
+  }
 }
 

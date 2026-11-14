@@ -57,7 +57,9 @@ class GenInternalTypeTrait<string prop> : GenInternalTrait<prop, "Type">;
 class PredTypeTrait<string descr, Pred pred> : PredTrait<descr, pred>;
 
 // Trait required to be added to any type which is mutable.
-def MutableType : NativeTypeTrait<"IsMutable">;
+def MutableType : NativeTypeTrait<"IsMutable"> {
+  let cppIncludes = ["mlir/IR/Types.h"];
+}
 
 //===----------------------------------------------------------------------===//
 // Builders

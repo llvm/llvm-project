@@ -40,7 +40,7 @@ TEST_F(LlvmLibcCbrtTest, InDoubleRange) {
     uint64_t fails = 0;
     uint64_t tested = 0;
     uint64_t total = 0;
-    double worst_input, worst_output = 0.0;
+    double worst_input = 0.0, worst_output = 0.0;
     double ulp = 0.5;
 
     for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {

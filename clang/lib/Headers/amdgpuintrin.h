@@ -119,8 +119,9 @@ _DEFAULT_FN_ATTRS static __inline__ uint64_t __gpu_ballot(uint64_t __lane_mask,
 
 // Waits for all the threads in the block to converge and issues a fence.
 _DEFAULT_FN_ATTRS static __inline__ void __gpu_sync_threads(void) {
+  __scoped_atomic_thread_fence(__ATOMIC_RELEASE, __MEMORY_SCOPE_WRKGRP);
   __builtin_amdgcn_s_barrier();
-  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup");
+  __scoped_atomic_thread_fence(__ATOMIC_ACQUIRE, __MEMORY_SCOPE_WRKGRP);
 }
 
 // Wait for all threads in the wavefront to converge, this is a noop on AMDGPU.

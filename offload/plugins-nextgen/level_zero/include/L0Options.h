@@ -13,6 +13,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0OPTIONS_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0OPTIONS_H
 
+#include "OffloadAPI.h"
 #include <level_zero/ze_api.h>
 
 #include "Shared/EnvironmentVar.h"
@@ -83,10 +84,10 @@ struct L0OptionsTy {
   };
   /// Memory pool default parameters for each allocation kind:
   /// {UseByDefault, AllocMax(MB), Capacity, PoolSize(MB)}
-  std::array<MemPoolConfigTy, 3> MemPoolConfig{
-      MemPoolConfigTy{true, 1, 4, 256},  // TARGET_ALLOC_DEVICE
-      MemPoolConfigTy{true, 1, 4, 256},  // TARGET_ALLOC_HOST
-      MemPoolConfigTy{true, 8, 4, 256}}; // TARGET_ALLOC_SHARED
+  std::array<MemPoolConfigTy, OL_ALLOC_TYPE_LAST> MemPoolConfig{
+      MemPoolConfigTy{true, 1, 4, 256},  // OL_ALLOC_TYPE_HOST
+      MemPoolConfigTy{true, 1, 4, 256},  // OL_ALLOC_TYPE_DEVICE
+      MemPoolConfigTy{true, 8, 4, 256}}; // OL_ALLOC_TYPE_MANAGED
 
   /// Parameters for memory pools dedicated to reduction scratch space.
   std::array<int32_t, 3> ReductionPoolInfo{256, 8, 8192};

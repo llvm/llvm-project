@@ -502,8 +502,8 @@ public:
   using AddrHashMap = std::vector<std::pair<uint64_t, uint64_t>>;
 
   // Returns the canonical name of the given PGOName. This shares the same
-  // logic of FunctionSamples::getCanonicalFnName() but only strips ".llvm."
-  // and ".part", and leaves out ".__uniq.".
+  // logic of FunctionSamples::getCanonicalFnName() but only strips ".cfi",
+  // ".llvm.", and ".part.", and leaves out ".__uniq.".
   LLVM_ABI static StringRef getCanonicalName(StringRef PGOName);
 
 private:
@@ -550,9 +550,12 @@ private:
   // - In MD5NameMap: <MD5Hash(name), name> for name in name-set
   // - In MD5FuncMap: <MD5Hash(name), &F> for name in name-set, and
   //   <GUID, &F> if \c F has a GUID that differs from MD5Hash(PGOFuncName),
-  //   e.g. because LTO renamed \c F.
+  //   e.g. because LTO renamed \c F. The GUID is \c F's thinlto_alias_guid if
+  //   \c KeyImportedAliasesByAliasGUID is true and \c F has that metadata,
+  //   and \c F's assigned GUID otherwise.
   // The canonical name is only added if \c AddCanonical is true.
-  Error addFuncWithName(Function &F, StringRef PGOFuncName, bool AddCanonical);
+  Error addFuncWithName(Function &F, StringRef PGOFuncName, bool AddCanonical,
+                        bool KeyImportedAliasesByAliasGUID);
 
   // Add the vtable into the symbol table, by creating the following
   // map entries:
@@ -615,8 +618,19 @@ public:
   /// indicates if this is called from LTO optimization passes.
   /// A canonical name, removing non-__uniq suffixes, is added if
   /// \c AddCanonical is true.
-  LLVM_ABI Error create(Module &M, bool InLTO = false,
-                        bool AddCanonical = true);
+  /// A function imported by ThinLTO as a copy of an alias (see
+  /// FunctionImport's replaceAliasWithAliasee) retains the aliasee's GUID in
+  /// its !guid metadata, and records the alias's GUID in its
+  /// thinlto_alias_guid metadata when that is emitted. By default such a
+  /// function is keyed by the aliasee's GUID, as it has the same address and
+  /// value profiles may record the aliasee for calls through the alias. If
+  /// \c KeyImportedAliasesByAliasGUID is true it is instead keyed by the
+  /// alias's GUID, so that it is found by lookups of the alias and does not
+  /// shadow the aliasee's own function, if that is also in \c M. This is used
+  /// by clients that depend on the looked up function's identity (e.g. its
+  /// name) rather than only its address.
+  LLVM_ABI Error create(Module &M, bool InLTO = false, bool AddCanonical = true,
+                        bool KeyImportedAliasesByAliasGUID = false);
 
   /// Create InstrProfSymtab from a set of names iteratable from
   /// \p IterRange. This interface is used by IndexedProfReader.

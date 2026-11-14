@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple nvptx-unknown-unknown -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple nvptx-unknown-unknown -emit-llvm -o - | FileCheck %s %}
 
 void device_function() {
 }

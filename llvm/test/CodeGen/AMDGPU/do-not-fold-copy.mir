@@ -29,7 +29,7 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   SI_END_CF [[SI_IF_BREAK]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[V_SET_INACTIVE_B32_:%[0-9]+]]:vgpr_32 = V_SET_INACTIVE_B32 0, [[COPY]], 0, 0, killed [[DEF]], implicit $exec
+  ; CHECK-NEXT:   [[V_SET_INACTIVE_B32_:%[0-9]+]]:vgpr_32 = V_SET_INACTIVE_B32 0, [[COPY]], 0, 0, [[DEF]], implicit $exec
   ; CHECK-NEXT:   S_ENDPGM 0
 
   bb.0:
@@ -51,7 +51,7 @@ body:             |
     SI_END_CF %4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     %8:vgpr_32 = COPY %7
     %9:sreg_64_xexec = IMPLICIT_DEF
-    %10:vgpr_32 = V_SET_INACTIVE_B32 0, %8, 0, 0, killed %9, implicit $exec
+    %10:vgpr_32 = V_SET_INACTIVE_B32 0, %8, 0, 0, %9, implicit $exec
     S_ENDPGM 0
 ...
 

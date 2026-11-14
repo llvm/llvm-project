@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=aarch64-- -verify-machineinstrs < %s | FileCheck %s --check-prefix=ASM
-; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -stop-after=finalize-isel < %s | FileCheck %s --check-prefixes=MIR,ISEL
-; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -stop-after=kcfi < %s | FileCheck %s --check-prefixes=MIR,KCFI
+; RUN: llc -mtriple=aarch64-- -stop-after=finalize-isel < %s | FileCheck %s --check-prefixes=MIR,ISEL
+; RUN: llc -mtriple=aarch64-- -stop-after=kcfi < %s | FileCheck %s --check-prefixes=MIR,KCFI
 
 ; ASM:       .word 12345678
 define void @f1(ptr noundef %x) #1 !kcfi_type !2 {

@@ -5,7 +5,7 @@ target triple = "aarch64-unknown-linux"
 
 ; Test case where we visit a VPWidenIntrinsic (for @llvm.fabs) with nnan flags.
 ; For https://github.com/llvm/llvm-project/issues/125301.
-define void @check_widen_intrinsic_with_nnan(ptr noalias %dst.0, ptr noalias %dst.1, ptr noalias %src.1, ptr %src.2) {
+define void @check_widen_intrinsic_with_nnan(ptr noalias %dst.0, ptr noalias %dst.1, ptr noalias %src.1, ptr %src.2) vscale_range(1,16) {
 ; CHECK-LABEL: define void @check_widen_intrinsic_with_nnan(
 ; CHECK-SAME: ptr noalias [[DST_0:%.*]], ptr noalias [[DST_1:%.*]], ptr noalias [[SRC_1:%.*]], ptr [[SRC_2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
