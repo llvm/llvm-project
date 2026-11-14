@@ -2407,7 +2407,11 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
   // Look at the do/do concurrent loops to extract bounds information unless
   // this loop is lowered in an unstructured fashion, in which case bounds are
   // not represented on acc.loop and explicit control flow is used inside body.
-  if (!eval.lowerAsUnstructured()) {
+  // A DO WHILE has no bounds either, even when it is lowered structurally (to
+  // scf.while): the whole loop is generated inside the body.
+  const bool boundsFree =
+      eval.lowerAsUnstructured() || outerDoConstruct.IsDoWhile();
+  if (!boundsFree) {
     processDoLoopBounds(converter, semanticsContext, currentLocation, stmtCtx,
                         builder, outerDoConstruct, eval, lowerbounds,
                         upperbounds, steps, privateOperands, ivPrivate, ivTypes,
@@ -2417,10 +2421,13 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
   } else {
     // When the loop contains early exits, privatize induction variables, but do
     // not create acc.loop bounds. The control flow of the loop will be
-    // generated explicitly in the acc.loop body that is just a container.
-    privatizeInductionVariables(converter, currentLocation, outerDoConstruct,
-                                eval, privateOperands, ivPrivate, locs,
-                                loopsToProcess);
+    // generated explicitly in the acc.loop body that is just a container. Only
+    // a counted DO has a loop variable here: a DO WHILE has none, and a DO
+    // CONCURRENT cannot contain early exits.
+    if (outerDoConstruct.IsDoNormal())
+      privatizeInductionVariables(converter, currentLocation, outerDoConstruct,
+                                  eval, privateOperands, ivPrivate, locs,
+                                  loopsToProcess);
     if (isSeq)
       privatizeNestedUnstructuredDoIvs(converter, eval, privateOperands,
                                        ivPrivate);
@@ -2474,7 +2481,7 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
   for (auto &[hostAssocSym, ultimateSym] : localSymPairs)
     converter.copySymbolBinding(ultimateSym, hostAssocSym);
 
-  if (!eval.lowerAsUnstructured()) {
+  if (!boundsFree) {
     for (auto [arg, iv] :
          llvm::zip(loopOp.getLoopRegions().front()->front().getArguments(),
                    ivPrivate)) {
