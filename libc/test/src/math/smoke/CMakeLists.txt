@@ -6847,6 +6847,7 @@ add_fp_unittest(
     DivTest.h
   DEPENDS
     libc.src.math.ddivf128
+    libc.src.__support.FPUtil.float128
 )
 
 add_fp_unittest(

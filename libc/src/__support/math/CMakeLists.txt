@@ -3118,7 +3118,7 @@ add_header_library(
   HDRS
     ddivf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.generic.div
     libc.src.__support.macros.config
 )
