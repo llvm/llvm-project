@@ -5842,11 +5842,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
       } else
         SunkAddr = Builder.CreatePointerCast(SunkAddr, Addr->getType());
     }
-  } else if (valueOr(Opts.cgp_addr_sink_using_gep, true) ||
-             (Opts.cgp_addr_sink_using_gep == BoolOrDefault::Default &&
-              SubtargetInfo->addrSinkUsingGEPs())) {
-    // By default, we use the GEP-based method when AA is used later. This
-    // prevents new inttoptr/ptrtoint pairs from degrading AA capabilities.
+  } else {
     LLVM_DEBUG(dbgs() << "CGP: SINKING nonlocal addrmode: " << AddrMode
                       << " for " << *MemoryInst << "\n");
     Value *ResultPtr = nullptr, *ResultIndex = nullptr;
@@ -5998,98 +5994,6 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
           SunkAddr = Builder.CreatePointerCast(SunkAddr, Addr->getType());
       }
     }
-  } else {
-    // We'd require a ptrtoint/inttoptr down the line, which we can't do for
-    // non-integral pointers, so in that case bail out now.
-    Type *BaseTy = AddrMode.BaseReg ? AddrMode.BaseReg->getType() : nullptr;
-    Type *ScaleTy = AddrMode.Scale ? AddrMode.ScaledReg->getType() : nullptr;
-    PointerType *BasePtrTy = dyn_cast_or_null<PointerType>(BaseTy);
-    PointerType *ScalePtrTy = dyn_cast_or_null<PointerType>(ScaleTy);
-    if (DL->isNonIntegralPointerType(Addr->getType()) ||
-        (BasePtrTy && DL->isNonIntegralPointerType(BasePtrTy)) ||
-        (ScalePtrTy && DL->isNonIntegralPointerType(ScalePtrTy)) ||
-        (AddrMode.BaseGV &&
-         DL->isNonIntegralPointerType(AddrMode.BaseGV->getType())))
-      return Modified;
-
-    LLVM_DEBUG(dbgs() << "CGP: SINKING nonlocal addrmode: " << AddrMode
-                      << " for " << *MemoryInst << "\n");
-    Type *IntPtrTy = DL->getIntPtrType(Addr->getType());
-    Value *Result = nullptr;
-
-    // Start with the base register. Do this first so that subsequent address
-    // matching finds it last, which will prevent it from trying to match it
-    // as the scaled value in case it happens to be a mul. That would be
-    // problematic if we've sunk a different mul for the scale, because then
-    // we'd end up sinking both muls.
-    if (AddrMode.BaseReg) {
-      Value *V = AddrMode.BaseReg;
-      if (V->getType()->isPointerTy())
-        V = Builder.CreatePtrToInt(V, IntPtrTy, "sunkaddr");
-      if (V->getType() != IntPtrTy)
-        V = Builder.CreateIntCast(V, IntPtrTy, /*isSigned=*/true, "sunkaddr");
-      Result = V;
-    }
-
-    // Add the scale value.
-    if (AddrMode.Scale) {
-      Value *V = AddrMode.ScaledReg;
-      if (V->getType() == IntPtrTy) {
-        // done.
-      } else if (V->getType()->isPointerTy()) {
-        V = Builder.CreatePtrToInt(V, IntPtrTy, "sunkaddr");
-      } else if (cast<IntegerType>(IntPtrTy)->getBitWidth() <
-                 cast<IntegerType>(V->getType())->getBitWidth()) {
-        V = Builder.CreateTrunc(V, IntPtrTy, "sunkaddr");
-      } else {
-        // It is only safe to sign extend the BaseReg if we know that the math
-        // required to create it did not overflow before we extend it. Since
-        // the original IR value was tossed in favor of a constant back when
-        // the AddrMode was created we need to bail out gracefully if widths
-        // do not match instead of extending it.
-        Instruction *I = dyn_cast_or_null<Instruction>(Result);
-        if (I && (Result != AddrMode.BaseReg))
-          I->eraseFromParent();
-        return Modified;
-      }
-      if (AddrMode.Scale != 1)
-        V = Builder.CreateMul(
-            V, ConstantInt::getSigned(IntPtrTy, AddrMode.Scale), "sunkaddr");
-      if (Result)
-        Result = Builder.CreateAdd(Result, V, "sunkaddr");
-      else
-        Result = V;
-    }
-
-    // Add in the BaseGV if present.
-    GlobalValue *BaseGV = AddrMode.BaseGV;
-    if (BaseGV != nullptr) {
-      Value *BaseGVPtr;
-      if (BaseGV->isThreadLocal()) {
-        BaseGVPtr = Builder.CreateThreadLocalAddress(BaseGV);
-      } else {
-        BaseGVPtr = BaseGV;
-      }
-      Value *V = Builder.CreatePtrToInt(BaseGVPtr, IntPtrTy, "sunkaddr");
-      if (Result)
-        Result = Builder.CreateAdd(Result, V, "sunkaddr");
-      else
-        Result = V;
-    }
-
-    // Add in the Base Offset if present.
-    if (AddrMode.BaseOffs) {
-      Value *V = ConstantInt::getSigned(IntPtrTy, AddrMode.BaseOffs);
-      if (Result)
-        Result = Builder.CreateAdd(Result, V, "sunkaddr");
-      else
-        Result = V;
-    }
-
-    if (!Result)
-      SunkAddr = Constant::getNullValue(Addr->getType());
-    else
-      SunkAddr = Builder.CreateIntToPtr(Result, Addr->getType(), "sunkaddr");
   }
 
   MemoryInst->replaceUsesOfWith(Repl, SunkAddr);
