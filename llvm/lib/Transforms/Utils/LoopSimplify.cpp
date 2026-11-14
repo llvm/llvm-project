@@ -648,8 +648,12 @@ ReprocessLoop:
       CondBrInst *BI = dyn_cast<CondBrInst>(ExitingBlock->getTerminator());
       if (!BI)
         continue;
-      CmpInst *CI = dyn_cast<CmpInst>(BI->getCondition());
-      if (!CI || CI->getParent() != ExitingBlock) continue;
+      Value *Cond = BI->getCondition();
+      if (!isa<CmpInst, TruncInst>(Cond))
+        continue;
+      auto *CI = cast<Instruction>(Cond);
+      if (CI->getParent() != ExitingBlock)
+        continue;
 
       // Attempt to hoist out all instructions except for the
       // comparison and the branch.
