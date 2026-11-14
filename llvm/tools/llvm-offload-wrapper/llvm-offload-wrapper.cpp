@@ -40,10 +40,10 @@ static cl::opt<object::OffloadKind> Kind(
                clEnumValN(object::OFK_OpenACC, "openacc",
                           "Wrap OpenACC binaries")));
 
-static cl::opt<bool> Relocatable(
-    "relocatable",
-    cl::desc("Wrap for a relocatable offloading application (OpenMP only)"),
-    cl::cat(OffloadWrapeprCategory));
+static cl::opt<bool>
+    Relocatable("relocatable",
+                cl::desc("Wrap for a relocatable offloading application"),
+                cl::cat(OffloadWrapeprCategory));
 
 static cl::opt<std::string> OutputFile("o", cl::desc("Write output to <file>."),
                                        cl::value_desc("file"),
@@ -94,7 +94,9 @@ static Error wrapImages(ArrayRef<ArrayRef<char>> BuffersToWrap) {
       return Err;
     break;
   case llvm::object::OFK_SYCL:
-    if (Error Err = offloading::wrapSYCLBinaries(M, BuffersToWrap.front()))
+    if (Error Err = offloading::wrapSYCLBinaries(
+            M, BuffersToWrap.front(), offloading::SYCLJITOptions(),
+            /*IsFinalizedImage=*/Relocatable))
       return Err;
     break;
   default:
