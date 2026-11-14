@@ -338,8 +338,40 @@ We do not require explicit proof of real-world usefulness for every transform
 come up for complex or unusual folds. Keep this in mind when choosing what you
 work on.
 
+The fact that another compiler performs an optimization is not a sufficient
+reason to implement it. Evidence of real-world usefulness is still required.
+
+#### Fuzzer-generated missed optimization reports
+
 In particular, fixes for fuzzer-generated missed optimization reports will
 likely be rejected if there is no evidence of real-world usefulness.
+
+The following conditions can be used as oracles for such reports. Any oracle
+not listed below requires prior approval from an InstCombine maintainer:
+
+1. The operation is commutative or associative, but reordering its operands does
+   not enable an optimization.
+2. Adding a new poison-generating or UB-implying annotation does not enable an
+   optimization. There are two exceptions:
+    * `nsz` widens the range of the result, so failing to optimize in this case
+      is expected.
+    * Adding a poison-generating flag may prevent optimizations that rely on
+      `isGuaranteedNotToBePoison` queries. In such cases, the maintainers should
+      still be consulted.
+
+### Choosing the pattern to optimize
+
+Start from IR that has gone through the full optimization pipeline and choose
+the pattern from that IR. Do not discuss patterns that have not been
+canonicalized at all, especially loads and stores that SROA would have
+eliminated. Such patterns rarely survive until InstCombine runs, so folds for
+them provide little real-world benefit.
+
+The piece you choose to optimize should be the most critical one, and it should
+be atomic. If the optimization you have in mind consists of multiple patterns,
+split it into multiple PRs, one per pattern. After the rewrite, the IR should
+either already be in the expected optimized form or be transformable into that
+form by existing optimizations.
 
 ### Pick the correct optimization pass
 
@@ -353,9 +385,13 @@ is important to pick the right place when implementing a fold.
  * `AggressiveInstCombine`: For folds that are expensive, or violate InstCombine requirements.
  * `VectorCombine`: For folds of vector operations that require target-dependent cost-modelling.
 
+If the transform relies on context-sensitive integer range analysis, prefer to implement it in SCCP, CVP, or ConstraintElimination instead.
+
 Sometimes, folds that logically belong in InstSimplify are placed in InstCombine instead, for example because they are too expensive, or because they are structurally simpler to implement in InstCombine.
 
 For example, if a fold produces new instructions in some cases but returns an existing value in others, it may be preferable to keep all cases in InstCombine, rather than trying to split them among InstCombine and InstSimplify.
+
+If it turns out that the pattern you extracted is already handled by that pass, first check whether the reproducer has been reduced too aggressively. For example, the relevant SSA value may have external users, or it may be poison. There may also be loads, stores, or potentially side-effecting calls between the instructions of interest. Any of these can prevent the existing fold from firing even though the pattern looks identical. In such cases, consider whether the preconditions of the existing optimization should be relaxed.
 
 ### Canonicalization and target-independence
 
@@ -404,6 +440,7 @@ list of canonicalizations that are implemented in InstCombine:
 | Original Pattern             | Canonical Form             | Condition                     |
 |------------------------------|----------------------------|-------------------------------|
 | `icmp spred X, Y`            | `icmp samesign upred X, Y` | `sign(X) == sign(Y)`          |
+| `icmp eq/ne X, 0`            | `(not) trunc X to i1`      | `X in [0, 1]`                 |
 | `smin/smax X, Y`             | `umin/umax X, Y`           | `sign(X) == sign(Y)`          |
 | `sext X`                     | `zext nneg X`              | `X >=s 0`                     |
 | `sitofp X`                   | `uitofp nneg X`            | `X >=s 0`                     |
@@ -538,6 +575,8 @@ One-use checks can be performed using the `m_OneUse()` matcher, or the
 
 ### Flag handling
 
+When matching, use the weakest possible preconditions and remove unnecessary flag requirements. Overly strict flag checks lead to missed optimizations.
+
 When possible, favour propagation of poison-generating flags like `nuw` and `nsw` since they may be
 hard to salvage later. Avoid doing so if it introduces additional complexity (e.g. requires querying `willNotOverflow`
 or KnownBits).
@@ -575,7 +614,10 @@ guidelines.
    properties, but the fold can be generalized to non-constant values by making
    use of ValueTracking queries. Whether this makes sense depends on the case,
    but it's usually a good idea to only handle the constant pattern first, and
-   then generalize later if it seems useful.
+   then generalize later if it seems useful. Do not introduce expensive
+   ValueTracking queries such as `computeKnownBits()` if the original
+   motivating case involves only the constant pattern and there is no further
+   real-world evidence that handling the variable case is useful.
  * When possible, handle more canonical patterns as well. It is encouraged to avoid
    potential phase-ordering issues. For example, if the motivating transform holds for
    `add`, it also holds for `or disjoint`. See the canonicalization list above for details.
