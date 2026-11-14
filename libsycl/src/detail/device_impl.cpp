@@ -31,6 +31,16 @@ bool DeviceImpl::has(aspect Aspect) const {
     // liboffload works with USM only and has no query to check support. We
     // assume that USM is always supported.
     return true;
+  case (aspect::fp16):
+  case (aspect::fp64): {
+    const ol_device_info_t Info = Aspect == aspect::fp16
+                                      ? OL_DEVICE_INFO_HALF_FP_SUPPORT
+                                      : OL_DEVICE_INFO_DOUBLE_FP_SUPPORT;
+    bool Supported = false;
+    callAndThrow(olGetDeviceInfo, MOffloadDevice, Info, sizeof(Supported),
+                 &Supported);
+    return Supported;
+  }
   default:
     // Other aspects are not implemented yet
     return false;
