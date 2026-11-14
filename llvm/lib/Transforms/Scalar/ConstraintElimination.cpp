@@ -15,6 +15,7 @@
 #include "ScalarOptions.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -633,6 +634,39 @@ static bool doesHoldInRange(ConstraintInfo &Info, Value *Op,
       !hasLimitWitness(Info, Op, UpperSlack, Signed, /*Upper=*/true))
     return false;
   return true;
+}
+
+/// Splits the first signed min/max result in \p D (of type \p Ty, if provided)
+/// across its operands, and returns whether \p IsKnown holds for the
+/// substituted decompositions, or std::nullopt if \p D has no such min/max.
+///
+/// \p IsKnown tests a property that is monotonic in \p D: if \p Upper, it is an
+/// upper bound on \p D, otherwise a lower bound. D is an affine function of the
+/// min/max result with slope E.Coefficient. If the slope is positive, then
+/// D(max(a, b)) = max(D(a), D(b)) and D(min(a, b)) = min(D(a), D(b)). If it is
+/// negative, max and min swap roles. An upper bound on a maximum holds if it
+/// holds on both sides, and a lower bound if it holds on either side.
+static std::optional<bool>
+splitSignedMinMax(const Decomposition &D, ConstraintInfo &Info, Type *Ty,
+                  bool Upper,
+                  function_ref<bool(const Decomposition &)> IsKnown) {
+  for (const DecompEntry &E : D.Vars) {
+    auto *MM = dyn_cast<MinMaxIntrinsic>(E.Variable);
+    if (!MM || !MM->isSigned() || (Ty && MM->getType() != Ty))
+      continue;
+
+    bool IsMax =
+        (MM->getIntrinsicID() == Intrinsic::smax) == (E.Coefficient > 0);
+    bool IsAnd = Upper == IsMax;
+    auto IsOperandKnown = [&](Value *V) {
+      auto Side = D.substitute(E.Variable, V, Info);
+      return Side && !Side->canonicalize() && IsKnown(*Side);
+    };
+    if (IsOperandKnown(MM->getLHS()) != IsAnd)
+      return !IsAnd;
+    return IsOperandKnown(MM->getRHS());
+  }
+  return std::nullopt;
 }
 
 std::optional<Decomposition>
@@ -2142,24 +2176,12 @@ static bool isSignedDecompositionKnownTrue(CmpInst::Predicate Pred,
     return Pred == CmpInst::ICMP_SLT ? D.Offset < 0 : D.Offset <= 0;
 
   if (Depth != 0) {
-    for (const DecompEntry &E : D.Vars) {
-      auto *MM = dyn_cast<MinMaxIntrinsic>(E.Variable);
-      if (!MM || !MM->isSigned())
-        continue;
-      auto IsOperandKnownTrue = [&](Value *V) {
-        auto Side = D.substitute(E.Variable, V, Info);
-        return Side && !Side->canonicalize() &&
-               isSignedDecompositionKnownTrue(Pred, *Side, Info, Depth - 1);
-      };
-      // D is an affine function of MM with slope E.Coefficient. If the slope
-      // is positive, then D(max(a, b)) = max(D(a), D(b)) and D(min(a, b)) =
-      // min(D(a), D(b)). If it is negative, max and min swap roles.
-      bool IsAnd =
-          (MM->getIntrinsicID() == Intrinsic::smax) == (E.Coefficient > 0);
-      if (IsOperandKnownTrue(MM->getLHS()) != IsAnd)
-        return !IsAnd;
-      return IsOperandKnownTrue(MM->getRHS());
-    }
+    if (auto Known = splitSignedMinMax(D, Info, /*Ty=*/nullptr, /*Upper=*/true,
+                                       [&](const Decomposition &Side) {
+                                         return isSignedDecompositionKnownTrue(
+                                             Pred, Side, Info, Depth - 1);
+                                       }))
+      return *Known;
   }
 
   // Build "D Pred 0" as a single constraint over known variables.
