@@ -16,6 +16,8 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#include <sys/syscall.h> // For SYS_mmap2
+
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 using LlvmLibcMMapTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
@@ -57,9 +59,24 @@ TEST_F(LlvmLibcMMapTest, FileOffsets) {
   ASSERT_ERRNO_SUCCESS();
   EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, 47), Succeeds());
 
-  // Mapping negative offsets fails.
+  // Mapping negative offsets fails. -1 is not page aligned, so this holds
+  // whichever of libc or the kernel looks at it.
   EXPECT_THAT(LIBC_NAMESPACE::mmap(nullptr, 47, PROT_READ, MAP_PRIVATE, fd, -1),
               Fails(EINVAL, MAP_FAILED));
+
+#ifndef SYS_mmap2
+  if constexpr (sizeof(long) == sizeof(off_t)) {
+    // An aligned offset with the top bit set is the kernel's to judge: it is
+    // unsigned there, and drivers such as KFD encode the kind of mapping in
+    // it. A memfd cannot be that large, so the kernel says EOVERFLOW, where
+    // libc rejecting the offset itself would say EINVAL. Targets that use
+    // mmap2 reject a negative offset in libc, as before.
+    EXPECT_THAT(
+        LIBC_NAMESPACE::mmap(nullptr, 47, PROT_READ, MAP_PRIVATE, fd,
+                             static_cast<off_t>(1) << (sizeof(off_t) * 8 - 1)),
+        Fails(EOVERFLOW, MAP_FAILED));
+  }
+#endif
 
   // So do offsets that are not page aligned. This should be rejected in the
   // kernel or by our mmap2 rounding code. Note that POSIX permits (but does not
