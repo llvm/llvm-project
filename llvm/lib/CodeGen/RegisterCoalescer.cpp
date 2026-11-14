@@ -2549,6 +2549,7 @@ class JoinVals {
   LiveIntervals *LIS;
   SlotIndexes *Indexes;
   const TargetRegisterInfo *TRI;
+  MachineRegisterInfo *MRI;
 
   /// Value number assignments. Maps value numbers in LI to entries in
   /// NewVNInfo. This is suitable for passing to LiveInterval::join().
@@ -2653,7 +2654,9 @@ private:
   /// previous value of the register.
   LaneBitmask computeWriteLanes(const MachineInstr *DefMI, bool &Redef) const;
 
-  /// Find the ultimate value that VNI was copied from.
+  /// Find the ultimate value that VNI was copied from. The search stops at
+  /// copies that are not value-preserving for the full width of the register
+  /// class being joined (see followCopyChain()).
   std::pair<const VNInfo *, Register> followCopyChain(const VNInfo *VNI) const;
 
   bool valuesIdentical(VNInfo *Value0, VNInfo *Value1,
@@ -2707,12 +2710,13 @@ private:
 public:
   JoinVals(LiveRange &LR, Register Reg, unsigned SubIdx, LaneBitmask LaneMask,
            SmallVectorImpl<VNInfo *> &newVNInfo, const CoalescerPair &cp,
-           LiveIntervals *lis, const TargetRegisterInfo *TRI, bool SubRangeJoin,
+           LiveIntervals *lis, const TargetRegisterInfo *TRI,
+           MachineRegisterInfo *MRI, bool SubRangeJoin,
            bool TrackSubRegLiveness)
       : LR(LR), Reg(Reg), SubIdx(SubIdx), LaneMask(LaneMask),
         SubRangeJoin(SubRangeJoin), TrackSubRegLiveness(TrackSubRegLiveness),
         NewVNInfo(newVNInfo), CP(cp), LIS(lis), Indexes(LIS->getSlotIndexes()),
-        TRI(TRI), Assignments(LR.getNumValNums(), -1),
+        TRI(TRI), MRI(MRI), Assignments(LR.getNumValNums(), -1),
         Vals(LR.getNumValNums()) {}
 
   /// Analyze defs in LR and compute a value mapping in NewVNInfo.
@@ -2786,6 +2790,18 @@ JoinVals::followCopyChain(const VNInfo *VNI) const {
   Register TrackReg = Reg;
 
   while (!VNI->isPHIDef()) {
+    // A full copy only carries the value of the narrower of the two register
+    // classes. If the value being traced lives in a register that cannot hold
+    // the whole register class being joined to, the chain cannot prove that
+    // this value is identical to a value that reaches the destination without
+    // passing through this register. For example an fr64 register only holds
+    // 64 bits of a vr128 value, so a vr128 value routed through it loses its
+    // upper half. Stop the search here.
+    if (!SubRangeJoin && CP.getNewRC() &&
+        TRI->getRegSizeInBits(*MRI->getRegClass(TrackReg)) <
+            TRI->getRegSizeInBits(*CP.getNewRC()))
+      return std::make_pair(VNI, TrackReg);
+
     SlotIndex Def = VNI->def;
     MachineInstr *MI = Indexes->getInstructionFromIndex(Def);
     assert(MI && "No defining instruction");
@@ -3666,9 +3682,9 @@ void RegisterCoalescer::joinSubRegRanges(LiveRange &LRange, LiveRange &RRange,
                                          const CoalescerPair &CP) {
   SmallVector<VNInfo *, 16> NewVNInfo;
   JoinVals RHSVals(RRange, CP.getSrcReg(), CP.getSrcIdx(), LaneMask, NewVNInfo,
-                   CP, LIS, TRI, true, true);
+                   CP, LIS, TRI, MRI, true, true);
   JoinVals LHSVals(LRange, CP.getDstReg(), CP.getDstIdx(), LaneMask, NewVNInfo,
-                   CP, LIS, TRI, true, true);
+                   CP, LIS, TRI, MRI, true, true);
 
   // Compute NewVNInfo and resolve conflicts (see also joinVirtRegs())
   // We should be able to resolve all conflicts here as we could successfully do
@@ -3765,9 +3781,9 @@ RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
   LiveInterval &LHS = LIS->getInterval(CP.getDstReg());
   bool TrackSubRegLiveness = MRI->shouldTrackSubRegLiveness(*CP.getNewRC());
   JoinVals RHSVals(RHS, CP.getSrcReg(), CP.getSrcIdx(), LaneBitmask::getNone(),
-                   NewVNInfo, CP, LIS, TRI, false, TrackSubRegLiveness);
+                   NewVNInfo, CP, LIS, TRI, MRI, false, TrackSubRegLiveness);
   JoinVals LHSVals(LHS, CP.getDstReg(), CP.getDstIdx(), LaneBitmask::getNone(),
-                   NewVNInfo, CP, LIS, TRI, false, TrackSubRegLiveness);
+                   NewVNInfo, CP, LIS, TRI, MRI, false, TrackSubRegLiveness);
 
   LLVM_DEBUG(dbgs() << "\t\tRHS = " << RHS << "\n\t\tLHS = " << LHS << '\n');
 
