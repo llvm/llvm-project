@@ -148,6 +148,8 @@ createABIClassifier(cir::CallConvTarget target,
     return createX86_64ABIClassifier(dl, modOp, options);
   case cir::CallConvTarget::AMDGPU:
     return createAMDGPUABIClassifier(dl, modOp);
+  case cir::CallConvTarget::SPIRV:
+    return createSPIRVABIClassifier(dl, modOp);
   case cir::CallConvTarget::None:
     break;
   }
@@ -239,8 +241,9 @@ void CallConvLoweringPass::runOnOperation() {
         (hasIncompleteRecordByValue(fnTy.getReturnType()) ||
          llvm::any_of(fnTy.getInputs(), hasIncompleteRecordByValue)))
       return;
-    std::optional<FunctionClassification> fc = classifier->classifyFunction(f);
-    if (!fc) {
+    mlir::FailureOr<FunctionClassification> fc =
+        classifier->classifyFunction(f);
+    if (failed(fc)) {
       anyFailed = true;
       return;
     }
@@ -287,9 +290,9 @@ void CallConvLoweringPass::runOnOperation() {
       anyFailed = true;
       return;
     }
-    std::optional<FunctionClassification> fc =
+    mlir::FailureOr<FunctionClassification> fc =
         classifier->classifyVariadicCall(call, callee);
-    if (!fc) {
+    if (failed(fc)) {
       anyFailed = true;
       return;
     }
@@ -397,9 +400,9 @@ void CallConvLoweringPass::runOnOperation() {
       indirectCalls.push_back(c);
   });
   for (cir::CIRCallOpInterface c : indirectCalls) {
-    std::optional<FunctionClassification> fc =
+    mlir::FailureOr<FunctionClassification> fc =
         classifier->classifyIndirectCall(c);
-    if (!fc) {
+    if (failed(fc)) {
       signalPassFailure();
       return;
     }
@@ -419,8 +422,8 @@ void CallConvLoweringPass::runOnOperation() {
       vaArgs.push_back(v);
   });
   for (cir::VAArgOp v : vaArgs) {
-    std::optional<ArgClassification> ac = classifier->classifyVAArg(v);
-    if (!ac) {
+    mlir::FailureOr<ArgClassification> ac = classifier->classifyVAArg(v);
+    if (failed(ac)) {
       signalPassFailure();
       return;
     }

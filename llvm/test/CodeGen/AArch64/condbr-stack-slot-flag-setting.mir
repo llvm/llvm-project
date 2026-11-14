@@ -64,29 +64,10 @@
 ---
 name:            launch
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
 hasFakeUses:     false
-registers:
-  - { id: 0, class: fpr64 }
-  - { id: 1, class: fpr64 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr64common }
-  - { id: 4, class: gpr64common }
-  - { id: 5, class: gpr32 }
-  - { id: 6, class: fpr64 }
-  - { id: 7, class: fpr128 }
-  - { id: 8, class: zpr }
-  - { id: 9, class: zpr }
-  - { id: 10, class: zpr }
-  - { id: 11, class: fpr64 }
-  - { id: 12, class: fpr64 }
-  - { id: 13, class: fpr128 }
-  - { id: 14, class: gpr64all }
-  - { id: 15, class: gpr32 }
-  - { id: 16, class: gpr64common }
 liveins:
   - { reg: '$w0', virtual-reg: '%2' }
   - { reg: '$x1', virtual-reg: '%3' }
@@ -144,8 +125,8 @@ body:             |
   ; are completely unchanged, and haven't been modified into an
   ; ADDSXri + Bcc.
   ;
-  ; CHECK: %16:gpr64common = ADDXri %stack.0, 0, 0
-  ; CHECK: CBZX %16, %bb.1
+  ; CHECK: %15:gpr64common = ADDXri %stack.0, 0, 0
+  ; CHECK: CBZX %15, %bb.1
   ; CHECK: B %bb.4
   
   bb.4 (%ir-block.11):

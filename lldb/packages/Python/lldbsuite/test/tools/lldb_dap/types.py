@@ -805,6 +805,9 @@ class StackFrame:
     languageSpecificData: Optional[Dict[str, Any]] = field(
         metadata={"alias": "$__lldb_languageSpecificData"}, default=None
     )
+    isOptimized: Optional[bool] = field(
+        metadata={"alias": "$__lldb_isOptimized"}, default=None
+    )
     presentationHint: Optional[StackFramePresentationHint] = None
 
 

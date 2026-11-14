@@ -38,6 +38,45 @@ define void @index_delta(ptr %input, i32 %c, i32 %b, i32 %n, float %r) {
   ret void
 }
 
+define void @index_delta_narrow_idx_pos_one(ptr %p, i32 %b) {
+; CHECK-LABEL: define void @index_delta_narrow_idx_pos_one(
+; CHECK-SAME: ptr [[P:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[IDX:%.*]] = add nsw i32 [[B]], 1
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i32 [[IDX]]
+; CHECK-NEXT:    store i8 0, ptr [[GEP1]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[IDX]] to i64
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[GEP1]], i64 [[TMP1]]
+; CHECK-NEXT:    store i16 0, ptr [[GEP2]], align 2
+; CHECK-NEXT:    ret void
+;
+  %idx = add nsw i32 %b, 1
+  %gep1 = getelementptr inbounds i8, ptr %p, i32 %idx
+  store i8 0, ptr %gep1, align 1
+  %gep2 = getelementptr inbounds i16, ptr %p, i32 %idx
+  store i16 0, ptr %gep2, align 2
+  ret void
+}
+
+define void @index_delta_narrow_idx_neg_one(ptr %p, i32 %b) {
+; CHECK-LABEL: define void @index_delta_narrow_idx_neg_one(
+; CHECK-SAME: ptr [[P:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[IDX:%.*]] = add nsw i32 [[B]], 1
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [3 x i8], ptr [[P]], i32 [[IDX]]
+; CHECK-NEXT:    store i8 0, ptr [[GEP1]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[IDX]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 0, [[TMP1]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[GEP1]], i64 [[TMP2]]
+; CHECK-NEXT:    store i16 0, ptr [[GEP2]], align 2
+; CHECK-NEXT:    ret void
+;
+  %idx = add nsw i32 %b, 1
+  %gep1 = getelementptr inbounds [3 x i8], ptr %p, i32 %idx
+  store i8 0, ptr %gep1, align 1
+  %gep2 = getelementptr inbounds i16, ptr %p, i32 %idx
+  store i16 0, ptr %gep2, align 2
+  ret void
+}
+
 ; Stride Delta
 
 ; foo(input[0]);

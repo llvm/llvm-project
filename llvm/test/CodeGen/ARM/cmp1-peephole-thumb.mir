@@ -24,14 +24,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: tgpr }
-  - { id: 1, class: tgpr }
-  - { id: 2, class: tgpr }
-  - { id: 3, class: tgpr }
-  - { id: 4, class: tgpr }
-  - { id: 5, class: tgpr }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$r1', virtual-reg: '%1' }
@@ -70,18 +62,18 @@ body:             |
   bb.0.entry:
     liveins: $r0, $r1
 
-    %1 = COPY $r1
-    %0 = COPY $r0
-    %2, $cpsr = tMUL %1, %0, 14, $noreg
-    %3, $cpsr = tMOVi8 1, 14, $noreg
-    %4, $cpsr = tMOVi8 0, 14, $noreg
+    %1:tgpr = COPY $r1
+    %0:tgpr = COPY $r0
+    %2:tgpr, $cpsr = tMUL %1, %0, 14, $noreg
+    %3:tgpr, $cpsr = tMOVi8 1, 14, $noreg
+    %4:tgpr, $cpsr = tMOVi8 0, 14, $noreg
     tCMPi8 %2, 0, 14, $noreg, implicit-def $cpsr
     tBcc %bb.2.entry, 0, $cpsr
 
   bb.1.entry:
 
   bb.2.entry:
-    %5 = PHI %4, %bb.1.entry, %3, %bb.0.entry
+    %5:tgpr = PHI %4, %bb.1.entry, %3, %bb.0.entry
     $r0 = COPY %5
     tBX_RET 14, $noreg, implicit $r0
 

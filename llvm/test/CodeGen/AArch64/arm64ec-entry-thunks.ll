@@ -781,8 +781,8 @@ start:
 }
 
 define <8 x i16> @large_vector(<8 x i16> %0) {
-; CHECK-LABEL:    .def	$ientry_thunk$cdecl$m16$m16;
-; CHECK:          .section	.wowthk$aa,"xr",discard,$ientry_thunk$cdecl$m16$m16
+; CHECK-LABEL:    .def	$ientry_thunk$cdecl$m16$m16a16;
+; CHECK:          .section	.wowthk$aa,"xr",discard,$ientry_thunk$cdecl$m16$m16a16
 ; CHECK:          // %bb.0:
 ; CHECK-NEXT:     stp	q6, q7, [sp, #-192]!            // 32-byte Folded Spill
 ; CHECK-NEXT:     .seh_save_any_reg_px	q6, 192
@@ -829,6 +829,26 @@ define <8 x i16> @large_vector(<8 x i16> %0) {
 ; CHECK-NEXT:     .seh_endproc
 start:
   ret <8 x i16> %0
+}
+
+define void @aligned_i128(ptr %out, i128 %v) {
+; CHECK-LABEL:    .def	$ientry_thunk$cdecl$v$i8m16a16;
+; CHECK:          .seh_endprologue
+; CHECK-NEXT:     ldp	x2, x3, [x1]
+; CHECK-NEXT:     blr	x9
+start:
+  store i128 %v, ptr %out, align 16
+  ret void
+}
+
+define void @pair_i64(ptr %out, [2 x i64] %v) {
+; CHECK-LABEL:    .def	$ientry_thunk$cdecl$v$i8m16;
+; CHECK:          .seh_endprologue
+; CHECK-NEXT:     ldp	x1, x2, [x1]
+; CHECK-NEXT:     blr	x9
+start:
+  store [2 x i64] %v, ptr %out, align 8
+  ret void
 }
 
 ; Verify the hybrid bitmap
@@ -885,5 +905,6 @@ start:
 ; CHECK-NEXT:     .symidx	$ientry_thunk$cdecl$m$m
 ; CHECK-NEXT:     .word	1
 ; CHECK-NEXT:     .symidx	"#large_vector"
-; CHECK-NEXT:     .symidx	$ientry_thunk$cdecl$m16$m16
+; CHECK-NEXT:     .symidx	$ientry_thunk$cdecl$m16$m16a16
 ; CHECK-NEXT:     .word	1
+

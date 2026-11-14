@@ -18,13 +18,13 @@ define void @scalable_wide_active_lane_mask_double(ptr noalias %dst, ptr readonl
 ; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <4 x i1> [ splat (i1 true), %[[VECTOR_PH]] ], [ [[EXTRACT_NEXT_ALM_PART:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = phi <4 x i1> [ splat (i1 true), %[[VECTOR_PH]] ], [ [[EXTRACT_NEXT_ALM_PART4:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-UF4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds double, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-UF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i64 4
+; CHECK-UF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 32
 ; CHECK-UF4-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 [[TMP0]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x double> poison)
 ; CHECK-UF4-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 [[TMP1]], <4 x i1> [[ACTIVE_LANE_MASK2]], <4 x double> poison)
 ; CHECK-UF4-NEXT:    [[TMP2:%.*]] = fmul <4 x double> [[WIDE_MASKED_LOAD]], splat (double 3.000000e+00)
 ; CHECK-UF4-NEXT:    [[TMP3:%.*]] = fmul <4 x double> [[WIDE_MASKED_LOAD3]], splat (double 3.000000e+00)
 ; CHECK-UF4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[INDEX]]
-; CHECK-UF4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[TMP4]], i64 4
+; CHECK-UF4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i64 32
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> [[TMP2]], ptr align 8 [[TMP4]], <4 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> [[TMP3]], ptr align 8 [[TMP5]], <4 x i1> [[ACTIVE_LANE_MASK2]])
 ; CHECK-UF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8

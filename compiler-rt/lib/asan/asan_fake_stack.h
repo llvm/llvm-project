@@ -181,6 +181,8 @@ class FakeStack {
 
  private:
   FakeStack() { }
+  template <typename Fn>
+  void ForEachAllocatedFrame(Fn fn);
   static const uptr kFlagsOffset = 4096;  // This is where the flags begin.
   // Must match the number of uses of DEFINE_STACK_MALLOC_FREE_WITH_CLASS_ID
   COMPILER_CHECK(kNumberOfSizeClasses == 11);

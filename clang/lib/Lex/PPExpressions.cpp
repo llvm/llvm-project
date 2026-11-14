@@ -30,6 +30,7 @@
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -93,8 +94,8 @@ struct DefinedTracker {
     Unknown              // Something else.
   } State;
   /// TheMacro - When the state is DefinedMacro or NotDefinedMacro, this
-  /// indicates the macro that was checked.
-  IdentifierInfo *TheMacro;
+  /// indicates the macro that was checked and its location.
+  IdentifierLoc TheMacro;
   bool IncludedUndefinedIds = false;
 };
 
@@ -218,7 +219,7 @@ static bool EvaluateDefined(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
 
   // Success, remember that we saw defined(X).
   DT.State = DefinedTracker::DefinedMacro;
-  DT.TheMacro = II;
+  DT.TheMacro = IdentifierLoc(macroToken.getLocation(), II);
   return false;
 }
 
@@ -886,9 +887,9 @@ static bool EvaluateDirectiveSubExpr(PPValue &LHS, unsigned MinPrec,
 
 /// EvaluateDirectiveExpression - Evaluate an integer constant expression that
 /// may occur after a #if or #elif directive.  If the expression is equivalent
-/// to "!defined(X)" return X in IfNDefMacro.
+/// to "!defined(X)" return X and its location in IfNDefMacro.
 Preprocessor::DirectiveEvalResult
-Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
+Preprocessor::EvaluateDirectiveExpression(IdentifierLoc &IfNDefMacro,
                                           Token &Tok, bool &EvaluatedDefined,
                                           bool CheckForEoD) {
   SaveAndRestore PPDir(ParsingIfOrElifDirective, true);
@@ -898,7 +899,8 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
   // to recursively expand in order to get more gcc-list behavior, so we force
   // DisableMacroExpansion to false and restore it when we're done parsing the
   // expression.
-  bool DisableMacroExpansionAtStartOfDirective = DisableMacroExpansion;
+  llvm::scope_exit RestoreMacroExpansion(
+      [this, Old = DisableMacroExpansion] { DisableMacroExpansion = Old; });
   DisableMacroExpansion = false;
 
   // Peek ahead one token.
@@ -914,9 +916,6 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
     // Parse error, skip the rest of the macro line.
     if (Tok.isNot(tok::eod))
       DiscardUntilEndOfDirective(Tok);
-
-    // Restore 'DisableMacroExpansion'.
-    DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
 
     // We cannot trust the source range from the value because there was a
     // parse error. Track the range manually -- the end of the directive is the
@@ -938,8 +937,6 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
     if (DT.State == DefinedTracker::NotDefinedMacro)
       IfNDefMacro = DT.TheMacro;
 
-    // Restore 'DisableMacroExpansion'.
-    DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
     bool IsNonZero = ResVal.Val != 0;
     SourceRange ValRange = ResVal.getRange();
     return {std::move(ResVal.Val), IsNonZero, DT.IncludedUndefinedIds,
@@ -954,8 +951,6 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
     if (Tok.isNot(tok::eod))
       DiscardUntilEndOfDirective(Tok);
 
-    // Restore 'DisableMacroExpansion'.
-    DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
     return {std::nullopt,
             false,
             DT.IncludedUndefinedIds,
@@ -973,15 +968,13 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
 
   EvaluatedDefined = EvaluatedDefined || DT.State != DefinedTracker::Unknown;
 
-  // Restore 'DisableMacroExpansion'.
-  DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
   bool IsNonZero = ResVal.Val != 0;
   SourceRange ValRange = ResVal.getRange();
   return {std::move(ResVal.Val), IsNonZero, DT.IncludedUndefinedIds, ValRange};
 }
 
 Preprocessor::DirectiveEvalResult
-Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
+Preprocessor::EvaluateDirectiveExpression(IdentifierLoc &IfNDefMacro,
                                           bool CheckForEoD) {
   Token Tok;
   bool EvaluatedDefined;

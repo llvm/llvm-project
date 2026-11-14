@@ -14,7 +14,7 @@ namespace Fortran::evaluate {
 static std::optional<ConstantSubscript> GetConstantLength(
     FoldingContext &context, Expr<SomeType> &&expr) {
   expr = Fold(context, std::move(expr));
-  if (auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(expr)}) {
+  if (auto *chExpr{UnwrapExpr<Expr<Type<TypeCategory::Character>>>(expr)}) {
     if (auto len{chExpr->LEN()}) {
       return ToInt64(*len);
     }
@@ -165,5 +165,4 @@ Expr<Type<TypeCategory::Character>> FoldOperation(
 #pragma warning(disable : 4661)
 #endif
 template class ExpressionBase<Type<TypeCategory::Character>>;
-template class ExpressionBase<SomeCharacter>;
 } // namespace Fortran::evaluate

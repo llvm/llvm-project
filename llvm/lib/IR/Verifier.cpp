@@ -99,6 +99,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsARM.h"
+#include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
@@ -690,6 +691,15 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
           "GlobalValue with local linkage or non-default "
           "visibility must be dso_local!",
           &GV);
+
+  // Constant::removeDeadConstantUsers skips the use-list walk for globals
+  // that are not marked as possibly having constant users.
+  if (!GV.mayHaveConstantUsers())
+    for (const User *U : GV.materialized_users())
+      Check(!isa<Constant>(U) || isa<GlobalValue>(U),
+            "Global is used by a constant but is not marked as possibly having "
+            "constant users",
+            &GV, U);
 
   forEachUser(&GV, GlobalValueVisited, [&](const Value *V) -> bool {
     if (const auto *I = dyn_cast<Instruction>(V)) {
@@ -1915,12 +1925,21 @@ void Verifier::visitDIImportedEntity(const DIImportedEntity &N) {
 }
 
 void Verifier::visitComdat(const Comdat &C) {
-  // In COFF the Module is invalid if the GlobalValue has private linkage.
-  // Entities with private linkage don't have entries in the symbol table.
-  if (TT.isOSBinFormatCOFF())
-    if (const GlobalValue *GV = M.getNamedValue(C.getName()))
+  // Comdats in COFF modules must have a corresponding global that is not
+  // private. If the global is private, there will be no symbol table entry.
+  // We consider unused or dead comdat entries to be valid, since they won't
+  // make it into the COFF object file.
+  if (TT.isOSBinFormatCOFF()) {
+    const GlobalValue *GV = M.getNamedValue(C.getName());
+    bool IsDefined = GV != nullptr && !GV->isDeclarationForLinker();
+    if (IsDefined)
       Check(!GV->hasPrivateLinkage(), "comdat global value has private linkage",
             GV);
+    else
+      Check(C.getUsers().empty(),
+            "COFF comdats must have a defined global value with the same name",
+            GV);
+  }
 }
 
 void Verifier::visitModuleIdents() {
@@ -2175,7 +2194,8 @@ Verifier::visitModuleFlag(const MDNode *Op,
   if (Name == "wchar_size") {
     ConstantInt *Value
       = mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
-    Check(Value, "wchar_size metadata requires constant integer argument");
+    Check(Value && Value->getValue().isStrictlyPositive(),
+          "wchar_size metadata requires constant positive integer argument");
     return;
   }
 
@@ -2609,9 +2629,6 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
         "Attributes 'noinline and alwaysinline' are incompatible!", V);
 
   if (Attrs.hasFnAttr(Attribute::OptimizeNone)) {
-    Check(Attrs.hasFnAttr(Attribute::NoInline),
-          "Attribute 'optnone' requires 'noinline'!", V);
-
     Check(!Attrs.hasFnAttr(Attribute::OptimizeForSize),
           "Attributes 'optsize and optnone' are incompatible!", V);
 
@@ -4725,8 +4742,8 @@ void Verifier::visitBitInsertInst(BitInsertInst &BII) {
   if (const char *Reason = BitInsertInst::areInvalidOperands(
           BII.getOperand(0), BII.getOperand(1), BII.getOperand(2)))
     Check(false, Reason, &BII);
-  Check(DL.getTypeSizeInBits(BII.getOperand(0)->getType()) >=
-            DL.getTypeSizeInBits(BII.getOperand(1)->getType()),
+  Check(DL.getTypeSizeInBits(BII.getOperand(0)->getType()->getScalarType()) >=
+            DL.getTypeSizeInBits(BII.getOperand(1)->getType()->getScalarType()),
         "bitinsert val type cannot be wider than base type!", &BII);
   visitInstruction(BII);
 }
@@ -4742,8 +4759,8 @@ void Verifier::visitBitExtractInst(BitExtractInst &BEI) {
   if (const char *Reason = BitExtractInst::areInvalidOperands(
           BEI.getType(), BEI.getOperand(0), BEI.getOperand(1)))
     Check(false, Reason, &BEI);
-  Check(DL.getTypeSizeInBits(BEI.getType()) <=
-            DL.getTypeSizeInBits(BEI.getOperand(0)->getType()),
+  Check(DL.getTypeSizeInBits(BEI.getType()->getScalarType()) <=
+            DL.getTypeSizeInBits(BEI.getOperand(0)->getType()->getScalarType()),
         "bitextract result type cannot be wider than source type!", &BEI);
   visitInstruction(BEI);
 }
@@ -5603,7 +5620,7 @@ void Verifier::visitDereferenceableMetadata(Instruction& I, MDNode* MD) {
         "dereferenceable, dereferenceable_or_null "
         "apply only to pointer types",
         &I);
-  Check((isa<LoadInst>(I) || isa<IntToPtrInst>(I)),
+  Check((isa<LoadInst, IntToPtrInst, PHINode>(I)),
         "dereferenceable, dereferenceable_or_null apply only to load"
         " and inttoptr instructions, use attributes for calls or invokes",
         &I);
@@ -6125,10 +6142,11 @@ void Verifier::visitInstruction(Instruction &I) {
                 F->getIntrinsicID() == Intrinsic::experimental_gc_statepoint ||
                 F->getIntrinsicID() == Intrinsic::wasm_throw ||
                 F->getIntrinsicID() == Intrinsic::wasm_rethrow ||
+                F->getIntrinsicID() == Intrinsic::bpf_unwind_exit ||
                 IsAttachedCallOperand(F, CBI, i),
             "Cannot invoke an intrinsic other than donothing, patchpoint, "
-            "statepoint, coro_resume, coro_destroy, clang.arc.attachedcall or "
-            "wasm.(re)throw",
+            "statepoint, coro_resume, coro_destroy, clang.arc.attachedcall, "
+            "wasm.(re)throw or bpf.unwind.exit",
             &I);
       Check(F->getParent() == &M, "Referencing function in another module!", &I,
             &M, F, F->getParent());
@@ -6170,13 +6188,14 @@ void Verifier::visitInstruction(Instruction &I) {
   }
 
   if (MDNode *Range = I.getMetadata(LLVMContext::MD_range)) {
-    Check(isa<LoadInst>(I) || isa<CallInst>(I) || isa<InvokeInst>(I),
-          "Ranges are only for loads, calls and invokes!", &I);
+    Check((isa<LoadInst, CallInst, InvokeInst, PHINode>(I)),
+          "Ranges are only for loads, calls, invokes and phi nodes!", &I);
     visitRangeMetadata(I, Range, I.getType());
   }
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_nofpclass)) {
-    Check(isa<LoadInst>(I), "nofpclass is only for loads", &I);
+    Check((isa<LoadInst, PHINode>(I)),
+          "nofpclass is only for loads and phi nodes", &I);
     visitNoFPClassMetadata(I, MD, I.getType());
   }
 
@@ -6203,15 +6222,16 @@ void Verifier::visitInstruction(Instruction &I) {
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_nonnull)) {
     Check(I.getType()->isPointerTy(), "nonnull applies only to pointer types",
           &I);
-    Check(isa<LoadInst>(I),
-          "nonnull applies only to load instructions, use attributes"
-          " for calls or invokes",
+    Check((isa<LoadInst, PHINode>(I)),
+          "nonnull applies only to load instructions or phi nodes, use "
+          "attributes for calls or invokes",
           &I);
     Check(MD->getNumOperands() == 0, "nonnull metadata must be empty", &I);
   }
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_noundef)) {
-    Check(isa<LoadInst>(I), "noundef applies only to load instructions", &I);
+    Check((isa<LoadInst, PHINode>(I)),
+          "noundef applies only to load instructions or phi nodes", &I);
     Check(MD->getNumOperands() == 0, "noundef metadata must be empty", &I);
   }
 
@@ -6241,8 +6261,8 @@ void Verifier::visitInstruction(Instruction &I) {
   if (MDNode *AlignMD = I.getMetadata(LLVMContext::MD_align)) {
     Check(I.getType()->isPointerTy(), "align applies only to pointer types",
           &I);
-    Check(isa<LoadInst>(I),
-          "align applies only to load instructions, "
+    Check((isa<LoadInst, PHINode>(I)),
+          "align applies only to load instructions or phi nodes, "
           "use attributes for calls or invokes",
           &I);
     Check(AlignMD->getNumOperands() == 1, "align takes one operand!", &I);
@@ -7260,6 +7280,16 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(ArgTy->getNumElements() == ResultTy->getMinNumElements(),
           "vector_repeat argument and result must have the same minimum "
           "element count.",
+          &Call);
+    break;
+  }
+  case Intrinsic::vector_shuffle: {
+    auto *RetTy = cast<VectorType>(Call.getType());
+    auto *MaskTy = cast<VectorType>(Call.getArgOperand(1)->getType());
+
+    Check(MaskTy->getElementCount() == RetTy->getElementCount(),
+          "vector_shuffle mask must have the same number of elements as the "
+          "result.",
           &Call);
     break;
   }

@@ -815,6 +815,15 @@ gentbl_cc_library(
     deps = [":OptParserTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "MCToolOptionsTableGen",
+    strip_include_prefix = "lib/MC",
+    tbl_outs = {"lib/MC/MCToolOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/MC/MCToolOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "MC",
     srcs = glob([
@@ -831,6 +840,7 @@ cc_library(
         ":DebugInfoCodeView",
         ":DebugInfoDWARFLowLevel",
         ":MCCLOptionsTableGen",
+        ":MCToolOptionsTableGen",
         ":Option",
         ":Support",
         ":TargetParser",
@@ -2576,6 +2586,24 @@ gentbl_cc_library(
     deps = [":OptParserTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "CodeGenToolOptionsTableGen",
+    strip_include_prefix = "lib/CodeGen",
+    tbl_outs = {"lib/CodeGen/CodeGenToolOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/CodeGen/CodeGenToolOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "SelectionDAGOptionsTableGen",
+    strip_include_prefix = "lib/CodeGen/SelectionDAG",
+    tbl_outs = {"lib/CodeGen/SelectionDAG/SelectionDAGOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/CodeGen/SelectionDAG/SelectionDAGOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 copy_file(
     name = "generate_regalloc_model1_h",
     src = "lib/Analysis/models/regalloc-eviction-test-model.inc",
@@ -2647,6 +2675,7 @@ cc_library(
         ":CFGuard",
         ":CGData",
         ":CodeGenOptionsTableGen",
+        ":CodeGenToolOptionsTableGen",
         ":CodeGenTypes",
         ":Core",
         ":DebugInfoCodeView",
@@ -2663,6 +2692,7 @@ cc_library(
         ":ProfileData",
         ":Remarks",
         ":Scalar",
+        ":SelectionDAGOptionsTableGen",
         ":Support",
         ":Target",
         ":TargetParser",
@@ -2869,7 +2899,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/ARM/ARMGenFastISel.inc",
             ),
             (
-                ["-gen-global-isel"],
+                [
+                    "-gen-global-isel",
+                    "-gisel-extended-llt",
+                ],
                 "lib/Target/ARM/ARMGenGlobalISel.inc",
             ),
             (
@@ -2959,6 +2992,7 @@ llvm_target_lib_list = [lib for lib in [
             ),
         ],
         "tbl_deps": [
+            ":AMDGPUOptionsTableGen",
             ":amdgpu_isel_target_gen",
             ":r600_target_gen",
         ],
@@ -3680,6 +3714,9 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/SPIRV/SPIRVGenSubtargetInfo.inc",
             ),
         ],
+        "tbl_deps": [
+            ":SPIRVOptionsTableGen",
+        ],
     },
     {
         "name": "SystemZ",
@@ -4178,6 +4215,15 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "AMDGPUOptionsTableGen",
+    strip_include_prefix = "lib/Target/AMDGPU",
+    tbl_outs = {"lib/Target/AMDGPU/AMDGPUOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/AMDGPU/AMDGPUOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
     name = "AArch64MCOptionsTableGen",
     strip_include_prefix = "lib/Target/AArch64",
     tbl_outs = {"lib/Target/AArch64/AArch64MCOptions.inc": ["-gen-opt-parser-defs"]},
@@ -4255,6 +4301,15 @@ gentbl_cc_library(
     tbl_outs = {"lib/Target/RISCV/RISCVOptions.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/RISCV/RISCVOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "SPIRVOptionsTableGen",
+    strip_include_prefix = "lib/Target/SPIRV",
+    tbl_outs = {"lib/Target/SPIRV/SPIRVOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/SPIRV/SPIRVOptions.td",
     deps = [":OptParserTdFiles"],
 )
 

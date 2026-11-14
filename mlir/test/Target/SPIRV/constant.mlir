@@ -270,14 +270,20 @@ spirv.module Logical Vulkan requires #spirv.vce<v1.3,
     spirv.Return
   }
 
-  // CHECK-LABEL: @materialize_const_at_each_use
-  spirv.func @materialize_const_at_each_use() -> (i32) "None" {
-    // CHECK: %[[USE1:.*]] = spirv.Constant 42 : i32
-    // CHECK: %[[USE2:.*]] = spirv.Constant 42 : i32
-    // CHECK: spirv.IAdd %[[USE1]], %[[USE2]]
+  // CHECK-LABEL: @materialize_const_once_per_block
+  spirv.func @materialize_const_once_per_block() -> (i32) "None" {
+    // CHECK: %[[C1:.*]] = spirv.Constant 42 : i32
+    // CHECK-NEXT: %[[ADD:.*]] = spirv.IAdd %[[C1]], %[[C1]]
+    // CHECK-NEXT: spirv.Branch ^[[BB:.*]]
+    // CHECK-NEXT: ^[[BB]]:
+    // CHECK-NEXT: %[[C2:.*]] = spirv.Constant 42 : i32
+    // CHECK-NEXT: spirv.IAdd %[[ADD]], %[[C2]]
     %0 = spirv.Constant 42 : i32
     %1 = spirv.IAdd %0, %0 : i32
-    spirv.ReturnValue %1 : i32
+    spirv.Branch ^bb1
+  ^bb1:
+    %2 = spirv.IAdd %1, %0 : i32
+    spirv.ReturnValue %2 : i32
   }
 
   // CHECK-LABEL: @const_variable
