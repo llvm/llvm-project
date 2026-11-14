@@ -48,7 +48,7 @@ public:
   }
 
 private:
-  std::map<StringRef, StringRef> ScalarMASSFuncs;
+  std::map<StringRef, std::pair<StringRef, unsigned>> ScalarMASSFuncs;
   bool isCandidateSafeToLower(const CallInst &CI) const;
   bool isFiniteCallSafe(const CallInst &CI) const;
   bool createScalarMASSCall(StringRef MASSEntry, CallInst &CI,
@@ -117,6 +117,11 @@ bool PPCGenScalarMASSEntries::runOnModule(Module &M) {
     auto Iter = ScalarMASSFuncs.find(Func.getName());
     if (Iter == ScalarMASSFuncs.end())
       continue;
+    
+
+    if(Func.arg_size() != Iter->second.second)
+      continue;
+    
 
     // The call to createScalarMASSCall() invalidates the iterator over users
     // upon replacing the users. Precomputing the current list of users allows
@@ -126,7 +131,7 @@ bool PPCGenScalarMASSEntries::runOnModule(Module &M) {
     for (auto *User : TheUsers)
       if (auto *CI = dyn_cast_or_null<CallInst>(User)) {
         if (isCandidateSafeToLower(*CI))
-          Changed |= createScalarMASSCall(Iter->second, *CI, Func);
+          Changed |= createScalarMASSCall(Iter->second.first, *CI, Func);
       }
   }
 
