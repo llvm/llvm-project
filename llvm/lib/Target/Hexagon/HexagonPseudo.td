@@ -501,6 +501,42 @@ def PS_vloadrq_ai: Pseudo<(outs HvxQR:$Qd),
       (ins IntRegs:$Rs, s32_0Imm:$Off), "", []>,
       Requires<[HasV60,UseHVX]>;
 
+// HLX vector load and store pseudos
+let Predicates = [UseHLX], isPseudo = 1, isCodeGenOnly = 1,
+    accessSize = HLXVectorAccess, hasSideEffects = 0, mayLoad = 1, isHLX = 1 in
+def LX_L16b_pseudo : LDInst<
+    (outs HlxLR:$dst),
+    (ins IntRegs:$src),
+    "",
+    [], "", HLX_LD_tc_ld_SLOT1>;
+
+let Predicates = [UseHLX], isPseudo = 1, isCodeGenOnly = 1,
+    accessSize = HLXVectorAccess, hasSideEffects = 0, mayStore = 1, isHLX = 1 in
+def LX_S16b_pseudo : STInst<
+    (outs),
+    (ins IntRegs:$dst, HlxLR:$L),
+    "",
+    [], "", HLX_ST_tc_st_SLOT0>;
+
+// HLX vector spill pseudos
+let Predicates = [UseHLX], isPseudo = 1, isCodeGenOnly = 1,
+    mayLoad = 1, accessSize = HLXVectorAccess, hasSideEffects = 0 in
+class LDril_template<RegisterClass RC, InstHexagon rootInst>
+  : InstHexagon<(outs RC:$dst), (ins IntRegs:$addr, s32_0Imm:$off),
+    "", [], "", rootInst.Itinerary, rootInst.Type>;
+
+def PS_loadrl : LDril_template<HlxLR, LX_L16b_pseudo>;
+def PS_loadrll : LDril_template<HlxLLR, LX_L16b_pseudo>;
+
+let Predicates = [UseHLX], isPseudo = 1, isCodeGenOnly = 1,
+    mayStore = 1, accessSize = HLXVectorAccess, hasSideEffects = 0 in
+class STril_template<RegisterClass RC, InstHexagon rootInst>
+  : InstHexagon<(outs), (ins IntRegs:$addr, s32_0Imm:$off, RC:$src),
+    "", [], "", rootInst.Itinerary, rootInst.Type>;
+
+def PS_storerl : STril_template<HlxLR, LX_S16b_pseudo>;
+def PS_storerll : STril_template<HlxLLR, LX_S16b_pseudo>;
+
 
 let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in
 class VSELInst<dag outs, dag ins, InstHexagon rootInst>
@@ -534,6 +570,18 @@ let isExtendable = 1, opExtendable = 1, isExtentSigned = 1, opExtentBits = 13,
     isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in
 def STriw_ctr : STInst<(outs),
       (ins IntRegs:$addr, s32_0Imm:$off, CtrRegs:$src1),
+      ".error \"should not emit\"", []>;
+
+// Load circular pseudo-register.
+let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in
+def LDriw_circ : LDInst<(outs CircRegs:$dst),
+                        (ins IntRegs:$addr),
+                        ".error \"should not emit\"", []>;
+
+// Store circular pseudo-register.
+let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in
+def STriw_circ : STInst<(outs),
+      (ins IntRegs:$addr, CircRegs:$src1),
       ".error \"should not emit\"", []>;
 
 let isExtendable = 1, opExtendable = 1, opExtentBits = 6,
@@ -579,16 +627,16 @@ def DuplexIClassF:  InstDuplex < 0xF >;
 // allocate the correct pair of CSx and Mx registers.
 multiclass NewCircularLoad<RegisterClass RC, MemAccessSize MS> {
 
-let isCodeGenOnly = 1, isPseudo = 1, Defs = [CS], Uses = [CS],
+let isCodeGenOnly = 1, isPseudo = 1,
     addrMode = PostInc, accessSize = MS, hasSideEffects = 0 in {
   // Use timing class of L2_loadrb_pci.
   def NAME#_pci : LDInst<(outs RC:$Rd32, IntRegs:$Rx32),
-       (ins IntRegs:$Rx32in, s4_0Imm:$Ii, ModRegs:$Mu2, IntRegs:$Cs),
+       (ins IntRegs:$Rx32in, s4_0Imm:$Ii, CircRegs:$CSMu2),
        ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_5ceb2f9e>;
 
   // Use timing class of L2_loadrb_pcr.
   def NAME#_pcr : LDInst<(outs RC:$Rd32, IntRegs:$Rx32),
-       (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Cs),
+       (ins IntRegs:$Rx32in, CircRegs:$CSMu2),
        ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_075c8dd8>;
 }
 }
@@ -602,16 +650,16 @@ defm PS_loadrd : NewCircularLoad<DoubleRegs, DoubleWordAccess>;
 
 multiclass NewCircularStore<RegisterClass RC, MemAccessSize MS> {
 
-let isCodeGenOnly = 1, isPseudo = 1, Defs = [CS], Uses = [CS],
+let isCodeGenOnly = 1, isPseudo = 1,
     addrMode = PostInc, accessSize = MS, hasSideEffects = 0 in {
   // Use timing class of S2_storerb_pci.
   def NAME#_pci : STInst<(outs IntRegs:$Rx32),
-       (ins IntRegs:$Rx32in, s4_0Imm:$Ii, ModRegs:$Mu2, RC:$Rt32, IntRegs:$Cs),
+       (ins IntRegs:$Rx32in, s4_0Imm:$Ii, CircRegs:$CSMu2, RC:$Rt32),
        ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_b4dc7630>;
 
   // Use timing class of S2_storerb_pcr.
   def NAME#_pcr : STInst<(outs IntRegs:$Rx32),
-       (ins IntRegs:$Rx32in, ModRegs:$Mu2, RC:$Rt32, IntRegs:$Cs),
+       (ins IntRegs:$Rx32in, CircRegs:$CSMu2, RC:$Rt32),
        ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_a2b365d2>;
 }
 }
@@ -632,8 +680,10 @@ def PS_crash: InstHexagon<(outs), (ins), "", [], "", PSEUDO, TypePSEUDO>;
 // misaligned load faults.
 // Defs: R6/R7 default scratch (R8 fallback if AddrReg conflicts), P0 for
 // compare, D13 for the crash load.
+// Size is the worst case: two extenders in the load packet, an uncompounded
+// compare/jump, and the extended crash load.
 let hasSideEffects = 1, mayLoad = 1, isPseudo = 1, isCodeGenOnly = 1,
-    Defs = [R6, R7, R8, P0, D13], Size = 28 in
+    Defs = [R6, R7, R8, P0, D13], Size = 32 in
 def KCFI_CHECK : InstHexagon<(outs), (ins IntRegs:$ptr, i32imm:$type),
                               "", [], "", PSEUDO, TypePSEUDO>;
 
@@ -646,4 +696,3 @@ def PS_trap1 : HInst<(outs), (ins u8_0Imm:$Ii), "trap1(#$Ii)", tc_53c851ab,
   let Inst{13-13} = 0b0;
   let Inst{31-16} = 0b0101010010000000;
 }
-

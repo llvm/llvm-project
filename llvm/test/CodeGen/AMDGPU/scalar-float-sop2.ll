@@ -238,16 +238,16 @@ define amdgpu_ps float @_amdgpu_ps_main() {
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    ; return to shader part epilog
 bb:
-  %i = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> zeroinitializer, i32 0, i32 0)
+  %i = call i32 @llvm.amdgcn.ptr.s.buffer.load.i32(ptr addrspace(8) null, i32 0, i32 0), !invariant.load !{}
   %i1 = bitcast i32 %i to float
-  %i2 = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> zeroinitializer, i32 4, i32 0)
+  %i2 = call i32 @llvm.amdgcn.ptr.s.buffer.load.i32(ptr addrspace(8) null, i32 4, i32 0), !invariant.load !{}
   %i3 = bitcast i32 %i2 to float
   %i4 = fmul contract float %i3, 4.0
   %i5 = fadd contract float %i4, %i1
   ret float %i5
 }
 
-declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32 immarg)
+declare i32 @llvm.amdgcn.ptr.s.buffer.load.i32(ptr addrspace(8), i32, i32 immarg)
 declare float @llvm.minnum.f32(float, float)
 declare float @llvm.maxnum.f32(float, float)
 declare half @llvm.minnum.f16(half, half)

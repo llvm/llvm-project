@@ -38,7 +38,7 @@ AST_POLYMORPHIC_MATCHER_P2(hasAnyArgumentWithParam,
   int ParamIndex = 0;
   for (; ArgIndex < Node.getNumArgs(); ++ArgIndex) {
     ast_matchers::internal::BoundNodesTreeBuilder ArgMatches(*Builder);
-    if (ArgMatcher.matches(*(Node.getArg(ArgIndex)->IgnoreParenCasts()), Finder,
+    if (ArgMatcher.matches(*Node.getArg(ArgIndex)->IgnoreParenCasts(), Finder,
                            &ArgMatches)) {
       ast_matchers::internal::BoundNodesTreeBuilder ParamMatches(ArgMatches);
       if (expr(anyOf(cxxConstructExpr(hasDeclaration(cxxConstructorDecl(
@@ -58,7 +58,7 @@ AST_POLYMORPHIC_MATCHER_P2(hasAnyArgumentWithParam,
 
 AST_MATCHER(Expr, usedInBooleanContext) {
   const char *ExprName = "__booleanContextExpr";
-  auto Result =
+  const auto Result =
       expr(expr().bind(ExprName),
            anyOf(hasParent(
                      mapAnyOf(varDecl, fieldDecl).with(hasType(booleanType()))),
@@ -339,13 +339,12 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
       return;
 
     // Always true/false, no warnings for that.
-    if (Value == 0) {
-      if ((OpCode == BinaryOperatorKind::BO_GT && !ContainerIsLHS) ||
-          (OpCode == BinaryOperatorKind::BO_LT && ContainerIsLHS) ||
-          (OpCode == BinaryOperatorKind::BO_LE && !ContainerIsLHS) ||
-          (OpCode == BinaryOperatorKind::BO_GE && ContainerIsLHS))
-        return;
-    }
+    if (Value == 0 &&
+        ((OpCode == BinaryOperatorKind::BO_GT && !ContainerIsLHS) ||
+         (OpCode == BinaryOperatorKind::BO_LT && ContainerIsLHS) ||
+         (OpCode == BinaryOperatorKind::BO_LE && !ContainerIsLHS) ||
+         (OpCode == BinaryOperatorKind::BO_GE && ContainerIsLHS)))
+      return;
 
     // Do not warn for size > 1, 1 < size, size <= 1, 1 >= size.
     if (Value == 1) {
@@ -408,8 +407,9 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
   auto WarnLoc = MemberCall ? MemberCall->getBeginLoc() : SourceLocation{};
 
   if (WarnLoc.isValid()) {
-    auto Diag = diag(WarnLoc, "the 'empty' method should be used to check "
-                              "for emptiness instead of %0");
+    const auto Diag =
+        diag(WarnLoc, "the 'empty' method should be used to check "
+                      "for emptiness instead of %0");
     if (const auto *SizeMethod =
             Result.Nodes.getNodeAs<NamedDecl>("SizeMethod"))
       Diag << SizeMethod->getDeclName();

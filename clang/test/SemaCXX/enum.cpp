@@ -151,3 +151,22 @@ class C {
                         // expected-error {{unexpected ';' before ')'}}
 };
 }
+
+namespace GH113465 {
+struct A { };
+
+enum E : int { A = 1, }; // expected-note {{struct 'A' is hidden by a non-type declaration of 'A' here}}
+#if __cplusplus < 201103L
+// expected-warning@-2 {{enumeration types with a fixed underlying type are a C++11 extension}}
+// expected-warning@-3 {{commas at the end of enumerator lists are a C++11 extension}}
+#endif
+
+struct B {                       // expected-note {{B defined here}}
+  void f(A                       // expected-error {{must use 'struct' tag to refer to type 'A' in this scope}} \
+                                 // expected-error {{expected ';' after struct}} \
+                                 // expected-note {{to match this '('}}
+#pragma message "Any Message"*); // expected-error {{pragma message requires parenthesized string}}
+};                               // expected-error {{expected ')'}}
+
+void B::f(A *p) { }              // expected-error {{out-of-line definition of 'f' does not match any declaration in 'GH113465::B'}}
+}

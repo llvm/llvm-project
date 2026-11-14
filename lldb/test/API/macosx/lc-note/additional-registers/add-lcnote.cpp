@@ -307,7 +307,7 @@ void copy_and_add_note(FILE *in, FILE *out, std::string lc_note_name,
   note.cmd = LC_NOTE;
   note.cmdsize = sizeof(struct note_command);
   memset(&note.data_owner, 0, 16);
-  // data_owner may not be nul terminated if all 16 characters
+  // data_owner may not be null-terminated if all 16 characters
   // are used, intentionally using strncpy here.
   strncpy(note.data_owner, lc_note_name.c_str(), 16);
   note.offset = infile_size + slide;

@@ -8,6 +8,11 @@
 
 #include "MulTest.h"
 
+#include "src/__support/FPUtil/float128.h"
 #include "src/math/dmulf128.h"
 
-LIST_MUL_TESTS(double, float128, LIBC_NAMESPACE::dmulf128)
+#ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
+using float128 = LIBC_NAMESPACE::fputil::Float128;
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
+
+LIST_MUL_TESTS(Dmulf128, double, float128, LIBC_NAMESPACE::dmulf128)

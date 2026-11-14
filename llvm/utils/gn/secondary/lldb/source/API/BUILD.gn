@@ -123,6 +123,7 @@ target(liblldb_type, "liblldb") {
     "SBVariablesOptions.cpp",
     "SBWatchpoint.cpp",
     "SBWatchpointOptions.cpp",
+    "ScriptInterpreterBridge.cpp",
     "SystemInitializerFull.cpp",
   ]
 

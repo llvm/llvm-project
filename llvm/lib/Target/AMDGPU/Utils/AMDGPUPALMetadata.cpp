@@ -367,7 +367,7 @@ void AMDGPUPALMetadata::setScratchSize(unsigned CC, const MCExpr *Val,
 }
 
 // Set the stack frame size of a function in the metadata.
-void AMDGPUPALMetadata::setFunctionScratchSize(StringRef FnName, unsigned Val) {
+void AMDGPUPALMetadata::setFunctionScratchSize(StringRef FnName, uint64_t Val) {
   auto Node = getShaderFunction(FnName);
   Node[".stack_frame_size_in_bytes"] = MsgPackDoc.getNode(Val);
   Node[".backend_stack_size"] = MsgPackDoc.getNode(Val);
@@ -1066,8 +1066,6 @@ unsigned AMDGPUPALMetadata::getPALVersion(unsigned idx) {
 }
 
 unsigned AMDGPUPALMetadata::getPALMajorVersion() { return getPALVersion(0); }
-
-unsigned AMDGPUPALMetadata::getPALMinorVersion() { return getPALVersion(1); }
 
 VersionTuple AMDGPUPALMetadata::getPALVersion() {
   return VersionTuple(getPALVersion(0), getPALVersion(1));

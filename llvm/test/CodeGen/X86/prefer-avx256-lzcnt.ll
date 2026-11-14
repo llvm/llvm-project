@@ -92,9 +92,9 @@ define <32 x i8> @testv32i8(<32 x i8> %in) {
 ; AVX256-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; AVX256-NEXT:    # ymm1 = mem[0,1,0,1]
 ; AVX256-NEXT:    vpshufb %ymm0, %ymm1, %ymm2
+; AVX256-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX256-NEXT:    vpsrlw $4, %ymm0, %ymm0
 ; AVX256-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
-; AVX256-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX256-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm3
 ; AVX256-NEXT:    vpand %ymm3, %ymm2, %ymm2
 ; AVX256-NEXT:    vpshufb %ymm0, %ymm1, %ymm0

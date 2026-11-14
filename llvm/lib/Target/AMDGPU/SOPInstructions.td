@@ -55,19 +55,20 @@ class SOP1_Real<bits<8> op, SOP1_Pseudo ps, string real_name = ps.Mnemonic> :
   let Size = 4;
 
   // copy relevant pseudo op flags
-  let SubtargetPredicate = ps.SubtargetPredicate;
-  let AsmMatchConverter  = ps.AsmMatchConverter;
-  let SchedRW            = ps.SchedRW;
-  let mayLoad            = ps.mayLoad;
-  let mayStore           = ps.mayStore;
-  let isTerminator       = ps.isTerminator;
-  let isReturn           = ps.isReturn;
-  let isCall             = ps.isCall;
-  let isBranch           = ps.isBranch;
-  let isBarrier          = ps.isBarrier;
-  let Uses               = ps.Uses;
-  let Defs               = ps.Defs;
-  let isConvergent       = ps.isConvergent;
+  let SubtargetPredicate   = ps.SubtargetPredicate;
+  let AsmMatchConverter    = ps.AsmMatchConverter;
+  let SchedRW              = ps.SchedRW;
+  let mayLoad              = ps.mayLoad;
+  let mayStore             = ps.mayStore;
+  let isTerminator         = ps.isTerminator;
+  let isReturn             = ps.isReturn;
+  let isCall               = ps.isCall;
+  let isBranch             = ps.isBranch;
+  let isBarrier            = ps.isBarrier;
+  let Uses                 = ps.Uses;
+  let Defs                 = ps.Defs;
+  let isConvergent         = ps.isConvergent;
+  let UseNamedOperandTable = ps.UseNamedOperandTable;
 
   // encoding
   bits<7> sdst;
@@ -264,7 +265,9 @@ def S_BREV_B64 : SOP1_64 <"s_brev_b64",
 } // End isReMaterializable = 1, isAsCheapAsAMove = 1
 
 let Defs = [SCC] in {
-def S_BCNT0_I32_B32 : SOP1_32 <"s_bcnt0_i32_b32">;
+def S_BCNT0_I32_B32 : SOP1_32 <"s_bcnt0_i32_b32",
+  [(set i32:$sdst, (UniformBinFrag<sub> 32, (ctpop i32:$src0)))]
+>;
 def S_BCNT0_I32_B64 : SOP1_32_64 <"s_bcnt0_i32_b64">;
 def S_BCNT1_I32_B32 : SOP1_32 <"s_bcnt1_i32_b32",
   [(set i32:$sdst, (UniformUnaryFrag<ctpop> i32:$src0))]
@@ -322,7 +325,7 @@ let isTerminator = 1, isBarrier = 1, SchedRW = [WriteBranch] in {
 let isBranch = 1, isIndirectBranch = 1 in {
 def S_SETPC_B64 : SOP1_1  <"s_setpc_b64">;
 
-let SubtargetPredicate = HasAddPC64Inst in
+let SubtargetPredicate = HasSAddPCI64Inst in
 def S_ADD_PC_I64 : SOP1_1_REGIMM64 <"s_add_pc_i64">;
 } // End isBranch = 1, isIndirectBranch = 1
 
@@ -995,6 +998,22 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
 } // End SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
   // Uses = [MODE], SchedRW = [WriteSFPU]
 
+def uniform_unscaled_div_fmas : PatFrag<
+  (ops node:$src0, node:$src1, node:$src2, node:$scale),
+  (unscaled_div_fmas node:$src0, node:$src1, node:$src2, node:$scale),
+  [{ return !N->isDivergent(); }]> {
+  // Uniformity is captured by the result register bank constraint in GlobalISel.
+  let GISelPredicateCode = [{ return true; }];
+}
+
+// Outrank the vector patterns, which include complex operand matchers.
+let SubtargetPredicate = HasSALUFloatInsts, AddedComplexity = 31 in
+def : GCNPat<
+  (f32 (uniform_unscaled_div_fmas SSrc_f32:$src0, SSrc_f32:$src1,
+                                 SReg_32:$src2, (i1 srcvalue))),
+  (S_FMAC_F32 $src0, $src1, $src2)
+>;
+
 // On GFX12 MIN/MAX instructions do not read MODE register.
 let SubtargetPredicate = isGFX12Plus, mayRaiseFPException = 1, isCommutable = 1,
     isReMaterializable = 1, SchedRW = [WriteSFPU], AddedComplexity = 25 in {
@@ -1620,6 +1639,7 @@ defm S_CBRANCH_EXECNZ : SOPP_With_Relaxation <
 >;
 } // End Uses = [EXEC]
 
+let hasSideEffects = 1 in {
 defm S_CBRANCH_CDBGSYS : SOPP_With_Relaxation <
   "s_cbranch_cdbgsys" , (ins SOPPBrTarget:$simm16),
   "$simm16"
@@ -1639,6 +1659,7 @@ defm S_CBRANCH_CDBGUSER : SOPP_With_Relaxation <
   "s_cbranch_cdbguser" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
+} // End hasSideEffects = 1
 
 } // End isBranch = 1
 } // End isTerminator = 1
@@ -1705,6 +1726,7 @@ let SubtargetPredicate = isGFX12Plus in {
   def S_WAIT_STORECNT_soft : SOPP_Pseudo <"s_soft_wait_storecnt", (ins s16imm:$simm16), "$simm16">;
 let OtherPredicates = [HasImageInsts] in {
   def S_WAIT_SAMPLECNT_soft : SOPP_Pseudo <"s_soft_wait_samplecnt", (ins s16imm:$simm16), "$simm16">;
+  let OtherPredicates = [HasImageInsts, HasAnyBVHInsts] in
   def S_WAIT_BVHCNT_soft : SOPP_Pseudo <"s_soft_wait_bvhcnt", (ins s16imm:$simm16), "$simm16">;
 } // End OtherPredicates = [HasImageInsts].
   def S_WAIT_DSCNT_soft : SOPP_Pseudo <"s_soft_wait_dscnt", (ins s16imm:$simm16), "$simm16">;
@@ -1723,13 +1745,13 @@ def S_WAITCNT_lds_direct : SPseudoInstSI<(outs), (ins)> {
 }
 
 let SubtargetPredicate = HasAsyncMark in {
-def ASYNCMARK : SPseudoInstSI<(outs), (ins),
-  [(int_amdgcn_asyncmark)]> {
+def ASYNCMARK : SPseudoInstSI<(outs), (ins i32imm:$stage),
+  [(int_amdgcn_asyncmark timm:$stage)]> {
    let maybeAtomic = 0;
    let isMeta = 1;
 }
-def WAIT_ASYNCMARK : SOPP_Pseudo <"", (ins s16imm:$simm16), "$simm16",
-    [(int_amdgcn_wait_asyncmark timm:$simm16)]> {
+def WAIT_ASYNCMARK : SOPP_Pseudo <"", (ins s16imm:$simm16, i32imm:$stage),
+    "$simm16", [(int_amdgcn_wait_asyncmark timm:$simm16, timm:$stage)]> {
     let maybeAtomic = 0;
     let Size = 0;
     let isMeta = 1;
@@ -1878,6 +1900,7 @@ let OtherPredicates = [HasImageInsts] in {
   def S_WAIT_SAMPLECNT :
     SOPP_Pseudo<"s_wait_samplecnt", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_wait_samplecnt timm:$simm16)]>;
+  let OtherPredicates = [HasImageInsts, HasAnyBVHInsts] in
   def S_WAIT_BVHCNT :
     SOPP_Pseudo<"s_wait_bvhcnt", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_wait_bvhcnt timm:$simm16)]>;
@@ -1920,7 +1943,7 @@ let SubtargetPredicate = HasWaitXcnt, hasSideEffects = 1 in {
     SOPP_Pseudo<"s_wait_xcnt", (ins s16imm:$simm16), "$simm16">;
 } // End SubtargetPredicate = hasWaitXcnt, hasSideEffects = 1
 
-let SubtargetPredicate = Has1024AddressableVGPRs in {
+let SubtargetPredicate = HasVGPRMSBs in {
   def S_SET_VGPR_MSB : SOPP_Pseudo<"s_set_vgpr_msb" , (ins i16imm:$simm16), "$simm16"> {
     let hasSideEffects = 1;
     let Defs = [MODE];
@@ -1945,6 +1968,13 @@ def : GCNPat <
   (i64 (UniformUnaryFrag<ctpop> i64:$src)),
     (i64 (REG_SEQUENCE SReg_64,
      (i32 (COPY_TO_REGCLASS (S_BCNT1_I32_B64 $src), SReg_32)), sub0,
+     (S_MOV_B32 (i32 0)), sub1))
+>;
+
+def : GCNPat <
+   (i64 (UniformBinFrag<sub> 64, (ctpop i64:$src))),
+    (i64 (REG_SEQUENCE SReg_64,
+     (i32 (COPY_TO_REGCLASS (S_BCNT0_I32_B64 $src), SReg_32)), sub0,
      (S_MOV_B32 (i32 0)), sub1))
 >;
 
@@ -2042,7 +2072,7 @@ let SubtargetPredicate = isNotGFX9Plus in {
 def : GetFPModePat<fpmode_mask_gfx6plus>;
 }
 
-let SubtargetPredicate = isGFX9GFX10 in
+let SubtargetPredicate = HasPopsExitingWaveID in
 def : GCNPat<
   (int_amdgcn_pops_exiting_wave_id),
   (S_MOV_B32_sideeffects (i32 SRC_POPS_EXITING_WAVE_ID))
@@ -2077,7 +2107,7 @@ let AddedComplexity = 20 in {
 let AddedComplexity = 20 in {
   def : GCNPat<
     (i32 (UniformBinFrag<uaddsat> i32:$src0, i32:$src1)),
-    (S_ADD_U32 (S_MIN_U32 $src0, (S_NOT_B32 $src1)), $src1)
+    (S_ADD_I32 (S_MIN_U32 $src0, (S_NOT_B32 $src1)), $src1)
   >;
   def : GCNPat<
     (i32 (UniformBinFrag<usubsat> i32:$src0, i32:$src1)),
@@ -2139,7 +2169,7 @@ def : GCNPat<
 }
 
 // v2i64 shl is legal, we need a way to select scalar code
-let SubtargetPredicate = HasPackedU64Ops in {
+let SubtargetPredicate = HasAnyPackedU64Ops in {
 def : GCNPat<
   (v2i64 (UniformBinFrag<cshl_64> v2i64:$src0, v2i64:$src1)),
   (v2i64 (REG_SEQUENCE SReg_128,

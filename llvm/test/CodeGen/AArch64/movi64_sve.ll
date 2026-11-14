@@ -11,22 +11,16 @@ define <2 x i64> @movi_1_v2i64() {
 ; CHECK-NEON-SD-NEXT:    dup v0.2d, x8
 ; CHECK-NEON-SD-NEXT:    ret
 ;
-; CHECK-SVE-SD-LABEL: movi_1_v2i64:
-; CHECK-SVE-SD:       // %bb.0:
-; CHECK-SVE-SD-NEXT:    mov z0.d, #1 // =0x1
-; CHECK-SVE-SD-NEXT:    ret
+; CHECK-SVE-LABEL: movi_1_v2i64:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    mov z0.d, #1 // =0x1
+; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-NEON-GI-LABEL: movi_1_v2i64:
 ; CHECK-NEON-GI:       // %bb.0:
 ; CHECK-NEON-GI-NEXT:    adrp x8, .LCPI0_0
 ; CHECK-NEON-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI0_0]
 ; CHECK-NEON-GI-NEXT:    ret
-;
-; CHECK-SVE-GI-LABEL: movi_1_v2i64:
-; CHECK-SVE-GI:       // %bb.0:
-; CHECK-SVE-GI-NEXT:    adrp x8, .LCPI0_0
-; CHECK-SVE-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI0_0]
-; CHECK-SVE-GI-NEXT:    ret
   ret <2 x i64> splat (i64 1)
 }
 
@@ -37,22 +31,16 @@ define <2 x i64> @movi_127_v2i64() {
 ; CHECK-NEON-SD-NEXT:    dup v0.2d, x8
 ; CHECK-NEON-SD-NEXT:    ret
 ;
-; CHECK-SVE-SD-LABEL: movi_127_v2i64:
-; CHECK-SVE-SD:       // %bb.0:
-; CHECK-SVE-SD-NEXT:    mov z0.d, #127 // =0x7f
-; CHECK-SVE-SD-NEXT:    ret
+; CHECK-SVE-LABEL: movi_127_v2i64:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    mov z0.d, #127 // =0x7f
+; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-NEON-GI-LABEL: movi_127_v2i64:
 ; CHECK-NEON-GI:       // %bb.0:
 ; CHECK-NEON-GI-NEXT:    adrp x8, .LCPI1_0
 ; CHECK-NEON-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI1_0]
 ; CHECK-NEON-GI-NEXT:    ret
-;
-; CHECK-SVE-GI-LABEL: movi_127_v2i64:
-; CHECK-SVE-GI:       // %bb.0:
-; CHECK-SVE-GI-NEXT:    adrp x8, .LCPI1_0
-; CHECK-SVE-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI1_0]
-; CHECK-SVE-GI-NEXT:    ret
   ret <2 x i64> splat (i64 127)
 }
 
@@ -63,22 +51,16 @@ define <2 x i64> @movi_m128_v2i64() {
 ; CHECK-NEON-SD-NEXT:    dup v0.2d, x8
 ; CHECK-NEON-SD-NEXT:    ret
 ;
-; CHECK-SVE-SD-LABEL: movi_m128_v2i64:
-; CHECK-SVE-SD:       // %bb.0:
-; CHECK-SVE-SD-NEXT:    mov z0.d, #-128 // =0xffffffffffffff80
-; CHECK-SVE-SD-NEXT:    ret
+; CHECK-SVE-LABEL: movi_m128_v2i64:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    mov z0.d, #-128 // =0xffffffffffffff80
+; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-NEON-GI-LABEL: movi_m128_v2i64:
 ; CHECK-NEON-GI:       // %bb.0:
 ; CHECK-NEON-GI-NEXT:    adrp x8, .LCPI2_0
 ; CHECK-NEON-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI2_0]
 ; CHECK-NEON-GI-NEXT:    ret
-;
-; CHECK-SVE-GI-LABEL: movi_m128_v2i64:
-; CHECK-SVE-GI:       // %bb.0:
-; CHECK-SVE-GI-NEXT:    adrp x8, .LCPI2_0
-; CHECK-SVE-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI2_0]
-; CHECK-SVE-GI-NEXT:    ret
   ret <2 x i64> splat (i64 -128)
 }
 
@@ -89,22 +71,16 @@ define <2 x i64> @movi_256_v2i64() {
 ; CHECK-NEON-SD-NEXT:    dup v0.2d, x8
 ; CHECK-NEON-SD-NEXT:    ret
 ;
-; CHECK-SVE-SD-LABEL: movi_256_v2i64:
-; CHECK-SVE-SD:       // %bb.0:
-; CHECK-SVE-SD-NEXT:    mov z0.d, #256 // =0x100
-; CHECK-SVE-SD-NEXT:    ret
+; CHECK-SVE-LABEL: movi_256_v2i64:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    mov z0.d, #256 // =0x100
+; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-NEON-GI-LABEL: movi_256_v2i64:
 ; CHECK-NEON-GI:       // %bb.0:
 ; CHECK-NEON-GI-NEXT:    adrp x8, .LCPI3_0
 ; CHECK-NEON-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI3_0]
 ; CHECK-NEON-GI-NEXT:    ret
-;
-; CHECK-SVE-GI-LABEL: movi_256_v2i64:
-; CHECK-SVE-GI:       // %bb.0:
-; CHECK-SVE-GI-NEXT:    adrp x8, .LCPI3_0
-; CHECK-SVE-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI3_0]
-; CHECK-SVE-GI-NEXT:    ret
   ret <2 x i64> splat (i64 256)
 }
 
@@ -115,22 +91,16 @@ define <2 x i64> @movi_32512_v2i64() {
 ; CHECK-NEON-SD-NEXT:    dup v0.2d, x8
 ; CHECK-NEON-SD-NEXT:    ret
 ;
-; CHECK-SVE-SD-LABEL: movi_32512_v2i64:
-; CHECK-SVE-SD:       // %bb.0:
-; CHECK-SVE-SD-NEXT:    mov z0.d, #32512 // =0x7f00
-; CHECK-SVE-SD-NEXT:    ret
+; CHECK-SVE-LABEL: movi_32512_v2i64:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    mov z0.d, #32512 // =0x7f00
+; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-NEON-GI-LABEL: movi_32512_v2i64:
 ; CHECK-NEON-GI:       // %bb.0:
 ; CHECK-NEON-GI-NEXT:    adrp x8, .LCPI4_0
 ; CHECK-NEON-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI4_0]
 ; CHECK-NEON-GI-NEXT:    ret
-;
-; CHECK-SVE-GI-LABEL: movi_32512_v2i64:
-; CHECK-SVE-GI:       // %bb.0:
-; CHECK-SVE-GI-NEXT:    adrp x8, .LCPI4_0
-; CHECK-SVE-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI4_0]
-; CHECK-SVE-GI-NEXT:    ret
   ret <2 x i64> splat (i64 32512)
 }
 
@@ -141,22 +111,16 @@ define <2 x i64> @movi_m32768_v2i64() {
 ; CHECK-NEON-SD-NEXT:    dup v0.2d, x8
 ; CHECK-NEON-SD-NEXT:    ret
 ;
-; CHECK-SVE-SD-LABEL: movi_m32768_v2i64:
-; CHECK-SVE-SD:       // %bb.0:
-; CHECK-SVE-SD-NEXT:    mov z0.d, #-32768 // =0xffffffffffff8000
-; CHECK-SVE-SD-NEXT:    ret
+; CHECK-SVE-LABEL: movi_m32768_v2i64:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    mov z0.d, #-32768 // =0xffffffffffff8000
+; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-NEON-GI-LABEL: movi_m32768_v2i64:
 ; CHECK-NEON-GI:       // %bb.0:
 ; CHECK-NEON-GI-NEXT:    adrp x8, .LCPI5_0
 ; CHECK-NEON-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI5_0]
 ; CHECK-NEON-GI-NEXT:    ret
-;
-; CHECK-SVE-GI-LABEL: movi_m32768_v2i64:
-; CHECK-SVE-GI:       // %bb.0:
-; CHECK-SVE-GI-NEXT:    adrp x8, .LCPI5_0
-; CHECK-SVE-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI5_0]
-; CHECK-SVE-GI-NEXT:    ret
   ret <2 x i64> splat (i64 -32768)
 }
 
@@ -169,16 +133,10 @@ define <4 x i32> @movi_v4i32_1() {
 ; CHECK-NEON-NEXT:    ldr q0, [x8, :lo12:.LCPI6_0]
 ; CHECK-NEON-NEXT:    ret
 ;
-; CHECK-SVE-SD-LABEL: movi_v4i32_1:
-; CHECK-SVE-SD:       // %bb.0:
-; CHECK-SVE-SD-NEXT:    mov z0.d, #127 // =0x7f
-; CHECK-SVE-SD-NEXT:    ret
-;
-; CHECK-SVE-GI-LABEL: movi_v4i32_1:
-; CHECK-SVE-GI:       // %bb.0:
-; CHECK-SVE-GI-NEXT:    adrp x8, .LCPI6_0
-; CHECK-SVE-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI6_0]
-; CHECK-SVE-GI-NEXT:    ret
+; CHECK-SVE-LABEL: movi_v4i32_1:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    mov z0.d, #127 // =0x7f
+; CHECK-SVE-NEXT:    ret
   ret <4 x i32> <i32 127, i32 0, i32 127, i32 0>
 }
 
@@ -189,16 +147,10 @@ define <4 x i32> @movi_v4i32_2() {
 ; CHECK-NEON-NEXT:    ldr q0, [x8, :lo12:.LCPI7_0]
 ; CHECK-NEON-NEXT:    ret
 ;
-; CHECK-SVE-SD-LABEL: movi_v4i32_2:
-; CHECK-SVE-SD:       // %bb.0:
-; CHECK-SVE-SD-NEXT:    mov z0.d, #32512 // =0x7f00
-; CHECK-SVE-SD-NEXT:    ret
-;
-; CHECK-SVE-GI-LABEL: movi_v4i32_2:
-; CHECK-SVE-GI:       // %bb.0:
-; CHECK-SVE-GI-NEXT:    adrp x8, .LCPI7_0
-; CHECK-SVE-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI7_0]
-; CHECK-SVE-GI-NEXT:    ret
+; CHECK-SVE-LABEL: movi_v4i32_2:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    mov z0.d, #32512 // =0x7f00
+; CHECK-SVE-NEXT:    ret
   ret <4 x i32> <i32 32512, i32 0, i32 32512, i32 0>
 }
 
@@ -209,22 +161,16 @@ define <4 x i32> @movi_v4i32_4092() {
 ; CHECK-NEON-SD-NEXT:    dup v0.4s, w8
 ; CHECK-NEON-SD-NEXT:    ret
 ;
-; CHECK-SVE-SD-LABEL: movi_v4i32_4092:
-; CHECK-SVE-SD:       // %bb.0:
-; CHECK-SVE-SD-NEXT:    mov z0.s, #4092 // =0xffc
-; CHECK-SVE-SD-NEXT:    ret
+; CHECK-SVE-LABEL: movi_v4i32_4092:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    mov z0.s, #4092 // =0xffc
+; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-NEON-GI-LABEL: movi_v4i32_4092:
 ; CHECK-NEON-GI:       // %bb.0:
 ; CHECK-NEON-GI-NEXT:    adrp x8, .LCPI8_0
 ; CHECK-NEON-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI8_0]
 ; CHECK-NEON-GI-NEXT:    ret
-;
-; CHECK-SVE-GI-LABEL: movi_v4i32_4092:
-; CHECK-SVE-GI:       // %bb.0:
-; CHECK-SVE-GI-NEXT:    adrp x8, .LCPI8_0
-; CHECK-SVE-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI8_0]
-; CHECK-SVE-GI-NEXT:    ret
   ret <4 x i32> splat (i32 4092)
 }
 
@@ -235,16 +181,10 @@ define <8 x i16> @movi_v8i16_1() {
 ; CHECK-NEON-NEXT:    ldr q0, [x8, :lo12:.LCPI9_0]
 ; CHECK-NEON-NEXT:    ret
 ;
-; CHECK-SVE-SD-LABEL: movi_v8i16_1:
-; CHECK-SVE-SD:       // %bb.0:
-; CHECK-SVE-SD-NEXT:    mov z0.d, #127 // =0x7f
-; CHECK-SVE-SD-NEXT:    ret
-;
-; CHECK-SVE-GI-LABEL: movi_v8i16_1:
-; CHECK-SVE-GI:       // %bb.0:
-; CHECK-SVE-GI-NEXT:    adrp x8, .LCPI9_0
-; CHECK-SVE-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI9_0]
-; CHECK-SVE-GI-NEXT:    ret
+; CHECK-SVE-LABEL: movi_v8i16_1:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    mov z0.d, #127 // =0x7f
+; CHECK-SVE-NEXT:    ret
   ret <8 x i16> <i16 127, i16 0, i16 0, i16 0, i16 127, i16 0, i16 0, i16 0>
 }
 
@@ -255,16 +195,10 @@ define <8 x i16> @movi_v8i16_2() {
 ; CHECK-NEON-NEXT:    ldr q0, [x8, :lo12:.LCPI10_0]
 ; CHECK-NEON-NEXT:    ret
 ;
-; CHECK-SVE-SD-LABEL: movi_v8i16_2:
-; CHECK-SVE-SD:       // %bb.0:
-; CHECK-SVE-SD-NEXT:    mov z0.d, #32512 // =0x7f00
-; CHECK-SVE-SD-NEXT:    ret
-;
-; CHECK-SVE-GI-LABEL: movi_v8i16_2:
-; CHECK-SVE-GI:       // %bb.0:
-; CHECK-SVE-GI-NEXT:    adrp x8, .LCPI10_0
-; CHECK-SVE-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI10_0]
-; CHECK-SVE-GI-NEXT:    ret
+; CHECK-SVE-LABEL: movi_v8i16_2:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    mov z0.d, #32512 // =0x7f00
+; CHECK-SVE-NEXT:    ret
   ret <8 x i16> <i16 32512, i16 0, i16 0, i16 0, i16 32512, i16 0, i16 0, i16 0>
 }
 
@@ -275,22 +209,16 @@ define <8 x i16> @movi_v8i16_510() {
 ; CHECK-NEON-SD-NEXT:    dup v0.8h, w8
 ; CHECK-NEON-SD-NEXT:    ret
 ;
-; CHECK-SVE-SD-LABEL: movi_v8i16_510:
-; CHECK-SVE-SD:       // %bb.0:
-; CHECK-SVE-SD-NEXT:    mov z0.h, #510 // =0x1fe
-; CHECK-SVE-SD-NEXT:    ret
+; CHECK-SVE-LABEL: movi_v8i16_510:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    mov z0.h, #510 // =0x1fe
+; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-NEON-GI-LABEL: movi_v8i16_510:
 ; CHECK-NEON-GI:       // %bb.0:
 ; CHECK-NEON-GI-NEXT:    adrp x8, .LCPI11_0
 ; CHECK-NEON-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI11_0]
 ; CHECK-NEON-GI-NEXT:    ret
-;
-; CHECK-SVE-GI-LABEL: movi_v8i16_510:
-; CHECK-SVE-GI:       // %bb.0:
-; CHECK-SVE-GI-NEXT:    adrp x8, .LCPI11_0
-; CHECK-SVE-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI11_0]
-; CHECK-SVE-GI-NEXT:    ret
   ret <8 x i16> splat (i16 510)
 }
 
@@ -301,16 +229,10 @@ define <16 x i8> @movi_v16i8_1() {
 ; CHECK-NEON-NEXT:    ldr q0, [x8, :lo12:.LCPI12_0]
 ; CHECK-NEON-NEXT:    ret
 ;
-; CHECK-SVE-SD-LABEL: movi_v16i8_1:
-; CHECK-SVE-SD:       // %bb.0:
-; CHECK-SVE-SD-NEXT:    mov z0.d, #127 // =0x7f
-; CHECK-SVE-SD-NEXT:    ret
-;
-; CHECK-SVE-GI-LABEL: movi_v16i8_1:
-; CHECK-SVE-GI:       // %bb.0:
-; CHECK-SVE-GI-NEXT:    adrp x8, .LCPI12_0
-; CHECK-SVE-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI12_0]
-; CHECK-SVE-GI-NEXT:    ret
+; CHECK-SVE-LABEL: movi_v16i8_1:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    mov z0.d, #127 // =0x7f
+; CHECK-SVE-NEXT:    ret
   ret <16 x i8> <i8 127, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 127, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
 }
 
@@ -321,16 +243,10 @@ define <16 x i8> @movi_v16i8_2() {
 ; CHECK-NEON-NEXT:    ldr q0, [x8, :lo12:.LCPI13_0]
 ; CHECK-NEON-NEXT:    ret
 ;
-; CHECK-SVE-SD-LABEL: movi_v16i8_2:
-; CHECK-SVE-SD:       // %bb.0:
-; CHECK-SVE-SD-NEXT:    mov z0.d, #32512 // =0x7f00
-; CHECK-SVE-SD-NEXT:    ret
-;
-; CHECK-SVE-GI-LABEL: movi_v16i8_2:
-; CHECK-SVE-GI:       // %bb.0:
-; CHECK-SVE-GI-NEXT:    adrp x8, .LCPI13_0
-; CHECK-SVE-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI13_0]
-; CHECK-SVE-GI-NEXT:    ret
+; CHECK-SVE-LABEL: movi_v16i8_2:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    mov z0.d, #32512 // =0x7f00
+; CHECK-SVE-NEXT:    ret
   ret <16 x i8> <i8 0, i8 127, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 127, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
 }
 
@@ -343,22 +259,16 @@ define <2 x i64> @movi_128_v2i64() {
 ; CHECK-NEON-SD-NEXT:    dup v0.2d, x8
 ; CHECK-NEON-SD-NEXT:    ret
 ;
-; CHECK-SVE-SD-LABEL: movi_128_v2i64:
-; CHECK-SVE-SD:       // %bb.0:
-; CHECK-SVE-SD-NEXT:    mov z0.d, #128 // =0x80
-; CHECK-SVE-SD-NEXT:    ret
+; CHECK-SVE-LABEL: movi_128_v2i64:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    mov z0.d, #128 // =0x80
+; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-NEON-GI-LABEL: movi_128_v2i64:
 ; CHECK-NEON-GI:       // %bb.0:
 ; CHECK-NEON-GI-NEXT:    adrp x8, .LCPI14_0
 ; CHECK-NEON-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI14_0]
 ; CHECK-NEON-GI-NEXT:    ret
-;
-; CHECK-SVE-GI-LABEL: movi_128_v2i64:
-; CHECK-SVE-GI:       // %bb.0:
-; CHECK-SVE-GI-NEXT:    adrp x8, .LCPI14_0
-; CHECK-SVE-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI14_0]
-; CHECK-SVE-GI-NEXT:    ret
   ret <2 x i64> splat (i64 128)
 }
 
@@ -369,22 +279,16 @@ define <2 x i64> @movi_m127_v2i64() {
 ; CHECK-NEON-SD-NEXT:    dup v0.2d, x8
 ; CHECK-NEON-SD-NEXT:    ret
 ;
-; CHECK-SVE-SD-LABEL: movi_m127_v2i64:
-; CHECK-SVE-SD:       // %bb.0:
-; CHECK-SVE-SD-NEXT:    mov z0.d, #-129 // =0xffffffffffffff7f
-; CHECK-SVE-SD-NEXT:    ret
+; CHECK-SVE-LABEL: movi_m127_v2i64:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    mov z0.d, #-129 // =0xffffffffffffff7f
+; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-NEON-GI-LABEL: movi_m127_v2i64:
 ; CHECK-NEON-GI:       // %bb.0:
 ; CHECK-NEON-GI-NEXT:    adrp x8, .LCPI15_0
 ; CHECK-NEON-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI15_0]
 ; CHECK-NEON-GI-NEXT:    ret
-;
-; CHECK-SVE-GI-LABEL: movi_m127_v2i64:
-; CHECK-SVE-GI:       // %bb.0:
-; CHECK-SVE-GI-NEXT:    adrp x8, .LCPI15_0
-; CHECK-SVE-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI15_0]
-; CHECK-SVE-GI-NEXT:    ret
   ret <2 x i64> splat (i64 -129)
 }
 
@@ -422,22 +326,16 @@ define <2 x i64> @movi_m32769_v2i64() {
 ; CHECK-NEON-SD-NEXT:    dup v0.2d, x8
 ; CHECK-NEON-SD-NEXT:    ret
 ;
-; CHECK-SVE-SD-LABEL: movi_m32769_v2i64:
-; CHECK-SVE-SD:       // %bb.0:
-; CHECK-SVE-SD-NEXT:    mov z0.d, #0xffffffffffff7fff
-; CHECK-SVE-SD-NEXT:    ret
+; CHECK-SVE-LABEL: movi_m32769_v2i64:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    mov z0.d, #0xffffffffffff7fff
+; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-NEON-GI-LABEL: movi_m32769_v2i64:
 ; CHECK-NEON-GI:       // %bb.0:
 ; CHECK-NEON-GI-NEXT:    adrp x8, .LCPI17_0
 ; CHECK-NEON-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI17_0]
 ; CHECK-NEON-GI-NEXT:    ret
-;
-; CHECK-SVE-GI-LABEL: movi_m32769_v2i64:
-; CHECK-SVE-GI:       // %bb.0:
-; CHECK-SVE-GI-NEXT:    adrp x8, .LCPI17_0
-; CHECK-SVE-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI17_0]
-; CHECK-SVE-GI-NEXT:    ret
   ret <2 x i64> splat (i64 -32769)
 }
 
@@ -475,16 +373,10 @@ define <4 x i32> @movi_v4i32_3() {
 ; CHECK-NEON-NEXT:    ldr q0, [x8, :lo12:.LCPI19_0]
 ; CHECK-NEON-NEXT:    ret
 ;
-; CHECK-SVE-SD-LABEL: movi_v4i32_3:
-; CHECK-SVE-SD:       // %bb.0:
-; CHECK-SVE-SD-NEXT:    mov z0.d, #0xffffff80
-; CHECK-SVE-SD-NEXT:    ret
-;
-; CHECK-SVE-GI-LABEL: movi_v4i32_3:
-; CHECK-SVE-GI:       // %bb.0:
-; CHECK-SVE-GI-NEXT:    adrp x8, .LCPI19_0
-; CHECK-SVE-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI19_0]
-; CHECK-SVE-GI-NEXT:    ret
+; CHECK-SVE-LABEL: movi_v4i32_3:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    mov z0.d, #0xffffff80
+; CHECK-SVE-NEXT:    ret
   ret <4 x i32> <i32 -128, i32 0, i32 -128, i32 0>
 }
 
@@ -495,18 +387,11 @@ define <16 x i8> @movi_v16i8_3() {
 ; CHECK-NEON-NEXT:    ldr q0, [x8, :lo12:.LCPI20_0]
 ; CHECK-NEON-NEXT:    ret
 ;
-; CHECK-SVE-SD-LABEL: movi_v16i8_3:
-; CHECK-SVE-SD:       // %bb.0:
-; CHECK-SVE-SD-NEXT:    mov z0.d, #0x7f0000
-; CHECK-SVE-SD-NEXT:    ret
-;
-; CHECK-SVE-GI-LABEL: movi_v16i8_3:
-; CHECK-SVE-GI:       // %bb.0:
-; CHECK-SVE-GI-NEXT:    adrp x8, .LCPI20_0
-; CHECK-SVE-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI20_0]
-; CHECK-SVE-GI-NEXT:    ret
+; CHECK-SVE-LABEL: movi_v16i8_3:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    mov z0.d, #0x7f0000
+; CHECK-SVE-NEXT:    ret
   ret <16 x i8> <i8 0, i8 0, i8 127, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 127, i8 0, i8 0, i8 0, i8 0, i8 0>
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK: {{.*}}
-; CHECK-SVE: {{.*}}

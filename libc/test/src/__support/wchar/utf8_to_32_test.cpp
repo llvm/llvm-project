@@ -8,11 +8,26 @@
 
 #include "hdr/errno_macros.h"
 #include "src/__support/error_or.h"
+#include "src/__support/macros/properties/types.h"
 #include "src/__support/wchar/character_converter.h"
 #include "src/__support/wchar/mbstate.h"
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcCharacterConverterUTF8To32Test, OneByte) {
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
+using TestCharTypesUTF32 = LIBC_NAMESPACE::testing::Types<char32_t, wchar_t>;
+#else
+using TestCharTypesUTF32 = LIBC_NAMESPACE::testing::Types<char32_t>;
+#endif
+
+template <typename T>
+class LlvmLibcTypedCharacterConverterUTF8To32Test
+    : public LIBC_NAMESPACE::testing::Test {};
+TYPED_TEST_SUITE(LlvmLibcTypedCharacterConverterUTF8To32Test,
+                 TestCharTypesUTF32);
+
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To32Test, OneByte) {
+  using CharType32 = TypeParam;
+
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_stored = 0;
   state.total_bytes = 0;
@@ -20,14 +35,16 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, OneByte) {
 
   LIBC_NAMESPACE::internal::CharacterConverter char_conv(&state);
   int err = char_conv.push(static_cast<char8_t>(ch));
-  auto wch = char_conv.pop_utf32();
+  auto wch = char_conv.pop<CharType32>();
 
   ASSERT_EQ(err, 0);
   ASSERT_TRUE(wch.has_value());
   ASSERT_EQ(static_cast<int>(wch.value()), 65);
 }
 
-TEST(LlvmLibcCharacterConverterUTF8To32Test, TwoBytes) {
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To32Test, TwoBytes) {
+  using CharType32 = TypeParam;
+
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_stored = 0;
   state.total_bytes = 0;
@@ -37,13 +54,15 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, TwoBytes) {
   LIBC_NAMESPACE::internal::CharacterConverter char_conv(&state);
   char_conv.push(static_cast<char8_t>(ch[0]));
   char_conv.push(static_cast<char8_t>(ch[1]));
-  auto wch = char_conv.pop_utf32();
+  auto wch = char_conv.pop<CharType32>();
 
   ASSERT_TRUE(wch.has_value());
   ASSERT_EQ(static_cast<int>(wch.value()), 142);
 }
 
-TEST(LlvmLibcCharacterConverterUTF8To32Test, ThreeBytes) {
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To32Test, ThreeBytes) {
+  using CharType32 = TypeParam;
+
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_stored = 0;
   state.total_bytes = 0;
@@ -54,13 +73,15 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, ThreeBytes) {
   char_conv.push(static_cast<char8_t>(ch[0]));
   char_conv.push(static_cast<char8_t>(ch[1]));
   char_conv.push(static_cast<char8_t>(ch[2]));
-  auto wch = char_conv.pop_utf32();
+  auto wch = char_conv.pop<CharType32>();
 
   ASSERT_TRUE(wch.has_value());
   ASSERT_EQ(static_cast<int>(wch.value()), 8721);
 }
 
-TEST(LlvmLibcCharacterConverterUTF8To32Test, FourBytes) {
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To32Test, FourBytes) {
+  using CharType32 = TypeParam;
+
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_stored = 0;
   state.total_bytes = 0;
@@ -73,7 +94,7 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, FourBytes) {
   char_conv.push(static_cast<char8_t>(ch[1]));
   char_conv.push(static_cast<char8_t>(ch[2]));
   char_conv.push(static_cast<char8_t>(ch[3]));
-  auto wch = char_conv.pop_utf32();
+  auto wch = char_conv.pop<CharType32>();
 
   ASSERT_TRUE(wch.has_value());
   ASSERT_EQ(static_cast<int>(wch.value()), 129313);
@@ -131,7 +152,10 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, InvalidLastByte) {
   ASSERT_EQ(err, EILSEQ);
 }
 
-TEST(LlvmLibcCharacterConverterUTF8To32Test, ValidTwoByteWithExtraRead) {
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To32Test,
+           ValidTwoByteWithExtraRead) {
+  using CharType32 = TypeParam;
+
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_stored = 0;
   state.total_bytes = 0;
@@ -148,11 +172,13 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, ValidTwoByteWithExtraRead) {
   ASSERT_EQ(err, EILSEQ);
 
   // Should produce an error since mbstate was reset
-  auto wch = char_conv.pop_utf32();
+  auto wch = char_conv.pop<CharType32>();
   ASSERT_FALSE(wch.has_value());
 }
 
-TEST(LlvmLibcCharacterConverterUTF8To32Test, TwoValidTwoBytes) {
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To32Test, TwoValidTwoBytes) {
+  using CharType32 = TypeParam;
+
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_stored = 0;
   state.total_bytes = 0;
@@ -164,7 +190,7 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, TwoValidTwoBytes) {
   ASSERT_EQ(err, 0);
   err = char_conv.push(static_cast<char8_t>(ch[1]));
   ASSERT_EQ(err, 0);
-  auto wch = char_conv.pop_utf32();
+  auto wch = char_conv.pop<CharType32>();
   ASSERT_TRUE(wch.has_value());
   ASSERT_EQ(static_cast<int>(wch.value()), 142);
 
@@ -173,12 +199,14 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, TwoValidTwoBytes) {
   ASSERT_EQ(err, 0);
   err = char_conv.push(static_cast<char8_t>(ch[3]));
   ASSERT_EQ(err, 0);
-  wch = char_conv.pop_utf32();
+  wch = char_conv.pop<CharType32>();
   ASSERT_TRUE(wch.has_value());
   ASSERT_EQ(static_cast<int>(wch.value()), 460);
 }
 
-TEST(LlvmLibcCharacterConverterUTF8To32Test, InvalidPop) {
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To32Test, InvalidPop) {
+  using CharType32 = TypeParam;
+
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_stored = 0;
   state.total_bytes = 0;
@@ -186,12 +214,12 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, InvalidPop) {
   const char ch[2] = {static_cast<char>(0xC2), static_cast<char>(0x8E)};
   int err = char_conv.push(static_cast<char8_t>(ch[0]));
   ASSERT_EQ(err, 0);
-  auto wch = char_conv.pop_utf32();
+  auto wch = char_conv.pop<CharType32>();
   ASSERT_FALSE(
       wch.has_value()); // Should fail since we have not read enough bytes
   err = char_conv.push(static_cast<char8_t>(ch[1]));
   ASSERT_EQ(err, 0);
-  wch = char_conv.pop_utf32();
+  wch = char_conv.pop<CharType32>();
   ASSERT_TRUE(wch.has_value());
   ASSERT_EQ(static_cast<int>(wch.value()), 142);
 }

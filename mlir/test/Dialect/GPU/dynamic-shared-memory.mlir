@@ -20,11 +20,11 @@ gpu.module @modules {
     %1 = memref.view %shmem[%c16384][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<32x64xf32, #gpu.address_space<workgroup>>
     "test.use.shared.memory"(%1) : (memref<32x64xf32, #gpu.address_space<workgroup>>) -> ()
 
-// CHECK-DAG: %[[S0:.+]] = llvm.mlir.constant(32 : index) : i64
-// CHECK-DAG: %[[S1:.+]] = llvm.mlir.constant(64 : index) : i64
+// CHECK-DAG: %[[S0:.+]] = llvm.mlir.constant(32 : i64) : i64
+// CHECK-DAG: %[[S1:.+]] = llvm.mlir.constant(64 : i64) : i64
 // CHECK-DAG: %[[S2:.+]] = llvm.mlir.poison : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
-// CHECK-DAG: %[[S3:.+]] = llvm.mlir.constant(1 : index) : i64
-// CHECK-DAG: %[[S4:.+]] = llvm.mlir.constant(0 : index) : i64
+// CHECK-DAG: %[[S3:.+]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK-DAG: %[[S4:.+]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK-DAG: %[[S5:.+]] = llvm.mlir.addressof @__dynamic_shmem__3 : !llvm.ptr<3>
 //     CHECK: %[[S6:.+]] = llvm.insertvalue %[[S5]], %[[S2]][0] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
 //     CHECK: %[[S7:.+]] = llvm.getelementptr %[[S5]][8192] : (!llvm.ptr<3>) -> !llvm.ptr<3>, i8
@@ -54,11 +54,11 @@ gpu.module @modules {
     %shmem = gpu.dynamic_shared_memory : memref<?xi8, #gpu.address_space<workgroup>>
     %0 = memref.view %shmem[%c8192][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<32x64xf32, #gpu.address_space<workgroup>>
     "test.use.shared.memory"(%0) : (memref<32x64xf32, #gpu.address_space<workgroup>>) -> ()
-// CHECK-DAG: %[[S0:.+]] = llvm.mlir.constant(32 : index) : i64
-// CHECK-DAG: %[[S1:.+]] = llvm.mlir.constant(64 : index) : i64
+// CHECK-DAG: %[[S0:.+]] = llvm.mlir.constant(32 : i64) : i64
+// CHECK-DAG: %[[S1:.+]] = llvm.mlir.constant(64 : i64) : i64
 // CHECK-DAG: %[[S2:.+]] = llvm.mlir.poison : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
-// CHECK-DAG: %[[S3:.+]] = llvm.mlir.constant(1 : index) : i64
-// CHECK-DAG: %[[S4:.+]] = llvm.mlir.constant(0 : index) : i64
+// CHECK-DAG: %[[S3:.+]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK-DAG: %[[S4:.+]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK-DAG: %[[S5:.+]] = llvm.mlir.addressof @__dynamic_shmem__3 : !llvm.ptr<3>
 //     CHECK: %[[S6:.+]] = llvm.insertvalue %[[S5]], %[[S2]][0] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
 //     CHECK: %[[S7:.+]] = llvm.getelementptr %[[S5]][8192] : (!llvm.ptr<3>) -> !llvm.ptr<3>, i8
@@ -80,11 +80,11 @@ gpu.module @modules {
     %shmem = gpu.dynamic_shared_memory : memref<?xi8, #gpu.address_space<workgroup>>
     %0 = memref.view %shmem[%c8192][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<32x64xf32, #gpu.address_space<workgroup>>
     "test.use.shared.memory"(%0) : (memref<32x64xf32, #gpu.address_space<workgroup>>) -> ()
-// CHECK-DAG: %[[S0:.+]] = llvm.mlir.constant(32 : index) : i64
-// CHECK-DAG: %[[S1:.+]] = llvm.mlir.constant(64 : index) : i64
+// CHECK-DAG: %[[S0:.+]] = llvm.mlir.constant(32 : i64) : i64
+// CHECK-DAG: %[[S1:.+]] = llvm.mlir.constant(64 : i64) : i64
 // CHECK-DAG: %[[S2:.+]] = llvm.mlir.poison : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
-// CHECK-DAG: %[[S3:.+]] = llvm.mlir.constant(1 : index) : i64
-// CHECK-DAG: %[[S4:.+]] = llvm.mlir.constant(0 : index) : i64
+// CHECK-DAG: %[[S3:.+]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK-DAG: %[[S4:.+]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK-DAG: %[[S5:.+]] = llvm.mlir.addressof @__dynamic_shmem__3 : !llvm.ptr<3>
 //     CHECK: %[[S6:.+]] = llvm.insertvalue %[[S5]], %[[S2]][0] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
 //     CHECK: %[[S7:.+]] = llvm.getelementptr %[[S5]][8192] : (!llvm.ptr<3>) -> !llvm.ptr<3>, i8

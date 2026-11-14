@@ -507,6 +507,8 @@ extern "C" void exit(int) throw();
 // CHECK-NEXT:    call void @exit(i32 noundef 1) #[[ATTR4]]
 // CHECK-NEXT:    call void @llvm.trap()
 // CHECK-NEXT:    unreachable
+// CHECK:       1:
+// CHECK-NEXT:    unreachable
 // CHECK:       return:
 // CHECK-NEXT:    ret void
 // CHECK:       unreachable:
@@ -548,6 +550,8 @@ extern "C" void exit(int) throw();
 // CHECK-EH-03:       cleanup.cont:
 // CHECK-EH-03-NEXT:    call void @exit(i32 noundef 1) #[[ATTR7:[0-9]+]]
 // CHECK-EH-03-NEXT:    call void @llvm.trap()
+// CHECK-EH-03-NEXT:    unreachable
+// CHECK-EH-03:       1:
 // CHECK-EH-03-NEXT:    unreachable
 // CHECK-EH-03:       return:
 // CHECK-EH-03-NEXT:    ret void
@@ -591,6 +595,8 @@ extern "C" void exit(int) throw();
 // CHECK-EH-11-NEXT:    call void @exit(i32 noundef 1) #[[ATTR6]]
 // CHECK-EH-11-NEXT:    call void @llvm.trap()
 // CHECK-EH-11-NEXT:    unreachable
+// CHECK-EH-11:       1:
+// CHECK-EH-11-NEXT:    unreachable
 // CHECK-EH-11:       return:
 // CHECK-EH-11-NEXT:    ret void
 // CHECK-EH-11:       unreachable:
@@ -628,7 +634,7 @@ void may_throw();
 // CHECK-EH-03-NEXT:    br label [[CATCH_DISPATCH:%.*]]
 // CHECK-EH-03:       catch.dispatch:
 // CHECK-EH-03-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
-// CHECK-EH-03-NEXT:    [[TMP3:%.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTI1X) #[[ATTR7]]
+// CHECK-EH-03-NEXT:    [[TMP3:%.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTI1X)
 // CHECK-EH-03-NEXT:    [[MATCHES:%.*]] = icmp eq i32 [[SEL]], [[TMP3]]
 // CHECK-EH-03-NEXT:    br i1 [[MATCHES]], label [[CATCH:%.*]], label [[EH_RESUME:%.*]]
 // CHECK-EH-03:       catch:
@@ -673,6 +679,8 @@ void may_throw();
 // CHECK-EH-03:       try.cont:
 // CHECK-EH-03-NEXT:    call void @llvm.trap()
 // CHECK-EH-03-NEXT:    unreachable
+// CHECK-EH-03:       12:
+// CHECK-EH-03-NEXT:    unreachable
 // CHECK-EH-03:       eh.resume:
 // CHECK-EH-03-NEXT:    [[EXN8:%.*]] = load ptr, ptr [[EXN_SLOT]], align 4
 // CHECK-EH-03-NEXT:    [[SEL9:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
@@ -680,10 +688,10 @@ void may_throw();
 // CHECK-EH-03-NEXT:    [[LPAD_VAL10:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL9]], 1
 // CHECK-EH-03-NEXT:    resume { ptr, i32 } [[LPAD_VAL10]]
 // CHECK-EH-03:       terminate.lpad:
-// CHECK-EH-03-NEXT:    [[TMP12:%.*]] = landingpad { ptr, i32 }
+// CHECK-EH-03-NEXT:    [[TMP13:%.*]] = landingpad { ptr, i32 }
 // CHECK-EH-03-NEXT:            catch ptr null
-// CHECK-EH-03-NEXT:    [[TMP13:%.*]] = extractvalue { ptr, i32 } [[TMP12]], 0
-// CHECK-EH-03-NEXT:    call void @__clang_call_terminate(ptr [[TMP13]]) #[[ATTR6]]
+// CHECK-EH-03-NEXT:    [[TMP14:%.*]] = extractvalue { ptr, i32 } [[TMP13]], 0
+// CHECK-EH-03-NEXT:    call void @__clang_call_terminate(ptr [[TMP14]]) #[[ATTR6]]
 // CHECK-EH-03-NEXT:    unreachable
 //
 // CHECK-EH-11-LABEL: @_Z5test5v(
@@ -707,7 +715,7 @@ void may_throw();
 // CHECK-EH-11-NEXT:    br label [[CATCH_DISPATCH:%.*]]
 // CHECK-EH-11:       catch.dispatch:
 // CHECK-EH-11-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
-// CHECK-EH-11-NEXT:    [[TMP3:%.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTI1X) #[[ATTR6]]
+// CHECK-EH-11-NEXT:    [[TMP3:%.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTI1X)
 // CHECK-EH-11-NEXT:    [[MATCHES:%.*]] = icmp eq i32 [[SEL]], [[TMP3]]
 // CHECK-EH-11-NEXT:    br i1 [[MATCHES]], label [[CATCH:%.*]], label [[EH_RESUME:%.*]]
 // CHECK-EH-11:       catch:
@@ -738,6 +746,8 @@ void may_throw();
 // CHECK-EH-11:       try.cont:
 // CHECK-EH-11-NEXT:    call void @llvm.trap()
 // CHECK-EH-11-NEXT:    unreachable
+// CHECK-EH-11:       9:
+// CHECK-EH-11-NEXT:    unreachable
 // CHECK-EH-11:       eh.resume:
 // CHECK-EH-11-NEXT:    [[EXN5:%.*]] = load ptr, ptr [[EXN_SLOT]], align 4
 // CHECK-EH-11-NEXT:    [[SEL6:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
@@ -745,10 +755,10 @@ void may_throw();
 // CHECK-EH-11-NEXT:    [[LPAD_VAL7:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL6]], 1
 // CHECK-EH-11-NEXT:    resume { ptr, i32 } [[LPAD_VAL7]]
 // CHECK-EH-11:       terminate.lpad:
-// CHECK-EH-11-NEXT:    [[TMP9:%.*]] = landingpad { ptr, i32 }
+// CHECK-EH-11-NEXT:    [[TMP10:%.*]] = landingpad { ptr, i32 }
 // CHECK-EH-11-NEXT:            catch ptr null
-// CHECK-EH-11-NEXT:    [[TMP10:%.*]] = extractvalue { ptr, i32 } [[TMP9]], 0
-// CHECK-EH-11-NEXT:    call void @__clang_call_terminate(ptr [[TMP10]]) #[[ATTR7:[0-9]+]]
+// CHECK-EH-11-NEXT:    [[TMP11:%.*]] = extractvalue { ptr, i32 } [[TMP10]], 0
+// CHECK-EH-11-NEXT:    call void @__clang_call_terminate(ptr [[TMP11]]) #[[ATTR7:[0-9]+]]
 // CHECK-EH-11-NEXT:    unreachable
 //
 X test5() { // http://wg21.link/p2025r2#ex-14
@@ -1062,6 +1072,8 @@ X test8(bool b) {
 // CHECK-NEXT:    call void @_ZN1YIiE1fEv(ptr dead_on_unwind writable sret([[STRUCT_Y]]) align 1 [[TMP]])
 // CHECK-NEXT:    call void @llvm.trap()
 // CHECK-NEXT:    unreachable
+// CHECK:       0:
+// CHECK-NEXT:    unreachable
 //
 // CHECK-EH-03-LABEL: @_Z5test9v(
 // CHECK-EH-03-NEXT:  entry:
@@ -1071,6 +1083,8 @@ X test8(bool b) {
 // CHECK-EH-03-NEXT:    call void @_ZN1YIiE1fEv(ptr dead_on_unwind writable sret([[STRUCT_Y]]) align 1 [[TMP]])
 // CHECK-EH-03-NEXT:    call void @llvm.trap()
 // CHECK-EH-03-NEXT:    unreachable
+// CHECK-EH-03:       0:
+// CHECK-EH-03-NEXT:    unreachable
 //
 // CHECK-EH-11-LABEL: @_Z5test9v(
 // CHECK-EH-11-NEXT:  entry:
@@ -1079,6 +1093,8 @@ X test8(bool b) {
 // CHECK-EH-11-NEXT:    store ptr [[AGG_RESULT:%.*]], ptr [[RESULT_PTR]], align 4
 // CHECK-EH-11-NEXT:    call void @_ZN1YIiE1fEv(ptr dead_on_unwind writable sret([[STRUCT_Y]]) align 1 [[TMP]])
 // CHECK-EH-11-NEXT:    call void @llvm.trap()
+// CHECK-EH-11-NEXT:    unreachable
+// CHECK-EH-11:       0:
 // CHECK-EH-11-NEXT:    unreachable
 //
 Y<int> test9() {
@@ -1918,7 +1934,7 @@ X test15(bool b) { // http://wg21.link/p2025r2#ex-15
 // CHECK-EH-11-NEXT:    invoke void @"_ZZ6test16vENK3$_0clEv"(ptr dead_on_unwind writable sret([[CLASS_X]]) align 1 [[AGG_TMP]], ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP]])
 // CHECK-EH-11-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK-EH-11:       invoke.cont:
-// CHECK-EH-11-NEXT:    invoke void @_Z8ConsumeX1X(ptr noundef align 1 [[AGG_TMP]])
+// CHECK-EH-11-NEXT:    invoke void @_Z8ConsumeX1X(ptr nofreeobj noundef align 1 dereferenceable(1) [[AGG_TMP]])
 // CHECK-EH-11-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD1:%.*]]
 // CHECK-EH-11:       invoke.cont2:
 // CHECK-EH-11-NEXT:    call void @_ZN1XD1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_TMP]]) #[[ATTR6]]

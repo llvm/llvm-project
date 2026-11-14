@@ -50,9 +50,7 @@ private:
   bool m_stop_others;
 
   void Clear();
-
-  // Need an appropriate marker for the current stack so we can tell step out
-  // from step in.
+  void SetUntilPointsEnabled(bool enabled);
 
   ThreadPlanStepUntil(const ThreadPlanStepUntil &) = delete;
   const ThreadPlanStepUntil &operator=(const ThreadPlanStepUntil &) = delete;

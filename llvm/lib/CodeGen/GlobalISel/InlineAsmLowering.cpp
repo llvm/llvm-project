@@ -46,6 +46,9 @@ public:
   /// contains the set of assigned registers corresponding to the operand.
   SmallVector<Register, 1> Regs;
 
+  /// The register class selected for this operand's constraint.
+  const TargetRegisterClass *RegClass = nullptr;
+
   explicit GISelAsmOperandInfo(const TargetLowering::AsmOperandInfo &Info)
       : TargetLowering::AsmOperandInfo(Info) {}
 };
@@ -112,6 +115,7 @@ static void getRegistersForValue(MachineFunction &MF,
   // RC is unset only on failure. Return immediately.
   if (!RC)
     return;
+  OpInfo.RegClass = RC;
 
   // No need to allocate a matching input constraint since the constraint it's
   // matching to has already been allocated.
@@ -402,7 +406,11 @@ bool InlineAsmLowering::lowerInlineAsm(
         unsigned InstFlagIdx = StartIdx;
         for (unsigned i = 0; i < DefIdx; ++i)
           InstFlagIdx += getNumOpRegs(*Inst, InstFlagIdx) + 1;
-        assert(getNumOpRegs(*Inst, InstFlagIdx) == 1 && "Wrong flag");
+        if (getNumOpRegs(*Inst, InstFlagIdx) != 1) {
+          LLVM_DEBUG(dbgs() << "Matching input constraints with multiple "
+                               "registers are not supported yet\n");
+          return false;
+        }
 
         const InlineAsm::Flag MatchedOperandFlag(Inst->getOperand(InstFlagIdx).getImm());
         if (MatchedOperandFlag.isMemKind()) {
@@ -425,14 +433,14 @@ bool InlineAsmLowering::lowerInlineAsm(
         // We need the tied input to live in the same register class as the def.
         //
         // - if Def is a vreg, we can just use its regclass.
-        // - if Def is a physreg, create a vreg in the minimal regclass for that
-        //   physreg.
+        // - if Def is a physreg, create a vreg in the regclass selected for its
+        //   constraint.
         //
         // Otherwise RegBankSelect may leave it in the wrong bank (e.g. GPR even
         // though it's tied to an FP physreg).
-        const TargetRegisterClass *RC = Def.isVirtual()
-                                            ? MRI->getRegClass(Def)
-                                            : TRI->getMinimalPhysRegClass(Def);
+        const TargetRegisterClass *RC =
+            Def.isVirtual() ? MRI->getRegClass(Def) : OpInfo.RegClass;
+        assert(RC && "Expected a register class for matching constraint");
 
         // Materialize `In` in a new vreg that has a register class that matches
         // the register class of `Def`.
@@ -579,6 +587,7 @@ bool InlineAsmLowering::lowerInlineAsm(
 
         for (Register Reg : OpInfo.Regs) {
           Inst.addReg(Reg, RegState::Define | RegState::EarlyClobber |
+                               RegState::Dead |
                                getImplRegState(Reg.isPhysical()));
         }
       }

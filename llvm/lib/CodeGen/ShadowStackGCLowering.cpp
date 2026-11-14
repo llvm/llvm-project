@@ -41,7 +41,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include <cassert>
 #include <optional>
@@ -137,8 +136,6 @@ INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(ShadowStackGCLowering, DEBUG_TYPE,
                     "Shadow Stack GC Lowering", false, false)
 
-FunctionPass *llvm::createShadowStackGCLoweringPass() { return new ShadowStackGCLowering(); }
-
 ShadowStackGCLowering::ShadowStackGCLowering() : FunctionPass(ID) {}
 
 Constant *ShadowStackGCLoweringImpl::GetFrameMap(Function &F,
@@ -196,7 +193,7 @@ ShadowStackGCLoweringImpl::ComputeFrameLayout(Function &F) {
   // Compute the layout of the shadow stack frame using byte offsets.
   // Layout: [Next ptr | Map ptr | Root 0 | Root 1 | ... | Root N]
 
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   uint64_t PtrSize = DL.getPointerSize(0);
   Align PtrAlign = DL.getPointerABIAlignment(0);
 
@@ -314,7 +311,7 @@ bool ShadowStackGCLoweringImpl::runOnFunction(Function &F,
     return false;
 
   LLVMContext &Context = F.getContext();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   // Find calls to llvm.gcroot.
   CollectRoots(F);
@@ -333,7 +330,7 @@ bool ShadowStackGCLoweringImpl::runOnFunction(Function &F,
 
   // Build the shadow stack entry at the very start of the function.
   BasicBlock::iterator IP = F.getEntryBlock().begin();
-  IRBuilder<> AtEntry(IP->getParent(), IP);
+  IRBuilder<> AtEntry(IP);
   Type *Int8Ty = Type::getInt8Ty(Context);
   AllocaInst *StackEntry = AtEntry.CreateAlloca(
       ArrayType::get(Int8Ty, FrameSize), nullptr, "gc_frame");
@@ -347,8 +344,8 @@ bool ShadowStackGCLoweringImpl::runOnFunction(Function &F,
       AtEntry.CreateLoad(AtEntry.getPtrTy(), Head, "gc_currhead");
 
   // Map pointer is at offset PtrSize (after the Next pointer)
-  Value *EntryMapPtr = AtEntry.CreatePtrAdd(
-      StackEntry, AtEntry.getInt64(PtrSize), "gc_frame.map");
+  Value *EntryMapPtr = AtEntry.CreatePtrAddWithUnsignedOffset(
+      StackEntry, PtrSize, "gc_frame.map");
   AtEntry.CreateStore(FrameMap, EntryMapPtr);
 
   // Zero out any padding between roots to ensure deterministic frame contents.
@@ -361,14 +358,14 @@ bool ShadowStackGCLoweringImpl::runOnFunction(Function &F,
     // Zero any padding before this root
     if (RootOffset > LastEnd) {
       Value *PaddingPtr =
-          AtEntry.CreatePtrAdd(StackEntry, AtEntry.getInt64(LastEnd));
+          AtEntry.CreatePtrAddWithUnsignedOffset(StackEntry, LastEnd);
       AtEntry.CreateMemSet(PaddingPtr, AtEntry.getInt8(0), RootOffset - LastEnd,
                            Align(1));
     }
 
     // For each root, compute pointer using precomputed offset
-    Value *SlotPtr = AtEntry.CreatePtrAdd(
-        StackEntry, AtEntry.getInt64(RootOffset), "gc_root");
+    Value *SlotPtr = AtEntry.CreatePtrAddWithUnsignedOffset(
+        StackEntry, RootOffset, "gc_root");
 
     // And use it in lieu of the alloca.
     AllocaInst *OriginalAlloca = Roots[I].second;
@@ -381,7 +378,7 @@ bool ShadowStackGCLoweringImpl::runOnFunction(Function &F,
   // Zero any padding at the end of the frame
   if (FrameSize > LastEnd) {
     Value *PaddingPtr =
-        AtEntry.CreatePtrAdd(StackEntry, AtEntry.getInt64(LastEnd));
+        AtEntry.CreatePtrAddWithUnsignedOffset(StackEntry, LastEnd);
     AtEntry.CreateMemSet(PaddingPtr, AtEntry.getInt8(0), FrameSize - LastEnd,
                          Align(1));
   }
@@ -392,7 +389,7 @@ bool ShadowStackGCLoweringImpl::runOnFunction(Function &F,
   // shadow stack.
   while (isa<StoreInst>(IP))
     ++IP;
-  AtEntry.SetInsertPoint(IP->getParent(), IP);
+  AtEntry.SetInsertPoint(IP);
 
   // Push the entry onto the shadow stack.
   // Next pointer is at offset 0, so it's just the frame pointer

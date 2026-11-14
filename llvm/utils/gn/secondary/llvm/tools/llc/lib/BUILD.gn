@@ -1,0 +1,11 @@
+static_library("lib") {
+  output_name = "LLVMLlcDriver"
+  deps = [
+    "//llvm/include/llvm/Analysis:TargetLibraryInfo",
+    "//llvm/include/llvm/IR:public_tablegen",
+  ]
+  sources = [
+    "NewPMDriver.cpp",
+    "llcdriver.cpp",
+  ]
+}

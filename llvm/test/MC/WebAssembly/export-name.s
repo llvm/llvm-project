@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple=wasm32-unknown-unknown < %s | FileCheck %s
-# Check that it also comiled to object for format.
+# Check that it also compiled to object for format.
 # RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -o - < %s | obj2yaml | FileCheck -check-prefix=CHECK-OBJ %s
 
 foo:
@@ -48,6 +48,7 @@ mid?question:
 
 # CHECK-OBJ:          Name:            linking
 # CHECK-OBJ-NEXT:     Version:         2
+# CHECK-OBJ-NEXT:     TargetArch:      wasm32
 # CHECK-OBJ-NEXT:     SymbolTable:
 # CHECK-OBJ-NEXT:       - Index:           0
 # CHECK-OBJ-NEXT:         Kind:            FUNCTION

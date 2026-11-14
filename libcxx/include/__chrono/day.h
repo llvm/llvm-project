@@ -32,62 +32,57 @@ private:
 
 public:
   day() = default;
-  _LIBCPP_HIDE_FROM_ABI explicit inline constexpr day(unsigned __val) noexcept
-      : __d_(static_cast<unsigned char>(__val)) {}
-  _LIBCPP_HIDE_FROM_ABI inline constexpr day& operator++() noexcept {
+  explicit inline constexpr day(unsigned __val) noexcept : __d_(static_cast<unsigned char>(__val)) {}
+  inline constexpr day& operator++() noexcept {
     ++__d_;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI inline constexpr day operator++(int) noexcept {
+  inline constexpr day operator++(int) noexcept {
     day __tmp = *this;
     ++(*this);
     return __tmp;
   }
-  _LIBCPP_HIDE_FROM_ABI inline constexpr day& operator--() noexcept {
+  inline constexpr day& operator--() noexcept {
     --__d_;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI inline constexpr day operator--(int) noexcept {
+  inline constexpr day operator--(int) noexcept {
     day __tmp = *this;
     --(*this);
     return __tmp;
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr day& operator+=(const days& __dd) noexcept;
-  _LIBCPP_HIDE_FROM_ABI constexpr day& operator-=(const days& __dd) noexcept;
-  _LIBCPP_HIDE_FROM_ABI explicit inline constexpr operator unsigned() const noexcept { return __d_; }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr bool ok() const noexcept { return __d_ >= 1 && __d_ <= 31; }
+  constexpr day& operator+=(const days& __dd) noexcept;
+  constexpr day& operator-=(const days& __dd) noexcept;
+  explicit inline constexpr operator unsigned() const noexcept { return __d_; }
+  [[nodiscard]] inline constexpr bool ok() const noexcept { return __d_ >= 1 && __d_ <= 31; }
 };
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr bool operator==(const day& __lhs, const day& __rhs) noexcept {
+inline constexpr bool operator==(const day& __lhs, const day& __rhs) noexcept {
   return static_cast<unsigned>(__lhs) == static_cast<unsigned>(__rhs);
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr strong_ordering operator<=>(const day& __lhs, const day& __rhs) noexcept {
+inline constexpr strong_ordering operator<=>(const day& __lhs, const day& __rhs) noexcept {
   return static_cast<unsigned>(__lhs) <=> static_cast<unsigned>(__rhs);
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr day operator+(const day& __lhs, const days& __rhs) noexcept {
+[[nodiscard]] inline constexpr day operator+(const day& __lhs, const days& __rhs) noexcept {
   return day(static_cast<unsigned>(__lhs) + __rhs.count());
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr day operator+(const days& __lhs, const day& __rhs) noexcept {
-  return __rhs + __lhs;
-}
+[[nodiscard]] inline constexpr day operator+(const days& __lhs, const day& __rhs) noexcept { return __rhs + __lhs; }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr day operator-(const day& __lhs, const days& __rhs) noexcept {
-  return __lhs + -__rhs;
-}
+[[nodiscard]] inline constexpr day operator-(const day& __lhs, const days& __rhs) noexcept { return __lhs + -__rhs; }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr days operator-(const day& __lhs, const day& __rhs) noexcept {
+[[nodiscard]] inline constexpr days operator-(const day& __lhs, const day& __rhs) noexcept {
   return days(static_cast<int>(static_cast<unsigned>(__lhs)) - static_cast<int>(static_cast<unsigned>(__rhs)));
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr day& day::operator+=(const days& __dd) noexcept {
+inline constexpr day& day::operator+=(const days& __dd) noexcept {
   *this = *this + __dd;
   return *this;
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr day& day::operator-=(const days& __dd) noexcept {
+inline constexpr day& day::operator-=(const days& __dd) noexcept {
   *this = *this - __dd;
   return *this;
 }
@@ -98,9 +93,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr day& day::operator-=(const days& __dd) no
 
 template <>
 struct hash<chrono::day> {
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::day& __d) noexcept {
-    return static_cast<unsigned>(__d);
-  }
+  [[nodiscard]] static size_t operator()(const chrono::day& __d) noexcept { return static_cast<unsigned>(__d); }
 };
 
 #  endif // _LIBCPP_STD_VER >= 26

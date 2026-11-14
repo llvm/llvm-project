@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/OperationSupport.h"
-#include "../../test/lib/Dialect/Test/TestDialect.h"
-#include "../../test/lib/Dialect/Test/TestOps.h"
+#include "TestOpsPatterns.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/BitVector.h"
@@ -307,6 +306,11 @@ TEST(OperandStorageTest, PopulateDefaultAttrs) {
                                              nullptr, nullptr, req2);
   auto opt = op->getInherentAttr("default_valued_attr");
   EXPECT_NE(opt, nullptr) << *op;
+  auto typed = op->getInherentAttrOfType<IntegerAttr>("default_valued_attr");
+  ASSERT_TRUE(typed) << *op;
+  EXPECT_EQ(typed.getInt(), 42);
+  EXPECT_FALSE(op->getInherentAttrOfType<StringAttr>("default_valued_attr"));
+  EXPECT_FALSE(op->getInherentAttrOfType<IntegerAttr>("unknown_attr"));
 
   op->destroy();
 }
@@ -334,7 +338,7 @@ TEST(OperationEquivalenceTest, HashWorksWithFlags) {
   // Check ignore discardable dictionary attributes.
   SmallVector<NamedAttribute> newAttrs = {
       b.getNamedAttr("foo", b.getStringAttr("f"))};
-  op1->setAttrs(newAttrs);
+  op1->setDiscardableAttrs(newAttrs);
   EXPECT_EQ(getHash(op1, OperationEquivalence::IgnoreDiscardableAttrs),
             getHash(op2, OperationEquivalence::IgnoreDiscardableAttrs));
   EXPECT_NE(getHash(op1, OperationEquivalence::None),

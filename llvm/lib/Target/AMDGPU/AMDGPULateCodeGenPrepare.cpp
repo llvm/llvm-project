@@ -16,6 +16,7 @@
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -23,23 +24,11 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 #define DEBUG_TYPE "amdgpu-late-codegenprepare"
 
 using namespace llvm;
-
-// Scalar load widening needs running after load-store-vectorizer as that pass
-// doesn't handle overlapping cases. In addition, this pass enhances the
-// widening to handle cases where scalar sub-dword loads are naturally aligned
-// only but not dword aligned.
-static cl::opt<bool>
-    WidenLoads("amdgpu-late-codegenprepare-widen-constant-loads",
-               cl::desc("Widen sub-dword constant address space loads in "
-                        "AMDGPULateCodeGenPrepare"),
-               cl::ReallyHidden, cl::init(true));
 
 namespace {
 
@@ -61,10 +50,15 @@ public:
   bool run();
   bool visitInstruction(Instruction &) { return false; }
 
-  // Check if the specified value is at least DWORD aligned.
-  bool isDWORDAligned(const Value *V) const {
-    KnownBits Known = computeKnownBits(V, DL, AC);
-    return Known.countMinTrailingZeros() >= 2;
+  // Widening may read padding bytes past the original access, so require the
+  // whole AccessSize-byte range at Base to be dereferenceable, not just Base
+  // itself aligned.
+  bool isSafeToWidenLoad(const Value *Base, uint64_t AccessSize,
+                         const Instruction *CtxI) const {
+    return isDereferenceableAndAlignedPointer(
+        Base, Align(4),
+        APInt(DL.getIndexTypeSizeInBits(Base->getType()), AccessSize),
+        SimplifyQuery(DL, /*TLI=*/nullptr, /*DT=*/nullptr, AC, CtxI));
   }
 
   bool canWidenScalarExtLoad(LoadInst &LI) const;
@@ -174,7 +168,7 @@ public:
       if (const auto *Intr = dyn_cast<IntrinsicInst>(II))
         return Intr->getIntrinsicID() == Intrinsic::amdgcn_perm;
       return isa<PHINode, ShuffleVectorInst, InsertElementInst,
-                 ExtractElementInst, CastInst>(II);
+                 ExtractElementInst, CastInst, FreezeInst>(II);
     };
 
     while (!UserList.empty()) {
@@ -256,7 +250,7 @@ Value *LiveRegOptimizer::convertToOptType(Instruction *V,
   TypeSize OriginalSize = DL.getTypeSizeInBits(VTy);
   TypeSize NewSize = DL.getTypeSizeInBits(NewTy);
 
-  IRBuilder<> Builder(V->getParent(), InsertPt);
+  IRBuilder<> Builder(InsertPt);
   // If there is a bitsize match, we can fit the old vector into a new vector of
   // desired type.
   if (OriginalSize == NewSize)
@@ -286,7 +280,7 @@ Value *LiveRegOptimizer::convertFromOptType(Type *ConvertType, Instruction *V,
   TypeSize OriginalSize = DL.getTypeSizeInBits(V->getType());
   TypeSize NewSize = DL.getTypeSizeInBits(NewVTy);
 
-  IRBuilder<> Builder(InsertBB, InsertPt);
+  IRBuilder<> Builder(InsertPt);
   // If there is a bitsize match, we simply convert back to the original type.
   if (OriginalSize == NewSize)
     return Builder.CreateBitCast(V, NewVTy, V->getName() + ".bc");
@@ -354,7 +348,7 @@ bool LiveRegOptimizer::optimizeLiveType(
           return false;
 
         // Collect all other incoming values for coercion.
-        if (IncInst)
+        if (IncInst && !IncInst->isTerminator())
           Defs.insert(IncInst);
       }
     }
@@ -372,7 +366,7 @@ bool LiveRegOptimizer::optimizeLiveType(
       // Collect all uses of PHINodes and any use the crosses BB boundaries.
       if (UseInst->getParent() != II->getParent() || isa<PHINode>(II)) {
         Uses.insert(UseInst);
-        if (!isa<PHINode>(II))
+        if (!isa<PHINode>(II) && !II->isTerminator())
           Defs.insert(II);
       }
     }
@@ -429,12 +423,14 @@ bool LiveRegOptimizer::optimizeLiveType(
         if (OriginalPhi != PhiNodes.end())
           ValMap.erase(*OriginalPhi);
 
-        DeadInsts.emplace_back(cast<Instruction>(NextDeadValue));
-
         for (User *U : NextDeadValue->users()) {
           if (!VisitedPhis.contains(cast<PHINode>(U)))
             PHIWorklist.push_back(U);
         }
+        NextDeadValue->replaceAllUsesWith(
+            PoisonValue::get(NextDeadValue->getType()));
+
+        DeadInsts.emplace_back(cast<Instruction>(NextDeadValue));
       }
     } else {
       DeadInsts.emplace_back(cast<Instruction>(Phi));
@@ -450,7 +446,8 @@ bool LiveRegOptimizer::optimizeLiveType(
             BBUseValMap[U->getParent()].contains(Val))
           NewVal = BBUseValMap[U->getParent()][Val];
         else {
-          BasicBlock::iterator InsertPt = U->getParent()->getFirstNonPHIIt();
+          // Not getFirstNonPHIIt, which would insert in front of a landingpad.
+          BasicBlock::iterator InsertPt = U->getParent()->getFirstInsertionPt();
           // We may pick up ops that were previously converted for users in
           // other blocks. If there is an originally typed definition of the Op
           // already in this block, simply reuse it.
@@ -498,7 +495,7 @@ bool AMDGPULateCodeGenPrepare::canWidenScalarExtLoad(LoadInst &LI) const {
 }
 
 bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
-  if (!WidenLoads)
+  if (!ST.getCLOpts().late_codegenprepare_widen_constant_loads)
     return false;
 
   // Skip if that load is already aligned on DWORD at least as it's handled in
@@ -512,18 +509,11 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   int64_t Offset = 0;
   auto *Base =
       GetPointerBaseWithConstantOffset(LI.getPointerOperand(), Offset, DL);
-  // If that base is not DWORD aligned, it's not safe to perform the following
-  // transforms.
-  if (!isDWORDAligned(Base))
-    return false;
 
   int64_t Adjust = Offset & 0x3;
-  if (Adjust == 0) {
-    // With a zero adjust, the original alignment could be promoted with a
-    // better one.
-    LI.setAlignment(Align(4));
-    return true;
-  }
+  int64_t AccessOffset = Offset - Adjust;
+  if (AccessOffset < 0 || !isSafeToWidenLoad(Base, AccessOffset + 4, &LI))
+    return false;
 
   IRBuilder<> IRB(&LI);
   IRB.SetCurrentDebugLocation(LI.getDebugLoc());
@@ -540,10 +530,11 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   AMDGPU::copyMetadataForWidenedLoad(*NewLd, LI);
 
   unsigned ShAmt = Adjust * 8;
+  Value *Shifted = ShAmt ? IRB.CreateLShr(NewLd, ShAmt) : NewLd;
   Value *NewVal = IRB.CreateBitCast(
-      IRB.CreateTrunc(IRB.CreateLShr(NewLd, ShAmt),
-                      DL.typeSizeEqualsStoreSize(LI.getType()) ? IntNTy
-                                                               : LI.getType()),
+      IRB.CreateTrunc(Shifted, DL.typeSizeEqualsStoreSize(LI.getType())
+                                   ? IntNTy
+                                   : LI.getType()),
       LI.getType());
   LI.replaceAllUsesWith(NewVal);
   DeadInsts.emplace_back(&LI);

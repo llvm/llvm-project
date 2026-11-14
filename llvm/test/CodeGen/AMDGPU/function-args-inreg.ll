@@ -34,19 +34,12 @@ define void @void_func_i8_inreg(i8 inreg %arg0) #0 {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: void_func_i8_inreg:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
-; GFX11-TRUE16-NEXT:    global_store_b8 v[0:1], v0, off
-; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FAKE16-LABEL: void_func_i8_inreg:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11-FAKE16-NEXT:    global_store_b8 v[0:1], v0, off
-; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: void_func_i8_inreg:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   store i8 %arg0, ptr addrspace(1) poison
   ret void
 }
@@ -60,19 +53,12 @@ define void @void_func_i16_inreg(i16 inreg %arg0) #0 {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: void_func_i16_inreg:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
-; GFX11-TRUE16-NEXT:    global_store_b16 v[0:1], v0, off
-; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FAKE16-LABEL: void_func_i16_inreg:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11-FAKE16-NEXT:    global_store_b16 v[0:1], v0, off
-; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: void_func_i16_inreg:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-NEXT:    global_store_b16 v[0:1], v0, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   store i16 %arg0, ptr addrspace(1) poison
   ret void
 }
@@ -125,19 +111,12 @@ define void @void_func_f16_inreg(half inreg %arg0) #0 {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: void_func_f16_inreg:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
-; GFX11-TRUE16-NEXT:    global_store_b16 v[0:1], v0, off
-; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FAKE16-LABEL: void_func_f16_inreg:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11-FAKE16-NEXT:    global_store_b16 v[0:1], v0, off
-; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: void_func_f16_inreg:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-NEXT:    global_store_b16 v[0:1], v0, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   store half %arg0, ptr addrspace(1) poison
   ret void
 }
@@ -2104,33 +2083,6 @@ define void @caller_void_func_i32_v2float_inreg(i32 inreg %arg0, <2 x float> inr
 ; GFX11-NEXT:    s_mov_b32 s33, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-; GFX11-NEXT  s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT  s_mov_b32 s3, s33
-; GFX11-NEXT  s_mov_b32 s33, s32
-; GFX11-NEXT  s_or_saveexec_b32 s4, -1
-; GFX11-NEXT  scratch_store_b32 off, v40, s33         ; 4-byte Folded Spill
-; GFX11-NEXT  s_mov_b32 exec_lo, s4
-; GFX11-NEXT  s_add_i32 s32, s32, 16
-; GFX11-NEXT  s_getpc_b64 s[4:5]
-; GFX11-NEXT  s_add_u32 s4, s4, caller_void_func_i32_v2float_inreg@gotpcrel32@lo+4
-; GFX11-NEXT  s_addc_u32 s5, s5, caller_void_func_i32_v2float_inreg@gotpcrel32@hi+12
-; GFX11-NEXT  v_writelane_b32 v40, s3, 2
-; GFX11-NEXT  s_load_b64 s[4:5], s[4:5], 0x0
-; GFX11-NEXT  v_writelane_b32 v40, s30, 0
-; GFX11-NEXT  v_writelane_b32 v40, s31, 1
-; GFX11-NEXT  s_waitcnt lgkmcnt(0)
-; GFX11-NEXT  s_swappc_b64 s[30:31], s[4:5]
-; GFX11-NEXT  s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT  v_readlane_b32 s31, v40, 1
-; GFX11-NEXT  v_readlane_b32 s30, v40, 0
-; GFX11-NEXT  v_readlane_b32 s0, v40, 2
-; GFX11-NEXT  s_or_saveexec_b32 s1, -1
-; GFX11-NEXT  scratch_load_b32 v40, off, s33          ; 4-byte Folded Reload
-; GFX11-NEXT  s_mov_b32 exec_lo, s1
-; GFX11-NEXT  s_add_i32 s32, s32, -16
-; GFX11-NEXT  s_mov_b32 s33, s0
-; GFX11-NEXT  s_waitcnt vmcnt(0)
-; GFX11-NEXT  s_setpc_b64 s[30:31]
   call void @caller_void_func_i32_v2float_inreg(i32 inreg %arg0, <2 x float> inreg %arg1)
   ret void
 }
@@ -2144,19 +2096,12 @@ define void @void_func_bf16_inreg(bfloat inreg %arg0) #0 {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: void_func_bf16_inreg:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
-; GFX11-TRUE16-NEXT:    global_store_b16 v[0:1], v0, off
-; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FAKE16-LABEL: void_func_bf16_inreg:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11-FAKE16-NEXT:    global_store_b16 v[0:1], v0, off
-; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: void_func_bf16_inreg:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-NEXT:    global_store_b16 v[0:1], v0, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   store bfloat %arg0, ptr addrspace(1) poison
   ret void
 }
@@ -2617,3 +2562,6 @@ define void @void_func_a16i32_inreg__noimplicit([16 x i32] inreg %arg0, ptr addr
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind noinline }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GFX11-FAKE16: {{.*}}
+; GFX11-TRUE16: {{.*}}

@@ -222,7 +222,7 @@ define dso_local <2 x double> @testDoubleToDoubleInfinity() local_unnamed_addr {
 ; CHECK-NEXT:    blr
 
 entry:
-  ret <2 x double> <double 0x7FF0000000000000, double 0x7FF0000000000000>
+  ret <2 x double> <double +inf, double +inf>
 }
 
 define dso_local <2 x double> @testFloatToDoubleNaN() local_unnamed_addr {
@@ -242,7 +242,7 @@ define dso_local <2 x double> @testFloatToDoubleInfinity() local_unnamed_addr {
 ; CHECK-NEXT:    blr
 
 entry:
-  ret <2 x double> <double 0x7FF0000000000000, double 0x7FF0000000000000>
+  ret <2 x double> <double +inf, double +inf>
 }
 
 define dso_local float @testFloatScalar() local_unnamed_addr {

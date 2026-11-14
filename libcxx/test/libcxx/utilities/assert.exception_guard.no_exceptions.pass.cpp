@@ -6,10 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: c++03
-// REQUIRES: libcpp-hardening-mode=debug
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+// REQUIRES: can-test-hardening-assertions-debug
 // ADDITIONAL_COMPILE_FLAGS: -fno-exceptions
 
 #include <__utility/exception_guard.h>
@@ -19,4 +16,6 @@
 int main(int, char**) {
   TEST_LIBCPP_ASSERT_FAILURE(
       std::__make_exception_guard([] {}), "__exception_guard not completed with exceptions disabled");
+
+  return 0;
 }

@@ -6,12 +6,12 @@
 # RUN:    | llvm-objdump -d --mattr=+experimental-zvfbdota32f --no-print-imm-hex - \
 # RUN:    | FileCheck %s --check-prefix=CHECK-INST
 
-# CHECK-INST: vfbdota.vv v8, v16, v12, 1
+# CHECK-INST: vfbdota.vv v8, v16, v12, 8
 # CHECK-ENCODING: [0x77,0x14,0x16,0xaf]
 # CHECK-ERROR: instruction requires the following: 'Zvfbdota32f' (FP32 batched dot-product extension){{$}}
-vfbdota.vv v8, v16, v12, 1
+vfbdota.vv v8, v16, v12, 8
 
-# CHECK-INST: vfbdota.vv v8, v16, v12, 2, v0.t
+# CHECK-INST: vfbdota.vv v8, v16, v12, 16, v0.t
 # CHECK-ENCODING: [0x77,0x14,0x26,0xad]
 # CHECK-ERROR: instruction requires the following: 'Zvfbdota32f' (FP32 batched dot-product extension){{$}}
-vfbdota.vv v8, v16, v12, 2, v0.t
+vfbdota.vv v8, v16, v12, 16, v0.t

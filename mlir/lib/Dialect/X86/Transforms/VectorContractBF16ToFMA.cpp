@@ -218,16 +218,12 @@ getSubviewFromVectorInput(Location loc, PatternRewriter &rewriter, Value prodOp,
 //   %4 = x86.avx.cvt.packed.odd.indexed_to_f32 %m2 -> vector<8xf32>
 //   %5 = vector.fma %1, %4, %arg2
 //   scf.yield %3, %5
-struct VectorContractBF16ToFMA
-    : public OpRewritePattern<vector::ContractionOp> {
-  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+struct VectorContractBF16ToFMA : public AddContractionOpRewritePattern {
+  using AddContractionOpRewritePattern::AddContractionOpRewritePattern;
 
-  LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
-                                PatternRewriter &rewriter) const override {
-
-    if (contractOp.getKind() != vector::CombiningKind::ADD)
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Expects add combining kind.");
+  LogicalResult
+  matchAndRewriteAddContractOp(vector::ContractionOp contractOp,
+                               PatternRewriter &rewriter) const override {
 
     // TODO: Move this validation to a common utility folder. Planned to
     // do once (code refactoring), all architecture specific nanokernel
@@ -415,25 +411,21 @@ struct VectorContractBF16ToFMA
       Operation *accReadOp1 =
           traceToVectorReadLikeParentOperation(pairContractOp.getAcc());
 
-      // Iterate down to find the users of contact operations until it is store
-      // or transfer_write.
-      Operation *resultWriteOp0 =
-          traceToVectorWriteLikeUserOperation(contractOp.getResult());
-      Operation *resultWriteOp1 =
-          traceToVectorWriteLikeUserOperation(pairContractOp.getResult());
+      if (!isa<arith::ConstantOp>(accReadOp0)) {
+        // Shuffle the accumulators of the contract operations.
+        LogicalResult readShuffle =
+            shuffleAfterReadLikeOp(rewriter, accReadOp0, accReadOp1, contractOp,
+                                   pairContractOp, nonUnitDim, accTy);
 
-      // Shuffle the accumulators of the contract operations.
-      LogicalResult readShuffle =
-          shuffleAfterReadLikeOp(rewriter, accReadOp0, accReadOp1, contractOp,
-                                 pairContractOp, nonUnitDim, accTy);
-
-      if (failed(readShuffle))
-        return rewriter.notifyMatchFailure(
-            contractOp, "Accumulator read is not by transfer_read or load");
+        if (failed(readShuffle))
+          return rewriter.notifyMatchFailure(
+              contractOp, "Accumulator read is not by transfer_read or load");
+      }
 
       // Shuffle the output of contract operations before its use.
       LogicalResult writeShuffle = shuffleBeforeWriteLikeOp(
-          rewriter, resultWriteOp0, resultWriteOp1, nonUnitDim, accTy);
+          rewriter, contractOp.getResult(), pairContractOp.getResult(),
+          nonUnitDim, accTy);
 
       if (failed(writeShuffle))
         return rewriter.notifyMatchFailure(

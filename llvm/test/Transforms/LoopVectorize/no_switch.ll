@@ -72,7 +72,7 @@ for.end:
 !10 = !DILocation(line: 3, column: 8, scope: !11)
 !11 = distinct !DILexicalBlock(line: 3, column: 3, file: !1, scope: !4)
 !12 = !{!12, !13, !13}
-!13 = !{!"llvm.loop.vectorize.enable", i1 true}
+!13 = !{!"llvm.loop.vectorize.enable"}
 !14 = !DILocation(line: 4, column: 5, scope: !15)
 !15 = distinct !DILexicalBlock(line: 3, column: 36, file: !1, scope: !11)
 !16 = !{!17, !17, i64 0}

@@ -57,6 +57,17 @@ bb:
   ret void
 }
 
+; CHECK:      .type          cs_wave_dispatch_agprs
+; CHECK:      NumVgprs: 4
+; CHECK:      NumAgprs: 8
+; GFX90A:     TotalNumVgprs: 12
+; GFX908:     TotalNumVgprs: 8
+define amdgpu_cs void @cs_wave_dispatch_agprs(<4 x float> %vgpr) {
+  call void asm sideeffect "; use $0", "a"(<8 x i32> zeroinitializer)
+  call void asm sideeffect "; use $0", "v"(<4 x float> %vgpr)
+  ret void
+}
+
 declare void @undef_func()
 
 ; CHECK:      .type          kernel_call_undef_func

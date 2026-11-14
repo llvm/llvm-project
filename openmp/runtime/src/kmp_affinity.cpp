@@ -3798,6 +3798,11 @@ restart_radix_check:
   __kmp_ncores = totals[coreIdIndex];
   if (!KMP_AFFINITY_CAPABLE()) {
     KMP_ASSERT(__kmp_affinity.type == affinity_none);
+    __kmp_free(lastId);
+    __kmp_free(totals);
+    __kmp_free(maxCt);
+    __kmp_free(counts);
+    CLEANUP_THREAD_INFO;
     return true;
   }
 

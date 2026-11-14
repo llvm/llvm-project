@@ -93,6 +93,8 @@ public:
 
   bool isBitField() const { return rec->getValueAsBit("is_bit_field"); }
 
+  bool isNodiscard() const { return rec->getValueAsBit("nodiscard"); }
+
 private:
   std::vector<EnumValueRec> vals;
 };
@@ -121,6 +123,8 @@ public:
     return rec->getValueAsOptionalString("base_class");
   }
   const std::vector<StructMemberRec> &getMembers() const { return members; }
+
+  bool isNodiscard() const { return rec->getValueAsBit("nodiscard"); }
 
 private:
   std::vector<StructMemberRec> members;
@@ -197,6 +201,13 @@ public:
   std::vector<StringRef> getConditions() const {
     return rec->getValueAsListOfStrings("conditions");
   }
+  // A condition that is a single backticked C++ expression is a validation
+  // check. Prose with several backticked spans is documentation only.
+  static bool isValidationCondition(StringRef Condition) {
+    return Condition.size() >= 2 && Condition.starts_with("`") &&
+           Condition.ends_with("`") &&
+           !Condition.drop_front().drop_back().contains('`');
+  }
 
 private:
   const Record *rec;
@@ -225,6 +236,7 @@ public:
   std::vector<StringRef> getAnalogues() const {
     return rec->getValueAsListOfStrings("analogues");
   }
+  bool isNodiscard() const { return rec->getValueAsBit("nodiscard"); }
 
 private:
   std::vector<ReturnRec> rets;

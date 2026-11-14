@@ -25,7 +25,7 @@ using namespace clang;
 // static constexpr const char *ExpressionTraitNames[] = {...};
 // static constexpr const char *ExpressionTraitSpellings[] = {...};
 #define EMIT_ARRAYS
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
 
 const char *clang::getTraitName(TypeTrait T) {
   assert(T <= TT_Last && "invalid enum value!");

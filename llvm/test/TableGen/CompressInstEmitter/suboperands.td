@@ -222,7 +222,7 @@ def : CompressPat<(BigInst3 RegsC:$dst, RegsC:$src, simm6:$imm),
 // CHECK: // simm6
 // CHECK: return isInt<6>(Imm);
 
-// CHECK-LABEL: isCompressibleInst
+// CHECK-LABEL: getCompressedSize
 // CHECK:  case Arch::BigInst: {
 // CHECK-NEXT:  if (MI.getOperand(0).isReg() && MI.getOperand(0).getReg().isPhysical() &&
 // CHECK-NEXT:    getArchMCRegisterClass(Arch::RegsCRegClassID).contains(MI.getOperand(0).getReg()) &&
@@ -233,7 +233,7 @@ def : CompressPat<(BigInst3 RegsC:$dst, RegsC:$src, simm6:$imm),
 // CHECK-NEXT:    // small $dst, $addr
 // CHECK-NEXT:    // Operand: dst
 // CHECK-NEXT:    // Operand: addr
-// CHECK-NEXT:    return true;
+// CHECK-NEXT:    return 2;
 // CHECK-NEXT: } // if
 // CHECK:  case Arch::BigInst2: {
 // CHECK-NEXT:  if (MI.getOperand(0).isReg() && MI.getOperand(0).getReg().isPhysical() &&
@@ -246,7 +246,7 @@ def : CompressPat<(BigInst3 RegsC:$dst, RegsC:$src, simm6:$imm),
 // CHECK-NEXT:    // Operand: dst
 // CHECK-NEXT:    // Operand: src
 // CHECK-NEXT:    // Operand: imm
-// CHECK-NEXT:    return true;
+// CHECK-NEXT:    return 2;
 // CHECK-NEXT: } // if
 // CHECK:  case Arch::BigInst3: {
 // CHECK-NEXT:  if (MI.getOperand(0).isReg() && MI.getOperand(0).getReg().isPhysical() &&
@@ -258,5 +258,5 @@ def : CompressPat<(BigInst3 RegsC:$dst, RegsC:$src, simm6:$imm),
 // CHECK-NEXT:    // small $dst, $addr
 // CHECK-NEXT:    // Operand: dst
 // CHECK-NEXT:    // Operand: addr
-// CHECK-NEXT:    return true;
+// CHECK-NEXT:    return 2;
 // CHECK-NEXT: } // if

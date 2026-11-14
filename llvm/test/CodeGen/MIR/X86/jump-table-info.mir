@@ -57,6 +57,7 @@
 ...
 ---
 name:            test_jumptable
+tracksRegLiveness: false
 # CHECK:      jumpTable:
 # CHECK-NEXT: kind: label-difference32
 # CHECK-NEXT: entries:
@@ -106,6 +107,7 @@ body: |
 ...
 ---
 name:            test_jumptable2
+tracksRegLiveness: false
 jumpTable:
   kind:          label-difference32
   entries:

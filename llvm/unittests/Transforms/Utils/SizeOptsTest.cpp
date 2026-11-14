@@ -33,17 +33,15 @@ protected:
   std::unique_ptr<Module> M;
   struct BFIData {
     std::unique_ptr<DominatorTree> DT;
-    std::unique_ptr<LoopInfo> LI;
     std::unique_ptr<CycleInfo> CI;
     std::unique_ptr<BranchProbabilityInfo> BPI;
     std::unique_ptr<BlockFrequencyInfo> BFI;
     BFIData(Function &F) {
       DT.reset(new DominatorTree(F));
-      LI.reset(new LoopInfo(*DT));
       CI.reset(new CycleInfo());
       CI->compute(F);
       BPI.reset(new BranchProbabilityInfo(F, *CI));
-      BFI.reset(new BlockFrequencyInfo(F, *BPI, *LI));
+      BFI.reset(new BlockFrequencyInfo(F, *BPI, *CI));
     }
     BlockFrequencyInfo *get() { return BFI.get(); }
   };

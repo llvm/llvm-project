@@ -206,3 +206,44 @@ int parallel() {
 
   return 0;
 }
+
+namespace GH217893 {
+struct S {
+  int a;
+  S() {
+#pragma omp parallel firstprivate(a)
+#pragma omp taskloop
+#pragma omp single copyprivate(a) // expected-error {{copyprivate variable must be threadprivate or private in the enclosing context}} expected-error {{region cannot be closely nested inside 'taskloop' region; perhaps you forget to enclose 'omp single' directive into a parallel region?}}
+  }; // expected-error {{expected statement}}
+
+  void nested() {
+#pragma omp parallel firstprivate(a)
+#pragma omp taskloop
+    for (int i = 0; i < 2; ++i) {
+#pragma omp single copyprivate(a) // expected-error {{copyprivate variable must be threadprivate or private in the enclosing context}} expected-error {{region cannot be closely nested inside 'taskloop' region; perhaps you forget to enclose 'omp single' directive into a parallel region?}}
+      foo();
+    }
+#pragma omp parallel default(none)
+#pragma omp single copyprivate(a) // expected-error {{copyprivate variable must be threadprivate or private in the enclosing context}}
+    foo();
+#pragma omp parallel private(a)
+#pragma omp single copyprivate(a)
+    foo();
+  }
+
+  template <class T> void dependent() {
+#pragma omp parallel private(a)
+#pragma omp single copyprivate(a)
+    foo();
+#pragma omp parallel private(a)
+#pragma omp task
+#pragma omp taskgroup
+#pragma omp single copyprivate(a) // expected-error {{copyprivate variable must be threadprivate or private in the enclosing context}}
+    foo();
+  }
+};
+
+void instantiate(S &s) {
+  s.dependent<int>(); // expected-note {{in instantiation of function template specialization 'GH217893::S::dependent<int>' requested here}}
+}
+}

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "TemporaryObjectsCheck.h"
-#include "../utils/CheckUtils.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -20,9 +19,6 @@ namespace clang::tidy::fuchsia {
 
 namespace {
 
-constexpr llvm::StringLiteral DeprecatedCheckName = "zircon-temporary-objects";
-constexpr llvm::StringLiteral CanonicalCheckName = "fuchsia-temporary-objects";
-
 AST_MATCHER_P(CXXRecordDecl, matchesAnyName, ArrayRef<StringRef>, Names) {
   const std::string QualifiedName = Node.getQualifiedNameAsString();
   return llvm::is_contained(Names, QualifiedName);
@@ -33,11 +29,7 @@ AST_MATCHER_P(CXXRecordDecl, matchesAnyName, ArrayRef<StringRef>, Names) {
 TemporaryObjectsCheck::TemporaryObjectsCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      Names(utils::options::parseStringList(Options.get("Names", ""))) {
-  if (Name == DeprecatedCheckName)
-    utils::diagDeprecatedCheckAlias(*this, *Context, DeprecatedCheckName,
-                                    CanonicalCheckName);
-}
+      Names(utils::options::parseStringList(Options.get("Names", ""))) {}
 
 void TemporaryObjectsCheck::registerMatchers(MatchFinder *Finder) {
   // Matcher for default constructors.

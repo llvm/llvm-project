@@ -290,15 +290,8 @@ LogicalResult Serializer::processExtension() {
 }
 
 void Serializer::processMemoryModel() {
-  StringAttr memoryModelName = module.getMemoryModelAttrName();
-  auto mm = static_cast<uint32_t>(
-      module->getAttrOfType<spirv::MemoryModelAttr>(memoryModelName)
-          .getValue());
-
-  StringAttr addressingModelName = module.getAddressingModelAttrName();
-  auto am = static_cast<uint32_t>(
-      module->getAttrOfType<spirv::AddressingModelAttr>(addressingModelName)
-          .getValue());
+  auto mm = static_cast<uint32_t>(module.getMemoryModel());
+  auto am = static_cast<uint32_t>(module.getAddressingModel());
 
   encodeInstructionInto(memoryModel, spirv::Opcode::OpMemoryModel, {am, mm});
 }
@@ -378,6 +371,15 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
     }
     return emitError(loc, "expected FPRoundingModeAttr attribute for ")
            << stringifyDecoration(decoration);
+  case spirv::Decoration::FuncParamAttr:
+    return processDecorationList<FunctionParameterAttributeAttr>(
+        loc, decoration, attr, "FunctionParameterAttribute",
+        [&](FunctionParameterAttributeAttr attr) {
+          return emitDecoration(resultID, decoration,
+                                {static_cast<uint32_t>(attr.getValue())});
+        });
+  case spirv::Decoration::Alignment:
+  case spirv::Decoration::MaxByteOffset:
   case spirv::Decoration::Binding:
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Location:
@@ -419,9 +421,12 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
   case spirv::Decoration::Constant:
   case spirv::Decoration::Block:
   case spirv::Decoration::BufferBlock:
+  case spirv::Decoration::CPacked:
   case spirv::Decoration::Invariant:
   case spirv::Decoration::Patch:
   case spirv::Decoration::Coherent:
+  case spirv::Decoration::Volatile:
+  case spirv::Decoration::SaturatedConversion:
     // For unit attributes and decoration attributes, the args list
     // has no values so we do nothing.
     if (isa<UnitAttr, DecorationAttr>(attr))
@@ -1044,6 +1049,10 @@ uint32_t Serializer::prepareConstant(Location loc, Type constType,
                                             /*dim=*/0, index);
   } else if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr)) {
     resultID = prepareArrayConstant(loc, constType, arrayAttr);
+  } else if (isa<spirv::NullAttr>(valueAttr)) {
+    resultID = getNextID();
+    encodeInstructionInto(typesGlobalValues, spirv::Opcode::OpConstantNull,
+                          {typeID, resultID});
   }
 
   if (resultID == 0) {
@@ -1737,7 +1746,7 @@ Serializer::processCompositeConstructOp(spirv::CompositeConstructOp op) {
   encodeInstructionWithContinuationInto(
       functionBody, spirv::Opcode::OpCompositeConstruct, operands);
 
-  for (auto attr : op->getAttrs()) {
+  for (auto attr : op->getDiscardableAttrDictionary().getValue()) {
     if (failed(processDecoration(loc, resultID, attr)))
       return failure();
   }
@@ -1780,7 +1789,7 @@ LogicalResult Serializer::processOpWithoutGrammarAttr(Operation *op,
   }
 
   if (op->getNumResults() != 0) {
-    for (auto attr : op->getAttrs()) {
+    for (auto attr : op->getDiscardableAttrDictionary().getValue()) {
       if (failed(processDecoration(loc, resultID, attr)))
         return failure();
     }

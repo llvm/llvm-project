@@ -215,15 +215,12 @@ static void packNonUnitDimOperandToVNNI(mlir::PatternRewriter &rewriter,
 //   x86.avx512.dot vector<32xbf16>, %3 -> vector<16xf32>
 // ```
 struct VectorContractToPackedTypeDotProduct
-    : public OpRewritePattern<vector::ContractionOp> {
-  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+    : public AddContractionOpRewritePattern {
+  using Base::Base;
 
-  LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
-                                PatternRewriter &rewriter) const override {
-
-    if (contractOp.getKind() != vector::CombiningKind::ADD)
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Expects add combining kind.");
+  LogicalResult
+  matchAndRewriteAddContractOp(vector::ContractionOp contractOp,
+                               PatternRewriter &rewriter) const override {
 
     VectorType lhsTy = contractOp.getLhsType();
     if (!lhsTy.getElementType().isBF16() &&
@@ -325,17 +322,17 @@ struct VectorContractToPackedTypeDotProduct
       }
 
       // If the accumulators are shuffled we get nullptr else the
-      // transfer_read or load operations.
-      Operation *accRead =
-          traceToVectorReadLikeParentOperation(contractOp.getAcc());
+      // transfer_load or store operations.
+      Operation *accWrite =
+          traceToVectorWriteLikeUserOperation(contractOp.getResult());
 
       if (!pairContractOp &&
-          (!isNonUnitDimOperandShuffled(nonUnitDimOperand) || accRead))
+          (!isNonUnitDimOperandShuffled(nonUnitDimOperand) || accWrite))
         return rewriter.notifyMatchFailure(contractOp,
                                            "Could not find a contract pair");
 
       // Validate and shuffle the accumulator
-      if (accRead) {
+      if (accWrite) {
         // Trace back to the load or transfer_read operations of the contract
         // accumulators.
         Operation *accReadOp0 =
@@ -352,8 +349,8 @@ struct VectorContractToPackedTypeDotProduct
 
         if (!accReadOp0 || !accReadOp1)
           return rewriter.notifyMatchFailure(
-              contractOp,
-              "Operands doesn't have load or transfer_read as it's parent op");
+              contractOp, "Operands doesn't have load or transfer_read or "
+                          "dense constant attribute as its parent op");
 
         if (!resultWriteOp0 || !resultWriteOp1)
           return rewriter.notifyMatchFailure(
@@ -373,18 +370,22 @@ struct VectorContractToPackedTypeDotProduct
           return rewriter.notifyMatchFailure(
               contractOp, "The store/write operation of contract operation is "
                           "before the pair contract operation");
-        // Shuffle the accumulators of the contract operations.
-        LogicalResult readShuffle =
-            shuffleAfterReadLikeOp(rewriter, accReadOp0, accReadOp1, contractOp,
-                                   pairContractOp, nonUnitDimValue, accTy);
 
-        if (failed(readShuffle))
-          return rewriter.notifyMatchFailure(
-              contractOp, "Accumulator read is not by transfer_read or load");
+        if (!isa<arith::ConstantOp>(accReadOp0)) {
+          // Shuffle the accumulators of the contract operations.
+          LogicalResult readShuffle = shuffleAfterReadLikeOp(
+              rewriter, accReadOp0, accReadOp1, contractOp, pairContractOp,
+              nonUnitDimValue, accTy);
+
+          if (failed(readShuffle))
+            return rewriter.notifyMatchFailure(
+                contractOp, "Accumulator read is not by transfer_read or load");
+        }
 
         // Shuffle the output of contract operations before it's use.
         LogicalResult writeShuffle = shuffleBeforeWriteLikeOp(
-            rewriter, resultWriteOp0, resultWriteOp1, nonUnitDimValue, accTy);
+            rewriter, contractOp.getResult(), pairContractOp.getResult(),
+            nonUnitDimValue, accTy);
 
         if (failed(writeShuffle))
           return rewriter.notifyMatchFailure(
@@ -485,7 +486,6 @@ struct VectorContractToPackedTypeDotProduct
     return success();
   }
 };
-
 } // namespace
 
 void x86::populateVectorContractToPackedTypeDotProductPatterns(

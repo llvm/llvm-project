@@ -12,6 +12,8 @@
 #include "lldb/Core/Diagnostics.h"
 #include "lldb/Core/PluginInterface.h"
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
 namespace lldb_private {
@@ -23,6 +25,13 @@ class BugReporter : public PluginInterface {
 public:
   virtual llvm::Error File(const Diagnostics::Report &report) = 0;
 };
+
+/// The questions only the person filing the report can answer. Shared so every
+/// reporter asks for the same thing.
+llvm::ArrayRef<llvm::StringRef> GetBugReportQuestions();
+
+/// Appended to an error that may be a bug in LLDB. Starts with a newline.
+llvm::StringRef GetBugReportNote();
 
 } // namespace lldb_private
 

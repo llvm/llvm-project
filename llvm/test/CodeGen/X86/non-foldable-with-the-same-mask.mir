@@ -3,7 +3,6 @@
 
 ---
 name:            test_valignd_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk4wm }
   - { id: 1, class: vr128x }
@@ -36,7 +35,6 @@ body:             |
 ...
 ---
 name:            test_vpalignr_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk16wm }
   - { id: 1, class: vr128x }
@@ -69,7 +67,6 @@ body:             |
 ...
 ---
 name:            test_vbroadcastss_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk4wm }
   - { id: 1, class: vr128x }
@@ -99,7 +96,6 @@ body:             |
 ...
 ---
 name:            test_vmovddup_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk2wm }
   - { id: 1, class: vr128x }
@@ -129,7 +125,6 @@ body:             |
 ...
 ---
 name:            test_vmovshdup_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk4wm }
   - { id: 1, class: vr128x }
@@ -159,7 +154,6 @@ body:             |
 ...
 ---
 name:            test_vpbroadcastd_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk4wm }
   - { id: 1, class: vr128x }
@@ -189,7 +183,6 @@ body:             |
 ...
 ---
 name:            test_vdbpsadbw_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk8wm }
   - { id: 1, class: vr128x }
@@ -222,7 +215,6 @@ body:             |
 ...
 ---
 name:            test_vgf2p8affineqb_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk16wm }
   - { id: 1, class: vr128x }
@@ -255,7 +247,6 @@ body:             |
 ...
 ---
 name:            test_vmpsadbw_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk8wm }
   - { id: 1, class: vr128x }
@@ -288,7 +279,6 @@ body:             |
 ...
 ---
 name:            test_vpconflictd_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk4wm }
   - { id: 1, class: vr128x }
@@ -318,7 +308,6 @@ body:             |
 ...
 ---
 name:            test_vpmultishiftqb_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk16wm }
   - { id: 1, class: vr128x }
@@ -351,7 +340,6 @@ body:             |
 ...
 ---
 name:            test_vexpandps_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk4wm }
   - { id: 1, class: vr128x }
@@ -381,13 +369,14 @@ body:             |
 ...
 ---
 name:            test_vinserti32x4_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk4wm }
-  - { id: 1, class: vr256x }
+  - { id: 1, class: vr128x }
   - { id: 2, class: vr256x }
   - { id: 3, class: vr128x }
-  - { id: 4, class: vr256 }
+  - { id: 4, class: vr256x }
+  - { id: 5, class: vr128x }
+  - { id: 6, class: vr256 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -398,23 +387,26 @@ body:             |
     ; CHECK: liveins: $rdi, $k1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk4wm = COPY $k1
-    ; CHECK-NEXT: [[AVX512_256_SET0_:%[0-9]+]]:vr256x = AVX512_256_SET0
-    ; CHECK-NEXT: [[AVX512_256_SET0_1:%[0-9]+]]:vr256x = AVX512_256_SET0
+    ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:vr256x = SUBREG_TO_REG [[AVX512_128_SET0_]], %subreg.sub_xmm
+    ; CHECK-NEXT: [[AVX512_128_SET0_1:%[0-9]+]]:vr128x = AVX512_128_SET0
+    ; CHECK-NEXT: [[SUBREG_TO_REG1:%[0-9]+]]:vr256x = SUBREG_TO_REG [[AVX512_128_SET0_1]], %subreg.sub_xmm
     ; CHECK-NEXT: [[VMOVDQA32Z128rmkz:%[0-9]+]]:vr128x = VMOVDQA32Z128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
-    ; CHECK-NEXT: [[VINSERTI32X4Z256rrikz:%[0-9]+]]:vr256 = VINSERTI32X4Z256rrikz [[COPY]], [[AVX512_256_SET0_1]], [[VMOVDQA32Z128rmkz]], 1
+    ; CHECK-NEXT: [[VINSERTI32X4Z256rrikz:%[0-9]+]]:vr256 = VINSERTI32X4Z256rrikz [[COPY]], [[SUBREG_TO_REG1]], [[VMOVDQA32Z128rmkz]], 1
     ; CHECK-NEXT: $ymm0 = COPY [[VINSERTI32X4Z256rrikz]]
     ; CHECK-NEXT: RET 0, $ymm0
     %0:vk4wm = COPY $k1
-    %1:vr256x = AVX512_256_SET0
-    %2:vr256x = AVX512_256_SET0
-    %3:vr128x = VMOVDQA32Z128rmkz %0, $rdi, 1, $noreg, 0, $noreg :: (load (s128))
-    %4:vr256 = VINSERTI32X4Z256rrikz %0, %2, %3, 1
-    $ymm0 = COPY %4
+    %1:vr128x = AVX512_128_SET0
+    %2:vr256x = SUBREG_TO_REG %1, %subreg.sub_xmm
+    %3:vr128x = AVX512_128_SET0
+    %4:vr256x = SUBREG_TO_REG %3, %subreg.sub_xmm
+    %5:vr128x = VMOVDQA32Z128rmkz %0, $rdi, 1, $noreg, 0, $noreg :: (load (s128))
+    %6:vr256 = VINSERTI32X4Z256rrikz %0, %4, %5, 1
+    $ymm0 = COPY %6
     RET 0, $ymm0
 ...
 ---
 name:            test_vpackssdw_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk8wm }
   - { id: 1, class: vr128x }
@@ -447,13 +439,14 @@ body:             |
 ...
 ---
 name:            test_vpermd_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk8wm }
-  - { id: 1, class: vr256x }
+  - { id: 1, class: vr128x }
   - { id: 2, class: vr256x }
   - { id: 3, class: vr256x }
-  - { id: 4, class: vr256 }
+  - { id: 4, class: vr128x }
+  - { id: 5, class: vr256x }
+  - { id: 6, class: vr256 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -464,23 +457,26 @@ body:             |
     ; CHECK: liveins: $rdi, $k1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk8wm = COPY $k1
-    ; CHECK-NEXT: [[AVX512_256_SET0_:%[0-9]+]]:vr256x = AVX512_256_SET0
+    ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:vr256x = SUBREG_TO_REG [[AVX512_128_SET0_]], %subreg.sub_xmm
     ; CHECK-NEXT: [[VMOVDQA32Z256rmkz:%[0-9]+]]:vr256x = VMOVDQA32Z256rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s256))
-    ; CHECK-NEXT: [[AVX512_256_SET0_1:%[0-9]+]]:vr256x = AVX512_256_SET0
-    ; CHECK-NEXT: [[VPERMDZ256rrk:%[0-9]+]]:vr256 = VPERMDZ256rrk [[AVX512_256_SET0_]], [[COPY]], [[AVX512_256_SET0_1]], [[VMOVDQA32Z256rmkz]]
+    ; CHECK-NEXT: [[AVX512_128_SET0_1:%[0-9]+]]:vr128x = AVX512_128_SET0
+    ; CHECK-NEXT: [[SUBREG_TO_REG1:%[0-9]+]]:vr256x = SUBREG_TO_REG [[AVX512_128_SET0_1]], %subreg.sub_xmm
+    ; CHECK-NEXT: [[VPERMDZ256rrk:%[0-9]+]]:vr256 = VPERMDZ256rrk [[SUBREG_TO_REG]], [[COPY]], [[SUBREG_TO_REG1]], [[VMOVDQA32Z256rmkz]]
     ; CHECK-NEXT: $ymm0 = COPY [[VPERMDZ256rrk]]
     ; CHECK-NEXT: RET 0, $ymm0
     %0:vk8wm = COPY $k1
-    %1:vr256x = AVX512_256_SET0
-    %2:vr256x = VMOVDQA32Z256rmkz %0, $rdi, 1, $noreg, 0, $noreg :: (load (s256))
-    %3:vr256x = AVX512_256_SET0
-    %4:vr256 = VPERMDZ256rrk %1, %0, %3, %2
-    $ymm0 = COPY %4
+    %1:vr128x = AVX512_128_SET0
+    %2:vr256x = SUBREG_TO_REG %1, %subreg.sub_xmm
+    %3:vr256x = VMOVDQA32Z256rmkz %0, $rdi, 1, $noreg, 0, $noreg :: (load (s256))
+    %4:vr128x = AVX512_128_SET0
+    %5:vr256x = SUBREG_TO_REG %4, %subreg.sub_xmm
+    %6:vr256 = VPERMDZ256rrk %2, %0, %5, %3
+    $ymm0 = COPY %6
     RET 0, $ymm0
 ...
 ---
 name:            test_vpermi2d_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk4wm }
   - { id: 1, class: vr128x }
@@ -513,7 +509,6 @@ body:             |
 ...
 ---
 name:            test_vpermilps_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk4wm }
   - { id: 1, class: vr128x }
@@ -540,13 +535,14 @@ body:             |
 ...
 ---
 name:            test_vpermps_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk8wm }
-  - { id: 1, class: vr256x }
+  - { id: 1, class: vr128x }
   - { id: 2, class: vr256x }
   - { id: 3, class: vr256x }
-  - { id: 4, class: vr256 }
+  - { id: 4, class: vr128x }
+  - { id: 5, class: vr256x }
+  - { id: 6, class: vr256 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -557,23 +553,26 @@ body:             |
     ; CHECK: liveins: $rdi, $k1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk8wm = COPY $k1
-    ; CHECK-NEXT: [[AVX512_256_SET0_:%[0-9]+]]:vr256x = AVX512_256_SET0
+    ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:vr256x = SUBREG_TO_REG [[AVX512_128_SET0_]], %subreg.sub_xmm
     ; CHECK-NEXT: [[VMOVAPSZ256rmkz:%[0-9]+]]:vr256x = VMOVAPSZ256rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s256))
-    ; CHECK-NEXT: [[AVX512_256_SET0_1:%[0-9]+]]:vr256x = AVX512_256_SET0
-    ; CHECK-NEXT: [[VPERMPSZ256rrkz:%[0-9]+]]:vr256 = VPERMPSZ256rrkz [[COPY]], [[AVX512_256_SET0_1]], [[VMOVAPSZ256rmkz]]
+    ; CHECK-NEXT: [[AVX512_128_SET0_1:%[0-9]+]]:vr128x = AVX512_128_SET0
+    ; CHECK-NEXT: [[SUBREG_TO_REG1:%[0-9]+]]:vr256x = SUBREG_TO_REG [[AVX512_128_SET0_1]], %subreg.sub_xmm
+    ; CHECK-NEXT: [[VPERMPSZ256rrkz:%[0-9]+]]:vr256 = VPERMPSZ256rrkz [[COPY]], [[SUBREG_TO_REG1]], [[VMOVAPSZ256rmkz]]
     ; CHECK-NEXT: $ymm0 = COPY [[VPERMPSZ256rrkz]]
     ; CHECK-NEXT: RET 0, $ymm0
     %0:vk8wm = COPY $k1
-    %1:vr256x = AVX512_256_SET0
-    %2:vr256x = VMOVAPSZ256rmkz %0, $rdi, 1, $noreg, 0, $noreg :: (load (s256))
-    %3:vr256x = AVX512_256_SET0
-    %4:vr256 = VPERMPSZ256rrkz %0, %3, %2
-    $ymm0 = COPY %4
+    %1:vr128x = AVX512_128_SET0
+    %2:vr256x = SUBREG_TO_REG %1, %subreg.sub_xmm
+    %3:vr256x = VMOVAPSZ256rmkz %0, $rdi, 1, $noreg, 0, $noreg :: (load (s256))
+    %4:vr128x = AVX512_128_SET0
+    %5:vr256x = SUBREG_TO_REG %4, %subreg.sub_xmm
+    %6:vr256 = VPERMPSZ256rrkz %0, %5, %3
+    $ymm0 = COPY %6
     RET 0, $ymm0
 ...
 ---
 name:            test_vpermt2d_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk4wm }
   - { id: 1, class: vr128x }
@@ -606,7 +605,6 @@ body:             |
 ...
 ---
 name:            test_vpermw_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk8wm }
   - { id: 1, class: vr128x }
@@ -639,7 +637,6 @@ body:             |
 ...
 ---
 name:            test_vpshufd_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk4wm }
   - { id: 1, class: vr128x }
@@ -666,7 +663,6 @@ body:             |
 ...
 ---
 name:            test_vpshufhw_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk8wm }
   - { id: 1, class: vr128x }
@@ -693,7 +689,6 @@ body:             |
 ...
 ---
 name:            test_vpshuflw_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk8wm }
   - { id: 1, class: vr128x }
@@ -720,13 +715,14 @@ body:             |
 ...
 ---
 name:            test_vshuff32x4_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk8wm }
-  - { id: 1, class: vr256x }
+  - { id: 1, class: vr128x }
   - { id: 2, class: vr256x }
   - { id: 3, class: vr256x }
-  - { id: 4, class: vr256 }
+  - { id: 4, class: vr128x }
+  - { id: 5, class: vr256x }
+  - { id: 6, class: vr256 }
 liveins:
   - { reg: '$rdi' }
   - { reg: '$k1' }
@@ -737,23 +733,26 @@ body:             |
     ; CHECK: liveins: $rdi, $k1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk8wm = COPY $k1
-    ; CHECK-NEXT: [[AVX512_256_SET0_:%[0-9]+]]:vr256x = AVX512_256_SET0
+    ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:vr256x = SUBREG_TO_REG [[AVX512_128_SET0_]], %subreg.sub_xmm
     ; CHECK-NEXT: [[VMOVAPSZ256rmkz:%[0-9]+]]:vr256x = VMOVAPSZ256rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s256))
-    ; CHECK-NEXT: [[AVX512_256_SET0_1:%[0-9]+]]:vr256x = AVX512_256_SET0
-    ; CHECK-NEXT: [[VSHUFF32X4Z256rrikz:%[0-9]+]]:vr256 = VSHUFF32X4Z256rrikz [[COPY]], [[AVX512_256_SET0_1]], [[VMOVAPSZ256rmkz]], 2
+    ; CHECK-NEXT: [[AVX512_128_SET0_1:%[0-9]+]]:vr128x = AVX512_128_SET0
+    ; CHECK-NEXT: [[SUBREG_TO_REG1:%[0-9]+]]:vr256x = SUBREG_TO_REG [[AVX512_128_SET0_1]], %subreg.sub_xmm
+    ; CHECK-NEXT: [[VSHUFF32X4Z256rrikz:%[0-9]+]]:vr256 = VSHUFF32X4Z256rrikz [[COPY]], [[SUBREG_TO_REG1]], [[VMOVAPSZ256rmkz]], 2
     ; CHECK-NEXT: $ymm0 = COPY [[VSHUFF32X4Z256rrikz]]
     ; CHECK-NEXT: RET 0, $ymm0
     %0:vk8wm = COPY $k1
-    %1:vr256x = AVX512_256_SET0
-    %2:vr256x = VMOVAPSZ256rmkz %0, $rdi, 1, $noreg, 0, $noreg :: (load (s256))
-    %3:vr256x = AVX512_256_SET0
-    %4:vr256 = VSHUFF32X4Z256rrikz %0, %3, %2, 2
-    $ymm0 = COPY %4
+    %1:vr128x = AVX512_128_SET0
+    %2:vr256x = SUBREG_TO_REG %1, %subreg.sub_xmm
+    %3:vr256x = VMOVAPSZ256rmkz %0, $rdi, 1, $noreg, 0, $noreg :: (load (s256))
+    %4:vr128x = AVX512_128_SET0
+    %5:vr256x = SUBREG_TO_REG %4, %subreg.sub_xmm
+    %6:vr256 = VSHUFF32X4Z256rrikz %0, %5, %3, 2
+    $ymm0 = COPY %6
     RET 0, $ymm0
 ...
 ---
 name:            test_vshufpd_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk2wm }
   - { id: 1, class: vr128x }
@@ -783,7 +782,6 @@ body:             |
 ...
 ---
 name:            test_vshufps_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk4wm }
   - { id: 1, class: vr128x }
@@ -813,7 +811,6 @@ body:             |
 ...
 ---
 name:            test_vpunpckhbw_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk16wm }
   - { id: 1, class: vr128x }
@@ -843,7 +840,6 @@ body:             |
 ...
 ---
 name:            test_vpunpcklbw_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk16wm }
   - { id: 1, class: vr128x }
@@ -873,7 +869,6 @@ body:             |
 ...
 ---
 name:            test_vunpcklps_same_mask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vk4wm }
   - { id: 1, class: vr128x }

@@ -39,10 +39,8 @@ public:
 
 void getAMDGPUTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                              const llvm::opt::ArgList &Args,
-                             std::vector<StringRef> &Features);
-
-void addFullLTOPartitionOption(const Driver &D, const llvm::opt::ArgList &Args,
-                               llvm::opt::ArgStringList &CmdArgs);
+                             std::vector<StringRef> &Features,
+                             bool ForAS = false);
 } // end namespace amdgpu
 } // end namespace tools
 

@@ -17,8 +17,6 @@
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/FuzzMutate/FuzzerCLI.h"
 #include "llvm/FuzzMutate/IRMutator.h"
-#include "llvm/FuzzMutate/Operations.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
@@ -26,8 +24,8 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
@@ -35,8 +33,6 @@
 #define DEBUG_TYPE "isel-fuzzer"
 
 using namespace llvm;
-
-static codegen::RegisterCodeGenFlags CGF;
 
 static cl::opt<char>
     OptLevel("O",
@@ -92,7 +88,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 
   // Set up the module to build for our target.
   M->setTargetTriple(TM->getTargetTriple());
-  M->setDataLayout(TM->createDataLayout());
+  M->setDataLayout(TM->getTargetTriple().computeDataLayout());
 
   // Build up a PM to do instruction selection.
   legacy::PassManager PM;
@@ -122,8 +118,10 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
   InitializeAllAsmPrinters();
   InitializeAllAsmParsers();
 
-  handleExecNameEncodedBEOpts(ExecName);
-  parseFuzzerCLOpts(*argc, *argv);
+  // Created after the targets register their library options.
+  static cl::LibraryOptionsContext LibraryOptions;
+  handleExecNameEncodedBEOpts(LibraryOptions, ExecName);
+  parseFuzzerCLOpts(LibraryOptions, codegen::getToolOptions(), *argc, *argv);
 
   if (TargetTriple.empty()) {
     errs() << ExecName << ": -mtriple must be specified\n";
@@ -143,7 +141,8 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
 
   Triple TT(Triple::normalize(TargetTriple));
 
-  TM = ExitOnErr(codegen::createTargetMachineForTriple(TT, OLvl));
+  TM = ExitOnErr(
+      codegen::createTargetMachineForTriple(LibraryOptions, TT, OLvl));
   assert(TM && "Could not allocate target machine!");
 
   // Make sure we print the summary and the current unit when LLVM errors out.

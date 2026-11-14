@@ -35,7 +35,7 @@ def FoldMemRefAliasOpsPass : Pass<"fold-memref-alias-ops"> {
     from/to the original memref.
   }];
   let dependentDialects = [
-      "memref::MemRefDialect", "vector::VectorDialect"
+      "vector::VectorDialect"
   ];
 }
 
@@ -183,7 +183,7 @@ def ResolveRankedShapeTypeResultDimsPass
            "Throw an error when pattern rewriter hits iteration limit">,
   ];
   let dependentDialects = [
-    "memref::MemRefDialect", "tensor::TensorDialect"
+    "tensor::TensorDialect"
   ];
 }
 
@@ -201,7 +201,7 @@ def ResolveShapedTypeResultDimsPass : Pass<"resolve-shaped-type-result-dims"> {
            "Throw an error when pattern rewriter hits iteration limit">,
   ];
   let dependentDialects = [
-    "affine::AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect"
+    "affine::AffineDialect", "tensor::TensorDialect"
   ];
 }
 
@@ -263,7 +263,7 @@ def ReifyResultShapesPass : Pass<"reify-result-shapes"> {
     ```
   }];
   let dependentDialects = [
-    "affine::AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect"
+    "affine::AffineDialect", "tensor::TensorDialect"
   ];
 }
 
@@ -285,7 +285,7 @@ def ExpandStridedMetadataPass : Pass<"expand-strided-metadata"> {
     - `memref.subview`
   }];
   let dependentDialects = [
-      "affine::AffineDialect", "memref::MemRefDialect"
+      "affine::AffineDialect"
   ];
 }
 
@@ -326,7 +326,7 @@ def ExpandReallocPass : Pass<"expand-realloc"> {
                         "Emit deallocation operations for the original MemRef">,
   ];
   let dependentDialects = [
-      "arith::ArithDialect", "scf::SCFDialect", "memref::MemRefDialect"
+      "arith::ArithDialect", "scf::SCFDialect"
   ];
 }
 
@@ -336,7 +336,7 @@ def FlattenMemrefsPass : Pass<"flatten-memref"> {
 
   }];
   let dependentDialects = [
-      "affine::AffineDialect", "arith::ArithDialect", "memref::MemRefDialect"
+      "affine::AffineDialect", "arith::ArithDialect"
   ];
 }
 

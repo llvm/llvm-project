@@ -73,15 +73,18 @@ void CIRCanonicalizePass::runOnOperation() {
     if (isa<BrOp, BrCondOp, BuiltinIntCastOp, CastOp, ScopeOp, SwitchOp,
             SelectOp, IncOp, DecOp, MinusOp, FNegOp, NotOp, AddOp, MulOp, AndOp,
             OrOp, XorOp, MaxOp, MinOp, ComplexCreateOp, ComplexImagOp,
-            ComplexRealOp, VecCmpOp, VecCreateOp, VecExtractOp, VecShuffleOp,
-            VecShuffleDynamicOp, VecTernaryOp, BitClrsbOp, BitClzOp, BitCtzOp,
-            BitFfsOp, BitParityOp, BitPopcountOp, BitReverseOp, ByteSwapOp,
-            RotateOp, ConstantOp, CleanupScopeOp>(op))
+            ComplexRealOp, VecCmpOp, VecFCmpOp, VecCreateOp, VecExtractOp,
+            VecShuffleOp, VecShuffleDynamicOp, VecTernaryOp, BitClrsbOp,
+            BitClzOp, BitCtzOp, BitFfsOp, BitParityOp, BitPopcountOp,
+            BitReverseOp, ByteSwapOp, RotateOp, ConstantOp, CleanupScopeOp>(op))
       ops.push_back(op);
   });
 
-  // Apply patterns.
-  if (applyOpPatternsGreedily(ops, std::move(patterns)).failed())
+  // Apply patterns. Scope the rewrite to the body region, which encloses
+  // the common ancestor the driver would otherwise search for.
+  GreedyRewriteConfig config;
+  config.setScope(&getOperation()->getRegion(0));
+  if (applyOpPatternsGreedily(ops, std::move(patterns), config).failed())
     signalPassFailure();
 }
 

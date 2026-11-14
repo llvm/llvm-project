@@ -185,8 +185,8 @@ def FeatureStdExtZicfilp
                                  [FeatureStdExtZicsr]>;
 
 def FeatureStdExtZicfiss
-    : RISCVExperimentalExtension<1, 0, "Shadow stack",
-                                 [FeatureStdExtZicsr, FeatureStdExtZimop]>,
+    : RISCVExtension<1, 0, "Shadow stack",
+                     [FeatureStdExtZicsr, FeatureStdExtZimop]>,
       RISCVExtensionBitmask<1, 27>;
 def HasStdExtZicfiss : Predicate<"Subtarget->hasStdExtZicfiss()">,
                        AssemblerPredicate<(all_of FeatureStdExtZicfiss),
@@ -203,6 +203,13 @@ def HasStdExtZilsd : Predicate<"Subtarget->hasStdExtZilsd()">,
 def FeatureZilsdWordAlign
     : SubtargetFeature<"zilsd-word-align", "AllowZilsdWordAlign", "true",
                        "Allow 4-byte alignment for Zilsd LD/SD instructions">;
+
+def FeatureStdExtZilx
+    : RISCVExperimentalExtension<0, 1, "Indexed Integer Load Instructions">;
+def HasStdExtZilx
+    : Predicate<"Subtarget->hasStdExtZilx()">,
+      AssemblerPredicate<(all_of FeatureStdExtZilx),
+                          "'Zilx' (Indexed Integer Load Instructions)">;
 
 // Multiply Extensions
 
@@ -500,7 +507,7 @@ def HasStdExtZbb : Predicate<"Subtarget->hasStdExtZbb()">,
                    AssemblerPredicate<(all_of FeatureStdExtZbb),
                                       "'Zbb' (Basic Bit-Manipulation)">;
 def NoStdExtZbb : Predicate<"!Subtarget->hasStdExtZbb()">,
-                  AssemblerPredicate<(all_of (not FeatureStdExtZbb))>;
+                  AssemblerPredicate<(none_of FeatureStdExtZbb)>;
 
 def FeatureStdExtZbs
     : RISCVExtension<1, 0, "Single-Bit Instructions">,
@@ -523,7 +530,7 @@ def HasStdExtZbkb : Predicate<"Subtarget->hasStdExtZbkb()">,
                     AssemblerPredicate<(all_of FeatureStdExtZbkb),
                         "'Zbkb' (Bitmanip instructions for Cryptography)">;
 def NoStdExtZbkb : Predicate<"!Subtarget->hasStdExtZbkb()">,
-                   AssemblerPredicate<(all_of (not FeatureStdExtZbkb))>;
+                   AssemblerPredicate<(none_of FeatureStdExtZbkb)>;
 
 def FeatureStdExtZbkx
     : RISCVExtension<1, 0, "Crossbar permutation instructions">,
@@ -695,7 +702,8 @@ def FeatureStdExtV
       RISCVExtensionBitmask<0, 21>;
 
 def FeatureStdExtZvabd
-    : RISCVExperimentalExtension<0, 7, "Vector Absolute Difference">;
+    : RISCVExperimentalExtension<0, 9, "Vector Absolute Difference",
+                                 [FeatureStdExtZve32x]>;
 def HasStdExtZvabd : Predicate<"Subtarget->hasStdExtZvabd()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvabd),
                                         "'Zvabd' (Vector Absolute Difference)">;
@@ -763,7 +771,7 @@ def HasStdExtZfhOrZvfh
                          "'Zvfh' (Vector Half-Precision Floating-Point)">;
 
 def FeatureStdExtZvfofp8min
-    : RISCVExperimentalExtension<0, 2,
+    : RISCVExperimentalExtension<0, 9,
                                  "Vector OFP8 Converts", [FeatureStdExtZve32f]>;
 def HasStdExtZvfofp8min
     : Predicate<"Subtarget->hasStdExtZvfofp8min()">,
@@ -917,7 +925,7 @@ def HasStdExtZvdot4a8i : Predicate<"Subtarget->hasStdExtZvdot4a8i()">,
 
 // Vector Reordering Structured Data
 def FeatureStdExtZvzip
-    : RISCVExperimentalExtension<0, 1, "Vector Reordering Structured Data",
+    : RISCVExperimentalExtension<0, 3, "Vector Reordering Structured Data",
                                  [FeatureStdExtZve32x]>;
 def HasStdExtZvzip : Predicate<"Subtarget->hasStdExtZvzip()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvzip),
@@ -1065,6 +1073,20 @@ def FeatureStdExtSsaia
 def FeatureStdExtSmcntrpmf
     : RISCVExtension<1, 0, "Cycle and Instret Privilege Mode Filtering">;
 
+def FeatureStdExtSmcsps
+    : RISCVExperimentalExtension<0, 20,
+                                 "Conditional Stack Pointer Swap at Machine Level">;
+def HasStdExtSmcsps : Predicate<"Subtarget->hasStdExtSmcsps()">,
+                      AssemblerPredicate<(all_of FeatureStdExtSmcsps),
+                          "'Smcsps' (Conditional Stack Pointer Swap at Machine Level)">;
+def FeatureStdExtSscsps
+    : RISCVExperimentalExtension<0, 20,
+                                 "Conditional Stack Pointer Swap at Supervisor Level",
+                                 [FeatureStdExtSmcsps]>;
+def HasStdExtSscsps : Predicate<"Subtarget->hasStdExtSscsps()">,
+                      AssemblerPredicate<(all_of FeatureStdExtSscsps),
+                          "'Sscsps' (Conditional Stack Pointer Swap at Supervisor Level)">;
+
 def FeatureStdExtSmcsrind
     : RISCVExtension<1, 0, "Indirect CSR Access Machine Level">;
 def FeatureStdExtSscsrind
@@ -1077,6 +1099,55 @@ def FeatureStdExtSsdbltrp
 
 def FeatureStdExtSmepmp
     : RISCVExtension<1, 0, "Enhanced Physical Memory Protection">;
+
+def FeatureStdExtSmidctrl
+    : RISCVExperimentalExtension<0, 20,
+                                 "Interrupt Domain Control Interface at Machine Level",
+                                 [FeatureStdExtSmcsrind, FeatureStdExtSmaia]>;
+def FeatureStdExtSsidctrl
+    : RISCVExperimentalExtension<0, 20,
+                                 "Interrupt Domain Control Interface at Supervisor Level",
+                                 [FeatureStdExtSscsrind, FeatureStdExtSsaia]>;
+
+def FeatureStdExtSmijt
+    : RISCVExperimentalExtension<0, 20,
+                                 "Interrupt Jump Table at Machine Level">;
+def FeatureStdExtSsijt
+    : RISCVExperimentalExtension<0, 20,
+                                 "Interrupt Jump Table at Supervisor Level">;
+
+def FeatureStdExtSmehv
+    : RISCVExperimentalExtension<0, 20,
+                                 "Synchronous Exception Hardware Vectoring at Machine Level",
+                                 [FeatureStdExtSmijt]>;
+def FeatureStdExtSsehv
+    : RISCVExperimentalExtension<0, 20,
+                                 "Synchronous Exception Hardware Vectoring at Supervisor Level",
+                                 [FeatureStdExtSsijt]>;
+
+def FeatureStdExtSmip
+    : RISCVExperimentalExtension<0, 20,
+                                 "Support for Interrupt Handler Push/Pop at Machine Level">;
+def HasStdExtSmip : Predicate<"Subtarget->hasStdExtSmip()">,
+                    AssemblerPredicate<(all_of FeatureStdExtSmip),
+                        "'Smip' (Support for Interrupt Handler Push/Pop at "
+                        "Machine Level)">;
+def FeatureStdExtSsip
+    : RISCVExperimentalExtension<0, 20,
+                                 "Support for Interrupt Handler Push/Pop at Supervisor Level">;
+def HasStdExtSsip : Predicate<"Subtarget->hasStdExtSsip()">,
+                    AssemblerPredicate<(all_of FeatureStdExtSsip),
+                        "'Ssip' (Support for Interrupt Handler Push/Pop at "
+                        "Supervisor Level)">;
+
+def FeatureStdExtSmnip
+    : RISCVExperimentalExtension<0, 20,
+                                 "Nested Interrupt Preemption Support at Machine Level",
+                                 [FeatureStdExtSmidctrl]>;
+def FeatureStdExtSsnip
+    : RISCVExperimentalExtension<0, 20,
+                                 "Nested Interrupt Preemption Support at Supervisor Level",
+                                 [FeatureStdExtSsidctrl]>;
 
 def FeatureStdExtSmpmpmt
     : RISCVExperimentalExtension<0, 6, "PMP-based Memory Types Extension">;
@@ -1094,6 +1165,17 @@ def FeatureStdExtSsccfg
 
 def FeatureStdExtSsccptr
     : RISCVExtension<1, 0, "Main memory supports page table reads">;
+
+def FeatureStdExtSspmp
+    : RISCVExtension<1, 0, "S-level Physical Memory Protection (SPMP)",
+                     [FeatureStdExtSscsrind]>;
+def FeatureStdExtSspmpen
+    : RISCVExtension<1, 0, "Optimizing Context Switching of SPMP Entries",
+                     [FeatureStdExtSspmp]>;
+
+def FeatureStdExtSmpmpdeleg
+    : RISCVExtension<1, 0, "Sharing Hardware Resources between PMP and SPMP",
+                     [FeatureStdExtSmcsrind, FeatureStdExtSspmp]>;
 
 def FeatureStdExtSscofpmf
     : RISCVExtension<1, 0, "Count Overflow and Mode-Based Filtering">;
@@ -1176,7 +1258,7 @@ def FeatureStdExtSha
                       FeatureStdExtShvsatpa, FeatureStdExtShgatpa]>;
 
 def FeatureStdExtSvukte
-    : RISCVExperimentalExtension<0, 3,
+    : RISCVExperimentalExtension<1, 0,
                                  "Address-Independent Latency of User-Mode Faults to Supervisor Addresses">;
 
 // Pointer Masking extensions
@@ -1243,23 +1325,46 @@ def HasStdExtZbkbOrP
                          "'Zbkb' (Bitmanip instructions for Cryptography) or "
                          "'Base P' (Packed-SIMD)">;
 
-// "Y" extension (CHERI support)
+// "Y" base ISA and Zyhybrid extension (CHERI support)
+//
+// RVY supports two execution modes: Capability Pointer Mode, where all memory
+// operands are YLEN-wide capability pointers, and Integral Pointer Mode where
+// the hart is compatible with RVI binaries (but supports the RVY instructions).
+// Zyhybrid adds instructions to dynamically switch between these modes.
+//
+// Technically, the base ISA is RVY in both modes: RVY repurposes the custom-3
+// opcode space, which cannot be done by a non-vendor extension and therefore
+// must be a new base ISA. However, Integral Pointer Mode is effectively RVI
+// just with some formerly vendor opcode space reserved. Following RISC-V ARC
+// guidance, it is represented in the arch string as rv{32,64}i_zyhybrid rather
+// than rv{32,64}y plus some kind of "rvi_compat" extension. This means we can
+// use FeatureStdExtY to directly track Capability Pointer Mode and encode the
+// four possible execution states as follows:
+// - -y, -zyhybrid: Standard RVI (no RVY support, custom-3 is vendor space).
+// - +y, -zyhybrid: RVY in Capability Pointer Mode (cannot switch modes).
+// - +y, +zyhybrid: RVY in Capability Pointer Mode with Zyhybrid to switch mode.
+// - -y, +zyhybrid: RVY in Integral Pointer Mode (RVI compatible, but custom-3
+//                  no longer reserved for vendor extension).
+def FeatureStdExtY
+    : RISCVExperimentalExtension<0, 910, "'Base Y' (CHERI)", [],
+                                 "HasStdExtYCapMode">;
+def FeatureStdExtZyhybrid
+    : RISCVExperimentalExtension<0, 910,
+                                 "Hybrid Extension for RVI Compatibility">;
 
-def FeatureStdExtY : RISCVExperimentalExtension<0, 98, "'Base Y' (CHERI)">;
-def HasStdExtY : Predicate<"Subtarget->hasStdExtY()">,
-                 AssemblerPredicate<(all_of FeatureStdExtY), "'Base Y' (CHERI)">;
+def HasYInstructions
+    : Predicate<"Subtarget->hasYInstructions()">,
+      AssemblerPredicate<(any_of FeatureStdExtY, FeatureStdExtZyhybrid),
+                         "'Base Y' (CHERI) or "
+                         "'Zyhybrid' (Hybrid Extension for RVI Compatibility)">;
+def HasStdExtZyhybrid
+    : Predicate<"Subtarget->hasStdExtZyhybrid()">,
+      AssemblerPredicate<(all_of FeatureStdExtZyhybrid),
+                         "'Zyhybrid' (Hybrid Extension for RVI Compatibility)">;
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions
 //===----------------------------------------------------------------------===//
-
-// Ventana Extensions
-
-def FeatureVendorXVentanaCondOps
-    : RISCVExtension<1, 0, "Ventana Conditional Ops">;
-def HasVendorXVentanaCondOps : Predicate<"Subtarget->hasVendorXVentanaCondOps()">,
-                               AssemblerPredicate<(all_of FeatureVendorXVentanaCondOps),
-                                   "'XVentanaCondOps' (Ventana Conditional Ops)">;
 
 // T-Head Extensions
 
@@ -1630,6 +1735,15 @@ def HasVendorXqccmp
       AssemblerPredicate<(all_of FeatureVendorXqccmp),
                          "'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves)">;
 
+def FeatureVendorXqccmi
+    : RISCVExperimentalExtension<0, 2,
+                     "Qualcomm 16-bit Instruction Lookup Table",
+                     [FeatureStdExtZca, FeatureStdExtZicsr]>;
+def HasVendorXqccmi
+    : Predicate<"Subtarget->hasVendorXqccmi()">,
+      AssemblerPredicate<(all_of FeatureVendorXqccmi),
+                         "'Xqccmi' (Qualcomm 16-bit Instruction Lookup Table)">;
+
 def FeatureVendorXqccmt
     : RISCVExperimentalExtension<0, 1, "Qualcomm 16-bit Table Jump",
                      [FeatureStdExtZca, FeatureStdExtZicsr]>;
@@ -1660,6 +1774,8 @@ def HasVendorXqcibi
     : Predicate<"Subtarget->hasVendorXqcibi()">,
       AssemblerPredicate<(all_of FeatureVendorXqcibi),
                          "'Xqcibi' (Qualcomm uC Branch Immediate Extension)">;
+def NoVendorXqcibiOrNoShortForwardBranch
+    : Predicate<"!Subtarget->hasVendorXqcibi() || !Subtarget->hasShortForwardBranchIALU()">;
 
 def FeatureVendorXqcibm
     : RISCVExtension<0, 8, "Qualcomm uC Bit Manipulation Extension",
@@ -1909,11 +2025,8 @@ def IsRV64 : Predicate<"Subtarget->is64Bit()">,
              AssemblerPredicate<(all_of Feature64Bit),
                                 "RV64I Base Instruction Set">;
 def IsRV32 : Predicate<"!Subtarget->is64Bit()">,
-             AssemblerPredicate<(all_of (not Feature64Bit)),
+             AssemblerPredicate<(none_of Feature64Bit),
                                 "RV32I Base Instruction Set">;
-
-defvar RV32 = DefaultMode;
-def RV64 : HwMode<[IsRV64]>;
 
 def FeatureRelax
     : SubtargetFeature<"relax", "EnableLinkerRelax", "true",
@@ -1925,7 +2038,7 @@ def FeatureExactAssembly
 
 foreach i = {1-31} in
   def FeatureReserveX#i :
-      SubtargetFeature<"reserve-x"#i, "UserReservedRegister[RISCV::X"#i#"]",
+      SubtargetFeature<"reserve-x"#i, "UserReservedXRegs["#i#"]",
                        "true", "Reserve X"#i>;
 
 def FeatureSaveRestore : SubtargetFeature<"save-restore", "EnableSaveRestore",
@@ -2130,13 +2243,6 @@ def TuneShortForwardBranchILoad
           [TuneShortForwardBranchIALU]>;
 def HasShortForwardBranchILoad : Predicate<"Subtarget->hasShortForwardBranchILoad()">;
 
-def TuneShortForwardBranchImm
-    : RISCVSimpleTuneFeature<"short-forward-branch-imm", "HasShortForwardBranchImm",
-                             "true", "Enable short forward branch optimization for branches with immediates",
-                             [TuneShortForwardBranchIALU]>;
-def HasShortForwardBranchImm : Predicate<"Subtarget->hasShortForwardBranchImm()">;
-def NoShortForwardBranchImm : Predicate<"!Subtarget->hasShortForwardBranchImm()">;
-
 // Some subtargets require a S2V transfer buffer to move scalars into vectors.
 // FIXME: Forming .vx/.vf/.wx/.wf can reduce register pressure.
 def TuneNoSinkSplatOperands
@@ -2178,6 +2284,114 @@ def TunePreferVsetvliOverReadVLENB
           "prefer-vsetvli-over-read-vlenb", "PreferVsetvliOverReadVLENB",
           "true", "Prefer vsetvli over read vlenb CSR to calculate VLEN">;
 
+def TuneAvoidVXRM
+    : SubtargetFeature<"avoid-vxrm", "AvoidVXRM",
+                       "true", "Instructions that use VXRM should be avoided">;
+
+class RISCVFusionFeature<string name, string field_name, string description>
+    : SubtargetFeature<"fusion-"#name, field_name, "true", description, [],
+                       InlineIgnore>;
+
+def TuneLUIADDIFusion
+    : RISCVFusionFeature<"lui-addi", "HasLUIADDIFusion",
+                         "Enable LUI+ADDI macro fusion">;
+
+def TuneAUIPCADDIFusion
+    : RISCVFusionFeature<"auipc-addi", "HasAUIPCADDIFusion",
+                         "Enable AUIPC+ADDI macrofusion">;
+
+def TuneZExtHFusion
+    : RISCVFusionFeature<"zexth", "HasZExtHFusion",
+                         "Enable SLLI+SRLI to be fused to zero extension of halfword">;
+
+def TuneZExtWFusion
+    : RISCVFusionFeature<"zextw", "HasZExtWFusion",
+                         "Enable SLLI+SRLI to be fused to zero extension of word">;
+
+def TuneShiftedZExtWFusion
+    : RISCVFusionFeature<"shifted-zextw", "HasShiftedZExtWFusion",
+                         "Enable SLLI+SRLI to be fused when computing (shifted) word zero extension">;
+
+def TuneLDADDFusion
+    : RISCVFusionFeature<"ld-add", "HasLDADDFusion",
+                         "Enable LD+ADD macrofusion">;
+
+def TuneADDLoadFusion
+    : RISCVFusionFeature<"add-load", "HasADDLoadFusion",
+                         "Enable ADD(.UW) + load macrofusion">;
+
+def TuneAUIPCLoadFusion
+    : RISCVFusionFeature<"auipc-load", "HasAUIPCLoadFusion",
+                         "Enable AUIPC + load macrofusion">;
+
+def TuneLUILoadFusion
+    : RISCVFusionFeature<"lui-load", "HasLUILoadFusion",
+                         "Enable LUI + load macrofusion">;
+
+def TuneQCELILoadStoreFusion
+    : RISCVFusionFeature<"qc-e-li-load-store", "HasQCELILoadStoreFusion",
+                         "Enable QC.E.LI + Load/Store macrofusion">;
+
+def TuneBFExtFusion
+    : RISCVFusionFeature<"bfext", "HasBFExtFusion",
+                         "Enable SLLI+SRLI (bitfield extract) macrofusion">;
+
+def TuneADDILoadFusion
+    : RISCVFusionFeature<"addi-load", "HasADDILoadFusion",
+                         "Enable ADDI + load macrofusion">;
+
+def TuneSHXADDLoadFusion
+    : RISCVFusionFeature<"shxadd-load", "HasSHXADDLoadFusion",
+                         "Enable SH(1|2|3)ADD(.UW) + load macrofusion">;
+
+def TuneFusionLogicRegReg
+    : RISCVFusionFeature<"logic-reg-reg", "HasFusionLogicRegReg",
+                         "Enable AND/OR/XOR+AND/OR/XOR macrofusion">;
+
+def TuneFusionLogicRegImm
+    : RISCVFusionFeature<"logic-reg-imm", "HasFusionLogicRegImm",
+                         "Enable AND/OR/XOR+ANDI/ORI/XORI macrofusion">;
+
+def TuneFusionLogicImmReg
+    : RISCVFusionFeature<"logic-imm-reg", "HasFusionLogicImmReg",
+                         "Enable ANDI/ORI/XORI+AND/OR/XOR macrofusion">;
+
+def TuneFusionMulAdd
+    : RISCVFusionFeature<"mul-add", "HasFusionMulAdd",
+                         "Enable MUL+ADD macrofusion">;
+
+def TuneFusionAddMem
+    : RISCVFusionFeature<"add-mem", "HasFusionAddMem",
+                         "Enable ADD+LOAD/STORE macrofusion">;
+
+def TuneFusionShiftBitExtract
+    : RISCVFusionFeature<"shift-bit-extract", "HasFusionShiftBitExtract",
+                         "Enable SLLI+SRLI/SRAI macrofusion">;
+
+def TuneMOVIMMALUXqciFusion
+    : RISCVFusionFeature<"xqci-movimm-alu", "HasMOVIMMALUXqciFusion",
+                         "Enable MOVIMM + ALU operations macrofusion">;
+
+def TuneMOVIMMMULXqciFusion
+    : RISCVFusionFeature<"xqci-movimm-mul", "HasMOVIMMMULXqciFusion",
+                         "Enable MOVIMM + multiply macrofusion">;
+
+def TuneMOVIMMLoadStoreXqciFusion
+    : RISCVFusionFeature<"xqci-movimm-ldst", "HasMOVIMMLoadStoreXqciFusion",
+                         "Enable MOVIMM + long Load/Store macrofusion">;
+
+def TuneMOVIMMJumpXqciFusion
+    : RISCVFusionFeature<"xqci-movimm-jump", "HasMOVIMMJumpXqciFusion",
+                         "Enable MOVIMM + Jump macrofusion">;
+
+def TuneMOVIMMLongAccumXciFusion
+    : RISCVFusionFeature<"xqci-movimm-longlogical", "HasMOVIMMLongAccumXqciFusion",
+                         "Enable MOVIMM + long accumulate macrofusion">;
+
+def TuneMovALUXqciFusion
+    : RISCVFusionFeature<"xqci-mov-longlogical", "HasMovALUXqciFusion",
+                         "Enable MOV + long accumulate macrofusion">;
+
 //===----------------------------------------------------------------------===//
 // CPU Families (alphabetized by vendor).
 //===----------------------------------------------------------------------===//
@@ -2191,7 +2405,3 @@ def TuneMIPSP8700
 
 def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
                                    "SiFive 7-Series processors", [], InlineIgnore>;
-
-def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
-                                         "Ventana Veyron-Series processors",
-                                         [], InlineIgnore>;

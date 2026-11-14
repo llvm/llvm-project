@@ -53,11 +53,8 @@ class WebAssemblyCFGSortLegacy final : public MachineFunctionPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
-    AU.addPreserved<MachineLoopInfoWrapperPass>();
     AU.addRequired<WebAssemblyExceptionInfoWrapperPass>();
-    AU.addPreserved<WebAssemblyExceptionInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -332,7 +329,7 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
     }
   }
 
-  SmallSet<const SortRegion *, 8> Regions;
+  SmallPtrSet<const SortRegion *, 8> Regions;
   for (auto &MBB : MF) {
     const SortRegion *Region = SRI.getRegionFor(&MBB);
     if (Region)

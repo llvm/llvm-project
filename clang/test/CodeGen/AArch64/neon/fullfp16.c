@@ -311,7 +311,7 @@ float16_t test_vrndxh_f16(float16_t a) {
 //===------------------------------------------------------===//
 // ALL-LABEL: test_vsqrth_f16
 float16_t test_vsqrth_f16(float16_t a) {
-// CIR:  cir.call_llvm_intrinsic "sqrt"
+// CIR:  cir.sqrt
 
 // LLVM-SAME: half{{.*}} [[A:%.*]])
 // LLVM:  [[SQR:%.*]] = call half @llvm.sqrt.f16(half [[A]])
@@ -337,7 +337,7 @@ float16_t test_vnegh_f16(float16_t a) {
 //===------------------------------------------------------===//
 // ALL-LABEL: test_vfmah_f16
 float16_t test_vfmah_f16(float16_t a, float16_t b, float16_t c) {
-// CIR: cir.call_llvm_intrinsic "fma" {{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
+// CIR: cir.fma {{.*}} : !cir.f16
 
 // LLVM-SAME: half{{.*}} [[A:%.*]], half{{.*}} [[B:%.*]], half{{.*}} [[C:%.*]])
 // LLVM:  [[FMA:%.*]] = call half @llvm.fma.f16(half [[B]], half [[C]], half [[A]])
@@ -348,7 +348,7 @@ float16_t test_vfmah_f16(float16_t a, float16_t b, float16_t c) {
 // ALL-LABEL: test_vfmsh_f16
 float16_t test_vfmsh_f16(float16_t a, float16_t b, float16_t c) {
 // CIR: [[SUB:%.*]] = cir.fneg %{{.*}} : !cir.f16
-// CIR: cir.call_llvm_intrinsic "fma" [[SUB]], {{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
+// CIR: cir.fma [[SUB]], {{.*}} : !cir.f16
 
 // LLVM-SAME: half{{.*}} [[A:%.*]], half{{.*}} [[B:%.*]], half{{.*}} [[C:%.*]])
 // LLVM:  [[SUB:%.*]] = fneg half [[B]]

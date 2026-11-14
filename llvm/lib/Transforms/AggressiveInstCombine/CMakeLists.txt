@@ -12,6 +12,7 @@ add_llvm_component_library(LLVMAggressiveInstCombine
   LINK_COMPONENTS
   Analysis
   Core
+  ProfileData
   Support
   TransformUtils
   )

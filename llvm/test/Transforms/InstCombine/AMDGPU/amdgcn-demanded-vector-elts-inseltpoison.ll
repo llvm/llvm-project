@@ -1197,6 +1197,399 @@ declare <3 x i8> @llvm.amdgcn.s.buffer.load.v3i8(<4 x i32>, i32, i32) #1
 declare <4 x i8> @llvm.amdgcn.s.buffer.load.v4i8(<4 x i32>, i32, i32) #1
 
 ; --------------------------------------------------------------------
+; llvm.amdgcn.ptr.s.buffer.load
+; --------------------------------------------------------------------
+
+define amdgpu_ps float @ptr_s_buffer_load_f32(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @ptr_s_buffer_load_f32(
+; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0), !invariant.load [[META1:![0-9]+]]
+; CHECK-NEXT:    ret float [[DATA]]
+;
+  %data = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  ret float %data
+}
+
+define amdgpu_ps <2 x float> @ptr_s_buffer_load_v2f32(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @ptr_s_buffer_load_v2f32(
+; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.ptr.s.buffer.load.v2f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret <2 x float> [[DATA]]
+;
+  %data = call <2 x float> @llvm.amdgcn.ptr.s.buffer.load.v2f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  ret <2 x float> %data
+}
+
+define amdgpu_ps <4 x float> @ptr_s_buffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @ptr_s_buffer_load_v4f32(
+; CHECK-NEXT:    [[DATA:%.*]] = call <4 x float> @llvm.amdgcn.ptr.s.buffer.load.v4f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret <4 x float> [[DATA]]
+;
+  %data = call <4 x float> @llvm.amdgcn.ptr.s.buffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  ret <4 x float> %data
+}
+
+define amdgpu_ps float @extract_elt0_ptr_s_buffer_load_v2f32(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt0_ptr_s_buffer_load_v2f32(
+; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret float [[DATA]]
+;
+  %data = call <2 x float> @llvm.amdgcn.ptr.s.buffer.load.v2f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %elt0 = extractelement <2 x float> %data, i32 0
+  ret float %elt0
+}
+
+define amdgpu_ps float @extract_elt1_ptr_s_buffer_load_v2f32(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt1_ptr_s_buffer_load_v2f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 4
+; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret float [[DATA]]
+;
+  %data = call <2 x float> @llvm.amdgcn.ptr.s.buffer.load.v2f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %elt1 = extractelement <2 x float> %data, i32 1
+  ret float %elt1
+}
+
+define amdgpu_ps float @extract_elt0_ptr_s_buffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt0_ptr_s_buffer_load_v4f32(
+; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret float [[DATA]]
+;
+  %data = call <4 x float> @llvm.amdgcn.ptr.s.buffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %elt0 = extractelement <4 x float> %data, i32 0
+  ret float %elt0
+}
+
+define amdgpu_ps float @extract_elt1_ptr_s_buffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt1_ptr_s_buffer_load_v4f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 4
+; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret float [[DATA]]
+;
+  %data = call <4 x float> @llvm.amdgcn.ptr.s.buffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %elt1 = extractelement <4 x float> %data, i32 1
+  ret float %elt1
+}
+
+define amdgpu_ps float @extract_elt2_ptr_s_buffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt2_ptr_s_buffer_load_v4f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 8
+; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret float [[DATA]]
+;
+  %data = call <4 x float> @llvm.amdgcn.ptr.s.buffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %elt1 = extractelement <4 x float> %data, i32 2
+  ret float %elt1
+}
+
+define amdgpu_ps float @extract_elt3_ptr_s_buffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt3_ptr_s_buffer_load_v4f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 12
+; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret float [[DATA]]
+;
+  %data = call <4 x float> @llvm.amdgcn.ptr.s.buffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %elt1 = extractelement <4 x float> %data, i32 3
+  ret float %elt1
+}
+
+define amdgpu_ps <2 x float> @extract_elt0_elt1_ptr_s_buffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt0_elt1_ptr_s_buffer_load_v4f32(
+; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.ptr.s.buffer.load.v2f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret <2 x float> [[DATA]]
+;
+  %data = call <4 x float> @llvm.amdgcn.ptr.s.buffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %shuf = shufflevector <4 x float> %data, <4 x float> poison, <2 x i32> <i32 0, i32 1>
+  ret <2 x float> %shuf
+}
+
+define amdgpu_ps <2 x float> @extract_elt1_elt2_ptr_s_buffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt1_elt2_ptr_s_buffer_load_v4f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 4
+; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.ptr.s.buffer.load.v2f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret <2 x float> [[DATA]]
+;
+  %data = call <4 x float> @llvm.amdgcn.ptr.s.buffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %shuf = shufflevector <4 x float> %data, <4 x float> poison, <2 x i32> <i32 1, i32 2>
+  ret <2 x float> %shuf
+}
+
+define amdgpu_ps <2 x float> @extract_elt2_elt3_ptr_s_buffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt2_elt3_ptr_s_buffer_load_v4f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 8
+; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.ptr.s.buffer.load.v2f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret <2 x float> [[DATA]]
+;
+  %data = call <4 x float> @llvm.amdgcn.ptr.s.buffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %shuf = shufflevector <4 x float> %data, <4 x float> poison, <2 x i32> <i32 2, i32 3>
+  ret <2 x float> %shuf
+}
+
+define amdgpu_ps <3 x float> @extract_elt0_elt1_elt2_ptr_s_buffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt0_elt1_elt2_ptr_s_buffer_load_v4f32(
+; CHECK-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.ptr.s.buffer.load.v3f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret <3 x float> [[DATA]]
+;
+  %data = call <4 x float> @llvm.amdgcn.ptr.s.buffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %shuf = shufflevector <4 x float> %data, <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
+  ret <3 x float> %shuf
+}
+
+define amdgpu_ps <3 x float> @extract_elt0_elt2_elt3_ptr_s_buffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt0_elt2_elt3_ptr_s_buffer_load_v4f32(
+; CHECK-NEXT:    [[DATA:%.*]] = call <4 x float> @llvm.amdgcn.ptr.s.buffer.load.v4f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[DATA]], <4 x float> poison, <3 x i32> <i32 0, i32 2, i32 3>
+; CHECK-NEXT:    ret <3 x float> [[SHUF]]
+;
+  %data = call <4 x float> @llvm.amdgcn.ptr.s.buffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %shuf = shufflevector <4 x float> %data, <4 x float> poison, <3 x i32> <i32 0, i32 2, i32 3>
+  ret <3 x float> %shuf
+}
+
+define amdgpu_ps float @extract_elt0_ptr_s_buffer_load_v3f32(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt0_ptr_s_buffer_load_v3f32(
+; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret float [[DATA]]
+;
+  %data = call <3 x float> @llvm.amdgcn.ptr.s.buffer.load.v3f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %elt0 = extractelement <3 x float> %data, i32 0
+  ret float %elt0
+}
+
+define amdgpu_ps float @extract_elt1_ptr_s_buffer_load_v3f32(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt1_ptr_s_buffer_load_v3f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 4
+; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret float [[DATA]]
+;
+  %data = call <3 x float> @llvm.amdgcn.ptr.s.buffer.load.v3f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %elt1 = extractelement <3 x float> %data, i32 1
+  ret float %elt1
+}
+
+define amdgpu_ps float @extract_elt2_ptr_s_buffer_load_v3f32(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt2_ptr_s_buffer_load_v3f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 8
+; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret float [[DATA]]
+;
+  %data = call <3 x float> @llvm.amdgcn.ptr.s.buffer.load.v3f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %elt1 = extractelement <3 x float> %data, i32 2
+  ret float %elt1
+}
+
+define amdgpu_ps <2 x float> @extract_elt0_elt1_ptr_s_buffer_load_v3f32(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt0_elt1_ptr_s_buffer_load_v3f32(
+; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.ptr.s.buffer.load.v2f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret <2 x float> [[DATA]]
+;
+  %data = call <3 x float> @llvm.amdgcn.ptr.s.buffer.load.v3f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %shuf = shufflevector <3 x float> %data, <3 x float> poison, <2 x i32> <i32 0, i32 1>
+  ret <2 x float> %shuf
+}
+
+define amdgpu_ps <2 x float> @extract_elt1_elt2_ptr_s_buffer_load_v3f32(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt1_elt2_ptr_s_buffer_load_v3f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 4
+; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.ptr.s.buffer.load.v2f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret <2 x float> [[DATA]]
+;
+  %data = call <3 x float> @llvm.amdgcn.ptr.s.buffer.load.v3f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %shuf = shufflevector <3 x float> %data, <3 x float> poison, <2 x i32> <i32 1, i32 2>
+  ret <2 x float> %shuf
+}
+
+; Do not trim to vec3 ptr_s_buffer_load in instcombine, as the load will most likely be widened
+; to vec4 anyway during lowering.
+define amdgpu_ps <3 x float> @extract_elt1_elt2_elt3_ptr_s_buffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt1_elt2_elt3_ptr_s_buffer_load_v4f32(
+; CHECK-NEXT:    [[DATA:%.*]] = call <4 x float> @llvm.amdgcn.ptr.s.buffer.load.v4f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[DATA]], <4 x float> poison, <3 x i32> <i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <3 x float> [[SHUF]]
+;
+  %data = call <4 x float> @llvm.amdgcn.ptr.s.buffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %shuf = shufflevector <4 x float> %data, <4 x float> poison, <3 x i32> <i32 1, i32 2, i32 3>
+  ret <3 x float> %shuf
+}
+
+define i32 @extract0_bitcast_ptr_s_buffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract0_bitcast_ptr_s_buffer_load_v4f32(
+; CHECK-NEXT:    [[VAR:%.*]] = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    [[VAR2:%.*]] = bitcast float [[VAR]] to i32
+; CHECK-NEXT:    ret i32 [[VAR2]]
+;
+  %var = call <4 x float> @llvm.amdgcn.ptr.s.buffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %var1 = bitcast <4 x float> %var to <4 x i32>
+  %var2 = extractelement <4 x i32> %var1, i32 0
+  ret i32 %var2
+}
+
+define float @extract0_bitcast_ptr_s_buffer_load_v4i32(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract0_bitcast_ptr_s_buffer_load_v4i32(
+; CHECK-NEXT:    [[VAR:%.*]] = call i32 @llvm.amdgcn.ptr.s.buffer.load.i32(ptr addrspace(8) [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    [[VAR2:%.*]] = bitcast i32 [[VAR]] to float
+; CHECK-NEXT:    ret float [[VAR2]]
+;
+  %var = call <4 x i32> @llvm.amdgcn.ptr.s.buffer.load.v4i32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %var1 = bitcast <4 x i32> %var to <4 x float>
+  %var2 = extractelement <4 x float> %var1, i32 0
+  ret float %var2
+}
+
+define amdgpu_ps float @preserve_metadata_extract_elt0_ptr_s_buffer_load_v2f32(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @preserve_metadata_extract_elt0_ptr_s_buffer_load_v2f32(
+; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0), !fpmath [[META0]], !invariant.load [[META1]]
+; CHECK-NEXT:    ret float [[DATA]]
+;
+  %data = call <2 x float> @llvm.amdgcn.ptr.s.buffer.load.v2f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !fpmath !0, !invariant.load !1
+  %elt0 = extractelement <2 x float> %data, i32 0
+  ret float %elt0
+}
+
+declare float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8), i32, i32) #1
+declare <2 x float> @llvm.amdgcn.ptr.s.buffer.load.v2f32(ptr addrspace(8), i32, i32) #1
+declare <3 x float> @llvm.amdgcn.ptr.s.buffer.load.v3f32(ptr addrspace(8), i32, i32) #1
+declare <4 x float> @llvm.amdgcn.ptr.s.buffer.load.v4f32(ptr addrspace(8), i32, i32) #1
+declare <4 x i32> @llvm.amdgcn.ptr.s.buffer.load.v4i32(ptr addrspace(8), i32, i32) #1
+
+define amdgpu_ps half @extract_elt0_ptr_s_buffer_load_v2f16(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt0_ptr_s_buffer_load_v2f16(
+; CHECK-NEXT:    [[DATA:%.*]] = call half @llvm.amdgcn.ptr.s.buffer.load.f16(ptr addrspace(8) [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret half [[DATA]]
+;
+  %data = call <2 x half> @llvm.amdgcn.ptr.s.buffer.load.v2f16(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %elt0 = extractelement <2 x half> %data, i32 0
+  ret half %elt0
+}
+
+define amdgpu_ps half @extract_elt1_ptr_s_buffer_load_v2f16(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt1_ptr_s_buffer_load_v2f16(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 2
+; CHECK-NEXT:    [[DATA:%.*]] = call half @llvm.amdgcn.ptr.s.buffer.load.f16(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret half [[DATA]]
+;
+  %data = call <2 x half> @llvm.amdgcn.ptr.s.buffer.load.v2f16(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %elt1 = extractelement <2 x half> %data, i32 1
+  ret half %elt1
+}
+
+define amdgpu_ps half @extract_elt1_ptr_s_buffer_load_v3f16(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt1_ptr_s_buffer_load_v3f16(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 2
+; CHECK-NEXT:    [[DATA:%.*]] = call half @llvm.amdgcn.ptr.s.buffer.load.f16(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret half [[DATA]]
+;
+  %data = call <3 x half> @llvm.amdgcn.ptr.s.buffer.load.v3f16(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %elt1 = extractelement <3 x half> %data, i32 1
+  ret half %elt1
+}
+
+define amdgpu_ps half @extract_elt1_ptr_s_buffer_load_v4f16(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt1_ptr_s_buffer_load_v4f16(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 2
+; CHECK-NEXT:    [[DATA:%.*]] = call half @llvm.amdgcn.ptr.s.buffer.load.f16(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret half [[DATA]]
+;
+  %data = call <4 x half> @llvm.amdgcn.ptr.s.buffer.load.v4f16(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %elt1 = extractelement <4 x half> %data, i32 1
+  ret half %elt1
+}
+
+
+define amdgpu_ps half @extract_elt3_ptr_s_buffer_load_v4f16(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt3_ptr_s_buffer_load_v4f16(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 6
+; CHECK-NEXT:    [[DATA:%.*]] = call half @llvm.amdgcn.ptr.s.buffer.load.f16(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret half [[DATA]]
+;
+  %data = call <4 x half> @llvm.amdgcn.ptr.s.buffer.load.v4f16(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %elt1 = extractelement <4 x half> %data, i32 3
+  ret half %elt1
+}
+
+define amdgpu_ps <2 x half> @extract_elt0_elt1_ptr_s_buffer_load_v4f16(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt0_elt1_ptr_s_buffer_load_v4f16(
+; CHECK-NEXT:    [[DATA:%.*]] = call <2 x half> @llvm.amdgcn.ptr.s.buffer.load.v2f16(ptr addrspace(8) [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret <2 x half> [[DATA]]
+;
+  %data = call <4 x half> @llvm.amdgcn.ptr.s.buffer.load.v4f16(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %shuf = shufflevector <4 x half> %data, <4 x half> poison, <2 x i32> <i32 0, i32 1>
+  ret <2 x half> %shuf
+}
+
+declare half @llvm.amdgcn.ptr.s.buffer.load.f16(ptr addrspace(8), i32, i32) #1
+declare <2 x half> @llvm.amdgcn.ptr.s.buffer.load.v2f16(ptr addrspace(8), i32, i32) #1
+declare <3 x half> @llvm.amdgcn.ptr.s.buffer.load.v3f16(ptr addrspace(8), i32, i32) #1
+declare <4 x half> @llvm.amdgcn.ptr.s.buffer.load.v4f16(ptr addrspace(8), i32, i32) #1
+
+define amdgpu_ps i8 @extract_elt0_ptr_s_buffer_load_v2i8(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt0_ptr_s_buffer_load_v2i8(
+; CHECK-NEXT:    [[DATA:%.*]] = call i8 @llvm.amdgcn.ptr.s.buffer.load.i8(ptr addrspace(8) [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret i8 [[DATA]]
+;
+  %data = call <2 x i8> @llvm.amdgcn.ptr.s.buffer.load.v2i8(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %elt0 = extractelement <2 x i8> %data, i32 0
+  ret i8 %elt0
+}
+
+define amdgpu_ps i8 @extract_elt1_ptr_s_buffer_load_v2i8(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt1_ptr_s_buffer_load_v2i8(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 1
+; CHECK-NEXT:    [[DATA:%.*]] = call i8 @llvm.amdgcn.ptr.s.buffer.load.i8(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret i8 [[DATA]]
+;
+  %data = call <2 x i8> @llvm.amdgcn.ptr.s.buffer.load.v2i8(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %elt1 = extractelement <2 x i8> %data, i32 1
+  ret i8 %elt1
+}
+
+define amdgpu_ps i8 @extract_elt1_ptr_s_buffer_load_v3i8(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt1_ptr_s_buffer_load_v3i8(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 1
+; CHECK-NEXT:    [[DATA:%.*]] = call i8 @llvm.amdgcn.ptr.s.buffer.load.i8(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret i8 [[DATA]]
+;
+  %data = call <3 x i8> @llvm.amdgcn.ptr.s.buffer.load.v3i8(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %elt1 = extractelement <3 x i8> %data, i32 1
+  ret i8 %elt1
+}
+
+define amdgpu_ps i8 @extract_elt1_ptr_s_buffer_load_v4i8(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt1_ptr_s_buffer_load_v4i8(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 1
+; CHECK-NEXT:    [[DATA:%.*]] = call i8 @llvm.amdgcn.ptr.s.buffer.load.i8(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret i8 [[DATA]]
+;
+  %data = call <4 x i8> @llvm.amdgcn.ptr.s.buffer.load.v4i8(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %elt1 = extractelement <4 x i8> %data, i32 1
+  ret i8 %elt1
+}
+
+define amdgpu_ps i8 @extract_elt3_ptr_s_buffer_load_v4i8(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt3_ptr_s_buffer_load_v4i8(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 3
+; CHECK-NEXT:    [[DATA:%.*]] = call i8 @llvm.amdgcn.ptr.s.buffer.load.i8(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret i8 [[DATA]]
+;
+  %data = call <4 x i8> @llvm.amdgcn.ptr.s.buffer.load.v4i8(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %elt1 = extractelement <4 x i8> %data, i32 3
+  ret i8 %elt1
+}
+
+define amdgpu_ps <2 x i8> @extract_elt0_elt1_ptr_s_buffer_load_v4i8(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt0_elt1_ptr_s_buffer_load_v4i8(
+; CHECK-NEXT:    [[DATA:%.*]] = call <2 x i8> @llvm.amdgcn.ptr.s.buffer.load.v2i8(ptr addrspace(8) [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0), !invariant.load [[META1]]
+; CHECK-NEXT:    ret <2 x i8> [[DATA]]
+;
+  %data = call <4 x i8> @llvm.amdgcn.ptr.s.buffer.load.v4i8(ptr addrspace(8) %rsrc, i32 %ofs, i32 0), !invariant.load !1
+  %shuf = shufflevector <4 x i8> %data, <4 x i8> poison, <2 x i32> <i32 0, i32 1>
+  ret <2 x i8> %shuf
+}
+
+declare i8 @llvm.amdgcn.ptr.s.buffer.load.i8(ptr addrspace(8), i32, i32) #1
+declare <2 x i8> @llvm.amdgcn.ptr.s.buffer.load.v2i8(ptr addrspace(8), i32, i32) #1
+declare <3 x i8> @llvm.amdgcn.ptr.s.buffer.load.v3i8(ptr addrspace(8), i32, i32) #1
+declare <4 x i8> @llvm.amdgcn.ptr.s.buffer.load.v4i8(ptr addrspace(8), i32, i32) #1
+
+; --------------------------------------------------------------------
 ; llvm.amdgcn.raw.buffer.load.format
 ; --------------------------------------------------------------------
 
@@ -3062,8 +3455,8 @@ define amdgpu_ps float @extract_elt0_raw_tbuffer_load_v2f32(<4 x i32> inreg %rsr
 
 define amdgpu_ps float @extract_elt1_raw_tbuffer_load_v2f32(<4 x i32> inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt1_raw_tbuffer_load_v2f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.raw.tbuffer.load.v2f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x float> [[DATA]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 4
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.raw.tbuffer.load.f32(<4 x i32> [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <2 x float> @llvm.amdgcn.raw.tbuffer.load.v2f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3083,8 +3476,8 @@ define amdgpu_ps float @extract_elt0_raw_tbuffer_load_v4f32(<4 x i32> inreg %rsr
 
 define amdgpu_ps float @extract_elt1_raw_tbuffer_load_v4f32(<4 x i32> inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt1_raw_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.raw.tbuffer.load.v2f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x float> [[DATA]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 4
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.raw.tbuffer.load.f32(<4 x i32> [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <4 x float> @llvm.amdgcn.raw.tbuffer.load.v4f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3094,8 +3487,8 @@ define amdgpu_ps float @extract_elt1_raw_tbuffer_load_v4f32(<4 x i32> inreg %rsr
 
 define amdgpu_ps float @extract_elt2_raw_tbuffer_load_v4f32(<4 x i32> inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt2_raw_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.raw.tbuffer.load.v3f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <3 x float> [[DATA]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 8
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.raw.tbuffer.load.f32(<4 x i32> [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 75, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <4 x float> @llvm.amdgcn.raw.tbuffer.load.v4f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3105,8 +3498,8 @@ define amdgpu_ps float @extract_elt2_raw_tbuffer_load_v4f32(<4 x i32> inreg %rsr
 
 define amdgpu_ps float @extract_elt3_raw_tbuffer_load_v4f32(<4 x i32> inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt3_raw_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <4 x float> @llvm.amdgcn.raw.tbuffer.load.v4f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <4 x float> [[DATA]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 12
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.raw.tbuffer.load.f32(<4 x i32> [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 68, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <4 x float> @llvm.amdgcn.raw.tbuffer.load.v4f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3126,8 +3519,8 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_raw_tbuffer_load_v4f32(<4 x i32>
 
 define amdgpu_ps <2 x float> @extract_elt1_elt2_raw_tbuffer_load_v4f32(<4 x i32> inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt1_elt2_raw_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.raw.tbuffer.load.v3f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x float> [[DATA]], <3 x float> poison, <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 4
+; CHECK-NEXT:    [[SHUF:%.*]] = call <2 x float> @llvm.amdgcn.raw.tbuffer.load.v2f32(<4 x i32> [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret <2 x float> [[SHUF]]
 ;
   %data = call <4 x float> @llvm.amdgcn.raw.tbuffer.load.v4f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3137,8 +3530,8 @@ define amdgpu_ps <2 x float> @extract_elt1_elt2_raw_tbuffer_load_v4f32(<4 x i32>
 
 define amdgpu_ps <2 x float> @extract_elt2_elt3_raw_tbuffer_load_v4f32(<4 x i32> inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt2_elt3_raw_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <4 x float> @llvm.amdgcn.raw.tbuffer.load.v4f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[DATA]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 8
+; CHECK-NEXT:    [[SHUF:%.*]] = call <2 x float> @llvm.amdgcn.raw.tbuffer.load.v2f32(<4 x i32> [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 75, i32 0)
 ; CHECK-NEXT:    ret <2 x float> [[SHUF]]
 ;
   %data = call <4 x float> @llvm.amdgcn.raw.tbuffer.load.v4f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3158,8 +3551,8 @@ define amdgpu_ps <3 x float> @extract_elt0_elt1_elt2_raw_tbuffer_load_v4f32(<4 x
 
 define amdgpu_ps <3 x float> @extract_elt1_elt2_elt3_raw_tbuffer_load_v4f32(<4 x i32> inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt1_elt2_elt3_raw_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <4 x float> @llvm.amdgcn.raw.tbuffer.load.v4f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[DATA]], <4 x float> poison, <3 x i32> <i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 4
+; CHECK-NEXT:    [[SHUF:%.*]] = call <3 x float> @llvm.amdgcn.raw.tbuffer.load.v3f32(<4 x i32> [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret <3 x float> [[SHUF]]
 ;
   %data = call <4 x float> @llvm.amdgcn.raw.tbuffer.load.v4f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3190,8 +3583,8 @@ define amdgpu_ps float @extract_elt0_raw_tbuffer_load_v3f32(<4 x i32> inreg %rsr
 
 define amdgpu_ps float @extract_elt1_raw_tbuffer_load_v3f32(<4 x i32> inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt1_raw_tbuffer_load_v3f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.raw.tbuffer.load.v2f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x float> [[DATA]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 4
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.raw.tbuffer.load.f32(<4 x i32> [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <3 x float> @llvm.amdgcn.raw.tbuffer.load.v3f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3201,8 +3594,8 @@ define amdgpu_ps float @extract_elt1_raw_tbuffer_load_v3f32(<4 x i32> inreg %rsr
 
 define amdgpu_ps float @extract_elt2_raw_tbuffer_load_v3f32(<4 x i32> inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt2_raw_tbuffer_load_v3f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.raw.tbuffer.load.v3f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <3 x float> [[DATA]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 8
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.raw.tbuffer.load.f32(<4 x i32> [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 75, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <3 x float> @llvm.amdgcn.raw.tbuffer.load.v3f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3222,8 +3615,8 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_raw_tbuffer_load_v3f32(<4 x i32>
 
 define amdgpu_ps <2 x float> @extract_elt1_elt2_raw_tbuffer_load_v3f32(<4 x i32> inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt1_elt2_raw_tbuffer_load_v3f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.raw.tbuffer.load.v3f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x float> [[DATA]], <3 x float> poison, <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 4
+; CHECK-NEXT:    [[SHUF:%.*]] = call <2 x float> @llvm.amdgcn.raw.tbuffer.load.v2f32(<4 x i32> [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret <2 x float> [[SHUF]]
 ;
   %data = call <3 x float> @llvm.amdgcn.raw.tbuffer.load.v3f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3262,8 +3655,8 @@ declare <4 x i32> @llvm.amdgcn.raw.tbuffer.load.v4i32(<4 x i32>, i32, i32, i32, 
 
 define amdgpu_ps half @extract_elt3_raw_tbuffer_load_v4f16(<4 x i32> inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt3_raw_tbuffer_load_v4f16(
-; CHECK-NEXT:    [[DATA:%.*]] = call <4 x half> @llvm.amdgcn.raw.tbuffer.load.v4f16(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <4 x half> [[DATA]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 12
+; CHECK-NEXT:    [[ELT1:%.*]] = call half @llvm.amdgcn.raw.tbuffer.load.f16(<4 x i32> [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 68, i32 0)
 ; CHECK-NEXT:    ret half [[ELT1]]
 ;
   %data = call <4 x half> @llvm.amdgcn.raw.tbuffer.load.v4f16(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3273,8 +3666,8 @@ define amdgpu_ps half @extract_elt3_raw_tbuffer_load_v4f16(<4 x i32> inreg %rsrc
 
 define amdgpu_ps half @extract_elt2_raw_tbuffer_load_v4f16(<4 x i32> inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt2_raw_tbuffer_load_v4f16(
-; CHECK-NEXT:    [[DATA:%.*]] = call <3 x half> @llvm.amdgcn.raw.tbuffer.load.v3f16(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <3 x half> [[DATA]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 8
+; CHECK-NEXT:    [[ELT1:%.*]] = call half @llvm.amdgcn.raw.tbuffer.load.f16(<4 x i32> [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 75, i32 0)
 ; CHECK-NEXT:    ret half [[ELT1]]
 ;
   %data = call <4 x half> @llvm.amdgcn.raw.tbuffer.load.v4f16(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3284,8 +3677,8 @@ define amdgpu_ps half @extract_elt2_raw_tbuffer_load_v4f16(<4 x i32> inreg %rsrc
 
 define amdgpu_ps half @extract_elt1_raw_tbuffer_load_v4f16(<4 x i32> inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt1_raw_tbuffer_load_v4f16(
-; CHECK-NEXT:    [[DATA:%.*]] = call <2 x half> @llvm.amdgcn.raw.tbuffer.load.v2f16(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x half> [[DATA]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 4
+; CHECK-NEXT:    [[ELT1:%.*]] = call half @llvm.amdgcn.raw.tbuffer.load.f16(<4 x i32> [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret half [[ELT1]]
 ;
   %data = call <4 x half> @llvm.amdgcn.raw.tbuffer.load.v4f16(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3351,8 +3744,8 @@ define amdgpu_ps float @extract_elt0_raw_ptr_tbuffer_load_v2f32(ptr addrspace(8)
 
 define amdgpu_ps float @extract_elt1_raw_ptr_tbuffer_load_v2f32(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt1_raw_ptr_tbuffer_load_v2f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v2f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x float> [[DATA]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 4
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.raw.ptr.tbuffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <2 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v2f32(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3372,8 +3765,8 @@ define amdgpu_ps float @extract_elt0_raw_ptr_tbuffer_load_v4f32(ptr addrspace(8)
 
 define amdgpu_ps float @extract_elt1_raw_ptr_tbuffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt1_raw_ptr_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v2f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x float> [[DATA]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 4
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.raw.ptr.tbuffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3383,8 +3776,8 @@ define amdgpu_ps float @extract_elt1_raw_ptr_tbuffer_load_v4f32(ptr addrspace(8)
 
 define amdgpu_ps float @extract_elt2_raw_ptr_tbuffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt2_raw_ptr_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v3f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <3 x float> [[DATA]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 8
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.raw.ptr.tbuffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 75, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3394,8 +3787,8 @@ define amdgpu_ps float @extract_elt2_raw_ptr_tbuffer_load_v4f32(ptr addrspace(8)
 
 define amdgpu_ps float @extract_elt3_raw_ptr_tbuffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt3_raw_ptr_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <4 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v4f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <4 x float> [[DATA]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 12
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.raw.ptr.tbuffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 68, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3415,8 +3808,8 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_raw_ptr_tbuffer_load_v4f32(ptr a
 
 define amdgpu_ps <2 x float> @extract_elt1_elt2_raw_ptr_tbuffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt1_elt2_raw_ptr_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v3f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x float> [[DATA]], <3 x float> poison, <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 4
+; CHECK-NEXT:    [[SHUF:%.*]] = call <2 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v2f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret <2 x float> [[SHUF]]
 ;
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3426,8 +3819,8 @@ define amdgpu_ps <2 x float> @extract_elt1_elt2_raw_ptr_tbuffer_load_v4f32(ptr a
 
 define amdgpu_ps <2 x float> @extract_elt2_elt3_raw_ptr_tbuffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt2_elt3_raw_ptr_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <4 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v4f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[DATA]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 8
+; CHECK-NEXT:    [[SHUF:%.*]] = call <2 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v2f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 75, i32 0)
 ; CHECK-NEXT:    ret <2 x float> [[SHUF]]
 ;
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3447,8 +3840,8 @@ define amdgpu_ps <3 x float> @extract_elt0_elt1_elt2_raw_ptr_tbuffer_load_v4f32(
 
 define amdgpu_ps <3 x float> @extract_elt1_elt2_elt3_raw_ptr_tbuffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt1_elt2_elt3_raw_ptr_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <4 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v4f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[DATA]], <4 x float> poison, <3 x i32> <i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 4
+; CHECK-NEXT:    [[SHUF:%.*]] = call <3 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v3f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret <3 x float> [[SHUF]]
 ;
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3479,8 +3872,8 @@ define amdgpu_ps float @extract_elt0_raw_ptr_tbuffer_load_v3f32(ptr addrspace(8)
 
 define amdgpu_ps float @extract_elt1_raw_ptr_tbuffer_load_v3f32(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt1_raw_ptr_tbuffer_load_v3f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v2f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x float> [[DATA]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 4
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.raw.ptr.tbuffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <3 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v3f32(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3490,8 +3883,8 @@ define amdgpu_ps float @extract_elt1_raw_ptr_tbuffer_load_v3f32(ptr addrspace(8)
 
 define amdgpu_ps float @extract_elt2_raw_ptr_tbuffer_load_v3f32(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt2_raw_ptr_tbuffer_load_v3f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v3f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <3 x float> [[DATA]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 8
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.raw.ptr.tbuffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 75, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <3 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v3f32(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3511,8 +3904,8 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_raw_ptr_tbuffer_load_v3f32(ptr a
 
 define amdgpu_ps <2 x float> @extract_elt1_elt2_raw_ptr_tbuffer_load_v3f32(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt1_elt2_raw_ptr_tbuffer_load_v3f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v3f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x float> [[DATA]], <3 x float> poison, <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 4
+; CHECK-NEXT:    [[SHUF:%.*]] = call <2 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v2f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret <2 x float> [[SHUF]]
 ;
   %data = call <3 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v3f32(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3551,8 +3944,8 @@ declare <4 x i32> @llvm.amdgcn.raw.ptr.tbuffer.load.v4i32(ptr addrspace(8), i32,
 
 define amdgpu_ps half @extract_elt3_raw_ptr_tbuffer_load_v4f16(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt3_raw_ptr_tbuffer_load_v4f16(
-; CHECK-NEXT:    [[DATA:%.*]] = call <4 x half> @llvm.amdgcn.raw.ptr.tbuffer.load.v4f16(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <4 x half> [[DATA]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 12
+; CHECK-NEXT:    [[ELT1:%.*]] = call half @llvm.amdgcn.raw.ptr.tbuffer.load.f16(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 68, i32 0)
 ; CHECK-NEXT:    ret half [[ELT1]]
 ;
   %data = call <4 x half> @llvm.amdgcn.raw.ptr.tbuffer.load.v4f16(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3562,8 +3955,8 @@ define amdgpu_ps half @extract_elt3_raw_ptr_tbuffer_load_v4f16(ptr addrspace(8) 
 
 define amdgpu_ps half @extract_elt2_raw_ptr_tbuffer_load_v4f16(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt2_raw_ptr_tbuffer_load_v4f16(
-; CHECK-NEXT:    [[DATA:%.*]] = call <3 x half> @llvm.amdgcn.raw.ptr.tbuffer.load.v3f16(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <3 x half> [[DATA]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 8
+; CHECK-NEXT:    [[ELT1:%.*]] = call half @llvm.amdgcn.raw.ptr.tbuffer.load.f16(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 75, i32 0)
 ; CHECK-NEXT:    ret half [[ELT1]]
 ;
   %data = call <4 x half> @llvm.amdgcn.raw.ptr.tbuffer.load.v4f16(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3573,8 +3966,8 @@ define amdgpu_ps half @extract_elt2_raw_ptr_tbuffer_load_v4f16(ptr addrspace(8) 
 
 define amdgpu_ps half @extract_elt1_raw_ptr_tbuffer_load_v4f16(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
 ; CHECK-LABEL: @extract_elt1_raw_ptr_tbuffer_load_v4f16(
-; CHECK-NEXT:    [[DATA:%.*]] = call <2 x half> @llvm.amdgcn.raw.ptr.tbuffer.load.v2f16(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x half> [[DATA]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0:%.*]], 4
+; CHECK-NEXT:    [[ELT1:%.*]] = call half @llvm.amdgcn.raw.ptr.tbuffer.load.f16(ptr addrspace(8) [[RSRC:%.*]], i32 [[TMP1]], i32 [[ARG1:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret half [[ELT1]]
 ;
   %data = call <4 x half> @llvm.amdgcn.raw.ptr.tbuffer.load.v4f16(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -3640,8 +4033,8 @@ define amdgpu_ps float @extract_elt0_struct_tbuffer_load_v2f32(<4 x i32> inreg %
 
 define amdgpu_ps float @extract_elt1_struct_tbuffer_load_v2f32(<4 x i32> inreg %rsrc, i32 %arg0, i32 %arg1, i32 inreg %arg2) #0 {
 ; CHECK-LABEL: @extract_elt1_struct_tbuffer_load_v2f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.struct.tbuffer.load.v2f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x float> [[DATA]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG1:%.*]], 4
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.struct.tbuffer.load.f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[TMP1]], i32 [[ARG2:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <2 x float> @llvm.amdgcn.struct.tbuffer.load.v2f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 %arg2, i32 78, i32 0)
@@ -3661,8 +4054,8 @@ define amdgpu_ps float @extract_elt0_struct_tbuffer_load_v4f32(<4 x i32> inreg %
 
 define amdgpu_ps float @extract_elt1_struct_tbuffer_load_v4f32(<4 x i32> inreg %rsrc, i32 %arg0, i32 %arg1, i32 inreg %arg2) #0 {
 ; CHECK-LABEL: @extract_elt1_struct_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.struct.tbuffer.load.v2f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x float> [[DATA]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG1:%.*]], 4
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.struct.tbuffer.load.f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[TMP1]], i32 [[ARG2:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <4 x float> @llvm.amdgcn.struct.tbuffer.load.v4f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 %arg2, i32 78, i32 0)
@@ -3672,8 +4065,8 @@ define amdgpu_ps float @extract_elt1_struct_tbuffer_load_v4f32(<4 x i32> inreg %
 
 define amdgpu_ps float @extract_elt2_struct_tbuffer_load_v4f32(<4 x i32> inreg %rsrc, i32 %arg0, i32 %arg1, i32 inreg %arg2) #0 {
 ; CHECK-LABEL: @extract_elt2_struct_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.struct.tbuffer.load.v3f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <3 x float> [[DATA]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG1:%.*]], 8
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.struct.tbuffer.load.f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[TMP1]], i32 [[ARG2:%.*]], i32 75, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <4 x float> @llvm.amdgcn.struct.tbuffer.load.v4f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 %arg2, i32 78, i32 0)
@@ -3683,8 +4076,8 @@ define amdgpu_ps float @extract_elt2_struct_tbuffer_load_v4f32(<4 x i32> inreg %
 
 define amdgpu_ps float @extract_elt3_struct_tbuffer_load_v4f32(<4 x i32> inreg %rsrc, i32 %arg0, i32 %arg1, i32 inreg %arg2) #0 {
 ; CHECK-LABEL: @extract_elt3_struct_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <4 x float> @llvm.amdgcn.struct.tbuffer.load.v4f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <4 x float> [[DATA]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG1:%.*]], 12
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.struct.tbuffer.load.f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[TMP1]], i32 [[ARG2:%.*]], i32 68, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <4 x float> @llvm.amdgcn.struct.tbuffer.load.v4f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 %arg2, i32 78, i32 0)
@@ -3704,8 +4097,8 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_struct_tbuffer_load_v4f32(<4 x i
 
 define amdgpu_ps <2 x float> @extract_elt1_elt2_struct_tbuffer_load_v4f32(<4 x i32> inreg %rsrc, i32 %arg0, i32 %arg1, i32 inreg %arg2) #0 {
 ; CHECK-LABEL: @extract_elt1_elt2_struct_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.struct.tbuffer.load.v3f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x float> [[DATA]], <3 x float> poison, <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG1:%.*]], 4
+; CHECK-NEXT:    [[SHUF:%.*]] = call <2 x float> @llvm.amdgcn.struct.tbuffer.load.v2f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[TMP1]], i32 [[ARG2:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret <2 x float> [[SHUF]]
 ;
   %data = call <4 x float> @llvm.amdgcn.struct.tbuffer.load.v4f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 %arg2, i32 78, i32 0)
@@ -3715,8 +4108,8 @@ define amdgpu_ps <2 x float> @extract_elt1_elt2_struct_tbuffer_load_v4f32(<4 x i
 
 define amdgpu_ps <2 x float> @extract_elt2_elt3_struct_tbuffer_load_v4f32(<4 x i32> inreg %rsrc, i32 %arg0, i32 %arg1, i32 inreg %arg2) #0 {
 ; CHECK-LABEL: @extract_elt2_elt3_struct_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <4 x float> @llvm.amdgcn.struct.tbuffer.load.v4f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[DATA]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG1:%.*]], 8
+; CHECK-NEXT:    [[SHUF:%.*]] = call <2 x float> @llvm.amdgcn.struct.tbuffer.load.v2f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[TMP1]], i32 [[ARG2:%.*]], i32 75, i32 0)
 ; CHECK-NEXT:    ret <2 x float> [[SHUF]]
 ;
   %data = call <4 x float> @llvm.amdgcn.struct.tbuffer.load.v4f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 %arg2, i32 78, i32 0)
@@ -3736,8 +4129,8 @@ define amdgpu_ps <3 x float> @extract_elt0_elt1_elt2_struct_tbuffer_load_v4f32(<
 
 define amdgpu_ps <3 x float> @extract_elt1_elt2_elt3_struct_tbuffer_load_v4f32(<4 x i32> inreg %rsrc, i32 %arg0, i32 %arg1, i32 inreg %arg2) #0 {
 ; CHECK-LABEL: @extract_elt1_elt2_elt3_struct_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <4 x float> @llvm.amdgcn.struct.tbuffer.load.v4f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[DATA]], <4 x float> poison, <3 x i32> <i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG1:%.*]], 4
+; CHECK-NEXT:    [[SHUF:%.*]] = call <3 x float> @llvm.amdgcn.struct.tbuffer.load.v3f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[TMP1]], i32 [[ARG2:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret <3 x float> [[SHUF]]
 ;
   %data = call <4 x float> @llvm.amdgcn.struct.tbuffer.load.v4f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 %arg2, i32 78, i32 0)
@@ -3768,8 +4161,8 @@ define amdgpu_ps float @extract_elt0_struct_tbuffer_load_v3f32(<4 x i32> inreg %
 
 define amdgpu_ps float @extract_elt1_struct_tbuffer_load_v3f32(<4 x i32> inreg %rsrc, i32 %arg0, i32 %arg1, i32 inreg %arg2) #0 {
 ; CHECK-LABEL: @extract_elt1_struct_tbuffer_load_v3f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.struct.tbuffer.load.v2f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x float> [[DATA]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG1:%.*]], 4
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.struct.tbuffer.load.f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[TMP1]], i32 [[ARG2:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <3 x float> @llvm.amdgcn.struct.tbuffer.load.v3f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 %arg2, i32 78, i32 0)
@@ -3779,8 +4172,8 @@ define amdgpu_ps float @extract_elt1_struct_tbuffer_load_v3f32(<4 x i32> inreg %
 
 define amdgpu_ps float @extract_elt2_struct_tbuffer_load_v3f32(<4 x i32> inreg %rsrc, i32 %arg0, i32 %arg1, i32 inreg %arg2) #0 {
 ; CHECK-LABEL: @extract_elt2_struct_tbuffer_load_v3f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.struct.tbuffer.load.v3f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <3 x float> [[DATA]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG1:%.*]], 8
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.struct.tbuffer.load.f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[TMP1]], i32 [[ARG2:%.*]], i32 75, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <3 x float> @llvm.amdgcn.struct.tbuffer.load.v3f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 %arg2, i32 78, i32 0)
@@ -3800,8 +4193,8 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_struct_tbuffer_load_v3f32(<4 x i
 
 define amdgpu_ps <2 x float> @extract_elt1_elt2_struct_tbuffer_load_v3f32(<4 x i32> inreg %rsrc, i32 %arg0, i32 %arg1, i32 inreg %arg2) #0 {
 ; CHECK-LABEL: @extract_elt1_elt2_struct_tbuffer_load_v3f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.struct.tbuffer.load.v3f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x float> [[DATA]], <3 x float> poison, <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG1:%.*]], 4
+; CHECK-NEXT:    [[SHUF:%.*]] = call <2 x float> @llvm.amdgcn.struct.tbuffer.load.v2f32(<4 x i32> [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[TMP1]], i32 [[ARG2:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret <2 x float> [[SHUF]]
 ;
   %data = call <3 x float> @llvm.amdgcn.struct.tbuffer.load.v3f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 %arg2, i32 78, i32 0)
@@ -3881,8 +4274,8 @@ define amdgpu_ps float @extract_elt0_struct_ptr_tbuffer_load_v2f32(ptr addrspace
 
 define amdgpu_ps float @extract_elt1_struct_ptr_tbuffer_load_v2f32(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 %arg1, i32 inreg %arg2) #0 {
 ; CHECK-LABEL: @extract_elt1_struct_ptr_tbuffer_load_v2f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v2f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x float> [[DATA]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG1:%.*]], 4
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.struct.ptr.tbuffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[TMP1]], i32 [[ARG2:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <2 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v2f32(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 %arg2, i32 78, i32 0)
@@ -3902,8 +4295,8 @@ define amdgpu_ps float @extract_elt0_struct_ptr_tbuffer_load_v4f32(ptr addrspace
 
 define amdgpu_ps float @extract_elt1_struct_ptr_tbuffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 %arg1, i32 inreg %arg2) #0 {
 ; CHECK-LABEL: @extract_elt1_struct_ptr_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v2f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x float> [[DATA]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG1:%.*]], 4
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.struct.ptr.tbuffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[TMP1]], i32 [[ARG2:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <4 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 %arg2, i32 78, i32 0)
@@ -3913,8 +4306,8 @@ define amdgpu_ps float @extract_elt1_struct_ptr_tbuffer_load_v4f32(ptr addrspace
 
 define amdgpu_ps float @extract_elt2_struct_ptr_tbuffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 %arg1, i32 inreg %arg2) #0 {
 ; CHECK-LABEL: @extract_elt2_struct_ptr_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v3f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <3 x float> [[DATA]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG1:%.*]], 8
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.struct.ptr.tbuffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[TMP1]], i32 [[ARG2:%.*]], i32 75, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <4 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 %arg2, i32 78, i32 0)
@@ -3924,8 +4317,8 @@ define amdgpu_ps float @extract_elt2_struct_ptr_tbuffer_load_v4f32(ptr addrspace
 
 define amdgpu_ps float @extract_elt3_struct_ptr_tbuffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 %arg1, i32 inreg %arg2) #0 {
 ; CHECK-LABEL: @extract_elt3_struct_ptr_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <4 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v4f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <4 x float> [[DATA]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG1:%.*]], 12
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.struct.ptr.tbuffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[TMP1]], i32 [[ARG2:%.*]], i32 68, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <4 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 %arg2, i32 78, i32 0)
@@ -3945,8 +4338,8 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_struct_ptr_tbuffer_load_v4f32(pt
 
 define amdgpu_ps <2 x float> @extract_elt1_elt2_struct_ptr_tbuffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 %arg1, i32 inreg %arg2) #0 {
 ; CHECK-LABEL: @extract_elt1_elt2_struct_ptr_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v3f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x float> [[DATA]], <3 x float> poison, <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG1:%.*]], 4
+; CHECK-NEXT:    [[SHUF:%.*]] = call <2 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v2f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[TMP1]], i32 [[ARG2:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret <2 x float> [[SHUF]]
 ;
   %data = call <4 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 %arg2, i32 78, i32 0)
@@ -3956,8 +4349,8 @@ define amdgpu_ps <2 x float> @extract_elt1_elt2_struct_ptr_tbuffer_load_v4f32(pt
 
 define amdgpu_ps <2 x float> @extract_elt2_elt3_struct_ptr_tbuffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 %arg1, i32 inreg %arg2) #0 {
 ; CHECK-LABEL: @extract_elt2_elt3_struct_ptr_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <4 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v4f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[DATA]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG1:%.*]], 8
+; CHECK-NEXT:    [[SHUF:%.*]] = call <2 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v2f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[TMP1]], i32 [[ARG2:%.*]], i32 75, i32 0)
 ; CHECK-NEXT:    ret <2 x float> [[SHUF]]
 ;
   %data = call <4 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 %arg2, i32 78, i32 0)
@@ -3977,8 +4370,8 @@ define amdgpu_ps <3 x float> @extract_elt0_elt1_elt2_struct_ptr_tbuffer_load_v4f
 
 define amdgpu_ps <3 x float> @extract_elt1_elt2_elt3_struct_ptr_tbuffer_load_v4f32(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 %arg1, i32 inreg %arg2) #0 {
 ; CHECK-LABEL: @extract_elt1_elt2_elt3_struct_ptr_tbuffer_load_v4f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <4 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v4f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[DATA]], <4 x float> poison, <3 x i32> <i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG1:%.*]], 4
+; CHECK-NEXT:    [[SHUF:%.*]] = call <3 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v3f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[TMP1]], i32 [[ARG2:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret <3 x float> [[SHUF]]
 ;
   %data = call <4 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 %arg2, i32 78, i32 0)
@@ -4009,8 +4402,8 @@ define amdgpu_ps float @extract_elt0_struct_ptr_tbuffer_load_v3f32(ptr addrspace
 
 define amdgpu_ps float @extract_elt1_struct_ptr_tbuffer_load_v3f32(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 %arg1, i32 inreg %arg2) #0 {
 ; CHECK-LABEL: @extract_elt1_struct_ptr_tbuffer_load_v3f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v2f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x float> [[DATA]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG1:%.*]], 4
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.struct.ptr.tbuffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[TMP1]], i32 [[ARG2:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <3 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v3f32(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 %arg2, i32 78, i32 0)
@@ -4020,8 +4413,8 @@ define amdgpu_ps float @extract_elt1_struct_ptr_tbuffer_load_v3f32(ptr addrspace
 
 define amdgpu_ps float @extract_elt2_struct_ptr_tbuffer_load_v3f32(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 %arg1, i32 inreg %arg2) #0 {
 ; CHECK-LABEL: @extract_elt2_struct_ptr_tbuffer_load_v3f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v3f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <3 x float> [[DATA]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG1:%.*]], 8
+; CHECK-NEXT:    [[ELT1:%.*]] = call float @llvm.amdgcn.struct.ptr.tbuffer.load.f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[TMP1]], i32 [[ARG2:%.*]], i32 75, i32 0)
 ; CHECK-NEXT:    ret float [[ELT1]]
 ;
   %data = call <3 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v3f32(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 %arg2, i32 78, i32 0)
@@ -4041,8 +4434,8 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_struct_ptr_tbuffer_load_v3f32(pt
 
 define amdgpu_ps <2 x float> @extract_elt1_elt2_struct_ptr_tbuffer_load_v3f32(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 %arg1, i32 inreg %arg2) #0 {
 ; CHECK-LABEL: @extract_elt1_elt2_struct_ptr_tbuffer_load_v3f32(
-; CHECK-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v3f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 78, i32 0)
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x float> [[DATA]], <3 x float> poison, <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG1:%.*]], 4
+; CHECK-NEXT:    [[SHUF:%.*]] = call <2 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v2f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 [[TMP1]], i32 [[ARG2:%.*]], i32 77, i32 0)
 ; CHECK-NEXT:    ret <2 x float> [[SHUF]]
 ;
   %data = call <3 x float> @llvm.amdgcn.struct.ptr.tbuffer.load.v3f32(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 %arg2, i32 78, i32 0)
@@ -5406,3 +5799,4 @@ attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }
 
 !0 = !{float 2.500000e+00}
+!1 = !{}

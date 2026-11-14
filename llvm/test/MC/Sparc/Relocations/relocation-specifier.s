@@ -57,6 +57,20 @@ or %o1, %pc10(sym), %o1
 sethi %pc22(main), %o1
 or %o1, %pc10(main), %o1
 
+## GNU as has no %got operators, so these do not round-trip through ASM output.
+# ASM:      sethi %hi(sym), %o1
+# ASM-NEXT: or %o1, %lo(sym), %o1
+# ASM-NEXT: ld [%l7+sym], %o2
+# OBJDUMP:      sethi 0x0, %o1
+# OBJDUMP-NEXT:   R_SPARC_GOT22 sym
+# OBJDUMP-NEXT: or %o1, 0x0, %o1
+# OBJDUMP-NEXT:   R_SPARC_GOT10 sym
+# OBJDUMP-NEXT: ld [%l7], %o2
+# OBJDUMP-NEXT:   R_SPARC_GOT13 sym
+sethi %got22(sym), %o1
+or %o1, %got10(sym), %o1
+ld [%l7 + %got13(sym)], %o2
+
 # ASM:      sethi %hh(sym), %l0
 # ASM-NEXT: sethi %hh(sym), %l0
 # ASM-NEXT: or %g1, %hm(sym), %g3

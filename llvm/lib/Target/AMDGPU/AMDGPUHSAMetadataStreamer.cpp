@@ -63,13 +63,6 @@ static std::string getEnqueuedBlockSymbolName(const AMDGPUTargetMachine &TM,
 
 namespace llvm {
 
-static cl::opt<bool> DumpHSAMetadata(
-    "amdgpu-dump-hsa-metadata",
-    cl::desc("Dump AMDGPU HSA Metadata"));
-static cl::opt<bool> VerifyHSAMetadata(
-    "amdgpu-verify-hsa-metadata",
-    cl::desc("Verify AMDGPU HSA Metadata"));
-
 namespace AMDGPU::HSAMD {
 
 //===----------------------------------------------------------------------===//
@@ -283,7 +276,7 @@ void MetadataStreamerMsgPackV4::emitKernelAttrs(const AMDGPUTargetMachine &TM,
 void MetadataStreamerMsgPackV4::emitKernelArgs(const MachineFunction &MF,
                                                msgpack::MapDocNode Kern) {
   auto &Func = MF.getFunction();
-  unsigned Offset = 0;
+  uint64_t Offset = 0;
   auto Args = HSAMetadataDoc->getArrayNode();
   for (auto &Arg : Func.args()) {
     if (Arg.hasAttribute("amdgpu-hidden-argument"))
@@ -298,7 +291,7 @@ void MetadataStreamerMsgPackV4::emitKernelArgs(const MachineFunction &MF,
 }
 
 void MetadataStreamerMsgPackV4::emitKernelArg(const Argument &Arg,
-                                              unsigned &Offset,
+                                              uint64_t &Offset,
                                               msgpack::ArrayDocNode Args) {
   const auto *Func = Arg.getParent();
   auto ArgNo = Arg.getArgNo();
@@ -364,7 +357,7 @@ void MetadataStreamerMsgPackV4::emitKernelArg(const Argument &Arg,
 
 void MetadataStreamerMsgPackV4::emitKernelArg(
     const DataLayout &DL, Type *Ty, Align Alignment, StringRef ValueKind,
-    unsigned &Offset, msgpack::ArrayDocNode Args, MaybeAlign PointeeAlign,
+    uint64_t &Offset, msgpack::ArrayDocNode Args, MaybeAlign PointeeAlign,
     StringRef Name, StringRef TypeName, StringRef BaseTypeName,
     StringRef ActAccQual, StringRef AccQual, StringRef TypeQual) {
   auto Arg = Args.getDocument()->getMapNode();
@@ -412,7 +405,7 @@ void MetadataStreamerMsgPackV4::emitKernelArg(
 }
 
 void MetadataStreamerMsgPackV4::emitHiddenKernelArgs(
-    const MachineFunction &MF, unsigned &Offset, msgpack::ArrayDocNode Args) {
+    const MachineFunction &MF, uint64_t &Offset, msgpack::ArrayDocNode Args) {
   auto &Func = MF.getFunction();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
@@ -507,7 +500,7 @@ MetadataStreamerMsgPackV4::getHSAKernelProps(const MachineFunction &MF,
                                 ProgramInfo.DynamicCallStack);
   }
 
-  if (CodeObjectVersion >= AMDGPU::AMDHSA_COV5 && STM.supportsWGP())
+  if (CodeObjectVersion >= AMDGPU::AMDHSA_COV5 && STM.hasSupportsWGP())
     Kern[".workgroup_processor_mode"] =
         Kern.getDocument()->getNode(ProgramInfo.WgpMode);
 
@@ -572,9 +565,9 @@ void MetadataStreamerMsgPackV4::end() {
   raw_string_ostream StrOS(HSAMetadataString);
   HSAMetadataDoc->toYAML(StrOS);
 
-  if (DumpHSAMetadata)
+  if (CLOpts.dump_hsa_metadata)
     dump(StrOS.str());
-  if (VerifyHSAMetadata)
+  if (CLOpts.verify_hsa_metadata)
     verify(StrOS.str());
 }
 
@@ -617,7 +610,7 @@ void MetadataStreamerMsgPackV5::emitVersion() {
 }
 
 void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
-    const MachineFunction &MF, unsigned &Offset, msgpack::ArrayDocNode Args) {
+    const MachineFunction &MF, uint64_t &Offset, msgpack::ArrayDocNode Args) {
   auto &Func = MF.getFunction();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 

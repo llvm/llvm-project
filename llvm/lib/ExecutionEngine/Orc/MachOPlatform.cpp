@@ -7,15 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
+#include "llvm/ExecutionEngine/Orc/Mangling.h"
 
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
-#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
+#include "llvm/ExecutionEngine/Orc/BindCallControllerHandler.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/MachOBuilder.h"
+#include "llvm/ExecutionEngine/Orc/SPSHandlerSpec.h"
+#include "llvm/ExecutionEngine/Orc/SPSProxySpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -87,6 +90,32 @@ public:
 } // namespace orc
 } // namespace llvm
 
+// Controller-interface descriptors for the MachO platform runtime's SPS
+// wrapper calls.
+namespace llvm::orc::macho_sps_ci {
+struct CreatePThreadKey {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_macho_create_pthread_key");
+  using SPSSig = SPSExpected<uint64_t>();
+};
+} // namespace llvm::orc::macho_sps_ci
+
+// Specs for the call-controller handlers that the MachO platform runtime calls.
+namespace llvm::orc::macho_sps_handlers {
+struct PushInitializers
+    : sps::HandlerSpec<SPSExpected<SPSMachOJITDylibDepInfoMap>(
+          SPSExecutorAddr)> {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_macho_push_initializers_tag");
+};
+struct PushSymbols
+    : sps::HandlerSpec<SPSError(SPSExecutorAddr,
+                                SPSSequence<SPSTuple<SPSString, bool>>)> {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_macho_push_symbols_tag");
+};
+} // namespace llvm::orc::macho_sps_handlers
+
 namespace {
 
 using SPSRegisterSymbolsArgs =
@@ -99,7 +128,8 @@ std::unique_ptr<jitlink::LinkGraph> createPlatformGraph(MachOPlatform &MOP,
   auto &ES = MOP.getExecutionSession();
   return std::make_unique<jitlink::LinkGraph>(
       std::move(Name), ES.getSymbolStringPool(), ES.getTargetTriple(),
-      SubtargetFeatures(), jitlink::getGenericEdgeKindName);
+      ES.getTargetTriple().getArchPointerBitWidth() / 8, SubtargetFeatures(),
+      jitlink::getGenericEdgeKindName);
 }
 
 // Creates a Bootstrap-Complete LinkGraph to run deferred actions.
@@ -303,13 +333,14 @@ MachOPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
 
   {
     // Add JIT dispatch reexports from bootstrap JITDylib.
+    MangleAndInterner Mangle(ES);
     if (auto Err = PlatformJD.define(reexports(
             ES.getBootstrapJITDylib(),
             {{ES.intern("___orc_rt_jit_dispatch"),
-              {ES.intern(rt::DispatchName),
+              {Mangle(rt::DispatchName),
                JITSymbolFlags::Exported | JITSymbolFlags::Callable}},
              {ES.intern("___orc_rt_jit_dispatch_ctx"),
-              {ES.intern(rt::DispatchCtxName), JITSymbolFlags::Exported}}})))
+              {Mangle(rt::DispatchCtxName), JITSymbolFlags::Exported}}})))
       return Err;
   }
 
@@ -432,8 +463,7 @@ ArrayRef<std::pair<const char *, const char *>>
 MachOPlatform::standardLazyCompilationAliases() {
   static const std::pair<const char *, const char *>
       StandardLazyCompilationAliases[] = {
-          {"__orc_rt_reenter", "__orc_rt_sysv_reenter"},
-          {"__orc_rt_resolve_tag", "___orc_rt_resolve_tag"}};
+          {"__orc_rt_reenter", "__orc_rt_sysv_reenter"}};
 
   return ArrayRef<std::pair<const char *, const char *>>(
       StandardLazyCompilationAliases);
@@ -612,21 +642,12 @@ MachOPlatform::MachOPlatform(
 }
 
 Error MachOPlatform::associateRuntimeSupportFunctions() {
-  ExecutionSession::JITDispatchHandlerAssociationMap WFs;
-
-  using PushInitializersSPSSig =
-      SPSExpected<SPSMachOJITDylibDepInfoMap>(SPSExecutorAddr);
-  WFs[ES.intern("___orc_rt_macho_push_initializers_tag")] =
-      ES.wrapAsyncWithSPS<PushInitializersSPSSig>(
-          this, &MachOPlatform::rt_pushInitializers);
-
-  using PushSymbolsSPSSig =
-      SPSError(SPSExecutorAddr, SPSSequence<SPSTuple<SPSString, bool>>);
-  WFs[ES.intern("___orc_rt_macho_push_symbols_tag")] =
-      ES.wrapAsyncWithSPS<PushSymbolsSPSSig>(this,
-                                             &MachOPlatform::rt_pushSymbols);
-
-  return ES.registerJITDispatchHandlers(PlatformJD, std::move(WFs));
+  return ES.registerCallControllerHandlers(
+      PlatformJD,
+      bindCallControllerHandler<macho_sps_handlers::PushInitializers>(
+          this, &MachOPlatform::rt_pushInitializers),
+      bindCallControllerHandler<macho_sps_handlers::PushSymbols>(
+          this, &MachOPlatform::rt_pushSymbols));
 }
 
 void MachOPlatform::pushInitializersLoop(
@@ -798,11 +819,11 @@ Expected<uint64_t> MachOPlatform::createPThreadKey() {
         "not been loaded yet",
         inconvertibleErrorCode());
 
-  Expected<uint64_t> Result(0);
-  if (auto Err = ES.callSPSWrapper<SPSExpected<uint64_t>(void)>(
-          CreatePThreadKey.Addr, Result))
-    return std::move(Err);
-  return Result;
+  using CreatePThreadKeyProxy = Proxy<Expected<uint64_t>()>;
+  CreatePThreadKeyProxy CreateKey(
+      sps::ProxySpec<macho_sps_ci::CreatePThreadKey>::dispatch,
+      CreatePThreadKey.Addr);
+  return CreateKey(ES);
 }
 
 void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
@@ -1579,7 +1600,7 @@ Error MachOPlatform::MachOPlatformPlugin::populateObjCRuntimeObject(
       }
 
       SecBlock.addEdge(PointerEdge,
-                       RecordOffset + ((char *)&SD.Sec.addr - (char *)&SD.Sec),
+                       RecordOffset + offsetof(MachO::section_64, addr),
                        *ObjCImageInfoSym, -SecBlock.getAddress().getValue());
     };
   }
@@ -1772,6 +1793,9 @@ jitlink::Block &createHeaderBlock(MachOPlatform &MOP,
   for (auto &BV : Opts.BuildVersions)
     B.template addLoadCommand<MachO::LC_BUILD_VERSION>(
         BV.Platform, BV.MinOS, BV.SDK, static_cast<uint32_t>(0));
+
+  if (Opts.TargetTriple)
+    B.template addLoadCommand<MachO::LC_TARGET_TRIPLE>(*Opts.TargetTriple);
 
   using LoadKind = MachOPlatform::HeaderOptions::LoadDylibCmd::LoadKind;
   for (auto &LD : Opts.LoadDylibs) {

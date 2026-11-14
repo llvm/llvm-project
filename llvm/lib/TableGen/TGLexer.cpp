@@ -23,7 +23,6 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 
 using namespace llvm;
 
@@ -488,7 +487,6 @@ bool TGLexer::LexInclude() {
     return true;
   }
 
-  Dependencies.insert(IncludedFile);
   // Save the line number and lex buffer of the includer.
   CurBuf = SrcMgr.getMemoryBuffer(CurBuffer)->getBuffer();
   CurPtr = CurBuf.begin();
@@ -913,7 +911,7 @@ bool TGLexer::prepSkipRegion(bool MustNeverBeFalse) {
 
   do {
     // Skip all symbols to the line end.
-    while (CurPtr != CurBuf.end() && *CurPtr != '\n')
+    while (CurPtr != CurBuf.end() && *CurPtr != '\n' && *CurPtr != '\r')
       ++CurPtr;
 
     // Find the first non-whitespace symbol in the next line(s).

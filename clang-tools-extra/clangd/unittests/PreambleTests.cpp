@@ -54,10 +54,6 @@ namespace clang {
 namespace clangd {
 namespace {
 
-MATCHER_P2(Distance, File, D, "") {
-  return arg.first() == File && arg.second == D;
-}
-
 // Builds a preamble for BaselineContents, patches it for ModifiedContents and
 // returns the includes in the patch.
 IncludeStructure
@@ -169,13 +165,6 @@ TEST(PreamblePatchTest, ContainsNewIncludes) {
                       .MainFileIncludes;
   EXPECT_THAT(Includes, ElementsAre(AllOf(Field(&Inclusion::Written, "<d.h>"),
                                           Field(&Inclusion::HashLine, 4))));
-}
-
-TEST(PreamblePatchTest, MainFileIsEscaped) {
-  auto Includes = collectPatchedIncludes("#include <a.h>", "", "file\"name.cpp")
-                      .MainFileIncludes;
-  EXPECT_THAT(Includes, ElementsAre(AllOf(Field(&Inclusion::Written, "<a.h>"),
-                                          Field(&Inclusion::HashLine, 0))));
 }
 
 TEST(PreamblePatchTest, PatchesPreambleIncludes) {

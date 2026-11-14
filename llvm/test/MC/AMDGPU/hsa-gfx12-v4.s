@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1200 < %s | FileCheck --check-prefix=ASM %s
-// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1200 -filetype=obj < %s > %t
+// RUN: llvm-mc -triple=amdgpu12.00-amd-amdhsa < %s | FileCheck --check-prefix=ASM %s
+// RUN: llvm-mc -triple=amdgpu12.00-amd-amdhsa -filetype=obj < %s > %t
 // RUN: llvm-readelf -S -r -s %t | FileCheck --check-prefix=READOBJ %s
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
 
@@ -48,11 +48,11 @@
 
 .text
 
-.amdgcn_target "amdgcn-amd-amdhsa--gfx1200"
+.amdgcn_target "amdgpu12.00-amd-amdhsa--gfx1200"
 
 .amdhsa_code_object_version 4
 // ASM: .amdhsa_code_object_version 4
-// ASM: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx1200"
+// ASM: .amdgcn_target "amdgpu12.00-amd-amdhsa-unknown-gfx1200"
 
 .p2align 8
 .type minimal,@function

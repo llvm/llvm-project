@@ -5,9 +5,9 @@
 // RUN: %clang_cc1 -pedantic    -std=c11 -xc -DC11 -verify %s
 // RUN: %clang_cc1 -Weverything -std=c11 -xc -fms-extensions -DMS -verify %s
 // RUN: %clang_cc1 -Weverything -std=c2x -xc -DC23 -verify %s
-// RUN: %clang_cc1 -pedantic    -std=c2x -xc -DC23 -verify -Wpre-c23-compat %s
+// RUN: %clang_cc1 -pedantic    -std=c2x -xc -DC23 -verify -Wpre-c23-compat-pedantic %s
 // RUN: %clang_cc1 -Weverything -std=c23 -xc -DC23 -verify %s
-// RUN: %clang_cc1 -pedantic    -std=c23 -xc -DC23 -verify -Wpre-c23-compat %s
+// RUN: %clang_cc1 -pedantic    -std=c23 -xc -DC23 -verify -Wpre-c23-compat-pedantic %s
 // RUN: %clang_cc1 -Weverything -std=c23 -xc -fms-extensions -DC23 -verify %s
 
 enum X : int {e};

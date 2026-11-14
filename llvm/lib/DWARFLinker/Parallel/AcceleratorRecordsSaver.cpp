@@ -15,51 +15,6 @@ using namespace llvm;
 using namespace dwarf_linker;
 using namespace dwarf_linker::parallel;
 
-static uint32_t hashFullyQualifiedName(CompileUnit &InputCU, DWARFDie &InputDIE,
-                                       int ChildRecurseDepth = 0) {
-  const char *Name = nullptr;
-  CompileUnit *CU = &InputCU;
-  std::optional<DWARFFormValue> RefVal;
-
-  if (Error Err = finiteLoop([&]() -> Expected<bool> {
-        if (const char *CurrentName = InputDIE.getName(DINameKind::ShortName))
-          Name = CurrentName;
-
-        if (!(RefVal = InputDIE.find(dwarf::DW_AT_specification)) &&
-            !(RefVal = InputDIE.find(dwarf::DW_AT_abstract_origin)))
-          return false;
-
-        if (!RefVal->isFormClass(DWARFFormValue::FC_Reference))
-          return false;
-
-        std::optional<UnitEntryPairTy> RefDie = CU->resolveDIEReference(
-            *RefVal, ResolveInterCUReferencesMode::Resolve);
-        if (!RefDie)
-          return false;
-
-        if (!RefDie->DieEntry)
-          return false;
-
-        CU = RefDie->CU;
-        InputDIE = RefDie->CU->getDIE(RefDie->DieEntry);
-        return true;
-      })) {
-    consumeError(std::move(Err));
-  }
-
-  if (!Name && InputDIE.getTag() == dwarf::DW_TAG_namespace)
-    Name = "(anonymous namespace)";
-
-  DWARFDie ParentDie = InputDIE.getParent();
-  if (!ParentDie.isValid() || ParentDie.getTag() == dwarf::DW_TAG_compile_unit)
-    return djbHash(Name ? Name : "", djbHash(ChildRecurseDepth ? "" : "::"));
-
-  return djbHash(
-      (Name ? Name : ""),
-      djbHash((Name ? "::" : ""),
-              hashFullyQualifiedName(*CU, ParentDie, ++ChildRecurseDepth)));
-}
-
 void AcceleratorRecordsSaver::save(const DWARFDebugInfoEntry *InputDieEntry,
                                    DIE *OutDIE, AttributesInfo &AttrInfo,
                                    TypeEntry *TypeEntry) {
@@ -102,25 +57,55 @@ void AcceleratorRecordsSaver::save(const DWARFDebugInfoEntry *InputDieEntry,
   case dwarf::DW_TAG_shared_type:
   case dwarf::DW_TAG_immutable_type:
   case dwarf::DW_TAG_rvalue_reference_type: {
-    if (!AttrInfo.IsDeclaration && AttrInfo.Name != nullptr &&
-        !AttrInfo.Name->getKey().empty()) {
-      uint32_t Hash = hashFullyQualifiedName(InUnit, InputDIE);
+    if (AttrInfo.IsDeclaration)
+      break;
 
-      uint64_t RuntimeLang =
-          dwarf::toUnsigned(InputDIE.find(dwarf::DW_AT_APPLE_runtime_class))
-              .value_or(0);
+    // The linkage name may be attached to the declaration rather than to the
+    // definition.
+    if (!AttrInfo.MangledName)
+      if (const char *LinkageName = InputDIE.getLinkageName())
+        AttrInfo.MangledName =
+            GlobalData.getStringPool().insert(LinkageName).first;
 
-      bool ObjCClassIsImplementation =
-          (RuntimeLang == dwarf::DW_LANG_ObjC ||
-           RuntimeLang == dwarf::DW_LANG_ObjC_plus_plus) &&
-          dwarf::toUnsigned(
-              InputDIE.find(dwarf::DW_AT_APPLE_objc_complete_type))
-              .value_or(0);
+    uint64_t RuntimeLang =
+        dwarf::toUnsigned(InputDIE.find(dwarf::DW_AT_APPLE_runtime_class))
+            .value_or(0);
 
+    bool ObjCClassIsImplementation =
+        (RuntimeLang == dwarf::DW_LANG_ObjC ||
+         RuntimeLang == dwarf::DW_LANG_ObjC_plus_plus) &&
+        dwarf::toUnsigned(InputDIE.find(dwarf::DW_AT_APPLE_objc_complete_type))
+            .value_or(0);
+
+    if (AttrInfo.Name != nullptr && !AttrInfo.Name->getKey().empty()) {
+      // A reference is relative to the unit of the DIE that holds it, which
+      // is the unit of the last DIE resolved.
+      CompileUnit *CU = &InUnit;
+      uint32_t Hash = hashFullyQualifiedName(
+          InputDIE, [&](const DWARFDie &Referrer, const DWARFFormValue &Ref) {
+            assert(Referrer.getDwarfUnit() == &CU->getOrigUnit());
+            std::optional<UnitEntryPairTy> RefDie = CU->resolveDIEReference(
+                Ref, ResolveInterCUReferencesMode::Resolve);
+            if (!RefDie || !RefDie->DieEntry)
+              return DWARFDie();
+            CU = RefDie->CU;
+            return CU->getDIE(RefDie->DieEntry);
+          });
       saveTypeRecord(InputDieEntry, AttrInfo.Name, OutDIE,
                      InputDieEntry->getTag(), Hash, ObjCClassIsImplementation,
                      TypeEntry);
     }
+
+    // Swift carries a type's mangled name in DW_AT_linkage_name, which a
+    // consumer may look up on its own.
+    if (AttrInfo.MangledName != nullptr &&
+        RuntimeLang == dwarf::DW_LANG_Swift &&
+        !AttrInfo.MangledName->getKey().empty() &&
+        AttrInfo.MangledName != AttrInfo.Name)
+      saveTypeRecord(InputDieEntry, AttrInfo.MangledName, OutDIE,
+                     InputDieEntry->getTag(),
+                     djbHash(AttrInfo.MangledName->getKey()),
+                     ObjCClassIsImplementation, TypeEntry);
   } break;
   case dwarf::DW_TAG_namespace: {
     if (AttrInfo.Name == nullptr)
@@ -144,7 +129,9 @@ void AcceleratorRecordsSaver::save(const DWARFDebugInfoEntry *InputDieEntry,
     // information of its own to warrant a name record; the output unit is
     // incidental and routed by the helpers.
 
-    if (AttrInfo.HasLiveAddress || AttrInfo.HasRanges) {
+    if ((AttrInfo.HasLiveAddress || AttrInfo.HasRanges) &&
+        !(InputDieEntry->getTag() == dwarf::DW_TAG_variable &&
+          hasImplicitAddressLocation(InputDIE))) {
       if (AttrInfo.Name)
         saveNameRecord(
             InputDieEntry, AttrInfo.Name, OutDIE, InputDieEntry->getTag(),

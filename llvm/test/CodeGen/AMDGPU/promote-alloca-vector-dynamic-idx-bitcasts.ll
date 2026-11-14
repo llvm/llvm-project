@@ -21,6 +21,28 @@ entry:
   ret void
 }
 
+define amdgpu_kernel void @test_bitcast_gen_4ptr_v2ptr(ptr addrspace(1) %out, i32 %idx) #0 {
+; CHECK-LABEL: define amdgpu_kernel void @test_bitcast_gen_4ptr_v2ptr(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[IDX:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <4 x ptr> poison
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint <4 x ptr> [[ALLOCA]] to <4 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i64> [[TMP0]] to <2 x i128>
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[IDX]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i128> [[TMP1]], i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i128 [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr <2 x i64> [[TMP4]] to <2 x ptr>
+; CHECK-NEXT:    store <2 x ptr> [[TMP5]], ptr addrspace(1) [[OUT]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %alloca = alloca [4 x ptr], align 16, addrspace(5)
+  %gep = getelementptr [8 x i8], ptr addrspace(5) %alloca, i32 %idx
+  %load = load <2 x ptr>, ptr addrspace(5) %gep, align 16
+  store <2 x ptr> %load, ptr addrspace(1) %out, align 16
+  ret void
+}
+
 define amdgpu_kernel void @test_bitcast_gen_32i16_v8i16(ptr addrspace(1) %out, i32 %idx) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @test_bitcast_gen_32i16_v8i16(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[IDX:%.*]]) {

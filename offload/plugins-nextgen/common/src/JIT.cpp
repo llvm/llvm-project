@@ -104,7 +104,8 @@ createTargetMachine(Module &M, std::string CPU, unsigned OptLevel) {
 
   std::optional<CodeModel::Model> CodeModel = M.getCodeModel();
 
-  TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags(TT);
+  TargetOptions Options =
+      codegen::getTargetOptions(M.getContext().getLibraryOptions(), TT);
 
   std::unique_ptr<TargetMachine> TM(
       T->createTargetMachine(M.getTargetTriple(), CPU, Features.getString(),
@@ -118,7 +119,6 @@ createTargetMachine(Module &M, std::string CPU, unsigned OptLevel) {
 } // namespace
 
 JITEngine::JITEngine(Triple::ArchType TA) : TT(Triple::getArchTypeName(TA)) {
-  codegen::RegisterCodeGenFlags();
 #ifdef LIBOMPTARGET_JIT_NVPTX
   if (TT.isNVPTX()) {
     LLVMInitializeNVPTXTargetInfo();
@@ -135,11 +135,18 @@ JITEngine::JITEngine(Triple::ArchType TA) : TT(Triple::getArchTypeName(TA)) {
     LLVMInitializeAMDGPUAsmPrinter();
   }
 #endif
+#ifdef LIBOMPTARGET_JIT_SPIRV
+  if (TT.isSPIRV()) {
+    LLVMInitializeSPIRVTargetInfo();
+    LLVMInitializeSPIRVTarget();
+    LLVMInitializeSPIRVTargetMC();
+    LLVMInitializeSPIRVAsmPrinter();
+  }
+#endif
 }
 
 void JITEngine::opt(TargetMachine *TM, TargetLibraryInfoImpl *TLII, Module &M,
                     unsigned OptLevel) {
-  PipelineTuningOptions PTO;
   std::optional<PGOOptions> PGOOpt;
 
   LoopAnalysisManager LAM;
@@ -148,7 +155,7 @@ void JITEngine::opt(TargetMachine *TM, TargetLibraryInfoImpl *TLII, Module &M,
   ModuleAnalysisManager MAM;
   ModulePassManager MPM;
 
-  PassBuilder PB(TM, PTO, PGOOpt, nullptr);
+  PassBuilder PB(M.getContext(), TM, std::nullopt, PGOOpt, nullptr);
 
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
 
@@ -292,5 +299,16 @@ JITEngine::process(StringRef Image, target::plugin::GenericDeviceTy &Device) {
     return Device.doJITPostProcessing(std::move(MB));
   };
 
-  return compile(Image, ComputeUnitKind, PostProcessing);
+  auto ImageOrError = compile(Image, ComputeUnitKind, PostProcessing);
+
+  if (SaveImageFileName.isPresent() && ImageOrError) {
+    std::error_code EC;
+    raw_fd_ostream OS(SaveImageFileName.get(), EC);
+    if (EC)
+      return createStringError(error::ErrorCode::HOST_IO,
+                               "saving JIT image file\n");
+    OS << ImageOrError.get()->getBuffer();
+    OS.close();
+  }
+  return ImageOrError;
 }

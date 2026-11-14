@@ -43,6 +43,47 @@ S0 foo5(long double a0) {
   return foo6(1, 2, a0);
 }
 
+#ifdef __SIZEOF_INT128__
+// Insert padding before a 128-bit integer argument, which is 16-byte aligned, to make it start in an even-numbered register.
+//
+// N64-LABEL: define{{.*}} void @foo11(i32 noundef signext %a0, i64 %0, i128 noundef signext %a1)
+// N64: tail call void @foo12(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext %a0, i64 undef, i128 noundef signext %a1)
+// N64: declare void @foo12(i32 noundef signext, i32 noundef signext, i32 noundef signext, i64, i128 noundef signext)
+
+extern void foo12(int, int, int, __int128);
+
+void foo11(int a0, __int128 a1) {
+  foo12(1, 2, a0, a1);
+}
+
+// Do not insert padding if the 128-bit integer is already 16-byte aligned.
+// Hence foo13 needs padding but foo14 does not.
+//
+// N64-LABEL: define{{.*}} void @foo13(i32 noundef signext %a0, i64 %0, i128 noundef zeroext %a1)
+// N64: tail call void @foo14(i32 noundef signext 1, i32 noundef signext %a0, i128 noundef zeroext %a1)
+// N64: declare void @foo14(i32 noundef signext, i32 noundef signext, i128 noundef zeroext)
+
+extern void foo14(int, int, unsigned __int128);
+
+void foo13(int a0, unsigned __int128 a1) {
+  foo14(1, a0, a1);
+}
+
+// Test a case where all but one argument register is exhausted.
+// The padding is still inserted, and the full __int128 value is
+// passed via the stack, it is not split.
+//
+// N64-LABEL: define{{.*}} void @foo15(i64 noundef signext %a0, i64 noundef signext %a1, i64 noundef signext %a2, i64 noundef signext %a3, i64 noundef signext %a4, i64 noundef signext %a5, i64 noundef signext %a6, i64 %0, i128 noundef signext %a7)
+// N64: tail call void @foo16(i64 noundef signext %a0, i64 noundef signext %a1, i64 noundef signext %a2, i64 noundef signext %a3, i64 noundef signext %a4, i64 noundef signext %a5, i64 noundef signext %a6, i64 undef, i128 noundef signext %a7)
+// N64: declare void @foo16(i64 noundef signext, i64 noundef signext, i64 noundef signext, i64 noundef signext, i64 noundef signext, i64 noundef signext, i64 noundef signext, i64, i128 noundef signext)
+
+extern void foo16(long, long, long, long, long, long, long, __int128);
+
+void foo15(long a0, long a1, long a2, long a3, long a4, long a5, long a6, __int128 a7) {
+  foo16(a0, a1, a2, a3, a4, a5, a6, a7);
+}
+#endif
+
 // Do not insert padding if ABI is O32.
 //
 // O32-LABEL: define{{.*}} void @foo7(float noundef %a0, double noundef %a1)

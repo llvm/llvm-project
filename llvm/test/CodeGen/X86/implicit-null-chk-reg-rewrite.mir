@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=x86_64 -run-pass=implicit-null-checks %s -o - | FileCheck %s
+# RUN: llc -mtriple=x86_64 -passes=implicit-null-checks %s -o - | FileCheck %s
 --- |
 
   define i32 @reg-rewrite(ptr %x, i1 %arg) {
@@ -23,7 +24,6 @@
 name:            reg-rewrite
 
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
 

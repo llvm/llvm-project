@@ -96,6 +96,13 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
     return llvm::make_error<DAPError>(
         "program must be set to when using runInTerminal");
 
+  llvm::StringMap<protocol::String> env = arguments.env;
+#ifdef _WIN32
+  if (dap.debugger.GetSetting("platform.plugin.windows.disable-debug-heap")
+          .GetBooleanValue(true))
+    env.try_emplace("_NO_DEBUG_HEAP", "1");
+#endif
+
   dap.is_attach = true;
   lldb::SBAttachInfo attach_info;
 
@@ -113,8 +120,8 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
 #endif
 
   llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
-      arguments.configuration.program, arguments.args, arguments.env,
-      arguments.cwd, comm_file->GetPath(), debugger_pid, arguments.stdio,
+      arguments.configuration.program, arguments.args, env, arguments.cwd,
+      comm_file->GetPath(), debugger_pid, arguments.stdio,
       arguments.console == protocol::eConsoleExternalTerminal);
   dap.SendReverseRequest<LogFailureResponseHandler>("runInTerminal",
                                                     std::move(reverse_request));
@@ -224,8 +231,9 @@ llvm::Error BaseRequestHandler::LaunchProcess(
   launch_info.SetShellExpandArguments(arguments.shellExpandArguments);
 
   auto flags = launch_info.GetLaunchFlags();
-  flags =
-      SetLaunchFlag(flags, arguments.disableASLR, lldb::eLaunchFlagDisableASLR);
+  if (arguments.disableASLR)
+    flags = SetLaunchFlag(flags, *arguments.disableASLR,
+                          lldb::eLaunchFlagDisableASLR);
   flags = SetLaunchFlag(flags, arguments.disableSTDIO,
                         lldb::eLaunchFlagDisableSTDIO);
 #ifdef _WIN32
@@ -280,7 +288,7 @@ void BaseRequestHandler::PrintWelcomeMessage() const {
   llvm::raw_string_ostream OS(message);
 
 #ifdef LLDB_DAP_WELCOME_MESSAGE
-  dap.SendOutput(eOutputCategoryConsole, LLDB_DAP_WELCOME_MESSAGE);
+  dap.SendOutput(OutputType::Console, LLDB_DAP_WELCOME_MESSAGE);
 #endif
 
   // Trying to provide a brief but helpful welcome message for users to better

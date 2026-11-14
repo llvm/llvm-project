@@ -220,8 +220,8 @@ define double @main(i224 %0) #0 {
 ; CHECK-NEXT:    shll $20, %r10d
 ; CHECK-NEXT:    addl $1072693248, %r10d # imm = 0x3FF00000
 ; CHECK-NEXT:    andl $1048575, %eax # imm = 0xFFFFF
+; CHECK-NEXT:    orl %r10d, %r9d
 ; CHECK-NEXT:    orl %r9d, %eax
-; CHECK-NEXT:    orl %r10d, %eax
 ; CHECK-NEXT:    movl %eax, %eax
 ; CHECK-NEXT:    shlq $32, %rax
 ; CHECK-NEXT:    movabsq $4294967295, %rcx # imm = 0xFFFFFFFF

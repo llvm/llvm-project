@@ -13,9 +13,12 @@
 #include "InputFiles.h"
 #include "Target.h"
 
+#include "lld/Common/Utils.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
+
+#include <atomic>
 
 namespace lld {
 namespace macho {
@@ -49,7 +52,9 @@ public:
 
   StringRef getName() const { return {nameData, nameSize}; }
 
-  bool isLive() const { return used; }
+  bool isLive() const {
+    return utils::atomicRef(used).load(std::memory_order_relaxed);
+  }
   bool isLazy() const {
     return symbolKind == LazyArchiveKind || symbolKind == LazyObjectKind;
   }
@@ -65,7 +70,7 @@ public:
 
   virtual bool isTlv() const { return false; }
 
-  // Whether this symbol is in the GOT or TLVPointer sections.
+  // Whether this symbol has a non-lazy pointer slot.
   bool isInGot() const { return gotIndex != UINT32_MAX; }
 
   // Whether this symbol is in the StubsSection.
@@ -74,17 +79,17 @@ public:
   uint64_t getStubVA() const;
   uint64_t getLazyPtrVA() const;
   uint64_t getGotVA() const;
-  uint64_t getTlvVA() const;
   uint64_t resolveBranchVA() const {
     assert(isa<Defined>(this) || isa<DylibSymbol>(this));
     return isInStubs() ? getStubVA() : getVA();
   }
-  uint64_t resolveGotVA() const { return isInGot() ? getGotVA() : getVA(); }
-  uint64_t resolveTlvVA() const { return isInGot() ? getTlvVA() : getVA(); }
+  // The address of this symbol's non-lazy pointer slot, or the symbol's own
+  // address if it has none.
+  uint64_t resolveNonLazyPtrVA() const {
+    return isInGot() ? getGotVA() : getVA();
+  }
 
-  // The index of this symbol in the GOT or the TLVPointer section, depending
-  // on whether it is a thread-local. A given symbol cannot be referenced by
-  // both these sections at once.
+  // The index of this symbol's non-lazy pointer slot in __got.
   uint32_t gotIndex = UINT32_MAX;
   uint32_t lazyBindOffset = UINT32_MAX;
   uint32_t stubsHelperIndex = UINT32_MAX;
@@ -109,7 +114,7 @@ public:
   bool isUsedInRegularObj : 1;
 
   // True if this symbol is used from a live section.
-  bool used : 1;
+  bool used;
 };
 
 class Defined : public Symbol {
@@ -182,6 +187,9 @@ public:
   // Whether this symbol has the N_COLD_FUNC nlist flag set. Populated from the
   // symbol table of input object files.
   bool cold : 1;
+
+  // Whether this symbol represents a synthesized branch-extension thunk.
+  bool branchExtensionThunk : 1;
 
 private:
   const bool weakDef : 1;

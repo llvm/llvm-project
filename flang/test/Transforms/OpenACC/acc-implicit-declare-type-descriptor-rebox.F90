@@ -17,5 +17,5 @@ end module
 ! CHECK-DAG: fir.rebox
 ! CHECK-DAG: @_QMmmE{{.+}}n{{.+}}member {acc.declare
 ! CHECK-DAG: @_QMmmE{{.+}}n{{.+}}struct {acc.declare
-! CHECK-DAG: @_QMmmE{{.+}}c{{.+}}struct {acc.declare
+! CHECK-DAG: @_QMmmE{{.+}}c{{.+}}struct <{alignment = 64 : i64}> {acc.declare
 ! CHECK-DAG: @_QMmmE{{.+}}dt{{.+}}struct {acc.declare

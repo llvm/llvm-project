@@ -7,7 +7,7 @@ define i8 @preserve_flags_when_cloning_trunc(i8 %start, ptr noalias %src, ptr no
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i8> splat (i8 1), i8 [[START]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i8> splat (i8 1), i8 [[START]], i64 0
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -19,7 +19,7 @@ define i8 @preserve_flags_when_cloning_trunc(i8 %start, ptr noalias %src, ptr no
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i1> [[TMP2]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i16, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i16, ptr [[TMP4]], i64 4
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i64 8
 ; CHECK-NEXT:    store <4 x i16> [[TMP3]], ptr [[TMP4]], align 2
 ; CHECK-NEXT:    store <4 x i16> [[TMP3]], ptr [[TMP5]], align 2
 ; CHECK-NEXT:    [[TMP6]] = mul <4 x i8> [[VEC_PHI]], splat (i8 3)

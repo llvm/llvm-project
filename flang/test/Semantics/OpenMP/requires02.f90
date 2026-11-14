@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=50
 ! OpenMP Version 5.0
 ! 2.4 Requires directive
 ! All atomic_default_mem_order clauses in 'requires' directives must come

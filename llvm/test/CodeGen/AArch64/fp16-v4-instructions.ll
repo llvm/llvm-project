@@ -677,8 +677,7 @@ define <4 x i1> @test_fcmp_one(<4 x half> %a, <4 x half> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-CVT-SD-NEXT:    fcmgt v2.4s, v0.4s, v1.4s
 ; CHECK-CVT-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-CVT-SD-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-CVT-SD-NEXT:    xtn v0.4h, v0.4s
+; CHECK-CVT-SD-NEXT:    addhn v0.4h, v0.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: test_fcmp_one:
@@ -823,8 +822,7 @@ define <4 x i1> @test_fcmp_ord(<4 x half> %a, <4 x half> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-CVT-SD-NEXT:    fcmge v2.4s, v0.4s, v1.4s
 ; CHECK-CVT-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-CVT-SD-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-CVT-SD-NEXT:    xtn v0.4h, v0.4s
+; CHECK-CVT-SD-NEXT:    addhn v0.4h, v0.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: test_fcmp_ord:

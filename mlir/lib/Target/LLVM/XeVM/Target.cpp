@@ -33,7 +33,6 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
@@ -411,8 +410,7 @@ std::optional<std::string> SerializeGPUModuleBase::findTool(StringRef tool) {
       return StringRef(path.data(), path.size()).str();
   }
   // 2. Check PATH.
-  if (std::optional<std::string> toolPath =
-          llvm::sys::Process::FindInEnvPath("PATH", tool))
+  if (llvm::ErrorOr<std::string> toolPath = llvm::sys::findProgramByName(tool))
     return *toolPath;
 
   getGPUModuleOp().emitError()
@@ -619,11 +617,8 @@ XeVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
   auto xeTarget = cast<XeVMTargetAttr>(attribute);
   if (xeTarget.getTriple().starts_with("spirv")) {
     gpuMod.walk([&](LLVM::LLVMFuncOp funcOp) {
-      if (funcOp->hasAttr(gpu::GPUDialect::getKernelFuncAttrName())) {
+      if (funcOp->hasDiscardableAttr(gpu::GPUDialect::getKernelFuncAttrName()))
         funcOp.setIntelReqdSubGroupSize(16);
-        return WalkResult::interrupt();
-      }
-      return WalkResult::advance();
     });
 
     SPIRVSerializer serializer(*module, cast<XeVMTargetAttr>(attribute),

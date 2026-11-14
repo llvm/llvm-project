@@ -33,10 +33,12 @@ void test() {
     std::unordered_map<int, operator_hijacker> mo;
     std::unordered_map<int, operator_hijacker> m;
     m = std::move(mo);
+    (void)m;
   }
   {
     std::unordered_map<operator_hijacker, int> mo;
     std::unordered_map<operator_hijacker, int> m;
     m = std::move(mo);
+    (void)m;
   }
 }

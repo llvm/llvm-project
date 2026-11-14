@@ -15,19 +15,14 @@
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
 
-#include <functional>
-#include <iterator>
 #include <string>
-#include <utility>
-#include <vector>
 
 #define DEBUG_TYPE "spirv-commandline"
 
 using namespace llvm;
-
-ExtensionSet SPIRVExtensionsParser::DisabledExtensions;
 
 static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
     {"SPV_EXT_shader_atomic_float_add",
@@ -99,6 +94,8 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
     {"SPV_KHR_shader_draw_parameters",
      SPIRV::Extension::Extension::SPV_KHR_shader_draw_parameters},
     {"SPV_KHR_ray_tracing", SPIRV::Extension::Extension::SPV_KHR_ray_tracing},
+    {"SPV_KHR_storage_buffer_storage_class",
+     SPIRV::Extension::Extension::SPV_KHR_storage_buffer_storage_class},
     {"SPV_KHR_uniform_group_instructions",
      SPIRV::Extension::Extension::SPV_KHR_uniform_group_instructions},
     {"SPV_KHR_no_integer_wrap_decoration",
@@ -132,6 +129,8 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
      SPIRV::Extension::Extension::SPV_KHR_cooperative_matrix},
     {"SPV_KHR_non_semantic_info",
      SPIRV::Extension::Extension::SPV_KHR_non_semantic_info},
+    {"SPV_KHR_relaxed_extended_instruction",
+     SPIRV::Extension::Extension::SPV_KHR_relaxed_extended_instruction},
     {"SPV_KHR_ray_query", SPIRV::Extension::Extension::SPV_KHR_ray_query},
     {"SPV_EXT_shader_image_int64",
      SPIRV::Extension::Extension::SPV_EXT_shader_image_int64},
@@ -143,6 +142,8 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
      SPIRV::Extension::Extension::SPV_KHR_vulkan_memory_model},
     {"SPV_NV_shader_subgroup_partitioned",
      SPIRV::Extension::Extension::SPV_NV_shader_subgroup_partitioned},
+    {"SPV_EXT_shader_subgroup_partitioned",
+     SPIRV::Extension::Extension::SPV_EXT_shader_subgroup_partitioned},
     {"SPV_INTEL_long_composites",
      SPIRV::Extension::Extension::SPV_INTEL_long_composites},
     {"SPV_INTEL_fp_max_error",
@@ -179,10 +180,18 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
     {"SPV_AMD_weak_linkage", SPIRV::Extension::Extension::SPV_AMD_weak_linkage},
     {"SPV_KHR_abort", SPIRV::Extension::Extension::SPV_KHR_abort},
     {"SPV_KHR_poison_freeze",
-     SPIRV::Extension::Extension::SPV_KHR_poison_freeze}};
+     SPIRV::Extension::Extension::SPV_KHR_poison_freeze},
+    {"SPV_KHR_untyped_pointers",
+     SPIRV::Extension::Extension::SPV_KHR_untyped_pointers},
+    {"SPV_EXT_long_vector", SPIRV::Extension::Extension::SPV_EXT_long_vector},
+    {"SPV_KHR_quad_control", SPIRV::Extension::Extension::SPV_KHR_quad_control},
+    {"SPV_KHR_compute_shader_derivatives",
+     SPIRV::Extension::Extension::SPV_KHR_compute_shader_derivatives},
+    {"SPV_KHR_relaxed_extended_instruction",
+     SPIRV::Extension::Extension::SPV_KHR_relaxed_extended_instruction}};
 
-bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
-                                  StringRef ArgValue, ExtensionSet &Vals) {
+Error SPIRVExtensionsParser::parse(StringRef ArgValue, ExtensionSet &Enabled,
+                                   ExtensionSet &Disabled) {
   SmallVector<StringRef, 10> Tokens;
   ArgValue.split(Tokens, ",", -1, false);
 
@@ -192,14 +201,14 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
 
   if (std::any_of(M, Tokens.end(), equal_to("all")))
     for (auto &&El : make_second_range(SPIRVExtensionMap))
-      Vals.insert(El);
+      Enabled.insert(El);
 
   for (auto &&Token : make_range(Tokens.begin(), M)) {
     StringRef ExtensionName = Token.substr(1);
     auto NameValuePair = SPIRVExtensionMap.find(ExtensionName);
 
     if (NameValuePair == SPIRVExtensionMap.end())
-      return O.error("Unknown SPIR-V extension: " + Token);
+      return createStringError("Unknown SPIR-V extension: " + Token);
 
     EnabledExtensions.insert(NameValuePair->second);
   }
@@ -211,28 +220,28 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
     if (Token.size() == 3 && Token.upper() == "KHR") {
       for (const auto &[ExtensionName, ExtensionEnum] : SPIRVExtensionMap)
         if (StringRef(ExtensionName).starts_with("SPV_KHR_"))
-          Vals.insert(ExtensionEnum);
+          Enabled.insert(ExtensionEnum);
       continue;
     }
 
     if (Token.empty() || (!Token.starts_with("+") && !Token.starts_with("-")))
-      return O.error("Invalid extension list format: " + Token);
+      return createStringError("Invalid extension list format: " + Token);
 
     auto NameValuePair = SPIRVExtensionMap.find(Token.substr(1));
 
     if (NameValuePair == SPIRVExtensionMap.end())
-      return O.error("Unknown SPIR-V extension: " + Token);
+      return createStringError("Unknown SPIR-V extension: " + Token);
     if (EnabledExtensions.count(NameValuePair->second))
-      return O.error(
+      return createStringError(
           "Extension cannot be allowed and disallowed at the same time: " +
           NameValuePair->first());
-    DisabledExtensions.insert(NameValuePair->second);
-    Vals.erase(NameValuePair->second);
+    Disabled.insert(NameValuePair->second);
+    Enabled.erase(NameValuePair->second);
   }
 
-  Vals.insert(EnabledExtensions.begin(), EnabledExtensions.end());
+  Enabled.insert(EnabledExtensions.begin(), EnabledExtensions.end());
 
-  return false;
+  return Error::success();
 }
 
 StringRef
@@ -242,7 +251,7 @@ SPIRVExtensionsParser::checkExtensions(ArrayRef<std::string> ExtNames,
     if (Ext == "all") {
       for (const auto &[ExtensionName, ExtensionEnum] : SPIRVExtensionMap)
         AllowedExtensions.insert(ExtensionEnum);
-      break;
+      return StringRef();
     }
     auto It = SPIRVExtensionMap.find(Ext);
     if (It == SPIRVExtensionMap.end())
@@ -252,7 +261,9 @@ SPIRVExtensionsParser::checkExtensions(ArrayRef<std::string> ExtNames,
   return StringRef();
 }
 
-ExtensionSet SPIRVExtensionsParser::getValidExtensions(const Triple &TT) {
+ExtensionSet
+SPIRVExtensionsParser::getValidExtensions(const Triple &TT,
+                                          const ExtensionSet &Disabled) {
   ExtensionSet R;
   SPIRV::Environment::Environment CurrentEnvironment =
       SPIRV::Environment::Environment::EnvOpenCL;
@@ -265,7 +276,7 @@ ExtensionSet SPIRVExtensionsParser::getValidExtensions(const Triple &TT) {
         ExtensionEnum);
 
     if (llvm::is_contained(AllowedEnv, CurrentEnvironment) &&
-        !llvm::is_contained(DisabledExtensions, ExtensionEnum))
+        !Disabled.contains(ExtensionEnum))
       R.insert(ExtensionEnum);
   }
 

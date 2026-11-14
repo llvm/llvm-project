@@ -21,8 +21,23 @@
 # RUN: llvm-readelf -rsW %t.relr.bolt | FileCheck --check-prefix=RELRELFCHECK %s
 # RUN: llvm-readelf -SW %t.relr.bolt | FileCheck --check-prefix=RELRSZCHECK %s
 
+// Check that RELR addends are patched at file offsets rather than virtual
+// addresses when the two differ.
+# RUN: %clang %cflags -fPIC -pie %t.o -o %t.relr.bias.exe -nostdlib \
+# RUN:   -Wl,-q -Wl,-z,notext -Wl,--pack-dyn-relocs=relr \
+# RUN:   -Wl,--image-base=0x20000
+# RUN: llvm-objcopy --remove-section .rela.mytext %t.relr.bias.exe
+# RUN: llvm-readelf -lW %t.relr.bias.exe | FileCheck --check-prefix=BIAS %s
+# RUN: llvm-bolt %t.relr.bias.exe -o %t.relr.bias.bolt --use-old-text=0 \
+# RUN:   --lite=0
+# RUN: llvm-objdump -j .text -d -z %t.relr.bias.bolt | \
+# RUN:   FileCheck %s --check-prefix=ADDENDCHECK
+
 // Check that the CI value was updated
 # CHECK: [[#%x,ADDR:]] <exitLocal>:
+
+# BIAS: LOAD {{.*}} 0x0000000000020000
+
 # CHECK: {{.*}} <$d>:
 # CHECK-NEXT: {{.*}} .word 0x{{[0]+}}[[#ADDR]]
 # CHECK-NEXT: {{.*}} .word 0x00000000

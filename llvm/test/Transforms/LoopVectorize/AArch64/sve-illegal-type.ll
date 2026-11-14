@@ -4,7 +4,7 @@
 target triple = "aarch64-linux-gnu"
 
 ; CHECK-REMARKS: Scalable vectorization is not supported for all element types found in this loop
-define void @loop_sve_i128(ptr nocapture %ptr, i64 %N) {
+define void @loop_sve_i128(ptr nocapture %ptr, i64 %N) vscale_range(1,16) {
 ; CHECK-LABEL: @loop_sve_i128
 ; CHECK: vector.body
 ; CHECK:  %[[LOAD1:.*]] = load i128, ptr {{.*}}
@@ -37,7 +37,7 @@ for.end:
 }
 
 ; CHECK-REMARKS: Scalable vectorization is not supported for all element types found in this loop
-define void @loop_sve_f128(ptr nocapture %ptr, i64 %N) {
+define void @loop_sve_f128(ptr nocapture %ptr, i64 %N) vscale_range(1,16) {
 ; CHECK-LABEL: @loop_sve_f128
 ; CHECK: vector.body
 ; CHECK: %[[LOAD1:.*]] = load fp128, ptr
@@ -70,7 +70,7 @@ for.end:
 }
 
 ; CHECK-REMARKS: Scalable vectorization is not supported for all element types found in this loop
-define void @loop_invariant_sve_i128(ptr nocapture %ptr, i128 %val, i64 %N) {
+define void @loop_invariant_sve_i128(ptr nocapture %ptr, i128 %val, i64 %N) vscale_range(1,16) {
 ; CHECK-LABEL: @loop_invariant_sve_i128
 ; CHECK: vector.body
 ; CHECK: %[[GEP1:.*]] = getelementptr inbounds i128, ptr %ptr
@@ -96,12 +96,11 @@ for.end:
   ret void
 }
 
-define void @loop_fixed_width_i128(ptr nocapture %ptr, i64 %N) {
+define void @loop_fixed_width_i128(ptr nocapture %ptr, i64 %N) vscale_range(1,16) {
 ; CHECK-LABEL: @loop_fixed_width_i128
 ; CHECK: load <4 x i128>, ptr
 ; CHECK: add nsw <4 x i128> {{.*}}, splat (i128 42)
 ; CHECK: store <4 x i128> {{.*}} ptr
-; CHECK-NOT: vscale
 entry:
   br label %for.body
 
@@ -120,4 +119,4 @@ for.end:
 }
 
 !0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!1 = !{!"llvm.loop.vectorize.scalable.enable"}

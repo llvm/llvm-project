@@ -2,12 +2,11 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98 -Wc++11-compat %s -std=c++98
 class C {
 public:
-  auto int errx;
-#if __cplusplus >= 201103L
-  // expected-error@-2 {{'auto' cannot be combined with a type specifier}}
+  auto int errx; // expected-error {{storage class specified for a member declaration}}
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{'auto' storage class specifier is redundant}}
 #else
-  // expected-error@-4 {{storage class specified for a member declaration}}
-  // expected-warning@-5 {{'auto' storage class specifier is redundant}}
+  // expected-warning@-4 {{'auto' storage class specifier is not permitted in C++11, and will not be supported in future releases}}
 #endif
   register int erry; // expected-error {{storage class specified for a member declaration}}
   extern int errz; // expected-error {{storage class specified for a member declaration}}

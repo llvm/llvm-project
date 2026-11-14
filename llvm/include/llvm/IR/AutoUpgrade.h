@@ -13,6 +13,7 @@
 #ifndef LLVM_IR_AUTOUPGRADE_H
 #define LLVM_IR_AUTOUPGRADE_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include <vector>
@@ -77,6 +78,12 @@ namespace llvm {
 
   LLVM_ABI void UpgradeSectionAttributes(Module &M);
 
+  /// Discover metadata used by instructions in this module, and apply the
+  /// suitable upgrade. Alias scope lists used by !alias.scope or !noalias
+  /// annotations, or by llvm.experimental.noalias.scope.decl intrinsics, are
+  /// upgraded using \ref UpgradeAliasScopeList.
+  LLVM_ABI void UpgradeInstructionMetadata(Module &M);
+
   /// Correct any IR that is relying on old function attribute behavior.
   LLVM_ABI void UpgradeFunctionAttributes(Function &F);
 
@@ -84,6 +91,18 @@ namespace llvm {
   /// corresponding to the upgrade to the struct-path aware TBAA format.
   /// Otherwise return the \p TBAANode itself.
   LLVM_ABI MDNode *UpgradeTBAANode(MDNode &TBAANode);
+
+  /// If the given !tbaa.struct node has old-style scalar field tags, return an
+  /// equivalent node with each field tag upgraded to the struct-path aware
+  /// format. Otherwise return the node itself.
+  LLVM_ABI MDNode *UpgradeTBAAStructNode(MDNode &TBAAStructNode);
+
+  /// Mark any domains from scopes in \p ScopeList that don't have a
+  /// disjointness flag as non-disjoint. Returns the original list if there are
+  /// no changes.
+  LLVM_ABI MDNode *
+  UpgradeAliasScopeList(MDNode &ScopeList,
+                        DenseMap<MDNode *, MDNode *> &UpgradedAliasScopes);
 
   /// This is an auto-upgrade for bitcast between pointers with different
   /// address spaces: the instruction is replaced by a pair ptrtoint+inttoptr.
@@ -110,14 +129,36 @@ namespace llvm {
   ///  - sign-return-address-with-bkey
   LLVM_ABI void copyModuleAttrToFunctions(Module &M);
 
+  /// Single-operand tags replacing a removed two-operand form
+  /// !{!"<Enable>", i1 X}: X = true selects Enable, X = false selects Disable.
+  struct BooleanLoopTags {
+    StringLiteral Enable;
+    StringLiteral Disable;
+  };
+
+  inline constexpr BooleanLoopTags OldBooleanLoopTags[] = {
+      {"llvm.loop.distribute.enable", "llvm.loop.distribute.disable"},
+      {"llvm.loop.vectorize.enable", "llvm.loop.vectorize.disable"},
+      {"llvm.loop.vectorize.predicate.enable",
+       "llvm.loop.vectorize.predicate.disable"},
+      {"llvm.loop.vectorize.scalable.enable",
+       "llvm.loop.vectorize.scalable.disable"}};
+
+  /// Return the replacement tags for the enable tag \p Name, or nullptr.
+  inline const BooleanLoopTags *findBooleanLoopTags(StringRef Name) {
+    for (const BooleanLoopTags &Tags : OldBooleanLoopTags)
+      if (Tags.Enable == Name)
+        return &Tags;
+    return nullptr;
+  }
+
   /// Check whether a string looks like an old loop attachment tag.
   inline bool mayBeOldLoopAttachmentTag(StringRef Name) {
-    // "llvm.loop.distribute.enable" is intentionally included: the current
-    // single-operand form shares the tag with the removed two-operand form
-    // (!{!"llvm.loop.distribute.enable", i1 X}), so we can only decide by
-    // inspecting the operands, which happens in upgradeLoopArgument().
-    return Name.starts_with("llvm.vectorizer.") ||
-           Name == "llvm.loop.distribute.enable";
+    // The enable tags are intentionally included: the current single-operand
+    // form shares the tag with the removed two-operand form (!{!"...", i1 X}),
+    // so we can only decide by inspecting the operands, which happens in
+    // upgradeLoopArgument().
+    return Name.starts_with("llvm.vectorizer.") || findBooleanLoopTags(Name);
   }
 
   /// Upgrade the loop attachment metadata node.

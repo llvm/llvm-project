@@ -8,9 +8,10 @@ from lldbsuite.test import lldbutil
 class DenyAttachTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIfDarwinEmbedded  # PT_DENY_ATTACH attach behavior differs on ios/tvos/etc
     @skipIfAsan  # Attach tests time out inconsistently under asan.
+    @skipIfOutOfTreeDebugserver
     def test_attach_to_deny_attach_process(self):
         """Attaching to a PT_DENY_ATTACH process reports an error, not a crash."""
         self.build()

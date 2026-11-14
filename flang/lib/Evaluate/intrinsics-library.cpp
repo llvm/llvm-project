@@ -27,6 +27,9 @@
 #include "flang/Common/float128.h"
 #include "flang/Common/float80.h"
 #include <type_traits>
+#ifndef _WIN32
+#include <unistd.h> // _POSIX_VERSION, _XOPEN_VERSION
+#endif
 
 namespace Fortran::evaluate {
 
@@ -149,12 +152,14 @@ template <typename FuncType, typename TR, typename... TA, size_t... I>
 static Expr<SomeType> ApplyHostFunctionHelper(FuncType func,
     FoldingContext &context, std::vector<Expr<SomeType>> &&args,
     std::index_sequence<I...>) {
+  constexpr int kind{TR::kind};
   host::HostFloatingPointEnvironment hostFPE;
   hostFPE.SetUpHostFloatingPointEnvironment(context);
   host::HostType<TR> hostResult{};
   Scalar<TR> result{};
   std::tuple<Scalar<TA>...> scalarArgs{
-      GetScalarConstantValue<TA>(args[I]).value()...};
+      GetScalarConstantValue<typename TA::FortranType>(TA::kind, args[I])
+          .value()...};
   if (context.targetCharacteristics().areSubnormalsFlushedToZero() &&
       !hostFPE.hasSubnormalFlushingHardwareControl()) {
     hostResult = func(host::CastFortranToHost<TA>(
@@ -168,7 +173,8 @@ static Expr<SomeType> ApplyHostFunctionHelper(FuncType func,
     CheckFloatingPointIssues<TR>(hostFPE, result);
   }
   hostFPE.CheckAndRestoreFloatingPointEnvironment(context);
-  return AsGenericExpr(Constant<TR>(std::move(result)));
+  return AsGenericExpr(
+      Constant<typename TR::FortranType>(kind, std::move(result)));
 }
 template <typename HostTR, typename... HostTA>
 Expr<SomeType> ApplyHostFunction(FuncPointer<HostTR, HostTA...> func,
@@ -439,7 +445,7 @@ struct HostRuntimeLibrary<std::complex<double>, LibraryVersion::Libm> {
 //    clang libc++ (ok in GNU libstdc++). Instead, the Posix libm
 //    extensions are used when available below.
 
-#if _POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600
+#if _POSIX_VERSION >= 200112L || _XOPEN_VERSION >= 600
 /// Define libm extensions
 /// Bessel functions are defined in POSIX.1-2001.
 
@@ -459,7 +465,58 @@ template <> struct HostRuntimeLibrary<float, LibraryVersion::LibmExtensions> {
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
 };
-#endif
+#endif // !_AIX && !__APPLE__
+
+template <> struct HostRuntimeLibrary<double, LibraryVersion::LibmExtensions> {
+  using F = FuncPointer<double, double>;
+  using FN = FuncPointer<double, int, double>;
+  static constexpr HostRuntimeFunction table[]{
+      FolderFactory<F, F{::j0}>::Create("bessel_j0"),
+      FolderFactory<F, F{::j1}>::Create("bessel_j1"),
+      FolderFactory<FN, FN{::jn}>::Create("bessel_jn"),
+      FolderFactory<F, F{::y0}>::Create("bessel_y0"),
+      FolderFactory<F, F{::y1}>::Create("bessel_y1"),
+      FolderFactory<FN, FN{::yn}>::Create("bessel_yn"),
+  };
+  static constexpr HostRuntimeMap map{table};
+  static_assert(map.Verify(), "map must be sorted");
+};
+
+#if defined(__GLIBC__) && (HAS_FLOAT80 || HAS_LDBL128)
+template <>
+struct HostRuntimeLibrary<long double, LibraryVersion::LibmExtensions> {
+  using F = FuncPointer<long double, long double>;
+  using FN = FuncPointer<long double, int, long double>;
+  static constexpr HostRuntimeFunction table[]{
+      FolderFactory<F, F{::j0l}>::Create("bessel_j0"),
+      FolderFactory<F, F{::j1l}>::Create("bessel_j1"),
+      FolderFactory<FN, FN{::jnl}>::Create("bessel_jn"),
+      FolderFactory<F, F{::y0l}>::Create("bessel_y0"),
+      FolderFactory<F, F{::y1l}>::Create("bessel_y1"),
+      FolderFactory<FN, FN{::ynl}>::Create("bessel_yn"),
+  };
+  static constexpr HostRuntimeMap map{table};
+  static_assert(map.Verify(), "map must be sorted");
+};
+#endif // __GLIBC__ && (HAS_FLOAT80 || HAS_LDBL128)
+#endif // _POSIX_VERSION >= 200112L || _XOPEN_VERSION >= 600
+
+#ifdef _WIN32
+template <> struct HostRuntimeLibrary<double, LibraryVersion::LibmExtensions> {
+  using F = FuncPointer<double, double>;
+  using FN = FuncPointer<double, int, double>;
+  static constexpr HostRuntimeFunction table[]{
+      FolderFactory<F, F{::_j0}>::Create("bessel_j0"),
+      FolderFactory<F, F{::_j1}>::Create("bessel_j1"),
+      FolderFactory<FN, FN{::_jn}>::Create("bessel_jn"),
+      FolderFactory<F, F{::_y0}>::Create("bessel_y0"),
+      FolderFactory<F, F{::_y1}>::Create("bessel_y1"),
+      FolderFactory<FN, FN{::_yn}>::Create("bessel_yn"),
+  };
+  static constexpr HostRuntimeMap map{table};
+  static_assert(map.Verify(), "map must be sorted");
+};
+#endif // _WIN32
 
 #if HAS_QUADMATHLIB
 template <> struct HostRuntimeLibrary<__float128, LibraryVersion::Libm> {
@@ -522,58 +579,7 @@ template <> struct HostRuntimeLibrary<__complex128, LibraryVersion::Libm> {
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
 };
-#endif
-
-template <> struct HostRuntimeLibrary<double, LibraryVersion::LibmExtensions> {
-  using F = FuncPointer<double, double>;
-  using FN = FuncPointer<double, int, double>;
-  static constexpr HostRuntimeFunction table[]{
-      FolderFactory<F, F{::j0}>::Create("bessel_j0"),
-      FolderFactory<F, F{::j1}>::Create("bessel_j1"),
-      FolderFactory<FN, FN{::jn}>::Create("bessel_jn"),
-      FolderFactory<F, F{::y0}>::Create("bessel_y0"),
-      FolderFactory<F, F{::y1}>::Create("bessel_y1"),
-      FolderFactory<FN, FN{::yn}>::Create("bessel_yn"),
-  };
-  static constexpr HostRuntimeMap map{table};
-  static_assert(map.Verify(), "map must be sorted");
-};
-
-#if defined(__GLIBC__) && (HAS_FLOAT80 || HAS_LDBL128)
-template <>
-struct HostRuntimeLibrary<long double, LibraryVersion::LibmExtensions> {
-  using F = FuncPointer<long double, long double>;
-  using FN = FuncPointer<long double, int, long double>;
-  static constexpr HostRuntimeFunction table[]{
-      FolderFactory<F, F{::j0l}>::Create("bessel_j0"),
-      FolderFactory<F, F{::j1l}>::Create("bessel_j1"),
-      FolderFactory<FN, FN{::jnl}>::Create("bessel_jn"),
-      FolderFactory<F, F{::y0l}>::Create("bessel_y0"),
-      FolderFactory<F, F{::y1l}>::Create("bessel_y1"),
-      FolderFactory<FN, FN{::ynl}>::Create("bessel_yn"),
-  };
-  static constexpr HostRuntimeMap map{table};
-  static_assert(map.Verify(), "map must be sorted");
-};
-#endif // HAS_FLOAT80 || HAS_LDBL128
-#endif //_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600
-
-#ifdef _WIN32
-template <> struct HostRuntimeLibrary<double, LibraryVersion::LibmExtensions> {
-  using F = FuncPointer<double, double>;
-  using FN = FuncPointer<double, int, double>;
-  static constexpr HostRuntimeFunction table[]{
-      FolderFactory<F, F{::_j0}>::Create("bessel_j0"),
-      FolderFactory<F, F{::_j1}>::Create("bessel_j1"),
-      FolderFactory<FN, FN{::_jn}>::Create("bessel_jn"),
-      FolderFactory<F, F{::_y0}>::Create("bessel_y0"),
-      FolderFactory<F, F{::_y1}>::Create("bessel_y1"),
-      FolderFactory<FN, FN{::_yn}>::Create("bessel_yn"),
-  };
-  static constexpr HostRuntimeMap map{table};
-  static_assert(map.Verify(), "map must be sorted");
-};
-#endif
+#endif // HAS_QUADMATHLIB
 
 /// Define pgmath description
 #if LINK_WITH_LIBPGMATH
@@ -820,9 +826,12 @@ static const Expr<SomeType> &GetArg(
 
 template <typename T>
 static bool IsInRange(const Expr<T> &expr, int lb, int ub) {
-  if (auto scalar{GetScalarConstantValue<T>(expr)}) {
-    auto lbValue{Scalar<T>::FromInteger(value::Integer<8>{lb}).value};
-    auto ubValue{Scalar<T>::FromInteger(value::Integer<8>{ub}).value};
+  const int kind{expr.kind()};
+  if (auto scalar{GetScalarConstantValue<T>(kind, expr)}) {
+    auto lbValue{
+        Scalar<T>::FromInteger(kind, value::IntegerValue{1, lb}).value};
+    auto ubValue{
+        Scalar<T>::FromInteger(kind, value::IntegerValue{1, ub}).value};
     return Satisfies(RelationalOperator::LE, lbValue.Compare(*scalar)) &&
         Satisfies(RelationalOperator::LE, scalar->Compare(ubValue));
   }
@@ -834,11 +843,9 @@ static bool IsInRange(const Expr<T> &expr, int lb, int ub) {
 template <int lb, int ub>
 static bool VerifyInRangeIfReal(
     const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
-  if (const auto *someReal{
-          std::get_if<Expr<SomeReal>>(&GetArg(firstArg, args).u)}) {
-    bool isInRange{
-        std::visit([&](const auto &x) -> bool { return IsInRange(x, lb, ub); },
-            someReal->u)};
+  if (const auto *someReal{std::get_if<Expr<Type<TypeCategory::Real>>>(
+          &GetArg(firstArg, args).u)}) {
+    bool isInRange{IsInRange(*someReal, lb, ub)};
     if (!isInRange) {
       context.messages().Say(
           "argument is out of range [%d., %d.]"_warn_en_US, lb, ub);
@@ -851,16 +858,13 @@ static bool VerifyInRangeIfReal(
 template <int argPosition, const char *argName>
 static bool VerifyStrictlyPositiveIfReal(
     const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
-  if (const auto *someReal =
-          std::get_if<Expr<SomeReal>>(&GetArg(argPosition, args).u)) {
-    const bool isStrictlyPositive{std::visit(
-        [&](const auto &x) -> bool {
-          using T = typename std::decay_t<decltype(x)>::Result;
-          auto scalar{GetScalarConstantValue<T>(x)};
-          return Satisfies(
-              RelationalOperator::LT, Scalar<T>{}.Compare(*scalar));
-        },
-        someReal->u)};
+  if (const auto *someReal = std::get_if<Expr<Type<TypeCategory::Real>>>(
+          &GetArg(argPosition, args).u)) {
+    using T = Type<TypeCategory::Real>;
+    const int kind{someReal->kind()};
+    auto scalar{GetScalarConstantValue<T>(kind, *someReal)};
+    const bool isStrictlyPositive{Satisfies(
+        RelationalOperator::LT, Scalar<T>::Zero(kind).Compare(*scalar))};
     if (!isStrictlyPositive) {
       context.messages().Say(
           "argument '%s' must be strictly positive"_warn_en_US, argName);
@@ -874,15 +878,10 @@ static bool VerifyStrictlyPositiveIfReal(
 template <int argPosition, const char *argName>
 static bool VerifyNotZeroIfReal(
     const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
-  if (const auto *someReal =
-          std::get_if<Expr<SomeReal>>(&GetArg(argPosition, args).u)) {
-    const bool isNotZero{std::visit(
-        [&](const auto &x) -> bool {
-          using T = typename std::decay_t<decltype(x)>::Result;
-          auto scalar{GetScalarConstantValue<T>(x)};
-          return !scalar || !scalar->IsZero();
-        },
-        someReal->u)};
+  if (const auto *someReal = std::get_if<Expr<Type<TypeCategory::Real>>>(
+          &GetArg(argPosition, args).u)) {
+    auto scalar{GetScalarConstantValue<Type<TypeCategory::Real>>(*someReal)};
+    const bool isNotZero{!scalar || !scalar->IsZero()};
     if (!isNotZero) {
       context.messages().Say(
           "argument '%s' must be different from zero"_warn_en_US, argName);
@@ -895,15 +894,11 @@ static bool VerifyNotZeroIfReal(
 /// Verify that the argument in an intrinsic call is not zero if is complex.
 static bool VerifyNotZeroIfComplex(
     const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
-  if (const auto *someComplex =
-          std::get_if<Expr<SomeComplex>>(&GetArg(firstArg, args).u)) {
-    const bool isNotZero{std::visit(
-        [&](const auto &z) -> bool {
-          using T = typename std::decay_t<decltype(z)>::Result;
-          auto scalar{GetScalarConstantValue<T>(z)};
-          return !scalar || !scalar->IsZero();
-        },
-        someComplex->u)};
+  if (const auto *someComplex = std::get_if<Expr<Type<TypeCategory::Complex>>>(
+          &GetArg(firstArg, args).u)) {
+    auto scalar{
+        GetScalarConstantValue<Type<TypeCategory::Complex>>(*someComplex)};
+    const bool isNotZero{!scalar || !scalar->IsZero()};
     if (!isNotZero) {
       context.messages().Say(
           "complex argument must be different from zero"_warn_en_US);
@@ -917,20 +912,13 @@ static bool VerifyNotZeroIfComplex(
 // integer.
 static bool VerifyGammaLikeArgument(
     const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
-  if (const auto *someReal =
-          std::get_if<Expr<SomeReal>>(&GetArg(firstArg, args).u)) {
-    const bool isValid{std::visit(
-        [&](const auto &x) -> bool {
-          using T = typename std::decay_t<decltype(x)>::Result;
-          auto scalar{GetScalarConstantValue<T>(x)};
-          if (scalar) {
-            return !scalar->IsZero() &&
-                !(scalar->IsNegative() &&
-                    scalar->ToWholeNumber().value == scalar);
-          }
-          return true;
-        },
-        someReal->u)};
+  if (const auto *someReal = std::get_if<Expr<Type<TypeCategory::Real>>>(
+          &GetArg(firstArg, args).u)) {
+    auto scalar{GetScalarConstantValue<Type<TypeCategory::Real>>(*someReal)};
+    const bool isValid{!scalar ||
+        (!scalar->IsZero() &&
+            !(scalar->IsNegative() &&
+                scalar->ToWholeNumber().value == scalar))};
     if (!isValid) {
       context.messages().Say(
           "argument must not be a negative integer or zero"_warn_en_US);
@@ -943,19 +931,12 @@ static bool VerifyGammaLikeArgument(
 // Verify that two real arguments are not both zero.
 static bool VerifyAtan2LikeArguments(
     const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
-  if (const auto *someReal =
-          std::get_if<Expr<SomeReal>>(&GetArg(firstArg, args).u)) {
-    const bool isValid{std::visit(
-        [&](const auto &typedExpr) -> bool {
-          using T = typename std::decay_t<decltype(typedExpr)>::Result;
-          auto x{GetScalarConstantValue<T>(typedExpr)};
-          auto y{GetScalarConstantValue<T>(GetArg(lastArg, args))};
-          if (x && y) {
-            return !(x->IsZero() && y->IsZero());
-          }
-          return true;
-        },
-        someReal->u)};
+  if (const auto *someReal = std::get_if<Expr<Type<TypeCategory::Real>>>(
+          &GetArg(firstArg, args).u)) {
+    auto x{GetScalarConstantValue<Type<TypeCategory::Real>>(*someReal)};
+    auto y{GetScalarConstantValue<Type<TypeCategory::Real>>(
+        someReal->kind(), GetArg(lastArg, args))};
+    const bool isValid{!(x && y) || !(x->IsZero() && y->IsZero())};
     if (!isValid) {
       context.messages().Say(
           "'x' and 'y' arguments must not be both zero"_warn_en_US);

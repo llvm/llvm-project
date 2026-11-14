@@ -10,7 +10,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
-@skipIfWasm  # no expression evaluation
+@requireExpressionEvaluation
 class TestExpressionResultNumbering(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

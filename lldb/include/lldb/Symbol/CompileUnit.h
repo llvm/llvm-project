@@ -339,6 +339,11 @@ public:
   ///     a NULL Function pointer.
   lldb::FunctionSP FindFunctionByUID(lldb::user_id_t uid);
 
+  /// Return the index of this compile unit in its module.
+  uint32_t GetIndex() const { return m_index; }
+
+  void SetIndex(uint32_t index) { m_index = index; }
+
   /// Set the line table for the compile unit.
   ///
   /// Called by the SymbolFile plug-in when if first parses the line table and
@@ -442,6 +447,8 @@ protected:
   /// eLazyBoolYes if this compile unit was compiled with
   /// optimization.
   lldb_private::LazyBool m_is_optimized;
+  /// Index of this compile unit in its module.
+  uint32_t m_index = LLDB_INVALID_INDEX32;
 
 private:
   enum {
@@ -459,6 +466,8 @@ private:
     flagsParsedDebugMacros =
         (1u << 6) ///< Have we parsed the debug macros already?
   };
+
+  std::recursive_mutex &GetMutex() const;
 
   CompileUnit(const CompileUnit &) = delete;
   const CompileUnit &operator=(const CompileUnit &) = delete;

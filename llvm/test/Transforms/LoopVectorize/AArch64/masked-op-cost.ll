@@ -83,12 +83,12 @@ for.inc:
   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body, !llvm.loop !0
 }
 
-attributes #0 = { "target-features"="+neon,+sve" }
+attributes #0 = { "target-features"="+neon,+sve" vscale_range(1,16) }
 
 !0 = distinct !{!0, !1, !2, !3, !4}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}
-!3 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
-!4 = !{!"llvm.loop.vectorize.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.scalable.enable"}
+!4 = !{!"llvm.loop.vectorize.enable"}
 !5 = distinct !{!5, !6}
-!6 = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
+!6 = !{!"llvm.loop.vectorize.scalable.disable"}

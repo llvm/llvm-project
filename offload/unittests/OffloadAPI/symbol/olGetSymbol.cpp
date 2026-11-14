@@ -18,7 +18,7 @@ struct olGetSymbolGlobalTest : OffloadQueueTest {
     RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
     ASSERT_TRUE(TestEnvironment::loadDeviceBinary("global", Device, DeviceBin));
     ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
-    ASSERT_SUCCESS(olCreateProgram(Device, DeviceBin->getBufferStart(),
+    ASSERT_SUCCESS(olCreateProgram(Context, Device, DeviceBin->getBufferStart(),
                                    DeviceBin->getBufferSize(), &Program));
   }
 
@@ -108,4 +108,36 @@ TEST_P(olGetSymbolGlobalTest, InvalidGlobalName) {
   ASSERT_ERROR(OL_ERRC_NOT_FOUND,
                olGetSymbol(Program, "invalid_global",
                            OL_SYMBOL_KIND_GLOBAL_VARIABLE, &Global));
+}
+
+using olGetSymbolImageVariableTest = OffloadImageVariableTest;
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetSymbolImageVariableTest);
+
+TEST_P(olGetSymbolImageVariableTest, Success) { ASSERT_NE(Image, nullptr); }
+
+TEST_P(olGetSymbolImageVariableTest, SuccessSamePtr) {
+  ol_symbol_handle_t ImageB = nullptr;
+  ASSERT_SUCCESS(olGetSymbol(Program, "global_init",
+                             OL_SYMBOL_KIND_GLOBAL_VARIABLE, &ImageB));
+  ASSERT_EQ(Image, ImageB);
+}
+
+TEST_P(olGetSymbolImageVariableTest, InvalidName) {
+  ol_symbol_handle_t Missing = nullptr;
+  ASSERT_ERROR(OL_ERRC_NOT_FOUND,
+               olGetSymbol(Program, "invalid_global",
+                           OL_SYMBOL_KIND_GLOBAL_VARIABLE, &Missing));
+}
+
+// Zero-initialized globals live in `.bss` and have no contents in the image,
+// so the host address is NULL rather than an error.
+TEST_P(olGetSymbolGlobalTest, HostAddressNoContents) {
+  ol_symbol_handle_t Global = nullptr;
+  ASSERT_SUCCESS(
+      olGetSymbol(Program, "global", OL_SYMBOL_KIND_GLOBAL_VARIABLE, &Global));
+  void *Addr = reinterpret_cast<void *>(1);
+  ASSERT_SUCCESS(olGetSymbolInfo(Global,
+                                 OL_SYMBOL_INFO_GLOBAL_VARIABLE_HOST_ADDRESS,
+                                 sizeof(Addr), &Addr));
+  ASSERT_EQ(Addr, nullptr);
 }

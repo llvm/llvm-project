@@ -11,14 +11,19 @@
 
 #if defined(__HIP__) || defined(__CUDA__)
 
-#ifndef __GPU_DEVICE__
-#error                                                                         \
-    "__clang_gpu_intrinsics.h must be included via __clang_gpu_device_functions.h"
-#endif
+#include <__clang_gpu_device_functions.h>
+#include <gpuintrin.h>
 
-//===----------------------------------------------------------------------===//
-// Wavefront shuffles
-//===----------------------------------------------------------------------===//
+static inline __attribute__((device)) const struct {
+  __attribute__((device, always_inline, const)) operator int() const noexcept {
+    return __gpu_num_lanes();
+  }
+} warpSize{};
+
+#pragma push_macro("__GPU_DEVICE__")
+#define __GPU_DEVICE__ static __inline__ __attribute__((device, always_inline))
+#pragma push_macro("MAYBE_UNDEF")
+#define MAYBE_UNDEF __attribute__((maybe_undef))
 
 template <typename __T>
 __GPU_DEVICE__ __T __gpu_shuffle_idx_impl(__T __v, unsigned int __idx,
@@ -67,19 +72,11 @@ __GPU_DEVICE__ __T __shfl_xor(MAYBE_UNDEF __T __var, int __lane_mask,
       __var, (unsigned int)(__tgt >= __width ? __rel : __tgt), __width);
 }
 
-//===----------------------------------------------------------------------===//
-// Warp synchronization
-//===----------------------------------------------------------------------===//
-
 __GPU_DEVICE__ void __syncwarp(unsigned long long __mask = -1) {
   __scoped_atomic_thread_fence(__ATOMIC_RELEASE, __MEMORY_SCOPE_WVFRNT);
   __gpu_sync_lane(__mask);
   __scoped_atomic_thread_fence(__ATOMIC_ACQUIRE, __MEMORY_SCOPE_WVFRNT);
 }
-
-//===----------------------------------------------------------------------===//
-// Wave syncrhonization sync aliases.
-//===----------------------------------------------------------------------===//
 
 template <typename __MaskT>
 __GPU_DEVICE__ unsigned long long __ballot_sync(__MaskT __mask, int __pred) {
@@ -121,10 +118,6 @@ __GPU_DEVICE__ __T __shfl_xor_sync(__MaskT __mask, MAYBE_UNDEF __T __var,
   return __shfl_xor(__var, __lane_mask, __width);
 }
 
-//===----------------------------------------------------------------------===//
-// Match primitives.
-//===----------------------------------------------------------------------===//
-
 template <typename __T>
 __GPU_DEVICE__ unsigned long long __match_any(__T __value) {
   if constexpr (sizeof(__T) == sizeof(unsigned long long)) {
@@ -160,10 +153,6 @@ __GPU_DEVICE__ unsigned long long __match_all_sync(__MaskT __mask, __T __value,
   (void)__mask;
   return __match_all(__value, __pred);
 }
-
-//===----------------------------------------------------------------------===//
-// Wave reductions.
-//===----------------------------------------------------------------------===//
 
 template <typename __MaskT>
 __GPU_DEVICE__ unsigned int __reduce_add_sync(__MaskT __mask,
@@ -213,10 +202,6 @@ __GPU_DEVICE__ unsigned int __reduce_xor_sync(__MaskT __mask,
   return __gpu_lane_xor_u32((unsigned long long)__mask, __val);
 }
 
-//===----------------------------------------------------------------------===//
-// Funnel shifts.
-//===----------------------------------------------------------------------===//
-
 __GPU_DEVICE__ unsigned int
 __funnelshift_l(unsigned int __lo, unsigned int __hi, unsigned int __shift) {
   unsigned int __s = __shift & 31u;
@@ -237,6 +222,9 @@ __funnelshift_rc(unsigned int __lo, unsigned int __hi, unsigned int __shift) {
   unsigned int __s = __shift >= 32u ? 32u : __shift;
   return (unsigned int)(((unsigned long long)__hi << 32 | __lo) >> __s);
 }
+
+#pragma pop_macro("MAYBE_UNDEF")
+#pragma pop_macro("__GPU_DEVICE__")
 
 #endif // device compile
 #endif // __CLANG_GPU_INTRINSICS_H__

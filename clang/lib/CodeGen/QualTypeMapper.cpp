@@ -34,6 +34,31 @@
 namespace clang {
 namespace CodeGen {
 
+/// Returns true if \p BT is one of the AArch64 SVE predicate types, i.e.
+/// svbool_t or one of its tuples.
+static bool isSVEPredicateBuiltinType(const BuiltinType *BT) {
+  switch (BT->getKind()) {
+#define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
+  case BuiltinType::Id:                                                        \
+    return true;
+#include "clang/Basic/AArch64ACLETypes.def"
+  default:
+    return false;
+  }
+}
+
+/// Maps a Clang vector kind onto the ABI library's notion of a vector flavor.
+static llvm::abi::VectorKind getABIVectorKind(clang::VectorKind Kind) {
+  switch (Kind) {
+  case clang::VectorKind::SveFixedLengthData:
+    return llvm::abi::VectorKind::SVEData;
+  case clang::VectorKind::SveFixedLengthPredicate:
+    return llvm::abi::VectorKind::SVEPredicate;
+  default:
+    return llvm::abi::VectorKind::Generic;
+  }
+}
+
 /// Main entry point for converting Clang QualType to LLVM ABI Type.
 /// This method performs type canonicalization, caching, and dispatches
 /// to specialized conversion methods based on the type kind.
@@ -97,8 +122,11 @@ const llvm::abi::Type *QualTypeMapper::convertTypeImpl(QualType QT) {
     return convertEnumType(cast<EnumType>(QT));
   case Type::Complex:
     return convertComplexType(cast<ComplexType>(QT));
-  case Type::Atomic:
-    return convertType(cast<AtomicType>(QT)->getValueType());
+  case Type::Atomic: {
+    const auto *AT = cast<AtomicType>(QT);
+    return Builder.getAtomicType(convertType(AT->getValueType()),
+                                 ASTCtx.getTypeSize(QT), getTypeAlign(QT));
+  }
   case Type::BlockPointer:
   case Type::Pipe:
     return createPointerTypeForPointee(ASTCtx.VoidPtrTy);
@@ -119,12 +147,12 @@ const llvm::abi::Type *QualTypeMapper::convertTypeImpl(QualType QT) {
   case Type::ObjCObject:
   case Type::ObjCInterface:
   case Type::ObjCObjectPointer:
-    // Objective-C objects are represented as pointers in the ABI.
+    // Objective-C objects are represented as pointers in the ABI. Clang lowers
+    // them to a pointer in address space 0.
     return Builder.getPointerType(
-        ASTCtx.getTargetInfo().getPointerWidth(QT.getAddressSpace()),
-        llvm::Align(
-            ASTCtx.getTargetInfo().getPointerAlign(QT.getAddressSpace()) / 8),
-        ASTCtx.getTargetInfo().getTargetAddressSpace(QT.getAddressSpace()));
+        ASTCtx.getTargetInfo().getPointerWidth(LangAS::Default),
+        llvm::Align(ASTCtx.getTargetInfo().getPointerAlign(LangAS::Default) /
+                    8));
   case Type::OverflowBehavior:
     return convertType(cast<OverflowBehaviorType>(QT)->getUnderlyingType());
   case Type::Auto:
@@ -150,11 +178,18 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
     return Builder.getVoidType();
 
   case BuiltinType::NullPtr:
-    return createPointerTypeForPointee(QT);
+    // Clang lowers std::nullptr_t to a pointer in address space 0.
+    return Builder.getPointerType(
+        ASTCtx.getTargetInfo().getPointerWidth(LangAS::Default),
+        llvm::Align(ASTCtx.getTargetInfo().getPointerAlign(LangAS::Default) /
+                    8));
 
   case BuiltinType::Bool:
     return Builder.getIntegerType(1, getTypeAlign(QT), /*Signed=*/false,
                                   /*IsBitInt=*/false);
+
+  case BuiltinType::MetaInfo:
+    llvm::reportFatalInternalError("std::meta::info is consteval-only type");
 
   case BuiltinType::Char_S:
   case BuiltinType::Char_U:
@@ -242,11 +277,24 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
   case BuiltinType::ObjCSel:
     return createPointerTypeForPointee(QT);
 
-    // Target-specific vector/matrix types — not yet implemented.
-#define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+    // AArch64 SVE data and predicate types, including the x2/x3/x4 tuples.
+#define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                    \
+  case BuiltinType::Id:
+#define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
+  case BuiltinType::Id:
 #include "clang/Basic/AArch64ACLETypes.def"
-    llvm::reportFatalInternalError(
-        "AArch64 SVE types not yet supported in ABI lowering library");
+    return convertSVEBuiltinType(BT);
+
+  case BuiltinType::SveCount:
+    return Builder.getScalablePredicateOrCountVectorType(
+        getTypeAlign(QT), llvm::abi::VectorKind::SVECount);
+
+  // __mfp8 is an opaque 8-bit float. Vector elements stay 8-bit
+  // integers, which is also their representation in LLVM IR.
+  case BuiltinType::MFloat8:
+    return Builder.getOpaqueFloat8Type(getTypeAlign(QT));
+
+    // Target-specific vector/matrix types — not yet implemented.
 #define PPC_VECTOR_TYPE(Name, Id, Size) case BuiltinType::Id:
 #include "clang/Basic/PPCTypes.def"
     llvm::reportFatalInternalError(
@@ -267,6 +315,14 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
 #include "clang/Basic/HLSLIntangibleTypes.def"
     llvm::reportFatalInternalError(
         "HLSL intangible types not yet Supported in ABI lowering library");
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
+    llvm::reportFatalInternalError(
+        "HLSL packed types not yet Supported in ABI lowering library");
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
+    llvm::reportFatalInternalError(
+        "SPIR-V types not yet supported in ABI lowering library");
 
     // Placeholder types should never reach ABI lowering.
 #define PLACEHOLDER_TYPE(Id, SingletonId) case BuiltinType::Id:
@@ -307,14 +363,55 @@ QualTypeMapper::convertArrayType(const clang::ArrayType *AT) {
 }
 
 const llvm::abi::Type *QualTypeMapper::convertVectorType(const VectorType *VT) {
-  const llvm::abi::Type *ElementType = convertType(VT->getElementType());
+  // Vectors of __mfp8 are stored as 8-bit integers. The scalar type is
+  // mapped separately as an opaque float.
+  const llvm::abi::Type *ElementType =
+      VT->getElementType()->isMFloat8Type()
+          ? Builder.getIntegerType(8, llvm::Align(1), /*Signed=*/false)
+          : convertType(VT->getElementType());
   QualType VectorQualType(VT, 0);
 
   unsigned NElems = VT->getNumElements();
   llvm::ElementCount NumElements = llvm::ElementCount::getFixed(NElems);
   llvm::Align VectorAlign = getTypeAlign(VectorQualType);
 
-  return Builder.getVectorType(ElementType, NumElements, VectorAlign);
+  // SveFixedLengthPredicate is tagged SVEPredicate, like sizeless svbool_t.
+  // The element type is left as the AST unsigned char (i8). The builtin path
+  // below maps sizeless predicates to i1. Both match the Clang AST, but
+  // consumers that key only off VectorKind cannot assume a 1-bit element.
+  return Builder.getVectorType(ElementType, NumElements, VectorAlign,
+                               getABIVectorKind(VT->getVectorKind()));
+}
+
+/// Converts the sizeless AArch64 SVE data and predicate builtin types.
+/// Single vectors become a scalable LLVM ABI VectorType. The x2/x3/x4
+/// forms become a TupleType of that vector.
+///
+/// \param BT The SVE BuiltinType to convert
+/// \return LLVM ABI VectorType or TupleType
+const llvm::abi::Type *
+QualTypeMapper::convertSVEBuiltinType(const BuiltinType *BT) {
+  ASTContext::BuiltinVectorTypeInfo Info = ASTCtx.getBuiltinVectorTypeInfo(BT);
+  assert(Info.NumVectors > 0 && Info.NumVectors <= 4 &&
+         "Expected 1, 2, 3 or 4 vectors!");
+
+  // __mfp8 carries no floating-point semantics, so mfloat8 vectors use an
+  // 8-bit integer element type, which is also how they are represented in
+  // LLVM IR.
+  const llvm::abi::Type *ElementType =
+      Info.ElementType->isMFloat8Type()
+          ? Builder.getIntegerType(8, llvm::Align(1), /*Signed=*/false)
+          : convertType(Info.ElementType);
+
+  llvm::abi::VectorKind VecKind = isSVEPredicateBuiltinType(BT)
+                                      ? llvm::abi::VectorKind::SVEPredicate
+                                      : llvm::abi::VectorKind::SVEData;
+
+  const llvm::abi::VectorType *VecTy = Builder.getVectorType(
+      ElementType, Info.EC, getTypeAlign(QualType(BT, 0)), VecKind);
+  if (Info.NumVectors == 1)
+    return VecTy;
+  return Builder.getTupleType(VecTy, Info.NumVectors);
 }
 
 /// Converts complex types to LLVM ABI complex representations.
@@ -348,6 +445,22 @@ QualTypeMapper::convertMemberPointerType(const clang::MemberPointerType *MPT) {
   return Builder.getMemberPointerType(IsFunctionPointer, Size, Align);
 }
 
+/// Returns the record flags that describe C++ class properties of \p RD.
+static llvm::abi::RecordFlags getCXXRecordFlags(const CXXRecordDecl *RD) {
+  llvm::abi::RecordFlags RecFlags = llvm::abi::RecordFlags::IsCXXRecord;
+  if (RD->isPolymorphic())
+    RecFlags |= llvm::abi::RecordFlags::IsPolymorphic;
+  if (RD->isEmpty())
+    RecFlags |= llvm::abi::RecordFlags::IsCXXEmpty;
+  if (RD->hasNonTrivialCopyAssignment())
+    RecFlags |= llvm::abi::RecordFlags::HasNonTrivialCopyAssignment;
+  if (RD->hasNonTrivialDestructor())
+    RecFlags |= llvm::abi::RecordFlags::HasNonTrivialDestructor;
+  if (RD->hasNonTrivialDefaultConstructor())
+    RecFlags |= llvm::abi::RecordFlags::HasNonTrivialDefaultConstructor;
+  return RecFlags;
+}
+
 /// Converts record types (struct/class/union) to LLVM ABI representations.
 /// This is the main dispatch method that handles different record kinds
 /// and delegates to specialized converters.
@@ -358,7 +471,8 @@ const llvm::abi::Type *QualTypeMapper::convertRecordType(const RecordType *RT) {
   const RecordDecl *RD = RT->getDecl()->getDefinition();
   if (!RD)
     return Builder.getRecordType({}, llvm::TypeSize::getFixed(0),
-                                 llvm::Align(1));
+                                 llvm::Align(1),
+                                 /*UnadjustedAlign=*/llvm::Align(1));
 
   if (RD->isUnion())
     return convertUnionType(RD);
@@ -401,7 +515,6 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
     uint64_t BaseOffset =
         Layout.getBaseClassOffset(BaseRT->getAsCXXRecordDecl()).getQuantity() *
         8;
-
     BaseClasses.emplace_back(BaseType, BaseOffset);
   }
 
@@ -412,7 +525,6 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
         Layout.getVBaseClassOffset(VBaseRT->getAsCXXRecordDecl())
             .getQuantity() *
         8;
-
     VirtualBaseClasses.emplace_back(VBaseType, VBaseOffset);
   }
 
@@ -426,16 +538,16 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
   llvm::TypeSize Size =
       llvm::TypeSize::getFixed(Layout.getSize().getQuantity() * 8);
   llvm::Align Alignment = llvm::Align(Layout.getAlignment().getQuantity());
+  llvm::Align UnadjustedAlign =
+      llvm::Align(Layout.getUnadjustedAlignment().getQuantity());
 
-  llvm::abi::RecordFlags RecFlags = llvm::abi::RecordFlags::IsCXXRecord;
-  if (RD->isPolymorphic())
-    RecFlags |= llvm::abi::RecordFlags::IsPolymorphic;
+  llvm::abi::RecordFlags RecFlags = getCXXRecordFlags(RD);
   if (RD->canPassInRegisters())
     RecFlags |= llvm::abi::RecordFlags::CanPassInRegisters;
   if (RD->hasFlexibleArrayMember())
     RecFlags |= llvm::abi::RecordFlags::HasFlexibleArrayMember;
 
-  return Builder.getRecordType(Fields, Size, Alignment,
+  return Builder.getRecordType(Fields, Size, Alignment, UnadjustedAlign,
                                llvm::abi::StructPacking::Default, BaseClasses,
                                VirtualBaseClasses, RecFlags);
 }
@@ -467,23 +579,24 @@ const llvm::abi::RecordType *
 QualTypeMapper::convertStructType(const clang::RecordDecl *RD) {
   const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(RD);
 
-  bool IsCXXRecord = isa<CXXRecordDecl>(RD);
   SmallVector<llvm::abi::FieldInfo, 16> Fields;
   computeFieldInfo(RD, Fields, Layout);
 
   llvm::TypeSize Size =
       llvm::TypeSize::getFixed(Layout.getSize().getQuantity() * 8);
   llvm::Align Alignment = llvm::Align(Layout.getAlignment().getQuantity());
+  llvm::Align UnadjustedAlign =
+      llvm::Align(Layout.getUnadjustedAlignment().getQuantity());
 
   llvm::abi::RecordFlags RecFlags = llvm::abi::RecordFlags::None;
-  if (IsCXXRecord)
-    RecFlags |= llvm::abi::RecordFlags::IsCXXRecord;
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+    RecFlags |= getCXXRecordFlags(CXXRD);
   if (RD->canPassInRegisters())
     RecFlags |= llvm::abi::RecordFlags::CanPassInRegisters;
   if (RD->hasFlexibleArrayMember())
     RecFlags |= llvm::abi::RecordFlags::HasFlexibleArrayMember;
 
-  return Builder.getRecordType(Fields, Size, Alignment,
+  return Builder.getRecordType(Fields, Size, Alignment, UnadjustedAlign,
                                llvm::abi::StructPacking::Default, {}, {},
                                RecFlags);
 }
@@ -504,16 +617,18 @@ QualTypeMapper::convertUnionType(const clang::RecordDecl *RD) {
   llvm::TypeSize Size =
       llvm::TypeSize::getFixed(Layout.getSize().getQuantity() * 8);
   llvm::Align Alignment = llvm::Align(Layout.getAlignment().getQuantity());
+  llvm::Align UnadjustedAlign =
+      llvm::Align(Layout.getUnadjustedAlignment().getQuantity());
 
   llvm::abi::RecordFlags RecFlags = llvm::abi::RecordFlags::None;
   if (RD->hasAttr<TransparentUnionAttr>())
     RecFlags |= llvm::abi::RecordFlags::IsTransparent;
   if (RD->canPassInRegisters())
     RecFlags |= llvm::abi::RecordFlags::CanPassInRegisters;
-  if (isa<CXXRecordDecl>(RD))
-    RecFlags |= llvm::abi::RecordFlags::IsCXXRecord;
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+    RecFlags |= getCXXRecordFlags(CXXRD);
 
-  return Builder.getUnionType(AllFields, Size, Alignment,
+  return Builder.getUnionType(AllFields, Size, Alignment, UnadjustedAlign,
                               llvm::abi::StructPacking::Default, RecFlags);
 }
 
@@ -535,8 +650,11 @@ QualTypeMapper::createPointerTypeForPointee(QualType PointeeType) {
       PointeeType->isFunctionType() && !PointeeType.hasAddressSpace()
           ? DL.getProgramAddressSpace()
           : ASTCtx.getTargetInfo().getTargetAddressSpace(AddrSpace);
-  return Builder.getPointerType(PointerSize, llvm::Align(Alignment.value() / 8),
-                                TargetAddrSpace);
+  // The default address space may map to a non-zero target address space
+  // (e.g. the SPIR-V generic one), which still makes the pointer qualified.
+  return Builder.getPointerType(
+      PointerSize, llvm::Align(Alignment.value() / 8), TargetAddrSpace,
+      PointeeType.hasAddressSpace() || TargetAddrSpace != 0);
 }
 
 /// Processes the fields of a record (struct/class/union) and populates
@@ -564,8 +682,9 @@ void QualTypeMapper::computeFieldInfo(
       IsUnnamedBitField = FD->isUnnamedBitField();
     }
 
+    bool HasNoUniqueAddress = FD->hasAttr<NoUniqueAddressAttr>();
     Fields.emplace_back(FieldType, OffsetInBits, IsBitField, BitFieldWidth,
-                        IsUnnamedBitField);
+                        IsUnnamedBitField, HasNoUniqueAddress);
     ++FieldIndex;
   }
 }

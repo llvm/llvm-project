@@ -12,7 +12,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-NOT: loop-inc
 ; CHECK: br i1 %cmp, label %return, label %loop_cond, !llvm.loop !0
 ; CHECK: !0 = distinct !{!0, !1}
-; CHECK: !1 = !{!"llvm.loop.vectorize.enable", i1 true}
+; CHECK: !1 = !{!"llvm.loop.vectorize.enable"}
 define i32 @foo(i32 %a) {
 entry:
   br label %loop_cond
@@ -31,4 +31,4 @@ return:
 }
 
 !0 = !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.enable", i1 true}
+!1 = !{!"llvm.loop.vectorize.enable"}

@@ -35,12 +35,11 @@ static bool isPtrOrReferenceForVar(const Stmt *S, const ValueDecl *Var) {
     return true;
 
   if (const auto *DS = dyn_cast<DeclStmt>(S)) {
-    for (const Decl *D : DS->getDeclGroup()) {
-      if (const auto *LeftVar = dyn_cast<VarDecl>(D)) {
-        if (LeftVar->hasInit() && LeftVar->getType()->isReferenceType())
-          return isAccessForVar(LeftVar->getInit(), Var);
-      }
-    }
+    for (const Decl *D : DS->getDeclGroup())
+      if (const auto *LeftVar = dyn_cast<VarDecl>(D);
+          LeftVar && LeftVar->hasInit() &&
+          LeftVar->getType()->isReferenceType())
+        return isAccessForVar(LeftVar->getInit(), Var);
   } else if (const auto *UnOp = dyn_cast<UnaryOperator>(S)) {
     if (UnOp->getOpcode() == UO_AddrOf)
       return isAccessForVar(UnOp->getSubExpr(), Var);

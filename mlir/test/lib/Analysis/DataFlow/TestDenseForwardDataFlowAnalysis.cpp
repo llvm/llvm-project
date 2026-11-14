@@ -11,8 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDenseDataFlowAnalysis.h"
-#include "TestDialect.h"
-#include "TestOps.h"
+#include "TestOpsInterfaces.h"
 #include "mlir/Analysis/DataFlow/DenseAnalysis.h"
 #include "mlir/Analysis/DataFlow/Utils.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -252,7 +251,7 @@ struct TestLastModifiedPass
     // Note that if the underlying value could not be computed or is unknown, we
     // conservatively treat the result also unknown.
     op->walk([&](Operation *op) {
-      auto tag = op->getAttrOfType<StringAttr>("tag");
+      auto tag = op->getDiscardableAttrOfType<StringAttr>("tag");
       if (!tag)
         return;
       os << "test_tag: " << tag.getValue() << ":\n";
@@ -285,7 +284,8 @@ struct TestLastModifiedPass
           } else {
             for (Operation *lastModifier : lastMod->get()) {
               if (auto tagName =
-                      lastModifier->getAttrOfType<StringAttr>("tag_name")) {
+                      lastModifier->getDiscardableAttrOfType<StringAttr>(
+                          "tag_name")) {
                 os << "  - " << tagName.getValue() << "\n";
               } else {
                 os << "  - " << lastModifier->getName() << "\n";

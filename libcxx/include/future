@@ -1834,7 +1834,7 @@ class _LIBCPP_HIDDEN __async_func {
   tuple<_Fp, _Args...> __f_;
 
 public:
-  using _Rp _LIBCPP_NODEBUG = __invoke_result_t<_Fp, _Args...>;
+  using _Rp _LIBCPP_NODEBUG = __direct_invoke_result_t<_Fp, _Args...>;
 
   template <class _Gp, class... _BArgs>
   _LIBCPP_HIDE_FROM_ABI explicit __async_func(_Gp&& __g, _BArgs&&... __bargs)
@@ -1854,7 +1854,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool __does_policy_contain(launch __policy, launch 
 }
 
 template <class _Fp, class... _Args>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI future<__invoke_result_t<__decay_t<_Fp>, __decay_t<_Args>...> >
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI future<__direct_invoke_result_t<__decay_t<_Fp>, __decay_t<_Args>...> >
 async(launch __policy, _Fp&& __f, _Args&&... __args) {
   static_assert(is_constructible<__decay_t<_Fp>, _Fp>::value, "");
   static_assert(_And<is_constructible<__decay_t<_Args>, _Args>...>::value, "");
@@ -1881,7 +1881,7 @@ async(launch __policy, _Fp&& __f, _Args&&... __args) {
 }
 
 template <class _Fp, class... _Args>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI future<__invoke_result_t<__decay_t<_Fp>, __decay_t<_Args>...> >
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI future<__direct_invoke_result_t<__decay_t<_Fp>, __decay_t<_Args>...> >
 async(_Fp&& __f, _Args&&... __args) {
   return std::async(launch::async | launch::deferred, std::forward<_Fp>(__f), std::forward<_Args>(__args)...);
 }
@@ -2065,23 +2065,6 @@ _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_POP_MACROS
 
 #  endif // _LIBCPP_HAS_THREADS
-
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 17
-#    include <chrono>
-#  endif
-
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <atomic>
-#    include <cstdlib>
-#    include <exception>
-#    include <iosfwd>
-#    include <system_error>
-#    include <thread>
-#  endif
-
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 23
-#    include <sstream>
-#  endif
 
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 

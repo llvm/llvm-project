@@ -39,13 +39,7 @@ def update_test(ti: common.TestInfo):
             common.warn("Skipping unparsable RUN line: " + l)
             continue
 
-        commands = [cmd.strip() for cmd in l.split("|")]
-        assert len(commands) >= 2
-        preprocess_cmd = None
-        if len(commands) > 2:
-            preprocess_cmd = " | ".join(commands[:-2])
-        llc_cmd = commands[-2]
-        filecheck_cmd = commands[-1]
+        llc_cmd, filecheck_cmd, preprocess_cmd = common.split_run_line(l)
         llc_tool = llc_cmd.split(" ")[0]
 
         triple_in_cmd = None
@@ -252,19 +246,20 @@ def update_test(ti: common.TestInfo):
                         output_lines.append(input_line)
                         continue
 
-                # Print out the various check lines here.
-                generated_prefixes.extend(
-                    output_type.add_checks(
-                        output_lines,
-                        check_indent + ";",
-                        run_list,
-                        func_dict,
-                        func_name,
-                        ginfo,
-                        global_vars_seen_dict,
-                        is_filtered=builder.is_filtered(),
+                if run_list:
+                    # Print out the various check lines here.
+                    generated_prefixes.extend(
+                        output_type.add_checks(
+                            output_lines,
+                            check_indent + ";",
+                            run_list,
+                            func_dict,
+                            func_name,
+                            ginfo,
+                            global_vars_seen_dict,
+                            is_filtered=builder.is_filtered(),
+                        )
                     )
-                )
 
                 # Also add MIR checks if we have them for this function
                 if mir_run_list and func_name:

@@ -27,7 +27,6 @@ XCoreMCAsmInfo::XCoreMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
   ProtectedVisibilityAttr = MCSA_Invalid;
 
   // Debug
-  ExceptionsType = ExceptionHandling::DwarfCFI;
   DwarfRegNumForCFI = true;
 
   UseIntegratedAssembler = false;

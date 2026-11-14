@@ -1,0 +1,54 @@
+# diagtool - clang diagnostics tool
+
+## SYNOPSIS
+
+{program}`diagtool` *command* \[*args*\]
+
+## DESCRIPTION
+
+{program}`diagtool` is a combination of four tools for dealing with diagnostics in {program}`clang`.
+
+## SUBCOMMANDS
+
+{program}`diagtool` is separated into several subcommands each tailored to a
+different purpose. A brief summary of each command follows, with more detail in
+the sections that follow.
+
+- {ref}`find_diagnostic_id` - Print the id of the given diagnostic.
+- {ref}`list_warnings` - List warnings and their corresponding flags.
+- {ref}`show_enabled` - Show which warnings are enabled for a given command line.
+- {ref}`tree` - Show warning flags in a tree view.
+
+(find_diagnostic_id)=
+
+### find-diagnostic-id
+
+{program}`diagtool` find-diagnostic-id *diagnostic-name*
+
+(list_warnings)=
+
+### list-warnings
+
+{program}`diagtool` list-warnings
+
+(show_enabled)=
+
+### show-enabled
+
+{program}`diagtool` show-enabled \[*options*\] *filename ...*
+
+(tree)=
+
+### tree
+
+{program}`diagtool` tree \[*options*\] \[*diagnostic-group*\]
+
+:::{option} --internal
+Print individual diagnostic names in addition to diagnostic groups.
+:::
+
+:::{option} --color [=<always|auto|never>]
+Specify whether to use color in output. Defaults to `auto`, which detects
+whether standard output supports color. Specifying `--color` alone is
+equivalent to `--color=always`.
+:::

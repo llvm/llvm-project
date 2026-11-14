@@ -105,7 +105,8 @@ auto GenericCycleInfo<ContextT>::getCyclePredecessor(CycleRef C) const
 }
 
 template <typename ContextT>
-void GenericCycleInfo<ContextT>::verifyCycle(CycleRef C) const {
+void GenericCycleInfo<ContextT>::verifyCycle(
+    CycleRef C, SmallPtrSetImpl<BlockT *> &Reachable) const {
 #ifndef NDEBUG
   assert(getNumBlocks(C) != 0 && "Cycle cannot be empty.");
   DenseSet<BlockT *> Blocks;
@@ -149,10 +150,13 @@ void GenericCycleInfo<ContextT>::verifyCycle(CycleRef C) const {
     } else if (!OutsideCyclePreds.empty()) {
       // A non-entry block shouldn't be reachable from outside the cycle,
       // though it is permitted if the predecessor is not itself actually
-      // reachable.
-      BlockT *EntryBB = &BB->getParent()->front();
-      for (BlockT *CB : depth_first(EntryBB))
-        assert(!OutsideCyclePreds.contains(CB) &&
+      // reachable. The entry block is always reachable, so an empty set means
+      // it has not been computed yet.
+      if (Reachable.empty())
+        for (BlockT *CB : depth_first(&BB->getParent()->front()))
+          Reachable.insert(CB);
+      for (BlockT *Pred : OutsideCyclePreds)
+        assert(!Reachable.contains(Pred) &&
                "Non-entry block reachable from outside!");
     }
     assert(BB != &getHeader(C)->getParent()->front() &&
@@ -333,13 +337,12 @@ void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleRef C) {
       ++X.EntryBegin;
   }
   addToBlockMap(Block, C);
-  // Cyc and its ancestors gain the new block: extend each one's slice and
-  // invalidate its exit-block cache in a single walk up the tree.
-  for (CycleRef I = C; I; I = deref(I).Parent) {
+  // Cyc and its ancestors gain the new block: extend each one's slice.
+  for (CycleRef I = C; I; I = deref(I).Parent)
     ++deref(I).IdxEnd;
-    if (!ExitBlocksCaches.empty())
-      ExitBlocksCaches[I.Index].clear();
-  }
+  // The new block may also have become an exit of a cycle that does not
+  // contain it, e.g. a child of Cyc whose exit edge was split.
+  ExitBlocksCaches.clear();
 }
 
 /// Lay the discovered cycle forest out into Info's flat preorder array: number
@@ -574,7 +577,9 @@ template <typename ContextT>
 void GenericCycleInfo<ContextT>::splitCriticalEdge(BlockT *Pred, BlockT *Succ,
                                                    BlockT *NewBlock) {
   // Edge Pred-Succ is replaced by edges Pred-NewBlock and NewBlock-Succ, all
-  // cycles that had blocks Pred and Succ also get NewBlock.
+  // cycles that had blocks Pred and Succ also get NewBlock. Any cycle that
+  // contains Pred but not Succ now exits to NewBlock instead of Succ.
+  ExitBlocksCaches.clear();
   CycleRef C = getSmallestCommonCycle(getCycle(Pred), getCycle(Succ));
   if (!C)
     return;
@@ -631,12 +636,13 @@ template <typename ContextT>
 void GenericCycleInfo<ContextT>::verifyCycleNest(bool VerifyFull) const {
 #ifndef NDEBUG
   DenseSet<BlockT *> CycleHeaders;
+  SmallPtrSet<BlockT *, 32> Reachable;
 
   for (auto C : cycles()) {
     BlockT *Header = getHeader(C);
     assert(CycleHeaders.insert(Header).second);
     if (VerifyFull)
-      verifyCycle(C);
+      verifyCycle(C, Reachable);
     else
       verifyCycleNest(C);
     // Check the block map entries for blocks contained in this cycle.

@@ -14,6 +14,7 @@
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/Module.h"
 #include "lldb/DataFormatters/DataVisualization.h"
+#include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/DataFormatters/FormatClasses.h"
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/DataFormatters/TypeSummary.h"
@@ -41,7 +42,6 @@
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/CompletionRequest.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -104,7 +104,7 @@ constexpr Definition g_frame_child_entries[] = {
     Definition("pc", EntryType::FrameRegisterPC),
     Definition("fp", EntryType::FrameRegisterFP),
     Definition("sp", EntryType::FrameRegisterSP),
-    Definition("flags", EntryType::FrameRegisterFlags),
+    Definition("flags", EntryType::FrameRegisterTypeFlags),
     Definition("no-debug", EntryType::FrameNoDebug),
     Entry::DefinitionWithChildren("reg", EntryType::FrameRegisterByName,
                                   g_string_entry),
@@ -380,7 +380,7 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(FrameRegisterPC);
     ENUM_TO_CSTR(FrameRegisterSP);
     ENUM_TO_CSTR(FrameRegisterFP);
-    ENUM_TO_CSTR(FrameRegisterFlags);
+    ENUM_TO_CSTR(FrameRegisterTypeFlags);
     ENUM_TO_CSTR(FrameRegisterByName);
     ENUM_TO_CSTR(FrameIsArtificial);
     ENUM_TO_CSTR(FrameKind);
@@ -1004,9 +1004,12 @@ bool FormatEntity::Formatter::DumpValue(Stream &s,
     llvm::StringRef special_directions;
     if (close_bracket_index != llvm::StringRef::npos &&
         subpath.size() > close_bracket_index) {
-      ConstString additional_data(subpath.drop_front(close_bracket_index + 1));
-      special_directions_stream.Printf("${%svar%s", do_deref_pointer ? "*" : "",
-                                       additional_data.GetCString());
+      llvm::StringRef additional_data(
+          subpath.drop_front(close_bracket_index + 1));
+      special_directions_stream
+          << "${"
+          << llvm::formatv("{0}var{1}", do_deref_pointer ? "*" : "",
+                           additional_data);
 
       if (entry.fmt != eFormatDefault) {
         const char format_char =
@@ -1538,7 +1541,12 @@ bool FormatEntity::Formatter::Format(const Entry &entry, Stream &s,
           ValueObjectSP return_valobj_sp =
               StopInfo::GetReturnValueObject(stop_info_sp);
           if (return_valobj_sp) {
-            if (llvm::Error error = return_valobj_sp->Dump(s)) {
+            DumpValueObjectOptions options;
+            if (return_valobj_sp->IsDynamic())
+              options.SetUseDynamicType(eDynamicCanRunTarget);
+            if (return_valobj_sp->DoesProvideSyntheticValue())
+              options.SetUseSyntheticValue(true);
+            if (llvm::Error error = return_valobj_sp->Dump(s, options)) {
               s << "error: " << toString(std::move(error));
               return false;
             }
@@ -1708,7 +1716,7 @@ bool FormatEntity::Formatter::Format(const Entry &entry, Stream &s,
     }
     return false;
 
-  case Entry::Type::FrameRegisterFlags:
+  case Entry::Type::FrameRegisterTypeFlags:
     if (m_exe_ctx) {
       StackFrame *frame = m_exe_ctx->GetFramePtr();
       if (frame) {
@@ -2337,7 +2345,7 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
         // hex number in the format
         if (isxdigit(format[0])) {
           // Make a string that can hold onto two hex chars plus a
-          // NULL terminator
+          // null terminator
           char hex_str[3] = {0, 0, 0};
           hex_str[0] = format[0];
 

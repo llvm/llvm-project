@@ -49,6 +49,7 @@ OptionalParseResult Parser::parseOptionalType(Type &type) {
   case Token::kw_f8E4M3B11FNUZ:
   case Token::kw_f8E3M4:
   case Token::kw_f8E8M0FNU:
+  case Token::kw_f8E5M3FNU:
   case Token::kw_bf16:
   case Token::kw_f16:
   case Token::kw_tf32:
@@ -57,6 +58,7 @@ OptionalParseResult Parser::parseOptionalType(Type &type) {
   case Token::kw_f80:
   case Token::kw_f128:
   case Token::kw_index:
+  case Token::kw_mxi8:
   case Token::kw_none:
   case Token::kw_token:
   case Token::exclamation_identifier:
@@ -340,6 +342,9 @@ Type Parser::parseNonFunctionType() {
   case Token::kw_f8E8M0FNU:
     consumeToken(Token::kw_f8E8M0FNU);
     return builder.getType<Float8E8M0FNUType>();
+  case Token::kw_f8E5M3FNU:
+    consumeToken(Token::kw_f8E5M3FNU);
+    return builder.getType<Float8E5M3FNUType>();
   case Token::kw_bf16:
     consumeToken(Token::kw_bf16);
     return builder.getType<BFloat16Type>();
@@ -366,6 +371,10 @@ Type Parser::parseNonFunctionType() {
   case Token::kw_index:
     consumeToken(Token::kw_index);
     return builder.getIndexType();
+
+  case Token::kw_mxi8:
+    consumeToken(Token::kw_mxi8);
+    return builder.getType<MXI8Type>();
 
   // none-type
   case Token::kw_none:

@@ -1,8 +1,8 @@
 // RUN: %clang_analyze_cc1 \
-// RUN:   -analyzer-checker=alpha.unix.PthreadLock \
+// RUN:   -analyzer-checker=alpha.unix.PthreadLock,debug.ExprInspection \
 // RUN:   -verify %s
 // RUN: %clang_analyze_cc1 \
-// RUN:   -analyzer-checker=alpha.unix.PthreadLock \
+// RUN:   -analyzer-checker=alpha.unix.PthreadLock,debug.ExprInspection \
 // RUN:   -analyzer-config alpha.unix.PthreadLock:WarnOnLockOrderReversal=true \
 // RUN:   -verify=expected,lor %s
 
@@ -17,6 +17,29 @@ lck_grp_t grp1;
 lck_rw_t rw;
 
 #define NULL 0
+
+void clang_analyzer_warnIfReached(void);
+long global_var;
+// The self-contradictory constraint below used to reach the lock call with an
+// internally inconsistent state and crash PthreadLockChecker on an assertion.
+// RangedConstraintManager now honors the concrete simplification of
+// `(global_var & 137) & 8` (== 0 when `(global_var & 137) == 2`), so the dead
+// branch is pruned before the lock and neither function warns or crashes.
+void noCrash(void) {
+  if (((global_var & 137) == 2) &&
+      ((global_var & 137) & 8)) {
+    clang_analyzer_warnIfReached(); // no-warning (dead branch, pruned)
+    pthread_mutex_lock(&mtx1); // no-warning
+  }
+}
+
+void noCrashTryLock(void) {
+  if (((global_var & 137) == 2) &&
+      ((global_var & 137) & 8)) {
+    clang_analyzer_warnIfReached(); // no-warning (dead branch, pruned)
+    pthread_mutex_trylock(&mtx1); // no-warning
+  }
+}
 
 void
 ok1(void)
@@ -269,7 +292,7 @@ bad3(void)
 {
 	pthread_mutex_lock(&mtx1);	// no-warning
 	pthread_mutex_lock(&mtx2);	// no-warning
-	pthread_mutex_unlock(&mtx1);	// lor-warning{{This was not the most recently acquired lock. Possible lock order reversal}}
+	pthread_mutex_unlock(&mtx1);	// lor-warning{{This was not the most recently acquired lock; possible lock order reversal}}
 	pthread_mutex_unlock(&mtx2);	// no-warning
 }
 
@@ -279,7 +302,7 @@ bad4(void)
 	if (pthread_mutex_trylock(&mtx1)) // no-warning
 		return;
 	pthread_mutex_lock(&mtx2);	// no-warning
-	pthread_mutex_unlock(&mtx1);	// lor-warning{{This was not the most recently acquired lock. Possible lock order reversal}}
+	pthread_mutex_unlock(&mtx1);	// lor-warning{{This was not the most recently acquired lock; possible lock order reversal}}
 }
 
 void
@@ -303,7 +326,7 @@ bad7(void)
 {
 	lck_mtx_lock(&lck1);	// no-warning
 	lck_mtx_lock(&lck2);	// no-warning
-	lck_mtx_unlock(&lck1);	// lor-warning{{This was not the most recently acquired lock. Possible lock order reversal}}
+	lck_mtx_unlock(&lck1);	// lor-warning{{This was not the most recently acquired lock; possible lock order reversal}}
 	lck_mtx_unlock(&lck2);	// no-warning
 }
 
@@ -313,7 +336,7 @@ bad8(void)
 	if (lck_mtx_try_lock(&lck1) == 0) // no-warning
 		return;
 	lck_mtx_lock(&lck2);		// no-warning
-	lck_mtx_unlock(&lck1);		// lor-warning{{This was not the most recently acquired lock. Possible lock order reversal}}
+	lck_mtx_unlock(&lck1);		// lor-warning{{This was not the most recently acquired lock; possible lock order reversal}}
 }
 
 void
@@ -532,7 +555,7 @@ void ok_non_lifo_unlock_three(void) {
 	pthread_mutex_lock(&mtx1);	// no-warning
 	pthread_mutex_lock(&mtx2);	// no-warning
 	pthread_mutex_lock(&mtx3);	// no-warning
-	pthread_mutex_unlock(&mtx2);	// lor-warning{{This was not the most recently acquired lock. Possible lock order reversal}}
+	pthread_mutex_unlock(&mtx2);	// lor-warning{{This was not the most recently acquired lock; possible lock order reversal}}
 	pthread_mutex_unlock(&mtx3);	// no-warning
 	pthread_mutex_unlock(&mtx1);	// no-warning
 }

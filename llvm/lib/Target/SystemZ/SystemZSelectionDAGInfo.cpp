@@ -100,9 +100,11 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemmove(
 
   if (auto *CSize = dyn_cast<ConstantSDNode>(Size))
     if (Subtarget.hasMiscellaneousExtensions3() && CSize->getZExtValue() > 0 &&
-        CSize->getZExtValue() <= 256)
+        CSize->getZExtValue() <= 256) {
+      SDValue Size64 = DAG.getZExtOrTrunc(Size, DL, MVT::i64);
       return DAG.getNode(SystemZISD::MEMMOVE, DL, MVT::Other,
-                         {Chain, Dst, Src, Size});
+                         {Chain, Dst, Src, Size64});
+    }
 
   return SDValue();
 }

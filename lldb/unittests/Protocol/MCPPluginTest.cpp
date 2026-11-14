@@ -83,7 +83,7 @@ public:
     // Use the FileSpec/ArchSpec constructor so the module keeps its file spec
     // even though the path doesn't point at a real object file.
     ModuleSP module_sp = std::make_shared<Module>(FileSpec(path), arch);
-    target_sp->SetExecutableModule(module_sp, eLoadDependentsNo);
+    target_sp->RebuildModuleListWithExecutable(module_sp, eLoadDependentsNo);
     return target_sp;
   }
 };

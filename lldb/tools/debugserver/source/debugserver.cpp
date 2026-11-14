@@ -715,7 +715,7 @@ static void PortWasBoundCallbackNamedPipe(const void *baton, uint16_t port) {
       char port_str[64];
       const ssize_t port_str_len =
           ::snprintf(port_str, sizeof(port_str), "%u", port);
-      // Write the port number as a C string with the NULL terminator
+      // Write the port number as a C string with the null terminator
       ::write(fd, port_str, port_str_len + 1);
       close(fd);
     }
@@ -1027,7 +1027,7 @@ int main(int argc, char *argv[]) {
       }
     }
   }
-  // NULL terminate the short option string.
+  // Null-terminate the short option string.
   short_options[short_options_idx++] = '\0';
 
 #if __GLIBC__

@@ -35,12 +35,7 @@ class ProcessSaveCoreTestCase(TestBase):
         exe = self.getBuildArtifact("a.out")
         core = self.getBuildArtifact("core.dmp")
         try:
-            target = self.dbg.CreateTarget(exe)
-            breakpoint = target.BreakpointCreateByName("bar")
-            process = target.LaunchSimple(
-                None, None, self.get_process_working_directory()
-            )
-            self.assertState(process.GetState(), lldb.eStateStopped)
+            target, process, _, _ = lldbutil.run_to_name_breakpoint(self, "bar")
             self.assertTrue(process.SaveCore(core))
             self.assertTrue(os.path.isfile(core))
             self.assertSuccess(process.Kill())
@@ -62,18 +57,12 @@ class ProcessSaveCoreTestCase(TestBase):
             if os.path.isfile(core):
                 os.unlink(core)
 
-    @skipUnlessPlatform(["freebsd", "netbsd"])
+    @requirePlatform(["freebsd", "netbsd"])
     def test_save_core_via_process_plugin(self):
         self.build()
-        exe = self.getBuildArtifact("a.out")
         core = self.getBuildArtifact("a.out.core")
         try:
-            target = self.dbg.CreateTarget(exe)
-            breakpoint = target.BreakpointCreateByName("bar")
-            process = target.LaunchSimple(
-                None, None, self.get_process_working_directory()
-            )
-            self.assertState(process.GetState(), lldb.eStateStopped)
+            target, process, _, _ = lldbutil.run_to_name_breakpoint(self, "bar")
             self.assertTrue(process.SaveCore(core))
             self.assertTrue(os.path.isfile(core))
             self.assertSuccess(process.Kill())

@@ -15,7 +15,6 @@
 
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/OpDefinition.h"
 
 #include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.h.inc"
 

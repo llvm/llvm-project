@@ -521,6 +521,11 @@ static void handlePAuthABI(const Driver &D, const ArgList &DriverArgs,
     CC1Args.push_back("-fptrauth-vtable-pointer-type-discrimination");
 
   if (!DriverArgs.hasArg(
+          options::OPT_fptrauth_vtt_vtable_pointer_discrimination,
+          options::OPT_fno_ptrauth_vtt_vtable_pointer_discrimination))
+    CC1Args.push_back("-fptrauth-vtt-vtable-pointer-discrimination");
+
+  if (!DriverArgs.hasArg(
           options::OPT_fptrauth_type_info_vtable_pointer_discrimination,
           options::OPT_fno_ptrauth_type_info_vtable_pointer_discrimination))
     CC1Args.push_back("-fptrauth-type-info-vtable-pointer-discrimination");
@@ -537,6 +542,10 @@ static void handlePAuthABI(const Driver &D, const ArgList &DriverArgs,
           options::OPT_fptrauth_init_fini_address_discrimination,
           options::OPT_fno_ptrauth_init_fini_address_discrimination))
     CC1Args.push_back("-fptrauth-init-fini-address-discrimination");
+
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_elf_got,
+                         options::OPT_fno_ptrauth_elf_got))
+    CC1Args.push_back("-fptrauth-elf-got");
 
   if (!DriverArgs.hasArg(options::OPT_faarch64_jump_table_hardening,
                          options::OPT_fno_aarch64_jump_table_hardening))
@@ -592,6 +601,29 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
     case llvm::Triple::x86_64:
       ArchName = Triple.isX32() ? "x32" : Triple.getArchName().str();
       break;
+    case llvm::Triple::mips:
+    case llvm::Triple::mipsel:
+    case llvm::Triple::mips64:
+    case llvm::Triple::mips64el: {
+      StringRef CPUName, ABIName;
+      tools::mips::getMipsCPUAndABI(Args, Triple, CPUName, ABIName);
+      if (ABIName == "n32")
+        ArchName = "mipsn32";
+      else if (ABIName == "n64")
+        ArchName = "mips64";
+      else
+        ArchName = "mips";
+      // CPUNames as defined in MipsTargetInfo::getISARev()
+      if (CPUName == "mips32r6" || CPUName == "mips64r6" ||
+          CPUName == "i6400" || CPUName == "i6500")
+        ArchName += "r6";
+      if (Triple.isLittleEndian())
+        ArchName += "el";
+      if (tools::mips::getMipsFloatABI(getDriver(), Args, Triple) ==
+          tools::mips::FloatABI::Soft)
+        ArchName += "-sf";
+      break;
+    }
     default:
       ArchName = Triple.getArchName().str();
     }
@@ -877,7 +909,9 @@ void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
   if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                     true) ||
       Args.hasArg(options::OPT_nostdlib) ||
-      Args.hasArg(options::OPT_no_hip_rt) || Args.hasArg(options::OPT_r))
+      Args.hasArg(options::OPT_no_hip_rt) || Args.hasArg(options::OPT_r) ||
+      Args.hasFlag(options::OPT_foffload_via_llvm,
+                   options::OPT_fno_offload_via_llvm, false))
     return;
 
   llvm::SmallVector<std::pair<StringRef, StringRef>> Libraries;
@@ -996,6 +1030,8 @@ Linux::getSupportedSanitizers(BoundArch BA,
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsPowerPC64 || IsSystemZ ||
       IsLoongArch64 || IsRISCV64)
     Res |= SanitizerKind::Thread;
+  if ((IsX86_64 || (IsHexagon && getTriple().isOSLinux())) && !IsAndroid)
+    Res |= SanitizerKind::Concurrency;
   if (IsX86_64 || IsAArch64 || IsSystemZ || IsHexagon)
     Res |= SanitizerKind::Type;
   if (IsX86_64 || IsSystemZ || IsPowerPC64)

@@ -228,7 +228,7 @@ inline StringRef getInstrProfNameSeparator() { return "\01"; }
 /// instrumentation
 LLVM_ABI bool isGPUProfTarget(const Module &M);
 
-/// Please use getIRPGOFuncName for LLVM IR instrumentation. This function is
+/// Please use getIRPGOObjectName for LLVM IR instrumentation. This function is
 /// for front-end (Clang, etc) instrumentation.
 /// Return the modified name for function \c F suitable to be
 /// used the key for profile lookup. Variable \c InLTO indicates if this
@@ -245,33 +245,34 @@ LLVM_ABI std::string
 getPGOFuncName(StringRef RawFuncName, GlobalValue::LinkageTypes Linkage,
                StringRef FileName, uint64_t Version = INSTR_PROF_INDEX_VERSION);
 
-/// \return the modified name for function \c F suitable to be
+/// \return the modified name for global object \c GO suitable to be
 /// used as the key for IRPGO profile lookup. \c InLTO indicates if this is
 /// called from LTO optimization passes.
-LLVM_ABI std::string getIRPGOFuncName(const Function &F, bool InLTO = false);
+LLVM_ABI std::string getIRPGOObjectName(const GlobalObject &GO,
+                                        bool InLTO = false);
 
 /// \return the filename and the function name parsed from the output of
-/// \c getIRPGOFuncName()
+/// \c getIRPGOObjectName()
 LLVM_ABI std::pair<StringRef, StringRef>
 getParsedIRPGOName(StringRef IRPGOName);
 
 /// Return the name of the global variable used to store a function
 /// name in PGO instrumentation. \c FuncName is the IRPGO function name
-/// (returned by \c getIRPGOFuncName) for LLVM IR instrumentation and PGO
+/// (returned by \c getIRPGOObjectName) for LLVM IR instrumentation and PGO
 /// function name (returned by \c getPGOFuncName) for front-end instrumentation.
 LLVM_ABI std::string getPGOFuncNameVarName(StringRef FuncName,
                                            GlobalValue::LinkageTypes Linkage);
 
 /// Create and return the global variable for function name used in PGO
 /// instrumentation. \c FuncName is the IRPGO function name (returned by
-/// \c getIRPGOFuncName) for LLVM IR instrumentation and PGO function name
+/// \c getIRPGOObjectName) for LLVM IR instrumentation and PGO function name
 /// (returned by \c getPGOFuncName) for front-end instrumentation.
 LLVM_ABI GlobalVariable *createPGOFuncNameVar(Function &F,
                                               StringRef PGOFuncName);
 
 /// Create and return the global variable for function name used in PGO
 /// instrumentation. \c FuncName is the IRPGO function name (returned by
-/// \c getIRPGOFuncName) for LLVM IR instrumentation and PGO function name
+/// \c getIRPGOObjectName) for LLVM IR instrumentation and PGO function name
 /// (returned by \c getPGOFuncName) for front-end instrumentation.
 LLVM_ABI GlobalVariable *createPGOFuncNameVar(Module &M,
                                               GlobalValue::LinkageTypes Linkage,
@@ -350,26 +351,6 @@ getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
                          uint32_t MaxNumValueData, uint64_t &TotalC,
                          bool GetNoICPValue = false);
 
-inline StringRef getPGOFuncNameMetadataName() { return "PGOFuncName"; }
-
-inline StringRef getPGONameMetadataName() { return "PGOName"; }
-
-/// Return the PGOFuncName meta data associated with a function.
-LLVM_ABI MDNode *getPGOFuncNameMetadata(const Function &F);
-
-LLVM_ABI std::string getPGOName(const GlobalVariable &V, bool InLTO = false);
-
-/// Create the PGOFuncName meta data if PGOFuncName is different from
-/// function's raw name. This should only apply to internal linkage functions
-/// declared by users only.
-/// TODO: Update all callers to 'createPGONameMetadata' and deprecate this
-/// function.
-LLVM_ABI void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName);
-
-/// Create the PGOName metadata if a global object's PGO name is different from
-/// its mangled name. This should apply to local-linkage global objects only.
-LLVM_ABI void createPGONameMetadata(GlobalObject &GO, StringRef PGOName);
-
 /// Check if we can use Comdat for profile variables. This will eliminate
 /// the duplicated profile variables for Comdat functions.
 LLVM_ABI bool needsComdatForCounter(const GlobalObject &GV, const Module &M);
@@ -413,6 +394,7 @@ enum class instrprof_error {
   unrecognized_format,
   bad_magic,
   bad_header,
+  header_size_mismatch,
   unsupported_version,
   unsupported_hash_type,
   too_large,
@@ -434,6 +416,7 @@ enum class instrprof_error {
   zlib_unavailable,
   raw_profile_version_mismatch,
   counter_value_too_large,
+  coverage_count_mismatch,
 };
 
 /// An ordered list of functions identified by their NameRef found in
@@ -512,15 +495,15 @@ uint64_t ComputeHash(StringRef K);
 /// A symbol table used for function [IR]PGO name look-up with keys
 /// (such as pointers, md5hash values) to the function. A function's
 /// [IR]PGO name or name's md5hash are used in retrieving the profile
-/// data of the function. See \c getIRPGOFuncName() and \c getPGOFuncName
+/// data of the function. See \c getIRPGOObjectName() and \c getPGOFuncName
 /// methods for details how [IR]PGO name is formed.
 class InstrProfSymtab {
 public:
   using AddrHashMap = std::vector<std::pair<uint64_t, uint64_t>>;
 
   // Returns the canonical name of the given PGOName. This shares the same
-  // logic of FunctionSamples::getCanonicalFnName() but only strips ".llvm."
-  // and ".part", and leaves out ".__uniq.".
+  // logic of FunctionSamples::getCanonicalFnName() but only strips ".cfi",
+  // ".llvm.", and ".part.", and leaves out ".__uniq.".
   LLVM_ABI static StringRef getCanonicalName(StringRef PGOName);
 
 private:
@@ -565,15 +548,22 @@ private:
   // map entries:
   // name-set = {PGOFuncName} union {getCanonicalName(PGOFuncName)}
   // - In MD5NameMap: <MD5Hash(name), name> for name in name-set
-  // - In MD5FuncMap: <MD5Hash(name), &F> for name in name-set
+  // - In MD5FuncMap: <MD5Hash(name), &F> for name in name-set, and
+  //   <GUID, &F> if \c F has a GUID that differs from MD5Hash(PGOFuncName),
+  //   e.g. because LTO renamed \c F. The GUID is \c F's thinlto_alias_guid if
+  //   \c KeyImportedAliasesByAliasGUID is true and \c F has that metadata,
+  //   and \c F's assigned GUID otherwise.
   // The canonical name is only added if \c AddCanonical is true.
-  Error addFuncWithName(Function &F, StringRef PGOFuncName, bool AddCanonical);
+  Error addFuncWithName(Function &F, StringRef PGOFuncName, bool AddCanonical,
+                        bool KeyImportedAliasesByAliasGUID);
 
   // Add the vtable into the symbol table, by creating the following
   // map entries:
   // name-set = {PGOName} union {getCanonicalName(PGOName)}
   // - In MD5NameMap:  <MD5Hash(name), name> for name in name-set
-  // - In MD5VTableMap: <MD5Hash(name), name> for name in name-set
+  // - In MD5VTableMap: <MD5Hash(name), &V> for name in name-set, and
+  //   <GUID, &V> if \c V has been assigned a GUID that differs from
+  //   MD5Hash(PGOVTableName).
   Error addVTableWithName(GlobalVariable &V, StringRef PGOVTableName);
 
   // If the symtab is created by a series of calls to \c addFuncName, \c
@@ -628,8 +618,19 @@ public:
   /// indicates if this is called from LTO optimization passes.
   /// A canonical name, removing non-__uniq suffixes, is added if
   /// \c AddCanonical is true.
-  LLVM_ABI Error create(Module &M, bool InLTO = false,
-                        bool AddCanonical = true);
+  /// A function imported by ThinLTO as a copy of an alias (see
+  /// FunctionImport's replaceAliasWithAliasee) retains the aliasee's GUID in
+  /// its !guid metadata, and records the alias's GUID in its
+  /// thinlto_alias_guid metadata when that is emitted. By default such a
+  /// function is keyed by the aliasee's GUID, as it has the same address and
+  /// value profiles may record the aliasee for calls through the alias. If
+  /// \c KeyImportedAliasesByAliasGUID is true it is instead keyed by the
+  /// alias's GUID, so that it is found by lookups of the alias and does not
+  /// shadow the aliasee's own function, if that is also in \c M. This is used
+  /// by clients that depend on the looked up function's identity (e.g. its
+  /// name) rather than only its address.
+  LLVM_ABI Error create(Module &M, bool InLTO = false, bool AddCanonical = true,
+                        bool KeyImportedAliasesByAliasGUID = false);
 
   /// Create InstrProfSymtab from a set of names iteratable from
   /// \p IterRange. This interface is used by IndexedProfReader.

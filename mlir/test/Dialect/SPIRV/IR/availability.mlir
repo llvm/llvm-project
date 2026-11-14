@@ -26,7 +26,7 @@ func.func @subgroup_ballot(%predicate: i1) -> vector<4xi32> {
   // CHECK: max version: v1.6
   // CHECK: extensions: [ ]
   // CHECK: capabilities: [ [GroupNonUniformBallot] ]
-  %0 = spirv.GroupNonUniformBallot <Workgroup> %predicate : vector<4xi32>
+  %0 = spirv.GroupNonUniformBallot <Subgroup> %predicate : vector<4xi32>
   return %0: vector<4xi32>
 }
 
@@ -82,6 +82,16 @@ func.func @sdot_vector_4xi16_i64(%a: vector<4xi16>) -> i64 {
   // CHECK: capabilities: [ [DotProduct] [DotProductInputAll] ]
   %r = spirv.SDot %a, %a: vector<4xi16> -> i64
   return %r: i64
+}
+
+// CHECK-LABEL: sdot_vector_2xi8_i32
+func.func @sdot_vector_2xi8_i32(%a: vector<2xi8>) -> i32 {
+  // CHECK: min version: v1.0
+  // CHECK: max version: v1.6
+  // CHECK: extensions: [ [SPV_KHR_integer_dot_product] ]
+  // CHECK: capabilities: [ [DotProduct] [DotProductInputAll] ]
+  %r = spirv.SDot %a, %a: vector<2xi8> -> i32
+  return %r: i32
 }
 
 // CHECK-LABEL: sudot_scalar_i32_i32

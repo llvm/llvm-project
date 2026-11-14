@@ -30,6 +30,7 @@ class Builtin_Type<string name, string typeMnemonic, list<Trait> traits = [],
     : TypeDef<Builtin_Dialect, name, traits, baseCppClass> {
   let mnemonic = ?;
   let typeName = "builtin." # typeMnemonic;
+  let cppIncludes = ["mlir/IR/BuiltinTypes.h"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -39,6 +40,7 @@ class Builtin_Type<string name, string typeMnemonic, list<Trait> traits = [],
 /// Type trait indicating that the type has value semantics.
 def ValueSemantics : NativeTypeTrait<"ValueSemantics"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/BuiltinTypes.h"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -430,6 +432,51 @@ def Builtin_Float8E8M0FNU : Builtin_FloatType<"Float8E8M0FNU", "f8E8M0FNU"> {
 
     Open Compute Project (OCP) microscaling formats (MX) specification:
     https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Float8E5M3FNUType
+//===----------------------------------------------------------------------===//
+
+def Builtin_Float8E5M3FNU : Builtin_FloatType<"Float8E5M3FNU", "f8E5M3FNU"> {
+  let summary = "8-bit unsigned floating point with 5-bit exponent, 3-bit mantissa";
+  let description = [{
+    An 8-bit floating point type with 0 sign bit, 5 bits exponent and 3 bits
+    mantissa. This is not a standard type as defined by IEEE-754, but it
+    follows similar conventions with the following characteristics:
+
+      * bit encoding: S0E5M3
+      * exponent bias: 15
+      * infinities: Not supported
+      * NaNs: Supported with all bits set to 1
+      * Zero: Supported
+      * denormals when exponent is 0
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MXI8Type
+//===----------------------------------------------------------------------===//
+
+def Builtin_MXI8 : Builtin_Type<"MXI8", "mxi8",
+    [VectorElementTypeInterface,
+     DeclareTypeInterfaceMethods<DenseElementTypeInterface, [
+         "getDenseElementBitSize", "convertToAttribute",
+         "convertFromAttribute"]>]> {
+  let summary = "MXI8 element type";
+  let description = [{
+    The `mxi8` type represents the INT8 element of the OCP MXINT8 block format.
+    It is an 8-bit signed two's-complement type with six fractional bits. Its
+    values are multiples of 1/64 in the range [-2, 127/64]. The shared E8M0 scale
+    is not part of this type.
+
+    Open Compute Project (OCP) microscaling formats (MX) specification,
+    Section 5.3.4 (INT8):
+    https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
+  }];
+  let extraClassDeclaration = [{
+    static llvm::FixedPointSemantics getFixedPointSemantics();
   }];
 }
 
@@ -874,7 +921,8 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "memref", [
     form which is converted to a semi-affine map automatically.
 
     The memory space of a memref is specified by a target-specific attribute.
-    It might be an integer value, string, dictionary or custom dialect attribute.
+    It might be an integer value, string, dictionary or custom dialect
+    attribute; no restriction is placed on the kind of attribute used.
     The empty memory space (attribute is None) is target specific.
 
     The notionally dynamic value of a memref value includes the address of the

@@ -17,7 +17,6 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
@@ -443,8 +442,8 @@ public:
 
 /// Helper for resource handle reading that returns LogicalResult.
 template <typename T, typename... Ts>
-static LogicalResult readResourceHandle(DialectBytecodeReader &reader,
-                                        FailureOr<T> &value, Ts &&...params) {
+LogicalResult readResourceHandle(DialectBytecodeReader &reader,
+                                 FailureOr<T> &value, Ts &&...params) {
   FailureOr<T> handle = reader.readResourceHandle<T>();
   if (failed(handle))
     return failure();

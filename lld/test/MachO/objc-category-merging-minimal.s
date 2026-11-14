@@ -12,11 +12,12 @@
 ## Create our main testing dylib - linking against the fake dylib above
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o merge_cat_minimal.o merge_cat_minimal.s
 # RUN: %lld -arch arm64 -dylib -o merge_cat_minimal_no_merge.dylib a64_fakedylib.dylib merge_cat_minimal.o
-# RUN: %lld -arch arm64 -dylib -o merge_cat_minimal_merge.dylib -objc_category_merging a64_fakedylib.dylib merge_cat_minimal.o
+# RUN: %lld -arch arm64 -dylib -o merge_cat_minimal_merge.dylib -objc_category_merging -map merge_cat_minimal.map a64_fakedylib.dylib merge_cat_minimal.o
 
 ## Now verify that the flag caused category merging to happen appropriatelly
 # RUN: llvm-objdump --objc-meta-data --macho merge_cat_minimal_no_merge.dylib | FileCheck %s --check-prefixes=NO_MERGE_CATS
 # RUN: llvm-objdump --objc-meta-data --macho merge_cat_minimal_merge.dylib | FileCheck %s --check-prefixes=MERGE_CATS
+# RUN: FileCheck %s --check-prefix=CATEGORY_MAP < merge_cat_minimal.map
 
 ############ Test merging multiple categories into the base class ############
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o merge_base_class_minimal.o merge_base_class_minimal.s
@@ -44,6 +45,25 @@
 # Check that lld emitted the warning about skipping category merging
 MERGE_WARNING: warning: ObjC category merging skipped for class symbol' _OBJC_CLASS_$_MyBaseClass'
 
+############ Test merging skipped due to missing base class metadata ############
+# Replace the base class's metaclass pointer with null. The class symbol is
+# still defined, but it does not contain the metadata required for merging.
+# RUN: awk '/^_OBJC_CLASS_\$_MyBaseClass:/ { print; getline; sub(/^[ \t]*\.quad[ \t]+_OBJC_METACLASS_\$_MyBaseClass$/, "\t.quad\t0"); print; next } { print }' merge_base_class_minimal.s > merge_base_class_missing_metadata.s
+
+# RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o merge_base_class_missing_metadata.o merge_base_class_missing_metadata.s
+
+# RUN: %no-fatal-warnings-lld -arch arm64 -dylib -objc_category_merging -o merge_base_class_missing_metadata.dylib merge_base_class_missing_metadata.o merge_cat_minimal.o 2>&1 | FileCheck %s --check-prefix=MISSING_METADATA_WARNING
+# RUN: llvm-objdump --objc-meta-data --macho merge_base_class_missing_metadata.dylib | FileCheck %s --check-prefixes=NO_MERGE_INTO_BASE
+
+# The unsupported base class is skipped instead of being dereferenced.
+MISSING_METADATA_WARNING: warning: ObjC category merging skipped for class symbol' _OBJC_CLASS_$_MyBaseClass'
+
+############ Test merging a category with an unconventional symbol name ############
+# RUN: sed 's/__OBJC_\$_CATEGORY_MyBaseClass_\$_Category01/l_unconventional_category_symbol/g' merge_cat_minimal.s > merge_cat_minimal_unconventional_symbol.s
+# RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o merge_cat_minimal_unconventional_symbol.o merge_cat_minimal_unconventional_symbol.s
+# RUN: %lld -arch arm64 -dylib -objc_category_merging -o merge_cat_minimal_unconventional_symbol.dylib a64_fakedylib.dylib merge_cat_minimal_unconventional_symbol.o
+# RUN: llvm-objdump --objc-meta-data --macho merge_cat_minimal_unconventional_symbol.dylib | FileCheck %s --check-prefix=MERGE_CATS
+
 #### Check merge categories enabled ###
 # Check that the original categories are not there
 MERGE_CATS-NOT: __OBJC_$_CATEGORY_MyBaseClass_$_Category01
@@ -64,6 +84,14 @@ MERGE_CATS-NEXT:    imp {{.*}} -[MyBaseClass(Category02) cat02_InstanceMethod]
 MERGE_CATS-NEXT:         classMethods 0x0
 MERGE_CATS-NEXT:            protocols 0x0
 MERGE_CATS-NEXT:   instanceProperties 0x0
+
+## Erased method lists must not get output addresses or appear among live map
+## symbols. Only the merged two-method list remains.
+# CATEGORY_MAP: 0x{{[0-9A-F]+}} 0x00000020 __TEXT __objc_methlist
+# CATEGORY_MAP: # Symbols:
+# CATEGORY_MAP-NOT: __OBJC_$_CATEGORY_INSTANCE_METHODS_MyBaseClass_$_Category
+# CATEGORY_MAP: __OBJC_$_INSTANCE_METHODS_MyBaseClass(Category01|Category02)
+# CATEGORY_MAP-NOT: __OBJC_$_CATEGORY_INSTANCE_METHODS_MyBaseClass_$_Category
 
 #### Check merge categories disabled ###
 # Check that the merged category is not there

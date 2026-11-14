@@ -712,6 +712,29 @@ func.func @do_not_fuse_vector_different_indices(%A: memref<4x4xf32>) {
 
 // -----
 
+// The load also reads elements that later iterations of the first loop store.
+func.func @do_not_fuse_vector_different_types(%A: memref<8xf32>, %B: memref<8xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %vec0 = arith.constant dense<0.0> : vector<1xf32>
+  scf.parallel (%i) = (%c0) to (%c5) step (%c1) {
+    vector.store %vec0, %A[%i] : memref<8xf32>, vector<1xf32>
+    scf.reduce
+  }
+  scf.parallel (%i) = (%c0) to (%c5) step (%c1) {
+    %v = vector.load %A[%i] : memref<8xf32>, vector<4xf32>
+    vector.store %v, %B[%i] : memref<8xf32>, vector<4xf32>
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @do_not_fuse_vector_different_types
+// CHECK:       scf.parallel
+// CHECK:       scf.parallel
+
+// -----
+
 func.func @fuse_vector_transfer_same_indices(%A: memref<4x4xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -835,6 +858,80 @@ func.func @do_not_fuse_vector_transfer_different_masks(%A: memref<1x4xf32>) {
   return
 }
 // CHECK-LABEL: func @do_not_fuse_vector_transfer_different_masks
+// CHECK:       scf.parallel
+// CHECK:       scf.parallel
+
+// -----
+
+// The read also reads elements that later iterations of the first loop write.
+func.func @do_not_fuse_vector_transfer_different_types(%A: memref<8xf32>, %B: memref<8xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %zero = arith.constant 0.0 : f32
+  %vec0 = arith.constant dense<0.0> : vector<1xf32>
+  scf.parallel (%i) = (%c0) to (%c5) step (%c1) {
+    vector.transfer_write %vec0, %A[%i] {in_bounds = [true]} : vector<1xf32>, memref<8xf32>
+    scf.reduce
+  }
+  scf.parallel (%i) = (%c0) to (%c5) step (%c1) {
+    %v = vector.transfer_read %A[%i], %zero {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+    vector.transfer_write %v, %B[%i] {in_bounds = [true]} : vector<4xf32>, memref<8xf32>
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @do_not_fuse_vector_transfer_different_types
+// CHECK:       scf.parallel
+// CHECK:       scf.parallel
+
+// -----
+
+// The write covers rows %i and %i + 1, the read rows %i to %i + 3.
+func.func @do_not_fuse_vector_transfer_different_permutation_maps(%A: memref<8x8xf32>, %B: memref<8x8xf32>) {
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %c6 = arith.constant 6 : index
+  %zero = arith.constant 0.0 : f32
+  %vec0 = arith.constant dense<0.0> : vector<4x2xf32>
+  scf.parallel (%i) = (%c0) to (%c6) step (%c2) {
+    vector.transfer_write %vec0, %A[%i, %c0] {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = [true, true]} : vector<4x2xf32>, memref<8x8xf32>
+    scf.reduce
+  }
+  scf.parallel (%i) = (%c0) to (%c6) step (%c2) {
+    %v = vector.transfer_read %A[%i, %c0], %zero {in_bounds = [true, true]} : memref<8x8xf32>, vector<4x2xf32>
+    vector.transfer_write %v, %B[%i, %c0] {in_bounds = [true, true]} : vector<4x2xf32>, memref<8x8xf32>
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @do_not_fuse_vector_transfer_different_permutation_maps
+// CHECK:       scf.parallel
+// CHECK:       scf.parallel
+
+// -----
+
+// The write only writes lane 0, so the read also reads elements that later
+// iterations of the first loop write.
+func.func @do_not_fuse_vector_transfer_write_in_vector_mask(%A: memref<8xf32>, %B: memref<8xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %zero = arith.constant 0.0 : f32
+  %vec0 = arith.constant dense<0.0> : vector<4xf32>
+  %mask = vector.constant_mask [1] : vector<4xi1>
+  scf.parallel (%i) = (%c0) to (%c5) step (%c1) {
+    vector.mask %mask { vector.transfer_write %vec0, %A[%i] {in_bounds = [true]} : vector<4xf32>, memref<8xf32> } : vector<4xi1>
+    scf.reduce
+  }
+  scf.parallel (%i) = (%c0) to (%c5) step (%c1) {
+    %v = vector.transfer_read %A[%i], %zero {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+    vector.transfer_write %v, %B[%i] {in_bounds = [true]} : vector<4xf32>, memref<8xf32>
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @do_not_fuse_vector_transfer_write_in_vector_mask
 // CHECK:       scf.parallel
 // CHECK:       scf.parallel
 
@@ -983,6 +1080,58 @@ func.func @fuse_vector_transfer_scalar_load_loop_rank2(%A: memref<2x4xf32>, %B: 
 // CHECK:         vector.transfer_write
 // CHECK:         scf.for
 // CHECK-NOT:   scf.parallel
+
+// -----
+
+// The write only writes lane 0, so the load reads an element that the next
+// iteration of the first loop writes.
+func.func @do_not_fuse_vector_transfer_scalar_load_write_with_mask(%A: memref<8xf32>, %B: memref<8xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %vec0 = arith.constant dense<0.0> : vector<4xf32>
+  %mask = vector.constant_mask [1] : vector<4xi1>
+  scf.parallel (%i) = (%c0) to (%c5) step (%c1) {
+    vector.transfer_write %vec0, %A[%i], %mask {in_bounds = [true]} : vector<4xf32>, memref<8xf32>
+    scf.reduce
+  }
+  scf.parallel (%i) = (%c0) to (%c5) step (%c1) {
+    %j = arith.addi %i, %c1 : index
+    %v = memref.load %A[%j] : memref<8xf32>
+    memref.store %v, %B[%i] : memref<8xf32>
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @do_not_fuse_vector_transfer_scalar_load_write_with_mask
+// CHECK:       scf.parallel
+// CHECK:       scf.parallel
+
+// -----
+
+// The write only writes lane 0, so the load reads an element that the next
+// iteration of the first loop writes.
+func.func @do_not_fuse_vector_transfer_scalar_load_write_in_vector_mask(%A: memref<8xf32>, %B: memref<8xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %vec0 = arith.constant dense<0.0> : vector<4xf32>
+  %mask = vector.constant_mask [1] : vector<4xi1>
+  scf.parallel (%i) = (%c0) to (%c5) step (%c1) {
+    vector.mask %mask { vector.transfer_write %vec0, %A[%i] {in_bounds = [true]} : vector<4xf32>, memref<8xf32> } : vector<4xi1>
+    scf.reduce
+  }
+  scf.parallel (%i) = (%c0) to (%c5) step (%c1) {
+    %j = arith.addi %i, %c1 : index
+    %v = memref.load %A[%j] : memref<8xf32>
+    memref.store %v, %B[%i] : memref<8xf32>
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @do_not_fuse_vector_transfer_scalar_load_write_in_vector_mask
+// CHECK:       scf.parallel
+// CHECK:       scf.parallel
 
 // -----
 
@@ -1231,7 +1380,7 @@ func.func @test_fuse_interchanged_loops(%arg0: memref<1x64xf32>) {
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %alloc_0 = memref.alloc() : memref<1x8x8xf32>
-  %alloc = memref.alloc() {alignment = 64 : i64} : memref<8x8x1xf32>
+  %alloc = memref.alloc() alignment = 64 : memref<8x8x1xf32>
   scf.parallel (%arg2, %arg3) = (%c0, %c0) to (%c8, %c8) step (%c1, %c1) {
     %0 = memref.load %alloc_0[%c0, %arg2, %arg3] : memref<1x8x8xf32>
     memref.store %0, %alloc[%arg3, %arg2, %c0] : memref<8x8x1xf32>
@@ -1643,3 +1792,157 @@ func.func @fuse_chain_after_interchanged_reduction(
 // CHECK: }
 // CHECK-NOT: scf.parallel
 // CHECK: return
+
+// -----
+
+// Bounds that are equal constants describe the same iteration space even when
+// they are materialized by distinct `arith.constant` ops, so the loops fuse.
+
+func.func @fuse_equal_constant_bounds(%A: memref<16xf32>, %B: memref<16xf32>) {
+  %c0 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  scf.parallel (%i) = (%c0) to (%c16) step (%c1) {
+    memref.store %cst, %A[%i] : memref<16xf32>
+    scf.reduce
+  }
+  %c0_0 = arith.constant 0 : index
+  %c16_1 = arith.constant 16 : index
+  %c1_2 = arith.constant 1 : index
+  scf.parallel (%i) = (%c0_0) to (%c16_1) step (%c1_2) {
+    %0 = memref.load %A[%i] : memref<16xf32>
+    memref.store %0, %B[%i] : memref<16xf32>
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @fuse_equal_constant_bounds
+// CHECK:        scf.parallel ([[I:%.*]]) =
+// CHECK-NEXT:     memref.store {{.*}}{{\[}}[[I]]{{\]}}
+// CHECK-NEXT:     [[V:%.*]] = memref.load {{.*}}{{\[}}[[I]]{{\]}}
+// CHECK-NEXT:     memref.store [[V]], {{.*}}{{\[}}[[I]]{{\]}}
+// CHECK-NEXT:     scf.reduce
+// CHECK-NEXT:   }
+// CHECK-NOT:    scf.parallel
+
+// -----
+
+// Only some of the bounds need to be shared SSA values; the rest may be equal
+// constants defined separately.
+
+func.func @fuse_partially_shared_constant_bounds(%A: memref<4x4xf32>,
+                                                 %B: memref<4x4xf32>) {
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c4, %c4) step (%c1, %c1) {
+    memref.store %cst, %A[%i, %j] : memref<4x4xf32>
+    scf.reduce
+  }
+  %c4_0 = arith.constant 4 : index
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c4, %c4_0) step (%c1, %c1) {
+    %0 = memref.load %A[%i, %j] : memref<4x4xf32>
+    memref.store %0, %B[%i, %j] : memref<4x4xf32>
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @fuse_partially_shared_constant_bounds
+// CHECK:        scf.parallel ([[I:%.*]], [[J:%.*]]) =
+// CHECK-NEXT:     memref.store {{.*}}{{\[}}[[I]], [[J]]{{\]}}
+// CHECK-NEXT:     [[V:%.*]] = memref.load {{.*}}{{\[}}[[I]], [[J]]{{\]}}
+// CHECK-NEXT:     memref.store [[V]], {{.*}}{{\[}}[[I]], [[J]]{{\]}}
+// CHECK-NEXT:     scf.reduce
+// CHECK-NEXT:   }
+// CHECK-NOT:    scf.parallel
+
+// -----
+
+// Distinct constants holding different values are still different iteration
+// spaces and must not fuse.
+
+func.func @do_not_fuse_unequal_constant_bounds(%A: memref<16xf32>,
+                                               %B: memref<16xf32>) {
+  %c0 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  scf.parallel (%i) = (%c0) to (%c16) step (%c1) {
+    memref.store %cst, %A[%i] : memref<16xf32>
+    scf.reduce
+  }
+  %c8 = arith.constant 8 : index
+  scf.parallel (%i) = (%c0) to (%c8) step (%c1) {
+    %0 = memref.load %A[%i] : memref<16xf32>
+    memref.store %0, %B[%i] : memref<16xf32>
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @do_not_fuse_unequal_constant_bounds
+// CHECK:        scf.parallel
+// CHECK:        scf.parallel
+
+// -----
+
+// A non-constant bound cannot be compared by value, so distinct dynamic bounds
+// must not fuse even when they may happen to be equal at runtime.
+
+func.func @do_not_fuse_distinct_dynamic_bounds(%A: memref<16xf32>,
+                                               %B: memref<16xf32>,
+                                               %ub0: index, %ub1: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  scf.parallel (%i) = (%c0) to (%ub0) step (%c1) {
+    memref.store %cst, %A[%i] : memref<16xf32>
+    scf.reduce
+  }
+  scf.parallel (%i) = (%c0) to (%ub1) step (%c1) {
+    %0 = memref.load %A[%i] : memref<16xf32>
+    memref.store %0, %B[%i] : memref<16xf32>
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @do_not_fuse_distinct_dynamic_bounds
+// CHECK:        scf.parallel
+// CHECK:        scf.parallel
+
+// -----
+
+func.func @fuse_unsigned_loops() {
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.parallel unsigned (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    scf.reduce
+  }
+  scf.parallel unsigned (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @fuse_unsigned_loops
+// CHECK:        scf.parallel unsigned (
+// CHECK-NOT:    scf.parallel
+
+// -----
+
+func.func @do_not_fuse_mixed_signedness() {
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.parallel unsigned (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    scf.reduce
+  }
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @do_not_fuse_mixed_signedness
+// CHECK:        scf.parallel unsigned (
+// CHECK:        scf.parallel (

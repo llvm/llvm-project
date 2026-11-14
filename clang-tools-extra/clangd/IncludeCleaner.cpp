@@ -445,16 +445,31 @@ computeIncludeCleanerFindings(ParsedAST &AST, bool AnalyzeAngledIncludes) {
         // offsets could lead into crashes in presence of stale preambles. Hence
         // we use "getFileLoc" instead to make sure it always points into main
         // file.
-        // FIXME: Use presumed locations to map such usages back to patched
-        // locations safely.
         auto Loc = SM.getFileLoc(Ref.RefLocation);
         // File locations can be outside of the main file if macro is expanded
         // through an #include.
-        while (SM.getFileID(Loc) != SM.getMainFileID())
+        while (Loc.isValid() && SM.getFileID(Loc) != SM.getMainFileID()) {
+          // An include replayed through the preamble patch is not transitively
+          // included from the main file. Translate its patch location to the
+          // corresponding presumed location in the main file.
+          SourceLocation Translated = translatePreamblePatchLocation(Loc, SM);
+          if (Translated != Loc) {
+            Loc = Translated;
+            break;
+          }
           Loc = SM.getIncludeLoc(SM.getFileID(Loc));
+        }
+        // Some files, such as command-line implicit includes, are not
+        // transitively included from the main file.
+        if (Loc.isInvalid())
+          return;
         auto TouchingTokens =
             syntax::spelledTokensTouching(Loc, AST.getTokens());
-        assert(!TouchingTokens.empty());
+        // Locations translated through a stale preamble refer to the baseline
+        // contents and are not guaranteed to point at a token in the current
+        // contents.
+        if (TouchingTokens.empty())
+          return;
         // Loc points to the start offset of the ref token, here we use the last
         // element of the TouchingTokens, e.g. avoid getting the "::" for
         // "ns::^abc".

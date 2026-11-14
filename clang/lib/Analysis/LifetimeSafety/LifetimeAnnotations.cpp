@@ -11,8 +11,12 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
+#include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Analysis/AnyCall.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/StringSet.h"
 
@@ -54,40 +58,36 @@ bool isAssignmentOperatorLifetimeBound(const CXXMethodDecl *CMD) {
          CMD->getParamDecl(0)->hasAttr<clang::LifetimeBoundAttr>();
 }
 
-/// Check if a function has a lifetimebound attribute on its function type
+/// Check if a function has an attribute on its function type
 /// (which represents the implicit 'this' parameter for methods).
 /// Returns the attribute if found, nullptr otherwise.
-static const LifetimeBoundAttr *
-getLifetimeBoundAttrFromFunctionType(const TypeSourceInfo &TSI) {
-  // Walk through the type layers looking for a lifetimebound attribute.
-  TypeLoc TL = TSI.getTypeLoc();
+template <typename AttrType>
+static const AttrType *getAttrFromFunctionType(const FunctionDecl *FD) {
+  const TypeSourceInfo *TSI = FD->getTypeSourceInfo();
+  if (!TSI)
+    return nullptr;
+  TypeLoc TL = TSI->getTypeLoc();
   while (true) {
     auto ATL = TL.getAsAdjusted<AttributedTypeLoc>();
     if (!ATL)
       break;
-    if (auto *LBAttr = ATL.getAttrAs<LifetimeBoundAttr>())
-      return LBAttr;
+    if (auto *Attr = ATL.getAttrAs<AttrType>())
+      return Attr;
     TL = ATL.getModifiedLoc();
   }
   return nullptr;
 }
 
-const LifetimeBoundAttr *
-getDirectImplicitObjectLifetimeBoundAttr(const FunctionDecl *FD) {
-  if (const TypeSourceInfo *TSI = FD->getTypeSourceInfo())
-    if (const auto *Attr = getLifetimeBoundAttrFromFunctionType(*TSI))
-      return Attr;
-  return nullptr;
-}
-
-const LifetimeBoundAttr *
-getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD) {
+template <typename AttrType>
+static const AttrType *getImplicitObjectParamAttr(const FunctionDecl *FD) {
+  // getDeclWithMergedLifetimeBoundAttrs just returns the most recent decl,
+  // so it is perfectly safe to reuse for capture_by as well.
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   // Attribute merging doesn't work well with attributes on function types (like
   // 'this' param). We need to check all redeclarations.
-  auto CheckRedecls = [](const FunctionDecl *F) -> const LifetimeBoundAttr * {
+  auto CheckRedecls = [](const FunctionDecl *F) -> const AttrType * {
     for (const FunctionDecl *Redecl : F->redecls())
-      if (const auto *Attr = getDirectImplicitObjectLifetimeBoundAttr(Redecl))
+      if (const auto *Attr = getAttrFromFunctionType<AttrType>(Redecl))
         return Attr;
     return nullptr;
   };
@@ -99,10 +99,119 @@ getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD) {
   return nullptr;
 }
 
+const LifetimeBoundAttr *
+getDirectImplicitObjectLifetimeBoundAttr(const FunctionDecl *FD) {
+  return getAttrFromFunctionType<LifetimeBoundAttr>(FD);
+}
+
+const LifetimeBoundAttr *
+getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD) {
+  return getImplicitObjectParamAttr<LifetimeBoundAttr>(FD);
+}
+
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   if (getImplicitObjectParamLifetimeBoundAttr(FD))
     return true;
   return isNormalAssignmentOperator(FD);
+}
+
+bool paramIsLifetimeBound(const ParmVarDecl &PVD) {
+  if (PVD.hasAttr<LifetimeBoundAttr>())
+    return true;
+  return isa<CXXConstructorDecl>(PVD.getDeclContext()) &&
+         llvm::any_of(PVD.specific_attrs<LifetimeCaptureByAttr>(),
+                      [](const LifetimeCaptureByAttr *A) {
+                        return llvm::is_contained(A->params(),
+                                                  LifetimeCaptureByAttr::This);
+                      });
+}
+
+const LifetimeCaptureByAttr *
+getCaptureByAttrFromFunctionType(const FunctionDecl *FD) {
+  return getImplicitObjectParamAttr<LifetimeCaptureByAttr>(FD);
+}
+
+FunctionCallInfo::FunctionCallInfo(const Expr *Call) {
+  if (!Call)
+    return;
+
+  std::optional<AnyCall> AC = AnyCall::forExpr(ignoreParensAndImpCasts(Call));
+  if (!AC)
+    return;
+
+  Args = AC->arguments();
+  FD = dyn_cast_or_null<FunctionDecl>(AC->getDecl());
+}
+
+bool hasObjectArg(const FunctionDecl &FD) {
+  const auto *MD = dyn_cast<CXXMethodDecl>(&FD);
+  return MD && MD->isInstance() && !isa<CXXConstructorDecl>(MD);
+}
+
+bool hasImplicitObjectArg(const FunctionDecl &FD) {
+  return hasObjectArg(FD) &&
+         cast<CXXMethodDecl>(FD).isImplicitObjectMemberFunction();
+}
+
+const ParmVarDecl *getParamForArg(const FunctionDecl &FD, unsigned I) {
+  if (hasImplicitObjectArg(FD)) {
+    if (I == 0)
+      return nullptr;
+    --I;
+  }
+  return I < FD.getNumParams() ? FD.getParamDecl(I) : nullptr;
+}
+
+std::optional<LifetimeBoundParamInfo>
+getTrackedArgInfo(const FunctionDecl *FD, llvm::ArrayRef<const Expr *> Args,
+                  unsigned I) {
+  FD = getDeclWithMergedLifetimeBoundAttrs(FD);
+  if (!FD || I >= Args.size())
+    return std::nullopt;
+
+  if (I == 0 && hasObjectArg(*FD)) {
+    const auto *Method = cast<CXXMethodDecl>(FD);
+    bool TrackObject =
+        implicitObjectParamIsLifetimeBound(Method) ||
+        shouldTrackImplicitObjectArg(*Args[0], Method,
+                                     /*RunningUnderLifetimeSafety=*/true);
+    if (hasImplicitObjectArg(*FD))
+      return TrackObject ? std::optional(LifetimeBoundParamInfo(Method))
+                         : std::nullopt;
+    // An explicit object parameter is reported as the parameter it is.
+    if (TrackObject)
+      return LifetimeBoundParamInfo(Method->getParamDecl(0));
+  }
+  if (!hasImplicitObjectArg(*FD)) {
+    if (I == 0 && shouldTrackFirstArgument(FD))
+      return LifetimeBoundParamInfo(FD->getParamDecl(I));
+    if (I == 1 && shouldTrackSecondArgument(FD))
+      return LifetimeBoundParamInfo(FD->getParamDecl(I));
+  }
+
+  if (const ParmVarDecl *PVD = getParamForArg(*FD, I);
+      PVD && paramIsLifetimeBound(*PVD))
+    return LifetimeBoundParamInfo(PVD);
+
+  return std::nullopt;
+}
+
+std::optional<LifetimeBoundParamInfo>
+getTrackingInfoForCallArg(const Expr *Call, const Expr *Source) {
+  if (!Call || !Source)
+    return std::nullopt;
+
+  auto [FD, Args] = FunctionCallInfo(Call);
+  if (!FD)
+    return std::nullopt;
+
+  for (unsigned I = 0; I < Args.size(); ++I)
+    if (ignoreParensAndImpCasts(Args[I]) == ignoreParensAndImpCasts(Source))
+      if (std::optional<LifetimeBoundParamInfo> ParamInfo =
+              getTrackedArgInfo(FD, Args, I))
+        return ParamInfo;
+
+  return std::nullopt;
 }
 
 bool isInStlNamespace(const Decl *D) {
@@ -314,6 +423,11 @@ bool isGslOwnerType(const CXXRecordDecl *RD) {
   return isRecordWithAttr<OwnerAttr>(RD);
 }
 
+bool isOwnerPtrCtor(const CXXConstructorDecl *Ctor, const ParmVarDecl *PVD) {
+  return Ctor && PVD->getType()->isPointerType() &&
+         isGslOwnerType(Ctor->getParent());
+}
+
 static StringRef getName(const CXXRecordDecl &RD) {
   if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(&RD))
     return CTSD->getSpecializedTemplate()->getName();
@@ -453,6 +567,40 @@ bool destructsFirstArg(const FunctionDecl &FD) {
   return isInStlNamespace(&FD) && getName(FD) == "destroy_at";
 }
 
+bool isAllocatingFunction(const FunctionDecl &FD) {
+  switch (FD.getBuiltinID()) {
+  case Builtin::BImalloc:
+  case Builtin::BI__builtin_malloc:
+  case Builtin::BIcalloc:
+  case Builtin::BI__builtin_calloc:
+  case Builtin::BIrealloc:
+  case Builtin::BI__builtin_realloc:
+    return true;
+  default:
+    break;
+  }
+  return llvm::any_of(FD.specific_attrs<OwnershipAttr>(),
+                      [](const OwnershipAttr *Attr) {
+                        return Attr->getOwnKind() == OwnershipAttr::Returns;
+                      });
+}
+
+bool isFreeingFunction(const FunctionDecl &FD) {
+  switch (FD.getBuiltinID()) {
+  case Builtin::BIfree:
+  case Builtin::BI__builtin_free:
+  case Builtin::BIrealloc:
+  case Builtin::BI__builtin_realloc:
+    return true;
+  default:
+    break;
+  }
+  return llvm::any_of(FD.specific_attrs<OwnershipAttr>(),
+                      [](const OwnershipAttr *Attr) {
+                        return Attr->getOwnKind() == OwnershipAttr::Takes;
+                      });
+}
+
 bool isStdCallableWrapperType(const CXXRecordDecl *RD) {
   if (!RD || !isInStlNamespace(RD))
     return false;
@@ -473,6 +621,11 @@ bool isStdReferenceCast(const FunctionDecl *FD) {
   default:
     return false;
   }
+}
+
+const Expr *ignoreParensAndImpCasts(const Expr *E) {
+  return IgnoreExprNodes(E, IgnoreParensSingleStep,
+                         IgnoreImplicitCastsSingleStep);
 }
 
 } // namespace clang::lifetimes

@@ -31,11 +31,15 @@ def XeGPU_VectorOrScalarType
     : AnyTypeOf<[VectorOfRankAndType<[1,2,3,4,5,6,7,8], [XeGPU_ScalarType, Index]>, XeGPU_ScalarType]>;
 def XeGPU_GatherScatterBaseAddrType
     : AnyTypeOf<[MemRefRankOf<[XeGPU_ScalarType], [1]>, XeGPU_PointerType]>;
+// Operand/result type of xegpu.lane_shuffle: a 1D vector of numerical type.
+def XeGPU_LaneShuffleType
+    : FixedVectorOfRankAndType<[1], [XeGPU_ScalarType]>;
 
 // common base class for types in XeGPU dialect
 class XeGPUTypeDef<string name, string typeMnemonic, list<Trait> traits = [],
                    string baseCppClass = "::mlir::Type">
     : TypeDef<XeGPU_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["mlir/Dialect/XeGPU/IR/XeGPU.h"];
   let mnemonic = typeMnemonic;
 }
 

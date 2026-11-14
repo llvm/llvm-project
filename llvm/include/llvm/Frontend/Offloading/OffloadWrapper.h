@@ -17,11 +17,11 @@
 
 namespace llvm {
 namespace offloading {
-using EntryArrayTy = std::pair<GlobalVariable *, GlobalVariable *>;
+using EntryArrayTy = std::pair<Constant *, Constant *>;
 /// Wraps the input device images into the module \p M as global symbols and
 /// registers the images with the OpenMP Offloading runtime libomptarget.
-/// \param EntryArray Optional pair pointing to the `__start` and `__stop`
-/// symbols holding the `__tgt_offload_entry` array.
+/// \param EntryArray Optional pair pointing to the begin and end of the
+/// `__tgt_offload_entry` array.
 /// \param Suffix An optional suffix appended to the emitted symbols.
 /// \param Relocatable Indicate if we need to change the offloading section to
 /// create a relocatable object.
@@ -30,10 +30,21 @@ wrapOpenMPBinaries(llvm::Module &M, llvm::ArrayRef<llvm::ArrayRef<char>> Images,
                    EntryArrayTy EntryArray, llvm::StringRef Suffix = "",
                    bool Relocatable = false);
 
+/// Wraps the input device images into the module \p M as global symbols and
+/// registers the images with the OpenACC Offloading runtime libacctarget.
+/// \param EntryArray Optional pair pointing to the begin and end of the
+/// `__tgt_offload_entry` array.
+/// \param Relocatable Indicate if we need to change the offloading section to
+/// create a relocatable object.
+LLVM_ABI llvm::Error
+wrapOpenACCBinaries(llvm::Module &M,
+                    llvm::ArrayRef<llvm::ArrayRef<char>> Images,
+                    EntryArrayTy EntryArray, bool Relocatable = false);
+
 /// Wraps the input fatbinary image into the module \p M as global symbols and
 /// registers the images with the CUDA runtime.
-/// \param EntryArray Optional pair pointing to the `__start` and `__stop`
-/// symbols holding the `__tgt_offload_entry` array.
+/// \param EntryArray Optional pair pointing to the begin and end of the
+/// `__tgt_offload_entry` array.
 /// \param Suffix An optional suffix appended to the emitted symbols.
 /// \param EmitSurfacesAndTextures Whether to emit surface and textures
 /// registration code. It defaults to false.
@@ -45,8 +56,8 @@ LLVM_ABI llvm::Error wrapCudaBinary(llvm::Module &M,
 
 /// Wraps the input bundled image into the module \p M as global symbols and
 /// registers the images with the HIP runtime.
-/// \param EntryArray Optional pair pointing to the `__start` and `__stop`
-/// symbols holding the `__tgt_offload_entry` array.
+/// \param EntryArray Optional pair pointing to the begin and end of the
+/// `__tgt_offload_entry` array.
 /// \param Suffix An optional suffix appended to the emitted symbols.
 /// \param EmitSurfacesAndTextures Whether to emit surface and textures
 /// registration code. It defaults to false.
@@ -68,9 +79,18 @@ struct SYCLJITOptions {
 /// as global symbols and registers the images with the SYCL Runtime.
 /// \param Options Compiler and linker options to be encoded for the later
 ///  use by a runtime for JIT compilation. Not used for AOT.
+/// \param IsFinalizedImage True when \p Buffer holds a device image that must
+///  not be device-linked again, e.g. from -fno-gpu-rdc or a relocatable link.
+///  It is put in .sycl_fatbin instead of .llvm.offloading, so
+///  clang-linker-wrapper does not extract it for linking.
+/// \param RegistrationFunc When given, receives the function that registers the
+///  binary with the runtime instead of it being appended to llvm.global_ctors.
+///  A caller has to add it to that list itself.
 LLVM_ABI llvm::Error
 wrapSYCLBinaries(llvm::Module &M, llvm::ArrayRef<char> Buffer,
-                 SYCLJITOptions Options = SYCLJITOptions());
+                 SYCLJITOptions Options = SYCLJITOptions(),
+                 bool IsFinalizedImage = false,
+                 llvm::Function **RegistrationFunc = nullptr);
 
 } // namespace offloading
 } // namespace llvm

@@ -82,19 +82,31 @@ target-defined scopes and constraints:
 These are arranged from largest scope (*system scope*) to smallest scope
 ("singlethread").
 
-- Every instance `X` of some scope `S1` other than "singlethread" scope is
-  partitioned by the scope `S2` one level below it. Each subset defined by this
-  partition is an instance of `S2` and is called a *subscope instance* of `X`.
-- It follows that if two scope instances `X` and `Y` intersect, then their
-  intersection is the smaller of `X` and `Y`.
-- A scope `S1` is a *subscope* of a scope `S2` if every instance of `S1`
-  is a subscope instance of some instance of `S2`.
+(amdgpu-subscopes)=
 
-**Inclusive Scopes**: Two operations `X` and `Y` are said to have *inclusive
-scopes* if the scope instance of each operation contains the other operation. In
-that case, the *common scope instance* `S'` of `X` and `Y` is the
-intersection of their scope instances. The scope corresponding to `S'` is also
-termed as the *common scope* of `X` and `Y`.
+#### Subscopes
+
+Every instance `X` of some scope `S1` other than "singlethread" scope is
+partitioned by the scope `S2` one level below it. Each subset defined by this
+partition is an instance of `S2` and is called a *subscope instance* of `X`.
+`S2` itself is called a *subscope* of `S1`.
+
+The two relations *subscope* and *subscope instance* are transitive.
+
+A scope instance `X` *contains* a scope instance `Y` if `Y` is a subset of
+`X`. In particular, every scope instance contains itself.
+
+It follows that if two scope instances `X` and `Y` intersect, then their
+intersection is the smaller of `X` and `Y`. The *common scope instance* `S'` of
+two operations `X` and `Y` is the intersection of their scope instances. The
+scope corresponding to `S'` is also termed as the *common scope* of `X` and `Y`.
+
+#### Inclusive Scopes
+
+Two operations `X` and `Y` are said to have *inclusive scopes* if their common
+scope instance contains both of `X` and `Y`. [Informational note --- In other
+words, `X` and `Y` have inclusive scopes if the scope instance of each contains
+the other.]
 
 ## Availability and Visibility
 
@@ -126,47 +138,14 @@ these necessary conditions, and hence they can be explained using the rules from
 either memory model. But the new intrinsics and metadata *opt out* of the LLVM
 memory model, and can only be explained using the AMDGPU memory model.
 
-(amdgpu-store-available)=
-
-### store-available
-
-```llvm
-@llvm.amdgcn.av.global.store.b128(ptr, value, scope)
-store atomic [syncscope("<target-scope>")]
-atomicrmw    [syncscope("<target-scope>")]
-cmpxchg      [syncscope("<target-scope>")]
-```
-
-The `@llvm.amdgcn.av.global.store.b128` intrinsic performs a non-atomic
-*store-available* operation on `ptr` with scope `scope`.
-
-An atomic operation that results in a store operation is a *store-available*
-operation with scope `syncscope`.
-
-(amdgpu-load-visible)=
-
-### load-visible
-
-```llvm
-@llvm.amdgcn.av.global.load.b128(ptr, scope)
-load atomic  [syncscope("<target-scope>")]
-atomicrmw    [syncscope("<target-scope>")]
-cmpxchg      [syncscope("<target-scope>")]
-```
-
-The `@llvm.amdgcn.av.global.load.b128` intrinsic performs a non-atomic
-*load-visible* operation on `ptr` with scope `scope`.
-
-An atomic operation that results in a read operation is a *load-visible*
-operation with scope `syncscope`.
-
 :::{note}
-Metadata cannot be used to model this using ordinary load/store operations,
-because the scope is necessary for correctness. In a hypothetical operation
-like this:
+We introduce new intrinsics because metadata cannot be used to express the
+availability and visibility of ordinary
+load/store operations, because the scope is necessary for correctness. In a
+hypothetical operation like this:
 
 ```llvm
-store ptr, data, !mmra !{!"amdgcn-av", !"workgroup"}
+store ptr addrspace(1) %ptr, <4 x i32> %value, !mmra !{!"amdgcn-av", !"workgroup"}
 ```
 
 If the metadata is dropped or ignored, there is no guarantee that the store
@@ -176,9 +155,101 @@ scope. A corresponding *load-visible* that does not access the same near
 cache will fail to observe this store.
 :::
 
+(amdgpu-store-available)=
+
+### store-available
+
+A *store-available* operation `X` writes data to the specified location, and
+then propagates those side-effects up to its scope instance `S` and also all
+the subscope instances of `S` that contain `X`.
+
+```llvm
+@llvm.amdgcn.av.store.b<N>(%addr, %value, metadata !scope)
+```
+
+The `@llvm.amdgcn.av.store.b{8,16,32,64,128}` intrinsics perform a non-atomic
+*store-available* operation on `%addr` with scope `!scope`. See
+{ref}`amdgpu-av-load-store` for details.
+
+```llvm
+store atomic ..., [syncscope("<target-scope>")]
+atomicrmw    ..., [syncscope("<target-scope>")]
+cmpxchg      ..., [syncscope("<target-scope>")]
+```
+
+An atomic operation that results in a store operation is a *store-available*
+operation with scope `syncscope`.
+
+(amdgpu-load-visible)=
+
+### load-visible
+
+A *load-visible* operation `Y` retrieves the state of the specified location
+from its scope instance `S`, and then loads the value at that location. In
+addition, it makes the retrieved state visible to all subscope instances of `S`
+that contain `Y`.
+
+```llvm
+%value = @llvm.amdgcn.av.load.b<N>(%addr, metadata !scope)
+```
+
+The `@llvm.amdgcn.av.load.b{8,16,32,64,128}` intrinsics perform a non-atomic *load-visible*
+operation on `%addr` with scope `!scope`. See {ref}`amdgpu-av-load-store` for
+details.
+
+```llvm
+%value = load atomic ..., [syncscope("<target-scope>")]
+%value = atomicrmw   ..., [syncscope("<target-scope>")]
+%value = cmpxchg     ..., [syncscope("<target-scope>")]
+```
+
+An atomic operation that results in a read operation is a *load-visible*
+operation with scope `syncscope`.
+
+### addrspace(3) Accesses
+
+Any access to `addrspace(3)` (aka LDS or local) always results in a *store-available* or
+*load-visible* operation with scope "workgroup".
+
+Any access to `addrspace(0)` (aka flat or generic) always results in a
+*store-available* or *load-visible* operation with scope "workgroup", if the
+flat address resolves to `addrspace(3)`.
+
+:::{note}
+This is independent of the `syncscope` of an atomic access. For example, even if
+a `store atomic` to `addrspace(3)` specifies a smaller `syncscope` such as "wavefront", the
+side-effects are made available at "workgroup" scope. In other words, the scope
+for atomicity is not always the same as the scope for availability/visibility.
+:::
+
+### volatile Accesses
+
+```llvm
+store volatile ..., ptr addrspace(N) %addr
+%value = load volatile ..., ptr addrspace(N) %addr
+```
+
+A non-atomic `volatile` access results in a *store-available* or *load-visible*
+operation with the widest scope supported by its address space:
+
+- "system" scope for `addrspace(1)` (global) and `addrspace(0)` (generic), and
+- "workgroup" scope for `addrspace(3)` (local), since local memory is not
+  observable beyond its workgroup.
+
+A `volatile` atomic access is not widened in this way. Its availability and
+visibility remain limited to its `syncscope`, as described for atomic accesses
+above.
+
+:::{note}
+The availability and visibility of volatile accesses is specific to AMDGPU, and
+orthogonal to the {ref}`base semantics defined in LLVM IR<volatile>`. This fully
+specifies the behavior that the {ref}`LLVM memory model<memmodel>` otherwise
+leaves target-dependent for `volatile` accesses.
+:::
+
 (amdgpu-av-metadata)=
 
-### AV Metadata
+### !"amdgcn-av" metadata
 
 ```llvm
 !mmra !{!"amdgcn-av", !"none"}
@@ -193,7 +264,12 @@ release` or `load atomic acquire`), the metadata does not affect the
 availability or the visibility of the access performed by the operation itself.
 It only affects the synchronization of other memory accesses.
 
-### MakeAvailable and MakeVisible
+### make-available and make-visible
+
+*make-available* and *make-visible* operations propagate certain side-effects
+from or to the specified scope respectively. They are similar to the
+*store-available* and *load-visible* operations, except that their effect is not
+limited to specific locations.
 
 ```llvm
 store atomic [syncscope("<target-scope>")] <ordering> [, !mmra !{!"amdgcn-av", !"none"}]
@@ -204,24 +280,24 @@ fence        [syncscope("<target-scope>")] <ordering> [, !mmra !{!"amdgcn-av", !
 ```
 
 A synchronizing operation with at least `release` ordering is a
-`MakeAvailable` operation with scope `syncscope`, if it is not marked as
+*make-available* operation with scope `syncscope`, if it is not marked as
 `!{!"amdgcn-av", !"none"}`.
 
 A synchronizing operation with at least `acquire` ordering is a
-`MakeVisible` operation with scope `syncscope`, if it is not marked as
+*make-visible* operation with scope `syncscope`, if it is not marked as
 `!{!"amdgcn-av", !"none"}`.
 
 ```llvm
 ; This includes the following operations:
 ; - The atomic store at "agent" scope,
 ; - A store-available operation at "agent" scope on `ptr`,
-; - A `MakeAvailable` operation at "agent" scope that affects previous memory accesses.
+; - A *make-available* operation at "agent" scope that affects previous memory accesses.
 store atomic syncscope("agent") release ptr
 
 ; This includes the following operations:
 ; - The atomic store at "agent" scope,
 ; - A store-available operation at "agent" scope on `ptr`.
-; Notably, it does not include a `MakeAvailable` operation on other memory accesses.
+; Notably, it does not include a *make-available* operation on other memory accesses.
 store atomic syncscope("agent") release ptr, !mmra !{!"amdgcn-av", !"none"}
 ```
 
@@ -240,40 +316,34 @@ following holds:
 
 - `X` is `W` itself, and `W` is a *store-available* operation, or,
 
-- `X` is a `MakeAvailable` operation that follows `W` in program order,
+- `X` is a *make-available* operation that follows `W` in program order,
   or,
 
-- `X` is a `MakeAvailable` operation whose scope instance includes `W`,
+- `X` is a *make-available* operation whose scope instance contains `W`,
   and there is an availability operation `Z` on `W` such that:
 
   - `Z` happens-before `X`, and,
-  - `Z`'s scope instance includes `X`.
+  - `Z`'s scope instance contains `X`.
 
 Then `X` makes `W` available in its own scope instance `S` and every
-subscope instance of `S` that also includes `W`.
+subscope instance of `S` that also contains `W`.
 
 ### Visibility Operation
 
 An operation `Y` is a *visibility operation* on a write `W` if `Y` is a
-*load-visible* operation to the same address, or a `MakeVisible` operation,
-and one of the following holds:
+*load-visible* operation to the same address, or a *make-visible* operation,
+and there exists an operation `X` such that:
 
-- There exists an *availability* operation `X` on write `W` such that:
+- `X` happens-before `Y`, and,
+- `X` makes `W` available or visible in a scope instance `S` that contains `Y`,
+  and,
+- `Y`'s scope instance contains `S`.
 
-  - `X` happens-before `Y`, and,
-  - `X` and `Y` specify inclusive scopes.
+Then `Y` makes `W` visible in `S` and every subscope instance of `S` that
+contains `Y`.
 
-  Then `Y` makes `W` visible in the common scope instance `S` of `X` and
-  `Y`, and every subscope instance of `S` that includes `Y`.
-
-- There exists a *visibility* operation `X` on write `W` such that:
-
-  - `X` happens-before `Y`, and,
-  - `X` makes `W` visible in a scope instance `S1` that includes `Y`, and,
-  - `X` is included in the scope instance `S2` of `Y`.
-
-  Then `Y` makes `W` visible in the intersection `S` of `S1` and `S2`,
-  and every subscope instance of `S` that includes `Y`.
+[Informational note --- The "{ref}`contains<amdgpu-subscopes>`" relation is
+reflexive over scope instances.]
 
 ### Location Order
 
@@ -284,13 +354,16 @@ A write `W` is *location-ordered* before a write `W1` to the same address if
 there exists an availability operation `Z` on `W` such that:
 
 - `Z` happens-before `W1`, and,
-- `W1` is included in `Z`'s scope instance.
+- `Z` makes `W` available in a scope instance that contains `W1`.
 
 A write `W` is *location-ordered* before a read `R` to the same address if
 there exists a visibility operation `Z` on write `W` such that:
 
 - `Z` is `R` itself, or,
 - `Z` precedes `R` in program order.
+
+A read `R` is *location-ordered* before an access (read and/or write) `X` to the
+same address if it happens-before `X`.
 
 The AMDGPU memory model overrides the definition of each byte in the
 {ref}`LLVM memory model<memmodel>` as follows.
@@ -304,15 +377,17 @@ For each byte of a read `R`, `R` may see any write to the same byte, except:
 
 - If a write `W1` is *location-ordered* before a write `W2`, and `W2` is
   *location-ordered* before a read `R`, then `R` may not see `W1`.
-- If a read `R` happens-before a write `W3`, then `R` may not see `W3`.
+- If a read `R` is *location-ordered* before a write `W3`, then `R` may not see
+  `W3`.
 
 The value returned by `R` is then defined as follows:
 
 - If no write is *location-ordered* before a read `R`, then `R` returns
   `undef`.
 - Otherwise if the set consisting of `R` and all writes that `R` may see
-  contains only atomic operations with inclusive scopes, then `R` returns the
-  value written by one of those writes.
+  contains only atomic operations with inclusive scopes that all access the
+  exact same set of bytes, then `R` returns the value written by one of those
+  writes.
 - Otherwise, if `R` may see some write that is not *location-ordered* before
   `R`, then `R` returns `undef`.
 - Otherwise, if `R` may see exactly one write `W`, then `R` returns the
@@ -327,35 +402,33 @@ This section is informational.
 
 The following properties follow from the definitions above:
 
-1. **Happens-before is necessary for location-order.** A write `W` is
-   *location-ordered* before a read `R` only if `W` happens-before `R`.
+1. **Happens-before is necessary for location-order.** An access `X` is
+   *location-ordered* before an access `Y` only if `X` happens-before `Y`.
    This follows from the definition of availability and visibility operations,
    which always require a happens-before link with the preceding operation in
    the chain.
 2. **A write cannot be made available in a scope that does not contain it.** The
    definition of an availability operation `X` requires that `X`'s scope
-   instance includes `W` as a precondition. Since every scope instance that
-   includes `X` also includes `W`, availability cannot reach a scope
-   instance that excludes `W`. In other words, availability can only "expand
-   outwards" into progressively larger scopes.
+   instance contains `W`. The operation makes `W` available in that scope
+   instance and only those subscope instances that also contain `W`.
+   Availability therefore cannot reach a scope instance that excludes `W`.
 3. **Visibility is bounded by availability.** When a write is available in a
    scope instance, it can be made visible in that scope instance by a visibility
-   operation with the corresponding scope. Subsequent `MakeVisible` operations
+   operation with the corresponding scope. Subsequent *make-visible* operations
    make that write visible into narrower scope instances towards the observer.
 4. **A write can be made visible in a scope instance that does not contain it.**
    The definition of a *visibility operation* anchors scope instances to the
    observer (`Y`), not to the original write. The only precondition is that the
-   write must already be visible or available in the scope instance of the
-   visibility operation.
+   write must already be visible or available in the scope instance `S` of `Y`
+   or a subscope instance of `S` that contains `Y`.
 5. **Availability and visibility chains.** For a write `W` to be visible to a
    read `R` anywhere in the system, the sufficient condition is a chain of
    happens-before edges that include availability and visibility operations with
    inclusive scopes. It is not necessary that `W` and `R` themselves have
-   inclusive scopes. Each link in the availability and visibility definitions
-   only checks the immediate predecessor, so intermediate operations can bridge
-   scope gaps that the endpoints cannot satisfy directly. Such a chain passes
+   inclusive scopes. Intermediate operations can bridge scope gaps that the
+   endpoints cannot satisfy directly. Such a chain passes
    through at least one availability operation and at least one visibility
-   operation with inclusive scopes, such that their common scope includes both
+   operation with inclusive scopes, such that their common scope contains both
    `W` and `R`.
 
 (amdgcn-av-vulkan)=
@@ -367,7 +440,7 @@ particular, the following instructions are equivalent.
 
 ```{list-table}
 :header-rows: 1
-:widths: 20 20 60
+:widths: 25 20 55
 
    * - LLVM
      - SPIRV
@@ -387,19 +460,19 @@ particular, the following instructions are equivalent.
    * - `load atomic`
      - `OpAtomicLoad`
      - `MakePointerVisible`. Also `MakeVisible` when order is at least `acquire`.
-   * - `load atomic !{!"amdgcn-av", !"none"}`
+   * - `load atomic`<br>`!{!"amdgcn-av", !"none"}`
      - `OpAtomicLoad`
      - `MakePointerVisible`
    * - `store atomic`
      - `OpAtomicStore`
      - `MakePointerAvailable`. Also `MakeAvailable` when order is at least `release`.
-   * - `store atomic !{!"amdgcn-av", !"none"}`
+   * - `store atomic`<br>`!{!"amdgcn-av", !"none"}`
      - `OpAtomicStore`
      - `MakePointerAvailable`
    * - `fence`
      - `OpMemoryBarrier`
      - `MakeAvailable` when order is at least `release`, and `MakeVisible` when order is at least `acquire`.
-   * - `fence !{!"amdgcn-av", !"none"}`
+   * - `fence`<br>`!{!"amdgcn-av", !"none"}`
      - `OpMemoryBarrier`
      - \-
 ```

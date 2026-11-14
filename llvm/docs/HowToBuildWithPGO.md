@@ -14,7 +14,7 @@ for PGO](https://clang.llvm.org/docs/UsersManual.html#profile-guided-optimizatio
 
 ## Using preconfigured CMake caches
 
-See <https://llvm.org/docs/AdvancedBuilds.html#multi-stage-pgo>
+See [Multi-stage PGO](AdvancedBuilds.md#multi-stage-pgo)
 
 ## Using the script
 
@@ -141,12 +141,12 @@ In more detailed steps:
 
    From here, you can build whatever targets you need.
 
-   ```{note}
+   :::{note}
    You may see warnings about a mismatched profile in the build output. These
    are generally harmless. To silence them, you can add
    `-DCMAKE_C_FLAGS='-Wno-backend-plugin'
    -DCMAKE_CXX_FLAGS='-Wno-backend-plugin'` to your CMake invocation.
-   ```
+   :::
 
 Congrats! You now have a Clang built with profile-guided optimizations, and you
 can delete all but the final build directory if you'd like.

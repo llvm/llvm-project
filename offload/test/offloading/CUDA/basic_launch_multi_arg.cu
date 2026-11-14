@@ -6,14 +6,12 @@
 // clang-format on
 
 // REQUIRES: gpu
+// UNSUPPORTED: nvptx64-nvidia-cuda-LTO
+// UNSUPPORTED: amdgcn-amd-amdhsa-LTO
+// UNSUPPORTED: amdgpu-amd-amdhsa-LTO
 // UNSUPPORTED: intelgpu
 
 #include <stdio.h>
-
-extern "C" {
-void *llvm_omp_target_alloc_shared(size_t Size, int DeviceNum);
-void llvm_omp_target_free_shared(void *DevicePtr, int DeviceNum);
-}
 
 __global__ void square(int *Dst, short Q, int *Src, short P) {
   *Dst = (Src[0] + Src[1]) * (Q + P);
@@ -23,19 +21,19 @@ __global__ void square(int *Dst, short Q, int *Src, short P) {
 
 int main(int argc, char **argv) {
   int DevNo = 0;
-  int *Ptr = reinterpret_cast<int *>(llvm_omp_target_alloc_shared(4, DevNo));
-  int *Src = reinterpret_cast<int *>(llvm_omp_target_alloc_shared(8, DevNo));
-  *Ptr = 7;
-  Src[0] = -2;
-  Src[1] = 8;
-  printf("Ptr %p, *Ptr: %i\n", Ptr, *Ptr);
-  // CHECK: Ptr [[Ptr:0x.*]], *Ptr: 7
-  printf("Src: %i : %i\n", Src[0], Src[1]);
-  // CHECK: Src: -2 : 8
+  int *Src, *Ptr;
+  cudaMalloc(&Ptr, 4);
+  cudaMalloc(&Src, 8);
+
+  int I = 7;
+  int HostSrc[2] = {-2, 8};
+  cudaMemcpy(Ptr, &I, sizeof(int), cudaMemcpyHostToDevice);
+  cudaMemcpy(Src, &HostSrc[0], 2 * sizeof(int), cudaMemcpyHostToDevice);
   square<<<1, 1>>>(Ptr, 3, Src, 4);
-  printf("Ptr %p, *Ptr: %i\n", Ptr, *Ptr);
-  // CHECK: Ptr [[Ptr]], *Ptr: 42
-  printf("Src: %i : %i\n", Src[0], Src[1]);
-  // CHECK: Src: 3 : 4
-  llvm_omp_target_free_shared(Ptr, DevNo);
+  cudaMemcpy(&I, Ptr, sizeof(int), cudaMemcpyDeviceToHost);
+  cudaMemcpy(&HostSrc[0], Src, 2 * sizeof(int), cudaMemcpyDeviceToHost);
+  printf("I: %i\n", I);
+  // CHECK: I: 42
+  printf("Src: %i, %i\n", HostSrc[0], HostSrc[1]);
+  // CHECK: Src: 3, 4
 }

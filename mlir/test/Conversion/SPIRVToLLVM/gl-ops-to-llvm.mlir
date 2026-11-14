@@ -1,4 +1,5 @@
 // RUN: mlir-opt -convert-spirv-to-llvm %s | FileCheck %s
+// RUN: mlir-opt -convert-spirv-to-llvm='allow-pattern-rollback=0' %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // spirv.GL.Ceil
@@ -165,6 +166,17 @@ spirv.func @pow(%arg0: f32, %arg1: vector<3xf16>) "None" {
   %0 = spirv.GL.Pow %arg0, %arg0 : f32
   // CHECK: llvm.intr.pow(%{{.*}}, %{{.*}}) : (vector<3xf16>, vector<3xf16>) -> vector<3xf16>
   %1 = spirv.GL.Pow %arg1, %arg1 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Ldexp
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @ldexp
+spirv.func @ldexp(%arg0: f32, %arg1: i32) "None" {
+  // CHECK: llvm.intr.ldexp(%{{.*}}, %{{.*}}) : (f32, i32) -> f32
+  %0 = spirv.GL.Ldexp %arg0 : f32, %arg1 : i32 -> f32
   spirv.Return
 }
 
@@ -455,6 +467,42 @@ spirv.func @asin_acos_atan(%arg0: f32, %arg1: vector<3xf16>) "None" {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.GL.Atan2
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @atan2
+spirv.func @atan2(%arg0: f32, %arg1: f32, %arg2: vector<3xf16>, %arg3: vector<3xf16>) "None" {
+  // CHECK: llvm.intr.atan2(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  %0 = spirv.GL.Atan2 %arg0, %arg1 : f32
+  // CHECK: llvm.intr.atan2(%{{.*}}, %{{.*}}) : (vector<3xf16>, vector<3xf16>) -> vector<3xf16>
+  %1 = spirv.GL.Atan2 %arg2, %arg3 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Asinh, spirv.GL.Acosh
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @asinh_acosh
+spirv.func @asinh_acosh(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
+  // CHECK: %[[SQ:.*]] = llvm.fmul %[[X:.*]], %[[X]] : f32
+  // CHECK: %[[RAD:.*]] = llvm.fadd %[[SQ]], %[[ONE]] : f32
+  // CHECK: %[[ROOT:.*]] = llvm.intr.sqrt(%[[RAD]]) : (f32) -> f32
+  // CHECK: %[[SUM:.*]] = llvm.fadd %[[X]], %[[ROOT]] : f32
+  // CHECK: llvm.intr.log(%[[SUM]]) : (f32) -> f32
+  %0 = spirv.GL.Asinh %arg0 : f32
+  // CHECK: %[[MONE:.*]] = llvm.mlir.constant(dense<-1.000000e+00> : vector<3xf16>) : vector<3xf16>
+  // CHECK: %[[VSQ:.*]] = llvm.fmul %[[VX:.*]], %[[VX]] : vector<3xf16>
+  // CHECK: %[[VRAD:.*]] = llvm.fadd %[[VSQ]], %[[MONE]] : vector<3xf16>
+  // CHECK: %[[VROOT:.*]] = llvm.intr.sqrt(%[[VRAD]]) : (vector<3xf16>) -> vector<3xf16>
+  // CHECK: %[[VSUM:.*]] = llvm.fadd %[[VX]], %[[VROOT]] : vector<3xf16>
+  // CHECK: llvm.intr.log(%[[VSUM]]) : (vector<3xf16>) -> vector<3xf16>
+  %1 = spirv.GL.Acosh %arg1 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.GL.Fract
 //===----------------------------------------------------------------------===//
 
@@ -466,6 +514,60 @@ spirv.func @fract(%arg0: f32, %arg1: vector<3xf16>) "None" {
   // CHECK: %[[FLOORV:.*]] = llvm.intr.floor(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
   // CHECK: llvm.fsub %{{.*}}, %[[FLOORV]] : vector<3xf16>
   %1 = spirv.GL.Fract %arg1 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.FSign
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @fsign_scalar
+spirv.func @fsign_scalar(%arg0: f32) "None" {
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0.000000e+00 : f32) : f32
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
+  // CHECK: %[[MONE:.*]] = llvm.mlir.constant(-1.000000e+00 : f32) : f32
+  // CHECK: %[[GT:.*]] = llvm.fcmp "ogt" %{{.*}}, %[[ZERO]] : f32
+  // CHECK: %[[LT:.*]] = llvm.fcmp "olt" %{{.*}}, %[[ZERO]] : f32
+  // CHECK: %[[SEL0:.*]] = llvm.select %[[LT]], %[[MONE]], %[[ZERO]] : i1, f32
+  // CHECK: llvm.select %[[GT]], %[[ONE]], %[[SEL0]] : i1, f32
+  %0 = spirv.GL.FSign %arg0 : f32
+  spirv.Return
+}
+
+// CHECK-LABEL: @fsign_vector
+spirv.func @fsign_vector(%arg0: vector<4xf32>) "None" {
+  // CHECK: %[[GT:.*]] = llvm.fcmp "ogt" %{{.*}}, %{{.*}} : vector<4xf32>
+  // CHECK: %[[LT:.*]] = llvm.fcmp "olt" %{{.*}}, %{{.*}} : vector<4xf32>
+  // CHECK: %[[SEL0:.*]] = llvm.select %[[LT]], %{{.*}}, %{{.*}} : vector<4xi1>, vector<4xf32>
+  // CHECK: llvm.select %[[GT]], %{{.*}}, %[[SEL0]] : vector<4xi1>, vector<4xf32>
+  %0 = spirv.GL.FSign %arg0 : vector<4xf32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.SSign
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @ssign_scalar
+spirv.func @ssign_scalar(%arg0: i32) "None" {
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[MONE:.*]] = llvm.mlir.constant(-1 : i32) : i32
+  // CHECK: %[[GT:.*]] = llvm.icmp "sgt" %{{.*}}, %[[ZERO]] : i32
+  // CHECK: %[[LT:.*]] = llvm.icmp "slt" %{{.*}}, %[[ZERO]] : i32
+  // CHECK: %[[SEL0:.*]] = llvm.select %[[LT]], %[[MONE]], %[[ZERO]] : i1, i32
+  // CHECK: llvm.select %[[GT]], %[[ONE]], %[[SEL0]] : i1, i32
+  %0 = spirv.GL.SSign %arg0 : i32
+  spirv.Return
+}
+
+// CHECK-LABEL: @ssign_vector
+spirv.func @ssign_vector(%arg0: vector<4xi32>) "None" {
+  // CHECK: %[[GT:.*]] = llvm.icmp "sgt" %{{.*}}, %{{.*}} : vector<4xi32>
+  // CHECK: %[[LT:.*]] = llvm.icmp "slt" %{{.*}}, %{{.*}} : vector<4xi32>
+  // CHECK: %[[SEL0:.*]] = llvm.select %[[LT]], %{{.*}}, %{{.*}} : vector<4xi1>, vector<4xi32>
+  // CHECK: llvm.select %[[GT]], %{{.*}}, %[[SEL0]] : vector<4xi1>, vector<4xi32>
+  %0 = spirv.GL.SSign %arg0 : vector<4xi32>
   spirv.Return
 }
 

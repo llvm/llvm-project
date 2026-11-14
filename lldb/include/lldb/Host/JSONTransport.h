@@ -68,6 +68,8 @@ class InvalidParams : public llvm::ErrorInfo<InvalidParams> {
 public:
   static char ID;
 
+  static constexpr int kErrorCode = -32602;
+
   explicit InvalidParams(std::string method, std::string context)
       : m_method(std::move(method)), m_context(std::move(context)) {}
 
@@ -81,6 +83,25 @@ private:
   /// Additional context from the parsing failure, e.g. "missing value at
   /// (root)[1].str".
   std::string m_context;
+};
+
+/// An error to indicate that an incoming message could not be parsed as a
+/// valid protocol message.
+class InvalidMessage : public llvm::ErrorInfo<InvalidMessage> {
+public:
+  static char ID;
+
+  static constexpr int kErrorCode = -32700;
+
+  explicit InvalidMessage(std::string raw_message, std::string reason)
+      : m_raw_message(std::move(raw_message)), m_reason(std::move(reason)) {}
+
+  void log(llvm::raw_ostream &OS) const override;
+  std::error_code convertToErrorCode() const override;
+
+private:
+  std::string m_raw_message;
+  std::string m_reason;
 };
 
 /// An error to indicate that no handler was registered for a given method.
@@ -138,6 +159,14 @@ public:
   virtual llvm::Error Send(const Req &) = 0;
   /// Sends a response to a specific request.
   virtual llvm::Error Send(const Resp &) = 0;
+
+  /// Sends an error response for a message that failed to parse, described by
+  /// \p reason. Sends nothing if no request id can be recovered from it, since
+  /// there is then no request to respond to.
+  virtual llvm::Error ReplyWithParseError(llvm::StringRef raw_message,
+                                          llvm::StringRef reason) {
+    return llvm::Error::success();
+  }
 
   /// Implemented to handle incoming messages. (See `RegisterMessageHandler()`
   /// below).
@@ -210,10 +239,15 @@ public:
 
 protected:
   llvm::Error Write(const llvm::json::Value &message) {
-    this->Logv("<-- {0}", message);
     std::string output = Encode(message);
     size_t bytes_written = output.size();
-    return m_out->Write(output.data(), bytes_written).takeError();
+    llvm::Error err = m_out->Write(output.data(), bytes_written).takeError();
+    if (err)
+      this->Logv("write failed [{0}]: <-- {1}",
+                 llvm::toStringWithoutConsuming(err), message);
+    else
+      this->Logv("<-- {0}", message);
+    return err;
   }
 
   virtual llvm::Expected<std::vector<std::string>> Parse() = 0;
@@ -245,8 +279,15 @@ private:
         llvm::Expected<Message> message =
             llvm::json::parse<Message>(raw_message);
         if (!message) {
-          handler.OnError(message.takeError());
-          return;
+          // Messages are independent, so one that fails to parse must not
+          // discard those already buffered behind it.
+          std::string reason = llvm::toString(message.takeError());
+          if (llvm::Error error =
+                  this->ReplyWithParseError(raw_message, reason))
+            handler.OnError(std::move(error));
+          handler.OnError(
+              llvm::make_error<InvalidMessage>(raw_message, std::move(reason)));
+          continue;
         }
 
         std::visit([&handler](auto &&msg) { handler.Received(msg); }, *message);
@@ -546,7 +587,7 @@ public:
     auto it = m_event_handlers.find(Proto::KeyFor(evt));
     if (it == m_event_handlers.end()) {
       OnError(llvm::createStringError(
-          llvm::formatv("no handled for event {0}", toJSON(evt))));
+          llvm::formatv("no handler for event {0}", toJSON(evt))));
       return;
     }
     it->second(evt);
@@ -558,7 +599,8 @@ public:
     std::scoped_lock<std::recursive_mutex> guard(m_mutex);
     auto it = m_request_handlers.find(Proto::KeyFor(req));
     if (it == m_request_handlers.end()) {
-      reply(Proto::Make(req, llvm::createStringError("method not found")));
+      reply(Proto::Make(req,
+                        llvm::make_error<MethodNotFound>(Proto::KeyFor(req))));
       return;
     }
 

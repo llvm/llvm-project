@@ -9,6 +9,8 @@ class TEST_Op<string mnemonic, list<Trait> traits = []> :
     Op<TEST_Dialect, mnemonic, traits>;
 
 def CustomResource : Resource<"CustomResource">;
+def ParameterizedResource : Resource<"CustomResource",
+    [{::mlir::StringAttr::get(getContext(), "parameter")}]>;
 
 def SideEffectOpA : TEST_Op<"side_effect_op_a"> {
   let arguments = (ins
@@ -23,6 +25,13 @@ def SideEffectOpA : TEST_Op<"side_effect_op_a"> {
 
 def SideEffectOpB : TEST_Op<"side_effect_op_b",
     [MemoryEffects<[MemWrite<CustomResource, 0>]>]>;
+
+def SideEffectOpC : TEST_Op<"side_effect_op_c"> {
+  let arguments = (ins Arg<AnyMemRef, "", [MemRead<ParameterizedResource>]>);
+}
+
+def SideEffectOpD : TEST_Op<"side_effect_op_d",
+    [MemoryEffects<[MemWrite<ParameterizedResource>]>]>;
 
 // CHECK: void SideEffectOpA::getEffects
 // CHECK:  {
@@ -50,3 +59,9 @@ def SideEffectOpB : TEST_Op<"side_effect_op_b",
 
 // CHECK: void SideEffectOpB::getEffects
 // CHECK:   effects.emplace_back(::mlir::MemoryEffects::Write::get(), 0, false, CustomResource::get());
+
+// CHECK-LABEL: void SideEffectOpC::getEffects
+// CHECK: "parameter"), 0, false, CustomResource::get());
+
+// CHECK-LABEL: void SideEffectOpD::getEffects
+// CHECK: "parameter"), 0, false, CustomResource::get());

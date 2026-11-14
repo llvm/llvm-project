@@ -21,6 +21,7 @@
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -62,13 +63,27 @@ static bool hasNestedParallelOp(ParallelOp ploop) {
 /// Verify equal iteration spaces.
 static bool equalIterationSpaces(ParallelOp firstPloop,
                                  ParallelOp secondPloop) {
-  if (firstPloop.getNumLoops() != secondPloop.getNumLoops())
+  if (firstPloop.getNumLoops() != secondPloop.getNumLoops() ||
+      firstPloop.getUnsignedCmp() != secondPloop.getUnsignedCmp())
     return false;
 
+  // Two bounds match if they are the same value, or if both are constants
+  // holding the same value. The latter matters because equivalent bounds are
+  // often materialized by distinct `arith.constant` ops, which leaves the
+  // iteration spaces equal even though the SSA values differ.
   auto matchOperands = [&](const OperandRange &lhs,
                            const OperandRange &rhs) -> bool {
-    // TODO: Extend this to support aliases and equal constants.
-    return std::equal(lhs.begin(), lhs.end(), rhs.begin());
+    // TODO: Extend this to support aliases.
+    return std::equal(lhs.begin(), lhs.end(), rhs.begin(),
+                      [](Value lhsValue, Value rhsValue) {
+                        if (lhsValue == rhsValue)
+                          return true;
+                        std::optional<int64_t> lhsConst =
+                            getConstantIntValue(lhsValue);
+                        std::optional<int64_t> rhsConst =
+                            getConstantIntValue(rhsValue);
+                        return lhsConst && rhsConst && *lhsConst == *rhsConst;
+                      });
   };
   return matchOperands(firstPloop.getLowerBound(),
                        secondPloop.getLowerBound()) &&
@@ -399,6 +414,10 @@ static bool loadMatchesVectorWrite(memref::LoadOp loadOp,
   if (!vecTy)
     return false;
 
+  // A masked write may not write the element that the load reads.
+  if (writeOp.getMask() || writeOp.isMasked())
+    return false;
+
   unsigned writeRank = writeOp.getIndices().size();
   AffineMap permutationMap = writeOp.getPermutationMap();
   if (!permutationMap.isProjectedPermutation() ||
@@ -547,9 +566,15 @@ loadsFromSameMemoryLocationWrittenBy(Operation *loadOp, Operation *storeOp,
             auto vecWriteOp = dyn_cast<vector::TransferWriteOp>(storeOp);
             if (!vecWriteOp)
               return false;
+            // A write masked by `vector.mask` may write fewer elements than
+            // the read reads.
             return opsAccessSameIndices(vecReadOp, vecWriteOp,
                                         firstToSecondPloopIVsMap, b) &&
+                   (vecReadOp.getVectorType() == vecWriteOp.getVectorType()) &&
+                   (vecReadOp.getPermutationMap() ==
+                    vecWriteOp.getPermutationMap()) &&
                    (vecReadOp.getMask() == vecWriteOp.getMask()) &&
+                   !vecWriteOp.isMasked() &&
                    (vecReadOp.getInBounds() == vecWriteOp.getInBounds());
           })
           .Case([&](vector::LoadOp vecLoadOp) {
@@ -558,6 +583,7 @@ loadsFromSameMemoryLocationWrittenBy(Operation *loadOp, Operation *storeOp,
               return false;
             return opsAccessSameIndices(vecLoadOp, vecStoreOp,
                                         firstToSecondPloopIVsMap, b) &&
+                   (vecLoadOp.getVectorType() == vecStoreOp.getVectorType()) &&
                    (vecLoadOp.getAlignment() == vecStoreOp.getAlignment());
           })
           .Default([](Operation *) { return false; });
@@ -765,8 +791,9 @@ interchangeLoops(OpBuilder &builder, ParallelOp &loop,
       applyPermutation(SmallVector<Value>(loop.getUpperBound()), indices);
   SmallVector<Value> newStep =
       applyPermutation(SmallVector<Value>(loop.getStep()), indices);
-  auto newOp = ParallelOp::create(builder, loop.getLoc(), newLB, newUB, newStep,
-                                  loop.getInitVals(), nullptr);
+  auto newOp =
+      ParallelOp::create(builder, loop.getLoc(), newLB, newUB, newStep,
+                         loop.getInitVals(), nullptr, loop.getUnsignedCmp());
   auto ivs = loop.getInductionVars();
   SmallVector<Value> newIvs = applyPermutation(
       newOp.getInductionVars(), invertPermutationVector(indices));
@@ -950,9 +977,10 @@ static void applyLoopFusion(ParallelOp &firstPloop, ParallelOp &secondPloop,
 
   IRRewriter b(builder);
   b.setInsertionPoint(secondPloop);
-  auto newSecondPloop = ParallelOp::create(
-      b, secondPloop.getLoc(), secondPloop.getLowerBound(),
-      secondPloop.getUpperBound(), secondPloop.getStep(), newInitVars);
+  auto newSecondPloop =
+      ParallelOp::create(b, secondPloop.getLoc(), secondPloop.getLowerBound(),
+                         secondPloop.getUpperBound(), secondPloop.getStep(),
+                         newInitVars, nullptr, secondPloop.getUnsignedCmp());
 
   Block *newBlock = newSecondPloop.getBody();
   auto term1 = cast<ReduceOp>(block1->getTerminator());

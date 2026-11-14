@@ -208,6 +208,9 @@ candidate function not viable: requires single argument 'x', but 2 arguments wer
             self, "// Break here", self.main_source_spec
         )
 
+        # CodeView only records that a compile unit is C++, not which standard.
+        cxx_language = "ISO C++" if self.getDebugInfo() == "pdb" else "C++"
+
         def check_error(diags):
             # Version.
             version = diags.GetValueForKey("version")
@@ -218,9 +221,13 @@ candidate function not viable: requires single argument 'x', but 2 arguments wer
             # Detail 1/3: note: requested expression language
             diag = details.GetItemAtIndex(0)
             self.assertEqual(str(diag.GetValueForKey("severity")), "note")
-            self.assertIn("Ran expression as 'C++", str(diag.GetValueForKey("message")))
             self.assertIn(
-                "Ran expression as 'C++", str(diag.GetValueForKey("rendered"))
+                f"Ran expression as '{cxx_language}",
+                str(diag.GetValueForKey("message")),
+            )
+            self.assertIn(
+                f"Ran expression as '{cxx_language}",
+                str(diag.GetValueForKey("rendered")),
             )
             self.assertEqual(str(diag.GetValueForKey("source_location")), "")
             self.assertEqual(str(diag.GetValueForKey("file")), "")

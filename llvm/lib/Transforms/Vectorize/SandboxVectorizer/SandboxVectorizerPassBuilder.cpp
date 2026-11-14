@@ -1,6 +1,6 @@
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerPassBuilder.h"
 
-#include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/BottomUpVec.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/BundleVec.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/LoadStoreVec.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/NullPass.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/PackReuse.h"

@@ -127,6 +127,15 @@ undefined t; // expected-error {{unknown type name 'undefined'}}
 // expected-error@-1{{MAIN2}}
 
 #line 129 L"wide" // expected-error {{invalid filename for #line directive}}
-#line 130 "\x12" // expected-error {{invalid escape sequence '\x12' in an unevaluated string literal}}
+#line 130 "\x12"
 # 131 U"hello" // expected-error {{invalid filename for line marker directive}}
-# 132 "\x13" // expected-error {{invalid escape sequence '\x13' in an unevaluated string literal}}
+# 132 "\x13" // expected-warning {{this style of line directive is a GNU extension}}
+
+#line 0 // expected-warning {{#line directive with zero argument is a GNU extension}}
+// #UNTERMINATED
+#line 1 "foo\""
+// expected-warning@#UNTERMINATED {{missing terminating '"' character}}
+// expected-warning@#UNTERMINATED {{extra tokens at end of #line directive}}
+
+#line 1 <> // expected-error {{invalid filename for #line directive}}
+#line 1 <foo> // expected-error {{invalid filename for #line directive}}

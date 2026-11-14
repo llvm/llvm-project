@@ -16,10 +16,10 @@
 
 #include "AMDGPUReserveWWMRegs.h"
 #include "AMDGPU.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 
@@ -52,8 +52,10 @@ public:
 
 } // End anonymous namespace.
 
-INITIALIZE_PASS(AMDGPUReserveWWMRegsLegacy, DEBUG_TYPE,
-                "AMDGPU Reserve WWM Registers", false, false)
+INITIALIZE_PASS_BEGIN(AMDGPUReserveWWMRegsLegacy, DEBUG_TYPE,
+                      "AMDGPU Reserve WWM Registers", false, false)
+INITIALIZE_PASS_END(AMDGPUReserveWWMRegsLegacy, DEBUG_TYPE,
+                    "AMDGPU Reserve WWM Registers", false, false)
 
 char AMDGPUReserveWWMRegsLegacy::ID = 0;
 
@@ -67,8 +69,6 @@ PreservedAnalyses
 AMDGPUReserveWWMRegsPass::run(MachineFunction &MF,
                               MachineFunctionAnalysisManager &) {
   AMDGPUReserveWWMRegs().run(MF);
-  // TODO: This should abandon RegisterClassInfo once it is turned into an
-  // analysis.
   return PreservedAnalyses::all();
 }
 
@@ -104,8 +104,8 @@ bool AMDGPUReserveWWMRegs::run(MachineFunction &MF) {
       MO.setIsRenamable(false);
   }
 
-  // Now clear the NonWWMRegMask earlier set during wwm-regalloc.
-  MFI->clearNonWWMRegAllocMask();
+  // Now clear the PerLaneVGPRMask earlier set during wwm-regalloc.
+  MFI->clearPerLaneVGPRAllocMask();
 
   return Changed;
 }

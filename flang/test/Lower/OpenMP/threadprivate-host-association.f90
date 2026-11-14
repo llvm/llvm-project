@@ -5,21 +5,24 @@
 
 !CHECK: func.func @_QQmain() attributes {fir.bindc_name = "MAIN"} {
 !CHECK:   %[[A:.*]] = fir.address_of(@_QFEa) : !fir.ref<i32>
-!CHECK:   %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:   %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] uniq_name("_QFEa") fortran_attrs<internal_assoc> : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:   %[[TP_A:.*]] = omp.threadprivate %[[A_DECL]]#0 : !fir.ref<i32> -> !fir.ref<i32>
-!CHECK:   %[[TP_A_DECL:.*]]:2 = hlfir.declare %[[TP_A]] {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:   %[[TP_A_DECL:.*]]:2 = hlfir.declare %[[TP_A]] uniq_name("_QFEa") fortran_attrs<internal_assoc> : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:   fir.call @_QFPsub() fastmath<contract> : () -> ()
 !CHECK:   return
 !CHECK: }
 !CHECK: func.func private @_QFPsub() attributes {fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
+!CHECK:   %[[EQ:.*]] = fir.address_of(@_QFEb)
 !CHECK:   %[[A:.*]] = fir.address_of(@_QFEa) : !fir.ref<i32>
-!CHECK:   %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] {uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:   %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] uniq_name("_QFEa") fortran_attrs<internal_assoc> : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:   %[[TP_A:.*]] = omp.threadprivate %[[A_DECL]]#0 : !fir.ref<i32> -> !fir.ref<i32>
-!CHECK:   %[[TP_A_DECL:.*]]:2 = hlfir.declare %[[TP_A]] {uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:   %[[TP_A_DECL:.*]]:2 = hlfir.declare %[[TP_A]] uniq_name("_QFEa") fortran_attrs<internal_assoc> : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:   %[[MEMBER:.*]]:2 = hlfir.declare {{.*}} storage(%[[EQ]][4]) uniq_name("_QFEc")
 !CHECK:   omp.parallel {
 !CHECK:     %[[PAR_TP_A:.*]] = omp.threadprivate %[[A_DECL]]#0 : !fir.ref<i32> -> !fir.ref<i32>
-!CHECK:     %[[PAR_TP_A_DECL:.*]]:2 = hlfir.declare %[[PAR_TP_A]] {uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:     %[[PAR_TP_A_DECL:.*]]:2 = hlfir.declare %[[PAR_TP_A]] uniq_name("_QFEa") fortran_attrs<internal_assoc> : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:     %{{.*}} = fir.load %[[PAR_TP_A_DECL]]#0 : !fir.ref<i32>
+!CHECK:     fir.load %[[MEMBER]]#0
 !CHECK:     omp.terminator
 !CHECK:   }
 !CHECK:   return
@@ -29,14 +32,17 @@
 !CHECK:   fir.has_value %[[A]] : i32
 !CHECK: }
 
+! The internal procedure uses an EQUIVALENCE member and a threadprivate scalar.
 program main
    integer, save :: a
+   integer, save :: b(2), c
+   equivalence (b(2), c)
    !$omp threadprivate(a)
    call sub()
 contains
    subroutine sub()
       !$omp parallel
-      print *, a
+      print *, a, c
       !$omp end parallel
    end
 end

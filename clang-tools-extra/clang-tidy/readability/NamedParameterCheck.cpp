@@ -100,9 +100,10 @@ void NamedParameterCheck::check(const MatchFinder::MatchResult &Result) {
       continue;
 
     // Skip gmock testing::Unused parameters.
-    if (const auto *Typedef = Parm->getType()->getAs<TypedefType>())
-      if (Typedef->getDecl()->getQualifiedNameAsString() == "testing::Unused")
-        continue;
+    if (const auto *Typedef = Parm->getType()->getAs<TypedefType>();
+        Typedef &&
+        Typedef->getDecl()->getQualifiedNameAsString() == "testing::Unused")
+      continue;
 
     // Skip std::nullptr_t.
     if (Parm->getType().getCanonicalType()->isNullPtrType())
@@ -132,10 +133,10 @@ void NamedParameterCheck::check(const MatchFinder::MatchResult &Result) {
   if (!UnnamedParams.empty()) {
     const ParmVarDecl *FirstParm =
         UnnamedParams.front().first->getParamDecl(UnnamedParams.front().second);
-    auto D = diag(FirstParm->getLocation(),
-                  "all parameters should be named in a function");
+    const auto D = diag(FirstParm->getLocation(),
+                        "all parameters should be named in a function");
 
-    for (auto P : UnnamedParams) {
+    for (const auto P : UnnamedParams) {
       // Fallback to an unused marker.
       static constexpr StringRef FallbackName = "unused";
       StringRef NewName = FallbackName;

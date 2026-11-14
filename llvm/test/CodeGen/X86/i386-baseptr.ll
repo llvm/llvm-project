@@ -97,7 +97,7 @@ define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 
 ; CHECK-NEXT:    .cfi_def_cfa_register %ebp
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    andl $-128, %esp
-; CHECK-NEXT:    subl $128, %esp
+; CHECK-NEXT:    addl $-128, %esp
 ; CHECK-NEXT:    movl %esp, %esi
 ; CHECK-NEXT:    .cfi_offset %ebx, -12
 ; CHECK-NEXT:    movl 8(%ebp), %edi

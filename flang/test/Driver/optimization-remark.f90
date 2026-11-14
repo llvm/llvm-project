@@ -11,28 +11,28 @@
 ! RUN: %flang_fc1 %s -O1 -vectorize-loops -Rpass -Rno-pass %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
 
 ! Check -Rno-pass, -Rno-pass-analysis, -Rno-pass-missed nothing emitted
-! RUN: %flang %s -O2 -Rno-pass -S %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
-! RUN: %flang %s -O2 -Rno-pass-missed -S %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
-! RUN: %flang %s -O2 -Rno-pass-analysis -S %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
+! RUN: %flang %s -O2 %if target=s390x{{.*}} %{-march=z13%} -Rno-pass -S %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
+! RUN: %flang %s -O2 %if target=s390x{{.*}} %{-march=z13%} -Rno-pass-missed -S %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
+! RUN: %flang %s -O2 %if target=s390x{{.*}} %{-march=z13%} -Rno-pass-analysis -S %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
 
 ! Check valid -Rpass regex
-! RUN: %flang %s -O2 -Rpass=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=PASS-REGEX-LOOP-ONLY
+! RUN: %flang %s -O2 %if target=s390x{{.*}} %{-march=z13%} -Rpass=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=PASS-REGEX-LOOP-ONLY
 
 ! Check valid -Rpass-missed regex
 ! UNSUPPORTED: target=riscv{{.*}}
-! RUN: %flang %s -O2 -Rpass-missed=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=MISSED-REGEX-LOOP-ONLY
+! RUN: %flang %s -O2 %if target=s390x{{.*}} %{-march=z13%} -Rpass-missed=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=MISSED-REGEX-LOOP-ONLY
 
 ! Check valid -Rpass-analysis regex
-! RUN: %flang %s -O2 -Rpass-analysis=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=ANALYSIS-REGEX-LOOP-ONLY
+! RUN: %flang %s -O2 %if target=s390x{{.*}} %{-march=z13%} -Rpass-analysis=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=ANALYSIS-REGEX-LOOP-ONLY
 
 ! Check full -Rpass message is emitted
-! RUN: %flang %s -O2 -Rpass -S %{output} 2>&1 | FileCheck %s --check-prefix=PASS
+! RUN: %flang %s -O2 %if target=s390x{{.*}} %{-march=z13%} -Rpass -S %{output} 2>&1 | FileCheck %s --check-prefix=PASS
 
 ! Check full -Rpass-missed message is emitted
-! RUN: %flang %s -O2 -Rpass-missed -S %{output} 2>&1 | FileCheck %s --check-prefix=MISSED
+! RUN: %flang %s -O2 %if target=s390x{{.*}} %{-march=z13%} -Rpass-missed -S %{output} 2>&1 | FileCheck %s --check-prefix=MISSED
 
 ! Check full -Rpass-analysis message is emitted
-! RUN: %flang %s -O2 -Rpass-analysis -S -o /dev/null 2>&1 | FileCheck %s --check-prefix=ANALYSIS
+! RUN: %flang %s -O2 %if target=s390x{{.*}} %{-march=z13%} -Rpass-analysis -S -o /dev/null 2>&1 | FileCheck %s --check-prefix=ANALYSIS
 
 ! REMARKS: remark:
 ! NO-REMARKS-NOT: remark:
@@ -82,3 +82,19 @@ subroutine swap_real(a1, a2)
     end do
 
 end subroutine swap_real
+
+! Check that the file path is displayed as it was presented on the command
+! line, matching how Clang prints optimization remarks: an absolute path is
+! shown in full and relative paths are kept relative.
+! The RUN and CHECK lines are placed at the end of the file so that adding them
+! does not shift the source line numbers referenced by the checks above.
+
+! Absolute path: %s is an absolute path, so the full path is displayed.
+! RUN: %flang %s -O2 %if target=s390x{{.*}} %{-march=z13%} -Rpass -S %{output} 2>&1 | FileCheck %s -DFILE=%s --check-prefix=ABSPATH
+! ABSPATH: {{^}}[[FILE]]:{{[0-9]+}}:{{[0-9]+}}: remark:
+
+! Relative path in a subdirectory: the relative path is displayed as given.
+! RUN: rm -rf %t && mkdir -p %t/sub
+! RUN: cp %s %t/sub/vec.f90
+! RUN: cd %t && %flang sub/vec.f90 -O2 %if target=s390x{{.*}} %{-march=z13%} -Rpass -S %{output} 2>&1 | FileCheck %s --check-prefix=SUBDIR
+! SUBDIR: {{^}}sub{{[/\\]}}vec.f90:{{[0-9]+}}:{{[0-9]+}}: remark:

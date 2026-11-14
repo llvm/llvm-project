@@ -19,8 +19,11 @@
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolTableEntry.h"
+#include "llvm/Support/Alignment.h"
 
 namespace llvm {
+
+class MCContext;
 
 class MCSymbolGOFF : public MCSymbol {
 
@@ -33,14 +36,17 @@ class MCSymbolGOFF : public MCSymbol {
   GOFF::ESDLinkageType Linkage = GOFF::ESDLinkageType::ESD_LT_XPLink;
 
   enum SymbolFlags : uint16_t {
-    SF_Hidden = 0x01,  // Symbol is hidden, aka not exported.
-    SF_Weak = 0x02,    // Symbol is weak.
-    SF_Indirect = 0x4, // Symbol referenced indirectly.
+    SF_Hidden = 0x01,    // Symbol is hidden, aka not exported.
+    SF_Weak = 0x02,      // Symbol is weak.
+    SF_Indirect = 0x4,   // Symbol referenced indirectly.
+    SF_Renameable = 0x8, // Symbol can be renamed.
   };
 
 public:
   MCSymbolGOFF(const MCSymbolTableEntry *Name, bool IsTemporary)
-      : MCSymbol(Name, IsTemporary) {}
+      : MCSymbol(Name, IsTemporary) {
+    setFlags(SF_Renameable);
+  }
 
   void setADA(MCSectionGOFF *AssociatedDataArea) {
     assert(AssociatedDataArea && "ADA must be non-null");
@@ -72,6 +78,11 @@ public:
   void setWeak(bool Value = true) { modifyFlags(Value ? SF_Weak : 0, SF_Weak); }
   bool isWeak() const { return getFlags() & SF_Weak; }
 
+  void setRenameable(bool Value = true) {
+    modifyFlags(Value ? SF_Renameable : 0, SF_Renameable);
+  }
+  bool isRenameable() const { return getFlags() & SF_Renameable; }
+
   void setCodeData(GOFF::ESDExecutable Value) { CodeData = Value; }
   GOFF::ESDExecutable getCodeData() const { return CodeData; }
 
@@ -91,6 +102,10 @@ public:
   }
 
   LLVM_ABI bool setSymbolAttribute(MCSymbolAttr Attribute);
+
+  /// Return the PR section to use when emitting this symbol as a common symbol.
+  LLVM_ABI MCSectionGOFF *getSectionForCommonSymbol(MCContext &Ctx,
+                                                    Align ByteAlignment);
 
   bool isInEDSection() const {
     return isInSection() && static_cast<MCSectionGOFF &>(getSection()).isED();

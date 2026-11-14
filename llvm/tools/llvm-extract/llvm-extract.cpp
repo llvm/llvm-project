@@ -19,6 +19,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -56,6 +57,10 @@ static cl::opt<std::string> OutputFilename("o",
 
 static cl::opt<bool> Force("f", cl::desc("Enable binary output on terminals"),
                            cl::cat(ExtractCat));
+
+static cl::opt<bool> NoVerify("disable-verify",
+                              cl::desc("Do not run the verifier"),
+                              cl::cat(ExtractCat), cl::Hidden);
 
 static cl::opt<bool> DeleteFn("delete",
                               cl::desc("Delete specified Globals from Module"),
@@ -134,7 +139,8 @@ int main(int argc, char **argv) {
 
   LLVMContext Context;
   cl::HideUnrelatedOptions(ExtractCat);
-  cl::ParseCommandLineOptions(argc, argv, "llvm extractor\n");
+  cl::parseCommandLineOptions(Context.getLibraryOptions(), ArrayRef(argv, argc),
+                              "llvm extractor\n");
 
   // Use lazy loading, since we only care about selected global values.
   SMDiagnostic Err;
@@ -142,6 +148,12 @@ int main(int argc, char **argv) {
 
   if (!M) {
     Err.print(argv[0], errs());
+    return 1;
+  }
+
+  if (!NoVerify && verifyModule(*M, &errs())) {
+    errs() << argv[0] << ": " << InputFilename
+           << ": error: input module is broken!\n";
     return 1;
   }
 
@@ -320,7 +332,7 @@ int main(int argc, char **argv) {
     CGSCCAnalysisManager CGAM;
     ModuleAnalysisManager MAM;
 
-    PassBuilder PB;
+    PassBuilder PB(Context);
 
     PB.registerModuleAnalyses(MAM);
     PB.registerCGSCCAnalyses(CGAM);
@@ -367,7 +379,7 @@ int main(int argc, char **argv) {
     CGSCCAnalysisManager CGAM;
     ModuleAnalysisManager MAM;
 
-    PassBuilder PB;
+    PassBuilder PB(Context);
 
     PB.registerModuleAnalyses(MAM);
     PB.registerCGSCCAnalyses(CGAM);
@@ -388,7 +400,7 @@ int main(int argc, char **argv) {
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
 
-  PassBuilder PB;
+  PassBuilder PB(Context);
 
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
@@ -411,8 +423,10 @@ int main(int argc, char **argv) {
   }
 
   if (OutputAssembly)
-    PM.addPass(
-        PrintModulePass(Out.os(), "", /* ShouldPreserveUseListOrder */ false));
+    PM.addPass(PrintModulePass(Out.os(), "",
+                               /*ShouldPreserveUseListOrder=*/false,
+                               /*EmitSummaryIndex=*/false,
+                               /*ShouldRenumberMetadata=*/true));
   else if (Force || !CheckBitcodeOutputToConsole(Out.os()))
     PM.addPass(
         BitcodeWriterPass(Out.os(), /* ShouldPreserveUseListOrder */ true));

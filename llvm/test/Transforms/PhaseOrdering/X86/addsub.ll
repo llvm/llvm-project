@@ -448,8 +448,11 @@ define <4 x float> @PR45015(<4 x float> %arg, <4 x float> %arg1) {
 
 define { <2 x float>, <2 x float> } @add_aggregate(<2 x float> %a0, <2 x float> %a1, <2 x float> %b0, <2 x float> %b1) {
 ; CHECK-LABEL: @add_aggregate(
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x float> [[A0:%.*]], [[B0:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> [[A1:%.*]], [[B1:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[A0:%.*]], <2 x float> [[A1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[B0:%.*]], <2 x float> [[B1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x float> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[FCA_0_INSERT:%.*]] = insertvalue { <2 x float>, <2 x float> } undef, <2 x float> [[TMP1]], 0
 ; CHECK-NEXT:    [[FCA_1_INSERT:%.*]] = insertvalue { <2 x float>, <2 x float> } [[FCA_0_INSERT]], <2 x float> [[TMP2]], 1
 ; CHECK-NEXT:    ret { <2 x float>, <2 x float> } [[FCA_1_INSERT]]
@@ -477,10 +480,10 @@ define { <2 x float>, <2 x float> } @add_aggregate(<2 x float> %a0, <2 x float> 
 
 define void @add_aggregate_store(<2 x float> %a0, <2 x float> %a1, <2 x float> %b0, <2 x float> %b1, ptr nocapture dereferenceable(16) %r) {
 ; CHECK-LABEL: @add_aggregate_store(
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x float> [[A0:%.*]], [[B0:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> [[A1:%.*]], [[B1:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[R:%.*]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP1:%.*]], <2 x float> [[TMP2:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[B0:%.*]], <2 x float> [[B1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr [[R:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %a00 = extractelement <2 x float> %a0, i32 0

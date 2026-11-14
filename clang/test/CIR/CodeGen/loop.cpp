@@ -5,8 +5,8 @@
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
-// CIR-DAG: cir.global "private" constant cir_private @[[L5_ARR:.*]] = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]>
-// LLVM-DAG: @[[L5_ARR:.*]] = private constant [4 x i32] [i32 1, i32 2, i32 3, i32 4]
+// CIR-DAG: cir.global "private" constant cir_private unnamed_addr @[[L5_ARR:.*]] = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]>
+// LLVM-DAG: @[[L5_ARR:.*]] = private unnamed_addr constant [4 x i32] [i32 1, i32 2, i32 3, i32 4]
 
 void l0() {
   for (;;) {
@@ -34,12 +34,8 @@ void l0() {
 // LLVM: [[LABEL2]]:
 // LLVM:   br i1 true, label %[[LABEL3:.*]], label %[[LABEL5:.*]]
 // LLVM: [[LABEL3]]:
-// LLVM:   br label %[[LABEL4:.*]]
-// LLVM: [[LABEL4]]:
 // LLVM:   br label %[[LABEL2]]
 // LLVM: [[LABEL5]]:
-// LLVM:   br label %[[LABEL6:.*]]
-// LLVM: [[LABEL6]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z2l0v()
@@ -71,7 +67,7 @@ void l1() {
 // CIR-NEXT: }
 
 // LLVM: define{{.*}} void @_Z2l1v(){{.*}}
-// LLVM:   %[[I:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[I:.*]] = alloca i32, align 4
 // LLVM:   br label %[[LABEL1:.*]]
 // LLVM: [[LABEL1]]:
 // LLVM:   store i32 0, ptr %[[I]], align 4
@@ -79,12 +75,8 @@ void l1() {
 // LLVM: [[LABEL2]]:
 // LLVM:   br i1 true, label %[[LABEL3:.*]], label %[[LABEL5:.*]]
 // LLVM: [[LABEL3]]:
-// LLVM:   br label %[[LABEL4:.*]]
-// LLVM: [[LABEL4]]:
 // LLVM:   br label %[[LABEL2]]
 // LLVM: [[LABEL5]]:
-// LLVM:   br label %[[LABEL6:.*]]
-// LLVM: [[LABEL6]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z2l1v()
@@ -121,7 +113,7 @@ void l2() {
 // CIR-NEXT: }
 
 // LLVM: define{{.*}} void @_Z2l2v(){{.*}}
-// LLVM:   %[[I:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[I:.*]] = alloca i32, align 4
 // LLVM:   br label %[[LABEL1:.*]]
 // LLVM: [[LABEL1]]:
 // LLVM:   br label %[[LABEL2:.*]]
@@ -133,8 +125,6 @@ void l2() {
 // LLVM: [[LABEL4]]:
 // LLVM:   br label %[[LABEL2]]
 // LLVM: [[LABEL5]]:
-// LLVM:   br label %[[LABEL6:.*]]
-// LLVM: [[LABEL6]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z2l2v()
@@ -169,7 +159,7 @@ void l3() {
 // CIR-NEXT: }
 
 // LLVM: define{{.*}} void @_Z2l3v(){{.*}}
-// LLVM:   %[[I:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[I:.*]] = alloca i32, align 4
 // LLVM:   br label %[[LABEL1:.*]]
 // LLVM: [[LABEL1]]:
 // LLVM:   br label %[[LABEL2:.*]]
@@ -181,8 +171,6 @@ void l3() {
 // LLVM: [[LABEL4]]:
 // LLVM:   br label %[[LABEL2]]
 // LLVM: [[LABEL5]]:
-// LLVM:   br label %[[LABEL6:.*]]
-// LLVM: [[LABEL6]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z2l3v()
@@ -235,11 +223,11 @@ void l4() {
 // CIR:   }
 
 // LLVM: define{{.*}} void @_Z2l4v(){{.*}} {
+// LLVM:   %[[A_ADDR:.*]] = alloca [10 x i32]
 // LLVM:   %[[RANGE_ADDR:.*]] = alloca ptr
 // LLVM:   %[[BEGIN_ADDR:.*]] = alloca ptr
 // LLVM:   %[[END_ADDR:.*]] = alloca ptr
 // LLVM:   %[[N_ADDR:.*]] = alloca i32
-// LLVM:   %[[A_ADDR:.*]] = alloca [10 x i32]
 // LLVM:   br label %[[SETUP:.*]]
 // LLVM: [[SETUP]]:
 // LLVM:   store ptr %[[A_ADDR]], ptr %[[RANGE_ADDR]]
@@ -267,8 +255,6 @@ void l4() {
 // LLVM:   store ptr %[[NEXT]], ptr %[[BEGIN_ADDR]]
 // LLVM:   br label %[[COND]]
 // LLVM: [[END]]:
-// LLVM:   br label %[[EXIT:.*]]
-// LLVM: [[EXIT]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z2l4v()
@@ -316,7 +302,7 @@ void l5() {
 // CIR:     %[[END_ADDR:.*]] = cir.alloca "__end1" {{.*}} init
 // CIR:     %[[X_ADDR:.*]] = cir.alloca "x" {{.*}} init
 // CIR:     %[[ARR_INIT:.*]] = cir.get_global @[[L5_ARR]]
-// CIR:     cir.copy %[[ARR_INIT]] to %[[ARR_ADDR]]
+// CIR:     cir.copy %[[ARR_INIT]] align(16) to %[[ARR_ADDR]] align(16)
 // CIR:     cir.store{{.*}} %[[ARR_ADDR]], %[[RANGE_ADDR]]
 // CIR:     %[[RANGE_LOAD:.*]] = cir.load %[[RANGE_ADDR]]
 // CIR:     %[[RANGE_CAST:.*]] = cir.cast array_to_ptrdecay %[[RANGE_LOAD]] : {{.*}}
@@ -353,7 +339,7 @@ void l5() {
 // LLVM:   %[[X_ADDR:.*]] = alloca i32
 // LLVM:   br label %[[SETUP:.*]]
 // LLVM: [[SETUP]]:
-// LLVM:   call void @llvm.memcpy{{.*}}(ptr align 4 %[[ARR_ADDR]], ptr align 4 @[[L5_ARR]], i64 16, i1 false)
+// LLVM:   call void @llvm.memcpy{{.*}}(ptr align 16 %[[ARR_ADDR]], ptr align 16 @[[L5_ARR]], i64 16, i1 false)
 // LLVM:   store ptr %[[ARR_ADDR]], ptr %[[RANGE_ADDR]]
 // LLVM:   %[[BEGIN:.*]] = load ptr, ptr %[[RANGE_ADDR]]
 // LLVM:   %[[BEGIN_CAST:.*]] = getelementptr i32, ptr %[[BEGIN]], i32 0
@@ -379,8 +365,6 @@ void l5() {
 // LLVM:   store ptr %[[NEXT]], ptr %[[BEGIN_ADDR]]
 // LLVM:   br label %[[COND]]
 // LLVM: [[END]]:
-// LLVM:   br label %[[EXIT:.*]]
-// LLVM: [[EXIT]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z2l5v()
@@ -427,21 +411,16 @@ void test_do_while_false() {
 // CIR-NEXT:     cir.do {
 // CIR-NEXT:       cir.yield
 // CIR-NEXT:     } while {
-// CIR-NEXT:       %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CIR-NEXT:       %[[FALSE:.*]] = cir.cast int_to_bool %[[ZERO]] : !s32i -> !cir.bool
+// CIR-NEXT:       %[[FALSE:.*]] = cir.const #false
 // CIR-NEXT:       cir.condition(%[[FALSE]])
 
 // LLVM: define{{.*}} void @_Z19test_do_while_falsev(){{.*}}
 // LLVM:   br label %[[LABEL1:.*]]
 // LLVM: [[LABEL1]]:
-// LLVM:   br label %[[LABEL3:.*]]
-// LLVM: [[LABEL2:.*]]:
-// LLVM:   br i1 false, label %[[LABEL3]], label %[[LABEL4:.*]]
-// LLVM: [[LABEL3]]:
-// LLVM:   br label %[[LABEL2]]
+// LLVM:   br label %[[LABEL2:.*]]
+// LLVM: [[LABEL2]]:
+// LLVM:   br i1 false, label %[[LABEL2]], label %[[LABEL4:.*]]
 // LLVM: [[LABEL4]]:
-// LLVM:   br label %[[LABEL5:.*]]
-// LLVM: [[LABEL5]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z19test_do_while_falsev()
@@ -476,15 +455,11 @@ void test_empty_while_true() {
 // LLVM: [[LABEL2]]:
 // LLVM:   br i1 true, label %[[LABEL3:.*]], label %[[LABEL6:.*]]
 // LLVM: [[LABEL3]]:
-// LLVM:   br label %[[LABEL4]]
-// LLVM: [[LABEL4]]:
 // LLVM:   ret void
 // LLVM: [[LABEL5:.*]]:
 // LLVM-SAME: ; No predecessors!
 // LLVM:   br label %[[LABEL2:.*]]
 // LLVM: [[LABEL6]]:
-// LLVM:   br label %[[LABEL7:.*]]
-// LLVM: [[LABEL7]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z21test_empty_while_truev()
@@ -523,15 +498,13 @@ void unreachable_after_continue() {
 // CIR: }
 
 // LLVM: define{{.*}} void @_Z26unreachable_after_continuev(){{.*}}
-// LLVM:   %[[X:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[X:.*]] = alloca i32, align 4
 // LLVM:   br label %[[LABEL1:.*]]
 // LLVM: [[LABEL1]]:
 // LLVM:   br label %[[LABEL2:.*]]
 // LLVM: [[LABEL2]]:
 // LLVM:   br i1 true, label %[[LABEL3:.*]], label %[[LABEL8:.*]]
 // LLVM: [[LABEL3]]:
-// LLVM:   br label %[[LABEL4:.*]]
-// LLVM: [[LABEL4]]:
 // LLVM:   br label %[[LABEL7:.*]]
 // LLVM: [[LABEL5:.*]]:
 // LLVM-SAME: ; No predecessors!
@@ -542,8 +515,6 @@ void unreachable_after_continue() {
 // LLVM: [[LABEL7]]:
 // LLVM:   br label %[[LABEL2]]
 // LLVM: [[LABEL8]]:
-// LLVM:   br label %[[LABEL9:]]
-// LLVM: [[LABEL9]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z26unreachable_after_continuev()
@@ -583,27 +554,21 @@ void unreachable_after_break() {
 // CIR: }
 
 // LLVM: define{{.*}} void @_Z23unreachable_after_breakv(){{.*}}
-// LLVM:   %[[X:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[X:.*]] = alloca i32, align 4
 // LLVM:   br label %[[LABEL1:.*]]
 // LLVM: [[LABEL1]]:
 // LLVM:   br label %[[LABEL2:.*]]
 // LLVM: [[LABEL2]]:
 // LLVM:   br i1 true, label %[[LABEL3:.*]], label %[[LABEL8:.*]]
 // LLVM: [[LABEL3]]:
-// LLVM:   br label %[[LABEL4:.*]]
-// LLVM: [[LABEL4]]:
 // LLVM:   br label %[[LABEL8]]
 // LLVM: [[LABEL5:.*]]:
 // LLVM-SAME: ; No predecessors!
 // LLVM:   store i32 1, ptr %[[X]], align 4
 // LLVM:   br label %[[LABEL6:.*]]
 // LLVM: [[LABEL6]]:
-// LLVM:   br label %[[LABEL7:.*]]
-// LLVM: [[LABEL7]]:
 // LLVM:   br label %[[LABEL2]]
 // LLVM: [[LABEL8]]:
-// LLVM:   br label %[[LABEL9:]]
-// LLVM: [[LABEL9]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z23unreachable_after_breakv()

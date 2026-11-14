@@ -100,8 +100,12 @@ public:
       const parser::OmpStylizedInstance *parserInitInstance = nullptr,
       unsigned instanceIdx = 0) const;
   bool processMergeable(mlir::omp::MergeableClauseOps &result) const;
+  bool processNocontext(lower::StatementContext &stmtCtx,
+                        mlir::omp::NocontextClauseOps &result) const;
   bool processNogroup(mlir::omp::NogroupClauseOps &result) const;
   bool processNotinbranch(mlir::omp::NotinbranchClauseOps &result) const;
+  bool processNovariants(lower::StatementContext &stmtCtx,
+                         mlir::omp::NovariantsClauseOps &result) const;
   bool processNowait(mlir::omp::NowaitClauseOps &result) const;
   bool processNumTasks(lower::StatementContext &stmtCtx,
                        mlir::omp::NumTasksClauseOps &result) const;
@@ -111,6 +115,7 @@ public:
                          mlir::omp::NumThreadsClauseOps &result) const;
   bool processOrder(mlir::omp::OrderClauseOps &result) const;
   bool processOrdered(mlir::omp::OrderedClauseOps &result) const;
+  bool processFull() const;
   bool processPartial(std::optional<int64_t> &result) const;
   bool processPriority(lower::StatementContext &stmtCtx,
                        mlir::omp::PriorityClauseOps &result) const;
@@ -124,12 +129,14 @@ public:
   bool processSimd(mlir::omp::OrderedRegionOperands &result) const;
   bool processThreadLimit(lower::StatementContext &stmtCtx,
                           mlir::omp::ThreadLimitClauseOps &result) const;
+  bool processThreadset(mlir::omp::ThreadsetClauseOps &result) const;
   bool processUntied(mlir::omp::UntiedClauseOps &result) const;
   bool processDetach(mlir::omp::DetachClauseOps &result) const;
   // 'Repeatable' clauses: They can appear multiple times in the clause list.
   bool processAffinity(mlir::omp::AffinityClauseOps &result) const;
   bool processAligned(mlir::omp::AlignedClauseOps &result) const;
-  bool processAllocate(mlir::omp::AllocateClauseOps &result) const;
+  bool processAllocate(mlir::omp::AllocateClauseOps &result,
+                       bool supportAlignment = false) const;
   bool processCopyin() const;
   bool processCopyprivate(mlir::Location currentLocation,
                           mlir::omp::CopyprivateClauseOps &result) const;
@@ -151,8 +158,10 @@ public:
   bool processIsDevicePtr(lower::StatementContext &stmtCtx,
                           mlir::omp::IsDevicePtrClauseOps &result,
                           llvm::SmallVectorImpl<Object> &isDeviceObjects) const;
-  bool processLinear(mlir::omp::LinearClauseOps &result,
-                     bool isDeclareSimd = false) const;
+  bool
+  processLinear(mlir::omp::LinearClauseOps &result, bool isDeclareSimd = false,
+                llvm::SmallVectorImpl<const semantics::Symbol *> *linearSyms =
+                    nullptr) const;
   bool
   processLink(llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const;
 
@@ -223,6 +232,17 @@ private:
       llvm::StringRef mapperIdNameRef = "", bool isMotionModifier = false,
       llvm::omp::Directive directive = llvm::omp::OMPD_unknown) const;
 
+  void processMapObjectsWithIterator(
+      lower::StatementContext &stmtCtx, mlir::Location clauseLocation,
+      const omp::ObjectList &objects,
+      llvm::ArrayRef<IteratorRange> iteratorRanges, bool hasIteratorModifier,
+      mlir::omp::ClauseMapFlags mapTypeBits,
+      std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
+      mlir::omp::MapClauseOps &result,
+      llvm::SmallVectorImpl<Object> &mapObjects,
+      llvm::StringRef mapperIdNameRef = "", bool isMotionModifier = false,
+      llvm::omp::Directive directive = llvm::omp::OMPD_unknown) const;
+
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;
   List<Clause> clauses;
@@ -234,7 +254,7 @@ void ClauseProcessor::processTODO(mlir::Location currentLocation,
   auto checkUnhandledClause = [&](llvm::omp::Clause id, const auto *x) {
     if (!x)
       return;
-    unsigned version = semaCtx.langOptions().OpenMPVersion;
+    llvm::omp::Version version = semaCtx.langOptions().getOpenMPVersion();
     bool isSimdDirective = llvm::omp::getOpenMPDirectiveName(directive, version)
                                .upper()
                                .find("SIMD") != llvm::StringRef::npos;

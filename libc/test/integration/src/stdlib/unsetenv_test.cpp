@@ -17,7 +17,6 @@
 #include "src/stdlib/setenv.h"
 #include "src/stdlib/unsetenv.h"
 #include "src/string/memory_utils/inline_memcpy.h"
-#include "src/string/strcmp.h"
 #include "src/unistd/environ.h"
 
 #include "test/IntegrationTest/test.h"
@@ -59,13 +58,13 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
   // Test: Unset then re-set
   {
     ASSERT_EQ(setenv("REUSE_VAR", "first", 1), 0);
-    ASSERT_EQ(strcmp(getenv("REUSE_VAR"), "first"), 0);
+    ASSERT_STREQ(getenv("REUSE_VAR"), "first");
 
     ASSERT_EQ(unsetenv("REUSE_VAR"), 0);
     ASSERT_TRUE(getenv("REUSE_VAR") == nullptr);
 
     ASSERT_EQ(setenv("REUSE_VAR", "second", 1), 0);
-    ASSERT_EQ(strcmp(getenv("REUSE_VAR"), "second"), 0);
+    ASSERT_STREQ(getenv("REUSE_VAR"), "second");
   }
 
   // Test: Unset multiple variables
@@ -80,8 +79,8 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
     ASSERT_TRUE(getenv("MULTI_B") == nullptr);
     ASSERT_TRUE(getenv("MULTI_C") != nullptr);
 
-    ASSERT_EQ(strcmp(getenv("MULTI_A"), "a"), 0);
-    ASSERT_EQ(strcmp(getenv("MULTI_C"), "c"), 0);
+    ASSERT_STREQ(getenv("MULTI_A"), "a");
+    ASSERT_STREQ(getenv("MULTI_C"), "c");
   }
 
   // Test: Unset same variable twice is harmless
@@ -98,7 +97,7 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
     // Verify it is in environ
     bool found = false;
     for (char **env = environ; *env != nullptr; ++env) {
-      if (strcmp(*env, "ENV_CHECK=val") == 0) {
+      if (cpp::string_view(*env) == "ENV_CHECK=val") {
         found = true;
         break;
       }

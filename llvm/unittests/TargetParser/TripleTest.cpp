@@ -585,6 +585,13 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(VersionTuple(1, 9), T.getDXILVersion());
 
+  T = Triple("dxilv1.10-unknown-shadermodel6.10-library");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::DXILSubArch_v1_10, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(VersionTuple(1, 10), T.getDXILVersion());
+
   T = Triple("x86_64-unknown-fuchsia");
   EXPECT_EQ(Triple::x86_64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
@@ -1356,6 +1363,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
 
+  T = Triple("dxilv1.10-unknown-unknown");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::DXILSubArch_v1_10, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+
   // Check specification of unknown SubArch results in
   // unknown architecture.
   T = Triple("dxilv1.999-unknown-unknown");
@@ -1685,6 +1698,214 @@ TEST(TripleTest, DefaultFloatABI) {
   EXPECT_EQ(FloatABI::Hard,
             Triple("riscv64-unknown-linux-gnu").getDefaultFloatABI());
   EXPECT_EQ(FloatABI::Hard, Triple("amdgpu-amd-amdhsa").getDefaultFloatABI());
+}
+
+TEST(TripleTest, DefaultLongDoubleFormat) {
+  // PowerPC defaults to IBM double-double, independent of the environment.
+  EXPECT_EQ(
+      LongDoubleFormat::PPCDoubleDouble,
+      Triple("powerpc64le-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpc64le-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpc64-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpc64-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpc-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpc-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpcle-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpcle-unknown-linux").getDefaultLongDoubleFormat());
+  // ... except on AIX, FreeBSD, OpenBSD, SPE, and Musl, which use IEEE double.
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("powerpc-ibm-aix").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("powerpc64-ibm-aix").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("powerpc64-unknown-freebsd").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("powerpc64-unknown-openbsd").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEdouble,
+      Triple("powerpcspe-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEdouble,
+      Triple("powerpc64-unknown-linux-musl").getDefaultLongDoubleFormat());
+  // NetBSD only switches to IEEE double on 32-bit PowerPC.
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("powerpc-unknown-netbsd").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpc64-unknown-netbsd").getDefaultLongDoubleFormat());
+
+  // X86 defaults to x87 80-bit extended precision, independent of environment.
+  EXPECT_EQ(LongDoubleFormat::X87DoubleExtended,
+            Triple("x86_64-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::X87DoubleExtended,
+            Triple("x86_64-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::X87DoubleExtended,
+            Triple("i686-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::X87DoubleExtended,
+            Triple("i686-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::X87DoubleExtended,
+            Triple("x86_64-apple-macosx").getDefaultLongDoubleFormat());
+  // MinGW and Cygwin keep x87 extended precision.
+  EXPECT_EQ(LongDoubleFormat::X87DoubleExtended,
+            Triple("x86_64-pc-windows-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::X87DoubleExtended,
+            Triple("x86_64-pc-cygwin").getDefaultLongDoubleFormat());
+  // Windows-MSVC and UEFI use IEEE double.
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("x86_64-pc-windows-msvc").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("i686-pc-windows-msvc").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("x86_64-unknown-uefi").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("i686-unknown-uefi").getDefaultLongDoubleFormat());
+  // Android and OHOS use IEEE double on 32-bit and IEEE quad on 64-bit.
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("i686-unknown-linux-android").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEquad,
+      Triple("x86_64-unknown-linux-android").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("i686-unknown-linux-ohos").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("x86_64-unknown-linux-ohos").getDefaultLongDoubleFormat());
+
+  // AArch64 defaults to IEEE quad, for all AArch64 arch variants, independent
+  // of the environment.
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("aarch64-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("aarch64-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEquad,
+      Triple("aarch64_be-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEquad,
+      Triple("aarch64_32-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  // ... except on Windows and Darwin, which use IEEE double.
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("aarch64-pc-windows-msvc").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("aarch64-unknown-uefi").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("arm64-apple-macosx").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEquad,
+      Triple("aarch64-unknown-linux-android").getDefaultLongDoubleFormat());
+
+  // ARM/Thumb use IEEE double.
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEdouble,
+      Triple("armv7-unknown-linux-gnueabihf").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEdouble,
+      Triple("thumbv7-unknown-linux-gnueabi").getDefaultLongDoubleFormat());
+
+  // SPARC V8 uses IEEE double for bare-metal, NetBSD, and RTEMS targets. Linux,
+  // Solaris, and other targets use IEEE quad. SPARC V9 always uses IEEE quad.
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("sparc-unknown-unknown").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("sparc-unknown-netbsd").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("sparc-unknown-rtems").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("sparc-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("sparcel-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("sparc-unknown-solaris").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("sparcv9-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("sparcv9-unknown-netbsd").getDefaultLongDoubleFormat());
+
+  // Targets that use IEEE quad, independent of the environment.
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("s390x-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("s390x-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("riscv32-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("riscv64-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("riscv32be-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("riscv64be-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEquad,
+      Triple("loongarch32-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEquad,
+      Triple("loongarch64-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("ve-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("wasm32-unknown-unknown").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("wasm64-unknown-unknown").getDefaultLongDoubleFormat());
+
+  // 64-bit MIPS uses IEEE quad; 32-bit MIPS uses IEEE double. Both are
+  // independent of the environment.
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("mips64-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("mips64-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("mips64el-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("mips-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("mips-unknown-linux").getDefaultLongDoubleFormat());
+
+  // AVR and 32-bit OpenASIP use IEEE single; the 64-bit tcele64 uses double.
+  EXPECT_EQ(LongDoubleFormat::IEEEsingle,
+            Triple("avr-unknown-unknown").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEsingle,
+            Triple("tce-unknown-unknown").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEsingle,
+            Triple("tcele-unknown-unknown").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("tcele64-unknown-unknown").getDefaultLongDoubleFormat());
+
+  // Targets without a special case fall back to IEEE double.
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("msp430-unknown-unknown").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("amdgpu-unknown-unknown").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("nvptx64-unknown-unknown").getDefaultLongDoubleFormat());
+}
+
+TEST(TripleTest, GetDefaultDebuggerTuning) {
+  EXPECT_EQ(DebuggerKind::LLDB,
+            Triple("x86_64-apple-darwin").getDefaultDebuggerTuning());
+  EXPECT_EQ(DebuggerKind::LLDB,
+            Triple("arm64-apple-ios").getDefaultDebuggerTuning());
+
+  EXPECT_EQ(DebuggerKind::SCE,
+            Triple("x86_64-scei-ps4").getDefaultDebuggerTuning());
+  EXPECT_EQ(DebuggerKind::SCE,
+            Triple("x86_64-sie-ps5").getDefaultDebuggerTuning());
+
+  EXPECT_EQ(DebuggerKind::DBX,
+            Triple("powerpc64-ibm-aix-xcoff").getDefaultDebuggerTuning());
+
+  EXPECT_EQ(DebuggerKind::GDB,
+            Triple("x86_64-pc-linux-gnu").getDefaultDebuggerTuning());
+  EXPECT_EQ(DebuggerKind::GDB,
+            Triple("x86_64-pc-windows-msvc").getDefaultDebuggerTuning());
+
+  EXPECT_EQ(DebuggerKind::GDB,
+            Triple("amdgpu9.00-amd-amdhsa").getDefaultDebuggerTuning());
+  EXPECT_EQ(DebuggerKind::GDB, Triple().getDefaultDebuggerTuning());
 }
 
 TEST(TripleTest, Normalization) {
@@ -3119,6 +3340,30 @@ TEST(TripleTest, FileFormat) {
   EXPECT_EQ(Triple::DXContainer, Triple("dxil-apple-macosx").getObjectFormat());
 }
 
+TEST(TripleTest, SupportsDebugEntryValues) {
+  EXPECT_TRUE(Triple("i686-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("x86_64-apple-macosx").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("arm64-apple-macosx").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("arm64e-apple-ios").supportsDebugEntryValues());
+  EXPECT_TRUE(
+      Triple("armv7-unknown-linux-gnueabihf").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("armeb-unknown-linux-gnueabi").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("mips-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("mipsel-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("mips64-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("mips64el-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("riscv32-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("riscv64-unknown-linux-gnu").supportsDebugEntryValues());
+
+  EXPECT_FALSE(Triple("arm64_32-apple-watchos").supportsDebugEntryValues());
+  EXPECT_FALSE(Triple("thumbv7-apple-ios").supportsDebugEntryValues());
+  EXPECT_FALSE(Triple("wasm32-unknown-wasip1").supportsDebugEntryValues());
+  EXPECT_FALSE(
+      Triple("powerpc64le-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_FALSE(Triple("s390x-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_FALSE(Triple("").supportsDebugEntryValues());
+}
+
 TEST(TripleTest, DefaultExceptionHandling) {
   EXPECT_EQ(ExceptionHandling::DwarfCFI,
             Triple("i686-unknown-linux-gnu").getDefaultExceptionHandling());
@@ -3161,6 +3406,8 @@ TEST(TripleTest, DefaultExceptionHandling) {
             Triple("spirv32--").getDefaultExceptionHandling());
   EXPECT_EQ(ExceptionHandling::None,
             Triple("spirv64--").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("avr--").getDefaultExceptionHandling());
 
   EXPECT_EQ(ExceptionHandling::DwarfCFI,
             Triple("i686-pc-windows-msvc-elf").getDefaultExceptionHandling());
@@ -3217,9 +3464,9 @@ TEST(TripleTest, DefaultExceptionHandling) {
   EXPECT_EQ(ExceptionHandling::WinEH,
             Triple("x86_64-pc-windows-coreclr").getDefaultExceptionHandling());
 
-  EXPECT_EQ(ExceptionHandling::None,
+  EXPECT_EQ(ExceptionHandling::SjLj,
             Triple("ve-unknown-linux").getDefaultExceptionHandling());
-  EXPECT_EQ(ExceptionHandling::None,
+  EXPECT_EQ(ExceptionHandling::SjLj,
             Triple("ve-unknown-unknown").getDefaultExceptionHandling());
 
   EXPECT_EQ(ExceptionHandling::DwarfCFI,
@@ -3571,16 +3818,16 @@ TEST(TripleTest, isArmMClass) {
   }
 }
 
-TEST(TripleTest, DXILNormaizeWithVersion) {
+TEST(TripleTest, DXILNormalizeWithVersion) {
   EXPECT_EQ("dxilv1.0-unknown-shadermodel6.0",
             Triple::normalize("dxilv1.0--shadermodel6.0"));
   EXPECT_EQ("dxilv1.0-unknown-shadermodel6.0",
             Triple::normalize("dxil--shadermodel6.0"));
   EXPECT_EQ("dxilv1.1-unknown-shadermodel6.1-library",
             Triple::normalize("dxil-shadermodel6.1-unknown-library"));
-  EXPECT_EQ("dxilv1.9-unknown-shadermodel6.x-unknown",
-            Triple::normalize("dxil-unknown-shadermodel6.x-unknown"));
-  EXPECT_EQ("dxilv1.9-unknown-shadermodel6.x-unknown",
+  EXPECT_EQ("dxilv1.9-unknown-shadermodel6.9-unknown",
+            Triple::normalize("dxil-unknown-shadermodel6.9-unknown"));
+  EXPECT_EQ("dxilv1.10-unknown-shadermodel6.x-unknown",
             Triple::normalize("dxil-unknown-shadermodel6.x-unknown"));
   EXPECT_EQ("dxil-unknown-unknown-unknown", Triple::normalize("dxil---"));
   EXPECT_EQ("dxilv1.0-pc-shadermodel5.0-compute",
@@ -3699,6 +3946,13 @@ TEST(TripleTest, isCompatibleWith) {
 
       {"amdgpu12.5-amd-amdhsa", "amdgpu12.50-amd-amdhsa", true},
       {"amdgpu12.5-amd-amdhsa", "amdgpu12.51-amd-amdhsa", true},
+
+      // amdgpu12.50s is its own major subarch: compatible only with itself.
+      {"amdgpu12.50s-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", true},
+      {"amdgpu12.5-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", false},
+      {"amdgpu12.50-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", false},
+      {"amdgpu12.51-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", false},
+      {"amdgpu12-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", false},
 
       {"amdgpu13-amd-amdhsa", "amdgpu13.10-amd-amdhsa", true},
 
@@ -3819,6 +4073,8 @@ TEST(TripleTest, DefaultWCharSize) {
   EXPECT_EQ(2u, Triple("x86_64-scei-ps4").getDefaultWCharSize());
   EXPECT_EQ(2u, Triple("x86_64-scei-ps5").getDefaultWCharSize());
   EXPECT_EQ(2u, Triple("powerpc-ibm-aix").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("avr-unknown-unknown").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("msp430-unknown-unknown").getDefaultWCharSize());
 
   EXPECT_EQ(1u, Triple("xcore-unknown-unknown").getDefaultWCharSize());
 }
