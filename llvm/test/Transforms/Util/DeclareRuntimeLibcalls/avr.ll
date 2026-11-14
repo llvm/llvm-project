@@ -68,7 +68,7 @@
 ; CHECK-NEXT: declare void @__atomic_store_2(ptr captures(none), i16, i16) addrspace(1) [[ATOMIC_ATTRS]]
 ; CHECK-NEXT: declare void @__atomic_store_4(ptr captures(none), i32, i16) addrspace(1) [[ATOMIC_ATTRS]]
 ; CHECK-NEXT: declare void @__atomic_store_8(ptr captures(none), i64, i16) addrspace(1) [[ATOMIC_ATTRS]]
-; CHECK-NEXT: declare void @__clear_cache(ptr, ptr) addrspace(1)
+; CHECK-NEXT: declare void @__clear_cache(ptr captures(none), ptr captures(none)) addrspace(1) [[ATOMIC_ATTRS]]
 ; CHECK-NEXT: declare i16 @__clzdi2(i64) addrspace(1) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare i16 @__clzsi2(i32) addrspace(1) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare i16 @__clzti2(i128) addrspace(1) [[NOMEM_ATTRS]]
