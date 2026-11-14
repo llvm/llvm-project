@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cuda.h>
@@ -24,6 +25,7 @@
 #include "PluginInterface.h"
 #include "Utils/ELF.h"
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -289,6 +291,10 @@ struct CUDADeviceTy : public GenericDeviceTy {
                  GenericProfilerTy *ProfilerPtr) override {
     CUresult Res = cuDeviceGet(&Device, DeviceId);
     if (auto Err = Plugin::check(Res, "error in cuDeviceGet: %s"))
+      return Err;
+
+    Res = cuDriverGetVersion(&DriverVersion);
+    if (auto Err = Plugin::check(Res, "error in cuDriverGetVersion: %s"))
       return Err;
 
     CUuuid UUID = {0};
@@ -944,9 +950,6 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// Prefetch managed memory to the device or back to the host.
-  // TODO: switch to cuMemPrefetchBatchAsync once the minimum supported CUDA
-  // driver is 13 or newer. That entry point takes the (Mems, Sizes, Count)
-  // arrays directly and lets the driver batch the migration.
   Error dataPrefetchImpl(size_t Count, const void **Mems, const size_t *Sizes,
                          bool ToHost,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override {
@@ -965,25 +968,55 @@ struct CUDADeviceTy : public GenericDeviceTy {
         !ConcurrentManagedAccess)
       return Plugin::success();
 
-    CUstream Stream;
-    if (auto Err = getStream(AsyncInfoWrapper, Stream))
-      return Err;
-
-    CUdevice Dst = ToHost ? CU_DEVICE_CPU : Device;
-    for (size_t I = 0; I < Count; I++) {
-      if (Sizes[I] == 0)
+    llvm::SmallVector<size_t, 8> FilteredSizes;
+    llvm::SmallVector<CUdeviceptr, 8> FilteredPtrs;
+    for (size_t MemoryPtrIndex = 0; MemoryPtrIndex < Count; MemoryPtrIndex++) {
+      if (Sizes[MemoryPtrIndex] == 0)
         continue;
 
       // Prefetch only works with USM (managed) memory; ignore the hint
       // otherwise.
       unsigned int IsManaged = 0;
       if (cuPointerGetAttribute(&IsManaged, CU_POINTER_ATTRIBUTE_IS_MANAGED,
-                                (CUdeviceptr)Mems[I]) != CUDA_SUCCESS ||
+                                (CUdeviceptr)Mems[MemoryPtrIndex]) !=
+              CUDA_SUCCESS ||
           !IsManaged)
         continue;
 
-      CUresult Res =
-          cuMemPrefetchAsync((CUdeviceptr)Mems[I], Sizes[I], Dst, Stream);
+      FilteredSizes.push_back(Sizes[MemoryPtrIndex]);
+      FilteredPtrs.push_back(
+          reinterpret_cast<CUdeviceptr>(Mems[MemoryPtrIndex]));
+    }
+
+    if (FilteredPtrs.size() == 0)
+      return Plugin::success();
+
+    CUstream Stream;
+    if (auto Err = getStream(AsyncInfoWrapper, Stream))
+      return Err;
+
+    if (DriverVersion >= 13000) {
+      CUmemLocation Loc{};
+      if (ToHost)
+        Loc = {.type = CU_MEM_LOCATION_TYPE_HOST, .id = 0};
+      else
+        Loc = {.type = CU_MEM_LOCATION_TYPE_DEVICE, .id = Device};
+
+      size_t LocIdxs = 0;
+      CUresult Res = cuMemPrefetchBatchAsync(
+          FilteredPtrs.data(), FilteredSizes.data(), FilteredPtrs.size(), &Loc,
+          &LocIdxs, 1, 0, Stream);
+      if (auto Err = Plugin::check(Res, "error in cuMemPrefetchBatchAsync: %s"))
+        return Err;
+
+      return Plugin::success();
+    }
+
+    // Fallback path for CUDA < 13
+    CUdevice Dst = ToHost ? CU_DEVICE_CPU : Device;
+    for (size_t I = 0; I < FilteredPtrs.size(); I++) {
+      CUresult Res = cuMemPrefetchAsync((CUdeviceptr)FilteredPtrs[I],
+                                        FilteredSizes[I], Dst, Stream);
       if (auto Err = Plugin::check(Res, "error in cuMemPrefetchAsync: %s"))
         return Err;
     }
@@ -1501,6 +1534,9 @@ private:
 
   /// Device page size.
   size_t Granularity = 0;
+
+  /// The CUDA version supported by the device
+  int DriverVersion = 0;
 
   /// Tracker for virtual address reservations.
   VMemTrackerTy<CUmemGenericAllocationHandle> VMemTracker;
