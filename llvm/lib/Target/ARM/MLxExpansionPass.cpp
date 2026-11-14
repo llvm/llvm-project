@@ -334,7 +334,8 @@ bool MLxExpansion::ExpandFPMLxInstructions(MachineBasicBlock &MBB) {
   while (MII != E) {
     MachineInstr *MI = &*MII++;
 
-    if (MI->isPosition() || MI->isImplicitDef() || MI->isCopy())
+    if (MI->isDebugInstr() || MI->isPosition() || MI->isImplicitDef() ||
+        MI->isCopy())
       continue;
 
     const MCInstrDesc &MCID = MI->getDesc();
