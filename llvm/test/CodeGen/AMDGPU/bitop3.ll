@@ -757,16 +757,11 @@ define amdgpu_ps half @not_and_and_not_and_b16(i16 %a, i16 %b, i16 %c) {
 }
 
 define amdgpu_ps half @test_xor3_b16(i16 %a, i16 %b, i16 %c) {
-; GFX950-SDAG-LABEL: test_xor3_b16:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    v_bitop3_b16 v0, v0, v2, v1 bitop3:0x96
-; GFX950-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX950-GISEL-LABEL: test_xor3_b16:
-; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v1
-; GFX950-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v2
-; GFX950-GISEL-NEXT:    ; return to shader part epilog
+; GFX950-LABEL: test_xor3_b16:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX950-NEXT:    v_xor_b32_e32 v0, v0, v2
+; GFX950-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_xor3_b16:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
@@ -774,7 +769,7 @@ define amdgpu_ps half @test_xor3_b16(i16 %a, i16 %b, i16 %c) {
 ; GFX1250-SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_nop
 ; GFX1250-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-SDAG-FAKE16-NEXT:    v_bitop3_b16 v0, v0, v2, v1 bitop3:0x96
+; GFX1250-SDAG-FAKE16-NEXT:    v_xor3_b32 v0, v0, v1, v2
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-TRUE16-LABEL: test_xor3_b16:
@@ -801,15 +796,10 @@ define amdgpu_ps half @test_xor3_b16(i16 %a, i16 %b, i16 %c) {
 }
 
 define amdgpu_ps half @test_or3_b16(i16 %a, i16 %b, i16 %c) {
-; GFX950-SDAG-LABEL: test_or3_b16:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    v_bitop3_b16 v0, v0, v2, v1 bitop3:0xfe
-; GFX950-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX950-GISEL-LABEL: test_or3_b16:
-; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_or3_b32 v0, v0, v1, v2
-; GFX950-GISEL-NEXT:    ; return to shader part epilog
+; GFX950-LABEL: test_or3_b16:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_or3_b32 v0, v0, v1, v2
+; GFX950-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_or3_b16:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
@@ -817,7 +807,7 @@ define amdgpu_ps half @test_or3_b16(i16 %a, i16 %b, i16 %c) {
 ; GFX1250-SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_nop
 ; GFX1250-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-SDAG-FAKE16-NEXT:    v_bitop3_b16 v0, v0, v2, v1 bitop3:0xfe
+; GFX1250-SDAG-FAKE16-NEXT:    v_or3_b32 v0, v0, v1, v2
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-TRUE16-LABEL: test_or3_b16:
@@ -844,15 +834,10 @@ define amdgpu_ps half @test_or3_b16(i16 %a, i16 %b, i16 %c) {
 }
 
 define amdgpu_ps half @test_and_or_b16(i16 %a, i16 %b, i16 %c) {
-; GFX950-SDAG-LABEL: test_and_or_b16:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    v_bitop3_b16 v0, v0, v2, v1 bitop3:0xec
-; GFX950-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX950-GISEL-LABEL: test_and_or_b16:
-; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_and_or_b32 v0, v0, v1, v2
-; GFX950-GISEL-NEXT:    ; return to shader part epilog
+; GFX950-LABEL: test_and_or_b16:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_and_or_b32 v0, v0, v1, v2
+; GFX950-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_and_or_b16:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
@@ -860,7 +845,7 @@ define amdgpu_ps half @test_and_or_b16(i16 %a, i16 %b, i16 %c) {
 ; GFX1250-SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_nop
 ; GFX1250-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-SDAG-FAKE16-NEXT:    v_bitop3_b16 v0, v0, v2, v1 bitop3:0xec
+; GFX1250-SDAG-FAKE16-NEXT:    v_and_or_b32 v0, v0, v1, v2
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-TRUE16-LABEL: test_and_or_b16:
