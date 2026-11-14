@@ -1861,6 +1861,21 @@ ASTReader::readSLocOffset(ModuleFile *F, unsigned Index) {
   }
 }
 
+InputFileLoc ASTReader::getLoadedModuleMapLoc(FileEntryRef Wanted) {
+  for (ModuleFile &F : ModuleMgr) {
+    // A module file that wrote no entries for its module map has no copy to
+    // offer.
+    if (!F.ModuleMapSLocIndex)
+      continue;
+    if (FileMgr.getOptionalFileRef(F.ModuleMapPath) != Wanted)
+      continue;
+    // The index counts from one, while the entries are numbered from zero.
+    return {FileID::get(F.SLocEntryBaseID + F.ModuleMapSLocIndex - 1),
+            F.SLocEntryBaseOffset + F.ModuleMapSLocOffset};
+  }
+  return InputFileLoc();
+}
+
 int ASTReader::getSLocEntryID(SourceLocation::UIntTy SLocOffset) {
   auto SLocMapI =
       GlobalSLocOffsetMap.find(SourceManager::MaxLoadedOffset - SLocOffset - 1);
@@ -4775,6 +4790,8 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
                                   unsigned ClientLoadCapabilities) {
   unsigned Idx = 0;
   F.ModuleMapPath = ReadPath(F, Record, Idx);
+  F.ModuleMapSLocIndex = static_cast<unsigned>(Record[Idx++]);
+  F.ModuleMapSLocOffset = static_cast<SourceLocation::UIntTy>(Record[Idx++]);
 
   // Try to resolve ModuleName in the current header search context and
   // verify that it is found in the same module map file as we saved. If the
