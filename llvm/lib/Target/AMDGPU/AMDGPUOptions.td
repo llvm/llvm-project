@@ -143,6 +143,11 @@ defm : BoolField<"amdgpu-promote-alloca-to-lds", "true",
   "Promote alloca to LDS">;
 defm : BoolField<"amdgpu-promote-alloca-to-vector", "true",
   "Promote alloca to vector">;
+// A divergent dynamic index into a promoted vector compiles into a chain of
+// `cmp`/`cndmask` instructions, which gets very long for larger vectors. Allow
+// only smaller vectors in that case.
+defm : OptionalValueField<"amdgpu-promote-alloca-to-vector-divergent-max-regs", "unsigned",
+  "Maximum vector size (in 32b registers) to use when promoting alloca with a divergent index">;
 defm : ValueField<"amdgpu-promote-alloca-to-vector-limit", "unsigned", "0",
   "Maximum byte size to consider promote alloca to vector">;
 defm : OptionalValueField<"amdgpu-promote-alloca-to-vector-max-regs", "unsigned",
