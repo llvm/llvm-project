@@ -107,6 +107,7 @@ FunctionPass *createSIAnnotateControlFlowLegacyPass();
 FunctionPass *createSILowerI1CopiesLegacyPass();
 FunctionPass *createSIShrinkInstructionsLegacyPass();
 FunctionPass *createSIMemoryLegalizerPass();
+FunctionPass *createAMDGPUNewInsertWaitcntsPass();
 FunctionPass *createSIInsertWaitcntsPass();
 
 FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
@@ -601,6 +602,9 @@ extern char &SIInsertHardClausesID;
 
 void initializeSIInsertWaitcntsLegacyPass(PassRegistry &);
 extern char &SIInsertWaitcntsID;
+
+void initializeAMDGPUNewInsertWaitcntsLegacyPass(PassRegistry &);
+extern char &AMDGPUNewInsertWaitcntsID;
 
 void initializeSIFormMemoryClausesLegacyPass(PassRegistry &);
 extern char &SIFormMemoryClausesID;
