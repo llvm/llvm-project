@@ -50,6 +50,12 @@ public:
     return true;
   }
 
+  // A failed store-to-load forward is a CPU store-buffer stall. Do not inherit
+  // the scheduling-model default for NVPTX memory, including shared memory.
+  InstructionCost getStoreLoadForwardingConflictCost() const override {
+    return 0;
+  }
+
   unsigned getFlatAddressSpace() const override {
     return AddressSpace::ADDRESS_SPACE_GENERIC;
   }

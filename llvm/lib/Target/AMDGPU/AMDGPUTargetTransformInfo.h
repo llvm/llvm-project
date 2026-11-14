@@ -118,6 +118,12 @@ public:
 
   bool hasBranchDivergence(const Function *F = nullptr) const override;
 
+  // A failed store-to-load forward is a CPU store-buffer stall. GPU memory,
+  // including LDS, does not use that model, so do not inherit the default.
+  InstructionCost getStoreLoadForwardingConflictCost() const override {
+    return 0;
+  }
+
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
                                OptimizationRemarkEmitter *ORE) const override;

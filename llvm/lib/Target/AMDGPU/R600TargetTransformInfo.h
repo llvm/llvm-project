@@ -37,6 +37,12 @@ class R600TTIImpl final : public BasicTTIImplBase<R600TTIImpl> {
 public:
   explicit R600TTIImpl(const AMDGPUTargetMachine *TM, const Function &F);
 
+  // A failed store-to-load forward is a CPU store-buffer stall. Do not inherit
+  // the scheduling-model default for R600 memory.
+  InstructionCost getStoreLoadForwardingConflictCost() const override {
+    return 0;
+  }
+
   const R600Subtarget *getST() const { return ST; }
   const TargetLowering *getTLI() const { return TLI; }
 
