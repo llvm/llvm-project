@@ -317,3 +317,140 @@ func.func @negative_transpose_fold(%arg : vector<2x2xi8>) -> vector<2x2xi8> {
   %0 = vector.transpose %arg, [1, 0] : vector<2x2xi8> to vector<2x2xi8>
   return %0 : vector<2x2xi8>
 }
+
+// -----
+
+// +----------------------------------------------------------------------------
+//  Tests of FoldTransposeShapeCastBroadcast:
+//    transpose(broadcast(shape_cast(x))) -> broadcast(x)
+// +----------------------------------------------------------------------------
+
+// Moving the prepended dimension to the end allows a direct broadcast to
+// expand the source's trailing size-1 dimension.
+// CHECK-LABEL: func @transpose_shape_cast_broadcast_drop_unit_dim
+//  CHECK-SAME: (%[[ARG:.+]]: vector<1x32x1xf32>)
+//       CHECK:   %[[V:.+]] = vector.broadcast %[[ARG]] : vector<1x32x1xf32> to vector<1x32x64xf32>
+//       CHECK:   return %[[V]] : vector<1x32x64xf32>
+func.func @transpose_shape_cast_broadcast_drop_unit_dim(%arg: vector<1x32x1xf32>) -> vector<1x32x64xf32> {
+  %sc = vector.shape_cast %arg : vector<1x32x1xf32> to vector<1x32xf32>
+  %bc = vector.broadcast %sc : vector<1x32xf32> to vector<64x1x32xf32>
+  %t = vector.transpose %bc, [1, 2, 0] : vector<64x1x32xf32> to vector<1x32x64xf32>
+  return %t : vector<1x32x64xf32>
+}
+
+// -----
+
+// Moving the prepended dimension of size 3 to the end preserves inherited
+// dimension order and places size 8 at the same index as a direct broadcast.
+// CHECK-LABEL: func @transpose_shape_cast_broadcast_split_prepended_dims
+//  CHECK-SAME: (%[[ARG:.+]]: vector<8x1xf32>)
+//       CHECK:   %[[V:.+]] = vector.broadcast %[[ARG]] : vector<8x1xf32> to vector<2x1x8x3xf32>
+//       CHECK:   return %[[V]] : vector<2x1x8x3xf32>
+func.func @transpose_shape_cast_broadcast_split_prepended_dims(%arg: vector<8x1xf32>) -> vector<2x1x8x3xf32> {
+  %sc = vector.shape_cast %arg : vector<8x1xf32> to vector<1x8xf32>
+  %bc = vector.broadcast %sc : vector<1x8xf32> to vector<2x3x1x8xf32>
+  %t = vector.transpose %bc, [0, 2, 3, 1] : vector<2x3x1x8xf32> to vector<2x1x8x3xf32>
+  return %t : vector<2x1x8x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @transpose_shape_cast_broadcast_scalable_dim
+//  CHECK-SAME: (%[[ARG:.+]]: vector<[4]x1xf32>)
+//       CHECK:   %[[V:.+]] = vector.broadcast %[[ARG]] : vector<[4]x1xf32> to vector<1x[4]x8xf32>
+//       CHECK:   return %[[V]] : vector<1x[4]x8xf32>
+func.func @transpose_shape_cast_broadcast_scalable_dim(%arg: vector<[4]x1xf32>) -> vector<1x[4]x8xf32> {
+  %sc = vector.shape_cast %arg : vector<[4]x1xf32> to vector<[4]xf32>
+  %bc = vector.broadcast %sc : vector<[4]xf32> to vector<8x1x[4]xf32>
+  %t = vector.transpose %bc, [1, 2, 0] : vector<8x1x[4]xf32> to vector<1x[4]x8xf32>
+  return %t : vector<1x[4]x8xf32>
+}
+
+// -----
+
+// The fold rejects swapping inherited dimensions, even though a direct
+// broadcast would be valid here.
+// CHECK-LABEL: func @negative_transpose_stretched_dim
+//       CHECK:   vector.shape_cast
+//       CHECK:   vector.broadcast
+//       CHECK:   %[[T:.+]] = vector.transpose
+//       CHECK:   return %[[T]]
+func.func @negative_transpose_stretched_dim(%arg: vector<1x4xf32>) -> vector<3x4xf32> {
+  %sc = vector.shape_cast %arg : vector<1x4xf32> to vector<4x1xf32>
+  %bc = vector.broadcast %sc : vector<4x1xf32> to vector<4x3xf32>
+  %t = vector.transpose %bc, [1, 0] : vector<4x3xf32> to vector<3x4xf32>
+  return %t : vector<3x4xf32>
+}
+
+// -----
+
+// The source dimension of size 4 lands at index 2 instead of index 1 for a
+// direct broadcast. The shape_cast remains; FoldTransposeBroadcast removes
+// the transpose.
+// CHECK-LABEL: func @negative_nonbroadcast_dim_misplaced
+//  CHECK-SAME: (%[[ARG:.+]]: vector<4x1xf32>)
+//       CHECK:   %[[SC:.+]] = vector.shape_cast %[[ARG]] : vector<4x1xf32> to vector<1x4xf32>
+//       CHECK:   %[[V:.+]] = vector.broadcast %[[SC]] : vector<1x4xf32> to vector<1x4x4xf32>
+//       CHECK:   return %[[V]] : vector<1x4x4xf32>
+func.func @negative_nonbroadcast_dim_misplaced(%arg: vector<4x1xf32>) -> vector<1x4x4xf32> {
+  %sc = vector.shape_cast %arg : vector<4x1xf32> to vector<1x4xf32>
+  %bc = vector.broadcast %sc : vector<1x4xf32> to vector<4x1x4xf32>
+  %t = vector.transpose %bc, [1, 0, 2] : vector<4x1x4xf32> to vector<1x4x4xf32>
+  return %t : vector<1x4x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @negative_transpose_reorders_nonbroadcast_dims
+//       CHECK:   vector.shape_cast
+//       CHECK:   vector.broadcast
+//       CHECK:   %[[T:.+]] = vector.transpose
+//       CHECK:   return %[[T]]
+func.func @negative_transpose_reorders_nonbroadcast_dims(%arg: vector<2x1x4xf32>) -> vector<4x8x2xf32> {
+  %sc = vector.shape_cast %arg : vector<2x1x4xf32> to vector<2x4xf32>
+  %bc = vector.broadcast %sc : vector<2x4xf32> to vector<8x2x4xf32>
+  %t = vector.transpose %bc, [2, 0, 1] : vector<8x2x4xf32> to vector<4x8x2xf32>
+  return %t : vector<4x8x2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @negative_shape_cast_merges_nonbroadcast_dims
+//       CHECK:   vector.shape_cast
+//       CHECK:   vector.broadcast
+//       CHECK:   %[[T:.+]] = vector.transpose
+//       CHECK:   return %[[T]]
+func.func @negative_shape_cast_merges_nonbroadcast_dims(%arg: vector<2x4xf32>) -> vector<8x3xf32> {
+  %sc = vector.shape_cast %arg : vector<2x4xf32> to vector<8xf32>
+  %bc = vector.broadcast %sc : vector<8xf32> to vector<3x8xf32>
+  %t = vector.transpose %bc, [1, 0] : vector<3x8xf32> to vector<8x3xf32>
+  return %t : vector<8x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @negative_shape_cast_reorders_nonbroadcast_dims
+//       CHECK:   vector.shape_cast
+//       CHECK:   vector.broadcast
+//       CHECK:   %[[T:.+]] = vector.transpose
+//       CHECK:   return %[[T]]
+func.func @negative_shape_cast_reorders_nonbroadcast_dims(%arg: vector<5x4xf32>) -> vector<5x4x3xf32> {
+  %sc = vector.shape_cast %arg : vector<5x4xf32> to vector<4x5x1xf32>
+  %bc = vector.broadcast %sc : vector<4x5x1xf32> to vector<4x5x3xf32>
+  %t = vector.transpose %bc, [1, 0, 2] : vector<4x5x3xf32> to vector<5x4x3xf32>
+  return %t : vector<5x4x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @negative_shape_cast_reshapes_scalable_unit_dim
+//       CHECK:   vector.shape_cast
+//       CHECK:   vector.broadcast
+//       CHECK:   %[[T:.+]] = vector.transpose
+//       CHECK:   return %[[T]]
+func.func @negative_shape_cast_reshapes_scalable_unit_dim(%arg: vector<[1]x4xf32>) -> vector<[4]x8xf32> {
+  %sc = vector.shape_cast %arg : vector<[1]x4xf32> to vector<[4]xf32>
+  %bc = vector.broadcast %sc : vector<[4]xf32> to vector<8x[4]xf32>
+  %t = vector.transpose %bc, [1, 0] : vector<8x[4]xf32> to vector<[4]x8xf32>
+  return %t : vector<[4]x8xf32>
+}
