@@ -100,6 +100,7 @@
 #include "llvm/CodeGen/StackSlotColoring.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
+#include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/Module.h"
@@ -1680,7 +1681,9 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // instructions that cause scheduling barriers.
   insertPass(EndOfPreRA, &SIWholeQuadModeID);
 
-  if (CLOpts.opt_exec_mask_pre_ra)
+  if (CLOpts.exec_mask_opt_ssa_mode)
+    insertPass(&UnreachableMachineBlockElimID, &SIOptimizeExecMaskingPreRAID);
+  else if (CLOpts.opt_exec_mask_pre_ra)
     insertPass(EndOfPreRA, &SIOptimizeExecMaskingPreRAID);
 
   // This is not an essential optimization and it has a noticeable impact on
@@ -2501,7 +2504,10 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
   // instructions that cause scheduling barriers.
   insertAtEndOfPreRA(SIWholeQuadModePass());
 
-  if (CLOpts.opt_exec_mask_pre_ra)
+  if (CLOpts.exec_mask_opt_ssa_mode)
+    insertPass<UnreachableMachineBlockElimPass>(
+        SIOptimizeExecMaskingPreRAPass());
+  else if (CLOpts.opt_exec_mask_pre_ra)
     insertAtEndOfPreRA(SIOptimizeExecMaskingPreRAPass());
 
   // This is not an essential optimization and it has a noticeable impact on
