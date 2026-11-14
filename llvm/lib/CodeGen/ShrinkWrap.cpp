@@ -801,12 +801,10 @@ void ShrinkWrapImpl::updateSaveRestorePoints(MachineBasicBlock &MBB,
         MLI->getLoopFor(Restore)->getExitingBlocks(ExitBlocks);
         // Push Restore outside of this loop.
         // Look for the immediate post-dominator of the loop exits.
-        MachineBasicBlock *IPdom = Restore;
-        for (MachineBasicBlock *LoopExitBB: ExitBlocks) {
-          IPdom = FindIDom<>(*IPdom, LoopExitBB->successors(), *MPDT);
-          if (!IPdom)
-            break;
-        }
+        SmallVector<MachineBasicBlock *, 4> ExitSuccs;
+        for (MachineBasicBlock *LoopExitBB : ExitBlocks)
+          llvm::append_range(ExitSuccs, LoopExitBB->successors());
+        MachineBasicBlock *IPdom = FindIDom<>(*Restore, ExitSuccs, *MPDT);
         // If the immediate post-dominator is not in a less nested loop,
         // then we are stuck in a program with an infinite loop.
         // In that case, we will not find a safe point, hence, bail out.
