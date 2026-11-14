@@ -1658,14 +1658,17 @@ bool LoopVectorizationPlanner::getDecisionAndClampRange(
   return PredicateAtRangeStart;
 }
 
-VPlan &LoopVectorizationPlanner::getPlanFor(ElementCount VF) const {
+VPlan &LoopVectorizationPlanner::getPlanFor(ElementCount VF,
+                                            bool HasTailFolded) const {
   assert(count_if(VPlans,
-                  [VF](const VPlanPtr &Plan) { return Plan->hasVF(VF); }) ==
-             1 &&
+                  [VF, HasTailFolded](const VPlanPtr &Plan) {
+                    return Plan->hasVF(VF) &&
+                           Plan->hasTailFolded() == HasTailFolded;
+                  }) == 1 &&
          "Multiple VPlans for VF.");
 
   for (const VPlanPtr &Plan : VPlans) {
-    if (Plan->hasVF(VF))
+    if (Plan->hasVF(VF) && Plan->hasTailFolded() == HasTailFolded)
       return *Plan.get();
   }
   llvm_unreachable("No plan found!");

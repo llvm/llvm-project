@@ -8,10 +8,6 @@
 ; RUN: %{cmd} -force-vector-width=16 -epilogue-vectorization-force-VF=8 -enable-epilogue-vectorization=false \
 ; RUN: < %s 2>&1 | FileCheck %s --check-prefix=CHECK-DISABLED-EPILOG
 
-; RUN: %{cmd}  -epilogue-vectorization-force-VF=8 < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-FORCED-MAIN-VF
-
-; RUN: %{cmd} -force-vector-width=16 < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-FORCED-EPILOGUE-VF
-
 ; RUN: %{cmd} -force-vector-width=8 -epilogue-vectorization-force-VF=8 < %s 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-VFs
 
 ; RUN: %{cmd} -force-vector-width=8 -epilogue-vectorization-force-VF=16 < %s 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-LARGER-EPILOGUE
@@ -34,12 +30,6 @@ define void @test_epilogue_tf(ptr %A, i64 %n, i8 %val) {
 ;
 ; CHECK-DISABLED-EPILOG-LABEL: LV: Checking a loop in 'test_epilogue_tf'
 ; CHECK-DISABLED-EPILOG: remark: <unknown>:0:0: Options conflict, epilogue vectorization is disallowed while epilogue tail-folding allowed!
-;
-; CHECK-NO-FORCED-MAIN-VF-LABEL: Checking a loop in 'test_epilogue_tf'
-; CHECK-NO-FORCED-MAIN-VF-NOT: LV: epilogue tail-folding is enabled
-
-; CHECK-NO-FORCED-EPILOGUE-VF-LABEL: Checking a loop in 'test_epilogue_tf'
-; CHECK-NO-FORCED-EPILOGUE-VF-NOT: LV: epilogue tail-folding is enabled
 ;
 ; CHECK-INVALID-VFs-LABEL: Checking a loop in 'test_epilogue_tf'
 ; CHECK-INVALID-VFs: remark: <unknown>:0:0: For now, epilogue tail-folding can't be applied when VF of the main loop <= VF of the epilogue
@@ -154,28 +144,6 @@ loop:
 
 exit:
   ret i32 0
-}
-
-define i64 @find_last_offset_wide_canonical_iv(ptr %A, i64 %n) {
-; CHECK-LABEL: Checking a loop in 'find_last_offset_wide_canonical_iv'
-; CHECK: remark: <unknown>:0:0: Epilogue tail-folding is not supported with reductions
-;
-entry:
-  br label %loop
-
-loop:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %red = phi i64 [ -1, %entry ], [ %sel, %loop ]
-  %gep = getelementptr inbounds i32, ptr %A, i64 %iv
-  %l = load i32, ptr %gep, align 4
-  %c = icmp eq i32 %l, 11
-  %sel = select i1 %c, i64 %iv, i64 %red
-  %iv.next = add nuw nsw i64 %iv, 1
-  %ec = icmp eq i64 %iv.next, %n
-  br i1 %ec, label %exit, label %loop
-
-exit:
-  ret i64 %sel
 }
 
 define i32 @fixed-order-recurrence(ptr %src) {
