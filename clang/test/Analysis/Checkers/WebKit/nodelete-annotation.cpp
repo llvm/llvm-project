@@ -1103,6 +1103,14 @@ struct DelegatesToOpaqueCtor {
   OpaqueMember member;
 };
 
+// The member is constructed by the target constructor, so only it is blamed.
+struct DelegatesWithOpaqueMember {
+  [[clang::annotate("webkit.nodelete")]] DelegatesWithOpaqueMember() : DelegatesWithOpaqueMember(nullptr) { }
+  [[clang::annotate("webkit.nodelete")]] explicit DelegatesWithOpaqueMember(int*) { }
+  // expected-warning@-1{{A constructor 'DelegatesWithOpaqueMember' has [[clang::annotate_type("webkit.nodelete")]] but it constructs a member variable 'member' that could destruct an object}}
+  OpaqueMember member;
+};
+
 struct ObserverWithOpaqueCtor {
   explicit ObserverWithOpaqueCtor(int*);
   OpaqueMember member;
