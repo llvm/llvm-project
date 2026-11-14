@@ -699,7 +699,7 @@ bb4:
 define amdgpu_kernel void @uniform_unconditional_min_long_backward_branch(ptr addrspace(1) %arg, i32 %arg1) {
 ; GCN-LABEL: uniform_unconditional_min_long_backward_branch:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_and_b64 vcc, exec, -1
+; GCN-NEXT:    s_mov_b64 vcc, exec
 ; GCN-NEXT:  .LBB6_1: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    ;;#ASMSTART
@@ -722,7 +722,7 @@ define amdgpu_kernel void @uniform_unconditional_min_long_backward_branch(ptr ad
 ;
 ; GFX11-LABEL: uniform_unconditional_min_long_backward_branch:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_and_b64 vcc, exec, -1
+; GFX11-NEXT:    s_mov_b64 vcc, exec
 ; GFX11-NEXT:    .p2align 6
 ; GFX11-NEXT:  .LBB6_1: ; %loop
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -1048,7 +1048,7 @@ define amdgpu_kernel void @analyze_mask_branch() #0 {
 ; GCN-NEXT:    s_addc_u32 s1, s1, (.LBB9_5-.Lpost_getpc10)>>32
 ; GCN-NEXT:    s_setpc_b64 s[0:1]
 ; GCN-NEXT:  .LBB9_3: ; %loop.preheader
-; GCN-NEXT:    s_and_b64 vcc, exec, -1
+; GCN-NEXT:    s_mov_b64 vcc, exec
 ; GCN-NEXT:  .LBB9_4: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    ;;#ASMSTART
@@ -1098,7 +1098,7 @@ define amdgpu_kernel void @analyze_mask_branch() #0 {
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
 ; GFX11-NEXT:  .LBB9_3: ; %loop.preheader
-; GFX11-NEXT:    s_and_b64 vcc, exec, -1
+; GFX11-NEXT:    s_mov_b64 vcc, exec
 ; GFX11-NEXT:    .p2align 6
 ; GFX11-NEXT:  .LBB9_4: ; %loop
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1

@@ -12,7 +12,7 @@ define amdgpu_kernel void @constrain_readfirstlane_av(i64 %arg, ptr addrspace(1)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_mov_b32 s5, 0
 ; CHECK-NEXT:    s_mov_b64 s[6:7], 0
-; CHECK-NEXT:    s_and_b64 vcc, exec, -1
+; CHECK-NEXT:    s_mov_b64 vcc, exec
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    global_load_ushort v1, v0, s[2:3] glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)

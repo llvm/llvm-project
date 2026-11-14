@@ -1832,13 +1832,14 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
   }
 
   if (Opc == AMDGPU::V_AND_B32_e64 || Opc == AMDGPU::V_AND_B32_e32 ||
-      Opc == AMDGPU::S_AND_B32) {
-    if (Src1Val == 0) {
-      // y = and x, 0 => y = v_mov_b32 0
+      Opc == AMDGPU::S_AND_B32 || Opc == AMDGPU::S_AND_B64) {
+    int64_t C = Opc == AMDGPU::S_AND_B64 ? *Src1Imm : Src1Val;
+    if (C == 0) {
+      // y = and x, 0 => y = mov 0
       MI->removeOperand(Src0Idx);
       TII->mutateAndCleanupImplicit(
-          *MI, TII->get(getMovOpc(Opc == AMDGPU::S_AND_B32)));
-    } else if (Src1Val == -1) {
+          *MI, TII->get(TII->getMovOpcode(TII->getOpRegClass(*MI, 0))));
+    } else if (C == -1) {
       // y = and x, -1 => y = copy x
       MI->removeOperand(Src1Idx);
       TII->mutateAndCleanupImplicit(*MI, TII->get(AMDGPU::COPY));
