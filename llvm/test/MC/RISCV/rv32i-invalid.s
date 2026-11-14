@@ -51,10 +51,10 @@ jal gp, 1 # expected-error:9 {{immediate must be a multiple of 2 bytes in the ra
 
 # Illegal operand modifier
 ## fencearg
-fence %hi(iorw), iorw # expected-error:7 {{operand must be formed of letters selected in-order from 'iorw'}}
-fence %lo(iorw), iorw # expected-error:7 {{operand must be formed of letters selected in-order from 'iorw'}}
-fence %pcrel_hi(iorw), iorw # expected-error:7 {{operand must be formed of letters selected in-order from 'iorw'}}
-fence %pcrel_lo(iorw), iorw # expected-error:7 {{operand must be formed of letters selected in-order from 'iorw'}}
+fence %hi(iorw), iorw # expected-error:7 {{operand must be formed of letters selected in-order from 'iorw' or be 0}}
+fence %lo(iorw), iorw # expected-error:7 {{operand must be formed of letters selected in-order from 'iorw' or be 0}}
+fence %pcrel_hi(iorw), iorw # expected-error:7 {{operand must be formed of letters selected in-order from 'iorw' or be 0}}
+fence %pcrel_lo(iorw), iorw # expected-error:7 {{operand must be formed of letters selected in-order from 'iorw' or be 0}}
 
 ## uimm5
 slli a0, a0, %lo(1) # expected-error:14 {{immediate must be an integer in the range [0, 31]}}
@@ -175,8 +175,8 @@ addi t0, sp, %pltpcrel(255) # expected-error:14 {{operand must be a symbol with 
 addi t1, %lo(t2), 1 # expected-error:10 {{register must be a GPR}}
 
 # Invalid mnemonics
-subs t0, t2, t1 # expected-error:1 {{unrecognized instruction mnemonic}}
-nandi t0, zero, 0 # expected-error:1 {{unrecognized instruction mnemonic}}
+subs t0, t2, t1 # expected-error:1 {{unrecognized instruction mnemonic, did you mean: sb, sub?}}
+nandi t0, zero, 0 # expected-error:1 {{unrecognized instruction mnemonic, did you mean: and, andi?}}
 
 # Invalid register names
 addi foo, sp, 10 # expected-error:6 {{register must be a GPR}}

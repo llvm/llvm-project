@@ -1,7 +1,7 @@
 # RUN: llvm-mc --verify -triple=riscv32 -mattr=+c,+d < %s
 
 ## FPRC
-c.fld  ft3, 8(a5) # expected-error:8 {{register must be a FPR}}
+c.fld  ft3, 8(a5) # expected-error:8 {{register must be a FPR from f8 to f15 (fs0-fs1, fa0-fa5)}}
 
 ## uimm9_lsb000
 c.fldsp  fs1, 512(sp) # expected-error:15 {{immediate must be a multiple of 8 bytes in the range [0, 504]}}

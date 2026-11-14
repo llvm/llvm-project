@@ -40,9 +40,9 @@ start:                                  # @start
 
 ## Check invalid usage
 .ifdef ERR
-	auipc x1, %tlsdesc_call(foo) # expected-error:12 {{operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier or an integer in the range}}
-	auipc x1, %tlsdesc_call(1234) # expected-error:12 {{operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier or an integer in the range}}
-	auipc a0, %tlsdesc_hi(a+b) # expected-error:12 {{operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier or an integer in the range}}
+	auipc x1, %tlsdesc_call(foo) # expected-error:12 {{operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier or an integer in the range [0, 1048575]}}
+	auipc x1, %tlsdesc_call(1234) # expected-error:12 {{operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier or an integer in the range [0, 1048575]}}
+	auipc a0, %tlsdesc_hi(a+b) # expected-error:12 {{operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier or an integer in the range [0, 1048575]}}
 
 	lw   a0, t0, %tlsdesc_load_lo(a_symbol) # expected-error:15 {{unexpected extra operand for instruction}}
 	lw   a0, t0, %tlsdesc_load_lo(a_symbol)(a4)

@@ -4,7 +4,7 @@
 # RUN: rm -rf %t && split-file --leading-lines %s %t && cd %t
 
 #--- match.s
-## Matching directives: a substring match, a '-re' regex match, '@+N' and
+## Matching directives: a full message match, a '-re' regex match, '@+N' and
 ## '@-N' offsets, '@above'/'@below', ':<col>' columns, and directives in '#'
 ## and '//' comments.
 # RUN: llvm-mc --triple=x86_64 --verify match.s
@@ -41,11 +41,24 @@
 ## A directive that was already matched does not steal a later diagnostic from
 ## a second directive on the same line.
 movl $1, %eax, %ebx; movl $1, %eax, %ebx
-# expected-error@-1 {{operand}}
-# expected-error@-2 {{invalid operand}}
+# expected-error-re@-1 {{{{.*}}operand{{.*}}}}
+# expected-error@-2 {{invalid operand for instruction}}
 
 movl $1, %eax, %ebx
 # expected-error@-1:16 {{invalid operand for instruction}}
+
+#--- partial-match.s
+## By default, directives must match the full message, including with '-re'.
+## --verify-allow-partial-match allows matching a substring instead.
+# RUN: not llvm-mc --triple=x86_64 --verify partial-match.s 2>&1 \
+# RUN:   | FileCheck partial-match.s --implicit-check-not=error:
+# RUN: llvm-mc --triple=x86_64 --verify --verify-allow-partial-match partial-match.s
+.foo_directive # expected-error {{unknown}}
+# CHECK: partial-match.s:[[#@LINE-1]]:1: error: unexpected error: unknown directive
+.bar_directive # expected-error-re {{u{{.*}}direc}}
+# CHECK: partial-match.s:[[#@LINE-1]]:1: error: unexpected error: unknown directive
+# CHECK: partial-match.s:[[#@LINE-4]]:18: error: expected error "unknown" was not produced
+# CHECK: partial-match.s:[[#@LINE-3]]:18: error: expected error "u{{\{\{}}.*}}direc" was not produced
 
 #--- wrong-column.s
 ## A directive with the wrong column fails.

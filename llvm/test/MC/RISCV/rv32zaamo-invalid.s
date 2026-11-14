@@ -7,6 +7,6 @@ amomin.w a1, a2, 1 # expected-error:20 {{expected '(' after optional integer off
 amomin.w a1, a2, 1(a3) # expected-error:18 {{optional integer offset must be 0}}
 
 # Only .aq, .rl, and .aqrl suffixes are valid
-amoxor.w.rlqa a2, a3, (a4) # expected-error:1 {{unrecognized instruction mnemonic}}
-amoor.w.aq.rl a4, a5, (a6) # expected-error:1 {{unrecognized instruction mnemonic}}
-amoor.w. a4, a5, (a6) # expected-error:1 {{unrecognized instruction mnemonic}}
+amoxor.w.rlqa a2, a3, (a4) # expected-error:1 {{unrecognized instruction mnemonic, did you mean: amoxor.w.rl?}}
+amoor.w.aq.rl a4, a5, (a6) # expected-error:1 {{unrecognized instruction mnemonic, did you mean: amoor.w.aqrl, amoxor.w.aqrl?}}
+amoor.w. a4, a5, (a6) # expected-error:1 {{unrecognized instruction mnemonic, did you mean: amoor.w, amoor.w.aq, amoor.w.rl, amoxor.w?}}

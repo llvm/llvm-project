@@ -224,6 +224,12 @@ static cl::list<std::string>
                     "the input (default prefix: 'expected')"),
            cl::value_desc("prefixes"), cl::cat(MCCategory));
 
+static cl::opt<bool> VerifyAllowPartialMatch(
+    "verify-allow-partial-match",
+    cl::desc("With --verify, allow directives to match a substring of the "
+             "diagnostic message"),
+    cl::cat(MCCategory));
+
 enum ActionType {
   AC_AsLex,
   AC_Assemble,
@@ -531,7 +537,8 @@ int main(int argc, char **argv) {
 
   std::optional<SourceMgrDiagnosticVerifier> Verifier;
   if (!VerifyPrefixes.empty()) {
-    Verifier.emplace(VerifyPrefixes);
+    Verifier.emplace(VerifyPrefixes,
+                     /*matchFullMessage=*/!VerifyAllowPartialMatch);
     // Most diagnostics are reported through SrcMgr, but some (e.g. from the
     // CFI checker) are only reported through Ctx, so route both to Ctx.
     Ctx.setDiagnosticHandler([&](const SMDiagnostic &Diag, bool,
