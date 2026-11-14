@@ -735,6 +735,9 @@ static_assert(bfloat16(0.0) ==
                                                     bfloat16(0.0)));
 static_assert(bfloat16(0.0) == LIBC_NAMESPACE::shared::rintbf16(bfloat16(0.0)));
 static_assert(1 == LIBC_NAMESPACE::shared::iscanonicalbf16(bfloat16(0.0)));
+#if defined(__clang__) || (defined(__GNUC__) && __GNUC__ >= 10)
+static_assert(0 == LIBC_NAMESPACE::shared::isnanbf16(bfloat16(0.0)));
+#endif
 static_assert(0 == LIBC_NAMESPACE::shared::issignalingbf16(bfloat16(0.0)));
 static_assert(bfloat16(1) == [] {
   const char arg{};

@@ -341,6 +341,7 @@ else()
       libc.src.__support.math.isnanf128
       libc.src.__support.math.isnanf80
       libc.src.__support.math.isnanf16
+      libc.src.__support.math.isnanbf16
       libc.src.__support.math.isnanl
       libc.src.__support.math.issignaling
       libc.src.__support.math.issignalingbf16
@@ -748,6 +749,7 @@ else()
       libc.src.__support.math.isnanf128
       libc.src.__support.math.isnanf80
       libc.src.__support.math.isnanf16
+      libc.src.__support.math.isnanbf16
       libc.src.__support.math.isnanl
       libc.src.__support.math.issignaling
       libc.src.__support.math.issignalingbf16
