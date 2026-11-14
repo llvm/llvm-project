@@ -3766,6 +3766,709 @@ define preserve_nonecc void @locally_streaming_inline_asm() #3 {
   ret void
 }
 
+define aarch64_sve_vector_pcs void @locally_streaming_svepcs() #3 {
+; CHECK-LABEL: locally_streaming_svepcs:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    stp x9, x28, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    .cfi_def_cfa w29, 32
+; CHECK-NEXT:    .cfi_offset w28, -8
+; CHECK-NEXT:    .cfi_offset vg, -16
+; CHECK-NEXT:    .cfi_offset w30, -24
+; CHECK-NEXT:    .cfi_offset w29, -32
+; CHECK-NEXT:    addsvl sp, sp, #-18
+; CHECK-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str z23, [sp, #2, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z22, [sp, #3, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z21, [sp, #4, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z20, [sp, #5, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z19, [sp, #6, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z18, [sp, #7, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z17, [sp, #8, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z16, [sp, #9, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z15, [sp, #10, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z14, [sp, #11, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z13, [sp, #12, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z12, [sp, #13, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z11, [sp, #14, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z10, [sp, #15, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d8 @ cfa - 8 * IncomingVG - 32
+; CHECK-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x70, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d9 @ cfa - 16 * IncomingVG - 32
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x68, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d10 @ cfa - 24 * IncomingVG - 32
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x60, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d11 @ cfa - 32 * IncomingVG - 32
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x58, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d12 @ cfa - 40 * IncomingVG - 32
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x50, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d13 @ cfa - 48 * IncomingVG - 32
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d14 @ cfa - 56 * IncomingVG - 32
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d15 @ cfa - 64 * IncomingVG - 32
+; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:    //APP
+; CHECK-NEXT:    //NO_APP
+; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:    bl callee
+; CHECK-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z20, [sp, #5, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z19, [sp, #6, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z18, [sp, #7, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z17, [sp, #8, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z16, [sp, #9, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z15, [sp, #10, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z14, [sp, #11, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z13, [sp, #12, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z12, [sp, #13, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z11, [sp, #14, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
+; CHECK-NEXT:    addsvl sp, sp, #18
+; CHECK-NEXT:    .cfi_restore z8
+; CHECK-NEXT:    .cfi_restore z9
+; CHECK-NEXT:    .cfi_restore z10
+; CHECK-NEXT:    .cfi_restore z11
+; CHECK-NEXT:    .cfi_restore z12
+; CHECK-NEXT:    .cfi_restore z13
+; CHECK-NEXT:    .cfi_restore z14
+; CHECK-NEXT:    .cfi_restore z15
+; CHECK-NEXT:    .cfi_def_cfa wsp, 32
+; CHECK-NEXT:    ldr x28, [sp, #24] // 8-byte Reload
+; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w28
+; CHECK-NEXT:    .cfi_restore vg
+; CHECK-NEXT:    .cfi_restore w30
+; CHECK-NEXT:    .cfi_restore w29
+; CHECK-NEXT:    ret
+;
+; FP-CHECK-LABEL: locally_streaming_svepcs:
+; FP-CHECK:       // %bb.0:
+; FP-CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
+; FP-CHECK-NEXT:    .cfi_def_cfa_offset 32
+; FP-CHECK-NEXT:    cntd x9
+; FP-CHECK-NEXT:    stp x9, x28, [sp, #16] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    mov x29, sp
+; FP-CHECK-NEXT:    .cfi_def_cfa w29, 32
+; FP-CHECK-NEXT:    .cfi_offset w28, -8
+; FP-CHECK-NEXT:    .cfi_offset vg, -16
+; FP-CHECK-NEXT:    .cfi_offset w30, -24
+; FP-CHECK-NEXT:    .cfi_offset w29, -32
+; FP-CHECK-NEXT:    addsvl sp, sp, #-18
+; FP-CHECK-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Spill
+; FP-CHECK-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Spill
+; FP-CHECK-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Spill
+; FP-CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
+; FP-CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; FP-CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; FP-CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; FP-CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
+; FP-CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; FP-CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; FP-CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; FP-CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
+; FP-CHECK-NEXT:    str z23, [sp, #2, mul vl] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    str z22, [sp, #3, mul vl] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    str z21, [sp, #4, mul vl] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    str z20, [sp, #5, mul vl] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    str z19, [sp, #6, mul vl] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    str z18, [sp, #7, mul vl] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    str z17, [sp, #8, mul vl] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    str z16, [sp, #9, mul vl] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    str z15, [sp, #10, mul vl] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    str z14, [sp, #11, mul vl] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    str z13, [sp, #12, mul vl] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    str z12, [sp, #13, mul vl] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    str z11, [sp, #14, mul vl] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    str z10, [sp, #15, mul vl] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
+; FP-CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d8 @ cfa - 8 * IncomingVG - 32
+; FP-CHECK-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x70, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d9 @ cfa - 16 * IncomingVG - 32
+; FP-CHECK-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x68, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d10 @ cfa - 24 * IncomingVG - 32
+; FP-CHECK-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x60, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d11 @ cfa - 32 * IncomingVG - 32
+; FP-CHECK-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x58, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d12 @ cfa - 40 * IncomingVG - 32
+; FP-CHECK-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x50, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d13 @ cfa - 48 * IncomingVG - 32
+; FP-CHECK-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d14 @ cfa - 56 * IncomingVG - 32
+; FP-CHECK-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d15 @ cfa - 64 * IncomingVG - 32
+; FP-CHECK-NEXT:    smstart sm
+; FP-CHECK-NEXT:    //APP
+; FP-CHECK-NEXT:    //NO_APP
+; FP-CHECK-NEXT:    smstop sm
+; FP-CHECK-NEXT:    bl callee
+; FP-CHECK-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldr z20, [sp, #5, mul vl] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldr z19, [sp, #6, mul vl] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldr z18, [sp, #7, mul vl] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldr z17, [sp, #8, mul vl] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldr z16, [sp, #9, mul vl] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldr z15, [sp, #10, mul vl] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldr z14, [sp, #11, mul vl] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldr z13, [sp, #12, mul vl] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldr z12, [sp, #13, mul vl] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldr z11, [sp, #14, mul vl] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
+; FP-CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Reload
+; FP-CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Reload
+; FP-CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Reload
+; FP-CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; FP-CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; FP-CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; FP-CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; FP-CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; FP-CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; FP-CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; FP-CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; FP-CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
+; FP-CHECK-NEXT:    addsvl sp, sp, #18
+; FP-CHECK-NEXT:    .cfi_restore z8
+; FP-CHECK-NEXT:    .cfi_restore z9
+; FP-CHECK-NEXT:    .cfi_restore z10
+; FP-CHECK-NEXT:    .cfi_restore z11
+; FP-CHECK-NEXT:    .cfi_restore z12
+; FP-CHECK-NEXT:    .cfi_restore z13
+; FP-CHECK-NEXT:    .cfi_restore z14
+; FP-CHECK-NEXT:    .cfi_restore z15
+; FP-CHECK-NEXT:    .cfi_def_cfa wsp, 32
+; FP-CHECK-NEXT:    ldr x28, [sp, #24] // 8-byte Reload
+; FP-CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; FP-CHECK-NEXT:    .cfi_def_cfa_offset 0
+; FP-CHECK-NEXT:    .cfi_restore w28
+; FP-CHECK-NEXT:    .cfi_restore vg
+; FP-CHECK-NEXT:    .cfi_restore w30
+; FP-CHECK-NEXT:    .cfi_restore w29
+; FP-CHECK-NEXT:    ret
+;
+; NO-SVE-CHECK-LABEL: locally_streaming_svepcs:
+; NO-SVE-CHECK:       // %bb.0:
+; NO-SVE-CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT:    .cfi_def_cfa_offset 32
+; NO-SVE-CHECK-NEXT:    bl __arm_get_current_vg
+; NO-SVE-CHECK-NEXT:    stp x0, x28, [sp, #16] // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT:    mov x29, sp
+; NO-SVE-CHECK-NEXT:    .cfi_def_cfa w29, 32
+; NO-SVE-CHECK-NEXT:    .cfi_offset w28, -8
+; NO-SVE-CHECK-NEXT:    .cfi_offset vg, -16
+; NO-SVE-CHECK-NEXT:    .cfi_offset w30, -24
+; NO-SVE-CHECK-NEXT:    .cfi_offset w29, -32
+; NO-SVE-CHECK-NEXT:    addsvl sp, sp, #-18
+; NO-SVE-CHECK-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Spill
+; NO-SVE-CHECK-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Spill
+; NO-SVE-CHECK-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Spill
+; NO-SVE-CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
+; NO-SVE-CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; NO-SVE-CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; NO-SVE-CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; NO-SVE-CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
+; NO-SVE-CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; NO-SVE-CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; NO-SVE-CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; NO-SVE-CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
+; NO-SVE-CHECK-NEXT:    str z23, [sp, #2, mul vl] // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT:    str z22, [sp, #3, mul vl] // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT:    str z21, [sp, #4, mul vl] // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT:    str z20, [sp, #5, mul vl] // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT:    str z19, [sp, #6, mul vl] // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT:    str z18, [sp, #7, mul vl] // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT:    str z17, [sp, #8, mul vl] // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT:    str z16, [sp, #9, mul vl] // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT:    str z15, [sp, #10, mul vl] // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT:    str z14, [sp, #11, mul vl] // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT:    str z13, [sp, #12, mul vl] // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT:    str z12, [sp, #13, mul vl] // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT:    str z11, [sp, #14, mul vl] // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT:    str z10, [sp, #15, mul vl] // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d8 @ cfa - 8 * IncomingVG - 32
+; NO-SVE-CHECK-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x70, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d9 @ cfa - 16 * IncomingVG - 32
+; NO-SVE-CHECK-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x68, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d10 @ cfa - 24 * IncomingVG - 32
+; NO-SVE-CHECK-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x60, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d11 @ cfa - 32 * IncomingVG - 32
+; NO-SVE-CHECK-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x58, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d12 @ cfa - 40 * IncomingVG - 32
+; NO-SVE-CHECK-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x50, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d13 @ cfa - 48 * IncomingVG - 32
+; NO-SVE-CHECK-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d14 @ cfa - 56 * IncomingVG - 32
+; NO-SVE-CHECK-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d15 @ cfa - 64 * IncomingVG - 32
+; NO-SVE-CHECK-NEXT:    smstart sm
+; NO-SVE-CHECK-NEXT:    //APP
+; NO-SVE-CHECK-NEXT:    //NO_APP
+; NO-SVE-CHECK-NEXT:    smstop sm
+; NO-SVE-CHECK-NEXT:    bl callee
+; NO-SVE-CHECK-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
+; NO-SVE-CHECK-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
+; NO-SVE-CHECK-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
+; NO-SVE-CHECK-NEXT:    ldr z20, [sp, #5, mul vl] // 16-byte Folded Reload
+; NO-SVE-CHECK-NEXT:    ldr z19, [sp, #6, mul vl] // 16-byte Folded Reload
+; NO-SVE-CHECK-NEXT:    ldr z18, [sp, #7, mul vl] // 16-byte Folded Reload
+; NO-SVE-CHECK-NEXT:    ldr z17, [sp, #8, mul vl] // 16-byte Folded Reload
+; NO-SVE-CHECK-NEXT:    ldr z16, [sp, #9, mul vl] // 16-byte Folded Reload
+; NO-SVE-CHECK-NEXT:    ldr z15, [sp, #10, mul vl] // 16-byte Folded Reload
+; NO-SVE-CHECK-NEXT:    ldr z14, [sp, #11, mul vl] // 16-byte Folded Reload
+; NO-SVE-CHECK-NEXT:    ldr z13, [sp, #12, mul vl] // 16-byte Folded Reload
+; NO-SVE-CHECK-NEXT:    ldr z12, [sp, #13, mul vl] // 16-byte Folded Reload
+; NO-SVE-CHECK-NEXT:    ldr z11, [sp, #14, mul vl] // 16-byte Folded Reload
+; NO-SVE-CHECK-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
+; NO-SVE-CHECK-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
+; NO-SVE-CHECK-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
+; NO-SVE-CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Reload
+; NO-SVE-CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Reload
+; NO-SVE-CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Reload
+; NO-SVE-CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; NO-SVE-CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; NO-SVE-CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; NO-SVE-CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; NO-SVE-CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; NO-SVE-CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; NO-SVE-CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; NO-SVE-CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; NO-SVE-CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
+; NO-SVE-CHECK-NEXT:    addsvl sp, sp, #18
+; NO-SVE-CHECK-NEXT:    .cfi_restore z8
+; NO-SVE-CHECK-NEXT:    .cfi_restore z9
+; NO-SVE-CHECK-NEXT:    .cfi_restore z10
+; NO-SVE-CHECK-NEXT:    .cfi_restore z11
+; NO-SVE-CHECK-NEXT:    .cfi_restore z12
+; NO-SVE-CHECK-NEXT:    .cfi_restore z13
+; NO-SVE-CHECK-NEXT:    .cfi_restore z14
+; NO-SVE-CHECK-NEXT:    .cfi_restore z15
+; NO-SVE-CHECK-NEXT:    .cfi_def_cfa wsp, 32
+; NO-SVE-CHECK-NEXT:    ldr x28, [sp, #24] // 8-byte Reload
+; NO-SVE-CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; NO-SVE-CHECK-NEXT:    .cfi_def_cfa_offset 0
+; NO-SVE-CHECK-NEXT:    .cfi_restore w28
+; NO-SVE-CHECK-NEXT:    .cfi_restore vg
+; NO-SVE-CHECK-NEXT:    .cfi_restore w30
+; NO-SVE-CHECK-NEXT:    .cfi_restore w29
+; NO-SVE-CHECK-NEXT:    ret
+;
+; OUTLINER-CHECK-LABEL: locally_streaming_svepcs:
+; OUTLINER-CHECK:       // %bb.0:
+; OUTLINER-CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
+; OUTLINER-CHECK-NEXT:    .cfi_def_cfa_offset 32
+; OUTLINER-CHECK-NEXT:    cntd x9
+; OUTLINER-CHECK-NEXT:    stp x9, x28, [sp, #16] // 16-byte Folded Spill
+; OUTLINER-CHECK-NEXT:    mov x29, sp
+; OUTLINER-CHECK-NEXT:    .cfi_def_cfa w29, 32
+; OUTLINER-CHECK-NEXT:    .cfi_offset w28, -8
+; OUTLINER-CHECK-NEXT:    .cfi_offset vg, -16
+; OUTLINER-CHECK-NEXT:    .cfi_offset w30, -24
+; OUTLINER-CHECK-NEXT:    .cfi_offset w29, -32
+; OUTLINER-CHECK-NEXT:    addsvl sp, sp, #-18
+; OUTLINER-CHECK-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Spill
+; OUTLINER-CHECK-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Spill
+; OUTLINER-CHECK-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Spill
+; OUTLINER-CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
+; OUTLINER-CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; OUTLINER-CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; OUTLINER-CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; OUTLINER-CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
+; OUTLINER-CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; OUTLINER-CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; OUTLINER-CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; OUTLINER-CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
+; OUTLINER-CHECK-NEXT:    str z23, [sp, #2, mul vl] // 16-byte Folded Spill
+; OUTLINER-CHECK-NEXT:    str z22, [sp, #3, mul vl] // 16-byte Folded Spill
+; OUTLINER-CHECK-NEXT:    str z21, [sp, #4, mul vl] // 16-byte Folded Spill
+; OUTLINER-CHECK-NEXT:    str z20, [sp, #5, mul vl] // 16-byte Folded Spill
+; OUTLINER-CHECK-NEXT:    str z19, [sp, #6, mul vl] // 16-byte Folded Spill
+; OUTLINER-CHECK-NEXT:    str z18, [sp, #7, mul vl] // 16-byte Folded Spill
+; OUTLINER-CHECK-NEXT:    str z17, [sp, #8, mul vl] // 16-byte Folded Spill
+; OUTLINER-CHECK-NEXT:    str z16, [sp, #9, mul vl] // 16-byte Folded Spill
+; OUTLINER-CHECK-NEXT:    str z15, [sp, #10, mul vl] // 16-byte Folded Spill
+; OUTLINER-CHECK-NEXT:    str z14, [sp, #11, mul vl] // 16-byte Folded Spill
+; OUTLINER-CHECK-NEXT:    str z13, [sp, #12, mul vl] // 16-byte Folded Spill
+; OUTLINER-CHECK-NEXT:    str z12, [sp, #13, mul vl] // 16-byte Folded Spill
+; OUTLINER-CHECK-NEXT:    str z11, [sp, #14, mul vl] // 16-byte Folded Spill
+; OUTLINER-CHECK-NEXT:    str z10, [sp, #15, mul vl] // 16-byte Folded Spill
+; OUTLINER-CHECK-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
+; OUTLINER-CHECK-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
+; OUTLINER-CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d8 @ cfa - 8 * IncomingVG - 32
+; OUTLINER-CHECK-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x70, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d9 @ cfa - 16 * IncomingVG - 32
+; OUTLINER-CHECK-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x68, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d10 @ cfa - 24 * IncomingVG - 32
+; OUTLINER-CHECK-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x60, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d11 @ cfa - 32 * IncomingVG - 32
+; OUTLINER-CHECK-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x58, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d12 @ cfa - 40 * IncomingVG - 32
+; OUTLINER-CHECK-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x50, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d13 @ cfa - 48 * IncomingVG - 32
+; OUTLINER-CHECK-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d14 @ cfa - 56 * IncomingVG - 32
+; OUTLINER-CHECK-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x12, 0x40, 0x1c, 0x06, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x60, 0x22 // $d15 @ cfa - 64 * IncomingVG - 32
+; OUTLINER-CHECK-NEXT:    smstart sm
+; OUTLINER-CHECK-NEXT:    //APP
+; OUTLINER-CHECK-NEXT:    //NO_APP
+; OUTLINER-CHECK-NEXT:    smstop sm
+; OUTLINER-CHECK-NEXT:    bl callee
+; OUTLINER-CHECK-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
+; OUTLINER-CHECK-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
+; OUTLINER-CHECK-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
+; OUTLINER-CHECK-NEXT:    ldr z20, [sp, #5, mul vl] // 16-byte Folded Reload
+; OUTLINER-CHECK-NEXT:    ldr z19, [sp, #6, mul vl] // 16-byte Folded Reload
+; OUTLINER-CHECK-NEXT:    ldr z18, [sp, #7, mul vl] // 16-byte Folded Reload
+; OUTLINER-CHECK-NEXT:    ldr z17, [sp, #8, mul vl] // 16-byte Folded Reload
+; OUTLINER-CHECK-NEXT:    ldr z16, [sp, #9, mul vl] // 16-byte Folded Reload
+; OUTLINER-CHECK-NEXT:    ldr z15, [sp, #10, mul vl] // 16-byte Folded Reload
+; OUTLINER-CHECK-NEXT:    ldr z14, [sp, #11, mul vl] // 16-byte Folded Reload
+; OUTLINER-CHECK-NEXT:    ldr z13, [sp, #12, mul vl] // 16-byte Folded Reload
+; OUTLINER-CHECK-NEXT:    ldr z12, [sp, #13, mul vl] // 16-byte Folded Reload
+; OUTLINER-CHECK-NEXT:    ldr z11, [sp, #14, mul vl] // 16-byte Folded Reload
+; OUTLINER-CHECK-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
+; OUTLINER-CHECK-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
+; OUTLINER-CHECK-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
+; OUTLINER-CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Reload
+; OUTLINER-CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Reload
+; OUTLINER-CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Reload
+; OUTLINER-CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; OUTLINER-CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; OUTLINER-CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; OUTLINER-CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; OUTLINER-CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; OUTLINER-CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; OUTLINER-CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; OUTLINER-CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; OUTLINER-CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
+; OUTLINER-CHECK-NEXT:    addsvl sp, sp, #18
+; OUTLINER-CHECK-NEXT:    .cfi_restore z8
+; OUTLINER-CHECK-NEXT:    .cfi_restore z9
+; OUTLINER-CHECK-NEXT:    .cfi_restore z10
+; OUTLINER-CHECK-NEXT:    .cfi_restore z11
+; OUTLINER-CHECK-NEXT:    .cfi_restore z12
+; OUTLINER-CHECK-NEXT:    .cfi_restore z13
+; OUTLINER-CHECK-NEXT:    .cfi_restore z14
+; OUTLINER-CHECK-NEXT:    .cfi_restore z15
+; OUTLINER-CHECK-NEXT:    .cfi_def_cfa wsp, 32
+; OUTLINER-CHECK-NEXT:    ldr x28, [sp, #24] // 8-byte Reload
+; OUTLINER-CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; OUTLINER-CHECK-NEXT:    .cfi_def_cfa_offset 0
+; OUTLINER-CHECK-NEXT:    .cfi_restore w28
+; OUTLINER-CHECK-NEXT:    .cfi_restore vg
+; OUTLINER-CHECK-NEXT:    .cfi_restore w30
+; OUTLINER-CHECK-NEXT:    .cfi_restore w29
+; OUTLINER-CHECK-NEXT:    ret
+;
+; WINDOWS-CHECK-LABEL: locally_streaming_svepcs:
+; WINDOWS-CHECK:       .seh_proc locally_streaming_svepcs
+; WINDOWS-CHECK-NEXT:  // %bb.0:
+; WINDOWS-CHECK-NEXT:    addsvl sp, sp, #-18
+; WINDOWS-CHECK-NEXT:    .seh_allocz 18
+; WINDOWS-CHECK-NEXT:    str p4, [sp] // 2-byte Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p4, 0
+; WINDOWS-CHECK-NEXT:    str p5, [sp, #1, mul vl] // 2-byte Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p5, 1
+; WINDOWS-CHECK-NEXT:    str p6, [sp, #2, mul vl] // 2-byte Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p6, 2
+; WINDOWS-CHECK-NEXT:    str p7, [sp, #3, mul vl] // 2-byte Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p7, 3
+; WINDOWS-CHECK-NEXT:    str p8, [sp, #4, mul vl] // 2-byte Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p8, 4
+; WINDOWS-CHECK-NEXT:    str p9, [sp, #5, mul vl] // 2-byte Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p9, 5
+; WINDOWS-CHECK-NEXT:    str p10, [sp, #6, mul vl] // 2-byte Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p10, 6
+; WINDOWS-CHECK-NEXT:    str p11, [sp, #7, mul vl] // 2-byte Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p11, 7
+; WINDOWS-CHECK-NEXT:    str p12, [sp, #8, mul vl] // 2-byte Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p12, 8
+; WINDOWS-CHECK-NEXT:    str p13, [sp, #9, mul vl] // 2-byte Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p13, 9
+; WINDOWS-CHECK-NEXT:    str p14, [sp, #10, mul vl] // 2-byte Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p14, 10
+; WINDOWS-CHECK-NEXT:    str p15, [sp, #11, mul vl] // 2-byte Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p15, 11
+; WINDOWS-CHECK-NEXT:    str z8, [sp, #2, mul vl] // 16-byte Folded Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z8, 2
+; WINDOWS-CHECK-NEXT:    str z9, [sp, #3, mul vl] // 16-byte Folded Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z9, 3
+; WINDOWS-CHECK-NEXT:    str z10, [sp, #4, mul vl] // 16-byte Folded Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z10, 4
+; WINDOWS-CHECK-NEXT:    str z11, [sp, #5, mul vl] // 16-byte Folded Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z11, 5
+; WINDOWS-CHECK-NEXT:    str z12, [sp, #6, mul vl] // 16-byte Folded Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z12, 6
+; WINDOWS-CHECK-NEXT:    str z13, [sp, #7, mul vl] // 16-byte Folded Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z13, 7
+; WINDOWS-CHECK-NEXT:    str z14, [sp, #8, mul vl] // 16-byte Folded Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z14, 8
+; WINDOWS-CHECK-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z15, 9
+; WINDOWS-CHECK-NEXT:    str z16, [sp, #10, mul vl] // 16-byte Folded Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z16, 10
+; WINDOWS-CHECK-NEXT:    str z17, [sp, #11, mul vl] // 16-byte Folded Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z17, 11
+; WINDOWS-CHECK-NEXT:    str z18, [sp, #12, mul vl] // 16-byte Folded Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z18, 12
+; WINDOWS-CHECK-NEXT:    str z19, [sp, #13, mul vl] // 16-byte Folded Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z19, 13
+; WINDOWS-CHECK-NEXT:    str z20, [sp, #14, mul vl] // 16-byte Folded Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z20, 14
+; WINDOWS-CHECK-NEXT:    str z21, [sp, #15, mul vl] // 16-byte Folded Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z21, 15
+; WINDOWS-CHECK-NEXT:    str z22, [sp, #16, mul vl] // 16-byte Folded Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z22, 16
+; WINDOWS-CHECK-NEXT:    str z23, [sp, #17, mul vl] // 16-byte Folded Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z23, 17
+; WINDOWS-CHECK-NEXT:    str x28, [sp, #-32]! // 8-byte Folded Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_reg_x x28, 32
+; WINDOWS-CHECK-NEXT:    str x30, [sp, #8] // 8-byte Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_reg x30, 8
+; WINDOWS-CHECK-NEXT:    cntd x9
+; WINDOWS-CHECK-NEXT:    .seh_nop
+; WINDOWS-CHECK-NEXT:    mrs x0, SVCR
+; WINDOWS-CHECK-NEXT:    .seh_nop
+; WINDOWS-CHECK-NEXT:    bfi x9, x0, #63, #1
+; WINDOWS-CHECK-NEXT:    .seh_nop
+; WINDOWS-CHECK-NEXT:    str x9, [sp, #16] // 8-byte Spill
+; WINDOWS-CHECK-NEXT:    .seh_save_vg_sm 16
+; WINDOWS-CHECK-NEXT:    .seh_endprologue
+; WINDOWS-CHECK-NEXT:    smstart sm
+; WINDOWS-CHECK-NEXT:    //APP
+; WINDOWS-CHECK-NEXT:    //NO_APP
+; WINDOWS-CHECK-NEXT:    smstop sm
+; WINDOWS-CHECK-NEXT:    bl callee
+; WINDOWS-CHECK-NEXT:    .seh_startepilogue
+; WINDOWS-CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_reg x30, 8
+; WINDOWS-CHECK-NEXT:    ldr x28, [sp], #32 // 8-byte Folded Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_reg_x x28, 32
+; WINDOWS-CHECK-NEXT:    ldr z8, [sp, #2, mul vl] // 16-byte Folded Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z8, 2
+; WINDOWS-CHECK-NEXT:    ldr z9, [sp, #3, mul vl] // 16-byte Folded Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z9, 3
+; WINDOWS-CHECK-NEXT:    ldr z10, [sp, #4, mul vl] // 16-byte Folded Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z10, 4
+; WINDOWS-CHECK-NEXT:    ldr z11, [sp, #5, mul vl] // 16-byte Folded Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z11, 5
+; WINDOWS-CHECK-NEXT:    ldr z12, [sp, #6, mul vl] // 16-byte Folded Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z12, 6
+; WINDOWS-CHECK-NEXT:    ldr z13, [sp, #7, mul vl] // 16-byte Folded Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z13, 7
+; WINDOWS-CHECK-NEXT:    ldr z14, [sp, #8, mul vl] // 16-byte Folded Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z14, 8
+; WINDOWS-CHECK-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z15, 9
+; WINDOWS-CHECK-NEXT:    ldr z16, [sp, #10, mul vl] // 16-byte Folded Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z16, 10
+; WINDOWS-CHECK-NEXT:    ldr z17, [sp, #11, mul vl] // 16-byte Folded Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z17, 11
+; WINDOWS-CHECK-NEXT:    ldr z18, [sp, #12, mul vl] // 16-byte Folded Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z18, 12
+; WINDOWS-CHECK-NEXT:    ldr z19, [sp, #13, mul vl] // 16-byte Folded Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z19, 13
+; WINDOWS-CHECK-NEXT:    ldr z20, [sp, #14, mul vl] // 16-byte Folded Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z20, 14
+; WINDOWS-CHECK-NEXT:    ldr z21, [sp, #15, mul vl] // 16-byte Folded Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z21, 15
+; WINDOWS-CHECK-NEXT:    ldr z22, [sp, #16, mul vl] // 16-byte Folded Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z22, 16
+; WINDOWS-CHECK-NEXT:    ldr z23, [sp, #17, mul vl] // 16-byte Folded Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_zreg z23, 17
+; WINDOWS-CHECK-NEXT:    ldr p4, [sp] // 2-byte Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p4, 0
+; WINDOWS-CHECK-NEXT:    ldr p5, [sp, #1, mul vl] // 2-byte Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p5, 1
+; WINDOWS-CHECK-NEXT:    ldr p6, [sp, #2, mul vl] // 2-byte Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p6, 2
+; WINDOWS-CHECK-NEXT:    ldr p7, [sp, #3, mul vl] // 2-byte Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p7, 3
+; WINDOWS-CHECK-NEXT:    ldr p8, [sp, #4, mul vl] // 2-byte Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p8, 4
+; WINDOWS-CHECK-NEXT:    ldr p9, [sp, #5, mul vl] // 2-byte Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p9, 5
+; WINDOWS-CHECK-NEXT:    ldr p10, [sp, #6, mul vl] // 2-byte Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p10, 6
+; WINDOWS-CHECK-NEXT:    ldr p11, [sp, #7, mul vl] // 2-byte Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p11, 7
+; WINDOWS-CHECK-NEXT:    ldr p12, [sp, #8, mul vl] // 2-byte Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p12, 8
+; WINDOWS-CHECK-NEXT:    ldr p13, [sp, #9, mul vl] // 2-byte Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p13, 9
+; WINDOWS-CHECK-NEXT:    ldr p14, [sp, #10, mul vl] // 2-byte Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p14, 10
+; WINDOWS-CHECK-NEXT:    ldr p15, [sp, #11, mul vl] // 2-byte Reload
+; WINDOWS-CHECK-NEXT:    .seh_save_preg p15, 11
+; WINDOWS-CHECK-NEXT:    addsvl sp, sp, #18
+; WINDOWS-CHECK-NEXT:    .seh_allocz 18
+; WINDOWS-CHECK-NEXT:    .seh_endepilogue
+; WINDOWS-CHECK-NEXT:    ret
+; WINDOWS-CHECK-NEXT:    .seh_endfunclet
+; WINDOWS-CHECK-NEXT:    .seh_endproc
+;
+; WINDOWS-NOSVE-CHECK-LABEL: locally_streaming_svepcs:
+; WINDOWS-NOSVE-CHECK:       .seh_proc locally_streaming_svepcs
+; WINDOWS-NOSVE-CHECK-NEXT:  // %bb.0:
+; WINDOWS-NOSVE-CHECK-NEXT:    addsvl sp, sp, #-18
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_allocz 18
+; WINDOWS-NOSVE-CHECK-NEXT:    str p4, [sp] // 2-byte Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p4, 0
+; WINDOWS-NOSVE-CHECK-NEXT:    str p5, [sp, #1, mul vl] // 2-byte Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p5, 1
+; WINDOWS-NOSVE-CHECK-NEXT:    str p6, [sp, #2, mul vl] // 2-byte Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p6, 2
+; WINDOWS-NOSVE-CHECK-NEXT:    str p7, [sp, #3, mul vl] // 2-byte Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p7, 3
+; WINDOWS-NOSVE-CHECK-NEXT:    str p8, [sp, #4, mul vl] // 2-byte Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p8, 4
+; WINDOWS-NOSVE-CHECK-NEXT:    str p9, [sp, #5, mul vl] // 2-byte Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p9, 5
+; WINDOWS-NOSVE-CHECK-NEXT:    str p10, [sp, #6, mul vl] // 2-byte Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p10, 6
+; WINDOWS-NOSVE-CHECK-NEXT:    str p11, [sp, #7, mul vl] // 2-byte Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p11, 7
+; WINDOWS-NOSVE-CHECK-NEXT:    str p12, [sp, #8, mul vl] // 2-byte Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p12, 8
+; WINDOWS-NOSVE-CHECK-NEXT:    str p13, [sp, #9, mul vl] // 2-byte Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p13, 9
+; WINDOWS-NOSVE-CHECK-NEXT:    str p14, [sp, #10, mul vl] // 2-byte Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p14, 10
+; WINDOWS-NOSVE-CHECK-NEXT:    str p15, [sp, #11, mul vl] // 2-byte Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p15, 11
+; WINDOWS-NOSVE-CHECK-NEXT:    str z8, [sp, #2, mul vl] // 16-byte Folded Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z8, 2
+; WINDOWS-NOSVE-CHECK-NEXT:    str z9, [sp, #3, mul vl] // 16-byte Folded Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z9, 3
+; WINDOWS-NOSVE-CHECK-NEXT:    str z10, [sp, #4, mul vl] // 16-byte Folded Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z10, 4
+; WINDOWS-NOSVE-CHECK-NEXT:    str z11, [sp, #5, mul vl] // 16-byte Folded Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z11, 5
+; WINDOWS-NOSVE-CHECK-NEXT:    str z12, [sp, #6, mul vl] // 16-byte Folded Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z12, 6
+; WINDOWS-NOSVE-CHECK-NEXT:    str z13, [sp, #7, mul vl] // 16-byte Folded Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z13, 7
+; WINDOWS-NOSVE-CHECK-NEXT:    str z14, [sp, #8, mul vl] // 16-byte Folded Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z14, 8
+; WINDOWS-NOSVE-CHECK-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z15, 9
+; WINDOWS-NOSVE-CHECK-NEXT:    str z16, [sp, #10, mul vl] // 16-byte Folded Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z16, 10
+; WINDOWS-NOSVE-CHECK-NEXT:    str z17, [sp, #11, mul vl] // 16-byte Folded Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z17, 11
+; WINDOWS-NOSVE-CHECK-NEXT:    str z18, [sp, #12, mul vl] // 16-byte Folded Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z18, 12
+; WINDOWS-NOSVE-CHECK-NEXT:    str z19, [sp, #13, mul vl] // 16-byte Folded Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z19, 13
+; WINDOWS-NOSVE-CHECK-NEXT:    str z20, [sp, #14, mul vl] // 16-byte Folded Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z20, 14
+; WINDOWS-NOSVE-CHECK-NEXT:    str z21, [sp, #15, mul vl] // 16-byte Folded Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z21, 15
+; WINDOWS-NOSVE-CHECK-NEXT:    str z22, [sp, #16, mul vl] // 16-byte Folded Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z22, 16
+; WINDOWS-NOSVE-CHECK-NEXT:    str z23, [sp, #17, mul vl] // 16-byte Folded Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z23, 17
+; WINDOWS-NOSVE-CHECK-NEXT:    str x28, [sp, #-32]! // 8-byte Folded Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_reg_x x28, 32
+; WINDOWS-NOSVE-CHECK-NEXT:    str x30, [sp, #8] // 8-byte Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_reg x30, 8
+; WINDOWS-NOSVE-CHECK-NEXT:    bl __arm_get_current_vg
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_nop
+; WINDOWS-NOSVE-CHECK-NEXT:    mrs x9, SVCR
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_nop
+; WINDOWS-NOSVE-CHECK-NEXT:    bfi x0, x9, #63, #1
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_nop
+; WINDOWS-NOSVE-CHECK-NEXT:    str x0, [sp, #16] // 8-byte Spill
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_vg_sm 16
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_endprologue
+; WINDOWS-NOSVE-CHECK-NEXT:    smstart sm
+; WINDOWS-NOSVE-CHECK-NEXT:    //APP
+; WINDOWS-NOSVE-CHECK-NEXT:    //NO_APP
+; WINDOWS-NOSVE-CHECK-NEXT:    smstop sm
+; WINDOWS-NOSVE-CHECK-NEXT:    bl callee
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_startepilogue
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_reg x30, 8
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr x28, [sp], #32 // 8-byte Folded Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_reg_x x28, 32
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr z8, [sp, #2, mul vl] // 16-byte Folded Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z8, 2
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr z9, [sp, #3, mul vl] // 16-byte Folded Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z9, 3
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr z10, [sp, #4, mul vl] // 16-byte Folded Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z10, 4
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr z11, [sp, #5, mul vl] // 16-byte Folded Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z11, 5
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr z12, [sp, #6, mul vl] // 16-byte Folded Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z12, 6
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr z13, [sp, #7, mul vl] // 16-byte Folded Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z13, 7
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr z14, [sp, #8, mul vl] // 16-byte Folded Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z14, 8
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z15, 9
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr z16, [sp, #10, mul vl] // 16-byte Folded Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z16, 10
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr z17, [sp, #11, mul vl] // 16-byte Folded Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z17, 11
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr z18, [sp, #12, mul vl] // 16-byte Folded Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z18, 12
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr z19, [sp, #13, mul vl] // 16-byte Folded Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z19, 13
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr z20, [sp, #14, mul vl] // 16-byte Folded Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z20, 14
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr z21, [sp, #15, mul vl] // 16-byte Folded Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z21, 15
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr z22, [sp, #16, mul vl] // 16-byte Folded Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z22, 16
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr z23, [sp, #17, mul vl] // 16-byte Folded Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_zreg z23, 17
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr p4, [sp] // 2-byte Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p4, 0
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr p5, [sp, #1, mul vl] // 2-byte Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p5, 1
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr p6, [sp, #2, mul vl] // 2-byte Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p6, 2
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr p7, [sp, #3, mul vl] // 2-byte Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p7, 3
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr p8, [sp, #4, mul vl] // 2-byte Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p8, 4
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr p9, [sp, #5, mul vl] // 2-byte Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p9, 5
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr p10, [sp, #6, mul vl] // 2-byte Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p10, 6
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr p11, [sp, #7, mul vl] // 2-byte Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p11, 7
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr p12, [sp, #8, mul vl] // 2-byte Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p12, 8
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr p13, [sp, #9, mul vl] // 2-byte Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p13, 9
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr p14, [sp, #10, mul vl] // 2-byte Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p14, 10
+; WINDOWS-NOSVE-CHECK-NEXT:    ldr p15, [sp, #11, mul vl] // 2-byte Reload
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_save_preg p15, 11
+; WINDOWS-NOSVE-CHECK-NEXT:    addsvl sp, sp, #18
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_allocz 18
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_endepilogue
+; WINDOWS-NOSVE-CHECK-NEXT:    ret
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_endfunclet
+; WINDOWS-NOSVE-CHECK-NEXT:    .seh_endproc
+  call void asm "", ""()
+  call void @callee()
+  ret void
+}
+
 attributes #0 = { "aarch64_pstate_sm_enabled" uwtable(async) }
 attributes #1 = { "probe-stack"="inline-asm" "aarch64_pstate_sm_enabled" uwtable(async) }
 attributes #3 = { "aarch64_pstate_sm_body" uwtable(async) }
