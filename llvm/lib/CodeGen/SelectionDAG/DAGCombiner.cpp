@@ -11086,6 +11086,15 @@ SDValue DAGCombiner::visitRotate(SDNode *N) {
     bool C2 = DAG.isConstantIntBuildVectorOrConstantInt(N0.getOperand(1));
     if (C1 && C2 && N1.getValueType() == N0.getOperand(1).getValueType()) {
       EVT ShiftVT = N1.getValueType();
+      // The amount arithmetic below is done in ShiftVT and can reach
+      // 3 * Bitsize - 2. If that does not fit in ShiftVT the result wraps
+      // around. This is harmless only when Bitsize is a power of 2 (the
+      // wrap-around is then a multiple of Bitsize), so skip the fold otherwise.
+      unsigned AmtBits = ShiftVT.getScalarSizeInBits();
+      APInt MaxAmt = APInt::getMaxValue(AmtBits);
+      bool MayOverflow = !isPowerOf2_32(Bitsize) && MaxAmt.ult(3 * Bitsize - 2);
+      if (MayOverflow || MaxAmt.ult(Bitsize))
+        return SDValue();
       bool SameSide = (N->getOpcode() == NextOp);
       unsigned CombineOp = SameSide ? ISD::ADD : ISD::SUB;
       SDValue BitsizeC = DAG.getConstant(Bitsize, dl, ShiftVT);
