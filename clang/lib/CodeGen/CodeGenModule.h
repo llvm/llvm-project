@@ -1755,9 +1755,9 @@ public:
   llvm::ConstantInt *CreateKCFITypeId(QualType T, StringRef Salt);
 
   /// Create a metadata identifier for the given function type for CFI icall.
-  llvm::Metadata *CreateMetadataIdentifierForFnType(QualType T,
-                                                    bool GeneralizePointers);
-  llvm::Metadata *CreateMetadataIdentifierForFnType(QualType T);
+  llvm::Metadata *CreateMetadataIdentifierForCFIFnType(QualType T,
+                                                       bool GeneralizePointers);
+  llvm::Metadata *CreateMetadataIdentifierForCFIFnType(QualType T);
 
   /// Create a metadata identifier for the given type. This may either be an
   /// MDString (for external identifiers) or a distinct unnamed MDNode (for

@@ -3757,11 +3757,11 @@ void CodeGenModule::createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
   if (isa<CXXMethodDecl>(FD) && !cast<CXXMethodDecl>(FD)->isStatic())
     return;
 
-  llvm::Metadata *MD = CreateMetadataIdentifierForFnType(
+  llvm::Metadata *MD = CreateMetadataIdentifierForCFIFnType(
       FD->getType(), /*GeneralizePointers=*/false);
   F->addTypeMetadata(0, MD);
 
-  F->addTypeMetadata(0, CreateMetadataIdentifierForFnType(
+  F->addTypeMetadata(0, CreateMetadataIdentifierForCFIFnType(
                             FD->getType(), /*GeneralizePointers=*/true));
 
   // Emit a hash-based bit set entry for cross-DSO calls.
@@ -8761,8 +8761,8 @@ CodeGenModule::CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
 }
 
 llvm::Metadata *
-CodeGenModule::CreateMetadataIdentifierForFnType(QualType T,
-                                                 bool GeneralizePointers) {
+CodeGenModule::CreateMetadataIdentifierForCFIFnType(QualType T,
+                                                    bool GeneralizePointers) {
   assert(T->isFunctionType());
   T = GeneralizeFunctionType(getContext(), T, GeneralizePointers);
   bool NormalizeIntegers = getCodeGenOpts().SanitizeCfiICallNormalizeIntegers;
@@ -8774,8 +8774,9 @@ CodeGenModule::CreateMetadataIdentifierForFnType(QualType T,
                                       /*ForceString=*/false, NormalizeIntegers);
 }
 
-llvm::Metadata *CodeGenModule::CreateMetadataIdentifierForFnType(QualType T) {
-  return CreateMetadataIdentifierForFnType(
+llvm::Metadata *
+CodeGenModule::CreateMetadataIdentifierForCFIFnType(QualType T) {
+  return CreateMetadataIdentifierForCFIFnType(
       T, getCodeGenOpts().SanitizeCfiICallGeneralizePointers);
 }
 

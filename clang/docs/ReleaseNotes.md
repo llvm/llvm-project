@@ -1575,6 +1575,10 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   modes for `-fsanitize=alloc-token`, selected with
   `-Xclang -falloc-token-mode=<mode>`. These modes derive token IDs from both
   the allocated type and the name of the function containing the allocation.
+- Fixed `-fsanitize-cfi-icall-experimental-normalize-integers` to only
+  normalize `cfi-icall` and `kcfi` function type metadata, leaving C++ class
+  vtable, member-pointer, and `-fexperimental-call-graph-section` metadata
+  canonical so whole-program devirtualization works reliably. (#GH242466)
 
 ### Python Binding Changes
 
