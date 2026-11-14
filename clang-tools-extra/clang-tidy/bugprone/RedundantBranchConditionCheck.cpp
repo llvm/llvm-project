@@ -24,10 +24,8 @@ namespace clang::tidy::bugprone {
 static const char CondVarStr[] = "cond_var";
 static const char OuterIfStr[] = "outer_if";
 static const char InnerIfStr[] = "inner_if";
-static const char OuterIfVar1Str[] = "outer_if_var1";
-static const char OuterIfVar2Str[] = "outer_if_var2";
-static const char InnerIfVar1Str[] = "inner_if_var1";
-static const char InnerIfVar2Str[] = "inner_if_var2";
+static const char OuterIfVarStr[] = "outer_if_var";
+static const char InnerIfVarStr[] = "inner_if_var";
 static const char FuncStr[] = "func";
 
 /// Returns whether `Var` is changed in range (`PrevS`..`NextS`).
@@ -67,6 +65,44 @@ static const Stmt *getOutermostLoopBetween(const Stmt *S, const Stmt *Outer,
   return Loop;
 }
 
+namespace {
+// ast matcher to get all declaration whose  all ancestor operator are matched
+// in AncestorOperatorMatcher.
+AST_MATCHER_P2(Expr, getAllDeclWithAncestor,
+               ast_matchers::internal::Matcher<clang::BinaryOperator>,
+               AncestorOperatorMatcher, ast_matchers::internal::Matcher<Expr>,
+               InnerMatcher) {
+  const auto *RootExpr = Node.IgnoreParenImpCasts();
+  if (!RootExpr)
+    return false;
+  llvm::SmallVector<const Expr *, 16> ExprStack;
+  ExprStack.push_back(RootExpr);
+  bool Matched = false;
+  while (!ExprStack.empty()) {
+    const auto *TopExpr = ExprStack.back();
+    ExprStack.pop_back();
+    if (!TopExpr)
+      continue;
+    if (const auto *BO =
+            dyn_cast<BinaryOperator>(TopExpr->IgnoreParenImpCasts())) {
+      ast_matchers::internal::BoundNodesTreeBuilder Useless;
+      if (!AncestorOperatorMatcher.matches(*BO, Finder, &Useless))
+        continue;
+      ExprStack.push_back(BO->getLHS());
+      ExprStack.push_back(BO->getRHS());
+
+    } else {
+      ast_matchers::internal::BoundNodesTreeBuilder Result(*Builder);
+      if (!InnerMatcher.matches(*TopExpr->IgnoreParenImpCasts(), Finder,
+                                &Result))
+        continue;
+      Builder->addMatch(Result);
+      Matched = true;
+    }
+  }
+  return Matched;
+}
+} // namespace
 void RedundantBranchConditionCheck::registerMatchers(MatchFinder *Finder) {
   const auto ImmutableVar =
       varDecl(anyOf(parmVarDecl(), hasLocalStorage()), hasType(isInteger()),
@@ -74,27 +110,19 @@ void RedundantBranchConditionCheck::registerMatchers(MatchFinder *Finder) {
           .bind(CondVarStr);
   Finder->addMatcher(
       ifStmt(
-          hasCondition(anyOf(
-              declRefExpr(hasDeclaration(ImmutableVar)).bind(OuterIfVar1Str),
-              binaryOperator(hasOperatorName("&&"),
-                             forEach(declRefExpr(hasDeclaration(ImmutableVar))
-                                         .bind(OuterIfVar2Str))))),
+          hasCondition(getAllDeclWithAncestor(
+              hasOperatorName("&&"),
+              declRefExpr(hasDeclaration(ImmutableVar)).bind(OuterIfVarStr))),
           hasThen(hasDescendant(
-              ifStmt(hasCondition(anyOf(
+              ifStmt(hasCondition(getAllDeclWithAncestor(
+                         hasAnyOperatorName("&&", "||"),
                          declRefExpr(hasDeclaration(
                                          varDecl(equalsBoundNode(CondVarStr))))
-                             .bind(InnerIfVar1Str),
-                         binaryOperator(
-                             hasAnyOperatorName("&&", "||"),
-                             hasEitherOperand(
-                                 declRefExpr(hasDeclaration(varDecl(
-                                                 equalsBoundNode(CondVarStr))))
-                                     .bind(InnerIfVar2Str))))))
+                             .bind(InnerIfVarStr))))
                   .bind(InnerIfStr))),
           forFunction(functionDecl().bind(FuncStr)))
           .bind(OuterIfStr),
       this);
-  // FIXME: Handle longer conjunctive and disjunctive clauses.
 }
 
 void RedundantBranchConditionCheck::check(
@@ -103,16 +131,15 @@ void RedundantBranchConditionCheck::check(
   const auto *InnerIf = Result.Nodes.getNodeAs<IfStmt>(InnerIfStr);
   const auto *CondVar = Result.Nodes.getNodeAs<VarDecl>(CondVarStr);
   const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>(FuncStr);
-
   const DeclRefExpr *OuterIfVar = nullptr, *InnerIfVar = nullptr;
-  if (const auto *Inner = Result.Nodes.getNodeAs<DeclRefExpr>(InnerIfVar1Str))
+  if (const auto *Inner = Result.Nodes.getNodeAs<DeclRefExpr>(InnerIfVarStr))
     InnerIfVar = Inner;
   else
-    InnerIfVar = Result.Nodes.getNodeAs<DeclRefExpr>(InnerIfVar2Str);
-  if (const auto *Outer = Result.Nodes.getNodeAs<DeclRefExpr>(OuterIfVar1Str))
+    return;
+  if (const auto *Outer = Result.Nodes.getNodeAs<DeclRefExpr>(OuterIfVarStr))
     OuterIfVar = Outer;
   else
-    OuterIfVar = Result.Nodes.getNodeAs<DeclRefExpr>(OuterIfVar2Str);
+    return;
 
   if (OuterIfVar && InnerIfVar) {
     if (isChangedBefore(OuterIf->getThen(), InnerIfVar, OuterIfVar, CondVar,

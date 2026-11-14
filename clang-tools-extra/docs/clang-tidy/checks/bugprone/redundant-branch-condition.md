@@ -74,6 +74,16 @@ if (onFire) {
     scream();
 }
 ```
+The check also detects redundant condition variables inside longer chains of
+logical "and" (`&&`) and logical "or" (`||`) expressions:
+
+```c
+bool onFire = isBurning();
+if (onFire && fireFighters < 10 && alarmActive) {
+  if (peopleInTheBuilding > 0 && onFire && doorLocked)
+    scream();
+}
+```
 
 Every possible change is considered, thus if the condition variable is not
 a local variable of the function, it is a volatile or it has an alias (pointer

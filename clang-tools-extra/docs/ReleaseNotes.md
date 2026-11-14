@@ -238,6 +238,8 @@ infrastructure are described first, followed by tool-specific sections.
     - Fixed false negatives when a nested `if` checks the second operand
       of an outer `&&` condition, as in `if (x && y) { if (y) ... }`.
 
+    - Fixed and added support for long conjuction and disjunction chain.
+
 - Fixed a crash in {doc}`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
   lambda closure types used as template arguments.
