@@ -497,7 +497,7 @@ func.func @loop_unroll_yield_loop_iv() {
 // CHECK-NEXT:    affine.max [[$MAP0]](%[[LOOP_IV_PLUS_4]])
 // CHECK-NEXT:    %[[LOOP_IV_PLUS_6:.*]] = affine.apply [[$MAP3]](%[[LOOP_IV]])
 // CHECK-NEXT:    affine.max [[$MAP0]](%[[LOOP_IV_PLUS_6]])
-// CHECK-NEXT:    affine.yield %[[LOOP_IV]] : index
+// CHECK-NEXT:    affine.yield %[[LOOP_IV_PLUS_6]] : index
 // CHECK-NEXT:  }
 // CHECK-NEXT:  return
 
