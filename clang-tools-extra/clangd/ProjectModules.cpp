@@ -196,6 +196,14 @@ public:
   getRequiredModules(PathRef File,
                      const ProjectModules::CommandMangler &Mangler);
 
+  std::optional<tooling::CompileCommand>
+  getCompileCommand(PathRef FilePath,
+                    const ProjectModules::CommandMangler &Mangler) const {
+    if (!CDB)
+      return std::nullopt;
+    return getCompileCommandForFile(*CDB, FilePath, Mangler);
+  }
+
 private:
   std::shared_ptr<const clang::tooling::CompilationDatabase> CDB;
 
@@ -344,6 +352,11 @@ public:
     return ModuleNameState::Unknown;
   }
 
+  std::optional<tooling::CompileCommand>
+  getCompileCommand(PathRef File) const override {
+    return Scanner.getCompileCommand(File, Mangler);
+  }
+
 private:
   ModuleDependencyScanner Scanner;
   CommandMangler Mangler;
@@ -427,6 +440,13 @@ public:
       return {};
 
     return SourceIt->second;
+  }
+
+  std::optional<tooling::CompileCommand>
+  getCompileCommand(PathRef File) const override {
+    if (!CDB)
+      return std::nullopt;
+    return getCompileCommandForFile(*CDB, File, Mangler);
   }
 
   void setCommandMangler(CommandMangler Mangler) override {
@@ -565,6 +585,13 @@ public:
     if (FromCompileCommands != ModuleNameState::Unknown)
       return FromCompileCommands;
     return Scanning->getModuleNameState(ModuleName);
+  }
+
+  std::optional<tooling::CompileCommand>
+  getCompileCommand(PathRef File) const override {
+    if (auto Cmd = CompileCommands->getCompileCommand(File))
+      return Cmd;
+    return Scanning->getCompileCommand(File);
   }
 
   void setCommandMangler(CommandMangler Mangler) override {
