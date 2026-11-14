@@ -1058,4 +1058,47 @@ void lifetime_loop_in_try() {
 // LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[C]])
 // LLVM-EH:         call ptr @__cxa_begin_catch
 
+// A reference default argument materializes a temporary in the catch-copy
+// thunk. Lifetime markers must be disabled there until EH ABI lowering supports
+// multi-block thunks, but the catch parameter still gets lifetime markers.
+struct E {
+  E(const E &, const int & = 42);
+};
+
+void catch_copy() {
+  try {
+    throw 1;
+  } catch (E e) {
+  }
+}
+
+// CIR-EH-LABEL: cir.func{{.*}} @_Z10catch_copyv()
+// CIR-EH:         %[[E:.*]] = cir.alloca "e" {{.*}} : !cir.ptr<!rec_E>
+// CIR-EH:         cir.lifetime.start %[[E]] : !cir.ptr<!rec_E>
+// CIR-EH:         cir.construct_catch_param non_trivial_copy %{{.*}} to %[[E]] using @__clang_cir_catch_copy__ZTS1E
+// CIR-EH:         cir.lifetime.end %[[E]] : !cir.ptr<!rec_E>
+
+// CIR-EH-LABEL: cir.func linkonce_odr hidden @__clang_cir_catch_copy__ZTS1E(
+// CIR-EH-SAME:    attributes {cir.eh.catch_copy_thunk} {
+// CIR-EH-NEXT:    %[[TMP:.*]] = cir.alloca "ref.tmp0" align(4) : !cir.ptr<!s32i>
+// CIR-EH-NEXT:    %[[VALUE:.*]] = cir.const #cir.int<42> : !s32i
+// CIR-EH-NEXT:    cir.store{{.*}} %[[VALUE]], %[[TMP]] : !s32i, !cir.ptr<!s32i>
+// CIR-EH-NEXT:    cir.call @_ZN1EC1ERKS_RKi(%{{.*}}, %{{.*}}, %[[TMP]])
+// CIR-EH-NEXT:    cir.return
+// CIR-EH-NEXT:  }
+
+// LLVM-EH-LABEL: define{{.*}} void @_Z10catch_copyv()
+// LLVM-EH:         call void @llvm.lifetime.start.p0(ptr %[[E:.*]])
+// LLVM-EH:         store i32 42, ptr %[[TMP:[^, ]+]],
+// LLVM-EH:         invoke void @_ZN1EC1ERKS_RKi(ptr {{.*}} %[[E]], ptr {{.*}}, ptr {{.*}} %[[TMP]])
+// LLVM-EH-NEXT:      to label %{{.*}} unwind label %[[TERM:.*]]
+// LLVM-EH:         call ptr @__cxa_begin_catch(
+// LLVM-EH:         call void @__cxa_end_catch()
+// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[E]])
+// LLVM-EH:       [[TERM]]:
+// LLVM-EH:         landingpad { ptr, i32 }
+// LLVM-EH-NEXT:      catch ptr null
+// LLVM-EH:         call void @__clang_call_terminate(
+// LLVM-EH-NEXT:    unreachable
+
 #endif // __EXCEPTIONS

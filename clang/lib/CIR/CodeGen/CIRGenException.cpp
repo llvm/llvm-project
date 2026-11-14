@@ -359,6 +359,9 @@ static cir::FuncOp getOrCreateCopyThunk(CIRGenFunction &cgf,
   // no return value, so we bypass the full startFunction/finishFunction
   // machinery.
   CIRGenFunction subCgf(cgm, builder);
+  // TODO(cir): Enable lifetime markers once EH ABI lowering supports
+  // multi-block catch-copy thunks.
+  subCgf.disableLifetimeMarkers();
   subCgf.curFn = thunk;
 
   // Some emission paths (e.g. materializing temporaries for default args via

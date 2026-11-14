@@ -1856,6 +1856,7 @@ public:
 
   bool emitLifetimeStartOp(mlir::Location loc, mlir::Value addr);
   void emitLifetimeEndOp(mlir::Location loc, mlir::Value addr);
+  void disableLifetimeMarkers() { shouldEmitLifetimeMarkers = false; }
 
 private:
   void emitAndUpdateRetAlloca(clang::QualType type, mlir::Location loc,
