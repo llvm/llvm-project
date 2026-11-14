@@ -1436,6 +1436,14 @@ static void gatherDeviceTypeAttrs(
         builder.getContext(), getDeviceType(deviceTypeExpr.v)));
 }
 
+// Returns true if `deviceTypes` holds the default device_type (none).
+static bool hasDefaultDeviceType(llvm::ArrayRef<mlir::Attribute> deviceTypes) {
+  return llvm::any_of(deviceTypes, [](mlir::Attribute attr) {
+    return mlir::cast<mlir::acc::DeviceTypeAttr>(attr).getValue() ==
+           mlir::acc::DeviceType::None;
+  });
+}
+
 // Tries to handle a clause that affects the loop's parallelism-mode tracking:
 //   - `seq` / `auto` / `independent`: append the current device_type set to
 //     the corresponding list.
@@ -1645,14 +1653,9 @@ static void determineDefaultLoopParMode(
     llvm::SmallVector<mlir::Attribute> &independentDeviceTypes,
     llvm::SmallVector<mlir::Attribute> &autoDeviceTypes,
     bool kernelsDoConcurrentIsIndependent) {
-  auto hasDeviceNone = [](mlir::Attribute attr) -> bool {
-    return mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr).getValue() ==
-           mlir::acc::DeviceType::None;
-  };
-  bool hasDefaultSeq = llvm::any_of(seqDeviceTypes, hasDeviceNone);
-  bool hasDefaultIndependent =
-      llvm::any_of(independentDeviceTypes, hasDeviceNone);
-  bool hasDefaultAuto = llvm::any_of(autoDeviceTypes, hasDeviceNone);
+  bool hasDefaultSeq = hasDefaultDeviceType(seqDeviceTypes);
+  bool hasDefaultIndependent = hasDefaultDeviceType(independentDeviceTypes);
+  bool hasDefaultAuto = hasDefaultDeviceType(autoDeviceTypes);
   if (hasDefaultSeq || hasDefaultIndependent || hasDefaultAuto)
     return; // Default loop par mode is already specified.
 
@@ -1737,15 +1740,10 @@ loopWillBeIndependent(Fortran::lower::AbstractConverter &converter,
     tryHandleLoopParModeClause(builder, clause, crtDeviceTypes, seqDeviceTypes,
                                independentDeviceTypes, autoDeviceTypes);
 
-  auto hasDeviceNone = [](mlir::Attribute attr) -> bool {
-    return mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr).getValue() ==
-           mlir::acc::DeviceType::None;
-  };
-
-  if (llvm::any_of(independentDeviceTypes, hasDeviceNone))
+  if (hasDefaultDeviceType(independentDeviceTypes))
     return true;
-  if (llvm::any_of(seqDeviceTypes, hasDeviceNone) ||
-      llvm::any_of(autoDeviceTypes, hasDeviceNone))
+  if (hasDefaultDeviceType(seqDeviceTypes) ||
+      hasDefaultDeviceType(autoDeviceTypes))
     return false;
 
   // No explicit parallelism clause for the default device_type. Defer to the
@@ -2282,6 +2280,64 @@ void AccDataMap::remapDataOperandSymbols(
   }
 }
 
+/// For an unstructured `acc loop seq` construct \p eval, privatize the
+/// induction variables of the unstructured DOs nested in its body that it does
+/// not own. Such a DO has no acc.loop of its own to privatize its induction
+/// variable, as a structured DO does. It runs entirely on the thread executing
+/// the seq loop, so the seq loop's acc.loop privatizes it. OpenACC 3.4,
+/// section 2.6.1 "Variables with Predetermined Data Attributes":
+///
+///   Loop variables in Fortran do statements within a compute construct are
+///   predetermined to be private to the thread that executes the loop.
+///
+/// For example:
+///
+///   !$acc loop seq                 ! acc.loop private(k, l), seq unstructured
+///   kloop: do k = 1, m             ! owned: privatized by
+///                                  !   privatizeInductionVariables
+///     do l = 1, p                  ! nested: privatized here
+///       if (b(l, k) > 0.0) exit kloop
+///     end do
+///   end do kloop
+///
+/// Structured DOs are left alone: they get an acc.loop of their own. DOs in a
+/// nested OpenACC construct belong to that construct.
+static void privatizeNestedUnstructuredDoIvs(
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::lower::pft::Evaluation &eval,
+    llvm::SmallVector<mlir::Value> &privateOperands,
+    llvm::SmallVectorImpl<std::pair<mlir::Value, Fortran::semantics::SymbolRef>>
+        &ivPrivate) {
+  // No acc.loop control arguments are created for these induction variables.
+  llvm::SmallVector<mlir::Type> ivTypes;
+  llvm::SmallVector<mlir::Location> ivLocs;
+  std::function<void(Fortran::lower::pft::Evaluation &)> visit =
+      [&](Fortran::lower::pft::Evaluation &parent) {
+        for (Fortran::lower::pft::Evaluation &nested :
+             parent.getNestedEvaluations()) {
+          if (nested.isA<Fortran::parser::OpenACCConstruct>())
+            continue;
+          if (const auto *doConstruct =
+                  nested.getIf<Fortran::parser::DoConstruct>())
+            if (nested.lowerAsUnstructured() && doConstruct->IsDoNormal()) {
+              const auto &bounds =
+                  std::get<Fortran::parser::LoopControl::Bounds>(
+                      doConstruct->GetLoopControl()->u);
+              // privatizeIv reuses the private copy of an induction variable
+              // that is already privatized, such as the owned DO's.
+              privatizeIv(
+                  converter, bounds.Name().thing.symbol->GetUltimate(),
+                  converter.genLocation(
+                      Fortran::parser::FindSourceLocation(*doConstruct)),
+                  ivTypes, ivLocs, privateOperands, ivPrivate);
+            }
+          if (nested.hasNestedEvaluations())
+            visit(nested);
+        }
+      };
+  visit(eval);
+}
+
 static void privatizeInductionVariables(
     Fortran::lower::AbstractConverter &converter,
     mlir::Location currentLocation,
@@ -2334,7 +2390,7 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
                llvm::SmallVector<mlir::Value> &cacheOperands,
                llvm::SmallVector<mlir::Value> &reductionOperands,
                llvm::SmallVector<mlir::Type> &retTy, mlir::Value yieldValue,
-               uint64_t loopsToProcess, bool hasDirective) {
+               uint64_t loopsToProcess, bool hasDirective, bool isSeq = false) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   llvm::SmallVector<std::pair<mlir::Value, Fortran::semantics::SymbolRef>>
@@ -2365,6 +2421,9 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
     privatizeInductionVariables(converter, currentLocation, outerDoConstruct,
                                 eval, privateOperands, ivPrivate, locs,
                                 loopsToProcess);
+    if (isSeq)
+      privatizeNestedUnstructuredDoIvs(converter, eval, privateOperands,
+                                       ivPrivate);
   }
   llvm::SmallVector<mlir::Value> operands;
   llvm::SmallVector<int32_t> operandSegments;
@@ -2708,7 +2767,8 @@ static mlir::acc::LoopOp createLoopOp(
       eval, privateOperands, firstprivateOperands, dataMap, gangOperands,
       workerNumOperands, vectorOperands, tileOperands, cacheOperands,
       reductionOperands, retTy, yieldValue, loopsToProcess,
-      /*hasDirective=*/true);
+      /*hasDirective=*/true,
+      /*isSeq=*/hasDefaultDeviceType(seqDeviceTypes));
 
   if (!gangDeviceTypes.empty())
     loopOp.setGangAttr(builder.getArrayAttr(gangDeviceTypes));
@@ -5736,8 +5796,8 @@ static bool isDoOfContainedUnstructuredSeqLoop(
   //
   // In the example, k and l are bound to `hlfir.declare %k_private` and
   // `hlfir.declare %l_private`, both private operands of currentLoop. Without
-  // collapse(2), currentLoop would privatize only k, and the DO over l -- then
-  // a plain DO in the seq loop's body -- would not qualify.
+  // collapse(2), the DO over l is a plain DO in the seq loop's body, and
+  // currentLoop privatizes l as well (see privatizeNestedUnstructuredDoIvs).
   const auto *bounds = std::get_if<Fortran::parser::LoopControl::Bounds>(
       &doConstruct.GetLoopControl()->u);
   if (!bounds)
