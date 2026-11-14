@@ -13112,14 +13112,12 @@ define void @test_compress_store_pd_128(ptr %addr, <2 x double> %data) {
 ; X86-LABEL: test_compress_store_pd_128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    kxnorw %k0, %k0, %k1 # encoding: [0xc5,0xfc,0x46,0xc8]
-; X86-NEXT:    vcompresspd %xmm0, (%eax) {%k1} # encoding: [0x62,0xf2,0xfd,0x09,0x8a,0x00]
+; X86-NEXT:    vmovups %xmm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x11,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_compress_store_pd_128:
 ; X64:       # %bb.0:
-; X64-NEXT:    kxnorw %k0, %k0, %k1 # encoding: [0xc5,0xfc,0x46,0xc8]
-; X64-NEXT:    vcompresspd %xmm0, (%rdi) {%k1} # encoding: [0x62,0xf2,0xfd,0x09,0x8a,0x07]
+; X64-NEXT:    vmovups %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x11,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
   call void @llvm.x86.avx512.mask.compress.store.pd.128(ptr %addr, <2 x double> %data, i8 -1)
   ret void
@@ -13149,14 +13147,12 @@ define void @test_compress_store_ps_128(ptr %addr, <4 x float> %data) {
 ; X86-LABEL: test_compress_store_ps_128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    kxnorw %k0, %k0, %k1 # encoding: [0xc5,0xfc,0x46,0xc8]
-; X86-NEXT:    vcompressps %xmm0, (%eax) {%k1} # encoding: [0x62,0xf2,0x7d,0x09,0x8a,0x00]
+; X86-NEXT:    vmovups %xmm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x11,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_compress_store_ps_128:
 ; X64:       # %bb.0:
-; X64-NEXT:    kxnorw %k0, %k0, %k1 # encoding: [0xc5,0xfc,0x46,0xc8]
-; X64-NEXT:    vcompressps %xmm0, (%rdi) {%k1} # encoding: [0x62,0xf2,0x7d,0x09,0x8a,0x07]
+; X64-NEXT:    vmovups %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x11,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
   call void @llvm.x86.avx512.mask.compress.store.ps.128(ptr %addr, <4 x float> %data, i8 -1)
   ret void
@@ -13186,14 +13182,12 @@ define void @test_compress_store_q_128(ptr %addr, <2 x i64> %data) {
 ; X86-LABEL: test_compress_store_q_128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    kxnorw %k0, %k0, %k1 # encoding: [0xc5,0xfc,0x46,0xc8]
-; X86-NEXT:    vpcompressq %xmm0, (%eax) {%k1} # encoding: [0x62,0xf2,0xfd,0x09,0x8b,0x00]
+; X86-NEXT:    vmovups %xmm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x11,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_compress_store_q_128:
 ; X64:       # %bb.0:
-; X64-NEXT:    kxnorw %k0, %k0, %k1 # encoding: [0xc5,0xfc,0x46,0xc8]
-; X64-NEXT:    vpcompressq %xmm0, (%rdi) {%k1} # encoding: [0x62,0xf2,0xfd,0x09,0x8b,0x07]
+; X64-NEXT:    vmovups %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x11,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
   call void @llvm.x86.avx512.mask.compress.store.q.128(ptr %addr, <2 x i64> %data, i8 -1)
   ret void
@@ -13223,14 +13217,12 @@ define void @test_compress_store_d_128(ptr %addr, <4 x i32> %data) {
 ; X86-LABEL: test_compress_store_d_128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    kxnorw %k0, %k0, %k1 # encoding: [0xc5,0xfc,0x46,0xc8]
-; X86-NEXT:    vpcompressd %xmm0, (%eax) {%k1} # encoding: [0x62,0xf2,0x7d,0x09,0x8b,0x00]
+; X86-NEXT:    vmovups %xmm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x11,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_compress_store_d_128:
 ; X64:       # %bb.0:
-; X64-NEXT:    kxnorw %k0, %k0, %k1 # encoding: [0xc5,0xfc,0x46,0xc8]
-; X64-NEXT:    vpcompressd %xmm0, (%rdi) {%k1} # encoding: [0x62,0xf2,0x7d,0x09,0x8b,0x07]
+; X64-NEXT:    vmovups %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x11,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
   call void @llvm.x86.avx512.mask.compress.store.d.128(ptr %addr, <4 x i32> %data, i8 -1)
   ret void
@@ -13482,15 +13474,13 @@ define void @test_compress_store_pd_256(ptr %addr, <4 x double> %data) {
 ; X86-LABEL: test_compress_store_pd_256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    kxnorw %k0, %k0, %k1 # encoding: [0xc5,0xfc,0x46,0xc8]
-; X86-NEXT:    vcompresspd %ymm0, (%eax) {%k1} # encoding: [0x62,0xf2,0xfd,0x29,0x8a,0x00]
+; X86-NEXT:    vmovups %ymm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x11,0x00]
 ; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_compress_store_pd_256:
 ; X64:       # %bb.0:
-; X64-NEXT:    kxnorw %k0, %k0, %k1 # encoding: [0xc5,0xfc,0x46,0xc8]
-; X64-NEXT:    vcompresspd %ymm0, (%rdi) {%k1} # encoding: [0x62,0xf2,0xfd,0x29,0x8a,0x07]
+; X64-NEXT:    vmovups %ymm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x11,0x07]
 ; X64-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X64-NEXT:    retq # encoding: [0xc3]
   call void @llvm.x86.avx512.mask.compress.store.pd.256(ptr %addr, <4 x double> %data, i8 -1)
@@ -13523,15 +13513,13 @@ define void @test_compress_store_ps_256(ptr %addr, <8 x float> %data) {
 ; X86-LABEL: test_compress_store_ps_256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    kxnorw %k0, %k0, %k1 # encoding: [0xc5,0xfc,0x46,0xc8]
-; X86-NEXT:    vcompressps %ymm0, (%eax) {%k1} # encoding: [0x62,0xf2,0x7d,0x29,0x8a,0x00]
+; X86-NEXT:    vmovups %ymm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x11,0x00]
 ; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_compress_store_ps_256:
 ; X64:       # %bb.0:
-; X64-NEXT:    kxnorw %k0, %k0, %k1 # encoding: [0xc5,0xfc,0x46,0xc8]
-; X64-NEXT:    vcompressps %ymm0, (%rdi) {%k1} # encoding: [0x62,0xf2,0x7d,0x29,0x8a,0x07]
+; X64-NEXT:    vmovups %ymm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x11,0x07]
 ; X64-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X64-NEXT:    retq # encoding: [0xc3]
   call void @llvm.x86.avx512.mask.compress.store.ps.256(ptr %addr, <8 x float> %data, i8 -1)
@@ -13564,15 +13552,13 @@ define void @test_compress_store_q_256(ptr %addr, <4 x i64> %data) {
 ; X86-LABEL: test_compress_store_q_256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    kxnorw %k0, %k0, %k1 # encoding: [0xc5,0xfc,0x46,0xc8]
-; X86-NEXT:    vpcompressq %ymm0, (%eax) {%k1} # encoding: [0x62,0xf2,0xfd,0x29,0x8b,0x00]
+; X86-NEXT:    vmovups %ymm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x11,0x00]
 ; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_compress_store_q_256:
 ; X64:       # %bb.0:
-; X64-NEXT:    kxnorw %k0, %k0, %k1 # encoding: [0xc5,0xfc,0x46,0xc8]
-; X64-NEXT:    vpcompressq %ymm0, (%rdi) {%k1} # encoding: [0x62,0xf2,0xfd,0x29,0x8b,0x07]
+; X64-NEXT:    vmovups %ymm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x11,0x07]
 ; X64-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X64-NEXT:    retq # encoding: [0xc3]
   call void @llvm.x86.avx512.mask.compress.store.q.256(ptr %addr, <4 x i64> %data, i8 -1)
@@ -13605,15 +13591,13 @@ define void @test_compress_store_d_256(ptr %addr, <8 x i32> %data) {
 ; X86-LABEL: test_compress_store_d_256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    kxnorw %k0, %k0, %k1 # encoding: [0xc5,0xfc,0x46,0xc8]
-; X86-NEXT:    vpcompressd %ymm0, (%eax) {%k1} # encoding: [0x62,0xf2,0x7d,0x29,0x8b,0x00]
+; X86-NEXT:    vmovups %ymm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x11,0x00]
 ; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_compress_store_d_256:
 ; X64:       # %bb.0:
-; X64-NEXT:    kxnorw %k0, %k0, %k1 # encoding: [0xc5,0xfc,0x46,0xc8]
-; X64-NEXT:    vpcompressd %ymm0, (%rdi) {%k1} # encoding: [0x62,0xf2,0x7d,0x29,0x8b,0x07]
+; X64-NEXT:    vmovups %ymm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x11,0x07]
 ; X64-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X64-NEXT:    retq # encoding: [0xc3]
   call void @llvm.x86.avx512.mask.compress.store.d.256(ptr %addr, <8 x i32> %data, i8 -1)
