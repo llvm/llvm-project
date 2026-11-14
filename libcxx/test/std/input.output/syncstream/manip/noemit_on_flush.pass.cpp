@@ -14,33 +14,62 @@
 // basic_ostream<charT, traits>& noemit_on_flush(basic_ostream<charT, traits>& os);
 
 #include <cassert>
+#include <concepts>
 #include <ostream>
 #include <sstream>
 #include <syncstream>
 
+#include "test_macros.h"
+
 template <class CharT>
-void test_noemit_on_flush() {
+void test() {
   {
     // non sync stream: nothing happens
     std::basic_ostringstream<CharT> os;
-    std::noemit_on_flush(os);
+    std::same_as<std::basic_ostream<CharT>&> decltype(auto) result = std::noemit_on_flush(os);
+    assert(&result == &os);
+    assert(os.good());
+  }
+  {
+    // non sync stream: << syntax
+    std::basic_ostringstream<CharT> os;
+    std::same_as<std::basic_ostream<CharT>&> decltype(auto) result = os << std::noemit_on_flush;
+    assert(&result == &os);
+    assert(os.good());
   }
   {
     std::basic_stringbuf<CharT> buf;
     std::basic_osyncstream<CharT> ss(&buf);
-    std::noemit_on_flush(ss);
+    // Turn emit on sync on first, so that noemit_on_flush has an observable effect.
+    ss.rdbuf()->set_emit_on_sync(true);
+    std::same_as<std::basic_ostream<CharT>&> decltype(auto) result = std::noemit_on_flush(ss);
+    assert(&result == &ss);
     ss << 5;
     ss.flush();
     assert(buf.str().empty());
     ss.emit();
     assert(!buf.str().empty());
+    assert(ss.good());
+  }
+  {
+    // << syntax
+    std::basic_stringbuf<CharT> buf;
+    std::basic_osyncstream<CharT> ss(&buf);
+    ss << std::emit_on_flush;
+    std::same_as<std::basic_ostream<CharT>&> decltype(auto) result = ss << std::noemit_on_flush;
+    assert(&result == &ss);
+    ss << 5 << std::flush;
+    assert(buf.str().empty());
+    ss.emit();
+    assert(!buf.str().empty());
+    assert(ss.good());
   }
 }
 
 int main(int, char**) {
-  test_noemit_on_flush<char>();
+  test<char>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  test_noemit_on_flush<wchar_t>();
+  test<wchar_t>();
 #endif
 
   return 0;
