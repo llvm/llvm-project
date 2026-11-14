@@ -1,0 +1,189 @@
+/// Check that BOLT copies over the file name entries from the original line
+/// table as is, without deduplicating entries, or changing any indices.
+
+// REQUIRES: system-linux
+// RUN: %clang %cflags %s -o %t.exe -Wl,-q
+// RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+// RUN: llvm-dwarfdump --debug-line %t.exe | FileCheck %s
+// RUN: llvm-dwarfdump --debug-line %t.bolt | FileCheck %s
+
+// CHECK:      include_directories[  0] = "/root"
+// CHECK-NEXT: include_directories[  1] = "/include"
+// CHECK:      file_names[  0]:
+// CHECK-NEXT:            name: "main.c"
+// CHECK-NEXT:       dir_index: 0
+// CHECK-NEXT: file_names[  1]:
+// CHECK-NEXT:            name: "main.c"
+// CHECK-NEXT:       dir_index: 0
+// CHECK-NEXT: file_names[  2]:
+// CHECK-NEXT:            name: "header.h"
+// CHECK-NEXT:       dir_index: 1
+// CHECK-NEXT: file_names[  3]:
+// CHECK-NEXT:            name: "main.c"
+// CHECK-NEXT:       dir_index: 0
+
+	.file	"main.c"
+	.text
+	.globl	main                            // -- Begin function main
+	.p2align	2
+	.type	main,@function
+main:                                   // @main
+.Lfunc_begin0:
+	.cfi_startproc
+// %bb.0:                               // %entry
+	.file	0 "/root" "main.c"
+	.loc	0 1 1
+	nop
+	.file	1 "/root" "main.c"
+	.loc	1 1 1
+	nop
+	.file	2 "/include" "header.h"
+	.loc	2 1 1
+	nop
+	.file	3 "/root" "main.c"
+	.loc	3 1 1
+	nop
+	ret
+.Ltmp0:
+.Lfunc_end0:
+	.size	main, .Lfunc_end0-main
+	.cfi_endproc
+                                        // -- End function
+	.section	.debug_abbrev,"",@progbits
+	.byte	1                               // Abbreviation Code
+	.byte	17                              // DW_TAG_compile_unit
+	.byte	1                               // DW_CHILDREN_yes
+	.byte	37                              // DW_AT_producer
+	.byte	37                              // DW_FORM_strx1
+	.byte	19                              // DW_AT_language
+	.byte	5                               // DW_FORM_data2
+	.byte	3                               // DW_AT_name
+	.byte	37                              // DW_FORM_strx1
+	.byte	114                             // DW_AT_str_offsets_base
+	.byte	23                              // DW_FORM_sec_offset
+	.byte	16                              // DW_AT_stmt_list
+	.byte	23                              // DW_FORM_sec_offset
+	.byte	27                              // DW_AT_comp_dir
+	.byte	37                              // DW_FORM_strx1
+	.ascii	"\341\177"                      // DW_AT_APPLE_optimized
+	.byte	25                              // DW_FORM_flag_present
+	.byte	17                              // DW_AT_low_pc
+	.byte	27                              // DW_FORM_addrx
+	.byte	18                              // DW_AT_high_pc
+	.byte	6                               // DW_FORM_data4
+	.byte	115                             // DW_AT_addr_base
+	.byte	23                              // DW_FORM_sec_offset
+	.byte	0                               // EOM(1)
+	.byte	0                               // EOM(2)
+	.byte	2                               // Abbreviation Code
+	.byte	46                              // DW_TAG_subprogram
+	.byte	0                               // DW_CHILDREN_no
+	.byte	17                              // DW_AT_low_pc
+	.byte	27                              // DW_FORM_addrx
+	.byte	18                              // DW_AT_high_pc
+	.byte	6                               // DW_FORM_data4
+	.byte	64                              // DW_AT_frame_base
+	.byte	24                              // DW_FORM_exprloc
+	.byte	122                             // DW_AT_call_all_calls
+	.byte	25                              // DW_FORM_flag_present
+	.byte	3                               // DW_AT_name
+	.byte	37                              // DW_FORM_strx1
+	.byte	58                              // DW_AT_decl_file
+	.byte	11                              // DW_FORM_data1
+	.byte	59                              // DW_AT_decl_line
+	.byte	11                              // DW_FORM_data1
+	.byte	39                              // DW_AT_prototyped
+	.byte	25                              // DW_FORM_flag_present
+	.byte	73                              // DW_AT_type
+	.byte	19                              // DW_FORM_ref4
+	.byte	63                              // DW_AT_external
+	.byte	25                              // DW_FORM_flag_present
+	.ascii	"\341\177"                      // DW_AT_APPLE_optimized
+	.byte	25                              // DW_FORM_flag_present
+	.byte	0                               // EOM(1)
+	.byte	0                               // EOM(2)
+	.byte	3                               // Abbreviation Code
+	.byte	36                              // DW_TAG_base_type
+	.byte	0                               // DW_CHILDREN_no
+	.byte	3                               // DW_AT_name
+	.byte	37                              // DW_FORM_strx1
+	.byte	62                              // DW_AT_encoding
+	.byte	11                              // DW_FORM_data1
+	.byte	11                              // DW_AT_byte_size
+	.byte	11                              // DW_FORM_data1
+	.byte	0                               // EOM(1)
+	.byte	0                               // EOM(2)
+	.byte	0                               // EOM(3)
+	.section	.debug_info,"",@progbits
+.Lcu_begin0:
+	.word	.Ldebug_info_end0-.Ldebug_info_start0 // Length of Unit
+.Ldebug_info_start0:
+	.hword	5                               // DWARF version number
+	.byte	1                               // DWARF Unit Type
+	.byte	8                               // Address Size (in bytes)
+	.word	.debug_abbrev                   // Offset Into Abbrev. Section
+	.byte	1                               // Abbrev [1] 0xc:0x2b DW_TAG_compile_unit
+	.byte	0                               // DW_AT_producer
+	.hword	29                              // DW_AT_language
+	.byte	1                               // DW_AT_name
+	.word	.Lstr_offsets_base0             // DW_AT_str_offsets_base
+	.word	.Lline_table_start0             // DW_AT_stmt_list
+	.byte	2                               // DW_AT_comp_dir
+                                        // DW_AT_APPLE_optimized
+	.byte	0                               // DW_AT_low_pc
+	.word	.Lfunc_end0-.Lfunc_begin0       // DW_AT_high_pc
+	.word	.Laddr_table_base0              // DW_AT_addr_base
+	.byte	2                               // Abbrev [2] 0x23:0xf DW_TAG_subprogram
+	.byte	0                               // DW_AT_low_pc
+	.word	.Lfunc_end0-.Lfunc_begin0       // DW_AT_high_pc
+	.byte	1                               // DW_AT_frame_base
+	.byte	111
+                                        // DW_AT_call_all_calls
+	.byte	3                               // DW_AT_name
+	.byte	0                               // DW_AT_decl_file
+	.byte	1                               // DW_AT_decl_line
+                                        // DW_AT_prototyped
+	.word	50                              // DW_AT_type
+                                        // DW_AT_external
+                                        // DW_AT_APPLE_optimized
+	.byte	3                               // Abbrev [3] 0x32:0x4 DW_TAG_base_type
+	.byte	4                               // DW_AT_name
+	.byte	5                               // DW_AT_encoding
+	.byte	4                               // DW_AT_byte_size
+	.byte	0                               // End Of Children Mark
+.Ldebug_info_end0:
+	.section	.debug_str_offsets,"",@progbits
+	.word	24                              // Length of String Offsets Set
+	.hword	5
+	.hword	0
+.Lstr_offsets_base0:
+	.section	.debug_str,"MS",@progbits,1
+.Linfo_string0:
+	.byte	0                               // string offset=0 ;
+.Linfo_string1:
+	.asciz	"main.c"                        // string offset=1 ; main.c
+.Linfo_string2:
+	.asciz	"/root"                         // string offset=8 ; /root
+.Linfo_string3:
+	.asciz	"main"                          // string offset=14 ; main
+.Linfo_string4:
+	.asciz	"int"                           // string offset=19 ; int
+	.section	.debug_str_offsets,"",@progbits
+	.word	.Linfo_string0
+	.word	.Linfo_string1
+	.word	.Linfo_string2
+	.word	.Linfo_string3
+	.word	.Linfo_string4
+	.section	.debug_addr,"",@progbits
+	.word	.Ldebug_addr_end0-.Ldebug_addr_start0 // Length of contribution
+.Ldebug_addr_start0:
+	.hword	5                               // DWARF version number
+	.byte	8                               // Address size
+	.byte	0                               // Segment selector size
+.Laddr_table_base0:
+	.xword	.Lfunc_begin0
+.Ldebug_addr_end0:
+	.section	".note.GNU-stack","",@progbits
+	.addrsig
+	.section	.debug_line,"",@progbits
+.Lline_table_start0:
