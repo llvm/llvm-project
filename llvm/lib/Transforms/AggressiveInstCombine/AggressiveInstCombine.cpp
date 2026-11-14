@@ -21,6 +21,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -33,12 +34,14 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include <memory>
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -1795,6 +1798,114 @@ static bool foldConsecutiveStores(BasicBlock &BB, const DataLayout &DL,
   return MadeChange;
 }
 
+struct MaskedStore {
+  StoreInst *Store;
+  Value *Insert;
+  unsigned Shift;
+  unsigned Offset;
+};
+
+/// Match a masked read-modify-write that can be narrowed to one byte.
+///
+///   store ((load Ptr & ~Mask) or disjoint (Insert & Mask)), Ptr
+///     -> store i8 trunc(Insert >> Shift), Ptr + Offset
+///
+/// The load and store can be in different blocks if the loaded word is still
+/// available at the store.
+static std::optional<MaskedStore>
+matchMaskedStore(StoreInst &SI, AliasAnalysis &AA, DominatorTree &DT,
+                 std::unique_ptr<MemorySSA> &MSSA) {
+  auto *Ty = dyn_cast<IntegerType>(SI.getValueOperand()->getType());
+  Value *Ptr = SI.getPointerOperand();
+  if (!Ty || Ty->getBitWidth() <= 8 || Ty->getBitWidth() % 8 ||
+      Ptr->isSwiftError())
+    return std::nullopt;
+
+  Value *Old, *Insert;
+  const APInt *KeepMask, *InsertMask;
+  // Require the merge and both masks to die. Replacing these three
+  // instructions with a shift, a truncate and an address offset then
+  // cannot increase the instruction count.
+  if (!match(SI.getValueOperand(),
+             m_OneUse(m_c_DisjointOr(
+                 m_OneUse(m_c_And(m_Value(Old, m_LoadSimple(m_Specific(Ptr))),
+                                  m_APInt(KeepMask))),
+                 m_OneUse(m_c_And(m_Value(Insert), m_APInt(InsertMask)))))))
+    return std::nullopt;
+
+  unsigned Shift, MaskWidth;
+  if (*InsertMask != ~*KeepMask ||
+      !InsertMask->isShiftedMask(Shift, MaskWidth) || MaskWidth != 8 ||
+      Shift % 8)
+    return std::nullopt;
+
+  auto *LI = cast<LoadInst>(Old);
+  if (!MSSA)
+    MSSA = std::make_unique<MemorySSA>(*SI.getFunction(), &AA, &DT);
+  auto *LoadAccess = MSSA->getMemoryAccess(LI);
+  auto *StoreAccess = dyn_cast_or_null<MemoryDef>(MSSA->getMemoryAccess(&SI));
+  if (!LoadAccess || !StoreAccess)
+    return std::nullopt;
+
+  // The wide store writes back the preserved bytes from LI. Conservatively
+  // prove that the entire word is unchanged by checking that the clobber
+  // immediately before SI dominates LI. Start before SI's own MemoryDef.
+  MemoryLocation Loc = MemoryLocation::get(LI).getWithoutAATags();
+  MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
+      StoreAccess->getDefiningAccess(), Loc);
+  if (!MSSA->dominates(Clobber, LoadAccess))
+    return std::nullopt;
+
+  const DataLayout &DL = SI.getDataLayout();
+  unsigned Offset =
+      DL.isLittleEndian() ? Shift / 8 : Ty->getBitWidth() / 8 - Shift / 8 - 1;
+  return MaskedStore{&SI, Insert, Shift, Offset};
+}
+
+static bool narrowMatchedStores(ArrayRef<MaskedStore> Stores) {
+  if (Stores.empty())
+    return false;
+
+  for (const MaskedStore &Candidate : Stores) {
+    StoreInst &SI = *Candidate.Store;
+    unsigned Offset = Candidate.Offset;
+    Value *Ptr = SI.getPointerOperand();
+    Type *ByteTy = Type::getInt8Ty(SI.getContext());
+    IRBuilder<> Builder(&SI);
+    Value *Byte = Candidate.Insert;
+    if (Candidate.Shift)
+      Byte = Builder.CreateLShr(Byte, Candidate.Shift);
+    Byte = Builder.CreateTrunc(Byte, ByteTy);
+    if (Offset)
+      Ptr = Builder.CreateConstGEP1_64(ByteTy, Ptr, Offset);
+    Align Alignment = commonAlignment(SI.getAlign(), Offset);
+    StoreInst *NewSI = Builder.CreateAlignedStore(Byte, Ptr, Alignment);
+    NewSI->setAAMetadata(SI.getAAMetadata().adjustForAccess(Offset, 1));
+    NewSI->copyMetadata(SI, {LLVMContext::MD_access_group});
+    SI.eraseFromParent();
+  }
+  return true;
+}
+
+static bool narrowMaskedStores(BasicBlock &BB, DominatorTree &DT,
+                               AliasAnalysis &AA) {
+  SmallVector<MaskedStore, 4> Stores;
+  // Finish all MemorySSA queries before replacing any stores in the block.
+  {
+    std::unique_ptr<MemorySSA> MSSA;
+    for (Instruction &I : BB) {
+      auto *SI = dyn_cast<StoreInst>(&I);
+      if (!SI || !SI->isSimple())
+        continue;
+      if (std::optional<MaskedStore> Candidate =
+              matchMaskedStore(*SI, AA, DT, MSSA))
+        Stores.push_back(*Candidate);
+    }
+  }
+
+  return narrowMatchedStores(Stores);
+}
+
 /// Combine away instructions providing they are still equivalent when compared
 /// against 0. i.e do they have any bits set.
 static Value *optimizeShiftInOrChain(Value *V, IRBuilder<> &Builder) {
@@ -2714,6 +2825,10 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
 
     // Do this separately to avoid redundantly scanning stores multiple times.
     MadeChange |= foldConsecutiveStores(BB, DL, TTI, AA);
+
+    // Merge this block's original stores first. Narrow before final
+    // simplification can remove the insertion mask required for matching.
+    MadeChange |= narrowMaskedStores(BB, DT, AA);
   }
 
   // We're done with transforms, so remove dead instructions.
