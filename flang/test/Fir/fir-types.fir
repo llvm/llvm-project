@@ -76,11 +76,15 @@ func.func private @mem6() -> !fir.llvm_ptr<i8>
 // CHECK-LABEL: func private @box3() -> !fir.boxproc<(i32, i32) -> i64>
 // CHECK-LABEL: func private @box4() -> !fir.box<none>
 // CHECK-LABEL: func private @box5() -> !fir.box<!fir.type<derived3{f:f32}>>
+// CHECK-LABEL: func private @box6() -> !fir.box<i32, volatile, corank:1>
+// CHECK-LABEL: func private @box7() -> !fir.box<i32, volatile, corank:1>
 func.func private @box1() -> !fir.box<!fir.array<?xf32>>
 func.func private @box2() -> !fir.boxchar<2>
 func.func private @box3() -> !fir.boxproc<(i32, i32) -> i64>
 func.func private @box4() -> !fir.box<none>
 func.func private @box5() -> !fir.box<!fir.type<derived3{f:f32}>>
+func.func private @box6() -> !fir.box<i32, volatile, corank:1>
+func.func private @box7() -> !fir.box<i32, corank:1, volatile>
 
 // -----
 
@@ -113,6 +117,8 @@ func.func private @vecty(i1) -> !fir.vector<10:i32>
 // CHECK-LABEL: class6() -> !fir.class<!fir.array<?xnone>>
 // CHECK-LABEL: class7() -> !fir.class<!fir.heap<none>>
 // CHECK-LABEL: class8() -> !fir.class<!fir.ptr<none>>
+// CHECK-LABEL: class9() -> !fir.class<i32, volatile, corank:1>
+// CHECK-LABEL: class10() -> !fir.class<i32, volatile, corank:1>
 func.func private @class1() -> !fir.class<!fir.type<c1{p:i32}>>
 func.func private @class2() -> !fir.class<!fir.array<?x!fir.type<c1{p:i32}>>>
 func.func private @class3() -> !fir.class<!fir.heap<!fir.type<c1{p:i32}>>>
@@ -121,3 +127,5 @@ func.func private @class5() -> !fir.class<none>
 func.func private @class6() -> !fir.class<!fir.array<?xnone>>
 func.func private @class7() -> !fir.class<!fir.heap<none>>
 func.func private @class8() -> !fir.class<!fir.ptr<none>>
+func.func private @class9() -> !fir.class<i32, volatile, corank:1>
+func.func private @class10() -> !fir.class<i32, corank:1, volatile>

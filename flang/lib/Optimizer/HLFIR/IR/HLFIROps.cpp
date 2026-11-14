@@ -243,7 +243,6 @@ updateDeclaredInputTypeWithVolatility(mlir::Type inputType, mlir::Value memref,
       bitEnumContainsAny(flags, fir::FortranVariableFlagsEnum::allocatable);
 
   auto updateType = [&](auto t) {
-    using FIRT = decltype(t);
     auto elementType = t.getEleTy();
     const bool elementTypeIsBox = mlir::isa<fir::BaseBoxType>(elementType);
     const bool elementTypeIsVolatile = isPointer || isAllocatable ||
@@ -251,7 +250,15 @@ updateDeclaredInputTypeWithVolatility(mlir::Type inputType, mlir::Value memref,
                                        fir::isa_volatile_type(elementType);
     auto newEleTy =
         fir::updateTypeWithVolatility(elementType, elementTypeIsVolatile);
-    inputType = FIRT::get(newEleTy, true);
+    inputType =
+        llvm::TypeSwitch<mlir::Type, mlir::Type>(inputType)
+            .Case<fir::BoxType, fir::ClassType>([&](auto t) -> mlir::Type {
+              using FIRT = decltype(t);
+              return FIRT::get(newEleTy, /*isVolatile=*/true, t.getCorank());
+            })
+            .Case([&](fir::ReferenceType t) -> mlir::Type {
+              return fir::ReferenceType::get(newEleTy, true);
+            });
   };
   llvm::TypeSwitch<mlir::Type>(inputType)
       .Case<fir::ReferenceType, fir::BoxType, fir::ClassType>(updateType);
