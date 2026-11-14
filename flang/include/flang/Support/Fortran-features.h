@@ -63,8 +63,8 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     CUDAImplicitDataAttrSpelling, OpenAccDefaultNoneScalarsStrict,
     OpenACCMultipleNamesInRoutine, CUDAInit,
     PreferIntrinsicModuleUseAssociation, MultipleCommonBlockInit,
-    OutOfBoundsSubscripts, ImplicitModulePrefix, RankOneBoundsOnFunctionResult)
-
+    OutOfBoundsSubscripts, ImplicitModulePrefix, CommonBlockBindingLabel,
+    RankOneBoundsOnFunctionResult)
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     NonTargetPassedToTarget, PointerToPossibleNoncontiguous,
