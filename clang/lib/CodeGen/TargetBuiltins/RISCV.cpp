@@ -1722,6 +1722,17 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     ID = Intrinsic::riscv_ssh1sadd_i32;
     break;
 
+  // Scalar Comparison
+  case RISCV::BI__builtin_riscv_mseq_u32:
+    ID = Intrinsic::riscv_mseq_u32;
+    break;
+  case RISCV::BI__builtin_riscv_mslt_i32:
+    ID = Intrinsic::riscv_mslt_i32;
+    break;
+  case RISCV::BI__builtin_riscv_msltu_u32:
+    ID = Intrinsic::riscv_msltu_u32;
+    break;
+
   // Scalar Multiply High
   case RISCV::BI__builtin_riscv_mulhr_i32:
   case RISCV::BI__builtin_riscv_mulhru_u32:

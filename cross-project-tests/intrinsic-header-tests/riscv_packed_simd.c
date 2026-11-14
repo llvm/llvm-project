@@ -6693,3 +6693,100 @@ uint32x2_t test_pslidedownx_u32x2(uint32x2_t rd, uint32x2_t rs1, unsigned rs2) {
 int32_t test_ssh1sadd_i32(int32_t rs1, int32_t rs2) {
   return __riscv_ssh1sadd_i32(rs1, rs2);
 }
+
+// Scalar Comparison
+// CHECK-LABEL: test_mseq_i32_u32:
+// RV32:        mseq{{[[:space:]]+a0, a0, a1}}
+// RV64:        pmseq.w{{[[:space:]]+a0, a0, a1}}
+uint32_t test_mseq_i32_u32(int32_t rs1, int32_t rs2) {
+  return __riscv_mseq_i32_u32(rs1, rs2);
+}
+
+// CHECK-LABEL: test_mseq_u32_u32:
+// RV32:        mseq{{[[:space:]]+a0, a0, a1}}
+// RV64:        pmseq.w{{[[:space:]]+a0, a0, a1}}
+uint32_t test_mseq_u32_u32(uint32_t rs1, uint32_t rs2) {
+  return __riscv_mseq_u32_u32(rs1, rs2);
+}
+
+// CHECK-LABEL: test_mslt_u32:
+// RV32:        mslt{{[[:space:]]+a0, a0, a1}}
+// RV64:        pmslt.w{{[[:space:]]+a0, a0, a1}}
+uint32_t test_mslt_u32(int32_t rs1, int32_t rs2) {
+  return __riscv_mslt_u32(rs1, rs2);
+}
+
+// CHECK-LABEL: test_msgt_u32:
+// RV32:        mslt{{[[:space:]]+a0, a1, a0}}
+// RV64:        pmslt.w{{[[:space:]]+a0, a1, a0}}
+uint32_t test_msgt_u32(int32_t rs1, int32_t rs2) {
+  return __riscv_msgt_u32(rs1, rs2);
+}
+
+// CHECK-LABEL: test_msltu_u32:
+// RV32:        msltu{{[[:space:]]+a0, a0, a1}}
+// RV64:        pmsltu.w{{[[:space:]]+a0, a0, a1}}
+uint32_t test_msltu_u32(uint32_t rs1, uint32_t rs2) {
+  return __riscv_msltu_u32(rs1, rs2);
+}
+
+// CHECK-LABEL: test_msgtu_u32:
+// RV32:        msltu{{[[:space:]]+a0, a1, a0}}
+// RV64:        pmsltu.w{{[[:space:]]+a0, a1, a0}}
+uint32_t test_msgtu_u32(uint32_t rs1, uint32_t rs2) {
+  return __riscv_msgtu_u32(rs1, rs2);
+}
+
+// CHECK-LABEL: test_msne_i32_u32:
+// RV32:        mseq{{[[:space:]]+a0, a0, a1}}
+// RV32-NEXT:   not
+// RV64:        pmseq.w{{[[:space:]]+a0, a0, a1}}
+// RV64-NEXT:   not
+uint32_t test_msne_i32_u32(int32_t rs1, int32_t rs2) {
+  return __riscv_msne_i32_u32(rs1, rs2);
+}
+
+// CHECK-LABEL: test_msne_u32_u32:
+// RV32:        mseq{{[[:space:]]+a0, a0, a1}}
+// RV32-NEXT:   not
+// RV64:        pmseq.w{{[[:space:]]+a0, a0, a1}}
+// RV64-NEXT:   not
+uint32_t test_msne_u32_u32(uint32_t rs1, uint32_t rs2) {
+  return __riscv_msne_u32_u32(rs1, rs2);
+}
+
+// CHECK-LABEL: test_msge_u32:
+// RV32:        mslt{{[[:space:]]+a0, a0, a1}}
+// RV32-NEXT:   not
+// RV64:        pmslt.w{{[[:space:]]+a0, a0, a1}}
+// RV64-NEXT:   not
+uint32_t test_msge_u32(int32_t rs1, int32_t rs2) {
+  return __riscv_msge_u32(rs1, rs2);
+}
+
+// CHECK-LABEL: test_msle_u32:
+// RV32:        mslt{{[[:space:]]+a0, a1, a0}}
+// RV32-NEXT:   not
+// RV64:        pmslt.w{{[[:space:]]+a0, a1, a0}}
+// RV64-NEXT:   not
+uint32_t test_msle_u32(int32_t rs1, int32_t rs2) {
+  return __riscv_msle_u32(rs1, rs2);
+}
+
+// CHECK-LABEL: test_msgeu_u32:
+// RV32:        msltu{{[[:space:]]+a0, a0, a1}}
+// RV32-NEXT:   not
+// RV64:        pmsltu.w{{[[:space:]]+a0, a0, a1}}
+// RV64-NEXT:   not
+uint32_t test_msgeu_u32(uint32_t rs1, uint32_t rs2) {
+  return __riscv_msgeu_u32(rs1, rs2);
+}
+
+// CHECK-LABEL: test_msleu_u32:
+// RV32:        msltu{{[[:space:]]+a0, a1, a0}}
+// RV32-NEXT:   not
+// RV64:        pmsltu.w{{[[:space:]]+a0, a1, a0}}
+// RV64-NEXT:   not
+uint32_t test_msleu_u32(uint32_t rs1, uint32_t rs2) {
+  return __riscv_msleu_u32(rs1, rs2);
+}

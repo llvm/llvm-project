@@ -2197,6 +2197,15 @@ class RVPBinaryIntrinsic
   // Scalar Shift-Add. On RV64 this maps to pssh1sadd.w on the low words.
   def int_riscv_ssh1sadd_i32 : RVPScalarBinaryIntrinsic;
 
+  // Scalar Comparison. The result is a 0/-1 mask; the derived forms
+  // (msne/msgt/msge/...) are composed in the header.
+  class RVPScalarCmpIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_mseq_u32  : RVPScalarCmpIntrinsic;
+  def int_riscv_mslt_i32  : RVPScalarCmpIntrinsic;
+  def int_riscv_msltu_u32 : RVPScalarCmpIntrinsic;
+
   // Scalar Multiply High. On RV32 these map to the M-extension mulh
   // instructions and the P-extension mulhr instructions.
   class RVPScalarMulHighIntrinsic

@@ -2046,6 +2046,11 @@ def riscv_mulhrsu : RVSDNode<"MULHRSU", SDTIntBinOp>;
 // Shift-add.
 def riscv_ssh1sadd : RVSDNode<"SSH1SADD", SDTIntBinOp>;
 
+// Scalar comparison. The result is a 0/-1 mask.
+def riscv_mseq  : RVSDNode<"MSEQ",  SDTIntBinOp, [SDNPCommutative]>;
+def riscv_mslt  : RVSDNode<"MSLT",  SDTIntBinOp>;
+def riscv_msltu : RVSDNode<"MSLTU", SDTIntBinOp>;
+
 def SDT_RISCVSameTernary : SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
                                                 SDTCisSameAs<0, 2>,
                                                 SDTCisSameAs<0, 3>]>;
@@ -2639,6 +2644,11 @@ let append Predicates = [IsRV32] in {
   def : PatGprGpr<avgflooru, AADDU, i32>;
   def : PatGprGpr<avgsubfloors, ASUB, i32>;
   def : PatGprGpr<avgsubflooru, ASUBU, i32>;
+
+  // 32-bit comparison patterns
+  def : PatGprGpr<riscv_mseq,  MSEQ,  i32>;
+  def : PatGprGpr<riscv_mslt,  MSLT,  i32>;
+  def : PatGprGpr<riscv_msltu, MSLTU, i32>;
 
   // 32-bit multiply high rounding patterns
   def : PatGprGpr<riscv_mulhr, MULHR, i32>;
