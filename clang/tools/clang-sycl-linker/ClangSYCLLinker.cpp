@@ -714,10 +714,16 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
   CmdArgs.push_back("-output_no_suffix");
   CmdArgs.push_back("-spirv_input");
 
-  StringRef Arch(Args.getLastArgValue(OPT_arch_EQ));
-  assert(!Arch.empty() && "Arch must be specified for AOT compilation");
+  // Compile for the --device list, e.g. "xe-mtl-u,xe-mtl-h" for an IGCA
+  // target, or else for the Intel GPU in --arch.
+  std::string Devices = llvm::join(Args.getAllArgValues(OPT_device_EQ), ",");
+  if (Devices.empty())
+    Devices = Args.getLastArgValue(OPT_arch_EQ);
+  assert(!Devices.empty() && "a device must be specified for AOT compilation");
   CmdArgs.push_back("-device");
-  CmdArgs.push_back(Arch);
+  CmdArgs.push_back(Devices);
+  if (Args.hasArg(OPT_no_embed_virtual_arch))
+    CmdArgs.push_back("-exclude_ir");
 
   // getAllArgValues returns a temporary vector; retain it so the StringRefs
   // remain valid through the executeCommands call below.
@@ -742,15 +748,11 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
 /// into the AOT compilation step.
 static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
                            const ArgList &Args) {
-  StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
-  OffloadArch OA = StringToOffloadArch(Arch);
-  if (OA.isIntelGPU())
+  OffloadArch OA = StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ));
+  if (OA.isIntelGPU() || OA.isIntelIGCA())
     return runAOTCompileIntelGPU(InputFile, OutputFile, Args);
   if (OA.isIntelCPU())
     return runAOTCompileIntelCPU(InputFile, OutputFile, Args);
-  if (OA.isIntelIGCA())
-    return createStringError("AOT compilation for IGCA target '" + Arch +
-                             "' is not yet implemented");
 
   llvm_unreachable("runAOTCompile dispatched on unsupported arch");
 }
@@ -1002,8 +1004,14 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     SplitModules = std::move(*SplitModulesOrErr);
   }
 
+  // An IGCA target is compiled ahead of time only for its --device list, and
+  // otherwise just in time.
+  OffloadArch OA = StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ));
   bool IsAOTCompileNeeded =
-      StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ)).isIntel();
+      OA.isIntelIGCA() ? Args.hasArg(OPT_device_EQ) : OA.isIntel();
+  // ocloc drops the SPIR-V for an Intel GPU; opencl-aot for a CPU keeps it.
+  bool NoEmbedVirtualArch = IsAOTCompileNeeded && !OA.isIntelCPU() &&
+                            Args.hasArg(OPT_no_embed_virtual_arch);
 
   StringRef OutputFileNameExt = ".spv";
 
@@ -1053,16 +1061,22 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     TheImage.StringData["arch"] =
         Args.MakeArgString(Args.getLastArgValue(OPT_arch_EQ));
     TheImage.StringData["symbols"] = SI.Symbols;
+    if (NoEmbedVirtualArch)
+      TheImage.StringData["no-embed-virtual-arch"] = "1";
     TheImage.Image = std::move(*FileOrErr);
     Images.emplace_back(std::move(TheImage));
   }
 
   if (Verbose) {
-    for (const OffloadingImage &Image : Images)
-      errs() << formatv(
-          "sycl-bundle: image kind: {0}, triple: {1}, arch: {2}\n",
-          getImageKindName(Image.TheImageKind),
-          Image.StringData.lookup("triple"), Image.StringData.lookup("arch"));
+    for (const OffloadingImage &Image : Images) {
+      errs() << formatv("sycl-bundle: image kind: {0}, triple: {1}, arch: {2}",
+                        getImageKindName(Image.TheImageKind),
+                        Image.StringData.lookup("triple"),
+                        Image.StringData.lookup("arch"));
+      if (Image.StringData.count("no-embed-virtual-arch"))
+        errs() << ", no-embed-virtual-arch";
+      errs() << "\n";
+    }
   }
 
   llvm::SmallString<0> Buffer = OffloadBinary::write(Images);

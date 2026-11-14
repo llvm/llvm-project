@@ -16,6 +16,8 @@
 #include "clang/Driver/Util.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Option.h"
 #include <cassert>
@@ -96,6 +98,16 @@ class Compilation {
     }
   };
   std::map<TCArgsKey, llvm::opt::DerivedArgList *> TCArgs;
+
+  /// For SYCL, the Intel GPUs given in --offload-arch for each IGCA target,
+  /// e.g. xe-mtl-h and xe-mtl-u for igca_30r. Each list is sorted.
+  llvm::DenseMap<std::pair<const ToolChain *, StringRef>,
+                 llvm::SmallVector<StringRef, 2>>
+      SYCLIGCADevices;
+
+  /// For SYCL, the --offload-arch values given as they are compiled, e.g.
+  /// igca_30r, rather than as an Intel GPU.
+  llvm::DenseSet<std::pair<const ToolChain *, StringRef>> SYCLDirectArchs;
 
   /// Temporary files which should be removed on exit.
   llvm::opt::ArgStringList TempFiles;
@@ -255,6 +267,26 @@ public:
   const llvm::opt::DerivedArgList &
   getArgsForToolChain(const ToolChain *TC, BoundArch BA,
                       Action::OffloadKind DeviceOffloadKind);
+
+  /// Add the Intel GPU \p Device to the GPUs of the IGCA target \p Target.
+  void addSYCLIGCADevice(const ToolChain *TC, StringRef Target,
+                         StringRef Device);
+
+  /// \return the Intel GPUs of the IGCA target \p Target, sorted, or an empty
+  /// list if there are none.
+  ArrayRef<StringRef> getSYCLIGCADevices(const ToolChain *TC,
+                                         StringRef Target) const;
+
+  /// Record that \p Arch was given in --offload-arch as it is compiled, e.g.
+  /// igca_30r, rather than as an Intel GPU.
+  void addSYCLDirectArch(const ToolChain *TC, StringRef Arch) {
+    SYCLDirectArchs.insert({TC, Arch});
+  }
+
+  /// \return true if \p Arch was given in --offload-arch as it is compiled.
+  bool isSYCLDirectArch(const ToolChain *TC, StringRef Arch) const {
+    return SYCLDirectArchs.contains({TC, Arch});
+  }
 
   /// addTempFile - Add a file to remove on exit, and returns its
   /// argument.

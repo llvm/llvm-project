@@ -1287,6 +1287,14 @@ def no_offload_arch_EQ : CommaJoined<["--"], "no-offload-arch=">,
   HelpText<"Remove CUDA/HIP offloading device architecture (e.g. sm_35, gfx906) from the list of devices to compile for. "
            "'all' resets the list to its default value.">;
 
+defm offload_embed_virtual_arch : BoolOptionWithoutMarshalling<"",
+  "offload-embed-virtual-arch",
+  PosFlag<SetTrue, [], [ClangOption], "Also embed the device code for the "
+    "virtual architecture when --offload-arch names a real architecture "
+    "(default for SYCL)">,
+  NegFlag<SetFalse, [], [ClangOption], "Do not embed the device code for the "
+    "virtual architecture when --offload-arch names a real architecture">,
+  BothFlags<[]>, ["--"]>;
 def offload_new_driver : Flag<["--"], "offload-new-driver">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
   HelpText<"Deprecated; the new driver is always used for offloading compilation.">;

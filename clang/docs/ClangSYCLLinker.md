@@ -37,6 +37,8 @@ USAGE: clang-sycl-linker [options] <input bitcode files>
 
 OPTIONS:
   --arch <value>                Specify the name of the target architecture.
+  --device=<value>              An Intel GPU to compile ahead of time for. Can be repeated.
+  --no-embed-virtual-arch       Do not keep the SPIR-V in a device image compiled ahead of time for an Intel GPU.
   --dry-run                     Print generated commands without running.
   -help-hidden                  Display all available options
   -help                         Display available options (--help-hidden for more)
@@ -107,6 +109,18 @@ generate the final executable.
 ```console
 clang-sycl-linker --triple spirv64 --arch xe-bmg-g21 input.bc
 ```
+
+For an IGCA target, such as `igca_30r`, the device image is compiled ahead of
+time for the Intel GPUs given with `--device`, with a single ocloc call, or just
+in time if no `--device` is given:
+
+```console
+clang-sycl-linker --triple spirv64 --arch igca_30r --device=xe-mtl-u --device=xe-mtl-h input.bc
+```
+
+The SPIR-V is kept in the device image compiled ahead of time, so that it can
+be compiled just in time for other GPUs. With `--no-embed-virtual-arch`, it is
+dropped.
 
 ### Linking with Device Libraries
 
