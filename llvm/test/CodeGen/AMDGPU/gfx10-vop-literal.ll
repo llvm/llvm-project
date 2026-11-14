@@ -42,7 +42,7 @@ define amdgpu_kernel void @test_cndmask_lit(ptr addrspace(1) %p) {
 ; GFX9-DAG: s_movk_i32 [[C1:s[0-9]+]], 0x3039
 ; GFX9:     v_bfe_u32 v{{[0-9]+}}, [[C1]], v{{[0-9]+}}, [[C2]]
 define amdgpu_kernel void @test_bfe_2lit_s(ptr addrspace(1) %p, i32 %src) {
-  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 12345, i32 %src, i32 56789)
+  %bfe = call i32 @llvm.amdgcn.ubfe(i32 12345, i32 %src, i32 56789)
   store i32 %bfe, ptr addrspace(1) %p, align 4
   ret void
 }
@@ -57,10 +57,10 @@ define amdgpu_kernel void @test_bfe_2lit_v(ptr addrspace(1) %p) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %ptr = getelementptr inbounds i32, ptr addrspace(1) %p, i32 %id
   %load = load i32, ptr addrspace(1) %ptr, align 4
-  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 12345, i32 %load, i32 56789)
+  %bfe = call i32 @llvm.amdgcn.ubfe(i32 12345, i32 %load, i32 56789)
   store i32 %bfe, ptr addrspace(1) %ptr, align 4
   ret void
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x()
-declare i32 @llvm.amdgcn.ubfe.i32(i32, i32, i32)
+declare i32 @llvm.amdgcn.ubfe(i32, i32, i32)

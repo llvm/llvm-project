@@ -2589,11 +2589,13 @@ def int_amdgcn_ds_swizzle :
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree,
              ImmArg<ArgIndex<1>>]>;
 
-def int_amdgcn_ubfe : PureIntrinsic<[llvm_anyint_ty],
-    [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty]>;
+// These model the 32-bit VALU V_BFE_{U,I}32 instruction. There is no 64-bit
+// vector bitfield extract, so the operands and result are fixed to i32.
+def int_amdgcn_ubfe : PureIntrinsic<[llvm_i32_ty],
+    [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
 
-def int_amdgcn_sbfe : PureIntrinsic<[llvm_anyint_ty],
-    [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty]>;
+def int_amdgcn_sbfe : PureIntrinsic<[llvm_i32_ty],
+    [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
 
 def int_amdgcn_lerp :
   ClangBuiltin<"__builtin_amdgcn_lerp">,

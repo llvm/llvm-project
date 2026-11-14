@@ -324,7 +324,6 @@ define float @test_constant_fold_rsq_f32_undef() nounwind {
 declare float @llvm.amdgcn.frexp.mant.f32(float) nounwind readnone
 declare double @llvm.amdgcn.frexp.mant.f64(double) nounwind readnone
 
-
 define float @test_constant_fold_frexp_mant_f32_poison() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_mant_f32_poison(
 ; CHECK-NEXT:    ret float poison
@@ -492,7 +491,6 @@ define double @test_constant_fold_frexp_mant_f64_min_num() nounwind {
   %val = call double @llvm.amdgcn.frexp.mant.f64(double 4.940656e-324)
   ret double %val
 }
-
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.frexp.exp
@@ -1592,33 +1590,32 @@ define <2 x i16> @poison_cvt_pk_u16() {
 ; llvm.amdgcn.ubfe
 ; --------------------------------------------------------------------
 
-declare i32 @llvm.amdgcn.ubfe.i32(i32, i32, i32) nounwind readnone
-declare i64 @llvm.amdgcn.ubfe.i64(i64, i32, i32) nounwind readnone
+declare i32 @llvm.amdgcn.ubfe(i32, i32, i32) nounwind readnone
 
 define i32 @ubfe_var_i32(i32 %src, i32 %offset, i32 %width) {
 ; CHECK-LABEL: @ubfe_var_i32(
-; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.ubfe.i32(i32 [[SRC:%.*]], i32 [[OFFSET:%.*]], i32 [[WIDTH:%.*]])
+; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.ubfe(i32 [[SRC:%.*]], i32 [[OFFSET:%.*]], i32 [[WIDTH:%.*]])
 ; CHECK-NEXT:    ret i32 [[BFE]]
 ;
-  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 %offset, i32 %width)
+  %bfe = call i32 @llvm.amdgcn.ubfe(i32 %src, i32 %offset, i32 %width)
   ret i32 %bfe
 }
 
 define i32 @ubfe_clear_high_bits_constant_offset_i32(i32 %src, i32 %width) {
 ; CHECK-LABEL: @ubfe_clear_high_bits_constant_offset_i32(
-; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.ubfe.i32(i32 [[SRC:%.*]], i32 5, i32 [[WIDTH:%.*]])
+; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.ubfe(i32 [[SRC:%.*]], i32 5, i32 [[WIDTH:%.*]])
 ; CHECK-NEXT:    ret i32 [[BFE]]
 ;
-  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 133, i32 %width)
+  %bfe = call i32 @llvm.amdgcn.ubfe(i32 %src, i32 133, i32 %width)
   ret i32 %bfe
 }
 
 define i32 @ubfe_clear_high_bits_constant_width_i32(i32 %src, i32 %offset) {
 ; CHECK-LABEL: @ubfe_clear_high_bits_constant_width_i32(
-; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.ubfe.i32(i32 [[SRC:%.*]], i32 [[OFFSET:%.*]], i32 5)
+; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.ubfe(i32 [[SRC:%.*]], i32 [[OFFSET:%.*]], i32 5)
 ; CHECK-NEXT:    ret i32 [[BFE]]
 ;
-  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 %offset, i32 133)
+  %bfe = call i32 @llvm.amdgcn.ubfe(i32 %src, i32 %offset, i32 133)
   ret i32 %bfe
 }
 
@@ -1626,16 +1623,16 @@ define i32 @ubfe_width_0(i32 %src, i32 %offset) {
 ; CHECK-LABEL: @ubfe_width_0(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 %offset, i32 0)
+  %bfe = call i32 @llvm.amdgcn.ubfe(i32 %src, i32 %offset, i32 0)
   ret i32 %bfe
 }
 
 define i32 @ubfe_width_31(i32 %src, i32 %offset) {
 ; CHECK-LABEL: @ubfe_width_31(
-; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.ubfe.i32(i32 [[SRC:%.*]], i32 [[OFFSET:%.*]], i32 31)
+; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.ubfe(i32 [[SRC:%.*]], i32 [[OFFSET:%.*]], i32 31)
 ; CHECK-NEXT:    ret i32 [[BFE]]
 ;
-  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 %offset, i32 31)
+  %bfe = call i32 @llvm.amdgcn.ubfe(i32 %src, i32 %offset, i32 31)
   ret i32 %bfe
 }
 
@@ -1643,52 +1640,52 @@ define i32 @ubfe_width_32(i32 %src, i32 %offset) {
 ; CHECK-LABEL: @ubfe_width_32(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 %offset, i32 32)
+  %bfe = call i32 @llvm.amdgcn.ubfe(i32 %src, i32 %offset, i32 32)
   ret i32 %bfe
 }
 
 define i32 @ubfe_width_33(i32 %src, i32 %offset) {
 ; CHECK-LABEL: @ubfe_width_33(
-; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.ubfe.i32(i32 [[SRC:%.*]], i32 [[OFFSET:%.*]], i32 1)
+; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.ubfe(i32 [[SRC:%.*]], i32 [[OFFSET:%.*]], i32 1)
 ; CHECK-NEXT:    ret i32 [[BFE]]
 ;
-  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 %offset, i32 33)
+  %bfe = call i32 @llvm.amdgcn.ubfe(i32 %src, i32 %offset, i32 33)
   ret i32 %bfe
 }
 
 define i32 @ubfe_offset_33(i32 %src, i32 %width) {
 ; CHECK-LABEL: @ubfe_offset_33(
-; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.ubfe.i32(i32 [[SRC:%.*]], i32 1, i32 [[WIDTH:%.*]])
+; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.ubfe(i32 [[SRC:%.*]], i32 1, i32 [[WIDTH:%.*]])
 ; CHECK-NEXT:    ret i32 [[BFE]]
 ;
-  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 33, i32 %width)
+  %bfe = call i32 @llvm.amdgcn.ubfe(i32 %src, i32 33, i32 %width)
   ret i32 %bfe
 }
 
 define i32 @ubfe_offset_0(i32 %src, i32 %width) {
 ; CHECK-LABEL: @ubfe_offset_0(
-; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.ubfe.i32(i32 [[SRC:%.*]], i32 0, i32 [[WIDTH:%.*]])
+; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.ubfe(i32 [[SRC:%.*]], i32 0, i32 [[WIDTH:%.*]])
 ; CHECK-NEXT:    ret i32 [[BFE]]
 ;
-  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 0, i32 %width)
+  %bfe = call i32 @llvm.amdgcn.ubfe(i32 %src, i32 0, i32 %width)
   ret i32 %bfe
 }
 
 define i32 @ubfe_offset_32(i32 %src, i32 %width) {
 ; CHECK-LABEL: @ubfe_offset_32(
-; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.ubfe.i32(i32 [[SRC:%.*]], i32 0, i32 [[WIDTH:%.*]])
+; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.ubfe(i32 [[SRC:%.*]], i32 0, i32 [[WIDTH:%.*]])
 ; CHECK-NEXT:    ret i32 [[BFE]]
 ;
-  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 32, i32 %width)
+  %bfe = call i32 @llvm.amdgcn.ubfe(i32 %src, i32 32, i32 %width)
   ret i32 %bfe
 }
 
 define i32 @ubfe_offset_31(i32 %src, i32 %width) {
 ; CHECK-LABEL: @ubfe_offset_31(
-; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.ubfe.i32(i32 [[SRC:%.*]], i32 31, i32 [[WIDTH:%.*]])
+; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.ubfe(i32 [[SRC:%.*]], i32 31, i32 [[WIDTH:%.*]])
 ; CHECK-NEXT:    ret i32 [[BFE]]
 ;
-  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 31, i32 %width)
+  %bfe = call i32 @llvm.amdgcn.ubfe(i32 %src, i32 31, i32 %width)
   ret i32 %bfe
 }
 
@@ -1696,7 +1693,7 @@ define i32 @ubfe_offset_0_width_0(i32 %src) {
 ; CHECK-LABEL: @ubfe_offset_0_width_0(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 0, i32 0)
+  %bfe = call i32 @llvm.amdgcn.ubfe(i32 %src, i32 0, i32 0)
   ret i32 %bfe
 }
 
@@ -1705,7 +1702,7 @@ define i32 @ubfe_offset_0_width_3(i32 %src) {
 ; CHECK-NEXT:    [[BFE:%.*]] = and i32 [[SRC:%.*]], 7
 ; CHECK-NEXT:    ret i32 [[BFE]]
 ;
-  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 0, i32 3)
+  %bfe = call i32 @llvm.amdgcn.ubfe(i32 %src, i32 0, i32 3)
   ret i32 %bfe
 }
 
@@ -1715,7 +1712,7 @@ define i32 @ubfe_offset_3_width_1(i32 %src) {
 ; CHECK-NEXT:    [[BFE:%.*]] = and i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i32 [[BFE]]
 ;
-  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 3, i32 1)
+  %bfe = call i32 @llvm.amdgcn.ubfe(i32 %src, i32 3, i32 1)
   ret i32 %bfe
 }
 
@@ -1725,7 +1722,7 @@ define i32 @ubfe_offset_3_width_4(i32 %src) {
 ; CHECK-NEXT:    [[BFE:%.*]] = and i32 [[TMP1]], 15
 ; CHECK-NEXT:    ret i32 [[BFE]]
 ;
-  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 3, i32 4)
+  %bfe = call i32 @llvm.amdgcn.ubfe(i32 %src, i32 3, i32 4)
   ret i32 %bfe
 }
 
@@ -1733,7 +1730,7 @@ define i32 @ubfe_0_0_0() {
 ; CHECK-LABEL: @ubfe_0_0_0(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 0, i32 0, i32 0)
+  %bfe = call i32 @llvm.amdgcn.ubfe(i32 0, i32 0, i32 0)
   ret i32 %bfe
 }
 
@@ -1741,7 +1738,7 @@ define i32 @ubfe_neg1_5_7() {
 ; CHECK-LABEL: @ubfe_neg1_5_7(
 ; CHECK-NEXT:    ret i32 127
 ;
-  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 -1, i32 5, i32 7)
+  %bfe = call i32 @llvm.amdgcn.ubfe(i32 -1, i32 5, i32 7)
   ret i32 %bfe
 }
 
@@ -1749,69 +1746,40 @@ define i32 @ubfe_undef_src_i32(i32 %offset, i32 %width) {
 ; CHECK-LABEL: @ubfe_undef_src_i32(
 ; CHECK-NEXT:    ret i32 undef
 ;
-  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 undef, i32 %offset, i32 %width)
+  %bfe = call i32 @llvm.amdgcn.ubfe(i32 undef, i32 %offset, i32 %width)
   ret i32 %bfe
 }
 
 define i32 @ubfe_undef_offset_i32(i32 %src, i32 %width) {
 ; CHECK-LABEL: @ubfe_undef_offset_i32(
-; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.ubfe.i32(i32 [[SRC:%.*]], i32 undef, i32 [[WIDTH:%.*]])
+; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.ubfe(i32 [[SRC:%.*]], i32 undef, i32 [[WIDTH:%.*]])
 ; CHECK-NEXT:    ret i32 [[BFE]]
 ;
-  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 undef, i32 %width)
+  %bfe = call i32 @llvm.amdgcn.ubfe(i32 %src, i32 undef, i32 %width)
   ret i32 %bfe
 }
 
 define i32 @ubfe_undef_width_i32(i32 %src, i32 %offset) {
 ; CHECK-LABEL: @ubfe_undef_width_i32(
-; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.ubfe.i32(i32 [[SRC:%.*]], i32 [[OFFSET:%.*]], i32 undef)
+; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.ubfe(i32 [[SRC:%.*]], i32 [[OFFSET:%.*]], i32 undef)
 ; CHECK-NEXT:    ret i32 [[BFE]]
 ;
-  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 %offset, i32 undef)
+  %bfe = call i32 @llvm.amdgcn.ubfe(i32 %src, i32 %offset, i32 undef)
   ret i32 %bfe
-}
-
-define i64 @ubfe_offset_33_width_4_i64(i64 %src) {
-; CHECK-LABEL: @ubfe_offset_33_width_4_i64(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[SRC:%.*]], 33
-; CHECK-NEXT:    [[BFE:%.*]] = and i64 [[TMP1]], 15
-; CHECK-NEXT:    ret i64 [[BFE]]
-;
-  %bfe = call i64 @llvm.amdgcn.ubfe.i64(i64 %src, i32 33, i32 4)
-  ret i64 %bfe
-}
-
-define i64 @ubfe_offset_0_i64(i64 %src, i32 %width) {
-; CHECK-LABEL: @ubfe_offset_0_i64(
-; CHECK-NEXT:    [[BFE:%.*]] = call i64 @llvm.amdgcn.ubfe.i64(i64 [[SRC:%.*]], i32 0, i32 [[WIDTH:%.*]])
-; CHECK-NEXT:    ret i64 [[BFE]]
-;
-  %bfe = call i64 @llvm.amdgcn.ubfe.i64(i64 %src, i32 0, i32 %width)
-  ret i64 %bfe
-}
-
-define i64 @ubfe_offset_32_width_32_i64(i64 %src) {
-; CHECK-LABEL: @ubfe_offset_32_width_32_i64(
-; CHECK-NEXT:    [[BFE:%.*]] = lshr i64 [[SRC:%.*]], 32
-; CHECK-NEXT:    ret i64 [[BFE]]
-;
-  %bfe = call i64 @llvm.amdgcn.ubfe.i64(i64 %src, i32 32, i32 32)
-  ret i64 %bfe
 }
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.sbfe
 ; --------------------------------------------------------------------
 
-declare i32 @llvm.amdgcn.sbfe.i32(i32, i32, i32) nounwind readnone
-declare i64 @llvm.amdgcn.sbfe.i64(i64, i32, i32) nounwind readnone
+declare i32 @llvm.amdgcn.sbfe(i32, i32, i32) nounwind readnone
 
 define i32 @sbfe_offset_31(i32 %src, i32 %width) {
 ; CHECK-LABEL: @sbfe_offset_31(
-; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.sbfe.i32(i32 [[SRC:%.*]], i32 31, i32 [[WIDTH:%.*]])
+; CHECK-NEXT:    [[BFE:%.*]] = call i32 @llvm.amdgcn.sbfe(i32 [[SRC:%.*]], i32 31, i32 [[WIDTH:%.*]])
 ; CHECK-NEXT:    ret i32 [[BFE]]
 ;
-  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %src, i32 31, i32 %width)
+  %bfe = call i32 @llvm.amdgcn.sbfe(i32 %src, i32 31, i32 %width)
   ret i32 %bfe
 }
 
@@ -1819,17 +1787,8 @@ define i32 @sbfe_neg1_5_7() {
 ; CHECK-LABEL: @sbfe_neg1_5_7(
 ; CHECK-NEXT:    ret i32 -1
 ;
-  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 -1, i32 5, i32 7)
+  %bfe = call i32 @llvm.amdgcn.sbfe(i32 -1, i32 5, i32 7)
   ret i32 %bfe
-}
-
-define i64 @sbfe_offset_32_width_32_i64(i64 %src) {
-; CHECK-LABEL: @sbfe_offset_32_width_32_i64(
-; CHECK-NEXT:    [[BFE:%.*]] = ashr i64 [[SRC:%.*]], 32
-; CHECK-NEXT:    ret i64 [[BFE]]
-;
-  %bfe = call i64 @llvm.amdgcn.sbfe.i64(i64 %src, i32 32, i32 32)
-  ret i64 %bfe
 }
 
 ; --------------------------------------------------------------------
@@ -1837,9 +1796,6 @@ define i64 @sbfe_offset_32_width_32_i64(i64 %src) {
 ; --------------------------------------------------------------------
 
 declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg) nounwind inaccessiblememonly
-
-
-
 
 define void @exp_disabled_inputs_to_undef(float %x, float %y, float %z, float %w) {
   ; enable src0..src3 constants
@@ -1887,8 +1843,6 @@ define void @exp_disabled_inputs_to_undef(float %x, float %y, float %z, float %w
 ; --------------------------------------------------------------------
 
 declare void @llvm.amdgcn.exp.compr.v2f16(i32 immarg, i32 immarg, <2 x half>, <2 x half>, i1 immarg, i1 immarg) nounwind inaccessiblememonly
-
-
 
 define void @exp_compr_disabled_inputs_to_undef(<2 x half> %xy, <2 x half> %zw) {
 ; CHECK-LABEL: @exp_compr_disabled_inputs_to_undef(
@@ -2214,7 +2168,6 @@ bb1:
   ret i32 %read1
 }
 
-
 define i32 @readlane_readfirstlane_different_block(i32 %arg) {
 ; CHECK-LABEL: @readlane_readfirstlane_different_block(
 ; CHECK-NEXT:  bb0:
@@ -2271,7 +2224,6 @@ define amdgpu_kernel void @update_dpp_undef_old(ptr addrspace(1) %out, i32 %in1)
   store i32 %tmp0, ptr addrspace(1) %out
   ret void
 }
-
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.permlane16
@@ -4029,7 +3981,6 @@ main_body:
   ret void
 }
 
-
 define amdgpu_kernel void @store_mip_1d(ptr addrspace(1) %out, <8 x i32> inreg %rsrc, <4 x float> %vdata, i32 %s) {
 ; CHECK-LABEL: @store_mip_1d(
 ; CHECK-NEXT:  main_body:
@@ -4102,7 +4053,6 @@ declare <4 x float> @llvm.amdgcn.image.load.mip.3d.v4f32.i32.v8i32(i32, i32, i32
 declare <4 x float> @llvm.amdgcn.image.load.mip.1darray.v4f32.i32.v8i32(i32, i32, i32, i32, <8 x i32>, i32, i32) #1
 declare <4 x float> @llvm.amdgcn.image.load.mip.2darray.v4f32.i32.v8i32(i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #1
 declare <4 x float> @llvm.amdgcn.image.load.mip.cube.v4f32.i32.v8i32(i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #1
-
 
 declare void @llvm.amdgcn.image.store.mip.1d.v4f32.i32.v8i32(<4 x float>, i32, i32, i32, <8 x i32>, i32, i32) #0
 declare void @llvm.amdgcn.image.store.mip.2d.v4f32.i32.v8i32(<4 x float>, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
