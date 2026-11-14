@@ -4,7 +4,6 @@
 ---
 name:            test
 alignment:       4
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           true
 noVRegs:         true

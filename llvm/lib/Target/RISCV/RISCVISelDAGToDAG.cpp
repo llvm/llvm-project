@@ -2165,7 +2165,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   case RISCVISD::MQRWACC:
   case RISCVISD::WMACC:
   case RISCVISD::WMACCU:
-  case RISCVISD::WMACCSU: {
+  case RISCVISD::WMACCSU:
+  case RISCVISD::PM2WADDA:
+  case RISCVISD::PM2WADDA_X:
+  case RISCVISD::PM2WADDAU:
+  case RISCVISD::PM2WSUBA:
+  case RISCVISD::PM2WSUBA_X:
+  case RISCVISD::PM2WADDASU: {
     assert(!Subtarget->is64Bit() && Subtarget->hasStdExtP() &&
            "Unexpected opcode");
 
@@ -2190,9 +2196,66 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     case RISCVISD::WMACCSU:
       Opc = RISCV::WMACCSU;
       break;
+    case RISCVISD::PM2WADDA:
+      Opc = RISCV::PM2WADDA_H;
+      break;
+    case RISCVISD::PM2WADDA_X:
+      Opc = RISCV::PM2WADDA_HX;
+      break;
+    case RISCVISD::PM2WADDAU:
+      Opc = RISCV::PM2WADDAU_H;
+      break;
+    case RISCVISD::PM2WSUBA:
+      Opc = RISCV::PM2WSUBA_H;
+      break;
+    case RISCVISD::PM2WSUBA_X:
+      Opc = RISCV::PM2WSUBA_HX;
+      break;
+    case RISCVISD::PM2WADDASU:
+      Opc = RISCV::PM2WADDASU_H;
+      break;
     }
     MachineSDNode *New = CurDAG->getMachineNode(
         Opc, DL, MVT::Untyped, Op0, Node->getOperand(2), Node->getOperand(3));
+    auto [Lo, Hi] = extractGPRPair(CurDAG, DL, SDValue(New, 0));
+    ReplaceUses(SDValue(Node, 0), Lo);
+    ReplaceUses(SDValue(Node, 1), Hi);
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
+  case RISCVISD::PM2WADD:
+  case RISCVISD::PM2WADDU:
+  case RISCVISD::PM2WADDSU:
+  case RISCVISD::PM2WADD_X:
+  case RISCVISD::PM2WSUB:
+  case RISCVISD::PM2WSUB_X: {
+    assert(!Subtarget->is64Bit() && Subtarget->hasStdExtP() &&
+           "Unexpected opcode");
+    unsigned Opc;
+    switch (Opcode) {
+    default:
+      llvm_unreachable("Unexpected opcode");
+    case RISCVISD::PM2WADD:
+      Opc = RISCV::PM2WADD_H;
+      break;
+    case RISCVISD::PM2WADDU:
+      Opc = RISCV::PM2WADDU_H;
+      break;
+    case RISCVISD::PM2WADDSU:
+      Opc = RISCV::PM2WADDSU_H;
+      break;
+    case RISCVISD::PM2WADD_X:
+      Opc = RISCV::PM2WADD_HX;
+      break;
+    case RISCVISD::PM2WSUB:
+      Opc = RISCV::PM2WSUB_H;
+      break;
+    case RISCVISD::PM2WSUB_X:
+      Opc = RISCV::PM2WSUB_HX;
+      break;
+    }
+    MachineSDNode *New = CurDAG->getMachineNode(
+        Opc, DL, MVT::Untyped, Node->getOperand(0), Node->getOperand(1));
     auto [Lo, Hi] = extractGPRPair(CurDAG, DL, SDValue(New, 0));
     ReplaceUses(SDValue(Node, 0), Lo);
     ReplaceUses(SDValue(Node, 1), Hi);
@@ -3163,8 +3226,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   case ISD::SCALAR_TO_VECTOR:
     if (Subtarget->hasStdExtP()) {
       MVT SrcVT = Node->getOperand(0).getSimpleValueType();
-      if ((VT == MVT::v2i32 && SrcVT == MVT::i64) ||
-          (VT == MVT::v4i8 && SrcVT == MVT::i32)) {
+      if (SrcVT == Subtarget->getXLenVT() &&
+          VT.getSizeInBits() == SrcVT.getSizeInBits()) {
         ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
         CurDAG->RemoveDeadNode(Node);
         return;
@@ -4095,35 +4158,10 @@ bool RISCVDAGToDAGISel::SelectAddrRegReg(SDValue Addr, SDValue &Base,
 
 bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
                                         SDValue &ShAmt) {
-  ShAmt = N;
-
-  // Peek through zext.
-  if (ShAmt->getOpcode() == ISD::ZERO_EXTEND)
-    ShAmt = ShAmt.getOperand(0);
-
   // Shift instructions on RISC-V only read the lower 5 or 6 bits of the shift
-  // amount. If there is an AND on the shift amount, we can bypass it if it
-  // doesn't affect any of those bits.
-  if (ShAmt.getOpcode() == ISD::AND &&
-      isa<ConstantSDNode>(ShAmt.getOperand(1))) {
-    const APInt &AndMask = ShAmt.getConstantOperandAPInt(1);
-
-    // Since the max shift amount is a power of 2 we can subtract 1 to make a
-    // mask that covers the bits needed to represent all shift amounts.
-    assert(isPowerOf2_32(ShiftWidth) && "Unexpected max shift amount!");
-    APInt ShMask(AndMask.getBitWidth(), ShiftWidth - 1);
-
-    if (ShMask.isSubsetOf(AndMask)) {
-      ShAmt = ShAmt.getOperand(0);
-    } else {
-      // SimplifyDemandedBits may have optimized the mask so try restoring any
-      // bits that are known zero.
-      KnownBits Known = CurDAG->computeKnownBits(ShAmt.getOperand(0));
-      if (!ShMask.isSubsetOf(AndMask | Known.Zero))
-        return true;
-      ShAmt = ShAmt.getOperand(0);
-    }
-  }
+  // amount. Look through an AND that doesn't affect those bits.
+  if (!selectShiftAmountMask(N, ShiftWidth, ShAmt))
+    ShAmt = N;
 
   if (ShAmt.getOpcode() == ISD::ADD &&
       isa<ConstantSDNode>(ShAmt.getOperand(1))) {
@@ -4740,6 +4778,7 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case RISCV::SH1ADD:
     case RISCV::SH2ADD:
     case RISCV::SH3ADD:
+    case RISCV::PseudoMERGE:
     RecCheck:
       if (hasAllNBitUsers(User, Bits, Depth + 1))
         break;

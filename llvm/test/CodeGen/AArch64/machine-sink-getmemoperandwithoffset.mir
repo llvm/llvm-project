@@ -21,15 +21,6 @@
 ...
 ---
 name:            g
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr32all }
-  - { id: 1, class: gpr32all }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr32 }
-  - { id: 4, class: gpr32all }
-  - { id: 5, class: gpr32 }
-  - { id: 6, class: gpr32all }
 body:             |
   ; Just check that the pass didn't crash/assert.
   ; CHECK-LABEL: name: g

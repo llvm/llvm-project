@@ -4,8 +4,10 @@
 # RUN: %lldb %t \
 # RUN:   -o exit 2>&1 | FileCheck %s
 
-# CHECK-DAG: error: {{.*}} [0x0000000000000022]: abbreviation code 65536 too big, please file a bug and attach the file at the start of this error message
-# CHECK-DAG: error: {{.*}} [0x0000000000000048]: invalid abbreviation code 47, please file a bug and attach the file at the start of this error message
+# CHECK-DAG: error: {{.*}} [0x0000000000000022]: abbreviation code 65536 too big
+# CHECK-DAG: error: {{.*}} [0x0000000000000048]: invalid abbreviation code 47
+# CHECK-DAG: note: if you believe this is a bug, use the 'bugreport' command
+# CHECK-DAG: note: if you believe this is a bug, use the 'bugreport' command
 
 
         .section        .debug_abbrev,"",@progbits

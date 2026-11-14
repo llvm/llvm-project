@@ -302,6 +302,10 @@ class VPSCEVExpander {
   /// Returns true if \p S can be expanded in IR, hoisted out of HoistOutOf.
   bool canExpandInIR(const SCEV *S);
 
+  /// Expand the sum of \p Operands, with \p WrapFlags on the adds.
+  VPValue *expandAddOps(ArrayRef<const SCEV *> Operands,
+                        VPIRFlags::WrapFlagsTy WrapFlags);
+
   /// Expand pointer-typed \p S as a ptradd of its pointer base and offset.
   VPValue *expandAsPtrAdd(const SCEVNAryExpr *S);
 

@@ -1236,10 +1236,10 @@ bool HexagonExpandCondsets::coalesceSegments(
       RegisterRef RS = S1;
       MachineInstr *RDef = getReachingDefForPred(RS, CI, RP.Reg, true);
       if (!RDef || !HII->isPredicable(*RDef)) {
-        Done = coalesceRegisters(RD, RegisterRef(S1));
+        Done = coalesceRegisters(RD, RS);
         if (Done) {
           UpdRegs.insert(RD.Reg);
-          UpdRegs.insert(S1.getReg());
+          UpdRegs.erase(RS.Reg);
         }
       }
     }
@@ -1247,10 +1247,10 @@ bool HexagonExpandCondsets::coalesceSegments(
       RegisterRef RS = S2;
       MachineInstr *RDef = getReachingDefForPred(RS, CI, RP.Reg, false);
       if (!RDef || !HII->isPredicable(*RDef)) {
-        Done = coalesceRegisters(RD, RegisterRef(S2));
+        Done = coalesceRegisters(RD, RS);
         if (Done) {
           UpdRegs.insert(RD.Reg);
-          UpdRegs.insert(S2.getReg());
+          UpdRegs.erase(RS.Reg);
         }
       }
     }

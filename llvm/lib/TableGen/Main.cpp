@@ -17,6 +17,7 @@
 #include "llvm/TableGen/Main.h"
 #include "TGLexer.h"
 #include "TGParser.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
@@ -34,6 +35,7 @@
 #include "llvm/TableGen/TGTimer.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <memory>
+#include <set>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -142,12 +144,43 @@ static int preprocessInput(TGLexer &Lex, raw_ostream &OS) {
   return Lex.getCode() == tgtok::Error;
 }
 
+/// Escape a filename in the dependency file so that it is correctly
+/// interpreted by `make`. This is consistent with Clang, GCC, and lld.
+static std::string escapeDependencyFilename(StringRef Filename) {
+  std::string Res;
+  raw_string_ostream OS(Res);
+
+  // Only transform the path to native on Windows, where backslashes are valid
+  // path separators. On non-Windows platforms, we don't want backslashes in
+  // filenames to be incorrectly treated as path separators.
+#ifdef _WIN32
+  SmallString<256> NativePath;
+  sys::path::native(Filename, NativePath);
+#else
+  StringRef NativePath = Filename;
+#endif
+
+  for (unsigned I = 0, E = NativePath.size(); I != E; ++I) {
+    if (NativePath[I] == '#')
+      OS << '\\';
+    else if (NativePath[I] == ' ') {
+      OS << '\\';
+      unsigned J = I;
+      while (J > 0 && NativePath[--J] == '\\')
+        OS << '\\';
+    } else if (NativePath[I] == '$')
+      OS << '$';
+    OS << NativePath[I];
+  }
+
+  return Res;
+}
+
 /// Create a dependency file for `-d` option.
 ///
 /// This functionality is really only for the benefit of the build system.
 /// It is similar to GCC's `-M*` family of options.
-static int createDependencyFile(const TGLexer::DependenciesSetTy &Dependencies,
-                                const char *argv0) {
+static int createDependencyFile(const char *argv0) {
   if (OutputFilename == "-")
     return reportError(argv0, "the option -d must be used together with -o\n");
 
@@ -156,7 +189,7 @@ static int createDependencyFile(const TGLexer::DependenciesSetTy &Dependencies,
   if (EC)
     return reportError(argv0, "error opening " + DependFilename + ":" +
                                   EC.message() + "\n");
-  DepOut.os() << OutputFilename << ":";
+  DepOut.os() << escapeDependencyFilename(OutputFilename) << ":";
 
   // Emit the primary input file as a dependency. This matches C compilers like
   // Clang and GCC. Without it, a .td file with no `include` directives would
@@ -165,11 +198,16 @@ static int createDependencyFile(const TGLexer::DependenciesSetTy &Dependencies,
   // treats as a missing depfile and re-runs the rule on every incremental
   // build.
   if (InputFilename != "-")
-    DepOut.os() << ' ' << InputFilename;
+    DepOut.os() << ' ' << escapeDependencyFilename(InputFilename);
 
-  for (const auto &Dep : Dependencies) {
-    DepOut.os() << ' ' << Dep;
-  }
+  // Every other buffer in SrcMgr was added by an include directive, and its
+  // identifier is the path that the include resolved to. Buffer 1 is the main
+  // file. Use a set to sort the list and remove duplicates.
+  std::set<std::string> Dependencies;
+  for (unsigned I = 2, E = SrcMgr.getNumBuffers(); I <= E; ++I)
+    Dependencies.insert(SrcMgr.getMemoryBuffer(I)->getBufferIdentifier().str());
+  for (const std::string &Dep : Dependencies)
+    DepOut.os() << ' ' << escapeDependencyFilename(Dep);
   DepOut.os() << "\n";
   DepOut.keep();
   return 0;
@@ -226,7 +264,7 @@ int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
     if (ErrorsPrinted > 0)
       return reportError(argv0, Twine(ErrorsPrinted) + " errors.\n");
     if (!DependFilename.empty()) {
-      if (int Ret = createDependencyFile(Lex.getDependencies(), argv0))
+      if (int Ret = createDependencyFile(argv0))
         return Ret;
     }
     return WriteOutput(argv0, OutputFilename, OutString);
@@ -272,7 +310,7 @@ int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
   // the early exit below and someone deleted the .inc.d file but not the .inc
   // file, tablegen would never write the depfile.
   if (!DependFilename.empty()) {
-    if (int Ret = createDependencyFile(Parser.getDependencies(), argv0))
+    if (int Ret = createDependencyFile(argv0))
       return Ret;
   }
 

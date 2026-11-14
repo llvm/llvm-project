@@ -2458,9 +2458,20 @@ public:
   LValue emitLValueForBitField(LValue base, const FieldDecl *field);
   LValue emitLValueForField(LValue base, const clang::FieldDecl *field);
 
+  /// Annotate the address of `field`; accesses must use the result.
+  Address emitFieldAnnotations(const clang::FieldDecl *field, Address addr);
+
+  /// Annotate the storage of `d` at `addr`.
+  void emitVarAnnotations(const clang::VarDecl *d, mlir::Value addr);
+
   LValue emitLValueForLambdaField(const FieldDecl *field);
   LValue emitLValueForLambdaField(const FieldDecl *field,
                                   mlir::Value thisValue);
+
+  void emitLambdaVLACapture(const VariableArrayType *vat, LValue lv) {
+    mlir::Value size = vlaSizeMap[vat->getSizeExpr()];
+    emitStoreThroughLValue(RValue::get(size), lv);
+  }
 
   /// Like emitLValueForField, excpet that if the Field is a reference, this
   /// will return the address of the reference and not the address of the value
@@ -2955,6 +2966,8 @@ public:
   emitOMPDistributeSimdDirective(const OMPDistributeSimdDirective &s);
   mlir::LogicalResult emitOMPTargetParallelGenericLoopDirective(
       const OMPTargetParallelGenericLoopDirective &s);
+  mlir::LogicalResult
+  emitOMPTargetGenericLoopDirective(const OMPTargetGenericLoopDirective &s);
   mlir::LogicalResult emitOMPTargetParallelForSimdDirective(
       const OMPTargetParallelForSimdDirective &s);
   mlir::LogicalResult

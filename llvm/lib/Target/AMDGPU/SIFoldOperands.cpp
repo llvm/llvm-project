@@ -1720,6 +1720,23 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
 
   unsigned Opc = MI->getOpcode();
 
+  // (src0 << src1) + 0 -> src0 << src1
+  if (Opc == AMDGPU::V_LSHL_ADD_U32_e64) {
+    int DataIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+    int AddIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
+    std::optional<int64_t> Addend =
+        TII->getImmOrMaterializedImm(*MRI, MI->getOperand(AddIdx));
+
+    if (Addend && static_cast<uint32_t>(*Addend) == 0) {
+      MachineOperand Data = MI->getOperand(DataIdx);
+      MI->removeOperand(AddIdx);
+      MI->removeOperand(DataIdx);
+      MI->addOperand(*MF, Data);
+      TII->mutateAndCleanupImplicit(*MI, TII->get(AMDGPU::V_LSHLREV_B32_e64));
+      return true;
+    }
+  }
+
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
   if (Src0Idx == -1)
     return false;
@@ -1844,11 +1861,11 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
   return false;
 }
 
-// Try to fold an instruction into a simpler one
+// Fold a select whose two sources are the same value into a copy or move.
 bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
   unsigned Opc = MI.getOpcode();
   if (Opc != AMDGPU::V_CNDMASK_B32_e32 && Opc != AMDGPU::V_CNDMASK_B32_e64 &&
-      Opc != AMDGPU::V_CNDMASK_B64_PSEUDO)
+      Opc != AMDGPU::S_CSELECT_B32 && Opc != AMDGPU::S_CSELECT_B64)
     return false;
 
   MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
@@ -1871,9 +1888,24 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
       (Src0ModIdx != -1 && MI.getOperand(Src0ModIdx).getImm() != 0))
     return false;
 
+  unsigned NewOpc;
+  if (Src0->isReg()) {
+    NewOpc = AMDGPU::COPY;
+  } else {
+    switch (Opc) {
+    case AMDGPU::S_CSELECT_B32:
+      NewOpc = AMDGPU::S_MOV_B32;
+      break;
+    case AMDGPU::S_CSELECT_B64:
+      NewOpc = AMDGPU::S_MOV_B64;
+      break;
+    default:
+      NewOpc = AMDGPU::V_MOV_B32_e32;
+      break;
+    }
+  }
+
   LLVM_DEBUG(dbgs() << "Folded " << MI << " into ");
-  auto &NewDesc =
-      TII->get(Src0->isReg() ? (unsigned)AMDGPU::COPY : getMovOpc(false));
   int Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
   if (Src2Idx != -1)
     MI.removeOperand(Src2Idx);
@@ -1882,7 +1914,7 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
     MI.removeOperand(Src1ModIdx);
   if (Src0ModIdx != -1)
     MI.removeOperand(Src0ModIdx);
-  TII->mutateAndCleanupImplicit(MI, NewDesc);
+  TII->mutateAndCleanupImplicit(MI, TII->get(NewOpc));
   LLVM_DEBUG(dbgs() << MI);
   return true;
 }
