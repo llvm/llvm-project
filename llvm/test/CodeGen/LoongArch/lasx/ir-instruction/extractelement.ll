@@ -320,7 +320,6 @@ define void @vextract_32xi8_sext(ptr %src, ptr %dst) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
 ; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; CHECK-NEXT:    ext.w.b $a0, $a0
 ; CHECK-NEXT:    st.w $a0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -337,7 +336,6 @@ define void @vextract_32xi8_sext_hi(ptr %src, ptr %dst) nounwind {
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
 ; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 14
 ; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; CHECK-NEXT:    ext.w.b $a0, $a0
 ; CHECK-NEXT:    st.w $a0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -353,7 +351,6 @@ define void @vextract_16xi16_sext(ptr %src, ptr %dst) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
 ; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; CHECK-NEXT:    ext.w.h $a0, $a0
 ; CHECK-NEXT:    st.w $a0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -370,7 +367,6 @@ define void @vextract_16xi16_sext_hi(ptr %src, ptr %dst) nounwind {
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
 ; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 14
 ; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; CHECK-NEXT:    ext.w.h $a0, $a0
 ; CHECK-NEXT:    st.w $a0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
