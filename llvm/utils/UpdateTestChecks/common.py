@@ -2153,6 +2153,7 @@ def add_checks(
     check_inst_comments=True,
 ):
     # prefix_exclusions are prefixes we cannot use to print the function because it doesn't exist in run lines that use these prefixes as well.
+    # Also exclude prefixes that would check this function again in a covered RUN.
     prefix_exclusions = set()
     printed_prefixes = []
     for p in prefix_list:
@@ -2210,6 +2211,11 @@ def add_checks(
 
             vars_seen = {}
             printed_prefixes.append(checkprefix)
+            # Every RUN using this prefix now checks the function. Exclude its other
+            # prefixes to avoid checking the function again in those RUNs.
+            for run in prefix_list:
+                if checkprefix in run[0]:
+                    prefix_exclusions.update(run[0])
             attrs = str(func_dict[checkprefix][func_name].attrs)
             attrs = "" if attrs == "None" else attrs
             if ginfo.get_version() > 1:
@@ -2889,6 +2895,7 @@ def add_checks_at_end(
     output_lines, prefix_list, func_order, comment_string, check_generator
 ):
     added = set()
+    prefix_exclusions = set()
     generated_prefixes = set()
     for prefix in prefix_list:
         prefixes = prefix[0]
@@ -2898,6 +2905,8 @@ def add_checks_at_end(
                 # The func order can contain the same functions multiple times.
                 # If we see one again we are done.
                 if (func, prefix) in added:
+                    continue
+                if (func, prefix) in prefix_exclusions:
                     continue
                 if added:
                     output_lines.append(comment_string)
@@ -2921,4 +2930,9 @@ def add_checks_at_end(
                 ):
                     added.add((func, generated_prefix))
                     generated_prefixes.add(generated_prefix)
+                    # Every RUN using this prefix now checks the function. Exclude its other
+                    # prefixes to avoid checking the function again in those RUNs.
+                    for run in prefix_list:
+                        if generated_prefix in run[0]:
+                            prefix_exclusions.update((func, p) for p in run[0])
     return generated_prefixes
