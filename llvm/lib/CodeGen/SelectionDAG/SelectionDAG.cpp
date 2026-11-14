@@ -2777,7 +2777,7 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
 
   if (N1CFP && N2CFP) {
     auto MaybeR = tryFoldFCmp(N1CFP->getValueAPF(), N2CFP->getValueAPF(),
-                              getDenormalMode(OpVT), TLI);
+                              getDenormalMode(OpVT));
     if (!MaybeR)
       return SDValue();
     APFloat::cmpResult R = *MaybeR;
@@ -7917,19 +7917,19 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
         V.clearSign();
         return getConstantFP(V, DL, VT);
       case ISD::FCEIL: {
-        if (auto Res = tryFoldFP(FPOp::Ceil, {V}, DenormMode, TLI))
+        if (auto Res = tryFoldFP(FPOp::Ceil, {V}, DenormMode))
           if (Res->Status == APFloat::opOK || Res->Status == APFloat::opInexact)
             return getConstantFP(Res->Value, DL, VT);
         return SDValue();
       }
       case ISD::FTRUNC: {
-        if (auto Res = tryFoldFP(FPOp::Trunc, {V}, DenormMode, TLI))
+        if (auto Res = tryFoldFP(FPOp::Trunc, {V}, DenormMode))
           if (Res->Status == APFloat::opOK || Res->Status == APFloat::opInexact)
             return getConstantFP(Res->Value, DL, VT);
         return SDValue();
       }
       case ISD::FFLOOR: {
-        if (auto Res = tryFoldFP(FPOp::Floor, {V}, DenormMode, TLI))
+        if (auto Res = tryFoldFP(FPOp::Floor, {V}, DenormMode))
           if (Res->Status == APFloat::opOK || Res->Status == APFloat::opInexact)
             return getConstantFP(Res->Value, DL, VT);
         return SDValue();
@@ -8109,12 +8109,12 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
       const APFloat &V2 = C2->getValueAPF();
       const APFloat &V3 = C3->getValueAPF();
       if (Opcode == ISD::FMAD || Opcode == ISD::FMULADD) {
-        if (auto Product = tryFoldFP(FPOp::Mul, {V1, V2}, DM, TLI))
-          return getConstFP(tryFoldFP(FPOp::Add, {Product->Value, V3}, DM, TLI),
-                            DL, VT);
+        if (auto Product = tryFoldFP(FPOp::Mul, {V1, V2}, DM))
+          return getConstFP(tryFoldFP(FPOp::Add, {Product->Value, V3}, DM), DL,
+                            VT);
         return SDValue();
       }
-      return getConstFP(tryFoldFP(FPOp::FMA, {V1, V2, V3}, DM, TLI), DL, VT);
+      return getConstFP(tryFoldFP(FPOp::FMA, {V1, V2, V3}, DM), DL, VT);
     }
   }
 
@@ -8454,30 +8454,30 @@ SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
     DenormalMode DM = getDenormalMode(VT);
     switch (Opcode) {
     case ISD::FADD:
-      return getConstFP(tryFoldFP(FPOp::Add, {C1, C2}, DM, TLI), DL, VT);
+      return getConstFP(tryFoldFP(FPOp::Add, {C1, C2}, DM), DL, VT);
     case ISD::FSUB:
-      return getConstFP(tryFoldFP(FPOp::Sub, {C1, C2}, DM, TLI), DL, VT);
+      return getConstFP(tryFoldFP(FPOp::Sub, {C1, C2}, DM), DL, VT);
     case ISD::FMUL:
-      return getConstFP(tryFoldFP(FPOp::Mul, {C1, C2}, DM, TLI), DL, VT);
+      return getConstFP(tryFoldFP(FPOp::Mul, {C1, C2}, DM), DL, VT);
     case ISD::FDIV:
-      return getConstFP(tryFoldFP(FPOp::Div, {C1, C2}, DM, TLI), DL, VT);
+      return getConstFP(tryFoldFP(FPOp::Div, {C1, C2}, DM), DL, VT);
     case ISD::FREM:
-      return getConstFP(tryFoldFP(FPOp::FRem, {C1, C2}, DM, TLI), DL, VT);
+      return getConstFP(tryFoldFP(FPOp::FRem, {C1, C2}, DM), DL, VT);
     case ISD::FCOPYSIGN:
       C1.copySign(C2);
       return getConstantFP(C1, DL, VT);
     case ISD::FMINNUM:
-      return getConstFP(tryFoldFP(FPOp::MinNum, {C1, C2}, DM, TLI), DL, VT);
+      return getConstFP(tryFoldFP(FPOp::MinNum, {C1, C2}, DM), DL, VT);
     case ISD::FMAXNUM:
-      return getConstFP(tryFoldFP(FPOp::MaxNum, {C1, C2}, DM, TLI), DL, VT);
+      return getConstFP(tryFoldFP(FPOp::MaxNum, {C1, C2}, DM), DL, VT);
     case ISD::FMINIMUM:
-      return getConstFP(tryFoldFP(FPOp::Minimum, {C1, C2}, DM, TLI), DL, VT);
+      return getConstFP(tryFoldFP(FPOp::Minimum, {C1, C2}, DM), DL, VT);
     case ISD::FMAXIMUM:
-      return getConstFP(tryFoldFP(FPOp::Maximum, {C1, C2}, DM, TLI), DL, VT);
+      return getConstFP(tryFoldFP(FPOp::Maximum, {C1, C2}, DM), DL, VT);
     case ISD::FMINIMUMNUM:
-      return getConstFP(tryFoldFP(FPOp::MinimumNum, {C1, C2}, DM, TLI), DL, VT);
+      return getConstFP(tryFoldFP(FPOp::MinimumNum, {C1, C2}, DM), DL, VT);
     case ISD::FMAXIMUMNUM:
-      return getConstFP(tryFoldFP(FPOp::MaximumNum, {C1, C2}, DM, TLI), DL, VT);
+      return getConstFP(tryFoldFP(FPOp::MaximumNum, {C1, C2}, DM), DL, VT);
     default: break;
     }
   }

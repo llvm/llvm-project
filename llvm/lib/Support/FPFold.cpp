@@ -20,7 +20,6 @@ using namespace llvm;
 
 namespace {
 enum class DenormalFoldingMode {
-  TargetDefault,
   DisableFlushing,
   MatchDenormalFPEnv,
   DisableFolding
@@ -31,15 +30,13 @@ struct CreateDenormalFoldingMode {
     return new cl::opt<DenormalFoldingMode>(
         "const-folding-denormal-mode", cl::Hidden,
         cl::desc("Denormal handling during floating-point constant folding"),
-        cl::init(DenormalFoldingMode::TargetDefault),
+        cl::init(DenormalFoldingMode::MatchDenormalFPEnv),
         cl::values(
-            clEnumValN(DenormalFoldingMode::TargetDefault, "target-default",
-                       "Use the target's preferred folding mode (default)"),
             clEnumValN(DenormalFoldingMode::DisableFlushing, "disable-flushing",
                        "Fold using IEEE denormal handling"),
             clEnumValN(DenormalFoldingMode::MatchDenormalFPEnv,
                        "match-denormal-fpenv",
-                       "Fold using the supplied denormal mode"),
+                       "Fold using the supplied denormal mode (default)"),
             clEnumValN(DenormalFoldingMode::DisableFolding, "disable-folding",
                        "Decline folds that depend on denormal handling")));
   }
@@ -51,15 +48,11 @@ static ManagedStatic<cl::opt<DenormalFoldingMode>, CreateDenormalFoldingMode>
 
 void llvm::initFPFoldOptions() { *ConstFoldingDenormalMode; }
 
-static DenormalMode getFoldingDenormalMode(FPOp Opcode, ArrayRef<APFloat> Args,
-                                           DenormalMode Denorms,
-                                           TargetFPInfo TFPI,
+static DenormalMode getFoldingDenormalMode(DenormalMode Denorms,
                                            bool OverrideDefaultFlushingMode) {
   if (OverrideDefaultFlushingMode)
     return Denorms;
   switch (*ConstFoldingDenormalMode) {
-  case DenormalFoldingMode::TargetDefault:
-    return TFPI.getTargetConstFoldDenormMode(Opcode, Args, Denorms);
   case DenormalFoldingMode::DisableFlushing:
     return DenormalMode::getIEEE();
   case DenormalFoldingMode::MatchDenormalFPEnv:
@@ -214,11 +207,9 @@ static std::optional<FPFoldResult> tryFoldFPOpImpl(FPOp Opcode,
 // Fold FPOps that do not require a rounding mode (or use the default RN)
 std::optional<FPFoldResult> llvm::tryFoldFP(FPOp Opcode, ArrayRef<APFloat> Args,
                                             DenormalMode Denorms,
-                                            TargetFPInfo TFPI,
                                             bool OverrideDefaultFlushingMode) {
   assert(!Args.empty());
-  Denorms = getFoldingDenormalMode(Opcode, Args, Denorms, TFPI,
-                                   OverrideDefaultFlushingMode);
+  Denorms = getFoldingDenormalMode(Denorms, OverrideDefaultFlushingMode);
   return tryFoldFPOpImpl(Opcode, Args, RoundingMode::NearestTiesToEven,
                          Denorms);
 }
@@ -228,12 +219,10 @@ std::optional<FPFoldResult> llvm::tryFoldFP(FPOp Opcode, ArrayRef<APFloat> Args,
 // only if no rounding is required).
 std::optional<FPFoldResult>
 llvm::tryFoldFPWithRM(FPOp Opcode, ArrayRef<APFloat> Args, RoundingMode RM,
-                      DenormalMode Denorms, TargetFPInfo TFPI,
-                      bool OverrideDefaultFlushingMode) {
+                      DenormalMode Denorms, bool OverrideDefaultFlushingMode) {
   assert(RM != RoundingMode::Invalid && "invalid rounding mode");
   assert(!Args.empty());
-  Denorms = getFoldingDenormalMode(Opcode, Args, Denorms, TFPI,
-                                   OverrideDefaultFlushingMode);
+  Denorms = getFoldingDenormalMode(Denorms, OverrideDefaultFlushingMode);
   RoundingMode EvalRM =
       RM == RoundingMode::Dynamic ? RoundingMode::NearestTiesToEven : RM;
   auto Res = tryFoldFPOpImpl(Opcode, Args, EvalRM, Denorms);
@@ -244,9 +233,8 @@ llvm::tryFoldFPWithRM(FPOp Opcode, ArrayRef<APFloat> Args, RoundingMode RM,
 
 std::optional<APFloat::cmpResult>
 llvm::tryFoldFCmp(const APFloat &LHS, const APFloat &RHS, DenormalMode Denorms,
-                  TargetFPInfo TFPI, bool OverrideDefaultFlushingMode) {
-  Denorms = getFoldingDenormalMode(FPOp::FCmp, {LHS, RHS}, Denorms, TFPI,
-                                   OverrideDefaultFlushingMode);
+                  bool OverrideDefaultFlushingMode) {
+  Denorms = getFoldingDenormalMode(Denorms, OverrideDefaultFlushingMode);
   assert(Denorms.isValid() && "invalid denormal mode");
   if (Denorms.Input == DenormalMode::Dynamic &&
       (LHS.isDenormal() || RHS.isDenormal()))

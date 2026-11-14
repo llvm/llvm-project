@@ -812,11 +812,6 @@ InstructionCost TargetTransformInfo::getFPOpCost(Type *Ty) const {
 // denormal_fpenv function attribute. Targets may override this to return DM
 // unmodified to match denormal_fpenv where possible when folding, or may
 // provide custom rules for specific input types / operations.
-DenormalMode TargetTransformInfo::getTargetConstFoldDenormMode(
-    FPOp Opcode, ArrayRef<APFloat> Args, DenormalMode DM) const {
-  return TTIImpl->getTargetConstFoldDenormMode(Opcode, Args, DM);
-}
-
 InstructionCost TargetTransformInfo::getIntImmCodeSizeCost(unsigned Opcode,
                                                            unsigned Idx,
                                                            const APInt &Imm,
