@@ -31,11 +31,11 @@ void markLive(COFFLinkerContext &ctx) {
   // sections alive.
   for (Chunk *c : ctx.driver.getChunks())
     if (auto *sc = dyn_cast<SectionChunk>(c))
-      if (sc->live && !sc->isDWARF())
+      if (sc->live && !sc->isDiscardedByCOMDAT() && !sc->isDWARF())
         worklist.push_back(sc);
 
   auto enqueue = [&](SectionChunk *c) {
-    if (c->live)
+    if (c->isDiscardedByCOMDAT() || c->live)
       return;
     c->live = true;
     worklist.push_back(c);
