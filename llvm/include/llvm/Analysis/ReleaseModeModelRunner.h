@@ -110,7 +110,7 @@ public:
 
   /// Whether every requested TensorSpec matched the shape the compiled model
   /// was built for. If false, the caller is expected to fall back.
-  bool isValid() const { return Valid; }
+  bool isValid() const override { return Valid; }
 
   static bool classof(const MLModelRunner *R) {
     return R->getKind() == MLModelRunner::Kind::Release;

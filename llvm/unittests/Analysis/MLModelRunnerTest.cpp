@@ -137,6 +137,8 @@ class MockEmitCModel final {
 
 public:
   std::map<std::string, void *> reflectionMap;
+  std::map<std::string, size_t> reflectionSizeMap{{"a", sizeof(A)},
+                                                  {"b", sizeof(B)}};
 
   MockEmitCModel() : reflectionMap{{"a", &A}, {"b", &B}} {}
 
@@ -254,6 +256,21 @@ TEST(ReleaseModeRunner, ShapeMismatch) {
   EXPECT_FALSE(Evaluator.isValid());
   EXPECT_EQ(HandlerPtr->NumErrors, 1u);
   // The scratch buffers are sized after the requested specs.
+  for (int64_t I = 0; I < 4; ++I)
+    Evaluator.getTensor<int64_t>(0)[I] = I;
+  EXPECT_EQ(Evaluator.getTensor<int64_t>(0)[3], 3);
+}
+
+TEST(EmitCModelRunner, ShapeMismatch) {
+  LLVMContext Ctx;
+  auto Handler = std::make_unique<CountingDiagnosticHandler>();
+  auto *HandlerPtr = Handler.get();
+  Ctx.setDiagnosticHandler(std::move(Handler));
+  std::vector<TensorSpec> Inputs{TensorSpec::createSpec<int64_t>("a", {4}),
+                                 TensorSpec::createSpec<int64_t>("b", {4})};
+  EmitCModelRunner<MockEmitCModel> Evaluator(Ctx, Inputs);
+  EXPECT_FALSE(Evaluator.isValid());
+  EXPECT_EQ(HandlerPtr->NumErrors, 1u);
   for (int64_t I = 0; I < 4; ++I)
     Evaluator.getTensor<int64_t>(0)[I] = I;
   EXPECT_EQ(Evaluator.getTensor<int64_t>(0)[3], 3);
