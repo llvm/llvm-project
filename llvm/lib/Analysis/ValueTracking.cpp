@@ -3763,6 +3763,12 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
             return true;
         }
       }
+      if (match(RecQ.CtxI,
+                m_Br(m_Trunc(m_Specific(U.get())), m_BasicBlock(TrueSucc),
+                     m_BasicBlock(FalseSucc))) &&
+          TrueSucc == PN->getParent() &&
+          (TrueSucc == PN->getParent()) != (FalseSucc == PN->getParent()))
+        return true;
       // Finally recurse on the edge and check it directly.
       return isKnownNonZero(U.get(), DemandedElts, RecQ, NewDepth);
     });

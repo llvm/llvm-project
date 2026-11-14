@@ -269,9 +269,7 @@ define i1 @phi_trunc_non_zero(i8 %x) {
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
 ; CHECK-NEXT:    br i1 [[TRUNC]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       T:
-; CHECK-NEXT:    [[V:%.*]] = phi i8 [ [[X]], [[ENTRY:%.*]] ], [ -1, [[F]] ]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       F:
 ; CHECK-NEXT:    br label [[T]]
 ;
