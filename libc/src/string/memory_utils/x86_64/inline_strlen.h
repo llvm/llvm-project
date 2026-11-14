@@ -9,6 +9,7 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_STRLEN_H
 
 #include "src/__support/CPP/bit.h" // countr_zero
+#include "src/string/memory_utils/utils.h"
 
 #include <immintrin.h>
 #include <stddef.h> // size_t
@@ -29,8 +30,7 @@ LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE static size_t
 string_length_vector(const char *src) {
   uintptr_t misalign_bytes = reinterpret_cast<uintptr_t>(src) % sizeof(Vector);
 
-  const Vector *block_ptr =
-      reinterpret_cast<const Vector *>(src - misalign_bytes);
+  const Vector *block_ptr = align_down_for_overread<Vector>(src);
   auto cmp = CompareAndMask(block_ptr, 0) >> misalign_bytes;
   if (cmp)
     return cpp::countr_zero(cmp);
@@ -65,8 +65,7 @@ find_first_character_vector(const unsigned char *s, unsigned char c, size_t n) {
 
   uintptr_t misalign_bytes = reinterpret_cast<uintptr_t>(s) % sizeof(Vector);
 
-  const Vector *block_ptr =
-      reinterpret_cast<const Vector *>(s - misalign_bytes);
+  const Vector *block_ptr = align_down_for_overread<Vector>(s);
   auto cmp_bytes = CompareAndMask(block_ptr, c) >> misalign_bytes;
   if (cmp_bytes)
     return calculate_find_first_character_return<Mask>(
