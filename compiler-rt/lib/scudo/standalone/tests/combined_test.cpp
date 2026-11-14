@@ -1018,6 +1018,74 @@ TEST(ScudoCombinedDeathTest, DeathCombined) {
   SCUDO_EXPECT_DEATH(Allocator->getUsableSize(P), "");
 }
 
+// Getting the size class allocator of a TSD requires holding its mutex, which
+// ScopedTSD does but the thread-safety analysis can't see.
+static void checkQuarantineBatches(TestAllocator<DeathConfig> *Allocator,
+                                   void *P, void *Q) NO_THREAD_SAFETY_ANALYSIS {
+  using AllocatorT = TestAllocator<DeathConfig>;
+  typename AllocatorT::TSDRegistryT::ScopedTSD TSD(
+      *Allocator->getTSDRegistry());
+  typename AllocatorT::QuarantineCallback Cb(*Allocator,
+                                             TSD->getSizeClassAllocator());
+  void *B = Cb.allocate(sizeof(scudo::QuarantineBatch));
+  Cb.checkBatch(B);
+
+  SCUDO_EXPECT_DEATH(Cb.checkBatch(P), "invalid chunk state");
+  SCUDO_EXPECT_DEATH(Cb.checkBatch(Q), "invalid chunk state");
+
+  scudo::u64 *H =
+      reinterpret_cast<scudo::u64 *>(scudo::Chunk::getAtomicHeader(B));
+  *H ^= 0x42U;
+  SCUDO_EXPECT_DEATH(Cb.checkBatch(B), "corrupted chunk header");
+  *H ^= 0x42U;
+  Cb.deallocate(B);
+}
+
+// Verify that the quarantine only takes its own batches for batches.
+TEST(ScudoCombinedDeathTest, QuarantineCallbackCheckBatch) {
+  using AllocatorT = TestAllocator<DeathConfig>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  // A chunk of the size class of the batches, and a quarantined chunk of
+  // another size class.
+  void *P = Allocator->allocate(sizeof(scudo::QuarantineBatch), Origin);
+  EXPECT_NE(P, nullptr);
+  void *Q = Allocator->allocate(100U, Origin);
+  EXPECT_NE(Q, nullptr);
+  Allocator->deallocate(Q, Origin);
+
+  checkQuarantineBatches(Allocator.get(), P, Q);
+
+  Allocator->deallocate(P, Origin);
+}
+
+static void checkQuarantinedUserChunk(TestAllocator<DeathConfig> *Allocator,
+                                      void *P) NO_THREAD_SAFETY_ANALYSIS {
+  using AllocatorT = TestAllocator<DeathConfig>;
+  typename AllocatorT::TSDRegistryT::ScopedTSD TSD(
+      *Allocator->getTSDRegistry());
+  typename AllocatorT::QuarantineCallback Cb(*Allocator,
+                                             TSD->getSizeClassAllocator());
+  SCUDO_EXPECT_DEATH(Cb.checkBatch(P), "invalid chunk state");
+}
+
+TEST(ScudoCombinedDeathTest,
+     QuarantineCallbackCheckBatchRejectsQuarantinedUserChunk) {
+  // The default maximum quarantined size is smaller than a batch. Keep this
+  // allocation in quarantine so that its state, class, offset and size would
+  // otherwise match a batch's header without any header modification.
+  ScopedScudoOptions Options("quarantine_size_kb=256:"
+                             "thread_local_quarantine_size_kb=128:"
+                             "quarantine_max_chunk_size=16384");
+  using AllocatorT = TestAllocator<DeathConfig>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+  void *P = Allocator->allocate(sizeof(scudo::QuarantineBatch), Origin);
+  ASSERT_NE(P, nullptr);
+  Allocator->deallocate(P, Origin);
+
+  checkQuarantinedUserChunk(Allocator.get(), P);
+}
+
 // Verify that when a region gets full, the allocator will still manage to
 // fulfill the allocation through a larger size class.
 TEST(ScudoCombinedTest, FullRegion) {
