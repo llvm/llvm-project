@@ -29,7 +29,7 @@ entry:
 ; CHECK-LABEL: define void @Store8_align4(
 ; CHECK: store i64 {{.*}}, align 4
 ; CHECK: store i32 {{.*}}, align 4
-; CHECK: getelementptr i32, ptr {{.*}}, i32 1
+; CHECK: getelementptr i8, ptr {{.*}}, i64 4
 ; CHECK: store i32 {{.*}}, align 4
 ; CHECK: store i64 {{.*}}, align 4
 ; CHECK: ret void
@@ -46,9 +46,9 @@ entry:
 ; CHECK-LABEL: define void @StoreAgg(
 ; CHECK: store { i32, i32, i32 }  {{.*}}, align 4
 ; CHECK: store i32 {{.*}}, align 4
-; CHECK: getelementptr i32, ptr {{.*}}, i32 1
+; CHECK: getelementptr i8, ptr {{.*}}, i64 4
 ; CHECK: store i32 {{.*}}, align 4
-; CHECK: getelementptr i32, ptr {{.*}}, i32 2
+; CHECK: getelementptr i8, ptr {{.*}}, i64 8
 ; CHECK: store i32 {{.*}}, align 4
 ; CHECK: store %struct.S {{.*}}, align 4
 ; CHECK: ret void
@@ -64,7 +64,7 @@ entry:
 ; CHECK-LABEL: define void @StoreAgg8(
 ; CHECK: store { i32, i32, i32 }  {{.*}}, align 8
 ; CHECK: store i64 {{.*}}, align 8
-; CHECK: getelementptr i32, ptr {{.*}}, i32 2
+; CHECK: getelementptr i8, ptr {{.*}}, i64 8
 ; CHECK: store i32 {{.*}}, align 8
 ; CHECK: store %struct.S {{.*}}, align 8
 ; CHECK: ret void
@@ -81,9 +81,9 @@ entry:
 ; CHECK-LABEL: define void @StoreAgg24(
 ; CHECK: store { i64, i64, i64 }  {{.*}}, align 8
 ; CHECK: store i64 {{.*}}, align 8
-; CHECK: getelementptr i64, ptr {{.*}}, i32 1
+; CHECK: getelementptr i8, ptr {{.*}}, i64 8
 ; CHECK: store i64 {{.*}}, align 8
-; CHECK: getelementptr i64, ptr {{.*}}, i32 2
+; CHECK: getelementptr i8, ptr {{.*}}, i64 16
 ; CHECK: store i64 {{.*}}, align 8
 ; CHECK: store %struct.Q {{.*}}, align 8
 ; CHECK: ret void

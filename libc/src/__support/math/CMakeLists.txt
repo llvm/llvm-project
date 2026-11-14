@@ -3058,6 +3058,25 @@ add_header_library(
 )
 
 add_header_library(
+  coshbf16
+  HDRS
+    coshbf16.h
+  DEPENDS
+    .sinhcoshbf16_utils
+    libc.hdr.fenv_macros
+    libc.hdr.stdint_proxy
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   coshf16
   HDRS
     coshf16.h
@@ -3118,7 +3137,7 @@ add_header_library(
   HDRS
     dmulf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.generic.mul
     libc.src.__support.macros.config
 )
@@ -3137,7 +3156,7 @@ add_header_library(
   HDRS
     daddf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.generic.add_sub
     libc.src.__support.macros.config
 )
@@ -3164,7 +3183,7 @@ add_header_library(
   HDRS
     dsubf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.generic.add_sub
     libc.src.__support.macros.config
 )

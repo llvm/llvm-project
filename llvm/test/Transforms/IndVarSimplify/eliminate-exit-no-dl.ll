@@ -12,10 +12,10 @@
 define void @foo() {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt ptr getelementptr (i8, ptr @global, i64 1), getelementptr (i8, ptr @global, i64 500)
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr getelementptr inbounds nuw (i8, ptr @global, i64 1), align 1
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt ptr getelementptr (i8, ptr @global, i64 1), getelementptr (i8, ptr @global, i64 500)
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[BB7:%.*]], label [[BB11:%.*]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i8 [[TMP6]] to i64

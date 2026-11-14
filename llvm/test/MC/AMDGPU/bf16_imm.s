@@ -35,7 +35,7 @@ v_dot2_bf16_bf16 v2.l, v0, 4.0, v2.l
 v_dot2_bf16_bf16 v2.l, v0, -4.0, v2.l
 // CHECK: v_dot2_bf16_bf16 v2.l, v0, -4.0, v2.l   ; encoding: [0x02,0x00,0x67,0xd6,0x00,0xef,0x09,0x04]
 
-// Check 1/(2*pi) rounded value and ideomatic fp32 0.15915494 value
+// Check 1/(2*pi) rounded value and idiomatic fp32 0.15915494 value
 // which cannot be accurately represented in bf16.
 
 v_dot2_bf16_bf16 v2.l, v0, 0.158203125, v2.l

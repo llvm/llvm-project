@@ -7,7 +7,6 @@
 # CHECK: LDRWui $[[BASE]], 0
 # CHECK: LDRWui $x1, 1
 name:            hwpf1
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $x1
@@ -28,7 +27,6 @@ body: |
 # CHECK: LD1i64 $q2, 0, $[[BASE]]
 # CHECK: LDRWui $x1, 0
 name:            hwpf2
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $x1, $q2
@@ -49,7 +47,6 @@ body: |
 # CHECK: LD1i8 $q2, 0, $[[BASE]]
 # CHECK: LDRWui $x1, 0
 name:            hwpf3
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $x1, $q2
@@ -70,7 +67,6 @@ body: |
 # CHECK: LD1Onev1d $[[BASE]]
 # CHECK: LDRWui $x1, 0
 name:            hwpf4
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $x1
@@ -91,7 +87,6 @@ body: |
 # CHECK: LD1Twov1d $[[BASE]]
 # CHECK: LDRWui $x1, 0
 name:            hwpf5
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $x1
@@ -112,7 +107,6 @@ body: |
 # CHECK: LDPQi $[[BASE]]
 # CHECK: LDRWui $x1, 3
 name:            hwpf6
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $x1
@@ -133,7 +127,6 @@ body: |
 # CHECK: LDPXi $[[BASE]]
 # CHECK: LDRWui $x1, 2
 name:            hwpf7
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $x1
@@ -158,7 +151,6 @@ body: |
 # CHECK: $x1 = ORRXrs $xzr, $[[BASE]], 0
 # CHECK: LDRWui $x1, 1
 name:            hwpfinc1
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $x1
@@ -180,7 +172,6 @@ body: |
 # CHECK: $x1 = ORRXrs $xzr, $[[BASE]], 0
 # CHECK: LDRWui $x1, 1
 name:            hwpfinc2
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $x1, $q2
@@ -202,7 +193,6 @@ body: |
 # CHECK: $x1 = ORRXrs $xzr, $[[BASE]], 0
 # CHECK: LDRWui $x1, 132
 name:            hwpfinc3
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $x1, $q2
@@ -224,7 +214,6 @@ body: |
 # CHECK: $x1 = ORRXrs $xzr, $[[BASE]], 0
 # CHECK: LDRWui $x1, 252
 name:            hwpfinc4
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $x1, $q2
@@ -246,7 +235,6 @@ body: |
 # CHECK: $x1 = ORRXrs $xzr, $[[BASE]], 0
 # CHECK: LDRWroX $x17, $x0
 name:            hwpfinc5
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $x1, $x17, $q2
@@ -268,7 +256,6 @@ body: |
 # CHECK: $x1 = ORRXrs $xzr, $[[BASE]], 0
 # CHECK: LDRWui $x17, 2
 name:            hwpfinc6
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $x1, $x17, $q2
@@ -290,7 +277,6 @@ body: |
 # CHECK: $x1 = ORRXrs $xzr, $[[BASE]], 0
 # CHECK: LDRWui $x17, 2
 name:            hwpfinc7
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $x1, $x17, $q2
@@ -314,7 +300,6 @@ body: |
 # CHECK-NOT: ORRXrs $xzr
 # CHECK: LDRWui $x1
 name:            hwpf_notagbug
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $x1, $x17
@@ -338,7 +323,6 @@ body: |
 # CHECK: LDRWui $x15
 # CHECK: LDRWui $sp
 name:            hwpf_spbase
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $x15
@@ -361,7 +345,6 @@ body: |
 # CHECK: $x3 = ORRXrs $xzr, $x1, 0
 # CHECK: $w10 = LDRWroX $x3, $x2, 0, 0
 name:            hwpf_offreg
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $x1, $x2, $x17, $x18

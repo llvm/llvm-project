@@ -48,8 +48,8 @@ define void @test() {
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
-; AVX512:  Cost of 5 for VF 2: REPLICATE store ir<%valB>, ir<%out>
-; AVX512:  Cost of 11 for VF 4: REPLICATE store ir<%valB>, ir<%out>
+; AVX512:  Cost of 3 for VF 2: REPLICATE store ir<%valB>, ir<%out>
+; AVX512:  Cost of 7 for VF 4: REPLICATE store ir<%valB>, ir<%out>
 ; AVX512:  Cost of 10 for VF 8: WIDEN store ir<%out>, ir<%valB>, ir<%canStore>, align 8 (!vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
 ; AVX512:  Cost of 24 for VF 16: WIDEN store ir<%out>, ir<%valB>, ir<%canStore>, align 8 (!vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
 ; AVX512:  Cost of 52 for VF 32: WIDEN store ir<%out>, ir<%valB>, ir<%canStore>, align 8 (!vplan.execution.frequency 11529215046068469760 (62.5%, estimated))

@@ -28,19 +28,76 @@
 #include "llvm/Support/WithColor.h"
 #include <bitset>
 #include <clocale>
-#include <cuchar>
 #include <string>
 
 #ifdef LLVM_ON_UNIX
 #include <langinfo.h>
 #endif
 
-#ifdef _WIN32
-#include "llvm/Support/Windows/WindowsSupport.h"
+// Ideally we would use mbrtoc32() and c32rtomb() unconditionally but there are
+// problems on most platforms, thus we introduce wrappers.
+
+// Use C++17 std::mbrtoc32() and std::c32rtomb() directly.
+#define MBTOC_UCHAR 1
+
+// Emulate std::mbrtoc32() and std::c32rtomb() through std::mbrtowc() and
+// std::wcrtomb(). Requires wchar_t to hold Unicode code points.
+#define MBTOC_WCHAR 2
+
+// Emulate std::mbrtoc32() and std::c32rtomb() through iconv(). Requires knowing
+// the right implementation-specific code set name for UTF-32.
+#define MBTOC_ICONV 3
+
+// Default to the C++17 implementation, unless we find we are on a system where
+// we should not.
+#define MBTOC MBTOC_UCHAR
+
+// glibc supports mbrtoc32() and c32rtomb() since version 2.16. However, if
+// libstdc++ was built against an older glibc, it may not wrap its functions by
+// default.
+// On glibc, mbrtoc32() is a wrapper for mbrtowc() and never returns (size_t)-3,
+// instead it handles this case by returning 0 but setting Ch to a non-null
+// character. This is worked around later.
+#ifdef __GLIBC__
+#if !__GLIBC_PREREQ(2, 16)
+#undef MBTOC
+#define MBTOC MBTOC_WCHAR
+#endif
 #endif
 
+// On Windows, mbrtoc32() ignores the locale and only converts UTF-8, but
+// wchar_t is UTF-16 and is close enough, as long as we make sure to avoid it
+// for UTF-8 locales.
+#ifdef _WIN32
+#include "llvm/Support/Windows/WindowsSupport.h"
+#undef MBTOC
+#define MBTOC MBTOC_WCHAR
+#endif
+
+// On Apple, <uchar.h> is not available, and wchar_t is not always UTF-32. We
+// implement mbrtoc() and crtomb() through iconv().
+// On FreeBSD, <uchar.h> is available but the result for encoding errors is
+// (size_t)-2 rather than (size_t)-1. We cannot recover from this, so likewise
+// use iconv().
 #if defined(__APPLE__) || defined(__FreeBSD__)
+#undef MBTOC
+#define MBTOC MBTOC_ICONV
+#endif
+
+#if MBTOC == MBTOC_UCHAR
+// Support for <cuchar> is less widespread than <uchar.h>: if libstdc++ was
+// configured against glibc before 2.16 (even if current glibc is newer), or if
+// a libc++ version older than 15 is used, <cuchar> will either be nonfunctional
+// or unavailable, even when <uchar.h> works perfectly.
+#include <uchar.h>
+#elif MBTOC == MBTOC_WCHAR
+#include <cwchar>
+#elif MBTOC == MBTOC_ICONV
+#ifdef ICONVH
+#include ICONVH
+#else
 #include <iconv.h>
+#endif
 #endif
 
 using namespace llvm;
@@ -106,19 +163,21 @@ static void parseIntArg(const opt::InputArgList &Args, int ID, T &Value) {
   }
 }
 
-// Ideally we would use mbrtoc32() and c32rtomb() unconditionally but there are
-// problems on most platforms, thus we introduce wrappers. On Windows,
-// mbrtoc32() ignores the locale and only converts UTF-8, but wchar_t is UTF-16
-// and is close enough, as long as we make sure to avoid it for UTF-8 locales.
-// On Apple, <uchar.h> is not available, and wchar_t is not always UTF-32. We
-// implement mbrtoc() and crtomb() through iconv().
-// On FreeBSD, <uchar.h> is available but the result for encoding errors is
-// (size_t)-2 rather than (size_t)-1. We cannot recover from this, so likewise
-// use iconv().
-// On glibc, mbrtoc32() is a wrapper for mbrtowc() and never returns (size_t)-3,
-// instead it handles this case by returning 0 but setting Ch to a non-null
-// character.
-#if defined(_WIN32)
+#if MBTOC == MBTOC_UCHAR
+using char_t = char32_t;
+
+static size_t mbrtoc(char_t *Ch, const char *S, size_t N,
+                     std::mbstate_t *MBState) {
+  size_t Result = mbrtoc32(Ch, S, N, MBState);
+  if (Result == 0 && *Ch)
+    Result = (size_t)-3;
+  return Result;
+}
+
+static size_t crtomb(char *S, char_t Ch, std::mbstate_t *MBState) {
+  return c32rtomb(S, Ch, MBState);
+}
+#elif MBTOC == MBTOC_WCHAR
 using char_t = wchar_t;
 
 static size_t mbrtoc(char_t *Ch, const char *S, size_t N,
@@ -132,7 +191,7 @@ static size_t mbrtoc(char_t *Ch, const char *S, size_t N,
 static size_t crtomb(char *S, char_t Ch, std::mbstate_t *MBState) {
   return std::wcrtomb(S, Ch, MBState);
 }
-#elif defined(__APPLE__) || defined(__FreeBSD__)
+#elif MBTOC == MBTOC_ICONV
 struct IconvHandle {
   IconvHandle(const char *DstName, const char *SrcName)
       : Value(iconv_open(DstName, SrcName)) {
@@ -194,20 +253,6 @@ static size_t crtomb(char *S, char_t Ch, std::mbstate_t *MBState) {
   if (mbrtowc(&WCh, Cvt, POut - Cvt, &CvtMBState) != size_t(POut - Cvt))
     llvm_unreachable("internal error: mbrtowc failed on valid character");
   return wcrtomb(S, WCh, MBState);
-}
-#else
-using char_t = char32_t;
-
-static size_t mbrtoc(char_t *Ch, const char *S, size_t N,
-                     std::mbstate_t *MBState) {
-  size_t Result = std::mbrtoc32(Ch, S, N, MBState);
-  if (Result == 0 && *Ch)
-    Result = (size_t)-3;
-  return Result;
-}
-
-static size_t crtomb(char *S, char_t Ch, std::mbstate_t *MBState) {
-  return std::c32rtomb(S, Ch, MBState);
 }
 #endif
 

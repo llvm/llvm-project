@@ -712,6 +712,29 @@ func.func @do_not_fuse_vector_different_indices(%A: memref<4x4xf32>) {
 
 // -----
 
+// The load also reads elements that later iterations of the first loop store.
+func.func @do_not_fuse_vector_different_types(%A: memref<8xf32>, %B: memref<8xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %vec0 = arith.constant dense<0.0> : vector<1xf32>
+  scf.parallel (%i) = (%c0) to (%c5) step (%c1) {
+    vector.store %vec0, %A[%i] : memref<8xf32>, vector<1xf32>
+    scf.reduce
+  }
+  scf.parallel (%i) = (%c0) to (%c5) step (%c1) {
+    %v = vector.load %A[%i] : memref<8xf32>, vector<4xf32>
+    vector.store %v, %B[%i] : memref<8xf32>, vector<4xf32>
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @do_not_fuse_vector_different_types
+// CHECK:       scf.parallel
+// CHECK:       scf.parallel
+
+// -----
+
 func.func @fuse_vector_transfer_same_indices(%A: memref<4x4xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -835,6 +858,80 @@ func.func @do_not_fuse_vector_transfer_different_masks(%A: memref<1x4xf32>) {
   return
 }
 // CHECK-LABEL: func @do_not_fuse_vector_transfer_different_masks
+// CHECK:       scf.parallel
+// CHECK:       scf.parallel
+
+// -----
+
+// The read also reads elements that later iterations of the first loop write.
+func.func @do_not_fuse_vector_transfer_different_types(%A: memref<8xf32>, %B: memref<8xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %zero = arith.constant 0.0 : f32
+  %vec0 = arith.constant dense<0.0> : vector<1xf32>
+  scf.parallel (%i) = (%c0) to (%c5) step (%c1) {
+    vector.transfer_write %vec0, %A[%i] {in_bounds = [true]} : vector<1xf32>, memref<8xf32>
+    scf.reduce
+  }
+  scf.parallel (%i) = (%c0) to (%c5) step (%c1) {
+    %v = vector.transfer_read %A[%i], %zero {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+    vector.transfer_write %v, %B[%i] {in_bounds = [true]} : vector<4xf32>, memref<8xf32>
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @do_not_fuse_vector_transfer_different_types
+// CHECK:       scf.parallel
+// CHECK:       scf.parallel
+
+// -----
+
+// The write covers rows %i and %i + 1, the read rows %i to %i + 3.
+func.func @do_not_fuse_vector_transfer_different_permutation_maps(%A: memref<8x8xf32>, %B: memref<8x8xf32>) {
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %c6 = arith.constant 6 : index
+  %zero = arith.constant 0.0 : f32
+  %vec0 = arith.constant dense<0.0> : vector<4x2xf32>
+  scf.parallel (%i) = (%c0) to (%c6) step (%c2) {
+    vector.transfer_write %vec0, %A[%i, %c0] {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds = [true, true]} : vector<4x2xf32>, memref<8x8xf32>
+    scf.reduce
+  }
+  scf.parallel (%i) = (%c0) to (%c6) step (%c2) {
+    %v = vector.transfer_read %A[%i, %c0], %zero {in_bounds = [true, true]} : memref<8x8xf32>, vector<4x2xf32>
+    vector.transfer_write %v, %B[%i, %c0] {in_bounds = [true, true]} : vector<4x2xf32>, memref<8x8xf32>
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @do_not_fuse_vector_transfer_different_permutation_maps
+// CHECK:       scf.parallel
+// CHECK:       scf.parallel
+
+// -----
+
+// The write only writes lane 0, so the read also reads elements that later
+// iterations of the first loop write.
+func.func @do_not_fuse_vector_transfer_write_in_vector_mask(%A: memref<8xf32>, %B: memref<8xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %zero = arith.constant 0.0 : f32
+  %vec0 = arith.constant dense<0.0> : vector<4xf32>
+  %mask = vector.constant_mask [1] : vector<4xi1>
+  scf.parallel (%i) = (%c0) to (%c5) step (%c1) {
+    vector.mask %mask { vector.transfer_write %vec0, %A[%i] {in_bounds = [true]} : vector<4xf32>, memref<8xf32> } : vector<4xi1>
+    scf.reduce
+  }
+  scf.parallel (%i) = (%c0) to (%c5) step (%c1) {
+    %v = vector.transfer_read %A[%i], %zero {in_bounds = [true]} : memref<8xf32>, vector<4xf32>
+    vector.transfer_write %v, %B[%i] {in_bounds = [true]} : vector<4xf32>, memref<8xf32>
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @do_not_fuse_vector_transfer_write_in_vector_mask
 // CHECK:       scf.parallel
 // CHECK:       scf.parallel
 
@@ -983,6 +1080,58 @@ func.func @fuse_vector_transfer_scalar_load_loop_rank2(%A: memref<2x4xf32>, %B: 
 // CHECK:         vector.transfer_write
 // CHECK:         scf.for
 // CHECK-NOT:   scf.parallel
+
+// -----
+
+// The write only writes lane 0, so the load reads an element that the next
+// iteration of the first loop writes.
+func.func @do_not_fuse_vector_transfer_scalar_load_write_with_mask(%A: memref<8xf32>, %B: memref<8xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %vec0 = arith.constant dense<0.0> : vector<4xf32>
+  %mask = vector.constant_mask [1] : vector<4xi1>
+  scf.parallel (%i) = (%c0) to (%c5) step (%c1) {
+    vector.transfer_write %vec0, %A[%i], %mask {in_bounds = [true]} : vector<4xf32>, memref<8xf32>
+    scf.reduce
+  }
+  scf.parallel (%i) = (%c0) to (%c5) step (%c1) {
+    %j = arith.addi %i, %c1 : index
+    %v = memref.load %A[%j] : memref<8xf32>
+    memref.store %v, %B[%i] : memref<8xf32>
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @do_not_fuse_vector_transfer_scalar_load_write_with_mask
+// CHECK:       scf.parallel
+// CHECK:       scf.parallel
+
+// -----
+
+// The write only writes lane 0, so the load reads an element that the next
+// iteration of the first loop writes.
+func.func @do_not_fuse_vector_transfer_scalar_load_write_in_vector_mask(%A: memref<8xf32>, %B: memref<8xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %vec0 = arith.constant dense<0.0> : vector<4xf32>
+  %mask = vector.constant_mask [1] : vector<4xi1>
+  scf.parallel (%i) = (%c0) to (%c5) step (%c1) {
+    vector.mask %mask { vector.transfer_write %vec0, %A[%i] {in_bounds = [true]} : vector<4xf32>, memref<8xf32> } : vector<4xi1>
+    scf.reduce
+  }
+  scf.parallel (%i) = (%c0) to (%c5) step (%c1) {
+    %j = arith.addi %i, %c1 : index
+    %v = memref.load %A[%j] : memref<8xf32>
+    memref.store %v, %B[%i] : memref<8xf32>
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @do_not_fuse_vector_transfer_scalar_load_write_in_vector_mask
+// CHECK:       scf.parallel
+// CHECK:       scf.parallel
 
 // -----
 

@@ -8,6 +8,7 @@
 ! RUN: bbc -fopenmp -fopenmp-version=51 -o - %s | FileCheck %s --check-prefix=OPENMP-VERSION-51
 ! RUN: bbc -fopenmp -fopenmp-version=52 -o - %s | FileCheck %s --check-prefix=OPENMP-VERSION-52
 ! RUN: bbc -fopenmp -fopenmp-version=60 -o - %s | FileCheck %s --check-prefix=OPENMP-VERSION-60
+! RUN: bbc -fopenmp -fopenmp-version=61 -o - %s | FileCheck %s --check-prefix=OPENMP-VERSION-61
 
 ! DEFAULT-OPENMP-VERSION: {{.*}} = arith.constant 201107 : i32
 ! OPENMP-VERSION-31: {{.*}} = arith.constant 201107 : i32
@@ -17,6 +18,7 @@
 ! OPENMP-VERSION-51: {{.*}} = arith.constant 202011 : i32
 ! OPENMP-VERSION-52: {{.*}} = arith.constant 202111 : i32
 ! OPENMP-VERSION-60: {{.*}} = arith.constant 202411 : i32
+! OPENMP-VERSION-61: {{.*}} = arith.constant 202611 : i32
 
 #if _OPENMP
   integer :: var1 = _OPENMP

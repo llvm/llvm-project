@@ -119,7 +119,6 @@ createTargetMachine(Module &M, std::string CPU, unsigned OptLevel) {
 } // namespace
 
 JITEngine::JITEngine(Triple::ArchType TA) : TT(Triple::getArchTypeName(TA)) {
-  codegen::RegisterCodeGenFlags();
 #ifdef LIBOMPTARGET_JIT_NVPTX
   if (TT.isNVPTX()) {
     LLVMInitializeNVPTXTargetInfo();

@@ -19,6 +19,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/DenseMap.h"
 
 namespace mlir {
 namespace bufferization {
@@ -314,15 +315,39 @@ struct SplitDeallocWhenNotAliasingAnyOther
     if (deallocOp.getMemrefs().size() <= 1)
       return failure();
 
+    // Fast path: when every operand is an alloc (or a chain of view-like
+    // operations rooted in an alloc), two operands may alias only when their
+    // allocation roots are identical. This avoids quadratic pairwise checks.
+    // Unknown origins retain the original conservative analysis below.
+    SmallVector<Value> knownRoots;
+    knownRoots.reserve(deallocOp.getMemrefs().size());
+    llvm::DenseMap<Value, int64_t> rootUseCount;
+    bool allRootsKnown = true;
+    for (Value memref : deallocOp.getMemrefs()) {
+      Value root = getViewBase(memref);
+      if (!root.getDefiningOp<memref::AllocOp>()) {
+        allRootsKnown = false;
+        break;
+      }
+      knownRoots.push_back(root);
+      ++rootUseCount[root];
+    }
+
     SmallVector<Value> remainingMemrefs, remainingConditions;
     SmallVector<SmallVector<Value>> updatedConditions;
     for (int64_t i = 0, e = deallocOp.getMemrefs().size(); i < e; ++i) {
       Value memref = deallocOp.getMemrefs()[i];
       Value cond = deallocOp.getConditions()[i];
-      SmallVector<Value> otherMemrefs(deallocOp.getMemrefs());
-      otherMemrefs.erase(otherMemrefs.begin() + i);
-      // Check if `memref` can split off into a separate bufferization.dealloc.
-      if (potentiallyAliasesMemref(analysis, otherMemrefs, memref)) {
+      bool mayAlias;
+      if (allRootsKnown) {
+        mayAlias = rootUseCount.lookup(knownRoots[i]) > 1;
+      } else {
+        SmallVector<Value> otherMemrefs(deallocOp.getMemrefs());
+        otherMemrefs.erase(otherMemrefs.begin() + i);
+        mayAlias = potentiallyAliasesMemref(analysis, otherMemrefs, memref);
+      }
+      // Check if memref can split off into a separate bufferization.dealloc.
+      if (mayAlias) {
         // `memref` alias with other memrefs, do not split off.
         remainingMemrefs.push_back(memref);
         remainingConditions.push_back(cond);

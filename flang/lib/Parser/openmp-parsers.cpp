@@ -1822,7 +1822,8 @@ TYPE_PARSER( //
     "NO_OPENMP_ROUTINES" >>
         construct<OmpClause>(construct<OmpClause::NoOpenmpRoutines>()) ||
     "NO_PARALLELISM" >>
-        construct<OmpClause>(construct<OmpClause::NoParallelism>()) ||
+        construct<OmpClause>(construct<OmpClause::NoParallelism>(
+            maybe(parenthesized(scalarLogicalConstantExpr)))) ||
     "NUM_TASKS" >> construct<OmpClause>(construct<OmpClause::NumTasks>(
                        parenthesized(Parser<OmpNumTasksClause>{}))) ||
     "NUM_TEAMS" >> construct<OmpClause>(construct<OmpClause::NumTeams>(

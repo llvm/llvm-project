@@ -5,7 +5,7 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ; Test case where the minimum profitable trip count due to runtime checks
 ; exceeds VF.getKnownMinValue() * UF.
-define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr %src.1, ptr %src.2, i64 %n) {
+define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr %src.1, ptr %src.2, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: define void @min_trip_count_due_to_runtime_checks_1(
 ; CHECK-SAME: ptr [[DST_1:%.*]], ptr [[DST_2:%.*]], ptr [[SRC_1:%.*]], ptr [[SRC_2:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -20,8 +20,8 @@ define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr 
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP3]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP1]], 5
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], -1
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP1]], 5
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP4]], -1
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[DST_212]], [[DST_113]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP7]], [[TMP5]]
@@ -51,20 +51,20 @@ define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr 
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i64, ptr [[SRC_1]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i64, ptr [[SRC_2]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i64, ptr [[TMP17]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr [8 x i8], ptr [[TMP17]], i64 [[TMP16]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP17]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD23:%.*]] = load <vscale x 2 x i64>, ptr [[TMP19]], align 8
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i64, ptr [[TMP18]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr [8 x i8], ptr [[TMP18]], i64 [[TMP16]]
 ; CHECK-NEXT:    [[WIDE_LOAD24:%.*]] = load <vscale x 2 x i64>, ptr [[TMP18]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD25:%.*]] = load <vscale x 2 x i64>, ptr [[TMP20]], align 8
 ; CHECK-NEXT:    [[TMP21:%.*]] = add <vscale x 2 x i64> [[WIDE_LOAD]], [[WIDE_LOAD24]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = add <vscale x 2 x i64> [[WIDE_LOAD23]], [[WIDE_LOAD25]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i64, ptr [[DST_1]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i64, ptr [[DST_2]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i64, ptr [[TMP23]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr [8 x i8], ptr [[TMP23]], i64 [[TMP16]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP21]], ptr [[TMP23]], align 8
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP22]], ptr [[TMP25]], align 8
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i64, ptr [[TMP24]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr [8 x i8], ptr [[TMP24]], i64 [[TMP16]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP21]], ptr [[TMP24]], align 8
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP22]], ptr [[TMP26]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
