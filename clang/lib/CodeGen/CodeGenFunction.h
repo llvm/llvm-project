@@ -632,6 +632,10 @@ public:
   /// __builtin_preserve_field_info.
   bool IsInPreserveFieldInfo = false;
 
+  /// Report a base class conversion that the address computed by a BPF
+  /// preserved access expression depends on.
+  void checkPreservedAccessBaseConversions(const Expr *E);
+
   /// True if the current statement has nomerge attribute.
   bool InNoMergeAttributedStmt = false;
 
