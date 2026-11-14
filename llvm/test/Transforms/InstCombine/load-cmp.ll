@@ -51,8 +51,7 @@ define i1 @test1_nusw(i32 %X) {
 
 define i1 @test1_nuw(i32 %X) {
 ; CHECK-LABEL: @test1_nuw(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 2147483647
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1]], 9
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1:%.*]], 9
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %P = getelementptr nuw [10 x i16], ptr @G16, i32 0, i32 %X
@@ -382,8 +381,7 @@ define i1 @test10_struct_arr_noarrayty_inbounds(i32 %x) {
 
 define i1 @test10_struct_arr_noarrayty_nuw(i32 %x) {
 ; CHECK-LABEL: @test10_struct_arr_noarrayty_nuw(
-; CHECK-NEXT:    [[X:%.*]] = and i32 [[X1:%.*]], 268435455
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[X]], 1
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[X:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %p = getelementptr nuw %Foo, ptr @GStructArr, i32 %x, i32 2
@@ -664,10 +662,7 @@ define i1 @cmp_load_multiplied_index_inbounds(i32 %X) {
 ; Stride = 6
 define i1 @cmp_load_multiplied_index_nuw(i32 %X) {
 ; CHECK-LABEL: @cmp_load_multiplied_index_nuw(
-; CHECK-NEXT:    [[GEP_IDX:%.*]] = mul nuw i32 [[X:%.*]], 6
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr @G16, i32 [[GEP_IDX]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 81
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %mul = mul nuw nsw i32 %X, 3
@@ -763,10 +758,7 @@ define i1 @cmp_load_multiplied_index_negative_inbounds(i32 %X) {
 ; Stride = -6, only index 0 is in bounds.
 define i1 @cmp_load_multiplied_index_negative_nuw(i32 %X) {
 ; CHECK-LABEL: @cmp_load_multiplied_index_negative_nuw(
-; CHECK-NEXT:    [[GEP_IDX:%.*]] = mul nuw i32 [[X:%.*]], -6
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr @G16, i32 [[GEP_IDX]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 35
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %mul = mul nuw i32 %X, -3
