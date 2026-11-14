@@ -1858,14 +1858,16 @@ void ComplexDeinterleavingGraph::identifyReductionNodes() {
     if (Processed[i] || Real->getNumOperands() < 2)
       continue;
 
-    // Can only combined integer reductions at the moment.
-    if (!ReductionInfo[Real].second->getType()->isIntegerTy())
+    // processReductionSingle is only correct for a complex dot product feeding
+    // an add reduction.
+    if (!match(ReductionInfo[Real].second,
+               m_Intrinsic<Intrinsic::vector_reduce_add>(m_Specific(Real))))
       continue;
 
     RealPHI = ReductionInfo[Real].first;
     ImagPHI = nullptr;
     PHIsFound = false;
-    auto Node = identifyNode(Real->getOperand(0), Real->getOperand(1));
+    auto *Node = identifyDotProduct(Real);
     if (Node && PHIsFound) {
       LLVM_DEBUG(
           dbgs() << "Identified single reduction starting from instruction: "
@@ -2434,6 +2436,10 @@ Value *ComplexDeinterleavingGraph::replaceNode(IRBuilderBase &Builder,
 
 void ComplexDeinterleavingGraph::processReductionSingle(
     Value *OperationReplacement, CompositeNode *Node) {
+  // All lanes are add-reduced below, so the operand must accumulate into the
+  // new PHI and produce a partial sum in every lane, which only CDot does.
+  assert(Node->Operands[0]->Operation == ComplexDeinterleavingOperation::CDot &&
+         "Single reductions are only supported for complex dot products");
   auto *Real = cast<Instruction>(Node->Vals[0].Real);
   auto *OldPHI = ReductionInfo[Real].first;
   auto *NewPHI = OldToNewPHI[OldPHI];
