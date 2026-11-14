@@ -14,6 +14,7 @@
 #include "clang/Basic/DiagnosticLex.h"
 #include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/MacroBuilder.h"
+#include "clang/Basic/OffloadArch.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/SyncScope.h"
 #include "clang/Basic/TargetInfo.h"
@@ -27,6 +28,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/TargetParser/IntelGPUTargetParser.h"
 using namespace clang;
 
 static bool MacroBodyEndsInBackslash(StringRef MacroBody) {
@@ -1513,6 +1515,20 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   // SYCL device compiler which doesn't produce host binary.
   if (LangOpts.SYCLIsDevice) {
     Builder.defineMacro("__SYCL_DEVICE_ONLY__", "1");
+    if (OffloadArch Arch = TI.getOffloadArch(); Arch.isIntelIGCA()) {
+      llvm::IntelGPU::IGCATarget IGCA = Arch.igcaTarget();
+
+      Builder.defineMacro("__OFFLOAD_ARCH_IGCA__", Twine(IGCA.getTarget()));
+      if (IGCA.isAnyCompute())
+        Builder.defineMacro("__OFFLOAD_ARCH_IGCA_COMPUTE__");
+      if (IGCA.isAnyRender())
+        Builder.defineMacro("__OFFLOAD_ARCH_IGCA_RENDER__");
+
+      if (IGCA.isComputeExact())
+        Builder.defineMacro("__OFFLOAD_ARCH_IGCA_COMPUTE_EXACT__");
+      if (IGCA.isRenderExact())
+        Builder.defineMacro("__OFFLOAD_ARCH_IGCA_RENDER_EXACT__");
+    }
   }
 
   // OpenCL definitions.
