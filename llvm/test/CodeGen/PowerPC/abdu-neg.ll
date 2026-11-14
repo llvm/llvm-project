@@ -426,7 +426,7 @@ define i4 @abd_ext_i4_to_i8(i4 %a, i4 %b) nounwind {
 ; CHECK-NEXT:    clrlwi 3, 3, 28
 ; CHECK-NEXT:    clrlwi 4, 4, 28
 ; CHECK-NEXT:    sub 3, 3, 4
-; CHECK-NEXT:    srawi 4, 3, 7
+; CHECK-NEXT:    srawi 4, 3, 31
 ; CHECK-NEXT:    xor 3, 3, 4
 ; CHECK-NEXT:    sub 3, 4, 3
 ; CHECK-NEXT:    blr
@@ -445,7 +445,7 @@ define i8 @abd_ext_i8_to_i16(i8 %a, i8 %b) nounwind {
 ; CHECK-NEXT:    clrlwi 3, 3, 24
 ; CHECK-NEXT:    clrlwi 4, 4, 24
 ; CHECK-NEXT:    sub 3, 3, 4
-; CHECK-NEXT:    srawi 4, 3, 15
+; CHECK-NEXT:    srawi 4, 3, 31
 ; CHECK-NEXT:    xor 3, 3, 4
 ; CHECK-NEXT:    sub 3, 4, 3
 ; CHECK-NEXT:    blr

@@ -567,7 +567,7 @@ static const MDNode *getCommonMemCacheHint(const RangeT &Nodes) {
     SDValue foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
                               const SDLoc &DL);
     SDValue foldSubToUSubSat(EVT DstVT, SDNode *N, const SDLoc &DL);
-    SDValue foldABSToABD(SDNode *N, const SDLoc &DL);
+    SDValue foldABSToABD(SDNode *N, const SDLoc &DL, bool IsNegated = false);
     SDValue foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
                             SDValue False, ISD::CondCode CC, const SDLoc &DL);
     SDValue foldSelectToUMin(SDValue LHS, SDValue RHS, SDValue True,
@@ -4351,9 +4351,15 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
 
     // Convert 0 - abs(x).
     if (ISD::isAbsOpcode(N1.getOpcode()) && N1.hasOneUse() &&
-        !TLI.isOperationLegalOrCustom(N1.getOpcode(), VT))
+        !TLI.isOperationLegalOrCustom(N1.getOpcode(), VT)) {
+      if (!(TLI.isOperationLegal(ISD::SUB, VT) &&
+            TLI.isOperationLegal(ISD::SMIN, VT)))
+        if (SDValue ABD = foldABSToABD(N1.getNode(), SDLoc(N1.getNode()), true))
+          return DAG.getNode(ISD::SUB, DL, VT, N0, ABD);
+
       if (SDValue Result = TLI.expandABS(N1.getNode(), DAG, true))
         return Result;
+    }
 
     // Similar to the previous rule, but this time targeting an expanded abs.
     // (sub 0, (max X, (sub 0, X))) --> (min X, (sub 0, X))
@@ -6012,13 +6018,17 @@ SDValue DAGCombiner::visitABD(SDNode *N) {
       return DAG.getNode(ISD::SUB, DL, VT, N1, N0);
   }
 
+  bool IsNegated = N->hasOneUse() && sd_match(N->use_begin()->getUser(),
+                                              m_Neg(m_Specific(SDValue(N, 0))));
+
   // fold (abd? (?ext x), (?ext y)) -> (zext (abd? x, y))
   if (sd_match(N, m_BinOp(ISD::ABDU, m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) ||
       sd_match(N, m_BinOp(ISD::ABDS, m_SExt(m_Value(X)), m_SExt(m_Value(Y))))) {
     EVT SmallVT = X.getScalarValueSizeInBits() > Y.getScalarValueSizeInBits()
                       ? X.getValueType()
                       : Y.getValueType();
-    if (!LegalOperations || hasOperation(Opcode, SmallVT)) {
+    if ((!LegalOperations || hasOperation(Opcode, SmallVT)) &&
+        (!IsNegated || !TLI.isTypeLegal(VT) || TLI.isTypeLegal(SmallVT))) {
       SDValue ExtedX = DAG.getExtOrTrunc(X, SDLoc(X), SmallVT, N0->getOpcode());
       SDValue ExtedY = DAG.getExtOrTrunc(Y, SDLoc(Y), SmallVT, N0->getOpcode());
       SDValue SmallABD = DAG.getNode(Opcode, DL, SmallVT, {ExtedX, ExtedY});
@@ -6031,7 +6041,8 @@ SDValue DAGCombiner::visitABD(SDNode *N) {
   if (sd_match(N, m_c_BinOp(ISD::ABDU, m_ZExt(m_Value(X)), m_Value(Y))) ||
       sd_match(N, m_c_BinOp(ISD::ABDS, m_SExt(m_Value(X)), m_Value(Y)))) {
     EVT SmallVT = X.getValueType();
-    if (!LegalOperations || hasOperation(Opcode, SmallVT)) {
+    if ((!LegalOperations || hasOperation(Opcode, SmallVT)) &&
+        (!IsNegated || !TLI.isTypeLegal(VT) || TLI.isTypeLegal(SmallVT))) {
       uint64_t Bits = SmallVT.getScalarSizeInBits();
       unsigned RelevantBits =
           (Opcode == ISD::ABDS) ? DAG.ComputeMaxSignificantBits(Y)
@@ -12342,7 +12353,7 @@ SDValue DAGCombiner::visitSHLSAT(SDNode *N) {
 // (ABS (SUB (EXTEND a), (EXTEND b))).
 // (TRUNC (ABS (SUB (EXTEND a), (EXTEND b)))).
 // Generates UABD/SABD instruction.
-SDValue DAGCombiner::foldABSToABD(SDNode *N, const SDLoc &DL) {
+SDValue DAGCombiner::foldABSToABD(SDNode *N, const SDLoc &DL, bool IsNegated) {
   EVT SrcVT = N->getValueType(0);
 
   if (N->getOpcode() == ISD::TRUNCATE)
@@ -12382,6 +12393,8 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N, const SDLoc &DL) {
        Opc0 != ISD::SIGN_EXTEND_INREG)) {
 
     auto CreateZextedAbd = [&](unsigned AbdOpc) {
+      if (IsNegated && TLI.isOperationCustom(AbdOpc, VT))
+        return SDValue();
       if (IsAdd)
         Op1 = DAG.getNegative(Op1, SDLoc(Op1), VT);
       SDValue ABD = DAG.getNode(AbdOpc, DL, VT, Op0, Op1);
@@ -12420,11 +12433,15 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N, const SDLoc &DL) {
   }
   unsigned ABDOpcode = (Opc0 == ISD::ZERO_EXTEND) ? ISD::ABDU : ISD::ABDS;
 
+  if (IsNegated && TLI.isOperationCustom(ABDOpcode, VT))
+    return SDValue();
+
   // fold abs(sext(x) - sext(y)) -> zext(abds(x, y))
   // fold abs(zext(x) - zext(y)) -> zext(abdu(x, y))
   EVT MaxVT = VT0.bitsGT(VT1) ? VT0 : VT1;
   if ((VT0 == MaxVT || Op0->hasOneUse()) &&
       (VT1 == MaxVT || Op1->hasOneUse()) &&
+      (!IsNegated || !TLI.isTypeLegal(VT) || TLI.isTypeLegal(MaxVT)) &&
       (!LegalTypes || hasOperation(ABDOpcode, MaxVT))) {
     SDValue ABD = DAG.getNode(ABDOpcode, DL, MaxVT,
                               DAG.getNode(ISD::TRUNCATE, DL, MaxVT, Op0),

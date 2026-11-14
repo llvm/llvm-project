@@ -11842,17 +11842,24 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
   // abds: if the sub is nsw -> abs(sub)
   // abdu with non-negative operands -> abs(sub)
   // The abdu case where the sub is nuw is handled in DAGCombine.
-  if (IsSigned) {
-    if (DAG.willNotOverflowSub(/*IsSigned=*/true, LHS, RHS))
+  // For scalars, only do this if ABS is legal/custom, otherwise the expansion
+  // of ABS is no better than the select/branchless expansion below. Vectors
+  // that can't use ABS directly are typically scalarized, where this form is
+  // still cheaper.
+  bool PreferAbs = VT.isVector() || isOperationLegalOrCustom(ISD::ABS, VT);
+  if (PreferAbs) {
+    if (IsSigned) {
+      if (DAG.willNotOverflowSub(/*IsSigned=*/true, LHS, RHS))
+        return DAG.getNode(ISD::ABS, dl, VT,
+                           DAG.getNode(ISD::SUB, dl, VT, LHS, RHS));
+
+      if (DAG.willNotOverflowSub(/*IsSigned=*/true, RHS, LHS))
+        return DAG.getNode(ISD::ABS, dl, VT,
+                           DAG.getNode(ISD::SUB, dl, VT, RHS, LHS));
+    } else if (DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS)) {
       return DAG.getNode(ISD::ABS, dl, VT,
                          DAG.getNode(ISD::SUB, dl, VT, LHS, RHS));
-
-    if (DAG.willNotOverflowSub(/*IsSigned=*/true, RHS, LHS))
-      return DAG.getNode(ISD::ABS, dl, VT,
-                         DAG.getNode(ISD::SUB, dl, VT, RHS, LHS));
-  } else if (DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS)) {
-    return DAG.getNode(ISD::ABS, dl, VT,
-                       DAG.getNode(ISD::SUB, dl, VT, LHS, RHS));
+    }
   }
 
   EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
