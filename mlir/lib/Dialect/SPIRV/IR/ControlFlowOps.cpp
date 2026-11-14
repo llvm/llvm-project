@@ -314,6 +314,16 @@ static LogicalResult verifyLifetimeOp(LifetimeOpTy op) {
   if (ptrType.getStorageClass() != spirv::StorageClass::Function)
     return op.emitOpError("pointer must have the Function storage class");
 
+  if (op.getSize() == 0)
+    return success();
+  auto moduleOp = op->template getParentOfType<spirv::ModuleOp>();
+  if (!moduleOp)
+    return success();
+  // A non-zero size needs the Addresses capability, which Physical32/64 imply.
+  spirv::AddressingModel model = moduleOp.getAddressingModel();
+  if (model != spirv::AddressingModel::Physical32 &&
+      model != spirv::AddressingModel::Physical64)
+    return op.emitOpError("size must be 0 without a physical addressing model");
   return success();
 }
 

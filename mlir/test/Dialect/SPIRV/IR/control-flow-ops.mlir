@@ -1087,10 +1087,10 @@ func.func @kill() {
 // CHECK-LABEL: func @lifetime
 func.func @lifetime() {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
-  // CHECK: spirv.LifetimeStart %{{.*}}, 0 : !spirv.ptr<f32, Function>
-  spirv.LifetimeStart %0, 0 : !spirv.ptr<f32, Function>
-  // CHECK: spirv.LifetimeStop %{{.*}}, 0 : !spirv.ptr<f32, Function>
-  spirv.LifetimeStop %0, 0 : !spirv.ptr<f32, Function>
+  // CHECK: spirv.LifetimeStart %{{.*}}, 4 : !spirv.ptr<f32, Function>
+  spirv.LifetimeStart %0, 4 : !spirv.ptr<f32, Function>
+  // CHECK: spirv.LifetimeStop %{{.*}}, 4 : !spirv.ptr<f32, Function>
+  spirv.LifetimeStop %0, 4 : !spirv.ptr<f32, Function>
 
   %1 = spirv.Bitcast %0 : !spirv.ptr<f32, Function> to !spirv.ptr<i8, Function>
   // CHECK: spirv.LifetimeStart %{{.*}}, 0 : !spirv.ptr<i8, Function>
@@ -1118,36 +1118,13 @@ func.func @lifetime_stop_wrong_storage_class(%arg0: !spirv.ptr<f32, CrossWorkgro
 
 // -----
 
-func.func @lifetime_start_size_on_typed_pointer() {
-  %0 = spirv.Variable : !spirv.ptr<f32, Function>
-  // expected-error @+1 {{attribute 'size' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {0}}}
-  spirv.LifetimeStart %0, 4 : !spirv.ptr<f32, Function>
-  spirv.Return
-}
-
-// -----
-
-func.func @lifetime_stop_size_on_typed_pointer() {
-  %0 = spirv.Variable : !spirv.ptr<f32, Function>
-  // expected-error @+1 {{attribute 'size' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {0}}}
-  spirv.LifetimeStop %0, 4 : !spirv.ptr<f32, Function>
-  spirv.Return
-}
-
-// -----
-
-func.func @lifetime_start_size_on_byte_pointer(%ptr: !spirv.ptr<i8, Function>) {
-  // expected-error @+1 {{attribute 'size' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {0}}}
-  spirv.LifetimeStart %ptr, 4 : !spirv.ptr<i8, Function>
-  spirv.Return
-}
-
-// -----
-
-func.func @lifetime_stop_size_on_byte_pointer(%ptr: !spirv.ptr<i8, Function>) {
-  // expected-error @+1 {{attribute 'size' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {0}}}
-  spirv.LifetimeStop %ptr, 4 : !spirv.ptr<i8, Function>
-  spirv.Return
+spirv.module Logical OpenCL {
+  spirv.func @lifetime_size_logical_addressing() "None" {
+    %0 = spirv.Variable : !spirv.ptr<f32, Function>
+    // expected-error @+1 {{size must be 0 without a physical addressing model}}
+    spirv.LifetimeStart %0, 4 : !spirv.ptr<f32, Function>
+    spirv.Return
+  }
 }
 
 // -----

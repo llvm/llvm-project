@@ -1479,6 +1479,30 @@ public:
   }
 };
 
+/// Converts `spirv.LifetimeStart` and `spirv.LifetimeStop`. The LLVM
+/// intrinsics take no size and only accept an alloca, so markers on other
+/// pointers or on part of an alloca are dropped.
+template <typename SPIRVOp, typename LLVMOp>
+class LifetimePattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Value ptr = adaptor.getPointer();
+    auto alloca = ptr.getDefiningOp<LLVM::AllocaOp>();
+    uint32_t size = op.getSize();
+    if (alloca && (size == 0 || size == DataLayout::closest(op)
+                                            .getTypeSize(alloca.getElemType())
+                                            .getFixedValue()))
+      rewriter.replaceOpWithNewOp<LLVMOp>(op, ptr);
+    else
+      rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 static LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable,
                                               StringRef name,
                                               ArrayRef<Type> paramTypes,
@@ -2506,6 +2530,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       BranchConversionPattern, BranchConditionalConversionPattern,
       FunctionCallPattern, LoopPattern, SelectionPattern,
       ErasePattern<spirv::MergeOp>,
+      LifetimePattern<spirv::LifetimeStartOp, LLVM::LifetimeStartOp>,
+      LifetimePattern<spirv::LifetimeStopOp, LLVM::LifetimeEndOp>,
 
       // Entry points and execution mode are handled separately.
       ErasePattern<spirv::EntryPointOp>, ExecutionModePattern,
