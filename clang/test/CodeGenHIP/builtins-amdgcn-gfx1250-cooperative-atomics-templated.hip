@@ -40,12 +40,12 @@ __device__ void test_amdgcn_cooperative_atomic_load_32x4B(int* addr, int *out)
 // CHECK-NEXT:    store i32 [[VAL]], ptr [[VAL_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[GADDR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[VAL_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    call void @_Z39template_cooperative_atomic_store_32x4BILj5EEvPii(ptr noundef [[TMP0]], i32 noundef [[TMP1]]) #[[ATTR3:[0-9]+]]
+// CHECK-NEXT:    call void @_Z39template_cooperative_atomic_store_32x4BILj5EEvPii(ptr noundef [[TMP0]], i32 noundef [[TMP1]]) #[[ATTR4:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 //
 // CHECK-LABEL: define linkonce_odr void @_Z39template_cooperative_atomic_store_32x4BILj5EEvPii(
-// CHECK-SAME: ptr noundef [[GADDR:%.*]], i32 noundef [[VAL:%.*]]) #[[ATTR0]] comdat {
+// CHECK-SAME: ptr noundef [[GADDR:%.*]], i32 noundef [[VAL:%.*]]) #[[ATTR1:[0-9]+]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[GADDR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[VAL_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
@@ -69,14 +69,14 @@ __device__ void test_amdgcn_cooperative_atomic_load_32x4B(int* addr, int *out)
 // CHECK-NEXT:    store ptr [[ADDR]], ptr [[ADDR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[OUT]], ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z38template_cooperative_atomic_load_32x4BILj5EEiPi(ptr noundef [[TMP0]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z38template_cooperative_atomic_load_32x4BILj5EEiPi(ptr noundef [[TMP0]]) #[[ATTR4]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[CALL]], ptr [[TMP1]], align 4
 // CHECK-NEXT:    ret void
 //
 //
 // CHECK-LABEL: define linkonce_odr noundef i32 @_Z38template_cooperative_atomic_load_32x4BILj5EEiPi(
-// CHECK-SAME: ptr noundef [[GADDR:%.*]]) #[[ATTR0]] comdat {
+// CHECK-SAME: ptr noundef [[GADDR:%.*]]) #[[ATTR1]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[GADDR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[GADDR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[GADDR_ADDR]] to ptr

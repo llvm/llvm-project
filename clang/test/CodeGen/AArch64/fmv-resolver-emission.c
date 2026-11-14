@@ -322,16 +322,16 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK-NEXT:    ret ptr @indirect_use.default
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: likely_module_local noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@internal_func._Maes
-// CHECK-SAME: () #[[ATTR0]] {
+// CHECK-SAME: () #[[ATTR6:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: likely_module_local noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@internal_func.default
-// CHECK-SAME: () #[[ATTR2]] {
+// CHECK-SAME: () #[[ATTR7:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
@@ -352,16 +352,16 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK-NEXT:    ret ptr @internal_func.default
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: likely_module_local noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@linkonce_func._Maes
-// CHECK-SAME: () #[[ATTR0]] {
+// CHECK-SAME: () #[[ATTR6]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: likely_module_local noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@linkonce_func.default
-// CHECK-SAME: () #[[ATTR2]] {
+// CHECK-SAME: () #[[ATTR7]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
@@ -398,5 +398,11 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK-NEXT:    ret ptr @clones_with_default.default
 //
 //.
-// CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META0:![0-9]+]] = !{i32 1, !"ptrauth-elf-got", i32 0}
+// CHECK: [[META1:![0-9]+]] = !{i32 1, !"ptrauth-init-fini", i32 0}
+// CHECK: [[META2:![0-9]+]] = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 0}
+// CHECK: [[META3:![0-9]+]] = !{i32 1, !"ptrauth-sign-personality", i32 0}
+// CHECK: [[META4:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
+// CHECK: [[META5:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-version", i32 0}
+// CHECK: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

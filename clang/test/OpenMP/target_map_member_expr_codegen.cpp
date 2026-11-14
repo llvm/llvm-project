@@ -107,7 +107,7 @@ void foo() {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZN1BC1Eii
-// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(12) [[THIS:%.*]], i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(12) [[THIS:%.*]], i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
@@ -123,7 +123,7 @@ void foo() {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZN1B3runEv
-// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(12) [[THIS:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(12) [[THIS:%.*]]) #[[ATTR1]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [5 x ptr], align 8
@@ -197,14 +197,14 @@ void foo() {
 // CHECK-NEXT:    [[TMP31:%.*]] = icmp ne i32 [[TMP30]], 0
 // CHECK-NEXT:    br i1 [[TMP31]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK:       omp_offload.failed:
-// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN1B3runEv_l29(ptr [[THIS1]], ptr null) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN1B3runEv_l29(ptr [[THIS1]], ptr null) #[[ATTR3:[0-9]+]]
 // CHECK-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK:       omp_offload.cont:
 // CHECK-NEXT:    ret void
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZN1C3barER10descriptorIfE
-// CHECK-SAME: (ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(40) [[D:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(40) [[D:%.*]]) #[[ATTR1]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8
@@ -362,7 +362,7 @@ void foo() {
 // CHECK-NEXT:    [[TMP71:%.*]] = icmp ne i32 [[TMP70]], 0
 // CHECK-NEXT:    br i1 [[TMP71]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK:       omp_offload.failed:
-// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN1C3barER10descriptorIfE_l65(i64 [[TMP42]], ptr [[TMP43]], ptr null) #[[ATTR2]]
+// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN1C3barER10descriptorIfE_l65(i64 [[TMP42]], ptr [[TMP43]], ptr null) #[[ATTR3]]
 // CHECK-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK:       omp_offload.cont:
 // CHECK-NEXT:    [[TMP72:%.*]] = getelementptr inbounds [4 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
@@ -455,14 +455,14 @@ void foo() {
 // CHECK-NEXT:    [[TMP121:%.*]] = icmp ne i32 [[TMP120]], 0
 // CHECK-NEXT:    br i1 [[TMP121]], label [[OMP_OFFLOAD_FAILED24:%.*]], label [[OMP_OFFLOAD_CONT25:%.*]]
 // CHECK:       omp_offload.failed24:
-// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN1C3barER10descriptorIfE_l73(i64 [[TMP77]], ptr [[TMP78]], ptr null) #[[ATTR2]]
+// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN1C3barER10descriptorIfE_l73(i64 [[TMP77]], ptr [[TMP78]], ptr null) #[[ATTR3]]
 // CHECK-NEXT:    br label [[OMP_OFFLOAD_CONT25]]
 // CHECK:       omp_offload.cont25:
 // CHECK-NEXT:    ret void
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZN1BC2Eii
-// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(12) [[THIS:%.*]], i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(12) [[THIS:%.*]], i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
@@ -480,7 +480,7 @@ void foo() {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZN1AC2Eii
-// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
@@ -499,7 +499,7 @@ void foo() {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN1B3runEv_l29
-// CHECK-SAME: (ptr noundef [[THIS:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK-SAME: (ptr noundef [[THIS:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
@@ -517,7 +517,7 @@ void foo() {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN1C3barER10descriptorIfE_l65
-// CHECK-SAME: (i64 noundef [[CSIZE:%.*]], ptr noundef nonnull align 8 dereferenceable(40) [[D:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR1]] {
+// CHECK-SAME: (i64 noundef [[CSIZE:%.*]], ptr noundef nonnull align 8 dereferenceable(40) [[D:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CSIZE_ADDR:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8
@@ -538,7 +538,7 @@ void foo() {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN1C3barER10descriptorIfE_l65.omp_outlined
-// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[CSIZE:%.*]], ptr noundef nonnull align 8 dereferenceable(40) [[D:%.*]]) #[[ATTR4:[0-9]+]] {
+// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[CSIZE:%.*]], ptr noundef nonnull align 8 dereferenceable(40) [[D:%.*]]) #[[ATTR2]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -578,7 +578,7 @@ void foo() {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN1C3barER10descriptorIfE_l73
-// CHECK-SAME: (i64 noundef [[CSIZE:%.*]], ptr noundef nonnull align 8 dereferenceable(40) [[D:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR1]] {
+// CHECK-SAME: (i64 noundef [[CSIZE:%.*]], ptr noundef nonnull align 8 dereferenceable(40) [[D:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CSIZE_ADDR:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8

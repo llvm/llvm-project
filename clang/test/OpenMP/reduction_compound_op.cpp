@@ -86,7 +86,7 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[RED:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
 // NORM-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
 // NORM-NEXT:    store ptr [[POINTS]], ptr [[POINTS_ADDR]], align 8
-// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR2:[0-9]+]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR3:[0-9]+]]
 // NORM-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3:[0-9]+]], i32 3, ptr @_Z3fooiPK5Point.omp_outlined, ptr [[N_ADDR]], ptr [[RED]], ptr [[POINTS_ADDR]])
 // NORM-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 3, ptr @_Z3fooiPK5Point.omp_outlined.1, ptr [[N_ADDR]], ptr [[RED]], ptr [[POINTS_ADDR]])
 // NORM-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 3, ptr @_Z3fooiPK5Point.omp_outlined.2, ptr [[N_ADDR]], ptr [[RED]], ptr [[POINTS_ADDR]])
@@ -99,17 +99,17 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_ZN5PointC1Ev
-// NORM-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// NORM-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // NORM-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// NORM-NEXT:    call void @_ZN5PointC2Ev(ptr nonnull align 4 dereferenceable(8) [[THIS1]]) #[[ATTR2]]
+// NORM-NEXT:    call void @_ZN5PointC2Ev(ptr nonnull align 4 dereferenceable(8) [[THIS1]]) #[[ATTR3]]
 // NORM-NEXT:    ret void
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined
-// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1:[0-9]+]] {
+// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2:[0-9]+]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -155,7 +155,7 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR3]]
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // NORM-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1:[0-9]+]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -234,7 +234,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.omp.reduction.reduction_func
-// NORM-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
+// NORM-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR5:[0-9]+]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -254,7 +254,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.1
-// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -300,7 +300,7 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR3]]
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // NORM-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -379,7 +379,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.1.omp.reduction.reduction_func
-// NORM-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR4]] {
+// NORM-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR5]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -399,7 +399,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.2
-// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -445,7 +445,7 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR3]]
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // NORM-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -524,7 +524,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.2.omp.reduction.reduction_func
-// NORM-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR4]] {
+// NORM-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR5]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -544,7 +544,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.3
-// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -590,7 +590,7 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR3]]
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // NORM-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -669,7 +669,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.3.omp.reduction.reduction_func
-// NORM-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR4]] {
+// NORM-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR5]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -689,7 +689,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.4
-// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -735,7 +735,7 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR3]]
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // NORM-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -814,7 +814,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.4.omp.reduction.reduction_func
-// NORM-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR4]] {
+// NORM-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR5]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -834,7 +834,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.5
-// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -880,7 +880,7 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR3]]
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // NORM-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -959,7 +959,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.5.omp.reduction.reduction_func
-// NORM-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR4]] {
+// NORM-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR5]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -979,7 +979,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.6
-// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1025,7 +1025,7 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR3]]
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // NORM-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -1104,7 +1104,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.6.omp.reduction.reduction_func
-// NORM-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR4]] {
+// NORM-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR5]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -1124,7 +1124,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.7
-// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// NORM-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1170,7 +1170,7 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR3]]
 // NORM-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // NORM-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -1249,7 +1249,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.7.omp.reduction.reduction_func
-// NORM-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR4]] {
+// NORM-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR5]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -1269,7 +1269,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@_ZN5PointC2Ev
-// NORM-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// NORM-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // NORM-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -1289,7 +1289,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[RED:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
 // COMP-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
 // COMP-NEXT:    store ptr [[POINTS]], ptr [[POINTS_ADDR]], align 8
-// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR2:[0-9]+]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR3:[0-9]+]]
 // COMP-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3:[0-9]+]], i32 3, ptr @_Z3fooiPK5Point.omp_outlined, ptr [[N_ADDR]], ptr [[RED]], ptr [[POINTS_ADDR]])
 // COMP-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 3, ptr @_Z3fooiPK5Point.omp_outlined.1, ptr [[N_ADDR]], ptr [[RED]], ptr [[POINTS_ADDR]])
 // COMP-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 3, ptr @_Z3fooiPK5Point.omp_outlined.2, ptr [[N_ADDR]], ptr [[RED]], ptr [[POINTS_ADDR]])
@@ -1302,17 +1302,17 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_ZN5PointC1Ev
-// COMP-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// COMP-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // COMP-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// COMP-NEXT:    call void @_ZN5PointC2Ev(ptr nonnull align 4 dereferenceable(8) [[THIS1]]) #[[ATTR2]]
+// COMP-NEXT:    call void @_ZN5PointC2Ev(ptr nonnull align 4 dereferenceable(8) [[THIS1]]) #[[ATTR3]]
 // COMP-NEXT:    ret void
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined
-// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1:[0-9]+]] {
+// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2:[0-9]+]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1356,7 +1356,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR3]]
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // COMP-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1:[0-9]+]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -1431,7 +1431,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.omp.reduction.reduction_func
-// COMP-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
+// COMP-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR5:[0-9]+]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -1448,7 +1448,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.1
-// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1492,7 +1492,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR3]]
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // COMP-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -1567,7 +1567,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.1.omp.reduction.reduction_func
-// COMP-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR4]] {
+// COMP-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR5]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -1584,7 +1584,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.2
-// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1628,7 +1628,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR3]]
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // COMP-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -1703,7 +1703,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.2.omp.reduction.reduction_func
-// COMP-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR4]] {
+// COMP-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR5]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -1720,7 +1720,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.3
-// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1764,7 +1764,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR3]]
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // COMP-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -1839,7 +1839,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.3.omp.reduction.reduction_func
-// COMP-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR4]] {
+// COMP-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR5]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -1856,7 +1856,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.4
-// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1900,7 +1900,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR3]]
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // COMP-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -1975,7 +1975,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.4.omp.reduction.reduction_func
-// COMP-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR4]] {
+// COMP-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR5]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -1992,7 +1992,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.5
-// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2036,7 +2036,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR3]]
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // COMP-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -2111,7 +2111,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.5.omp.reduction.reduction_func
-// COMP-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR4]] {
+// COMP-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR5]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -2128,7 +2128,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.6
-// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2174,7 +2174,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR3]]
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // COMP-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -2253,7 +2253,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.6.omp.reduction.reduction_func
-// COMP-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR4]] {
+// COMP-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR5]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -2273,7 +2273,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.7
-// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR1]] {
+// COMP-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[RED:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2319,7 +2319,7 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR2]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR3]]
 // COMP-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 // COMP-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[TMP8]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -2398,7 +2398,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_Z3fooiPK5Point.omp_outlined.7.omp.reduction.reduction_func
-// COMP-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR4]] {
+// COMP-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR5]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -2418,7 +2418,7 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@_ZN5PointC2Ev
-// COMP-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// COMP-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // COMP-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -2446,7 +2446,7 @@ void foo(int N, Point const *Points) {
 // SIMD-ONLY-NEXT:    [[I43:%.*]] = alloca i32, align 4
 // SIMD-ONLY-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
 // SIMD-ONLY-NEXT:    store ptr [[POINTS]], ptr [[POINTS_ADDR]], align 8
-// SIMD-ONLY-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR2:[0-9]+]]
+// SIMD-ONLY-NEXT:    call void @_ZN5PointC1Ev(ptr nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR3:[0-9]+]]
 // SIMD-ONLY-NEXT:    store i32 0, ptr [[I]], align 4
 // SIMD-ONLY-NEXT:    br label [[FOR_COND:%.*]]
 // SIMD-ONLY:       for.cond:
@@ -2595,17 +2595,17 @@ void foo(int N, Point const *Points) {
 //
 //
 // SIMD-ONLY-LABEL: define {{[^@]+}}@_ZN5PointC1Ev
-// SIMD-ONLY-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// SIMD-ONLY-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
 // SIMD-ONLY-NEXT:  entry:
 // SIMD-ONLY-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // SIMD-ONLY-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// SIMD-ONLY-NEXT:    call void @_ZN5PointC2Ev(ptr nonnull align 4 dereferenceable(8) [[THIS1]]) #[[ATTR2]]
+// SIMD-ONLY-NEXT:    call void @_ZN5PointC2Ev(ptr nonnull align 4 dereferenceable(8) [[THIS1]]) #[[ATTR3]]
 // SIMD-ONLY-NEXT:    ret void
 //
 //
 // SIMD-ONLY-LABEL: define {{[^@]+}}@_ZN5PointC2Ev
-// SIMD-ONLY-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// SIMD-ONLY-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // SIMD-ONLY-NEXT:  entry:
 // SIMD-ONLY-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8

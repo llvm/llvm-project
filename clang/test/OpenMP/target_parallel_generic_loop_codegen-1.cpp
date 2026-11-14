@@ -2339,7 +2339,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@_Z3bari
-// CHECK-NTARGET-SAME: (i32 noundef signext [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (i32 noundef signext [[A:%.*]]) #[[ATTR5:[0-9]+]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NTARGET-NEXT:    [[R:%.*]] = alloca i32, align 4
@@ -3148,7 +3148,7 @@ int bar(int a){
 //
 //
 // SIMD-ONLY2-LABEL: define {{[^@]+}}@_Z3bari
-// SIMD-ONLY2-SAME: (i32 noundef signext [[A:%.*]]) #[[ATTR1]] {
+// SIMD-ONLY2-SAME: (i32 noundef signext [[A:%.*]]) #[[ATTR3:[0-9]+]] {
 // SIMD-ONLY2-NEXT:  entry:
 // SIMD-ONLY2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // SIMD-ONLY2-NEXT:    [[R:%.*]] = alloca i32, align 4
@@ -5553,7 +5553,7 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@_Z3bari
-// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]]) #[[ATTR1]] {
+// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]]) #[[ATTR5:[0-9]+]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    [[R:%.*]] = alloca i32, align 4
@@ -6083,7 +6083,7 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SE3fooEv_l185
-// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR5:[0-9]+]] {
+// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR6:[0-9]+]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
@@ -7930,7 +7930,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@_Z3bari
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (i32 noundef signext [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (i32 noundef signext [[A:%.*]]) #[[ATTR5:[0-9]+]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[R:%.*]] = alloca i32, align 4

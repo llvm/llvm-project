@@ -76,7 +76,7 @@ template void foo<int>();
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_Z3fooIiEvv
-// CHECK-SAME: () #[[ATTR0]] comdat {
+// CHECK-SAME: () #[[ATTR1:[0-9]+]] comdat {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[R:%.*]] = alloca [[STRUCT_RANGE:%.*]], align 4
 // CHECK-NEXT:    [[LAMBDA:%.*]] = alloca [[CLASS_ANON:%.*]], align 4
@@ -87,7 +87,7 @@ template void foo<int>();
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZZ3fooIiEvvENKUlvE_clEv
-// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(16) [[THIS:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(16) [[THIS:%.*]]) #[[ATTR1]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DOTOMP_IV:%.*]] = alloca i64, align 8
@@ -188,7 +188,7 @@ template void foo<int>();
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZNK4ItermiERKS_
-// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OTHER:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OTHER:%.*]]) #[[ATTR1]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[OTHER_ADDR:%.*]] = alloca ptr, align 8
@@ -208,7 +208,7 @@ template void foo<int>();
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZNK4IterneERKS_
-// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OTHER:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OTHER:%.*]]) #[[ATTR1]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[OTHER_ADDR:%.*]] = alloca ptr, align 8
@@ -225,7 +225,7 @@ template void foo<int>();
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZN4IterpLEl
-// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i64 noundef [[N:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i64 noundef [[N:%.*]]) #[[ATTR1]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8
@@ -241,7 +241,7 @@ template void foo<int>();
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZNK4IterdeEv
-// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]]) #[[ATTR1]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8

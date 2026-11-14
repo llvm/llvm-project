@@ -6408,14 +6408,14 @@ int bar(int n, double *ptr) {
 // CHECK0-NEXT:    store ptr [[CN]], ptr [[CN_ADDR]], align 8
 // CHECK0-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 8
 // CHECK0-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
-// CHECK0-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META16:![0-9]+]], !align [[META17:![0-9]+]]
+// CHECK0-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META17:![0-9]+]], !align [[META18:![0-9]+]]
 // CHECK0-NEXT:    [[TMP1:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// CHECK0-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[BN_ADDR]], align 8, !nonnull [[META16]], !align [[META17]]
-// CHECK0-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !nonnull [[META16]], !align [[META18:![0-9]+]]
+// CHECK0-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[BN_ADDR]], align 8, !nonnull [[META17]], !align [[META18]]
+// CHECK0-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !nonnull [[META17]], !align [[META19:![0-9]+]]
 // CHECK0-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
 // CHECK0-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VLA_ADDR4]], align 8
-// CHECK0-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[CN_ADDR]], align 8, !nonnull [[META16]], !align [[META18]]
-// CHECK0-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[D_ADDR]], align 8, !nonnull [[META16]], !align [[META18]]
+// CHECK0-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[CN_ADDR]], align 8, !nonnull [[META17]], !align [[META19]]
+// CHECK0-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[D_ADDR]], align 8, !nonnull [[META17]], !align [[META19]]
 // CHECK0-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[B5]], ptr align 4 [[TMP0]], i64 40, i1 false)
 // CHECK0-NEXT:    [[TMP8:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK0-NEXT:    store ptr [[TMP8]], ptr [[SAVED_STACK]], align 8
@@ -6467,7 +6467,7 @@ int bar(int n, double *ptr) {
 // CHECK0-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8
 // CHECK0-NEXT:    store ptr [[E]], ptr [[E_ADDR]], align 8
 // CHECK0-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
-// CHECK0-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 8, !nonnull [[META16]], !align [[META17]]
+// CHECK0-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 8, !nonnull [[META17]], !align [[META18]]
 // CHECK0-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[E1]], ptr align 4 [[TMP0]], i64 8, i1 false)
 // CHECK0-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TT_0]], ptr [[E1]], i32 0, i32 0
 // CHECK0-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 4
@@ -6519,7 +6519,7 @@ int bar(int n, double *ptr) {
 //
 //
 // CHECK0-LABEL: define {{[^@]+}}@_ZN2S12r1Ei
-// CHECK0-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] comdat {
+// CHECK0-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR5:[0-9]+]] comdat {
 // CHECK0-NEXT:  entry:
 // CHECK0-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK0-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
@@ -6724,7 +6724,7 @@ int bar(int n, double *ptr) {
 //
 //
 // CHECK0-LABEL: define {{[^@]+}}@_Z9ftemplateIiET_i
-// CHECK0-SAME: (i32 noundef signext [[N:%.*]]) #[[ATTR0]] comdat {
+// CHECK0-SAME: (i32 noundef signext [[N:%.*]]) #[[ATTR5]] comdat {
 // CHECK0-NEXT:  entry:
 // CHECK0-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 // CHECK0-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -6817,7 +6817,7 @@ int bar(int n, double *ptr) {
 // CHECK0-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK0-NEXT:    [[TMP1:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
 // CHECK0-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// CHECK0-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !nonnull [[META16]], !align [[META19:![0-9]+]]
+// CHECK0-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !nonnull [[META17]], !align [[META20:![0-9]+]]
 // CHECK0-NEXT:    [[TMP4:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK0-NEXT:    store ptr [[TMP4]], ptr [[SAVED_STACK]], align 8
 // CHECK0-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP1]], [[TMP2]]
@@ -6858,7 +6858,7 @@ int bar(int n, double *ptr) {
 // CHECK0-NEXT:    store i64 [[AAA]], ptr [[AAA_ADDR]], align 8
 // CHECK0-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // CHECK0-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
-// CHECK0-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META16]], !align [[META17]]
+// CHECK0-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META17]], !align [[META18]]
 // CHECK0-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[B1]], ptr align 4 [[TMP0]], i64 40, i1 false)
 // CHECK0-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK0-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], 1
@@ -6885,7 +6885,7 @@ int bar(int n, double *ptr) {
 // CHECK0-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
 // CHECK0-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // CHECK0-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
-// CHECK0-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META16]], !align [[META17]]
+// CHECK0-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META17]], !align [[META18]]
 // CHECK0-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[B1]], ptr align 4 [[TMP0]], i64 40, i1 false)
 // CHECK0-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK0-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], 1
@@ -7227,14 +7227,14 @@ int bar(int n, double *ptr) {
 // CHECK1-NEXT:    store ptr [[CN]], ptr [[CN_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META16:![0-9]+]], !align [[META17:![0-9]+]]
+// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META17:![0-9]+]], !align [[META18:![0-9]+]]
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[BN_ADDR]], align 8, !nonnull [[META16]], !align [[META17]]
-// CHECK1-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !nonnull [[META16]], !align [[META18:![0-9]+]]
+// CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[BN_ADDR]], align 8, !nonnull [[META17]], !align [[META18]]
+// CHECK1-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !nonnull [[META17]], !align [[META19:![0-9]+]]
 // CHECK1-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
 // CHECK1-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VLA_ADDR4]], align 8
-// CHECK1-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[CN_ADDR]], align 8, !nonnull [[META16]], !align [[META18]]
-// CHECK1-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[D_ADDR]], align 8, !nonnull [[META16]], !align [[META18]]
+// CHECK1-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[CN_ADDR]], align 8, !nonnull [[META17]], !align [[META19]]
+// CHECK1-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[D_ADDR]], align 8, !nonnull [[META17]], !align [[META19]]
 // CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[B5]], ptr align 4 [[TMP0]], i64 40, i1 false)
 // CHECK1-NEXT:    [[TMP8:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK1-NEXT:    store ptr [[TMP8]], ptr [[SAVED_STACK]], align 8
@@ -7286,7 +7286,7 @@ int bar(int n, double *ptr) {
 // CHECK1-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[E]], ptr [[E_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 8, !nonnull [[META16]], !align [[META17]]
+// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 8, !nonnull [[META17]], !align [[META18]]
 // CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[E1]], ptr align 4 [[TMP0]], i64 8, i1 false)
 // CHECK1-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TT_0]], ptr [[E1]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 4
@@ -7636,7 +7636,7 @@ int bar(int n, double *ptr) {
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !nonnull [[META16]], !align [[META19:![0-9]+]]
+// CHECK1-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !nonnull [[META17]], !align [[META20:![0-9]+]]
 // CHECK1-NEXT:    [[TMP4:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK1-NEXT:    store ptr [[TMP4]], ptr [[SAVED_STACK]], align 8
 // CHECK1-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP1]], [[TMP2]]
@@ -7677,7 +7677,7 @@ int bar(int n, double *ptr) {
 // CHECK1-NEXT:    store i64 [[AAA]], ptr [[AAA_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META16]], !align [[META17]]
+// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META17]], !align [[META18]]
 // CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[B1]], ptr align 4 [[TMP0]], i64 40, i1 false)
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], 1
@@ -7704,7 +7704,7 @@ int bar(int n, double *ptr) {
 // CHECK1-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META16]], !align [[META17]]
+// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META17]], !align [[META18]]
 // CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[B1]], ptr align 4 [[TMP0]], i64 40, i1 false)
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], 1
@@ -8157,7 +8157,7 @@ int bar(int n, double *ptr) {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN2S12r1Ei
-// CHECK2-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[N:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK2-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[N:%.*]]) #[[ATTR5:[0-9]+]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK2-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
@@ -8362,7 +8362,7 @@ int bar(int n, double *ptr) {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_Z9ftemplateIiET_i
-// CHECK2-SAME: (i32 noundef [[N:%.*]]) #[[ATTR0]] comdat {
+// CHECK2-SAME: (i32 noundef [[N:%.*]]) #[[ATTR5]] comdat {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -9464,7 +9464,7 @@ int bar(int n, double *ptr) {
 //
 //
 // SIMD-ONLY0-LABEL: define {{[^@]+}}@_ZN2S12r1Ei
-// SIMD-ONLY0-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] comdat {
+// SIMD-ONLY0-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR2:[0-9]+]] comdat {
 // SIMD-ONLY0-NEXT:  entry:
 // SIMD-ONLY0-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY0-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
@@ -9537,7 +9537,7 @@ int bar(int n, double *ptr) {
 //
 //
 // SIMD-ONLY0-LABEL: define {{[^@]+}}@_Z9ftemplateIiET_i
-// SIMD-ONLY0-SAME: (i32 noundef signext [[N:%.*]]) #[[ATTR0]] comdat {
+// SIMD-ONLY0-SAME: (i32 noundef signext [[N:%.*]]) #[[ATTR2]] comdat {
 // SIMD-ONLY0-NEXT:  entry:
 // SIMD-ONLY0-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 // SIMD-ONLY0-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -9864,7 +9864,7 @@ int bar(int n, double *ptr) {
 //
 //
 // SIMD-ONLY02-LABEL: define {{[^@]+}}@_ZN2S12r1Ei
-// SIMD-ONLY02-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[N:%.*]]) #[[ATTR0]] comdat align 2 {
+// SIMD-ONLY02-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[N:%.*]]) #[[ATTR2:[0-9]+]] comdat align 2 {
 // SIMD-ONLY02-NEXT:  entry:
 // SIMD-ONLY02-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // SIMD-ONLY02-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
@@ -9936,7 +9936,7 @@ int bar(int n, double *ptr) {
 //
 //
 // SIMD-ONLY02-LABEL: define {{[^@]+}}@_Z9ftemplateIiET_i
-// SIMD-ONLY02-SAME: (i32 noundef [[N:%.*]]) #[[ATTR0]] comdat {
+// SIMD-ONLY02-SAME: (i32 noundef [[N:%.*]]) #[[ATTR2]] comdat {
 // SIMD-ONLY02-NEXT:  entry:
 // SIMD-ONLY02-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 // SIMD-ONLY02-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -11362,7 +11362,7 @@ int bar(int n, double *ptr) {
 //
 //
 // SIMD-ONLY1-LABEL: define {{[^@]+}}@_ZN2S12r1Ei
-// SIMD-ONLY1-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] comdat {
+// SIMD-ONLY1-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR2:[0-9]+]] comdat {
 // SIMD-ONLY1-NEXT:  entry:
 // SIMD-ONLY1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY1-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
@@ -11435,7 +11435,7 @@ int bar(int n, double *ptr) {
 //
 //
 // SIMD-ONLY1-LABEL: define {{[^@]+}}@_Z9ftemplateIiET_i
-// SIMD-ONLY1-SAME: (i32 noundef signext [[N:%.*]]) #[[ATTR0]] comdat {
+// SIMD-ONLY1-SAME: (i32 noundef signext [[N:%.*]]) #[[ATTR2]] comdat {
 // SIMD-ONLY1-NEXT:  entry:
 // SIMD-ONLY1-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 // SIMD-ONLY1-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -11762,7 +11762,7 @@ int bar(int n, double *ptr) {
 //
 //
 // SIMD-ONLY12-LABEL: define {{[^@]+}}@_ZN2S12r1Ei
-// SIMD-ONLY12-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[N:%.*]]) #[[ATTR0]] comdat align 2 {
+// SIMD-ONLY12-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[N:%.*]]) #[[ATTR2:[0-9]+]] comdat align 2 {
 // SIMD-ONLY12-NEXT:  entry:
 // SIMD-ONLY12-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // SIMD-ONLY12-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
@@ -11834,7 +11834,7 @@ int bar(int n, double *ptr) {
 //
 //
 // SIMD-ONLY12-LABEL: define {{[^@]+}}@_Z9ftemplateIiET_i
-// SIMD-ONLY12-SAME: (i32 noundef [[N:%.*]]) #[[ATTR0]] comdat {
+// SIMD-ONLY12-SAME: (i32 noundef [[N:%.*]]) #[[ATTR2]] comdat {
 // SIMD-ONLY12-NEXT:  entry:
 // SIMD-ONLY12-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 // SIMD-ONLY12-NEXT:    [[A:%.*]] = alloca i32, align 4

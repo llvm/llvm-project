@@ -284,7 +284,7 @@ int main (int argc, char **argv) {
 //
 //
 // OMP51-LABEL: define linkonce_odr noundef i32 @_Z5tmainIiLi10EEiT_PPc(
-// OMP51-SAME: i32 noundef [[ARGC:%.*]], ptr noundef [[ARGV:%.*]]) #[[ATTR0]] comdat {
+// OMP51-SAME: i32 noundef [[ARGC:%.*]], ptr noundef [[ARGV:%.*]]) #[[ATTR3:[0-9]+]] comdat {
 // OMP51-NEXT:  [[ENTRY:.*:]]
 // OMP51-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
 // OMP51-NEXT:    [[ARGV_ADDR:%.*]] = alloca ptr, align 8
@@ -429,7 +429,7 @@ int main (int argc, char **argv) {
 //
 //
 // OMP60-LABEL: define linkonce_odr noundef i32 @_Z5tmainIiLi10EEiT_PPc(
-// OMP60-SAME: i32 noundef [[ARGC:%.*]], ptr noundef [[ARGV:%.*]]) #[[ATTR0]] comdat {
+// OMP60-SAME: i32 noundef [[ARGC:%.*]], ptr noundef [[ARGV:%.*]]) #[[ATTR3:[0-9]+]] comdat {
 // OMP60-NEXT:  [[ENTRY:.*:]]
 // OMP60-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
 // OMP60-NEXT:    [[ARGV_ADDR:%.*]] = alloca ptr, align 8
@@ -565,7 +565,7 @@ int main (int argc, char **argv) {
 //
 //
 // SIMD-LABEL: define linkonce_odr noundef i32 @_Z5tmainIiLi10EEiT_PPc(
-// SIMD-SAME: i32 noundef [[ARGC:%.*]], ptr noundef [[ARGV:%.*]]) #[[ATTR0]] comdat !dbg [[DBG22:![0-9]+]] {
+// SIMD-SAME: i32 noundef [[ARGC:%.*]], ptr noundef [[ARGV:%.*]]) #[[ATTR3:[0-9]+]] comdat !dbg [[DBG22:![0-9]+]] {
 // SIMD-NEXT:  [[ENTRY:.*:]]
 // SIMD-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
 // SIMD-NEXT:    [[ARGV_ADDR:%.*]] = alloca ptr, align 8
