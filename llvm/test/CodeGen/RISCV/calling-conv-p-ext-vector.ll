@@ -70,22 +70,20 @@ define <2 x i32> @test_cc_v2i32(<2 x i32> %a, <2 x i32> %b) {
 define <16 x i8> @test_cc_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; RV32-LABEL: test_cc_v16i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lw a3, 0(a2)
-; RV32-NEXT:    lw a4, 4(a2)
-; RV32-NEXT:    lw a5, 8(a2)
-; RV32-NEXT:    lw a2, 12(a2)
-; RV32-NEXT:    lw a6, 8(a1)
-; RV32-NEXT:    lw a7, 12(a1)
-; RV32-NEXT:    lw t0, 0(a1)
-; RV32-NEXT:    lw a1, 4(a1)
-; RV32-NEXT:    padd.b a2, a7, a2
-; RV32-NEXT:    padd.b a5, a6, a5
-; RV32-NEXT:    padd.b a1, a1, a4
-; RV32-NEXT:    padd.b a3, t0, a3
-; RV32-NEXT:    sw a3, 0(a0)
-; RV32-NEXT:    sw a1, 4(a0)
-; RV32-NEXT:    sw a5, 8(a0)
-; RV32-NEXT:    sw a2, 12(a0)
+; RV32-NEXT:    lw a5, 4(a2)
+; RV32-NEXT:    lw a3, 12(a2)
+; RV32-NEXT:    lw a4, 0(a2)
+; RV32-NEXT:    lw a2, 8(a2)
+; RV32-NEXT:    lw a7, 4(a1)
+; RV32-NEXT:    lw t2, 12(a1)
+; RV32-NEXT:    lw a6, 0(a1)
+; RV32-NEXT:    lw t1, 8(a1)
+; RV32-NEXT:    padd.db a4, a6, a4
+; RV32-NEXT:    padd.db a2, t1, a2
+; RV32-NEXT:    sw a4, 0(a0)
+; RV32-NEXT:    sw a5, 4(a0)
+; RV32-NEXT:    sw a2, 8(a0)
+; RV32-NEXT:    sw a3, 12(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_cc_v16i8:
@@ -100,22 +98,20 @@ define <16 x i8> @test_cc_v16i8(<16 x i8> %a, <16 x i8> %b) {
 define <8 x i16> @test_cc_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; RV32-LABEL: test_cc_v8i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lw a3, 0(a2)
-; RV32-NEXT:    lw a4, 4(a2)
-; RV32-NEXT:    lw a5, 8(a2)
-; RV32-NEXT:    lw a2, 12(a2)
-; RV32-NEXT:    lw a6, 8(a1)
-; RV32-NEXT:    lw a7, 12(a1)
-; RV32-NEXT:    lw t0, 0(a1)
-; RV32-NEXT:    lw a1, 4(a1)
-; RV32-NEXT:    padd.h a2, a7, a2
-; RV32-NEXT:    padd.h a5, a6, a5
-; RV32-NEXT:    padd.h a1, a1, a4
-; RV32-NEXT:    padd.h a3, t0, a3
-; RV32-NEXT:    sw a3, 0(a0)
-; RV32-NEXT:    sw a1, 4(a0)
-; RV32-NEXT:    sw a5, 8(a0)
-; RV32-NEXT:    sw a2, 12(a0)
+; RV32-NEXT:    lw a5, 4(a2)
+; RV32-NEXT:    lw a3, 12(a2)
+; RV32-NEXT:    lw a4, 0(a2)
+; RV32-NEXT:    lw a2, 8(a2)
+; RV32-NEXT:    lw a7, 4(a1)
+; RV32-NEXT:    lw t2, 12(a1)
+; RV32-NEXT:    lw a6, 0(a1)
+; RV32-NEXT:    lw t1, 8(a1)
+; RV32-NEXT:    padd.dh a4, a6, a4
+; RV32-NEXT:    padd.dh a2, t1, a2
+; RV32-NEXT:    sw a4, 0(a0)
+; RV32-NEXT:    sw a5, 4(a0)
+; RV32-NEXT:    sw a2, 8(a0)
+; RV32-NEXT:    sw a3, 12(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_cc_v8i16:
