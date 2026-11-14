@@ -15,6 +15,7 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetSelect.h"
 
 using namespace mlir;
@@ -43,6 +44,8 @@ mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
   }
   if (enablePIC)
     tmBuilderOrError->setRelocationModel(llvm::Reloc::PIC_);
+  tmBuilderOrError->getOptions().MCOptions.LibraryOptions =
+      &llvm::cl::getCAPILibraryOptions();
   auto tmOrError = tmBuilderOrError->createTargetMachine();
   if (!tmOrError) {
     consumeError(tmOrError.takeError());
@@ -58,6 +61,7 @@ mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
   auto transformer = mlir::makeOptimizingTransformer(
       optLevel, /*sizeLevel=*/0, /*targetMachine=*/tmOrError->get());
   ExecutionEngineOptions jitOptions;
+  jitOptions.libraryOptions = &llvm::cl::getCAPILibraryOptions();
   jitOptions.transformer = transformer;
   jitOptions.jitCodeGenOptLevel = static_cast<llvm::CodeGenOptLevel>(optLevel);
   jitOptions.sharedLibPaths = libPaths;

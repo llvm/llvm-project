@@ -2983,29 +2983,18 @@ void cl::addLibraryOptions(const LibraryOptions &L) {
   globalParser().Libraries.push_back(&L);
 }
 
-// Parses the arguments that a LibraryOptionsContext recorded, each with the
-// library that parsed it, into Context, or into their global() if Context is
-// null.
-static void replayLibraryArgs(ArrayRef<const char *> Args,
-                              ArrayRef<const LibraryOptions *> Libraries,
-                              LibraryOptionsContext *Context) {
-  for (size_t I = 0, E = Args.size(); I != E;) {
-    const LibraryOptions &L = *Libraries[I];
-    unsigned N;
-    ArrayRef<const char *> Rest = Args.drop_front(I);
-    cantFail(Context ? Context->parse(L, Rest, N)
-                     : parseLibraryOption(L, L.global(), Rest, N,
-                                          globalParser().LibraryArgAlloc));
-    I += N;
-  }
-}
-
 void LibraryOptionsContext::assign(const LibraryOptionsContext &Other) {
   assert(this != &Other);
   Values.clear();
   SavedArgs.clear();
   SavedLibraries.clear();
-  replayLibraryArgs(Other.SavedArgs, Other.SavedLibraries, this);
+  // Replay each argument with the library that parsed it.
+  ArrayRef<const char *> Args = Other.SavedArgs;
+  for (size_t I = 0, E = Args.size(); I != E;) {
+    unsigned N;
+    cantFail(parse(*Other.SavedLibraries[I], Args.drop_front(I), N));
+    I += N;
+  }
 }
 
 Error LibraryOptionsContext::parse(const LibraryOptions &L,
@@ -3029,24 +3018,10 @@ LibraryOptionsContext &cl::getCAPILibraryOptions() {
   return C;
 }
 
-static bool llvmParseCommandLineOptionsImpl(int argc, const char *const *argv,
-                                            const char *Overview,
-                                            raw_ostream *Errs) {
-  LibraryOptionsContext &C = getCAPILibraryOptions();
-  size_t Begin = C.args().size();
-  bool Res = parseCommandLineOptions(C, ArrayRef(argv, argc), Overview, Errs);
-
-  // Code without a context, such as a target machine created through the C
-  // API, reads the global values.
-  replayLibraryArgs(C.args().drop_front(Begin),
-                    C.argLibraries().drop_front(Begin), nullptr);
-
-  return Res;
-}
-
 void LLVMParseCommandLineOptions(int argc, const char *const *argv,
                                  const char *Overview) {
-  llvmParseCommandLineOptionsImpl(argc, argv, Overview, &nulls());
+  parseCommandLineOptions(getCAPILibraryOptions(), ArrayRef(argv, argc),
+                          Overview, &nulls());
 }
 
 LLVMBool LLVMParseCommandLineOptionsWithError(int argc, const char *const *argv,
@@ -3055,7 +3030,8 @@ LLVMBool LLVMParseCommandLineOptionsWithError(int argc, const char *const *argv,
   *ErrorMessage = nullptr;
   SmallString<128> Err;
   raw_svector_ostream Stream(Err);
-  if (!llvmParseCommandLineOptionsImpl(argc, argv, Overview, &Stream)) {
+  if (!parseCommandLineOptions(getCAPILibraryOptions(), ArrayRef(argv, argc),
+                               Overview, &Stream)) {
     *ErrorMessage = strdup(Err.c_str());
     return 1;
   }
