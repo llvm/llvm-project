@@ -1682,6 +1682,8 @@ void GCNPassConfig::addOptimizedRegAlloc() {
 
   if (CLOpts.opt_exec_mask_pre_ra)
     insertPass(EndOfPreRA, &SIOptimizeExecMaskingPreRAID);
+  else if (CLOpts.exec_mask_opt_ssa_mode)
+    insertPass(&UnreachableMachineBlockElimID, &SIOptimizeExecMaskingPreRAID);
 
   // This is not an essential optimization and it has a noticeable impact on
   // compilation time, so we only enable it from O2.

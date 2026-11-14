@@ -258,6 +258,8 @@ defm : BoolField<"amdgpu-lower-global-ctor-dtor", "true",
   "Lower GPU ctor / dtors to globals on the device">;
 defm : BoolField<"amdgpu-opt-exec-mask-pre-ra", "true",
   "Run pre-RA exec mask optimizations">;
+defm : BoolField<"amdgpu-exec-mask-opt-ssa-mode", "false",
+  "Run exec mask optimization in SSA mode instead of pre-RA">;
 defm : BoolField<"amdgpu-opt-vgpr-liverange", "true",
   "Enable VGPR liverange optimizations for if-else structure">;
 defm : BoolField<"amdgpu-reassign-regs", "true",
