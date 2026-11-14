@@ -1188,6 +1188,10 @@ public:
       return false;
 
     if (auto loadOp = mlir::dyn_cast<cir::LoadOp>(defOp)) {
+      // A volatile or atomic load must happen before the cleanup runs.
+      if (loadOp.isVolatileOrAtomic())
+        return false;
+
       // Only attempt to move loads of allocas in the entry block.
       mlir::Value ptr = loadOp.getAddr();
       auto funcOp = returnOp->getParentOfType<cir::FuncOp>();
