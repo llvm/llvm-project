@@ -3822,7 +3822,10 @@ SDValue SITargetLowering::LowerFormalArguments(
       llvm_unreachable("Unexpected register class in LowerFormalArguments!");
 
     Reg = MF.addLiveIn(Reg, RC);
-    SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, VT);
+    bool CopyAsI32 =
+        VT.getSizeInBits() == 16 &&
+        (RC == &AMDGPU::SGPR_32RegClass || !Subtarget->useRealTrue16Insts());
+    SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, CopyAsI32 ? MVT::i32 : VT);
     if (Arg.Flags.isInReg() && RC == &AMDGPU::VGPR_32RegClass) {
       // FIXME: Need to forward the chains created by `CopyFromReg`s, make sure
       // they will read physical regs before any side effect instructions.
@@ -3831,6 +3834,9 @@ SDValue SITargetLowering::LowerFormalArguments(
       Val = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Val.getValueType(),
                         ReadFirstLane, Val);
     }
+
+    if (CopyAsI32)
+      Val = DAG.getBitcast(VT, DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Val));
 
     if (Arg.Flags.isSRet()) {
       // The return object should be reasonably addressable.
