@@ -486,6 +486,121 @@ TEST_F(DeserializationTest, OpMemberNameExcessOperands) {
 }
 
 //===----------------------------------------------------------------------===//
+// Memory copies
+//===----------------------------------------------------------------------===//
+
+class CopyMemoryDeserializationTest
+    : public DeserializationTest,
+      public ::testing::WithParamInterface<spirv::Opcode> {
+protected:
+  void addCopyMemoryFunction() {
+    addHeader();
+    auto voidType = addVoidType();
+    auto intType = addIntType(32);
+    auto ptrType = nextID++;
+    addInstruction(spirv::Opcode::OpTypePointer,
+                   {ptrType,
+                    static_cast<uint32_t>(spirv::StorageClass::Function),
+                    intType});
+    auto fnType = addFunctionType(voidType, {ptrType, ptrType, intType});
+    addFunction(voidType, fnType);
+    for (auto type : {ptrType, ptrType, intType}) {
+      auto id = nextID++;
+      addInstruction(spirv::Opcode::OpFunctionParameter, {type, id});
+      copyOperands.push_back(id);
+    }
+    if (GetParam() == spirv::Opcode::OpCopyMemory)
+      copyOperands.pop_back();
+    addInstruction(spirv::Opcode::OpLabel, {nextID++});
+  }
+
+  void addCopyMemory(ArrayRef<uint32_t> memoryOperands) {
+    copyOperands.append(memoryOperands.begin(), memoryOperands.end());
+    addInstruction(GetParam(), copyOperands);
+    addReturn();
+    addFunctionEnd();
+  }
+
+  SmallVector<uint32_t> copyOperands;
+};
+
+TEST_P(CopyMemoryDeserializationTest, MissingOperands) {
+  addHeader();
+  addInstruction(GetParam(), {});
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic(
+      GetParam() == spirv::Opcode::OpCopyMemory
+          ? "expected at least 2 operands for spirv.CopyMemory, but got 0"
+          : "expected at least 3 operands for spirv.CopyMemorySized, but got "
+            "0");
+}
+
+TEST_P(CopyMemoryDeserializationTest, UnknownValue) {
+  addCopyMemoryFunction();
+  copyOperands[0] = 100;
+  addCopyMemory({});
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("unknown result <id> : 100");
+}
+
+TEST_P(CopyMemoryDeserializationTest, MissingTargetAlignment) {
+  addCopyMemoryFunction();
+  addCopyMemory({static_cast<uint32_t>(spirv::MemoryAccess::Volatile |
+                                       spirv::MemoryAccess::Aligned)});
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("missing alignment literal for memory_access");
+}
+
+TEST_P(CopyMemoryDeserializationTest, MissingSourceAlignment) {
+  addCopyMemoryFunction();
+  addCopyMemory({0, static_cast<uint32_t>(spirv::MemoryAccess::Aligned)});
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("missing alignment literal for source_memory_access");
+}
+
+TEST_P(CopyMemoryDeserializationTest, UnsupportedScopeOperand) {
+  addCopyMemoryFunction();
+  addCopyMemory(
+      {static_cast<uint32_t>(spirv::MemoryAccess::MakePointerAvailable |
+                             spirv::MemoryAccess::NonPrivatePointer),
+       1});
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("unsupported memory access mask: "
+                   "MakePointerAvailable|NonPrivatePointer (40)");
+}
+
+TEST_P(CopyMemoryDeserializationTest, UnsupportedSourceAliasOperand) {
+  addCopyMemoryFunction();
+  addCopyMemory(
+      {0, static_cast<uint32_t>(spirv::MemoryAccess::AliasScopeINTELMask), 1});
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic(
+      "unsupported memory access mask: AliasScopeINTELMask (65536)");
+}
+
+TEST_P(CopyMemoryDeserializationTest, UnknownMemoryAccessMask) {
+  addCopyMemoryFunction();
+  addCopyMemory({64});
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("unsupported memory access mask: unknown (64)");
+}
+
+TEST_P(CopyMemoryDeserializationTest, ExcessOperands) {
+  addCopyMemoryFunction();
+  addCopyMemory({0, 0, 0});
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic(GetParam() == spirv::Opcode::OpCopyMemory
+                       ? "found more operands than expected when deserializing "
+                         "spirv.CopyMemory, only 4 of 5 processed"
+                       : "found more operands than expected when deserializing "
+                         "spirv.CopyMemorySized, only 5 of 6 processed");
+}
+
+INSTANTIATE_TEST_SUITE_P(SPIRV, CopyMemoryDeserializationTest,
+                         ::testing::Values(spirv::Opcode::OpCopyMemory,
+                                           spirv::Opcode::OpCopyMemorySized));
+
+//===----------------------------------------------------------------------===//
 // Functions
 //===----------------------------------------------------------------------===//
 
