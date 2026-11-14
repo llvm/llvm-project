@@ -4088,6 +4088,101 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Val);
   }
 
+  // stdc_store8_*: store an N-bit integer into an unsigned char* using
+  // little-endian or big-endian byte order.
+  case Builtin::BIstdc_store8_leu8:
+  case Builtin::BI__builtin_stdc_store8_leu8:
+  case Builtin::BIstdc_store8_les8:
+  case Builtin::BI__builtin_stdc_store8_les8:
+  case Builtin::BIstdc_store8_beu8:
+  case Builtin::BI__builtin_stdc_store8_beu8:
+  case Builtin::BIstdc_store8_bes8:
+  case Builtin::BI__builtin_stdc_store8_bes8:
+  case Builtin::BIstdc_store8_aligned_leu8:
+  case Builtin::BI__builtin_stdc_store8_aligned_leu8:
+  case Builtin::BIstdc_store8_aligned_les8:
+  case Builtin::BI__builtin_stdc_store8_aligned_les8:
+  case Builtin::BIstdc_store8_aligned_beu8:
+  case Builtin::BI__builtin_stdc_store8_aligned_beu8:
+  case Builtin::BIstdc_store8_aligned_bes8:
+  case Builtin::BI__builtin_stdc_store8_aligned_bes8:
+  case Builtin::BIstdc_store8_leu16:
+  case Builtin::BI__builtin_stdc_store8_leu16:
+  case Builtin::BIstdc_store8_les16:
+  case Builtin::BI__builtin_stdc_store8_les16:
+  case Builtin::BIstdc_store8_beu16:
+  case Builtin::BI__builtin_stdc_store8_beu16:
+  case Builtin::BIstdc_store8_bes16:
+  case Builtin::BI__builtin_stdc_store8_bes16:
+  case Builtin::BIstdc_store8_aligned_leu16:
+  case Builtin::BI__builtin_stdc_store8_aligned_leu16:
+  case Builtin::BIstdc_store8_aligned_les16:
+  case Builtin::BI__builtin_stdc_store8_aligned_les16:
+  case Builtin::BIstdc_store8_aligned_beu16:
+  case Builtin::BI__builtin_stdc_store8_aligned_beu16:
+  case Builtin::BIstdc_store8_aligned_bes16:
+  case Builtin::BI__builtin_stdc_store8_aligned_bes16:
+  case Builtin::BIstdc_store8_leu32:
+  case Builtin::BI__builtin_stdc_store8_leu32:
+  case Builtin::BIstdc_store8_les32:
+  case Builtin::BI__builtin_stdc_store8_les32:
+  case Builtin::BIstdc_store8_beu32:
+  case Builtin::BI__builtin_stdc_store8_beu32:
+  case Builtin::BIstdc_store8_bes32:
+  case Builtin::BI__builtin_stdc_store8_bes32:
+  case Builtin::BIstdc_store8_aligned_leu32:
+  case Builtin::BI__builtin_stdc_store8_aligned_leu32:
+  case Builtin::BIstdc_store8_aligned_les32:
+  case Builtin::BI__builtin_stdc_store8_aligned_les32:
+  case Builtin::BIstdc_store8_aligned_beu32:
+  case Builtin::BI__builtin_stdc_store8_aligned_beu32:
+  case Builtin::BIstdc_store8_aligned_bes32:
+  case Builtin::BI__builtin_stdc_store8_aligned_bes32:
+  case Builtin::BIstdc_store8_leu64:
+  case Builtin::BI__builtin_stdc_store8_leu64:
+  case Builtin::BIstdc_store8_les64:
+  case Builtin::BI__builtin_stdc_store8_les64:
+  case Builtin::BIstdc_store8_beu64:
+  case Builtin::BI__builtin_stdc_store8_beu64:
+  case Builtin::BIstdc_store8_bes64:
+  case Builtin::BI__builtin_stdc_store8_bes64:
+  case Builtin::BIstdc_store8_aligned_leu64:
+  case Builtin::BI__builtin_stdc_store8_aligned_leu64:
+  case Builtin::BIstdc_store8_aligned_les64:
+  case Builtin::BI__builtin_stdc_store8_aligned_les64:
+  case Builtin::BIstdc_store8_aligned_beu64:
+  case Builtin::BI__builtin_stdc_store8_aligned_beu64:
+  case Builtin::BIstdc_store8_aligned_bes64:
+  case Builtin::BI__builtin_stdc_store8_aligned_bes64: {
+    // The name is [__builtin_]stdc_store8_[aligned_]{le,be}{u,s}N.
+    std::string BuiltinName = getContext().BuiltinInfo.getName(BuiltinID);
+    StringRef Name = BuiltinName;
+    Name.consume_front("__builtin_");
+    Name.consume_front("stdc_store8_");
+    bool IsAligned = Name.consume_front("aligned_");
+    bool IsBE = Name.starts_with("be");
+
+    Value *Val = EmitScalarExpr(E->getArg(0));
+    llvm::Type *IntTy = Val->getType();
+    unsigned BitWidth = IntTy->getIntegerBitWidth();
+    assert(
+        (BitWidth == 8 || BitWidth == 16 || BitWidth == 32 || BitWidth == 64) &&
+        "unexpected bit width for stdc_store8_*");
+    Address Addr = EmitPointerWithAlignment(E->getArg(1));
+    if (IsAligned) {
+      CharUnits TypeAlign =
+          getContext().getTypeAlignInChars(E->getArg(0)->getType());
+      Addr = Addr.withAlignment(std::max(Addr.getAlignment(), TypeAlign));
+    }
+    Addr = Addr.withElementType(IntTy);
+    if ((BitWidth == 16 || BitWidth == 32 || BitWidth == 64) &&
+        IsBE != getTarget().isBigEndian())
+      Val = Builder.CreateCall(CGM.getIntrinsic(Intrinsic::bswap, IntTy), Val);
+    Builder.CreateStore(Val, Addr);
+
+    return RValue::get(nullptr);
+  }
+
   case Builtin::BI__builtin_constant_p: {
     llvm::Type *ResultType = ConvertType(E->getType());
 

@@ -331,6 +331,13 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   and assemble them into an integer using little-endian or big-endian
   byte order.
 
+- Implemented the C2y `<stdbit.h>` endian-aware 8-bit store functions
+  `stdc_store8_{le,be}{u,s}{8,16,32,64}` and their aligned counterparts
+  `stdc_store8_aligned_{le,be}{u,s}{8,16,32,64}`. These functions write an
+  integer to N/8 bytes of an `unsigned char *` using little-endian or
+  big-endian byte order. They can be evaluated in constant expressions
+  through their `__builtin_` spellings.
+
 - Clang now diagnoses the use of the same identifier with both internal and
   external linkage within a translation unit, as made ill-formed by
   [N3410](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3410.pdf).
