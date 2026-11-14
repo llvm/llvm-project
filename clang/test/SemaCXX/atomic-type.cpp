@@ -111,3 +111,13 @@ namespace non_trivially_copyable {
   _Atomic S s;  // expected-error {{_Atomic cannot be applied to type 'S' which is not trivially copyable}} \
                 // expected-warning {{'_Atomic' is a C11 extension}}
 }
+
+#if __cplusplus >= 201103L
+namespace GH111295 {
+  typedef __attribute__((aligned(8))) int alignedint;
+  static_assert(alignof(alignedint) == 8, "");
+  static_assert(sizeof(_Atomic(alignedint)) == sizeof(int), ""); // expected-warning {{'_Atomic' is a C11 extension}}
+  static_assert(alignof(_Atomic(alignedint)) == 8, ""); // expected-warning {{'_Atomic' is a C11 extension}}
+  static_assert(alignof(_Atomic(int)) == sizeof(int), ""); // expected-warning {{'_Atomic' is a C11 extension}}
+}
+#endif

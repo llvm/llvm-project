@@ -149,6 +149,13 @@ features cannot lower the translation-unit ABI level;
   longer classified according to a single member. `-fclang-abi-compat=23`
   restores the previous behavior. (#GH227130)
 
+- `_Atomic(T)` is now never less aligned than `T`, matching GCC. Previously an
+  over-aligned `T`, such as an `int` typedef declared with
+  `__attribute__((aligned(8)))`, lost its alignment under `_Atomic`, which
+  affects the layout of structures with such members. In the Microsoft record
+  layout, an `_Atomic` member of such a typedef now also resists `#pragma pack`
+  like the typedef itself. (#GH111295)
+
 - Clang now considers matrix types in its isHomogeneousAggregate() handling,
   which can lead to differences in how structures containing matrix types are
   classified for ABI purposes. The previous exclusion of matrix types appears
@@ -848,6 +855,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed incorrect handling of C++ import preprocessing token when a digraph character after import. (#GH190693)
 - Fixed a crash when emitting RTTI for a `dllexport` class, or the fundamental type descriptors for `__cxxabiv1::__fundamental_type_info`, under `-fvisibility=hidden`. (#GH207963)
 - Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
+- Fixed an assertion failure when accessing an `_Atomic` object whose value type is more aligned than it is
+  wide, such as an `int` typedef declared with `__attribute__((aligned(8)))`. (#GH111295)
 - Fixed an assertion failure when converting between an x87 `long double` vector and another vector type of the same size. (#GH173254), (#GH63548)
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
