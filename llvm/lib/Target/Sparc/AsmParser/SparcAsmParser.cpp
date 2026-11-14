@@ -92,6 +92,8 @@ class SparcAsmParser : public MCTargetAsmParser {
   ParseStatus parseMEMOperand(OperandVector &Operands);
 
   ParseStatus parseMembarTag(OperandVector &Operands);
+  ParseStatus parseLeonStbarTag(OperandVector &Operands);
+  ParseStatus parseBarrierMask(OperandVector &Operands, bool LeonStbar);
 
   ParseStatus parseASITag(OperandVector &Operands);
 
@@ -269,6 +271,7 @@ public:
   bool isMEMrr() const { return Kind == k_MemoryReg; }
   bool isMEMri() const { return Kind == k_MemoryImm; }
   bool isMembarTag() const { return Kind == k_Immediate; }
+  bool isLeonStbarTag() const { return Kind == k_Immediate; }
   bool isASITag() const { return Kind == k_ASITag; }
   bool isPrefetchTag() const { return Kind == k_PrefetchTag; }
   bool isTailRelocSym() const { return Kind == k_TailRelocSym; }
@@ -464,6 +467,10 @@ public:
     assert(N == 1 && "Invalid number of operands!");
     const MCExpr *Expr = getImm();
     addExpr(Inst, Expr);
+  }
+
+  void addLeonStbarTagOperands(MCInst &Inst, unsigned N) const {
+    addMembarTagOperands(Inst, N);
   }
 
   void addCallTargetOperands(MCInst &Inst, unsigned N) const {
@@ -1219,34 +1226,48 @@ ParseStatus SparcAsmParser::parseTailRelocSym(OperandVector &Operands) {
 }
 
 ParseStatus SparcAsmParser::parseMembarTag(OperandVector &Operands) {
+  return parseBarrierMask(Operands, /*LeonStbar=*/false);
+}
+
+ParseStatus SparcAsmParser::parseLeonStbarTag(OperandVector &Operands) {
+  return parseBarrierMask(Operands, /*LeonStbar=*/true);
+}
+
+ParseStatus SparcAsmParser::parseBarrierMask(OperandVector &Operands,
+                                             bool LeonStbar) {
   SMLoc S = Parser.getTok().getLoc();
   const MCExpr *EVal;
   int64_t ImmVal = 0;
+  const int64_t ValidMask =
+      LeonStbar ? SparcBarrier::LeonStbarMask : SparcBarrier::MembarMask;
 
   std::unique_ptr<SparcOperand> Mask;
   if (parseSparcAsmOperand(Mask).isSuccess()) {
     if (!Mask->isImm() || !Mask->getImm()->evaluateAsAbsolute(ImmVal) ||
-        ImmVal < 0 || ImmVal > 127)
-      return Error(S, "invalid membar mask number");
+        (ImmVal & ~ValidMask))
+      return Error(S, LeonStbar ? "invalid stbar mask number"
+                                : "invalid membar mask number");
   }
 
   while (getLexer().getKind() == AsmToken::Hash) {
     SMLoc TagStart = getLexer().getLoc();
     Parser.Lex(); // Eat the '#'.
     unsigned MaskVal = StringSwitch<unsigned>(Parser.getTok().getString())
-      .Case("LoadLoad", 0x1)
-      .Case("StoreLoad", 0x2)
-      .Case("LoadStore", 0x4)
-      .Case("StoreStore", 0x8)
-      .Case("Lookaside", 0x10)
-      .Case("MemIssue", 0x20)
-      .Case("Sync", 0x40)
-      .Default(0);
+                           .Case("LoadLoad", 0x1)
+                           .Case("StoreLoad", 0x2)
+                           .Case("LoadStore", 0x4)
+                           .Case("StoreStore", 0x8)
+                           .Case("Lookaside", 0x10)
+                           .Case("MemIssue", 0x20)
+                           .Case("Sync", 0x40)
+                           .Case("WriteCombine", LeonStbar ? 0x100 : 0)
+                           .Default(0);
 
     Parser.Lex(); // Eat the identifier token.
 
     if (!MaskVal)
-      return Error(TagStart, "unknown membar tag");
+      return Error(TagStart,
+                   LeonStbar ? "unknown stbar tag" : "unknown membar tag");
 
     ImmVal |= MaskVal;
 
@@ -1365,6 +1386,9 @@ ParseStatus SparcAsmParser::parseOperand(OperandVector &Operands,
   // the operand parsing failed.
   if (Res.isSuccess() || Res.isFailure())
     return Res;
+
+  if (Mnemonic == "stbar" && getLexer().is(AsmToken::Hash))
+    return parseLeonStbarTag(Operands);
 
   if (getLexer().is(AsmToken::LBrac)) {
     // Memory operand
