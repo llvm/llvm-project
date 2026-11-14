@@ -170,9 +170,7 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
   case AMDGPU::BI__builtin_amdgcn_global_prefetch: {
     // Only th (bits 0-2, not 7), scope (bits 3-4) and nv (bit 5) may be set.
     llvm::APSInt CPol;
-    if (SemaRef.BuiltinConstantArgRange(TheCall, /*ArgNum=*/1, /*Low=*/0,
-                                        /*High=*/63) ||
-        SemaRef.BuiltinConstantArg(TheCall, /*ArgNum=*/1, CPol))
+    if (SemaRef.BuiltinConstantArg(TheCall, /*ArgNum=*/1, CPol))
       return true;
     if ((CPol.getZExtValue() & 0x7) != 0x7)
       return false;

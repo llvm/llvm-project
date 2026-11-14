@@ -1060,8 +1060,8 @@ def __builtin_amdgcn_cvt_sr_f16_f32 : AMDGPUBuiltin<"_ExtVector<2, _Float16>(_Ex
 //===----------------------------------------------------------------------===//
 def __builtin_amdgcn_s_cluster_barrier : AMDGPUBuiltin<"void()", [], "gfx1250-insts">;
 
-def __builtin_amdgcn_flat_prefetch : AMDGPUBuiltin<"void(void const address_space<0> *, _Constant int)", [Const], "vmem-pref-insts">;
-def __builtin_amdgcn_global_prefetch : AMDGPUBuiltin<"void(void const address_space<1> *, _Constant int)", [Const], "vmem-pref-insts">;
+def __builtin_amdgcn_flat_prefetch : AMDGPUBuiltin<"void(void const address_space<0> *, _Constant int)", [Const, ArgRange<1, 0, 64>], "vmem-pref-insts">;
+def __builtin_amdgcn_global_prefetch : AMDGPUBuiltin<"void(void const address_space<1> *, _Constant int)", [Const, ArgRange<1, 0, 64>], "vmem-pref-insts">;
 
 def __builtin_amdgcn_global_load_monitor_b32 : AMDGPUBuiltin<"int(int address_space<1> *, _Constant int, _Constant int)", [Const], "load-monitor-insts">;
 def __builtin_amdgcn_global_load_monitor_b64 : AMDGPUBuiltin<"_ExtVector<2, int>(_ExtVector<2, int> address_space<1> *, _Constant int, _Constant int)", [Const], "load-monitor-insts">;
