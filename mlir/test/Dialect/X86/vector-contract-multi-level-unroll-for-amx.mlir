@@ -879,6 +879,62 @@ func.func @amx_bf16_flat_acc_partial_overlap(%A: memref<?x?xbf16>, %B: memref<?x
 
 // NANO-LABEL: func.func @amx_bf16_flat_acc_partial_overlap(
 
+// Multiple register tiles in M alone require the temporary buffer.
+func.func @amx_bf16_flat_acc_partial_overlap_m(%A: memref<?x?xbf16>, %B: memref<?x?xbf16>, %C: memref<?x?xf32>,
+                                               %m: index, %n: index, %k_start: index, %k_end: index) {
+  %c32 = arith.constant 32 : index
+  %c0_0 = arith.constant 0.0 : bf16
+  %c0_0_f32 = arith.constant 0.0 : f32
+  %m_off = arith.addi %m, %c32 : index
+  %c = vector.transfer_read %C[%m, %n], %c0_0_f32 {in_bounds = [true, true]} : memref<?x?xf32>, vector<64x32xf32>
+  %res = scf.for %k = %k_start to %k_end step %c32 iter_args(%acc = %c) -> (vector<64x32xf32>) {
+    %a = vector.transfer_read %A[%m, %k], %c0_0 {in_bounds = [true, true]} : memref<?x?xbf16>, vector<64x32xbf16>
+    %b = vector.transfer_read %B[%k, %n], %c0_0 {in_bounds = [true, true]} : memref<?x?xbf16>, vector<32x32xbf16>
+    %d = vector.contract {
+      indexing_maps = [#map, #map1, #map2],
+      iterator_types = ["parallel", "parallel", "reduction"],
+      kind = #vector.kind<add>}
+      %a, %b, %acc : vector<64x32xbf16>, vector<32x32xbf16> into vector<64x32xf32>
+    scf.yield %d : vector<64x32xf32>
+  }
+  vector.transfer_write %res, %C[%m_off, %n] {in_bounds = [true, true]} : vector<64x32xf32>, memref<?x?xf32>
+  func.return
+}
+
+// CHECK-LABEL: func.func @amx_bf16_flat_acc_partial_overlap_m(
+// CHECK:         memref.alloca() : memref<64x32xf32>
+// CHECK:         vector.transfer_write {{.*}} : vector<64x32xf32>, memref<?x?xf32>
+
+// NANO-LABEL: func.func @amx_bf16_flat_acc_partial_overlap_m(
+
+// Multiple register tiles in N alone also require the temporary buffer.
+func.func @amx_bf16_flat_acc_partial_overlap_n(%A: memref<?x?xbf16>, %B: memref<?x?xbf16>, %C: memref<?x?xf32>,
+                                               %m: index, %n: index, %k_start: index, %k_end: index) {
+  %c32 = arith.constant 32 : index
+  %c0_0 = arith.constant 0.0 : bf16
+  %c0_0_f32 = arith.constant 0.0 : f32
+  %n_off = arith.addi %n, %c32 : index
+  %c = vector.transfer_read %C[%m, %n], %c0_0_f32 {in_bounds = [true, true]} : memref<?x?xf32>, vector<32x64xf32>
+  %res = scf.for %k = %k_start to %k_end step %c32 iter_args(%acc = %c) -> (vector<32x64xf32>) {
+    %a = vector.transfer_read %A[%m, %k], %c0_0 {in_bounds = [true, true]} : memref<?x?xbf16>, vector<32x32xbf16>
+    %b = vector.transfer_read %B[%k, %n], %c0_0 {in_bounds = [true, true]} : memref<?x?xbf16>, vector<32x64xbf16>
+    %d = vector.contract {
+      indexing_maps = [#map, #map1, #map2],
+      iterator_types = ["parallel", "parallel", "reduction"],
+      kind = #vector.kind<add>}
+      %a, %b, %acc : vector<32x32xbf16>, vector<32x64xbf16> into vector<32x64xf32>
+    scf.yield %d : vector<32x64xf32>
+  }
+  vector.transfer_write %res, %C[%m, %n_off] {in_bounds = [true, true]} : vector<32x64xf32>, memref<?x?xf32>
+  func.return
+}
+
+// CHECK-LABEL: func.func @amx_bf16_flat_acc_partial_overlap_n(
+// CHECK:         memref.alloca() : memref<32x64xf32>
+// CHECK:         vector.transfer_write {{.*}} : vector<32x64xf32>, memref<?x?xf32>
+
+// NANO-LABEL: func.func @amx_bf16_flat_acc_partial_overlap_n(
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
@@ -1148,8 +1204,8 @@ module attributes {transform.with_named_sequence} {
 #map2 = affine_map<(d0, d1, d2) -> (d0, d1)>
 
 // The original shape equals the register tile shape, so the M-N loop nest has
-// a single iteration and folds away.
-func.func @amx_bf16_flat_single_reg_tile(%A: memref<?x?xbf16>, %B: memref<?x?xbf16>, %C: memref<?x?xf32>,
+// a single iteration and folds away. The result can use a different buffer.
+func.func @amx_bf16_flat_single_reg_tile(%A: memref<?x?xbf16>, %B: memref<?x?xbf16>, %C: memref<?x?xf32>, %D: memref<?x?xf32>,
                                          %m: index, %n: index, %k_start: index, %k_end: index) {
   %c32 = arith.constant 32 : index
   %c0_0 = arith.constant 0.0 : bf16
@@ -1165,18 +1221,19 @@ func.func @amx_bf16_flat_single_reg_tile(%A: memref<?x?xbf16>, %B: memref<?x?xbf
       %a, %b, %acc : vector<32x32xbf16>, vector<32x32xbf16> into vector<32x32xf32>
     scf.yield %d : vector<32x32xf32>
   }
-  vector.transfer_write %res, %C[%m, %n] {in_bounds = [true, true]} : vector<32x32xf32>, memref<?x?xf32>
+  vector.transfer_write %res, %D[%m, %n] {in_bounds = [true, true]} : vector<32x32xf32>, memref<?x?xf32>
   func.return
 }
 
 // CHECK-LABEL: func.func @amx_bf16_flat_single_reg_tile(
-// CHECK-SAME:    %[[A:.+]]: memref<?x?xbf16>, %[[B:.+]]: memref<?x?xbf16>, %[[C:.+]]: memref<?x?xf32>,
+// CHECK-SAME:    %[[A:.+]]: memref<?x?xbf16>, %[[B:.+]]: memref<?x?xbf16>, %[[C:.+]]: memref<?x?xf32>, %[[D:.+]]: memref<?x?xf32>,
 // CHECK-SAME:    %[[M:.+]]: index, %[[N:.+]]: index, %[[K_START:.+]]: index, %[[K_END:.+]]: index)
 // CHECK-DAG:     %[[C0:.+]] = arith.constant 0 : index
 // CHECK-DAG:     %[[C16:.+]] = arith.constant 16 : index
 // CHECK-DAG:     %[[C32:.+]] = arith.constant 32 : index
 // CHECK-NOT:     memref.alloca
-// CHECK:         %[[ACC_VIEW:.+]] = memref.subview %[[C]][%[[M]], %[[N]]] [32, 32] [1, 1]
+// CHECK-DAG:     %[[ACC_VIEW:.+]] = memref.subview %[[C]][%[[M]], %[[N]]] [32, 32] [1, 1]
+// CHECK-DAG:     %[[OUT_VIEW:.+]] = memref.subview %[[D]][%[[M]], %[[N]]] [32, 32] [1, 1]
 // CHECK-NOT:     memref.subview %[[ACC_VIEW]]
 // CHECK:         %[[ACC0:.+]] = vector.transfer_read %[[ACC_VIEW]][%[[C0]], %[[C0]]], {{.*}} vector<16x16xf32>
 // CHECK:         %[[ACC1:.+]] = vector.transfer_read %[[ACC_VIEW]][%[[C0]], %[[C16]]], {{.*}} vector<16x16xf32>
@@ -1194,10 +1251,10 @@ func.func @amx_bf16_flat_single_reg_tile(%A: memref<?x?xbf16>, %B: memref<?x?xbf
 // CHECK-COUNT-4:   vector.contract {{.*}} {x86_vcmlu_native_shape = array<i64: 16, 16, 32>} : vector<16x32xbf16>, vector<32x16xbf16> into vector<16x16xf32>
 // CHECK:           scf.yield
 // CHECK:         }
-// CHECK:         vector.transfer_write %[[RES]]#0, %[[ACC_VIEW]][%[[C0]], %[[C0]]]
-// CHECK:         vector.transfer_write %[[RES]]#1, %[[ACC_VIEW]][%[[C0]], %[[C16]]]
-// CHECK:         vector.transfer_write %[[RES]]#2, %[[ACC_VIEW]][%[[C16]], %[[C0]]]
-// CHECK:         vector.transfer_write %[[RES]]#3, %[[ACC_VIEW]][%[[C16]], %[[C16]]]
+// CHECK:         vector.transfer_write %[[RES]]#0, %[[OUT_VIEW]][%[[C0]], %[[C0]]]
+// CHECK:         vector.transfer_write %[[RES]]#1, %[[OUT_VIEW]][%[[C0]], %[[C16]]]
+// CHECK:         vector.transfer_write %[[RES]]#2, %[[OUT_VIEW]][%[[C16]], %[[C0]]]
+// CHECK:         vector.transfer_write %[[RES]]#3, %[[OUT_VIEW]][%[[C16]], %[[C16]]]
 // CHECK-NOT:     vector.transfer_read
 // CHECK-NOT:     vector.transfer_write
 // CHECK:         return
@@ -1229,12 +1286,15 @@ module attributes {transform.with_named_sequence} {
 #map1 = affine_map<(d0, d1, d2, d3) -> (d2, d1, d3)>
 #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1)>
 
+// All four accumulator slices are read before any result is written, so a
+// shifted, overlapping result view is safe for a single register tile.
 func.func @amx_bf16_vnni_single_reg_tile(%A: memref<?x?x2xbf16>, %B: memref<?x?x2xbf16>, %C: memref<?x?xf32>,
                                          %m: index, %n: index, %k_start: index, %k_end: index) {
   %c0 = arith.constant 0 : index
   %c16 = arith.constant 16 : index
   %c0_0 = arith.constant 0.0 : bf16
   %c0_0_f32 = arith.constant 0.0 : f32
+  %n_off = arith.addi %n, %c16 : index
   %c = vector.transfer_read %C[%m, %n], %c0_0_f32 {in_bounds = [true, true]} : memref<?x?xf32>, vector<32x32xf32>
   %res = scf.for %k = %k_start to %k_end step %c16 iter_args(%acc = %c) -> (vector<32x32xf32>) {
     %a = vector.transfer_read %A[%m, %k, %c0], %c0_0 {in_bounds = [true, true, true]} : memref<?x?x2xbf16>, vector<32x16x2xbf16>
@@ -1246,7 +1306,7 @@ func.func @amx_bf16_vnni_single_reg_tile(%A: memref<?x?x2xbf16>, %B: memref<?x?x
       %a, %b, %acc : vector<32x16x2xbf16>, vector<16x32x2xbf16> into vector<32x32xf32>
     scf.yield %d : vector<32x32xf32>
   }
-  vector.transfer_write %res, %C[%m, %n] {in_bounds = [true, true]} : vector<32x32xf32>, memref<?x?xf32>
+  vector.transfer_write %res, %C[%m, %n_off] {in_bounds = [true, true]} : vector<32x32xf32>, memref<?x?xf32>
   func.return
 }
 
@@ -1255,8 +1315,10 @@ func.func @amx_bf16_vnni_single_reg_tile(%A: memref<?x?x2xbf16>, %B: memref<?x?x
 // CHECK-SAME:    %[[M:.+]]: index, %[[N:.+]]: index, %[[K_START:.+]]: index, %[[K_END:.+]]: index)
 // CHECK-DAG:     %[[C0:.+]] = arith.constant 0 : index
 // CHECK-DAG:     %[[C16:.+]] = arith.constant 16 : index
+// CHECK-DAG:     %[[N_OFF:.+]] = arith.addi %[[N]], %[[C16]]
 // CHECK-NOT:     memref.alloca
-// CHECK:         %[[ACC_VIEW:.+]] = memref.subview %[[C]][%[[M]], %[[N]]] [32, 32] [1, 1]
+// CHECK-DAG:     %[[ACC_VIEW:.+]] = memref.subview %[[C]][%[[M]], %[[N]]] [32, 32] [1, 1]
+// CHECK-DAG:     %[[OUT_VIEW:.+]] = memref.subview %[[C]][%[[M]], %[[N_OFF]]] [32, 32] [1, 1]
 // CHECK-NOT:     memref.subview %[[ACC_VIEW]]
 // CHECK:         %[[ACC0:.+]] = vector.transfer_read %[[ACC_VIEW]][%[[C0]], %[[C0]]], {{.*}} vector<16x16xf32>
 // CHECK:         %[[ACC1:.+]] = vector.transfer_read %[[ACC_VIEW]][%[[C0]], %[[C16]]], {{.*}} vector<16x16xf32>
@@ -1274,10 +1336,10 @@ func.func @amx_bf16_vnni_single_reg_tile(%A: memref<?x?x2xbf16>, %B: memref<?x?x
 // CHECK-COUNT-4:   vector.contract {{.*}} {x86_vcmlu_native_shape = array<i64: 16, 16, 16, 2>} : vector<16x16x2xbf16>, vector<16x16x2xbf16> into vector<16x16xf32>
 // CHECK:           scf.yield
 // CHECK:         }
-// CHECK:         vector.transfer_write %[[RES]]#0, %[[ACC_VIEW]][%[[C0]], %[[C0]]]
-// CHECK:         vector.transfer_write %[[RES]]#1, %[[ACC_VIEW]][%[[C0]], %[[C16]]]
-// CHECK:         vector.transfer_write %[[RES]]#2, %[[ACC_VIEW]][%[[C16]], %[[C0]]]
-// CHECK:         vector.transfer_write %[[RES]]#3, %[[ACC_VIEW]][%[[C16]], %[[C16]]]
+// CHECK:         vector.transfer_write %[[RES]]#0, %[[OUT_VIEW]][%[[C0]], %[[C0]]]
+// CHECK:         vector.transfer_write %[[RES]]#1, %[[OUT_VIEW]][%[[C0]], %[[C16]]]
+// CHECK:         vector.transfer_write %[[RES]]#2, %[[OUT_VIEW]][%[[C16]], %[[C0]]]
+// CHECK:         vector.transfer_write %[[RES]]#3, %[[OUT_VIEW]][%[[C16]], %[[C16]]]
 // CHECK-NOT:     vector.transfer_read
 // CHECK-NOT:     vector.transfer_write
 // CHECK:         return
