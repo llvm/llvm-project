@@ -87,8 +87,7 @@ private:
   ///   All strings in cache files are put into string tables for efficiency
   ///   and cache file size reduction. Strings are stored as uint32_t string
   ///   table offsets in the cache data.
-  bool Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
-              bool &signature_mismatch);
+  bool Decode(const DataExtractor &data, lldb::offset_t *offset_ptr);
 
   /// Encode this object into a data encoder object.
   ///

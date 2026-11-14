@@ -556,16 +556,12 @@ void ManualDWARFIndex::Dump(Stream &s) {
 }
 
 bool ManualDWARFIndex::Decode(const DataExtractor &data,
-                              lldb::offset_t *offset_ptr,
-                              bool &signature_mismatch) {
-  signature_mismatch = false;
+                              lldb::offset_t *offset_ptr) {
   CacheSignature signature;
   if (!signature.Decode(data, offset_ptr))
     return false;
-  if (CacheSignature(m_dwarf->GetObjectFile()) != signature) {
-    signature_mismatch = true;
+  if (CacheSignature(m_dwarf->GetObjectFile()) != signature)
     return false;
-  }
   std::optional<IndexSet<NameToDIE>> set = DecodeIndexSet(data, offset_ptr);
   if (!set)
     return false;
@@ -632,10 +628,11 @@ bool ManualDWARFIndex::LoadFromCache() {
                      mem_buffer_up->getBufferSize(),
                      endian::InlHostByteOrder(),
                      objfile->GetAddressByteSize());
-  bool signature_mismatch = false;
   lldb::offset_t offset = 0;
-  const bool result = Decode(data, &offset, signature_mismatch);
-  if (signature_mismatch)
+  const bool result = Decode(data, &offset);
+  // SaveToCache won't overwrite an existing cache file, so remove any file
+  // that can't be used or it will stop this index from being cached.
+  if (!result)
     cache->RemoveCacheFile(GetCacheKey());
   return result;
 }
