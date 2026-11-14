@@ -1697,6 +1697,10 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   `default(private)`, which could silently lose writes such as the result of
   a reduction on the nested construct.
 
+- On GPUs, a `critical` region is now run by the threads of each warp one at
+  a time with a loop over the warp's active lanes, instead of a loop over every
+  thread of the team.
+
 ### SYCL Support
 
 - On a `spirv32-unknown-unknown` or `spirv64-unknown-unknown` offload target,

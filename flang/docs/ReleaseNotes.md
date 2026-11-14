@@ -84,6 +84,9 @@ page](https://llvm.org/releases/).
   the same length.
   ([#220377](https://github.com/llvm/llvm-project/pull/220377))
 
+- Fixed `!$omp critical` on AMDGPU executing its region once per wavefront
+  instead of once per thread: the threads of a wavefront entered the region
+  together on a single acquisition of the lock. Each thread now enters in turn.
 
 ## Non-comprehensive list of changes in this release
 
