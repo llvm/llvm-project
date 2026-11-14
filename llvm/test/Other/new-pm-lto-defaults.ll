@@ -32,6 +32,7 @@
 
 ; CHECK-EP: Running pass: NoOpModulePass
 ; CHECK-O: Running pass: CrossDSOCFIPass
+; CHECK-O-NEXT: Running pass: CoroEarlyPass
 ; CHECK-O-NEXT: Running pass: OpenMPOptPass
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O-NEXT: Running pass: InferFunctionAttrsPass
@@ -65,9 +66,9 @@
 ; CHECK-O-NEXT: Running pass: GlobalSplitPass
 ; CHECK-O-NEXT: Running pass: WholeProgramDevirtPass
 ; CHECK-O-NEXT: Running pass: NoRecurseLTOInferencePass
-; CHECK-O23-NEXT: Running pass: CoroEarlyPass
 ; CHECK-O1-NEXT: Running pass: LowerConstantIntrinsicsPass on foo
 ; CHECK-O1-NEXT: Running pass: LowerTypeTestsPass
+; CHECK-O23-NEXT: Running pass: CoroEarlyPass
 ; CHECK-O23-NEXT: Running pass: GlobalOptPass
 ; CHECK-O23-NEXT: Running pass: PromotePass
 ; CHECK-O23-NEXT: Running pass: ConstantMergePass

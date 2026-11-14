@@ -8,6 +8,7 @@
 
 #include "llvm/Transforms/Coroutines/CoroEarly.h"
 #include "CoroInternal.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -197,15 +198,104 @@ static bool declaresCoroEarlyIntrinsics(const Module &M) {
           Intrinsic::coro_promise, Intrinsic::coro_resume});
 }
 
+static bool isRetconCoroutine(Function &F) {
+  return llvm::any_of(instructions(F), [](Instruction &I) {
+    auto *II = dyn_cast<IntrinsicInst>(&I);
+    return II && (II->getIntrinsicID() == Intrinsic::coro_id_retcon ||
+                  II->getIntrinsicID() == Intrinsic::coro_id_retcon_once);
+  });
+}
+
+// A returned-continuation body's exits do not describe calls to its ramp: a
+// suspension returns to the caller even if the body never reaches coro.end.
+// Keep the callable entry opaque until CoroSplit has materialized those
+// returns.
+static void separateRetconRamp(Function &Body) {
+  if (Body.hasFnAttribute("coro-retcon-body") || !isRetconCoroutine(Body))
+    return;
+
+  Module *M = Body.getParent();
+  auto *Ramp = Function::Create(Body.getFunctionType(), Body.getLinkage(),
+                                Body.getAddressSpace(), "", M);
+  M->getFunctionList().splice(Body.getIterator(), M->getFunctionList(),
+                              Ramp->getIterator());
+  Ramp->copyAttributesFrom(&Body);
+  Ramp->setComdat(Body.getComdat());
+  Ramp->copyMetadata(&Body, 0);
+  if (DISubprogram *SP = Body.getSubprogram()) {
+    // The entry needs a distinct subprogram. Local variables still belong to
+    // the body and will be remapped normally when it is inlined into the ramp.
+    TempDISubprogram RampSP = SP->clone();
+    RampSP->replaceRetainedNodes({});
+    Ramp->setSubprogram(MDNode::replaceWithDistinct(std::move(RampSP)));
+  }
+  Ramp->setSplittedCoroutine();
+  Ramp->removeFnAttr(Attribute::NoReturn);
+  Ramp->removeRetAttr(Attribute::NoAlias);
+  Ramp->removeRetAttr(Attribute::NonNull);
+
+  // Block addresses still identify blocks in the body, not the callable entry.
+  Body.replaceUsesWithIf(
+      Ramp, [](Use &U) { return !isa<BlockAddress>(U.getUser()); });
+  Ramp->takeName(&Body);
+  Body.setName(Ramp->getName() + ".coro.body");
+  Body.setLinkage(GlobalValue::InternalLinkage);
+  Body.setVisibility(GlobalValue::DefaultVisibility);
+  Body.setDLLStorageClass(GlobalValue::DefaultStorageClass);
+  Body.setComdat(nullptr);
+  Body.setPrefixData(nullptr);
+  Body.setPrologueData(nullptr);
+  Body.eraseMetadata(LLVMContext::MD_type);
+  Body.eraseMetadata(LLVMContext::MD_kcfi_type);
+  Body.addFnAttr("coro-retcon-body");
+  // noinline controls the caller-visible boundary, not its implementation.
+  if (!Body.hasFnAttribute(Attribute::OptimizeNone))
+    Body.removeFnAttr(Attribute::NoInline);
+
+  IRBuilder<> Builder(BasicBlock::Create(M->getContext(), "entry", Ramp));
+  if (DISubprogram *SP = Ramp->getSubprogram())
+    Builder.SetCurrentDebugLocation(
+        DILocation::get(M->getContext(), SP->getScopeLine(), 0, SP));
+  Value *BodyPtr = Builder.CreatePointerCast(&Body, Builder.getPtrTy());
+  auto *Prepared =
+      Builder.CreateIntrinsic(Intrinsic::coro_prepare_retcon, {}, {BodyPtr});
+  Value *Callee = Builder.CreatePointerCast(Prepared, Body.getType());
+  SmallVector<Value *> Args;
+  SmallVector<AttributeSet> ArgAttrs;
+  for (auto [RampArg, BodyArg] : llvm::zip(Ramp->args(), Body.args())) {
+    RampArg.setName(BodyArg.getName());
+    Args.push_back(&RampArg);
+    ArgAttrs.push_back(Ramp->getAttributes().getParamAttrs(RampArg.getArgNo()));
+  }
+  auto *Call = Builder.CreateCall(Ramp->getFunctionType(), Callee, Args);
+  Call->setCallingConv(Ramp->getCallingConv());
+  Call->setAttributes(AttributeList::get(M->getContext(), AttributeSet(),
+                                         Ramp->getAttributes().getRetAttrs(),
+                                         ArgAttrs));
+  if (Ramp->hasFnAttribute(Attribute::NoUnwind))
+    Call->addFnAttr(Attribute::NoUnwind);
+  if (Ramp->hasFnAttribute(Attribute::Convergent))
+    Call->addFnAttr(Attribute::Convergent);
+  // This also forwards unnamed arguments for a variadic entry point.
+  Call->setTailCallKind(CallInst::TCK_MustTail);
+  if (Ramp->getReturnType()->isVoidTy())
+    Builder.CreateRetVoid();
+  else
+    Builder.CreateRet(Call);
+}
+
 PreservedAnalyses CoroEarlyPass::run(Module &M, ModuleAnalysisManager &) {
   if (!declaresCoroEarlyIntrinsics(M))
     return PreservedAnalyses::all();
 
   Lowerer L(M);
   for (auto &F : M)
-    L.lowerEarlyIntrinsics(F);
+    if (!RetconOnly || isRetconCoroutine(F))
+      L.lowerEarlyIntrinsics(F);
 
-  PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
+  for (auto &F : llvm::make_early_inc_range(M))
+    if (!F.isDeclaration())
+      separateRetconRamp(F);
+
+  return PreservedAnalyses::none();
 }
