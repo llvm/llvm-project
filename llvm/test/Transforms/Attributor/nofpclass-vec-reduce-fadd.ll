@@ -60,9 +60,9 @@ define float @vec_reduce_fadd_fast__nzero__pnorm(float nofpclass(nan inf pzero s
 ;-------------------------------------------------------------------------------
 
 define float @vec_reduce_fadd__zero__pnorm(float nofpclass(nan inf sub norm) %start, <4 x float> nofpclass(nan inf zero sub nnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__zero__pnorm(
+; CHECK-LABEL: define nofpclass(nan ninf sub nnorm) float @vec_reduce_fadd__zero__pnorm(
 ; CHECK-SAME: float nofpclass(nan inf sub norm) [[START:%.*]], <4 x float> nofpclass(nan inf zero sub nnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf sub norm) [[START]], <4 x float> nofpclass(nan inf zero sub nnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf sub nnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf sub norm) [[START]], <4 x float> nofpclass(nan inf zero sub nnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -70,9 +70,9 @@ define float @vec_reduce_fadd__zero__pnorm(float nofpclass(nan inf sub norm) %st
 }
 
 define float @vec_reduce_fadd__zero__nnorm(float nofpclass(nan inf sub norm) %start, <4 x float> nofpclass(nan inf zero sub pnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__zero__nnorm(
+; CHECK-LABEL: define nofpclass(nan pinf sub pnorm) float @vec_reduce_fadd__zero__nnorm(
 ; CHECK-SAME: float nofpclass(nan inf sub norm) [[START:%.*]], <4 x float> nofpclass(nan inf zero sub pnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf sub norm) [[START]], <4 x float> nofpclass(nan inf zero sub pnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan pinf sub pnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf sub norm) [[START]], <4 x float> nofpclass(nan inf zero sub pnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -80,9 +80,9 @@ define float @vec_reduce_fadd__zero__nnorm(float nofpclass(nan inf sub norm) %st
 }
 
 define float @vec_reduce_fadd__nzero__qnan_pzero(float nofpclass(nan inf pzero sub norm) %start, <4 x float> nofpclass(snan inf nzero sub norm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__nzero__qnan_pzero(
+; CHECK-LABEL: define nofpclass(snan inf sub norm) float @vec_reduce_fadd__nzero__qnan_pzero(
 ; CHECK-SAME: float nofpclass(nan inf pzero sub norm) [[START:%.*]], <4 x float> nofpclass(snan inf nzero sub norm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf pzero sub norm) [[START]], <4 x float> nofpclass(snan inf nzero sub norm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf sub norm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf pzero sub norm) [[START]], <4 x float> nofpclass(snan inf nzero sub norm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -90,9 +90,9 @@ define float @vec_reduce_fadd__nzero__qnan_pzero(float nofpclass(nan inf pzero s
 }
 
 define float @vec_reduce_fadd__pzero__qnan_nzero(float nofpclass(nan inf nzero sub norm) %start, <4 x float> nofpclass(snan inf pzero sub norm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__pzero__qnan_nzero(
+; CHECK-LABEL: define nofpclass(snan inf sub norm) float @vec_reduce_fadd__pzero__qnan_nzero(
 ; CHECK-SAME: float nofpclass(nan inf nzero sub norm) [[START:%.*]], <4 x float> nofpclass(snan inf pzero sub norm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf nzero sub norm) [[START]], <4 x float> nofpclass(snan inf pzero sub norm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf sub norm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf nzero sub norm) [[START]], <4 x float> nofpclass(snan inf pzero sub norm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -100,9 +100,9 @@ define float @vec_reduce_fadd__pzero__qnan_nzero(float nofpclass(nan inf nzero s
 }
 
 define float @vec_reduce_fadd__norm__pnorm(float nofpclass(nan inf zero sub) %start, <4 x float> nofpclass(nan inf zero sub nnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__norm__pnorm(
+; CHECK-LABEL: define nofpclass(snan) float @vec_reduce_fadd__norm__pnorm(
 ; CHECK-SAME: float nofpclass(nan inf zero sub) [[START:%.*]], <4 x float> nofpclass(nan inf zero sub nnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero sub) [[START]], <4 x float> nofpclass(nan inf zero sub nnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero sub) [[START]], <4 x float> nofpclass(nan inf zero sub nnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -110,9 +110,9 @@ define float @vec_reduce_fadd__norm__pnorm(float nofpclass(nan inf zero sub) %st
 }
 
 define float @vec_reduce_fadd__norm__nnorm(float nofpclass(nan inf zero sub) %start, <4 x float> nofpclass(nan inf zero sub pnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__norm__nnorm(
+; CHECK-LABEL: define nofpclass(snan) float @vec_reduce_fadd__norm__nnorm(
 ; CHECK-SAME: float nofpclass(nan inf zero sub) [[START:%.*]], <4 x float> nofpclass(nan inf zero sub pnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero sub) [[START]], <4 x float> nofpclass(nan inf zero sub pnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero sub) [[START]], <4 x float> nofpclass(nan inf zero sub pnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -120,9 +120,9 @@ define float @vec_reduce_fadd__norm__nnorm(float nofpclass(nan inf zero sub) %st
 }
 
 define float @vec_reduce_fadd_nsz__nzero__qnan_pzero(float nofpclass(nan inf pzero sub norm) %start, <4 x float> nofpclass(snan inf nzero sub norm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd_nsz__nzero__qnan_pzero(
+; CHECK-LABEL: define nofpclass(snan inf sub norm) float @vec_reduce_fadd_nsz__nzero__qnan_pzero(
 ; CHECK-SAME: float nofpclass(nan inf pzero sub norm) [[START:%.*]], <4 x float> nofpclass(snan inf nzero sub norm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf pzero sub norm) [[START]], <4 x float> nofpclass(snan inf nzero sub norm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf sub norm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf pzero sub norm) [[START]], <4 x float> nofpclass(snan inf nzero sub norm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -130,9 +130,9 @@ define float @vec_reduce_fadd_nsz__nzero__qnan_pzero(float nofpclass(nan inf pze
 }
 
 define float @vec_reduce_fadd_nsz__pzero__qnan_nzero(float nofpclass(nan inf nzero sub norm) %start, <4 x float> nofpclass(snan inf pzero sub norm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd_nsz__pzero__qnan_nzero(
+; CHECK-LABEL: define nofpclass(snan inf sub norm) float @vec_reduce_fadd_nsz__pzero__qnan_nzero(
 ; CHECK-SAME: float nofpclass(nan inf nzero sub norm) [[START:%.*]], <4 x float> nofpclass(snan inf pzero sub norm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf nzero sub norm) [[START]], <4 x float> nofpclass(snan inf pzero sub norm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf sub norm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf nzero sub norm) [[START]], <4 x float> nofpclass(snan inf pzero sub norm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -141,9 +141,9 @@ define float @vec_reduce_fadd_nsz__pzero__qnan_nzero(float nofpclass(nan inf nze
 
 ; TODO: Rule out -inf and NaN
 define float @vec_reduce_fadd__no_nan_ninf__no_nan_ninf_nsub_nnorm(float nofpclass(nan ninf) %start, <4 x float> nofpclass(nan ninf nsub nnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__no_nan_ninf__no_nan_ninf_nsub_nnorm(
+; CHECK-LABEL: define nofpclass(snan) float @vec_reduce_fadd__no_nan_ninf__no_nan_ninf_nsub_nnorm(
 ; CHECK-SAME: float nofpclass(nan ninf) [[START:%.*]], <4 x float> nofpclass(nan ninf nsub nnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan ninf) [[START]], <4 x float> nofpclass(nan ninf nsub nnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan ninf) [[START]], <4 x float> nofpclass(nan ninf nsub nnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -152,9 +152,9 @@ define float @vec_reduce_fadd__no_nan_ninf__no_nan_ninf_nsub_nnorm(float nofpcla
 
 ; TODO: Rule out +inf and NaN
 define float @vec_reduce_fadd__no_nan_pinf__no_nan_pinf_psub_pnorm(float nofpclass(nan pinf) %start, <4 x float> nofpclass(nan pinf psub pnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__no_nan_pinf__no_nan_pinf_psub_pnorm(
+; CHECK-LABEL: define nofpclass(snan) float @vec_reduce_fadd__no_nan_pinf__no_nan_pinf_psub_pnorm(
 ; CHECK-SAME: float nofpclass(nan pinf) [[START:%.*]], <4 x float> nofpclass(nan pinf psub pnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan pinf) [[START]], <4 x float> nofpclass(nan pinf psub pnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan pinf) [[START]], <4 x float> nofpclass(nan pinf psub pnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -166,9 +166,9 @@ define float @vec_reduce_fadd__no_nan_pinf__no_nan_pinf_psub_pnorm(float nofpcla
 ;-------------------------------------------------------------------------------
 
 define float @vec_reduce_fadd__no_nan__no_nan(float nofpclass(nan) %start, <4 x float> nofpclass(nan) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__no_nan__no_nan(
+; CHECK-LABEL: define nofpclass(snan) float @vec_reduce_fadd__no_nan__no_nan(
 ; CHECK-SAME: float nofpclass(nan) [[START:%.*]], <4 x float> nofpclass(nan) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan) [[START]], <4 x float> nofpclass(nan) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan) [[START]], <4 x float> nofpclass(nan) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -176,9 +176,9 @@ define float @vec_reduce_fadd__no_nan__no_nan(float nofpclass(nan) %start, <4 x 
 }
 
 define float @vec_reduce_fadd__no_snan__no_snan(float nofpclass(snan) %start, <4 x float> nofpclass(snan) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__no_snan__no_snan(
+; CHECK-LABEL: define nofpclass(snan) float @vec_reduce_fadd__no_snan__no_snan(
 ; CHECK-SAME: float nofpclass(snan) [[START:%.*]], <4 x float> nofpclass(snan) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(snan) [[START]], <4 x float> nofpclass(snan) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(snan) [[START]], <4 x float> nofpclass(snan) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -196,9 +196,9 @@ define float @vec_reduce_fadd__no_qnan__no_qnan(float nofpclass(qnan) %start, <4
 }
 
 define float @vec_reduce_fadd__no_psub_pnorm__no_psub_pnorm(float nofpclass(psub pnorm) %start, <4 x float> nofpclass(psub pnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__no_psub_pnorm__no_psub_pnorm(
+; CHECK-LABEL: define nofpclass(psub pnorm) float @vec_reduce_fadd__no_psub_pnorm__no_psub_pnorm(
 ; CHECK-SAME: float nofpclass(psub pnorm) [[START:%.*]], <4 x float> nofpclass(psub pnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(psub pnorm) [[START]], <4 x float> nofpclass(psub pnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(psub pnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(psub pnorm) [[START]], <4 x float> nofpclass(psub pnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -206,9 +206,9 @@ define float @vec_reduce_fadd__no_psub_pnorm__no_psub_pnorm(float nofpclass(psub
 }
 
 define float @vec_reduce_fadd__no_pinf_psub_pnorm__no_pinf_psub_pnorm(float nofpclass(pinf psub pnorm) %start, <4 x float> nofpclass(pinf psub pnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__no_pinf_psub_pnorm__no_pinf_psub_pnorm(
+; CHECK-LABEL: define nofpclass(pinf psub pnorm) float @vec_reduce_fadd__no_pinf_psub_pnorm__no_pinf_psub_pnorm(
 ; CHECK-SAME: float nofpclass(pinf psub pnorm) [[START:%.*]], <4 x float> nofpclass(pinf psub pnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(pinf psub pnorm) [[START]], <4 x float> nofpclass(pinf psub pnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf psub pnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(pinf psub pnorm) [[START]], <4 x float> nofpclass(pinf psub pnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -216,9 +216,9 @@ define float @vec_reduce_fadd__no_pinf_psub_pnorm__no_pinf_psub_pnorm(float nofp
 }
 
 define float @vec_reduce_fadd__no_pinf_sub_pnorm__no_pinf_sub_pnorm(float nofpclass(pinf sub pnorm) %start, <4 x float> nofpclass(pinf sub pnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__no_pinf_sub_pnorm__no_pinf_sub_pnorm(
+; CHECK-LABEL: define nofpclass(pinf sub pnorm) float @vec_reduce_fadd__no_pinf_sub_pnorm__no_pinf_sub_pnorm(
 ; CHECK-SAME: float nofpclass(pinf sub pnorm) [[START:%.*]], <4 x float> nofpclass(pinf sub pnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(pinf sub pnorm) [[START]], <4 x float> nofpclass(pinf sub pnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf sub pnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(pinf sub pnorm) [[START]], <4 x float> nofpclass(pinf sub pnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -226,9 +226,9 @@ define float @vec_reduce_fadd__no_pinf_sub_pnorm__no_pinf_sub_pnorm(float nofpcl
 }
 
 define float @vec_reduce_fadd__no_sub_pnorm__no_sub_pnorm(float nofpclass(sub pnorm) %start, <4 x float> nofpclass(sub pnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__no_sub_pnorm__no_sub_pnorm(
+; CHECK-LABEL: define nofpclass(sub pnorm) float @vec_reduce_fadd__no_sub_pnorm__no_sub_pnorm(
 ; CHECK-SAME: float nofpclass(sub pnorm) [[START:%.*]], <4 x float> nofpclass(sub pnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(sub pnorm) [[START]], <4 x float> nofpclass(sub pnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub pnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(sub pnorm) [[START]], <4 x float> nofpclass(sub pnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -236,9 +236,9 @@ define float @vec_reduce_fadd__no_sub_pnorm__no_sub_pnorm(float nofpclass(sub pn
 }
 
 define float @vec_reduce_fadd__no_nsub_nnorm__no_nsub_nnorm(float nofpclass(nsub nnorm) %start, <4 x float> nofpclass(nsub nnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__no_nsub_nnorm__no_nsub_nnorm(
+; CHECK-LABEL: define nofpclass(nsub nnorm) float @vec_reduce_fadd__no_nsub_nnorm__no_nsub_nnorm(
 ; CHECK-SAME: float nofpclass(nsub nnorm) [[START:%.*]], <4 x float> nofpclass(nsub nnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nsub nnorm) [[START]], <4 x float> nofpclass(nsub nnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nsub nnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nsub nnorm) [[START]], <4 x float> nofpclass(nsub nnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -246,9 +246,9 @@ define float @vec_reduce_fadd__no_nsub_nnorm__no_nsub_nnorm(float nofpclass(nsub
 }
 
 define float @vec_reduce_fadd__no_ninf_nsub_nnorm__no_ninf_nsub_nnorm(float nofpclass(ninf nsub nnorm) %start, <4 x float> nofpclass(ninf nsub nnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__no_ninf_nsub_nnorm__no_ninf_nsub_nnorm(
+; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @vec_reduce_fadd__no_ninf_nsub_nnorm__no_ninf_nsub_nnorm(
 ; CHECK-SAME: float nofpclass(ninf nsub nnorm) [[START:%.*]], <4 x float> nofpclass(ninf nsub nnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(ninf nsub nnorm) [[START]], <4 x float> nofpclass(ninf nsub nnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(ninf nsub nnorm) [[START]], <4 x float> nofpclass(ninf nsub nnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -256,9 +256,9 @@ define float @vec_reduce_fadd__no_ninf_nsub_nnorm__no_ninf_nsub_nnorm(float nofp
 }
 
 define float @vec_reduce_fadd__no_ninf_sub_nnorm__no_ninf_sub_nnorm(float nofpclass(ninf sub nnorm) %start, <4 x float> nofpclass(ninf sub nnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__no_ninf_sub_nnorm__no_ninf_sub_nnorm(
+; CHECK-LABEL: define nofpclass(ninf sub nnorm) float @vec_reduce_fadd__no_ninf_sub_nnorm__no_ninf_sub_nnorm(
 ; CHECK-SAME: float nofpclass(ninf sub nnorm) [[START:%.*]], <4 x float> nofpclass(ninf sub nnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(ninf sub nnorm) [[START]], <4 x float> nofpclass(ninf sub nnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf sub nnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(ninf sub nnorm) [[START]], <4 x float> nofpclass(ninf sub nnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -266,9 +266,9 @@ define float @vec_reduce_fadd__no_ninf_sub_nnorm__no_ninf_sub_nnorm(float nofpcl
 }
 
 define float @vec_reduce_fadd__no_sub_nnorm__no_sub_nnorm(float nofpclass(sub nnorm) %start, <4 x float> nofpclass(sub nnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__no_sub_nnorm__no_sub_nnorm(
+; CHECK-LABEL: define nofpclass(sub nnorm) float @vec_reduce_fadd__no_sub_nnorm__no_sub_nnorm(
 ; CHECK-SAME: float nofpclass(sub nnorm) [[START:%.*]], <4 x float> nofpclass(sub nnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(sub nnorm) [[START]], <4 x float> nofpclass(sub nnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub nnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(sub nnorm) [[START]], <4 x float> nofpclass(sub nnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -276,9 +276,9 @@ define float @vec_reduce_fadd__no_sub_nnorm__no_sub_nnorm(float nofpclass(sub nn
 }
 
 define float @vec_reduce_fadd__no_pzero_psub_pnorm__no_pzero_psub_pnorm(float nofpclass(pzero psub pnorm) %start, <4 x float> nofpclass(pzero psub pnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__no_pzero_psub_pnorm__no_pzero_psub_pnorm(
+; CHECK-LABEL: define nofpclass(pzero psub pnorm) float @vec_reduce_fadd__no_pzero_psub_pnorm__no_pzero_psub_pnorm(
 ; CHECK-SAME: float nofpclass(pzero psub pnorm) [[START:%.*]], <4 x float> nofpclass(pzero psub pnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(pzero psub pnorm) [[START]], <4 x float> nofpclass(pzero psub pnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pzero psub pnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(pzero psub pnorm) [[START]], <4 x float> nofpclass(pzero psub pnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -286,9 +286,9 @@ define float @vec_reduce_fadd__no_pzero_psub_pnorm__no_pzero_psub_pnorm(float no
 }
 
 define float @vec_reduce_fadd__no_nzero_psub_pnorm__no_nzero_psub_pnorm(float nofpclass(nzero psub pnorm) %start, <4 x float> nofpclass(nzero psub pnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__no_nzero_psub_pnorm__no_nzero_psub_pnorm(
+; CHECK-LABEL: define nofpclass(nzero psub pnorm) float @vec_reduce_fadd__no_nzero_psub_pnorm__no_nzero_psub_pnorm(
 ; CHECK-SAME: float nofpclass(nzero psub pnorm) [[START:%.*]], <4 x float> nofpclass(nzero psub pnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nzero psub pnorm) [[START]], <4 x float> nofpclass(nzero psub pnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero psub pnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nzero psub pnorm) [[START]], <4 x float> nofpclass(nzero psub pnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -296,9 +296,9 @@ define float @vec_reduce_fadd__no_nzero_psub_pnorm__no_nzero_psub_pnorm(float no
 }
 
 define float @vec_reduce_fadd__no_pzero_nsub_nnorm__no_pzero_nsub_nnorm(float nofpclass(pzero nsub nnorm) %start, <4 x float> nofpclass(pzero nsub nnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__no_pzero_nsub_nnorm__no_pzero_nsub_nnorm(
+; CHECK-LABEL: define nofpclass(pzero nsub nnorm) float @vec_reduce_fadd__no_pzero_nsub_nnorm__no_pzero_nsub_nnorm(
 ; CHECK-SAME: float nofpclass(pzero nsub nnorm) [[START:%.*]], <4 x float> nofpclass(pzero nsub nnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(pzero nsub nnorm) [[START]], <4 x float> nofpclass(pzero nsub nnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pzero nsub nnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(pzero nsub nnorm) [[START]], <4 x float> nofpclass(pzero nsub nnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -306,9 +306,9 @@ define float @vec_reduce_fadd__no_pzero_nsub_nnorm__no_pzero_nsub_nnorm(float no
 }
 
 define float @vec_reduce_fadd__no_nzero_nsub_nnorm__no_nzero_nsub_nnorm(float nofpclass(nzero nsub nnorm) %start, <4 x float> nofpclass(nzero nsub nnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__no_nzero_nsub_nnorm__no_nzero_nsub_nnorm(
+; CHECK-LABEL: define nofpclass(nzero nsub nnorm) float @vec_reduce_fadd__no_nzero_nsub_nnorm__no_nzero_nsub_nnorm(
 ; CHECK-SAME: float nofpclass(nzero nsub nnorm) [[START:%.*]], <4 x float> nofpclass(nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nzero nsub nnorm) [[START]], <4 x float> nofpclass(nzero nsub nnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero nsub nnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nzero nsub nnorm) [[START]], <4 x float> nofpclass(nzero nsub nnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -316,9 +316,9 @@ define float @vec_reduce_fadd__no_nzero_nsub_nnorm__no_nzero_nsub_nnorm(float no
 }
 
 define float @vec_reduce_fadd__no_nan_pinf_psub_pnorm__no_nan_pinf_psub_pnorm(float nofpclass(nan pinf psub pnorm) %start, <4 x float> nofpclass(nan pinf psub pnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__no_nan_pinf_psub_pnorm__no_nan_pinf_psub_pnorm(
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) float @vec_reduce_fadd__no_nan_pinf_psub_pnorm__no_nan_pinf_psub_pnorm(
 ; CHECK-SAME: float nofpclass(nan pinf psub pnorm) [[START:%.*]], <4 x float> nofpclass(nan pinf psub pnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan pinf psub pnorm) [[START]], <4 x float> nofpclass(nan pinf psub pnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan pinf psub pnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan pinf psub pnorm) [[START]], <4 x float> nofpclass(nan pinf psub pnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -326,9 +326,9 @@ define float @vec_reduce_fadd__no_nan_pinf_psub_pnorm__no_nan_pinf_psub_pnorm(fl
 }
 
 define float @vec_reduce_fadd__no_nan_ninf_nsub_nnorm__no_nan_ninf_nsub_nnorm(float nofpclass(nan ninf nsub nnorm) %start, <4 x float> nofpclass(nan ninf nsub nnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__no_nan_ninf_nsub_nnorm__no_nan_ninf_nsub_nnorm(
+; CHECK-LABEL: define nofpclass(nan ninf nsub nnorm) float @vec_reduce_fadd__no_nan_ninf_nsub_nnorm__no_nan_ninf_nsub_nnorm(
 ; CHECK-SAME: float nofpclass(nan ninf nsub nnorm) [[START:%.*]], <4 x float> nofpclass(nan ninf nsub nnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan ninf nsub nnorm) [[START]], <4 x float> nofpclass(nan ninf nsub nnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nsub nnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan ninf nsub nnorm) [[START]], <4 x float> nofpclass(nan ninf nsub nnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -336,9 +336,9 @@ define float @vec_reduce_fadd__no_nan_ninf_nsub_nnorm__no_nan_ninf_nsub_nnorm(fl
 }
 
 define float @vec_reduce_fadd__psub__psub(float nofpclass(nan inf zero nsub norm) %start, <4 x float> nofpclass(nan inf zero nsub norm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__psub__psub(
+; CHECK-LABEL: define nofpclass(nan ninf zero nsub nnorm) float @vec_reduce_fadd__psub__psub(
 ; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[START:%.*]], <4 x float> nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero nsub norm) [[START]], <4 x float> nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf zero nsub nnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero nsub norm) [[START]], <4 x float> nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -346,9 +346,9 @@ define float @vec_reduce_fadd__psub__psub(float nofpclass(nan inf zero nsub norm
 }
 
 define float @vec_reduce_fadd__nsub__nsub(float nofpclass(nan inf zero psub norm) %start, <4 x float> nofpclass(nan inf zero psub norm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__nsub__nsub(
+; CHECK-LABEL: define nofpclass(nan pinf zero psub pnorm) float @vec_reduce_fadd__nsub__nsub(
 ; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[START:%.*]], <4 x float> nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero psub norm) [[START]], <4 x float> nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan pinf zero psub pnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero psub norm) [[START]], <4 x float> nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -358,9 +358,9 @@ define float @vec_reduce_fadd__nsub__nsub(float nofpclass(nan inf zero psub norm
 ; +inf + -inf is still possible since we have no idea how the terms will be
 ; added.
 define float @vec_reduce_fadd__sub__sub(float nofpclass(nan inf zero norm) %start, <4 x float> nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd__sub__sub(
+; CHECK-LABEL: define nofpclass(snan) float @vec_reduce_fadd__sub__sub(
 ; CHECK-SAME: float nofpclass(nan inf zero norm) [[START:%.*]], <4 x float> nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero norm) [[START]], <4 x float> nofpclass(nan inf zero norm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero norm) [[START]], <4 x float> nofpclass(nan inf zero norm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -368,9 +368,9 @@ define float @vec_reduce_fadd__sub__sub(float nofpclass(nan inf zero norm) %star
 }
 
 define float @vec_reduce_fadd_nsz__no_zero_psub_pnorm__no_zero_psub_pnorm(float nofpclass(zero psub pnorm) %start, <4 x float> nofpclass(zero psub pnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd_nsz__no_zero_psub_pnorm__no_zero_psub_pnorm(
+; CHECK-LABEL: define nofpclass(zero psub pnorm) float @vec_reduce_fadd_nsz__no_zero_psub_pnorm__no_zero_psub_pnorm(
 ; CHECK-SAME: float nofpclass(zero psub pnorm) [[START:%.*]], <4 x float> nofpclass(zero psub pnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz float @llvm.vector.reduce.fadd.v4f32(float nofpclass(zero psub pnorm) [[START]], <4 x float> nofpclass(zero psub pnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(zero psub pnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(zero psub pnorm) [[START]], <4 x float> nofpclass(zero psub pnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -378,9 +378,9 @@ define float @vec_reduce_fadd_nsz__no_zero_psub_pnorm__no_zero_psub_pnorm(float 
 }
 
 define float @vec_reduce_fadd_nsz__no_zero_nsub_nnorm__no_zero_nsub_nnorm(float nofpclass(zero nsub nnorm) %start, <4 x float> nofpclass(zero nsub nnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd_nsz__no_zero_nsub_nnorm__no_zero_nsub_nnorm(
+; CHECK-LABEL: define nofpclass(zero nsub nnorm) float @vec_reduce_fadd_nsz__no_zero_nsub_nnorm__no_zero_nsub_nnorm(
 ; CHECK-SAME: float nofpclass(zero nsub nnorm) [[START:%.*]], <4 x float> nofpclass(zero nsub nnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz float @llvm.vector.reduce.fadd.v4f32(float nofpclass(zero nsub nnorm) [[START]], <4 x float> nofpclass(zero nsub nnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(zero nsub nnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(zero nsub nnorm) [[START]], <4 x float> nofpclass(zero nsub nnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -388,9 +388,9 @@ define float @vec_reduce_fadd_nsz__no_zero_nsub_nnorm__no_zero_nsub_nnorm(float 
 }
 
 define float @vec_reduce_fadd_nsz__pzero_pnorm__pzero_pnorm(float nofpclass(nan inf nzero sub nnorm) %start, <4 x float> nofpclass(nan inf nzero sub nnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd_nsz__pzero_pnorm__pzero_pnorm(
+; CHECK-LABEL: define nofpclass(nan ninf sub nnorm) float @vec_reduce_fadd_nsz__pzero_pnorm__pzero_pnorm(
 ; CHECK-SAME: float nofpclass(nan inf nzero sub nnorm) [[START:%.*]], <4 x float> nofpclass(nan inf nzero sub nnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf nzero sub nnorm) [[START]], <4 x float> nofpclass(nan inf nzero sub nnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(nan ninf sub nnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf nzero sub nnorm) [[START]], <4 x float> nofpclass(nan inf nzero sub nnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -398,9 +398,9 @@ define float @vec_reduce_fadd_nsz__pzero_pnorm__pzero_pnorm(float nofpclass(nan 
 }
 
 define float @vec_reduce_fadd_nsz__nzero_pnorm__nzero_pnorm(float nofpclass(nan inf pzero sub nnorm) %start, <4 x float> nofpclass(nan inf pzero sub nnorm) %arg) {
-; CHECK-LABEL: define float @vec_reduce_fadd_nsz__nzero_pnorm__nzero_pnorm(
+; CHECK-LABEL: define nofpclass(nan ninf sub nnorm) float @vec_reduce_fadd_nsz__nzero_pnorm__nzero_pnorm(
 ; CHECK-SAME: float nofpclass(nan inf pzero sub nnorm) [[START:%.*]], <4 x float> nofpclass(nan inf pzero sub nnorm) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf pzero sub nnorm) [[START]], <4 x float> nofpclass(nan inf pzero sub nnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(nan ninf sub nnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf pzero sub nnorm) [[START]], <4 x float> nofpclass(nan inf pzero sub nnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -408,9 +408,9 @@ define float @vec_reduce_fadd_nsz__nzero_pnorm__nzero_pnorm(float nofpclass(nan 
 }
 
 define float @vec_reduce_fadd__nsub_nnorm__nsub_nnorm__ieee_dynamic(float nofpclass(nan inf zero psub pnorm) %start, <4 x float> nofpclass(nan inf zero psub pnorm) %arg) denormal_fpenv(ieee|dynamic) {
-; CHECK-LABEL: define float @vec_reduce_fadd__nsub_nnorm__nsub_nnorm__ieee_dynamic(
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) float @vec_reduce_fadd__nsub_nnorm__nsub_nnorm__ieee_dynamic(
 ; CHECK-SAME: float nofpclass(nan inf zero psub pnorm) [[START:%.*]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero psub pnorm) [[START]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan pinf psub pnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero psub pnorm) [[START]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -418,9 +418,9 @@ define float @vec_reduce_fadd__nsub_nnorm__nsub_nnorm__ieee_dynamic(float nofpcl
 }
 
 define float @vec_reduce_fadd__nsub_nnorm__nsub_nnorm__ieee_dapz(float nofpclass(nan inf zero psub pnorm) %start, <4 x float> nofpclass(nan inf zero psub pnorm) %arg) denormal_fpenv(ieee|positivezero) {
-; CHECK-LABEL: define float @vec_reduce_fadd__nsub_nnorm__nsub_nnorm__ieee_dapz(
+; CHECK-LABEL: define nofpclass(nan pinf nzero psub pnorm) float @vec_reduce_fadd__nsub_nnorm__nsub_nnorm__ieee_dapz(
 ; CHECK-SAME: float nofpclass(nan inf zero psub pnorm) [[START:%.*]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero psub pnorm) [[START]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan pinf nzero psub pnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero psub pnorm) [[START]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -428,9 +428,9 @@ define float @vec_reduce_fadd__nsub_nnorm__nsub_nnorm__ieee_dapz(float nofpclass
 }
 
 define float @vec_reduce_fadd__nsub_nnorm__nsub_nnorm__dynamic_ieee(float nofpclass(nan inf zero psub pnorm) %start, <4 x float> nofpclass(nan inf zero psub pnorm) %arg) denormal_fpenv(dynamic|ieee) {
-; CHECK-LABEL: define float @vec_reduce_fadd__nsub_nnorm__nsub_nnorm__dynamic_ieee(
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) float @vec_reduce_fadd__nsub_nnorm__nsub_nnorm__dynamic_ieee(
 ; CHECK-SAME: float nofpclass(nan inf zero psub pnorm) [[START:%.*]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG:%.*]]) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero psub pnorm) [[START]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan pinf psub pnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero psub pnorm) [[START]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -438,9 +438,9 @@ define float @vec_reduce_fadd__nsub_nnorm__nsub_nnorm__dynamic_ieee(float nofpcl
 }
 
 define float @vec_reduce_fadd__nsub_nnorm__nsub_nnorm__ftpz_ieee(float nofpclass(nan inf zero psub pnorm) %start, <4 x float> nofpclass(nan inf zero psub pnorm) %arg) denormal_fpenv(positivezero|ieee) {
-; CHECK-LABEL: define float @vec_reduce_fadd__nsub_nnorm__nsub_nnorm__ftpz_ieee(
+; CHECK-LABEL: define nofpclass(nan pinf nzero psub pnorm) float @vec_reduce_fadd__nsub_nnorm__nsub_nnorm__ftpz_ieee(
 ; CHECK-SAME: float nofpclass(nan inf zero psub pnorm) [[START:%.*]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero psub pnorm) [[START]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan pinf nzero psub pnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero psub pnorm) [[START]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -448,9 +448,9 @@ define float @vec_reduce_fadd__nsub_nnorm__nsub_nnorm__ftpz_ieee(float nofpclass
 }
 
 define float @vec_reduce_fadd_nsz__nsub_nnorm__nsub_nnorm__ieee_dynamic(float nofpclass(nan inf zero psub pnorm) %start, <4 x float> nofpclass(nan inf zero psub pnorm) %arg) denormal_fpenv(ieee|dynamic) {
-; CHECK-LABEL: define float @vec_reduce_fadd_nsz__nsub_nnorm__nsub_nnorm__ieee_dynamic(
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) float @vec_reduce_fadd_nsz__nsub_nnorm__nsub_nnorm__ieee_dynamic(
 ; CHECK-SAME: float nofpclass(nan inf zero psub pnorm) [[START:%.*]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero psub pnorm) [[START]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(nan pinf psub pnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero psub pnorm) [[START]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -458,9 +458,9 @@ define float @vec_reduce_fadd_nsz__nsub_nnorm__nsub_nnorm__ieee_dynamic(float no
 }
 
 define float @vec_reduce_fadd_nsz__nsub_nnorm__nsub_nnorm__ieee_dapz(float nofpclass(nan inf zero psub pnorm) %start, <4 x float> nofpclass(nan inf zero psub pnorm) %arg) denormal_fpenv(ieee|positivezero) {
-; CHECK-LABEL: define float @vec_reduce_fadd_nsz__nsub_nnorm__nsub_nnorm__ieee_dapz(
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) float @vec_reduce_fadd_nsz__nsub_nnorm__nsub_nnorm__ieee_dapz(
 ; CHECK-SAME: float nofpclass(nan inf zero psub pnorm) [[START:%.*]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero psub pnorm) [[START]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(nan pinf psub pnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero psub pnorm) [[START]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -468,9 +468,9 @@ define float @vec_reduce_fadd_nsz__nsub_nnorm__nsub_nnorm__ieee_dapz(float nofpc
 }
 
 define float @vec_reduce_fadd_nsz__nsub_nnorm__nsub_nnorm__dynamic_ieee(float nofpclass(nan inf zero psub pnorm) %start, <4 x float> nofpclass(nan inf zero psub pnorm) %arg) denormal_fpenv(dynamic|ieee) {
-; CHECK-LABEL: define float @vec_reduce_fadd_nsz__nsub_nnorm__nsub_nnorm__dynamic_ieee(
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) float @vec_reduce_fadd_nsz__nsub_nnorm__nsub_nnorm__dynamic_ieee(
 ; CHECK-SAME: float nofpclass(nan inf zero psub pnorm) [[START:%.*]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero psub pnorm) [[START]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(nan pinf psub pnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero psub pnorm) [[START]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)
@@ -478,9 +478,9 @@ define float @vec_reduce_fadd_nsz__nsub_nnorm__nsub_nnorm__dynamic_ieee(float no
 }
 
 define float @vec_reduce_fadd_nsz__nsub_nnorm__nsub_nnorm__ftpz_ieee(float nofpclass(nan inf zero psub pnorm) %start, <4 x float> nofpclass(nan inf zero psub pnorm) %arg) denormal_fpenv(positivezero|ieee) {
-; CHECK-LABEL: define float @vec_reduce_fadd_nsz__nsub_nnorm__nsub_nnorm__ftpz_ieee(
+; CHECK-LABEL: define nofpclass(nan pinf nzero psub pnorm) float @vec_reduce_fadd_nsz__nsub_nnorm__nsub_nnorm__ftpz_ieee(
 ; CHECK-SAME: float nofpclass(nan inf zero psub pnorm) [[START:%.*]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero psub pnorm) [[START]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(nan pinf nzero psub pnorm) float @llvm.vector.reduce.fadd.v4f32(float nofpclass(nan inf zero psub pnorm) [[START]], <4 x float> nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %arg)

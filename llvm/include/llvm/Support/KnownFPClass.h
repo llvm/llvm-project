@@ -690,6 +690,12 @@ public:
   LLVM_ABI static KnownFPClass powi(const KnownFPClass &Src,
                                     const KnownBits &N);
 
+  /// Propagate known values for vec_reduce_fadd and vec_reduce_seq_fadd.
+  LLVM_ABI static KnownFPClass vec_reduce_fadd(const KnownFPClass &Start,
+                                               const KnownFPClass &Src,
+                                               DenormalMode Mode,
+                                               bool MayBeNSZ = true);
+
   void resetAll() { *this = KnownFPClass(); }
 };
 

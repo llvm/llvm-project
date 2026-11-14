@@ -434,6 +434,12 @@ public:
     return Flags & Flag;
   }
 
+  /// Return true if any rewrite-based fast-math flag (reassoc, arcp, contract,
+  /// afn) is set.
+  bool hasRewriteBasedFlags() const {
+    return Flags & (FmReassoc | FmArcp | FmContract | FmAfn);
+  }
+
   /// Set a MI flag.
   void setFlag(MIFlag Flag) {
     assert(isUInt<LLVM_MI_FLAGS_BITS>(unsigned(Flag)) &&
