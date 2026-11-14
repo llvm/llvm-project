@@ -56,8 +56,7 @@ Symbol *Symtab::Resize(size_t count) {
   // Clients should grab the mutex from this symbol table and lock it manually
   // when calling this function to avoid performance issues.
   m_symbols.resize(count);
-  m_has_debug_map.reset();
-  m_has_source_files.reset();
+  ClearCachedSymbolChecks();
   return m_symbols.empty() ? nullptr : &m_symbols[0];
 }
 
@@ -71,8 +70,7 @@ uint32_t Symtab::AddSymbol(const Symbol &symbol) {
   m_symbols.push_back(symbol);
   m_file_addr_to_index_computed = false;
   m_name_indexes_computed = false;
-  m_has_debug_map.reset();
-  m_has_source_files.reset();
+  ClearCachedSymbolChecks();
   return symbol_idx;
 }
 
@@ -106,6 +104,11 @@ bool Symtab::HasSourceFiles() const {
   if (!m_has_source_files)
     CalculateHasSourceFiles();
   return *m_has_source_files;
+}
+
+void Symtab::ClearCachedSymbolChecks() {
+  m_has_debug_map.reset();
+  m_has_source_files.reset();
 }
 
 void Symtab::SectionFileAddressesChanged() {
@@ -992,6 +995,9 @@ void Symtab::InitAddressIndexes() {
 
 void Symtab::Finalize() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  // Symbols may have been modified directly, e.g. through the pointer
+  // returned by Resize(), after these were last cleared.
+  ClearCachedSymbolChecks();
   // Calculate the size of symbols inside InitAddressIndexes.
   InitAddressIndexes();
   // Shrink to fit the symbols so we don't waste memory
@@ -1318,6 +1324,7 @@ bool Symtab::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
     if (num_symbols == 0)
       return true;
     m_symbols.resize(num_symbols);
+    ClearCachedSymbolChecks();
     SectionList *sections = m_objfile->GetModule()->GetSectionList();
     for (uint32_t i=0; i<num_symbols; ++i) {
       if (!m_symbols[i].Decode(data, offset_ptr, sections, strtab)) {

@@ -57,8 +57,11 @@ public:
   /// This, and HasSourceFiles(), allow clients to find out if it is worth
   /// searching the symbol table for specific symbols without needing to
   /// iterate over all of the symbols themselves. Each value is calculated
-  /// the first time it is requested, and is recalculated after symbols
-  /// are added with AddSymbol() or Resize().
+  /// the first time it is requested and then cached. The cached values are
+  /// cleared by AddSymbol(), Resize(), Finalize() and Decode(). Modifying
+  /// symbols directly, through the pointer returned by Resize() or
+  /// SymbolAtIndex(), does not update the cached values, so code doing that
+  /// should not call these until it is done.
   ///
   /// \return
   ///   True if any symbol is an eSymbolTypeObjectFile symbol whose flags are
@@ -303,6 +306,9 @@ protected:
   void InitAddressIndexes();
   void CalculateHasDebugMap() const;
   void CalculateHasSourceFiles() const;
+  /// Clear the cached HasDebugMap() and HasSourceFiles() values so they are
+  /// recalculated the next time they are requested.
+  void ClearCachedSymbolChecks();
 
   /// Provide thread safety for this symbol table.
   mutable std::recursive_mutex m_mutex;
@@ -318,7 +324,7 @@ protected:
   bool m_name_indexes_computed = false;
 
   /// Cached results for HasDebugMap() and HasSourceFiles(). These are unset
-  /// until they are requested, and are reset any time symbols are added.
+  /// until they are requested, and are reset by ClearCachedSymbolChecks().
   /// \{
   mutable std::optional<bool> m_has_debug_map;
   mutable std::optional<bool> m_has_source_files;

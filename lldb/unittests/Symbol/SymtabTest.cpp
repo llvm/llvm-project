@@ -47,6 +47,14 @@ public:
 };
 } // namespace
 
+static Symbol MakeSymbol(uint32_t id, SymbolType type, uint32_t flags) {
+  return Symbol(id, "symbol", type, /*external=*/false, /*is_debug=*/true,
+                /*is_trampoline=*/false, /*is_artificial=*/false,
+                /*section_sp=*/SectionSP(), /*value=*/0, /*size=*/0,
+                /*size_is_valid=*/false,
+                /*contains_linker_annotations=*/false, flags);
+}
+
 static void EncodeDecode(const Symtab &object, ByteOrder byte_order) {
   const uint8_t addr_size = 8;
   DataEncoder file(byte_order, addr_size);
@@ -55,6 +63,10 @@ static void EncodeDecode(const Symtab &object, ByteOrder byte_order) {
   llvm::ArrayRef<uint8_t> bytes = file.GetData();
   DataExtractor data(bytes.data(), bytes.size(), byte_order, addr_size);
   Symtab decoded_object(object.GetObjectFile());
+  // Request these before decoding to make sure that decoding the symbols
+  // causes them to be recalculated.
+  EXPECT_FALSE(decoded_object.HasDebugMap());
+  EXPECT_FALSE(decoded_object.HasSourceFiles());
   offset_t data_offset = 0;
   bool uuid_mismatch = false;
   decoded_object.Decode(data, &data_offset, uuid_mismatch);
@@ -342,38 +354,31 @@ LinkEditData:
 }
 
 TEST_F(SymtabTest, TestHasDebugMapAndSourceFiles) {
-  auto make_symbol = [](uint32_t id, SymbolType type, uint32_t flags) {
-    return Symbol(id, "symbol", type, /*external=*/false, /*is_debug=*/true,
-                  /*is_trampoline=*/false, /*is_artificial=*/false,
-                  /*section_sp=*/SectionSP(), /*value=*/0, /*size=*/0,
-                  /*size_is_valid=*/false,
-                  /*contains_linker_annotations=*/false, flags);
-  };
   const uint32_t debug_map_flags = Symtab::kDebugMapOSOSymbolFlagsValue;
 
   Symtab symtab(/*objfile=*/nullptr);
   EXPECT_FALSE(symtab.HasDebugMap());
   EXPECT_FALSE(symtab.HasSourceFiles());
 
-  symtab.AddSymbol(make_symbol(0, eSymbolTypeCode, 0));
+  symtab.AddSymbol(MakeSymbol(0, eSymbolTypeCode, 0));
   EXPECT_FALSE(symtab.HasDebugMap());
   EXPECT_FALSE(symtab.HasSourceFiles());
 
-  symtab.AddSymbol(make_symbol(1, eSymbolTypeSourceFile, 0x640000));
+  symtab.AddSymbol(MakeSymbol(1, eSymbolTypeSourceFile, 0x640000));
   EXPECT_FALSE(symtab.HasDebugMap());
   EXPECT_TRUE(symtab.HasSourceFiles());
 
   // An object file symbol without the debug map flags isn't a debug map.
-  symtab.AddSymbol(make_symbol(2, eSymbolTypeObjectFile, 0x660000));
+  symtab.AddSymbol(MakeSymbol(2, eSymbolTypeObjectFile, 0x660000));
   EXPECT_FALSE(symtab.HasDebugMap());
   EXPECT_TRUE(symtab.HasSourceFiles());
 
   // Neither are other symbol types with the debug map flags.
-  symtab.AddSymbol(make_symbol(3, eSymbolTypeCode, debug_map_flags));
+  symtab.AddSymbol(MakeSymbol(3, eSymbolTypeCode, debug_map_flags));
   EXPECT_FALSE(symtab.HasDebugMap());
   EXPECT_TRUE(symtab.HasSourceFiles());
 
-  symtab.AddSymbol(make_symbol(4, eSymbolTypeObjectFile, debug_map_flags));
+  symtab.AddSymbol(MakeSymbol(4, eSymbolTypeObjectFile, debug_map_flags));
   EXPECT_TRUE(symtab.HasDebugMap());
   EXPECT_TRUE(symtab.HasSourceFiles());
 
@@ -388,10 +393,44 @@ TEST_F(SymtabTest, TestHasDebugMapAndSourceFiles) {
 
   // A source file symbol that follows a debug map symbol is still found.
   Symtab symtab2(/*objfile=*/nullptr);
-  symtab2.AddSymbol(make_symbol(0, eSymbolTypeObjectFile, debug_map_flags));
-  symtab2.AddSymbol(make_symbol(1, eSymbolTypeSourceFile, 0x640000));
+  symtab2.AddSymbol(MakeSymbol(0, eSymbolTypeObjectFile, debug_map_flags));
+  symtab2.AddSymbol(MakeSymbol(1, eSymbolTypeSourceFile, 0x640000));
   EXPECT_TRUE(symtab2.HasDebugMap());
   EXPECT_TRUE(symtab2.HasSourceFiles());
+}
+
+TEST_F(SymtabTest, TestHasDebugMapAndSourceFilesAfterFinalize) {
+  // Finalize() saves the symbol table to the cache, which needs an object
+  // file.
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+  auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
+  ObjectFile *objfile = module_sp->GetObjectFile();
+  ASSERT_NE(objfile, nullptr);
+
+  // Object file plug-ins resize the symbol table and then fill in the
+  // symbols through the returned pointer, which doesn't update the cached
+  // values. Finalize() must clear them so they are recalculated.
+  Symtab symtab(objfile);
+  std::lock_guard<std::recursive_mutex> guard(symtab.GetMutex());
+  Symbol *symbols = symtab.Resize(2);
+  ASSERT_NE(symbols, nullptr);
+  EXPECT_FALSE(symtab.HasDebugMap());
+  EXPECT_FALSE(symtab.HasSourceFiles());
+  symbols[0] = MakeSymbol(0, eSymbolTypeSourceFile, 0x640000);
+  symbols[1] = MakeSymbol(1, eSymbolTypeObjectFile,
+                          Symtab::kDebugMapOSOSymbolFlagsValue);
+  symtab.Finalize();
+  EXPECT_TRUE(symtab.HasDebugMap());
+  EXPECT_TRUE(symtab.HasSourceFiles());
 }
 
 TEST_F(SymtabTest, TestSymbolFileSymtabSourceFiles) {
