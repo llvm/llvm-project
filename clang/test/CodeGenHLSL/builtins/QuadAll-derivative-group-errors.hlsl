@@ -52,6 +52,10 @@ void invalid_quad_3d() {
 void no_vote() {}
 
 // CHECK-DAG: error: entry point 'invalid_linear' has invalid numthreads: DerivativeGroupLinearKHR requires X * Y * Z to be a multiple of 4
+// CHECK-DAG: note: 'QuadAll' implicitly requires a derivative group execution mode for SPIR-V entry point 'invalid_linear'
 // CHECK-DAG: error: entry point 'invalid_quad_x' has invalid numthreads: DerivativeGroupQuadsKHR requires X and Y to be multiples of 2
+// CHECK-DAG: note: 'QuadAll' implicitly requires a derivative group execution mode for SPIR-V entry point 'invalid_quad_x'
 // CHECK-DAG: error: entry point 'invalid_quad_y' has invalid numthreads: DerivativeGroupQuadsKHR requires X and Y to be multiples of 2
+// CHECK-DAG: note: 'QuadAll' implicitly requires a derivative group execution mode for SPIR-V entry point 'invalid_quad_y'
 // CHECK-DAG: error: entry point 'invalid_quad_3d' has invalid numthreads: DerivativeGroupQuadsKHR requires X and Y to be multiples of 2
+// CHECK-DAG: note: 'QuadAll' implicitly requires a derivative group execution mode for SPIR-V entry point 'invalid_quad_3d'

@@ -1046,8 +1046,12 @@ static void addSPIRVQuadAllExecutionModes(CodeGenModule &CGM) {
     if (F->hasFnAttribute("hlsl.numthreads")) {
       std::optional<SPIRVExecutionMode> Mode =
           getSPIRVDerivativeGroupMode(CGM, *F);
-      if (!Mode)
+      if (!Mode) {
+        CGM.getDiags().Report(
+            diag::note_hlsl_spirv_derivative_group_requirement)
+            << "QuadAll" << F->getName();
         continue;
+      }
       MDNode *MD = MDNode::get(
           M.getContext(),
           {ValueAsMetadata::get(F),
