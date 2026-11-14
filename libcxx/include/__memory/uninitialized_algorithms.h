@@ -329,6 +329,18 @@ uninitialized_move_n(_InputIterator __ifirst, _Size __n, _ForwardIterator __ofir
 
 #endif // _LIBCPP_STD_VER >= 17
 
+template <class _Iter>
+struct _DestroyRangeReverse {
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 _DestroyRangeReverse(_Iter& __first, _Iter& __last)
+      : __first_(__first), __last_(__last) {}
+
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 void operator()() const { std::__reverse_destroy(__first_, __last_); }
+
+private:
+  _Iter& __first_;
+  _Iter& __last_;
+};
+
 // __uninitialized_relocate relocates the objects in [__first, __last) into __result element-by-element from __first to
 // __last. Relocation means that the objects in [__first, __last) are placed into __result as-if by move-construct and
 // destroy, except that the move constructor and destructor may never be called if they are known to be equivalent to a
@@ -344,16 +356,31 @@ __uninitialized_relocate(_ContiguousIterator __first, _ContiguousIterator __last
   static_assert(__libcpp_is_contiguous_iterator<_ContiguousIterator>::value, "");
   using _ValueType = typename iterator_traits<_ContiguousIterator>::value_type;
 
-  // TODO: Accept non-trivially relocatable types
-  static_assert(__is_trivially_relocatable_v<_ValueType>);
+  if (__libcpp_is_constant_evaluated() || !__is_trivially_relocatable_v<_ValueType>) {
+#ifndef _LIBCPP_CXX03_LANG
+    if constexpr (!_LIBCPP_HAS_EXCEPTIONS || is_nothrow_move_constructible<_ValueType>::value) {
+      auto __iter = __first;
+      while (__iter != __last) {
+        std::__construct_at(std::__to_address(__result), std::move(*__iter));
+        std::__destroy_at(std::__to_address(__iter));
+        ++__iter;
+        ++__result;
+      }
+    } else
+#endif
+    {
+      auto __destruct_first = __result;
+      auto __guard = std::__make_exception_guard(_DestroyRangeReverse<_ContiguousIterator>(__destruct_first, __result));
+      auto __iter  = __first;
 
-  if (__libcpp_is_constant_evaluated()) {
-    auto __iter = __first;
-    while (__iter != __last) {
-      std::__construct_at(std::__to_address(__result), std::move(*__iter));
-      std::__destroy_at(std::__to_address(__iter));
-      ++__iter;
-      ++__result;
+      while (__iter != __last) {
+        std::__construct_at(std::__to_address(__result), std::move(*__iter));
+        std::__destroy_at(std::__to_address(__iter));
+        ++__iter;
+        ++__result;
+      }
+      __guard.__complete();
+      std::__destroy(__first, __last);
     }
   } else {
     // Casting to void* to suppress clang complaining that this is technically UB.
