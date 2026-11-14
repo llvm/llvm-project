@@ -261,8 +261,11 @@ bool Evaluator::getFormalParams(CallBase &CB, Function *F,
     return false;
   }
 
-  for (Value *Arg : CB.args())
-    Formals.push_back(getVal(Arg));
+  for (unsigned I = 0, E = CB.arg_size(); I != E; ++I) {
+    if (CB.isPassPointeeByValueArgument(I))
+      return false;
+    Formals.push_back(getVal(CB.getArgOperand(I)));
+  }
   return true;
 }
 
