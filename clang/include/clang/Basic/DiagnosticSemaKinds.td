@@ -7034,6 +7034,8 @@ def note_protected_by_variable_non_pod : Note<
   "jump bypasses initialization of non-POD variable">;
 def note_protected_by_cleanup : Note<
   "jump bypasses initialization of variable with __attribute__((cleanup))">;
+def note_protected_by_omp_allocate : Note<
+  "jump bypasses allocation of variable with '#pragma omp allocate'">;
 def note_protected_by_vla_typedef : Note<
   "jump bypasses initialization of VLA typedef">;
 def note_protected_by_vla_type_alias : Note<
@@ -7094,6 +7096,8 @@ def note_enters_defer_stmt : Note<"jump enters a defer statement">;
 
 def note_exits_cleanup : Note<
   "jump exits scope of variable with __attribute__((cleanup))">;
+def note_exits_omp_allocate : Note<
+  "jump exits scope of variable with '#pragma omp allocate'">;
 def note_exits_dtor : Note<
   "jump exits scope of variable with non-trivial destructor">;
 def note_exits_temporary_dtor : Note<
