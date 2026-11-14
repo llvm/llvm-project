@@ -15,7 +15,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-const wchar_t *wmemchr(const wchar_t *s, wchar_t c, size_t n);
+wchar_t *wmemchr(const wchar_t *s, wchar_t c, size_t n);
 
 } // namespace LIBC_NAMESPACE_DECL
 

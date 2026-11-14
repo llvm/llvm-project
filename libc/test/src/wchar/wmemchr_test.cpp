@@ -13,40 +13,40 @@
 TEST(LlvmLibcWMemChrTest, FindsCharacterAfterNullTerminator) {
   // wmemchr should continue searching after a null terminator.
   const size_t size = 5;
-  const wchar_t src[size] = {L'a', L'\0', L'b', L'c', L'\0'};
+  wchar_t src[size] = {L'a', L'\0', L'b', L'c', L'\0'};
   ASSERT_EQ(LIBC_NAMESPACE::wmemchr(src, L'b', size), (src + 2));
 }
 
 TEST(LlvmLibcWMemChrTest, FindsCharacterInNonNullTerminatedCollection) {
   const size_t size = 3;
-  const wchar_t src[size] = {L'a', L'b', L'c'};
+  wchar_t src[size] = {L'a', L'b', L'c'};
   ASSERT_EQ(LIBC_NAMESPACE::wmemchr(src, L'b', size), (src + 1));
 }
 
 TEST(LlvmLibcWMemChrTest, FindsFirstCharacter) {
   const size_t size = 6;
-  const wchar_t *src = L"abcde";
+  wchar_t src[] = L"abcde";
   // Should return original array since 'a' is the first character.
   ASSERT_EQ(LIBC_NAMESPACE::wmemchr(src, L'a', size), (src));
 }
 
 TEST(LlvmLibcWMemChrTest, FindsMiddleCharacter) {
   const size_t size = 6;
-  const wchar_t *src = L"abcde";
+  wchar_t src[] = L"abcde";
   // Should return characters after and including 'c'.
   ASSERT_EQ(LIBC_NAMESPACE::wmemchr(src, L'c', size), (src + 2));
 }
 
 TEST(LlvmLibcWMemChrTest, FindsLastCharacterThatIsNotNullTerminator) {
   const size_t size = 6;
-  const wchar_t *src = L"abcde";
+  wchar_t src[] = L"abcde";
   // Should return 'e' and null terminator.
   ASSERT_EQ(LIBC_NAMESPACE::wmemchr(src, L'e', size), (src + 4));
 }
 
 TEST(LlvmLibcWMemChrTest, FindsNullTerminator) {
   const size_t size = 6;
-  const wchar_t *src = L"abcde";
+  wchar_t src[] = L"abcde";
   // Should return null terminator.
   ASSERT_EQ(LIBC_NAMESPACE::wmemchr(src, L'\0', size), (src + 5));
 }
@@ -68,7 +68,8 @@ TEST(LlvmLibcWMemChrTest, CharacterNotWithinSizeShouldReturnNullptr) {
 TEST(LlvmLibcWMemChrTest, TheSourceShouldNotChange) {
   const size_t size = 3;
   const wchar_t *src = L"ab";
-  ASSERT_EQ(LIBC_NAMESPACE::wmemchr(src, L'a', size), src);
+  const wchar_t *res = LIBC_NAMESPACE::wmemchr(src, L'a', size);
+  ASSERT_EQ(res, src);
   ASSERT_TRUE(src[0] == L'a');
   ASSERT_TRUE(src[1] == L'b');
   ASSERT_EQ(LIBC_NAMESPACE::wmemchr(src, L'c', size), nullptr);
@@ -78,7 +79,7 @@ TEST(LlvmLibcWMemChrTest, TheSourceShouldNotChange) {
 
 TEST(LlvmLibcWMemChrTest, EmptyStringShouldOnlyMatchNullTerminator) {
   const size_t size = 1;
-  const wchar_t *src = L"";
+  wchar_t src[] = L"";
   ASSERT_EQ(LIBC_NAMESPACE::wmemchr(src, L'\0', size), src);
   ASSERT_EQ(LIBC_NAMESPACE::wmemchr(src, L'c', size), nullptr);
   ASSERT_EQ(LIBC_NAMESPACE::wmemchr(src, L'1', size), nullptr);
@@ -87,6 +88,6 @@ TEST(LlvmLibcWMemChrTest, EmptyStringShouldOnlyMatchNullTerminator) {
 
 TEST(LlvmLibcWMemChrTest, SingleRepeatedCharacterShouldReturnFirst) {
   const size_t size = 6;
-  const wchar_t *src = L"XXXXX";
+  wchar_t src[] = L"XXXXX";
   ASSERT_EQ(LIBC_NAMESPACE::wmemchr(src, L'X', size), src);
 }

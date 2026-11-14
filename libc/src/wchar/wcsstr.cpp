@@ -16,12 +16,11 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(const wchar_t *, wcsstr,
-                   (const wchar_t *s1, const wchar_t *s2)) {
+LLVM_LIBC_FUNCTION(wchar_t *, wcsstr, (const wchar_t *s1, const wchar_t *s2)) {
   size_t s1_len = internal::string_length(s1);
   size_t s2_len = internal::string_length(s2);
   if (s2_len == 0)
-    return s1;
+    return const_cast<wchar_t *>(s1);
   if (s2_len > s1_len)
     return nullptr;
   for (size_t i = 0; i <= (s1_len - s2_len); ++i) {
@@ -30,7 +29,7 @@ LLVM_LIBC_FUNCTION(const wchar_t *, wcsstr,
     for (; j < s2_len && s1[i + j] == s2[j]; ++j)
       ;
     if (j == s2_len)
-      return (s1 + i);
+      return const_cast<wchar_t *>(s1 + i);
   }
   return nullptr;
 }

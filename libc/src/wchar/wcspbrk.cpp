@@ -15,7 +15,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(const wchar_t *, wcspbrk,
+LLVM_LIBC_FUNCTION(wchar_t *, wcspbrk,
                    (const wchar_t *src, const wchar_t *breakset)) {
   LIBC_CRASH_ON_NULLPTR(src);
   LIBC_CRASH_ON_NULLPTR(breakset);
@@ -23,7 +23,7 @@ LLVM_LIBC_FUNCTION(const wchar_t *, wcspbrk,
   // currently O(n * m), can be further optimized to O(n + m) with a hash set
   for (int src_idx = 0; src[src_idx] != 0; src_idx++)
     if (internal::wcschr(breakset, src[src_idx]))
-      return src + src_idx;
+      return const_cast<wchar_t *>(src + src_idx);
 
   return nullptr;
 }
