@@ -21,9 +21,7 @@ define protected amdgpu_kernel void @_RSENC_PRInit______________________________
 ; CHECK-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_bitcmp1_b32 s4, 0
-; CHECK-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; CHECK-NEXT:    s_and_b64 vcc, exec, s[4:5]
-; CHECK-NEXT:    s_cbranch_vccnz .LBB0_11
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_11
 ; CHECK-NEXT:  ; %bb.2: ; %lor.lhs.false17
 ; CHECK-NEXT:    s_cmp_eq_u32 s4, 0
 ; CHECK-NEXT:  .LBB0_3: ; %while.cond.i
