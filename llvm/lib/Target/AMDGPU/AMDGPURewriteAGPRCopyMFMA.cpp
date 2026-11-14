@@ -81,7 +81,8 @@ public:
         LIS(LIS), LSS(LSS), RegClassInfo(RegClassInfo), MDT(MDT) {}
 
   bool isRewriteCandidate(const MachineInstr &MI) const {
-    return TII.isMAI(MI) && AMDGPU::getAGPRFormOp(MI.getOpcode()) != -1;
+    return TII.isMAI(MI) && !TII.getMFMACDRegClass(MI) &&
+           AMDGPU::getAGPRFormOp(MI.getOpcode()) != -1;
   }
 
   /// Find AV_* registers assigned to AGPRs (or virtual registers which were

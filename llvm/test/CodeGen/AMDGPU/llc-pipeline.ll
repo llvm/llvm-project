@@ -103,6 +103,7 @@
 ; GCN-O0-NEXT:        Finalize ISel and expand pseudo-instructions
 ; GCN-O0-NEXT:        Local Stack Slot Allocation
 ; GCN-O0-NEXT:        Register Usage Information Propagation
+; GCN-O0-NEXT:        AMDGPU Prepare AGPR Alloc
 ; GCN-O0-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O0-NEXT:        SI Lower control flow pseudo instructions
 ; GCN-O0-NEXT:        Two-Address instruction pass
