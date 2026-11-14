@@ -10203,6 +10203,14 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   if (canGuaranteeTCO(CalleeCC, getTargetMachine().Options.GuaranteedTailCallOpt))
     return CCMatch;
 
+  // A sibling call bypasses the caller's epilogue. Do not allow one from a
+  // calling convention that restores its incoming stack arguments if there
+  // are any to restore.
+  if (DoesCalleeRestoreStack(CallerF.getCallingConv(),
+                             getTargetMachine().Options.GuaranteedTailCallOpt) &&
+      MF.getInfo<AArch64FunctionInfo>()->getBytesInStackArgArea() != 0)
+    return false;
+
   // Externally-defined functions with weak linkage should not be
   // tail-called on AArch64 when the OS does not support dynamic
   // pre-emption of symbols, as the AAELF spec requires normal calls
