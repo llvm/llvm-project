@@ -8,9 +8,15 @@
 #
 # This covers the MBB->size() check in the critical path part of
 # MachineCombinerImpl::combineInstructions.
+#
+# test_latency covers the use of the new root's result in
+# MachineCombinerImpl::getLatency.
 
 --- |
   define void @test() !dbg !5 {
+    ret void
+  }
+  define void @test_latency() !dbg !11 {
     ret void
   }
   !llvm.dbg.cu = !{!0}
@@ -23,6 +29,9 @@
   !7 = !{null}
   !9 = !DILocation(line: 0, scope: !5)
   !10 = !DILocalVariable(name: "x", scope: !5)
+  !11 = distinct !DISubprogram(name: "test_latency", scope: !1, file: !1, type: !6, spFlags: DISPFlagDefinition, unit: !0)
+  !12 = !DILocation(line: 0, scope: !11)
+  !13 = !DILocalVariable(name: "x", scope: !11)
 ...
 ---
 name:            test
@@ -62,4 +71,32 @@ body:             |
     %8:fpr32 = nsz reassoc FADDSrr %6, %7, implicit $fpcr
     %9:fpr32 = nsz reassoc FADDSrr %8, %6, implicit $fpcr
     B %bb.1
+...
+---
+name:            test_latency
+body:             |
+  bb.0:
+    liveins: $d0, $d1, $d2
+    ; CHECK-LABEL: name: test_latency
+    ; CHECK: liveins: $d0, $d1, $d2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY $d2
+    ; CHECK-NEXT: [[FADDv2f32_:%[0-9]+]]:fpr64 = contract nofpexcept FADDv2f32 [[COPY]], [[COPY2]], implicit $fpcr
+    ; CHECK-NEXT: [[FNEGv2f32_:%[0-9]+]]:fpr64 = contract nofpexcept FNEGv2f32 [[FADDv2f32_]]
+    ; CHECK-NEXT: [[FMLAv2f32_:%[0-9]+]]:fpr64 = contract nofpexcept FMLAv2f32 [[FNEGv2f32_]], [[COPY]], [[COPY1]], implicit $fpcr
+    ; CHECK-NEXT: [[FMLAv2f32_1:%[0-9]+]]:fpr64 = contract nofpexcept FMLAv2f32 [[FMLAv2f32_]], [[COPY1]], [[COPY]], implicit $fpcr
+    ; CHECK-NEXT: $d0 = COPY [[FMLAv2f32_1]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %0:fpr64 = COPY $d0
+    %1:fpr64 = COPY $d1
+    %2:fpr64 = COPY $d2
+    %3:fpr64 = contract nofpexcept FADDv2f32 %0, %2, implicit $fpcr
+    %4:fpr64 = contract nofpexcept FMULv2f32 %0, %1, implicit $fpcr
+    %5:fpr64 = contract nofpexcept FSUBv2f32 %4, %3, implicit $fpcr
+    DBG_VALUE %5, $noreg, !13, !DIExpression(), debug-location !12
+    %6:fpr64 = contract nofpexcept FMLAv2f32 %5, %1, %0, implicit $fpcr
+    $d0 = COPY %6
+    RET_ReallyLR implicit $d0
 ...
