@@ -277,7 +277,7 @@ subroutine mapType_derived_type_alloca()
 end subroutine
 
 !CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [9 x i64] [i64 0, i64 40, i64 0, i64 48, i64 0, i64 4, i64 0, i64 0, i64 0]
-!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [9 x i64] [i64 33, i64 281474976710661, i64 0, i64 281474976710661, i64 3, i64 281474976710659, i64 16384, i64 16384, i64 288]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [9 x i64] [i64 33, i64 281474976710661, i64 512, i64 281474976710661, i64 3, i64 281474976710659, i64 16384, i64 16384, i64 288]
 subroutine mapType_alloca_derived_type()
   type :: one_layer
   real(4) :: i
@@ -300,7 +300,7 @@ subroutine mapType_alloca_derived_type()
 end subroutine
 
 !CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [9 x i64] [i64 0, i64 40, i64 0, i64 48, i64 0, i64 4, i64 0, i64 0, i64 0]
-!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [9 x i64] [i64 33, i64 281474976710661, i64 0, i64 281474976710661, i64 3, i64 281474976710659, i64 16384, i64 16384, i64 288]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [9 x i64] [i64 33, i64 281474976710661, i64 512, i64 281474976710661, i64 3, i64 281474976710659, i64 16384, i64 16384, i64 288]
 subroutine mapType_alloca_nested_derived_type()
   type :: middle_layer
   real(4) :: i

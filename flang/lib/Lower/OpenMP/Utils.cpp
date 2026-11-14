@@ -613,7 +613,7 @@ void insertChildMapInfoIntoParent(
     lower::StatementContext &stmtCtx,
     std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-    llvm::SmallVectorImpl<Object> &mapObjects) {
+    llvm::SmallVectorImpl<Object> &mapObjects, bool isTargetEnterExitData) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   // If any of our children have the close map type applied and our parent
@@ -706,13 +706,32 @@ void insertChildMapInfoIntoParent(
       // Create parent to emplace and bind members
       llvm::SmallVector<mlir::Value> bounds;
       std::stringstream asFortran;
-      fir::factory::AddrAndBoundsInfo info =
-          lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
-                                                mlir::omp::MapBoundsType>(
-              converter, firOpBuilder, semaCtx, converter.getFctCtx(),
-              *indices.first.sym(), indices.first.ref(),
-              converter.getCurrentLocation(), asFortran, bounds,
-              treatIndexAsSection);
+      fir::factory::AddrAndBoundsInfo info;
+      const auto &parentRef = indices.first.ref();
+      if (isTargetEnterExitData && parentRef && parentRef->Rank() == 0 &&
+          (evaluate::IsArrayElement(*parentRef) ||
+           semantics::IsAllocatableOrPointer(*indices.first.sym()))) {
+        // A mapping-only construct needs only the storage of the mapped
+        // components. Address the scalar record directly: treating an array
+        // element as a section would also map the containing array descriptor
+        // and the whole record when its descriptor map is expanded. Those
+        // mappings do not match a partial record map through a scalar dummy.
+        // Ordinary scalar records already use the correct storage address in
+        // the regular operand lowering below.
+        mlir::Location loc = converter.getCurrentLocation();
+        info.rawInput =
+            fir::getBase(converter.genExprAddr(loc, *parentRef, stmtCtx));
+        if (mlir::isa<fir::BaseBoxType>(info.rawInput.getType()))
+          info.rawInput =
+              fir::BoxAddrOp::create(firOpBuilder, loc, info.rawInput);
+        asFortran << parentRef->AsFortran();
+      } else {
+        info = lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
+                                                     mlir::omp::MapBoundsType>(
+            converter, firOpBuilder, semaCtx, converter.getFctCtx(),
+            *indices.first.sym(), parentRef, converter.getCurrentLocation(),
+            asFortran, bounds, treatIndexAsSection);
+      }
 
       mlir::omp::MapInfoOp mapOp = utils::openmp::createMapInfoOp(
           firOpBuilder, info.rawInput.getLoc(), info.rawInput,

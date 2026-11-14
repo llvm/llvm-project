@@ -2324,8 +2324,12 @@ bool ClauseProcessor::processMap(
   };
 
   bool clauseFound = findRepeatableClause<omp::clause::Map>(process);
+  bool isTargetEnterExitData =
+      directive == llvm::omp::Directive::OMPD_target_enter_data ||
+      directive == llvm::omp::Directive::OMPD_target_exit_data;
   insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
-                               result.mapVars, *ptrMapObjects);
+                               result.mapVars, *ptrMapObjects,
+                               isTargetEnterExitData);
 
   return clauseFound;
 }

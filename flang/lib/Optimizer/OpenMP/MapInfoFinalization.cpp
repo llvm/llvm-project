@@ -341,6 +341,14 @@ class MapInfoFinalizationPass
 
     mlir::Type underlyingDescType = fir::unwrapRefType(descriptor.getType());
 
+    // A partial storage map is an implicit container for explicitly mapped
+    // members. It may already have only those members mapped by enter data.
+    // Keep the container implicit so structured regions can reuse that storage,
+    // while still mapping the descriptor they need for device-side addressing.
+    if (parentOp.getPartialMap() &&
+        bitEnumContainsAll(mapType, mlir::omp::ClauseMapFlags::storage))
+      mapType |= mlir::omp::ClauseMapFlags::implicit;
+
     // Member of the descriptor pointing at the allocated data
     return mlir::omp::MapInfoOp::create(
         builder, mapInfoOpLoc, baseAddr.getType(), descriptor,
@@ -1150,9 +1158,10 @@ class MapInfoFinalizationPass
     mapOnlyDescriptor = isHasDeviceAddrFlag | canOptimizeUseDeviceAddr;
     mlir::FlatSymbolRefAttr mapperId = op.getMapperIdAttr();
     // Exclude irregular maps from optimization via privatization; at least for
-    // the moment.
+    // the moment. A partial map needs bounds-aware attachment because the
+    // descriptor's base address may lie outside the mapped component storage.
     if (isHasDeviceAddrFlag || getUseDeviceAddrBlockArg(op, *target) ||
-        isUseDevicePtr(op, *target))
+        isUseDevicePtr(op, *target) || op.getPartialMap())
       canOptimizeDescViaPrivatization = false;
 
     // If we're a derived type descriptor, that's been flagged as ref_ptr,
@@ -1336,12 +1345,23 @@ class MapInfoFinalizationPass
     }
   }
 
-  static bool hasADescriptor(mlir::Operation *varOp, mlir::Type varType) {
+  bool hasADescriptor(mlir::omp::MapInfoOp map) {
+    mlir::Type varType = fir::unwrapRefType(map.getVarPtrType());
     if (fir::isTypeWithDescriptor(varType) ||
-        mlir::isa<fir::BoxCharType>(varType) ||
-        mlir::isa_and_present<fir::BoxAddrOp>(varOp))
+        mlir::isa<fir::BoxCharType>(varType))
       return true;
-    return false;
+    if (!map.getVarPtr().getDefiningOp<fir::BoxAddrOp>())
+      return false;
+
+    // A synthesized partial scalar record map on enter/exit data already
+    // names the component storage to map. Recovering its descriptor here
+    // would introduce mappings for the descriptor and the whole record.
+    if (map.getPartialMap() && map.getBounds().empty() &&
+        mlir::isa<fir::RecordType>(varType) &&
+        mlir::isa<mlir::omp::TargetEnterDataOp, mlir::omp::TargetExitDataOp>(
+            getFirstTargetUser(map)))
+      return false;
+    return true;
   }
 
   mlir::Value genTgtGetMappedPtrCall(fir::FirOpBuilder &builder,
@@ -1549,8 +1569,7 @@ class MapInfoFinalizationPass
                "single users or up to two users when those users"
                "are a MapInfoOp and Target mapping directive");
 
-        if (hasADescriptor(op.getVarPtr().getDefiningOp(),
-                           fir::unwrapRefType(op.getVarPtrType()))) {
+        if (hasADescriptor(op)) {
           builder.setInsertionPoint(op);
           mlir::Operation *targetUser = getFirstTargetUser(op);
           assert(targetUser && "expected user of map operation was not found");
