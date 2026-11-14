@@ -1562,15 +1562,17 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
 
   off_t Size;
   time_t ModTime;
-  std::error_code EC = ImportingInstance.getModuleCache().write(
-      ModuleFileName, *Buffer, Size, ModTime);
-  if (EC) {
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Written =
+      ImportingInstance.getModuleCache().write(
+          ModuleFileName, std::move(Buffer), Size, ModTime);
+  if (!Written) {
     ImportingInstance.getDiagnostics().Report(ModuleNameLoc,
                                               diag::err_module_not_written)
-        << Module->Name << ModuleFileName << EC.message()
+        << Module->Name << ModuleFileName << Written.getError().message()
         << SourceRange(ImportLoc, ModuleNameLoc);
     return false;
   }
+  Buffer = std::move(*Written);
 
   // The module is built successfully, we can update its timestamp now.
   if (ImportingInstance.getPreprocessor()
