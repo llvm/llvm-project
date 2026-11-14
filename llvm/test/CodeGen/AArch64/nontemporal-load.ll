@@ -555,7 +555,6 @@ define <5 x double> @test_ldnp_v5f64(ptr %A) {
 ; CHECK-BE-NEXT:    ld1 { v0.2d }, [x0]
 ; CHECK-BE-NEXT:    ldr d4, [x0, #32]
 ; CHECK-BE-NEXT:    ld1 { v2.2d }, [x8]
-; CHECK-BE-NEXT:    // kill: def $d4 killed $d4 killed $q4
 ; CHECK-BE-NEXT:    mov d1, v0.d[1]
 ; CHECK-BE-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-BE-NEXT:    mov d3, v2.d[1]

@@ -6,14 +6,14 @@ define half @test_rmw_xchg_f16(ptr %dst, half %new) {
 ; NOLSE-LABEL: test_rmw_xchg_f16:
 ; NOLSE:       // %bb.0:
 ; NOLSE-NEXT:    // kill: def $h0 killed $h0 def $s0
-; NOLSE-NEXT:    fmov w9, s0
+; NOLSE-NEXT:    fmov w8, s0
 ; NOLSE-NEXT:  .LBB0_1: // %atomicrmw.start
 ; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
-; NOLSE-NEXT:    ldaxrh w8, [x0]
-; NOLSE-NEXT:    stlxrh w10, w9, [x0]
+; NOLSE-NEXT:    ldaxrh w9, [x0]
+; NOLSE-NEXT:    stlxrh w10, w8, [x0]
 ; NOLSE-NEXT:    cbnz w10, .LBB0_1
 ; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
-; NOLSE-NEXT:    fmov s0, w8
+; NOLSE-NEXT:    fmov s0, w9
 ; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; NOLSE-NEXT:    ret
 ;
@@ -32,14 +32,14 @@ define half @test_rmw_xchg_f16(ptr %dst, half %new) {
 define float @test_rmw_xchg_f32(ptr %dst, float %new) {
 ; NOLSE-LABEL: test_rmw_xchg_f32:
 ; NOLSE:       // %bb.0:
-; NOLSE-NEXT:    fmov w9, s0
+; NOLSE-NEXT:    fmov w8, s0
 ; NOLSE-NEXT:  .LBB1_1: // %atomicrmw.start
 ; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
-; NOLSE-NEXT:    ldaxr w8, [x0]
-; NOLSE-NEXT:    stlxr w10, w9, [x0]
+; NOLSE-NEXT:    ldaxr w9, [x0]
+; NOLSE-NEXT:    stlxr w10, w8, [x0]
 ; NOLSE-NEXT:    cbnz w10, .LBB1_1
 ; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
-; NOLSE-NEXT:    fmov s0, w8
+; NOLSE-NEXT:    fmov s0, w9
 ; NOLSE-NEXT:    ret
 ;
 ; LSE-LABEL: test_rmw_xchg_f32:

@@ -85,7 +85,6 @@ define half @test_atomicrmw_fmin_f16_seq_cst_align2(ptr %ptr, half %value) #0 {
 ; SOFTFP-NOLSE-NEXT:    cbz w8, .LBB0_1
 ; SOFTFP-NOLSE-NEXT:  .LBB0_6: // %atomicrmw.end
 ; SOFTFP-NOLSE-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; SOFTFP-NOLSE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; SOFTFP-NOLSE-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
 ; SOFTFP-NOLSE-NEXT:    ldr x30, [sp], #48 // 8-byte Folded Reload
 ; SOFTFP-NOLSE-NEXT:    ret
@@ -173,7 +172,6 @@ define half @test_atomicrmw_fmin_f16_seq_cst_align4(ptr %ptr, half %value) #0 {
 ; SOFTFP-NOLSE-NEXT:    cbz w8, .LBB1_1
 ; SOFTFP-NOLSE-NEXT:  .LBB1_6: // %atomicrmw.end
 ; SOFTFP-NOLSE-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; SOFTFP-NOLSE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; SOFTFP-NOLSE-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
 ; SOFTFP-NOLSE-NEXT:    ldr x30, [sp], #48 // 8-byte Folded Reload
 ; SOFTFP-NOLSE-NEXT:    ret
@@ -268,7 +266,6 @@ define bfloat @test_atomicrmw_fmin_bf16_seq_cst_align2(ptr %ptr, bfloat %value) 
 ; SOFTFP-NOLSE-NEXT:    cbz w8, .LBB2_1
 ; SOFTFP-NOLSE-NEXT:  .LBB2_6: // %atomicrmw.end
 ; SOFTFP-NOLSE-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
-; SOFTFP-NOLSE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; SOFTFP-NOLSE-NEXT:    ldp x30, x21, [sp], #32 // 16-byte Folded Reload
 ; SOFTFP-NOLSE-NEXT:    ret
   %res = atomicrmw fmin ptr %ptr, bfloat %value seq_cst, align 2
@@ -362,7 +359,6 @@ define bfloat @test_atomicrmw_fmin_bf16_seq_cst_align4(ptr %ptr, bfloat %value) 
 ; SOFTFP-NOLSE-NEXT:    cbz w8, .LBB3_1
 ; SOFTFP-NOLSE-NEXT:  .LBB3_6: // %atomicrmw.end
 ; SOFTFP-NOLSE-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
-; SOFTFP-NOLSE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; SOFTFP-NOLSE-NEXT:    ldp x30, x21, [sp], #32 // 16-byte Folded Reload
 ; SOFTFP-NOLSE-NEXT:    ret
   %res = atomicrmw fmin ptr %ptr, bfloat %value seq_cst, align 4
@@ -436,7 +432,6 @@ define float @test_atomicrmw_fmin_f32_seq_cst_align4(ptr %ptr, float %value) #0 
 ; SOFTFP-NOLSE-NEXT:    cbz w8, .LBB4_1
 ; SOFTFP-NOLSE-NEXT:  .LBB4_6: // %atomicrmw.end
 ; SOFTFP-NOLSE-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
-; SOFTFP-NOLSE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; SOFTFP-NOLSE-NEXT:    ldp x30, x21, [sp], #32 // 16-byte Folded Reload
 ; SOFTFP-NOLSE-NEXT:    ret
   %res = atomicrmw fmin ptr %ptr, float %value seq_cst, align 4
