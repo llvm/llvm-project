@@ -237,6 +237,9 @@ in your toolchain can lead to unexpected behavior.
 
 : This macro is used to re-enable all named declarations in `<codecvt>`.
 
+**\_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS**\:
+  This macro is used to re-enable all `shared_ptr` atomic access APIs in `<memory>`.
+
 **\_LIBCPP_ENABLE_CXX26_REMOVED_STRING_RESERVE**\:
 
 : This macro is used to re-enable the function
