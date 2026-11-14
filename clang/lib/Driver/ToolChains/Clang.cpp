@@ -1183,6 +1183,14 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(P));
   }
 
+  // Add HIP toolkit include paths after C++ stdlib but before system headers.
+  // This ensures the selected ROCm headers beat distro-installed HIP headers
+  // in /usr/include without breaking C++ #include_next chains.
+  // Skip when using LLVM offloading (-foffload-via-llvm): that mode uses its
+  // own offload headers instead of vendor ROCm headers.
+  if (JA.isOffloading(Action::OFK_HIP) && !UsesLLVMOffloading)
+    getToolChain().AddHIPIncludeArgsLate(Args, CmdArgs);
+
   // Add system include arguments for all targets but IAMCU.
   if (!IsIAMCU)
     forAllAssociatedToolChains(C, JA, getToolChain(),

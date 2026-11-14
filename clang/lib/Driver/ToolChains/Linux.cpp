@@ -904,6 +904,11 @@ void Linux::AddHIPIncludeArgs(const ArgList &DriverArgs,
   RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
+void Linux::AddHIPIncludeArgsLate(const ArgList &DriverArgs,
+                                  ArgStringList &CC1Args) const {
+  RocmInstallation->AddHIPIncludeArgsLate(DriverArgs, CC1Args);
+}
+
 void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
                              ArgStringList &CmdArgs) const {
   if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,

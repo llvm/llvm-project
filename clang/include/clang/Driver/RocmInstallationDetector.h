@@ -259,6 +259,9 @@ public:
   void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                          llvm::opt::ArgStringList &CC1Args) const;
 
+  void AddHIPIncludeArgsLate(const llvm::opt::ArgList &DriverArgs,
+                             llvm::opt::ArgStringList &CC1Args) const;
+
   void detectDeviceLibrary();
   void detectHIPRuntime(const llvm::Triple &HostTriple);
 
