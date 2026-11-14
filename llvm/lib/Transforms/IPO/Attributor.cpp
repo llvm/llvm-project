@@ -3285,6 +3285,7 @@ void InformationCache::initializeInformationCache(const Function &CF,
 
   for (Instruction &I : instructions(&F)) {
     bool IsInterestingOpcode = false;
+    bool MayReadOrWriteMemory = false;
 
     // To allow easy access to all instructions in a function with a given
     // opcode we store them in the InfoCache. As not all opcodes are interesting
@@ -3296,6 +3297,12 @@ void InformationCache::initializeInformationCache(const Function &CF,
       assert(!isa<CallBase>(&I) &&
              "New call base instruction type needs to be known in the "
              "Attributor.");
+      break;
+    case Instruction::VAArg:
+    case Instruction::Fence:
+    case Instruction::CatchPad:
+    case Instruction::CatchRet:
+      MayReadOrWriteMemory = true;
       break;
     case Instruction::Call:
       // Calls are interesting on their own, additionally:
@@ -3312,29 +3319,37 @@ void InformationCache::initializeInformationCache(const Function &CF,
       [[fallthrough]];
     case Instruction::CallBr:
     case Instruction::Invoke:
-    case Instruction::CleanupRet:
-    case Instruction::CatchSwitch:
+      MayReadOrWriteMemory = !cast<CallBase>(I).doesNotAccessMemory();
+      IsInterestingOpcode = true;
+      break;
     case Instruction::AtomicRMW:
     case Instruction::AtomicCmpXchg:
-    case Instruction::UncondBr:
-    case Instruction::CondBr:
-    case Instruction::Resume:
-    case Instruction::Ret:
     case Instruction::Load:
       // The alignment of a pointer is interesting for loads.
     case Instruction::Store:
       // The alignment of a pointer is interesting for stores.
+      MayReadOrWriteMemory = true;
+      IsInterestingOpcode = true;
+      break;
+    case Instruction::CleanupRet:
+    case Instruction::CatchSwitch:
+    case Instruction::UncondBr:
+    case Instruction::CondBr:
+    case Instruction::Resume:
+    case Instruction::Ret:
     case Instruction::Alloca:
     case Instruction::AddrSpaceCast:
       IsInterestingOpcode = true;
     }
+    assert(MayReadOrWriteMemory == I.mayReadOrWriteMemory() &&
+           "Memory accessing opcode not handled");
     if (IsInterestingOpcode) {
       auto *&Insts = FI.OpcodeInstMap[I.getOpcode()];
       if (!Insts)
         Insts = new (Allocator) InstructionVectorTy();
       Insts->push_back(&I);
     }
-    if (I.mayReadOrWriteMemory())
+    if (MayReadOrWriteMemory)
       FI.RWInsts.push_back(&I);
   }
 
