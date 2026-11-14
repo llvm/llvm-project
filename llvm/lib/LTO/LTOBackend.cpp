@@ -33,6 +33,7 @@
 #include "llvm/Passes/RunCodeGen.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Plugins/PassPlugin.h"
+#include "llvm/Remarks/RemarkStreamer.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -495,14 +496,23 @@ static void codegen(const Config &Conf, TargetMachine *TM,
     report_fatal_error(std::move(Err));
 }
 
-static void splitCodeGen(const Config &C, TargetMachine *TM,
-                         AddStreamFn AddStream,
-                         unsigned ParallelCodeGenParallelismLevel, Module &Mod,
-                         const ModuleSummaryIndex &CombinedIndex) {
+static Error splitCodeGen(const Config &C, TargetMachine *TM,
+                          AddStreamFn AddStream,
+                          unsigned ParallelCodeGenParallelismLevel, Module &Mod,
+                          const ModuleSummaryIndex &CombinedIndex) {
   DefaultThreadPool CodegenThreadPool(
       heavyweight_hardware_concurrency(ParallelCodeGenParallelismLevel));
   unsigned ThreadCount = 0;
   const Target *T = &TM->getTarget();
+
+  // Each partition is compiled in a context of its own, which has no remark
+  // file. When C configured the remark file of Mod's context, collect the
+  // remarks of each partition in a buffer with the same settings, and add them
+  // to that file in partition order once all partitions are done.
+  remarks::RemarkStreamer *RemarkFile =
+      C.RemarksFilename.empty() ? nullptr
+                                : Mod.getContext().getMainRemarkStreamer();
+  std::vector<LLVMRemarkBuffer> RemarkBuffers(ParallelCodeGenParallelismLevel);
 
   const auto HandleModulePartition =
       [&](std::unique_ptr<Module> MPart) {
@@ -520,6 +530,15 @@ static void splitCodeGen(const Config &C, TargetMachine *TM,
         CodegenThreadPool.async(
             [&](const SmallString<0> &BC, unsigned ThreadId) {
               LTOLLVMContext Ctx(C);
+              assert(ThreadId < RemarkBuffers.size() && "too many partitions");
+              LLVMRemarkBuffer &Remarks = RemarkBuffers[ThreadId];
+              if (RemarkFile) {
+                if (Error E = Remarks.setup(Ctx, C.RemarksPasses,
+                                            C.RemarksWithHotness,
+                                            C.RemarksHotnessThreshold))
+                  reportFatalUsageError(std::move(E));
+              }
+
               Expected<std::unique_ptr<Module>> MOrErr =
                   parseBitcodeFile(MemoryBufferRef(BC.str(), "ld-temp.o"), Ctx);
               if (!MOrErr)
@@ -531,6 +550,7 @@ static void splitCodeGen(const Config &C, TargetMachine *TM,
 
               codegen(C, TM.get(), AddStream, ThreadId, *MPartInCtx,
                       CombinedIndex);
+              Remarks.finalize();
             },
             // Pass BC using std::move to ensure that it get moved rather than
             // copied into the thread's context.
@@ -548,6 +568,13 @@ static void splitCodeGen(const Config &C, TargetMachine *TM,
   // variables, we need to wait for the worker threads to terminate before we
   // can leave the function scope.
   CodegenThreadPool.wait();
+
+  if (RemarkFile) {
+    for (LLVMRemarkBuffer &Remarks : RemarkBuffers)
+      if (Error E = Remarks.emitTo(RemarkFile->getSerializer()))
+        return E;
+  }
+  return Error::success();
 }
 
 static Expected<const Target *> initAndLookupTarget(const Config &C,
@@ -596,11 +623,10 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
 
   if (ParallelCodeGenParallelismLevel == 1) {
     codegen(C, TM.get(), AddStream, 0, Mod, CombinedIndex);
-  } else {
-    splitCodeGen(C, TM.get(), AddStream, ParallelCodeGenParallelismLevel, Mod,
-                 CombinedIndex);
+    return Error::success();
   }
-  return Error::success();
+  return splitCodeGen(C, TM.get(), AddStream, ParallelCodeGenParallelismLevel,
+                      Mod, CombinedIndex);
 }
 
 static void dropDeadSymbols(Module &Mod, const GVSummaryMapTy &DefinedGlobals,

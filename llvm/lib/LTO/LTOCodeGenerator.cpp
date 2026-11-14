@@ -566,10 +566,17 @@ bool LTOCodeGenerator::optimize() {
   Config.SampleProfile = SampleProfileLoaderPass::getSampleProfileFile(Context);
   Config.PTO.LoopVectorization = Config.OptLevel > 1;
   Config.PTO.SLPVectorization = Config.OptLevel > 1;
+  // Parallel code generation reads the remark settings from Config.
+  Config.RemarksFilename = RemarksFilename;
+  Config.RemarksPasses = RemarksPasses;
+  Config.RemarksFormat = RemarksFormat;
+  Config.RemarksWithHotness = RemarksWithHotness;
+  Config.RemarksHotnessThreshold = RemarksHotnessThreshold;
 
   auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
-      Context, RemarksFilename, RemarksPasses, RemarksFormat,
-      RemarksWithHotness, RemarksHotnessThreshold);
+      Context, Config.RemarksFilename, Config.RemarksPasses,
+      Config.RemarksFormat, Config.RemarksWithHotness,
+      Config.RemarksHotnessThreshold);
   if (!DiagFileOrErr) {
     errs() << "Error: " << toString(DiagFileOrErr.takeError()) << "\n";
     report_fatal_error("Can't get an output file for the remarks");
