@@ -107,11 +107,6 @@ static cl::opt<bool> EnablePrecomputePhysRegs(
 static bool EnablePrecomputePhysRegs = false;
 #endif // NDEBUG
 
-static cl::opt<bool> UseSegmentSetForPhysRegs(
-    "use-segment-set-for-physregs", cl::Hidden, cl::init(true),
-    cl::desc(
-        "Use segment set for the computation of the live ranges of physregs."));
-
 void LiveIntervalsWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addPreservedID(MachineLoopInfoID);
@@ -251,9 +246,7 @@ LiveInterval *LiveIntervals::createInterval(Register reg) {
 }
 
 LiveRange *LiveIntervals::createRegUnitRange() {
-  // Use segment set to speed-up initial computation of the live range.
-  return new (RegUnitRangeRecycler.Allocate(RangeAllocator))
-      LiveRange(UseSegmentSetForPhysRegs);
+  return new (RegUnitRangeRecycler.Allocate(RangeAllocator)) LiveRange();
 }
 
 /// Compute the live interval of a virtual register, based on defs and uses.
@@ -386,15 +379,17 @@ void LiveIntervals::computeRegUnitRange(LiveRange &LR, MCRegUnit Unit) {
 
   // The physregs aliasing Unit are the roots and their super-registers.
   // Create all values as dead defs before extending to uses. Note that roots
-  // may share super-registers. That's OK because createDeadDefs() is
+  // may share super-registers. That's OK because createDeadDef() is
   // idempotent. It is very rare for a register unit to have multiple roots, so
   // uniquing super-registers is probably not worthwhile.
   bool IsReserved = false;
+  SmallVector<SlotIndex, 32> DefIdxs;
   for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root) {
     bool IsRootReserved = true;
     for (MCPhysReg Reg : TRI->superregs_inclusive(*Root)) {
-      if (!MRI->reg_empty(Reg))
-        LICalc->createDeadDefs(LR, Reg);
+      for (const MachineOperand &MO : MRI->def_operands(Reg))
+        DefIdxs.push_back(Indexes->getInstructionIndex(*MO.getParent())
+                              .getRegSlot(MO.isEarlyClobber()));
       // A register unit is considered reserved if all its roots and all their
       // super registers are reserved.
       if (!MRI->isReserved(Reg))
@@ -404,6 +399,10 @@ void LiveIntervals::computeRegUnitRange(LiveRange &LR, MCRegUnit Unit) {
   }
   assert(IsReserved == MRI->isReservedRegUnit(Unit) &&
          "reserved computation mismatch");
+
+  llvm::sort(DefIdxs);
+  for (SlotIndex DefIdx : DefIdxs)
+    LR.createDeadDef(DefIdx, VNInfoAllocator);
 
   // Now extend LR to reach all uses.
   // Ignore uses of reserved registers. We only track defs of those.
@@ -415,10 +414,6 @@ void LiveIntervals::computeRegUnitRange(LiveRange &LR, MCRegUnit Unit) {
       }
     }
   }
-
-  // Flush the segment set to the segment vector.
-  if (UseSegmentSetForPhysRegs)
-    LR.flushSegmentSet();
 }
 
 /// Precompute the live ranges of any register units that are live-in to an ABI
