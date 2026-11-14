@@ -17,6 +17,7 @@
 
 namespace llvm {
 
+// PassPlugin::invokePreCodeGenCallback() wants to match the parameter list
 LLVM_ABI Error runCodeGenPipeline(
     TargetMachine &TM, Module &M, raw_pwrite_stream &OS,
     raw_pwrite_stream *DwoOS, CodeGenFileType CGFT, bool DisableVerify = true,
