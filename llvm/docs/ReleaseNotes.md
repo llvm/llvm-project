@@ -373,6 +373,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the ARM Backend
 
+* A variadic function that calls `va_start` can now make variadic tail calls.
+  A `musttail` call from such a function used to be a fatal error.
+
 * Using the hard-float procedure call standard without floating-point registers
   is now an error. Previously this would fall back to the soft-float PCS while
   still emitting the hard-float ABI attribute tag.
