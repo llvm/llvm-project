@@ -229,7 +229,7 @@ computeCalleeSavedRegs(BitVector &SavedRegs, MachineFunction &MF) {
     return;
 
   // Insert subregs.
-  const MCPhysReg *CSRegs = TRI.getCalleeSavedRegs(&MF);
+  const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
   for (unsigned i = 0; CSRegs[i]; ++i) {
     MCPhysReg Reg = CSRegs[i];
     if (SavedRegs.test(Reg)) {
