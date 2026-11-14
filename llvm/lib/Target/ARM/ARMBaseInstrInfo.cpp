@@ -6081,7 +6081,7 @@ bool ARMBaseInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
 
   LiveRegUnits LRU(getRegisterInfo());
 
-  for (MachineInstr &MI : llvm::reverse(MBB))
+  for (MachineInstr &MI : instructionsWithoutDebug(MBB.rbegin(), MBB.rend()))
     LRU.accumulate(MI);
 
   // Check if each of the unsafe registers are available...
