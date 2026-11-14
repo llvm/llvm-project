@@ -5684,6 +5684,94 @@ std::pair<uint64_t, bool> Fortran::lower::getCollapseSizeAndForce(
   return {size, force};
 }
 
+/// Return true if \p doConstruct, which \p eval holds and which is lowered as
+/// unstructured, is a DO of an `acc loop seq` construct whose control flow is
+/// contained: the construct's acc.loop privatizes the DO's induction variable,
+/// and the construct sits in an enclosing construct that is lowered
+/// structurally.
+///
+/// Running example, with each construct's PFT classification and what it
+/// lowers to:
+///
+///   !$acc kernels                     !   acc.kernels
+///   do j = 1, nj                      !   acc.loop private(j), bounds
+///     do i = 1, n                     ! ~ acc.loop private(i), bounds; its
+///                                     !   body in an scf.execute_region
+///       !$acc loop seq collapse(2)    ! ! acc.loop private(k, l), no bounds,
+///                                     !   seq unstructured (currentLoop)
+///       kloop: do k = 1, m            ! ! CFG inside currentLoop
+///         do l = 1, p                 ! ! CFG inside currentLoop
+///           if (b(l, k, i, j) > 0.0) exit kloop
+///         end do
+///       end do kloop
+///     end do
+///   end do
+///
+/// The EXIT makes the DOs over k and l unstructured, and an unstructured DO in
+/// kernels is not yet implemented because its induction variable is not
+/// privatized. Here it is: the `acc loop seq` directive already lowered to
+/// currentLoop, which privatizes k and l. The DO over i holds the branching in
+/// its body, so the seq loop's CFG is contained there, and the DOs over j and
+/// i stay parallelizable loops.
+///
+/// genOpenACCLoopFromDoConstruct calls this once for the DO over k and once for
+/// the DO over l. Both times the builder inserts into currentLoop's region: an
+/// unstructured acc.loop carries no bounds, so the DOs it owns are emitted as
+/// plain blocks directly in its region, with no loop op of their own around
+/// the DO over l.
+static bool isDoOfContainedUnstructuredSeqLoop(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::lower::pft::Evaluation &eval,
+    const Fortran::parser::DoConstruct &doConstruct) {
+  auto currentLoop = mlir::dyn_cast_or_null<mlir::acc::LoopOp>(
+      converter.getFirOpBuilder().getRegion().getParentOp());
+  if (!currentLoop || !currentLoop.getUnstructured() || !currentLoop.hasSeq())
+    return false;
+
+  // The acc.loop privatizes the induction variables of the DOs its directive
+  // owns -- its loop and the inner levels of a collapse -- and rebinds each to
+  // an hlfir.declare of the private copy. Require that this DO's induction
+  // variable is one of them: that is what makes the NYI unnecessary, and it
+  // ties this DO to currentLoop.
+  //
+  // In the example, k and l are bound to `hlfir.declare %k_private` and
+  // `hlfir.declare %l_private`, both private operands of currentLoop. Without
+  // collapse(2), currentLoop would privatize only k, and the DO over l -- then
+  // a plain DO in the seq loop's body -- would not qualify.
+  const auto *bounds = std::get_if<Fortran::parser::LoopControl::Bounds>(
+      &doConstruct.GetLoopControl()->u);
+  if (!bounds)
+    return false;
+  mlir::Value ivAddr =
+      converter.getSymbolAddress(bounds->Name().thing.symbol->GetUltimate());
+  auto ivDeclare =
+      ivAddr ? ivAddr.getDefiningOp<hlfir::DeclareOp>() : hlfir::DeclareOp{};
+  if (!ivDeclare || !llvm::is_contained(currentLoop.getPrivateOperands(),
+                                        ivDeclare.getMemref()))
+    return false;
+
+  // Find the construct that created currentLoop. For the outer DO of the
+  // directive it is the parent; for an inner level of a collapse the parent is
+  // the enclosing collapsed DO, so walk past those. In the example, the DO over
+  // k reaches the `acc loop seq` construct in one step; the DO over l starts at
+  // the DO over k and steps past it.
+  const Fortran::lower::pft::Evaluation *accEval = eval.parentConstruct;
+  while (accEval && accEval->isA<Fortran::parser::DoConstruct>())
+    accEval = accEval->parentConstruct;
+
+  // The seq loop is contained when the construct around `acc loop seq` is
+  // lowered structurally. In the example that is the DO over i, which the PFT
+  // reclassified from unstructured to structured with unstructured internals
+  // (~); the DO over j and the kernels construct above it never become
+  // unstructured. Two variations do not qualify: with `exit kloop` changed to
+  // an EXIT of the DO over i, that DO stays unstructured; and were `acc loop
+  // seq` directly in the kernels construct, the kernels construct would stay
+  // unstructured.
+  const Fortran::lower::pft::Evaluation *container =
+      accEval ? accEval->parentConstruct : nullptr;
+  return container && !container->lowerAsUnstructured();
+}
+
 /// Create an ACC loop operation for a DO construct when inside ACC compute
 /// constructs This serves as a bridge between regular DO construct handling and
 /// ACC loop creation
@@ -5715,6 +5803,11 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
   // to any OpenACC directives (e.g. `kernels` ops), it is just nested inside
   // the kernels region.
   if (eval.lowerAsUnstructured()) {
+    // The DO of a contained unstructured seq loop is lowered as plain control
+    // flow inside its acc.loop, which already privatizes the induction
+    // variable.
+    if (isDoOfContainedUnstructuredSeqLoop(converter, eval, doConstruct))
+      return nullptr;
     if (mlir::isa_and_present<mlir::acc::KernelsOp>(
             mlir::acc::getEnclosingComputeOp(
                 converter.getFirOpBuilder().getRegion())) &&
