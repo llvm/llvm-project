@@ -60,6 +60,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Argument.h"
@@ -480,8 +481,6 @@ private:
   bool verifyAttributeCount(AttributeList Attrs, unsigned Params);
   void verifyAttributeTypes(AttributeSet Attrs, const Value *V);
   void verifyParameterAttrs(AttributeSet Attrs, Type *Ty, const Value *V);
-  void checkUnsignedBaseTenFuncAttr(AttributeList Attrs, StringRef Attr,
-                                    const Value *V);
   void verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
                            const Value *V, bool IsIntrinsic, bool IsInlineAsm);
   void verifyFunctionMetadata(ArrayRef<std::pair<unsigned, MDNode *>> MDs);
@@ -2505,16 +2504,6 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
   }
 }
 
-void Verifier::checkUnsignedBaseTenFuncAttr(AttributeList Attrs, StringRef Attr,
-                                            const Value *V) {
-  if (Attrs.hasFnAttr(Attr)) {
-    StringRef S = Attrs.getFnAttr(Attr).getValueAsString();
-    unsigned N;
-    if (S.getAsInteger(10, N))
-      CheckFailed("\"" + Attr + "\" takes an unsigned integer: " + S, V);
-  }
-}
-
 // Check parameter attributes against a function type.
 // The value V is printed in error messages.
 void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
@@ -2675,34 +2664,6 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
         "Attribute writable and memory without argmem: write are incompatible!",
         V);
 
-  if (Attrs.hasFnAttr("aarch64_pstate_sm_enabled")) {
-    Check(!Attrs.hasFnAttr("aarch64_pstate_sm_compatible"),
-           "Attributes 'aarch64_pstate_sm_enabled and "
-           "aarch64_pstate_sm_compatible' are incompatible!",
-           V);
-  }
-
-  Check((Attrs.hasFnAttr("aarch64_new_za") + Attrs.hasFnAttr("aarch64_in_za") +
-         Attrs.hasFnAttr("aarch64_inout_za") +
-         Attrs.hasFnAttr("aarch64_out_za") +
-         Attrs.hasFnAttr("aarch64_preserves_za") +
-         Attrs.hasFnAttr("aarch64_za_state_agnostic")) <= 1,
-        "Attributes 'aarch64_new_za', 'aarch64_in_za', 'aarch64_out_za', "
-        "'aarch64_inout_za', 'aarch64_preserves_za' and "
-        "'aarch64_za_state_agnostic' are mutually exclusive",
-        V);
-
-  Check((Attrs.hasFnAttr("aarch64_new_zt0") +
-         Attrs.hasFnAttr("aarch64_in_zt0") +
-         Attrs.hasFnAttr("aarch64_inout_zt0") +
-         Attrs.hasFnAttr("aarch64_out_zt0") +
-         Attrs.hasFnAttr("aarch64_preserves_zt0") +
-         Attrs.hasFnAttr("aarch64_za_state_agnostic")) <= 1,
-        "Attributes 'aarch64_new_zt0', 'aarch64_in_zt0', 'aarch64_out_zt0', "
-        "'aarch64_inout_zt0', 'aarch64_preserves_zt0' and "
-        "'aarch64_za_state_agnostic' are mutually exclusive",
-        V);
-
   if (Attrs.hasFnAttr(Attribute::JumpTable)) {
     const GlobalValue *GV = cast<GlobalValue>(V);
     Check(GV->hasGlobalUnnamedAddr(),
@@ -2752,36 +2713,6 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       CheckFailed("'allockind()' can't be both zeroed and uninitialized");
   }
 
-  if (Attribute A = Attrs.getFnAttr("alloc-variant-zeroed"); A.isValid()) {
-    StringRef S = A.getValueAsString();
-    Check(!S.empty(), "'alloc-variant-zeroed' must not be empty");
-    Function *Variant = M.getFunction(S);
-    if (Variant) {
-      Attribute Family = Attrs.getFnAttr("alloc-family");
-      Attribute VariantFamily = Variant->getFnAttribute("alloc-family");
-      if (Family.isValid())
-        Check(VariantFamily.isValid() &&
-                  VariantFamily.getValueAsString() == Family.getValueAsString(),
-              "'alloc-variant-zeroed' must name a function belonging to the "
-              "same 'alloc-family'");
-
-      Check(Variant->hasFnAttribute(Attribute::AllocKind) &&
-                (Variant->getFnAttribute(Attribute::AllocKind).getAllocKind() &
-                 AllocFnKind::Zeroed) != AllocFnKind::Unknown,
-            "'alloc-variant-zeroed' must name a function with "
-            "'allockind(\"zeroed\")'");
-
-      Check(FT == Variant->getFunctionType(),
-            "'alloc-variant-zeroed' must name a function with the same "
-            "signature");
-
-      if (const auto *F = dyn_cast<Function>(V))
-        Check(F->getCallingConv() == Variant->getCallingConv(),
-              "'alloc-variant-zeroed' must name a function with the same "
-              "calling convention");
-    }
-  }
-
   if (Attrs.hasFnAttr(Attribute::VScaleRange)) {
     unsigned VScaleMin = Attrs.getFnAttrs().getVScaleRangeMin();
     if (VScaleMin == 0)
@@ -2795,167 +2726,260 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       CheckFailed("'vscale_range' maximum must be power-of-two value", V);
   }
 
-  if (Attribute FPAttr = Attrs.getFnAttr("frame-pointer"); FPAttr.isValid()) {
-    StringRef FP = FPAttr.getValueAsString();
-    if (FP != "all" && FP != "non-leaf" && FP != "none" && FP != "reserved" &&
-        FP != "non-leaf-no-reserve")
-      CheckFailed("invalid value for 'frame-pointer' attribute: " + FP, V);
-  }
-
-  checkUnsignedBaseTenFuncAttr(Attrs, "tail-pad-to-size", V);
-  checkUnsignedBaseTenFuncAttr(Attrs, "tail-pad-value", V);
-  checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-prefix", V);
-  checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-entry", V);
-  if (Attrs.hasFnAttr("patchable-function-entry-section"))
-    Check(!Attrs.getFnAttr("patchable-function-entry-section")
-               .getValueAsString()
-               .empty(),
-          "\"patchable-function-entry-section\" must not be empty");
-  checkUnsignedBaseTenFuncAttr(Attrs, "warn-stack-size", V);
-  checkUnsignedBaseTenFuncAttr(Attrs, "unsafe-stack-size", V);
-  for (StringLiteral Attr : NVVMAttr::AbiPreserveAttrs)
-    checkUnsignedBaseTenFuncAttr(Attrs, Attr, V);
-
-  if (auto A = Attrs.getFnAttr("sign-return-address"); A.isValid()) {
-    StringRef S = A.getValueAsString();
-    if (S != "none" && S != "all" && S != "non-leaf")
-      CheckFailed("invalid value for 'sign-return-address' attribute: " + S, V);
-  }
-
-  if (auto A = Attrs.getFnAttr("sign-return-address-key"); A.isValid()) {
-    StringRef S = A.getValueAsString();
-    if (S != "a_key" && S != "b_key")
-      CheckFailed("invalid value for 'sign-return-address-key' attribute: " + S,
-                  V);
-    if (auto AA = Attrs.getFnAttr("sign-return-address"); !AA.isValid()) {
-      CheckFailed(
-          "'sign-return-address-key' present without `sign-return-address`");
-    }
-  }
-
-  if (auto A = Attrs.getFnAttr("sign-return-address-harden"); A.isValid()) {
-    StringRef S = A.getValueAsString();
-    if (S != "load-return-address" && S != "none")
-      CheckFailed(
-          "invalid value for 'sign-return-address-harden' attribute: " + S, V);
-    auto SignRetA = Attrs.getFnAttr("sign-return-address");
-    auto PAuthRetA = Attrs.getFnAttr("ptrauth-returns");
-    if (!SignRetA.isValid() && !PAuthRetA.isValid())
-      CheckFailed("'sign-return-address-harden' present without "
-                  "'sign-return-address' or 'ptrauth-returns'");
-  }
-
-  if (auto A = Attrs.getFnAttr("branch-target-enforcement"); A.isValid()) {
-    StringRef S = A.getValueAsString();
-    if (S != "" && S != "true" && S != "false")
-      CheckFailed(
-          "invalid value for 'branch-target-enforcement' attribute: " + S, V);
-  }
-
-  if (auto A = Attrs.getFnAttr("branch-protection-pauth-lr"); A.isValid()) {
-    StringRef S = A.getValueAsString();
-    if (S != "" && S != "true" && S != "false")
-      CheckFailed(
-          "invalid value for 'branch-protection-pauth-lr' attribute: " + S, V);
-  }
-
-  if (auto A = Attrs.getFnAttr("guarded-control-stack"); A.isValid()) {
-    StringRef S = A.getValueAsString();
-    if (S != "" && S != "true" && S != "false")
-      CheckFailed("invalid value for 'guarded-control-stack' attribute: " + S,
-                  V);
-  }
-
-  if (auto A = Attrs.getFnAttr("vector-function-abi-variant"); A.isValid()) {
-    StringRef S = A.getValueAsString();
-    const std::optional<VFInfo> Info = VFABI::tryDemangleForVFABI(S, FT);
-    if (!Info)
-      CheckFailed("invalid name for a VFABI variant: " + S, V);
-  }
-
-  if (auto A = Attrs.getFnAttr("modular-format"); A.isValid()) {
-    StringRef S = A.getValueAsString();
-    SmallVector<StringRef> Args;
-    S.split(Args, ',');
-    Check(Args.size() >= 5,
-          "modular-format attribute requires at least 5 arguments", V);
-    unsigned UpperBound = FT->getNumParams() + (FT->isVarArg() ? 1 : 0);
-    unsigned FormatIdx;
-    Check(!Args[1].getAsInteger(10, FormatIdx),
-          "modular-format attribute format string index is not an integer", V);
-    Check(FormatIdx > 0,
-          "modular-format attribute format string index must be greater than 0",
-          V);
-    Check(FormatIdx <= UpperBound,
-          "modular-format attribute format string index is out of bounds", V);
-    unsigned FirstArgIdx;
-    Check(!Args[2].getAsInteger(10, FirstArgIdx),
-          "modular-format attribute first arg index is not an integer", V);
-    Check(FirstArgIdx <= UpperBound,
-          "modular-format attribute first arg index is out of bounds", V);
-    Check(!Args[3].empty(),
-          "modular-format attribute modular implementation function name "
-          "cannot be empty",
-          V);
-    Check(!Args[4].empty(),
-          "modular-format attribute implementation name cannot be empty", V);
-  }
-
-  if (auto A = Attrs.getFnAttr("target-features"); A.isValid()) {
-    StringRef S = A.getValueAsString();
-    if (!S.empty()) {
-      for (auto FeatureFlag : split(S, ',')) {
-        if (FeatureFlag.empty())
-          CheckFailed(
-              "target-features attribute should not contain an empty string");
-        else
-          Check(FeatureFlag[0] == '+' || FeatureFlag[0] == '-',
-                "target feature '" + FeatureFlag +
-                    "' must start with a '+' or '-'",
-                V);
-      }
-    }
-  }
-
   Check(!(Attrs.hasFnAttr(Attribute::Hot) && Attrs.hasFnAttr(Attribute::Cold)),
         "Attributes 'hot' and 'cold' are incompatible");
 
-  if (Attrs.hasFnAttr("mnop-mcount")) {
-    auto A = Attrs.getFnAttr("fentry-call");
-    Check(A.isValid() && A.getValueAsString() == "true",
-          "mnop-mcount only supported with fentry-call");
-  }
+  enum class StringAttr {
+    Unknown,
+    SMEnabled,
+    ZAState,
+    ZT0State,
+    ZAStateAgnostic,
+    AllocVariantZeroed,
+    FramePointer,
+    UnsignedInt,
+    PatchableFunctionEntrySection,
+    SignReturnAddress,
+    SignReturnAddressKey,
+    SignReturnAddressHarden,
+    BoolOrEmpty,
+    VectorFunctionABIVariant,
+    ModularFormat,
+    TargetFeatures,
+    MCount,
+    OracleFunction,
+  };
 
-  if (Attrs.hasFnAttr("mrecord-mcount")) {
-    auto A = Attrs.getFnAttr("fentry-call");
-    Check(A.isValid() && A.getValueAsString() == "true",
-          "mrecord-mcount only supported with fentry-call");
-  }
+  unsigned NumZAStates = 0;
+  unsigned NumZT0States = 0;
 
-  if (Attrs.hasFnAttr("oracle-function")) {
-    const auto *F = dyn_cast<Function>(V);
-    Check(F, "\"oracle-function\" attribute only applies to functions", V);
-    Check(F->hasLocalLinkage(), "oracle function must have local linkage", V);
-    Check(F->onlyReadsMemory() && F->onlyAccessesArgMemory() &&
-              F->doesNotThrow() && F->hasNoSync() && F->willReturn(),
-          "oracle function must be nounwind, nosync and willreturn, must not "
-          "have side effects and may only read memory through its arguments",
-          V);
-    Check(FT->getReturnType()->isIntegerTy(64),
-          "oracle function must return i64", V);
-    Check(!FT->isVarArg(), "oracle function must have a fixed argument list",
-          V);
-    if (M.isMaterialized()) {
-      for (const Use &U : F->uses()) {
-        auto *II = dyn_cast<IntrinsicInst>(U.getUser());
-        Check(II && II->getIntrinsicID() == Intrinsic::speculative_load &&
-                  II->isArgOperand(&U) && II->getArgOperandNo(&U) == 2,
-              "oracle function may only be used as the oracle operand of "
-              "llvm.speculative.load",
-              V, U.getUser());
+  // String attributes are sorted after the enum attributes.
+  AttributeSet FnAttrs = Attrs.getFnAttrs();
+  const Attribute *FirstStringAttr = partition_point(
+      FnAttrs, [](Attribute A) { return !A.isStringAttribute(); });
+
+  for (Attribute A : make_range(FirstStringAttr, FnAttrs.end())) {
+    StringRef Kind = A.getKindAsString();
+    StringRef S = A.getValueAsString();
+    StringAttr KindID =
+        StringSwitch<StringAttr>(Kind)
+            .Case("aarch64_pstate_sm_enabled", StringAttr::SMEnabled)
+            .Cases({"aarch64_new_za", "aarch64_in_za", "aarch64_inout_za",
+                    "aarch64_out_za", "aarch64_preserves_za"},
+                   StringAttr::ZAState)
+            .Cases({"aarch64_new_zt0", "aarch64_in_zt0", "aarch64_inout_zt0",
+                    "aarch64_out_zt0", "aarch64_preserves_zt0"},
+                   StringAttr::ZT0State)
+            .Case("aarch64_za_state_agnostic", StringAttr::ZAStateAgnostic)
+            .Case("alloc-variant-zeroed", StringAttr::AllocVariantZeroed)
+            .Case("frame-pointer", StringAttr::FramePointer)
+            .Cases({"tail-pad-to-size", "tail-pad-value",
+                    "patchable-function-prefix", "patchable-function-entry",
+                    "warn-stack-size", "unsafe-stack-size"},
+                   StringAttr::UnsignedInt)
+            .Case("patchable-function-entry-section",
+                  StringAttr::PatchableFunctionEntrySection)
+            .Case("sign-return-address", StringAttr::SignReturnAddress)
+            .Case("sign-return-address-key", StringAttr::SignReturnAddressKey)
+            .Case("sign-return-address-harden",
+                  StringAttr::SignReturnAddressHarden)
+            .Cases({"branch-target-enforcement", "branch-protection-pauth-lr",
+                    "guarded-control-stack"},
+                   StringAttr::BoolOrEmpty)
+            .Case("vector-function-abi-variant",
+                  StringAttr::VectorFunctionABIVariant)
+            .Case("modular-format", StringAttr::ModularFormat)
+            .Case("target-features", StringAttr::TargetFeatures)
+            .Cases({"mnop-mcount", "mrecord-mcount"}, StringAttr::MCount)
+            .Case("oracle-function", StringAttr::OracleFunction)
+            .Default(is_contained(NVVMAttr::AbiPreserveAttrs, Kind)
+                         ? StringAttr::UnsignedInt
+                         : StringAttr::Unknown);
+    switch (KindID) {
+    case StringAttr::Unknown:
+      break;
+    case StringAttr::SMEnabled:
+      Check(!Attrs.hasFnAttr("aarch64_pstate_sm_compatible"),
+            "Attributes 'aarch64_pstate_sm_enabled and "
+            "aarch64_pstate_sm_compatible' are incompatible!",
+            V);
+      break;
+    case StringAttr::ZAState:
+      ++NumZAStates;
+      break;
+    case StringAttr::ZT0State:
+      ++NumZT0States;
+      break;
+    case StringAttr::ZAStateAgnostic:
+      ++NumZAStates;
+      ++NumZT0States;
+      break;
+    case StringAttr::AllocVariantZeroed: {
+      Check(!S.empty(), "'alloc-variant-zeroed' must not be empty");
+      Function *Variant = M.getFunction(S);
+      if (Variant) {
+        Attribute Family = Attrs.getFnAttr("alloc-family");
+        Attribute VariantFamily = Variant->getFnAttribute("alloc-family");
+        if (Family.isValid())
+          Check(VariantFamily.isValid() && VariantFamily.getValueAsString() ==
+                                               Family.getValueAsString(),
+                "'alloc-variant-zeroed' must name a function belonging to the "
+                "same 'alloc-family'");
+
+        Check(
+            Variant->hasFnAttribute(Attribute::AllocKind) &&
+                (Variant->getFnAttribute(Attribute::AllocKind).getAllocKind() &
+                 AllocFnKind::Zeroed) != AllocFnKind::Unknown,
+            "'alloc-variant-zeroed' must name a function with "
+            "'allockind(\"zeroed\")'");
+
+        Check(FT == Variant->getFunctionType(),
+              "'alloc-variant-zeroed' must name a function with the same "
+              "signature");
+
+        if (const auto *F = dyn_cast<Function>(V))
+          Check(F->getCallingConv() == Variant->getCallingConv(),
+                "'alloc-variant-zeroed' must name a function with the same "
+                "calling convention");
       }
+
+      break;
+    }
+    case StringAttr::FramePointer:
+      if (S != "all" && S != "non-leaf" && S != "none" && S != "reserved" &&
+          S != "non-leaf-no-reserve")
+        CheckFailed("invalid value for 'frame-pointer' attribute: " + S, V);
+      break;
+    case StringAttr::UnsignedInt: {
+      unsigned N;
+      if (S.getAsInteger(10, N))
+        CheckFailed("\"" + Kind + "\" takes an unsigned integer: " + S, V);
+      break;
+    }
+    case StringAttr::PatchableFunctionEntrySection:
+      Check(!S.empty(),
+            "\"patchable-function-entry-section\" must not be empty");
+      break;
+    case StringAttr::SignReturnAddress:
+      if (S != "none" && S != "all" && S != "non-leaf")
+        CheckFailed("invalid value for 'sign-return-address' attribute: " + S,
+                    V);
+      break;
+    case StringAttr::SignReturnAddressKey:
+      if (S != "a_key" && S != "b_key")
+        CheckFailed(
+            "invalid value for 'sign-return-address-key' attribute: " + S, V);
+      if (!Attrs.hasFnAttr("sign-return-address"))
+        CheckFailed(
+            "'sign-return-address-key' present without `sign-return-address`");
+      break;
+    case StringAttr::SignReturnAddressHarden:
+      if (S != "load-return-address" && S != "none")
+        CheckFailed(
+            "invalid value for 'sign-return-address-harden' attribute: " + S,
+            V);
+      if (!Attrs.hasFnAttr("sign-return-address") &&
+          !Attrs.hasFnAttr("ptrauth-returns"))
+        CheckFailed("'sign-return-address-harden' present without "
+                    "'sign-return-address' or 'ptrauth-returns'");
+      break;
+    case StringAttr::BoolOrEmpty:
+      if (S != "" && S != "true" && S != "false")
+        CheckFailed("invalid value for '" + Kind + "' attribute: " + S, V);
+      break;
+    case StringAttr::VectorFunctionABIVariant:
+      if (!VFABI::tryDemangleForVFABI(S, FT))
+        CheckFailed("invalid name for a VFABI variant: " + S, V);
+      break;
+    case StringAttr::ModularFormat: {
+      SmallVector<StringRef> Args;
+      S.split(Args, ',');
+      Check(Args.size() >= 5,
+            "modular-format attribute requires at least 5 arguments", V);
+      unsigned UpperBound = FT->getNumParams() + (FT->isVarArg() ? 1 : 0);
+      unsigned FormatIdx;
+      Check(!Args[1].getAsInteger(10, FormatIdx),
+            "modular-format attribute format string index is not an integer",
+            V);
+      Check(
+          FormatIdx > 0,
+          "modular-format attribute format string index must be greater than 0",
+          V);
+      Check(FormatIdx <= UpperBound,
+            "modular-format attribute format string index is out of bounds", V);
+      unsigned FirstArgIdx;
+      Check(!Args[2].getAsInteger(10, FirstArgIdx),
+            "modular-format attribute first arg index is not an integer", V);
+      Check(FirstArgIdx <= UpperBound,
+            "modular-format attribute first arg index is out of bounds", V);
+      Check(!Args[3].empty(),
+            "modular-format attribute modular implementation function name "
+            "cannot be empty",
+            V);
+      Check(!Args[4].empty(),
+            "modular-format attribute implementation name cannot be empty", V);
+
+      break;
+    }
+    case StringAttr::TargetFeatures:
+      if (!S.empty()) {
+        for (auto FeatureFlag : split(S, ',')) {
+          if (FeatureFlag.empty())
+            CheckFailed(
+                "target-features attribute should not contain an empty string");
+          else
+            Check(FeatureFlag[0] == '+' || FeatureFlag[0] == '-',
+                  "target feature '" + FeatureFlag +
+                      "' must start with a '+' or '-'",
+                  V);
+        }
+      }
+
+      break;
+    case StringAttr::MCount: {
+      Attribute FEntry = Attrs.getFnAttr("fentry-call");
+      Check(FEntry.isValid() && FEntry.getValueAsString() == "true",
+            Kind + " only supported with fentry-call");
+      break;
+    }
+    case StringAttr::OracleFunction: {
+      const auto *F = dyn_cast<Function>(V);
+      Check(F, "\"oracle-function\" attribute only applies to functions", V);
+      Check(F->hasLocalLinkage(), "oracle function must have local linkage", V);
+      Check(F->onlyReadsMemory() && F->onlyAccessesArgMemory() &&
+                F->doesNotThrow() && F->hasNoSync() && F->willReturn(),
+            "oracle function must be nounwind, nosync and willreturn, must not "
+            "have side effects and may only read memory through its arguments",
+            V);
+      Check(FT->getReturnType()->isIntegerTy(64),
+            "oracle function must return i64", V);
+      Check(!FT->isVarArg(), "oracle function must have a fixed argument list",
+            V);
+      if (M.isMaterialized()) {
+        for (const Use &U : F->uses()) {
+          auto *II = dyn_cast<IntrinsicInst>(U.getUser());
+          Check(II && II->getIntrinsicID() == Intrinsic::speculative_load &&
+                    II->isArgOperand(&U) && II->getArgOperandNo(&U) == 2,
+                "oracle function may only be used as the oracle operand of "
+                "llvm.speculative.load",
+                V, U.getUser());
+        }
+      }
+      break;
+    }
     }
   }
+
+  Check(NumZAStates <= 1,
+        "Attributes 'aarch64_new_za', 'aarch64_in_za', 'aarch64_out_za', "
+        "'aarch64_inout_za', 'aarch64_preserves_za' and "
+        "'aarch64_za_state_agnostic' are mutually exclusive",
+        V);
+  Check(NumZT0States <= 1,
+        "Attributes 'aarch64_new_zt0', 'aarch64_in_zt0', 'aarch64_out_zt0', "
+        "'aarch64_inout_zt0', 'aarch64_preserves_zt0' and "
+        "'aarch64_za_state_agnostic' are mutually exclusive",
+        V);
 }
 
 void Verifier::verifyUnknownProfileMetadata(MDNode *MD) {
