@@ -4,13 +4,13 @@
 define zeroext i32 @trunc_nuw_nsw_urem(i64 %x) nounwind {
 ; CHECK-LABEL: trunc_nuw_nsw_urem:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    movl $3518437209, %ecx # imm = 0xD1B71759
-; CHECK-NEXT:    imulq %rdi, %rcx
-; CHECK-NEXT:    shrq $45, %rcx
-; CHECK-NEXT:    imull $10000, %ecx, %ecx # imm = 0x2710
-; CHECK-NEXT:    subl %ecx, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    movl $-776530087, %ecx # imm = 0xD1B71759
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    mull %ecx
+; CHECK-NEXT:    shrl $13, %edx
+; CHECK-NEXT:    imull $10000, %edx, %eax # imm = 0x2710
+; CHECK-NEXT:    subl %eax, %edi
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
 entry:
   %trunc = trunc nuw nsw i64 %x to i32
@@ -63,16 +63,15 @@ define i32 @simplify_demanded_bits_drop_flag(i1 zeroext %x, i1 zeroext %y) nounw
 ; CHECK-LABEL: simplify_demanded_bits_drop_flag:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    shll $2, %esi
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    negq %rax
-; CHECK-NEXT:    xorq %rsi, %rax
-; CHECK-NEXT:    imulq $-1634202141, %rax, %rax # imm = 0x9E980DE3
-; CHECK-NEXT:    movq %rax, %rcx
-; CHECK-NEXT:    shrq $63, %rcx
-; CHECK-NEXT:    sarq $44, %rax
-; CHECK-NEXT:    addl %ecx, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    negl %edi
+; CHECK-NEXT:    leal (,%rsi,4), %eax
+; CHECK-NEXT:    xorl %edi, %eax
+; CHECK-NEXT:    movl $-1634202141, %ecx # imm = 0x9E980DE3
+; CHECK-NEXT:    imull %ecx
+; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    shrl $31, %eax
+; CHECK-NEXT:    sarl $12, %edx
+; CHECK-NEXT:    addl %edx, %eax
 ; CHECK-NEXT:    retq
 entry:
   %sel = select i1 %y, i64 4, i64 0

@@ -7,35 +7,45 @@ define dso_local void @_Z12d2s_bufferedmPc(i64 %arg, ptr nocapture %arg1) {
 ; CHECK-LABEL: _Z12d2s_bufferedmPc:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    cmpq $10000, %rdi # imm = 0x2710
-; CHECK-NEXT:    jb .LBB0_3
+; CHECK-NEXT:    jb .LBB0_4
 ; CHECK-NEXT:  # %bb.1: # %bb2.preheader
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    movabsq $3777893186295716171, %r8 # imm = 0x346DC5D63886594B
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NEXT:    xorl %r9d, %r9d
+; CHECK-NEXT:    movabsq $3777893186295716171, %r10 # imm = 0x346DC5D63886594B
+; CHECK-NEXT:    movl $42949673, %r11d # imm = 0x28F5C29
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    mulq %r8
-; CHECK-NEXT:    shrq $11, %rdx
-; CHECK-NEXT:    imulq $10000, %rdx, %rax # imm = 0x2710
-; CHECK-NEXT:    movq %rdi, %r9
-; CHECK-NEXT:    subq %rax, %r9
-; CHECK-NEXT:    imulq $42949673, %r9, %rax # imm = 0x28F5C29
-; CHECK-NEXT:    shrq $32, %rax
-; CHECK-NEXT:    imull $100, %eax, %r10d
-; CHECK-NEXT:    subl %r10d, %r9d
-; CHECK-NEXT:    movl %ecx, %r10d
-; CHECK-NEXT:    movq %rsi, %r11
-; CHECK-NEXT:    subq %r10, %r11
-; CHECK-NEXT:    movzwl _ZL11DIGIT_TABLE(%r9,%r9), %r9d
-; CHECK-NEXT:    movw %r9w, -1(%r11)
-; CHECK-NEXT:    movzwl _ZL11DIGIT_TABLE(%rax,%rax), %eax
-; CHECK-NEXT:    movw %ax, -3(%r11)
-; CHECK-NEXT:    addl $4, %ecx
+; CHECK-NEXT:    mulq %r10
+; CHECK-NEXT:    movq %rdx, %rcx
+; CHECK-NEXT:    shrq $11, %rcx
+; CHECK-NEXT:    imull $10000, %ecx, %eax # imm = 0x2710
+; CHECK-NEXT:    movl %edi, %r8d
+; CHECK-NEXT:    subl %eax, %r8d
+; CHECK-NEXT:    movl %r8d, %eax
+; CHECK-NEXT:    mull %r11d
+; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
+; CHECK-NEXT:    imull $100, %edx, %eax
+; CHECK-NEXT:    subl %eax, %r8d
+; CHECK-NEXT:    movl %r9d, %eax
+; CHECK-NEXT:    movq %rsi, %rbx
+; CHECK-NEXT:    subq %rax, %rbx
+; CHECK-NEXT:    movzwl _ZL11DIGIT_TABLE(%r8,%r8), %eax
+; CHECK-NEXT:    movw %ax, -1(%rbx)
+; CHECK-NEXT:    movzwl _ZL11DIGIT_TABLE(%rdx,%rdx), %eax
+; CHECK-NEXT:    movw %ax, -3(%rbx)
+; CHECK-NEXT:    addl $4, %r9d
 ; CHECK-NEXT:    cmpq $99999999, %rdi # imm = 0x5F5E0FF
-; CHECK-NEXT:    movq %rdx, %rdi
+; CHECK-NEXT:    movq %rcx, %rdi
 ; CHECK-NEXT:    ja .LBB0_2
-; CHECK-NEXT:  .LBB0_3: # %bb29
+; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    .cfi_restore %rbx
+; CHECK-NEXT:  .LBB0_4: # %bb29
 ; CHECK-NEXT:    retq
 bb:
   %i = icmp ugt i64 %arg, 9999

@@ -284,6 +284,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SREM, VT, Expand);
     setOperationAction(ISD::UREM, VT, Expand);
   }
+  // Though legal, no ISel exists for i8/i16 ?MUL_LOHI (was removed in D38276),
+  // and the i32 form is faster anyway.
+  for (auto VT : {MVT::i8, MVT::i16}) {
+    setOperationPromotedToType(ISD::SMUL_LOHI, VT, MVT::i32);
+    setOperationPromotedToType(ISD::UMUL_LOHI, VT, MVT::i32);
+  }
 
   setOperationAction(ISD::BR_JT            , MVT::Other, Expand);
   setOperationAction(ISD::BRCOND           , MVT::Other, Custom);

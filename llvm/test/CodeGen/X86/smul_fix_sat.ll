@@ -10,18 +10,15 @@ declare  <4 x i32> @llvm.smul.fix.sat.v4i32(<4 x i32>, <4 x i32>, i32)
 define i32 @func(i32 %x, i32 %y) nounwind {
 ; X64-LABEL: func:
 ; X64:       # %bb.0:
-; X64-NEXT:    movslq %esi, %rax
-; X64-NEXT:    movslq %edi, %rcx
-; X64-NEXT:    imulq %rax, %rcx
-; X64-NEXT:    movq %rcx, %rax
-; X64-NEXT:    shrq $32, %rax
-; X64-NEXT:    shrdl $2, %eax, %ecx
-; X64-NEXT:    cmpl $2, %eax
-; X64-NEXT:    movl $2147483647, %edx # imm = 0x7FFFFFFF
-; X64-NEXT:    cmovll %ecx, %edx
-; X64-NEXT:    cmpl $-2, %eax
-; X64-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
-; X64-NEXT:    cmovgel %edx, %eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    imull %esi
+; X64-NEXT:    shrdl $2, %edx, %eax
+; X64-NEXT:    cmpl $2, %edx
+; X64-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
+; X64-NEXT:    cmovgel %ecx, %eax
+; X64-NEXT:    cmpl $-2, %edx
+; X64-NEXT:    movl $-2147483648, %ecx # imm = 0x80000000
+; X64-NEXT:    cmovll %ecx, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: func:

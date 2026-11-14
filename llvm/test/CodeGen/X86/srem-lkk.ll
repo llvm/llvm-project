@@ -4,17 +4,17 @@
 define i32 @fold_srem_positive_odd(i32 %x) {
 ; CHECK-LABEL: fold_srem_positive_odd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    imulq $-1401515643, %rax, %rcx # imm = 0xAC769185
-; CHECK-NEXT:    shrq $32, %rcx
-; CHECK-NEXT:    addl %eax, %ecx
-; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:    shrl $31, %edx
-; CHECK-NEXT:    sarl $6, %ecx
-; CHECK-NEXT:    addl %edx, %ecx
-; CHECK-NEXT:    imull $95, %ecx, %ecx
-; CHECK-NEXT:    subl %ecx, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    movl $-1401515643, %ecx # imm = 0xAC769185
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    imull %ecx
+; CHECK-NEXT:    addl %edi, %edx
+; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    shrl $31, %eax
+; CHECK-NEXT:    sarl $6, %edx
+; CHECK-NEXT:    addl %eax, %edx
+; CHECK-NEXT:    imull $95, %edx, %eax
+; CHECK-NEXT:    subl %eax, %edi
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %1 = srem i32 %x, 95
   ret i32 %1
@@ -24,15 +24,16 @@ define i32 @fold_srem_positive_odd(i32 %x) {
 define i32 @fold_srem_positive_even(i32 %x) {
 ; CHECK-LABEL: fold_srem_positive_even:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    imulq $1037275121, %rax, %rcx # imm = 0x3DD38FF1
-; CHECK-NEXT:    movq %rcx, %rdx
-; CHECK-NEXT:    shrq $63, %rdx
-; CHECK-NEXT:    sarq $40, %rcx
-; CHECK-NEXT:    addl %edx, %ecx
-; CHECK-NEXT:    imull $1060, %ecx, %ecx # imm = 0x424
-; CHECK-NEXT:    subl %ecx, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    movl $1037275121, %ecx # imm = 0x3DD38FF1
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    imull %ecx
+; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    shrl $31, %eax
+; CHECK-NEXT:    sarl $8, %edx
+; CHECK-NEXT:    addl %eax, %edx
+; CHECK-NEXT:    imull $1060, %edx, %eax # imm = 0x424
+; CHECK-NEXT:    subl %eax, %edi
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %1 = srem i32 %x, 1060
   ret i32 %1
@@ -42,15 +43,16 @@ define i32 @fold_srem_positive_even(i32 %x) {
 define i32 @fold_srem_negative_odd(i32 %x) {
 ; CHECK-LABEL: fold_srem_negative_odd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    imulq $-1520762971, %rax, %rcx # imm = 0xA55AFFA5
-; CHECK-NEXT:    movq %rcx, %rdx
-; CHECK-NEXT:    shrq $63, %rdx
-; CHECK-NEXT:    sarq $40, %rcx
-; CHECK-NEXT:    addl %edx, %ecx
-; CHECK-NEXT:    imull $-723, %ecx, %ecx # imm = 0xFD2D
-; CHECK-NEXT:    subl %ecx, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    movl $-1520762971, %ecx # imm = 0xA55AFFA5
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    imull %ecx
+; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    shrl $31, %eax
+; CHECK-NEXT:    sarl $8, %edx
+; CHECK-NEXT:    addl %eax, %edx
+; CHECK-NEXT:    imull $-723, %edx, %eax # imm = 0xFD2D
+; CHECK-NEXT:    subl %eax, %edi
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %1 = srem i32 %x, -723
   ret i32 %1
@@ -60,15 +62,16 @@ define i32 @fold_srem_negative_odd(i32 %x) {
 define i32 @fold_srem_negative_even(i32 %x) {
 ; CHECK-LABEL: fold_srem_negative_even:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    imulq $-47844377, %rax, %rcx # imm = 0xFD25F3E7
-; CHECK-NEXT:    movq %rcx, %rdx
-; CHECK-NEXT:    shrq $63, %rdx
-; CHECK-NEXT:    sarq $40, %rcx
-; CHECK-NEXT:    addl %edx, %ecx
-; CHECK-NEXT:    imull $-22981, %ecx, %ecx # imm = 0xA63B
-; CHECK-NEXT:    subl %ecx, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    movl $-47844377, %ecx # imm = 0xFD25F3E7
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    imull %ecx
+; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    shrl $31, %eax
+; CHECK-NEXT:    sarl $8, %edx
+; CHECK-NEXT:    addl %eax, %edx
+; CHECK-NEXT:    imull $-22981, %edx, %eax # imm = 0xA63B
+; CHECK-NEXT:    subl %eax, %edi
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %1 = srem i32 %x, -22981
   ret i32 %1
@@ -79,18 +82,19 @@ define i32 @fold_srem_negative_even(i32 %x) {
 define i32 @combine_srem_sdiv(i32 %x) {
 ; CHECK-LABEL: combine_srem_sdiv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    imulq $-1401515643, %rax, %rcx # imm = 0xAC769185
-; CHECK-NEXT:    shrq $32, %rcx
-; CHECK-NEXT:    addl %eax, %ecx
-; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:    shrl $31, %edx
-; CHECK-NEXT:    sarl $6, %ecx
-; CHECK-NEXT:    addl %edx, %ecx
-; CHECK-NEXT:    imull $95, %ecx, %edx
-; CHECK-NEXT:    subl %edx, %eax
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    movl $-1401515643, %ecx # imm = 0xAC769185
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    imull %ecx
+; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
+; CHECK-NEXT:    leal (%rdx,%rdi), %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shrl $31, %ecx
+; CHECK-NEXT:    sarl $6, %eax
 ; CHECK-NEXT:    addl %ecx, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    imull $95, %eax, %ecx
+; CHECK-NEXT:    subl %ecx, %edi
+; CHECK-NEXT:    addl %edi, %eax
 ; CHECK-NEXT:    retq
   %1 = srem i32 %x, 95
   %2 = sdiv i32 %x, 95
