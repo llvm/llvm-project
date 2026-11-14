@@ -305,6 +305,11 @@ infrastructure are described first, followed by tool-specific sections.
   nested expressions involving different macros or a mix of macro and
   non-macro operands.
 
+- Improved {doc}`modernize-loop-convert
+  <clang-tidy/checks/modernize/loop-convert>` check to also convert iterator
+  loops that call `end()` in the condition when the iterator type has a
+  non-trivial destructor.
+
 - Fixed false positive in {doc}`modernize-make-unique
   <clang-tidy/checks/modernize/make-unique>` in presence of private, protected
   or deleted destructor.
