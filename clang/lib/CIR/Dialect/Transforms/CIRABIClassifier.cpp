@@ -681,12 +681,14 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
   if (info.isExtend()) {
     assert(origTy && "an extended value must have a type");
     if (isa<cir::BoolType>(origTy))
-      return ArgClassification::getExtend(nullptr, info.isSignExt());
+      return ArgClassification::getExtend(nullptr, info.isSignExt(),
+                                          info.isConservative());
     assert((isa<cir::IntType, cir::RecordType>(origTy)) &&
            "Extend is only expected for integers, bool, and transparent "
            "unions");
     mlir::Type extendedTy = abiTypeToCIR(info.getCoerceToType(), ctx);
-    return ArgClassification::getExtend(extendedTy, info.isSignExt());
+    return ArgClassification::getExtend(extendedTy, info.isSignExt(),
+                                        info.isConservative());
   }
   if (info.isIndirect())
     return ArgClassification::getIndirect(info.getIndirectAlign(),

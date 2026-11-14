@@ -74,7 +74,7 @@ void test2(long long y) {
 
 // Test non-const initializer for struct with padding and bit fields.
 // CHECK-LABEL: define dso_local void @test3(
-// CHECK-SAME: i8 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: i8 noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_S2:%.*]], align 4
@@ -147,7 +147,7 @@ void test5(int a, int b) {
 }
 
 // CHECK-LABEL: define dso_local void @test6(
-// CHECK-SAME: i8 noundef signext [[X:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: i8 noundef [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_S5:%.*]], align 1

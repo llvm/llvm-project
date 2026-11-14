@@ -94,7 +94,7 @@ int HasConditionalCleanup(bool cond) {
   return (cond ? TakesTwo(A(), A()) : CouldThrow());
 }
 
-// WIN32-LABEL: define dso_local noundef i32 @"?HasConditionalCleanup@@YAH_N@Z"(i1 noundef zeroext %{{.*}}) {{.*}} {
+// WIN32-LABEL: define dso_local noundef i32 @"?HasConditionalCleanup@@YAH_N@Z"(i1 noundef %{{.*}}) {{.*}} {
 // WIN32:   store i1 false
 // WIN32:   br i1
 // WIN32:   call ptr @llvm.stacksave.p0()

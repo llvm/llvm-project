@@ -190,14 +190,14 @@ int call_wide_char(Pair2 p, WideChar w) { return vf(p, w); }
 // declared parameter.
 int ell_bitint17(Pair2 p, _BitInt(17) b) { return vf(p, b); }
 
-// CIR-LABEL: cir.func {{.*}}@ell_bitint17(%arg0: !u64i loc({{.+}}), %arg1: !cir.int<s, 17, bitint> {llvm.noundef, llvm.signext} loc({{.+}})) -> !s32i
+// CIR-LABEL: cir.func {{.*}}@ell_bitint17(%arg0: !u64i loc({{.+}}), %arg1: !cir.int<s, 17, bitint> {llvm.noundef} loc({{.+}})) -> !s32i
 // CIR:         cir.store %arg1, %[[BSLOT:[0-9]+]] : !cir.int<s, 17, bitint>, !cir.ptr<!cir.int<s, 17, bitint>>
 // CIR:         %[[BV:[0-9]+]] = cir.load align(4) %[[BSLOT]] : !cir.ptr<!cir.int<s, 17, bitint>>, !cir.int<s, 17, bitint>
 // CIR:         %[[PV:[0-9]+]] = cir.load align(4) %{{[0-9]+}} : !cir.ptr<!u64i>, !u64i
 // CIR:         cir.call @vf(%[[PV]], %[[BV]]) : (!u64i, !cir.int<s, 17, bitint> {llvm.noundef, llvm.signext}) -> !s32i
 
 // LLVM-LABEL: define dso_local i32 @ell_bitint17(
-// LLVM-SAME:    i64 %[[P:[0-9a-zA-Z._]+]], i17 noundef signext %[[B:[0-9a-zA-Z._]+]])
+// LLVM-SAME:    i64 %[[P:[0-9a-zA-Z._]+]], i17 noundef %[[B:[0-9a-zA-Z._]+]])
 // LLVM:         %[[EXT:[0-9a-zA-Z._]+]] = sext i17 %[[B]] to i32
 // LLVM:         store i32 %[[EXT]], ptr %[[BSLOT:[0-9a-zA-Z._]+]], align 4
 // LLVM:         %[[RE:[0-9a-zA-Z._]+]] = load i32, ptr %[[BSLOT]], align 4

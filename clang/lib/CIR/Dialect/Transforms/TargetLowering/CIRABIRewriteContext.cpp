@@ -284,7 +284,7 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx, mlir::ModuleOp module,
                                mlir::ArrayAttr existingArgAttrs,
                                const FunctionClassification &fc,
                                const mlir::DataLayout &dl,
-                               bool enableNoundefAttrs) {
+                               bool enableNoundefAttrs, bool isCallSite) {
   mlir::Builder builder(ctx);
   SmallVector<mlir::Attribute> newArgAttrs;
   newArgAttrs.reserve(fc.argInfos.size());
@@ -323,7 +323,9 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx, mlir::ModuleOp module,
                                ? mlir::LLVM::LLVMDialect::getSExtAttrName()
                                : mlir::LLVM::LLVMDialect::getZExtAttrName();
       mlir::NamedAttrList attrs(existing);
-      attrs.set(attrName, builder.getUnitAttr());
+      // Conservative argument extends apply only at the call-site.
+      if (isCallSite || !ac.conservative)
+        attrs.set(attrName, builder.getUnitAttr());
       if (enableNoundefAttrs)
         attrs.set(mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
                   builder.getUnitAttr());
@@ -1730,7 +1732,8 @@ rewriteIndirectReturnCall(cir::CallOp call, const FunctionClassification &fc,
   if (needsArgAttrUpdate(fc))
     argAttrs =
         updateArgAttrs(ctx, call->getParentOfType<mlir::ModuleOp>(),
-                       origCallArgTypes, argAttrs, fc, dl, enableNoundefAttrs);
+                       origCallArgTypes, argAttrs, fc, dl, enableNoundefAttrs,
+                       /*isCallSite=*/true);
   applySretSlotAttrs(newCall, argAttrs, origRetTy, sretAlign, builder);
 
   if (reuseStore) {
@@ -2086,7 +2089,8 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
   if (hasSRet || needsArgAttrUpdate(fc)) {
     auto existing = funcOp->getAttrOfType<mlir::ArrayAttr>("arg_attrs");
     mlir::ArrayAttr updated = updateArgAttrs(ctx, module, oldArgTypes, existing,
-                                             fc, dl, enableNoundefAttrs);
+                                             fc, dl, enableNoundefAttrs,
+                                             /*isCallSite=*/false);
     if (hasSRet) {
       // Prepend the sret slot's attribute dict (slot 0); the per-argument
       // dicts shift to slots 1..N.  noalias is valid only on the callee's
@@ -2410,7 +2414,8 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
     auto existing = call->getAttrOfType<mlir::ArrayAttr>("arg_attrs");
     newCall->setAttr("arg_attrs",
                      updateArgAttrs(ctx, module, origCallArgTypes, existing, fc,
-                                    dl, enableNoundefAttrs));
+                                    dl, enableNoundefAttrs,
+                                    /*isCallSite=*/true));
   }
   // Add llvm.signext / llvm.zeroext to an Extend return, and drop llvm.noundef
   // from a coerced Direct return that passes undefined bits.
