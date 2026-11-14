@@ -1728,6 +1728,10 @@ class HighRegisterPressureDetector {
 
   DenseMap<MachineInstr *, RegisterOperands> ROMap;
 
+  // The reads that ProcessImplicitDefs marks undef and the definitions it
+  // deletes. See collectUndefs().
+  SmallPtrSet<const MachineOperand *, 16> Undefs;
+
   using Instr2LastUsesTy = DenseMap<MachineInstr *, SmallSet<VirtRegOrUnit, 4>>;
 
 public:
@@ -1786,6 +1790,88 @@ private:
   bool isDefinedInThisLoop(VirtRegOrUnit VRegOrUnit) const {
     return VRegOrUnit.isVirtualReg() &&
            MRI.getDefBlock(VRegOrUnit.asVirtualReg()) == OrigMBB;
+  }
+
+  // Collects in Undefs the reads of the loop's virtual registers that
+  // ProcessImplicitDefs, which runs before register allocation, marks undef,
+  // and the definitions it deletes. It walks bottom-up from the loop's
+  // registers to the IMPLICIT_DEFs they can come from, then top-down from
+  // those as the pass does, without changing anything. For example, in
+  // \code
+  //   preheader:
+  //     %a:sreg_32 = IMPLICIT_DEF
+  //     %b:vgpr_32 = COPY %a
+  //   loop:
+  //     %d:vgpr_32 = V_MOV_B32_dpp %b(tied-def 0), %x, ...
+  // \endcode
+  // the walk goes from %b back to %a's IMPLICIT_DEF. From there, the COPY's
+  // read of %a is undef, so the COPY becomes an IMPLICIT_DEF, and then the
+  // DPP's read of %b is undef. Both definitions are deleted, so the loop
+  // doesn't count %b as live.
+  void collectUndefs() {
+    // ProcessImplicitDefs turns these into IMPLICIT_DEFs if all their reads are
+    // undef.
+    auto CanBecomeImplicitDef = [](const MachineInstr &MI) {
+      return MI.isCopyLike() || MI.isInsertSubreg() || MI.isRegSequence() ||
+             MI.isPHI();
+    };
+
+    // Start from the registers that the loop reads or defines.
+    SmallVector<Register> ToVisit;
+    for (const MachineInstr &MI : *OrigMBB)
+      for (const MachineOperand &MO : MI.operands())
+        if (MO.isReg() && MO.getReg().isVirtual())
+          ToVisit.push_back(MO.getReg());
+
+    // Bottom-up: follow each register back through the definitions that can
+    // become IMPLICIT_DEFs, and collect the IMPLICIT_DEFs reached.
+    SmallPtrSet<const MachineInstr *, 16> Visited;
+    SmallVector<const MachineInstr *> WorkList;
+    while (!ToVisit.empty()) {
+      const MachineInstr *DefMI = MRI.getUniqueVRegDef(ToVisit.pop_back_val());
+      if (!DefMI || Visited.contains(DefMI))
+        continue;
+      Visited.insert(DefMI);
+      if (DefMI->isImplicitDef())
+        WorkList.push_back(DefMI);
+      else if (CanBecomeImplicitDef(*DefMI))
+        for (const MachineOperand &MO : DefMI->all_uses())
+          if (MO.getReg().isVirtual())
+            ToVisit.push_back(MO.getReg());
+    }
+
+    // Top-down: process each undefined definition as ProcessImplicitDefs does.
+    // The pass stops by turning what it converts into IMPLICIT_DEFs, which this
+    // doesn't, so it remembers what it processed.
+    SmallPtrSet<const MachineInstr *, 16> Processed;
+    while (!WorkList.empty()) {
+      const MachineInstr *MI = WorkList.pop_back_val();
+      Register Reg = MI->getOperand(0).getReg();
+      if (!Reg.isVirtual() || Processed.contains(MI))
+        continue;
+      Processed.insert(MI);
+      bool AllUsesUndef = true;
+      for (const MachineOperand &MO : MRI.use_nodbg_operands(Reg)) {
+        const MachineInstr &UseMI = *MO.getParent();
+        // The tied read is copied into the result, which overwrites it, and the
+        // other read must see the same value, so both stay real reads.
+        if (UseMI.hasTiedAndOtherReadOf(Reg, MO.getSubReg())) {
+          AllUsesUndef = false;
+          continue;
+        }
+        // Mark the read undef. If all of UseMI's reads are now undef, its
+        // result is undefined too, so process it next.
+        Undefs.insert(&MO);
+        if (CanBecomeImplicitDef(UseMI) &&
+            all_of(UseMI.all_uses(), [&](const MachineOperand &Op) {
+              return !Op.readsReg() || Undefs.contains(&Op);
+            }))
+          WorkList.push_back(&UseMI);
+      }
+      // The pass deletes a definition whose reads are all undef.
+      if (AllUsesUndef)
+        Undefs.insert(&MI->getOperand(0));
+    }
   }
 
   // Search for live-in variables. They are factored into the register pressure
@@ -1998,6 +2084,25 @@ public:
       if (MI.isDebugInstr())
         continue;
       ROMap[&MI].collect(MI, *TRI, MRI, false, true);
+    }
+
+    collectUndefs();
+    for (MachineInstr &MI : *OrigMBB) {
+      if (MI.isDebugInstr())
+        continue;
+      // Leave out the reads that ProcessImplicitDefs marks undef and the
+      // definitions it deletes. Otherwise, for example, an IMPLICIT_DEF hoisted
+      // out of the loop would count as a register live in the whole loop.
+      auto IsUndef = [&](const VRegMaskOrUnit &RegOrUnit) {
+        return RegOrUnit.VRegOrUnit.isVirtualReg() &&
+               all_of(MI.operands(), [&](const MachineOperand &MO) {
+                 return !MO.isReg() ||
+                        MO.getReg() != RegOrUnit.VRegOrUnit.asVirtualReg() ||
+                        Undefs.contains(&MO);
+               });
+      };
+      erase_if(ROMap[&MI].Uses, IsUndef);
+      erase_if(ROMap[&MI].Defs, IsUndef);
     }
 
     computeLiveIn();
