@@ -416,7 +416,6 @@ template <class Derived> struct GenFuncBase {
     EltQT = IsVolatile ? EltQT.withVolatile() : EltQT;
     this->asDerived().visitWithKind(FK, EltQT, nullptr, CharUnits::Zero(),
                                     NewAddrs);
-
     LoopBB = CGF.Builder.GetInsertBlock();
 
     for (unsigned I = 0; I < N; ++I) {
@@ -792,7 +791,10 @@ struct GenCopyAssignment : GenBinaryFunc<GenCopyAssignment, false, false> {
                     std::array<Address, 2> Addrs) {
     Addrs[DstIdx] = getAddrWithOffset(Addrs[DstIdx], CurStructOffset, FD);
     Addrs[SrcIdx] = getAddrWithOffset(Addrs[SrcIdx], CurStructOffset, FD);
-    CGF->emitARCCopyAssignWeak(QT, Addrs[DstIdx], Addrs[SrcIdx]);
+    {
+      CodeGenFunction::RunCleanupsScope Scope(*CGF);
+      CGF->emitARCCopyAssignWeak(QT, Addrs[DstIdx], Addrs[SrcIdx]);
+    }
   }
 
   void callSpecialFunction(QualType FT, CharUnits Offset,
@@ -828,7 +830,10 @@ struct GenMoveAssignment : GenBinaryFunc<GenMoveAssignment, true, false> {
                     std::array<Address, 2> Addrs) {
     Addrs[DstIdx] = getAddrWithOffset(Addrs[DstIdx], CurStructOffset, FD);
     Addrs[SrcIdx] = getAddrWithOffset(Addrs[SrcIdx], CurStructOffset, FD);
-    CGF->emitARCMoveAssignWeak(QT, Addrs[DstIdx], Addrs[SrcIdx]);
+    {
+      CodeGenFunction::RunCleanupsScope Scope(*CGF);
+      CGF->emitARCMoveAssignWeak(QT, Addrs[DstIdx], Addrs[SrcIdx]);
+    }
   }
 
   void callSpecialFunction(QualType FT, CharUnits Offset,
