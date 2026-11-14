@@ -2156,7 +2156,8 @@ checkSignedDecompositionWithMinMax(CmpInst::Predicate Pred, Decomposition D,
       // is positive, then D(max(a, b)) = max(D(a), D(b)) and D(min(a, b)) =
       // min(D(a), D(b)). If it is negative, max and min swap roles.
       auto L = CheckOperand(MM->getLHS());
-      bool IsAnd = (MM->getIntrinsicID() == Intrinsic::smax) == (E.Coefficient > 0);
+      bool IsAnd =
+          (MM->getIntrinsicID() == Intrinsic::smax) == (E.Coefficient > 0);
       if (L == !IsAnd)
         return L;
       auto R = CheckOperand(MM->getRHS());
