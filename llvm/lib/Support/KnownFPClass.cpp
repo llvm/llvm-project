@@ -48,6 +48,20 @@ KnownFPClass KnownFPClass::applyInputDenormalMode(const KnownFPClass &KnownSrc,
   llvm_unreachable("covered switch over denormal mode");
 }
 
+KnownFPClass KnownFPClass::applyInputSemantics(const KnownFPClass &KnownSrc,
+                                               DenormalMode Mode,
+                                               bool MayBeNSZ) {
+  // We flush denormals first since it may add zeroes to the input classes.
+  KnownFPClass Known = applyInputDenormalMode(KnownSrc, Mode);
+
+  // NSZ means that a +0.0 or -0.0 input may be treated as a zero of the
+  // opposite sign.
+  if (MayBeNSZ && !Known.isKnownNever(fcZero))
+    Known |= fcZero;
+
+  return Known;
+}
+
 KnownFPClass KnownFPClass::applyOutputDenormalMode(const KnownFPClass &KnownSrc,
                                                    DenormalMode Mode) {
   KnownFPClass Known = KnownSrc;
@@ -981,8 +995,10 @@ KnownFPClass KnownFPClass::log(const KnownFPClass &KnownSrc_, DenormalMode Mode,
   return applyOutputDenormalMode(Known, Mode);
 }
 
-KnownFPClass KnownFPClass::sqrt(const KnownFPClass &KnownSrc,
-                                DenormalMode Mode) {
+KnownFPClass KnownFPClass::sqrt(const KnownFPClass &KnownSrc_,
+                                DenormalMode Mode, bool MayBeNSZ) {
+  KnownFPClass KnownSrc = applyInputSemantics(KnownSrc_, Mode, MayBeNSZ);
+
   KnownFPClass Known;
   Known.knownNot(fcPosSubnormal);
 
@@ -991,16 +1007,15 @@ KnownFPClass KnownFPClass::sqrt(const KnownFPClass &KnownSrc,
 
   Known.propagateNonSNaN(KnownSrc);
 
-  // Any negative value besides -0 returns a nan.
+  // Any negative value besides -0.0 returns a nan.
   if (KnownSrc.isKnownNeverNaN() && KnownSrc.cannotBeOrderedLessThanZero())
     Known.knownNot(fcNan);
 
-  // The only negative value that can be returned is -0 for -0 inputs.
+  // The only negative value that can be returned is -0.0 for -0.0 inputs.
   Known.knownNot(fcNegInf | fcNegSubnormal | fcNegNormal);
 
-  // If the input denormal mode could be PreserveSign, a negative
-  // subnormal input could produce a negative zero output.
-  if (KnownSrc.isKnownNeverLogicalNegZero(Mode))
+  // Only sqrt(-0.0) == -0.0.
+  if (KnownSrc.isKnownNever(fcNegZero))
     Known.knownNot(fcNegZero);
 
   return Known;
