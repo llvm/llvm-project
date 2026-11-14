@@ -1,0 +1,70 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -run-pass=legalizer -global-isel-abort=2 -pass-remarks-missed='gisel*' %s -o - 2>%t | FileCheck %s
+# RUN: FileCheck -check-prefix=ILLEGAL %s < %t
+
+# Regression test for #220802
+
+# ILLEGAL: remark: <unknown>:0:0: unable to legalize instruction: %1:_(<4 x s32>) = G_CTPOP %0:_(<4 x s32>) (in function: test_ctpop_v4i32)
+# ILLEGAL: remark: <unknown>:0:0: unable to legalize instruction: %1:_(<4 x s32>) = G_CTLZ %0:_(<4 x s32>) (in function: test_ctlz_v4i32)
+# ILLEGAL: remark: <unknown>:0:0: unable to legalize instruction: %1:_(<4 x s32>) = G_CTTZ_ZERO_POISON %0:_(<4 x s32>) (in function: test_cttz_zero_poison_v4i32)
+# ILLEGAL: remark: <unknown>:0:0: unable to legalize instruction: %1:_(<4 x s32>) = G_CTTZ %0:_(<4 x s32>) (in function: test_cttz_v4i32)
+
+---
+name:            test_ctpop_v4i32
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_ctpop_v4i32
+    ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<4 x s32>) = G_CTPOP [[DEF]](<4 x s32>)
+    ; CHECK-NEXT: $xmm0 = COPY [[CTPOP]](<4 x s32>)
+    ; CHECK-NEXT: RET 0, implicit $xmm0
+    %0:_(<4 x s32>) = G_IMPLICIT_DEF
+    %1:_(<4 x s32>) = G_CTPOP %0
+    $xmm0 = COPY %1(<4 x s32>)
+    RET 0, implicit $xmm0
+...
+---
+name:            test_ctlz_v4i32
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_ctlz_v4i32
+    ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[CTLZ:%[0-9]+]]:_(<4 x s32>) = G_CTLZ [[DEF]](<4 x s32>)
+    ; CHECK-NEXT: $xmm0 = COPY [[CTLZ]](<4 x s32>)
+    ; CHECK-NEXT: RET 0, implicit $xmm0
+    %0:_(<4 x s32>) = G_IMPLICIT_DEF
+    %1:_(<4 x s32>) = G_CTLZ %0
+    $xmm0 = COPY %1(<4 x s32>)
+    RET 0, implicit $xmm0
+...
+---
+name:            test_cttz_zero_poison_v4i32
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_cttz_zero_poison_v4i32
+    ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[CTTZ_ZERO_POISON:%[0-9]+]]:_(<4 x s32>) = G_CTTZ_ZERO_POISON [[DEF]](<4 x s32>)
+    ; CHECK-NEXT: $xmm0 = COPY [[CTTZ_ZERO_POISON]](<4 x s32>)
+    ; CHECK-NEXT: RET 0, implicit $xmm0
+    %0:_(<4 x s32>) = G_IMPLICIT_DEF
+    %1:_(<4 x s32>) = G_CTTZ_ZERO_POISON %0
+    $xmm0 = COPY %1(<4 x s32>)
+    RET 0, implicit $xmm0
+...
+---
+name:            test_cttz_v4i32
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_cttz_v4i32
+    ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[CTTZ:%[0-9]+]]:_(<4 x s32>) = G_CTTZ [[DEF]](<4 x s32>)
+    ; CHECK-NEXT: $xmm0 = COPY [[CTTZ]](<4 x s32>)
+    ; CHECK-NEXT: RET 0, implicit $xmm0
+    %0:_(<4 x s32>) = G_IMPLICIT_DEF
+    %1:_(<4 x s32>) = G_CTTZ %0
+    $xmm0 = COPY %1(<4 x s32>)
+    RET 0, implicit $xmm0
+...
