@@ -932,9 +932,9 @@ bool MVETPAndVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
     unsigned NotImm = ~Imm & 0xffff;
     if (LastVPTReg != 0 && LastVPTReg != VPR && LastVPTImm == Imm) {
       Instr.getOperand(PIdx + 1).setReg(LastVPTReg);
-      if (MRI->use_empty(VPR)) {
+      if (MRI->use_nodbg_empty(VPR)) {
         DeadInstructions.insert(Copy);
-        if (MRI->hasOneUse(GPR))
+        if (MRI->hasOneNonDBGUse(GPR))
           DeadInstructions.insert(MRI->getVRegDef(GPR));
       }
       LLVM_DEBUG(dbgs() << "Reusing predicate: in  " << Instr);
@@ -950,9 +950,9 @@ bool MVETPAndVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
 
       // Use the new register and check if the def is now dead.
       Instr.getOperand(PIdx + 1).setReg(NewVPR);
-      if (MRI->use_empty(VPR)) {
+      if (MRI->use_nodbg_empty(VPR)) {
         DeadInstructions.insert(Copy);
-        if (MRI->hasOneUse(GPR))
+        if (MRI->hasOneNonDBGUse(GPR))
           DeadInstructions.insert(MRI->getVRegDef(GPR));
       }
       LLVM_DEBUG(dbgs() << "Adding VPNot: " << *VPNot << "  to replace use at "
@@ -964,8 +964,10 @@ bool MVETPAndVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
     LastVPTReg = VPR;
   }
 
-  for (MachineInstr *DI : DeadInstructions)
+  for (MachineInstr *DI : DeadInstructions) {
+    MRI->markUsesInDebugValueAsUndef(DI->getOperand(0).getReg());
     DI->eraseFromParent();
+  }
 
   return !DeadInstructions.empty();
 }
