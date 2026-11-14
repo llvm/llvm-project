@@ -190,6 +190,21 @@ static bool hasForcedEpilogueVF() {
          EpilogueVectorizationForceVF != ElementCount::getFixed(1);
 }
 
+/// Return true when it is legal to use check-first vectorization. Currently,
+/// the fallback mechanism is scalar replay when the early exit is triggered
+/// from the loop.
+static bool usesCheckFirstReplay(const VectorizeOptions &Opts,
+                                 const LoopVectorizationLegality *Legal) {
+  if (!Legal->hasUncountableEarlyExit())
+    return false;
+  if (Opts.enable_check_first_masked_replay)
+    return false;
+  if (Legal->hasUncountableExitWithSideEffects())
+    return !Opts.enable_early_exit_vectorization_with_side_effects;
+  return Opts.enable_check_first_early_exit_vectorization &&
+         Legal->wouldUseCheckFirstStyle();
+}
+
 // Likelyhood of bypassing the vectorized loop because there are zero trips left
 // after prolog. See `emitIterationCountCheck`.
 static constexpr uint32_t MinItersBypassWeights[] = {1, 127};
@@ -3348,6 +3363,10 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   if (hasConditionalInductionPhi(Plan))
     return 1;
 
+  // Interleaving would break check-first scalar-replay resume wiring.
+  if (usesCheckFirstReplay(Opts, Legal))
+    return 1;
+
   const bool HasReductions =
       any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
              IsaPred<VPReductionPHIRecipe>);
@@ -5048,6 +5067,10 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   if (!MaxFactors) // Cases that should not to be vectorized nor interleaved.
     return;
 
+  // Disable scalable vectorization for check-first early-exit loops for now.
+  if (usesCheckFirstReplay(Opts, Legal))
+    MaxFactors.ScalableVF = ElementCount::getScalable(0);
+
   Config.collectInLoopReductions();
   // Cases that may be vectorized may be optimized by unit stride predicates.
   // TODO: Currently unit stride predicates are added unconditionally, even if
@@ -5626,6 +5649,11 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // removes unneeded loop regions first.
   const bool HasTailFolded = BestVPlan.hasTailFolded();
   RUN_VPLAN_PASS(VPlanTransforms::dissolveLoopRegions, BestVPlan);
+  // Scalar replay routes check.exit to the scalar preheader after region
+  // dissolution.
+  VPlanTransforms::wireCheckFirstExitToScalar(BestVPlan);
+  // Masked replay routes check.exit to the real early exit block instead.
+  VPlanTransforms::wireCheckFirstMaskedReplayToExit(BestVPlan);
   // Expand BranchOnTwoConds after dissolution, when latch has direct access to
   // its successors.
   RUN_VPLAN_PASS(VPlanTransforms::expandBranchOnTwoConds, BestVPlan);
@@ -6269,18 +6297,31 @@ LoopVectorizationPlanner::tryToBuildVPlan1(LoopVectorizationCostModel &PlanCM) {
 
     // TODO: Check target preference for style.
     UncountableExitStyle EEStyle = UncountableExitStyle::ReadOnly;
+    if (Legal->hasUncountableExitWithSideEffects()) {
+      if (Opts.enable_early_exit_vectorization_with_side_effects)
+        EEStyle = UncountableExitStyle::MaskedHandleExitInScalarLoop;
+      else
+        EEStyle = UncountableExitStyle::CheckFirst;
+    }
+
+    assert((EEStyle != UncountableExitStyle::CheckFirst ||
+            Legal->exitLoadsAreDereferenceable()) &&
+           "check-first vectorization reached for a loop whose speculatively "
+           "widened loads could not be made memory-safe");
+
     if (!RUN_VPLAN_PASS(VPlanTransforms::handleUncountableEarlyExits, *VPlan0,
                         ORE, OrigLoop, PSE, *DT, Legal->getAssumptionCache(),
-                        EEStyle)) {
+                        EEStyle))
       return nullptr;
-    }
   } else {
     RUN_VPLAN_PASS(VPlanTransforms::handleCountableEarlyExits, *VPlan0);
   }
 
   RUN_VPLAN_PASS(VPlanTransforms::createLoopRegions, *VPlan0,
                  getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()));
-  if (PlanCM.foldTailByMasking())
+  // Check-first plans manage their own exit masking. Tail folding would
+  // interfere with the cascade's resume wiring.
+  if (PlanCM.foldTailByMasking() && !VPlan0->getCheckFirstExitBlock())
     RUN_VPLAN_PASS(VPlanTransforms::foldTailByMasking, *VPlan0);
 
   RUN_VPLAN_PASS(VPlanTransforms::introduceMasksAndLinearize, *VPlan0);
@@ -6946,8 +6987,12 @@ static void checkMixedPrecision(Loop *L, OptimizationRemarkEmitter *ORE) {
 /// TODO: This is currently overly pessimistic because the loop may not take
 /// the early exit, but better to keep this conservative for now. In future,
 /// it might be possible to relax this by using branch probabilities.
+///
+/// For check first loops, add the scalar replay cost of the early exit chunk.
 static InstructionCost calculateEarlyExitCost(VPCostContext &CostCtx,
-                                              VPlan &Plan, ElementCount VF) {
+                                              VPlan &Plan, ElementCount VF,
+                                              uint64_t ScalarCostPerIter,
+                                              bool IsCheckFirstReplay) {
   InstructionCost Cost = 0;
   for (auto *ExitVPBB : Plan.getExitBlocks()) {
     for (auto *PredVPBB : ExitVPBB->getPredecessors()) {
@@ -6960,6 +7005,16 @@ static InstructionCost calculateEarlyExitCost(VPCostContext &CostCtx,
         Cost += PredVPBB->cost(VF, CostCtx);
       }
     }
+  }
+
+  if (IsCheckFirstReplay && VF.isFixed()) {
+    // At most VF iterations are replayed.
+    uint64_t ReplayedIters = VF.getFixedValue();
+    InstructionCost ReplayCost(ScalarCostPerIter * ReplayedIters);
+    LLVM_DEBUG(dbgs() << "LV: Adding check-first scalar-replay cost "
+                      << ReplayCost << " (~" << ReplayedIters
+                      << " scalar iterations) for VF " << VF << ".\n");
+    Cost += ReplayCost;
   }
   return Cost;
 }
@@ -6977,7 +7032,8 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
                                         PredicatedScalarEvolution &PSE,
                                         VPCostContext &CostCtx, VPlan &Plan,
                                         EpilogueLowering SEL,
-                                        std::optional<unsigned> VScale) {
+                                        std::optional<unsigned> VScale,
+                                        bool IsCheckFirstReplay) {
   InstructionCost RtC = Checks.getCost();
   if (!RtC.isValid())
     return false;
@@ -7003,8 +7059,9 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
 
   InstructionCost TotalCost = RtC;
   // Add on the cost of any work required in the vector early exit block, if
-  // one exists.
-  TotalCost += calculateEarlyExitCost(CostCtx, Plan, VF.Width);
+  // one exists plus check first scalar replay cost.
+  TotalCost += calculateEarlyExitCost(CostCtx, Plan, VF.Width, ScalarC,
+                                      IsCheckFirstReplay);
   TotalCost += Plan.getMiddleBlock()->cost(VF.Width, CostCtx);
 
   // First, compute the minimum iteration count required so that the vector
@@ -7469,6 +7526,19 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
+  // Bail to the scalar loop when a speculatively widened
+  // exit-condition load is not provably dereferenceable.
+  if (Opts.enable_check_first_early_exit_vectorization &&
+      !Opts.enable_early_exit_vectorization_with_side_effects &&
+      LVL.wouldUseCheckFirstStyle() && !LVL.exitLoadsAreDereferenceable()) {
+    reportVectorizationFailure(
+        "check-first early-exit memory-safety strategy is Unsafe: a "
+        "speculatively-widened condition load could not be proven "
+        "dereferenceable for the full trip count",
+        "CheckFirstUnsafeMemSafety", ORE, L);
+    return false;
+  }
+
   bool IsInnerLoop = L->isInnermost();
 
   // Outer loops require a computable trip count.
@@ -7485,7 +7555,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       return false;
     }
     if (LVL.hasUncountableExitWithSideEffects() &&
-        !Opts.enable_early_exit_vectorization_with_side_effects) {
+        !Opts.enable_early_exit_vectorization_with_side_effects &&
+        !Opts.enable_check_first_early_exit_vectorization) {
       reportVectorizationFailure("Auto-vectorization of loops with uncountable "
                                  "early exit and side effects is not enabled",
                                  "UncountableEarlyExitSideEffectLoopsDisabled",
@@ -7677,7 +7748,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                           /*ReusePrintingSlotTracker=*/true);
     if (!ForceVectorization &&
         !isOutsideLoopWorkProfitable(Checks, VF, L, PSE, CostCtx, *BestPlanPtr,
-                                     SEL, Config.getVScaleForTuning())) {
+                                     SEL, Config.getVScaleForTuning(),
+                                     usesCheckFirstReplay(Opts, &LVL))) {
       ORE->emit([&]() {
         return OptimizationRemarkAnalysisAliasing(
                    DEBUG_TYPE, "CantReorderMemOps", L->getStartLoc(),

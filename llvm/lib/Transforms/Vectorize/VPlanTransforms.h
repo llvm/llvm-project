@@ -412,6 +412,18 @@ struct VPlanTransforms {
   /// Disconnect countable early exits from the loop.
   LLVM_ABI_FOR_TEST static void handleCountableEarlyExits(VPlan &Plan);
 
+  /// Connect vector.check.exit to the scalar preheader and resume the scalar
+  /// induction at the chunk that exited. See the definition for an IR example.
+  static void wireCheckFirstExitToScalar(VPlan &Plan);
+
+  /// Clone stores and their backward slice from the body into the
+  /// masked-replay block, masked to the lanes before the exiting lane.
+  static void maskCheckFirstReplayStores(VPlan &Plan);
+
+  /// Wire the masked replay block to the early-exit block and rebuild its
+  /// live-out values.
+  static void wireCheckFirstMaskedReplayToExit(VPlan &Plan);
+
   /// Replaces the exit condition from
   ///   (branch-on-cond eq CanonicalIVInc, VectorTripCount)
   /// to

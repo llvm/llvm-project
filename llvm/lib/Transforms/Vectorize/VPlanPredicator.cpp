@@ -470,5 +470,8 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
   // Nested loop regions (outer-loop vectorization) are not supported yet.
   if (Plan.isOuterLoop())
     return;
+  // Check-first plans keep their CFG; masking and linearization are skipped.
+  if (Plan.getCheckFirstExitBlock())
+    return;
   VPPredicator(Plan).run();
 }
