@@ -132,14 +132,6 @@ static VectorType getWholeParentVectorType(memref::SubViewOp subView) {
   return VectorType::get(parentType.getShape(), parentType.getElementType());
 }
 
-/// If `slotPtr` is a dynamic subview, returns it.
-static memref::SubViewOp getDynamicSubView(Value slotPtr) {
-  auto subView = slotPtr.getDefiningOp<memref::SubViewOp>();
-  if (subView && isAliasableDynamicShapeSubView(subView))
-    return subView;
-  return {};
-}
-
 /// Builds the mask of `subView`'s valid region: a `vector.create_mask` of the
 /// subview's sizes, in the shape of the whole parent that its alias holds.
 static Value buildSubViewMask(OpBuilder &builder, Location loc,
@@ -150,18 +142,6 @@ static Value buildSubViewMask(OpBuilder &builder, Location loc,
   return vector::CreateMaskOp::create(
       builder, loc,
       VectorType::get(parentVecType.getShape(), builder.getI1Type()), bounds);
-}
-
-bool mlir::memref::isDynamicSubViewSlot(Value slotPtr) {
-  return static_cast<bool>(getDynamicSubView(slotPtr));
-}
-
-Value mlir::memref::buildDynamicSubViewMask(OpBuilder &builder, Location loc,
-                                            Value slotPtr) {
-  memref::SubViewOp subView = getDynamicSubView(slotPtr);
-  if (!subView)
-    return {};
-  return buildSubViewMask(builder, loc, subView);
 }
 
 namespace {
@@ -248,9 +228,8 @@ struct SubViewOpAliasModel
                                      Value slotValue,
                                      OpBuilder &builder) const {
     auto subView = cast<memref::SubViewOp>(op);
-    // Identity: the alias holds the whole parent value. Masking is left to
-    // `TransferReadOpMemOpModel::removeBlockingUses`, which unlike this hook
-    // can see the consuming read's padding value.
+    // Identity: the alias holds the whole parent value. Lanes past the
+    // subview's extent are expected to be masked off by the consuming read.
     if (isAliasableDynamicShapeSubView(subView))
       return slotValue;
 
