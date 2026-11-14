@@ -79,6 +79,6 @@ Error parseArguments(ArrayRef<const char *> Args) {
 // legacy codegen pipeline relies on the static initialization.
 extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
 llvmGetPassPluginInfo() {
-  return {LLVM_PLUGIN_API_VERSION, "Ciao", LLVM_VERSION_STRING, nullptr,
-          preCodeGenCallback, parseArguments};
+  return {LLVM_PLUGIN_API_VERSION, "Ciao",        LLVM_VERSION_STRING, nullptr,
+          preCodeGenCallback,      parseArguments};
 }
