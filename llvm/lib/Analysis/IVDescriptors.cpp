@@ -489,9 +489,9 @@ bool RecurrenceDescriptor::AddReductionVar(
   // must include the original PHI.
   bool FoundStartPHI = false;
 
-  // To recognize AnyOf patterns formed by a icmp select sequence, we store
-  // the number of instruction we saw to make sure we only see one.
-  unsigned NumCmpSelectPatternInst = 0;
+  // To recognize AnyOf patterns formed by a select, we store the select to
+  // make sure we only see one.
+  SelectInst *AnyOfSelect = nullptr;
   InstDesc ReduxDesc(false, nullptr);
 
   // To recognize find-lasts of conditional operations (such as loads or
@@ -676,8 +676,11 @@ bool RecurrenceDescriptor::AddReductionVar(
       }
     }
 
-    if (isAnyOfRecurrenceKind(Kind) && IsASelect)
-      ++NumCmpSelectPatternInst;
+    if (isAnyOfRecurrenceKind(Kind) && IsASelect) {
+      if (AnyOfSelect)
+        return false;
+      AnyOfSelect = cast<SelectInst>(Cur);
+    }
 
     // Check  whether we found a reduction operator.
     FoundReduxOp |= (!IsAPhi || FoundFindLastLikePhi) && Cur != Start;
@@ -757,8 +760,17 @@ bool RecurrenceDescriptor::AddReductionVar(
           (Kind == RecurKind::FindLast && NumNonPHIUsers == 0)) &&
          "Unexpectedly matched a 'find-last-like' phi");
 
-  if (isAnyOfRecurrenceKind(Kind) && NumCmpSelectPatternInst != 1)
-    return false;
+  if (isAnyOfRecurrenceKind(Kind)) {
+    if (!AnyOfSelect)
+      return false;
+    // Reject a select whose condition is part of the chain: the vectorizer
+    // replaces the chain, so the condition would become poison. Compares are
+    // allowed, since the vectorizer rewrites a compare of the reduction phi
+    // to use the start value.
+    auto *Cond = dyn_cast<Instruction>(AnyOfSelect->getCondition());
+    if (Cond && !isa<CmpInst>(Cond) && VisitedInsts.contains(Cond))
+      return false;
+  }
 
   if (IntermediateStore) {
     // Check that stored value goes to the phi node again. This way we make sure
@@ -868,6 +880,9 @@ bool RecurrenceDescriptor::AddReductionVar(
 //     %cmp = icmp sgt i32 %5, 3
 //     %spec.select = select i1 %cmp, i32 3, i32 %r
 //     ...
+// The condition can be any i1 value, including one defined outside the loop.
+// If it is part of the reduction chain, it has to be a compare (see
+// AddReductionVar).
 // In general we can support vectorization of loops where 'r' flips between
 // any two non-constants, provided they are loop invariant. The only thing
 // we actually care about at the end of the loop is whether or not any lane
@@ -885,10 +900,10 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
       return InstDesc(Select, Prev.getRecKind());
   }
 
-  if (!match(I, m_Select(m_Cmp(), m_Value(), m_Value())))
+  SelectInst *SI = dyn_cast<SelectInst>(I);
+  if (!SI)
     return InstDesc(false, I);
 
-  SelectInst *SI = cast<SelectInst>(I);
   Value *NonPhi = nullptr;
 
   if (OrigPhi == dyn_cast<PHINode>(SI->getTrueValue()))
@@ -899,8 +914,8 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
     return InstDesc(false, I);
 
   // We are looking for selects of the form:
-  //   select(cmp(), phi, loop_invariant) or
-  //   select(cmp(), loop_invariant, phi)
+  //   select(cond, phi, loop_invariant) or
+  //   select(cond, loop_invariant, phi)
   if (!Loop->isLoopInvariant(NonPhi))
     return InstDesc(false, I);
 
