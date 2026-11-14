@@ -29,4 +29,14 @@ entry:
   ret void
 }
 
+; Tail calls are not supported.
+define void @f4(ptr %dst, ptr %src, i32 %n) nounwind {
+; CHECK-LABEL: f4:
+; CHECK: bl __memcpy_4
+entry:
+  %0 = shl i32 %n, 2
+  tail call void @llvm.memcpy.p0.p0.i32(ptr align 4 %dst, ptr align 4 %src, i32 %0, i1 false)
+  ret void
+}
+
 declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
