@@ -397,3 +397,127 @@ define i1 @icmp_ult_sremsmax_smax(i32 %x) {
   %c = icmp ult i32 %r, 2147483647
   ret i1 %c
 }
+
+define i1 @icmp_eq_srem_dividend(i64 %x) {
+; CHECK-LABEL: define i1 @icmp_eq_srem_dividend(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[X_OFF:%.*]] = add i64 [[X]], 249
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[X_OFF]], 499
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %rem = srem i64 %x, 250
+  %cmp = icmp eq i64 %rem, %x
+  ret i1 %cmp
+}
+
+define i1 @icmp_ne_dividend_srem(i64 %x) {
+; CHECK-LABEL: define i1 @icmp_ne_dividend_srem(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[X]], -250
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[TMP1]], -499
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %rem = srem i64 %x, 250
+  %cmp = icmp ne i64 %x, %rem
+  ret i1 %cmp
+}
+
+define i1 @icmp_ne_srem_dividend_smax(i8 %x) {
+; CHECK-LABEL: define i1 @icmp_ne_srem_dividend_smax(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X]], -127
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP1]], 3
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %rem = srem i8 %x, 127
+  %cmp = icmp ne i8 %rem, %x
+  ret i1 %cmp
+}
+
+define <2 x i1> @icmp_eq_srem_dividend_vec(<2 x i8> %x) {
+; CHECK-LABEL: define <2 x i1> @icmp_eq_srem_dividend_vec(
+; CHECK-SAME: <2 x i8> [[X:%.*]]) {
+; CHECK-NEXT:    [[X_OFF:%.*]] = add <2 x i8> [[X]], splat (i8 4)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i8> [[X_OFF]], splat (i8 9)
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %rem = srem <2 x i8> %x, <i8 5, i8 5>
+  %cmp = icmp eq <2 x i8> %rem, %x
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @icmp_eq_srem_dividend_vec_nonsplat(<2 x i8> %x) {
+; CHECK-LABEL: define <2 x i1> @icmp_eq_srem_dividend_vec_nonsplat(
+; CHECK-SAME: <2 x i8> [[X:%.*]]) {
+; CHECK-NEXT:    [[REM:%.*]] = srem <2 x i8> [[X]], <i8 5, i8 7>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[REM]], [[X]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %rem = srem <2 x i8> %x, <i8 5, i8 7>
+  %cmp = icmp eq <2 x i8> %rem, %x
+  ret <2 x i1> %cmp
+}
+
+define i64 @icmp_ne_srem_dividend_multi_use(i64 %x) {
+; CHECK-LABEL: define i64 @icmp_ne_srem_dividend_multi_use(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[REM:%.*]] = srem i64 [[X]], 250
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[REM]], [[X]]
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i64
+; CHECK-NEXT:    [[RES:%.*]] = add nsw i64 [[REM]], [[EXT]]
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+  %rem = srem i64 %x, 250
+  %cmp = icmp ne i64 %rem, %x
+  %ext = zext i1 %cmp to i64
+  %res = add i64 %rem, %ext
+  ret i64 %res
+}
+
+define i1 @icmp_eq_srem_dividend_negative_divisor_canonicalized(i64 %x) {
+; CHECK-LABEL: define i1 @icmp_eq_srem_dividend_negative_divisor_canonicalized(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[X_OFF:%.*]] = add i64 [[X]], 249
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[X_OFF]], 499
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %rem = srem i64 %x, -250
+  %cmp = icmp eq i64 %rem, %x
+  ret i1 %cmp
+}
+
+define i1 @icmp_eq_srem_dividend_signed_min_divisor(i8 %x) {
+; CHECK-LABEL: define i1 @icmp_eq_srem_dividend_signed_min_divisor(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X]], -128
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[REM]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %rem = srem i8 %x, -128
+  %cmp = icmp eq i8 %rem, %x
+  ret i1 %cmp
+}
+
+define i1 @icmp_ne_srem_dividend_variable_divisor(i64 %x, i64 %divisor) {
+; CHECK-LABEL: define i1 @icmp_ne_srem_dividend_variable_divisor(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[DIVISOR:%.*]]) {
+; CHECK-NEXT:    [[REM:%.*]] = srem i64 [[X]], [[DIVISOR]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[REM]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %rem = srem i64 %x, %divisor
+  %cmp = icmp ne i64 %rem, %x
+  ret i1 %cmp
+}
+
+define i1 @icmp_eq_srem_different_dividend(i64 %x, i64 %y) {
+; CHECK-LABEL: define i1 @icmp_eq_srem_different_dividend(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:    [[REM:%.*]] = srem i64 [[X]], 250
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[REM]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %rem = srem i64 %x, 250
+  %cmp = icmp eq i64 %rem, %y
+  ret i1 %cmp
+}
