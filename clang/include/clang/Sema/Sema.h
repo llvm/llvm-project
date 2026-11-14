@@ -16099,6 +16099,38 @@ public:
   ///@}
 };
 
+enum class DestructorFormat {
+  // SMF is deleted, private, protected, or otherwise inaccessible.
+  NotAvailable,
+
+  // SMF is trivial.
+  Trivial,
+
+  // SMF is non-trivial and nothrow.
+  NonTrivial,
+};
+
+/// Returns whether a type is trivially-destructible, non-trivially
+/// destructible, or cannot be destroyed in the current context.
+///
+/// It is possible for a type to have a trivial destructor without being
+/// trivially-destructible. For example, `struct S { ~S() = delete; };`
+/// has a trivial destructor: its destructor is non-virtual, all of its
+/// bases have trivial destructors, and all of its members are trivially
+/// destructible. `S` isn't trivially-destructible because its destructor
+/// has been deleted. Similarly, `class C { ~C() = default; }` isn't
+/// trivially-destructible because `~C()`---although trivial for the
+/// same reasons---is private.
+///
+/// This would ideally be placed in `QualType`, but libClangBasic
+/// doesn't include `Sema`.
+DestructorFormat GetDestructorFormat(Sema &S, const ASTContext &C,
+                                     SourceLocation Loc, QualType T);
+
+/// Returns whether a type's destructor is nothrow.
+bool IsDestructorNoThrow(Sema &S, const ASTContext &C, SourceLocation Loc,
+                         QualType T);
+
 DeductionFailureInfo
 MakeDeductionFailureInfo(ASTContext &Context, TemplateDeductionResult TDK,
                          sema::TemplateDeductionInfo &Info);
