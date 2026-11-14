@@ -64,27 +64,27 @@ class cache_latest_view : public view_interface<cache_latest_view<_View>> {
   class __sentinel;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI cache_latest_view()
+  cache_latest_view()
     requires default_initializable<_View>
   = default;
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit cache_latest_view(_View __base) : __base_{std::move(__base)} {}
+  constexpr explicit cache_latest_view(_View __base) : __base_{std::move(__base)} {}
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
+  [[nodiscard]] constexpr _View base() const&
     requires copy_constructible<_View>
   {
     return __base_;
   }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  [[nodiscard]] constexpr _View base() && { return std::move(__base_); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() { return __iterator(*this); }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() { return __sentinel{*this}; }
+  [[nodiscard]] constexpr auto begin() { return __iterator(*this); }
+  [[nodiscard]] constexpr auto end() { return __sentinel{*this}; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
+  [[nodiscard]] constexpr auto size()
     requires sized_range<_View>
   {
     return ranges::size(__base_);
   }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  [[nodiscard]] constexpr auto size() const
     requires sized_range<const _View>
   {
     return ranges::size(__base_);
@@ -92,13 +92,13 @@ public:
 
 #  if _LIBCPP_STD_VER >= 26
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint()
+  [[nodiscard]] constexpr auto reserve_hint()
     requires approximately_sized_range<_View>
   {
     return ranges::reserve_hint(__base_);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint() const
+  [[nodiscard]] constexpr auto reserve_hint() const
     requires approximately_sized_range<const _View>
   {
     return ranges::reserve_hint(__base_);
@@ -118,7 +118,7 @@ class cache_latest_view<_View>::__iterator {
   cache_latest_view* __parent_;
   iterator_t<_View> __current_;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator(cache_latest_view& __parent)
+  constexpr explicit __iterator(cache_latest_view& __parent)
       : __parent_{std::addressof(__parent)}, __current_{ranges::begin(__parent.__base_)} {}
 
   friend class cache_latest_view<_View>;
@@ -128,13 +128,13 @@ public:
   using value_type       = range_value_t<_View>;
   using iterator_concept = input_iterator_tag;
 
-  _LIBCPP_HIDE_FROM_ABI __iterator(__iterator&&)            = default;
-  _LIBCPP_HIDE_FROM_ABI __iterator& operator=(__iterator&&) = default;
+  __iterator(__iterator&&)            = default;
+  __iterator& operator=(__iterator&&) = default;
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_View> base() && { return std::move(__current_); }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const iterator_t<_View>& base() const& noexcept { return __current_; }
+  [[nodiscard]] constexpr iterator_t<_View> base() && { return std::move(__current_); }
+  [[nodiscard]] constexpr const iterator_t<_View>& base() const& noexcept { return __current_; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr range_reference_t<_View>& operator*() const {
+  [[nodiscard]] constexpr range_reference_t<_View>& operator*() const {
     if constexpr (is_reference_v<range_reference_t<_View>>) {
       if (!__parent_->__cache_.__has_value()) {
         __parent_->__cache_.__emplace(std::addressof(std::__as_lvalue(*__current_)));
@@ -148,19 +148,19 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
+  constexpr __iterator& operator++() {
     __parent_->__cache_.__reset();
     ++__current_;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr void operator++(int) { ++*this; }
+  constexpr void operator++(int) { ++*this; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr range_rvalue_reference_t<_View>
+  [[nodiscard]] friend constexpr range_rvalue_reference_t<_View>
   iter_move(const __iterator& __i) noexcept(noexcept(ranges::iter_move(__i.__current_))) {
     return ranges::iter_move(__i.__current_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr void
+  friend constexpr void
   iter_swap(const __iterator& __x,
             const __iterator& __y) noexcept(noexcept(ranges::iter_swap(__x.__current_, __y.__current_)))
     requires indirectly_swappable<iterator_t<_View>>
@@ -176,27 +176,27 @@ template <input_range _View>
 class cache_latest_view<_View>::__sentinel {
   sentinel_t<_View> __end_ = sentinel_t<_View>();
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(cache_latest_view& __parent)
+  constexpr explicit __sentinel(cache_latest_view& __parent)
       : __end_{ranges::end(__parent.__base_)} {}
 
   friend class cache_latest_view<_View>;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __sentinel() = default;
+  __sentinel() = default;
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr sentinel_t<_View> base() const { return __end_; }
+  [[nodiscard]] constexpr sentinel_t<_View> base() const { return __end_; }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __sentinel& __y) {
+  friend constexpr bool operator==(const __iterator& __x, const __sentinel& __y) {
     return __x.__current_ == __y.__end_;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr range_difference_t<_View>
+  [[nodiscard]] friend constexpr range_difference_t<_View>
   operator-(const __iterator& __x, const __sentinel& __y)
     requires sized_sentinel_for<sentinel_t<_View>, iterator_t<_View>>
   {
     return __x.__current_ - __y.__end_;
   }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr range_difference_t<_View>
+  [[nodiscard]] friend constexpr range_difference_t<_View>
   operator-(const __sentinel& __x, const __iterator& __y)
     requires sized_sentinel_for<sentinel_t<_View>, iterator_t<_View>>
   {
@@ -209,7 +209,7 @@ namespace __cache_latest_view {
 
 struct __fn : __range_adaptor_closure<__fn> {
   template <class _Range>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
+  [[nodiscard]] static constexpr auto
   operator()(_Range&& __range) noexcept(noexcept(/**/ cache_latest_view(std::forward<_Range>(__range))))
       -> decltype(/*-------------------------------*/ cache_latest_view(std::forward<_Range>(__range))) {
     return /*--------------------------------------*/ cache_latest_view(std::forward<_Range>(__range));
