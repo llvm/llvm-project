@@ -1462,12 +1462,16 @@ For landingpad based exception model, it is expected that frontend uses the
 
 ```llvm
   ehcleanup:
-    call void @llvm.coro.end(ptr null, i1 true, token none)
     %InRamp = call i1 @llvm.coro.is_in_ramp()
-    br i1 %InRamp, label %cleanup.cont, label %eh.resume
+    br i1 %InRamp, label %cleanup.cont, label %coro.eh
 
   cleanup.cont:
     ; rest of the cleanup
+    br i1 %coro.eh
+
+  coro.eh:
+    call void @llvm.coro.end(ptr null, i1 true, token none)
+    br label %eh.resume
 
   eh.resume:
     %exn = load ptr, ptr %exn.slot, align 8
@@ -1482,19 +1486,15 @@ thus allowing to proceed to the rest of the cleanup code that is only needed dur
 initial invocation of the coroutine. Otherwise, it is replaced with `False`,
 thus leading to immediate unwind to the caller.
 
-For Windows Exception handling model, a frontend should attach a funclet bundle
-referring to an enclosing cleanuppad as follows:
+For Windows Exception handling model, it is expected that frontend uses the
+{ref}`coro.end` intrinsic as follows:
 
 ```llvm
   ehcleanup:
     %tok = cleanuppad within none []
-    call void @llvm.coro.end(ptr null, i1 true, token none) [ "funclet"(token %tok) ]
-    cleanupret from %tok unwind label %RestOfTheCleanup
+    call void @llvm.coro.end(ptr null, i1 true, token none)
+    cleanupret from %tok unwind to caller
 ```
-
-The `CoroSplit` pass, if the funclet bundle is present, will insert
-`cleanupret from %tok unwind to caller` before
-the {ref}`coro.end` intrinsic and will remove the rest of the block.
 
 In the unwind path (when the argument is `true`), `coro.end` will mark the coroutine
 as done, making it undefined behavior to resume the coroutine again and causing
@@ -1503,11 +1503,10 @@ the coroutine will already be marked as done by the final suspend.
 
 The following table summarizes the handling of {ref}`coro.end` intrinsic.
 
-| unwind | EH model | In Start Function | In Resume/Destroy Functions |
-| --- | --- | --- | --- |
-| `false` | | nothing | `ret void` |
-| `true` | WinEH | mark coroutine as done | `cleanupret unwind to caller`<br>mark coroutine done |
-| `true` | Landingpad | mark coroutine as done | mark coroutine done |
+| unwind | In Start Function | In Resume/Destroy Functions |
+| --- | --- | --- |
+| `false` | nothing | `ret void` |
+| `true` | mark coroutine as done | mark coroutine done |
 
 (coro.end.results)=
 
