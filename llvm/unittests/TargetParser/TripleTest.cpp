@@ -2434,6 +2434,12 @@ TEST(TripleTest, BitWidthChecks) {
   EXPECT_FALSE(T.isArch64Bit());
 }
 
+TEST(TripleTest, PISAIsGPU) {
+  Triple T("pisa");
+  EXPECT_TRUE(T.isPISA());
+  EXPECT_TRUE(T.isGPU());
+}
+
 TEST(TripleTest, BitWidthArchVariants) {
   Triple T;
   EXPECT_EQ(Triple::UnknownArch, T.get32BitArchVariant().getArch());
