@@ -30048,6 +30048,121 @@ performVecReduceBitwiseCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   return SDValue();
 }
 
+/// Return \p Op as a \p VecVT vector if it is a constant, a load, a
+/// zero-extended load, or an OR/XOR tree of these, such as those formed by
+/// memcmp expansion.
+static SDValue tryVectorizeMemCmpOperand(SDValue Op, EVT VecVT,
+                                         SelectionDAG &DAG) {
+  if (isa<ConstantSDNode>(Op))
+    return DAG.getBitcast(VecVT, Op);
+  if (!Op.hasOneUse())
+    return SDValue();
+  if (ISD::isNormalLoad(Op.getNode()) && cast<LoadSDNode>(Op)->isSimple())
+    return DAG.getBitcast(VecVT, Op);
+  if (Op.getOpcode() == ISD::ZERO_EXTEND) {
+    SDValue Src = Op.getOperand(0);
+    if (!Src.hasOneUse() || !ISD::isNormalLoad(Src.getNode()) ||
+        !cast<LoadSDNode>(Src)->isSimple())
+      return SDValue();
+    // Inserting into a zero vector selects a single zeroing scalar FP load.
+    EVT SrcVT = Src.getValueType();
+    if (VecVT.is128BitVector() && DAG.getDataLayout().isLittleEndian() &&
+        SrcVT.isSimple() && isPowerOf2_32(SrcVT.getSizeInBits()) &&
+        SrcVT.getSizeInBits() >= 8 && SrcVT.getSizeInBits() <= 64) {
+      EVT InsVT = EVT::getVectorVT(*DAG.getContext(), SrcVT,
+                                   128 / SrcVT.getSizeInBits());
+      SDValue Ins = DAG.getInsertVectorElt(
+          SDLoc(Op), DAG.getConstant(0, SDLoc(Op), InsVT), Src, 0);
+      return DAG.getBitcast(VecVT, Ins);
+    }
+    return DAG.getBitcast(VecVT, Op);
+  }
+  if (Op.getOpcode() != ISD::OR && Op.getOpcode() != ISD::XOR)
+    return SDValue();
+  SDValue LHS = tryVectorizeMemCmpOperand(Op.getOperand(0), VecVT, DAG);
+  SDValue RHS = tryVectorizeMemCmpOperand(Op.getOperand(1), VecVT, DAG);
+  if (!LHS || !RHS)
+    return SDValue();
+  return DAG.getNode(Op.getOpcode(), SDLoc(Op), VecVT, LHS, RHS);
+}
+
+/// Try to map an equality comparison of an integer wider than a GPR, such as
+/// those formed by memcmp expansion, to a vector compare and reduction before
+/// type legalization splits it up into chunks.
+static SDValue combineVectorSizedSetCCEquality(SDNode *N, SelectionDAG &DAG) {
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  ISD::CondCode Cond = N->getOperandCondCode(2);
+  EVT OpVT = LHS.getValueType();
+  if (!ISD::isIntEqualitySetCC(Cond) || !OpVT.isScalarInteger() ||
+      OpVT.bitsLE(MVT::i64) || !isPowerOf2_32(OpVT.getSizeInBits()))
+    return SDValue();
+
+  const auto &ST = DAG.getSubtarget<AArch64Subtarget>();
+  if (ST.requiresStrictAlign() ||
+      (!ST.isNeonAvailable() && !ST.isSVEAvailable()) ||
+      DAG.getMachineFunction().getFunction().hasFnAttribute(
+          Attribute::NoImplicitFloat))
+    return SDValue();
+
+  EVT VecVT =
+      EVT::getVectorVT(*DAG.getContext(), MVT::i8, OpVT.getSizeInBits() / 8);
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(VecVT))
+    return SDValue();
+  bool UseSVE = ST.isSVEAvailable() && ST.useSVEForFixedLengthVectors(VecVT);
+  if (!UseSVE && !VecVT.is128BitVector())
+    return SDValue();
+
+  // A load compared with another load or with a constant whose halves are
+  // compare immediates is cheaper as a scalar CMP/CCMP pair.
+  auto IsCheapScalarOperand = [](SDValue V) {
+    if (ISD::isNormalLoad(V.getNode()))
+      return true;
+    auto *C = dyn_cast<ConstantSDNode>(V);
+    if (!C)
+      return false;
+    const APInt &Imm = C->getAPIntValue();
+    unsigned HalfBits = Imm.getBitWidth() / 2;
+    APInt Lo = Imm.trunc(HalfBits);
+    APInt Hi = Imm.extractBits(HalfBits, HalfBits);
+    return (AArch64_AM::isLegalCmpImmed(Lo) && isLegalCondCmpImmediate(Hi)) ||
+           (AArch64_AM::isLegalCmpImmed(Hi) && isLegalCondCmpImmediate(Lo));
+  };
+  if (!UseSVE && ISD::isNormalLoad(LHS.getNode()) && IsCheapScalarOperand(RHS))
+    return SDValue();
+
+  SDValue VecLHS = tryVectorizeMemCmpOperand(LHS, VecVT, DAG);
+  SDValue VecRHS = tryVectorizeMemCmpOperand(RHS, VecVT, DAG);
+  if (!VecLHS || !VecRHS)
+    return SDValue();
+
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  if (UseSVE) {
+    EVT ContainerVT = getContainerForFixedLengthVector(DAG, VecVT);
+    SDValue Pg = getPredicateForVector(DAG, DL, VecVT);
+    VecLHS = convertToScalableVector(DAG, ContainerVT, VecLHS);
+    VecRHS = convertToScalableVector(DAG, ContainerVT, VecRHS);
+    SDValue Cmp =
+        DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, DL, Pg.getValueType(), Pg,
+                    VecLHS, VecRHS, DAG.getCondCode(ISD::SETNE));
+    return getPTest(DAG, VT, Pg, Cmp,
+                    Cond == ISD::SETEQ ? AArch64CC::NONE_ACTIVE
+                                       : AArch64CC::ANY_ACTIVE);
+  }
+
+  // Fold the differences to 64 bits with a pairwise maximum, which is cheaper
+  // than a full UMAXV reduction, and test them in a GPR.
+  SDValue Diff = DAG.getBitcast(
+      MVT::v4i32, DAG.getNode(ISD::XOR, DL, VecVT, VecLHS, VecRHS));
+  SDValue Max = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, MVT::v4i32,
+      DAG.getConstant(Intrinsic::aarch64_neon_umaxp, DL, MVT::i32), Diff, Diff);
+  SDValue Folded =
+      DAG.getExtractVectorElt(DL, MVT::i64, DAG.getBitcast(MVT::v2i64, Max), 0);
+  return DAG.getSetCC(DL, VT, Folded, DAG.getConstant(0, DL, MVT::i64), Cond);
+}
+
 static SDValue performSETCCCombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG) {
@@ -30057,6 +30172,10 @@ static SDValue performSETCCCombine(SDNode *N,
   ISD::CondCode Cond = N->getOperandCondCode(2);
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
+
+  if (DCI.isBeforeLegalize())
+    if (SDValue V = combineVectorSizedSetCCEquality(N, DAG))
+      return V;
 
   if (SDValue V = tryToWidenSetCCOperands(N, DAG))
     return V;

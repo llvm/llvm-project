@@ -5803,11 +5803,34 @@ AArch64TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   Options.AllowOverlappingLoads = true;
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
   Options.NumLoadsPerBlock = IsZeroCmp ? Options.MaxNumLoads : 1;
-  // TODO: Though vector loads usually perform well on AArch64, in some targets
-  // they may wake up the FP unit, which raises the power consumption.  Perhaps
-  // they could be used with no holds barred (-O3).
   Options.LoadSizes = {8, 4, 2, 1};
   Options.AllowedTailExpansions = {3, 5, 6};
+
+  // Equality comparisons can use vector compares and reductions. Keep the
+  // scalar limits when optimizing for size.
+  // TODO: Add a tuning feature for cores where vector compares cost more power.
+  if (!IsZeroCmp || OptSize || HasNoImplicitFloat ||
+      (!ST->isNeonAvailable() && !ST->isSVEAvailable()))
+    return Options;
+
+  // Keep the scalar inline limit in one branchless block, using fewer, wider
+  // loads. Loads up to half the limit wide can cover any size by overlapping.
+  const unsigned ScalarLoadSize =
+      getRegisterBitWidth(TTI::RGK_Scalar).getFixedValue() / 8;
+  const unsigned MaxSize = Options.MaxNumLoads * ScalarLoadSize;
+  const unsigned VectorSize =
+      getRegisterBitWidth(TTI::RGK_FixedWidthVector).getFixedValue() / 8;
+  SmallVector<unsigned, 4> VectorLoadSizes;
+  for (unsigned LoadSize = llvm::bit_floor(std::min(VectorSize, MaxSize / 2));
+       LoadSize > ScalarLoadSize; LoadSize >>= 1)
+    if (TLI->isTypeLegal(MVT::getVectorVT(MVT::i8, LoadSize)))
+      VectorLoadSizes.push_back(LoadSize);
+  if (VectorLoadSizes.empty())
+    return Options;
+  Options.LoadSizes.insert(Options.LoadSizes.begin(), VectorLoadSizes.begin(),
+                           VectorLoadSizes.end());
+  Options.MaxNumLoads = MaxSize / VectorLoadSizes.front();
+  Options.NumLoadsPerBlock = Options.MaxNumLoads;
   return Options;
 }
 
