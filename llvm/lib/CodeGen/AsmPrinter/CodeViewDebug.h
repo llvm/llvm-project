@@ -200,6 +200,14 @@ private:
 
     const MCSymbol *Begin = nullptr;
     const MCSymbol *End = nullptr;
+
+    /// The first instruction after the prologue and the first instruction of
+    /// the epilogue, for the DbgStart and DbgEnd fields of S_GPROC32.
+    const MachineInstr *PrologEndInst = nullptr;
+    const MachineInstr *EpilogBeginInst = nullptr;
+    const MCSymbol *PrologEnd = nullptr;
+    const MCSymbol *EpilogBegin = nullptr;
+
     unsigned FuncId = 0;
     unsigned LastFileId = 0;
 
@@ -526,6 +534,10 @@ private:
 protected:
   /// Gather pre-function debug information.
   void beginFunctionImpl(const MachineFunction *MF) override;
+
+  /// Find the instructions where the prologue of \p MF ends and its epilogue
+  /// begins. beginInstruction emits labels for them.
+  void findPrologueAndEpilogue(const MachineFunction &MF);
 
   /// Gather post-function debug information.
   void endFunctionImpl(const MachineFunction *) override;
