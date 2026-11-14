@@ -1751,38 +1751,42 @@ ConstantRange::shl(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
     return getEmpty();
 
+  unsigned BitWidth = getBitWidth();
+  ConstantRange ShAmt = Other.intersectWith(
+      ConstantRange(APInt::getZero(BitWidth), APInt(BitWidth, BitWidth)));
+  if (ShAmt.isEmptySet())
+    return getEmpty();
+
   APInt Min = getUnsignedMin();
   APInt Max = getUnsignedMax();
-  if (const APInt *RHS = Other.getSingleElement()) {
-    unsigned BW = getBitWidth();
-    if (RHS->uge(BW))
-      return getEmpty();
-
+  if (const APInt *RHS = ShAmt.getSingleElement()) {
     unsigned EqualLeadingBits = (Min ^ Max).countl_zero();
     if (RHS->ule(EqualLeadingBits))
       return getNonEmpty(Min << *RHS, (Max << *RHS) + 1);
 
-    return getNonEmpty(APInt::getZero(BW),
-                       APInt::getBitsSetFrom(BW, RHS->getZExtValue()) + 1);
+    return getNonEmpty(APInt::getZero(BitWidth),
+                       APInt::getBitsSetFrom(BitWidth, RHS->getZExtValue()) +
+                           1);
   }
 
-  APInt OtherMax = Other.getUnsignedMax();
-  if (isAllNegative() && OtherMax.ule(Min.countl_one())) {
+  APInt ShAmtMin = ShAmt.getUnsignedMin();
+  APInt ShAmtMax = ShAmt.getUnsignedMax();
+  if (isAllNegative() && ShAmtMax.ule(Min.countl_one())) {
     // For negative numbers, if the shift does not overflow in a signed sense,
     // a larger shift will make the number smaller.
-    Max <<= Other.getUnsignedMin();
-    Min <<= OtherMax;
+    Max <<= ShAmtMin;
+    Min <<= ShAmtMax;
     return ConstantRange::getNonEmpty(std::move(Min), std::move(Max) + 1);
   }
 
   // There's overflow!
-  if (OtherMax.ugt(Max.countl_zero()))
+  if (ShAmtMax.ugt(Max.countl_zero()))
     return getFull();
 
   // FIXME: implement the other tricky cases
 
-  Min <<= Other.getUnsignedMin();
-  Max <<= OtherMax;
+  Min <<= ShAmtMin;
+  Max <<= ShAmtMax;
 
   return ConstantRange::getNonEmpty(std::move(Min), std::move(Max) + 1);
 }
@@ -1792,12 +1796,12 @@ static ConstantRange computeShlNUW(const ConstantRange &LHS,
   unsigned BitWidth = LHS.getBitWidth();
   bool Overflow;
   APInt LHSMin = LHS.getUnsignedMin();
-  unsigned RHSMin = RHS.getUnsignedMin().getLimitedValue(BitWidth);
+  unsigned RHSMin = RHS.getUnsignedMin().getZExtValue();
   APInt MinShl = LHSMin.ushl_ov(RHSMin, Overflow);
   if (Overflow)
     return ConstantRange::getEmpty(BitWidth);
   APInt LHSMax = LHS.getUnsignedMax();
-  unsigned RHSMax = RHS.getUnsignedMax().getLimitedValue(BitWidth);
+  unsigned RHSMax = RHS.getUnsignedMax().getZExtValue();
   APInt MaxShl = MinShl;
   unsigned MaxShAmt = LHSMax.countLeadingZeros();
   if (RHSMin <= MaxShAmt)
@@ -1853,8 +1857,8 @@ static ConstantRange computeShlNSWWithNegLHS(const APInt &LHSMin,
 static ConstantRange computeShlNSW(const ConstantRange &LHS,
                                    const ConstantRange &RHS) {
   unsigned BitWidth = LHS.getBitWidth();
-  unsigned RHSMin = RHS.getUnsignedMin().getLimitedValue(BitWidth);
-  unsigned RHSMax = RHS.getUnsignedMax().getLimitedValue(BitWidth);
+  unsigned RHSMin = RHS.getUnsignedMin().getZExtValue();
+  unsigned RHSMax = RHS.getUnsignedMax().getZExtValue();
   APInt LHSMin = LHS.getSignedMin();
   APInt LHSMax = LHS.getSignedMax();
   if (LHSMin.isNonNegative())
@@ -1874,17 +1878,24 @@ ConstantRange ConstantRange::shlWithNoWrap(const ConstantRange &Other,
   if (isEmptySet() || Other.isEmptySet())
     return getEmpty();
 
-  switch (NoWrapKind) {
-  case 0:
+  if (NoWrapKind == 0)
     return shl(Other);
+
+  unsigned BitWidth = getBitWidth();
+  ConstantRange ShAmt = Other.intersectWith(
+      ConstantRange(APInt::getZero(BitWidth), APInt(BitWidth, BitWidth)));
+  if (ShAmt.isEmptySet())
+    return getEmpty();
+
+  switch (NoWrapKind) {
   case OverflowingBinaryOperator::NoSignedWrap:
-    return computeShlNSW(*this, Other);
+    return computeShlNSW(*this, ShAmt);
   case OverflowingBinaryOperator::NoUnsignedWrap:
-    return computeShlNUW(*this, Other);
+    return computeShlNUW(*this, ShAmt);
   case OverflowingBinaryOperator::NoSignedWrap |
       OverflowingBinaryOperator::NoUnsignedWrap:
-    return computeShlNSW(*this, Other)
-        .intersectWith(computeShlNUW(*this, Other), RangeType);
+    return computeShlNSW(*this, ShAmt)
+        .intersectWith(computeShlNUW(*this, ShAmt), RangeType);
   default:
     llvm_unreachable("Invalid NoWrapKind");
   }

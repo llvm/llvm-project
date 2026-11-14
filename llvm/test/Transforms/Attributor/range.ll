@@ -1093,9 +1093,7 @@ define i8 @undef_collapse_2() {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@undef_collapse_2
 ; CGSCC-SAME: () #[[ATTR3]] {
-; CGSCC-NEXT:    [[C:%.*]] = call i8 @ret_two() #[[ATTR7]]
-; CGSCC-NEXT:    [[S:%.*]] = shl i8 undef, [[C]]
-; CGSCC-NEXT:    ret i8 [[S]]
+; CGSCC-NEXT:    ret i8 0
 ;
   %c = call i8 @ret_two()
   %s = shl i8 undef, %c

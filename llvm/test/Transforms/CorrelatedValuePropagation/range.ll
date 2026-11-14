@@ -1443,7 +1443,7 @@ else:
 }
 
 define i8 @shl_single_inbounds_rhs(i8 %x, i8 range(i8 7, 10) %y) {
-; CHECK-LABEL: define i8 @shl_single_inbounds_rhs(
+; CHECK-LABEL: define range(i8 0, -127) i8 @shl_single_inbounds_rhs(
 ; CHECK-SAME: i8 [[X:%.*]], i8 range(i8 7, 10) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[RES:%.*]] = shl i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[RES]]
@@ -1453,7 +1453,7 @@ define i8 @shl_single_inbounds_rhs(i8 %x, i8 range(i8 7, 10) %y) {
 }
 
 define i8 @shl_partial_oob_rhs(i8 range(i8 -64, -2) %x, i8 range(i8 8, 3) %y) {
-; CHECK-LABEL: define i8 @shl_partial_oob_rhs(
+; CHECK-LABEL: define range(i8 0, -2) i8 @shl_partial_oob_rhs(
 ; CHECK-SAME: i8 range(i8 -64, -2) [[X:%.*]], i8 range(i8 8, 3) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[RES:%.*]] = shl i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[RES]]
@@ -1463,7 +1463,7 @@ define i8 @shl_partial_oob_rhs(i8 range(i8 -64, -2) %x, i8 range(i8 8, 3) %y) {
 }
 
 define i8 @shl_nuw_partial_oob_rhs(i8 range(i8 0, 50) %x, i8 range(i8 8, 3) %y) {
-; CHECK-LABEL: define range(i8 0, -7) i8 @shl_nuw_partial_oob_rhs(
+; CHECK-LABEL: define range(i8 0, -59) i8 @shl_nuw_partial_oob_rhs(
 ; CHECK-SAME: i8 range(i8 0, 50) [[X:%.*]], i8 range(i8 8, 3) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[RES:%.*]] = shl nuw i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[RES]]
@@ -1473,7 +1473,7 @@ define i8 @shl_nuw_partial_oob_rhs(i8 range(i8 0, 50) %x, i8 range(i8 8, 3) %y) 
 }
 
 define i8 @shl_nsw_partial_oob_rhs(i8 range(i8 -10, 3) %x, i8 range(i8 8, 3) %y) {
-; CHECK-LABEL: define range(i8 -128, 65) i8 @shl_nsw_partial_oob_rhs(
+; CHECK-LABEL: define range(i8 -40, 9) i8 @shl_nsw_partial_oob_rhs(
 ; CHECK-SAME: i8 range(i8 -10, 3) [[X:%.*]], i8 range(i8 8, 3) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[RES:%.*]] = shl nsw i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[RES]]

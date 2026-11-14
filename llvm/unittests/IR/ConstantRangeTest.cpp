@@ -229,12 +229,6 @@ static bool CheckNonSignWrappedOnly(const ConstantRange &CR1,
   return !CR1.isSignWrappedSet() && !CR2.isSignWrappedSet();
 }
 
-static bool
-CheckNoSignedWrappedLHSAndNoWrappedRHSOnly(const ConstantRange &CR1,
-                                           const ConstantRange &CR2) {
-  return !CR1.isSignWrappedSet() && !CR2.isWrappedSet();
-}
-
 static bool CheckNonWrappedOrSignWrappedOnly(const ConstantRange &CR1,
                                              const ConstantRange &CR2) {
   return !CR1.isWrappedSet() && !CR1.isSignWrappedSet() &&
@@ -1546,7 +1540,8 @@ TEST_F(ConstantRangeTest, Shl) {
   EXPECT_EQ(One.shl(One), ConstantRange(APInt(16, 0xa << 0xa),
                                         APInt(16, (0xa << 0xa) + 1)));
   EXPECT_EQ(One.shl(Some), Full);    // TODO: [0xa << 0xa, 0)
-  EXPECT_EQ(One.shl(Wrap), Full);    // TODO: [0xa, 0xa << 14 + 1)
+  EXPECT_EQ(One.shl(Wrap),
+            ConstantRange(APInt(16, 0xa), APInt(16, (0xa << 9) + 1)));
   EXPECT_EQ(Some.shl(Some), Full);   // TODO: [0xa << 0xa, 0xfc01)
   EXPECT_EQ(Some.shl(Wrap), Full);   // TODO: [0xa, 0x7ff << 0x5 + 1)
   EXPECT_EQ(Wrap.shl(Wrap), Full);
@@ -1573,8 +1568,10 @@ TEST_F(ConstantRangeTest, Shl) {
       },
       PreferSmallestUnsigned,
       [](const ConstantRange &, const ConstantRange &CR2) {
-        // We currently only produce precise results for single element RHS.
-        return CR2.isSingleElement();
+        unsigned BW = CR2.getBitWidth();
+        ConstantRange ShAmt =
+            CR2.intersectWith(ConstantRange(APInt::getZero(BW), APInt(BW, BW)));
+        return ShAmt.isEmptySet() || ShAmt.isSingleElement();
       });
 }
 
@@ -1593,7 +1590,11 @@ TEST_F(ConstantRangeTest, ShlWithNoWrap) {
           return std::nullopt;
         return Res;
       },
-      PreferSmallest, CheckNonWrappedOnly);
+      PreferSmallest,
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return !CR1.isWrappedSet() &&
+               (!CR2.isWrappedSet() || CR2.getLower().uge(CR2.getBitWidth()));
+      });
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.shlWithNoWrap(CR2, OBO::NoSignedWrap);
@@ -1605,7 +1606,11 @@ TEST_F(ConstantRangeTest, ShlWithNoWrap) {
           return std::nullopt;
         return Res;
       },
-      PreferSmallestSigned, CheckNoSignedWrappedLHSAndNoWrappedRHSOnly);
+      PreferSmallestSigned,
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return !CR1.isSignWrappedSet() &&
+               (!CR2.isWrappedSet() || CR2.getLower().uge(CR2.getBitWidth()));
+      });
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.shlWithNoWrap(CR2, OBO::NoUnsignedWrap | OBO::NoSignedWrap);
