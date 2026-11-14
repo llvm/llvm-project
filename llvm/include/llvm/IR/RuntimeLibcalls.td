@@ -742,14 +742,14 @@ def MEMCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
   let FnAttrs = CommonFnAttrs;
   let Memory = ArgMemOnly;
   let ParamAttrs = [[NoAlias, Returned, WriteOnly],
-                    [NoAlias, ReadOnly, CapturesNone]];
+                    [NoAlias, ReadOnly]];
 }
 
 def MEMCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
 def MEMMOVE : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
   let FnAttrs = CommonFnAttrs;
   let Memory = ArgMemOnly;
-  let ParamAttrs = [[Returned, WriteOnly], ReadPtrAttrs];
+  let ParamAttrs = [[Returned, WriteOnly], [ReadOnly]];
 }
 
 def MEMMOVE_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
@@ -1014,20 +1014,19 @@ def SMEABI_SME_RESTORE : RuntimeLibcall<Void, [Ptr]>;
 def AEABI_MEMCPY : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
   let FnAttrs = CommonFnAttrs;
   let Memory = ArgMemOnly;
-  let ParamAttrs = [[NoAlias, WriteOnly, CapturesNone],
-                    [NoAlias, ReadOnly, CapturesNone]];
+  let ParamAttrs = [[NoAlias, WriteOnly], [NoAlias, ReadOnly]];
 }
 
 def AEABI_MEMMOVE : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
   let FnAttrs = CommonFnAttrs;
   let Memory = ArgMemOnly;
-  let ParamAttrs = [[WriteOnly, CapturesNone], [ReadOnly, CapturesNone]];
+  let ParamAttrs = [[WriteOnly], [ReadOnly]];
 }
 
 def AEABI_MEMSET : RuntimeLibcall<Void, [Ptr, SizeT, Int]> {
   let FnAttrs = CommonFnAttrs;
   let Memory = ArgMemWriteOnly;
-  let ParamAttrs = [[WriteOnly, CapturesNone]];
+  let ParamAttrs = [[WriteOnly]];
 }
 
 def AEABI_MEMCPY4 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>; // Align 4

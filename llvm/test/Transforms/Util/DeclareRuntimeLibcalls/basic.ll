@@ -33,8 +33,8 @@ define float @sinf(float %x) {
 
 ; CHECK: declare noalias noundef ptr @malloc(i64 noundef) [[MALLOC_ATTRS:#[0-9]+]]
 
-; CHECK: declare ptr @memcpy(ptr noalias returned writeonly, ptr noalias readonly captures(none), i64) [[ARGMEM_ATTRS:#[0-9]+]]
-; CHECK: declare ptr @memmove(ptr returned writeonly, ptr readonly captures(none), i64) [[ARGMEM_ATTRS]]
+; CHECK: declare ptr @memcpy(ptr noalias returned writeonly, ptr noalias readonly, i64) [[ARGMEM_ATTRS:#[0-9]+]]
+; CHECK: declare ptr @memmove(ptr returned writeonly, ptr readonly, i64) [[ARGMEM_ATTRS]]
 ; CHECK: declare ptr @memset(ptr returned writeonly, i32, i64) [[ARGMEM_WRITE_ATTRS]]
 
 ; CHECK: declare nofpclass(snan inf zero sub norm) double @nan(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS:#[0-9]+]]

@@ -12,7 +12,7 @@
 ; AIX32-NEXT: declare void @___bzero(ptr writeonly captures(none), i32) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: declare ptr @___memccpy(ptr, ptr, i32, i32)
 ; AIX32-NEXT: declare i32 @___memcmp(ptr readonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_READ_ATTRS:#[0-9]+]]
-; AIX32-NEXT: declare ptr @___memmove(ptr returned writeonly, ptr readonly captures(none), i32) [[ARGMEM_ATTRS:#[0-9]+]]
+; AIX32-NEXT: declare ptr @___memmove(ptr returned writeonly, ptr readonly, i32) [[ARGMEM_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: declare ptr @___memset(ptr returned writeonly, i32, i32) [[ARGMEM_WRITE_ATTRS]]
 ; AIX32-NEXT: declare i32 @___strcmp(ptr, ptr)
 ; AIX32-NEXT: declare ptr @___strcpy(ptr, ptr)
@@ -481,7 +481,7 @@
 ; AIX32-NEXT: declare i32 @lroundf128(fp128) [[SQRT_ATTRS]]
 ; AIX32-NEXT: declare i32 @lroundl(double) [[SQRT_ATTRS]]
 ; AIX32-NEXT: declare noalias noundef ptr @malloc(i32 noundef) [[MALLOC_ATTRS:#[0-9]+]]
-; AIX32-NEXT: declare ptr @memmove(ptr returned writeonly, ptr readonly captures(none), i32) [[ARGMEM_ATTRS]]
+; AIX32-NEXT: declare ptr @memmove(ptr returned writeonly, ptr readonly, i32) [[ARGMEM_ATTRS]]
 ; AIX32-NEXT: declare ptr @memset(ptr returned writeonly, i32, i32) [[ARGMEM_WRITE_ATTRS]]
 ; AIX32-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 4 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
 ; AIX32-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
@@ -577,7 +577,7 @@
 ; AIX64-NEXT: declare void @___bzero64(ptr writeonly captures(none), i64) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: declare ptr @___memccpy64(ptr, ptr, i32 signext, i64)
 ; AIX64-NEXT: declare signext i32 @___memcmp64(ptr readonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_READ_ATTRS:#[0-9]+]]
-; AIX64-NEXT: declare ptr @___memmove64(ptr returned writeonly, ptr readonly captures(none), i64) [[ARGMEM_ATTRS:#[0-9]+]]
+; AIX64-NEXT: declare ptr @___memmove64(ptr returned writeonly, ptr readonly, i64) [[ARGMEM_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: declare ptr @___memset64(ptr returned writeonly, i32 signext, i64) [[ARGMEM_WRITE_ATTRS]]
 ; AIX64-NEXT: declare signext i32 @___strcmp64(ptr, ptr)
 ; AIX64-NEXT: declare ptr @___strcpy64(ptr, ptr)
@@ -1050,7 +1050,7 @@
 ; AIX64-NEXT: declare i64 @lroundf128(fp128) [[SQRT_ATTRS]]
 ; AIX64-NEXT: declare i64 @lroundl(double) [[SQRT_ATTRS]]
 ; AIX64-NEXT: declare noalias noundef ptr @malloc(i64 noundef) [[MALLOC_ATTRS:#[0-9]+]]
-; AIX64-NEXT: declare ptr @memmove(ptr returned writeonly, ptr readonly captures(none), i64) [[ARGMEM_ATTRS]]
+; AIX64-NEXT: declare ptr @memmove(ptr returned writeonly, ptr readonly, i64) [[ARGMEM_ATTRS]]
 ; AIX64-NEXT: declare ptr @memset(ptr returned writeonly, i32 signext, i64) [[ARGMEM_WRITE_ATTRS]]
 ; AIX64-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 4 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
 ; AIX64-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
@@ -1610,8 +1610,8 @@
 ; LINUX-NEXT: declare i64 @lroundf128(fp128) [[SQRT_ATTRS]]
 ; LINUX-NEXT: declare i64 @lroundl(ppc_fp128) [[SQRT_ATTRS]]
 ; LINUX-NEXT: declare noalias noundef ptr @malloc(i64 noundef) [[MALLOC_ATTRS:#[0-9]+]]
-; LINUX-NEXT: declare ptr @memcpy(ptr noalias returned writeonly, ptr noalias readonly captures(none), i64) [[ARGMEM_ATTRS:#[0-9]+]]
-; LINUX-NEXT: declare ptr @memmove(ptr returned writeonly, ptr readonly captures(none), i64) [[ARGMEM_ATTRS]]
+; LINUX-NEXT: declare ptr @memcpy(ptr noalias returned writeonly, ptr noalias readonly, i64) [[ARGMEM_ATTRS:#[0-9]+]]
+; LINUX-NEXT: declare ptr @memmove(ptr returned writeonly, ptr readonly, i64) [[ARGMEM_ATTRS]]
 ; LINUX-NEXT: declare ptr @memset(ptr returned writeonly, i32 signext, i64) [[ARGMEM_WRITE_ATTRS]]
 ; LINUX-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
 ; LINUX-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
