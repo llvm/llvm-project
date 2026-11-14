@@ -727,8 +727,10 @@ MustBeExecutedContextExplorer::getMustBeExecutedPrevInstruction(
 
 MustBeExecutedIterator::MustBeExecutedIterator(
     MustBeExecutedContextExplorer &Explorer, const Instruction *I)
-    : Explorer(Explorer), CurInst(I) {
-  reset(I);
+    : Explorer(Explorer), CurInst(I), Head(nullptr), Tail(nullptr) {
+  // The end iterator, without an instruction, never explores anything.
+  if (I)
+    reset(I);
 }
 
 void MustBeExecutedIterator::reset(const Instruction *I) {
