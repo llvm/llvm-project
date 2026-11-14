@@ -21,8 +21,10 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -2200,6 +2202,85 @@ collectVersions(Value *V, SmallVectorImpl<Function *> &Versions,
   return true;
 }
 
+// Limit equivalence-based resolution to small scalar integer expressions. In
+// particular, do not infer equivalence from a common IFUNC or source function:
+// target-specific operations and calls can give versions different behavior.
+static bool isSimpleIntegerVersion(const Function &F) {
+  if (F.isDeclaration() || F.isInterposable() || F.size() != 1 ||
+      F.isVarArg() || !F.getReturnType()->isIntegerTy() ||
+      F.hasPersonalityFn() || F.hasPrefixData() || F.hasPrologueData() ||
+      F.hasGC() || F.hasFnAttribute(Attribute::NoInline) ||
+      F.hasFnAttribute(Attribute::OptimizeNone) || F.front().size() > 32)
+    return false;
+  if (any_of(F.args(),
+             [](const Argument &A) { return !A.getType()->isIntegerTy(); }))
+    return false;
+  for (const Instruction &I : F.front()) {
+    if (I.hasMetadataOtherThanDebugLoc())
+      return false;
+    switch (I.getOpcode()) {
+    case Instruction::Add:
+    case Instruction::Sub:
+    case Instruction::Mul:
+    case Instruction::And:
+    case Instruction::Or:
+    case Instruction::Xor:
+    case Instruction::Shl:
+    case Instruction::LShr:
+    case Instruction::AShr:
+    case Instruction::Trunc:
+    case Instruction::ZExt:
+    case Instruction::SExt:
+    case Instruction::ICmp:
+    case Instruction::Select:
+    case Instruction::Ret:
+      break;
+    default:
+      return false;
+    }
+    if (!I.getType()->isIntegerTy() && !isa<ReturnInst>(I))
+      return false;
+    for (const Value *Op : I.operands())
+      if (!Op->getType()->isIntegerTy() ||
+          (!isa<Argument, Instruction, ConstantInt>(Op)))
+        return false;
+  }
+  return true;
+}
+
+static AttributeList getVersionSemanticAttrs(const Function &F) {
+  AttributeList Attrs = F.getAttributes();
+  for (StringRef Name : {"target-cpu", "target-features", "tune-cpu",
+                         "fmv-features", "fmv-priority"})
+    Attrs = Attrs.removeFnAttribute(F.getContext(), Name);
+  return Attrs;
+}
+
+static bool haveSameIntegerBody(const Function &L, const Function &R) {
+  if (L.getFunctionType() != R.getFunctionType() ||
+      L.getCallingConv() != R.getCallingConv() ||
+      getVersionSemanticAttrs(L) != getVersionSemanticAttrs(R) ||
+      L.front().size() != R.front().size())
+    return false;
+  DenseMap<const Value *, const Value *> Values;
+  for (auto [LA, RA] : zip(L.args(), R.args()))
+    Values[&LA] = &RA;
+  for (auto [LI, RI] : zip(L.front(), R.front())) {
+    if (!LI.isSameOperationAs(&RI) ||
+        LI.getRawSubclassOptionalData() != RI.getRawSubclassOptionalData())
+      return false;
+    for (auto [LO, RO] : zip(LI.operands(), RI.operands())) {
+      if (isa<ConstantInt>(LO)) {
+        if (LO != RO)
+          return false;
+      } else if (Values.lookup(LO) != RO)
+        return false;
+    }
+    Values[&LI] = &RI;
+  }
+  return true;
+}
+
 // Try to statically resolve calls to versioned functions when possible. First
 // we identify the function versions which are associated with an IFUNC symbol.
 // We do that by examining the resolver function of the IFUNC. Once we have
@@ -2221,8 +2302,11 @@ collectVersions(Value *V, SmallVectorImpl<Function *> &Versions,
 //
 // Presentation in EuroLLVM2025:
 // https://www.youtube.com/watch?v=k54MFimPz-A&t=867s
-static bool OptimizeNonTrivialIFuncs(
-    Module &M, function_ref<TargetTransformInfo &(Function &)> GetTTI) {
+static bool
+OptimizeNonTrivialIFuncs(Module &M,
+                         function_ref<TargetTransformInfo &(Function &)> GetTTI,
+                         function_ref<TargetLibraryInfo &(Function &)> GetTLI,
+                         function_ref<AssumptionCache &(Function &)> GetAC) {
   const IPOOptions &Opts = getIPOOptions(M);
   bool Changed = false;
 
@@ -2417,6 +2501,54 @@ static bool OptimizeNonTrivialIFuncs(
       staticallyResolveCalls(Callers, Callees, /*CallerIsFMV=*/true);
     }
 
+    // Exact resolver selection may leave an indirect call, or select a version
+    // whose target requirements prevent inlining. If every possible version
+    // computes the same integer expression, a compatible version is sufficient.
+    // Keep an already compatible direct call. Otherwise choose a compatible
+    // body only when the inline cost model predicts a profitable inlining.
+    if (all_of(Callees,
+               [](Function *F) { return isSimpleIntegerVersion(*F); }) &&
+        all_of(drop_begin(Callees), [&](Function *F) {
+          return haveSameIntegerBody(*Callees.front(), *F);
+        })) {
+      for (auto &Entry : CallSites) {
+        Function *Caller = Entry.first;
+        TargetTransformInfo &TTI = GetTTI(*Caller);
+        for (CallBase *CS : Entry.second) {
+          Function *Current = CS->getCalledFunction();
+          if ((Current &&
+               AttributeFuncs::areInlineCompatible(*Caller, *Current) &&
+               TTI.areInlineCompatible(Caller, Current)) ||
+              CS->isNoInline() || CS->hasOperandBundles() ||
+              CS->isMustTailCall())
+            continue;
+          Function *Replacement = nullptr;
+          int BestCost = 0;
+          for (Function *F : Callees) {
+            if (CS->getFunctionType() != F->getFunctionType() ||
+                CS->getCallingConv() != F->getCallingConv())
+              continue;
+            InlineCost Cost =
+                getInlineCost(*CS, F, getInlineParams(), TTI, GetAC, GetTLI);
+            if (!Cost)
+              continue;
+            if (Cost.isAlways()) {
+              Replacement = F;
+              break;
+            }
+            if (!Replacement || Cost.getCost() < BestCost) {
+              Replacement = F;
+              BestCost = Cost.getCost();
+            }
+          }
+          if (Replacement) {
+            CS->setCalledOperand(Replacement);
+            Changed = true;
+          }
+        }
+      }
+    }
+
     if (CalleeIF->use_empty() ||
         all_of(CalleeIF->users(), [](User *U) { return isa<GlobalAlias>(U); }))
       NumIFuncsResolved++;
@@ -2428,6 +2560,7 @@ static bool
 optimizeGlobalsInModule(Module &M, const DataLayout &DL,
                         function_ref<TargetLibraryInfo &(Function &)> GetTLI,
                         function_ref<TargetTransformInfo &(Function &)> GetTTI,
+                        function_ref<AssumptionCache &(Function &)> GetAC,
                         function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
                         function_ref<DominatorTree &(Function &)> LookupDomTree,
                         function_ref<void(Function &F)> ChangedCFGCallback,
@@ -2491,7 +2624,7 @@ optimizeGlobalsInModule(Module &M, const DataLayout &DL,
     LocalChange |= OptimizeStaticIFuncs(M);
 
     // Optimize IFuncs based on the target features of the caller.
-    LocalChange |= OptimizeNonTrivialIFuncs(M, GetTTI);
+    LocalChange |= OptimizeNonTrivialIFuncs(M, GetTTI, GetTLI, GetAC);
 
     // Remove any IFuncs that are now dead.
     LocalChange |= DeleteDeadIFuncs(M, NotDiscardableComdats);
@@ -2519,6 +2652,9 @@ PreservedAnalyses GlobalOptPass::run(Module &M, ModuleAnalysisManager &AM) {
       return FAM.getResult<TargetIRAnalysis>(F);
     };
 
+    auto GetAC = [&FAM](Function &F) -> AssumptionCache & {
+      return FAM.getResult<AssumptionAnalysis>(F);
+    };
     auto GetBFI = [&FAM](Function &F) -> BlockFrequencyInfo & {
       return FAM.getResult<BlockFrequencyAnalysis>(F);
     };
@@ -2527,8 +2663,9 @@ PreservedAnalyses GlobalOptPass::run(Module &M, ModuleAnalysisManager &AM) {
     };
     auto DeleteFnCallback = [&FAM](Function &F) { FAM.clear(F, F.getName()); };
 
-    if (!optimizeGlobalsInModule(M, DL, GetTLI, GetTTI, GetBFI, LookupDomTree,
-                                 ChangedCFGCallback, DeleteFnCallback))
+    if (!optimizeGlobalsInModule(M, DL, GetTLI, GetTTI, GetAC, GetBFI,
+                                 LookupDomTree, ChangedCFGCallback,
+                                 DeleteFnCallback))
       return PreservedAnalyses::all();
 
     PreservedAnalyses PA = PreservedAnalyses::none();

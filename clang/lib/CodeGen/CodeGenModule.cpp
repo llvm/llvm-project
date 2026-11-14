@@ -3605,7 +3605,7 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
       AddedAttr = true;
     }
   }
-  // Add metadata for AArch64 Function Multi Versioning.
+  // Add metadata for Function Multi Versioning.
   if (getTarget().getTriple().isAArch64()) {
     llvm::SmallVector<StringRef, 8> Feats;
     bool IsDefault = false;
@@ -3626,6 +3626,19 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
       for (StringRef F : OrderedFeats)
         FMVFeatures.append("," + F.str());
       Attrs.addAttribute("fmv-features", FMVFeatures.substr(1));
+      AddedAttr = true;
+    }
+  } else if (getTarget().getTriple().isX86() && getTarget().supportsIFunc() &&
+             TC) {
+    std::optional<StringRef> Arch =
+        TC->getX86Architecture(GD.getMultiVersionIndex());
+    // A CPU-model predicate such as arch=haswell tests CPU identity, not just
+    // supported ISA features. Leave it to runtime dispatch: fmv-features only
+    // represents feature predicates and x86-64 ISA levels.
+    if (!Arch || Arch->starts_with("x86-64")) {
+      StringRef Feature =
+          Arch.value_or(TC->getFeatureStr(GD.getMultiVersionIndex()));
+      Attrs.addAttribute("fmv-features", Feature == "default" ? "" : Feature);
       AddedAttr = true;
     }
   }
