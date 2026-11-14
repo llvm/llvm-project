@@ -7,6 +7,28 @@
 # RUN: llvm-readobj --coff-basereloc %t.exe | FileCheck -check-prefix=BASEREL %s
 # RUN: llvm-objdump --no-print-imm-hex -d %t.exe | FileCheck --check-prefix=DISASM %s
 # RUN: llvm-readobj --file-headers %t.exe | FileCheck -check-prefix=DIR %s
+# RUN: lld-link %t.obj %p/Inputs/library.lib /subsystem:console \
+# RUN:   /entry:mainCRTStartup /alternatename:__delayLoadHelper2=mainCRTStartup \
+# RUN:   /delayload:library.dll /delay:unload /out:%t.unload.exe
+# RUN: llvm-readobj --coff-imports %t.unload.exe > %t.unload.txt
+# RUN: llvm-readobj --sections --section-data %t.unload.exe >> %t.unload.txt
+# RUN: llvm-readobj --coff-basereloc %t.unload.exe >> %t.unload.txt
+# RUN: FileCheck --check-prefix=UNLOAD %s < %t.unload.txt
+
+# UNLOAD: ImportAddressTable: 0x[[#%X,IAT:]]
+# UNLOAD: UnloadDelayImportTable: 0x[[#%X,UIAT:]]
+# UNLOAD: Name: .rdata (
+# UNLOAD: VirtualAddress: 0x[[#%X,ROBASE:]]
+# UNLOAD: Characteristics [ (0x40000040)
+# UNLOAD: SectionData (
+# UNLOAD: [[#%X,UIAT-ROBASE-8]]: {{([0-9A-F]{8})}} {{([0-9A-F]{8})}} [[V0_0:[0-9A-F]{8}]] 00000000
+# UNLOAD: Name: .data (
+# UNLOAD: VirtualAddress: 0x[[#%X,RWBASE:]]
+# UNLOAD: SectionData (
+# UNLOAD: [[#%X,IAT-RWBASE]]: [[V0_0]] 00000000
+# UNLOAD: BaseReloc [
+# UNLOAD: Type: HIGHLOW{{[[:space:]]+}}Address: 0x[[#%X,UIAT]]
+# UNLOAD: Type: HIGHLOW{{[[:space:]]+}}Address: 0x[[#%X,IAT]]
 
 # IMPORT:      Format: COFF-ARM
 # IMPORT-NEXT: Arch: thumb

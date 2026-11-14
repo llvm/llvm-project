@@ -1,0 +1,42 @@
+# REQUIRES: aarch64
+# RUN: split-file %s %t.dir && cd %t.dir
+# RUN: llvm-mc -triple=aarch64-windows -filetype=obj main.s -o main.obj
+# RUN: llvm-lib /machine:arm64 /def:test.def /out:test.lib
+# RUN: lld-link main.obj test.lib /entry:main /subsystem:console /nodefaultlib \
+# RUN:   /delayload:test.dll /delay:unload /out:main.exe
+# RUN: llvm-readobj --coff-imports main.exe > main.txt
+# RUN: llvm-readobj --sections --section-data main.exe >> main.txt
+# RUN: llvm-readobj --coff-basereloc main.exe >> main.txt
+# RUN: FileCheck --check-prefix=CHECK %s < main.txt
+
+CHECK: ImportAddressTable: 0x[[#%X,IAT:]]
+CHECK: UnloadDelayImportTable: 0x[[#%X,UIAT:]]
+CHECK: Name: .rdata (
+CHECK: VirtualAddress: 0x[[#%X,ROBASE:]]
+CHECK: Characteristics [ (0x40000040)
+CHECK: SectionData (
+CHECK: [[#%X,UIAT-ROBASE-8]]: {{([0-9A-F]{8})}} {{([0-9A-F]{8})}} [[V0_0:[0-9A-F]{8} [0-9A-F]{8}]]
+CHECK-NEXT: [[#%X,UIAT-ROBASE+8]]: 00000000 00000000
+CHECK: Name: .data (
+CHECK: VirtualAddress: 0x[[#%X,RWBASE:]]
+CHECK: SectionData (
+CHECK: [[#%X,IAT-RWBASE]]: [[V0_0]] 00000000 00000000
+CHECK: BaseReloc [
+CHECK: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,UIAT]]
+CHECK: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,IAT]]
+
+#--- main.s
+.text
+.globl main
+main:
+  ret
+.globl __delayLoadHelper2
+__delayLoadHelper2:
+  ret
+.data
+  .rva __imp_func
+
+#--- test.def
+NAME test.dll
+EXPORTS
+  func

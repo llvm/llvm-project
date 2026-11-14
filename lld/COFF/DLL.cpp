@@ -226,12 +226,15 @@ public:
     e->ModuleHandle = moduleHandle->getRVA();
     e->DelayImportAddressTable = addressTab->getRVA();
     e->DelayImportNameTable = nameTab->getRVA();
+    if (unloadTab)
+      e->UnloadDelayImportTable = unloadTab->getRVA();
   }
 
   Chunk *dllName;
   Chunk *moduleHandle;
   Chunk *addressTab;
   Chunk *nameTab;
+  Chunk *unloadTab = nullptr;
 };
 
 // Initial contents for delay-loaded functions.
@@ -907,6 +910,7 @@ std::vector<Chunk *> DelayLoadContents::getChunks() {
   v.insert(v.end(), names.begin(), names.end());
   v.insert(v.end(), hintNames.begin(), hintNames.end());
   v.insert(v.end(), dllNames.begin(), dllNames.end());
+  v.insert(v.end(), unloadAddresses.begin(), unloadAddresses.end());
   return v;
 }
 
@@ -948,6 +952,12 @@ void DelayLoadContents::create() {
               Arm64XRelocVal(dir, offsetof(delay_import_directory_table_entry,
                                            DelayImportNameTable)),
               (addresses.size() - base) * sizeof(uint64_t));
+          if (ctx.config.delayUnload)
+            ctx.dynamicRelocs->add(
+                IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA, 0,
+                Arm64XRelocVal(dir, offsetof(delay_import_directory_table_entry,
+                                             UnloadDelayImportTable)),
+                (addresses.size() - base) * sizeof(uint64_t));
         } else {
           base = addresses.size();
         }
@@ -970,6 +980,9 @@ void DelayLoadContents::create() {
         Chunk *t = newThunkChunk(s, tm);
         auto *a = make<DelayAddressChunk>(ctx, t);
         addresses.push_back(a);
+        // The unload table is a pristine copy of the initial IAT.
+        if (ctx.config.delayUnload)
+          unloadAddresses.push_back(make<DelayAddressChunk>(ctx, t));
         s->setLocation(a);
         thunks.push_back(t);
         StringRef extName = s->getExternalName();
@@ -1015,6 +1028,8 @@ void DelayLoadContents::create() {
 
       // Terminate with null values.
       addresses.push_back(make<NullChunk>(ctx, 8));
+      if (ctx.config.delayUnload)
+        unloadAddresses.push_back(make<NullChunk>(ctx, 8));
       names.push_back(make<NullChunk>(ctx, 8));
       if (ctx.symtab.isEC()) {
         auxIat.push_back(make<NullChunk>(ctx, 8));
@@ -1029,6 +1044,8 @@ void DelayLoadContents::create() {
     dir->moduleHandle = mh;
     dir->addressTab = addresses[base];
     dir->nameTab = names[base];
+    if (ctx.config.delayUnload)
+      dir->unloadTab = unloadAddresses[base];
     dirs.push_back(dir);
   }
 

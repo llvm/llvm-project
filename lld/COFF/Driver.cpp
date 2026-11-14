@@ -2591,6 +2591,14 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle /delayload
   {
     llvm::TimeTraceScope timeScope("Delay load");
+    for (auto *arg : args.filtered(OPT_delay)) {
+      StringRef value = arg->getValue();
+      // /delay:nobind is a no-op: lld never emits bound delay imports.
+      if (value.equals_insensitive("unload"))
+        config->delayUnload = true;
+      else if (!value.equals_insensitive("nobind"))
+        Warn(ctx) << "ignoring unknown argument for /delay: " << value;
+    }
     for (auto *arg : args.filtered(OPT_delayload)) {
       config->delayLoads.insert(StringRef(arg->getValue()).lower());
       ctx.forEachActiveSymtab([&](SymbolTable &symtab) {
