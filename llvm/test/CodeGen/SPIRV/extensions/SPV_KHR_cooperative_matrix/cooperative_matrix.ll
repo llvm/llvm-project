@@ -9,6 +9,7 @@
 
 ; CHECK-DAG: %[[#Int32Ty:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#Int16Ty:]] = OpTypeInt 16 0
+; CHECK-DAG: %[[#Int64Ty:]] = OpTypeInt 64 0
 ; CHECK-DAG: %[[#Const12:]] = OpConstant %[[#Int32Ty]] 12{{$}}
 ; CHECK-DAG: %[[#Const48:]] = OpConstant %[[#Int32Ty]] 48{{$}}
 ; CHECK-DAG: %[[#Const16:]] = OpConstant %[[#Int32Ty]] 16{{$}}
@@ -24,12 +25,16 @@
 ; CHECK-DAG: %[[#MatTy5:]] = OpTypeCooperativeMatrixKHR %[[#Int16Ty]] %[[#Const3]] %[[#Const16]] %[[#Const16]] %[[#Const1]]
 ; CHECK-DAG: %[[#MatTy6:]] = OpTypeCooperativeMatrixKHR %[[#Int32Ty]] %[[#Const3]] %[[#Const8]] %[[#Const16]] %[[#Const2]]
 
+; CHECK: %[[#ArgN:]] = OpFunctionParameter %[[#Int64Ty]]
+; CHECK: %[[#ArgK:]] = OpFunctionParameter %[[#Int64Ty]]
 ; CHECK: OpCompositeConstruct %[[#MatTy1]]
-; CHECK: %[[#Load1:]] = OpCooperativeMatrixLoadKHR %[[#MatTy2]]
+; CHECK: %[[#StrideK:]] = OpUConvert %[[#Int32Ty]] %[[#ArgK]]
+; CHECK: %[[#Load1:]] = OpCooperativeMatrixLoadKHR %[[#MatTy2]] %[[#]] %[[#Const0]] %[[#StrideK]] 1{{$}}
 ; CHECK: OpCooperativeMatrixLengthKHR %[[#Int32Ty]] %[[#MatTy2:]]
-; CHECK: OpCooperativeMatrixLoadKHR %[[#MatTy3]]
+; CHECK: OpCooperativeMatrixLoadKHR %[[#MatTy3]] %[[#]] %[[#Const0]] %[[#Const0]]{{$}}
 ; CHECK: OpCooperativeMatrixMulAddKHR %[[#MatTy1]] %[[#]] %[[#]] %[[#]] MatrixCSignedComponentsKHR|MatrixResultSignedComponentsKHR
-; CHECK: OpCooperativeMatrixStoreKHR
+; CHECK: %[[#StrideN:]] = OpUConvert %[[#Int32Ty]] %[[#ArgN]]
+; CHECK: OpCooperativeMatrixStoreKHR %[[#]] %[[#]] %[[#Const0]] %[[#StrideN]] 1{{$}}
 
 ; CHECK: %[[#MatA:]] = OpCooperativeMatrixLoadKHR %[[#MatTy4]] %[[#]] %[[#Const1]] %[[#]] 0{{$}}
 ; CHECK: %[[#MatB:]] = OpCooperativeMatrixLoadKHR %[[#MatTy5]] %[[#]] %[[#Const0]] %[[#]] 0{{$}}
