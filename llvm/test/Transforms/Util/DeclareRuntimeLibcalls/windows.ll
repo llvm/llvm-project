@@ -10,7 +10,7 @@
 ; MSVC: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; MSVC-NEXT: @__security_cookie = external global ptr
 ; MSVC-NEXT: declare i32 @_Unwind_RaiseException(ptr)
-; MSVC-NEXT: declare void @_Unwind_Resume(ptr)
+; MSVC-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; MSVC-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
 ; MSVC-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare fp128 @__addtf3(fp128, fp128) [[NOMEM_ATTRS]]
@@ -85,7 +85,7 @@
 ; MSVC-NEXT: declare i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare i32 @__ctzsi2(i32) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare i32 @__ctzti2(<2 x i64>) [[NOMEM_ATTRS]]
-; MSVC-NEXT: declare void @__cxa_end_cleanup()
+; MSVC-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; MSVC-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare signext i8 @__divqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
@@ -437,6 +437,7 @@
 ; MSVC-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
 ; MSVC-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; MSVC-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; MSVC-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; MSVC-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
@@ -453,7 +454,7 @@
 ; MINGW: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; MINGW-NEXT: @__stack_chk_guard = external global ptr
 ; MINGW-NEXT: declare i32 @_Unwind_RaiseException(ptr)
-; MINGW-NEXT: declare void @_Unwind_Resume(ptr)
+; MINGW-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; MINGW-NEXT: declare void @___chkstk_ms()
 ; MINGW-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
 ; MINGW-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
@@ -528,7 +529,7 @@
 ; MINGW-NEXT: declare i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare i32 @__ctzsi2(i32) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare i32 @__ctzti2(<2 x i64>) [[NOMEM_ATTRS]]
-; MINGW-NEXT: declare void @__cxa_end_cleanup()
+; MINGW-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; MINGW-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare signext i8 @__divqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
@@ -992,6 +993,7 @@
 ; MINGW-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare fp128 @truncf128(fp128) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare x86_fp80 @truncl(x86_fp80) [[NOMEM_ATTRS]]
+; MINGW-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; MINGW-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; MINGW-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; MINGW-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
@@ -1009,7 +1011,7 @@
 ; CYGWIN: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; CYGWIN-NEXT: @__stack_chk_guard = external global ptr
 ; CYGWIN-NEXT: declare i32 @_Unwind_RaiseException(ptr)
-; CYGWIN-NEXT: declare void @_Unwind_Resume(ptr)
+; CYGWIN-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; CYGWIN-NEXT: declare void @___chkstk_ms()
 ; CYGWIN-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
 ; CYGWIN-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
@@ -1084,7 +1086,7 @@
 ; CYGWIN-NEXT: declare i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare i32 @__ctzsi2(i32) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare i32 @__ctzti2(<2 x i64>) [[NOMEM_ATTRS]]
-; CYGWIN-NEXT: declare void @__cxa_end_cleanup()
+; CYGWIN-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; CYGWIN-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare signext i8 @__divqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
@@ -1498,6 +1500,7 @@
 ; CYGWIN-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare x86_fp80 @truncl(x86_fp80) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; CYGWIN-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CYGWIN-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; CYGWIN-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
@@ -1515,7 +1518,7 @@
 ; UEFI: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; UEFI-NEXT: @__stack_chk_guard = external global ptr
 ; UEFI-NEXT: declare i32 @_Unwind_RaiseException(ptr)
-; UEFI-NEXT: declare void @_Unwind_Resume(ptr)
+; UEFI-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; UEFI-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
 ; UEFI-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare fp128 @__addtf3(fp128, fp128) [[NOMEM_ATTRS]]
@@ -1590,7 +1593,7 @@
 ; UEFI-NEXT: declare i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare i32 @__ctzsi2(i32) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare i32 @__ctzti2(<2 x i64>) [[NOMEM_ATTRS]]
-; UEFI-NEXT: declare void @__cxa_end_cleanup()
+; UEFI-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; UEFI-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare signext i8 @__divqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
@@ -1947,6 +1950,7 @@
 ; UEFI-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
 ; UEFI-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; UEFI-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; UEFI-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; UEFI-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }

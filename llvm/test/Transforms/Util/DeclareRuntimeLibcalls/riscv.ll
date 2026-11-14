@@ -8,7 +8,7 @@
 ; RV32: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; RV32-NEXT: @__stack_chk_guard = external global ptr
 ; RV32-NEXT: declare i32 @_Unwind_RaiseException(ptr)
-; RV32-NEXT: declare void @_Unwind_Resume(ptr)
+; RV32-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; RV32-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
 ; RV32-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
 ; RV32-NEXT: declare fp128 @__addtf3(fp128, fp128) [[NOMEM_ATTRS]]
@@ -79,7 +79,7 @@
 ; RV32-NEXT: declare i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; RV32-NEXT: declare i32 @__ctzsi2(i32) [[NOMEM_ATTRS]]
 ; RV32-NEXT: declare i32 @__ctzti2(i128) [[NOMEM_ATTRS]]
-; RV32-NEXT: declare void @__cxa_end_cleanup()
+; RV32-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; RV32-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; RV32-NEXT: declare i64 @__divdi3(i64, i64) [[NOMEM_ATTRS]]
 ; RV32-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
@@ -474,6 +474,7 @@
 ; RV32-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; RV32-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; RV32-NEXT: declare fp128 @truncl(fp128) [[NOMEM_ATTRS]]
+; RV32-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; RV32-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; RV32-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; RV32-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
@@ -491,7 +492,7 @@
 ; RV64: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; RV64-NEXT: @__stack_chk_guard = external global ptr
 ; RV64-NEXT: declare signext i32 @_Unwind_RaiseException(ptr)
-; RV64-NEXT: declare void @_Unwind_Resume(ptr)
+; RV64-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; RV64-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
 ; RV64-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
 ; RV64-NEXT: declare fp128 @__addtf3(fp128, fp128) [[NOMEM_ATTRS]]
@@ -564,7 +565,7 @@
 ; RV64-NEXT: declare signext i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; RV64-NEXT: declare signext i32 @__ctzsi2(i32 signext) [[NOMEM_ATTRS]]
 ; RV64-NEXT: declare signext i32 @__ctzti2(i128) [[NOMEM_ATTRS]]
-; RV64-NEXT: declare void @__cxa_end_cleanup()
+; RV64-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; RV64-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; RV64-NEXT: declare i64 @__divdi3(i64, i64) [[NOMEM_ATTRS]]
 ; RV64-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
@@ -961,6 +962,7 @@
 ; RV64-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; RV64-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; RV64-NEXT: declare fp128 @truncl(fp128) [[NOMEM_ATTRS]]
+; RV64-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; RV64-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; RV64-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; RV64-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }

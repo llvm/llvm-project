@@ -8,7 +8,7 @@
 ; MIPS32: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; MIPS32-NEXT: @__stack_chk_guard = external global ptr
 ; MIPS32-NEXT: declare i32 @_Unwind_RaiseException(ptr)
-; MIPS32-NEXT: declare void @_Unwind_Resume(ptr)
+; MIPS32-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; MIPS32-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
 ; MIPS32-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
 ; MIPS32-NEXT: declare fp128 @__addtf3(fp128, fp128) [[NOMEM_ATTRS]]
@@ -79,7 +79,7 @@
 ; MIPS32-NEXT: declare i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; MIPS32-NEXT: declare i32 @__ctzsi2(i32 signext) [[NOMEM_ATTRS]]
 ; MIPS32-NEXT: declare i32 @__ctzti2(i128) [[NOMEM_ATTRS]]
-; MIPS32-NEXT: declare void @__cxa_end_cleanup()
+; MIPS32-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; MIPS32-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; MIPS32-NEXT: declare i64 @__divdi3(i64, i64) [[NOMEM_ATTRS]]
 ; MIPS32-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
@@ -452,6 +452,7 @@
 ; MIPS32-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
 ; MIPS32-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; MIPS32-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; MIPS32-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; MIPS32-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; MIPS32-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; MIPS32-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
@@ -469,7 +470,7 @@
 ; MIPS64: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; MIPS64-NEXT: @__stack_chk_guard = external global ptr
 ; MIPS64-NEXT: declare i32 @_Unwind_RaiseException(ptr)
-; MIPS64-NEXT: declare void @_Unwind_Resume(ptr)
+; MIPS64-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; MIPS64-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
 ; MIPS64-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
 ; MIPS64-NEXT: declare fp128 @__addtf3(fp128, fp128) [[NOMEM_ATTRS]]
@@ -542,7 +543,7 @@
 ; MIPS64-NEXT: declare i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; MIPS64-NEXT: declare i32 @__ctzsi2(i32 signext) [[NOMEM_ATTRS]]
 ; MIPS64-NEXT: declare i32 @__ctzti2(i128) [[NOMEM_ATTRS]]
-; MIPS64-NEXT: declare void @__cxa_end_cleanup()
+; MIPS64-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; MIPS64-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; MIPS64-NEXT: declare i64 @__divdi3(i64, i64) [[NOMEM_ATTRS]]
 ; MIPS64-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
@@ -941,6 +942,7 @@
 ; MIPS64-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; MIPS64-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; MIPS64-NEXT: declare fp128 @truncl(fp128) [[NOMEM_ATTRS]]
+; MIPS64-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; MIPS64-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; MIPS64-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; MIPS64-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
