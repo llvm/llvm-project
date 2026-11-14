@@ -106,6 +106,7 @@ static void updateSSA(DominatorTree &DT, CallBrInst *CBR, CallInst *Intrinsic,
                       SSAUpdater &SSAUpdate) {
   SmallPtrSet<Use *, 4> Visited;
   BasicBlock *DefaultDest = CBR->getDefaultDest();
+  BasicBlockEdge DefaultEdge(CBR->getParent(), DefaultDest);
   BasicBlock *LandingPad = Intrinsic->getParent();
 
   SmallVector<Use *, 4> Uses(make_pointer_range(CBR->uses()));
@@ -130,8 +131,9 @@ static void updateSSA(DominatorTree &DT, CallBrInst *CBR, CallInst *Intrinsic,
       continue;
     }
 
-    // If the Use is dominated by the default dest, do not touch it.
-    if (DT.dominates(DefaultDest, *U))
+    // If the Use is dominated by the edge to the default dest, do not touch it.
+    // The default dest itself may also be reached from an indirect dest.
+    if (DT.dominates(DefaultEdge, *U))
       continue;
 
     SSAUpdate.RewriteUse(*U);
@@ -181,7 +183,6 @@ static bool insertIntrinsicCalls(CallBrInst *CBR, DominatorTree &DT) {
   SSAUpdater SSAUpdate;
   SSAUpdate.Initialize(CBR->getType(), CBR->getName());
   SSAUpdate.AddAvailableValue(CBR->getParent(), CBR);
-  SSAUpdate.AddAvailableValue(CBR->getDefaultDest(), CBR);
 
   for (BasicBlock *IndDest : CBR->getIndirectDests()) {
     if (!Visited.insert(IndDest).second)
