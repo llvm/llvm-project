@@ -4632,10 +4632,30 @@ unsigned SIRegisterInfo::getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
           : RC.getRegisters();
   for (MCPhysReg Reg : reverse(Registers)) {
     if (Reg != AMDGPU::VCC_LO && Reg != AMDGPU::VCC_HI &&
-        MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/!IncludeCalls))
+        isPhysRegCounted(MRI, Reg, IncludeCalls))
       return getHWRegIndex(Reg) + 1;
   }
   return 0;
+}
+
+bool SIRegisterInfo::isPhysRegCounted(const MachineRegisterInfo &MRI,
+                                      MCRegister Reg, bool IncludeCalls) const {
+  if (IncludeCalls && MRI.getUsedPhysRegsMask().test(Reg.id()))
+    return true;
+  for (MCRegAliasIterator AI(Reg, this, /*IncludeSelf=*/true); AI.isValid();
+       ++AI) {
+    if (any_of(MRI.reg_nodbg_operands(*AI), countsTowardRegisterUsage))
+      return true;
+  }
+  return false;
+}
+
+bool SIRegisterInfo::countsTowardRegisterUsage(const MachineOperand &MO) {
+  if (!MO.isUse() || !MO.isUndef())
+    return true;
+  const MachineInstr &MI = *MO.getParent();
+  return MI.isReturn() || MI.isInlineAsm() ||
+         MI.getMF()->getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled();
 }
 
 SmallVector<StringLiteral>

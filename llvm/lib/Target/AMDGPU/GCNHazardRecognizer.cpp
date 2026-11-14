@@ -2979,7 +2979,8 @@ bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {
   if (!TRI.isVGPR(MRI, AmtReg) || ((AmtReg - AMDGPU::VGPR0) & 7) != 7)
     return false;
 
-  if (AmtReg != AMDGPU::VGPR255 && MRI.isPhysRegUsed(AmtReg + 1))
+  if (AmtReg != AMDGPU::VGPR255 &&
+      TRI.isPhysRegCounted(MRI, AmtReg + 1, /*IncludeCalls=*/true))
     return false;
 
   assert(ST.needsAlignedVGPRs());

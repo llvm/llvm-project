@@ -93,6 +93,6 @@ body:             |
     ; GCN-NEXT: v_fmamk_f16 v5.l, v2.l, 0x1, v4.l
     $vgpr5_lo16 = V_FMAMK_F16_t16 undef $vgpr2_lo16, 1, undef $vgpr4_lo16, implicit $exec, implicit $mode
 
-    ; ASM: NumVgprs: 771
+    ; ASM: NumVgprs: 769
 
 ...
