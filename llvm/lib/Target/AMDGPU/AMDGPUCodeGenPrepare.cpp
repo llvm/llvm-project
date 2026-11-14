@@ -128,6 +128,10 @@ public:
   /// SelectionDAG has an issue where an and asserting the bits are known
   bool replaceMulWithMul24(BinaryOperator &I) const;
 
+  /// \returns true if \p I should stay a plain i64 mul so SelectionDAG can
+  /// fold it into v_mad_[iu]64_[iu]32.
+  bool shouldKeepMulForMad64(const BinaryOperator &I) const;
+
   /// Perform same function as equivalently named function in DAGCombiner. Since
   /// we expand some divisions here, we need to perform this before obscuring.
   bool foldBinOpIntoSelect(BinaryOperator &I) const;
@@ -1400,14 +1404,30 @@ bool AMDGPUCodeGenPrepareImpl::tryNarrowMathIfNoOverflow(Instruction *I) {
   return true;
 }
 
+// Mul24 or narrowing would hide the ISD::MUL that tryFoldToMad64_32 matches.
+bool AMDGPUCodeGenPrepareImpl::shouldKeepMulForMad64(
+    const BinaryOperator &I) const {
+  if (I.getOpcode() != Instruction::Mul || !I.getType()->isIntegerTy(64))
+    return false;
+  if (ST.getGeneration() < AMDGPUSubtarget::GFX9 || UA.isUniformAtDef(&I))
+    return false;
+  // Only the SelectionDAG add combine fuses the mul into the mad.
+  if (getCGPassBuilderOption(TM).EnableGlobalISelOption ==
+      cl::boolOrDefault::BOU_TRUE)
+    return false;
+  return I.hasOneUse() && match(I.user_back(), m_Add(m_Value(), m_Value()));
+}
+
 bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
   if (foldBinOpIntoSelect(I))
     return true;
 
-  if (CLOpts.codegenprepare_mul24 && replaceMulWithMul24(I))
-    return true;
-  if (tryNarrowMathIfNoOverflow(&I))
-    return true;
+  if (!shouldKeepMulForMad64(I)) {
+    if (CLOpts.codegenprepare_mul24 && replaceMulWithMul24(I))
+      return true;
+    if (tryNarrowMathIfNoOverflow(&I))
+      return true;
+  }
 
   bool Changed = false;
   Instruction::BinaryOps Opc = I.getOpcode();
