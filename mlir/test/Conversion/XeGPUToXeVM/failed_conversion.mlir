@@ -305,3 +305,43 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
     gpu.return
   }
 }
+
+// -----
+
+// XeVM has no scalable vectors. Verify that a scalable vector type is rejected
+// rather than flattened to a fixed-length vector, which crashed in the source
+// materialization.
+
+func.func @scf_if_scalable_vector(%cond: i1, %a: vector<[4]x[4]xf32>, %b: vector<[4]x[4]xf32>) -> vector<[4]x[4]xf32> {
+  // expected-error@+1 {{failed to legalize operation 'scf.if' that was explicitly marked illegal}}
+  %0 = scf.if %cond -> (vector<[4]x[4]xf32>) {
+    scf.yield %a : vector<[4]x[4]xf32>
+  } else {
+    scf.yield %b : vector<[4]x[4]xf32>
+  }
+  return %0 : vector<[4]x[4]xf32>
+}
+
+// -----
+
+// The same goes for a scalable result, which the pattern converts on its own.
+
+gpu.module @test_kernel {
+  gpu.func @load_gather_scalable_result(%src: i64, %offsets: vector<4xindex>, %mask: vector<4xi1>) {
+    // expected-error@+1 {{failed to legalize operation 'xegpu.load' that was explicitly marked illegal}}
+    %0 = xegpu.load %src[%offsets], %mask : i64, vector<4xindex>, vector<4xi1> -> vector<[4]xf32>
+    gpu.return
+  }
+}
+
+// -----
+
+gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
+  gpu.func @load_matrix_scalable_result(%arg0: memref<4096xi8, 3>) {
+    %c0 = arith.constant 0 : index
+    %0 = xegpu.create_mem_desc %arg0 : memref<4096xi8, 3> -> !xegpu.mem_desc<32x32xf32>
+    // expected-error@+1 {{failed to legalize operation 'xegpu.load_matrix' that was explicitly marked illegal}}
+    %1 = xegpu.load_matrix %0[%c0, %c0]: !xegpu.mem_desc<32x32xf32>, index, index -> vector<[8]xf32>
+    gpu.return
+  }
+}

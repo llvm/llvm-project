@@ -876,6 +876,8 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
           this->getTypeConverter()->convertType(op.getResult().getType());
     else
       valOrResTy = adaptor.getValue().getType();
+    if (!valOrResTy)
+      return rewriter.notifyMatchFailure(op, "Unsupported result type.");
     VectorType valOrResVecTy = dyn_cast<VectorType>(valOrResTy);
     bool hasScalarVal = !valOrResVecTy;
     int64_t elemBitWidth =
@@ -1102,6 +1104,8 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
           this->getTypeConverter()->convertType(op.getResult().getType());
     else
       payloadTy = adaptor.getData().getType();
+    if (!payloadTy)
+      return rewriter.notifyMatchFailure(op, "Unsupported result type.");
     auto payloadVecTy = dyn_cast<VectorType>(payloadTy);
 
     Type sliceTy = payloadTy;
@@ -2041,6 +2045,10 @@ struct ConvertXeGPUToXeVMPass
     Type xevmIndexType = typeConverter.convertType(IndexType::get(context));
     Type i32Type = IntegerType::get(context, 32);
     typeConverter.addConversion([&](VectorType type) -> Type {
+      // XeVM has no scalable vectors. Fail the conversion instead of
+      // flattening to a fixed-length vector, which drops the scalable dims.
+      if (type.isScalable())
+        return {};
       auto elemType = typeConverter.convertType(type.getElementType());
       // If the vector rank is 0 or has a single element, return the element
       unsigned rank = type.getRank();
