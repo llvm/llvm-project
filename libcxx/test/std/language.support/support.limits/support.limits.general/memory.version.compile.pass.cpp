@@ -24,6 +24,14 @@
 #    error "__cpp_lib_addressof_constexpr should not be defined before c++17"
 #  endif
 
+#  ifdef __cpp_lib_algorithm_default_value_type
+#    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_algorithm_iterator_requirements
+#    error "__cpp_lib_algorithm_iterator_requirements should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_allocate_at_least
 #    error "__cpp_lib_allocate_at_least should not be defined before c++23"
 #  endif
@@ -104,6 +112,14 @@
 #    error "__cpp_lib_smart_ptr_owner_equality should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_start_lifetime
+#    error "__cpp_lib_start_lifetime should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_start_lifetime_as
+#    error "__cpp_lib_start_lifetime_as should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_to_address
 #    error "__cpp_lib_to_address should not be defined before c++20"
 #  endif
@@ -116,6 +132,14 @@
 
 #  ifdef __cpp_lib_addressof_constexpr
 #    error "__cpp_lib_addressof_constexpr should not be defined before c++17"
+#  endif
+
+#  ifdef __cpp_lib_algorithm_default_value_type
+#    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_algorithm_iterator_requirements
+#    error "__cpp_lib_algorithm_iterator_requirements should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_allocate_at_least
@@ -201,6 +225,14 @@
 #    error "__cpp_lib_smart_ptr_owner_equality should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_start_lifetime
+#    error "__cpp_lib_start_lifetime should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_start_lifetime_as
+#    error "__cpp_lib_start_lifetime_as should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_to_address
 #    error "__cpp_lib_to_address should not be defined before c++20"
 #  endif
@@ -219,6 +251,14 @@
 #  endif
 #  if __cpp_lib_addressof_constexpr != 201603L
 #    error "__cpp_lib_addressof_constexpr should have the value 201603L in c++17"
+#  endif
+
+#  ifdef __cpp_lib_algorithm_default_value_type
+#    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_algorithm_iterator_requirements
+#    error "__cpp_lib_algorithm_iterator_requirements should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_allocate_at_least
@@ -319,6 +359,14 @@
 #    error "__cpp_lib_smart_ptr_owner_equality should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_start_lifetime
+#    error "__cpp_lib_start_lifetime should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_start_lifetime_as
+#    error "__cpp_lib_start_lifetime_as should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_to_address
 #    error "__cpp_lib_to_address should not be defined before c++20"
 #  endif
@@ -337,6 +385,14 @@
 #  endif
 #  if __cpp_lib_addressof_constexpr != 201603L
 #    error "__cpp_lib_addressof_constexpr should have the value 201603L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_algorithm_default_value_type
+#    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_algorithm_iterator_requirements
+#    error "__cpp_lib_algorithm_iterator_requirements should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_allocate_at_least
@@ -455,6 +511,14 @@
 #    error "__cpp_lib_smart_ptr_owner_equality should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_start_lifetime
+#    error "__cpp_lib_start_lifetime should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_start_lifetime_as
+#    error "__cpp_lib_start_lifetime_as should not be defined before c++23"
+#  endif
+
 #  ifndef __cpp_lib_to_address
 #    error "__cpp_lib_to_address should be defined in c++20"
 #  endif
@@ -476,6 +540,23 @@
 #  endif
 #  if __cpp_lib_addressof_constexpr != 201603L
 #    error "__cpp_lib_addressof_constexpr should have the value 201603L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_algorithm_default_value_type
+#    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_algorithm_iterator_requirements
+#      error "__cpp_lib_algorithm_iterator_requirements should be defined in c++23"
+#    endif
+#    if __cpp_lib_algorithm_iterator_requirements != 202207L
+#      error "__cpp_lib_algorithm_iterator_requirements should have the value 202207L in c++23"
+#    endif
+#  else
+#    ifdef __cpp_lib_algorithm_iterator_requirements
+#      error "__cpp_lib_algorithm_iterator_requirements should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_allocate_at_least
@@ -600,6 +681,23 @@
 #    error "__cpp_lib_smart_ptr_owner_equality should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_start_lifetime
+#    error "__cpp_lib_start_lifetime should not be defined before c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_start_lifetime_as
+#      error "__cpp_lib_start_lifetime_as should be defined in c++23"
+#    endif
+#    if __cpp_lib_start_lifetime_as != 202207L
+#      error "__cpp_lib_start_lifetime_as should have the value 202207L in c++23"
+#    endif
+#  else
+#    ifdef __cpp_lib_start_lifetime_as
+#      error "__cpp_lib_start_lifetime_as should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_to_address
 #    error "__cpp_lib_to_address should be defined in c++23"
 #  endif
@@ -621,6 +719,32 @@
 #  endif
 #  if __cpp_lib_addressof_constexpr != 201603L
 #    error "__cpp_lib_addressof_constexpr should have the value 201603L in c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_algorithm_default_value_type
+#      error "__cpp_lib_algorithm_default_value_type should be defined in c++26"
+#    endif
+#    if __cpp_lib_algorithm_default_value_type != 202603L
+#      error "__cpp_lib_algorithm_default_value_type should have the value 202603L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_algorithm_default_value_type
+#      error "__cpp_lib_algorithm_default_value_type should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_algorithm_iterator_requirements
+#      error "__cpp_lib_algorithm_iterator_requirements should be defined in c++26"
+#    endif
+#    if __cpp_lib_algorithm_iterator_requirements != 202207L
+#      error "__cpp_lib_algorithm_iterator_requirements should have the value 202207L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_algorithm_iterator_requirements
+#      error "__cpp_lib_algorithm_iterator_requirements should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_allocate_at_least
@@ -778,6 +902,32 @@
 #    error "__cpp_lib_smart_ptr_owner_equality should have the value 202306L in c++26"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_start_lifetime
+#      error "__cpp_lib_start_lifetime should be defined in c++26"
+#    endif
+#    if __cpp_lib_start_lifetime != 202603L
+#      error "__cpp_lib_start_lifetime should have the value 202603L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_start_lifetime
+#      error "__cpp_lib_start_lifetime should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_start_lifetime_as
+#      error "__cpp_lib_start_lifetime_as should be defined in c++26"
+#    endif
+#    if __cpp_lib_start_lifetime_as != 202207L
+#      error "__cpp_lib_start_lifetime_as should have the value 202207L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_start_lifetime_as
+#      error "__cpp_lib_start_lifetime_as should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_to_address
 #    error "__cpp_lib_to_address should be defined in c++26"
 #  endif
@@ -799,6 +949,32 @@
 #  endif
 #  if __cpp_lib_addressof_constexpr != 201603L
 #    error "__cpp_lib_addressof_constexpr should have the value 201603L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_algorithm_default_value_type
+#      error "__cpp_lib_algorithm_default_value_type should be defined in c++29"
+#    endif
+#    if __cpp_lib_algorithm_default_value_type != 202603L
+#      error "__cpp_lib_algorithm_default_value_type should have the value 202603L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_algorithm_default_value_type
+#      error "__cpp_lib_algorithm_default_value_type should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_algorithm_iterator_requirements
+#      error "__cpp_lib_algorithm_iterator_requirements should be defined in c++29"
+#    endif
+#    if __cpp_lib_algorithm_iterator_requirements != 202207L
+#      error "__cpp_lib_algorithm_iterator_requirements should have the value 202207L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_algorithm_iterator_requirements
+#      error "__cpp_lib_algorithm_iterator_requirements should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_allocate_at_least
@@ -963,6 +1139,32 @@
 #  endif
 #  if __cpp_lib_smart_ptr_owner_equality != 202306L
 #    error "__cpp_lib_smart_ptr_owner_equality should have the value 202306L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_start_lifetime
+#      error "__cpp_lib_start_lifetime should be defined in c++29"
+#    endif
+#    if __cpp_lib_start_lifetime != 202603L
+#      error "__cpp_lib_start_lifetime should have the value 202603L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_start_lifetime
+#      error "__cpp_lib_start_lifetime should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_start_lifetime_as
+#      error "__cpp_lib_start_lifetime_as should be defined in c++29"
+#    endif
+#    if __cpp_lib_start_lifetime_as != 202207L
+#      error "__cpp_lib_start_lifetime_as should have the value 202207L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_start_lifetime_as
+#      error "__cpp_lib_start_lifetime_as should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_to_address

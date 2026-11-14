@@ -20,6 +20,10 @@
 
 #if TEST_STD_VER < 14
 
+#  ifdef __cpp_lib_algorithm_default_value_type
+#    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_default_template_type_for_algorithm_values
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
 #  endif
@@ -48,6 +52,10 @@
 #    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_cartesian_product
+#    error "__cpp_lib_ranges_cartesian_product should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_chunk
 #    error "__cpp_lib_ranges_chunk should not be defined before c++23"
 #  endif
@@ -62,6 +70,10 @@
 
 #  ifdef __cpp_lib_ranges_enumerate
 #    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_filter
+#    error "__cpp_lib_ranges_filter should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_indices
@@ -102,6 +114,10 @@
 
 #elif TEST_STD_VER == 14
 
+#  ifdef __cpp_lib_algorithm_default_value_type
+#    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_default_template_type_for_algorithm_values
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
 #  endif
@@ -130,6 +146,10 @@
 #    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_cartesian_product
+#    error "__cpp_lib_ranges_cartesian_product should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_chunk
 #    error "__cpp_lib_ranges_chunk should not be defined before c++23"
 #  endif
@@ -144,6 +164,10 @@
 
 #  ifdef __cpp_lib_ranges_enumerate
 #    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_filter
+#    error "__cpp_lib_ranges_filter should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_indices
@@ -184,6 +208,10 @@
 
 #elif TEST_STD_VER == 17
 
+#  ifdef __cpp_lib_algorithm_default_value_type
+#    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_default_template_type_for_algorithm_values
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
 #  endif
@@ -212,6 +240,10 @@
 #    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_cartesian_product
+#    error "__cpp_lib_ranges_cartesian_product should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_chunk
 #    error "__cpp_lib_ranges_chunk should not be defined before c++23"
 #  endif
@@ -226,6 +258,10 @@
 
 #  ifdef __cpp_lib_ranges_enumerate
 #    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_filter
+#    error "__cpp_lib_ranges_filter should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_indices
@@ -266,6 +302,10 @@
 
 #elif TEST_STD_VER == 20
 
+#  ifdef __cpp_lib_algorithm_default_value_type
+#    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_default_template_type_for_algorithm_values
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
 #  endif
@@ -297,6 +337,10 @@
 #    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_cartesian_product
+#    error "__cpp_lib_ranges_cartesian_product should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_chunk
 #    error "__cpp_lib_ranges_chunk should not be defined before c++23"
 #  endif
@@ -311,6 +355,10 @@
 
 #  ifdef __cpp_lib_ranges_enumerate
 #    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_filter
+#    error "__cpp_lib_ranges_filter should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_indices
@@ -350,6 +398,10 @@
 #  endif
 
 #elif TEST_STD_VER == 23
+
+#  ifdef __cpp_lib_algorithm_default_value_type
+#    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
 
 #  ifdef __cpp_lib_default_template_type_for_algorithm_values
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
@@ -395,6 +447,19 @@
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_cartesian_product
+#      error "__cpp_lib_ranges_cartesian_product should be defined in c++23"
+#    endif
+#    if __cpp_lib_ranges_cartesian_product != 202207L
+#      error "__cpp_lib_ranges_cartesian_product should have the value 202207L in c++23"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_cartesian_product
+#      error "__cpp_lib_ranges_cartesian_product should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_ranges_chunk
 #      error "__cpp_lib_ranges_chunk should be defined in c++23"
 #    endif
@@ -423,6 +488,10 @@
 #  endif
 #  if __cpp_lib_ranges_enumerate != 202302L
 #    error "__cpp_lib_ranges_enumerate should have the value 202302L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_filter
+#    error "__cpp_lib_ranges_filter should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_indices
@@ -486,6 +555,19 @@
 #  endif
 
 #elif TEST_STD_VER == 26
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_algorithm_default_value_type
+#      error "__cpp_lib_algorithm_default_value_type should be defined in c++26"
+#    endif
+#    if __cpp_lib_algorithm_default_value_type != 202603L
+#      error "__cpp_lib_algorithm_default_value_type should have the value 202603L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_algorithm_default_value_type
+#      error "__cpp_lib_algorithm_default_value_type should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
 
 #  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_default_template_type_for_algorithm_values
@@ -567,6 +649,19 @@
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_cartesian_product
+#      error "__cpp_lib_ranges_cartesian_product should be defined in c++26"
+#    endif
+#    if __cpp_lib_ranges_cartesian_product != 202207L
+#      error "__cpp_lib_ranges_cartesian_product should have the value 202207L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_cartesian_product
+#      error "__cpp_lib_ranges_cartesian_product should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_ranges_chunk
 #      error "__cpp_lib_ranges_chunk should be defined in c++26"
 #    endif
@@ -598,6 +693,19 @@
 #  endif
 #  if __cpp_lib_ranges_enumerate != 202302L
 #    error "__cpp_lib_ranges_enumerate should have the value 202302L in c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_filter
+#      error "__cpp_lib_ranges_filter should be defined in c++26"
+#    endif
+#    if __cpp_lib_ranges_filter != 202603L
+#      error "__cpp_lib_ranges_filter should have the value 202603L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_filter
+#      error "__cpp_lib_ranges_filter should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_ranges_indices
@@ -673,6 +781,19 @@
 #  endif
 
 #elif TEST_STD_VER > 26
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_algorithm_default_value_type
+#      error "__cpp_lib_algorithm_default_value_type should be defined in c++29"
+#    endif
+#    if __cpp_lib_algorithm_default_value_type != 202603L
+#      error "__cpp_lib_algorithm_default_value_type should have the value 202603L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_algorithm_default_value_type
+#      error "__cpp_lib_algorithm_default_value_type should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
 
 #  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_default_template_type_for_algorithm_values
@@ -754,6 +875,19 @@
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_cartesian_product
+#      error "__cpp_lib_ranges_cartesian_product should be defined in c++29"
+#    endif
+#    if __cpp_lib_ranges_cartesian_product != 202207L
+#      error "__cpp_lib_ranges_cartesian_product should have the value 202207L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_cartesian_product
+#      error "__cpp_lib_ranges_cartesian_product should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_ranges_chunk
 #      error "__cpp_lib_ranges_chunk should be defined in c++29"
 #    endif
@@ -785,6 +919,19 @@
 #  endif
 #  if __cpp_lib_ranges_enumerate != 202302L
 #    error "__cpp_lib_ranges_enumerate should have the value 202302L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_filter
+#      error "__cpp_lib_ranges_filter should be defined in c++29"
+#    endif
+#    if __cpp_lib_ranges_filter != 202603L
+#      error "__cpp_lib_ranges_filter should have the value 202603L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_filter
+#      error "__cpp_lib_ranges_filter should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_ranges_indices

@@ -20,6 +20,10 @@
 
 #if TEST_STD_VER < 14
 
+#  ifdef __cpp_lib_algorithm_default_value_type
+#    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_allocator_traits_is_always_equal
 #    error "__cpp_lib_allocator_traits_is_always_equal should not be defined before c++17"
 #  endif
@@ -54,6 +58,10 @@
 
 #elif TEST_STD_VER == 14
 
+#  ifdef __cpp_lib_algorithm_default_value_type
+#    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_allocator_traits_is_always_equal
 #    error "__cpp_lib_allocator_traits_is_always_equal should not be defined before c++17"
 #  endif
@@ -87,6 +95,10 @@
 #  endif
 
 #elif TEST_STD_VER == 17
+
+#  ifdef __cpp_lib_algorithm_default_value_type
+#    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
 
 #  ifndef __cpp_lib_allocator_traits_is_always_equal
 #    error "__cpp_lib_allocator_traits_is_always_equal should be defined in c++17"
@@ -130,6 +142,10 @@
 #  endif
 
 #elif TEST_STD_VER == 20
+
+#  ifdef __cpp_lib_algorithm_default_value_type
+#    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
 
 #  ifndef __cpp_lib_allocator_traits_is_always_equal
 #    error "__cpp_lib_allocator_traits_is_always_equal should be defined in c++20"
@@ -179,6 +195,10 @@
 #  endif
 
 #elif TEST_STD_VER == 23
+
+#  ifdef __cpp_lib_algorithm_default_value_type
+#    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
 
 #  ifndef __cpp_lib_allocator_traits_is_always_equal
 #    error "__cpp_lib_allocator_traits_is_always_equal should be defined in c++23"
@@ -231,6 +251,19 @@
 #  endif
 
 #elif TEST_STD_VER == 26
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_algorithm_default_value_type
+#      error "__cpp_lib_algorithm_default_value_type should be defined in c++26"
+#    endif
+#    if __cpp_lib_algorithm_default_value_type != 202603L
+#      error "__cpp_lib_algorithm_default_value_type should have the value 202603L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_algorithm_default_value_type
+#      error "__cpp_lib_algorithm_default_value_type should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
 
 #  ifndef __cpp_lib_allocator_traits_is_always_equal
 #    error "__cpp_lib_allocator_traits_is_always_equal should be defined in c++26"
@@ -301,6 +334,19 @@
 #  endif
 
 #elif TEST_STD_VER > 26
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_algorithm_default_value_type
+#      error "__cpp_lib_algorithm_default_value_type should be defined in c++29"
+#    endif
+#    if __cpp_lib_algorithm_default_value_type != 202603L
+#      error "__cpp_lib_algorithm_default_value_type should have the value 202603L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_algorithm_default_value_type
+#      error "__cpp_lib_algorithm_default_value_type should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
 
 #  ifndef __cpp_lib_allocator_traits_is_always_equal
 #    error "__cpp_lib_allocator_traits_is_always_equal should be defined in c++29"

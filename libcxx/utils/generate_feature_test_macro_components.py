@@ -99,6 +99,31 @@ feature_test_macros = [
             "headers": ["memory"],
         },
         {
+            "name": "__cpp_lib_algorithm_default_value_type",
+            "values": {"c++26": 202603},
+            "headers": [
+                "algorithm",
+                "deque",
+                "forward_list",
+                "list",
+                "memory",
+                "ranges",
+                "string",
+                "vector",
+            ],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_algorithm_iterator_requirements",
+            "values": {"c++23": 202207},
+            "headers": [
+                "algorithm",
+                "memory",
+                "numeric",
+            ],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_aligned_accessor",
             "values": {"c++26": 202411},
             "headers": ["mdspan"],
@@ -429,6 +454,12 @@ feature_test_macros = [
             "headers": ["flat_set"],
         },
         {
+            "name": "__cpp_lib_constexpr_format",
+            "values": {"c++26": 202511},
+            "headers": ["format"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_constexpr_forward_list",
             "values": {"c++26": 202502},
             "headers": ["forward_list"],
@@ -499,7 +530,10 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_constexpr_string",
-            "values": {"c++20": 201907},
+            "values": {
+                "c++20": 201907,
+                # "c++26": 202511,  # P3391R2: constexpr std::format
+            },
             "headers": ["string"],
         },
         {
@@ -637,7 +671,10 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_exception_ptr_cast",
-            "values": {"c++26": 202506},
+            "values": {
+                "c++26": 202506,
+                # "c++26": 202603,  # P3981R2: Better return types in std::inplace_vector and std::exception_ptr_cast
+            },
             "headers": ["exception"],
             "unimplemented": True,
         },
@@ -822,6 +859,12 @@ feature_test_macros = [
             "unimplemented": True,
         },
         {
+            "name": "__cpp_lib_generator",
+            "values": {"c++23": 202207},
+            "headers": ["generator"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_generic_associative_lookup",
             "values": {"c++14": 201304},
             "headers": ["map", "set"],
@@ -993,7 +1036,11 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_inplace_vector",
-            "values": {"c++26": 202406},  # P0843R14 inplace_vector
+            "values": {
+                "c++26": 202406,  # P0843R14 inplace_vector
+                "c++26": 202603,  # P4022R0: Remove try_append_range from inplace_vector for now
+                #                 # P3981R2: Better return types in std::inplace_vector and std::exception_ptr_cast
+            },
             "headers": ["inplace_vector"],
             "unimplemented": True,
         },
@@ -1095,6 +1142,12 @@ feature_test_macros = [
             "headers": ["type_traits"],
         },
         {
+            "name": "__cpp_lib_is_structural",
+            "values": {"c++26": 202603},
+            "headers": ["meta", "type_traits"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_is_sufficiently_aligned",
             "values": {"c++26": 202411},
             "headers": ["memory"],
@@ -1145,6 +1198,7 @@ feature_test_macros = [
                 "c++26": 202311  # P1673 A free function linear algebra interface based on the BLAS
                 # "c++26": 202411  # P3222R0 Fix C++26 by adding transposed special cases for P2642 layouts
                 # "c++26": 202411  # P3050R2 Fix C++26 by optimizing linalg::conjugated for noncomplex value types
+                # "c++26": 202511  # P3371R5 Fix C++26 by making the rank-1, rank-2, rank-k, and rank-2k updates consistent with the BLAS
             },
             "headers": ["linalg"],
             "unimplemented": True,
@@ -1401,6 +1455,12 @@ feature_test_macros = [
             "unimplemented": True,
         },
         {
+            "name": "__cpp_lib_ranges_cartesian_product",
+            "values": {"c++23": 202207},
+            "headers": ["ranges"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_ranges_chunk",
             "values": {"c++23": 202202},
             "headers": ["ranges"],
@@ -1425,6 +1485,14 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_enumerate",
             "values": {"c++23": 202302},
             "headers": ["ranges"],
+        },
+        {
+            "name": "__cpp_lib_ranges_filter",
+            "values": {
+                "c++26": 202603,  # P3725R3: Filter View Extensions for Safer Use, Rev 3
+            },
+            "headers": ["ranges"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_find_last",
@@ -1600,6 +1668,8 @@ feature_test_macros = [
                 "c++26": 202411,  # P1928R15: std::simd — merge data-parallel types from the Parallelism TS 2
                 # "c++26": 202506,  # P2876R3: Proposal to extend std::simd with more constructors and accessors
                 #                   # P3480R6: std::simd is a range
+                # "c++26": 202603,  # P4012R1: Value-preserving consteval broadcast to simd::vec
+                #                   # P3690R1: Consistency fix: Make simd reductions SIMD-generic
                 # "c++29": 202606,  # P3319R6 Add an iota object for simd (and more)
             },
             "headers": ["simd"],
@@ -1685,6 +1755,18 @@ feature_test_macros = [
             "unimplemented": True,
         },
         {
+            "name": "__cpp_lib_start_lifetime",
+            "values": {"c++26": 202603},
+            "headers": ["memory"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_start_lifetime_as",
+            "values": {"c++23": 202207},
+            "headers": ["memory"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_starts_ends_with",
             "values": {"c++20": 201711},
             "headers": ["string", "string_view"],
@@ -1726,8 +1808,10 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_submdspan",
             "values": {
-                "c++26": 202306, # P2630R4: submdspan
-                # "c++26": 202403, # P2642R6: Padded mdspan layouts
+                "c++26": 202306,  # P2630R4: submdspan
+                # "c++26": 202403,  # P2642R6: Padded mdspan layouts
+                # "c++26": 202511,  # P3663R3: Future-proof submdspan_mapping
+                # "c++26": 202603,  # P3982R2: Split strided_slice into extent_slice and range_slice for C++26
             },
             "headers": ["mdspan"],
             "unimplemented": True,
