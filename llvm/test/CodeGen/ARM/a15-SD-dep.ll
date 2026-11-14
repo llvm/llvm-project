@@ -1,6 +1,7 @@
 ; RUN: llc -O1 -mattr=+splat-vfp-neon -mtriple=armv7-linux-gnueabi -verify-machineinstrs -disable-a15-sd-optimization < %s | FileCheck -check-prefixes=CHECK,CHECK-DISABLED %s
 ; RUN: llc -O1 -mattr=-splat-vfp-neon -mtriple=armv7-linux-gnueabi -verify-machineinstrs                              < %s | FileCheck -check-prefixes=CHECK,CHECK-DISABLED %s
 ; RUN: llc -O1 -mattr=+splat-vfp-neon -mtriple=armv7-linux-gnueabi -verify-machineinstrs                              < %s | FileCheck -check-prefixes=CHECK,CHECK-ENABLED  %s
+; RUN: llc -O1 -mattr=+splat-vfp-neon -mtriple=armv7-linux-gnueabi -verify-machineinstrs -debugify-and-strip-all-safe < %s | FileCheck -check-prefixes=CHECK,CHECK-ENABLED %s
 
 ; CHECK-LABEL: t1:
 define <2 x float> @t1(float %f) {
@@ -108,4 +109,15 @@ sw.bb1:                                           ; preds = %entry, %sw.bb
 
 sw.epilog:                                        ; preds = %entry, %sw.bb1
   ret void
+}
+
+; A debug use of a D register built from two S registers must not make the
+; optimizer rewrite the D register's definition.
+; CHECK-LABEL: build_vector_debug_use:
+define arm_aapcs_vfpcc <2 x float> @build_vector_debug_use(float %a, float %b) {
+  ; CHECK-NOT: {{vdup|vext}}
+  ; CHECK: bx lr
+  %v0 = insertelement <2 x float> poison, float %a, i32 0
+  %v1 = insertelement <2 x float> %v0, float %b, i32 1
+  ret <2 x float> %v1
 }
