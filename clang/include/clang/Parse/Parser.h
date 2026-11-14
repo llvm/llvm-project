@@ -3191,6 +3191,14 @@ private:
     return isCXX11VirtSpecifier(Tok);
   }
 
+  /// Diagnose a macro named after \p VS ('final' or 'override'; other
+  /// specifiers are ignored) that was expanded where the current token is, or
+  /// immediately before it, i.e. where that identifier would have been a
+  /// contextual keyword ([cpp.replace.general]). \p VS is the specifier the
+  /// grammar accepts at this position, not the current token, which the macro
+  /// has usually replaced.
+  void DiagnoseVirtSpecifierMacro(VirtSpecifiers::Specifier VS);
+
   /// ParseOptionalCXX11VirtSpecifierSeq - Parse a virt-specifier-seq.
   ///
   /// \verbatim

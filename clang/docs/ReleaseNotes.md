@@ -814,6 +814,15 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Added `-Wunsafe-buffer-usage-main-argv` as a diagnostic group under
   `-Wunsafe-buffer-usage` to control warnings on `main`'s `argv` parameter,
   allowing users to suppress them with `-Wno-unsafe-buffer-usage-main-argv`.
+- In C++, `-Wkeyword-macro` is now an error-by-default warning for `#define`
+  directives whose macro name is a C++ keyword or an identifier with
+  special meaning. The corresponding `#undef` diagnostic is not enabled by
+  default; it is enabled by `-pedantic`, `-Wkeyword-macro`, or its more
+  specific `-Wkeyword-macro-undef` subgroup. Keywords that are only enabled by
+  an extension (such as `typeof` in GNU mode), C keywords such as
+  `_Static_assert`, and all keywords in C keep the previous pedantic-only
+  diagnostic.
+
 
 - `-Wno-unsafe-buffer-usage-in-libc-call` no longer turns off
   `-Wunsafe-buffer-usage-in-format-attr-call`, and

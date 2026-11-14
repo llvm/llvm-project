@@ -1914,6 +1914,9 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   // If there are attributes after class name, parse them.
   MaybeParseCXX11Attributes(Attributes);
 
+  if (Name || TemplateId)
+    DiagnoseVirtSpecifierMacro(VirtSpecifiers::VS_Final);
+
   const PrintingPolicy &Policy = Actions.getASTContext().getPrintingPolicy();
   TagUseKind TUK;
 
@@ -2510,10 +2513,89 @@ VirtSpecifiers::Specifier Parser::isCXX11VirtSpecifier(const Token &Tok) const {
   return VirtSpecifiers::VS_None;
 }
 
+void Parser::DiagnoseVirtSpecifierMacro(VirtSpecifiers::Specifier VS) {
+  if (!getLangOpts().CPlusPlus11 ||
+      (VS != VirtSpecifiers::VS_Final && VS != VirtSpecifiers::VS_Override))
+    return;
+
+  IdentifierInfo *Kw =
+      PP.getIdentifierInfo(VirtSpecifiers::getSpecifierName(VS));
+
+  // Fast path: in almost all code the keyword was never #defined.
+  if (!Kw->hadMacroDefinition() || Tok.getLocation().isInvalid())
+    return;
+
+  const SourceManager &SM = PP.getSourceManager();
+  SourceLocation TokLoc = Tok.getLocation();
+  SourceLocation TokExpansionLoc = SM.getExpansionLoc(TokLoc);
+
+  // The macro expanded to at least one token and the current token came
+  // from that expansion, e.g. '#define final 1' or '#define final final'.
+  for (SourceLocation L = TokLoc; L.isMacroID();
+       L = SM.getImmediateMacroCallerLoc(L)) {
+    if (PP.getImmediateMacroName(L) != Kw->getName())
+      continue;
+    SourceLocation ExpandLoc = SM.getExpansionLoc(L);
+    const MacroInfo *MI =
+        PP.getMacroDefinitionAtLoc(Kw, ExpandLoc).getMacroInfo();
+    PP.diagnoseContextualKeywordMacro(Kw, MI ? MI : PP.getMacroInfo(Kw),
+                                      ExpandLoc);
+    return;
+  }
+
+  // The macro expanded to nothing, e.g. '#define final' or
+  // '#define final EMPTY'. The parser never saw the identifier, but it is
+  // the raw token immediately preceding the current one, either in the file
+  // or in the body of the macro that produced the current token.
+  const MacroInfo *MI =
+      PP.getMacroDefinitionAtLoc(Kw, TokExpansionLoc).getMacroInfo();
+  if (!MI)
+    return;
+  auto PrecedesTokAfter = [&](SourceLocation Loc, SourceLocation Lower) {
+    std::optional<Token> Prev = Lexer::findPreviousToken(
+        Loc, SM, getLangOpts(), /*IncludeComments=*/false);
+    // findPreviousToken may walk back across lines, so the token must lie
+    // strictly after Lower (the previous parsed token, or the start of the
+    // macro definition the current token was spelled in).
+    if (!Prev || Prev->isNot(tok::raw_identifier) ||
+        Prev->getRawIdentifier() != Kw->getName() ||
+        !SM.isBeforeInTranslationUnit(Lower, Prev->getLocation()))
+      return SourceLocation();
+    return Prev->getLocation();
+  };
+
+  // The keyword was written in the file, e.g. 'struct S final {'.
+  if (PrevTokLocation.isValid()) {
+    if (SourceLocation L = PrecedesTokAfter(
+            TokExpansionLoc, SM.getExpansionLoc(PrevTokLocation));
+        L.isValid())
+      return PP.diagnoseContextualKeywordMacro(Kw, MI, L);
+  }
+
+  // The keyword was written in the body of the macro that produced the
+  // current token, e.g. '#define DECL(n) struct n final {}'.
+  if (TokLoc.isMacroID() && !SM.isMacroArgExpansion(TokLoc)) {
+    StringRef Outer = PP.getImmediateMacroName(TokLoc);
+    const MacroInfo *OuterMI =
+        PP.getMacroDefinitionAtLoc(PP.getIdentifierInfo(Outer),
+                                   SM.getExpansionLoc(TokLoc))
+            .getMacroInfo();
+    if (OuterMI &&
+        PrecedesTokAfter(SM.getSpellingLoc(TokLoc), OuterMI->getDefinitionLoc())
+            .isValid())
+      PP.diagnoseContextualKeywordMacro(Kw, MI, TokExpansionLoc);
+  }
+}
+
 void Parser::ParseOptionalCXX11VirtSpecifierSeq(VirtSpecifiers &VS,
                                                 bool IsInterface,
                                                 SourceLocation FriendLoc) {
   while (true) {
+    // Check before testing the current token: a macro named 'final' or
+    // 'override' has replaced the virt-specifier, so the current token is
+    // usually not one.
+    DiagnoseVirtSpecifierMacro(VirtSpecifiers::VS_Final);
+    DiagnoseVirtSpecifierMacro(VirtSpecifiers::VS_Override);
     VirtSpecifiers::Specifier Specifier = isCXX11VirtSpecifier();
     if (Specifier == VirtSpecifiers::VS_None)
       return;
