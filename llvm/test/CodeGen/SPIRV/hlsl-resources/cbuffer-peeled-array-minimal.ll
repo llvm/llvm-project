@@ -12,9 +12,9 @@
 
 ; CHECK-DAG: %[[FLOAT:[0-9]+]] = OpTypeFloat 32
 ; CHECK-DAG: %[[STRUCT]] = OpTypeStruct %[[FLOAT]]
-; CHECK-DAG: %[[I8:[0-9]+]] = OpTypeInt 8 0
-; CHECK-DAG: %[[STRUCT_PAD]] = OpTypeStruct %[[STRUCT]] %[[I8]]
+; The 12-byte padding is modeled as a 32-bit member.
 ; CHECK-DAG: %[[UINT:[0-9]+]] = OpTypeInt 32 0
+; CHECK-DAG: %[[STRUCT_PAD]] = OpTypeStruct %[[STRUCT]] %[[UINT]]
 ; CHECK-DAG: %[[CONST_4:[0-9]+]] = OpConstant %[[UINT]] 4
 ; CHECK-DAG: %[[ARRAY]] = OpTypeArray %[[STRUCT_PAD]] %[[CONST_4]]
 ; CHECK-DAG: %[[CBLAYOUT]] = OpTypeStruct %[[ARRAY]] %[[FLOAT]]
