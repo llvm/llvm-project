@@ -262,26 +262,26 @@ func.func @xfer_write_non_minor_identity_masked(
 
 // CHECK-LABEL: func.func @xfer_write_non_minor_identity_masked_scalable
 //  CHECK-SAME:   %[[VEC:.*]]: vector<4x[8]xi16>,
-//  CHECK-SAME:   %[[DEST:.*]]: tensor<?x?x?x?xf32>,
+//  CHECK-SAME:   %[[DEST:.*]]: tensor<?x?x?x?xi16>,
 //  CHECK-SAME:   %[[MASK:.*]]: vector<4x[8]xi1>
-//  CHECK-SAME:   -> tensor<?x?x?x?xf32> {
+//  CHECK-SAME:   -> tensor<?x?x?x?xi16> {
 //   CHECK-NOT:   vector.transpose
-//       CHECK:   vector.mask %[[MASK]] { vector.transfer_write %[[VEC]], %[[DEST]]{{.*}} : vector<4x[8]xi16>, tensor<?x?x?x?xf32> } : vector<4x[8]xi1> -> tensor<?x?x?x?xf32>
+//       CHECK:   vector.mask %[[MASK]] { vector.transfer_write %[[VEC]], %[[DEST]]{{.*}} : vector<4x[8]xi16>, tensor<?x?x?x?xi16> } : vector<4x[8]xi1> -> tensor<?x?x?x?xi16>
 func.func @xfer_write_non_minor_identity_masked_scalable(
     %vec: vector<4x[8]xi16>,
-    %dest: tensor<?x?x?x?xf32>,
+    %dest: tensor<?x?x?x?xi16>,
     %mask:  vector<4x[8]xi1>,
-    %idx: index) -> tensor<?x?x?x?xf32> {
+    %idx: index) -> tensor<?x?x?x?xi16> {
 
   %c0 = arith.constant 0 : index
   %res = vector.mask %mask {
     vector.transfer_write %vec, %dest[%idx, %idx, %idx, %idx] {
       in_bounds = [true, true],
       permutation_map = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
-    } : vector<4x[8]xi16>, tensor<?x?x?x?xf32>
-  } : vector<4x[8]xi1> -> tensor<?x?x?x?xf32>
+    } : vector<4x[8]xi16>, tensor<?x?x?x?xi16>
+  } : vector<4x[8]xi1> -> tensor<?x?x?x?xi16>
 
-  return %res : tensor<?x?x?x?xf32>
+  return %res : tensor<?x?x?x?xi16>
 }
 
 // Masked version is not supported
