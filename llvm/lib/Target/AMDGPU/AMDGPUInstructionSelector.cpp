@@ -61,6 +61,7 @@ void AMDGPUInstructionSelector::setupMF(MachineFunction &MF,
   MRI = &MF.getRegInfo();
   Subtarget = &MF.getSubtarget<GCNSubtarget>();
   Subtarget->checkSubtargetFeatures(MF.getFunction());
+  SAddrOffsetAdds.clear();
   InstructionSelector::setupMF(MF, VT, CoverageInfo, PSI, BFI);
 }
 
@@ -6219,6 +6220,63 @@ AMDGPUInstructionSelector::selectScratchOffset(MachineOperand &Root) const {
     }};
 }
 
+bool AMDGPUInstructionSelector::selectGlobalSAddrVOffset(
+    MachineOperand &Root, Register Addr, Register &SAddr, Register &VOffset,
+    bool &ScaleOffset) const {
+  auto AddrDef = getDefSrcRegIgnoringCopies(Addr, *MRI);
+  if (AddrDef->MI->getOpcode() != AMDGPU::G_PTR_ADD)
+    return false;
+
+  // Look through the SGPR->VGPR copy.
+  Register Base =
+      getSrcRegIgnoringCopies(AddrDef->MI->getOperand(1).getReg(), *MRI);
+  if (!isSGPR(Base))
+    return false;
+
+  Register PtrBaseOffset = AddrDef->MI->getOperand(2).getReg();
+
+  // It's possible voffset is an SGPR here, but the copy to VGPR will be
+  // inserted later.
+  bool IsSigned = Subtarget->hasSignedGVSOffset();
+  bool Scale = selectScaleOffset(Root, PtrBaseOffset, IsSigned);
+  Register Offset = matchExtendFromS32OrS32(PtrBaseOffset, IsSigned);
+  if (!Offset)
+    return false;
+
+  SAddr = Base;
+  VOffset = Offset;
+  ScaleOffset = Scale;
+  return true;
+}
+
+Register AMDGPUInstructionSelector::buildSAddrWithOffset(MachineInstr &MI,
+                                                         Register Base,
+                                                         int64_t Offset) const {
+  MachineBasicBlock *MBB = MI.getParent();
+  MachineInstr *&Add = SAddrOffsetAdds[{MBB, Base, Offset}];
+  if (Add) {
+    // Selection is bottom-up, so the cached add is below MI.
+    MachineInstr *Mov = MRI->getVRegDef(Add->getOperand(2).getReg());
+    MBB->splice(MI.getIterator(), MBB, Mov->getIterator());
+    MBB->splice(MI.getIterator(), MBB, Add->getIterator());
+    return Add->getOperand(0).getReg();
+  }
+
+  if (!RBI.constrainGenericRegister(Base, AMDGPU::SReg_64RegClass, *MRI))
+    return Register();
+
+  const DebugLoc &DL = MI.getDebugLoc();
+  Register Imm = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
+  BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_MOV_B64_IMM_PSEUDO), Imm)
+      .addImm(Offset);
+  Register Dst = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
+  Add = BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_ADD_U64_PSEUDO), Dst)
+            .addReg(Base)
+            .addReg(Imm)
+            .setOperandDead(3); // Dead scc
+  return Dst;
+}
+
 // Match (64-bit SGPR base) + (zext vgpr offset) + sext(imm offset)
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
@@ -6228,6 +6286,21 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
   Register PtrBase;
   int64_t ConstOffset;
   int64_t ImmOffset = 0;
+  Register SAddr, VOffset;
+  bool ScaleOffset = false;
+
+  auto RenderSAddrVOffset =
+      [=](Register Base, Register Off, int64_t Imm,
+          unsigned CPol) -> InstructionSelector::ComplexRendererFns {
+    if (NeedIOffset)
+      return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Base); },
+               [=](MachineInstrBuilder &MIB) { MIB.addReg(Off); },
+               [=](MachineInstrBuilder &MIB) { MIB.addImm(Imm); },
+               [=](MachineInstrBuilder &MIB) { MIB.addImm(CPol); }}};
+    return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Base); },
+             [=](MachineInstrBuilder &MIB) { MIB.addReg(Off); },
+             [=](MachineInstrBuilder &MIB) { MIB.addImm(CPol); }}};
+  };
 
   // Match the immediate offset first, which canonically is moved as low as
   // possible.
@@ -6299,51 +6372,54 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
   }
 
   // Match the variable offset.
-  auto AddrDef = getDefSrcRegIgnoringCopies(Addr, *MRI);
-  if (AddrDef->MI->getOpcode() == AMDGPU::G_PTR_ADD) {
-    // Look through the SGPR->VGPR copy.
-    Register SAddr =
-        getSrcRegIgnoringCopies(AddrDef->MI->getOperand(1).getReg(), *MRI);
+  if (selectGlobalSAddrVOffset(Root, Addr, SAddr, VOffset, ScaleOffset))
+    return RenderSAddrVOffset(SAddr, VOffset, ImmOffset,
+                              CPolBits |
+                                  (ScaleOffset ? AMDGPU::CPol::SCAL : 0));
 
-    if (isSGPR(SAddr)) {
-      Register PtrBaseOffset = AddrDef->MI->getOperand(2).getReg();
+  // FLAT selects the aperture without the immediate offset.
+  const MachineInstr &RootMI = *Root.getParent();
+  bool IsFlat = RootMI.memoperands_empty() ||
+                any_of(RootMI.memoperands(), [](const MachineMemOperand *MMO) {
+                  return MMO->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS;
+                });
+  if (!isSGPR(getDefSrcRegIgnoringCopies(Root.getReg(), *MRI)->Reg) &&
+      !IsFlat) {
+    Register Base = Root.getReg();
+    int64_t COffsetVal = 0, Sum;
+    while (true) {
+      Register NextBase;
+      int64_t NextOffset;
+      std::tie(NextBase, NextOffset, std::ignore) =
+          getPtrBaseWithConstantOffset(Base, *MRI);
+      if (NextOffset == 0 || AddOverflow(COffsetVal, NextOffset, Sum))
+        break;
+      COffsetVal = Sum;
+      Base = NextBase;
+    }
 
-      // It's possible voffset is an SGPR here, but the copy to VGPR will be
-      // inserted later.
-      bool ScaleOffset = selectScaleOffset(Root, PtrBaseOffset,
-                                           Subtarget->hasSignedGVSOffset());
-      if (Register VOffset = matchExtendFromS32OrS32(
-              PtrBaseOffset, Subtarget->hasSignedGVSOffset())) {
-        if (NeedIOffset)
-          return {{[=](MachineInstrBuilder &MIB) { // saddr
-                     MIB.addReg(SAddr);
-                   },
-                   [=](MachineInstrBuilder &MIB) { // voffset
-                     MIB.addReg(VOffset);
-                   },
-                   [=](MachineInstrBuilder &MIB) { // offset
-                     MIB.addImm(ImmOffset);
-                   },
-                   [=](MachineInstrBuilder &MIB) { // cpol
-                     MIB.addImm(CPolBits |
-                                (ScaleOffset ? AMDGPU::CPol::SCAL : 0));
-                   }}};
-        return {{[=](MachineInstrBuilder &MIB) { // saddr
-                   MIB.addReg(SAddr);
-                 },
-                 [=](MachineInstrBuilder &MIB) { // voffset
-                   MIB.addReg(VOffset);
-                 },
-                 [=](MachineInstrBuilder &MIB) { // cpol
-                   MIB.addImm(CPolBits |
-                              (ScaleOffset ? AMDGPU::CPol::SCAL : 0));
-                 }}};
+    if (Base != Root.getReg() &&
+        selectGlobalSAddrVOffset(Root, Base, SAddr, VOffset, ScaleOffset)) {
+      int64_t SplitImmOffset = 0, RemainderOffset = COffsetVal;
+      if (NeedIOffset) {
+        std::tie(SplitImmOffset, RemainderOffset) =
+            TII.splitFlatOffset(COffsetVal, AMDGPUAS::GLOBAL_ADDRESS,
+                                AMDGPU::FlatAddrSpace::FlatGlobal);
       }
+
+      if (RemainderOffset != 0)
+        SAddr = buildSAddrWithOffset(*Root.getParent(), SAddr, RemainderOffset);
+
+      if (SAddr)
+        return RenderSAddrVOffset(SAddr, VOffset, SplitImmOffset,
+                                  CPolBits |
+                                      (ScaleOffset ? AMDGPU::CPol::SCAL : 0));
     }
   }
 
   // FIXME: We should probably have folded COPY (G_IMPLICIT_DEF) earlier, and
   // drop this.
+  auto AddrDef = getDefSrcRegIgnoringCopies(Addr, *MRI);
   if (AddrDef->MI->getOpcode() == AMDGPU::G_IMPLICIT_DEF ||
       AddrDef->MI->getOpcode() == AMDGPU::G_CONSTANT || !isSGPR(AddrDef->Reg))
     return std::nullopt;
@@ -6352,7 +6428,7 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
   // moves required to copy a 64-bit SGPR to VGPR.
   MachineInstr *MI = Root.getParent();
   MachineBasicBlock *MBB = MI->getParent();
-  Register VOffset = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  VOffset = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
 
   BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::V_MOV_B32_e32), VOffset)
       .addImm(0);
