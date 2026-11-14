@@ -978,8 +978,7 @@ define <vscale x 2 x ptr> @gep_vector_base_scalar_index(ptr %basep, i64 %i) sani
 ; ORIGIN-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP1]], i64 0
 ; ORIGIN-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; ORIGIN-NEXT:    [[_MSPROP:%.*]] = or <vscale x 2 x i64> [[_MSLD]], [[DOTSPLAT]]
-; ORIGIN-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.or.nxv2i64(<vscale x 2 x i64> [[DOTSPLAT]])
-; ORIGIN-NEXT:    [[TMP10:%.*]] = icmp ne i64 [[TMP9]], 0
+; ORIGIN-NEXT:    [[TMP10:%.*]] = icmp ne i64 [[TMP1]], 0
 ; ORIGIN-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i32 [[TMP2]], i32 [[TMP8]]
 ; ORIGIN-NEXT:    [[P:%.*]] = getelementptr i32, <vscale x 2 x ptr> [[BASE]], i64 [[I]]
 ; ORIGIN-NEXT:    store <vscale x 2 x i64> [[_MSPROP]], ptr @__msan_retval_tls, align 8
@@ -1026,8 +1025,7 @@ define <vscale x 2 x ptr> @gep_vector_base_i32_index(ptr %basep, i32 %i) sanitiz
 ; ORIGIN-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP9]], i64 0
 ; ORIGIN-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; ORIGIN-NEXT:    [[_MSPROP:%.*]] = or <vscale x 2 x i64> [[_MSLD]], [[DOTSPLAT]]
-; ORIGIN-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vector.reduce.or.nxv2i64(<vscale x 2 x i64> [[DOTSPLAT]])
-; ORIGIN-NEXT:    [[TMP11:%.*]] = icmp ne i64 [[TMP10]], 0
+; ORIGIN-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP1]], 0
 ; ORIGIN-NEXT:    [[TMP12:%.*]] = select i1 [[TMP11]], i32 [[TMP2]], i32 [[TMP8]]
 ; ORIGIN-NEXT:    [[P:%.*]] = getelementptr i32, <vscale x 2 x ptr> [[BASE]], i32 [[I]]
 ; ORIGIN-NEXT:    store <vscale x 2 x i64> [[_MSPROP]], ptr @__msan_retval_tls, align 8
@@ -1073,6 +1071,288 @@ define <vscale x 2 x ptr> @gep_vector_base_const_index(ptr %basep) sanitize_memo
   %base = load <vscale x 2 x ptr>, ptr %basep
   %p = getelementptr i32, <vscale x 2 x ptr> %base, i64 1
   ret <vscale x 2 x ptr> %p
+}
+
+; GEP with a scalar base and vector indices.
+define <vscale x 4 x ptr> @gep_scalar_base(ptr %base, ptr %idxp) sanitize_memory {
+; CHECK-LABEL: define <vscale x 4 x ptr> @gep_scalar_base(
+; CHECK-SAME: ptr [[BASE:%.*]], ptr [[IDXP:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[IDX:%.*]] = load <vscale x 4 x i64>, ptr [[IDXP]], align 32
+; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[IDXP]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[_MSLD:%.*]] = load <vscale x 4 x i64>, ptr [[TMP4]], align 32
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP1]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <vscale x 4 x i64> [[DOTSPLAT]], [[_MSLD]]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr float, ptr [[BASE]], <vscale x 4 x i64> [[IDX]]
+; CHECK-NEXT:    store <vscale x 4 x i64> [[_MSPROP]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    ret <vscale x 4 x ptr> [[P]]
+;
+; ORIGIN-LABEL: define <vscale x 4 x ptr> @gep_scalar_base(
+; ORIGIN-SAME: ptr [[BASE:%.*]], ptr [[IDXP:%.*]]) #[[ATTR0]] {
+; ORIGIN-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
+; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
+; ORIGIN-NEXT:    call void @llvm.donothing()
+; ORIGIN-NEXT:    [[IDX:%.*]] = load <vscale x 4 x i64>, ptr [[IDXP]], align 32
+; ORIGIN-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[IDXP]] to i64
+; ORIGIN-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080
+; ORIGIN-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
+; ORIGIN-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], 17592186044416
+; ORIGIN-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; ORIGIN-NEXT:    [[_MSLD:%.*]] = load <vscale x 4 x i64>, ptr [[TMP5]], align 32
+; ORIGIN-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 32
+; ORIGIN-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP1]], i64 0
+; ORIGIN-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
+; ORIGIN-NEXT:    [[_MSPROP:%.*]] = or <vscale x 4 x i64> [[DOTSPLAT]], [[_MSLD]]
+; ORIGIN-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.or.nxv4i64(<vscale x 4 x i64> [[_MSLD]])
+; ORIGIN-NEXT:    [[TMP10:%.*]] = icmp ne i64 [[TMP9]], 0
+; ORIGIN-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i32 [[TMP8]], i32 [[TMP2]]
+; ORIGIN-NEXT:    [[P:%.*]] = getelementptr float, ptr [[BASE]], <vscale x 4 x i64> [[IDX]]
+; ORIGIN-NEXT:    store <vscale x 4 x i64> [[_MSPROP]], ptr @__msan_retval_tls, align 8
+; ORIGIN-NEXT:    store i32 [[TMP11]], ptr @__msan_retval_origin_tls, align 4
+; ORIGIN-NEXT:    ret <vscale x 4 x ptr> [[P]]
+;
+  %idx = load <vscale x 4 x i64>, ptr %idxp
+  %p = getelementptr float, ptr %base, <vscale x 4 x i64> %idx
+  ret <vscale x 4 x ptr> %p
+}
+
+define <vscale x 4 x ptr> @gep_scalar_base_i32_idx(ptr %base, ptr %idxp) sanitize_memory {
+; CHECK-LABEL: define <vscale x 4 x ptr> @gep_scalar_base_i32_idx(
+; CHECK-SAME: ptr [[BASE:%.*]], ptr [[IDXP:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[IDX:%.*]] = load <vscale x 4 x i32>, ptr [[IDXP]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[IDXP]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[_MSLD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP4]], align 16
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP1]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <vscale x 4 x i32> [[_MSLD]] to <vscale x 4 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <vscale x 4 x i64> [[DOTSPLAT]], [[TMP5]]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr float, ptr [[BASE]], <vscale x 4 x i32> [[IDX]]
+; CHECK-NEXT:    store <vscale x 4 x i64> [[_MSPROP]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    ret <vscale x 4 x ptr> [[P]]
+;
+; ORIGIN-LABEL: define <vscale x 4 x ptr> @gep_scalar_base_i32_idx(
+; ORIGIN-SAME: ptr [[BASE:%.*]], ptr [[IDXP:%.*]]) #[[ATTR0]] {
+; ORIGIN-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
+; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
+; ORIGIN-NEXT:    call void @llvm.donothing()
+; ORIGIN-NEXT:    [[IDX:%.*]] = load <vscale x 4 x i32>, ptr [[IDXP]], align 16
+; ORIGIN-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[IDXP]] to i64
+; ORIGIN-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080
+; ORIGIN-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
+; ORIGIN-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], 17592186044416
+; ORIGIN-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; ORIGIN-NEXT:    [[_MSLD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP5]], align 16
+; ORIGIN-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 16
+; ORIGIN-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP1]], i64 0
+; ORIGIN-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
+; ORIGIN-NEXT:    [[TMP9:%.*]] = zext <vscale x 4 x i32> [[_MSLD]] to <vscale x 4 x i64>
+; ORIGIN-NEXT:    [[_MSPROP:%.*]] = or <vscale x 4 x i64> [[DOTSPLAT]], [[TMP9]]
+; ORIGIN-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.or.nxv4i32(<vscale x 4 x i32> [[_MSLD]])
+; ORIGIN-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP10]], 0
+; ORIGIN-NEXT:    [[TMP12:%.*]] = select i1 [[TMP11]], i32 [[TMP8]], i32 [[TMP2]]
+; ORIGIN-NEXT:    [[P:%.*]] = getelementptr float, ptr [[BASE]], <vscale x 4 x i32> [[IDX]]
+; ORIGIN-NEXT:    store <vscale x 4 x i64> [[_MSPROP]], ptr @__msan_retval_tls, align 8
+; ORIGIN-NEXT:    store i32 [[TMP12]], ptr @__msan_retval_origin_tls, align 4
+; ORIGIN-NEXT:    ret <vscale x 4 x ptr> [[P]]
+;
+  %idx = load <vscale x 4 x i32>, ptr %idxp
+  %p = getelementptr float, ptr %base, <vscale x 4 x i32> %idx
+  ret <vscale x 4 x ptr> %p
+}
+
+define <vscale x 4 x ptr> @gep_scalar_base_vector_then_scalar_index(ptr %base, ptr %ip, i64 %j) sanitize_memory {
+; CHECK-LABEL: define <vscale x 4 x ptr> @gep_scalar_base_vector_then_scalar_index(
+; CHECK-SAME: ptr [[BASE:%.*]], ptr [[IP:%.*]], i64 [[J:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[I:%.*]] = load <vscale x 4 x i32>, ptr [[IP]], align 16
+; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[IP]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080
+; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
+; CHECK-NEXT:    [[_MSLD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP5]], align 16
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP1]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <vscale x 4 x i32> [[_MSLD]] to <vscale x 4 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <vscale x 4 x i64> [[DOTSPLAT]], [[TMP6]]
+; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP2]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <vscale x 4 x i64> [[_MSPROP]], [[DOTSPLAT2]]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr [10 x float], ptr [[BASE]], <vscale x 4 x i32> [[I]], i64 [[J]]
+; CHECK-NEXT:    store <vscale x 4 x i64> [[_MSPROP3]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    ret <vscale x 4 x ptr> [[P]]
+;
+; ORIGIN-LABEL: define <vscale x 4 x ptr> @gep_scalar_base_vector_then_scalar_index(
+; ORIGIN-SAME: ptr [[BASE:%.*]], ptr [[IP:%.*]], i64 [[J:%.*]]) #[[ATTR0]] {
+; ORIGIN-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
+; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
+; ORIGIN-NEXT:    [[TMP3:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; ORIGIN-NEXT:    [[TMP4:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 16), align 4
+; ORIGIN-NEXT:    call void @llvm.donothing()
+; ORIGIN-NEXT:    [[I:%.*]] = load <vscale x 4 x i32>, ptr [[IP]], align 16
+; ORIGIN-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[IP]] to i64
+; ORIGIN-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080
+; ORIGIN-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; ORIGIN-NEXT:    [[TMP8:%.*]] = add i64 [[TMP6]], 17592186044416
+; ORIGIN-NEXT:    [[TMP9:%.*]] = inttoptr i64 [[TMP8]] to ptr
+; ORIGIN-NEXT:    [[_MSLD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP7]], align 16
+; ORIGIN-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP9]], align 16
+; ORIGIN-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP1]], i64 0
+; ORIGIN-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
+; ORIGIN-NEXT:    [[TMP11:%.*]] = zext <vscale x 4 x i32> [[_MSLD]] to <vscale x 4 x i64>
+; ORIGIN-NEXT:    [[_MSPROP:%.*]] = or <vscale x 4 x i64> [[DOTSPLAT]], [[TMP11]]
+; ORIGIN-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.or.nxv4i32(<vscale x 4 x i32> [[_MSLD]])
+; ORIGIN-NEXT:    [[TMP13:%.*]] = icmp ne i32 [[TMP12]], 0
+; ORIGIN-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i32 [[TMP10]], i32 [[TMP2]]
+; ORIGIN-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP3]], i64 0
+; ORIGIN-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
+; ORIGIN-NEXT:    [[_MSPROP3:%.*]] = or <vscale x 4 x i64> [[_MSPROP]], [[DOTSPLAT2]]
+; ORIGIN-NEXT:    [[TMP15:%.*]] = icmp ne i64 [[TMP3]], 0
+; ORIGIN-NEXT:    [[TMP16:%.*]] = select i1 [[TMP15]], i32 [[TMP4]], i32 [[TMP14]]
+; ORIGIN-NEXT:    [[P:%.*]] = getelementptr [10 x float], ptr [[BASE]], <vscale x 4 x i32> [[I]], i64 [[J]]
+; ORIGIN-NEXT:    store <vscale x 4 x i64> [[_MSPROP3]], ptr @__msan_retval_tls, align 8
+; ORIGIN-NEXT:    store i32 [[TMP16]], ptr @__msan_retval_origin_tls, align 4
+; ORIGIN-NEXT:    ret <vscale x 4 x ptr> [[P]]
+;
+  %i = load <vscale x 4 x i32>, ptr %ip
+  %p = getelementptr [10 x float], ptr %base, <vscale x 4 x i32> %i, i64 %j
+  ret <vscale x 4 x ptr> %p
+}
+
+define <vscale x 4 x ptr> @gep_scalar_base_two_vector_indices(ptr %base, ptr %ip, ptr %jp) sanitize_memory {
+; CHECK-LABEL: define <vscale x 4 x ptr> @gep_scalar_base_two_vector_indices(
+; CHECK-SAME: ptr [[BASE:%.*]], ptr [[IP:%.*]], ptr [[JP:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[I:%.*]] = load <vscale x 4 x i32>, ptr [[IP]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[IP]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[_MSLD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP4]], align 16
+; CHECK-NEXT:    [[J:%.*]] = load <vscale x 4 x i64>, ptr [[JP]], align 32
+; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[JP]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080
+; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; CHECK-NEXT:    [[_MSLD1:%.*]] = load <vscale x 4 x i64>, ptr [[TMP7]], align 32
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP1]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = zext <vscale x 4 x i32> [[_MSLD]] to <vscale x 4 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <vscale x 4 x i64> [[DOTSPLAT]], [[TMP8]]
+; CHECK-NEXT:    [[_MSPROP2:%.*]] = or <vscale x 4 x i64> [[_MSPROP]], [[_MSLD1]]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr [10 x float], ptr [[BASE]], <vscale x 4 x i32> [[I]], <vscale x 4 x i64> [[J]]
+; CHECK-NEXT:    store <vscale x 4 x i64> [[_MSPROP2]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    ret <vscale x 4 x ptr> [[P]]
+;
+; ORIGIN-LABEL: define <vscale x 4 x ptr> @gep_scalar_base_two_vector_indices(
+; ORIGIN-SAME: ptr [[BASE:%.*]], ptr [[IP:%.*]], ptr [[JP:%.*]]) #[[ATTR0]] {
+; ORIGIN-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
+; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
+; ORIGIN-NEXT:    call void @llvm.donothing()
+; ORIGIN-NEXT:    [[I:%.*]] = load <vscale x 4 x i32>, ptr [[IP]], align 16
+; ORIGIN-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[IP]] to i64
+; ORIGIN-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080
+; ORIGIN-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
+; ORIGIN-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], 17592186044416
+; ORIGIN-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; ORIGIN-NEXT:    [[_MSLD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP5]], align 16
+; ORIGIN-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 16
+; ORIGIN-NEXT:    [[J:%.*]] = load <vscale x 4 x i64>, ptr [[JP]], align 32
+; ORIGIN-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[JP]] to i64
+; ORIGIN-NEXT:    [[TMP10:%.*]] = xor i64 [[TMP9]], 87960930222080
+; ORIGIN-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to ptr
+; ORIGIN-NEXT:    [[TMP12:%.*]] = add i64 [[TMP10]], 17592186044416
+; ORIGIN-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to ptr
+; ORIGIN-NEXT:    [[_MSLD1:%.*]] = load <vscale x 4 x i64>, ptr [[TMP11]], align 32
+; ORIGIN-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP13]], align 32
+; ORIGIN-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP1]], i64 0
+; ORIGIN-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
+; ORIGIN-NEXT:    [[TMP15:%.*]] = zext <vscale x 4 x i32> [[_MSLD]] to <vscale x 4 x i64>
+; ORIGIN-NEXT:    [[_MSPROP:%.*]] = or <vscale x 4 x i64> [[DOTSPLAT]], [[TMP15]]
+; ORIGIN-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vector.reduce.or.nxv4i32(<vscale x 4 x i32> [[_MSLD]])
+; ORIGIN-NEXT:    [[TMP17:%.*]] = icmp ne i32 [[TMP16]], 0
+; ORIGIN-NEXT:    [[TMP18:%.*]] = select i1 [[TMP17]], i32 [[TMP8]], i32 [[TMP2]]
+; ORIGIN-NEXT:    [[_MSPROP2:%.*]] = or <vscale x 4 x i64> [[_MSPROP]], [[_MSLD1]]
+; ORIGIN-NEXT:    [[TMP19:%.*]] = call i64 @llvm.vector.reduce.or.nxv4i64(<vscale x 4 x i64> [[_MSLD1]])
+; ORIGIN-NEXT:    [[TMP20:%.*]] = icmp ne i64 [[TMP19]], 0
+; ORIGIN-NEXT:    [[TMP21:%.*]] = select i1 [[TMP20]], i32 [[TMP14]], i32 [[TMP18]]
+; ORIGIN-NEXT:    [[P:%.*]] = getelementptr [10 x float], ptr [[BASE]], <vscale x 4 x i32> [[I]], <vscale x 4 x i64> [[J]]
+; ORIGIN-NEXT:    store <vscale x 4 x i64> [[_MSPROP2]], ptr @__msan_retval_tls, align 8
+; ORIGIN-NEXT:    store i32 [[TMP21]], ptr @__msan_retval_origin_tls, align 4
+; ORIGIN-NEXT:    ret <vscale x 4 x ptr> [[P]]
+;
+  %i = load <vscale x 4 x i32>, ptr %ip
+  %j = load <vscale x 4 x i64>, ptr %jp
+  %p = getelementptr [10 x float], ptr %base, <vscale x 4 x i32> %i, <vscale x 4 x i64> %j
+  ret <vscale x 4 x ptr> %p
+}
+
+; A clean constant base, and two vector indices of different widths.
+define <vscale x 4 x ptr> @gep_null_base_two_vector_indices(ptr %ip, ptr %jp) sanitize_memory {
+; CHECK-LABEL: define <vscale x 4 x ptr> @gep_null_base_two_vector_indices(
+; CHECK-SAME: ptr [[IP:%.*]], ptr [[JP:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[I:%.*]] = load <vscale x 4 x i32>, ptr [[IP]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[IP]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
+; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
+; CHECK-NEXT:    [[_MSLD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP3]], align 16
+; CHECK-NEXT:    [[J:%.*]] = load <vscale x 4 x i64>, ptr [[JP]], align 32
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[JP]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
+; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; CHECK-NEXT:    [[_MSLD1:%.*]] = load <vscale x 4 x i64>, ptr [[TMP6]], align 32
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <vscale x 4 x i32> zeroinitializer, [[_MSLD]]
+; CHECK-NEXT:    [[TMP7:%.*]] = zext <vscale x 4 x i32> [[_MSPROP]] to <vscale x 4 x i64>
+; CHECK-NEXT:    [[_MSPROP2:%.*]] = or <vscale x 4 x i64> [[TMP7]], [[_MSLD1]]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr [10 x float], ptr null, <vscale x 4 x i32> [[I]], <vscale x 4 x i64> [[J]]
+; CHECK-NEXT:    store <vscale x 4 x i64> [[_MSPROP2]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    ret <vscale x 4 x ptr> [[P]]
+;
+; ORIGIN-LABEL: define <vscale x 4 x ptr> @gep_null_base_two_vector_indices(
+; ORIGIN-SAME: ptr [[IP:%.*]], ptr [[JP:%.*]]) #[[ATTR0]] {
+; ORIGIN-NEXT:    call void @llvm.donothing()
+; ORIGIN-NEXT:    [[I:%.*]] = load <vscale x 4 x i32>, ptr [[IP]], align 16
+; ORIGIN-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[IP]] to i64
+; ORIGIN-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
+; ORIGIN-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
+; ORIGIN-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], 17592186044416
+; ORIGIN-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
+; ORIGIN-NEXT:    [[_MSLD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP3]], align 16
+; ORIGIN-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 16
+; ORIGIN-NEXT:    [[J:%.*]] = load <vscale x 4 x i64>, ptr [[JP]], align 32
+; ORIGIN-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[JP]] to i64
+; ORIGIN-NEXT:    [[TMP8:%.*]] = xor i64 [[TMP7]], 87960930222080
+; ORIGIN-NEXT:    [[TMP9:%.*]] = inttoptr i64 [[TMP8]] to ptr
+; ORIGIN-NEXT:    [[TMP10:%.*]] = add i64 [[TMP8]], 17592186044416
+; ORIGIN-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to ptr
+; ORIGIN-NEXT:    [[_MSLD1:%.*]] = load <vscale x 4 x i64>, ptr [[TMP9]], align 32
+; ORIGIN-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP11]], align 32
+; ORIGIN-NEXT:    [[_MSPROP:%.*]] = or <vscale x 4 x i32> zeroinitializer, [[_MSLD]]
+; ORIGIN-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.or.nxv4i32(<vscale x 4 x i32> [[_MSLD]])
+; ORIGIN-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
+; ORIGIN-NEXT:    [[TMP15:%.*]] = select i1 [[TMP14]], i32 [[TMP6]], i32 0
+; ORIGIN-NEXT:    [[TMP16:%.*]] = zext <vscale x 4 x i32> [[_MSPROP]] to <vscale x 4 x i64>
+; ORIGIN-NEXT:    [[_MSPROP2:%.*]] = or <vscale x 4 x i64> [[TMP16]], [[_MSLD1]]
+; ORIGIN-NEXT:    [[TMP17:%.*]] = call i64 @llvm.vector.reduce.or.nxv4i64(<vscale x 4 x i64> [[_MSLD1]])
+; ORIGIN-NEXT:    [[TMP18:%.*]] = icmp ne i64 [[TMP17]], 0
+; ORIGIN-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i32 [[TMP12]], i32 [[TMP15]]
+; ORIGIN-NEXT:    [[P:%.*]] = getelementptr [10 x float], ptr null, <vscale x 4 x i32> [[I]], <vscale x 4 x i64> [[J]]
+; ORIGIN-NEXT:    store <vscale x 4 x i64> [[_MSPROP2]], ptr @__msan_retval_tls, align 8
+; ORIGIN-NEXT:    store i32 [[TMP19]], ptr @__msan_retval_origin_tls, align 4
+; ORIGIN-NEXT:    ret <vscale x 4 x ptr> [[P]]
+;
+  %i = load <vscale x 4 x i32>, ptr %ip
+  %j = load <vscale x 4 x i64>, ptr %jp
+  %p = getelementptr [10 x float], ptr null, <vscale x 4 x i32> %i, <vscale x 4 x i64> %j
+  ret <vscale x 4 x ptr> %p
 }
 
 ;.
