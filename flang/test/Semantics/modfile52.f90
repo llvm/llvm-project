@@ -17,7 +17,7 @@ module m3
   end type
 end module
 module m4
-  use m4
+  use m3
   interface foo
     procedure bar
   end interface
@@ -49,6 +49,7 @@ end module
 
 !Expect: m4.mod
 !module m4
+!use m3,only:foo
 !interface foo
 !procedure::bar
 !end interface
