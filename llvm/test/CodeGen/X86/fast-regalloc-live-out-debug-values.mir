@@ -148,7 +148,7 @@ body:             |
   ; CHECK:   DBG_VALUE $rbp, 0, !18, !DIExpression(DW_OP_constu, 40, DW_OP_minus, DW_OP_deref), debug-location !22
   ; CHECK:   $rsp = MOV64rr $rcx, debug-location !14
   ; CHECK:   MOV64mr $rbp, 1, $noreg, -24, $noreg, killed renamable $rax, debug-location !14 :: (store (s64) into %ir.__vla_expr0)
-  ; CHECK:   DBG_VALUE renamable $rcx, 0, !18, !DIExpression(), debug-location !22
+  ; CHECK:   DBG_VALUE $rbp, 0, !18, !DIExpression(DW_OP_constu, 40, DW_OP_minus, DW_OP_deref), debug-location !22
   ; CHECK:   MOV32mi $rbp, 1, $noreg, -28, $noreg, 0, debug-location !25 :: (store (s32) into %ir.i)
   ; CHECK:   DBG_VALUE $rbp, 0, !18, !DIExpression(DW_OP_constu, 40, DW_OP_minus, DW_OP_deref), debug-location !22
   ; CHECK: bb.1.for.cond:
