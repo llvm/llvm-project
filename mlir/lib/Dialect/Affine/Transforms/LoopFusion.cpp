@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Affine/Transforms/Passes.h"
 
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
@@ -24,6 +25,7 @@
 #include "mlir/IR/Builders.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
@@ -63,7 +65,6 @@ struct LoopFusion : public affine::impl::AffineLoopFusionBase<LoopFusion> {
   void runOnBlock(Block *block);
   void runOnOperation() override;
 };
-
 } // namespace
 
 /// Returns true if node 'srcId' can be removed after fusing it with node
@@ -725,7 +726,6 @@ static bool isFusionProfitable(AffineForOp srcForOp,
 }
 
 namespace {
-
 // GreedyFusion greedily fuses loop nests which have a producer/consumer or
 // input-reuse relationship on a memref, with the goal of improving locality.
 //
@@ -1327,6 +1327,9 @@ public:
         continue;
       }
 
+      auto *oldDstOp = dstNode->op;
+      auto *dstYield = dstAffineForOp.getBody()->getTerminator();
+
       // Check if source loop is being inserted in the innermost
       // destination loop. Based on this, the fused loop may be optimized
       // further inside `fuseLoops`.
@@ -1335,9 +1338,12 @@ public:
       affine::fuseLoops(sibAffineForOp, dstAffineForOp, bestSlice,
                         isInnermostInsertion);
 
+      dstAffineForOp = cast<AffineForOp>(dstYield->getParentOp());
+      dstNode->op = dstAffineForOp.getOperation();
+
       auto dstForInst = cast<AffineForOp>(dstNode->op);
       // Update operation position of fused loop nest (if needed).
-      if (insertPointInst != dstForInst)
+      if (insertPointInst != oldDstOp && insertPointInst != dstForInst)
         dstForInst->moveBefore(insertPointInst);
 
       LDBG() << "Fused sibling nest " << sibId << " into destination nest "
@@ -1369,6 +1375,25 @@ public:
       // TODO: Remove restrict to single load op restriction.
       if (sibNode->getLoadOpCount(memref) != 1)
         return false;
+
+      // Skip sibling loops with SSA dependences in either direction.
+      Operation *firstOp = sibNode->op;
+      Operation *secondOp = dstNode->op;
+
+      if (secondOp->isBeforeInBlock(firstOp))
+        std::swap(firstOp, secondOp);
+
+      for (Value result : firstOp->getResults()) {
+        for (Operation *user : result.getUsers()) {
+          // Find the ancestor operation in the siblings' block.
+          while (user && user->getBlock() != firstOp->getBlock())
+            user = user->getParentOp();
+
+          if (user && (user == secondOp || user->isBeforeInBlock(secondOp)))
+            return false;
+        }
+      }
+
       // Skip if there exists a path of dependent edges between
       // 'sibNode' and 'dstNode'.
       if (mdg->hasDependencePath(sibNode->id, dstNode->id) ||
@@ -1431,8 +1456,8 @@ public:
       }
     }
 
-    // Search for siblings by following edges through an intermediate src node.
-    // Collect candidate 'dstNode' input edges in 'inEdges'.
+    // Search for siblings by following edges through an intermediate src
+    // node. Collect candidate 'dstNode' input edges in 'inEdges'.
     SmallVector<MemRefDependenceGraph::Edge, 2> inEdges;
     mdg->forEachMemRefInputEdge(
         dstNode->id, [&](MemRefDependenceGraph::Edge inEdge) {
@@ -1444,10 +1469,11 @@ public:
             inEdges.push_back(inEdge);
         });
 
-    // Search for sibling nodes to fuse by visiting output edges from each input
-    // edge in 'inEdges'.
+    // Search for sibling nodes to fuse by visiting output edges from each
+    // input edge in 'inEdges'.
     for (auto &inEdge : inEdges) {
-      // Collect candidate output edges from each node 'inEdge.id' in 'inEdges'.
+      // Collect candidate output edges from each node 'inEdge.id' in
+      // 'inEdges'.
       SmallVector<MemRefDependenceGraph::Edge, 2> outEdges;
       mdg->forEachMemRefOutputEdge(
           inEdge.id, [&](MemRefDependenceGraph::Edge outEdge) {
@@ -1460,7 +1486,8 @@ public:
             auto *sibNode = mdg->getNode(sibNodeId);
             if (!isa<AffineForOp>(sibNode->op))
               return;
-            // Check if 'sibNode/dstNode' can be input-reuse fused on 'memref'.
+            // Check if 'sibNode/dstNode' can be input-reuse fused on
+            // 'memref'.
             if (canFuseWithSibNode(sibNode, outEdge.value)) {
               // Add candidate 'outEdge' to sibling node.
               outEdges.push_back(outEdge);
@@ -1478,8 +1505,8 @@ public:
     return false;
   }
 
-  /// Update data dependence graph state to reflect sibling fusion of 'sibNode'
-  /// into 'dstNode'.
+  /// Update data dependence graph state to reflect sibling fusion of
+  /// 'sibNode' into 'dstNode'.
   void updateStateAfterSiblingFusion(Node *sibNode, Node *dstNode) {
     // Update 'sibNode' and 'dstNode' input/output edges to reflect fusion.
     mdg->updateEdges(sibNode->id, dstNode->id);
@@ -1511,7 +1538,6 @@ public:
     }
   }
 };
-
 } // namespace
 
 /// Run fusion on `block`.
