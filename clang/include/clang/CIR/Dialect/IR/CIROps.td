@@ -229,6 +229,15 @@ defvar CIR_FenvOpTraits = [
 // dynamically via FenvOpTrait, so they must not inherit NoMemoryEffect.
 defvar CIR_DynamicMemoryEffects = 0;
 
+// Declares isVolatileOrAtomic() on cir.load and cir.store.
+defvar CIR_VolatileOrAtomicAccessDecl = [{
+  /// Returns true if the access is volatile or atomic. Such an access must
+  /// stay as written: it cannot be removed, merged or reordered.
+  bool isVolatileOrAtomic() {
+    return getIsVolatile() || getMemOrder().has_value();
+  }
+}];
+
 //===----------------------------------------------------------------------===//
 // CastOp
 //===----------------------------------------------------------------------===//
@@ -942,6 +951,8 @@ def CIR_LoadOp : CIR_Op<"load", [
     }]>
   ];
 
+  let extraClassDeclaration = CIR_VolatileOrAtomicAccessDecl;
+
   // FIXME: add verifier.
 }
 
@@ -997,7 +1008,8 @@ def CIR_VecMaskedLoadOp : CIR_Op<"vec.masked_load", [
 def CIR_StoreOp : CIR_Op<"store", [
   TypesMatchWith<"type of 'value' matches pointee type of 'addr'",
     "addr", "value", "mlir::cast<cir::PointerType>($_self).getPointee()">,
-  DeclareOpInterfaceMethods<PromotableMemOpInterface>
+  DeclareOpInterfaceMethods<PromotableMemOpInterface>,
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
 ]> {
   let summary = "Store value to memory address";
   let description = [{
@@ -1024,8 +1036,8 @@ def CIR_StoreOp : CIR_Op<"store", [
   }];
 
   let arguments = (ins CIR_AnyType:$value,
-                       Arg<CIR_PointerType, "the address to store the value",
-                           [MemWrite]>:$addr,
+                       Arg<CIR_PointerType,
+                           "the address to store the value">:$addr,
                        UnitAttr:$is_volatile,
                        UnitAttr:$is_nontemporal,
                        OptionalAttr<I64Attr>:$alignment,
@@ -1051,6 +1063,8 @@ def CIR_StoreOp : CIR_Op<"store", [
             /*mem_order=*/cir::MemOrderAttr());
     }]>
   ];
+
+  let extraClassDeclaration = CIR_VolatileOrAtomicAccessDecl;
 
   // FIXME: add verifier.
 }
@@ -3958,7 +3972,9 @@ def CIR_VTTAddrPointOp : CIR_Op<"vtt.address_point", [
 // SetBitfieldOp
 //===----------------------------------------------------------------------===//
 
-def CIR_SetBitfieldOp : CIR_Op<"set_bitfield"> {
+def CIR_SetBitfieldOp : CIR_Op<"set_bitfield", [
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
+]> {
   let summary = "Set the value of a bitfield member";
   let description = [{
     The `cir.set_bitfield` operation provides a store-like access to
@@ -4011,7 +4027,7 @@ def CIR_SetBitfieldOp : CIR_Op<"set_bitfield"> {
    }];
 
   let arguments = (ins
-    Arg<CIR_PointerType, "the address to store the value", [MemWrite]>:$addr,
+    Arg<CIR_PointerType, "the address to store the value">:$addr,
     CIR_AnyType:$src,
     CIR_BitfieldInfoAttr:$bitfield_info,
     DefaultValuedOptionalAttr<I64Attr, "0">:$alignment,
@@ -7216,6 +7232,7 @@ def CIR_MatrixMultiplyOp : CIR_Op<"matrix.multiply", [
 
 def CIR_MatrixColumnMajorStoreOp : CIR_Op<"matrix.column_major_store", [
   DeclareOpInterfaceMethods<PromotableMemOpInterface>,
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
 ]> {
   let summary = "Matrix column major store";
   let description = [{
@@ -7238,7 +7255,7 @@ def CIR_MatrixColumnMajorStoreOp : CIR_Op<"matrix.column_major_store", [
 
   let arguments = (ins
     CIR_MatrixType:$matrix,
-    Arg<CIR_PointerType, "the address to store the value", [MemWrite]>:$value,
+    Arg<CIR_PointerType, "the address to store the value">:$value,
     CIR_IntType:$stride,
     UnitAttr:$is_volatile
   );

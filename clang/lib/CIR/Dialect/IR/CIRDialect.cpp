@@ -4809,16 +4809,18 @@ LogicalResult cir::LdexpOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// LoadOp, GetBitfieldOp and MatrixColumnMajorLoadOp
+// Memory access effects of loads and stores
 //===----------------------------------------------------------------------===//
 
-/// Adds the effects of a load from `addr`. A volatile or atomic load also has
-/// unknown read and write effects, as in the LLVM dialect, so that it is never
-/// erased when its result is unused.
+/// Adds the effects of a load or store through `addr`, where `access` is a
+/// read or a write. A volatile or atomic access also reads and writes unknown
+/// memory, as in the LLVM dialect, so dead code elimination keeps it and alias
+/// analysis treats it as touching any memory.
 static void
-getLoadEffects(OpOperand &addr, bool isVolatileOrAtomic,
-               SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  effects.emplace_back(MemoryEffects::Read::get(), &addr);
+getAccessEffects(MemoryEffects::Effect *access, OpOperand &addr,
+                 bool isVolatileOrAtomic,
+                 SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  effects.emplace_back(access, &addr);
   if (isVolatileOrAtomic) {
     effects.emplace_back(MemoryEffects::Write::get());
     effects.emplace_back(MemoryEffects::Read::get());
@@ -4827,18 +4829,38 @@ getLoadEffects(OpOperand &addr, bool isVolatileOrAtomic,
 
 void cir::LoadOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  getLoadEffects(getAddrMutable(), getIsVolatile() || getMemOrder().has_value(),
-                 effects);
+  getAccessEffects(MemoryEffects::Read::get(), getAddrMutable(),
+                   isVolatileOrAtomic(), effects);
+}
+
+void cir::StoreOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  getAccessEffects(MemoryEffects::Write::get(), getAddrMutable(),
+                   isVolatileOrAtomic(), effects);
 }
 
 void cir::GetBitfieldOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  getLoadEffects(getAddrMutable(), getIsVolatile(), effects);
+  getAccessEffects(MemoryEffects::Read::get(), getAddrMutable(),
+                   getIsVolatile(), effects);
+}
+
+void cir::SetBitfieldOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  getAccessEffects(MemoryEffects::Write::get(), getAddrMutable(),
+                   getIsVolatile(), effects);
 }
 
 void cir::MatrixColumnMajorLoadOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  getLoadEffects(getValueMutable(), getIsVolatile(), effects);
+  getAccessEffects(MemoryEffects::Read::get(), getValueMutable(),
+                   getIsVolatile(), effects);
+}
+
+void cir::MatrixColumnMajorStoreOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  getAccessEffects(MemoryEffects::Write::get(), getValueMutable(),
+                   getIsVolatile(), effects);
 }
 
 //===----------------------------------------------------------------------===//
