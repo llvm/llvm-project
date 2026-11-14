@@ -2121,26 +2121,6 @@ static RowTy getDecompositionLinkRow(Value *V, const ConstraintTy &C,
   return NewVariables.empty() ? Row : RowTy();
 }
 
-/// Three-valued conjunction, where std::nullopt is "unknown".
-static std::optional<bool> kleeneAnd(std::optional<bool> A,
-                                     std::optional<bool> B) {
-  if (A == false || B == false)
-    return false;
-  if (A == true && B == true)
-    return true;
-  return std::nullopt;
-}
-
-/// Three-valued disjunction, where std::nullopt is "unknown".
-static std::optional<bool> kleeneOr(std::optional<bool> A,
-                                    std::optional<bool> B) {
-  if (A == true || B == true)
-    return true;
-  if (A == false && B == false)
-    return false;
-  return std::nullopt;
-}
-
 /// Checks the signed relation \p D \p Pred 0 against the signed system, where
 /// \p Pred is SLT or SLE. Returns true or false if the relation or its
 /// negation is implied, std::nullopt otherwise.
@@ -2157,9 +2137,6 @@ checkSignedDecompositionWithMinMax(CmpInst::Predicate Pred, Decomposition D,
                                    ConstraintInfo &Info, unsigned Depth) {
   assert((Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SLE) &&
          "only < and <= are handled");
-  if (D.canonicalize())
-    return std::nullopt;
-
   // Evaluate constants directly.
   if (D.Vars.empty())
     return Pred == CmpInst::ICMP_SLT ? D.Offset < 0 : D.Offset <= 0;
@@ -2169,18 +2146,25 @@ checkSignedDecompositionWithMinMax(CmpInst::Predicate Pred, Decomposition D,
       auto *MM = dyn_cast<MinMaxIntrinsic>(E.Variable);
       if (!MM || !MM->isSigned())
         continue;
-      auto LHS = D.substitute(E.Variable, MM->getLHS(), Info);
-      auto RHS = D.substitute(E.Variable, MM->getRHS(), Info);
-      if (!LHS || !RHS)
-        return std::nullopt;
-      auto L = checkSignedDecompositionWithMinMax(Pred, *LHS, Info, Depth - 1);
-      auto R = checkSignedDecompositionWithMinMax(Pred, *RHS, Info, Depth - 1);
+      auto CheckOperand = [&](Value *V) -> std::optional<bool> {
+        auto Side = D.substitute(E.Variable, V, Info);
+        if (!Side || Side->canonicalize())
+          return std::nullopt;
+        return checkSignedDecompositionWithMinMax(Pred, *Side, Info, Depth - 1);
+      };
       // D is an affine function of MM with slope E.Coefficient. If the slope
       // is positive, then D(max(a, b)) = max(D(a), D(b)) and D(min(a, b)) =
       // min(D(a), D(b)). If it is negative, max and min swap roles.
-      return (MM->getIntrinsicID() == Intrinsic::smax) == (E.Coefficient > 0)
-                 ? kleeneAnd(L, R)
-                 : kleeneOr(L, R);
+      auto L = CheckOperand(MM->getLHS());
+      bool IsAnd = (MM->getIntrinsicID() == Intrinsic::smax) == (E.Coefficient > 0);
+      if (L == !IsAnd)
+        return L;
+      auto R = CheckOperand(MM->getRHS());
+      if (R == !IsAnd)
+        return R;
+      if (L && R)
+        return IsAnd;
+      return std::nullopt;
     }
   }
 
@@ -2231,6 +2215,9 @@ static std::optional<bool> TryWithMinMaxDecomposition(CmpInst::Predicate Pred,
         auto *MM = dyn_cast<MinMaxIntrinsic>(E.Variable);
         return MM && MM->isSigned();
       }))
+    return std::nullopt;
+
+  if (D.canonicalize())
     return std::nullopt;
 
   return checkSignedDecompositionWithMinMax(Pred, D, Info, /*Depth=*/2);
