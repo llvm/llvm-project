@@ -174,10 +174,21 @@ Error DwarfLinkerForBinary::emitRelocations(
     return Error::success();
 
   RelocationMap RM(DM.getTriple(), DM.getBinaryPath());
+  // The parallel linker saves relocations relative to the units, so a unit it
+  // never placed has no output to relocate.
+  bool OnlyPlacedUnits =
+      Options.DWARFLinkerType == DsymutilDWARFLinkerType::Parallel;
   for (auto &Obj : ObjectsForLinking) {
     if (!Obj.OutRelocs->isInitialized())
       continue;
-    Obj.OutRelocs->addValidRelocs(RM);
+    size_t NumSaved = Obj.OutRelocs->addValidRelocs(RM, OnlyPlacedUnits);
+    // A valid relocation is against a symbol of the binary, whose DIE is kept
+    // along with the relocation, so saving none means they were lost.
+    if (NumSaved == 0 && Obj.OutRelocs->getNumInputRelocs() != 0)
+      reportWarning("none of the " + Twine(Obj.OutRelocs->getNumInputRelocs()) +
+                        " valid relocations was saved to the relocation map, "
+                        "so merging the library would drop this debug info",
+                    Obj.Object->FileName);
   }
 
   SmallString<128> Path;
@@ -266,6 +277,11 @@ ErrorOr<std::unique_ptr<DWARFFile>> DwarfLinkerForBinary::loadObject(
         Obj.getObjectFilename(), std::move(Context),
         std::make_unique<AddressManager>(*this, *ErrorOrObj, Obj, DLBRM),
         [&](StringRef FileName) { BinHolder.eraseObjectEntry(FileName); });
+    Res->UnitOffsetsFunc = [DLBRM](uint64_t UnitOffset,
+                                   uint64_t DebugInfoOffset,
+                                   uint64_t DebugAddrOffset) {
+      DLBRM->setUnitOffsets(UnitOffset, DebugInfoOffset, DebugAddrOffset);
+    };
 
     if (Error E = PL.collect(*ErrorOrObj))
       reportWarning(toString(std::move(E)), Obj.getObjectFilename());
@@ -1268,22 +1284,19 @@ DwarfLinkerForBinary::AddressManager::relocate(const ValidReloc &Reloc) const {
   return Reloc.SymbolMapping.BinaryAddress + Reloc.Addend;
 }
 
-void DwarfLinkerForBinary::AddressManager::updateAndSaveValidRelocs(
-    bool IsDWARF5, uint64_t OriginalUnitOffset, int64_t LinkedOffset,
-    uint64_t StartOffset, uint64_t EndOffset) {
-  std::vector<ValidReloc> InRelocs =
-      getRelocations(ValidDebugInfoRelocs, StartOffset, EndOffset);
-  if (IsDWARF5)
-    InRelocs = getRelocations(ValidDebugAddrRelocs, StartOffset, EndOffset);
+bool DwarfLinkerForBinary::AddressManager::updateAndSaveValidRelocs(
+    RelocSectionKind InSection, RelocSectionKind OutSection,
+    uint64_t OriginalUnitOffset, int64_t LinkedOffset, uint64_t StartOffset,
+    uint64_t EndOffset) {
+  std::vector<ValidReloc> InRelocs = getRelocations(
+      InSection == RelocSectionKind::DebugAddr ? ValidDebugAddrRelocs
+                                               : ValidDebugInfoRelocs,
+      StartOffset, EndOffset);
   DwarfLinkerRelocMap->updateAndSaveValidRelocs(
-      IsDWARF5, InRelocs, OriginalUnitOffset, LinkedOffset);
+      OutSection, InRelocs, OriginalUnitOffset, LinkedOffset);
+  return !InRelocs.empty();
 }
 
-void DwarfLinkerForBinary::AddressManager::updateRelocationsWithUnitOffset(
-    uint64_t OriginalUnitOffset, uint64_t OutputUnitOffset) {
-  DwarfLinkerRelocMap->updateRelocationsWithUnitOffset(OriginalUnitOffset,
-                                                       OutputUnitOffset);
-}
 /// Apply the valid relocations found by findValidRelocs() to
 /// the buffer \p Data, taking into account that Data is at \p BaseOffset
 /// in the debug_info section.
@@ -1299,54 +1312,79 @@ bool DwarfLinkerForBinary::AddressManager::applyValidRelocs(
       ValidDebugInfoRelocs, BaseOffset, BaseOffset + Data.size());
 
   for (const ValidReloc &CurReloc : Relocs) {
-    assert(CurReloc.Offset - BaseOffset < Data.size());
-    assert(CurReloc.Offset - BaseOffset + CurReloc.Size <= Data.size());
+    uint64_t RelocOffset = CurReloc.Offset - BaseOffset;
     char Buf[8];
+    // Only a relocation map which does not describe this DWARF holds a
+    // relocation running past the end of the DIE it starts in.
+    if (CurReloc.Size > sizeof(Buf) ||
+        CurReloc.Size > Data.size() - RelocOffset) {
+      Linker.reportWarning("ignoring relocation at offset 0x" +
+                               Twine::utohexstr(CurReloc.Offset) +
+                               ", which does not fit its DIE",
+                           SrcFileName);
+      continue;
+    }
     uint64_t Value = relocate(CurReloc);
     for (unsigned I = 0; I != CurReloc.Size; ++I) {
       unsigned Index = IsLittleEndian ? I : (CurReloc.Size - I - 1);
       Buf[I] = uint8_t(Value >> (Index * 8));
     }
-    assert(CurReloc.Size <= sizeof(Buf));
-    memcpy(&Data[CurReloc.Offset - BaseOffset], Buf, CurReloc.Size);
+    memcpy(&Data[RelocOffset], Buf, CurReloc.Size);
   }
   return Relocs.size() > 0;
 }
 
 void DwarfLinkerForBinaryRelocationMap::init(DWARFContext &Context) {
   for (const std::unique_ptr<DWARFUnit> &CU : Context.compile_units())
-    StoredValidDebugInfoRelocsMap.insert(
-        std::make_pair(CU->getOffset(), std::vector<ValidReloc>()));
-  // FIXME: Support relocations debug_addr (DWARF5).
+    Units.try_emplace(CU->getOffset());
 }
 
-void DwarfLinkerForBinaryRelocationMap::addValidRelocs(RelocationMap &RM) {
-  for (const auto &DebugInfoRelocs : StoredValidDebugInfoRelocsMap) {
-    for (const auto &InfoReloc : DebugInfoRelocs.second)
-      RM.addRelocationMapEntry(InfoReloc);
+size_t DwarfLinkerForBinaryRelocationMap::addValidRelocs(RelocationMap &RM,
+                                                         bool OnlyPlacedUnits) {
+  std::vector<ValidReloc> DebugInfoRelocs;
+  std::vector<ValidReloc> DebugAddrRelocs;
+  for (const auto &[UnitOffset, Relocs] : Units) {
+    if (OnlyPlacedUnits && !Relocs.Offsets)
+      continue;
+    auto [DebugInfoBase, DebugAddrBase] =
+        Relocs.Offsets.value_or(std::pair<uint64_t, uint64_t>(0, 0));
+    for (ValidReloc R : Relocs.DebugInfo) {
+      R.Offset = R.Offset + DebugInfoBase;
+      DebugInfoRelocs.push_back(R);
+    }
+    for (ValidReloc R : Relocs.DebugAddr) {
+      R.Offset = R.Offset + DebugAddrBase;
+      DebugAddrRelocs.push_back(R);
+    }
   }
-  // FIXME: Support relocations debug_addr (DWARF5).
+
+  // The units are unordered.
+  llvm::sort(DebugInfoRelocs);
+  llvm::sort(DebugAddrRelocs);
+  for (const ValidReloc &R : DebugInfoRelocs)
+    RM.addDebugInfoRelocationMapEntry(R);
+  for (const ValidReloc &R : DebugAddrRelocs)
+    RM.addDebugAddrRelocationMapEntry(R);
+  return DebugInfoRelocs.size() + DebugAddrRelocs.size();
 }
 
-void DwarfLinkerForBinaryRelocationMap::updateRelocationsWithUnitOffset(
-    uint64_t OriginalUnitOffset, uint64_t OutputUnitOffset) {
-  std::vector<ValidReloc> &StoredValidDebugInfoRelocs =
-      StoredValidDebugInfoRelocsMap[OriginalUnitOffset];
-  for (ValidReloc &R : StoredValidDebugInfoRelocs) {
-    R.Offset = (uint64_t)R.Offset + OutputUnitOffset;
-  }
-  // FIXME: Support relocations debug_addr (DWARF5).
+void DwarfLinkerForBinaryRelocationMap::setUnitOffsets(
+    uint64_t UnitOffset, uint64_t DebugInfoOffset, uint64_t DebugAddrOffset) {
+  auto It = Units.find(UnitOffset);
+  assert(It != Units.end() && "unit placed before init()");
+  It->second.Offsets.emplace(DebugInfoOffset, DebugAddrOffset);
 }
 
 void DwarfLinkerForBinaryRelocationMap::updateAndSaveValidRelocs(
-    bool IsDWARF5, std::vector<ValidReloc> &InRelocs, uint64_t UnitOffset,
-    int64_t LinkedOffset) {
-  std::vector<ValidReloc> &OutRelocs =
-      StoredValidDebugInfoRelocsMap[UnitOffset];
-  if (IsDWARF5)
-    OutRelocs = StoredValidDebugAddrRelocsMap[UnitOffset];
+    RelocSectionKind OutSection, const std::vector<ValidReloc> &InRelocs,
+    uint64_t UnitOffset, int64_t LinkedOffset) {
+  auto It = Units.find(UnitOffset);
+  assert(It != Units.end() && "relocations saved before init()");
+  std::vector<ValidReloc> &OutRelocs = OutSection == RelocSectionKind::DebugAddr
+                                           ? It->second.DebugAddr
+                                           : It->second.DebugInfo;
 
-  for (ValidReloc &R : InRelocs) {
+  for (const ValidReloc &R : InRelocs) {
     OutRelocs.emplace_back(R.Offset + LinkedOffset, R.Size, R.Addend,
                            R.SymbolName, R.SymbolMapping);
   }
