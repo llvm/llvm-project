@@ -74,10 +74,6 @@
 ...
 ---
 name:            MVE_VLDRWU32
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -100,10 +96,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRHU16
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -126,10 +118,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRBU8
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -152,10 +140,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRBS32
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -178,10 +162,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRBU32
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -204,10 +184,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRHS32
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -230,10 +206,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRHU32
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -256,10 +228,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRBS16
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -282,10 +250,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRBU16
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -308,10 +272,6 @@ body:             |
 ...
 ---
 name:            MVE_VSTRWU32
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -336,10 +296,6 @@ body:             |
 ...
 ---
 name:            MVE_VSTRHU16
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -364,10 +320,6 @@ body:             |
 ...
 ---
 name:            MVE_VSTRBU8
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -392,10 +344,6 @@ body:             |
 ...
 ---
 name:            MVE_VSTRH32
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -420,10 +368,6 @@ body:             |
 ...
 ---
 name:            MVE_VSTRB32
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -448,10 +392,6 @@ body:             |
 ...
 ---
 name:            MVE_VSTRB16
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -476,11 +416,6 @@ body:             |
 ...
 ---
 name:            ld0ld4
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
-  - { id: 3, class: mqpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -505,11 +440,6 @@ body:             |
 ...
 ---
 name:            ld4ld0
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
-  - { id: 3, class: mqpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -534,12 +464,6 @@ body:             |
 ...
 ---
 name:            ld0ld4ld0
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
-  - { id: 3, class: mqpr, preferred-register: '' }
-  - { id: 4, class: mqpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -566,12 +490,6 @@ body:             |
 ...
 ---
 name:            ld4ld0ld4
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
-  - { id: 3, class: mqpr, preferred-register: '' }
-  - { id: 4, class: mqpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -598,11 +516,6 @@ body:             |
 ...
 ---
 name:            addload
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
-  - { id: 3, class: mqpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -627,11 +540,6 @@ body:             |
 ...
 ---
 name:            sub
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
-  - { id: 3, class: mqpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -656,11 +564,6 @@ body:             |
 ...
 ---
 name:            otherUse
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
-  - { id: 3, class: mqpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -688,12 +591,6 @@ body:             |
 ...
 ---
 name:            postincUse
-registers:
-  - { id: 0, class: rgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
-  - { id: 3, class: mqpr, preferred-register: '' }
-  - { id: 4, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -719,11 +616,6 @@ body:             |
 ...
 ---
 name:            badScale
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
-  - { id: 3, class: mqpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -749,11 +641,6 @@ body:             |
 ...
 ---
 name:            badRange
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
-  - { id: 3, class: mqpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -779,12 +666,6 @@ body:             |
 ...
 ---
 name:            addUseOK
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
-  - { id: 3, class: mqpr, preferred-register: '' }
-  - { id: 4, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -811,12 +692,6 @@ body:             |
 ...
 ---
 name:            addUseDom
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
-  - { id: 3, class: mqpr, preferred-register: '' }
-  - { id: 4, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -844,12 +719,6 @@ body:             |
 ...
 ---
 name:            addUseKilled
-registers:
-  - { id: 0, class: gprnopc, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
-  - { id: 3, class: mqpr, preferred-register: '' }
-  - { id: 4, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -876,10 +745,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRWU32_post
-registers:
-  - { id: 0, class: rgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -903,10 +768,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRHU16_post
-registers:
-  - { id: 0, class: rgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -930,10 +791,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRBU8_post
-registers:
-  - { id: 0, class: rgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -957,10 +814,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRBS32_post
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: tgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -984,10 +837,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRBU32_post
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: tgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1011,10 +860,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRHS32_post
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: tgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1038,10 +883,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRHU32_post
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: tgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1065,10 +906,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRBS16_post
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: tgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1092,10 +929,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRBU16_post
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: tgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1119,10 +952,6 @@ body:             |
 ...
 ---
 name:            MVE_VSTRWU32_post
-registers:
-  - { id: 0, class: rgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1148,10 +977,6 @@ body:             |
 ...
 ---
 name:            MVE_VSTRHU16_post
-registers:
-  - { id: 0, class: rgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1177,10 +1002,6 @@ body:             |
 ...
 ---
 name:            MVE_VSTRBU8_post
-registers:
-  - { id: 0, class: rgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1206,10 +1027,6 @@ body:             |
 ...
 ---
 name:            MVE_VSTRH32_post
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: tgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1235,10 +1052,6 @@ body:             |
 ...
 ---
 name:            MVE_VSTRB32_post
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: tgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1264,10 +1077,6 @@ body:             |
 ...
 ---
 name:            MVE_VSTRB16_post
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: tgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1293,10 +1102,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRWU32_pre
-registers:
-  - { id: 0, class: rgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1320,10 +1125,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRHU16_pre
-registers:
-  - { id: 0, class: rgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1347,10 +1148,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRBU8_pre
-registers:
-  - { id: 0, class: rgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1374,10 +1171,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRBS32_pre
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: tgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1401,10 +1194,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRBU32_pre
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: tgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1428,10 +1217,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRHS32_pre
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: tgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1455,10 +1240,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRHU32_pre
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: tgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1482,10 +1263,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRBS16_pre
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: tgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1509,10 +1286,6 @@ body:             |
 ...
 ---
 name:            MVE_VLDRBU16_pre
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: tgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1536,10 +1309,6 @@ body:             |
 ...
 ---
 name:            MVE_VSTRWU32_pre
-registers:
-  - { id: 0, class: rgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1565,10 +1334,6 @@ body:             |
 ...
 ---
 name:            MVE_VSTRHU16_pre
-registers:
-  - { id: 0, class: rgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1594,10 +1359,6 @@ body:             |
 ...
 ---
 name:            MVE_VSTRBU8_pre
-registers:
-  - { id: 0, class: rgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1623,10 +1384,6 @@ body:             |
 ...
 ---
 name:            MVE_VSTRH32_pre
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: tgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1652,10 +1409,6 @@ body:             |
 ...
 ---
 name:            MVE_VSTRB32_pre
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: tgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1681,10 +1434,6 @@ body:             |
 ...
 ---
 name:            MVE_VSTRB16_pre
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: tgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1710,10 +1459,6 @@ body:             |
 ...
 ---
 name:            multiple2
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: tgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1743,11 +1488,6 @@ body:             |
 ...
 ---
 name:            multiple3
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: tgpr, preferred-register: '' }
-  - { id: 3, class: tgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1775,11 +1515,6 @@ body:             |
 ...
 ---
 name:            multiple4
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: tgpr, preferred-register: '' }
-  - { id: 3, class: tgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1807,10 +1542,6 @@ body:             |
 ...
 ---
 name:            badScale2
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: tgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1836,10 +1567,6 @@ body:             |
 ...
 ---
 name:            badRange2
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: tgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }
@@ -1865,11 +1592,6 @@ body:             |
 ...
 ---
 name:            regtype
-registers:
-  - { id: 0, class: tgpr, preferred-register: '' }
-  - { id: 1, class: mqpr, preferred-register: '' }
-  - { id: 2, class: rgpr, preferred-register: '' }
-  - { id: 3, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$q0', virtual-reg: '%1' }

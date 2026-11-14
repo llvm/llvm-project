@@ -750,58 +750,39 @@ void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
 FunctionCallee
 OpenMPIRBuilder::getOrCreateRuntimeFunction(Module &M, RuntimeFunction FnID) {
   FunctionType *FnTy = nullptr;
-  Function *Fn = nullptr;
+  StringRef Name;
 
-  // Try to find the declation in the module first.
   switch (FnID) {
 #define OMP_RTL(Enum, Str, IsVarArg, ReturnType, ...)                          \
   case Enum:                                                                   \
     FnTy = FunctionType::get(ReturnType, ArrayRef<Type *>{__VA_ARGS__},        \
                              IsVarArg);                                        \
-    Fn = M.getFunction(Str);                                                   \
+    Name = Str;                                                                \
     break;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
   }
 
-  if (!Fn) {
-    // Create a new declaration if we need one.
-    switch (FnID) {
-#define OMP_RTL(Enum, Str, ...)                                                \
-  case Enum:                                                                   \
-    Fn = Function::Create(FnTy, GlobalValue::ExternalLinkage, Str, M);         \
-    break;
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
-    }
-    Fn->setCallingConv(Config.getRuntimeCC());
+  return M.getOrInsertFunction(Name, FnTy, [&](Function &Fn) {
+    Fn.setCallingConv(Config.getRuntimeCC());
     // Add information if the runtime function takes a callback function
     if (FnID == OMPRTL___kmpc_fork_call || FnID == OMPRTL___kmpc_fork_teams) {
-      if (!Fn->hasMetadata(LLVMContext::MD_callback)) {
-        LLVMContext &Ctx = Fn->getContext();
-        MDBuilder MDB(Ctx);
-        // Annotate the callback behavior of the runtime function:
-        //  - The callback callee is argument number 2 (microtask).
-        //  - The first two arguments of the callback callee are unknown (-1).
-        //  - All variadic arguments to the runtime function are passed to the
-        //    callback callee.
-        Fn->addMetadata(
-            LLVMContext::MD_callback,
-            *MDNode::get(Ctx, {MDB.createCallbackEncoding(
-                                  2, {-1, -1}, /* VarArgsArePassed */ true)}));
-      }
+      LLVMContext &Ctx = Fn.getContext();
+      MDBuilder MDB(Ctx);
+      // Annotate the callback behavior of the runtime function:
+      //  - The callback callee is argument number 2 (microtask).
+      //  - The first two arguments of the callback callee are unknown (-1).
+      //  - All variadic arguments to the runtime function are passed to the
+      //    callback callee.
+      Fn.addMetadata(
+          LLVMContext::MD_callback,
+          *MDNode::get(Ctx, {MDB.createCallbackEncoding(
+                                2, {-1, -1}, /* VarArgsArePassed */ true)}));
     }
 
-    LLVM_DEBUG(dbgs() << "Created OpenMP runtime function " << Fn->getName()
-                      << " with type " << *Fn->getFunctionType() << "\n");
-    addAttributes(FnID, *Fn);
-
-  } else {
-    LLVM_DEBUG(dbgs() << "Found OpenMP runtime function " << Fn->getName()
-                      << " with type " << *Fn->getFunctionType() << "\n");
-  }
-
-  assert(Fn && "Failed to create OpenMP runtime function");
-
-  return {FnTy, Fn};
+    LLVM_DEBUG(dbgs() << "Created OpenMP runtime function " << Fn.getName()
+                      << " with type " << *Fn.getFunctionType() << "\n");
+    addAttributes(FnID, Fn);
+  });
 }
 
 Expected<BasicBlock *>
@@ -9553,28 +9534,10 @@ static Expected<Function *> createOutlinedFunction(
 /// Given a task descriptor, TaskWithPrivates, return the pointer to the block
 /// of pointers containing shared data between the parent task and the created
 /// task.
-static LoadInst *loadSharedDataFromTaskDescriptor(OpenMPIRBuilder &OMPIRBuilder,
-                                                  IRBuilderBase &Builder,
-                                                  Value *TaskWithPrivates,
-                                                  Type *TaskWithPrivatesTy) {
-
-  Type *TaskTy = OMPIRBuilder.Task;
+static LoadInst *loadSharedDataFromTaskDescriptor(IRBuilderBase &Builder,
+                                                  Value *TaskWithPrivates) {
   LLVMContext &Ctx = Builder.getContext();
-  Value *TaskT =
-      Builder.CreateStructGEP(TaskWithPrivatesTy, TaskWithPrivates, 0);
-  Value *Shareds = TaskT;
-  // TaskWithPrivatesTy can be one of the following
-  // 1. %struct.task_with_privates = type { %struct.kmp_task_ompbuilder_t,
-  //                                        %struct.privates }
-  // 2. %struct.kmp_task_ompbuilder_t ;; This is simply TaskTy
-  //
-  // In the former case, that is when  TaskWithPrivatesTy != TaskTy,
-  // its first member has to be the task descriptor. TaskTy is the type of the
-  // task descriptor. TaskT is the pointer to the task descriptor. Loading the
-  // first member of TaskT, gives us the pointer to shared data.
-  if (TaskWithPrivatesTy != TaskTy)
-    Shareds = Builder.CreateStructGEP(TaskTy, TaskT, 0);
-  return Builder.CreateLoad(PointerType::getUnqual(Ctx), Shareds);
+  return Builder.CreateLoad(PointerType::getUnqual(Ctx), TaskWithPrivates);
 }
 /// Create an entry point for a target task with the following.
 /// It'll have the following signature
@@ -9681,8 +9644,8 @@ static Function *emitTargetTaskProxyFunction(
 
     Value *SharedsSize = Builder.getInt64(StructSize);
 
-    LoadInst *LoadShared = loadSharedDataFromTaskDescriptor(
-        OMPBuilder, Builder, TaskWithPrivates, TaskWithPrivatesTy);
+    LoadInst *LoadShared =
+        loadSharedDataFromTaskDescriptor(Builder, TaskWithPrivates);
 
     Builder.CreateMemCpy(
         NewArgStructAlloca, NewArgStructAlloca->getAlign(), LoadShared,
@@ -9719,9 +9682,10 @@ static Type *getOffloadingArrayType(Value *V) {
 // %struct.kmp_task_ompbuilder_t is returned.
 static StructType *
 createTaskWithPrivatesTy(OpenMPIRBuilder &OMPIRBuilder,
-                         ArrayRef<Value *> OffloadingArraysToPrivatize) {
+                         ArrayRef<Value *> OffloadingArraysToPrivatize,
+                         ArrayRef<Type *> DescriptorTypes) {
 
-  if (OffloadingArraysToPrivatize.empty())
+  if (OffloadingArraysToPrivatize.empty() && DescriptorTypes.empty())
     return OMPIRBuilder.Task;
 
   SmallVector<Type *, 4> StructFieldTypes;
@@ -9733,6 +9697,7 @@ createTaskWithPrivatesTy(OpenMPIRBuilder &OMPIRBuilder,
     assert(ArrayTy && "ArrayType cannot be nullptr");
     StructFieldTypes.push_back(ArrayTy);
   }
+  llvm::append_range(StructFieldTypes, DescriptorTypes);
   StructType *PrivatesStructTy =
       StructType::create(StructFieldTypes, "struct.privates");
   return StructType::create({OMPIRBuilder.Task, PrivatesStructTy},
@@ -9936,9 +9901,14 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
       }
     }
   }
+  auto NonContiguousDescriptors = RTArgs.NonContiguousDescriptors;
+  if (!NeedsTargetTask)
+    NonContiguousDescriptors.clear();
   OI->PostOutlineCB = [this, ToBeDeleted, Dependencies, NeedsTargetTask,
-                       DeviceID, OffloadingArraysToPrivatize](
-                          Function &OutlinedFn) mutable {
+                       DeviceID, OffloadingArraysToPrivatize,
+                       NonContiguousDescriptors,
+                       PointersArray =
+                           RTArgs.PointersArray](Function &OutlinedFn) mutable {
     assert(OutlinedFn.hasOneUse() &&
            "there must be a single user for the outlined function");
 
@@ -9962,8 +9932,13 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
     int SharedArgOperandNo =
         HasShareds ? OffloadingArraysToPrivatize.size() + 1 : 0;
 
-    StructType *TaskWithPrivatesTy =
-        createTaskWithPrivatesTy(*this, OffloadingArraysToPrivatize);
+    // Descriptor storage is not an argument to the outlined function. It is
+    // reached indirectly through the task-private pointer array.
+    SmallVector<Type *, 2> DescriptorTypes;
+    for (const auto &Descriptor : NonContiguousDescriptors)
+      DescriptorTypes.push_back(Descriptor.Storage->getAllocatedType());
+    StructType *TaskWithPrivatesTy = createTaskWithPrivatesTy(
+        *this, OffloadingArraysToPrivatize, DescriptorTypes);
     StructType *PrivatesTy = nullptr;
 
     if (!OffloadingArraysToPrivatize.empty())
@@ -10054,14 +10029,14 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
     Align Alignment = TaskData->getPointerAlignment(M.getDataLayout());
     if (HasShareds) {
       Value *Shareds = StaleCI->getArgOperand(SharedArgOperandNo);
-      Value *TaskShareds = loadSharedDataFromTaskDescriptor(
-          *this, Builder, TaskData, TaskWithPrivatesTy);
+      Value *TaskShareds = loadSharedDataFromTaskDescriptor(Builder, TaskData);
       Builder.CreateMemCpy(TaskShareds, Alignment, Shareds, Alignment,
                            SharedsSize);
     }
     if (!OffloadingArraysToPrivatize.empty()) {
       Value *Privates =
           Builder.CreateStructGEP(TaskWithPrivatesTy, TaskData, 1);
+      Value *PrivatePointersArray = nullptr;
       for (unsigned int i = 0; i < OffloadingArraysToPrivatize.size(); ++i) {
         Value *PtrToPrivatize = OffloadingArraysToPrivatize[i];
         [[maybe_unused]] Type *ArrayType =
@@ -10077,6 +10052,23 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
         Builder.CreateMemCpy(
             Dst, Alignment, PtrToPrivatize, Alignment,
             Builder.getInt64(M.getDataLayout().getTypeStoreSize(ElementType)));
+        if (PtrToPrivatize == PointersArray)
+          PrivatePointersArray = Dst;
+      }
+      // Snapshot the encounter-time bounds before enqueueing the task, then
+      // redirect its pointer entries to descriptors owned by that task.
+      for (auto [I, Descriptor] : llvm::enumerate(NonContiguousDescriptors)) {
+        assert(PrivatePointersArray && "missing task-private pointer array");
+        Value *Dst = Builder.CreateStructGEP(
+            PrivatesTy, Privates, OffloadingArraysToPrivatize.size() + I);
+        Builder.CreateMemCpy(
+            Dst, Alignment, Descriptor.Storage, Descriptor.Storage->getAlign(),
+            Builder.getInt64(M.getDataLayout().getTypeStoreSize(
+                Descriptor.Storage->getAllocatedType())));
+        Value *Entry = Builder.CreateConstInBoundsGEP2_32(
+            getOffloadingArrayType(PointersArray), PrivatePointersArray, 0,
+            Descriptor.MapIndex);
+        Builder.CreateAlignedStore(Dst, Entry, Alignment);
       }
     }
 
@@ -10551,6 +10543,7 @@ void OpenMPIRBuilder::emitOffloadingArraysArgument(IRBuilderBase &Builder,
   auto Int64Ty = Type::getInt64Ty(M.getContext());
   auto Int64PtrTy = UnqualPtrTy;
 
+  RTArgs.NonContiguousDescriptors = Info.RTArgs.NonContiguousDescriptors;
   if (!Info.NumberOfPtrs) {
     RTArgs.BasePointersArray = ConstantPointerNull::get(VoidPtrPtrTy);
     RTArgs.PointersArray = ConstantPointerNull::get(VoidPtrPtrTy);
@@ -10630,6 +10623,7 @@ void OpenMPIRBuilder::emitNonContiguousDescriptor(InsertPointTy AllocaIP,
     ArrayType *ArrayTy = ArrayType::get(DimTy, NonContigInfo.Dims[I]);
     AllocaInst *DimsAddr =
         Builder.CreateAlloca(ArrayTy, /* ArraySize = */ nullptr, "dims");
+    Info.RTArgs.NonContiguousDescriptors.push_back({I, DimsAddr});
     Builder.restoreIP(CodeGenIP);
     for (unsigned II = 0, EE = NonContigInfo.Dims[I]; II < EE; ++II) {
       unsigned RevIdx = EE - II - 1;
