@@ -109,6 +109,22 @@ getModuleProjectRoot(PathRef RequiredSource, PathRef ModuleUnitFileName,
   return std::nullopt;
 }
 
+/// Returns the compile command for a module unit. The global CDB wins only
+/// when it has an exact entry. If it has none, or only a heuristic guess
+/// (e.g. an unrelated ancestor compile_commands.json), prefer the consuming
+/// project's CDB, then fall back to whatever the global CDB gave us.
+std::optional<tooling::CompileCommand>
+getModuleUnitCompileCommand(PathRef ModuleUnitFileName,
+                            const GlobalCompilationDatabase &CDB,
+                            const ProjectModules &MDB) {
+  auto Cmd = CDB.getCompileCommand(ModuleUnitFileName);
+  if (Cmd && Cmd->Heuristic.empty())
+    return Cmd;
+  if (auto ProjectCmd = MDB.getCompileCommand(ModuleUnitFileName))
+    return ProjectCmd;
+  return Cmd;
+}
+
 /// Returns the root directory used for persistent module cache storage.
 /// Prefer a project-local cache (resolved from the module unit or the
 /// consuming translation unit) so different clangd sessions working on the
@@ -1220,9 +1236,7 @@ void ModulesBuilder::ModulesBuilderImpl::getPrebuiltModuleFile(
   if (!ReusePrebuiltModuleFile)
     return;
 
-  auto Cmd = getCDB().getCompileCommand(ModuleUnitFileName);
-  if (!Cmd)
-    Cmd = MDB.getCompileCommand(ModuleUnitFileName);
+  auto Cmd = getModuleUnitCompileCommand(ModuleUnitFileName, getCDB(), MDB);
   if (!Cmd)
     return;
 
@@ -1296,9 +1310,7 @@ llvm::Error ModulesBuilder::ModulesBuilderImpl::getOrBuildModuleFile(
 
     std::string ReqFileName =
         MDB.getSourceForModuleName(ReqModuleName, RequiredSource);
-    auto Cmd = getCDB().getCompileCommand(ReqFileName);
-    if (!Cmd)
-      Cmd = MDB.getCompileCommand(ReqFileName);
+    auto Cmd = getModuleUnitCompileCommand(ReqFileName, getCDB(), MDB);
     if (!Cmd)
       return llvm::createStringError(
           llvm::formatv("No compile command for {0}", ReqFileName));

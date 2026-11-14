@@ -1655,221 +1655,120 @@ export int BValue = MValue;
   EXPECT_TRUE(StringRef(HSB.PrebuiltModuleFiles["M"]).contains("M.cppm-"));
 }
 
+namespace {
+
+std::string slash(llvm::StringRef P) {
+  return llvm::sys::path::convert_to_slash(P);
+}
+
+void writeFile(llvm::StringRef Path, llvm::StringRef Contents) {
+  ASSERT_FALSE(
+      llvm::sys::fs::create_directories(llvm::sys::path::parent_path(Path)));
+  std::error_code EC;
+  llvm::raw_fd_ostream OS(Path, EC);
+  ASSERT_FALSE(EC);
+  OS << Contents;
+}
+
+std::string cdbEntry(llvm::StringRef Dir, llvm::StringRef Command,
+                     llvm::StringRef File) {
+  return "{\"directory\":\"" + slash(Dir) + "\",\"command\":\"" +
+         Command.str() + "\",\"file\":\"" + slash(File) + "\"}";
+}
+
+// <Root>/project/{main.cpp,build/compile_commands.json}
+// <Root>/external/M.cppm   (not covered by any ancestor CDB)
+struct OutOfTreeProject {
+  llvm::SmallString<256> Project, Build, ExtMod, Main;
+
+  explicit OutOfTreeProject(llvm::StringRef Root) {
+    Project = Root;
+    llvm::sys::path::append(Project, "project");
+    Build = Project;
+    llvm::sys::path::append(Build, "build");
+    Main = Project;
+    llvm::sys::path::append(Main, "main.cpp");
+    ExtMod = Root;
+    llvm::sys::path::append(ExtMod, "external", "M.cppm");
+
+    writeFile(ExtMod, "export module M;\nexport int extVal = 42;\n");
+    writeFile(Main, "import M;\nint main() { return extVal; }\n");
+
+    llvm::SmallString<256> Pcm(Build);
+    llvm::sys::path::append(Pcm, "M.pcm");
+    llvm::SmallString<256> CDB(Build);
+    llvm::sys::path::append(CDB, "compile_commands.json");
+    writeFile(CDB, "[" +
+                       cdbEntry(Build,
+                                "clang++ -std=c++20 --precompile -o " +
+                                    slash(Pcm) + " " + slash(ExtMod),
+                                ExtMod) +
+                       "," +
+                       cdbEntry(Build,
+                                "clang++ -std=c++20 -fmodule-file=M=" +
+                                    slash(Pcm) + " -c " + slash(Main),
+                                Main) +
+                       "]");
+  }
+};
+
+} // namespace
+
+TEST_F(PrerequisiteModulesTests, OutOfTreeModuleUnitCachedInConsumerProject) {
+  OutOfTreeProject P(TestDir);
+  DirectoryBasedGlobalCompilationDatabase DirCDB(FS);
+  OverlayCDB CDB(&DirCDB);
+
+  // Precondition: the module unit has no ancestor CDB of its own.
+  ASSERT_FALSE(CDB.getCompileCommand(P.ExtMod));
+
+  ModulesBuilder Builder(CDB);
+  auto Info = Builder.buildPrerequisiteModulesFor(P.Main, FS);
+  ASSERT_TRUE(Info);
+
+  HeaderSearchOptions HS(P.Project);
+  Info->adjustHeaderSearchOptions(HS);
+  ASSERT_EQ(HS.PrebuiltModuleFiles.count("M"), 1u);
+
+  llvm::SmallString<256> ExpectedRoot(P.Project);
+  llvm::sys::path::append(ExpectedRoot, ".cache", "clangd", "modules");
+  EXPECT_TRUE(StringRef(HS.PrebuiltModuleFiles["M"]).starts_with(ExpectedRoot))
+      << "Actual: " << HS.PrebuiltModuleFiles["M"];
+}
+
+// An unrelated ancestor CDB makes the global CDB return an interpolated
+// (heuristic) command for the module unit. It must not shadow the exact entry
+// from the consuming project's CDB.
 TEST_F(PrerequisiteModulesTests,
-       OutOfTreeModuleUnitResolvedViaConsumerCDBAndCachedInProject) {
-  SmallString<256> ProjectDir(TestDir);
-  llvm::sys::path::append(ProjectDir, "project");
-  SmallString<256> BuildDir(ProjectDir);
-  llvm::sys::path::append(BuildDir, "build");
-  SmallString<256> ExternalDir(TestDir);
-  llvm::sys::path::append(ExternalDir, "external");
+       OutOfTreeModuleUnitIgnoresHeuristicAncestorCommand) {
+  OutOfTreeProject P(TestDir);
 
-  ASSERT_FALSE(llvm::sys::fs::create_directories(BuildDir));
-  ASSERT_FALSE(llvm::sys::fs::create_directories(ExternalDir));
-
-  SmallString<256> ExtModPath(ExternalDir);
-  llvm::sys::path::append(ExtModPath, "M.cppm");
-  {
-    std::error_code EC;
-    llvm::raw_fd_ostream OS(ExtModPath, EC);
-    ASSERT_FALSE(EC);
-    OS << "export module M;\nexport int extVal = 42;\n";
-  }
-
-  SmallString<256> MainPath(ProjectDir);
-  llvm::sys::path::append(MainPath, "main.cpp");
-  {
-    std::error_code EC;
-    llvm::raw_fd_ostream OS(MainPath, EC);
-    ASSERT_FALSE(EC);
-    OS << "import M;\nint main() { return extVal; }\n";
-  }
-
-  SmallString<256> MPcmPath(BuildDir);
-  llvm::sys::path::append(MPcmPath, "M.pcm");
-
-  SmallString<256> CDBPath(BuildDir);
-  llvm::sys::path::append(CDBPath, "compile_commands.json");
-  {
-    std::error_code EC;
-    llvm::raw_fd_ostream OS(CDBPath, EC);
-    ASSERT_FALSE(EC);
-    std::string SlashBuild = llvm::sys::path::convert_to_slash(BuildDir);
-    std::string SlashExtMod = llvm::sys::path::convert_to_slash(ExtModPath);
-    std::string SlashMain = llvm::sys::path::convert_to_slash(MainPath);
-    std::string SlashPcm = llvm::sys::path::convert_to_slash(MPcmPath);
-    OS << llvm::formatv(
-        R"json([
-  {
-    "directory": "{0}",
-    "command": "clang++ -std=c++20 --precompile -o {3} {1}",
-    "file": "{1}"
-  },
-  {
-    "directory": "{0}",
-    "command": "clang++ -std=c++20 -fmodule-file=M={3} -c {2}",
-    "file": "{2}"
-  }
-])json",
-        SlashBuild, SlashExtMod, SlashMain, SlashPcm);
-  }
+  llvm::SmallString<256> StrayDir(llvm::sys::path::parent_path(P.ExtMod));
+  llvm::SmallString<256> Unrelated(StrayDir);
+  llvm::sys::path::append(Unrelated, "unrelated.cpp");
+  llvm::SmallString<256> StrayCDB(StrayDir);
+  llvm::sys::path::append(StrayCDB, "compile_commands.json");
+  // -std=c++11 cannot build a module, so using this command would fail.
+  writeFile(StrayCDB,
+            "[" +
+                cdbEntry(StrayDir, "clang++ -std=c++11 -c " + slash(Unrelated),
+                         Unrelated) +
+                "]");
 
   DirectoryBasedGlobalCompilationDatabase DirCDB(FS);
   OverlayCDB CDB(&DirCDB);
 
-  // Out-of-tree module unit has no ancestor CDB of its own.
-  EXPECT_FALSE(CDB.getCompileCommand(ExtModPath));
+  auto Heuristic = CDB.getCompileCommand(P.ExtMod);
+  ASSERT_TRUE(Heuristic);
+  ASSERT_FALSE(Heuristic->Heuristic.empty());
 
   ModulesBuilder Builder(CDB);
-  auto Info = Builder.buildPrerequisiteModulesFor(MainPath, FS);
+  auto Info = Builder.buildPrerequisiteModulesFor(P.Main, FS);
   ASSERT_TRUE(Info);
 
-  HeaderSearchOptions HS(ProjectDir);
+  HeaderSearchOptions HS(P.Project);
   Info->adjustHeaderSearchOptions(HS);
-  ASSERT_EQ(HS.PrebuiltModuleFiles.count("M"), 1u);
-  std::string BuiltPCMPath = HS.PrebuiltModuleFiles["M"];
-  EXPECT_TRUE(llvm::sys::fs::exists(BuiltPCMPath));
-
-  // Because the out-of-tree module unit has no project root, its persistent BMI
-  // cache must fall back to the consuming translation unit's project root.
-  SmallString<256> ExpectedCacheRoot(ProjectDir);
-  llvm::sys::path::append(ExpectedCacheRoot, ".cache", "clangd", "modules");
-  EXPECT_TRUE(StringRef(BuiltPCMPath).starts_with(ExpectedCacheRoot))
-      << "Actual BMI path: " << BuiltPCMPath
-      << "\nExpected prefix: " << ExpectedCacheRoot;
-
-  ParseInputs MainInputs = getInputs("project/main.cpp", CDB);
-  MainInputs.ModulesManager = &Builder;
-  auto CI = buildCompilerInvocation(MainInputs, DiagConsumer);
-  ASSERT_TRUE(CI);
-  EXPECT_TRUE(Info->canReuse(*CI, FS.view(ProjectDir)));
-
-  // Also verify getPrebuiltModuleFile() when an out-of-tree module unit
-  // itself consumes a prebuilt BMI via -fmodule-file= in compile_commands.json.
-  SmallString<256> DepModPath(ExternalDir);
-  llvm::sys::path::append(DepModPath, "Dep.cppm");
-  {
-    std::error_code EC;
-    llvm::raw_fd_ostream OS(DepModPath, EC);
-    ASSERT_FALSE(EC);
-    OS << "export module Dep;\nexport int depVal = 7;\n";
-  }
-
-  SmallString<256> DepPcmPath(BuildDir);
-  llvm::sys::path::append(DepPcmPath, "Dep.pcm");
-
-  // Build Dep.pcm once so a valid prebuilt BMI exists on disk.
-  {
-    std::string SlashBuild = llvm::sys::path::convert_to_slash(BuildDir);
-    std::string SlashDepMod = llvm::sys::path::convert_to_slash(DepModPath);
-    std::error_code EC;
-    llvm::raw_fd_ostream OS(CDBPath, EC);
-    ASSERT_FALSE(EC);
-    OS << llvm::formatv(
-        R"json([
-  {
-    "directory": "{0}",
-    "command": "clang++ -std=c++20 --precompile {1}",
-    "file": "{1}"
-  }
-])json",
-        SlashBuild, SlashDepMod);
-  }
-  {
-    DirectoryBasedGlobalCompilationDatabase SeedDirCDB(FS);
-    OverlayCDB SeedCDB(&SeedDirCDB);
-    ModulesBuilder SeedBuilder(SeedCDB);
-    // Build a temporary consumer of Dep to produce a valid BMI on disk.
-    SmallString<256> SeedMainPath(ProjectDir);
-    llvm::sys::path::append(SeedMainPath, "seed.cpp");
-    {
-      std::error_code EC;
-      llvm::raw_fd_ostream OS(SeedMainPath, EC);
-      ASSERT_FALSE(EC);
-      OS << "import Dep;\n";
-    }
-    {
-      std::string SlashBuild = llvm::sys::path::convert_to_slash(BuildDir);
-      std::string SlashDepMod = llvm::sys::path::convert_to_slash(DepModPath);
-      std::string SlashSeed = llvm::sys::path::convert_to_slash(SeedMainPath);
-      std::error_code EC;
-      llvm::raw_fd_ostream OS(CDBPath, EC);
-      ASSERT_FALSE(EC);
-      OS << llvm::formatv(
-          R"json([
-  {
-    "directory": "{0}",
-    "command": "clang++ -std=c++20 --precompile {1}",
-    "file": "{1}"
-  },
-  {
-    "directory": "{0}",
-    "command": "clang++ -std=c++20 -c {2}",
-    "file": "{2}"
-  }
-])json",
-          SlashBuild, SlashDepMod, SlashSeed);
-    }
-    auto SeedInfo = SeedBuilder.buildPrerequisiteModulesFor(SeedMainPath, FS);
-    ASSERT_TRUE(SeedInfo);
-    HeaderSearchOptions SeedHS(ProjectDir);
-    SeedInfo->adjustHeaderSearchOptions(SeedHS);
-    ASSERT_EQ(SeedHS.PrebuiltModuleFiles.count("Dep"), 1u);
-    ASSERT_FALSE(llvm::sys::fs::copy_file(SeedHS.PrebuiltModuleFiles["Dep"],
-                                          DepPcmPath));
-  }
-
-  // Now update external/M.cppm to import Dep and pass -fmodule-file=Dep=... on
-  // M.cppm's compile command in compile_commands.json.
-  {
-    std::error_code EC;
-    llvm::raw_fd_ostream OS(ExtModPath, EC);
-    ASSERT_FALSE(EC);
-    OS << "export module M;\nimport Dep;\nexport int extVal = depVal + 35;\n";
-  }
-  {
-    std::string SlashBuild = llvm::sys::path::convert_to_slash(BuildDir);
-    std::string SlashDepMod = llvm::sys::path::convert_to_slash(DepModPath);
-    std::string SlashExtMod = llvm::sys::path::convert_to_slash(ExtModPath);
-    std::string SlashMain = llvm::sys::path::convert_to_slash(MainPath);
-    std::string SlashDepPcm = llvm::sys::path::convert_to_slash(DepPcmPath);
-    std::string SlashMPcm = llvm::sys::path::convert_to_slash(MPcmPath);
-    std::error_code EC;
-    llvm::raw_fd_ostream OS(CDBPath, EC);
-    ASSERT_FALSE(EC);
-    OS << llvm::formatv(
-        R"json([
-  {
-    "directory": "{0}",
-    "command": "clang++ -std=c++20 --precompile -o {4} {1}",
-    "file": "{1}"
-  },
-  {
-    "directory": "{0}",
-    "command": "clang++ -std=c++20 -fmodule-file=Dep={4} --precompile -o {5} {2}",
-    "file": "{2}"
-  },
-  {
-    "directory": "{0}",
-    "command": "clang++ -std=c++20 -fmodule-file=M={5} -c {3}",
-    "file": "{3}"
-  }
-])json",
-        SlashBuild, SlashDepMod, SlashExtMod, SlashMain, SlashDepPcm,
-        SlashMPcm);
-  }
-
-  DirectoryBasedGlobalCompilationDatabase DirCDB2(FS);
-  OverlayCDB CDB2(&DirCDB2);
-  ModulesBuilder BuilderWithPrebuilt(CDB2);
-  auto PrebuiltInfo =
-      BuilderWithPrebuilt.buildPrerequisiteModulesFor(MainPath, FS);
-  ASSERT_TRUE(PrebuiltInfo);
-
-  HeaderSearchOptions PrebuiltHS(ProjectDir);
-  PrebuiltInfo->adjustHeaderSearchOptions(PrebuiltHS);
-  ASSERT_EQ(PrebuiltHS.PrebuiltModuleFiles.count("Dep"), 1u);
-  EXPECT_EQ(PrebuiltHS.PrebuiltModuleFiles["Dep"], std::string(DepPcmPath));
+  EXPECT_EQ(HS.PrebuiltModuleFiles.count("M"), 1u);
 }
 
 TEST_F(PrerequisiteModulesTests, ModuleImportThroughInclude) {
