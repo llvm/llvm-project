@@ -30,6 +30,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
@@ -7335,6 +7336,43 @@ static void checkLifetimeBoundAttr(Sema &S, NamedDecl &ND) {
   }
 }
 
+static void checkOracleFunctionAttr(Sema &S, FunctionDecl &FD,
+                                    const Declarator &D) {
+  auto *Attr = FD.getAttr<OracleFunctionAttr>();
+  if (!Attr)
+    return;
+
+  if (!Attr->isInherited() &&
+      D.getFunctionDefinitionKind() != FunctionDefinitionKind::Definition) {
+    S.Diag(Attr->getLocation(),
+           diag::err_attribute_no_builtin_on_non_definition)
+        << Attr;
+    return;
+  }
+
+  if (FD.isExternallyVisible()) {
+    S.Diag(Attr->getLocation(), diag::err_oracle_function_no_external_linkage);
+    return;
+  }
+
+  if (!FD.hasPrototype()) {
+    S.Diag(Attr->getLocation(), diag::err_oracle_function_no_prototype);
+    return;
+  }
+
+  if (FD.isVariadic()) {
+    S.Diag(Attr->getLocation(), diag::err_oracle_function_variadic);
+    return;
+  }
+
+  QualType RetTy = FD.getReturnType();
+  if (!RetTy->isDependentType() &&
+      (!RetTy->isIntegerType() || S.Context.getIntWidth(RetTy) != 64)) {
+    S.Diag(Attr->getLocation(), diag::err_oracle_function_return_type);
+    return;
+  }
+}
+
 static void checkModularFormatAttr(Sema &S, NamedDecl &ND) {
   if (ND.hasAttr<ModularFormatAttr>() && !ND.hasAttr<FormatAttr>())
     S.Diag(ND.getLocation(), diag::err_modular_format_attribute_no_format);
@@ -11302,6 +11340,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   ProcessPragmaWeak(S, NewFD);
   ProcessPragmaExport(NewFD);
   checkAttributesAfterMerging(*this, *NewFD);
+  checkOracleFunctionAttr(*this, *NewFD, D);
 
   AddKnownFunctionAttributes(NewFD);
   // The above can add the format attribute for known builtin/library functions

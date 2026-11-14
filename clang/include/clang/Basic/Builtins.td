@@ -1562,6 +1562,12 @@ def MaskedScatter : Builtin {
   let Prototype = "void(...)";
 }
 
+def SpeculativeLoad : Builtin {
+  let Spellings = ["__builtin_speculative_load"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def AllocaUninitialized : Builtin {
   let Spellings = ["__builtin_alloca_uninitialized"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow];

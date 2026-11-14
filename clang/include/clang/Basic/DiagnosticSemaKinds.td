@@ -3997,6 +3997,26 @@ def err_attribute_selectany_non_extern_data : Error<
 def warn_attribute_hybrid_patchable_non_extern : Warning<
   "'hybrid_patchable' is ignored on functions without external linkage">,
   InGroup<IgnoredAttributes>;
+def err_oracle_function_no_external_linkage : Error<
+  "'clang::oracle_function' on a function with external linkage is not allowed">;
+def err_oracle_function_no_prototype : Error<
+  "'clang::oracle_function' on a function with no prototype is not allowed">;
+def err_oracle_function_variadic : Error<
+  "'clang::oracle_function' on a variadic function is not allowed">;
+def err_oracle_function_return_type : Error<
+  "'clang::oracle_function' can only be put on functions that return a 64-bit "
+  "integer">;
+def err_speculative_load_not_a_vector_of_integers: Error<
+  "the 1st argument to '__builtin_speculative_load' must be a pointer to a "
+  "vector of integers">;
+def err_speculative_load_third_arg_must_be_function : Error<
+  "the 3rd argument to '__builtin_speculative_load' must be a function">;
+def err_speculative_load_function_oracle_attr : Error<
+  "the oracle function passed to '__builtin_speculative_load' must have the "
+  "oracle_function attribute">;
+def err_speculative_load_arg_oracle_param_count_mismatch : Error<
+  "expected to have %0 arguments after the oracle function to match its "
+  "parameter count, but there are %1">;
 def err_declspec_thread_on_thread_variable : Error<
   "'__declspec(thread)' applied to variable that already has a "
   "thread-local storage specifier">;

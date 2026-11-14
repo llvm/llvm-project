@@ -893,6 +893,57 @@ void scatter(v8b mask, v8i val, v8i idx, int *ptr) {
 }
 ```
 
+## Speculative Loads
+
+Clang provides an extension that allows developers to perform speculative loads, loads that might load from out-of-bounds memory provided the memory can be safely accessed on the underlying hardware.
+
+Query for this feature with `__has_builtin(__builtin_speculative_load)`.
+
+### Syntax
+
+The prototype for the `__builtin_speculative_load` intrinsic is as follows:
+
+```c++
+__builtin_speculative_load(vector_ty *load_addr, bool from_end, (*uint64_t)(...) oracle, ...);
+```
+
+All parameters after the oracle function are passed to the oracle function. Example:
+```c++
+typedef char v8 __attribute__((ext_vector_type(8)));
+
+v8 value = __builtin_speculative_load(input_ptr, false, oracle, input_size);
+```
+
+### Semantics
+
+`__builtin_speculative_load` loads a vector from `load_addr` that is potentially out of bounds of the memory object that `load_addr` points into. Any vector lanes containing any bytes that would have otherwise been out of bounds contain indeterminate values (corresponding to poison in LLVM). The oracle function must refer to a function with the `[[clang::oracle_function]]` attribute (described below) that will return the number of bytes that will be used from the load. These bytes are numbered starting from the beginning if `from_end` is false and vice versa.
+
+### Oracle Functions
+
+Oracle functions must be denoted with the `[[clang::oracle_function]]` attribute:
+
+```c++
+[[clang::oracle_function]] static uint64_t oracle(uint64_t input) {
+  return input;
+}
+```
+
+Annotating a function as an oracle function implies several properties:
+
+* The function will never raise an exception.
+* The function does not synchronize with other threads.
+* The function will return.
+* The function only reads memory from its arguments.
+
+If the function violates one or more of these properties, the behavior is undefined. In addition to the above behavior requirements, there are also several more requirements on using the `[[clang::oracle_function]]` attribute:
+
+* It must be applied to a function definition.
+* The function definition must have internal linkage.
+* The function definition cannot be varidaic.
+* The function must return a 64-bit integer.
+
+Any violations of the properties immediately above will result in a compilation failure.
+
 ## Matrix Types
 
 Clang provides an extension for matrix types, which is currently being
