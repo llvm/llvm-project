@@ -1308,6 +1308,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::ABS,                MVT::v16i8, Legal);
     setOperationAction(ISD::ABS,                MVT::v8i16, Legal);
     setOperationAction(ISD::ABS,                MVT::v4i32, Legal);
+    for (auto VT : {MVT::v16i8, MVT::v8i16, MVT::v8f16, MVT::v4i32, MVT::v4f32})
+      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
 
     for (auto VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64}) {
       setOperationAction(ISD::BITREVERSE,       VT, Custom);
@@ -1330,6 +1332,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::USUBSAT, MVT::i64, Custom);
   }
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSE41()) {
+    setOperationAction(ISD::VECTOR_SHUFFLE_VAR, MVT::v2i64, Custom);
+    setOperationAction(ISD::VECTOR_SHUFFLE_VAR, MVT::v2f64, Custom);
+
     for (MVT RoundedTy : {MVT::f32, MVT::f64, MVT::v4f32, MVT::v2f64}) {
       setOperationAction(ISD::FFLOOR,            RoundedTy,  Legal);
       setOperationAction(ISD::STRICT_FFLOOR,     RoundedTy,  Legal);
@@ -1415,6 +1420,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasAVX()) {
     bool HasInt256 = Subtarget.hasInt256();
+
+    for (auto VT : {MVT::v32i8, MVT::v16i16, MVT::v16f16, MVT::v8i32,
+                    MVT::v8f32, MVT::v4i64, MVT::v4f64})
+      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
 
     addRegisterClass(MVT::v32i8,  Subtarget.hasVLX() ? &X86::VR256XRegClass
                                                      : &X86::VR256RegClass);
@@ -1813,6 +1822,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // required-vector-width function attributes.
   if (!Subtarget.useSoftFloat() && Subtarget.useAVX512Regs()) {
     bool HasBWI = Subtarget.hasBWI();
+
+    for (auto VT : {MVT::v16i32, MVT::v16f32, MVT::v8i64, MVT::v8f64})
+      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
+    if (HasBWI) {
+      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, MVT::v32i16, Custom);
+      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, MVT::v32f16, Custom);
+    }
+    if (Subtarget.hasVBMI())
+      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, MVT::v64i8, Custom);
 
     addRegisterClass(MVT::v16i32, &X86::VR512RegClass);
     addRegisterClass(MVT::v16f32, &X86::VR512RegClass);
@@ -2513,6 +2531,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
         setOperationAction(ISD::VSELECT, VT, Custom);
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Legal);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
@@ -2533,6 +2552,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setF16Action(MVT::v32bf16, Expand);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v32bf16, Custom);
     setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v32bf16, Custom);
+    setOperationAction(ISD::VECTOR_SHUFFLE_VAR, MVT::v32bf16, Custom);
     setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v32bf16, Legal);
     setOperationAction(ISD::CONCAT_VECTORS, MVT::v32bf16, Custom);
     setOperationAction(ISD::FP_ROUND, MVT::v16bf16, Custom);
@@ -9161,55 +9181,36 @@ static SDValue materializeVectorConstant(SDValue Op, const SDLoc &DL,
   return SDValue();
 }
 
-/// Look for opportunities to create a VPERMV/VPERMILPV/PSHUFB variable permute
-/// from a vector of source values and a vector of extraction indices.
-/// The vectors might be manipulated to match the type of the permute op.
-static SDValue createVariablePermute(MVT VT, SDValue SrcVec, SDValue IndicesVec,
-                                     const SDLoc &DL, SelectionDAG &DAG,
-                                     const X86Subtarget &Subtarget) {
+// A vector SELECT_CC created during vector op legalization gets scalarized.
+static SDValue getVSelectCC(SelectionDAG &DAG, const SDLoc &DL, SDValue LHS,
+                            SDValue RHS, SDValue True, SDValue False,
+                            ISD::CondCode CC) {
+  EVT CCVT = DAG.getTargetLoweringInfo().getSetCCResultType(
+      DAG.getDataLayout(), *DAG.getContext(), LHS.getValueType());
+  return DAG.getSelect(DL, True.getValueType(),
+                       DAG.getSetCC(DL, CCVT, LHS, RHS, CC), True, False);
+}
+
+static SDValue lowerVECTOR_SHUFFLE_VAR(SDValue Op,
+                                       const X86Subtarget &Subtarget,
+                                       SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  SDValue SrcVec = Op.getOperand(0);
+
+  // Permute half and bfloat vectors as integers.
+  if (VT.isFloatingPoint() && VT.getScalarSizeInBits() == 16) {
+    MVT IntVT = VT.changeVectorElementTypeToInteger();
+    SDValue Res = lowerVECTOR_SHUFFLE_VAR(
+        DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, DL, IntVT,
+                    DAG.getBitcast(IntVT, SrcVec), Op.getOperand(1)),
+        Subtarget, DAG);
+    return Res ? DAG.getBitcast(VT, Res) : SDValue();
+  }
+
   MVT ShuffleVT = VT;
   EVT IndicesVT = EVT(VT).changeVectorElementTypeToInteger();
-  unsigned NumElts = VT.getVectorNumElements();
-  unsigned SizeInBits = VT.getSizeInBits();
-
-  // Adjust IndicesVec to match VT size.
-  assert(IndicesVec.getValueType().getVectorNumElements() >= NumElts &&
-         "Illegal variable permute mask size");
-  if (IndicesVec.getValueType().getVectorNumElements() > NumElts) {
-    // Narrow/widen the indices vector to the correct size.
-    if (IndicesVec.getValueSizeInBits() > SizeInBits)
-      IndicesVec = extractSubVector(IndicesVec, 0, DAG, SDLoc(IndicesVec),
-                                    NumElts * VT.getScalarSizeInBits());
-    else if (IndicesVec.getValueSizeInBits() < SizeInBits)
-      IndicesVec = widenSubVector(IndicesVec, false, Subtarget, DAG,
-                                  SDLoc(IndicesVec), SizeInBits);
-    // Zero-extend the index elements within the vector.
-    if (IndicesVec.getValueType().getVectorNumElements() > NumElts)
-      IndicesVec = DAG.getNode(ISD::ZERO_EXTEND_VECTOR_INREG, SDLoc(IndicesVec),
-                               IndicesVT, IndicesVec);
-  }
-  IndicesVec = DAG.getZExtOrTrunc(IndicesVec, SDLoc(IndicesVec), IndicesVT);
-
-  // Handle SrcVec that don't match VT type.
-  if (SrcVec.getValueSizeInBits() != SizeInBits) {
-    if ((SrcVec.getValueSizeInBits() % SizeInBits) == 0) {
-      // Handle larger SrcVec by treating it as a larger permute.
-      unsigned Scale = SrcVec.getValueSizeInBits() / SizeInBits;
-      VT = MVT::getVectorVT(VT.getScalarType(), Scale * NumElts);
-      IndicesVT = EVT(VT).changeVectorElementTypeToInteger();
-      IndicesVec = widenSubVector(IndicesVT.getSimpleVT(), IndicesVec, false,
-                                  Subtarget, DAG, SDLoc(IndicesVec));
-      SDValue NewSrcVec =
-          createVariablePermute(VT, SrcVec, IndicesVec, DL, DAG, Subtarget);
-      if (NewSrcVec)
-        return extractSubVector(NewSrcVec, 0, DAG, DL, SizeInBits);
-      return SDValue();
-    } else if (SrcVec.getValueSizeInBits() < SizeInBits) {
-      // Widen smaller SrcVec to match VT.
-      SrcVec = widenSubVector(VT, SrcVec, false, Subtarget, DAG, SDLoc(SrcVec));
-    } else
-      return SDValue();
-  }
+  SDValue IndicesVec = DAG.getZExtOrTrunc(Op.getOperand(1), DL, IndicesVT);
 
   auto ScaleIndices = [&DAG](SDValue Idx, uint64_t Scale) {
     assert(isPowerOf2_64(Scale) && "Illegal variable permute shuffle scale");
@@ -9270,8 +9271,8 @@ static SDValue createVariablePermute(MVT VT, SDValue SrcVec, SDValue IndicesVec,
       ShuffleVT = MVT::v2f64;
     } else if (Subtarget.hasSSE41()) {
       // SSE41 can compare v2i64 - select between indices 0 and 1.
-      return DAG.getSelectCC(
-          DL, IndicesVec,
+      return getVSelectCC(
+          DAG, DL, IndicesVec,
           getZeroVector(IndicesVT.getSimpleVT(), Subtarget, DAG, DL),
           DAG.getVectorShuffle(VT, DL, SrcVec, SrcVec, {0, 0}),
           DAG.getVectorShuffle(VT, DL, SrcVec, SrcVec, {1, 1}),
@@ -9302,10 +9303,10 @@ static SDValue createVariablePermute(MVT VT, SDValue SrcVec, SDValue IndicesVec,
         // care about the bit[7] as its just an index vector.
         SDValue Idx = Ops[2];
         EVT VT = Idx.getValueType();
-        return DAG.getSelectCC(DL, Idx, DAG.getConstant(15, DL, VT),
-                               DAG.getNode(X86ISD::PSHUFB, DL, VT, Ops[1], Idx),
-                               DAG.getNode(X86ISD::PSHUFB, DL, VT, Ops[0], Idx),
-                               ISD::CondCode::SETGT);
+        return getVSelectCC(DAG, DL, Idx, DAG.getConstant(15, DL, VT),
+                            DAG.getNode(X86ISD::PSHUFB, DL, VT, Ops[1], Idx),
+                            DAG.getNode(X86ISD::PSHUFB, DL, VT, Ops[0], Idx),
+                            ISD::CondCode::SETGT);
       };
       SDValue Ops[] = {LoLo, HiHi, IndicesVec};
       return SplitOpsAndApply(DAG, Subtarget, DL, MVT::v32i8, Ops,
@@ -9318,10 +9319,10 @@ static SDValue createVariablePermute(MVT VT, SDValue SrcVec, SDValue IndicesVec,
     else if (Subtarget.hasAVX()) {
       // Scale to v32i8 and perform as v32i8.
       IndicesVec = ScaleIndices(IndicesVec, 2);
-      return DAG.getBitcast(
-          VT, createVariablePermute(
-                  MVT::v32i8, DAG.getBitcast(MVT::v32i8, SrcVec),
-                  DAG.getBitcast(MVT::v32i8, IndicesVec), DL, DAG, Subtarget));
+      SDValue Shuf = DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, DL, MVT::v32i8,
+                                 DAG.getBitcast(MVT::v32i8, SrcVec),
+                                 DAG.getBitcast(MVT::v32i8, IndicesVec));
+      return DAG.getBitcast(VT, lowerVECTOR_SHUFFLE_VAR(Shuf, Subtarget, DAG));
     }
     break;
   case MVT::v8f32:
@@ -9340,8 +9341,8 @@ static SDValue createVariablePermute(MVT VT, SDValue SrcVec, SDValue IndicesVec,
                             IndicesVec, DAG.getTargetConstant(0, DL, MVT::i8)));
       // Permute Lo and Hi and then select based on index range.
       // This works as VPERMILPS only uses index bits[0:1] to permute elements.
-      SDValue Res = DAG.getSelectCC(
-          DL, IndicesVec, DAG.getConstant(3, DL, MVT::v8i32),
+      SDValue Res = getVSelectCC(
+          DAG, DL, IndicesVec, DAG.getConstant(3, DL, MVT::v8i32),
           DAG.getNode(X86ISD::VPERMILPV, DL, MVT::v8f32, HiHi, IndicesVec),
           DAG.getNode(X86ISD::VPERMILPV, DL, MVT::v8f32, LoLo, IndicesVec),
           ISD::CondCode::SETGT);
@@ -9357,8 +9358,10 @@ static SDValue createVariablePermute(MVT VT, SDValue SrcVec, SDValue IndicesVec,
                                 SDLoc(SrcVec));
         IndicesVec = widenSubVector(MVT::v8i64, IndicesVec, false, Subtarget,
                                     DAG, SDLoc(IndicesVec));
-        SDValue Res = createVariablePermute(WidenSrcVT, SrcVec, IndicesVec, DL,
-                                            DAG, Subtarget);
+        SDValue Res =
+            lowerVECTOR_SHUFFLE_VAR(DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, DL,
+                                                WidenSrcVT, SrcVec, IndicesVec),
+                                    Subtarget, DAG);
         return extract256BitVector(Res, 0, DAG, DL);
       }
       Opcode = X86ISD::VPERMV;
@@ -9376,8 +9379,8 @@ static SDValue createVariablePermute(MVT VT, SDValue SrcVec, SDValue IndicesVec,
                             IndicesVec, DAG.getTargetConstant(0, DL, MVT::i8)));
       // Permute Lo and Hi and then select based on index range.
       // This works as VPERMILPD only uses index bit[1] to permute elements.
-      SDValue Res = DAG.getSelectCC(
-          DL, IndicesVec, DAG.getConstant(2, DL, MVT::v4i64),
+      SDValue Res = getVSelectCC(
+          DAG, DL, IndicesVec, DAG.getConstant(2, DL, MVT::v4i64),
           DAG.getNode(X86ISD::VPERMILPV, DL, MVT::v4f64, HiHi, IndicesVec),
           DAG.getNode(X86ISD::VPERMILPV, DL, MVT::v4f64, LoLo, IndicesVec),
           ISD::CondCode::SETGT);
@@ -9475,7 +9478,67 @@ LowerBUILD_VECTORAsVariablePermute(SDValue V, const SDLoc &DL,
   }
 
   MVT VT = V.getSimpleValueType();
-  return createVariablePermute(VT, SrcVec, IndicesVec, DL, DAG, Subtarget);
+  MVT IndicesVT = VT.changeVectorElementTypeToInteger();
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned SizeInBits = VT.getSizeInBits();
+
+  // Adjust IndicesVec to match VT size.
+  assert(IndicesVec.getValueType().getVectorNumElements() >= NumElts &&
+         "Illegal variable permute mask size");
+  if (IndicesVec.getValueType().getVectorNumElements() > NumElts) {
+    // Narrow/widen the indices vector to the correct size.
+    if (IndicesVec.getValueSizeInBits() > SizeInBits)
+      IndicesVec = extractSubVector(IndicesVec, 0, DAG, SDLoc(IndicesVec),
+                                    NumElts * VT.getScalarSizeInBits());
+    else if (IndicesVec.getValueSizeInBits() < SizeInBits)
+      IndicesVec = widenSubVector(IndicesVec, false, Subtarget, DAG,
+                                  SDLoc(IndicesVec), SizeInBits);
+    // Zero-extend the index elements within the vector.
+    MVT InVT = IndicesVec.getSimpleValueType();
+    unsigned InNumElts = InVT.getVectorNumElements();
+    if (InNumElts > NumElts && Subtarget.hasSSE41()) {
+      IndicesVec = DAG.getNode(ISD::ZERO_EXTEND_VECTOR_INREG, SDLoc(IndicesVec),
+                               IndicesVT, IndicesVec);
+    } else if (InNumElts > NumElts) {
+      // Without PMOVZX, this runs too late to legalize the extend node.
+      SmallVector<int, 16> Mask(InNumElts, InNumElts);
+      for (unsigned I = 0; I != NumElts; ++I)
+        Mask[I * (InNumElts / NumElts)] = I;
+      IndicesVec = DAG.getBitcast(
+          IndicesVT,
+          DAG.getVectorShuffle(InVT, DL, IndicesVec,
+                               getZeroVector(InVT, Subtarget, DAG, DL), Mask));
+    }
+  }
+  IndicesVec = DAG.getZExtOrTrunc(IndicesVec, SDLoc(IndicesVec), IndicesVT);
+
+  // Handle SrcVec that don't match VT type.
+  if (SrcVec.getValueSizeInBits() != SizeInBits) {
+    if ((SrcVec.getValueSizeInBits() % SizeInBits) == 0) {
+      // Handle larger SrcVec by treating it as a larger permute.
+      unsigned Scale = SrcVec.getValueSizeInBits() / SizeInBits;
+      MVT WideVT = MVT::getVectorVT(VT.getScalarType(), Scale * NumElts);
+      IndicesVec =
+          widenSubVector(WideVT.changeVectorElementTypeToInteger(), IndicesVec,
+                         false, Subtarget, DAG, SDLoc(IndicesVec));
+      SDValue Res = lowerVECTOR_SHUFFLE_VAR(
+          DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, DL, WideVT,
+                      DAG.getBitcast(WideVT, SrcVec), IndicesVec),
+          Subtarget, DAG);
+      if (Res)
+        return extractSubVector(Res, 0, DAG, DL, SizeInBits);
+      return SDValue();
+    } else if (SrcVec.getValueSizeInBits() < SizeInBits) {
+      // Widen smaller SrcVec to match VT.
+      SrcVec = widenSubVector(VT, SrcVec, false, Subtarget, DAG, SDLoc(SrcVec));
+    } else
+      return SDValue();
+  }
+
+  return lowerVECTOR_SHUFFLE_VAR(DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, DL, VT,
+                                             DAG.getBitcast(VT, SrcVec),
+                                             IndicesVec),
+                                 Subtarget, DAG);
 }
 
 SDValue
@@ -34929,6 +34992,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::BUILD_VECTOR:       return LowerBUILD_VECTOR(Op, DAG);
   case ISD::CONCAT_VECTORS:     return LowerCONCAT_VECTORS(Op, Subtarget, DAG);
   case ISD::VECTOR_SHUFFLE:     return lowerVECTOR_SHUFFLE(Op, Subtarget, DAG);
+  case ISD::VECTOR_SHUFFLE_VAR: return lowerVECTOR_SHUFFLE_VAR(Op, Subtarget, DAG);
   case ISD::VECTOR_COMPRESS:    return lowerVECTOR_COMPRESS(Op, Subtarget, DAG);
   case ISD::VSELECT:            return LowerVSELECT(Op, DAG);
   case ISD::EXTRACT_VECTOR_ELT: return LowerEXTRACT_VECTOR_ELT(Op, DAG);
