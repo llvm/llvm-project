@@ -83,6 +83,28 @@ bool Vreg1LoweringHelper::cleanConstrainRegs(bool Changed) {
 
 } // end anonymous namespace
 
+/// Return true if \p Latch -> \p Header is the only back-edge of a loop that
+/// is left as a whole, so that EXEC is the same on every iteration at the
+/// header and at the end of the latch.
+///
+/// This holds when the latch post-dominates the header, so that the latch is
+/// the only exit and every divergent region opened inside the loop is closed
+/// by the end of the latch, and when the latch ends in a uniform branch.
+static bool isExecInvariantBackEdge(const MachineBasicBlock &Latch,
+                                    const MachineBasicBlock &Header,
+                                    const MachineDominatorTree &DT,
+                                    const MachinePostDominatorTree &PDT,
+                                    const SIInstrInfo &TII) {
+  assert(Latch.isSuccessor(&Header) && "expected a CFG edge");
+  if (TII.hasDivergentBranch(&Latch) || !DT.dominates(&Header, &Latch) ||
+      !PDT.dominates(&Latch, &Header))
+    return false;
+
+  return none_of(Header.predecessors(), [&](const MachineBasicBlock *Pred) {
+    return Pred != &Latch && DT.dominates(&Header, Pred);
+  });
+}
+
 namespace llvm {
 namespace AMDGPU {
 
@@ -104,11 +126,16 @@ namespace AMDGPU {
 ///    through an incoming block where we can take the scalar lane mask as-is,
 ///    we need to invent an available value for the SSAUpdater. Choices are
 ///    0 and undef, with differing consequences for how to merge values etc.
+///  - Back-edges of loops whose EXEC is the same on every iteration (see
+///    isExecInvariantBackEdge) do not let a wave reach a block with a different
+///    set of active lanes, so they are ignored, and an incoming value along
+///    such a back-edge is taken as-is.
 ///
 /// TODO: We could use region analysis to quickly skip over SESE regions during
 ///       the traversal.
 ///
 class PhiIncomingAnalysis {
+  MachineDominatorTree &DT;
   MachinePostDominatorTree &PDT;
   const SIInstrInfo *TII;
 
@@ -119,8 +146,9 @@ class PhiIncomingAnalysis {
   SmallVector<MachineBasicBlock *, 4> Predecessors;
 
 public:
-  PhiIncomingAnalysis(MachinePostDominatorTree &PDT, const SIInstrInfo *TII)
-      : PDT(PDT), TII(TII) {}
+  PhiIncomingAnalysis(MachineDominatorTree &DT, MachinePostDominatorTree &PDT,
+                      const SIInstrInfo *TII)
+      : DT(DT), PDT(PDT), TII(TII) {}
 
   /// Returns whether \p MBB is a source in the induced subgraph of reachable
   /// blocks.
@@ -140,10 +168,16 @@ public:
     // traversal.
     ReachableMap.try_emplace(&DefBlock, false);
 
+    MachineBasicBlock *ExecInvariantLatch = nullptr;
     for (auto Incoming : Incomings) {
       MachineBasicBlock *MBB = Incoming.Block;
       if (MBB == &DefBlock) {
         ReachableMap[&DefBlock] = true; // self-loop on DefBlock
+        continue;
+      }
+
+      if (isExecInvariantBackEdge(*MBB, DefBlock)) {
+        ExecInvariantLatch = MBB;
         continue;
       }
 
@@ -155,8 +189,12 @@ public:
 
     while (!Stack.empty()) {
       MachineBasicBlock *MBB = Stack.pop_back_val();
-      if (ReachableMap.try_emplace(MBB, false).second)
-        append_range(Stack, MBB->successors());
+      if (!ReachableMap.try_emplace(MBB, false).second)
+        continue;
+      for (MachineBasicBlock *Succ : MBB->successors()) {
+        if (!isExecInvariantBackEdge(*MBB, *Succ))
+          Stack.push_back(Succ);
+      }
     }
 
     // Insert remaining incoming blocks.
@@ -165,9 +203,17 @@ public:
       ReachableMap.try_emplace(MBB, false);
     }
 
+    if (ExecInvariantLatch)
+      ReachableMap[ExecInvariantLatch] = true;
+
     for (auto &[MBB, IsSource] : ReachableMap) {
+      if (MBB == ExecInvariantLatch)
+        continue;
+
       bool HaveReachablePred = false;
       for (MachineBasicBlock *Pred : MBB->predecessors()) {
+        if (isExecInvariantBackEdge(*Pred, *MBB))
+          continue;
         if (ReachableMap.count(Pred)) {
           HaveReachablePred = true;
         } else {
@@ -184,6 +230,12 @@ public:
       }
       Stack.clear();
     }
+  }
+
+private:
+  bool isExecInvariantBackEdge(const MachineBasicBlock &Latch,
+                               const MachineBasicBlock &Header) const {
+    return ::isExecInvariantBackEdge(Latch, Header, DT, PDT, *TII);
   }
 };
 
@@ -210,8 +262,13 @@ public:
 /// edge to B is reachable without going through the nearest common
 /// post-dominator of B and all uses of the def.
 ///
+/// Back-edges of loops whose EXEC is the same on every iteration (see
+/// isExecInvariantBackEdge) are not followed: all lanes run every iteration
+/// and leave the loop together, so no lane can observe a value from an older
+/// iteration.
+///
 /// TODO: This rule is conservative because it does not check whether the
-///       relevant branches are actually divergent.
+///       relevant branches are actually divergent, apart from the case above.
 ///
 /// The class is designed to cache the CFG traversal so that it can be re-used
 /// for multiple defs within the same basic block.
@@ -222,6 +279,7 @@ public:
 class LoopFinder {
   MachineDominatorTree &DT;
   MachinePostDominatorTree &PDT;
+  const SIInstrInfo *TII;
 
   // All visited / reachable block, tagged by level (level 0 is the def block,
   // level 1 are all blocks reachable including but not going through the def
@@ -245,8 +303,9 @@ class LoopFinder {
   SmallVector<MachineBasicBlock *, 4> NextLevel;
 
 public:
-  LoopFinder(MachineDominatorTree &DT, MachinePostDominatorTree &PDT)
-      : DT(DT), PDT(PDT) {}
+  LoopFinder(MachineDominatorTree &DT, MachinePostDominatorTree &PDT,
+             const SIInstrInfo *TII)
+      : DT(DT), PDT(PDT), TII(TII) {}
 
   void initialize(MachineBasicBlock &MBB) {
     Visited.clear();
@@ -356,6 +415,9 @@ private:
       VisitedDom = DT.findNearestCommonDominator(VisitedDom, MBB);
 
       for (MachineBasicBlock *Succ : MBB->successors()) {
+        if (isExecInvariantBackEdge(*MBB, *Succ, DT, PDT, *TII))
+          continue;
+
         if (Succ == DefBlock) {
           if (MBB == VisitedPostDom)
             FoundLoopLevel = std::min(FoundLoopLevel, Level + 1);
@@ -551,8 +613,8 @@ bool AMDGPU::PhiLoweringHelper::lowerPhis() {
   if (Vreg1Phis.empty())
     return false;
 
-  LoopFinder LF(DT, PDT);
-  PhiIncomingAnalysis PIA(PDT, TII);
+  LoopFinder LF(DT, PDT, TII);
+  PhiIncomingAnalysis PIA(DT, PDT, TII);
 
   DT.updateDFSNumbers();
   for (MachineInstr *MI : Vreg1Phis) {
@@ -583,7 +645,7 @@ bool AMDGPU::PhiLoweringHelper::lowerPhis() {
 
 bool Vreg1LoweringHelper::lowerCopiesToI1() {
   bool Changed = false;
-  AMDGPU::LoopFinder LF(DT, PDT);
+  AMDGPU::LoopFinder LF(DT, PDT, TII);
   SmallVector<MachineInstr *, 4> DeadCopies;
 
   for (MachineBasicBlock &MBB : MF) {
