@@ -187,28 +187,25 @@ launchExecutor(llvm::StringRef ExecutablePath,
         llvm::formatv("Specified executor invalid: {0}", ExecutablePath),
         llvm::inconvertibleErrorCode());
 
-  constexpr int ReadEnd = 0;
-  constexpr int WriteEnd = 1;
+  constexpr int ParentSocket = 0;
+  constexpr int ChildSocket = 1;
 
-  // Pipe FDs.
-  int ToExecutor[2];
-  int FromExecutor[2];
+  int Sockets[2];
 
   uint32_t ChildPID;
 
-  // Create pipes to/from the executor..
-  if (pipe(ToExecutor) != 0 || pipe(FromExecutor) != 0)
+  // Create a socket pair to communicate with the executor.
+  if (socketpair(AF_UNIX, SOCK_STREAM, 0, Sockets) != 0)
     return llvm::make_error<llvm::StringError>(
-        "Unable to create pipe for executor", llvm::inconvertibleErrorCode());
+        "Unable to create socket for executor", llvm::inconvertibleErrorCode());
 
   ChildPID = fork();
 
   if (ChildPID == 0) {
     // In the child...
 
-    // Close the parent ends of the pipes
-    close(ToExecutor[WriteEnd]);
-    close(FromExecutor[ReadEnd]);
+    // Close the parent socket.
+    close(Sockets[ParentSocket]);
 
     if (CustomizeFork)
       CustomizeFork();
@@ -219,10 +216,8 @@ launchExecutor(llvm::StringRef ExecutablePath,
       ExecutorPath = std::make_unique<char[]>(ExecutablePath.size() + 1);
       strcpy(ExecutorPath.get(), ExecutablePath.data());
 
-      std::string FDSpecifierStr("filedescs=");
-      FDSpecifierStr += llvm::utostr(ToExecutor[ReadEnd]);
-      FDSpecifierStr += ',';
-      FDSpecifierStr += llvm::utostr(FromExecutor[WriteEnd]);
+      std::string FDSpecifierStr("socket:adopt=");
+      FDSpecifierStr += llvm::utostr(Sockets[ChildSocket]);
       FDSpecifier = std::make_unique<char[]>(FDSpecifierStr.size() + 1);
       strcpy(FDSpecifier.get(), FDSpecifierStr.c_str());
     }
@@ -237,15 +232,14 @@ launchExecutor(llvm::StringRef ExecutablePath,
   }
   // else we're the parent...
 
-  // Close the child ends of the pipes
-  close(ToExecutor[ReadEnd]);
-  close(FromExecutor[WriteEnd]);
+  // Close the child socket.
+  close(Sockets[ChildSocket]);
 
   auto EPCOrErr =
       llvm::orc::SimpleRemoteEPC::Create<llvm::orc::FDSimpleRemoteEPCTransport>(
           std::make_unique<llvm::orc::DynamicThreadPoolTaskDispatcher>(
               std::nullopt),
-          FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
+          Sockets[ParentSocket], Sockets[ParentSocket]);
   if (!EPCOrErr)
     return EPCOrErr.takeError();
   return std::make_pair(std::move(*EPCOrErr), ChildPID);
