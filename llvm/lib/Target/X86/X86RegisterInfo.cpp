@@ -1038,19 +1038,11 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   return false;
 }
 
-unsigned X86RegisterInfo::findDeadCallerSavedReg(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI) const {
-  const MachineFunction *MF = MBB.getParent();
-  const MachineRegisterInfo &MRI = MF->getRegInfo();
-  if (MF->callsEHReturn())
-    return 0;
-
-  if (MBBI == MBB.end())
-    return 0;
-
-  switch (MBBI->getOpcode()) {
+// Return true if MI is a return or tail-call terminator.
+static bool isReturnOrTailCall(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
   default:
-    return 0;
+    return false;
   case TargetOpcode::PATCHABLE_RET:
   case X86::RET:
   case X86::RET32:
@@ -1068,18 +1060,86 @@ unsigned X86RegisterInfo::findDeadCallerSavedReg(
   case X86::TCRETURNmi64:
   case X86::TCRETURN_WINmi64:
   case X86::EH_RETURN:
-  case X86::EH_RETURN64: {
-    LiveRegUnits LRU(*this);
-    LRU.addLiveOuts(MBB);
-    LRU.stepBackward(*MBBI);
-
-    const TargetRegisterClass &RC =
-        Is64Bit ? X86::GR64_NOSPRegClass : X86::GR32_NOSPRegClass;
-    for (MCRegister Reg : RC) {
-      if (LRU.available(Reg) && !MRI.isReserved(Reg))
-        return Reg;
-    }
+  case X86::EH_RETURN64:
+    return true;
   }
+}
+
+// Return true if MI is an epilogue callee-saved POP or metadata instruction.
+static bool isEpilogueCSRPopOrMeta(const MachineInstr &MI) {
+  if (MI.isCFIInstruction() || MI.isDebugOrPseudoInstr())
+    return true;
+  if (!MI.getFlag(MachineInstr::FrameDestroy))
+    return false;
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+  case X86::POP32r:
+  case X86::POP64r:
+  case X86::POPP64r:
+  case X86::POP2:
+  case X86::POP2P:
+    return true;
+  }
+}
+
+// Return true if an immediately preceding call cleanup will merge with an ADD.
+static bool hasMergingCallFrameDestroy(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator MBBI) {
+  if (MBBI == MBB.begin())
+    return false;
+  const TargetInstrInfo &TII = *MBB.getParent()->getSubtarget().getInstrInfo();
+  auto Prev = prev_nodbg(MBBI, MBB.begin());
+  return Prev->getOpcode() == TII.getCallFrameDestroyOpcode() &&
+         TII.getSPAdjust(*Prev) < 0;
+}
+
+// Advance past epilogue callee-saved POPs to find the return instruction.
+static MachineBasicBlock::iterator
+skipEpilogueCSRPops(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
+  const MachineFunction &MF = *MBB.getParent();
+  // Win64 epilogues have a fixed layout; CSR live-outs require valid CSI.
+  if (MF.usesWindowsUnwindInfo() || !MF.getFrameInfo().isCalleeSavedInfoValid())
+    return MBBI;
+
+  auto I = MBBI;
+  while (I != MBB.end() && isEpilogueCSRPopOrMeta(*I))
+    ++I;
+  if (I == MBBI || hasMergingCallFrameDestroy(MBB, MBBI))
+    return MBBI;
+
+  return I;
+}
+
+unsigned X86RegisterInfo::findDeadCallerSavedReg(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI) const {
+  const MachineFunction *MF = MBB.getParent();
+  if (MF->callsEHReturn())
+    return 0;
+
+  if (MBBI == MBB.end())
+    return 0;
+
+  // Under -Os/-Oz, look past callee-saved register POPs in the epilogue.
+  MachineBasicBlock::iterator Term = MBBI;
+  if (MF->getFunction().hasOptSize())
+    Term = skipEpilogueCSRPops(MBB, MBBI);
+
+  if (Term == MBB.end() || !isReturnOrTailCall(*Term))
+    return 0;
+
+  LiveRegUnits LRU(*this);
+  LRU.addLiveOuts(MBB);
+  LRU.stepBackward(*Term);
+  for (const MachineInstr &MI : instructionsWithoutDebug(MBBI, Term))
+    LRU.accumulate(MI);
+
+  const TargetRegisterClass &RC =
+      Is64Bit ? X86::GR64_NOSPRegClass : X86::GR32_NOSPRegClass;
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
+  for (MCRegister Reg : RC) {
+    if (LRU.available(Reg) && !MRI.isReserved(Reg))
+      return Reg;
   }
 
   return 0;
