@@ -140,10 +140,63 @@ struct VectorBitcastConvert final
     // types, which can cause issue with bitcast.
     Type srcType = adaptor.getSource().getType();
     if (getNumBits(dstType) != getNumBits(srcType)) {
-      return rewriter.notifyMatchFailure(
-          bitcastOp,
-          llvm::formatv("different source ({0}) and target ({1}) bitwidth",
-                        srcType, dstType));
+      auto srcVector = bitcastOp.getSourceVectorType();
+      auto dstVector = bitcastOp.getResultVectorType();
+      auto srcInteger = dyn_cast<IntegerType>(srcVector.getElementType());
+      auto dstInteger = dyn_cast<IntegerType>(dstVector.getElementType());
+      // Repack the original element bits after narrow integers become i32.
+      // SPIR-V composite extraction here requires fixed one-dimensional
+      // vectors.
+      if (srcVector.getRank() != 1 || dstVector.getRank() != 1 ||
+          srcVector.isScalable() || dstVector.isScalable() || !srcInteger ||
+          !dstInteger || srcInteger.getWidth() > 32 ||
+          dstInteger.getWidth() > 32 ||
+          !getElementTypeOrSelf(srcType).isInteger(32) ||
+          !getElementTypeOrSelf(dstType).isInteger(32))
+        return rewriter.notifyMatchFailure(bitcastOp,
+                                           "unsupported bitcast emulation");
+
+      Location loc = bitcastOp.getLoc();
+      Type wordType = rewriter.getI32Type();
+      auto constant = [&](uint32_t value) -> Value {
+        return spirv::ConstantOp::create(rewriter, loc, wordType,
+                                         rewriter.getI32IntegerAttr(value));
+      };
+      SmallVector<Value> components;
+      for (int64_t dst = 0; dst < dstVector.getNumElements(); ++dst) {
+        Value result = constant(0);
+        unsigned consumed = 0;
+        while (consumed < dstInteger.getWidth()) {
+          unsigned bit = dst * dstInteger.getWidth() + consumed;
+          unsigned sourceIndex = bit / srcInteger.getWidth();
+          unsigned sourceShift = bit % srcInteger.getWidth();
+          unsigned count = std::min(srcInteger.getWidth() - sourceShift,
+                                    dstInteger.getWidth() - consumed);
+          Value part = adaptor.getSource();
+          if (isa<VectorType>(srcType))
+            part = spirv::CompositeExtractOp::create(
+                rewriter, loc, wordType, part,
+                rewriter.getI32ArrayAttr({static_cast<int32_t>(sourceIndex)}));
+          if (sourceShift)
+            part = spirv::ShiftRightLogicalOp::create(rewriter, loc, part,
+                                                      constant(sourceShift));
+          if (count < 32)
+            part = spirv::BitwiseAndOp::create(
+                rewriter, loc, part, constant((uint32_t(1) << count) - 1));
+          if (consumed)
+            part = spirv::ShiftLeftLogicalOp::create(rewriter, loc, part,
+                                                     constant(consumed));
+          result = spirv::BitwiseOrOp::create(rewriter, loc, result, part);
+          consumed += count;
+        }
+        components.push_back(result);
+      }
+      if (isa<VectorType>(dstType))
+        rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
+            bitcastOp, dstType, components);
+      else
+        rewriter.replaceOp(bitcastOp, components.front());
+      return success();
     }
 
     rewriter.replaceOpWithNewOp<spirv::BitcastOp>(bitcastOp, dstType,
