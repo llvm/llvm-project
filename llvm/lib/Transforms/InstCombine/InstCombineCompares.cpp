@@ -1962,6 +1962,29 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
 Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
                                                    BinaryOperator *And,
                                                    const APInt &C) {
+  // Reuse an existing wider mask of X:
+  // (X & C) == C --> (X & M) u>= C
+  // (X & C) != C --> (X & M) u< C
+  // iff C is a subset of M and M - C is a low-bit mask. Without an existing
+  // X & M, the single-use form on the left is the canonical one.
+  const APInt *AndC;
+  if (Cmp.isEquality() && And->hasOneUse() &&
+      match(And->getOperand(1), m_APInt(AndC)) && *AndC == C) {
+    Value *X = And->getOperand(0);
+    for (User *U : X->users()) {
+      const APInt *M;
+      auto *Wide = dyn_cast<Instruction>(U);
+      if (!Wide || Wide == And || Wide->use_empty() ||
+          !match(Wide, m_And(m_Specific(X), m_APInt(M))) || !C.isSubsetOf(*M) ||
+          !(*M - C).isMask() || !DT.dominates(Wide, &Cmp))
+        continue;
+      return new ICmpInst(Cmp.getPredicate() == ICmpInst::ICMP_EQ
+                              ? ICmpInst::ICMP_UGE
+                              : ICmpInst::ICMP_ULT,
+                          Wide, Cmp.getOperand(1));
+    }
+  }
+
   if (Instruction *I = foldICmpAndConstConst(Cmp, And, C))
     return I;
 
