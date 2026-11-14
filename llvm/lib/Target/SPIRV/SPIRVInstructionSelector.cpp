@@ -5197,6 +5197,26 @@ bool SPIRVInstructionSelector::selectInsertElt(Register ResVReg,
 bool SPIRVInstructionSelector::selectExtractElt(Register ResVReg,
                                                 SPIRVTypeInst ResType,
                                                 MachineInstr &I) const {
+  // An element of a vector of pointers has the vector's component type; the
+  // result may have been deduced to point to another type, so cast to it.
+  SPIRVTypeInst VecType = GR.getSPIRVTypeForVReg(I.getOperand(2).getReg());
+  // <1 x T> keeps a placeholder type here; only longer vectors are typed.
+  SPIRVTypeInst ElemType =
+      VecType &&
+              GR.isScalarOrVectorOfType(I.getOperand(2).getReg(),
+                                        SPIRV::OpTypePointer) &&
+              GR.getScalarOrVectorComponentCount(VecType) > 1
+          ? GR.getScalarOrVectorComponentType(VecType)
+          : SPIRVTypeInst();
+  if (ElemType && ElemType != ResType &&
+      ResType->getOpcode() == SPIRV::OpTypePointer &&
+      ElemType->getOpcode() == SPIRV::OpTypePointer &&
+      GR.getPointerStorageClass(ElemType) ==
+          GR.getPointerStorageClass(ResType)) {
+    Register ElemReg = createVirtualRegister(ElemType, &GR, MRI, MRI->getMF());
+    return selectExtractElt(ElemReg, ElemType, I) &&
+           selectOpWithSrcs(ResVReg, ResType, I, {ElemReg}, SPIRV::OpBitcast);
+  }
   if (getImm(I.getOperand(3), MRI))
     return selectExtractVal(ResVReg, ResType, I);
   MachineBasicBlock &BB = *I.getParent();
