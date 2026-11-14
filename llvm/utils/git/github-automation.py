@@ -105,7 +105,8 @@ class IssueSubscriber:
                 for existing_comment in self.issue.get_comments():
                     if self.COMMENT_TAG in existing_comment.body:
                         return True
-                comment = textwrap.dedent(f"""
+                comment = textwrap.dedent(
+                    f"""
                     {self.COMMENT_TAG}
                     This issue has been tagged as a missed optimization in InstCombine.
                     
@@ -114,7 +115,8 @@ class IssueSubscriber:
                     For contributors:
                     * Check that the issue has a real-world motivation. If it does *not* have one, do *not* create a PR without prior explicit approval from InstCombine maintainers.
                     * Follow the [InstCombine contributor guide](http://llvm.org/docs/InstCombineContributorGuide.html).
-                """)
+                """
+                )
                 self.issue.create_comment(comment)
                 return True
 
