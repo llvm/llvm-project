@@ -1,7 +1,9 @@
 ; Test for a subtle bug when computing analyses during inlining and mutating
 ; the SCC structure. Without care, this can fail to invalidate analyses.
 ;
-; RUN: opt < %s -aa-pipeline= -passes='cgscc(inline,function(verify<domtree>))' -debug-pass-manager -inline-deferral -S 2>&1 | FileCheck %s
+; RUN: opt < %s -aa-pipeline= -passes='cgscc(inline,function(verify<domtree>))' \
+; RUN:       -debug-pass-manager -inline-deferral -inline-jump-threading-discount=0 \
+; RUN:       -S 2>&1 | FileCheck %s
 
 ; First we check that the passes run in the way we expect. Otherwise this test
 ; may stop testing anything.
