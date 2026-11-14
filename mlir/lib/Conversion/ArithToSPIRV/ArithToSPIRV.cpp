@@ -1423,6 +1423,9 @@ public:
   matchAndRewrite(ArithExtendedOp op, typename ArithExtendedOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type dstElemTy = adaptor.getLhs().getType();
+    if (!isa<IntegerType, VectorType>(dstElemTy))
+      return rewriter.notifyMatchFailure(op, "expected scalar or vector type");
+
     Location loc = op->getLoc();
     Value result = SPIRVExtendedOp::create(rewriter, loc, adaptor.getLhs(),
                                            adaptor.getRhs());

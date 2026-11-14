@@ -141,6 +141,22 @@ func.func @trunci_tensor_no_crash(%arg0: tensor<1xi32>) -> tensor<1xi16> {
 
 // -----
 
+func.func @addui_extended_tensor_no_crash(%arg0: tensor<1xi32>, %arg1: tensor<1xi32>) -> (tensor<1xi32>, tensor<1xi1>) {
+  // expected-error @+1 {{failed to legalize operation 'arith.addui_extended'}}
+  %sum, %overflow = arith.addui_extended %arg0, %arg1 : tensor<1xi32>, tensor<1xi1>
+  return %sum, %overflow : tensor<1xi32>, tensor<1xi1>
+}
+
+// -----
+
+func.func @subui_extended_tensor_no_crash(%arg0: tensor<1xi32>, %arg1: tensor<1xi32>) -> (tensor<1xi32>, tensor<1xi1>) {
+  // expected-error @+1 {{failed to legalize operation 'arith.subui_extended'}}
+  %diff, %borrow = arith.subui_extended %arg0, %arg1 : tensor<1xi32>, tensor<1xi1>
+  return %diff, %borrow : tensor<1xi32>, tensor<1xi1>
+}
+
+// -----
+
 func.func @constant_dense_resource_non_existant() {
   // expected-error @+2 {{failed to legalize operation 'arith.constant'}}
   // expected-error @+1 {{could not find resource blob}}
