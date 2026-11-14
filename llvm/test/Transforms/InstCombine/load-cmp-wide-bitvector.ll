@@ -9,9 +9,9 @@ target datalayout = "n8:16:32:64:128"
 define i1 @cmp_load_more_than_64_elements(i64 %i) {
 ; CHECK-LABEL: define i1 @cmp_load_more_than_64_elements(
 ; CHECK-SAME: i64 [[I:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i64 [[I]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i128 6, [[TMP1]]
-; CHECK-NEXT:    [[C:%.*]] = trunc i128 [[TMP2]] to i1
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, ptr @g, i64 [[I]]
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[V]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %p = getelementptr inbounds i8, ptr @g, i64 %i
