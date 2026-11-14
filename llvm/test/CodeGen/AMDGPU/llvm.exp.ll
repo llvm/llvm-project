@@ -5637,16 +5637,16 @@ define float @v_exp_f32_from_fpext_bf16(bfloat %src) {
 ; GFX900-SDAG:       ; %bb.0:
 ; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX900-SDAG-NEXT:    v_mul_f32_e32 v1, 0x3fb8aa3b, v0
 ; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x3fb8aa3b
-; GFX900-SDAG-NEXT:    v_rndne_f32_e32 v2, v1
-; GFX900-SDAG-NEXT:    v_sub_f32_e32 v3, v1, v2
-; GFX900-SDAG-NEXT:    v_fma_f32 v1, v0, s4, -v1
+; GFX900-SDAG-NEXT:    v_mul_f32_e32 v1, 0x3fb8aa3b, v0
+; GFX900-SDAG-NEXT:    v_fma_f32 v2, v0, s4, -v1
 ; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x32a5705f
-; GFX900-SDAG-NEXT:    v_fma_f32 v1, v0, s4, v1
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v1, v3, v1
+; GFX900-SDAG-NEXT:    v_rndne_f32_e32 v3, v1
+; GFX900-SDAG-NEXT:    v_fma_f32 v2, v0, s4, v2
+; GFX900-SDAG-NEXT:    v_sub_f32_e32 v1, v1, v3
+; GFX900-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
 ; GFX900-SDAG-NEXT:    v_exp_f32_e32 v1, v1
-; GFX900-SDAG-NEXT:    v_cvt_i32_f32_e32 v2, v2
+; GFX900-SDAG-NEXT:    v_cvt_i32_f32_e32 v2, v3
 ; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0xc2ce8ed0
 ; GFX900-SDAG-NEXT:    v_cmp_ngt_f32_e32 vcc, s4, v0
 ; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0x42b17218

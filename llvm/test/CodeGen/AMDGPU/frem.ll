@@ -18976,16 +18976,18 @@ define half @fast_frem_f16_uniform(half inreg %in1, half inreg %in2) #0 {
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s16
 ; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    v_mad_mix_f32 v1, s16, v0, neg(0) op_sel_hi:[1,0,0]
-; GFX9-NEXT:    v_mad_mix_f32 v3, -s17, v1, v2 op_sel_hi:[1,0,1]
-; GFX9-NEXT:    v_mac_f32_e32 v1, v3, v0
-; GFX9-NEXT:    v_mad_mix_f32 v3, -s17, v1, v2 op_sel_hi:[1,0,1]
-; GFX9-NEXT:    v_mul_f32_e32 v0, v3, v0
+; GFX9-NEXT:    v_mad_mix_f32 v2, -s17, v1, v2 op_sel_hi:[1,0,1]
+; GFX9-NEXT:    v_mac_f32_e32 v1, v2, v0
+; GFX9-NEXT:    v_mov_b32_e32 v2, s16
+; GFX9-NEXT:    v_mad_mix_f32 v2, -s17, v1, v2 op_sel_hi:[1,0,1]
+; GFX9-NEXT:    v_mul_f32_e32 v0, v2, v0
 ; GFX9-NEXT:    v_and_b32_e32 v0, 0xff800000, v0
 ; GFX9-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX9-NEXT:    v_div_fixup_f16 v0, v0, s17, v2
+; GFX9-NEXT:    v_mov_b32_e32 v1, s16
+; GFX9-NEXT:    v_div_fixup_f16 v0, v0, s17, v1
 ; GFX9-NEXT:    v_trunc_f16_e32 v0, v0
-; GFX9-NEXT:    v_fma_f16 v0, -v0, s17, v2
+; GFX9-NEXT:    v_fma_f16 v0, -v0, s17, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: fast_frem_f16_uniform:
@@ -19335,16 +19337,18 @@ define half @unsafe_frem_f16_uniform(half inreg %in1, half inreg %in2) #0 {
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s16
 ; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    v_mad_mix_f32 v1, s16, v0, neg(0) op_sel_hi:[1,0,0]
-; GFX9-NEXT:    v_mad_mix_f32 v3, -s17, v1, v2 op_sel_hi:[1,0,1]
-; GFX9-NEXT:    v_mac_f32_e32 v1, v3, v0
-; GFX9-NEXT:    v_mad_mix_f32 v3, -s17, v1, v2 op_sel_hi:[1,0,1]
-; GFX9-NEXT:    v_mul_f32_e32 v0, v3, v0
+; GFX9-NEXT:    v_mad_mix_f32 v2, -s17, v1, v2 op_sel_hi:[1,0,1]
+; GFX9-NEXT:    v_mac_f32_e32 v1, v2, v0
+; GFX9-NEXT:    v_mov_b32_e32 v2, s16
+; GFX9-NEXT:    v_mad_mix_f32 v2, -s17, v1, v2 op_sel_hi:[1,0,1]
+; GFX9-NEXT:    v_mul_f32_e32 v0, v2, v0
 ; GFX9-NEXT:    v_and_b32_e32 v0, 0xff800000, v0
 ; GFX9-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX9-NEXT:    v_div_fixup_f16 v0, v0, s17, v2
+; GFX9-NEXT:    v_mov_b32_e32 v1, s16
+; GFX9-NEXT:    v_div_fixup_f16 v0, v0, s17, v1
 ; GFX9-NEXT:    v_trunc_f16_e32 v0, v0
-; GFX9-NEXT:    v_fma_f16 v0, -v0, s17, v2
+; GFX9-NEXT:    v_fma_f16 v0, -v0, s17, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: unsafe_frem_f16_uniform:
