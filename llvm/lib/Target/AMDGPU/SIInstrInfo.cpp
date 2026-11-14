@@ -5295,8 +5295,19 @@ bool SIInstrInfo::isMaskedByExec(Register Reg, const MachineInstr &Use,
     return true;
   if ((Opc == LMC.OrOpc || Opc == LMC.XorOpc) && Recurse(1) && Recurse(2))
     return true;
-  // TODO: Sometimes we encounter "reg = S_CSELECT -1, 0". If Reg has no other
-  // uses this could be optimized to "reg = S_CSELECT $exec, 0".
+  // S_CSELECT x, 0 and S_CSELECT 0, x produce either x or 0. 0 has no bits set
+  // for inactive lanes, so the result is masked iff x is. An immediate x (e.g.
+  // -1) is rejected by Recurse, since it may set bits for inactive lanes.
+  if (Opc == LMC.CSelectOpc) {
+    std::optional<int64_t> FalseImm =
+        getImmOrMaterializedImm(MRI, Def->getOperand(2));
+    if (FalseImm && *FalseImm == 0)
+      return Recurse(1);
+    std::optional<int64_t> TrueImm =
+        getImmOrMaterializedImm(MRI, Def->getOperand(1));
+    if (TrueImm && *TrueImm == 0)
+      return Recurse(2);
+  }
 
   return false;
 }
