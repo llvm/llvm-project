@@ -41,6 +41,16 @@ mlir::LogicalResult lowerAMDGPUPrintf(cir::OffloadPrintfOp op,
                                       unsigned genericAddrSpace,
                                       bool isBuffered);
 
+/// Whether \p module lowers device printf with the AMDGPU runtime
+/// interface: an AMDGCN triple, or SPIR-V with the AMD vendor.
+bool isAMDGPUPrintfModule(mlir::ModuleOp module);
+
+/// Resolve constant format strings for AMDGPU printf ops while their
+/// producers are still CIR, recording one string per operand on each
+/// op for the lowering to read. Must run before ConvertCIRToLLVM.
+void annotateAMDGPUPrintfStrings(mlir::ModuleOp module,
+                                 mlir::SymbolTableCollection &symbolTables);
+
 } // namespace direct
 } // namespace cir
 
