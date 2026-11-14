@@ -42,14 +42,11 @@ extern A &a;
 // CIR-NEXT: %[[LOAD_GLOB_A:.*]] = cir.load %[[GET_GLOB_A]] : !cir.ptr<!cir.ptr<!rec_Test13A3AA>>, !cir.ptr<!rec_Test13A3AA>
 // CIR-NEXT: %[[GET_VPTR:.*]] = cir.vtable.get_vptr %[[LOAD_GLOB_A]] : !cir.ptr<!rec_Test13A3AA> -> !cir.ptr<!cir.vptr>
 // CIR-NEXT: %[[LOAD_VPTR:.*]] = cir.load align(8) %[[GET_VPTR]] : !cir.ptr<!cir.vptr>, !cir.vptr
-// CIR-BEFORE: %[[GET_TYPEINFO:.*]] = cir.vtable.get_type_info %[[LOAD_VPTR]] : !cir.vptr -> !cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>
+// CIR-BEFORE: %[[TYPEINFO:.*]] = cir.vtable.get_type_info %[[LOAD_VPTR]] : !cir.vptr -> !cir.ptr<!rec_std3A3Atype_info>
 //
-// CIR-AFTER: %[[NEG_ONE:.*]] = cir.const #cir.int<-1> : !s64i
-// CIR-AFTER: %[[VPTR_CAST:.*]] = cir.cast bitcast %[[LOAD_VPTR]] : !cir.vptr -> !cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>
-// CIR-AFTER: %[[GET_TYPEINFO:.*]] = cir.ptr_stride %[[VPTR_CAST]], %[[NEG_ONE]] : (!cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>, !s64i) -> !cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>
+// CIR-AFTER: %[[TYPEINFO:.*]] = cir.vtable.get_entry %[[LOAD_VPTR]][-1] : !cir.vptr -> !cir.ptr<!rec_std3A3Atype_info>
 //
-// CIR-NEXT: %[[LOAD_TYPEINFO:.*]] = cir.load align(8) %[[GET_TYPEINFO]] : !cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>, !cir.ptr<!rec_std3A3Atype_info>
-// CIR-NEXT: cir.store align(8) %[[LOAD_TYPEINFO]], %[[GET_GLOB_ATI]] : !cir.ptr<!rec_std3A3Atype_info>, !cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>
+// CIR-NEXT: cir.store align(8) %[[TYPEINFO]], %[[GET_GLOB_ATI]] : !cir.ptr<!rec_std3A3Atype_info>, !cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>
 // CIR-AFTER: cir.return
 // CIR-NEXT:}
 // CIR: cir.global "private" constant external @_ZN5Test11aE : !cir.ptr<!rec_Test13A3AA>
@@ -79,14 +76,11 @@ const char *f(void *arg) {
     // CIR: %[[GETVPTR:.*]] = cir.vtable.get_vptr %[[ARG_CAST]]
     // CIR-NEXT: %[[LOAD_VPTR:.*]] = cir.load{{.*}} %[[GETVPTR]] : !cir.ptr<!cir.vptr>, !cir.vptr
     //
-    // CIR-BEFORE: %[[GET_TYPEINFO:.*]] = cir.vtable.get_type_info %[[LOAD_VPTR]] : !cir.vptr -> !cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>
+    // CIR-BEFORE: %[[TYPEINFO:.*]] = cir.vtable.get_type_info %[[LOAD_VPTR]] : !cir.vptr -> !cir.ptr<!rec_std3A3Atype_info>
     //
-    // CIR-AFTER: %[[NEG_ONE:.*]] = cir.const #cir.int<-1> : !s64i
-    // CIR-AFTER: %[[VPTR_CAST:.*]] = cir.cast bitcast %[[LOAD_VPTR]] : !cir.vptr -> !cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>
-    // CIR-AFTER: %[[GET_TYPEINFO:.*]] = cir.ptr_stride %[[VPTR_CAST]], %[[NEG_ONE]] : (!cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>, !s64i) -> !cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>
+    // CIR-AFTER: %[[TYPEINFO:.*]] = cir.vtable.get_entry %[[LOAD_VPTR]][-1] : !cir.vptr -> !cir.ptr<!rec_std3A3Atype_info>
     //
-    // CIR-NEXT: %[[LOAD_TYPEINFO:.*]] = cir.load{{.*}}%[[GET_TYPEINFO]]
-    // CIR-NEXT: cir.call @_ZNKSt9type_info4nameEv(%[[LOAD_TYPEINFO]])
+    // CIR-NEXT: cir.call @_ZNKSt9type_info4nameEv(%[[TYPEINFO]])
 
     // LLVM: br i1
     // LLVM: invoke void @__cxa_bad_typeid()

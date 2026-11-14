@@ -1,0 +1,17 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!rec_std3A3Atype_info = !cir.struct<"std::type_info" incomplete>
+
+// CHECK-LABEL: cir.func @get_entry
+cir.func @get_entry(%arg0: !cir.vptr) -> !cir.ptr<!rec_std3A3Atype_info> {
+  // CHECK: cir.vtable.get_entry %arg0[-1] : !cir.vptr -> !cir.ptr<!rec_std3A3Atype_info>
+  %0 = cir.vtable.get_entry %arg0[-1] : !cir.vptr -> !cir.ptr<!rec_std3A3Atype_info>
+  cir.return %0 : !cir.ptr<!rec_std3A3Atype_info>
+}
+
+// CHECK-LABEL: cir.func @get_type_info
+cir.func @get_type_info(%arg0: !cir.vptr) -> !cir.ptr<!rec_std3A3Atype_info> {
+  // CHECK: cir.vtable.get_type_info %arg0 : !cir.vptr -> !cir.ptr<!rec_std3A3Atype_info>
+  %0 = cir.vtable.get_type_info %arg0 : !cir.vptr -> !cir.ptr<!rec_std3A3Atype_info>
+  cir.return %0 : !cir.ptr<!rec_std3A3Atype_info>
+}
