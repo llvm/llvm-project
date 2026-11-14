@@ -16,9 +16,6 @@
 ...
 ---
 name:            test
-registers:
-  - { id: 0, class: gr64 }
-  - { id: 1, class: gr32 }
 body: |
   bb.0.entry:
     liveins: $rdi, $esi

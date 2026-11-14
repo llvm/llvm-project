@@ -2,7 +2,6 @@
 
 ---
 name:            noconvergent_invalid
-registers:
 body: |
   bb.0:
     ; CHECK: NoConvergent flag expected only on convergent instructions.

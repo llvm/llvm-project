@@ -13,9 +13,6 @@ selected:        false
 failedISel:      false
 tracksRegLiveness: true
 hasWinCFI:       false
-registers:
-  - { id: 0, class: i64, preferred-register: '' }
-  - { id: 1, class: i64, preferred-register: '' }
 liveins:
   - { reg: '$sx0', virtual-reg: '%0' }
 frameInfo:
@@ -68,9 +65,6 @@ selected:        false
 failedISel:      false
 tracksRegLiveness: true
 hasWinCFI:       false
-registers:
-  - { id: 0, class: i64, preferred-register: '' }
-  - { id: 1, class: i64, preferred-register: '' }
 liveins:
   - { reg: '$sx0', virtual-reg: '%0' }
 frameInfo:
@@ -123,9 +117,6 @@ selected:        false
 failedISel:      false
 tracksRegLiveness: true
 hasWinCFI:       false
-registers:
-  - { id: 0, class: i64, preferred-register: '' }
-  - { id: 1, class: i64, preferred-register: '' }
 liveins:
   - { reg: '$sx0', virtual-reg: '%0' }
 frameInfo:
@@ -178,9 +169,6 @@ selected:        false
 failedISel:      false
 tracksRegLiveness: true
 hasWinCFI:       false
-registers:
-  - { id: 0, class: i64, preferred-register: '' }
-  - { id: 1, class: i64, preferred-register: '' }
 liveins:
   - { reg: '$sx0', virtual-reg: '%0' }
 frameInfo:

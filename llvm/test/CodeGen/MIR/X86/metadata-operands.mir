@@ -40,8 +40,6 @@
 ...
 ---
 name:            test
-registers:
-  - { id: 0, class: gr32 }
 frameInfo:
   maxAlignment:  4
 stack:
@@ -51,7 +49,7 @@ body: |
     liveins: $edi
     ; CHECK:      %0:gr32 = COPY $edi
     ; CHECK-NEXT: DBG_VALUE $noreg, 0, !{{[0-9]+}}, !DIExpression()
-    %0 = COPY $edi
+    %0:gr32 = COPY $edi
     DBG_VALUE _, 0, !12, !DIExpression(), debug-location !13
     MOV32mr %stack.0.x.addr, 1, _, 0, _, %0
     $eax = COPY %0

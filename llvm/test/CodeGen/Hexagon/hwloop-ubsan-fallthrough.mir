@@ -49,17 +49,6 @@
 ...
 ---
 name:            strlen
-registers:
-  - { id: 0, class: intregs }
-  - { id: 1, class: intregs }
-  - { id: 2, class: intregs }
-  - { id: 3, class: intregs }
-  - { id: 4, class: intregs }
-  - { id: 5, class: intregs }
-  - { id: 6, class: intregs }
-  - { id: 7, class: intregs }
-  - { id: 8, class: predregs }
-  - { id: 9, class: predregs }
 liveins:
   - { reg: '$r0', virtual-reg: '%5' }
 body: |

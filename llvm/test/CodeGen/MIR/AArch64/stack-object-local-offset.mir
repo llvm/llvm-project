@@ -15,11 +15,6 @@
 ...
 ---
 name:            stack_local
-registers:
-  - { id: 0, class: gpr64common }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: gpr64common }
-  - { id: 3, class: gpr64common }
 frameInfo:
   maxAlignment:    8
 # CHECK-LABEL: stack_local
@@ -32,11 +27,11 @@ stack:
   - { id: 0,name: local_var,offset: 0,size: 8,alignment: 8, local-offset: -8 }
 body: |
   bb.0.entry:
-    %0 = ADRP @var
-    %1 = LDRXui %0, @var :: (load (s64) from @var)
+    %0:gpr64common = ADRP @var
+    %1:gpr64 = LDRXui %0, @var :: (load (s64) from @var)
     STRXui %1, %stack.0.local_var, 0 :: (store (s64) into %ir.local_var)
-    %2 = ADRP @local_addr
-    %3 = ADDXri %stack.0.local_var, 0, 0
+    %2:gpr64common = ADRP @local_addr
+    %3:gpr64common = ADDXri %stack.0.local_var, 0, 0
     STRXui %3, %2, @local_addr :: (store (s64) into @local_addr)
     RET_ReallyLR
 ...

@@ -62,7 +62,6 @@ name:            blah
 alignment:       16
 debugInstrRef:   true
 tracksDebugUserValues: true
-registers:       []
 liveins:
   - { reg: '$r14', virtual-reg: '' }
 frameInfo:

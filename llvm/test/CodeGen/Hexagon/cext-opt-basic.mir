@@ -14,15 +14,11 @@
 # CHECK: L2_loadri_io [[B]], 8
 ---
 name: test0
-registers:
-  - { id: 0, class: intregs }
-  - { id: 1, class: intregs }
-  - { id: 2, class: intregs }
 body: |
   bb.0:
-    %0 = PS_loadriabs @global_address
-    %1 = PS_loadriabs @global_address+4
-    %2 = PS_loadriabs @global_address+8
+    %0:intregs = PS_loadriabs @global_address
+    %1:intregs = PS_loadriabs @global_address+4
+    %2:intregs = PS_loadriabs @global_address+8
 ...
 
 # CHECK-LABEL: name: test1
@@ -33,18 +29,13 @@ body: |
 # CHECK: L2_loadri_io [[B]], 8
 ---
 name: test1
-registers:
-  - { id: 0, class: intregs }
-  - { id: 1, class: intregs }
-  - { id: 2, class: intregs }
-  - { id: 3, class: intregs }
 body: |
   bb.0:
     liveins: $r0
-    %0 = COPY $r0
-    %1 = L4_loadri_ur %0, 0, @global_address
-    %2 = L4_loadri_ur %0, 0, @global_address+4
-    %3 = L4_loadri_ur %0, 0, @global_address+8
+    %0:intregs = COPY $r0
+    %1:intregs = L4_loadri_ur %0, 0, @global_address
+    %2:intregs = L4_loadri_ur %0, 0, @global_address+4
+    %3:intregs = L4_loadri_ur %0, 0, @global_address+8
 ...
 
 # CHECK-LABEL: name: test2
@@ -57,18 +48,13 @@ body: |
 # CHECK: L4_loadri_rr [[B]], [[C]], 0
 ---
 name: test2
-registers:
-  - { id: 0, class: intregs }
-  - { id: 1, class: intregs }
-  - { id: 2, class: intregs }
-  - { id: 3, class: intregs }
 body: |
   bb.0:
     liveins: $r0
-    %0 = COPY $r0
-    %1 = A2_tfrsi @global_address
+    %0:intregs = COPY $r0
+    %1:intregs = A2_tfrsi @global_address
     $r0 = COPY %1
-    %2 = A2_tfrsi @global_address+2
+    %2:intregs = A2_tfrsi @global_address+2
     $r1 = COPY %2
-    %3 = L4_loadri_ur %0, 0, @global_address+4
+    %3:intregs = L4_loadri_ur %0, 0, @global_address+4
 ...

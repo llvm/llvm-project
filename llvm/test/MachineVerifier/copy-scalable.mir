@@ -5,8 +5,6 @@
 ---
 name: test_copy_physical_to_virtual_nxv1s8
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: _, preferred-register: '' }
 body:             |
   bb.0:
     liveins: $v8
@@ -35,8 +33,6 @@ body: |
 ---
 name: test_copy_virtual_to_physical
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: _, preferred-register: '' }
 body: |
   bb.0:
     liveins: $v8
