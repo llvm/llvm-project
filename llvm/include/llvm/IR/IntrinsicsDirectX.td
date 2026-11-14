@@ -667,4 +667,20 @@ let TargetPrefix = "dx" in {
 
   def int_dx_view_id
       : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
+
+  def int_dx_unpack_u8u16
+      : DefaultAttrsIntrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
+                               llvm_i16_ty], [llvm_i32_ty], [IntrNoMem]>;
+
+  def int_dx_unpack_u8u32
+      : DefaultAttrsIntrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
+
+  def int_dx_unpack_s8s16
+      : DefaultAttrsIntrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
+                               llvm_i16_ty], [llvm_i32_ty], [IntrNoMem]>;
+
+  def int_dx_unpack_s8s32
+      : DefaultAttrsIntrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
 }

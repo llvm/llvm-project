@@ -339,6 +339,9 @@ defvar QuadOpKind_ReadAcrossDiagonal = 2;
 
 defvar QuadVoteOpKind_All = 1;
 
+defvar Unpack_Unsigned = 0;
+defvar Unpack_Signed = 1;
+
 // Intrinsic arg selection
 class IntrinArgSelectType;
 def IntrinArgSelect_Index : IntrinArgSelectType;
@@ -1710,4 +1713,35 @@ def StartInstanceLocation : DXILOp<257, startInstanceLocation> {
   let overloads = [Overloads<DXIL1_8, [Int32Ty]>];
   let stages = [Stages<DXIL1_8, [vertex]>];
   let attributes = [Attributes<DXIL1_0, [DXILReadNone]>];
+}
+
+def Unpack4x8 : DXILOp<219, unpack4x8> {
+  let Doc = "unpack 4 integer values from a single 32 bit value";
+  let intrinsics = [
+    IntrinSelect<int_dx_unpack_u8u16,
+                 [
+                   IntrinArgI8<Unpack_Unsigned>,
+                   IntrinArgIndex<0>
+                 ]>,
+    IntrinSelect<int_dx_unpack_u8u32,
+                 [
+                   IntrinArgI8<Unpack_Unsigned>,
+                   IntrinArgIndex<0>
+                 ]>,
+    IntrinSelect<int_dx_unpack_s8s16,
+                 [
+                   IntrinArgI8<Unpack_Signed>,
+                   IntrinArgIndex<0>
+                 ]>,
+    IntrinSelect<int_dx_unpack_s8s32,
+                 [
+                   IntrinArgI8<Unpack_Signed>,
+                   IntrinArgIndex<0>
+                 ]>,
+  ];
+  let arguments = [Int8Ty, Int32Ty];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_6, [Int16Ty, Int32Ty]>];
+  let stages = [Stages<DXIL1_6, [all_stages]>];
+  let attributes = [Attributes<DXIL1_6, [DXILReadNone]>];
 }
