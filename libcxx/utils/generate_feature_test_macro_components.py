@@ -863,7 +863,7 @@ feature_test_macros = [
             "values": {"c++23": 202207},
             "headers": ["generator"],
             "unimplemented": True,
-        },        
+        },
         {
             "name": "__cpp_lib_generic_associative_lookup",
             "values": {"c++14": 201304},
