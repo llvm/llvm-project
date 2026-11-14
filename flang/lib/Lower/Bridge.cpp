@@ -12,6 +12,7 @@
 
 #include "flang/Lower/Bridge.h"
 
+#include "OpenMP/Utils.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CUDA.h"
@@ -68,6 +69,8 @@
 #include "flang/Support/Flags.h"
 #include "flang/Support/Version.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
+#include "mlir/Dialect/OpenMP/Utils/Utils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Matchers.h"
@@ -496,6 +499,7 @@ private:
             builder, info.loc,
             mlir::StringAttr::get(builder.getContext(), tbpName),
             mlir::SymbolRefAttr::get(builder.getContext(), bindingName));
+
         // Propagate DEFERRED attribute on the binding to fir.dt_entry.
         if (binding.get().attrs().test(Fortran::semantics::Attr::DEFERRED))
           dtEntry->setAttr(fir::DTEntryOp::getDeferredAttrNameStr(),

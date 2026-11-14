@@ -427,6 +427,7 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
   pm.addPass(flangomp::createMapsForPrivatizedSymbolsPass());
   pm.addPass(flangomp::createAutomapToTargetDataPass());
   pm.addPass(flangomp::createMapInfoFinalizationPass());
+  pm.addPass(flangomp::createPolymorphicRTTIDeclareTargetPass());
 
   pm.addPass(flangomp::createGenericLoopConversionPass());
 }

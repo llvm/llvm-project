@@ -13,6 +13,7 @@ end program
 ! NO_OMP-NOT: MapsForPrivatizedSymbolsPass
 ! NO_OMP-NOT: AutomapToTargetDataPass
 ! NO_OMP-NOT: MapInfoFinalizationPass
+! NO_OMP-NOT: PolymorphicRTTIDeclareTargetPass
 ! NO_OMP-NOT: GenericLoopConversionPass
 ! NO_OMP: InlineHLFIRAssign
 ! NO_OMP-NOT: LowerWorkshare
@@ -29,6 +30,7 @@ end program
 ! FULL: MapsForPrivatizedSymbolsPass
 ! FULL: AutomapToTargetDataPass
 ! FULL: MapInfoFinalizationPass
+! FULL: PolymorphicRTTIDeclareTargetPass
 ! FULL: GenericLoopConversionPass
 ! FULL: InlineHLFIRAssign
 ! FULL: LowerWorkshare
@@ -46,6 +48,7 @@ end program
 ! SIMD-NOT: MapsForPrivatizedSymbolsPass
 ! SIMD-NOT: AutomapToTargetDataPass
 ! SIMD-NOT: MapInfoFinalizationPass
+! SIMD-NOT: PolymorphicRTTIDeclareTargetPass
 ! SIMD-NOT: GenericLoopConversionPass
 ! SIMD: InlineHLFIRAssign
 ! SIMD-NOT: LowerWorkshare
@@ -62,6 +65,7 @@ end program
 ! DEVICE: MapsForPrivatizedSymbolsPass
 ! DEVICE: AutomapToTargetDataPass
 ! DEVICE: MapInfoFinalizationPass
+! DEVICE: PolymorphicRTTIDeclareTargetPass
 ! DEVICE: GenericLoopConversionPass
 ! DEVICE: InlineHLFIRAssign
 ! DEVICE: LowerWorkshare
