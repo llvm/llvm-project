@@ -19542,15 +19542,24 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc, Scope *S) {
 
   // Defer checking functions that are defaulted in a dependent context.
   if (FD->isDependentContext()) {
-    // The unqualified lookup of the prefix operator for a postfix operator
-    // defaulted outside its class can only be performed now, while we have the
-    // scope of the function-body. Instantiation reuses its result. (When it is
-    // defaulted in its class, the lookup is performed once the class is
-    // complete.)
-    if (DefKind.isPostfixOperator() &&
-        !isa<CXXRecordDecl>(FD->getLexicalDeclContext()))
-      CheckExplicitlyDefaultedPostfixOperator(S, FD,
-                                              DefKind.asPostfixOperator());
+    // A function defaulted outside its class is not defaulted when its
+    // declaration is instantiated, so record what the instantiation of its
+    // definition needs from here: the floating-point features in effect and,
+    // for a postfix operator, the unqualified lookup of the prefix operator,
+    // which can only be performed now, while we have the scope of the
+    // function-body. The info is recorded even for default floating-point
+    // features, so that the instantiation does not take those in effect at its
+    // point of instantiation. (When the function is defaulted in its class,
+    // the lookup is performed once the class is complete.)
+    if (!isa<CXXRecordDecl>(FD->getLexicalDeclContext())) {
+      if (DefKind.isPostfixOperator())
+        CheckExplicitlyDefaultedPostfixOperator(S, FD,
+                                                DefKind.asPostfixOperator());
+      else if (!FD->getDefaultedOrDeletedInfo())
+        FD->setDefaultedOrDeletedInfo(
+            FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
+                Context, /*Lookups=*/{}, CurFPFeatureOverrides()));
+    }
     return;
   }
 
@@ -19582,8 +19591,10 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc, Scope *S) {
 
   // Only allocate DefaultedOrDeletedFunctionInfo if we actually have
   // non-default FP features to stash. This avoids memory overhead for
-  // the vast majority of defaulted functions.
-  if (!FD->getDefaultedOrDeletedInfo() &&
+  // the vast majority of defaulted functions. A postfix operator defaulted
+  // with a scope gets its info, which includes these features, when the
+  // lookup of its prefix operator is performed below.
+  if (!FD->getDefaultedOrDeletedInfo() && !(DefKind.isPostfixOperator() && S) &&
       CurFPFeatureOverrides().requiresTrailingStorage()) {
     FD->setDefaultedOrDeletedInfo(
         FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
