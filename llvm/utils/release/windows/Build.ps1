@@ -3,12 +3,9 @@
 function New-PGOProfile {
     <#
     .SYNOPSIS
-        Builds and trains an instrumented stage 2 clang and sets the profile path.
+        Builds and trains an instrumented stage 2 clang, and merges the
+        profile into $ProfilePath.
     .NOTES
-        Uses a script-scoped variable instead of return to avoid PowerShell
-        capturing native command stdout as part of the function's return value,
-        which would break Ninja's \r progress display and corrupt the path.
-
         PGO artifacts are created as top-level siblings of the stage 2 build
         directory so that each step owns an independent directory tree:
           $InstrumentDir/   - instrumented stage 2 clang build
@@ -39,9 +36,8 @@ function New-PGOProfile {
             'LLVM_ENABLE_RUNTIMES=""'
             'LLVM_ENABLE_PROJECTS="clang;lld"'
         )
-        $Cache = Write-CMakeCacheFile -Flags $InstrumentFlags -FileName 'instrument_cache.cmake'
-        $OtherFlags = $Cache.OtherFlags
-        Invoke-NativeCommand cmake -G Ninja -C $Cache.CacheFile @OtherFlags "$LLVMSrc/llvm"
+        $CacheFile = Write-CMakeCacheFile -Flags $InstrumentFlags -FileName 'instrument_cache.cmake'
+        Invoke-NativeCommand cmake -G Ninja -C $CacheFile "$LLVMSrc/llvm"
         Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs clang
         $InstrumentedClang = ConvertTo-UnixPath (Join-Path $PWD 'bin' 'clang-cl.exe')
     } finally {
@@ -60,9 +56,8 @@ function New-PGOProfile {
             'LLVM_ENABLE_RUNTIMES=""'
             "LLVM_TARGETS_TO_BUILD=Native"
         )
-        $Cache = Write-CMakeCacheFile -Flags $TrainFlags -FileName 'train_cache.cmake'
-        $OtherFlags = $Cache.OtherFlags
-        Invoke-NativeCommand cmake -G Ninja -C $Cache.CacheFile @OtherFlags "$LLVMSrc/llvm"
+        $CacheFile = Write-CMakeCacheFile -Flags $TrainFlags -FileName 'train_cache.cmake'
+        Invoke-NativeCommand cmake -G Ninja -C $CacheFile "$LLVMSrc/llvm"
 
         # Drop profiles generated from running cmake; those are not representative.
         Remove-Item -Path "$InstrumentDir/profiles/*.profraw" -Force -ErrorAction SilentlyContinue
@@ -77,7 +72,6 @@ function New-PGOProfile {
         -output="$ResolvedProfilePath" "$InstrumentDir/profiles/*.profraw"
 
     Write-SubStep "PGO profile generated: $ResolvedProfilePath"
-    $script:PGOProfilePath = $ResolvedProfilePath
 }
 
 function Invoke-Tests {
@@ -158,10 +152,9 @@ function Build-Stage {
     Push-Location $Name
     try {
         $AllFlags = $CMakeFlags + $ExtraCMakeFlags
-        $Cache = Write-CMakeCacheFile -Flags $AllFlags
-        $OtherFlags = $Cache.OtherFlags
+        $CacheFile = Write-CMakeCacheFile -Flags $AllFlags
         # The static cache is last so its fixed settings override the shared flags.
-        Invoke-NativeCommand cmake -G Ninja -C $Cache.CacheFile -C $StaticCache @OtherFlags "$LLVMSrc/llvm"
+        Invoke-NativeCommand cmake -G Ninja -C $CacheFile -C $StaticCache "$LLVMSrc/llvm"
         if ($InitialBuildTargets.Count -gt 0) {
             Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs @InitialBuildTargets
         }
@@ -273,21 +266,15 @@ function Build-Architecture {
     # Step: dependencies (libxml2, zlib, and zstd)
     # Each dependency returns immediately when this step is skipped.
     #-------------------------------------------------------------------
-    $LibXml2 = Get-ThirdPartyLibrary -Name 'libxml2'
-    $Zlib = Get-ThirdPartyLibrary -Name 'zlib'
-    $Zstd = Get-ThirdPartyLibrary -Name 'zstd'
-    Build-LibXml2 -SourceDir (Join-Path $ThirdPartyDir $LibXml2.SourceDirectory) `
-        -BuildDirectory (Join-Path $BuildDir $Stage1Name $LibXml2.BuildDirectory) `
-        -ToolchainFlags $HostToolchainFlags
-    Build-Zlib -SourceDir (Join-Path $ThirdPartyDir $Zlib.SourceDirectory) `
-        -BuildDirectory (Join-Path $BuildDir $Stage1Name $Zlib.BuildDirectory) `
-        -ToolchainFlags $HostToolchainFlags
-    Build-Zstd -SourceDir (Join-Path $ThirdPartyDir $Zstd.SourceDirectory) `
-        -BuildDirectory (Join-Path $BuildDir $Stage1Name $Zstd.BuildDirectory) `
-        -ToolchainFlags $HostToolchainFlags
-    $LibXmlDir = $script:LibXmlInstallDir
-    $ZlibDir = $script:ZlibInstallDir
-    $ZstdDir = $script:ZstdInstallDir
+    foreach ($Library in $script:ThirdPartyLibraries) {
+        Build-ThirdPartyLibrary -Library $Library `
+            -SourceDir (Join-Path $ThirdPartyDir $Library.SourceDirectory) `
+            -BuildDirectory (Join-Path $BuildDir $Stage1Name $Library.BuildDirectory) `
+            -ToolchainFlags $HostToolchainFlags
+    }
+    $LibXmlDir = $script:ThirdPartyInstallDirs['libxml2']
+    $ZlibDir = $script:ThirdPartyInstallDirs['zlib']
+    $ZstdDir = $script:ThirdPartyInstallDirs['zstd']
 
     # The stage 1 bootstrap tools are needed by PGO and stage 2.
     $Stage1BinDir = ConvertTo-UnixPath (Join-Path $BuildDir $Stage1Name 'bin')
@@ -318,11 +305,7 @@ function Build-Architecture {
         $Stage1Dir = Join-Path $BuildDir $Stage1Name
         if (Test-Path $Stage1Dir) {
             Write-SubStep "Cleaning stage 1 bootstrap build artifacts (preserving dependency installs)..."
-            $PreservedBuilds = @(
-                $LibXml2.BuildDirectory
-                $Zlib.BuildDirectory
-                $Zstd.BuildDirectory
-            )
+            $PreservedBuilds = @($script:ThirdPartyLibraries | ForEach-Object { $_.BuildDirectory })
             Get-ChildItem -Path $Stage1Dir -Exclude $PreservedBuilds |
                 ForEach-Object {
                     Remove-ItemWithoutProgress -LiteralPath $_.FullName -Recurse -Force
@@ -394,9 +377,8 @@ function Build-Architecture {
         } else {
             Write-Step "Skipping PGO (-StartAt $($script:StartAtStep))"
             Assert-PathExists -Path $ProfileFile -Description 'PGO profile data'
-            $script:PGOProfilePath = ConvertTo-UnixPath $ProfileFile
         }
-        $ProfilePath = $script:PGOProfilePath
+        $ProfilePath = ConvertTo-UnixPath $ProfileFile
 
         $PgoCFlags = "$CommonCompilerFlags -Wno-backend-plugin"
         $ProfileFlags = @(
@@ -451,9 +433,8 @@ function Build-Architecture {
                     -TarballInstallDirectory $TarballInstallDirectory) {
                 Write-SubStep 'The stage2 cache has tarball settings; restoring the MSI build configuration.'
                 $PackageFlags = $Stage2Flags + $Stage2Extra
-                $Cache = Write-CMakeCacheFile -Flags $PackageFlags -FileName 'package_cache.cmake'
-                $OtherFlags = $Cache.OtherFlags
-                Invoke-NativeCommand cmake -G Ninja -C $Cache.CacheFile -C $Stage2Cache @OtherFlags "$LLVMSrc/llvm"
+                $CacheFile = Write-CMakeCacheFile -Flags $PackageFlags -FileName 'package_cache.cmake'
+                Invoke-NativeCommand cmake -G Ninja -C $CacheFile -C $Stage2Cache "$LLVMSrc/llvm"
                 Remove-Item -LiteralPath $TarballConfigMarker -Force -ErrorAction SilentlyContinue
             } else {
                 Write-SubStep 'Stage2 is already configured for packaging; skipping CMake reconfigure.'
@@ -492,13 +473,12 @@ function Build-Architecture {
                 "CMAKE_INSTALL_PREFIX=$BuildDir/$Filename"
                 "LLVM_INCLUDE_TESTS=OFF"
             )
-            $Cache = Write-CMakeCacheFile -Flags $TarballFlags -FileName 'tarball_cache.cmake'
-            $OtherFlags = $Cache.OtherFlags
+            $CacheFile = Write-CMakeCacheFile -Flags $TarballFlags -FileName 'tarball_cache.cmake'
             # Leave a durable marker so a later -StartAt package invocation
             # restores the stage2 settings before invoking CPack.
             Set-Content -LiteralPath '.llvm_release_tarball_configured' `
                 -Value 'LLVM_INSTALL_TOOLCHAIN_ONLY=OFF' -Encoding ASCII
-            Invoke-NativeCommand cmake -G Ninja -C $Cache.CacheFile -C $Stage2Cache @OtherFlags "$LLVMSrc/llvm"
+            Invoke-NativeCommand cmake -G Ninja -C $CacheFile -C $Stage2Cache "$LLVMSrc/llvm"
             Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs install
 
             # Verify llvm-config works

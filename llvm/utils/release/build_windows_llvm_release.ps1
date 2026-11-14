@@ -250,8 +250,7 @@ if ($PSBoundParameters.ContainsKey('StartAt')) {
         exit 0
     }
     if ($StartAt -notin $script:StepOrder) {
-        Write-Error "Invalid -StartAt value: '$StartAt'. Valid steps: $($script:StepOrder -join ', ')"
-        exit 1
+        throw "Invalid -StartAt value: '$StartAt'. Valid steps: $($script:StepOrder -join ', ')"
     }
 }
 
@@ -323,9 +322,8 @@ if ($Missing.Count -gt 0 -and -not $InstallPrerequisites -and -not $Unattended) 
 
 if ($Missing.Count -gt 0) {
     Write-Host ""
-    Write-Error ("Missing prerequisites: $($Missing -join ', ')`n" +
+    throw ("Missing prerequisites: $($Missing -join ', ')`n" +
         "Run the script with -InstallPrerequisites to install them, or install manually.")
-    exit 1
 }
 
 if ($DownloadSource -and -not $StartAt) {
@@ -379,16 +377,14 @@ Write-Host "  Architecture:    $script:BuildArch"
 if ($StartAt) {
     # Resuming from a specific step: validate that the build directory exists.
     if (-not (Test-Path $BuildDir)) {
-        Write-Error "Build directory does not exist: $BuildDir`nCannot use -StartAt without a previous build. Run a full build first."
-        exit 1
+        throw "Build directory does not exist: $BuildDir`nCannot use -StartAt without a previous build. Run a full build first."
     }
     Write-Host "  Resuming from step: $StartAt" -ForegroundColor Yellow
 } else {
     # Full build: prompt to delete existing build directory.
     if (Test-Path $BuildDir) {
         if ($Unattended) {
-            Write-Error "Build directory already exists: $BuildDir`nUse -StartAt to resume it, or remove it before running an unattended full build."
-            exit 1
+            throw "Build directory already exists: $BuildDir`nUse -StartAt to resume it, or remove it before running an unattended full build."
         }
         $Answer = Read-Host "Build directory already exists: $BuildDir`nDelete and re-create it? [y/N]"
         if ($Answer -ne 'y' -and $Answer -ne 'Y') {

@@ -11,16 +11,6 @@ function Test-ShouldRun {
     return $script:StepOrder.IndexOf($Step) -ge $script:StepOrder.IndexOf($script:StartAtStep)
 }
 
-function Test-IsStartStep {
-    <#
-    .SYNOPSIS
-        Returns $true if the given step is exactly the -StartAt step (the step
-        whose directory should be cleaned before a fresh rebuild).
-    #>
-    param([Parameter(Mandatory)][string]$Step)
-    return ($script:StartAtStep -and $script:StartAtStep -eq $Step)
-}
-
 function Assert-PathExists {
     <#
     .SYNOPSIS
@@ -32,8 +22,7 @@ function Assert-PathExists {
         [string]$Description = $Path
     )
     if (-not (Test-Path $Path)) {
-        Write-Error "Required artifact missing: $Description`n  Path: $Path`n  Hint: run the earlier build steps first, or use a different -StartAt value."
-        exit 1
+        throw "Required artifact missing: $Description`n  Path: $Path`n  Hint: run the earlier build steps first, or use a different -StartAt value."
     }
 }
 
@@ -46,14 +35,10 @@ function Remove-ItemWithoutProgress {
 
     # Recursive Remove-Item reports progress in PowerShell 7. In classic
     # conhost (including cmd.exe), that progress display can leave cursor
-    # artifacts behind after deletion completes.
-    $SavedProgressPreference = $ProgressPreference
-    try {
-        $ProgressPreference = 'SilentlyContinue'
-        Remove-Item -LiteralPath $LiteralPath -Recurse:$Recurse -Force:$Force
-    } finally {
-        $ProgressPreference = $SavedProgressPreference
-    }
+    # artifacts behind after deletion completes. This assignment creates a
+    # variable local to this function, so the caller's preference is unchanged.
+    $ProgressPreference = 'SilentlyContinue'
+    Remove-Item -LiteralPath $LiteralPath -Recurse:$Recurse -Force:$Force
 }
 
 function Remove-StepDirectory {
@@ -90,10 +75,8 @@ function Write-CMakeCacheFile {
         exceeding the Windows command-line length limit.
     .DESCRIPTION
         Accepts VAR[:TYPE]=VALUE entries and writes each as a
-        set(VAR VALUE CACHE <type> "") line in a temporary .cmake file.
-        Returns a hashtable with:
-          CacheFile  - the path to the generated file
-          OtherFlags - any non-assignment arguments in the input array
+        set(VAR VALUE CACHE <type> "" FORCE) line in a .cmake file in the
+        current directory. Returns the file's path, for cmake -C.
     #>
     param(
         [Parameter(Mandatory)]
@@ -101,23 +84,18 @@ function Write-CMakeCacheFile {
         [string]$FileName = 'cache_flags.cmake'
     )
     $CacheLines = @()
-    $OtherFlags = @()
     foreach ($F in $Flags) {
-        if ($F -match '^([A-Za-z_][A-Za-z0-9_]*)(?::([^=]*))?=(.*)$') {
-            $VarName  = $Matches[1]
-            $VarType  = if ($Matches[2]) { $Matches[2] } else { 'STRING' }
-            $VarValue = ($Matches[3] -replace '"', '').Replace('\', '/')   # strip quotes, use forward slashes
-            $CacheLines += "set($VarName `"$VarValue`" CACHE $VarType `"`" FORCE)"
-        } else {
-            $OtherFlags += $F
+        if ($F -notmatch '^([A-Za-z_][A-Za-z0-9_]*)(?::([^=]*))?=(.*)$') {
+            throw "Not a CMake cache assignment (VAR[:TYPE]=VALUE): '$F'"
         }
+        $VarName  = $Matches[1]
+        $VarType  = if ($Matches[2]) { $Matches[2] } else { 'STRING' }
+        $VarValue = ($Matches[3] -replace '"', '').Replace('\', '/')   # strip quotes, use forward slashes
+        $CacheLines += "set($VarName `"$VarValue`" CACHE $VarType `"`" FORCE)"
     }
     $CachePath = (Join-Path $PWD $FileName).Replace('\', '/')
     $CacheLines -join "`n" | Set-Content -Path $CachePath -Encoding UTF8
-    return @{
-        CacheFile  = $CachePath
-        OtherFlags = $OtherFlags
-    }
+    return $CachePath
 }
 
 function Invoke-NativeCommand {
