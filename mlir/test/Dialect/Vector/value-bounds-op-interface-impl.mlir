@@ -11,3 +11,14 @@ func.func @vector_transfer_write(%t: tensor<?xf32>, %v: vector<5xf32>, %pos: ind
   %1 = "test.reify_bound"(%0) {dim = 0} : (tensor<?xf32>) -> (index)
   return %1 : index
 }
+
+// -----
+
+// CHECK-LABEL: func @vscale_lower_bound(
+//       CHECK:   %[[c1:.*]] = arith.constant 1 : index
+//       CHECK:   return %[[c1]]
+func.func @vscale_lower_bound() -> index {
+  %vscale = vector.vscale
+  %lb = "test.reify_bound"(%vscale) {type = "LB", constant} : (index) -> index
+  return %lb : index
+}
