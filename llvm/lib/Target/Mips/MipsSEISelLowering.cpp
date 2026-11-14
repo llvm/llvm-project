@@ -3452,8 +3452,9 @@ MipsSETargetLowering::emitCOPY_FD(MachineInstr &MI,
 //
 // insert_fw_pseudo $wd, $wd_in, $n, $fs
 // =>
-// subreg_to_reg $wt:sub_lo, $fs
-// insve_w $wd[$n], $wd_in, $wt[0]
+// implicit_def $wt1
+// insert_subreg $wt2:sub_lo, $wt1, $fs
+// insve_w $wd[$n], $wd_in, $wt2[0]
 MachineBasicBlock *
 MipsSETargetLowering::emitINSERT_FW(MachineInstr &MI,
                                     MachineBasicBlock *BB) const {
@@ -3464,17 +3465,21 @@ MipsSETargetLowering::emitINSERT_FW(MachineInstr &MI,
   Register Wd_in = MI.getOperand(1).getReg();
   unsigned Lane = MI.getOperand(2).getImm();
   Register Fs = MI.getOperand(3).getReg();
-  Register Wt = RegInfo.createVirtualRegister(
-      Subtarget.useOddSPReg() ? &Mips::MSA128WRegClass
-                              : &Mips::MSA128WEvensRegClass);
+  const TargetRegisterClass *RC = Subtarget.useOddSPReg()
+                                      ? &Mips::MSA128WRegClass
+                                      : &Mips::MSA128WEvensRegClass;
+  Register Wt1 = RegInfo.createVirtualRegister(RC);
+  Register Wt2 = RegInfo.createVirtualRegister(RC);
 
-  BuildMI(*BB, MI, DL, TII->get(Mips::SUBREG_TO_REG), Wt)
+  BuildMI(*BB, MI, DL, TII->get(Mips::IMPLICIT_DEF), Wt1);
+  BuildMI(*BB, MI, DL, TII->get(Mips::INSERT_SUBREG), Wt2)
+      .addReg(Wt1)
       .addReg(Fs)
       .addImm(Mips::sub_lo);
   BuildMI(*BB, MI, DL, TII->get(Mips::INSVE_W), Wd)
       .addReg(Wd_in)
       .addImm(Lane)
-      .addReg(Wt)
+      .addReg(Wt2)
       .addImm(0);
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
@@ -3485,8 +3490,9 @@ MipsSETargetLowering::emitINSERT_FW(MachineInstr &MI,
 //
 // insert_fd_pseudo $wd, $fs, n
 // =>
-// subreg_to_reg $wt:sub_64, $fs
-// insve_d $wd[$n], $wd_in, $wt[0]
+// implicit_def $wt1
+// insert_subreg $wt2:sub_64, $wt1, $fs
+// insve_d $wd[$n], $wd_in, $wt2[0]
 MachineBasicBlock *
 MipsSETargetLowering::emitINSERT_FD(MachineInstr &MI,
                                     MachineBasicBlock *BB) const {
@@ -3499,15 +3505,18 @@ MipsSETargetLowering::emitINSERT_FD(MachineInstr &MI,
   Register Wd_in = MI.getOperand(1).getReg();
   unsigned Lane = MI.getOperand(2).getImm();
   Register Fs = MI.getOperand(3).getReg();
-  Register Wt = RegInfo.createVirtualRegister(&Mips::MSA128DRegClass);
+  Register Wt1 = RegInfo.createVirtualRegister(&Mips::MSA128DRegClass);
+  Register Wt2 = RegInfo.createVirtualRegister(&Mips::MSA128DRegClass);
 
-  BuildMI(*BB, MI, DL, TII->get(Mips::SUBREG_TO_REG), Wt)
+  BuildMI(*BB, MI, DL, TII->get(Mips::IMPLICIT_DEF), Wt1);
+  BuildMI(*BB, MI, DL, TII->get(Mips::INSERT_SUBREG), Wt2)
+      .addReg(Wt1)
       .addReg(Fs)
       .addImm(Mips::sub_64);
   BuildMI(*BB, MI, DL, TII->get(Mips::INSVE_D), Wd)
       .addReg(Wd_in)
       .addImm(Lane)
-      .addReg(Wt)
+      .addReg(Wt2)
       .addImm(0);
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
@@ -3528,7 +3537,8 @@ MipsSETargetLowering::emitINSERT_FD(MachineInstr &MI,
 // For floating point:
 // (INSERT_([BHWD]|F[WD])_PSEUDO $wd, $wd_in, $n, $fs)
 // =>
-// (SUBREG_TO_REG $wt, $fs, <subreg>)
+// (IMPLICIT_DEF $wt1)
+// (INSERT_SUBREG $wt2, $wt1, $fs, <subreg>)
 // (SLL $lanetmp1, $lane, <log2size)
 // (SLD_B $wdtmp1, $wd_in, $wd_in, $lanetmp1)
 // (INSVE_[WD], $wdtmp2, 0, $wdtmp1, 0)
@@ -3584,11 +3594,14 @@ MachineBasicBlock *MipsSETargetLowering::emitINSERT_DF_VIDX(
   }
 
   if (IsFP) {
-    Register Wt = RegInfo.createVirtualRegister(VecRC);
-    BuildMI(*BB, MI, DL, TII->get(Mips::SUBREG_TO_REG), Wt)
+    Register Wt1 = RegInfo.createVirtualRegister(VecRC);
+    Register Wt2 = RegInfo.createVirtualRegister(VecRC);
+    BuildMI(*BB, MI, DL, TII->get(Mips::IMPLICIT_DEF), Wt1);
+    BuildMI(*BB, MI, DL, TII->get(Mips::INSERT_SUBREG), Wt2)
+        .addReg(Wt1)
         .addReg(SrcValReg)
         .addImm(EltSizeInBytes == 8 ? Mips::sub_64 : Mips::sub_lo);
-    SrcValReg = Wt;
+    SrcValReg = Wt2;
   }
 
   // Convert the lane index into a byte index
