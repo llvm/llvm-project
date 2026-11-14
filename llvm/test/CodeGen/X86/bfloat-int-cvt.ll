@@ -6,17 +6,19 @@
 ; Signed Integer to BFloat
 ;
 
-define bfloat @sitofp_i32_to_bf16(i32 %a) {
+define bfloat @sitofp_i32_to_bf16(i32 %a) nounwind {
 ; CHECK-LABEL: sitofp_i32_to_bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm0
-; CHECK-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm0
+; CHECK-NEXT:    callq __truncdfbf2@PLT
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
   %cvt = sitofp i32 %a to bfloat
   ret bfloat %cvt
 }
 
-define bfloat @sitofp_i64_to_bf16(i64 %a) {
+define bfloat @sitofp_i64_to_bf16(i64 %a) nounwind {
 ; CHECK-LABEL: sitofp_i64_to_bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
@@ -26,7 +28,7 @@ define bfloat @sitofp_i64_to_bf16(i64 %a) {
   ret bfloat %cvt
 }
 
-define <8 x bfloat> @sitofp_v8i32_to_v8bf16(<8 x i32> %a) {
+define <8 x bfloat> @sitofp_v8i32_to_v8bf16(<8 x i32> %a) nounwind {
 ; CHECK-LABEL: sitofp_v8i32_to_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtdq2ps %ymm0, %ymm0
@@ -37,7 +39,7 @@ define <8 x bfloat> @sitofp_v8i32_to_v8bf16(<8 x i32> %a) {
   ret <8 x bfloat> %cvt
 }
 
-define <4 x bfloat> @sitofp_v4i32_to_v4bf16(<4 x i32> %a) {
+define <4 x bfloat> @sitofp_v4i32_to_v4bf16(<4 x i32> %a) nounwind {
 ; CHECK-LABEL: sitofp_v4i32_to_v4bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
@@ -49,7 +51,7 @@ define <4 x bfloat> @sitofp_v4i32_to_v4bf16(<4 x i32> %a) {
   ret <4 x bfloat> %cvt
 }
 
-define <2 x bfloat> @sitofp_v2i32_to_v2bf16(<2 x i32> %a) {
+define <2 x bfloat> @sitofp_v2i32_to_v2bf16(<2 x i32> %a) nounwind {
 ; CHECK-LABEL: sitofp_v2i32_to_v2bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
@@ -61,7 +63,7 @@ define <2 x bfloat> @sitofp_v2i32_to_v2bf16(<2 x i32> %a) {
   ret <2 x bfloat> %cvt
 }
 
-define <16 x bfloat> @sitofp_v16i32_to_v16bf16(<16 x i32> %a) {
+define <16 x bfloat> @sitofp_v16i32_to_v16bf16(<16 x i32> %a) nounwind {
 ; CHECK-LABEL: sitofp_v16i32_to_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtdq2ps %zmm0, %zmm0
@@ -71,7 +73,7 @@ define <16 x bfloat> @sitofp_v16i32_to_v16bf16(<16 x i32> %a) {
   ret <16 x bfloat> %cvt
 }
 
-define <2 x bfloat> @sitofp_v2i64_to_v2bf16(<2 x i64> %a) {
+define <2 x bfloat> @sitofp_v2i64_to_v2bf16(<2 x i64> %a) nounwind {
 ; BF16-LABEL: sitofp_v2i64_to_v2bf16:
 ; BF16:       # %bb.0:
 ; BF16-NEXT:    vpextrq $1, %xmm0, %rax
@@ -97,7 +99,7 @@ define <2 x bfloat> @sitofp_v2i64_to_v2bf16(<2 x i64> %a) {
   ret <2 x bfloat> %cvt
 }
 
-define <4 x bfloat> @sitofp_v4i64_to_v4bf16(<4 x i64> %a) {
+define <4 x bfloat> @sitofp_v4i64_to_v4bf16(<4 x i64> %a) nounwind {
 ; BF16-LABEL: sitofp_v4i64_to_v4bf16:
 ; BF16:       # %bb.0:
 ; BF16-NEXT:    vextracti128 $1, %ymm0, %xmm1
@@ -135,7 +137,7 @@ define <4 x bfloat> @sitofp_v4i64_to_v4bf16(<4 x i64> %a) {
   ret <4 x bfloat> %cvt
 }
 
-define <8 x bfloat> @sitofp_v8i64_to_v8bf16(<8 x i64> %a) {
+define <8 x bfloat> @sitofp_v8i64_to_v8bf16(<8 x i64> %a) nounwind {
 ; BF16-LABEL: sitofp_v8i64_to_v8bf16:
 ; BF16:       # %bb.0:
 ; BF16-NEXT:    vextracti32x4 $3, %zmm0, %xmm1
@@ -195,17 +197,19 @@ define <8 x bfloat> @sitofp_v8i64_to_v8bf16(<8 x i64> %a) {
 ; Unsigned Integer to BFloat
 ;
 
-define bfloat @uitofp_i32_to_bf16(i32 %a) {
+define bfloat @uitofp_i32_to_bf16(i32 %a) nounwind {
 ; CHECK-LABEL: uitofp_i32_to_bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcvtusi2ss %edi, %xmm15, %xmm0
-; CHECK-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    vcvtusi2sd %edi, %xmm15, %xmm0
+; CHECK-NEXT:    callq __truncdfbf2@PLT
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
   %cvt = uitofp i32 %a to bfloat
   ret bfloat %cvt
 }
 
-define bfloat @uitofp_i64_to_bf16(i64 %a) {
+define bfloat @uitofp_i64_to_bf16(i64 %a) nounwind {
 ; CHECK-LABEL: uitofp_i64_to_bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtusi2ss %rdi, %xmm15, %xmm0
@@ -215,7 +219,7 @@ define bfloat @uitofp_i64_to_bf16(i64 %a) {
   ret bfloat %cvt
 }
 
-define <8 x bfloat> @uitofp_v8i32_to_v8bf16(<8 x i32> %a) {
+define <8 x bfloat> @uitofp_v8i32_to_v8bf16(<8 x i32> %a) nounwind {
 ; CHECK-LABEL: uitofp_v8i32_to_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtudq2ps %ymm0, %ymm0
@@ -226,7 +230,7 @@ define <8 x bfloat> @uitofp_v8i32_to_v8bf16(<8 x i32> %a) {
   ret <8 x bfloat> %cvt
 }
 
-define <4 x bfloat> @uitofp_v4i32_to_v4bf16(<4 x i32> %a) {
+define <4 x bfloat> @uitofp_v4i32_to_v4bf16(<4 x i32> %a) nounwind {
 ; CHECK-LABEL: uitofp_v4i32_to_v4bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
@@ -238,7 +242,7 @@ define <4 x bfloat> @uitofp_v4i32_to_v4bf16(<4 x i32> %a) {
   ret <4 x bfloat> %cvt
 }
 
-define <2 x bfloat> @uitofp_v2i32_to_v2bf16(<2 x i32> %a) {
+define <2 x bfloat> @uitofp_v2i32_to_v2bf16(<2 x i32> %a) nounwind {
 ; CHECK-LABEL: uitofp_v2i32_to_v2bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
@@ -250,7 +254,7 @@ define <2 x bfloat> @uitofp_v2i32_to_v2bf16(<2 x i32> %a) {
   ret <2 x bfloat> %cvt
 }
 
-define <16 x bfloat> @uitofp_v16i32_to_v16bf16(<16 x i32> %a) {
+define <16 x bfloat> @uitofp_v16i32_to_v16bf16(<16 x i32> %a) nounwind {
 ; CHECK-LABEL: uitofp_v16i32_to_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtudq2ps %zmm0, %zmm0
@@ -260,7 +264,7 @@ define <16 x bfloat> @uitofp_v16i32_to_v16bf16(<16 x i32> %a) {
   ret <16 x bfloat> %cvt
 }
 
-define <2 x bfloat> @uitofp_v2i64_to_v2bf16(<2 x i64> %a) {
+define <2 x bfloat> @uitofp_v2i64_to_v2bf16(<2 x i64> %a) nounwind {
 ; BF16-LABEL: uitofp_v2i64_to_v2bf16:
 ; BF16:       # %bb.0:
 ; BF16-NEXT:    vpextrq $1, %xmm0, %rax
@@ -324,7 +328,7 @@ define <4 x bfloat> @uitofp_v4i64_to_v4bf16(<4 x i64> %a) {
   ret <4 x bfloat> %cvt
 }
 
-define <8 x bfloat> @uitofp_v8i64_to_v8bf16(<8 x i64> %a) {
+define <8 x bfloat> @uitofp_v8i64_to_v8bf16(<8 x i64> %a) nounwind {
 ; BF16-LABEL: uitofp_v8i64_to_v8bf16:
 ; BF16:       # %bb.0:
 ; BF16-NEXT:    vextracti32x4 $3, %zmm0, %xmm1
@@ -384,7 +388,7 @@ define <8 x bfloat> @uitofp_v8i64_to_v8bf16(<8 x i64> %a) {
 ; BFloat to Signed Integer
 ;
 
-define i32 @fptosi_bf16_to_i32(bfloat %a) {
+define i32 @fptosi_bf16_to_i32(bfloat %a) nounwind {
 ; CHECK-LABEL: fptosi_bf16_to_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpslld $16, %xmm0, %xmm0
@@ -394,7 +398,7 @@ define i32 @fptosi_bf16_to_i32(bfloat %a) {
   ret i32 %cvt
 }
 
-define i64 @fptosi_bf16_to_i64(bfloat %a) {
+define i64 @fptosi_bf16_to_i64(bfloat %a) nounwind {
 ; CHECK-LABEL: fptosi_bf16_to_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpslld $16, %xmm0, %xmm0
@@ -404,7 +408,7 @@ define i64 @fptosi_bf16_to_i64(bfloat %a) {
   ret i64 %cvt
 }
 
-define <8 x i32> @fptosi_v8bf16_to_v8i32(<8 x bfloat> %a) {
+define <8 x i32> @fptosi_v8bf16_to_v8i32(<8 x bfloat> %a) nounwind {
 ; CHECK-LABEL: fptosi_v8bf16_to_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
@@ -415,7 +419,7 @@ define <8 x i32> @fptosi_v8bf16_to_v8i32(<8 x bfloat> %a) {
   ret <8 x i32> %cvt
 }
 
-define <4 x i32> @fptosi_v4bf16_to_v4i32(<4 x bfloat> %a) {
+define <4 x i32> @fptosi_v4bf16_to_v4i32(<4 x bfloat> %a) nounwind {
 ; CHECK-LABEL: fptosi_v4bf16_to_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
@@ -426,7 +430,7 @@ define <4 x i32> @fptosi_v4bf16_to_v4i32(<4 x bfloat> %a) {
   ret <4 x i32> %cvt
 }
 
-define <2 x i32> @fptosi_v2bf16_to_v2i32(<2 x bfloat> %a) {
+define <2 x i32> @fptosi_v2bf16_to_v2i32(<2 x bfloat> %a) nounwind {
 ; CHECK-LABEL: fptosi_v2bf16_to_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
@@ -437,7 +441,7 @@ define <2 x i32> @fptosi_v2bf16_to_v2i32(<2 x bfloat> %a) {
   ret <2 x i32> %cvt
 }
 
-define <16 x i32> @fptosi_v16bf16_to_v16i32(<16 x bfloat> %a) {
+define <16 x i32> @fptosi_v16bf16_to_v16i32(<16 x bfloat> %a) nounwind {
 ; CHECK-LABEL: fptosi_v16bf16_to_v16i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
@@ -448,7 +452,7 @@ define <16 x i32> @fptosi_v16bf16_to_v16i32(<16 x bfloat> %a) {
   ret <16 x i32> %cvt
 }
 
-define <2 x i64> @fptosi_v2bf16_to_v2i64(<2 x bfloat> %a) {
+define <2 x i64> @fptosi_v2bf16_to_v2i64(<2 x bfloat> %a) nounwind {
 ; BF16-LABEL: fptosi_v2bf16_to_v2i64:
 ; BF16:       # %bb.0:
 ; BF16-NEXT:    vpxor %xmm1, %xmm1, %xmm1
@@ -473,7 +477,7 @@ define <2 x i64> @fptosi_v2bf16_to_v2i64(<2 x bfloat> %a) {
   ret <2 x i64> %cvt
 }
 
-define <4 x i64> @fptosi_v4bf16_to_v4i64(<4 x bfloat> %a) {
+define <4 x i64> @fptosi_v4bf16_to_v4i64(<4 x bfloat> %a) nounwind {
 ; BF16-LABEL: fptosi_v4bf16_to_v4i64:
 ; BF16:       # %bb.0:
 ; BF16-NEXT:    vpxor %xmm1, %xmm1, %xmm1
@@ -509,7 +513,7 @@ define <4 x i64> @fptosi_v4bf16_to_v4i64(<4 x bfloat> %a) {
   ret <4 x i64> %cvt
 }
 
-define <8 x i64> @fptosi_v8bf16_to_v8i64(<8 x bfloat> %a) {
+define <8 x i64> @fptosi_v8bf16_to_v8i64(<8 x bfloat> %a) nounwind {
 ; BF16-LABEL: fptosi_v8bf16_to_v8i64:
 ; BF16:       # %bb.0:
 ; BF16-NEXT:    vpextrw $7, %xmm0, %eax
@@ -570,7 +574,7 @@ define <8 x i64> @fptosi_v8bf16_to_v8i64(<8 x bfloat> %a) {
 ; BFloat to Unsigned Integer
 ;
 
-define i32 @fptoui_bf16_to_i32(bfloat %a) {
+define i32 @fptoui_bf16_to_i32(bfloat %a) nounwind {
 ; CHECK-LABEL: fptoui_bf16_to_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpslld $16, %xmm0, %xmm0
@@ -580,7 +584,7 @@ define i32 @fptoui_bf16_to_i32(bfloat %a) {
   ret i32 %cvt
 }
 
-define i64 @fptoui_bf16_to_i64(bfloat %a) {
+define i64 @fptoui_bf16_to_i64(bfloat %a) nounwind {
 ; CHECK-LABEL: fptoui_bf16_to_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpslld $16, %xmm0, %xmm0
@@ -590,7 +594,7 @@ define i64 @fptoui_bf16_to_i64(bfloat %a) {
   ret i64 %cvt
 }
 
-define <8 x i32> @fptoui_v8bf16_to_v8i32(<8 x bfloat> %a) {
+define <8 x i32> @fptoui_v8bf16_to_v8i32(<8 x bfloat> %a) nounwind {
 ; CHECK-LABEL: fptoui_v8bf16_to_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
@@ -601,7 +605,7 @@ define <8 x i32> @fptoui_v8bf16_to_v8i32(<8 x bfloat> %a) {
   ret <8 x i32> %cvt
 }
 
-define <4 x i32> @fptoui_v4bf16_to_v4i32(<4 x bfloat> %a) {
+define <4 x i32> @fptoui_v4bf16_to_v4i32(<4 x bfloat> %a) nounwind {
 ; CHECK-LABEL: fptoui_v4bf16_to_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
@@ -612,7 +616,7 @@ define <4 x i32> @fptoui_v4bf16_to_v4i32(<4 x bfloat> %a) {
   ret <4 x i32> %cvt
 }
 
-define <2 x i32> @fptoui_v2bf16_to_v2i32(<2 x bfloat> %a) {
+define <2 x i32> @fptoui_v2bf16_to_v2i32(<2 x bfloat> %a) nounwind {
 ; CHECK-LABEL: fptoui_v2bf16_to_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
@@ -623,7 +627,7 @@ define <2 x i32> @fptoui_v2bf16_to_v2i32(<2 x bfloat> %a) {
   ret <2 x i32> %cvt
 }
 
-define <16 x i32> @fptoui_v16bf16_to_v16i32(<16 x bfloat> %a) {
+define <16 x i32> @fptoui_v16bf16_to_v16i32(<16 x bfloat> %a) nounwind {
 ; CHECK-LABEL: fptoui_v16bf16_to_v16i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
@@ -634,7 +638,7 @@ define <16 x i32> @fptoui_v16bf16_to_v16i32(<16 x bfloat> %a) {
   ret <16 x i32> %cvt
 }
 
-define <2 x i64> @fptoui_v2bf16_to_v2i64(<2 x bfloat> %a) {
+define <2 x i64> @fptoui_v2bf16_to_v2i64(<2 x bfloat> %a) nounwind {
 ; BF16-LABEL: fptoui_v2bf16_to_v2i64:
 ; BF16:       # %bb.0:
 ; BF16-NEXT:    vpxor %xmm1, %xmm1, %xmm1
@@ -659,7 +663,7 @@ define <2 x i64> @fptoui_v2bf16_to_v2i64(<2 x bfloat> %a) {
   ret <2 x i64> %cvt
 }
 
-define <4 x i64> @fptoui_v4bf16_to_v4i64(<4 x bfloat> %a) {
+define <4 x i64> @fptoui_v4bf16_to_v4i64(<4 x bfloat> %a) nounwind {
 ; BF16-LABEL: fptoui_v4bf16_to_v4i64:
 ; BF16:       # %bb.0:
 ; BF16-NEXT:    vpxor %xmm1, %xmm1, %xmm1
@@ -695,7 +699,7 @@ define <4 x i64> @fptoui_v4bf16_to_v4i64(<4 x bfloat> %a) {
   ret <4 x i64> %cvt
 }
 
-define <8 x i64> @fptoui_v8bf16_to_v8i64(<8 x bfloat> %a) {
+define <8 x i64> @fptoui_v8bf16_to_v8i64(<8 x bfloat> %a) nounwind {
 ; BF16-LABEL: fptoui_v8bf16_to_v8i64:
 ; BF16:       # %bb.0:
 ; BF16-NEXT:    vpextrw $7, %xmm0, %eax
@@ -751,3 +755,60 @@ define <8 x i64> @fptoui_v8bf16_to_v8i64(<8 x bfloat> %a) {
   %cvt = fptoui <8 x bfloat> %a to <8 x i64>
   ret <8 x i64> %cvt
 }
+
+;
+; Signed/Unsigned int to bfloat with afn (no libcall)
+;
+
+define bfloat @sitofp_afn_i32_to_bf16(i32 %a) nounwind {
+; CHECK-LABEL: sitofp_afn_i32_to_bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm0
+; CHECK-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %cvt = sitofp afn i32 %a to bfloat
+  ret bfloat %cvt
+}
+
+define bfloat @uitofp_afn_i32_to_bf16(i32 %a) nounwind {
+; CHECK-LABEL: uitofp_afn_i32_to_bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcvtusi2ss %edi, %xmm15, %xmm0
+; CHECK-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %cvt = uitofp afn i32 %a to bfloat
+  ret bfloat %cvt
+}
+
+;
+; 25..53-bit sources: converted through f64
+;
+
+define bfloat @sitofp_i25_to_bf16(i25 %a) nounwind {
+; CHECK-LABEL: sitofp_i25_to_bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    shll $7, %edi
+; CHECK-NEXT:    sarl $7, %edi
+; CHECK-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm0
+; CHECK-NEXT:    callq __truncdfbf2@PLT
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    retq
+  %cvt = sitofp i25 %a to bfloat
+  ret bfloat %cvt
+}
+
+define bfloat @uitofp_i48_to_bf16(i48 %a) nounwind {
+; CHECK-LABEL: uitofp_i48_to_bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    movabsq $281474976710655, %rax # imm = 0xFFFFFFFFFFFF
+; CHECK-NEXT:    andq %rdi, %rax
+; CHECK-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
+; CHECK-NEXT:    callq __truncdfbf2@PLT
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    retq
+  %cvt = uitofp i48 %a to bfloat
+  ret bfloat %cvt
+}
+
