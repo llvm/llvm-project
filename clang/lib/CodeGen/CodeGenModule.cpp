@@ -571,7 +571,10 @@ CodeGenModule::CodeGenModule(ASTContext &C,
       Target(C.getTargetInfo()), ABI(createCXXABI(*this)),
       VMContext(M.getContext()), VTables(*this), StackHandler(diags),
       SanitizerMD(new SanitizerMetadata(*this)),
-      AtomicOpts(Target.getAtomicOpts()) {
+      AtomicOpts(Target.getAtomicOpts()),
+      HasStorageOnlyLongDouble(&Target.getLongDoubleFormat() ==
+                                   &llvm::APFloat::x87DoubleExtended() &&
+                               !Target.getTriple().isX86()) {
 
   AbiMapper = std::make_unique<QualTypeMapper>(C, M.getDataLayout(), AbiAlloc);
   AbiReverseMapper = std::make_unique<llvm::abi::IRTypeMapper>(
@@ -2979,8 +2982,31 @@ void CodeGenModule::SetLLVMFunctionAttributes(GlobalDecl GD,
 
     Error(Loc, "__vectorcall calling convention is not currently supported");
   }
+  if (HasStorageOnlyLongDouble) {
+    SourceLocation Loc;
+    if (const Decl *D = GD.getDecl())
+      Loc = D->getLocation();
+    if (!diagnoseLongDoubleType(Info.getReturnType(), Loc))
+      for (const CGFunctionInfoArgInfo &Arg : Info.arguments())
+        if (diagnoseLongDoubleType(Arg.type, Loc))
+          break;
+  }
   F->setAttributes(PAL);
   F->setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
+}
+
+bool CodeGenModule::diagnoseLongDoubleType(QualType Ty, SourceLocation Loc) {
+  if (const auto *AT = Ty->getAs<AtomicType>())
+    Ty = AT->getValueType();
+  if (const auto *CT = Ty->getAs<ComplexType>())
+    Ty = CT->getElementType();
+  else if (const auto *VT = Ty->getAs<VectorType>())
+    Ty = VT->getElementType();
+  if (!Ty->isSpecificBuiltinType(BuiltinType::LongDouble))
+    return false;
+  getDiags().Report(Loc, diag::err_storage_only_long_double)
+      << getTriple().str();
+  return true;
 }
 
 static void removeImageAccessQualifier(std::string& TyName) {

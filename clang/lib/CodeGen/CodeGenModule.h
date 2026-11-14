@@ -727,6 +727,10 @@ private:
 
   AtomicOptions AtomicOpts;
 
+  // 'long double' has the x87 format on a target that cannot compute with it,
+  // e.g. ARM64EC with -mlong-double-80; only its layout is supported.
+  bool HasStorageOnlyLongDouble;
+
   // A set of functions which should be hot-patched; see
   // -fms-hotpatch-functions-file (and -list). This will nearly always be empty.
   // The list is sorted for binary-searching.
@@ -752,6 +756,12 @@ public:
 
   /// Set the current Atomic options.
   void setAtomicOpts(AtomicOptions AO) { AtomicOpts = AO; }
+
+  bool hasStorageOnlyLongDouble() const { return HasStorageOnlyLongDouble; }
+
+  /// If \p Ty contains a storage-only 'long double' value, report an error at
+  /// \p Loc and return true.
+  bool diagnoseLongDoubleType(QualType Ty, SourceLocation Loc);
 
   /// Return true if we should emit location information for expressions.
   bool getExpressionLocationsEnabled() const;
