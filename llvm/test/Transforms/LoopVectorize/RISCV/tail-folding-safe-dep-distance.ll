@@ -356,8 +356,7 @@ define void @no_high_lmul_or_interleave(ptr %p) vscale_range(2, 1024) {
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[AVL:%.*]] = phi i64 [ 3002, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IF-EVL-NEXT:    [[TMP9:%.*]] = icmp ult i64 [[AVL]], 1024
-; IF-EVL-NEXT:    [[SAFE_AVL:%.*]] = select i1 [[TMP9]], i64 [[AVL]], i64 1024
+; IF-EVL-NEXT:    [[SAFE_AVL:%.*]] = call i64 @llvm.umin.i64(i64 [[AVL]], i64 1024)
 ; IF-EVL-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[SAFE_AVL]], i32 1, i1 true)
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 1 x i64> @llvm.vp.load.nxv1i64.p0(ptr align 32 [[TMP2]], <vscale x 1 x i1> splat (i1 true), i32 [[TMP10]])
@@ -497,25 +496,41 @@ define i32 @recurrence_safe_dist_zbb(ptr %p, i32 %n) vscale_range(2, 8) "target-
 ; IF-EVL-NEXT:    [[N_ZERO:%.*]] = icmp eq i32 [[N:%.*]], 0
 ; IF-EVL-NEXT:    br i1 [[N_ZERO]], label [[EXIT:%.*]], label [[LOOP_PREHEADER:%.*]]
 ; IF-EVL:       loop.preheader:
-; IF-EVL-NEXT:    br label [[LOOP:%.*]]
-; IF-EVL:       loop:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
-; IF-EVL-NEXT:    [[FOR:%.*]] = phi i32 [ [[L:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
-; IF-EVL-NEXT:    [[IV_EXT:%.*]] = zext i32 [[IV]] to i64
-; IF-EVL-NEXT:    [[GEP_LOAD:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IV_EXT]]
-; IF-EVL-NEXT:    [[L]] = load i32, ptr [[GEP_LOAD]], align 4
-; IF-EVL-NEXT:    [[IV_OFF:%.*]] = add i64 [[IV_EXT]], 8
-; IF-EVL-NEXT:    [[GEP_STORE:%.*]] = getelementptr i32, ptr [[P]], i64 [[IV_OFF]]
-; IF-EVL-NEXT:    [[SUB:%.*]] = sub i32 [[L]], [[FOR]]
-; IF-EVL-NEXT:    store i32 [[SUB]], ptr [[GEP_STORE]], align 4
-; IF-EVL-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; IF-EVL-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EC]], label [[EXIT_LOOPEXIT:%.*]], label [[LOOP]]
+; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
+; IF-EVL:       vector.ph:
+; IF-EVL-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
+; IF-EVL-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vscale.i32()
+; IF-EVL-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP1]], 1
+; IF-EVL-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 1 x i32> poison, i32 0, i32 [[TMP2]]
+; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
+; IF-EVL:       vector.body:
+; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[VECTOR_RECUR:%.*]] = phi <vscale x 1 x i32> [ [[VECTOR_RECUR_INIT]], [[VECTOR_PH]] ], [ [[VP_OP_LOAD:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[AVL:%.*]] = phi i32 [ [[N]], [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[PREV_EVL:%.*]] = phi i32 [ [[TMP0]], [[VECTOR_PH]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[SAFE_AVL:%.*]] = call i32 @llvm.umin.i32(i32 [[AVL]], i32 8)
+; IF-EVL-NEXT:    [[TMP3]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[SAFE_AVL]], i32 1, i1 true)
+; IF-EVL-NEXT:    [[TMP4:%.*]] = zext i32 [[INDEX]] to i64
+; IF-EVL-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[TMP4]]
+; IF-EVL-NEXT:    [[VP_OP_LOAD]] = call <vscale x 1 x i32> @llvm.vp.load.nxv1i32.p0(ptr align 4 [[TMP5]], <vscale x 1 x i1> splat (i1 true), i32 [[TMP3]])
+; IF-EVL-NEXT:    [[TMP6:%.*]] = call <vscale x 1 x i32> @llvm.experimental.vp.splice.nxv1i32(<vscale x 1 x i32> [[VECTOR_RECUR]], <vscale x 1 x i32> [[VP_OP_LOAD]], i32 -1, <vscale x 1 x i1> splat (i1 true), i32 [[PREV_EVL]], i32 [[TMP3]])
+; IF-EVL-NEXT:    [[TMP7:%.*]] = add i64 [[TMP4]], 8
+; IF-EVL-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[P]], i64 [[TMP7]]
+; IF-EVL-NEXT:    [[TMP9:%.*]] = sub <vscale x 1 x i32> [[VP_OP_LOAD]], [[TMP6]]
+; IF-EVL-NEXT:    call void @llvm.vp.store.nxv1i32.p0(<vscale x 1 x i32> [[TMP9]], ptr align 4 [[TMP8]], <vscale x 1 x i1> splat (i1 true), i32 [[TMP3]])
+; IF-EVL-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i32 [[TMP3]], [[INDEX]]
+; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP3]]
+; IF-EVL-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
+; IF-EVL-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; IF-EVL:       middle.block:
+; IF-EVL-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP3]] to i64
+; IF-EVL-NEXT:    [[TMP12:%.*]] = sub i64 [[TMP11]], 1
+; IF-EVL-NEXT:    [[TMP13:%.*]] = extractelement <vscale x 1 x i32> [[TMP6]], i64 [[TMP12]]
+; IF-EVL-NEXT:    br label [[EXIT_LOOPEXIT:%.*]]
 ; IF-EVL:       exit.loopexit:
-; IF-EVL-NEXT:    [[FOR_LCSSA:%.*]] = phi i32 [ [[FOR]], [[LOOP]] ]
 ; IF-EVL-NEXT:    br label [[EXIT]]
 ; IF-EVL:       exit:
-; IF-EVL-NEXT:    [[RES:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[FOR_LCSSA]], [[EXIT_LOOPEXIT]] ]
+; IF-EVL-NEXT:    [[RES:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP13]], [[EXIT_LOOPEXIT]] ]
 ; IF-EVL-NEXT:    ret i32 [[RES]]
 ;
 ; NO-VP-LABEL: @recurrence_safe_dist_zbb(
