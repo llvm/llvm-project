@@ -23,6 +23,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -733,6 +734,41 @@ Value *createExtractVector(IRBuilderBase &Builder, Value *Vec,
   SmallVector<int> Mask(SubVecVF, PoisonMaskElem);
   std::iota(Mask.begin(), Mask.end(), Index);
   return Builder.CreateShuffleVector(Vec, Mask);
+}
+
+bool dominatesAllUses(const DominatorTree &DT, const Instruction &InsertPt,
+                      const Instruction &I) {
+  assert(InsertPt.getParent() == I.getParent() && "Expected same block.");
+  // The uses of the instruction after InsertPt are dominated by InsertPt.
+  if (InsertPt.comesBefore(&I))
+    return true;
+  return !I.hasNUsesOrMore(UsesLimit) && all_of(I.uses(), [&](const Use &U) {
+    return DT.dominates(&InsertPt, U);
+  });
+}
+
+Instruction *findPairedDivision(unsigned Opcode, Value *X, Value *Y,
+                                const BasicBlock *BB,
+                                function_ref<bool(Instruction *)> Pred) {
+  assert((Opcode == Instruction::URem || Opcode == Instruction::SRem) &&
+         "Expected remainder.");
+  // The paired division is another user of both operands.
+  if (X->hasOneUse() || Y->hasOneUse())
+    return nullptr;
+  // Constants have context-wide use lists, walk the variable operand. The
+  // dividend usually has fewer users than the divisor.
+  Value *Op = isa<Constant>(X) ? Y : X;
+  if (isa<Constant>(Op) || Op->hasNUsesOrMore(UsesLimit))
+    return nullptr;
+  const unsigned DivOpcode =
+      Opcode == Instruction::URem ? Instruction::UDiv : Instruction::SDiv;
+  for (User *U : Op->users()) {
+    auto *I = dyn_cast<Instruction>(U);
+    if (I && I->getParent() == BB &&
+        match(I, m_BinOp(DivOpcode, m_Specific(X), m_Specific(Y))) && Pred(I))
+      return I;
+  }
+  return nullptr;
 }
 
 SmallBitVector buildUseMask(int VF, ArrayRef<int> Mask, UseMask MaskArg) {
