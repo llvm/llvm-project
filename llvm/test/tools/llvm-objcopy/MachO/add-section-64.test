@@ -1,8 +1,10 @@
-## Show that llvm-objcopy adds a new section into a 64-bit object if
+## Show that llvm-objcopy adds a new section into a 64-bit Mach-O file if
 ## --add-section is given.
 
-# RUN: yaml2obj %s -o %t
 # RUN: echo -n abcdefg > %t.data
+
+## Linked image (MH_EXECUTE).
+# RUN: yaml2obj --docnum=1 %s -o %t
 
 ## Case 1: Add a new section into an existing segment.
 # RUN: llvm-objcopy --add-section __TEXT,__bar=%t.data %t %t.out1
@@ -21,6 +23,147 @@
 # RUN: llvm-readobj --sections --section-data %t.out3 \
 # RUN:   | FileCheck %s --check-prefixes=COMMON,CASE3
 
+## Object file (MH_OBJECT): one segment holds all sections.
+# RUN: yaml2obj --docnum=2 %s -o %t.o
+# RUN: yaml2obj --docnum=2 -DSEGNAME= %s -o %t.empty.o
+
+## Case 4: Add a new section into an existing segment.
+# RUN: llvm-objcopy --add-section __TEXT,__bar=%t.data %t.o %t.out4
+# RUN: llvm-readobj --sections --macho-segment %t.out4 \
+# RUN:   | FileCheck %s --check-prefixes=OBJ,CASE4
+
+## Case 5: Add a new section with an empty segment name into an existing segment
+## with an empty name.
+# RUN: llvm-objcopy --add-section ,__bar=%t.data %t.empty.o %t.out5
+# RUN: llvm-readobj --sections --macho-segment %t.out5 \
+# RUN:   | FileCheck %s --check-prefixes=OBJ,CASE5
+
+## Case 6: Add a new section with a new segment name into an object file whose
+## only segment has an empty name.
+# RUN: llvm-objcopy --add-section __FOO,__bar=%t.data %t.empty.o %t.out6
+# RUN: llvm-readobj --sections --macho-segment %t.out6 \
+# RUN:   | FileCheck %s --check-prefixes=OBJ,CASE6
+
+--- !mach-o
+IsLittleEndian:  true
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000002
+  ncmds:           3
+  sizeofcmds:      248
+  flags:           0x00000000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          0x100000000
+    vmsize:          0x1000
+    fileoff:         0
+    filesize:        1028
+    maxprot:         5
+    initprot:        5
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x100000400
+        content:         'AABBCCDD'
+        size:            4
+        offset:          1024
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          0x100001000
+    vmsize:          0x1000
+    fileoff:         1028
+    filesize:        4
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          0
+    nsyms:           0
+    stroff:          1028
+    strsize:         4
+LinkEditData:
+  StringTable:
+    - ''
+    - ''
+    - ''
+
+# COMMON:         Index: 0
+# COMMON-NEXT:    Name: __text (5F 5F 74 65 78 74 00 00 00 00 00 00 00 00 00 00)
+# COMMON-NEXT:    Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# COMMON-NEXT:    Address: 0x100000400
+# COMMON-NEXT:    Size: 0x4
+# COMMON-NEXT:    Offset:
+# COMMON-NEXT:    Alignment: 0
+# COMMON-NEXT:    RelocationOffset: 0x0
+# COMMON-NEXT:    RelocationCount: 0
+# COMMON-NEXT:    Type: Regular (0x0)
+# COMMON-NEXT:    Attributes [ (0x800004)
+# COMMON-NEXT:      PureInstructions (0x800000)
+# COMMON-NEXT:      SomeInstructions (0x4)
+# COMMON-NEXT:    ]
+# COMMON-NEXT:    Reserved1: 0x0
+# COMMON-NEXT:    Reserved2: 0x0
+# COMMON-NEXT:    Reserved3: 0x0
+# COMMON-NEXT:    SectionData (
+# COMMON-NEXT:      0000: AABBCCDD                             |....|
+# COMMON-NEXT:    )
+
+# COMMON:         Index: 1
+# COMMON-NEXT:    Name: __bar (5F 5F 62 61 72 00 00 00 00 00 00 00 00 00 00 00)
+
+# CASE1-NEXT:     Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# CASE1-NEXT:     Address: 0x100000404
+# CASE1-NEXT:     Size: 0x7
+# CASE1-NEXT:     Offset: 1028
+
+# CASE2:          Segment: __FOO (5F 5F 46 4F 4F 00 00 00 00 00 00 00 00 00 00 00)
+# CASE2-NEXT:     Address: 0x100002000
+# CASE2-NEXT:     Size: 0x7
+# CASE2-NEXT:     Offset: 4096
+
+# CASE3-NEXT:     Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# CASE3-NEXT:     Address: 0x100000404
+# CASE3-NEXT:     Size: 0x0
+# CASE3-NEXT:     Offset: 1028
+
+# COMMON-NEXT:    Alignment: 0
+# COMMON-NEXT:    RelocationOffset: 0x0
+# COMMON-NEXT:    RelocationCount: 0
+# COMMON-NEXT:    Type: Regular (0x0)
+# COMMON-NEXT:    Attributes [ (0x0)
+# COMMON-NEXT:    ]
+# COMMON-NEXT:    Reserved1: 0x0
+# COMMON-NEXT:    Reserved2: 0x0
+# COMMON-NEXT:    Reserved3: 0x0
+
+# CASE1-NEXT:     SectionData (
+# CASE1-NEXT:       0000: 61626364 656667                      |abcdefg|
+# CASE1-NEXT:     )
+
+# CASE2-NEXT:     SectionData (
+# CASE2-NEXT:       0000: 61626364 656667                      |abcdefg|
+# CASE2-NEXT:     )
+
+# CASE3-NEXT:     SectionData (
+# CASE3-NEXT:     )
+
 --- !mach-o
 IsLittleEndian:  true
 FileHeader:
@@ -35,7 +178,7 @@ FileHeader:
 LoadCommands:
   - cmd:             LC_SEGMENT_64
     cmdsize:         152
-    segname:         __TEXT
+    segname:         '[[SEGNAME=__TEXT]]'
     vmaddr:          0
     vmsize:          4
     fileoff:         184
@@ -59,62 +202,15 @@ LoadCommands:
         reserved2:       0x00000000
         reserved3:       0x00000000
 
-# COMMON:         Index: 0
-# COMMON-NEXT:    Name: __text (5F 5F 74 65 78 74 00 00 00 00 00 00 00 00 00 00)
-# COMMON-NEXT:    Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
-# COMMON-NEXT:    Address: 0x0
-# COMMON-NEXT:    Size: 0x4
-# COMMON-NEXT:    Offset:
-# COMMON-NEXT:    Alignment: 0
-# COMMON-NEXT:    RelocationOffset: 0x0
-# COMMON-NEXT:    RelocationCount: 0
-# COMMON-NEXT:    Type: Regular (0x0)
-# COMMON-NEXT:    Attributes [ (0x800004)
-# COMMON-NEXT:      PureInstructions (0x800000)
-# COMMON-NEXT:      SomeInstructions (0x4)
-# COMMON-NEXT:    ]
-# COMMON-NEXT:    Reserved1: 0x0
-# COMMON-NEXT:    Reserved2: 0x0
-# COMMON-NEXT:    Reserved3: 0x0
-# COMMON-NEXT:    SectionData (
-# COMMON-NEXT:      0000: AABBCCDD                             |....|
-# COMMON-NEXT:    )
+# OBJ:          Name: __bar (5F 5F 62 61 72 00 00 00 00 00 00 00 00 00 00 00)
+# CASE4-NEXT:   Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# CASE5-NEXT:   Segment: (00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00)
+# CASE6-NEXT:   Segment: __FOO (5F 5F 46 4F 4F 00 00 00 00 00 00 00 00 00 00 00)
 
-# COMMON:         Index: 1
-# COMMON-NEXT:    Name: __bar (5F 5F 62 61 72 00 00 00 00 00 00 00 00 00 00 00)
-
-# CASE1-NEXT:     Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
-# CASE1-NEXT:     Address: 0x4
-# CASE1-NEXT:     Size: 0x7
-# CASE1-NEXT:     Offset: 268
-
-# CASE2:          Segment: __FOO (5F 5F 46 4F 4F 00 00 00 00 00 00 00 00 00 00 00)
-# CASE2-NEXT:     Address: 0xB8
-# CASE2-NEXT:     Size: 0x7
-# CASE2-NEXT:     Offset: 340
-
-# CASE3-NEXT:     Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
-# CASE3-NEXT:     Address: 0x4
-# CASE3-NEXT:     Size: 0x0
-# CASE3-NEXT:     Offset: 268
-
-# COMMON-NEXT:    Alignment: 0
-# COMMON-NEXT:    RelocationOffset: 0x0
-# COMMON-NEXT:    RelocationCount: 0
-# COMMON-NEXT:    Type: Regular (0x0)
-# COMMON-NEXT:    Attributes [ (0x0)
-# COMMON-NEXT:    ]
-# COMMON-NEXT:    Reserved1: 0x0
-# COMMON-NEXT:    Reserved2: 0x0
-# COMMON-NEXT:    Reserved3: 0x0
-
-# CASE1-NEXT:     SectionData (
-# CASE1-NEXT:       0000: 61626364 656667                      |abcdefg|
-# CASE1-NEXT:     )
-
-# CASE2-NEXT:     SectionData (
-# CASE2-NEXT:       0000: 61626364 656667                      |abcdefg|
-# CASE2-NEXT:     )
-
-# CASE3-NEXT:     SectionData (
-# CASE3-NEXT:     )
+# OBJ:          Segment {
+# OBJ-NEXT:       Cmd: LC_SEGMENT_64
+# CASE4-NEXT:     Name: __TEXT{{$}}
+# CASE5-NEXT:     Name: {{$}}
+# CASE6-NEXT:     Name: {{$}}
+# OBJ:            nsects: 2
+# OBJ-NOT:      Segment {
