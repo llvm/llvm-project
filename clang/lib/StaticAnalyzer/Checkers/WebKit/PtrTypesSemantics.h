@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -275,8 +276,11 @@ public:
 private:
   friend class TrivialFunctionAnalysisVisitor;
 
-  using CacheTy =
-      llvm::DenseMap<llvm::PointerUnion<const Decl *, const Stmt *>, bool>;
+  /// The triviality of a function or a statement, which mutually recursive
+  /// functions share until the outermost one has been fully analyzed.
+  struct Triviality;
+  using CacheTy = llvm::DenseMap<llvm::PointerUnion<const Decl *, const Stmt *>,
+                                 std::shared_ptr<Triviality>>;
   mutable CacheTy TheCache{};
 
   static bool isTrivialImpl(const Decl *D, CacheTy &Cache);

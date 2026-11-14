@@ -726,6 +726,20 @@ bool isSingleton(const NamedDecl *F) {
   return Name == "singleton" || Name.ends_with("Singleton");
 }
 
+struct TrivialFunctionAnalysis::Triviality {
+  bool IsTrivial = true;
+  // Whether it's still being analyzed. Only meaningful when not merged.
+  bool IsPending = true;
+  // The result of a mutually recursive caller, which this one now shares.
+  std::shared_ptr<Triviality> MergedInto;
+
+  static std::shared_ptr<Triviality> resolve(std::shared_ptr<Triviality> T) {
+    while (T->MergedInto)
+      T = T->MergedInto;
+    return T;
+  }
+};
+
 // We only care about statements so let's use the simple
 // (non-recursive) visitor.
 class TrivialFunctionAnalysisVisitor
@@ -748,28 +762,38 @@ class TrivialFunctionAnalysisVisitor
 
   template <typename StmtOrDecl, typename CheckFunction>
   bool WithCachedResult(const StmtOrDecl *S, CheckFunction Function) {
-    auto CacheIt = Cache.find(S);
-    if (CacheIt != Cache.end() && canUseCachedResult(CacheIt->second))
-      return CacheIt->second;
-
-    // Treat a recursive statement to be trivial until proven otherwise.
-    auto [RecursiveIt, IsNew] = RecursiveFn.insert(std::make_pair(S, true));
-    if (!IsNew)
-      return RecursiveIt->second;
-
-    bool Result = Function();
-
-    if (!Result) {
-      for (auto &It : RecursiveFn)
-        It.second = false;
+    if (auto CacheIt = Cache.find(S); CacheIt != Cache.end()) {
+      auto Cached = Triviality::resolve(CacheIt->second);
+      if (Cached->IsPending) {
+        // Treat a recursive statement to be trivial until proven otherwise.
+        // Everything being analyzed on top of it relies on this assumption,
+        // so they share its result from now on. e.g. when analyzing f, which
+        // calls g and then something non-trivial, g which calls f back is
+        // only trivial if f is. Keep going until reaching the statement itself
+        // since merging a group doesn't merge the ones underneath it.
+        for (auto &Current : llvm::reverse(Analyzing)) {
+          if (Current == Cached)
+            break;
+          auto Root = Triviality::resolve(Current);
+          if (Root != Cached)
+            Root->MergedInto = Cached;
+        }
+        return Cached->IsTrivial;
+      }
+      if (canUseCachedResult(Cached->IsTrivial))
+        return Cached->IsTrivial;
     }
-    RecursiveIt = RecursiveFn.find(S);
-    assert(RecursiveIt != RecursiveFn.end());
-    Result = RecursiveIt->second;
-    RecursiveFn.erase(RecursiveIt);
-    Cache[S] = Result;
 
-    return Result;
+    auto Result = std::make_shared<Triviality>();
+    Cache[S] = Result;
+    Analyzing.push_back(Result);
+    if (!Function()) {
+      for (auto &Current : Analyzing)
+        Triviality::resolve(Current)->IsTrivial = false;
+    }
+    Analyzing.pop_back();
+    Result->IsPending = false;
+    return Triviality::resolve(Result)->IsTrivial;
   }
 
   static bool isTrivialType(QualType Ty) {
@@ -924,6 +948,7 @@ class TrivialFunctionAnalysisVisitor
 
 public:
   using CacheTy = TrivialFunctionAnalysis::CacheTy;
+  using Triviality = TrivialFunctionAnalysis::Triviality;
 
   TrivialFunctionAnalysisVisitor(CacheTy &Cache,
                                  NonTrivialityReason *Reason = nullptr)
@@ -1052,11 +1077,14 @@ public:
   }
 
   bool IsStatementTrivial(const Stmt *S) {
-    auto CacheIt = Cache.find(S);
-    if (CacheIt != Cache.end() && canUseCachedResult(CacheIt->second))
-      return CacheIt->second;
+    if (auto CacheIt = Cache.find(S); CacheIt != Cache.end()) {
+      bool Cached = Triviality::resolve(CacheIt->second)->IsTrivial;
+      if (canUseCachedResult(Cached))
+        return Cached;
+    }
     bool Result = Visit(S);
-    Cache[S] = Result;
+    Cache[S] = std::make_shared<Triviality>(
+        Triviality{Result, /*IsPending=*/false, nullptr});
     return Result;
   }
 
@@ -1545,9 +1573,11 @@ public:
 
 private:
   CacheTy &Cache;
-  CacheTy FieldCtorCache;
-  CacheTy FieldDtorCache;
-  CacheTy RecursiveFn;
+  llvm::DenseMap<const CXXRecordDecl *, bool> FieldCtorCache;
+  llvm::DenseMap<const CXXRecordDecl *, bool> FieldDtorCache;
+  // Results of the statements and functions currently being analyzed,
+  // outermost first.
+  SmallVector<std::shared_ptr<Triviality>> Analyzing;
   const Stmt **OffendingStmt;
   SmallVectorImpl<NonTrivialityReason::Frame> *CallStack;
   unsigned ActiveDepth = 0;

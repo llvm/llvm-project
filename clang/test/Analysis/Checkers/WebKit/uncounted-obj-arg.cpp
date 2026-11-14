@@ -732,6 +732,68 @@ void test2() {
   someFunction(*object());
 }
 
+namespace mutual_recursion_query_order {
+
+RefCounted* provide();
+void unknownFunction();
+void first(RefCounted*);
+void second(RefCounted*);
+void loopFirst(RefCounted*);
+void loopSecond(RefCounted*);
+void loopThird(RefCounted*);
+void outer(RefCounted*);
+void inner(RefCounted*);
+void innerLoop(RefCounted*);
+void sibling(RefCounted*);
+void top(RefCounted*);
+void middle(RefCounted*);
+void bottom(RefCounted*);
+
+void test() {
+  first(provide());
+  // expected-warning@-1{{Function argument 'provide()' (to 'mutual_recursion_query_order::first') is a raw pointer to RefPtr-capable type 'RefCounted'}}
+  second(provide());
+  // expected-warning@-1{{Function argument 'provide()' (to 'mutual_recursion_query_order::second') is a raw pointer to RefPtr-capable type 'RefCounted'}}
+  loopFirst(provide());
+  // expected-warning@-1{{Function argument 'provide()' (to 'mutual_recursion_query_order::loopFirst') is a raw pointer to RefPtr-capable type 'RefCounted'}}
+  loopSecond(provide());
+  // expected-warning@-1{{Function argument 'provide()' (to 'mutual_recursion_query_order::loopSecond') is a raw pointer to RefPtr-capable type 'RefCounted'}}
+  loopThird(provide());
+  // expected-warning@-1{{Function argument 'provide()' (to 'mutual_recursion_query_order::loopThird') is a raw pointer to RefPtr-capable type 'RefCounted'}}
+  outer(provide());
+  // expected-warning@-1{{Function argument 'provide()' (to 'mutual_recursion_query_order::outer') is a raw pointer to RefPtr-capable type 'RefCounted'}}
+  inner(provide());
+  // expected-warning@-1{{Function argument 'provide()' (to 'mutual_recursion_query_order::inner') is a raw pointer to RefPtr-capable type 'RefCounted'}}
+  innerLoop(provide());
+  // expected-warning@-1{{Function argument 'provide()' (to 'mutual_recursion_query_order::innerLoop') is a raw pointer to RefPtr-capable type 'RefCounted'}}
+  sibling(provide());
+  // expected-warning@-1{{Function argument 'provide()' (to 'mutual_recursion_query_order::sibling') is a raw pointer to RefPtr-capable type 'RefCounted'}}
+  top(provide());
+  // expected-warning@-1{{Function argument 'provide()' (to 'mutual_recursion_query_order::top') is a raw pointer to RefPtr-capable type 'RefCounted'}}
+  middle(provide());
+  // expected-warning@-1{{Function argument 'provide()' (to 'mutual_recursion_query_order::middle') is a raw pointer to RefPtr-capable type 'RefCounted'}}
+  bottom(provide());
+  // expected-warning@-1{{Function argument 'provide()' (to 'mutual_recursion_query_order::bottom') is a raw pointer to RefPtr-capable type 'RefCounted'}}
+}
+
+void first(RefCounted* obj) { second(obj); unknownFunction(); }
+void second(RefCounted* obj) { first(obj); }
+
+void loopFirst(RefCounted* obj) { loopSecond(obj); unknownFunction(); }
+void loopSecond(RefCounted* obj) { loopThird(obj); }
+void loopThird(RefCounted* obj) { loopFirst(obj); }
+
+void outer(RefCounted* obj) { inner(obj); sibling(obj); unknownFunction(); }
+void inner(RefCounted* obj) { innerLoop(obj); outer(obj); }
+void innerLoop(RefCounted* obj) { inner(obj); }
+void sibling(RefCounted* obj) { innerLoop(obj); }
+
+void top(RefCounted* obj) { middle(obj); unknownFunction(); }
+void middle(RefCounted* obj) { bottom(obj); }
+void bottom(RefCounted* obj) { { bottom(obj); top(obj); } }
+
+}
+
 void system_header() {
   callMethod<RefCountable>(object);
 }
