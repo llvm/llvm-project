@@ -171,9 +171,8 @@ OpFoldResult math::Atan2Op::fold(FoldAdaptor adaptor) {
   return constFoldBinaryOpConditional<FloatAttr>(
       adaptor.getOperands(),
       [](const APFloat &a, const APFloat &b) -> std::optional<APFloat> {
-        if (a.isZero() && b.isZero())
-          return llvm::APFloat::getNaN(a.getSemantics());
-
+        // Zero operands are not special-cased: C11 Annex F.10.1.4 defines
+        // atan2(+-0, +0) = +-0 and atan2(+-0, -0) = +-pi.
         switch (APFloat::SemanticsToEnum(a.getSemantics())) {
         case APFloat::Semantics::S_IEEEdouble:
           return APFloat(atan2(a.convertToDouble(), b.convertToDouble()));
