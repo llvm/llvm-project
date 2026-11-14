@@ -46,6 +46,7 @@ add_mlir_dialect_library(MLIRMemRefTransforms
   MLIRTransforms
   MLIRValueBoundsOpInterface
   MLIRVectorDialect
+  MLIRVectorUtils
 )
 
 add_mlir_dialect_library(MLIRMemRefAllocationOpInterfaceImpl
