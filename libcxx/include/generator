@@ -151,7 +151,11 @@ private:
     _LIBCPP_ASSERT_INTERNAL(__is_recursive(), "the active member of `__data_` is not `__recursive`");
     return __data_.__recursive;
   }
-  _LIBCPP_HIDE_FROM_ABI void __set_recursive_tag() noexcept { __tag_ = true; }
+  _LIBCPP_HIDE_FROM_ABI void __set_recursive_tag() noexcept {
+    _LIBCPP_ASSERT_INTERNAL(__is_root(), "the active member of `__data_` is not `__root`");
+    std::construct_at(std::addressof(__data_.__recursive));
+    __tag_ = true;
+  }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI coroutine_handle<__gen_promise_base>& __active() noexcept {
     _LIBCPP_ASSERT_INTERNAL(__is_root(), "the active member of `__data_` is not `__root`");
@@ -279,7 +283,7 @@ public:
     requires is_rvalue_reference_v<_Yielded> &&
              constructible_from<remove_cvref_t<_Yielded>, const remove_reference_t<_Yielded>&>
   {
-    return __element_awaiter{.__value{__value}};
+    return __element_awaiter{.__value = remove_cvref_t<_Yielded>(__value)};
   }
 
   template <class _Ref2, class _Val2, class _Allocator2, class _Unused>
@@ -375,12 +379,16 @@ public:
 
   template <class _Allocator2, class... _Args>
   _LIBCPP_HIDE_FROM_ABI void* operator new(size_t __size, allocator_arg_t, const _Allocator2& __al, const _Args&...) {
+    static_assert(convertible_to<const _Allocator2&, _Allocator>,
+                  "the allocator argument must be convertible to the generator's allocator type");
     return __alloc(static_cast<_Allocator>(__al), __size);
   }
 
   template <class _This, class _Allocator2, class... _Args>
   _LIBCPP_HIDE_FROM_ABI void*
   operator new(size_t __size, const _This&, allocator_arg_t, const _Allocator2& __al, const _Args&...) {
+    static_assert(convertible_to<const _Allocator2&, _Allocator>,
+                  "the allocator argument must be convertible to the generator's allocator type");
     return __alloc(static_cast<_Allocator>(__al), __size);
   }
 
@@ -405,6 +413,8 @@ public:
 template <>
 class __gen_promise_allocator<void> {
 private:
+  // The deallocation function is stored immediately after the frame, which may be unaligned.
+  // Access its representation with memcpy rather than through a pointer to __dealloc_fn.
   using __dealloc_fn _LIBCPP_NODEBUG = void (*)(void*, size_t) noexcept;
 
   template <class _Allocator>
@@ -421,8 +431,8 @@ private:
       void* const __ptr          = __rebind_al.allocate(static_cast<__rebind_size_type>(__block_count));
 
       // Stores the deallocation function in the allocated block
-      __dealloc_fn* const __dealloc_ptr = reinterpret_cast<__dealloc_fn*>(reinterpret_cast<uintptr_t>(__ptr) + __size);
-      *__dealloc_ptr                    = __dealloc<__rebind>;
+      const __dealloc_fn __dealloc_func = __dealloc<__rebind>;
+      __builtin_memcpy(static_cast<char*>(__ptr) + __size, std::addressof(__dealloc_func), sizeof(__dealloc_fn));
       return __ptr;
     } else {
       // Allocates enough blocks for the coroutine frame, the size of the stateful allocator, the alignment of the
@@ -432,8 +442,8 @@ private:
       void* const __ptr = __rebind_al.allocate(static_cast<__rebind_size_type>(__block_count));
 
       // Stores the deallocation function in the allocated block
-      __dealloc_fn* const __dealloc_ptr = reinterpret_cast<__dealloc_fn*>(reinterpret_cast<uintptr_t>(__ptr) + __size);
-      *__dealloc_ptr                    = __dealloc<__rebind>;
+      const __dealloc_fn __dealloc_func = __dealloc<__rebind>;
+      __builtin_memcpy(static_cast<char*>(__ptr) + __size, std::addressof(__dealloc_func), sizeof(__dealloc_fn));
 
       // Stores the stateful allocator in the allocated block
       __rebind* const __rebind_al_ptr = reinterpret_cast<__rebind*>(
@@ -478,8 +488,7 @@ public:
 #    endif
     };
 
-    __dealloc_fn* const __dealloc_ptr = reinterpret_cast<__dealloc_fn*>(reinterpret_cast<uintptr_t>(__ptr) + __size);
-    *__dealloc_ptr                    = __dealloc;
+    __builtin_memcpy(static_cast<char*>(__ptr) + __size, std::addressof(__dealloc), sizeof(__dealloc_fn));
     return __ptr;
   }
 
@@ -495,8 +504,8 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI static void operator delete(void* const __ptr, size_t __size) noexcept {
-    __dealloc_fn* const __dealloc_ptr = reinterpret_cast<__dealloc_fn*>(reinterpret_cast<uintptr_t>(__ptr) + __size);
-    const __dealloc_fn __dealloc      = *__dealloc_ptr;
+    __dealloc_fn __dealloc;
+    __builtin_memcpy(std::addressof(__dealloc), static_cast<const char*>(__ptr) + __size, sizeof(__dealloc_fn));
     __dealloc(__ptr, __size);
   }
 };
