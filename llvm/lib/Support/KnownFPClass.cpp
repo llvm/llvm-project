@@ -550,6 +550,30 @@ KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS_,
   return applyOutputDenormalMode(Known, Mode);
 }
 
+KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS_,
+                                const APFloat &RHS, DenormalMode Mode) {
+  const auto &Semantics = RHS.getSemantics();
+
+  // Only handle fcNormal constants, and bail out for PPCDoubleDouble.
+  if (!RHS.isNormal() || &Semantics == &APFloat::PPCDoubleDouble())
+    return fadd(KnownLHS_, KnownFPClass(RHS), Mode);
+
+  KnownFPClass KnownLHS = applyInputDenormalMode(KnownLHS_, Mode);
+  KnownFPClass Known =
+      fadd(KnownLHS, KnownFPClass(RHS), DenormalMode::getIEEE());
+
+  auto MinExp = APFloat::semanticsMinExponent(Semantics);
+  auto Precision = static_cast<int>(APFloat::semanticsPrecision(Semantics));
+  auto ThresholdExp = MinExp + Precision - 1;
+
+  // If |C| > T, X + C will never be subnormal.
+  if (ilogb(RHS) > ThresholdExp ||
+      (ilogb(RHS) == ThresholdExp && RHS.getExactLog2Abs() == INT_MIN))
+    Known.knownNot(fcSubnormal);
+
+  return applyOutputDenormalMode(Known, Mode);
+}
+
 KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc_,
                                      DenormalMode Mode) {
   KnownFPClass KnownSrc = applyInputDenormalMode(KnownSrc_, Mode);

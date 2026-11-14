@@ -631,7 +631,219 @@ define float @fadd_known_positive_normal_dapz(float nofpclass(ninf nnorm nzero) 
   ret float %add
 }
 
+define float @fadd_p2(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) float @fadd_p2(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], 2.000000e+00
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, 2.0
+  ret float %add
+}
 
+define float @fadd_n2(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) float @fadd_n2(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], -2.000000e+00
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, -2.0
+  ret float %add
+}
+
+; Smallest positive float subnormal: 2^-149.
+define float @fadd_psub(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_psub(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], 1.401300e-45
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, f0x00000001
+  ret float %add
+}
+
+; Positive subnormal + largest positive subnormal >= smallest positive normal.
+define float @fadd_psub_max(float nofpclass(nan inf zero nsub norm) %arg) {
+; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @fadd_psub_max(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], f0x007FFFFF
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, f0x007FFFFF
+  ret float %add
+}
+
+; Smallest negative float subnormal by magnitude: -2^-149.
+define float @fadd_nsub(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_nsub(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], -1.401300e-45
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, f0x80000001
+  ret float %add
+}
+
+define float @fadd_pinf(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_pinf(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], +inf
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, +inf
+  ret float %add
+}
+
+define float @fadd_ninf(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_ninf(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], -inf
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, -inf
+  ret float %add
+}
+
+define ppc_fp128 @fadd_ppc_fp128_bailout(ppc_fp128 noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) ppc_fp128 @fadd_ppc_fp128_bailout(
+; CHECK-SAME: ppc_fp128 noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd ppc_fp128 [[ARG]], 2.000000e+00
+; CHECK-NEXT:    ret ppc_fp128 [[ADD]]
+;
+  %add = fadd ppc_fp128 %arg, 2.0
+  ret ppc_fp128 %add
+}
+
+; For float, the threshold T is 2^-103.
+define float @fadd_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], f0x0C000000
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, f0x0C000000
+  ret float %add
+}
+
+define float @fadd_neg_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_neg_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], f0x8C000000
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, f0x8C000000
+  ret float %add
+}
+
+; 2 * T.
+define float @fadd_twice_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) float @fadd_twice_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], f0x0C800000
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, f0x0C800000
+  ret float %add
+}
+
+; -2 * T.
+define float @fadd_neg_twice_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) float @fadd_neg_twice_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], f0x8C800000
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, f0x8C800000
+  ret float %add
+}
+
+; nextup(T) in float precision.
+define float @fadd_nextup_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) float @fadd_nextup_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], f0x0C000001
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, f0x0C000001
+  ret float %add
+}
+
+; nextdown(T) in float precision.
+define float @fadd_nextdown_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_nextdown_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], f0x0BFFFFFF
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, f0x0BFFFFFF
+  ret float %add
+}
+
+; nextup(-T) in float precision.
+define float @fadd_nextup_neg_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_nextup_neg_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], f0x8BFFFFFF
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, f0x8BFFFFFF
+  ret float %add
+}
+
+; nextdown(-T) in float precision.
+define float @fadd_nextdown_neg_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) float @fadd_nextdown_neg_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], f0x8C000001
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, f0x8C000001
+  ret float %add
+}
+
+; For half, the threshold T is 2^-4.
+define half @fadd_threshold_half(half noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) half @fadd_threshold_half(
+; CHECK-SAME: half noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[ARG]], 6.250000e-02
+; CHECK-NEXT:    ret half [[ADD]]
+;
+  %add = fadd half %arg, f0x2C00
+  ret half %add
+}
+
+; nextup(T) in half precision.
+define half @fadd_nextup_threshold_half(half noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) half @fadd_nextup_threshold_half(
+; CHECK-SAME: half noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[ARG]], 6.256100e-02
+; CHECK-NEXT:    ret half [[ADD]]
+;
+  %add = fadd half %arg, f0x2C01
+  ret half %add
+}
+
+; For x86_fp80, the threshold T is 2^-16319.
+define x86_fp80 @fadd_threshold_x86_fp80(x86_fp80 noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) x86_fp80 @fadd_threshold_x86_fp80(
+; CHECK-SAME: x86_fp80 noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd x86_fp80 [[ARG]], f0x00408000000000000000
+; CHECK-NEXT:    ret x86_fp80 [[ADD]]
+;
+  %add = fadd x86_fp80 %arg, f0x00408000000000000000
+  ret x86_fp80 %add
+}
+
+; nextup(T) in x86_fp80 precision.
+define x86_fp80 @fadd_nextup_threshold_x86_fp80(x86_fp80 noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) x86_fp80 @fadd_nextup_threshold_x86_fp80(
+; CHECK-SAME: x86_fp80 noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd x86_fp80 [[ARG]], f0x00408000000000000001
+; CHECK-NEXT:    ret x86_fp80 [[ADD]]
+;
+  %add = fadd x86_fp80 %arg, f0x00408000000000000001
+  ret x86_fp80 %add
+}
 
 define float @fadd_self(float noundef %arg) {
 ; CHECK-LABEL: define noundef float @fadd_self(

@@ -6268,8 +6268,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         (InterestedClasses & KnownFPClass::OrderedLessThanZeroMask) != fcNone;
     bool WantNaN = (InterestedClasses & fcNan) != fcNone;
     bool WantNegZero = (InterestedClasses & fcNegZero) != fcNone;
+    bool WantSubnormal = (InterestedClasses & fcSubnormal) != fcNone;
 
-    if (!WantNaN && !WantNegative && !WantNegZero)
+    if (!WantNaN && !WantNegative && !WantNegZero && !WantSubnormal)
       break;
 
     FPClassTest InterestedSrcs = InterestedClasses;
@@ -6287,9 +6288,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     if (Self)
       KnownLHS = KnownRHS;
 
+    auto *ConstFP = llvm::dyn_cast<llvm::ConstantFP>(Op->getOperand(1));
+
     if ((WantNaN && KnownRHS.isKnownNeverNaN()) ||
         (WantNegative && KnownRHS.cannotBeOrderedLessThanZero()) ||
-        WantNegZero || Opc == Instruction::FSub) {
+        WantNegZero || Opc == Instruction::FSub || (WantSubnormal && ConstFP)) {
 
       // FIXME: Context function should always be passed in separately
       const Function *F = cast<Instruction>(Op)->getFunction();
@@ -6307,6 +6310,12 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if (!Self) {
           computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedSrcs,
                               KnownLHS, Q, Depth + 1);
+        }
+
+        if (ConstFP && Opc == Instruction::FAdd) {
+          const auto &APF = ConstFP->getValueAPF();
+          Known = KnownFPClass::fadd(KnownLHS, APF, Mode);
+          break;
         }
 
         Known = Opc == Instruction::FAdd
