@@ -2430,6 +2430,12 @@ public:
     return isKnownNeverNaN(Op, true, Depth);
   }
 
+  /// Return true if the floating-point value \p Op (or every element of it, if
+  /// it is a vector) is known to be an integer, infinity or NaN, so rounding it
+  /// to an integral value leaves it unchanged.
+  LLVM_ABI bool isKnownIntegralOrNonFinite(SDValue Op,
+                                           unsigned Depth = 0) const;
+
   /// Test whether the given floating point SDValue (or all elements of it, if
   /// it is a vector) is known to never be interpretable as zero in \p
   /// DemandedElts.

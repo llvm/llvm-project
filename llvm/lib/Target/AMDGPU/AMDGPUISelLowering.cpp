@@ -3667,18 +3667,26 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT64(SDValue Op, SelectionDAG &DAG,
   //     hi := fptoi(hif);
   //     lo := fptoi(lof);
   //
-  SDValue Trunc = DAG.getNode(ISD::FTRUNC, SL, SrcVT, Src);
-  SDValue Sign;
-  if (Signed && SrcVT == MVT::f32) {
-    // However, a 32-bit floating point number has only 23 bits mantissa and
-    // it's not enough to hold all the significant bits of `lof` if val is
-    // negative. To avoid the loss of precision, We need to take the absolute
-    // value after truncating and flip the result back based on the original
-    // signedness.
-    Sign = DAG.getNode(ISD::SRA, SL, MVT::i32,
-                       DAG.getNode(ISD::BITCAST, SL, MVT::i32, Trunc),
-                       DAG.getConstant(31, SL, MVT::i32));
-    Trunc = DAG.getNode(ISD::FABS, SL, SrcVT, Trunc);
+  // The split floors, so tf must be truncated if val can be a negative
+  // non-integer. A nonnegative val needs no truncation: floor(val * 2^-32)
+  // already equals floor(tf * 2^-32), and the fraction left in lof is dropped
+  // by fptoi(lof). So tf := |val| is used when the sign is restored afterwards
+  // (signed f32) or cannot matter (unsigned, where val <= -1 is poison and
+  // (-1, 0) converts to 0).
+  SDValue Val;
+  if (Signed && SrcVT == MVT::f64) {
+    // Signed f64 splits val itself. Truncation is still unnecessary if val is
+    // already an integer or cannot be ordered less than zero.
+    // Users are legalized before their operands, so a rounding source is still
+    // visible here; if that changes this is only a missed optimization.
+    if (DAG.isKnownIntegralOrNonFinite(Src) ||
+        DAG.computeKnownFPClass(Src, fcNegative).cannotBeOrderedLessThanZero())
+      Val = Src;
+    else
+      Val = DAG.getNode(ISD::FTRUNC, SL, SrcVT, Src);
+  } else {
+    // For signed f32, splitting the magnitude avoids losing precision in lof.
+    Val = DAG.getNode(ISD::FABS, SL, SrcVT, Src);
   }
 
   SDValue K0, K1;
@@ -3696,11 +3704,11 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT64(SDValue Op, SelectionDAG &DAG,
         llvm::bit_cast<float>(UINT32_C(/*-2^32*/ 0xcf800000)), SL, SrcVT);
   }
   // TODO: Should this propagate fast-math-flags?
-  SDValue Mul = DAG.getNode(ISD::FMUL, SL, SrcVT, Trunc, K0);
+  SDValue Mul = DAG.getNode(ISD::FMUL, SL, SrcVT, Val, K0);
 
   SDValue FloorMul = DAG.getNode(ISD::FFLOOR, SL, SrcVT, Mul);
 
-  SDValue Fma = DAG.getNode(ISD::FMA, SL, SrcVT, FloorMul, K1, Trunc);
+  SDValue Fma = DAG.getNode(ISD::FMA, SL, SrcVT, FloorMul, K1, Val);
 
   SDValue Hi = DAG.getNode((Signed && SrcVT == MVT::f64) ? ISD::FP_TO_SINT
                                                          : ISD::FP_TO_UINT,
@@ -3711,8 +3719,10 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT64(SDValue Op, SelectionDAG &DAG,
                                DAG.getBuildVector(MVT::v2i32, SL, {Lo, Hi}));
 
   if (Signed && SrcVT == MVT::f32) {
-    assert(Sign);
-    // Flip the result based on the signedness, which is either all 0s or 1s.
+    // Restore the sign after converting the absolute value.
+    SDValue Sign = DAG.getNode(ISD::SRA, SL, MVT::i32,
+                               DAG.getNode(ISD::BITCAST, SL, MVT::i32, Src),
+                               DAG.getConstant(31, SL, MVT::i32));
     Sign = DAG.getNode(ISD::BITCAST, SL, MVT::i64,
                        DAG.getBuildVector(MVT::v2i32, SL, {Sign, Sign}));
     // r := xor(r, sign) - sign;

@@ -2453,6 +2453,47 @@ KnownFPClass GISelValueTracking::computeKnownFPClass(
   return computeKnownFPClass(R, DemandedElts, Flags, InterestedClasses, Depth);
 }
 
+bool GISelValueTracking::isKnownIntegralOrNonFinite(Register R,
+                                                    unsigned Depth) {
+  const MachineInstr *MI = getDefIgnoringCopies(R, MRI);
+  if (!MI)
+    return false;
+
+  std::optional<APFloat> Const;
+  if (MI->getOpcode() == TargetOpcode::G_FCONSTANT)
+    Const = MI->getOperand(1).getFPImm()->getValueAPF();
+  else if (auto Splat = getFConstantSplat(MI->getOperand(0).getReg(), MRI,
+                                          /*AllowUndef=*/false))
+    Const = Splat->Value;
+  if (Const)
+    return !Const->isFinite() || Const->isInteger();
+
+  if (Depth >= getMaxDepth())
+    return false;
+
+  switch (MI->getOpcode()) {
+  case TargetOpcode::G_INTRINSIC_TRUNC:
+  case TargetOpcode::G_FFLOOR:
+  case TargetOpcode::G_FCEIL:
+  case TargetOpcode::G_FRINT:
+  case TargetOpcode::G_FNEARBYINT:
+  case TargetOpcode::G_INTRINSIC_ROUND:
+  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_UITOFP:
+    return true;
+  case TargetOpcode::G_FNEG:
+  case TargetOpcode::G_FABS:
+  case TargetOpcode::G_FCOPYSIGN:
+    return isKnownIntegralOrNonFinite(MI->getOperand(1).getReg(), Depth + 1);
+  case TargetOpcode::G_SELECT:
+    return isKnownIntegralOrNonFinite(MI->getOperand(2).getReg(), Depth + 1) &&
+           isKnownIntegralOrNonFinite(MI->getOperand(3).getReg(), Depth + 1);
+  default:
+    return false;
+  }
+}
+
 bool GISelValueTracking::isKnownNeverNaN(Register Val, bool SNaN) {
   const MachineInstr *DefMI = MRI.getVRegDef(Val);
   if (!DefMI)

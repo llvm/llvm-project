@@ -2376,9 +2376,9 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_UITOFP:
     return legalizeITOFP(MI, MRI, B, false);
   case TargetOpcode::G_FPTOSI:
-    return legalizeFPTOI(MI, MRI, B, true);
+    return legalizeFPTOI(Helper, MI, MRI, B, true);
   case TargetOpcode::G_FPTOUI:
-    return legalizeFPTOI(MI, MRI, B, false);
+    return legalizeFPTOI(Helper, MI, MRI, B, false);
   case TargetOpcode::G_FMINNUM:
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMINIMUMNUM:
@@ -2956,9 +2956,9 @@ bool AMDGPULegalizerInfo::legalizeITOFP(
   return true;
 }
 
-// TODO: Copied from DAG implementation. Verify logic and document how this
-// actually works.
-bool AMDGPULegalizerInfo::legalizeFPTOI(MachineInstr &MI,
+// Keep in sync with AMDGPUTargetLowering::LowerFP_TO_INT64.
+bool AMDGPULegalizerInfo::legalizeFPTOI(LegalizerHelper &Helper,
+                                        MachineInstr &MI,
                                         MachineRegisterInfo &MRI,
                                         MachineIRBuilder &B,
                                         bool Signed) const {
@@ -2983,17 +2983,27 @@ bool AMDGPULegalizerInfo::legalizeFPTOI(MachineInstr &MI,
   //     hi := fptoi(hif);
   //     lo := fptoi(lof);
   //
-  auto Trunc = B.buildIntrinsicTrunc(SrcLT, Src, Flags);
-  MachineInstrBuilder Sign;
-  if (Signed && SrcLT == F32) {
-    // However, a 32-bit floating point number has only 23 bits mantissa and
-    // it's not enough to hold all the significant bits of `lof` if val is
-    // negative. To avoid the loss of precision, We need to take the absolute
-    // value after truncating and flip the result back based on the original
-    // signedness.
-    auto SrcInt = B.buildBitcast(I32, Src);
-    Sign = B.buildAShr(I32, SrcInt, B.buildConstant(I32, 31));
-    Trunc = B.buildFAbs(F32, Trunc, Flags);
+  // The split floors, so tf must be truncated if val can be a negative
+  // non-integer. A nonnegative val needs no truncation: floor(val * 2^-32)
+  // already equals floor(tf * 2^-32), and the fraction left in lof is dropped
+  // by fptoi(lof). So tf := |val| is used when the sign is restored afterwards
+  // (signed f32) or cannot matter (unsigned, where val <= -1 is poison and
+  // (-1, 0) converts to 0).
+  Register Val;
+  if (Signed && SrcLT == F64) {
+    // Signed f64 splits val itself. Truncation is still unnecessary if val is
+    // already an integer or cannot be ordered less than zero.
+    // Users are legalized before their operands, so a rounding source is still
+    // visible here; if that changes this is only a missed optimization.
+    GISelValueTracking &VT = *Helper.getValueTracking();
+    if (VT.isKnownIntegralOrNonFinite(Src) ||
+        VT.computeKnownFPClass(Src, fcNegative).cannotBeOrderedLessThanZero())
+      Val = Src;
+    else
+      Val = B.buildIntrinsicTrunc(SrcLT, Src, Flags).getReg(0);
+  } else {
+    // For signed f32, splitting the magnitude avoids losing precision in lof.
+    Val = B.buildFAbs(SrcLT, Src, Flags).getReg(0);
   }
   MachineInstrBuilder K0, K1;
   if (SrcLT == F64) {
@@ -3008,16 +3018,18 @@ bool AMDGPULegalizerInfo::legalizeFPTOI(MachineInstr &MI,
         F32, llvm::bit_cast<float>(UINT32_C(/*-2^32*/ 0xcf800000)));
   }
 
-  auto Mul = B.buildFMul(SrcLT, Trunc, K0, Flags);
+  auto Mul = B.buildFMul(SrcLT, Val, K0, Flags);
   auto FloorMul = B.buildFFloor(SrcLT, Mul, Flags);
-  auto Fma = B.buildFMA(SrcLT, FloorMul, K1, Trunc, Flags);
+  auto Fma = B.buildFMA(SrcLT, FloorMul, K1, Val, Flags);
 
   auto Hi = (Signed && SrcLT == F64) ? B.buildFPTOSI(I32, FloorMul)
                                      : B.buildFPTOUI(I32, FloorMul);
   auto Lo = B.buildFPTOUI(I32, Fma);
 
   if (Signed && SrcLT == F32) {
-    // Flip the result based on the signedness, which is either all 0s or 1s.
+    // Restore the sign after converting the absolute value.
+    auto SrcInt = B.buildBitcast(I32, Src);
+    auto Sign = B.buildAShr(I32, SrcInt, B.buildConstant(I32, 31));
     Sign = B.buildMergeLikeInstr(I64, {Sign, Sign});
     // r := xor({lo, hi}, sign) - sign;
     B.buildSub(Dst, B.buildXor(I64, B.buildMergeLikeInstr(I64, {Lo, Hi}), Sign),
