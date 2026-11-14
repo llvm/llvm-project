@@ -120,6 +120,8 @@ defm : BoolField<"enable-load-in-loop-pre", "true", "">;
 defm : BoolField<"enable-load-pre", "true", "">;
 defm : BoolField<"enable-scalar-pre", "true", "">;
 defm : BoolField<"enable-split-backedge-in-load-pre", "false", "">;
+defm : BoolField<"enable-fold-outside-const-expr", "true",
+  "Fold uses of expressions defined outside a dominated region when an equality makes them constant">;
 // This is based on IsValueFullyAvailableInBlockNumSpeculationsMax stat.
 defm : ValueField<"gvn-max-block-speculations", "uint32_t", "600",
   "Max number of blocks we're willing to speculate on (and recurse into) when deducing if a value is fully available or not in GVN">;
