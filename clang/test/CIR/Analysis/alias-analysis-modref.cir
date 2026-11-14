@@ -54,3 +54,39 @@ cir.func @modref_fenv(%a: !cir.float, %b: !cir.float) {
   %0 = cir.fadd %a, %b : !cir.float fenv<> {test.ptr = "fadd_op"}
   cir.return
 }
+
+// -----
+
+// A volatile or atomic load or store also reads and writes unknown memory,
+// so it Mod-s and Ref-s every location. A plain access to `x` leaves `y`
+// alone.
+
+// CHECK-LABEL: Testing : "modref_volatile_atomic_access"
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+#bfi_f = #cir.bitfield_info<name = "f", storage_type = !u8i, size = 3, offset = 0, is_signed = true>
+cir.func @modref_volatile_atomic_access(%m: !cir.matrix<2 x 2 x !cir.float>,
+                                        %p: !cir.ptr<!cir.float>,
+                                        %stride: !cir.int<u, 64>) {
+  %x = cir.alloca "x" align(4) : !cir.ptr<!s32i>
+  %y = cir.alloca "y" align(4) : !cir.ptr<!s32i> {test.ptr = "y"}
+  %b = cir.alloca "b" align(1) : !cir.ptr<!u8i>
+  %val = cir.const #cir.int<1> : !s32i
+  // CHECK-DAG: plain_store -> y#0: NoModRef
+  cir.store %val, %x {test.ptr = "plain_store"} : !s32i, !cir.ptr<!s32i>
+  // CHECK-DAG: volatile_store -> y#0: ModRef
+  cir.store volatile %val, %x {test.ptr = "volatile_store"} : !s32i, !cir.ptr<!s32i>
+  // CHECK-DAG: atomic_store -> y#0: ModRef
+  cir.store syncscope(system) atomic(seq_cst) %val, %x {test.ptr = "atomic_store"} : !s32i, !cir.ptr<!s32i>
+  // CHECK-DAG: plain_load -> y#0: NoModRef
+  %0 = cir.load %x : !cir.ptr<!s32i>, !s32i {test.ptr = "plain_load"}
+  // CHECK-DAG: volatile_load -> y#0: ModRef
+  %1 = cir.load volatile %x : !cir.ptr<!s32i>, !s32i {test.ptr = "volatile_load"}
+  // CHECK-DAG: atomic_load -> y#0: ModRef
+  %3 = cir.load syncscope(system) atomic(seq_cst) %x : !cir.ptr<!s32i>, !s32i {test.ptr = "atomic_load"}
+  // CHECK-DAG: volatile_set_bitfield -> y#0: ModRef
+  %2 = cir.set_bitfield align(1) (#bfi_f, %b : !cir.ptr<!u8i>, %val : !s32i) {is_volatile} {test.ptr = "volatile_set_bitfield"} -> !s32i
+  // CHECK-DAG: volatile_matrix_store -> y#0: ModRef
+  cir.matrix.column_major_store %m : <2 x 2 x !cir.float>, %p : <!cir.float>, %stride : !cir.int<u, 64> volatile {test.ptr = "volatile_matrix_store"}
+  cir.return
+}

@@ -73,8 +73,7 @@ bool cir::LoadOp::canUsesBeRemoved(
   if (blockingUses.size() != 1)
     return false;
 
-  // Volatile load or atomic load should not be removed.
-  if (getIsVolatile() || getMemOrder().has_value())
+  if (isVolatileOrAtomic())
     return false;
 
   Value blockingUse = (*blockingUses.begin())->get();
@@ -112,8 +111,7 @@ bool cir::StoreOp::canUsesBeRemoved(
   if (blockingUses.size() != 1)
     return false;
 
-  // Volatile store or atomic store should not be removed.
-  if (getIsVolatile() || getMemOrder().has_value())
+  if (isVolatileOrAtomic())
     return false;
 
   Value blockingUse = (*blockingUses.begin())->get();
