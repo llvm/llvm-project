@@ -1,0 +1,54 @@
+# RUN: llc -mtriple=amdgpu12.50 -run-pass=postmisched %s -o - | FileCheck -check-prefix=GFX1250 %s
+# RUN: llc -mtriple=amdgpu12.50s -run-pass=postmisched %s -o - | FileCheck -check-prefix=GFX1250 %s
+# RUN: llc -mtriple=amdgpu12.51 -run-pass=postmisched %s -o - | FileCheck -check-prefix=NOWINDOW %s
+# RUN: llc -mtriple=amdgpu12.5 -run-pass=postmisched %s -o - | FileCheck -check-prefix=NOWINDOW %s
+
+# The co-execution window model (hasCoExecWindowModel) is active for gfx1250
+# and gfx1250-strict. On gfx1251 and gfx12-5-generic the postRA scheduler does
+# not consider co-execution slot hazards, so VALU instructions are not reordered
+# to respect WMMA co-execution windows.
+
+--- |
+  define void @wmma_valu_salu_interleave() #0 { ret void }
+
+  attributes #0 = { "amdgpu-waves-per-eu"="1,1" }
+...
+
+# WMMA F32_16X16X32_F16 has co-execution pattern 0EIIEEIIV (9-cycle window).
+# On gfx1250/gfx1250-strict, the scheduler will place SALU in 'E' slots
+# (stages 1, 4, 5) and VALU in 'I' slots (stages 2, 3, 6, 7).
+# On gfx1251/gfx12-5-generic, the scheduler does not track co-execution slots
+# and schedules based on standard latency/resource pressure.
+---
+name: wmma_valu_salu_interleave
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $sgpr0, $sgpr1, $sgpr2, $sgpr3
+
+    ; GFX1250-LABEL: name: wmma_valu_salu_interleave
+    ; GFX1250: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_F16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    ; GFX1250-NEXT: $sgpr4 = S_ADD_I32 killed $sgpr0, killed $sgpr1, implicit-def dead $scc
+    ; GFX1250-NEXT: $vgpr28 = V_ADD_U32_e32 killed $vgpr24, killed $vgpr25, implicit $exec
+    ; GFX1250-NEXT: $vgpr29 = V_ADD_U32_e32 killed $vgpr26, killed $vgpr27, implicit $exec
+    ; GFX1250-NEXT: $sgpr5 = S_ADD_I32 killed $sgpr2, killed $sgpr3, implicit-def dead $scc
+    ; GFX1250-NEXT: S_ENDPGM 0, implicit killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, implicit killed $vgpr28, implicit killed $vgpr29, implicit killed $sgpr4, implicit killed $sgpr5
+    ;
+    ; NOWINDOW-LABEL: name: wmma_valu_salu_interleave
+    ; NOWINDOW: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; NOWINDOW-NEXT: {{  $}}
+    ; NOWINDOW-NEXT: early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_F16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    ; NOWINDOW-NEXT: $vgpr28 = V_ADD_U32_e32 killed $vgpr24, killed $vgpr25, implicit $exec
+    ; NOWINDOW-NEXT: $vgpr29 = V_ADD_U32_e32 killed $vgpr26, killed $vgpr27, implicit $exec
+    ; NOWINDOW-NEXT: $sgpr4 = S_ADD_I32 killed $sgpr0, killed $sgpr1, implicit-def dead $scc
+    ; NOWINDOW-NEXT: $sgpr5 = S_ADD_I32 killed $sgpr2, killed $sgpr3, implicit-def dead $scc
+    ; NOWINDOW-NEXT: S_ENDPGM 0, implicit killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, implicit killed $vgpr28, implicit killed $vgpr29, implicit killed $sgpr4, implicit killed $sgpr5
+    early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_F16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $sgpr4 = S_ADD_I32 $sgpr0, $sgpr1, implicit-def dead $scc
+    $vgpr28 = V_ADD_U32_e32 killed $vgpr24, $vgpr25, implicit $exec
+    $sgpr5 = S_ADD_I32 $sgpr2, $sgpr3, implicit-def dead $scc
+    $vgpr29 = V_ADD_U32_e32 killed $vgpr26, $vgpr27, implicit $exec
+    S_ENDPGM 0, implicit $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, implicit $vgpr28, implicit $vgpr29, implicit $sgpr4, implicit $sgpr5
+...
