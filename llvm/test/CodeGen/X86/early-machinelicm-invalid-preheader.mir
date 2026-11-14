@@ -1,0 +1,58 @@
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=early-machinelicm -verify-machineinstrs -o - %s | FileCheck %s
+
+# bb.0 ends in a conditional branch (JCC_1) followed by an unconditional branch
+# to the same block, so it has a single successor edge. It is not a valid loop
+# preheader: hoisting ADD64ri32 (which defines a dead $eflags) before the first
+# terminator would clobber the $eflags value consumed by JCC_1.
+
+--- |
+  @g_outer = external global i8
+  @g_inner = external global i8
+  declare void @sink(i64)
+  define void @f(i64 %p) { entry: unreachable }
+...
+---
+name: f
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: f
+  ; CHECK:       bb.0:
+  ; CHECK-NOT:     ADD64ri32
+  ; CHECK:         CMP8mi
+  ; CHECK-NOT:     ADD64ri32
+  ; CHECK-NEXT:    JCC_1 %bb.1, 5, implicit $eflags
+  ; CHECK-NEXT:    JMP_1 %bb.1
+  ; CHECK:       bb.2:
+  ; CHECK:         ADD64ri32
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $rdi
+
+    %0:gr64 = COPY $rdi
+    CMP8mi $rip, 1, $noreg, @g_outer, $noreg, 0, implicit-def $eflags :: (load (s8) from @g_outer)
+    JCC_1 %bb.1, 5, implicit $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.2(0x40000000), %bb.1(0x40000000)
+
+    CMP8mi $rip, 1, $noreg, @g_outer, $noreg, 0, implicit-def $eflags :: (load (s8) from @g_outer)
+    JCC_1 %bb.2, 5, implicit $eflags
+    JMP_1 %bb.1
+
+  bb.2:
+    successors: %bb.3(0x80000000)
+
+    %1:gr64 = ADD64ri32 %0, 42, implicit-def dead $eflags
+
+  bb.3:
+    successors: %bb.3(0x7c000000), %bb.1(0x04000000)
+
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    $rdi = COPY %1
+    CALL64pcrel32 @sink, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    CMP8mi $rip, 1, $noreg, @g_inner, $noreg, 0, implicit-def $eflags :: (load (s8) from @g_inner)
+    JCC_1 %bb.3, 4, implicit $eflags
+    JMP_1 %bb.1
+...
