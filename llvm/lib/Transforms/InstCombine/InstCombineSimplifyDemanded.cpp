@@ -2595,40 +2595,18 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     Value *X = I->getOperand(0);
     Value *Y = I->getOperand(1);
 
+    Type *EltTy = VTy->getScalarType();
+    DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+
     FPClassTest SrcDemandedMask =
-        DemandedMask & (fcNan | fcZero | fcSubnormal | fcNormal);
-
-    if (DemandedMask & fcInf) {
-      // mul x, inf = inf
-      // mul large_x, large_y = inf
-      SrcDemandedMask |= fcSubnormal | fcNormal | fcInf;
-    }
-
-    if (DemandedMask & fcNan) {
-      // mul +/-inf, 0 => nan
-      SrcDemandedMask |= fcZero | fcInf | fcNan;
-
-      // TODO: Mode check
-      // mul +/-inf, sub => nan if daz
-      SrcDemandedMask |= fcSubnormal;
-    }
-
-    // mul normal, subnormal = normal
-    // Normal inputs may result in underflow.
-    if (DemandedMask & (fcNormal | fcSubnormal))
-      SrcDemandedMask |= fcNormal | fcSubnormal;
-
-    if (DemandedMask & fcZero)
-      SrcDemandedMask |= fcNormal | fcSubnormal;
+        KnownFPClass::inverse_fmul(DemandedMask, Mode).getKnownFPClasses();
 
     if (X == Y &&
         isGuaranteedNotToBeUndef(X, SQ.AC, SQ.CtxI, SQ.DT, Depth + 1)) {
       if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownLHS, SQ,
                                   Depth + 1))
         return I;
-      Type *EltTy = VTy->getScalarType();
 
-      DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
       Known = KnownFPClass::square(KnownLHS, Mode);
       Known.knownNot(~DemandedMask);
 
@@ -2720,9 +2698,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       return Copysign;
     }
 
-    Type *EltTy = VTy->getScalarType();
-    DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
-
     if (KnownLHS.isKnownAlways(fcInf | fcNan) &&
         (KnownRHS.isKnownNeverNaN() &&
          KnownRHS.cannotBeOrderedGreaterEqZero(Mode))) {
@@ -2791,50 +2766,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     Type *EltTy = VTy->getScalarType();
     DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
 
-    // Every output class could require denormal inputs (except for the
-    // degenerate case of only-nan results, without DAZ).
-    FPClassTest SrcDemandedMask = (DemandedMask & fcNan) | fcSubnormal;
-
-    // Normal inputs may result in underflow.
-    // x / x = 1.0 for non0/inf/nan
-    // -x = +y / -z
-    // -x = -y / +z
-    if (DemandedMask & (fcSubnormal | fcNormal))
-      SrcDemandedMask |= fcNormal;
-
-    if (DemandedMask & fcNan) {
-      // 0 / 0 = nan
-      // inf / inf = nan
-
-      // Subnormal is added in case of DAZ, but this isn't strictly
-      // necessary. Every other input class implies a possible subnormal source,
-      // so this only could matter in the degenerate case of only-nan results.
-      SrcDemandedMask |= fcZero | fcInf | fcNan;
-    }
-
-    // Zero outputs may be the result of underflow.
-    if (DemandedMask & fcZero)
-      SrcDemandedMask |= fcNormal | fcSubnormal;
-
-    FPClassTest LHSDemandedMask = SrcDemandedMask;
-    FPClassTest RHSDemandedMask = SrcDemandedMask;
-
-    // 0 / inf = 0
-    if (DemandedMask & fcZero) {
-      assert((LHSDemandedMask & fcSubnormal) &&
-             "should not have to worry about daz here");
-      LHSDemandedMask |= fcZero;
-      RHSDemandedMask |= fcInf;
-    }
-
-    // x / 0 = inf
-    // large_normal / small_normal = inf
-    // inf / 1 = inf
-    // large_normal / subnormal = inf
-    if (DemandedMask & fcInf) {
-      LHSDemandedMask |= fcInf | fcNormal | fcSubnormal;
-      RHSDemandedMask |= fcZero | fcSubnormal | fcNormal;
-    }
+    auto DemandedInputs = KnownFPClass::inverse_fdiv(DemandedMask, Mode);
+    FPClassTest LHSDemandedMask = DemandedInputs.first.getKnownFPClasses();
+    FPClassTest RHSDemandedMask = DemandedInputs.second.getKnownFPClasses();
 
     KnownFPClass KnownLHS, KnownRHS;
     if (SimplifyDemandedFPClass(I, 0, LHSDemandedMask, KnownLHS, SQ,
