@@ -1,5 +1,7 @@
 ; RUN: llc -mtriple=amdgpu10.30 -asm-verbose=0 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10-ASM %s
 ; RUN: llc -mtriple=amdgpu10.30 < %s -filetype=obj | llvm-objdump -d --triple=amdgpu10.30 --symbolize-operands - | FileCheck --check-prefixes=GCN,GFX10,GFX10-DIS %s
+; RUN: llc -mtriple=amdgpu10.30 -asm-verbose=0 -align-loops=1 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10-ASM %s
+; RUN: llc -mtriple=amdgpu10.30 -asm-verbose=0 -align-loops=16 < %s | FileCheck --check-prefixes=GCN,ALIGN16 %s
 ; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck --check-prefix=GFX8 %s
 
 ; GFX8-NOT: s_inst_prefetch
@@ -13,6 +15,10 @@
 ; GFX10:          s_sleep 0
 ; GFX10:          s_cbranch_scc0 [[L1]]
 ; GFX10-NEXT:     s_endpgm
+; ALIGN16:        s_movk_i32 s{{[0-9]+}}, 0x400
+; ALIGN16-NEXT:   [[L1:.LBB[0-9_]+]]:
+; ALIGN16:        s_cbranch_scc0 [[L1]]
+; ALIGN16-NEXT:   s_endpgm
 define amdgpu_kernel void @test_loop_64(ptr addrspace(1) nocapture %arg) {
 bb:
   br label %bb2
@@ -38,6 +44,10 @@ bb2:                                              ; preds = %bb2, %bb
 ; GFX10:          s_sleep 0
 ; GFX10:          s_cbranch_scc0 [[L1]]
 ; GFX10-NEXT:     s_endpgm
+; ALIGN16:        s_movk_i32 s{{[0-9]+}}, 0x400
+; ALIGN16-NEXT:   [[L1:.LBB[0-9_]+]]:
+; ALIGN16:        s_cbranch_scc0 [[L1]]
+; ALIGN16-NEXT:   s_endpgm
 define amdgpu_kernel void @test_loop_128(ptr addrspace(1) nocapture %arg) {
 bb:
   br label %bb2
@@ -80,6 +90,10 @@ bb2:                                              ; preds = %bb2, %bb
 ; GFX10:          s_cbranch_scc0 [[L1]]
 ; GFX10-NEXT:     s_inst_prefetch 0x2
 ; GFX10-NEXT:     s_endpgm
+; ALIGN16:        s_movk_i32 s{{[0-9]+}}, 0x400
+; ALIGN16-NEXT:   [[L1:.LBB[0-9_]+]]:
+; ALIGN16:        s_cbranch_scc0 [[L1]]
+; ALIGN16-NEXT:   s_endpgm
 define amdgpu_kernel void @test_loop_192(ptr addrspace(1) nocapture %arg) {
 bb:
   br label %bb2
@@ -136,6 +150,10 @@ bb2:                                              ; preds = %bb2, %bb
 ; GFX10:          s_sleep 0
 ; GFX10:          s_cbranch_scc0 [[L1]]
 ; GFX10-NEXT:     s_endpgm
+; ALIGN16:        s_movk_i32 s{{[0-9]+}}, 0x400
+; ALIGN16-NEXT:   [[L1:.LBB[0-9_]+]]:
+; ALIGN16:        s_cbranch_scc0 [[L1]]
+; ALIGN16-NEXT:   s_endpgm
 define amdgpu_kernel void @test_loop_256(ptr addrspace(1) nocapture %arg) {
 bb:
   br label %bb2
