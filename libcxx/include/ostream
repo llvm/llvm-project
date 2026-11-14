@@ -128,10 +128,10 @@ template <class charT, class traits>
 
 template<class charT, class traits>
   basic_ostream<charT, traits>& emit_on_flush(basic_ostream<charT, traits>& os);                       // since C++20
-  
+
 template<class charT, class traits>
   basic_ostream<charT, traits>& noemit_on_flush(basic_ostream<charT, traits>& os);                     // since C++20
-  
+
 template<class charT, class traits>
   basic_ostream<charT, traits>& flush_emit(basic_ostream<charT, traits>& os);                          // since C++20
 
@@ -190,7 +190,7 @@ void vprint_nonunicode(ostream& os, string_view fmt, format_args args);         
 
 #    include <__ostream/basic_ostream.h>
 
-#    if _LIBCPP_STD_VER >= 20
+#    if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 #      include <__ostream/syncbuf_base.h>
 #    endif
 
