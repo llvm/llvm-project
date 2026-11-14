@@ -11,30 +11,57 @@
 //===----------------------------------------------------------------------===//
 
 def olCreateQueue : Function {
-    let desc = "Create a queue for the given device within the given context.";
+    let desc = "Create a queue that submits work to a device.";
     let details = [
-        "The queue is scoped to `Context` and `Device` must belong to it.",
-        "The queue can only operate on resources (memory allocations, programs) that were created in the same context."
+        "`olCreateQueue` creates a queue on `Device` and stores its handle in "
+        "`Queue`.",
+        "The queue belongs to `Context`. `Device` must be one of the devices "
+        "of `Context`, and the queue can only be used with resources (memory "
+        "allocations, programs) created in `Context`.",
+        "The caller owns the returned queue and must release it with a "
+        "subsequent call to `olDestroyQueue`.",
+        "`Context` and `Device` must remain valid for the lifetime of the "
+        "queue. If `Context` is destroyed first, the queue is left in an "
+        "undefined state and must not be used.",
+        "The new queue may reuse the backend resources of a queue that was "
+        "destroyed earlier on the same device in the same context.",
+        "`olCreateQueue` is thread safe."
     ];
     let params = [
-        Param<"ol_context_handle_t", "Context", "handle of the context", PARAM_IN>,
-        Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
-        Param<"ol_queue_handle_t*", "Queue", "output pointer for the created queue", PARAM_OUT>
+        Param<"ol_context_handle_t", "Context", "context the queue belongs to", PARAM_IN>,
+        Param<"ol_device_handle_t", "Device", "device the queue submits work to", PARAM_IN>,
+        Param<"ol_queue_handle_t*", "Queue", "receives the handle of the created queue", PARAM_OUT>
     ];
     let returns = [
         Return<"OL_ERRC_INVALID_DEVICE", [
-            "Device does not belong to `Context`"
+            "`Device` does not belong to `Context`"
+        ]>,
+        Return<"OL_ERRC_UNKNOWN", [
+            "The queue being reused is in an error state"
         ]>
     ];
 }
 
 def olDestroyQueue : Function {
-    let desc = "Destroy the queue and free all underlying resources.";
+    let desc = "Destroy a queue.";
     let details = [
-      "Any work previously enqueued to the queue is still performed and any events generated for this queue remain valid."
+      "`olDestroyQueue` releases `Queue`. After a successful call the handle "
+      "is invalid and must not be used.",
+      "Work submitted before the call is not cancelled and runs to "
+      "completion. `olDestroyQueue` does not wait for it.",
+      "Events created from `Queue` remain valid and can still be passed to "
+      "`olSyncEvent`, `olWaitEvents` and `olDestroyEvent`.",
+      "Backend resources of a queue that still has work pending are released "
+      "later, at the latest when its context is destroyed.",
+      "If `olDestroyQueue` fails, `Queue` is not released. It is left in an "
+      "undefined state and must not be used, including in another call to "
+      "`olDestroyQueue`.",
+      "May be called concurrently with calls that operate on other queues. "
+      "The caller must ensure that no other thread uses `Queue` during or "
+      "after the call."
     ];
     let params = [
-        Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>
+        Param<"ol_queue_handle_t", "Queue", "queue to destroy", PARAM_IN>
     ];
     let returns = [];
 }
@@ -68,47 +95,63 @@ def ol_queue_info_t : Enum {
   let desc = "Supported queue info.";
   let is_typed = 1;
   let etors = [
-    TaggedEtor<"DEVICE", "ol_device_handle_t", "The handle of the device associated with the queue.">,
-    TaggedEtor<"CONTEXT", "ol_context_handle_t", "The handle of the context associated with the queue.">,
+    TaggedEtor<"DEVICE", "ol_device_handle_t", "The device that was passed to `olCreateQueue`. The handle is borrowed; no ownership is transferred to the caller.">,
+    TaggedEtor<"CONTEXT", "ol_context_handle_t", "The context that was passed to `olCreateQueue`. The handle is borrowed; no ownership is transferred to the caller.">,
     TaggedEtor<"EMPTY", "bool", "True if all work submitted to the queue has completed.">,
-    TaggedEtor<"NATIVE_HANDLE", "void *", "The backend-native handle of the queue, reinterpreted as a void pointer.">,
+    TaggedEtor<"NATIVE_HANDLE", "void *", "The backend-native handle of the queue, reinterpreted as a void pointer. It is owned by the platform, must not be released by the caller, and is valid only while the queue exists.">,
   ];
 }
 
 def olGetQueueInfo : Function {
-  let desc = "Queries the given property of the queue.";
+  let desc = "Query a property of a queue.";
   let details = [
-    "`olGetQueueInfoSize` can be used to query the storage size "
-    "required for the given query."
+    "`olGetQueueInfo` writes the value of the property `PropName` of `Queue` "
+    "to `PropValue`. `PropSize` is the size of that storage; "
+    "`olGetQueueInfoSize` reports the size required.",
+    "`ol_queue_info_t` describes each property, including the ownership of "
+    "returned handles.",
+    "`olGetQueueInfo` is thread safe."
   ];
   let params = [
-    Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
-    Param<"ol_queue_info_t", "PropName", "type of the info to retrieve", PARAM_IN>,
-    Param<"size_t", "PropSize", "the number of bytes pointed to by PropValue.", PARAM_IN>,
-    TypeTaggedParam<"void*", "PropValue", "array of bytes holding the info. "
-      "If Size is not equal to or greater to the real number of bytes needed to return the info "
-      "then the OL_ERRC_INVALID_SIZE error is returned and pPlatformInfo is not used.", PARAM_OUT,
+    Param<"ol_queue_handle_t", "Queue", "queue to query", PARAM_IN>,
+    Param<"ol_queue_info_t", "PropName", "property to retrieve", PARAM_IN>,
+    Param<"size_t", "PropSize", "size in bytes of the storage pointed to by `PropValue`", PARAM_IN>,
+    TypeTaggedParam<"void*", "PropValue", "receives the property value", PARAM_OUT,
       TypeInfo<"PropName" , "PropSize">>
   ];
   let returns = [
     Return<"OL_ERRC_INVALID_SIZE", [
       "`PropSize == 0`",
-      "If `PropSize` is less than the real number of bytes needed to return the info."
+      "`PropSize` is smaller than the size of the result"
     ]>,
-    Return<"OL_ERRC_INVALID_QUEUE">
+    Return<"OL_ERRC_INVALID_ENUMERATION", [
+      "`PropName` is not a valid `ol_queue_info_t` value"
+    ]>,
+    Return<"OL_ERRC_UNSUPPORTED", [
+      "`PropName` is not supported by the platform"
+    ]>
   ];
 }
 
 def olGetQueueInfoSize : Function {
-  let desc = "Returns the storage size of the given queue query.";
-  let details = [];
+  let desc = "Query the storage size of a queue property.";
+  let details = [
+    "`olGetQueueInfoSize` writes to `PropSizeRet` the number of bytes that "
+    "`olGetQueueInfo` needs to return the property `PropName` of `Queue`.",
+    "`olGetQueueInfoSize` is thread safe."
+  ];
   let params = [
-    Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
-    Param<"ol_queue_info_t", "PropName", "type of the info to query", PARAM_IN>,
-    Param<"size_t*", "PropSizeRet", "pointer to the number of bytes required to store the query", PARAM_OUT>
+    Param<"ol_queue_handle_t", "Queue", "queue to query", PARAM_IN>,
+    Param<"ol_queue_info_t", "PropName", "property to query", PARAM_IN>,
+    Param<"size_t*", "PropSizeRet", "receives the required size in bytes", PARAM_OUT>
   ];
   let returns = [
-    Return<"OL_ERRC_INVALID_QUEUE">
+    Return<"OL_ERRC_INVALID_ENUMERATION", [
+      "`PropName` is not a valid `ol_queue_info_t` value"
+    ]>,
+    Return<"OL_ERRC_UNSUPPORTED", [
+      "`PropName` is not supported by the platform"
+    ]>
   ];
 }
 

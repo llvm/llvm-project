@@ -975,8 +975,11 @@ Error olCreateQueue_impl(ol_context_handle_t Context, ol_device_handle_t Device,
     // The queue is empty, but we still need to sync it to release any temporary
     // memory allocations or do other cleanup.
     if (auto Err =
-            Device->Device->synchronize(OutstandingQueue, /*Release=*/false))
-      return Err;
+            Device->Device->synchronize(OutstandingQueue, /*Release=*/false)) {
+      // This only fails after a fatal device error on the destroyed queue.
+      return createOffloadError(ErrorCode::UNKNOWN, std::move(Err),
+                                "failed to reuse a destroyed queue");
+    }
     CreatedQueue->AsyncInfo = OutstandingQueue;
   } else if (auto Err = Context->PluginCtx->initAsyncInfo(
                  *Device->Device, &(CreatedQueue->AsyncInfo))) {
