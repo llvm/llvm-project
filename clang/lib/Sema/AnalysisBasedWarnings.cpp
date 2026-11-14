@@ -2629,6 +2629,15 @@ public:
     }
   }
 
+  void handleUnsafeFieldInit(const FieldDecl *Field,
+                             SourceRange Range) override {
+    SourceLocation Loc = Range.getBegin();
+    S.Diag(Loc, diag::warn_unsafe_buffer_operation)
+        << /*field*/ 5 << Field << Range;
+    if (SuggestSuggestions)
+      S.Diag(Loc, diag::note_safe_buffer_usage_suggestions_disabled);
+  }
+
   void handleUnsafeLibcCall(const CallExpr *Call, unsigned PrintfInfo,
                             UnsafeLibcFunctionFamily Family, ASTContext &Ctx,
                             const Expr *UnsafeArg = nullptr) override {
