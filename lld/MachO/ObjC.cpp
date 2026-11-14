@@ -20,6 +20,8 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Support/TimeProfiler.h"
 
+#include <optional>
+
 using namespace llvm;
 using namespace llvm::MachO;
 using namespace lld;
@@ -153,6 +155,8 @@ enum MethodKind {
 };
 
 struct ObjcClass {
+  /// The offset within its input section for locally defined classes.
+  std::optional<uint64_t> offset;
   DenseMap<CachedHashStringRef, MethodContainer> instanceMethods;
   DenseMap<CachedHashStringRef, MethodContainer> classMethods;
 };
@@ -165,9 +169,8 @@ public:
   void parseCategory(const ConcatInputSection *catListIsec);
 
 private:
-  void parseClass(const Defined *classSym);
-  void parseMethods(const ConcatInputSection *methodsIsec,
-                    const Symbol *methodContainer,
+  void parseClass(ObjcClass &klass, const Defined *classSym, int64_t addend);
+  void parseMethods(const ConcatInputSection *methodsIsec, ObjcClass &klass,
                     const ConcatInputSection *containerIsec,
                     MethodContainerKind, MethodKind);
 
@@ -177,7 +180,8 @@ private:
   ListHeaderLayout listHeaderLayout;
   MethodLayout methodLayout;
 
-  DenseMap<const Symbol *, ObjcClass> classMap;
+  // Map Symbol + Addend -> ObjC Class
+  DenseMap<std::pair<const Symbol *, int64_t>, ObjcClass> classMap;
 };
 
 ObjcCategoryChecker::ObjcCategoryChecker()
@@ -186,11 +190,10 @@ ObjcCategoryChecker::ObjcCategoryChecker()
       methodLayout(target->wordSize) {}
 
 void ObjcCategoryChecker::parseMethods(const ConcatInputSection *methodsIsec,
-                                       const Symbol *methodContainerSym,
+                                       ObjcClass &klass,
                                        const ConcatInputSection *containerIsec,
                                        MethodContainerKind mcKind,
                                        MethodKind mKind) {
-  ObjcClass &klass = classMap[methodContainerSym];
   for (const Relocation &r : methodsIsec->relocs) {
     if ((r.offset - listHeaderLayout.totalSize) % methodLayout.totalSize !=
         methodLayout.nameOffset)
@@ -224,8 +227,9 @@ void ObjcCategoryChecker::parseMethods(const ConcatInputSection *methodsIsec,
       nameReloc = mc.isec->getRelocAt(catLayout.nameOffset);
     } else {
       assert(mc.kind == MCK_Class);
-      const auto *roIsec = mc.isec->getRelocAt(classLayout.roDataOffset)
-                         ->getReferentInputSection();
+      const auto *roIsec =
+          mc.isec->getRelocAt(classLayout.roDataOffset + *klass.offset)
+              ->getReferentInputSection();
       nameReloc = roIsec->getRelocAt(roClassLayout.nameOffset);
     }
     StringRef containerName = nameReloc->getReferentString();
@@ -263,26 +267,33 @@ void ObjcCategoryChecker::parseCategory(const ConcatInputSection *catIsec) {
     return;
 
   auto *classSym = cast<Symbol *>(classReloc->referent);
-  if (auto *d = dyn_cast<Defined>(classSym))
-    if (!classMap.contains(d))
-      parseClass(d);
+  auto [it, wasInserted] =
+      classMap.try_emplace({classSym, classReloc->getAddend()});
+  auto &klass = it->second;
+  if (wasInserted)
+    if (const auto *definedSym = dyn_cast<Defined>(classSym))
+      parseClass(klass, definedSym, classReloc->getAddend());
 
   if (const auto *r = catIsec->getRelocAt(catLayout.classMethodsOffset)) {
-    parseMethods(cast<ConcatInputSection>(r->getReferentInputSection()),
-                 classSym, catIsec, MCK_Category, MK_Static);
+    parseMethods(cast<ConcatInputSection>(r->getReferentInputSection()), klass,
+                 catIsec, MCK_Category, MK_Static);
   }
 
   if (const auto *r = catIsec->getRelocAt(catLayout.instanceMethodsOffset)) {
-    parseMethods(cast<ConcatInputSection>(r->getReferentInputSection()),
-                 classSym, catIsec, MCK_Category, MK_Instance);
+    parseMethods(cast<ConcatInputSection>(r->getReferentInputSection()), klass,
+                 catIsec, MCK_Category, MK_Instance);
   }
 }
 
-void ObjcCategoryChecker::parseClass(const Defined *classSym) {
+void ObjcCategoryChecker::parseClass(ObjcClass &klass, const Defined *classDef,
+                                     int64_t addend) {
+  klass.offset = classDef->value + addend;
+
   // Given a Class struct, get its corresponding Methods struct
-  auto getMethodsIsec =
-      [&](const InputSection *classIsec) -> ConcatInputSection * {
-    if (const auto *r = classIsec->getRelocAt(classLayout.roDataOffset)) {
+  auto getMethodsIsec = [&](const InputSection *classIsec,
+                            uint64_t offset) -> ConcatInputSection * {
+    if (const auto *r =
+            classIsec->getRelocAt(offset + classLayout.roDataOffset)) {
       if (const auto *roIsec =
               cast_or_null<ConcatInputSection>(r->getReferentInputSection())) {
         if (const auto *r =
@@ -296,18 +307,23 @@ void ObjcCategoryChecker::parseClass(const Defined *classSym) {
     return nullptr;
   };
 
-  const auto *classIsec = cast<ConcatInputSection>(classSym->isec());
+  const auto *classIsec = cast<ConcatInputSection>(classDef->isec());
 
   // Parse instance methods.
-  if (const auto *instanceMethodsIsec = getMethodsIsec(classIsec))
-    parseMethods(instanceMethodsIsec, classSym, classIsec, MCK_Class,
-                 MK_Instance);
+  if (const auto *instanceMethodsIsec =
+          getMethodsIsec(classIsec, *klass.offset))
+    parseMethods(instanceMethodsIsec, klass, classIsec, MCK_Class, MK_Instance);
 
   // Class methods are contained in the metaclass.
-  if (const auto *r = classSym->isec()->getRelocAt(classLayout.metaClassOffset))
+  if (const auto *r =
+          classIsec->getRelocAt(*klass.offset + classLayout.metaClassOffset)) {
+    uint64_t metaOffset = r->getAddend();
+    if (const auto *sym = dyn_cast<Symbol *>(r->referent))
+      metaOffset += cast<Defined>(sym)->value;
     if (const auto *classMethodsIsec = getMethodsIsec(
-            cast<ConcatInputSection>(r->getReferentInputSection())))
-      parseMethods(classMethodsIsec, classSym, classIsec, MCK_Class, MK_Static);
+            cast<ConcatInputSection>(r->getReferentInputSection()), metaOffset))
+      parseMethods(classMethodsIsec, klass, classIsec, MCK_Class, MK_Static);
+  }
 }
 
 void objc::checkCategories() {

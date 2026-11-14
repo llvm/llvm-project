@@ -30,8 +30,8 @@
 # RUN:   %t/cat1-with-load.o %t/cat2-with-load.o -o /dev/null 2>&1 | \
 # RUN:   FileCheck %s --check-prefixes=CATCLS,CATCAT --implicit-check-not '+load'
 
-## Regression test: Check that we don't crash.
-# RUN: %no-fatal-warnings-lld -no_objc_relative_method_lists --check-category-conflicts -dylib -lobjc %t/klass-with-no-rodata.o -o /dev/null
+## Regression test: Check that we don't crash or report conflicts across classes.
+# RUN: %lld -no_objc_relative_method_lists --check-category-conflicts -dylib -lobjc %t/klass-with-no-rodata.o -o /dev/null
 
 ## Check that we don't emit any warnings without --check-category-conflicts.
 # RUN: %no-fatal-warnings-lld -no_objc_relative_method_lists -dylib -lobjc %t/klass.o %t/cat1.o %t/cat2.o -o \
@@ -278,14 +278,15 @@ __OBJC_$_INSTANCE_METHODS_Foo:
 
 .include "objc-macros.s"
 
-## swiftc generates some classes without a statically-linked rodata. Not
-## entirely sure what the corresponding Swift inputs are required for this to
-## happen; this test merely checks that we can gracefully handle this case
-## without crashing.
+## Swift classes may lack statically-linked rodata (Foo) or have metadata before
+## their class address point (Bar). The 24-byte space models Swift's three
+## pointer-sized metadata fields before the Objective-C class. Bar references
+## itself so an incorrect zero offset mistakes class bytes for a method list.
 ## FIXME: It would be better if this test used the output of some real Swift
 ## code.
 
 .globl _$s11FooAACfD
+.globl _Bar
 
 .section __DATA,__objc_data
 _$s11FooAACfD:
@@ -294,21 +295,46 @@ _$s11FooAACfD:
   .quad __objc_empty_cache
   .quad 0
   .quad __objc_empty_cache
+## A second class at offset 40 shares the symbol but has a different addend.
+  .quad 0, 0, 0, 0, __objc_empty_cache
+
+_Bar:
+  .space 24
+  .quad 0, _Bar, 0, 0, __objc_empty_cache
 
 .section __DATA,__objc_catlist,regular,no_dead_strip
   .quad __CATEGORY_METAFoo_$_Foo20
+  .quad __CATEGORY_METABar_$_Bar20
+  .quad __CATEGORY_METAFoo_$_Foo0
 
 .section __DATA,__objc_const
 __CATEGORY_METAFoo_$_Foo20:
   .objc_classname "Foo20"
-  .quad _$s11FooAACfD
-  .quad 0
+  .quad _$s11FooAACfD + 40
+  .quad _SharedMethods
   .quad 0
   .quad 0
   .quad 0
   .quad 0
   .long 64
   .space 4
+
+__CATEGORY_METABar_$_Bar20:
+  .objc_classname "Bar20"
+  .quad _Bar + 24
+  .quad 0, 0, 0, 0, 0
+  .long 64, 0
+
+__CATEGORY_METAFoo_$_Foo0:
+  .objc_classname "Foo0"
+  .quad _$s11FooAACfD, _SharedMethods, 0, 0, 0, 0
+  .long 64, 0
+
+_SharedMethods:
+  .long 24, 1
+  .empty_objc_method "shared", "v16@0:8", "shared"
+
+.subsections_via_symbols
 
 #--- objc-macros.s
 
