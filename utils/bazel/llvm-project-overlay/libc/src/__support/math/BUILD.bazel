@@ -3536,6 +3536,7 @@ libc_support_library(
     hdrs = ["exp2f_integer_utils.h"],
     deps = [
         "//libc/hdr:fenv_macros",
+        "//libc/hdr:stdint_proxy",
         "//libc/src/__support:frac64",
         "//libc/src/__support/FPUtil:multiply_add",
         "//libc/src/__support/FPUtil:polyeval",
@@ -3602,6 +3603,7 @@ libc_support_library(
         ":check_exp_exceptions",
         ":exp2f_integer_utils",
         "//libc/hdr:fenv_macros",
+        "//libc/hdr:stdint_proxy",
         "//libc/src/__support:frac64",
         "//libc/src/__support/CPP:bit",
         "//libc/src/__support/FPUtil:fp_bits",
@@ -5494,6 +5496,7 @@ libc_support_library(
     deps = [
         ":exp2f_integer_utils",
         "//libc/hdr:fenv_macros",
+        "//libc/hdr:stdint_proxy",
         "//libc/src/__support/CPP:bit",
         "//libc/src/__support/FPUtil:fp_bits",
         "//libc/src/__support/macros:attributes",

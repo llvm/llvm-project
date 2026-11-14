@@ -1364,11 +1364,17 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.hdr.math_macros
+    libc.hdr.stdint_proxy
     libc.src.math.expf
     libc.src.__support.math.expf_double_eval
     libc.src.__support.math.expf_float_eval
     libc.src.__support.math.expf_integer_eval
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
 )
 
 add_fp_unittest(
@@ -1420,11 +1426,16 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.hdr.math_macros
+    libc.hdr.stdint_proxy
     libc.src.math.exp2f
     libc.src.__support.math.exp2f_double_eval
     libc.src.__support.math.exp2f_float_eval
     libc.src.__support.math.exp2f_integer_eval
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.optimization
 )
 
 add_fp_unittest(
