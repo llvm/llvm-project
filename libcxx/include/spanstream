@@ -104,11 +104,9 @@ public:
 
   basic_spanbuf() : basic_spanbuf(ios_base::in | ios_base::out) {}
 
-  explicit basic_spanbuf(ios_base::openmode __which)
-      : basic_spanbuf(std::span<_CharT>(), __which) {}
+  explicit basic_spanbuf(ios_base::openmode __which) : basic_spanbuf(std::span<_CharT>(), __which) {}
 
-  explicit basic_spanbuf(std::span<_CharT> __s,
-                                               ios_base::openmode __which = ios_base::in | ios_base::out)
+  explicit basic_spanbuf(std::span<_CharT> __s, ios_base::openmode __which = ios_base::in | ios_base::out)
       : basic_streambuf<_CharT, _Traits>{}, __mode_(__which) {
     span(__s);
   }
@@ -236,8 +234,7 @@ protected:
     return static_cast<pos_type>(__newoff);
   }
 
-  pos_type seekpos(pos_type __sp,
-                                         ios_base::openmode __which = ios_base::in | ios_base::out) override {
+  pos_type seekpos(pos_type __sp, ios_base::openmode __which = ios_base::in | ios_base::out) override {
     return seekoff(static_cast<off_type>(__sp), ios_base::beg, __which);
   }
 
@@ -408,8 +405,7 @@ public:
 
   // [spanstream.cons], constructors
 
-  explicit basic_spanstream(std::span<_CharT> __s,
-                                                  ios_base::openmode __which = ios_base::out | ios_base::in)
+  explicit basic_spanstream(std::span<_CharT> __s, ios_base::openmode __which = ios_base::out | ios_base::in)
       : basic_iostream<_CharT, _Traits>(std::addressof(__sb_)), __sb_(basic_spanbuf<_CharT, _Traits>(__s, __which)) {}
 
   basic_spanstream(const basic_spanstream&) = delete;
