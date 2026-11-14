@@ -1398,7 +1398,6 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_cache_latest",
             "values": {"c++26": 202411},
             "headers": ["ranges"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_chunk",
