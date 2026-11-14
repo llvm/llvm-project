@@ -26,4 +26,10 @@
 #define SEM_INFO 19
 #define SEM_STAT_ANY 20
 
+// The union a caller passes to semctl is the caller's to declare: the
+// standard says so, and no libc defines it. Saying that here is what lets a
+// program tell "this libc leaves it to me" from "this libc has it already",
+// which is the test a great deal of software makes before declaring its own.
+#define _SEM_SEMUN_UNDEFINED 1
+
 #endif // LLVM_LIBC_MACROS_LINUX_SYS_SEM_MACROS_H

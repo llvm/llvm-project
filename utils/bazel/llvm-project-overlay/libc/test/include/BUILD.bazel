@@ -326,6 +326,15 @@ libc_test(
 )
 
 libc_test(
+    name = "linux_sys_sem_macros_test",
+    srcs = ["linux_sys_sem_macros_test.cpp"],
+    full_build_only = True,
+    deps = [
+        "//libc:llvm_libc_macros_sys_sem_macros",
+    ],
+)
+
+libc_test(
     name = "signbit_test",
     srcs = [
         "SignbitTest.h",
