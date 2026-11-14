@@ -2922,6 +2922,13 @@ private:
         genLoopBodyEvaluations(eval, unstructuredContext);
 
         builder->setInsertionPointAfter(loopOp);
+        // The code after the loop uses the DO variable itself, not the copy
+        // that is private to the loop.
+        scopeGuard.release();
+        localSymbols.popScope();
+        setCurrentPosition(eval.getLastNestedEvaluation().position);
+        Fortran::lower::genOpenACCDoVariableFinalValue(*this, loopOp,
+                                                       doConstruct, eval);
         return;
       }
       // Fall back to normal loop handling.

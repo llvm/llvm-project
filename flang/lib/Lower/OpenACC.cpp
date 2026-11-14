@@ -46,6 +46,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -2317,6 +2318,178 @@ static void privatizeInductionVariables(
       /*markInnerCollapsed=*/false);
 }
 
+/// Returns the compute construct that \p eval is, or that contains it, if any.
+static Fortran::lower::pft::Evaluation *
+getEnclosingComputeConstruct(Fortran::lower::pft::Evaluation &eval) {
+  for (Fortran::lower::pft::Evaluation *parent = &eval; parent;
+       parent = parent->parentConstruct) {
+    const auto *construct = parent->getIf<Fortran::parser::OpenACCConstruct>();
+    if (!construct)
+      continue;
+    if (std::holds_alternative<Fortran::parser::OpenACCCombinedConstruct>(
+            construct->u))
+      return parent;
+    if (const auto *block = std::get_if<Fortran::parser::OpenACCBlockConstruct>(
+            &construct->u)) {
+      const auto &directive = std::get<Fortran::parser::AccBlockDirective>(
+          std::get<Fortran::parser::AccBeginBlockDirective>(block->t).t);
+      if (directive.v == llvm::acc::ACCD_parallel ||
+          directive.v == llvm::acc::ACCD_serial ||
+          directive.v == llvm::acc::ACCD_kernels)
+        return parent;
+    }
+  }
+  return nullptr;
+}
+
+/// Returns true if the variable can be read through another name.
+static bool isAliased(const Fortran::semantics::Symbol &sym) {
+  return Fortran::semantics::FindEquivalenceSet(sym) ||
+         sym.test(Fortran::semantics::Symbol::Flag::InNamelist) ||
+         sym.attrs().test(Fortran::semantics::Attr::TARGET);
+}
+
+/// Returns true if \p evals reference the DO variable \p sym outside of the
+/// DO constructs that it controls.
+static bool
+isReferencedOutsideItsLoops(const Fortran::lower::pft::EvaluationList &evals,
+                            const Fortran::semantics::Symbol &sym) {
+  bool found = false;
+  auto check = [&](const Fortran::semantics::Symbol &other) {
+    found = found || &other.GetUltimate() == &sym;
+  };
+  for (const Fortran::lower::pft::Evaluation &eval : evals) {
+    const auto *doConstruct = eval.getIf<Fortran::parser::DoConstruct>();
+    const auto *bounds = doConstruct && doConstruct->IsDoNormal()
+                             ? &std::get<Fortran::parser::LoopControl::Bounds>(
+                                   doConstruct->GetLoopControl()->u)
+                             : nullptr;
+    if (bounds && &bounds->Name().thing.symbol->GetUltimate() == &sym) {
+      // The bounds are evaluated before the loop assigns the variable.
+      for (const Fortran::parser::ScalarExpr *expr :
+           {&bounds->Lower(), &bounds->Upper(),
+            bounds->Step() ? &*bounds->Step() : nullptr})
+        if (const auto *someExpr =
+                expr ? Fortran::semantics::GetExpr(*expr) : nullptr)
+          for (const Fortran::semantics::Symbol &used :
+               Fortran::evaluate::CollectSymbols(*someExpr))
+            check(used);
+    } else if (eval.hasNestedEvaluations()) {
+      found = found || isReferencedOutsideItsLoops(*eval.evaluationList, sym);
+    } else {
+      Fortran::lower::pft::visitAllSymbols(eval, check);
+    }
+    if (found)
+      return true;
+  }
+  return false;
+}
+
+/// Collects in \p variables the DO variables of the DO constructs nested in
+/// \p eval, and in \p unstructured those of the ones lowered as control flow.
+/// The loops of a loop directive and the LOCAL variables of a DO CONCURRENT
+/// have storage of their own and are left out.
+static void collectNestedDoVariables(
+    Fortran::lower::pft::Evaluation &eval,
+    llvm::SetVector<const Fortran::semantics::Symbol *> &variables,
+    llvm::SmallPtrSetImpl<const Fortran::semantics::Symbol *> &unstructured,
+    llvm::SmallPtrSetImpl<const Fortran::parser::DoConstruct *> &directed) {
+  if (!eval.hasNestedEvaluations())
+    return;
+  for (Fortran::lower::pft::Evaluation &nested : eval.getNestedEvaluations()) {
+    const auto *construct = nested.getIf<Fortran::parser::OpenACCConstruct>();
+    if (const auto *loop =
+            construct ? std::get_if<Fortran::parser::OpenACCLoopConstruct>(
+                            &construct->u)
+                      : nullptr) {
+      // The DO constructs that the directive takes, as visitLoopControl finds
+      // them.
+      if (const auto &doConstruct =
+              std::get<std::optional<Fortran::parser::DoConstruct>>(loop->t))
+        directed.insert(&*doConstruct);
+      uint64_t loopCount = Fortran::lower::getLoopCountForCollapseAndTile(
+          std::get<Fortran::parser::AccClauseList>(
+              std::get<Fortran::parser::AccBeginLoopDirective>(loop->t).t));
+      Fortran::lower::pft::Evaluation *doEval =
+          nested.hasNestedEvaluations() ? &nested.getFirstNestedEvaluation()
+                                        : nullptr;
+      for (uint64_t i = 1; doEval && i < loopCount; ++i) {
+        doEval = Fortran::lower::findNestedDoConstructEvaluation(*doEval);
+        if (doEval)
+          directed.insert(doEval->getIf<Fortran::parser::DoConstruct>());
+      }
+    }
+    const auto *doConstruct = nested.getIf<Fortran::parser::DoConstruct>();
+    if (doConstruct && doConstruct->IsDoNormal() &&
+        !directed.contains(doConstruct))
+      if (const Fortran::semantics::Symbol *sym =
+              std::get<Fortran::parser::LoopControl::Bounds>(
+                  doConstruct->GetLoopControl()->u)
+                  .Name()
+                  .thing.symbol;
+          sym && !Fortran::lower::SymMap::getKey(*sym).HasLocalLocality()) {
+        variables.insert(&sym->GetUltimate());
+        if (nested.lowerAsUnstructured())
+          unstructured.insert(&sym->GetUltimate());
+      }
+    collectNestedDoVariables(nested, variables, unstructured, directed);
+  }
+}
+
+static void privatizeNestedDoVariables(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    Fortran::lower::pft::Evaluation &eval,
+    llvm::ArrayRef<std::pair<mlir::Value, Fortran::semantics::SymbolRef>>
+        ivPrivate,
+    llvm::SmallVector<mlir::Value> &privateOperands, AccDataMap &dataMap) {
+  llvm::SetVector<const Fortran::semantics::Symbol *> variables;
+  llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 4> unstructured;
+  llvm::SmallPtrSet<const Fortran::parser::DoConstruct *, 4> directed;
+  collectNestedDoVariables(eval, variables, unstructured, directed);
+  if (variables.empty())
+    return;
+  // Outside of a compute construct, the procedure can read the value.
+  Fortran::lower::pft::Evaluation *construct =
+      getEnclosingComputeConstruct(eval);
+  const Fortran::lower::pft::EvaluationList &scope =
+      construct ? construct->getNestedEvaluations()
+                : converter.getCurrentFunctionUnit()->evaluationList;
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  for (const Fortran::semantics::Symbol *sym : variables) {
+    // An acc.loop has a copy of its variable: the value after it only needs
+    // one when it is read. A loop lowered as control flow assigns the
+    // variable itself. An alias reads the variable itself.
+    if ((!unstructured.contains(sym) &&
+         !isReferencedOutsideItsLoops(scope, *sym)) ||
+        isAliased(*sym))
+      continue;
+    // The variables of the loop, and those in its clauses, have their copy.
+    auto isCovered = [&](const Fortran::semantics::Symbol &other) {
+      return &other.GetUltimate() == sym;
+    };
+    if (llvm::any_of(ivPrivate,
+                     [&](const auto &iv) { return isCovered(*iv.second); }) ||
+        llvm::any_of(dataMap.symbols, [&](const auto &mapped) {
+          return isCovered(*mapped.second);
+        }))
+      continue;
+    mlir::Value var = converter.getSymbolAddress(*sym);
+    if (!var || !fir::isa_integer(fir::unwrapRefType(var.getType())))
+      continue;
+    llvm::SmallVector<mlir::Value> noBounds;
+    std::stringstream asFortran;
+    asFortran << Fortran::lower::mangle::demangleName(toStringRef(sym->name()));
+    auto op = createDataEntryOp<mlir::acc::PrivateOp>(
+        builder, loc, var, asFortran, noBounds, /*structured=*/true,
+        /*implicit=*/true, mlir::acc::DataClause::acc_private, var.getType(),
+        /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
+    op.setRecipeAttr(
+        fir::acc::createOrGetPrivateRecipe(builder, loc, var, noBounds));
+    privateOperands.push_back(op.getAccVar());
+    dataMap.emplaceSymbol(op.getAccVar(), Fortran::semantics::SymbolRef(*sym));
+  }
+}
+
 static mlir::acc::LoopOp
 buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
                mlir::Location currentLocation,
@@ -2334,7 +2507,7 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
                llvm::SmallVector<mlir::Value> &cacheOperands,
                llvm::SmallVector<mlir::Value> &reductionOperands,
                llvm::SmallVector<mlir::Type> &retTy, mlir::Value yieldValue,
-               uint64_t loopsToProcess, bool hasDirective) {
+               uint64_t loopsToProcess, bool hasDirective, bool isIndependent) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   llvm::SmallVector<std::pair<mlir::Value, Fortran::semantics::SymbolRef>>
@@ -2366,6 +2539,11 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
                                 eval, privateOperands, ivPrivate, locs,
                                 loopsToProcess);
   }
+  // Each thread that executes an iteration has its own DO variables for the
+  // loops in the body, as for the variables of this loop.
+  if (isIndependent)
+    privatizeNestedDoVariables(converter, currentLocation, eval, ivPrivate,
+                               privateOperands, dataMap);
   llvm::SmallVector<mlir::Value> operands;
   llvm::SmallVector<int32_t> operandSegments;
   addOperands(operands, operandSegments, lowerbounds);
@@ -2708,7 +2886,8 @@ static mlir::acc::LoopOp createLoopOp(
       eval, privateOperands, firstprivateOperands, dataMap, gangOperands,
       workerNumOperands, vectorOperands, tileOperands, cacheOperands,
       reductionOperands, retTy, yieldValue, loopsToProcess,
-      /*hasDirective=*/true);
+      /*hasDirective=*/true,
+      loopWillBeIndependent(converter, accClauseList, llvm::acc::ACCD_loop));
 
   if (!gangDeviceTypes.empty())
     loopOp.setGangAttr(builder.getArrayAttr(gangDeviceTypes));
@@ -5734,16 +5913,6 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
   mlir::Value yieldValue;
   uint64_t loopsToProcess = 1; // Single loop construct
 
-  // Use same mechanism that handles `acc loop` contained do loops to handle
-  // the implicit loop case.
-  Fortran::lower::StatementContext stmtCtx;
-  auto loopOp = buildACCLoopOp(
-      converter, converter.getCurrentLocation(), semanticsContext, stmtCtx,
-      doConstruct, eval, privateOperands, firstprivateOperands, dataMap,
-      gangOperands, workerNumOperands, vectorOperands, tileOperands,
-      cacheOperands, reductionOperands, retTy, yieldValue, loopsToProcess,
-      /*hasDirective=*/false);
-
   // Normal do loops which are not annotated with `acc loop` should be
   // left for analysis by marking with `auto`. This is the case even in the case
   // of `acc parallel` region because the normal rules of applying `independent`
@@ -5771,6 +5940,17 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
     parMode = mlir::acc::LoopParMode::loop_auto;
   }
 
+  // Use same mechanism that handles `acc loop` contained do loops to handle
+  // the implicit loop case.
+  Fortran::lower::StatementContext stmtCtx;
+  auto loopOp = buildACCLoopOp(
+      converter, converter.getCurrentLocation(), semanticsContext, stmtCtx,
+      doConstruct, eval, privateOperands, firstprivateOperands, dataMap,
+      gangOperands, workerNumOperands, vectorOperands, tileOperands,
+      cacheOperands, reductionOperands, retTy, yieldValue, loopsToProcess,
+      /*hasDirective=*/false,
+      /*isIndependent=*/parMode == mlir::acc::LoopParMode::loop_independent);
+
   // Set the parallel mode based on the computed parMode
   auto deviceNoneAttr = mlir::acc::DeviceTypeAttr::get(
       builder.getContext(), mlir::acc::DeviceType::None);
@@ -5797,4 +5977,55 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
   }
 
   return loopOp;
+}
+
+void Fortran::lower::genOpenACCDoVariableFinalValue(
+    AbstractConverter &converter, mlir::Operation *loopOp,
+    const Fortran::parser::DoConstruct &doConstruct, pft::Evaluation &eval) {
+  auto accLoop = mlir::cast<mlir::acc::LoopOp>(loopOp);
+  // The index variables of DO CONCURRENT do not exist after the loop.
+  if (!doConstruct.IsDoNormal() || accLoop.getLowerbound().size() != 1)
+    return;
+  const auto &bounds = std::get<Fortran::parser::LoopControl::Bounds>(
+      doConstruct.GetLoopControl()->u);
+  const Fortran::semantics::Symbol &sym =
+      bounds.Name().thing.symbol->GetUltimate();
+
+  // In a compute construct, the variable is private to the thread that
+  // executes the loop: it is only assigned when the construct reads it.
+  if (Fortran::lower::pft::Evaluation *construct =
+          getEnclosingComputeConstruct(eval))
+    if (!isAliased(sym) &&
+        !isReferencedOutsideItsLoops(construct->getNestedEvaluations(), sym))
+      return;
+  mlir::Value var = converter.getSymbolAddress(sym);
+  if (!var || !fir::isa_integer(fir::unwrapRefType(var.getType())))
+    return;
+  // The iterations of an independent loop without a copy of the variable
+  // share it: none of them is owed the value.
+  for (auto loop = accLoop->getParentOfType<mlir::acc::LoopOp>(); loop;
+       loop = loop->getParentOfType<mlir::acc::LoopOp>())
+    if (loop.hasIndependent() &&
+        !loop.getRegion().isAncestor(var.getParentRegion()))
+      return;
+
+  // The variable is incremented once per iteration. The bounds are converted
+  // to its kind and the value is computed in the index type, as for a DO loop
+  // outside of OpenACC.
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Location loc = converter.getCurrentLocation();
+  mlir::Type varTy = fir::unwrapRefType(var.getType());
+  mlir::Type idxTy = builder.getIndexType();
+  auto convertBound = [&](mlir::Value bound) {
+    return builder.createConvert(loc, idxTy,
+                                 builder.createConvert(loc, varTy, bound));
+  };
+  mlir::Value lb = convertBound(accLoop.getLowerbound().front());
+  mlir::Value ub = convertBound(accLoop.getUpperbound().front());
+  mlir::Value step = convertBound(accLoop.getStep().front());
+  mlir::Value count = builder.genExtentFromTriplet(loc, lb, ub, step, idxTy);
+  mlir::Value last = mlir::arith::AddIOp::create(
+      builder, loc, lb, mlir::arith::MulIOp::create(builder, loc, count, step));
+  fir::StoreOp::create(builder, loc, builder.createConvert(loc, varTy, last),
+                       var);
 }
