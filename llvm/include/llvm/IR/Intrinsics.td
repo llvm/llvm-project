@@ -840,6 +840,36 @@ class DefaultAttrsIntrinsic<list<LLVMType> ret_types,
                             intr_properties, name,
                             sd_properties, /*disable_default_attributes*/ 0> {}
 
+// A guarded variant pairs feature guards with the intrinsic overloads to which
+// they apply. Each target decides how many guard positions it uses and what
+// each position means. With no overload list, the guards apply to every valid
+// overload and this must be the intrinsic's only TargetGuards variant. A list
+// containing one empty type list matches an intrinsic with no overloaded types.
+class GuardedVariant<list<string> guards,
+                     list<list<LLVMType>> overloads = []> {
+  list<string> Guards = guards;
+  list<list<LLVMType>> Overloads = overloads;
+}
+
+class GuardedIntrinsic<list<LLVMType> ret_types,
+                       list<LLVMType> param_types = [],
+                       list<IntrinsicProperty> intr_properties = [],
+                       string name = "",
+                       list<SDNodeProperty> sd_properties = [],
+                       bit disable_default_attributes = true>
+    : Intrinsic<ret_types, param_types, intr_properties, name, sd_properties,
+                disable_default_attributes> {
+  list<GuardedVariant> TargetGuards = [];
+}
+
+class GuardedDefaultIntrinsic<list<LLVMType> ret_types,
+                              list<LLVMType> param_types = [],
+                              list<IntrinsicProperty> intr_properties = [],
+                              string name = "",
+                              list<SDNodeProperty> sd_properties = []>
+    : GuardedIntrinsic<ret_types, param_types, intr_properties, name,
+                       sd_properties, 0>;
+
 /// ClangBuiltin - If this intrinsic exactly corresponds to a Clang builtin,
 /// this specifies the name of the builtin. This provides automatic CBE and CFE
 /// support.
