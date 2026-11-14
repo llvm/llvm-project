@@ -2920,6 +2920,31 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     Check(A.isValid() && A.getValueAsString() == "true",
           "mrecord-mcount only supported with fentry-call");
   }
+
+  if (Attrs.hasFnAttr("oracle-function")) {
+    const auto *F = dyn_cast<Function>(V);
+    Check(F, "\"oracle-function\" attribute only applies to functions", V);
+    Check(F->hasLocalLinkage(), "oracle function must have local linkage", V);
+    Check(F->onlyReadsMemory() && F->onlyAccessesArgMemory() &&
+              F->doesNotThrow() && F->hasNoSync() && F->willReturn(),
+          "oracle function must be nounwind, nosync and willreturn, must not "
+          "have side effects and may only read memory through its arguments",
+          V);
+    Check(FT->getReturnType()->isIntegerTy(64),
+          "oracle function must return i64", V);
+    Check(!FT->isVarArg(), "oracle function must have a fixed argument list",
+          V);
+    if (M.isMaterialized()) {
+      for (const Use &U : F->uses()) {
+        auto *II = dyn_cast<IntrinsicInst>(U.getUser());
+        Check(II && II->getIntrinsicID() == Intrinsic::speculative_load &&
+                  II->isArgOperand(&U) && II->getArgOperandNo(&U) == 2,
+              "oracle function may only be used as the oracle operand of "
+              "llvm.speculative.load",
+              V, U.getUser());
+      }
+    }
+  }
 }
 
 void Verifier::verifyUnknownProfileMetadata(MDNode *MD) {
@@ -3628,20 +3653,6 @@ void Verifier::visitFunction(const Function &F) {
           "Should be: " +
               ExpectedName,
           PrintDecl);
-  }
-
-  // Oracle functions of llvm.speculative.load may not be referenced in any
-  // other way.
-  if (isMaterialized && F.hasFnAttribute("oracle-function")) {
-    Check(F.hasLocalLinkage(), "oracle function must have local linkage", &F);
-    for (const Use &U : F.uses()) {
-      auto *II = dyn_cast<IntrinsicInst>(U.getUser());
-      Check(II && II->getIntrinsicID() == Intrinsic::speculative_load &&
-                II->isArgOperand(&U) && II->getArgOperandNo(&U) == 2,
-            "oracle function may only be used as the oracle operand of "
-            "llvm.speculative.load",
-            &F, U.getUser());
-    }
   }
 
   auto *N = F.getSubprogram();
@@ -7238,23 +7249,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
             "\"oracle-function\" attribute",
             &Call);
 
-      // Make sure the called oracle matches the attributes of the intrinsic.
-      Check(OracleFn->onlyReadsMemory() && OracleFn->onlyAccessesArgMemory() &&
-                OracleFn->doesNotThrow() && OracleFn->hasNoSync() &&
-                OracleFn->willReturn(),
-            "llvm.speculative.load oracle function must be nounwind, nosync "
-            "and willreturn, must not have side effects and may only read "
-            "memory through its arguments",
-            &Call);
-
       FunctionType *FTy = OracleFn->getFunctionType();
-      Check(FTy->getReturnType()->isIntegerTy(64),
-            "llvm.speculative.load oracle function must return i64", &Call);
-
-      Check(!FTy->isVarArg(),
-            "llvm.speculative.load oracle function must have a fixed argument "
-            "list",
-            &Call);
       Check(NumArgs - NumFixedArgs == FTy->getNumParams(),
             "llvm.speculative.load oracle function argument count mismatch",
             &Call);
