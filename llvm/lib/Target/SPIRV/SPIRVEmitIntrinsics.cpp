@@ -262,6 +262,7 @@ class SPIRVEmitIntrinsicsImpl
                            bool IsPostprocessing = false);
 
   void preprocessCompositeConstants(IRBuilder<> &B);
+  Type *getCompositeElementPointee(Instruction *I);
   Value *lowerUndefOrPoison(Value *Op, IRBuilder<> &B, bool HasPoisonExt);
   void preprocessUndefsAndPoisons(IRBuilder<> &B);
   void insertCompositeAggregateArms(Instruction *I, IRBuilder<> &B);
@@ -1771,6 +1772,23 @@ void SPIRVEmitIntrinsicsImpl::preprocessUndefsAndPoisons(IRBuilder<> &B) {
   }
 }
 
+// The pointee type of the elements of the constant array or vector I, if they
+// are typed pointers. All elements share one type, so a null one must take it.
+Type *SPIRVEmitIntrinsicsImpl::getCompositeElementPointee(Instruction *I) {
+  auto *II = dyn_cast<IntrinsicInst>(I);
+  if (!II || II->getIntrinsicID() != Intrinsic::spv_const_composite)
+    return nullptr;
+  auto It = AggrConstTypes.find(I);
+  if (It == AggrConstTypes.end())
+    return nullptr;
+  Type *ElemTy = nullptr;
+  if (auto *ATy = dyn_cast<ArrayType>(It->second))
+    ElemTy = ATy->getElementType();
+  else if (auto *VTy = dyn_cast<VectorType>(It->second))
+    ElemTy = VTy->getElementType();
+  return ElemTy ? getPointeeType(ElemTy) : nullptr;
+}
+
 // Simplify addrspacecast(null) instructions to ConstantPointerNull of the
 // target type. Casting null always yields null, and this avoids SPIR-V
 // lowering issues where the null gets typed as an integer instead of a
@@ -3108,7 +3126,11 @@ void SPIRVEmitIntrinsicsImpl::insertAssignTypeIntrs(Instruction *I,
         if (OpTyElem) {
           GR->buildAssignPtr(B, OpTyElem, Op);
         } else if (isPointerTy(OpTy)) {
-          Type *ElemTy = GR->findDeducedElementType(Op);
+          Type *ElemTy = isa<ConstantPointerNull>(Op)
+                             ? getCompositeElementPointee(I)
+                             : nullptr;
+          if (!ElemTy)
+            ElemTy = GR->findDeducedElementType(Op);
           GR->buildAssignPtr(B, ElemTy ? ElemTy : deduceElementType(Op, true),
                              Op);
         } else {
