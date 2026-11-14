@@ -323,20 +323,30 @@ entry:
 }
 
 define void @vec3_fpext_cost(ptr %Colour, float %0) {
-; CHECK-LABEL: @vec3_fpext_cost(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX80:%.*]] = getelementptr float, ptr [[COLOUR:%.*]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[TMP0:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = fpext <2 x float> [[TMP2]] to <2 x double>
-; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP3]], <2 x double> zeroinitializer, <2 x double> zeroinitializer)
-; CHECK-NEXT:    [[TMP5:%.*]] = fptrunc <2 x double> [[TMP4]] to <2 x float>
-; CHECK-NEXT:    store <2 x float> [[TMP5]], ptr [[COLOUR]], align 4
-; CHECK-NEXT:    [[CONV78:%.*]] = fpext float [[TMP0]] to double
-; CHECK-NEXT:    [[TMP6:%.*]] = call double @llvm.fmuladd.f64(double [[CONV78]], double 0.000000e+00, double 0.000000e+00)
-; CHECK-NEXT:    [[CONV82:%.*]] = fptrunc double [[TMP6]] to float
-; CHECK-NEXT:    store float [[CONV82]], ptr [[ARRAYIDX80]], align 4
-; CHECK-NEXT:    ret void
+; NON-POW2-LABEL: @vec3_fpext_cost(
+; NON-POW2-NEXT:  entry:
+; NON-POW2-NEXT:    [[TMP1:%.*]] = insertelement <3 x float> poison, float [[TMP0:%.*]], i64 0
+; NON-POW2-NEXT:    [[TMP2:%.*]] = shufflevector <3 x float> [[TMP1]], <3 x float> poison, <3 x i32> zeroinitializer
+; NON-POW2-NEXT:    [[TMP3:%.*]] = fpext <3 x float> [[TMP2]] to <3 x double>
+; NON-POW2-NEXT:    [[TMP4:%.*]] = call <3 x double> @llvm.fmuladd.v3f64(<3 x double> [[TMP3]], <3 x double> zeroinitializer, <3 x double> zeroinitializer)
+; NON-POW2-NEXT:    [[TMP5:%.*]] = fptrunc <3 x double> [[TMP4]] to <3 x float>
+; NON-POW2-NEXT:    store <3 x float> [[TMP5]], ptr [[COLOUR:%.*]], align 4
+; NON-POW2-NEXT:    ret void
+;
+; POW2-ONLY-LABEL: @vec3_fpext_cost(
+; POW2-ONLY-NEXT:  entry:
+; POW2-ONLY-NEXT:    [[ARRAYIDX80:%.*]] = getelementptr float, ptr [[COLOUR:%.*]], i64 2
+; POW2-ONLY-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[TMP0:%.*]], i64 0
+; POW2-ONLY-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> zeroinitializer
+; POW2-ONLY-NEXT:    [[TMP3:%.*]] = fpext <2 x float> [[TMP2]] to <2 x double>
+; POW2-ONLY-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP3]], <2 x double> zeroinitializer, <2 x double> zeroinitializer)
+; POW2-ONLY-NEXT:    [[TMP5:%.*]] = fptrunc <2 x double> [[TMP4]] to <2 x float>
+; POW2-ONLY-NEXT:    store <2 x float> [[TMP5]], ptr [[COLOUR]], align 4
+; POW2-ONLY-NEXT:    [[CONV78:%.*]] = fpext float [[TMP0]] to double
+; POW2-ONLY-NEXT:    [[TMP6:%.*]] = call double @llvm.fmuladd.f64(double [[CONV78]], double 0.000000e+00, double 0.000000e+00)
+; POW2-ONLY-NEXT:    [[CONV82:%.*]] = fptrunc double [[TMP6]] to float
+; POW2-ONLY-NEXT:    store float [[CONV82]], ptr [[ARRAYIDX80]], align 4
+; POW2-ONLY-NEXT:    ret void
 ;
 entry:
   %arrayidx72 = getelementptr float, ptr %Colour, i64 1
@@ -378,6 +388,51 @@ entry:
   %conv34 = fptrunc double %conv to float
   %arrayidx37 = getelementptr float, ptr %dst, i64 2
   store float %conv34, ptr %arrayidx37, align 4
+  ret void
+}
+
+define void @vec3_load_f64_fmuladd_fptrunc_store(ptr %d, ptr %b, ptr %c, double %x) {
+; CHECK-LABEL: @vec3_load_f64_fmuladd_fptrunc_store(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B2P:%.*]] = getelementptr double, ptr [[B:%.*]], i64 2
+; CHECK-NEXT:    [[C2P:%.*]] = getelementptr double, ptr [[C:%.*]], i64 2
+; CHECK-NEXT:    [[D2P:%.*]] = getelementptr float, ptr [[D:%.*]], i64 2
+; CHECK-NEXT:    [[B2:%.*]] = load double, ptr [[B2P]], align 8
+; CHECK-NEXT:    [[C2:%.*]] = load double, ptr [[C2P]], align 8
+; CHECK-NEXT:    [[M2:%.*]] = call double @llvm.fmuladd.f64(double [[X:%.*]], double [[B2]], double [[C2]])
+; CHECK-NEXT:    [[T2:%.*]] = fptrunc double [[M2]] to float
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[B]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[C]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[X]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP3]], <2 x double> [[TMP0]], <2 x double> [[TMP1]])
+; CHECK-NEXT:    [[TMP5:%.*]] = fptrunc <2 x double> [[TMP4]] to <2 x float>
+; CHECK-NEXT:    store <2 x float> [[TMP5]], ptr [[D]], align 4
+; CHECK-NEXT:    store float [[T2]], ptr [[D2P]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %b1p = getelementptr double, ptr %b, i64 1
+  %b2p = getelementptr double, ptr %b, i64 2
+  %c1p = getelementptr double, ptr %c, i64 1
+  %c2p = getelementptr double, ptr %c, i64 2
+  %d1p = getelementptr float, ptr %d, i64 1
+  %d2p = getelementptr float, ptr %d, i64 2
+  %b0 = load double, ptr %b, align 8
+  %b1 = load double, ptr %b1p, align 8
+  %b2 = load double, ptr %b2p, align 8
+  %c0 = load double, ptr %c, align 8
+  %c1 = load double, ptr %c1p, align 8
+  %c2 = load double, ptr %c2p, align 8
+  %m0 = call double @llvm.fmuladd.f64(double %x, double %b0, double %c0)
+  %m1 = call double @llvm.fmuladd.f64(double %x, double %b1, double %c1)
+  %m2 = call double @llvm.fmuladd.f64(double %x, double %b2, double %c2)
+  %t0 = fptrunc double %m0 to float
+  %t1 = fptrunc double %m1 to float
+  %t2 = fptrunc double %m2 to float
+  store float %t0, ptr %d, align 4
+  store float %t1, ptr %d1p, align 4
+  store float %t2, ptr %d2p, align 4
   ret void
 }
 

@@ -4230,6 +4230,30 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     return DstTy.getVectorNumElements() * (LaneCost + ExtCost);
   }
 
+  // Non-power-of-2 vectors are widened by the type legalization and cast as
+  // the widened vectors. Only the parts of a split widened vector that hold
+  // the original elements are cast.
+  if (auto *SrcVTy = dyn_cast<FixedVectorType>(Src);
+      SrcVTy && ISD != ISD::BITCAST &&
+      !isPowerOf2_32(SrcVTy->getNumElements()) &&
+      TLI->getTypeAction(Src->getContext(), SrcTy) ==
+          TargetLowering::TypeWidenVector) {
+    unsigned NumElts = SrcVTy->getNumElements();
+    unsigned WideElts = PowerOf2Ceil(NumElts);
+    auto *WideDst = FixedVectorType::get(Dst->getScalarType(), WideElts);
+    auto *WideSrc = FixedVectorType::get(Src->getScalarType(), WideElts);
+    InstructionCost Cost =
+        getCastInstrCost(Opcode, WideDst, WideSrc, CCH, CostKind);
+    auto [Parts, PartTy] = getTypeLegalizationCost(
+        Dst->getScalarSizeInBits() > Src->getScalarSizeInBits() ? WideDst
+                                                                : WideSrc);
+    if (!Cost.isValid() || !PartTy.isVector())
+      return Cost;
+    return divideCeil(Cost.getValue() *
+                          divideCeil(NumElts, PartTy.getVectorNumElements()),
+                      Parts.getValue());
+  }
+
   if (!SrcTy.isSimple() || !DstTy.isSimple())
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
