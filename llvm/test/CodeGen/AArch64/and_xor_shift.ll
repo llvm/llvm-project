@@ -39,21 +39,48 @@ entry:
 }
 
 define i64 @right_opt(i64 %bits) {
-; CHECK-SD-LABEL: right_opt:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    lsr x8, x0, #30
-; CHECK-SD-NEXT:    eor w8, w8, w0
-; CHECK-SD-NEXT:    and x0, x8, #0x10000000
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: right_opt:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    eor x8, x0, x0, lsr #30
-; CHECK-GI-NEXT:    and x0, x8, #0x10000000
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: right_opt:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    eor x8, x0, x0, lsr #30
+; CHECK-NEXT:    and x0, x8, #0x10000000
+; CHECK-NEXT:    ret
 entry:
   %shr = lshr i64 %bits, 30
   %xor = xor i64 %shr, %bits
   %and = and i64 %xor, 268435456
   ret i64 %and
+}
+
+define i32 @right_trunc_different(i64 %x, i64 %y) {
+; CHECK-SD-LABEL: right_trunc_different:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    eor x0, x1, x0, lsr #30
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: right_trunc_different:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    lsr x8, x0, #30
+; CHECK-GI-NEXT:    eor w0, w8, w1
+; CHECK-GI-NEXT:    ret
+entry:
+  %shift = lshr i64 %x, 30
+  %a = trunc i64 %shift to i32
+  %b = trunc i64 %y to i32
+  %result = xor i32 %a, %b
+  ret i32 %result
+}
+
+define i64 @right_different_mask32(i64 %x, i64 %y) {
+; CHECK-LABEL: right_different_mask32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    eor x8, x1, x0, lsr #30
+; CHECK-NEXT:    mov w9, #1431655765 // =0x55555555
+; CHECK-NEXT:    and x0, x8, x9
+; CHECK-NEXT:    ret
+entry:
+  %shift = lshr i64 %x, 30
+  %xor = xor i64 %shift, %y
+  %result = and i64 %xor, 1431655765
+  ret i64 %result
 }
