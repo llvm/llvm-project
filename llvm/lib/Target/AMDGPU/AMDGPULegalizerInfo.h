@@ -25,6 +25,7 @@ class GCNSubtarget;
 class MachineIRBuilder;
 
 namespace AMDGPU {
+struct BufferIntrinsicInfo;
 struct ImageDimIntrinsicInfo;
 }
 class AMDGPULegalizerInfo final : public LegalizerInfo {
@@ -210,11 +211,11 @@ public:
                               bool IsFormat) const;
 
   bool legalizeBufferStore(MachineInstr &MI, LegalizerHelper &Helper,
-                           bool IsTyped, bool IsFormat) const;
+                           const AMDGPU::BufferIntrinsicInfo &Info) const;
   bool legalizeBufferLoad(MachineInstr &MI, LegalizerHelper &Helper,
-                          bool IsFormat, bool IsTyped) const;
+                          const AMDGPU::BufferIntrinsicInfo &Info) const;
   bool legalizeBufferAtomic(MachineInstr &MI, MachineIRBuilder &B,
-                            Intrinsic::ID IID) const;
+                            const AMDGPU::BufferIntrinsicInfo &Info) const;
 
   bool legalizeBVHIntersectRayIntrinsic(MachineInstr &MI,
                                         MachineIRBuilder &B) const;

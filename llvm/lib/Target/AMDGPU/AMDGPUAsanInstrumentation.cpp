@@ -7,6 +7,7 @@
 //===-------------------------------------------------------------===//
 
 #include "AMDGPUAsanInstrumentation.h"
+#include "AMDGPUInstrInfo.h"
 
 #define DEBUG_TYPE "amdgpu-asan-instrumentation"
 
@@ -310,20 +311,6 @@ void getInterestingMemoryOperands(
                                VPI->getVectorLengthParam());
       break;
     }
-    case Intrinsic::amdgcn_raw_buffer_load:
-    case Intrinsic::amdgcn_raw_ptr_buffer_load:
-    case Intrinsic::amdgcn_raw_buffer_load_format:
-    case Intrinsic::amdgcn_raw_ptr_buffer_load_format:
-    case Intrinsic::amdgcn_raw_tbuffer_load:
-    case Intrinsic::amdgcn_raw_ptr_tbuffer_load:
-    case Intrinsic::amdgcn_struct_buffer_load:
-    case Intrinsic::amdgcn_struct_ptr_buffer_load:
-    case Intrinsic::amdgcn_struct_buffer_load_format:
-    case Intrinsic::amdgcn_struct_ptr_buffer_load_format:
-    case Intrinsic::amdgcn_struct_tbuffer_load:
-    case Intrinsic::amdgcn_struct_ptr_tbuffer_load:
-    case Intrinsic::amdgcn_s_buffer_load:
-    case Intrinsic::amdgcn_ptr_s_buffer_load:
     case Intrinsic::amdgcn_global_load_tr_b64:
     case Intrinsic::amdgcn_global_load_tr_b128: {
       unsigned PtrOpNo = 0;
@@ -334,27 +321,20 @@ void getInterestingMemoryOperands(
       Interesting.emplace_back(I, PtrOpNo, IsWrite, Ty, Alignment);
       break;
     }
-    case Intrinsic::amdgcn_raw_tbuffer_store:
-    case Intrinsic::amdgcn_raw_ptr_tbuffer_store:
-    case Intrinsic::amdgcn_raw_buffer_store:
-    case Intrinsic::amdgcn_raw_ptr_buffer_store:
-    case Intrinsic::amdgcn_raw_buffer_store_format:
-    case Intrinsic::amdgcn_raw_ptr_buffer_store_format:
-    case Intrinsic::amdgcn_struct_buffer_store:
-    case Intrinsic::amdgcn_struct_ptr_buffer_store:
-    case Intrinsic::amdgcn_struct_buffer_store_format:
-    case Intrinsic::amdgcn_struct_ptr_buffer_store_format:
-    case Intrinsic::amdgcn_struct_tbuffer_store:
-    case Intrinsic::amdgcn_struct_ptr_tbuffer_store: {
-      unsigned PtrOpNo = 1;
-      bool IsWrite = true;
-      Value *Ptr = CI->getArgOperand(PtrOpNo);
-      Type *Ty = Ptr->getType();
-      MaybeAlign Alignment = Ptr->getPointerAlignment(DL);
-      Interesting.emplace_back(I, PtrOpNo, IsWrite, Ty, Alignment);
-      break;
-    }
     default:
+      if (const AMDGPU::BufferIntrinsicInfo *BufInfo =
+              AMDGPU::lookupBufferIntrinsic(CI->getIntrinsicID());
+          BufInfo && (BufInfo->Kind == AMDGPU::BufferKindLoad ||
+                      BufInfo->Kind == AMDGPU::BufferKindSLoad ||
+                      BufInfo->Kind == AMDGPU::BufferKindStore)) {
+        unsigned PtrOpNo = BufInfo->RsrcArg;
+        bool IsWrite = BufInfo->Kind == AMDGPU::BufferKindStore;
+        Value *Ptr = CI->getArgOperand(PtrOpNo);
+        Type *Ty = IsWrite ? Ptr->getType() : CI->getType();
+        MaybeAlign Alignment = Ptr->getPointerAlignment(DL);
+        Interesting.emplace_back(I, PtrOpNo, IsWrite, Ty, Alignment);
+        break;
+      }
       for (unsigned ArgNo = 0; ArgNo < CI->arg_size(); ArgNo++) {
         if (Type *Ty = CI->getParamByRefType(ArgNo)) {
           Interesting.emplace_back(I, ArgNo, false, Ty, Align(1));

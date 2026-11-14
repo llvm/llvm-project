@@ -46,6 +46,7 @@ using namespace llvm;
 namespace llvm::AMDGPU {
 #define GET_ImageDimIntrinsicTable_IMPL
 #define GET_RsrcIntrinsics_IMPL
+#define GET_BufferIntrinsicsTable_IMPL
 #define GET_GFX1250BlockingCyclesTable_DECL
 #define GET_GFX1250BlockingCyclesTable_IMPL
 

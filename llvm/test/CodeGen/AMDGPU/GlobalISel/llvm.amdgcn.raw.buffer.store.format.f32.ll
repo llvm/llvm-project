@@ -603,6 +603,40 @@ define amdgpu_ps void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffse
   ret void
 }
 
+define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_soffset_i32(<4 x i32> inreg %rsrc, i32 %val, i32 %voffset, i32 inreg %soffset) {
+  ; GFX8-LABEL: name: raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_soffset_i32
+  ; GFX8: bb.1 (%ir-block.0):
+  ; GFX8-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1
+  ; GFX8-NEXT: {{  $}}
+  ; GFX8-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; GFX8-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; GFX8-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
+  ; GFX8-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; GFX8-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
+  ; GFX8-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GFX8-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
+  ; GFX8-NEXT:   BUFFER_STORE_FORMAT_X_OFFEN_exact [[COPY4]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable store (i32), align 1, addrspace 8)
+  ; GFX8-NEXT:   S_ENDPGM 0
+  ;
+  ; GFX12-LABEL: name: raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_soffset_i32
+  ; GFX12: bb.1 (%ir-block.0):
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0, $vgpr1
+  ; GFX12-NEXT: {{  $}}
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr4
+  ; GFX12-NEXT:   BUFFER_STORE_FORMAT_X_VBUFFER_OFFEN_exact [[COPY4]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable store (i32), align 1, addrspace 8)
+  ; GFX12-NEXT:   S_ENDPGM 0
+  call void @llvm.amdgcn.raw.buffer.store.format.i32(i32 %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
+  ret void
+}
+
 declare void @llvm.amdgcn.raw.buffer.store.format.f32(float, <4 x i32>, i32, i32, i32 immarg)
 declare void @llvm.amdgcn.raw.buffer.store.format.v2f32(<2 x float>, <4 x i32>, i32, i32, i32 immarg)
 declare void @llvm.amdgcn.raw.buffer.store.format.v3f32(<3 x float>, <4 x i32>, i32, i32, i32 immarg)
