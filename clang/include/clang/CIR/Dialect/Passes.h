@@ -20,7 +20,7 @@ namespace cir {
 /// The ABI target whose calling-convention rules drive CallConvLowering.
 /// None is the unset state used when the pass runs in classification-attr
 /// mode instead of selecting a target.
-enum class CallConvTarget { None, Test, X86_64, AMDGPU };
+enum class CallConvTarget { None, Test, X86_64, AMDGPU, SPIRV };
 } // namespace cir
 
 namespace mlir {

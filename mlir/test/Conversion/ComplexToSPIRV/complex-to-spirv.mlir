@@ -681,3 +681,91 @@ func.func @complex_log1p_opencl(%arg: complex<f32>) -> complex<f32> {
 //       CHECK:   spirv.CL.atan2
 
 }
+
+// -----
+
+func.func @complex_atan2(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
+  %0 = complex.atan2 %lhs, %rhs : complex<f32>
+  return %0 : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_atan2
+//  CHECK-SAME: (%[[LHS:.+]]: complex<f32>, %[[RHS:.+]]: complex<f32>)
+//   CHECK-DAG:   %[[LV:.+]] = builtin.unrealized_conversion_cast %[[LHS]] : complex<f32> to vector<2xf32>
+//   CHECK-DAG:   %[[RV:.+]] = builtin.unrealized_conversion_cast %[[RHS]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[YRE:.+]] = spirv.CompositeExtract %[[LV]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[YIM:.+]] = spirv.CompositeExtract %[[LV]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[XRE:.+]] = spirv.CompositeExtract %[[RV]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[XIM:.+]] = spirv.CompositeExtract %[[RV]][1 : i32] : vector<2xf32>
+//       CHECK:   spirv.GL.Sqrt
+//       CHECK:   spirv.GL.Atan2
+//       CHECK:   spirv.GL.Log
+//       CHECK:   spirv.GL.Atan2
+//       CHECK:   spirv.CompositeConstruct
+
+// -----
+
+func.func @complex_pow(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
+  %0 = complex.pow %lhs, %rhs : complex<f32>
+  return %0 : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_pow
+//  CHECK-SAME: (%[[LHS:.+]]: complex<f32>, %[[RHS:.+]]: complex<f32>)
+//   CHECK-DAG:   %[[LV:.+]] = builtin.unrealized_conversion_cast %[[LHS]] : complex<f32> to vector<2xf32>
+//   CHECK-DAG:   %[[RV:.+]] = builtin.unrealized_conversion_cast %[[RHS]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[A:.+]] = spirv.CompositeExtract %[[LV]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[B:.+]] = spirv.CompositeExtract %[[LV]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[C:.+]] = spirv.CompositeExtract %[[RV]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[D:.+]] = spirv.CompositeExtract %[[RV]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[ASQ:.+]] = spirv.FMul %[[A]], %[[A]] : f32
+//       CHECK:   %[[BSQ:.+]] = spirv.FMul %[[B]], %[[B]] : f32
+//       CHECK:   %[[ABSSQ:.+]] = spirv.FAdd %[[ASQ]], %[[BSQ]] : f32
+//       CHECK:   %[[ABS:.+]] = spirv.GL.Sqrt %[[ABSSQ]] : f32
+//       CHECK:   %[[ABSTOC:.+]] = spirv.GL.Pow %[[ABS]], %[[C]] : f32
+//       CHECK:   %[[ARGLHS:.+]] = spirv.GL.Atan2 %[[B]], %[[A]] : f32
+//       CHECK:   %[[NEGD:.+]] = spirv.FNegate %[[D]] : f32
+//       CHECK:   %[[NEGDARGLHS:.+]] = spirv.FMul %[[NEGD]], %[[ARGLHS]] : f32
+//       CHECK:   %[[EXPNEGDARGLHS:.+]] = spirv.GL.Exp %[[NEGDARGLHS]] : f32
+//       CHECK:   %[[COEFF:.+]] = spirv.FMul %[[ABSTOC]], %[[EXPNEGDARGLHS]] : f32
+//       CHECK:   %[[LNABS:.+]] = spirv.GL.Log %[[ABS]] : f32
+//       CHECK:   %[[CARGLHS:.+]] = spirv.FMul %[[C]], %[[ARGLHS]] : f32
+//       CHECK:   %[[DLNABS:.+]] = spirv.FMul %[[D]], %[[LNABS]] : f32
+//       CHECK:   %[[Q:.+]] = spirv.FAdd %[[CARGLHS]], %[[DLNABS]] : f32
+//       CHECK:   %[[COSQ:.+]] = spirv.GL.Cos %[[Q]] : f32
+//       CHECK:   %[[SINQ:.+]] = spirv.GL.Sin %[[Q]] : f32
+//       CHECK:   %[[RESRE:.+]] = spirv.FMul %[[COEFF]], %[[COSQ]] : f32
+//       CHECK:   %[[RESIM:.+]] = spirv.FMul %[[COEFF]], %[[SINQ]] : f32
+//       CHECK:   spirv.CompositeConstruct %[[RESRE]], %[[RESIM]] : (f32, f32) -> vector<2xf32>
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>>
+} {
+
+func.func @complex_atan2_opencl(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
+  %0 = complex.atan2 %lhs, %rhs : complex<f32>
+  return %0 : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_atan2_opencl
+//       CHECK:   spirv.CL.sqrt
+//       CHECK:   spirv.CL.atan2
+//       CHECK:   spirv.CL.log
+//       CHECK:   spirv.CL.atan2
+//       CHECK:   spirv.CompositeConstruct
+
+func.func @complex_pow_opencl(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
+  %0 = complex.pow %lhs, %rhs : complex<f32>
+  return %0 : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_pow_opencl
+//       CHECK:   spirv.CL.sqrt
+//       CHECK:   spirv.CL.pow
+//       CHECK:   spirv.CL.atan2
+//       CHECK:   spirv.CL.exp
+//       CHECK:   spirv.CL.log
+
+}

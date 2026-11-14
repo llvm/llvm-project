@@ -385,10 +385,10 @@ def err_invalid_width_spec : Error<
 def err_invalid_complex_spec : Error<"'_Complex %0' is invalid">;
 
 def ext_auto_type_specifier : ExtWarn<
-  "'auto' type specifier is a %select{C++11|HLSL 202y}0 extension">,
+  "'auto' type specifier is %select{a C++11|an HLSL 202x}0 extension">,
   InGroup<CXX11>;
 def ext_hlsl_auto_type_specifier : ExtWarn<
-  ext_auto_type_specifier.Summary>, InGroup<HLSL202y>;
+  ext_auto_type_specifier.Summary>, InGroup<HLSL202x>;
 def warn_auto_storage_class : Warning<
   "'auto' storage class specifier is redundant and incompatible with C++11">,
   InGroup<CXX11Compat>, DefaultIgnore;
@@ -13641,6 +13641,13 @@ def err_preserve_enum_value_invalid : Error<
   "__builtin_preserve_enum_value argument %0 invalid">;
 def err_preserve_enum_value_not_const: Error<
   "__builtin_preserve_enum_value argument %0 not a constant">;
+def warn_preserve_access_index_anon_enum : Warning<
+  "%0 attribute has no effect on an anonymous enum without a typedef name">,
+  InGroup<IgnoredAttributes>, DefaultError;
+def warn_preserve_access_index_enumerator_not_relocated : Warning<
+  "enumerator %0 is not relocated where a constant is required, although %1 "
+  "has the 'preserve_access_index' attribute">,
+  InGroup<BPFEnumNotRelocated>, DefaultError;
 
 def err_bit_cast_non_trivially_copyable : Error<
   "'__builtin_bit_cast' %select{source|destination}0 type must be trivially copyable">;
@@ -13899,7 +13906,8 @@ def err_hlsl_semantic_invalid_type
             "%select{scalar|scalar or vector of up to %2 components|vector of %2 components}1 of "
             "%select{16 or 32 bit integer|32 bit integer|"
             "16 or 32 bit floating-point|16 or 32 bit unsigned integer|"
-            "32 bit unsigned integer}3 type (was %4)">;
+            "32 bit unsigned integer|bool or 32 bit integer}3 type "
+            "(was %4)">;
 def err_hlsl_init_priority_unsupported : Error<
   "initializer priorities are not supported in HLSL">;
 def err_hlsl_semantic_index_overlap : Error<"semantic index overlap %0">;
@@ -13913,6 +13921,10 @@ def err_hlsl_semantic_partial_explicit_indexing
 def err_hlsl_vk_builtin_unsupported_value
     : Error<"'%0' is not a supported value for the 'vk::builtin' attribute; "
             "supported values are: %1">;
+def err_hlsl_vk_builtin_wrong_type
+    : Error<"'%0' builtin must be of type %1">;
+def err_hlsl_vk_builtin_wrong_stage
+    : Error<"'%0' builtin cannot be used as %1 shader %2">;
 
 def warn_hlsl_user_defined_type_missing_member: Warning<"binding type '%select{t|u|b|s|c}0' only applies to types containing %select{SRV resources|UAV resources|constant buffer resources|sampler state|numeric types}0">, InGroup<LegacyConstantRegisterBinding>;
 def err_hlsl_binding_type_mismatch: Error<"binding type '%select{t|u|b|s|c}0' only applies to %select{SRV resources|UAV resources|constant buffer resources|sampler state|numeric variables in the global scope}0">;

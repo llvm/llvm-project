@@ -3168,6 +3168,35 @@ static QualType getVectorElementType(ASTContext &Context, QualType VecTy) {
   return QualType();
 }
 
+static bool checkConstantArgValueRange(Sema &S, CallExpr *TheCall,
+                                       unsigned ArgNum,
+                                       const llvm::APSInt &Result, int Low,
+                                       int High, bool RangeIsError) {
+  if (S.isConstantEvaluatedContext())
+    return false;
+
+  // We can't check the value of a dependent argument.
+  Expr *Arg = TheCall->getArg(ArgNum);
+  if (Arg->isTypeDependent() || Arg->isValueDependent())
+    return false;
+
+  if (Result.getSExtValue() < Low || Result.getSExtValue() > High) {
+    if (RangeIsError) {
+      return S.Diag(TheCall->getBeginLoc(), diag::err_argument_invalid_range)
+             << toString(Result, 10) << Low << High << Arg->getSourceRange();
+    }
+
+    // Defer the warning until we know if the code will be emitted so that
+    // dead code can ignore this.
+    S.DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall,
+                          S.PDiag(diag::warn_argument_invalid_range)
+                              << toString(Result, 10) << Low << High
+                              << Arg->getSourceRange());
+  }
+
+  return false;
+}
+
 ExprResult
 Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
                                CallExpr *TheCall) {
@@ -3177,21 +3206,35 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   unsigned ICEArguments = 0;
   ASTContext::GetBuiltinTypeError Error;
   Context.GetBuiltinType(BuiltinID, Error, &ICEArguments);
+  SmallVector<Builtin::Context::ArgRange, 2> ArgRanges;
   if (Error != ASTContext::GE_None)
     ICEArguments = 0;  // Don't diagnose previously diagnosed errors.
+  else if (ICEArguments)
+    Context.BuiltinInfo.getArgRanges(BuiltinID, ArgRanges);
 
   // If any arguments are required to be ICE's, check and diagnose.
   for (unsigned ArgNo = 0; ICEArguments != 0; ++ArgNo) {
     // Skip arguments not required to be ICE's.
     if ((ICEArguments & (1 << ArgNo)) == 0) continue;
 
-    llvm::APSInt Result;
+    ICEArguments &= ~(1 << ArgNo);
+
     // If we don't have enough arguments, continue so we can issue better
     // diagnostic in checkArgCount(...)
-    if (ArgNo < TheCall->getNumArgs() &&
-        BuiltinConstantArg(TheCall, ArgNo, Result))
+    if (ArgNo >= TheCall->getNumArgs())
+      continue;
+
+    llvm::APSInt Result;
+    if (BuiltinConstantArg(TheCall, ArgNo, Result))
       return true;
-    ICEArguments &= ~(1 << ArgNo);
+
+    for (const Builtin::Context::ArgRange &Range : ArgRanges) {
+      if (Range.Index == ArgNo &&
+          checkConstantArgValueRange(*this, TheCall, ArgNo, Result, Range.Lower,
+                                     Range.Upper - 1,
+                                     /*RangeIsError=*/true))
+        return true;
+    }
   }
 
   FPOptions FPO;
@@ -7051,8 +7094,10 @@ bool Sema::BuiltinConstantArg(CallExpr *TheCall, unsigned ArgNum,
   if (!R) {
     auto *DRE = cast<DeclRefExpr>(TheCall->getCallee()->IgnoreParenCasts());
     auto *FDecl = cast<FunctionDecl>(DRE->getDecl());
-    return Diag(TheCall->getBeginLoc(), diag::err_constant_integer_arg_type)
-           << FDecl->getDeclName() << Arg->getSourceRange();
+    Diag(TheCall->getBeginLoc(), diag::err_constant_integer_arg_type)
+        << FDecl->getDeclName() << Arg->getSourceRange();
+    BPF().notePreserveAIEnumerator(Arg);
+    return true;
   }
   Result = *R;
 
@@ -7063,31 +7108,14 @@ bool Sema::BuiltinConstantArgRange(CallExpr *TheCall, unsigned ArgNum, int Low,
                                    int High, bool RangeIsError) {
   if (isConstantEvaluatedContext())
     return false;
-  llvm::APSInt Result;
-
-  // We can't check the value of a dependent argument.
-  Expr *Arg = TheCall->getArg(ArgNum);
-  if (Arg->isTypeDependent() || Arg->isValueDependent())
-    return false;
 
   // Check constant-ness first.
+  llvm::APSInt Result;
   if (BuiltinConstantArg(TheCall, ArgNum, Result))
     return true;
 
-  if (Result.getSExtValue() < Low || Result.getSExtValue() > High) {
-    if (RangeIsError)
-      return Diag(TheCall->getBeginLoc(), diag::err_argument_invalid_range)
-             << toString(Result, 10) << Low << High << Arg->getSourceRange();
-    else
-      // Defer the warning until we know if the code will be emitted so that
-      // dead code can ignore this.
-      DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall,
-                          PDiag(diag::warn_argument_invalid_range)
-                              << toString(Result, 10) << Low << High
-                              << Arg->getSourceRange());
-  }
-
-  return false;
+  return checkConstantArgValueRange(*this, TheCall, ArgNum, Result, Low, High,
+                                    RangeIsError);
 }
 
 bool Sema::BuiltinConstantArgMultiple(CallExpr *TheCall, unsigned ArgNum,

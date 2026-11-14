@@ -1985,10 +1985,11 @@ def PedanticMacros : DiagGroup<"pedantic-macros",
 def BranchProtection : DiagGroup<"branch-protection">;
 
 // HLSL diagnostic groups
+def HLSL202x : DiagGroup<"hlsl-202x-extensions">;
 def HLSL202y : DiagGroup<"hlsl-202y-extensions">;
 
 // Warnings for HLSL Clang extensions
-def HLSLExtension : DiagGroup<"hlsl-extensions", [HLSL202y]>;
+def HLSLExtension : DiagGroup<"hlsl-extensions", [HLSL202x, HLSL202y]>;
 
 // Warning for mix packoffset and non-packoffset.
 def HLSLMixPackOffset : DiagGroup<"mix-packoffset">;
@@ -2074,3 +2075,5 @@ def UnguardedBuiltinUsageAMDGPU : DiagGroup<"amdgpu-unguarded-builtin-usage">;
 def AvailableVisibleAMDGPU : DiagGroup<"amdgpu-av">;
 
 def DynamicDebugging : DiagGroup<"dynamic-debugging">;
+
+def BPFEnumNotRelocated : DiagGroup<"bpf-enum-not-relocated">;

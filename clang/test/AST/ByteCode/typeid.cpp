@@ -111,3 +111,13 @@ namespace TypeIdInOtherStruct {
   auto &zti = typeid(z.y);
   static_assert(&zti == &typeid(Y));
 }
+
+/// CXXTypeIdExpr containing errors.
+namespace std {
+struct type_info struct S { // both-error {{cannot combine with previous 'struct' declaration specifier}}
+  virtual ~S();
+  constexpr void foo() { typeid((S &&)*nullptr); } // both-error {{indirection requires pointer operand}} \
+                                                   // both-warning {{expression with side effects will be evaluated despite being used as an operand to 'typeid'}} \
+                                                   // both-warning {{expression result unused}}
+};
+}; // namespace std
