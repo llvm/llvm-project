@@ -1601,6 +1601,16 @@ m_NUWAddLike(const LHS &L, const RHS &R) {
   return m_CombineOr(m_NUWAdd(L, R), m_DisjointOr(L, R));
 }
 
+/// Match either "add nuw" or "or disjoint", with LHS and RHS commutable.
+template <typename LHS, typename RHS>
+inline match_combine_or<
+    OverflowingBinaryOp_match<LHS, RHS, Instruction::Add,
+                              OverflowingBinaryOperator::NoUnsignedWrap, true>,
+    DisjointOr_match<LHS, RHS, true>>
+m_c_NUWAddLike(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_c_NUWAdd(L, R), m_c_DisjointOr(L, R));
+}
+
 template <typename LHS, typename RHS>
 struct XorLike_match {
   LHS L;

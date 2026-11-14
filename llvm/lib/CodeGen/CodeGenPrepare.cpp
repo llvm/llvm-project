@@ -1988,8 +1988,7 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
     AddOffset = nullptr;
   } else {
     // Search through a NUW add (or disjoint or) on top of the loop increment.
-    if (!match(Incr, m_CombineOr(m_c_NUWAdd(m_Phi(PN), m_Value(AddOffset)),
-                                 m_DisjointOr(m_Phi(PN), m_Value(AddOffset)))))
+    if (!match(Incr, m_c_NUWAddLike(m_Phi(PN), m_Value(AddOffset))))
       return false;
     AddInst = Incr;
   }

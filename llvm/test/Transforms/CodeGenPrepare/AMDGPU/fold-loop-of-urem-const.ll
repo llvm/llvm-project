@@ -328,3 +328,43 @@ for.body:
   %exitcond.not = icmp uge i32 %inc, %N
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
+
+; The loop-invariant offset is the first operand of the `or disjoint`.
+define void @const_rem_or_disjoint_commuted(i32 %N, i32 %off) {
+; CHECK-LABEL: define void @const_rem_or_disjoint_commuted(
+; CHECK-SAME: i32 [[N:%.*]], i32 [[OFF:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CMP3_NOT:%.*]] = icmp eq i32 [[N]], 0
+; CHECK-NEXT:    br i1 [[CMP3_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
+; CHECK:       [[FOR_BODY_PREHEADER]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = urem i32 [[OFF]], 5
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_COND_CLEANUP]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ [[TMP0]], %[[FOR_BODY_PREHEADER]] ], [ [[TMP4:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INC:%.*]], %[[FOR_BODY]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    tail call void @use.i32(i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i32 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 5
+; CHECK-NEXT:    [[TMP4]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]
+; CHECK-NEXT:    [[INC]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+;
+entry:
+  %cmp3.not = icmp eq i32 %N, 0
+  br i1 %cmp3.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %i = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %idx = or disjoint i32 %off, %i
+  %rem = urem i32 %idx, 5
+  tail call void @use.i32(i32 %rem)
+  %inc = add nuw i32 %i, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
