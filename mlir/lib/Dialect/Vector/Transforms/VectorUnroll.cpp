@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -86,9 +87,12 @@ static Operation *cloneOpWithOperandsAndTypes(OpBuilder &builder, Location loc,
 }
 
 /// Return the target shape for unrolling for the given `op`. Return
-/// std::nullopt if the op shouldn't be or cannot be unrolled.
+/// std::nullopt if the op shouldn't be or cannot be unrolled. Ops masked by an
+/// enclosing vector.mask are rejected unless `allowMasked` is set, which only
+/// patterns that slice the mask for each unrolled op may do.
 static std::optional<SmallVector<int64_t>>
-getTargetShape(const vector::UnrollVectorOptions &options, Operation *op) {
+getTargetShape(const vector::UnrollVectorOptions &options, Operation *op,
+               bool allowMasked = false) {
   LDBG() << "Get unroll shape for op " << op->getName().getStringRef();
   if (options.filterConstraint && failed(options.filterConstraint(op))) {
     LDBG() << "--no filter constraint -> BAIL";
@@ -97,7 +101,7 @@ getTargetShape(const vector::UnrollVectorOptions &options, Operation *op) {
   // Unrolling a masked op would put several ops inside its vector.mask region,
   // and the enclosing mask would not be sliced to match them.
   auto maskableOp = dyn_cast<vector::MaskableOpInterface>(op);
-  if (maskableOp && maskableOp.isMasked()) {
+  if (!allowMasked && maskableOp && maskableOp.isMasked()) {
     LDBG() << "--op is masked -> BAIL";
     return std::nullopt;
   }
@@ -151,26 +155,81 @@ getUnrollOrder(unsigned numLoops, Operation *op,
   return loopOrder;
 }
 
-namespace {
+/// Fail if `xferOp`, masked by an enclosing vector.mask, is masked in a way
+/// that the transfer unrolling patterns do not support yet.
+template <typename TransferOpTy>
+static LogicalResult
+checkSupportedMaskedTransferUnrolling(TransferOpTy xferOp,
+                                      PatternRewriter &rewriter) {
+  // Extra dimensions from a vector element type are not represented in the
+  // transfer's mask.
+  if (xferOp.getVectorType().getRank() != xferOp.getTransferRank())
+    return rewriter.notifyMatchFailure(
+        xferOp, "masked transfer with a vector element type");
+  // With a minor identity map and a scalar element type, the mask has the same
+  // shape as the vector, so each tile of the vector has the tile of the mask at
+  // the same offsets.
+  if (!xferOp.getPermutationMap().isMinorIdentity())
+    return rewriter.notifyMatchFailure(
+        xferOp, "masked transfer with a non-minor-identity map");
+  if (xferOp.getVectorType().isScalable())
+    return rewriter.notifyMatchFailure(xferOp, "masked scalable transfer");
+  return success();
+}
 
+/// Wrap `tileOp`, the new transfer for one tile, in a vector.mask with the tile
+/// of `maskingOp`'s mask (and passthru, if any) at `offsets` with shape
+/// `sizes`. `maskingOp` is the vector.mask around the original transfer;
+/// `tileOp` is created outside of it. Return `tileOp` itself if `maskingOp` is
+/// null.
+static Operation *maskTile(PatternRewriter &rewriter, Location loc,
+                           Operation *tileOp,
+                           vector::MaskingOpInterface maskingOp,
+                           ArrayRef<int64_t> offsets, ArrayRef<int64_t> sizes,
+                           ArrayRef<int64_t> strides) {
+  if (!maskingOp)
+    return tileOp;
+  Value mask = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+      loc, maskingOp.getMask(), offsets, sizes, strides);
+  Value passthru;
+  if (maskingOp.hasPassthru())
+    passthru = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+        loc, maskingOp.getPassthru(), offsets, sizes, strides);
+  return vector::maskOperation(rewriter, tileOp, mask, passthru);
+}
+
+namespace {
 struct UnrollTransferReadPattern
-    : public OpRewritePattern<vector::TransferReadOp> {
+    : public vector::MaskableOpRewritePattern<vector::TransferReadOp> {
   UnrollTransferReadPattern(MLIRContext *context,
                             const vector::UnrollVectorOptions &options,
                             PatternBenefit benefit = 1)
-      : OpRewritePattern<vector::TransferReadOp>(context, benefit),
+      : MaskableOpRewritePattern<vector::TransferReadOp>(context, benefit),
         options(options) {}
 
-  LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
-                                PatternRewriter &rewriter) const override {
+  FailureOr<Value>
+  matchAndRewriteMaskableOp(vector::TransferReadOp readOp,
+                            vector::MaskingOpInterface maskingOp,
+                            PatternRewriter &rewriter) const override {
     // TODO: support 0-d corner case.
     if (readOp.getTransferRank() == 0)
       return failure();
     if (readOp.getMask())
       return failure();
-    auto targetShape = getTargetShape(options, readOp);
+    // A read masked by an enclosing vector.mask is unrolled into one
+    // vector.mask per tile, each with its tile of the mask.
+    if (maskingOp &&
+        failed(checkSupportedMaskedTransferUnrolling(readOp, rewriter)))
+      return failure();
+    auto targetShape = getTargetShape(options, readOp, /*allowMasked=*/true);
     if (!targetShape)
       return failure();
+    // The mask is sliced with one offset per vector dim, so the tiles must have
+    // the rank of the vector.
+    if (maskingOp && readOp.getVectorType().getRank() !=
+                         static_cast<int64_t>(targetShape->size()))
+      return rewriter.notifyMatchFailure(
+          readOp, "masked read with a target shape of a different rank");
     auto sourceVectorType = readOp.getVectorType();
     SmallVector<int64_t> strides(targetShape->size(), 1);
     Location loc = readOp.getLoc();
@@ -191,16 +250,17 @@ struct UnrollTransferReadPattern
       SmallVector<Value> indices =
           sliceTransferIndices(elementOffsets, originalIndices,
                                readOp.getPermutationMap(), loc, rewriter);
-      auto slicedRead = vector::TransferReadOp::create(
+      Operation *slicedRead = vector::TransferReadOp::create(
           rewriter, loc, targetType, readOp.getBase(), indices,
           readOp.getPermutationMapAttr(), readOp.getPadding(), readOp.getMask(),
           readOp.getInBoundsAttr());
+      slicedRead = maskTile(rewriter, loc, slicedRead, maskingOp,
+                            elementOffsets, *targetShape, strides);
 
       result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
-          loc, slicedRead, result, elementOffsets, strides);
+          loc, slicedRead->getResult(0), result, elementOffsets, strides);
     }
-    rewriter.replaceOp(readOp, result);
-    return success();
+    return result;
   }
 
 private:
@@ -208,22 +268,29 @@ private:
 };
 
 struct UnrollTransferWritePattern
-    : public OpRewritePattern<vector::TransferWriteOp> {
+    : public vector::MaskableOpRewritePattern<vector::TransferWriteOp> {
   UnrollTransferWritePattern(MLIRContext *context,
                              const vector::UnrollVectorOptions &options,
                              PatternBenefit benefit = 1)
-      : OpRewritePattern<vector::TransferWriteOp>(context, benefit),
+      : MaskableOpRewritePattern<vector::TransferWriteOp>(context, benefit),
         options(options) {}
 
-  LogicalResult matchAndRewrite(vector::TransferWriteOp writeOp,
-                                PatternRewriter &rewriter) const override {
+  FailureOr<Value>
+  matchAndRewriteMaskableOp(vector::TransferWriteOp writeOp,
+                            vector::MaskingOpInterface maskingOp,
+                            PatternRewriter &rewriter) const override {
     // TODO: support 0-d corner case.
     if (writeOp.getTransferRank() == 0)
       return failure();
 
     if (writeOp.getMask())
       return failure();
-    auto targetShape = getTargetShape(options, writeOp);
+    // A write masked by an enclosing vector.mask is unrolled into one
+    // vector.mask per tile, each with its tile of the mask.
+    if (maskingOp &&
+        failed(checkSupportedMaskedTransferUnrolling(writeOp, rewriter)))
+      return failure();
+    auto targetShape = getTargetShape(options, writeOp, /*allowMasked=*/true);
     if (!targetShape)
       return failure();
     auto sourceVectorType = writeOp.getVectorType();
@@ -254,15 +321,14 @@ struct UnrollTransferWritePattern
           rewriter, loc, slicedVector,
           resultTensor ? resultTensor : writeOp.getBase(), indices,
           writeOp.getPermutationMapAttr(), writeOp.getInBoundsAttr());
+      slicedWrite = maskTile(rewriter, loc, slicedWrite, maskingOp,
+                             elementOffsets, *targetShape, strides);
       // For the tensor case update the destination for the next transfer write.
       if (!slicedWrite->getResults().empty())
         resultTensor = slicedWrite->getResult(0);
     }
-    if (resultTensor)
-      rewriter.replaceOp(writeOp, resultTensor);
-    else
-      rewriter.eraseOp(writeOp);
-    return success();
+    // A write to a memref has no result to replace.
+    return resultTensor;
   }
 
 private:
@@ -1744,7 +1810,6 @@ struct UnrollDeinterleavePattern
 private:
   vector::UnrollVectorOptions options;
 };
-
 } // namespace
 
 void mlir::vector::populateVectorUnrollPatterns(
