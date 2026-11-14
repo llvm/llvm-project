@@ -290,7 +290,7 @@ TEST_F(SarifDocumentWriterTest, checkSerializingResultsWithCustomRuleConfig) {
 TEST_F(SarifDocumentWriterTest, checkSerializingArtifacts) {
   // GIVEN:
   const std::string ExpectedOutput =
-      R"({"$schema":"https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/sarif-schema-2.1.0.json","runs":[{"artifacts":[{"length":40,"location":{"index":0,"uri":"file:///main.cpp"},"mimeType":"text/plain","roles":["resultFile"]}],"columnKind":"unicodeCodePoints","results":[{"level":"error","locations":[{"physicalLocation":{"artifactLocation":{"index":0,"uri":"file:///main.cpp"},"region":{"endColumn":14,"startColumn":14,"startLine":3}}}],"message":{"text":"expected ';' after top level declarator"},"relatedLocations":[{"physicalLocation":{"artifactLocation":{"index":0,"uri":"file:///main.cpp"},"region":{"endColumn":14,"startColumn":14,"startLine":3}}}],"ruleId":"clang.unittest","ruleIndex":0}],"tool":{"driver":{"fullName":"sarif test runner","informationUri":"https://clang.llvm.org/docs/UsersManual.html","language":"en-US","name":"sarif test","rules":[{"defaultConfiguration":{"enabled":true,"level":"warning","rank":-1},"fullDescription":{"text":"Example rule created during unit tests"},"id":"clang.unittest","name":"clang unit test"}],"version":"1.0.0"}}}],"version":"2.1.0"})";    
+      R"({"$schema":"https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/sarif-schema-2.1.0.json","runs":[{"artifacts":[{"length":40,"location":{"index":0,"uri":"file:///main.cpp"},"mimeType":"text/plain","roles":["resultFile"]}],"columnKind":"unicodeCodePoints","results":[{"level":"error","locations":[{"physicalLocation":{"artifactLocation":{"index":0,"uri":"file:///main.cpp"},"region":{"endColumn":14,"startColumn":14,"startLine":3}}}],"message":{"text":"expected ';' after top level declarator"},"relatedLocations":[{"id":0,"physicalLocation":{"artifactLocation":{"index":0,"uri":"file:///main.cpp"},"region":{"endColumn":14,"startColumn":14,"startLine":3}}}],"ruleId":"clang.unittest","ruleIndex":0}],"tool":{"driver":{"fullName":"sarif test runner","informationUri":"https://clang.llvm.org/docs/UsersManual.html","language":"en-US","name":"sarif test","rules":[{"defaultConfiguration":{"enabled":true,"level":"warning","rank":-1},"fullDescription":{"text":"Example rule created during unit tests"},"id":"clang.unittest","name":"clang unit test"}],"version":"1.0.0"}}}],"version":"2.1.0"})";
 
   SarifDocumentWriter Writer{SourceMgr};
   const SarifRule &Rule =
@@ -386,6 +386,23 @@ TEST_F(SarifDocumentWriterTest, checkSerializingCodeflows) {
 
   // THEN: Assert that the serialized SARIF is as expected
   ASSERT_THAT(Output, ::testing::StrEq(ExpectedOutput));
+}
+
+TEST_F(SarifDocumentWriterTest, artifactIndexMatchesArrayPosition) {
+  SarifDocumentWriter Writer{SourceMgr};
+  Writer.createRun("sarif test", "sarif test runner");
+  unsigned RuleIdx = Writer.createRule(SarifRule::create());
+
+  // "/z.cpp" is seen first (index 0) but sorts after "/a.h" by name.
+  FileID ZFile = registerSource("/z.cpp", "int z;\n");
+  FileID AFile = registerSource("/a.h", "int a;\n");
+  Writer.appendResult(SarifResult::create(RuleIdx).addLocations(
+      {getFakeCharSourceRange(ZFile, {1, 1}, {1, 2}),
+       getFakeCharSourceRange(AFile, {1, 1}, {1, 2})}));
+
+  std::string Output = serializeSarifDocument(Writer.createDocument());
+  EXPECT_THAT(Output, ::testing::HasSubstr(
+                          R"("location":{"index":0,"uri":"file:///z.cpp"})"));
 }
 
 } // namespace
