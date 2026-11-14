@@ -643,7 +643,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_SUBVECTOR, {MVT::v4i16, MVT::v8i8},
                          Custom);
     } else {
-      setOperationAction(ISD::MUL, P64VecVTs, Legal);
+      setOperationAction(ISD::MUL, MVT::v2i32, Legal);
+      setOperationAction(ISD::MUL, {MVT::v4i16, MVT::v8i8}, Custom);
       setOperationAction({ISD::MULHS, ISD::MULHU}, {MVT::v2i32, MVT::v4i16},
                          Legal);
       setOperationAction({ISD::MULHS, ISD::MULHU}, MVT::v8i8, Custom);
@@ -9630,10 +9631,11 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       }
       return DAG.getNode(ISD::TRUNCATE, DL, VT, Res);
     }
-    // Lower v8i8 MULHS/MULHU on RV64 via a pair of widening byte multiplies
-    // (picking out the even/odd result lanes) recombined with PPAIRO.
-    if (Subtarget.hasStdExtP() && Subtarget.is64Bit() && VT == MVT::v8i8 &&
-        Opc != ISD::MUL) {
+    // Lower packed MUL and byte MULHS/MULHU on RV64 via a pair of widening
+    // multiplies, selecting the low/high halves with PPAIRE/PPAIRO.
+    if (Subtarget.hasStdExtP() && Subtarget.is64Bit() &&
+        ((Opc == ISD::MUL && (VT == MVT::v8i8 || VT == MVT::v4i16)) ||
+         (VT == MVT::v8i8 && (Opc == ISD::MULHS || Opc == ISD::MULHU)))) {
       SDLoc DL(Op);
       SDValue LHS = Op.getOperand(0);
       SDValue RHS = Op.getOperand(1);
@@ -9641,9 +9643,11 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
                                          : RISCVISD::PMUL_HALVES_00;
       unsigned HiOpc = Opc == ISD::MULHU ? RISCVISD::PMULU_HALVES_11
                                          : RISCVISD::PMUL_HALVES_11;
-      SDValue Lo = DAG.getNode(LoOpc, DL, MVT::v4i16, LHS, RHS);
-      SDValue Hi = DAG.getNode(HiOpc, DL, MVT::v4i16, LHS, RHS);
-      return DAG.getNode(RISCVISD::PPAIRO, DL, VT, DAG.getBitcast(VT, Lo),
+      MVT WideVT = VT == MVT::v8i8 ? MVT::v4i16 : MVT::v2i32;
+      SDValue Lo = DAG.getNode(LoOpc, DL, WideVT, LHS, RHS);
+      SDValue Hi = DAG.getNode(HiOpc, DL, WideVT, LHS, RHS);
+      unsigned PairOpc = Opc == ISD::MUL ? RISCVISD::PPAIRE : RISCVISD::PPAIRO;
+      return DAG.getNode(PairOpc, DL, VT, DAG.getBitcast(VT, Lo),
                          DAG.getBitcast(VT, Hi));
     }
     return lowerToScalableOp(Op, DAG);
