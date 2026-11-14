@@ -18480,6 +18480,10 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
   if (SDValue R = propagateUnaryUndef(DAG, N0, VT))
     return R;
 
+  // A bitcast of an otherwise unused frozen undef is itself a frozen undef.
+  if (ISD::isFreezeUndef(N0.getNode()) && N0.hasOneUse())
+    return DAG.getFreeze(DAG.getUNDEF(VT));
+
   // If the input is a BUILD_VECTOR with all constant elements, fold this now.
   // Only do this before legalize types, unless both types are integer and the
   // scalar type is legal. Only do this before legalize ops, since the target

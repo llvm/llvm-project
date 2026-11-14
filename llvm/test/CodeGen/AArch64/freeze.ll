@@ -118,11 +118,17 @@ define <16 x i8> @freeze_v16i8() {
 }
 
 define <32 x i8> @freeze_v32i8() {
-; CHECK-LABEL: freeze_v32i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v0.16b, v0.16b, v0.16b
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_v32i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add v0.16b, v0.16b, v0.16b
+; CHECK-SD-NEXT:    add v1.16b, v0.16b, v0.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_v32i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v0.16b, v0.16b, v0.16b
+; CHECK-GI-NEXT:    mov v1.16b, v0.16b
+; CHECK-GI-NEXT:    ret
   %y1 = freeze <32 x i8> undef
   %t1 = add <32 x i8> %y1, %y1
   ret <32 x i8> %t1
@@ -177,11 +183,17 @@ define <8 x i16> @freeze_v8i16() {
 }
 
 define <16 x i16> @freeze_v16i16() {
-; CHECK-LABEL: freeze_v16i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v0.8h, v0.8h, v0.8h
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_v16i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add v0.8h, v0.8h, v0.8h
+; CHECK-SD-NEXT:    add v1.8h, v0.8h, v0.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_v16i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v0.8h, v0.8h, v0.8h
+; CHECK-GI-NEXT:    mov v1.16b, v0.16b
+; CHECK-GI-NEXT:    ret
   %y1 = freeze <16 x i16> undef
   %t1 = add <16 x i16> %y1, %y1
   ret <16 x i16> %t1
@@ -218,11 +230,17 @@ define <4 x i32> @freeze_v4i32() {
 }
 
 define <8 x i32> @freeze_v8i32() {
-; CHECK-LABEL: freeze_v8i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_v8i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add v0.4s, v0.4s, v0.4s
+; CHECK-SD-NEXT:    add v1.4s, v0.4s, v0.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_v8i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v0.4s, v0.4s, v0.4s
+; CHECK-GI-NEXT:    mov v1.16b, v0.16b
+; CHECK-GI-NEXT:    ret
   %y1 = freeze <8 x i32> undef
   %t1 = add <8 x i32> %y1, %y1
   ret <8 x i32> %t1
@@ -243,7 +261,8 @@ define <3 x i64> @freeze_v3i64() {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    add v0.2d, v0.2d, v0.2d
 ; CHECK-SD-NEXT:    mov d1, v0.d[1]
-; CHECK-SD-NEXT:    fmov d2, d0
+; CHECK-SD-NEXT:    add d2, d0, d0
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: freeze_v3i64:
@@ -260,11 +279,17 @@ define <3 x i64> @freeze_v3i64() {
 }
 
 define <4 x i64> @freeze_v4i64() {
-; CHECK-LABEL: freeze_v4i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v0.2d, v0.2d, v0.2d
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_v4i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add v0.2d, v0.2d, v0.2d
+; CHECK-SD-NEXT:    add v1.2d, v0.2d, v0.2d
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_v4i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add v0.2d, v0.2d, v0.2d
+; CHECK-GI-NEXT:    mov v1.16b, v0.16b
+; CHECK-GI-NEXT:    ret
   %y1 = freeze <4 x i64> undef
   %t1 = add <4 x i64> %y1, %y1
   ret <4 x i64> %t1
@@ -318,9 +343,9 @@ define <4 x ptr> @freeze_v4p0() {
 ; CHECK-SD-LABEL: freeze_v4p0:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    mov w8, #4 // =0x4
-; CHECK-SD-NEXT:    dup v0.2d, x8
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v0.2d
-; CHECK-SD-NEXT:    mov v1.16b, v0.16b
+; CHECK-SD-NEXT:    dup v1.2d, x8
+; CHECK-SD-NEXT:    add v0.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    add v1.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: freeze_v4p0:
