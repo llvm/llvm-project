@@ -13,7 +13,9 @@ if(LLVM_ENABLE_PIC)
     set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_CURRENT_SOURCE_DIR}/Remarks.exports)
   endif()
 
-  add_llvm_library(Remarks SHARED INSTALL_WITH_TOOLCHAIN ${SOURCES})
+  # LLVM_C_EXPORTS (below) sets this library apart from every shared PCH.
+  add_llvm_library(Remarks SHARED INSTALL_WITH_TOOLCHAIN DISABLE_PCH_REUSE
+    ${SOURCES})
 
   # libRemarks defines LLVMRemarkVersion() from the LLVM C API.
   target_compile_definitions(Remarks PRIVATE LLVM_C_EXPORTS)
