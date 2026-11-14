@@ -272,20 +272,19 @@ public:
   }
 };
 
-/// Check if a memory operation doesn't alias with memory operations using
-/// scoped noalias metadata, in blocks in the single-successor chain between \p
-/// FirstBB and \p LastBB. If \p SinkInfo is std::nullopt, only recipes that may
-/// write to memory are checked (for load hoisting). Otherwise recipes that both
-/// read and write memory are checked, and SCEV is used to prove no-alias
-/// between the group leader and other replicate recipes (for store sinking).
+/// Check if a memory operation doesn't alias with memory operations in \p
+/// Blocks using scoped noalias metadata. If \p SinkInfo is std::nullopt, only
+/// recipes that may write to memory are checked (for load hoisting). Otherwise
+/// recipes that both read and write memory are checked, and SCEV is used to
+/// prove no-alias between the group leader and other replicate recipes (for
+/// store sinking).
 static bool
 canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
-                               VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
+                               ArrayRef<VPBasicBlock *> Blocks,
                                std::optional<SinkStoreInfo> SinkInfo = {}) {
   bool CheckReads = SinkInfo.has_value();
-  ScopedNoAliasAAResult ScopedNoAlias(FirstBB->getPlan()->getContext());
-  for (VPBasicBlock *VPBB :
-       VPBlockUtils::blocksInSingleSuccessorChainBetween(FirstBB, LastBB)) {
+  ScopedNoAliasAAResult ScopedNoAlias(Blocks.front()->getPlan()->getContext());
+  for (VPBasicBlock *VPBB : Blocks) {
     for (VPRecipeBase &R : *VPBB) {
       if (SinkInfo && SinkInfo->shouldSkip(R))
         continue;
@@ -2481,16 +2480,18 @@ void VPlanTransforms::cse(VPlan &Plan, const VPDominatorTree &VPDT) {
 }
 
 /// Return true if we do not know how to (mechanically) hoist or sink a
-/// non-memory or memory recipe \p R out of a loop region. When sinking, passing
-/// \p Sinking = true ensures that assumes aren't sunk.
-static bool cannotHoistOrSinkRecipe(VPRecipeBase &R, VPBasicBlock *FirstBB,
-                                    VPBasicBlock *LastBB,
+/// non-memory or memory recipe \p R out of a loop region with blocks \p
+/// RegionBlocks. When sinking, passing \p Sinking = true ensures that assumes
+/// aren't sunk.
+static bool cannotHoistOrSinkRecipe(VPRecipeBase &R,
+                                    ArrayRef<VPBasicBlock *> RegionBlocks,
                                     bool Sinking = false) {
   if (!isa<VPReplicateRecipe>(R) || !R.mayReadOrWriteMemory() ||
       match(&R, m_Intrinsic<Intrinsic::assume>()))
     return vputils::cannotHoistOrSinkRecipe(R, Sinking);
 
-  // Check that the memory operation doesn't alias between FirstBB and LastBB.
+  // Check that the memory operation doesn't alias with any memory operation in
+  // the region.
   auto MemLoc = vputils::getMemoryLocation(R);
 
   // TODO: Could make use of SinkStoreInfo::isNoAliasViaDistance by collecting
@@ -2500,7 +2501,7 @@ static bool cannotHoistOrSinkRecipe(VPRecipeBase &R, VPBasicBlock *FirstBB,
               : std::nullopt;
 
   return !MemLoc ||
-         !canHoistOrSinkWithNoAliasCheck(*MemLoc, FirstBB, LastBB, SinkInfo);
+         !canHoistOrSinkWithNoAliasCheck(*MemLoc, RegionBlocks, SinkInfo);
 }
 
 /// Move loop-invariant recipes out of the vector loop region in \p Plan.
@@ -2516,6 +2517,16 @@ static void licm(VPlan &Plan, const VPDominatorTree &VPDT) {
   assert(Preheader->getSingleSuccessor() == LoopRegion &&
          "Expected vector prehader's successor to be the vector loop region");
   VPBasicBlock *ExitingVPBB = LoopRegion->getExitingBasicBlock();
+  // The blocks of the region need not form a single-successor chain: the
+  // region of an outer-loop plan may contain uniform branches, also inside
+  // inner loops. Check all of them for aliasing memory recipes. The deep
+  // traversal continues from the region's exiting block into the blocks after
+  // the region; those are not in any region, skip them.
+  SmallVector<VPBasicBlock *> RegionBlocks;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(LoopRegion->getEntry())))
+    if (VPBB->getParent())
+      RegionBlocks.push_back(VPBB);
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(LoopRegion->getEntry()))) {
     if (!VPDT.dominates(VPBB, ExitingVPBB))
@@ -2525,8 +2536,7 @@ static void licm(VPlan &Plan, const VPDominatorTree &VPDT) {
             return !Op->isDefinedOutsideLoopRegions();
           }))
         continue;
-      if (cannotHoistOrSinkRecipe(R, LoopRegion->getEntryBasicBlock(),
-                                  LoopRegion->getExitingBasicBlock()))
+      if (cannotHoistOrSinkRecipe(R, RegionBlocks))
         continue;
       R.moveBefore(Preheader->end());
     }
@@ -2580,9 +2590,7 @@ static void licm(VPlan &Plan, const VPDominatorTree &VPDT) {
           }))
         continue;
 
-      if (cannotHoistOrSinkRecipe(R, LoopRegion->getEntryBasicBlock(),
-                                  LoopRegion->getExitingBasicBlock(),
-                                  /*Sinking=*/true))
+      if (cannotHoistOrSinkRecipe(R, RegionBlocks, /*Sinking=*/true))
         continue;
 
       [[maybe_unused]] auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
@@ -4220,7 +4228,10 @@ void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan,
 
     // Check that the load doesn't alias with stores between first and last.
     auto LoadLoc = vputils::getMemoryLocation(*EarliestLoad);
-    if (!LoadLoc || !canHoistOrSinkWithNoAliasCheck(*LoadLoc, FirstBB, LastBB))
+    if (!LoadLoc ||
+        !canHoistOrSinkWithNoAliasCheck(
+            *LoadLoc,
+            VPBlockUtils::blocksInSingleSuccessorChainBetween(FirstBB, LastBB)))
       continue;
 
     // Collect common metadata from all loads in the group.
@@ -4264,7 +4275,10 @@ canSinkStoreWithNoAliasCheck(ArrayRef<VPReplicateRecipe *> StoresToSink,
   VPBasicBlock *FirstBB = StoresToSink.front()->getParent();
   VPBasicBlock *LastBB = StoresToSink.back()->getParent();
   SinkStoreInfo SinkInfo(StoresToSink, *StoresToSink[0], PSE, L);
-  return canHoistOrSinkWithNoAliasCheck(*StoreLoc, FirstBB, LastBB, SinkInfo);
+  return canHoistOrSinkWithNoAliasCheck(
+      *StoreLoc,
+      VPBlockUtils::blocksInSingleSuccessorChainBetween(FirstBB, LastBB),
+      SinkInfo);
 }
 
 void VPlanTransforms::sinkPredicatedStores(VPlan &Plan,
