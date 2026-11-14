@@ -327,7 +327,7 @@
 #define LLVM_READNONE
 #endif
 
-#if __has_attribute(pure) || defined(__GNUC__)
+#if __has_attribute(__pure__) || defined(__GNUC__)
 // aka 'PURE' but following LLVM Conventions.
 #define LLVM_READONLY __attribute__((__pure__))
 #else
