@@ -45,6 +45,7 @@ define <2 x bfloat> @sqrt_v2bf16(<2 x bfloat> %a) {
 ; GFX12-TRUE16-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-TRUE16-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-SDAG-NEXT:    v_sqrt_bf16_e32 v0.l, v0.l
+; GFX12-TRUE16-SDAG-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX12-TRUE16-SDAG-NEXT:    v_sqrt_bf16_e32 v0.h, v0.h
 ; GFX12-TRUE16-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -53,6 +54,7 @@ define <2 x bfloat> @sqrt_v2bf16(<2 x bfloat> %a) {
 ; GFX12-TRUE16-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-TRUE16-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-GISEL-NEXT:    v_sqrt_bf16_e32 v0.l, v0.l
+; GFX12-TRUE16-GISEL-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX12-TRUE16-GISEL-NEXT:    v_sqrt_bf16_e32 v0.h, v0.h
 ; GFX12-TRUE16-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -63,7 +65,7 @@ define <2 x bfloat> @sqrt_v2bf16(<2 x bfloat> %a) {
 ; GFX12-FAKE16-SDAG-NEXT:    v_sqrt_bf16_e64 v1, v0 op_sel:[1,0]
 ; GFX12-FAKE16-SDAG-NEXT:    v_sqrt_bf16_e32 v0, v0
 ; GFX12-FAKE16-SDAG-NEXT:    v_nop
-; GFX12-FAKE16-SDAG-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-FAKE16-SDAG-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX12-FAKE16-SDAG-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX12-FAKE16-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -74,7 +76,7 @@ define <2 x bfloat> @sqrt_v2bf16(<2 x bfloat> %a) {
 ; GFX12-FAKE16-GISEL-NEXT:    v_sqrt_bf16_e32 v1, v0
 ; GFX12-FAKE16-GISEL-NEXT:    v_sqrt_bf16_e64 v0, v0 op_sel:[1,0]
 ; GFX12-FAKE16-GISEL-NEXT:    v_nop
-; GFX12-FAKE16-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-FAKE16-GISEL-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX12-FAKE16-GISEL-NEXT:    v_pack_b32_f16 v0, v1, v0
 ; GFX12-FAKE16-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %r.val = call <2 x bfloat> @llvm.sqrt.v2bf16(<2 x bfloat> %a)

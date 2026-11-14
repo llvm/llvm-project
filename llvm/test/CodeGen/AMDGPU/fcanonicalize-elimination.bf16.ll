@@ -21,7 +21,7 @@ define bfloat @test_canonicalize_amdgcn_tanh_bf16(bfloat %a) {
 ; FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; FAKE16-NEXT:    v_tanh_bf16_e32 v0, v0
 ; FAKE16-NEXT:    v_nop
-; FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; FAKE16-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
