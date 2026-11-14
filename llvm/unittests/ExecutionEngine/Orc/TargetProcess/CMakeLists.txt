@@ -1,0 +1,5 @@
+set(LLVM_LINK_COMPONENTS OrcTargetProcess Support DebugInfoDWARF TargetParser)
+add_llvm_unittest(OrcPerfJITUnwindInfoTests PerfJITUnwindInfoTest.cpp)
+target_include_directories(OrcPerfJITUnwindInfoTests PRIVATE
+  ${LLVM_MAIN_SRC_DIR}/lib/ExecutionEngine/Orc/TargetProcess)
+target_link_libraries(OrcPerfJITUnwindInfoTests PRIVATE LLVMTestingSupport)
