@@ -27,6 +27,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -116,6 +117,77 @@ INITIALIZE_PASS_END(IndirectBrExpandLegacyPass, DEBUG_TYPE,
 
 FunctionPass *llvm::createIndirectBrExpandPass(CodeGenOptLevel OptLevel) {
   return new IndirectBrExpandLegacyPass(OptLevel);
+}
+
+/// Update the PHI nodes in the successors of \p IBrs, which are about to be
+/// replaced. A successor's PHIs have one entry per indirectbr edge, i.e. one
+/// per occurrence in the destination list. After the rewrite, each block in
+/// \p SwitchSuccs is reached exactly once, from \p SwitchBB, and the other
+/// successors are no longer reached from the indirectbr blocks at all.
+static void
+updateSuccessorPHIs(ArrayRef<IndirectBrInst *> IBrs, BasicBlock *SwitchBB,
+                    const SmallPtrSetImpl<BasicBlock *> &SwitchSuccs) {
+  SmallPtrSet<BasicBlock *, 4> IBrBlocks;
+  SmallSetVector<BasicBlock *, 8> Succs;
+  for (IndirectBrInst *IBr : IBrs) {
+    IBrBlocks.insert(IBr->getParent());
+    Succs.insert_range(IBr->successors());
+  }
+
+  for (BasicBlock *Succ : Succs) {
+    for (PHINode &PN : make_early_inc_range(Succ->phis())) {
+      // All entries for the same predecessor carry the same value.
+      SmallDenseMap<BasicBlock *, Value *, 4> ValueFromIBrBlock;
+      Value *CommonValue = nullptr;
+      bool AllSame = true;
+      for (unsigned I = 0, E = PN.getNumIncomingValues(); I != E; ++I) {
+        BasicBlock *Pred = PN.getIncomingBlock(I);
+        if (!IBrBlocks.contains(Pred))
+          continue;
+        Value *V = PN.getIncomingValue(I);
+        ValueFromIBrBlock.try_emplace(Pred, V);
+        if (!CommonValue)
+          CommonValue = V;
+        else if (CommonValue != V)
+          AllSame = false;
+      }
+      if (ValueFromIBrBlock.empty())
+        continue;
+
+      PN.removeIncomingValueIf(
+          [&](unsigned I) {
+            return IBrBlocks.contains(PN.getIncomingBlock(I));
+          },
+          /*DeletePHIIfEmpty=*/false);
+
+      if (!SwitchSuccs.contains(Succ)) {
+        // The block is no longer reached from any indirectbr.
+        if (PN.getNumIncomingValues() == 0) {
+          PN.replaceAllUsesWith(PoisonValue::get(PN.getType()));
+          PN.eraseFromParent();
+        }
+        continue;
+      }
+
+      // The block is now reached once, from SwitchBB. If the indirectbr blocks
+      // contributed different values, select the value in SwitchBB by
+      // predecessor (SwitchBB's predecessors are exactly the indirectbr
+      // blocks).
+      Value *Incoming = CommonValue;
+      if (!AllSame) {
+        auto *SelPN =
+            PHINode::Create(PN.getType(), IBrs.size(), PN.getName() + ".switch",
+                            SwitchBB->begin());
+        for (IndirectBrInst *IBr : IBrs) {
+          BasicBlock *Pred = IBr->getParent();
+          Value *V = ValueFromIBrBlock.lookup(Pred);
+          SelPN->addIncoming(V ? V : PoisonValue::get(PN.getType()), Pred);
+        }
+        Incoming = SelPN;
+      }
+      PN.addIncoming(Incoming, SwitchBB);
+    }
+  }
 }
 
 bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
@@ -249,6 +321,8 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
     SmallVector<DominatorTree::UpdateType, 8> Updates;
     if (DTU)
       Updates.reserve(IndirectBrSuccToIndirectBr.size());
+    updateSuccessorPHIs(IndirectBrs, /*SwitchBB=*/nullptr,
+                        SmallPtrSet<BasicBlock *, 1>());
     for (auto *IBr : IndirectBrs) {
       if (DTU) {
         for (BasicBlock *SuccBB : IBr->successors())
@@ -285,6 +359,7 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
   };
 
   SmallVector<DominatorTree::UpdateType, 8> Updates;
+  SmallPtrSet<BasicBlock *, 8> SwitchSuccs(llvm::from_range, BBs);
 
   if (IndirectBrs.size() == 1) {
     // If we only have one indirectbr, we can just directly replace it within
@@ -299,6 +374,7 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
       assert(Updates.size() == IndirectBrSuccToIndirectBr.size() &&
              "Got unexpected update count.");
     }
+    updateSuccessorPHIs(IBr, SwitchBB, SwitchSuccs);
     IBr->eraseFromParent();
   } else {
     // Otherwise we need to create a new block to hold the switch across BBs,
@@ -308,6 +384,7 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
     auto *SwitchPN = PHINode::Create(CommonITy, IndirectBrs.size(),
                                      "switch_value_phi", SwitchBB);
     SwitchValue = SwitchPN;
+    updateSuccessorPHIs(IndirectBrs, SwitchBB, SwitchSuccs);
 
     // Now replace the indirectbr instructions with direct branches to the
     // switch block and fill out the PHI operands.
