@@ -19,7 +19,7 @@ Flang encodes Fortran's aliasing guarantees in TBAA metadata, with one TBAA tree
 
 TBAA has no notion of an invocation. The second kind of fact becomes wrong as soon as LLVM lets the accesses of two invocations meet, which happens in two ways:
 
-1. A procedure is inlined twice into one caller. This is [llvm-project#240818][i240818]. One fix makes Flang's TBAA roots `distinct` and has the inliner clone a distinct root's tree at every inline site ([#242095][pr242095] for the inliner, [[TBD: Flang PR]] for Flang). The review of [#242095][pr242095] pointed out that TBAA was never intended to be used with distinct metadata. We agree, so we do not propose that fix (Option 0, Section 7.0).
+1. A procedure is inlined twice into one caller. This is [llvm-project#240818][i240818]. One fix makes Flang's TBAA roots `distinct` and has the inliner clone a distinct root's tree at every inline site ([#242095][pr242095] for the inliner, plus a small Flang change). The review of [#242095][pr242095] pointed out that TBAA was never intended to be used with distinct metadata. We agree, so we do not propose that fix (Option 0, Section 7.0).
 2. A procedure is inlined into a loop whose iterations pass overlapping arguments, as in `do i = 1, n - 1; call step(x(i + 1), x(i)); end do`. The loop vectorizer then miscompiles the loop at `-O2` (Section 4.2). This is [llvm-project#242533][i242533]. Distinct roots would not help either, because all iterations share one inline site.
 
 This document compares five representations, from today's scheme with distinct roots (Option 0) to the explicit alias graph presented at the 2020 LLVM Developers' Meeting (Option 4). Options 0 and 1 serve only for comparison: Option 1, per-invocation TBAA roots, would need new IR semantics and changes to seven passes, which is too intrusive. **We propose Option 3.** TBAA keeps only the facts that hold everywhere, in one tree for all of Fortran. The per-invocation facts move into one `!alias.scope` domain per procedure. The domain has disjoint scopes ([#218768][pr218768]), declared with `llvm.experimental.noalias.scope.decl`: one scope per dummy argument and one for all other named storage. This is the mechanism LLVM already uses for the `noalias` arguments of inlined calls. The inliner, the passes that duplicate code and the passes that reason across loop iterations already handle it, so **no LLVM change is needed**.
@@ -105,7 +105,7 @@ subroutine twice(x, i, j, k, l)
 end subroutine twice
 ```
 
-After inlining, the load of `b` in the first copy and the store to `a` in the second have the tags `dummy arg data/b` and `dummy arg data/a` under the same root, so TBAA says NoAlias. That is wrong when `j == k`. The issue was reported with LTO on AArch64, but the wrong answer depends on neither (kernel k1, Appendix A). With distinct roots (Option 0: [#242095][pr242095] and [[TBD: Flang PR]]), each copy gets its own tree and the pair is MayAlias.
+After inlining, the load of `b` in the first copy and the store to `a` in the second have the tags `dummy arg data/b` and `dummy arg data/a` under the same root, so TBAA says NoAlias. That is wrong when `j == k`. The issue was reported with LTO on AArch64, but the wrong answer depends on neither (kernel k1, Appendix A). With distinct roots (Option 0, [#242095][pr242095]), each copy gets its own tree and the pair is MayAlias.
 
 ### 4.2 Iterations share facts (new)
 
@@ -217,7 +217,7 @@ Flang marks each function root `distinct`, and the inliner clones the tree of a 
 - **Soundness.** Fixes inlined copies (k1). It does not fix iterations (k2), or code duplicated by unrolling, peeling or jump threading, because duplicated code keeps one tree.
 - **Precision.** As today before inlining. After inlining, it drops the facts that today's shared root states between inlined copies of one procedure: 2,754 NoAlias answers on the gfortran tests (0.03%), in 35 modules. By today's tags, 1,943 of them relate a descriptor field to data, which is valid across copies. 801 relate data accessed through a dummy argument in one copy to data in another copy. They come from per-invocation facts, the class of the miscompile, which Fortran does not guarantee across invocations. The other 10 relate named storage, including the 4 wrong reallocation pairs of Section 4.5 (Section 9.4).
 - **Cost.** One tree copy per inline site of a procedure. After `opt -O2`, the alias metadata grows by 1.8% on SNAP and CloverLeaf, by 21.5% on the gfortran tests and by 15.5% on the cray tests. The bitcode grows by 0.03%, 0.23% and 0.19%, and compile time does not change.
-- **Changes.** LLVM: 124 lines in `InlineFunction.cpp`, a few lines in `TypeBasedAliasAnalysis.cpp` and `MDBuilder.h`, and a LangRef paragraph. MLIR: a `distinct` flag on the TBAA root attribute. Flang: 7 lines in `TBAAForest.cpp`. The inliner change is [#242095][pr242095], and the Flang change is [[TBD: Flang PR]].
+- **Changes.** LLVM: 124 lines in `InlineFunction.cpp`, a few lines in `TypeBasedAliasAnalysis.cpp` and `MDBuilder.h`, and a LangRef paragraph. MLIR: a `distinct` flag on the TBAA root attribute. Flang: 7 lines in `TBAAForest.cpp`. The inliner change is [#242095][pr242095].
 
 ### 7.1 Option 1: per-invocation TBAA roots in LLVM
 
