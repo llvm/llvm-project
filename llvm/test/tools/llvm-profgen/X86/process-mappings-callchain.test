@@ -1,0 +1,233 @@
+; REQUIRES: x86-registered-target
+; UNSUPPORTED: system-windows
+
+; RUN: split-file %s %t
+
+; With callchains, perf script -F pid,time,ip,brstack -F -sym --no-inline prints
+; a PID/time header, leaf-to-root IP lines, then the branch stack. Its header's
+; PID applies to the entire block, including return-PC to callsite conversion
+; before ordinary LBR unwinding.
+; RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/legacy.perfscript --skip-symbolization --output=%t/legacy.raw
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/single.perfscript --skip-symbolization --output=%t/single.raw
+; RUN: cmp %t/legacy.raw %t/single.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=1 --input-file=%t/single.raw
+
+; Windows text input preserves PID headers and whole-address frames with CRLF.
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/coff-profile.exe \
+; RUN:   --perfscript=%t/coff.perfscript --skip-symbolization --use-offset=0 --output=%t/coff.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=COFF --input-file=%t/coff.raw
+; RUN: %python -c "import sys; sys.stdout.buffer.write(sys.stdin.buffer.read().replace(b'\n', b'\r\n'))" < %t/coff.perfscript > %t/crlf.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/coff-profile.exe \
+; RUN:   --perfscript=%t/crlf.perfscript --skip-symbolization --use-offset=0 --output=%t/crlf.raw
+; RUN: cmp %t/coff.raw %t/crlf.raw
+
+; RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/legacy.perfscript --format=text --profile-summary-cold-count=0 \
+; RUN:   --csspgo-preinliner=0 --gen-cs-nested-profile=0 --output=%t/legacy.prof
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/single.perfscript --format=text --profile-summary-cold-count=0 \
+; RUN:   --csspgo-preinliner=0 --gen-cs-nested-profile=0 --output=%t/single.prof
+; RUN: cmp %t/legacy.prof %t/single.prof
+; RUN: FileCheck %s --match-full-lines --check-prefix=PROFILE --input-file=%t/single.prof
+; RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --unsymbolized-profile=%t/single.raw --format=text --profile-summary-cold-count=0 \
+; RUN:   --csspgo-preinliner=0 --gen-cs-nested-profile=0 --output=%t/replay.prof
+; RUN: cmp %t/single.prof %t/replay.prof
+
+; Empty stacks surrounding a real callchain must preserve hybrid selection and
+; the existing policy of unwinding only observations with usable stacks.
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/mixed.perfscript --skip-symbolization --output=%t/mixed.raw
+; RUN: cmp %t/single.raw %t/mixed.raw
+
+; An excluded PID's callchain must not select hybrid processing for flat
+; samples in the selected PID, regardless of which sample comes first.
+; RUN: cat %t/flat-mappings %t/flat-sample > %t/flat.perfscript
+; RUN: llvm-profgen --per-process-mappings --pid=100 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/flat.perfscript --skip-symbolization --output=%t/flat.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=FLAT -D#COUNT=1 --input-file=%t/flat.raw
+; RUN: cat %t/flat-mappings %t/other-callchain %t/flat-sample > %t/other-first.perfscript
+; RUN: cat %t/flat.perfscript %t/other-callchain > %t/other-last.perfscript
+; RUN: llvm-profgen --per-process-mappings --pid=100 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/other-first.perfscript --skip-symbolization --output=%t/other-first.raw
+; RUN: llvm-profgen --per-process-mappings --pid=100 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/other-last.perfscript --skip-symbolization --output=%t/other-last.raw
+; RUN: cmp %t/flat.raw %t/other-first.raw
+; RUN: cmp %t/flat.raw %t/other-last.raw
+
+; Recognising excluded LBR records still permits an empty selected profile.
+; A missing mapping remains an error. Unfiltered selection still uses CS.
+; RUN: cat %t/flat-mappings %t/other-callchain > %t/other-only.perfscript
+; RUN: llvm-profgen --per-process-mappings --pid=100 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/other-only.perfscript --skip-symbolization --output=%t/empty.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=EMPTY --input-file=%t/empty.raw
+; RUN: not llvm-profgen --per-process-mappings --pid=300 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/other-only.perfscript --skip-symbolization --output=%t/missing.raw 2>&1 | FileCheck %s --check-prefix=MISSING
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/other-first.perfscript --skip-symbolization --output=%t/unfiltered.raw
+; RUN: cmp %t/single.raw %t/unfiltered.raw
+
+; Identical canonical stacks at different ASLR bases merge only after all
+; frames and branches have been resolved. Filtering must skip whole blocks.
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/interleaved.perfscript --skip-symbolization --output=%t/all.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=3 --input-file=%t/all.raw
+; RUN: llvm-profgen --per-process-mappings --ignore-stack-samples --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/interleaved.perfscript --skip-symbolization --output=%t/ignore-stack.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=FLAT -D#COUNT=3 --input-file=%t/ignore-stack.raw
+; RUN: llvm-profgen --per-process-mappings --pid=100 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/interleaved.perfscript --skip-symbolization --output=%t/100.raw
+; RUN: cmp %t/single.raw %t/100.raw
+; RUN: llvm-profgen --per-process-mappings --pid=200 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/interleaved.perfscript --skip-symbolization --output=%t/200.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=2 --input-file=%t/200.raw
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/interleaved.perfscript --format=text --profile-summary-cold-count=0 \
+; RUN:   --csspgo-preinliner=0 --gen-cs-nested-profile=0 --output=%t/all.prof
+; RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --unsymbolized-profile=%t/all.raw --format=text --profile-summary-cold-count=0 \
+; RUN:   --csspgo-preinliner=0 --gen-cs-nested-profile=0 --output=%t/all-replay.prof
+; RUN: cmp %t/all.prof %t/all-replay.prof
+
+; A mapped leaf does not authorize resolving its callers through another PID.
+; Mapping PID 200's image must not turn these external caller frames into
+; PID 100's main/foo context. Keep the legacy external-frame behavior instead.
+; RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/legacy-foreign.perfscript --skip-symbolization --output=%t/legacy-foreign.raw
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/foreign.perfscript --skip-symbolization --output=%t/foreign.raw
+; RUN: cmp %t/legacy-foreign.raw %t/foreign.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=FOREIGN --input-file=%t/foreign.raw
+
+; COFF-NOT:  {{.}}
+; COFF:      []
+; COFF-NEXT:   0
+; COFF-NEXT:   1
+; COFF-NEXT:   140001461->140001410:1
+; COFF-NOT:  {{.}}
+
+; RAW-NOT:  {{.}}
+; RAW:      [main:1 @ foo]
+; RAW-NEXT:   0
+; RAW-NEXT:   1
+; RAW-NEXT:   62f->5b0:[[#COUNT]]
+; RAW-NEXT: [main:1 @ foo:3 @ bar]
+; RAW-NEXT:   1
+; RAW-NEXT:   5b0-5c8:[[#COUNT]]
+; RAW-NEXT:   1
+; RAW-NEXT:   5c8->5dc:[[#COUNT]]
+; RAW-NOT:  {{.}}
+
+; PROFILE: [main:1 @ foo:3 @ bar]:10:1
+; PROFILE-NEXT:  0: 1
+; PROFILE-NEXT:  1: 1
+
+; FOREIGN-NOT:  {{.}}
+; FOREIGN:      [bar]
+; FOREIGN-NEXT:   1
+; FOREIGN-NEXT:   5b0-5c8:1
+; FOREIGN-NEXT:   1
+; FOREIGN-NEXT:   5c8->5dc:1
+; FOREIGN-NEXT: [foo]
+; FOREIGN-NEXT:   0
+; FOREIGN-NEXT:   1
+; FOREIGN-NEXT:   62f->5b0:1
+; FOREIGN-NOT:  {{.}}
+
+; FLAT-NOT:  {{.}}
+; FLAT:      1
+; FLAT-NEXT: 5b0-5c8:[[#COUNT]]
+; FLAT-NEXT: 2
+; FLAT-NEXT: 5c8->5dc:[[#COUNT]]
+; FLAT-NEXT: 62f->5b0:[[#COUNT]]
+; FLAT-NOT: {{.}}
+
+; EMPTY-NOT:  {{.}}
+; EMPTY:      0
+; EMPTY-NEXT: 0
+; EMPTY-NOT:  {{.}}
+; MISSING: Invalid perf script input: no usable mmap
+
+;--- flat-mappings
+    100 1.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    200 1.000001: PERF_RECORD_MMAP2 200/200: [0x600000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+;--- flat-sample
+    100 2.000000: 5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+;--- other-callchain
+    200 2.000000:
+          6005dc
+          600634
+          600684
+ 0x6005c8/0x6005dc/P/-/-/0 0x60062f/0x6005b0/P/-/-/0
+
+;--- legacy.perfscript
+PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+          5005dc
+          500634
+          500684
+ 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+
+;--- single.perfscript
+    100 1.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    100 1.000001:
+          5005dc
+          500634
+          500684
+ 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+
+;--- interleaved.perfscript
+    100 1.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    200 1.000001: PERF_RECORD_MMAP2 200/200: [0x600000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    100 1.000002:
+          5005dc
+          500634
+          500684
+ 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+
+    200 1.000003:
+          6005dc
+          600634
+          600684
+ 0x6005c8/0x6005dc/P/-/-/0 0x60062f/0x6005b0/P/-/-/0
+
+    200 1.000004:
+          6005dc
+          600634
+          600684
+ 0x6005c8/0x6005dc/P/-/-/0 0x60062f/0x6005b0/P/-/-/0
+
+;--- legacy-foreign.perfscript
+PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+          5005dc
+          600634
+          600684
+ 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+
+;--- foreign.perfscript
+    100 1.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    200 1.000001: PERF_RECORD_MMAP2 200/200: [0x600000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    100 1.000002:
+          5005dc
+          600634
+          600684
+ 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+
+;--- mixed.perfscript
+    100 1.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    100 1.000001:
+ 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+    100 1.000002:
+          5005dc
+          500634
+          500684
+ 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+    100 1.000003:
+ 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+
+;--- coff.perfscript
+PERF_RECORD_MMAP2 5752/0: [0x7ff70a1b0000(0x640000) @ 0x1000 00:00 0 0]: r-xp c:\Users\haohaiwe\Desktop\coff-profile.exe
+5752 1.000001:
+          7ff70a1b1410
+ 0x7ff70a1b1461/0x7ff70a1b1410/P/-/A/0

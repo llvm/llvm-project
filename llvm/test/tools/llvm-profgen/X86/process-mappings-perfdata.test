@@ -1,0 +1,333 @@
+; REQUIRES: x86-registered-target, system-linux
+
+; RUN: split-file %s %t
+; RUN: split-file %S/Inputs/process-mappings-lifetime.txt %t
+; RUN: touch %t/flat.perf.data %t/hybrid.perf.data
+; RUN: touch %t/late-flat.perf.data %t/late-hybrid.perf.data
+; RUN: touch %t/partial-flat.perf.data %t/partial-hybrid.perf.data
+; RUN: chmod +x %t/perfdir/perf
+
+; The only initially observed task is worker 101. Its EXIT cannot retire the
+; partial inventory: discovery must include the later child, and replay must
+; retain all three samples. The shim replays the shared text fixture in order,
+; including unselected-parent metadata, rather than moving events ahead of samples.
+; RUN: env EXPECTED_PIDS=100,200 PATH=%t/perfdir llvm-profgen --per-process-mappings \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/worker-first.perfscript \
+; RUN:   --skip-symbolization --output=%t/worker-first.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=FLAT -D#COUNT=3 --input-file=%t/worker-first.raw
+; RUN: env EXPECTED_PIDS=200 PATH=%t/perfdir llvm-profgen --per-process-mappings --pid=200 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/worker-first.perfscript \
+; RUN:   --skip-symbolization --output=%t/worker-child.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=FLAT -D#COUNT=1 --input-file=%t/worker-child.raw
+; RUN: env LIFETIME_HYBRID=1 EXPECTED_PIDS=100,200 PATH=%t/perfdir llvm-profgen --per-process-mappings \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/worker-first.perfscript \
+; RUN:   --skip-symbolization --output=%t/worker-hybrid.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=HYBRID -D#COUNT=3 --input-file=%t/worker-hybrid.raw
+
+; Discovery needs task events and timestamps, but no callchains or branch stack.
+; Sampling needs pid,time,ip,brstack with symbol fields explicitly disabled,
+; and physical callchains preserved using --no-inline. Even with a selected
+; PID, perf must retain its unselected ancestors' mapping/task records.
+; The mock checks both exact invocations and never runs the real perf tool.
+; RUN: env PATH=%t/perfdir llvm-profgen --per-process-mappings \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/flat.perf.data \
+; RUN:   --skip-symbolization --output=%t/flat.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=FLAT -D#COUNT=3 --input-file=%t/flat.raw
+; RUN: env EXPECTED_PIDS=300 PATH=%t/perfdir llvm-profgen --per-process-mappings --pid=300 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/flat.perf.data \
+; RUN:   --skip-symbolization --output=%t/flat-child.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=FLAT -D#COUNT=2 --input-file=%t/flat-child.raw
+; RUN: env PATH=%t/perfdir llvm-profgen --per-process-mappings \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/hybrid.perf.data \
+; RUN:   --skip-symbolization --output=%t/hybrid.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=HYBRID -D#COUNT=3 --input-file=%t/hybrid.raw
+; RUN: env EXPECTED_PIDS=300 PATH=%t/perfdir llvm-profgen --per-process-mappings --pid=300 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/hybrid.perf.data \
+; RUN:   --skip-symbolization --output=%t/hybrid-child.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=HYBRID -D#COUNT=2 --input-file=%t/hybrid-child.raw
+
+; Both perf.data discovery and actual parsing list the mappings. The input-type
+; detector must not add a third copy, including when profiling an inherited PID.
+; RUN: env EXPECTED_PIDS=300 PATH=%t/perfdir llvm-profgen --per-process-mappings --pid=300 --show-mmap-events \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/hybrid.perf.data \
+; RUN:   --skip-symbolization --output=%t/show.raw | FileCheck %s --check-prefix=MMAP --implicit-check-not="Mmap: Binary"
+; RUN: cmp %t/hybrid-child.raw %t/show.raw
+
+; A read-only replacement in PID 200 preserves the earlier child's mapping.
+; Both extraction passes see the replacement; PID 300 supplies both samples.
+; RUN: env READONLY_REPLACE=1 PATH=%t/perfdir llvm-profgen --per-process-mappings \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/flat.perf.data \
+; RUN:   --skip-symbolization --output=%t/readonly-flat.raw
+; RUN: cmp %t/flat-child.raw %t/readonly-flat.raw
+; RUN: env READONLY_REPLACE=1 EXPECTED_PIDS=300 PATH=%t/perfdir llvm-profgen --per-process-mappings --pid=300 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/flat.perf.data \
+; RUN:   --skip-symbolization --output=%t/readonly-flat-child.raw
+; RUN: cmp %t/flat-child.raw %t/readonly-flat-child.raw
+; RUN: env READONLY_REPLACE=1 PATH=%t/perfdir llvm-profgen --per-process-mappings \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/hybrid.perf.data \
+; RUN:   --skip-symbolization --output=%t/readonly-hybrid.raw
+; RUN: cmp %t/hybrid-child.raw %t/readonly-hybrid.raw
+; RUN: env READONLY_REPLACE=1 EXPECTED_PIDS=300 PATH=%t/perfdir llvm-profgen --per-process-mappings --pid=300 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/hybrid.perf.data \
+; RUN:   --skip-symbolization --output=%t/readonly-hybrid-child.raw
+; RUN: cmp %t/hybrid-child.raw %t/readonly-hybrid-child.raw
+
+; Discover descendants forked after the worker that loaded the library exits.
+; The sample pass selects PID 300 while retaining its ancestors' metadata.
+; RUN: env PATH=%t/perfdir llvm-profgen --per-process-mappings \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/late-flat.perf.data \
+; RUN:   --skip-symbolization --output=%t/late-flat.raw
+; RUN: cmp %t/flat.raw %t/late-flat.raw
+; RUN: env EXPECTED_PIDS=300 PATH=%t/perfdir llvm-profgen --per-process-mappings --pid=300 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/late-flat.perf.data \
+; RUN:   --skip-symbolization --output=%t/late-flat-child.raw
+; RUN: cmp %t/flat-child.raw %t/late-flat-child.raw
+; RUN: env PATH=%t/perfdir llvm-profgen --per-process-mappings \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/late-hybrid.perf.data \
+; RUN:   --skip-symbolization --output=%t/late-hybrid.raw
+; RUN: cmp %t/hybrid.raw %t/late-hybrid.raw
+; RUN: env EXPECTED_PIDS=300 PATH=%t/perfdir llvm-profgen --per-process-mappings --pid=300 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/late-hybrid.perf.data \
+; RUN:   --skip-symbolization --output=%t/late-hybrid-child.raw
+; RUN: cmp %t/hybrid-child.raw %t/late-hybrid-child.raw
+
+; A live worker fork can be the first record of a process. Discovery must keep
+; its target mapping after worker exit, including when selecting a descendant.
+; RUN: env PATH=%t/perfdir llvm-profgen --per-process-mappings \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/partial-flat.perf.data \
+; RUN:   --skip-symbolization --output=%t/partial-flat.raw
+; RUN: cmp %t/flat.raw %t/partial-flat.raw
+; RUN: env EXPECTED_PIDS=300 PATH=%t/perfdir llvm-profgen --per-process-mappings --pid=300 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/partial-flat.perf.data \
+; RUN:   --skip-symbolization --output=%t/partial-flat-child.raw
+; RUN: cmp %t/flat-child.raw %t/partial-flat-child.raw
+; RUN: env PATH=%t/perfdir llvm-profgen --per-process-mappings \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/partial-hybrid.perf.data \
+; RUN:   --skip-symbolization --output=%t/partial-hybrid.raw
+; RUN: cmp %t/hybrid.raw %t/partial-hybrid.raw
+; RUN: env EXPECTED_PIDS=300 PATH=%t/perfdir llvm-profgen --per-process-mappings --pid=300 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/partial-hybrid.perf.data \
+; RUN:   --skip-symbolization --output=%t/partial-hybrid-child.raw
+; RUN: cmp %t/hybrid-child.raw %t/partial-hybrid-child.raw
+
+; The same small variants as the direct lifetime test must also discover the
+; inherited child after completeness is withdrawn. Preserve ancestor metadata
+; even though only PID 200 is selected for sample extraction.
+; RUN: sed 's|PERF_RECORD_COMM: worker:100/101|PERF_RECORD_MMAP2 100/101: [0x900000(0x1000) @ 0 00:1d 2 1]: r--p /tmp/other-file|' %t/observed-comm.perfscript > %t/observed-mmap.perfscript
+; RUN: sed 's/0x900000(0x1000)/0x900000(0)/' %t/observed-mmap.perfscript > %t/observed-zero.perfscript
+; RUN: sed 's|PERF_RECORD_COMM: worker:100/101|PERF_RECORD_FORK(150:150):(100:101)|' %t/observed-comm.perfscript > %t/observed-parent.perfscript
+; RUN: sed 's|PERF_RECORD_COMM: worker:100/101|PERF_RECORD_EXIT(100:101):(100:100)|' %t/observed-comm.perfscript > %t/observed-exit.perfscript
+; RUN: sed '/1.00000[23]:/d' %t/observed-comm.perfscript > %t/unannounced.perfscript
+; RUN: env EXPECTED_PIDS=200 PATH=%t/perfdir llvm-profgen --per-process-mappings --pid=200 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/observed-comm.perfscript \
+; RUN:   --skip-symbolization --output=%t/observed-comm.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=FLAT -D#COUNT=1 --input-file=%t/observed-comm.raw
+; RUN: env EXPECTED_PIDS=200 PATH=%t/perfdir llvm-profgen --per-process-mappings --pid=200 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/observed-mmap.perfscript \
+; RUN:   --skip-symbolization --output=%t/observed-mmap.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=FLAT -D#COUNT=1 --input-file=%t/observed-mmap.raw
+; RUN: env EXPECTED_PIDS=200 PATH=%t/perfdir llvm-profgen --per-process-mappings --pid=200 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/observed-zero.perfscript \
+; RUN:   --skip-symbolization --output=%t/observed-zero.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=FLAT -D#COUNT=1 --input-file=%t/observed-zero.raw
+; RUN: env EXPECTED_PIDS=200 PATH=%t/perfdir llvm-profgen --per-process-mappings --pid=200 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/observed-parent.perfscript \
+; RUN:   --skip-symbolization --output=%t/observed-parent.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=FLAT -D#COUNT=1 --input-file=%t/observed-parent.raw
+; RUN: env EXPECTED_PIDS=200 PATH=%t/perfdir llvm-profgen --per-process-mappings --pid=200 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/observed-exit.perfscript \
+; RUN:   --skip-symbolization --output=%t/observed-exit.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=FLAT -D#COUNT=1 --input-file=%t/observed-exit.raw
+; RUN: env EXPECTED_PIDS=200 PATH=%t/perfdir llvm-profgen --per-process-mappings --pid=200 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/unannounced.perfscript \
+; RUN:   --skip-symbolization --output=%t/unannounced.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=FLAT -D#COUNT=1 --input-file=%t/unannounced.raw
+
+; An incomplete parent still produces a complete newborn child. After child
+; 200 exits, descendant 300 cannot inherit. Check its absence from discovery,
+; not removal of old PIDs from the recording-wide set of earlier owners.
+; The post-final-exit forks are structural negative controls for retired maps.
+; RUN: env EXPECTED_PIDS=100,200 PATH=%t/perfdir llvm-profgen --per-process-mappings \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/observed-comm.perfscript \
+; RUN:   --skip-symbolization --output=%t/observed-all.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=FLAT -D#COUNT=3 --input-file=%t/observed-all.raw
+
+; Explicit same-PID worker rebirth preserves completeness: final exit prevents
+; discovery of either later descendant, while both earlier samples survive.
+; RUN: sed 's|PERF_RECORD_COMM: worker:100/101|PERF_RECORD_FORK(100:101):(100:100)|' %t/observed-comm.perfscript > %t/announced.perfscript
+; RUN: env EXPECTED_PIDS=100 PATH=%t/perfdir llvm-profgen --per-process-mappings \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/announced.perfscript \
+; RUN:   --skip-symbolization --output=%t/announced.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=FLAT -D#COUNT=2 --input-file=%t/announced.raw
+
+; Exec/PID reuse clear partial old ownership before child 200 forks. The new
+; complete lifetime's final exit also prevents inheritance by child 300.
+; RUN: head -n 3 %t/worker-first.perfscript > %t/exec.perfscript
+; RUN: cat %t/replace-tail.perfscript >> %t/exec.perfscript
+; RUN: sed 's|PERF_RECORD_COMM exec: replacement:100/100|PERF_RECORD_FORK(100:100):(900:900)|' %t/exec.perfscript > %t/reuse.perfscript
+; RUN: env EXPECTED_PIDS=100 PATH=%t/perfdir llvm-profgen --per-process-mappings \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/exec.perfscript \
+; RUN:   --skip-symbolization --output=%t/exec.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=FLAT -D#COUNT=2 --input-file=%t/exec.raw
+; RUN: env EXPECTED_PIDS=100 PATH=%t/perfdir llvm-profgen --per-process-mappings \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/reuse.perfscript \
+; RUN:   --skip-symbolization --output=%t/reuse.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=FLAT -D#COUNT=2 --input-file=%t/reuse.raw
+
+; Synthetic exec still resets the image, but its partial inventory retains the
+; new mapping for child 300. This checks a transition, not a producer capture.
+; RUN: sed '/PERF_RECORD_COMM exec/s/1.000003/0.000000/' %t/exec.perfscript > %t/synthetic-exec.perfscript
+; RUN: env EXPECTED_PIDS=100,300 PATH=%t/perfdir llvm-profgen --per-process-mappings \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfdata=%t/synthetic-exec.perfscript \
+; RUN:   --skip-symbolization --output=%t/synthetic-exec.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=FLAT -D#COUNT=4 --input-file=%t/synthetic-exec.raw
+
+; FLAT-NOT:  {{.}}
+; FLAT:      1
+; FLAT-NEXT: 5b0-5c8:[[#COUNT]]
+; FLAT-NEXT: 2
+; FLAT-NEXT: 5c8->5dc:[[#COUNT]]
+; FLAT-NEXT: 62f->5b0:[[#COUNT]]
+; FLAT-NOT:  {{.}}
+
+; HYBRID-NOT:  {{.}}
+; HYBRID:      [main:1 @ foo]
+; HYBRID-NEXT:   0
+; HYBRID-NEXT:   1
+; HYBRID-NEXT:   62f->5b0:[[#COUNT]]
+; HYBRID-NEXT: [main:1 @ foo:3 @ bar]
+; HYBRID-NEXT:   1
+; HYBRID-NEXT:   5b0-5c8:[[#COUNT]]
+; HYBRID-NEXT:   1
+; HYBRID-NEXT:   5c8->5dc:[[#COUNT]]
+; HYBRID-NOT:  {{.}}
+
+; MMAP:      Mmap: Binary /tmp/noinline-cs-noprobe.perfbin loaded at 0x500000:
+; MMAP-NEXT: Mmap: Binary /tmp/other.perfbin loaded at 0x500000:
+; MMAP-NEXT: Mmap: Binary /tmp/noinline-cs-noprobe.perfbin loaded at 0x500000:
+; MMAP-NEXT: Mmap: Binary /tmp/other.perfbin loaded at 0x500000:
+
+;--- perfdir/perf
+#!/bin/sh
+
+if [ "$1" != "script" ] || [ "$2" != "--show-mmap-events" ] || \
+   [ "$3" != "--show-task-events" ] || [ "$4" != "-F" ]; then
+  echo "unexpected perf arguments: $*" >&2
+  exit 2
+fi
+
+case "$5" in
+  pid,time)
+    if [ "$#" -ne 7 ] || [ "$6" != "-i" ]; then
+      echo "unexpected discovery arguments: $*" >&2
+      exit 2
+    fi
+    input=$7
+    ;;
+  pid,time,ip,brstack)
+    if [ "$#" -ne 12 ] || [ "$6" != "-F" ] || [ "$7" != "-sym" ] || \
+       [ "$8" != "-i" ] || [ "${10}" != "--pid" ] || \
+       [ "${11}" != "${EXPECTED_PIDS:-100,200,300}" ] || [ "${12}" != "--no-inline" ]; then
+      echo "unexpected sample arguments: $*" >&2
+      exit 2
+    fi
+    input=$9
+    pids=${11}
+    ;;
+  *) echo "unexpected perf fields: $5" >&2; exit 2 ;;
+esac
+if [ ! -f "$input" ]; then
+  echo "missing perf input: $input" >&2
+  exit 2
+fi
+
+late_load=0
+lifetime_trace=
+case "${input##*/}" in
+  flat.perf.data) hybrid=0 ;;
+  hybrid.perf.data) hybrid=1 ;;
+  late-flat.perf.data) hybrid=0; late_load=1 ;;
+  late-hybrid.perf.data) hybrid=1; late_load=1 ;;
+  partial-flat.perf.data) hybrid=0; late_load=2 ;;
+  partial-hybrid.perf.data) hybrid=1; late_load=2 ;;
+  *.perfscript) hybrid=${LIFETIME_HYBRID:-0}; lifetime_trace=$input ;;
+  *) echo "unexpected perf input: $input" >&2; exit 2 ;;
+esac
+
+emit_metadata() {
+  if [ "$late_load" != 0 ]; then
+    if [ "$late_load" = 1 ]; then
+      printf '%s\n' '    900 1.000000: PERF_RECORD_FORK(100:100):(900:900)'
+    fi
+    printf '%s\n' \
+      '    100 1.000001: PERF_RECORD_FORK(100:101):(100:100)' \
+      '    100 1.000002: PERF_RECORD_MMAP2 100/101: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin' \
+      '    100 1.000003: PERF_RECORD_EXIT(100:101):(100:100)' \
+      '    100 1.000004: PERF_RECORD_FORK(200:200):(100:100)' \
+      '    100 1.000005: PERF_RECORD_EXIT(100:100):(900:900)' \
+      '    200 1.000006: PERF_RECORD_FORK(300:300):(200:200)'
+    return
+  fi
+  # The leader exits before worker 101 forks. Both descendants inherit the
+  # target without an explicit target mmap. PID 900 never owns the target.
+  printf '%s\n' \
+    '    100 0.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin' \
+    '    100 1.000000: PERF_RECORD_COMM: worker:100/101' \
+    '    100 1.000001: PERF_RECORD_EXIT(100:100):(1:1)' \
+    '    100 1.000002: PERF_RECORD_FORK(200:200):(100:101)' \
+    '    100 1.000003: PERF_RECORD_EXIT(100:101):(100:100)' \
+    '    200 1.000004: PERF_RECORD_FORK(300:300):(200:200)' \
+    '    900 1.000005: PERF_RECORD_MMAP2 900/900: [0x500000(0x1000) @ 0 00:1d 2 1]: r-xp /tmp/other.perfbin'
+  if [ "$READONLY_REPLACE" = 1 ]; then
+    printf '%s\n' \
+      '    200 1.000006: PERF_RECORD_MMAP2 200/200: [0x500000(0x1000) @ 0 00:1d 2 1]: r--p /tmp/other.perfbin'
+  fi
+}
+
+emit_sample() {
+  if [ "$hybrid" = 1 ]; then
+    printf '%7d %s:\n' "$1" "$2"
+    printf '%s\n' '          5005dc' '          500634' '          500684'
+  else
+    printf '%7d %s:           5005dc' "$1" "$2"
+  fi
+  printf '%s\n\n' ' 0x5005c8/0x5005dc/P/-/-/0/COND/-  0x50062f/0x5005b0/P/-/-/0/CALL/-'
+}
+
+if [ -n "$lifetime_trace" ]; then
+  # Keep event order and all metadata in both passes. Only sample records are
+  # PID-filtered; discovery emits no samples. Hybrid uses the worker-first IPs.
+  while read -r pid time record; do
+    case "$record" in
+      PERF_RECORD_*) printf '    %s %s %s\n' "$pid" "$time" "$record" ;;
+      *)
+        if [ "$5" = pid,time,ip,brstack ]; then
+          case ",$pids," in
+            *,"$pid",*)
+              if [ "$hybrid" = 1 ]; then
+                emit_sample "$pid" "${time%:}"
+              else
+                printf '    %s %s %s\n' "$pid" "$time" "$record"
+              fi
+              ;;
+          esac
+        fi
+        ;;
+    esac
+  done < "$lifetime_trace"
+  exit 0
+fi
+
+case "$5" in
+  pid,time)
+    emit_metadata
+    ;;
+  pid,time,ip,brstack)
+    emit_metadata
+    case ",$pids," in
+      *,200,*) emit_sample 200 2.000001 ;;
+    esac
+    emit_sample 300 2.000002
+    emit_sample 300 2.000003
+    ;;
+esac

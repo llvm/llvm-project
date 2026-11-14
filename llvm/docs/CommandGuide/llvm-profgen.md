@@ -21,6 +21,10 @@ At least one of the following commands are required:
 Path of a trace created by the Linux `perf script` command. For LBR or BRBE
 input, the raw perf data must contain branch stacks, for example from recording
 with `-b`.
+
+When the recording contains callchains, use `perf script --no-inline` to
+print physical stack frames. `llvm-profgen` reconstructs inline calling
+contexts from the profiled binary.
 :::
 
 :::{option} --etm=<string>
@@ -58,6 +62,22 @@ Path of the output profile file.
 ## OPTIONS
 
 {program}`llvm-profgen` supports the following options:
+
+:::{option} --per-process-mappings
+Resolve LBR samples using per-process executable mappings, so samples from
+processes with different load addresses can be combined. Use `--pid` to
+select a process.
+
+For `--perfscript`, generate the input with:
+
+    perf script --show-mmap-events --show-task-events -F pid,time,ip,brstack -F -sym -i perf.data --no-inline
+
+Recorded callchains are used for context-sensitive profiles. Add `-G` to
+generate branch-stack-only input.
+
+This option requires `--perfdata` or `--perfscript` and cannot be combined with
+`--data-access-perftrace`.
+:::
 
 :::{option} --format=[text|binary|extbinary|compbinary|gcc]
 Specify the format of the generated profile. Supported \<format> are `text`,
