@@ -23,7 +23,7 @@ class MemCacheHintTest : public testing::Test {
 protected:
   LLVMContext Context;
   Module M{"test", Context};
-  IRBuilder<> Builder{Context};
+  IRBuilder<> Builder{M};
   Value *Dest;
   Value *Source;
 
