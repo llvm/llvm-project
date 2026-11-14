@@ -26,6 +26,7 @@ module m
   type stuff
      real(8), allocatable :: d(:)
      !dir$  align : 1024 :: d
+     !dir$ integer = 64
   end type stuff
 end
 
