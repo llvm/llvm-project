@@ -951,9 +951,33 @@ deleteIfDead(GlobalValue &GV,
   if (!GV.isDiscardableIfUnused() && !GV.isDeclaration())
     return false;
 
-  if (const Comdat *C = GV.getComdat())
-    if (!GV.hasLocalLinkage() && NotDiscardableComdats.count(C))
+  if (auto *C = GV.getComdat()) {
+    auto IsComdatLeaderWithUses = false;
+    if (GV.isComdatLeader()) {
+      if (C->getUsers().size() > 1) {
+        IsComdatLeaderWithUses = true;
+      } else if (auto *GA = dyn_cast<GlobalAlias>(&GV)) {
+        if (auto *GO = dyn_cast<GlobalObject>(GA->getAliasee())) {
+          GO->removeDeadConstantUsers();
+          // The alias leader has uses if the aliasee cannot be discarded, or if
+          // the aliasee has uses other than this alias.
+          IsComdatLeaderWithUses = !GO->hasOneUse();
+        } else {
+          IsComdatLeaderWithUses = true;
+        }
+      }
+    }
+
+    if (IsComdatLeaderWithUses ||
+        (!GV.hasInternalLinkage() && NotDiscardableComdats.count(C))) {
+      // If the leader we are preserving is available_externally, promote it to
+      // an emitted ODR definition so the comdat stays valid instead of leaving
+      // what is effectively a declaration in it.
+      if (GV.isComdatLeader() && GV.hasAvailableExternallyLinkage())
+        GV.setLinkage(GlobalValue::WeakODRLinkage);
       return false;
+    }
+  }
 
   bool Dead;
   if (auto *F = dyn_cast<Function>(&GV))
