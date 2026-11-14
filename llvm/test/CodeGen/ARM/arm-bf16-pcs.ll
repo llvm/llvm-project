@@ -97,23 +97,10 @@ define arm_aapcs_vfpcc i32 @bf_to_int_hard(bfloat %f) {
 }
 
 define bfloat @bf_from_int_soft(i32 %w) {
-; BASE-ARM-LABEL: bf_from_int_soft:
-; BASE-ARM:       @ %bb.0:
-; BASE-ARM-NEXT:    .pad #4
-; BASE-ARM-NEXT:    sub sp, sp, #4
-; BASE-ARM-NEXT:    strh r0, [sp, #2]
-; BASE-ARM-NEXT:    ldrh r0, [sp, #2]
-; BASE-ARM-NEXT:    add sp, sp, #4
-; BASE-ARM-NEXT:    bx lr
-;
-; BASE-THUMB-LABEL: bf_from_int_soft:
-; BASE-THUMB:       @ %bb.0:
-; BASE-THUMB-NEXT:    .pad #4
-; BASE-THUMB-NEXT:    sub sp, #4
-; BASE-THUMB-NEXT:    strh.w r0, [sp, #2]
-; BASE-THUMB-NEXT:    ldrh.w r0, [sp, #2]
-; BASE-THUMB-NEXT:    add sp, #4
-; BASE-THUMB-NEXT:    bx lr
+; BASE-LABEL: bf_from_int_soft:
+; BASE:       @ %bb.0:
+; BASE-NEXT:    uxth r0, r0
+; BASE-NEXT:    bx lr
 ;
 ; FULLFP16-LABEL: bf_from_int_soft:
 ; FULLFP16:       @ %bb.0:
@@ -126,25 +113,11 @@ define bfloat @bf_from_int_soft(i32 %w) {
 }
 
 define arm_aapcs_vfpcc bfloat @bf_from_int_hard(i32 %w) {
-; BASE-ARM-LABEL: bf_from_int_hard:
-; BASE-ARM:       @ %bb.0:
-; BASE-ARM-NEXT:    .pad #4
-; BASE-ARM-NEXT:    sub sp, sp, #4
-; BASE-ARM-NEXT:    strh r0, [sp, #2]
-; BASE-ARM-NEXT:    ldrh r0, [sp, #2]
-; BASE-ARM-NEXT:    vmov s0, r0
-; BASE-ARM-NEXT:    add sp, sp, #4
-; BASE-ARM-NEXT:    bx lr
-;
-; BASE-THUMB-LABEL: bf_from_int_hard:
-; BASE-THUMB:       @ %bb.0:
-; BASE-THUMB-NEXT:    .pad #4
-; BASE-THUMB-NEXT:    sub sp, #4
-; BASE-THUMB-NEXT:    strh.w r0, [sp, #2]
-; BASE-THUMB-NEXT:    ldrh.w r0, [sp, #2]
-; BASE-THUMB-NEXT:    vmov s0, r0
-; BASE-THUMB-NEXT:    add sp, #4
-; BASE-THUMB-NEXT:    bx lr
+; BASE-LABEL: bf_from_int_hard:
+; BASE:       @ %bb.0:
+; BASE-NEXT:    uxth r0, r0
+; BASE-NEXT:    vmov s0, r0
+; BASE-NEXT:    bx lr
 ;
 ; FULLFP16-LABEL: bf_from_int_hard:
 ; FULLFP16:       @ %bb.0:
@@ -156,43 +129,21 @@ define arm_aapcs_vfpcc bfloat @bf_from_int_hard(i32 %w) {
 }
 
 define bfloat @test_fncall_soft(bfloat %bf, ptr %f) {
-; BASE-ARM-LABEL: test_fncall_soft:
-; BASE-ARM:       @ %bb.0:
-; BASE-ARM-NEXT:    .save {r4, r5, r11, lr}
-; BASE-ARM-NEXT:    push {r4, r5, r11, lr}
-; BASE-ARM-NEXT:    .pad #8
-; BASE-ARM-NEXT:    sub sp, sp, #8
-; BASE-ARM-NEXT:    uxth r5, r0
-; BASE-ARM-NEXT:    mov r4, r1
-; BASE-ARM-NEXT:    mov r0, r5
-; BASE-ARM-NEXT:    mov r1, r5
-; BASE-ARM-NEXT:    blx r4
-; BASE-ARM-NEXT:    strh r0, [sp, #6]
-; BASE-ARM-NEXT:    uxth r1, r0
-; BASE-ARM-NEXT:    mov r0, r5
-; BASE-ARM-NEXT:    blx r4
-; BASE-ARM-NEXT:    ldrh r0, [sp, #6]
-; BASE-ARM-NEXT:    add sp, sp, #8
-; BASE-ARM-NEXT:    pop {r4, r5, r11, pc}
-;
-; BASE-THUMB-LABEL: test_fncall_soft:
-; BASE-THUMB:       @ %bb.0:
-; BASE-THUMB-NEXT:    .save {r4, r5, r7, lr}
-; BASE-THUMB-NEXT:    push {r4, r5, r7, lr}
-; BASE-THUMB-NEXT:    .pad #8
-; BASE-THUMB-NEXT:    sub sp, #8
-; BASE-THUMB-NEXT:    uxth r5, r0
-; BASE-THUMB-NEXT:    mov r4, r1
-; BASE-THUMB-NEXT:    mov r0, r5
-; BASE-THUMB-NEXT:    mov r1, r5
-; BASE-THUMB-NEXT:    blx r4
-; BASE-THUMB-NEXT:    strh.w r0, [sp, #6]
-; BASE-THUMB-NEXT:    uxth r1, r0
-; BASE-THUMB-NEXT:    mov r0, r5
-; BASE-THUMB-NEXT:    blx r4
-; BASE-THUMB-NEXT:    ldrh.w r0, [sp, #6]
-; BASE-THUMB-NEXT:    add sp, #8
-; BASE-THUMB-NEXT:    pop {r4, r5, r7, pc}
+; BASE-LABEL: test_fncall_soft:
+; BASE:       @ %bb.0:
+; BASE-NEXT:    .save {r4, r5, r6, lr}
+; BASE-NEXT:    push {r4, r5, r6, lr}
+; BASE-NEXT:    uxth r5, r0
+; BASE-NEXT:    mov r4, r1
+; BASE-NEXT:    mov r0, r5
+; BASE-NEXT:    mov r1, r5
+; BASE-NEXT:    blx r4
+; BASE-NEXT:    uxth r6, r0
+; BASE-NEXT:    mov r0, r5
+; BASE-NEXT:    mov r1, r6
+; BASE-NEXT:    blx r4
+; BASE-NEXT:    mov r0, r6
+; BASE-NEXT:    pop {r4, r5, r6, pc}
 ;
 ; FULLFP16-ARM-LABEL: test_fncall_soft:
 ; FULLFP16-ARM:       @ %bb.0:
@@ -241,12 +192,10 @@ define bfloat @test_fncall_soft(bfloat %bf, ptr %f) {
 define arm_aapcs_vfpcc bfloat @test_fncall_hard(bfloat %bf, ptr %f) {
 ; BASE-ARM-LABEL: test_fncall_hard:
 ; BASE-ARM:       @ %bb.0:
-; BASE-ARM-NEXT:    .save {r4, lr}
-; BASE-ARM-NEXT:    push {r4, lr}
+; BASE-ARM-NEXT:    .save {r4, r5, r11, lr}
+; BASE-ARM-NEXT:    push {r4, r5, r11, lr}
 ; BASE-ARM-NEXT:    .vsave {d8}
 ; BASE-ARM-NEXT:    vpush {d8}
-; BASE-ARM-NEXT:    .pad #8
-; BASE-ARM-NEXT:    sub sp, sp, #8
 ; BASE-ARM-NEXT:    mov r4, r0
 ; BASE-ARM-NEXT:    vmov r0, s0
 ; BASE-ARM-NEXT:    uxth r0, r0
@@ -256,24 +205,19 @@ define arm_aapcs_vfpcc bfloat @test_fncall_hard(bfloat %bf, ptr %f) {
 ; BASE-ARM-NEXT:    blx r4
 ; BASE-ARM-NEXT:    vmov r0, s0
 ; BASE-ARM-NEXT:    vmov.f32 s0, s16
-; BASE-ARM-NEXT:    strh r0, [sp, #6]
-; BASE-ARM-NEXT:    uxth r0, r0
-; BASE-ARM-NEXT:    vmov s1, r0
+; BASE-ARM-NEXT:    uxth r5, r0
+; BASE-ARM-NEXT:    vmov s1, r5
 ; BASE-ARM-NEXT:    blx r4
-; BASE-ARM-NEXT:    ldrh r0, [sp, #6]
-; BASE-ARM-NEXT:    vmov s0, r0
-; BASE-ARM-NEXT:    add sp, sp, #8
+; BASE-ARM-NEXT:    vmov s0, r5
 ; BASE-ARM-NEXT:    vpop {d8}
-; BASE-ARM-NEXT:    pop {r4, pc}
+; BASE-ARM-NEXT:    pop {r4, r5, r11, pc}
 ;
 ; BASE-THUMB-LABEL: test_fncall_hard:
 ; BASE-THUMB:       @ %bb.0:
-; BASE-THUMB-NEXT:    .save {r4, lr}
-; BASE-THUMB-NEXT:    push {r4, lr}
+; BASE-THUMB-NEXT:    .save {r4, r5, r7, lr}
+; BASE-THUMB-NEXT:    push {r4, r5, r7, lr}
 ; BASE-THUMB-NEXT:    .vsave {d8}
 ; BASE-THUMB-NEXT:    vpush {d8}
-; BASE-THUMB-NEXT:    .pad #8
-; BASE-THUMB-NEXT:    sub sp, #8
 ; BASE-THUMB-NEXT:    mov r4, r0
 ; BASE-THUMB-NEXT:    vmov r0, s0
 ; BASE-THUMB-NEXT:    uxth r0, r0
@@ -283,15 +227,12 @@ define arm_aapcs_vfpcc bfloat @test_fncall_hard(bfloat %bf, ptr %f) {
 ; BASE-THUMB-NEXT:    blx r4
 ; BASE-THUMB-NEXT:    vmov r0, s0
 ; BASE-THUMB-NEXT:    vmov.f32 s0, s16
-; BASE-THUMB-NEXT:    strh.w r0, [sp, #6]
-; BASE-THUMB-NEXT:    uxth r0, r0
-; BASE-THUMB-NEXT:    vmov s1, r0
+; BASE-THUMB-NEXT:    uxth r5, r0
+; BASE-THUMB-NEXT:    vmov s1, r5
 ; BASE-THUMB-NEXT:    blx r4
-; BASE-THUMB-NEXT:    ldrh.w r0, [sp, #6]
-; BASE-THUMB-NEXT:    vmov s0, r0
-; BASE-THUMB-NEXT:    add sp, #8
+; BASE-THUMB-NEXT:    vmov s0, r5
 ; BASE-THUMB-NEXT:    vpop {d8}
-; BASE-THUMB-NEXT:    pop {r4, pc}
+; BASE-THUMB-NEXT:    pop {r4, r5, r7, pc}
 ;
 ; FULLFP16-LABEL: test_fncall_hard:
 ; FULLFP16:       @ %bb.0:

@@ -115,13 +115,10 @@ entry:
 define dso_local <4 x bfloat> @test_vmov_n_bf16(float %a.coerce) {
 ; CHECK-NOFP16-LABEL: test_vmov_n_bf16:
 ; CHECK-NOFP16:       @ %bb.0: @ %entry
-; CHECK-NOFP16-NEXT:    .pad #4
-; CHECK-NOFP16-NEXT:    sub sp, sp, #4
 ; CHECK-NOFP16-NEXT:    vmov r0, s0
-; CHECK-NOFP16-NEXT:    strh r0, [sp, #2]
-; CHECK-NOFP16-NEXT:    add r0, sp, #2
-; CHECK-NOFP16-NEXT:    vld1.16 {d0[]}, [r0:16]
-; CHECK-NOFP16-NEXT:    add sp, sp, #4
+; CHECK-NOFP16-NEXT:    uxth r0, r0
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    vdup.16 d0, d0[0]
 ; CHECK-NOFP16-NEXT:    bx lr
 ;
 ; CHECK-FP16-LABEL: test_vmov_n_bf16:
@@ -141,13 +138,10 @@ entry:
 define dso_local <8 x bfloat> @test_vmovq_n_bf16(float %a.coerce) {
 ; CHECK-NOFP16-LABEL: test_vmovq_n_bf16:
 ; CHECK-NOFP16:       @ %bb.0: @ %entry
-; CHECK-NOFP16-NEXT:    .pad #4
-; CHECK-NOFP16-NEXT:    sub sp, sp, #4
 ; CHECK-NOFP16-NEXT:    vmov r0, s0
-; CHECK-NOFP16-NEXT:    strh r0, [sp, #2]
-; CHECK-NOFP16-NEXT:    add r0, sp, #2
-; CHECK-NOFP16-NEXT:    vld1.16 {d0[], d1[]}, [r0:16]
-; CHECK-NOFP16-NEXT:    add sp, sp, #4
+; CHECK-NOFP16-NEXT:    uxth r0, r0
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    vdup.16 q0, d0[0]
 ; CHECK-NOFP16-NEXT:    bx lr
 ;
 ; CHECK-FP16-LABEL: test_vmovq_n_bf16:
@@ -167,13 +161,10 @@ entry:
 define dso_local <4 x bfloat> @test_vdup_n_bf16(float %a.coerce) {
 ; CHECK-NOFP16-LABEL: test_vdup_n_bf16:
 ; CHECK-NOFP16:       @ %bb.0: @ %entry
-; CHECK-NOFP16-NEXT:    .pad #4
-; CHECK-NOFP16-NEXT:    sub sp, sp, #4
 ; CHECK-NOFP16-NEXT:    vmov r0, s0
-; CHECK-NOFP16-NEXT:    strh r0, [sp, #2]
-; CHECK-NOFP16-NEXT:    add r0, sp, #2
-; CHECK-NOFP16-NEXT:    vld1.16 {d0[]}, [r0:16]
-; CHECK-NOFP16-NEXT:    add sp, sp, #4
+; CHECK-NOFP16-NEXT:    uxth r0, r0
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    vdup.16 d0, d0[0]
 ; CHECK-NOFP16-NEXT:    bx lr
 ;
 ; CHECK-FP16-LABEL: test_vdup_n_bf16:
@@ -193,13 +184,10 @@ entry:
 define dso_local <8 x bfloat> @test_vdupq_n_bf16(float %a.coerce) {
 ; CHECK-NOFP16-LABEL: test_vdupq_n_bf16:
 ; CHECK-NOFP16:       @ %bb.0: @ %entry
-; CHECK-NOFP16-NEXT:    .pad #4
-; CHECK-NOFP16-NEXT:    sub sp, sp, #4
 ; CHECK-NOFP16-NEXT:    vmov r0, s0
-; CHECK-NOFP16-NEXT:    strh r0, [sp, #2]
-; CHECK-NOFP16-NEXT:    add r0, sp, #2
-; CHECK-NOFP16-NEXT:    vld1.16 {d0[], d1[]}, [r0:16]
-; CHECK-NOFP16-NEXT:    add sp, sp, #4
+; CHECK-NOFP16-NEXT:    uxth r0, r0
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    vdup.16 q0, d0[0]
 ; CHECK-NOFP16-NEXT:    bx lr
 ;
 ; CHECK-FP16-LABEL: test_vdupq_n_bf16:
