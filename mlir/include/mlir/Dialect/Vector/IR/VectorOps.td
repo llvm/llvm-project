@@ -2679,6 +2679,7 @@ def Vector_TypeCastOp :
     }
     // Implement ViewLikeOpInterface.
     Value getViewSource() { return getMemref(); }
+    bool mayHaveNonZeroOffset() { return false; }
   }];
 
   let assemblyFormat = [{

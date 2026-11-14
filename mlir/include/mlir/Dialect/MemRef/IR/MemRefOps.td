@@ -178,6 +178,7 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [
     MemRefType getType() { return ::llvm::cast<MemRefType>(getResult().getType()); }
 
     Value getViewSource() { return getMemref(); }
+    bool mayHaveNonZeroOffset() { return false; }
   }];
 
   let hasVerifier = 1;
@@ -568,6 +569,7 @@ def MemRef_CastOp : MemRef_Op<"cast", [
     static bool canFoldIntoConsumerOp(CastOp castOp);
 
     Value getViewSource() { return getSource(); }
+    bool mayHaveNonZeroOffset() { return false; }
   }];
 
   let hasFolder = 1;
@@ -1419,6 +1421,7 @@ def MemRef_MemorySpaceCastOp : MemRef_Op<"memory_space_cast", [
 
   let extraClassDeclaration = [{
     Value getViewSource() { return getSource(); }
+    bool mayHaveNonZeroOffset() { return false; }
 
     //===------------------------------------------------------------------===//
     // MemorySpaceCastConsumerOpInterface
@@ -1785,6 +1788,7 @@ def MemRef_ReshapeOp: MemRef_Op<"reshape", [
 
   let extraClassDeclaration = [{
     Value getViewSource() { return getSource(); }
+    bool mayHaveNonZeroOffset() { return false; }
   }];
 
   let assemblyFormat = [{
@@ -1822,6 +1826,7 @@ class MemRef_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
     MemRefType getResultType() { return ::llvm::cast<MemRefType>(getResult().getType()); }
 
     Value getViewSource() { return getSrc(); }
+    bool mayHaveNonZeroOffset() { return false; }
   }];
 
   let hasFolder = 1;
@@ -2156,7 +2161,8 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
     DeclareOpInterfaceMethods<InferStridedMetadataOpInterface>,
     DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
-    DeclareOpInterfaceMethods<ViewLikeOpInterface>,
+    DeclareOpInterfaceMethods<ViewLikeOpInterface,
+        ["mayHaveNonZeroOffset"]>,
     AttrSizedOperandSegments,
     OffsetSizeAndStrideOpInterface,
     Pure
@@ -2434,7 +2440,8 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
 def MemRef_TransposeOp : MemRef_Op<"transpose", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
     DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
-    DeclareOpInterfaceMethods<ViewLikeOpInterface>,
+    DeclareOpInterfaceMethods<ViewLikeOpInterface,
+        ["mayHaveNonZeroOffset"]>,
     Pure]>,
     Arguments<(ins AnyStridedMemRef:$in, AffineMapAttr:$permutation)>,
     Results<(outs AnyStridedMemRef)> {
@@ -2471,7 +2478,8 @@ def MemRef_TransposeOp : MemRef_Op<"transpose", [
 def MemRef_ViewOp : MemRef_Op<"view", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
     DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
-    DeclareOpInterfaceMethods<ViewLikeOpInterface>,
+    DeclareOpInterfaceMethods<ViewLikeOpInterface,
+        ["mayHaveNonZeroOffset"]>,
     Pure]> {
   let summary = "memref view operation";
   let description = [{
