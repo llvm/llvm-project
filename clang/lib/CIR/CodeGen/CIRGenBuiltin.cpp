@@ -1177,6 +1177,13 @@ decodeFixedType(CIRGenFunction &cgf,
     unsigned numElements = descriptor.VectorWidth.getFixedValue();
     return cir::VectorType::getFixed(elementType, numElements);
   }
+  case IITDescriptor::Struct: {
+    SmallVector<mlir::Type, 8> members;
+    for (unsigned i = 0; i < descriptor.StructNumElements; ++i)
+      members.push_back(decodeFixedType(cgf, infos, overloadTys, context));
+    return cgf.getBuilder().getAnonRecordTy(
+        members, /*packed=*/false, cir::RecordType::getAllDataKinds(members));
+  }
   case IITDescriptor::Pointer: {
     mlir::Builder builder(context);
     auto addrSpace = cir::TargetAddressSpaceAttr::get(
