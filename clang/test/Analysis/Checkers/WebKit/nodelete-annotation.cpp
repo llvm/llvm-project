@@ -980,6 +980,63 @@ constexpr T min(initializer_list<T> list) {
 
 } // namespace std
 
+namespace unused_defaulted_default_ctor {
+
+struct Ext { double w; };
+
+struct Size {
+  constexpr Size() = default;
+  [[clang::annotate("webkit.nodelete")]] Size(const Ext&);
+  double m_w { 0 };
+};
+
+struct Rect {
+  [[clang::annotate("webkit.nodelete")]] Rect(const Ext&);
+  Size m_size;
+};
+
+Rect::Rect(const Ext& e) : m_size(e) { }
+
+// The in-class initializer, not the field type's default constructor, is what
+// the defaulted default constructor runs for that field.
+struct OpaqueDefaultSafeConverting {
+  OpaqueDefaultSafeConverting();
+  [[clang::annotate("webkit.nodelete")]] OpaqueDefaultSafeConverting(int);
+};
+
+struct InitializedWithSafeConverting {
+  InitializedWithSafeConverting() = default;
+  [[clang::annotate("webkit.nodelete")]] InitializedWithSafeConverting(const Ext&);
+  OpaqueDefaultSafeConverting m_obj = 3;
+};
+
+struct HoldsInitializedWithSafeConverting {
+  [[clang::annotate("webkit.nodelete")]] HoldsInitializedWithSafeConverting(const Ext&);
+  InitializedWithSafeConverting m_member;
+};
+
+HoldsInitializedWithSafeConverting::HoldsInitializedWithSafeConverting(const Ext& e) : m_member(e) { }
+
+struct OpaqueConverting {
+  OpaqueConverting(int);
+};
+
+struct InitializedWithOpaqueConverting {
+  InitializedWithOpaqueConverting() = default;
+  [[clang::annotate("webkit.nodelete")]] InitializedWithOpaqueConverting(const Ext&);
+  OpaqueConverting m_obj = 3;
+};
+
+struct HoldsInitializedWithOpaqueConverting {
+  [[clang::annotate("webkit.nodelete")]] HoldsInitializedWithOpaqueConverting(const Ext&);
+  InitializedWithOpaqueConverting m_member;
+};
+
+HoldsInitializedWithOpaqueConverting::HoldsInitializedWithOpaqueConverting(const Ext& e) : m_member(e) { }
+// expected-warning@-1{{A constructor 'HoldsInitializedWithOpaqueConverting' has [[clang::annotate_type("webkit.nodelete")]] but it constructs a member variable 'm_member' that could destruct an object}}
+
+} // namespace unused_defaulted_default_ctor
+
 namespace std_initializer_list {
 
 // A braced list passed as std::initializer_list materialises a backing array
