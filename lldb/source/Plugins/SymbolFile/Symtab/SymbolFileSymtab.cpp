@@ -76,16 +76,16 @@ uint32_t SymbolFileSymtab::CalculateAbilities() {
 }
 
 void SymbolFileSymtab::InitializeSymbolIndexes() {
+  // GetModuleMutex() dereferences the object file, so check it first.
+  if (!m_objfile_sp)
+    return;
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (m_symbol_indexes_initialized)
-    return;
-  m_symbol_indexes_initialized = true;
-
-  if (!m_objfile_sp)
     return;
   const Symtab *symtab = m_objfile_sp->GetSymtab();
   if (!symtab)
     return;
+  m_symbol_indexes_initialized = true;
 
   // Get the indexes of the source file and non-debug code entries in the
   // module symbol table.
@@ -110,13 +110,8 @@ uint32_t SymbolFileSymtab::CalculateNumCompileUnits() {
 
   InitializeSymbolIndexes();
 
-  // If we don't have any source file symbols we will just have one compile
-  // unit for the entire object file
-  if (m_source_indexes.empty())
-    return 0;
-
-  // If we have any source file symbols we will logically organize the object
-  // symbols using these.
+  // Each source file symbol is a compile unit, and the object file symbols
+  // are logically organized using these.
   return m_source_indexes.size();
 }
 
@@ -125,8 +120,7 @@ CompUnitSP SymbolFileSymtab::ParseCompileUnitAtIndex(uint32_t idx) {
 
   CompUnitSP cu_sp;
 
-  // If we don't have any source file symbols we will just have one compile
-  // unit for the entire object file
+  // Each source file symbol is a compile unit.
   if (idx < m_source_indexes.size()) {
     const Symbol *cu_symbol =
         m_objfile_sp->GetSymtab()->SymbolAtIndex(m_source_indexes[idx]);

@@ -444,7 +444,13 @@ Symbols:
   ASSERT_NE(cu_sp, nullptr);
   EXPECT_EQ(cu_sp->GetPrimaryFile().GetFilename(), "main.c");
 
+  // Calculating the abilities must not build the symbol indexes, only asking
+  // for the compile units should.
   SymbolFileSymtabTester tester(module_sp->GetObjectFile()->shared_from_this());
+  EXPECT_FALSE(tester.SymbolIndexesInitialized());
+  EXPECT_EQ(
+      tester.GetAbilities(),
+      static_cast<uint32_t>(SymbolFile::Symbols | SymbolFile::CompileUnits));
   EXPECT_FALSE(tester.SymbolIndexesInitialized());
   EXPECT_EQ(tester.GetNumCompileUnits(), 1u);
   EXPECT_TRUE(tester.SymbolIndexesInitialized());
