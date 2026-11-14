@@ -138,3 +138,27 @@ void local_in_parallel_for(int *a, int n) {
 
 // LLVM-LABEL: define{{.*}} void @local_in_parallel_for(
 // LLVM:         call void {{.*}}@__kmpc_fork_call(
+
+// A local in the teams region is ended inside the region, before its
+// terminator.
+void local_in_teams(void) {
+#pragma omp target teams
+  {
+    int t = 2;
+    use(t);
+  }
+}
+
+// CIR-LABEL: cir.func{{.*}}@local_in_teams
+// CIR:         omp.target
+// CIR:           omp.teams {
+// CIR:             %[[T:.*]] = cir.alloca "t"
+// CIR:             cir.lifetime.start %[[T]]
+// CIR:             cir.cleanup.scope {
+// CIR:             } cleanup normal {
+// CIR:               cir.lifetime.end %[[T]]
+// CIR:             }
+// CIR-NEXT:        omp.terminator
+
+// LLVM-LABEL: define{{.*}} void @local_in_teams(
+// LLVM:         call void {{.*}}@__kmpc_fork_teams(
