@@ -3847,6 +3847,26 @@ void OmpStructureChecker::Enter(const parser::OmpClauseList &) {
 void OmpStructureChecker::Leave(const parser::OmpClauseList &x) {
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
 
+  if (context_.ShouldWarn(common::UsageWarning::Portability) &&
+      llvm::omp::allDoSimdSet.test(GetContext().directive)) {
+
+    SymbolSourceMap firstprivateSymbols, lastprivateSymbols;
+    for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_firstprivate)) {
+      GetSymbolsInObjectList(*GetOmpObjectList(*clause), firstprivateSymbols);
+    }
+    for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_lastprivate)) {
+      GetSymbolsInObjectList(*GetOmpObjectList(*clause), lastprivateSymbols);
+    }
+    for (const auto &[symbol, source] : lastprivateSymbols) {
+      // Erasing all occurrences emits only one warning per variable.
+      if (firstprivateSymbols.erase(symbol)) {
+        context_.Warn(common::UsageWarning::Portability, source,
+            "Variable '%s' appears in both FIRSTPRIVATE and LASTPRIVATE clauses on a %s construct; '%s' may be uninitialised in the associated structured block"_port_en_US,
+            symbol->name(), ContextDirectiveAsFortran(), symbol->name());
+      }
+    }
+  }
+
   // 2.7.1 Loop Construct Restriction
   if (llvm::omp::allDoSet.test(GetContext().directive)) {
     if (auto *clause{FindClause(llvm::omp::Clause::OMPC_schedule)}) {
