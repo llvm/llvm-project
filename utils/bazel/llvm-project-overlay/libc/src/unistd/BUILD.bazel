@@ -303,7 +303,7 @@ libc_function(
         "//libc/hdr/types:pid_t",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:clone3",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:gettid",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/threads:fork_callbacks",
