@@ -1186,9 +1186,9 @@ define i32 @zext_load_i32_by_i8_bswap(ptr %arg) nounwind {
 ;
 ; X86-MOVBE-LABEL: zext_load_i32_by_i8_bswap:
 ; X86-MOVBE:       # %bb.0:
-; X86-MOVBE-NEXT:    movl 4(%esp), %eax
-; X86-MOVBE-NEXT:    movbew (%eax), %ax
-; X86-MOVBE-NEXT:    movzwl %ax, %eax
+; X86-MOVBE-NEXT:    movl 4(%esp), %ecx
+; X86-MOVBE-NEXT:    xorl %eax, %eax
+; X86-MOVBE-NEXT:    movbew (%ecx), %ax
 ; X86-MOVBE-NEXT:    retl
 ;
 ; X64-BSWAP-LABEL: zext_load_i32_by_i8_bswap:
@@ -1200,8 +1200,8 @@ define i32 @zext_load_i32_by_i8_bswap(ptr %arg) nounwind {
 ;
 ; X64-MOVBE-LABEL: zext_load_i32_by_i8_bswap:
 ; X64-MOVBE:       # %bb.0:
+; X64-MOVBE-NEXT:    xorl %eax, %eax
 ; X64-MOVBE-NEXT:    movbew (%rdi), %ax
-; X64-MOVBE-NEXT:    movzwl %ax, %eax
 ; X64-MOVBE-NEXT:    retq
   %tmp1 = getelementptr inbounds i8, ptr %arg, i32 1
   %tmp2 = load i8, ptr %tmp1, align 1
