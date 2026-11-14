@@ -21,10 +21,6 @@ define void @uniform_loads(ptr noalias %a, ptr noalias %p, ptr noalias %r, i64 %
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[K]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP1]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <4 x ptr> [[BROADCAST_SPLATINSERT5]], <4 x ptr> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[R]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x ptr> [[BROADCAST_SPLATINSERT]], <4 x ptr> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i64> poison, i64 [[N]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT1]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x i64> poison, i64 [[M]], i64 0
@@ -33,12 +29,14 @@ define void @uniform_loads(ptr noalias %a, ptr noalias %p, ptr noalias %r, i64 %
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[OUTER_LATCH10:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[OUTER_LATCH10]] ]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[BROADCAST_SPLAT6]], <4 x i1> splat (i1 true), <4 x i32> poison)
+; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    br label %[[INNER7:.*]]
 ; CHECK:       [[INNER7]]:
 ; CHECK-NEXT:    [[J8:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP5:%.*]], %[[INNER7]] ]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER9:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[BROADCAST_SPLAT]], <4 x i1> splat (i1 true), <4 x i32> poison)
-; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[WIDE_MASKED_GATHER]], [[WIDE_MASKED_GATHER9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[R]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <4 x i32> poison, i32 [[TMP11]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT5]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nsw <4 x i64> [[J8]], [[BROADCAST_SPLAT2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i64> [[TMP3]], [[VEC_IND]]
 ; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], <4 x i64> [[TMP4]]
@@ -97,15 +95,15 @@ define void @uniform_load_pointer_chase(ptr noalias %a, ptr noalias %pp, i64 %N,
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[PP]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x ptr> [[BROADCAST_SPLATINSERT]], <4 x ptr> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i64> poison, i64 [[M]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT1]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[OUTER_LATCH6:.*]] ]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x ptr> @llvm.masked.gather.v4p0.v4p0(<4 x ptr> align 8 [[BROADCAST_SPLAT]], <4 x i1> splat (i1 true), <4 x ptr> poison)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER3:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[WIDE_MASKED_GATHER]], <4 x i1> splat (i1 true), <4 x i32> poison)
+; CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[PP]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <4 x i32> poison, i32 [[TMP7]], i64 0
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER3:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT4]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[INNER4:.*]]
 ; CHECK:       [[INNER4]]:
 ; CHECK-NEXT:    [[J5:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP1:%.*]], %[[INNER4]] ]
@@ -161,14 +159,14 @@ define void @uniform_load_sext(ptr noalias %a, ptr noalias %q, i64 %N, i64 %M) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[Q]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x ptr> [[BROADCAST_SPLATINSERT]], <4 x ptr> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i64> poison, i64 [[M]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT1]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[OUTER_LATCH5:.*]] ]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[BROADCAST_SPLAT]], <4 x i1> splat (i1 true), <4 x i32> poison)
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[Q]], align 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP7]], i64 0
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT2]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext <4 x i32> [[WIDE_MASKED_GATHER]] to <4 x i64>
 ; CHECK-NEXT:    br label %[[INNER3:.*]]
 ; CHECK:       [[INNER3]]:
@@ -296,8 +294,6 @@ define void @uniform_load_in_then(ptr noalias %a, ptr noalias %p, i1 %c, i64 %N,
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[P]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x ptr> [[BROADCAST_SPLATINSERT]], <4 x ptr> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i64> poison, i64 [[M]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT1]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -305,10 +301,12 @@ define void @uniform_load_in_then(ptr noalias %a, ptr noalias %p, i1 %c, i64 %N,
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[OUTER_LATCH8:.*]] ]
 ; CHECK-NEXT:    br i1 [[C]], label %[[THEN3:.*]], label %[[MERGE4:.*]]
 ; CHECK:       [[THEN3]]:
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[BROADCAST_SPLAT]], <4 x i1> splat (i1 true), <4 x i32> poison)
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x i32> poison, i32 [[TMP6]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT3]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[MERGE4]]
 ; CHECK:       [[MERGE4]]:
-; CHECK-NEXT:    [[M5:%.*]] = phi <4 x i32> [ [[WIDE_MASKED_GATHER]], %[[THEN3]] ], [ zeroinitializer, %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[M5:%.*]] = phi <4 x i32> [ [[BROADCAST_SPLAT4]], %[[THEN3]] ], [ zeroinitializer, %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    br label %[[INNER6:.*]]
 ; CHECK:       [[INNER6]]:
 ; CHECK-NEXT:    [[J7:%.*]] = phi <4 x i64> [ zeroinitializer, %[[MERGE4]] ], [ [[TMP1:%.*]], %[[INNER6]] ]
@@ -384,7 +382,9 @@ define void @uniform_load_after_branch(ptr %a, ptr %p, i1 %c, i64 %N, i64 %M) {
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> splat (i32 7), <4 x ptr> align 4 [[BROADCAST_SPLAT]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    br label %[[MERGE4]]
 ; CHECK:       [[MERGE4]]:
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[BROADCAST_SPLAT]], <4 x i1> splat (i1 true), <4 x i32> poison), !alias.scope [[META12:![0-9]+]], !noalias [[META15:![0-9]+]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[P]], align 4, !alias.scope [[META12:![0-9]+]], !noalias [[META15:![0-9]+]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <4 x i32> poison, i32 [[TMP6]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT8]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[INNER5:.*]]
 ; CHECK:       [[INNER5]]:
 ; CHECK-NEXT:    [[J6:%.*]] = phi <4 x i64> [ zeroinitializer, %[[MERGE4]] ], [ [[TMP1:%.*]], %[[INNER5]] ]
@@ -394,7 +394,7 @@ define void @uniform_load_after_branch(ptr %a, ptr %p, i1 %c, i64 %N, i64 %M) {
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[OUTER_LATCH7]], label %[[INNER5]]
 ; CHECK:       [[OUTER_LATCH7]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    store <4 x i32> [[WIDE_MASKED_GATHER]], ptr [[TMP4]], align 4, !alias.scope [[META15]], !noalias [[META12]]
+; CHECK-NEXT:    store <4 x i32> [[BROADCAST_SPLAT9]], ptr [[TMP4]], align 4, !alias.scope [[META15]], !noalias [[META12]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
@@ -446,10 +446,11 @@ define void @uniform_load_after_branch_noalias(ptr %a, ptr %b, ptr %p, i1 %c, i6
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[P]], align 4, !alias.scope [[META12]], !noalias [[META15]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <4 x i32> poison, i32 [[TMP6]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT8]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[B]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x ptr> [[BROADCAST_SPLATINSERT]], <4 x ptr> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x ptr> poison, ptr [[P]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x ptr> [[BROADCAST_SPLATINSERT1]], <4 x ptr> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x i64> poison, i64 [[M]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT3]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -460,7 +461,6 @@ define void @uniform_load_after_branch_noalias(ptr %a, ptr %b, ptr %p, i1 %c, i6
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> splat (i32 7), <4 x ptr> align 4 [[BROADCAST_SPLAT]], <4 x i1> splat (i1 true)), !alias.scope [[META15]], !noalias [[META12]]
 ; CHECK-NEXT:    br label %[[MERGE6]]
 ; CHECK:       [[MERGE6]]:
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[BROADCAST_SPLAT2]], <4 x i1> splat (i1 true), <4 x i32> poison), !alias.scope [[META12]], !noalias [[META15]]
 ; CHECK-NEXT:    br label %[[INNER7:.*]]
 ; CHECK:       [[INNER7]]:
 ; CHECK-NEXT:    [[J8:%.*]] = phi <4 x i64> [ zeroinitializer, %[[MERGE6]] ], [ [[TMP1:%.*]], %[[INNER7]] ]
@@ -470,7 +470,7 @@ define void @uniform_load_after_branch_noalias(ptr %a, ptr %b, ptr %p, i1 %c, i6
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[OUTER_LATCH9]], label %[[INNER7]]
 ; CHECK:       [[OUTER_LATCH9]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    store <4 x i32> [[WIDE_MASKED_GATHER]], ptr [[TMP4]], align 4, !alias.scope [[META15]], !noalias [[META12]]
+; CHECK-NEXT:    store <4 x i32> [[BROADCAST_SPLAT9]], ptr [[TMP4]], align 4, !alias.scope [[META15]], !noalias [[META12]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
@@ -529,7 +529,9 @@ define void @uniform_load_store_in_inner_loop(ptr %a, ptr %p, i64 %N, i64 %M) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[OUTER_LATCH5:.*]] ]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[BROADCAST_SPLAT]], <4 x i1> splat (i1 true), <4 x i32> poison), !alias.scope [[META12]], !noalias [[META15]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[P]], align 4, !alias.scope [[META12]], !noalias [[META15]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <4 x i32> poison, i32 [[TMP6]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT6]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[INNER3:.*]]
 ; CHECK:       [[INNER3]]:
 ; CHECK-NEXT:    [[J4:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP1:%.*]], %[[INNER3]] ]
@@ -540,7 +542,7 @@ define void @uniform_load_store_in_inner_loop(ptr %a, ptr %p, i64 %N, i64 %M) {
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[OUTER_LATCH5]], label %[[INNER3]]
 ; CHECK:       [[OUTER_LATCH5]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    store <4 x i32> [[WIDE_MASKED_GATHER]], ptr [[TMP4]], align 4, !alias.scope [[META15]], !noalias [[META12]]
+; CHECK-NEXT:    store <4 x i32> [[BROADCAST_SPLAT7]], ptr [[TMP4]], align 4, !alias.scope [[META15]], !noalias [[META12]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
@@ -594,7 +596,9 @@ define void @uniform_load_store_in_inner_loop_branch(ptr %a, ptr %p, i1 %c, i64 
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[OUTER_LATCH7:.*]] ]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[BROADCAST_SPLAT]], <4 x i1> splat (i1 true), <4 x i32> poison), !alias.scope [[META12]], !noalias [[META15]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[P]], align 4, !alias.scope [[META12]], !noalias [[META15]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <4 x i32> poison, i32 [[TMP6]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT8]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[INNER3:.*]]
 ; CHECK:       [[INNER3]]:
 ; CHECK-NEXT:    [[J4:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP1:%.*]], %[[INNER_LATCH6:.*]] ]
@@ -609,7 +613,7 @@ define void @uniform_load_store_in_inner_loop_branch(ptr %a, ptr %p, i1 %c, i64 
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[OUTER_LATCH7]], label %[[INNER3]]
 ; CHECK:       [[OUTER_LATCH7]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    store <4 x i32> [[WIDE_MASKED_GATHER]], ptr [[TMP4]], align 4, !alias.scope [[META15]], !noalias [[META12]]
+; CHECK-NEXT:    store <4 x i32> [[BROADCAST_SPLAT9]], ptr [[TMP4]], align 4, !alias.scope [[META15]], !noalias [[META12]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
