@@ -38,6 +38,45 @@ using llvm::SmallDenseMap;
 
 using Node = MemRefDependenceGraph::Node;
 
+/// Returns the values that `op` may have a memref effect of type `EffectTys`
+/// on, not considering recursive effects. An op with unknown memory effects
+/// (e.g. a call to an external function without a memory-effect interface) is
+/// conservatively assumed to affect all its memref operands.
+template <typename... EffectTys>
+static void getMayEffectedValues(Operation *op,
+                                 SmallVectorImpl<Value> &values) {
+  auto memOp = dyn_cast<MemoryEffectOpInterface>(op);
+  if (!memOp) {
+    if (op->hasTrait<OpTrait::HasRecursiveMemoryEffects>())
+      // No effects.
+      return;
+    // Memref operands have to be considered as being affected.
+    for (Value operand : op->getOperands()) {
+      if (isa<MemRefType>(operand.getType()))
+        values.push_back(operand);
+    }
+    return;
+  }
+  SmallVector<SideEffects::EffectInstance<MemoryEffects::Effect>, 4> effects;
+  memOp.getEffects(effects);
+  for (auto &effect : effects) {
+    Value effectVal = effect.getValue();
+    if (isa<EffectTys...>(effect.getEffect()) && effectVal &&
+        isa<MemRefType>(effectVal.getType()))
+      values.push_back(effectVal);
+  };
+}
+
+/// Returns true if `op` may have a memory effect of type `EffectTys` on
+/// `memref`, i.e., whether `memref` is among the values returned by
+/// `getMayEffectedValues` for `op`.
+template <typename... EffectTys>
+static bool mayHaveEffect(Operation *op, Value memref) {
+  SmallVector<Value> values;
+  getMayEffectedValues<EffectTys...>(op, values);
+  return llvm::is_contained(values, memref);
+}
+
 // LoopNestStateCollector walks loop nests and collects load and store
 // operations, and whether or not a region holding op other than ForOp and IfOp
 // was encountered in the loop nest.
@@ -83,7 +122,7 @@ unsigned Node::getLoadOpCount(Value memref) const {
     if (auto affineLoad = dyn_cast<AffineReadOpInterface>(loadOp)) {
       if (memref == affineLoad.getMemRef())
         ++loadOpCount;
-    } else if (hasEffect<MemoryEffects::Read>(loadOp, memref)) {
+    } else if (mayHaveEffect<MemoryEffects::Read>(loadOp, memref)) {
       ++loadOpCount;
     }
   }
@@ -98,8 +137,7 @@ unsigned Node::getStoreOpCount(Value memref) const {
     if (auto affineStore = dyn_cast<AffineWriteOpInterface>(storeOp)) {
       if (memref == affineStore.getMemRef())
         ++storeOpCount;
-    } else if (hasEffect<MemoryEffects::Write>(const_cast<Operation *>(storeOp),
-                                               memref)) {
+    } else if (mayHaveEffect<MemoryEffects::Write>(storeOp, memref)) {
       ++storeOpCount;
     }
   }
@@ -114,7 +152,7 @@ unsigned Node::hasStore(Value memref) const {
         if (auto affineStore = dyn_cast<AffineWriteOpInterface>(storeOp)) {
           if (memref == affineStore.getMemRef())
             return true;
-        } else if (hasEffect<MemoryEffects::Write>(storeOp, memref)) {
+        } else if (mayHaveEffect<MemoryEffects::Write>(storeOp, memref)) {
           return true;
         }
         return false;
@@ -123,7 +161,7 @@ unsigned Node::hasStore(Value memref) const {
 
 unsigned Node::hasFree(Value memref) const {
   return llvm::any_of(memrefFrees, [&](Operation *freeOp) {
-    return hasEffect<MemoryEffects::Free>(freeOp, memref);
+    return mayHaveEffect<MemoryEffects::Free>(freeOp, memref);
   });
 }
 
@@ -160,32 +198,6 @@ void Node::getLoadAndStoreMemrefSet(
   }
 }
 
-/// Returns the values that this op has a memref effect of type `EffectTys` on,
-/// not considering recursive effects.
-template <typename... EffectTys>
-static void getEffectedValues(Operation *op, SmallVectorImpl<Value> &values) {
-  auto memOp = dyn_cast<MemoryEffectOpInterface>(op);
-  if (!memOp) {
-    if (op->hasTrait<OpTrait::HasRecursiveMemoryEffects>())
-      // No effects.
-      return;
-    // Memref operands have to be considered as being affected.
-    for (Value operand : op->getOperands()) {
-      if (isa<MemRefType>(operand.getType()))
-        values.push_back(operand);
-    }
-    return;
-  }
-  SmallVector<SideEffects::EffectInstance<MemoryEffects::Effect>, 4> effects;
-  memOp.getEffects(effects);
-  for (auto &effect : effects) {
-    Value effectVal = effect.getValue();
-    if (isa<EffectTys...>(effect.getEffect()) && effectVal &&
-        isa<MemRefType>(effectVal.getType()))
-      values.push_back(effectVal);
-  };
-}
-
 /// Add `op` to MDG creating a new node and adding its memory accesses (affine
 /// or non-affine to memrefAccesses (memref -> list of nodes with accesses) map.
 static Node *
@@ -210,7 +222,7 @@ addNodeToMDG(Operation *nodeOp, MemRefDependenceGraph &mdg,
   }
   for (Operation *op : collector.memrefLoads) {
     SmallVector<Value> effectedValues;
-    getEffectedValues<MemoryEffects::Read>(op, effectedValues);
+    getMayEffectedValues<MemoryEffects::Read>(op, effectedValues);
     if (llvm::any_of(((ValueRange)effectedValues).getTypes(),
                      [](Type type) { return !isa<MemRefType>(type); }))
       // We do not know the interaction here.
@@ -221,7 +233,7 @@ addNodeToMDG(Operation *nodeOp, MemRefDependenceGraph &mdg,
   }
   for (Operation *op : collector.memrefStores) {
     SmallVector<Value> effectedValues;
-    getEffectedValues<MemoryEffects::Write>(op, effectedValues);
+    getMayEffectedValues<MemoryEffects::Write>(op, effectedValues);
     if (llvm::any_of((ValueRange(effectedValues)).getTypes(),
                      [](Type type) { return !isa<MemRefType>(type); }))
       return nullptr;
@@ -231,7 +243,7 @@ addNodeToMDG(Operation *nodeOp, MemRefDependenceGraph &mdg,
   }
   for (Operation *op : collector.memrefFrees) {
     SmallVector<Value> effectedValues;
-    getEffectedValues<MemoryEffects::Free>(op, effectedValues);
+    getMayEffectedValues<MemoryEffects::Free>(op, effectedValues);
     if (llvm::any_of((ValueRange(effectedValues)).getTypes(),
                      [](Type type) { return !isa<MemRefType>(type); }))
       return nullptr;
