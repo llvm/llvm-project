@@ -6,9 +6,8 @@ declare void @use(...)
 define i8 @bitextract(b32 %b) {
 ; CHECK-LABEL: define i8 @bitextract(
 ; CHECK-SAME: b32 [[B:%.*]]) {
-; CHECK-NEXT:    [[X:%.*]] = bitextract i8, b32 [[B]], i32 8
 ; CHECK-NEXT:    [[Y:%.*]] = bitextract i8, b32 [[B]], i32 8
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[Y]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %x = bitextract i8, b32 %b, i32 8
@@ -20,9 +19,8 @@ define i8 @bitextract(b32 %b) {
 define void @bitinsert(b32 %b, i8 %v) {
 ; CHECK-LABEL: define void @bitinsert(
 ; CHECK-SAME: b32 [[B:%.*]], i8 [[V:%.*]]) {
-; CHECK-NEXT:    [[X:%.*]] = bitinsert b32 [[B]], i8 [[V]], i32 8
 ; CHECK-NEXT:    [[Y:%.*]] = bitinsert b32 [[B]], i8 [[V]], i32 8
-; CHECK-NEXT:    call void (...) @use(b32 [[X]], b32 [[Y]])
+; CHECK-NEXT:    call void (...) @use(b32 [[Y]], b32 [[Y]])
 ; CHECK-NEXT:    ret void
 ;
   %x = bitinsert b32 %b, i8 %v, i32 8
@@ -106,9 +104,8 @@ define void @neg_bitinsert_offset(b32 %b, i8 %v) {
 define void @bitextract_vec(<2 x b32> %b) {
 ; CHECK-LABEL: define void @bitextract_vec(
 ; CHECK-SAME: <2 x b32> [[B:%.*]]) {
-; CHECK-NEXT:    [[X:%.*]] = bitextract <2 x i8>, <2 x b32> [[B]], <2 x i32> <i32 0, i32 8>
 ; CHECK-NEXT:    [[Y:%.*]] = bitextract <2 x i8>, <2 x b32> [[B]], <2 x i32> <i32 0, i32 8>
-; CHECK-NEXT:    call void (...) @use(<2 x i8> [[X]], <2 x i8> [[Y]])
+; CHECK-NEXT:    call void (...) @use(<2 x i8> [[Y]], <2 x i8> [[Y]])
 ; CHECK-NEXT:    ret void
 ;
   %x = bitextract <2 x i8>, <2 x b32> %b, <2 x i32> <i32 0, i32 8>
