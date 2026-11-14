@@ -1148,6 +1148,8 @@ public:
 
   /// Emit flush of the variables specified in 'omp flush' directive.
   /// \param Vars List of variables to flush.
+  /// \param AO Memory ordering of the flush, or NotAtomic for a flush with a
+  /// list (a strong flush).
   virtual void emitFlush(CodeGenFunction &CGF, ArrayRef<const Expr *> Vars,
                          SourceLocation Loc, llvm::AtomicOrdering AO);
 

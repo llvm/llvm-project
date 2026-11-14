@@ -1632,6 +1632,10 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   - A loop transformation (`tile`, `unroll`, `interchange`, ...) that consumes
     another tile's intra-tile loop.
 
+- The `acquire`, `release` and `acq_rel` clauses of the `flush` directive now
+  take effect. On GPUs a flush is emitted as a fence of the requested ordering.
+  On the host, a flush other than a seq_cst flush needs an OpenMP runtime from
+  this release.
 - Added parsing and semantic support for `dims` modifier in `num_teams`,
   `thread_limit` and `num_threads` clauses for OpenMP 6.1 or later.
 - Map-type-modifying modifiers applied to a list item with a user-defined mapper

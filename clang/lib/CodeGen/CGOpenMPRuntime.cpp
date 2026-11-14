@@ -2953,16 +2953,36 @@ void CGOpenMPRuntime::emitProcBindClause(CodeGenFunction &CGF,
 
 void CGOpenMPRuntime::emitFlush(CodeGenFunction &CGF, ArrayRef<const Expr *>,
                                 SourceLocation Loc, llvm::AtomicOrdering AO) {
-  if (CGF.CGM.getLangOpts().OpenMPIRBuilder) {
-    OMPBuilder.createFlush(CGF.Builder);
-  } else {
-    if (!CGF.HaveInsertPoint())
-      return;
+  // The OpenMPIRBuilder emits a fence on a GPU, so GPUs always use it.
+  if (CGF.CGM.getLangOpts().OpenMPIRBuilder || isGPU()) {
+    OMPBuilder.createFlush(CGF.Builder, AO);
+    return;
+  }
+  if (!CGF.HaveInsertPoint())
+    return;
+  // This is the host lowering of OpenMPIRBuilder::emitFlush, but with the
+  // source location from emitUpdateLocation, as for clang's other host
+  // runtime calls.
+  // A flush with a list is a strong flush, which is treated as seq_cst.
+  if (AO == llvm::AtomicOrdering::NotAtomic)
+    AO = llvm::AtomicOrdering::SequentiallyConsistent;
+  if (AO == llvm::AtomicOrdering::SequentiallyConsistent) {
     // Build call void __kmpc_flush(ident_t *loc)
     CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                             CGM.getModule(), OMPRTL___kmpc_flush),
                         emitUpdateLocation(CGF, Loc));
+    return;
   }
+  // Build call void __kmpc_flush_explicit(ident_t *loc, kmp_int32 order,
+  // kmp_int32 scope), where order is an __ATOMIC_* value and scope is the
+  // __MEMORY_SCOPE_* value for device scope.
+  llvm::Value *Args[] = {
+      emitUpdateLocation(CGF, Loc),
+      CGF.Builder.getInt32(static_cast<unsigned>(llvm::toCABI(AO))),
+      CGF.Builder.getInt32(static_cast<unsigned>(llvm::AtomicScope::Device))};
+  CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                          CGM.getModule(), OMPRTL___kmpc_flush_explicit),
+                      Args);
 }
 
 namespace {

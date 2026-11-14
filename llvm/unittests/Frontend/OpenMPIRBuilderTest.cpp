@@ -370,6 +370,95 @@ static Value *findAggregateFromValue(Value *V) {
   return Aggregate;
 }
 
+TEST_F(OpenMPIRBuilderTest, CreateFlush) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc(Builder);
+  // A seq_cst flush at device scope, or a flush with a list, is a call to
+  // __kmpc_flush. Anything else calls __kmpc_flush_explicit with the
+  // __ATOMIC_* ordering and the __MEMORY_SCOPE_* scope.
+  OMPBuilder.createFlush(Loc);
+  OMPBuilder.createFlush(Loc, AtomicOrdering::NotAtomic);
+  OMPBuilder.createFlush(Loc, AtomicOrdering::Acquire);
+  OMPBuilder.createFlush(Loc, AtomicOrdering::SequentiallyConsistent,
+                         AtomicScope::System);
+  Builder.CreateRetVoid();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  SmallVector<CallInst *> Calls;
+  for (Instruction &I : *BB)
+    if (auto *CI = dyn_cast<CallInst>(&I))
+      Calls.push_back(CI);
+  ASSERT_EQ(Calls.size(), 4U);
+  EXPECT_EQ(Calls[0]->getCalledFunction()->getName(), "__kmpc_flush");
+  EXPECT_EQ(Calls[1]->getCalledFunction()->getName(), "__kmpc_flush");
+  for (auto [CI, Order, Scope] :
+       {std::tuple(Calls[2], 2, 1), std::tuple(Calls[3], 5, 0)}) {
+    EXPECT_EQ(CI->getCalledFunction()->getName(), "__kmpc_flush_explicit");
+    EXPECT_EQ(cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue(),
+              uint64_t(Order));
+    EXPECT_EQ(cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue(),
+              uint64_t(Scope));
+  }
+}
+
+TEST_F(OpenMPIRBuilderTest, CreateFlushGPU) {
+  M->setTargetTriple(Triple("amdgcn-amd-amdhsa"));
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.Config.IsTargetDevice = true;
+  OMPBuilder.Config.setIsGPU(true);
+  OMPBuilder.initialize();
+
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc(Builder);
+  // On a GPU a flush is a fence of the given ordering and scope.
+  OMPBuilder.createFlush(Loc);
+  OMPBuilder.createFlush(Loc, AtomicOrdering::NotAtomic);
+  OMPBuilder.createFlush(Loc, AtomicOrdering::Release, AtomicScope::System);
+  OMPBuilder.createFlush(Loc, AtomicOrdering::Acquire, AtomicScope::Workgroup);
+  Builder.CreateRetVoid();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  SmallVector<FenceInst *> Fences;
+  for (Instruction &I : *BB) {
+    EXPECT_FALSE(isa<CallInst>(I));
+    if (auto *FI = dyn_cast<FenceInst>(&I))
+      Fences.push_back(FI);
+  }
+  ASSERT_EQ(Fences.size(), 4U);
+  SyncScope::ID Agent = M->getContext().getOrInsertSyncScopeID("agent");
+  EXPECT_EQ(Fences[0]->getOrdering(), AtomicOrdering::SequentiallyConsistent);
+  EXPECT_EQ(Fences[0]->getSyncScopeID(), Agent);
+  EXPECT_EQ(Fences[1]->getOrdering(), AtomicOrdering::SequentiallyConsistent);
+  EXPECT_EQ(Fences[1]->getSyncScopeID(), Agent);
+  EXPECT_EQ(Fences[2]->getOrdering(), AtomicOrdering::Release);
+  EXPECT_EQ(Fences[2]->getSyncScopeID(), SyncScope::System);
+  EXPECT_EQ(Fences[3]->getOrdering(), AtomicOrdering::Acquire);
+  EXPECT_EQ(Fences[3]->getSyncScopeID(),
+            M->getContext().getOrInsertSyncScopeID("workgroup"));
+}
+
+TEST_F(OpenMPIRBuilderTest, CreateFlushGPUTriple) {
+  // Without IsGPU in the config, a GPU triple still gets a fence.
+  M->setTargetTriple(Triple("nvptx64-nvidia-cuda"));
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+
+  IRBuilder<> Builder(BB);
+  OMPBuilder.createFlush(OpenMPIRBuilder::LocationDescription(Builder),
+                         AtomicOrdering::Acquire);
+  Builder.CreateRetVoid();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  auto *FI = dyn_cast<FenceInst>(&BB->front());
+  ASSERT_NE(FI, nullptr);
+  EXPECT_EQ(FI->getOrdering(), AtomicOrdering::Acquire);
+  EXPECT_EQ(FI->getSyncScopeID(),
+            M->getContext().getOrInsertSyncScopeID("device"));
+}
+
 TEST_F(OpenMPIRBuilderTest, CreateBarrier) {
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.initialize();
