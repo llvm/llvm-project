@@ -441,8 +441,7 @@ define i1 @scalar_i128_lowestbit_eq(i128 %x, i128 %y) nounwind {
 ; X86-SSE2-NEXT:    movaps %xmm0, (%esp)
 ; X86-SSE2-NEXT:    movl %eax, %ecx
 ; X86-SSE2-NEXT:    shrb $3, %cl
-; X86-SSE2-NEXT:    andb $12, %cl
-; X86-SSE2-NEXT:    movzbl %cl, %ecx
+; X86-SSE2-NEXT:    andl $12, %ecx
 ; X86-SSE2-NEXT:    movl (%esp,%ecx), %ecx
 ; X86-SSE2-NEXT:    btl %eax, %ecx
 ; X86-SSE2-NEXT:    setae %al
@@ -459,8 +458,7 @@ define i1 @scalar_i128_lowestbit_eq(i128 %x, i128 %y) nounwind {
 ; X86-BMI2-AVX2-NEXT:    vmovaps %xmm0, (%esp)
 ; X86-BMI2-AVX2-NEXT:    movl %eax, %ecx
 ; X86-BMI2-AVX2-NEXT:    shrb $3, %cl
-; X86-BMI2-AVX2-NEXT:    andb $12, %cl
-; X86-BMI2-AVX2-NEXT:    movzbl %cl, %ecx
+; X86-BMI2-AVX2-NEXT:    andl $12, %ecx
 ; X86-BMI2-AVX2-NEXT:    movl (%esp,%ecx), %ecx
 ; X86-BMI2-AVX2-NEXT:    btl %eax, %ecx
 ; X86-BMI2-AVX2-NEXT:    setae %al
