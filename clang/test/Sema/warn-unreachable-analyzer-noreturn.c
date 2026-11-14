@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wunreachable-code -Wreturn-type -Wimplicit-fallthrough %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wunreachable-code -Wunreachable-code-fallthrough -Wreturn-type -Wimplicit-fallthrough %s
 
 // 'analyzer_noreturn' calls can return, so the code after them is not
 // unreachable. -Wreturn-type and -Wimplicit-fallthrough do treat them as
@@ -32,6 +32,40 @@ void fallthrough(int x) {
   case 1:
     analyzer_stop("bad");
   case 2: // no warning
+    use(2);
+    break;
+  }
+}
+
+void annotated_fallthrough(int x) {
+  switch (x) {
+  case 1:
+    analyzer_stop("bad");
+    __attribute__((fallthrough)); // no warning
+  case 2:
+    use(2);
+    break;
+  }
+}
+
+void annotated_fallthrough_after_code(int x) {
+  switch (x) {
+  case 1:
+    analyzer_stop("bad");
+    use(1);
+    __attribute__((fallthrough)); // no warning
+  case 2:
+    use(2);
+    break;
+  }
+}
+
+void annotated_fallthrough_after_real(int x) {
+  switch (x) {
+  case 1:
+    real_stop();
+    __attribute__((fallthrough)); // expected-warning {{fallthrough annotation in unreachable code}}
+  case 2:
     use(2);
     break;
   }

@@ -1250,9 +1250,22 @@ public:
     while (!BlockQueue.empty()) {
       const CFGBlock *P = BlockQueue.front();
       BlockQueue.pop_front();
-      for (const CFGBlock *B : P->succs()) {
+      // The code after an 'analyzer_noreturn' call isn't dead, since the call
+      // can return. The CFG keeps that code as the alternate successor of the
+      // exit edge, so follow it too.
+      bool FollowAlternate = P->hasOnlyAnalyzerNoReturnElement();
+      for (const CFGBlock::AdjacentBlock &Succ : P->succs()) {
+        const CFGBlock *B = Succ.getReachableBlock();
         if (B && ReachableBlocks.insert(B).second)
           BlockQueue.push_back(B);
+        if (!FollowAlternate)
+          continue;
+        const CFGBlock *Alt = Succ.getPossiblyUnreachableBlock();
+        assert(B && Alt != B &&
+               "noreturn edge should have a reachable block and a distinct "
+               "alternate");
+        if (Alt && ReachableBlocks.insert(Alt).second)
+          BlockQueue.push_back(Alt);
       }
     }
   }
