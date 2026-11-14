@@ -5384,6 +5384,27 @@ static bool isMultipleOf(Value *X, const APInt &C, const SimplifyQuery &Q) {
   return MaskedValueIsZero(X, C - 1, Q);
 }
 
+/// Match an add-like operation (add or disjoint or), or a shl by 1 which is
+/// equivalent to adding the shifted value to itself. For the shift, require
+/// that the value is not undef: each use of undef may produce a different
+/// value, so "shl undef, 1" is not the same as "undef + undef". Also require
+/// more than one bit, as shifting a 1-bit value by 1 is always poison.
+static bool matchAddLikeOperands(const BinaryOperator &BO, Value *&A, Value *&B,
+                                 const SimplifyQuery &Q) {
+  if (match(&BO, m_AddLike(m_Value(A), m_Value(B))))
+    return true;
+
+  Value *X;
+  if (match(&BO, m_Shl(m_Value(X), m_One())) &&
+      X->getType()->getScalarSizeInBits() > 1 &&
+      isGuaranteedNotToBeUndef(X, Q.AC, Q.CtxI, Q.DT)) {
+    A = B = X;
+    return true;
+  }
+
+  return false;
+}
+
 static bool hasNoWrapProblem(const BinaryOperator &BO, CmpInst::Predicate Pred,
                              bool &HasNSW, bool &HasNUW) {
   if (isa<OverflowingBinaryOperator>(BO)) {
@@ -5423,8 +5444,8 @@ bool InstCombinerImpl::matchCommonBinOpOperands(Value *Op0, Value *Op1,
   Value *A, *B, *C, *D;
 
   // Handle all add-like operations.
-  if (match(BO0, m_AddLike(m_Value(A), m_Value(B))) &&
-      match(BO1, m_AddLike(m_Value(C), m_Value(D)))) {
+  if (matchAddLikeOperands(*BO0, A, B, Q) &&
+      matchAddLikeOperands(*BO1, C, D, Q)) {
     if (!NoOp0WrapProblem || !NoOp1WrapProblem)
       return false;
 
@@ -5641,11 +5662,11 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
   Value *A = nullptr, *B = nullptr, *C = nullptr, *D = nullptr;
 
   if (BO0) {
-    match(BO0, m_AddLike(m_Value(A), m_Value(B)));
+    matchAddLikeOperands(*BO0, A, B, Q);
     NoOp0WrapProblem = hasNoWrapProblem(*BO0, Pred, Op0HasNSW, Op0HasNUW);
   }
   if (BO1) {
-    match(BO1, m_AddLike(m_Value(C), m_Value(D)));
+    matchAddLikeOperands(*BO1, C, D, Q);
     NoOp1WrapProblem = hasNoWrapProblem(*BO1, Pred, Op1HasNSW, Op1HasNUW);
   }
 
