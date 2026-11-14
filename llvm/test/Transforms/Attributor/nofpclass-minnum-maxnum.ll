@@ -26,9 +26,19 @@ define float @ret_minnum_noinf__noinf(float nofpclass(inf) %arg0, float nofpclas
 }
 
 define float @ret_minnum_noinf__nonan(float nofpclass(inf) %arg0, float nofpclass(nan) %arg1) #0 {
-; CHECK-LABEL: define nofpclass(nan) float @ret_minnum_noinf__nonan
+; CHECK-LABEL: define float @ret_minnum_noinf__nonan
 ; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]], float nofpclass(nan) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.minnum.f32(float nofpclass(inf) [[ARG0]], float nofpclass(nan) [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.minnum.f32(float nofpclass(inf) [[ARG0]], float nofpclass(nan) [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.minnum.f32(float %arg0, float %arg1)
+  ret float %call
+}
+
+define float @ret_minnum_nosnan_noinf__nonan(float nofpclass(snan inf) %arg0, float nofpclass(nan) %arg1) #0 {
+; CHECK-LABEL: define nofpclass(nan) float @ret_minnum_nosnan_noinf__nonan
+; CHECK-SAME: (float nofpclass(snan inf) [[ARG0:%.*]], float nofpclass(nan) [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.minnum.f32(float nofpclass(snan inf) [[ARG0]], float nofpclass(nan) [[ARG1]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.minnum.f32(float %arg0, float %arg1)
@@ -36,9 +46,19 @@ define float @ret_minnum_noinf__nonan(float nofpclass(inf) %arg0, float nofpclas
 }
 
 define float @ret_minnum_nonan__noinf(float nofpclass(nan) %arg0, float nofpclass(inf) %arg1) #0 {
-; CHECK-LABEL: define nofpclass(nan) float @ret_minnum_nonan__noinf
+; CHECK-LABEL: define float @ret_minnum_nonan__noinf
 ; CHECK-SAME: (float nofpclass(nan) [[ARG0:%.*]], float nofpclass(inf) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.minnum.f32(float nofpclass(nan) [[ARG0]], float nofpclass(inf) [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.minnum.f32(float nofpclass(nan) [[ARG0]], float nofpclass(inf) [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.minnum.f32(float %arg0, float %arg1)
+  ret float %call
+}
+
+define float @ret_minnum_nonan__nosnan_noinf(float nofpclass(nan) %arg0, float nofpclass(snan inf) %arg1) #0 {
+; CHECK-LABEL: define nofpclass(nan) float @ret_minnum_nonan__nosnan_noinf
+; CHECK-SAME: (float nofpclass(nan) [[ARG0:%.*]], float nofpclass(snan inf) [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.minnum.f32(float nofpclass(nan) [[ARG0]], float nofpclass(snan inf) [[ARG1]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.minnum.f32(float %arg0, float %arg1)
@@ -96,9 +116,19 @@ define float @ret_maxnum_noinf__noinf(float nofpclass(inf) %arg0, float nofpclas
 }
 
 define float @ret_maxnum_noinf__nonan(float nofpclass(inf) %arg0, float nofpclass(nan) %arg1) #0 {
-; CHECK-LABEL: define nofpclass(nan) float @ret_maxnum_noinf__nonan
+; CHECK-LABEL: define float @ret_maxnum_noinf__nonan
 ; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]], float nofpclass(nan) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.maxnum.f32(float nofpclass(inf) [[ARG0]], float nofpclass(nan) [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.maxnum.f32(float nofpclass(inf) [[ARG0]], float nofpclass(nan) [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.maxnum.f32(float %arg0, float %arg1)
+  ret float %call
+}
+
+define float @ret_maxnum_nosnan_noinf__nonan(float nofpclass(snan inf) %arg0, float nofpclass(nan) %arg1) #0 {
+; CHECK-LABEL: define nofpclass(nan) float @ret_maxnum_nosnan_noinf__nonan
+; CHECK-SAME: (float nofpclass(snan inf) [[ARG0:%.*]], float nofpclass(nan) [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.maxnum.f32(float nofpclass(snan inf) [[ARG0]], float nofpclass(nan) [[ARG1]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.maxnum.f32(float %arg0, float %arg1)
@@ -106,9 +136,19 @@ define float @ret_maxnum_noinf__nonan(float nofpclass(inf) %arg0, float nofpclas
 }
 
 define float @ret_maxnum_nonan__noinf(float nofpclass(nan) %arg0, float nofpclass(inf) %arg1) #0 {
-; CHECK-LABEL: define nofpclass(nan) float @ret_maxnum_nonan__noinf
+; CHECK-LABEL: define float @ret_maxnum_nonan__noinf
 ; CHECK-SAME: (float nofpclass(nan) [[ARG0:%.*]], float nofpclass(inf) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.maxnum.f32(float nofpclass(nan) [[ARG0]], float nofpclass(inf) [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.maxnum.f32(float nofpclass(nan) [[ARG0]], float nofpclass(inf) [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.maxnum.f32(float %arg0, float %arg1)
+  ret float %call
+}
+
+define float @ret_maxnum_nonan__nosnan_noinf(float nofpclass(nan) %arg0, float nofpclass(snan inf) %arg1) #0 {
+; CHECK-LABEL: define nofpclass(nan) float @ret_maxnum_nonan__nosnan_noinf
+; CHECK-SAME: (float nofpclass(nan) [[ARG0:%.*]], float nofpclass(snan inf) [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.maxnum.f32(float nofpclass(nan) [[ARG0]], float nofpclass(snan inf) [[ARG1]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.maxnum.f32(float %arg0, float %arg1)
@@ -345,9 +385,19 @@ define float @ret_minnum_dapz_ieee_nozero__nozero(float nofpclass(zero) %arg0, f
 }
 
 define float @ret_minnum_noneg_nan__any(float nofpclass(ninf nsub nnorm nan) %arg0, float %arg1) #3 {
-; CHECK-LABEL: define nofpclass(nan) float @ret_minnum_noneg_nan__any
+; CHECK-LABEL: define float @ret_minnum_noneg_nan__any
 ; CHECK-SAME: (float nofpclass(nan ninf nsub nnorm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.minnum.f32(float nofpclass(nan ninf nsub nnorm) [[ARG0]], float [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.minnum.f32(float nofpclass(nan ninf nsub nnorm) [[ARG0]], float [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.minnum.f32(float %arg0, float %arg1)
+  ret float %call
+}
+
+define float @ret_minnum_noneg_nan__nosnan(float nofpclass(nan ninf nsub nnorm) %arg0, float nofpclass(snan) %arg1) #3 {
+; CHECK-LABEL: define nofpclass(nan) float @ret_minnum_noneg_nan__nosnan
+; CHECK-SAME: (float nofpclass(nan ninf nsub nnorm) [[ARG0:%.*]], float nofpclass(snan) [[ARG1:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.minnum.f32(float nofpclass(nan ninf nsub nnorm) [[ARG0]], float nofpclass(snan) [[ARG1]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.minnum.f32(float %arg0, float %arg1)
@@ -355,9 +405,19 @@ define float @ret_minnum_noneg_nan__any(float nofpclass(ninf nsub nnorm nan) %ar
 }
 
 define float @ret_minnum_any__noneg_nan(float %arg0, float nofpclass(ninf nsub nnorm nan) %arg1) #3 {
-; CHECK-LABEL: define nofpclass(nan) float @ret_minnum_any__noneg_nan
+; CHECK-LABEL: define float @ret_minnum_any__noneg_nan
 ; CHECK-SAME: (float [[ARG0:%.*]], float nofpclass(nan ninf nsub nnorm) [[ARG1:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.minnum.f32(float [[ARG0]], float nofpclass(nan ninf nsub nnorm) [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.minnum.f32(float [[ARG0]], float nofpclass(nan ninf nsub nnorm) [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.minnum.f32(float %arg0, float %arg1)
+  ret float %call
+}
+
+define float @ret_minnum_nosnan__noneg_nan(float nofpclass(snan) %arg0, float nofpclass(nan ninf nsub nnorm) %arg1) #3 {
+; CHECK-LABEL: define nofpclass(nan) float @ret_minnum_nosnan__noneg_nan
+; CHECK-SAME: (float nofpclass(snan) [[ARG0:%.*]], float nofpclass(nan ninf nsub nnorm) [[ARG1:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.minnum.f32(float nofpclass(snan) [[ARG0]], float nofpclass(nan ninf nsub nnorm) [[ARG1]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.minnum.f32(float %arg0, float %arg1)
@@ -365,9 +425,19 @@ define float @ret_minnum_any__noneg_nan(float %arg0, float nofpclass(ninf nsub n
 }
 
 define float @ret_minnum_nopos_nan__any(float nofpclass(pinf psub pnorm nan) %arg0, float %arg1) #3 {
-; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) float @ret_minnum_nopos_nan__any
+; CHECK-LABEL: define nofpclass(pinf psub pnorm) float @ret_minnum_nopos_nan__any
 ; CHECK-SAME: (float nofpclass(nan pinf psub pnorm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan pinf psub pnorm) float @llvm.minnum.f32(float nofpclass(nan pinf psub pnorm) [[ARG0]], float [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf psub pnorm) float @llvm.minnum.f32(float nofpclass(nan pinf psub pnorm) [[ARG0]], float [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.minnum.f32(float %arg0, float %arg1)
+  ret float %call
+}
+
+define float @ret_minnum_nopos_nan__nosnan(float nofpclass(nan pinf psub pnorm) %arg0, float nofpclass(snan) %arg1) #3 {
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) float @ret_minnum_nopos_nan__nosnan
+; CHECK-SAME: (float nofpclass(nan pinf psub pnorm) [[ARG0:%.*]], float nofpclass(snan) [[ARG1:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan pinf psub pnorm) float @llvm.minnum.f32(float nofpclass(nan pinf psub pnorm) [[ARG0]], float nofpclass(snan) [[ARG1]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.minnum.f32(float %arg0, float %arg1)
@@ -375,9 +445,19 @@ define float @ret_minnum_nopos_nan__any(float nofpclass(pinf psub pnorm nan) %ar
 }
 
 define float @ret_minnum_any__nopos_nan(float %arg0, float nofpclass(pinf psub pnorm nan) %arg1) #3 {
-; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) float @ret_minnum_any__nopos_nan
+; CHECK-LABEL: define nofpclass(pinf psub pnorm) float @ret_minnum_any__nopos_nan
 ; CHECK-SAME: (float [[ARG0:%.*]], float nofpclass(nan pinf psub pnorm) [[ARG1:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan pinf psub pnorm) float @llvm.minnum.f32(float [[ARG0]], float nofpclass(nan pinf psub pnorm) [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf psub pnorm) float @llvm.minnum.f32(float [[ARG0]], float nofpclass(nan pinf psub pnorm) [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.minnum.f32(float %arg0, float %arg1)
+  ret float %call
+}
+
+define float @ret_minnum_nosnan__nopos_nan(float nofpclass(snan) %arg0, float nofpclass(nan pinf psub pnorm) %arg1) #3 {
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) float @ret_minnum_nosnan__nopos_nan
+; CHECK-SAME: (float nofpclass(snan) [[ARG0:%.*]], float nofpclass(nan pinf psub pnorm) [[ARG1:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan pinf psub pnorm) float @llvm.minnum.f32(float nofpclass(snan) [[ARG0]], float nofpclass(nan pinf psub pnorm) [[ARG1]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.minnum.f32(float %arg0, float %arg1)
@@ -425,9 +505,19 @@ define float @ret_minnum_any__nopos(float %arg0, float nofpclass(pinf psub pnorm
 }
 
 define float @ret_maxnum_noneg_nan__any(float nofpclass(ninf nsub nnorm nan) %arg0, float %arg1) #3 {
-; CHECK-LABEL: define nofpclass(nan ninf nsub nnorm) float @ret_maxnum_noneg_nan__any
+; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @ret_maxnum_noneg_nan__any
 ; CHECK-SAME: (float nofpclass(nan ninf nsub nnorm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nsub nnorm) float @llvm.maxnum.f32(float nofpclass(nan ninf nsub nnorm) [[ARG0]], float [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.maxnum.f32(float nofpclass(nan ninf nsub nnorm) [[ARG0]], float [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.maxnum.f32(float %arg0, float %arg1)
+  ret float %call
+}
+
+define float @ret_maxnum_noneg_nan__nosnan(float nofpclass(nan ninf nsub nnorm) %arg0, float nofpclass(snan) %arg1) #3 {
+; CHECK-LABEL: define nofpclass(nan ninf nsub nnorm) float @ret_maxnum_noneg_nan__nosnan
+; CHECK-SAME: (float nofpclass(nan ninf nsub nnorm) [[ARG0:%.*]], float nofpclass(snan) [[ARG1:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nsub nnorm) float @llvm.maxnum.f32(float nofpclass(nan ninf nsub nnorm) [[ARG0]], float nofpclass(snan) [[ARG1]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.maxnum.f32(float %arg0, float %arg1)
@@ -435,9 +525,19 @@ define float @ret_maxnum_noneg_nan__any(float nofpclass(ninf nsub nnorm nan) %ar
 }
 
 define float @ret_maxnum_any__noneg_nan(float %arg0, float nofpclass(ninf nsub nnorm nan) %arg1) #3 {
-; CHECK-LABEL: define nofpclass(nan ninf nsub nnorm) float @ret_maxnum_any__noneg_nan
+; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @ret_maxnum_any__noneg_nan
 ; CHECK-SAME: (float [[ARG0:%.*]], float nofpclass(nan ninf nsub nnorm) [[ARG1:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nsub nnorm) float @llvm.maxnum.f32(float [[ARG0]], float nofpclass(nan ninf nsub nnorm) [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.maxnum.f32(float [[ARG0]], float nofpclass(nan ninf nsub nnorm) [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.maxnum.f32(float %arg0, float %arg1)
+  ret float %call
+}
+
+define float @ret_maxnum_nosnan__noneg_nan(float nofpclass(snan) %arg0, float nofpclass(nan ninf nsub nnorm) %arg1) #3 {
+; CHECK-LABEL: define nofpclass(nan ninf nsub nnorm) float @ret_maxnum_nosnan__noneg_nan
+; CHECK-SAME: (float nofpclass(snan) [[ARG0:%.*]], float nofpclass(nan ninf nsub nnorm) [[ARG1:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nsub nnorm) float @llvm.maxnum.f32(float nofpclass(snan) [[ARG0]], float nofpclass(nan ninf nsub nnorm) [[ARG1]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.maxnum.f32(float %arg0, float %arg1)
@@ -445,9 +545,19 @@ define float @ret_maxnum_any__noneg_nan(float %arg0, float nofpclass(ninf nsub n
 }
 
 define float @ret_maxnum_nopos_nan__any(float nofpclass(pinf psub pnorm nan) %arg0, float %arg1) #3 {
-; CHECK-LABEL: define nofpclass(nan) float @ret_maxnum_nopos_nan__any
+; CHECK-LABEL: define float @ret_maxnum_nopos_nan__any
 ; CHECK-SAME: (float nofpclass(nan pinf psub pnorm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.maxnum.f32(float nofpclass(nan pinf psub pnorm) [[ARG0]], float [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.maxnum.f32(float nofpclass(nan pinf psub pnorm) [[ARG0]], float [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.maxnum.f32(float %arg0, float %arg1)
+  ret float %call
+}
+
+define float @ret_maxnum_nopos_nan__nosnan(float nofpclass(nan pinf psub pnorm) %arg0, float nofpclass(snan) %arg1) #3 {
+; CHECK-LABEL: define nofpclass(nan) float @ret_maxnum_nopos_nan__nosnan
+; CHECK-SAME: (float nofpclass(nan pinf psub pnorm) [[ARG0:%.*]], float nofpclass(snan) [[ARG1:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.maxnum.f32(float nofpclass(nan pinf psub pnorm) [[ARG0]], float nofpclass(snan) [[ARG1]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.maxnum.f32(float %arg0, float %arg1)
@@ -455,9 +565,19 @@ define float @ret_maxnum_nopos_nan__any(float nofpclass(pinf psub pnorm nan) %ar
 }
 
 define float @ret_maxnum_any__nopos_nan(float %arg0, float nofpclass(pinf psub pnorm nan) %arg1) #3 {
-; CHECK-LABEL: define nofpclass(nan) float @ret_maxnum_any__nopos_nan
+; CHECK-LABEL: define float @ret_maxnum_any__nopos_nan
 ; CHECK-SAME: (float [[ARG0:%.*]], float nofpclass(nan pinf psub pnorm) [[ARG1:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.maxnum.f32(float [[ARG0]], float nofpclass(nan pinf psub pnorm) [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.maxnum.f32(float [[ARG0]], float nofpclass(nan pinf psub pnorm) [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.maxnum.f32(float %arg0, float %arg1)
+  ret float %call
+}
+
+define float @ret_maxnum_nosnan__nopos_nan(float nofpclass(snan) %arg0, float nofpclass(nan pinf psub pnorm) %arg1) #3 {
+; CHECK-LABEL: define nofpclass(nan) float @ret_maxnum_nosnan__nopos_nan
+; CHECK-SAME: (float nofpclass(snan) [[ARG0:%.*]], float nofpclass(nan pinf psub pnorm) [[ARG1:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.maxnum.f32(float nofpclass(snan) [[ARG0]], float nofpclass(nan pinf psub pnorm) [[ARG1]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.maxnum.f32(float %arg0, float %arg1)
