@@ -2586,11 +2586,17 @@ convertOmpSections(Operation &opInst, llvm::IRBuilderBase &builder,
     sectionCBs.push_back(sectionCB);
   }
 
-  // No sections within omp.sections operation - skip generation. This situation
-  // is only possible if there is only a terminator operation inside the
-  // sections operation
-  if (sectionCBs.empty())
+  // Empty sections still require an implicit barrier unless nowait is present.
+  if (sectionCBs.empty()) {
+    if (!sectionsOp.getNowait()) {
+      auto afterIP = getOpenMPBuilder(moduleTranslation)
+                         ->createBarrier(builder, llvm::omp::OMPD_sections);
+      if (failed(handleError(afterIP, opInst)))
+        return failure();
+      builder.restoreIP(*afterIP);
+    }
     return success();
+  }
 
   // For `reduction(task, ...)` open a task-reduction scope for the worksharing
   // region. Participating explicit tasks accumulate into the per-thread private
