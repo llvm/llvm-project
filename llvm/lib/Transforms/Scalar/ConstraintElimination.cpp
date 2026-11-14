@@ -2121,9 +2121,8 @@ static RowTy getDecompositionLinkRow(Value *V, const ConstraintTy &C,
   return NewVariables.empty() ? Row : RowTy();
 }
 
-/// Checks the signed relation \p D \p Pred 0 against the signed system, where
-/// \p Pred is SLT or SLE. Returns true or false if the relation or its
-/// negation is implied, std::nullopt otherwise.
+/// Returns true if the signed relation \p D \p Pred 0 is implied by the signed
+/// system, where \p Pred is SLT or SLE.
 ///
 /// For the result of a signed min/max intrinsic the systems only contain the
 /// bounds that hold for both sides (smax(a, b) >= a and >= b, and smin(a, b) <=
@@ -2132,9 +2131,10 @@ static RowTy getDecompositionLinkRow(Value *V, const ConstraintTy &C,
 /// D is monotonic in that result, so it is the max or the min of its values at
 /// each side, and the relation holds for all or for either of the sides
 /// respectively.
-static std::optional<bool>
-checkSignedDecompositionWithMinMax(CmpInst::Predicate Pred, Decomposition D,
-                                   ConstraintInfo &Info, unsigned Depth) {
+static bool isSignedDecompositionKnownTrue(CmpInst::Predicate Pred,
+                                           const Decomposition &D,
+                                           ConstraintInfo &Info,
+                                           unsigned Depth) {
   assert((Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SLE) &&
          "only < and <= are handled");
   // Evaluate constants directly.
@@ -2146,26 +2146,19 @@ checkSignedDecompositionWithMinMax(CmpInst::Predicate Pred, Decomposition D,
       auto *MM = dyn_cast<MinMaxIntrinsic>(E.Variable);
       if (!MM || !MM->isSigned())
         continue;
-      auto CheckOperand = [&](Value *V) -> std::optional<bool> {
+      auto IsOperandKnownTrue = [&](Value *V) {
         auto Side = D.substitute(E.Variable, V, Info);
-        if (!Side || Side->canonicalize())
-          return std::nullopt;
-        return checkSignedDecompositionWithMinMax(Pred, *Side, Info, Depth - 1);
+        return Side && !Side->canonicalize() &&
+               isSignedDecompositionKnownTrue(Pred, *Side, Info, Depth - 1);
       };
       // D is an affine function of MM with slope E.Coefficient. If the slope
       // is positive, then D(max(a, b)) = max(D(a), D(b)) and D(min(a, b)) =
       // min(D(a), D(b)). If it is negative, max and min swap roles.
-      auto L = CheckOperand(MM->getLHS());
       bool IsAnd =
           (MM->getIntrinsicID() == Intrinsic::smax) == (E.Coefficient > 0);
-      if (L == !IsAnd)
-        return L;
-      auto R = CheckOperand(MM->getRHS());
-      if (R == !IsAnd)
-        return R;
-      if (L && R)
-        return IsAnd;
-      return std::nullopt;
+      if (IsOperandKnownTrue(MM->getLHS()) != IsAnd)
+        return !IsAnd;
+      return IsOperandKnownTrue(MM->getRHS());
     }
   }
 
@@ -2175,7 +2168,7 @@ checkSignedDecompositionWithMinMax(CmpInst::Predicate Pred, Decomposition D,
   RowTy R = getRowForLessEqual(D, Zero, Info.getValue2Index(/*Signed=*/true),
                                NewVariables);
   if (R.empty() || !NewVariables.empty())
-    return std::nullopt;
+    return false;
 
   // "D < 0" is "D <= -1". R[0] is -D.Offset, and getRowForLessEqual gives up if
   // that overflows, so R[0] > INT64_MIN and subtracting one cannot wrap.
@@ -2185,9 +2178,7 @@ checkSignedDecompositionWithMinMax(CmpInst::Predicate Pred, Decomposition D,
     --R[0].Coefficient;
   }
 
-  ConstraintTy C(std::move(R), Info.getValue2Index(/*Signed=*/true).size(),
-                 /*IsSigned=*/true, /*IsEq=*/false, /*IsNe=*/false);
-  return C.isImpliedBy(Info.getCS(/*Signed=*/true));
+  return Info.getCS(/*Signed=*/true).isConditionImpliedInSubSystem(R);
 }
 
 /// Checks the signed relation \p A \p Pred \p B, splitting signed min/max
@@ -2221,7 +2212,19 @@ static std::optional<bool> TryWithMinMaxDecomposition(CmpInst::Predicate Pred,
   if (D.canonicalize())
     return std::nullopt;
 
-  return checkSignedDecompositionWithMinMax(Pred, D, Info, /*Depth=*/2);
+  constexpr unsigned MaxDepth = 2;
+  if (isSignedDecompositionKnownTrue(Pred, D, Info, MaxDepth))
+    return true;
+
+  // Likewise, the relation is known false if its negation holds:
+  // !(D < 0) is -D <= 0, and !(D <= 0) is -D < 0.
+  CmpInst::Predicate NegatedPred =
+      Pred == CmpInst::ICMP_SLT ? CmpInst::ICMP_SLE : CmpInst::ICMP_SLT;
+  if (!D.mul(-1) &&
+      isSignedDecompositionKnownTrue(NegatedPred, D, Info, MaxDepth))
+    return false;
+
+  return std::nullopt;
 }
 
 static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
