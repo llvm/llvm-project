@@ -31,6 +31,40 @@ template <typename T> void tmpl(T flag) {
 }
 void inst() { tmpl(1); }
 
+// A block 'ordered' variant uses the statement, so 'otherwise' gets a copy.
+// CHECK-LABEL: FunctionDecl {{.*}} ordered_block
+// CHECK:      OMPMetaDirective
+// CHECK-NEXT: OMPOrderedBlockAssocDirective
+// CHECK-NOT:  NullStmt
+// CHECK-COUNT-2: BinaryOperator {{.*}} 'int' lvalue '='
+// CHECK-NOT:  NullStmt
+// CHECK:      ImplicitCastExpr {{.*}} 'bool' <IntegralToBoolean>
+void ordered_block(int flag, int n) {
+#pragma omp for ordered
+  for (int i = 0; i < n; ++i) {
+#pragma omp metadirective when(user={condition(flag)}: ordered) otherwise(nothing)
+    n = i;
+  }
+}
+
+// An 'ordered' variant with 'doacross' is standalone, so the statement stays
+// outside the variants.
+// CHECK-LABEL: FunctionDecl {{.*}} ordered_doacross
+// CHECK:      OMPMetaDirective
+// CHECK-NEXT: OMPOrderedStandaloneDirective
+// CHECK-NEXT: OMPDoacrossClause
+// CHECK-NEXT: NullStmt
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'bool' <IntegralToBoolean>
+// CHECK:      <<<NULL>>>
+// CHECK-NEXT: BinaryOperator {{.*}} 'int' lvalue '='
+void ordered_doacross(int flag, int n) {
+#pragma omp for ordered(1)
+  for (int i = 0; i < n; ++i) {
+#pragma omp metadirective when(user={condition(flag)}: ordered doacross(source:)) otherwise(nothing)
+    n = i;
+  }
+}
+
 // Without 'otherwise', the last variant is the plain associated statement.
 // CHECK-LABEL: FunctionDecl {{.*}} no_otherwise
 // CHECK:      OMPMetaDirective

@@ -1711,9 +1711,10 @@ public:
   StmtResult RebuildOMPMetaDirective(SourceLocation StartLoc,
                                      SourceLocation EndLoc,
                                      ArrayRef<OMPTraitInfo *> TraitInfos,
-                                     ArrayRef<Stmt *> Variants) {
-    return getSema().OpenMP().ActOnOpenMPMetaDirective(StartLoc, EndLoc,
-                                                       TraitInfos, Variants);
+                                     ArrayRef<Stmt *> Variants,
+                                     ArrayRef<bool> DirectiveThenStmt) {
+    return getSema().OpenMP().ActOnOpenMPMetaDirective(
+        StartLoc, EndLoc, TraitInfos, Variants, DirectiveThenStmt);
   }
 
   /// Build a new OpenMP informational directive.
@@ -10121,7 +10122,8 @@ TreeTransform<Derived>::TransformOMPMetaDirective(OMPMetaDirective *D) {
   }
 
   return getDerived().RebuildOMPMetaDirective(D->getBeginLoc(), D->getEndLoc(),
-                                              TraitInfos, Variants);
+                                              TraitInfos, Variants,
+                                              D->directiveThenStmt());
 }
 
 template <typename Derived>

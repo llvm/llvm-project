@@ -214,10 +214,13 @@ public:
   /// Called for metadirectives with user conditions that require runtime
   /// selection. \p Variants holds one complete directive (or the plain
   /// associated statement) per entry of \p TraitInfos.
+  /// \p DirectiveThenStmt marks the variants that are a standalone directive
+  /// followed by the statement.
   StmtResult ActOnOpenMPMetaDirective(SourceLocation StartLoc,
                                       SourceLocation EndLoc,
                                       ArrayRef<OMPTraitInfo *> TraitInfos,
-                                      ArrayRef<Stmt *> Variants);
+                                      ArrayRef<Stmt *> Variants,
+                                      ArrayRef<bool> DirectiveThenStmt);
 
   // OpenMP directives and clauses.
   /// Called on correct id-expression from the '#pragma omp
@@ -1529,6 +1532,9 @@ public:
   void setOpenMPDeviceNum(int Num);
 
   int getOpenMPDeviceNum() const;
+
+  /// Return the OpenMP constructs enclosing the current location.
+  ArrayRef<llvm::omp::TraitProperty> getConstructTraits();
 
   void setOpenMPDeviceNumID(StringRef ID);
 

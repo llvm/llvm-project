@@ -2614,10 +2614,15 @@ void ASTStmtWriter::VisitOMPLoopDirective(OMPLoopDirective *D) {
 void ASTStmtWriter::VisitOMPMetaDirective(OMPMetaDirective *D) {
   VisitStmt(D);
   Record.push_back(D->getNumVariants());
+  Record.push_back(D->constructTraits().size());
   VisitOMPExecutableDirective(D);
   Record.writeBool(D->hasImplicitOtherwise());
   for (const OMPTraitInfo *TI : D->traitInfos())
     Record.writeOMPTraitInfo(TI);
+  for (llvm::omp::TraitProperty Trait : D->constructTraits())
+    Record.push_back(unsigned(Trait));
+  for (bool Flag : D->directiveThenStmt())
+    Record.writeBool(Flag);
   Code = serialization::STMT_OMP_META_DIRECTIVE;
 }
 

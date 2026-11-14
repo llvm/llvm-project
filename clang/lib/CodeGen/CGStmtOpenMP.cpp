@@ -2426,8 +2426,63 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
 }
 
 void CodeGenFunction::EmitOMPMetaDirective(const OMPMetaDirective &S) {
-  // TODO: Select the variant at runtime.
-  EmitStmt(S.variants().front());
+  // Try variants from best to worst match; 'otherwise' runs if none applies.
+  TargetOMPContext OMPCtx(
+      getContext(), /*DiagUnknownTrait=*/[](StringRef) {},
+      /*CurrentFunctionDecl=*/nullptr, S.constructTraits(), /*DeviceNum=*/-1);
+  ArrayRef<Stmt *> Variants = S.variants();
+  ArrayRef<Expr *> Conditions = S.conditions();
+  SmallVector<llvm::omp::VariantMatchInfo, 4> VMIs;
+  SmallVector<unsigned, 4> VariantIdx;
+  std::optional<unsigned> Fallback;
+  for (auto [I, TI] : llvm::enumerate(S.traitInfos())) {
+    if (TI->Sets.empty()) {
+      Fallback = I;
+      continue;
+    }
+    llvm::omp::VariantMatchInfo &VMI = VMIs.emplace_back();
+    TI->getAsVariantMatchInfo(getContext(), VMI);
+    // Treat the condition as true here; it is checked at runtime.
+    if (Conditions[I]) {
+      VMI.RequiredTraits.reset(
+          unsigned(llvm::omp::TraitProperty::user_condition_false));
+      VMI.RequiredTraits.set(
+          unsigned(llvm::omp::TraitProperty::user_condition_true));
+    }
+    VariantIdx.push_back(I);
+  }
+
+  llvm::BasicBlock *EndBB = createBasicBlock("omp.metadirective.end");
+  SmallVector<llvm::BasicBlock *, 4> VariantBBs(Variants.size());
+  for (llvm::BasicBlock *&BB : VariantBBs)
+    BB = createBasicBlock("omp.metadirective.variant");
+  while (!VMIs.empty()) {
+    int Best = llvm::omp::getBestVariantMatchForContext(VMIs, OMPCtx);
+    if (Best < 0)
+      break;
+    unsigned I = VariantIdx[Best];
+    VMIs.erase(VMIs.begin() + Best);
+    VariantIdx.erase(VariantIdx.begin() + Best);
+    // Without a condition the variant always applies; later ones never run.
+    const Expr *Cond = Conditions[I];
+    if (!Cond) {
+      Fallback = I;
+      break;
+    }
+    llvm::BasicBlock *ElseBB = createBasicBlock("omp.metadirective.else");
+    EmitBranchOnBoolExpr(Cond, VariantBBs[I], ElseBB, /*TrueCount=*/0);
+    EmitBlock(ElseBB);
+  }
+  EmitBranch(Fallback ? VariantBBs[*Fallback] : EndBB);
+
+  // Emit every variant in source order, as the device compilation does, so
+  // their target regions get the same names on both sides.
+  for (auto [V, BB] : llvm::zip_equal(Variants, VariantBBs)) {
+    EmitBlock(BB);
+    EmitStmt(V);
+    EmitBranch(EndBB);
+  }
+  EmitBlock(EndBB, /*IsFinished=*/true);
 }
 
 namespace {

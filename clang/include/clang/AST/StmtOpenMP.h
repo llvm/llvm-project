@@ -6630,20 +6630,33 @@ class OMPMetaDirective final : public OMPExecutableDirective {
   /// directive has no 'otherwise' clause.
   bool HasImplicitOtherwise = false;
 
+  /// Number of OpenMP constructs that enclose the directive.
+  unsigned NumConstructTraits = 0;
+
   OMPMetaDirective(SourceLocation StartLoc, SourceLocation EndLoc)
       : OMPExecutableDirective(OMPMetaDirectiveClass,
                                llvm::omp::OMPD_metadirective, StartLoc,
                                EndLoc) {}
 
-  /// Layout: the children hold the variants, then their conditions; the
-  /// trait infos follow the children.
+  /// Layout: the children (variants, then conditions), the trait infos, one
+  /// flag per variant, then the OpenMP constructs that enclose the directive.
   static size_t getTraitInfosOffset(unsigned NumVariants) {
     return llvm::alignTo(OMPChildren::size(/*NumClauses=*/0,
                                            /*HasAssociatedStmt=*/false,
                                            2 * NumVariants),
                          alignof(OMPTraitInfo *));
   }
+  static size_t getFlagsOffset(unsigned NumVariants) {
+    return getTraitInfosOffset(NumVariants) +
+           NumVariants * sizeof(OMPTraitInfo *);
+  }
+  static size_t getConstructTraitsOffset(unsigned NumVariants) {
+    return llvm::alignTo(getFlagsOffset(NumVariants) +
+                             NumVariants * sizeof(bool),
+                         alignof(llvm::omp::TraitProperty));
+  }
   static OMPMetaDirective *allocate(const ASTContext &C, unsigned NumVariants,
+                                    unsigned NumConstructTraits,
                                     SourceLocation StartLoc,
                                     SourceLocation EndLoc);
 
@@ -6667,8 +6680,25 @@ class OMPMetaDirective final : public OMPExecutableDirective {
   ArrayRef<Expr *> getTrailingConditions() const {
     return const_cast<OMPMetaDirective *>(this)->getTrailingConditions();
   }
+  MutableArrayRef<bool> getTrailingDirectiveThenStmt() {
+    return {reinterpret_cast<bool *>(reinterpret_cast<char *>(Data) +
+                                     getFlagsOffset(getNumVariants())),
+            getNumVariants()};
+  }
+  MutableArrayRef<llvm::omp::TraitProperty> getTrailingConstructTraits() {
+    return {reinterpret_cast<llvm::omp::TraitProperty *>(
+                reinterpret_cast<char *>(Data) +
+                getConstructTraitsOffset(getNumVariants())),
+            NumConstructTraits};
+  }
   ArrayRef<OMPTraitInfo *> getTrailingTraitInfos() const {
     return const_cast<OMPMetaDirective *>(this)->getTrailingTraitInfos();
+  }
+  ArrayRef<bool> getTrailingDirectiveThenStmt() const {
+    return const_cast<OMPMetaDirective *>(this)->getTrailingDirectiveThenStmt();
+  }
+  ArrayRef<llvm::omp::TraitProperty> getTrailingConstructTraits() const {
+    return const_cast<OMPMetaDirective *>(this)->getTrailingConstructTraits();
   }
 
   void setHasImplicitOtherwise(bool V) { HasImplicitOtherwise = V; }
@@ -6677,9 +6707,12 @@ public:
   static OMPMetaDirective *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
          ArrayRef<Stmt *> Variants, ArrayRef<Expr *> Conditions,
-         ArrayRef<OMPTraitInfo *> TraitInfos, bool HasImplicitOtherwise);
+         ArrayRef<OMPTraitInfo *> TraitInfos, bool HasImplicitOtherwise,
+         ArrayRef<llvm::omp::TraitProperty> ConstructTraits,
+         ArrayRef<bool> DirectiveThenStmt);
   static OMPMetaDirective *CreateEmpty(const ASTContext &C,
-                                       unsigned NumVariants, EmptyShell);
+                                       unsigned NumVariants,
+                                       unsigned NumConstructTraits, EmptyShell);
 
   unsigned getNumVariants() const { return Data->getChildren().size() / 2; }
   bool hasImplicitOtherwise() const { return HasImplicitOtherwise; }
@@ -6687,6 +6720,14 @@ public:
   ArrayRef<Expr *> conditions() const { return getTrailingConditions(); }
   ArrayRef<OMPTraitInfo *> traitInfos() const {
     return getTrailingTraitInfos();
+  }
+  ArrayRef<llvm::omp::TraitProperty> constructTraits() const {
+    return getTrailingConstructTraits();
+  }
+  /// For each variant, true if it is a standalone directive followed by the
+  /// statement, stored together as a compound statement.
+  ArrayRef<bool> directiveThenStmt() const {
+    return getTrailingDirectiveThenStmt();
   }
 
   child_range children() {

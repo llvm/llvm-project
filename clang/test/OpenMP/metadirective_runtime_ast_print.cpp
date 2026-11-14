@@ -49,4 +49,24 @@ void loop(int flag, int n) {
     ;
 }
 
+// A standalone variant is printed in its clause; the statement once.
+// CHECK-LABEL: void standalone(int flag, int n) {
+// CHECK-NEXT: #pragma omp metadirective when(user={condition(flag)}: barrier) otherwise(single)
+// CHECK-NEXT: n = 1;
+// CHECK-NEXT: }
+void standalone(int flag, int n) {
+#pragma omp metadirective when(user={condition(flag)}: barrier) otherwise(single)
+  n = 1;
+}
+
+// All variants are standalone: the statement follows the metadirective.
+// CHECK-LABEL: void all_standalone(int flag, int n) {
+// CHECK-NEXT: #pragma omp metadirective when(user={condition(flag)}: barrier) otherwise(taskyield)
+// CHECK-NEXT: n = 1;
+// CHECK-NEXT: }
+void all_standalone(int flag, int n) {
+#pragma omp metadirective when(user={condition(flag)}: barrier) otherwise(taskyield)
+  n = 1;
+}
+
 #endif
