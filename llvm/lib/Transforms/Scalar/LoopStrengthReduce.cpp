@@ -3937,17 +3937,25 @@ LSRInstance::CollectLoopInvariantFixupsAndFormulae() {
 /// Ops. If Ops is complete, return NULL.
 static const SCEV *CollectSubexprs(const SCEV *S, const SCEVConstant *C,
                                    SmallVectorImpl<const SCEV *> &Ops,
-                                   const Loop *L,
-                                   ScalarEvolution &SE,
+                                   const Loop *L, ScalarEvolution &SE,
+                                   unsigned MaxInvariantReassociationSize,
                                    unsigned Depth = 0) {
   // Arbitrarily cap recursion to protect compile time.
   if (Depth >= 3)
     return S;
 
+  // Keep large invariant bases together while exploring the loop's recurrences.
+  // Other generators can still extract constants or scale the whole base.
+  if (MaxInvariantReassociationSize &&
+      S->getExpressionSize() > MaxInvariantReassociationSize &&
+      SE.isLoopInvariant(S, L))
+    return S;
+
   if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(S)) {
     // Break out add operands.
     for (const SCEV *S : Add->operands()) {
-      const SCEV *Remainder = CollectSubexprs(S, C, Ops, L, SE, Depth+1);
+      const SCEV *Remainder = CollectSubexprs(
+          S, C, Ops, L, SE, MaxInvariantReassociationSize, Depth + 1);
       if (Remainder)
         Ops.push_back(C ? SE.getMulExpr(C, Remainder).getPointer() : Remainder);
     }
@@ -3961,7 +3969,8 @@ static const SCEV *CollectSubexprs(const SCEV *S, const SCEVConstant *C,
     if (Start->isZero())
       return S;
 
-    const SCEV *Remainder = CollectSubexprs(Start, C, Ops, L, SE, Depth + 1);
+    const SCEV *Remainder = CollectSubexprs(
+        Start, C, Ops, L, SE, MaxInvariantReassociationSize, Depth + 1);
     // Split the non-zero AddRec unless it is part of a nested recurrence that
     // does not pertain to this loop.
     if (Remainder && (cast<SCEVAddRecExpr>(S)->getLoop() == L ||
@@ -3980,7 +3989,8 @@ static const SCEV *CollectSubexprs(const SCEV *S, const SCEVConstant *C,
   } else if (match(S, m_scev_Mul(m_SCEVConstant(Op0), m_SCEV(Op1)))) {
     // Break (C * (a + b + c)) into C*a + C*b + C*c.
     C = C ? cast<SCEVConstant>(SE.getMulExpr(C, Op0)) : Op0;
-    const SCEV *Remainder = CollectSubexprs(Op1, C, Ops, L, SE, Depth + 1);
+    const SCEV *Remainder = CollectSubexprs(
+        Op1, C, Ops, L, SE, MaxInvariantReassociationSize, Depth + 1);
     if (Remainder)
       Ops.push_back(SE.getMulExpr(C, Remainder));
     return nullptr;
@@ -4021,7 +4031,9 @@ void LSRInstance::GenerateReassociationsImpl(LSRUse &LU, unsigned LUIdx,
   if (AMK == TTI::AMK_PostIndexed && mayUsePostIncMode(TTI, LU, BaseReg, L, SE))
     return;
   SmallVector<const SCEV *, 8> AddOps;
-  const SCEV *Remainder = CollectSubexprs(BaseReg, nullptr, AddOps, L, SE);
+  const SCEV *Remainder =
+      CollectSubexprs(BaseReg, nullptr, AddOps, L, SE,
+                      Opts.lsr_max_invariant_reassociation_size);
   if (Remainder)
     AddOps.push_back(Remainder);
 

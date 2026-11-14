@@ -361,6 +361,8 @@ defm : BoolField<"lsr-filter-same-scaled-reg", "true",
 // The flag adds instruction count to solutions cost comparison.
 defm : OptionalBoolField<"lsr-insns-cost",
   "Add instruction count to a LSR cost model">;
+defm : ValueField<"lsr-max-invariant-reassociation-size", "unsigned", "256",
+  "Keep loop-invariant expressions larger than this SCEV size intact during reassociation; zero disables the limit">;
 defm : OptionalEnumField<"lsr-preferred-addressing-mode", "TargetTransformInfo::AddressingModeKind",
   "none,preindexed,postindexed,all",
   ["TargetTransformInfo::AMK_None", "TargetTransformInfo::AMK_PreIndexed", "TargetTransformInfo::AMK_PostIndexed", "TargetTransformInfo::AMK_All"],
