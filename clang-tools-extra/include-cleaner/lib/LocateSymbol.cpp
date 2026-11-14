@@ -47,9 +47,9 @@ Hints declHints(const Decl *D) {
 
 std::vector<Hinted<SymbolLocation>> locateDecl(const Decl &D) {
   std::vector<Hinted<SymbolLocation>> Result;
-  // FIXME: Should we also provide physical locations?
-  if (auto SS = tooling::stdlib::Recognizer()(&D))
-    return {{*SS, Hints::CompleteSymbol}};
+  auto SS = tooling::stdlib::Recognizer()(&D);
+  if (SS)
+    Result.push_back({*SS, Hints::CompleteSymbol});
   // FIXME: Signal foreign decls, e.g. a forward declaration not owned by a
   // library. Some useful signals could be derived by checking the DeclContext.
   // Most incidental forward decls look like:
@@ -57,16 +57,23 @@ std::vector<Hinted<SymbolLocation>> locateDecl(const Decl &D) {
   //   class SourceManager; // likely an incidental forward decl.
   //   namespace my_own_ns {}
   //   }
-  for (auto *Redecl : D.redecls())
-    Result.push_back({Redecl->getLocation(), declHints(Redecl)});
+  for (auto *Redecl : D.redecls()) {
+    Hints H = declHints(Redecl);
+    if (SS) {
+      if (Redecl->isImplicit() || H != Hints::CompleteSymbol)
+        continue;
+      // Rank below the stdlib providers.
+      H = Hints::None;
+    }
+    Result.push_back({Redecl->getLocation(), H});
+  }
   return Result;
 }
 
 std::vector<Hinted<SymbolLocation>> locateMacro(const Macro &M,
                                                 const tooling::stdlib::Lang L) {
-  // FIXME: Should we also provide physical locations?
   if (auto SS = tooling::stdlib::Symbol::named("", M.Name->getName(), L))
-    return {{*SS, Hints::CompleteSymbol}};
+    return {{*SS, Hints::CompleteSymbol}, {M.Definition, Hints::None}};
   return {{M.Definition, Hints::CompleteSymbol}};
 }
 } // namespace
