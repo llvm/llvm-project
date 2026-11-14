@@ -2443,6 +2443,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
            {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV, ISD::FMA})
         setOperationAction(Opc, VT, Legal);
 
+    // Without VLX, v2i64/v4i64 to v2f16/v4f16 use 512-bit conversions during
+    // isel.
+    for (unsigned Opc : {ISD::SINT_TO_FP, ISD::STRICT_SINT_TO_FP,
+                         ISD::UINT_TO_FP, ISD::STRICT_UINT_TO_FP})
+      setOperationAction(Opc, {MVT::v2f16, MVT::v4f16}, Custom);
+
     if (Subtarget.hasVLX()) {
       setGroup(MVT::v8f16);
       setGroup(MVT::v16f16);
@@ -31102,6 +31108,10 @@ SDValue X86TargetLowering::LowerWin64_INT128_TO_FP(SDValue Op,
   EVT VT = Op.getValueType();
   bool IsStrict = Op->isStrictFPOpcode();
 
+  // The generic expansion converts to f16 without a libcall.
+  if (VT == MVT::f16)
+    return SDValue();
+
   SDValue Arg = Op.getOperand(IsStrict ? 1 : 0);
   EVT ArgVT = Arg.getValueType();
 
@@ -36223,7 +36233,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     EVT VT = N->getValueType(0);
     SDValue Src = N->getOperand(IsStrict ? 1 : 0);
     if (VT.getVectorElementType() == MVT::f16 && Subtarget.hasFP16() &&
-        Subtarget.hasVLX()) {
+        (Subtarget.hasVLX() ||
+         Src.getValueType().getScalarType() == MVT::i64)) {
       if (Src.getValueType().getVectorElementType() == MVT::i16)
         return;
 

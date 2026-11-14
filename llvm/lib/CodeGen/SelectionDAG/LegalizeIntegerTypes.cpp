@@ -6090,14 +6090,50 @@ SDValue DAGTypeLegalizer::ExpandIntOp_XINT_TO_FP(SDNode *N) {
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
   SDValue Op = N->getOperand(IsStrict ? 1 : 0);
   EVT DstVT = N->getValueType(0);
-  RTLIB::Libcall LC = IsSigned ? RTLIB::getSINTTOFP(Op.getValueType(), DstVT)
-                               : RTLIB::getUINTTOFP(Op.getValueType(), DstVT);
+  SDLoc dl(N);
+
+  // A signed type wider than semanticsIntSizeInBits has bounds of at least
+  // 2^(MaxExponent + 1) in magnitude, which overflow DstVT in every rounding
+  // mode. If the half-width type is that wide, clamp to its bounds and convert
+  // from it, so that e.g. f16 needs no libcall. Unsigned inputs are clamped to
+  // the signed maximum so that the signed conversion can be used.
+  EVT OpVT = Op.getValueType();
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OpVT);
+  unsigned NBits = NVT.getScalarSizeInBits();
+  unsigned MinIntBits = APFloat::semanticsIntSizeInBits(DstVT.getFltSemantics(),
+                                                        /*isSigned=*/true);
+  if (MinIntBits < NBits) {
+    unsigned OpBits = OpVT.getScalarSizeInBits();
+    // Max is positive, so it is safe to use for unsigned inputs as well.
+    SDValue Max =
+        DAG.getConstant(APInt::getSignedMaxValue(NBits).sext(OpBits), dl, OpVT);
+    SDValue Clamped;
+    if (IsSigned) {
+      SDValue Min = DAG.getConstant(
+          APInt::getSignedMinValue(NBits).sext(OpBits), dl, OpVT);
+      Clamped = DAG.getNode(ISD::SMIN, dl, OpVT, Op, Max);
+      Clamped = DAG.getNode(ISD::SMAX, dl, OpVT, Clamped, Min);
+    } else {
+      Clamped = DAG.getNode(ISD::UMIN, dl, OpVT, Op, Max);
+    }
+    Clamped = DAG.getNode(ISD::TRUNCATE, dl, NVT, Clamped);
+    if (!IsStrict)
+      return DAG.getNode(ISD::SINT_TO_FP, dl, DstVT, Clamped);
+    SDValue Res = DAG.getNode(ISD::STRICT_SINT_TO_FP, dl, {DstVT, MVT::Other},
+                              {Chain, Clamped});
+    ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+    ReplaceValueWith(SDValue(N, 0), Res);
+    return SDValue();
+  }
+
+  RTLIB::Libcall LC = IsSigned ? RTLIB::getSINTTOFP(OpVT, DstVT)
+                               : RTLIB::getUINTTOFP(OpVT, DstVT);
   assert(LC != RTLIB::UNKNOWN_LIBCALL &&
          "Don't know how to expand this XINT_TO_FP!");
   TargetLowering::MakeLibCallOptions CallOptions;
   CallOptions.setIsSigned(true);
   std::pair<SDValue, SDValue> Tmp =
-      TLI.makeLibCall(DAG, LC, DstVT, Op, CallOptions, SDLoc(N), Chain);
+      TLI.makeLibCall(DAG, LC, DstVT, Op, CallOptions, dl, Chain);
 
   if (!IsStrict)
     return Tmp.first;
