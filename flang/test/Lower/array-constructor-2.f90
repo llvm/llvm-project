@@ -117,12 +117,25 @@ subroutine test5(a, array2)
   real :: array2(2)
 
   !  Array ctor with runtime element values and constant extents.
-  !  Concatenation of array values of constant extent.
-  ! CHECK: fir.call @_FortranAInitArrayConstructorVector
-  ! CHECK: fir.address_of(@_QQro.{{.*}})
-  ! CHECK: fir.call @_FortranAPushArrayConstructorValue
-  ! CHECK: fir.call @_FortranAPushArrayConstructorValue
-  ! CHECK: %[[EXPR:.*]] = hlfir.as_expr
+  !  Concatenate the arrays into one inline temporary using ordered loops.
+  ! CHECK: %[[ARRAY2:.*]]:2 = hlfir.declare %[[array2]](
+  ! CHECK: %[[ALLOC:.*]] = fir.allocmem !fir.array<4xf32>
+  ! CHECK: %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC]](
+  ! CHECK: %[[CONST:.*]] = fir.address_of(@_QQro.{{.*}})
+  ! CHECK: %[[CONST_DECL:.*]]:2 = hlfir.declare %[[CONST]](
+  ! CHECK: fir.do_loop %[[I:.*]] = %{{.*}} to %{{.*}} step %{{[^ ]+}} {
+  ! CHECK: %[[SOURCE:.*]] = hlfir.designate %[[CONST_DECL]]#0 (%[[I]])
+  ! CHECK: %[[VALUE:.*]] = fir.load %[[SOURCE]]
+  ! CHECK: %[[DEST:.*]] = hlfir.designate %[[TEMP]]#0 (%{{.*}})
+  ! CHECK: hlfir.assign %[[VALUE]] to %[[DEST]]
+  ! CHECK-NEXT: }
+  ! CHECK: fir.do_loop %[[J:.*]] = %{{.*}} to %{{.*}} step %{{[^ ]+}} {
+  ! CHECK: %[[SOURCE:.*]] = hlfir.designate %[[ARRAY2]]#0 (%[[J]])
+  ! CHECK: %[[VALUE:.*]] = fir.load %[[SOURCE]]
+  ! CHECK: %[[DEST:.*]] = hlfir.designate %[[TEMP]]#0 (%{{.*}})
+  ! CHECK: hlfir.assign %[[VALUE]] to %[[DEST]]
+  ! CHECK-NEXT: }
+  ! CHECK: %[[EXPR:.*]] = hlfir.as_expr %[[TEMP]]#0 move
   ! CHECK: hlfir.assign %[[EXPR]]
   ! CHECK: hlfir.destroy %[[EXPR]]
   ! CHECK: return

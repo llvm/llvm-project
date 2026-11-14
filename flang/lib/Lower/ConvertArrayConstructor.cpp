@@ -34,8 +34,8 @@
 //
 // - Strategy 2: inlined temporary approach (InlinedTempStrategyImpl)
 //   This strategy can only be used if the array constructor extent and length
-//   parameters can be pre-computed without evaluating any ac-value, and if all
-//   of the ac-value are scalars (at least for now).
+//   parameters can be pre-computed without evaluating any ac-value, and the
+//   elements have intrinsic type.
 //   A temporary is allocated inline in one go, and an index pointing at the
 //   current ac-value position in the array constructor element sequence is
 //   maintained and used to store ac-value as they are being lowered.
@@ -102,7 +102,7 @@ protected:
 
 /// Class that implements the "inlined temp strategy" to lower array
 /// constructors. It must be provided a boolean to indicate if the array
-/// constructor has any implied-do-loop.
+/// constructor needs loops, either for implied-dos or array-valued entries.
 template <bool hasLoops>
 class InlinedTempStrategyImpl : public StrategyBase,
                                 public fir::factory::HomogeneousScalarStack {
@@ -124,9 +124,29 @@ public:
             extent,   lengths, /*allocateOnHeap=*/true,
             hasLoops, tempName} {}
 
-  /// Push a lowered ac-value into the current insertion point and
-  /// increment the insertion point.
-  using fir::factory::HomogeneousScalarStack::pushValue;
+  /// Append a scalar or the elements of an array in array element order.
+  void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
+                 hlfir::Entity value) {
+    if (value.isScalar()) {
+      fir::factory::HomogeneousScalarStack::pushValue(loc, builder, value);
+      return;
+    }
+    // Do not emit a loop in a `LooplessInlinedTempStrategy`
+    if constexpr (!hasLoops)
+      fir::emitFatalError(loc, "array constructor lowering is inconsistent");
+
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    mlir::Value shape = hlfir::genShape(loc, builder, value);
+    // The position in the temporary is shared by all iterations, so the
+    // loops must be ordered. The first dimension is the innermost loop.
+    hlfir::LoopNest loopNest =
+        hlfir::genLoopNest(loc, builder, shape, /*isUnordered=*/false);
+    builder.setInsertionPointToStart(loopNest.body);
+    hlfir::Entity element =
+        hlfir::getElementAt(loc, builder, value, loopNest.oneBasedIndices);
+    element = hlfir::loadTrivialScalar(loc, builder, element);
+    fir::factory::HomogeneousScalarStack::pushValue(loc, builder, element);
+  }
 
   /// Start a fir.do_loop with the control from an implied-do and return
   /// the loop induction variable that is the ac-do-variable value.
@@ -704,7 +724,6 @@ static ArrayCtorLoweringStrategy selectArrayCtorLoweringStrategy(
   // Based on what was gathered and the result of the analysis, select and
   // instantiate the right lowering strategy for the array constructor.
   if (!extent || needToEvaluateOneExprToGetLengthParameters ||
-      analysis.anyArrayExpr ||
       mlir::isa<fir::RecordType>(declaredType.getEleTy()))
     return RuntimeTempStrategy(
         loc, builder, stmtCtx, symMap, declaredType,
@@ -718,7 +737,7 @@ static ArrayCtorLoweringStrategy selectArrayCtorLoweringStrategy(
     return AsElementalStrategy(loc, builder, stmtCtx, symMap, declaredType,
                                extent, lengths);
 
-  if (analysis.anyImpliedDo)
+  if (analysis.anyImpliedDo || analysis.anyArrayExpr)
     return InlinedTempStrategy(loc, builder, stmtCtx, symMap, declaredType,
                                extent, lengths);
 

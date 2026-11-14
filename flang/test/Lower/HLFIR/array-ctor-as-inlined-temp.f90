@@ -1,5 +1,5 @@
 ! Test lowering of array constructors as inlined temporary.
-! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s --implicit-check-not=FortranAPushArrayConstructorValue
 
 subroutine test_simple(i)
   call takes_int([42, i])
@@ -296,3 +296,123 @@ end subroutine
 ! CHECK:           hlfir.destroy %[[VAL_58]] : !hlfir.expr<?xi32>
 ! CHECK:           return
 ! CHECK:         }
+
+subroutine test_arrays(a)
+  integer :: a(:, :)
+  call takes_int([a, a])
+end subroutine
+! CHECK-LABEL: func.func @_QPtest_arrays(
+! The total size is known before evaluating the entries, so use an inline
+! temporary.
+! CHECK:  fir.alloca index
+! CHECK:  %[[ARRAY:.*]]:2 = hlfir.declare {{.*}}Ea"
+! CHECK:  %[[DIM0:.*]] = arith.constant 0 : index
+! CHECK:  %[[DIM0_INFO:.*]]:3 = fir.box_dims %[[ARRAY]]#0, %[[DIM0]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
+! CHECK:  %[[EXTENT0:.*]] = fir.convert %[[DIM0_INFO]]#1 : (index) -> i64
+! CHECK:  %[[DIM1:.*]] = arith.constant 1 : index
+! CHECK:  %[[DIM1_INFO:.*]]:3 = fir.box_dims %[[ARRAY]]#0, %[[DIM1]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
+! CHECK:  %[[EXTENT1:.*]] = fir.convert %[[DIM1_INFO]]#1 : (index) -> i64
+! CHECK:  %[[ARRAY_SIZE:.*]] = arith.muli %[[EXTENT0]], %[[EXTENT1]] : i64
+! CHECK:  %[[TOTAL_SIZE:.*]] = arith.addi %[[ARRAY_SIZE]], %{{.*}} : i64
+! CHECK:  %[[TOTAL_EXTENT:.*]] = fir.convert %[[TOTAL_SIZE]] : (i64) -> index
+! CHECK:  %[[STORAGE:.*]] = fir.allocmem !fir.array<?xi32>, %[[TOTAL_EXTENT]] <{bindc_name = ".tmp.arrayctor", uniq_name = ""}>
+! CHECK:  %[[SHAPE:.*]] = fir.shape %[[TOTAL_EXTENT]] : (index) -> !fir.shape<1>
+! CHECK:  %[[TEMP:.*]]:2 = hlfir.declare %[[STORAGE]](%[[SHAPE]]) uniq_name(".tmp.arrayctor") : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
+! CHECK:  fir.do_loop
+! CHECK:  fir.do_loop
+! CHECK:  hlfir.assign
+! CHECK:  }
+! CHECK:  }
+! CHECK:  fir.do_loop
+! CHECK:  fir.do_loop
+! CHECK:  hlfir.assign
+! CHECK:  }
+! CHECK:  }
+! CHECK:  %[[MUST_FREE:.*]] = arith.constant true
+! CHECK:  hlfir.as_expr %[[TEMP]]#0 move %[[MUST_FREE]] : (!fir.box<!fir.array<?xi32>>, i1) -> !hlfir.expr<?xi32>
+
+subroutine copy(a, b)
+  integer :: a(:), b(:)
+  b = [a(:)]
+end subroutine
+! CHECK-LABEL: func.func @_QPcopy(
+! CHECK: %[[COUNTER:.*]] = fir.alloca index
+! CHECK: %[[STORAGE:.*]] = fir.allocmem !fir.array<?xi32>
+! CHECK: %[[TEMP:.*]]:2 = hlfir.declare %[[STORAGE]]
+! CHECK: fir.do_loop %[[I:.*]] = {{.*}} {
+! CHECK: %[[SOURCE:.*]] = hlfir.designate {{.*}} (%[[I]])
+! CHECK: %[[VALUE:.*]] = fir.load %[[SOURCE]]
+! CHECK: %[[POSITION:.*]] = fir.load %[[COUNTER]]
+! CHECK: %[[NEXT:.*]] = arith.addi %[[POSITION]], %{{.*}} : index
+! CHECK: fir.store %[[NEXT]] to %[[COUNTER]]
+! CHECK: %[[DEST:.*]] = hlfir.designate %[[TEMP]]#0 (%[[POSITION]])
+! CHECK: hlfir.assign %[[VALUE]] to %[[DEST]]
+! CHECK: }
+! CHECK: %[[RESULT:.*]] = hlfir.as_expr %[[TEMP]]#0 move
+! CHECK: hlfir.assign %[[RESULT]] to
+! CHECK: hlfir.destroy %[[RESULT]]
+
+subroutine rank_two(a, b)
+  integer :: a(-2:, 3:), b(:)
+  b = [a, a]
+end subroutine
+! CHECK-LABEL: func.func @_QPrank_two(
+! Both entries append to the same temporary using one counter. In particular,
+! the counter must not be reset before copying the second entry.
+! CHECK: %[[COUNTER:.*]] = fir.alloca index
+! CHECK: %[[STORAGE:.*]] = fir.allocmem !fir.array<?xi32>
+! CHECK: %[[TEMP:.*]]:2 = hlfir.declare %[[STORAGE]]
+! CHECK: fir.do_loop %[[J:.*]] = {{.*}} {
+! CHECK: fir.do_loop %[[I:.*]] = {{.*}} {
+! CHECK: %[[ROW:.*]] = arith.addi %[[I]], %{{.*}} : index
+! CHECK: %[[COL:.*]] = arith.addi %[[J]], %{{.*}} : index
+! CHECK: %[[SOURCE:.*]] = hlfir.designate {{.*}} (%[[ROW]], %[[COL]])
+! CHECK: %[[VALUE:.*]] = fir.load %[[SOURCE]]
+! CHECK: %[[POSITION:.*]] = fir.load %[[COUNTER]]
+! CHECK-NEXT: %[[NEXT:.*]] = arith.addi %[[POSITION]], %[[STEP:.*]] : index
+! CHECK-NEXT: fir.store %[[NEXT]] to %[[COUNTER]]
+! CHECK-NEXT: %[[DEST:.*]] = hlfir.designate %[[TEMP]]#0 (%[[POSITION]])
+! CHECK-NEXT: hlfir.assign %[[VALUE]] to %[[DEST]]
+! CHECK-NEXT: }
+! CHECK-NEXT: }
+! CHECK-NOT: fir.store {{.*}} to %[[COUNTER]] :
+! CHECK: fir.do_loop
+! CHECK-NOT: fir.store {{.*}} to %[[COUNTER]] :
+! CHECK: fir.do_loop
+! CHECK-NOT: fir.store {{.*}} to %[[COUNTER]] :
+! CHECK: %[[POSITION:.*]] = fir.load %[[COUNTER]]
+! CHECK-NEXT: %[[NEXT:.*]] = arith.addi %[[POSITION]], %[[STEP]] : index
+! CHECK-NEXT: fir.store %[[NEXT]] to %[[COUNTER]]
+! CHECK-NEXT: %[[DEST:.*]] = hlfir.designate %[[TEMP]]#0 (%[[POSITION]])
+! CHECK-NEXT: hlfir.assign %{{.*}} to %[[DEST]]
+! CHECK-NEXT: }
+! CHECK-NEXT: }
+! CHECK: hlfir.as_expr %[[TEMP]]#0 move
+
+subroutine implied_do(a, b, n)
+  integer :: a(:), b(:), n, i
+  b = [(a + i, i=1,n)]
+end subroutine
+! CHECK-LABEL: func.func @_QPimplied_do(
+! CHECK: fir.allocmem !fir.array<?xi32>
+! CHECK: fir.do_loop
+! CHECK: %[[EXPR:.*]] = hlfir.elemental
+! CHECK: fir.do_loop
+! CHECK: hlfir.apply %[[EXPR]]
+! CHECK: hlfir.assign
+! CHECK: }
+! CHECK: hlfir.destroy %[[EXPR]]
+! CHECK: }
+! CHECK: hlfir.as_expr
+
+subroutine characters(a, b)
+  character(*) :: a(:)
+  character(4) :: b(:)
+  b = [character(4) :: a]
+end subroutine
+! CHECK-LABEL: func.func @_QPcharacters(
+! CHECK: fir.allocmem !fir.array<?x!fir.char<1,4>>
+! CHECK: fir.do_loop
+! CHECK: hlfir.assign {{.*}} : !hlfir.expr<!fir.char<1,?>>, !fir.ref<!fir.char<1,4>>
+! CHECK: }
+! CHECK: hlfir.as_expr
