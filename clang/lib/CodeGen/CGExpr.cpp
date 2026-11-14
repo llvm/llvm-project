@@ -7226,7 +7226,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
     EmitSanitizerStatReport(llvm::SanStat_CFI_ICall);
 
     llvm::Metadata *MD =
-        CGM.CreateMetadataIdentifierForFnType(QualType(FnType, 0));
+        CGM.CreateMetadataIdentifierForCFIFnType(QualType(FnType, 0));
 
     llvm::Value *TypeId = llvm::MetadataAsValue::get(getLLVMContext(), MD);
 
