@@ -275,12 +275,6 @@ function Get-MissingPrerequisites {
         }
     }
 
-    if (Test-NetFx3Installed) {
-        Write-SubStep 'NetFx3 (.NET Framework 3.5): installed'
-    } else {
-        $Missing += 'NetFx3 (.NET Framework 3.5)'
-    }
-
     return $Missing
 }
 
@@ -310,65 +304,6 @@ function Test-IsElevated {
     $Identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $Principal = [Security.Principal.WindowsPrincipal]::new($Identity)
     return $Principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-}
-
-function Test-NetFx3Installed {
-    # The .NET Framework 3.5 installer records this value on both Windows
-    # Server and desktop Windows. WiX 3.14 needs the feature to run.
-    $Key = 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v3.5'
-    $Framework = Get-ItemProperty -LiteralPath $Key -ErrorAction SilentlyContinue
-    return $null -ne $Framework -and $Framework.Install -eq 1
-}
-
-function Install-NetFx3 {
-    if (Test-NetFx3Installed) {
-        Write-SubStep 'NetFx3 (.NET Framework 3.5) is already installed.'
-        return
-    }
-
-    Write-SubStep 'Installing NetFx3 (.NET Framework 3.5)...'
-    $InstallationType = (Get-ItemProperty `
-        -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').InstallationType
-    if ($InstallationType -like 'Server*') {
-        # Windows Server exposes NetFx3 as the NET-Framework-Core server role.
-        # Use the built-in Windows PowerShell to load ServerManager reliably,
-        # even when this release script is running under PowerShell 7.
-        $WindowsPowerShell = Join-Path $env:SystemRoot `
-            'System32\WindowsPowerShell\v1.0\powershell.exe'
-        $ServerCommand = @'
-$ErrorActionPreference = 'Stop'
-Import-Module ServerManager
-$Feature = Get-WindowsFeature -Name NET-Framework-Core
-if (-not $Feature) { throw 'NET-Framework-Core is not available on this server.' }
-if (-not $Feature.Installed) {
-    $Result = Install-WindowsFeature -Name NET-Framework-Core
-    if (-not $Result.Success) {
-        throw "Install-WindowsFeature failed: $($Result.ExitCode)"
-    }
-    if ($Result.RestartNeeded -eq 'Yes') { exit 3010 }
-}
-'@
-        $EncodedCommand = [Convert]::ToBase64String(
-            [Text.Encoding]::Unicode.GetBytes($ServerCommand))
-        & $WindowsPowerShell -NoProfile -NonInteractive -EncodedCommand $EncodedCommand
-        if ($LASTEXITCODE -eq 3010) {
-            throw 'NetFx3 installation requires a restart. Restart Windows and rerun the release script.'
-        }
-        if ($LASTEXITCODE -ne 0) {
-            throw "NetFx3 installation failed (exit code $LASTEXITCODE). If Windows cannot find the feature files, install NET-Framework-Core from matching Windows Server media and rerun the release script."
-        }
-    } else {
-        $Result = Enable-WindowsOptionalFeature -Online -FeatureName NetFx3 `
-            -All -NoRestart -ErrorAction Stop
-        if ($Result.RestartNeeded) {
-            throw 'NetFx3 installation requires a restart. Restart Windows and rerun the release script.'
-        }
-    }
-
-    if (-not (Test-NetFx3Installed)) {
-        throw 'NetFx3 installation completed, but .NET Framework 3.5 is not registered as installed.'
-    }
-    Write-SubStep 'NetFx3 installed.'
 }
 
 function Update-PathAfterPrerequisites {
@@ -490,12 +425,11 @@ function Install-Prerequisites {
 
     Write-Step "Installing prerequisites"
 
-    Install-NetFx3
     $WingetPath = Find-WingetExecutable
 
     # Version requirements for the release build:
+    #   - winget 1.7 or newer, for --skip-dependencies
     #   - CMake 3.31 or newer
-    #   - NetFx3 (.NET Framework 3.5) for WiX Toolset 3.14
     #   - Python 3.13 for all architectures
     #   - SWIG 4 or newer for LLDB (install the latest available WinGet version)
     #   - WiX Toolset 3.14 for MSI packaging
@@ -534,16 +468,15 @@ function Install-Prerequisites {
             Write-SubStep "Installing $($Tool.Name) ($($Tool.WingetId)$VersionLabel)..."
             $InstallArgs = @('install', '--id', $Tool.WingetId) + $VersionArg +
                 @('--accept-package-agreements', '--accept-source-agreements', '--silent')
+            if ($Tool.Name -eq 'wix') {
+                # The WiX manifest lists the NetFx3 Windows feature, but WiX
+                # 3.14 runs on .NET Framework 4.x, and its installer brings
+                # .NET Framework 4.6.2 when missing. Stop winget from trying
+                # to enable .NET Framework 3.5.
+                $InstallArgs += '--skip-dependencies'
+            }
             & $WingetPath @InstallArgs
             $InstallExitCode = $LASTEXITCODE
-            if ($Tool.Name -eq 'wix' -and $InstallExitCode -eq -1978334960) {
-                # winget can fail while checking its NetFx3 dependency on
-                # Server 2025 even after the feature is installed. The feature
-                # was installed and verified above; bypass only this check.
-                Write-Warning 'winget could not verify the installed NetFx3 feature. Retrying WiX with --force.'
-                & $WingetPath @InstallArgs --force
-                $InstallExitCode = $LASTEXITCODE
-            }
             if ($Tool.Name -eq '7z') {
                 $SevenZipPath = Find-SevenZipExecutable
                 if ($SevenZipPath) {
@@ -571,9 +504,6 @@ function Install-Prerequisites {
                 continue
             }
             if ($InstallExitCode -ne 0) {
-                if ($Tool.Name -eq 'wix') {
-                    throw "Failed to install WiX via winget (exit code $InstallExitCode). NetFx3 is installed; inspect winget's error above."
-                }
                 throw "Failed to install $($Tool.Name) via winget (exit code $InstallExitCode)."
             }
             if ($Tool.Name -eq '7z') {

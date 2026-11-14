@@ -40,8 +40,8 @@
     stage 1 targets, stage 1 tests, and PGO. Stage 2 tests still run.
 
 .PARAMETER InstallPrerequisites
-    Install build prerequisites (NetFx3, Visual Studio, official LLVM release,
-    CMake, Python and its psutil module, etc.) before building.
+    Install build prerequisites (Visual Studio, official LLVM release, CMake,
+    Python and its psutil module, etc.) before building.
     On ARM64, also installs ARM64 Python for LLDB.
     Requests administrator elevation once for the entire prerequisite
     installation when the current shell is not elevated.
@@ -311,7 +311,7 @@ if ($InstallPrerequisites) {
 $Missing = @(Get-MissingPrerequisites)
 if ($Missing.Count -gt 0 -and -not $InstallPrerequisites -and -not $Unattended) {
     Write-Host "Missing prerequisites: $($Missing -join ', ')" -ForegroundColor Yellow
-    $Answer = Read-Host "Install prerequisites (including NetFx3 and Visual Studio Build Tools if needed)? [y/N]"
+    $Answer = Read-Host "Install prerequisites (including Visual Studio Build Tools if needed)? [y/N]"
     if ($Answer -eq 'y' -or $Answer -eq 'Y') {
         Install-Prerequisites
         $Missing = @(Get-MissingPrerequisites)

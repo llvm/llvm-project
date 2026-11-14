@@ -328,25 +328,6 @@ jobs:
         release_dir=`find "$BUILD_PREFIX/build" -iname 'stage2-bins'`
         mv "$release_dir/$RELEASE_BINARY_FILENAME" .
 
-    - name: Enable NetFx3 (Windows ARM64)
-      if: runner.os == 'Windows' && runner.arch == 'ARM64'
-      shell: pwsh
-      run: |
-        $feature = Get-WindowsOptionalFeature -Online -FeatureName NetFx3
-        if ($feature.State -ne 'Enabled') {
-          $result = Enable-WindowsOptionalFeature -Online -FeatureName NetFx3 `
-            -All -NoRestart -ErrorAction Stop
-          if ($result.RestartNeeded) {
-            throw 'Enabling NetFx3 requires a restart; the runner image must have it pre-enabled.'
-          }
-        }
-        $framework = Get-ItemProperty `
-          -LiteralPath 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v3.5' `
-          -ErrorAction SilentlyContinue
-        if ($null -eq $framework -or $framework.Install -ne 1) {
-          throw 'NetFx3 did not register as installed after enabling the Windows feature.'
-        }
-
     # Wix is not installed by default on Windows ARM64
     - name: Install Wix (Windows ARM64)
       env:
