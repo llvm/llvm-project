@@ -604,6 +604,11 @@ struct BasicAAResult::DecomposedGEP {
   SmallVector<VariableGEPIndex, 4> VarIndices;
   // Nowrap flags common to all GEP operations involved in expression.
   GEPNoWrapFlags NWFlags = GEPNoWrapFlags::all();
+  // True if every GEP involved is nusw and the constant offset was computed
+  // without signed overflow. The pointer then equals
+  // Base + Offset + sum(Scale * V) without wrapping, rather than only modulo
+  // the index width, provided that every Scale * V is nsw.
+  bool IsExact = true;
 
   void dump() const {
     print(dbgs());
@@ -628,6 +633,8 @@ struct BasicAAResult::VariableGEPOffsetInfo {
   APInt GCD;
   ConstantRange OffsetRange;
   SmallVector<KnownBits, 4> VarIndexKnownBits;
+  // The range of each variable index after its casts, before scaling.
+  SmallVector<ConstantRange, 4> VarIndexRanges;
 };
 
 /// If V is a symbolic pointer expression, decompose it into a base pointer
@@ -648,6 +655,11 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
   unsigned IndexSize = DL.getIndexTypeSizeInBits(V->getType());
   DecomposedGEP Decomposed;
   Decomposed.Offset = APInt(IndexSize, 0);
+  auto AddToOffset = [&Decomposed](const APInt &Off) {
+    bool Overflow;
+    Decomposed.Offset = Decomposed.Offset.sadd_ov(Off, Overflow);
+    Decomposed.IsExact &= !Overflow;
+  };
   do {
     // See if this is a bitcast or GEP.
     const Operator *Op = dyn_cast<Operator>(V);
@@ -712,6 +724,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
 
     // Track the common nowrap flags for all GEPs we see.
     Decomposed.NWFlags &= GEPOp->getNoWrapFlags();
+    Decomposed.IsExact &= GEPOp->hasNoUnsignedSignedWrap();
 
     assert(GEPOp->getSourceElementType()->isSized() && "GEP must be sized");
 
@@ -727,7 +740,11 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
         if (FieldNo == 0)
           continue;
 
-        Decomposed.Offset += DL.getStructLayout(STy)->getElementOffset(FieldNo);
+        APInt FieldOffset(IndexSize,
+                          DL.getStructLayout(STy)->getElementOffset(FieldNo),
+                          /*isSigned=*/false, /*implicitTrunc=*/true);
+        Decomposed.IsExact &= FieldOffset.isNonNegative();
+        AddToOffset(FieldOffset);
         continue;
       }
 
@@ -743,8 +760,13 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
           return Decomposed;
         }
 
-        Decomposed.Offset += AllocTypeSize.getFixedValue() *
-                             CIdx->getValue().sextOrTrunc(IndexSize);
+        bool Overflow;
+        APInt ScaledIdx = CIdx->getValue().sextOrTrunc(IndexSize).smul_ov(
+            APInt(IndexSize, AllocTypeSize.getFixedValue(),
+                  /*isSigned=*/false, /*implicitTrunc=*/true),
+            Overflow);
+        Decomposed.IsExact &= !Overflow;
+        AddToOffset(ScaledIdx);
         continue;
       }
 
@@ -769,7 +791,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       APInt TypeSize(IndexSize, AllocTypeSize.getFixedValue(),
                      /*isSigned=*/false, /*implicitTrunc=*/true);
       LE = LE.mul(TypeSize, NUW, NUSW);
-      Decomposed.Offset += LE.Offset;
+      AddToOffset(LE.Offset);
       APInt Scale = LE.Scale;
       if (!LE.IsNUW)
         Decomposed.NWFlags = Decomposed.NWFlags.withoutNoUnsignedWrap();
@@ -1334,7 +1356,23 @@ AliasResult BasicAAResult::aliasGEP(
   // Analyze the variable indices, and compute the GCD that the total
   // variable offset is guaranteed to be a multiple of, and its approximate
   // range.
-  auto [GCD, OffsetRange, VIKnownBits] = analyzeVariableOffsets(DecompGEP1, DT);
+  auto [GCD, OffsetRange, VIKnownBits, VIRanges] =
+      analyzeVariableOffsets(DecompGEP1, DT);
+
+  // The distance between the pointers is DecompGEP1.Offset plus the variable
+  // offset, but in general only modulo 2^BW. Two kinds of rule below reason
+  // about the variable offset as an integer and need to know that the sum does
+  // not wrap around for overlapping accesses: the modular rule when GCD does
+  // not divide 2^BW, and the rules for the difference of two scaled indices.
+  bool OffsetIsExact =
+      (!GCD.isPowerOf2() || DecompGEP1.VarIndices.size() == 2) &&
+      offsetIsExactIfOverlapping(DecompGEP1, VIRanges, V1Size.getValue(),
+                                 V2Size.getValue());
+
+  // The variable offset is a multiple of GCD. If the sum may wrap, the
+  // distance is only known modulo the largest power of two dividing GCD.
+  if (!GCD.isPowerOf2() && !OffsetIsExact)
+    GCD = APInt::getOneBitSet(BW, GCD.countr_zero());
 
   // We now have accesses at two offsets from the same base:
   //  1. (...)*GCD + DecompGEP1.Offset with size V1Size
@@ -1360,8 +1398,8 @@ AliasResult BasicAAResult::aliasGEP(
 
   // If a minimum absolute variable offset can be established, employ it to
   // prove that the two accesses are far enough apart.
-  if (auto MinAbsVarIndex =
-          computeMinAbsVarOffset(DecompGEP1, VIKnownBits, DT, AAQI)) {
+  if (auto MinAbsVarIndex = computeMinAbsVarOffset(DecompGEP1, VIKnownBits,
+                                                   OffsetIsExact, DT, AAQI)) {
     // The constant offset will have added at least +/-MinAbsVarIndex to it.
     APInt OffsetLo = DecompGEP1.Offset - *MinAbsVarIndex;
     APInt OffsetHi = DecompGEP1.Offset + *MinAbsVarIndex;
@@ -1373,7 +1411,8 @@ AliasResult BasicAAResult::aliasGEP(
 
   // As a last attempt, search for a constant offset between the variable
   // indices that GetLinearExpression could not extract through casts.
-  if (computeConstantOffsetHeuristic(DecompGEP1, V1Size, V2Size, &AC, DT, AAQI))
+  if (computeConstantOffsetHeuristic(DecompGEP1, V1Size, V2Size, OffsetIsExact,
+                                     &AC, DT, AAQI))
     return AliasResult::NoAlias;
 
   // Statically, we can see that the base objects are the same, but the
@@ -1888,7 +1927,9 @@ void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
   if (DestGEP.Offset.ult(SrcGEP.Offset))
     DestGEP.NWFlags = DestGEP.NWFlags.withoutNoUnsignedWrap();
 
-  DestGEP.Offset -= SrcGEP.Offset;
+  bool Overflow;
+  DestGEP.Offset = DestGEP.Offset.ssub_ov(SrcGEP.Offset, Overflow);
+  DestGEP.IsExact &= SrcGEP.IsExact && !Overflow;
   for (const VariableGEPIndex &Src : SrcGEP.VarIndices) {
     // Find V in Dest.  This is N^2, but pointer indices almost never have more
     // than a few variable indexes.
@@ -1942,7 +1983,9 @@ BasicAAResult::analyzeVariableOffsets(const DecomposedGEP &GEP,
   APInt GCD;
   ConstantRange OffsetRange(GEP.Offset);
   SmallVector<KnownBits, 4> VarIndexKnownBits;
+  SmallVector<ConstantRange, 4> VarIndexRanges;
   VarIndexKnownBits.reserve(GEP.VarIndices.size());
+  VarIndexRanges.reserve(GEP.VarIndices.size());
 
   for (unsigned I = 0, E = GEP.VarIndices.size(); I != E; ++I) {
     const VariableGEPIndex &Index = GEP.VarIndices[I];
@@ -1979,6 +2022,7 @@ BasicAAResult::analyzeVariableOffsets(const DecomposedGEP &GEP,
         CR.intersectWith(ConstantRange::fromKnownBits(Known, /*IsSigned=*/true),
                          ConstantRange::Signed);
     CR = Index.Val.evaluateWith(CR).sextOrTrunc(OffsetRange.getBitWidth());
+    VarIndexRanges.push_back(CR);
 
     assert(OffsetRange.getBitWidth() == Scale.getBitWidth() &&
            "Bit widths are normalized to MaxIndexSize");
@@ -1993,15 +2037,66 @@ BasicAAResult::analyzeVariableOffsets(const DecomposedGEP &GEP,
       OffsetRange = OffsetRange.add(CR);
   }
 
-  return {GCD, OffsetRange, std::move(VarIndexKnownBits)};
+  return {GCD, OffsetRange, std::move(VarIndexKnownBits),
+          std::move(VarIndexRanges)};
 }
 
-/// Check whether V*Scale cannot wrap for any value of V, so that abs(V*Scale)
-/// >= abs(Scale) holds in the presence of potentially wrapping math.
-static bool multiplyByScaleNoWrap(const VariableGEPIndex &Var) {
-  if (Var.IsNSW)
+/// The decomposition gives the distance between two pointers as
+/// GEP.Offset + sum(Scale * V), but only modulo 2^BW: the real distance may
+/// differ from that sum, evaluated without wrapping, by a multiple of 2^BW.
+/// Return true if they are known to be equal whenever an access of V1Size
+/// bytes at the first pointer overlaps one of V2Size bytes at the second.
+bool BasicAAResult::offsetIsExactIfOverlapping(const DecomposedGEP &GEP,
+                                               ArrayRef<ConstantRange> VIRanges,
+                                               uint64_t V1Size,
+                                               uint64_t V2Size) {
+  // If both pointers are computed by nusw GEPs from the same address and no
+  // constant or scaled index overflows, no step wraps and the sum is the
+  // distance.
+  if (GEP.IsExact && all_of(GEP.VarIndices, [](const VariableGEPIndex &Index) {
+        return Index.IsNSW;
+      }))
     return true;
 
+  // Otherwise, bound the sum S. If the accesses overlap, the distance D
+  // satisfies -V1Size < D < V2Size. So when S lies in
+  // [V2Size - 2^BW, 2^BW - V1Size], S + 2^BW and S - 2^BW are outside that
+  // window, and D == S.
+  // Each product is at most 2^(2*BW-2) in magnitude, so this width holds the
+  // sum of all of them and the offset.
+  unsigned BW = GEP.Offset.getBitWidth();
+  unsigned WideBW = 2 * BW + Log2_32_Ceil(GEP.VarIndices.size() + 1);
+  APInt MinSum = GEP.Offset.sext(WideBW);
+  APInt MaxSum = MinSum;
+  for (const auto &[Index, CR] : zip_equal(GEP.VarIndices, VIRanges)) {
+    // The bounds of Scale * V without wrapping.
+    APInt WideScale = Index.Scale.sext(WideBW);
+    APInt Lo = CR.getSignedMin().sext(WideBW) * WideScale;
+    APInt Hi = CR.getSignedMax().sext(WideBW) * WideScale;
+    if (Lo.sgt(Hi))
+      std::swap(Lo, Hi);
+    // If the multiplication is nsw, the product also fits the index type.
+    if (Index.IsNSW) {
+      Lo = APIntOps::smax(Lo, APInt::getSignedMinValue(BW).sext(WideBW));
+      Hi = APIntOps::smin(Hi, APInt::getSignedMaxValue(BW).sext(WideBW));
+    }
+    if (Index.IsNegated) {
+      MinSum -= Hi;
+      MaxSum -= Lo;
+    } else {
+      MinSum += Lo;
+      MaxSum += Hi;
+    }
+  }
+
+  APInt Modulus = APInt::getOneBitSet(WideBW, BW);
+  return MaxSum.sle(Modulus - APInt(WideBW, V1Size)) &&
+         MinSum.sge(APInt(WideBW, V2Size) - Modulus);
+}
+
+/// Check whether Scale is small enough for the bit width of V that V*Scale
+/// stays at least abs(Scale) away from a multiple of 2^BW for any non-zero V.
+static bool scaleIsSmallForValue(const VariableGEPIndex &Var) {
   int ValOrigBW = Var.Val.V->getType()->getPrimitiveSizeInBits();
   // If Scale is small enough so that abs(V*Scale) >= abs(Scale) holds.
   // The max value of abs(V) is 2^ValOrigBW - 1. Multiplying with a
@@ -2013,9 +2108,25 @@ static bool multiplyByScaleNoWrap(const VariableGEPIndex &Var) {
       APInt::getMaxValue(MaxScaleValueBW).zext(Var.Scale.getBitWidth()));
 }
 
+/// Check whether V*Scale cannot wrap for any value of V, so that abs(V*Scale)
+/// >= abs(Scale) holds in the presence of potentially wrapping math.
+static bool multiplyByScaleNoWrap(const VariableGEPIndex &Var) {
+  return Var.IsNSW || scaleIsSmallForValue(Var);
+}
+
+/// Check whether the difference of two scaled indices with the same casts
+/// stays at least the common factor of their scales away from a multiple of
+/// 2^BW whenever it is not zero. Unlike for a single index, nsw on both
+/// multiplications is not enough: each product fits the index type, but their
+/// difference can come within less than that of 2^BW.
+static bool differenceOfScaledNoWrap(const VariableGEPIndex &Var0,
+                                     const VariableGEPIndex &Var1) {
+  return scaleIsSmallForValue(Var0) && scaleIsSmallForValue(Var1);
+}
+
 std::optional<APInt> BasicAAResult::computeMinAbsVarOffset(
     const DecomposedGEP &GEP, ArrayRef<KnownBits> VIKnownBits,
-    DominatorTree *DT, const AAQueryInfo &AAQI) {
+    bool OffsetIsExact, DominatorTree *DT, const AAQueryInfo &AAQI) {
   const auto &VarIndices = GEP.VarIndices;
   if (VarIndices.size() == 1) {
     // VarIndex = Scale*V.
@@ -2039,10 +2150,12 @@ std::optional<APInt> BasicAAResult::computeMinAbsVarOffset(
     // inequality of values across loop iterations.
     const VariableGEPIndex &Var0 = VarIndices[0];
     const VariableGEPIndex &Var1 = VarIndices[1];
-    bool Preconditions =
-        Var0.Val.TruncBits == 0 && Var0.Val.hasSameCastsAs(Var1.Val) &&
-        !AAQI.MayBeCrossIteration && multiplyByScaleNoWrap(Var0) &&
-        multiplyByScaleNoWrap(Var1);
+    bool Preconditions = Var0.Val.TruncBits == 0 &&
+                         Var0.Val.hasSameCastsAs(Var1.Val) &&
+                         !AAQI.MayBeCrossIteration &&
+                         (differenceOfScaledNoWrap(Var0, Var1) ||
+                          (OffsetIsExact && multiplyByScaleNoWrap(Var0) &&
+                           multiplyByScaleNoWrap(Var1)));
 
     if (!Preconditions)
       return std::nullopt;
@@ -2091,12 +2204,10 @@ std::optional<APInt> BasicAAResult::computeMinAbsVarOffset(
   return std::nullopt;
 }
 
-bool BasicAAResult::computeConstantOffsetHeuristic(const DecomposedGEP &GEP,
-                                                   LocationSize MaybeV1Size,
-                                                   LocationSize MaybeV2Size,
-                                                   AssumptionCache *AC,
-                                                   DominatorTree *DT,
-                                                   const AAQueryInfo &AAQI) {
+bool BasicAAResult::computeConstantOffsetHeuristic(
+    const DecomposedGEP &GEP, LocationSize MaybeV1Size,
+    LocationSize MaybeV2Size, bool OffsetIsExact, AssumptionCache *AC,
+    DominatorTree *DT, const AAQueryInfo &AAQI) {
   if (GEP.VarIndices.size() != 2 || !MaybeV1Size.hasValue() ||
       !MaybeV2Size.hasValue())
     return false;
@@ -2114,9 +2225,11 @@ bool BasicAAResult::computeConstantOffsetHeuristic(const DecomposedGEP &GEP,
     return false;
 
   // MinDiffBytes below is computed as MinDiff * Scale in the index width. This
-  // is correct so long as neither Scale*ext(V0) nor Scale*ext(V1) wraps around
-  // the index space.
-  if (!multiplyByScaleNoWrap(Var0) || !multiplyByScaleNoWrap(Var1))
+  // is correct so long as Scale*ext(V0) - Scale*ext(V1) does not wrap around
+  // the index space. That neither product wraps is not enough for that.
+  if (!differenceOfScaledNoWrap(Var0, Var1) &&
+      !(OffsetIsExact && multiplyByScaleNoWrap(Var0) &&
+        multiplyByScaleNoWrap(Var1)))
     return false;
 
   // We'll strip off the Extensions of Var0 and Var1 and do another round
