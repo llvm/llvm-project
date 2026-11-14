@@ -38,7 +38,6 @@ struct RuntimeArrayTypeStorage;
 struct SampledImageTypeStorage;
 struct StructTypeStorage;
 struct UntypedPointerTypeStorage;
-
 } // namespace detail
 
 // Base SPIR-V type for providing availability queries.
