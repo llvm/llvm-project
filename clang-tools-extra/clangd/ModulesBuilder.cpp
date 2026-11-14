@@ -94,17 +94,33 @@ std::string normalizePathForCache(PathRef Path) {
   return maybeCaseFoldPath(Normalized);
 }
 
+/// Returns the project source root owning \p ModuleUnitFileName, falling back
+/// to the consuming translation unit's (\p RequiredSource) project root when
+/// the module unit resides outside the workspace tree (e.g. system `std.cppm`).
+std::optional<std::string>
+getModuleProjectRoot(PathRef RequiredSource, PathRef ModuleUnitFileName,
+                     const GlobalCompilationDatabase &CDB) {
+  if (auto PI = CDB.getProjectInfo(ModuleUnitFileName);
+      PI && !PI->SourceRoot.empty())
+    return PI->SourceRoot;
+  if (auto PI = CDB.getProjectInfo(RequiredSource);
+      PI && !PI->SourceRoot.empty())
+    return PI->SourceRoot;
+  return std::nullopt;
+}
+
 /// Returns the root directory used for persistent module cache storage.
-/// Prefer a project-local cache so different clangd sessions working on the
+/// Prefer a project-local cache (resolved from the module unit or the
+/// consuming translation unit) so different clangd sessions working on the
 /// same source tree can reuse BMIs. Fall back to the user cache directory, and
 /// finally to a non-ephemeral temp directory when no better cache root exists.
 llvm::SmallString<256>
-getModuleCacheRoot(PathRef ModuleUnitFileName,
+getModuleCacheRoot(PathRef RequiredSource, PathRef ModuleUnitFileName,
                    const GlobalCompilationDatabase &CDB) {
   llvm::SmallString<256> Result;
-  if (auto PI = CDB.getProjectInfo(ModuleUnitFileName);
-      PI && !PI->SourceRoot.empty()) {
-    Result = PI->SourceRoot;
+  if (auto ProjectRoot =
+          getModuleProjectRoot(RequiredSource, ModuleUnitFileName, CDB)) {
+    Result = *ProjectRoot;
     llvm::sys::path::append(Result, ".cache", "clangd", "modules");
     return Result;
   }
@@ -123,9 +139,10 @@ getModuleCacheRoot(PathRef ModuleUnitFileName,
 /// module cache. Placing locks beside the cache ensures all builders sharing
 /// the cache also synchronize through the same lock namespace.
 llvm::SmallString<256>
-getModuleCacheLocksDirectory(PathRef ModuleUnitFileName,
+getModuleCacheLocksDirectory(PathRef RequiredSource, PathRef ModuleUnitFileName,
                              const GlobalCompilationDatabase &CDB) {
-  llvm::SmallString<256> Result = getModuleCacheRoot(ModuleUnitFileName, CDB);
+  llvm::SmallString<256> Result =
+      getModuleCacheRoot(RequiredSource, ModuleUnitFileName, CDB);
   llvm::sys::path::append(Result, ".locks");
   return Result;
 }
@@ -162,10 +179,11 @@ std::string getCompileCommandStringHash(const tooling::CompileCommand &Cmd) {
 /// basename alongside the source-hash, and the command-hash keeps incompatible
 /// command lines apart.
 llvm::SmallString<256>
-getModuleFilesDirectory(PathRef ModuleUnitFileName,
+getModuleFilesDirectory(PathRef RequiredSource, PathRef ModuleUnitFileName,
                         const tooling::CompileCommand &Cmd,
                         const GlobalCompilationDatabase &CDB) {
-  llvm::SmallString<256> Result = getModuleCacheRoot(ModuleUnitFileName, CDB);
+  llvm::SmallString<256> Result =
+      getModuleCacheRoot(RequiredSource, ModuleUnitFileName, CDB);
   llvm::sys::path::append(Result,
                           getModuleUnitSourceDirectoryName(ModuleUnitFileName),
                           getCompileCommandStringHash(Cmd));
@@ -175,10 +193,10 @@ getModuleFilesDirectory(PathRef ModuleUnitFileName,
 /// Returns the lock file path guarding publication of BMIs for a module unit
 /// source. Builders targeting the same source-hash serialize through this path.
 llvm::SmallString<256>
-getModuleSourceHashLockPath(PathRef ModuleUnitFileName,
+getModuleSourceHashLockPath(PathRef RequiredSource, PathRef ModuleUnitFileName,
                             const GlobalCompilationDatabase &CDB) {
   llvm::SmallString<256> Result =
-      getModuleCacheLocksDirectory(ModuleUnitFileName, CDB);
+      getModuleCacheLocksDirectory(RequiredSource, ModuleUnitFileName, CDB);
   llvm::sys::path::append(Result,
                           getModuleUnitSourcePathHash(ModuleUnitFileName));
   return Result;
@@ -269,10 +287,11 @@ llvm::Error ensureLockAnchorFileExists(PathRef LockPath) {
 class ScopedModuleSourceLock {
 public:
   static llvm::Expected<ScopedModuleSourceLock>
-  acquire(PathRef ModuleUnitFileName, const GlobalCompilationDatabase &CDB) {
+  acquire(PathRef RequiredSource, PathRef ModuleUnitFileName,
+          const GlobalCompilationDatabase &CDB) {
     constexpr auto LockWaitInterval = std::chrono::seconds(10);
     llvm::SmallString<256> LockPath =
-        getModuleSourceHashLockPath(ModuleUnitFileName, CDB);
+        getModuleSourceHashLockPath(RequiredSource, ModuleUnitFileName, CDB);
     if (llvm::Error Err = ensureLockAnchorFileExists(LockPath))
       return std::move(Err);
 
@@ -966,6 +985,11 @@ public:
     return MDB->getModuleNameState(ModuleName);
   }
 
+  std::optional<tooling::CompileCommand>
+  getCompileCommand(PathRef File) const override {
+    return MDB->getCompileCommand(File);
+  }
+
   std::string getSourceForModuleName(llvm::StringRef ModuleName,
                                      PathRef RequiredSrcFile) override {
     auto ModuleState = MDB->getModuleNameState(ModuleName);
@@ -1152,6 +1176,7 @@ private:
   /// Try to get prebuilt module files from the compilation database.
   void getPrebuiltModuleFile(StringRef ModuleName, PathRef ModuleUnitFileName,
                              const ThreadsafeFS &TFS,
+                             const CachingProjectModules &MDB,
                              ReusablePrerequisiteModules &BuiltModuleFiles);
 
   /// Runs GC once for the cache root owning a project root.
@@ -1190,11 +1215,14 @@ void ModulesBuilder::ModulesBuilderImpl::
 
 void ModulesBuilder::ModulesBuilderImpl::getPrebuiltModuleFile(
     StringRef ModuleName, PathRef ModuleUnitFileName, const ThreadsafeFS &TFS,
+    const CachingProjectModules &MDB,
     ReusablePrerequisiteModules &BuiltModuleFiles) {
   if (!ReusePrebuiltModuleFile)
     return;
 
   auto Cmd = getCDB().getCompileCommand(ModuleUnitFileName);
+  if (!Cmd)
+    Cmd = MDB.getCompileCommand(ModuleUnitFileName);
   if (!Cmd)
     return;
 
@@ -1257,7 +1285,8 @@ llvm::Error ModulesBuilder::ModulesBuilderImpl::getOrBuildModuleFile(
   /// Try to get prebuilt module files from the compilation database first. This
   /// helps to avoid building the module files that are already built by the
   /// compiler.
-  getPrebuiltModuleFile(ModuleName, ModuleUnitFileName, TFS, BuiltModuleFiles);
+  getPrebuiltModuleFile(ModuleName, ModuleUnitFileName, TFS, MDB,
+                        BuiltModuleFiles);
 
   // Get Required modules in topological order.
   auto ReqModuleNames = getAllRequiredModules(RequiredSource, MDB, ModuleName);
@@ -1269,19 +1298,23 @@ llvm::Error ModulesBuilder::ModulesBuilderImpl::getOrBuildModuleFile(
         MDB.getSourceForModuleName(ReqModuleName, RequiredSource);
     auto Cmd = getCDB().getCompileCommand(ReqFileName);
     if (!Cmd)
+      Cmd = MDB.getCompileCommand(ReqFileName);
+    if (!Cmd)
       return llvm::createStringError(
           llvm::formatv("No compile command for {0}", ReqFileName));
-    if (auto PI = getCDB().getProjectInfo(ReqFileName);
-        PI && !PI->SourceRoot.empty())
-      garbageCollectModuleCacheForProjectRoot(PI->SourceRoot);
+    if (auto ProjectRoot =
+            getModuleProjectRoot(RequiredSource, ReqFileName, getCDB()))
+      garbageCollectModuleCacheForProjectRoot(*ProjectRoot);
 
     const std::string CommandHash = getCompileCommandStringHash(*Cmd);
     const std::string PublishedModuleFilePath = getPublishedModuleFilePath(
-        ReqModuleName, getModuleFilesDirectory(ReqFileName, *Cmd, getCDB()));
+        ReqModuleName,
+        getModuleFilesDirectory(RequiredSource, ReqFileName, *Cmd, getCDB()));
 
     // Keep the source-scoped lock while probing and validating cached BMIs so
     // stale-file replacement and final publication stay serialized.
-    auto SourceLock = ScopedModuleSourceLock::acquire(ReqFileName, getCDB());
+    auto SourceLock =
+        ScopedModuleSourceLock::acquire(RequiredSource, ReqFileName, getCDB());
     if (!SourceLock)
       return SourceLock.takeError();
 
