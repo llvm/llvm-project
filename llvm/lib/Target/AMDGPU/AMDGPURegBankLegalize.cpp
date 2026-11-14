@@ -331,12 +331,27 @@ void AMDGPURegBankLegalizeCombiner::tryCombineCopy(MachineInstr &MI) {
   // ->
   // %BoolSrc:sgpr(s32) = G_AND %TruncS32Src:sgpr(s32), 1
   // %Dst:lane-mask(s1) = G_AMDGPU_COPY_VCC_SCC %BoolSrc:sgpr(s32)
+  //
+  // S1 truncs that come from the legalizer can have S16 or S64 sources, e.g.
+  // from a uniform i1 select legalized as S16. Convert those to S32 first.
   if (isLaneMask(Dst) && MRI.getRegBankOrNull(Src) == SgprRB) {
     auto [Trunc, TruncS32Src] = tryMatch(Src, AMDGPU::G_TRUNC);
-    assert(Trunc && MRI.getType(TruncS32Src) == S32 &&
-           "sgpr S1 must be result of G_TRUNC of sgpr S32");
+    assert(Trunc && "sgpr S1 must be result of G_TRUNC of sgpr");
 
     B.setInstr(MI);
+    LLT TruncSrcTy = MRI.getType(TruncS32Src);
+    if (TruncSrcTy == S16) {
+      TruncS32Src =
+          B.buildAnyExt({SgprRB, TruncSrcTy.changeElementSize(32)}, TruncS32Src)
+              .getReg(0);
+    } else if (TruncSrcTy == S64) {
+      TruncS32Src = B.buildUnmerge({SgprRB, TruncSrcTy.changeElementSize(32)},
+                                   TruncS32Src)
+                        .getReg(0);
+    }
+    assert(MRI.getType(TruncS32Src) == S32 &&
+           "sgpr S1 must be result of G_TRUNC of sgpr S16, S32 or S64");
+
     // Ensure that truncated bits in BoolSrc are 0.
     LLT Ty = MRI.getType(TruncS32Src);
     auto One = B.buildConstant({SgprRB, Ty}, 1);
