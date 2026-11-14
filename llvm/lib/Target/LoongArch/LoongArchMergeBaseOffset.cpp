@@ -367,7 +367,7 @@ bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
   int Shift = 0;
 
   // This can point to one of [ORI, LU12I.W, LU32I.D, LU52I.D, SLLI.D]:
-  for (int i = 0; i < 4; i++) {
+  for (int I = 0; I < 4; I++) {
     // Handle Reg is R0.
     if (Reg == LoongArch::R0)
       break;
