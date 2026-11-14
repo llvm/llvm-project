@@ -72,6 +72,8 @@
 #include "AArch64ExpandImm.h"
 #include "AArch64InstrInfo.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 
@@ -121,6 +123,15 @@ private:
 
   bool checkMovImmInstr(MachineInstr &MI, MachineInstr *&MovMI,
                         MachineInstr *&SubregToRegMI);
+
+  bool getConstantDef(Register Reg, uint64_t &Value, MachineInstr *&MovMI,
+                      MachineInstr *&SubregToRegMI);
+  template <typename T>
+  void recordConstantDef(MachineInstr &MI,
+                         DenseMap<uint64_t, Register> &Consts);
+  bool foldSharedAddSubConstant(MachineInstr &MI, unsigned AddOpc,
+                                unsigned SubOpc, bool Is64Bit,
+                                DenseMap<uint64_t, Register> &SameWidth);
 
   template <typename T>
   bool visitADDSUB(unsigned PosOpc, unsigned NegOpc, MachineInstr &MI);
@@ -579,6 +590,82 @@ bool AArch64MIPeepholeOptImpl::checkMovImmInstr(MachineInstr &MI,
   return true;
 }
 
+bool AArch64MIPeepholeOptImpl::getConstantDef(Register Reg, uint64_t &Value,
+                                              MachineInstr *&MovMI,
+                                              MachineInstr *&SubregToRegMI) {
+  SubregToRegMI = nullptr;
+  MovMI = MRI->getUniqueVRegDef(Reg);
+  if (!MovMI)
+    return false;
+  if (MovMI->getOpcode() == TargetOpcode::SUBREG_TO_REG) {
+    SubregToRegMI = MovMI;
+    MovMI = MRI->getUniqueVRegDef(MovMI->getOperand(1).getReg());
+    if (!MovMI)
+      return false;
+  }
+  if (MovMI->getOpcode() != AArch64::MOVi32imm &&
+      MovMI->getOpcode() != AArch64::MOVi64imm)
+    return false;
+  Value = static_cast<uint64_t>(MovMI->getOperand(1).getImm());
+  if (SubregToRegMI)
+    Value = static_cast<uint32_t>(Value);
+  return true;
+}
+
+static bool hasRealUse(const MachineRegisterInfo &MRI, Register Reg) {
+  return any_of(MRI.use_nodbg_instructions(Reg),
+                [](const MachineInstr &UseMI) { return !UseMI.isFakeUse(); });
+}
+
+template <typename T>
+void AArch64MIPeepholeOptImpl::recordConstantDef(
+    MachineInstr &MI, DenseMap<uint64_t, Register> &Consts) {
+  if (hasRealUse(*MRI, MI.getOperand(0).getReg()))
+    Consts[static_cast<T>(MI.getOperand(1).getImm())] =
+        MI.getOperand(0).getReg();
+}
+
+bool AArch64MIPeepholeOptImpl::foldSharedAddSubConstant(
+    MachineInstr &MI, unsigned AddOpc, unsigned SubOpc, bool Is64Bit,
+    DenseMap<uint64_t, Register> &SameWidth) {
+  unsigned Opc = MI.getOpcode();
+
+  Register SrcReg = MI.getOperand(2).getReg();
+  if (!SrcReg.isVirtual())
+    return false;
+
+  uint64_t RawValue;
+  MachineInstr *MovMI, *SubregToRegMI;
+  if (!getConstantDef(SrcReg, RawValue, MovMI, SubregToRegMI))
+    return false;
+
+  uint64_t NegValue =
+      Is64Bit ? (0ULL - RawValue)
+              : static_cast<uint32_t>(0U - static_cast<uint32_t>(RawValue));
+
+  auto SameIt = SameWidth.find(NegValue);
+  if (SameIt == SameWidth.end() || SameIt->second == SrcReg ||
+      MRI->def_empty(SameIt->second))
+    return false;
+  Register CanonReg = SameIt->second;
+
+  unsigned NewOpc = (Opc == AddOpc) ? SubOpc : AddOpc;
+  MI.getOperand(2).setReg(CanonReg);
+  MI.setDesc(TII->get(NewOpc));
+  MRI->clearKillFlags(CanonReg);
+
+  if (MRI->use_nodbg_empty(SrcReg)) {
+    if (SubregToRegMI) {
+      SubregToRegMI->eraseFromParent();
+      if (MRI->use_nodbg_empty(MovMI->getOperand(0).getReg()))
+        MovMI->eraseFromParent();
+    } else {
+      MovMI->eraseFromParent();
+    }
+  }
+  return true;
+}
+
 template <typename T>
 bool AArch64MIPeepholeOptImpl::splitTwoPartImm(MachineInstr &MI,
                                                SplitAndOpcFunc<T> SplitAndOpc,
@@ -986,9 +1073,17 @@ bool AArch64MIPeepholeOptImpl::run(MachineFunction &MF) {
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
+    DenseMap<uint64_t, Register> SharedConsts32, SharedConsts64;
+
     for (MachineInstr &MI : make_early_inc_range(MBB)) {
       switch (MI.getOpcode()) {
       default:
+        break;
+      case AArch64::MOVi32imm:
+        recordConstantDef<uint32_t>(MI, SharedConsts32);
+        break;
+      case AArch64::MOVi64imm:
+        recordConstantDef<uint64_t>(MI, SharedConsts64);
         break;
       case AArch64::INSERT_SUBREG:
         Changed |= visitINSERT(MI);
@@ -1029,16 +1124,28 @@ bool AArch64MIPeepholeOptImpl::run(MachineFunction &MF) {
         Changed |= visitORR(MI);
         break;
       case AArch64::ADDWrr:
-        Changed |= visitADDSUB<uint32_t>(AArch64::ADDWri, AArch64::SUBWri, MI);
+        Changed |=
+            foldSharedAddSubConstant(MI, AArch64::ADDWrr, AArch64::SUBWrr,
+                                     false, SharedConsts32) ||
+            visitADDSUB<uint32_t>(AArch64::ADDWri, AArch64::SUBWri, MI);
         break;
       case AArch64::SUBWrr:
-        Changed |= visitADDSUB<uint32_t>(AArch64::SUBWri, AArch64::ADDWri, MI);
+        Changed |=
+            foldSharedAddSubConstant(MI, AArch64::ADDWrr, AArch64::SUBWrr,
+                                     false, SharedConsts32) ||
+            visitADDSUB<uint32_t>(AArch64::SUBWri, AArch64::ADDWri, MI);
         break;
       case AArch64::ADDXrr:
-        Changed |= visitADDSUB<uint64_t>(AArch64::ADDXri, AArch64::SUBXri, MI);
+        Changed |=
+            foldSharedAddSubConstant(MI, AArch64::ADDXrr, AArch64::SUBXrr, true,
+                                     SharedConsts64) ||
+            visitADDSUB<uint64_t>(AArch64::ADDXri, AArch64::SUBXri, MI);
         break;
       case AArch64::SUBXrr:
-        Changed |= visitADDSUB<uint64_t>(AArch64::SUBXri, AArch64::ADDXri, MI);
+        Changed |=
+            foldSharedAddSubConstant(MI, AArch64::ADDXrr, AArch64::SUBXrr, true,
+                                     SharedConsts64) ||
+            visitADDSUB<uint64_t>(AArch64::SUBXri, AArch64::ADDXri, MI);
         break;
       case AArch64::ADDSWrr:
         Changed |=
