@@ -356,6 +356,14 @@ infrastructure are described first, followed by tool-specific sections.
   - Kept diagnostics but suppressed unsafe fix-its when no safe
     result-preserving rewrite is available.
 
+- Improved {doc}`modernize-use-trailing-return-type
+  <clang-tidy/checks/modernize/use-trailing-return-type>` check by adding `()`
+  to fixes for lambdas without a parameter clause before C++23, and not offering
+  a fix when that would need specifiers to be moved. The check also no longer
+  crashes on a lambda whose body comes from a macro, and no longer inserts the
+  return type inside the preceding token or comment, such as in
+  `[](){ return 1; }`.
+
 - Improved {doc}`performance-inefficient-algorithm
   <clang-tidy/checks/performance/inefficient-algorithm>` check to no longer
   produce a fix with the container or the searched-for value missing, such as
