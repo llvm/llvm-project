@@ -1308,8 +1308,12 @@ bool RegAllocFastImpl::lowerTiedUse(MachineInstr &MI, MachineOperand &MO,
     }
   }
 
-  // The free-defs step skips tied defs, so DefReg still holds the def.
+  // The free-defs step skips tied defs, so DefReg still holds the def. Other
+  // uses of MI must not be assigned DefReg, or the copy would overwrite them.
+  // A virtual def's register is already marked used in MI, but a physical
+  // def's is not, so mark it here.
   freePhysReg(DefReg);
+  markRegUsedInInstr(DefReg);
   return true;
 }
 

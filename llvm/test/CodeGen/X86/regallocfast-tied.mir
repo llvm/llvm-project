@@ -11,6 +11,9 @@
   define i16 @tied_use_subreg(i32 %a, i16 %b) { ret i16 0 }
   define void @tied_use_class_mismatch(i32 %a) { ret void }
   define i64 @tied_def_reserved(i64 %a) { ret i64 0 }
+  define i32 @tied_physreg_def_other_use(i32 %a, ptr %p) { ret i32 0 }
+  define void @tied_physreg_def_twice(i32 %a, ptr %p) { ret void }
+  define void @untied_read_before_tied_physreg_def(i32 %a, ptr %p) { ret void }
   define i64 @insert_subreg_undef_base(i32 %a) { ret i64 0 }
   define i64 @insert_subreg_live_base(i64 %a, i32 %b) { ret i64 0 }
   define i32 @tied_use_read_twice(i32 %a) { ret i32 0 }
@@ -196,6 +199,69 @@ body: |
     INLINEASM &"// $0", attdialect, regdef, implicit-def $rbx, reguse tiedto:$0, %1(tied-def 3), clobber, implicit-def early-clobber $eflags
     $rax = COPY $rbx
     RET64 implicit $rax
+...
+---
+# %0 is read after the asm, so it is copied into the tied def's $eax. %1 must
+# not be assigned $eax, or the copy would overwrite it.
+name: tied_physreg_def_other_use
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $ecx, $rdi
+    ; CHECK-LABEL: name: tied_physreg_def_other_use
+    ; CHECK: liveins: $ecx, $rdi
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $edx = MOV32rm killed $rdi, 1, $noreg, 0, $noreg
+    ; CHECK-NEXT: $eax = COPY $ecx
+    ; CHECK-NEXT: INLINEASM &"// $0 $1 $2", attdialect, regdef-ec, implicit-def dead early-clobber $eax, reguse tiedto:$0, renamable $eax(tied-def 3), reguse:GR32, killed renamable $edx
+    ; CHECK-NEXT: RET64 implicit killed $ecx
+    %0:gr32 = COPY $ecx
+    %1:gr32 = MOV32rm $rdi, 1, $noreg, 0, $noreg
+    INLINEASM &"// $0 $1 $2", attdialect, regdef-ec, implicit-def early-clobber $eax, reguse tiedto:$0, %0(tied-def 3), reguse:GR32, %1
+    $ecx = COPY %0
+    RET64 implicit $ecx
+...
+---
+# %0 is tied to both $eax and $ecx. Neither may go to %1 or %2.
+name: tied_physreg_def_twice
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $edx, $rdi
+    ; CHECK-LABEL: name: tied_physreg_def_twice
+    ; CHECK: liveins: $edx, $rdi
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $esi = MOV32rm $rdi, 1, $noreg, 0, $noreg
+    ; CHECK-NEXT: renamable $edi = MOV32rm killed $rdi, 1, $noreg, 4, $noreg
+    ; CHECK-NEXT: $eax = COPY $edx
+    ; CHECK-NEXT: $ecx = COPY $edx
+    ; CHECK-NEXT: INLINEASM &"// $0 $1 $2 $3 $4 $5", attdialect, regdef-ec, implicit-def dead early-clobber $eax, regdef-ec, implicit-def dead early-clobber $ecx, reguse tiedto:$0, killed renamable $eax(tied-def 3), reguse tiedto:$1, renamable $ecx(tied-def 5), reguse:GR32, killed renamable $esi, reguse:GR32, killed renamable $edi
+    ; CHECK-NEXT: RET64
+    %0:gr32 = COPY $edx
+    %1:gr32 = MOV32rm $rdi, 1, $noreg, 0, $noreg
+    %2:gr32 = MOV32rm $rdi, 1, $noreg, 4, $noreg
+    INLINEASM &"// $0 $1 $2 $3 $4 $5", attdialect, regdef-ec, implicit-def early-clobber $eax, regdef-ec, implicit-def early-clobber $ecx, reguse tiedto:$0, %0(tied-def 3), reguse tiedto:$1, %0(tied-def 5), reguse:GR32, %1, reguse:GR32, %2
+    RET64
+...
+---
+# The untied read of %0 is allocated first, so the tied use is copied into $eax.
+# %1 must not be assigned $eax.
+name: untied_read_before_tied_physreg_def
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $ecx, $rdi
+    ; CHECK-LABEL: name: untied_read_before_tied_physreg_def
+    ; CHECK: liveins: $ecx, $rdi
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $edx = MOV32rm killed $rdi, 1, $noreg, 0, $noreg
+    ; CHECK-NEXT: $eax = COPY $ecx
+    ; CHECK-NEXT: INLINEASM &"// $0 $1 $2 $3", attdialect, regdef, implicit-def dead $eax, reguse:GR32, killed renamable $ecx, reguse tiedto:$0, renamable $eax(tied-def 3), reguse:GR32, killed renamable $edx
+    ; CHECK-NEXT: RET64
+    %0:gr32 = COPY $ecx
+    %1:gr32 = MOV32rm $rdi, 1, $noreg, 0, $noreg
+    INLINEASM &"// $0 $1 $2 $3", attdialect, regdef, implicit-def $eax, reguse:GR32, %0, reguse tiedto:$0, %0(tied-def 3), reguse:GR32, %1
+    RET64
 ...
 ---
 name: insert_subreg_undef_base
