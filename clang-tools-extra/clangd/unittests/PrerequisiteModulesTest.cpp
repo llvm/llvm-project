@@ -14,6 +14,7 @@
 #include "Annotations.h"
 #include "CodeComplete.h"
 #include "Compiler.h"
+#include "GlobalCompilationDatabase.h"
 #include "ModulesBuilder.h"
 #include "Preamble.h"
 #include "ProjectModules.h"
@@ -66,6 +67,11 @@ public:
 
   ModuleNameState getModuleNameState(llvm::StringRef ModuleName) override {
     return Underlying->getModuleNameState(ModuleName);
+  }
+
+  std::optional<tooling::CompileCommand>
+  getCompileCommand(PathRef File) const override {
+    return Underlying->getCompileCommand(File);
   }
 
 private:
@@ -1647,6 +1653,122 @@ export int BValue = MValue;
   EXPECT_TRUE(
       StringRef(HSB.PrebuiltModuleFiles["M"]).starts_with(ExpectedRoot));
   EXPECT_TRUE(StringRef(HSB.PrebuiltModuleFiles["M"]).contains("M.cppm-"));
+}
+
+namespace {
+
+std::string slash(llvm::StringRef P) {
+  return llvm::sys::path::convert_to_slash(P);
+}
+
+void writeFile(llvm::StringRef Path, llvm::StringRef Contents) {
+  ASSERT_FALSE(
+      llvm::sys::fs::create_directories(llvm::sys::path::parent_path(Path)));
+  std::error_code EC;
+  llvm::raw_fd_ostream OS(Path, EC);
+  ASSERT_FALSE(EC);
+  OS << Contents;
+}
+
+std::string cdbEntry(llvm::StringRef Dir, llvm::StringRef Command,
+                     llvm::StringRef File) {
+  return "{\"directory\":\"" + slash(Dir) + "\",\"command\":\"" +
+         Command.str() + "\",\"file\":\"" + slash(File) + "\"}";
+}
+
+// <Root>/project/{main.cpp,build/compile_commands.json}
+// <Root>/external/M.cppm   (not covered by any ancestor CDB)
+struct OutOfTreeProject {
+  llvm::SmallString<256> Project, Build, ExtMod, Main;
+
+  explicit OutOfTreeProject(llvm::StringRef Root) {
+    Project = Root;
+    llvm::sys::path::append(Project, "project");
+    Build = Project;
+    llvm::sys::path::append(Build, "build");
+    Main = Project;
+    llvm::sys::path::append(Main, "main.cpp");
+    ExtMod = Root;
+    llvm::sys::path::append(ExtMod, "external", "M.cppm");
+
+    writeFile(ExtMod, "export module M;\nexport int extVal = 42;\n");
+    writeFile(Main, "import M;\nint main() { return extVal; }\n");
+
+    llvm::SmallString<256> Pcm(Build);
+    llvm::sys::path::append(Pcm, "M.pcm");
+    llvm::SmallString<256> CDB(Build);
+    llvm::sys::path::append(CDB, "compile_commands.json");
+    writeFile(CDB, "[" +
+                       cdbEntry(Build,
+                                "clang++ -std=c++20 --precompile -o " +
+                                    slash(Pcm) + " " + slash(ExtMod),
+                                ExtMod) +
+                       "," +
+                       cdbEntry(Build,
+                                "clang++ -std=c++20 -fmodule-file=M=" +
+                                    slash(Pcm) + " -c " + slash(Main),
+                                Main) +
+                       "]");
+  }
+};
+
+} // namespace
+
+TEST_F(PrerequisiteModulesTests, OutOfTreeModuleUnitCachedInConsumerProject) {
+  OutOfTreeProject P(TestDir);
+  DirectoryBasedGlobalCompilationDatabase DirCDB(FS);
+  OverlayCDB CDB(&DirCDB);
+
+  // Precondition: the module unit has no ancestor CDB of its own.
+  ASSERT_FALSE(CDB.getCompileCommand(P.ExtMod));
+
+  ModulesBuilder Builder(CDB);
+  auto Info = Builder.buildPrerequisiteModulesFor(P.Main, FS);
+  ASSERT_TRUE(Info);
+
+  HeaderSearchOptions HS(P.Project);
+  Info->adjustHeaderSearchOptions(HS);
+  ASSERT_EQ(HS.PrebuiltModuleFiles.count("M"), 1u);
+
+  llvm::SmallString<256> ExpectedRoot(P.Project);
+  llvm::sys::path::append(ExpectedRoot, ".cache", "clangd", "modules");
+  EXPECT_TRUE(StringRef(HS.PrebuiltModuleFiles["M"]).starts_with(ExpectedRoot))
+      << "Actual: " << HS.PrebuiltModuleFiles["M"];
+}
+
+// An unrelated ancestor CDB makes the global CDB return an interpolated
+// (heuristic) command for the module unit. It must not shadow the exact entry
+// from the consuming project's CDB.
+TEST_F(PrerequisiteModulesTests,
+       OutOfTreeModuleUnitIgnoresHeuristicAncestorCommand) {
+  OutOfTreeProject P(TestDir);
+
+  llvm::SmallString<256> StrayDir(llvm::sys::path::parent_path(P.ExtMod));
+  llvm::SmallString<256> Unrelated(StrayDir);
+  llvm::sys::path::append(Unrelated, "unrelated.cpp");
+  llvm::SmallString<256> StrayCDB(StrayDir);
+  llvm::sys::path::append(StrayCDB, "compile_commands.json");
+  // -std=c++11 cannot build a module, so using this command would fail.
+  writeFile(StrayCDB,
+            "[" +
+                cdbEntry(StrayDir, "clang++ -std=c++11 -c " + slash(Unrelated),
+                         Unrelated) +
+                "]");
+
+  DirectoryBasedGlobalCompilationDatabase DirCDB(FS);
+  OverlayCDB CDB(&DirCDB);
+
+  auto Heuristic = CDB.getCompileCommand(P.ExtMod);
+  ASSERT_TRUE(Heuristic);
+  ASSERT_FALSE(Heuristic->Heuristic.empty());
+
+  ModulesBuilder Builder(CDB);
+  auto Info = Builder.buildPrerequisiteModulesFor(P.Main, FS);
+  ASSERT_TRUE(Info);
+
+  HeaderSearchOptions HS(P.Project);
+  Info->adjustHeaderSearchOptions(HS);
+  EXPECT_EQ(HS.PrebuiltModuleFiles.count("M"), 1u);
 }
 
 TEST_F(PrerequisiteModulesTests, ModuleImportThroughInclude) {
