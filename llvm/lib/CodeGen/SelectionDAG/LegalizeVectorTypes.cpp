@@ -5445,13 +5445,22 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     // elements. If the wide vector op is eventually going to be expanded to
     // scalar libcalls, then unroll into scalar ops now to avoid unnecessary
     // libcalls on the undef elements.
+
+    // The lane count comes from the result being widened, but operation
+    // legality is queried using the corresponding result 0 type.
     EVT ResVT = N->getValueType(ResNo);
-    EVT WideVecVT = TLI.getTypeToTransformTo(*DAG.getContext(), ResVT);
-    if (WideVecVT.isScalableVector())
+    EVT WideResVT = TLI.getTypeToTransformTo(*DAG.getContext(), ResVT);
+    if (WideResVT.isScalableVector())
       return false;
+
     EVT VT0 = N->getValueType(0);
+    EVT WideVecVT = VT0.changeVectorElementCount(
+        *DAG.getContext(), WideResVT.getVectorElementCount());
+
     if (!TLI.isOperationLegalOrCustomOrPromote(N->getOpcode(), WideVecVT) &&
-        TLI.isOperationExpandOrLibCall(N->getOpcode(), VT0.getScalarType())) {
+        TLI.isOperationExpandOrLibCall(N->getOpcode(),
+                                      VT0.getScalarType())) {
+
       SDValue Unrolled =
           DAG.UnrollVectorOp(N, WideVecVT.getVectorNumElements());
       Res = Unrolled.getValue(ResNo);
