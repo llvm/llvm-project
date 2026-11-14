@@ -145,7 +145,7 @@ void LiveIntervals::clear() {
   // Free the live intervals themselves.
   for (unsigned i = 0, e = VirtRegIntervals.size(); i != e; ++i) {
     if (LiveInterval *LI = VirtRegIntervals[Register::index2VirtReg(i)])
-      destroyInterval(*LI);
+      LI->~LiveInterval();
   }
   VirtRegIntervals.clear();
   RegMaskSlots.clear();
@@ -155,9 +155,8 @@ void LiveIntervals::clear() {
 
   for (LiveRange *LR : RegUnitRanges) {
     if (LR)
-      destroyRegUnitRange(*LR);
+      LR->~LiveRange();
   }
-
   RegUnitRanges.clear();
 
   IntervalRecycler.clear(RangeAllocator);
@@ -255,16 +254,6 @@ LiveRange *LiveIntervals::createRegUnitRange() {
   // Use segment set to speed-up initial computation of the live range.
   return new (RegUnitRangeRecycler.Allocate(RangeAllocator))
       LiveRange(UseSegmentSetForPhysRegs);
-}
-
-void LiveIntervals::destroyInterval(LiveInterval &LI) {
-  LI.~LiveInterval();
-  IntervalRecycler.Deallocate(RangeAllocator, &LI);
-}
-
-void LiveIntervals::destroyRegUnitRange(LiveRange &LR) {
-  LR.~LiveRange();
-  RegUnitRangeRecycler.Deallocate(RangeAllocator, &LR);
 }
 
 /// Compute the live interval of a virtual register, based on defs and uses.

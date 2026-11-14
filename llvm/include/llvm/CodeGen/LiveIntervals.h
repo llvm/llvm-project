@@ -198,8 +198,10 @@ public:
 
   /// Interval removal.
   void removeInterval(Register Reg) {
-    LiveInterval *Interval = VirtRegIntervals[Reg];
-    destroyInterval(*Interval);
+    LiveInterval *&Interval = VirtRegIntervals[Reg];
+    assert(Interval && "removing a nonexistent interval");
+    Interval->~LiveInterval();
+    IntervalRecycler.Deallocate(RangeAllocator, Interval);
     Interval = nullptr;
   }
 
@@ -475,7 +477,10 @@ public:
   /// should rely on on-demand recomputation.
   void removeRegUnit(MCRegUnit Unit) {
     LiveRange *&LR = RegUnitRanges[static_cast<unsigned>(Unit)];
-    destroyRegUnitRange(*LR);
+    if (!LR)
+      return;
+    LR->~LiveRange();
+    RegUnitRangeRecycler.Deallocate(RangeAllocator, LR);
     LR = nullptr;
   }
 
@@ -536,8 +541,6 @@ private:
 
   LLVM_ABI LiveInterval *createInterval(Register Reg);
   LLVM_ABI LiveRange *createRegUnitRange();
-  LLVM_ABI void destroyInterval(LiveInterval &LI);
-  LLVM_ABI void destroyRegUnitRange(LiveRange &LR);
 
   void printInstrs(raw_ostream &O) const;
   void dumpInstrs() const;
