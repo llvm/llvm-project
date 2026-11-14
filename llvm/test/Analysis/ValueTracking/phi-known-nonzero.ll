@@ -263,6 +263,50 @@ F:
   br label %T
 }
 
+define i1 @phi_trunc_non_zero(i8 %x) {
+; CHECK-LABEL: @phi_trunc_non_zero(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    br i1 [[TRUNC]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       F:
+; CHECK-NEXT:    br label [[T]]
+;
+entry:
+  %trunc = trunc i8 %x to i1
+  br i1 %trunc, label %T, label %F
+T:
+  %v = phi i8 [ %x, %entry], [-1, %F]
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+F:
+  br label %T
+}
+
+define i1 @neg_phi_trunc_non_zero_wrong_arm(i8 %x) {
+; CHECK-LABEL: @neg_phi_trunc_non_zero_wrong_arm(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    br i1 [[TRUNC]], label [[F:%.*]], label [[T:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    [[V:%.*]] = phi i8 [ [[X]], [[ENTRY:%.*]] ], [ -1, [[F]] ]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+; CHECK:       F:
+; CHECK-NEXT:    br label [[T]]
+;
+entry:
+  %trunc = trunc i8 %x to i1
+  br i1 %trunc, label %F, label %T
+T:
+  %v = phi i8 [ %x, %entry], [-1, %F]
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+F:
+  br label %T
+}
+
 ; An or recurrence with a non-zero start value is never zero.
 define i1 @or_recurrence_nonzero_start(ptr %p, i64 %n) {
 ;
