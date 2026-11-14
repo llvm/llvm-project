@@ -17,15 +17,19 @@
 namespace llvm {
 
 class MemoryLocation;
+struct NVPTXOptions;
 
 class NVPTXAAResult : public AAResultBase {
+  const NVPTXOptions &CLOpts;
+
 public:
-  NVPTXAAResult() = default;
-  NVPTXAAResult(NVPTXAAResult &&Arg) : AAResultBase(std::move(Arg)) {}
+  explicit NVPTXAAResult(const NVPTXOptions &CLOpts) : CLOpts(CLOpts) {}
+  NVPTXAAResult(NVPTXAAResult &&Arg)
+      : AAResultBase(std::move(Arg)), CLOpts(Arg.CLOpts) {}
 
   /// Handle invalidation events from the new pass manager.
   ///
-  /// By definition, this result is stateless and so remains valid.
+  /// This result does not depend on the IR and so remains valid.
   bool invalidate(Function &, const PreservedAnalyses &,
                   FunctionAnalysisManager::Invalidator &Inv) {
     return false;
@@ -53,9 +57,7 @@ class NVPTXAA : public AnalysisInfoMixin<NVPTXAA> {
 public:
   using Result = NVPTXAAResult;
 
-  NVPTXAAResult run(Function &F, AnalysisManager<Function> &AM) {
-    return NVPTXAAResult();
-  }
+  NVPTXAAResult run(Function &F, AnalysisManager<Function> &AM);
 };
 
 /// Legacy wrapper pass to provide the NVPTXAAResult object.
@@ -70,10 +72,7 @@ public:
   NVPTXAAResult &getResult() { return *Result; }
   const NVPTXAAResult &getResult() const { return *Result; }
 
-  bool doInitialization(Module &M) override {
-    Result.reset(new NVPTXAAResult());
-    return false;
-  }
+  bool doInitialization(Module &M) override;
 
   bool doFinalization(Module &M) override {
     Result.reset();

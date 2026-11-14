@@ -14,7 +14,8 @@ define void @fn(float %val, i32 %idx) #0 {
 ; CHECK-LABEL: define void @fn(
 ; CHECK-SAME: float [[VAL:%.*]], i32 [[IDX:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; CHECK-NEXT:    [[VAR0:%.*]] = getelementptr inbounds [1 x ptr addrspace(3)], ptr addrspace(4) @llvm.amdgcn.dynlds.offset.table, i32 0, i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[VAR0:%.*]] = getelementptr inbounds [4 x i8], ptr addrspace(4) @llvm.amdgcn.dynlds.offset.table, i64 [[TMP2]]
 ; CHECK-NEXT:    [[VAR01:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[VAR0]], align 4
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(3) [[VAR01]], i32 [[IDX]]
 ; CHECK-NEXT:    store float [[VAL]], ptr addrspace(3) [[PTR]], align 4

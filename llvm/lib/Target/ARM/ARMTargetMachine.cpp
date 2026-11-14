@@ -21,7 +21,6 @@
 #include "TargetInfo/ARMTargetInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/CodeGen/ExecutionDomainFix.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
@@ -162,6 +161,8 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
   setSupportsDebugEntryValues(true);
 
   initAsmInfo();
+
+  LLT::setUseExtended(true);
 
   // ARM supports the MachineOutliner.
   setMachineOutliner(true);
@@ -512,7 +513,7 @@ void ARMPassConfig::addPreSched2() {
              this->TM->getSubtarget<ARMSubtarget>(F).restrictIT();
     }));
 
-    addPass(createIfConverter([](const MachineFunction &MF) {
+    addPass(createIfConverterLegacyPass([](const MachineFunction &MF) {
       return !MF.getSubtarget<ARMSubtarget>().isThumb1Only();
     }));
   }

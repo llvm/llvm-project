@@ -14,6 +14,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_COPY_FILE_RANGE_H
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_COPY_FILE_RANGE_H
 
+#include "hdr/errno_macros.h"
 #include "hdr/types/off_t.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/ssize_t.h"
@@ -29,8 +30,21 @@ namespace linux_syscalls {
 LIBC_INLINE ErrorOr<ssize_t> copy_file_range(int fd_in, off_t *off_in,
                                              int fd_out, off_t *off_out,
                                              size_t len, unsigned int flags) {
+#ifdef SYS_copy_file_range
   return syscall_checked<ssize_t>(SYS_copy_file_range, fd_in, off_in, fd_out,
                                   off_out, len, flags);
+#elif defined(__NR_copy_file_range)
+  return syscall_checked<ssize_t>(__NR_copy_file_range, fd_in, off_in, fd_out,
+                                  off_out, len, flags);
+#else
+  (void)fd_in;
+  (void)off_in;
+  (void)fd_out;
+  (void)off_out;
+  (void)len;
+  (void)flags;
+  return ErrorOr<ssize_t>::from_error(ENOSYS);
+#endif
 }
 
 } // namespace linux_syscalls

@@ -376,34 +376,19 @@ define i3 @bitcast_trunc_v3i64(<3 x i64> %a) nounwind {
 ;
 ; AVX1-LABEL: bitcast_trunc_v3i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    vpextrb $8, %xmm0, %ecx
-; AVX1-NEXT:    andb $1, %cl
-; AVX1-NEXT:    addb %cl, %cl
-; AVX1-NEXT:    orb %al, %cl
+; AVX1-NEXT:    vpsllq $63, %xmm0, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vpextrb $0, %xmm0, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    shlb $2, %al
-; AVX1-NEXT:    orb %cl, %al
+; AVX1-NEXT:    vpsllq $63, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    vmovmskpd %ymm0, %eax
 ; AVX1-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: bitcast_trunc_v3i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    vpextrb $8, %xmm0, %ecx
-; AVX2-NEXT:    andb $1, %cl
-; AVX2-NEXT:    addb %cl, %cl
-; AVX2-NEXT:    orb %al, %cl
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vpextrb $0, %xmm0, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    shlb $2, %al
-; AVX2-NEXT:    orb %cl, %al
+; AVX2-NEXT:    vpsllq $63, %ymm0, %ymm0
+; AVX2-NEXT:    vmovmskpd %ymm0, %eax
 ; AVX2-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq

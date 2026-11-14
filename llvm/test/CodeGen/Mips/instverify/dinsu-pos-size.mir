@@ -11,10 +11,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr64, preferred-register: '' }
-  - { id: 1, class: gpr64, preferred-register: '' }
 liveins:
   - { reg: '$r4_64', virtual-reg: '%0' }
 frameInfo:
@@ -41,8 +37,8 @@ body:             |
   bb.0.entry:
     liveins: $r4_64
 
-    %0 = COPY $r4_64
-    %1 = DINSU %0, 50, 20
+    %0:gpr64 = COPY $r4_64
+    %1:gpr64 = DINSU %0, 50, 20
     $r2_64 = COPY %1
     RetRA implicit $r2_64
 

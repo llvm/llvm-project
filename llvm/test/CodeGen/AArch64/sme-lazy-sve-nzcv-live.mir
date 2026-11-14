@@ -26,14 +26,10 @@
 ---
 name:            cmp_branch
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
 hasFakeUses:     false
-registers:
-  - { id: 0, class: gpr32common }
-  - { id: 1, class: gpr32 }
 liveins:
   - { reg: '$w0' }
 frameInfo:

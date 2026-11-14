@@ -532,16 +532,48 @@ void noopWithLambda(Callback) {
 
 void [[clang::annotate_type("webkit.nodelete")]] deleteInLambda(SomeObject* someObj) {
   callLambda([&]() {
-    // expected-warning@-1{{A function 'deleteInLambda' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
     delete someObj;
+    // expected-warning@-1{{A function 'deleteInLambda' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
   });
 }
 
 void [[clang::annotate_type("webkit.nodelete")]] deleteInLambda2(SomeObject* someObj) {
   noopWithLambda([&]() {
-    // expected-warning@-1{{A function 'deleteInLambda2' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
     delete someObj;
+    // expected-warning@-1{{A function 'deleteInLambda2' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
   });
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] trivialLambda(SomeObject* someObj) {
+  callLambda([&]() {
+    someObj->doTrivialWork();
+  });
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] trivialLambdaNeverCalled(SomeObject* someObj) {
+  noopWithLambda([someObj]() {
+    someObj->doTrivialWork();
+  });
+}
+
+template <typename Callback, typename Arg>
+void callLambdaWithArg(Callback callback, Arg arg) {
+  callback(arg);
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] trivialGenericLambda(SomeObject* someObj) {
+  callLambdaWithArg([](auto* obj) { obj->doTrivialWork(); }, someObj);
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] uninstantiatedGenericLambda() {
+  noopWithLambda([](auto* obj) { delete obj; });
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] deleteInGenericLambda(SomeObject* someObj) {
+  callLambdaWithArg([](auto* obj) {
+    delete obj;
+    // expected-warning@-1{{A function 'deleteInGenericLambda' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }, someObj);
 }
 
 void [[clang::annotate_type("webkit.nodelete")]] deleteIfNeeded(SomeObject* someObj) {
@@ -978,3 +1010,131 @@ void [[clang::annotate_type("webkit.nodelete")]] destructiveObjectInBraces() {
 }
 
 } // namespace std_initializer_list
+
+namespace implicit_destructor {
+
+// An implicit or =default destructor has no body in the AST, so deciding it
+// from the body alone classifies every non-trivially-destructible class as
+// unsafe. What it actually does is destroy the bases and members, so ask
+// those instead. Closure types hit this constantly: their destructor is
+// always implicit.
+
+struct SafeMember {
+  ~SafeMember() { m_count = 0; }
+  unsigned m_count { 0 };
+};
+
+struct DeletingMember {
+  ~DeletingMember() { delete m_obj; }
+  // expected-note@-1 3 {{Could destruct an object}}
+  SomeObject* m_obj { nullptr };
+};
+
+struct SafeAggregate { SafeMember member; };
+struct DeletingAggregate { DeletingMember member; }; // expected-note {{Calling '~DeletingMember'}}
+struct DerivedFromSafe : SafeMember { };
+struct DerivedFromDeleting : DeletingMember { }; // expected-note {{Calling '~DeletingMember'}}
+
+void [[clang::annotate_type("webkit.nodelete")]] takeSafe(const SafeAggregate&) { }
+void [[clang::annotate_type("webkit.nodelete")]] takeDeleting(const DeletingAggregate&) { }
+void [[clang::annotate_type("webkit.nodelete")]] takeDerivedFromSafe(const DerivedFromSafe&) { }
+void [[clang::annotate_type("webkit.nodelete")]] takeDerivedFromDeleting(const DerivedFromDeleting&) { }
+
+void [[clang::annotate_type("webkit.nodelete")]] safeTemporary() {
+  takeSafe(SafeAggregate { });
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] deletingTemporary() {
+  takeDeleting(DeletingAggregate { });
+  // expected-warning@-1{{A function 'deletingTemporary' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] safeBaseTemporary() {
+  takeDerivedFromSafe(DerivedFromSafe { });
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] deletingBaseTemporary() {
+  takeDerivedFromDeleting(DerivedFromDeleting { });
+  // expected-warning@-1{{A function 'deletingBaseTemporary' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] safeCaptureByValue() {
+  noopWithLambda([member = SafeMember { }]() { });
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] deletingCaptureByValue() {
+  noopWithLambda([member = DeletingMember { }]() { });
+  // expected-note@-1 {{Calling '~DeletingMember'}}
+  // expected-warning@-2{{A function 'deletingCaptureByValue' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+} // namespace implicit_destructor
+
+namespace nodelete_ctor_base_fields {
+
+struct OpaqueMember {
+  OpaqueMember();
+  ~OpaqueMember();
+};
+
+struct Observer {
+  [[clang::annotate("webkit.nodelete")]] explicit Observer(int*);
+  virtual ~Observer();
+  OpaqueMember member;
+};
+
+// The base class fields are constructed by Observer's constructor, and
+// delegating constructors don't construct any field at all.
+struct ActiveObject : Observer {
+  [[clang::annotate("webkit.nodelete")]] explicit ActiveObject(int* p) : ActiveObject(p, Checked) { }
+  [[clang::annotate("webkit.nodelete")]] explicit ActiveObject(int& p) : ActiveObject(&p, Checked) { }
+
+private:
+  enum CheckedType { Checked };
+  [[clang::annotate("webkit.nodelete")]] ActiveObject(int* p, CheckedType) : Observer(p) { }
+
+  int count { 0 };
+};
+
+struct DelegatesToOpaqueCtor {
+  [[clang::annotate("webkit.nodelete")]] DelegatesToOpaqueCtor() : DelegatesToOpaqueCtor(nullptr) { }
+  // expected-warning@-1{{A constructor 'DelegatesToOpaqueCtor' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  explicit DelegatesToOpaqueCtor(int*);
+  OpaqueMember member;
+};
+
+// The member is constructed by the target constructor, so only it is blamed.
+struct DelegatesWithOpaqueMember {
+  [[clang::annotate("webkit.nodelete")]] DelegatesWithOpaqueMember() : DelegatesWithOpaqueMember(nullptr) { }
+  [[clang::annotate("webkit.nodelete")]] explicit DelegatesWithOpaqueMember(int*) { }
+  // expected-warning@-1{{A constructor 'DelegatesWithOpaqueMember' has [[clang::annotate_type("webkit.nodelete")]] but it constructs a member variable 'member' that could destruct an object}}
+  OpaqueMember member;
+};
+
+struct ObserverWithOpaqueCtor {
+  explicit ObserverWithOpaqueCtor(int*);
+  OpaqueMember member;
+};
+
+struct DerivedFromOpaqueCtor : ObserverWithOpaqueCtor {
+  [[clang::annotate("webkit.nodelete")]] explicit DerivedFromOpaqueCtor(int* p) : ObserverWithOpaqueCtor(p) { }
+  // expected-warning@-1{{A constructor 'DerivedFromOpaqueCtor' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+};
+
+struct ObserverWithOpaqueDefaultCtor {
+  ObserverWithOpaqueDefaultCtor();
+  OpaqueMember member;
+};
+
+struct DerivedFromOpaqueDefaultCtor : ObserverWithOpaqueDefaultCtor {
+  [[clang::annotate("webkit.nodelete")]] DerivedFromOpaqueDefaultCtor() { }
+  // expected-warning@-1{{A constructor 'DerivedFromOpaqueDefaultCtor' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+};
+
+struct DerivedWithOpaqueMember : Observer {
+  [[clang::annotate("webkit.nodelete")]] explicit DerivedWithOpaqueMember(int* p) : Observer(p) { }
+  // expected-warning@-1{{A constructor 'DerivedWithOpaqueMember' has [[clang::annotate_type("webkit.nodelete")]] but it constructs a member variable 'ownMember' that could destruct an object}}
+  OpaqueMember ownMember;
+};
+
+} // namespace nodelete_ctor_base_fields

@@ -1,5 +1,3 @@
-
-
 add_entrypoint_object(
   canonicalize
   SRCS
@@ -37,6 +35,7 @@ add_entrypoint_object(
   HDRS
     ../canonicalizef128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.canonicalizef128
 )
 
@@ -215,6 +214,7 @@ add_entrypoint_object(
   HDRS
     ../daddf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.daddf128
 )
 
@@ -278,7 +278,6 @@ add_entrypoint_object(
     libc.src.__support.math.dsqrtf128
 )
 
-
 add_entrypoint_object(
   dsubf128
   SRCS
@@ -286,6 +285,7 @@ add_entrypoint_object(
   HDRS
     ../dsubf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.dsubf128
 )
 
@@ -306,6 +306,7 @@ add_entrypoint_object(
   HDRS
     ../cos.h
   DEPENDS
+    libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
     libc.src.__support.math.cos
     libc.src.__support.math.cos_integer_eval
@@ -358,9 +359,20 @@ add_entrypoint_object(
   HDRS
     ../sin.h
   DEPENDS
+    libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
     libc.src.__support.math.sin
     libc.src.__support.math.sin_integer_eval
+)
+
+add_entrypoint_object(
+  sinbf16
+  SRCS
+    sinbf16.cpp
+  HDRS
+    ../sinbf16.h
+  DEPENDS
+    libc.src.__support.math.sinbf16
 )
 
 add_entrypoint_object(
@@ -1816,6 +1828,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  log10p1bf16
+  SRCS
+    log10p1bf16.cpp
+  HDRS
+    ../log10p1bf16.h
+  DEPENDS
+    libc.src.__support.math.log10p1bf16
+)
+
+add_entrypoint_object(
   log10p1f16
   SRCS
     log10p1f16.cpp
@@ -2033,6 +2055,7 @@ add_entrypoint_object(
   HDRS
     ../modff128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.modff128
 )
 
@@ -2904,6 +2927,7 @@ add_entrypoint_object(
   HDRS
     ../remquof128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.remquof128
 )
 
@@ -3919,6 +3943,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  coshbf16
+  SRCS
+    coshbf16.cpp
+  HDRS
+    ../coshbf16.h
+  DEPENDS
+    libc.src.__support.math.coshbf16
+)
+
+add_entrypoint_object(
   coshf16
   SRCS
     coshf16.cpp
@@ -3946,6 +3980,16 @@ add_entrypoint_object(
     ../sinhf.h
   DEPENDS
     libc.src.__support.math.sinhf
+)
+
+add_entrypoint_object(
+  sinhbf16
+  SRCS
+    sinhbf16.cpp
+  HDRS
+    ../sinhbf16.h
+  DEPENDS
+    libc.src.__support.math.sinhbf16
 )
 
 add_entrypoint_object(
@@ -3996,6 +4040,16 @@ add_entrypoint_object(
     ../acoshf.h
   DEPENDS
     libc.src.__support.math.acoshf
+)
+
+add_entrypoint_object(
+  acoshbf16
+  SRCS
+    acoshbf16.cpp
+  HDRS
+    ../acoshbf16.h
+  DEPENDS
+    libc.src.__support.math.acoshbf16
 )
 
 add_entrypoint_object(
@@ -5057,6 +5111,7 @@ add_entrypoint_object(
   HDRS
     ../dmulf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.dmulf128
 )
 

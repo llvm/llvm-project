@@ -351,7 +351,6 @@
 ---
 name:            "\x01+[MyObject doWithSize:]"
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -660,7 +659,6 @@ body:             |
 ---
 name:            asan.module_ctor
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   stackSize:       16
   maxAlignment:    8

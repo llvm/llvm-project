@@ -6,6 +6,18 @@ if(NOT LLVM_LIBC_FULL_BUILD AND "${LIBC_CONF_ERRNO_MODE}" STREQUAL "LIBC_ERRNO_M
   add_compile_options(${shared_test_errno_options})
 endif()
 
+# Shared headers are included together by external consumers that build with
+# -Werror -Wshadow; enable -Wshadow here to catch cross-header shadow warnings.
+# Older Clang versions emit false positive shadow warnings for lambda captures
+# inside static member functions (fixed in Clang 22, see PR #157667 and #165919).
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "22.0.0")
+  if(LIBC_WNO_ERROR)
+    add_compile_options(-Wshadow)
+  else()
+    add_compile_options(-Wshadow -Werror=shadow)
+  endif()
+endif()
+
 # Shared math tests include the entire math library headers into a single file
 # so it might take some time to compile the tests.  We do have dedicated
 # precommit CIs to build and test shared tests.  So we provide a cmake option
@@ -32,6 +44,7 @@ else()
       libc.src.__support.math.acosf
       libc.src.__support.math.acosf16
       libc.src.__support.math.acoshf
+      libc.src.__support.math.acoshbf16
       libc.src.__support.math.acoshf16
       libc.src.__support.math.acospif
       libc.src.__support.math.acospif16
@@ -103,6 +116,7 @@ else()
       libc.src.__support.math.cosf
       libc.src.__support.math.cosf16
       libc.src.__support.math.cosh
+      libc.src.__support.math.coshbf16
       libc.src.__support.math.coshf
       libc.src.__support.math.coshf16
       libc.src.__support.math.cospif
@@ -356,6 +370,7 @@ else()
       libc.src.__support.math.log
       libc.src.__support.math.log10
       libc.src.__support.math.log10f16
+      libc.src.__support.math.log10p1bf16
       libc.src.__support.math.log10p1f16
       libc.src.__support.math.log10f
       libc.src.__support.math.log1p
@@ -494,12 +509,14 @@ else()
       libc.src.__support.math.setpayloadsigl
       libc.src.__support.math.sqrtf16
       libc.src.__support.math.sin
+      libc.src.__support.math.sinbf16
       libc.src.__support.math.sincos
       libc.src.__support.math.sincosf
       libc.src.__support.math.sinf
       libc.src.__support.math.sinf16
       libc.src.__support.math.sinh
       libc.src.__support.math.sinhf
+      libc.src.__support.math.sinhbf16
       libc.src.__support.math.sinhf16
       libc.src.__support.math.sqrtf128
       libc.src.__support.math.sinpif
@@ -560,6 +577,7 @@ else()
     DEPENDS
       libc.src.__support.FPUtil.float128
       libc.src.__support.FPUtil.float80
+      libc.src.__support.math.acoshbf16
       libc.src.__support.math.asinbf16
       libc.src.__support.math.bf16subl
       libc.src.__support.math.canonicalize
@@ -582,11 +600,13 @@ else()
       libc.src.__support.math.copysignf80
       libc.src.__support.math.copysignf16
       libc.src.__support.math.copysignl
+      libc.src.__support.math.daddf128
       libc.src.__support.math.ddivf128
       libc.src.__support.math.ddivl
       libc.src.__support.math.dmulf128
       libc.src.__support.math.dmull
       libc.src.__support.math.dsqrtf128
+      libc.src.__support.math.dsubf128
       libc.src.__support.math.f16add
       libc.src.__support.math.f16addf
       libc.src.__support.math.f16addf128

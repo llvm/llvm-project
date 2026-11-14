@@ -5,7 +5,6 @@
 
 ---
 name: foo
-tracksRegLiveness: true
 fixedStack:
 - { id: 0, offset: 0, size: 16, alignment: 8, isImmutable: true }
 body: |

@@ -103,8 +103,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
-registers:
 liveins:
   - { reg: '$r4', virtual-reg: '' }
 frameInfo:
@@ -194,8 +192,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
-registers:
 liveins:
   - { reg: '$r4', virtual-reg: '' }
 frameInfo:
@@ -289,8 +285,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
-registers:
 liveins:
   - { reg: '$r4', virtual-reg: '' }
 frameInfo:
@@ -384,8 +378,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
-registers:
 liveins:
   - { reg: '$r4', virtual-reg: '' }
 frameInfo:
@@ -479,8 +471,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
-registers:
 liveins:
   - { reg: '$r4', virtual-reg: '' }
 frameInfo:
@@ -574,8 +564,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
-registers:
 liveins:
   - { reg: '$r4', virtual-reg: '' }
 frameInfo:
@@ -665,8 +653,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
-registers:
 liveins:
   - { reg: '$r4', virtual-reg: '' }
 frameInfo:
@@ -760,8 +746,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
-registers:
 liveins:
   - { reg: '$r4', virtual-reg: '' }
 frameInfo:

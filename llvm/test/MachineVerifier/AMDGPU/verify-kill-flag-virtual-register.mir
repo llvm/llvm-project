@@ -1,0 +1,21 @@
+# RUN: not --crash llc -o - -mtriple=amdgpu9-amd-amdhsa -run-pass=none %s 2>&1 | FileCheck -implicit-check-not="Bad machine code" %s
+
+# CHECK: *** Bad machine code: Kill flag on virtual register ***
+# CHECK: - instruction: %1:sreg_32 = S_AND_B32 1, killed %0:sreg_32, implicit-def dead $scc
+# CHECK: *** Bad machine code: Kill flag on virtual register ***
+# CHECK: - instruction: S_CMP_EQ_I32 killed %1:sreg_32, 1, implicit-def $scc
+# CHECK: LLVM ERROR: Found 2 machine code errors.
+
+---
+name:            kill_flag_virtual_register
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0, $sgpr1
+
+    %0:sreg_32 = COPY $sgpr0
+    %1:sreg_32 = S_AND_B32 1, killed %0, implicit-def dead $scc
+    S_NOP 0, implicit killed $sgpr1
+    S_CMP_EQ_I32 killed %1, 1, implicit-def $scc
+    S_ENDPGM 0, implicit killed $scc
+...

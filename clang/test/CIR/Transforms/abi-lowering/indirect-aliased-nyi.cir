@@ -15,7 +15,7 @@ module attributes {
     #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
 } {
 
-  cir.func private @ret_big() -> !rec_Big
+  cir.func private @ret_big() -> !rec_Big requires_call_conv_lowering
       attributes { test_classify = #byref_return }
 
   // CHECK: error: 'cir.func' op IndirectAliased return is not supported
@@ -44,12 +44,12 @@ module attributes {
     #dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui64>>
 } {
 
-  cir.func private @takes_big_as4(%arg0: !rec_Big)
+  cir.func private @takes_big_as4(%arg0: !rec_Big) requires_call_conv_lowering
       attributes { test_classify = #byref_as4 }
 
   // A slot for the copy would be an alloca, which cannot live in address
   // space 4.
-  cir.func @caller_as4_no_storage(%novalue: !rec_Big)
+  cir.func @caller_as4_no_storage(%novalue: !rec_Big) requires_call_conv_lowering
       attributes { test_classify = #passthrough } {
     cir.call @takes_big_as4(%novalue) : (!rec_Big) -> ()
     cir.return

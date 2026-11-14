@@ -1,12 +1,12 @@
 ; RUN: split-file %s %t
-; RUN: not llvm-as < %t/zeroinit-error.ll -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-ZEROINIT %s
-; RUN: not llvm-as < %t/global-var.ll -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-GLOBAL-VAR %s
-; RUN: not llvm-as < %t/global-array.ll -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-GLOBAL-ARRAY %s
-; RUN: not llvm-as < %t/global-struct.ll -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-GLOBAL-STRUCT %s
-; RUN: not llvm-as < %t/alloca.ll -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-ALLOCA %s
-; RUN: not llvm-as < %t/alloca-struct.ll -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-ALLOCA-STRUCT %s
-; RUN: not llvm-as < %t/byval.ll -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BYVAL %s
-; RUN: not llvm-as < %t/byval-array.ll -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BYVAL-ARRAY %s
+; RUN: not llvm-as < %t/zeroinit-error.ll -disable-output 2>&1 | FileCheck --check-prefix=CHECK-ZEROINIT %s
+; RUN: not llvm-as < %t/global-var.ll -disable-output 2>&1 | FileCheck --check-prefix=CHECK-GLOBAL-VAR %s
+; RUN: not llvm-as < %t/global-array.ll -disable-output 2>&1 | FileCheck --check-prefix=CHECK-GLOBAL-ARRAY %s
+; RUN: not llvm-as < %t/global-struct.ll -disable-output 2>&1 | FileCheck --check-prefix=CHECK-GLOBAL-STRUCT %s
+; RUN: not llvm-as < %t/alloca.ll -disable-output 2>&1 | FileCheck --check-prefix=CHECK-ALLOCA %s
+; RUN: not llvm-as < %t/alloca-struct.ll -disable-output 2>&1 | FileCheck --check-prefix=CHECK-ALLOCA-STRUCT %s
+; RUN: not llvm-as < %t/byval.ll -disable-output 2>&1 | FileCheck --check-prefix=CHECK-BYVAL %s
+; RUN: not llvm-as < %t/byval-array.ll -disable-output 2>&1 | FileCheck --check-prefix=CHECK-BYVAL-ARRAY %s
 ; Check target extension type properties are verified in the assembler.
 
 ;--- zeroinit-error.ll

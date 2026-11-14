@@ -176,6 +176,10 @@ LLVM_ABI IGCATarget parseIGCATarget(StringRef MaybeTarget);
 /// \p Target is invalid.
 LLVM_ABI StringRef getIGCATargetName(IGCATarget Target);
 
+/// \return the IGCA target of \p Kind, e.g. igca_20ca for xe-pvc, or an
+/// invalid IGCATarget for GK_NONE.
+LLVM_ABI IGCATarget getIGCATarget(GPUKind Kind);
+
 } // namespace IntelGPU
 } // namespace llvm
 

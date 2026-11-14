@@ -30,15 +30,6 @@
 ...
 ---
 name:            g
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
-  - { id: 6, class: gpr, preferred-register: '' }
-  - { id: 7, class: gpr, preferred-register: '' }
-  - { id: 8, class: gpr, preferred-register: '' }
-  - { id: 9, class: gprnopc, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%8' }
   - { reg: '$r1', virtual-reg: '%9' }

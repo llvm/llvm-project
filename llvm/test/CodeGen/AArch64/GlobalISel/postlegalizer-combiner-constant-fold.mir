@@ -408,3 +408,298 @@ body:             |
     RET_ReallyLR implicit $s0
 
 ...
+---
+name:            add_vector
+legalized:       true
+body:             |
+  bb.1.entry:
+    ; Element-wise fold of an integer vector binop: <40, 10> + <2, 2> = <42, 12>.
+    ; CHECK-LABEL: name: add_vector
+    ; CHECK: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 42
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 12
+    ; CHECK-NEXT: %res:_(<2 x i64>) = G_BUILD_VECTOR [[C]](i64), [[C1]](i64)
+    ; CHECK-NEXT: $q0 = COPY %res(<2 x i64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %a0:_(i64) = G_CONSTANT i64 40
+    %a1:_(i64) = G_CONSTANT i64 10
+    %b:_(i64) = G_CONSTANT i64 2
+    %av:_(<2 x i64>) = G_BUILD_VECTOR %a0(i64), %a1(i64)
+    %bv:_(<2 x i64>) = G_BUILD_VECTOR %b(i64), %b(i64)
+    %res:_(<2 x i64>) = G_ADD %av, %bv
+    $q0 = COPY %res(<2 x i64>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            fadd_vector
+legalized:       true
+body:             |
+  bb.1.entry:
+    ; Element-wise fold of an FP vector binop: <40.0, 1.0> + <2.0, 2.0>.
+    ; CHECK-LABEL: name: fadd_vector
+    ; CHECK: [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double 4.200000e+01
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(f64) = G_FCONSTANT double 3.000000e+00
+    ; CHECK-NEXT: %res:_(<2 x f64>) = G_BUILD_VECTOR [[C]](f64), [[C1]](f64)
+    ; CHECK-NEXT: $q0 = COPY %res(<2 x f64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %a0:_(f64) = G_FCONSTANT double 40.0
+    %a1:_(f64) = G_FCONSTANT double 1.0
+    %b:_(f64) = G_FCONSTANT double 2.0
+    %av:_(<2 x f64>) = G_BUILD_VECTOR %a0(f64), %a1(f64)
+    %bv:_(<2 x f64>) = G_BUILD_VECTOR %b(f64), %b(f64)
+    %res:_(<2 x f64>) = G_FADD %av, %bv
+    $q0 = COPY %res(<2 x f64>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            fadd_vector_bitcast_bf16_to_f16
+legalized:       true
+body:             |
+  bb.1.entry:
+    ; The bitcast reinterprets the bits of bf16 1.0 (0x3F80) as f16 1.875, so
+    ; the sum is 3.75 rather than 2.0. Don't fold through the bitcast.
+    ; CHECK-LABEL: name: fadd_vector_bitcast_bf16_to_f16
+    ; CHECK: %one:_(bf16) = G_FCONSTANT bfloat 1.000000e+00
+    ; CHECK-NEXT: %bv:_(<4 x bf16>) = G_BUILD_VECTOR %one(bf16), %one(bf16), %one(bf16), %one(bf16)
+    ; CHECK-NEXT: %cast:_(<4 x f16>) = G_BITCAST %bv(<4 x bf16>)
+    ; CHECK-NEXT: %res:_(<4 x f16>) = G_FADD %cast, %cast
+    ; CHECK-NEXT: $d0 = COPY %res(<4 x f16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %one:_(bf16) = G_FCONSTANT bfloat 1.0
+    %bv:_(<4 x bf16>) = G_BUILD_VECTOR %one(bf16), %one(bf16), %one(bf16), %one(bf16)
+    %cast:_(<4 x f16>) = G_BITCAST %bv(<4 x bf16>)
+    %res:_(<4 x f16>) = G_FADD %cast, %cast
+    $d0 = COPY %res(<4 x f16>)
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            zext_vector
+legalized:       true
+body:             |
+  bb.1.entry:
+    ; Element-wise fold of a vector cast: zext(<7, 8> : <2 x i32>) to <2 x i64>.
+    ; CHECK-LABEL: name: zext_vector
+    ; CHECK: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 7
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: %res:_(<2 x i64>) = G_BUILD_VECTOR [[C]](i64), [[C1]](i64)
+    ; CHECK-NEXT: $q0 = COPY %res(<2 x i64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %a0:_(i32) = G_CONSTANT i32 7
+    %a1:_(i32) = G_CONSTANT i32 8
+    %src:_(<2 x i32>) = G_BUILD_VECTOR %a0(i32), %a1(i32)
+    %res:_(<2 x i64>) = G_ZEXT %src(<2 x i32>)
+    $q0 = COPY %res(<2 x i64>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            fneg_vector
+legalized:       true
+body:             |
+  bb.1.entry:
+    ; Element-wise fold of a unary FP op: fneg(<3.0, -4.0>) = <-3.0, 4.0>.
+    ; CHECK-LABEL: name: fneg_vector
+    ; CHECK: [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double -3.000000e+00
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(f64) = G_FCONSTANT double 4.000000e+00
+    ; CHECK-NEXT: %res:_(<2 x f64>) = G_BUILD_VECTOR [[C]](f64), [[C1]](f64)
+    ; CHECK-NEXT: $q0 = COPY %res(<2 x f64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %a0:_(f64) = G_FCONSTANT double 3.0
+    %a1:_(f64) = G_FCONSTANT double -4.0
+    %src:_(<2 x f64>) = G_BUILD_VECTOR %a0(f64), %a1(f64)
+    %res:_(<2 x f64>) = G_FNEG %src(<2 x f64>)
+    $q0 = COPY %res(<2 x f64>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            fsqrt_vector
+legalized:       true
+body:             |
+  bb.1.entry:
+    ; Element-wise fold of a host-libm unary FP op: fsqrt(<4.0, 9.0>) = <2.0, 3.0>.
+    ; CHECK-LABEL: name: fsqrt_vector
+    ; CHECK: [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double 2.000000e+00
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(f64) = G_FCONSTANT double 3.000000e+00
+    ; CHECK-NEXT: %res:_(<2 x f64>) = G_BUILD_VECTOR [[C]](f64), [[C1]](f64)
+    ; CHECK-NEXT: $q0 = COPY %res(<2 x f64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %a0:_(f64) = G_FCONSTANT double 4.0
+    %a1:_(f64) = G_FCONSTANT double 9.0
+    %src:_(<2 x f64>) = G_BUILD_VECTOR %a0(f64), %a1(f64)
+    %res:_(<2 x f64>) = G_FSQRT %src(<2 x f64>)
+    $q0 = COPY %res(<2 x f64>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            flog2_vector
+legalized:       true
+body:             |
+  bb.1.entry:
+    ; Element-wise fold of a host-libm unary FP op: flog2(<8.0, 4.0>) = <3.0, 2.0>.
+    ; CHECK-LABEL: name: flog2_vector
+    ; CHECK: [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double 3.000000e+00
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(f64) = G_FCONSTANT double 2.000000e+00
+    ; CHECK-NEXT: %res:_(<2 x f64>) = G_BUILD_VECTOR [[C]](f64), [[C1]](f64)
+    ; CHECK-NEXT: $q0 = COPY %res(<2 x f64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %a0:_(f64) = G_FCONSTANT double 8.0
+    %a1:_(f64) = G_FCONSTANT double 4.0
+    %src:_(<2 x f64>) = G_BUILD_VECTOR %a0(f64), %a1(f64)
+    %res:_(<2 x f64>) = G_FLOG2 %src(<2 x f64>)
+    $q0 = COPY %res(<2 x f64>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            udiv_vector_by_zero
+legalized:       true
+body:             |
+  bb.1.entry:
+    ; A zero divisor in any lane must refuse the whole vector fold.
+    ; CHECK-LABEL: name: udiv_vector_by_zero
+    ; CHECK: %a0:_(i64) = G_CONSTANT i64 40
+    ; CHECK-NEXT: %a1:_(i64) = G_CONSTANT i64 10
+    ; CHECK-NEXT: %b0:_(i64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: %b1:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %av:_(<2 x i64>) = G_BUILD_VECTOR %a0(i64), %a1(i64)
+    ; CHECK-NEXT: %bv:_(<2 x i64>) = G_BUILD_VECTOR %b0(i64), %b1(i64)
+    ; CHECK-NEXT: %res:_(<2 x i64>) = G_UDIV %av, %bv
+    ; CHECK-NEXT: $q0 = COPY %res(<2 x i64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %a0:_(i64) = G_CONSTANT i64 40
+    %a1:_(i64) = G_CONSTANT i64 10
+    %b0:_(i64) = G_CONSTANT i64 2
+    %b1:_(i64) = G_CONSTANT i64 0
+    %av:_(<2 x i64>) = G_BUILD_VECTOR %a0(i64), %a1(i64)
+    %bv:_(<2 x i64>) = G_BUILD_VECTOR %b0(i64), %b1(i64)
+    %res:_(<2 x i64>) = G_UDIV %av, %bv
+    $q0 = COPY %res(<2 x i64>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            add_vector_undef_lane
+legalized:       true
+body:             |
+  bb.1.entry:
+    ; An undef lane must refuse the whole vector fold.
+    ; CHECK-LABEL: name: add_vector_undef_lane
+    ; CHECK: %a0:_(i64) = G_CONSTANT i64 40
+    ; CHECK-NEXT: %a1:_(i64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: %b:_(i64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: %av:_(<2 x i64>) = G_BUILD_VECTOR %a0(i64), %a1(i64)
+    ; CHECK-NEXT: %bv:_(<2 x i64>) = G_BUILD_VECTOR %b(i64), %b(i64)
+    ; CHECK-NEXT: %res:_(<2 x i64>) = G_ADD %av, %bv
+    ; CHECK-NEXT: $q0 = COPY %res(<2 x i64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %a0:_(i64) = G_CONSTANT i64 40
+    %a1:_(i64) = G_IMPLICIT_DEF
+    %b:_(i64) = G_CONSTANT i64 2
+    %av:_(<2 x i64>) = G_BUILD_VECTOR %a0(i64), %a1(i64)
+    %bv:_(<2 x i64>) = G_BUILD_VECTOR %b(i64), %b(i64)
+    %res:_(<2 x i64>) = G_ADD %av, %bv
+    $q0 = COPY %res(<2 x i64>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            fptrunc_scalar
+legalized:       true
+body:             |
+  bb.1.entry:
+    ; fptrunc(4.0 : f64) = 4.0 : f32. G_FCONSTANT f32 is legal.
+    ; CHECK-LABEL: name: fptrunc_scalar
+    ; CHECK: %res:_(f32) = G_FCONSTANT float 4.000000e+00
+    ; CHECK-NEXT: $s0 = COPY %res(f32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $s0
+    %src:_(f64) = G_FCONSTANT double 4.0
+    %res:_(f32) = G_FPTRUNC %src(f64)
+    $s0 = COPY %res(f32)
+    RET_ReallyLR implicit $s0
+
+...
+---
+name:            fpext_scalar
+legalized:       true
+body:             |
+  bb.1.entry:
+    ; fpext(4.0 : f32) = 4.0 : f64. G_FCONSTANT f64 is legal.
+    ; CHECK-LABEL: name: fpext_scalar
+    ; CHECK: %res:_(f64) = G_FCONSTANT double 4.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %src:_(f32) = G_FCONSTANT float 4.0
+    %res:_(f64) = G_FPEXT %src(f32)
+    $d0 = COPY %res(f64)
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            fptrunc_v4f16
+legalized:       true
+body:             |
+  bb.1.entry:
+    ; <4 x f16> G_BUILD_VECTOR and f16 G_FCONSTANT are legal, so fold.
+    ; CHECK-LABEL: name: fptrunc_v4f16
+    ; CHECK: [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half 1.000000e+00
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(f16) = G_FCONSTANT half 2.000000e+00
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(f16) = G_FCONSTANT half 3.000000e+00
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(f16) = G_FCONSTANT half 4.000000e+00
+    ; CHECK-NEXT: %res:_(<4 x f16>) = G_BUILD_VECTOR [[C]](f16), [[C1]](f16), [[C2]](f16), [[C3]](f16)
+    ; CHECK-NEXT: $d0 = COPY %res(<4 x f16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %a0:_(f32) = G_FCONSTANT float 1.0
+    %a1:_(f32) = G_FCONSTANT float 2.0
+    %a2:_(f32) = G_FCONSTANT float 3.0
+    %a3:_(f32) = G_FCONSTANT float 4.0
+    %src:_(<4 x f32>) = G_BUILD_VECTOR %a0(f32), %a1(f32), %a2(f32), %a3(f32)
+    %res:_(<4 x f16>) = G_FPTRUNC %src(<4 x f32>)
+    $d0 = COPY %res(<4 x f16>)
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            fpext_v2f64
+legalized:       true
+body:             |
+  bb.1.entry:
+    ; <2 x f64> G_BUILD_VECTOR and f64 G_FCONSTANT are legal, so fold.
+    ; CHECK-LABEL: name: fpext_v2f64
+    ; CHECK: [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double 1.000000e+00
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(f64) = G_FCONSTANT double 2.000000e+00
+    ; CHECK-NEXT: %res:_(<2 x f64>) = G_BUILD_VECTOR [[C]](f64), [[C1]](f64)
+    ; CHECK-NEXT: $q0 = COPY %res(<2 x f64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %a0:_(f32) = G_FCONSTANT float 1.0
+    %a1:_(f32) = G_FCONSTANT float 2.0
+    %src:_(<2 x f32>) = G_BUILD_VECTOR %a0(f32), %a1(f32)
+    %res:_(<2 x f64>) = G_FPEXT %src(<2 x f32>)
+    $q0 = COPY %res(<2 x f64>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            fptrunc_v2f16
+legalized:       true
+body:             |
+  bb.1.entry:
+    ; <2 x f16> has no legal G_BUILD_VECTOR, so leave the trunc in place.
+    ; CHECK-LABEL: name: fptrunc_v2f16
+    ; CHECK: %a0:_(f32) = G_FCONSTANT float 1.000000e+00
+    ; CHECK-NEXT: %a1:_(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: %src:_(<2 x f32>) = G_BUILD_VECTOR %a0(f32), %a1(f32)
+    ; CHECK-NEXT: %res:_(<2 x f16>) = G_FPTRUNC %src(<2 x f32>)
+    ; CHECK-NEXT: $s0 = COPY %res(<2 x f16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $s0
+    %a0:_(f32) = G_FCONSTANT float 1.0
+    %a1:_(f32) = G_FCONSTANT float 2.0
+    %src:_(<2 x f32>) = G_BUILD_VECTOR %a0(f32), %a1(f32)
+    %res:_(<2 x f16>) = G_FPTRUNC %src(<2 x f32>)
+    $s0 = COPY %res(<2 x f16>)
+    RET_ReallyLR implicit $s0
+
+...

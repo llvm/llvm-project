@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s %}
 
 // PR5484
 namespace PR5484 {
@@ -53,14 +54,14 @@ struct C {
  C();
 };
 
-// CHECK-LABEL: define{{.*}} void @_ZN1CC2Ev(ptr {{[^,]*}} %this) unnamed_addr
+// CHECK-LABEL: define{{.*}} void @_ZN1CC2Ev(ptr {{[^,]*}} %{{.*}}) unnamed_addr
 // CHECK: call void @_ZN2A1C1Ev(
 // CHECK: call void @_ZN2A2C1Ev(
 // CHECK: call void @_ZN1BC1ERK2A1RK2A2(
 // CHECK: call void @_ZN2A2D1Ev
 // CHECK: call void @_ZN2A1D1Ev
 
-// CHECK-LABEL: define{{.*}} void @_ZN1CC1Ev(ptr {{[^,]*}} %this) unnamed_addr
+// CHECK-LABEL: define{{.*}} void @_ZN1CC1Ev(ptr {{[^,]*}} %{{.*}}) unnamed_addr
 // CHECK: call void @_ZN1CC2Ev(
 C::C() { }
 

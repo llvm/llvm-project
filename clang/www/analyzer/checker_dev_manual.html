@@ -268,8 +268,11 @@ need to be made:
   All checker implementation files are located in
   <tt>clang/lib/StaticAnalyzer/Checkers</tt> folder. The steps below describe
   how the checker <tt>SimpleStreamChecker</tt>, which checks for misuses of
-  stream APIs, was registered with the analyzer.
-  Similar steps should be followed for a new checker.
+  stream APIs such as <tt>fopen</tt> and <tt>fclose</tt>. It was built as a
+  demo checker for the <a href="https://llvm.org/devmtg/2012-11/">2012 LLVM Developers' Meeting</a>)
+  by Anna Zaks and Jordan Rose. The
+  <a href="https://llvm.org/devmtg/2012-11/Zaks-Rose-Checker24Hours.pdf">slides</a>
+  and the <a href="https://youtu.be/kdxlsP5QVPw">video</a> are available.
 <ol>
   <li>A new checker implementation file, <tt>SimpleStreamChecker.cpp</tt>, was
   created in the directory <tt>lib/StaticAnalyzer/Checkers</tt>.

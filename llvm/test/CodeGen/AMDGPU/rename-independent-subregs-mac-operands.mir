@@ -3,7 +3,7 @@
 ---
 
 # GCN-LABEL: name: mac_invalid_operands
-# GCN: undef %18.sub0:vreg_128 = nofpexcept V_MAC_F32_e32 undef %3:vgpr_32, undef %9:vgpr_32, undef %18.sub0, implicit $mode, implicit $exec
+# GCN: undef %17.sub0:vreg_128 = nofpexcept V_MAC_F32_e32 undef %1:vgpr_32, undef %8:vgpr_32, undef %17.sub0, implicit $mode, implicit $exec
 
 name:            mac_invalid_operands
 alignment:       1
@@ -16,59 +16,40 @@ machineFunctionInfo:
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
   frameOffsetReg:  '$sgpr4'
 
-registers:
-  - { id: 0, class: vreg_128 }
-  - { id: 1, class: vreg_128 }
-  - { id: 2, class: sgpr_64 }
-  - { id: 3, class: vgpr_32 }
-  - { id: 4, class: vgpr_32 }
-  - { id: 5, class: vgpr_32 }
-  - { id: 6, class: vgpr_32 }
-  - { id: 7, class: sreg_64 }
-  - { id: 8, class: vgpr_32 }
-  - { id: 9, class: vgpr_32 }
-  - { id: 10, class: vreg_64 }
-  - { id: 11, class: vreg_64 }
-  - { id: 12, class: vreg_128 }
-  - { id: 13, class: vreg_128 }
-  - { id: 14, class: vgpr_32 }
-  - { id: 15, class: vreg_64 }
-  - { id: 16, class: vgpr_32 }
-  - { id: 17, class: vreg_128 }
 body:             |
   bb.0:
     successors: %bb.2, %bb.1
 
-    %7 = nofpexcept V_CMP_NEQ_F32_e64 0, 0, 0, undef %3, 0, implicit $mode, implicit $exec
-    $vcc = COPY killed %7
+    %7:sreg_64 = nofpexcept V_CMP_NEQ_F32_e64 0, 0, 0, undef %3:vgpr_32, 0, implicit $mode, implicit $exec
+    $vcc = COPY %7
     S_CBRANCH_VCCZ %bb.2, implicit killed $vcc
 
   bb.1:
     successors: %bb.3
 
-    %4 = nofpexcept V_ADD_F32_e32 undef %6, undef %5, implicit $mode, implicit $exec
-    undef %12.sub0 = COPY killed %4
-    %17 = COPY killed %12
+    %4:vgpr_32 = nofpexcept V_ADD_F32_e32 undef %6:vgpr_32, undef %5:vgpr_32, implicit $mode, implicit $exec
+    undef %12.sub0:vreg_128 = COPY %4
+    %17:vreg_128 = COPY %12
     S_BRANCH %bb.3
 
   bb.2:
     successors: %bb.3
 
-    %8 = nofpexcept V_MAC_F32_e32 undef %3, undef %9, undef %8, implicit $mode, implicit $exec
-    undef %13.sub0 = COPY %8
+    %8:vgpr_32 = nofpexcept V_MAC_F32_e32 undef %3, undef %9:vgpr_32, undef %8, implicit $mode, implicit $exec
+    undef %13.sub0:vreg_128 = COPY %8
     %13.sub1 = COPY %8
-    %13.sub2 = COPY killed %8
-    %0 = COPY killed %13
-    %17 = COPY killed %0
+    %13.sub2 = COPY %8
+    %0:vreg_128 = COPY %13
+    %17 = COPY %0
 
   bb.3:
-    %1 = COPY killed %17
-    FLAT_STORE_DWORD undef %10, %1.sub2, 0, 0, implicit $exec, implicit $flat_scr
-    %14 = COPY %1.sub1
-    %16 = COPY killed %1.sub0
-    undef %15.sub0 = COPY killed %16
-    %15.sub1 = COPY killed %14
-    FLAT_STORE_DWORDX2 undef %11, killed %15, 0, 0, implicit $exec, implicit $flat_scr
+    %1:vreg_128 = COPY %17
+    FLAT_STORE_DWORD undef %10:vreg_64, %1.sub2, 0, 0, implicit $exec, implicit $flat_scr
+    %14:vgpr_32 = COPY %1.sub1
+    %16:vgpr_32 = COPY %1.sub0
+    undef %15.sub0:vreg_64 = COPY %16
+    %15.sub1 = COPY %14
+    FLAT_STORE_DWORDX2 undef %11:vreg_64, %15, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 
 ...
@@ -78,18 +59,18 @@ body:             |
 
 # GCN-LABEL: name: vreg_does_not_dominate
 
-# GCN: undef %8.sub1:vreg_128 = nofpexcept V_MAC_F32_e32 undef %2:vgpr_32, undef %1:vgpr_32, undef %8.sub1, implicit $mode, implicit $exec
-# GCN: undef %7.sub0:vreg_128 = V_MOV_B32_e32 0, implicit $exec
-# GCN: undef %9.sub2:vreg_128 = COPY %7.sub0
+# GCN: undef %7.sub1:vreg_128 = nofpexcept V_MAC_F32_e32 undef %3:vgpr_32, undef %4:vgpr_32, undef %7.sub1, implicit $mode, implicit $exec
+# GCN: undef %6.sub0:vreg_128 = V_MOV_B32_e32 0, implicit $exec
+# GCN: undef %8.sub2:vreg_128 = COPY %6.sub0
 
-# GCN: undef %6.sub3:vreg_128 = nofpexcept V_ADD_F32_e32 undef %3:vgpr_32, undef %3:vgpr_32, implicit $mode, implicit $exec
-# GCN: undef %7.sub0:vreg_128 = nofpexcept V_ADD_F32_e64 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-# GCN: %8.sub1:vreg_128 = nofpexcept V_ADD_F32_e32 %8.sub1, %8.sub1, implicit $mode, implicit $exec
+# GCN: undef %2.sub3:vreg_128 = nofpexcept V_ADD_F32_e32 undef %5:vgpr_32, undef %5:vgpr_32, implicit $mode, implicit $exec
+# GCN: undef %6.sub0:vreg_128 = nofpexcept V_ADD_F32_e64 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+# GCN: %7.sub1:vreg_128 = nofpexcept V_ADD_F32_e32 %7.sub1, %7.sub1, implicit $mode, implicit $exec
 
-# GCN: BUFFER_STORE_DWORD_OFFEN %6.sub3, %0,
-# GCN: BUFFER_STORE_DWORD_OFFEN %9.sub2, %0,
-# GCN: BUFFER_STORE_DWORD_OFFEN %8.sub1, %0,
-# GCN: BUFFER_STORE_DWORD_OFFEN %7.sub0, %0,
+# GCN: BUFFER_STORE_DWORD_OFFEN %2.sub3, %0,
+# GCN: BUFFER_STORE_DWORD_OFFEN %8.sub2, %0,
+# GCN: BUFFER_STORE_DWORD_OFFEN %7.sub1, %0,
+# GCN: BUFFER_STORE_DWORD_OFFEN %6.sub0, %0,
 name:            vreg_does_not_dominate
 alignment:       1
 exposesReturnsTwice: false
@@ -100,14 +81,6 @@ tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
   frameOffsetReg:  '$sgpr4'
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
-  - { id: 1, class: vgpr_32, preferred-register: '' }
-  - { id: 2, class: vgpr_32, preferred-register: '' }
-  - { id: 3, class: vgpr_32, preferred-register: '' }
-  - { id: 4, class: vgpr_32, preferred-register: '' }
-  - { id: 5, class: sreg_64, preferred-register: '' }
-  - { id: 6, class: vreg_128, preferred-register: '' }
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr30_sgpr31', virtual-reg: '%5' }
@@ -116,9 +89,9 @@ body:             |
     successors: %bb.2, %bb.1
     liveins: $vgpr0, $sgpr30_sgpr31, $sgpr5
 
-    %5 = COPY $sgpr30_sgpr31
-    %0 = COPY $vgpr0
-    undef %6.sub1 = nofpexcept V_MAC_F32_e32 undef %2, undef %1, undef %6.sub1, implicit $mode, implicit $exec
+    %5:sreg_64 = COPY $sgpr30_sgpr31
+    %0:vgpr_32 = COPY $vgpr0
+    undef %6.sub1:vreg_128 = nofpexcept V_MAC_F32_e32 undef %2:vgpr_32, undef %1:vgpr_32, undef %6.sub1, implicit $mode, implicit $exec
     %6.sub0 = V_MOV_B32_e32 0, implicit $exec
     %6.sub2 = COPY %6.sub0
     S_CBRANCH_VCCNZ %bb.2, implicit undef $vcc
@@ -127,7 +100,7 @@ body:             |
   bb.1:
     successors: %bb.2
 
-    %6.sub3 = nofpexcept V_ADD_F32_e32 undef %3, undef %3, implicit $mode, implicit $exec
+    %6.sub3 = nofpexcept V_ADD_F32_e32 undef %3:vgpr_32, undef %3, implicit $mode, implicit $exec
     %6.sub0 = nofpexcept V_ADD_F32_e64 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     %6.sub1 = nofpexcept V_ADD_F32_e32 %6.sub1, %6.sub1, implicit $mode, implicit $exec
     %6.sub2 = COPY %6.sub0
@@ -144,19 +117,15 @@ body:             |
 
 # GCN-LABEL: name: inf_loop_tied_operand
 # GCN: bb.0:
-# GCN-NEXT: undef %2.sub0:vreg_128 = nofpexcept V_MAC_F32_e32 1073741824, undef %0:vgpr_32, undef %2.sub0, implicit $mode, implicit $exec
+# GCN-NEXT: undef %2.sub0:vreg_128 = nofpexcept V_MAC_F32_e32 1073741824, undef %1:vgpr_32, undef %2.sub0, implicit $mode, implicit $exec
 # GCN-NEXT: dead undef %3.sub1:vreg_128 = COPY %2.sub0
 
 name:            inf_loop_tied_operand
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: vgpr_32, preferred-register: '' }
-  - { id: 1, class: vgpr_32, preferred-register: '' }
-  - { id: 2, class: vreg_128, preferred-register: '' }
 body:             |
   bb.0:
-    %1 = nofpexcept V_MAC_F32_e32 1073741824, undef %0, undef %1, implicit $mode, implicit $exec
-    undef %2.sub0 = COPY %1
+    %1:vgpr_32 = nofpexcept V_MAC_F32_e32 1073741824, undef %0:vgpr_32, undef %1, implicit $mode, implicit $exec
+    undef %2.sub0:vreg_128 = COPY %1
     %2.sub1 = COPY %1
 
 ...
