@@ -2251,6 +2251,14 @@ def TuneNoSinkSplatOperands
                        "Disable sink splat operands to enable .vx, .vf,.wx, "
                        "and .wf instructions">;
 
+def TuneNoStridedLoadForReverse
+    : RISCVTuneFeature<"no-strided-load-for-reverse",
+                       "no-strided-load-for-reverse",
+                       "strided-load-for-reverse",
+                       "StridedLoadForReverse", "false",
+                       "Avoid vlse with stride -1 for reversed vector loads; "
+                       "prefer vle+vrgather instead">;
+
 def TunePreferWInst
     : RISCVSimpleTuneFeature<"prefer-w-inst", "PreferWInst", "true",
                              "Prefer instructions with W suffix">;

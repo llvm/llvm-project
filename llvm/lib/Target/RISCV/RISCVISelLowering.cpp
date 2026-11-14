@@ -23444,9 +23444,13 @@ static auto m_ReverseEVL = [](auto X, auto EVL) {
                  m_Node<ISD::EXPERIMENTAL_VP_REVERSE>(X, m_Value(), EVL));
 };
 
-// TODO: A vlse.v is not necessarily faster than a vrgather.vv on all uarchs.
-// Remove once a cost model driven transform is implemented in the loop
-// vectorizer.
+// A vlse.v with stride -1 is not necessarily faster than a vle + vrgather.vv
+// on all microarchitectures.  On sub-targets where strided loads devolve to
+// element-by-element access, the unit-stride load + register reverse is
+// faster for narrow types (e8, e16) where vrgatherei16/vrgather is efficient
+// relative to the many element-by-element memory accesses.  For wider types
+// (e32, e64) the strided load has fewer elements and the gather cost is
+// proportionally higher, so vlse may still win.
 static SDValue performReverseEVLCombine(SDNode *N,
                                         TargetLowering::DAGCombinerInfo &DCI,
                                         const RISCVSubtarget &Subtarget) {
@@ -23493,6 +23497,14 @@ static SDValue performReverseEVLCombine(SDNode *N,
   // and vp.load should always be the same.
   if (!LoadVT.getVectorElementType().isByteSized() ||
       EVL != VPLoad->getVectorLength())
+    return SDValue();
+
+  // On sub-targets with slow strided loads, avoid the combine for narrow element
+  // types (e8, e16) where the many element-by-element memory accesses make
+  // vlse much slower than a contiguous vle + vrgather reverse.  For wider
+  // types (e32+) the element count is lower and vlse is still profitable.
+  unsigned EltBits = LoadVT.getScalarSizeInBits();
+  if (!Subtarget.stridedLoadForReverse() && EltBits < 32)
     return SDValue();
 
   SDValue LoadMask = VPLoad->getMask();
@@ -23575,6 +23587,12 @@ static SDValue performVP_STORECombine(SDNode *N, SelectionDAG &DAG,
 
   // We do not have a strided_store version for masks.
   if (!ReverseVT.getVectorElementType().isByteSized())
+    return SDValue();
+
+  // See performReverseEVLCombine: avoid strided store for narrow types on
+  // sub-targets that have slow strided memory access.
+  unsigned StoreEltBits = ReverseVT.getScalarSizeInBits();
+  if (!Subtarget.stridedLoadForReverse() && StoreEltBits < 32)
     return SDValue();
 
   SDValue StoreMask = VPStore->getMask();
