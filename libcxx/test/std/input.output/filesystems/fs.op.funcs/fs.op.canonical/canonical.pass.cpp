@@ -92,6 +92,35 @@ static void test_dne_path()
     }
 }
 
+// https://llvm.org/PR77170
+// Per [fs.op.canonical], "!exists(p) is an error", and an empty path never
+// refers to an existing file (exists(path()) is always false). canonical("")
+// must therefore report an error instead of silently returning the current
+// directory.
+static void test_empty_path() {
+  std::error_code ec = GetTestEC();
+  {
+    const path ret = canonical(path{}, ec);
+    assert(ec != GetTestEC());
+    assert(ec);
+    assert(ret == path{});
+  }
+  {
+    TEST_THROWS_TYPE(filesystem_error, canonical(path{}));
+  }
+
+  ec = GetTestEC();
+  {
+    const path ret = canonical("", ec);
+    assert(ec != GetTestEC());
+    assert(ec);
+    assert(ret == path{});
+  }
+  {
+    TEST_THROWS_TYPE(filesystem_error, canonical(""));
+  }
+}
+
 static void test_exception_contains_paths()
 {
 #ifndef TEST_HAS_NO_EXCEPTIONS
@@ -121,6 +150,7 @@ int main(int, char**) {
     signature_test();
     test_canonical();
     test_dne_path();
+    test_empty_path();
     test_exception_contains_paths();
 
     return 0;
