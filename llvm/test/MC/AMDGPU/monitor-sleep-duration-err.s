@@ -10,7 +10,7 @@
 
 s_monitor_sleep -1
 // FOREVER: :[[@LINE-1]]:17: error: sleep duration must be in range [0, 127] on this target
-// NO-FOREVER: :[[@LINE-2]]:17: error: sleep forever is unsuported on the target
+// NO-FOREVER: :[[@LINE-2]]:17: error: sleep forever is unsupported on the target
 
 s_monitor_sleep 0x10000
 // ERR: :[[@LINE-1]]:17: error: sleep duration must be in range [0, 127] on this target
@@ -23,7 +23,7 @@ s_monitor_sleep 0x80
 
 s_monitor_sleep 0x8080
 // FOREVER: :[[@LINE-1]]:17: error: sleep duration must be in range [0, 127] on this target
-// NO-FOREVER: :[[@LINE-2]]:17: error: sleep forever is unsuported on the target
+// NO-FOREVER: :[[@LINE-2]]:17: error: sleep forever is unsupported on the target
 
 s_monitor_sleep 0xc8
 // ERR: :[[@LINE-1]]:17: error: sleep duration must be in range [0, 127] on this target

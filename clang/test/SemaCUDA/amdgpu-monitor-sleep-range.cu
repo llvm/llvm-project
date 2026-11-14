@@ -4,12 +4,11 @@
 // RUN: %clang_cc1 -triple amdgpu12.50s-amd-amdhsa -fcuda-is-device -x hip -DNO_SLEEP_FOREVER -fsyntax-only -verify=range,forever %s
 // RUN: %clang_cc1 -triple amdgpu12.51-amd-amdhsa -fcuda-is-device -x hip -fsyntax-only -verify=range,negative %s
 // RUN: %clang_cc1 -triple amdgpu12.50-amd-amdhsa -target-feature -no-sleep-forever -fcuda-is-device -x hip -fsyntax-only -verify=range,negative %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -aux-triple amdgpu12.50-amd-amdhsa -x hip -DNO_SLEEP_FOREVER -fsyntax-only -verify=host %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -aux-triple amdgpu13-amd-amdhsa -x hip -DNO_SLEEP_FOREVER -fsyntax-only -verify=host %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -aux-triple amdgpu12.50-amd-amdhsa -x hip -DNO_SLEEP_FOREVER -fsyntax-only -verify=range %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -aux-triple amdgpu13-amd-amdhsa -x hip -DNO_SLEEP_FOREVER -fsyntax-only -verify=range %s
 // RUN: %clang_cc1 -triple amdgpu12.5-amd-amdhsa -fcuda-is-device -x hip -fsyntax-only -verify=range,negative %s
 // RUN: %clang_cc1 -triple amdgpu13-amd-amdhsa -fcuda-is-device -x hip -fsyntax-only -verify=range,negative %s
 // RUN: %clang_cc1 -triple amdgpu13.10-amd-amdhsa -fcuda-is-device -x hip -fsyntax-only -verify=range,negative %s
-// host-no-diagnostics
 
 #include "Inputs/cuda.h"
 

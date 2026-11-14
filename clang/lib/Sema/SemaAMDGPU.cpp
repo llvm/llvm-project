@@ -167,8 +167,6 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
     return false;
   }
   case AMDGPU::BI__builtin_amdgcn_s_monitor_sleep: {
-    if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice)
-      return false;
     bool NoSleepForever = Builtin::evaluateRequiredTargetFeatures(
         "no-sleep-forever", CallerFeatureMap);
     Expr *ArgExpr = TheCall->getArg(0);
