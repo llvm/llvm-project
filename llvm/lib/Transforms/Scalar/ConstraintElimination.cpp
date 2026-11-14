@@ -636,6 +636,8 @@ static bool doesHoldInRange(ConstraintInfo &Info, Value *Op,
   return true;
 }
 
+enum class SignedBound { Upper, Lower };
+
 /// Splits the first signed min/max result in \p D (of type \p Ty, if provided)
 /// across its operands, and returns whether \p IsKnown holds for the
 /// substituted decompositions, or std::nullopt if \p D has no such min/max.
@@ -648,7 +650,7 @@ static bool doesHoldInRange(ConstraintInfo &Info, Value *Op,
 /// holds on both sides, and a lower bound if it holds on either side.
 static std::optional<bool>
 splitSignedMinMax(const Decomposition &D, ConstraintInfo &Info, Type *Ty,
-                  bool Upper,
+                  SignedBound Bound,
                   function_ref<bool(const Decomposition &)> IsKnown) {
   for (const DecompEntry &E : D.Vars) {
     auto *MM = dyn_cast<MinMaxIntrinsic>(E.Variable);
@@ -657,7 +659,7 @@ splitSignedMinMax(const Decomposition &D, ConstraintInfo &Info, Type *Ty,
 
     bool IsMax =
         (MM->getIntrinsicID() == Intrinsic::smax) == (E.Coefficient > 0);
-    bool IsAnd = Upper == IsMax;
+    bool IsAnd = (Bound == SignedBound::Upper) == IsMax;
     auto IsOperandKnown = [&](Value *V) {
       auto Side = D.substitute(E.Variable, V, Info);
       return Side && !Side->canonicalize() && IsKnown(*Side);
@@ -2176,7 +2178,8 @@ static bool isSignedDecompositionKnownTrue(CmpInst::Predicate Pred,
     return Pred == CmpInst::ICMP_SLT ? D.Offset < 0 : D.Offset <= 0;
 
   if (Depth != 0) {
-    if (auto Known = splitSignedMinMax(D, Info, /*Ty=*/nullptr, /*Upper=*/true,
+    if (auto Known = splitSignedMinMax(D, Info, /*Ty=*/nullptr,
+                                       SignedBound::Upper,
                                        [&](const Decomposition &Side) {
                                          return isSignedDecompositionKnownTrue(
                                              Pred, Side, Info, Depth - 1);
