@@ -9,21 +9,13 @@ define i32 @chain(ptr %a, i32 %idx) {
 ; CHECK-LABEL: define i32 @chain(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[IDX:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 4
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 12
-; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P1]], align 4
-; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[P2]], align 4
-; CHECK-NEXT:    [[V3:%.*]] = load i32, ptr [[P3]], align 4
-; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[IDX]], 0
-; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[IDX]], 1
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[IDX]], 2
-; CHECK-NEXT:    [[C3:%.*]] = icmp eq i32 [[IDX]], 3
-; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C3]], i32 [[V3]], i32 0
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2]], i32 [[V2]], i32 [[S3]]
-; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0]], i32 [[V0]], i32 [[S2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[C1]], i32 [[V1]], i32 [[S0]]
+; CHECK-NEXT:    [[IDX_FR:%.*]] = freeze i32 [[IDX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[IDX_FR]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i32> [[TMP2]], <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> [[TMP0]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP4]])
 ; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
 entry:
@@ -49,21 +41,12 @@ define i32 @chain_noundef(ptr %a, i32 noundef %idx) {
 ; CHECK-LABEL: define i32 @chain_noundef(
 ; CHECK-SAME: ptr [[A:%.*]], i32 noundef [[IDX:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 4
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 12
-; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P1]], align 4
-; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[P2]], align 4
-; CHECK-NEXT:    [[V3:%.*]] = load i32, ptr [[P3]], align 4
-; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[IDX]], 0
-; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[IDX]], 1
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[IDX]], 2
-; CHECK-NEXT:    [[C3:%.*]] = icmp eq i32 [[IDX]], 3
-; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C3]], i32 [[V3]], i32 0
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2]], i32 [[V2]], i32 [[S3]]
-; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0]], i32 [[V0]], i32 [[S2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[C1]], i32 [[V1]], i32 [[S0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[IDX]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[TMP1]], <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP4]])
 ; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
 entry:
@@ -89,25 +72,18 @@ define i32 @chain_leftover(ptr %a, i32 %idx) {
 ; CHECK-LABEL: define i32 @chain_leftover(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[IDX:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[IDX_FR:%.*]] = freeze i32 [[IDX]]
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 4
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 12
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
 ; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P1]], align 4
-; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[P2]], align 4
-; CHECK-NEXT:    [[V3:%.*]] = load i32, ptr [[P3]], align 4
-; CHECK-NEXT:    [[V4:%.*]] = load i32, ptr [[P4]], align 4
-; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[IDX]], 0
-; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[IDX]], 1
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[IDX]], 2
-; CHECK-NEXT:    [[C3:%.*]] = icmp eq i32 [[IDX]], 3
-; CHECK-NEXT:    [[C4:%.*]] = icmp eq i32 [[IDX]], 4
-; CHECK-NEXT:    [[S4:%.*]] = select i1 [[C4]], i32 [[V4]], i32 0
-; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C3]], i32 [[V3]], i32 [[S4]]
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2]], i32 [[V2]], i32 [[S3]]
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 [[V1]], i32 [[S2]]
-; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[C0]], i32 [[V0]], i32 [[S1]]
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[IDX_FR]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P1]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[IDX_FR]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i32> [[TMP2]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> [[TMP0]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[C0]], i32 [[V0]], i32 0
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or i32 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    ret i32 [[OP_RDX]]
 ;
 entry:
@@ -137,22 +113,13 @@ define i32 @or_root(ptr %a, i32 %idx) {
 ; CHECK-LABEL: define i32 @or_root(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[IDX:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 4
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 12
-; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P1]], align 4
-; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[P2]], align 4
-; CHECK-NEXT:    [[V3:%.*]] = load i32, ptr [[P3]], align 4
-; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[IDX]], 0
-; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[IDX]], 1
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[IDX]], 2
-; CHECK-NEXT:    [[C3:%.*]] = icmp eq i32 [[IDX]], 3
-; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C3]], i32 [[V3]], i32 0
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2]], i32 [[V2]], i32 [[S3]]
-; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0]], i32 [[V0]], i32 0
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 [[V1]], i32 [[S0]]
-; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[S1]], [[S2]]
+; CHECK-NEXT:    [[IDX_FR:%.*]] = freeze i32 [[IDX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[IDX_FR]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i32> [[TMP2]], <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> [[TMP0]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP4]])
 ; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
 entry:
@@ -325,23 +292,16 @@ define i32 @root_cond_extra_use(ptr %a, i32 %idx, ptr %q) {
 ; CHECK-LABEL: define i32 @root_cond_extra_use(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[IDX:%.*]], ptr [[Q:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 4
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 12
-; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P1]], align 4
-; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[P2]], align 4
-; CHECK-NEXT:    [[V3:%.*]] = load i32, ptr [[P3]], align 4
-; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[IDX]], 0
-; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[IDX]], 1
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[IDX]], 2
-; CHECK-NEXT:    [[C3:%.*]] = icmp eq i32 [[IDX]], 3
+; CHECK-NEXT:    [[IDX_FR:%.*]] = freeze i32 [[IDX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[IDX_FR]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[IDX_FR]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i32> [[TMP2]], <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[C1]] to i32
 ; CHECK-NEXT:    store i32 [[Z]], ptr [[Q]], align 4
-; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C3]], i32 [[V3]], i32 0
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2]], i32 [[V2]], i32 [[S3]]
-; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0]], i32 [[V0]], i32 [[S2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[C1]], i32 [[V1]], i32 [[S0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> [[TMP0]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP4]])
 ; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
 entry:
@@ -369,42 +329,20 @@ define i32 @inner_link_extra_use(ptr %a, i32 %idx, ptr %q) {
 ; CHECK-LABEL: define i32 @inner_link_extra_use(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[IDX:%.*]], ptr [[Q:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 4
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 12
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
-; CHECK-NEXT:    [[P5:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 20
-; CHECK-NEXT:    [[P6:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 24
-; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 28
+; CHECK-NEXT:    [[IDX_FR:%.*]] = freeze i32 [[IDX]]
 ; CHECK-NEXT:    [[P8:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 32
-; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P1]], align 4
-; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[P2]], align 4
-; CHECK-NEXT:    [[V3:%.*]] = load i32, ptr [[P3]], align 4
-; CHECK-NEXT:    [[V4:%.*]] = load i32, ptr [[P4]], align 4
-; CHECK-NEXT:    [[V5:%.*]] = load i32, ptr [[P5]], align 4
-; CHECK-NEXT:    [[V6:%.*]] = load i32, ptr [[P6]], align 4
-; CHECK-NEXT:    [[V7:%.*]] = load i32, ptr [[P7]], align 4
 ; CHECK-NEXT:    [[V8:%.*]] = load i32, ptr [[P8]], align 4
-; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[IDX]], 0
-; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[IDX]], 1
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[IDX]], 2
-; CHECK-NEXT:    [[C3:%.*]] = icmp eq i32 [[IDX]], 3
-; CHECK-NEXT:    [[C4:%.*]] = icmp eq i32 [[IDX]], 4
-; CHECK-NEXT:    [[C5:%.*]] = icmp eq i32 [[IDX]], 5
-; CHECK-NEXT:    [[C6:%.*]] = icmp eq i32 [[IDX]], 6
-; CHECK-NEXT:    [[C7:%.*]] = icmp eq i32 [[IDX]], 7
-; CHECK-NEXT:    [[C8:%.*]] = icmp eq i32 [[IDX]], 8
+; CHECK-NEXT:    [[C8:%.*]] = icmp eq i32 [[IDX_FR]], 8
 ; CHECK-NEXT:    [[S8:%.*]] = select i1 [[C8]], i32 [[V8]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[C7]], i32 [[V7]], i32 [[S8]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> poison, i32 [[IDX_FR]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <8 x i32> [[TMP2]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 poison>, i32 [[S8]], i64 7
+; CHECK-NEXT:    [[TMP5:%.*]] = select <8 x i1> [[TMP3]], <8 x i32> [[TMP0]], <8 x i32> [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x i32> [[TMP5]], i64 7
 ; CHECK-NEXT:    store i32 [[TMP6]], ptr [[Q]], align 4
-; CHECK-NEXT:    [[S6:%.*]] = select i1 [[C6]], i32 [[V6]], i32 [[TMP6]]
-; CHECK-NEXT:    [[S5:%.*]] = select i1 [[C5]], i32 [[V5]], i32 [[S6]]
-; CHECK-NEXT:    [[S4:%.*]] = select i1 [[C4]], i32 [[V4]], i32 [[S5]]
-; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C3]], i32 [[V3]], i32 [[S4]]
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2]], i32 [[V2]], i32 [[S3]]
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 [[V1]], i32 [[S2]]
-; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[C0]], i32 [[V0]], i32 [[S1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> [[TMP5]])
 ; CHECK-NEXT:    ret i32 [[TMP7]]
 ;
 entry:

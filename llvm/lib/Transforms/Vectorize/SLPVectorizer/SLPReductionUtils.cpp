@@ -69,6 +69,31 @@ bool isReductionCandidate(Instruction *I) {
   return IsBinop || IsSelect;
 }
 
+bool isOrLikeSelect(Instruction *I, const DataLayout &DL, unsigned MaxDepth) {
+  Value *Cond, *FalseV, *CmpOp;
+  if (!I->getType()->isIntegerTy() || I->getType()->isIntegerTy(1) ||
+      !match(I, m_Select(m_Value(Cond), m_Value(), m_Value(FalseV))) ||
+      match(FalseV, m_Zero()) ||
+      !match(Cond, m_ICmp(m_Value(CmpOp), m_Constant())))
+    return false;
+  // The compared value is frozen before the vectorization.
+  if (auto *CmpOpI = dyn_cast<Instruction>(CmpOp);
+      CmpOpI && !CmpOpI->getInsertionPointAfterDef())
+    return false;
+  Value *InnerCond;
+  for ([[maybe_unused]] unsigned _ : seq<unsigned>(MaxDepth)) {
+    if (!match(FalseV,
+               m_Select(m_Value(InnerCond), m_Value(), m_Value(FalseV))) ||
+        !match(InnerCond, m_ICmp(m_Specific(CmpOp), m_Constant())) ||
+        isImpliedCondition(Cond, InnerCond, DL).value_or(true) ||
+        !impliesPoison(InnerCond, Cond))
+      return false;
+    if (match(FalseV, m_Zero()))
+      return true;
+  }
+  return false;
+}
+
 Type *getBoolReduxWideTy(RecurKind RdxKind, Type *RootTy, Type *LeafTy) {
   if ((RdxKind == RecurKind::And || RdxKind == RecurKind::Or) &&
       RootTy->isIntegerTy(1) && LeafTy->isIntegerTy() &&
