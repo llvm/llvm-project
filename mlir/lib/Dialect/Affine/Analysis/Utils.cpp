@@ -21,6 +21,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/IntegerSet.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/Debug.h"
@@ -184,6 +185,18 @@ static void getEffectedValues(Operation *op, SmallVectorImpl<Value> &values) {
         isa<MemRefType>(effectVal.getType()))
       values.push_back(effectVal);
   };
+}
+
+/// Returns the memref that `memref` is a view of, looking through any chain of
+/// view-like ops (e.g., memref.subview, memref.cast). Returns `memref` itself
+/// if it isn't defined by a view-like op.
+static Value getBaseMemRef(Value memref) {
+  while (auto viewOp = memref.getDefiningOp<ViewLikeOpInterface>()) {
+    if (memref != viewOp.getViewDest())
+      break;
+    memref = viewOp.getViewSource();
+  }
+  return memref;
 }
 
 /// Add `op` to MDG creating a new node and adding its memory accesses (affine
@@ -452,6 +465,46 @@ bool MemRefDependenceGraph::init(bool fullAffineDependences) {
           if (!fullAffineDependences ||
               mayDependence(*srcNode, *dstNode, srcMemRef))
             addEdge(srcId, dstId, srcMemRef);
+        }
+      }
+    }
+  }
+  // Different memref values can be views of the same underlying memref (e.g.,
+  // via memref.subview or memref.cast), but the edges added above only relate
+  // accesses on the same memref value. Conservatively add an edge between any
+  // two nodes accessing different views of the same base memref if either of
+  // them may write to or free its view.
+  DenseMap<Value, SmallVector<Value>> baseToMemRefs;
+  for (auto &memrefAndList : memrefAccesses)
+    baseToMemRefs[getBaseMemRef(memrefAndList.first)].push_back(
+        memrefAndList.first);
+  for (auto &baseAndMemRefs : baseToMemRefs) {
+    ArrayRef<Value> memrefs = baseAndMemRefs.second;
+    if (memrefs.size() < 2)
+      continue;
+    // For each view, collect the nodes accessing it along with whether they
+    // may write to or free it.
+    SmallVector<SmallVector<std::pair<Node *, bool>>> viewAccesses;
+    for (Value memref : memrefs) {
+      auto &accesses = viewAccesses.emplace_back();
+      for (unsigned id : memrefAccesses[memref]) {
+        Node *node = getNode(id);
+        accesses.push_back(
+            {node, node->hasStore(memref) || node->hasFree(memref)});
+      }
+    }
+    for (unsigned a = 0, e = memrefs.size(); a < e; ++a) {
+      for (unsigned b = a + 1; b < e; ++b) {
+        for (auto [nodeA, aWrites] : viewAccesses[a]) {
+          for (auto [nodeB, bWrites] : viewAccesses[b]) {
+            if (nodeA == nodeB || (!aWrites && !bWrites))
+              continue;
+            // Edges go from the node earlier in the block to the later one.
+            if (nodeA->op->isBeforeInBlock(nodeB->op))
+              addEdge(nodeA->id, nodeB->id, memrefs[a]);
+            else
+              addEdge(nodeB->id, nodeA->id, memrefs[b]);
+          }
         }
       }
     }
