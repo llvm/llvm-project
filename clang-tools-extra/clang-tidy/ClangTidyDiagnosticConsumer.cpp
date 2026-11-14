@@ -218,7 +218,8 @@ bool ClangTidyContext::shouldSuppressDiagnostic(
     bool EnableNoLintBlocks) {
   const std::string CheckName = getCheckName(Info.getID());
   return NoLintHandler.shouldSuppress(DiagLevel, Info, CheckName, NoLintErrors,
-                                      AllowIO, EnableNoLintBlocks);
+                                      AllowIO, EnableNoLintBlocks,
+                                      &getLangOpts());
 }
 
 void ClangTidyContext::setSourceManager(SourceManager *SourceMgr) {
@@ -401,7 +402,7 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
 
   SmallVector<tooling::Diagnostic, 1> SuppressionErrors;
   if (Context.shouldSuppressDiagnostic(DiagLevel, Info, SuppressionErrors,
-                                       EnableNolintBlocks)) {
+                                       /*AllowIO=*/true, EnableNolintBlocks)) {
     ++Context.Stats.ErrorsIgnoredNOLINT;
     // Ignored a warning, should ignore related notes as well
     LastErrorWasIgnored = true;
