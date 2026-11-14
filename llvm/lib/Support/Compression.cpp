@@ -18,7 +18,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <limits>
 #include <optional>
 #if LLVM_ENABLE_ZLIB
 #include <zlib.h>
@@ -26,6 +25,7 @@
 #if LLVM_ENABLE_ZSTD
 #include <zstd.h>
 #endif
+#include <limits>
 #if LLVM_ENABLE_LZMA
 #include <lzma.h>
 #endif
@@ -218,6 +218,10 @@ bool zstd::isAvailable() { return true; }
 
 #include <zstd.h> // Ensure ZSTD library is included
 
+int zstd::getMinCompressionLevel() { return ZSTD_minCLevel(); }
+
+int zstd::getMaxCompressionLevel() { return ZSTD_maxCLevel(); }
+
 void zstd::compress(ArrayRef<uint8_t> Input,
                     SmallVectorImpl<uint8_t> &CompressedBuffer, int Level,
                     bool EnableLdm) {
@@ -280,6 +284,8 @@ Error zstd::decompress(ArrayRef<uint8_t> Input,
 
 #else
 bool zstd::isAvailable() { return false; }
+int zstd::getMinCompressionLevel() { llvm_unreachable("zstd is unavailable"); }
+int zstd::getMaxCompressionLevel() { llvm_unreachable("zstd is unavailable"); }
 void zstd::compress(ArrayRef<uint8_t> Input,
                     SmallVectorImpl<uint8_t> &CompressedBuffer, int Level,
                     bool EnableLdm) {

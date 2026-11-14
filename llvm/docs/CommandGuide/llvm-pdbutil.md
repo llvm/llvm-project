@@ -567,6 +567,13 @@ examine the output for an example starting point.
 
 Write the resulting PDB to the specified file.
 
+:::{option} -msfz
+:::
+
+Write an MSFZ compressed container instead of classic MSF. Requires LLVM to be
+built with Zstandard support. The logical PDB streams are generated from the
+same YAML description.
+
 (export-subcommand)=
 
 ### export

@@ -68,9 +68,10 @@ Error DebugStringTableSubsection::commit(BinaryStreamWriter &Writer) const {
   if (auto EC = Writer.writeCString(StringRef()))
     return EC;
 
-  for (auto &Pair : StringToId) {
-    StringRef S = Pair.getKey();
-    uint32_t Offset = Begin + Pair.getValue();
+  // Assigned offsets must be written in order for forward-only streams.
+  for (uint32_t Id : sortedIds()) {
+    StringRef S = getStringForId(Id);
+    uint32_t Offset = Begin + Id;
     Writer.setOffset(Offset);
     if (auto EC = Writer.writeCString(S))
       return EC;

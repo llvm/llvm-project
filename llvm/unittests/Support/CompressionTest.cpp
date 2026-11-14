@@ -71,6 +71,7 @@ TEST(CompressionTest, Zlib) {
   testZlibCompression(BinaryDataStr, zlib::BestSpeedCompression);
   testZlibCompression(BinaryDataStr, zlib::DefaultCompression);
 }
+
 #endif
 
 #if LLVM_ENABLE_ZSTD

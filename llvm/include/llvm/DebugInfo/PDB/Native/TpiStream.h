@@ -17,6 +17,7 @@
 #include "llvm/Support/Compiler.h"
 
 #include "llvm/Support/Error.h"
+#include <memory>
 
 namespace llvm {
 class BinaryStream;
@@ -24,7 +25,7 @@ namespace codeview {
 class TypeIndex;
 struct TypeIndexOffset;
 class LazyRandomTypeCollection;
-}
+} // namespace codeview
 namespace msf {
 class MappedBlockStream;
 }
@@ -36,6 +37,7 @@ class TpiStream {
   friend class TpiStreamBuilder;
 
 public:
+  LLVM_ABI TpiStream(PDBFile &File, std::unique_ptr<BinaryStream> Stream);
   LLVM_ABI TpiStream(PDBFile &File,
                      std::unique_ptr<msf::MappedBlockStream> Stream);
   LLVM_ABI ~TpiStream();
@@ -93,7 +95,7 @@ public:
 
 private:
   PDBFile &Pdb;
-  std::unique_ptr<msf::MappedBlockStream> Stream;
+  std::unique_ptr<BinaryStream> Stream;
 
   std::unique_ptr<codeview::LazyRandomTypeCollection> Types;
 
@@ -110,7 +112,7 @@ private:
 
   const TpiStreamHeader *Header;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 #endif
