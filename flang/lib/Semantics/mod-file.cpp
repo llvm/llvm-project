@@ -20,6 +20,7 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/FileSystem.h"
@@ -220,9 +221,8 @@ std::string ModFileWriter::GetAsString(const Symbol &symbol) {
   }
   all << '\n' << uses_.str();
   uses_.str().clear();
-  // Re-exported reduction modules are tracked per module file, so reset the set
-  // (like usedNonIntrinsicModules_) now that this module's uses are emitted.
-  reexportedReductionModules_.clear();
+  // Per-module-file state, like usedNonIntrinsicModules_.
+  reexportedPlainUseModules_.clear();
   all << useExtraAttrs_.str();
   useExtraAttrs_.str().clear();
   all << decls_.str();
@@ -479,6 +479,14 @@ void ModFileWriter::PutSymbols(
   }
   for (const Symbol &symbol : uses) {
     PutUse(symbol);
+  }
+  // This must follow the PutUse calls, which determine the modules that are
+  // re-exported by a plain USE.
+  for (const Symbol &symbol : sorted) {
+    if (symbol.has<UseErrorDetails>() &&
+        !symbol.test(Symbol::Flag::CompilerCreated)) {
+      PutUseError(symbol);
+    }
   }
   PutOpenMPRequirements(decls_, DEREF(scope.symbol()), context_);
   if (const auto *decls{GetOmpDeclarative(DEREF(scope.symbol()))};
@@ -1042,18 +1050,43 @@ void ModFileWriter::PutUse(const Symbol &symbol) {
       if (!symbol.attrs().test(Attr::PRIVATE)) {
         auto &reductionUse{symbol.get<UseDetails>()};
         const Symbol &reexportModule{GetUsedModule(reductionUse)};
-        if (!reductionUse.symbol().owner().parent().IsIntrinsicModules() &&
-            reexportedReductionModules_.insert(reexportModule).second) {
-          uses_ << "use " << reexportModule.name() << '\n';
-          usedNonIntrinsicModules_.insert(reexportModule);
+        if (!reductionUse.symbol().owner().parent().IsIntrinsicModules()) {
+          PutPlainUse(reexportModule);
         }
       }
       return;
     }
   }
-  auto &details{symbol.get<UseDetails>()};
-  auto &use{details.symbol()};
-  const Symbol &module{GetUsedModule(details)};
+  // A DEC STRUCTURE's name has slashes (e.g. "/s/") and cannot be written in a
+  // USE only-list, so re-export it by a plain USE of its module. A private
+  // structure is not re-exported, as the plain USE would make it public.
+  if (ultimate.has<DerivedTypeDetails>() &&
+      ultimate.get<DerivedTypeDetails>().isDECStructure()) {
+    if (!symbol.attrs().test(Attr::PRIVATE)) {
+      PutPlainUse(GetUsedModule(symbol.get<UseDetails>()));
+    }
+    return;
+  }
+  auto &use{symbol.get<UseDetails>().symbol()};
+  PutUseOnly(symbol, use);
+  PutUseExtraAttr(Attr::VOLATILE, symbol, use);
+  PutUseExtraAttr(Attr::ASYNCHRONOUS, symbol, use);
+  if (!isSubmodule_ && symbol.attrs().test(Attr::PRIVATE)) {
+    PutGenericName(useExtraAttrs_ << "private::", symbol) << '\n';
+  }
+}
+
+// Re-export the whole of a module by a plain USE, once per module file.
+void ModFileWriter::PutPlainUse(const Symbol &module) {
+  if (reexportedPlainUseModules_.insert(module).second) {
+    uses_ << "use " << module.name() << '\n';
+    usedNonIntrinsicModules_.insert(module);
+  }
+}
+
+// Write "USE module, only: local => use".
+void ModFileWriter::PutUseOnly(const Symbol &local, const Symbol &use) {
+  const Symbol &module{DEREF(use.owner().symbol())};
   if (use.owner().parent().IsIntrinsicModules()) {
     uses_ << "use,intrinsic::";
   } else {
@@ -1061,15 +1094,30 @@ void ModFileWriter::PutUse(const Symbol &symbol) {
     usedNonIntrinsicModules_.insert(module);
   }
   uses_ << module.name() << ",only:";
-  PutGenericName(uses_, symbol);
+  PutGenericName(uses_, local);
   // Can have intrinsic op with different local-name and use-name
   // (e.g. `operator(<)` and `operator(.lt.)`) but rename is not allowed
-  if (!IsIntrinsicOp(symbol) && use.name() != symbol.name()) {
+  if (!IsIntrinsicOp(local) && use.name() != local.name()) {
     PutGenericName(uses_ << "=>", use);
   }
   uses_ << '\n';
-  PutUseExtraAttr(Attr::VOLATILE, symbol, use);
-  PutUseExtraAttr(Attr::ASYNCHRONOUS, symbol, use);
+}
+
+// An ambiguous name (USE-associated from several modules) is not written, since
+// its symbol has no usable name. If one of those modules is re-exported by a
+// plain USE, that USE would make the names hidden by the ambiguity accessible
+// again, so write the name's occurrences (with renames) and its PRIVATE.
+void ModFileWriter::PutUseError(const Symbol &symbol) {
+  const auto &occurrences{symbol.get<UseErrorDetails>().occurrences()};
+  if (!llvm::any_of(occurrences, [&](const auto &occurrence) {
+        return reexportedPlainUseModules_.count(
+            DEREF(DEREF(occurrence.second).owner().symbol()));
+      })) {
+    return;
+  }
+  for (const auto &occurrence : occurrences) {
+    PutUseOnly(symbol, DEREF(occurrence.second));
+  }
   if (!isSubmodule_ && symbol.attrs().test(Attr::PRIVATE)) {
     PutGenericName(useExtraAttrs_ << "private::", symbol) << '\n';
   }
