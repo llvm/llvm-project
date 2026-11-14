@@ -563,13 +563,16 @@ let OtherPredicates = [NoFP32Denormals] in {
 // For 16-bit src arguments their location (hi/lo) are controlled by op_sel.
 let isCommutable = 1, mayRaiseFPException = 0 in {
 let isReMaterializable = 1 in
+let CoexecYoungerGFX942 = CoexecC, CoexecOlderGFX942 = CoexecA in
 defm V_MAD_MIX_F32 : VOP3_VOP3PInst<"v_mad_mix_f32", VOP3P_Mix_Profile<VOP_F32_F16_F16_F16, VOP3_OPSEL>>;
 
 let FPDPRounding = 1 in {
 // Clamp modifier is applied after conversion to f16.
+let CoexecYoungerGFX942 = CoexecC, CoexecOlderGFX942 = CoexecA in
 defm V_MAD_MIXLO_F16 : VOP3_VOP3PInst<"v_mad_mixlo_f16", VOP3P_Mix_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL, 1>>;
 
 let ClampLo = 0, ClampHi = 1 in {
+let CoexecYoungerGFX942 = CoexecC, CoexecOlderGFX942 = CoexecA in
 defm V_MAD_MIXHI_F16 : VOP3_VOP3PInst<"v_mad_mixhi_f16", VOP3P_Mix_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL, 1>>;
 }
 } // End FPDPRounding = 1
@@ -588,13 +591,16 @@ let SubtargetPredicate = HasFmaMixInsts in {
 let isCommutable = 1 in {
 
 let isReMaterializable = 1 in
+let CoexecYoungerGFX942 = CoexecC, CoexecOlderGFX942 = CoexecA in
 defm V_FMA_MIX_F32 : VOP3_VOP3PInst<"v_fma_mix_f32", VOP3P_Mix_Profile<VOP_F32_F16_F16_F16, VOP3_OPSEL>>;
 
 let FPDPRounding = 1 in {
 // Clamp modifier is applied after conversion to f16.
+let CoexecYoungerGFX942 = CoexecC, CoexecOlderGFX942 = CoexecC in
 defm V_FMA_MIXLO_F16 : VOP3_VOP3PInst<"v_fma_mixlo_f16", VOP3P_Mix_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL, 1>>;
 
 let ClampLo = 0, ClampHi = 1 in {
+let CoexecYoungerGFX942 = CoexecC, CoexecOlderGFX942 = CoexecC in
 defm V_FMA_MIXHI_F16 : VOP3_VOP3PInst<"v_fma_mixhi_f16", VOP3P_Mix_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL, 1>>;
 }
 
@@ -1265,8 +1271,10 @@ class VgprMAIFrag<SDPatternOperator Op, bit HasAbid = true,
   MAIFrag<Op, HasAbid, Scaled>;
 
 let isAsCheapAsAMove = 1, isReMaterializable = 1 in {
+  let CoexecYoungerGFX942 = CoexecA, CoexecOlderGFX942 = CoexecA in
   defm V_ACCVGPR_READ_B32  : VOP3Inst<"v_accvgpr_read_b32",  VOPProfileAccRead>;
   let isMoveImm = 1 in {
+    let CoexecYoungerGFX942 = CoexecA, CoexecOlderGFX942 = CoexecA in
     defm V_ACCVGPR_WRITE_B32 : VOP3Inst<"v_accvgpr_write_b32", VOPProfileAccWrite>;
   } // End isMoveImm = 1
 } // End isAsCheapAsAMove = 1, isReMaterializable = 1

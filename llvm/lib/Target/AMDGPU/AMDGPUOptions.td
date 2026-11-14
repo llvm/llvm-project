@@ -448,6 +448,10 @@ defm : BoolField<"amdgpu-skip-cache-invalidations", "false",
 // SIPreAllocateWWMRegs.cpp
 defm : BoolField<"amdgpu-prealloc-sgpr-spill-vgprs", "false", "">;
 
+// SIPreEmitPeephole.cpp
+defm : ValueField<"amdgpu-gfx9-cross-wave-valu-coexec-opt-threshold", "unsigned", "10",
+  "Insert s_nop 0 to improve cross-wave VALU co-execution if the younger wave would otherwise be blocked from co-issuing VALUs next to at least this many VALUs of the older wave (0 to disable)">;
+
 // SIRegisterInfo.cpp
 defm : BoolField<"amdgpu-spill-cfi-saved-regs", "false",
   "Enable spilling the registers required for CFI emission">;

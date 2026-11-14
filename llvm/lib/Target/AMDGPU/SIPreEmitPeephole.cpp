@@ -20,6 +20,8 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
+#include "SIMachineFunctionInfo.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -64,6 +66,7 @@ private:
                              const MachineBasicBlock &To) const;
   bool removeExeczBranch(MachineInstr &MI, MachineBasicBlock &SrcMBB);
   bool removeRedundantModeWrites(MachineBasicBlock &SrcMBB) const;
+  bool optimizeGFX9CrossWaveVALUCoexec(MachineFunction &MF) const;
   // Creates a list of packed instructions following an MFMA that are suitable
   // for unpacking.
   void collectUnpackingCandidates(MachineInstr &BeginMI,
@@ -845,6 +848,290 @@ llvm::SIPreEmitPeepholePass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
+namespace {
+
+// How well a VALU can be co-issued with a VALU of another wave on the same
+// SIMD, from A (best) to C (never). A SIMD co-issues VALUs of two waves: the
+// oldest wave with a VALU ready to issue (the older wave) and a younger wave. A
+// VALU of the younger wave, of class Y as given by getGFX9YoungerVALUClass, can
+// be co-issued next to a VALU of the older wave, of class O as given by
+// getGFX9OlderVALUClass, iff Y + O <= 1.
+enum class GFX9VALUCoexecClass { A = 0, B = 1, C = 2 };
+
+} // end anonymous namespace
+
+static bool canCoissueGFX9VALUs(GFX9VALUCoexecClass Younger,
+                                GFX9VALUCoexecClass Older) {
+  return static_cast<unsigned>(Younger) + static_cast<unsigned>(Older) <= 1;
+}
+
+static bool hasVectorOperandOf64Bits(const MachineInstr &MI,
+                                     const GCNSubtarget &ST) {
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  return any_of(MI.explicit_operands(), [&](const MachineOperand &MO) {
+    return MO.isReg() && MO.getReg().isPhysical() &&
+           TRI->isVectorRegister(MRI, MO.getReg()) &&
+           TRI->getRegSizeInBits(MO.getReg(), MRI) >= 64;
+  });
+}
+
+// The class from the GFX942/GFX950 co-execution fields of the VOP pseudo, or
+// B if the VALU has none.
+static GFX9VALUCoexecClass getGFX9TableVALUClass(const MachineInstr &MI,
+                                                 const GCNSubtarget &ST,
+                                                 bool Younger) {
+  const AMDGPU::VOPCoexecClassInfo *Info =
+      AMDGPU::getVOPCoexecClassInfo(MI.getOpcode());
+  if (!Info)
+    return GFX9VALUCoexecClass::B;
+  const bool GFX942 = ST.hasGFX942CrossWaveVALUCoexecution();
+  return static_cast<GFX9VALUCoexecClass>(
+      Younger ? (GFX942 ? Info->CoexecYoungerGFX942 : Info->CoexecYoungerGFX950)
+              : (GFX942 ? Info->CoexecOlderGFX942 : Info->CoexecOlderGFX950));
+}
+
+// The class of a VALU of the younger wave.
+static GFX9VALUCoexecClass getGFX9YoungerVALUClass(const MachineInstr &MI,
+                                                   const GCNSubtarget &ST) {
+  if (SIInstrInfo::isDPP(MI) || SIInstrInfo::isSDWA(MI) ||
+      SIInstrInfo::isTRANS(MI) || SIInstrInfo::isVOP3P(MI) ||
+      SIInstrInfo::isDOT(MI))
+    return GFX9VALUCoexecClass::C;
+  return getGFX9TableVALUClass(MI, ST, /*Younger=*/true);
+}
+
+// The class of a VALU of the older wave.
+static GFX9VALUCoexecClass getGFX9OlderVALUClass(const MachineInstr &MI,
+                                                 const GCNSubtarget &ST) {
+  if (AMDGPU::getVOPCoexecClassInfo(MI.getOpcode()) == nullptr &&
+      (SIInstrInfo::isTRANS(MI) || SIInstrInfo::isVOP3P(MI) ||
+       SIInstrInfo::isDOT(MI)))
+    return GFX9VALUCoexecClass::C;
+  GFX9VALUCoexecClass Class = getGFX9TableVALUClass(MI, ST, /*Younger=*/false);
+  // Without GFX942CrossWaveVALUCoexecution, no VALU can be co-issued next to a
+  // VALU with a 64-bit operand.
+  if (Class == GFX9VALUCoexecClass::B &&
+      !ST.hasGFX942CrossWaveVALUCoexecution() &&
+      hasVectorOperandOf64Bits(MI, ST))
+    return GFX9VALUCoexecClass::C;
+  return Class;
+}
+
+// The occupancy, further limited by the VGPRs and AGPRs actually allocated.
+// The occupancy recorded in SIMachineFunctionInfo is only an estimate made
+// before register allocation.
+static unsigned getAllocatedOccupancy(const MachineFunction &MF,
+                                      const GCNSubtarget &ST) {
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  unsigned NumVGPRs = TRI->getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass,
+                                              /*IncludeCalls=*/false);
+  unsigned NumAGPRs = TRI->getNumUsedPhysRegs(MRI, AMDGPU::AGPR_32RegClass,
+                                              /*IncludeCalls=*/false);
+  unsigned Total =
+      AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), NumAGPRs, NumVGPRs);
+  return std::min(
+      MFI->getOccupancy(),
+      ST.getOccupancyWithNumVGPRs(Total, MFI->getDynamicVGPRBlockSize()));
+}
+
+// A SIMD can co-issue VALUs of two waves (see GFX9VALUCoexecClass). Assuming
+// that the waves run the same code, while the older wave issues a sequence S
+// of VALUs, a younger wave's next VALU X stalls unless X can be co-issued
+// with S, and so do the VALUs S' that follow X, even if S' could be co-issued
+// with S, until the older wave issues a VALU next to which X can be co-issued
+// or a non-VALU instruction. An s_nop 0 in the older wave lets the younger wave
+// issue X while the older wave issues the s_nop 0. It is inserted between a
+// VALU X and an immediately following sequence S' of VALUs if 1) X is of
+// younger class B or C, 2) S' starts with at least 2 VALUs of younger class A,
+// to amortize the s_nop 0, and 3) S' has at least
+// -amdgpu-gfx9-cross-wave-valu-coexec-opt-threshold VALUs of older class A or B
+// before the first VALU with which X can be co-issued. It is inserted only
+// outside MFMA shadows and when the occupancy is not known to be 1.
+//
+// This is applied only to relatively small loops (see MaxLoopInstrs) whose
+// bodies consist mostly of VALUs that are likely to be co-issued (see
+// MinOlderABPct and MinYoungerAPct), where unblocking the younger wave's class
+// B or C VALU pays off on every iteration. Loops are processed from the
+// innermost outward, and a loop is skipped if s_nop 0 has been inserted into
+// one of its subloops.
+bool SIPreEmitPeephole::optimizeGFX9CrossWaveVALUCoexec(
+    MachineFunction &MF) const {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const unsigned MinBlockingVALUs =
+      ST.getCLOpts().gfx9_cross_wave_valu_coexec_opt_threshold;
+  if (!MinBlockingVALUs || !ST.hasGFX9CrossWaveVALUCoexecution() || !MLI ||
+      MLI->empty() || getAllocatedOccupancy(MF, ST) < 2)
+    return false;
+
+  // Very rough ballpark values that work for the cases measured so far. They
+  // can be adjusted up or down as needed.
+  static constexpr unsigned MinOlderABPct = 70;
+  static constexpr unsigned MinYoungerAPct = 50;
+  static constexpr unsigned MaxLoopInstrs = 500;
+
+  // Returns std::nullopt if L has too many instructions, otherwise whether L is
+  // a loop as described above.
+  auto IsCoexecLoop = [&](const MachineLoop &L) -> std::optional<bool> {
+    unsigned NumInstrs = 0, NumOlderAB = 0, NumYoungerA = 0;
+    for (const MachineBasicBlock *MBB : L.blocks()) {
+      for (const MachineInstr &MI : MBB->instrs()) {
+        if (MI.isMetaInstruction() || MI.isBundle())
+          continue;
+        if (++NumInstrs > MaxLoopInstrs)
+          return std::nullopt;
+        if (!SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false) ||
+            SIInstrInfo::isMFMA(MI))
+          continue;
+        if (canCoissueGFX9VALUs(GFX9VALUCoexecClass::A,
+                                getGFX9OlderVALUClass(MI, ST)))
+          ++NumOlderAB;
+        if (getGFX9YoungerVALUClass(MI, ST) == GFX9VALUCoexecClass::A)
+          ++NumYoungerA;
+      }
+    }
+    return NumOlderAB * 100 >= NumInstrs * MinOlderABPct &&
+           NumYoungerA * 100 >= NumInstrs * MinYoungerAPct;
+  };
+
+  SmallVector<MachineInstr *, 16> InsertPts;
+  // The older class of each VALU in the current VALU sequence.
+  SmallVector<GFX9VALUCoexecClass, 64> VALUSeq;
+  // Candidate insertion points in the current VALU sequence: the first of at
+  // least 2 younger class A VALUs immediately following a VALU X of another
+  // younger class, its index in VALUSeq, and the younger class of X.
+  struct Candidate {
+    MachineInstr *MI;
+    size_t Idx;
+    GFX9VALUCoexecClass XClass;
+  };
+  SmallVector<Candidate, 4> Candidates;
+  auto CloseVALUSeq = [&]() {
+    for (const Candidate &C : Candidates) {
+      unsigned NumBlocking = 0;
+      for (GFX9VALUCoexecClass OC : drop_begin(VALUSeq, C.Idx)) {
+        if (NumBlocking >= MinBlockingVALUs ||
+            canCoissueGFX9VALUs(C.XClass, OC))
+          break;
+        if (canCoissueGFX9VALUs(GFX9VALUCoexecClass::A, OC))
+          ++NumBlocking;
+      }
+      if (NumBlocking >= MinBlockingVALUs)
+        InsertPts.push_back(C.MI);
+    }
+    Candidates.clear();
+    VALUSeq.clear();
+  };
+  const TargetSchedModel &SchedModel = TII->getSchedModel();
+  auto GetPasses = [&](const MachineInstr &MI) -> unsigned {
+    const MCSchedClassDesc *SC = SchedModel.resolveSchedClass(&MI);
+    const MCWriteProcResEntry *WPR = SchedModel.getWriteProcResBegin(SC);
+    return WPR != SchedModel.getWriteProcResEnd(SC) ? WPR->ReleaseAtCycle : 1;
+  };
+  // VALUs issued within the expected duration of an MFMA are not part of a
+  // VALU sequence, so that the wave's own VALUs that execute alongside the
+  // MFMA, which is more predictable than cross-wave co-issue, are left
+  // undisturbed.
+  unsigned MFMAPassesLeft = 0;
+  // The younger class of the previous VALU if it is not A. VALU sequences end
+  // at block boundaries, but such a VALU at the end of a block that falls
+  // through still precedes the younger class A VALUs at the start of the next
+  // block.
+  std::optional<GFX9VALUCoexecClass> PrevXClass;
+  auto ScanBlock = [&](MachineBasicBlock &MBB) {
+    // After a VALU X whose younger class is not A, the first instruction of the
+    // immediately following sequence of younger class A VALUs, the length of
+    // that sequence so far, and the younger class of X.
+    MachineInstr *ASeqStart = nullptr;
+    unsigned ASeqLen = 0;
+    GFX9VALUCoexecClass ASeqXClass = GFX9VALUCoexecClass::B;
+    for (MachineInstr &MI : MBB.instrs()) {
+      if (MI.isMetaInstruction() || MI.isBundle())
+        continue;
+      bool InMFMAShadow = MFMAPassesLeft > 0;
+      bool IsMFMA = SIInstrInfo::isMFMA(MI);
+      if (IsMFMA)
+        MFMAPassesLeft = std::max(MFMAPassesLeft, GetPasses(MI));
+      else if (InMFMAShadow)
+        MFMAPassesLeft -= std::min(MFMAPassesLeft, GetPasses(MI));
+      if (!SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false) || IsMFMA ||
+          InMFMAShadow) {
+        CloseVALUSeq();
+        PrevXClass.reset();
+        ASeqStart = nullptr;
+        continue;
+      }
+      GFX9VALUCoexecClass YC = getGFX9YoungerVALUClass(MI, ST);
+      VALUSeq.push_back(getGFX9OlderVALUClass(MI, ST));
+      if (YC != GFX9VALUCoexecClass::A || MI.isInsideBundle()) {
+        ASeqStart = nullptr;
+      } else if (PrevXClass) {
+        ASeqStart = &MI;
+        ASeqLen = 0;
+        ASeqXClass = *PrevXClass;
+      }
+      if (ASeqStart && ++ASeqLen == 2)
+        Candidates.push_back({ASeqStart, VALUSeq.size() - 2, ASeqXClass});
+      if (YC != GFX9VALUCoexecClass::A)
+        PrevXClass = YC;
+      else
+        PrevXClass.reset();
+    }
+    CloseVALUSeq();
+  };
+
+  // Subloops come before the loops containing them. The blocks of a loop L that
+  // are not in a subloop of L are scanned in layout order unless processing of
+  // L is given up. Processing of the loops containing L is given up if s_nop 0
+  // is inserted into L or a subloop of L, or if L is too large.
+  SmallPtrSet<const MachineLoop *, 8> GivenUp;
+  SmallVector<MachineBasicBlock *, 16> Blocks;
+  SmallVector<MachineLoop *, 4> Loops = MLI->getLoopsInPreorder();
+  for (MachineLoop *L : reverse(Loops)) {
+    if (any_of(L->getSubLoops(),
+               [&](const MachineLoop *Sub) { return GivenUp.contains(Sub); })) {
+      GivenUp.insert(L);
+      continue;
+    }
+    std::optional<bool> IsCoexec = IsCoexecLoop(*L);
+    if (!IsCoexec) {
+      GivenUp.insert(L);
+      continue;
+    }
+    if (!*IsCoexec)
+      continue;
+    Blocks.clear();
+    for (MachineBasicBlock *MBB : L->blocks())
+      if (MLI->getLoopFor(MBB) == L)
+        Blocks.push_back(MBB);
+    llvm::sort(Blocks,
+               [](const MachineBasicBlock *A, const MachineBasicBlock *B) {
+                 return A->getNumber() < B->getNumber();
+               });
+    size_t NumInsertPts = InsertPts.size();
+    const MachineBasicBlock *Prev = nullptr;
+    for (MachineBasicBlock *MBB : Blocks) {
+      // The blocks in between are not scanned. An MFMA shadow extending from
+      // them can only make an s_nop 0 useless.
+      if (!Prev || MBB->getPrevNode() != Prev) {
+        MFMAPassesLeft = 0;
+        PrevXClass.reset();
+      }
+      ScanBlock(*MBB);
+      Prev = MBB;
+    }
+    if (InsertPts.size() > NumInsertPts)
+      GivenUp.insert(L);
+  }
+
+  for (MachineInstr *MI : InsertPts)
+    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII->get(AMDGPU::S_NOP))
+        .addImm(0);
+  return !InsertPts.empty();
+}
+
 bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
@@ -931,6 +1218,8 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
     if (!InstrsToUnpack.empty())
       Changed = true;
   }
+
+  Changed |= optimizeGFX9CrossWaveVALUCoexec(MF);
 
   return Changed;
 }
