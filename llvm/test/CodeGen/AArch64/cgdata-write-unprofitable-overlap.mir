@@ -1,0 +1,116 @@
+# RUN: llc -mtriple=aarch64-apple-darwin -enable-machine-outliner \
+# RUN:   -start-before=machine-outliner -codegen-data-generate \
+# RUN:   -machine-outliner-publish-unprofitable-candidates \
+# RUN:   -verify-machineinstrs -filetype=obj %s -o %t.o
+# RUN: llvm-cgdata --merge %t.o -o %t.local.cgdata
+# RUN: llvm-cgdata --convert --format text %t.local.cgdata -o - | \
+# RUN:   FileCheck %s --check-prefix=COUNT-TWO \
+# RUN:   --implicit-check-not='Terminals: {{[1-9]}}'
+# RUN: llvm-cgdata --merge %t.o %t.o -o %t.global.cgdata
+# RUN: llvm-cgdata --convert --format text %t.global.cgdata -o - | \
+# RUN:   FileCheck %s --check-prefix=COUNT-FOUR \
+# RUN:   --implicit-check-not='Terminals: {{[1-9]}}'
+# RUN: llc -mtriple=aarch64-apple-darwin -enable-machine-outliner \
+# RUN:   -start-before=machine-outliner -codegen-data-use-path=%t.global.cgdata \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=READ
+#
+# A-B-C has two sites, and B-C has three, including the two nested sites. If
+# both groups were published, merging two copies would give counts of four
+# and six. Read mode would outline A-B-C first, leaving only two B-C sites
+# globally. Outlining those B-C sites costs 2*4 + (8+4) = 20 bytes instead of
+# 2*8 = 16, even with one folded helper, despite the stale count of six.
+#
+# Suppress both conflicting groups, including B-C's standalone site. The
+# independent D-E group still publishes two sites and becomes profitable at
+# a merged count of four. Check actual Read-mode selection, not just counts.
+#
+# COUNT-TWO: Terminals:       2
+# COUNT-FOUR: Terminals:       4
+#
+# READ-LABEL: _abc1:
+# READ: orr w0, wzr, #0x3
+# READ-NEXT: orr w1, wzr, #0x7
+# READ-NEXT: orr w2, wzr, #0xf
+# READ-NEXT: ; InlineAsm Start
+# READ-LABEL: _abc2:
+# READ: orr w0, wzr, #0x3
+# READ-NEXT: orr w1, wzr, #0x7
+# READ-NEXT: orr w2, wzr, #0xf
+# READ-NEXT: ; InlineAsm Start
+# READ-LABEL: _bc:
+# READ: orr w1, wzr, #0x7
+# READ-NEXT: orr w2, wzr, #0xf
+# READ-NEXT: ; InlineAsm Start
+# READ-LABEL: _de1:
+# READ: bl _OUTLINED_FUNCTION_0.content.
+# READ-LABEL: _de2:
+# READ: bl _OUTLINED_FUNCTION_1.content.
+# READ-LABEL: _OUTLINED_FUNCTION_0.content.{{[0-9]+}}:
+# READ: orr w3, wzr, #0x1f
+# READ-NEXT: orr w4, wzr, #0x3f
+# READ-NEXT: ret
+# READ-LABEL: _OUTLINED_FUNCTION_1.content.{{[0-9]+}}:
+# READ: orr w3, wzr, #0x1f
+# READ-NEXT: orr w4, wzr, #0x3f
+# READ-NEXT: ret
+# READ-NOT: OUTLINED_FUNCTION
+
+--- |
+  define void @abc1() noredzone { unreachable }
+  define void @abc2() noredzone { unreachable }
+  define void @bc() noredzone { unreachable }
+  define void @de1() noredzone { unreachable }
+  define void @de2() noredzone { unreachable }
+...
+---
+name: abc1
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 2
+    $w2 = ORRWri $wzr, 3
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
+---
+name: abc2
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 2
+    $w2 = ORRWri $wzr, 3
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
+---
+name: bc
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w1 = ORRWri $wzr, 2
+    $w2 = ORRWri $wzr, 3
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
+---
+name: de1
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w3 = ORRWri $wzr, 4
+    $w4 = ORRWri $wzr, 5
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
+---
+name: de2
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w3 = ORRWri $wzr, 4
+    $w4 = ORRWri $wzr, 5
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
