@@ -288,6 +288,9 @@ defm : ValueField<"amdgpu-inline-arg-alloca-cost", "unsigned", "4000",
 // heuristic.
 defm : ValueField<"amdgpu-inline-arg-alloca-cutoff", "unsigned", "256",
   "Maximum alloca size to use for inline cost">;
+// Bound the per-access LDS bonus to limit code growth.
+defm : ValueField<"amdgpu-inline-arg-lds-cost", "unsigned", "500",
+  "Maximum inline threshold bonus for generic accesses to LDS arguments">;
 // Inliner constraint to achieve reasonable compilation time.
 defm : ValueField<"amdgpu-inline-max-bb", "size_t", "1100",
   "Maximum number of BBs allowed in a function after inlining (compile time constraint)">;
