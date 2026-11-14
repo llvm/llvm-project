@@ -13,7 +13,7 @@
 #include "DXILWriterPass.h"
 #include "DXILBitcodeWriter.h"
 #include "DirectX.h"
-#include "MCTargetDesc/DirectXContainerObjectWriter.h"
+#include "MCTargetDesc/DirectXMCOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
@@ -30,17 +30,11 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Alignment.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 using namespace llvm::dxil;
-
-cl::opt<bool> dxil::SourceInDebugModule(
-    "dx-source-in-debug-module",
-    cl::desc("Embed source code into debug module on DirectX target"),
-    cl::init(false));
 
 namespace {
 class DXILWriterLegacy : public llvm::ModulePass {
@@ -173,13 +167,14 @@ public:
 };
 } // namespace
 
-static std::string writeModule(Module &M, bool HasDebugInfo, bool WriteDebug) {
+static std::string writeModule(const DirectXMCOptions &Opts, Module &M,
+                               bool HasDebugInfo, bool WriteDebug) {
   std::string Data;
   llvm::raw_string_ostream OS(Data);
 
   if (HasDebugInfo) {
     if (WriteDebug) {
-      if (!SourceInDebugModule) {
+      if (!Opts.source_in_debug_module) {
         // Replace dx.source metadata nodes with stubs.
         LLVMContext &Ctx = M.getContext();
         MDString *EmptyString = MDString::get(Ctx, "");
@@ -241,12 +236,13 @@ static bool runEmbedderOnModule(Module &M) {
 
   bool HasDebugInfo = !M.debug_compile_units().empty();
 
-  if (SlimDebug && EmbedDebug)
+  const auto &Opts = M.getContext().getLibraryOptions().get<DirectXMCOptions>();
+  if (Opts.slim_debug && Opts.embed_debug)
     reportFatalUsageError("/Qembed_debug is not compatible with /Zs");
-  if (!HasDebugInfo && EmbedDebug)
+  if (!HasDebugInfo && Opts.embed_debug)
     reportFatalUsageError(
         "Missing debug info for embedding into the container");
-  if (!HasDebugInfo && !PdbDebugPath.empty())
+  if (!HasDebugInfo && !Opts.pdb_path.empty())
     reportFatalUsageError("Missing debug info for writing to the PDB file");
 
   std::string ILDBData;
@@ -254,14 +250,14 @@ static bool runEmbedderOnModule(Module &M) {
     // Write DXIL with debug info to ILDB part.
     // Clone the module to avoid alternating it with DebugInfoPass
     // before stripping the debug info later.
-    ILDBData =
-        writeModule(*llvm::CloneModule(M), HasDebugInfo, /*WriteDebug=*/true);
+    ILDBData = writeModule(Opts, *llvm::CloneModule(M), HasDebugInfo,
+                           /*WriteDebug=*/true);
   }
 
   // Clone the module to save dx.source metadata nodes from stripping, as they
   // are needed for DXILMetadataAnalysisWrapperPass.
-  std::string DXILData =
-      writeModule(*llvm::CloneModule(M), HasDebugInfo, /*WriteDebug=*/false);
+  std::string DXILData = writeModule(Opts, *llvm::CloneModule(M), HasDebugInfo,
+                                     /*WriteDebug=*/false);
 
   // We no longer need lifetime intrinsics after bitcode serialization, so we
   // simply remove them to keep the Module Verifier happy after our

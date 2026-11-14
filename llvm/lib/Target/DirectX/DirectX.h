@@ -13,13 +13,8 @@
 
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
-namespace dxil {
-extern cl::opt<bool> PdbInPrivate;
-} // namespace dxil
-
 class AttributeMask;
 class Function;
 class FunctionPass;
