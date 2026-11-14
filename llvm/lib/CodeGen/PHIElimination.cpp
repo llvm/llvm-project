@@ -16,7 +16,6 @@
 #include "PHIEliminationUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/LiveInterval.h"
@@ -30,6 +29,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
@@ -110,9 +110,32 @@ class PHIEliminationImpl {
   // Count the number of non-undef PHI uses of each register in each BB.
   VRegPHIUse VRegPHIUseCount;
 
-  // PHI source registers whose subranges must be shrunk to their own uses once
-  // all PHIs are gone.
-  SmallSet<Register, 8> PHISrcRegsToShrink;
+  struct PHISrcLaneKill {
+    LaneBitmask Lanes;
+    SlotIndex Index;
+  };
+
+  using PHISrcLaneKillMap =
+      DenseMap<BBVRegPair, SmallVector<PHISrcLaneKill, 2>>;
+
+  // Copies are not always inserted in index order, so keep the kills sorted
+  // to find the latest read of a lane by searching from the back.
+  static void addPHISrcLaneKill(SmallVectorImpl<PHISrcLaneKill> &Kills,
+                                LaneBitmask Lanes, SlotIndex Index) {
+    auto It = Kills.end();
+    if (!Kills.empty() && Index < Kills.back().Index) {
+      It = upper_bound(Kills, Index,
+                       [](SlotIndex Idx, const PHISrcLaneKill &Kill) {
+                         return Idx < Kill.Index;
+                       });
+    }
+
+    Kills.insert(It, {Lanes, Index});
+  }
+
+  // Index of each PHI source copy inserted in a BB, and the lanes of the
+  // source register it reads.
+  PHISrcLaneKillMap PHISrcLaneKills;
 
   // Defs of PHI sources which are implicit_def.
   SmallPtrSet<MachineInstr *, 4> ImpDefs;
@@ -273,20 +296,9 @@ bool PHIEliminationImpl::run(MachineFunction &MF) {
   }
 
   LoweredPHIs.clear();
-
-  // Different lanes may be used by different PHI source copies, or may already
-  // be dead in a predecessor. The main range's last use is therefore not a
-  // valid endpoint for every subrange. Wait until all PHIs have been removed
-  // before shrinking subranges to their remaining lane-specific uses.
-  for (Register Reg : PHISrcRegsToShrink) {
-    LiveInterval &LI = LIS->getInterval(Reg);
-    for (LiveInterval::SubRange &SR : LI.subranges())
-      LIS->shrinkToUses(SR, Reg);
-  }
-  PHISrcRegsToShrink.clear();
-
   ImpDefs.clear();
   VRegPHIUseCount.clear();
+  PHISrcLaneKills.clear();
 
   MF.getProperties().setNoPHIs();
 
@@ -390,6 +402,7 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
   // into the phi node destination.
   MachineInstr *PHICopy = nullptr;
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+  const TargetRegisterInfo &TRI = TII->getRegisterInfo();
   if (allPhiOperandsUndefined(*MPhi, *MRI))
     // If all sources of a PHI node are implicit_def or undef uses, just emit an
     // implicit_def instead of a copy.
@@ -589,6 +602,9 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
       }
     }
 
+    BBVRegPair SrcKey(opBlock.getNumber(), SrcReg);
+    bool IsLastPHIUse = !VRegPHIUseCount.lookup(SrcKey);
+
     if (SI && NewSrcInstr)
       SI->insertMachineInstrInMaps(*NewSrcInstr);
 
@@ -598,13 +614,16 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
             SI &&
             "Expected SI to be available to insert new MI if LIS is available");
         LIS->addSegmentToEndOfBlock(IncomingReg, *NewSrcInstr);
+
+        if (!SrcUndef && LIS->getInterval(SrcReg).hasSubRanges()) {
+          addPHISrcLaneKill(
+              PHISrcLaneKills[SrcKey], TRI.getSubRegIndexLaneMask(SrcSubReg),
+              LIS->getInstructionIndex(*NewSrcInstr).getRegSlot());
+        }
       }
 
-      if (!SrcUndef &&
-          !VRegPHIUseCount[BBVRegPair(opBlock.getNumber(), SrcReg)]) {
+      if (!SrcUndef && IsLastPHIUse) {
         LiveInterval &SrcLI = LIS->getInterval(SrcReg);
-        if (SrcLI.hasSubRanges())
-          PHISrcRegsToShrink.insert(SrcReg);
 
         bool isLiveOut = false;
         for (MachineBasicBlock *Succ : opBlock.successors()) {
@@ -618,12 +637,42 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
           }
         }
 
+        PHISrcLaneKillMap::iterator KillsIt = PHISrcLaneKills.end();
+        if (SrcLI.hasSubRanges())
+          KillsIt = PHISrcLaneKills.find(SrcKey);
+
         if (!isLiveOut) {
+          auto RecordLaneKill = [&](MachineInstr &MI) {
+            addPHISrcLaneKill(
+                KillsIt->second,
+                AnalyzeVirtRegLanesInBundle(MI, SrcReg, *MRI, TRI).first,
+                LIS->getInstructionIndex(MI).getRegSlot());
+          };
+
+          // Each lane dies at its own last read, which can be earlier than the
+          // last read of the whole register, so record a kill for every read
+          // after the first inserted copy, not just for the last one. A copy
+          // for a landing pad goes before the call, so this can include
+          // ordinary instructions and the copies themselves.
+          MachineBasicBlock::iterator ScanStart = InsertPos;
+          if (KillsIt != PHISrcLaneKills.end()) {
+            SlotIndex FirstCopyIndex = KillsIt->second.front().Index;
+            if (InsertPos == opBlock.end() ||
+                FirstCopyIndex <= SI->getIndexBefore(*InsertPos).getRegSlot()) {
+              ScanStart = std::next(MachineBasicBlock::iterator(
+                  LIS->getInstructionFromIndex(FirstCopyIndex)));
+            }
+          }
+
           MachineBasicBlock::iterator KillInst = opBlock.end();
-          for (MachineBasicBlock::iterator Term = InsertPos;
-               Term != opBlock.end(); ++Term) {
-            if (Term->readsRegister(SrcReg, /*TRI=*/nullptr))
-              KillInst = Term;
+          for (MachineBasicBlock::iterator MI = ScanStart; MI != opBlock.end();
+               ++MI) {
+            if (MI->isDebugInstr() ||
+                !MI->readsRegister(SrcReg, /*TRI=*/nullptr))
+              continue;
+            KillInst = MI;
+            if (KillsIt != PHISrcLaneKills.end())
+              RecordLaneKill(*MI);
           }
 
           if (KillInst == opBlock.end()) {
@@ -639,8 +688,10 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
                 if (KillInst->readsRegister(SrcReg, /*TRI=*/nullptr))
                   break;
               }
+              if (KillsIt != PHISrcLaneKills.end())
+                RecordLaneKill(*KillInst);
             } else {
-              // We just inserted this copy.
+              // We just inserted this copy, and its lanes are already recorded.
               KillInst = std::prev(InsertPos);
             }
           }
@@ -648,9 +699,30 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
                  "Cannot find kill instruction");
 
           SlotIndex LastUseIndex = LIS->getInstructionIndex(*KillInst);
-          SrcLI.removeSegment(LastUseIndex.getRegSlot(),
-                              LIS->getMBBEndIdx(&opBlock));
+          SlotIndex BlockEndIndex = LIS->getMBBEndIdx(&opBlock);
+          SrcLI.removeSegment(LastUseIndex.getRegSlot(), BlockEndIndex);
+          if (KillsIt != PHISrcLaneKills.end()) {
+            for (LiveInterval::SubRange &SR : SrcLI.subranges()) {
+              LiveQueryResult LRQ = SR.Query(LastUseIndex);
+              if (!LRQ.valueOut())
+                continue;
+
+              // The segment can continue past this block when another
+              // predecessor reads the lane; only trim the part in opBlock.
+              SlotIndex EndIndex = std::min(LRQ.endPoint(), BlockEndIndex);
+              for (const PHISrcLaneKill &Kill : reverse(KillsIt->second)) {
+                if ((Kill.Lanes & SR.LaneMask).any()) {
+                  if (Kill.Index < EndIndex)
+                    SR.removeSegment(Kill.Index, EndIndex);
+                  break;
+                }
+              }
+            }
+          }
         }
+
+        if (KillsIt != PHISrcLaneKills.end())
+          PHISrcLaneKills.erase(KillsIt);
       }
     }
   }
