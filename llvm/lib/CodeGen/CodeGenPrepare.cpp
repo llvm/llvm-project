@@ -4391,8 +4391,8 @@ private:
         // It must be a Phi node then.
         PHINode *CurrentPhi = cast<PHINode>(Current);
         unsigned PredCount = CurrentPhi->getNumIncomingValues();
-        PHINode *PHI = PHINode::Create(CommonType, PredCount, "sunk_phi",
-                                       CurrentPhi->getIterator());
+        PHINode *PHI =
+            PHINode::Create(CommonType, PredCount, "sunk_phi", CurrentPhi->getIterator());
         Map[Current] = PHI;
         ST.insertNewPhi(PHI);
         append_range(Worklist, CurrentPhi->incoming_values());
@@ -5095,9 +5095,9 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     // Try to match an integer constant second to increase its chance of ending
     // up in `BaseOffs`, resp. decrease its chance of ending up in `BaseReg`.
     int First = 0, Second = 1;
-    if (isa<ConstantInt>(AddrInst->getOperand(First)) &&
-        !isa<ConstantInt>(AddrInst->getOperand(Second)))
-      std::swap(First, Second);
+    if (isa<ConstantInt>(AddrInst->getOperand(First))
+      && !isa<ConstantInt>(AddrInst->getOperand(Second)))
+        std::swap(First, Second);
     AddrMode.InBounds = false;
     if (matchAddr(AddrInst->getOperand(First), Depth + 1) &&
         matchAddr(AddrInst->getOperand(Second), Depth + 1))
@@ -5178,9 +5178,9 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     if (VariableOperand == -1) {
       AddrMode.BaseOffs += ConstantOffset;
       if (matchAddr(AddrInst->getOperand(0), Depth + 1)) {
-        if (!cast<GEPOperator>(AddrInst)->isInBounds())
-          AddrMode.InBounds = false;
-        return true;
+          if (!cast<GEPOperator>(AddrInst)->isInBounds())
+            AddrMode.InBounds = false;
+          return true;
       }
       AddrMode.BaseOffs -= ConstantOffset;
 
