@@ -22,8 +22,8 @@ define amdgpu_kernel void @call_without_ptr_args(ptr addrspace(1) noalias %out, 
 ; CHECK-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @memory_read_no_ptr_args(), !noalias [[META1:![0-9]+]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[IN_LOAD]], i32 [[VAL]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[GEP]], align 4, !alias.scope [[META5:![0-9]+]], !noalias [[META6:![0-9]+]]
-; CHECK-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT_LOAD]], align 4, !alias.scope [[META6]], !noalias [[META5]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[GEP]], align 4, !alias.scope [[META5:![0-9]+]]
+; CHECK-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT_LOAD]], align 4, !alias.scope [[META6:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %val = call i32 @memory_read_no_ptr_args()
@@ -68,8 +68,8 @@ define amdgpu_kernel void @argmemonly_call_without_ptr_args(ptr addrspace(1) noa
 ; CHECK-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @argmemonly_read_no_ptr_args(), !noalias [[META10:![0-9]+]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[IN_LOAD]], i32 [[VAL]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[GEP]], align 4, !alias.scope [[META14:![0-9]+]], !noalias [[META15:![0-9]+]]
-; CHECK-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT_LOAD]], align 4, !alias.scope [[META15]], !noalias [[META14]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[GEP]], align 4, !alias.scope [[META14:![0-9]+]]
+; CHECK-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT_LOAD]], align 4, !alias.scope [[META15:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %val = call i32 @argmemonly_read_no_ptr_args()
@@ -92,9 +92,9 @@ define amdgpu_kernel void @argmemonly_call_with_ptr_arg(ptr addrspace(1) noalias
 ; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ARGMEMONLY_CALL_WITH_PTR_ARG_KERNARG_SEGMENT]], i64 8
 ; CHECK-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN_LOAD]], align 4, !alias.scope [[META16:![0-9]+]], !noalias [[META19:![0-9]+]]
-; CHECK-NEXT:    call void @argmemonly_with_ptr_arg(ptr addrspace(1) [[OUT_LOAD]]), !alias.scope [[META19]], !noalias [[META16]]
-; CHECK-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT_LOAD]], align 4, !alias.scope [[META19]], !noalias [[META16]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN_LOAD]], align 4, !alias.scope [[META16:![0-9]+]]
+; CHECK-NEXT:    call void @argmemonly_with_ptr_arg(ptr addrspace(1) [[OUT_LOAD]]), !alias.scope [[META19:![0-9]+]]
+; CHECK-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT_LOAD]], align 4, !alias.scope [[META19]]
 ; CHECK-NEXT:    ret void
 ;
   %load = load i32, ptr addrspace(1) %in, align 4
@@ -112,22 +112,22 @@ attributes #4 = { nounwind memory(argmem: readwrite) }
 ; CHECK: [[META0]] = !{}
 ; CHECK: [[META1]] = !{[[META2:![0-9]+]], [[META4:![0-9]+]]}
 ; CHECK: [[META2]] = distinct !{[[META2]], [[META3:![0-9]+]], !"out"}
-; CHECK: [[META3]] = distinct !{[[META3]], i1 false, !"call_without_ptr_args"}
+; CHECK: [[META3]] = distinct !{[[META3]], i1 true, !"call_without_ptr_args"}
 ; CHECK: [[META4]] = distinct !{[[META4]], [[META3]], !"in"}
 ; CHECK: [[META5]] = !{[[META4]]}
 ; CHECK: [[META6]] = !{[[META2]]}
 ; CHECK: [[META7]] = !{[[META8:![0-9]+]]}
 ; CHECK: [[META8]] = distinct !{[[META8]], [[META9:![0-9]+]], !"out"}
-; CHECK: [[META9]] = distinct !{[[META9]], i1 false, !"readnone_call_without_ptr_args"}
+; CHECK: [[META9]] = distinct !{[[META9]], i1 true, !"readnone_call_without_ptr_args"}
 ; CHECK: [[META10]] = !{[[META11:![0-9]+]], [[META13:![0-9]+]]}
 ; CHECK: [[META11]] = distinct !{[[META11]], [[META12:![0-9]+]], !"out"}
-; CHECK: [[META12]] = distinct !{[[META12]], i1 false, !"argmemonly_call_without_ptr_args"}
+; CHECK: [[META12]] = distinct !{[[META12]], i1 true, !"argmemonly_call_without_ptr_args"}
 ; CHECK: [[META13]] = distinct !{[[META13]], [[META12]], !"in"}
 ; CHECK: [[META14]] = !{[[META13]]}
 ; CHECK: [[META15]] = !{[[META11]]}
 ; CHECK: [[META16]] = !{[[META17:![0-9]+]]}
 ; CHECK: [[META17]] = distinct !{[[META17]], [[META18:![0-9]+]], !"in"}
-; CHECK: [[META18]] = distinct !{[[META18]], i1 false, !"argmemonly_call_with_ptr_arg"}
+; CHECK: [[META18]] = distinct !{[[META18]], i1 true, !"argmemonly_call_with_ptr_arg"}
 ; CHECK: [[META19]] = !{[[META20:![0-9]+]]}
 ; CHECK: [[META20]] = distinct !{[[META20]], [[META18]], !"out"}
 ;.
