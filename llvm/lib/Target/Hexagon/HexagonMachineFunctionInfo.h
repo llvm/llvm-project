@@ -43,6 +43,8 @@ class HexagonMachineFunctionInfo : public MachineFunctionInfo {
   bool HasEHReturn = false;
   MachineFrameInfo VTCMFrameInfo{Align(2048), false, false};
   DenseMap<int, int> VTCMMap;
+  // Size of the largest outgoing HLX argument area on the VTCM stack.
+  unsigned MaxVTCMCallFrameSize = 0;
   std::map<const MachineInstr*, unsigned> PacketInfo;
   virtual void anchor();
 
@@ -112,6 +114,11 @@ public:
   int64_t getMappedVTCMObjectOffset(int ObjectIdx) const {
     return VTCMFrameInfo.getObjectOffset(getMappedVTCMObjectIndex(ObjectIdx));
   }
+
+  unsigned getMaxVTCMCallFrameSize() const { return MaxVTCMCallFrameSize; }
+  void reserveVTCMCallFrame(unsigned Size) {
+    MaxVTCMCallFrameSize = std::max(MaxVTCMCallFrameSize, Size);
+  }
 };
 
 namespace yaml {
@@ -119,6 +126,7 @@ namespace yaml {
 /// Hexagon-specific MachineFunction properties for YAML serialization.
 struct HexagonFunctionInfo final : public yaml::MachineFunctionInfo {
   StringValue StackAlignBaseReg;
+  unsigned MaxVTCMCallFrameSize = 0;
 
   HexagonFunctionInfo() = default;
   HexagonFunctionInfo(const llvm::HexagonMachineFunctionInfo &MFI,
@@ -131,6 +139,7 @@ struct HexagonFunctionInfo final : public yaml::MachineFunctionInfo {
 template <> struct MappingTraits<HexagonFunctionInfo> {
   static void mapping(IO &YamlIO, HexagonFunctionInfo &MFI) {
     YamlIO.mapOptional("stackAlignBaseReg", MFI.StackAlignBaseReg);
+    YamlIO.mapOptional("maxVTCMCallFrameSize", MFI.MaxVTCMCallFrameSize, 0u);
   }
 };
 

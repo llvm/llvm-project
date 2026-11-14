@@ -56,5 +56,35 @@ define i32 @restore_boundary_tail_call(ptr %p, i32 %b) nounwind {
   ret i32 %r
 }
 
+;; A tail call from a leaf procedure saves %o7 in %g1 and has to restore it in
+;; the delay slot of the call, since the call writes %o7. The multiplication
+;; must not be moved after the restore, where it would take the delay slot.
+define void @leaf_tail_call(ptr %p, ptr %q, i32 %c) nounwind {
+; V8-LABEL: leaf_tail_call:
+; V8:       ! %bb.0:
+; V8-NEXT:    ld [%o0], %o0
+; V8-NEXT:    ld [%o1], %o1
+; V8-NEXT:    mov %o7, %g1
+; V8-NEXT:    smul %o0, %o1, %o1
+; V8-NEXT:    call ext
+; V8-NEXT:    mov %g1, %o7
+;
+; V9-LABEL: leaf_tail_call:
+; V9:       ! %bb.0:
+; V9-NEXT:    ld [%o0], %o0
+; V9-NEXT:    ldsw [%o1], %o1
+; V9-NEXT:    mov %o7, %g1
+; V9-NEXT:    sra %o0, 0, %o3
+; V9-NEXT:    mulx %o3, %o1, %o1
+; V9-NEXT:    call ext
+; V9-NEXT:    mov %g1, %o7
+  %x = load i32, ptr %p
+  %y = load i32, ptr %q
+  %z = mul i32 %x, %y
+  tail call void @ext(i32 %x, i32 %z, i32 %c)
+  ret void
+}
+
 declare void @g()
 declare i32 @h(i32, i32)
+declare void @ext(i32, i32, i32)

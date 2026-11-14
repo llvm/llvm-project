@@ -246,9 +246,11 @@ void getSpirvExtOperand(StringRef SpvExtensionArg, raw_ostream &out) {
 }
 
 SmallString<1024> getSpirvExtArg(ArrayRef<std::string> SpvExtensionArgs) {
-  if (SpvExtensionArgs.empty()) {
-    return StringRef("-spirv-ext=all");
-  }
+  // The backend uses any enabled extension it can, so `all` makes modules
+  // declare extensions that a Vulkan application may not have enabled.
+  const std::string DefaultExtension = "DXC";
+  if (SpvExtensionArgs.empty())
+    SpvExtensionArgs = ArrayRef<std::string>(DefaultExtension);
 
   llvm::SmallString<1024> LlvmOption;
   raw_svector_ostream out(LlvmOption);
@@ -265,7 +267,7 @@ SmallString<1024> getSpirvExtArg(ArrayRef<std::string> SpvExtensionArgs) {
 }
 
 bool isValidSPIRVExtensionName(const std::string &str) {
-  std::regex pattern("dxc|DXC|khr|KHR|SPV_[a-zA-Z0-9_]+");
+  std::regex pattern("dxc|DXC|khr|KHR|all|SPV_[a-zA-Z0-9_]+");
   return std::regex_match(str, pattern);
 }
 
