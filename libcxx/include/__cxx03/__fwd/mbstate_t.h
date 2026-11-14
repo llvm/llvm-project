@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___MBSTATE_T_H
-#define _LIBCPP___CXX03___MBSTATE_T_H
+#ifndef _LIBCPP___CXX03___FWD_MBSTATE_T_H
+#define _LIBCPP___CXX03___FWD_MBSTATE_T_H
 
 #include <__cxx03/__config>
 
@@ -16,16 +16,8 @@
 #  pragma GCC system_header
 #endif
 
-// The goal of this header is to provide mbstate_t without requiring all of
-// <uchar.h> or <wchar.h>. It's also used by the libc++ versions of <uchar.h>
-// and <wchar.h> to get mbstate_t when the C library doesn't provide <uchar.h>
-// or <wchar.h>, hence the #include_next of those headers instead of #include.
-// (e.g. if <wchar.h> isn't present in the C library, the libc++ <wchar.h>
-// will include this header. This header needs to not turn around and cyclically
-// include <__cxx03/wchar.h>, but fall through to <uchar.h>.)
-//
-// This does not define std::mbstate_t -- this only brings in the declaration
-// in the global namespace.
+// The goal of this header is to provide std::mbstate_t without requiring all
+// of <cuchar> or <cwchar>.
 
 // We define this here to support older versions of glibc <wchar.h> that do
 // not define this for clang. This is also set in libc++'s <wchar.h> header,
@@ -39,16 +31,26 @@
 #  define __NEED_mbstate_t
 #  include <bits/alltypes.h>
 #  undef __NEED_mbstate_t
+#elif defined(_LIBCPP_LIBC_LLVM_LIBC)
+#  include <llvm-libc-types/mbstate_t.h>
 #elif __has_include(<bits/types/mbstate_t.h>)
 #  include <bits/types/mbstate_t.h> // works on most Unixes
 #elif __has_include(<sys/_types/_mbstate_t.h>)
 #  include <sys/_types/_mbstate_t.h> // works on Darwin
-#elif !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS) && __has_include_next(<wchar.h>)
-#  include_next <wchar.h> // fall back to the C standard provider of mbstate_t
+#elif __has_include(<bits/mbstate_t.h>)
+#  include <bits/mbstate_t.h> // works for Android
+#elif __has_include_next(<wchar.h>)
+#  include_next <wchar.h> // use the C standard provider of mbstate_t if present
 #elif __has_include_next(<uchar.h>)
-#  include_next <uchar.h> // <uchar.h> is also required to make mbstate_t visible
+#  include_next <uchar.h> // Try <uchar.h> in absence of <wchar.h> for mbstate_t
 #else
-#  error "We don't know how to get the definition of mbstate_t without <wchar.h> on your platform."
+#  error "We don't know how to get the definition of mbstate_t on your platform."
 #endif
 
-#endif // _LIBCPP___CXX03___MBSTATE_T_H
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+using ::mbstate_t _LIBCPP_USING_IF_EXISTS;
+
+_LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP___CXX03___FWD_MBSTATE_T_H
