@@ -21,7 +21,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Timer.h"
 #include <memory>
-#include <utility>
 
 namespace llvm {
 
@@ -53,11 +52,6 @@ LLVM_ABI Timer *getPassTimer(Pass *);
 /// execution time. They collect timing info into individual timers as
 /// passes are being run.
 class TimePassesHandler {
-  /// Value of this type is capable of uniquely identifying pass invocations.
-  /// It is a pair of string Pass-Identifier (which for now is common
-  /// to all the instance of a given pass) + sequential invocation counter.
-  using PassInvocationID = std::pair<StringRef, unsigned>;
-
   /// Groups of timers for passes and analyses.
   TimerGroup &PassTG =
       NamedRegionTimer::getNamedTimerGroup(PassGroupName, PassGroupDesc);
