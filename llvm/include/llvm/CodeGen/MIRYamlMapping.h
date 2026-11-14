@@ -850,6 +850,7 @@ struct MachineFunction {
   bool FailsVerification = false;
   bool TracksDebugUserValues = false;
   bool UseDebugInstrRef = false;
+  bool UsesBlockArgs = false;
   std::vector<VirtualRegisterDefinition> VirtualRegisters;
   std::vector<MachineFunctionLiveIn> LiveIns;
   std::optional<std::vector<FlowStringValue>> CalleeSavedRegisters;
@@ -900,6 +901,7 @@ template <> struct MappingTraits<MachineFunction> {
     YamlIO.mapOptional("failsVerification", MF.FailsVerification, false);
     YamlIO.mapOptional("tracksDebugUserValues", MF.TracksDebugUserValues,
                        false);
+    YamlIO.mapOptional("usesBlockArgs", MF.UsesBlockArgs, false);
     YamlIO.mapOptional("registers", MF.VirtualRegisters,
                        std::vector<VirtualRegisterDefinition>());
     YamlIO.mapOptional("liveins", MF.LiveIns,
