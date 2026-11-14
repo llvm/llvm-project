@@ -1603,6 +1603,9 @@ TensorDescType::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
   if (rank == 0)
     return emitError() << "expected non-zero rank tensor";
 
+  if (mlir::ShapedType::isDynamicShape(shape))
+    return emitError() << "expected static shape";
+
   auto blockAttr = mlir::dyn_cast_if_present<BlockTensorDescAttr>(encoding);
   if (blockAttr) {
     MemorySpaceAttr memorySpaceAttr = blockAttr.getMemorySpace();
