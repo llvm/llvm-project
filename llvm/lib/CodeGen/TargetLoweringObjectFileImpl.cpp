@@ -2907,17 +2907,40 @@ void TargetLoweringObjectFileGOFF::initialize(MCContext &Ctx,
     FileName = FileName.substr(1, FileName.size() - 2);
   DefaultRootSDName = Twine(FileName).concat("#C").str();
   DefaultADAPRName = Twine(FileName).concat("#S").str();
+
+  // The CSECT names given with the module flags replace the default names.
+  bool HasCsectCodeName = false;
+  bool HasCsectStaticName = false;
+  if (auto *MD = dyn_cast_or_null<MDString>(M.getModuleFlag("zos_csect_code"));
+      MD && !MD->getString().empty()) {
+    DefaultRootSDName = MD->getString().str();
+    HasCsectCodeName = true;
+  }
+  if (auto *MD =
+          dyn_cast_or_null<MDString>(M.getModuleFlag("zos_csect_static"));
+      MD && !MD->getString().empty()) {
+    DefaultADAPRName = MD->getString().str();
+    HasCsectStaticName = true;
+  }
+
   MCSectionGOFF *RootSD =
       static_cast<MCSectionGOFF *>(TextSection)->getParent();
   MCSectionGOFF *ADAPR = static_cast<MCSectionGOFF *>(ADASection);
   RootSD->setName(DefaultRootSDName);
   ADAPR->setName(DefaultADAPRName);
+  if (HasCsectCodeName)
+    RootSD->setBindingScope(GOFF::ESD_BSC_Unspecified);
+  if (HasCsectStaticName)
+    ADAPR->setBindingScope(GOFF::ESD_BSC_Library);
   // Initialize the label for the text section.
   MCSymbolGOFF *TextLD = static_cast<MCSymbolGOFF *>(
       getContext().getOrCreateSymbol(RootSD->getName()));
   TextLD->setCodeData(GOFF::ESD_EXE_CODE);
   TextLD->setLinkage(GOFF::ESD_LT_XPLink);
-  TextLD->setExternal(false);
+  // MCSymbolGOFF::getBindingScope gives Library scope for a defined, external,
+  // hidden symbol, so external and hidden are set.
+  TextLD->setExternal(HasCsectCodeName);
+  TextLD->setHidden(HasCsectCodeName);
   TextLD->setWeak(false);
   TextLD->setADA(ADAPR);
   TextSection->setBeginSymbol(TextLD);

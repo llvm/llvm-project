@@ -232,7 +232,9 @@ void SystemZHLASMAsmStreamer::changeSection(MCSection *Section,
         if (BeginSym->getADA()) {
           emitXATTR(OS, BeginSym->getName(), BeginSym->getADA(),
                     /*IsIndirectReference=*/false, GOFF::ESD_LT_XPLink,
-                    GOFF::ESD_EXE_Unspecified, GOFF::ESD_BSC_Section);
+                    GOFF::ESD_EXE_Unspecified,
+                    BeginSym->isExternal() ? GOFF::ESD_BSC_Library
+                                           : GOFF::ESD_BSC_Section);
           OS << '\n';
         }
       }
