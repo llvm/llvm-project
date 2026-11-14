@@ -120,6 +120,7 @@
 #include <cctype>
 #include <forward_list>
 #include <map>
+#include <numeric>
 #include <set>
 
 using namespace llvm;
@@ -1349,11 +1350,12 @@ void AsmMatcherInfo::buildRegisterClasses(
     }
     const CodeGenRegisterClass *FromRC = Target.getRegBank().getRegClass(
         Def->getValueAsDef("CoerceFromRegClass"));
-    for (const Record *From : FromRC->getOrder()) {
+    // Iterate getMembers() so conversions are ordered by EnumValue.
+    for (const CodeGenRegister *From : FromRC->getMembers()) {
       const Record *To =
-          RegsByAsmName.lookup(From->getValueAsString("AsmName"));
-      if (To && To != From)
-        RegConversions[Def].push_back({From, To});
+          RegsByAsmName.lookup(From->TheDef->getValueAsString("AsmName"));
+      if (To && To != From->TheDef)
+        RegConversions[Def].push_back({From->TheDef, To});
     }
   }
 
@@ -2092,6 +2094,42 @@ getConverterOperandID(const std::string &Name,
   return ID;
 }
 
+static bool
+tryEmitLinearRegCoercion(CodeGenRegBank &RegBank, raw_ostream &OS,
+                         ArrayRef<AsmMatcherInfo::RegConversion> Conversions) {
+  if (Conversions.size() < 2)
+    return false;
+  auto getEnum = [&](const Record *R) { return RegBank.getReg(R)->EnumValue; };
+  unsigned FirstFrom = getEnum(Conversions[0].From);
+  unsigned FirstTo = getEnum(Conversions[0].To);
+  if (getEnum(Conversions[1].To) <= FirstTo)
+    return false;
+  unsigned FromStride = getEnum(Conversions[1].From) - FirstFrom;
+  unsigned ToStride = getEnum(Conversions[1].To) - FirstTo;
+  for (auto [Idx, C] : enumerate(Conversions))
+    if (getEnum(C.From) != FirstFrom + Idx * FromStride ||
+        getEnum(C.To) != FirstTo + Idx * ToStride)
+      return false;
+
+  std::string FirstFromName = getQualifiedName(Conversions.front().From);
+  std::string LastFromName = getQualifiedName(Conversions.back().From);
+  std::string FirstToName = getQualifiedName(Conversions.front().To);
+  OS << formatv("  assert(Reg.id() >= {0} && Reg.id() <= {1}", FirstFromName,
+                LastFromName);
+  if (FromStride > 1)
+    OS << formatv(" &&\n         (Reg.id() - {0}) % {1} == 0", FirstFromName,
+                  FromStride);
+  OS << " && \"unexpected register\");\n"
+     << formatv("  return {0} + (Reg.id() - {1})", FirstToName, FirstFromName);
+  unsigned G = std::gcd(FromStride, ToStride);
+  if (FromStride / G > 1)
+    OS << " / " << (FromStride / G);
+  if (ToStride / G > 1)
+    OS << " * " << (ToStride / G);
+  OS << ";\n";
+  return true;
+}
+
 static unsigned emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
                                  AsmMatcherInfo &Info, bool HasMnemonicFirst,
                                  bool HasOptionalOperands, raw_ostream &OS) {
@@ -2556,16 +2594,19 @@ static unsigned emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
 
   // Spit out the functions converting registers matched via CoerceFromRegClass.
   for (const Record *RC : CoercedRegClasses) {
+    ArrayRef<AsmMatcherInfo::RegConversion> Conversions =
+        Info.RegConversions.find(RC)->second;
     OS << "static MCRegister convertTo" << RC->getName()
-       << "(MCRegister Reg) {\n"
-       << "  switch (Reg.id()) {\n";
-    for (const AsmMatcherInfo::RegConversion &C :
-         Info.RegConversions.lookup(RC))
-      OS << "  case " << getQualifiedName(C.From) << ": return "
-         << getQualifiedName(C.To) << ";\n";
-    OS << "  default: llvm_unreachable(\"unexpected register\");\n"
-       << "  }\n"
-       << "}\n\n";
+       << "(MCRegister Reg) {\n";
+    if (!tryEmitLinearRegCoercion(Target.getRegBank(), OS, Conversions)) {
+      OS << "  switch (Reg.id()) {\n";
+      for (const AsmMatcherInfo::RegConversion &C : Conversions)
+        OS << "  case " << getQualifiedName(C.From) << ": return "
+           << getQualifiedName(C.To) << ";\n";
+      OS << "  default: llvm_unreachable(\"unexpected register\");\n"
+         << "  }\n";
+    }
+    OS << "}\n\n";
   }
 
   // Spit out the conversion driver function.
