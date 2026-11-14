@@ -914,6 +914,68 @@ void function_captured_ref_invalidated() {
 
 } // namespace callable_wrappers
 
+namespace lifetime_extended_temporary {
+
+// clear() destroys the elements, not the vector the reference refers to.
+void clear_preserves_automatic_reference() {
+  std::vector<int> &&v = std::vector<int>{1, 2};
+  v.clear();
+  use(v);
+}
+
+void clear_preserves_static_reference() {
+  static std::vector<int> &&v = std::vector<int>{1, 2};
+  v.clear();
+  use(v);
+}
+
+void clear_preserves_thread_local_reference() {
+  thread_local std::vector<int> &&v = std::vector<int>{1, 2};
+  v.clear();
+  use(v);
+}
+
+void clear_invalidates_static_iterator() {
+  static std::vector<int> &&v = std::vector<int>{1, 2}; // expected-warning {{temporary object is later invalidated}}
+  auto it = v.begin(); // expected-note {{result of call to 'begin' aliases the storage of temporary object}}
+  v.clear();          // expected-note {{temporary object is invalidated here}}
+  use(*it);           // expected-note {{later used here}}
+}
+
+void clear_invalidates_thread_local_iterator() {
+  thread_local std::vector<int> &&v = std::vector<int>{1, 2}; // expected-warning {{temporary object is later invalidated}}
+  auto it = v.begin(); // expected-note {{result of call to 'begin' aliases the storage of temporary object}}
+  v.clear();          // expected-note {{temporary object is invalidated here}}
+  use(*it);           // expected-note {{later used here}}
+}
+
+void clear_invalidates_nested_container_reference() {
+  std::vector<std::vector<int>> v{{1}, {2}};
+  std::vector<int> &r = v[0]; // expected-warning {{local variable 'v' is later invalidated}} \
+                             // expected-note {{result of call to 'operator[]' aliases the storage of local variable 'v' because the implicit object parameter is inferred as lifetimebound}}
+  v.clear();                 // expected-note {{local variable 'v' is invalidated here}}
+  use(r);                    // expected-note {{later used here}}
+}
+
+struct Node {
+  std::unique_ptr<Node> next;
+};
+
+void reset_invalidates_nested_owner_reference() {
+  static std::unique_ptr<Node> &&p = std::unique_ptr<Node>(new Node); // expected-warning {{temporary object is later invalidated}}
+  std::unique_ptr<Node> &r = p->next; // expected-note {{result of call to 'operator->' aliases the storage of temporary object}}
+  p.reset();                        // expected-note {{temporary object is invalidated here}}
+  use(r);                           // expected-note {{later used here}}
+}
+
+void destruction_invalidates_static_reference() {
+  static std::vector<int> &&v = std::vector<int>{1, 2}; // expected-warning {{temporary object is later invalidated}}
+  std::destroy_at(&v); // expected-note {{temporary object is invalidated here}}
+  use(v);             // expected-note {{later used here}}
+}
+
+} // namespace lifetime_extended_temporary
+
 // FIXME: does not report a double free
 namespace explicit_destructor {
 
