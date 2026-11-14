@@ -1,13 +1,15 @@
-// RUN: mlir-opt %s -split-input-file -test-vector-linearize -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s -split-input-file \
+// RUN:   -transform-preload-library='transform-library-paths=%p/td/linearize.mlir' \
+// RUN:   -transform-interpreter=entry-point=linearize -verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL: test_linearize
 // CHECK-SAME: (%[[ORIG_ARG:.*]]: vector<2x2xf32>)
 func.func @test_linearize(%arg0: vector<2x2xf32>) -> vector<2x2xf32> {
 
   // CHECK: %[[ARG:.*]] = vector.shape_cast %[[ORIG_ARG]] : vector<2x2xf32> to vector<4xf32>
-  // CHECK: %[[CST:.*]] = arith.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : vector<4xf32>
+  // CHECK: %[[CST:.*]] = arith.constant {test.marker} dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : vector<4xf32>
   // CHECK: %[[RES:.*]] = vector.shape_cast %[[CST]] : vector<4xf32> to vector<2x2xf32>
-  %0 = arith.constant dense<[[1.0, 2.0], [3.0, 4.0]]> : vector<2x2xf32>
+  %0 = arith.constant {test.marker} dense<[[1.0, 2.0], [3.0, 4.0]]> : vector<2x2xf32>
 
   // CHECK: %{{.*}} =  math.sin %[[ARG]] : vector<4xf32>
   %1 = math.sin %arg0 : vector<2x2xf32>

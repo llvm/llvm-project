@@ -14,9 +14,9 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/CFGToSCF.h"
 
@@ -139,22 +139,11 @@ FailureOr<Operation *>
 ControlFlowToSCFTransformation::createUnreachableTerminator(Location loc,
                                                             OpBuilder &builder,
                                                             Region &region) {
+  return ub::UnreachableOp::create(builder, loc).getOperation();
+}
 
-  // TODO: This should create a `ub.unreachable` op. Once such an operation
-  //       exists to make the pass independent of the func dialect. For now just
-  //       return poison values.
-  Operation *parentOp = region.getParentOp();
-  auto funcOp = dyn_cast<func::FuncOp>(parentOp);
-  if (!funcOp)
-    return emitError(loc, "Cannot create unreachable terminator for '")
-           << parentOp->getName() << "'";
-
-  return func::ReturnOp::create(
-             builder, loc,
-             llvm::map_to_vector(
-                 funcOp.getResultTypes(),
-                 [&](Type type) { return getUndefValue(loc, builder, type); }))
-      .getOperation();
+bool ControlFlowToSCFTransformation::isUnreachableTerminator(Operation *op) {
+  return isa<ub::UnreachableOp>(op);
 }
 
 namespace {
@@ -169,8 +158,8 @@ struct LiftControlFlowToSCF
 
     bool changed = false;
     Operation *op = getOperation();
-    WalkResult result = op->walk([&](func::FuncOp funcOp) {
-      if (funcOp.getBody().empty())
+    WalkResult result = op->walk([&](FunctionOpInterface funcOp) {
+      if (funcOp.getFunctionBody().empty())
         return WalkResult::advance();
 
       auto &domInfo = funcOp != op ? getChildAnalysis<DominanceInfo>(funcOp)

@@ -120,6 +120,7 @@ public:
   /// @}
 };
 
+struct AnalysisOptions;
 template <typename T> class ArrayRef;
 class DemandedBits;
 template <typename InstTy> class InterleaveGroup;
@@ -131,6 +132,16 @@ class Value;
 namespace Intrinsic {
 typedef unsigned ID;
 }
+
+/// The kind of update operation performed on the buckets of a histogram, i.e.
+/// buckets[indices[i]] = UpdateOp(buckets[indices[i]], Val).
+enum class HistogramUpdateKind {
+  Add,
+  Sub,
+  UAddSat,
+  UMax,
+  UMin,
+};
 
 /// Identify if the intrinsic is trivially vectorizable.
 /// This method returns true if the intrinsic's argument types are all scalars
@@ -165,6 +176,21 @@ LLVM_ABI bool
 isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx,
                                        const TargetTransformInfo *TTI);
 
+/// Returns the argument index of the pointer parameter for the vector memory
+/// intrinsic \p ID, or `std::nullopt` if the intrinsic does not have a pointer
+/// operand.
+LLVM_ABI std::optional<unsigned>
+getVectorMemoryIntrinsicPointerArgIdx(Intrinsic::ID ID);
+
+/// Returns the argument index of the data value of the vector store intrinsic
+/// \p ID, or `std::nullopt` if the intrinsic does not have a data operand.
+LLVM_ABI std::optional<unsigned>
+getVectorStoreIntrinsicDataArgIdx(Intrinsic::ID ID);
+
+/// Returns the argument index of the mask for the vector intrinsic \p ID, or
+/// `std::nullopt` if the intrinsic does not have a mask operand.
+LLVM_ABI std::optional<unsigned> getVectorIntrinsicMaskArgIdx(Intrinsic::ID ID);
+
 /// Identifies if the vector form of the intrinsic that returns a struct is
 /// overloaded at the struct element index \p RetIdx. /// \p TTI is used to
 /// consider target specific intrinsics, if no target specific intrinsics
@@ -177,6 +203,13 @@ LLVM_ABI bool isVectorIntrinsicWithStructReturnOverloadAtField(
 /// its intrinsic ID, in case it does not found it return not_intrinsic.
 LLVM_ABI Intrinsic::ID
 getVectorIntrinsicIDForCall(const CallInst *CI, const TargetLibraryInfo *TLI);
+
+/// Returns true if the vector llvm.sincos with \p ScalarTy elements and \p EC
+/// element count has no vector library mapping, but both llvm.sin and llvm.cos
+/// have, so it is split into the separate vector sin and cos library calls.
+LLVM_ABI bool shouldSplitVectorSinCos(const TargetLibraryInfo &TLI,
+                                      Type *ScalarTy, ElementCount EC,
+                                      Module *M);
 
 /// Returns the corresponding factor of llvm.vector.interleaveN intrinsics.
 LLVM_ABI unsigned getInterleaveIntrinsicFactor(Intrinsic::ID ID);
@@ -378,14 +411,9 @@ LLVM_ABI void getMetadataToPropagate(
     Instruction *Inst,
     SmallVectorImpl<std::pair<unsigned, MDNode *>> &Metadata);
 
-/// Specifically, let Kinds = [MD_tbaa, MD_alias_scope, MD_noalias, MD_fpmath,
-/// MD_nontemporal, MD_access_group, MD_mmra].
-/// For K in Kinds, we get the MDNode for K from each of the
-/// elements of VL, compute their "intersection" (i.e., the most generic
-/// metadata value that covers all of the individual values), and set I's
-/// metadata for M equal to the intersection value.
-///
-/// This function always sets a (possibly null) value for each K in Kinds.
+/// Propagate metadata that can be preserved after vectorization from \p VL to
+/// \p I, retaining only information valid for all sources and the destination.
+/// Return \p I.
 LLVM_ABI Instruction *propagateMetadata(Instruction *I, ArrayRef<Value *> VL);
 
 /// Create a mask that filters the members of an interleave group where there
@@ -663,11 +691,9 @@ private:
 /// between the member and the group in a map.
 class InterleavedAccessInfo {
 public:
-  InterleavedAccessInfo(PredicatedScalarEvolution &PSE, Loop *L,
-                        DominatorTree *DT, LoopInfo *LI,
-                        const LoopAccessInfo *LAI, bool OptForSize)
-      : PSE(PSE), TheLoop(L), DT(DT), LI(LI), LAI(LAI), OptForSize(OptForSize) {
-  }
+  LLVM_ABI InterleavedAccessInfo(PredicatedScalarEvolution &PSE, Loop *L,
+                                 DominatorTree *DT, LoopInfo *LI,
+                                 const LoopAccessInfo *LAI, bool OptForSize);
 
   ~InterleavedAccessInfo() { invalidateGroups(); }
 
@@ -729,6 +755,8 @@ public:
   bool hasGroups() const { return !InterleaveGroups.empty(); }
 
 private:
+  const AnalysisOptions &Opts;
+
   /// A wrapper around ScalarEvolution, used to add runtime SCEV checks.
   /// Simplifies SCEV expressions in the context of existing SCEV assumptions.
   /// The interleaved access analysis can also add new predicates (for example
@@ -812,11 +840,11 @@ private:
   /// Predicates if it is not nullptr.
   void collectConstStrideAccesses(
       MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
-      const DenseMap<Value *, const SCEV *> &Strides,
+      const SymbolicStrideMap &Strides,
       SmallVectorImpl<const SCEVPredicate *> *Predicates);
 
   /// Returns true if \p Stride is allowed in an interleaved group.
-  LLVM_ABI static bool isStrided(int Stride);
+  LLVM_ABI bool isStrided(int Stride) const;
 
   /// Returns true if \p BB is a predicated block.
   bool isPredicated(BasicBlock *BB) const {

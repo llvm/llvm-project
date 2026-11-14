@@ -32,13 +32,15 @@ public:
   static void DebuggerInitialize(Debugger &debugger);
   static void Terminate();
 
-  static llvm::StringRef GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "wasm"; }
   static llvm::StringRef GetPluginDescriptionStatic();
 
   llvm::StringRef GetPluginName() override;
 
-  size_t ReadMemory(const ProcessAddress &vm_addr, void *buf, size_t size,
-                    Status &error) override;
+  bool ShouldUseMemoryCache(const ProcessAddress &process_addr) override;
+
+  size_t DoReadMemory(const ProcessAddress &vm_addr, void *buf, size_t size,
+                      Status &error) override;
 
   bool CanDebug(lldb::TargetSP target_sp,
                 bool plugin_specified_by_name) override;

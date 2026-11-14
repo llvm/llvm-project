@@ -14,7 +14,6 @@
 #include "SIPreAllocateWWMRegs.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -29,12 +28,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-pre-allocate-wwm-regs"
 
-static cl::opt<bool>
-    EnablePreallocateSGPRSpillVGPRs("amdgpu-prealloc-sgpr-spill-vgprs",
-                                    cl::init(false), cl::Hidden);
-
 bool llvm::isPreallocateSGPRSpillVGPRsEnabled(const MachineFunction &MF) {
-  return EnablePreallocateSGPRSpillVGPRs ||
+  return MF.getSubtarget<GCNSubtarget>()
+             .getCLOpts()
+             .prealloc_sgpr_spill_vgprs ||
          MF.getFunction().hasFnAttribute("amdgpu-prealloc-sgpr-spill-vgprs");
 }
 
@@ -96,10 +93,6 @@ INITIALIZE_PASS_END(SIPreAllocateWWMRegsLegacy, DEBUG_TYPE,
 char SIPreAllocateWWMRegsLegacy::ID = 0;
 
 char &llvm::SIPreAllocateWWMRegsLegacyID = SIPreAllocateWWMRegsLegacy::ID;
-
-FunctionPass *llvm::createSIPreAllocateWWMRegsLegacyPass() {
-  return new SIPreAllocateWWMRegsLegacy();
-}
 
 bool SIPreAllocateWWMRegs::processDef(MachineOperand &MO) {
   Register Reg = MO.getReg();

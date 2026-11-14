@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -verify-machineinstrs\
-; RUN:       -mcpu=pwr9 --ppc-enable-pipeliner --debug-only=pipeliner 2>&1 | FileCheck %s
+; RUN:       -mcpu=pwr9 --enable-pipeliner --debug-only=pipeliner 2>&1 | FileCheck %s
 
 ; Test that the pipeliner doesn't overestimate the recurrence MII when evaluating circuits.
 ; CHECK: MII = 16 MAX_II = 26 (rec=16, res=5)

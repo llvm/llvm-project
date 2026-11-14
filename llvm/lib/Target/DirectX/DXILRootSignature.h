@@ -84,12 +84,12 @@ public:
 };
 
 /// Printer pass for RootSignatureAnalysis results.
-class RootSignatureAnalysisPrinter
-    : public OptionalPassInfoMixin<RootSignatureAnalysisPrinter> {
+class RootSignatureAnalysisPrinterPass
+    : public OptionalPassInfoMixin<RootSignatureAnalysisPrinterPass> {
   raw_ostream &OS;
 
 public:
-  explicit RootSignatureAnalysisPrinter(raw_ostream &OS) : OS(OS) {}
+  explicit RootSignatureAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 

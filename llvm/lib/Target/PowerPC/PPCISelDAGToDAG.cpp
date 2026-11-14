@@ -20,7 +20,6 @@
 #include "PPCSubtarget.h"
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -89,8 +88,9 @@ STATISTIC(NumP9Setb,
           "Number of compares lowered to setb.");
 
 // FIXME: Remove this once the bug has been fixed!
-cl::opt<bool> ANDIGlueBug("expose-ppc-andi-glue-bug",
-cl::desc("expose the ANDI glue bug on PPC"), cl::Hidden);
+cl::opt<bool> ANDIGlueBug("ppc-expose-andi-glue-bug",
+                          cl::desc("expose the ANDI glue bug on PPC"),
+                          cl::Hidden);
 
 static cl::opt<bool>
     UseBitPermRewriter("ppc-use-bit-perm-rewriter", cl::init(true),
@@ -401,8 +401,9 @@ namespace {
       case InlineAsm::ConstraintCode::Zy:
         // We need to make sure that this one operand does not end up in r0
         // (because we might end up lowering this as 0(%op)).
-        const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
-        const TargetRegisterClass *TRC = TRI->getPointerRegClass(/*Kind=*/1);
+        const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+        const TargetRegisterClass *TRC =
+            TII->getInlineAsmMemoryOperandRegClass(ConstraintID);
         SDLoc dl(Op);
         SDValue RC = CurDAG->getTargetConstant(TRC->getID(), dl, MVT::i32);
         SDValue NewOp =
@@ -4022,8 +4023,7 @@ SDValue IntegerCompareEliminator::getSETCCInGPR(SDValue Compare,
 
   // The condition code is operand 2 for SETCC and operand 4 for SELECT_CC.
   int CCOpNum = Compare.getOpcode() == ISD::SELECT_CC ? 4 : 2;
-  ISD::CondCode CC =
-    cast<CondCodeSDNode>(Compare.getOperand(CCOpNum))->get();
+  ISD::CondCode CC = Compare.getOperandCondCode(CCOpNum);
   EVT InputVT = LHS.getValueType();
   if (InputVT != MVT::i32 && InputVT != MVT::i64)
     return SDValue();
@@ -4478,8 +4478,7 @@ bool PPCDAGToDAGISel::trySETCC(SDNode *N) {
   SDLoc dl(N);
   unsigned Imm;
   bool IsStrict = N->isStrictFPOpcode();
-  ISD::CondCode CC =
-      cast<CondCodeSDNode>(N->getOperand(IsStrict ? 3 : 2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(IsStrict ? 3 : 2);
   EVT PtrVT =
       CurDAG->getTargetLoweringInfo().getPointerTy(CurDAG->getDataLayout());
   bool isPPC64 = (PtrVT == MVT::i64);
@@ -4742,8 +4741,7 @@ static bool mayUseP9Setb(SDNode *N, const ISD::CondCode &CC, SelectionDAG *DAG,
 
   SDValue InnerLHS = SetOrSelCC.getOperand(0);
   SDValue InnerRHS = SetOrSelCC.getOperand(1);
-  ISD::CondCode InnerCC =
-      cast<CondCodeSDNode>(SetOrSelCC.getOperand(InnerIsSel ? 4 : 2))->get();
+  ISD::CondCode InnerCC = SetOrSelCC.getOperandCondCode(InnerIsSel ? 4 : 2);
   // If the inner comparison is a select_cc, make sure the true/false values are
   // 1/-1 and canonicalize it if needed.
   if (InnerIsSel) {
@@ -4862,7 +4860,7 @@ bool PPCDAGToDAGISel::tryFoldSWTestBRCC(SDNode *N) {
   // (br_cc setne, (and SWTestOp, 2), 0) -> (BCC PRED_EQ, SWTestOp)
   // (br_cc setne, (and SWTestOp, 4), 0) -> (BCC PRED_GT, SWTestOp)
   // (br_cc setne, (and SWTestOp, 8), 0) -> (BCC PRED_LT, SWTestOp)
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(1))->get();
+  ISD::CondCode CC = N->getOperandCondCode(1);
   if (CC != ISD::SETEQ && CC != ISD::SETNE)
     return false;
 
@@ -4912,7 +4910,7 @@ bool PPCDAGToDAGISel::trySelectLoopCountIntrinsic(SDNode *N) {
   // Sometimes the promoted value of the intrinsic is ANDed by some non-zero
   // value, for example when crbits is disabled. If so, select the
   // loop_decrement intrinsics now.
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(1))->get();
+  ISD::CondCode CC = N->getOperandCondCode(1);
   SDValue LHS = N->getOperand(2), RHS = N->getOperand(3);
 
   if (LHS.getOpcode() != ISD::AND || !isa<ConstantSDNode>(LHS.getOperand(1)) ||
@@ -5857,7 +5855,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     return;
   }
   case ISD::SELECT_CC: {
-    ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(4))->get();
+    ISD::CondCode CC = N->getOperandCondCode(4);
     EVT PtrVT =
         CurDAG->getTargetLoweringInfo().getPointerTy(CurDAG->getDataLayout());
     bool isPPC64 = (PtrVT == MVT::i64);
@@ -6058,7 +6056,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       return;
     if (trySelectLoopCountIntrinsic(N))
       return;
-    ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(1))->get();
+    ISD::CondCode CC = N->getOperandCondCode(1);
     unsigned PCC =
         getPredicateForSetCC(CC, N->getOperand(2).getValueType(), Subtarget);
 
@@ -6429,8 +6427,7 @@ SDValue PPCDAGToDAGISel::combineToCMPB(SDNode *N) {
                                SDValue &LHS, SDValue &RHS) {
     if (O.getOpcode() != ISD::SELECT_CC)
       return false;
-    ISD::CondCode CC = cast<CondCodeSDNode>(O.getOperand(4))->get();
-
+    ISD::CondCode CC = O.getOperandCondCode(4);
     if (!isa<ConstantSDNode>(O.getOperand(2)) ||
         !isa<ConstantSDNode>(O.getOperand(3)))
       return false;

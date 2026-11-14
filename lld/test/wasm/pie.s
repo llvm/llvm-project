@@ -76,6 +76,7 @@ _start:
 # CHECK:      Sections:
 # CHECK-NEXT:   - Type:            CUSTOM
 # CHECK-NEXT:     Name:            dylink.0
+# CHECK-NEXT:     TargetArch:      wasm32
 # CHECK-NEXT:     MemorySize:      16
 # CHECK-NEXT:     MemoryAlignment: 2
 # CHECK-NEXT:     TableSize:       3

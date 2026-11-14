@@ -86,11 +86,13 @@ ASTPrintAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 
 std::unique_ptr<ASTConsumer>
 ASTDumpAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
+  // Dumping the AST shows documentation comments.
+  CI.getLangOpts().CommentOpts.RetainComments = true;
   const FrontendOptions &Opts = CI.getFrontendOpts();
   return CreateASTDumper(nullptr /*Dump to stdout.*/, Opts.ASTDumpFilter,
-                         Opts.ASTDumpDecls, Opts.ASTDumpAll,
-                         Opts.ASTDumpLookups, Opts.ASTDumpDeclTypes,
-                         Opts.ASTDumpFormat);
+                         Opts.ASTDumpFilterPath, Opts.ASTDumpDecls,
+                         Opts.ASTDumpAll, Opts.ASTDumpLookups,
+                         Opts.ASTDumpDeclTypes, Opts.ASTDumpFormat);
 }
 
 std::unique_ptr<ASTConsumer>
@@ -135,6 +137,11 @@ GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 bool GeneratePCHAction::ComputeASTConsumerArguments(CompilerInstance &CI,
                                                     std::string &Sysroot) {
   Sysroot = CI.getHeaderSearchOpts().Sysroot;
+  if (CI.getFrontendOpts().RelocatablePCH &&
+      CI.getHeaderSearchOpts().PCHBaseDirIsCwd) {
+    CI.getDiagnostics().Report(diag::err_pch_base_dir_is_cwd_relocatable);
+    return false;
+  }
   if (CI.getFrontendOpts().RelocatablePCH && Sysroot.empty()) {
     CI.getDiagnostics().Report(diag::err_relocatable_without_isysroot);
     return false;
@@ -250,6 +257,10 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
 
 bool GenerateModuleInterfaceAction::PrepareToExecuteAction(
     CompilerInstance &CI) {
+  // Documentation comments must still be serialized into the BMI
+  // so importers can query them.
+  CI.getLangOpts().CommentOpts.RetainComments = true;
+
   for (const auto &FIF : CI.getFrontendOpts().Inputs) {
     if (const auto InputFormat = FIF.getKind().getFormat();
         InputFormat != InputKind::Format::Source) {
@@ -884,12 +895,12 @@ void PrintPreambleAction::ExecuteAction() {
   case Language::CUDA:
   case Language::HIP:
   case Language::HLSL:
-  case Language::CIR:
     break;
 
   case Language::Unknown:
   case Language::Asm:
   case Language::LLVM_IR:
+  case Language::CIR:
     // We can't do anything with these.
     return;
   }

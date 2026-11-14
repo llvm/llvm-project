@@ -30,7 +30,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __not_fn_op {
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 auto operator()(_Args&&... __args) const
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 auto operator()(_Args&&... __args) const
       noexcept(noexcept(!std::invoke(std::forward<_Args>(__args)...)))
           -> decltype(!std::invoke(std::forward<_Args>(__args)...)) {
     return !std::invoke(std::forward<_Args>(__args)...);
@@ -44,7 +44,7 @@ struct __not_fn_t : __perfect_forward<__not_fn_op, _Fn> {
 
 template <class _Fn,
           class = enable_if_t< is_constructible_v<decay_t<_Fn>, _Fn> && is_move_constructible_v<decay_t<_Fn>> >>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 auto not_fn(_Fn&& __f) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 auto not_fn(_Fn&& __f) {
   return __not_fn_t<decay_t<_Fn>>(std::forward<_Fn>(__f));
 }
 
@@ -55,7 +55,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 auto not_fn(_Fn&& __f) {
 template <auto _Fn>
 struct __nttp_not_fn_t {
   template <class... _Args>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Args&&... __args) const
+  [[__nodiscard__]] constexpr auto operator()(_Args&&... __args) const
       noexcept(noexcept(!std::invoke(_Fn, std::forward<_Args>(__args)...)))
           -> decltype(!std::invoke(_Fn, std::forward<_Args>(__args)...)) {
     return !std::invoke(_Fn, std::forward<_Args>(__args)...);
@@ -63,7 +63,7 @@ struct __nttp_not_fn_t {
 };
 
 template <auto _Fn>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr auto not_fn() noexcept {
+[[__nodiscard__]] constexpr auto not_fn() noexcept {
   if constexpr (using _Ty = decltype(_Fn); is_pointer_v<_Ty> || is_member_pointer_v<_Ty>)
     static_assert(_Fn != nullptr, "f cannot be equal to nullptr");
   return __nttp_not_fn_t<_Fn>();

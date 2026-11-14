@@ -9,10 +9,12 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 
-#include "Plugins/Process/Utility/RegisterContextDarwin_arm.h"
-#include "Plugins/Process/Utility/RegisterContextDarwin_arm64.h"
-#include "Plugins/Process/Utility/RegisterContextDarwin_riscv32.h"
-#include "Plugins/Process/Utility/RegisterContextDarwin_x86_64.h"
+#include <algorithm>
+
+#include "Plugins/Register/Darwin/RegisterContextDarwin_arm.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_arm64.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_riscv32.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_x86_64.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -20,6 +22,7 @@
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -46,6 +49,8 @@
 #include "lldb/Host/SafeMachO.h"
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/Compression.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -1658,7 +1663,7 @@ void ObjectFileMachO::ProcessSegmentCommand(
             << 8, // Section ID is the 1 based segment index
         // shifted right by 8 bits as not to collide with any of the 256
         // section IDs that are possible
-        ConstString(segname),  // Name of this section
+        segname.str(),         // Name of this section
         eSectionTypeContainer, // This section is a container of other
         // sections.
         load_cmd.vmaddr, // File VM address == addresses as they are
@@ -1822,7 +1827,7 @@ void ObjectFileMachO::ProcessSegmentCommand(
               // shifted right by 8 bits as not to
               // collide with any of the 256 section IDs
               // that are possible
-              ConstString(segname),  // Name of this section
+              segname.str(),         // Name of this section
               eSectionTypeContainer, // This section is a container of
               // other sections.
               sect64.addr, // File VM address == addresses as they are
@@ -1849,7 +1854,7 @@ void ObjectFileMachO::ProcessSegmentCommand(
 
       SectionSP section_sp = std::make_shared<Section>(
           segment_sp, module_sp, this, ++context.NextSectionIdx,
-          ConstString(section_name), sect_type,
+          section_name.str(), sect_type,
           sect64.addr - segment_sp->GetFileAddress(), sect64.size,
           section_file_offset, section_file_offset == 0 ? 0 : sect64.size,
           sect64.align, sect64.flags);
@@ -2179,12 +2184,12 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     case LC_LOADFVMLIB:
     case LC_LOAD_UPWARD_DYLIB: {
       uint32_t name_offset = cmd_offset + m_data_nsp->GetU32(&offset);
-      const char *path = m_data_nsp->PeekCStr(name_offset);
-      if (path) {
-        FileSpec file_spec(path);
+      if (std::optional<llvm::StringRef> path =
+              m_data_nsp->PeekCStr(name_offset)) {
+        FileSpec file_spec(*path);
         // Strip the path if there is @rpath, @executable, etc so we just use
         // the basename
-        if (path[0] == '@')
+        if (path->starts_with("@"))
           file_spec.ClearDirectory();
 
         if (lc.cmd == LC_REEXPORT_DYLIB) {
@@ -2615,77 +2620,92 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     UndefinedNameToDescMap undefined_name_to_desc;
     SymbolIndexToName reexport_shlib_needs_fixup;
 
-    dyld_for_each_installed_shared_cache(^(dyld_shared_cache_t shared_cache) {
-      uuid_t cache_uuid;
-      dyld_shared_cache_copy_uuid(shared_cache, &cache_uuid);
-      if (found_image)
+    // Compute the size of the string table. We need to ask dyld for a
+    // new SPI to avoid this step.
+    auto nlist_extraction_block = ^(const void *nlistStart, uint64_t nlistCount,
+                                    const char *stringTable) {
+      if (!nlistStart || !nlistCount)
         return;
 
-        if (process_shared_cache_uuid.IsValid() &&
-          process_shared_cache_uuid != UUID(&cache_uuid, 16))
+      // The buffers passed here are valid only inside the block.
+      // Use vm_read to make a cheap copy of them available for our
+      // processing later.
+      kern_return_t ret = vm_read(mach_task_self(), (vm_address_t)nlistStart,
+                                  nlist_byte_size * nlistCount,
+                                  &vm_nlist_memory, &vm_nlist_bytes_read);
+      if (ret != KERN_SUCCESS)
+        return;
+      assert(vm_nlist_bytes_read == nlist_byte_size * nlistCount);
+
+      // We don't know the size of the string table. It's cheaper
+      // to map the whole VM region than to determine the size by
+      // parsing all the nlist entries.
+      vm_address_t string_address = (vm_address_t)stringTable;
+      vm_size_t region_size;
+      mach_msg_type_number_t info_count = VM_REGION_BASIC_INFO_COUNT_64;
+      vm_region_basic_info_data_t info;
+      memory_object_name_t object;
+      ret = vm_region_64(mach_task_self(), &string_address, &region_size,
+                         VM_REGION_BASIC_INFO_64, (vm_region_info_t)&info,
+                         &info_count, &object);
+      if (ret != KERN_SUCCESS)
         return;
 
-      dyld_shared_cache_for_each_image(shared_cache, ^(dyld_image_t image) {
-        uuid_t dsc_image_uuid;
+      ret = vm_read(mach_task_self(), (vm_address_t)stringTable,
+                    region_size - ((vm_address_t)stringTable - string_address),
+                    &vm_string_memory, &vm_string_bytes_read);
+      if (ret != KERN_SUCCESS)
+        return;
+
+      nlist_buffer = (void *)vm_nlist_memory;
+      string_table = (char *)vm_string_memory;
+      nlist_count = nlistCount;
+    };
+
+    // The shared-cache-binary-loading setting only exists for hosts without
+    // the indexing SPIs.
+    SharedCacheImageInfo image_info = HostInfo::GetSharedCacheImageInfo(
+        image_uuid, process_shared_cache_uuid,
+        eSymbolSharedCacheUseHostAndInferiorSharedCache);
+    if (void *image = image_info.GetImageBaton()) {
+      found_image = true;
+      dyld_image_local_nlist_content_4Symbolication((dyld_image_t)image,
+                                                    nlist_extraction_block);
+    }
+
+    // Images outside the indexed caches need the much slower enumeration.
+    if (!found_image) {
+      dyld_for_each_installed_shared_cache(^(dyld_shared_cache_t shared_cache) {
+        uuid_t cache_uuid;
+        dyld_shared_cache_copy_uuid(shared_cache, &cache_uuid);
         if (found_image)
           return;
 
-        dyld_image_copy_uuid(image, &dsc_image_uuid);
-        if (image_uuid != UUID(dsc_image_uuid, 16))
+        if (process_shared_cache_uuid.IsValid() &&
+            process_shared_cache_uuid != UUID(&cache_uuid, 16))
           return;
 
-        found_image = true;
+        dyld_shared_cache_for_each_image(shared_cache, ^(dyld_image_t image) {
+          uuid_t dsc_image_uuid;
+          if (found_image)
+            return;
 
-        // Compute the size of the string table. We need to ask dyld for a
-        // new SPI to avoid this step.
-        dyld_image_local_nlist_content_4Symbolication(
-            image, ^(const void *nlistStart, uint64_t nlistCount,
-                     const char *stringTable) {
-              if (!nlistStart || !nlistCount)
-                return;
+          dyld_image_copy_uuid(image, &dsc_image_uuid);
+          if (image_uuid != UUID(dsc_image_uuid, 16))
+            return;
 
-              // The buffers passed here are valid only inside the block.
-              // Use vm_read to make a cheap copy of them available for our
-              // processing later.
-              kern_return_t ret =
-                  vm_read(mach_task_self(), (vm_address_t)nlistStart,
-                          nlist_byte_size * nlistCount, &vm_nlist_memory,
-                          &vm_nlist_bytes_read);
-              if (ret != KERN_SUCCESS)
-                return;
-              assert(vm_nlist_bytes_read == nlist_byte_size * nlistCount);
-
-              // We don't know the size of the string table. It's cheaper
-              // to map the whole VM region than to determine the size by
-              // parsing all the nlist entries.
-              vm_address_t string_address = (vm_address_t)stringTable;
-              vm_size_t region_size;
-              mach_msg_type_number_t info_count = VM_REGION_BASIC_INFO_COUNT_64;
-              vm_region_basic_info_data_t info;
-              memory_object_name_t object;
-              ret = vm_region_64(mach_task_self(), &string_address,
-                                 &region_size, VM_REGION_BASIC_INFO_64,
-                                 (vm_region_info_t)&info, &info_count, &object);
-              if (ret != KERN_SUCCESS)
-                return;
-
-              ret = vm_read(mach_task_self(), (vm_address_t)stringTable,
-                            region_size -
-                                ((vm_address_t)stringTable - string_address),
-                            &vm_string_memory, &vm_string_bytes_read);
-              if (ret != KERN_SUCCESS)
-                return;
-
-              nlist_buffer = (void *)vm_nlist_memory;
-              string_table = (char *)vm_string_memory;
-              nlist_count = nlistCount;
-            });
+          found_image = true;
+          dyld_image_local_nlist_content_4Symbolication(image,
+                                                        nlist_extraction_block);
+        });
       });
-    });
+    }
     if (nlist_buffer) {
       DataExtractor dsc_local_symbols_data(nlist_buffer,
                                            nlist_count * nlist_byte_size,
                                            byte_order, addr_byte_size);
+      DataExtractor dsc_string_table_data(string_table, vm_string_bytes_read,
+                                          byte_order, addr_byte_size);
       unmapped_local_symbols_found = nlist_count;
 
                 // The normal nlist code cannot correctly size the Symbols
@@ -2710,21 +2730,25 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                     struct nlist_64 nlist = *nlist_maybe;
 
                     SymbolType type = eSymbolTypeInvalid;
-          const char *symbol_name = string_table + nlist.n_strx;
+                    const char *symbol_name = NULL;
+                    std::optional<llvm::StringRef> name =
+                        dsc_string_table_data.PeekCStr(nlist.n_strx);
 
-                    if (symbol_name == NULL) {
+                    if (!name) {
                       // No symbol should be NULL, even the symbols with no
                       // string values should have an offset zero which
                       // points to an empty C-string
                       Debugger::ReportError(llvm::formatv(
-                          "DSC unmapped local symbol[{0}] has invalid "
-                          "string table offset {1:x} in {2}, ignoring symbol",
+                          "DSC unmapped local symbol[{0}] has invalid or "
+                          "unterminated string table offset {1:x} in {2}, "
+                          "ignoring symbol",
                           nlist_index, nlist.n_strx,
                           module_sp->GetFileSpec().GetPath()));
                       continue;
                     }
-                    if (symbol_name[0] == '\0')
-                      symbol_name = NULL;
+                    // The code below spells "no name" as a NULL pointer.
+                    if (!name->empty())
+                      symbol_name = name->data();
 
                     const char *symbol_name_non_abi_mangled = NULL;
 
@@ -2918,7 +2942,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                             const char *so_path = sym[sym_idx - 1]
                                                       .GetMangled()
                                                       .GetDemangledName()
-                                                      .AsCString();
+                                                      .AsCString(nullptr);
                             if (so_path && so_path[0]) {
                               std::string full_so_path(so_path);
                               const size_t double_slash_pos =
@@ -3111,13 +3135,13 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
                       switch (n_type) {
                       case N_INDR: {
-                        const char *reexport_name_cstr =
+                        std::optional<llvm::StringRef> reexport_name_str =
                             strtab_data.PeekCStr(nlist.n_value);
-                        if (reexport_name_cstr && reexport_name_cstr[0]) {
+                        if (reexport_name_str && !reexport_name_str->empty()) {
                           type = eSymbolTypeReExported;
                           ConstString reexport_name(
-                              reexport_name_cstr +
-                              ((reexport_name_cstr[0] == '_') ? 1 : 0));
+                              reexport_name_str->drop_front(
+                                  reexport_name_str->front() == '_' ? 1 : 0));
                           sym[sym_idx].SetReExportedSymbolName(reexport_name);
                           set_value = false;
                           reexport_shlib_needs_fixup[sym_idx] = reexport_name;
@@ -3260,7 +3284,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                               } else {
                                 type = eSymbolTypeData;
                               }
-                            } else if (symbol_sect_name.starts_with("__IMPORT")) 
+                            } else if (symbol_sect_name.starts_with(
+                                           "__IMPORT")) {
                               type = eSymbolTypeTrampoline;
                             } else if (symbol_section->IsDescendant(
                                            objc_section_sp.get())) {
@@ -3468,11 +3493,16 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
   if (nlist_data.GetByteSize() > 0) {
 
+    const uint64_t max_nsyms = nlist_data.GetByteSize() / nlist_byte_size;
+    const uint64_t max_nindirectsyms =
+        indirect_symbol_index_data.GetByteSize() / sizeof(uint32_t);
+
     // If the sym array was not created while parsing the DSC unmapped
     // symbols, create it now.
     if (sym == nullptr) {
-      sym =
-          symtab.Resize(symtab_load_command.nsyms + m_dysymtab.nindirectsyms);
+      sym = symtab.Resize(
+          std::min<uint64_t>(symtab_load_command.nsyms, max_nsyms) +
+          std::min<uint64_t>(m_dysymtab.nindirectsyms, max_nindirectsyms));
       num_syms = symtab.GetNumSymbols();
     }
 
@@ -3505,19 +3535,21 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       const char *symbol_name = nullptr;
 
       if (have_strtab_data) {
-        symbol_name = strtab_data.PeekCStr(nlist.n_strx);
+        std::optional<llvm::StringRef> name =
+            strtab_data.PeekCStr(nlist.n_strx);
 
-        if (symbol_name == nullptr) {
+        if (!name) {
           // No symbol should be NULL, even the symbols with no string values
           // should have an offset zero which points to an empty C-string
           Debugger::ReportError(llvm::formatv(
-              "symbol[{0}] has invalid string table offset {1:x} in {2}, "
-              "ignoring symbol",
+              "symbol[{0}] has invalid or unterminated string table offset "
+              "{1:x} in {2}, ignoring symbol",
               nlist_idx, nlist.n_strx, module_sp->GetFileSpec().GetPath()));
           return true;
         }
-        if (symbol_name[0] == '\0')
-          symbol_name = nullptr;
+        // The code below spells "no name" as a nullptr.
+        if (!name->empty())
+          symbol_name = name->data();
       } else {
         const addr_t str_addr = strtab_addr + nlist.n_strx;
         Status str_error;
@@ -3875,11 +3907,12 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
         switch (n_type) {
         case N_INDR: {
-          const char *reexport_name_cstr = strtab_data.PeekCStr(nlist.n_value);
-          if (reexport_name_cstr && reexport_name_cstr[0] && symbol_name) {
+          std::optional<llvm::StringRef> reexport_name_str =
+              strtab_data.PeekCStr(nlist.n_value);
+          if (reexport_name_str && !reexport_name_str->empty() && symbol_name) {
             type = eSymbolTypeReExported;
-            ConstString reexport_name(reexport_name_cstr +
-                                      ((reexport_name_cstr[0] == '_') ? 1 : 0));
+            ConstString reexport_name(reexport_name_str->drop_front(
+                reexport_name_str->front() == '_' ? 1 : 0));
             sym[sym_idx].SetReExportedSymbolName(reexport_name);
             set_value = false;
             reexport_shlib_needs_fixup[sym_idx] = reexport_name;
@@ -4179,7 +4212,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     // First parse all the nlists but don't process them yet. See the next
     // comment for an explanation why.
     std::vector<struct nlist_64> nlists;
-    nlists.reserve(symtab_load_command.nsyms);
+    nlists.reserve(std::min<uint64_t>(symtab_load_command.nsyms, max_nsyms));
     for (; nlist_idx < symtab_load_command.nsyms; ++nlist_idx) {
       if (auto nlist =
               ParseNList(nlist_data, nlist_data_offset, nlist_byte_size))
@@ -4810,23 +4843,20 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
         if (flags & 0x08 /* DYLIB_USE_DELAYED_INIT */)
           is_delayed_init = true;
       }
-      const char *path = m_data_nsp->PeekCStr(name_offset);
-      if (path && !is_delayed_init) {
+      std::optional<llvm::StringRef> maybe_path =
+          m_data_nsp->PeekCStr(name_offset);
+      if (maybe_path && !is_delayed_init) {
+        llvm::StringRef path = *maybe_path;
         if (load_cmd.cmd == LC_RPATH)
-          rpath_paths.push_back(path);
-        else {
-          if (path[0] == '@') {
-            if (strncmp(path, "@rpath", strlen("@rpath")) == 0)
-              rpath_relative_paths.push_back(path + strlen("@rpath"));
-            else if (strncmp(path, "@executable_path",
-                             strlen("@executable_path")) == 0)
-              at_exec_relative_paths.push_back(path +
-                                               strlen("@executable_path"));
-          } else {
-            FileSpec file_spec(path);
-            if (files.AppendIfUnique(file_spec))
-              count++;
-          }
+          rpath_paths.push_back(path.str());
+        else if (path.consume_front("@rpath"))
+          rpath_relative_paths.push_back(path.str());
+        else if (path.consume_front("@executable_path"))
+          at_exec_relative_paths.push_back(path.str());
+        else if (!path.starts_with("@")) {
+          FileSpec file_spec(path);
+          if (files.AppendIfUnique(file_spec))
+            count++;
         }
       }
     } break;
@@ -5372,6 +5402,54 @@ bool ObjectFileMachO::GetCorefileThreadExtraInfos(
   return false;
 }
 
+/// Return the payload of an LC_NOTE, decompressing it if needed.
+///
+/// A payload is either stored as is, or compressed in the layout of a GNU
+/// .zdebug section:
+///
+///   offset  size  contents
+///        0     4  magic "ZLIB"
+///        4     8  uncompressed size, big-endian uint64_t
+///       12     n  RFC 1950 zlib stream
+///
+/// The size is big-endian regardless of the corefile's byte order. An
+/// uncompressed payload must not start with the magic.
+static llvm::Expected<std::string> ReadLCNotePayload(const DataExtractor &data,
+                                                     lldb::offset_t offset,
+                                                     uint64_t size) {
+  const uint8_t *bytes = data.PeekData(offset, size);
+  if (!bytes)
+    return llvm::createStringError(
+        "payload of %" PRIu64 " bytes is out of bounds", size);
+  llvm::ArrayRef<uint8_t> payload(bytes, size);
+
+  constexpr llvm::StringLiteral magic = "ZLIB";
+  constexpr size_t header_size = magic.size() + sizeof(uint64_t);
+  if (!llvm::toStringRef(payload).starts_with(magic))
+    return llvm::toStringRef(payload).str();
+  if (payload.size() < header_size)
+    return llvm::createStringError("compressed payload header is truncated");
+
+  uint64_t uncompressed_size =
+      llvm::support::endian::read64be(payload.data() + magic.size());
+  llvm::ArrayRef<uint8_t> compressed = payload.drop_front(header_size);
+  // Deflate cannot exceed a 1032:1 ratio. A larger claimed size is corrupt and
+  // must not size the allocation.
+  if (uncompressed_size / 1032 > compressed.size())
+    return llvm::createStringError("uncompressed size %" PRIu64
+                                   " is impossible for %zu compressed bytes",
+                                   uncompressed_size, compressed.size());
+  if (!llvm::compression::zlib::isAvailable())
+    return llvm::createStringError(
+        "payload is zlib-compressed but LLDB was built without zlib");
+
+  llvm::SmallVector<uint8_t, 0> uncompressed;
+  if (llvm::Error err = llvm::compression::zlib::decompress(
+          compressed, uncompressed, uncompressed_size))
+    return err;
+  return llvm::toStringRef(uncompressed).str();
+}
+
 StructuredData::ObjectSP ObjectFileMachO::GetCorefileProcessMetadata() {
   ModuleSP module_sp(GetModule());
   if (!module_sp)
@@ -5388,18 +5466,16 @@ StructuredData::ObjectSP ObjectFileMachO::GetCorefileProcessMetadata() {
         log,
         "Multiple 'process metadata' LC_NOTEs found, only using the first.");
 
-  auto [payload_offset, strsize] = lc_notes[0];
-  std::string buf(strsize, '\0');
-  if (m_data_nsp->CopyData(payload_offset, strsize, buf.data()) != strsize) {
-    LLDB_LOGF(log,
-              "Unable to read %" PRIu64
-              " bytes of 'process metadata' LC_NOTE JSON contents",
-              strsize);
+  auto [payload_offset, payload_size] = lc_notes[0];
+  llvm::Expected<std::string> json =
+      ReadLCNotePayload(*m_data_nsp, payload_offset, payload_size);
+  if (!json) {
+    LLDB_LOG_ERROR(log, json.takeError(),
+                   "Unable to read 'process metadata' LC_NOTE: {0}");
     return {};
   }
-  while (buf.back() == '\0')
-    buf.resize(buf.size() - 1);
-  StructuredData::ObjectSP object_sp = StructuredData::ParseJSON(buf);
+  StructuredData::ObjectSP object_sp =
+      StructuredData::ParseJSON(llvm::StringRef(*json).rtrim('\0'));
   if (!object_sp) {
     LLDB_LOGF(log, "Unable to read 'process metadata' LC_NOTE, did not "
                    "parse as valid JSON.");
@@ -6099,9 +6175,9 @@ CreateAllImageInfosPayload(const lldb::ProcessSP &process_sp,
         llvm::StringRef name = section->GetName();
         segment_vmaddr seg_vmaddr;
         // This is the uncommon case where strncpy is exactly
-        // the right one, doesn't need to be nul terminated.
+        // the right one, doesn't need to be null-terminated.
         // The segment name in a Mach-O LC_SEGMENT/LC_SEGMENT_64 is char[16] and
-        // is not guaranteed to be nul-terminated if all 16 characters are
+        // is not guaranteed to be null-terminated if all 16 characters are
         // used.
         // coverity[buffer_size_warning]
         strncpy(seg_vmaddr.segname, name.data(),
@@ -6453,9 +6529,9 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
           char namebuf[16];
           memset(namebuf, 0, sizeof(namebuf));
           // This is the uncommon case where strncpy is exactly
-          // the right one, doesn't need to be nul terminated.
+          // the right one, doesn't need to be null-terminated.
           // LC_NOTE name field is char[16] and is not guaranteed to be
-          // nul-terminated.
+          // null-terminated.
           // coverity[buffer_size_warning]
           strncpy(namebuf, lcnote->name.c_str(), sizeof(namebuf));
           buffer.PutRawBytes(namebuf, sizeof(namebuf));

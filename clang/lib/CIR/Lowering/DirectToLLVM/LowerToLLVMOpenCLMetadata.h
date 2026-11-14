@@ -9,28 +9,19 @@
 #ifndef CLANG_CIR_LOWERING_DIRECTTOLLVM_LOWERTOLLVMOPENCLMETADATA_H
 #define CLANG_CIR_LOWERING_DIRECTTOLLVM_LOWERTOLLVMOPENCLMETADATA_H
 
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/OperationSupport.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace cir {
 namespace direct {
 
-class OpenCLFunctionMetadataLowering {
-public:
-  OpenCLFunctionMetadataLowering(mlir::MLIRContext *ctx);
+void lowerOpenCLKernelArgMetadata(
+    cir::OpenCLKernelArgMetadataAttr clArgMetadata,
+    llvm::SmallVectorImpl<mlir::Attribute> &entries);
 
-  bool lower(mlir::NamedAttribute attr, bool includeFunctionOnlyAttrs);
-  void appendAttrs(llvm::SmallVectorImpl<mlir::NamedAttribute> &result) const;
-
-private:
-  void lower(cir::OpenCLKernelArgMetadataAttr clArgMetadata);
-
-  mlir::MLIRContext *ctx;
-  llvm::SmallVector<mlir::Attribute> functionMetadata;
-};
+void lowerOpenCLModuleMetadataAttrs(mlir::ModuleOp module);
 
 } // namespace direct
 } // namespace cir

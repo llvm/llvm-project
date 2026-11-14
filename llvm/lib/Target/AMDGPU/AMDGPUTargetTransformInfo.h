@@ -25,6 +25,7 @@
 namespace llvm {
 
 class AMDGPUTargetMachine;
+struct AMDGPUOptions;
 class GCNSubtarget;
 class InstCombiner;
 class Loop;
@@ -39,6 +40,7 @@ class AMDGPUTTIImpl final : public BasicTTIImplBase<AMDGPUTTIImpl> {
 
   friend BaseT;
 
+  const AMDGPUOptions &CLOpts;
   Triple TargetTriple;
 
   const TargetSubtargetInfo *ST;
@@ -66,12 +68,12 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
 
   friend BaseT;
 
+  const AMDGPUOptions &CLOpts;
   const GCNSubtarget *ST;
   const SITargetLowering *TLI;
   AMDGPUTTIImpl CommonTTI;
   bool IsGraphics;
   bool HasFP32Denormals;
-  bool HasFP64FP16Denormals;
   static constexpr bool InlinerVectorBonusPercent = 0;
 
   static const FeatureBitset InlineFeatureIgnoreList;
@@ -171,12 +173,19 @@ public:
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr) const override;
+      const Instruction *CtxI = nullptr) const override;
 
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                                  const Instruction *I = nullptr) const override;
 
-  bool isInlineAsmSourceOfDivergence(const CallInst *CI,
+  InstructionCost getCmpSelInstrCost(
+      unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+      TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
+      TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
+      const Instruction *I = nullptr) const override;
+
+  bool isInlineAsmSourceOfDivergence(const CallBase *CB,
                                      ArrayRef<unsigned> Indices = {}) const;
 
   using BaseT::getVectorInstrCost;
@@ -250,7 +259,9 @@ public:
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
                  TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr) const override;
+                 const Instruction *CtxI = nullptr,
+                 TTI::VectorInstrContext VIC =
+                     TTI::VectorInstrContext::None) const override;
 
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const override;
@@ -267,6 +278,11 @@ public:
   int getInlinerVectorBonusPercent() const override {
     return InlinerVectorBonusPercent;
   }
+
+  InstructionCost
+  getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                   TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
+                   const Instruction *I = nullptr) const override;
 
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,

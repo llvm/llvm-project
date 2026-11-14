@@ -232,6 +232,9 @@ public:
     /// is implemented. (See clang/Basic/LangOptions.h)
   };
 
+  /// The kind of name table (accelerator table) the debug info asks for.
+  enum class DebugNameTableKind { None, Default, GNU, Apple };
+
   // Define accessors/mutators for code generation options of enumeration type.
 #define CODEGENOPT(Name, Bits, Default)
 #define ENUM_CODEGENOPT(Name, Type, Bits, Default)                             \

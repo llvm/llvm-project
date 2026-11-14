@@ -53,6 +53,29 @@ func.func @unranked_dealloc(%arg0: memref<*xf32>) {
 
 // -----
 
+// CHECK-LABEL: func @dealloc_address_space
+func.func @dealloc_address_space(%arg0: memref<?xf32, 1>) {
+//      CHECK: %[[ptr:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK-NEXT: %[[cast:.*]] = llvm.addrspacecast %[[ptr]] : !llvm.ptr<1> to !llvm.ptr
+// CHECK-NEXT: llvm.call @free(%[[cast]]) : (!llvm.ptr) -> ()
+  memref.dealloc %arg0 : memref<?xf32, 1>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @unranked_dealloc_address_space
+func.func @unranked_dealloc_address_space(%arg0: memref<*xf32, 1>) {
+//      CHECK: %[[memref:.*]] = llvm.extractvalue %{{.*}} : !llvm.struct<(i64, ptr)>
+//      CHECK: %[[ptr:.*]] = llvm.load %[[memref]] : !llvm.ptr -> !llvm.ptr<1>
+// CHECK-NEXT: %[[cast:.*]] = llvm.addrspacecast %[[ptr]] : !llvm.ptr<1> to !llvm.ptr
+// CHECK-NEXT: llvm.call @free(%[[cast]]) : (!llvm.ptr) -> ()
+  memref.dealloc %arg0 : memref<*xf32, 1>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @dynamic_alloc(
 //       CHECK:   %[[Marg:.*]]: index, %[[Narg:.*]]: index)
 func.func @dynamic_alloc(%arg0: index, %arg1: index) -> memref<?x?xf32> {

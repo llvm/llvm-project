@@ -12,7 +12,6 @@
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
@@ -20,13 +19,16 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 
+#include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Error.h"
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
 
-std::map<ConstString, CXXFunctionSummaryFormat::Callback> &
+llvm::StringMap<CXXFunctionSummaryFormat::Callback> &
 NSString_Additionals::GetAdditionalSummaries() {
-  static std::map<ConstString, CXXFunctionSummaryFormat::Callback> g_map;
+  static llvm::StringMap<CXXFunctionSummaryFormat::Callback> g_map;
   return g_map;
 }
 
@@ -57,8 +59,7 @@ bool lldb_private::formatters::NSStringSummaryProvider(
   if (!valobj_addr)
     return false;
 
-  ConstString class_name_cs = descriptor->GetClassName();
-  llvm::StringRef class_name = class_name_cs.GetStringRef();
+  llvm::StringRef class_name = descriptor->GetClassName();
 
   if (class_name.empty())
     return false;
@@ -76,7 +77,7 @@ bool lldb_private::formatters::NSStringSummaryProvider(
   }
 
   auto &additionals_map(NSString_Additionals::GetAdditionalSummaries());
-  auto iter = additionals_map.find(class_name_cs), end = additionals_map.end();
+  auto iter = additionals_map.find(class_name), end = additionals_map.end();
   if (iter != end)
     return iter->second(valobj, stream, summary_options);
 
@@ -127,7 +128,7 @@ bool lldb_private::formatters::NSStringSummaryProvider(
       "NSCFString",   "NSPathStore2"};
   if (supported_string_classes.count(class_name) == 0) {
     // not one of us - but tell me class name
-    stream.Printf("class name = %s", class_name_cs.GetCString());
+    stream.Format("class name = {0}", class_name);
     return true;
   }
 
@@ -141,9 +142,13 @@ bool lldb_private::formatters::NSStringSummaryProvider(
 
   if (is_mutable) {
     uint64_t location = 2 * ptr_size + valobj_addr;
-    location = process_sp->ReadPointerFromMemory(location, error);
-    if (error.Fail())
+    llvm::Expected<lldb::addr_t> location_or_err =
+        process_sp->ReadPointerFromMemory(location);
+    if (!location_or_err) {
+      llvm::consumeError(location_or_err.takeError());
       return false;
+    }
+    location = *location_or_err;
     if (has_explicit_length && is_unicode) {
       options.SetLocation(Address(location));
       options.SetTargetSP(valobj.GetTargetSP());
@@ -190,9 +195,13 @@ bool lldb_private::formatters::NSStringSummaryProvider(
       } else
         location += ptr_size;
     } else {
-      location = process_sp->ReadPointerFromMemory(location, error);
-      if (error.Fail())
+      llvm::Expected<lldb::addr_t> location_or_err =
+          process_sp->ReadPointerFromMemory(location);
+      if (!location_or_err) {
+        llvm::consumeError(location_or_err.takeError());
         return false;
+      }
+      location = *location_or_err;
     }
     options.SetLocation(Address(location));
     options.SetTargetSP(valobj.GetTargetSP());
@@ -266,9 +275,13 @@ bool lldb_private::formatters::NSStringSummaryProvider(
           StringPrinter::StringElementType::ASCII>(options);
   } else {
     uint64_t location = valobj_addr + 2 * ptr_size;
-    location = process_sp->ReadPointerFromMemory(location, error);
-    if (error.Fail())
+    llvm::Expected<lldb::addr_t> location_or_err =
+        process_sp->ReadPointerFromMemory(location);
+    if (!location_or_err) {
+      llvm::consumeError(location_or_err.takeError());
       return false;
+    }
+    location = *location_or_err;
     if (has_explicit_length && !has_null)
       explicit_length++; // account for the fact that there is no NULL and we
                          // need to have one added

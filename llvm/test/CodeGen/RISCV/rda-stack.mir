@@ -2,7 +2,6 @@
 
 ---
 name:            test0
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: default, offset: 0, size: 4, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
@@ -23,7 +22,6 @@ body:             |
 ...
 ---
 name:            test1
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: default, offset: 0, size: 4, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
@@ -56,7 +54,6 @@ body:             |
 ...
 ---
 name:            test2
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: default, offset: 0, size: 4, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
@@ -98,7 +95,6 @@ body:             |
 ...
 ---
 name:            test3
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: default, offset: 0, size: 4, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
@@ -156,7 +152,6 @@ body:             |
 ...
 ---
 name:            test4
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 0, size: 4, alignment: 16,
       isImmutable: true, isAliased: false }

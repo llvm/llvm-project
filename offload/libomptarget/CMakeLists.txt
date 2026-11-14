@@ -5,18 +5,16 @@ if(NOT TARGET "omp")
 endif()
 
 add_library(omptarget SHARED
-  device.cpp
   interface.cpp
   omptarget.cpp
   OffloadRTL.cpp
   LegacyAPI.cpp
-  PluginManager.cpp
-  DeviceImage.cpp
 
   OpenMP/API.cpp
-  OpenMP/Mapping.cpp
   OpenMP/InteropAPI.cpp
   OpenMP/OMPT/Callback.cpp
+
+  ${LIBOMPACCSUPPORT_SOURCES}
 
   KernelLanguage/API.cpp
 )
@@ -41,9 +39,7 @@ target_compile_definitions(omptarget PRIVATE
   DEBUG_PREFIX="omptarget"
 )
 
-foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
-  target_link_libraries(omptarget PRIVATE omptarget.rtl.${plugin})
-endforeach()
+target_link_libraries(omptarget PRIVATE LLVMOffloadStatic)
 
 target_compile_options(omptarget PRIVATE ${offload_compile_flags})
 target_link_options(omptarget PRIVATE ${offload_link_flags})

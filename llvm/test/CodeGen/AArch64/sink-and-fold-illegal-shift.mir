@@ -23,7 +23,6 @@ legalized:       true
 regBankSelected: true
 selected:        true
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 callsEHReturn:   false
 callsUnwindInit: false
@@ -34,15 +33,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: gpr64, preferred-register: '' }
-  - { id: 1, class: gpr64, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
-  - { id: 3, class: gpr, preferred-register: '' }
-  - { id: 4, class: gpr64common, preferred-register: '' }
-  - { id: 5, class: _, preferred-register: '' }
-  - { id: 6, class: gpr, preferred-register: '' }
-  - { id: 7, class: gpr64, preferred-register: '' }
 liveins:
   - { reg: '$x0', virtual-reg: '' }
   - { reg: '$x1', virtual-reg: '' }

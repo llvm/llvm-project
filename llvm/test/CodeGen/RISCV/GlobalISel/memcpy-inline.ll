@@ -3,6 +3,102 @@
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -global-isel -mtriple=riscv64 < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
+; RUN: llc -global-isel -mtriple=riscv32 -mattr=+unaligned-scalar-mem < %s \
+; RUN:   | FileCheck -check-prefix=RV32I-UNALIGNED %s
+; RUN: llc -global-isel -mtriple=riscv64 -mattr=+unaligned-scalar-mem < %s \
+; RUN:   | FileCheck -check-prefix=RV64I-UNALIGNED %s
+
+define void @test_memcpy_inline_15bytes(ptr %dst, ptr readonly %src) {
+; RV32I-LABEL: test_memcpy_inline_15bytes:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lbu a2, 0(a1)
+; RV32I-NEXT:    sb a2, 0(a0)
+; RV32I-NEXT:    lbu a2, 1(a1)
+; RV32I-NEXT:    sb a2, 1(a0)
+; RV32I-NEXT:    lbu a2, 2(a1)
+; RV32I-NEXT:    sb a2, 2(a0)
+; RV32I-NEXT:    lbu a2, 3(a1)
+; RV32I-NEXT:    sb a2, 3(a0)
+; RV32I-NEXT:    lbu a2, 4(a1)
+; RV32I-NEXT:    sb a2, 4(a0)
+; RV32I-NEXT:    lbu a2, 5(a1)
+; RV32I-NEXT:    sb a2, 5(a0)
+; RV32I-NEXT:    lbu a2, 6(a1)
+; RV32I-NEXT:    sb a2, 6(a0)
+; RV32I-NEXT:    lbu a2, 7(a1)
+; RV32I-NEXT:    sb a2, 7(a0)
+; RV32I-NEXT:    lbu a2, 8(a1)
+; RV32I-NEXT:    sb a2, 8(a0)
+; RV32I-NEXT:    lbu a2, 9(a1)
+; RV32I-NEXT:    sb a2, 9(a0)
+; RV32I-NEXT:    lbu a2, 10(a1)
+; RV32I-NEXT:    sb a2, 10(a0)
+; RV32I-NEXT:    lbu a2, 11(a1)
+; RV32I-NEXT:    sb a2, 11(a0)
+; RV32I-NEXT:    lbu a2, 12(a1)
+; RV32I-NEXT:    sb a2, 12(a0)
+; RV32I-NEXT:    lbu a2, 13(a1)
+; RV32I-NEXT:    sb a2, 13(a0)
+; RV32I-NEXT:    lbu a1, 14(a1)
+; RV32I-NEXT:    sb a1, 14(a0)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: test_memcpy_inline_15bytes:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lbu a2, 0(a1)
+; RV64I-NEXT:    sb a2, 0(a0)
+; RV64I-NEXT:    lbu a2, 1(a1)
+; RV64I-NEXT:    sb a2, 1(a0)
+; RV64I-NEXT:    lbu a2, 2(a1)
+; RV64I-NEXT:    sb a2, 2(a0)
+; RV64I-NEXT:    lbu a2, 3(a1)
+; RV64I-NEXT:    sb a2, 3(a0)
+; RV64I-NEXT:    lbu a2, 4(a1)
+; RV64I-NEXT:    sb a2, 4(a0)
+; RV64I-NEXT:    lbu a2, 5(a1)
+; RV64I-NEXT:    sb a2, 5(a0)
+; RV64I-NEXT:    lbu a2, 6(a1)
+; RV64I-NEXT:    sb a2, 6(a0)
+; RV64I-NEXT:    lbu a2, 7(a1)
+; RV64I-NEXT:    sb a2, 7(a0)
+; RV64I-NEXT:    lbu a2, 8(a1)
+; RV64I-NEXT:    sb a2, 8(a0)
+; RV64I-NEXT:    lbu a2, 9(a1)
+; RV64I-NEXT:    sb a2, 9(a0)
+; RV64I-NEXT:    lbu a2, 10(a1)
+; RV64I-NEXT:    sb a2, 10(a0)
+; RV64I-NEXT:    lbu a2, 11(a1)
+; RV64I-NEXT:    sb a2, 11(a0)
+; RV64I-NEXT:    lbu a2, 12(a1)
+; RV64I-NEXT:    sb a2, 12(a0)
+; RV64I-NEXT:    lbu a2, 13(a1)
+; RV64I-NEXT:    sb a2, 13(a0)
+; RV64I-NEXT:    lbu a1, 14(a1)
+; RV64I-NEXT:    sb a1, 14(a0)
+; RV64I-NEXT:    ret
+;
+; RV32I-UNALIGNED-LABEL: test_memcpy_inline_15bytes:
+; RV32I-UNALIGNED:       # %bb.0:
+; RV32I-UNALIGNED-NEXT:    lw a2, 0(a1)
+; RV32I-UNALIGNED-NEXT:    lw a3, 4(a1)
+; RV32I-UNALIGNED-NEXT:    sw a2, 0(a0)
+; RV32I-UNALIGNED-NEXT:    sw a3, 4(a0)
+; RV32I-UNALIGNED-NEXT:    lw a2, 7(a1)
+; RV32I-UNALIGNED-NEXT:    lw a1, 11(a1)
+; RV32I-UNALIGNED-NEXT:    sw a2, 7(a0)
+; RV32I-UNALIGNED-NEXT:    sw a1, 11(a0)
+; RV32I-UNALIGNED-NEXT:    ret
+;
+; RV64I-UNALIGNED-LABEL: test_memcpy_inline_15bytes:
+; RV64I-UNALIGNED:       # %bb.0:
+; RV64I-UNALIGNED-NEXT:    ld a2, 0(a1)
+; RV64I-UNALIGNED-NEXT:    sd a2, 0(a0)
+; RV64I-UNALIGNED-NEXT:    ld a1, 7(a1)
+; RV64I-UNALIGNED-NEXT:    sd a1, 7(a0)
+; RV64I-UNALIGNED-NEXT:    ret
+  call void @llvm.memcpy.inline.p0.p0.i64(ptr %dst, ptr %src, i64 15, i1 false)
+  ret void
+}
 
 define void @test_memcpy_inline_2bytes(ptr %dst, ptr readonly %src) {
 ; RV32I-LABEL: test_memcpy_inline_2bytes:
@@ -20,6 +116,18 @@ define void @test_memcpy_inline_2bytes(ptr %dst, ptr readonly %src) {
 ; RV64I-NEXT:    lbu a1, 1(a1)
 ; RV64I-NEXT:    sb a1, 1(a0)
 ; RV64I-NEXT:    ret
+;
+; RV32I-UNALIGNED-LABEL: test_memcpy_inline_2bytes:
+; RV32I-UNALIGNED:       # %bb.0:
+; RV32I-UNALIGNED-NEXT:    lh a1, 0(a1)
+; RV32I-UNALIGNED-NEXT:    sh a1, 0(a0)
+; RV32I-UNALIGNED-NEXT:    ret
+;
+; RV64I-UNALIGNED-LABEL: test_memcpy_inline_2bytes:
+; RV64I-UNALIGNED:       # %bb.0:
+; RV64I-UNALIGNED-NEXT:    lh a1, 0(a1)
+; RV64I-UNALIGNED-NEXT:    sh a1, 0(a0)
+; RV64I-UNALIGNED-NEXT:    ret
   call void @llvm.memcpy.inline.p0.p0.i64(ptr %dst, ptr %src, i64 2, i1 false)
   ret void
 }
@@ -48,6 +156,18 @@ define void @test_memcpy_inline_4bytes(ptr %dst, ptr readonly %src) {
 ; RV64I-NEXT:    lbu a1, 3(a1)
 ; RV64I-NEXT:    sb a1, 3(a0)
 ; RV64I-NEXT:    ret
+;
+; RV32I-UNALIGNED-LABEL: test_memcpy_inline_4bytes:
+; RV32I-UNALIGNED:       # %bb.0:
+; RV32I-UNALIGNED-NEXT:    lw a1, 0(a1)
+; RV32I-UNALIGNED-NEXT:    sw a1, 0(a0)
+; RV32I-UNALIGNED-NEXT:    ret
+;
+; RV64I-UNALIGNED-LABEL: test_memcpy_inline_4bytes:
+; RV64I-UNALIGNED:       # %bb.0:
+; RV64I-UNALIGNED-NEXT:    lw a1, 0(a1)
+; RV64I-UNALIGNED-NEXT:    sw a1, 0(a0)
+; RV64I-UNALIGNED-NEXT:    ret
   call void @llvm.memcpy.inline.p0.p0.i64(ptr %dst, ptr %src, i64 4, i1 false)
   ret void
 }
@@ -92,6 +212,20 @@ define void @test_memcpy_inline_8bytes(ptr %dst, ptr readonly %src) {
 ; RV64I-NEXT:    lbu a1, 7(a1)
 ; RV64I-NEXT:    sb a1, 7(a0)
 ; RV64I-NEXT:    ret
+;
+; RV32I-UNALIGNED-LABEL: test_memcpy_inline_8bytes:
+; RV32I-UNALIGNED:       # %bb.0:
+; RV32I-UNALIGNED-NEXT:    lw a2, 0(a1)
+; RV32I-UNALIGNED-NEXT:    lw a1, 4(a1)
+; RV32I-UNALIGNED-NEXT:    sw a2, 0(a0)
+; RV32I-UNALIGNED-NEXT:    sw a1, 4(a0)
+; RV32I-UNALIGNED-NEXT:    ret
+;
+; RV64I-UNALIGNED-LABEL: test_memcpy_inline_8bytes:
+; RV64I-UNALIGNED:       # %bb.0:
+; RV64I-UNALIGNED-NEXT:    ld a1, 0(a1)
+; RV64I-UNALIGNED-NEXT:    sd a1, 0(a0)
+; RV64I-UNALIGNED-NEXT:    ret
   call void @llvm.memcpy.inline.p0.p0.i64(ptr %dst, ptr %src, i64 8, i1 false)
   ret void
 }

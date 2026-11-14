@@ -17,7 +17,7 @@
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/index_space_classes.hpp>
 #include <sycl/__impl/memory_enums.hpp>
-#include <sycl/__spirv/spirv_vars.hpp>
+#include <sycl/__spirv/vars.hpp>
 
 #include <cstdint>
 
@@ -51,29 +51,31 @@ public:
 
   /// \return an id representing the index of the sub-group within the
   /// work-group.
-  id_type get_group_id() const noexcept { return __spirv_BuiltInSubgroupId(); }
+  id_type get_group_id() const noexcept {
+    return __spirv::getBuiltInSubgroupId();
+  }
 
-  /// \return a SYCL id representing the calling work-item’s position within the
+  /// \return a SYCL id representing the calling work-item's position within the
   /// sub-group.
   id_type get_local_id() const noexcept {
-    return __spirv_BuiltInSubgroupLocalInvocationId();
+    return __spirv::getBuiltInSubgroupLocalInvocationId();
   }
 
   /// \return a range representing the size of the sub-group.
   range_type get_local_range() const noexcept {
-    return __spirv_BuiltInSubgroupSize();
+    return __spirv::getBuiltInSubgroupSize();
   }
 
   /// \return a range representing the number of sub-groups within the
   /// work-group.
   range_type get_group_range() const noexcept {
-    return __spirv_BuiltInNumSubgroups();
+    return __spirv::getBuiltInNumSubgroups();
   }
 
   /// \return a range representing the maximum number of work-items permitted in
   /// a sub-group for the executing kernel.
   range_type get_max_local_range() const noexcept {
-    return __spirv_BuiltInSubgroupMaxSize();
+    return __spirv::getBuiltInSubgroupMaxSize();
   }
 
   /// Equivalent to return get_group_id()[0].
@@ -104,7 +106,7 @@ public:
 protected:
   sub_group() = default;
 
-  template <int dimensions> friend class sycl::nd_item;
+  template <int> friend class sycl::nd_item;
 };
 
 _LIBSYCL_END_NAMESPACE_SYCL

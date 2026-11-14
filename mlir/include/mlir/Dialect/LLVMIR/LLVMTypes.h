@@ -16,7 +16,6 @@
 
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
-#include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include <optional>
 
 namespace llvm {

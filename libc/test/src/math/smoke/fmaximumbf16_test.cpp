@@ -11,4 +11,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/fmaximumbf16.h"
 
-LIST_FMAXIMUM_TESTS(bfloat16, LIBC_NAMESPACE::fmaximumbf16)
+LIST_FMAXIMUM_TESTS(Fmaximumbf16, bfloat16, LIBC_NAMESPACE::fmaximumbf16)

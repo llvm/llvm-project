@@ -51,6 +51,10 @@ public:
   LevelZeroPluginContextTy *getUserCtx() const { return UserCtx; }
   void setUserCtx(LevelZeroPluginContextTy *Ctx) { UserCtx = Ctx; }
 
+  ze_command_list_handle_t getZeCmdList() const {
+    return CmdList ? CmdList->getCmdList() : nullptr;
+  }
+
   /// Clear data.
   void reset() { resetImpl(); }
 
@@ -166,74 +170,6 @@ private:
   /// device copies, doubling each time.
   Error memoryFillReplicateImpl(void *Ptr, const void *Pattern,
                                 size_t PatternSize, size_t Size);
-};
-
-class L0AsyncQueueTy : public L0QueueTy {
-protected:
-  /// List of events attached to submitted commands.
-  llvm::SmallVector<ze_event_handle_t> WaitEvents;
-  /// Kernel event not signaled.
-  ze_event_handle_t KernelEvent = nullptr;
-
-  /// Contains information about pending memory copies.
-  struct PendingCopyDescTy {
-    const void *Src;
-    void *Dst;
-    size_t Size;
-  };
-
-  /// Pending staging buffer to host copies.
-  llvm::SmallVector<PendingCopyDescTy> H2MList;
-  /// Pending USM memory copy commands that must wait for kernel completion.
-  llvm::SmallVector<PendingCopyDescTy> USM2MList;
-
-  virtual std::tuple<size_t, ze_event_handle_t *> getMemCopyEvents();
-  virtual std::tuple<size_t, ze_event_handle_t *> getLaunchKernelEvents();
-  void processCopyQueues();
-
-public:
-  L0AsyncQueueTy(L0DeviceTy &Device) : L0QueueTy(Device, /*IsInorder*/ false) {}
-  virtual ~L0AsyncQueueTy() {}
-
-  L0AsyncQueueTy(const L0AsyncQueueTy &) = delete;
-  L0AsyncQueueTy(const L0AsyncQueueTy &&) = delete;
-  L0AsyncQueueTy &operator=(const L0AsyncQueueTy &) = delete;
-  L0AsyncQueueTy &operator=(const L0AsyncQueueTy &&) = delete;
-
-  Error deinitImpl() override;
-  void resetImpl() override;
-  Error synchronizeImpl() override;
-  Expected<bool> hasPendingWorkImpl() override;
-  bool hasPendingMemoryCopies() override {
-    return !H2MList.empty() || !USM2MList.empty();
-  }
-  Error memoryCopyImpl(void *Dst, const void *Src, size_t Size) override;
-  Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
-                         int64_t Size) override;
-  Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size) override;
-  Error launchKernelImpl(ze_kernel_handle_t Kernel,
-                         L0LaunchEnvTy &KEnv) override;
-  Error hostCallImpl(void (*Callback)(void *), void *UserData) override;
-  Error memoryFillImpl(void *Ptr, const void *Pattern, size_t PatternSize,
-                       size_t Size) override;
-  Error dataFenceImpl() override;
-};
-
-class L0AsyncOrderedQueueTy : public L0AsyncQueueTy {
-public:
-  L0AsyncOrderedQueueTy(L0DeviceTy &Device) : L0AsyncQueueTy(Device) {}
-  virtual ~L0AsyncOrderedQueueTy() {}
-
-  L0AsyncOrderedQueueTy(const L0AsyncOrderedQueueTy &) = delete;
-  L0AsyncOrderedQueueTy(const L0AsyncOrderedQueueTy &&) = delete;
-  L0AsyncOrderedQueueTy &operator=(const L0AsyncOrderedQueueTy &) = delete;
-  L0AsyncOrderedQueueTy &operator=(const L0AsyncOrderedQueueTy &&) = delete;
-
-  Error synchronizeImpl() override;
-  std::tuple<size_t, ze_event_handle_t *> getMemCopyEvents() override;
-  std::tuple<size_t, ze_event_handle_t *> getLaunchKernelEvents() override;
-  Error hostCallImpl(void (*Callback)(void *), void *UserData) override;
-  Error dataFenceImpl() override { return Plugin::success(); }
 };
 
 class L0InorderQueueTy : public L0QueueTy {

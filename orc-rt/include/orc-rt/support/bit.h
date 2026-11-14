@@ -15,6 +15,8 @@
 #ifndef ORC_RT_SUPPORT_BIT_H
 #define ORC_RT_SUPPORT_BIT_H
 
+#include "orc-rt/support/Compiler.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -78,7 +80,7 @@ template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
 #endif
   } else if constexpr (sizeof(T) == 4) {
     uint32_t UV = V;
-#if __has_builtin(__builtin_bswap32)
+#if ORC_RT_HAS_BUILTIN(__builtin_bswap32)
     return __builtin_bswap32(UV);
 #elif defined(_MSC_VER) && !defined(_DEBUG)
     return _byteswap_ulong(UV);
@@ -91,7 +93,7 @@ template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
 #endif
   } else if constexpr (sizeof(T) == 8) {
     uint64_t UV = V;
-#if __has_builtin(__builtin_bswap64)
+#if ORC_RT_HAS_BUILTIN(__builtin_bswap64)
     return __builtin_bswap64(UV);
 #elif defined(_MSC_VER) && !defined(_DEBUG)
     return _byteswap_uint64(UV);
@@ -108,24 +110,24 @@ template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
 
 /// Calculates the number of leading zeros.
 template <typename T, typename _ = std::enable_if_t<std::is_unsigned_v<T>>>
-[[nodiscard]] constexpr int countl_zero(T Val) noexcept {
-  if (!Val)
-    return std::numeric_limits<T>::digits;
+[[nodiscard]] constexpr int countl_zero(T Value) noexcept {
+  size_t LeadingZeros = std::numeric_limits<T>::digits;
 
-  unsigned ZeroBits = 0;
-  for (T Shift = std::numeric_limits<T>::digits >> 1; Shift; Shift >>= 1) {
-    T Tmp = Val >> Shift;
-    if (Tmp)
-      Val = Tmp;
-    else
-      ZeroBits |= Shift;
+  while (Value) {
+    --LeadingZeros;
+    Value >>= 1;
   }
-  return ZeroBits;
+
+  return LeadingZeros;
 }
 
+/// Returns the number of bits needed to represent Value if Value is nonzero.
+/// Returns 0 otherwise.
+///
+/// Ex. bit_width(5) == 3.
 template <typename T, typename _ = std::enable_if_t<std::is_unsigned_v<T>>>
-[[nodiscard]] constexpr int bit_width(T x) noexcept {
-  return std::numeric_limits<T>::digits - countl_zero(x);
+[[nodiscard]] constexpr int bit_width(T Value) noexcept {
+  return std::numeric_limits<T>::digits - countl_zero(Value);
 }
 
 template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>

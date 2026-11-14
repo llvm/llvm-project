@@ -25,6 +25,9 @@ subroutine h
   !$omp declare_target enter(h, a)
   continue
 end
+subroutine k
+  !$omp declare target
+end
 end module
 
 !Expect: m.mod
@@ -45,10 +48,13 @@ end module
 !!$omp declare_target enter(g)
 !!$omp declare_target enter(f)
 !!$omp declare_target enter(h)
+!!$omp declare_target enter(k)
 !!$omp declare_target link(named_block)
 !contains
 !subroutine f()
 !end
 !subroutine h()
+!end
+!subroutine k()
 !end
 !end

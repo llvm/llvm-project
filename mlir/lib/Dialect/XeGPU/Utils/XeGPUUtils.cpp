@@ -23,6 +23,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/Casting.h"
@@ -160,19 +161,30 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     }
 
     std::string layoutName = getTemporaryLayoutName(result);
-    if (defOp->hasAttr(layoutName)) {
+    if (defOp->hasDiscardableAttr(layoutName)) {
       auto layout =
-          defOp->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+          defOp->getDiscardableAttrOfType<xegpu::DistributeLayoutAttr>(
+              layoutName);
       return layout;
     }
   }
 
   if (auto arg = dyn_cast<BlockArgument>(value)) {
     auto *parentOp = arg.getOwner()->getParentOp();
-    if (auto loop = dyn_cast_if_present<LoopLikeOpInterface>(parentOp)) {
-      OpOperand *tiedInit = loop.getTiedLoopInit(arg);
-      if (tiedInit)
+    auto loop = dyn_cast_if_present<LoopLikeOpInterface>(parentOp);
+    if (loop)
+      if (OpOperand *tiedInit = loop.getTiedLoopInit(arg))
         return getTemporaryLayout(*tiedInit);
+    // An scf.while "after" argument is tied to no init operand; scf.condition
+    // feeds it. Only a pass-through is supported: the forwarded value must be
+    // the matching "before" argument, whose tied init operand carries the
+    // layout.
+    if (auto whileOp = dyn_cast_if_present<scf::WhileOp>(parentOp);
+        whileOp && arg.getOwner()->getParent() == &whileOp.getAfter()) {
+      Value forwarded = whileOp.getConditionOp().getArgs()[arg.getArgNumber()];
+      if (auto beforeArg = dyn_cast<BlockArgument>(forwarded))
+        if (OpOperand *tiedInit = whileOp.getTiedLoopInit(beforeArg))
+          return getTemporaryLayout(*tiedInit);
     }
   }
 
@@ -235,27 +247,15 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
     if (isa<xegpu::StoreNdOp, xegpu::StoreMatrixOp>(op) && (idx < 2))
       return layout;
 
-    if (isa<xegpu::StoreScatterOp>(op)) {
-      xegpu::StoreScatterOp store(op);
-      int chunkSize = store.getChunkSize().value_or(1);
-      if (layout && idx >= 2 && chunkSize > 1)
-        return layout.dropDims(llvm::to_vector(
-            llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));
+    // For gather/scatter ops the mask and offsets share the value's layout.
+    if (isa<xegpu::StoreScatterOp, xegpu::LoadGatherOp>(op))
       return layout;
-    }
-    if (isa<xegpu::LoadGatherOp>(op)) {
-      xegpu::LoadGatherOp load(op);
-      int chunkSize = load.getChunkSize().value_or(1);
-      if (layout && idx >= 1 && chunkSize > 1)
-        return layout.dropDims(llvm::to_vector(
-            llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));
-      return layout;
-    }
   }
 
   std::string layoutName = xegpu::getTemporaryLayoutName(opr);
-  if (op->hasAttr(layoutName)) {
-    auto layout = op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+  if (op->hasDiscardableAttr(layoutName)) {
+    auto layout =
+        op->getDiscardableAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
     return layout;
   }
 
@@ -312,11 +312,11 @@ void xegpu::setDistributeLayoutAttr(
   }
 
   std::string name = xegpu::getTemporaryLayoutName(result);
-  if (owner->hasAttrOfType<DistributeLayoutAttr>(name)) {
+  if (owner->hasDiscardableAttrOfType<DistributeLayoutAttr>(name)) {
     return;
   }
   if (layout) {
-    owner->setAttr(name, layout);
+    owner->setDiscardableAttr(name, layout);
   }
 }
 
@@ -360,11 +360,11 @@ void xegpu::setDistributeLayoutAttr(const OpOperand &operand,
   }
 
   std::string name = xegpu::getTemporaryLayoutName(operand);
-  if (owner->hasAttrOfType<DistributeLayoutAttr>(name)) {
+  if (owner->hasDiscardableAttrOfType<DistributeLayoutAttr>(name)) {
     return;
   }
   if (layout) {
-    owner->setAttr(name, layout);
+    owner->setDiscardableAttr(name, layout);
   }
 }
 
@@ -374,8 +374,9 @@ xegpu::getTemporaryLayout(const T &operandOrResult) {
   Operation *op = operandOrResult.getOwner();
 
   std::string layoutName = xegpu::getTemporaryLayoutName(operandOrResult);
-  if (op->hasAttr(layoutName)) {
-    auto layout = op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+  if (op->hasDiscardableAttr(layoutName)) {
+    auto layout =
+        op->getDiscardableAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
     return layout;
   }
 
@@ -392,11 +393,11 @@ void xegpu::setTemporaryLayout(const T &operandOrResult,
                                const xegpu::DistributeLayoutAttr layout) {
   Operation *owner = operandOrResult.getOwner();
   std::string name = xegpu::getTemporaryLayoutName(operandOrResult);
-  if (owner->hasAttrOfType<xegpu::DistributeLayoutAttr>(name)) {
+  if (owner->hasDiscardableAttrOfType<xegpu::DistributeLayoutAttr>(name)) {
     return;
   }
   if (layout) {
-    owner->setAttr(name, layout);
+    owner->setDiscardableAttr(name, layout);
   }
 }
 
@@ -489,6 +490,24 @@ std::optional<std::string> xegpu::getChipStr(Operation *op) {
   return std::nullopt;
 }
 
+FailureOr<int64_t> xegpu::getNumSubgroupsFromBlockSize(Operation *op,
+                                                       int64_t subgroupSize) {
+  auto gpuFunc = op->getParentOfType<gpu::GPUFuncOp>();
+  if (!gpuFunc)
+    return failure();
+  std::optional<ArrayRef<int32_t>> blockSize = gpuFunc.getKnownBlockSize();
+  if (!blockSize)
+    return failure();
+  if (!llvm::all_of(*blockSize, [](int32_t dim) {
+        return dim > 0 && llvm::isPowerOf2_32(dim);
+      }))
+    return failure();
+  int64_t numSubgroups = llvm::product_of(*blockSize) / subgroupSize;
+  if (numSubgroups < 1)
+    return failure();
+  return numSubgroups;
+}
+
 /// Generates element-wise addition ops of two arrays with same length.
 SmallVector<OpFoldResult> xegpu::addElementwise(OpBuilder &builder,
                                                 Location loc,
@@ -546,17 +565,25 @@ int xegpu::getLargestDivisor(T dim, ArrayRef<T> candidates,
   return largest;
 }
 
+/// Returns the flags held by `fastmath`, or none if it is null.
+static arith::FastMathFlags getFlags(arith::FastMathFlagsAttr fastmath) {
+  return fastmath ? fastmath.getValue() : arith::FastMathFlags::none;
+}
+
 Value xegpu::subgroupReduction(Location loc, OpBuilder &builder, Value input,
-                               vector::CombiningKind kind, uint32_t size) {
+                               vector::CombiningKind kind, uint32_t size,
+                               arith::FastMathFlagsAttr fastmath) {
   // First reduce on a single thread to get per lane reduction value.
-  Value laneVal = vector::ReductionOp::create(builder, loc, kind, input);
+  Value laneVal = vector::ReductionOp::create(builder, loc, kind, input,
+                                              getFlags(fastmath));
   // Parallel reduction using butterfly shuffles.
   for (uint64_t i = 1; i < size; i <<= 1) {
     Value shuffled =
         gpu::ShuffleOp::create(builder, loc, laneVal, i, /**  width = **/ size,
                                /**  mode = **/ gpu::ShuffleMode::XOR)
             .getShuffleResult();
-    laneVal = makeArithReduction(builder, loc, kind, laneVal, shuffled);
+    laneVal =
+        makeArithReduction(builder, loc, kind, laneVal, shuffled, fastmath);
   }
   return laneVal;
 }
@@ -565,7 +592,8 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
                                      TypedValue<VectorType> acc,
                                      vector::CombiningKind kind,
                                      int64_t reductionDim, Location loc,
-                                     PatternRewriter &rewriter) {
+                                     PatternRewriter &rewriter,
+                                     arith::FastMathFlagsAttr fastmath) {
   VectorType sourceType = src.getType();
   int64_t sourceRank = sourceType.getRank();
   // Expecting at least a 2D source vector. Leading dimensions (all except the
@@ -629,7 +657,7 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
     accIdx[accRank - 1] = i;
     Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, accIdx);
     Value reduction = vector::ReductionOp::create(
-        rewriter, loc, kind, slice.getResult(), accExtract);
+        rewriter, loc, kind, slice.getResult(), accExtract, getFlags(fastmath));
     reductionResult = vector::InsertOp::create(rewriter, loc, reduction,
                                                reductionResult, accIdx);
     // Insert op should have the same layout as the accumulator.
@@ -641,7 +669,8 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
 Value xegpu::lowerCrossLaneReductionToShuffles(
     TypedValue<VectorType> src, TypedValue<VectorType> acc,
     vector::CombiningKind kind, int64_t reductionDim, int64_t reductionSize,
-    Location loc, PatternRewriter &rewriter) {
+    Location loc, PatternRewriter &rewriter,
+    arith::FastMathFlagsAttr fastmath) {
   VectorType sourceType = src.getType();
   int64_t sourceRank = sourceType.getRank();
   // Expecting at least a 2D source vector. Leading dimensions (all except the
@@ -696,19 +725,55 @@ Value xegpu::lowerCrossLaneReductionToShuffles(
     SmallVector<int64_t> accIdx(accRank, 0);
     accIdx[accRank - 1] = i;
     Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, accIdx);
-    Value fullReduce =
-        xegpu::subgroupReduction(loc, rewriter, slice, kind, reductionSize);
-    fullReduce =
-        vector::makeArithReduction(rewriter, loc, kind, fullReduce, accExtract);
+    Value fullReduce = xegpu::subgroupReduction(loc, rewriter, slice, kind,
+                                                reductionSize, fastmath);
+    fullReduce = vector::makeArithReduction(rewriter, loc, kind, fullReduce,
+                                            accExtract, fastmath);
     reductionResult = vector::InsertOp::create(rewriter, loc, fullReduce,
                                                reductionResult, accIdx);
   }
   return reductionResult;
 }
 
+/// Returns the neutral value of the float min or max reduction `kind` over
+/// elements of `semantics`. The reduction combines this value under its
+/// fast-math `flags`, so build only a value that the format can represent and
+/// the flags allow:
+/// - A kind that ignores NaN operands uses a quiet NaN, if the format has one
+///   and `nnan` is not set.
+/// - Otherwise it uses the infinity that never wins, if the format has one and
+///   `ninf` is not set.
+/// - Otherwise it uses the lowest (for max) or highest (for min) finite value.
+///   That value never wins either: no number that the format and the flags
+///   allow is below the lowest or above the highest finite value.
+static APFloat getMinMaxNeutral(const llvm::fltSemantics &semantics,
+                                vector::CombiningKind kind,
+                                arith::FastMathFlags flags) {
+  bool isMax = kind == vector::CombiningKind::MAXIMUMF ||
+               kind == vector::CombiningKind::MAXNUMF ||
+               kind == vector::CombiningKind::MAXIMUMNUMF;
+  bool ignoresNaN = kind != vector::CombiningKind::MINIMUMF &&
+                    kind != vector::CombiningKind::MAXIMUMF;
+  if (ignoresNaN && APFloat::semanticsHasNaN(semantics) &&
+      !arith::bitEnumContainsAny(flags, arith::FastMathFlags::nnan))
+    return APFloat::getQNaN(semantics);
+  bool useInf = APFloat::semanticsHasInf(semantics) &&
+                !arith::bitEnumContainsAny(flags, arith::FastMathFlags::ninf);
+  if (!isMax)
+    return useInf ? APFloat::getInf(semantics) : APFloat::getLargest(semantics);
+  // An unsigned format has no negative values. Its lowest value is zero, or
+  // its smallest positive value if it has no zero.
+  if (!APFloat::semanticsHasSignedRepr(semantics))
+    return APFloat::semanticsHasZero(semantics)
+               ? APFloat::getZero(semantics)
+               : APFloat::getSmallest(semantics);
+  return useInf ? APFloat::getInf(semantics, /*Negative=*/true)
+                : APFloat::getLargest(semantics, /*Negative=*/true);
+}
+
 Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
-                                         Type type,
-                                         vector::CombiningKind kind) {
+                                         Type type, vector::CombiningKind kind,
+                                         arith::FastMathFlagsAttr fastmath) {
   auto vecTy = dyn_cast<VectorType>(type);
   Type elemTy = vecTy ? vecTy.getElementType() : type;
 
@@ -728,8 +793,15 @@ Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
     return makeConst(builder.getZeroAttr(elemTy));
 
   case vector::CombiningKind::MUL:
-  case vector::CombiningKind::AND:
     return makeConst(builder.getOneAttr(elemTy));
+
+  case vector::CombiningKind::AND:
+    if (auto intTy = dyn_cast<IntegerType>(elemTy))
+      return makeConst(
+          builder.getIntegerAttr(elemTy, APInt::getAllOnes(intTy.getWidth())));
+    if (elemTy.isIndex())
+      return makeConst(builder.getIndexAttr(-1));
+    return nullptr;
 
   case vector::CombiningKind::MINSI:
     if (auto intTy = dyn_cast<IntegerType>(elemTy))
@@ -749,18 +821,16 @@ Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
           elemTy, APInt::getSignedMinValue(intTy.getWidth())));
     return nullptr;
 
-  case vector::CombiningKind::MINNUMF:
   case vector::CombiningKind::MINIMUMF:
-    if (auto floatTy = dyn_cast<FloatType>(elemTy))
-      return makeConst(builder.getFloatAttr(
-          elemTy, APFloat::getInf(floatTy.getFloatSemantics())));
-    return nullptr;
-
-  case vector::CombiningKind::MAXNUMF:
   case vector::CombiningKind::MAXIMUMF:
+  case vector::CombiningKind::MINNUMF:
+  case vector::CombiningKind::MINIMUMNUMF:
+  case vector::CombiningKind::MAXNUMF:
+  case vector::CombiningKind::MAXIMUMNUMF:
     if (auto floatTy = dyn_cast<FloatType>(elemTy))
       return makeConst(builder.getFloatAttr(
-          elemTy, APFloat::getInf(floatTy.getFloatSemantics(), true)));
+          elemTy, getMinMaxNeutral(floatTy.getFloatSemantics(), kind,
+                                   getFlags(fastmath))));
     return nullptr;
   }
   return nullptr;
@@ -794,7 +864,7 @@ bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
                              const xegpu::uArch::uArch *uArch) {
   // Return false for unsupported targets.
   // TODO: Add more support or move to target info.
-  if (!isa<xegpu::uArch::Xe2>(uArch) && !isa<xegpu::uArch::Xe3>(uArch))
+  if (!isa<xegpu::uArch::Xe2>(uArch) && !isa<xegpu::uArch::Xe3p>(uArch))
     return false;
   if (!layout)
     return false;
@@ -811,6 +881,39 @@ bool xegpu::hasStaticShapeAndStrides(MemRefType type) {
   int64_t offset;
   return succeeded(type.getStridesAndOffset(strides, offset)) &&
          llvm::none_of(strides, ShapedType::isDynamic);
+}
+
+Value xegpu::addElemOffsetInBytes(OpBuilder &builder, Location loc,
+                                  Value baseAddr, Value elemOffset,
+                                  MemRefType memrefTy) {
+  Type type = elemOffset.getType();
+  assert(baseAddr.getType() == type &&
+         "expected base address and offset of the same type");
+  auto makeConst = [&](int64_t value) -> Value {
+    return arith::ConstantOp::create(builder, loc, type,
+                                     builder.getIntegerAttr(type, value));
+  };
+
+  // finalAddr = baseAddr + elemOffset * bitWidth / 8
+  unsigned elemBits = memrefTy.getElementTypeBitWidth();
+  Value byteOffset;
+  if (elemBits % 8 == 0) {
+    // For byte-sized elements divide by 8 statically so that the division is
+    // folded into the constant:
+    //   finalAddr = baseAddr + elemOffset * (bitWidth / 8)
+    byteOffset = arith::MulIOp::create(builder, loc, elemOffset,
+                                       makeConst(elemBits / 8));
+  } else {
+    // For sub-byte elements multiply first and then divide by 8, otherwise the
+    // byte size would be zero (e.g. 4 / 8 == 0 for i4):
+    //   finalAddr = baseAddr + (elemOffset * bitWidth) / 8
+    Value bitSize = makeConst(elemBits);
+    Value eight = makeConst(8);
+    byteOffset = arith::DivUIOp::create(
+        builder, loc, arith::MulIOp::create(builder, loc, elemOffset, bitSize),
+        eight);
+  }
+  return arith::AddIOp::create(builder, loc, baseAddr, byteOffset);
 }
 
 // Check if dst shape is an expansion of src shape by inserting unit dimensions.
@@ -837,10 +940,15 @@ bool xegpu::matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
 // is split into one or more consecutive dimensions in dst whose product equals
 // the original dimension. Populates splitDimGroups with groups of dst indices
 // that correspond to each src dimension. Example: src=[6,4], dst=[2,3,2,2] ->
-// true
+// true. Shapes that only insert unit dimensions are  rejected here.
 bool xegpu::matchSplitDimExpansion(
     ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
     SmallVector<SmallVector<int64_t>> &splitDimGroups) {
+  SmallVector<int64_t> expandedUnitDims;
+  if (matchUnitDimExpansion(src, dst, expandedUnitDims) &&
+      !expandedUnitDims.empty())
+    return false;
+
   // each dim in src can be mapped to one or more dims in dst whose product
   // equals to the src dim
   size_t srcIdx = 0;

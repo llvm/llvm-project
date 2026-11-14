@@ -8,6 +8,6 @@
 
 #include "mlir-c/Dialect/Arith.h"
 #include "mlir/CAPI/Registration.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/IR/ArithDialect.h"
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Arith, arith, mlir::arith::ArithDialect)

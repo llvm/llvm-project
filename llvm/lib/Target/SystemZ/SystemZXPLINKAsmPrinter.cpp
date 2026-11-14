@@ -18,9 +18,7 @@
 #include "SystemZMCInstLower.h"
 #include "SystemZMachineFunctionInfo.h"
 #include "SystemZSubtarget.h"
-#include "SystemZTargetObjectFile.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/Function.h"
@@ -38,8 +36,7 @@ using namespace llvm;
 
 SystemZXPLINKAsmPrinter::SystemZXPLINKAsmPrinter(
     TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-    : SystemZAsmPrinter(TM, std::move(Streamer)),
-      ADATable(TM.getPointerSize(0)) {}
+    : SystemZAsmPrinter(TM, std::move(Streamer)), ADATable(8) {}
 
 bool SystemZXPLINKAsmPrinter::doInitialization(Module &M) {
   SM.reset();
@@ -109,15 +106,15 @@ SystemZXPLINKAsmPrinter::AssociatedDataAreaTable::insert(const MCSymbol *Sym,
 }
 
 uint32_t SystemZXPLINKAsmPrinter::AssociatedDataAreaTable::insert(
-    const MachineOperand MO) {
+    const MachineFunction &MF, const MachineOperand &MO) {
   MCSymbol *Sym;
   if (MO.getType() == MachineOperand::MO_GlobalAddress) {
     const GlobalValue *GV = MO.getGlobal();
-    Sym = MO.getParent()->getMF()->getTarget().getSymbol(GV);
+    Sym = MF.getTarget().getSymbol(GV);
     assert(Sym && "No symbol");
   } else if (MO.getType() == MachineOperand::MO_ExternalSymbol) {
     const char *SymName = MO.getSymbolName();
-    Sym = MO.getParent()->getMF()->getContext().getOrCreateSymbol(SymName);
+    Sym = MF.getContext().getOrCreateSymbol(SymName);
     assert(Sym && "No symbol");
   } else
     llvm_unreachable("Unexpected operand type");
@@ -160,6 +157,20 @@ void SystemZXPLINKAsmPrinter::emitInstruction(const MachineInstr *MI) {
                     .addReg(0);
     break;
 
+  case SystemZ::XPLINK_STACKRESTORE: {
+    if (!StackRestoreStub)
+      StackRestoreStub = OutContext.createTempSymbol("stackrestore");
+    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::LARL)
+                                     .addReg(SystemZ::R3D)
+                                     .addExpr(MCSymbolRefExpr::create(
+                                         StackRestoreStub, OutContext)));
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(SystemZ::BASR).addReg(SystemZ::R3D).addReg(SystemZ::R3D));
+    emitCallInformation(CallType::BASR33);
+    return;
+  }
+
   case SystemZ::CallBASR_STACKEXT:
     EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BASR)
                                      .addReg(SystemZ::R3D)
@@ -171,7 +182,7 @@ void SystemZXPLINKAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case SystemZ::ADA_ENTRY: {
     const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
     const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
-    uint32_t Disp = ADATable.insert(MI->getOperand(1));
+    uint32_t Disp = ADATable.insert(*MF, MI->getOperand(1));
     Register TargetReg = MI->getOperand(0).getReg();
 
     Register ADAReg = MI->getOperand(2).getReg();
@@ -272,6 +283,15 @@ void SystemZXPLINKAsmPrinter::emitXXStructorList(const DataLayout &DL,
   }
 }
 
+bool SystemZXPLINKAsmPrinter::doFinalization(Module &M) {
+  // The stack restore stub follows the last function. It must be emitted
+  // before the debug information is finalized, which may end the code section
+  // (emitEndOfAsmFile is too late).
+  if (StackRestoreStub)
+    emitStackRestoreStub();
+  return SystemZAsmPrinter::doFinalization(M);
+}
+
 void SystemZXPLINKAsmPrinter::emitEndOfAsmFile(Module &M) {
   auto *ZOS = getTargetStreamer();
   emitADASection();
@@ -289,6 +309,54 @@ void SystemZXPLINKAsmPrinter::emitEndOfAsmFile(Module &M) {
       }
     }
   }
+}
+
+// Emit CELQMAIN in RENT format (see z/OS Language Environment Vendor
+// Interfaces, "Program initialization and termination for AMODE 64
+// applications"):
+//   +0   X'04000001'
+//   +8   AD(main entry point)
+//   +10  AD(CELQINPL)
+//   +18  A(0) / Q(environment); emitted as 8 byte R-con to main, which the
+//        binder resolves to the offset of the ADA of main (fits into 4 bytes)
+// followed by a reference to the bootstrap routine CELQBST. CELQSTRT only has
+// a weak reference to CELQBST, so without it autocall would not include it.
+void SystemZXPLINKAsmPrinter::emitCELQMAIN(const Function &MainFn) {
+  MCSymbol *MainSym = getSymbol(&MainFn);
+  auto ExternalOSSymbol = [&](StringRef Name, bool IsRenameable) {
+    MCSymbol *Sym = OutContext.getOrCreateSymbol(Name);
+    OutStreamer->emitSymbolAttribute(Sym, MCSA_OSLinkage);
+    OutStreamer->emitSymbolAttribute(Sym, MCSA_Global);
+    getTargetStreamer()->emitRenameable(Sym, IsRenameable);
+    return Sym;
+  };
+  MCSymbol *CELQINPL = ExternalOSSymbol("CELQINPL", /*IsRenameable=*/false);
+  MCSymbol *CELQBST = ExternalOSSymbol("CELQBST", /*IsRenameable=*/true);
+
+  OutStreamer->pushSection();
+  OutStreamer->switchSection(getObjFileLowering().getTextSection());
+  OutStreamer->emitValueToAlignment(Align(8));
+  MCSymbol *CELQMAIN = OutContext.getOrCreateSymbol("CELQMAIN");
+  // Referenced by CELQSTRT, CELQINPL and CELQBST with OS linkage.
+  OutStreamer->emitSymbolAttribute(CELQMAIN, MCSA_OSLinkage);
+  OutStreamer->emitSymbolAttribute(CELQMAIN, MCSA_Global);
+  OutStreamer->emitSymbolAttribute(CELQMAIN, MCSA_Hidden);
+  OutStreamer->emitLabel(CELQMAIN);
+  OutStreamer->AddComment("CELQMAIN, RENT format");
+  OutStreamer->emitInt32(0x04000001);
+  OutStreamer->emitInt32(0);
+  OutStreamer->AddComment("Address of main");
+  OutStreamer->emitValue(MCSymbolRefExpr::create(MainSym, OutContext), 8);
+  OutStreamer->AddComment("Address of CELQINPL");
+  OutStreamer->emitValue(MCSymbolRefExpr::create(CELQINPL, OutContext), 8);
+  OutStreamer->AddComment("Q(environment) of main");
+  OutStreamer->emitValue(
+      MCSpecifierExpr::create(MCSymbolRefExpr::create(MainSym, OutContext),
+                              SystemZ::S_RCon, OutContext),
+      8);
+  OutStreamer->AddComment("Reference to CELQBST");
+  OutStreamer->emitValue(MCSymbolRefExpr::create(CELQBST, OutContext), 8);
+  OutStreamer->popSection();
 }
 
 void SystemZXPLINKAsmPrinter::emitADASection() {
@@ -343,6 +411,10 @@ void SystemZXPLINKAsmPrinter::emitADASection() {
       OutStreamer->emitSymbolAttribute(Alias, MCSA_Extern);
       MCSymbolGOFF *GOFFSym =
           static_cast<llvm::MCSymbolGOFF *>(const_cast<llvm::MCSymbol *>(Sym));
+      // A weak reference (extern_weak) stays weak through the indirect
+      // symbol, otherwise the binder fails on the unresolved reference.
+      if (GOFFSym->isWeak())
+        OutStreamer->emitSymbolAttribute(Alias, MCSA_WeakReference);
       ZOS->emitExternalName(Alias, GOFFSym->getExternalName());
       EMIT_COMMENT("pointer to function descriptor");
       OutStreamer->emitValue(
@@ -427,6 +499,10 @@ void SystemZXPLINKAsmPrinter::emitIDRLSection(Module &M) {
 }
 
 void SystemZXPLINKAsmPrinter::emitFunctionBodyEnd() {
+  // A stub (naked function) has no PPA1 and thus no end of function symbol.
+  if (MF->getFunction().hasFnAttribute(Attribute::Naked))
+    return;
+
   // Emit symbol for the end of function if the z/OS target streamer
   // is used. This is needed to calculate the size of the function.
   auto *ZOS = getTargetStreamer();
@@ -633,7 +709,59 @@ void SystemZXPLINKAsmPrinter::calculatePPA1() {
 
 void SystemZXPLINKAsmPrinter::emitStartOfAsmFile(Module &M) {
   emitPPA2(M);
+  // A main program needs CELQMAIN, through which the Language Environment
+  // startup (CELQSTRT) finds the main routine and its environment. It is
+  // emitted here and not at the end of the file, because the text section
+  // may already be closed then (e.g. after emitting the DWARF aranges).
+  if (const Function *MainFn = M.getFunction("main");
+      MainFn && !MainFn->isDeclaration())
+    emitCELQMAIN(*MainFn);
   AsmPrinter::emitStartOfAsmFile(M);
+}
+
+// Emit the stack restore stub. A stack restore must copy the frame header
+// (which @@ALCAXP moved down with the stack pointer) to the restored stack
+// pointer, and no signal may be delivered while the stack pointer is changed
+// and the header is copied. Language Environment delays signals while a stub
+// runs, so this is done in a stub routine: it has a stub entry marker
+// (preceded by 8 bytes of padding, so that the entry is 16 bytes after the
+// start, like for a normal routine), no PPA1 and no save area. Like the stack
+// extension routine, it is called with BASR 3,3 and returns with B 2(3). It
+// gets the new stack pointer in R1. The new stack pointer is never below the
+// current one, and both are multiples of 32 apart (0 if no storage was
+// allocated), so copying the header in blocks of 32 bytes from the highest
+// block down never overwrites a block that is still to be copied.
+void SystemZXPLINKAsmPrinter::emitStackRestoreStub() {
+  const MCSubtargetInfo &STI = TM.getMCSubtargetInfo();
+  auto Emit = [&](const MCInst &Inst) {
+    OutStreamer->emitInstruction(Inst, STI);
+  };
+
+  OutStreamer->pushSection();
+  OutStreamer->switchSection(getObjFileLowering().getTextSection());
+  OutStreamer->emitValueToAlignment(Align(8));
+  OutStreamer->AddComment("XPLINK Stub Entry Padding");
+  OutStreamer->emitIntValue(0, 8);
+  OutStreamer->AddComment("XPLINK Stub Entry Marker");
+  OutStreamer->AddComment("Eyecatcher 0x00C300C500C500");
+  OutStreamer->emitIntValueInHex(0x00C300C500C500, 7);
+  OutStreamer->AddComment("Mark Type C'4'");
+  OutStreamer->emitInt8(0xF4);
+  OutStreamer->emitLabel(StackRestoreStub);
+
+  SystemZXPLINK64Registers Regs;
+  const int Bias = Regs.getStackPointerBias();
+  const int Block = 32;
+  for (int Off = Regs.getCallFrameSize() - Block; Off >= 0; Off -= Block)
+    Emit(MCInstBuilder(SystemZ::MVC)
+             .addReg(SystemZ::R1D)
+             .addImm(Bias + Off)
+             .addImm(Block)
+             .addReg(SystemZ::R4D)
+             .addImm(Bias + Off));
+  Emit(MCInstBuilder(SystemZ::LGR).addReg(SystemZ::R4D).addReg(SystemZ::R1D));
+  Emit(MCInstBuilder(SystemZ::B).addReg(SystemZ::R3D).addImm(2).addReg(0));
+  OutStreamer->popSection();
 }
 
 void SystemZXPLINKAsmPrinter::emitPPA2(Module &M) {
@@ -646,6 +774,7 @@ void SystemZXPLINKAsmPrinter::emitPPA2(Module &M) {
   MCSymbol *CELQSTRT = OutContext.getOrCreateSymbol(StartSymbolName);
   OutStreamer->emitSymbolAttribute(CELQSTRT, MCSA_OSLinkage);
   OutStreamer->emitSymbolAttribute(CELQSTRT, MCSA_Global);
+  ZOS->emitRenameable(CELQSTRT, /*IsRenamable=*/false);
 
   // Create symbol and assign to streamer field for use in PPA1.
   ZOS->PPA2Sym = OutContext.createTempSymbol("PPA2", false);
@@ -661,7 +790,7 @@ void SystemZXPLINKAsmPrinter::emitPPA2(Module &M) {
            ProductPatch = getProductPatch(M);
 
   SmallString<6> VersionEBCDIC, Version;
-  Version = formatv("{0,0-2:d}{1,0-2:d}{2,0-2:d}", ProductVersion,
+  Version = formatv("{0,0+2:d}{1,0+2:d}{2,0+2:d}", ProductVersion,
                     ProductRelease, ProductPatch);
 
   ConverterEBCDIC::convertToEBCDIC(CompilationTime, CompilationTimeEBCDIC);
@@ -752,7 +881,7 @@ void SystemZXPLINKAsmPrinter::emitPPA2(Module &M) {
 
 void SystemZXPLINKAsmPrinter::emitGlobalAlias(const Module &M,
                                               const GlobalAlias &GA) {
-  if (!TM.getTargetTriple().isOSzOS())
+  if (!M.getTargetTriple().isOSzOS())
     return AsmPrinter::emitGlobalAlias(M, GA);
 
   // Aliased function labels have already been emitted for z/OS
@@ -764,24 +893,36 @@ const MCExpr *SystemZXPLINKAsmPrinter::lowerConstant(const Constant *CV,
   const GlobalAlias *GA = dyn_cast<GlobalAlias>(CV);
   const GlobalVariable *GV = dyn_cast<GlobalVariable>(CV);
   const Function *FV = dyn_cast<Function>(CV);
-  bool IsFunc = !GV && (FV || (GA && isa<Function>(GA->getAliaseeObject())));
 
-  MCSymbol *Sym = NULL;
-
+  MCSymbol *Sym = nullptr;
   if (GA)
     Sym = getSymbol(GA);
-  else if (IsFunc)
+  else if (FV)
     Sym = getSymbol(FV);
   else if (GV)
     Sym = getSymbol(GV);
+  else
+    return AsmPrinter::lowerConstant(CV);
 
-  if (IsFunc) {
-    OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
-    if (FV->hasExternalLinkage())
-      return MCSpecifierExpr::create(MCSymbolRefExpr::create(Sym, OutContext),
+  // Functions and function aliases need special handling.
+  if (FV || (GA && isa<Function>(GA->getAliaseeObject()))) {
+    // A function pointer must point to a function descriptor (a V-con would
+    // yield the entry point instead), and it must compare equal to the address
+    // of the same function taken in code. For a function that is not internal,
+    // code loads the address of the descriptor from an ADA slot that refers to
+    // the indirect symbol; the binder resolves that reference to the function
+    // descriptor. Use the same reference here. The slot is shared with code
+    // taking the address and defines the indirect symbol.
+    const GlobalValue *FGV = GA ? static_cast<const GlobalValue *>(GA)
+                                : static_cast<const GlobalValue *>(FV);
+    if (!FGV->hasLocalLinkage()) {
+      ADATable.insert(Sym, SystemZII::MO_ADA_INDIRECT_FUNC_DESC);
+      MCSymbol *Alias = OutContext.getOrCreateSymbol(
+          Twine(Sym->getName()).concat("@indirect"));
+      return MCSpecifierExpr::create(MCSymbolRefExpr::create(Alias, OutContext),
                                      SystemZ::S_VCon, OutContext);
-    // Trigger creation of function descriptor in ADA for internal
-    // functions.
+    }
+    // Internal functions: function descriptor in the ADA.
     unsigned Disp = ADATable.insert(Sym, SystemZII::MO_ADA_DIRECT_FUNC_DESC);
     return MCBinaryExpr::createAdd(
         MCSpecifierExpr::create(
@@ -791,57 +932,71 @@ const MCExpr *SystemZXPLINKAsmPrinter::lowerConstant(const Constant *CV,
             SystemZ::S_None, OutContext),
         MCConstantExpr::create(Disp, OutContext), OutContext);
   }
-  if (Sym) {
-    OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeObject);
-    return MCSymbolRefExpr::create(Sym, OutContext);
-  }
-  return AsmPrinter::lowerConstant(CV);
+  auto *ZOS = getTargetStreamer();
+  ZOS->emitADA(Sym, OutContext.getObjectFileInfo()->getADASection());
+  OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeObject);
+  return MCSymbolRefExpr::create(Sym, OutContext);
 }
 
 void SystemZXPLINKAsmPrinter::emitFunctionEntryLabel() {
   auto *ZOS = getTargetStreamer();
-  calculatePPA1();
 
-  // EntryPoint Marker
-  const MachineFrameInfo &MFFrame = MF->getFrameInfo();
-  bool IsUsingAlloca = MFFrame.hasVarSizedObjects();
-  uint32_t DSASize = MFFrame.getStackSize();
-  bool IsLeaf = DSASize == 0 && MFFrame.getCalleeSavedInfo().empty();
+  // A naked function is an XPLINK stub: it has a stub entry marker and no PPA1.
+  if (MF->getFunction().hasFnAttribute(Attribute::Naked)) {
+    // The entry marker of a normal function is 16 bytes. Pad the 8 byte stub
+    // marker, so that the entry point is at the same offset from the start of
+    // the function.
+    OutStreamer->AddComment("XPLINK Stub Entry Padding");
+    OutStreamer->emitZeros(8);
+    OutStreamer->AddComment("XPLINK Stub Entry Marker");
+    OutStreamer->AddComment("Eyecatcher 0x00C300C500C500");
+    OutStreamer->emitIntValueInHex(0x00C300C500C500, 7); // Eyecatcher.
+    OutStreamer->AddComment("Mark Type C'4'");
+    OutStreamer->emitInt8(0xF4); // Mark Type.
+  } else {
+    calculatePPA1();
 
-  // Set Flags.
-  uint8_t Flags = 0;
-  if (IsLeaf)
-    Flags |= 0x08;
-  if (IsUsingAlloca)
-    Flags |= 0x04;
+    // EntryPoint Marker
+    const MachineFrameInfo &MFFrame = MF->getFrameInfo();
+    bool IsUsingAlloca = MFFrame.hasVarSizedObjects();
+    uint32_t DSASize = MFFrame.getStackSize();
+    bool IsLeaf = DSASize == 0 && MFFrame.getCalleeSavedInfo().empty();
 
-  // Combine into top 27 bits of DSASize and bottom 5 bits of Flags.
-  uint32_t DSAAndFlags = DSASize & 0xFFFFFFE0; // (x/32) << 5
-  DSAAndFlags |= Flags;
+    // Set Flags.
+    uint8_t Flags = 0;
+    if (IsLeaf)
+      Flags |= 0x08;
+    if (IsUsingAlloca)
+      Flags |= 0x04;
 
-  // Emit entry point marker section.
-  OutStreamer->AddComment("XPLINK Routine Layout Entry");
-  OutStreamer->emitLabel(ZOS->DeferredPPA1.back().EPMarker);
-  OutStreamer->AddComment("Eyecatcher 0x00C300C500C500");
-  OutStreamer->emitIntValueInHex(0x00C300C500C500, 7); // Eyecatcher.
-  OutStreamer->AddComment("Mark Type C'1'");
-  OutStreamer->emitInt8(0xF1); // Mark Type.
-  OutStreamer->AddComment("Offset to PPA1");
-  OutStreamer->emitAbsoluteSymbolDiff(ZOS->DeferredPPA1.back().PPA1,
-                                      ZOS->DeferredPPA1.back().EPMarker, 4);
-  if (OutStreamer->isVerboseAsm()) {
-    OutStreamer->AddComment("DSA Size 0x" + Twine::utohexstr(DSASize));
-    OutStreamer->AddComment("Entry Flags");
-    if (Flags & 0x08)
-      OutStreamer->AddComment("  Bit 1: 1 = Leaf function");
-    else
-      OutStreamer->AddComment("  Bit 1: 0 = Non-leaf function");
-    if (Flags & 0x04)
-      OutStreamer->AddComment("  Bit 2: 1 = Uses alloca");
-    else
-      OutStreamer->AddComment("  Bit 2: 0 = Does not use alloca");
+    // Combine into top 27 bits of DSASize and bottom 5 bits of Flags.
+    uint32_t DSAAndFlags = DSASize & 0xFFFFFFE0; // (x/32) << 5
+    DSAAndFlags |= Flags;
+
+    // Emit entry point marker section.
+    OutStreamer->AddComment("XPLINK Routine Layout Entry");
+    OutStreamer->emitLabel(ZOS->DeferredPPA1.back().EPMarker);
+    OutStreamer->AddComment("Eyecatcher 0x00C300C500C500");
+    OutStreamer->emitIntValueInHex(0x00C300C500C500, 7); // Eyecatcher.
+    OutStreamer->AddComment("Mark Type C'1'");
+    OutStreamer->emitInt8(0xF1); // Mark Type.
+    OutStreamer->AddComment("Offset to PPA1");
+    OutStreamer->emitAbsoluteSymbolDiff(ZOS->DeferredPPA1.back().PPA1,
+                                        ZOS->DeferredPPA1.back().EPMarker, 4);
+    if (OutStreamer->isVerboseAsm()) {
+      OutStreamer->AddComment("DSA Size 0x" + Twine::utohexstr(DSASize));
+      OutStreamer->AddComment("Entry Flags");
+      if (Flags & 0x08)
+        OutStreamer->AddComment("  Bit 1: 1 = Leaf function");
+      else
+        OutStreamer->AddComment("  Bit 1: 0 = Non-leaf function");
+      if (Flags & 0x04)
+        OutStreamer->AddComment("  Bit 2: 1 = Uses alloca");
+      else
+        OutStreamer->AddComment("  Bit 2: 0 = Does not use alloca");
+    }
+    OutStreamer->emitInt32(DSAAndFlags);
   }
-  OutStreamer->emitInt32(DSAAndFlags);
 
   ZOS->emitADA(CurrentFnSym, getObjFileLowering().getADASection());
 
@@ -851,6 +1006,7 @@ void SystemZXPLINKAsmPrinter::emitFunctionEntryLabel() {
   // Emit aliasing label for function entry point label.
   for (const GlobalAlias *Alias : GOAliasMap[F]) {
     MCSymbol *Sym = getSymbol(Alias);
+    ZOS->emitADA(Sym, getObjFileLowering().getADASection());
     OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
     emitVisibility(Sym, Alias->getVisibility());
     emitLinkage(Alias, Sym);

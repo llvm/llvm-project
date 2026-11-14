@@ -131,7 +131,7 @@ func.func @store_with_a_region_before(%arg0: memref<f32>) -> memref<f32> {
   %1 = arith.constant 1.0 : f32
   memref.store %0, %arg0[] {tag_name = "pre"} : memref<f32>
   memref.load %arg0[] {tag = "store_with_a_region_before::before"} : memref<f32>
-  test.store_with_a_region %arg0 attributes { tag_name = "region", store_before_region = true } {
+  test.store_with_a_region %arg0 <store_before_region = true> attributes {tag_name = "region"} {
     memref.load %arg0[] {tag = "inside_region"} : memref<f32>
     test.store_with_a_region_terminator
   } : memref<f32>
@@ -157,7 +157,7 @@ func.func @store_with_a_region_after(%arg0: memref<f32>) -> memref<f32> {
   %1 = arith.constant 1.0 : f32
   memref.store %0, %arg0[] {tag_name = "pre"} : memref<f32>
   memref.load %arg0[] {tag = "store_with_a_region_after::before"} : memref<f32>
-  test.store_with_a_region %arg0 attributes { tag_name = "region", store_before_region = false } {
+  test.store_with_a_region %arg0 <store_before_region = false> attributes {tag_name = "region"} {
     memref.load %arg0[] {tag = "inside_region"} : memref<f32>
     test.store_with_a_region_terminator
   } : memref<f32>
@@ -186,7 +186,7 @@ func.func @store_with_a_region_before_containing_a_store(%arg0: memref<f32>) -> 
   %1 = arith.constant 1.0 : f32
   memref.store %0, %arg0[] {tag_name = "pre"} : memref<f32>
   memref.load %arg0[] {tag = "store_with_a_region_before_containing_a_store::before"} : memref<f32>
-  test.store_with_a_region %arg0 attributes { tag_name = "region", store_before_region = true } {
+  test.store_with_a_region %arg0 <store_before_region = true> attributes {tag_name = "region"} {
     memref.load %arg0[] {tag = "enter_region"} : memref<f32>
     %2 = arith.constant 2.0 : f32
     memref.store %2, %arg0[] {tag_name = "inner"} : memref<f32>
@@ -218,7 +218,7 @@ func.func @store_with_a_region_after_containing_a_store(%arg0: memref<f32>) -> m
   %1 = arith.constant 1.0 : f32
   memref.store %0, %arg0[] {tag_name = "pre"} : memref<f32>
   memref.load %arg0[] {tag = "store_with_a_region_after_containing_a_store::before"} : memref<f32>
-  test.store_with_a_region %arg0 attributes { tag_name = "region", store_before_region = false } {
+  test.store_with_a_region %arg0 <store_before_region = false> attributes {tag_name = "region"} {
     memref.load %arg0[] {tag = "enter_region"} : memref<f32>
     %2 = arith.constant 2.0 : f32
     memref.store %2, %arg0[] {tag_name = "inner"} : memref<f32>
@@ -247,7 +247,7 @@ func.func @store_with_a_loop_region_before(%arg0: memref<f32>) -> memref<f32> {
   %1 = arith.constant 1.0 : f32
   memref.store %0, %arg0[] {tag_name = "pre"} : memref<f32>
   memref.load %arg0[] {tag = "store_with_a_loop_region_before::before"} : memref<f32>
-  test.store_with_a_loop_region %arg0 attributes { tag_name = "region", store_before_region = true } {
+  test.store_with_a_loop_region %arg0 <store_before_region = true> attributes {tag_name = "region"} {
     memref.load %arg0[] {tag = "inside_region"} : memref<f32>
     test.store_with_a_region_terminator
   } : memref<f32>
@@ -273,7 +273,7 @@ func.func @store_with_a_loop_region_after(%arg0: memref<f32>) -> memref<f32> {
   %1 = arith.constant 1.0 : f32
   memref.store %0, %arg0[] {tag_name = "pre"} : memref<f32>
   memref.load %arg0[] {tag = "store_with_a_loop_region_after::before"} : memref<f32>
-  test.store_with_a_loop_region %arg0 attributes { tag_name = "region", store_before_region = false } {
+  test.store_with_a_loop_region %arg0 <store_before_region = false> attributes {tag_name = "region"} {
     memref.load %arg0[] {tag = "inside_region"} : memref<f32>
     test.store_with_a_region_terminator
   } : memref<f32>
@@ -304,7 +304,7 @@ func.func @store_with_a_loop_region_before_containing_a_store(%arg0: memref<f32>
   %1 = arith.constant 1.0 : f32
   memref.store %0, %arg0[] {tag_name = "pre"} : memref<f32>
   memref.load %arg0[] {tag = "store_with_a_loop_region_before_containing_a_store::before"} : memref<f32>
-  test.store_with_a_loop_region %arg0 attributes { tag_name = "region", store_before_region = true } {
+  test.store_with_a_loop_region %arg0 <store_before_region = true> attributes {tag_name = "region"} {
     memref.load %arg0[] {tag = "enter_region"} : memref<f32>
     %2 = arith.constant 2.0 : f32
     memref.store %2, %arg0[] {tag_name = "inner"} : memref<f32>
@@ -337,7 +337,7 @@ func.func @store_with_a_loop_region_after_containing_a_store(%arg0: memref<f32>)
   %1 = arith.constant 1.0 : f32
   memref.store %0, %arg0[] {tag_name = "pre"} : memref<f32>
   memref.load %arg0[] {tag = "store_with_a_loop_region_after_containing_a_store::before"} : memref<f32>
-  test.store_with_a_loop_region %arg0 attributes { tag_name = "region", store_before_region = false } {
+  test.store_with_a_loop_region %arg0 <store_before_region = false> attributes {tag_name = "region"} {
     memref.load %arg0[] {tag = "enter_region"} : memref<f32>
     %2 = arith.constant 2.0 : f32
     memref.store %2, %arg0[] {tag_name = "inner"} : memref<f32>

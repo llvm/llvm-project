@@ -54,5 +54,5 @@ template("unittest") {
 }
 
 set_defaults("unittest") {
-  configs = shared_binary_target_configs
+  configs = executable_target_configs
 }

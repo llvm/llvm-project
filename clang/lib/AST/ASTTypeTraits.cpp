@@ -30,14 +30,15 @@ const ASTNodeKind::KindInfo ASTNodeKind::AllKindInfo[] = {
     {NKI_None, "TemplateArgumentLoc"},
     {NKI_None, "LambdaCapture"},
     {NKI_None, "TemplateName"},
+    {NKI_None, "NestedNameSpecifier"},
     {NKI_None, "NestedNameSpecifierLoc"},
+    {NKI_None, "ObjCProtocolLoc"},
     {NKI_None, "QualType"},
 #define TYPELOC(CLASS, PARENT) {NKI_##PARENT, #CLASS "TypeLoc"},
 #include "clang/AST/TypeLocNodes.def"
     {NKI_None, "TypeLoc"},
     {NKI_None, "CXXBaseSpecifier"},
     {NKI_None, "CXXCtorInitializer"},
-    {NKI_None, "NestedNameSpecifier"},
     {NKI_None, "Decl"},
 #define DECL(DERIVED, BASE) { NKI_##BASE, #DERIVED "Decl" },
 #include "clang/AST/DeclNodes.inc"
@@ -54,7 +55,6 @@ const ASTNodeKind::KindInfo ASTNodeKind::AllKindInfo[] = {
     {NKI_None, "Attr"},
 #define ATTR(A) {NKI_Attr, #A "Attr"},
 #include "clang/Basic/AttrList.inc"
-    {NKI_None, "ObjCProtocolLoc"},
     {NKI_None, "ConceptReference"},
     {NKI_None, "OffsetOfNode"},
 };
@@ -228,7 +228,7 @@ void DynTypedNode::dump(llvm::raw_ostream &OS,
   else if (const Type *T = get<Type>())
     T->dump(OS, Context);
   else if (const ConceptReference *C = get<ConceptReference>())
-    C->dump(OS);
+    C->dump(OS, Context);
   else if (const TypeLoc *TL = get<TypeLoc>())
     TL->dump(OS, Context);
   else

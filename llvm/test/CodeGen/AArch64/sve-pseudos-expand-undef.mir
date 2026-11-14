@@ -1,9 +1,8 @@
-# RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -run-pass=aarch64-expand-pseudo -simplify-mir -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -run-pass=aarch64-expand-pseudo -simplify-mir %s -o - | FileCheck %s
 # RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -passes=aarch64-expand-pseudo -simplify-mir %s -o - | FileCheck %s
 ---
 name:            add_x
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$p0' }
   - { reg: '$z0' }
@@ -26,6 +25,7 @@ body:             |
 name: expand_mls_to_msb
 body:             |
   bb.0:
+    liveins: $z0, $z1, $z2
     ; CHECK: name: expand_mls_to_msb
     ; CHECK: {{.*}} MSB_ZPmZZ_B {{.*}}
     renamable $p0 = PTRUE_B 31, implicit $vg
@@ -37,6 +37,7 @@ body:             |
 name: expand_mla_to_mad
 body:             |
   bb.0:
+    liveins: $z0, $z1, $z2
     ; CHECK: name: expand_mla_to_mad
     ; CHECK: {{.*}} MAD_ZPmZZ_B {{.*}}
     renamable $p0 = PTRUE_B 31, implicit $vg

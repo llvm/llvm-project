@@ -654,7 +654,7 @@ define float @test_minnum_inf_nnan(float %x, float %y) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX-NEXT:    retq
-  %r = call nnan float @llvm.minnum.f32(float %y, float 0x7ff0000000000000)
+  %r = call nnan float @llvm.minnum.f32(float %y, float +inf)
   ret float %r
 }
 

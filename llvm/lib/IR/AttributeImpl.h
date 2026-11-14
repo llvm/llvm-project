@@ -92,42 +92,13 @@ public:
   /// Used when sorting the attributes.
   bool operator<(const AttributeImpl &AI) const;
 
+  /// Only the ConstantRange kinds are uniqued by profile; every other kind
+  /// has a pool with a typed key.
   void Profile(FoldingSetNodeID &ID) const {
-    if (isEnumAttribute())
-      Profile(ID, getKindAsEnum());
-    else if (isIntAttribute())
-      Profile(ID, getKindAsEnum(), getValueAsInt());
-    else if (isStringAttribute())
-      Profile(ID, getKindAsString(), getValueAsString());
-    else if (isTypeAttribute())
-      Profile(ID, getKindAsEnum(), getValueAsType());
-    else if (isConstantRangeAttribute())
+    if (isConstantRangeAttribute())
       Profile(ID, getKindAsEnum(), getValueAsConstantRange());
     else
       Profile(ID, getKindAsEnum(), getValueAsConstantRangeList());
-  }
-
-  static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind) {
-    assert(Attribute::isEnumAttrKind(Kind) && "Expected enum attribute");
-    ID.AddInteger(Kind);
-  }
-
-  static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind,
-                      uint64_t Val) {
-    assert(Attribute::isIntAttrKind(Kind) && "Expected int attribute");
-    ID.AddInteger(Kind);
-    ID.AddInteger(Val);
-  }
-
-  static void Profile(FoldingSetNodeID &ID, StringRef Kind, StringRef Values) {
-    ID.AddString(Kind);
-    if (!Values.empty()) ID.AddString(Values);
-  }
-
-  static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind,
-                      Type *Ty) {
-    ID.AddInteger(Kind);
-    ID.AddPointer(Ty);
   }
 
   static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind,
@@ -186,6 +157,8 @@ public:
   }
 
   uint64_t getValue() const { return Val; }
+
+  std::pair<unsigned, uint64_t> getKey() const { return {getEnumKind(), Val}; }
 };
 
 class StringAttributeImpl final
@@ -215,6 +188,10 @@ public:
     return StringRef(getTrailingObjects() + KindSize + 1, ValSize);
   }
 
+  std::pair<StringRef, StringRef> getKey() const {
+    return {getStringKind(), getStringValue()};
+  }
+
   static size_t totalSizeToAlloc(StringRef Kind, StringRef Val) {
     return TrailingObjects::totalSizeToAlloc<char>(Kind.size() + 1 +
                                                    Val.size() + 1);
@@ -229,6 +206,8 @@ public:
       : EnumAttributeImpl(TypeAttrEntry, Kind), Ty(Ty) {}
 
   Type *getTypeValue() const { return Ty; }
+
+  std::pair<unsigned, Type *> getKey() const { return {getEnumKind(), Ty}; }
 };
 
 class ConstantRangeAttributeImpl : public EnumAttributeImpl {
@@ -270,40 +249,22 @@ public:
   }
 };
 
-class AttributeBitSet {
-  /// Bitset with a bit for each available attribute Attribute::AttrKind.
-  uint8_t AvailableAttrs[16] = {};
-  static_assert(Attribute::EndAttrKinds <= sizeof(AvailableAttrs) * CHAR_BIT,
-                "Too many attributes");
-
-public:
-  bool hasAttribute(Attribute::AttrKind Kind) const {
-    return AvailableAttrs[Kind / 8] & (1 << (Kind % 8));
-  }
-
-  void addAttribute(Attribute::AttrKind Kind) {
-    AvailableAttrs[Kind / 8] |= 1 << (Kind % 8);
-  }
-};
-
 //===----------------------------------------------------------------------===//
 /// \class
 /// This class represents a group of attributes that apply to one
 /// element: function, return type, or parameter.
 class AttributeSetNode final
     : public FoldingSetNode,
+      public AttributeSetNodeBase,
       private TrailingObjects<AttributeSetNode, Attribute> {
   friend TrailingObjects;
 
   unsigned NumAttrs; ///< Number of attributes in this node.
-  AttributeBitSet AvailableAttrs; ///< Available enum attributes.
 
   DenseMap<StringRef, Attribute> StringAttrs;
 
   AttributeSetNode(ArrayRef<Attribute> Attrs);
 
-  static AttributeSetNode *getSorted(LLVMContext &C,
-                                     ArrayRef<Attribute> SortedAttrs);
   std::optional<Attribute> findEnumAttribute(Attribute::AttrKind Kind) const;
 
 public:
@@ -317,12 +278,13 @@ public:
 
   static AttributeSetNode *get(LLVMContext &C, ArrayRef<Attribute> Attrs);
 
+  static AttributeSetNode *getSorted(LLVMContext &C,
+                                     ArrayRef<Attribute> SortedAttrs);
+
   /// Return the number of attributes this AttributeList contains.
   unsigned getNumAttributes() const { return NumAttrs; }
 
-  bool hasAttribute(Attribute::AttrKind Kind) const {
-    return AvailableAttrs.hasAttribute(Kind);
-  }
+  using AttributeSetNodeBase::hasAttribute;
   bool hasAttribute(StringRef Kind) const;
   bool hasAttributes() const { return NumAttrs != 0; }
 
@@ -351,14 +313,7 @@ public:
   iterator begin() const { return getTrailingObjects(); }
   iterator end() const { return begin() + NumAttrs; }
 
-  void Profile(FoldingSetNodeID &ID) const {
-    Profile(ID, ArrayRef(begin(), end()));
-  }
-
-  static void Profile(FoldingSetNodeID &ID, ArrayRef<Attribute> AttrList) {
-    for (const auto &Attr : AttrList)
-      Attr.Profile(ID);
-  }
+  ArrayRef<Attribute> getKey() const { return getTrailingObjects(NumAttrs); }
 };
 
 //===----------------------------------------------------------------------===//
@@ -367,14 +322,13 @@ public:
 /// return type, and parameters.
 class AttributeListImpl final
     : public FoldingSetNode,
+      public AttributeListImplBase,
       private TrailingObjects<AttributeListImpl, AttributeSet> {
   friend class AttributeList;
   friend TrailingObjects;
 
 private:
   unsigned NumAttrSets; ///< Number of entries in this set.
-  /// Available enum function attributes.
-  AttributeBitSet AvailableFunctionAttrs;
   /// Union of enum attributes available at any index.
   AttributeBitSet AvailableSomewhereAttrs;
 
@@ -384,12 +338,6 @@ public:
   // AttributesSetImpt is uniqued, these should not be available.
   AttributeListImpl(const AttributeListImpl &) = delete;
   AttributeListImpl &operator=(const AttributeListImpl &) = delete;
-
-  /// Return true if the AttributeSet or the FunctionIndex has an
-  /// enum attribute of the given kind.
-  bool hasFnAttribute(Attribute::AttrKind Kind) const {
-    return AvailableFunctionAttrs.hasAttribute(Kind);
-  }
 
   /// Return true if the specified attribute is set for at least one
   /// parameter or for the return value. If Index is not nullptr, the index
@@ -402,8 +350,9 @@ public:
   iterator begin() const { return getTrailingObjects(); }
   iterator end() const { return begin() + NumAttrSets; }
 
-  void Profile(FoldingSetNodeID &ID) const;
-  static void Profile(FoldingSetNodeID &ID, ArrayRef<AttributeSet> Nodes);
+  ArrayRef<AttributeSet> getKey() const {
+    return getTrailingObjects(NumAttrSets);
+  }
 
   void dump() const;
 };

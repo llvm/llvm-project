@@ -23,7 +23,9 @@
 namespace llvm {
 class MCStreamer;
 class MCSymbolGOFF;
+class MachineFunction;
 class MachineInstr;
+class MachineOperand;
 class Module;
 class raw_ostream;
 
@@ -64,9 +66,10 @@ class LLVM_LIBRARY_VISIBILITY SystemZXPLINKAsmPrinter
     AssociatedDataAreaTable(uint64_t PointerSize) : PointerSize(PointerSize) {}
 
     /// @brief Add a function descriptor to the ADA.
-    /// @param MI Pointer to an ADA_ENTRY instruction.
+    /// @param MF The function containing the ADA_ENTRY instruction.
+    /// @param MO The operand describing the descriptor symbol.
     /// @return The displacement of the descriptor into the ADA.
-    uint32_t insert(const MachineOperand MO);
+    uint32_t insert(const MachineFunction &MF, const MachineOperand &MO);
 
     /// @brief Get the displacement into associated data area (ADA) for a name.
     /// If no displacement is already associated with the name, assign one and
@@ -91,10 +94,16 @@ class LLVM_LIBRARY_VISIBILITY SystemZXPLINKAsmPrinter
   DenseMap<const GlobalObject *, SmallVector<const GlobalAlias *, 1>>
       GOAliasMap;
 
+  /// Entry of the stack restore stub. Created by the first stack restore of
+  /// the module; the stub is then emitted after the last function.
+  MCSymbol *StackRestoreStub = nullptr;
+
   void calculatePPA1();
   void emitPPA2(Module &M);
   void emitADASection();
   void emitIDRLSection(Module &M);
+  void emitCELQMAIN(const Function &MainFn);
+  void emitStackRestoreStub();
   void emitCallInformation(CallType CT);
 
   SystemZTargetzOSStreamer *getTargetStreamer() {
@@ -113,6 +122,7 @@ public:
                           bool IsCtor) override;
   void emitEndOfAsmFile(Module &M) override;
   bool doInitialization(Module &M) override;
+  bool doFinalization(Module &M) override;
   void emitFunctionEntryLabel() override;
   void emitFunctionBodyEnd() override;
   void emitStartOfAsmFile(Module &M) override;

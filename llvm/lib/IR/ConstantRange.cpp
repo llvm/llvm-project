@@ -409,9 +409,48 @@ ConstantRange::makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
 ConstantRange ConstantRange::makeExactNoWrapRegion(Instruction::BinaryOps BinOp,
                                                    const APInt &Other,
                                                    unsigned NoWrapKind) {
-  // makeGuaranteedNoWrapRegion() is exact for single-element ranges, as
-  // "for all" and "for any" coincide in this case.
-  return makeGuaranteedNoWrapRegion(BinOp, ConstantRange(Other), NoWrapKind);
+  using OBO = OverflowingBinaryOperator;
+
+  assert(
+      (NoWrapKind == OBO::NoSignedWrap || NoWrapKind == OBO::NoUnsignedWrap) &&
+      "NoWrapKind invalid!");
+
+  bool Unsigned = NoWrapKind == OBO::NoUnsignedWrap;
+  unsigned BitWidth = Other.getBitWidth();
+  switch (BinOp) {
+  case Instruction::Add: {
+    if (Unsigned)
+      return getNonEmpty(APInt::getZero(BitWidth), -Other);
+    APInt SignedMinVal = APInt::getSignedMinValue(BitWidth);
+    return Other.isNegative() ? getNonEmpty(SignedMinVal - Other, SignedMinVal)
+                              : getNonEmpty(SignedMinVal, SignedMinVal - Other);
+  }
+
+  case Instruction::Sub: {
+    if (Unsigned)
+      return getNonEmpty(Other, APInt::getZero(BitWidth));
+    APInt SignedMinVal = APInt::getSignedMinValue(BitWidth);
+    return Other.isNegative() ? getNonEmpty(SignedMinVal, SignedMinVal + Other)
+                              : getNonEmpty(SignedMinVal + Other, SignedMinVal);
+  }
+
+  case Instruction::Mul:
+    return Unsigned ? makeExactMulNUWRegion(Other)
+                    : makeExactMulNSWRegion(Other);
+
+  case Instruction::Shl:
+    // Shift amounts >= BitWidth always produce poison.
+    if (Other.uge(BitWidth))
+      return getFull(BitWidth);
+    if (Unsigned)
+      return getNonEmpty(APInt::getZero(BitWidth),
+                         APInt::getMaxValue(BitWidth).lshr(Other) + 1);
+    return getNonEmpty(APInt::getSignedMinValue(BitWidth).ashr(Other),
+                       APInt::getSignedMaxValue(BitWidth).ashr(Other) + 1);
+
+  default:
+    llvm_unreachable("Unsupported binary op");
+  }
 }
 
 ConstantRange ConstantRange::makeMaskNotEqualRange(const APInt &Mask,
@@ -1044,12 +1083,25 @@ ConstantRange ConstantRange::overflowingBinaryOp(Instruction::BinaryOps BinOp,
   }
 }
 
+ConstantRange ConstantRange::binaryOp(const BinaryOperator &BO,
+                                      const ConstantRange &Other) const {
+  if (const auto *OBO = dyn_cast<OverflowingBinaryOperator>(&BO))
+    return overflowingBinaryOp(BO.getOpcode(), Other, OBO->getNoWrapKind());
+
+  if (BO.getOpcode() == Instruction::Or)
+    return binaryOr(Other, cast<PossiblyDisjointInst>(BO).isDisjoint());
+
+  return binaryOp(BO.getOpcode(), Other);
+}
+
 bool ConstantRange::isIntrinsicSupported(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
   case Intrinsic::uadd_sat:
   case Intrinsic::usub_sat:
   case Intrinsic::sadd_sat:
   case Intrinsic::ssub_sat:
+  case Intrinsic::ushl_sat:
+  case Intrinsic::sshl_sat:
   case Intrinsic::umin:
   case Intrinsic::umax:
   case Intrinsic::smin:
@@ -1075,6 +1127,10 @@ ConstantRange ConstantRange::intrinsic(Intrinsic::ID IntrinsicID,
     return Ops[0].sadd_sat(Ops[1]);
   case Intrinsic::ssub_sat:
     return Ops[0].ssub_sat(Ops[1]);
+  case Intrinsic::ushl_sat:
+    return Ops[0].ushl_sat(Ops[1]);
+  case Intrinsic::sshl_sat:
+    return Ops[0].sshl_sat(Ops[1]);
   case Intrinsic::umin:
     return Ops[0].umin(Ops[1]);
   case Intrinsic::umax:
@@ -1628,7 +1684,8 @@ ConstantRange ConstantRange::binaryAnd(const ConstantRange &Other) const {
   return KnownBitsRange.intersectWith(UMinUMaxRange);
 }
 
-ConstantRange ConstantRange::binaryOr(const ConstantRange &Other) const {
+ConstantRange ConstantRange::binaryOr(const ConstantRange &Other,
+                                      bool IsDisjoint) const {
   if (isEmptySet() || Other.isEmptySet())
     return getEmpty();
 
@@ -1645,7 +1702,16 @@ ConstantRange ConstantRange::binaryOr(const ConstantRange &Other) const {
   // Upper wrapped range.
   ConstantRange UMaxUMinRange = getNonEmpty(
       APIntOps::umax(getUnsignedMin(), Other.getUnsignedMin()), UpperBound);
-  return KnownBitsRange.intersectWith(UMaxUMinRange);
+  ConstantRange Result = KnownBitsRange.intersectWith(UMaxUMinRange);
+
+  if (IsDisjoint) {
+    // Treat 'or disjoint' as both 'add nuw nsw' and binary or, picking the best
+    // from both.
+    using OBO = OverflowingBinaryOperator;
+    Result = addWithNoWrap(Other, OBO::NoUnsignedWrap | OBO::NoSignedWrap)
+                 .intersectWith(Result);
+  }
+  return Result;
 }
 
 ConstantRange ConstantRange::binaryXor(const ConstantRange &Other) const {
@@ -1955,8 +2021,14 @@ ConstantRange ConstantRange::ushl_sat(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
     return getEmpty();
 
-  APInt NewL = getUnsignedMin().ushl_sat(Other.getUnsignedMin());
-  APInt NewU = getUnsignedMax().ushl_sat(Other.getUnsignedMax()) + 1;
+  unsigned BitWidth = getBitWidth();
+  ConstantRange ShAmt = Other.intersectWith(
+      ConstantRange(APInt::getZero(BitWidth), APInt(BitWidth, BitWidth)));
+  if (ShAmt.isEmptySet())
+    return getEmpty();
+
+  APInt NewL = getUnsignedMin().ushl_sat(ShAmt.getUnsignedMin());
+  APInt NewU = getUnsignedMax().ushl_sat(ShAmt.getUnsignedMax()) + 1;
   return getNonEmpty(std::move(NewL), std::move(NewU));
 }
 
@@ -1964,8 +2036,14 @@ ConstantRange ConstantRange::sshl_sat(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
     return getEmpty();
 
+  unsigned BitWidth = getBitWidth();
+  ConstantRange ShAmt = Other.intersectWith(
+      ConstantRange(APInt::getZero(BitWidth), APInt(BitWidth, BitWidth)));
+  if (ShAmt.isEmptySet())
+    return getEmpty();
+
   APInt Min = getSignedMin(), Max = getSignedMax();
-  APInt ShAmtMin = Other.getUnsignedMin(), ShAmtMax = Other.getUnsignedMax();
+  APInt ShAmtMin = ShAmt.getUnsignedMin(), ShAmtMax = ShAmt.getUnsignedMax();
   APInt NewL = Min.sshl_sat(Min.isNonNegative() ? ShAmtMin : ShAmtMax);
   APInt NewU = Max.sshl_sat(Max.isNegative() ? ShAmtMin : ShAmtMax) + 1;
   return getNonEmpty(std::move(NewL), std::move(NewU));

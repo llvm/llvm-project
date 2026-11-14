@@ -28,6 +28,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/MemCacheHint.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
@@ -112,25 +113,6 @@ static unsigned adjustForEndian(const DataLayout &DL, unsigned VectorWidth,
   return DL.isBigEndian() ? VectorWidth - 1 - Idx : Idx;
 }
 
-static void copyMemCacheHint(Instruction &Dest, const Instruction &Source,
-                             unsigned SourcePtrOperand,
-                             unsigned DestPtrOperand) {
-  MDNode *CacheHint = Source.getMetadata(LLVMContext::MD_mem_cache_hint);
-  // These intrinsics have a single memory operand.
-  if (!CacheHint || CacheHint->getNumOperands() != 2)
-    return;
-
-  auto *OperandNo = mdconst::extract<ConstantInt>(CacheHint->getOperand(0));
-  if (OperandNo->getZExtValue() != SourcePtrOperand)
-    return;
-
-  Metadata *DestOperandNo = ConstantAsMetadata::get(
-      ConstantInt::get(Type::getInt32Ty(Dest.getContext()), DestPtrOperand));
-  Dest.setMetadata(LLVMContext::MD_mem_cache_hint,
-                   MDNode::get(Dest.getContext(),
-                               {DestOperandNo, CacheHint->getOperand(1)}));
-}
-
 static void copyMetadataForMemoryAccess(
     Instruction &Dest, const Instruction &Source, const DataLayout &DL,
     unsigned SourcePtrOperand, unsigned DestPtrOperand, Type *AccessType,
@@ -155,7 +137,8 @@ static void copyMetadataForMemoryAccess(
     AANodes.TBAAStruct = nullptr;
     Dest.setAAMetadata(AANodes);
   }
-  copyMemCacheHint(Dest, Source, SourcePtrOperand, DestPtrOperand);
+  setMemCacheHint(Dest, DestPtrOperand,
+                  getMemCacheHint(Source, SourcePtrOperand));
 }
 
 static void copyMetadataForScalarizedLoad(LoadInst &Dest,
@@ -229,12 +212,10 @@ static void scalarizeMaskedLoad(const DataLayout &DL, bool HasBranchDivergence,
 
   Type *EltTy = VecType->getElementType();
 
-  IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
+  IRBuilder<> Builder(InsertPt);
+  Builder.disableGEPCanonicalization();
   BasicBlock *IfBlock = CI->getParent();
-
-  Builder.SetInsertPoint(InsertPt);
-  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
 
   // Short-cut if the mask is all-true.
   if (isa<Constant>(Mask) && cast<Constant>(Mask)->isAllOnesValue()) {
@@ -294,7 +275,7 @@ static void scalarizeMaskedLoad(const DataLayout &DL, bool HasBranchDivergence,
                                   std::nullopt);
 
     BasicBlock *PostLoad = ThenTerm->getSuccessor(0);
-    Builder.SetInsertPoint(PostLoad, PostLoad->begin());
+    Builder.SetInsertPoint(PostLoad->begin());
     PHINode *Phi = Builder.CreatePHI(VecType, /*NumReservedValues=*/2);
     Phi->addIncoming(Load, CondBlock);
     Phi->addIncoming(Src0, IfBlock);
@@ -366,7 +347,7 @@ static void scalarizeMaskedLoad(const DataLayout &DL, bool HasBranchDivergence,
     IfBlock = NewIfBlock;
 
     // Create the phi to join the new and previous value.
-    Builder.SetInsertPoint(NewIfBlock, NewIfBlock->begin());
+    Builder.SetInsertPoint(NewIfBlock->begin());
     PHINode *Phi = Builder.CreatePHI(VecType, 2, "res.phi.else");
     Phi->addIncoming(NewVResult, CondBlock);
     Phi->addIncoming(VResult, PrevIfBlock);
@@ -417,10 +398,9 @@ static void scalarizeMaskedStore(const DataLayout &DL, bool HasBranchDivergence,
 
   Type *EltTy = VecType->getElementType();
 
-  IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
-  Builder.SetInsertPoint(InsertPt);
-  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
+  IRBuilder<> Builder(InsertPt);
+  Builder.disableGEPCanonicalization();
 
   // Short-cut if the mask is all-true.
   if (isa<Constant>(Mask) && cast<Constant>(Mask)->isAllOnesValue()) {
@@ -543,7 +523,7 @@ static void scalarizeMaskedStore(const DataLayout &DL, bool HasBranchDivergence,
     BasicBlock *NewIfBlock = ThenTerm->getSuccessor(0);
     NewIfBlock->setName("else");
 
-    Builder.SetInsertPoint(NewIfBlock, NewIfBlock->begin());
+    Builder.SetInsertPoint(NewIfBlock->begin());
   }
   CI->eraseFromParent();
 
@@ -589,13 +569,10 @@ static void scalarizeMaskedGather(const DataLayout &DL,
   auto *VecType = cast<FixedVectorType>(CI->getType());
   Type *EltTy = VecType->getElementType();
 
-  IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
+  IRBuilder<> Builder(InsertPt);
   BasicBlock *IfBlock = CI->getParent();
-  Builder.SetInsertPoint(InsertPt);
   Align AlignVal = CI->getParamAlign(0).valueOrOne();
-
-  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
 
   // The result vector
   Value *VResult = Src0;
@@ -682,7 +659,7 @@ static void scalarizeMaskedGather(const DataLayout &DL,
     IfBlock = NewIfBlock;
 
     // Create the phi to join the new and previous value.
-    Builder.SetInsertPoint(NewIfBlock, NewIfBlock->begin());
+    Builder.SetInsertPoint(NewIfBlock->begin());
     PHINode *Phi = Builder.CreatePHI(VecType, 2, "res.phi.else");
     Phi->addIncoming(NewVResult, CondBlock);
     Phi->addIncoming(VResult, PrevIfBlock);
@@ -735,10 +712,8 @@ static void scalarizeMaskedScatter(const DataLayout &DL,
       isa<PointerType>(cast<VectorType>(Ptrs->getType())->getElementType()) &&
       "Vector of pointers is expected in masked scatter intrinsic");
 
-  IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
-  Builder.SetInsertPoint(InsertPt);
-  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
+  IRBuilder<> Builder(InsertPt);
 
   Align AlignVal = CI->getParamAlign(1).valueOrOne();
   unsigned VectorWidth = SrcFVTy->getNumElements();
@@ -817,7 +792,7 @@ static void scalarizeMaskedScatter(const DataLayout &DL,
     BasicBlock *NewIfBlock = ThenTerm->getSuccessor(0);
     NewIfBlock->setName("else");
 
-    Builder.SetInsertPoint(NewIfBlock, NewIfBlock->begin());
+    Builder.SetInsertPoint(NewIfBlock->begin());
   }
   CI->eraseFromParent();
 
@@ -836,12 +811,10 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL,
 
   Type *EltTy = VecType->getElementType();
 
-  IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
+  IRBuilder<> Builder(InsertPt);
+  Builder.disableGEPCanonicalization();
   BasicBlock *IfBlock = CI->getParent();
-
-  Builder.SetInsertPoint(InsertPt);
-  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
 
   unsigned VectorWidth = VecType->getNumElements();
 
@@ -950,7 +923,7 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL,
     IfBlock = NewIfBlock;
 
     // Create the phi to join the new and previous value.
-    Builder.SetInsertPoint(NewIfBlock, NewIfBlock->begin());
+    Builder.SetInsertPoint(NewIfBlock->begin());
     PHINode *ResultPhi = Builder.CreatePHI(VecType, 2, "res.phi.else");
     ResultPhi->addIncoming(NewVResult, CondBlock);
     ResultPhi->addIncoming(VResult, PrevIfBlock);
@@ -982,12 +955,10 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL,
 
   auto *VecType = cast<FixedVectorType>(Src->getType());
 
-  IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
+  IRBuilder<> Builder(InsertPt);
+  Builder.disableGEPCanonicalization();
   BasicBlock *IfBlock = CI->getParent();
-
-  Builder.SetInsertPoint(InsertPt);
-  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
 
   Type *EltTy = VecType->getElementType();
 
@@ -1080,7 +1051,7 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL,
     BasicBlock *PrevIfBlock = IfBlock;
     IfBlock = NewIfBlock;
 
-    Builder.SetInsertPoint(NewIfBlock, NewIfBlock->begin());
+    Builder.SetInsertPoint(NewIfBlock->begin());
 
     // Add a PHI for the pointer if this isn't the last iteration.
     if ((Idx + 1) != VectorWidth) {
@@ -1108,11 +1079,8 @@ static void scalarizeMaskedVectorHistogram(const DataLayout &DL, CallInst *CI,
   auto *AddrType = cast<FixedVectorType>(Ptrs->getType());
   Type *EltTy = Inc->getType();
 
-  IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
-  Builder.SetInsertPoint(InsertPt);
-
-  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
+  IRBuilder<> Builder(InsertPt);
 
   // FIXME: Do we need to add an alignment parameter to the intrinsic?
   unsigned VectorWidth = AddrType->getNumElements();
@@ -1190,7 +1158,7 @@ static void scalarizeMaskedVectorHistogram(const DataLayout &DL, CallInst *CI,
     // Create "else" block, fill it in the next iteration
     BasicBlock *NewIfBlock = ThenTerm->getSuccessor(0);
     NewIfBlock->setName("else");
-    Builder.SetInsertPoint(NewIfBlock, NewIfBlock->begin());
+    Builder.SetInsertPoint(NewIfBlock->begin());
   }
 
   CI->eraseFromParent();

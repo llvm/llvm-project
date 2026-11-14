@@ -40,53 +40,11 @@ protected:
   SMDiagnostic Err;
 
   std::unique_ptr<Module> createVPDeclarationModule() {
-    const char *BinaryIntOpcodes[] = {"add",  "sub",  "mul", "sdiv", "srem",
-                                      "udiv", "urem", "and", "xor",  "or",
-                                      "ashr", "lshr", "shl", "smin", "smax",
-                                      "umin", "umax"};
+    const char *BinaryIntOpcodes[] = {"sdiv", "srem", "udiv", "urem"};
     std::stringstream Str;
     for (const char *BinaryIntOpcode : BinaryIntOpcodes)
       Str << " declare <8 x i32> @llvm.vp." << BinaryIntOpcode
           << ".v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32) ";
-
-    const char *BinaryFPOpcodes[] = {"fadd",    "fsub",    "fmul",   "fdiv",
-                                     "frem",    "minnum",  "maxnum", "minimum",
-                                     "maximum", "copysign"};
-    for (const char *BinaryFPOpcode : BinaryFPOpcodes)
-      Str << " declare <8 x float> @llvm.vp." << BinaryFPOpcode
-          << ".v8f32(<8 x float>, <8 x float>, <8 x i1>, i32) ";
-
-    Str << " declare <8 x float> @llvm.vp.floor.v8f32(<8 x float>, <8 x i1>, "
-           "i32)";
-    Str << " declare <8 x float> @llvm.vp.round.v8f32(<8 x float>, <8 x i1>, "
-           "i32)";
-    Str << " declare <8 x float> @llvm.vp.roundeven.v8f32(<8 x float>, <8 x "
-           "i1>, "
-           "i32)";
-    Str << " declare <8 x float> @llvm.vp.roundtozero.v8f32(<8 x float>, <8 x "
-           "i1>, "
-           "i32)";
-    Str << " declare <8 x float> @llvm.vp.rint.v8f32(<8 x float>, <8 x i1>, "
-           "i32)";
-    Str << " declare <8 x float> @llvm.vp.nearbyint.v8f32(<8 x float>, <8 x "
-           "i1>, "
-           "i32)";
-    Str << " declare <8 x float> @llvm.vp.ceil.v8f32(<8 x float>, <8 x i1>, "
-           "i32)";
-    Str << " declare <8 x i32> @llvm.vp.lrint.v8i32.v8f32(<8 x float>, "
-           "<8 x i1>, i32)";
-    Str << " declare <8 x i64> @llvm.vp.llrint.v8i64.v8f32(<8 x float>, "
-           "<8 x i1>, i32)";
-    Str << " declare <8 x float> @llvm.vp.fneg.v8f32(<8 x float>, <8 x i1>, "
-           "i32)";
-    Str << " declare <8 x float> @llvm.vp.fabs.v8f32(<8 x float>, <8 x i1>, "
-           "i32)";
-    Str << " declare <8 x float> @llvm.vp.sqrt.v8f32(<8 x float>, <8 x i1>, "
-           "i32)";
-    Str << " declare <8 x float> @llvm.vp.fma.v8f32(<8 x float>, <8 x float>, "
-           "<8 x float>, <8 x i1>, i32) ";
-    Str << " declare <8 x float> @llvm.vp.fmuladd.v8f32(<8 x float>, "
-           "<8 x float>, <8 x float>, <8 x i1>, i32) ";
 
     Str << " declare void @llvm.vp.store.v8i32.p0v8i32(<8 x i32>, <8 x i32>*, "
            "<8 x i1>, i32) ";
@@ -122,67 +80,11 @@ protected:
 
     Str << " declare <8 x i32> @llvm.vp.merge.v8i32(<8 x i1>, <8 x i32>, <8 x "
            "i32>, i32)";
-    Str << " declare <8 x i32> @llvm.vp.select.v8i32(<8 x i1>, <8 x i32>, <8 x "
-           "i32>, i32)";
-    Str << " declare <8 x i1> @llvm.vp.is.fpclass.v8f32(<8 x float>, i32, <8 x "
-           "i1>, i32)";
     Str << " declare <8 x i32> @llvm.experimental.vp.splice.v8i32(<8 x "
            "i32>, <8 x i32>, i32, <8 x i1>, i32, i32) ";
 
-    Str << " declare <8 x i32> @llvm.vp.fptoui.v8i32"
-        << ".v8f32(<8 x float>, <8 x i1>, i32) ";
-    Str << " declare <8 x i32> @llvm.vp.fptosi.v8i32"
-        << ".v8f32(<8 x float>, <8 x i1>, i32) ";
-    Str << " declare <8 x float> @llvm.vp.uitofp.v8f32"
-        << ".v8i32(<8 x i32>, <8 x i1>, i32) ";
-    Str << " declare <8 x float> @llvm.vp.sitofp.v8f32"
-        << ".v8i32(<8 x i32>, <8 x i1>, i32) ";
-    Str << " declare <8 x float> @llvm.vp.fptrunc.v8f32"
-        << ".v8f64(<8 x double>, <8 x i1>, i32) ";
-    Str << " declare <8 x double> @llvm.vp.fpext.v8f64"
-        << ".v8f32(<8 x float>, <8 x i1>, i32) ";
-    Str << " declare <8 x i32> @llvm.vp.trunc.v8i32"
-        << ".v8i64(<8 x i64>, <8 x i1>, i32) ";
-    Str << " declare <8 x i64> @llvm.vp.zext.v8i64"
-        << ".v8i32(<8 x i32>, <8 x i1>, i32) ";
-    Str << " declare <8 x i64> @llvm.vp.sext.v8i64"
-        << ".v8i32(<8 x i32>, <8 x i1>, i32) ";
-    Str << " declare <8 x i32> @llvm.vp.ptrtoint.v8i32"
-        << ".v8p0i32(<8 x ptr>, <8 x i1>, i32) ";
-    Str << " declare <8 x ptr> @llvm.vp.inttoptr.v8p0i32"
-        << ".v8i32(<8 x i32>, <8 x i1>, i32) ";
-
-    Str << " declare <8 x i1> @llvm.vp.fcmp.v8f32"
-        << "(<8 x float>, <8 x float>, metadata, <8 x i1>, i32) ";
-    Str << " declare <8 x i1> @llvm.vp.icmp.v8i16"
-        << "(<8 x i16>, <8 x i16>, metadata, <8 x i1>, i32) ";
-
     Str << " declare <8 x i32> @llvm.experimental.vp.reverse.v8i32(<8 x i32>, "
            "<8 x i1>, i32) ";
-    Str << " declare <8 x i16> @llvm.vp.abs.v8i16"
-        << "(<8 x i16>, i1 immarg, <8 x i1>, i32) ";
-    Str << " declare <8 x i16> @llvm.vp.bitreverse.v8i16"
-        << "(<8 x i16>, <8 x i1>, i32) ";
-    Str << " declare <8 x i16> @llvm.vp.bswap.v8i16"
-        << "(<8 x i16>, <8 x i1>, i32) ";
-    Str << " declare <8 x i16> @llvm.vp.ctpop.v8i16"
-        << "(<8 x i16>, <8 x i1>, i32) ";
-    Str << " declare <8 x i16> @llvm.vp.ctlz.v8i16"
-        << "(<8 x i16>, i1 immarg, <8 x i1>, i32) ";
-    Str << " declare <8 x i16> @llvm.vp.cttz.v8i16"
-        << "(<8 x i16>, i1 immarg, <8 x i1>, i32) ";
-    Str << " declare <8 x i16> @llvm.vp.sadd.sat.v8i16"
-        << "(<8 x i16>, <8 x i16>, <8 x i1>, i32) ";
-    Str << " declare <8 x i16> @llvm.vp.uadd.sat.v8i16"
-        << "(<8 x i16>, <8 x i16>, <8 x i1>, i32) ";
-    Str << " declare <8 x i16> @llvm.vp.ssub.sat.v8i16"
-        << "(<8 x i16>, <8 x i16>, <8 x i1>, i32) ";
-    Str << " declare <8 x i16> @llvm.vp.usub.sat.v8i16"
-        << "(<8 x i16>, <8 x i16>, <8 x i1>, i32) ";
-    Str << " declare <8 x i16> @llvm.vp.fshl.v8i16"
-        << "(<8 x i16>, <8 x i16>, <8 x i16>, <8 x i1>, i32) ";
-    Str << " declare <8 x i16> @llvm.vp.fshr.v8i16"
-        << "(<8 x i16>, <8 x i16>, <8 x i16>, <8 x i1>, i32) ";
     Str << " declare i32 @llvm.vp.cttz.elts.i32.v8i16"
         << "(<8 x i16>, i1 immarg, <8 x i1>, i32) ";
 
@@ -236,34 +138,36 @@ TEST_F(VPIntrinsicTest, CanIgnoreVectorLength) {
   LLVMContext C;
   SMDiagnostic Err;
 
+  // clang-format off
   std::unique_ptr<Module> M =
       parseAssemblyString(
-"declare <256 x i64> @llvm.vp.mul.v256i64(<256 x i64>, <256 x i64>, <256 x i1>, i32)"
-"declare <vscale x 2 x i64> @llvm.vp.mul.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i1>, i32)"
-"declare <vscale x 1 x i64> @llvm.vp.mul.nxv1i64(<vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i1>, i32)"
+"declare <256 x i64> @llvm.vp.sdiv.v256i64(<256 x i64>, <256 x i64>, <256 x i1>, i32)"
+"declare <vscale x 2 x i64> @llvm.vp.sdiv.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i1>, i32)"
+"declare <vscale x 1 x i64> @llvm.vp.sdiv.nxv1i64(<vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i1>, i32)"
 "declare i32 @llvm.vscale.i32()"
 "define void @test_static_vlen( "
 "      <256 x i64> %i0, <vscale x 2 x i64> %si0x2, <vscale x 1 x i64> %si0x1,"
 "      <256 x i64> %i1, <vscale x 2 x i64> %si1x2, <vscale x 1 x i64> %si1x1,"
 "      <256 x i1> %m, <vscale x 2 x i1> %smx2, <vscale x 1 x i1> %smx1, i32 %vl) { "
-"  %r0 = call <256 x i64> @llvm.vp.mul.v256i64(<256 x i64> %i0, <256 x i64> %i1, <256 x i1> %m, i32 %vl)"
-"  %r1 = call <256 x i64> @llvm.vp.mul.v256i64(<256 x i64> %i0, <256 x i64> %i1, <256 x i1> %m, i32 256)"
-"  %r2 = call <256 x i64> @llvm.vp.mul.v256i64(<256 x i64> %i0, <256 x i64> %i1, <256 x i1> %m, i32 0)"
-"  %r3 = call <256 x i64> @llvm.vp.mul.v256i64(<256 x i64> %i0, <256 x i64> %i1, <256 x i1> %m, i32 7)"
-"  %r4 = call <256 x i64> @llvm.vp.mul.v256i64(<256 x i64> %i0, <256 x i64> %i1, <256 x i1> %m, i32 123)"
+"  %r0 = call <256 x i64> @llvm.vp.sdiv.v256i64(<256 x i64> %i0, <256 x i64> %i1, <256 x i1> %m, i32 %vl)"
+"  %r1 = call <256 x i64> @llvm.vp.sdiv.v256i64(<256 x i64> %i0, <256 x i64> %i1, <256 x i1> %m, i32 256)"
+"  %r2 = call <256 x i64> @llvm.vp.sdiv.v256i64(<256 x i64> %i0, <256 x i64> %i1, <256 x i1> %m, i32 0)"
+"  %r3 = call <256 x i64> @llvm.vp.sdiv.v256i64(<256 x i64> %i0, <256 x i64> %i1, <256 x i1> %m, i32 7)"
+"  %r4 = call <256 x i64> @llvm.vp.sdiv.v256i64(<256 x i64> %i0, <256 x i64> %i1, <256 x i1> %m, i32 123)"
 "  %vs = call i32 @llvm.vscale.i32()"
 "  %vs.x2 = mul i32 %vs, 2"
-"  %r5 = call <vscale x 2 x i64> @llvm.vp.mul.nxv2i64(<vscale x 2 x i64> %si0x2, <vscale x 2 x i64> %si1x2, <vscale x 2 x i1> %smx2, i32 %vs.x2)"
-"  %r6 = call <vscale x 2 x i64> @llvm.vp.mul.nxv2i64(<vscale x 2 x i64> %si0x2, <vscale x 2 x i64> %si1x2, <vscale x 2 x i1> %smx2, i32 %vs)"
-"  %r7 = call <vscale x 2 x i64> @llvm.vp.mul.nxv2i64(<vscale x 2 x i64> %si0x2, <vscale x 2 x i64> %si1x2, <vscale x 2 x i1> %smx2, i32 99999)"
-"  %r8 = call <vscale x 1 x i64> @llvm.vp.mul.nxv1i64(<vscale x 1 x i64> %si0x1, <vscale x 1 x i64> %si1x1, <vscale x 1 x i1> %smx1, i32 %vs)"
-"  %r9 = call <vscale x 1 x i64> @llvm.vp.mul.nxv1i64(<vscale x 1 x i64> %si0x1, <vscale x 1 x i64> %si1x1, <vscale x 1 x i1> %smx1, i32 1)"
-"  %r10 = call <vscale x 1 x i64> @llvm.vp.mul.nxv1i64(<vscale x 1 x i64> %si0x1, <vscale x 1 x i64> %si1x1, <vscale x 1 x i1> %smx1, i32 %vs.x2)"
+"  %r5 = call <vscale x 2 x i64> @llvm.vp.sdiv.nxv2i64(<vscale x 2 x i64> %si0x2, <vscale x 2 x i64> %si1x2, <vscale x 2 x i1> %smx2, i32 %vs.x2)"
+"  %r6 = call <vscale x 2 x i64> @llvm.vp.sdiv.nxv2i64(<vscale x 2 x i64> %si0x2, <vscale x 2 x i64> %si1x2, <vscale x 2 x i1> %smx2, i32 %vs)"
+"  %r7 = call <vscale x 2 x i64> @llvm.vp.sdiv.nxv2i64(<vscale x 2 x i64> %si0x2, <vscale x 2 x i64> %si1x2, <vscale x 2 x i1> %smx2, i32 99999)"
+"  %r8 = call <vscale x 1 x i64> @llvm.vp.sdiv.nxv1i64(<vscale x 1 x i64> %si0x1, <vscale x 1 x i64> %si1x1, <vscale x 1 x i1> %smx1, i32 %vs)"
+"  %r9 = call <vscale x 1 x i64> @llvm.vp.sdiv.nxv1i64(<vscale x 1 x i64> %si0x1, <vscale x 1 x i64> %si1x1, <vscale x 1 x i1> %smx1, i32 1)"
+"  %r10 = call <vscale x 1 x i64> @llvm.vp.sdiv.nxv1i64(<vscale x 1 x i64> %si0x1, <vscale x 1 x i64> %si1x1, <vscale x 1 x i1> %smx1, i32 %vs.x2)"
 "  %vs.wat = add i32 %vs, 2"
-"  %r11 = call <vscale x 2 x i64> @llvm.vp.mul.nxv2i64(<vscale x 2 x i64> %si0x2, <vscale x 2 x i64> %si1x2, <vscale x 2 x i1> %smx2, i32 %vs.wat)"
+"  %r11 = call <vscale x 2 x i64> @llvm.vp.sdiv.nxv2i64(<vscale x 2 x i64> %si0x2, <vscale x 2 x i64> %si1x2, <vscale x 2 x i1> %smx2, i32 %vs.wat)"
 "  ret void "
 "}",
           Err, C);
+  // clang-format on
 
   auto *F = M->getFunction("test_static_vlen");
   assert(F);
@@ -350,7 +254,7 @@ TEST_F(VPIntrinsicTest, VPReductions) {
   SMDiagnostic Err;
 
   std::stringstream Str;
-  Str << "declare <8 x i32> @llvm.vp.mul.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, "
+  Str << "declare <8 x i32> @llvm.vp.sdiv.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, "
          "i32)";
   for (const char *ReductionOpcode : ReductionIntOpcodes)
     Str << " declare i32 @llvm.vp.reduce." << ReductionOpcode
@@ -365,7 +269,7 @@ TEST_F(VPIntrinsicTest, VPReductions) {
 
   // Mix in a regular non-reduction intrinsic to check that the
   // VPReductionIntrinsic subclass works as intended.
-  Str << "  %r0 = call <8 x i32> @llvm.vp.mul.v8i32(<8 x i32> %val, <8 x i32> "
+  Str << "  %r0 = call <8 x i32> @llvm.vp.sdiv.v8i32(<8 x i32> %val, <8 x i32> "
          "%val, <8 x i1> %m, i32 %vl)";
 
   unsigned Idx = 1;

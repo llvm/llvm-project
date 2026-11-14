@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++17 -emit-llvm -triple x86_64-linux-gnu -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -std=c++17 -emit-llvm -triple x86_64-linux-gnu -o - %s | FileCheck %s %}
 
 void doSomething();
 

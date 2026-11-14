@@ -8,11 +8,6 @@
 
 # OpenACC in Flang
 
-```{contents}
----
-local:
----
-```
 
 ## Intentional deviation from the specification
 

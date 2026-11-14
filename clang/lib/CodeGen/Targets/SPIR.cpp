@@ -11,7 +11,9 @@
 #include "TargetInfo.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/LLVMContext.h"
 
 #include <stdint.h>
 #include <utility>
@@ -73,7 +75,7 @@ class AMDGCNSPIRVABIInfo : public SPIRVABIInfo {
 
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyKernelArgumentType(QualType Ty) const;
-  ABIArgInfo classifyArgumentType(QualType Ty) const;
+  ABIArgInfo classifyArgumentType(QualType Ty, bool Variadic) const;
 
 public:
   AMDGCNSPIRVABIInfo(CodeGenTypes &CGT) : SPIRVABIInfo(CGT) {}
@@ -184,11 +186,6 @@ void SPIRVABIInfo::computeInfo(CGFunctionInfo &FI) const {
   // arguments handling.
   llvm::CallingConv::ID CC = FI.getCallingConvention();
 
-  for (auto &&[ArgumentsCount, I] : llvm::enumerate(FI.arguments()))
-    I.info = ArgumentsCount < FI.getNumRequiredArgs()
-                 ? classifyArgumentType(I.type)
-                 : ABIArgInfo::getDirect();
-
   if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 
@@ -260,7 +257,7 @@ ABIArgInfo AMDGCNSPIRVABIInfo::classifyReturnType(QualType RetTy) const {
     return ABIArgInfo::getIgnore();
 
   // Lower single-element structs to just return a regular value.
-  if (const Type *SeltTy = isSingleElementStruct(RetTy, getContext()))
+  if (const Type *SeltTy = isSingleElementRecord(RetTy, getContext()))
     return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
 
   if (const auto *RD = RetTy->getAsRecordDecl();
@@ -294,7 +291,7 @@ ABIArgInfo AMDGCNSPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
 
   // TODO: Can we omit empty structs?
 
-  if (const Type *SeltTy = isSingleElementStruct(Ty, getContext()))
+  if (const Type *SeltTy = isSingleElementRecord(Ty, getContext()))
     Ty = QualType(SeltTy, 0);
 
   llvm::Type *OrigLTy = CGT.ConvertType(Ty);
@@ -320,12 +317,19 @@ ABIArgInfo AMDGCNSPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
   return ABIArgInfo::getDirect(LTy, 0, nullptr, false);
 }
 
-ABIArgInfo AMDGCNSPIRVABIInfo::classifyArgumentType(QualType Ty) const {
+ABIArgInfo AMDGCNSPIRVABIInfo::classifyArgumentType(QualType Ty,
+                                                    bool Variadic) const {
   assert(NumRegsLeft <= MaxNumRegsForArgsRet && "register estimate underflow");
 
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
-  // TODO: support for variadics.
+  if (Variadic) {
+    return ABIArgInfo::getDirect(/*T=*/nullptr,
+                                 /*Offset=*/0,
+                                 /*Padding=*/nullptr,
+                                 /*CanBeFlattened=*/false,
+                                 /*Align=*/0);
+  }
 
   if (!isAggregateTypeForABI(Ty)) {
     ABIArgInfo ArgInfo = DefaultABIInfo::classifyArgumentType(Ty);
@@ -350,7 +354,7 @@ ABIArgInfo AMDGCNSPIRVABIInfo::classifyArgumentType(QualType Ty) const {
   // Lower single-element structs to just pass a regular value. TODO: We
   // could do reasonable-size multiple-element structs too, using getExpand(),
   // though watch out for things like bitfields.
-  if (const Type *SeltTy = isSingleElementStruct(Ty, getContext()))
+  if (const Type *SeltTy = isSingleElementRecord(Ty, getContext()))
     return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
 
   if (const auto *RD = Ty->getAsRecordDecl();
@@ -396,12 +400,17 @@ void AMDGCNSPIRVABIInfo::computeInfo(CGFunctionInfo &FI) const {
   if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 
+  unsigned ArgumentIndex = 0;
+  const unsigned NumRequiredArgs = FI.getNumRequiredArgs();
+
   NumRegsLeft = MaxNumRegsForArgsRet;
   for (auto &I : FI.arguments()) {
-    if (CC == llvm::CallingConv::SPIR_KERNEL)
+    if (CC == llvm::CallingConv::SPIR_KERNEL) {
       I.info = classifyKernelArgumentType(I.type);
-    else
-      I.info = classifyArgumentType(I.type);
+    } else {
+      bool FixedArgument = ArgumentIndex++ < NumRequiredArgs;
+      I.info = classifyArgumentType(I.type, !FixedArgument);
+    }
   }
 }
 
@@ -478,19 +487,7 @@ llvm::Constant *
 CommonSPIRTargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
                                             llvm::PointerType *PT,
                                             QualType QT) const {
-  LangAS AS = QT->getUnqualifiedDesugaredType()->isNullPtrType()
-                  ? LangAS::Default
-                  : QT->getPointeeType().getAddressSpace();
-  unsigned ASAsInt = static_cast<unsigned>(AS);
-  unsigned FirstTargetASAsInt =
-      static_cast<unsigned>(LangAS::FirstTargetAddressSpace);
-  unsigned CodeSectionINTELAS = FirstTargetASAsInt + 9;
-  // As per SPV_INTEL_function_pointers, it is illegal to addrspacecast
-  // function pointers to/from the generic AS.
-  bool IsFunctionPtrAS =
-      CGM.getTriple().isSPIRV() && ASAsInt == CodeSectionINTELAS;
-  if (AS == LangAS::Default || AS == LangAS::opencl_generic ||
-      AS == LangAS::opencl_constant || IsFunctionPtrAS)
+  if (!CodeGenUtils::spirNullPointerNeedsGenericCast(QT, CGM.getTriple()))
     return llvm::ConstantPointerNull::get(PT);
 
   auto &Ctx = CGM.getContext();
@@ -586,10 +583,8 @@ void SPIRVTargetCodeGenInfo::setTargetAtomicMetadata(
     RMW->setMetadata("amdgpu.no.fine.grained.memory", Empty);
   if (!AO.getOption(clang::AtomicOptionKind::RemoteMemory))
     RMW->setMetadata("amdgpu.no.remote.memory", Empty);
-  if (AO.getOption(clang::AtomicOptionKind::IgnoreDenormalMode) &&
-      RMW->getOperation() == llvm::AtomicRMWInst::FAdd &&
-      RMW->getType()->isFloatTy())
-    RMW->setMetadata("amdgpu.ignore.denormal.mode", Empty);
+  if (AO.getOption(clang::AtomicOptionKind::IgnoreDenormalMode))
+    addAtomicIgnoreDenormalModeMetadata(CGF, *RMW);
 }
 
 /// Construct a SPIR-V target extension type for the given OpenCL image type.

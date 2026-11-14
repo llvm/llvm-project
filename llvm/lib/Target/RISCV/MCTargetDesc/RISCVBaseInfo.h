@@ -20,6 +20,8 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/Alignment.h"
+#include "llvm/Support/Error.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -51,7 +53,6 @@ enum OperandType : unsigned {
   OPERAND_UIMM7,
   OPERAND_UIMM7_LSB00,
   OPERAND_UIMM7_LSB000,
-  OPERAND_UIMM7_EQ_XLEN,
   OPERAND_UIMM8_LSB00,
   OPERAND_UIMM8,
   OPERAND_UIMM8_LSB000,
@@ -713,29 +714,135 @@ struct RISCVOpcode {
 
 namespace RISCVABI {
 
-enum ABI {
-  ABI_ILP32,
-  ABI_ILP32F,
-  ABI_ILP32D,
-  ABI_ILP32E,
-  ABI_IL32PC64,
-  ABI_IL32PC64F,
-  ABI_IL32PC64D,
-  ABI_IL32PC64E,
-  ABI_LP64,
-  ABI_LP64F,
-  ABI_LP64D,
-  ABI_LP64E,
-  ABI_L64PC128,
-  ABI_L64PC128F,
-  ABI_L64PC128D,
-  ABI_CHERIOT,
-  ABI_Unknown
+enum class ABI {
+  ILP32,
+  ILP32F,
+  ILP32D,
+  ILP32E,
+  IL32PC64,
+  IL32PC64F,
+  IL32PC64D,
+  IL32PC64E,
+  LP64,
+  LP64F,
+  LP64D,
+  LP64E,
+  L64PC128,
+  L64PC128F,
+  L64PC128D,
+  CHERIOT,
+  Unknown
 };
 
+// Returns true for the ABIs that pass all floating point values in integer
+// registers.
+inline bool isSoftFP(ABI TargetABI) {
+  switch (TargetABI) {
+  case ABI::ILP32:
+  case ABI::ILP32E:
+  case ABI::IL32PC64:
+  case ABI::IL32PC64E:
+  case ABI::LP64:
+  case ABI::LP64E:
+  case ABI::L64PC128:
+  case ABI::CHERIOT:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Returns true for the ABIs that pass half, bfloat, or single precision
+// floating point values in FP registers. Double and quad precision FP values
+// are passed in integer registers.
+inline bool isSingleFP(ABI TargetABI) {
+  switch (TargetABI) {
+  case ABI::ILP32F:
+  case ABI::IL32PC64F:
+  case ABI::LP64F:
+  case ABI::L64PC128F:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Returns true for the ABIs that pass half, bfloat, single, or double precision
+// floating point values in FP registers. Quad precision FP values are passed
+// in integer registers.
+inline bool isDoubleFP(ABI TargetABI) {
+  switch (TargetABI) {
+  case ABI::ILP32D:
+  case ABI::IL32PC64D:
+  case ABI::LP64D:
+  case ABI::L64PC128D:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Returns true for the ABIs that only use the reduced 16 register integer file.
+inline bool isRVE(ABI TargetABI) {
+  switch (TargetABI) {
+  case ABI::ILP32E:
+  case ABI::IL32PC64E:
+  case ABI::LP64E:
+  case ABI::CHERIOT:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Returns true for the ABIs in which pointers are capabilities.
+inline bool isPurecap(ABI TargetABI) {
+  switch (TargetABI) {
+  case ABI::IL32PC64:
+  case ABI::IL32PC64F:
+  case ABI::IL32PC64D:
+  case ABI::IL32PC64E:
+  case ABI::L64PC128:
+  case ABI::L64PC128F:
+  case ABI::L64PC128D:
+  case ABI::CHERIOT:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Returns the stack alignment required by the ABI.
+inline Align getStackAlignment(ABI TargetABI) {
+  switch (TargetABI) {
+  case ABI::ILP32E:
+    return Align(4);
+  case ABI::LP64E:
+    return Align(8);
+  case ABI::ILP32:
+  case ABI::ILP32F:
+  case ABI::ILP32D:
+  case ABI::IL32PC64:
+  case ABI::IL32PC64F:
+  case ABI::IL32PC64D:
+  case ABI::IL32PC64E:
+  case ABI::LP64:
+  case ABI::LP64F:
+  case ABI::LP64D:
+  case ABI::L64PC128:
+  case ABI::L64PC128F:
+  case ABI::L64PC128D:
+  case ABI::CHERIOT:
+    return Align(16);
+  case ABI::Unknown:
+    llvm_unreachable("Unknown ABI has no stack alignment");
+  }
+  llvm_unreachable("Unhandled ABI");
+}
+
 // Returns the target ABI, or else a StringError if the requested ABIName is
-// not supported for the subtargets triple and FeatureBits combination.
-ABI computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName);
+// not supported for the subtarget's triple and FeatureBits combination.
+Expected<ABI> computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName);
 
 ABI getTargetABI(StringRef ABIName);
 

@@ -119,7 +119,7 @@ AnalysisManager<IRUnitT, ExtraArgTs...>::clear(IRUnitT &IR,
   auto ResultsListI = AnalysisResultLists.find(&IR);
   if (ResultsListI == AnalysisResultLists.end())
     return;
-  // Delete the map entries that point into the results list.
+  // Delete the map entries that point to the results in the list.
   for (auto &IDAndResult : ResultsListI->second)
     AnalysisResults.erase({IDAndResult.first, &IR});
 
@@ -131,7 +131,8 @@ template <typename IRUnitT, typename... ExtraArgTs>
 inline typename AnalysisManager<IRUnitT, ExtraArgTs...>::ResultConceptT &
 AnalysisManager<IRUnitT, ExtraArgTs...>::getResultImpl(
     AnalysisKey *ID, IRUnitT &IR, ExtraArgTs... ExtraArgs) {
-  auto [RI, Inserted] = AnalysisResults.try_emplace(std::make_pair(ID, &IR));
+  auto [RI, Inserted] =
+      AnalysisResults.try_emplace(std::make_pair(ID, &IR), nullptr);
 
   // If we don't have a cached result for this function, look up the pass and
   // run it to produce a result, which we then add to the cache.
@@ -144,9 +145,12 @@ AnalysisManager<IRUnitT, ExtraArgTs...>::getResultImpl(
       PI.runBeforeAnalysis(P, IR);
     }
 
+    // Run the analysis first: running it can recursively cache another
+    // result and rehash the map.
+    auto Result = P.run(IR, *this, std::forward<ExtraArgTs>(ExtraArgs)...);
+    ResultConceptT *ResultPtr = Result.get();
     AnalysisResultListT &ResultList = AnalysisResultLists[&IR];
-    ResultList.emplace_back(
-        ID, P.run(IR, *this, std::forward<ExtraArgTs>(ExtraArgs)...));
+    ResultList.emplace_back(ID, std::move(Result));
 
     PI.runAfterAnalysis(P, IR);
 
@@ -155,10 +159,10 @@ AnalysisManager<IRUnitT, ExtraArgTs...>::getResultImpl(
     RI = AnalysisResults.find({ID, &IR});
     assert(RI != AnalysisResults.end() && "we just inserted it!");
 
-    RI->second = std::prev(ResultList.end());
+    RI->second = ResultPtr;
   }
 
-  return *RI->second->second;
+  return *RI->second;
 }
 
 template <typename IRUnitT, typename... ExtraArgTs>
@@ -168,51 +172,39 @@ inline void AnalysisManager<IRUnitT, ExtraArgTs...>::invalidate(
   if (PA.allAnalysesInSetPreserved<AllAnalysesOn<IRUnitT>>())
     return;
 
-  // Track whether each analysis's result is invalidated in
-  // IsResultInvalidated.
-  SmallDenseMap<AnalysisKey *, bool, 8> IsResultInvalidated;
-  Invalidator Inv(IsResultInvalidated, AnalysisResults);
-  AnalysisResultListT &ResultsList = AnalysisResultLists[&IR];
-  for (auto &AnalysisResultPair : ResultsList) {
-    // This is basically the same thing as Invalidator::invalidate, but we
-    // can't call it here because we're operating on the type-erased result.
-    // Moreover if we instead called invalidate() directly, it would do an
-    // unnecessary look up in ResultsList.
-    AnalysisKey *ID = AnalysisResultPair.first;
-    auto &Result = *AnalysisResultPair.second;
+  auto ResultsListI = AnalysisResultLists.find(&IR);
+  if (ResultsListI == AnalysisResultLists.end())
+    return;
+  AnalysisResultListT &ResultsList = ResultsListI->second;
 
-    auto IMapI = IsResultInvalidated.find(ID);
-    if (IMapI != IsResultInvalidated.end())
-      // This result was already handled via the Invalidator.
-      continue;
-
-    // Try to invalidate the result, giving it the Invalidator so it can
-    // recursively query for any dependencies it has and record the result.
-    // Note that we cannot reuse 'IMapI' here or pre-insert the ID, as
-    // Result.invalidate may insert things into the map, invalidating our
-    // iterator.
-    bool Inserted =
-        IsResultInvalidated.insert({ID, Result.invalidate(IR, PA, Inv)}).second;
-    (void)Inserted;
-    assert(Inserted && "Should never have already inserted this ID, likely "
-                       "indicates a cycle!");
-  }
+  // Track whether each result is invalidated, by its index in ResultsList. The
+  // Invalidator lets results recursively query their dependencies.
+  using ResultState = typename Invalidator::ResultState;
+  SmallVector<ResultState, 32> States(ResultsList.size(), ResultState::Unknown);
+  Invalidator Inv(IR, ResultsList, States);
+  bool AnyInvalidated = false;
+  for (size_t Idx = 0, E = ResultsList.size(); Idx != E; ++Idx)
+    AnyInvalidated |= Inv.invalidateResult(Idx, PA);
 
   // Now erase the results that were marked above as invalidated.
-  if (!IsResultInvalidated.empty()) {
-    for (auto I = ResultsList.begin(), E = ResultsList.end(); I != E;) {
-      AnalysisKey *ID = I->first;
-      if (!IsResultInvalidated.lookup(ID)) {
-        ++I;
+  if (AnyInvalidated) {
+    auto *PI = getCachedResult<PassInstrumentationAnalysis>(IR);
+    size_t WriteIdx = 0;
+    for (size_t ReadIdx = 0, E = ResultsList.size(); ReadIdx < E; ++ReadIdx) {
+      if (States[ReadIdx] != ResultState::Invalid) {
+        if (WriteIdx != ReadIdx)
+          ResultsList[WriteIdx] = std::move(ResultsList[ReadIdx]);
+        ++WriteIdx;
         continue;
       }
 
-      if (auto *PI = getCachedResult<PassInstrumentationAnalysis>(IR))
+      AnalysisKey *ID = ResultsList[ReadIdx].first;
+      if (PI)
         PI->runAnalysisInvalidated(this->lookUpPass(ID), IR);
 
-      I = ResultsList.erase(I);
       AnalysisResults.erase({ID, &IR});
     }
+    ResultsList.resize(WriteIdx);
   }
 
   if (ResultsList.empty())

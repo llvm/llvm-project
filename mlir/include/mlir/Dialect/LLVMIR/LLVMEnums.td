@@ -84,21 +84,6 @@ def AsmATTOrIntel : LLVM_EnumAttr<
 }
 
 //===----------------------------------------------------------------------===//
-// ProfileCountType
-//===----------------------------------------------------------------------===//
-
-def ProfileCountReal : I64EnumAttrCase<
-  /*string sym=*/"Real", /*int val=*/0, /*string str=*/"real">;
-def ProfileCountSynthetic : I64EnumAttrCase<
-  /*string sym=*/"Synthetic", /*int val=*/1, /*string str=*/"synthetic">;
-def ProfileCountTypeAttr : I64EnumAttr<
-  /*string name=*/"ProfileCountType",
-  /*string description=*/"real or synthetic function entry count",
-  /*list<I64EnumAttrCase> cases=*/[ProfileCountReal, ProfileCountSynthetic]> {
-  let cppNamespace = "::mlir::LLVM";
-}
-
-//===----------------------------------------------------------------------===//
 // Atomic Operations
 //===----------------------------------------------------------------------===//
 
@@ -199,6 +184,8 @@ def CConvCFGuard_Check : LLVM_EnumAttrCase<"CFGuard_Check",
                                             "CFGuard_Check", 19>;
 def CConvSwiftTail : LLVM_EnumAttrCase<"SwiftTail", "swifttailcc",
                                        "SwiftTail", 20>;
+def CConvPreserveNone : LLVM_EnumAttrCase<"PreserveNone", "preserve_nonecc",
+                                          "PreserveNone", 21>;
 def CConvX86_StdCall : LLVM_EnumAttrCase<"X86_StdCall", "x86_stdcallcc",
                                          "X86_StdCall", 64>;
 def CConvX86_FastCall : LLVM_EnumAttrCase<"X86_FastCall", "x86_fastcallcc",
@@ -280,7 +267,7 @@ def CConvEnum : LLVM_CEnumAttr<
     [CConvC, CConvFast, CConvCold, CConvGHC, CConvHiPE,
      CConvAnyReg, CConvPreserveMost, CConvPreserveAll, CConvSwift,
      CConvCXXFastTLS, CConvTail, CConvCFGuard_Check, CConvSwiftTail,
-     CConvX86_StdCall, CConvX86_FastCall, CConvARM_APCS,
+     CConvPreserveNone, CConvX86_StdCall, CConvX86_FastCall, CConvARM_APCS,
      CConvARM_AAPCS, CConvARM_AAPCS_VFP, CConvMSP430_INTR, CConvX86_ThisCall,
      CConvPTX_Kernel, CConvPTX_Device, CConvSPIR_FUNC, CConvSPIR_KERNEL,
      CConvIntel_OCL_BI, CConvX86_64_SysV, CConvWin64, CConvX86_VectorCall,
@@ -520,9 +507,7 @@ def IntegerOverflowFlags : I32BitEnum<
 }
 
 def LLVM_IntegerOverflowFlagsAttr :
-    EnumAttr<LLVM_Dialect, IntegerOverflowFlags, "overflow"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    EnumAttr<LLVM_Dialect, IntegerOverflowFlags, "overflow">;
 
 def LLVM_IntegerOverflowFlagsProp :
     NamedEnumPropWithAttrForm<IntegerOverflowFlags, "overflow", LLVM_IntegerOverflowFlagsAttr> {
@@ -556,9 +541,7 @@ def FastmathFlags : I32BitEnumAttr<
 }
 
 def LLVM_FastmathFlagsAttr :
-    EnumAttr<LLVM_Dialect, FastmathFlags, "fastmath"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    EnumAttr<LLVM_Dialect, FastmathFlags, "fastmath">;
 
 //===----------------------------------------------------------------------===//
 // FCmp and ICmp Predicates
@@ -965,9 +948,7 @@ def GEPNoWrapFlags : I32BitEnum<
   let printBitEnumPrimaryGroups = 1;
 }
 
-def GEPNoWrapFlagsProp : EnumProp<GEPNoWrapFlags> {
-  let defaultValue = interfaceType # "::none";
-}
+def GEPNoWrapFlagsProp : DefaultValuedEnumProp<GEPNoWrapFlags, GEPNone>;
 
 //===----------------------------------------------------------------------===//
 // TLSModel

@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/Object/Archive.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
@@ -17,13 +15,11 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/JSON.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Regex.h"
@@ -31,7 +27,6 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
-#include <algorithm>
 #include <cstring>
 #include <inttypes.h>
 #include <iostream>
@@ -70,24 +65,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-const opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "Opts.inc"
-#undef OPTION
-};
-
-class GSYMUtilOptTable : public llvm::opt::GenericOptTable {
+class GSYMUtilOptTable : public llvm::opt::OptTable {
 public:
-  GSYMUtilOptTable()
-      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
+  GSYMUtilOptTable() : OptTable(optionTables()) {
     setGroupedShortOptions(true);
   }
 };
@@ -557,8 +540,10 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, ObjectFile *SymtabObj,
 
   // Finalize the GSYM to make it ready to save to disk. This will remove
   // duplicate FunctionInfo entries where we might have found an entry from
-  // debug info and also a symbol table entry from the object file.
-  if (auto Err = Gsym.finalize(Out))
+  // debug info and also a symbol table entry from the object file. Pass along
+  // the object file that the symbols came from so the size of a trailing
+  // symbol that has no size doesn't extend past the end of its section.
+  if (auto Err = Gsym.finalize(Out, SymtabObj ? SymtabObj : &Obj))
     return Err;
 
   // Save the GSYM file to disk.

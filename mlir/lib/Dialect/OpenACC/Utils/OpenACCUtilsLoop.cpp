@@ -20,16 +20,15 @@
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
 
-namespace {
-
 /// Calculate trip count for a loop: (ub - lb + step) / step
 /// If inclusiveUpperbound is false, subtracts 1 from ub first.
-static Value calculateTripCount(OpBuilder &b, Location loc, Value lb, Value ub,
-                                Value step, bool inclusiveUpperbound) {
+Value acc::calculateTripCount(OpBuilder &b, Location loc, Value lb, Value ub,
+                              Value step, bool inclusiveUpperbound) {
   Type type = b.getIndexType();
 
   // Convert original loop arguments to index type
@@ -66,8 +65,8 @@ static void mapACCLoopIVsToSCFIVs(acc::LoopOp accLoop, ValueRange newIVs,
 /// Normalize IV uses after converting to normalized loop form.
 /// For normalized loops (lb=0, step=1), we need to denormalize the IV:
 /// original_iv = new_iv * orig_step + orig_lb
-static void normalizeIVUses(OpBuilder &b, Location loc, Value iv, Value origLB,
-                            Value origStep) {
+void acc::normalizeIVUses(OpBuilder &b, Location loc, Value iv, Value origLB,
+                          Value origStep) {
   Type indexType = b.getIndexType();
   Value lb = getValueOrCreateCastToIndexLike(b, loc, indexType, origLB);
   Value step = getValueOrCreateCastToIndexLike(b, loc, indexType, origStep);
@@ -102,11 +101,10 @@ static Block::iterator cloneACCRegionIntoForLoop(Region *src, Block *dest,
 /// lowered SCF op so later SCF to CFG/LLVM lowering can emit !llvm.loop
 /// metadata.
 static void copyLoopAnnotationAttr(Operation *from, Operation *to) {
-  if (Attribute ann = from->getDiscardableAttr(LLVM::LoopAnnotationAttr::name))
-    to->setDiscardableAttr(LLVM::LoopAnnotationAttr::name, ann);
+  if (Attribute ann =
+          from->getDiscardableAttr(LLVM::getLoopAnnotationAttrName()))
+    to->setDiscardableAttr(LLVM::getLoopAnnotationAttrName(), ann);
 }
-
-} // namespace
 
 namespace mlir {
 namespace acc {
@@ -244,9 +242,20 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
     scfIVs.push_back(forOp.getInductionVar());
   mapACCLoopIVsToSCFIVs(loopOp, scfIVs, rewriter, mapping);
 
-  // Clone the loop body into the innermost scf.for
-  cloneACCRegionIntoForLoop(&loopOp.getRegion(), forOps.back().getBody(),
-                            rewriter.getInsertionPoint(), mapping, rewriter);
+  // Clone the loop body into the innermost scf.for. scf.for has a single-block
+  // region, so a multi-block body is wrapped in scf.execute_region, matching
+  // convertACCLoopToSCFParallel.
+  if (!loopOp.getRegion().hasOneBlock()) {
+    auto exeRegion = wrapMultiBlockRegionWithSCFExecuteRegion(
+        loopOp.getRegion(), mapping, loc, rewriter);
+    if (!exeRegion) {
+      rewriter.eraseOp(forOps.front());
+      return nullptr;
+    }
+  } else {
+    cloneACCRegionIntoForLoop(&loopOp.getRegion(), forOps.back().getBody(),
+                              rewriter.getInsertionPoint(), mapping, rewriter);
+  }
 
   // Denormalize IV uses: original_iv = normalized_iv * orig_step + orig_lb
   for (size_t idx = 0; idx < forOps.size(); ++idx) {

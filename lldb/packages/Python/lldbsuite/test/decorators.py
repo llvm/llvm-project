@@ -779,18 +779,18 @@ def _usingLLDBServerOnWindows():
     )
 
 
-def expectedFailureWindowsAndLLDBServer(bugnumber=None):
+def expectedFailureWindowsAndLLDBServer(bugnumber=None, archs=None):
     """Mark a test as xfail on Windows when driving lldb-server."""
     if not _usingLLDBServerOnWindows():
         return lambda func: func
-    return expectedFailureOS(["windows"], bugnumber)
+    return expectedFailureOS(["windows"], bugnumber, archs=archs)
 
 
-def expectedFailureWindowsAndNoLLDBServer(bugnumber=None):
+def expectedFailureWindowsAndNoLLDBServer(bugnumber=None, archs=None):
     """Mark a test as xfail on Windows when using the in-process plugin."""
     if _usingLLDBServerOnWindows():
         return lambda func: func
-    return expectedFailureOS(["windows"], bugnumber)
+    return expectedFailureOS(["windows"], bugnumber, archs=archs)
 
 
 # TODO: This decorator does not do anything. Remove it.
@@ -1313,6 +1313,25 @@ def requireSocketPermission(func):
     return unittest.skipIf(error is not None, UnsupportedReason(error or ""))(func)
 
 
+def requireClang(func):
+    """Mark the item as inherently Clang-only (Clang-specific debug info,
+    diagnostics, or command-line flags)."""
+    compiler = os.path.basename(lldbplatformutil.getCompiler())
+    return unittest.skipUnless(
+        compiler.startswith("clang"), UnsupportedReason("requires clang")
+    )(func)
+
+
+def requireMinidumpSave(func):
+    """Mark the item as requiring the ability to save a Minidump file. Which
+    is not implemented for all architectures."""
+    arch = lldbplatformutil.getArchitecture()
+    return unittest.skipUnless(
+        arch in ["aarch64", "x86_64", "arm64", "arm64e"],
+        UnsupportedReason(f"Minidump saving is not implemented for {arch}"),
+    )(func)
+
+
 def skipIfTargetDoesNotSupportSharedLibraries():
     """Skip tests that require shared library (dylib/so) support."""
     platform = lldbplatformutil.getPlatform()
@@ -1410,19 +1429,6 @@ def skipUnlessHasCallSiteInfo(func):
             return None
 
     return skipTestIfFn(is_compiler_clang_with_call_site_info)(func)
-
-
-def skipUnlessCompilerIsClang(func):
-    """Decorate the item to skip test unless the compiler is clang."""
-
-    def is_compiler_clang():
-        compiler_path = lldbplatformutil.getCompiler()
-        compiler = os.path.basename(compiler_path)
-        if not compiler.startswith("clang"):
-            return "Test requires clang as compiler"
-        return None
-
-    return skipTestIfFn(is_compiler_clang)(func)
 
 
 def skipUnlessMSVC(func):

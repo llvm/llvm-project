@@ -279,6 +279,19 @@ DWARFExpression lldb_private::npdb::MakeGlobalLocationExpression(
       });
 }
 
+DWARFExpression lldb_private::npdb::MakeGlobalThreadLocalLocationExpression(
+    uint32_t offset, const ModuleSP &module) {
+  return MakeLocationExpressionInternal(
+      module, [&](Stream &stream, RegisterKind &register_kind) -> bool {
+        const ArchSpec &arch = module->GetArchitecture();
+
+        stream.PutHex8(llvm::dwarf::DW_OP_const4u);
+        stream.PutHex32(offset, arch.GetByteOrder());
+        stream.PutHex8(llvm::dwarf::DW_OP_form_tls_address);
+        return true;
+      });
+}
+
 llvm::Expected<DWARFExpression>
 lldb_private::npdb::MakeConstantLocationExpression(TypeIndex underlying_ti,
                                                    TpiStream &tpi,

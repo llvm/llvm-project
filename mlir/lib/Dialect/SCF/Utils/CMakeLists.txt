@@ -8,7 +8,7 @@ add_mlir_dialect_library(MLIRSCFUtils
   LINK_LIBS PUBLIC
   MLIRAffineDialect
   MLIRAffineAnalysis
-  MLIRAnalysis
+  MLIRAnalysisBase
   MLIRArithDialect
   MLIRDialectUtils
   MLIRFuncDialect

@@ -20,6 +20,7 @@
 #include "SPIRVRegisterBankInfo.h"
 #include "SPIRVTargetMachine.h"
 
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/TargetParser/Host.h"
 
 using namespace llvm;
@@ -30,20 +31,8 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "SPIRVGenSubtargetInfo.inc"
 
-static cl::opt<bool>
-    SPVTranslatorCompat("translator-compatibility-mode",
-                        cl::desc("SPIR-V Translator compatibility mode"),
-                        cl::Optional, cl::init(false));
-
-static cl::opt<ExtensionSet, false, SPIRVExtensionsParser>
-    Extensions("spirv-ext",
-               cl::desc("Specify list of enabled SPIR-V extensions"));
-
-// Provides access to the cl::opt<...> `Extensions` variable from outside of the
-// module.
-void SPIRVSubtarget::addExtensionsToClOpt(const ExtensionSet &AllowList) {
-  Extensions.insert(AllowList.begin(), AllowList.end());
-}
+#define OPTIONS_STRUCT_DEFS
+#include "SPIRVOptions.inc"
 
 // Compare version numbers, but allow 0 to mean unspecified.
 static bool isAtLeastVer(VersionTuple Target, VersionTuple VerToCompareTo) {
@@ -54,7 +43,8 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
                                const std::string &FS,
                                const SPIRVTargetMachine &TM)
     : SPIRVGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS),
-      PointerSize(TM.getPointerSizeInBits(/* AS= */ 0)),
+      CLOpts(TM.getCLOpts()),
+      PointerSize(TT.getArch() == Triple::spirv32 ? 32 : 64),
       InstrInfo(initSubtargetDependencies(CPU, FS)), FrameLowering(*this),
       TLInfo(TM, *this), TargetTriple(TT) {
   switch (TT.getSubArch()) {
@@ -97,6 +87,11 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   else
     Env = Unknown;
 
+  ExtensionSet Extensions;
+  if (Error E = SPIRVExtensionsParser::parse(CLOpts.ext, Extensions,
+                                             DisabledExtensions))
+    reportFatalUsageError(std::move(E));
+
   // Set the default extensions based on the target triple.
   if (TargetTriple.getVendor() == Triple::Intel) {
     Extensions.insert(SPIRV::Extension::SPV_INTEL_function_pointers);
@@ -104,13 +99,19 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
         SPIRV::Extension::SPV_EXT_relaxed_printf_string_address_space);
   }
   if (TargetTriple.getVendor() == Triple::AMD)
-    Extensions = SPIRVExtensionsParser::getValidExtensions(TargetTriple);
+    Extensions = SPIRVExtensionsParser::getValidExtensions(TargetTriple,
+                                                           DisabledExtensions);
 
   // The order of initialization is important.
   initAvailableExtensions(Extensions);
   initAvailableExtInstSets();
 
-  GR = std::make_unique<SPIRVGlobalRegistry>(TM.createDataLayout());
+  // FIXME: The GlobalRegistry does not belong in the subtarget, see issue
+  // #223774. The DataLayout is a property of the module and in principle
+  // depends on program state. It just happens SPIRV currently doesn't use
+  // target-abi names.
+  GR = std::make_unique<SPIRVGlobalRegistry>(
+      DataLayout(TargetTriple.computeDataLayout()));
   CallLoweringInfo = std::make_unique<SPIRVCallLowering>(TLInfo, GR.get());
   InlineAsmInfo = std::make_unique<SPIRVInlineAsmLowering>(TLInfo);
   Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this);
@@ -154,7 +155,8 @@ bool SPIRVSubtarget::isAtLeastOpenCLVer(VersionTuple VerToCompareTo) const {
 // If the SPIR-V version is >= 1.4 we can call OpPtrEqual and OpPtrNotEqual.
 // In SPIR-V Translator compatibility mode this feature is not available.
 bool SPIRVSubtarget::canDirectlyComparePointers() const {
-  return !SPVTranslatorCompat && isAtLeastVer(SPIRVVersion, VersionTuple(1, 4));
+  return !CLOpts.translator_compatibility_mode &&
+         isAtLeastVer(SPIRVVersion, VersionTuple(1, 4));
 }
 
 void SPIRVSubtarget::accountForAMDShaderTrinaryMinmax() {
@@ -163,6 +165,12 @@ void SPIRVSubtarget::accountForAMDShaderTrinaryMinmax() {
     AvailableExtInstSets.insert(
         SPIRV::InstructionSet::SPV_AMD_shader_trinary_minmax);
   }
+}
+
+void SPIRVSubtarget::accountForNonSemanticDebugBreak() {
+  if (isAtLeastSPIRVVer(VersionTuple(1, 6)) ||
+      canUseExtension(SPIRV::Extension::SPV_KHR_non_semantic_info))
+    AvailableExtInstSets.insert(SPIRV::InstructionSet::NonSemantic_DebugBreak);
 }
 
 // TODO: use command line args for this rather than just defaults.
@@ -176,6 +184,7 @@ void SPIRVSubtarget::initAvailableExtInstSets() {
 
   // Handle extended instruction sets from extensions.
   accountForAMDShaderTrinaryMinmax();
+  accountForNonSemanticDebugBreak();
 }
 
 void SPIRVSubtarget::setEnv(SPIRVEnvType E) {
@@ -244,7 +253,8 @@ void SPIRVSubtarget::initAvailableExtensions(
     const ExtensionSet &AllowedExtIds) {
   AvailableExtensions.clear();
   const ExtensionSet &ValidExtensions =
-      SPIRVExtensionsParser::getValidExtensions(TargetTriple);
+      SPIRVExtensionsParser::getValidExtensions(TargetTriple,
+                                                DisabledExtensions);
 
   for (const auto &Ext : AllowedExtIds) {
     if (ValidExtensions.count(Ext))
@@ -252,4 +262,5 @@ void SPIRVSubtarget::initAvailableExtensions(
   }
 
   accountForAMDShaderTrinaryMinmax();
+  accountForNonSemanticDebugBreak();
 }

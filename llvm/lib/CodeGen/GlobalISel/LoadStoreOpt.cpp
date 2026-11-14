@@ -84,7 +84,7 @@ class LoadStoreOptImpl {
     // after the potential alias is recorded.
     SmallVector<std::pair<MachineInstr *, unsigned>> PotentialAliases;
 
-    LLVM_ABI void addPotentialAlias(MachineInstr &MI);
+    void addPotentialAlias(MachineInstr &MI);
 
     /// Reset this candidate back to an empty one.
     void reset() {
@@ -566,11 +566,18 @@ bool LoadStoreOptImpl::processMergeCandidate(StoreMergeCandidate &C) {
     return false;
   };
   // Start from the last store in the group, and check if it aliases with any
-  // of the potential aliasing operations in the list.
+  // of the potential aliasing operations in the list. A store that does has to
+  // stay where it is, so the stores on either side of it are no longer adjacent
+  // and are merged separately.
+  bool AnyMerged = false;
   for (int StoreIdx = C.Stores.size() - 1; StoreIdx >= 0; --StoreIdx) {
     auto *CheckStore = C.Stores[StoreIdx];
-    if (DoesStoreAliasWithPotential(StoreIdx, *CheckStore))
+    if (DoesStoreAliasWithPotential(StoreIdx, *CheckStore)) {
+      if (StoresToMerge.size() > 1)
+        AnyMerged |= mergeStores(StoresToMerge);
+      StoresToMerge.clear();
       continue;
+    }
     StoresToMerge.emplace_back(CheckStore);
   }
 
@@ -579,9 +586,9 @@ bool LoadStoreOptImpl::processMergeCandidate(StoreMergeCandidate &C) {
 
   // Now we've checked for aliasing hazards, merge any stores left.
   C.reset();
-  if (StoresToMerge.size() < 2)
-    return false;
-  return mergeStores(StoresToMerge);
+  if (StoresToMerge.size() > 1)
+    AnyMerged |= mergeStores(StoresToMerge);
+  return AnyMerged;
 }
 
 bool LoadStoreOptImpl::operationAliasesWithCandidate(MachineInstr &MI,

@@ -51,7 +51,7 @@ static bool isSupportedElementType(Type elementType) {
   if (isa<quant::QuantizedType>(elementType))
     return true;
 
-  if (isa<tosa::mxint8Type>(elementType))
+  if (isa<MXI8Type, tosa::mxint8Type>(elementType))
     return true;
 
   return false;
@@ -59,7 +59,7 @@ static bool isSupportedElementType(Type elementType) {
 
 class ArithConstantToTosaConst : public OpRewritePattern<arith::ConstantOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(arith::ConstantOp constOp,
                                 PatternRewriter &rewriter) const override {

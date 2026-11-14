@@ -91,6 +91,8 @@ convertToNVVMReductionKind(gpu::AllReduceOperation mode) {
     return NVVM::ReductionKind::XOR;
   case gpu::AllReduceOperation::MINIMUMF:
   case gpu::AllReduceOperation::MAXIMUMF:
+  case gpu::AllReduceOperation::MINIMUMNUMF:
+  case gpu::AllReduceOperation::MAXIMUMNUMF:
     return std::nullopt;
   }
   return std::nullopt;
@@ -443,10 +445,17 @@ struct GPUBarrierOpToNVVMLowering final
       rewriter.replaceOpWithNewOp<NVVM::SyncWarpOp>(op, mask);
       return success();
     }
-    default:
-      return rewriter.notifyMatchFailure(
-          op, "unsupported scope for NVVM barrier lowering");
+    case gpu::BarrierScope::Cluster: {
+      UnitAttr aligned = rewriter.getUnitAttr();
+      if (op.getAddressSpaces() && op.getAddressSpaces()->empty())
+        NVVM::ClusterArriveRelaxedOp::create(rewriter, op.getLoc(), aligned);
+      else
+        NVVM::ClusterArriveOp::create(rewriter, op.getLoc(), aligned);
+      rewriter.replaceOpWithNewOp<NVVM::ClusterWaitOp>(op, aligned);
+      return success();
     }
+    }
+    llvm_unreachable("unknown barrier scope");
   }
 };
 
@@ -511,10 +520,15 @@ struct LowerGpuOpsToNVVMOpsPass final
   void runOnOperation() override {
     gpu::GPUModuleOp m = getOperation();
 
-    // Request C wrapper emission.
+    // Request C wrapper emission for externally visible functions only. A
+    // private function cannot be called from outside its module, so its C
+    // interface wrapper is unreachable and would only anchor the wrapped
+    // function against dead-code elimination.
     for (auto func : m.getOps<func::FuncOp>()) {
-      func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
-                    UnitAttr::get(&getContext()));
+      if (func.isPrivate())
+        continue;
+      func->setDiscardableAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
+                               UnitAttr::get(&getContext()));
     }
 
     // Customize the bitwidth used for the device side index computations.

@@ -17,14 +17,14 @@ namespace llvm::omp::target::plugin {
 
 static const char *allocKindToStr(int32_t Kind) {
   switch (Kind) {
-  case TARGET_ALLOC_DEVICE:
+  case OL_ALLOC_TYPE_DEVICE:
     return "DEVICE";
-  case TARGET_ALLOC_HOST:
+  case OL_ALLOC_TYPE_HOST:
     return "HOST";
-  case TARGET_ALLOC_SHARED:
+  case OL_ALLOC_TYPE_MANAGED:
     return "SHARED";
   default:
-    return "DEFAULT";
+    llvm_unreachable("unexpected allocation type");
   }
 }
 
@@ -76,7 +76,7 @@ Error MemAllocatorTy::MemPoolTy::init(int32_t Kind, MemAllocatorTy *AllocatorIn,
   PoolSizeMax = UserPoolSize << 20; // Covert MB to B.
   PoolSize = 0;
 
-  auto Context = Allocator->L0Context->getZeContext();
+  auto Context = Allocator->ZeContext;
   const auto Device = Allocator->Device;
 
   // Check page size used for this allocation kind to decide minimum.
@@ -103,7 +103,7 @@ Error MemAllocatorTy::MemPoolTy::init(int32_t Kind, MemAllocatorTy *AllocatorIn,
                       &Properties);
     IsDiscrete = Device->isDiscreteDevice();
 
-    if (AllocKind == TARGET_ALLOC_SHARED && IsDiscrete) {
+    if (AllocKind == OL_ALLOC_TYPE_MANAGED && IsDiscrete) {
       // Use page size as minimum chunk size for USM shared on discrete.
       // device.
       // FIXME: pageSize is not returned correctly (=0) on some new devices,
@@ -141,7 +141,7 @@ Error MemAllocatorTy::MemPoolTy::init(int32_t Kind, MemAllocatorTy *AllocatorIn,
     } else if (IsDiscrete) {
       // Do not preallocate if it does not pay off.
       if (ChunkSize >= L0UsmPreAllocThreshold ||
-          (AllocKind == TARGET_ALLOC_HOST &&
+          (AllocKind == OL_ALLOC_TYPE_HOST &&
            ChunkSize >= L0HostUsmPreAllocThreshold))
         BlockSize = ChunkSize;
     }
@@ -160,7 +160,7 @@ Error MemAllocatorTy::MemPoolTy::init(int32_t Kind, MemAllocatorTy *AllocatorIn,
 // Used for reduction pool.
 Error MemAllocatorTy::MemPoolTy::init(MemAllocatorTy *AllocatorIn,
                                       const L0OptionsTy &Option) {
-  AllocKind = TARGET_ALLOC_DEVICE;
+  AllocKind = OL_ALLOC_TYPE_DEVICE;
   Allocator = AllocatorIn;
   AllocMin = AllocUnit = 1024 << 6; // 64KB.
   AllocMax = Option.ReductionPoolInfo[0] << 20;
@@ -186,7 +186,7 @@ Error MemAllocatorTy::MemPoolTy::init(MemAllocatorTy *AllocatorIn,
 
 // Used for small memory pool with fixed parameters.
 Error MemAllocatorTy::MemPoolTy::init(MemAllocatorTy *AllocatorIn) {
-  AllocKind = TARGET_ALLOC_DEVICE;
+  AllocKind = OL_ALLOC_TYPE_DEVICE;
   Allocator = AllocatorIn;
   AllocMax = AllocMin;
   BlockCapacity = AllocUnit / AllocMax;
@@ -380,12 +380,14 @@ bool MemAllocatorTy::MemAllocInfoMapTy::remove(void *Ptr,
 }
 
 Error MemAllocatorTy::initDevicePools(L0DeviceTy &L0Device,
-                                      const L0OptionsTy &Options) {
+                                      const L0OptionsTy &Options,
+                                      ze_context_handle_t ZeCtx) {
   SupportsLargeMem = L0Device.supportsLargeMem();
   IsHostMem = false;
   Device = &L0Device;
-  L0Context = &L0Device.getL0Context();
-  for (auto Kind : {TARGET_ALLOC_DEVICE, TARGET_ALLOC_SHARED}) {
+  L0Driver = &L0Device.getL0Driver();
+  ZeContext = ZeCtx;
+  for (auto Kind : {OL_ALLOC_TYPE_DEVICE, OL_ALLOC_TYPE_MANAGED}) {
     if (Options.MemPoolConfig[Kind].Use) {
       std::lock_guard<std::mutex> Lock(Mtx);
       Pools[Kind] = std::make_unique<MemPoolTy>();
@@ -403,16 +405,18 @@ Error MemAllocatorTy::initDevicePools(L0DeviceTy &L0Device,
   return Plugin::success();
 }
 
-Error MemAllocatorTy::initHostPool(L0ContextTy &Driver,
-                                   const L0OptionsTy &Option) {
+Error MemAllocatorTy::initHostPool(L0DriverTy &Driver,
+                                   const L0OptionsTy &Option,
+                                   ze_context_handle_t ZeCtx) {
   SupportsLargeMem = Driver.supportsLargeMem();
   IsHostMem = true;
-  L0Context = &Driver;
-  if (Option.MemPoolConfig[TARGET_ALLOC_HOST].Use) {
+  L0Driver = &Driver;
+  ZeContext = ZeCtx;
+  if (Option.MemPoolConfig[OL_ALLOC_TYPE_HOST].Use) {
     std::lock_guard<std::mutex> Lock(Mtx);
-    Pools[TARGET_ALLOC_HOST] = std::make_unique<MemPoolTy>();
+    Pools[OL_ALLOC_TYPE_HOST] = std::make_unique<MemPoolTy>();
     if (auto Err =
-            Pools[TARGET_ALLOC_HOST]->init(TARGET_ALLOC_HOST, this, Option))
+            Pools[OL_ALLOC_TYPE_HOST]->init(OL_ALLOC_TYPE_HOST, this, Option))
       return Err;
   }
   return Plugin::success();
@@ -426,7 +430,7 @@ void MemAllocatorTy::updateMaxAllocSize(L0DeviceTy &L0Device) {
     // MaxAllocSize should be the minimum of all devices from the driver.
     if (MaxAllocSize > maxMemAllocSize) {
       MaxAllocSize = maxMemAllocSize;
-      ODBG(OLDT_Alloc) << "Updated MaxAllocSize for driver " << L0Context
+      ODBG(OLDT_Alloc) << "Updated MaxAllocSize for driver " << L0Driver
                        << " to " << MaxAllocSize;
     }
     return;
@@ -439,11 +443,11 @@ void MemAllocatorTy::updateMaxAllocSize(L0DeviceTy &L0Device) {
 
 /// Release resources and report statistics if requested.
 Error MemAllocatorTy::deinit() {
-  if (!L0Context)
+  if (!L0Driver)
     return Plugin::success();
 
   std::lock_guard<std::mutex> Lock(Mtx);
-  if (!L0Context)
+  if (!L0Driver)
     return Plugin::success();
   // Release RTL-owned memory.
   for (auto *M : MemOwned) {
@@ -496,7 +500,7 @@ Error MemAllocatorTy::deinit() {
   });
 
   // Mark as deinitialized.
-  L0Context = nullptr;
+  L0Driver = nullptr;
   return Plugin::success();
 }
 
@@ -506,8 +510,8 @@ Expected<void *> MemAllocatorTy::allocFromPool(size_t Size, size_t Align,
                                                bool UserAlloc, bool DevMalloc,
                                                uint32_t MemAdvice,
                                                AllocOptionTy AllocOpt) {
-  assert((Kind == TARGET_ALLOC_DEVICE || Kind == TARGET_ALLOC_HOST ||
-          Kind == TARGET_ALLOC_SHARED) &&
+  assert((Kind == OL_ALLOC_TYPE_DEVICE || Kind == OL_ALLOC_TYPE_HOST ||
+          Kind == OL_ALLOC_TYPE_MANAGED) &&
          "Unknown memory kind while allocating target memory");
 
   std::lock_guard<std::mutex> Lock(Mtx);
@@ -654,28 +658,28 @@ Expected<void *> MemAllocatorTy::allocFromL0(size_t Size, size_t Align,
   }
 
   auto zeDevice = Device ? Device->getZeDevice() : nullptr;
-  auto zeContext = L0Context->getZeContext();
+  auto zeContext = ZeContext;
   bool MakeResident = false;
   switch (Kind) {
-  case TARGET_ALLOC_DEVICE:
+  case OL_ALLOC_TYPE_DEVICE:
     MakeResident = true;
     CALL_ZE_RET_ERROR(zeMemAllocDevice, zeContext, &DeviceDesc, Size, Align,
                       zeDevice, &Mem);
     ODBG(OLDT_Alloc) << "Allocated " << Size << " bytes of device memory "
                      << Mem;
     break;
-  case TARGET_ALLOC_HOST:
+  case OL_ALLOC_TYPE_HOST:
     CALL_ZE_RET_ERROR(zeMemAllocHost, zeContext, &HostDesc, Size, Align, &Mem);
     ODBG(OLDT_Alloc) << "Allocated " << Size << " bytes of host memory " << Mem;
     break;
-  case TARGET_ALLOC_SHARED:
+  case OL_ALLOC_TYPE_MANAGED:
     CALL_ZE_RET_ERROR(zeMemAllocShared, zeContext, &DeviceDesc, &HostDesc, Size,
                       Align, zeDevice, &Mem);
     ODBG(OLDT_Alloc) << "Allocated " << Size << " bytes of shared memory "
                      << Mem;
     break;
   default:
-    assert(0 && "Invalid target data allocation kind");
+    llvm_unreachable("unexpected allocation type");
   }
 
   if (MakeResident) {
@@ -690,7 +694,7 @@ Expected<void *> MemAllocatorTy::allocFromL0(size_t Size, size_t Align,
 }
 
 Error MemAllocatorTy::deallocFromL0(void *Ptr) {
-  CALL_ZE_RET_ERROR(zeMemFree, L0Context->getZeContext(), Ptr);
+  CALL_ZE_RET_ERROR(zeMemFree, ZeContext, Ptr);
   ODBG(OLDT_Alloc) << "Freed device pointer " << Ptr;
   return Plugin::success();
 }

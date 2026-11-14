@@ -1,4 +1,4 @@
-# RUN: llc %s -start-after=livedebugvalues --filetype=obj -o - \
+# RUN: llc %s -start-after=live-debug-values --filetype=obj -o - \
 # RUN: | llvm-dwarfdump - -v \
 # RUN: | FileCheck %s
 
@@ -41,7 +41,6 @@
 ---
 name:            _Z8call_memPPFvvE
 alignment:       16
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         true

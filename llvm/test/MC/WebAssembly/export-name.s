@@ -48,6 +48,7 @@ mid?question:
 
 # CHECK-OBJ:          Name:            linking
 # CHECK-OBJ-NEXT:     Version:         2
+# CHECK-OBJ-NEXT:     TargetArch:      wasm32
 # CHECK-OBJ-NEXT:     SymbolTable:
 # CHECK-OBJ-NEXT:       - Index:           0
 # CHECK-OBJ-NEXT:         Kind:            FUNCTION

@@ -44,15 +44,14 @@ define float @not_fmaxnm_maybe_nan(i32 %i1, i32 %i2) #0 {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ucvtf s0, w0
 ; CHECK-GI-NEXT:    ucvtf s1, w1
-; CHECK-GI-NEXT:    mov w8, #-8388608 // =0xff800000
-; CHECK-GI-NEXT:    fmov s2, #17.00000000
-; CHECK-GI-NEXT:    fmov s3, w8
-; CHECK-GI-NEXT:    fmul s0, s0, s3
-; CHECK-GI-NEXT:    fadd s1, s1, s2
+; CHECK-GI-NEXT:    mvni v2.2s, #127, msl #16
+; CHECK-GI-NEXT:    fmov s3, #17.00000000
+; CHECK-GI-NEXT:    fmul s0, s0, s2
+; CHECK-GI-NEXT:    fadd s1, s1, s3
 ; CHECK-GI-NEXT:    fmax s0, s0, s1
 ; CHECK-GI-NEXT:    ret
   %f1 = uitofp i32 %i1 to float
-  %fmul = fmul float %f1, 0xfff0000000000000 ; -INFINITY as 64-bit hex
+  %fmul = fmul float %f1, -inf ; -INFINITY as 64-bit hex
   %f2 = uitofp i32 %i2 to float
   %fadd2 = fadd float %f2, 17.0
   %cmp = fcmp uge float %fmul, %fadd2

@@ -108,6 +108,7 @@ public:
     eServerPacketType_QThreadSuffixSupported,
 
     eServerPacketType_jThreadsInfo,
+    eServerPacketType_jAddressSpacesInfo,
     eServerPacketType_qsThreadInfo,
     eServerPacketType_qfThreadInfo,
     eServerPacketType_qGetPid,
@@ -130,7 +131,6 @@ public:
     eServerPacketType_qWatchpointSupportInfoSupported,
     eServerPacketType_qXfer,
 
-    eServerPacketType_jSignalsInfo,
     eServerPacketType_jModulesInfo,
 
     eServerPacketType_vAttach,
@@ -168,6 +168,7 @@ public:
     eServerPacketType__m,
     eServerPacketType_notify, // '%' notification
 
+    eServerPacketType_jLLDBSettings,
     eServerPacketType_jLLDBTraceSupported,
     eServerPacketType_jLLDBTraceStart,
     eServerPacketType_jLLDBTraceStop,
@@ -176,6 +177,8 @@ public:
     eServerPacketType_jMultiBreakpoint,
     eServerPacketType_jAcceleratorPluginInitialize,
     eServerPacketType_jAcceleratorPluginBreakpointHit,
+    eServerPacketType_jAcceleratorPluginGetDynamicLoaderLibraryInfo,
+    eServerPacketType_jThreadExtendedInfo,
 
     eServerPacketType_qMemTags, // read memory tags
     eServerPacketType_QMemTags, // write memory tags

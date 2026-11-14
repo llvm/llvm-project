@@ -88,7 +88,7 @@ entry:
   br i1 %cmp, label %if.then, label %if.else
 if.then:
   %abs = call float @llvm.fabs.f32(float %x)
-  %ret = fcmp oeq float %abs, 0x7FF0000000000000
+  %ret = fcmp oeq float %abs, +inf
   ret i1 %ret
 if.else:
   ret i1 false
@@ -216,7 +216,7 @@ define i1 @test8(float %x) {
 ; CHECK-NEXT:    ret i1 [[RET2]]
 ;
   %abs = call float @llvm.fabs.f32(float %x)
-  %cond = fcmp oeq float %abs, 0x7FF0000000000000
+  %cond = fcmp oeq float %abs, +inf
   br i1 %cond, label %if.then, label %if.else
 if.then:
   %ret1 = call i1 @llvm.is.fpclass.f32(float %x, i32 575)
@@ -239,7 +239,7 @@ define i1 @test9(float %x) {
   %cond = fcmp olt float %x, -1.0
   br i1 %cond, label %if.then, label %if.else
 if.then:
-  %ret1 = fcmp oeq float %x, 0x7FF0000000000000
+  %ret1 = fcmp oeq float %x, +inf
   ret i1 %ret1
 if.else:
   ret i1 false
@@ -259,7 +259,7 @@ define i1 @test10(float %x) {
   %neg = fneg float %x
   br i1 %cond, label %if.then, label %if.else
 if.then:
-  %ret1 = fcmp oeq float %neg, 0xFFF0000000000000
+  %ret1 = fcmp oeq float %neg, -inf
   ret i1 %ret1
 if.else:
   ret i1 false
@@ -281,7 +281,7 @@ define i1 @test11_and(float %x, i1 %cond2) {
   %and = and i1 %cond, %cond2
   br i1 %and, label %if.then, label %if.else
 if.then:
-  %ret1 = fcmp oeq float %neg, 0xFFF0000000000000
+  %ret1 = fcmp oeq float %neg, -inf
   ret i1 %ret1
 if.else:
   ret i1 false
@@ -537,9 +537,35 @@ define i1 @test_inv_and(float %x, i1 %cond2) {
   %and = and i1 %not, %cond2
   br i1 %and, label %if.then, label %if.else
 if.then:
-  %ret1 = fcmp oeq float %neg, 0xFFF0000000000000
+  %ret1 = fcmp oeq float %neg, -inf
   ret i1 %ret1
 if.else:
+  ret i1 false
+}
+
+define i1 @PR232565(double %numerator) {
+; CHECK-LABEL: define i1 @PR232565(
+; CHECK-SAME: double [[NUMERATOR:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[QUOTIENT:%.*]] = fdiv double [[NUMERATOR]], 0.000000e+00
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.fmuladd.f64(double [[QUOTIENT]], double 2.000000e+00, double 0.000000e+00)
+; CHECK-NEXT:    [[NEGATIVE_OR_NAN:%.*]] = fcmp ult double [[RESULT]], 0.000000e+00
+; CHECK-NEXT:    br i1 [[NEGATIVE_OR_NAN]], label [[NEGATIVE:%.*]], label [[EXIT:%.*]]
+; CHECK:       negative:
+; CHECK-NEXT:    [[NONPOSITIVE:%.*]] = fcmp ole double [[RESULT]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[NONPOSITIVE]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %quotient = fdiv double %numerator, 0.0
+  %result = call double @llvm.fmuladd.f64(double %quotient, double 2.0, double 0.0)
+  %negative_or_nan = fcmp ult double %result, 0.0
+  br i1 %negative_or_nan, label %negative, label %exit
+negative:
+  %nonpositive = fcmp ole double %result, 0.0
+  ret i1 %nonpositive
+exit:
   ret i1 false
 }
 

@@ -132,7 +132,7 @@ TEST(RTDyldObjectLinkingLayerTest, TestOverrideObjectFlags) {
   {
     auto Ctx = std::make_unique<LLVMContext>();
     ModuleBuilder MB(*Ctx, TM->getTargetTriple().str(), "dummy");
-    MB.getModule()->setDataLayout(TM->createDataLayout());
+    MB.getModule()->setDataLayout(TM->getTargetTriple().computeDataLayout());
 
     Function *FooImpl = MB.createFunctionDecl(
         FunctionType::get(Type::getVoidTy(*Ctx), {}, false), "foo");
@@ -207,7 +207,7 @@ TEST(RTDyldObjectLinkingLayerTest, TestAutoClaimResponsibilityForSymbols) {
   {
     auto Ctx = std::make_unique<LLVMContext>();
     ModuleBuilder MB(*Ctx, TM->getTargetTriple().str(), "dummy");
-    MB.getModule()->setDataLayout(TM->createDataLayout());
+    MB.getModule()->setDataLayout(TM->getTargetTriple().computeDataLayout());
 
     Function *FooImpl = MB.createFunctionDecl(
         FunctionType::get(Type::getVoidTy(*Ctx), {}, false), "foo");
@@ -256,7 +256,7 @@ TEST(RTDyldObjectLinkingLayerTest, TestMemoryBufferNamePropagation) {
   {
     auto Ctx = std::make_unique<LLVMContext>();
     ModuleBuilder MB(*Ctx, TM->getTargetTriple().str(), "dummy");
-    MB.getModule()->setDataLayout(TM->createDataLayout());
+    MB.getModule()->setDataLayout(TM->getTargetTriple().computeDataLayout());
 
     Function *FooImpl = MB.createFunctionDecl(
         FunctionType::get(Type::getVoidTy(*Ctx), {}, false), "foo");

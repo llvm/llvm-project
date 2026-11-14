@@ -12,10 +12,9 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @masked_scatter_v2i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v2i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr h0, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    cmeq v1.2s, v0.2s, #0
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
@@ -528,19 +527,14 @@ define void @masked_scatter_v32i64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define void @masked_scatter_v2f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr s1, [x0]
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    fcmeq v2.4h, v1.4h, #0.0
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    sshll v2.4s, v2.4h, #0
-; CHECK-NEXT:    mov v0.h[0], v2.h[0]
-; CHECK-NEXT:    mov w8, v2.s[1]
-; CHECK-NEXT:    mov v0.h[1], w8
-; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    sunpklo z0.d, z0.s
-; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
-; CHECK-NEXT:    uunpklo z0.d, z1.s
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    fcmeq v1.4h, v0.4h, #0.0
+; CHECK-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
+; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
+; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    st1h { z0.d }, p1, [z1.d]
 ; CHECK-NEXT:    ret
@@ -662,19 +656,14 @@ define void @masked_scatter_v32f16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define void @masked_scatter_v2bf16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v2bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr s1, [x0]
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    shll v2.4s, v1.4h, #16
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    fcmeq v2.4s, v2.4s, #0.0
-; CHECK-NEXT:    mov v0.h[0], v2.h[0]
-; CHECK-NEXT:    mov w8, v2.s[1]
-; CHECK-NEXT:    mov v0.h[1], w8
-; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    sunpklo z0.d, z0.s
-; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
-; CHECK-NEXT:    uunpklo z0.d, z1.s
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    shll v1.4s, v0.4h, #16
+; CHECK-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    fcmeq v1.4s, v1.4s, #0.0
+; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
+; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    st1h { z0.d }, p1, [z1.d]
 ; CHECK-NEXT:    ret

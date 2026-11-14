@@ -67,6 +67,7 @@ MODULE_PASS("coro-cleanup", CoroCleanupPass())
 MODULE_PASS("coro-early", CoroEarlyPass())
 MODULE_PASS("lower-comment-string", LowerCommentStringPass())
 MODULE_PASS("cross-dso-cfi", CrossDSOCFIPass())
+MODULE_PASS("csan-module", ModuleConcurrencySanitizerPass())
 MODULE_PASS("ctx-instr-gen",
             PGOInstrumentationGen(PGOInstrumentationType::CTXPROF))
 MODULE_PASS("ctx-prof-flatten",
@@ -96,11 +97,12 @@ MODULE_PASS("hipstdpar-select-accelerator-code",
 MODULE_PASS("hotcoldsplit", HotColdSplittingPass())
 MODULE_PASS("inferattrs", InferFunctionAttrsPass())
 MODULE_PASS("inliner-ml-advisor-release",
-            ModuleInlinerWrapperPass(getInlineParams(), true, {},
+            ModuleInlinerWrapperPass(getInlineParams(Context), true, {},
                                      InliningAdvisorMode::Release, 0))
-MODULE_PASS("inliner-wrapper", ModuleInlinerWrapperPass())
+MODULE_PASS("inliner-wrapper",
+            ModuleInlinerWrapperPass(getInlineParams(Context)))
 MODULE_PASS("inliner-wrapper-no-mandatory-first",
-            ModuleInlinerWrapperPass(getInlineParams(), false))
+            ModuleInlinerWrapperPass(getInlineParams(Context), false))
 MODULE_PASS("insert-gcov-profiling", GCOVProfilerPass())
 MODULE_PASS("instrprof", InstrProfilingLoweringPass())
 MODULE_PASS("ctx-instr-lower", PGOCtxProfLoweringPass())
@@ -126,7 +128,7 @@ MODULE_PASS("metarenamer", MetaRenamerPass())
 MODULE_PASS("mir-debugify", NewPMDebugifyPass(applyMIRDebugify))
 MODULE_PASS("mir-check-debugify", CheckDebugMachineModulePass())
 MODULE_PASS("mir-strip-debug", StripDebugMachineModulePass())
-MODULE_PASS("module-inline", ModuleInlinerPass())
+MODULE_PASS("module-inline", ModuleInlinerPass(getInlineParams(Context)))
 MODULE_PASS("name-anon-globals", NameAnonGlobalPass())
 MODULE_PASS("no-op-module", NoOpModulePass())
 MODULE_PASS("norecurse-lto-inference", NoRecurseLTOInferencePass())
@@ -138,12 +140,13 @@ MODULE_PASS("partial-inliner", PartialInlinerPass())
 MODULE_PASS("pgo-icall-prom", PGOIndirectCallPromotion())
 MODULE_PASS("pgo-instr-gen", PGOInstrumentationGen())
 MODULE_PASS("pgo-instr-use", PGOInstrumentationUse())
-MODULE_PASS("pre-isel-intrinsic-lowering", PreISelIntrinsicLoweringPass(TM))
+MODULE_PASS("pre-isel-intrinsic-lowering", PreISelIntrinsicLoweringPass(*TM))
 MODULE_PASS("print", PrintModulePass(errs()))
 MODULE_PASS("print-callgraph", CallGraphPrinterPass(errs()))
 MODULE_PASS("print-callgraph-sccs", CallGraphSCCsPrinterPass(errs()))
 MODULE_PASS("print-lcg", LazyCallGraphPrinterPass(errs()))
 MODULE_PASS("print-lcg-dot", LazyCallGraphDOTPrinterPass(errs()))
+MODULE_PASS("print-mir", PrintMIRPass(errs()))
 MODULE_PASS("print-must-be-executed-contexts",
             MustBeExecutedContextPrinterPass(errs()))
 MODULE_PASS("print-profile-summary", ProfileSummaryPrinterPass(errs()))
@@ -325,6 +328,7 @@ CGSCC_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 CGSCC_PASS("no-op-cgscc", NoOpCGSCCPass())
 CGSCC_PASS("openmp-opt-cgscc", OpenMPOptCGSCCPass())
 CGSCC_PASS("coro-annotation-elide", CoroAnnotationElidePass())
+CGSCC_PASS("trigger-crash-cgscc", TriggerCrashCGSCCPass())
 #undef CGSCC_PASS
 
 #ifndef CGSCC_PASS_WITH_PARAMS
@@ -412,7 +416,6 @@ FUNCTION_PASS("aggressive-instcombine", AggressiveInstCombinePass())
 FUNCTION_PASS("alignment-from-assumptions", AlignmentFromAssumptionsPass())
 FUNCTION_PASS("annotation-remarks", AnnotationRemarksPass())
 FUNCTION_PASS("assume-builder", AssumeBuilderPass())
-FUNCTION_PASS("assume-simplify", AssumeSimplifyPass())
 FUNCTION_PASS("atomic-expand", AtomicExpandPass(*TM))
 FUNCTION_PASS("bdce", BDCEPass())
 FUNCTION_PASS("break-crit-edges", BreakCriticalEdgesPass())
@@ -428,6 +431,7 @@ FUNCTION_PASS("copyprof-stores", CopyProfStoresPass())
 FUNCTION_PASS("coro-elide", CoroElidePass())
 FUNCTION_PASS("correlated-propagation", CorrelatedValuePropagationPass())
 FUNCTION_PASS("count-visits", CountVisitsPass())
+FUNCTION_PASS("csan", ConcurrencySanitizerPass())
 FUNCTION_PASS("dce", DCEPass())
 FUNCTION_PASS("declare-to-assign", llvm::AssignmentTrackingPass())
 FUNCTION_PASS("dfa-jump-threading", DFAJumpThreadingPass())
@@ -454,7 +458,6 @@ FUNCTION_PASS("gvn-hoist", GVNHoistPass())
 FUNCTION_PASS("gvn-sink", GVNSinkPass())
 FUNCTION_PASS("helloworld", HelloWorldPass())
 FUNCTION_PASS("indirectbr-expand", IndirectBrExpandPass(*TM))
-FUNCTION_PASS("infer-address-spaces", InferAddressSpacesPass())
 FUNCTION_PASS("infer-alignment", InferAlignmentPass())
 FUNCTION_PASS("inject-tli-mappings", InjectTLIMappings())
 FUNCTION_PASS("inline-asm-prepare", InlineAsmPreparePass())
@@ -545,7 +548,7 @@ FUNCTION_PASS("select-optimize", SelectOptimizePass(*TM))
 FUNCTION_PASS("separate-const-offset-from-gep",
               SeparateConstOffsetFromGEPPass())
 FUNCTION_PASS("sink", SinkingPass())
-FUNCTION_PASS("sjlj-eh-prepare", SjLjEHPreparePass(TM))
+FUNCTION_PASS("sjlj-eh-prepare", SjLjEHPreparePass())
 FUNCTION_PASS("slp-vectorizer", SLPVectorizerPass())
 FUNCTION_PASS("slsr", StraightLineStrengthReducePass())
 FUNCTION_PASS("stack-protector", StackProtectorPass(*TM))
@@ -574,6 +577,7 @@ FUNCTION_PASS("view-dom", DomViewer())
 FUNCTION_PASS("view-dom-only", DomOnlyViewer())
 FUNCTION_PASS("view-post-dom", PostDomViewer())
 FUNCTION_PASS("view-post-dom-only", PostDomOnlyViewer())
+FUNCTION_PASS("win-eh-prepare", WinEHPreparePass())
 FUNCTION_PASS("wasm-eh-prepare", WasmEHPreparePass())
 #undef FUNCTION_PASS
 
@@ -584,6 +588,12 @@ FUNCTION_PASS_WITH_PARAMS(
     "early-cse", "EarlyCSEPass",
     [](bool UseMemorySSA) { return EarlyCSEPass(UseMemorySSA); },
     parseEarlyCSEPassOptions, "memssa")
+FUNCTION_PASS_WITH_PARAMS(
+    "infer-address-spaces", "InferAddressSpacesPass",
+    [](bool AssumeDefaultIsFlatAddressSpace) {
+      return InferAddressSpacesPass(AssumeDefaultIsFlatAddressSpace);
+    },
+    parseInferAddressSpacesPassOptions, "assume-default-is-flat-addrspace")
 FUNCTION_PASS_WITH_PARAMS(
     "drop-unnecessary-assumes", "DropUnnecessaryAssumesPass",
     [](bool DropDereferenceable) { return DropUnnecessaryAssumesPass(DropDereferenceable); },
@@ -730,12 +740,6 @@ FUNCTION_PASS_WITH_PARAMS(
     },
     parseStructurizeCFGPassOptions, "skip-uniform-regions")
 FUNCTION_PASS_WITH_PARAMS(
-    "win-eh-prepare", "WinEHPreparePass",
-    [](bool DemoteCatchSwitchPHIOnly) {
-      return WinEHPreparePass(DemoteCatchSwitchPHIOnly);
-    },
-    parseWinEHPrepareOptions, "demote-catchswitch-only")
-FUNCTION_PASS_WITH_PARAMS(
     "bounds-checking", "BoundsCheckingPass",
     [](BoundsCheckingPass::Options Options) {
       return BoundsCheckingPass(Options);
@@ -799,6 +803,7 @@ LOOP_PASS("print<ddg>", DDGAnalysisPrinterPass(errs()))
 LOOP_PASS("print<hash-recognize>", HashRecognizePrinterPass(errs()))
 LOOP_PASS("print<iv-users>", IVUsersPrinterPass(errs()))
 LOOP_PASS("print<loopnest>", LoopNestPrinterPass(errs()))
+LOOP_PASS("trigger-crash-loop", TriggerCrashLoopPass())
 #undef LOOP_PASS
 
 #ifndef LOOP_PASS_WITH_PARAMS

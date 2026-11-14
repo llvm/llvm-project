@@ -180,11 +180,58 @@ int TrivialLocal(int x) {
 // LLVM:         %[[R:.+]] = musttail call{{.*}} i32 @_Z10ReturnsInti
 // LLVM-NEXT:    ret i32 %[[R]]
 
-// FIXME(cir): This requires a cleanup scope of some sort, but is NYI.
-//   int VlaScope(int x) {
-//     int vla[x];
-//     [[clang::musttail]] return Bar(x);
-//   }
+int VlaScope(int x) {
+  int vla[x];
+  [[clang::musttail]] return Bar(x);
+}
+
+// CIR-LABEL: cir.func{{.*}} @_Z8VlaScopei
+// CIR:         %[[R:.+]] = cir.call @_Z3Bari(%{{.+}}) musttail : (!s32i{{.*}}) -> (!s32i{{.*}})
+// CIR-NEXT:    cir.return %[[R]] : !s32i
+
+// LLVM-LABEL: define{{.*}} i32 @_Z8VlaScopei
+// LLVM:         %[[R:.+]] = musttail call{{.*}} i32 @_Z3Bari
+// LLVM-NEXT:    ret i32 %[[R]]
+
+int VlaConditional(int x) {
+  int vla[x];
+  if (x)
+    [[clang::musttail]] return Bar(x);
+  return 0;
+}
+
+// CIR-LABEL: cir.func{{.*}} @_Z14VlaConditionali
+// CIR:         %[[SAVED:.+]] = cir.alloca "saved_stack"
+// CIR:         %[[STACK:.+]] = cir.stacksave
+// CIR:         cir.store{{.*}} %[[STACK]], %[[SAVED]]
+// CIR:         cir.cleanup.scope {
+// CIR:           cir.alloca "vla"
+// CIR:           cir.if %{{.+}} {
+// CIR-NOT:         cir.stackrestore
+// CIR:             %[[R:.+]] = cir.call @_Z3Bari(%{{.+}}) musttail : (!s32i{{.*}}) -> (!s32i{{.*}})
+// CIR-NEXT:        cir.return %[[R]] : !s32i
+// CIR:           }
+// The ordinary `return 0` leaves the scope normally and does run the cleanup.
+// CIR:           %[[ZERO:.+]] = cir.const #cir.int<0> : !s32i
+// CIR-NEXT:      cir.store %[[ZERO]], %[[RETVAL:.+]] :
+// CIR-NEXT:      %[[RET:.+]] = cir.load %[[RETVAL]] :
+// CIR-NEXT:      cir.return %[[RET]] : !s32i
+// CIR:         } cleanup normal {
+// CIR:           %[[RELOAD:.+]] = cir.load{{.*}} %[[SAVED]]
+// CIR-NEXT:      cir.stackrestore %[[RELOAD]]
+
+// LLVM-LABEL: define{{.*}} i32 @_Z14VlaConditionali
+// LLVM:         %[[STACK:.+]] = call ptr @llvm.stacksave.p0()
+// LLVM:         store ptr %[[STACK]], ptr %[[SAVED:.+]], align
+// LLVM:         br i1 %{{[^,]+}}, label %[[TAIL:[a-zA-Z0-9._]+]], label %[[NOTAIL:[a-zA-Z0-9._]+]]
+// LLVM:       [[TAIL]]:
+// LLVM-NOT:     stackrestore
+// LLVM:         %[[R:.+]] = musttail call{{.*}} i32 @_Z3Bari
+// LLVM-NEXT:    ret i32 %[[R]]
+// LLVM:       [[NOTAIL]]:
+// LLVM:         %[[RELOAD:.+]] = load ptr, ptr %[[SAVED]]
+// LLVM-NEXT:    call void @llvm.stackrestore.p0(ptr %[[RELOAD]])
+// LLVM:         ret i32
 
 int (Foo::*pmf)(int);
 int Foo::TailFrom2(int x) {

@@ -104,7 +104,7 @@
       ! CHECK: cf.cond_br
       case (.true.)
         n8 = 2
-      ! CHECK-NOT: 888
+      ! CHECK-NOT: arith.constant 888
       case default ! dead
         n8 = 888
     end select
@@ -180,7 +180,7 @@
     character(len=3) :: s
     n = 0
 
-    ! CHECK: %[[STR00:[0-9]+]] = fir.declare {{.*}} uniq_name = "_QQclX3030"}
+    ! CHECK: %[[STR00:[0-9]+]] = fir.declare {{.*}} uniq_name("_QQclX3030")
     ! CHECK: %[[STR00_CONV:[0-9]+]] = fir.convert %[[STR00]]
 
     ! CHECK-O0: fir.call @_FortranACharacterCompareScalar1({{.*}}, %[[STR00_CONV]]
@@ -190,17 +190,19 @@
     ! CHECK-NEXT: cf.cond_br
     if (lge(s,'00')) then
 
-      ! CHECK: fir.call @_FortranATrim
+      ! CHECK-O0: fir.call @_FortranATrim
+      ! CHECK-O1-NOT: fir.call @_FortranATrim
+      ! CHECK-O1: fir.iterate_while
 
       ! All the strings in SELECT CASE
-      ! CHECK: %[[STR11:[0-9]+]] = fir.declare {{.*}} uniq_name = "_QQclX3131"}
-      ! CHECK: %[[STR22:[0-9]+]] = fir.declare {{.*}} uniq_name = "_QQclX3232"}
-      ! CHECK: %[[STR33:[0-9]+]] = fir.declare {{.*}} uniq_name = "_QQclX3333"}
-      ! CHECK: %[[STR44:[0-9]+]] = fir.declare {{.*}} uniq_name = "_QQclX3434"}
-      ! CHECK: %[[STR55:[0-9]+]] = fir.declare {{.*}} uniq_name = "_QQclX3535"}
-      ! CHECK: %[[STR66:[0-9]+]] = fir.declare {{.*}} uniq_name = "_QQclX3636"}
-      ! CHECK: %[[STR77:[0-9]+]] = fir.declare {{.*}} uniq_name = "_QQclX3737"}
-      ! CHECK: %[[STR88:[0-9]+]] = fir.declare {{.*}} uniq_name = "_QQclX3838"}
+      ! CHECK: %[[STR11:[0-9]+]] = fir.declare {{.*}} uniq_name("_QQclX3131")
+      ! CHECK: %[[STR22:[0-9]+]] = fir.declare {{.*}} uniq_name("_QQclX3232")
+      ! CHECK: %[[STR33:[0-9]+]] = fir.declare {{.*}} uniq_name("_QQclX3333")
+      ! CHECK: %[[STR44:[0-9]+]] = fir.declare {{.*}} uniq_name("_QQclX3434")
+      ! CHECK: %[[STR55:[0-9]+]] = fir.declare {{.*}} uniq_name("_QQclX3535")
+      ! CHECK: %[[STR66:[0-9]+]] = fir.declare {{.*}} uniq_name("_QQclX3636")
+      ! CHECK: %[[STR77:[0-9]+]] = fir.declare {{.*}} uniq_name("_QQclX3737")
+      ! CHECK: %[[STR88:[0-9]+]] = fir.declare {{.*}} uniq_name("_QQclX3838")
 
       ! == '11'
       ! CHECK-O0: %[[STR11_CONV:[0-9]+]] = fir.convert %[[STR11]]
@@ -281,10 +283,12 @@
   ! CHECK-LABEL: func @_QPscharacter2
   subroutine scharacter2(s)
     character(len=3) :: s
-    ! CHECK: %[[N:[0-9]+]] = fir.declare {{.*}} {uniq_name = "_QFscharacter2En"}
+    ! CHECK: %[[N:[0-9]+]] = fir.declare {{.*}} uniq_name("_QFscharacter2En")
     ! CHECK: fir.store %c-10_i32 to %[[N]] : !fir.ref<i32>
     n = -10
-    ! CHECK: fir.call @_FortranATrim(
+    ! CHECK-O0: fir.call @_FortranATrim(
+    ! CHECK-O1-NOT: fir.call @_FortranATrim(
+    ! CHECK-O1: fir.iterate_while
     select case(trim(s))
     case default
       ! CHECK: fir.store %c9_i32 to %[[N]] : !fir.ref<i32>
@@ -297,7 +301,9 @@
     ! CHECK:  fir.store %c-2_i32 to %[[N]] : !fir.ref<i32>
     n = -2
 
-    ! CHECK: fir.call @_FortranATrim(
+    ! CHECK-O0: fir.call @_FortranATrim(
+    ! CHECK-O1-NOT: fir.call @_FortranATrim(
+    ! CHECK-O1: fir.iterate_while
     select case(trim(s))
     end select
     ! CHECK: fir.call @_FortranAioBeginExternalListOutput(
@@ -348,9 +354,12 @@
   ! select case with goto exit
   subroutine sgoto
     n = 0
-    ! CHECK: cf.cond_br
+    ! The SELECT CASE and its GOTOs branch only within the loop body, so the
+    ! loop keeps its structured form and the raw blocks are confined to a wrap.
+    ! CHECK: fir.do_loop
+    ! CHECK: scf.execute_region no_inline {
     do i=1,8
-      ! CHECK: fir.select_case %8 : i32 [#fir.upper, %c2_i32, ^bb{{.*}}, #fir.lower, %c5_i32, ^bb{{.*}}, unit, ^bb{{.*}}]
+      ! CHECK: fir.select_case %{{[0-9]+}} : i32 [#fir.upper, %c2_i32, ^bb{{.*}}, #fir.lower, %c5_i32, ^bb{{.*}}, unit, ^bb{{.*}}]
       select case(i)
       case (:2)
         ! CHECK-DAG: arith.muli {{.*}}, %c10_i32 : i32
@@ -424,7 +433,9 @@
 
     ! CHECK: fir.is_present
     if (present(str)) then
-      ! CHECK: fir.call @_FortranATrim
+      ! CHECK-O0: fir.call @_FortranATrim
+      ! CHECK-O1-NOT: fir.call @_FortranATrim
+      ! CHECK-O1: fir.iterate_while
       select case (trim(str))
         ! == 'a'
         ! CHECK-O0: fir.call @_FortranACharacterCompareScalar1
@@ -515,3 +526,52 @@
     call swhere(1)            ! expected output: 42.
     call sforall(1)           ! expected output: 42.
   end
+
+    ! CHECK-LABEL: func.func @_QPsinteger16()
+  subroutine sinteger16()
+    integer(16) :: i
+
+    ! Test negative INTEGER(16) constant.
+    i = -3_16
+    ! CHECK: fir.select_case {{.*}} : i128
+    ! CHECK-SAME: #fir.point, %c-3_i128,
+    select case (i)
+    case (-3_16)
+      continue
+    case default
+      continue
+    end select
+
+    ! Test INTEGER(16) constant greater than INT64_MAX.
+    i = 2_16**70
+    ! CHECK: fir.select_case {{.*}} : i128
+    ! CHECK-SAME: #fir.point, %c1180591620717411303424_i128,
+    select case (i)
+    case (2_16**70)
+      continue
+    case default
+      continue
+    end select
+
+    ! Test negative INTEGER(16) constant less than INT64_MIN.
+    i = -2_16**70
+    ! CHECK: fir.select_case {{.*}} : i128
+    ! CHECK-SAME: #fir.point, %c-1180591620717411303424_i128,
+    select case (i)
+    case (-2_16**70)
+      continue
+    case default
+      continue
+    end select
+
+    ! Test ordinary INTEGER(16) constant.
+    i = 3_16
+    ! CHECK: fir.select_case {{.*}} : i128
+    ! CHECK-SAME: #fir.point, %c3_i128,
+    select case (i)
+    case (3_16)
+      continue
+    case default
+      continue
+    end select
+  end subroutine sinteger16

@@ -22,7 +22,6 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -118,6 +117,10 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf,
     std::fill(&PSetLimits[0], &PSetLimits[NumPSets], 0);
     ++Tag;
   }
+}
+
+bool RegisterClassInfo::hasCurrentReservedRegs() const {
+  return Reserved == MF->getRegInfo().getReservedRegs();
 }
 
 void RegisterClassInfo::updateReservedRegs(const BitVector &ReservedInput) {

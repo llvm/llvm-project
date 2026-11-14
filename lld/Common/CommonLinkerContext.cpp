@@ -10,8 +10,6 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 
-#include "llvm/CodeGen/CommandFlags.h"
-
 using namespace llvm;
 using namespace lld;
 
@@ -23,9 +21,11 @@ using namespace lld;
 static CommonLinkerContext *lctx;
 
 CommonLinkerContext::CommonLinkerContext() {
+  // A nested context, e.g. the dynamic debugging link, does not install itself.
+  if (lctx)
+    return;
+
   lctx = this;
-  // Fire off the static initializations in CGF's constructor.
-  codegen::RegisterCodeGenFlags CGF;
 }
 
 CommonLinkerContext::~CommonLinkerContext() {
@@ -34,7 +34,9 @@ CommonLinkerContext::~CommonLinkerContext() {
   // new in SpecificAlloc::create().
   for (auto &it : instances)
     it.second->~SpecificAllocBase();
-  lctx = nullptr;
+
+  if (lctx == this)
+    lctx = nullptr;
 }
 
 CommonLinkerContext &lld::commonContext() {

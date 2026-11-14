@@ -34,9 +34,7 @@ module attributes {omp.target_triples = ["dummy-target-triple"]} {
 // CHECK: %[[TASK:.*]] = call ptr @__kmpc_omp_target_task_alloc
 // CHECK-SAME: (ptr @{{.*}}, i32 %{{.*}}, i32 {{.*}}, i64 {{.*}}, i64 {{.*}}, ptr
 // CHECK-SAME: @[[TASK_PROXY_FUNC:.*]], i64 {{.*}})
-// CHECK: %[[TSK_PTR:.*]] = getelementptr inbounds nuw %struct.[[TSK_WTH_PRVTS]], ptr %[[TASK]], i32 0, i32 0
-// CHECK: %[[SHAREDS:.*]] = getelementptr inbounds nuw %struct.kmp_task_ompbuilder_t, ptr %[[TSK_PTR]], i32 0, i32 0
-// CHECK: %[[SHAREDS_PTR:.*]] = load ptr, ptr %[[SHAREDS]], align 8
+// CHECK: %[[SHAREDS_PTR:.*]] = load ptr, ptr %[[TASK]], align 8
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[SHAREDS_PTR]], ptr align 1 %[[STRUCTARG]], i64 8, i1 false)
 // CHECK: %[[VAL_50:.*]] = getelementptr inbounds nuw %struct.[[TSK_WTH_PRVTS]], ptr %[[TASK]], i32 0, i32 1
 // CHECK: %[[VAL_51:.*]] = getelementptr inbounds nuw %struct.[[PRVTS]], ptr %[[VAL_50]], i32 0, i32 0
@@ -53,8 +51,6 @@ module attributes {omp.target_triples = ["dummy-target-triple"]} {
 // CHECK: %[[BASEPTRS:.*]] = getelementptr inbounds nuw %struct.[[PRVTS]], ptr %[[PRIVATE_DATA]], i32 0, i32 0
 // CHECK: %[[PTRS:.*]] = getelementptr inbounds nuw %struct.[[PRVTS]], ptr %[[PRIVATE_DATA]], i32 0, i32 1
 // CHECK: %[[STRUCTARG:.*]] = alloca { ptr }, align 8
-// CHECK: %[[TASK:.*]] = getelementptr inbounds nuw %struct.[[TSK_WTH_PRVTS]], ptr %[[TASK_DESC_PARAM]], i32 0, i32 0
-// CHECK: %[[SHAREDS:.*]] = getelementptr inbounds nuw %struct.kmp_task_ompbuilder_t, ptr %[[TASK]], i32 0, i32 0
-// CHECK: %[[SHAREDS_PTR:.*]] = load ptr, ptr %[[SHAREDS]], align 8
+// CHECK: %[[SHAREDS_PTR:.*]] = load ptr, ptr %[[TASK_DESC_PARAM]], align 8
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[STRUCTARG]], ptr align 1 %[[SHAREDS_PTR]], i64 8, i1 false)
 // CHECK:   call void @[[WORKER]](i32 %{{.*}}, ptr %{{.*}})

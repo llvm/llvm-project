@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple spir -emit-llvm -O0 -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple spir -emit-llvm -O0 -o - | FileCheck %s %}
 
 typedef __SIZE_TYPE__ size_t;
 

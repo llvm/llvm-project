@@ -471,7 +471,7 @@ class Foo final {})cpp";
          HI.Name = "bar";
          HI.Kind = index::SymbolKind::Parameter;
          HI.Definition = "decltype(lamb) &bar";
-         HI.Type = {"decltype(lamb) &", "(lambda) &"};
+         HI.Type = "(lambda) &";
          HI.ReturnType = "bool";
          HI.Parameters = {
              {{"int"}, std::string("T"), std::nullopt},
@@ -1642,6 +1642,72 @@ TEST(Hover, DefinitionLanuage) {
     ASSERT_TRUE(H);
 
     EXPECT_STREQ(H->DefinitionLanguage, Case.ExpectedDefinitionLanguage);
+  }
+}
+
+TEST(Hover, AccessSpecifierByLanguage) {
+  struct {
+    const char *const Code;
+    const llvm::StringRef ClangLanguageFlag;
+    const char *const ExpectedAccessSpecifier;
+  } Cases[] = {
+      {R"c(
+        struct Waldo {
+          int loca^tion;
+        };
+      )c",
+       "-xc", ""},
+      {R"cpp(
+        struct Waldo {
+          int loca^tion;
+        };
+      )cpp",
+       "-xc++", "public"},
+      {R"objc(
+        struct Waldo {
+          int loca^tion;
+        };
+      )objc",
+       "-xobjective-c", ""},
+      {R"objcpp(
+        struct Waldo {
+          int loca^tion;
+        };
+      )objcpp",
+       "-xobjective-c++", "public"},
+      // Hover currently does not retrieve ivar access specifiers in either
+      // Objective-C or Objective-C++, so no label is expected.
+      {R"objc(
+        @interface Waldo {
+        @public
+          int loca^tion;
+        }
+        @end
+      )objc",
+       "-xobjective-c", ""},
+      {R"objcpp(
+        @interface Waldo {
+        @public
+          int loca^tion;
+        }
+        @end
+      )objcpp",
+       "-xobjective-c++", ""},
+  };
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Code);
+    SCOPED_TRACE(Case.ClangLanguageFlag);
+
+    Annotations T(Case.Code);
+    TestTU TU = TestTU::withCode(T.code());
+    if (!Case.ClangLanguageFlag.empty())
+      TU.ExtraArgs.push_back(Case.ClangLanguageFlag.str());
+    auto AST = TU.build();
+
+    auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(H);
+
+    EXPECT_EQ(H->AccessSpecifier, Case.ExpectedAccessSpecifier);
   }
 }
 
@@ -3000,7 +3066,7 @@ TEST(Hover, All) {
             HI.Kind = index::SymbolKind::Variable;
             HI.NamespaceScope = "";
             HI.Name = "b";
-            HI.Type = "int";
+            HI.Type = "const int";
           }},
       {
           R"cpp(// type with decltype
@@ -3011,10 +3077,7 @@ TEST(Hover, All) {
             HI.Kind = index::SymbolKind::Function;
             HI.NamespaceScope = "";
             HI.Name = "foo";
-            // FIXME: Handle composite types with decltype with a printing
-            // policy.
-            HI.Type = {"auto (decltype(a)) -> decltype(a)",
-                       "auto (int) -> int"};
+            HI.Type = "auto (int) -> int";
             HI.ReturnType = "int";
             HI.Parameters = {{{"int"}, std::string("x"), std::nullopt}};
           }},
@@ -3322,7 +3385,7 @@ TEST(Hover, All) {
             HI.NamespaceScope = "";
             HI.Definition =
                 "bool operator==(const Foo &) const noexcept = default";
-            HI.Documentation = "";
+            HI.Documentation = "Foo spaceship";
           }},
   };
 
@@ -4743,7 +4806,7 @@ TEST(Hover, SpaceshipTemplateNoCrash) {
   TU.ExtraArgs.push_back("-std=c++20");
   auto AST = TU.build();
   auto HI = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
-  EXPECT_EQ(HI->Documentation, "");
+  EXPECT_EQ(HI->Documentation, "Foo bar baz");
 }
 
 TEST(Hover, ForwardStructNoCrash) {
