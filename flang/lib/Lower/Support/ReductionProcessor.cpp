@@ -90,9 +90,9 @@ ReductionProcessor::ReductionIdentifier ReductionProcessor::getReductionType(
                      getRealName(pd.v.sym()).ToString())
                      .Case("max", ReductionIdentifier::MAX)
                      .Case("min", ReductionIdentifier::MIN)
-                     .Case("iand", ReductionIdentifier::IAND)
-                     .Case("ior", ReductionIdentifier::IOR)
-                     .Case("ieor", ReductionIdentifier::IEOR)
+                     .Case("iand", ReductionIdentifier::AND)
+                     .Case("ior", ReductionIdentifier::OR)
+                     .Case("ieor", ReductionIdentifier::NEQV)
                      .Default(std::nullopt);
   assert(redType && "Invalid Reduction");
   return *redType;
@@ -167,11 +167,11 @@ ReductionProcessor::getReductionType(const fir::ReduceOperationEnum &redOp) {
     return ReductionIdentifier::NEQV;
 
   case fir::ReduceOperationEnum::IAND:
-    return ReductionIdentifier::IAND;
+    return ReductionIdentifier::AND;
   case fir::ReduceOperationEnum::IEOR:
-    return ReductionIdentifier::IEOR;
+    return ReductionIdentifier::NEQV;
   case fir::ReduceOperationEnum::IOR:
-    return ReductionIdentifier::IOR;
+    return ReductionIdentifier::OR;
   case fir::ReduceOperationEnum::MAX:
     return ReductionIdentifier::MAX;
   case fir::ReduceOperationEnum::MIN:
@@ -262,15 +262,6 @@ ReductionProcessor::getReductionName(ReductionIdentifier redId,
   case ReductionIdentifier::MIN:
     reductionName = "min_reduction";
     break;
-  case ReductionIdentifier::IAND:
-    reductionName = "iand_reduction";
-    break;
-  case ReductionIdentifier::IOR:
-    reductionName = "ior_reduction";
-    break;
-  case ReductionIdentifier::IEOR:
-    reductionName = "ieor_reduction";
-    break;
   default:
     llvm_unreachable("unsupported reduction identifier");
   }
@@ -331,24 +322,18 @@ ReductionProcessor::getReductionInitValue(mlir::Location loc, mlir::Type type,
     return builder.createIntegerConstant(loc, type,
                                          llvm::APInt::getSignedMaxValue(bits));
   }
-  case ReductionIdentifier::IOR: {
-    unsigned bits = type.getIntOrFloatBitWidth();
-    int64_t zeroInt = llvm::APInt::getZero(bits).getSExtValue();
-    return builder.createIntegerConstant(loc, type, zeroInt);
-  }
-  case ReductionIdentifier::IEOR: {
-    unsigned bits = type.getIntOrFloatBitWidth();
-    int64_t zeroInt = llvm::APInt::getZero(bits).getSExtValue();
-    return builder.createIntegerConstant(loc, type, zeroInt);
-  }
-  case ReductionIdentifier::IAND: {
-    unsigned bits = type.getIntOrFloatBitWidth();
-    int64_t allOnInt = llvm::APInt::getAllOnes(bits).getSExtValue();
-    return builder.createIntegerConstant(loc, type, allOnInt);
-  }
+  case ReductionIdentifier::AND:
+    // On integers this is IAND, whose identity is all-ones rather than the
+    // logical .TRUE. that getOperationIdentity gives. Every other operation
+    // below has the same identity for both operand types.
+    if (fir::isa_integer(type)) {
+      unsigned bits = type.getIntOrFloatBitWidth();
+      int64_t allOnInt = llvm::APInt::getAllOnes(bits).getSExtValue();
+      return builder.createIntegerConstant(loc, type, allOnInt);
+    }
+    [[fallthrough]];
   case ReductionIdentifier::ADD:
   case ReductionIdentifier::MULTIPLY:
-  case ReductionIdentifier::AND:
   case ReductionIdentifier::OR:
   case ReductionIdentifier::EQV:
   case ReductionIdentifier::NEQV:
@@ -385,6 +370,19 @@ ReductionProcessor::getReductionInitValue(mlir::Location loc, mlir::Type type,
   llvm_unreachable("Unhandled Reduction identifier : getReductionInitValue");
 }
 
+template <typename IntOp, typename LogicalOp>
+static mlir::Value createBitwiseOrLogicalOp(fir::FirOpBuilder &builder,
+                                            mlir::Location loc, mlir::Type type,
+                                            mlir::Value op1, mlir::Value op2) {
+  if (type.isIntOrIndex()) {
+    return IntOp::create(builder, loc, op1, op2);
+  } else {
+    mlir::Value v1 = builder.createConvert(loc, type, op1);
+    mlir::Value v2 = builder.createConvert(loc, type, op2);
+    return LogicalOp::create(builder, loc, type, v1, v2);
+  }
+}
+
 mlir::Value ReductionProcessor::createScalarCombiner(
     fir::FirOpBuilder &builder, mlir::Location loc, ReductionIdentifier redId,
     mlir::Type type, mlir::Value op1, mlir::Value op2) {
@@ -401,18 +399,6 @@ mlir::Value ReductionProcessor::createScalarCombiner(
         getReductionOperation<mlir::arith::MinNumFOp, mlir::arith::MinSIOp>(
             builder, type, loc, op1, op2);
     break;
-  case ReductionIdentifier::IOR:
-    assert((type.isIntOrIndex()) && "only integer is expected");
-    reductionOp = mlir::arith::OrIOp::create(builder, loc, op1, op2);
-    break;
-  case ReductionIdentifier::IEOR:
-    assert((type.isIntOrIndex()) && "only integer is expected");
-    reductionOp = mlir::arith::XOrIOp::create(builder, loc, op1, op2);
-    break;
-  case ReductionIdentifier::IAND:
-    assert((type.isIntOrIndex()) && "only integer is expected");
-    reductionOp = mlir::arith::AndIOp::create(builder, loc, op1, op2);
-    break;
   case ReductionIdentifier::ADD:
     reductionOp =
         getReductionOperation<mlir::arith::AddFOp, mlir::arith::AddIOp,
@@ -423,28 +409,27 @@ mlir::Value ReductionProcessor::createScalarCombiner(
         getReductionOperation<mlir::arith::MulFOp, mlir::arith::MulIOp,
                               fir::MulcOp>(builder, type, loc, op1, op2);
     break;
-  case ReductionIdentifier::AND: {
-    mlir::Value v1 = builder.createConvert(loc, type, op1);
-    mlir::Value v2 = builder.createConvert(loc, type, op2);
-    reductionOp = fir::LogicalAndOp::create(builder, loc, type, v1, v2);
+  // AND, OR and NEQV are the logical operations; on integers the same
+  // identifiers stand for the bitwise intrinsics IAND, IOR and IEOR, which
+  // lower to the corresponding arith ops instead of the fir logical ones.
+  case ReductionIdentifier::AND:
+    reductionOp =
+        createBitwiseOrLogicalOp<mlir::arith::AndIOp, fir::LogicalAndOp>(
+            builder, loc, type, op1, op2);
     break;
-  }
-  case ReductionIdentifier::OR: {
-    mlir::Value v1 = builder.createConvert(loc, type, op1);
-    mlir::Value v2 = builder.createConvert(loc, type, op2);
-    reductionOp = fir::LogicalOrOp::create(builder, loc, type, v1, v2);
+  case ReductionIdentifier::OR:
+    reductionOp =
+        createBitwiseOrLogicalOp<mlir::arith::OrIOp, fir::LogicalOrOp>(
+            builder, loc, type, op1, op2);
     break;
-  }
+  case ReductionIdentifier::NEQV:
+    reductionOp = createBitwiseOrLogicalOp<mlir::arith::XOrIOp, fir::NeqvOp>(
+        builder, loc, type, op1, op2);
+    break;
   case ReductionIdentifier::EQV: {
     mlir::Value v1 = builder.createConvert(loc, type, op1);
     mlir::Value v2 = builder.createConvert(loc, type, op2);
     reductionOp = fir::EqvOp::create(builder, loc, type, v1, v2);
-    break;
-  }
-  case ReductionIdentifier::NEQV: {
-    mlir::Value v1 = builder.createConvert(loc, type, op1);
-    mlir::Value v2 = builder.createConvert(loc, type, op2);
-    reductionOp = fir::NeqvOp::create(builder, loc, type, v1, v2);
     break;
   }
   default:
