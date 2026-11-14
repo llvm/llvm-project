@@ -7,12 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/dsubf128.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/math/dsubf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
+using LIBC_NAMESPACE::fputil::Float128;
+
 LLVM_LIBC_FUNCTION(double, dsubf128, (float128 x, float128 y)) {
-  return math::dsubf128(x, y);
+  return math::dsubf128(cpp::bit_cast<Float128>(x), cpp::bit_cast<Float128>(y));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -4583,6 +4583,9 @@ bool Compiler<Emitter>::VisitBlockExpr(const BlockExpr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
+  if (E->containsErrors())
+    return false;
+
   const Type *TypeInfoType = E->getType().getTypePtr();
 
   auto canonType = [](const Type *T) {

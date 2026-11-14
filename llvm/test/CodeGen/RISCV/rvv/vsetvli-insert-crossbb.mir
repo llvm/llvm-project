@@ -148,16 +148,6 @@
 ---
 name:            load_add_or_sub
 alignment:       4
-registers:
-  - { id: 0, class: vr }
-  - { id: 1, class: vr }
-  - { id: 2, class: vr }
-  - { id: 3, class: vr }
-  - { id: 4, class: gpr }
-  - { id: 5, class: gpr }
-  - { id: 6, class: vr }
-  - { id: 7, class: gprnox0 }
-  - { id: 8, class: gpr }
 liveins:
   - { reg: '$x10', virtual-reg: '%4' }
   - { reg: '$x11', virtual-reg: '%5' }
@@ -224,16 +214,6 @@ body:             |
 ---
 name:            load_zext_or_sext
 alignment:       4
-registers:
-  - { id: 0, class: vr }
-  - { id: 1, class: vr }
-  - { id: 2, class: vr }
-  - { id: 3, class: vr }
-  - { id: 4, class: gpr }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
-  - { id: 7, class: gprnox0 }
-  - { id: 8, class: gpr }
 liveins:
   - { reg: '$x10', virtual-reg: '%4' }
   - { reg: '$x11', virtual-reg: '%5' }
@@ -302,16 +282,6 @@ body:             |
 ---
 name:            vmv_x_s
 alignment:       4
-registers:
-  - { id: 0, class: vr }
-  - { id: 1, class: vr }
-  - { id: 2, class: vr }
-  - { id: 3, class: gpr }
-  - { id: 4, class: vr }
-  - { id: 5, class: vr }
-  - { id: 6, class: gprnox0 }
-  - { id: 7, class: gpr }
-  - { id: 8, class: gpr }
 liveins:
   - { reg: '$x10', virtual-reg: '%3' }
   - { reg: '$v8', virtual-reg: '%4' }
@@ -379,16 +349,6 @@ body:             |
 ---
 name:            vsetvli_add_or_sub
 alignment:       4
-registers:
-  - { id: 0, class: gprnox0 }
-  - { id: 1, class: vr }
-  - { id: 2, class: vr }
-  - { id: 3, class: vr }
-  - { id: 4, class: gpr }
-  - { id: 5, class: vr }
-  - { id: 6, class: vr }
-  - { id: 7, class: gprnox0 }
-  - { id: 8, class: gpr }
 liveins:
   - { reg: '$x10', virtual-reg: '%4' }
   - { reg: '$v8', virtual-reg: '%5' }
@@ -453,19 +413,6 @@ body:             |
 ...
 ---
 name:            vsetvli_vcpop
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
-  - { id: 3, class: vr, preferred-register: '' }
-  - { id: 4, class: vrnov0, preferred-register: '' }
-  - { id: 5, class: vmv0, preferred-register: '' }
-  - { id: 6, class: vrnov0, preferred-register: '' }
-  - { id: 7, class: gpr, preferred-register: '' }
-  - { id: 8, class: gpr, preferred-register: '' }
-  - { id: 9, class: gpr, preferred-register: '' }
-  - { id: 10, class: gpr, preferred-register: '' }
-  - { id: 11, class: vr, preferred-register: '' }
 body:             |
   ; CHECK-LABEL: name: vsetvli_vcpop
   ; CHECK: bb.0:
@@ -536,18 +483,6 @@ body:             |
 ...
 ---
 name:            vsetvli_loop_store
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
-  - { id: 3, class: gpr, preferred-register: '' }
-  - { id: 4, class: vr,  preferred-register: '' }
-  - { id: 5, class: gpr, preferred-register: '' }
-  - { id: 6, class: gpr, preferred-register: '' }
-  - { id: 7, class: vr,  preferred-register: '' }
-  - { id: 8, class: gpr, preferred-register: '' }
-  - { id: 9, class: gpr, preferred-register: '' }
-  - { id: 10, class: gpr, preferred-register: '' }
 body:             |
   ; CHECK-LABEL: name: vsetvli_loop_store
   ; CHECK: bb.0:
@@ -602,18 +537,6 @@ body:             |
 ...
 ---
 name:            vsetvli_loop_store2
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
-  - { id: 3, class: gpr, preferred-register: '' }
-  - { id: 4, class: vr,  preferred-register: '' }
-  - { id: 5, class: gpr, preferred-register: '' }
-  - { id: 6, class: gpr, preferred-register: '' }
-  - { id: 7, class: vr,  preferred-register: '' }
-  - { id: 8, class: gpr, preferred-register: '' }
-  - { id: 9, class: gpr, preferred-register: '' }
-  - { id: 10, class: gpr, preferred-register: '' }
 body:             |
   ; CHECK-LABEL: name: vsetvli_loop_store2
   ; CHECK: bb.0:
@@ -676,32 +599,6 @@ body:             |
 ---
 name:            redusum_loop
 alignment:       4
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: vr }
-  - { id: 3, class: vr }
-  - { id: 4, class: gpr }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
-  - { id: 7, class: gpr }
-  - { id: 8, class: gpr }
-  - { id: 9, class: gpr }
-  - { id: 10, class: vr }
-  - { id: 11, class: vr }
-  - { id: 12, class: vr }
-  - { id: 13, class: gpr }
-  - { id: 14, class: vr }
-  - { id: 15, class: vr }
-  - { id: 16, class: vr }
-  - { id: 17, class: vr }
-  - { id: 18, class: gpr }
-  - { id: 19, class: gpr }
-  - { id: 20, class: vr }
-  - { id: 21, class: vr }
-  - { id: 22, class: vr }
-  - { id: 23, class: vr }
-  - { id: 24, class: vr }
 liveins:
   - { reg: '$x10', virtual-reg: '%6' }
   - { reg: '$x12', virtual-reg: '%8' }
