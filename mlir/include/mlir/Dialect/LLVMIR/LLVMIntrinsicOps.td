@@ -477,6 +477,17 @@ def LLVM_LaunderInvariantGroupOp
 
 // Constrained Floating-Point Intrinsics.
 
+defvar constrainedFPEffects = [{
+  void getEffects(
+      ::llvm::SmallVectorImpl<::mlir::SideEffects::EffectInstance<
+          ::mlir::MemoryEffects::Effect>> &effects) {
+    effects.emplace_back(::mlir::MemoryEffects::Read::get());
+    if (getFpExceptionBehaviorAttr().getValue() !=
+        ::mlir::LLVM::FPExceptionBehavior::Ignore)
+      effects.emplace_back(::mlir::MemoryEffects::Write::get());
+  }
+}];
+
 class LLVM_ConstrainedIntr<string mnem, int numArgs,
                            bit overloadedResult, list<int> overloadedOperands,
                            bit hasRoundingMode,
@@ -486,7 +497,8 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
                            !cond(!gt(overloadedResult, 0) : [0],
                                  true : []),
                            overloadedOperands,
-                           /*traits=*/[Pure, DeclareOpInterfaceMethods<FPExceptionBehaviorOpInterface>]
+                           /*traits=*/[MemoryEffectsOpInterface,
+                                       DeclareOpInterfaceMethods<FPExceptionBehaviorOpInterface>]
                            # !cond(
                                !gt(hasRoundingMode, 0) : [DeclareOpInterfaceMethods<RoundingModeOpInterface>],
                                true : [])
@@ -567,6 +579,7 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
     moduleImport.setFastmathFlagsAttr(inst, op);
     $res = op;
   }];
+  let extraClassDeclaration = constrainedFPEffects;
 }
 
 // Convenience base class for constrained intrinsics that take a single
@@ -645,7 +658,7 @@ class LLVM_ConstrainedFPToIntIntrNoRM<string mnem>
 class LLVM_ConstrainedFCmpIntrBase<string mnem>
     : LLVM_OneResultIntrOp<"experimental.constrained." # mnem,
         /*overloadedResults=*/[], /*overloadedOperands=*/[0],
-        /*traits=*/[Pure, SameTypeOperands,
+        /*traits=*/[MemoryEffectsOpInterface, SameTypeOperands,
           TypesMatchWith<"result type has i1 element type and same shape as "
                          "operands", "arg_0", "res",
                          "::mlir::LLVM::getI1SameShape($_self)">,
@@ -682,6 +695,7 @@ class LLVM_ConstrainedFCmpIntrBase<string mnem>
     moduleImport.setFastmathFlagsAttr(inst, op);
     $res = op;
   }];
+  let extraClassDeclaration = constrainedFPEffects;
 }
 
 def LLVM_ConstrainedFAddIntr
