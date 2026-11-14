@@ -764,8 +764,9 @@ private:
   // Read the profile summary. Return a pointer pointing to one byte past the
   // end of the summary data if it exists or the input \c Cur.
   // \c UseCS indicates whether to use the context-sensitive profile summary.
-  const unsigned char *readSummary(IndexedInstrProf::ProfVersion Version,
-                                   const unsigned char *Cur, bool UseCS);
+  Expected<const unsigned char *>
+  readSummary(IndexedInstrProf::ProfVersion Version, const unsigned char *Cur,
+              bool UseCS);
 
 public:
   IndexedInstrProfReader(

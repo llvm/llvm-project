@@ -1306,21 +1306,46 @@ bool IndexedInstrProfReader::hasFormat(const MemoryBuffer &DataBuffer) {
   return Magic == IndexedInstrProf::Magic;
 }
 
-const unsigned char *
+Expected<const unsigned char *>
 IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
                                     const unsigned char *Cur, bool UseCS) {
   using namespace IndexedInstrProf;
   using namespace support;
 
   if (Version >= IndexedInstrProf::Version4) {
+    const unsigned char *BufferEnd =
+        (const unsigned char *)DataBuffer->getBufferEnd();
+    // The on-disk summary header must be fully present before reading the
+    // untrusted field and entry counts.
+    if (Cur > BufferEnd ||
+        (uint64_t)(BufferEnd - Cur) < sizeof(IndexedInstrProf::Summary))
+      return make_error<InstrProfError>(instrprof_error::truncated,
+                                        "truncated profile summary");
+
     const IndexedInstrProf::Summary *SummaryInLE =
         reinterpret_cast<const IndexedInstrProf::Summary *>(Cur);
     uint64_t NFields = endian::byte_swap<uint64_t>(
         SummaryInLE->NumSummaryFields, llvm::endianness::little);
     uint64_t NEntries = endian::byte_swap<uint64_t>(
         SummaryInLE->NumCutoffEntries, llvm::endianness::little);
-    uint32_t SummarySize =
-        IndexedInstrProf::Summary::getSize(NFields, NEntries);
+    // The counts are untrusted: validate them before using them to compute
+    // the summary size. The divisions keep the size computation itself from
+    // overflowing, and every use below stays within the validated bounds.
+    // The reader accesses all Summary::NumKinds fields, so fewer fields
+    // would also read out of bounds.
+    uint64_t BytesLeft = (BufferEnd - Cur) - sizeof(IndexedInstrProf::Summary);
+    constexpr uint64_t EntrySize = sizeof(IndexedInstrProf::Summary::Entry);
+    if (NFields < IndexedInstrProf::Summary::NumKinds ||
+        NEntries > BytesLeft / EntrySize ||
+        NFields > (BytesLeft - NEntries * EntrySize) / sizeof(uint64_t))
+      return make_error<InstrProfError>(instrprof_error::malformed,
+                                        "corrupt profile summary");
+    uint64_t SummarySize64 = sizeof(IndexedInstrProf::Summary) +
+                             NEntries * EntrySize + NFields * sizeof(uint64_t);
+    if (SummarySize64 > UINT32_MAX)
+      return make_error<InstrProfError>(instrprof_error::malformed,
+                                        "corrupt profile summary");
+    uint32_t SummarySize = (uint32_t)SummarySize64;
     std::unique_ptr<IndexedInstrProf::Summary> SummaryData =
         IndexedInstrProf::allocSummary(SummarySize);
 
@@ -1376,11 +1401,18 @@ Error IndexedInstrProfReader::readHeader() {
   const IndexedInstrProf::Header *Header = &HeaderOr.get();
   Cur += Header->size();
 
-  Cur = readSummary((IndexedInstrProf::ProfVersion)Header->Version, Cur,
-                    /* UseCS */ false);
-  if (Header->Version & VARIANT_MASK_CSIR_PROF)
-    Cur = readSummary((IndexedInstrProf::ProfVersion)Header->Version, Cur,
-                      /* UseCS */ true);
+  auto SummaryOr = readSummary((IndexedInstrProf::ProfVersion)Header->Version,
+                               Cur, /* UseCS */ false);
+  if (!SummaryOr)
+    return SummaryOr.takeError();
+  Cur = *SummaryOr;
+  if (Header->Version & VARIANT_MASK_CSIR_PROF) {
+    SummaryOr = readSummary((IndexedInstrProf::ProfVersion)Header->Version, Cur,
+                            /* UseCS */ true);
+    if (!SummaryOr)
+      return SummaryOr.takeError();
+    Cur = *SummaryOr;
+  }
   // Read the hash type and start offset.
   IndexedInstrProf::HashT HashType =
       static_cast<IndexedInstrProf::HashT>(Header->HashType);
