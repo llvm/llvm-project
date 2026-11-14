@@ -75,6 +75,24 @@ memory effects they have and whether they are speculatable.
 We don't have proper modeling yet to fully capture non-local control flow
 semantics.
 
+### Observable behavior and abstraction level
+
+Side effects are modeled at the abstraction level of an operation's semantics.
+A dialect defines which aspects of execution are observable and which are
+implementation details outside that semantic model. For example, `memref.load`
+models a read from the referenced memory, but does not model changes to
+processor caches that may occur when executing the load. Such changes are
+implementation details outside the operation's semantic model, so they do not
+require a write effect on a cache resource.
+
+Lowering may make implementation details explicit by introducing operations
+with memory effects to implement an operation that has none at a higher
+abstraction level. For example, `tensor.extract` has no memory effects because
+it accesses an immutable tensor value. Bufferization lowers it to a
+`memref.load`, which reports a read effect on the buffer that contains the
+tensor's elements. The introduced operations must model their effects according
+to their own semantics.
+
 ### Resource hierarchy and scope
 
 Each effect is applied to a `Resource`. Resources form a hierarchy: each
@@ -95,10 +113,13 @@ fine-grained regions with specific addresses or sizes, or for alias classes /
 offset-based disambiguation. Those concerns are out of scope for the resource
 hierarchy and should be handled by alias analysis or other mechanisms.
 
+### Guidelines for operation authors
+
 When adding a new op, ask:
 
-1. Does it read from or write to the heap or stack? It should probably implement
-   `MemoryEffectsOpInterface`.
+1. Does it access a resource, such as the heap or stack, in a way that is
+   observable outside the operation under the dialect's semantics? It should
+   probably implement `MemoryEffectsOpInterface` to report those effects.
 1. Are these side effects ordered? The op should probably set the stage of
    side effects to make analyses more accurate.
 1. Do these side effects act on every single value of a resource? It probably
@@ -198,3 +219,27 @@ In the above example, we attach the side effect `[MemReadAt<0, PartialEffect>]` 
 the source, indicating that the load operation reads parts of values from the
 memref during stage 0. Since side effects typically occur at stage 0 and are
 partial by default, we can abbreviate it as `[MemRead]`.
+
+### Internal temporary memory
+
+Consider an operation that computes a result using a temporary buffer. Its
+implementation allocates the buffer, reads and writes it, and deallocates it
+before returning. If the buffer does not escape and these actions have no
+observable effects outside the operation under the dialect's semantics, the
+operation may report no memory effects. For example, the dialect may leave
+temporary storage requirements as an implementation detail. However, if the
+dialect makes resource consumption or allocation failure observable, those
+behaviors cannot be ignored merely because the buffer is temporary.
+
+### Constant lookup tables
+
+Consider an operation that computes a mathematical function using an internal,
+immutable lookup table. If accessing the table has no observable effects beyond
+producing the result according to the operation's semantics, the operation may
+report no memory effects.
+
+This does not mean that all reads from constant memory should always be modeled
+as having no effects. For example, a dialect may model hardware that counts
+accesses to a memory location or require volatile accesses to be preserved.
+Such behavior must be modeled. Constant contents alone do not justify omitting
+effects.
