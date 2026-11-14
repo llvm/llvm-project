@@ -12,6 +12,10 @@
 
 #include "flang/Optimizer/CodeGen/FIROpPatterns.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMCastOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 
 static inline mlir::Type getLlvmPtrType(mlir::MLIRContext *context,

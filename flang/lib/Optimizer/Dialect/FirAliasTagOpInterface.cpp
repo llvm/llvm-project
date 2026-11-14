@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/FirAliasTagOpInterface.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 
 #include "flang/Optimizer/Dialect/FirAliasTagOpInterface.cpp.inc"
 

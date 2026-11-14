@@ -14,7 +14,7 @@
 #ifndef MLIR_LIB_TARGET_LLVMIR_LOOPANNOTATIONIMPORTER_H_
 #define MLIR_LIB_TARGET_LLVMIR_LOOPANNOTATIONIMPORTER_H_
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Target/LLVMIR/ModuleImport.h"
 
 namespace mlir {

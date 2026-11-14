@@ -9,7 +9,7 @@
 #define MLIR_CONVERSION_GPUCOMMON_GPUCOMMONPASS_H_
 
 #include "mlir/Dialect/GPU/Utils/GPUUtils.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Support/LLVM.h"
@@ -38,7 +38,7 @@ class GPUModuleOp;
 } // namespace gpu
 
 namespace LLVM {
-class LLVMDialect;
+class CallOp;
 } // namespace LLVM
 
 #define GEN_PASS_DECL_GPUTOLLVMCONVERSIONPASS

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRABIRewriteContext.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dominance.h"
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"

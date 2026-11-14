@@ -14,7 +14,7 @@
 #ifndef MLIR_DIALECT_OPENACC_OPENACCRUNTIMEUTILS_H
 #define MLIR_DIALECT_OPENACC_OPENACCRUNTIMEUTILS_H
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMControlFlowOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"

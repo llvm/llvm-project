@@ -16,7 +16,6 @@
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Runtime/iostat-consts.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include <optional>
 
 namespace fir {

@@ -10,7 +10,8 @@
 #define MLIR_CONVERSION_ARITHATTRTOLLVM_ATTRTOLLVMCONVERTER_H
 
 #include "mlir/Dialect/Arith/IR/ArithAttributes.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
+#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 
 //===----------------------------------------------------------------------===//
 // Support for converting Arith FastMathFlags to LLVM FastmathFlags

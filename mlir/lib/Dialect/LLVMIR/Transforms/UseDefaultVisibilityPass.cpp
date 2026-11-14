@@ -8,7 +8,7 @@
 
 #include "mlir/Dialect/LLVMIR/Transforms/UseDefaultVisibilityPass.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/TypeSwitch.h"
 

@@ -9,12 +9,13 @@
 #ifndef MLIR_DIALECT_LLVMIR_PRINTCALLHELPER_H_
 #define MLIR_DIALECT_LLVMIR_PRINTCALLHELPER_H_
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 #include <optional>
 
 namespace mlir {
-
+class Location;
+class ModuleOp;
 class OpBuilder;
 class LLVMTypeConverter;
 class SymbolTableCollection;

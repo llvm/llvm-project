@@ -9,7 +9,7 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "gtest/gtest.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"

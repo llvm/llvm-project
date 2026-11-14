@@ -14,7 +14,7 @@
 #include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
 #include "flang/Optimizer/Dialect/FIROperationMoveOpInterface.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 namespace cuf {

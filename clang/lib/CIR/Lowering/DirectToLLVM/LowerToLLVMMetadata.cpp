@@ -9,7 +9,7 @@
 #include "LowerToLLVMMetadata.h"
 #include "LowerToLLVMOpenCLMetadata.h"
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/IR/OperationSupport.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "llvm/ADT/TypeSwitch.h"

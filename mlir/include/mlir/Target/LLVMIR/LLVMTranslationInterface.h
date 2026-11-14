@@ -13,7 +13,7 @@
 #ifndef MLIR_TARGET_LLVMIR_LLVMTRANSLATIONINTERFACE_H
 #define MLIR_TARGET_LLVMIR_LLVMTRANSLATIONINTERFACE_H
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectInterface.h"
 
