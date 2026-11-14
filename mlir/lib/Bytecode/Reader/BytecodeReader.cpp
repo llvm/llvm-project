@@ -917,6 +917,16 @@ public:
     return types[index].entry;
   }
 
+  /// Return the type bound to the type entry at `index` before its contents
+  /// were read, or null. See DialectBytecodeReader::bindResult.
+  Type getBoundType(uint64_t index) const { return boundTypes.lookup(index); }
+
+  /// Bind the type entry at `index` to `type`, unless it is already bound.
+  /// Returns the type the entry is bound to.
+  Type bindType(uint64_t index, Type type) {
+    return boundTypes.try_emplace(index, type).first->second;
+  }
+
   /// Parse a reference to an attribute or type using the given reader.
   LogicalResult parseAttribute(EncodingReader &reader, Attribute &result) {
     uint64_t attrIdx;
@@ -962,6 +972,15 @@ public:
   /// Add an index to the deferred worklist for re-parsing.
   void addDeferredParsing(uint64_t index, EntryKind kind) {
     deferredWorklist.emplace_back(index, kind);
+  }
+
+  /// Drop the entries deferred since the worklist had `size` entries, and the
+  /// bindings their reads kept.
+  void truncateDeferredWorklist(size_t size) {
+    for (auto [index, kind] : llvm::drop_begin(deferredWorklist, size))
+      if (kind == EntryKind::Type)
+        boundTypes.erase(index);
+    deferredWorklist.resize(size);
   }
 
   /// Whether currently resolving.
@@ -1025,6 +1044,11 @@ private:
 
   /// Flag indicating if we are currently resolving an attribute or type.
   bool resolving = false;
+
+  /// Types bound before their contents were read, keyed by entry index, whose
+  /// read has not completed. A reference to one reads as the bound type, which
+  /// breaks cycles through mutable types.
+  llvm::DenseMap<uint64_t, Type> boundTypes;
 };
 
 class DialectReader : public DialectBytecodeReader {
@@ -1072,6 +1096,18 @@ public:
   }
 
   Location getLoc() const { return reader.getLoc(); }
+
+  /// Make this the reader of the type entry at `index`, see bindResult.
+  void setTypeIndex(uint64_t index) { typeIndex = index; }
+
+  LogicalResult bindResult(Type type) override {
+    if (!typeIndex)
+      return emitError("bindResult called while not reading a type");
+    Type bound = attrTypeReader.bindType(*typeIndex, type);
+    if (bound != type)
+      return emitError("type entry already bound to ") << bound;
+    return success();
+  }
 
   //===--------------------------------------------------------------------===//
   // IR
@@ -1125,6 +1161,12 @@ public:
         return success();
       }
       return failure();
+    }
+
+    // A type bound before its contents were read reads as that type.
+    if (Type type = attrTypeReader.getBoundType(index)) {
+      result = type;
+      return success();
     }
 
     if (depth > maxAttrTypeDepth) {
@@ -1226,6 +1268,8 @@ private:
   EncodingReader &reader;
   uint64_t &bytecodeVersion;
   uint64_t depth;
+  /// The index of the type entry being read, if any.
+  std::optional<uint64_t> typeIndex;
 };
 
 /// Wraps the properties section and handles reading properties out of it.
@@ -1486,6 +1530,20 @@ LogicalResult AttrTypeReader::readEntry(SmallVectorImpl<Entry<T>> &entries,
       entry.hasCustomEncoding
           ? parseCustomEntry(entry, reader, entryType, index, depth)
           : parseAsmEntry(entry.entry, reader, entryType);
+  if constexpr (std::is_same_v<T, Type>) {
+    if (Type bound = boundTypes.lookup(index)) {
+      // A read that the depth limit cut short stays bound, and is read again
+      // once the entries it waits on are.
+      if (failed(parseResult) && !deferredWorklist.empty()) {
+        addDeferredParsing(index, EntryKind::Type);
+        return failure();
+      }
+      boundTypes.erase(index);
+      if (succeeded(parseResult) && entry.entry != bound)
+        return reader.emitError("type bound to ", bound, " was read as ",
+                                entry.entry);
+    }
+  }
   if (failed(parseResult))
     return failure();
 
@@ -1508,6 +1566,7 @@ LogicalResult AttrTypeReader::parseCustomEntry(Entry<T> &entry,
     return failure();
 
   if constexpr (std::is_same_v<T, Type>) {
+    dialectReader.setTypeIndex(index);
     // Try parsing with callbacks first if available.
     for (const auto &callback :
          parserConfig.getBytecodeReaderConfig().getTypeCallbacks()) {
@@ -1521,8 +1580,10 @@ LogicalResult AttrTypeReader::parseCustomEntry(Entry<T> &entry,
 
       // The callback fell through without consuming the encoding. Reset the
       // reader and restore the deferred worklist: any entries added during the
-      // callback's partial read are stale and must not persist.
-      deferredWorklist.resize(savedWorklistSize);
+      // callback's partial read are stale and must not persist, nor must any
+      // binding it made.
+      truncateDeferredWorklist(savedWorklistSize);
+      boundTypes.erase(index);
       reader = EncodingReader(entry.data, reader.getLoc());
     }
   } else {
@@ -1540,7 +1601,7 @@ LogicalResult AttrTypeReader::parseCustomEntry(Entry<T> &entry,
       // The callback fell through without consuming the encoding. Reset the
       // reader and restore the deferred worklist: any entries added during the
       // callback's partial read are stale and must not persist.
-      deferredWorklist.resize(savedWorklistSize);
+      truncateDeferredWorklist(savedWorklistSize);
       reader = EncodingReader(entry.data, reader.getLoc());
     }
   }
