@@ -533,6 +533,65 @@ genCUDADataArgAttrs(fir::FirOpBuilder &builder,
   return hasDataAttr ? builder.getArrayAttr(argAttrs) : mlir::ArrayAttr{};
 }
 
+/// Add fir.may_be_modified to \p argAttrs for the arguments of a PURE function
+/// whose dummy argument is INTENT(OUT) or INTENT(INOUT) (an extension). The
+/// ordered assignment scheduling otherwise assumes that calls inside FORALL do
+/// not modify their arguments.
+static mlir::ArrayAttr
+addMayBeModifiedArgAttrs(Fortran::lower::AbstractConverter &converter,
+                         const Fortran::lower::CallerInterface &caller,
+                         fir::FortranProcedureFlagsEnumAttr procAttrs,
+                         bool isFunction, std::size_t numArgs,
+                         mlir::ArrayAttr argAttrs) {
+  if (!isFunction || !procAttrs ||
+      !fir::bitEnumContainsAny(procAttrs.getValue(),
+                               fir::FortranProcedureFlagsEnum::pure))
+    return argAttrs;
+  // Use the procedure characteristics: for calls with implicit interfaces,
+  // the caller dummy characteristics are built from the actual arguments and
+  // have no intents.
+  const Fortran::evaluate::ProcedureRef &procRef = caller.getCallDescription();
+  std::optional<Fortran::evaluate::characteristics::Procedure> characteristic =
+      Fortran::evaluate::characteristics::Procedure::Characterize(
+          procRef.proc(), converter.getFoldingContext(), /*emitError=*/false);
+  if (!characteristic)
+    return argAttrs;
+  const Fortran::evaluate::ActualArguments &actuals = procRef.arguments();
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  llvm::SmallVector<mlir::Attribute> newArgAttrs;
+  if (argAttrs)
+    newArgAttrs.assign(argAttrs.begin(), argAttrs.end());
+  else
+    newArgAttrs.assign(numArgs, builder.getDictionaryAttr({}));
+  bool anyModified = false;
+  for (const auto &arg : caller.getPassedArguments()) {
+    std::size_t argIdx = arg.firArgument;
+    if (!arg.entity || argIdx >= newArgAttrs.size())
+      continue;
+    auto actual = llvm::find_if(
+        actuals,
+        [&](const std::optional<Fortran::evaluate::ActualArgument> &a) {
+          return a && &*a == arg.entity;
+        });
+    if (actual == actuals.end())
+      continue;
+    std::size_t dummyIdx = actual - actuals.begin();
+    if (dummyIdx >= characteristic->dummyArguments.size())
+      continue;
+    Fortran::common::Intent intent =
+        characteristic->dummyArguments[dummyIdx].GetIntent();
+    if (intent != Fortran::common::Intent::Out &&
+        intent != Fortran::common::Intent::InOut)
+      continue;
+    mlir::NamedAttrList attrs(
+        mlir::cast<mlir::DictionaryAttr>(newArgAttrs[argIdx]));
+    attrs.set(fir::getMayBeModifiedAttrName(), builder.getUnitAttr());
+    newArgAttrs[argIdx] = attrs.getDictionary(builder.getContext());
+    anyModified = true;
+  }
+  return anyModified ? builder.getArrayAttr(newArgAttrs) : argAttrs;
+}
+
 std::tuple<Fortran::lower::LoweredResult, bool, mlir::Operation *>
 Fortran::lower::genCallOpAndResult(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
@@ -807,6 +866,8 @@ Fortran::lower::genCallOpAndResult(
   unsigned callNumResults;
   fir::FortranProcedureFlagsEnumAttr procAttrs =
       caller.getProcedureAttrs(builder.getContext());
+  const bool isFunction =
+      caller.getCallDescription().proc().GetType().has_value();
 
   if (converter.getLoweringOptions().getCUDARuntimeCheck()) {
     if (caller.getCallDescription().chevrons().empty() &&
@@ -909,6 +970,9 @@ Fortran::lower::genCallOpAndResult(
         binding.numPrivatesNotOverridden() > 0)
       procName += "."s + std::to_string(binding.numPrivatesNotOverridden());
     fir::DispatchOp dispatch;
+    mlir::ArrayAttr dispatchArgAttrs =
+        addMayBeModifiedArgAttrs(converter, caller, procAttrs, isFunction,
+                                 operands.size(), /*argAttrs=*/nullptr);
     if (std::optional<unsigned> passArg = caller.getPassArgIndex()) {
       // PASS, PASS(arg-name)
       // Note that caller.getInputs is used instead of operands to get the
@@ -921,7 +985,7 @@ Fortran::lower::genCallOpAndResult(
       dispatch = fir::DispatchOp::create(
           builder, loc, funcType.getResults(), builder.getStringAttr(procName),
           passActual, operands, builder.getI32IntegerAttr(*passArg),
-          /*arg_attrs=*/nullptr,
+          dispatchArgAttrs,
           /*res_attrs=*/nullptr, procAttrs);
       callOp = dispatch;
     } else {
@@ -938,7 +1002,7 @@ Fortran::lower::genCallOpAndResult(
         passObject = fir::LoadOp::create(builder, loc, passObject);
       dispatch = fir::DispatchOp::create(
           builder, loc, funcType.getResults(), builder.getStringAttr(procName),
-          passObject, operands, nullptr, /*arg_attrs=*/nullptr,
+          passObject, operands, nullptr, dispatchArgAttrs,
           /*res_attrs=*/nullptr, procAttrs);
       callOp = dispatch;
     }
@@ -966,6 +1030,9 @@ Fortran::lower::genCallOpAndResult(
                                   fir::FortranProcedureFlagsEnum::bind_c))
         argAttrs = genCUDADataArgAttrs(builder, caller,
                                        args.drop_front(callee ? 0 : 1));
+      argAttrs =
+          addMayBeModifiedArgAttrs(converter, caller, procAttrs, isFunction,
+                                   args.size() - (callee ? 0 : 1), argAttrs);
       return fir::CallOp::create(builder, loc, type.getResults(), callee, args,
                                  argAttrs, /*res_attrs=*/nullptr, procAttrs,
                                  inlineAttr,
@@ -3316,13 +3383,6 @@ static std::optional<hlfir::EntityWithAttributes> genEnumerationNextOrPrevious(
   mlir::Location loc = callContext.loc;
   fir::FirOpBuilder &builder = callContext.getBuilder();
   const auto &args = callContext.procRef.arguments();
-  if (args.size() > 1 && args[1]) {
-    // FORALL scheduling ignores the STAT= write (see issue for #229873).
-    mlir::Operation *parent = builder.getInsertionBlock()->getParentOp();
-    if (mlir::isa<hlfir::ForallOp>(parent) ||
-        parent->getParentOfType<hlfir::ForallOp>())
-      TODO(loc, "NEXT/PREVIOUS with STAT= inside FORALL");
-  }
   const Fortran::lower::SomeExpr *argExpr =
       !args.empty() && args[0] ? args[0]->UnwrapExpr() : nullptr;
   assert(argExpr && "NEXT/PREVIOUS requires argument A");
