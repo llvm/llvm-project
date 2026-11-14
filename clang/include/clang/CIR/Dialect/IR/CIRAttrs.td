@@ -920,17 +920,21 @@ def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
     parameters are optional.
 
     - `dynamic_rounding_mode`: the known dynamic rounding mode at the point the
-      instruction is executed. Otherwise the behavior is undefined.
+      instruction is executed. If the actual mode differs, the behavior is
+      undefined.
     - `except_mode`: the known exception mode at the point the instruction is
-      executed. Otherwise the behavior is undefined.
+      executed. If the actual mode differs, the behavior is undefined.
     - `strict_except`: if `false`, any case that would produce an FP exception
       produces it non-deterministically instead (i.e. it may or may not occur).
       This means the FP status is written non-deterministically, and, if
       exceptions are unmasked, the instruction traps non-deterministically.
 
-    An absent `dynamic_rounding_mode` defaults to `unknown`, an absent
-    `except_mode` defaults to `masked`, and an absent `strict_except` defaults
-    to `false`.
+    An absent parameter takes its value in the default floating-point
+    environment: `dynamic_rounding_mode` defaults to `tonearest`, `except_mode`
+    to `masked`, and `strict_except` to `false`.
+
+    At least one parameter must be set. An operation without a `fenv`
+    attribute is not constrained.
 
     Example:
     ```
@@ -950,30 +954,29 @@ def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
   }];
 
   let extraClassDeclaration = [{
-    static constexpr cir::FPDynamicRoundingMode
-    getDefaultDynamicRoundingMode() {
-      return cir::FPDynamicRoundingMode::Unknown;
-    }
-
-    static constexpr cir::FPExceptionMode getDefaultExceptionMode() {
-      return cir::FPExceptionMode::Masked;
-    }
-
     cir::FPDynamicRoundingMode getDynamicRoundingModeOrDefault() const {
       return getDynamicRoundingMode().value_or(
-          getDefaultDynamicRoundingMode());
+          cir::FPDynamicRoundingMode::ToNearest);
     }
 
     cir::FPExceptionMode getExceptionModeOrDefault() const {
-      return getExceptMode().value_or(getDefaultExceptionMode());
+      return getExceptMode().value_or(cir::FPExceptionMode::Masked);
     }
 
     bool getStrictExceptOrDefault() const {
       mlir::BoolAttr strictExcept = getStrictExcept();
       return strictExcept && strictExcept.getValue();
     }
+
+    /// Whether exceptions are masked and not strict, so the operation can
+    /// neither trap nor has to keep the floating-point status exact.
+    bool canIgnoreExceptions() const {
+      return getExceptionModeOrDefault() == cir::FPExceptionMode::Masked &&
+             !getStrictExceptOrDefault();
+    }
   }];
 
+  let genVerifyDecl = 1;
   let canHaveIllegalCXXABIType = 0;
 }
 

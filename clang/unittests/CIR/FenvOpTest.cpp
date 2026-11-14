@@ -68,19 +68,19 @@ TEST_F(CIRFenvOpTest, MemoryEffects) {
                 %va: !cir.vector<4 x !cir.float>,
                 %vb: !cir.vector<4 x !cir.float>) {
       %0 = cir.fadd %a, %b : !cir.float
-      %1 = cir.fadd %a, %b : !cir.float fenv<>
-      %2 = cir.sqrt %a : !cir.float fenv<>
-      %3 = cir.pow %a, %b : !cir.float fenv<>
+      %1 = cir.fadd %a, %b : !cir.float fenv<strict_except = true>
+      %2 = cir.sqrt %a : !cir.float fenv<strict_except = true>
+      %3 = cir.pow %a, %b : !cir.float fenv<strict_except = true>
       %4 = cir.fma %a, %b, %c : !cir.float
-      %5 = cir.fma %a, %b, %c : !cir.float fenv<>
+      %5 = cir.fma %a, %b, %c : !cir.float fenv<strict_except = true>
       %6 = cir.lround %a : !cir.float -> !s32i
-      %7 = cir.lround %a : !cir.float -> !s32i fenv<>
+      %7 = cir.lround %a : !cir.float -> !s32i fenv<strict_except = true>
       %8 = cir.cast floating %a : !cir.float -> !cir.double
-      %9 = cir.cast floating %a : !cir.float -> !cir.double fenv<>
+      %9 = cir.cast floating %a : !cir.float -> !cir.double fenv<strict_except = true>
       %10 = cir.cmp lt %a, %b : !cir.float
-      %11 = cir.cmp lt %a, %b : !cir.float fenv<>
+      %11 = cir.cmp lt %a, %b : !cir.float fenv<strict_except = true>
       %12 = cir.vec.cmp(eq, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
-      %13 = cir.vec.cmp(eq, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv<>
+      %13 = cir.vec.cmp(eq, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv<strict_except = true>
       cir.return
     }
   )CIR");
@@ -141,34 +141,32 @@ TEST_F(CIRFenvOpTest, Speculatability) {
   OwningOpRef<ModuleOp> module = parse(R"CIR(
     cir.func @f(%a: !cir.float, %b: !cir.float) {
       %0 = cir.fadd %a, %b : !cir.float
-      %1 = cir.fadd %a, %b : !cir.float fenv<>
-      %2 = cir.fadd %a, %b : !cir.float fenv<except_mode = masked>
-      %3 = cir.fadd %a, %b : !cir.float fenv<strict_except = false>
-      %4 = cir.fadd %a, %b : !cir.float fenv<except_mode = masked, strict_except = true>
-      %5 = cir.fadd %a, %b : !cir.float fenv<except_mode = unmasked, strict_except = false>
-      %6 = cir.fadd %a, %b : !cir.float fenv<except_mode = unknown, strict_except = false>
+      %1 = cir.fadd %a, %b : !cir.float fenv<except_mode = masked>
+      %2 = cir.fadd %a, %b : !cir.float fenv<strict_except = false>
+      %3 = cir.fadd %a, %b : !cir.float fenv<except_mode = masked, strict_except = true>
+      %4 = cir.fadd %a, %b : !cir.float fenv<except_mode = unmasked, strict_except = false>
+      %5 = cir.fadd %a, %b : !cir.float fenv<except_mode = unknown, strict_except = false>
       cir.return
     }
   )CIR");
   ASSERT_TRUE(module);
 
   SmallVector<cir::FAddOp> ops = findOps<cir::FAddOp>(*module);
-  ASSERT_EQ(ops.size(), 7u);
+  ASSERT_EQ(ops.size(), 6u);
 
   // Missing fenv fields use the defaults: masked exceptions and non-strict
   // exception behavior.
-  for (unsigned i = 0; i != 4; ++i)
+  for (unsigned i = 0; i != 3; ++i)
     EXPECT_TRUE(isSpeculatable(ops[i])) << "operation " << i;
 
-  for (unsigned i = 4; i != ops.size(); ++i)
+  for (unsigned i = 3; i != ops.size(); ++i)
     EXPECT_FALSE(isSpeculatable(ops[i])) << "operation " << i;
 
-  cir::FPEnvConstrainedOpInterface fenvOp =
-      cast<cir::FPEnvConstrainedOpInterface>(ops[1].getOperation());
-  EXPECT_EQ(fenvOp.getFenvDynamicRoundingMode(),
-            cir::FPDynamicRoundingMode::Unknown);
-  EXPECT_EQ(fenvOp.getFenvExceptionMode(), cir::FPExceptionMode::Masked);
-  EXPECT_FALSE(fenvOp.getFenvStrictExcept());
+  cir::FenvAttr fenv = ops[2].getFenvAttr();
+  EXPECT_EQ(fenv.getDynamicRoundingModeOrDefault(),
+            cir::FPDynamicRoundingMode::ToNearest);
+  EXPECT_EQ(fenv.getExceptionModeOrDefault(), cir::FPExceptionMode::Masked);
+  EXPECT_FALSE(fenv.getStrictExceptOrDefault());
 }
 
 } // namespace
