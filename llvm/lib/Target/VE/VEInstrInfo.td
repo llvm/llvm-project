@@ -1217,6 +1217,15 @@ let cx = 1 in defm ADDUW : RRm<"addu.w", 0x48, I32, i32>;
 // Section 8.4.2 - ADS (Add Single)
 defm ADDSWSX : RRm<"adds.w.sx", 0x4A, I32, i32, add>;
 let cx = 1 in defm ADDSWZX : RRm<"adds.w.zx", 0x4A, I32, i32>;
+// adds.w.sx and adds.w.zx sign or zero extend the result into the whole 64-bit
+// register. These are used for extending i32 to i64.
+let isCodeGenOnly = 1, hasSideEffects = 0, cz = 0 in {
+def ADDSWSX64rm : RR<0x4A, (outs I64:$sx), (ins I32:$sy, mimm:$sz),
+                     "adds.w.sx $sx, $sy, $sz">;
+let cx = 1 in
+def ADDSWZX64rm : RR<0x4A, (outs I64:$sx), (ins I32:$sy, mimm:$sz),
+                     "adds.w.zx $sx, $sy, $sz">;
+}
 
 // Section 8.4.3 - ADX (Add)
 defm ADDSL : RRm<"adds.l", 0x59, I64, i64, add>;
@@ -1731,9 +1740,9 @@ def : Pat<(i32 (fp_to_sint f64:$src)), (CVTWDSXr RD_RZ, $src)>;
 def : Pat<(i32 (fp_to_sint f128:$src)), (CVTWDSXr RD_RZ, (CVTDQr $src))>;
 
 // Cast to i64
-def : Pat<(sext_inreg i64:$src, i32), (i2l (ADDSWSXrm (l2i $src), 0))>;
-def : Pat<(i64 (sext i32:$src)), (i2l (ADDSWSXrm $src, 0))>;
-def : Pat<(i64 (zext i32:$src)), (i2l (ADDSWZXrm $src, 0))>;
+def : Pat<(sext_inreg i64:$src, i32), (ADDSWSX64rm (l2i $src), 0)>;
+def : Pat<(i64 (sext i32:$src)), (ADDSWSX64rm $src, 0)>;
+def : Pat<(i64 (zext i32:$src)), (ADDSWZX64rm $src, 0)>;
 def : Pat<(i64 (anyext i32:$sy)), (i2l $sy)>;
 def : Pat<(i64 (fp_to_sint f32:$src)), (CVTLDr RD_RZ, (CVTDSr $src))>;
 def : Pat<(i64 (fp_to_sint f64:$src)), (CVTLDr RD_RZ, $src)>;
