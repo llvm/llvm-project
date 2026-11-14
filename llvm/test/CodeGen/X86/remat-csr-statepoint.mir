@@ -16,7 +16,6 @@
 # is enabled, so keep it in a CSR across the first call. Without the restriction,
 # rematerialize it after the call instead.
 name: variable_statepoint_operand
-tracksRegLiveness: true
 frameInfo:
   adjustsStack: true
 body: |

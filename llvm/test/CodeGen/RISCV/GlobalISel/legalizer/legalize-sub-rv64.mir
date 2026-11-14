@@ -5,8 +5,11 @@
 name:            sub_i8
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: sub_i8
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[SUB]](s64)
@@ -25,8 +28,11 @@ body:             |
 name:            sub_i15
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: sub_i15
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[SUB]](s64)
@@ -45,8 +51,11 @@ body:             |
 name:            sub_i16
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: sub_i16
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[SUB]](s64)
@@ -65,8 +74,11 @@ body:             |
 name:            sub_i32
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: sub_i32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB]], 32
@@ -83,11 +95,38 @@ body:             |
 
 ...
 ---
+name:            sub_nsw_nuw_i32
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    ; CHECK-LABEL: name: sub_nsw_nuw_i32
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB]], 32
+    ; CHECK-NEXT: $x10 = COPY [[SEXT_INREG]](s64)
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s32) = G_TRUNC %0(s64)
+    %3:_(s32) = G_TRUNC %1(s64)
+    %4:_(s32) = nsw nuw G_SUB %2, %3
+    %5:_(s64) = G_ANYEXT %4(s32)
+    $x10 = COPY %5(s64)
+    PseudoRET implicit $x10
+
+...
+---
 name:            sub_i64
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: sub_i64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[SUB]](s64)
@@ -103,8 +142,11 @@ body:             |
 name:            sub_i72
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12, $x13
     ; CHECK-LABEL: name: sub_i72
-    ; CHECK: %x00:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12, $x13
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x00:_(s64) = COPY $x10
     ; CHECK-NEXT: %x01:_(s64) = COPY $x11
     ; CHECK-NEXT: %y00:_(s64) = COPY $x12
     ; CHECK-NEXT: %y01:_(s64) = COPY $x13
@@ -135,8 +177,11 @@ body:             |
 name:            sub_i128
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12, $x13
     ; CHECK-LABEL: name: sub_i128
-    ; CHECK: %lo1:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12, $x13
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lo1:_(s64) = COPY $x10
     ; CHECK-NEXT: %hi1:_(s64) = COPY $x11
     ; CHECK-NEXT: %lo2:_(s64) = COPY $x12
     ; CHECK-NEXT: %hi2:_(s64) = COPY $x13
@@ -164,8 +209,11 @@ body:             |
 name:            sub_i192
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12, $x13, $x14, $x15
     ; CHECK-LABEL: name: sub_i192
-    ; CHECK: %lo1:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12, $x13, $x14, $x15
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lo1:_(s64) = COPY $x10
     ; CHECK-NEXT: %mid1:_(s64) = COPY $x11
     ; CHECK-NEXT: %hi1:_(s64) = COPY $x12
     ; CHECK-NEXT: %lo2:_(s64) = COPY $x13

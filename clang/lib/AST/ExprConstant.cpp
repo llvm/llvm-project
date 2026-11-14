@@ -2829,7 +2829,6 @@ static bool HandleFloatToFloatCast(EvalInfo &Info, const Expr *E,
          "the new expression or address the root cause of this usage.");
   llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
   APFloat::opStatus St;
-  APFloat Value = Result;
   bool ignored;
   St = Result.convert(Info.Ctx.getFloatTypeSemantics(DestType), RM, &ignored);
   return checkFloatingPointResultForConstantFolding(Info, E, St);
@@ -6486,7 +6485,20 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
   case Stmt::ContinueStmtClass:
   case Stmt::BreakStmtClass: {
     auto *B = cast<LoopControlStmt>(S);
-    Info.BreakContinueStack.push_back(B->getNamedLoopOrSwitch());
+    const Stmt *LoopOrSwitch = nullptr;
+    if (B->isNamed()) {
+      LoopOrSwitch = B->getNamedLoopOrSwitch();
+      // May be null if the named loop is outside of the
+      // current evaluation context, i.e. not a valid target.
+      if (!LoopOrSwitch) {
+        Info.FFDiag(S->getBeginLoc(),
+                    diag::note_break_continue_label_outside_context)
+            << isa<ContinueStmt>(B);
+        return ESR_Failed;
+      }
+    }
+
+    Info.BreakContinueStack.push_back(LoopOrSwitch);
     return isa<ContinueStmt>(S) ? ESR_Continue : ESR_Break;
   }
 
@@ -7308,7 +7320,6 @@ static bool HandleFunctionCall(SourceLocation CallLoc,
                            MD->getParent()->isUnion()))
       return false;
 
-    LValue Obj;
     if (!handleAssignment(Info, Args[ExplicitOffset], *ObjectArg,
                           MD->getFunctionObjectParameterReferenceType(),
                           RHSValue))
@@ -8711,6 +8722,35 @@ static bool handleLValueToRValueBitCast(EvalInfo &Info, APValue &DestValue,
   return handleRValueToRValueBitCast(Info, DestValue, SourceRValue, BCE);
 }
 
+/// Diagnose a relocated BPF enumerator, i.e., of an enum with the
+/// preserve_access_index attribute, which is not a constant expression. Return
+/// true if diagnosed.
+static bool diagnoseBPFPreserveAIEnumerator(EvalInfo &Info,
+                                            const PseudoObjectExpr *E) {
+  const auto *DRE = dyn_cast<DeclRefExpr>(E->getSyntacticForm());
+  if (!DRE)
+    return false;
+  const auto *ECD = dyn_cast<EnumConstantDecl>(DRE->getDecl());
+  if (!ECD)
+    return false;
+  const auto *ED = dyn_cast<EnumDecl>(ECD->getDeclContext());
+  if (!ED || !ED->hasAttr<BPFPreserveAccessIndexAttr>())
+    return false;
+
+  // An anonymous enum is only relocated through its typedef name.
+  QualType EnumTy;
+  if (ED->getDeclName())
+    EnumTy = Info.Ctx.getCanonicalTagType(ED);
+  else if (const TypedefNameDecl *TD = ED->getTypedefNameForAnonDecl())
+    EnumTy = Info.Ctx.getTypeDeclType(TD);
+  else
+    return false;
+
+  Info.FFDiag(E, diag::note_constexpr_bpf_preserve_ai_enumerator)
+      << ECD << EnumTy << E->getSourceRange();
+  return true;
+}
+
 template <class Derived>
 class ExprEvaluatorBase
   : public ConstStmtVisitor<Derived, bool> {
@@ -8961,6 +9001,8 @@ public:
   }
 
   bool VisitPseudoObjectExpr(const PseudoObjectExpr *E) {
+    if (diagnoseBPFPreserveAIEnumerator(Info, E))
+      return false;
     for (const Expr *SemE : E->semantics()) {
       if (auto *OVE = dyn_cast<OpaqueValueExpr>(SemE)) {
         // FIXME: We can't handle the case where an OpaqueValueExpr is also the
@@ -10918,13 +10960,6 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     switch (BuiltinOp) {
     case Builtin::BIstrchr:
     case Builtin::BI__builtin_strchr:
-      // strchr compares directly to the passed integer, and therefore
-      // always fails if given an int that is not a char.
-      if (!APSInt::isSameValue(HandleIntToIntCast(Info, E, CharTy,
-                                                  E->getArg(1)->getType(),
-                                                  Desired),
-                               Desired))
-        return ZeroInitialization(E);
       StopAtNull = true;
       [[fallthrough]];
     case Builtin::BImemchr:
@@ -11430,6 +11465,25 @@ bool ReflectionEvaluator::ZeroInitialization(const Expr *E) {
 static bool EvaluateReflection(const Expr *E, APValue &Result, EvalInfo &Info) {
   assert(E->isPRValue() && E->getType()->isMetaInfoType());
   return ReflectionEvaluator(Info, Result).Visit(E);
+}
+
+static bool EvaluateReflectionMetafunctionBuiltin(EvalInfo &Info,
+                                                  const CallExpr *E,
+                                                  unsigned BuiltinOp,
+                                                  APValue &Result) {
+  switch (BuiltinOp) {
+  case Builtin::BI__builtin_meta_is_type: {
+    APValue Reflection;
+    if (!EvaluateReflection(E->getArg(0), Reflection, Info))
+      return false;
+    Result = APValue(Info.Ctx.MakeIntValue(
+        Reflection.getReflectionOperandKind() == ReflectionKind::Type,
+        E->getType()));
+    return true;
+  }
+  default:
+    llvm_unreachable("unknown metafunction builtin");
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -17202,6 +17256,13 @@ static bool EvaluateStdcLoad8(EvalInfo &Info, const CallExpr *E, bool IsBE,
 
 bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                                             unsigned BuiltinOp) {
+  if (Info.Ctx.BuiltinInfo.isReflectionMetafunctionBuiltin(BuiltinOp)) {
+    APValue Result;
+    if (!EvaluateReflectionMetafunctionBuiltin(Info, E, BuiltinOp, Result))
+      return false;
+    return Success(Result, E);
+  }
+
   auto EvalTestOp = [&](llvm::function_ref<bool(const APInt &, const APInt &)>
                             Fn) {
     APValue SourceLHS, SourceRHS;
@@ -20383,7 +20444,6 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_HLSLAggregateSplatCast:
     llvm_unreachable("invalid cast kind for integral value");
 
-  case CK_BitCast:
   case CK_Dependent:
   case CK_LValueBitCast:
   case CK_ARCProduceObject:
@@ -20400,6 +20460,16 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_LValueToRValueBitCast:
   case CK_HLSLArrayRValue:
     return ExprEvaluatorBaseTy::VisitCastExpr(E);
+
+  case CK_BitCast: {
+    APValue Src;
+    if (!Evaluate(Src, Info, SubExpr))
+      return false;
+    APValue Dst;
+    if (!handleRValueToRValueBitCast(Info, Dst, Src, E))
+      return false;
+    return Success(Dst, E);
+  }
 
   case CK_MemberPointerToBoolean:
   case CK_PointerToBoolean:
@@ -22802,6 +22872,13 @@ APSInt Expr::EvaluateKnownConstInt(const ASTContext &Ctx) const {
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateKnownConstInt");
   EvalResult EVResult;
 
+  bool IsConst;
+  if (FastEvaluateAsRValue(this, EVResult.Val, Ctx, IsConst)) {
+    assert(IsConst);
+    assert(EVResult.Val.isInt() && "Expression did not evaluate to integer");
+    return EVResult.Val.getInt();
+  }
+
   if (Ctx.getLangOpts().EnableNewConstInterp) {
     interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, EVResult,
                                   /*SProxy=*/nullptr);
@@ -22834,6 +22911,13 @@ APSInt Expr::EvaluateKnownConstIntCheckOverflow(
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateKnownConstIntCheckOverflow");
   EvalResult EVResult;
   EVResult.Diag = Diag;
+
+  bool IsConst;
+  if (FastEvaluateAsRValue(this, EVResult.Val, Ctx, IsConst)) {
+    assert(IsConst);
+    assert(EVResult.Val.isInt() && "Expression did not evaluate to integer");
+    return EVResult.Val.getInt();
+  }
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
     interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, EVResult,

@@ -204,6 +204,7 @@ public:
     case AppleA17:
     case AppleM4:
     case AppleM5:
+    case AppleM6:
       return true;
     default:
       return false;
@@ -256,6 +257,14 @@ public:
   /// available to SME2.
   bool isNonStreamingSVEorSME2Available() const {
     return isSVEAvailable() || (isSVEorStreamingSVEAvailable() && hasSME2());
+  }
+
+  /// Returns true if SVE bit-permute instructions (bext/bdep/bgrp) can be
+  /// emitted.
+  bool isSVEBitPermAvailable() const {
+    return hasSVEBitPerm() &&
+           (isSVEAvailable() ||
+            (isSVEorStreamingSVEAvailable() && hasSSVE_BitPerm()));
   }
 
   unsigned getMinVectorRegisterBitWidth() const {

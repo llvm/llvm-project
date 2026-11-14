@@ -102,6 +102,15 @@ _LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is,
            mersenne_twister_engine<_UInt, _Wp, _Np, _Mp, _Rp, _Ap, _Up, _Dp, _Sp, _Bp, _Tp, _Cp, _Lp, _Fp>& __x);
 
+// When building the library, we mark some constructors and functions of mersenne_twister as constexpr
+// to allow constant initialization. This will no longer be necessary once this is constexpr in the
+// standard.
+#ifdef _LIBCPP_BUILDING_LIBRARY
+#  define _LIBCPP_MERSENNE_TWISTER_CONSTEXPR constexpr
+#else
+#  define _LIBCPP_MERSENNE_TWISTER_CONSTEXPR
+#endif
+
 template <class _UIntType,
           size_t __w,
           size_t __n,
@@ -167,8 +176,11 @@ public:
 
   // constructors and seeding functions
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI mersenne_twister_engine() : mersenne_twister_engine(default_seed) {}
-  _LIBCPP_HIDE_FROM_ABI explicit mersenne_twister_engine(result_type __sd) { seed(__sd); }
+  _LIBCPP_MERSENNE_TWISTER_CONSTEXPR _LIBCPP_HIDE_FROM_ABI mersenne_twister_engine()
+      : mersenne_twister_engine(default_seed) {}
+  _LIBCPP_MERSENNE_TWISTER_CONSTEXPR _LIBCPP_HIDE_FROM_ABI explicit mersenne_twister_engine(result_type __sd) {
+    seed(__sd);
+  }
 #else
   _LIBCPP_HIDE_FROM_ABI explicit mersenne_twister_engine(result_type __sd = default_seed) { seed(__sd); }
 #endif
@@ -176,7 +188,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit mersenne_twister_engine(_Sseq& __q) {
     seed(__q);
   }
-  _LIBCPP_HIDE_FROM_ABI void seed(result_type __sd = default_seed) _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK {
+  _LIBCPP_MERSENNE_TWISTER_CONSTEXPR _LIBCPP_HIDE_FROM_ABI void
+  seed(result_type __sd = default_seed) _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK {
     __x_[0] = __sd & _Max;
     for (size_t __i = 1; __i < __n; ++__i)
       __x_[__i] = (__f * (__x_[__i - 1] ^ __rshift<__w - 2>(__x_[__i - 1])) + __i) & _Max;
@@ -209,16 +222,16 @@ public:
     __update_all_states();
   }
 
-  void __update_state(size_t __i, size_t __k) {
+  _LIBCPP_MERSENNE_TWISTER_CONSTEXPR void __update_state(size_t __i, size_t __k) {
     const size_t __j         = (__i + 1) % __n;
     const result_type __mask = __r == _Dt ? result_type(~0) : (result_type(1) << __r) - result_type(1);
     const result_type __yp   = (__x_[__i] & ~__mask) | (__x_[__j] & __mask);
     __x_[__i]                = __x_[__k] ^ __rshift<1>(__yp) ^ (__a * (__yp & 1));
   }
 
-  void __update_state(size_t __i) { __update_state(__i, (__i + __m) % __n); }
+  _LIBCPP_MERSENNE_TWISTER_CONSTEXPR void __update_state(size_t __i) { __update_state(__i, (__i + __m) % __n); }
 
-  void __update_all_states() {
+  _LIBCPP_MERSENNE_TWISTER_CONSTEXPR void __update_all_states() {
     size_t __i = 0;
     // This is split into two loops to help the compiler vectorize the code
     for (; __i != (__n - __m); ++__i)
@@ -314,7 +327,7 @@ private:
   }
 
   template <size_t __count>
-  _LIBCPP_HIDE_FROM_ABI static result_type __rshift(result_type __x) {
+  _LIBCPP_MERSENNE_TWISTER_CONSTEXPR _LIBCPP_HIDE_FROM_ABI static result_type __rshift(result_type __x) {
     if _LIBCPP_CONSTEXPR (__count < _Dt) {
       return __x >> __count;
     } else {

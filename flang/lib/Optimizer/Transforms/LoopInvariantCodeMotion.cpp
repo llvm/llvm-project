@@ -23,8 +23,11 @@
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <utility>
 
@@ -193,6 +196,43 @@ static bool isNonOptionalScalar(Value location) {
   }
 }
 
+/// Caches, for one run of the pass, which locations the alias analysis said
+/// may be modified inside which loops. Hoisting a load asks this for every
+/// location it reads, and the same location is read by many loads of a loop,
+/// while the answer depends only on the loop and the location.
+///
+/// This is valid for the whole run because the pass only hoists operations
+/// that have no effects or only read: it never moves a write, and so never
+/// makes a location that is not modified in a loop modified in it.
+class LoopModifiesLocationCache {
+public:
+  /// Whether \p aliasAnalysis says that \p loopLike may modify \p location.
+  bool mayModify(AliasAnalysis &aliasAnalysis, LoopLikeOpInterface loopLike,
+                 Value location) {
+    auto key = std::make_pair(loopLike.getOperation(), location);
+    auto [it, inserted] = answers.try_emplace(key);
+    if (!inserted) {
+      ++numHits;
+      return it->second;
+    }
+    ++numMisses;
+    bool modifies =
+        aliasAnalysis.getModRef(loopLike.getOperation(), location).isMod();
+    it->second = modifies;
+    return modifies;
+  }
+
+  /// How many queries were answered from the cache, and how many had to ask the
+  /// alias analysis (one for each distinct loop and location).
+  unsigned getNumHits() const { return numHits; }
+  unsigned getNumMisses() const { return numMisses; }
+
+private:
+  llvm::DenseMap<std::pair<Operation *, Value>, bool> answers;
+  unsigned numHits = 0;
+  unsigned numMisses = 0;
+};
+
 /// Returns true iff it is safe to hoist the given load-like operation 'op',
 /// which access given memory 'locations', out of the operation 'loopLike'.
 /// The current safety conditions are:
@@ -210,9 +250,10 @@ static bool isNonOptionalScalar(Value location) {
 static bool isSafeToHoistLoad(Operation *op, ArrayRef<Value> locations,
                               LoopLikeOpInterface loopLike,
                               AliasAnalysis &aliasAnalysis,
+                              LoopModifiesLocationCache &modifiesCache,
                               bool maybeConditionallyExecuted) {
   for (Value location : locations)
-    if (aliasAnalysis.getModRef(loopLike.getOperation(), location).isMod()) {
+    if (modifiesCache.mayModify(aliasAnalysis, loopLike, location)) {
       LDBG() << "Failure: reads location:\n"
              << location << "\nwhich is modified inside the loop";
       return false;
@@ -241,6 +282,7 @@ static bool isSafeToHoistLoad(Operation *op, ArrayRef<Value> locations,
 /// See isSafeToHoistLoad for the meaning of \p maybeConditionallyExecuted.
 static bool canHoistLoad(Operation *op, LoopLikeOpInterface loopLike,
                          AliasAnalysis &aliasAnalysis,
+                         LoopModifiesLocationCache &modifiesCache,
                          bool maybeConditionallyExecuted) {
   LDBG() << "Checking operation:\n" << *op;
   if (auto effectInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
@@ -263,7 +305,8 @@ static bool canHoistLoad(Operation *op, LoopLikeOpInterface loopLike,
       locations.insert(location);
     }
     return isSafeToHoistLoad(op, locations.getArrayRef(), loopLike,
-                             aliasAnalysis, maybeConditionallyExecuted);
+                             aliasAnalysis, modifiesCache,
+                             maybeConditionallyExecuted);
   }
   LDBG() << "Failure: has unknown effects";
   return false;
@@ -347,6 +390,10 @@ void LoopInvariantCodeMotion::runOnOperation() {
   firAliasAnalysis.enableSourceCache();
   aliasAnalysis.addAnalysisImplementation(std::move(firAliasAnalysis));
 
+  // Owned by this run, like the caches above: the answers of the alias analysis
+  // that hoisting a load asks for, see LoopModifiesLocationCache.
+  LoopModifiesLocationCache modifiesCache;
+
   std::function<bool(Operation *, LoopLikeOpInterface, bool)>
       shouldMoveOutOfLoop = [&](Operation *op, LoopLikeOpInterface loopLike,
                                 bool maybeConditionallyExecuted) {
@@ -362,6 +409,17 @@ void LoopInvariantCodeMotion::runOnOperation() {
         if (llvm::any_of(op->getResultTypes(),
                          [](mlir::Type t) { return isa<fir::FieldType>(t); })) {
           LDBG() << "Not hoisting producer of a field value: " << *op;
+          return false;
+        }
+
+        // Never hoist a loop. Moving it out of the loop it is nested in
+        // changes how it is scheduled relative to the iterations of that loop
+        // (e.g. an inner loop of an OpenACC parallel loop that ends up outside
+        // of the parallel region is no longer executed by every iteration of
+        // the parallel loop).
+        // TODO This is a workaround, we should find a better solution here.
+        if (isa<LoopLikeOpInterface>(op)) {
+          LDBG() << "Not hoisting loop-like operation: " << *op;
           return false;
         }
 
@@ -399,7 +457,7 @@ void LoopInvariantCodeMotion::runOnOperation() {
               return result;
           }
         }
-        return canHoistLoad(op, loopLike, aliasAnalysis,
+        return canHoistLoad(op, loopLike, aliasAnalysis, modifiesCache,
                             maybeConditionallyExecuted);
       };
 
@@ -452,6 +510,13 @@ void LoopInvariantCodeMotion::runOnOperation() {
     // restrictions like cuf.kernel blocking !fir.ref operands must be
     // checked transitively.
     auto canMoveOutOfOp = [&](Operation *regionOwner, Operation *candidate) {
+      // fir::canMoveOutOf() consults only the region owner's
+      // OperationMoveOpInterface. Without it, the candidate and everything
+      // nested in it may move, so skip the walk over the candidate's
+      // regions: repeating it for every nested candidate and every
+      // intermediate ancestor is quadratic in the size of the loop body.
+      if (!isa<fir::OperationMoveOpInterface>(regionOwner))
+        return true;
       if (!fir::canMoveOutOf(regionOwner, candidate))
         return false;
       bool blocked = false;
@@ -550,6 +615,23 @@ void LoopInvariantCodeMotion::runOnOperation() {
                    shouldMoveFromNestedRegion(op, region);
           },
           moveOutOfRegion);
+    }
+  });
+
+  // Enable with -debug-only=flang-licm-cache: a summary of the cache for each
+  // run that made queries, without the output of the rest of the pass. The
+  // line is written at once, as passes on other functions may print at the same
+  // time.
+  DEBUG_WITH_TYPE("flang-licm-cache", {
+    unsigned numQueries =
+        modifiesCache.getNumHits() + modifiesCache.getNumMisses();
+    if (numQueries > 0) {
+      std::string summary;
+      llvm::raw_string_ostream os(summary);
+      os << "flang-licm-cache: @" << getOperation().getName() << ": "
+         << modifiesCache.getNumHits() << " hits, "
+         << modifiesCache.getNumMisses() << " misses\n";
+      llvm::dbgs() << summary;
     }
   });
 

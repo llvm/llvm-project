@@ -219,7 +219,7 @@ public:
   MaybeSubscriptIntExpr EvaluateSubscriptIntExpr(const T &expr) {
     if (MaybeIntExpr maybeIntExpr{EvaluateIntExpr(expr)}) {
       return FoldExpr(evaluate::ConvertToType<evaluate::SubscriptInteger>(
-          std::move(*maybeIntExpr)));
+          evaluate::SubscriptIntegerKind, std::move(*maybeIntExpr)));
     } else {
       return std::nullopt;
     }
@@ -823,6 +823,8 @@ protected:
     // of the specification part, since the declaration typing the index's
     // name may follow the DATA statement (F'2023 19.4 p5)
     std::vector<MutableSymbolRef> deferredDataIDoVars;
+    std::vector<const parser::ScalarLogicalConstantExpr *>
+        ompAssumesNoParallelismConditions;
     // Info about SAVE statements and attributes in current scope
     struct {
       std::optional<SourceName> saveAll; // "SAVE" without entity list
@@ -1851,13 +1853,46 @@ public:
   bool Pre(const parser::OmpClause::To &);
   bool Pre(const parser::OmpClause::From &);
 
+  bool Pre(const parser::OmpClause::NoParallelism &) {
+    return !inSpecificationPart_;
+  }
+
   void Post(const parser::OmpAssumesDirective &x) {
-    if (llvm::any_of(x.v.Clauses().v, [](const parser::OmpClause &clause) {
-          return std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u);
-        })) {
-      if (Symbol * symbol{currScope().symbol()}) {
-        symbol->set(Symbol::Flag::OmpAssumesNoOpenmp);
+    if (Symbol * symbol{currScope().symbol()}) {
+      llvm::omp::Clauses clauses;
+      llvm::omp::Directives absent;
+      for (const parser::OmpClause &clause : x.v.Clauses().v) {
+        if (std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u)) {
+          clauses.set(clause.Id());
+        } else if (const auto *noParallelism{
+                       std::get_if<parser::OmpClause::NoParallelism>(
+                           &clause.u)}) {
+          if (const auto &condition{noParallelism->v}) {
+            specPartState_.ompAssumesNoParallelismConditions.push_back(
+                &condition->v);
+          } else {
+            clauses.set(clause.Id());
+          }
+        } else if (const auto *absentClause{
+                       std::get_if<parser::OmpClause::Absent>(&clause.u)}) {
+          clauses.set(clause.Id());
+          for (llvm::omp::Directive directive : absentClause->v.v) {
+            absent.set(directive);
+          }
+        }
       }
+      common::visit(
+          [&](auto &details) {
+            if constexpr (std::is_convertible_v<decltype(details),
+                              WithOmpDeclarative &>) {
+              details.set_version(context().langOptions().getOpenMPVersion());
+              details.set_ompAssumes(details.ompAssumes() | clauses);
+              for (llvm::omp::Directive directive : absent) {
+                details.add_ompAssumesAbsent(directive);
+              }
+            }
+          },
+          symbol->details());
     }
   }
 
@@ -2179,8 +2214,7 @@ void OmpVisitor::ProcessReductionSpecifier(
       mangledName = context().SaveTempName(MangleDefinedOperator(name->source));
     } else {
       mangledName = MakeNameFromOperator(
-          std::get<parser::DefinedOperator::IntrinsicOperator>(defOp.u),
-          context());
+          std::get<parser::DefinedOperator::IntrinsicOperator>(defOp.u));
     }
   }
 
@@ -2585,8 +2619,11 @@ void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
     return;
   }
   symbol.SetIsCDefined(isCDefined_);
-  std::optional<std::string> label{
-      evaluate::GetScalarConstantValue<evaluate::Ascii>(bindName_)};
+  std::optional<std::string> label;
+  if (auto charVal{evaluate::GetScalarConstantValue<evaluate::Ascii>(
+          evaluate::AsciiKind, bindName_)}) {
+    label = charVal->AsStdString();
+  }
   // 18.9.2(2): discard leading and trailing blanks
   if (label) {
     symbol.SetIsExplicitBindName(true);
@@ -3416,6 +3453,12 @@ Symbol &ScopeHandler::MakeHostAssocSymbol(
   // attribute would fail.
   symbol.implicitAttrs() |= hostSymbol.implicitAttrs() & Attrs{Attr::SAVE};
   symbol.flags() = hostSymbol.flags();
+  // Locality is a property of a DO CONCURRENT construct entity and its own
+  // storage; a host-associated name never inherits it (e.g. a VOLATILE
+  // statement in a BLOCK, or a locality-spec in a nested DO CONCURRENT).
+  symbol.flags() &= ~Symbol::Flags{Symbol::Flag::LocalityLocal,
+      Symbol::Flag::LocalityLocalInit, Symbol::Flag::LocalityReduce,
+      Symbol::Flag::LocalityShared};
   return symbol;
 }
 Symbol &ScopeHandler::CopySymbol(const SourceName &name, const Symbol &symbol) {
@@ -6479,7 +6522,7 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
     // Enumerators are treated as PARAMETER (section 7.6 paragraph (4))
     symbol = &MakeSymbol(name, Attrs{Attr::PARAMETER}, ObjectEntityDetails{});
     symbol->SetType(context().MakeNumericType(
-        TypeCategory::Integer, evaluate::CInteger::kind));
+        TypeCategory::Integer, evaluate::CIntegerKind));
   }
 
   if (auto &init{std::get<std::optional<parser::ScalarIntConstantExpr>>(
@@ -6490,7 +6533,7 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
       // F2023 7.6.1 errata f23/013: a BOZ enumerator initializer
       // has the value specified by INT(boz-literal-constant, C_INT).
       const evaluate::DynamicType cIntType{
-          TypeCategory::Integer, evaluate::CInteger::kind};
+          TypeCategory::Integer, evaluate::CIntegerKind};
       if (MaybeExpr maybeExpr{EvaluateExpr(expr)}) {
         if (auto converted{
                 evaluate::ConvertToType(cIntType, std::move(*maybeExpr))}) {
@@ -6516,8 +6559,8 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
 
   if (symbol) {
     if (enumerationState_.value) {
-      symbol->get<ObjectEntityDetails>().set_init(SomeExpr{
-          evaluate::Expr<evaluate::CInteger>{*enumerationState_.value}});
+      symbol->get<ObjectEntityDetails>().set_init(
+          SomeExpr{evaluate::MakeCIntegerExpr(*enumerationState_.value)});
     } else {
       context().SetError(*symbol);
     }
@@ -6581,7 +6624,7 @@ void DeclarationVisitor::Post(const parser::EnumerationTypeStmt &x) {
   Symbol &ordinalSym{MakeSymbol(currScope(), ordinalName, Attrs{})};
   ordinalSym.set_details(ObjectEntityDetails{});
   ordinalSym.SetType(
-      currScope().MakeNumericType(TypeCategory::Integer, KindExpr{4}));
+      currScope().MakeNumericType(TypeCategory::Integer, MakeKindExpr(4)));
   ordinalSym.set(Symbol::Flag::CompilerCreated);
   symbol.get<DerivedTypeDetails>().add_component(ordinalSym);
 }
@@ -6618,7 +6661,7 @@ bool DeclarationVisitor::Pre(const parser::EnumerationEnumeratorStmt &x) {
     enumerator.SetType(declType);
     // Store the init as a StructureConstructor of the enumeration type with
     // the ordinal in the hidden __ordinal component.  This gives each
-    // enumerator a distinct Constant<SomeDerived> value.
+    // enumerator a distinct Constant<Type<TypeCategory::Derived>> value.
     evaluate::StructureConstructor enumCtor{declType.derivedTypeSpec()};
     // Look up the __ordinal component symbol in the type's scope.
     auto ordinalIter{
@@ -6627,10 +6670,11 @@ bool DeclarationVisitor::Pre(const parser::EnumerationEnumeratorStmt &x) {
     CHECK(ordinalIter != currScope().end());
     const Symbol &ordinalSym{*ordinalIter->second};
     enumCtor.Add(ordinalSym,
-        evaluate::AsGenericExpr(evaluate::Expr<evaluate::CInteger>{ordinal}));
+        evaluate::AsGenericExpr(evaluate::MakeCIntegerExpr(ordinal)));
     enumerator.get<ObjectEntityDetails>().set_init(
-        SomeExpr{evaluate::Expr<evaluate::SomeDerived>{
-            evaluate::Constant<evaluate::SomeDerived>{std::move(enumCtor)}}});
+        SomeExpr{evaluate::Expr<evaluate::Type<common::TypeCategory::Derived>>{
+            evaluate::Constant<evaluate::Type<common::TypeCategory::Derived>>{
+                std::move(enumCtor)}}});
     typeDetails.set_enumeratorCount(ordinal);
   }
   return false;
@@ -7031,7 +7075,7 @@ void DeclarationVisitor::Post(const parser::IntrinsicTypeSpec::Character &) {
   }
   if (!charInfo_.kind) {
     charInfo_.kind =
-        KindExpr{context().GetDefaultKind(TypeCategory::Character)};
+        MakeKindExpr(context().GetDefaultKind(TypeCategory::Character));
   }
   SetDeclTypeSpec(currScope().MakeCharacterType(
       std::move(*charInfo_.length), std::move(*charInfo_.kind)));
@@ -8563,6 +8607,15 @@ Symbol &DeclarationVisitor::FindOrDeclareEnclosingEntity(
     prev = &MakeSymbol(InclusiveScope(), name.source, Attrs{});
     ConvertToObjectEntity(*prev);
     ApplyImplicitRules(*prev);
+  } else {
+    // A name in a locality-spec must be a variable (F2023 C1126). An entity
+    // declared in an enclosing BLOCK is not classified as an object or a
+    // procedure until the end of the BLOCK, so classify it now; the locality
+    // checks then diagnose a name that cannot be a variable. A nested BLOCK
+    // can reach the entity through a host-association symbol (for example,
+    // after an ASYNCHRONOUS or VOLATILE statement), so classify the ultimate
+    // entity. The locality checks still use prev, which has those attributes.
+    ConvertToObjectEntity(prev->GetUltimate());
   }
   return *prev;
 }
@@ -9416,13 +9469,11 @@ void ConstructVisitor::SetTypeFromAssociation(Symbol &symbol) {
   if (*pexpr) {
     const SomeExpr &expr{**pexpr};
     if (std::optional<evaluate::DynamicType> type{expr.GetType()}) {
-      if (const auto *charExpr{
-              evaluate::UnwrapExpr<evaluate::Expr<evaluate::SomeCharacter>>(
-                  expr)}) {
-        symbol.SetType(ToDeclTypeSpec(std::move(*type),
-            FoldExpr(common::visit(
-                [](const auto &kindChar) { return kindChar.LEN(); },
-                charExpr->u))));
+      if (const auto *charExpr{evaluate::UnwrapExpr<
+              evaluate::Expr<evaluate::Type<common::TypeCategory::Character>>>(
+              expr)}) {
+        symbol.SetType(
+            ToDeclTypeSpec(std::move(*type), FoldExpr(charExpr->LEN())));
       } else {
         symbol.SetType(ToDeclTypeSpec(std::move(*type)));
       }
@@ -9517,11 +9568,11 @@ const DeclTypeSpec &ConstructVisitor::ToDeclTypeSpec(
   if (length) {
     return currScope().MakeCharacterType(
         ParamValue{SomeIntExpr{*std::move(length)}, common::TypeParamAttr::Len},
-        KindExpr{type.kind()});
+        MakeKindExpr(type.kind()));
   } else {
     return currScope().MakeCharacterType(
         ParamValue::Deferred(common::TypeParamAttr::Len),
-        KindExpr{type.kind()});
+        MakeKindExpr(type.kind()));
   }
 }
 
@@ -9733,12 +9784,14 @@ public:
   bool Pre(const parser::IoControlSpec::Asynchronous &async) {
     if (auto folded{evaluate::Fold(
             context_.foldingContext(), AnalyzeExpr(context_, async.v))}) {
-      if (auto str{
-              evaluate::GetScalarConstantValue<evaluate::Ascii>(*folded)}) {
-        for (char ch : *str) {
-          if (ch != ' ') {
-            inAsyncIO_ = ch == 'y' || ch == 'Y';
-            break;
+      if (auto charVal{evaluate::GetScalarConstantValue<evaluate::Ascii>(
+              evaluate::AsciiKind, *folded)}) {
+        if (auto str{charVal->AsStdString()}) {
+          for (char ch : *str) {
+            if (ch != ' ') {
+              inAsyncIO_ = ch == 'y' || ch == 'Y';
+              break;
+            }
           }
         }
       }
@@ -11112,6 +11165,25 @@ void ResolveNamesVisitor::FinishSpecificationPart(
     // procedure declaration in an interface block
     CheckEquivalenceSets();
   }
+  if (Symbol * symbol{currScope().symbol()}) {
+    for (const auto *condition :
+        specPartState_.ompAssumesNoParallelismConditions) {
+      Walk(*condition);
+      if (auto value{EvaluateExpr(*condition)};
+          value && omp::GetLogicalValue(*value).value_or(false)) {
+        common::visit(
+            [&](auto &details) {
+              if constexpr (std::is_convertible_v<decltype(details),
+                                WithOmpDeclarative &>) {
+                llvm::omp::Clauses clauses{details.ompAssumes()};
+                clauses.set(llvm::omp::Clause::OMPC_no_parallelism);
+                details.set_ompAssumes(clauses);
+              }
+            },
+            symbol->details());
+      }
+    }
+  }
 }
 
 // Analyze the bodies of statement functions now that the symbols in this
@@ -11501,6 +11573,8 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
 }
 
 bool ResolveNamesVisitor::Pre(const parser::ProgramUnit &x) {
+  // Compiler entry points reject recovered parses before name resolution.
+  CHECK(!std::holds_alternative<parser::ErrorRecovery>(x.u));
   if (std::holds_alternative<common::Indirection<parser::CompilerDirective>>(
           x.u)) {
     // TODO: global directives
@@ -11586,7 +11660,12 @@ bool ResolveNamesVisitor::Pre(const parser::Program &x) {
       }
     }
     for (SourceName used : common::visit(
-             [](const auto &indUnit) { return GetUses(indUnit.value()); },
+             common::visitors{
+                 [](const parser::ErrorRecovery &) -> std::set<SourceName> {
+                   // The variant requires this arm, but it must never execute.
+                   DIE("Parser error recovery reached name resolution");
+                 },
+                 [](const auto &indUnit) { return GetUses(indUnit.value()); }},
              progUnit.u)) {
       uses.insert(used);
     }

@@ -364,6 +364,14 @@ PrologEpilogInserterPass::run(MachineFunction &MF,
   if (!PEIImpl(&ORE).run(MF))
     return PreservedAnalyses::all();
 
+  // Segmented-stack and HiPE prologues insert new basic blocks, so the CFG is
+  // not preserved for such functions.
+  // TODO: We should propagate this info directly once we are done with NewPM
+  // transition.
+  if (MF.shouldSplitStack() ||
+      MF.getFunction().getCallingConv() == CallingConv::HiPE)
+    return getMachineFunctionPassPreservedAnalyses();
+
   return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }
 

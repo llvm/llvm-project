@@ -131,6 +131,10 @@ bool isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays,
 /// it exists.
 const Type *isSingleElementRecord(QualType T, ASTContext &Context);
 
+/// isSingleElementStruct - Like isSingleElementRecord, but neither \p T nor
+/// any record nested in it may be a union.
+const Type *isSingleElementStruct(QualType T, ASTContext &Context);
+
 Address EmitVAArgInstr(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                        const ABIArgInfo &AI);
 

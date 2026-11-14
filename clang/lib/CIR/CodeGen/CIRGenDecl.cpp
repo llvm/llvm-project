@@ -32,6 +32,49 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
+namespace {
+/// Call the function named by a variable's `cleanup` attribute with the
+/// variable's address when it goes out of scope.
+struct CallCleanupFunction final : EHScopeStack::Cleanup {
+  const CIRGenFunctionInfo &fnInfo;
+  Address addr;
+  QualType varType;
+  CIRGenCallee callee;
+  SourceRange attrRange;
+
+  CallCleanupFunction(cir::FuncOp cleanupFn, const CIRGenFunctionInfo *info,
+                      Address addr, QualType varType, const CleanupAttr *attr)
+      : fnInfo(*info), addr(addr), varType(varType),
+        callee(CIRGenCallee::forDirect(
+            cleanupFn, CIRGenCalleeInfo(attr->getFunctionDecl()))),
+        attrRange(attr->getRange()) {}
+
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    assert(!fnInfo.arguments().empty());
+    QualType argTy = fnInfo.arguments()[0];
+    // Sema only guarantees that these are assignable/convertible pointers (that
+    // is, the address-of the cleanup variable and the function parameter type),
+    // which don't necessarily match in either pointee type or address space.
+    // For example: address-of-g is void**, but the function takes void*.
+    // void f(void* arg);
+    // __attribute__((cleanup(f))) void *g;
+    // Likewise `int *__ptr32` parameters are accepted for an `int` variable.
+    // Classic codegen only emits a bitcast, which asserts for the latter.
+    // Both casts are no-ops when the types already match.
+    CIRGenBuilderTy &builder = cgf.getBuilder();
+    auto argPtrTy = mlir::cast<cir::PointerType>(cgf.convertType(argTy));
+    mlir::Value arg =
+        builder.createPtrBitcast(addr.getPointer(), argPtrTy.getPointee());
+    arg = cgf.performAddrSpaceCast(arg, argPtrTy);
+
+    CallArgList args;
+    args.add(RValue::get(arg), cgf.getContext().getPointerType(varType));
+    cgf.emitCall(fnInfo, callee, ReturnValueSlot(), args,
+                 /*callOp=*/nullptr, /*isMustTail=*/false, attrRange);
+  }
+};
+} // namespace
+
 struct CallLifetimeEnd final : EHScopeStack::Cleanup {
   // The raw alloca pointer (in the alloca address space). Mirrors classic
   // CodeGen's CallLifetimeEnd, which stores the llvm::Value pointer rather
@@ -192,6 +235,9 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
 
   emission.addr = address;
   setAddrOfLocalVar(&d, address);
+
+  if (d.hasAttr<AnnotateAttr>() && haveInsertPoint())
+    emitVarAnnotations(&d, address.getPointer());
 
   // The lifetime marker must reference the original alloca, so peel any
   // address-space cast back to it.
@@ -376,8 +422,18 @@ void CIRGenFunction::emitAutoVarCleanups(
   assert(!cir::MissingFeatures::opAllocaPreciseLifetime());
 
   // Handle the cleanup attribute.
-  if (d.hasAttr<CleanupAttr>())
-    cgm.errorNYI(d.getSourceRange(), "emitAutoVarCleanups: CleanupAttr");
+  if (const CleanupAttr *ca = d.getAttr<CleanupAttr>()) {
+    const FunctionDecl *fd = ca->getFunctionDecl();
+
+    cir::FuncOp f = cgm.getAddrOfFunction(fd);
+    assert(f && "Could not find function!");
+
+    const CIRGenFunctionInfo &info =
+        cgm.getTypes().arrangeFunctionDeclaration(fd);
+    ehStack.pushCleanup<CallCleanupFunction>(NormalAndEHCleanup, f, &info,
+                                             emission.getObjectAddress(*this),
+                                             d.getType(), ca);
+  }
 }
 
 /// Emit code and set up symbol table for a variable declaration with auto,
@@ -627,10 +683,11 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   assert(ty->isConstantSizeType() && "VLAs can't be static");
 
   // Use the label if the variable is renamed with the asm-label extension.
+  std::string name;
   if (d.hasAttr<AsmLabelAttr>())
-    errorNYI(d.getSourceRange(), "getOrCreateStaticVarDecl: asm label");
-
-  std::string name = getStaticDeclName(*this, d);
+    name = std::string(getMangledName(&d));
+  else
+    name = getStaticDeclName(*this, d);
 
   mlir::Type lty = getTypes().convertTypeForMem(ty);
 
@@ -751,7 +808,7 @@ Address CIRGenModule::createUnnamedGlobalFrom(const VarDecl &d,
         cir::GlobalLinkageKind::PrivateLinkage));
     gv.setInitialValueAttr(constAttr);
     gv.setAlignment(align.getAsAlign().value());
-    // TODO(cir): Set unnamed address attribute when available in CIR
+    gv.setUnnamedAddr(true);
 
     cacheEntry = gv;
   } else if (cacheEntry.getAlignment() <
@@ -1224,7 +1281,9 @@ struct IrregularPartialArrayDestroy final : EHScopeStack::Cleanup {
     QualType baseElementType = cgf.getContext().getBaseElementType(elementType);
 
     mlir::Type cirElementType = cgf.convertTypeForMem(baseElementType);
-    cir::PointerType ptrToElmType = builder.getPointerTo(cirElementType);
+    cir::PointerType ptrToElmType = builder.getPointerTo(
+        cirElementType,
+        mlir::cast<cir::PointerType>(arrayBegin.getType()).getAddrSpace());
 
     mlir::Value begin = arrayBegin;
     if (baseElementType != elementType) {
@@ -1332,7 +1391,7 @@ void CIRGenFunction::pushDestroyAndDeferDeactivation(
 void CIRGenFunction::pushLifetimeExtendedDestroy(
     CleanupKind cleanupKind, Address addr, QualType type, Destroyer *destroyer,
     bool useEHCleanupForArray, const ValueDecl *extendingDecl) {
-  if (isInConditionalBranch()) {
+  if (isInConditionalBranch() || hiddenOutermostConditional) {
     cgm.errorNYI("conditional lifetime-extended destroy");
     return;
   }
@@ -1388,7 +1447,9 @@ void CIRGenFunction::emitArrayDestroy(mlir::Value begin,
   // Differently from LLVM traditional codegen, use a higher level
   // representation instead of lowering directly to a loop.
   mlir::Type cirElementType = convertTypeForMem(elementType);
-  cir::PointerType ptrToElmType = builder.getPointerTo(cirElementType);
+  cir::PointerType ptrToElmType = builder.getPointerTo(
+      cirElementType,
+      mlir::cast<cir::PointerType>(begin.getType()).getAddrSpace());
 
   auto regionBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
     mlir::BlockArgument arg =

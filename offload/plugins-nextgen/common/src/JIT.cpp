@@ -104,7 +104,8 @@ createTargetMachine(Module &M, std::string CPU, unsigned OptLevel) {
 
   std::optional<CodeModel::Model> CodeModel = M.getCodeModel();
 
-  TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags(TT);
+  TargetOptions Options =
+      codegen::getTargetOptions(M.getContext().getLibraryOptions(), TT);
 
   std::unique_ptr<TargetMachine> TM(
       T->createTargetMachine(M.getTargetTriple(), CPU, Features.getString(),
@@ -118,7 +119,6 @@ createTargetMachine(Module &M, std::string CPU, unsigned OptLevel) {
 } // namespace
 
 JITEngine::JITEngine(Triple::ArchType TA) : TT(Triple::getArchTypeName(TA)) {
-  codegen::RegisterCodeGenFlags();
 #ifdef LIBOMPTARGET_JIT_NVPTX
   if (TT.isNVPTX()) {
     LLVMInitializeNVPTXTargetInfo();

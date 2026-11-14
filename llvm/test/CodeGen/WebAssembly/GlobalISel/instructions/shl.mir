@@ -3,7 +3,6 @@
 
 ---
 name: shl_i32_i8
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -22,7 +21,6 @@ body: |
 ...
 ---
 name: shlv_i32_i8
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -45,7 +43,6 @@ body: |
 
 ---
 name: shl_i64_i8
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -66,7 +63,6 @@ body: |
 ...
 ---
 name: shlv_i64_i8
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments

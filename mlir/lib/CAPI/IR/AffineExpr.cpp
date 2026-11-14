@@ -32,7 +32,8 @@ void mlirAffineExprPrint(MlirAffineExpr affineExpr, MlirStringCallback callback,
 }
 
 void mlirAffineExprDump(MlirAffineExpr affineExpr) {
-  unwrap(affineExpr).dump();
+  unwrap(affineExpr).print(llvm::errs());
+  llvm::errs() << "\n";
 }
 
 bool mlirAffineExprIsSymbolicOrConstant(MlirAffineExpr affineExpr) {

@@ -3035,8 +3035,8 @@ LogicalResult IFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   Operation *symbol =
       symbolTable.lookupSymbolIn(parentLLVMModule(*this), getResolverAttr());
   // This matches LLVM IR verification logic, see llvm/lib/IR/Verifier.cpp
-  auto resolver = dyn_cast<LLVMFuncOp>(symbol);
-  auto alias = dyn_cast<AliasOp>(symbol);
+  auto resolver = dyn_cast_if_present<LLVMFuncOp>(symbol);
+  auto alias = dyn_cast_if_present<AliasOp>(symbol);
   while (alias) {
     Block &initBlock = alias.getInitializerBlock();
     auto returnOp = cast<ReturnOp>(initBlock.getTerminator());
@@ -4675,6 +4675,34 @@ Speculation::Speculatability SDivOp::getSpeculatability() {
 }
 
 //===----------------------------------------------------------------------===//
+// URemOp
+//===----------------------------------------------------------------------===//
+
+Speculation::Speculatability URemOp::getSpeculatability() {
+  // urem(x, 0) => UB
+  Value divisor = getRhs();
+  if (matchPattern(divisor, m_IntRangeWithoutZeroU()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
+}
+
+//===----------------------------------------------------------------------===//
+// SRemOp
+//===----------------------------------------------------------------------===//
+
+Speculation::Speculatability SRemOp::getSpeculatability() {
+  // srem(x, 0) => UB
+  // srem(INT_MIN, -1) => UB
+  Value divisor = getRhs();
+  if (matchPattern(divisor, m_IntRangeWithoutZeroS()) &&
+      matchPattern(divisor, m_IntRangeWithoutNegOneS()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
+}
+
+//===----------------------------------------------------------------------===//
 // LLVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 
@@ -4806,7 +4834,8 @@ LogicalResult LLVMDialect::verifyParameterAttribute(Operation *op,
 
   // Check a unit attribute that is attached to an integer value.
   if (name == LLVMDialect::getSExtAttrName() ||
-      name == LLVMDialect::getZExtAttrName()) {
+      name == LLVMDialect::getZExtAttrName() ||
+      name == LLVMDialect::getNoExtAttrName()) {
     if (failed(checkUnitAttrType()))
       return failure();
     if (verifyValueType && failed(checkIntegerType()))

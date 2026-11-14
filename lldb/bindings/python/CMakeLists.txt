@@ -5,6 +5,10 @@ if ("${SWIG_VERSION}" VERSION_LESS "4.1.0")
   message(STATUS "SWIG version ${SWIG_VERSION} uses `-py3` flag.")
 endif()
 
+if (NOT LLDB_ENABLE_PYTHON_LIMITED_API)
+    set(SWIG_EXTRA_FLAGS ${SWIG_EXTRA_FLAGS} -fastproxy -olddefs)
+endif()
+
 add_custom_command(
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/LLDBWrapPython.cpp
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/lldb.py

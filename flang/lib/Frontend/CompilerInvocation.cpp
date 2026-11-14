@@ -132,7 +132,8 @@ bool Fortran::frontend::parseDiagnosticArgs(clang::DiagnosticOptions &opts,
 
 static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
                            llvm::opt::ArgList &args,
-                           clang::DiagnosticsEngine &diags) {
+                           clang::DiagnosticsEngine &diags,
+                           const llvm::Triple &triple) {
   using DebugInfoKind = llvm::codegenoptions::DebugInfoKind;
   if (llvm::opt::Arg *arg =
           args.getLastArg(clang::options::OPT_debug_info_kind_EQ)) {
@@ -177,6 +178,19 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
 
   opts.DebugInfoForProfiling =
       args.hasArg(clang::options::OPT_fdebug_info_for_profiling);
+
+  using NameTableKind = Fortran::frontend::CodeGenOptions::DebugNameTableKind;
+  NameTableKind nameTable = NameTableKind::None;
+  if (args.hasArg(clang::options::OPT_ggnu_pubnames))
+    nameTable = NameTableKind::GNU;
+  else if (args.hasArg(clang::options::OPT_gpubnames))
+    nameTable = NameTableKind::Default;
+  // Match the target overrides in clang's CGDebugInfo::CreateCompileUnit.
+  if (triple.isNVPTX())
+    nameTable = NameTableKind::None;
+  else if (triple.getVendor() == llvm::Triple::Apple)
+    nameTable = NameTableKind::Apple;
+  opts.setDebugNameTable(nameTable);
 
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::options::OPT_compress_debug_sections_EQ)) {
@@ -393,6 +407,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.hasArg(clang::options::OPT_fno_optimize_sibling_calls))
     opts.DisableTailCalls = 1;
 
+  // -fplt / -fno-plt. The driver forwards only -fno-plt, and only for ELF
+  // x86 and AArch64. Last flag wins if both reach the frontend.
+  opts.NoPLT = args.hasFlag(clang::options::OPT_fno_plt,
+                            clang::options::OPT_fplt, /*Default=*/false);
+
   // -fno-integrated-as: emit GNU Assembler compatible assembly.
   if (!args.hasFlag(clang::options::OPT_fintegrated_as,
                     clang::options::OPT_fno_integrated_as, true))
@@ -566,6 +585,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::options::OPT_funderscoring, false)) {
     opts.Underscoring = 0;
   }
+
+  opts.ImplicitDefaultMapperAllocatableMembers = args.hasFlag(
+      clang::options::OPT_fimplicit_default_mapper_allocatable_members,
+      clang::options::OPT_fno_implicit_default_mapper_allocatable_members,
+      /*Default=*/true);
 
   if (const llvm::opt::Arg *arg =
           args.getLastArg(clang::options::OPT_complex_range_EQ)) {
@@ -1327,7 +1351,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   llvm::Triple t(res.getTargetOpts().triple);
 
   constexpr unsigned newestFullySupported = 31;
-  constexpr unsigned latestFinalized = 60;
+  constexpr unsigned latestFinalized = 61;
   // By default OpenMP is set to the most recent fully supported version
   res.getLangOpts().OpenMPVersion = newestFullySupported;
   res.getFrontendOpts().features.Enable(
@@ -1335,7 +1359,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   if (auto *arg = args.getLastArg(clang::options::OPT_fopenmp_version_EQ)) {
     llvm::SmallVector<unsigned> ompVersions;
     for (llvm::omp::Version v : llvm::omp::getOpenMPVersions()) {
-      ompVersions.push_back(static_cast<unsigned>(v));
+      ompVersions.push_back(v.value());
     }
     unsigned oldVersions[] = {11, 20, 25, 30};
     unsigned version = 0;
@@ -1891,7 +1915,8 @@ bool CompilerInvocation::createFromArgs(
   parsePreprocessorArgs(invoc.getPreprocessorOpts(), args);
   parseCodeGenArgs(invoc.getCodeGenOpts(), args, diags);
   success &= parseDoConcurrentMapping(invoc.getCodeGenOpts(), args, diags);
-  success &= parseDebugArgs(invoc.getCodeGenOpts(), args, diags);
+  success &= parseDebugArgs(invoc.getCodeGenOpts(), args, diags,
+                            llvm::Triple(invoc.getTargetOpts().triple));
 
   // Enable USE statement preservation for debug info if debug level is above
   // LineTablesOnly.
@@ -2023,9 +2048,8 @@ void CompilerInvocation::setDefaultPredefinitions() {
   }
   if (frontendOptions.features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP)) {
-    Fortran::common::setOpenMPMacro(
-        static_cast<unsigned>(getLangOpts().getOpenMPVersion()),
-        fortranOptions.predefinitions);
+    Fortran::common::setOpenMPMacro(getLangOpts().getOpenMPVersion().value(),
+                                    fortranOptions.predefinitions);
   }
 
   if (frontendOptions.features.IsEnabled(

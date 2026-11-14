@@ -41,7 +41,9 @@
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Parallel.h"
 #include "lld/Common/Strings.h"
+#include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -223,7 +225,7 @@ std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
 }
 
 // Opens a file and create a file object. Path has to be resolved already.
-// Every regular input (not binary-format or linker scripts) is recorded as a
+// Every regular input (not linker scripts) is recorded as a
 // LoadJob. Inside createFiles() jobs batch up and are expanded in parallel at
 // the end. Outside createFiles() (e.g. addDependentLibrary during parseFiles)
 // the single job is expanded immediately.
@@ -235,26 +237,12 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     return;
   MemoryBufferRef mbref = *buffer;
 
-  if (ctx.arg.formatBinary) {
-    loadJobs.push_back({mbref,
-                        path,
-                        LoadJob::Binary,
-                        /*inWholeArchive=*/false,
-                        /*lazy=*/false,
-                        /*asNeeded=*/false,
-                        /*withLOption=*/false,
-                        nextGroupId,
-                        {},
-                        {},
-                        {}});
-  } else {
-    auto magic = identify_magic(mbref.getBuffer());
-    if (magic == file_magic::unknown) {
+  LoadJob::Kind kind = LoadJob::Binary;
+  if (!ctx.arg.formatBinary) {
+    switch (identify_magic(mbref.getBuffer())) {
+    case file_magic::unknown:
       readLinkerScript(ctx, mbref);
       return;
-    }
-    LoadJob::Kind kind;
-    switch (magic) {
     case file_magic::archive:
       kind = LoadJob::Archive;
       break;
@@ -275,18 +263,18 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
       Err(ctx) << path << ": unknown file type";
       return;
     }
-    loadJobs.push_back({mbref,
-                        path,
-                        kind,
-                        inWholeArchive,
-                        inLib,
-                        ctx.arg.asNeeded,
-                        withLOption,
-                        nextGroupId,
-                        {},
-                        {},
-                        {}});
   }
+  loadJobs.push_back({mbref,
+                      path,
+                      kind,
+                      inWholeArchive,
+                      inLib,
+                      ctx.arg.asNeeded,
+                      withLOption,
+                      nextGroupId,
+                      {},
+                      {},
+                      {}});
   if (!isInGroup)
     ++nextGroupId;
   if (!deferLoad)
@@ -415,6 +403,10 @@ static void checkOptions(Ctx &ctx) {
     else if (!ctx.arg.isRela)
       ErrAlways(ctx) << "-z mark-plt requires -z rela";
   }
+
+  if (ctx.arg.emachine == EM_CUDA && !ctx.arg.ltoEmitAsm && !ctx.arg.emitLLVM)
+    ErrAlways(ctx) << "CUDA input is only supported with --lto-emit-asm or "
+                      "--lto-emit-llvm";
 
   if (ctx.arg.pie && ctx.arg.shared)
     ErrAlways(ctx) << "-shared and -pie may not be used together";
@@ -1370,7 +1362,8 @@ static void parseClangOption(Ctx &ctx, StringRef opt, const Twine &msg) {
   const char *argv[] = {ctx.arg.progName.data(), opt.data()};
   // Called after initLLVM() to ensure target-specific RegisterLibraryOptions
   // have been called.
-  if (cl::parseCommandLineOptions(ctx.arg.libraryOptions, argv, "", &os))
+  if (cl::parseCommandLineOptions(ctx.arg.libraryOptions, getToolOptions(),
+                                  argv, "", &os))
     return;
   ErrAlways(ctx) << msg << ": " << StringRef(err).trim();
 }
@@ -1527,7 +1520,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.mergeArmExidx =
       args.hasFlag(OPT_merge_exidx_entries, OPT_no_merge_exidx_entries, true);
   ctx.arg.mmapOutputFile =
-      args.hasFlag(OPT_mmap_output_file, OPT_no_mmap_output_file, false);
+      args.hasFlag(OPT_mmap_output_file, OPT_no_mmap_output_file, true);
   ctx.arg.nmagic = args.hasFlag(OPT_nmagic, OPT_no_nmagic, false);
   ctx.arg.nostdlib = args.hasArg(OPT_nostdlib);
   ctx.arg.oFormatBinary = isOutputFormatBinary(ctx, args);
@@ -2680,7 +2673,7 @@ static void replaceCommonSymbols(Ctx &ctx) {
       auto *bss = make<BssSection>(ctx, "COMMON", s->size, s->alignment);
       bss->file = s->file;
       ctx.inputSections.push_back(bss);
-      Defined(ctx, s->file, StringRef(), s->binding, s->stOther, s->type,
+      Defined(s->file, StringRef(), s->binding, s->stOther, s->type,
               /*value=*/0, s->size, bss)
           .overwrite(*s);
     }
@@ -2743,6 +2736,11 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
           Err(ctx) << f << ": could not decode addrsig section: " << err;
           break;
         }
+        if (symIndex >= syms.size()) {
+          Err(ctx) << f << ": out of range symbol index " << symIndex
+                   << " in addrsig section";
+          break;
+        }
         markAddrsig(icfSafe, syms[symIndex]);
         cur += size;
       }
@@ -2755,7 +2753,8 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
   }
 }
 
-static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
+void elf::markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
+  llvm::TimeTraceScope timeScope("Mark buffers as dontneed");
   // With --thinlto-index-only, all buffers are nearly unused from now on
   // (except symbol/section names used by infrequent passes). Mark input file
   // buffers as MADV_DONTNEED so that these pages can be reused by the expensive
@@ -2808,8 +2807,18 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
   // Compile bitcode files and replace bitcode symbols.
   lto.reset(new BitcodeCompiler(ctx));
   lto->setBitcodeLibFuncs(bitcodeLibFuncs);
-  for (BitcodeFile *file : ctx.bitcodeFiles)
+  DenseMap<const char *, MemoryBuffer *> bitcodeBufs;
+  if (skipLinkedOutput && !ctx.bitcodeFiles.empty()) {
+    bitcodeBufs.reserve(ctx.memoryBuffers.size());
+    for (MemoryBuffer &mb : llvm::make_pointee_range(ctx.memoryBuffers))
+      bitcodeBufs.try_emplace(mb.getBufferStart(), &mb);
+  }
+  for (BitcodeFile *file : ctx.bitcodeFiles) {
+    const char *bufStart = file->mb.getBufferStart();
     lto->add(*file);
+    if (MemoryBuffer *mb = bitcodeBufs.lookup(bufStart))
+      mb->dontNeedIfMmap();
+  }
 
   if (!ctx.bitcodeFiles.empty())
     markBuffersAsDontNeed(ctx, skipLinkedOutput);
@@ -3021,8 +3030,6 @@ static void readSecurityNotes(Ctx &ctx) {
       ctx.arg.emachine != EM_AARCH64 && ctx.arg.emachine != EM_RISCV)
     return;
 
-  ctx.arg.andFeatures = -1;
-
   StringRef referenceFileName;
   if (ctx.arg.emachine == EM_AARCH64) {
     auto it = llvm::find_if(ctx.objectFiles, [](const ELFFileBase *f) {
@@ -3044,6 +3051,14 @@ static void readSecurityNotes(Ctx &ctx) {
       return {ctx, DiagLevel::None};
     return {ctx, toDiagLevel(policy)};
   };
+
+  // We start with a mask with all bits set, unless we have no true object
+  // file like in ld -b binary invocations.
+  if (!ctx.objectFiles.empty())
+    ctx.arg.andFeatures = -1;
+  else
+    ctx.arg.andFeatures = 0;
+
   for (ELFFileBase *f : ctx.objectFiles) {
     uint32_t features = f->andFeatures;
 
@@ -3205,44 +3220,6 @@ static void readSecurityNotes(Ctx &ctx) {
           << "dependencies have the GCS marking.";
 }
 
-static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {
-  switch (file->ekind) {
-  case ELF32LEKind:
-    cast<ObjFile<ELF32LE>>(file)->initSectionsAndLocalSyms(ignoreComdats);
-    break;
-  case ELF32BEKind:
-    cast<ObjFile<ELF32BE>>(file)->initSectionsAndLocalSyms(ignoreComdats);
-    break;
-  case ELF64LEKind:
-    cast<ObjFile<ELF64LE>>(file)->initSectionsAndLocalSyms(ignoreComdats);
-    break;
-  case ELF64BEKind:
-    cast<ObjFile<ELF64BE>>(file)->initSectionsAndLocalSyms(ignoreComdats);
-    break;
-  default:
-    llvm_unreachable("");
-  }
-}
-
-static void postParseObjectFile(ELFFileBase *file) {
-  switch (file->ekind) {
-  case ELF32LEKind:
-    cast<ObjFile<ELF32LE>>(file)->postParse();
-    break;
-  case ELF32BEKind:
-    cast<ObjFile<ELF32BE>>(file)->postParse();
-    break;
-  case ELF64LEKind:
-    cast<ObjFile<ELF64LE>>(file)->postParse();
-    break;
-  case ELF64BEKind:
-    cast<ObjFile<ELF64BE>>(file)->postParse();
-    break;
-  default:
-    llvm_unreachable("");
-  }
-}
-
 // Objects that support Dynamic Debugging contain an ELF Dynamic Debugging
 // section that embeds an unoptimized ELF file with debug information. We
 // extract these embedded ELF files to make a consolidated unoptimized
@@ -3377,10 +3354,15 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // No more lazy bitcode can be extracted at this point. Do post parse work
   // like checking duplicate symbols.
-  parallelForEach(ctx.objectFiles, [](ELFFileBase *file) {
-    initSectionsAndLocalSyms(file, /*ignoreComdats=*/false);
-  });
-  parallelForEach(ctx.objectFiles, postParseObjectFile);
+  {
+    llvm::TimeTraceScope timeScope("Initialize sections");
+    parallelForEachFineGrained(ctx.objectFiles, [](ELFFileBase *file) {
+      cast<ObjFile<ELFT>>(file)->initSectionsAndLocalSyms();
+    });
+    parallelForEachFineGrained(ctx.objectFiles, [](ELFFileBase *file) {
+      cast<ObjFile<ELFT>>(file)->postParse();
+    });
+  }
   parallelForEach(ctx.bitcodeFiles,
                   [](BitcodeFile *file) { file->postParse(); });
   for (auto &it : ctx.nonPrevailingSyms) {
@@ -3471,10 +3453,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // compileBitcodeFiles may have produced lto.tmp object files. After this, no
   // more file will be added.
   auto newObjectFiles = ArrayRef(ctx.objectFiles).slice(numObjsBeforeLTO);
-  parallelForEach(newObjectFiles, [](ELFFileBase *file) {
-    initSectionsAndLocalSyms(file, /*ignoreComdats=*/true);
+  parallelForEachFineGrained(newObjectFiles, [](ELFFileBase *file) {
+    cast<ObjFile<ELFT>>(file)->initSectionsAndLocalSyms();
   });
-  parallelForEach(newObjectFiles, postParseObjectFile);
+  parallelForEachFineGrained(newObjectFiles, [](ELFFileBase *file) {
+    cast<ObjFile<ELFT>>(file)->postParse();
+  });
   for (const DuplicateSymbol &d : ctx.duplicates)
     reportDuplicate(ctx, *d.sym, d.file, d.section, d.value);
 

@@ -524,7 +524,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
                                        ->castAs<MemberPointerType>()
                                        ->getMostRecentCXXRecordDecl();
     for (const CXXBaseSpecifier *B : E->path()) {
-      const CXXRecordDecl *ToDecl = B->getType()->getAsCXXRecordDecl();
+      const CXXRecordDecl *ToDecl = B->getType()->castAsCXXRecordDecl();
       unsigned DerivedOffset = Ctx.collectBaseOffset(ToDecl, CurDecl);
 
       if (!this->emitCastMemberPtrBasePop(DerivedOffset, ToDecl, E))
@@ -553,7 +553,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     typedef std::reverse_iterator<CastExpr::path_const_iterator> ReverseIter;
     for (ReverseIter PathI(E->path_end() - 1), PathE(E->path_begin());
          PathI != PathE; ++PathI) {
-      const CXXRecordDecl *ToDecl = (*PathI)->getType()->getAsCXXRecordDecl();
+      const CXXRecordDecl *ToDecl = (*PathI)->getType()->castAsCXXRecordDecl();
       unsigned DerivedOffset = Ctx.collectBaseOffset(CurDecl, ToDecl);
 
       if (!this->emitCastMemberPtrDerivedPop(-DerivedOffset, ToDecl, E))
@@ -579,8 +579,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
 
     const auto extractRecordDecl = [](QualType Ty) -> const CXXRecordDecl * {
       if (const auto *PT = dyn_cast<PointerType>(Ty))
-        return PT->getPointeeType()->getAsCXXRecordDecl();
-      return Ty->getAsCXXRecordDecl();
+        return PT->getPointeeType()->castAsCXXRecordDecl();
+      return Ty->castAsCXXRecordDecl();
     };
 
     // FIXME: We can express a series of non-virtual casts as a single
@@ -781,8 +781,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     }
     QualType SubExprTy = SubExpr->getType();
     OptPrimType FromT = classify(SubExprTy);
-    // Casts from integer/vector to vector.
-    if (E->getType()->isVectorType())
+    // Casts between vectors and integers of the same same size.
+    if (ETy->isVectorType() || SubExprTy->isVectorType())
       return this->emitBuiltinBitCast(E);
 
     OptPrimType ToT = classify(E->getType());
@@ -1310,7 +1310,9 @@ bool Compiler<Emitter>::VisitImaginaryLiteral(const ImaginaryLiteral *E) {
     return false;
   if (!this->emitInitElem(SubExprT, 0, SubExpr))
     return false;
-  return this->visitArrayElemInit(1, SubExpr, SubExprT);
+  if (!this->visitArrayElemInit(1, SubExpr, SubExprT))
+    return false;
+  return this->emitFinishInit(E);
 }
 
 template <class Emitter>
@@ -1884,7 +1886,7 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
         return this->emitPopPtr(E);
     }
   }
-  return true;
+  return this->emitFinishInit(E);
 }
 
 template <class Emitter>
@@ -3944,7 +3946,7 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
     if (Ctor->isDefaulted() && Ctor->isCopyOrMoveConstructor() &&
         Ctor->isTrivial() &&
         E->getArg(0)->isTemporaryObject(Ctx.getASTContext(),
-                                        T->getAsCXXRecordDecl()))
+                                        T->castAsCXXRecordDecl()))
       return this->visitInitializer(E->getArg(0));
 
     // Zero initialization.
@@ -4581,6 +4583,9 @@ bool Compiler<Emitter>::VisitBlockExpr(const BlockExpr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
+  if (E->containsErrors())
+    return false;
+
   const Type *TypeInfoType = E->getType().getTypePtr();
 
   auto canonType = [](const Type *T) {
@@ -5472,8 +5477,7 @@ unsigned Compiler<Emitter>::allocateLocalPrimitive(DeclOrExpr Src, PrimType Ty,
   //   or isa<MaterializeTemporaryExpr>().
   Descriptor *D = P.createDescriptor(Src, Ty, nullptr, IsConst, Src.isExpr(),
                                      /*IsMutable=*/false, IsVolatile);
-  D->IsConstexprUnknown = this->VariablesAreConstexprUnknown;
-  Scope::Local Local = this->createLocal(D);
+  Scope::Local Local = this->createLocal(D, this->VariablesAreConstexprUnknown);
   if (auto *VD = Src.asValueDecl())
     Locals.insert({VD, Local});
   VarScope->addForScopeKind(Local, SC);
@@ -5503,9 +5507,8 @@ UnsignedOrNone Compiler<Emitter>::allocateLocal(DeclOrExpr Src, QualType Ty,
       /*IsMutable=*/false, /*IsVolatile=*/Ty.isVolatileQualified(), Init);
   if (!D)
     return std::nullopt;
-  D->IsConstexprUnknown = this->VariablesAreConstexprUnknown;
 
-  Scope::Local Local = this->createLocal(D);
+  Scope::Local Local = this->createLocal(D, this->VariablesAreConstexprUnknown);
   if (Key)
     Locals.insert({Key, Local});
   VarScope->addForScopeKind(Local, SC);
@@ -5994,8 +5997,15 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
     APValue::LValueBase Base = Val.getLValueBase();
     QualType EntryType;
     if (const Expr *BaseExpr = Base.dyn_cast<const Expr *>()) {
-      if (!this->visit(BaseExpr))
-        return false;
+      // Try to avoid evaluating the BaseExpr multiple times.
+      if (UnsignedOrNone GlobalIndex = P.getGlobal(BaseExpr);
+          GlobalIndex && P.isGlobalInitialized(*GlobalIndex)) {
+        if (!this->emitGetPtrGlobal(*GlobalIndex, Info))
+          return false;
+      } else {
+        if (!this->visit(BaseExpr))
+          return false;
+      }
       EntryType = BaseExpr->getType();
     } else if (const auto *VD = Base.dyn_cast<const ValueDecl *>()) {
       if (!this->visitDeclRef(VD, Info.asExpr()))
@@ -6269,7 +6279,9 @@ bool Compiler<Emitter>::registerRedecl(const VarDecl *VD, const APValue &Val) {
   if (P.getGlobal(VD))
     return true;
 
-  UnsignedOrNone GlobalIndex = P.createGlobal(VD, /*Init=*/nullptr);
+  UnsignedOrNone GlobalIndex =
+      P.createGlobal(VD, /*Init=*/nullptr, /*IsConstexprUnknown=*/false,
+                     /*CanBeExtern=*/false);
   if (!GlobalIndex) {
     llvm_unreachable("Why didn't that work?");
   }
@@ -6400,6 +6412,7 @@ static bool isTrivialMemoryOperation(const CXXMethodDecl *MD) {
     return false;
   if (!MD->isCopyAssignmentOperator() && !MD->isMoveAssignmentOperator())
     return false;
+  assert(!MD->getParent()->isInvalidDecl());
   return MD->getParent()->isUnion() ||
          (MD->isTrivial() && isReadByLvalueToRvalueConversion(MD->getParent()));
 }
@@ -6434,6 +6447,11 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
              this->emitPopPtr(E);
     }
   }
+
+  // Don't generate code for method with invalid parent decls.
+  if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(FuncDecl);
+      MD && MD->getParent()->isInvalidDecl())
+    return false;
 
   LocalScope<Emitter> CallScope(this, ScopeKind::Call);
   ArrayRef<const Expr *> Args(E->getArgs(), E->getNumArgs());
@@ -6549,7 +6567,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
         if (isa<CXXThisExpr>(Stripped)) {
           FuncDecl =
               cast<CXXMethodDecl>(FuncDecl)->getCorrespondingMethodInClass(
-                  Stripped->getType()->getPointeeType()->getAsCXXRecordDecl());
+                  Stripped->getType()->getPointeeType()->castAsCXXRecordDecl());
           Devirtualized = true;
           if (!this->visit(Stripped))
             return false;
@@ -7261,13 +7279,13 @@ bool Compiler<Emitter>::visitCXXForRangeStmt(const CXXForRangeStmt *S) {
 template <class Emitter>
 bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
   if (LabelInfoStack.empty())
-    return false;
+    return this->emitInvalidTargetLabel(/*IsContinue=*/false, S);
 
   OptLabelTy TargetLabel = std::nullopt;
-  const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
   const VariableScope<Emitter> *BreakScope = nullptr;
 
-  if (!TargetLoop) {
+  if (!S->isNamed()) {
+
     for (const auto &LI : llvm::reverse(LabelInfoStack)) {
       if (LI.BreakLabel) {
         TargetLabel = *LI.BreakLabel;
@@ -7276,6 +7294,12 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
       }
     }
   } else {
+    const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
+    // May be null if the named loop is outside of the
+    // current evaluation context, i.e. not a valid target.
+    if (!TargetLoop)
+      return this->emitInvalidTargetLabel(/*IsContinue=*/false, S);
+
     for (const auto &LI : LabelInfoStack) {
       if (LI.Name == TargetLoop) {
         TargetLabel = *LI.BreakLabel;
@@ -7301,13 +7325,12 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
 template <class Emitter>
 bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
   if (LabelInfoStack.empty())
-    return false;
+    return this->emitInvalidTargetLabel(/*IsContinue=*/true, S);
 
   OptLabelTy TargetLabel = std::nullopt;
-  const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
   const VariableScope<Emitter> *ContinueScope = nullptr;
 
-  if (!TargetLoop) {
+  if (!S->isNamed()) {
     for (const auto &LI : llvm::reverse(LabelInfoStack)) {
       if (LI.ContinueLabel) {
         TargetLabel = *LI.ContinueLabel;
@@ -7316,6 +7339,12 @@ bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
       }
     }
   } else {
+    const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
+    // May be null if the named loop is outside of the
+    // current evaluation context, i.e. not a valid target.
+    if (!TargetLoop)
+      return this->emitInvalidTargetLabel(/*IsContinue=*/true, S);
+
     for (auto LI : LabelInfoStack) {
       if (LI.Name == TargetLoop) {
         TargetLabel = *LI.ContinueLabel;
@@ -7733,10 +7762,10 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
       return false;
 
     for (const auto *Init : Ctor->inits()) {
+      LocalScope<Emitter> VirtLocalScope(this);
       if (const Type *Base = Init->getBaseClass();
           Base && Init->isBaseVirtual()) {
-        const auto *BaseDecl = Base->getAsCXXRecordDecl();
-        assert(BaseDecl);
+        const auto *BaseDecl = Base->castAsCXXRecordDecl();
         assert(R->findVirtualBase(BaseDecl));
         if (!this->emitGetPtrThisVirtBase(BaseDecl, Ctor))
           return false;
@@ -7766,8 +7795,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
         return false;
       ++FieldInits;
     } else if (const Type *Base = Init->getBaseClass()) {
-      const auto *BaseDecl = Base->getAsCXXRecordDecl();
-      assert(BaseDecl);
+      const auto *BaseDecl = Base->castAsCXXRecordDecl();
 
       if (Init->isBaseVirtual()) {
         // See above.
@@ -8736,7 +8764,7 @@ unsigned Compiler<Emitter>::collectBaseOffset(const QualType BaseType,
   const auto extractRecordDecl = [](QualType Ty) -> const CXXRecordDecl * {
     if (const auto *R = Ty->getPointeeCXXRecordDecl())
       return R;
-    return Ty->getAsCXXRecordDecl();
+    return Ty->castAsCXXRecordDecl();
   };
   const CXXRecordDecl *BaseDecl = extractRecordDecl(BaseType);
   const CXXRecordDecl *DerivedDecl = extractRecordDecl(DerivedType);

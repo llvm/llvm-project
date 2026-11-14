@@ -507,6 +507,8 @@ struct Variable {
     bool isGlobal() const { return isGlobalAggregate; }
     /// Get offset of the aggregate inside its scope.
     std::size_t getOffset() const { return std::get<0>(interval); }
+    /// Get byte alignment required by the members.
+    std::size_t getAlignment() const { return alignment; }
     /// Returns symbols holding the aggregate initial value if any.
     const semantics::Symbol *getInitialValueSymbol() const {
       return initialValueSymbol;
@@ -525,6 +527,8 @@ struct Variable {
     const semantics::Symbol *initialValueSymbol = nullptr;
     /// Is this a global aggregate?
     bool isGlobalAggregate;
+    /// Byte alignment of the most strictly aligned member, 0 if unknown.
+    std::size_t alignment = 0;
   };
 
   explicit Variable(const Fortran::semantics::Symbol &sym, bool global = false,
@@ -750,7 +754,7 @@ struct FunctionLikeUnit : public ProgramUnit {
 
   void setHostAssociatedSymbols(
       const llvm::SetVector<const semantics::Symbol *> &symbols) {
-    hostAssociations.addSymbolsToBind(symbols, getScope());
+    hostAssociations.addSymbolsToBind(symbols);
   }
 
   /// Return the host associations, if any, from the parent (host) procedure.
@@ -900,7 +904,9 @@ struct Program {
 private:
   std::list<Units> units;
   semantics::CommonBlockList commonBlocks;
-  ScopeVariableListMap scopeVariableListMap; // module and submodule scopes
+  // Module and submodule lists last until lowering ends. A host's list is kept
+  // only while lowering that host and all its internal procedures.
+  ScopeVariableListMap scopeVariableListMap;
 };
 
 /// Helper to get location from FunctionLikeUnit/ModuleLikeUnit begin/end

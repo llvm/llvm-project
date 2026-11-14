@@ -26,8 +26,9 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/MathExtras.h"
+
+#include "CIROpDefinitions.h"
 
 //===----------------------------------------------------------------------===//
 // CIR Helpers
@@ -59,13 +60,6 @@ cir::FPTypeInterface cir::getFloatingPointType(const llvm::fltSemantics &sem,
     // Float8 formats).  Return null and let the caller report it.
     return {};
   }
-}
-
-static bool isPureCIRType(mlir::Type ty) {
-  if (!ty)
-    return true;
-  return ty.getContext()->getOrLoadDialect<cir::CIRDialect>()->isPureCIRType(
-      ty);
 }
 
 //===----------------------------------------------------------------------===//
@@ -171,14 +165,18 @@ verifyRecordMemberKinds(function_ref<mlir::InFlightDiagnostic()> emitError,
   return mlir::success();
 }
 
-/// A void member has no layout, so a record holding one has none either.
+/// Members must be CIR types other than void, which has no layout.
 static mlir::LogicalResult
 verifyRecordMemberTypes(function_ref<mlir::InFlightDiagnostic()> emitError,
                         llvm::ArrayRef<mlir::Type> members) {
-  for (auto [idx, memberTy] : llvm::enumerate(members))
+  for (auto [idx, memberTy] : llvm::enumerate(members)) {
+    if (!cir::isCIRType(memberTy))
+      return emitError() << "record member at index " << idx
+                         << " must be a CIR type, got " << memberTy;
     if (mlir::isa<cir::VoidType>(memberTy))
       return emitError() << "record member at index " << idx
                          << " cannot be void";
+  }
   return mlir::success();
 }
 
@@ -404,6 +402,12 @@ void StructType::removeABIConversionNamePrefix() {
 void StructType::complete(ArrayRef<Type> members, bool packed,
                           ArrayRef<RecordMemberKind> memberKinds) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
+  // mutate() bypasses the verifier, so check what get() would have checked.
+  assert(
+      succeeded(verifyInvariants(
+          mlir::detail::getDefaultDiagnosticEmitFn(getContext()), members,
+          getName(), /*incomplete=*/false, packed, memberKinds, isClass())) &&
+      "invalid struct completion");
   if (mutate(members, packed, memberKinds).failed())
     llvm_unreachable("failed to complete struct");
 }
@@ -597,6 +601,11 @@ void UnionType::complete(ArrayRef<Type> members, bool packed,
                          mlir::Type padding,
                          ArrayRef<RecordMemberKind> memberKinds) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
+  // mutate() bypasses the verifier, so check what get() would have checked.
+  assert(succeeded(verifyInvariants(
+             mlir::detail::getDefaultDiagnosticEmitFn(getContext()), members,
+             getName(), /*incomplete=*/false, packed, padding, memberKinds)) &&
+         "invalid union completion");
   if (mutate(members, packed, padding, memberKinds).failed())
     llvm_unreachable("failed to complete union");
 }
@@ -779,6 +788,22 @@ cir::PtrSpecAttr getPointerSpec(mlir::DataLayoutEntryListRef params,
                                kDefaultPointerAlignment * kBitsInByte,
                                kDefaultPointerAlignment * kBitsInByte,
                                kDefaultPointerSizeBits);
+}
+
+// TargetInfo::getBitIntMaxAlign() when the module has no #cir.bitint_spec
+// entry. That is LongLongAlign's initial value.
+constexpr static uint64_t kDefaultBitIntMaxAlignBits = 64;
+
+/// The _BitInt alignment cap in bits. The #cir.bitint_spec entry holds
+/// TargetInfo::getBitIntMaxAlign().
+uint64_t getBitIntMaxAlignBits(mlir::DataLayoutEntryListRef params) {
+  for (mlir::DataLayoutEntryInterface entry : params) {
+    if (!entry.isTypeEntry())
+      continue;
+    if (auto spec = mlir::dyn_cast<cir::BitIntSpecAttr>(entry.getValue()))
+      return spec.getMaxAlign();
+  }
+  return kDefaultBitIntMaxAlignBits;
 }
 } // namespace
 
@@ -1077,7 +1102,7 @@ unsigned
 IntType::getStorageTypeWidth(const mlir::DataLayout &dataLayout) const {
   if (!isBitInt())
     return getWidth();
-  uint64_t alignBits = getABIAlignment(dataLayout, {}) * 8;
+  uint64_t alignBits = dataLayout.getTypeABIAlignment(*this) * 8;
   return static_cast<unsigned>(llvm::alignTo(getWidth(), alignBits));
 }
 
@@ -1094,10 +1119,9 @@ uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,
                                   mlir::DataLayoutEntryListRef params) const {
   unsigned width = getWidth();
   if (isBitInt()) {
-    // _BitInt alignment: min(PowerOf2Ceil(width), 64 bits) in bytes.
-    // Matches Clang's TargetInfo::getBitIntAlign with default max = 64.
-    uint64_t alignBits =
-        std::min(llvm::PowerOf2Ceil(width), static_cast<uint64_t>(64));
+    uint64_t maxAlignBits = getBitIntMaxAlignBits(params);
+    uint64_t alignBits = std::min(
+        static_cast<uint64_t>(llvm::PowerOf2Ceil(width)), maxAlignBits);
     return std::max(alignBits / 8, static_cast<uint64_t>(1));
   }
   // Round up to a power-of-two byte alignment.  DataLayout consumers such as
@@ -1107,6 +1131,40 @@ uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,
   // keeps __int128 at 16.
   uint64_t alignBits = llvm::PowerOf2Ceil(width);
   return std::max(alignBits / 8, static_cast<uint64_t>(1));
+}
+
+bool IntType::areCompatible(mlir::DataLayoutEntryListRef oldLayout,
+                            mlir::DataLayoutEntryListRef newLayout,
+                            mlir::DataLayoutSpecInterface,
+                            const mlir::DataLayoutIdentifiedEntryMap &) const {
+  // A nested spec may only repeat the same _BitInt max alignment.
+  uint64_t oldMax = getBitIntMaxAlignBits(oldLayout);
+  for (mlir::DataLayoutEntryInterface newEntry : newLayout) {
+    if (!newEntry.isTypeEntry())
+      continue;
+    auto newSpec = mlir::dyn_cast<cir::BitIntSpecAttr>(newEntry.getValue());
+    if (newSpec && newSpec.getMaxAlign() != oldMax)
+      return false;
+  }
+  return true;
+}
+
+llvm::LogicalResult IntType::verifyEntries(mlir::DataLayoutEntryListRef entries,
+                                           mlir::Location loc) const {
+  cir::IntType keyTy = getBitIntMaxAlignKey(getContext());
+  for (mlir::DataLayoutEntryInterface entry : entries) {
+    if (!entry.isTypeEntry())
+      continue;
+    auto key = mlir::cast<IntType>(mlir::cast<mlir::Type>(entry.getKey()));
+    if (key != keyTy)
+      return mlir::emitError(loc)
+             << "expected _BitInt data layout entry to be keyed on " << keyTy
+             << ", got " << key;
+    if (!mlir::isa<cir::BitIntSpecAttr>(entry.getValue()))
+      return mlir::emitError(loc) << "expected layout attribute for " << key
+                                  << " to be a #cir.bitint_spec attribute";
+  }
+  return mlir::success();
 }
 
 mlir::LogicalResult
@@ -1337,13 +1395,10 @@ FuncType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
            << "!cir.func cannot have an explicit 'void' return type";
 
   // The calling convention lowering pass expects all types in a function
-  // signature to be CIR types.
-  for (mlir::Type type : argTypes) {
-    if (!isPureCIRType(type))
-      return emitError()
-             << "expected all types in the function signature to be CIR types";
-  }
-  if (!isPureCIRType(returnType))
+  // signature to be CIR types. CIR types only nest CIR types, so checking the
+  // signature's own types covers everything reachable from them.
+  if (!llvm::all_of(argTypes, cir::isCIRType) ||
+      (returnType && !cir::isCIRType(returnType)))
     return emitError()
            << "expected all types in the function signature to be CIR types";
 
@@ -1479,6 +1534,11 @@ BitFieldType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                             "single zero-width bit-field";
     return mlir::success();
   }
+
+  if (!cir::isCIRType(storageType))
+    return emitError() << "bit-field access unit storage must be a CIR type, "
+                          "got "
+                       << storageType;
 
   if (mlir::isa<cir::BitFieldType>(storageType))
     return emitError() << "bit-field access unit storage cannot itself be a "
@@ -1777,8 +1837,8 @@ void printMemorySpace(mlir::AsmPrinter &p,
 }
 
 mlir::OptionalParseResult
-parseGlobalMemorySpace(mlir::AsmParser &p,
-                       mlir::ptr::MemorySpaceAttrInterface &attr) {
+cir::parseGlobalMemorySpace(mlir::AsmParser &p,
+                            mlir::ptr::MemorySpaceAttrInterface &attr) {
 
   mlir::SMLoc loc = p.getCurrentLocation();
   if (parseMemorySpace(p, attr).failed())
@@ -1786,8 +1846,8 @@ parseGlobalMemorySpace(mlir::AsmParser &p,
   return mlir::success();
 }
 
-void printGlobalMemorySpace(mlir::AsmPrinter &printer, cir::GlobalOp,
-                            mlir::ptr::MemorySpaceAttrInterface attr) {
+void cir::printGlobalMemorySpace(mlir::AsmPrinter &printer, cir::GlobalOp,
+                                 mlir::ptr::MemorySpaceAttrInterface attr) {
   printMemorySpace(printer, attr);
 }
 

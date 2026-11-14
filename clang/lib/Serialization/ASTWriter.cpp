@@ -1534,6 +1534,13 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
     SmallString<128> CleanedSysroot(isysroot);
     PP.getFileManager().makeAbsolutePath(CleanedSysroot, /*Canonicalize=*/true);
     BaseDirectory.assign(CleanedSysroot.begin(), CleanedSysroot.end());
+  } else if (PP.getHeaderSearchInfo().getHeaderSearchOpts().PCHBaseDirIsCwd) {
+    // Reuse relocatable PCH prefix stripping, but leave the reader's base
+    // directory empty so relative paths resolve against the consumer's cwd.
+    // GeneratePCHAction rejects combining this with -relocatable-pch.
+    SmallString<128> BaseDir(".");
+    FileMgr.makeAbsolutePath(BaseDir, /*Canonicalize=*/true);
+    BaseDirectory.assign(BaseDir.begin(), BaseDir.end());
   }
 
   // Module map file
@@ -1578,12 +1585,15 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
 
   // Imports
   if (Chain) {
+    const auto &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
     auto Abbrev = std::make_shared<BitCodeAbbrev>();
     Abbrev->Add(BitCodeAbbrevOp(IMPORT));
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // Kind
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // ImportLoc
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Module name len
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Standard C++ mod
+    Abbrev->Add(
+        BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));       // C++20/prebuilt HU
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File size
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File timestamp
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File name raw kind
@@ -1607,9 +1617,20 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
       AddStringBlob(M.ModuleName, Record, Blob);
       Record.push_back(M.StandardCXXModule);
 
-      // We don't want to hard code the information about imported modules
-      // in the C++20 named modules.
-      if (M.StandardCXXModule) {
+      // We don't want to hard code file information for C++20 Modules
+      // (including explicitly mapped header units).
+      const Module *ImportedModule =
+          PP.getHeaderSearchInfo().getModuleMap().findModule(M.ModuleName);
+      bool IsPrebuiltHeaderUnit =
+          ImportedModule && ImportedModule->isHeaderUnit() &&
+          M.Kind == MK_PrebuiltModule &&
+          HSOpts.PrebuiltModuleFiles.count(M.ModuleName);
+
+      bool IsCXX20ModuleOrPrebuiltHeaderUnit =
+          M.StandardCXXModule || IsPrebuiltHeaderUnit;
+      Record.push_back(IsCXX20ModuleOrPrebuiltHeaderUnit);
+
+      if (IsCXX20ModuleOrPrebuiltHeaderUnit) {
         Record.push_back(0);
         Record.push_back(0);
         Record.push_back(0);
@@ -6694,7 +6715,7 @@ void ASTWriter::WriteDeclUpdatesBlocks(ASTContext &Context,
           // specialization. If so, record which one.
           auto From = Spec->getInstantiatedFrom();
           if (auto PartialSpec =
-                From.dyn_cast<ClassTemplatePartialSpecializationDecl*>()) {
+                  dyn_cast<ClassTemplatePartialSpecializationDecl *>(From)) {
             Record.push_back(true);
             Record.AddDeclRef(PartialSpec);
             Record.AddTemplateArgumentList(

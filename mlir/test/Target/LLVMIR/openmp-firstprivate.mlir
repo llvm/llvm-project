@@ -70,7 +70,7 @@ llvm.func @parallel_op_firstprivate_multi_block(%arg0: !llvm.ptr) {
 
 // CHECK: [[PRIV_BB1]]:
 // The 1st `alloc` block directly branches to the 2nd `alloc` block since the
-// only insruction is `llvm.mlir.constant` which gets translated to compile-time
+// only instruction is `llvm.mlir.constant` which gets translated to compile-time
 // constant in LLVM IR.
 // CHECK-NEXT: br label %[[PRIV_BB2:.*]]
 

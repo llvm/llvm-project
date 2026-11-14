@@ -30,6 +30,7 @@
 ; O0-NEXT:   scalarize-masked-mem-intrin
 ; O0-NEXT:   expand-reductions
 ; O0-NEXT:   indirectbr-expand
+; O0-NEXT:   x86-fence-nontemporal-stores
 ; O0-NEXT:   sjlj-eh-prepare
 ; O0-NEXT:   dwarf-eh-prepare
 ; O0-NEXT:   inline-asm-prepare
@@ -70,10 +71,11 @@
 ; O0-NEXT:     funclet-layout
 ; O0-NEXT:     remove-loads-into-fake-uses
 ; O0-NEXT:     StackMapLivenessPass
-; O0-NEXT:     live-debug-values<emit-debug-entry-values>
+; O0-NEXT:     live-debug-values
 ; O0-NEXT:     machine-sanmd
 ; O0-NEXT:     stack-frame-layout
 ; O0-NEXT:     x86-seses
+; O0-NEXT:     x86-indirect-thunks
 ; O0-NEXT:     x86-return-thunks
 ; O0-NEXT:     cfi-instr-inserter
 ; O0-NEXT:     x86-lvi-ret
@@ -114,6 +116,7 @@
 ; O2-NEXT:   interleaved-access
 ; O2-NEXT:   x86-partial-reduction
 ; O2-NEXT:   indirectbr-expand
+; O2-NEXT:   x86-fence-nontemporal-stores
 ; O2-NEXT:   codegenprepare
 ; O2-NEXT:   sjlj-eh-prepare
 ; O2-NEXT:   dwarf-eh-prepare
@@ -189,6 +192,7 @@
 ; O2-NEXT:     fentry-insert
 ; O2-NEXT:     xray-instrumentation
 ; O2-NEXT:     patchable-function
+; O2-NEXT:     execution-domain-fix
 ; O2-NEXT:     break-false-deps
 ; O2-NEXT:     x86-indirect-branch-tracking
 ; O2-NEXT:     x86-insert-vzeroupper
@@ -202,10 +206,11 @@
 ; O2-NEXT:     funclet-layout
 ; O2-NEXT:     remove-loads-into-fake-uses
 ; O2-NEXT:     StackMapLivenessPass
-; O2-NEXT:     live-debug-values<emit-debug-entry-values>
+; O2-NEXT:     live-debug-values
 ; O2-NEXT:     machine-sanmd
 ; O2-NEXT:     stack-frame-layout
 ; O2-NEXT:     x86-seses
+; O2-NEXT:     x86-indirect-thunks
 ; O2-NEXT:     x86-return-thunks
 ; O2-NEXT:     cfi-instr-inserter
 ; O2-NEXT:     x86-lvi-ret
@@ -237,6 +242,7 @@
 ; O0-WINDOWS-NEXT:   expand-reductions
 ; O0-WINDOWS-NEXT:   indirectbr-expand
 ; O0-WINDOWS-NEXT:   cfguard
+; O0-WINDOWS-NEXT:   x86-fence-nontemporal-stores
 ; O0-WINDOWS-NEXT:   sjlj-eh-prepare
 ; O0-WINDOWS-NEXT:   win-eh-prepare
 ; O0-WINDOWS-NEXT:   dwarf-eh-prepare
@@ -278,10 +284,11 @@
 ; O0-WINDOWS-NEXT:     funclet-layout
 ; O0-WINDOWS-NEXT:     remove-loads-into-fake-uses
 ; O0-WINDOWS-NEXT:     StackMapLivenessPass
-; O0-WINDOWS-NEXT:     live-debug-values<emit-debug-entry-values>
+; O0-WINDOWS-NEXT:     live-debug-values
 ; O0-WINDOWS-NEXT:     machine-sanmd
 ; O0-WINDOWS-NEXT:     stack-frame-layout
 ; O0-WINDOWS-NEXT:     x86-seses
+; O0-WINDOWS-NEXT:     x86-indirect-thunks
 ; O0-WINDOWS-NEXT:     x86-return-thunks
 ; O0-WINDOWS-NEXT:     x86-avoid-trailing-call
 ; O0-WINDOWS-NEXT:     cfi-instr-inserter
@@ -327,6 +334,7 @@
 ; O3-WINDOWS-NEXT:   x86-partial-reduction
 ; O3-WINDOWS-NEXT:   indirectbr-expand
 ; O3-WINDOWS-NEXT:   cfguard
+; O3-WINDOWS-NEXT:   x86-fence-nontemporal-stores
 ; O3-WINDOWS-NEXT:   codegenprepare
 ; O3-WINDOWS-NEXT:   sjlj-eh-prepare
 ; O3-WINDOWS-NEXT:   win-eh-prepare
@@ -402,6 +410,7 @@
 ; O3-WINDOWS-NEXT:     fentry-insert
 ; O3-WINDOWS-NEXT:     xray-instrumentation
 ; O3-WINDOWS-NEXT:     patchable-function
+; O3-WINDOWS-NEXT:     execution-domain-fix
 ; O3-WINDOWS-NEXT:     break-false-deps
 ; O3-WINDOWS-NEXT:     x86-indirect-branch-tracking
 ; O3-WINDOWS-NEXT:     x86-insert-vzeroupper
@@ -415,10 +424,11 @@
 ; O3-WINDOWS-NEXT:     funclet-layout
 ; O3-WINDOWS-NEXT:     remove-loads-into-fake-uses
 ; O3-WINDOWS-NEXT:     StackMapLivenessPass
-; O3-WINDOWS-NEXT:     live-debug-values<emit-debug-entry-values>
+; O3-WINDOWS-NEXT:     live-debug-values
 ; O3-WINDOWS-NEXT:     machine-sanmd
 ; O3-WINDOWS-NEXT:     stack-frame-layout
 ; O3-WINDOWS-NEXT:     x86-seses
+; O3-WINDOWS-NEXT:     x86-indirect-thunks
 ; O3-WINDOWS-NEXT:     x86-return-thunks
 ; O3-WINDOWS-NEXT:     x86-avoid-trailing-call
 ; O3-WINDOWS-NEXT:     cfi-instr-inserter

@@ -1208,6 +1208,7 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("apple-m4", "armv8.7-a"),
                       AArch64CPUTestParams("apple-a18", "armv8.7-a"),
                       AArch64CPUTestParams("apple-m5", "armv8.7-a"),
+                      AArch64CPUTestParams("apple-m6", "armv8.7-a"),
                       AArch64CPUTestParams("exynos-m3", "armv8-a"),
                       AArch64CPUTestParams("exynos-m4", "armv8.2-a"),
                       AArch64CPUTestParams("exynos-m5", "armv8.2-a"),
@@ -1316,24 +1317,25 @@ TEST_P(AArch64CPUAliasTestFixture, testCPUAlias) {
 
 INSTANTIATE_TEST_SUITE_P(
     AArch64CPUAliasTests, AArch64CPUAliasTestFixture,
-    ::testing::Values(AArch64CPUAliasTestParams({"neoverse-n2", "cobalt-100"}),
-                      AArch64CPUAliasTestParams({"c1-pro", "c2-pro"}),
-                      AArch64CPUAliasTestParams({"apple-a7", "cyclone",
-                                                 "apple-a8", "apple-a9"}),
-                      AArch64CPUAliasTestParams({"apple-a12", "apple-s4",
-                                                 "apple-s5"}),
-                      AArch64CPUAliasTestParams({"apple-a13", "apple-s6",
-                                                 "apple-s7", "apple-s8"}),
-                      AArch64CPUAliasTestParams({"apple-a14", "apple-m1"}),
-                      AArch64CPUAliasTestParams({"apple-a15", "apple-m2"}),
-                      AArch64CPUAliasTestParams({"apple-a16", "apple-m3",
-                                                 "apple-s9", "apple-s10"}),
-                      AArch64CPUAliasTestParams({"apple-m4", "apple-a18"}),
-                      AArch64CPUAliasTestParams({"apple-m5", "apple-a19"})),
+    ::testing::Values(
+        AArch64CPUAliasTestParams({"neoverse-n2", "cobalt-100"}),
+        AArch64CPUAliasTestParams({"c1-pro", "c2-pro"}),
+        AArch64CPUAliasTestParams({"apple-a7", "cyclone", "apple-a8",
+                                   "apple-a9"}),
+        AArch64CPUAliasTestParams({"apple-a12", "apple-s4", "apple-s5"}),
+        AArch64CPUAliasTestParams({"apple-a13", "apple-s6", "apple-s7",
+                                   "apple-s8"}),
+        AArch64CPUAliasTestParams({"apple-a14", "apple-m1"}),
+        AArch64CPUAliasTestParams({"apple-a15", "apple-m2"}),
+        AArch64CPUAliasTestParams({"apple-a16", "apple-m3", "apple-s9",
+                                   "apple-s10"}),
+        AArch64CPUAliasTestParams({"apple-m4", "apple-a18"}),
+        AArch64CPUAliasTestParams({"apple-m5", "apple-a19"}),
+        AArch64CPUAliasTestParams({"apple-m6", "apple-a20", "apple-s11"})),
     AArch64CPUAliasTestParams::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 103;
+static constexpr unsigned NumAArch64CPUArchs = 106;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -2932,6 +2934,14 @@ TEST(TargetParserTest, testAMDGPUgetFeatureBitset) {
   // An unknown kind yields an empty bitset.
   EXPECT_EQ(AMDGPU::getFeatureBitset(AMDGPU::GK_NONE).count(), 0u);
 
+  // The subarch overload returns the bitset of the subarch's GPU.
+  EXPECT_EQ(AMDGPU::getFeatureBitset(Triple::AMDGPUSubArch900), GFX900);
+  EXPECT_TRUE(AMDGPU::getFeatureBitset(Triple::AMDGPUSubArch1250)
+                  .test(AMDGPU::FEAT_MCAST_FULL_MASK_BUG));
+  EXPECT_FALSE(AMDGPU::getFeatureBitset(Triple::AMDGPUSubArch1251)
+                   .test(AMDGPU::FEAT_MCAST_FULL_MASK_BUG));
+  EXPECT_EQ(AMDGPU::getFeatureBitset(Triple::NoSubArch).count(), 0u);
+
   // getFeatureNames maps the set bits back to their SubtargetFeature names, one
   // per set bit.
   SmallVector<StringRef, 0> Names;
@@ -3019,11 +3029,7 @@ TEST(TargetParserTest, testAMDGPULDSGranularityFeatures) {
     EXPECT_TRUE(Has(Kind, AMDGPU::FEAT_LDS_ENCODING_GRANULARITY_512));
   }
 
-  // A generic target uses the largest allocation granularity of the GPUs it
-  // covers. gfx9-4-generic therefore uses gfx950's 1280-byte granule.
   EXPECT_TRUE(
-      Has(AMDGPU::GK_GFX9_4_GENERIC, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_1280));
-  EXPECT_FALSE(
       Has(AMDGPU::GK_GFX9_4_GENERIC, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_512));
   EXPECT_TRUE(Has(AMDGPU::GK_GFX9_4_GENERIC,
                   AMDGPU::FEAT_LDS_ENCODING_GRANULARITY_1280));
@@ -3323,7 +3329,7 @@ TEST(TargetParserTest, testAMDGPUgetTotalNumVGPRs) {
 
 TEST(TargetParserTest, testAMDGPUgetAddressableNumVGPRs) {
   // A wave addresses 256 VGPRs, except on gfx90a where the unified file makes
-  // the AGPRs addressable too, and on targets with 1024 addressable VGPRs.
+  // the AGPRs addressable too, and on targets with VGPR MSBs.
   EXPECT_EQ(AMDGPU::getAddressableNumVGPRs(AMDGPU::GK_GFX600, false), 256u);
   EXPECT_EQ(AMDGPU::getAddressableNumVGPRs(AMDGPU::GK_GFX1030, true), 256u);
 
@@ -3505,7 +3511,7 @@ TEST(TargetParserTest, testAMDGPUgetLDSGranules) {
       {AMDGPU::GK_GFX1250, Triple::AMDGPUSubArch1250, 2048, 2048},
       {AMDGPU::GK_GFX1251, Triple::AMDGPUSubArch1251, 2048, 2048},
       {AMDGPU::GK_GFX1310, Triple::AMDGPUSubArch1310, 1024, 1024},
-      {AMDGPU::GK_GFX9_4_GENERIC, Triple::AMDGPUSubArch9_4, 1280, 1280},
+      {AMDGPU::GK_GFX9_4_GENERIC, Triple::AMDGPUSubArch9_4, 512, 1280},
       {AMDGPU::GK_GFX10_1_GENERIC, Triple::AMDGPUSubArch10_1, 512, 512},
       {AMDGPU::GK_GFX10_3_GENERIC, Triple::AMDGPUSubArch10_3, 1024, 512},
       {AMDGPU::GK_GFX11_GENERIC, Triple::AMDGPUSubArch11, 1024, 512},

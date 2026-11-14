@@ -754,10 +754,21 @@ method ``[[clang::lifetimebound]]``.
   }];
 }
 
+def LifetimeSafetyDestructorUse
+    : DiagGroup<"lifetime-safety-experimental-destructor-use"> {
+  code Documentation = [{
+Experimental. Treats a non-trivial destructor running at scope exit as a use of
+the borrows the object holds, since the analysis cannot see whether the
+destructor reads them. Detects objects destroyed after the storage they borrow
+from. May report destructors that never read the borrow (e.g. ``std::function``).
+  }];
+}
+
 def LifetimeSafetyExperimental
     : DiagGroup<"lifetime-safety-experimental",
                 [LifetimeSafetyInvalidation,
-                 LifetimeSafetyFieldOriginEscape]> {
+                 LifetimeSafetyFieldOriginEscape,
+                 LifetimeSafetyDestructorUse]> {
   code Documentation = [{
 Experimental lifetime safety warnings. These may have known false positives and
 their behavior may change. Not enabled by -Wlifetime-safety-all.
@@ -1974,10 +1985,11 @@ def PedanticMacros : DiagGroup<"pedantic-macros",
 def BranchProtection : DiagGroup<"branch-protection">;
 
 // HLSL diagnostic groups
+def HLSL202x : DiagGroup<"hlsl-202x-extensions">;
 def HLSL202y : DiagGroup<"hlsl-202y-extensions">;
 
 // Warnings for HLSL Clang extensions
-def HLSLExtension : DiagGroup<"hlsl-extensions", [HLSL202y]>;
+def HLSLExtension : DiagGroup<"hlsl-extensions", [HLSL202x, HLSL202y]>;
 
 // Warning for mix packoffset and non-packoffset.
 def HLSLMixPackOffset : DiagGroup<"mix-packoffset">;
@@ -2014,7 +2026,14 @@ def ReadOnlyPlacementChecks : DiagGroup<"read-only-types">;
 
 // Warnings and fixes to support the "safe buffers" programming model.
 def UnsafeBufferUsageInContainer : DiagGroup<"unsafe-buffer-usage-in-container">;
-def UnsafeBufferUsageInLibcCall : DiagGroup<"unsafe-buffer-usage-in-libc-call">;
+def UnsafeBufferUsageInLibcCallNumericConversion : DiagGroup<"unsafe-buffer-usage-in-libc-call-numeric-conversion">;
+def UnsafeBufferUsageInLibcCallStringManipulation : DiagGroup<"unsafe-buffer-usage-in-libc-call-string-manipulation">;
+def UnsafeBufferUsageInLibcCallStringExamination : DiagGroup<"unsafe-buffer-usage-in-libc-call-string-examination">;
+def UnsafeBufferUsageInLibcCallMemory : DiagGroup<"unsafe-buffer-usage-in-libc-call-memory">;
+def UnsafeBufferUsageInLibcCallIO : DiagGroup<"unsafe-buffer-usage-in-libc-call-io">;
+def UnsafeBufferUsageInLibcCallPrintf : DiagGroup<"unsafe-buffer-usage-in-libc-call-printf">;
+def UnsafeBufferUsageInLibcCallScanf : DiagGroup<"unsafe-buffer-usage-in-libc-call-scanf">;
+def UnsafeBufferUsageInLibcCall : DiagGroup<"unsafe-buffer-usage-in-libc-call", [UnsafeBufferUsageInLibcCallNumericConversion, UnsafeBufferUsageInLibcCallStringManipulation, UnsafeBufferUsageInLibcCallStringExamination, UnsafeBufferUsageInLibcCallMemory, UnsafeBufferUsageInLibcCallIO, UnsafeBufferUsageInLibcCallPrintf, UnsafeBufferUsageInLibcCallScanf]>;
 def UnsafeBufferUsageInUniquePtrArrayAccess : DiagGroup<"unsafe-buffer-usage-in-unique-ptr-array-access">;
 def UnsafeBufferUsageInStaticSizedArray : DiagGroup<"unsafe-buffer-usage-in-static-sized-array">;
 def UnsafeBufferUsageInFormatAttrCall : DiagGroup<"unsafe-buffer-usage-in-format-attr-call">;
@@ -2056,3 +2075,5 @@ def UnguardedBuiltinUsageAMDGPU : DiagGroup<"amdgpu-unguarded-builtin-usage">;
 def AvailableVisibleAMDGPU : DiagGroup<"amdgpu-av">;
 
 def DynamicDebugging : DiagGroup<"dynamic-debugging">;
+
+def BPFEnumNotRelocated : DiagGroup<"bpf-enum-not-relocated">;

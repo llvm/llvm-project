@@ -100,7 +100,7 @@ module attributes {cir.triple = "spirv64-unknown-unknown"} {
 !langptr = !cir.ptr<!cir.int<s, 32>, lang_address_space(offload_local)>
 !ptr = !cir.ptr<!langptr>
 
-module attributes {cir.triple = "amdgcn-amd-amdhsa", llvm.data_layout = "e-p:64:64-p3:32:32"} {
+module attributes {cir.triple = "amdgpu-amd-amdhsa", llvm.data_layout = "e-p:64:64-p3:32:32"} {
   // The stored pointer has a known layout even though its pointee does not.
   // CHECK-LABEL: llvm.func @copy_opaque_pointers
   cir.func @copy_opaque_pointers(%src: !cir.ptr<!ptr>, %dst: !cir.ptr<!ptr>) {
@@ -141,13 +141,13 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
 !langptr = !cir.ptr<!s32i, lang_address_space(offload_global)>
 !fn = !cir.func<() -> !langptr>
 !fnptr = !cir.ptr<!fn>
-!fnptrptr = !cir.ptr<!fnptr>
 
 module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
-  // CHECK-LABEL: llvm.func @virtual_fn_addr_language_address_space
-  cir.func @virtual_fn_addr_language_address_space(%vptr: !cir.vptr) {
+  // CHECK-LABEL: llvm.func @virtual_fn_language_address_space
+  cir.func @virtual_fn_language_address_space(%vptr: !cir.vptr) {
     // CHECK: llvm.getelementptr {{.*}}[0] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
-    %0 = cir.vtable.get_virtual_fn_addr %vptr[0] : !cir.vptr -> !fnptrptr
+    // CHECK: llvm.load {{.*}} : !llvm.ptr -> !llvm.ptr
+    %0 = cir.vtable.get_virtual_fn %vptr[0] : !cir.vptr -> !fnptr
     cir.return
   }
 }

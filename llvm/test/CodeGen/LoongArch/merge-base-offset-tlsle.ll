@@ -784,8 +784,8 @@ define dso_local ptr @tlsle_load_addr_offset_281474439839744() nounwind {
 ; LA64-NEXT:    lu12i.w $a0, %le_hi20_r(g_a64)
 ; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_a64)
 ; LA64-NEXT:    addi.d $a0, $a0, %le_lo12_r(g_a64)
-; LA64-NEXT:    ori $a1, $zero, 0
-; LA64-NEXT:    lu32i.d $a1, 524287
+; LA64-NEXT:    lu12i.w $a1, 524287
+; LA64-NEXT:    slli.d $a1, $a1, 20
 ; LA64-NEXT:    add.d $a0, $a0, $a1
 ; LA64-NEXT:    ret
 entry:

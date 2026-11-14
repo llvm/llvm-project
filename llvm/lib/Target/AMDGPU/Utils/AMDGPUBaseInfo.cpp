@@ -18,6 +18,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/LLVMContext.h"
@@ -1324,7 +1325,7 @@ unsigned getVGPREncodingGranule(const MCSubtargetInfo &STI,
                       ? *EnableWavefrontSize32
                       : STI.getFeatureBits().test(FeatureWavefrontSize32);
 
-  if (STI.getFeatureBits().test(Feature1024AddressableVGPRs))
+  if (STI.getFeatureBits().test(FeatureVGPRMSBs))
     return IsWave32 ? 16 : 8;
 
   return IsWave32 ? 8 : 4;
@@ -1334,7 +1335,7 @@ unsigned getArchVGPRAllocGranule() { return 4; }
 
 unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo &STI) {
   const auto &Features = STI.getFeatureBits();
-  if (Features.test(Feature1024AddressableVGPRs))
+  if (Features.test(FeatureVGPRMSBs))
     return Features.test(FeatureWavefrontSize32) ? 1024 : 512;
   return 256;
 }
@@ -2577,8 +2578,8 @@ unsigned hasKernargPreload(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureKernargPreload);
 }
 
-int32_t getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR,
-                         int32_t ArgNumVGPR) {
+uint32_t getTotalNumVGPRs(bool has90AInsts, uint32_t ArgNumAGPR,
+                          uint32_t ArgNumVGPR) {
   if (has90AInsts && ArgNumAGPR)
     return alignTo(ArgNumVGPR, 4) + ArgNumAGPR;
   return std::max(ArgNumVGPR, ArgNumAGPR);
@@ -2960,12 +2961,16 @@ bool isInlinableLiteral32(int32_t Literal, bool HasInv2Pi) {
          (Val == 0x3e22f983 && HasInv2Pi);
 }
 
-bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi) {
+bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi, bool *IsBF16) {
   if (!HasInv2Pi)
     return false;
+  if (IsBF16)
+    *IsBF16 = false;
   if (isInlinableIntLiteral(Literal))
     return true;
   uint16_t Val = static_cast<uint16_t>(Literal);
+  if (IsBF16)
+    *IsBF16 = true;
   return Val == 0x3F00 || // 0.5
          Val == 0xBF00 || // -0.5
          Val == 0x3F80 || // 1.0
@@ -3354,9 +3359,17 @@ struct LDSDMAIntrinsic {
 };
 const LDSDMAIntrinsic *lookupLDSDMAIntrinsic(unsigned Intr);
 
+struct ExponentOnlyScaleIntrinsic {
+  unsigned Intr;
+  uint8_t ScaleArg;
+};
+const ExponentOnlyScaleIntrinsic *
+lookupExponentOnlyScaleIntrinsic(unsigned Intr);
+
 #define GET_SourcesOfDivergence_IMPL
 #define GET_UniformIntrinsics_IMPL
 #define GET_LDSDMAIntrinsicTable_IMPL
+#define GET_ExponentOnlyScaleIntrinsics_IMPL
 #define GET_Gfx9BufferFormat_IMPL
 #define GET_Gfx10BufferFormat_IMPL
 #define GET_Gfx11PlusBufferFormat_IMPL
@@ -3373,8 +3386,34 @@ bool isIntrinsicAlwaysUniform(unsigned IntrID) {
   return lookupAlwaysUniform(IntrID);
 }
 
+bool isTriviallyUniform(const Value *V, const Instruction *CtxI) {
+  if (isa<Constant>(V))
+    return true;
+  if (const auto *A = dyn_cast<Argument>(V))
+    return isArgPassedInSGPR(A);
+  if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
+    if (!isIntrinsicAlwaysUniform(II->getIntrinsicID()))
+      return false;
+    // If II and CtxI are in different blocks then there is a possibility of a
+    // temporal divergence.
+    return II->getParent() == CtxI->getParent();
+  }
+  return false;
+}
+
+bool isTriviallyUniform(const Use &U) {
+  return isTriviallyUniform(U.get(), cast<Instruction>(U.getUser()));
+}
+
 bool isLDSDMAIntrinsic(unsigned IntrID) {
   return lookupLDSDMAIntrinsic(IntrID);
+}
+
+std::optional<unsigned> getExponentOnlyScaleArgIdx(unsigned IntrID) {
+  if (const ExponentOnlyScaleIntrinsic *Info =
+          lookupExponentOnlyScaleIntrinsic(IntrID))
+    return Info->ScaleArg;
+  return std::nullopt;
 }
 
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,

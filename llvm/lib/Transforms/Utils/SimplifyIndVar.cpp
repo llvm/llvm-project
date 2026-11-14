@@ -242,9 +242,13 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
   auto *NewRHS =
       Rewriter.expandCodeFor(InvariantRHS, IVOperand->getType(), PHTerm);
   LLVM_DEBUG(dbgs() << "INDVARS: Simplified comparison: " << *ICmp << '\n');
-  ICmp->setPredicate(InvariantPredicate);
-  ICmp->setOperand(0, NewLHS);
-  ICmp->setOperand(1, NewRHS);
+  IRBuilder<> Builder(PHTerm);
+  Builder.SetCurrentDebugLocation(DebugLoc::getDropped());
+  Value *NewICmp = Builder.CreateICmp(InvariantPredicate, NewLHS, NewRHS, "",
+                                      ICmp->hasSameSign());
+  NewICmp->takeName(ICmp);
+  ICmp->replaceAllUsesWith(NewICmp);
+  DeadInsts.emplace_back(ICmp);
   RunUnswitching = true;
   return true;
 }
@@ -361,6 +365,8 @@ void SimplifyIndvar::replaceRemWithNumerator(BinaryOperator *Rem) {
 
 bool SimplifyIndvar::replaceRemWithNumeratorOrZeroUpdateProfiles(
     SelectInst &SI) {
+  if (ProfcheckDisableMetadataFixes)
+    return false;
   // The select instruction condition is guaranteed to evaluate to true exactly
   // once through the duration of the loop if it is executed on every loop
   // iteration. So we set the branch weights to be {1, LoopIterations - 1}.

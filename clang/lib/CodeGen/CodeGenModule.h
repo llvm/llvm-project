@@ -362,6 +362,10 @@ private:
   llvm::Module &TheModule;
   DiagnosticsEngine &Diags;
   const TargetInfo &Target;
+  /// Lazily cached target features for functions without a target attribute.
+  /// An invalid attribute means that the defaults were computed but no
+  /// target-features attribute needs to be emitted.
+  std::optional<llvm::Attribute> DefaultTargetFeatures;
   std::unique_ptr<CGCXXABI> ABI;
   llvm::LLVMContext &VMContext;
   std::string ModuleNameHash;
@@ -704,6 +708,7 @@ private:
   typedef llvm::DenseMap<QualType, llvm::Metadata *> MetadataTypeMap;
   MetadataTypeMap MetadataIdMap;
   MetadataTypeMap VirtualMetadataIdMap;
+  MetadataTypeMap CfiICallMetadataIdMap;
   MetadataTypeMap GeneralizedMetadataIdMap;
   MetadataTypeMap CallGraphMetadataIdMap;
 
@@ -1168,8 +1173,6 @@ public:
   getVTablePointerAuthentication(const CXXRecordDecl *thisClass,
                                  bool IsVTTEntry = false);
 
-  CGPointerAuthInfo EmitPointerAuthInfo(const RecordDecl *RD);
-
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool ForEH = false) {
     return (ForEH || getLangOpts().RTTI) &&
@@ -1491,10 +1494,6 @@ public:
   /// definition.
   void SetLLVMFunctionAttributesForDefinition(const Decl *D, llvm::Function *F);
 
-  /// Set the LLVM function attributes that represent floating point
-  /// environment.
-  void setLLVMFunctionFEnvAttributes(const FunctionDecl *D, llvm::Function *F);
-
   /// Return true iff the given type uses 'sret' when used as a return type.
   bool ReturnTypeUsesSRet(const CGFunctionInfo &FI);
 
@@ -1755,8 +1754,10 @@ public:
   /// Generate a KCFI type identifier for T.
   llvm::ConstantInt *CreateKCFITypeId(QualType T, StringRef Salt);
 
-  /// Create a metadata identifier for the given function type.
-  llvm::Metadata *CreateMetadataIdentifierForFnType(QualType T);
+  /// Create a metadata identifier for the given function type for CFI icall.
+  llvm::Metadata *CreateMetadataIdentifierForCFIFnType(QualType T,
+                                                       bool GeneralizePointers);
+  llvm::Metadata *CreateMetadataIdentifierForCFIFnType(QualType T);
 
   /// Create a metadata identifier for the given type. This may either be an
   /// MDString (for external identifiers) or a distinct unnamed MDNode (for
@@ -1782,11 +1783,6 @@ public:
   /// Create a metadata identifier that is intended to be used to check virtual
   /// calls via a member function pointer.
   llvm::Metadata *CreateMetadataIdentifierForVirtualMemPtrType(QualType T);
-
-  /// Create a metadata identifier for the generalization of the given type.
-  /// This may either be an MDString (for external identifiers) or a distinct
-  /// unnamed MDNode (for internal identifiers).
-  llvm::Metadata *CreateMetadataIdentifierGeneralized(QualType T);
 
   /// Create and attach type metadata to the given function.
   void createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
@@ -2225,7 +2221,8 @@ private:
 
   llvm::Metadata *CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
                                                StringRef Suffix,
-                                               bool ForceString = false);
+                                               bool ForceString = false,
+                                               bool NormalizeIntegers = false);
 
   /// Emit deactivation symbols for any PFP fields whose offset is taken with
   /// offsetof.

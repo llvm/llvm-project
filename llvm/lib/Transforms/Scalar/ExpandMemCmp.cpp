@@ -316,6 +316,7 @@ MemCmpExpansion::MemCmpExpansion(
       MaxBytesPerBlock(MaxBytesPerBlock), IsUsedForZeroCmp(IsUsedForZeroCmp),
       DL(TheDataLayout), TTI(TTI), CommonAlign(CommonAlign), DTU(DTU),
       Builder(CI) {
+  Builder.disableGEPCanonicalization();
   assert(Size > 0 && "zero blocks");
   assert(NumLoadsPerBlock > 0 && "zero loads per block");
   // Scale the max size down if the target can load more bytes than we need.
@@ -626,7 +627,7 @@ void MemCmpExpansion::emitLoadCompareBlockMultipleLoads(unsigned BlockIndex,
   }
 }
 
-// This function creates the IR intructions for loading and comparing using the
+// This function creates the IR instructions for loading and comparing using the
 // given LoadSize. It loads the number of bytes specified by LoadSize from each
 // source of the memcmp parameters. It then does a subtract to see if there was
 // a difference in the loaded values. If a difference is found, it branches
@@ -1090,6 +1091,7 @@ PreservedAnalyses ExpandMemCmpPass::run(Function &F,
   if (F.hasFnAttribute(Attribute::SanitizeAddress) ||
       F.hasFnAttribute(Attribute::SanitizeMemory) ||
       F.hasFnAttribute(Attribute::SanitizeThread) ||
+      F.hasFnAttribute(Attribute::SanitizeConcurrency) ||
       F.hasFnAttribute(Attribute::SanitizeHWAddress))
     return PreservedAnalyses::all();
 

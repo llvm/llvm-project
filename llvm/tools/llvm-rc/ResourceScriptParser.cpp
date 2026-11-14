@@ -12,9 +12,6 @@
 
 #include "ResourceScriptParser.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Option/ArgList.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 
 // Take an expression returning llvm::Error and forward the error if it exists.

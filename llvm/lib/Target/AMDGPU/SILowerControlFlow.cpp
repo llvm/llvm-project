@@ -64,10 +64,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-lower-control-flow"
 
-static cl::opt<bool>
-RemoveRedundantEndcf("amdgpu-remove-redundant-endcf",
-    cl::init(true), cl::ReallyHidden);
-
 namespace {
 
 class SILowerControlFlow {
@@ -755,7 +751,7 @@ bool SILowerControlFlow::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
-  EnableOptimizeEndCf = RemoveRedundantEndcf &&
+  EnableOptimizeEndCf = ST.getCLOpts().remove_redundant_endcf &&
                         MF.getTarget().getOptLevel() > CodeGenOptLevel::None;
 
   MRI = &MF.getRegInfo();
