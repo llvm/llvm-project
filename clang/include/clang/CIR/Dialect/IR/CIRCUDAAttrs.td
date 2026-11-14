@@ -79,4 +79,27 @@ def CIR_CUDAVarRegistrationInfoAttr : CIR_Attr<"CUDAVarRegistrationInfo", "cu.va
   let hasCustomAssemblyFormat = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// CUDAOffloadEntryAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_CUDAOffloadEntryAttr : CIR_Attr<"CUDAOffloadEntry", "cu.offload_entry"> {
+  let summary = "Offloading entry for a kernel or device variable.";
+  let description = [{
+    The arguments of `llvm::offloading::emitOffloadingEntry`, which emits the
+    entry during translation to LLVM IR. Used for -fgpu-rdc.
+  }];
+  let parameters = (ins
+    "uint16_t":$kind,
+    "mlir::FlatSymbolRefAttr":$addr,
+    "mlir::StringAttr":$name,
+    "uint64_t":$size,
+    "uint32_t":$flags,
+    "uint64_t":$data,
+    OptionalParameter<"mlir::FlatSymbolRefAttr">:$aux_addr
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+  let canHaveIllegalCXXABIType = 0;
+}
+
 #endif // CLANG_CIR_DIALECT_IR_CIRCUDAATTRS_TD

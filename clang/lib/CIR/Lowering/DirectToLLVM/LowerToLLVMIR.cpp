@@ -17,6 +17,7 @@
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -28,6 +29,42 @@ using namespace llvm;
 
 namespace cir {
 namespace direct {
+
+namespace {
+/// Emits the -fgpu-rdc offloading entries once the globals they refer to have
+/// been translated.
+class CUDAOffloadEntries : public mlir::LLVM::ModuleTranslation::Extension {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(CUDAOffloadEntries)
+
+  CUDAOffloadEntries(mlir::ModuleOp mod, mlir::ArrayAttr entries,
+                     llvm::Module &llvmModule)
+      : mod(mod), entries(entries), llvmModule(llvmModule) {}
+
+  mlir::LogicalResult finalize() override {
+    for (auto entry : entries.getAsRange<cir::CUDAOffloadEntryAttr>()) {
+      mlir::FlatSymbolRefAttr aux = entry.getAuxAddr();
+      llvm::GlobalValue *addr =
+          llvmModule.getNamedValue(entry.getAddr().getValue());
+      llvm::GlobalValue *auxAddr =
+          aux ? llvmModule.getNamedValue(aux.getValue()) : nullptr;
+      if (!addr || (aux && !auxAddr))
+        return mod.emitError("offloading entry refers to undefined symbol ")
+               << (addr ? aux : entry.getAddr());
+      llvm::offloading::emitOffloadingEntry(
+          llvmModule, static_cast<llvm::object::OffloadKind>(entry.getKind()),
+          addr, entry.getName(), entry.getSize(), entry.getFlags(),
+          entry.getData(), auxAddr);
+    }
+    return mlir::success();
+  }
+
+private:
+  mlir::ModuleOp mod;
+  mlir::ArrayAttr entries;
+  llvm::Module &llvmModule;
+};
+} // namespace
 
 /// Implementation of the dialect interface that converts CIR attributes to LLVM
 /// IR metadata.
@@ -209,6 +246,13 @@ private:
         llvmModule->addModuleFlag(llvm::Module::Error, "amdgpu.xnack",
                                   static_cast<uint32_t>(intAttr.getInt()));
       }
+    }
+
+    if (attribute.getName() ==
+        cir::CIRDialect::getCUDAOffloadEntriesAttrName()) {
+      if (auto entries = mlir::dyn_cast<mlir::ArrayAttr>(attribute.getValue()))
+        moduleTranslation.getOrCreateExtension<CUDAOffloadEntries>(mod, entries,
+                                                                   *llvmModule);
     }
 
     if (attribute.getName() == "cir.amdgpu_sramecc") {
