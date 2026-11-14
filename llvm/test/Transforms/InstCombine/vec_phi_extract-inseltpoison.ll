@@ -128,18 +128,13 @@ ret:
 define i1 @g(<3 x i32> %input_2, i1 %c1) {
 ; CHECK-LABEL: @g(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <3 x i32> [[INPUT_2:%.*]], i64 0
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[TMP4:%.*]], [[FOR_BODY:%.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ poison, [[ENTRY]] ], [ [[TMP3:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    br i1 [[C1:%.*]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[FOR_END:%.*]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP3]] = add i32 [[TMP2]], -1
-; CHECK-NEXT:    [[SUB44_ELT:%.*]] = sub i32 0, [[TMP2]]
-; CHECK-NEXT:    [[TMP4]] = sdiv i32 [[TMP1]], [[SUB44_ELT]]
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.end:
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <3 x i32> [[INPUT_2:%.*]], i64 0
 ; CHECK-NEXT:    [[TOBOOL313:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[TOBOOL313]]
 ;
