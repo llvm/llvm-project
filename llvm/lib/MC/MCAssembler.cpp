@@ -35,6 +35,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
+#include <numeric>
 #include <tuple>
 #include <utility>
 
@@ -820,9 +821,17 @@ void MCAssembler::relaxAlign(MCFragment &F) {
   bool AlignFixup = false;
   if (F.hasAlignEmitNops()) {
     AlignFixup = getBackend().relaxAlign(F, Size);
-    if (!AlignFixup)
-      while (Size % getBackend().getMinimumNopSize())
-        Size += F.getAlignment().value();
+    if (!AlignFixup) {
+      const unsigned MinNopSize = getBackend().getMinimumNopSize();
+      const unsigned Alignment = F.getAlignment().value();
+      // Adding Alignment can only reach a multiple of MinNopSize when the
+      // initial padding is divisible by their greatest common divisor.
+      // Otherwise keep the required size and let writeNopData diagnose that
+      // the target cannot encode such a NOP sequence.
+      if (Size % std::gcd(Alignment, MinNopSize) == 0)
+        while (Size % MinNopSize)
+          Size += Alignment;
+    }
   }
   if (!AlignFixup && Size > F.getAlignMaxBytesToEmit())
     Size = 0;
