@@ -1182,6 +1182,10 @@ void FactsGenerator::handleAllocatingCall(const Expr *Call,
       FactMgr.createFact<IssueFact>(L->getID(), CallList->getOuterOriginID()));
 }
 
+static bool isReferenceToPointer(QualType Ty) {
+  return Ty->isReferenceType() && Ty->getPointeeType()->isPointerType();
+}
+
 void FactsGenerator::handleFunctionCall(const Expr *Call,
                                         bool IsGslConstruction) {
   FunctionCallInfo CallInfo(Call);
@@ -1232,7 +1236,9 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
     OriginList *ArgList = getOriginsList(*Args[I]);
     if (!ArgList)
       continue;
-    bool ShouldTrackArg = getTrackedArgInfo(FD, Args, I).has_value();
+    std::optional<LifetimeBoundParamInfo> TrackedArg =
+        getTrackedArgInfo(FD, Args, I);
+    bool ShouldTrackArg = TrackedArg.has_value();
     if (IsGslConstruction) {
       // TODO: document with code example.
       // std::string_view(const std::string_view& from)
@@ -1271,10 +1277,33 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
       KillSrc = false;
     } else if (ShouldTrackArg) {
       // Lifetimebound on a non-GSL-ctor function means the returned
-      // pointer/reference itself must not outlive the arguments. This
-      // only constrains the top-level origin.
+      // pointer/reference itself must not outlive the arguments.
+      // This usually only constrains the top-level origin.
+      // If the number of indirections differ between the parameter and the
+      // return value then we need to adjust the origin.
+      //
+      // The number of levels to peel is the indirection-depth difference
+      // between the argument and the result: for `T*&` returning `T*` that is
+      // one, but for a reference to a multi-level pointer (`T**&` returning
+      // `T*`) it can be more.
+      // This is restricted to raw-pointer pointees. For a reference to a
+      // gsl::Pointer (`const View&`) the returned view borrows the referent
+      // itself, so the outer origin is correct and must not peel.
+      OriginList *Src = ArgList;
+      if (const auto *PVD = dyn_cast<const ParmVarDecl *>(*TrackedArg)) {
+        if (isReferenceToPointer(PVD->getType())) {
+          size_t CallListLen = CallList->getLength();
+          size_t SrcLen = Src->getLength();
+          if (SrcLen > CallListLen) {
+            size_t LevelsToDrop = SrcLen - CallListLen;
+            for (size_t I = LevelsToDrop; I > 0; --I) {
+              Src = Src->peelOuterOrigin();
+            }
+          }
+        }
+      }
       CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-          CallList->getOuterOriginID(), ArgList->getOuterOriginID(), KillSrc));
+          CallList->getOuterOriginID(), Src->getOuterOriginID(), KillSrc));
       KillSrc = false;
     }
   }
