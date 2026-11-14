@@ -2197,13 +2197,11 @@ Address CodeGenFunction::OMPBuilderCBHelpers::getAddressOfLocalVariable(
   CodeGenModule &CGM = CGF.CGM;
   auto &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
 
-  if (!VD)
+  // Unreachable declaration: nothing can run the allocation.
+  if (!VD || !CGF.HaveInsertPoint())
     return Address::invalid();
   const VarDecl *CVD = VD->getCanonicalDecl();
   if (!isAllocatableDecl(CVD))
-    return Address::invalid();
-  // Unreachable declaration: nothing can run the allocation.
-  if (!CGF.HaveInsertPoint())
     return Address::invalid();
   llvm::Value *Size;
   CharUnits Align = CGM.getContext().getDeclAlign(CVD);

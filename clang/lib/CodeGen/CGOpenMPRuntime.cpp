@@ -12794,14 +12794,14 @@ Address CGOpenMPRuntime::getAddressOfLocalVariable(CodeGenFunction &CGF,
       UntiedRealAddr = I->second.second;
     }
   }
+  // Unreachable declaration: nothing can run the allocation.
+  if (!CGF.HaveInsertPoint())
+    return UntiedRealAddr.isValid() ? UntiedRealAddr : UntiedAddr;
   const VarDecl *CVD = VD->getCanonicalDecl();
   if (CVD->hasAttr<OMPAllocateDeclAttr>()) {
     // Use the default allocation.
     if (!isAllocatableDecl(VD))
       return UntiedAddr;
-    // Unreachable declaration: nothing can run the allocation.
-    if (!CGF.HaveInsertPoint())
-      return UntiedRealAddr.isValid() ? UntiedRealAddr : Address::invalid();
     llvm::Value *Size;
     CharUnits Align = CGM.getContext().getDeclAlign(CVD);
     if (CVD->getType()->isVariablyModifiedType()) {
