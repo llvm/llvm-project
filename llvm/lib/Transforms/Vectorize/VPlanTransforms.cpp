@@ -6364,14 +6364,33 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
         continue;
 
       VPValue *Op = VPI.getOperand(0);
-      auto *WideIV = getOptimizableIVOf(Op, PSE);
-      if (!WideIV)
+
+      // Also handle the IV plus a loop-invariant %c, e.g. %iv.c below:
+      //
+      //   %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+      //   %iv.c = add i64 %iv, %c
+      //   %iv.next = add i64 %iv, %step
+      //
+      // %iv.c is an induction with the same step as %iv, but starting at
+      // %start + %c, which is computed once in the vector preheader. This also
+      // covers the increment %iv.next, with %c == %step.
+      VPValue *IVOp = Op, *X, *Offset = nullptr;
+      bool IsSub = false;
+      auto MatchIV = m_VPValue(X, m_Isa<VPWidenIntOrFpInductionRecipe>());
+      if (match(Op, m_c_Add(MatchIV, m_VPValue(Offset)))) {
+        IVOp = X;
+      } else if (match(Op, m_Sub(MatchIV, m_VPValue(Offset)))) {
+        IVOp = X;
+        IsSub = true;
+      }
+
+      // An IV that is already truncated is not narrowed further.
+      auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(IVOp);
+      if (!WideIV || WideIV->isTruncated())
         continue;
 
-      // getOptimizableIVOf also matches an add of the IV and its step, which
-      // is not handled here.
-      // TODO: Also narrow truncates of the incremented IV.
-      if (Op != WideIV)
+      // The IV plus a value that changes in the loop is not an induction.
+      if (Offset && !Offset->isDefinedOutsideLoopRegions())
         continue;
 
       // A truncate that is not widened is left to the scalarization decisions
@@ -6392,10 +6411,16 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
               IsNarrowingProfitable, Range))
         continue;
 
+      VPValue *Start = WideIV->getStartValue();
+      if (Offset) {
+        VPBuilder PHBuilder(Plan.getVectorPreheader());
+        Start = IsSub ? PHBuilder.createSub(Start, Offset)
+                      : PHBuilder.createAdd(Start, Offset);
+      }
       // Wrap flags of the original induction do not hold in the truncated
       // type, so do not propagate them.
       auto *NarrowIV = new VPWidenIntOrFpInductionRecipe(
-          WideIV->getPHINode(), WideIV->getStartValue(), WideIV->getStepValue(),
+          WideIV->getPHINode(), Start, WideIV->getStepValue(),
           WideIV->getVFValue(), WideIV->getInductionDescriptor(),
           VPI.getScalarType(), VPIRFlags::WrapFlagsTy(false, false),
           VPI.getDebugLoc());
