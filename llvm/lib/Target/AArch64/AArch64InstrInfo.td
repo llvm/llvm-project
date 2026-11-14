@@ -3390,6 +3390,13 @@ defm BIC  : LogicalReg<0b00, 1, "bic",
 defm EON  : LogicalReg<0b10, 1, "eon",
                        BinOpFrag<(not (xor_like node:$LHS, node:$RHS))>>;
 defm EOR  : LogicalReg<0b10, 0, "eor", xor>;
+// Fold a 64-bit shifted operand into a truncated XOR without narrowing the base.
+let GISelShouldIgnore = 1 in
+def : Pat<(i32 (xor (trunc GPR64:$Rn),
+                    (trunc_isWorthFoldingALU logical_shifted_reg64:$Rm))),
+          (EXTRACT_SUBREG (EORXrs GPR64:$Rn, logical_shifted_reg64:$Rm),
+                          sub_32)>;
+
 defm ORN  : LogicalReg<0b01, 1, "orn",
                        BinOpFrag<(or node:$LHS, (not node:$RHS))>>;
 defm ORR  : LogicalReg<0b01, 0, "orr", or>;
