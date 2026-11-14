@@ -575,8 +575,8 @@ for.body:
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
-define void @simple_urem_skip_const_rem_amt(i32 %N) nounwind {
-; CHECK-LABEL: define void @simple_urem_skip_const_rem_amt(
+define void @simple_urem_const_rem_amt(i32 %N) nounwind {
+; CHECK-LABEL: define void @simple_urem_const_rem_amt(
 ; CHECK-SAME: i32 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP3_NOT:%.*]] = icmp eq i32 [[N]], 0
@@ -586,9 +586,12 @@ define void @simple_urem_skip_const_rem_amt(i32 %N) nounwind {
 ; CHECK:       [[FOR_COND_CLEANUP]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 4, %[[FOR_BODY_PREHEADER]] ], [ [[TMP3:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[I_04:%.*]] = phi i32 [ [[INC:%.*]], %[[FOR_BODY]] ], [ 4, %[[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[I_04]], 19
-; CHECK-NEXT:    tail call void @use.i32(i32 [[REM]])
+; CHECK-NEXT:    tail call void @use.i32(i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 19
+; CHECK-NEXT:    [[TMP3]] = select i1 [[TMP2]], i32 0, i32 [[TMP1]]
 ; CHECK-NEXT:    [[INC]] = add nuw i32 [[I_04]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
