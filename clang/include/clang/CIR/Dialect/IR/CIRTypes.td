@@ -38,7 +38,7 @@ class CIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
 
 def CIR_IntType : CIR_Type<"Int", "int", [
     DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
-        ["areCompatible", "verifyEntries"]>,
+        ["areCompatible", "verifyEntries", "getRequiredAlignment"]>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
     DeclareTypeInterfaceMethods<CIR_IntTypeInterface>,
 ]> {
@@ -208,7 +208,8 @@ def CIR_LongDouble : CIR_FloatType<"LongDouble", "long_double"> {
 //===----------------------------------------------------------------------===//
 
 def CIR_ComplexType : CIR_Type<"Complex", "complex", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
+        ["getRequiredAlignment"]>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>
 ]> {
   let summary = "CIR complex type";
@@ -457,7 +458,8 @@ def CIR_BoolType : CIR_Type<"Bool", "bool", [
 //===----------------------------------------------------------------------===//
 
 def CIR_ArrayType : CIR_Type<"Array", "array", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
+        ["getRequiredAlignment"]>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface, ["isSized"]>,
 ]> {
   let summary = "CIR array type";
@@ -583,7 +585,8 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 //===----------------------------------------------------------------------===//
 
 def CIR_MatrixType : CIR_Type<"Matrix", "matrix", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
+        ["getRequiredAlignment"]>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
 ]> {
   let summary = "CIR matrix type";
@@ -756,7 +759,8 @@ def CIR_VoidType : CIR_Type<"Void", "void"> {
 //===----------------------------------------------------------------------===//
 
 def CIR_BitFieldType : CIR_Type<"BitField", "bitfield", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
+        ["getRequiredAlignment"]>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>
 ]> {
   let summary = "CIR bit-field access unit member type";
@@ -896,7 +900,8 @@ def CIR_RecordMemberKind : CIR_I32Enum<
 //===----------------------------------------------------------------------===//
 
 def CIR_StructType : CIR_Type<"Struct", "struct", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
+        ["getRequiredAlignment"]>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
     MutableType,
 ]> {
@@ -1079,7 +1084,8 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
 //===----------------------------------------------------------------------===//
 
 def CIR_UnionType : CIR_Type<"Union", "union", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
+        ["getRequiredAlignment"]>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
     MutableType,
 ]> {

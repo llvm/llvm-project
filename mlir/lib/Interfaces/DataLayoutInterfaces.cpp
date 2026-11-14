@@ -219,6 +219,19 @@ uint64_t mlir::detail::getDefaultPreferredAlignment(
   reportMissingDataLayout(type);
 }
 
+uint64_t mlir::detail::getDefaultRequiredAlignment(
+    Type type, const DataLayout &dataLayout,
+    ArrayRef<DataLayoutEntryInterface> params) {
+  if (auto typeInterface = dyn_cast<DataLayoutTypeInterface>(type))
+    return typeInterface.getRequiredAlignment(dataLayout, params);
+  return dataLayout.getTypeABIAlignment(type);
+}
+
+uint64_t mlir::detail::getTypeABIAlignment(Type type,
+                                           const DataLayout &dataLayout) {
+  return dataLayout.getTypeABIAlignment(type);
+}
+
 std::optional<uint64_t> mlir::detail::getDefaultIndexBitwidth(
     Type type, const DataLayout &dataLayout,
     ArrayRef<DataLayoutEntryInterface> params) {
@@ -601,6 +614,18 @@ uint64_t mlir::DataLayout::getTypePreferredAlignment(Type t) const {
     if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
       return iface.getTypePreferredAlignment(ty, *this, list);
     return detail::getDefaultPreferredAlignment(ty, *this, list);
+  });
+}
+
+uint64_t mlir::DataLayout::getTypeRequiredAlignment(Type t) const {
+  checkValid();
+  return cachedLookup<uint64_t>(t, requiredAlignments, [&](Type ty) {
+    DataLayoutEntryList list;
+    if (originalLayout)
+      list = originalLayout.getSpecForType(ty.getTypeID());
+    if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+      return iface.getTypeRequiredAlignment(ty, *this, list);
+    return detail::getDefaultRequiredAlignment(ty, *this, list);
   });
 }
 

@@ -892,6 +892,19 @@ StructType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
   return computeStructAlignment(dataLayout);
 }
 
+uint64_t
+StructType::getRequiredAlignment(const ::mlir::DataLayout &dataLayout,
+                                 ::mlir::DataLayoutEntryListRef params) const {
+  if (getPacked())
+    return 1;
+  assert(isComplete() && "Cannot get layout of incomplete records");
+  uint64_t recordAlignment = 1;
+  for (mlir::Type ty : getMembers())
+    recordAlignment =
+        std::max(dataLayout.getTypeRequiredAlignment(ty), recordAlignment);
+  return recordAlignment;
+}
+
 // Sums the storage member's alloc size (if present) with the padding field's
 // size (if present).
 // A union whose member list came out empty has no storage type, so its whole
@@ -916,6 +929,17 @@ UnionType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
   if (!storage)
     return 1;
   return dataLayout.getTypeABIAlignment(storage);
+}
+
+uint64_t
+UnionType::getRequiredAlignment(const ::mlir::DataLayout &dataLayout,
+                                ::mlir::DataLayoutEntryListRef params) const {
+  if (getPacked())
+    return 1;
+  mlir::Type storage = getUnionStorageType(dataLayout);
+  if (!storage)
+    return 1;
+  return dataLayout.getTypeRequiredAlignment(storage);
 }
 
 unsigned
@@ -1102,7 +1126,7 @@ unsigned
 IntType::getStorageTypeWidth(const mlir::DataLayout &dataLayout) const {
   if (!isBitInt())
     return getWidth();
-  uint64_t alignBits = dataLayout.getTypeABIAlignment(*this) * 8;
+  uint64_t alignBits = dataLayout.getTypeRequiredAlignment(*this) * 8;
   return static_cast<unsigned>(llvm::alignTo(getWidth(), alignBits));
 }
 
@@ -1115,14 +1139,26 @@ IntType::getStorageTypeAlignment(const mlir::DataLayout &dataLayout) const {
   return dataLayout.getTypeABIAlignment(storageTy);
 }
 
+uint64_t
+IntType::getRequiredAlignment(const mlir::DataLayout &dataLayout,
+                              mlir::DataLayoutEntryListRef params) const {
+  if (!isBitInt())
+    return dataLayout.getTypeABIAlignment(*this);
+  uint64_t maxAlignBits = getBitIntMaxAlignBits(params);
+  uint64_t alignBits = std::min(
+      static_cast<uint64_t>(llvm::PowerOf2Ceil(getWidth())), maxAlignBits);
+  return std::max(alignBits / 8, static_cast<uint64_t>(1));
+}
+
 uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,
                                   mlir::DataLayoutEntryListRef params) const {
   unsigned width = getWidth();
   if (isBitInt()) {
-    uint64_t maxAlignBits = getBitIntMaxAlignBits(params);
-    uint64_t alignBits = std::min(
-        static_cast<uint64_t>(llvm::PowerOf2Ceil(width)), maxAlignBits);
-    return std::max(alignBits / 8, static_cast<uint64_t>(1));
+    uint64_t storageBytes = getStorageTypeWidth(dataLayout) / 8;
+    uint64_t storageAlign = getStorageTypeAlignment(dataLayout);
+    if (llvm::alignTo(storageBytes, storageAlign) == storageBytes)
+      return storageAlign;
+    return 1;
   }
   // Round up to a power-of-two byte alignment.  DataLayout consumers such as
   // llvm::Align require power-of-two alignments, and width / 8 is not a power
@@ -1322,6 +1358,12 @@ cir::ComplexType::getABIAlignment(const mlir::DataLayout &dataLayout,
   return dataLayout.getTypeABIAlignment(getElementType());
 }
 
+uint64_t cir::ComplexType::getRequiredAlignment(
+    const mlir::DataLayout &dataLayout,
+    mlir::DataLayoutEntryListRef params) const {
+  return dataLayout.getTypeRequiredAlignment(getElementType());
+}
+
 FuncType FuncType::clone(TypeRange inputs, TypeRange results) const {
   assert(results.size() == 1 && "expected exactly one result type");
   return get(llvm::to_vector(inputs), results[0], isVarArg());
@@ -1515,6 +1557,12 @@ ArrayType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
   return dataLayout.getTypeABIAlignment(getElementType());
 }
 
+uint64_t
+ArrayType::getRequiredAlignment(const ::mlir::DataLayout &dataLayout,
+                                ::mlir::DataLayoutEntryListRef params) const {
+  return dataLayout.getTypeRequiredAlignment(getElementType());
+}
+
 //===----------------------------------------------------------------------===//
 //  BitFieldType Definitions
 //===----------------------------------------------------------------------===//
@@ -1575,6 +1623,14 @@ BitFieldType::getABIAlignment(const mlir::DataLayout &dataLayout,
   // the record layout walk a zero-width bit-field without skipping it.
   if (mlir::Type storage = getStorageType())
     return dataLayout.getTypeABIAlignment(storage);
+  return 1;
+}
+
+uint64_t
+BitFieldType::getRequiredAlignment(const mlir::DataLayout &dataLayout,
+                                   mlir::DataLayoutEntryListRef params) const {
+  if (mlir::Type storage = getStorageType())
+    return dataLayout.getTypeRequiredAlignment(storage);
   return 1;
 }
 
@@ -1704,6 +1760,12 @@ uint64_t
 cir::MatrixType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                                  ::mlir::DataLayoutEntryListRef params) const {
   return dataLayout.getTypeABIAlignment(getElementType());
+}
+
+uint64_t cir::MatrixType::getRequiredAlignment(
+    const ::mlir::DataLayout &dataLayout,
+    ::mlir::DataLayoutEntryListRef params) const {
+  return dataLayout.getTypeRequiredAlignment(getElementType());
 }
 
 mlir::LogicalResult cir::MatrixType::verify(

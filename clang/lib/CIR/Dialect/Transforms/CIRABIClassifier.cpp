@@ -116,7 +116,7 @@ static llvm::Align recordDeclaredAlign(ModuleOp modOp, cir::RecordType recTy,
                                        const DataLayout &dl) {
   auto layout = cir::tryGetRecordLayout(modOp, recTy.getName());
   if (!layout)
-    return llvm::Align(dl.getTypeABIAlignment(recTy));
+    return llvm::Align(dl.getTypeRequiredAlignment(recTy));
   return llvm::Align(layout.getRecordAlign());
 }
 
@@ -128,7 +128,7 @@ static llvm::Align recordUnadjustedAlign(ModuleOp modOp, cir::RecordType recTy,
                                          const DataLayout &dl) {
   auto layout = cir::tryGetRecordLayout(modOp, recTy.getName());
   if (!layout)
-    return llvm::Align(dl.getTypeABIAlignment(recTy));
+    return llvm::Align(dl.getTypeRequiredAlignment(recTy));
   return llvm::Align(layout.getUnadjustedAlign());
 }
 
@@ -341,7 +341,7 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
   return llvm::TypeSwitch<mlir::Type, const llvm::abi::Type *>(type)
       .Case([&](cir::IntType intTy) {
         return tb.getIntegerType(intTy.getWidth(),
-                                 llvm::Align(dl.getTypeABIAlignment(type)),
+                                 llvm::Align(dl.getTypeRequiredAlignment(type)),
                                  intTy.isSigned(), intTy.getIsBitInt());
       })
       .Case([&](cir::PointerType ptrTy) {
@@ -353,20 +353,22 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         // Any address-space attribute is a qualifier.
         bool hasAddressSpaceQualifier = ptrTy.getAddrSpace() != nullptr;
         return tb.getPointerType(dl.getTypeSizeInBits(type),
-                                 llvm::Align(dl.getTypeABIAlignment(type)),
+                                 llvm::Align(dl.getTypeRequiredAlignment(type)),
                                  addrSpace, hasAddressSpaceQualifier);
       })
       .Case([&](cir::VPtrType) {
         // cir::VPtrType carries no address-space parameter yet, so this
         // always maps into the default one until that gap closes.
         assert(!cir::MissingFeatures::addressSpace());
-        return tb.getPointerType(dl.getTypeSizeInBits(type),
-                                 llvm::Align(dl.getTypeABIAlignment(type)));
+        return tb.getPointerType(
+            dl.getTypeSizeInBits(type),
+            llvm::Align(dl.getTypeRequiredAlignment(type)));
       })
       .Case([&](cir::BoolType) {
         // A bool is a one-bit integer to the classifier, as QualTypeMapper
         // maps it, so a bool vector is sized one bit per element.
-        return tb.getIntegerType(1, llvm::Align(dl.getTypeABIAlignment(type)),
+        return tb.getIntegerType(1,
+                                 llvm::Align(dl.getTypeRequiredAlignment(type)),
                                  /*Signed=*/false);
       })
       .Case([&](cir::VoidType) { return tb.getVoidType(); })
@@ -374,19 +376,19 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         // LongDoubleType reports its underlying format's semantics, so the
         // classifier sees x87 or IEEE quad rather than the wrapper.
         return tb.getFloatType(fpTy.getFloatSemantics(),
-                               llvm::Align(dl.getTypeABIAlignment(type)));
+                               llvm::Align(dl.getTypeRequiredAlignment(type)));
       })
       .Case([&](cir::ComplexType complexTy) {
         return tb.getComplexType(
             mapCIRType(complexTy.getElementType(), typeMapper, dl, modOp),
-            llvm::Align(dl.getTypeABIAlignment(type)));
+            llvm::Align(dl.getTypeRequiredAlignment(type)));
       })
       .Case([&](cir::VectorType vecTy) {
         // isSupportedType rejects a scalable vector, so the element count is
         // always fixed here.
         return tb.getVectorType(
             mapCIRType(vecTy.getElementType(), typeMapper, dl, modOp),
-            vecTy.getSize(), llvm::Align(dl.getTypeABIAlignment(type)));
+            vecTy.getSize(), llvm::Align(dl.getTypeRequiredAlignment(type)));
       })
       .Case([&](cir::ArrayType arrTy) {
         const llvm::abi::Type *elemAbi =

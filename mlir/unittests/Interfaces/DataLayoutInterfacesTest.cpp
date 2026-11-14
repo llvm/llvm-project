@@ -257,6 +257,34 @@ struct SingleQueryType
   }
 };
 
+/// A 36-byte type whose required alignment is lower than its ABI alignment.
+struct RequiredAlignType
+    : public Type::TypeBase<RequiredAlignType, Type, TypeStorage,
+                            DataLayoutTypeInterface::Trait> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(RequiredAlignType)
+
+  using Base::Base;
+
+  static constexpr StringLiteral name = "test.required_align";
+
+  static RequiredAlignType get(MLIRContext *ctx) { return Base::get(ctx); }
+
+  llvm::TypeSize getTypeSizeInBits(const DataLayout &layout,
+                                   DataLayoutEntryListRef params) const {
+    return llvm::TypeSize::getFixed(36 * 8);
+  }
+
+  uint64_t getABIAlignment(const DataLayout &layout,
+                           DataLayoutEntryListRef params) const {
+    return 64;
+  }
+
+  uint64_t getRequiredAlignment(const DataLayout &layout,
+                                DataLayoutEntryListRef params) const {
+    return 16;
+  }
+};
+
 /// A types that is not subject to data layout.
 struct TypeNoLayout : public Type::TypeBase<TypeNoLayout, Type, TypeStorage> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TypeNoLayout)
@@ -358,7 +386,7 @@ struct DLTestDialect : Dialect {
     ctx->getOrLoadDialect<DLTIDialect>();
     addAttributes<CustomDataLayoutSpec>();
     addOperations<OpWithLayout, OpWith7BitByte>();
-    addTypes<SingleQueryType, TypeNoLayout>();
+    addTypes<SingleQueryType, RequiredAlignType, TypeNoLayout>();
   }
   static StringRef getDialectNamespace() { return "dltest"; }
 
@@ -536,6 +564,33 @@ module {}
   EXPECT_EQ(layout.getTypeSize(scalableVec), llvm::TypeSize::getScalable(6));
   EXPECT_EQ(layout.getTypeAllocSize(scalableVec),
             llvm::TypeSize::getScalable(8));
+}
+
+TEST(DataLayout, RequiredAlignment) {
+  const char *ir = R"MLIR(
+module {}
+  )MLIR";
+
+  DialectRegistry registry;
+  registry.insert<DLTIDialect, DLTestDialect>();
+  MLIRContext ctx(registry);
+  ctx.getOrLoadDialect<DLTestDialect>();
+
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
+  DataLayout layout(module.get());
+
+  // Without an override, the required alignment is the ABI alignment.
+  Type i72 = IntegerType::get(&ctx, 72);
+  EXPECT_EQ(layout.getTypeRequiredAlignment(i72), 4u);
+  EXPECT_EQ(layout.getTypeRequiredAlignment(Float16Type::get(&ctx)), 2u);
+
+  // The allocation size rounds to the ABI alignment, not the storage
+  // alignment.
+  Type requiredAlign = RequiredAlignType::get(&ctx);
+  EXPECT_EQ(layout.getTypeSize(requiredAlign), 36u);
+  EXPECT_EQ(layout.getTypeABIAlignment(requiredAlign), 64u);
+  EXPECT_EQ(layout.getTypeRequiredAlignment(requiredAlign), 16u);
+  EXPECT_EQ(layout.getTypeAllocSize(requiredAlign), 64u);
 }
 
 TEST(DataLayout, NullSpec) {

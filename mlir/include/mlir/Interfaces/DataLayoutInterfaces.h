@@ -65,6 +65,16 @@ uint64_t
 getDefaultPreferredAlignment(Type type, const DataLayout &dataLayout,
                              ArrayRef<DataLayoutEntryInterface> params);
 
+/// Default handler for the required alignment request. Dispatches to the
+/// DataLayoutTypeInterface for types that implement it, and returns the ABI
+/// alignment for other types.
+uint64_t getDefaultRequiredAlignment(Type type, const DataLayout &dataLayout,
+                                     ArrayRef<DataLayoutEntryInterface> params);
+
+/// Returns `dataLayout.getTypeABIAlignment(type)`. Interface default
+/// implementations, which are defined before DataLayout, call this.
+uint64_t getTypeABIAlignment(Type type, const DataLayout &dataLayout);
+
 /// Default handler for the index bitwidth request. Computes the result for
 /// the built-in index type and dispatches to the DataLayoutTypeInterface for
 /// other types.
@@ -196,6 +206,12 @@ public:
   /// Returns the preferred of the given type in the current scope.
   uint64_t getTypePreferredAlignment(Type t) const;
 
+  /// Returns the alignment that the language requires of an object of the
+  /// given type in the current scope. Code accessing such an object may assume
+  /// this alignment and no more. It equals the ABI alignment unless the type
+  /// overrides it.
+  uint64_t getTypeRequiredAlignment(Type t) const;
+
   /// Returns the bitwidth that should be used when performing index
   /// computations for the given pointer-like type in the current scope. If the
   /// type is not a pointer-like type, it returns std::nullopt.
@@ -261,6 +277,7 @@ private:
   mutable DenseMap<Type, llvm::TypeSize> bitsizes;
   mutable DenseMap<Type, uint64_t> abiAlignments;
   mutable DenseMap<Type, uint64_t> preferredAlignments;
+  mutable DenseMap<Type, uint64_t> requiredAlignments;
   mutable DenseMap<Type, std::optional<uint64_t>> indexBitwidths;
 
   /// Cache for the endianness.
