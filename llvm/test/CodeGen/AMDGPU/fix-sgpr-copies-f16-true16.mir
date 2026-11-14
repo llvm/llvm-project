@@ -476,7 +476,7 @@ body:             |
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_16 = COPY [[COPY]].lo16
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_16 = COPY [[COPY]].hi16
     ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY1]]
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_lo16 = COPY %0.hi16
