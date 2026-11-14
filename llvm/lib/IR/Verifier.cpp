@@ -6396,6 +6396,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   switch (ID) {
   default:
     break;
+  case Intrinsic::icall_branch_funnel:
+    Check(Call.isMustTailCall(),
+          "llvm.icall.branch.funnel must be called with musttail", Call);
+    break;
   case Intrinsic::assume: {
     if (Call.hasOperandBundles()) {
       auto *Cond = dyn_cast<ConstantInt>(Call.getArgOperand(0));

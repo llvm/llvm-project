@@ -27306,6 +27306,31 @@ attach various forms of information to operands that dominate specific
 uses.  It is not meant for general use, only for building temporary
 renaming forms that require value splits at certain points.
 
+(int_icall_branch_funnel)=
+
+#### '`llvm.icall.branch.funnel`' Intrinsic
+
+##### Syntax:
+
+```
+declare void @llvm.icall.branch.funnel(...)
+```
+
+##### Arguments:
+
+The first argument is a selector pointer. The remaining arguments are one or
+more pairs of addresses and corresponding target functions. The addresses must
+be constant offsets from the same global object, and the targets must be global
+addresses.
+
+##### Overview:
+
+The `llvm.icall.branch.funnel` intrinsic uses the selector to choose a target
+from the address and target pairs, then tail calls that target with the
+forwarded arguments. The branch funnel uses direct branches, allowing
+speculative execution of the listed targets without an indirect branch to an
+arbitrary address. A call to this intrinsic must be marked `musttail`.
+
 (type.test)=
 
 #### '`llvm.type.test`' Intrinsic
