@@ -37,6 +37,48 @@ def PoisonAttr : UB_Attr<"Poison", "poison", [PoisonAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
+// AssumeOp
+//===----------------------------------------------------------------------===//
+
+def AssumeOp : UB_Op<"assume", [Pure, AllTypesMatch<["value", "result"]>]> {
+  let summary = "Refine an SSA value with an assumed predicate";
+  let description = [{
+    Returns `value` if `predicate` holds for `value` and `predicateOperands`,
+    and poison otherwise. Poison in the predicated value propagates to the
+    result. The predicate defines how poison in additional operands is handled.
+    Executing this operation does not itself cause immediate undefined behavior,
+    even if the predicate is false.
+
+    The predicate holds for the result only. It does not constrain other uses
+    of `value`. Data flow analyses may use the predicate to reason about
+    properties of the result.
+
+    The predicate attribute must implement `AssumePredicateAttrInterface`,
+    which verifies the predicated value type and the number and types of
+    additional operands.
+
+    Example:
+
+    ```mlir
+    %positive = ub.assume %x, #arith.assume_cmpi<sgt, 0 : i32>() : i32
+    ```
+  }];
+
+  let arguments = (ins AnyType:$value,
+                       AssumePredicateAttrInterface:$predicate,
+                       Variadic<AnyType>:$predicateOperands);
+  let results = (outs AnyType:$result);
+
+  let assemblyFormat = [{
+    $value `,` $predicate `(`
+    ($predicateOperands^ `:` type($predicateOperands))? `)`
+    attr-dict `:` type($value)
+  }];
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // PoisonOp
 //===----------------------------------------------------------------------===//
 

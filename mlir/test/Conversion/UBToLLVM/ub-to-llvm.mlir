@@ -23,3 +23,11 @@ func.func @check_unrechable() {
 // CHECK: llvm.unreachable
   ub.unreachable
 }
+
+// CHECK-LABEL: func.func @drop_assumption(
+//  CHECK-SAME: %[[VALUE:[^:]+]]: i32) -> i32 {
+//  CHECK-NEXT:   return %[[VALUE]] : i32
+func.func @drop_assumption(%value: i32) -> i32 {
+  %assumed = ub.assume %value, #arith.assume_cmpi<sgt, 0 : i32>() : i32
+  return %assumed : i32
+}
