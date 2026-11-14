@@ -10,16 +10,6 @@
 
 ---
 name:            peephole_substitute_cmp_adcs
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr64 }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: gpr64 }
-  - { id: 3, class: gpr64 }
-  - { id: 4, class: gpr64 }
-  - { id: 5, class: gpr64common }
-  - { id: 6, class: gpr32 }
-  - { id: 7, class: gpr64 }
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -49,16 +39,6 @@ body:             |
 ...
 ---
 name:            peephole_substitute_cmp_adcswr
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr32 }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr32 }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32common }
-  - { id: 6, class: gpr32 }
-  - { id: 7, class: gpr32 }
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $w3
@@ -88,16 +68,6 @@ body:             |
 ...
 ---
 name:            peephole_substitute_cmp_sbcsxr
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr64 }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: gpr64 }
-  - { id: 3, class: gpr64 }
-  - { id: 4, class: gpr64 }
-  - { id: 5, class: gpr64common }
-  - { id: 6, class: gpr32 }
-  - { id: 7, class: gpr64 }
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -127,13 +97,6 @@ body:             |
 ...
 ---
 name:            peephole_substitute_cmp_addwrs
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr32 }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32common }
-  - { id: 3, class: gpr32 }
-  - { id: 4, class: gpr32 }
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -157,13 +120,6 @@ body:             |
 ...
 ---
 name:            peephole_substitute_cmp_addxrs
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr64 }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: gpr64common }
-  - { id: 3, class: gpr32 }
-  - { id: 4, class: gpr64 }
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -187,13 +143,6 @@ body:             |
 ...
 ---
 name:            peephole_substitute_cmp_subwrs
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr32 }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32common }
-  - { id: 3, class: gpr32 }
-  - { id: 4, class: gpr32 }
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -217,13 +166,6 @@ body:             |
 ...
 ---
 name:            peephole_substitute_cmp_subxrs
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr64 }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: gpr64common }
-  - { id: 3, class: gpr32 }
-  - { id: 4, class: gpr64 }
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -247,16 +189,6 @@ body:             |
 ...
 ---
 name:            peephole_substitute_cmp_sbcswr
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr32 }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr32 }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32common }
-  - { id: 6, class: gpr32 }
-  - { id: 7, class: gpr32 }
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $w3

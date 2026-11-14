@@ -24,22 +24,11 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 #define DEBUG_TYPE "amdgpu-late-codegenprepare"
 
 using namespace llvm;
-
-// Scalar load widening needs running after load-store-vectorizer as that pass
-// doesn't handle overlapping cases. In addition, this pass enhances the
-// widening to handle cases where scalar sub-dword loads are naturally aligned
-// only but not dword aligned.
-static cl::opt<bool>
-    WidenLoads("amdgpu-late-codegenprepare-widen-constant-loads",
-               cl::desc("Widen sub-dword constant address space loads in "
-                        "AMDGPULateCodeGenPrepare"),
-               cl::ReallyHidden, cl::init(true));
 
 namespace {
 
@@ -179,7 +168,7 @@ public:
       if (const auto *Intr = dyn_cast<IntrinsicInst>(II))
         return Intr->getIntrinsicID() == Intrinsic::amdgcn_perm;
       return isa<PHINode, ShuffleVectorInst, InsertElementInst,
-                 ExtractElementInst, CastInst>(II);
+                 ExtractElementInst, CastInst, FreezeInst>(II);
     };
 
     while (!UserList.empty()) {
@@ -506,7 +495,7 @@ bool AMDGPULateCodeGenPrepare::canWidenScalarExtLoad(LoadInst &LI) const {
 }
 
 bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
-  if (!WidenLoads)
+  if (!ST.getCLOpts().late_codegenprepare_widen_constant_loads)
     return false;
 
   // Skip if that load is already aligned on DWORD at least as it's handled in

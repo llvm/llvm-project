@@ -206,7 +206,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
                current_pc);
   }
 
-  if (IsTrapHandlerSymbol(process, m_sym_ctx)) {
+  if (IsTrapHandler(process)) {
     m_frame_type = eTrapHandlerFrame;
   } else {
     // FIXME:  Detect eDebuggerFrame here.
@@ -570,11 +570,11 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
       decr_pc_and_recompute_addr_range = false;
     else
       decr_pc_and_recompute_addr_range = true;
-  } else if (IsTrapHandlerSymbol(process, m_sym_ctx)) {
+  } else if (IsTrapHandler(process)) {
     // Signal dispatch may set the return address of the handler it calls to
-    // point to the first byte of a return trampoline (like __kernel_rt_sigreturn),
-    // so do not decrement and recompute if the symbol we already found is a trap
-    // handler.
+    // point to the first byte of a return trampoline (like
+    // __kernel_rt_sigreturn), so do not decrement and recompute if the current
+    // function is a trap handler.
     decr_pc_and_recompute_addr_range = false;
   } else if (m_behaves_like_zeroth_frame) {
     decr_pc_and_recompute_addr_range = false;
@@ -622,7 +622,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
     m_current_offset_backed_up_one = std::nullopt;
   }
 
-  if (IsTrapHandlerSymbol(process, m_sym_ctx)) {
+  if (IsTrapHandler(process)) {
     m_frame_type = eTrapHandlerFrame;
   } else {
     // FIXME:  Detect eDebuggerFrame here.
@@ -1312,9 +1312,21 @@ bool RegisterContextUnwind::IsSkipFrame() const {
   return m_frame_type == eSkipFrame;
 }
 
-bool RegisterContextUnwind::IsTrapHandlerSymbol(
-    lldb_private::Process *process,
-    const lldb_private::SymbolContext &m_sym_ctx) const {
+bool RegisterContextUnwind::IsTrapHandler(Process *process) const {
+  // See if signal-frame CFI exists at m_current_pc.
+  ModuleSP module_sp = m_current_pc.GetModule();
+  if (m_current_pc.IsValid() && module_sp && module_sp->GetObjectFile()) {
+    if (DWARFCallFrameInfo *eh_frame =
+            module_sp->GetUnwindTable().GetEHFrameInfo()) {
+      std::unique_ptr<UnwindPlan> plan_up =
+          eh_frame->GetUnwindPlan(m_current_pc);
+      if (plan_up && plan_up->GetUnwindPlanForSignalTrap() == eLazyBoolYes &&
+          plan_up->PlanValidAtAddress(m_current_pc))
+        return true;
+    }
+  }
+
+  // Check trap handler names provided by platform.
   PlatformSP platform_sp(process->GetTarget().GetPlatform());
   if (platform_sp) {
     const std::vector<std::string> &trap_handler_names(
@@ -1328,6 +1340,8 @@ bool RegisterContextUnwind::IsTrapHandlerSymbol(
       }
     }
   }
+
+  // Check trap handler names provided by user.
   const std::vector<std::string> &user_specified_trap_handler_names =
       m_parent_unwind.GetUserSpecifiedTrapHandlerFunctionNames();
   for (const std::string &name : user_specified_trap_handler_names) {
@@ -1339,6 +1353,7 @@ bool RegisterContextUnwind::IsTrapHandlerSymbol(
     }
   }
 
+  // This is not a trap handler.
   return false;
 }
 

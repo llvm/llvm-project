@@ -24,6 +24,7 @@ def DerivedAttributeOpInterface : OpInterface<"DerivedAttributeOpInterface"> {
     derived attributes and can be used to simplify translations.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/DerivedAttributeOpInterface.h"];
 
   let methods = [
     StaticInterfaceMethod<

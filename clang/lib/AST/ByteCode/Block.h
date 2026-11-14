@@ -84,14 +84,14 @@ public:
     return sizeof(Block) + getMetadataSize(K) + D->getAllocSize();
   }
 
-  static constexpr unsigned getMetadataSize(BlockKind K) {
+  static unsigned getMetadataSize(BlockKind K) {
     switch (K) {
     case None:
       return 0;
     case Global:
       return sizeof(GlobalInlineDescriptor);
     case Local:
-      return sizeof(InlineDescriptor);
+      return sizeof(LocalInlineDescriptor);
     }
     llvm_unreachable("Unhandled Block kind");
   }
@@ -150,7 +150,7 @@ public:
 
     if constexpr (std::is_same_v<T, GlobalInlineDescriptor>)
       assert(Kind == Global);
-    else if constexpr (std::is_same_v<T, InlineDescriptor>)
+    else if constexpr (std::is_same_v<T, LocalInlineDescriptor>)
       assert(Kind == Local);
     else
       assert(Kind == None);

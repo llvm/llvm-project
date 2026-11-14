@@ -3078,8 +3078,7 @@ void AMDGPUInstructionSelector::getAddrModeInfo(const MachineInstr &Load,
     const MachineRegisterInfo &MRI, SmallVectorImpl<GEPInfo> &AddrInfo) const {
 
   unsigned OpNo = Load.getOpcode() == AMDGPU::G_PREFETCH ? 0 : 1;
-  const MachineInstr *PtrMI =
-      MRI.getUniqueVRegDef(Load.getOperand(OpNo).getReg());
+  const MachineInstr *PtrMI = MRI.getVRegDef(Load.getOperand(OpNo).getReg());
 
   assert(PtrMI);
 
@@ -3090,7 +3089,7 @@ void AMDGPUInstructionSelector::getAddrModeInfo(const MachineInstr &Load,
 
   for (unsigned i = 1; i != 3; ++i) {
     const MachineOperand &GEPOp = PtrMI->getOperand(i);
-    const MachineInstr *OpDef = MRI.getUniqueVRegDef(GEPOp.getReg());
+    const MachineInstr *OpDef = MRI.getVRegDef(GEPOp.getReg());
     assert(OpDef);
     if (i == 2 && isConstant(*OpDef)) {
       // TODO: Could handle constant base + variable offset, but a combine
@@ -3170,7 +3169,7 @@ static bool isVCmpResult(Register Reg, MachineRegisterInfo &MRI) {
   if (Reg.isPhysical())
     return false;
 
-  MachineInstr &MI = *MRI.getUniqueVRegDef(Reg);
+  MachineInstr &MI = *MRI.getVRegDef(Reg);
   const unsigned Opcode = MI.getOpcode();
 
   if (Opcode == AMDGPU::COPY)
@@ -4564,10 +4563,10 @@ bool AMDGPUInstructionSelector::selectStackRestore(MachineInstr &MI) const {
 
   if (!WaveAddr) {
     WaveAddr = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
-    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_LSHR_B32), WaveAddr)
-      .addReg(SrcReg)
-      .addImm(Subtarget->getWavefrontSizeLog2())
-      .setOperandDead(3); // Dead scc
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_LSHL_B32), WaveAddr)
+        .addReg(SrcReg)
+        .addImm(Subtarget->getWavefrontSizeLog2())
+        .setOperandDead(3); // Dead scc
   }
 
   BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), SP)
@@ -4947,6 +4946,14 @@ AMDGPUInstructionSelector::selectVOP3NoMods(MachineOperand &Root) const {
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.addReg(Reg); },
   }};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVOP3NoOpSelMods(MachineOperand &Root) const {
+  Register Unused;
+  if (isExtractHiElt(*MRI, Root.getReg(), Unused))
+    return {};
+  return selectVOP3NoMods(Root);
 }
 
 enum class SrcStatus {
@@ -5749,7 +5756,6 @@ AMDGPUInstructionSelector::selectWMMAModsF16NegAbs(MachineOperand &Root) const {
 
     // All elements had ModOpcode modifier
     if (CV->getNumSources() == EltsV2F16.size()) {
-      MachineIRBuilder B(*Root.getParent());
       selectWMMAModsNegAbs(ModOpcode, Mods, EltsV2F16, Src, Root.getParent(),
                            *MRI);
     }
@@ -7641,6 +7647,13 @@ void AMDGPUInstructionSelector::renderTruncTImm(MachineInstrBuilder &MIB,
     MIB.addImm(Imm);
   else
     MIB.addImm(Op.getImm());
+}
+
+void AMDGPUInstructionSelector::renderPrefetchLen(MachineInstrBuilder &MIB,
+                                                  const MachineInstr &MI,
+                                                  int OpIdx) const {
+  Register Len = MI.getOperand(OpIdx).getReg();
+  MIB.addImm(*getIConstantVRegSExtVal(Len, *MRI) & 0x1f);
 }
 
 void AMDGPUInstructionSelector::renderZextBoolTImm(MachineInstrBuilder &MIB,

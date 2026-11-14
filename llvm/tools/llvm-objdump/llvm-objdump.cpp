@@ -79,7 +79,6 @@
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
-#include <cctype>
 #include <cstring>
 #include <optional>
 #include <set>

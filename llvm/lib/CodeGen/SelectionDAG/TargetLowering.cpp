@@ -222,6 +222,13 @@ TargetLowering::getArgListForFunctionType(FunctionType *FuncTy,
   return Args;
 }
 
+std::pair<SDValue, SDValue> TargetLowering::makeLibCall(
+    SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT, ArrayRef<SDValue> Ops,
+    MakeLibCallOptions CallOptions, const SDLoc &dl, SDValue Chain) const {
+  return makeLibCall(DAG, DAG.getLibcalls().getLibcallImpl(LC), RetVT, Ops,
+                     CallOptions, dl, Chain);
+}
+
 /// Generate a libcall taking the given operands as arguments and returning a
 /// result of type RetVT.
 std::pair<SDValue, SDValue>
@@ -277,8 +284,8 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::LibcallImpl LibcallImpl,
 
   CLI.setDebugLoc(dl)
       .setChain(InChain)
-      .setLibCallee(getLibcallImplCallingConv(LibcallImpl), RetTy, OrigRetTy,
-                    Callee, std::move(Args))
+      .setLibCallee(DAG.getLibcalls().getLibcallImplCallingConv(LibcallImpl),
+                    RetTy, OrigRetTy, Callee, std::move(Args))
       .setNoReturn(CallOptions.DoesNotReturn)
       .setDiscardResult(!CallOptions.IsReturnValueUsed)
       .setIsPostTypeLegalization(CallOptions.IsPostTypeLegalization)
@@ -8941,7 +8948,7 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
   // UDIVREM can lower it instead.
   bool CanDecomposeUREMWithoutMulHi =
       Opcode == ISD::UREM &&
-      getLibcallImpl(RTLIB::getUREM(N->getValueType(0))) ==
+      DAG.getLibcalls().getLibcallImpl(RTLIB::getUREM(N->getValueType(0))) ==
           RTLIB::Unsupported &&
       isOperationLegalOrCustom(ISD::UDIVREM, HiLoVT);
   if (!CanDecomposeUREMWithoutMulHi &&
@@ -13152,7 +13159,7 @@ void TargetLowering::forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl,
   else if (WideVT == MVT::i128)
     LC = RTLIB::MUL_I128;
 
-  RTLIB::LibcallImpl LibcallImpl = getLibcallImpl(LC);
+  RTLIB::LibcallImpl LibcallImpl = DAG.getLibcalls().getLibcallImpl(LC);
   if (LibcallImpl == RTLIB::Unsupported) {
     forceExpandMultiply(DAG, dl, Signed, Lo, Hi, LHS, RHS);
     return;
@@ -14318,6 +14325,31 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
   return DAG.getLoad(VecVT, DL, Chain, StackPtr, PtrInfo, Alignment);
 }
 
+SDValue TargetLowering::expandVECTOR_SHUFFLE_VAR(SDNode *Node,
+                                                 SelectionDAG &DAG) const {
+  SDLoc DL(Node);
+  SDValue V = Node->getOperand(0);
+  SDValue Mask = Node->getOperand(1);
+
+  EVT VecVT = Node->getValueType(0);
+  EVT ScalarVT = VecVT.getScalarType();
+
+  // Needs to be handled by targets that have scalable vector types.
+  if (VecVT.isScalableVector())
+    reportFatalUsageError(
+        "Cannot expand vector_shuffle_var for scalable vectors.");
+
+  // Res[i] = V[Mask[i]]. Out-of-range extracts are undefined, as required.
+  MVT IdxVT = getVectorIdxTy(DAG.getDataLayout());
+  SmallVector<SDValue, 16> Elts;
+  DAG.ExtractVectorElements(Mask, Elts);
+  for (SDValue &Elt : Elts) {
+    SDValue Idx = DAG.getZExtOrTrunc(Elt, DL, IdxVT);
+    Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, V, Idx);
+  }
+  return DAG.getBuildVector(VecVT, DL, Elts);
+}
+
 SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
@@ -14532,7 +14564,8 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
 /// Given a store node \p StoreNode, return true if it is safe to fold that node
 /// into \p FPNode, which expands to a library call with output pointers.
 static bool canFoldStoreIntoLibCallOutputPointers(StoreSDNode *StoreNode,
-                                                  SDNode *FPNode) {
+                                                  SDNode *FPNode,
+                                                  unsigned MaxSteps) {
   SmallVector<const SDNode *, 8> Worklist;
   SmallVector<const SDNode *, 8> DeferredNodes;
   SmallPtrSet<const SDNode *, 16> Visited;
@@ -14542,7 +14575,6 @@ static bool canFoldStoreIntoLibCallOutputPointers(StoreSDNode *StoreNode,
     if (Op.getNode() != FPNode)
       Worklist.push_back(Op.getNode());
 
-  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
   while (!Worklist.empty()) {
     const SDNode *Node = Worklist.pop_back_val();
     auto [_, Inserted] = Visited.insert(Node);
@@ -14582,13 +14614,14 @@ bool TargetLowering::expandMultipleResultFPLibCall(
     return false;
 
   RTLIB::LibcallImpl LibcallImpl =
-      getLibcallLoweringInfo().getVectorLibcallImplOrMasked(LC);
+      DAG.getLibcalls().getVectorLibcallImplOrMasked(LC);
   if (LibcallImpl == RTLIB::Unsupported)
     return false;
 
   LLVMContext &Ctx = *DAG.getContext();
   EVT VT = Node->getValueType(0);
   unsigned NumResults = Node->getNumValues();
+  unsigned MaxSteps = DAG.getHasPredecessorMaxSteps();
 
   // Find users of the node that store the results (and share input chains). The
   // destination pointers can be used instead of creating stack allocations.
@@ -14617,7 +14650,7 @@ bool TargetLowering::expandMultipleResultFPLibCall(
     // Avoid:
     //  1. Creating cyclic dependencies.
     //  2. Expanding the node to a call within a call sequence.
-    if (!canFoldStoreIntoLibCallOutputPointers(ST, Node))
+    if (!canFoldStoreIntoLibCallOutputPointers(ST, Node, MaxSteps))
       continue;
     ResultStores[ResNo] = ST;
     StoresInChain = ST->getChain();
@@ -14661,7 +14694,8 @@ bool TargetLowering::expandMultipleResultFPLibCall(
       DAG.getExternalSymbol(LibcallImpl, getPointerTy(DAG.getDataLayout()));
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(DL).setChain(InChain).setLibCallee(
-      getLibcallImplCallingConv(LibcallImpl), RetType, Callee, std::move(Args));
+      DAG.getLibcalls().getLibcallImplCallingConv(LibcallImpl), RetType, Callee,
+      std::move(Args));
 
   auto [Call, CallChain] = LowerCallTo(CLI);
 

@@ -130,6 +130,10 @@ defm : ValueField<"dot-ddg-filename-prefix", "StringRef", "\"ddg\"",
 defm : BoolField<"dot-ddg-only", "false",
   "simple ddg dot graph">;
 
+// DXILMetadataAnalysis.cpp
+defm : OptionalEnumField<"compress-srci", "dxbc::SourceInfo::Contents::CompressionType", "none,zlib", ["dxbc::SourceInfo::Contents::CompressionType::None", "dxbc::SourceInfo::Contents::CompressionType::Zlib"],
+  "Choose SCRI part compression">;
+
 // Delinearization.cpp
 defm : BoolField<"delinearize-use-fixed-size-array-heuristic", "true",
   "When printing analysis, use the heuristic for fixed-size arrays if the default delinearization fails">;
@@ -228,6 +232,8 @@ defm : BoolField<"gep-const-evaluation", "true",
   "Evaluate GetElementPtr with constant operands">;
 defm : ValueField<"hot-callsite-rel-freq", "uint64_t", "60",
   "Minimum block frequency, expressed as a multiple of caller's entry frequency, for a callsite to be hot in the absence of profile information">;
+defm : ValueField<"hot-callsite-threshold", "int", "3000",
+  "Threshold for hot callsites">;
 // We introduce this option since there is a minor compile-time win by avoiding
 // addition of TTI attributes (target-features in particular) to inline
 // candidates when they are guaranteed to be the same as top level methods in
@@ -243,10 +249,14 @@ defm : ValueField<"inline-call-penalty", "int", "25",
   "Call penalty that is applied per callsite when inlining">;
 defm : BoolField<"inline-caller-superset-nobuiltin", "true",
   "Allow inlining when caller has a superset of callee's nobuiltin attributes">;
+defm : ValueField<"inline-cold-callsite-threshold", "int", "45",
+  "Threshold for inlining cold callsites">;
 defm : BoolField<"inline-cost-full", "false",
   "Compute the full inline cost of a call site even when the cost exceeds the threshold">;
 defm : OptionalBoolField<"inline-enable-cost-benefit-analysis",
   "Enable the cost-benefit analysis for the inliner">;
+defm : ValueField<"inline-instr-cost", "int", "5",
+  "Cost of a single instruction when inlining">;
 defm : OptionalValueField<"inline-max-stacksize", "size_t",
   "Do not inline functions with a stack size that exceeds the specified limit">;
 defm : ValueField<"inline-memaccess-cost", "int", "0",
@@ -263,6 +273,19 @@ defm : OptionalValueField<"inline-savings-profitable-multiplier", "int",
   "A multiplier on top of cycle savings to decide whether the savings won't justify the cost">;
 defm : ValueField<"inline-size-allowance", "int", "100",
   "The maximum size of a callee that get's inlined without sufficient cycle savings">;
+defm : OptionalValueField<"inline-threshold", "int",
+  "Control the amount of inlining to perform">;
+// We introduce this threshold to help performance of instrumentation based
+// PGO before we actually hook up inliner with analysis passes such as BPI and
+// BFI.
+defm : OptionalValueField<"inlinecold-threshold", "int",
+  "Threshold for inlining functions with cold attribute">;
+defm : ValueField<"inlinedefault-threshold", "int", "225",
+  "Default amount of inlining to perform">;
+defm : ValueField<"inlinehint-threshold", "int", "325",
+  "Threshold for inlining functions with inline hint">;
+defm : OptionalValueField<"locally-hot-callsite-threshold", "int",
+  "Threshold for locally hot callsites">;
 defm : BoolField<"print-instruction-comments", "false",
   "Prints comments for instruction based on inline cost analysis">;
 defm : ValueField<"recursive-inline-max-stacksize", "size_t", "1024",

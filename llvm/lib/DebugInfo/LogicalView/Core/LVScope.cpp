@@ -1347,7 +1347,7 @@ void LVScopeCompileUnit::addedElement(LVType *Type) {
   getReader().notifyAddedElement(Type);
 }
 
-// Record unsuported DWARF tags.
+// Record unsupported DWARF tags.
 void LVScopeCompileUnit::addDebugTag(dwarf::Tag Target, LVOffset Offset) {
   addItem<LVTagOffsetsMap, dwarf::Tag, LVOffset>(&DebugTags, Target, Offset);
 }
