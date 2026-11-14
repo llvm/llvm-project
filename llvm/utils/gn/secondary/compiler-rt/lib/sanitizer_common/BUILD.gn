@@ -212,17 +212,6 @@ source_set("sancov_runtime_thunk") {
   }
 }
 
-# Libc functions stubs. These sources should be linked instead of
-# SANITIZER_LIBCDEP_SOURCES when sanitizer_common library must not depend on
-# libc. This is currently unreferenced and exists to make
-# sync_source_lists_from_cmake happy.
-source_set("nolibc_sources") {
-  configs -= [ "//llvm/utils/gn/build:llvm_code" ]
-  configs += [ "//llvm/utils/gn/build:crt_code" ]
-  deps = [ "//llvm/utils/gn/build/libs/pthread" ]
-  sources = [ "sanitizer_common_nolibc.cpp" ]
-}
-
 # This currently unreferenced and exists to make
 # sync_source_lists_from_cmake.py happy.
 source_set("RTSanitizerOffload_dummy") {
