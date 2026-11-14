@@ -45,6 +45,11 @@ public:
 private:
   using ValueMap = llvm::ScopedHashTable<Position *, Value>;
   using ValueMapScope = llvm::ScopedHashTableScope<Position *, Value>;
+  using ConstraintOpMap = llvm::ScopedHashTable<ConstraintQuestion *,
+                                                pdl_interp::ApplyConstraintOp>;
+  using ConstraintOpMapScope =
+      llvm::ScopedHashTableScope<ConstraintQuestion *,
+                                 pdl_interp::ApplyConstraintOp>;
 
   /// Generate interpreter operations for the tree rooted at the given matcher
   /// node, in the specified region.
@@ -148,9 +153,9 @@ private:
   /// set.
   DenseMap<Operation *, PDLPatternConfigSet *> *configMap;
 
-  /// A mapping from a constraint question to the ApplyConstraintOp
+  /// A scoped mapping from a constraint question to the ApplyConstraintOp
   /// that implements it.
-  DenseMap<ConstraintQuestion *, pdl_interp::ApplyConstraintOp> constraintOpMap;
+  ConstraintOpMap constraintOpMap;
 };
 } // namespace
 
@@ -167,6 +172,7 @@ void PatternLowering::lower(ModuleOp module) {
 
   // Define top-level scope for the arguments to the matcher function.
   ValueMapScope topLevelValueScope(values);
+  ConstraintOpMapScope topLevelConstraintScope(constraintOpMap);
 
   // Insert the root operation, i.e. argument to the matcher, at the root
   // position.
@@ -191,6 +197,7 @@ Block *PatternLowering::generateMatcher(MatcherNode &node, Region &region,
   if (!block)
     block = &region.emplaceBlock();
   ValueMapScope scope(values);
+  ConstraintOpMapScope constraintScope(constraintOpMap);
 
   // If this is the return node, simply insert the corresponding interpreter
   // finalize.
@@ -375,9 +382,10 @@ Value PatternLowering::getValueAt(Block *&currentBlock, Position *pos) {
     // Due to the order of traversal, the ApplyConstraintOp has already been
     // created and we can find it in constraintOpMap.
     auto *constrResPos = cast<ConstraintPosition>(pos);
-    auto i = constraintOpMap.find(constrResPos->getQuestion());
-    assert(i != constraintOpMap.end());
-    value = i->second->getResult(constrResPos->getIndex());
+    pdl_interp::ApplyConstraintOp applyConstraintOp =
+        constraintOpMap.lookup(constrResPos->getQuestion());
+    assert(applyConstraintOp && "expected constraint to be generated");
+    value = applyConstraintOp->getResult(constrResPos->getIndex());
     break;
   }
   default:
@@ -469,7 +477,7 @@ void PatternLowering::generate(BoolNode *boolNode, Block *&currentBlock,
         builder, loc, cstQuestion->getResultTypes(), cstQuestion->getName(),
         args, cstQuestion->getIsNegated(), success, failure);
 
-    constraintOpMap.insert({cstQuestion, applyConstraintOp});
+    constraintOpMap.insert(cstQuestion, applyConstraintOp);
     break;
   }
   default:
