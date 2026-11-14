@@ -37,6 +37,7 @@ public:
   }
 
 private:
+  std::vector<StringRef> ExcludedLengthTypes;
   std::vector<StringRef> ExcludedComparisonTypes;
 };
 
