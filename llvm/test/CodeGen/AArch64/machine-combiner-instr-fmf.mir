@@ -10,13 +10,6 @@
 ---
 name:            scalar_fmadd_fast
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr32 }
-  - { id: 1, class: fpr32 }
-  - { id: 2, class: fpr32 }
-  - { id: 3, class: fpr32 }
-  - { id: 4, class: fpr32 }
 liveins:
   - { reg: '$s0', virtual-reg: '%0' }
   - { reg: '$s1', virtual-reg: '%1' }
@@ -50,13 +43,6 @@ body:             |
 ---
 name:            scalar_fmadd_contract
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr32 }
-  - { id: 1, class: fpr32 }
-  - { id: 2, class: fpr32 }
-  - { id: 3, class: fpr32 }
-  - { id: 4, class: fpr32 }
 liveins:
   - { reg: '$s0', virtual-reg: '%0' }
   - { reg: '$s1', virtual-reg: '%1' }
@@ -90,13 +76,6 @@ body:             |
 ---
 name:            scalar_fmadd_contract_op0
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr32 }
-  - { id: 1, class: fpr32 }
-  - { id: 2, class: fpr32 }
-  - { id: 3, class: fpr32 }
-  - { id: 4, class: fpr32 }
 liveins:
   - { reg: '$s0', virtual-reg: '%0' }
   - { reg: '$s1', virtual-reg: '%1' }
@@ -130,13 +109,6 @@ body:             |
 ---
 name:            scalar_fmadd_contract_op1
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr32 }
-  - { id: 1, class: fpr32 }
-  - { id: 2, class: fpr32 }
-  - { id: 3, class: fpr32 }
-  - { id: 4, class: fpr32 }
 liveins:
   - { reg: '$s0', virtual-reg: '%0' }
   - { reg: '$s1', virtual-reg: '%1' }
@@ -171,13 +143,6 @@ body:             |
 ---
 name:            scalar_fmadd_nsz
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr32 }
-  - { id: 1, class: fpr32 }
-  - { id: 2, class: fpr32 }
-  - { id: 3, class: fpr32 }
-  - { id: 4, class: fpr32 }
 liveins:
   - { reg: '$s0', virtual-reg: '%0' }
   - { reg: '$s1', virtual-reg: '%1' }
@@ -210,13 +175,6 @@ body:             |
 ---
 name:            vector_fmadd_fast
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr128 }
-  - { id: 1, class: fpr128 }
-  - { id: 2, class: fpr128 }
-  - { id: 3, class: fpr128 }
-  - { id: 4, class: fpr128 }
 liveins:
   - { reg: '$q0', virtual-reg: '%0' }
   - { reg: '$q1', virtual-reg: '%1' }
@@ -249,13 +207,6 @@ body:             |
 ---
 name:            vector_fmadd_contract
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr128 }
-  - { id: 1, class: fpr128 }
-  - { id: 2, class: fpr128 }
-  - { id: 3, class: fpr128 }
-  - { id: 4, class: fpr128 }
 liveins:
   - { reg: '$q0', virtual-reg: '%0' }
   - { reg: '$q1', virtual-reg: '%1' }
@@ -289,13 +240,6 @@ body:             |
 ---
 name:            vector_fmadd_contract_op0
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr128 }
-  - { id: 1, class: fpr128 }
-  - { id: 2, class: fpr128 }
-  - { id: 3, class: fpr128 }
-  - { id: 4, class: fpr128 }
 liveins:
   - { reg: '$q0', virtual-reg: '%0' }
   - { reg: '$q1', virtual-reg: '%1' }
@@ -329,13 +273,6 @@ body:             |
 ---
 name:            vector_fmadd_contract_op1
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr128 }
-  - { id: 1, class: fpr128 }
-  - { id: 2, class: fpr128 }
-  - { id: 3, class: fpr128 }
-  - { id: 4, class: fpr128 }
 liveins:
   - { reg: '$q0', virtual-reg: '%0' }
   - { reg: '$q1', virtual-reg: '%1' }
@@ -369,13 +306,6 @@ body:             |
 ---
 name:            vector_fmadd_nsz
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr128 }
-  - { id: 1, class: fpr128 }
-  - { id: 2, class: fpr128 }
-  - { id: 3, class: fpr128 }
-  - { id: 4, class: fpr128 }
 liveins:
   - { reg: '$q0', virtual-reg: '%0' }
   - { reg: '$q1', virtual-reg: '%1' }

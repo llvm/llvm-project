@@ -64,6 +64,16 @@ public:
     ompAtomicDefaultMemOrder_ = flags;
   }
 
+  const llvm::omp::Clauses &ompAssumes() const { return ompAssumes_; }
+  void set_ompAssumes(llvm::omp::Clauses clauses) { ompAssumes_ = clauses; }
+
+  const llvm::omp::Directives &ompAssumesAbsent() const {
+    return ompAssumesAbsent_;
+  }
+  void add_ompAssumesAbsent(llvm::omp::Directive directive) {
+    ompAssumesAbsent_.set(directive);
+  }
+
   const llvm::omp::Clauses &ompDeclTarget() const { return ompDeclTarget_; }
   void set_ompDeclTarget(llvm::omp::Clauses clauses) {
     ompDeclTarget_ = clauses;
@@ -109,6 +119,8 @@ private:
   // The argument to ATOMIC_DEFAULT_MEM_ORDER. Only needed when the ADMO
   // clause is present in the ompRequires_ set.
   std::optional<common::OmpMemoryOrderType> ompAtomicDefaultMemOrder_;
+  llvm::omp::Clauses ompAssumes_;
+  llvm::omp::Directives ompAssumesAbsent_;
   // The set of clauses on DECLARE_TARGET directive that apply to this
   // symbol.
   llvm::omp::Clauses ompDeclTarget_;
@@ -947,7 +959,8 @@ public:
       AccPrivate, AccFirstPrivate, AccShared,
       // OpenACC data-mapping attribute
       AccCopy, AccCopyIn, AccCopyInReadOnly, AccCopyOut, AccCreate, AccDelete,
-      AccPresent, AccLink, AccDeviceResident, AccDevicePtr, AccUseDevice,
+      AccNoCreate, AccPresent, AccLink, AccDeviceResident, AccDevicePtr,
+      AccUseDevice,
       // OpenACC declare
       AccDeclare,
       // OpenACC declare on allocatable/pointer needs cross-TU action recipes
@@ -973,7 +986,7 @@ public:
       OmpThreadprivate, OmpDeclareReduction, OmpFlushed, OmpCriticalLock,
       OmpIfSpecified, OmpNone, OmpPreDetermined, OmpExplicit, OmpImplicit,
       OmpDependObject, OmpInclusiveScan, OmpExclusiveScan, OmpInScanReduction,
-      OmpUniform, OmpAssumesNoOpenmp);
+      OmpUniform);
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   const Scope &owner() const { return *owner_; }

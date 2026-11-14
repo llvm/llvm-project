@@ -3079,6 +3079,22 @@ attribute for the BPF target. This attribute may be attached to a
 struct or union declaration, where if -g is specified, it enables
 preserving struct or union member access debuginfo indices of this
 struct or union, similar to clang `__builtin_preserve_access_index()`.
+
+The attribute may also be attached to a named enum, or an anonymous enum with
+a typedef name. A use of its enumerator is then treated like
+`__builtin_preserve_enum_value(*(enum_type *)enumerator, BPF_ENUMVAL_VALUE)`,
+so it is not a constant expression, and if -g is specified, its value is
+relocated. An enum defined in a struct or union with the attribute does not
+get the attribute.
+
+Where a constant is required, e.g., in an array bound, a case label, an array
+designator, the initializer of a global, static local or constexpr variable or
+an `"i"` operand of inline asm, the enumerator is not relocated and its value in
+the local enum is used. This is diagnosed by `-Wbpf-enum-not-relocated`, an
+error by default; `-Wno-error=` or `#pragma clang diagnostic` allows such a use.
+
+The macro `__BPF_FEATURE_ENUM_PRESERVE_ACCESS_INDEX` is defined if the
+attribute is supported on enum declarations.
   }];
 }
 
@@ -9752,6 +9768,40 @@ fields. This parameter has no effect when used outside of an entrypoint
 parameter/parameter field/return value.
 
 This attribute maps to the `Location` SPIR-V decoration.
+  }];
+}
+
+def HLSLVkBuiltInDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Some Vulkan built-in variables have no equivalent in native HLSL, so no
+system-value semantic can express them. The `[[vk::builtin]]` attribute marks a
+stage input/output variable as a SPIR-V built-in variable, identified by name.
+Allowed on function parameters, function returns, and struct fields. This
+attribute has no effect when used outside of an entrypoint parameter/parameter
+field/return value.
+
+The attribute is only available when targeting SPIR-V. For any other target it
+is ignored with an "unknown attribute ignored" warning.
+
+The attribute takes a single string literal argument naming the built-in.
+Currently supported built-ins:
+
+* `PointSize`: the GLSL equivalent is `gl_PointSize`. Must be a scalar
+  `float`, or a `half` when native 16-bit types are not enabled (it is then
+  treated as `float`). Can be used as a vertex or mesh shader output, or as a
+  hull, domain or geometry shader input or output. It cannot be used in a pixel
+  shader.
+
+A declaration annotated with `[[vk::builtin]]` does not take part in
+`vk::location` assignment, and cannot also be annotated with `[[vk::location]]`.
+
+```c++
+struct VSOutput {
+  [[vk::location(0)]] float4 color : COLOR;
+  [[vk::builtin("PointSize")]] float size : PSIZE;
+};
+```
   }];
 }
 

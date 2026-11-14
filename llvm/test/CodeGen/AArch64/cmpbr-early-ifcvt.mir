@@ -3,18 +3,10 @@
 ---
 name:            cb_diamond
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
 hasFakeUses:     false
-registers:
-  - { id: 0, class: gpr64 }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: gpr64 }
-  - { id: 3, class: gpr64 }
-  - { id: 4, class: gpr64 }
-  - { id: 5, class: gpr64 }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
   - { reg: '$x1', virtual-reg: '%1' }
@@ -64,17 +56,10 @@ body:             |
 ---
 name:            cb_triangle
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
 hasFakeUses:     false
-registers:
-  - { id: 0, class: gpr64 }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: gpr64 }
-  - { id: 3, class: gpr64 }
-  - { id: 4, class: gpr64 }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
   - { reg: '$x1', virtual-reg: '%1' }
@@ -116,17 +101,10 @@ body:             |
 ---
 name:            cb_triangle_w_imm
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
 hasFakeUses:     false
-registers:
-  - { id: 0, class: gpr32 }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr32 }
-  - { id: 4, class: gpr32 }
 liveins:
   - { reg: '$w0', virtual-reg: '%0' }
   - { reg: '$w1', virtual-reg: '%1' }
@@ -168,17 +146,10 @@ body:             |
 ---
 name:            cb_triangle_x_imm
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
 hasFakeUses:     false
-registers:
-  - { id: 0, class: gpr64 }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: gpr64 }
-  - { id: 3, class: gpr64 }
-  - { id: 4, class: gpr64 }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
   - { reg: '$x1', virtual-reg: '%1' }
@@ -220,18 +191,10 @@ body:             |
 ---
 name:            cbb_diamond_no_ext
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
 hasFakeUses:     false
-registers:
-  - { id: 0, class: gpr32 }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr32 }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32 }
 liveins:
   - { reg: '$w0', virtual-reg: '%0' }
   - { reg: '$w1', virtual-reg: '%1' }
@@ -281,18 +244,10 @@ body:             |
 ---
 name:            cbb_diamond_zext
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
 hasFakeUses:     false
-registers:
-  - { id: 0, class: gpr32 }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr32 }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32 }
 liveins:
   - { reg: '$w0', virtual-reg: '%0' }
   - { reg: '$w1', virtual-reg: '%1' }
@@ -343,18 +298,10 @@ body:             |
 ---
 name:            cbb_diamond_sext
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
 hasFakeUses:     false
-registers:
-  - { id: 0, class: gpr32 }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr32 }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32 }
 liveins:
   - { reg: '$w0', virtual-reg: '%0' }
   - { reg: '$w1', virtual-reg: '%1' }
@@ -405,18 +352,10 @@ body:             |
 ---
 name:            cbh_diamond_zext
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
 hasFakeUses:     false
-registers:
-  - { id: 0, class: gpr32 }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr32 }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32 }
 liveins:
   - { reg: '$w0', virtual-reg: '%0' }
   - { reg: '$w1', virtual-reg: '%1' }
@@ -467,18 +406,10 @@ body:             |
 ---
 name:            cbh_diamond_sext
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
 hasFakeUses:     false
-registers:
-  - { id: 0, class: gpr32 }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr32 }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32 }
 liveins:
   - { reg: '$w0', virtual-reg: '%0' }
   - { reg: '$w1', virtual-reg: '%1' }
@@ -529,18 +460,10 @@ body:             |
 ---
 name:            cbh_diamond_lhs_sext
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
 hasFakeUses:     false
-registers:
-  - { id: 0, class: gpr32 }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr32 }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32 }
 liveins:
   - { reg: '$w0', virtual-reg: '%0' }
   - { reg: '$w1', virtual-reg: '%1' }
@@ -591,18 +514,10 @@ body:             |
 ---
 name:            cbh_diamond_rhs_sext
 alignment:       4
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
 hasFakeUses:     false
-registers:
-  - { id: 0, class: gpr32 }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr32 }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32 }
 liveins:
   - { reg: '$w0', virtual-reg: '%0' }
   - { reg: '$w1', virtual-reg: '%1' }

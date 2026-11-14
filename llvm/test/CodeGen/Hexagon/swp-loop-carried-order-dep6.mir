@@ -108,7 +108,6 @@
 ...
 ---
 name:            f
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     successors: %bb.1, %bb.2

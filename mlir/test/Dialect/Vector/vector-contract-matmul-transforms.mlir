@@ -28,18 +28,19 @@ func.func @matmul_mk_nk_mn_4x4xi32(%arg0: vector<4x4xi32>, %arg1: vector<4x4xi32
   return %res : vector<4x4xi32>
 }
 
-// CHECK-LABEL: func.func @matmul_mk_kn_mn_4x4xi32
-// CHECK-SAME:    ([[ARG0:%.+]]: vector<4x4xi32>, [[ARG1:%.+]]: vector<4x4xi32>, [[ARG2:%.+]]: vector<4x4xi32>)
-// CHECK-NEXT:    [[TRANS:%.+]] = vector.transpose [[ARG1]], [1, 0] : vector<4x4xi32> to vector<4x4xi32>
-// CHECK-NEXT:    [[RES:%.+]]   = vector.contract {{.+}} [[ARG0]], [[TRANS]], [[ARG2]]
+// The combining kind and the fast-math flags are kept.
+// CHECK-LABEL: func.func @matmul_mk_kn_mn_4x4xf32
+// CHECK-SAME:    ([[ARG0:%.+]]: vector<4x4xf32>, [[ARG1:%.+]]: vector<4x4xf32>, [[ARG2:%.+]]: vector<4x4xf32>)
+// CHECK-NEXT:    [[TRANS:%.+]] = vector.transpose [[ARG1]], [1, 0] : vector<4x4xf32> to vector<4x4xf32>
+// CHECK-NEXT:    [[RES:%.+]]   = vector.contract {fastmath = #arith.fastmath<nnan>, {{.+}} kind = #vector.kind<maxnumf>} [[ARG0]], [[TRANS]], [[ARG2]]
 // CHECK-NEXT:    return [[RES]]
-func.func @matmul_mk_kn_mn_4x4xi32(%arg0: vector<4x4xi32>, %arg1: vector<4x4xi32>, %arg2: vector<4x4xi32>) -> vector<4x4xi32> {
+func.func @matmul_mk_kn_mn_4x4xf32(%arg0: vector<4x4xf32>, %arg1: vector<4x4xf32>, %arg2: vector<4x4xf32>) -> vector<4x4xf32> {
   %res = vector.contract {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>,
                                            affine_map<(d0, d1, d2) -> (d2, d1)>,
                                            affine_map<(d0, d1, d2) -> (d0, d1)>],
                           iterator_types = ["parallel", "parallel", "reduction"],
-                          kind = #vector.kind<add>} %arg0, %arg1, %arg2 : vector<4x4xi32>, vector<4x4xi32> into vector<4x4xi32>
-  return %res : vector<4x4xi32>
+                          kind = #vector.kind<maxnumf>, fastmath = #arith.fastmath<nnan>} %arg0, %arg1, %arg2 : vector<4x4xf32>, vector<4x4xf32> into vector<4x4xf32>
+  return %res : vector<4x4xf32>
 }
 
 // CHECK-LABEL: func.func @matmul_mk_kn_mn_8x16xi8_extsi_i32

@@ -39,6 +39,21 @@ const TargetRegisterClass *SparcInstrInfo::getInlineAsmMemoryOperandRegClass(
   return Subtarget.is64Bit() ? &SP::I64RegsRegClass : &SP::IntRegsRegClass;
 }
 
+bool SparcInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
+                                          const MachineBasicBlock *MBB,
+                                          const MachineFunction &MF) const {
+  if (MI.getFlag(MachineInstr::FrameDestroy))
+    return true;
+  switch (MI.getOpcode()) {
+  case SP::SAVErr:
+  case SP::SAVEri:
+  case SP::RESTORErr:
+  case SP::RESTOREri:
+    return true;
+  }
+  return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);
+}
+
 /// isLoadFromStackSlot - If the specified machine instruction is a direct
 /// load from a stack slot, return the virtual or physical register number of
 /// the destination along with the FrameIndex of the loaded stack slot.  If
@@ -229,10 +244,8 @@ static void parseCondBranch(MachineInstr *LastInst, MachineBasicBlock *&Target,
 
   // Branch on register contents need another argument to indicate
   // the register it branches on.
-  if (isRegCondBranchOpcode(Opc)) {
-      Register Reg = LastInst->getOperand(2).getReg();
-      Cond.push_back(MachineOperand::CreateReg(Reg, false));
-  }
+  if (isRegCondBranchOpcode(Opc))
+    Cond.push_back(LastInst->getOperand(2));
 
   Target = LastInst->getOperand(0).getMBB();
 }
@@ -375,8 +388,7 @@ unsigned SparcInstrInfo::insertBranch(MachineBasicBlock &MBB,
   unsigned Opc = Cond[0].getImm();
   unsigned CC = Cond[1].getImm();
   if (isRegCondBranchOpcode(Opc)) {
-    Register Reg = Cond[2].getReg();
-    BuildMI(&MBB, DL, get(Opc)).addMBB(TBB).addImm(CC).addReg(Reg);
+    BuildMI(&MBB, DL, get(Opc)).addMBB(TBB).addImm(CC).add(Cond[2]);
   } else {
     BuildMI(&MBB, DL, get(Opc)).addMBB(TBB).addImm(CC);
   }

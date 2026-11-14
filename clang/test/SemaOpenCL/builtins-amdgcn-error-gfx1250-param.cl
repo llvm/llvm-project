@@ -55,7 +55,9 @@ void test__builtin_amdgcn_cvt_f16_bf8(int a, int b) {
 void test_cvt_sr_f8_f16(global int* out, uint sr, int old, int sel)
 {
   *out = __builtin_amdgcn_cvt_sr_bf8_f16(1.0, sr, old, sel); // expected-error {{'__builtin_amdgcn_cvt_sr_bf8_f16' must be a constant integer}}
+  *out = __builtin_amdgcn_cvt_sr_bf8_f16(1.0, sr, old, 4); // expected-error{{argument value 4 is outside the valid range [0, 3]}}
   *out = __builtin_amdgcn_cvt_sr_fp8_f16(1.0, sr, old, sel); // expected-error {{'__builtin_amdgcn_cvt_sr_fp8_f16' must be a constant integer}}
+  *out = __builtin_amdgcn_cvt_sr_fp8_f16(1.0, sr, old, 4); // expected-error{{argument value 4 is outside the valid range [0, 3]}}
 }
 
 void test_cvt_scale_pk(global half8 *outh8, global bfloat8 *outy8, uint2 src2,
@@ -194,6 +196,11 @@ void test_amdgcn_tensor_load_store(v4u sg0, v8u sg1, v4u sg2, v4u sg3, v8u sg4, 
 void test_prefetch(generic void *fptr, global void *gptr, int cpol) {
   __builtin_amdgcn_flat_prefetch(fptr, cpol); // expected-error {{'__builtin_amdgcn_flat_prefetch' must be a constant integer}}
   __builtin_amdgcn_global_prefetch(gptr, cpol); // expected-error {{'__builtin_amdgcn_global_prefetch' must be a constant integer}}
+  __builtin_amdgcn_flat_prefetch(fptr, 64); // expected-error {{argument value 64 is outside the valid range [0, 63]}}
+  __builtin_amdgcn_global_prefetch(gptr, 2048); // expected-error {{argument value 2048 is outside the valid range [0, 63]}}
+  __builtin_amdgcn_flat_prefetch(fptr, 15); // expected-error {{cache policy uses the reserved th value 7}}
+  __builtin_amdgcn_global_prefetch(gptr, 7); // expected-error {{cache policy uses the reserved th value 7}}
+  __builtin_amdgcn_global_prefetch(gptr, 62);
 }
 
 void test_cvt_f32_fp8_e5m3(global int* out, int a)

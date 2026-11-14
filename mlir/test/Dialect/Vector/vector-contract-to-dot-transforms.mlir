@@ -36,6 +36,36 @@ func.func @masked_extract_contract1(%arg0: vector<4xf32>, %arg1: vector<4xf32>, 
   return %0 : f32
 }
 
+// CHECK-LABEL: func @extract_contract1_0d_acc
+// CHECK-SAME: %[[A:.*0]]: vector<4xf32>,
+// CHECK-SAME: %[[B:.*1]]: vector<4xf32>,
+// CHECK-SAME: %[[C:.*2]]: vector<f32>
+// CHECK:      %[[F:.*]] = arith.mulf %[[A]], %[[B]] : vector<4xf32>
+// CHECK:      %[[ACC:.*]] = vector.extract %[[C]][] : f32 from vector<f32>
+// CHECK:      %[[R:.*]] = vector.reduction <add>, %[[F]], %[[ACC]] : vector<4xf32> into f32
+// CHECK:      %[[B0:.*]] = vector.broadcast %[[R]] : f32 to vector<f32>
+// CHECK:      return %[[B0]] : vector<f32>
+
+func.func @extract_contract1_0d_acc(%arg0: vector<4xf32>, %arg1: vector<4xf32>, %acc: vector<f32>) -> vector<f32> {
+  %0 = vector.contract #dotp_trait %arg0, %arg1, %acc
+    : vector<4xf32>, vector<4xf32> into vector<f32>
+  return %0 : vector<f32>
+}
+
+// CHECK-LABEL: func @masked_extract_contract1_0d_acc
+//  CHECK-SAME:   %[[A:.*0]]: vector<4xf32>, %[[B:.*1]]: vector<4xf32>, %[[C:.*2]]: vector<f32>
+//  CHECK-SAME:   %[[M:.*]]: vector<4xi1>
+//       CHECK:   %[[F:.*]] = arith.mulf %[[A]], %[[B]] : vector<4xf32>
+//       CHECK:   %[[ACC:.*]] = vector.extract %[[C]][] : f32 from vector<f32>
+//       CHECK:   %[[R:.*]] = vector.mask %[[M]] { vector.reduction <add>, %[[F]], %[[ACC]] : vector<4xf32> into f32 } : vector<4xi1> -> f32
+//       CHECK:   %[[B0:.*]] = vector.broadcast %[[R]] : f32 to vector<f32>
+//       CHECK:   return %[[B0]] : vector<f32>
+
+func.func @masked_extract_contract1_0d_acc(%arg0: vector<4xf32>, %arg1: vector<4xf32>, %acc: vector<f32>, %mask: vector<4xi1>) -> vector<f32> {
+  %0 = vector.mask %mask { vector.contract #dotp_trait %arg0, %arg1, %acc : vector<4xf32>, vector<4xf32> into vector<f32> } : vector<4xi1> -> vector<f32>
+  return %0 : vector<f32>
+}
+
 // CHECK-LABEL: func @extract_contract1_int
 // CHECK-SAME: %[[A:.*0]]: vector<4xi32>,
 // CHECK-SAME: %[[B:.*1]]: vector<4xi32>,
@@ -403,6 +433,34 @@ func.func @batch_contract_fmf(%arg0: vector<2x2xf32>,
     iterator_types = ["parallel", "reduction"],
     fastmath = #arith.fastmath<reassoc>
   } %arg0, %arg1, %arg2 : vector<2x2xf32>, vector<2x2xf32> into vector<2xf32>
+  return %0 : vector<2xf32>
+}
+
+// CHECK-LABEL: @negative_contract_to_dot_matvec_scalable
+//       CHECK: vector.contract
+func.func @negative_contract_to_dot_matvec_scalable(%arg0: vector<[2]x3xf32>,
+                        %arg1: vector<3xf32>,
+                        %arg2: vector<[2]xf32>) -> vector<[2]xf32> {
+  %0 = vector.contract #matvec_trait %arg0, %arg1, %arg2
+    : vector<[2]x3xf32>, vector<3xf32> into vector<[2]xf32>
+  return %0 : vector<[2]xf32>
+}
+
+// CHECK-LABEL: func @contract_to_dot_matvec_scalable_reduction
+//  CHECK-SAME:   %[[A:.*]]: vector<2x[8]xf32>, %[[B:.*]]: vector<[8]xf32>, %[[ACC:.*]]: vector<2xf32>
+//       CHECK:   %[[ROW0:.*]] = vector.extract %[[A]][0] : vector<[8]xf32> from vector<2x[8]xf32>
+//       CHECK:   %[[MUL0:.*]] = arith.mulf %[[ROW0]], %[[B]] : vector<[8]xf32>
+//       CHECK:   vector.reduction <add>, %[[MUL0]] : vector<[8]xf32> into f32
+//       CHECK:   %[[ROW1:.*]] = vector.extract %[[A]][1] : vector<[8]xf32> from vector<2x[8]xf32>
+//       CHECK:   %[[MUL1:.*]] = arith.mulf %[[ROW1]], %[[B]] : vector<[8]xf32>
+//       CHECK:   vector.reduction <add>, %[[MUL1]] : vector<[8]xf32> into f32
+//       CHECK:   %[[RES:.*]] = arith.addf %{{.*}}, %[[ACC]] : vector<2xf32>
+//       CHECK:   return %[[RES]] : vector<2xf32>
+func.func @contract_to_dot_matvec_scalable_reduction(%arg0: vector<2x[8]xf32>,
+                        %arg1: vector<[8]xf32>,
+                        %arg2: vector<2xf32>) -> vector<2xf32> {
+  %0 = vector.contract #matvec_trait %arg0, %arg1, %arg2
+    : vector<2x[8]xf32>, vector<[8]xf32> into vector<2xf32>
   return %0 : vector<2xf32>
 }
 

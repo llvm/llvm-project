@@ -113,7 +113,6 @@
 ...
 ---
 name:            store_common_value_double
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11, $x12, $x16, $x17
@@ -143,7 +142,6 @@ body:             |
 ...
 ---
 name:            store_common_value_double_zero
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11, $x12
@@ -173,7 +171,6 @@ body:             |
 ...
 ---
 name:            store_common_ptr_double
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16
@@ -194,7 +191,6 @@ body:             |
 ...
 ---
 name:            load_common_ptr_double
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x16
@@ -215,7 +211,6 @@ body:             |
 ...
 ---
 name:            store_large_offset_double
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x12, $x13, $x14, $x15
@@ -236,7 +231,6 @@ body:             |
 ...
 ---
 name:            load_large_offset_double
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x14
@@ -256,7 +250,6 @@ body:             |
 ...
 ---
 name:            store_common_value_double_no_opt
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x16, $x17
@@ -272,7 +265,6 @@ body:             |
 ...
 ---
 name:            store_common_value_double_no_opt2
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x16, $x17
@@ -290,7 +282,6 @@ body:             |
 ...
 ---
 name:            store_common_ptr_double_no_opt
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11, $x16
@@ -306,7 +297,6 @@ body:             |
 ...
 ---
 name:            load_common_ptr_double_no_opt
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x16
@@ -322,7 +312,6 @@ body:             |
 ...
 ---
 name:            store_large_offset_double_no_opt
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11, $x12, $x13, $x14
@@ -348,7 +337,6 @@ body:             |
 ...
 ---
 name:            load_large_offset_double_no_opt
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10

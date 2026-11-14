@@ -270,6 +270,16 @@ public:
     return false;
   }
 
+  bool Pre(const parser::AccClause::Delete &x) {
+    ResolveAccObjectList(x.v, Symbol::Flag::AccDelete);
+    return false;
+  }
+
+  bool Pre(const parser::AccClause::NoCreate &x) {
+    ResolveAccObjectList(x.v, Symbol::Flag::AccNoCreate);
+    return false;
+  }
+
   bool Pre(const parser::AccClause::Present &x) {
     ResolveAccObjectList(x.v, Symbol::Flag::AccPresent);
     return false;
@@ -356,7 +366,8 @@ private:
 
   Symbol::Flags dataMappingAttributeFlags{Symbol::Flag::AccCreate,
       Symbol::Flag::AccCopyIn, Symbol::Flag::AccCopyOut,
-      Symbol::Flag::AccDelete, Symbol::Flag::AccPresent};
+      Symbol::Flag::AccDelete, Symbol::Flag::AccNoCreate,
+      Symbol::Flag::AccPresent};
 
   Symbol::Flags accDataMvtFlags{
       Symbol::Flag::AccDevice, Symbol::Flag::AccHost, Symbol::Flag::AccSelf};
@@ -501,11 +512,26 @@ public:
     if (x.moduleName.symbol) {
       Scope &thisScope{context_.FindScope(x.moduleName.source)};
       const auto version{context_.langOptions().getOpenMPVersion()};
-      if ((version == 51 || version == 52) &&
-          x.moduleName.symbol->test(Symbol::Flag::OmpAssumesNoOpenmp)) {
-        if (auto *symbol{const_cast<Symbol *>(
-                omp::GetProgramUnit(thisScope).symbol())}) {
-          symbol->set(Symbol::Flag::OmpAssumesNoOpenmp);
+      if (version == 51 || version == 52) {
+        Scope &programUnit{const_cast<Scope &>(omp::GetProgramUnit(thisScope))};
+        if (auto *symbol{const_cast<Symbol *>(programUnit.symbol())}) {
+          if (const auto *moduleDetails{
+                  x.moduleName.symbol->detailsIf<ModuleDetails>()}) {
+            common::visit(
+                [&](auto &details) {
+                  if constexpr (std::is_convertible_v<decltype(details),
+                                    WithOmpDeclarative &>) {
+                    details.set_version(version);
+                    details.set_ompAssumes(
+                        details.ompAssumes() | moduleDetails->ompAssumes());
+                    for (llvm::omp::Directive directive :
+                        moduleDetails->ompAssumesAbsent()) {
+                      details.add_ompAssumesAbsent(directive);
+                    }
+                  }
+                },
+                symbol->details());
+          }
         }
       }
       common::visit(
@@ -1706,10 +1732,24 @@ void AccAttributeVisitor::CheckAssociatedLoop(
   Symbol::Flag flag = Symbol::Flag::AccPrivate;
   llvm::SmallVector<Symbol *> ivs;
 
+  // A REAL lower bound, upper bound, or step is a Fortran extension. An
+  // explicit OpenACC loop requires integer controls; diagnosing it here
+  // avoids lowering, which aborts while building the default step.
+  auto checkRealAccLoopBound = [&](const parser::Expr *expr) {
+    if (!expr)
+      return;
+    if (auto analyzed{semantics::AnalyzeExpr(context_, *expr)}; analyzed &&
+        semantics::ExprHasTypeCategory(*analyzed, common::TypeCategory::Real)) {
+      context_.Say(expr->source,
+          "OpenACC loop bound expression must have INTEGER type"_err_en_US);
+    }
+  };
+
   // Iterate the index variables of one DoConstruct, calling fn(name, lower,
-  // upper) for each: once for a regular do loop, once per control variable for
-  // a do concurrent loop.  Null pointers signal a loop without valid bounds
-  // (e.g. do while); the level must still be consumed.
+  // upper, step) for each: once for a regular do loop, once per control
+  // variable for a do concurrent loop.  Null pointers signal a loop without
+  // valid bounds (e.g. do while); the level must still be consumed. A DO
+  // CONCURRENT step is an integer expression, so it is not passed here.
   auto forEachIndex = [this](const parser::DoConstruct &loop, auto &&fn) {
     if (loop.IsDoConcurrent()) {
       const auto &loopControl{*loop.GetLoopControl()};
@@ -1720,24 +1760,29 @@ void AccAttributeVisitor::CheckAssociatedLoop(
           std::get<std::list<parser::ConcurrentControl>>(header.t)) {
         fn(&std::get<parser::Name>(control.t),
             &parser::UnwrapRef<parser::Expr>(std::get<1>(control.t)),
-            &parser::UnwrapRef<parser::Expr>(std::get<2>(control.t)));
+            &parser::UnwrapRef<parser::Expr>(std::get<2>(control.t)),
+            /*step=*/nullptr);
       }
     } else {
       auto bounds{GetLoopBounds(loop)};
       const parser::ScalarExpr *lower{std::get<1>(bounds)};
       const parser::ScalarExpr *upper{std::get<2>(bounds)};
+      const parser::ScalarExpr *step{std::get<3>(bounds)};
       fn(std::get<0>(bounds),
           lower ? &parser::UnwrapRef<parser::Expr>(*lower) : nullptr,
-          upper ? &parser::UnwrapRef<parser::Expr>(*upper) : nullptr);
+          upper ? &parser::UnwrapRef<parser::Expr>(*upper) : nullptr,
+          step ? &parser::UnwrapRef<parser::Expr>(*step) : nullptr);
     }
   };
 
   for (const parser::DoConstruct *loop{&outerDoConstruct}; loop && level > 0;) {
     forEachIndex(*loop,
         [&](const parser::Name *ivName, const parser::Expr *lower,
-            const parser::Expr *upper) {
+            const parser::Expr *upper, const parser::Expr *step) {
           if (level <= 0)
             return;
+          for (const parser::Expr *bound : {lower, upper, step})
+            checkRealAccLoopBound(bound);
           if (ivName && lower && upper) {
             if (auto *symbol{ResolveAcc(*ivName, flag, currScope())}) {
               if (auto lowerExpr{semantics::AnalyzeExpr(context_, *lower)}) {

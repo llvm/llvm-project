@@ -91,18 +91,22 @@ cl::opt<bool> InstrumentCalls("instrument-calls",
 namespace llvm {
 namespace bolt {
 
-static bool hasExclusiveMemop(BinaryFunction &Function,
-                              DenseSet<const BinaryBasicBlock *> &BBToSkip) {
+static bool
+hasExclusiveMemop(BinaryFunction &Function,
+                  DenseMap<const BinaryBasicBlock *, bool> &BBToSkip) {
   // FIXME ARMv8-a architecture reference manual says that software must avoid
   // having any explicit memory accesses between exclusive load and associated
   // store instruction. So for now skip instrumentation for basic blocks that
   // have these instructions, since it might lead to runtime deadlock.
+  // BBToSkip maps each such block to whether it is entered with an exclusive
+  // load still pending, where even a counter at the start of the block is
+  // unsafe.
   BinaryContext &BC = Function.getBinaryContext();
   std::queue<std::pair<BinaryBasicBlock *, bool>> BBQueue; // {BB, isLoad}
   DenseSet<BinaryBasicBlock *> Visited;
 
   if (Function.getLayout().block_begin() == Function.getLayout().block_end())
-    return 0;
+    return false;
 
   BinaryBasicBlock *BBfirst = *Function.getLayout().block_begin();
   BBQueue.push({BBfirst, false});
@@ -113,6 +117,12 @@ static bool hasExclusiveMemop(BinaryFunction &Function,
     BBQueue.pop();
     if (!Visited.insert(BB).second)
       continue;
+
+    const bool EnteredInRegion = IsLoad;
+    // An empty block entered inside a region has no instruction to mark it
+    // in the loop below.
+    if (EnteredInRegion && BB->empty())
+      BBToSkip.try_emplace(BB, true);
 
     for (const MCInst &Inst : *BB) {
       // Two loads one after another - skip whole function
@@ -127,7 +137,7 @@ static bool hasExclusiveMemop(BinaryFunction &Function,
       if (BC.MIB->isExclusiveLoad(Inst))
         IsLoad = true;
 
-      if (IsLoad && BBToSkip.insert(BB).second) {
+      if (IsLoad && BBToSkip.try_emplace(BB, EnteredInRegion).second) {
         if (opts::Verbosity >= 2) {
           outs() << "BOLT-INSTRUMENTER: skip BB " << BB->getName()
                  << " due to exclusive instruction in function "
@@ -370,7 +380,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
   if (BC.isMachO() && Function.hasName("___GLOBAL_init_65535/1"))
     return;
 
-  DenseSet<const BinaryBasicBlock *> BBToSkip;
+  DenseMap<const BinaryBasicBlock *, bool> BBToSkip;
   if ((BC.isAArch64() || BC.isRISCV()) && hasExclusiveMemop(Function, BBToSkip))
     return;
 
@@ -578,6 +588,14 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
   if (!opts::ConservativeInstrumentation) {
     for (auto BBI = Function.begin(), BBE = Function.end(); BBI != BBE; ++BBI) {
       BinaryBasicBlock &BB = *BBI;
+
+      // The counter goes at the start of the block, so unlike the edge
+      // counters above, it only has to stay out of blocks entered inside an
+      // exclusive region (mapped to true in BBToSkip). A block that starts a
+      // region keeps its counter, which runs before the exclusive load.
+      if (BBToSkip.lookup(&BB))
+        continue;
+
       auto STIt = STOutSet.find(&BB);
       if (STIt == STOutSet.end() || STIt->second.empty())
         instrumentLeafNode(BB, BB.begin(), IsLeafFunction, *FuncDesc,

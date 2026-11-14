@@ -14,7 +14,7 @@
 #include "orc-rt/bedrock/sps/StandaloneMachOUnwindInfoRegistrarSPSCI.h"
 #include "orc-rt-internal/bedrock/sys/darwin/StandaloneMachOUnwindInfoRegistrar.h"
 
-namespace orc_rt::sps_ci {
+namespace orc_rt::sps::ci {
 
 ORC_RT_SPS_ALLOC_ACTION_IMPL(
     orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_registerSections,
@@ -39,4 +39,4 @@ Error addStandaloneMachOUnwindInfoRegistrar(SimpleSymbolTable &ST) {
       orc_rt_ci_StandaloneMachOUnwindInfoRegistrar_sps_interface);
 }
 
-} // namespace orc_rt::sps_ci
+} // namespace orc_rt::sps::ci

@@ -1,4 +1,4 @@
-; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as < %s -disable-output 2>&1 | FileCheck %s
 
 ; CHECK: Attribute 'immarg' is incompatible with other attributes except the 'range' attribute
 declare void @llvm.immarg.byval(ptr byval(i32) immarg)

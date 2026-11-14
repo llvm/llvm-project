@@ -4139,7 +4139,40 @@ KMP_EXPORT void __kmpc_fork_call_if(ident_t *loc, kmp_int32 nargs,
 KMP_EXPORT void __kmpc_serialized_parallel(ident_t *, kmp_int32 global_tid);
 KMP_EXPORT void __kmpc_end_serialized_parallel(ident_t *, kmp_int32 global_tid);
 
+// Values of the order and scope arguments of __kmpc_flush_explicit. They are
+// the compiler's __ATOMIC_* and __MEMORY_SCOPE_* values.
+enum kmp_flush_order {
+  kmp_flush_order_relaxed = 0,
+  kmp_flush_order_consume = 1, // Completes the encoding; never emitted.
+  kmp_flush_order_acquire = 2,
+  kmp_flush_order_release = 3,
+  kmp_flush_order_acq_rel = 4,
+  kmp_flush_order_seq_cst = 5
+};
+enum kmp_flush_scope {
+  kmp_flush_scope_all = 0, // memscope(all)
+  kmp_flush_scope_device = 1, // memscope(device)
+  kmp_flush_scope_cgroup = 2 // memscope(cgroup)
+};
+#ifdef __ATOMIC_SEQ_CST
+static_assert(kmp_flush_order_relaxed == __ATOMIC_RELAXED &&
+                  kmp_flush_order_consume == __ATOMIC_CONSUME &&
+                  kmp_flush_order_acquire == __ATOMIC_ACQUIRE &&
+                  kmp_flush_order_release == __ATOMIC_RELEASE &&
+                  kmp_flush_order_acq_rel == __ATOMIC_ACQ_REL &&
+                  kmp_flush_order_seq_cst == __ATOMIC_SEQ_CST,
+              "kmp_flush_order must match the __ATOMIC_* values");
+#endif
+#ifdef __MEMORY_SCOPE_SYSTEM
+static_assert(kmp_flush_scope_all == __MEMORY_SCOPE_SYSTEM &&
+                  kmp_flush_scope_device == __MEMORY_SCOPE_DEVICE &&
+                  kmp_flush_scope_cgroup == __MEMORY_SCOPE_WRKGRP,
+              "kmp_flush_scope must match the __MEMORY_SCOPE_* values");
+#endif
+
 KMP_EXPORT void __kmpc_flush(ident_t *);
+KMP_EXPORT void __kmpc_flush_explicit(ident_t *, kmp_int32 order,
+                                      kmp_int32 scope);
 KMP_EXPORT void __kmpc_barrier(ident_t *, kmp_int32 global_tid);
 KMP_EXPORT kmp_int32 __kmpc_master(ident_t *, kmp_int32 global_tid);
 KMP_EXPORT void __kmpc_end_master(ident_t *, kmp_int32 global_tid);

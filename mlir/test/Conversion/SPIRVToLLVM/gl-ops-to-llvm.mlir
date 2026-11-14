@@ -1,4 +1,5 @@
 // RUN: mlir-opt -convert-spirv-to-llvm %s | FileCheck %s
+// RUN: mlir-opt -convert-spirv-to-llvm='allow-pattern-rollback=0' %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // spirv.GL.Ceil
@@ -165,6 +166,17 @@ spirv.func @pow(%arg0: f32, %arg1: vector<3xf16>) "None" {
   %0 = spirv.GL.Pow %arg0, %arg0 : f32
   // CHECK: llvm.intr.pow(%{{.*}}, %{{.*}}) : (vector<3xf16>, vector<3xf16>) -> vector<3xf16>
   %1 = spirv.GL.Pow %arg1, %arg1 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Ldexp
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @ldexp
+spirv.func @ldexp(%arg0: f32, %arg1: i32) "None" {
+  // CHECK: llvm.intr.ldexp(%{{.*}}, %{{.*}}) : (f32, i32) -> f32
+  %0 = spirv.GL.Ldexp %arg0 : f32, %arg1 : i32 -> f32
   spirv.Return
 }
 
