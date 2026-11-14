@@ -12,6 +12,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/lldb-enumerations.h"
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/bit.h"
 
 #include <cassert>
@@ -43,9 +44,9 @@ public:
 
   Opcode() = default;
 
-  /// The size in bytes of the fixed buffer used to store opcode bytes. It must
-  /// be big enough to hold the longest opcode of any supported target (x86
-  /// caps instructions at 15 bytes).
+  /// The capacity in bytes of the inline buffer used to store opcode bytes
+  /// without dynamic allocation. Instructions <= 16 bytes remain inline,
+  /// while longer opcodes spill into heap storage.
   static constexpr size_t kMaxByteSize = 16;
 
   Opcode(uint8_t inst, lldb::ByteOrder order)
@@ -76,6 +77,7 @@ public:
   void Clear() {
     m_byte_order = lldb::eByteOrderInvalid;
     m_type = Opcode::eTypeInvalid;
+    m_byte_buf.clear();
   }
 
   Opcode::Type GetType() const { return m_type; }
@@ -176,30 +178,35 @@ public:
     m_type = eType8;
     m_data.inst8 = inst;
     m_byte_order = order;
+    m_byte_buf.clear();
   }
 
   void SetOpcode16(uint16_t inst, lldb::ByteOrder order) {
     m_type = eType16;
     m_data.inst16 = inst;
     m_byte_order = order;
+    m_byte_buf.clear();
   }
 
   void SetOpcode16_2(uint32_t inst, lldb::ByteOrder order) {
     m_type = eType16_2;
     m_data.inst32 = inst;
     m_byte_order = order;
+    m_byte_buf.clear();
   }
 
   void SetOpcode32(uint32_t inst, lldb::ByteOrder order) {
     m_type = eType32;
     m_data.inst32 = inst;
     m_byte_order = order;
+    m_byte_buf.clear();
   }
 
   void SetOpcode64(uint64_t inst, lldb::ByteOrder order) {
     m_type = eType64;
     m_data.inst64 = inst;
     m_byte_order = order;
+    m_byte_buf.clear();
   }
 
   void SetOpcode16_32TupleBytes(const void *bytes, size_t length,
@@ -215,13 +222,12 @@ public:
                         lldb::ByteOrder order) {
     if (bytes != nullptr && length > 0) {
       m_type = type;
-      m_data.inst.length = length;
-      assert(length <= sizeof(m_data.inst.bytes));
-      memcpy(m_data.inst.bytes, bytes, length);
+      m_byte_buf.assign(static_cast<const uint8_t *>(bytes),
+                        static_cast<const uint8_t *>(bytes) + length);
       m_byte_order = order;
     } else {
       m_type = eTypeInvalid;
-      m_data.inst.length = 0;
+      m_byte_buf.clear();
     }
   }
 
@@ -229,7 +235,7 @@ public:
 
   const void *GetOpcodeBytes() const {
     return ((m_type == Opcode::eTypeBytes || m_type == Opcode::eType16_32Tuples)
-                ? m_data.inst.bytes
+                ? (m_byte_buf.empty() ? nullptr : m_byte_buf.data())
                 : nullptr);
   }
 
@@ -242,14 +248,14 @@ public:
     case Opcode::eType16:
       return sizeof(m_data.inst16);
     case Opcode::eType16_32Tuples:
-      return m_data.inst.length;
+      return m_byte_buf.size();
     case Opcode::eType16_2: // passthrough
     case Opcode::eType32:
       return sizeof(m_data.inst32);
     case Opcode::eType64:
       return sizeof(m_data.inst64);
     case Opcode::eTypeBytes:
-      return m_data.inst.length;
+      return m_byte_buf.size();
     }
     return 0;
   }
@@ -269,14 +275,14 @@ protected:
     case Opcode::eType16:
       return &m_data.inst16;
     case Opcode::eType16_32Tuples:
-      return m_data.inst.bytes;
+      return m_byte_buf.empty() ? nullptr : m_byte_buf.data();
     case Opcode::eType16_2: // passthrough
     case Opcode::eType32:
       return &m_data.inst32;
     case Opcode::eType64:
       return &m_data.inst64;
     case Opcode::eTypeBytes:
-      return m_data.inst.bytes;
+      return m_byte_buf.empty() ? nullptr : m_byte_buf.data();
     }
     return nullptr;
   }
@@ -298,12 +304,8 @@ protected:
     uint16_t inst16;
     uint32_t inst32;
     uint64_t inst64;
-    struct {
-      uint8_t bytes[kMaxByteSize]; // This must be big enough to handle any
-                                   // opcode for any supported target.
-      uint8_t length;
-    } inst;
   } m_data;
+  llvm::SmallVector<uint8_t, kMaxByteSize> m_byte_buf;
 };
 
 } // namespace lldb_private

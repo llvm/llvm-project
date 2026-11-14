@@ -39,21 +39,19 @@ int Opcode::Dump(Stream *s, uint32_t min_byte_width) const {
     break;
 
   case Opcode::eType16_32Tuples: {
-    const bool format_as_words = (m_data.inst.length % 4) == 0;
+    const bool format_as_words = (m_byte_buf.size() % 4) == 0;
     uint32_t i = 0;
-    while (i < m_data.inst.length) {
+    while (i < m_byte_buf.size()) {
       if (i > 0)
         s->PutChar(' ');
       if (format_as_words) {
         // Format as words; print 1 or more UInt32 values.
-        s->Printf("%2.2x%2.2x%2.2x%2.2x", m_data.inst.bytes[i + 3],
-                  m_data.inst.bytes[i + 2], m_data.inst.bytes[i + 1],
-                  m_data.inst.bytes[i + 0]);
+        s->Printf("%2.2x%2.2x%2.2x%2.2x", m_byte_buf[i + 3], m_byte_buf[i + 2],
+                  m_byte_buf[i + 1], m_byte_buf[i + 0]);
         i += 4;
       } else {
         // Format as halfwords; print 1 or more UInt16 values.
-        s->Printf("%2.2x%2.2x", m_data.inst.bytes[i + 1],
-                  m_data.inst.bytes[i + 0]);
+        s->Printf("%2.2x%2.2x", m_byte_buf[i + 1], m_byte_buf[i + 0]);
         i += 2;
       }
     }
@@ -64,10 +62,10 @@ int Opcode::Dump(Stream *s, uint32_t min_byte_width) const {
     break;
 
   case Opcode::eTypeBytes:
-    for (uint32_t i = 0; i < m_data.inst.length; ++i) {
+    for (uint32_t i = 0; i < m_byte_buf.size(); ++i) {
       if (i > 0)
         s->PutChar(' ');
-      s->Printf("%2.2x", m_data.inst.bytes[i]);
+      s->Printf("%2.2x", m_byte_buf[i]);
     }
     break;
   }
@@ -109,10 +107,12 @@ uint32_t Opcode::GetData(DataExtractor &data) const {
     if (!GetEndianSwap()) {
       if (m_type == Opcode::eType16_2) {
         // 32 bit thumb instruction, we need to sizzle this a bit
-        swap_buf[0] = m_data.inst.bytes[2];
-        swap_buf[1] = m_data.inst.bytes[3];
-        swap_buf[2] = m_data.inst.bytes[0];
-        swap_buf[3] = m_data.inst.bytes[1];
+        uint8_t inst_bytes[4];
+        memcpy(inst_bytes, &m_data.inst32, sizeof(inst_bytes));
+        swap_buf[0] = inst_bytes[2];
+        swap_buf[1] = inst_bytes[3];
+        swap_buf[2] = inst_bytes[0];
+        swap_buf[3] = inst_bytes[1];
         buf = swap_buf;
       } else {
         buf = GetOpcodeDataBytes();
@@ -128,13 +128,16 @@ uint32_t Opcode::GetData(DataExtractor &data) const {
         *(uint16_t *)swap_buf = llvm::byteswap<uint16_t>(m_data.inst16);
         buf = swap_buf;
         break;
-      case Opcode::eType16_2:
-        swap_buf[0] = m_data.inst.bytes[1];
-        swap_buf[1] = m_data.inst.bytes[0];
-        swap_buf[2] = m_data.inst.bytes[3];
-        swap_buf[3] = m_data.inst.bytes[2];
+      case Opcode::eType16_2: {
+        uint8_t inst_bytes[4];
+        memcpy(inst_bytes, &m_data.inst32, sizeof(inst_bytes));
+        swap_buf[0] = inst_bytes[1];
+        swap_buf[1] = inst_bytes[0];
+        swap_buf[2] = inst_bytes[3];
+        swap_buf[3] = inst_bytes[2];
         buf = swap_buf;
         break;
+      }
       case Opcode::eType16_32Tuples:
         buf = GetOpcodeDataBytes();
         break;
