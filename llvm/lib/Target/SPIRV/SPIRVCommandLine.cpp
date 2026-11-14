@@ -190,11 +190,9 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
     {"SPV_KHR_relaxed_extended_instruction",
      SPIRV::Extension::Extension::SPV_KHR_relaxed_extended_instruction}};
 
-Error SPIRVExtensionsParser::parse(StringRef ArgValue, ExtensionSet &Enabled,
-                                   ExtensionSet &Disabled) {
-  SmallVector<StringRef, 10> Tokens;
-  ArgValue.split(Tokens, ",", -1, false);
-
+Error SPIRVExtensionsParser::parseExtensions(SmallVectorImpl<StringRef> &Tokens,
+                                             ExtensionSet &Enabled,
+                                             ExtensionSet &Disabled) {
   ExtensionSet EnabledExtensions;
 
   auto M = partition(Tokens, [](auto &&T) { return T.starts_with('+'); });
@@ -244,21 +242,21 @@ Error SPIRVExtensionsParser::parse(StringRef ArgValue, ExtensionSet &Enabled,
   return Error::success();
 }
 
-StringRef
-SPIRVExtensionsParser::checkExtensions(ArrayRef<std::string> ExtNames,
-                                       ExtensionSet &AllowedExtensions) {
-  for (const auto &Ext : ExtNames) {
-    if (Ext == "all") {
-      for (const auto &[ExtensionName, ExtensionEnum] : SPIRVExtensionMap)
-        AllowedExtensions.insert(ExtensionEnum);
-      return StringRef();
-    }
-    auto It = SPIRVExtensionMap.find(Ext);
-    if (It == SPIRVExtensionMap.end())
-      return Ext;
-    AllowedExtensions.insert(It->second);
-  }
-  return StringRef();
+Error SPIRVExtensionsParser::parse(StringRef ArgValue, ExtensionSet &Enabled,
+                                   ExtensionSet &Disabled) {
+  SmallVector<StringRef, 10> Tokens;
+  ArgValue.split(Tokens, ",", -1, false);
+
+  return parseExtensions(Tokens, Enabled, Disabled);
+}
+
+Error SPIRVExtensionsParser::checkExtensions(ArrayRef<std::string> ExtNames,
+                                             ExtensionSet &AllowedExtensions) {
+  SmallVector<StringRef, 10> Tokens(ExtNames);
+
+  ExtensionSet Disabled;
+
+  return parseExtensions(Tokens, AllowedExtensions, Disabled);
 }
 
 ExtensionSet
