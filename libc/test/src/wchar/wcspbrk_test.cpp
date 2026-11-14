@@ -27,7 +27,7 @@ TEST(LlvmLibcWCSPBrkTest, ShouldReturnNullptrIfNoCharactersFound) {
 }
 
 TEST(LlvmLibcWCSPBrkTest, FindsFirstCharacter) {
-  const wchar_t *src = L"12345";
+  wchar_t src[] = L"12345";
   EXPECT_EQ(LIBC_NAMESPACE::wcspbrk(src, L"1"), src);
   EXPECT_EQ(LIBC_NAMESPACE::wcspbrk(src, L"-1"), src);
   EXPECT_EQ(LIBC_NAMESPACE::wcspbrk(src, L"1_"), src);
@@ -35,7 +35,7 @@ TEST(LlvmLibcWCSPBrkTest, FindsFirstCharacter) {
 }
 
 TEST(LlvmLibcWCSPBrkTest, FindsMiddleCharacter) {
-  const wchar_t *src = L"12345";
+  wchar_t src[] = L"12345";
   EXPECT_EQ(LIBC_NAMESPACE::wcspbrk(src, L"3"), src + 2);
   EXPECT_EQ(LIBC_NAMESPACE::wcspbrk(src, L"?3"), src + 2);
   EXPECT_EQ(LIBC_NAMESPACE::wcspbrk(src, L"3F"), src + 2);
@@ -43,7 +43,7 @@ TEST(LlvmLibcWCSPBrkTest, FindsMiddleCharacter) {
 }
 
 TEST(LlvmLibcWCSPBrkTest, FindsLastCharacter) {
-  const wchar_t *src = L"12345";
+  wchar_t src[] = L"12345";
   EXPECT_EQ(LIBC_NAMESPACE::wcspbrk(src, L"5"), src + 4);
   EXPECT_EQ(LIBC_NAMESPACE::wcspbrk(src, L"r5"), src + 4);
   EXPECT_EQ(LIBC_NAMESPACE::wcspbrk(src, L"59"), src + 4);
@@ -51,14 +51,18 @@ TEST(LlvmLibcWCSPBrkTest, FindsLastCharacter) {
 }
 
 TEST(LlvmLibcWCSPBrkTest, FindsFirstOfRepeated) {
-  const wchar_t *src = L"A,B,C,D";
+  wchar_t src[] = L"A,B,C,D";
   EXPECT_EQ(LIBC_NAMESPACE::wcspbrk(src, L","), src + 1);
 }
 
 TEST(LlvmLibcWCSPBrkTest, FindsFirstInBreakset) {
-  const wchar_t *src = L"12345";
+  wchar_t src[] = L"12345";
   EXPECT_EQ(LIBC_NAMESPACE::wcspbrk(src, L"34"), src + 2);
   EXPECT_EQ(LIBC_NAMESPACE::wcspbrk(src, L"43"), src + 2);
+
+  const wchar_t *const_src = L"12345";
+  const wchar_t *res = LIBC_NAMESPACE::wcspbrk(const_src, L"34");
+  EXPECT_EQ(res, const_src + 2);
 }
 
 #if defined(LIBC_ADD_NULL_CHECKS)

@@ -19,7 +19,7 @@ TEST(LlvmLibcWCSStrTest, NeedleNotInHaystack) {
 
 TEST(LlvmLibcWCSStrTest, NeedleIsEmptyString) {
   // Should return pointer to first character if needle is empty.
-  const wchar_t *haystack = L"12345";
+  wchar_t haystack[] = L"12345";
   const wchar_t *needle = L"";
   ASSERT_EQ(LIBC_NAMESPACE::wcsstr(haystack, needle), haystack);
 }
@@ -34,12 +34,12 @@ TEST(LlvmLibcWCSStrTest, HaystackIsEmptyString) {
 TEST(LlvmLibcWCSStrTest, HaystackAndNeedleAreEmptyStrings) {
   // Should point to haystack since needle is empty.
   const wchar_t *needle = L"";
-  const wchar_t *haystack = L"";
+  wchar_t haystack[] = L"";
   ASSERT_EQ(LIBC_NAMESPACE::wcsstr(haystack, needle), haystack);
 }
 
 TEST(LlvmLibcWCSStrTest, HaystackAndNeedleAreSingleCharacters) {
-  const wchar_t *haystack = L"a";
+  wchar_t haystack[] = L"a";
   // Should point to haystack.
   ASSERT_EQ(LIBC_NAMESPACE::wcsstr(haystack, L"a"), haystack);
   // Should return nullptr.
@@ -47,7 +47,7 @@ TEST(LlvmLibcWCSStrTest, HaystackAndNeedleAreSingleCharacters) {
 }
 
 TEST(LlvmLibcWCSStrTest, NeedleEqualToHaystack) {
-  const wchar_t *haystack = L"12345";
+  wchar_t haystack[] = L"12345";
   // Should point to haystack.
   ASSERT_EQ(LIBC_NAMESPACE::wcsstr(haystack, L"12345"), haystack);
 }
@@ -59,19 +59,23 @@ TEST(LlvmLibcWCSStrTest, NeedleLargerThanHaystack) {
 }
 
 TEST(LlvmLibcWCSStrTest, NeedleAtBeginning) {
-  const wchar_t *haystack = L"12345";
+  wchar_t haystack[] = L"12345";
   const wchar_t *needle = L"12";
   ASSERT_EQ(LIBC_NAMESPACE::wcsstr(haystack, needle), haystack);
 }
 
 TEST(LlvmLibcWCSStrTest, NeedleInMiddle) {
-  const wchar_t *haystack = L"abcdefghi";
+  wchar_t haystack[] = L"abcdefghi";
   const wchar_t *needle = L"def";
   ASSERT_EQ(LIBC_NAMESPACE::wcsstr(haystack, needle), haystack + 3);
+
+  const wchar_t *const_haystack = L"abcdefghi";
+  const wchar_t *res = LIBC_NAMESPACE::wcsstr(const_haystack, needle);
+  ASSERT_EQ(res, const_haystack + 3);
 }
 
 TEST(LlvmLibcWCSStrTest, NeedleDirectlyBeforeNullTerminator) {
-  const wchar_t *haystack = L"abcdefghi";
+  wchar_t haystack[] = L"abcdefghi";
   const wchar_t *needle = L"ghi";
   ASSERT_EQ(LIBC_NAMESPACE::wcsstr(haystack, needle), haystack + 6);
 }
@@ -84,27 +88,27 @@ TEST(LlvmLibcWCSStrTest, NeedlePastNullTerminator) {
 }
 
 TEST(LlvmLibcWCSStrTest, PartialNeedle) {
-  const wchar_t *haystack = L"la_ap_lap";
+  wchar_t haystack[] = L"la_ap_lap";
   const wchar_t *needle = L"lap";
   // Shouldn't find la or ap.
   ASSERT_EQ(LIBC_NAMESPACE::wcsstr(haystack, needle), haystack + 6);
 }
 
 TEST(LlvmLibcWCSStrTest, MisspelledNeedle) {
-  const wchar_t *haystack = L"atalloftwocities...wait, tale";
+  wchar_t haystack[] = L"atalloftwocities...wait, tale";
   const wchar_t *needle = L"tale";
   ASSERT_EQ(LIBC_NAMESPACE::wcsstr(haystack, needle), haystack + 25);
 }
 
 TEST(LlvmLibcWCSStrTest, AnagramNeedle) {
-  const wchar_t *haystack = L"dgo_ogd_god_odg_gdo_dog";
+  wchar_t haystack[] = L"dgo_ogd_god_odg_gdo_dog";
   const wchar_t *needle = L"dog";
   ASSERT_EQ(LIBC_NAMESPACE::wcsstr(haystack, needle), haystack + 20);
 }
 
 TEST(LlvmLibcWCSStrTest, MorphedNeedle) {
   // Changes a single letter in the needle to mismatch with the haystack.
-  const wchar_t *haystack = L"once upon a time";
+  wchar_t haystack[] = L"once upon a time";
   ASSERT_EQ(LIBC_NAMESPACE::wcsstr(haystack, L"time"), haystack + 12);
   ASSERT_EQ(LIBC_NAMESPACE::wcsstr(haystack, L"lime"), nullptr);
   ASSERT_EQ(LIBC_NAMESPACE::wcsstr(haystack, L"tome"), nullptr);
