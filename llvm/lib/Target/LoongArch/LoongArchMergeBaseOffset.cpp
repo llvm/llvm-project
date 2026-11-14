@@ -420,8 +420,8 @@ bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
       MachineOperand ImmOp = Curr->getOperand(2);
       if (ImmOp.getTargetFlags() != LoongArchII::MO_None || !Hi12)
         return false;
-      const int64_t Imm = ImmOp.getImm();
-      Offset += (static_cast<uint64_t>(Imm) << 52) << Shift;
+      const int64_t Imm = ImmOp.getImm() << 52;
+      Offset += (static_cast<uint64_t>(Imm) << Shift) & Mask;
       Mask &= ~(0xFFF0000000000000ULL << Shift);
       Reg = Curr->getOperand(1).getReg();
       Instrs.push_back(Curr);
