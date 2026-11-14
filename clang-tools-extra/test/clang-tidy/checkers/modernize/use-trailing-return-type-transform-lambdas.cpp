@@ -14,10 +14,6 @@
 #include <vector>
 
 void test_lambda_positive() {
-  auto l01 = [] {};
-  // CHECK-MESSAGES-ALL: :[[@LINE-1]]:14: warning: use a trailing return type for this lambda [modernize-use-trailing-return-type]
-  // CHECK-MESSAGES-NOAUTO: :[[@LINE-2]]:14: warning: use a trailing return type for this lambda [modernize-use-trailing-return-type]
-  // CHECK-FIXES-ALL: auto l01 = [] -> void {};
   auto l1 = []() {};
   // CHECK-MESSAGES-ALL: :[[@LINE-1]]:13: warning: use a trailing return type for this lambda [modernize-use-trailing-return-type]
   // CHECK-MESSAGES-NOAUTO: :[[@LINE-2]]:13: warning: use a trailing return type for this lambda [modernize-use-trailing-return-type]
@@ -55,14 +51,14 @@ void test_lambda_positive() {
   // CHECK-MESSAGES-ALL: :[[@LINE-1]]:13: warning: use a trailing return type for this lambda [modernize-use-trailing-return-type]
   // CHECK-MESSAGES-NOAUTO: :[[@LINE-2]]:13: warning: use a trailing return type for this lambda [modernize-use-trailing-return-type]
   // CHECK-FIXES-ALL: auto l8 = [&capture_int]() -> int { return capture_int; };
-  auto l9 = [] { return std::vector<std::vector<int>>{}; };
+  auto l9 = []() { return std::vector<std::vector<int>>{}; };
   // CHECK-MESSAGES-ALL: :[[@LINE-1]]:13: warning: use a trailing return type for this lambda [modernize-use-trailing-return-type]
   // CHECK-MESSAGES-NOAUTO: :[[@LINE-2]]:13: warning: use a trailing return type for this lambda [modernize-use-trailing-return-type]
-  // CHECK-FIXES-ALL: auto l9 = [] -> std::vector<std::vector<int>> { return std::vector<std::vector<int>>{}; };
-  auto l10 = [] { const char* const * const * const ptr = nullptr; return ptr; };
+  // CHECK-FIXES-ALL: auto l9 = []() -> std::vector<std::vector<int>> { return std::vector<std::vector<int>>{}; };
+  auto l10 = []() { const char* const * const * const ptr = nullptr; return ptr; };
   // CHECK-MESSAGES-ALL: :[[@LINE-1]]:14: warning: use a trailing return type for this lambda [modernize-use-trailing-return-type]
   // CHECK-MESSAGES-NOAUTO: :[[@LINE-2]]:14: warning: use a trailing return type for this lambda [modernize-use-trailing-return-type]
-  // CHECK-FIXES-ALL: auto l10 = [] -> const char *const *const * { const char* const * const * const ptr = nullptr; return ptr; };
+  // CHECK-FIXES-ALL: auto l10 = []() -> const char *const *const * { const char* const * const * const ptr = nullptr; return ptr; };
 }
 
 // In c++11 mode we can not write 'auto' type, see *-cxx14.cpp for fixes.
