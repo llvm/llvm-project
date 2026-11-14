@@ -163,7 +163,7 @@ public:
 
   static lldb::StopInfoSP
   CreateStopReasonWithPlan(lldb::ThreadPlanSP &plan,
-                           lldb::ValueObjectSP return_valobj_sp,
+                           ThreadPlanReturnValue return_value,
                            lldb::ExpressionVariableSP expression_variable_sp);
 
   static lldb::StopInfoSP
@@ -193,7 +193,7 @@ public:
 
   static lldb::StopInfoSP CreateStopReasonVForkDone(Thread &thread);
 
-  static lldb::ValueObjectSP
+  static ThreadPlanReturnValue
   GetReturnValueObject(lldb::StopInfoSP &stop_info_sp);
 
   static lldb::ExpressionVariableSP

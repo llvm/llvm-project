@@ -1478,10 +1478,10 @@ public:
 
 class StopInfoThreadPlan : public StopInfo {
 public:
-  StopInfoThreadPlan(ThreadPlanSP &plan_sp, ValueObjectSP &return_valobj_sp,
+  StopInfoThreadPlan(ThreadPlanSP &plan_sp, ThreadPlanReturnValue return_value,
                      ExpressionVariableSP &expression_variable_sp)
       : StopInfo(plan_sp->GetThread(), LLDB_INVALID_UID), m_plan_sp(plan_sp),
-        m_return_valobj_sp(return_valobj_sp),
+        m_return_value(std::move(return_value)),
         m_expression_variable_sp(expression_variable_sp) {}
 
   ~StopInfoThreadPlan() override = default;
@@ -1497,7 +1497,7 @@ public:
     return m_description.c_str();
   }
 
-  ValueObjectSP GetReturnValueObject() { return m_return_valobj_sp; }
+  ThreadPlanReturnValue GetReturnValueObject() { return m_return_value; }
 
   ExpressionVariableSP GetExpressionVariable() {
     return m_expression_variable_sp;
@@ -1513,7 +1513,7 @@ protected:
 
 private:
   ThreadPlanSP m_plan_sp;
-  ValueObjectSP m_return_valobj_sp;
+  ThreadPlanReturnValue m_return_value;
   ExpressionVariableSP m_expression_variable_sp;
 };
 
@@ -1748,9 +1748,9 @@ StopInfoSP StopInfo::CreateStopReasonToTrace(Thread &thread) {
 }
 
 StopInfoSP StopInfo::CreateStopReasonWithPlan(
-    ThreadPlanSP &plan_sp, ValueObjectSP return_valobj_sp,
+    ThreadPlanSP &plan_sp, ThreadPlanReturnValue return_value,
     ExpressionVariableSP expression_variable_sp) {
-  return std::make_shared<StopInfoThreadPlan>(plan_sp, return_valobj_sp,
+  return std::make_shared<StopInfoThreadPlan>(plan_sp, std::move(return_value),
                                               expression_variable_sp);
 }
 
@@ -1795,14 +1795,14 @@ StopInfoSP StopInfo::CreateStopReasonVForkDone(Thread &thread) {
   return std::make_shared<StopInfoVForkDone>(thread);
 }
 
-ValueObjectSP StopInfo::GetReturnValueObject(StopInfoSP &stop_info_sp) {
+ThreadPlanReturnValue StopInfo::GetReturnValueObject(StopInfoSP &stop_info_sp) {
   if (stop_info_sp &&
       stop_info_sp->GetStopReason() == eStopReasonPlanComplete) {
     StopInfoThreadPlan *plan_stop_info =
         static_cast<StopInfoThreadPlan *>(stop_info_sp.get());
     return plan_stop_info->GetReturnValueObject();
   } else
-    return ValueObjectSP();
+    return {};
 }
 
 ExpressionVariableSP StopInfo::GetExpressionVariable(StopInfoSP &stop_info_sp) {

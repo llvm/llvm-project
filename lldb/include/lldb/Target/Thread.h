@@ -1050,9 +1050,9 @@ public:
   /// Gets the outer-most return value from the completed plans
   ///
   /// \return
-  ///     A ValueObjectSP, either empty if there is no return value,
-  ///     or containing the return value.
-  lldb::ValueObjectSP GetReturnValueObject() const;
+  ///     The return value, which is empty if there is none, or the error the
+  ///     function threw.
+  ThreadPlanReturnValue GetReturnValueObject() const;
 
   /// Gets the outer-most expression variable from the completed plans
   ///

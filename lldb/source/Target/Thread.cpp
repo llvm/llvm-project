@@ -1198,7 +1198,7 @@ ThreadPlanSP Thread::GetCompletedPlan() const {
   return GetPlans().GetCompletedPlan();
 }
 
-ValueObjectSP Thread::GetReturnValueObject() const {
+ThreadPlanReturnValue Thread::GetReturnValueObject() const {
   return GetPlans().GetReturnValueObject();
 }
 

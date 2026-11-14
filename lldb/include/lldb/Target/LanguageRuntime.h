@@ -185,6 +185,44 @@ public:
     return {};
   }
 
+  /// Given a frame, compute the location where its function would place an
+  /// error, if one is thrown by the function.
+  ///
+  /// \return
+  ///     std::nullopt if the function cannot throw. A register location is
+  ///     read in the frame the function returns to.
+  virtual std::optional<Value> GetThrownErrorLocation(StackFrame &frame) {
+    return std::nullopt;
+  }
+
+  /// Given \p frame, the frame a callee returned to, and \p location,
+  /// computed by GetThrownErrorLocation from the callee's frame, get the
+  /// error the callee threw.
+  ///
+  /// \return
+  ///     std::nullopt if the callee did not throw. Otherwise the thrown
+  ///     error, which is null if the error could not be read.
+  virtual std::optional<lldb::ValueObjectSP>
+  GetThrownError(StackFrame &frame, const Value &location) {
+    return std::nullopt;
+  }
+
+  /// A description of how to find an error thrown by a function. It is
+  /// computed from the callee's frame, and is only meaningful in the frame the
+  /// callee returns to.
+  class ThrownErrorLocation {
+  public:
+    explicit ThrownErrorLocation(lldb::StackFrameSP callee_frame_sp = nullptr);
+
+    /// See LanguageRuntime::GetThrownError.
+    std::optional<lldb::ValueObjectSP>
+    GetThrownError(lldb::StackFrameSP caller_frame_sp) const;
+
+  private:
+    LanguageRuntime *m_runtime = nullptr;
+    std::optional<Value> m_location;
+  };
+
   static lldb::BreakpointSP
   CreateExceptionBreakpoint(Target &target, lldb::LanguageType language,
                             bool catch_bp, bool throw_bp,

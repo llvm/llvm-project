@@ -1538,8 +1538,13 @@ bool FormatEntity::Formatter::Format(const Entry &entry, Stream &s,
       if (thread) {
         StopInfoSP stop_info_sp = thread->GetStopInfo();
         if (stop_info_sp && stop_info_sp->IsValid()) {
-          ValueObjectSP return_valobj_sp =
+          ThreadPlanReturnValue return_value =
               StopInfo::GetReturnValueObject(stop_info_sp);
+          ValueObjectSP return_valobj_sp;
+          if (auto *returned = std::get_if<ReturnedValue>(&return_value))
+            return_valobj_sp = returned->valobj_sp;
+          else if (auto *thrown = std::get_if<ThrownError>(&return_value))
+            return_valobj_sp = thrown->valobj_sp;
           if (return_valobj_sp) {
             DumpValueObjectOptions options;
             if (return_valobj_sp->IsDynamic())
