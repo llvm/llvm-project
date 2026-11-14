@@ -3602,3 +3602,121 @@ entry:
   %result = select i1 %eq, i1 %v1_lt_v3, i1 %less_than
   ret i1 %result
 }
+
+define i1 @window_no_multiple_i64(i64 %iv) {
+; CHECK-LABEL: @window_no_multiple_i64(
+; CHECK-NEXT:    ret i1 false
+;
+  %scaled = mul nuw nsw i64 %iv, 26456
+  %offset = add nsw i64 %scaled, -26457
+  %cmp = icmp ult i64 %offset, 31
+  ret i1 %cmp
+}
+
+define i1 @window_no_multiple_i32(i32 %x) {
+; CHECK-LABEL: @window_no_multiple_i32(
+; CHECK-NEXT:    ret i1 false
+;
+  %mul = mul nuw i32 %x, 13
+  %add = add i32 %mul, -1
+  %cmp = icmp ult i32 %add, 7
+  ret i1 %cmp
+}
+
+define <2 x i1> @window_no_multiple_splat(<2 x i32> %x) {
+; CHECK-LABEL: @window_no_multiple_splat(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %mul = mul nuw <2 x i32> %x, splat (i32 13)
+  %add = add <2 x i32> %mul, splat (i32 -1)
+  %cmp = icmp ult <2 x i32> %add, splat (i32 7)
+  ret <2 x i1> %cmp
+}
+
+define i1 @inverse_window_no_multiple(i8 %x) {
+; CHECK-LABEL: @inverse_window_no_multiple(
+; CHECK-NEXT:    ret i1 true
+;
+  %mul = mul nuw i8 %x, 13
+  %add = add i8 %mul, -1
+  %cmp = icmp ugt i8 %add, 6
+  ret i1 %cmp
+}
+
+define i1 @issue_reproducer(i32 noundef %a) {
+; CHECK-LABEL: @issue_reproducer(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SQUARE:%.*]] = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 [[A:%.*]], i32 [[A]])
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i32, i1 } [[SQUARE]], 1
+; CHECK-NEXT:    br i1 [[OVERFLOW]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %square = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 %a, i32 %a)
+  %overflow = extractvalue { i32, i1 } %square, 1
+  br i1 %overflow, label %then, label %else
+
+then:
+  %mul = mul nuw nsw i32 %a, 10000
+  %add = add nsw i32 %mul, -5000
+  %cond = icmp ult i32 %add, 4999
+  ret i1 %cond
+
+else:
+  ret i1 false
+}
+
+define i1 @window_has_multiple(i64 %iv) {
+; CHECK-LABEL: @window_has_multiple(
+; CHECK-NEXT:    [[SCALED:%.*]] = mul nuw nsw i64 [[IV:%.*]], 26456
+; CHECK-NEXT:    [[OFFSET:%.*]] = add nsw i64 [[SCALED]], -26450
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[OFFSET]], 31
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %scaled = mul nuw nsw i64 %iv, 26456
+  %offset = add nsw i64 %scaled, -26450
+  %cmp = icmp ult i64 %offset, 31
+  ret i1 %cmp
+}
+
+define i1 @mul_without_nuw(i32 %x) {
+; CHECK-LABEL: @mul_without_nuw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], 13
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[MUL]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 7
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul nsw i32 %x, 13
+  %add = add i32 %mul, -1
+  %cmp = icmp ult i32 %add, 7
+  ret i1 %cmp
+}
+
+define i1 @mul_variable(i32 %x, i32 %y) {
+; CHECK-LABEL: @mul_variable(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[MUL]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 7
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul nuw i32 %x, %y
+  %add = add i32 %mul, -1
+  %cmp = icmp ult i32 %add, 7
+  ret i1 %cmp
+}
+
+define <2 x i1> @non_splat(<2 x i32> %x) {
+; CHECK-LABEL: @non_splat(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw <2 x i32> [[X:%.*]], <i32 13, i32 3>
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[MUL]], splat (i32 -1)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[ADD]], splat (i32 7)
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %mul = mul nuw <2 x i32> %x, <i32 13, i32 3>
+  %add = add <2 x i32> %mul, splat (i32 -1)
+  %cmp = icmp ult <2 x i32> %add, splat (i32 7)
+  ret <2 x i1> %cmp
+}
