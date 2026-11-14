@@ -87,16 +87,11 @@ TEST(InProcessModuleCache, WriteReturnsSharedBuffer) {
 
   off_t Size;
   time_t ModTime;
-  std::unique_ptr<llvm::MemoryBuffer> Written;
-  {
-    std::string Contents = "contents\n";
-    auto WrittenOrErr = ModCache->write(
-        Path, llvm::MemoryBuffer::getMemBufferCopy(Contents, Path), Size,
-        ModTime);
-    ASSERT_EQ(WrittenOrErr.getError(), std::error_code{});
-    Written = std::move(*WrittenOrErr);
-  }
-  // The returned buffer doesn't reference the written contents.
+  auto WrittenOrErr = ModCache->write(
+      Path, llvm::MemoryBuffer::getMemBuffer("contents\n", Path), Size,
+      ModTime);
+  ASSERT_EQ(WrittenOrErr.getError(), std::error_code{});
+  auto Written = std::move(*WrittenOrErr);
   ASSERT_TRUE(Written);
   EXPECT_EQ(Written->getBuffer(), "contents\n");
 
