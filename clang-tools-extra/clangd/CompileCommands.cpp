@@ -416,10 +416,12 @@ std::pair<unsigned, unsigned> getArgCount(const llvm::opt::Option &Opt) {
   case Option::MultiArgClass:
     return {1 + Opt.getNumArgs(), 0};
   case Option::JoinedOrSeparateClass:
-  case Option::SeparateOrEqClass:
     return {2, 1};
+  // The -x= spelling gets its own rule.
+  case Option::SeparateOrEqClass:
+    return {2, 0};
   case Option::FlagOrEqClass:
-    return {1, 1};
+    return {1, 0};
   case Option::RemainingArgsClass:
     return {Rest, 0};
   case Option::RemainingArgsJoinedClass:
@@ -530,22 +532,31 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
           continue;
         auto Modes = getModes(Opt);
         std::pair<unsigned, unsigned> ArgCount = getArgCount(Opt);
-        // Iterate over each spelling of the alias, e.g. -foo vs --foo.
-        for (StringRef Prefix : Prefixes) {
-          llvm::SmallString<64> Buf(Prefix);
-          Buf.append(Opt.getName());
-          llvm::StringRef Spelling = Result->try_emplace(Buf).first->getKey();
+        auto AddRule = [&](const Twine &Text, unsigned ExactArgs,
+                           unsigned PrefixArgs) {
+          llvm::SmallString<64> Buf;
+          llvm::StringRef Spelling =
+              Result->try_emplace(Text.toStringRef(Buf)).first->getKey();
           Rules.emplace_back();
           Rule &R = Rules.back();
           R.Text = Spelling;
           R.Modes = Modes;
-          R.ExactArgs = ArgCount.first;
-          R.PrefixArgs = ArgCount.second;
+          R.ExactArgs = ExactArgs;
+          R.PrefixArgs = PrefixArgs;
           // Concrete priority is the index into the option table.
           // Effectively, earlier entries take priority over later ones.
           assert(ID < std::numeric_limits<decltype(R.Priority)>::max() &&
                  "Rules::Priority overflowed by options table");
           R.Priority = ID;
+        };
+        bool HasEqSpelling =
+            Opt.getKind() == llvm::opt::Option::SeparateOrEqClass ||
+            Opt.getKind() == llvm::opt::Option::FlagOrEqClass;
+        // Iterate over each spelling of the alias, e.g. -foo vs --foo.
+        for (StringRef Prefix : Prefixes) {
+          AddRule(Prefix + Opt.getName(), ArgCount.first, ArgCount.second);
+          if (HasEqSpelling)
+            AddRule(Prefix + Opt.getName() + "=", 1, 1);
         }
       }
       // Register the set of rules under each possible name.

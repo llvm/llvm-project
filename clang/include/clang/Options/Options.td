@@ -5736,13 +5736,10 @@ def mkernel : Flag<["-"], "mkernel">, Group<m_Group>;
 def mlinker_version_EQ : Joined<["-"], "mlinker-version=">, Group<m_Group>,
   Flags<[NoXarchOption]>;
 } // let Flags = [TargetSpecific]
-def mllvm : Separate<["-"], "mllvm">,
+def mllvm : SeparateOrEq<["-"], "mllvm">, Flags<[RenderSeparate]>,
   Visibility<[ClangOption, CC1Option, CC1AsOption, CLOption, DXCOption, FC1Option, FlangOption]>,
   HelpText<"Additional arguments to forward to LLVM's option processing">,
   MarshallingInfoStringVector<FrontendOpts<"LLVMArgs">>;
-def : Joined<["-"], "mllvm=">,
-  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>, Alias<mllvm>,
-  HelpText<"Alias for -mllvm">, MetaVarName<"<arg>">;
 def mmlir : Separate<["-"], "mmlir">,
   Visibility<[ClangOption, CC1Option, FC1Option, FlangOption]>,
   HelpText<"Additional arguments to forward to MLIR's option processing">,
@@ -7142,11 +7139,9 @@ def _compile : Flag<["--"], "compile">, Alias<c>;
 def _constant_cfstrings : Flag<["--"], "constant-cfstrings">;
 def _debug_EQ : Joined<["--"], "debug=">, Alias<g_Flag>;
 def _debug : Flag<["--"], "debug">, Alias<g_Flag>;
-def _define_macro_EQ : Joined<["--"], "define-macro=">, Alias<D>;
-def _define_macro : Separate<["--"], "define-macro">, Alias<D>;
+def _define_macro : SeparateOrEq<["--"], "define-macro">, Alias<D>;
 def _dependencies : Flag<["--"], "dependencies">, Alias<M>;
-def _dyld_prefix_EQ : Joined<["--"], "dyld-prefix=">;
-def _dyld_prefix : Separate<["--"], "dyld-prefix">, Alias<_dyld_prefix_EQ>;
+def _dyld_prefix_EQ : SeparateOrEq<["--"], "dyld-prefix">;
 def _encoding_EQ : Joined<["--"], "encoding=">, Alias<fencoding_EQ>;
 def _encoding : Separate<["--"], "encoding">, Alias<fencoding_EQ>;
 def : Joined<["--"], "entry=">, Alias<e>;
@@ -7173,8 +7168,7 @@ def _include_with_prefix_before : Separate<["--"], "include-with-prefix-before">
 def _include_with_prefix_EQ : Joined<["--"], "include-with-prefix=">, Alias<iwithprefix>;
 def _include_with_prefix : Separate<["--"], "include-with-prefix">, Alias<iwithprefix>;
 def _include_EQ : Joined<["--"], "include=">, Alias<include_>;
-def _language_EQ : Joined<["--"], "language=">, Alias<x>;
-def _language : Separate<["--"], "language">, Alias<x>;
+def _language : SeparateOrEq<["--"], "language">, Alias<x>;
 def _library_directory_EQ : Joined<["--"], "library-directory=">, Alias<L>;
 def _library_directory : Separate<["--"], "library-directory">, Alias<L>;
 def _no_line_commands : Flag<["--"], "no-line-commands">, Alias<P>;
@@ -7188,8 +7182,7 @@ def _optimize_EQ : Joined<["--"], "optimize=">, Alias<O>;
 def _optimize : Flag<["--"], "optimize">, Alias<O>;
 def _output_class_directory_EQ : Joined<["--"], "output-class-directory=">, Alias<foutput_class_dir_EQ>;
 def _output_class_directory : Separate<["--"], "output-class-directory">, Alias<foutput_class_dir_EQ>;
-def _output_EQ : Joined<["--"], "output=">, Alias<o>;
-def _output : Separate<["--"], "output">, Alias<o>;
+def _output : SeparateOrEq<["--"], "output">, Alias<o>;
 def _param : Separate<["--"], "param">, Group<CompileOnly_Group>;
 def _param_EQ : Joined<["--"], "param=">, Alias<_param>;
 def _precompile : Flag<["--"], "precompile">, Flags<[NoXarchOption]>,
@@ -7222,8 +7215,7 @@ def _stdlib : Separate<["--"], "stdlib">, Alias<stdlib_EQ>;
 def _cstdlib : Separate<["--"], "cstdlib">, Alias<cstdlib_EQ>;
 def _target_help : Flag<["--"], "target-help">;
 def _trace_includes : Flag<["--"], "trace-includes">, Alias<H>;
-def _undefine_macro_EQ : Joined<["--"], "undefine-macro=">, Alias<U>;
-def _undefine_macro : Separate<["--"], "undefine-macro">, Alias<U>;
+def _undefine_macro : SeparateOrEq<["--"], "undefine-macro">, Alias<U>;
 def _unsigned_char : Flag<["--"], "unsigned-char">, Alias<funsigned_char>;
 def _user_dependencies : Flag<["--"], "user-dependencies">, Alias<MM>;
 def _verbose : Flag<["--"], "verbose">, Alias<v>;
