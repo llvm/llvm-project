@@ -1280,6 +1280,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Miscellaneous Clang Crashes Fixed
 
+- Fixed a crash during code generation when builtin templates such as
+  `__type_pack_element` or `__make_integer_seq` were used as template
+  template arguments of emitted entities. (#GH232739)
+
 - Fixed a crash in preprocessor conditionals containing `_Pragma`.
 - Fixed a crash when Microsoft extensions were enabled and an unterminated
   `__identifier` expression reached the end of a preprocessing directive or
