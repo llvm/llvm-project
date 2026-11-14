@@ -769,3 +769,54 @@ loop:
 exit:
   ret void
 }
+
+define void @test_masked_divv_8i64_uniform_loop(ptr noalias %a, i64 %b, i64 %n, <8 x i1> %m) nounwind {
+; CHECK-LABEL: test_masked_divv_8i64_uniform_loop:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpbroadcastq %rsi, %zmm0
+; CHECK-NEXT:    vcvtusi2sd %rsi, {ru-sae}, %xmm15, %xmm1
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm2 = [1.0E+0,1.0E+0]
+; CHECK-NEXT:    # xmm2 = mem[0,0]
+; CHECK-NEXT:    vdivsd {rd-sae}, %xmm1, %xmm2, %xmm1
+; CHECK-NEXT:    vbroadcastsd %xmm1, %zmm1
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB22_1: # %loop
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vmovdqu64 (%rdi), %zmm2
+; CHECK-NEXT:    vcvtuqq2pd {rd-sae}, %zmm2, %zmm3
+; CHECK-NEXT:    vmulpd {rd-sae}, %zmm1, %zmm3, %zmm3
+; CHECK-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
+; CHECK-NEXT:    vpmullq %zmm0, %zmm3, %zmm4
+; CHECK-NEXT:    vpsubq %zmm4, %zmm2, %zmm2
+; CHECK-NEXT:    vcvtuqq2pd {rd-sae}, %zmm2, %zmm4
+; CHECK-NEXT:    vmulpd {rd-sae}, %zmm1, %zmm4, %zmm4
+; CHECK-NEXT:    vcvtpd2uqq {rd-sae}, %zmm4, %zmm4
+; CHECK-NEXT:    vpaddq %zmm4, %zmm3, %zmm3
+; CHECK-NEXT:    vpmullq %zmm0, %zmm4, %zmm4
+; CHECK-NEXT:    vpsubq %zmm4, %zmm2, %zmm2
+; CHECK-NEXT:    vpcmpnltuq %zmm0, %zmm2, %k0
+; CHECK-NEXT:    vpmovm2q %k0, %zmm2
+; CHECK-NEXT:    vpsubq %zmm2, %zmm3, %zmm2
+; CHECK-NEXT:    vmovdqu64 %zmm2, (%rdi)
+; CHECK-NEXT:    addq $64, %rdi
+; CHECK-NEXT:    addq $-8, %rdx
+; CHECK-NEXT:    jne .LBB22_1
+; CHECK-NEXT:  # %bb.2: # %exit
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+entry:
+  %ins = insertelement <8 x i64> poison, i64 %b, i64 0
+  %bv = shufflevector <8 x i64> %ins, <8 x i64> poison, <8 x i32> zeroinitializer
+  br label %loop
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
+  %p = getelementptr inbounds i64, ptr %a, i64 %i
+  %ld = load <8 x i64>, ptr %p, align 8
+  %res = call <8 x i64> @llvm.masked.udiv(<8 x i64> %ld, <8 x i64> %bv, <8 x i1> %m)
+  store <8 x i64> %res, ptr %p, align 8
+  %i.next = add nuw i64 %i, 8
+  %done = icmp eq i64 %i.next, %n
+  br i1 %done, label %exit, label %loop
+exit:
+  ret void
+}

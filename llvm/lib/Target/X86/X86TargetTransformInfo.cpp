@@ -8309,7 +8309,26 @@ bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
     return !Ops.empty();
   }
 
-  switch (I->getOpcode()) {
+  unsigned Opc = I->getOpcode();
+  if (Opc == Instruction::Call)
+    switch (cast<CallInst>(I)->getIntrinsicID()) {
+    case Intrinsic::masked_udiv:
+      Opc = Instruction::UDiv;
+      break;
+    case Intrinsic::masked_sdiv:
+      Opc = Instruction::SDiv;
+      break;
+    case Intrinsic::masked_urem:
+      Opc = Instruction::URem;
+      break;
+    case Intrinsic::masked_srem:
+      Opc = Instruction::SRem;
+      break;
+    default:
+      break;
+    }
+
+  switch (Opc) {
   case Instruction::UDiv:
   case Instruction::SDiv:
   case Instruction::URem:
