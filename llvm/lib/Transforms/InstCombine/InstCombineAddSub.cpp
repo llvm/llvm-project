@@ -2597,6 +2597,23 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     }
   }
 
+  // sext(X) - sext(X +nsw C) --> -sext(C)
+  // sext(X +nsw C) - sext(X) --> sext(C)
+  // using SExtLike (matching both sext and zext nneg) is OK
+  {
+    Value *X;
+    Constant *C;
+    if (match(Op0, m_SExtLike(m_Value(X))) &&
+        match(Op1, m_SExtLike(m_c_NSWAdd(m_Specific(X), m_Constant(C))))) {
+      Constant *WideC = ConstantFoldCastOperand(Instruction::SExt, C, I.getType(), DL);
+      return replaceInstUsesWith(I, ConstantExpr::getNeg(WideC));
+    }
+    if (match(Op1, m_SExtLike(m_Value(X))) &&
+        match(Op0, m_SExtLike(m_c_NSWAdd(m_Specific(X), m_Constant(C))))) {
+      Constant *WideC = ConstantFoldCastOperand(Instruction::SExt, C, I.getType(), DL);
+      return replaceInstUsesWith(I, WideC);
+    }
+  }
   // (X + Z) - (Y + Z) --> (X - Y)
   {
     Value *W, *Z;

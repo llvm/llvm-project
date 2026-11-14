@@ -348,3 +348,88 @@ define i64 @src_x_add_2sext_sub_nuw(i32 %x, i32 %y) {
   %sub = sub nuw i64 %sext1, %sext2
   ret i64 %sub
 }
+
+; sext(X) - sext(X +nsw C) -> -sext(C)
+; sext(X +nsw C) - sext(X) -> sext(C)
+
+define i64 @sub_sext_sext_add(i32 %x) {
+; CHECK-LABEL: define i64 @sub_sext_sext_add(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    ret i64 -42
+;
+  %a = add nsw i32 %x, 42
+  %sx = sext i32 %x to i64
+  %sa = sext i32 %a to i64
+  %r = sub i64 %sx, %sa
+  ret i64 %r
+}
+
+define <4 x i64> @sub_sext_sext_add_vector(<4 x i32> %x) {
+; CHECK-LABEL: define <4 x i64> @sub_sext_sext_add_vector(
+; CHECK-SAME: <4 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    ret <4 x i64> <i64 -4, i64 -2, i64 4, i64 2>
+;
+  %a = add nsw <4 x i32> %x, <i32 4, i32 2, i32 -4, i32 -2>
+  %sx = sext <4 x i32> %x to <4 x i64>
+  %sa = sext <4 x i32> %a to <4 x i64>
+  %r = sub <4 x i64> %sx, %sa
+  ret <4 x i64> %r
+}
+
+define i64 @sub_sext_add_sext(i32 %x) {
+; CHECK-LABEL: define i64 @sub_sext_add_sext(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    ret i64 42
+;
+  %a = add nsw i32 %x, 42
+  %sx = sext i32 %x to i64
+  %sa = sext i32 %a to i64
+  %r = sub i64 %sa, %sx
+  ret i64 %r
+}
+
+define <4 x i64> @sub_sext_add_sext_vector(<4 x i32> %x) {
+; CHECK-LABEL: define <4 x i64> @sub_sext_add_sext_vector(
+; CHECK-SAME: <4 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    ret <4 x i64> <i64 4, i64 2, i64 -4, i64 -2>
+;
+  %a = add nsw <4 x i32> %x, <i32 4, i32 2, i32 -4, i32 -2>
+  %sx = sext <4 x i32> %x to <4 x i64>
+  %sa = sext <4 x i32> %a to <4 x i64>
+  %r = sub <4 x i64> %sa, %sx
+  ret <4 x i64> %r
+}
+
+; Negative tests
+
+define i64 @sub_sext_sext_add_no_nsw(i32 %x) {
+; CHECK-LABEL: define i64 @sub_sext_sext_add_no_nsw(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X]], 42
+; CHECK-NEXT:    [[SX:%.*]] = sext i32 [[X]] to i64
+; CHECK-NEXT:    [[SA:%.*]] = sext i32 [[A]] to i64
+; CHECK-NEXT:    [[R:%.*]] = sub nsw i64 [[SX]], [[SA]]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %a = add i32 %x, 42
+  %sx = sext i32 %x to i64
+  %sa = sext i32 %a to i64
+  %r = sub i64 %sx, %sa
+  ret i64 %r
+}
+
+define i64 @sub_sext_add_sext_no_nsw(i32 %x) {
+; CHECK-LABEL: define i64 @sub_sext_add_sext_no_nsw(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X]], 42
+; CHECK-NEXT:    [[SX:%.*]] = sext i32 [[X]] to i64
+; CHECK-NEXT:    [[SA:%.*]] = sext i32 [[A]] to i64
+; CHECK-NEXT:    [[R:%.*]] = sub nsw i64 [[SA]], [[SX]]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %a = add i32 %x, 42
+  %sx = sext i32 %x to i64
+  %sa = sext i32 %a to i64
+  %r = sub i64 %sa, %sx
+  ret i64 %r
+}
