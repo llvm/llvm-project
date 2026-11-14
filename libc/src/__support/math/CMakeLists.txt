@@ -4529,14 +4529,32 @@ add_header_library(
 )
 
 add_header_library(
+  exp_integer_eval
+  HDRS
+    exp_integer_eval.h
+  DEPENDS
+    .exp_double_eval
+    libc.hdr.fenv_macros
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.compiler
+    libc.src.__support.uint128
+)
+
+add_header_library(
   exp
   HDRS
     exp.h
   DEPENDS
     .exp_double_eval
+    .exp_integer_eval
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
 )
 
 add_header_library(
