@@ -4,10 +4,6 @@
 name:            v2s32_fpr
 alignment:       4
 legalized:       true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1.entry:
     liveins: $d0
@@ -23,10 +19,6 @@ body:             |
 name:            v4s32_gpr
 alignment:       4
 legalized:       true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1.entry:
     liveins: $q0
@@ -50,10 +42,6 @@ body:             |
 name:            v2s64_fpr
 alignment:       4
 legalized:       true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1.entry:
     liveins: $q0
@@ -77,10 +65,6 @@ body:             |
 name:            v4s16_fpr
 alignment:       4
 legalized:       true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1.entry:
     liveins: $d0

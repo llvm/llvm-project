@@ -2772,13 +2772,14 @@ bool SPIRVInstructionSelector::selectUnmergeValues(MachineInstr &I) const {
 
 bool SPIRVInstructionSelector::selectFence(MachineInstr &I) const {
   AtomicOrdering AO = AtomicOrdering(I.getOperand(0).getImm());
+  // In the kernel environment image ordering is requested explicitly via
+  // CLK_IMAGE_MEM_FENCE, so a fence covers only pointer-addressable memory.
   uint32_t ScSem = STI.isShader()
                        ? SPIRV::MemorySemantics::UniformMemory |
                              SPIRV::MemorySemantics::WorkgroupMemory |
                              SPIRV::MemorySemantics::ImageMemory
                        : SPIRV::MemorySemantics::WorkgroupMemory |
-                             SPIRV::MemorySemantics::CrossWorkgroupMemory |
-                             SPIRV::MemorySemantics::ImageMemory;
+                             SPIRV::MemorySemantics::CrossWorkgroupMemory;
   uint32_t MemSem = getMemSemanticsWithStorageClass(
       STI.getTargetTriple(), static_cast<uint32_t>(getMemSemantics(AO)), ScSem);
   Register MemSemReg = buildI32ConstantInEntryBlock(MemSem, I);
@@ -6816,7 +6817,6 @@ bool SPIRVInstructionSelector::selectResourceGetPointer(Register &ResVReg,
   }
 
   assert(ResType->getOpcode() == SPIRV::OpTypePointer);
-  MachineIRBuilder MIRBuilder(I);
 
   Register ZeroReg =
       buildZerosVal(GR.getOrCreateSPIRVIntegerType(32, I, TII), I);

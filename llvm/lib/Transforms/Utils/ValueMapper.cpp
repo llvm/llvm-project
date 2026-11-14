@@ -1044,7 +1044,7 @@ void Mapper::remapInstruction(Instruction *I) {
     LLVMContext &C = CB->getContext();
     AttributeList Attrs = CB->getAttributes();
     for (unsigned i = 0; i < Attrs.getNumAttrSets(); ++i) {
-      for (int AttrIdx = Attribute::FirstTypeAttr;
+      for (unsigned AttrIdx = Attribute::FirstTypeAttr;
            AttrIdx <= Attribute::LastTypeAttr; AttrIdx++) {
         Attribute::AttrKind TypedAttr = (Attribute::AttrKind)AttrIdx;
         if (Type *Ty =

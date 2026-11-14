@@ -3,7 +3,6 @@
 
 ---
 name:            bitreverse_i8
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10
@@ -54,7 +53,6 @@ body:             |
 ...
 ---
 name:            bitreverse_i16
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10
@@ -105,7 +103,6 @@ body:             |
 ...
 ---
 name:            bitreverse_i32
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10
@@ -164,7 +161,6 @@ body:             |
 ...
 ---
 name:            bitreverse_i64
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10
@@ -235,7 +231,6 @@ body:             |
 ...
 ---
 name:            bitreverse_i2
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
     liveins: $x10
@@ -265,7 +260,6 @@ body:             |
 ...
 ---
 name:            bitreverse_i3
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
     liveins: $x10
@@ -300,7 +294,6 @@ body:             |
 ...
 ---
 name:            bitreverse_i4
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
     liveins: $x10
@@ -339,7 +332,6 @@ body:             |
 ...
 ---
 name:            bitreverse_i7
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
     liveins: $x10
@@ -391,7 +383,6 @@ body:             |
 ...
 ---
 name:            bitreverse_i24
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
     liveins: $x10
@@ -442,12 +433,14 @@ body:             |
 ...
 ---
 name:            bitreverse_v2i4
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
+    liveins: $v8
 
     ; CHECK-LABEL: name: bitreverse_v2i4
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $v8
+    ; CHECK: liveins: $v8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $v8
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<2 x s4>) = G_TRUNC [[COPY]](<2 x s32>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s4) = G_CONSTANT i4 3
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s4>) = G_BUILD_VECTOR [[C]](s4), [[C]](s4)

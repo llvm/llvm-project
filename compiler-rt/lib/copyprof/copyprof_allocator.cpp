@@ -17,6 +17,7 @@
 
 #include "copyprof_interceptors.h"
 #include "copyprof_interface_internal.h"
+#include "copyprof_per_object_state.h"
 #include "copyprof_shadow.h"
 #include "copyprof_state.h"
 #include "sanitizer_common/sanitizer_allocator.h"
@@ -152,9 +153,10 @@ struct CopyProfAllocator {
       ReportOutOfMemory(size, &stack);
     }
     GetMetadata(allocated)->requested_size = size;
-    MarkApplicationMemory(
-        allocated, size,
-        ShouldMarkNewMemoryAsCopy(__copyprof_state.smf_context));
+    SmfContext ctx = __copyprof_state.smf_context;
+    MarkApplicationMemory(allocated, size, ShouldMarkNewMemoryAsCopy(ctx));
+    if (ctx == SmfContext::COPY)
+      RecordPerObjectAllocation(__copyprof_state.current_this_ptr, size);
     return allocated;
   }
 
@@ -191,8 +193,8 @@ struct CopyProfAllocator {
   }
 
   // Implemented via `Allocate` and `Deallocate` rather than
-  // `CombinedAllocator::Reallocate`, s.t. shadow memory and metadata are
-  // updated as for any other (de)allocation.
+  // `CombinedAllocator::Reallocate`, s.t. shadow memory, metadata and
+  // per-object state are updated as for any other (de)allocation.
   // Note that the shadow of the old memory is not carried over.
   // TODO: figure out whether this assumption is a problem in practice.
   void* Reallocate(void* old_ptr, uptr new_size) {

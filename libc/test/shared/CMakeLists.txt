@@ -599,11 +599,13 @@ else()
       libc.src.__support.math.copysignf80
       libc.src.__support.math.copysignf16
       libc.src.__support.math.copysignl
+      libc.src.__support.math.daddf128
       libc.src.__support.math.ddivf128
       libc.src.__support.math.ddivl
       libc.src.__support.math.dmulf128
       libc.src.__support.math.dmull
       libc.src.__support.math.dsqrtf128
+      libc.src.__support.math.dsubf128
       libc.src.__support.math.f16add
       libc.src.__support.math.f16addf
       libc.src.__support.math.f16addf128

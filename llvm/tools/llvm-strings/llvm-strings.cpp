@@ -59,9 +59,7 @@
 // instead it handles this case by returning 0 but setting Ch to a non-null
 // character. This is worked around later.
 #ifdef __GLIBC__
-#if __GLIBC_PREREQ(2, 16)
-#define _GLIBCXX_USE_C11_UCHAR_CXX11 1
-#else
+#if !__GLIBC_PREREQ(2, 16)
 #undef MBTOC
 #define MBTOC MBTOC_WCHAR
 #endif
@@ -87,11 +85,19 @@
 #endif
 
 #if MBTOC == MBTOC_UCHAR
-#include <cuchar>
+// Support for <cuchar> is less widespread than <uchar.h>: if libstdc++ was
+// configured against glibc before 2.16 (even if current glibc is newer), or if
+// a libc++ version older than 15 is used, <cuchar> will either be nonfunctional
+// or unavailable, even when <uchar.h> works perfectly.
+#include <uchar.h>
 #elif MBTOC == MBTOC_WCHAR
 #include <cwchar>
 #elif MBTOC == MBTOC_ICONV
+#ifdef ICONVH
+#include ICONVH
+#else
 #include <iconv.h>
+#endif
 #endif
 
 using namespace llvm;
@@ -162,14 +168,14 @@ using char_t = char32_t;
 
 static size_t mbrtoc(char_t *Ch, const char *S, size_t N,
                      std::mbstate_t *MBState) {
-  size_t Result = std::mbrtoc32(Ch, S, N, MBState);
+  size_t Result = mbrtoc32(Ch, S, N, MBState);
   if (Result == 0 && *Ch)
     Result = (size_t)-3;
   return Result;
 }
 
 static size_t crtomb(char *S, char_t Ch, std::mbstate_t *MBState) {
-  return std::c32rtomb(S, Ch, MBState);
+  return c32rtomb(S, Ch, MBState);
 }
 #elif MBTOC == MBTOC_WCHAR
 using char_t = wchar_t;

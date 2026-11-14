@@ -10,8 +10,6 @@
 
 ---
 name:            test_copy
-registers:
-  - { id: 0, class: _ }
 body: |
   bb.0:
     liveins: $x0
@@ -21,7 +19,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: $x0 = COPY [[COPY]](i64)
-    %0(i64) = COPY $x0
+    %0:_(i64) = COPY $x0
     $x0 = COPY %0
 ...
 

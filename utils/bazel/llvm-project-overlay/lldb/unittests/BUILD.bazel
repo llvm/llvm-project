@@ -1159,6 +1159,7 @@ cc_test(
         "//lldb/source/Plugins:PluginObjectFileMachO",
         "//lldb/source/Plugins:PluginSymbolFileDWARF",
         "//lldb/source/Plugins:PluginSymbolFileSymtab",
+        "//lldb/source/Plugins:PluginSymbolLocatorDefault",
         "//lldb/source/Plugins:PluginSymbolLocatorSymStore",
         "//lldb/source/Plugins:PluginTypeSystemClang",
         "//llvm:Core",

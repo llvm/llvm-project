@@ -574,6 +574,27 @@
 // RUN: %clang --target=x86_64-sie-ps5 -fsanitize=thread -nodefaultlibs -nostdlib  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-NOLIB-PS5
 // CHECK-TSAN-NOLIB-PS5-NOT: SceThreadSanitizer_nosubmission_stub_weak
 
+// RUN: %clang --target=x86_64-sie-ps5 -fsanitize=type %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TYSAN-PS5
+// Make sure there are no *.{o,bc} or -l passed before the TySan library.
+// CHECK-TYSAN-PS5-NOT: {{(\.(o|bc)"? |-l).*-lSceTypeSanitizer_nosubmission_stub_weak}}
+// CHECK-TYSAN-PS5: --dependent-lib=libSceTypeSanitizer_nosubmission_stub_weak.a
+// CHECK-TYSAN-PS5-NOT: {{(\.(o|bc)"? |-l).*-lSceTypeSanitizer_nosubmission_stub_weak}}
+// CHECK-TYSAN-PS5: -lSceTypeSanitizer_nosubmission_stub_weak
+// RUN: %clang --target=x86_64-sie-ps5 -fsanitize=type -nostdlib %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TYSAN-NOLIB-PS5
+// RUN: %clang --target=x86_64-sie-ps5 -fsanitize=type -nodefaultlibs %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TYSAN-NOLIB-PS5
+// RUN: %clang --target=x86_64-sie-ps5 -fsanitize=type -nodefaultlibs -nostdlib  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TYSAN-NOLIB-PS5
+// CHECK-TYSAN-NOLIB-PS5-NOT: SceTypeSanitizer_nosubmission_stub_weak
+
+// RUN: %clang --target=x86_64-sie-ps5 -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-PS5
+// Make sure there are no *.{o,bc} or -l passed before the RtSan library.
+// CHECK-RTSAN-PS5-NOT: {{(\.(o|bc)"? |-l).*-lSceRealtimeSanitizer_nosubmission_stub_weak}}
+// CHECK-RTSAN-PS5: --dependent-lib=libSceRealtimeSanitizer_nosubmission_stub_weak.a
+// CHECK-RTSAN-PS5-NOT: {{(\.(o|bc)"? |-l).*-lSceRealtimeSanitizer_nosubmission_stub_weak}}
+// CHECK-RTSAN-PS5: -lSceRealtimeSanitizer_nosubmission_stub_weak
+// RUN: %clang --target=x86_64-sie-ps5 -fsanitize=realtime -nostdlib %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-NOLIB-PS5
+// RUN: %clang --target=x86_64-sie-ps5 -fsanitize=realtime -nodefaultlibs %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-NOLIB-PS5
+// RUN: %clang --target=x86_64-sie-ps5 -fsanitize=realtime -nodefaultlibs -nostdlib  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-NOLIB-PS5
+// CHECK-RTSAN-NOLIB-PS5-NOT: SceRealtimeSanitizer_nosubmission_stub_weak
 
 // RUN: %clang --target=aarch64 -fsanitize=shadow-call-stack -ffixed-x18 %s -### 2>&1 | FileCheck %s --check-prefix=AARCH64-SCS
 // RUN: %clang --target=aarch64_be -fsanitize=shadow-call-stack -ffixed-x18 %s -### 2>&1 | FileCheck %s --check-prefix=AARCH64-SCS

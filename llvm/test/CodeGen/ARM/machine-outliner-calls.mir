@@ -345,3 +345,4 @@ body:             |
   ; CHECK:   $r1 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $r2 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   tBX_RET 14 /* CC::al */, $noreg
+...

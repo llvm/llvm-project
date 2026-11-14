@@ -155,3 +155,4 @@ body:             |
     %width:_(i64) = G_CONSTANT i64 256
     G_MEMSET %ptr(p0), %not_zero(i8), %width(i64), 0 :: (store (i32))
     RET_ReallyLR
+...
