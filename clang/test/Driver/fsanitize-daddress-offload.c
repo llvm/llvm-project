@@ -69,11 +69,23 @@
 // CHECK-HIP-SAME: "--whole-archive"
 // CHECK-HIP-SAME: "{{[^"]*}}amdgpu-amd-amdhsa{{/|\\\\}}libclang_rt.dasan.a"
 
+// RUN: %clang -no-canonical-prefixes -### -x hip --offload-arch=gfx908 \
+// RUN:     --offload-device-only -fsanitize=daddress -fno-sanitize-link-runtime \
+// RUN:     -nogpuinc -nogpulib --rocm-path=%S/Inputs/rocm \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_amdgpu_per_target_subdir %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-HIP-NO-LINK
+//     CHECK-HIP-NO-LINK: lld
+// CHECK-HIP-NO-LINK-NOT: libclang_rt.dasan
+
+// The device flag is forwarded even without any device sanitizer runtime.
 // RUN: %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu \
 // RUN:     -fopenmp=libomp --offload-arch=gfx908 -fsanitize=daddress -nogpuinc \
-// RUN:     --rocm-path=%S/Inputs/rocm \
-// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir %s 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-MISSING
-// CHECK-MISSING-NOT: "--device-compiler=amdgpu-amd-amdhsa=-fsanitize=daddress"
+// RUN:     --rocm-path=%S/Inputs/rocm -resource-dir=%S/Inputs/resource_dir %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-FORWARD
+// RUN: %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu \
+// RUN:     -fopenmp=libomp --offload-arch=gfx908 -Xarch_device -fsanitize=daddress \
+// RUN:     -nogpuinc --rocm-path=%S/Inputs/rocm -resource-dir=%S/Inputs/resource_dir \
+// RUN:     %s 2>&1 | FileCheck %s --check-prefix=CHECK-FORWARD
+// CHECK-FORWARD: "--device-compiler=amdgpu-amd-amdhsa=-fsanitize=daddress"
 
 int main(void) { return 0; }
