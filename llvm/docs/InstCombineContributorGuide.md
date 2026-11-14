@@ -167,6 +167,7 @@ examples:
  * For folds involving memory accesses like load/store, check that scalable vectors and non-byte-size types (like i3) are handled correctly. Also check that volatile/atomic are handled.
  * For folds that interact with the bitwidth in some non-trivial way, check an illegal type like i13. Also confirm that the transform is correct for i1.
  * For folds that involve phis, you may want to check that the case of multiple incoming values from one block is handled correctly.
+ * For VectorCombine, add RUN lines for the relevant CPU configurations (for example, `-mcpu=x86-64`, `-mcpu=x86-64-v2`, `-mcpu=x86-64-v3`, and `-mcpu=x86-64-v4`).
 
 ## Proofs
 
@@ -450,6 +451,38 @@ list of canonicalizations that are implemented in InstCombine:
 | `mul X, C`                   | `shl X, Log2(C)`           | `isPowerOf2(C)`               |
 | `select Cond1, Cond2, false` | `and Cond1, Cond2`         | `impliesPoison(Cond2, Cond1)` |
 | `select Cond1, true, Cond2`  | `or Cond1, Cond2`          | `impliesPoison(Cond2, Cond1)` |
+
+### VectorCombine
+
+VectorCombine is a cost-driven pass and, unlike InstCombine, may use
+target-specific cost modelling. Every fold must compare the cost of the
+original sequence against that of the transformed sequence using
+`TargetTransformInfo` (TTI) cost APIs such as `getInstructionCost()` and
+`getMemoryOpCost()`.
+
+Pass the actual operands to the cost model rather than assuming that operands
+have the same cost or hand-rolling cost estimates. For example, passing the
+operands of a shuffle lets TTI improve its estimate in cases such as broadcast
+loads:
+
+```cpp
+// Op0 is a load and Op1 is poison.
+InstructionCost Cost =
+    TTI.getShuffleCost(SK, DstTy, SrcTy, CostKind, Mask, 0, nullptr,
+                       {Op0, Op1}, &I);
+```
+
+The cost comparison must account for every instruction that is added, removed,
+or kept, including old instructions that cannot be removed because they have
+other uses. Add an `LLVM_DEBUG` message that reports the old and new costs,
+following the style of existing VectorCombine folds.
+
+If the costs are equal, prefer the more canonical form to avoid oscillation.
+Do not break canonical forms established elsewhere, such as splat and identity
+forms.
+
+If a transform is only profitable because of a backend lowering detail, it
+belongs in the backend rather than VectorCombine.
 
 ### PatternMatch
 
