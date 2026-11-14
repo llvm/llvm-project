@@ -754,6 +754,8 @@ public:
             BBSectionsType == BasicBlockSection::Preset);
   }
 
+  BasicBlockSection getBBSectionsType() const { return BBSectionsType; }
+
   void setBBSectionsType(BasicBlockSection V) { BBSectionsType = V; }
 
   void

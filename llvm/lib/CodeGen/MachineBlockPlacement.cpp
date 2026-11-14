@@ -36,6 +36,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/CodeGen/BasicBlockSectionUtils.h"
 #include "llvm/CodeGen/MBFIWrapper.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
@@ -2998,114 +2999,112 @@ void MachineBlockPlacement::optimizeBranches() {
   }
 }
 
-void MachineBlockPlacement::alignBlocks() {
+void BlockAlignmentProfile::anchor() {}
+
+void llvm::alignMachineBlocks(MachineFunction &MF, const MachineLoopInfo *MLI,
+                              const BlockAlignmentProfile *Prof) {
   // Walk through the backedges of the function now that we have fully laid out
   // the basic blocks and align the destination of each backedge. We don't rely
   // exclusively on the loop info here so that we can align backedges in
   // unnatural CFGs and backedges that were introduced purely because of the
-  // loop rotations done during this layout pass.
+  // loop rotations done during layout.
+  const TargetLoweringBase *TLI = MF.getSubtarget().getTargetLowering();
   if (!AlignAllBlock && !AlignAllNonFallThruBlocks) {
-    if (F->getFunction().hasMinSize() ||
-        (F->getFunction().hasOptSize() && !TLI->alignLoopsWithOptSize()))
+    if (MF.getFunction().hasMinSize() ||
+        (MF.getFunction().hasOptSize() && !TLI->alignLoopsWithOptSize()))
       return;
   }
 
-  BlockChain &FunctionChain = *BlockToChain[&F->front()];
-  // Empty chain.
-  if (FunctionChain.begin() == FunctionChain.end())
+  if (MF.empty())
     return;
 
-  const BranchProbability ColdProb(1, 5); // 20%
-  BlockFrequency EntryFreq = MBFI->getBlockFreq(&F->front());
-  BlockFrequency WeightedEntryFreq = EntryFreq * ColdProb;
-  for (MachineBasicBlock *ChainBB : FunctionChain) {
-    if (ChainBB == *FunctionChain.begin())
-      continue;
+  if (Prof && MLI) {
+    const BranchProbability ColdRatio(1, 5); // 20%
+    for (MachineBasicBlock &BB : MF) {
+      // The entry block is aligned via the function alignment.
+      if (&BB == &MF.front())
+        continue;
 
-    // Don't align non-looping basic blocks. These are unlikely to execute
-    // enough times to matter in practice. Note that we'll still handle
-    // unnatural CFGs inside of a natural outer loop (the common case) and
-    // rotated loops.
-    MachineLoop *L = MLI->getLoopFor(ChainBB);
-    if (!L)
-      continue;
+      // Don't align non-looping basic blocks. These are unlikely to execute
+      // enough times to matter in practice. Note that we'll still handle
+      // unnatural CFGs inside of a natural outer loop (the common case) and
+      // rotated loops.
+      MachineLoop *L = MLI->getLoopFor(&BB);
+      if (!L)
+        continue;
 
-    // Query the block being aligned rather than only the LoopInfo header.
-    // After loop rotation, ChainBB can be a different backedge destination.
-    const Align TLIAlign = TLI->getPrefLoopAlignment(L, ChainBB);
-    unsigned MDAlign = 1;
-    MDNode *LoopID = L->getLoopID();
-    if (LoopID) {
-      for (const MDOperand &MDO : llvm::drop_begin(LoopID->operands())) {
-        MDNode *MD = dyn_cast<MDNode>(MDO);
-        if (MD == nullptr)
-          continue;
-        MDString *S = dyn_cast<MDString>(MD->getOperand(0));
-        if (S == nullptr)
-          continue;
-        if (S->getString() == "llvm.loop.align") {
-          MDAlign =
-              mdconst::extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
+      // Query the block being aligned rather than only the LoopInfo header.
+      // After loop rotation, BB can be a different backedge destination.
+      const Align TLIAlign = TLI->getPrefLoopAlignment(L, &BB);
+      unsigned MDAlign = 1;
+      MDNode *LoopID = L->getLoopID();
+      if (LoopID) {
+        for (const MDOperand &MDO : llvm::drop_begin(LoopID->operands())) {
+          MDNode *MD = dyn_cast<MDNode>(MDO);
+          if (MD == nullptr)
+            continue;
+          MDString *S = dyn_cast<MDString>(MD->getOperand(0));
+          if (S == nullptr)
+            continue;
+          if (S->getString() == "llvm.loop.align") {
+            MDAlign = mdconst::extract<ConstantInt>(MD->getOperand(1))
+                          ->getZExtValue();
+          }
         }
       }
-    }
 
-    // Use max of the TLIAlign and MDAlign
-    const Align LoopAlign = std::max(TLIAlign, Align(MDAlign));
-    if (LoopAlign == 1)
-      continue; // Don't care about loop alignment.
+      // Use max of the TLIAlign and MDAlign
+      const Align LoopAlign = std::max(TLIAlign, Align(MDAlign));
+      if (LoopAlign <= BB.getAlignment())
+        continue; // Don't care about loop alignment.
 
-    // If the block is cold relative to the function entry don't waste space
-    // aligning it.
-    BlockFrequency Freq = MBFI->getBlockFreq(ChainBB);
-    if (Freq < WeightedEntryFreq)
-      continue;
+      // If the block is cold relative to the function entry don't waste space
+      // aligning it.
+      if (Prof->isColdRelativeTo(BB, MF.front(), ColdRatio))
+        continue;
 
-    // If the block is cold relative to its loop header, don't align it
-    // regardless of what edges into the block exist.
-    MachineBasicBlock *LoopHeader = L->getHeader();
-    BlockFrequency LoopHeaderFreq = MBFI->getBlockFreq(LoopHeader);
-    if (Freq < (LoopHeaderFreq * ColdProb))
-      continue;
+      // If the block is cold relative to its loop header, don't align it
+      // regardless of what edges into the block exist.
+      MachineBasicBlock *LoopHeader = L->getHeader();
+      if (Prof->isColdRelativeTo(BB, *LoopHeader, ColdRatio))
+        continue;
 
-    // If the global profiles indicates so, don't align it.
-    if (llvm::shouldOptimizeForSize(ChainBB, PSI, MBFI.get()) &&
-        !TLI->alignLoopsWithOptSize())
-      continue;
+      // If the global profiles indicates so, don't align it.
+      if (Prof->shouldOptForSize(BB) && !TLI->alignLoopsWithOptSize())
+        continue;
 
-    // Check for the existence of a non-layout predecessor which would benefit
-    // from aligning this block.
-    MachineBasicBlock *LayoutPred =
-        &*std::prev(MachineFunction::iterator(ChainBB));
+      // Check for the existence of a non-layout predecessor which would benefit
+      // from aligning this block.
+      MachineBasicBlock *LayoutPred =
+          &*std::prev(MachineFunction::iterator(&BB));
 
-    auto DetermineMaxAlignmentPadding = [&]() {
-      // Set the maximum bytes allowed to be emitted for alignment.
-      unsigned MaxBytes;
-      if (MaxBytesForAlignmentOverride.getNumOccurrences() > 0)
-        MaxBytes = MaxBytesForAlignmentOverride;
-      else
-        MaxBytes = TLI->getMaxPermittedBytesForAlignment(ChainBB);
-      ChainBB->setMaxBytesForAlignment(MaxBytes);
-    };
+      auto DetermineMaxAlignmentPadding = [&]() {
+        // Set the maximum bytes allowed to be emitted for alignment.
+        unsigned MaxBytes;
+        if (MaxBytesForAlignmentOverride.getNumOccurrences() > 0)
+          MaxBytes = MaxBytesForAlignmentOverride;
+        else
+          MaxBytes = TLI->getMaxPermittedBytesForAlignment(&BB);
+        BB.setMaxBytesForAlignment(MaxBytes);
+      };
 
-    // Force alignment if all the predecessors are jumps. We already checked
-    // that the block isn't cold above.
-    if (!LayoutPred->isSuccessor(ChainBB)) {
-      ChainBB->setAlignment(LoopAlign);
-      DetermineMaxAlignmentPadding();
-      continue;
-    }
+      // Force alignment if all the predecessors are jumps. We already checked
+      // that the block isn't cold above. A block that begins a section never
+      // has a fall-through predecessor, as the linker may reorder sections.
+      if (BB.isBeginSection() || !LayoutPred->isSuccessor(&BB)) {
+        BB.setAlignment(LoopAlign);
+        DetermineMaxAlignmentPadding();
+        continue;
+      }
 
-    // Align this block if the layout predecessor's edge into this block is
-    // cold relative to the block. When this is true, other predecessors make up
-    // all of the hot entries into the block and thus alignment is likely to be
-    // important.
-    BranchProbability LayoutProb =
-        MBPI->getEdgeProbability(LayoutPred, ChainBB);
-    BlockFrequency LayoutEdgeFreq = MBFI->getBlockFreq(LayoutPred) * LayoutProb;
-    if (LayoutEdgeFreq <= (Freq * ColdProb)) {
-      ChainBB->setAlignment(LoopAlign);
-      DetermineMaxAlignmentPadding();
+      // Align this block if the layout predecessor's edge into this block is
+      // cold relative to the block. When this is true, other predecessors make
+      // up all of the hot entries into the block and thus alignment is likely
+      // to be important.
+      if (Prof->isEdgeColdRelativeToDest(*LayoutPred, BB, ColdRatio)) {
+        BB.setAlignment(LoopAlign);
+        DetermineMaxAlignmentPadding();
+      }
     }
   }
 
@@ -3114,7 +3113,7 @@ void MachineBlockPlacement::alignBlocks() {
 
   if (AlignAllBlock)
     // Align all of the blocks in the function to a specific alignment.
-    for (MachineBasicBlock &MBB : *F) {
+    for (MachineBasicBlock &MBB : MF) {
       if (HasMaxBytesOverride)
         MBB.setAlignment(Align::fromLog2(AlignAllBlock),
                          MaxBytesForAlignmentOverride);
@@ -3123,10 +3122,11 @@ void MachineBlockPlacement::alignBlocks() {
     }
   else if (AlignAllNonFallThruBlocks) {
     // Align all of the blocks that have no fall-through predecessors to a
-    // specific alignment.
-    for (auto MBI = std::next(F->begin()), MBE = F->end(); MBI != MBE; ++MBI) {
+    // specific alignment. A block that begins a section never has a
+    // fall-through predecessor, as the linker may reorder sections.
+    for (auto MBI = std::next(MF.begin()), MBE = MF.end(); MBI != MBE; ++MBI) {
       auto LayoutPred = std::prev(MBI);
-      if (!LayoutPred->isSuccessor(&*MBI)) {
+      if (MBI->isBeginSection() || !LayoutPred->isSuccessor(&*MBI)) {
         if (HasMaxBytesOverride)
           MBI->setAlignment(Align::fromLog2(AlignAllNonFallThruBlocks),
                             MaxBytesForAlignmentOverride);
@@ -3135,6 +3135,32 @@ void MachineBlockPlacement::alignBlocks() {
       }
     }
   }
+}
+
+bool MBFIBlockAlignmentProfile::isColdRelativeTo(
+    const MachineBasicBlock &BB, const MachineBasicBlock &RefBB,
+    BranchProbability ColdRatio) const {
+  return MBFI.getBlockFreq(&BB) < MBFI.getBlockFreq(&RefBB) * ColdRatio;
+}
+
+bool MBFIBlockAlignmentProfile::isEdgeColdRelativeToDest(
+    const MachineBasicBlock &Src, const MachineBasicBlock &Dst,
+    BranchProbability ColdRatio) const {
+  BranchProbability EdgeProb = MBPI.getEdgeProbability(&Src, &Dst);
+  BlockFrequency EdgeFreq = MBFI.getBlockFreq(&Src) * EdgeProb;
+  return EdgeFreq <= (MBFI.getBlockFreq(&Dst) * ColdRatio);
+}
+
+bool MBFIBlockAlignmentProfile::shouldOptForSize(
+    const MachineBasicBlock &BB) const {
+  return llvm::shouldOptimizeForSize(&BB, PSI, &MBFI);
+}
+
+void MachineBlockPlacement::alignBlocks() {
+  if (shouldAlignBlocksInBBSections(F->getTarget()))
+    return;
+  MBFIBlockAlignmentProfile Prof(*MBFI, *MBPI, PSI);
+  alignMachineBlocks(*F, MLI, &Prof);
 }
 
 /// Tail duplicate \p BB into (some) predecessors if profitable, repeating if
