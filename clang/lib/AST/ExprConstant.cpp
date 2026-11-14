@@ -23816,25 +23816,30 @@ EvaluateBuiltinStrLen(const Expr *E, EvalInfo &Info,
   if (!EvaluatePointer(E, String, Info))
     return std::nullopt;
 
+  QualType CharTy = E->getType()->getPointeeType();
+
   // Fast path: if it's a string literal, search the string value.
   if (const StringLiteral *S = dyn_cast_or_null<StringLiteral>(
           String.getLValueBase().dyn_cast<const Expr *>())) {
     StringRef Str = S->getBytes();
     int64_t Off = String.Offset.getQuantity();
-    if (Off >= 0 && (uint64_t)Off <= (uint64_t)Str.size()) {
-      UnsignedOrNone ZeroIndex = S->findZeroCodeUnit(Off);
-      if (StringResult) {
-        if (ZeroIndex)
-          Str = Str.substr(Off, *ZeroIndex);
-        *StringResult = Str;
+    unsigned CharByteWidth = S->getCharByteWidth();
+    // StringResult holds one char per character, so the literal's bytes can
+    // only be copied into it when each character is one byte.
+    if (Off >= 0 && static_cast<size_t>(Off) <= Str.size() &&
+        Off % CharByteWidth == 0 && !CharTy->isIncompleteType() &&
+        Info.Ctx.getTypeSizeInChars(CharTy) ==
+            CharUnits::fromQuantity(CharByteWidth) &&
+        (CharByteWidth == 1 || !StringResult)) {
+      if (UnsignedOrNone Len = S->findZeroCodeUnit(Off / CharByteWidth)) {
+        if (StringResult)
+          *StringResult = Str.substr(Off, *Len);
+        return *Len;
       }
-
-      return ZeroIndex.value_or(Str.size());
     }
-    // For an invalid index, fall through to the offset handling below.
+    // Anything else falls through to the slow path.
   }
 
-  QualType CharTy = E->getType()->getPointeeType();
   // Slow path: scan the bytes of the string looking for the terminating 0.
   for (uint64_t Strlen = 0; /**/; ++Strlen) {
     APValue Char;
