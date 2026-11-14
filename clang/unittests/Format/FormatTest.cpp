@@ -3007,6 +3007,18 @@ TEST_F(FormatTest, ShortEnums) {
                Style);
 }
 
+TEST_F(FormatTest, ShortEnumsWithoutColumnLimit) {
+  FormatStyle Style = getLLVMStyle();
+  Style.ColumnLimit = 0;
+  verifyNoChange("enum { A, B, C };", Style);
+  verifyNoChange("enum {\n"
+                 "  A,\n"
+                 "  B,\n"
+                 "  C\n"
+                 "};",
+                 Style);
+}
+
 TEST_F(FormatTest, ShortCompoundRequirement) {
   constexpr StringRef Code("template <typename T>\n"
                            "concept c = requires(T x) {\n"
