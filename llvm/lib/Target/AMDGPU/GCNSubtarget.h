@@ -410,11 +410,11 @@ public:
   }
 
   bool hasExportInsts() const {
-    return !hasGFX940Insts() && !hasGFX1250Insts();
+    return !hasGFX940Insts() && (!hasGFX1250Insts() || hasGFX13Insts());
   }
 
   bool hasVINTERPEncoding() const {
-    return HasGFX11Insts && !hasGFX1250Insts();
+    return HasGFX11Insts && (!hasGFX1250Insts() || hasGFX13Insts());
   }
 
   bool hasMultiDwordFlatScratchAddressing() const {
