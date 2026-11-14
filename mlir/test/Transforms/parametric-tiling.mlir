@@ -128,16 +128,21 @@ func.func @triangular(%arg0: memref<?x?xf32>) {
   return
 }
 
-// Verify that extractFixedOuterLoops silently skips loops with iter_args
-// instead of producing invalid IR (regression test for
-// https://github.com/llvm/llvm-project/issues/129044).
+// Verify that iter_args are threaded through the new inner loop.
 
-// COMMON-LABEL: @loop_with_iter_args
-// COMMON: scf.for {{.*}} iter_args({{.*}}) -> (f32)
+// COMMON-LABEL: func.func @loop_with_iter_args(
+// COMMON:         %[[r:.*]] = scf.for %[[i:.*]] = {{.*}} iter_args(%[[sum:.*]] = %{{.*}}) -> (f32) {
+// COMMON:           %[[inner:.*]] = scf.for %[[ii:.*]] = %[[i]] to {{.*}} iter_args(%[[s:.*]] = %[[sum]]) -> (f32) {
+// COMMON-NEXT:        %[[e:.*]] = memref.load %{{.*}}[%[[ii]]]
+// COMMON-NEXT:        %[[new:.*]] = arith.addf %[[s]], %[[e]]
+// COMMON-NEXT:        scf.yield %[[new]]
+// COMMON-NEXT:      }
+// COMMON-NEXT:      scf.yield %[[inner]]
+// COMMON-NEXT:    }
+// COMMON-NEXT:    return %[[r]]
 func.func @loop_with_iter_args(%buffer: memref<1024xf32>, %lb: index,
                                %ub: index, %step: index) -> f32 {
   %initial_sum = arith.constant 0.0 : f32
-  // This loop has iter_args; strip-mining must not be applied.
   %final_sum = scf.for %iv = %lb to %ub step %step
       iter_args(%sum_iter = %initial_sum) -> (f32) {
     %element = memref.load %buffer[%iv] : memref<1024xf32>
@@ -145,4 +150,79 @@ func.func @loop_with_iter_args(%buffer: memref<1024xf32>, %lb: index,
     scf.yield %updated_sum : f32
   }
   return %final_sum : f32
+}
+
+// Verify that loops using unsigned comparisons are strip-mined with unsigned
+// arithmetic: the upper bound of each strip is computed with `arith.minui` and
+// the new inner loop also compares unsigned (regression test for
+// https://github.com/llvm/llvm-project/issues/240306).
+
+// COMMON-LABEL: func.func @loop_with_unsigned_cmp(
+// COMMON-SAME:    %{{[^:]*}}: memref<1024xf32>, %[[lb:[^:]*]]: index, %[[ub:[^:]*]]: index, %[[step:[^:]*]]: index
+// COMMON:         scf.for unsigned %[[i:.*]] = %[[lb]] to %[[ub]] step %[[tile:.*]] {
+// COMMON-NEXT:      %[[stepped:.*]] = arith.addi %[[i]], %[[tile]]
+// COMMON-NEXT:      %[[strip_ub:.*]] = arith.minui %[[ub]], %[[stepped]]
+// COMMON-NEXT:      scf.for unsigned %[[ii:.*]] = %[[i]] to %[[strip_ub]] step %[[step]] {
+// COMMON-NEXT:        memref.load %{{.*}}[%[[ii]]]
+func.func @loop_with_unsigned_cmp(%buffer: memref<1024xf32>, %lb: index,
+                                  %ub: index, %step: index) {
+  scf.for unsigned %iv = %lb to %ub step %step {
+    %element = memref.load %buffer[%iv] : memref<1024xf32>
+    memref.store %element, %buffer[%iv] : memref<1024xf32>
+  }
+  return
+}
+
+// Verify that each new inner loop takes the signedness of the loop it was
+// strip-mined from, not of the loop it is placed in. With two tiling levels,
+// the strip of the unsigned outer loop is placed inside the signed loop.
+
+// COMMON-LABEL: func.func @mixed_signedness(
+// COMMON-SAME:    %{{[^:]*}}: memref<?x?xf32>, %[[n:[^:]*]]: index, %[[m:[^:]*]]: index
+// COMMON:         scf.for unsigned %[[i:.*]] = %c0 to %[[n]] step %[[tile:.*]] {
+// TILE_74-NEXT:     scf.for %[[j:.*]] = %c0 to %[[m]] step %[[tile2:.*]] {
+// COMMON-NEXT:        %[[stepped:.*]] = arith.addi %[[i]], %[[tile]]
+// COMMON-NEXT:        %[[strip_ub:.*]] = arith.minui %[[n]], %[[stepped]]
+// TILE_74-NEXT:       %[[stepped2:.*]] = arith.addi %[[j]], %[[tile2]]
+// TILE_74-NEXT:       %[[strip_ub2:.*]] = arith.minsi %[[m]], %[[stepped2]]
+// COMMON-NEXT:        scf.for unsigned %[[ii:.*]] = %[[i]] to %[[strip_ub]] step %c1 {
+// TILE_7-NEXT:          scf.for %[[j:.*]] = %c0 to %[[m]] step %c1 {
+// TILE_74-NEXT:         scf.for %[[jj:.*]] = %[[j]] to %[[strip_ub2]] step %c1 {
+// TILE_7-NEXT:            memref.load %{{.*}}[%[[ii]], %[[j]]]
+// TILE_74-NEXT:           memref.load %{{.*}}[%[[ii]], %[[jj]]]
+func.func @mixed_signedness(%arg0: memref<?x?xf32>, %n: index, %m: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.for unsigned %i = %c0 to %n step %c1 {
+    scf.for %j = %c0 to %m step %c1 {
+      memref.load %arg0[%i, %j] : memref<?x?xf32>
+    }
+  }
+  return
+}
+
+// Verify that a nest with iter_args is only tiled when a single loop is
+// strip-mined, since tiling more loops reorders the iterations.
+
+// COMMON-LABEL: func.func @nest_with_iter_args(
+// TILE_7:         scf.for %[[i:.*]] = {{.*}} iter_args(%[[a:.*]] = %{{.*}}) -> (f32) {
+// TILE_7:           scf.for %[[ii:.*]] = %[[i]] to {{.*}} iter_args(%[[a2:.*]] = %[[a]]) -> (f32) {
+// TILE_7-NEXT:        scf.for %[[j:.*]] = {{.*}} iter_args(%[[b:.*]] = %[[a2]]) -> (f32) {
+// TILE_7-NEXT:          memref.load %{{.*}}[%[[ii]], %[[j]]]
+// TILE_74:        scf.for %[[i:.*]] = %c0 to %{{.*}} step %c1 iter_args
+// TILE_74-NEXT:     scf.for %[[j:.*]] = %c0 to %{{.*}} step %c1 iter_args
+// TILE_74-NEXT:       memref.load %{{.*}}[%[[i]], %[[j]]]
+func.func @nest_with_iter_args(%buffer: memref<?x?xf32>, %n: index, %m: index,
+                               %init: f32) -> f32 {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %r = scf.for %i = %c0 to %n step %c1 iter_args(%a = %init) -> (f32) {
+    %r2 = scf.for %j = %c0 to %m step %c1 iter_args(%b = %a) -> (f32) {
+      %e = memref.load %buffer[%i, %j] : memref<?x?xf32>
+      %s = arith.addf %b, %e : f32
+      scf.yield %s : f32
+    }
+    scf.yield %r2 : f32
+  }
+  return %r : f32
 }
