@@ -78,7 +78,7 @@ multiclass SS3I_unop_rm_int_mm<bits<8> opc, string OpcodeStr,
                  [(set VR64:$dst, (IntId64 VR64:$src))]>,
            Sched<[sched]>;
 
-  def rm : MMXSS38I<opc, MRMSrcMem, (outs VR64:$dst), (ins i64mem:$src),
+  def rm : MMXSS38I<opc, MRMSrcMem, (outs VR64:$dst), (ins i64mem_norex2:$src),
                  !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
                  [(set VR64:$dst, (IntId64 (load_mmx addr:$src)))]>,
                  Sched<[sched.Folded]>;
@@ -96,7 +96,7 @@ multiclass SS3I_binop_rm_int_mm<bits<8> opc, string OpcodeStr,
        [(set VR64:$dst, (IntId64 VR64:$src1, VR64:$src2))]>,
       Sched<[sched]>;
   def rm : MMXSS38I<opc, MRMSrcMem, (outs VR64:$dst),
-       (ins VR64:$src1, i64mem:$src2),
+       (ins VR64:$src1, i64mem_norex2:$src2),
         !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
        [(set VR64:$dst,
          (IntId64 VR64:$src1, (load_mmx addr:$src2)))]>,
@@ -113,7 +113,7 @@ multiclass ssse3_palign_mm<string asm, Intrinsic IntId,
       [(set VR64:$dst, (IntId VR64:$src1, VR64:$src2, (i8 timm:$src3)))]>,
       Sched<[sched]>;
   def rmi  : MMXSS3AI<0x0F, MRMSrcMem, (outs VR64:$dst),
-      (ins VR64:$src1, i64mem:$src2, u8imm:$src3),
+      (ins VR64:$src1, i64mem_norex2:$src2, u8imm:$src3),
       !strconcat(asm, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
       [(set VR64:$dst, (IntId VR64:$src1, (load_mmx addr:$src2),
                                           (i8 timm:$src3)))]>,

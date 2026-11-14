@@ -1,0 +1,76 @@
+# RUN: not --crash llc -mtriple=x86_64 \
+# RUN:   -mattr=+sse4.2,+avx,+tbm,+amx-tile,+egpr -run-pass=none -filetype=null %s \
+# RUN:   2>&1 | FileCheck %s -implicit-check-not="Bad machine code"
+
+# The *_norex2 operands resolve to the *_NOREX2 register classes in the
+# X86_64_EGPR HwMode, so the machine verifier now rejects an r16-r31 (EGPR)
+# operand on an instruction that cannot encode one. This is what previously
+# required the X86InstrInfo::getRegClass override; the encoding restriction is
+# otherwise only caught when emitting an object file.
+
+---
+name: egpr_regclass
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r16, $r17, $rbx, $xmm0, $rdi, $rax
+
+    ; PABSB is an SSSE3 T8 instruction (a legacy map other than OB/TB), so
+    ; X86II::canUseApxExtendedReg is false and its address base cannot be an
+    ; EGPR.
+    ; CHECK: *** Bad machine code: Illegal physical register for instruction ***
+    ; CHECK: - instruction: renamable $xmm1 = PABSBrm renamable $r16
+    ; CHECK: $r16 is not a GR64_NOREX2 register.
+    renamable $xmm1 = PABSBrm renamable $r16, 1, $noreg, 0, $noreg
+
+    ; The address index is constrained the same way (the _nosp variant).
+    ; CHECK: *** Bad machine code: Illegal physical register for instruction ***
+    ; CHECK: - instruction: renamable $xmm2 = PABSBrm renamable $rdi, 4, renamable $r17
+    ; CHECK: $r17 is not a GR64_NOREX2_NOSP register.
+    renamable $xmm2 = PABSBrm renamable $rdi, 4, renamable $r17, 0, $noreg
+
+    ; A non-EGPR base and index are legal in the same subtarget.
+    renamable $xmm3 = PABSBrm renamable $rbx, 1, $noreg, 0, $noreg
+
+    ; TBM is XOP-encoded; its address base cannot be an EGPR.
+    ; CHECK: *** Bad machine code: Illegal physical register for instruction ***
+    ; CHECK: - instruction: renamable $ecx = BEXTRI32mi renamable $r16
+    ; CHECK: $r16 is not a GR64_NOREX2 register.
+    renamable $ecx = BEXTRI32mi renamable $r16, 1, $noreg, 0, $noreg, 2571, implicit-def $eflags
+
+    ; x87 load pseudo; the address base cannot be an EGPR.
+    ; CHECK: *** Bad machine code: Illegal physical register for instruction ***
+    ; CHECK: - instruction: renamable $fp0 = LD_Fp32m renamable $r16
+    ; CHECK: $r16 is not a GR64_NOREX2 register.
+    renamable $fp0 = LD_Fp32m renamable $r16, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw
+
+    ; AMX tile-load pseudo with a SIB address; the base cannot be an EGPR.
+    ; CHECK: *** Bad machine code: Illegal physical register for instruction ***
+    ; CHECK: - instruction: PTILELOADD 4, renamable $r16
+    ; CHECK: $r16 is not a GR64_NOREX2 register.
+    PTILELOADD 4, renamable $r16, 1, killed renamable $rax, 0, $noreg
+
+    ; The VEX encoding of cvtsd2si cannot write an EGPR (the EVEX form can, but
+    ; is a separate instruction), so the GPR def is constrained.
+    ; CHECK: *** Bad machine code: Illegal physical register for instruction ***
+    ; CHECK: - instruction: renamable $r18d = VCVTSD2SIrr_Int
+    ; CHECK: $r18d is not a GR32_NOREX2 register.
+    renamable $r18d = VCVTSD2SIrr_Int renamable $xmm0, implicit $mxcsr
+
+    ; MOV32rm is EGPR-capable, so an EGPR def is accepted.
+    renamable $r19d = MOV32rm renamable $rdi, 1, $noreg, 0, $noreg
+
+    ; PMULLD is an SSE4.1 T8 instruction with no EVEX form, so its address
+    ; base cannot be an EGPR.
+    ; CHECK: *** Bad machine code: Illegal physical register for instruction ***
+    ; CHECK: - instruction: renamable $xmm0 = PMULLDrm renamable $xmm0{{.*}} renamable $r16
+    ; CHECK: $r16 is not a GR64_NOREX2 register.
+    renamable $xmm0 = PMULLDrm renamable $xmm0, renamable $r16, 1, $noreg, 0, $noreg
+
+    ; PEXTRD writes its result to a GPR that cannot be an EGPR in the legacy
+    ; encoding.
+    ; CHECK: *** Bad machine code: Illegal physical register for instruction ***
+    ; CHECK: - instruction: renamable $r20d = PEXTRDrri
+    ; CHECK: $r20d is not a GR32_NOREX2 register.
+    renamable $r20d = PEXTRDrri renamable $xmm0, 1
+...
