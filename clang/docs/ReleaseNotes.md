@@ -908,6 +908,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Bug Fixes to Compiler Builtins
 
+- Fixed `__arithmetic_fence` incorrectly rejecting sizeless SVE vectors of
+  floating-point elements. (#GH223145)
 - Dropped invalid ``constexpr`` specifier from ``__builtin_assume_separate_storage``, which is not supported in constexpr evaluation. (#GH225335)
 - Fixed a crash when classifying a call to a builtin with dependent arguments,
   such as when the call is used as an `auto` non-type template argument.

@@ -6898,7 +6898,9 @@ bool Sema::BuiltinArithmeticFence(CallExpr *TheCall) {
     return false;
 
   QualType ArgTy = Arg->getType();
-  if (!ArgTy->hasFloatingRepresentation())
+  if (!ArgTy->hasFloatingRepresentation() &&
+      !(ArgTy->isSveVLSBuiltinType() &&
+        ArgTy->getSveEltType(Context)->isFloatingType()))
     return Diag(TheCall->getEndLoc(), diag::err_typecheck_expect_flt_or_vector)
            << ArgTy;
   if (Arg->isLValue()) {
