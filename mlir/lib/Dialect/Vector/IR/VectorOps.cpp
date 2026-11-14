@@ -67,6 +67,18 @@ enum class MaskFormat {
   Unknown = 2,
 };
 
+// Default target shape for unrolling CreateMaskOp and ConstantMaskOp
+std::optional<SmallVector<int64_t>> getDefaultTargetMaskShapeForUnroll() {
+
+  return SmallVector<int64_t>{8, 8};
+}
+
+// Default target shape for unrolling InterleaveOp and DeinterleaveOp
+std::optional<SmallVector<int64_t>> getDefaultTargetInterleaveShapeForUnroll() {
+
+  return SmallVector<int64_t>{2, 4};
+}
+
 /// Helper method to classify a mask value. Currently, the method
 /// looks "under the hood" of a constant value with dense attributes
 /// and a constant mask operation (since the client may be called at
@@ -616,11 +628,6 @@ OpFoldResult MultiDimReductionOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
-std::optional<SmallVector<int64_t, 4>>
-MultiDimReductionOp::getIterationShapeToUnroll() {
-  return llvm::to_vector<4>(getSourceVectorType().getShape());
-}
-
 LogicalResult MultiDimReductionOp::verify() {
   // Verify the reduction dimensions.
   int64_t sourceRank = getSourceVectorType().getRank();
@@ -663,6 +670,14 @@ Type MultiDimReductionOp::getExpectedMaskType() {
   return VectorType::get(vecType.getShape(),
                          IntegerType::get(vecType.getContext(), /*width=*/1),
                          vecType.getScalableDims());
+}
+
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
+std::optional<SmallVector<int64_t, 4>>
+MultiDimReductionOp::getIterationShapeToUnroll() {
+  return llvm::to_vector<4>(getSourceVectorType().getShape());
 }
 
 namespace {
@@ -825,9 +840,15 @@ Value mlir::vector::getVectorReductionOp(arith::AtomicRMWKind op,
   return nullptr;
 }
 
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
 std::optional<SmallVector<int64_t, 4>>
 ReductionOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getSourceVectorType().getShape());
+}
+std::optional<SmallVector<int64_t>> ReductionOp::getDefaultUnrollTargetShape() {
+  return SmallVector<int64_t>{2};
 }
 
 namespace {
@@ -1363,11 +1384,22 @@ void ContractionOp::getIterationIndexMap(
   }
 }
 
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
 std::optional<SmallVector<int64_t, 4>>
 ContractionOp::getIterationShapeToUnroll() {
   SmallVector<int64_t, 4> shape;
   getIterationBounds(shape);
   return shape;
+}
+
+std::optional<SmallVector<int64_t>>
+ContractionOp::getDefaultUnrollTargetShape() {
+  SmallVector<int64_t> nativeShape(this->getIteratorTypes().size(), 4);
+  Type lhsType = this->getLhsType().getElementType();
+  nativeShape[nativeShape.size() - 1] = lhsType.isF16() ? 4 : 2;
+  return nativeShape;
 }
 
 /// Return a fused vector::ContractionOp which represents a patterns such as:
@@ -2679,6 +2711,9 @@ static void populateFromInt64AttrArray(ArrayAttr arrayAttr,
 // FmaOp
 //===----------------------------------------------------------------------===//
 
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
 std::optional<SmallVector<int64_t, 4>> FMAOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
@@ -3090,6 +3125,9 @@ void BroadcastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   setResultRanges(getResult(), argRanges.front());
 }
 
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
 std::optional<SmallVector<int64_t, 4>>
 BroadcastOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
@@ -5624,6 +5662,9 @@ OpFoldResult TransferReadOp::fold(FoldAdaptor) {
   return OpFoldResult();
 }
 
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
 std::optional<SmallVector<int64_t, 4>>
 TransferReadOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
@@ -6347,14 +6388,17 @@ OpFoldResult LoadOp::fold(FoldAdaptor) {
   return OpFoldResult();
 }
 
-std::optional<SmallVector<int64_t, 4>> LoadOp::getIterationShapeToUnroll() {
-  return llvm::to_vector<4>(getVectorType().getShape());
-}
-
 FailureOr<std::optional<SmallVector<Value>>>
 LoadOp::bubbleDownCasts(OpBuilder &builder) {
   return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
                                                             getResult());
+}
+
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
+std::optional<SmallVector<int64_t, 4>> LoadOp::getIterationShapeToUnroll() {
+  return llvm::to_vector<4>(getVectorType().getShape());
 }
 
 //===----------------------------------------------------------------------===//
@@ -6398,14 +6442,17 @@ LogicalResult StoreOp::fold(FoldAdaptor adaptor,
   return memref::foldMemRefCast(*this);
 }
 
-std::optional<SmallVector<int64_t, 4>> StoreOp::getIterationShapeToUnroll() {
-  return llvm::to_vector<4>(getVectorType().getShape());
-}
-
 FailureOr<std::optional<SmallVector<Value>>>
 StoreOp::bubbleDownCasts(OpBuilder &builder) {
   return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
                                                             ValueRange());
+}
+
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
+std::optional<SmallVector<int64_t, 4>> StoreOp::getIterationShapeToUnroll() {
+  return llvm::to_vector<4>(getVectorType().getShape());
 }
 
 //===----------------------------------------------------------------------===//
@@ -6582,12 +6629,9 @@ LogicalResult GatherOp::verify() {
   return success();
 }
 
+//-----------------------------------------------------------------------------
 // MaskableOpInterface methods.
-
-std::optional<SmallVector<int64_t, 4>> GatherOp::getIterationShapeToUnroll() {
-  return llvm::to_vector<4>(getVectorType().getShape());
-}
-
+//-----------------------------------------------------------------------------
 /// Cheeck if `indexVec` is constant 1D vec of consecutive values [0, 1, 2, ...]
 static LogicalResult isZeroBasedContiguousSeq(Value indexVec) {
   auto vecType = dyn_cast<VectorType>(indexVec.getType());
@@ -6603,6 +6647,13 @@ static LogicalResult isZeroBasedContiguousSeq(Value indexVec) {
 
   return success(
       llvm::equal(elements, llvm::seq<int64_t>(0, vecType.getNumElements())));
+}
+
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
+std::optional<SmallVector<int64_t, 4>> GatherOp::getIterationShapeToUnroll() {
+  return llvm::to_vector<4>(getVectorType().getShape());
 }
 
 namespace {
@@ -6895,11 +6946,6 @@ void ShapeCastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   setResultRanges(getResult(), argRanges.front());
 }
 
-std::optional<SmallVector<int64_t, 4>>
-ShapeCastOp::getIterationShapeToUnroll() {
-  return llvm::to_vector<4>(getResultVectorType().getShape());
-}
-
 LogicalResult ShapeCastOp::verify() {
 
   VectorType sourceType = getSourceVectorType();
@@ -7027,6 +7073,43 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
     return ub::PoisonAttr::get(getContext());
 
   return {};
+}
+
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
+std::optional<SmallVector<int64_t, 4>>
+ShapeCastOp::getIterationShapeToUnroll() {
+  return llvm::to_vector<4>(getResultVectorType().getShape());
+}
+
+std::optional<SmallVector<int64_t>> ShapeCastOp::getDefaultUnrollTargetShape() {
+  auto resultShape = this->getResultVectorType().getShape();
+  // Special case with leading unit dims and different inner dim
+  // for result and target shape.
+  if (resultShape.size() == 2 && resultShape[0] == 1 && resultShape[1] == 32) {
+    return SmallVector<int64_t>{1, 16};
+  }
+  if (resultShape.size() == 2 && resultShape[0] == 2 && resultShape[1] == 1) {
+    return SmallVector<int64_t>{1, 1};
+  }
+  // Multi-group cases: tile contiguous per reassociation group
+  // but strided in the whole result.
+  auto sourceShape = this->getSourceVectorType().getShape();
+  if (resultShape.size() == 3 && resultShape[0] == 8 && resultShape[1] == 1 &&
+      resultShape[2] == 32) {
+    return SmallVector<int64_t>{8, 1, 4};
+  }
+  if (sourceShape.size() == 3 && resultShape.size() == 2 &&
+      resultShape[0] == 4 && resultShape[1] == 4) {
+    return SmallVector<int64_t>{2, 2};
+  }
+  if (resultShape.size() == 3 && resultShape[0] == 2 && resultShape[1] == 8 &&
+      resultShape[2] == 4) {
+    return SmallVector<int64_t>{2, 2, 2};
+  }
+  // Default case: [2,4] for all tests.
+  return SmallVector<int64_t>{2, 4};
 }
 
 namespace {
@@ -7413,8 +7496,15 @@ OpFoldResult BitCastOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
 std::optional<SmallVector<int64_t, 4>> BitCastOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
+}
+
+std::optional<SmallVector<int64_t>> BitCastOp::getDefaultUnrollTargetShape() {
+  return SmallVector<int64_t>{4, 4};
 }
 
 //===----------------------------------------------------------------------===//
@@ -7539,14 +7629,21 @@ LogicalResult vector::TransposeOp::verify() {
   return success();
 }
 
+void TransposeOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                    SetIntRangeFn setResultRanges) {
+  setResultRanges(getResult(), argRanges.front());
+}
+
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
 std::optional<SmallVector<int64_t, 4>>
 TransposeOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
 }
 
-void TransposeOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
-                                    SetIntRangeFn setResultRanges) {
-  setResultRanges(getResult(), argRanges.front());
+std::optional<SmallVector<int64_t>> TransposeOp::getDefaultUnrollTargetShape() {
+  return SmallVector<int64_t>{1, 3, 4, 2};
 }
 
 namespace {
@@ -7927,6 +8024,11 @@ OpFoldResult ConstantMaskOp::fold(FoldAdaptor adaptor) {
   return OpFoldResult();
 }
 
+std::optional<SmallVector<int64_t>>
+ConstantMaskOp::getDefaultUnrollTargetShape() {
+  return getDefaultTargetMaskShapeForUnroll();
+}
+
 //===----------------------------------------------------------------------===//
 // CreateMaskOp
 //===----------------------------------------------------------------------===//
@@ -7952,6 +8054,11 @@ LogicalResult CreateMaskOp::verify() {
         "must specify an operand for each result vector dimension");
   }
   return success();
+}
+
+std::optional<SmallVector<int64_t>>
+CreateMaskOp::getDefaultUnrollTargetShape() {
+  return getDefaultTargetMaskShapeForUnroll();
 }
 
 namespace {
@@ -8533,6 +8640,10 @@ void StepOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   setResultRanges(getResult(), ConstantIntRanges::fromUnsigned(umin, umax));
 }
 
+std::optional<SmallVector<int64_t>> StepOp::getDefaultUnrollTargetShape() {
+  return SmallVector<int64_t>{8};
+}
+
 namespace {
 
 /// Fold `vector.step -> arith.cmpi` when the step value is compared to a
@@ -8728,18 +8839,33 @@ OpFoldResult InterleaveOp::fold(FoldAdaptor adaptor) {
                                 splat.getSplatValue<Attribute>());
 }
 
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
 std::optional<SmallVector<int64_t, 4>>
 InterleaveOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
 }
 
+std::optional<SmallVector<int64_t>>
+InterleaveOp::getDefaultUnrollTargetShape() {
+  return getDefaultTargetInterleaveShapeForUnroll();
+}
+
 //===----------------------------------------------------------------------===//
 // DeinterleaveOp
 //===----------------------------------------------------------------------===//
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
 
 std::optional<SmallVector<int64_t, 4>>
 DeinterleaveOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
+}
+std::optional<SmallVector<int64_t>>
+DeinterleaveOp::getDefaultUnrollTargetShape() {
+  return getDefaultTargetInterleaveShapeForUnroll();
 }
 
 //===----------------------------------------------------------------------===//

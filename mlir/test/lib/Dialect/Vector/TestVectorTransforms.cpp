@@ -163,7 +163,6 @@ struct TestVectorUnrollingPatterns
     populateVectorUnrollPatterns(
         patterns,
         UnrollVectorOptions()
-            .setNativeShape(ArrayRef<int64_t>{2, 2})
             .setFilterConstraint([](Operation *op) {
               return success(
                   isa<arith::AddFOp, vector::FMAOp, vector::MultiDimReductionOp,
@@ -172,20 +171,17 @@ struct TestVectorUnrollingPatterns
             }));
     populateVectorUnrollPatterns(
         patterns, UnrollVectorOptions()
-                      .setNativeShape(ArrayRef<int64_t>{2})
                       .setFilterConstraint([](Operation *op) {
                         return success(isa<vector::ReductionOp>(op));
                       }));
     populateVectorUnrollPatterns(patterns,
                                  UnrollVectorOptions()
-                                     .setNativeShape(ArrayRef<int64_t>{8})
                                      .setFilterConstraint([](Operation *op) {
                                        return success(isa<vector::StepOp>(op));
                                      }));
     populateVectorUnrollPatterns(
         patterns,
         UnrollVectorOptions()
-            .setNativeShape(ArrayRef<int64_t>{8, 8})
             .setFilterConstraint([](Operation *op) {
               return success(
                   isa<vector::CreateMaskOp, vector::ConstantMaskOp>(op));
@@ -193,84 +189,34 @@ struct TestVectorUnrollingPatterns
     populateVectorUnrollPatterns(
         patterns,
         UnrollVectorOptions()
-            .setNativeShapeFn(
-                [](Operation *op) -> std::optional<SmallVector<int64_t>> {
-                  auto shapeCast = dyn_cast<vector::ShapeCastOp>(op);
-                  if (!shapeCast)
-                    return std::nullopt;
-
-                  auto resultShape = shapeCast.getResultVectorType().getShape();
-                  // Special case with leading unit dims and different inner dim
-                  // for result and target shape.
-                  if (resultShape.size() == 2 && resultShape[0] == 1 &&
-                      resultShape[1] == 32) {
-                    return SmallVector<int64_t>{1, 16};
-                  }
-                  if (resultShape.size() == 2 && resultShape[0] == 2 &&
-                      resultShape[1] == 1) {
-                    return SmallVector<int64_t>{1, 1};
-                  }
-                  // Multi-group cases: tile contiguous per reassociation group
-                  // but strided in the whole result.
-                  auto sourceShape = shapeCast.getSourceVectorType().getShape();
-                  if (resultShape.size() == 3 && resultShape[0] == 8 &&
-                      resultShape[1] == 1 && resultShape[2] == 32) {
-                    return SmallVector<int64_t>{8, 1, 4};
-                  }
-                  if (sourceShape.size() == 3 && resultShape.size() == 2 &&
-                      resultShape[0] == 4 && resultShape[1] == 4) {
-                    return SmallVector<int64_t>{2, 2};
-                  }
-                  if (resultShape.size() == 3 && resultShape[0] == 2 &&
-                      resultShape[1] == 8 && resultShape[2] == 4) {
-                    return SmallVector<int64_t>{2, 2, 2};
-                  }
-                  // Default case: [2,4] for all tests.
-                  return SmallVector<int64_t>{2, 4};
-                })
             .setFilterConstraint([](Operation *op) {
               return success(isa<vector::ShapeCastOp>(op));
             }));
     populateVectorUnrollPatterns(
         patterns, UnrollVectorOptions()
-                      .setNativeShape(ArrayRef<int64_t>{1, 3, 4, 2})
                       .setFilterConstraint([](Operation *op) {
                         return success(isa<vector::TransposeOp>(op));
                       }));
     populateVectorUnrollPatterns(
         patterns, UnrollVectorOptions()
-                      .setNativeShape(ArrayRef<int64_t>{4, 4})
                       .setFilterConstraint([](Operation *op) {
                         return success(isa<vector::BitCastOp>(op));
                       }));
     populateVectorUnrollPatterns(
         patterns, UnrollVectorOptions()
-                      .setNativeShape(ArrayRef<int64_t>{2, 4})
                       .setFilterConstraint([](Operation *op) {
                         return success(isa<vector::InterleaveOp>(op));
                       }));
     populateVectorUnrollPatterns(
         patterns, UnrollVectorOptions()
-                      .setNativeShape(ArrayRef<int64_t>{2, 4})
                       .setFilterConstraint([](Operation *op) {
                         return success(isa<vector::DeinterleaveOp>(op));
                       }));
 
     if (unrollBasedOnType) {
-      UnrollVectorOptions::NativeShapeFnType nativeShapeFn =
-          [](Operation *op) -> std::optional<SmallVector<int64_t>> {
-        vector::ContractionOp contractOp = cast<vector::ContractionOp>(op);
-        SmallVector<int64_t> nativeShape(contractOp.getIteratorTypes().size(),
-                                         4);
-        Type lhsType = contractOp.getLhsType().getElementType();
-        nativeShape[nativeShape.size() - 1] = lhsType.isF16() ? 4 : 2;
-        return nativeShape;
-      };
-
       UnrollVectorOptions opts;
-      opts.setNativeShapeFn(nativeShapeFn)
-          .setFilterConstraint(
-              [](Operation *op) { return success(isa<ContractionOp>(op)); });
+      opts.setFilterConstraint(
+          [](Operation *op) { return success(isa<ContractionOp>(op)); });
 
       if (!unrollOrder.empty()) {
         opts.setUnrollTraversalOrderFn(
@@ -285,16 +231,8 @@ struct TestVectorUnrollingPatterns
       }
       populateVectorUnrollPatterns(patterns, opts);
     } else {
-      auto nativeShapeFn =
-          [](Operation *op) -> std::optional<SmallVector<int64_t>> {
-        auto contractOp = dyn_cast<ContractionOp>(op);
-        if (!contractOp)
-          return std::nullopt;
-        return SmallVector<int64_t>(contractOp.getIteratorTypes().size(), 2);
-      };
       populateVectorUnrollPatterns(patterns,
                                    UnrollVectorOptions()
-                                       .setNativeShapeFn(nativeShapeFn)
                                        .setFilterConstraint([](Operation *op) {
                                          return success(isa<ContractionOp>(op));
                                        }));

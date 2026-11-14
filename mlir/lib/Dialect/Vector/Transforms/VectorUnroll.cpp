@@ -85,11 +85,24 @@ static Operation *cloneOpWithOperandsAndTypes(OpBuilder &builder, Location loc,
   return builder.create(state);
 }
 
-/// Return the target shape for unrolling for the given `op`. Return
-/// std::nullopt if the op shouldn't be or cannot be unrolled.
+/// Return the target shape for unrolling for the given op, provided throgh its
+/// VectorUnrollOpInterface object, `iface`. Return std::nullopt if the op
+/// shouldn't be or cannot be unrolled.
+///
+/// ATM, target shape can be specified two-fold:
+///   1. Via `VectorUnrollOpInterface` (see `getDefaultUnrollTargetShape`).
+///   2. Via `UnrollVectorOptions ` (see `nativeShape`).
+///
+/// Input from a "user" always takes precedence, i.e. 1. is used iff 2. (used
+/// for "user" input) is not available.
 static std::optional<SmallVector<int64_t>>
-getTargetShape(const vector::UnrollVectorOptions &options, Operation *op) {
+getTargetShape(const vector::UnrollVectorOptions &options,
+               VectorUnrollOpInterface &iface) {
+  auto op = iface.getOperation();
+
   LDBG() << "Get unroll shape for op " << op->getName().getStringRef();
+  auto tS = iface.getDefaultUnrollTargetShape();
+
   if (options.filterConstraint && failed(options.filterConstraint(op))) {
     LDBG() << "--no filter constraint -> BAIL";
     return std::nullopt;
@@ -101,9 +114,6 @@ getTargetShape(const vector::UnrollVectorOptions &options, Operation *op) {
     LDBG() << "--op is masked -> BAIL";
     return std::nullopt;
   }
-  assert(options.nativeShape &&
-         "vector unrolling expects the native shape or native"
-         "shape call back function to be set");
   auto unrollableVectorOp = dyn_cast<VectorUnrollOpInterface>(op);
   if (!unrollableVectorOp) {
     LDBG() << "--not an unrollable op -> BAIL";
@@ -116,7 +126,9 @@ getTargetShape(const vector::UnrollVectorOptions &options, Operation *op) {
   }
   LDBG() << "--vector op shape: " << llvm::interleaved(*maybeUnrollShape);
 
-  std::optional<SmallVector<int64_t>> targetShape = options.nativeShape(op);
+  //
+  std::optional<SmallVector<int64_t>> targetShape =
+      options.nativeShape ? options.nativeShape(op) : tS;
   if (!targetShape) {
     LDBG() << "--no unrolling target shape defined " << *op << "-> SKIP";
     return std::nullopt;
@@ -168,7 +180,9 @@ struct UnrollTransferReadPattern
       return failure();
     if (readOp.getMask())
       return failure();
-    auto targetShape = getTargetShape(options, readOp);
+    // TODO: This is shared between all Unroll patterns - merge.
+    auto iface = dyn_cast<VectorUnrollOpInterface>(readOp.getOperation());
+    auto targetShape = getTargetShape(options, iface);
     if (!targetShape)
       return failure();
     auto sourceVectorType = readOp.getVectorType();
@@ -223,7 +237,9 @@ struct UnrollTransferWritePattern
 
     if (writeOp.getMask())
       return failure();
-    auto targetShape = getTargetShape(options, writeOp);
+    // TODO: This is shared between all Unroll patterns - merge.
+    auto iface = dyn_cast<VectorUnrollOpInterface>(writeOp.getOperation());
+    auto targetShape = getTargetShape(options, iface);
     if (!targetShape)
       return failure();
     auto sourceVectorType = writeOp.getVectorType();
@@ -290,7 +306,9 @@ struct UnrollContractionPattern
 
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
-    auto targetShape = getTargetShape(options, contractOp);
+    // TODO: This is shared between all Unroll patterns - merge.
+    auto iface = dyn_cast<VectorUnrollOpInterface>(contractOp.getOperation());
+    auto targetShape = getTargetShape(options, iface);
     if (!targetShape)
       return failure();
     auto dstVecType = cast<VectorType>(contractOp.getResultType());
@@ -384,8 +402,11 @@ struct UnrollMultiReductionPattern
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp reductionOp,
                                 PatternRewriter &rewriter) const override {
+
+    // TODO: This is shared between all Unroll patterns - merge.
+    auto iface = dyn_cast<VectorUnrollOpInterface>(reductionOp.getOperation());
     std::optional<SmallVector<int64_t>> targetShape =
-        getTargetShape(options, reductionOp);
+        getTargetShape(options, iface);
     if (!targetShape)
       return failure();
     SmallVector<int64_t> originalSize =
@@ -491,13 +512,14 @@ struct UnrollElementwisePattern : public RewritePattern {
                                 PatternRewriter &rewriter) const override {
     if (!OpTrait::hasElementwiseMappableTraits(op) || op->getNumResults() != 1)
       return failure();
-    auto targetShape = getTargetShape(options, op);
+    // TODO: This is shared between all Unroll patterns - merge.
+    auto iface = dyn_cast<VectorUnrollOpInterface>(op);
+    auto targetShape = getTargetShape(options, iface);
     if (!targetShape)
       return failure();
     int64_t targetShapeRank = targetShape->size();
     auto dstVecType = cast<VectorType>(op->getResult(0).getType());
-    SmallVector<int64_t> originalSize =
-        *cast<VectorUnrollOpInterface>(op).getIterationShapeToUnroll();
+    SmallVector<int64_t> originalSize = *iface.getIterationShapeToUnroll();
     int64_t originalShapeRank = originalSize.size();
 
     Location loc = op->getLoc();
@@ -571,8 +593,10 @@ struct UnrollReductionPattern : public OpRewritePattern<vector::ReductionOp> {
 
   LogicalResult matchAndRewrite(vector::ReductionOp reductionOp,
                                 PatternRewriter &rewriter) const override {
+    // TODO: This is shared between all Unroll patterns - merge.
+    auto iface = cast<VectorUnrollOpInterface>(*reductionOp);
     std::optional<SmallVector<int64_t>> targetShape =
-        getTargetShape(options, reductionOp);
+        getTargetShape(options, iface);
     if (!targetShape)
       return failure();
     SmallVector<int64_t> originalSize =
@@ -620,7 +644,9 @@ struct UnrollTransposePattern : public OpRewritePattern<vector::TransposeOp> {
                                 PatternRewriter &rewriter) const override {
     if (transposeOp.getResultVectorType().getRank() == 0)
       return failure();
-    auto targetShape = getTargetShape(options, transposeOp);
+    // TODO: This is shared between all Unroll patterns - merge.
+    auto iface = cast<VectorUnrollOpInterface>(*transposeOp);
+    auto targetShape = getTargetShape(options, iface);
     if (!targetShape)
       return failure();
     auto originalVectorType = transposeOp.getResultVectorType();
@@ -673,7 +699,9 @@ struct UnrollGatherPattern : public OpRewritePattern<vector::GatherOp> {
     VectorType sourceVectorType = gatherOp.getVectorType();
     if (sourceVectorType.getRank() == 0)
       return failure();
-    auto targetShape = getTargetShape(options, gatherOp);
+    // TODO: This is shared between all Unroll patterns - merge.
+    auto iface = cast<VectorUnrollOpInterface>(*gatherOp);
+    auto targetShape = getTargetShape(options, iface);
     if (!targetShape)
       return failure();
     SmallVector<int64_t> strides(targetShape->size(), 1);
@@ -727,7 +755,9 @@ struct UnrollLoadPattern : public OpRewritePattern<vector::LoadOp> {
                                 PatternRewriter &rewriter) const override {
     VectorType vecType = loadOp.getVectorType();
 
-    auto targetShape = getTargetShape(options, loadOp);
+    // TODO: This is shared between all Unroll patterns - merge.
+    auto iface = cast<VectorUnrollOpInterface>(*loadOp);
+    auto targetShape = getTargetShape(options, iface);
     if (!targetShape)
       return failure();
 
@@ -771,7 +801,9 @@ struct UnrollStorePattern : public OpRewritePattern<vector::StoreOp> {
                                 PatternRewriter &rewriter) const override {
     VectorType vecType = storeOp.getVectorType();
 
-    auto targetShape = getTargetShape(options, storeOp);
+    // TODO: This is shared between all Unroll patterns - merge.
+    auto iface = cast<VectorUnrollOpInterface>(*storeOp);
+    auto targetShape = getTargetShape(options, iface);
     if (!targetShape)
       return failure();
 
@@ -810,7 +842,9 @@ struct UnrollBroadcastPattern : public OpRewritePattern<vector::BroadcastOp> {
 
   LogicalResult matchAndRewrite(vector::BroadcastOp broadcastOp,
                                 PatternRewriter &rewriter) const override {
-    auto targetShape = getTargetShape(options, broadcastOp);
+    // TODO: This is shared between all Unroll patterns - merge.
+    auto iface = cast<VectorUnrollOpInterface>(*broadcastOp);
+    auto targetShape = getTargetShape(options, iface);
     if (!targetShape)
       return failure();
 
@@ -954,8 +988,10 @@ struct UnrollStepPattern : public OpRewritePattern<vector::StepOp> {
 
   LogicalResult matchAndRewrite(vector::StepOp stepOp,
                                 PatternRewriter &rewriter) const override {
+    // TODO: This is shared between all Unroll patterns - merge.
+    auto iface = cast<VectorUnrollOpInterface>(*stepOp);
     std::optional<SmallVector<int64_t>> targetShape =
-        getTargetShape(options, stepOp);
+        getTargetShape(options, iface);
     if (!targetShape)
       return failure();
 
@@ -1082,7 +1118,9 @@ struct UnrollCreateMaskPattern : public OpRewritePattern<vector::CreateMaskOp> {
 
   LogicalResult matchAndRewrite(vector::CreateMaskOp createMaskOp,
                                 PatternRewriter &rewriter) const override {
-    auto targetShape = getTargetShape(options, createMaskOp);
+    // TODO: This is shared between all Unroll patterns - merge.
+    auto iface = cast<VectorUnrollOpInterface>(*createMaskOp);
+    auto targetShape = getTargetShape(options, iface);
     if (!targetShape)
       return failure();
 
@@ -1179,8 +1217,9 @@ struct UnrollConstantMaskPattern
 
   LogicalResult matchAndRewrite(vector::ConstantMaskOp constantMaskOp,
                                 PatternRewriter &rewriter) const override {
-    std::optional<SmallVector<int64_t>> targetShape =
-        getTargetShape(options, constantMaskOp);
+    // TODO: This is shared between all Unroll patterns - merge.
+    auto iface = cast<VectorUnrollOpInterface>(*constantMaskOp);
+    auto targetShape = getTargetShape(options, iface);
     if (!targetShape)
       return failure();
 
@@ -1427,8 +1466,9 @@ struct UnrollShapeCastPattern : public OpRewritePattern<vector::ShapeCastOp> {
 
   LogicalResult matchAndRewrite(vector::ShapeCastOp shapeCastOp,
                                 PatternRewriter &rewriter) const override {
-    std::optional<SmallVector<int64_t>> targetShape =
-        getTargetShape(options, shapeCastOp);
+    // TODO: This is shared between all Unroll patterns - merge.
+    auto iface = cast<VectorUnrollOpInterface>(*shapeCastOp);
+    auto targetShape = getTargetShape(options, iface);
     if (!targetShape)
       return failure();
 
@@ -1532,7 +1572,9 @@ struct UnrollBitCastPattern : public OpRewritePattern<vector::BitCastOp> {
 
   LogicalResult matchAndRewrite(vector::BitCastOp bitCastOp,
                                 PatternRewriter &rewriter) const override {
-    auto targetShape = getTargetShape(options, bitCastOp);
+    // TODO: This is shared between all Unroll patterns - merge.
+    auto iface = cast<VectorUnrollOpInterface>(*bitCastOp);
+    auto targetShape = getTargetShape(options, iface);
     if (!targetShape)
       return rewriter.notifyMatchFailure(bitCastOp,
                                          "failed to get target shape");
@@ -1613,7 +1655,9 @@ struct UnrollInterleavePattern : public OpRewritePattern<vector::InterleaveOp> {
 
   LogicalResult matchAndRewrite(vector::InterleaveOp interleaveOp,
                                 PatternRewriter &rewriter) const override {
-    auto targetShape = getTargetShape(options, interleaveOp);
+    // TODO: This is shared between all Unroll patterns - merge.
+    auto iface = cast<VectorUnrollOpInterface>(*interleaveOp);
+    auto targetShape = getTargetShape(options, iface);
     if (!targetShape)
       return rewriter.notifyMatchFailure(interleaveOp,
                                          "failed to get target shape");
@@ -1692,7 +1736,9 @@ struct UnrollDeinterleavePattern
 
   LogicalResult matchAndRewrite(vector::DeinterleaveOp deinterleaveOp,
                                 PatternRewriter &rewriter) const override {
-    auto targetShape = getTargetShape(options, deinterleaveOp);
+    // TODO: This is shared between all Unroll patterns - merge.
+    auto iface = cast<VectorUnrollOpInterface>(*deinterleaveOp);
+    auto targetShape = getTargetShape(options, iface);
     if (!targetShape)
       return rewriter.notifyMatchFailure(deinterleaveOp,
                                          "failed to get target shape");
