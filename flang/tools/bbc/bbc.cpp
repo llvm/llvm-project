@@ -148,6 +148,13 @@ static llvm::cl::opt<bool> enableOpenMP("fopenmp",
                                         llvm::cl::desc("enable openmp"),
                                         llvm::cl::init(false));
 
+static llvm::cl::opt<bool> disableOpenMPMainProgramGlobals(
+    "fno-openmp-main-program-globals",
+    llvm::cl::desc(
+        "Disable promotion to static storage for small main-program "
+        "scalars referenced directly in explicit host OpenMP PARALLEL regions"),
+    llvm::cl::init(false));
+
 static llvm::cl::opt<bool>
     enableOpenMPDevice("fopenmp-is-target-device",
                        llvm::cl::desc("enable openmp device compilation"),
@@ -499,9 +506,10 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
     return mlir::success();
   }
 
+  Fortran::lower::LoweringOptions loweringOptions{};
   if (pftDumpTest) {
-    // Use default lowering options for PFT dump test
-    Fortran::lower::LoweringOptions loweringOptions{};
+    // PFT dumps do not use variable storage choices.
+    loweringOptions.setOpenMPMainProgramGlobals(false);
     if (auto ast = Fortran::lower::createPFT(parseTree, semanticsContext,
                                              loweringOptions)) {
       Fortran::lower::dumpPFT(llvm::outs(), *ast);
@@ -510,6 +518,10 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
     llvm::errs() << "Pre FIR Tree is NULL.\n";
     return mlir::failure();
   }
+
+  loweringOptions.setOpenMPMainProgramGlobals(!disableOpenMPMainProgramGlobals);
+  loweringOptions.setDeviceDoConcurrent(
+      enableDoConcurrentToOpenMPConversion.getValue() == "device");
 
   // translate to FIR dialect of MLIR
   mlir::DialectRegistry registry;
@@ -521,8 +533,6 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   fir::KindMapping kindMap(
       &ctx, llvm::ArrayRef<fir::KindTy>{fir::fromDefaultKinds(defKinds)});
   std::string targetTriple = targetMachine.getTargetTriple().normalize();
-  // Use default lowering options for bbc.
-  Fortran::lower::LoweringOptions loweringOptions{};
   loweringOptions.setNoPPCNativeVecElemOrder(enableNoPPCNativeVecElemOrder);
   loweringOptions.setIntegerWrapAround(integerWrapAround);
   loweringOptions.setInitGlobalZero(initGlobalZero);

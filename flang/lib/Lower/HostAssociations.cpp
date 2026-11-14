@@ -542,13 +542,14 @@ static mlir::Value genTupleCoor(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 void Fortran::lower::HostAssociations::addSymbolsToBind(
-    const llvm::SetVector<const Fortran::semantics::Symbol *> &symbols) {
+    const llvm::SetVector<const Fortran::semantics::Symbol *> &symbols,
+    const pft::Program &program) {
   assert(tupleSymbols.empty() && globalSymbols.empty() &&
          "must be initially empty");
   for (const auto *s : symbols)
     // GlobalOp are created for non-global threadprivate variable,
     //  so considering them as globals.
-    if (Fortran::lower::symbolIsGlobal(*s) ||
+    if (Fortran::lower::symbolIsGlobal(*s, program) ||
         (*s).test(Fortran::semantics::Symbol::Flag::OmpThreadprivate)) {
       // The ultimate symbol is stored here so that global symbols from the
       // host scope can later be searched in this set.
@@ -562,8 +563,9 @@ void Fortran::lower::HostAssociations::prepareGlobalBindings(
     const pft::FunctionLikeUnit &host) {
   assert(!globalSymbols.empty() && globalBindings.empty() &&
          "expected captured globals without prepared bindings");
-  const auto &variables = pft::getScopeVariableList(
-      host.getScope(), pft::getScopeVariableListMap(host));
+  auto *program = pft::getAncestor<pft::Program>(host);
+  assert(program && "pft must have a root");
+  const auto &variables = program->getScopeVariableList(host.getScope());
   // EQUIVALENCE variables use offsets into aggregate storage.
   // All aggregate stores precede the variable entries in the list,
   // so scan backwards to select variables before their storage.

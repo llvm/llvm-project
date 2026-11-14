@@ -2906,7 +2906,8 @@ public:
         requiredDummySymbols;
     const Fortran::semantics::Symbol &result = caller.getResultSymbol();
     for (Fortran::lower::pft::Variable var :
-         Fortran::lower::pft::getDependentVariableList(result))
+         Fortran::lower::pft::getDependentVariableList(result,
+                                                       converter.getPft()))
       if (var.hasSymbol()) {
         const Fortran::semantics::Symbol &sym = var.getSymbol();
         if (Fortran::semantics::IsDummy(sym) && sym.owner() == result.owner())

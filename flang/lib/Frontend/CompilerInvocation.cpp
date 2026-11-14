@@ -1915,6 +1915,8 @@ bool CompilerInvocation::createFromArgs(
   parsePreprocessorArgs(invoc.getPreprocessorOpts(), args);
   parseCodeGenArgs(invoc.getCodeGenOpts(), args, diags);
   success &= parseDoConcurrentMapping(invoc.getCodeGenOpts(), args, diags);
+  invoc.loweringOpts.setOpenMPMainProgramGlobals(
+      !args.hasArg(clang::options::OPT_fno_openmp_main_program_globals));
   success &= parseDebugArgs(invoc.getCodeGenOpts(), args, diags,
                             llvm::Triple(invoc.getTargetOpts().triple));
 
@@ -2186,6 +2188,11 @@ CompilerInvocation::getSemanticsCtx(
 /// on the \p optimizationLevel.
 void CompilerInvocation::setLoweringOptions() {
   const CodeGenOptions &codegenOpts = getCodeGenOpts();
+
+  // API clients may change the mapping after argument parsing.
+  loweringOpts.setDeviceDoConcurrent(
+      codegenOpts.getDoConcurrentMapping() ==
+      CodeGenOptions::DoConcurrentMappingKind::DCMK_Device);
 
   // Lower TRANSPOSE as a runtime call under -O0.
   loweringOpts.setOptimizeTranspose(codegenOpts.OptimizationLevel > 0);
