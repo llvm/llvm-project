@@ -11,6 +11,20 @@
 
 include "mlir/Pass/PassBase.td"
 
+def DeduplicateIncludesPass : Pass<"deduplicate-emitc-includes", "ModuleOp"> {
+  let summary = "Remove duplicate standard includes";
+  let description = [{
+    Keeps the first standard `emitc.include` for each header name and removes
+    later duplicates, including those in nested modules. Quoted includes are
+    left unchanged. Each `emitc.file` is processed independently.
+
+    Run this pass after EmitC conversion and before C/C++ translation. It assumes
+    standard includes are idempotent translation-unit dependencies and have been
+    inserted before their uses. The pass preserves the position of the first
+    include and does not infer dependencies from opaque calls.
+  }];
+}
+
 def FormExpressionsPass : Pass<"form-expressions"> {
   let summary = "Form C-style expressions from C-operator ops";
   let description = [{
