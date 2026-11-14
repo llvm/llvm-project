@@ -398,7 +398,11 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
   // Add conditional branch to check we can skip post-loop in its preheader,
   // and update DT.
   Instruction *OrigBI = PostLoopPreHeader->getTerminator();
-  ICmpInst::Predicate Pred = ICmpInst::ICMP_NE;
+  ICmpInst::Predicate Pred;
+  if (ExitingCond.BI->getSuccessor(0) == PostLoopPreHeader)
+    Pred = ICmpInst::getInversePredicate(ExitingCond.Pred);
+  else
+    Pred = ExitingCond.Pred;
   Value *Cond =
       Builder.CreateICmp(Pred, ExitingCondLCSSAPhi, ExitingCond.BoundValue);
   Builder.CreateCondBr(Cond, PostLoop->getHeader(), PostLoop->getExitBlock());
