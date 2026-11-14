@@ -5,7 +5,6 @@
 # between the final run of MULLDs and the LDXs that feed them, to try to hide
 # the latency of the LDXs.
 name: test
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: test
   ; CHECK: bb.0:

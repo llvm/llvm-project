@@ -43,7 +43,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }

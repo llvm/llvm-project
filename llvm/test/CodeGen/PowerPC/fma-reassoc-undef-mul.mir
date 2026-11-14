@@ -5,7 +5,6 @@
 # with no def. Both multiply operands are checked, so cover each one.
 ---
 name: fma_undef_mul_lhs
-tracksRegLiveness: true
 constants:
   - id: 0
     value: float f0x2D9299FF
@@ -39,7 +38,6 @@ body: |
 ...
 ---
 name: fma_undef_mul_rhs
-tracksRegLiveness: true
 constants:
   - id: 0
     value: float f0x2D9299FF
