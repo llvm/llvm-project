@@ -3456,6 +3456,28 @@ SDValue AMDGPUTargetLowering::LowerINT_TO_FP16(SDValue Op, SelectionDAG &DAG,
   assert(FP16Ty == MVT::f16 || FP16Ty == MVT::bf16);
   SDLoc SL(Op);
   SDValue Src = Op.getOperand(0);
+  if (FP16Ty == MVT::f16 && Src.getValueType() == MVT::i64) {
+    // An i64 value outside the i32 range, and the i32 bound it saturates to,
+    // are both far beyond the largest finite half, so they round to the same
+    // infinity. Saturating to i32 therefore preserves the result and avoids
+    // the i64-to-f32 expansion. This does not hold for bf16, whose range
+    // matches f32.
+    SDValue Lo, Hi;
+    std::tie(Lo, Hi) = split64BitValue(Src, DAG);
+    // Src fits in 32 bits iff Hi is the high half of the zero or sign
+    // extension of Lo.
+    SDValue ExpectedHi = DAG.getConstant(0, SL, MVT::i32);
+    SDValue Limit = DAG.getAllOnesConstant(SL, MVT::i32);
+    if (Op.getOpcode() == ISD::SINT_TO_FP) {
+      SDValue SignShift = DAG.getConstant(31, SL, MVT::i32);
+      ExpectedHi = DAG.getNode(ISD::SRA, SL, MVT::i32, Lo, SignShift);
+      // Saturate to INT32_MIN if Src is negative, INT32_MAX otherwise.
+      SDValue Sign = DAG.getNode(ISD::SRA, SL, MVT::i32, Hi, SignShift);
+      Limit = DAG.getNode(ISD::XOR, SL, MVT::i32, Sign,
+                          DAG.getConstant(INT32_MAX, SL, MVT::i32));
+    }
+    Src = DAG.getSelectCC(SL, Hi, ExpectedHi, Lo, Limit, ISD::SETEQ);
+  }
   SDValue ToF32 = DAG.getNode(Op.getOpcode(), SL, MVT::f32, Src);
   SDValue FPRoundFlag = DAG.getIntPtrConstant(0, SL, /*isTarget=*/true);
   return DAG.getNode(ISD::FP_ROUND, SL, FP16Ty, ToF32, FPRoundFlag);
