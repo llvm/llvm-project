@@ -1,4 +1,4 @@
-// UNSUPPORTED: system-windows
+// UNSUPPORTED: system-windows, system-zos
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/mod
