@@ -2461,6 +2461,13 @@ math_test(
     ],
 )
 
+math_test(
+    name = "tanhbf16",
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+    ],
+)
+
 math_test(name = "tanhf")
 
 math_test(name = "tanpif")

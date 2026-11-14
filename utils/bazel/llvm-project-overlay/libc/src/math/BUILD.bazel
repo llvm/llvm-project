@@ -3414,6 +3414,14 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "tanhbf16",
+    additional_deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/math:tanhbf16",
+    ],
+)
+
+libc_math_function(
     name = "tanhf",
     additional_deps = [
         "//libc/src/__support/math:tanhf",
