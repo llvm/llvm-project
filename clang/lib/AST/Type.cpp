@@ -3976,6 +3976,14 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
     ArmTypeAttrs.AArch64SMEAttributes = epi.AArch64SMEAttributes;
   }
 
+  // Propagate the RISC-V state attributes.
+  if (epi.RISCVAttributes != RISCVNormalFunction) {
+    assert(epi.RISCVAttributes <= RISCVAttributeMask &&
+           "Not enough bits to encode RISC-V attributes");
+    auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
+    ExtraBits.RISCVAttributes = epi.RISCVAttributes;
+  }
+
   // Fill in the exception type array if present.
   if (getExceptionSpecType() == EST_Dynamic) {
     auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
@@ -4226,6 +4234,7 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   ID.AddInteger((EffectCount << 3) | (HasConds << 2) |
                 (epi.AArch64SMEAttributes << 1) | epi.HasTrailingReturn);
   ID.AddInteger(epi.CFIUncheckedCallee);
+  ID.AddInteger(epi.RISCVAttributes);
 
   for (unsigned Idx = 0; Idx != EffectCount; ++Idx) {
     ID.AddInteger(epi.FunctionEffects.Effects[Idx].toOpaqueInt32());
