@@ -136,3 +136,9 @@ define spir_kernel void @insert_array(ptr addrspace(1) %out) {
   store i8 %r, ptr addrspace(1) %out
   ret void
 }
+
+; The uniqued null already has a pointee from @ret_aggr; it is not a known
+; pointee, so the constant is not rebuilt.
+; CHECK: Begin function ret_nested_aggr
+; CHECK-NEXT: OpLabel
+; CHECK-NEXT: OpReturnValue
