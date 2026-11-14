@@ -1,9 +1,14 @@
-//===-- Implementation of c32rtomb ----------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the c32rtomb function implementation.
+///
 //===----------------------------------------------------------------------===//
 
 #include "src/wchar/c32rtomb.h"
@@ -23,7 +28,7 @@ LLVM_LIBC_FUNCTION(size_t, c32rtomb,
                     mbstate_t *__restrict ps)) {
   static internal::mbstate internal_mbstate;
 
-  // when s is nullptr, this is equivalent to c32rtomb(buf, U'\0', ps)
+  // When s is nullptr, this is equivalent to c32rtomb(buf, U'\0', ps).
   char buf[sizeof(char32_t) / sizeof(char)];
   if (s == nullptr) {
     s = buf;

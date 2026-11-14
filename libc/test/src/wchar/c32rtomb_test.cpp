@@ -1,9 +1,14 @@
-//===-- Unittests for c32rtomb --------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains unit tests for c32rtomb.
+///
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
@@ -31,7 +36,7 @@ TEST_F(LlvmLibcC32RToMBTest, OneByte) {
 TEST_F(LlvmLibcC32RToMBTest, TwoByte) {
   mbstate_t state;
   LIBC_NAMESPACE::memset(&state, 0, sizeof(mbstate_t));
-  // testing utf32: 0xff -> utf8: 0xc3 0xbf
+  // Testing UTF-32: 0xff -> UTF-8: 0xc3 0xbf.
   char32_t c32 = 0xff;
   char mb[4];
   size_t cnt = LIBC_NAMESPACE::c32rtomb(mb, c32, &state);
@@ -44,7 +49,7 @@ TEST_F(LlvmLibcC32RToMBTest, TwoByte) {
 TEST_F(LlvmLibcC32RToMBTest, ThreeByte) {
   mbstate_t state;
   LIBC_NAMESPACE::memset(&state, 0, sizeof(mbstate_t));
-  // testing utf32: 0xac15 -> utf8: 0xea 0xb0 0x95
+  // Testing UTF-32: 0xac15 -> UTF-8: 0xea 0xb0 0x95.
   char32_t c32 = 0xac15;
   char mb[4];
   size_t cnt = LIBC_NAMESPACE::c32rtomb(mb, c32, &state);
@@ -58,7 +63,7 @@ TEST_F(LlvmLibcC32RToMBTest, ThreeByte) {
 TEST_F(LlvmLibcC32RToMBTest, FourByte) {
   mbstate_t state;
   LIBC_NAMESPACE::memset(&state, 0, sizeof(mbstate_t));
-  // testing utf32: 0x1f921 -> utf8: 0xf0 0x9f 0xa4 0xa1
+  // Testing UTF-32: 0x1f921 -> UTF-8: 0xf0 0x9f 0xa4 0xa1.
   char32_t c32 = 0x1f921;
   char mb[4];
   size_t cnt = LIBC_NAMESPACE::c32rtomb(mb, c32, &state);
@@ -76,7 +81,7 @@ TEST_F(LlvmLibcC32RToMBTest, NullString) {
   char32_t c32 = U'A';
   char mb[4];
 
-  // should be equivalent to the call c32rtomb(buf, U'\0', state)
+  // Should be equivalent to the call c32rtomb(buf, U'\0', state).
   size_t cnt1 = LIBC_NAMESPACE::c32rtomb(nullptr, c32, &state);
   ASSERT_ERRNO_SUCCESS();
   size_t cnt2 = LIBC_NAMESPACE::c32rtomb(mb, 0, &state);
@@ -121,12 +126,12 @@ TEST_F(LlvmLibcC32RToMBTest, InvalidSurrogate) {
   LIBC_NAMESPACE::memset(&state, 0, sizeof(mbstate_t));
   char mb[4];
 
-  // Leading surrogate
+  // Leading surrogate.
   size_t cnt1 = LIBC_NAMESPACE::c32rtomb(mb, 0xd800, &state);
   ASSERT_EQ(cnt1, static_cast<size_t>(-1));
   ASSERT_ERRNO_EQ(EILSEQ);
 
-  // Trailing surrogate
+  // Trailing surrogate.
   size_t cnt2 = LIBC_NAMESPACE::c32rtomb(mb, 0xdfff, &state);
   ASSERT_EQ(cnt2, static_cast<size_t>(-1));
   ASSERT_ERRNO_EQ(EILSEQ);

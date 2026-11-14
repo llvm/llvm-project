@@ -1,13 +1,18 @@
-//===-- Implementation header for c32rtomb --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation of the internal c32rtomb function.
+///
+//===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC__SUPPORT_WCHAR_C32RTOMB_H
-#define LLVM_LIBC_SRC__SUPPORT_WCHAR_C32RTOMB_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_WCHAR_C32RTOMB_H
+#define LLVM_LIBC_SRC___SUPPORT_WCHAR_C32RTOMB_H
 
 #include "hdr/errno_macros.h"
 #include "hdr/types/char32_t.h"
@@ -38,7 +43,7 @@ LIBC_INLINE ErrorOr<size_t> c32rtomb(char *__restrict dest_ptr, char32_t c32,
 
   size_t count = 0;
   while (!cr.isEmpty()) {
-    auto utf8 = cr.pop_utf8(); // can never fail as long as the push succeeded
+    auto utf8 = cr.pop_utf8(); // Can never fail as long as the push succeeded.
     LIBC_ASSERT(utf8.has_value());
 
     *dest_ptr = utf8.value();
@@ -51,4 +56,4 @@ LIBC_INLINE ErrorOr<size_t> c32rtomb(char *__restrict dest_ptr, char32_t c32,
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC__SUPPORT_WCHAR_C32RTOMB_H
+#endif // LLVM_LIBC_SRC___SUPPORT_WCHAR_C32RTOMB_H
