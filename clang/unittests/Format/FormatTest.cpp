@@ -15605,6 +15605,70 @@ TEST_F(FormatTest, CustomShortFunctionOptions) {
                "  return 42;\n"
                "}",
                CustomMixed);
+
+  // Test with Other = true, Empty = false.
+  FormatStyle CustomOther = getLLVMStyle();
+  CustomOther.AllowShortFunctionsOnASingleLine = {/*Empty=*/false,
+                                                  /*Inline=*/false,
+                                                  /*Other=*/true};
+
+  // Non-empty functions are merged, except those defined in a class.
+  verifyFormat("int f() { return 42; }", CustomOther);
+  verifyFormat("class C {\n"
+               "  int f() {\n"
+               "    return 42;\n"
+               "  }\n"
+               "};",
+               CustomOther);
+
+  // Empty functions are not merged.
+  verifyFormat("int f() {\n"
+               "}",
+               CustomOther);
+  verifyFormat("class C {\n"
+               "  int f() {\n"
+               "  }\n"
+               "};",
+               CustomOther);
+
+  // Test with AfterFunction = true.
+  CustomOther.BreakBeforeBraces = FormatStyle::BS_Custom;
+  CustomOther.BraceWrapping.AfterFunction = true;
+  verifyFormat("int f() { return 42; }", CustomOther);
+  verifyFormat("int f()\n"
+               "{\n"
+               "}",
+               CustomOther);
+
+  // Test with SplitEmptyFunction = false.
+  CustomOther.BraceWrapping.SplitEmptyFunction = false;
+  verifyFormat("int f() { return 42; }", CustomOther);
+  verifyFormat("int f()\n"
+               "{}",
+               CustomOther);
+  verifyFormat("class C {\n"
+               "  int f()\n"
+               "  {}\n"
+               "};",
+               CustomOther);
+  CustomOther.AllowShortFunctionsOnASingleLine.Empty = true;
+  verifyFormat("int f() {}", CustomOther);
+  CustomOther.AllowShortFunctionsOnASingleLine.Empty = false;
+  CustomOther.BraceWrapping.SplitEmptyFunction = true;
+
+  CustomOther.AllowShortFunctionsOnASingleLine.Inline = true;
+  verifyFormat("class C {\n"
+               "  int f() {}\n"
+               "};",
+               CustomOther);
+  verifyFormat("class C {\n"
+               "  int f() { return 42; }\n"
+               "};",
+               CustomOther);
+  verifyFormat("int f()\n"
+               "{\n"
+               "}",
+               CustomOther);
 }
 
 TEST_F(FormatTest, PullInlineOnlyFunctionDefinitionsIntoSingleLine) {

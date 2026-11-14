@@ -348,53 +348,62 @@ private:
       if (Style.AllowShortFunctionsOnASingleLine.isAll())
         return true;
 
-      if (Style.AllowShortFunctionsOnASingleLine.Empty &&
-          NextLine.First->is(tok::r_brace)) {
+      // Whether the function body is empty, checking the line after the left
+      // brace, which may be wrapped onto its own line.
+      const bool LBraceWrapped = NextLine.First->is(TT_FunctionLBrace) &&
+                                 NextLine.First == NextLine.Last;
+      const bool IsEmptyFunction =
+          LBraceWrapped ? I + 2 != E && I[2]->First->is(tok::r_brace)
+                        : NextLine.First->is(tok::r_brace);
+
+      if (Style.AllowShortFunctionsOnASingleLine.Empty && IsEmptyFunction)
+        return true;
+
+      if (Style.AllowShortFunctionsOnASingleLine.Inline &&
+          Style.isJavaScript() && TheLine->Last->is(TT_FunctionLBrace)) {
         return true;
       }
 
-      if (Style.AllowShortFunctionsOnASingleLine.Inline &&
-          !Style.AllowShortFunctionsOnASingleLine.Other) {
-        if (Style.isJavaScript() && TheLine->Last->is(TT_FunctionLBrace))
-          return true;
-
+      auto IsInRecord = [&] {
         // Just checking `TheLine->Level > 0` is not enough because it would
         // cause functions inside indented namespaces to be treated as short.
-        if (const auto Level = TheLine->Level; Level > 0) {
-          if (!PreviousLine)
-            return false;
+        const auto Level = TheLine->Level;
+        if (Level == 0 || !PreviousLine)
+          return false;
 
-          // TODO: Use IndentTracker to avoid loop?
-          // Find the last line with lower level.
-          const AnnotatedLine *Line = nullptr;
-          for (auto J = I - 1; J >= AnnotatedLines.begin(); --J) {
-            const auto *L = *J;
-            assert(L);
-            if (TheLine->InMacroBody && !L->InMacroBody)
-              break;
-            if (L->isComment() || (!TheLine->InPPDirective && L->InPPDirective))
-              continue;
-            if (L->Level < Level ||
-                (L->Level == Level && L->First->is(tok::l_brace) &&
-                 Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths)) {
-              Line = L;
-              break;
-            }
+        // TODO: Use IndentTracker to avoid loop?
+        // Find the last line with lower level.
+        const AnnotatedLine *Line = nullptr;
+        for (auto J = I - 1; J >= AnnotatedLines.begin(); --J) {
+          const auto *L = *J;
+          assert(L);
+          if (TheLine->InMacroBody && !L->InMacroBody)
+            break;
+          if (L->isComment() || (!TheLine->InPPDirective && L->InPPDirective))
+            continue;
+          if (L->Level < Level ||
+              (L->Level == Level && L->First->is(tok::l_brace) &&
+               Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths)) {
+            Line = L;
+            break;
           }
-
-          if (!Line)
-            return false;
-
-          // Check if the found line starts a record.
-          const auto *LastNonComment = Line->getLastNonComment();
-          // There must be another token (usually `{`), because we chose a
-          // non-PPDirective and non-comment line that has a smaller level.
-          assert(LastNonComment);
-          return isRecordLBrace(*LastNonComment);
         }
-      }
 
-      return false;
+        if (!Line)
+          return false;
+
+        // Check if the found line starts a record.
+        const auto *LastNonComment = Line->getLastNonComment();
+        // There must be another token (usually `{`), because we chose a
+        // non-PPDirective and non-comment line that has a smaller level.
+        assert(LastNonComment);
+        return isRecordLBrace(*LastNonComment);
+      };
+
+      if (IsInRecord())
+        return Style.AllowShortFunctionsOnASingleLine.Inline;
+
+      return Style.AllowShortFunctionsOnASingleLine.Other && !IsEmptyFunction;
     };
 
     bool MergeShortFunctions = ShouldMergeShortFunctions();
@@ -581,10 +590,7 @@ private:
       Limit -= 2;
 
       unsigned MergedLines = 0;
-      if (MergeShortFunctions ||
-          (Style.AllowShortFunctionsOnASingleLine.Empty &&
-           NextLine.First == NextLine.Last && I + 2 != E &&
-           I[2]->First->is(tok::r_brace))) {
+      if (MergeShortFunctions) {
         MergedLines = tryMergeSimpleBlock(I + 1, E, Limit);
         // If we managed to merge the block, count the function header, which is
         // on a separate line.
