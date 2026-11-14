@@ -628,6 +628,45 @@ func.func @unsupported_element_types() {
 
 // -----
 
+// Sub-byte elements are not bit-packed: each i1 occupies a full byte, so two
+// live memref<16xi1> buffers need 16 bytes each and must not overlap.
+// CHECK-LABEL: func.func @sub_byte_elements(
+// CHECK-NEXT: %[[ARENA:.*]] = memref.alloc() alignment = 1 : memref<32xi8>
+// CHECK-NEXT: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-NEXT: %{{.*}} = memref.view %[[ARENA]][%[[C0]]][] : memref<32xi8> to memref<16xi1>
+// CHECK-NEXT: %[[C16:.*]] = arith.constant 16 : index
+// CHECK-NEXT: %{{.*}} = memref.view %[[ARENA]][%[[C16]]][] : memref<32xi8> to memref<16xi1>
+// CHECK-NOT: memref.alloc
+// CHECK-NOT: memref.dealloc
+func.func @sub_byte_elements() {
+  %a = memref.alloc() : memref<16xi1>
+  %b = memref.alloc() : memref<16xi1>
+  memref.dealloc %a : memref<16xi1>
+  memref.dealloc %b : memref<16xi1>
+  return
+}
+
+// -----
+
+// Non-power-of-two element widths are padded: each i24 occupies 4 bytes.
+// CHECK-LABEL: func.func @non_power_of_two_elements(
+// CHECK-NEXT: %[[ARENA:.*]] = memref.alloc() alignment = 1 : memref<32xi8>
+// CHECK-NEXT: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-NEXT: %{{.*}} = memref.view %[[ARENA]][%[[C0]]][] : memref<32xi8> to memref<4xi24>
+// CHECK-NEXT: %[[C16:.*]] = arith.constant 16 : index
+// CHECK-NEXT: %{{.*}} = memref.view %[[ARENA]][%[[C16]]][] : memref<32xi8> to memref<4xi24>
+// CHECK-NOT: memref.alloc
+// CHECK-NOT: memref.dealloc
+func.func @non_power_of_two_elements() {
+  %a = memref.alloc() : memref<4xi24>
+  %b = memref.alloc() : memref<4xi24>
+  memref.dealloc %a : memref<4xi24>
+  memref.dealloc %b : memref<4xi24>
+  return
+}
+
+// -----
+
 // A dynamic allocation is in the entry block but cannot enter the arena.
 // Preserve both allocations and both releases when they share deallocs.
 // CHECK-LABEL: func.func @shared_dynamic_shape(
