@@ -176,8 +176,7 @@ template <input_range _View>
 class cache_latest_view<_View>::__sentinel {
   sentinel_t<_View> __end_ = sentinel_t<_View>();
 
-  constexpr explicit __sentinel(cache_latest_view& __parent)
-      : __end_{ranges::end(__parent.__base_)} {}
+  constexpr explicit __sentinel(cache_latest_view& __parent) : __end_{ranges::end(__parent.__base_)} {}
 
   friend class cache_latest_view<_View>;
 
@@ -190,14 +189,12 @@ public:
     return __x.__current_ == __y.__end_;
   }
 
-  [[nodiscard]] friend constexpr range_difference_t<_View>
-  operator-(const __iterator& __x, const __sentinel& __y)
+  [[nodiscard]] friend constexpr range_difference_t<_View> operator-(const __iterator& __x, const __sentinel& __y)
     requires sized_sentinel_for<sentinel_t<_View>, iterator_t<_View>>
   {
     return __x.__current_ - __y.__end_;
   }
-  [[nodiscard]] friend constexpr range_difference_t<_View>
-  operator-(const __sentinel& __x, const __iterator& __y)
+  [[nodiscard]] friend constexpr range_difference_t<_View> operator-(const __sentinel& __x, const __iterator& __y)
     requires sized_sentinel_for<sentinel_t<_View>, iterator_t<_View>>
   {
     return __x.__end_ - __y.__current_;
