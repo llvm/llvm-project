@@ -81,6 +81,10 @@ defm : BoolField<"profile-unknown-in-special-section", "false",
   "In profiling mode like sampleFDO, if a function doesn't have profile, we cannot tell the function is cold for sure because it may be a function newly added without ever being sampled. "
   "With the flag enabled, compiler can put such profile unknown functions into a special section, so runtime system can choose to handle it in a different way than .text section, to save RAM for example">;
 
+// OptimizePHIs.cpp
+defm : OptionalBoolField<"hoist-phi-consts",
+  "Hoist duplicate constants feeding a PHI, overriding the target's choice">;
+
 // TargetPassConfig.cpp
 defm : BoolField<"basic-block-section-match-infer", "false",
   "Enable matching and inference when generating basic block sections">;

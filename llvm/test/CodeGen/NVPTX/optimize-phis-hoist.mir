@@ -1,0 +1,467 @@
+# RUN: llc -mtriple=nvptx -run-pass=opt-phis -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=nvptx64 -run-pass=opt-phis -verify-machineinstrs -o - %s | FileCheck %s
+
+---
+name: test_phi_hoist_fpimm
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %0:b1 = IMPLICIT_DEF
+    %1:b1 = IMPLICIT_DEF
+    CBranch killed %0, %bb.2, 0
+
+  bb.1:
+    successors: %bb.4
+
+    %2:b32 = MOV_F32_i float 1.000000e+00
+    GOTO %bb.4
+
+  bb.2:
+    successors: %bb.3, %bb.4
+
+    %3:b32 = MOV_F32_i float 1.000000e+00
+    CBranch killed %1, %bb.4, 0
+
+  bb.3:
+    successors: %bb.4
+
+    %4:b32 = MOV_F32_i float 2.000000e+00
+
+  bb.4:
+    %5:b32 = PHI %2, %bb.1, %3, %bb.2, %4, %bb.3
+    ST_i32 %5, 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+    Return
+
+# CHECK-LABEL: name: test_phi_hoist_fpimm
+# CHECK: bb.0:
+# CHECK:   [[HOISTED:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
+# CHECK: bb.4:
+# CHECK:   PHI [[HOISTED]], %bb.1, [[HOISTED]], %bb.2, %{{[0-9]+}}, %bb.3
+...
+
+---
+name: test_phi_hoist_fpimm_multiple
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.3
+
+    %0:b1 = IMPLICIT_DEF
+    %1:b1 = IMPLICIT_DEF
+    CBranch killed %0, %bb.3, 0
+
+  bb.1:
+    successors: %bb.2, %bb.5
+
+    %2:b32 = MOV_F32_i float 1.000000e+00
+    CBranch killed %1, %bb.5, 0
+
+  bb.2:
+    successors: %bb.5
+
+    %3:b32 = MOV_F32_i float 1.000000e+00
+    GOTO %bb.5
+
+  bb.3:
+    successors: %bb.4, %bb.5
+
+    %4:b32 = MOV_F32_i float 2.000000e+00
+    %5:b1 = IMPLICIT_DEF
+    CBranch killed %5, %bb.5, 0
+
+  bb.4:
+    successors: %bb.5
+
+    %6:b32 = MOV_F32_i float 2.000000e+00
+
+  bb.5:
+    %7:b32 = PHI %2, %bb.1, %3, %bb.2, %4, %bb.3, %6, %bb.4
+    ST_i32 %7, 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+    Return
+
+# CHECK-LABEL: name: test_phi_hoist_fpimm_multiple
+# CHECK: bb.0:
+# CHECK:   [[ONE:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
+# CHECK:   [[TWO:%[0-9]+]]:b32 = MOV_F32_i float 2.000000e+00
+# CHECK: bb.5:
+# CHECK:   PHI [[ONE]], %bb.1, [[ONE]], %bb.2, [[TWO]], %bb.3, [[TWO]], %bb.4
+...
+
+---
+name: test_phi_hoist_imm_not_hoisted
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %0:b1 = IMPLICIT_DEF
+    CBranch killed %0, %bb.2, 0
+
+  bb.1:
+    successors: %bb.3
+
+    %1:b32 = MOV_B32_i 1
+    GOTO %bb.3
+
+  bb.2:
+    successors: %bb.3
+
+    %2:b32 = MOV_B32_i 2
+
+  bb.3:
+    %3:b32 = PHI %1, %bb.1, %2, %bb.2
+    ST_i32 %3, 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+    Return
+
+# CHECK-LABEL: name: test_phi_hoist_imm_not_hoisted
+# CHECK: bb.0:
+# CHECK-NOT: MOV_B32_i
+# CHECK: bb.1:
+# CHECK:   [[A:%[0-9]+]]:b32 = MOV_B32_i 1
+# CHECK: bb.2:
+# CHECK:   [[B:%[0-9]+]]:b32 = MOV_B32_i 2
+# CHECK: bb.3:
+# CHECK:   PHI [[A]], %bb.1, [[B]], %bb.2
+...
+
+---
+name: test_phi_hoist_fpimm_noduplicates
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %0:b1 = IMPLICIT_DEF
+    CBranch killed %0, %bb.2, 0
+
+  bb.1:
+    successors: %bb.3
+
+    %1:b32 = MOV_F32_i float 1.000000e+00
+    GOTO %bb.3
+
+  bb.2:
+    successors: %bb.3
+
+    %2:b32 = MOV_F32_i float 2.000000e+00
+
+  bb.3:
+    %3:b32 = PHI %1, %bb.1, %2, %bb.2
+    ST_i32 %3, 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+    Return
+
+# CHECK-LABEL: name: test_phi_hoist_fpimm_noduplicates
+# CHECK: bb.0:
+# CHECK-NOT: MOV_F32_i
+# CHECK: bb.1:
+# CHECK:   [[A:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
+# CHECK: bb.2:
+# CHECK:   [[B:%[0-9]+]]:b32 = MOV_F32_i float 2.000000e+00
+# CHECK: bb.3:
+# CHECK:   PHI [[A]], %bb.1, [[B]], %bb.2
+...
+
+---
+name: test_phi_hoist_fpimm_through_copy
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %0:b1 = IMPLICIT_DEF
+    CBranch killed %0, %bb.2, 0
+
+  bb.1:
+    successors: %bb.3
+
+    %1:b32 = MOV_F32_i float 1.000000e+00
+    %2:b32 = COPY %1
+    GOTO %bb.3
+
+  bb.2:
+    successors: %bb.3
+
+    %3:b32 = MOV_F32_i float 1.000000e+00
+    %4:b32 = COPY %3
+
+  bb.3:
+    %5:b32 = PHI %2, %bb.1, %4, %bb.2
+    ST_i32 %5, 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+    Return
+
+# CHECK-LABEL: name: test_phi_hoist_fpimm_through_copy
+# CHECK: bb.0:
+# CHECK:   [[HOISTED:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
+# CHECK-NOT: PHI
+# CHECK: ST_i32 [[HOISTED]]
+...
+
+---
+name: test_phi_hoist_fpimm_no_dominating_pred
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %0:b1 = IMPLICIT_DEF
+    CBranch killed %0, %bb.2, 0
+
+  bb.1:
+    successors: %bb.3
+
+    GOTO %bb.3
+
+  bb.2:
+    successors: %bb.4
+
+    GOTO %bb.4
+
+  bb.3:
+    successors: %bb.5
+
+    %1:b32 = MOV_F32_i float 1.000000e+00
+    GOTO %bb.5
+
+  bb.4:
+    successors: %bb.5
+
+    %2:b32 = MOV_F32_i float 1.000000e+00
+
+  bb.5:
+    %3:b32 = PHI %1, %bb.3, %2, %bb.4
+    ST_i32 %3, 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+    Return
+
+# CHECK-LABEL: name: test_phi_hoist_fpimm_no_dominating_pred
+# CHECK: bb.0:
+# CHECK-NOT: MOV_F32_i
+# CHECK: bb.3:
+# CHECK:   [[A:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
+# CHECK: bb.4:
+# CHECK:   [[B:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
+# CHECK: bb.5:
+# CHECK:   PHI [[A]], %bb.3, [[B]], %bb.4
+...
+
+---
+name: test_phi_hoist_fpimm_implicit_def
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %0:b1 = IMPLICIT_DEF
+    CBranch killed %0, %bb.2, 0
+
+  bb.1:
+    successors: %bb.3
+
+    %1:b32 = MOV_F32_i float 1.000000e+00, implicit-def dead $vrframe32
+    GOTO %bb.3
+
+  bb.2:
+    successors: %bb.3
+
+    %2:b32 = MOV_F32_i float 1.000000e+00, implicit-def dead $vrframe32
+
+  bb.3:
+    %3:b32 = PHI %1, %bb.1, %2, %bb.2
+    ST_i32 %3, 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+    Return
+
+# CHECK-LABEL: name: test_phi_hoist_fpimm_implicit_def
+# CHECK: bb.0:
+# CHECK-NOT: MOV_F32_i
+# CHECK: bb.1:
+# CHECK: bb.3:
+# CHECK:   PHI
+...
+
+---
+name: test_phi_hoist_fpimm_same_def_block
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %0:b1 = IMPLICIT_DEF
+    %1:b1 = IMPLICIT_DEF
+    %2:b32 = MOV_F32_i float 1.000000e+00
+    %3:b32 = MOV_F32_i float 1.000000e+00
+    CBranch killed %0, %bb.2, 0
+
+  bb.1:
+    successors: %bb.3
+
+    GOTO %bb.3
+
+  bb.2:
+    successors: %bb.3
+
+  bb.3:
+    %4:b32 = PHI %2, %bb.1, %3, %bb.2
+    ST_i32 %4, 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+    Return
+
+# CHECK-LABEL: name: test_phi_hoist_fpimm_same_def_block
+# CHECK: bb.0:
+# CHECK:   [[A:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
+# CHECK:   [[B:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
+# CHECK: bb.3:
+# CHECK:   PHI [[A]], %bb.1, [[B]], %bb.2
+...
+
+---
+name: test_phi_hoist_f64
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %0:b1 = IMPLICIT_DEF
+    %1:b1 = IMPLICIT_DEF
+    CBranch killed %0, %bb.2, 0
+
+  bb.1:
+    successors: %bb.4
+
+    %2:b64 = MOV_F64_i double 1.000000e+00
+    GOTO %bb.4
+
+  bb.2:
+    successors: %bb.3, %bb.4
+
+    %3:b64 = MOV_F64_i double 1.000000e+00
+    CBranch killed %1, %bb.4, 0
+
+  bb.3:
+    successors: %bb.4
+
+    %4:b64 = MOV_F64_i double 2.000000e+00
+
+  bb.4:
+    %5:b64 = PHI %2, %bb.1, %3, %bb.2, %4, %bb.3
+    ST_i64 %5, 0, 0, 101, 64, &func_retval0, 0, 0, $noreg :: (store (s64), addrspace 101)
+    Return
+
+# CHECK-LABEL: name: test_phi_hoist_f64
+# CHECK: bb.0:
+# CHECK:   [[HOISTED:%[0-9]+]]:b64 = MOV_F64_i double 1.000000e+00
+# CHECK: bb.4:
+# CHECK:   PHI [[HOISTED]], %bb.1, [[HOISTED]], %bb.2, %{{[0-9]+}}, %bb.3
+...
+
+---
+name: test_phi_hoist_fpimm_removes_phi_cycle
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %0:b1 = IMPLICIT_DEF
+    %1:b1 = IMPLICIT_DEF
+    CBranch killed %0, %bb.2, 0
+
+  bb.1:
+    successors: %bb.3
+
+    %2:b32 = MOV_F32_i float 1.000000e+00
+    GOTO %bb.3
+
+  bb.2:
+    successors: %bb.3
+
+    %3:b32 = MOV_F32_i float 1.000000e+00
+
+  bb.3:
+    successors: %bb.3, %bb.4
+
+    %4:b32 = PHI %2, %bb.1, %3, %bb.2, %4, %bb.3
+    CBranch %1, %bb.3, 0
+
+  bb.4:
+    ST_i32 %4, 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+    Return
+
+# CHECK-LABEL: name: test_phi_hoist_fpimm_removes_phi_cycle
+# CHECK: bb.0:
+# CHECK:   [[HOISTED:%[0-9]+]]:b32 = MOV_F32_i float 1.000000e+00
+# CHECK-NOT: PHI
+# CHECK: bb.4:
+# CHECK:   ST_i32 [[HOISTED]]
+...
+
+---
+name: test_phi_hoist_fpimm_multiple_noncontiguous
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    %0:b1 = IMPLICIT_DEF
+
+  bb.1:
+    successors: %bb.2, %bb.9
+
+    %1:b32 = MOV_F32_i float 2.000000e+00
+    CBranch %0, %bb.9, 0
+
+  bb.2:
+    successors: %bb.3, %bb.9
+
+    %2:b32 = MOV_F32_i float 3.000000e+00
+    CBranch %0, %bb.9, 0
+
+  bb.3:
+    successors: %bb.4, %bb.9
+
+    %3:b32 = MOV_F32_i float 2.000000e+00
+    CBranch %0, %bb.9, 0
+
+  bb.4:
+    successors: %bb.5, %bb.9
+
+    %4:b32 = MOV_F32_i float 4.000000e+00
+    CBranch %0, %bb.9, 0
+
+  bb.5:
+    successors: %bb.6, %bb.9
+
+    %5:b32 = MOV_F32_i float 3.000000e+00
+    CBranch %0, %bb.9, 0
+
+  bb.6:
+    successors: %bb.7, %bb.9
+
+    %6:b32 = MOV_F32_i float 2.000000e+00
+    CBranch %0, %bb.9, 0
+
+  bb.7:
+    successors: %bb.8, %bb.9
+
+    %7:b32 = MOV_F32_i float 3.000000e+00
+    CBranch %0, %bb.9, 0
+
+  bb.8:
+    successors: %bb.9
+
+    %8:b32 = MOV_F32_i float 3.000000e+00
+
+  bb.9:
+    %9:b32 = PHI %1, %bb.1, %2, %bb.2, %3, %bb.3, %4, %bb.4, %5, %bb.5, %6, %bb.6, %7, %bb.7, %8, %bb.8
+    ST_i32 %9, 0, 0, 101, 32, &func_retval0, 0, 0, $noreg :: (store (s32), addrspace 101)
+    Return
+
+# CHECK-LABEL: name: test_phi_hoist_fpimm_multiple_noncontiguous
+# CHECK: bb.0:
+# CHECK:   [[TWO:%[0-9]+]]:b32 = MOV_F32_i float 2.000000e+00
+# CHECK: bb.1:
+# CHECK:   MOV_F32_i float 2.000000e+00
+# CHECK:   [[THREE:%[0-9]+]]:b32 = MOV_F32_i float 3.000000e+00
+# CHECK: bb.4:
+# CHECK:   [[FOUR:%[0-9]+]]:b32 = MOV_F32_i float 4.000000e+00
+# CHECK: bb.9:
+# CHECK:   PHI [[TWO]], %bb.1, [[THREE]], %bb.2, [[TWO]], %bb.3, [[FOUR]], %bb.4, [[THREE]], %bb.5, [[TWO]], %bb.6, [[THREE]], %bb.7, [[THREE]], %bb.8
+...
