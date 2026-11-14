@@ -5724,9 +5724,16 @@ bool CombinerHelper::matchSDivOrSRemByConst(MachineInstr &MI) const {
   if (LI) {
     if (!isLegalOrBeforeLegalizer({TargetOpcode::G_MUL, {DstTy, DstTy}}))
       return false;
-    if (!isLegalOrHasFewerElements({TargetOpcode::G_SMULH, {DstTy}}) &&
-        !isLegalOrHasWidenScalar({TargetOpcode::G_MUL, {WideTy, WideTy}}))
+    if (isPreLegalize()) {
+      // The legalizer can still split a vector G_SMULH or lower it through a
+      // wider G_MUL.
+      if (!isLegalOrHasFewerElements({TargetOpcode::G_SMULH, {DstTy}}) &&
+          !isLegalOrHasWidenScalar({TargetOpcode::G_MUL, {WideTy, WideTy}}))
+        return false;
+    } else if (!isLegal({TargetOpcode::G_SMULH, {DstTy}})) {
+      // After legalization nothing will fix up an illegal G_SMULH.
       return false;
+    }
     if (Opcode == TargetOpcode::G_SREM &&
         !isLegalOrBeforeLegalizer({TargetOpcode::G_SUB, {DstTy, DstTy}}))
       return false;

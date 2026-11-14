@@ -495,5 +495,6 @@ def AArch64PostLegalizerCombiner
                         extmultomull, subaddmulreassoc, truncsat_combines,
                         lshr_of_trunc_of_lshr,
                         funnel_shift_from_or_shift_constants_are_legal,
-                        vashr_to_sshl, vlshr_to_ushl, simplify_demanded_bits]> {
+                        vashr_to_sshl, vlshr_to_ushl, simplify_demanded_bits,
+                        sdiv_by_const]> {
 }
