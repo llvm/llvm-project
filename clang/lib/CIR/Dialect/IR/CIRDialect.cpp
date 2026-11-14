@@ -1921,6 +1921,29 @@ mlir::LogicalResult cir::ReturnOp::verify() {
   return success();
 }
 
+static void getFunctionExitEffects(
+    mlir::Operation *op,
+    llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance> &effects) {
+  if (isa_and_nonnull<cir::FuncOp>(op->getParentOp()))
+    return;
+  effects.emplace_back(mlir::MemoryEffects::Read::get());
+  effects.emplace_back(mlir::MemoryEffects::Write::get());
+}
+
+void cir::ReturnOp::getEffects(
+    llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance> &effects) {
+  getFunctionExitEffects(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
+// UnreachableOp
+//===----------------------------------------------------------------------===//
+
+void cir::UnreachableOp::getEffects(
+    llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance> &effects) {
+  getFunctionExitEffects(getOperation(), effects);
+}
+
 //===----------------------------------------------------------------------===//
 // IfOp
 //===----------------------------------------------------------------------===//
