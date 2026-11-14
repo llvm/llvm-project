@@ -1110,7 +1110,9 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::VulkanMemoryModelKHR,
                     Capability::StorageImageExtendedFormats,
                     Capability::StorageImageMultisample,
-                    Capability::ImageMSArray});
+                    Capability::ImageMSArray,
+                    Capability::SampledCubeArray,
+                    Capability::ImageCubeArray});
 
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 3)) ||
       ST.canUseExtension(Extension::SPV_KHR_variable_pointers))
