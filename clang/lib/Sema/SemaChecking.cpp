@@ -3075,7 +3075,7 @@ static ExprResult BuiltinSpeculativeLoad(Sema &S, CallExpr *TheCall) {
   const auto *VT = PointeeTy->getAs<VectorType>();
   if (!VT || !VT->getElementType()->isIntegerType())
     return S.Diag(PtrArg->getExprLoc(),
-           diag::err_speculative_load_not_a_vector_of_integers);
+                  diag::err_speculative_load_not_a_vector_of_integers);
 
   InitializedEntity Entity = InitializedEntity::InitializeParameter(
       S.Context, S.Context.BoolTy, /*consume=f*/ false);
@@ -3093,16 +3093,16 @@ static ExprResult BuiltinSpeculativeLoad(Sema &S, CallExpr *TheCall) {
       OracleFnArg->getAsBuiltinConstantDeclRef(S.getASTContext()));
   if (!FD)
     return S.Diag(OracleFnArg->getBeginLoc(),
-           diag::err_speculative_load_third_arg_must_be_function);
+                  diag::err_speculative_load_third_arg_must_be_function);
 
   if (!FD->hasAttr<OracleFunctionAttr>())
     return S.Diag(OracleFnArg->getBeginLoc(),
-           diag::err_speculative_load_function_oracle_attr);
+                  diag::err_speculative_load_function_oracle_attr);
 
   if (TheCall->getNumArgs() - 3 != FD->getNumParams())
     return S.Diag(TheCall->getBeginLoc(),
-           diag::err_speculative_load_arg_oracle_param_count_mismatch)
-        << FD->getNumParams() << TheCall->getNumArgs() - 3;
+                  diag::err_speculative_load_arg_oracle_param_count_mismatch)
+           << FD->getNumParams() << TheCall->getNumArgs() - 3;
 
   for (unsigned I = 0, N = FD->getNumParams(); I != N; ++I) {
     ParmVarDecl *Param = const_cast<ParmVarDecl *>(FD->getParamDecl(I));
