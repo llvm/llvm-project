@@ -562,6 +562,12 @@ void MachineLICMImpl::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
       continue;
     }
 
+    // A user-reserved register is not tracked by liveness and may be read
+    // anywhere, so its definition cannot be hoisted: that would move it above
+    // reads of the previous value.
+    if (MRI->isReserved(Reg) && TRI->isUserReservedReg(*MI->getMF(), Reg))
+      RuledOut = true;
+
     // FIXME: For now, avoid instructions with multiple defs, unless it's dead.
     if (!MO.isDead()) {
       if (Def)

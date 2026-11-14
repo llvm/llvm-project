@@ -415,6 +415,15 @@ public:
     return {};
   }
 
+  /// Returns true if the user asked for PhysReg to be reserved, for example
+  /// with -ffixed-<reg>. Such a register may hold a global register variable,
+  /// so its value can be read and written in ways that liveness does not
+  /// track: a definition of it must not be hoisted or executed speculatively.
+  virtual bool isUserReservedReg(const MachineFunction &MF,
+                                 MCRegister PhysReg) const {
+    return false;
+  }
+
   /// Returns false if we can't guarantee that Physreg, specified as an IR asm
   /// clobber constraint, will be preserved across the statement.
   virtual bool isAsmClobberable(const MachineFunction &MF,
