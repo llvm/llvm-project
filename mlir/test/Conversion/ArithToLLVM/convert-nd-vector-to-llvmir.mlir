@@ -243,3 +243,19 @@ func.func @index_cast_2d(%arg0: vector<1x2x3xi1>) {
   %1 = arith.index_cast %0: vector<1x2x3xindex> to vector<1x2x3xi1>
   return
 }
+
+// -----
+
+// CHECK-LABEL: @remsi_overflow_zero_multidimensional_vector(
+// CHECK: llvm.extractvalue {{.*}}[0]
+// CHECK: llvm.select {{.*}} : vector<4xi1>, vector<4xi32>
+// CHECK: llvm.srem {{.*}} : vector<4xi32>
+// CHECK: llvm.insertvalue {{.*}}[0]
+// CHECK: llvm.extractvalue {{.*}}[1]
+// CHECK: llvm.select {{.*}} : vector<4xi1>, vector<4xi32>
+// CHECK: llvm.srem {{.*}} : vector<4xi32>
+// CHECK: llvm.insertvalue {{.*}}[1]
+func.func @remsi_overflow_zero_multidimensional_vector(%a: vector<2x4xi32>, %b: vector<2x4xi32>) -> vector<2x4xi32> {
+  %r = arith.remsi %a, %b overflow<zero> : vector<2x4xi32>
+  return %r : vector<2x4xi32>
+}

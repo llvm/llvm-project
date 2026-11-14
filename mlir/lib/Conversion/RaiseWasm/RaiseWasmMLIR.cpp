@@ -119,7 +119,19 @@ using WasmMaxOpConversion = OpMappingConversion<MaxOp, arith::MaximumFOp>;
 using WasmMinOpConversion = OpMappingConversion<MinOp, arith::MinimumFOp>;
 using WasmOrOpConversion = OpMappingConversion<OrOp, arith::OrIOp>;
 using WasmPromoteOpConversion = OpMappingConversion<PromoteOp, arith::ExtFOp>;
-using WasmRemSIOpConversion = OpMappingConversion<RemSIOp, arith::RemSIOp>;
+struct WasmRemSIOpConversion : OpConversionPattern<RemSIOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(RemSIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // WebAssembly defines the remainder of INT_MIN / -1 to be zero.
+    rewriter.replaceOpWithNewOp<arith::RemSIOp>(op, adaptor.getOperands()[0],
+                                                adaptor.getOperands()[1],
+                                                /*isOverflowZero=*/true);
+    return success();
+  }
+};
 using WasmRemUIOpConversion = OpMappingConversion<RemUIOp, arith::RemUIOp>;
 using WasmReinterpretOpConversion =
     OpMappingConversion<ReinterpretOp, arith::BitcastOp>;

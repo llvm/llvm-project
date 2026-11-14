@@ -174,3 +174,15 @@ func.func @negative_scalar_only_eltwise(%a: f32, %b: f32) -> f32 {
   %0 = arith.addf %a, %b : f32
   return %0 : f32
 }
+
+// -----
+
+// CHECK-LABEL: @remsi_overflow_zero
+// CHECK: linalg.generic
+// CHECK: ^bb0(%[[A:.*]]: i32, %[[B:.*]]: i32, %{{.*}}: i32):
+// CHECK: %[[REM:.*]] = arith.remsi %[[A]], %[[B]] overflow<zero> : i32
+// CHECK: linalg.yield %[[REM]] : i32
+func.func @remsi_overflow_zero(%a: tensor<?xi32>, %b: tensor<?xi32>) -> tensor<?xi32> {
+  %r = arith.remsi %a, %b overflow<zero> : tensor<?xi32>
+  return %r : tensor<?xi32>
+}

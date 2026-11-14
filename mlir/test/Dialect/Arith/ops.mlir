@@ -1,6 +1,24 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s
 // RUN: mlir-opt %s --mlir-print-op-generic | mlir-opt | FileCheck %s
 
+// CHECK-LABEL: @remsi_overflow_zero
+func.func @remsi_overflow_zero(%a: i32, %b: i32) -> i32 {
+  // CHECK: arith.remsi %{{.*}}, %{{.*}} overflow<zero> : i32
+  %r = arith.remsi %a, %b overflow<zero> : i32
+  return %r : i32
+}
+
+// CHECK-LABEL: @remsi_overflow_zero_shaped
+func.func @remsi_overflow_zero_shaped(%a: vector<[4]xi32>, %b: vector<[4]xi32>,
+                                    %x: tensor<?xi8>, %y: tensor<?xi8>)
+    -> (vector<[4]xi32>, tensor<?xi8>) {
+  // CHECK: arith.remsi %{{.*}}, %{{.*}} overflow<zero> : vector<[4]xi32>
+  %v = arith.remsi %a, %b overflow<zero> : vector<[4]xi32>
+  // CHECK: arith.remsi %{{.*}}, %{{.*}} overflow<zero> : tensor<?xi8>
+  %t = arith.remsi %x, %y overflow<zero> : tensor<?xi8>
+  return %v, %t : vector<[4]xi32>, tensor<?xi8>
+}
+
 // CHECK-LABEL: test_addi
 func.func @test_addi(%arg0 : i64, %arg1 : i64) -> i64 {
   %0 = arith.addi %arg0, %arg1 : i64
