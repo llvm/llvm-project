@@ -18,6 +18,7 @@
 #include "Hexagon.h"
 #include "PS4CPU.h"
 #include "ToolChains/Cuda.h"
+#include "ToolChains/SYCL.h"
 #include "clang/Basic/CLWarnings.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/HeaderInclude.h"
@@ -39,6 +40,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Frontend/Debug/Options.h"
@@ -9768,6 +9770,13 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
         "kind=" + Kind.str(),
     };
 
+    // Add one "code=" per Intel GPU requested for this IGCA target.
+    // llvm-offload-binary joins them, so the image gets
+    // "code=xe-mtl-h,xe-mtl-u".
+    if (OffloadAction->getOffloadingDeviceKind() == Action::OFK_SYCL)
+      for (StringRef Device : C.getSYCLIGCADevices(TC, Arch.ArchName))
+        Parts.emplace_back("code=" + Device.str());
+
     if (TC->isUsingLTO(TCArgs, OffloadAction->getOffloadingDeviceKind()))
       for (StringRef Feature : FeatureArgs)
         Parts.emplace_back("feature=" + Feature.str());
@@ -9959,11 +9968,18 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       // If the user explicitly requested it via `--offload-arch` we should
       // extract it from any static libraries if present. Device images are
       // labeled with the canonical target ID, so request that.
+      llvm::StringSet<> ShouldExtract;
       for (StringRef Arg : ToolChainArgs.getAllArgValues(OPT_offload_arch_EQ)) {
         std::optional<std::string> TargetID =
             getCanonicalTargetID(TC->getTriple(), Arg);
-        CmdArgs.emplace_back(Args.MakeArgString(
-            "--should-extract=" + (TargetID ? StringRef(*TargetID) : Arg)));
+        StringRef Name = TargetID ? StringRef(*TargetID) : Arg;
+        // A SYCL device image for an Intel GPU is labeled with the GPU's IGCA
+        // target.
+        if (Kind == Action::OFK_SYCL)
+          Name = toolchains::getSYCLVirtualArch(Name);
+        // Intel GPUs that share an IGCA target ask for it once.
+        if (ShouldExtract.insert(Name).second)
+          CmdArgs.emplace_back(Args.MakeArgString("--should-extract=" + Name));
       }
 
       // If this is OpenMP the device linker will need `-lompdevice`.

@@ -30,30 +30,37 @@ be passed down to downstream AOT compilation tools like 'ocloc' and 'opencl-aot'
 
 ```console
 OVERVIEW: A utility that wraps around the SYCL device code linking process.
-This enables LLVM IR linking, post-linking and code generation for SPIR-V
-JIT and AOT targets.
+This enables LLVM IR linking, post-linking and code generation for SPIR-V JIT and AOT targets.
 
 USAGE: clang-sycl-linker [options] <input bitcode files>
 
 OPTIONS:
-  --arch <value>                Specify the name of the target architecture.
-  --dry-run                     Print generated commands without running.
-  -help-hidden                  Display all available options
-  -help                         Display available options (--help-hidden for more)
-  -L <dir>                      Add <dir> to the library search path
-  -l <libname>                  Search for library <libname>
-  --whole-archive               Include all archive members in the link
-  --no-whole-archive            Only include archive members that resolve undefined symbols (default)
-  -u <symbol>                   Force undefined symbol during linking
-  --module-split-mode=<mode>    Module split mode: 'translation_unit' (default), 'kernel', or 'link_unit'
-  --ocloc-options=<value>       Options passed to ocloc for Intel GPU AOT compilation
-  --opencl-aot-options=<value>  Options passed to opencl-aot for Intel CPU AOT compilation
-  -o <path>                     Path to file to write output
-  --save-temps                  Save intermediate results
-  --triple <value>              Specify the target triple.
-  --version                     Display the version number and exit
-  -v                            Print verbose information
-  -spirv-dump-device-code=<dir> Directory to dump SPIR-V IR code into
+  --arch=<arch>           The device architecture
+  --code=<code>           Specify a real device to compile ahead of time for. Can be repeated. Without it, a real --arch is compiled ahead of time and a virtual one is kept for just-in-time compilation.
+  --dry-run               Print generated commands without running.
+  -help-hidden            Display all available options
+  -help                   Display available options (--help-hidden for more)
+  -L <dir>                Add <dir> to the library search path
+  -l <libname>            Search for library <libname>
+  --module-split-mode=<mode>
+                          SYCL device code module split mode. Valid values:
+                          - 'translation_unit' (default) emits one device image per translation unit that contains at least one entry point;
+                          - 'kernel' emits one device image per kernel function;
+                          - 'link_unit' emits one device image per linking unit.
+  --no-whole-archive      Disable --whole-archive for the following inputs (default state)
+  --ocloc-options=<value> Options passed to ocloc for Intel GPU AOT compilation
+  --opencl-aot-options=<value>
+                          Options passed to opencl-aot for Intel CPU AOT compilation
+  -o <path>               Path to file to write output
+  --print-linked-module   Print the linked module's IR for testing
+  --save-temps            Save intermediate results
+  --spirv-dump-device-code=<value>
+                          Path to the folder where the tool dumps SPIR-V device code. Other formats aren't dumped.
+  --triple=<triple>       The device target triple
+  -u <symbol>             Force undefined symbol during linking
+  --version               Display the version number and exit
+  -v                      Print verbose information
+  --whole-archive         Include all archive members in the link
 ```
 
 ## Library Linking
@@ -106,6 +113,21 @@ generate the final executable.
 
 ```console
 clang-sycl-linker --triple spirv64 --arch xe-bmg-g21 input.bc
+```
+
+### Specifying a virtual architecture and real devices
+
+`--arch` can name a virtual architecture, which several real devices share.
+`--code` then names the real devices to compile the device code for ahead of
+time.
+
+For example, for an IGCA target, such as `igca_30r`, the device image is
+compiled ahead of time for the Intel GPUs given with `--code`, with a single
+ocloc call, or, if no `--code` is given, kept as SPIR-V to be compiled just in
+time by the runtime:
+
+```console
+clang-sycl-linker --triple spirv64 --arch igca_30r --code=xe-mtl-u --code=xe-mtl-h input.bc
 ```
 
 ### Linking with Device Libraries
