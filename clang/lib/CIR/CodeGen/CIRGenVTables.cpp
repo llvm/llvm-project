@@ -297,7 +297,13 @@ void CIRGenVTables::createVTableInitializer(cir::GlobalOp &vtableOp,
   cir::ConstRecordAttr record = cgm.getBuilder().getAnonConstRecord(members);
 
   // Create a VTableAttr
-  auto vtableAttr = cir::VTableAttr::get(record.getType(), record.getMembers());
+  SmallVector<mlir::Attribute> addressPointAttrs;
+  for (auto [vtableIndex, addressPoint] : llvm::enumerate(addressPoints))
+    addressPointAttrs.push_back(
+        cir::AddressPointAttr::get(mlirContext, vtableIndex, addressPoint));
+  auto vtableAttr = cir::VTableAttr::get(
+      record.getType(), record.getMembers(),
+      mlir::ArrayAttr::get(mlirContext, addressPointAttrs));
 
   // Add the vtable initializer to the vtable global op.
   cgm.setInitializer(vtableOp, vtableAttr);
