@@ -218,9 +218,16 @@ bool ISD::isConstantSplatVectorAllOnes(const SDNode *N, bool BuildVectorOnly) {
 }
 
 bool ISD::isConstantSplatVectorAllZeros(const SDNode *N, bool BuildVectorOnly) {
+  if (!N->getValueType(0).isVector())
+    return false;
+
   // Look through a bit convert.
   while (N->getOpcode() == ISD::BITCAST)
     N = N->getOperand(0).getNode();
+
+  SDValue V(const_cast<SDNode *>(N), 0);
+  if (!BuildVectorOnly && (isNullConstant(V) || isNullFPConstant(V)))
+    return true;
 
   if (!BuildVectorOnly && N->getOpcode() == ISD::SPLAT_VECTOR) {
     APInt SplatVal;
