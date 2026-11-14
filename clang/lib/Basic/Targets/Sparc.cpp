@@ -156,6 +156,31 @@ SparcTargetInfo::CPUFamily SparcTargetInfo::getCPUFamily(CPUKind Kind) const {
   return Item->Family;
 }
 
+// The CPUs that the backend gives the LeonCASA feature.
+bool SparcTargetInfo::hasLeonCASA(CPUKind Kind) {
+  switch (Kind) {
+  case CK_MYRIAD2100:
+  case CK_MYRIAD2150:
+  case CK_MYRIAD2155:
+  case CK_MYRIAD2450:
+  case CK_MYRIAD2455:
+  case CK_MYRIAD2x5x:
+  case CK_MYRIAD2080:
+  case CK_MYRIAD2085:
+  case CK_MYRIAD2480:
+  case CK_MYRIAD2485:
+  case CK_MYRIAD2x8x:
+  case CK_LEON3:
+  case CK_LEON3_GR712RC:
+  case CK_LEON4:
+  case CK_LEON4_GR740:
+  case CK_LEON5:
+    return true;
+  default:
+    return false;
+  }
+}
+
 SparcTargetInfo::CPUKind SparcTargetInfo::getCPUKind(StringRef Name) const {
   const SparcCPUInfo *Item = llvm::find_if(
       CPUInfo, [Name](const SparcCPUInfo &Info) { return Info.Name == Name; });
@@ -199,11 +224,13 @@ void SparcV8TargetInfo::getTargetDefines(const LangOptions &Opts,
   }
   if (getCPUFamily(CPU) == CF_LEON)
     Builder.defineMacro("__leon__");
-  if (getCPUGeneration(CPU) == CG_V9) {
+  if (getCPUGeneration(CPU) == CG_V9 || hasLeonCASA(CPU)) {
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
-    Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
+    // As with GCC, 64-bit compare-and-swap is only inlined in V8+ mode.
+    if (getCPUGeneration(CPU) == CG_V9 && V8Plus)
+      Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
   }
   if (LongDoubleWidth == 128)
     Builder.defineMacro("__LONG_DOUBLE_128__");

@@ -4822,6 +4822,44 @@
 // CHECK_SPARC_SOLARIS_GCC_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
 // CHECK_SPARC_SOLARIS_GCC_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
 
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-sun-solaris \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_V8PLUS_LOCK_FREE
+// RUN: %clang -mcpu=v9 -mv8plus -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_SPARC_V8PLUS_LOCK_FREE,CHECK_SPARC_V8PLUS_CAS8
+// CHECK_SPARC_V8PLUS_LOCK_FREE: #define __GCC_ATOMIC_LLONG_LOCK_FREE 2
+// CHECK_SPARC_V8PLUS_CAS8: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+
+// Without V8+, 64-bit atomics are not lock-free in 32-bit code.
+// RUN: %clang -mcpu=v9 -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_V9_NO_V8PLUS
+// RUN: %clang -mcpu=v9 -mno-v8plus -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-sun-solaris \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_V9_NO_V8PLUS
+// CHECK_SPARC_V9_NO_V8PLUS: #define __GCC_ATOMIC_LLONG_LOCK_FREE 1
+// CHECK_SPARC_V9_NO_V8PLUS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// CHECK_SPARC_V9_NO_V8PLUS-NOT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+
+// Plain V8 has no CAS, so no atomics are lock-free; LEON/Myriad CASA CPUs
+// have 32-bit ones.
+// RUN: %clang -mcpu=v8 -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-elf \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_NO_CAS
+// RUN: %clang -mcpu=leon2 -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-elf \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_NO_CAS
+// CHECK_SPARC_NO_CAS: #define __GCC_ATOMIC_INT_LOCK_FREE 1
+// CHECK_SPARC_NO_CAS-NOT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// RUN: %clang -mcpu=leon3 -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-elf \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_CASA
+// CHECK_SPARC_CASA: #define __GCC_ATOMIC_INT_LOCK_FREE 2
+// CHECK_SPARC_CASA: #define __GCC_ATOMIC_LLONG_LOCK_FREE 1
+// CHECK_SPARC_CASA: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// CHECK_SPARC_CASA-NOT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+
 // RUN: %clang -mcpu=v8 -E -dM %s -o - 2>&1 \
 // RUN:     -target sparc-sun-solaris \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_SOLARIS_GCC_ATOMICS-V8
