@@ -397,9 +397,10 @@ defm : SKXWriteResPair<WriteVarShuffle,  [SKXPort0,SKXPort5], 1, [1,1], 2, 5>; /
 defm : SKXWriteResPair<WriteVarShuffleX, [SKXPort5], 1, [1], 1, 6>;
 defm : SKXWriteResPair<WriteVarShuffleY, [SKXPort5], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WriteVarShuffleZ, [SKXPort5], 1, [1], 1, 7>;
-defm : SKXWriteResPair<WriteBlend, [SKXPort5], 1, [1], 1, 6>; // Vector blends.
-defm : SKXWriteResPair<WriteBlendY,[SKXPort5], 1, [1], 1, 7>;
-defm : SKXWriteResPair<WriteBlendZ,[SKXPort5], 1, [1], 1, 7>;
+defm : SKXWriteResPair<WritePBLENDDX,[SKXPort015], 1, [1], 1, 6>; // Vector blends.
+defm : SKXWriteResPair<WritePBLENDDY,[SKXPort015], 1, [1], 1, 7>;
+defm : SKXWriteResPair<WritePBLENDWX,[SKXPort5], 1, [1], 1, 6>; // Vector blends.
+defm : SKXWriteResPair<WritePBLENDWY,[SKXPort5], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WriteVarBlend, [SKXPort015], 2, [2], 2, 6>; // Vector variable blends.
 defm : SKXWriteResPair<WriteVarBlendY,[SKXPort015], 2, [2], 2, 6>;
 defm : SKXWriteResPair<WriteVarBlendZ,[SKXPort05],  2, [1], 1, 6>;
@@ -703,7 +704,6 @@ def: InstRW<[SKXWriteResGroup9], (instregex "VBLENDMPD(Z128|Z256)rr",
                                             "VBLENDMPS(Z128|Z256)rr",
                                             "VPADD(B|D|Q|W)(Y|Z|Z128|Z256)rr",
                                             "(V?)PADD(B|D|Q|W)rr",
-                                            "VPBLENDD(Y?)rri",
                                             "VPBLENDMB(Z128|Z256)rr",
                                             "VPBLENDMD(Z128|Z256)rr",
                                             "VPBLENDMQ(Z128|Z256)rr",
@@ -1328,7 +1328,6 @@ def SKXWriteResGroup95 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup95], (instrs VPBLENDDrmi)>;
 def: InstRW<[SKXWriteResGroup95, ReadAfterVecXLd],
                                   (instregex "VBLENDMPDZ128rm(b?)",
                                              "VBLENDMPSZ128rm(b?)",
@@ -1530,7 +1529,6 @@ def SKXWriteResGroup121 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup121], (instrs VPBLENDDYrmi)>;
 def: InstRW<[SKXWriteResGroup121, ReadAfterVecYLd],
                                    (instregex "VBLENDMPD(Z|Z256)rm(b?)",
                                               "VBLENDMPS(Z|Z256)rm(b?)",

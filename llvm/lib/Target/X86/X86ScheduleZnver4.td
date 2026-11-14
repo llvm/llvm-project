@@ -1180,9 +1180,10 @@ defm : Zn4WriteResXMMPair<WriteVarShuffle, [Zn4FPVShuf01], 1, [1], 1>;  // Vecto
 defm : Zn4WriteResXMMPair<WriteVarShuffleX, [Zn4FPVShuf01], 1, [1], 1>; // Vector variable shuffles (XMM).
 defm : Zn4WriteResYMMPair<WriteVarShuffleY, [Zn4FPVShuf01], 1, [1], 1>; // Vector variable shuffles (YMM).
 defm : Zn4WriteResZMMPair<WriteVarShuffleZ, [Zn4FPVShuf01], 1, [2], 1>; // Vector variable shuffles (ZMM).
-defm : Zn4WriteResXMMPair<WriteBlend, [Zn4FPVMisc0123], 1, [1], 1>; // Vector blends.
-defm : Zn4WriteResYMMPair<WriteBlendY, [Zn4FPVMisc0123], 1, [1], 1>; // Vector blends (YMM).
-defm : Zn4WriteResZMMPair<WriteBlendZ, [Zn4FPVMisc0123], 1, [2], 1>; // Vector blends (ZMM).
+defm : Zn4WriteResXMMPair<WritePBLENDDX, [Zn4FPVMisc0123], 1, [1], 1>; // Vector blends (XMM).
+defm : Zn4WriteResYMMPair<WritePBLENDDY, [Zn4FPVMisc0123], 1, [1], 1>; // Vector blends (YMM).
+defm : Zn4WriteResXMMPair<WritePBLENDWX, [Zn4FPVMisc0123], 1, [1], 1>; // Vector blends (XMM).
+defm : Zn4WriteResYMMPair<WritePBLENDWY, [Zn4FPVMisc0123], 1, [1], 1>; // Vector blends (YMM).
 defm : Zn4WriteResXMMPair<WriteVarBlend, [Zn4FPVMul01], 1, [1], 1>; // Vector variable blends.
 defm : Zn4WriteResYMMPair<WriteVarBlendY, [Zn4FPVMul01], 1, [1], 1>; // Vector variable blends (YMM).
 defm : Zn4WriteResZMMPair<WriteVarBlendZ, [Zn4FPVMul01], 1, [2], 1>; // Vector variable blends (ZMM).

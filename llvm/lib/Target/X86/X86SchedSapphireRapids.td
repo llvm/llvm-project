@@ -150,8 +150,10 @@ def : WriteRes<WriteBitTestSetImmLd, [SPRPort01]> {
   let Latency = 11;
 }
 defm : X86WriteRes<WriteBitTestSetRegLd, [SPRPort00_01_05_06_11, SPRPort00_06, SPRPort01, SPRPort01_05_11], 17, [3, 2, 1, 2], 8>;
-defm : SPRWriteResPair<WriteBlend, [SPRPort01_05], 1, [1], 1, 7>;
-defm : SPRWriteResPair<WriteBlendY, [SPRPort00_01_05], 1, [1], 1, 8>;
+defm : SPRWriteResPair<WritePBLENDDX, [SPRPort00_01_05], 1, [1], 1, 7>;
+defm : SPRWriteResPair<WritePBLENDDY, [SPRPort00_01_05], 1, [1], 1, 8>;
+defm : SPRWriteResPair<WritePBLENDWX, [SPRPort01_05], 1, [1], 1, 7>;
+defm : SPRWriteResPair<WritePBLENDWY, [SPRPort01_05], 1, [1], 1, 8>;
 defm : SPRWriteResPair<WriteCLMul, [SPRPort05], 3, [1], 1, 7>;
 defm : SPRWriteResPair<WriteCMOV, [SPRPort00_06], 1, [1], 1, 6>;
 defm : X86WriteRes<WriteCMPXCHG, [SPRPort00_01_05_06_11, SPRPort00_06], 3, [3, 2], 5>;
@@ -782,8 +784,7 @@ def : InstRW<[SPRWriteResGroup23], (instregex "^C(DQ|WD)E$",
                                               "^VPMOVQDZ128rr((k|kz)?)$",
                                               "^VSHUFP(D|S)Yrri$",
                                               "^VSHUFP(D|S)Z(128|256)rri((k|kz)?)$")>;
-def : InstRW<[SPRWriteResGroup23], (instrs CBW,
-                                           VPBLENDWYrri)>;
+def : InstRW<[SPRWriteResGroup23], (instrs CBW)>;
 
 def SPRWriteResGroup24 : SchedWriteRes<[SPRPort00_06]>;
 def : InstRW<[SPRWriteResGroup24], (instregex "^C(DQ|QO)$",
@@ -1874,7 +1875,6 @@ def : InstRW<[SPRWriteResGroup160], (instregex "^(V?)MOVS(D|S)rr((_REV)?)$",
                                                "^VP(ADD|SUB)(D|Q)Z(128|256)rrk(z?)$",
                                                "^VPMOVM2(D|Q)Z128rk$",
                                                "^VPTERNLOG(D|Q)Z(128|256)rri((k|kz)?)$")>;
-def : InstRW<[SPRWriteResGroup160], (instrs VPBLENDDrri)>;
 
 def SPRWriteResGroup161 : SchedWriteRes<[SPRPort00_01_05_06_11, SPRPort02_03_10, SPRPort04_09, SPRPort07_08]> {
   let ReleaseAtCycles = [4, 1, 1, 1];
@@ -2026,7 +2026,6 @@ def : InstRW<[SPRWriteResGroup178, ReadAfterVecXLd], (instregex "^(V?)P(ADD|SUB)
                                                                 "^VPTERNLOG(D|Q)Z128rm(bi|ik)$",
                                                                 "^VPTERNLOG(D|Q)Z128rmbik(z?)$",
                                                                 "^VPTERNLOG(D|Q)Z128rmi((kz)?)$")>;
-def : InstRW<[SPRWriteResGroup178, ReadAfterVecXLd], (instrs VPBLENDDrmi)>;
 
 def SPRWriteResGroup179 : SchedWriteRes<[SPRPort02_03_10, SPRPort05]> {
   let Latency = 8;
@@ -4177,7 +4176,6 @@ def : InstRW<[SPRWriteResGroup442, ReadAfterVecYLd], (instregex "^VSHUFP(D|S)Yrm
                                                                 "^VSHUFP(D|S)Z256rm(bi|ik)$",
                                                                 "^VSHUFP(D|S)Z256rmbik(z?)$",
                                                                 "^VSHUFP(D|S)Z256rmi((kz)?)$")>;
-def : InstRW<[SPRWriteResGroup442, ReadAfterVecYLd], (instrs VPBLENDWYrmi)>;
 
 def SPRWriteResGroup443 : SchedWriteRes<[SPRPort00, SPRPort05]> {
   let Latency = 6;
