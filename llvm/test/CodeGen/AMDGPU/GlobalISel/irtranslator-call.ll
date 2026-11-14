@@ -3769,14 +3769,17 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i8_i8_i16() #0 {
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i16) = G_ANYEXT [[LOAD2]](i8)
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(i32) = G_CONSTANT i32 4
   ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C4]](i32)
-  ; CHECK-NEXT:   G_STORE [[ANYEXT]](i16), [[PTR_ADD2]](p5) :: (store (i16) into stack + 4, align 4, addrspace 5)
+  ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(i32) = G_ANYEXT [[ANYEXT]](i16)
+  ; CHECK-NEXT:   G_STORE [[ANYEXT1]](i32), [[PTR_ADD2]](p5) :: (store (i16) into stack + 4, align 4, addrspace 5)
   ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:_(i16) = COPY [[ANYEXT]](i16)
   ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(i32) = G_CONSTANT i32 8
   ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C5]](i32)
-  ; CHECK-NEXT:   G_STORE [[COPY20]](i16), [[PTR_ADD3]](p5) :: (store (i16) into stack + 8, align 8, addrspace 5)
+  ; CHECK-NEXT:   [[ANYEXT2:%[0-9]+]]:_(i32) = G_ANYEXT [[COPY20]](i16)
+  ; CHECK-NEXT:   G_STORE [[ANYEXT2]](i32), [[PTR_ADD3]](p5) :: (store (i16) into stack + 8, align 8, addrspace 5)
   ; CHECK-NEXT:   [[C6:%[0-9]+]]:_(i32) = G_CONSTANT i32 12
   ; CHECK-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C6]](i32)
-  ; CHECK-NEXT:   G_STORE [[LOAD3]](i16), [[PTR_ADD4]](p5) :: (store (i16) into stack + 12, align 4, addrspace 5)
+  ; CHECK-NEXT:   [[ANYEXT3:%[0-9]+]]:_(i32) = G_ANYEXT [[LOAD3]](i16)
+  ; CHECK-NEXT:   G_STORE [[ANYEXT3]](i32), [[PTR_ADD4]](p5) :: (store (i16) into stack + 12, align 4, addrspace 5)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](i32)
   ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](i32)
   ; CHECK-NEXT:   $vgpr2 = COPY [[UV2]](i32)
