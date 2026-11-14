@@ -50,6 +50,7 @@ if(NOT LLVM_LIBC_FULL_BUILD)
 endif()
 
 add_subdirectory(include)
+add_subdirectory(startup)
 
 if(NOT ${LIBC_TARGET_OS} STREQUAL "linux" AND
     NOT ${LIBC_TARGET_OS} STREQUAL "gpu")
