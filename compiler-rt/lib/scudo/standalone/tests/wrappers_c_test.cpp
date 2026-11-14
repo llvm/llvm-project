@@ -10,6 +10,7 @@
 #include "memtag.h"
 #include "scudo/interface.h"
 #include "tests/scudo_unit_test.h"
+#include "wrappers_c.h"
 
 #include <errno.h>
 #include <limits.h>
@@ -669,7 +670,7 @@ void MallInfoTest() {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
   const FieldType BypassQuarantineSize = 1024U;
-  struct mallinfo MI = mallinfo();
+  struct SCUDO_MALLINFO MI = mallinfo();
   FieldType Allocated = MI.uordblks;
   void *P = malloc(BypassQuarantineSize);
   EXPECT_NE(P, nullptr);
