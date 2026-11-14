@@ -1332,6 +1332,16 @@ void AsmMatcherInfo::buildRegisterClasses(
     return BS;
   };
 
+  // MatchRegisterName returns the first register (in enum order) for each
+  // AsmName, so registers shadowed by an earlier one are never parsed and
+  // can't be coerced from.
+  StringMap<const CodeGenRegister *> FirstRegByAsmName;
+  for (const CodeGenRegister &Reg : Registers) {
+    StringRef AsmName = Reg.TheDef->getValueAsString("AsmName");
+    if (!AsmName.empty())
+      FirstRegByAsmName.try_emplace(AsmName, &Reg);
+  }
+
   // Allow register classes with CoerceFromRegClass to also accept registers
   // with the same name from that class (e.g. x1 parsed as a GPR for a YGPR
   // operand). They get converted to the right register in convertToMCInst.
@@ -1352,10 +1362,18 @@ void AsmMatcherInfo::buildRegisterClasses(
         Def->getValueAsDef("CoerceFromRegClass"));
     // Iterate getMembers() so conversions are ordered by EnumValue.
     for (const CodeGenRegister *From : FromRC->getMembers()) {
-      const Record *To =
-          RegsByAsmName.lookup(From->TheDef->getValueAsString("AsmName"));
-      if (To && To != From->TheDef)
-        RegConversions[Def].push_back({From->TheDef, To});
+      StringRef AsmName = From->TheDef->getValueAsString("AsmName");
+      const Record *To = RegsByAsmName.lookup(AsmName);
+      if (!To || To == From->TheDef)
+        continue;
+      const CodeGenRegister *First = FirstRegByAsmName.lookup(AsmName);
+      if (First != From)
+        PrintFatalError(Def->getLoc(),
+                        "RegisterClass '" + RC.getName() +
+                            "' cannot coerce from '" + From->getName() +
+                            "' since MatchRegisterName returns '" +
+                            First->getName() + "' for '" + AsmName + "'");
+      RegConversions[Def].push_back({From->TheDef, To});
     }
   }
 
