@@ -268,6 +268,7 @@ bool HotColdSplitting::shouldOutlineFrom(const Function &F) const {
 
   if (F.hasFnAttribute(Attribute::SanitizeAddress) ||
       F.hasFnAttribute(Attribute::SanitizeHWAddress) ||
+      F.hasFnAttribute(Attribute::SanitizeDeviceAddress) ||
       F.hasFnAttribute(Attribute::SanitizeThread) ||
       F.hasFnAttribute(Attribute::SanitizeConcurrency) ||
       F.hasFnAttribute(Attribute::SanitizeMemory))

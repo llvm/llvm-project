@@ -444,6 +444,17 @@ define <4 x float> @load_v1f32_v4f32_asan(ptr dereferenceable(16) %p) sanitize_a
   ret <4 x float> %s
 }
 
+define <4 x float> @load_v1f32_v4f32_dasan(ptr dereferenceable(16) %p) sanitize_device_address {
+; CHECK-LABEL: @load_v1f32_v4f32_dasan(
+; CHECK-NEXT:    [[L:%.*]] = load <1 x float>, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <1 x float> [[L]], <1 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    ret <4 x float> [[S]]
+;
+  %l = load <1 x float>, ptr %p, align 16
+  %s = shufflevector <1 x float> %l, <1 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
+  ret <4 x float> %s
+}
+
 define <4 x float> @load_v2f32_v4f32_hwasan(ptr align 16 dereferenceable(16) %p) sanitize_hwaddress {
 ; CHECK-LABEL: @load_v2f32_v4f32_hwasan(
 ; CHECK-NEXT:    [[L:%.*]] = load <2 x float>, ptr [[P:%.*]], align 1

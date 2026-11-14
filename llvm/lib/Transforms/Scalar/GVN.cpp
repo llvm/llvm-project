@@ -2369,7 +2369,8 @@ static void reportLoadElim(LoadInst *Load, Value *AvailableValue,
 bool GVNPassImpl::processNonLocalLoad(LoadInst *Load) {
   // Non-local speculations are not allowed under asan.
   if (Load->getFunction()->hasFnAttribute(Attribute::SanitizeAddress) ||
-      Load->getFunction()->hasFnAttribute(Attribute::SanitizeHWAddress))
+      Load->getFunction()->hasFnAttribute(Attribute::SanitizeHWAddress) ||
+      Load->getFunction()->hasFnAttribute(Attribute::SanitizeDeviceAddress))
     return false;
 
   // Find the non-local dependencies of the load.
@@ -2976,7 +2977,8 @@ bool GVNPassImpl::findReachingValuesForLoad(
 
   // Non-local speculations are not allowed under ASan.
   if (L->getFunction()->hasFnAttribute(Attribute::SanitizeAddress) ||
-      L->getFunction()->hasFnAttribute(Attribute::SanitizeHWAddress))
+      L->getFunction()->hasFnAttribute(Attribute::SanitizeHWAddress) ||
+      L->getFunction()->hasFnAttribute(Attribute::SanitizeDeviceAddress))
     return false;
 
   // Phase 2. Walk backwards through the CFG, collecting all the blocks that

@@ -531,6 +531,11 @@ define void @hybrid_patchable() hybrid_patchable {
   ret void
 }
 
+; CHECK: define void @f_sanitize_device_address() #58
+define void @f_sanitize_device_address() sanitize_device_address {
+        ret void;
+}
+
 ; CHECK: define void @f_flatten() [[FLATTEN:#[0-9]+]]
 define void @f_flatten() flatten {
         ret void;
@@ -675,6 +680,7 @@ define linkonce_odr void @likely_module_local() likely_module_local {
 ; CHECK: attributes #55 = { sanitize_alloc_token }
 ; CHECK: attributes #56 = { nocreateundeforpoison }
 ; CHECK: attributes #57 = { hybrid_patchable }
+; CHECK: attributes #58 = { sanitize_device_address }
 ; CHECK: attributes [[FLATTEN]] = { flatten }
 ; CHECK: attributes [[FNRETTHUNKEXTERN]] = { fn_ret_thunk_extern }
 ; CHECK: attributes [[SKIPPROFILE]] = { skipprofile }
