@@ -2084,9 +2084,11 @@ void JumpThreadingPass::cloneInstructions(ValueToValueMapTy &ValueMapping,
   // visible at the same time.
   SmallVector<MDNode *> NoAliasScopes;
   DenseMap<MDNode *, MDNode *> ClonedScopes;
+  DenseMap<const MDNode *, MDNode *> ClonedDomains;
   LLVMContext &Context = PredBB->getContext();
   identifyNoAliasScopesToClone(BI, BE, NoAliasScopes);
-  cloneNoAliasScopes(NoAliasScopes, ClonedScopes, "thread", Context);
+  cloneNoAliasScopes(NoAliasScopes, ClonedScopes, ClonedDomains, "thread",
+                     Context);
 
   auto CloneAndRemapDbgInfo = [&](Instruction *NewInst, Instruction *From) {
     auto DVRRange = NewInst->cloneDebugInfoFrom(From);
@@ -2102,7 +2104,7 @@ void JumpThreadingPass::cloneInstructions(ValueToValueMapTy &ValueMapping,
     New->setName(BI->getName());
     New->insertInto(NewBB, NewBB->end());
     ValueMapping[&*BI] = New;
-    adaptNoAliasScopes(New, ClonedScopes, Context);
+    adaptNoAliasScopes(New, ClonedScopes, ClonedDomains, "thread", Context);
 
     CloneAndRemapDbgInfo(New, &*BI);
     if (const DebugLoc &DL = New->getDebugLoc())
@@ -2705,16 +2707,18 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
   // could conclude two accesses on different paths do not alias when they may.
   SmallVector<MDNode *> NoAliasScopes;
   DenseMap<MDNode *, MDNode *> ClonedScopes;
+  DenseMap<const MDNode *, MDNode *> ClonedDomains;
   LLVMContext &Context = PredBB->getContext();
   identifyNoAliasScopesToClone(BI, BB->end(), NoAliasScopes);
-  cloneNoAliasScopes(NoAliasScopes, ClonedScopes, "thread", Context);
+  cloneNoAliasScopes(NoAliasScopes, ClonedScopes, ClonedDomains, "thread",
+                     Context);
 
   // Clone the non-phi instructions of BB into PredBB, keeping track of the
   // mapping and using it to remap operands in the cloned instructions.
   for (; BI != BB->end(); ++BI) {
     Instruction *New = BI->clone();
     New->insertInto(PredBB, OldPredBranch->getIterator());
-    adaptNoAliasScopes(New, ClonedScopes, Context);
+    adaptNoAliasScopes(New, ClonedScopes, ClonedDomains, "thread", Context);
 
     // Remap operands to patch up intra-block references.
     for (unsigned i = 0, e = New->getNumOperands(); i != e; ++i)
