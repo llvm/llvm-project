@@ -374,7 +374,7 @@ private:
 
   basic_string<_CharT, _Traits, _Allocator> __str_;
 
-  _LIBCPP_HIDE_FROM_ABI bool __emit(bool __flush) override final {
+  _LIBCPP_HIDE_FROM_ABI bool __emit(bool __flush) {
     if (!__wrapped_)
       return false;
 
