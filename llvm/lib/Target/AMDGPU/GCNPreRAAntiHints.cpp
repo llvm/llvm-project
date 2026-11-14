@@ -254,8 +254,10 @@ unsigned wmmaHazardCategory(const MachineInstr &Producer,
   const bool LowestRate = Ctx.ST->hasGFX125xLowestRateWMMA();
   switch (Ctx.SchedModel->computeInstrLatency(&Producer)) {
   case 4:
+  case 5: // Scaled variant: 1-cycle LD_SCALE + 4-cycle WMMA
     return 6;
   case 8:
+  case 9: // Scaled variant: 1-cycle LD_SCALE + 8-cycle WMMA
     return IsSWMMAC ? 2 : 0;
   case 16:
     return LowestRate ? 4 : (IsSWMMAC ? 3 : 1);

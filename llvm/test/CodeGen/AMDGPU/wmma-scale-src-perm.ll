@@ -19,6 +19,7 @@ define amdgpu_ps <8 x float> @wmma_scale_src_uniform_pack(<16 x i32> %a, <16 x i
 ; CHECK-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
 ; CHECK-NEXT:    v_dual_mov_b32 v2, v34 :: v_dual_mov_b32 v3, v35
 ; CHECK-NEXT:    v_dual_mov_b32 v4, v36 :: v_dual_mov_b32 v5, v37
+; CHECK-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
 ; CHECK-NEXT:    v_dual_mov_b32 v6, v38 :: v_dual_mov_b32 v7, v39
 ; CHECK-NEXT:    ; return to shader part epilog
   %byte0 = and i32 %scale0, 255
@@ -78,6 +79,7 @@ define amdgpu_ps <8 x float> @wmma_scale_src_extra_use(<16 x i32> %a, <16 x i32>
 ; CHECK-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
 ; CHECK-NEXT:    v_dual_mov_b32 v2, v34 :: v_dual_mov_b32 v3, v35
 ; CHECK-NEXT:    v_dual_mov_b32 v4, v36 :: v_dual_mov_b32 v5, v37
+; CHECK-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
 ; CHECK-NEXT:    v_dual_mov_b32 v6, v38 :: v_dual_mov_b32 v7, v39
 ; CHECK-NEXT:    ; return to shader part epilog
   %byte0 = and i32 %scale0, 255

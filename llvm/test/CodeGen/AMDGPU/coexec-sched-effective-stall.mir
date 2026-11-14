@@ -32,8 +32,8 @@ body: |
     ; DEFAULT-NEXT: [[DEF8:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF9:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF10:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: [[V_PK_ADD_F32_gfx1250_:%[0-9]+]]:vreg_64_align2 = V_PK_ADD_F32_gfx1250 8, [[GLOBAL_LOAD_DWORDX2_]], 8, [[GLOBAL_LOAD_DWORDX2_]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; DEFAULT-NEXT: early-clobber %14:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF6]], [[DEF7]], 0, [[DEF8]], [[DEF9]], [[DEF10]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; DEFAULT-NEXT: [[V_PK_ADD_F32_gfx1250_:%[0-9]+]]:vreg_64_align2 = V_PK_ADD_F32_gfx1250 8, [[GLOBAL_LOAD_DWORDX2_]], 8, [[GLOBAL_LOAD_DWORDX2_]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; DEFAULT-NEXT: S_ENDPGM 0, implicit [[V_PK_ADD_F32_gfx1250_]], implicit %13, implicit %14
     ;
     ; COEXEC-LABEL: name: test-sched-effective-stall
@@ -88,9 +88,9 @@ body: |
     ; DEFAULT-NEXT: [[DEF7:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF8:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF9:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: S_NOP 0
-    ; DEFAULT-NEXT: S_NOP 0
     ; DEFAULT-NEXT: early-clobber %11:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 0, [[DEF7]], [[DEF8]], [[DEF9]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; DEFAULT-NEXT: S_NOP 0
+    ; DEFAULT-NEXT: S_NOP 0
     ; DEFAULT-NEXT: S_ENDPGM 0, implicit %10, implicit %11
     ;
     ; COEXEC-LABEL: name: test-sched-pending-structural-stall
@@ -157,13 +157,13 @@ body: |
     ; DEFAULT-NEXT: undef [[DS_LOAD_TR16_B128_7:%[0-9]+]].sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF]], 896, 0, implicit $exec
     ; DEFAULT-NEXT: dead early-clobber %19:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF1]], [[DEF2]], 8, 0, [[DEF3]].sub0, [[DEF4]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; DEFAULT-NEXT: dead undef [[DS_LOAD_TR16_B128_7:%[0-9]+]].sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF]], 960, 0, implicit $exec
+    ; DEFAULT-NEXT: dead early-clobber %20:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF1]], [[DEF2]], 8, 0, [[DEF3]].sub0, [[DEF4]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; DEFAULT-NEXT: dead [[DEF5:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
     ; DEFAULT-NEXT: dead [[DEF6:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF7:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF8:%[0-9]+]]:sreg_32_xm0_xexec = IMPLICIT_DEF
     ; DEFAULT-NEXT: dead [[DEF8:%[0-9]+]]:sreg_32_xm0_xexec = S_ADD_I32 [[DEF8]], [[DEF7]].sub1, implicit-def dead $scc
     ; DEFAULT-NEXT: ATOMIC_FENCE 4, 2
-    ; DEFAULT-NEXT: dead early-clobber %20:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF1]], [[DEF2]], 8, 0, [[DEF3]].sub0, [[DEF4]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; DEFAULT-NEXT: S_ENDPGM 0, amdgpu_allvgprs
     ;
     ; COEXEC-LABEL: name: test-fence-stall
@@ -264,13 +264,13 @@ body: |
     ; DEFAULT-NEXT: undef [[DS_LOAD_TR16_B128_7:%[0-9]+]].sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF]], 896, 0, implicit $exec
     ; DEFAULT-NEXT: dead early-clobber %19:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF1]], [[DEF2]], 8, 0, [[DEF3]].sub0, [[DEF4]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; DEFAULT-NEXT: dead undef [[DS_LOAD_TR16_B128_7:%[0-9]+]].sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF]], 960, 0, implicit $exec
-    ; DEFAULT-NEXT: dead [[DEF5:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: dead [[DEF6:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: [[DEF7:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
-    ; DEFAULT-NEXT: [[DEF8:%[0-9]+]]:sreg_32_xm0_xexec = IMPLICIT_DEF
-    ; DEFAULT-NEXT: dead [[DEF8:%[0-9]+]]:sreg_32_xm0_xexec = S_ADD_I32 [[DEF8]], [[DEF7]].sub1, implicit-def dead $scc
-    ; DEFAULT-NEXT: S_WAIT_TENSORCNT 5, implicit-def dead $tensorcnt, implicit $tensorcnt
     ; DEFAULT-NEXT: dead early-clobber %20:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF1]], [[DEF2]], 8, 0, [[DEF3]].sub0, [[DEF4]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; DEFAULT-NEXT: [[DEF5:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
+    ; DEFAULT-NEXT: [[DEF6:%[0-9]+]]:sreg_32_xm0_xexec = IMPLICIT_DEF
+    ; DEFAULT-NEXT: dead [[DEF6:%[0-9]+]]:sreg_32_xm0_xexec = S_ADD_I32 [[DEF6]], [[DEF5]].sub1, implicit-def dead $scc
+    ; DEFAULT-NEXT: S_WAIT_TENSORCNT 5, implicit-def dead $tensorcnt, implicit $tensorcnt
+    ; DEFAULT-NEXT: dead [[DEF7:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+    ; DEFAULT-NEXT: dead [[DEF8:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
     ; DEFAULT-NEXT: S_ENDPGM 0, amdgpu_allvgprs
     ;
     ; COEXEC-LABEL: name: test-tensorcnt-stall
@@ -370,13 +370,13 @@ body: |
     ; DEFAULT-NEXT: undef [[DS_LOAD_TR16_B128_7:%[0-9]+]].sub0_sub1_sub2_sub3:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF]], 896, 0, implicit $exec
     ; DEFAULT-NEXT: dead early-clobber %19:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF1]], [[DEF2]], 8, 0, [[DEF3]].sub0, [[DEF4]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; DEFAULT-NEXT: dead undef [[DS_LOAD_TR16_B128_7:%[0-9]+]].sub4_sub5_sub6_sub7:vreg_256_align2 = DS_LOAD_TR16_B128 [[DEF]], 960, 0, implicit $exec
+    ; DEFAULT-NEXT: dead early-clobber %20:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF1]], [[DEF2]], 8, 0, [[DEF3]].sub0, [[DEF4]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; DEFAULT-NEXT: dead [[DEF5:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
     ; DEFAULT-NEXT: dead [[DEF6:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF7:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF8:%[0-9]+]]:sreg_32_xm0_xexec = IMPLICIT_DEF
     ; DEFAULT-NEXT: dead [[DEF8:%[0-9]+]]:sreg_32_xm0_xexec = S_ADD_I32 [[DEF8]], [[DEF7]].sub1, implicit-def dead $scc
     ; DEFAULT-NEXT: S_WAIT_DSCNT 5, implicit-def dead $tensorcnt, implicit $tensorcnt
-    ; DEFAULT-NEXT: dead early-clobber %20:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF1]], [[DEF2]], 8, 0, [[DEF3]].sub0, [[DEF4]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; DEFAULT-NEXT: S_ENDPGM 0, amdgpu_allvgprs
     ;
     ; COEXEC-LABEL: name: test-dscnt-stall

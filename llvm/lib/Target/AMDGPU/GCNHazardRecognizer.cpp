@@ -335,8 +335,7 @@ GCNHazardRecognizer::checkWMMACoexecSlot(const MachineInstr &MI) const {
     return 0;
 
   unsigned Stage = *CurrentCoExecStage;
-  AMDGPU::CoExecMaskT InstMask = getCoExecMaskForMI(MI, TII);
-  unsigned StallCycles = ActiveCoExecInfo.getStallCycles(InstMask, Stage);
+  unsigned StallCycles = ActiveCoExecInfo.getStallCycles(MI, Stage, TII);
 
   // No stall required if the instruction can co-execute at the current stage.
   if (StallCycles == 0)
@@ -349,7 +348,8 @@ GCNHazardRecognizer::checkWMMACoexecSlot(const MachineInstr &MI) const {
         DEBUG_TYPE_VERBOSE,
         dbgs() << "    CoExec stall: stage=" << Stage << "("
                << AMDGPU::getStageTypeName(ActiveCoExecInfo.getType(Stage))
-               << ") mask=" << AMDGPU::getCoExecMaskName(InstMask)
+               << ") mask="
+               << AMDGPU::getCoExecMaskName(AMDGPU::getCoExecMaskForMI(MI, TII))
                << " -> stall " << StallCycles << " (next allowed=" << NextStage
                << ")\n"
                << "      " << MI);
@@ -361,8 +361,9 @@ GCNHazardRecognizer::checkWMMACoexecSlot(const MachineInstr &MI) const {
       DEBUG_TYPE_VERBOSE,
       dbgs() << "    CoExec stall: stage=" << Stage << "("
              << AMDGPU::getStageTypeName(ActiveCoExecInfo.getType(Stage))
-             << ") mask=" << AMDGPU::getCoExecMaskName(InstMask) << " -> stall "
-             << StallCycles << " (window ends)\n"
+             << ") mask="
+             << AMDGPU::getCoExecMaskName(AMDGPU::getCoExecMaskForMI(MI, TII))
+             << " -> stall " << StallCycles << " (window ends)\n"
              << "      " << MI);
   return StallCycles;
 }
@@ -386,11 +387,9 @@ GCNHazardRecognizer::checkMultiShadowHazard(const MachineInstr &MI) const {
 
   // We have a VALU instruction that is under both a TRANS and WMMA shadow.
   // We need to wait for at least one to clear.
-
   unsigned LookAheadStage = *CurrentCoExecStage + CyclesUntilTRANS;
-  AMDGPU::CoExecMaskT InstMask = getCoExecMaskForMI(MI, TII);
   return CyclesUntilTRANS +
-         ActiveCoExecInfo.getStallCycles(InstMask, LookAheadStage);
+         ActiveCoExecInfo.getStallCycles(MI, LookAheadStage, TII);
 }
 
 void GCNHazardRecognizer::schedulerEmitInstruction(MachineInstr *MI) {
@@ -2764,12 +2763,16 @@ static unsigned getWMMAHazardInstInCategory(const MachineInstr &MI,
   unsigned Latency = SchedModel.computeInstrLatency(&MI);
   switch (Latency) {
   case 4:
+  case 5:
     // Dense 4-cycle WMMA (gfx1250 16x16x64 FP8/BF8 and f8f6f4 with both
     // inputs F4). One co-execution slot; there is no 4-cycle SWMMAC.
+    // Latency 5 is for scaled variants (1-cycle LD_SCALE + 4-cycle WMMA).
     assert(!IsSWMMAC && "no 4-cycle SWMMAC expected");
     Category = 6;
     break;
   case 8:
+  case 9:
+    // Latency 9 is for scaled variants (1-cycle LD_SCALE + 8-cycle WMMA).
     Category = IsSWMMAC ? 2 : 0;
     break;
   case 16:

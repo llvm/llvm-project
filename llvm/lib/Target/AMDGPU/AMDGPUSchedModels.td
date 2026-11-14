@@ -33,6 +33,8 @@ def SIDPGFX950FullSpeedModel : SISchedMachineModel;
 def GFX10SpeedModel : SISchedMachineModel;
 def GFX11SpeedModel : SISchedMachineModel;
 def GFX12SpeedModel : SISchedMachineModel;
-def GFX1250SpeedModel : SISchedMachineModel;
+def GFX1250SpeedModel : SISchedMachineModel {
+  let EnableIntervals = true;
+}
 def GFX1251SpeedModel : SISchedMachineModel;
 def GFX125xGenericSpeedModel : SISchedMachineModel;

@@ -1,0 +1,330 @@
+# RUN: llc -mtriple=amdgpu12.50 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec -verify-misched -debug-only=gcn-hazard-recognizer %s -o /dev/null 2>&1 | FileCheck -check-prefix=DBG %s
+
+# REQUIRES: asserts
+
+# Verify that scaled WMMA instructions get the X (LD_SCALE) slot prepended
+# to their co-execution window pattern, while non-scaled WMMAs do not.
+
+--- |
+  define void @scale_f8f6f4_f8() #0 { ret void }
+  define void @nonscale_f8f6f4_f8() #0 { ret void }
+  define void @scale_f8f6f4_f4xf4() #0 { ret void }
+  define void @nonscale_f8f6f4_f4xf4() #0 { ret void }
+  define void @scale_f4_32x16() #0 { ret void }
+  define void @nonscale_f4_32x16() #0 { ret void }
+  define void @nonscale_fp8bf8_16x16x64() #0 { ret void }
+  define void @nonscale_f16_16x16x32() #0 { ret void }
+  define void @nonscale_fp8bf8_16x16x128() #0 { ret void }
+  define void @nonscale_iu8_16x16x64() #0 { ret void }
+
+  attributes #0 = { "amdgpu-waves-per-eu"="1,1" }
+...
+
+# Scaled F8F6F4 16x16x128 (FP8 format): X slot present.
+# DBG-LABEL: PreRA hazard recognizer: scale_f8f6f4_f8
+# DBG: Slots:     X 0 E E I E E I I V V
+---
+name: scale_f8f6f4_f8
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1
+    %0:vreg_512_align2 = IMPLICIT_DEF
+    %1:vreg_512_align2 = IMPLICIT_DEF
+    %2:vreg_256_align2 = IMPLICIT_DEF
+    %3:vgpr_32_lo256 = IMPLICIT_DEF
+    %4:vgpr_32_lo256 = IMPLICIT_DEF
+    %5:vgpr_32 = IMPLICIT_DEF
+    %6:sreg_32 = IMPLICIT_DEF
+    %7:sreg_32 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+
+  bb.1:
+    %8:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 0, 0, implicit $exec
+    %9:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 16, 0, implicit $exec
+    %10:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 32, 0, implicit $exec
+    %11:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 48, 0, implicit $exec
+    %12:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 64, 0, implicit $exec
+    %13:sreg_32 = S_ADD_I32 %6, %7, implicit-def dead $scc
+    %14:sreg_32 = S_ADD_I32 %13, %7, implicit-def dead $scc
+    %15:sreg_32 = S_ADD_I32 %14, %6, implicit-def dead $scc
+    %16:sreg_32 = S_ADD_I32 %15, %7, implicit-def dead $scc
+    early-clobber %17:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %0, %1, 0, %2, %3, %4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0, implicit %8, implicit %9, implicit %10, implicit %11, implicit %12, implicit %16, implicit %17
+...
+
+# Non-scaled F8F6F4 16x16x128 (FP8 format): no X slot.
+# DBG-LABEL: PreRA hazard recognizer: nonscale_f8f6f4_f8
+# DBG: Slots:     0 E E I E E I I V V
+---
+name: nonscale_f8f6f4_f8
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1
+    %0:vreg_512_align2 = IMPLICIT_DEF
+    %1:vreg_512_align2 = IMPLICIT_DEF
+    %2:vreg_256_align2 = IMPLICIT_DEF
+    %5:vgpr_32 = IMPLICIT_DEF
+    %6:sreg_32 = IMPLICIT_DEF
+    %7:sreg_32 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+
+  bb.1:
+    %8:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 0, 0, implicit $exec
+    %9:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 16, 0, implicit $exec
+    %10:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 32, 0, implicit $exec
+    %11:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 48, 0, implicit $exec
+    %12:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 64, 0, implicit $exec
+    %13:sreg_32 = S_ADD_I32 %6, %7, implicit-def dead $scc
+    %14:sreg_32 = S_ADD_I32 %13, %7, implicit-def dead $scc
+    %15:sreg_32 = S_ADD_I32 %14, %6, implicit-def dead $scc
+    %16:sreg_32 = S_ADD_I32 %15, %7, implicit-def dead $scc
+    %17:vreg_256_align2 = V_WMMA_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %0, %1, 8, %2, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0, implicit %8, implicit %9, implicit %10, implicit %11, implicit %12, implicit %16, implicit %17
+...
+
+# Scaled F8F6F4 16x16x128 (F4xF4 format): X slot present, shorter window.
+# DBG-LABEL: PreRA hazard recognizer: scale_f8f6f4_f4xf4
+# DBG: Slots:     X 0 E E I V V
+---
+name: scale_f8f6f4_f4xf4
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1
+    %0:vreg_256_align2 = IMPLICIT_DEF
+    %1:vreg_256_align2 = IMPLICIT_DEF
+    %2:vreg_256_align2 = IMPLICIT_DEF
+    %3:vgpr_32_lo256 = IMPLICIT_DEF
+    %4:vgpr_32_lo256 = IMPLICIT_DEF
+    %5:vgpr_32 = IMPLICIT_DEF
+    %6:sreg_32 = IMPLICIT_DEF
+    %7:sreg_32 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+
+  bb.1:
+    %8:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 0, 0, implicit $exec
+    %9:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 16, 0, implicit $exec
+    %10:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 32, 0, implicit $exec
+    %11:sreg_32 = S_ADD_I32 %6, %7, implicit-def dead $scc
+    %12:sreg_32 = S_ADD_I32 %11, %7, implicit-def dead $scc
+    early-clobber %13:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_w32_threeaddr %0, %1, 0, %2, %3, %4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0, implicit %8, implicit %9, implicit %10, implicit %12, implicit %13
+...
+
+# Non-scaled F8F6F4 16x16x128 (F4xF4 format): no X slot.
+# DBG-LABEL: PreRA hazard recognizer: nonscale_f8f6f4_f4xf4
+# DBG: Slots:     0 E E I V V
+---
+name: nonscale_f8f6f4_f4xf4
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1
+    %0:vreg_256_align2 = IMPLICIT_DEF
+    %1:vreg_256_align2 = IMPLICIT_DEF
+    %2:vreg_256_align2 = IMPLICIT_DEF
+    %5:vgpr_32 = IMPLICIT_DEF
+    %6:sreg_32 = IMPLICIT_DEF
+    %7:sreg_32 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+
+  bb.1:
+    %8:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 0, 0, implicit $exec
+    %9:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 16, 0, implicit $exec
+    %10:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 32, 0, implicit $exec
+    %11:sreg_32 = S_ADD_I32 %6, %7, implicit-def dead $scc
+    %12:sreg_32 = S_ADD_I32 %11, %7, implicit-def dead $scc
+    %13:vreg_256_align2 = V_WMMA_F32_16X16X128_F8F6F4_f4_f4_w32_twoaddr %0, %1, 8, %2, 4, 4, 0, 0, implicit $exec
+    S_ENDPGM 0, implicit %8, implicit %9, implicit %10, implicit %12, implicit %13
+...
+
+# Scaled F4 32x16x128: X slot present.
+# DBG-LABEL: PreRA hazard recognizer: scale_f4_32x16
+# DBG: Slots:     X 0 E E I E I E I V V
+---
+name: scale_f4_32x16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1
+    %0:vreg_512_align2 = IMPLICIT_DEF
+    %1:vreg_256_align2 = IMPLICIT_DEF
+    %2:vreg_512_align2 = IMPLICIT_DEF
+    %3:vgpr_32_lo256 = IMPLICIT_DEF
+    %4:vgpr_32_lo256 = IMPLICIT_DEF
+    %5:vgpr_32 = IMPLICIT_DEF
+    %6:sreg_32 = IMPLICIT_DEF
+    %7:sreg_32 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+
+  bb.1:
+    %8:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 0, 0, implicit $exec
+    %9:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 16, 0, implicit $exec
+    %10:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 32, 0, implicit $exec
+    %11:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 48, 0, implicit $exec
+    %12:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 64, 0, implicit $exec
+    %13:sreg_32 = S_ADD_I32 %6, %7, implicit-def dead $scc
+    %14:sreg_32 = S_ADD_I32 %13, %7, implicit-def dead $scc
+    %15:sreg_32 = S_ADD_I32 %14, %6, implicit-def dead $scc
+    %16:sreg_32 = S_ADD_I32 %15, %7, implicit-def dead $scc
+    early-clobber %17:vreg_512_align2 = V_WMMA_SCALE_F32_32X16X128_F4_w32_threeaddr %0, %1, 0, %2, %3, %4, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0, implicit %8, implicit %9, implicit %10, implicit %11, implicit %12, implicit %16, implicit %17
+...
+
+# Non-scaled F4 32x16x128: no X slot.
+# DBG-LABEL: PreRA hazard recognizer: nonscale_f4_32x16
+# DBG: Slots:     0 E E I E I E I V V
+---
+name: nonscale_f4_32x16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1
+    %0:vreg_512_align2 = IMPLICIT_DEF
+    %1:vreg_256_align2 = IMPLICIT_DEF
+    %2:vreg_512_align2 = IMPLICIT_DEF
+    %5:vgpr_32 = IMPLICIT_DEF
+    %6:sreg_32 = IMPLICIT_DEF
+    %7:sreg_32 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+
+  bb.1:
+    %8:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 0, 0, implicit $exec
+    %9:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 16, 0, implicit $exec
+    %10:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 32, 0, implicit $exec
+    %11:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 48, 0, implicit $exec
+    %12:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 64, 0, implicit $exec
+    %13:sreg_32 = S_ADD_I32 %6, %7, implicit-def dead $scc
+    %14:sreg_32 = S_ADD_I32 %13, %7, implicit-def dead $scc
+    %15:sreg_32 = S_ADD_I32 %14, %6, implicit-def dead $scc
+    %16:sreg_32 = S_ADD_I32 %15, %7, implicit-def dead $scc
+    %17:vreg_512_align2 = V_WMMA_F32_32X16X128_F4_w32_twoaddr %0, %1, 8, %2, 0, 0, implicit $exec
+    S_ENDPGM 0, implicit %8, implicit %9, implicit %10, implicit %11, implicit %12, implicit %16, implicit %17
+...
+
+# Non-scaled FP8/BF8 16x16x64: no X slot.
+# DBG-LABEL: PreRA hazard recognizer: nonscale_fp8bf8_16x16x64
+# DBG: Slots:     0 E E I V V
+---
+name: nonscale_fp8bf8_16x16x64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1
+    %0:vreg_256_align2 = IMPLICIT_DEF
+    %1:vreg_256_align2 = IMPLICIT_DEF
+    %2:vreg_256_align2 = IMPLICIT_DEF
+    %5:vgpr_32 = IMPLICIT_DEF
+    %6:sreg_32 = IMPLICIT_DEF
+    %7:sreg_32 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+
+  bb.1:
+    %8:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 0, 0, implicit $exec
+    %9:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 16, 0, implicit $exec
+    %10:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 32, 0, implicit $exec
+    %11:sreg_32 = S_ADD_I32 %6, %7, implicit-def dead $scc
+    %12:sreg_32 = S_ADD_I32 %11, %7, implicit-def dead $scc
+    %13:vreg_256_align2 = V_WMMA_F32_16X16X64_FP8_FP8_w32_twoaddr %0, %1, 8, %2, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0, implicit %8, implicit %9, implicit %10, implicit %12, implicit %13
+...
+
+# Non-scaled F16 16x16x32: no X slot.
+# DBG-LABEL: PreRA hazard recognizer: nonscale_f16_16x16x32
+# DBG: Slots:     0 E I I E E I I V
+---
+name: nonscale_f16_16x16x32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1
+    %0:vreg_256_align2 = IMPLICIT_DEF
+    %1:vreg_256_align2 = IMPLICIT_DEF
+    %2:vreg_256_align2 = IMPLICIT_DEF
+    %5:vgpr_32 = IMPLICIT_DEF
+    %6:sreg_32 = IMPLICIT_DEF
+    %7:sreg_32 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+
+  bb.1:
+    %8:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 0, 0, implicit $exec
+    %9:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 16, 0, implicit $exec
+    %10:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 32, 0, implicit $exec
+    %11:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 48, 0, implicit $exec
+    %12:sreg_32 = S_ADD_I32 %6, %7, implicit-def dead $scc
+    %13:sreg_32 = S_ADD_I32 %12, %7, implicit-def dead $scc
+    %14:sreg_32 = S_ADD_I32 %13, %6, implicit-def dead $scc
+    %15:vreg_256_align2 = V_WMMA_F32_16X16X32_F16_w32_twoaddr %0, %1, 8, %2, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0, implicit %8, implicit %9, implicit %10, implicit %11, implicit %14, implicit %15
+...
+
+# Non-scaled FP8/BF8 16x16x128: no X slot.
+# DBG-LABEL: PreRA hazard recognizer: nonscale_fp8bf8_16x16x128
+# DBG: Slots:     0 E E I E E I I V V
+---
+name: nonscale_fp8bf8_16x16x128
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1
+    %0:vreg_512_align2 = IMPLICIT_DEF
+    %1:vreg_512_align2 = IMPLICIT_DEF
+    %2:vreg_256_align2 = IMPLICIT_DEF
+    %5:vgpr_32 = IMPLICIT_DEF
+    %6:sreg_32 = IMPLICIT_DEF
+    %7:sreg_32 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+
+  bb.1:
+    %8:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 0, 0, implicit $exec
+    %9:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 16, 0, implicit $exec
+    %10:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 32, 0, implicit $exec
+    %11:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 48, 0, implicit $exec
+    %12:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 64, 0, implicit $exec
+    %13:sreg_32 = S_ADD_I32 %6, %7, implicit-def dead $scc
+    %14:sreg_32 = S_ADD_I32 %13, %7, implicit-def dead $scc
+    %15:sreg_32 = S_ADD_I32 %14, %6, implicit-def dead $scc
+    %16:sreg_32 = S_ADD_I32 %15, %7, implicit-def dead $scc
+    %17:vreg_256_align2 = V_WMMA_F32_16X16X128_FP8_FP8_w32_twoaddr %0, %1, 8, %2, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0, implicit %8, implicit %9, implicit %10, implicit %11, implicit %12, implicit %16, implicit %17
+...
+
+# Non-scaled IU8 16x16x64: no X slot, long window.
+# DBG-LABEL: PreRA hazard recognizer: nonscale_iu8_16x16x64
+# DBG: Slots:     0 E I I E E I I E E I I E E I I V
+---
+name: nonscale_iu8_16x16x64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1
+    %0:vreg_256_align2 = IMPLICIT_DEF
+    %1:vreg_256_align2 = IMPLICIT_DEF
+    %2:vreg_256_align2 = IMPLICIT_DEF
+    %5:vgpr_32 = IMPLICIT_DEF
+    %6:sreg_32 = IMPLICIT_DEF
+    %7:sreg_32 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+
+  bb.1:
+    %8:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 0, 0, implicit $exec
+    %9:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 16, 0, implicit $exec
+    %10:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 32, 0, implicit $exec
+    %11:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 48, 0, implicit $exec
+    %12:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 64, 0, implicit $exec
+    %13:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 80, 0, implicit $exec
+    %14:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 96, 0, implicit $exec
+    %15:vreg_128_lo256_align2 = DS_READ_B128_gfx9 %5, 112, 0, implicit $exec
+    %16:sreg_32 = S_ADD_I32 %6, %7, implicit-def dead $scc
+    %17:sreg_32 = S_ADD_I32 %16, %7, implicit-def dead $scc
+    %18:sreg_32 = S_ADD_I32 %17, %6, implicit-def dead $scc
+    %19:sreg_32 = S_ADD_I32 %18, %7, implicit-def dead $scc
+    %20:sreg_32 = S_ADD_I32 %19, %6, implicit-def dead $scc
+    %21:sreg_32 = S_ADD_I32 %20, %7, implicit-def dead $scc
+    %22:sreg_32 = S_ADD_I32 %21, %6, implicit-def dead $scc
+    %23:sreg_32 = S_ADD_I32 %22, %7, implicit-def dead $scc
+    %24:vreg_256_align2 = V_WMMA_I32_16X16X64_IU8_w32_twoaddr 8, %0, 8, %1, %2, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0, implicit %8, implicit %9, implicit %10, implicit %11, implicit %12, implicit %13, implicit %14, implicit %15, implicit %23, implicit %24
+...

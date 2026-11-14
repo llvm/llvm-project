@@ -157,6 +157,11 @@ inline CoExecMaskT getCoExecMask(InstructionFlavor F) {
   llvm_unreachable("Unknown InstructionFlavor");
 }
 
+inline CoExecMaskT getCoExecMaskForMI(const MachineInstr &MI,
+                                      const SIInstrInfo &TII) {
+  return getCoExecMask(classifyFlavor(MI, TII));
+}
+
 //===----------------------------------------------------------------------===//
 // Co-execution Stage Type
 //===----------------------------------------------------------------------===//
@@ -257,18 +262,32 @@ struct CoExecInfo {
     return Stage < TotalWindow ? Slots[Stage].Mask : CoExecMask::All;
   }
 
-  /// Check if an instruction class mask can co-execute at a given stage.
-  bool canCoExec(CoExecMaskT InstMask, unsigned Stage) const {
+  /// Check if instruction class mask can co-execute at a given stage,
+  /// with special handling for scaled WMMA instructions.
+  ///
+  /// A scaled WMMA's first micro-op is LD_SCALE, which uses the VALU unit.
+  /// This means a scaled WMMA can issue at an I slot (which allows VALU),
+  /// even though a regular WMMA cannot (since it would require a V slot).
+  bool canCoExec(CoExecMaskT InstMask, unsigned Stage,
+                 bool IsScaledWMMA) const {
     if (Stage >= TotalWindow)
       return true;
-    return any(Slots[Stage].Mask & InstMask);
+    CoExecMaskT SlotMask = Slots[Stage].Mask;
+    if (IsScaledWMMA) {
+      assert(any(InstMask & CoExecMask::WMMA));
+      if (any(SlotMask & CoExecMask::VALU))
+        return true;
+    }
+    return any(SlotMask & InstMask);
   }
 
-  /// Find next stage where the instruction class is allowed.
+  /// Find next stage where instruction class is allowed, with scaled WMMA
+  /// handling.
   std::optional<unsigned> findNextAllowedStage(CoExecMaskT InstMask,
-                                               unsigned FromStage) const {
+                                               unsigned FromStage,
+                                               bool IsScaledWMMA) const {
     for (unsigned I = FromStage; I < TotalWindow; ++I) {
-      if (any(Slots[I].Mask & InstMask))
+      if (canCoExec(InstMask, I, IsScaledWMMA))
         return I;
     }
     return std::nullopt;
@@ -276,13 +295,23 @@ struct CoExecInfo {
 
   /// Return the number of cycles an instruction matching \p InstMask must wait
   /// at \p Stage. Returns zero when no stall is required.
-  unsigned getStallCycles(CoExecMaskT InstMask, unsigned Stage) const {
-    if (canCoExec(InstMask, Stage))
+  /// This has handling for scaled WMMA, where the first micro-op is LD_SCALE
+  unsigned getStallCycles(const MachineInstr &MI, unsigned Stage,
+                          const SIInstrInfo &TII) const {
+    AMDGPU::CoExecMaskT InstMask = AMDGPU::getCoExecMaskForMI(MI, TII);
+    bool IsScaledWMMA = false;
+    if (any(InstMask & AMDGPU::CoExecMask::WMMA) &&
+        (SIInstrInfo::isWMMA(MI) || SIInstrInfo::isSWMMAC(MI))) {
+      StringRef Name = TII.getName(MI.getOpcode());
+      IsScaledWMMA = Name.contains_insensitive("scale");
+    }
+
+    if (canCoExec(InstMask, Stage, IsScaledWMMA))
       return 0;
 
     // Stall until the next stage that accepts the instruction.
     if (std::optional<unsigned> Next =
-            findNextAllowedStage(InstMask, Stage + 1))
+            findNextAllowedStage(InstMask, Stage + 1, IsScaledWMMA))
       return *Next - Stage;
 
     // Stall until the window ends if no later stage accepts the instruction.
@@ -291,6 +320,8 @@ struct CoExecInfo {
 
   /// Get stage type from mask for display.
   static CoExecStageType getStageType(CoExecMaskT Mask) {
+    if (Mask == CoExecMask::None)
+      return CoExecStageType::NONE;
     if (Mask == CoExecMask::StageE0)
       return CoExecStageType::E0;
     if (Mask == CoExecMask::StageE)
@@ -326,7 +357,8 @@ struct CoExecInfo {
 //===----------------------------------------------------------------------===//
 
 /// Build CoExecInfo from a pattern string.
-/// Pattern chars: '0'=E0, 'E'=External, 'I'=Internal, 'V'=Vacant,
+/// Pattern chars: 'X'=None (nothing can coexecute), '0'=E0, 'E'=External,
+///                'I'=Internal, 'V'=Vacant,
 ///                'S'=Internal+ScaleWMMAAbsorb (I plus next scaled WMMA),
 ///                'T'=TRANS co-exec (all except TRANS), 'A'=Any
 inline CoExecInfo CoExecInfo::build(unsigned UnitOccupancy,
@@ -341,6 +373,9 @@ inline CoExecInfo CoExecInfo::build(unsigned UnitOccupancy,
 
   for (unsigned I = 0; I < Info.TotalWindow; ++I) {
     switch (Pattern[I]) {
+    case 'X':
+      Info.Slots[I].Mask = CoExecMask::None;
+      break;
     case '0':
       Info.Slots[I].Mask = CoExecMask::StageE0;
       break;
@@ -404,14 +439,17 @@ inline CoExecInfo getCoExecInfo(const MachineInstr &MI,
   case WMMAVariant::IU8_16x16x64:
     return CoExecInfo::build(16, 17, "0EIIEEIIEEIIEEIIV");
 
-  // 16x16x128 F8/F6/F4 has occupancy of 8 cycles and a window of 10 cycles.
+  // 16x16x128 F8/F6/F4 has occupancy of 8 cycles and a window of 10 cycles (11
+  // for scaled due to LD_SCALE X slot).
   case WMMAVariant::F8F6F4_16x16x128:
-    return CoExecInfo::build(8, 10, HasScaling ? "0EEIEEISVV" : "0EEIEEIIVV");
+    return CoExecInfo::build(8, HasScaling ? 11 : 10,
+                             HasScaling ? "X0EEIEEIIVV" : "0EEIEEIIVV");
 
   // 16x16x128 with two F4 inputs has occupancy of 4 cycles and a window of 6
-  // cycles.
+  // cycles (7 for scaled due to LD_SCALE X slot).
   case WMMAVariant::F8F6F4_16x16x128_BothF4:
-    return CoExecInfo::build(4, 6, HasScaling ? "0EESVV" : "0EEIVV");
+    return CoExecInfo::build(4, HasScaling ? 7 : 6,
+                             HasScaling ? "X0EEIVV" : "0EEIVV");
 
   // 16x16x64 FP8/BF8: 4-cycle occupancy, 6-cycle window.
   case WMMAVariant::FP8BF8_16x16x64:
@@ -425,9 +463,11 @@ inline CoExecInfo getCoExecInfo(const MachineInstr &MI,
   case WMMAVariant::FP8BF8_16x16x128:
     return CoExecInfo::build(8, 10, "0EEIEEIIVV");
 
-  // 32x16x128 F4: 8-cycle occupancy, 10-cycle window.
+  // 32x16x128 F4: 8-cycle occupancy, 10-cycle window (11 for scaled due to
+  // LD_SCALE X slot).
   case WMMAVariant::F4_32x16x128:
-    return CoExecInfo::build(8, 10, HasScaling ? "0EEIEIESVV" : "0EEIEIEIVV");
+    return CoExecInfo::build(8, HasScaling ? 11 : 10,
+                             HasScaling ? "X0EEIEIEIVV" : "0EEIEIEIVV");
 
   case WMMAVariant::Unknown:
     // Permissive window for variants without a modeled slot pattern.
