@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
+#include "clang/Basic/DiagnosticDriver.h"
 
 using namespace clang;
 using namespace ento;
@@ -38,6 +39,19 @@ AnalysisManager::AnalysisManager(ASTContext &ASTCtx, Preprocessor &PP,
       PathConsumers(std::move(PDC)), CreateStoreMgr(storemgr),
       CreateConstraintMgr(constraintmgr), CheckerMgr(checkerMgr),
       options(Options) {
+  SmallVector<StringRef> Extensions;
+  if (!Options.UnityBuildFileExtensions.empty())
+    Options.UnityBuildFileExtensions.split(Extensions, ';');
+  for (StringRef Extension : Extensions) {
+    Extension = Extension.trim();
+    if (Extension.empty()) {
+      ASTCtx.getDiagnostics().Report(diag::err_analyzer_config_invalid_input)
+          << "unitybuild-file-extensions" << "a non-empty file extension";
+      continue;
+    }
+    UnityBuildFileExtensions.push_back(Extension);
+  }
+
   AnaCtxMgr.getCFGBuildOptions().setAllAlwaysAdd();
   AnaCtxMgr.getCFGBuildOptions().OmitImplicitValueInitializers = true;
   AnaCtxMgr.getCFGBuildOptions().AddCXXDefaultInitExprInAggregates =
