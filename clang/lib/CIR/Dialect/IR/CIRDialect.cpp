@@ -4382,22 +4382,7 @@ LogicalResult cir::CmpOp::verify() {
 // VecCmpOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult cir::VecCmpOp::verify() {
-  if (getFenvAttr() && !cir::isFPOrVectorOfFPType(getLhs().getType()))
-    return emitOpError()
-           << "'fenv' is only valid for floating-point comparisons";
-  return success();
-}
-
 OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
-  // Do not fold when fenv is present.
-  // TODO(cir): This is overly conservative. We could fold comparisons as long
-  //            as we can prove that the operation wouldn't raise exceptions or
-  //            when the fenv attribute does not require strict exception
-  //            semantics.
-  if (getFenvAttr())
-    return {};
-
   auto lhsVecAttr =
       mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getLhs());
   auto rhsVecAttr =
@@ -4407,7 +4392,9 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
 
   mlir::Type inputElemTy =
       mlir::cast<cir::VectorType>(lhsVecAttr.getType()).getElementType();
-  if (!isAnyIntegerOrFloatingPointType(inputElemTy))
+  auto IntTy = mlir::dyn_cast<cir::IntType>(inputElemTy);
+  // FIXME: Fold vectors of bool too?
+  if (!IntTy)
     return {};
 
   cir::CmpOpKind opKind = adaptor.getKind();
@@ -4416,103 +4403,59 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
   uint64_t vecSize = lhsVecElhs.size();
 
   SmallVector<mlir::Attribute, 16> elements(vecSize);
-  bool isIntAttr = vecSize && mlir::isa<cir::IntAttr>(lhsVecElhs[0]);
-  bool isUnsignedInt =
-      isIntAttr && mlir::cast<cir::IntType>(inputElemTy).isUnsigned();
+  bool isUnsignedInt = IntTy.isUnsigned();
   for (uint64_t i = 0; i < vecSize; i++) {
     mlir::Attribute lhsAttr = lhsVecElhs[i];
     mlir::Attribute rhsAttr = rhsVecElhs[i];
     bool cmpResult = false;
     switch (opKind) {
     case cir::CmpOpKind::lt: {
-      if (isIntAttr) {
-        if (isUnsignedInt)
-          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() <
-                      mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
-        else
-          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <
-                      mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
-      } else {
-        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() <
-                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
-      }
+      if (isUnsignedInt)
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() <
+                    mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
+      else
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <
+                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
       break;
     }
     case cir::CmpOpKind::le: {
-      if (isIntAttr) {
-        if (isUnsignedInt)
-          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() <=
-                      mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
-        else
-          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <=
-                      mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
-      } else {
-        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() <=
-                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
-      }
+      if (isUnsignedInt)
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() <=
+                    mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
+      else
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <=
+                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
       break;
     }
     case cir::CmpOpKind::gt: {
-      if (isIntAttr) {
-        if (isUnsignedInt)
-          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() >
-                      mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
-        else
-          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >
-                      mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
-      } else {
-        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() >
-                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
-      }
+      if (isUnsignedInt)
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() >
+                    mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
+      else
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >
+                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
       break;
     }
     case cir::CmpOpKind::ge: {
-      if (isIntAttr) {
-        if (isUnsignedInt)
-          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() >=
-                      mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
-        else
-          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >=
-                      mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
-      } else {
-        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() >=
-                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
-      }
-      break;
-    }
-    case cir::CmpOpKind::eq: {
-      if (isIntAttr) {
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() ==
+      if (isUnsignedInt)
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() >=
+                    mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
+      else
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >=
                     mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
-      } else {
-        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() ==
-                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
-      }
       break;
     }
-    case cir::CmpOpKind::ne: {
-      if (isIntAttr) {
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() !=
-                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
-      } else {
-        cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() !=
-                    mlir::cast<cir::FPAttr>(rhsAttr).getValue();
-      }
+    case cir::CmpOpKind::eq:
+      cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getValue() ==
+                  mlir::cast<cir::IntAttr>(rhsAttr).getValue();
       break;
-    }
-    case cir::CmpOpKind::one: {
-      llvm::APFloat::cmpResult cr =
-          mlir::cast<cir::FPAttr>(lhsAttr).getValue().compare(
-              mlir::cast<cir::FPAttr>(rhsAttr).getValue());
-      cmpResult =
-          cr != llvm::APFloat::cmpUnordered && cr != llvm::APFloat::cmpEqual;
+    case cir::CmpOpKind::ne:
+      cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getValue() !=
+                  mlir::cast<cir::IntAttr>(rhsAttr).getValue();
       break;
-    }
+    case cir::CmpOpKind::one:
     case cir::CmpOpKind::uno: {
-      cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue().compare(
-                      mlir::cast<cir::FPAttr>(rhsAttr).getValue()) ==
-                  llvm::APFloat::cmpUnordered;
-      break;
+      llvm_unreachable("Should not reach fp-only comparison kinds here");
     }
     }
 

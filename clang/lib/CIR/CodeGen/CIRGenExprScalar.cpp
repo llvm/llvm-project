@@ -1289,6 +1289,26 @@ public:
       llvm_unreachable("unsupported comparison kind for cir.cmp");
     }
   }
+  /// Returns <Signaling, Kind>.
+  std::pair<bool, cir::FCmpOpKind>
+  clangCmpToCIRFCmp(clang::BinaryOperatorKind clangCmp) {
+    switch (clangCmp) {
+    case BO_LT:
+      return std::make_pair(/*Signaling=*/true, cir::FCmpOpKind::olt);
+    case BO_GT:
+      return std::make_pair(/*Signaling=*/true, cir::FCmpOpKind::ogt);
+    case BO_LE:
+      return std::make_pair(/*Signaling=*/true, cir::FCmpOpKind::ole);
+    case BO_GE:
+      return std::make_pair(/*Signaling=*/true, cir::FCmpOpKind::oge);
+    case BO_EQ:
+      return std::make_pair(/*Signaling=*/false, cir::FCmpOpKind::oeq);
+    case BO_NE:
+      return std::make_pair(/*Signaling=*/false, cir::FCmpOpKind::une);
+    default:
+      llvm_unreachable("unsupported comparison kind");
+    }
+  }
 
   mlir::Value emitCmp(const BinaryOperator *e) {
     ignoreResultAssign = false;
@@ -1298,6 +1318,7 @@ public:
     QualType rhsTy = e->getRHS()->getType();
 
     cir::CmpOpKind kind = clangCmpToCIRCmp(e->getOpcode());
+    std::pair<bool, cir::FCmpOpKind> fpInfo = clangCmpToCIRFCmp(e->getOpcode());
     if (lhsTy->getAs<MemberPointerType>()) {
       assert(!cir::MissingFeatures::dataMemberType());
       assert(e->getOpcode() == BO_EQ || e->getOpcode() == BO_NE);
@@ -1317,9 +1338,17 @@ public:
         } else {
           // Other kinds of vectors. Element-wise comparison returning
           // a vector.
-          result = cir::VecCmpOp::create(builder, cgf.getLoc(boInfo.loc),
-                                         cgf.convertType(boInfo.fullType), kind,
-                                         boInfo.lhs, boInfo.rhs);
+          auto resultTy =
+              mlir::cast<cir::VectorType>(cgf.convertType(boInfo.fullType));
+          if (cir::isFPOrVectorOfFPType(lhs.getType())) {
+            CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
+            result = builder.createVecFCompare(cgf.getLoc(boInfo.loc), resultTy,
+                                               fpInfo.second, lhs, rhs,
+                                               fpInfo.first);
+          } else {
+            result = builder.createVecCompare(cgf.getLoc(boInfo.loc), resultTy,
+                                              kind, lhs, rhs);
+          }
         }
       } else if (boInfo.isFixedPointOp()) {
         result = emitFixedPointBinOp(boInfo);

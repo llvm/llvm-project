@@ -5818,21 +5818,6 @@ mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
         rewriter, op.getLoc(),
         convertCmpKindToICmpPredicate(op.getKind(), /*isSigned=*/false),
         adaptor.getLhs(), adaptor.getRhs());
-  } else if (mlir::isa<cir::FPTypeInterface>(elementType)) {
-    if (cir::FenvAttr fenv = op.getFenvAttr()) {
-      llvm::ElementCount size = op.getLhs().getType().getSize();
-      auto i1VecTy = mlir::VectorType::get(
-          size.getKnownMinValue(), rewriter.getI1Type(), {size.isScalable()});
-      bitResult = createConstrainedFCmpCall(
-                      rewriter, op.getLoc(), adaptor.getLhs(), adaptor.getRhs(),
-                      op.getKind(), isSignalingConstrainedFCmp(op.getKind()),
-                      fenv, i1VecTy)
-                      .getResult(0);
-    } else {
-      bitResult = mlir::LLVM::FCmpOp::create(
-          rewriter, op.getLoc(), convertCmpKindToFCmpPredicate(op.getKind()),
-          adaptor.getLhs(), adaptor.getRhs());
-    }
   } else {
     return op.emitError() << "unsupported type for VecCmpOp: " << elementType;
   }

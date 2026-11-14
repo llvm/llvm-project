@@ -79,8 +79,8 @@ TEST_F(CIRFenvOpTest, MemoryEffects) {
       %9 = cir.cast floating %a : !cir.float -> !cir.double fenv<>
       %10 = cir.cmp lt %a, %b : !cir.float
       %11 = cir.cmp lt %a, %b : !cir.float fenv<>
-      %12 = cir.vec.cmp(eq, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
-      %13 = cir.vec.cmp(eq, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv<>
+      %12 = cir.vec.fcmp(oeq, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+      %13 = cir.vec.fcmp(oeq, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv<>
       cir.return
     }
   )CIR");
@@ -129,7 +129,7 @@ TEST_F(CIRFenvOpTest, MemoryEffects) {
   expectFenvReadAndWrite(cmpOps[1]);
   EXPECT_FALSE(isMemoryEffectFree(cmpOps[1]));
 
-  SmallVector<cir::VecCmpOp> vecCmpOps = findOps<cir::VecCmpOp>(*module);
+  SmallVector<cir::VecFCmpOp> vecCmpOps = findOps<cir::VecFCmpOp>(*module);
   ASSERT_EQ(vecCmpOps.size(), 2u);
   EXPECT_TRUE(getEffects(vecCmpOps[0]).empty());
   EXPECT_TRUE(isMemoryEffectFree(vecCmpOps[0]));

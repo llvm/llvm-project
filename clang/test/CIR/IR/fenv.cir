@@ -128,14 +128,14 @@ cir.func @cmp_fenv(%a: !cir.float, %b: !cir.float,
   %0 = cir.cmp lt %a, %b : !cir.float fenv<except_mode = unmasked>
   // CHECK: cir.cmp eq %{{.*}}, %{{.*}} : !cir.float fenv<>
   %1 = cir.cmp eq %a, %b : !cir.float fenv<>
-  // CHECK: cir.vec.cmp(gt, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv<strict_except = true>
-  %2 = cir.vec.cmp(gt, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
-       fenv<strict_except = true>
+  // CHECK: cir.vec.fcmp(ogt, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> signaling fenv<strict_except = true>
+  %2 = cir.vec.fcmp(ogt, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+       signaling fenv<strict_except = true>
   // CHECK: cir.cmp ne %{{.*}}, %{{.*}} : !cir.float
   // CHECK-NOT: fenv
   %3 = cir.cmp ne %a, %b : !cir.float
-  // CHECK: cir.vec.cmp(le, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // CHECK: cir.vec.fcmp(ole, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> signaling
   // CHECK-NOT: fenv
-  %4 = cir.vec.cmp(le, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  %4 = cir.vec.fcmp(ole, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> signaling
   cir.return
 }
