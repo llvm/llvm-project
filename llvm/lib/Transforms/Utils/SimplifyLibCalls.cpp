@@ -4867,8 +4867,16 @@ Value *FortifiedLibCallSimplifier::optimizeCall(CallInst *CI,
   // differently, disregard the "nobuiltin" attribute and TLI::has.
   //
   // PR23093.
+  //
+  // This workaround only makes sense for calls that may resolve to a libc
+  // function that is unavailable at link time. If the callee is defined in
+  // this module, a "nobuiltin" call must be left alone: it refers to that
+  // definition, which need not implement the fortified libc semantics.
 
   Function *Callee = CI->getCalledFunction();
+  if (CI->isNoBuiltin() && !Callee->isDeclaration())
+    return nullptr;
+
   bool IsCallingConvC = TargetLibraryInfoImpl::isCallingConvCCompatible(CI);
 
   SmallVector<OperandBundleDef, 2> OpBundles;
