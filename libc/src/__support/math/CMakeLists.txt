@@ -4754,6 +4754,7 @@ add_header_library(
   DEPENDS
     .exp2f_integer_utils
     libc.hdr.fenv_macros
+    libc.hdr.stdint_proxy
     libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.frac64

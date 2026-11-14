@@ -1623,11 +1623,14 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.hdr.math_macros
+    libc.hdr.stdint_proxy
     libc.src.math.exp10f
     libc.src.__support.math.exp10f_double_eval
     libc.src.__support.math.exp10f_float_eval
     libc.src.__support.math.exp10f_integer_eval
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
 )
 
 add_fp_unittest(

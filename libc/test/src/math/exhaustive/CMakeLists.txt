@@ -276,11 +276,11 @@ add_fp_unittest(
   DEPENDS
     .exhaustive_test
     .exhaustive_test_static_rounding
+    libc.hdr.stdint_proxy
     libc.src.math.exp10f
     libc.src.__support.math.exp10f_double_eval
     libc.src.__support.math.exp10f_float_eval
     libc.src.__support.math.exp10f_integer_eval
-    libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread
 )
