@@ -222,6 +222,11 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .legalFor(HasDQI, {v8s64})
       .legalFor(HasDQI && HasVLX, {v2s64, v4s64})
       .legalFor(HasBWI, {v32s16})
+      // No packed byte multiply; custom-lower instead of scalarizing into
+      // unselectable G_UNMERGE_VALUES of <N x s8> (#216655).
+      .customIf([=](const LegalityQuery &Query) {
+        return HasSSE2 && typeInSet(0, {v16s8})(Query);
+      })
       .clampMinNumElements(0, s16, 8)
       .clampMinNumElements(0, s32, 4)
       .clampMinNumElements(0, s64, HasVLX ? 2 : 8)
@@ -640,6 +645,8 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return false;
   case TargetOpcode::G_BUILD_VECTOR:
     return legalizeBuildVector(MI, MRI, Helper);
+  case TargetOpcode::G_MUL:
+    return legalizeMul(MI, MRI, Helper);
   case TargetOpcode::G_FPTOUI:
     return legalizeFPTOUI(MI, MRI, Helper);
   case TargetOpcode::G_UITOFP:
@@ -716,6 +723,55 @@ bool X86LegalizerInfo::legalizeFPTOSI(MachineInstr &MI,
   return true;
 }
 
+
+bool X86LegalizerInfo::legalizeMul(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                   LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  auto [Dst, DstTy, Src0, Src0Ty, Src1, Src1Ty] = MI.getFirst3RegLLTs();
+
+  // Currently only the SSE2 <16 x s8> case is handled. Wider byte vectors can
+  // be split by existing legality actions once this path exists.
+  if (!DstTy.isVector() || DstTy != Src0Ty || DstTy != Src1Ty)
+    return false;
+  LLT EltTy = DstTy.getElementType();
+  if (EltTy != LLT::scalar(8) || DstTy.getNumElements() != 16)
+    return false;
+
+  Align VecAlign = Helper.getStackTemporaryAlignment(DstTy);
+  MachinePointerInfo Ptr0, Ptr1, PtrDst;
+  auto Slot0 =
+      Helper.createStackTemporary(DstTy.getSizeInBytes(), VecAlign, Ptr0);
+  auto Slot1 =
+      Helper.createStackTemporary(DstTy.getSizeInBytes(), VecAlign, Ptr1);
+  auto SlotDst =
+      Helper.createStackTemporary(DstTy.getSizeInBytes(), VecAlign, PtrDst);
+
+  MIRBuilder.buildStore(Src0, Slot0, Ptr0, VecAlign);
+  MIRBuilder.buildStore(Src1, Slot1, Ptr1, VecAlign);
+
+  Register Base0 = Slot0.getReg(0);
+  Register Base1 = Slot1.getReg(0);
+  Register BaseDst = SlotDst.getReg(0);
+  LLT PtrTy = MRI.getType(Base0);
+
+  for (unsigned i = 0, e = DstTy.getNumElements(); i != e; ++i) {
+    auto Off =
+        MIRBuilder.buildConstant(LLT::scalar(PtrTy.getSizeInBits()), i);
+    auto Addr0 = MIRBuilder.buildPtrAdd(PtrTy, Base0, Off);
+    auto Addr1 = MIRBuilder.buildPtrAdd(PtrTy, Base1, Off);
+    auto AddrDst = MIRBuilder.buildPtrAdd(PtrTy, BaseDst, Off);
+
+    auto A = MIRBuilder.buildLoad(EltTy, Addr0, Ptr0.getWithOffset(i), Align(1));
+    auto B = MIRBuilder.buildLoad(EltTy, Addr1, Ptr1.getWithOffset(i), Align(1));
+    auto Prod = MIRBuilder.buildMul(EltTy, A, B);
+    MIRBuilder.buildStore(Prod, AddrDst, PtrDst.getWithOffset(i), Align(1));
+  }
+
+  MIRBuilder.buildLoad(Dst, SlotDst, PtrDst, VecAlign);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool X86LegalizerInfo::legalizeBuildVector(MachineInstr &MI,
                                            MachineRegisterInfo &MRI,
                                            LegalizerHelper &Helper) const {
@@ -728,6 +784,7 @@ bool X86LegalizerInfo::legalizeBuildVector(MachineInstr &MI,
   uint64_t DstTySize = DstTy.getScalarSizeInBits();
 
   SmallVector<Constant *, 4> CstIdxs;
+  bool AllConstantLike = true;
   for (unsigned i = 0; i < BuildVector.getNumSources(); ++i) {
     Register Source = BuildVector.getSourceReg(i);
 
@@ -747,22 +804,56 @@ bool X86LegalizerInfo::legalizeBuildVector(MachineInstr &MI,
       CstIdxs.emplace_back(UndefValue::get(Type::getIntNTy(Ctx, DstTySize)));
       continue;
     }
-    return false;
+    AllConstantLike = false;
+    break;
   }
 
-  Constant *ConstVal = ConstantVector::get(CstIdxs);
+  if (AllConstantLike) {
+    Constant *ConstVal = ConstantVector::get(CstIdxs);
 
-  const DataLayout &DL = MIRBuilder.getDataLayout();
-  unsigned AddrSpace = DL.getDefaultGlobalsAddressSpace();
-  Align Alignment(DL.getABITypeAlign(ConstVal->getType()));
-  auto Addr = MIRBuilder.buildConstantPool(
-      LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace)),
-      MF.getConstantPool()->getConstantPoolIndex(ConstVal, Alignment));
-  MachineMemOperand *MMO =
-      MF.getMachineMemOperand(MachinePointerInfo::getConstantPool(MF),
-                              MachineMemOperand::MOLoad, DstTy, Alignment);
+    const DataLayout &DL = MIRBuilder.getDataLayout();
+    unsigned AddrSpace = DL.getDefaultGlobalsAddressSpace();
+    Align Alignment(DL.getABITypeAlign(ConstVal->getType()));
+    auto Addr = MIRBuilder.buildConstantPool(
+        LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace)),
+        MF.getConstantPool()->getConstantPoolIndex(ConstVal, Alignment));
+    MachineMemOperand *MMO =
+        MF.getMachineMemOperand(MachinePointerInfo::getConstantPool(MF),
+                                MachineMemOperand::MOLoad, DstTy, Alignment);
 
-  MIRBuilder.buildLoad(Dst, Addr, *MMO);
+    MIRBuilder.buildLoad(Dst, Addr, *MMO);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  // Non-constant BUILD_VECTOR (e.g. after scalarizing G_MUL on <16 x s8>).
+  // Lower through a stack temporary so the Legalizer can finish its own
+  // scalarization artifacts instead of aborting (#216655).
+  LLT EltTy = DstTy.getElementType();
+  if (!EltTy.isByteSized())
+    return false;
+  TypeSize VecBytes = DstTy.getSizeInBytes();
+  Align Alignment = Helper.getStackTemporaryAlignment(DstTy);
+  MachinePointerInfo PtrInfo;
+  auto SlotPointer = Helper.createStackTemporary(VecBytes, Alignment, PtrInfo);
+  Register Base = SlotPointer.getReg(0);
+  LLT PtrTy = MRI.getType(Base);
+  unsigned EltBytes = EltTy.getSizeInBytes();
+
+  for (unsigned i = 0; i < BuildVector.getNumSources(); ++i) {
+    Register Source = BuildVector.getSourceReg(i);
+    auto Off = MIRBuilder.buildConstant(LLT::scalar(PtrTy.getSizeInBits()),
+                                        i * EltBytes);
+    auto Addr = MIRBuilder.buildPtrAdd(PtrTy, Base, Off);
+    MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+        PtrInfo.getWithOffset(i * EltBytes), MachineMemOperand::MOStore, EltTy,
+        Align(EltBytes));
+    MIRBuilder.buildStore(Source, Addr, *StoreMMO);
+  }
+
+  MachineMemOperand *LoadMMO = MF.getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOLoad, DstTy, Alignment);
+  MIRBuilder.buildLoad(Dst, SlotPointer, *LoadMMO);
   MI.eraseFromParent();
   return true;
 }
