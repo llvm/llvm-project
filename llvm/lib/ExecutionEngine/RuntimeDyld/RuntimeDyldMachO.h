@@ -20,11 +20,6 @@
 namespace llvm {
 class RuntimeDyldMachO : public RuntimeDyldImpl {
 protected:
-  struct SectionOffsetPair {
-    unsigned SectionID;
-    uint64_t Offset;
-  };
-
   struct EHFrameRelatedSections {
     EHFrameRelatedSections()
         : EHFrameSID(RTDYLD_INVALID_SECTION_ID),
