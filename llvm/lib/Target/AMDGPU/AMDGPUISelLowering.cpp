@@ -4872,7 +4872,8 @@ SDValue AMDGPUTargetLowering::performMulhsCombine(SDNode *N,
                                                   DAGCombinerInfo &DCI) const {
   EVT VT = N->getValueType(0);
 
-  if (!Subtarget->hasMulI24() || VT.isVector())
+  // MULHI_I24 returns the product shifted by 32, not by the operand type width.
+  if (!Subtarget->hasMulI24() || VT != MVT::i32)
     return SDValue();
 
   // Don't generate 24-bit multiplies on values that are in SGPRs, since
@@ -4905,7 +4906,7 @@ SDValue AMDGPUTargetLowering::performMulhuCombine(SDNode *N,
                                                   DAGCombinerInfo &DCI) const {
   EVT VT = N->getValueType(0);
 
-  if (VT.isVector() || VT.getSizeInBits() > 32 || !Subtarget->hasMulU24())
+  if (VT != MVT::i32 || !Subtarget->hasMulU24())
     return SDValue();
 
   // Don't generate 24-bit multiplies on values that are in SGPRs, since
