@@ -1807,10 +1807,17 @@ static bool isAggregateValueIdInstr(const Instruction &I) {
 void SPIRVEmitIntrinsicsImpl::insertCompositeAggregateArms(Instruction *I,
                                                            IRBuilder<> &B) {
   auto *Phi = dyn_cast<PHINode>(I);
+  // A switch can list an incoming block twice, and both entries need the same
+  // value, so build one chain per block.
+  SmallDenseMap<BasicBlock *, Value *> PhiArms;
   for (Use &U : I->operands()) {
     Value *Op = U.get();
     if (!isMultiRegisterAggregate(Op))
       continue;
+    if (Value *Arm = Phi ? PhiArms.lookup(Phi->getIncomingBlock(U)) : nullptr) {
+      U.set(Arm);
+      continue;
+    }
     // A PHI arm materializes in its incoming block, everything else after the
     // producer.
     if (Phi)
@@ -1824,6 +1831,8 @@ void SPIRVEmitIntrinsicsImpl::insertCompositeAggregateArms(Instruction *I,
       Composite = B.CreateInsertValue(Composite, Field, Idx);
     }
     U.set(Composite);
+    if (Phi)
+      PhiArms[Phi->getIncomingBlock(U)] = Composite;
   }
 }
 
@@ -3905,6 +3914,11 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
     processGlobalValue(GV, B);
 
   reconstructAggregateReturns(Func, B);
+  // Before preprocessUndefsAndPoisons, which gives the poison starting each
+  // chain a typed placeholder.
+  for (Instruction &I : instructions(Func))
+    if (isAggregateValueIdInstr(I))
+      insertCompositeAggregateArms(&I, B);
   preprocessUndefsAndPoisons(B);
   simplifyNullAddrSpaceCasts();
   preprocessCompositeConstants(B);
@@ -3919,8 +3933,6 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
   for (Instruction &I : instructions(Func)) {
     if (!isAggregateValueIdInstr(I))
       continue;
-    // Give multi-register arms a value-id first, before the result is mutated.
-    insertCompositeAggregateArms(&I, B);
     AggrConstTypes[&I] = I.getType();
     I.mutateType(I32Ty);
   }
