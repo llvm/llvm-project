@@ -70,6 +70,7 @@
 #include "RawMemoryCallOnNonTrivialTypeCheck.h"
 #include "RedundantBranchConditionCheck.h"
 #include "ReservedIdentifierCheck.h"
+#include "RethrowCaughtExceptionCheck.h"
 #include "ReturnConstRefFromParameterCheck.h"
 #include "SharedPtrArrayMismatchCheck.h"
 #include "SignalHandlerCheck.h"
@@ -184,6 +185,8 @@ public:
         "bugprone-incorrect-enable-if");
     CheckFactories.registerCheck<IncorrectEnableSharedFromThisCheck>(
         "bugprone-incorrect-enable-shared-from-this");
+    CheckFactories.registerCheck<RethrowCaughtExceptionCheck>(
+        "bugprone-rethrow-caught-exception");
     CheckFactories.registerCheck<UnintendedCharOstreamOutputCheck>(
         "bugprone-unintended-char-ostream-output");
     CheckFactories.registerCheck<ReturnConstRefFromParameterCheck>(
