@@ -1,5 +1,5 @@
-## On ARMNT, the export RVA of a Thumb function has its low bit set. Disassemble
-## an export from the even address.
+## On ARMNT, the export RVA of a Thumb function has its mode selection bit set. Disassemble
+## an export from physical address.
 
 # RUN: yaml2obj %s -o %t.dll
 # RUN: llvm-objdump -d --no-show-raw-insn %t.dll | FileCheck %s
