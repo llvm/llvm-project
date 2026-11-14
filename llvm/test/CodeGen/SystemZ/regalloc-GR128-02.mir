@@ -28,17 +28,6 @@
 ---
 name:            main
 alignment:       16
-registers:       
-  - { id: 0, class: grx32bit }
-  - { id: 1, class: addr64bit }
-  - { id: 2, class: gr32bit }
-  - { id: 3, class: gr32bit }
-  - { id: 4, class: gr64bit }
-  - { id: 5, class: gr128bit }
-  - { id: 6, class: gr128bit }
-  - { id: 7, class: grx32bit }
-  - { id: 8, class: gr32bit }
-  - { id: 9, class: gr128bit }
 body:             |
   bb.0 (%ir-block.0):
     successors: %bb.2(0x00000001), %bb.1(0x7fffffff)

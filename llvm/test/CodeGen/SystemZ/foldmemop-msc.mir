@@ -17,16 +17,6 @@
 ---
 name:            fun0
 alignment:       16
-registers:
-  - { id: 0, class: grx32bit }
-  - { id: 1, class: grx32bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: gr32bit }
-  - { id: 4, class: grx32bit }
-  - { id: 5, class: grx32bit }
-  - { id: 6, class: gr32bit }
-  - { id: 7, class: gr32bit }
-  - { id: 8, class: gr32bit }
 liveins:
   - { reg: '$r2d', virtual-reg: '%2' }
   - { reg: '$r3l', virtual-reg: '%3' }
@@ -68,16 +58,6 @@ body:             |
 ---
 name:            fun1
 alignment:       16
-registers:
-  - { id: 0, class: grx32bit }
-  - { id: 1, class: grx32bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: gr32bit }
-  - { id: 4, class: grx32bit }
-  - { id: 5, class: grx32bit }
-  - { id: 6, class: gr32bit }
-  - { id: 7, class: gr32bit }
-  - { id: 8, class: gr32bit }
 liveins:
   - { reg: '$r2d', virtual-reg: '%2' }
   - { reg: '$r3l', virtual-reg: '%3' }
@@ -119,16 +99,6 @@ body:             |
 ---
 name:            fun2
 alignment:       16
-registers:
-  - { id: 0, class: gr64bit }
-  - { id: 1, class: gr64bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: gr64bit }
-  - { id: 4, class: gr64bit }
-  - { id: 5, class: gr64bit }
-  - { id: 6, class: gr64bit }
-  - { id: 7, class: gr64bit }
-  - { id: 8, class: gr64bit }
 liveins:
   - { reg: '$r2d', virtual-reg: '%2' }
   - { reg: '$r3d', virtual-reg: '%3' }
@@ -170,16 +140,6 @@ body:             |
 ---
 name:            fun3
 alignment:       16
-registers:
-  - { id: 0, class: gr64bit }
-  - { id: 1, class: gr64bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: gr64bit }
-  - { id: 4, class: gr64bit }
-  - { id: 5, class: gr64bit }
-  - { id: 6, class: gr64bit }
-  - { id: 7, class: gr64bit }
-  - { id: 8, class: gr64bit }
 liveins:
   - { reg: '$r2d', virtual-reg: '%2' }
   - { reg: '$r3d', virtual-reg: '%3' }

@@ -8,8 +8,6 @@
 
 ---
 name:            fun0
-registers:
-  - { id: 0, class: grx32bit }
 body:             |
   bb.0:
   liveins: $cc

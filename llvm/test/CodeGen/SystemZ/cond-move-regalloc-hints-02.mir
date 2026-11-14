@@ -14,19 +14,6 @@
 ---
 name:            fun
 alignment:       16
-registers:
-  - { id: 0, class: gr32bit }
-  - { id: 1, class: gr32bit }
-  - { id: 2, class: gr32bit }
-  - { id: 3, class: gr32bit }
-  - { id: 4, class: gr64bit }
-  - { id: 5, class: grx32bit }
-  - { id: 6, class: grx32bit }
-  - { id: 7, class: addr64bit }
-  - { id: 8, class: grx32bit }
-  - { id: 9, class: grx32bit }
-  - { id: 10, class: gr64bit }
-  - { id: 11, class: gr32bit }
 frameInfo:
   maxAlignment:    1
   adjustsStack:    true
