@@ -269,13 +269,16 @@ LogicalResult Serializer::processFuncParameter(spirv::FuncOp op) {
     // Process decoration attributes of arguments.
     auto funcOp = cast<FunctionOpInterface>(*op);
     for (auto argAttr : funcOp.getArgAttrs(idx)) {
-      if (argAttr.getName() == spirv::getFuncParamAlignmentAttrName() ||
-          argAttr.getName() == spirv::getFuncParamAttrName()) {
-        auto decoration =
-            argAttr.getName() == spirv::getFuncParamAlignmentAttrName()
-                ? Decoration::Alignment
-                : Decoration::FuncParamAttr;
-        if (failed(processDecorationAttr(op.getLoc(), argValueID, decoration,
+      StringAttr name = argAttr.getName();
+      std::optional<Decoration> decoration;
+      if (name == spirv::getFuncParamAlignmentAttrName())
+        decoration = Decoration::Alignment;
+      else if (name == spirv::getFuncParamMaxByteOffsetAttrName())
+        decoration = Decoration::MaxByteOffset;
+      else if (name == spirv::getFuncParamAttrName())
+        decoration = Decoration::FuncParamAttr;
+      if (decoration) {
+        if (failed(processDecorationAttr(op.getLoc(), argValueID, *decoration,
                                          argAttr.getValue())))
           return failure();
         continue;

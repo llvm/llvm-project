@@ -94,6 +94,10 @@ MLIRContext *spirv::TargetEnv::getContext() const {
 
 StringRef spirv::getFuncParamAlignmentAttrName() { return "spirv.alignment"; }
 
+StringRef spirv::getFuncParamMaxByteOffsetAttrName() {
+  return "spirv.max_byte_offset";
+}
+
 StringRef spirv::getFuncParamAttrName() { return "spirv.func_param_attr"; }
 
 StringRef spirv::getInterfaceVarABIAttrName() {

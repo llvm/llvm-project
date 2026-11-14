@@ -1163,14 +1163,15 @@ LogicalResult SPIRVDialect::verifyRegionArgAttribute(Operation *op,
     return success();
   Type argType = funcOp.getArgumentTypes()[argIndex];
 
-  if (attribute.getName() == spirv::getFuncParamAlignmentAttrName()) {
-    auto alignment = dyn_cast<IntegerAttr>(attribute.getValue());
-    if (!alignment || !alignment.getType().isSignlessInteger(32))
+  if (attribute.getName() == spirv::getFuncParamAlignmentAttrName() ||
+      attribute.getName() == spirv::getFuncParamMaxByteOffsetAttrName()) {
+    auto value = dyn_cast<IntegerAttr>(attribute.getValue());
+    if (!value || !value.getType().isSignlessInteger(32))
       return op->emitError("'")
-             << spirv::getFuncParamAlignmentAttrName()
+             << attribute.getName().getValue()
              << "' must be a 32-bit signless integer attribute";
     if (!isa<spirv::PointerType>(argType))
-      return op->emitError("'") << spirv::getFuncParamAlignmentAttrName()
+      return op->emitError("'") << attribute.getName().getValue()
                                 << "' requires a pointer parameter";
     return success();
   }

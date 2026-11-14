@@ -74,16 +74,23 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Addresses, Kernel, Lin
 
 // -----
 
-// Alignment alone must not be rejected as an unsupported argument decoration.
-// Its literal is unsigned: the high bit must not be lost in either direction.
-// The signless i32 attribute prints the same bits using a signed spelling.
-spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Addresses, Kernel, Linkage], []> {
+// Alignment and MaxByteOffset alone must not be rejected as unsupported
+// argument decorations. Their literals are unsigned: the high bit must not be
+// lost in either direction. The signless i32 attribute prints the same bits
+// using a signed spelling. MaxByteOffset requires SPIR-V 1.1.
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.1, [Addresses, Kernel, Linkage], []> {
   // CHECK-LABEL: spirv.func @alignment(
   // CHECK-SAME: !spirv.ptr<f32, CrossWorkgroup> {spirv.alignment = 4 : i32}
   // CHECK-SAME: !spirv.ptr<f32, CrossWorkgroup> {spirv.alignment = -2147483648 : i32}
+  // CHECK-SAME: !spirv.ptr<f32, CrossWorkgroup> {spirv.max_byte_offset = 64 : i32}
+  // CHECK-SAME: !spirv.ptr<f32, CrossWorkgroup> {spirv.alignment = 4 : i32, spirv.max_byte_offset = -2147483648 : i32}
   spirv.func @alignment(
       %a: !spirv.ptr<f32, CrossWorkgroup> {spirv.alignment = 4 : i32},
-      %b: !spirv.ptr<f32, CrossWorkgroup> {spirv.alignment = 2147483648 : i32}
+      %b: !spirv.ptr<f32, CrossWorkgroup> {spirv.alignment = 2147483648 : i32},
+      %c: !spirv.ptr<f32, CrossWorkgroup> {spirv.max_byte_offset = 64 : i32},
+      %d: !spirv.ptr<f32, CrossWorkgroup> {
+        spirv.alignment = 4 : i32,
+        spirv.max_byte_offset = 2147483648 : i32}
   ) "None" {
     spirv.Return
   }
