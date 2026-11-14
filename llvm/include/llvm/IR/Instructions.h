@@ -579,11 +579,6 @@ class AtomicCmpXchgInst : public Instruction {
             AtomicOrdering SuccessOrdering, AtomicOrdering FailureOrdering,
             SyncScope::ID SSID);
 
-  template <unsigned Offset>
-  using AtomicOrderingBitfieldElement =
-      typename Bitfield::Element<AtomicOrdering, Offset, 3,
-                                 AtomicOrdering::LAST>;
-
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{3};
 
 protected:
@@ -865,11 +860,6 @@ public:
   };
 
 private:
-  template <unsigned Offset>
-  using AtomicOrderingBitfieldElement =
-      typename Bitfield::Element<AtomicOrdering, Offset, 3,
-                                 AtomicOrdering::LAST>;
-
   template <unsigned Offset>
   using BinOpBitfieldElement =
       typename Bitfield::Element<BinOp, Offset, 5, BinOp::LAST_BINOP>;
