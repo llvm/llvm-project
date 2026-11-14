@@ -1840,6 +1840,7 @@
 // CHECK_GNR_M32: #define __AMX_INT8__ 1
 // CHECK_DMR_M32: #define __AMX_MOVRS__ 1
 // CHECK_GNR_M32: #define __AMX_TILE__ 1
+// CHECK_DMR_M32: #define __APX_F__ 1
 // CHECK_DMR_M32: #define __AVX10_2_512__ 1
 // CHECK_DMR_M32: #define __AVX10_2__ 1
 // CHECK_GNR_M32: #define __AVX2__ 1
@@ -1865,6 +1866,7 @@
 // CHECK_GNR_M32: #define __BMI2__ 1
 // CHECK_GNR_M32: #define __BMI__ 1
 // CHECK_DMR_M32: #define __CCMP__ 1
+// CHECK_DMR_M32: #define __CF__ 1
 // CHECK_GNR_M32: #define __CLDEMOTE__ 1
 // CHECK_GNR_M32: #define __CLFLUSHOPT__ 1
 // CHECK_GNR_M32: #define __CLWB__ 1
@@ -1945,6 +1947,7 @@
 // CHECK_GNR_M64: #define __AMX_INT8__ 1
 // CHECK_DMR_M64: #define __AMX_MOVRS__ 1
 // CHECK_GNR_M64: #define __AMX_TILE__ 1
+// CHECK_DMR_M64: #define __APX_F__ 1
 // CHECK_DMR_M64: #define __AVX10_2_512__ 1
 // CHECK_DMR_M64: #define __AVX10_2__ 1
 // CHECK_GNR_M64: #define __AVX2__ 1
@@ -1970,6 +1973,7 @@
 // CHECK_GNR_M64: #define __BMI2__ 1
 // CHECK_GNR_M64: #define __BMI__ 1
 // CHECK_DMR_M64: #define __CCMP__ 1
+// CHECK_DMR_M64: #define __CF__ 1
 // CHECK_GNR_M64: #define __CLDEMOTE__ 1
 // CHECK_GNR_M64: #define __CLFLUSHOPT__ 1
 // CHECK_GNR_M64: #define __CLWB__ 1
@@ -2533,6 +2537,7 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M32,CHECK_ARLS_M32,CHECK_CWF_M32,CHECK_NVL_M32,CHECK_NKL_M32
 // CHECK_ARL_M32: #define __ADX__ 1
 // CHECK_ARL_M32: #define __AES__ 1
+// CHECK_NVL_M32: #define __APX_F__ 1
 // CHECK_NVL_M32: #define __AVX10_1__ 1
 // CHECK_NVL_M32: #define __AVX10_2__ 1
 // CHECK_ARL_M32: #define __AVX2__ 1
@@ -2562,6 +2567,7 @@
 // CHECK_ARL_M32: #define __BMI2__ 1
 // CHECK_ARL_M32: #define __BMI__ 1
 // CHECK_NVL_M32: #define __CCMP__ 1
+// CHECK_NVL_M32: #define __CF__ 1
 // CHECK_ARLS_M32-NOT: __CLDEMOTE__
 // CHECK_SRF_M32: #define __CLDEMOTE__ 1
 // CHECK_ARL_M32: #define __CLFLUSHOPT__ 1
@@ -2669,6 +2675,7 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M64,CHECK_ARLS_M64,CHECK_CWF_M64,CHECK_NVL_M64,CHECK_NKL_M64
 // CHECK_ARL_M64: #define __ADX__ 1
 // CHECK_ARL_M64: #define __AES__ 1
+// CHECK_NVL_M64: #define __APX_F__ 1
 // CHECK_NVL_M64: #define __AVX10_1__ 1
 // CHECK_NVL_M64: #define __AVX10_2__ 1
 // CHECK_ARL_M64: #define __AVX2__ 1
@@ -2696,6 +2703,7 @@
 // CHECK_ARL_M64: #define __BMI2__ 1
 // CHECK_ARL_M64: #define __BMI__ 1
 // CHECK_NVL_M64: #define __CCMP__ 1
+// CHECK_NVL_M64: #define __CF__ 1
 // CHECK_ARLS_M64-NOT: __CLDEMOTE__
 // CHECK_SRF_M64: #define __CLDEMOTE__ 1
 // CHECK_ARL_M64: #define __CLFLUSHOPT__ 1

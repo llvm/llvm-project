@@ -51,6 +51,8 @@ def PreferLegacySetCC  : Predicate<"!Subtarget->hasZU() || "
 def PreferNoLegacySetCC : Predicate<"Subtarget->hasZU() && "
                                     "!Subtarget->preferLegacySetCC()">;
 def HasCF        : Predicate<"Subtarget->hasCF()">;
+def UseCFRegOperand : Predicate<"Subtarget->getCLOpts().cf_reg_operand">;
+def UseCFMemOperand : Predicate<"Subtarget->getCLOpts().cf_mem_operand">;
 def HasJMPABS    : Predicate<"Subtarget->hasJMPABS()">;
 def HasCMOV      : Predicate<"Subtarget->canUseCMOV()">;
 def NoCMOV       : Predicate<"!Subtarget->canUseCMOV()">;
