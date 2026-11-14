@@ -46,9 +46,10 @@ const llvm::abi::TargetInfo &AMDGPUABIClassifier::getTargetInfo(cir::FuncOp) {
     // HIP passes a generic pointer kernel argument as a global one.
     auto langOpts = modOp->getAttrOfType<cir::LoweringOptionsAttr>(
         cir::CIRDialect::getLoweringOptionsAttrName());
-    target = llvm::abi::createAMDGPUTargetInfo(
-        typeMapper.getTypeBuilder(),
-        /*CoerceGenericPtrArgToGlobal=*/langOpts && langOpts.getHip());
+    llvm::abi::AMDGPUABIOptions opts;
+    opts.CoerceGenericPtrArgToGlobal = langOpts && langOpts.getHip();
+    target =
+        llvm::abi::createAMDGPUTargetInfo(typeMapper.getTypeBuilder(), opts);
   }
   return *target;
 }
