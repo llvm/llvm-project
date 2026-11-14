@@ -26,9 +26,11 @@
 #include "llvm/CodeGen/VLIWMachineScheduler.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Transforms/Scalar.h"
 #include <optional>
 
@@ -205,6 +207,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeHexagonTarget() {
   // Register the target.
   RegisterTargetMachine<HexagonTargetMachine> X(getTheHexagonTarget());
+  static opt::RegisterLibraryOptions<HexagonOptions> O;
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeHexagonAlignGlobalArraysPass(PR);
@@ -268,6 +271,8 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small),
                                (HexagonNoOpt ? CodeGenOptLevel::None : OL)),
+      CLOpts(cl::LibraryOptionsContext::get<HexagonOptions>(
+          Options.MCOptions.LibraryOptions)),
       TLOF(std::make_unique<HexagonTargetObjectFile>()),
       Subtarget(Triple(TT), CPU, FS, *this) {
   initAsmInfo();

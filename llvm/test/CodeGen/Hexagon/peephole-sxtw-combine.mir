@@ -1,6 +1,6 @@
 # RUN: llc -mtriple=hexagon -run-pass hexagon-peephole \
-# RUN:   -disable-hexagon-optszext=false \
-# RUN:   -disable-hexagon-opt-ext-to-64=false -o - %s | FileCheck %s
+# RUN:   -hexagon-optszext=true \
+# RUN:   -hexagon-opt-ext-to-64=true -o - %s | FileCheck %s
 
 # Test coverage for HexagonPeephole:
 # 1) SXTW + COPY isub_lo optimization

@@ -24,12 +24,19 @@ tablegen("HexagonGenSDNodeInfo") {
   td_file = "Hexagon.td"
 }
 
+tablegen("HexagonOptions") {
+  visibility = [ ":LLVMHexagonCodeGen" ]
+  args = [ "-gen-opt-parser-defs" ]
+  td_file = "HexagonOptions.td"
+}
+
 static_library("LLVMHexagonCodeGen") {
   deps = [
     ":HexagonGenCallingConv",
     ":HexagonGenDAGISel",
     ":HexagonGenDFAPacketizer",
     ":HexagonGenSDNodeInfo",
+    ":HexagonOptions",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -39,6 +46,7 @@ static_library("LLVMHexagonCodeGen") {
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
+    "//llvm/lib/Option",
     "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Target",

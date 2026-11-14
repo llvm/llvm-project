@@ -1,3 +1,5 @@
+; RUN: llc -mtriple=hexagon -O2 -hexagon-misched=false < %s | FileCheck %s
+; Old spelling, still accepted as an alias.
 ; RUN: llc -mtriple=hexagon -O2 -disable-hexagon-misched < %s | FileCheck %s
 
 target triple = "hexagon-unknown--elf"
