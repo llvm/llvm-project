@@ -110,6 +110,16 @@ POSIX.1-2024, where EINVAL is returned if the spinlock is invalid (here we only 
 EBUSY is returned if the spinlock is currently locked. The lock is poisoned after a successful destroy. That is,
 subsequent operations on the lock object without any reinitialization will return EINVAL.
 
+### PThread Mutex Destroy
+
+POSIX.1 Issue 7 (2018) removed the requirement to return `EBUSY` from
+`pthread_mutex_destroy`: an implementation may detect a locked mutex, and the
+detection is best effort. We return `EBUSY` and leave the mutex untouched when
+the futex word shows it held. The check can miss a mutex that another thread
+takes right afterwards and can report one that is being released, so it only
+catches a mutex that is held when the call starts. A robust mutex is destroyed
+regardless, since its owner may have exited.
+
 ### Strftime
 
 In the C Standard, it provides a list of modifiers, and the conversions these
