@@ -648,7 +648,14 @@ set(LLVM_ENABLE_LIBEDIT "ON" CACHE STRING "Use libedit if available. Can be ON, 
 
 option(LLVM_ENABLE_LIBPFM "Use libpfm for performance counters if available." ON)
 
-option(LLVM_ENABLE_THREADS "Use threads if available." ON)
+# On z/OS, threads cannot be used because TLS is not supported.
+if (CMAKE_SYSTEM_NAME STREQUAL "OS390")
+  set(LLVM_ENABLE_THREADS_DEFAULT OFF)
+else()
+  set(LLVM_ENABLE_THREADS_DEFAULT ON)
+endif()
+
+option(LLVM_ENABLE_THREADS "Use threads if available." ${LLVM_ENABLE_THREADS_DEFAULT})
 
 set(LLVM_ENABLE_ICU "OFF" CACHE STRING "Use ICU for text encoding conversion support if available. Can be ON, OFF, or FORCE_ON")
 
@@ -741,7 +748,7 @@ set(LLVM_TARGETS_TO_BUILD
    ${LLVM_EXPERIMENTAL_TARGETS_TO_BUILD})
 list(REMOVE_DUPLICATES LLVM_TARGETS_TO_BUILD)
 
-if (NOT CMAKE_SYSTEM_NAME MATCHES "OS390")
+if (NOT CMAKE_SYSTEM_NAME STREQUAL "OS390")
   option(LLVM_ENABLE_PIC "Build Position-Independent Code" ON)
 endif()
 option(LLVM_ENABLE_MODULES "Compile with C++ modules enabled." OFF)
@@ -1352,7 +1359,7 @@ if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
 endif()
 
 # Build with _XOPEN_SOURCE on z/OS.
-if (CMAKE_SYSTEM_NAME MATCHES "OS390")
+if (CMAKE_SYSTEM_NAME STREQUAL "OS390")
   add_compile_definitions(_XOPEN_SOURCE=600)
   add_compile_definitions(_XPLATFORM_SOURCE) # Needed e.g. for O_CLOEXEC.
   add_compile_definitions(_OPEN_SYS) # Needed for process information.
@@ -1385,7 +1392,7 @@ if(LLVM_TARGET_IS_CROSSCOMPILE_HOST)
 endif()
 
 # Special hack for z/OS for missing POSIX functions
-if (CMAKE_SYSTEM_NAME MATCHES "OS390")
+if (CMAKE_SYSTEM_NAME STREQUAL "OS390")
   include_directories(SYSTEM "${LLVM_MAIN_INCLUDE_DIR}/llvm/Support/SystemZ/zos_wrappers" )
 endif()
 
