@@ -329,6 +329,9 @@ private:
   bool selectQuadSwap(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
                       unsigned Direction) const;
 
+  bool selectQuadAll(Register ResVReg, SPIRVTypeInst ResType,
+                     MachineInstr &I) const;
+
   bool selectConst(Register ResVReg, SPIRVTypeInst ResType,
                    MachineInstr &I) const;
 
@@ -4139,6 +4142,28 @@ bool SPIRVInstructionSelector::selectQuadSwap(Register ResVReg,
   return true;
 }
 
+bool SPIRVInstructionSelector::selectQuadAll(Register ResVReg,
+                                             SPIRVTypeInst ResType,
+                                             MachineInstr &I) const {
+  if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_quad_control))
+    return selectOpWithSrcs(ResVReg, ResType, I, {I.getOperand(2).getReg()},
+                            SPIRV::OpGroupNonUniformQuadAllKHR);
+
+  Register Result = I.getOperand(2).getReg();
+  for (unsigned Direction = 0; Direction != 3; ++Direction) {
+    Register QuadValue = createVirtualRegister(ResType, &GR, MRI, MRI->getMF());
+    Register Next =
+        Direction == 2 ? ResVReg
+                       : createVirtualRegister(ResType, &GR, MRI, MRI->getMF());
+    if (!selectQuadSwap(QuadValue, ResType, I, Direction) ||
+        !selectOpWithSrcs(Next, ResType, I, {Result, QuadValue},
+                          SPIRV::OpLogicalAnd))
+      return false;
+    Result = Next;
+  }
+  return true;
+}
+
 bool SPIRVInstructionSelector::selectBitreverseViaI32(Register ResVReg,
                                                       SPIRVTypeInst ResType,
                                                       MachineInstr &I,
@@ -5923,12 +5948,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_wave_prefix_product:
     return selectWaveExclusiveScanProduct(ResVReg, ResType, I);
   case Intrinsic::spv_quad_all:
-    BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpGroupNonUniformQuadAllKHR))
-        .addDef(ResVReg)
-        .addUse(GR.getSPIRVTypeID(ResType))
-        .addUse(I.getOperand(2).getReg())
-        .constrainAllUses(TII, TRI, RBI);
-    return true;
+    return selectQuadAll(ResVReg, ResType, I);
   case Intrinsic::spv_quad_read_across_x: {
     return selectQuadSwap(ResVReg, ResType, I, /*Direction*/ 0);
   }
