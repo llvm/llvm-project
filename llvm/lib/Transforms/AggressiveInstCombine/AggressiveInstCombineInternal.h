@@ -43,6 +43,7 @@ class AssumptionCache;
 class DataLayout;
 class DominatorTree;
 class Function;
+class ICmpInst;
 class Instruction;
 class TargetLibraryInfo;
 class TruncInst;
@@ -76,6 +77,10 @@ class TruncInstCombine {
   /// all other instructions in the graph that uses it.
   MapVector<Instruction *, Info> InstInfoMap;
 
+  /// ICmp users outside the expression graph, which are narrowed together
+  /// with it.
+  SmallVector<ICmpInst *, 2> ICmpUsers;
+
 public:
   TruncInstCombine(AssumptionCache &AC, TargetLibraryInfo &TLI,
                    const DataLayout &DL, const DominatorTree &DT)
@@ -105,6 +110,10 @@ private:
   ///         expression graph, or nullptr if the expression graph is not
   ///         eligible to be reduced.
   Type *getBestTruncatedType();
+
+  /// Return true if the outside icmp user \p Cmp gives the same result when
+  /// its operands are truncated to \p BitWidth bits.
+  bool canNarrowICmp(ICmpInst *Cmp, unsigned BitWidth) const;
 
   KnownBits computeKnownBits(const Value *V) const {
     return llvm::computeKnownBits(V, DL, &AC,
