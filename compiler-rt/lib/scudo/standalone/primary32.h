@@ -862,6 +862,7 @@ u16 SizeClassAllocator32<Config>::popBlocksImpl(
   const u16 PopCount = ClassId == SizeClassMap::BatchClassId
                            ? B->getCount()
                            : Min(MaxBlockCount, B->getCount());
+  CHECK_LE(PopCount, MaxBlockCount);
   B->moveNToArray(ToArray, PopCount);
 
   // TODO(chiahungduan): The deallocation of unused BatchClassId blocks can be
