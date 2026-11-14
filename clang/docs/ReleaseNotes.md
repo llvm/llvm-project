@@ -1341,6 +1341,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### AMDGPU Support
 
+- Clang now honors floating-point model and individual finite-math, NaN, and
+  infinity option overrides when selecting the ROCm finite-only control library.
+  In particular, `-ffast-math -fno-finite-math-only` selects the control library
+  that preserves NaN and infinity handling.
+
 - Deprecated the following builtins in favor of `__builtin_amdgcn_ballot_w32` or
   `__builtin_amdgcn_ballot_w64`:
   - `__builtin_amdgcn_uicmp`

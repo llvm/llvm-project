@@ -35,6 +35,25 @@ using namespace clang::driver::toolchains;
 using namespace clang;
 using namespace llvm::opt;
 
+static bool isNoHonorEnabled(const ArgList &Args, OptSpecifier NoHonorOption,
+                             OptSpecifier HonorOption) {
+  // Ignore -Ofast when another optimization level overrides it.
+  OptSpecifier OfastOption = isOptimizationLevelFast(Args)
+                                 ? options::OPT_Ofast
+                                 : options::OPT_ffast_math;
+  const Arg *A = Args.getLastArg(
+      NoHonorOption, HonorOption, options::OPT_ffast_math,
+      options::OPT_fno_fast_math, options::OPT_ffinite_math_only,
+      options::OPT_fno_finite_math_only, options::OPT_ffp_model_EQ,
+      OfastOption);
+  if (A && A->getOption().matches(options::OPT_ffp_model_EQ))
+    return StringRef(A->getValue()) == "aggressive";
+  return A && (A->getOption().matches(NoHonorOption) ||
+               A->getOption().matches(options::OPT_ffast_math) ||
+               A->getOption().matches(options::OPT_ffinite_math_only) ||
+               A->getOption().matches(options::OPT_Ofast));
+}
+
 RocmInstallationDetector::CommonBitcodeLibsPreferences::
     CommonBitcodeLibsPreferences(const Driver &D,
                                  const llvm::opt::ArgList &DriverArgs,
@@ -73,8 +92,11 @@ RocmInstallationDetector::CommonBitcodeLibsPreferences::
             : DriverArgs.hasArg(options::OPT_cl_denorms_are_zero) || DefaultDAZ;
 
   FiniteOnly = DriverArgs.hasArg(options::OPT_cl_finite_math_only) ||
-               DriverArgs.hasFlag(options::OPT_ffinite_math_only,
-                                  options::OPT_fno_finite_math_only, false);
+               DriverArgs.hasArg(options::OPT_cl_fast_relaxed_math) ||
+               (isNoHonorEnabled(DriverArgs, options::OPT_fno_honor_infinities,
+                                 options::OPT_fhonor_infinities) &&
+                isNoHonorEnabled(DriverArgs, options::OPT_fno_honor_nans,
+                                 options::OPT_fhonor_nans));
 
   UnsafeMathOpt =
       DriverArgs.hasArg(options::OPT_cl_unsafe_math_optimizations) ||
@@ -1158,7 +1180,7 @@ RocmInstallationDetector::getCommonBitcodeLibs(
   else if (Pref.GPUSan && Pref.IsOpenMP)
     AddBCLib(getOCKLPath());
   AddBCLib(getUnsafeMathPath(Pref.UnsafeMathOpt || Pref.FastRelaxedMath));
-  AddBCLib(getFiniteOnlyPath(Pref.FiniteOnly || Pref.FastRelaxedMath));
+  AddBCLib(getFiniteOnlyPath(Pref.FiniteOnly));
   AddBCLib(getWavefrontSize64Path(Pref.Wave64));
   AddBCLib(LibDeviceFile);
   auto ABIVerPath = getABIVersionPath(Pref.ABIVer);
