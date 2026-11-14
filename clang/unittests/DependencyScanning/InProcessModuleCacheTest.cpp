@@ -85,23 +85,26 @@ TEST(InProcessModuleCache, WriteReturnsSharedBuffer) {
   llvm::SmallString<256> Path;
   llvm::sys::fs::createUniquePath("M-%%%%%%.pcm", Path, /*MakeAbsolute=*/true);
 
+  auto Given = llvm::MemoryBuffer::getMemBuffer("contents\n", Path);
+  const char *GivenBufStart = Given->getBufferStart();
+
   off_t Size;
   time_t ModTime;
-  auto WrittenOrErr = ModCache->write(
-      Path, llvm::MemoryBuffer::getMemBuffer("contents\n", Path), Size,
-      ModTime);
+  auto WrittenOrErr = ModCache->write(Path, std::move(Given), Size, ModTime);
   ASSERT_EQ(WrittenOrErr.getError(), std::error_code{});
   auto Written = std::move(*WrittenOrErr);
   ASSERT_TRUE(Written);
   EXPECT_EQ(Written->getBuffer(), "contents\n");
+  // Written buffers share the memory of the given buffer.
+  EXPECT_EQ(Written->getBufferStart(), GivenBufStart);
 
-  // Reads share the memory of the written buffer.
+  // Read buffers share the memory of the written buffer.
   std::unique_ptr<llvm::MemoryBuffer> Read;
   ASSERT_THAT_ERROR(ModCache->read(Path, Size, ModTime).moveInto(Read),
                     llvm::Succeeded());
   EXPECT_EQ(Read->getBufferStart(), Written->getBufferStart());
 
-  // Writing the same PCM again shares the memory of the first write.
+  // Repeatedly-read buffers share the memory of the buffer written first.
   auto RewrittenOrErr = ModCache->write(
       Path, llvm::MemoryBuffer::getMemBufferCopy("contents\n", Path), Size,
       ModTime);
