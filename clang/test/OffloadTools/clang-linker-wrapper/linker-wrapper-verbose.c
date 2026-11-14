@@ -40,7 +40,7 @@
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --wrapper-verbose --save-temps --dry-run \
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=OPENACC
 
-// OPENACC: llvm-offload-binary{{.*}} {{.*}}.o --image=kind=openacc,triple=nvptx64-nvidia-cuda,arch=sm_70,file={{.*}}.o
+// OPENACC: llvm-offload-binary{{.*}} {{.*}}.o --image=kind=openacc,triple=nvptx64-nvidia-cuda,arch=sm_70,code=,file={{.*}}.o
 // OPENACC: clang{{.*}} --target=nvptx64-nvidia-cuda -march=sm_70
 // OPENACC: llvm-offload-binary{{.*}} -o {{.*}}.offload --image=file={{.*}}.img,kind=openacc,triple=nvptx64-nvidia-cuda,arch=sm_70
 // OPENACC: llvm-offload-wrapper{{.*}} --kind=openacc --triple=x86_64-unknown-linux-gnu -o [[BC:.*]].bc {{.*}}.offload
