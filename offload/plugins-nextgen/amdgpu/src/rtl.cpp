@@ -31,6 +31,7 @@
 #include "Shared/Utils.h"
 #include "Utils/ELF.h"
 
+#include "AMDGPUDeviceOptions.h"
 #include "GenericProfiler.h"
 #include "GlobalHandler.h"
 #include "OffloadAPI.h"
@@ -2524,8 +2525,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_InitialNumSignals("LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS",
                                64),
         OMPX_StreamBusyWait("LIBOMPTARGET_AMDGPU_STREAM_BUSYWAIT", 2000000),
-        OMPX_UseMultipleSdmaEngines(
-            "LIBOMPTARGET_AMDGPU_USE_MULTIPLE_SDMA_ENGINES", false),
         OMPX_ApuMaps("OMPX_APU_MAPS", false), AMDGPUStreamManager(*this, Agent),
         AMDGPUEventManager(*this), AMDGPUSignalManager(*this), Agent(Agent),
         HostDevice(HostDevice) {}
@@ -2630,6 +2629,14 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Err;
     HardwareParallelism = ComputeUnits * WavesPerCU;
 
+    // detect if device is an APU.
+    if (auto Err = checkIfAPU())
+      return Err;
+
+    DeviceOptions =
+        AMDGPUDeviceOptionsTy::getDeviceDefaults(ComputeUnitKind, IsAPU);
+    DeviceOptions.readFromEnv();
+
     // Get maximum size of any device queues and maximum number of queues.
     uint32_t MaxQueueSize;
     if (auto Err = getDeviceAttr(HSA_AGENT_INFO_QUEUE_MAX_SIZE, MaxQueueSize))
@@ -2662,10 +2669,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Err;
     if (!Targets.empty() && Targets[0].str().contains("xnack+"))
       IsXnackEnabled = true;
-
-    // detect if device is an APU.
-    if (auto Err = checkIfAPU())
-      return Err;
 
     // Retrieve the size of the group memory.
     for (const auto *Pool : AllMemoryPools) {
@@ -3838,7 +3841,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         });
   }
 
-  bool useMultipleSdmaEngines() const { return OMPX_UseMultipleSdmaEngines; }
+  bool useMultipleSdmaEngines() const {
+    return DeviceOptions.UseMultipleSdmaEngines;
+  }
 
 private:
   using AMDGPUEventRef = AMDGPUResourceRef<AMDGPUEventTy>;
@@ -3924,6 +3929,9 @@ private:
     return 0;
   }
 
+  /// Runtime options of the device.
+  AMDGPUDeviceOptionsTy DeviceOptions;
+
   /// Envar for controlling the number of HSA queues per device. High number of
   /// queues may degrade performance.
   UInt32Envar OMPX_NumQueues;
@@ -3956,9 +3964,6 @@ private:
   /// before going into a blocking HSA wait state. The unit for these variables
   /// are microseconds.
   UInt32Envar OMPX_StreamBusyWait;
-
-  /// Use ROCm 5.7 interface for multiple SDMA engines
-  BoolEnvar OMPX_UseMultipleSdmaEngines;
 
   /// Value of OMPX_APU_MAPS env var used to force
   /// automatic zero-copy behavior on non-APU GPUs.
