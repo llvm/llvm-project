@@ -6,7 +6,7 @@ main:
   jae .L4
   cmpq $0x1, %rdi
   jne .L4
-  movslq .Ljt_pic+8(%rip), %rax
+  movslq .Ljt_pic+JT_ENTRY_OFFSET(%rip), %rax
   lea .Ljt_pic(%rip), %rdx
   add %rdx, %rax
   jmpq *%rax
