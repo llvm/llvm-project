@@ -6,7 +6,7 @@
 ;   clang -target bpf -std=c23 -O2 -g -S -emit-llvm nested.c
 ;
 ; Clang names the C23 nullptr type "decltype(nullptr)" in debug info.
-; CHECK: error: unsupported BTF array element type 'decltype(nullptr)'
+; CHECK: error: unsupported BTF type 'decltype(nullptr)'
 
 @nested = global { [2 x ptr] } zeroinitializer, !dbg !0
 
