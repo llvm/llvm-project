@@ -2203,6 +2203,19 @@ func.func @deinterleave_1d_scalable(%arg: vector<[4]xi32>) -> (vector<[2]xi32>, 
 
 // -----
 
+// CHECK-LABEL: @deinterleave_1d_index(
+// CHECK-SAME: %[[ARG:.*]]: vector<4xindex>
+func.func @deinterleave_1d_index(%arg: vector<4xindex>) -> (vector<2xindex>, vector<2xindex>) {
+  // CHECK-DAG: %[[SOURCE:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : vector<4xindex> to vector<4xi64>
+  // CHECK-DAG: %[[POISON:.*]] = llvm.mlir.poison : vector<4xi64>
+  // CHECK: llvm.shufflevector %[[SOURCE]], %[[POISON]] [0, 2] : vector<4xi64>
+  // CHECK: llvm.shufflevector %[[SOURCE]], %[[POISON]] [1, 3] : vector<4xi64>
+  %0, %1 = vector.deinterleave %arg : vector<4xindex> -> vector<2xindex>
+  return %0, %1 : vector<2xindex>, vector<2xindex>
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // vector.from_elements
 //===----------------------------------------------------------------------===//
