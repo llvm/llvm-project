@@ -20819,6 +20819,9 @@ Align SITargetLowering::getPrefLoopAlignment(
   const Align PrefAlign = TargetLowering::getPrefLoopAlignment(ML);
   const Align CacheLineAlign = Align(64);
 
+  if (getTargetMachine().Options.LoopAlignment)
+    return PrefAlign;
+
   // GFX950: Prevent an 8-byte instruction at the block being aligned from being
   // split by the 32-byte instruction fetch window boundary. This avoids a
   // significant fetch delay after a backward branch. We use 32-byte alignment
@@ -20913,7 +20916,8 @@ unsigned SITargetLowering::getMaxPermittedBytesForAlignment(
   // GFX950: Limit padding to 4 bytes (one s_nop) for blocks where an 8-byte
   // instruction could be split by the 32-byte fetch window boundary.
   // See getPrefLoopAlignment() for context.
-  if (needsFetchWindowAlignment(*MBB))
+  if (!getTargetMachine().Options.LoopAlignment &&
+      needsFetchWindowAlignment(*MBB))
     return 4;
   return TargetLowering::getMaxPermittedBytesForAlignment(MBB);
 }
