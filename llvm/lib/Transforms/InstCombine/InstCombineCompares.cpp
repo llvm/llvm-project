@@ -276,10 +276,9 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     if (i < 64 && IsTrueForElt)
       MagicBitvector |= 1ULL << i;
 
-    // If all of our states become overdefined, bail out early.  Since the
-    // predicate is expensive, only check it every 8 elements.  This is only
-    // really useful for really huge arrays.
-    if ((i & 8) == 0 && i >= 64 && SecondTrueElement == Overdefined &&
+    // If all of our states become overdefined and we need more than 64 bits in
+    // the bit vector, bail out.
+    if (i >= 64 && SecondTrueElement == Overdefined &&
         SecondFalseElement == Overdefined && TrueRangeEnd == Overdefined &&
         FalseRangeEnd == Overdefined)
       return nullptr;
@@ -288,7 +287,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   // Now that we've scanned the entire array, emit our new comparison(s).  We
   // order the state machines in complexity of the generated code.
 
-  // If inbounds keyword is not present, Idx * Stride can overflow.
+  // If nusw (implied by inbounds) is not present, Idx * Stride can overflow.
   // Let's assume that Stride is 2 and the wanted value is at offset 0.
   // Then, there are two possible values for Idx to match offset 0:
   // 0x00..00, 0x80..00.
@@ -296,7 +295,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   // comparison is false if Idx was 0x80..00.
   // We need to erase the highest countTrailingZeros(ElementSize) bits of Idx.
   auto MaskIdx = [&](Value *Idx) {
-    if (!Expr.Flags.isInBounds() && Stride.countr_zero() != 0) {
+    if (!Expr.Flags.hasNoUnsignedSignedWrap() && Stride.countr_zero() != 0) {
       Value *Mask = Constant::getAllOnesValue(Idx->getType());
       Mask = Builder.CreateLShr(Mask, Stride.countr_zero());
       Idx = Builder.CreateAnd(Idx, Mask);

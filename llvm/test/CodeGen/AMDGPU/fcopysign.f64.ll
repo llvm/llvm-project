@@ -1138,23 +1138,16 @@ define double @v_copysign_f64_0_f32(float %sign) {
 }
 
 define amdgpu_ps <2 x i32> @s_copysign_f64_0_f16(half inreg %sign) {
-; SI-LABEL: s_copysign_f64_0_f16:
-; SI:       ; %bb.0:
-; SI-NEXT:    s_lshl_b32 s0, s0, 16
-; SI-NEXT:    s_and_b32 s1, s0, 0x80000000
-; SI-NEXT:    s_mov_b32 s0, 0
-; SI-NEXT:    ; return to shader part epilog
-;
-; VI-LABEL: s_copysign_f64_0_f16:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_sext_i32_i16 s0, s0
-; VI-NEXT:    s_and_b32 s1, s0, 0x80000000
-; VI-NEXT:    s_mov_b32 s0, 0
-; VI-NEXT:    ; return to shader part epilog
+; SIVI-LABEL: s_copysign_f64_0_f16:
+; SIVI:       ; %bb.0:
+; SIVI-NEXT:    s_lshl_b32 s0, s0, 16
+; SIVI-NEXT:    s_and_b32 s1, s0, 0x80000000
+; SIVI-NEXT:    s_mov_b32 s0, 0
+; SIVI-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: s_copysign_f64_0_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_sext_i32_i16 s0, s0
+; GFX11-NEXT:    s_lshl_b32 s0, s0, 16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s1, s0, 0x80000000
 ; GFX11-NEXT:    s_mov_b32 s0, 0

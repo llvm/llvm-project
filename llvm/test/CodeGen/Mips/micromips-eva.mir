@@ -57,24 +57,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr32, preferred-register: '' }
-  - { id: 1, class: gpr32, preferred-register: '' }
-  - { id: 2, class: gpr32, preferred-register: '' }
-  - { id: 3, class: gpr32, preferred-register: '' }
-  - { id: 4, class: gpr32, preferred-register: '' }
-  - { id: 5, class: gpr32, preferred-register: '' }
-  - { id: 6, class: gpr32, preferred-register: '' }
-  - { id: 7, class: gpr32, preferred-register: '' }
-  - { id: 8, class: gpr32, preferred-register: '' }
-  - { id: 9, class: gpr32, preferred-register: '' }
-  - { id: 10, class: gpr32, preferred-register: '' }
-  - { id: 11, class: gpr32, preferred-register: '' }
-  - { id: 12, class: gpr32, preferred-register: '' }
-  - { id: 13, class: gpr32, preferred-register: '' }
-  - { id: 14, class: gpr32, preferred-register: '' }
-  - { id: 15, class: gpr32, preferred-register: '' }
 liveins:
 frameInfo:
   isFrameAddressTaken: false
@@ -129,17 +111,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr32, preferred-register: '' }
-  - { id: 1, class: gpr32, preferred-register: '' }
-  - { id: 2, class: gpr32, preferred-register: '' }
-  - { id: 3, class: gpr32, preferred-register: '' }
-  - { id: 4, class: gpr32, preferred-register: '' }
-  - { id: 5, class: gpr32, preferred-register: '' }
-  - { id: 6, class: gpr32, preferred-register: '' }
-  - { id: 7, class: gpr32, preferred-register: '' }
-  - { id: 8, class: gpr32, preferred-register: '' }
 liveins:
   - { reg: '$r4', virtual-reg: '%0' }
 frameInfo:

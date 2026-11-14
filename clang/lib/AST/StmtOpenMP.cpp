@@ -117,8 +117,11 @@ bool OMPExecutableDirective::isStandaloneDirective() const {
 Stmt *OMPExecutableDirective::getStructuredBlock() {
   assert(!isStandaloneDirective() &&
          "Standalone Executable Directives don't have Structured Blocks.");
+  // The loop body is unknwown while a loop transformation is deferred in
+  // a dependent context, so use the whole associated statement instead.
   if (auto *LD = dyn_cast<OMPLoopDirective>(this))
-    return LD->getBody();
+    if (Stmt *Body = LD->getBody())
+      return Body;
   return getRawStmt();
 }
 

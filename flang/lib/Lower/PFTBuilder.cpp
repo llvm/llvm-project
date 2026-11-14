@@ -1783,6 +1783,14 @@ bool Fortran::lower::symbolIsGlobal(const semantics::Symbol &sym) {
 }
 
 namespace {
+/// Byte alignment required by \p sym, or zero if it cannot be determined.
+static std::size_t getSymbolAlignment(const semantics::Symbol &sym) {
+  if (auto dynamicType = evaluate::DynamicType::From(sym))
+    return dynamicType->GetAlignment(
+        sym.owner().context().targetCharacteristics());
+  return 0;
+}
+
 /// This helper class sorts the symbols in a scope such that a symbol will
 /// be placed after those it depends upon. Otherwise the sort is stable and
 /// preserves the order of the symbol table, which is sorted by name. This
@@ -1868,6 +1876,7 @@ private:
         continue;
       std::size_t start = first.offset();
       std::size_t end = first.offset() + first.size();
+      std::size_t alignment = 0;
       const Fortran::semantics::Symbol *namingSym = nullptr;
       for (semantics::SymbolRef symRef : aggregate) {
         const semantics::Symbol &sym = *symRef;
@@ -1878,6 +1887,7 @@ private:
           isGlobal |= lower::symbolIsGlobal(sym);
           start = std::min(sym.offset(), start);
           end = std::max(sym.offset() + sym.size(), end);
+          alignment = std::max(alignment, getSymbolAlignment(sym));
           if (!namingSym || (sym.name() < namingSym->name()))
             namingSym = &sym;
         }
@@ -1890,6 +1900,7 @@ private:
       } else {
         stores.emplace_back(*aggregateSym, *namingSym, isGlobal);
       }
+      stores.back().alignment = alignment;
     }
   }
 
@@ -2299,8 +2310,8 @@ void Fortran::lower::pft::BlockDataUnit::dump() const {
 const lower::pft::VariableList &
 lower::pft::getScopeVariableList(const semantics::Scope &scope,
                                  ScopeVariableListMap &map) {
-  LLVM_DEBUG(llvm::dbgs() << "\ngetScopeVariableList of [sub]module scope <"
-                          << &scope << "> " << scope.GetName() << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "\ngetScopeVariableList of scope <" << &scope
+                          << "> " << scope.GetName() << "\n");
   auto iter = map.find(&scope);
   if (iter == map.end()) {
     SymbolDependenceAnalysis sda(scope);

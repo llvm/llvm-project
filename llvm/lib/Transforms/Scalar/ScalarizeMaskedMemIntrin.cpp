@@ -28,6 +28,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/MemCacheHint.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
@@ -112,25 +113,6 @@ static unsigned adjustForEndian(const DataLayout &DL, unsigned VectorWidth,
   return DL.isBigEndian() ? VectorWidth - 1 - Idx : Idx;
 }
 
-static void copyMemCacheHint(Instruction &Dest, const Instruction &Source,
-                             unsigned SourcePtrOperand,
-                             unsigned DestPtrOperand) {
-  MDNode *CacheHint = Source.getMetadata(LLVMContext::MD_mem_cache_hint);
-  // These intrinsics have a single memory operand.
-  if (!CacheHint || CacheHint->getNumOperands() != 2)
-    return;
-
-  auto *OperandNo = mdconst::extract<ConstantInt>(CacheHint->getOperand(0));
-  if (OperandNo->getZExtValue() != SourcePtrOperand)
-    return;
-
-  Metadata *DestOperandNo = ConstantAsMetadata::get(
-      ConstantInt::get(Type::getInt32Ty(Dest.getContext()), DestPtrOperand));
-  Dest.setMetadata(LLVMContext::MD_mem_cache_hint,
-                   MDNode::get(Dest.getContext(),
-                               {DestOperandNo, CacheHint->getOperand(1)}));
-}
-
 static void copyMetadataForMemoryAccess(
     Instruction &Dest, const Instruction &Source, const DataLayout &DL,
     unsigned SourcePtrOperand, unsigned DestPtrOperand, Type *AccessType,
@@ -155,7 +137,8 @@ static void copyMetadataForMemoryAccess(
     AANodes.TBAAStruct = nullptr;
     Dest.setAAMetadata(AANodes);
   }
-  copyMemCacheHint(Dest, Source, SourcePtrOperand, DestPtrOperand);
+  setMemCacheHint(Dest, DestPtrOperand,
+                  getMemCacheHint(Source, SourcePtrOperand));
 }
 
 static void copyMetadataForScalarizedLoad(LoadInst &Dest,
@@ -231,6 +214,7 @@ static void scalarizeMaskedLoad(const DataLayout &DL, bool HasBranchDivergence,
 
   Instruction *InsertPt = CI;
   IRBuilder<> Builder(InsertPt);
+  Builder.disableGEPCanonicalization();
   BasicBlock *IfBlock = CI->getParent();
 
   // Short-cut if the mask is all-true.
@@ -416,6 +400,7 @@ static void scalarizeMaskedStore(const DataLayout &DL, bool HasBranchDivergence,
 
   Instruction *InsertPt = CI;
   IRBuilder<> Builder(InsertPt);
+  Builder.disableGEPCanonicalization();
 
   // Short-cut if the mask is all-true.
   if (isa<Constant>(Mask) && cast<Constant>(Mask)->isAllOnesValue()) {
@@ -828,6 +813,7 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL,
 
   Instruction *InsertPt = CI;
   IRBuilder<> Builder(InsertPt);
+  Builder.disableGEPCanonicalization();
   BasicBlock *IfBlock = CI->getParent();
 
   unsigned VectorWidth = VecType->getNumElements();
@@ -971,6 +957,7 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL,
 
   Instruction *InsertPt = CI;
   IRBuilder<> Builder(InsertPt);
+  Builder.disableGEPCanonicalization();
   BasicBlock *IfBlock = CI->getParent();
 
   Type *EltTy = VecType->getElementType();

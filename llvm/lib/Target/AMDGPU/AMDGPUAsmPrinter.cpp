@@ -565,7 +565,8 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
       const SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
       unsigned MaxWaves = MFI.getMaxWavesPerEU();
       uint64_t TotalNumVgpr =
-          getTotalNumVGPRs(STM.hasGFX90AInsts(), NumAgpr, NumVgpr);
+          getTotalNumVGPRs(STM.hasGFX90AInsts(), static_cast<uint32_t>(NumAgpr),
+                           static_cast<uint32_t>(NumVgpr));
       uint64_t NumVGPRsForWavesPerEU =
           std::max({TotalNumVgpr, (uint64_t)1,
                     (uint64_t)STM.getMinNumVGPRs(
@@ -602,7 +603,7 @@ static void appendTypeEncoding(std::string &Enc, Type *Ty, const DataLayout &DL,
     Enc += 'v';
     return;
   }
-  unsigned Bits = DL.getTypeSizeInBits(Ty);
+  uint64_t Bits = DL.getTypeSizeInBits(Ty);
   // Zero-sized non-void types (e.g. `{}` or `[0 x i8]`) consume no ABI
   // registers. For returns, emit the same no-result marker as void so the
   // parameter encoding still has an explicit return-type prefix.
@@ -1918,7 +1919,8 @@ void AMDGPUAsmPrinter::getAmdKernelCode(AMDGPUMCKernelCodeT &Out,
   // kernarg_segment_alignment is specified as log of the alignment.
   // The minimum alignment is 16.
   // FIXME: The metadata treats the minimum as 4?
-  Out.kernarg_segment_alignment = Log2(std::max(Align(16), MaxKernArgAlign));
+  Out.kernarg_segment_alignment =
+      static_cast<uint8_t>(Log2(std::max(Align(16), MaxKernArgAlign)));
 }
 
 bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
@@ -1960,6 +1962,16 @@ bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     return false;
   }
   return true;
+}
+
+bool AMDGPUAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
+                                             unsigned OpNo,
+                                             const char *ExtraCode,
+                                             raw_ostream &OS) {
+  const MachineOperand &MO = MI->getOperand(OpNo);
+  AMDGPUInstPrinter::printRegOperand(MO.getReg(), OS,
+                                     *MF->getSubtarget().getRegisterInfo());
+  return false;
 }
 
 void AMDGPUAsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
