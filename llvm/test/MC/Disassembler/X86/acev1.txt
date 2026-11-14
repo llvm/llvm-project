@@ -1,0 +1,262 @@
+# RUN: llvm-mc --disassemble %s -triple=x86_64 | FileCheck %s --check-prefixes=ATT
+# RUN: llvm-mc --disassemble %s -triple=x86_64 -x86-asm-syntax=intel --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
+
+## Check that every byte sequence below is also reachable from the assembler.
+# RUN: llvm-mc --disassemble %s -triple=x86_64 | llvm-mc -triple=x86_64 -mattr=+acev1 -filetype=obj -o %t.o
+# RUN: llvm-objdump -d --no-print-imm-hex %t.o | FileCheck %s --check-prefixes=ATT
+
+## BSR management
+
+# ATT:   bsrinit	%bsr0
+# INTEL: bsrinit	bsr0
+0xc4,0xe2,0xfb,0x49,0xc0
+
+## BSRMOVF - fill both BSR halves from two ZMMs
+
+# ATT:   bsrmovf	%zmm2, %zmm1, %bsr0
+# INTEL: bsrmovf	bsr0, zmm1, zmm2
+0x62,0xf6,0xf4,0x48,0x95,0xc2
+
+# ATT:   bsrmovf	%zmm31, %zmm30, %bsr0
+# INTEL: bsrmovf	bsr0, zmm30, zmm31
+0x62,0x96,0x8c,0x40,0x95,0xc7
+
+# ATT:   bsrmovf	(%rax), %zmm1, %bsr0
+# INTEL: bsrmovf	bsr0, zmm1, zmmword ptr [rax]
+0x62,0xf6,0xf4,0x48,0x95,0x00
+
+# ATT:   bsrmovf	-64(%rsp), %zmm0, %bsr0
+# INTEL: bsrmovf	bsr0, zmm0, zmmword ptr [rsp - 64]
+0x62,0xf6,0xfc,0x48,0x95,0x44,0x24,0xff
+
+# ATT:   bsrmovf	64(%rdx,%rax,4), %zmm10, %bsr0
+# INTEL: bsrmovf	bsr0, zmm10, zmmword ptr [rdx + 4*rax + 64]
+0x62,0xf6,0xac,0x48,0x95,0x44,0x82,0x01
+
+# ATT:   bsrmovf	268435456(%rbp,%r14,8), %zmm1, %bsr0
+# INTEL: bsrmovf	bsr0, zmm1, zmmword ptr [rbp + 8*r14 + 268435456]
+0x62,0xb6,0xf4,0x48,0x95,0x84,0xf5,0x00,0x00,0x00,0x10
+
+## BSRMOVH - high half, set (ZMM to BSR) and get (BSR to ZMM)
+
+# ATT:   bsrmovh	%zmm1, %bsr0
+# INTEL: bsrmovh	bsr0, zmm1
+0x62,0xf6,0xff,0x48,0x95,0xc1
+
+# ATT:   bsrmovh	%zmm31, %bsr0
+# INTEL: bsrmovh	bsr0, zmm31
+0x62,0x96,0xff,0x48,0x95,0xc7
+
+# ATT:   bsrmovh	(%rbx), %bsr0
+# INTEL: bsrmovh	bsr0, zmmword ptr [rbx]
+0x62,0xf6,0xff,0x48,0x95,0x03
+
+# ATT:   bsrmovh	64(%rdx,%rax,4), %bsr0
+# INTEL: bsrmovh	bsr0, zmmword ptr [rdx + 4*rax + 64]
+0x62,0xf6,0xff,0x48,0x95,0x44,0x82,0x01
+
+# ATT:   bsrmovh	%bsr0, %zmm1
+# INTEL: bsrmovh	zmm1, bsr0
+0x62,0xf6,0x7f,0x48,0x95,0xc1
+
+# ATT:   bsrmovh	%bsr0, %zmm31
+# INTEL: bsrmovh	zmm31, bsr0
+0x62,0x96,0x7f,0x48,0x95,0xc7
+
+# ATT:   bsrmovh	%bsr0, (%rcx)
+# INTEL: bsrmovh	zmmword ptr [rcx], bsr0
+0x62,0xf6,0x7f,0x48,0x95,0x01
+
+# ATT:   bsrmovh	%bsr0, 268435456(%rbp,%r14,8)
+# INTEL: bsrmovh	zmmword ptr [rbp + 8*r14 + 268435456], bsr0
+0x62,0xb6,0x7f,0x48,0x95,0x84,0xf5,0x00,0x00,0x00,0x10
+
+## BSRMOVL - low half, set (ZMM to BSR) and get (BSR to ZMM)
+
+# ATT:   bsrmovl	%zmm2, %bsr0
+# INTEL: bsrmovl	bsr0, zmm2
+0x62,0xf6,0xfe,0x48,0x95,0xc2
+
+# ATT:   bsrmovl	%zmm30, %bsr0
+# INTEL: bsrmovl	bsr0, zmm30
+0x62,0x96,0xfe,0x48,0x95,0xc6
+
+# ATT:   bsrmovl	(%rdx), %bsr0
+# INTEL: bsrmovl	bsr0, zmmword ptr [rdx]
+0x62,0xf6,0xfe,0x48,0x95,0x02
+
+# ATT:   bsrmovl	64(%rdx,%rax,4), %bsr0
+# INTEL: bsrmovl	bsr0, zmmword ptr [rdx + 4*rax + 64]
+0x62,0xf6,0xfe,0x48,0x95,0x44,0x82,0x01
+
+# ATT:   bsrmovl	%bsr0, %zmm3
+# INTEL: bsrmovl	zmm3, bsr0
+0x62,0xf6,0x7e,0x48,0x95,0xc3
+
+# ATT:   bsrmovl	%bsr0, %zmm30
+# INTEL: bsrmovl	zmm30, bsr0
+0x62,0x96,0x7e,0x48,0x95,0xc6
+
+# ATT:   bsrmovl	%bsr0, (%rsi)
+# INTEL: bsrmovl	zmmword ptr [rsi], bsr0
+0x62,0xf6,0x7e,0x48,0x95,0x06
+
+# ATT:   bsrmovl	%bsr0, 268435456(%rbp,%r14,8)
+# INTEL: bsrmovl	zmmword ptr [rbp + 8*r14 + 268435456], bsr0
+0x62,0xb6,0x7e,0x48,0x95,0x84,0xf5,0x00,0x00,0x00,0x10
+
+## TILEMOVCOL - write a ZMM into a tile column (ACE only, EVEX.W1)
+
+# ATT:   tilemovcol	$0, %zmm0, %tmm0
+# INTEL: tilemovcol	tmm0, zmm0, 0
+0x62,0xf3,0xfd,0x48,0x2f,0xc0,0x00
+
+# ATT:   tilemovcol	$5, %zmm2, %tmm1
+# INTEL: tilemovcol	tmm1, zmm2, 5
+0x62,0xf3,0xfd,0x48,0x2f,0xca,0x05
+
+# ATT:   tilemovcol	$15, %zmm31, %tmm7
+# INTEL: tilemovcol	tmm7, zmm31, 15
+0x62,0x93,0xfd,0x48,0x2f,0xff,0x0f
+
+# ATT:   tilemovcol	%ecx, %zmm2, %tmm1
+# INTEL: tilemovcol	tmm1, zmm2, ecx
+0x62,0xf2,0xf5,0x48,0x4b,0xca
+
+# ATT:   tilemovcol	%r14d, %zmm15, %tmm7
+# INTEL: tilemovcol	tmm7, zmm15, r14d
+0x62,0xd2,0x8d,0x48,0x4b,0xff
+
+# ATT:   tilemovcol	%edx, %zmm16, %tmm1
+# INTEL: tilemovcol	tmm1, zmm16, edx
+0x62,0xb2,0xed,0x48,0x4b,0xc8
+
+# ATT:   tilemovcol	%edx, %zmm31, %tmm1
+# INTEL: tilemovcol	tmm1, zmm31, edx
+0x62,0x92,0xed,0x48,0x4b,0xcf
+
+## TILEMOVROW write - ZMM into a tile row (ACE only, EVEX.W1)
+
+# ATT:   tilemovrow	$0, %zmm0, %tmm0
+# INTEL: tilemovrow	tmm0, zmm0, 0
+0x62,0xf3,0xfd,0x48,0x07,0xc0,0x00
+
+# ATT:   tilemovrow	$3, %zmm2, %tmm1
+# INTEL: tilemovrow	tmm1, zmm2, 3
+0x62,0xf3,0xfd,0x48,0x07,0xca,0x03
+
+# ATT:   tilemovrow	$15, %zmm31, %tmm7
+# INTEL: tilemovrow	tmm7, zmm31, 15
+0x62,0x93,0xfd,0x48,0x07,0xff,0x0f
+
+# ATT:   tilemovrow	%edx, %zmm3, %tmm2
+# INTEL: tilemovrow	tmm2, zmm3, edx
+0x62,0xf2,0xed,0x48,0x4a,0xd3
+
+# ATT:   tilemovrow	%r14d, %zmm15, %tmm7
+# INTEL: tilemovrow	tmm7, zmm15, r14d
+0x62,0xd2,0x8d,0x48,0x4a,0xff
+
+# ATT:   tilemovrow	%edx, %zmm16, %tmm1
+# INTEL: tilemovrow	tmm1, zmm16, edx
+0x62,0xb2,0xed,0x48,0x4a,0xc8
+
+# ATT:   tilemovrow	%edx, %zmm31, %tmm1
+# INTEL: tilemovrow	tmm1, zmm31, edx
+0x62,0x92,0xed,0x48,0x4a,0xcf
+
+## TILEMOVROW read - tile row into a ZMM (EVEX.W0, same opcode as write)
+
+# ATT:   tilemovrow	$0, %tmm0, %zmm0
+# INTEL: tilemovrow	zmm0, tmm0, 0
+0x62,0xf3,0x7d,0x48,0x07,0xc0,0x00
+
+# ATT:   tilemovrow	$3, %tmm1, %zmm2
+# INTEL: tilemovrow	zmm2, tmm1, 3
+0x62,0xf3,0x7d,0x48,0x07,0xd1,0x03
+
+# ATT:   tilemovrow	$15, %tmm7, %zmm31
+# INTEL: tilemovrow	zmm31, tmm7, 15
+0x62,0x63,0x7d,0x48,0x07,0xff,0x0f
+
+# ATT:   tilemovrow	%edx, %tmm2, %zmm3
+# INTEL: tilemovrow	zmm3, tmm2, edx
+0x62,0xf2,0x6d,0x48,0x4a,0xda
+
+# ATT:   tilemovrow	%r14d, %tmm7, %zmm31
+# INTEL: tilemovrow	zmm31, tmm7, r14d
+0x62,0x62,0x0d,0x48,0x4a,0xff
+
+## TOP2BF16PS - rank-2 BF16 outer product
+
+# ATT:   top2bf16ps	%zmm3, %zmm2, %tmm1
+# INTEL: top2bf16ps	tmm1, zmm2, zmm3
+0x62,0xf2,0x66,0x48,0x5c,0xca
+
+# ATT:   top2bf16ps	%zmm31, %zmm30, %tmm7
+# INTEL: top2bf16ps	tmm7, zmm30, zmm31
+0x62,0x92,0x06,0x40,0x5c,0xfe
+
+## TOP4 - rank-4 INT8 outer products
+
+# ATT:   top4buud	%zmm3, %zmm2, %tmm1
+# INTEL: top4buud	tmm1, zmm2, zmm3
+0x62,0xf2,0x64,0x48,0x5e,0xca
+
+# ATT:   top4buud	%zmm31, %zmm30, %tmm7
+# INTEL: top4buud	tmm7, zmm30, zmm31
+0x62,0x92,0x04,0x40,0x5e,0xfe
+
+# ATT:   top4busd	%zmm3, %zmm2, %tmm1
+# INTEL: top4busd	tmm1, zmm2, zmm3
+0x62,0xf2,0x65,0x48,0x5e,0xca
+
+# ATT:   top4busd	%zmm31, %zmm30, %tmm7
+# INTEL: top4busd	tmm7, zmm30, zmm31
+0x62,0x92,0x05,0x40,0x5e,0xfe
+
+# ATT:   top4bssd	%zmm3, %zmm2, %tmm1
+# INTEL: top4bssd	tmm1, zmm2, zmm3
+0x62,0xf2,0x67,0x48,0x5e,0xca
+
+# ATT:   top4bssd	%zmm31, %zmm30, %tmm7
+# INTEL: top4bssd	tmm7, zmm30, zmm31
+0x62,0x92,0x07,0x40,0x5e,0xfe
+
+# ATT:   top4bsud	%zmm3, %zmm2, %tmm1
+# INTEL: top4bsud	tmm1, zmm2, zmm3
+0x62,0xf2,0x66,0x48,0x5e,0xca
+
+# ATT:   top4bsud	%zmm31, %zmm30, %tmm7
+# INTEL: top4bsud	tmm7, zmm30, zmm31
+0x62,0x92,0x06,0x40,0x5e,0xfe
+
+## TOP4MX - rank-4 MX outer products, BSR scaling mode in imm8
+
+# ATT:   top4mxbf8ps	$0, %zmm0, %zmm0, %tmm0
+# INTEL: top4mxbf8ps	tmm0, zmm0, zmm0, 0
+0x62,0xf3,0x7c,0x48,0x8d,0xc0,0x00
+
+# ATT:   top4mxbf8ps	$7, %zmm3, %zmm2, %tmm1
+# INTEL: top4mxbf8ps	tmm1, zmm2, zmm3, 7
+0x62,0xf3,0x64,0x48,0x8d,0xca,0x07
+
+# ATT:   top4mxhf8ps	$7, %zmm3, %zmm2, %tmm1
+# INTEL: top4mxhf8ps	tmm1, zmm2, zmm3, 7
+0x62,0xf3,0x65,0x48,0x8d,0xca,0x07
+
+# ATT:   top4mxbhf8ps	$3, %zmm5, %zmm4, %tmm2
+# INTEL: top4mxbhf8ps	tmm2, zmm4, zmm5, 3
+0x62,0xf3,0x57,0x48,0x8d,0xd4,0x03
+
+# ATT:   top4mxhbf8ps	$1, %zmm7, %zmm6, %tmm3
+# INTEL: top4mxhbf8ps	tmm3, zmm6, zmm7, 1
+0x62,0xf3,0x46,0x48,0x8d,0xde,0x01
+
+# ATT:   top4mxbssps	$15, %zmm9, %zmm8, %tmm4
+# INTEL: top4mxbssps	tmm4, zmm8, zmm9, 15
+0x62,0xd3,0x37,0x48,0x8f,0xe0,0x0f
+
+# ATT:   top4mxbssps	$255, %zmm31, %zmm30, %tmm7
+# INTEL: top4mxbssps	tmm7, zmm30, zmm31, 255
+0x62,0x93,0x07,0x40,0x8f,0xfe,0xff

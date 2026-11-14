@@ -42,6 +42,7 @@ public:
 private:
   // context
   MachineFunction *MF = nullptr;
+  const X86Subtarget *ST = nullptr;
   const TargetInstrInfo *TII = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
@@ -131,6 +132,13 @@ bool X86FastTileConfigImpl::configBasicBlock(MachineBasicBlock &MBB) {
     } else { // PLDTILECFGV
       // Rewrite the shape information to memory. Stack slot should have
       // been initialized to zero in pre config.
+      // ACE Palette 2 uses fixed tile dimensions (16x64), so skip writing
+      // shapes - bytes 1-63 must remain zero for ACE.
+      if (ST->hasACEV1()) {
+        ShapeInfos.clear();
+        Change = true;
+        continue;
+      }
       int SS = MI.getOperand(0).getIndex(); // tile config stack slot.
       for (auto &ShapeInfo : ShapeInfos) {
         DebugLoc DL;
@@ -176,15 +184,16 @@ bool X86FastTileConfigImpl::configBasicBlock(MachineBasicBlock &MBB) {
 
 bool X86FastTileConfigImpl::runOnMachineFunction(MachineFunction &MFunc) {
   X86FI = MFunc.getInfo<X86MachineFunctionInfo>();
-  // Early exit in the common case of non-AMX code.
-  if (X86FI->getAMXProgModel() != AMXProgModelEnum::ManagedRA)
+  // Early exit in the common case of non-AMX/ACE code.
+  if (X86FI->getAMXProgModel() != AMXProgModelEnum::ManagedRA &&
+      X86FI->getACEProgModel() != ACEProgModelEnum::ACE_ManagedRA)
     return false;
 
   MF = &MFunc;
   MRI = &MFunc.getRegInfo();
-  const TargetSubtargetInfo *ST = &MFunc.getSubtarget<X86Subtarget>();
+  ST = &MFunc.getSubtarget<X86Subtarget>();
   TRI = ST->getRegisterInfo();
-  TII = MFunc.getSubtarget().getInstrInfo();
+  TII = ST->getInstrInfo();
   bool Change = false;
 
   // Loop over all of the basic blocks, eliminating virtual register references
