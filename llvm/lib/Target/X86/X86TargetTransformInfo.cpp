@@ -5151,6 +5151,29 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       }
     }
     break;
+  case Intrinsic::fptosi_sat:
+  case Intrinsic::fptoui_sat: {
+    // The custom vXi32 lowering is unreachable for sources legalized to fewer
+    // lanes than v4i32 (vXf64 on SSE), the type legalizer unrolls those.
+    auto *VTy = dyn_cast<FixedVectorType>(RetTy);
+    if (!VTy || ICA.getArgTypes().empty())
+      break;
+    Type *SrcTy = ICA.getArgTypes()[0];
+    MVT SrcLTVT = getTypeLegalizationCost(SrcTy).second;
+    if (getTypeLegalizationCost(RetTy).second.getScalarType() != MVT::i32 ||
+        (SrcLTVT.isVector() && SrcLTVT.getVectorNumElements() >= 4))
+      break;
+    unsigned NumElts = VTy->getNumElements();
+    IntrinsicCostAttributes ScalarAttrs(IID, VTy->getElementType(),
+                                        {SrcTy->getScalarType()});
+    return NumElts * getIntrinsicInstrCost(ScalarAttrs, CostKind) +
+           getScalarizationOverhead(
+               cast<VectorType>(SrcTy), APInt::getAllOnes(NumElts),
+               /*Insert=*/false, /*Extract=*/true, CostKind) +
+           getScalarizationOverhead(VTy, APInt::getAllOnes(NumElts),
+                                    /*Insert=*/true, /*Extract=*/false,
+                                    CostKind);
+  }
   case Intrinsic::lrint:
   case Intrinsic::llrint: {
     // X86 can use the CVTP2SI instructions to lower lrint/llrint calls, which
