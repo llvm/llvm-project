@@ -534,6 +534,7 @@ set(files
   __iterator/projected.h
   __iterator/ranges_iterator_traits.h
   __iterator/readable_traits.h
+  __iterator/repeat_iterator.h
   __iterator/reverse_access.h
   __iterator/reverse_iterator.h
   __iterator/segmented_iterator.h

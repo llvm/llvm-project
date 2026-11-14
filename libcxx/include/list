@@ -213,6 +213,7 @@ template <class T, class Allocator, class Predicate>
 #  include <__iterator/move_iterator.h>
 #  include <__iterator/next.h>
 #  include <__iterator/prev.h>
+#  include <__iterator/repeat_iterator.h>
 #  include <__iterator/reverse_iterator.h>
 #  include <__memory/addressof.h>
 #  include <__memory/allocation_guard.h>
@@ -900,7 +901,9 @@ public:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, const value_type& __x);
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI iterator
-  insert(const_iterator __p, size_type __n, const value_type& __x);
+  insert(const_iterator __p, size_type __n, const value_type& __x) {
+    return insert(__p, __repeat_iterator<const value_type>(__x, __n), __repeat_iterator<const value_type>(__x, 0));
+  }
 
   template <class _InpIter, __enable_if_t<__has_input_iterator_category<_InpIter>::value, int> = 0>
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, _InpIter __f, _InpIter __l);
@@ -1223,36 +1226,6 @@ list<_Tp, _Alloc>::insert(const_iterator __p, const value_type& __x) {
   __link_nodes(__p.__ptr_, __node->__as_link(), __node->__as_link());
   ++this->__size_;
   return iterator(__node->__as_link());
-}
-
-template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 typename list<_Tp, _Alloc>::iterator
-list<_Tp, _Alloc>::insert(const_iterator __p, size_type __n, const value_type& __x) {
-  iterator __r(__p.__ptr_);
-  if (__n > 0) {
-    size_type __ds        = 0;
-    __node_pointer __node = this->__create_node(/* prev = */ nullptr, /* next = */ nullptr, __x);
-    ++__ds;
-    __r          = iterator(__node->__as_link());
-    iterator __e = __r;
-    auto __guard = std::__make_exception_guard([&] {
-      while (true) {
-        __base_pointer __prev    = __e.__ptr_->__prev_;
-        __node_pointer __current = __e.__ptr_->__as_node();
-        this->__delete_node(__current);
-        if (__prev == 0)
-          break;
-        __e = iterator(__prev);
-      }
-    });
-    for (--__n; __n != 0; --__n, (void)++__e, ++__ds) {
-      __e.__ptr_->__next_ = this->__create_node(/* prev = */ __e.__ptr_, /* next = */ nullptr, __x)->__as_link();
-    }
-    __guard.__complete();
-    __link_nodes(__p.__ptr_, __r.__ptr_, __e.__ptr_);
-    this->__size_ += __ds;
-  }
-  return __r;
 }
 
 template <class _Tp, class _Alloc>
