@@ -905,6 +905,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed conversion from `float` to `bool` in `__builtin_convertvector`. (#GH228649)
 - Fixed `-print-dependency-directives-minimized-source` output for object-like macros starting with '(' so that it is not incorrectly turned into a function-like macro.
 - Fixed an exponential time-increase bug when collecting argument dependent lookup candidates when the same type is used several times at each level.
+- Fixed a spurious `-Wmissing-variable-declarations` warning and an assertion
+  failure when the linkage of an `auto` variable initialized with a lambda was
+  computed before its type was deduced. (#GH22203, #GH200597)
 
 #### Bug Fixes to Compiler Builtins
 

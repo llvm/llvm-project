@@ -1905,6 +1905,10 @@ private:
                     dyn_cast<NamedDecl>(&adjustDeclToTemplate(*DeclToLookup))) {
               DeclToLookup = Adjusted;
             }
+            // Computing USR caches linkage, which may change after code
+            // completion.
+            if (hasUnstableLinkage(DeclToLookup))
+              continue;
             auto ID = clangd::getSymbolID(DeclToLookup);
             if (!ID)
               continue;

@@ -7137,8 +7137,16 @@ isOutOfScopePreviousDeclaration(NamedDecl *PrevDecl, DeclContext *DC,
   if (!PrevDecl)
     return false;
 
-  if (!PrevDecl->hasLinkage())
+  // Don't compute (and cache) the linkage of a variable whose type is not
+  // deduced yet, since deduction may change it. Whether the variable has
+  // linkage at all doesn't depend on its type.
+  if (const auto *VD = dyn_cast<VarDecl>(PrevDecl);
+      VD && VD->getType()->isUndeducedType()) {
+    if (getFormalLinkage(VD->getLinkageIgnoringType()) == Linkage::None)
+      return false;
+  } else if (!PrevDecl->hasLinkage()) {
     return false;
+  }
 
   if (Context.getLangOpts().CPlusPlus) {
     // C++ [basic.link]p6:

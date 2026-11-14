@@ -1260,6 +1260,14 @@ public:
   /// Determines whether this variable is a variable with external, C linkage.
   bool isExternC() const;
 
+  /// Compute the linkage of this variable without considering its type, and
+  /// without caching the result. This may only be used while the type of a
+  /// variable declared with a deduced type is still undeduced, where
+  /// getLinkageInternal() would cache a linkage that deduction can change.
+  /// The deduced type may lower the linkage, but cannot give a variable that
+  /// has no linkage any linkage.
+  Linkage getLinkageIgnoringType() const;
+
   /// Determines whether this variable's context is, or is nested within,
   /// a C++ extern "C" linkage spec.
   bool isInExternCContext() const;
