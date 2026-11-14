@@ -23,8 +23,7 @@
 ! RUN:   -fopenmp-is-target-device %t/no-offload.f90 -o - | \
 ! RUN:   FileCheck %t/no-offload.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 \
-! RUN:   -fopenmp-targets=amdgcn-amd-amdhsa %t/self.f90 -o - | \
-! RUN:   FileCheck %t/self.f90
+! RUN:   %t/self.f90 -o - | FileCheck %t/self.f90
 
 !--- maps.f90
 subroutine declare_mapper_mapper_references()

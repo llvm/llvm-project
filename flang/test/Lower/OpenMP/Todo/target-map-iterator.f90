@@ -88,8 +88,9 @@ subroutine target_enter_data_component_iterator_mapper()
 end subroutine
 
 !--- recursive-iterated.f90
-! The implicit mapper for holder, generated inside the mapper of inner, would
-! not use the mapper of inner for holder%in.
+! The iterated component is allocatable, which the mapper emitted in host
+! offload compilation does not support yet; this is diagnosed before the
+! implicit mapper for holder is considered.
 subroutine recursive_iterated_component()
   type :: inner
     integer :: a(2)
@@ -99,7 +100,7 @@ subroutine recursive_iterated_component()
     type(inner), allocatable :: in
   end type
 
-  ! CHECK: not yet implemented: implicit default mapper for a type with a component whose default mapper has an iterator modifier
+  ! CHECK: not yet implemented: iterator modifier with ALLOCATABLE or POINTER component in declare mapper
   !$omp declare mapper(inner :: v) map(iterator(i = 1:2), to: v%h(i))
 end subroutine
 

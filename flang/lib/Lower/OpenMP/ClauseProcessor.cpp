@@ -2141,6 +2141,23 @@ void ClauseProcessor::processMapObjectsWithIterator(
       if (const auto *symbol{object.sym()};
           symbol && semantics::IsOptional(*symbol))
         TODO(clauseLocation, "iterator modifier with optional locator");
+      // The mapper function is only emitted in host offload compilation; its
+      // per-iteration map entry carries the element's data address only.
+      if (declareMapper && isHostOffloadCompilation(converter.getModuleOp())) {
+        // An ALLOCATABLE or POINTER anywhere on the component path also needs
+        // the descriptor mapped and an attach entry for its base address.
+        if (isMemberOrParentAllocatableOrPointer(object, semaCtx))
+          TODO(clauseLocation, "iterator modifier with ALLOCATABLE or POINTER "
+                               "component in declare mapper");
+        // Element offsets of CHARACTER arrays are computed in bytes without
+        // the character length, so the elements would map at the wrong
+        // addresses.
+        if (const auto *symbol{object.sym()};
+            symbol && symbol->GetType() &&
+            symbol->GetType()->category() == semantics::DeclTypeSpec::Character)
+          TODO(clauseLocation,
+               "iterator modifier with CHARACTER component in declare mapper");
+      }
       result.mapIterated.push_back(buildIteratedMapEntry(
           converter, semaCtx, clauseLocation, objectRanges, object,
           *analysis.arrayRef, mapperIdNameRef, mapTypeBits, directive));

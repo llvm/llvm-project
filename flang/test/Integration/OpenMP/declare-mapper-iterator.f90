@@ -27,6 +27,10 @@ subroutine f(arg)
 end
 
 ! CHECK-LABEL: define internal void @.omp_mapper._QQFfm
+! The iterator variable's storage is hoisted out of the per-element loop.
+! CHECK-NEXT: entry:
+! CHECK-NEXT: alloca i32
+! CHECK-NOT: alloca
 ! Storage-only parent for the whole variable, then each element MEMBER_OF it.
 ! CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %omp.arraymap.ptrcurrent, ptr %omp.arraymap.ptrcurrent, i64 40, i64 %{{.*}}, ptr @{{.*}})
 ! CHECK: omp_mapper.iterator.cond:

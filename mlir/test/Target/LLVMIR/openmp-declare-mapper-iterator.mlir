@@ -167,3 +167,56 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK: %[[CCNT1:.*]] = mul i64 1, %[[CCNT]]
 // CHECK: %[[CSIZE:.*]] = mul i64 %[[CCNT1]], 4
 // CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %[[C]], ptr %[[CELEM]], i64 %[[CSIZE]], i64 %{{.*}}, ptr null)
+
+// -----
+
+// When the mapper maps other members of the variable but not the variable
+// itself, the synthesized storage parent for the iterated elements must be
+// the first component: the runtime maps components in order and rejects a
+// later one that extends an earlier mapping. The static members' MEMBER_OF
+// then refers to their own (partial) parent at index 1, and the iterated
+// elements' MEMBER_OF to the storage parent at index 0.
+
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  omp.declare_mapper @mapper_members_and_iterator : !llvm.struct<"s3", (i32, array<4 x i32>, i32)> {
+  ^bb0(%arg: !llvm.ptr):
+    %c0 = llvm.mlir.constant(0 : i64) : i64
+    %c1 = llvm.mlir.constant(1 : i64) : i64
+    %c3 = llvm.mlir.constant(3 : i64) : i64
+    %tag = llvm.getelementptr %arg[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"s3", (i32, array<4 x i32>, i32)>
+    %b = llvm.getelementptr %arg[0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"s3", (i32, array<4 x i32>, i32)>
+    %mtag = omp.map.info var_ptr(%tag : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
+    %mb = omp.map.info var_ptr(%b : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
+    %parent = omp.map.info var_ptr(%arg : !llvm.ptr, !llvm.struct<"s3", (i32, array<4 x i32>, i32)>) map_clauses(storage) capture(ByRef) members(%mtag, %mb : [0], [2] : !llvm.ptr, !llvm.ptr) name("") partial_map(true) -> !llvm.ptr
+    %it = omp.iterator(%iv: i64) = (%c0 to %c3 step %c1) {
+      %field = llvm.getelementptr %arg[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"s3", (i32, array<4 x i32>, i32)>
+      %bounds = omp.map.bounds lower_bound(%iv : i64) upper_bound(%iv : i64) extent(%c3 : i64) stride(%c1 : i64) start_idx(%c0 : i64)
+      %m = omp.map.info var_ptr(%field : !llvm.ptr, !llvm.array<4 x i32>) map_clauses(tofrom) capture(ByRef) bounds(%bounds) name("") -> !llvm.ptr
+      omp.yield(%m : !llvm.ptr)
+    } inclusive -> !omp.iterated<!llvm.ptr>
+    omp.declare_mapper.info map_entries(%parent, %mtag, %mb : !llvm.ptr, !llvm.ptr, !llvm.ptr) map_iterated(%it : !omp.iterated<!llvm.ptr>)
+  }
+
+  llvm.func @target_data_members_and_iterator(%addr : !llvm.ptr) {
+    %map = omp.map.info var_ptr(%addr : !llvm.ptr, !llvm.struct<"s3", (i32, array<4 x i32>, i32)>) map_clauses(tofrom) capture(ByRef) mapper(@mapper_members_and_iterator) name("") -> !llvm.ptr
+    omp.target_data map_entries(%map : !llvm.ptr) {}
+    llvm.return
+  }
+}
+
+// CHECK-LABEL: define internal void @.omp_mapper.mapper_members_and_iterator
+// CHECK: %[[NUM3:.*]] = call i64 @__tgt_mapper_num_components(ptr %{{.*}})
+// CHECK: %[[SHIFTED3:.*]] = shl i64 %[[NUM3]], 48
+// Storage parent first (whole 24-byte struct) ...
+// CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %omp.arraymap.ptrcurrent, ptr %omp.arraymap.ptrcurrent, i64 24, i64 %{{.*}}, ptr @{{.*}})
+// ... then the static members' partial parent (base = struct, begin = first member) ...
+// CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %omp.arraymap.ptrcurrent, ptr %[[TAG:.*]], i64 %{{.*}}, i64 %{{.*}}, ptr @{{.*}})
+// ... the static members with MEMBER_OF(2) = 2 << 48 | TOFROM ...
+// CHECK: add nuw i64 562949953421315, %[[SHIFTED3]]
+// CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %[[TAG]], ptr %[[TAG]], i64 4, i64 %{{.*}}, ptr @{{.*}})
+// CHECK: add nuw i64 562949953421315, %[[SHIFTED3]]
+// CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, i64 4, i64 %{{.*}}, ptr @{{.*}})
+// ... and the iterated elements with MEMBER_OF(1) = 1 << 48 | TOFROM.
+// CHECK: omp_mapper.iterator.body:
+// CHECK: add nuw i64 281474976710659, %[[SHIFTED3]]
+// CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, ptr null)

@@ -678,12 +678,12 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     for (Value iterVal : op.getMapIterated()) {
       auto itersOp = iterVal.getDefiningOp<omp::IteratorOp>();
       bool supported = itersOp && itersOp.getLoopLowerBounds().size() == 1;
-      omp::MapInfoOp mapInfoOp;
       if (supported) {
         omp::YieldOp yieldOp = itersOp.getYieldOp();
         supported = yieldOp && yieldOp.getResults().size() == 1;
         if (supported) {
-          mapInfoOp = yieldOp.getResults()[0].getDefiningOp<omp::MapInfoOp>();
+          auto mapInfoOp =
+              yieldOp.getResults()[0].getDefiningOp<omp::MapInfoOp>();
           supported =
               mapInfoOp && !mapInfoOp.getVarPtrPtr() &&
               mapInfoOp.getMembers().empty() &&
@@ -693,18 +693,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       if (!supported) {
         result = todo("map/motion clause with iterator modifier");
         return;
-      }
-      // Bounds with a byte stride come from a descriptor, i.e. the locator is
-      // an element of an ALLOCATABLE or POINTER component. Mapping it needs
-      // the descriptor and an attach entry for the component's base address,
-      // which the per-iteration map.info does not carry.
-      for (Value bound : mapInfoOp.getBounds()) {
-        auto boundOp = bound.getDefiningOp<omp::MapBoundsOp>();
-        if (boundOp && boundOp.getStrideInBytes()) {
-          result = todo("iterator modifier with ALLOCATABLE or POINTER "
-                        "component in declare mapper");
-          return;
-        }
       }
     }
   };
@@ -8803,6 +8791,23 @@ getOrCreateUserDefinedMapperFunc(Operation *op, llvm::IRBuilderBase &builder,
                                mapperFuncName, targetDirective);
 }
 
+/// The mapper body (and any iterator regions in it) is emitted inside the
+/// mapper's per-element loop, so temporaries Flang allocates in the mapper
+/// region (e.g. the storage for an iterator variable) would be allocated once
+/// per element and grow the stack with every iteration. Move constant-size
+/// allocas to the function's entry block, where a frontend would place them.
+static void hoistMapperAllocasToEntry(llvm::Function &mapperFn) {
+  llvm::BasicBlock &entry = mapperFn.getEntryBlock();
+  llvm::SmallVector<llvm::AllocaInst *> toHoist;
+  for (llvm::BasicBlock &bb : llvm::drop_begin(mapperFn))
+    for (llvm::Instruction &inst : bb)
+      if (auto *alloca = dyn_cast<llvm::AllocaInst>(&inst))
+        if (isa<llvm::ConstantInt>(alloca->getArraySize()))
+          toHoist.push_back(alloca);
+  for (llvm::AllocaInst *alloca : toHoist)
+    alloca->moveBefore(entry.getFirstNonPHIOrAlloca());
+}
+
 static llvm::Expected<llvm::Function *>
 emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
                       LLVM::ModuleTranslation &moduleTranslation,
@@ -8838,8 +8843,6 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
     MapInfoData mapData;
     collectMapDataFromMapOperands(mapData, mapVars, moduleTranslation, dl,
                                   builder);
-    genMapInfos(builder, moduleTranslation, dl, combinedInfo, mapData,
-                targetDirective);
 
     // Components produced by an `iterator` modifier on the mapper's own map
     // clause: their count is only known at runtime, so they are recorded as
@@ -8856,20 +8859,20 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
     // via MEMBER_OF, so the runtime treats them as sub-ranges of one
     // allocation rather than independent objects. If the mapper also maps the
     // variable itself that component is reused; otherwise a storage-only
-    // parent covering the variable is synthesized.
-    llvm::omp::OpenMPOffloadMappingFlags iteratedMemberOf =
-        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
-    if (!declMapperInfoOp.getMapIterated().empty()) {
-      std::optional<unsigned> parentIdx;
-      for (unsigned i = 0; i < combinedInfo.BasePointers.size(); ++i) {
-        if (combinedInfo.BasePointers[i] == ptrPHI &&
-            combinedInfo.Pointers[i] == ptrPHI) {
-          parentIdx = i;
-          break;
-        }
-      }
-      if (!parentIdx) {
-        parentIdx = combinedInfo.BasePointers.size();
+    // parent covering the variable is synthesized. The parent must precede
+    // every other component: the runtime maps components in order and rejects
+    // a later one that extends an earlier mapping (e.g. members of the
+    // variable mapped before the whole variable).
+    bool hasIterated = !declMapperInfoOp.getMapIterated().empty();
+    std::optional<unsigned> iteratedParentIdx;
+    if (hasIterated) {
+      bool mapsWholeVariable = llvm::any_of(mapVars, [&](Value mapVar) {
+        auto mapOp = cast<omp::MapInfoOp>(mapVar.getDefiningOp());
+        return mapOp.getVarPtr() == declMapperOp.getSymVal() &&
+               !mapOp.getPartialMap() && mapOp.getBounds().empty();
+      });
+      if (!mapsWholeVariable) {
+        iteratedParentIdx = 0;
         combinedInfo.BasePointers.push_back(ptrPHI);
         combinedInfo.Pointers.push_back(ptrPHI);
         combinedInfo.Sizes.push_back(
@@ -8883,7 +8886,27 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
         combinedInfo.Names.push_back(LLVM::createMappingInformation(
             declMapperOp.getLoc(), *ompBuilder, declMapperOp.getSymName()));
       }
-      iteratedMemberOf = ompBuilder->getMemberOfFlag(*parentIdx);
+    }
+
+    genMapInfos(builder, moduleTranslation, dl, combinedInfo, mapData,
+                targetDirective);
+
+    llvm::omp::OpenMPOffloadMappingFlags iteratedMemberOf =
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+    if (hasIterated) {
+      if (!iteratedParentIdx) {
+        // The whole-variable component emitted for the static map clauses.
+        for (unsigned i = 0; i < combinedInfo.BasePointers.size(); ++i) {
+          if (combinedInfo.BasePointers[i] == ptrPHI &&
+              combinedInfo.Pointers[i] == ptrPHI) {
+            iteratedParentIdx = i;
+            break;
+          }
+        }
+      }
+      assert(iteratedParentIdx && "no parent component for iterated entries");
+      if (iteratedParentIdx)
+        iteratedMemberOf = ompBuilder->getMemberOfFlag(*iteratedParentIdx);
     }
 
     for (mlir::Value iterVal : declMapperInfoOp.getMapIterated()) {
@@ -9005,6 +9028,7 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
   moduleTranslation.forgetMapping(declMapperOp.getRegion());
   if (!newFn)
     return newFn.takeError();
+  hoistMapperAllocasToEntry(**newFn);
   if ([[maybe_unused]] llvm::Function *mappedFunc =
           moduleTranslation.lookupFunction(mapperFuncName)) {
     assert(mappedFunc == *newFn &&
