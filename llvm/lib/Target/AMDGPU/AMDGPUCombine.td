@@ -76,6 +76,21 @@ def fdiv_by_sqrt_to_rsq_f16 : GICombineRule<
          [{ return matchFDivSqrtToRsqF16(*${root}); }]),
   (apply [{ applyFDivSqrtToRsqF16(*${root}, ${x}.getReg()); }])>;
 
+// Intrinsics that read only some bits of an operand can share this rule.
+// Add patterns here and operand demands in the target demanded-bits hook.
+// The matcher starts analysis with all result bits demanded.
+def intrinsic_demanded_bits_frags : GICombinePatFrag<
+  (outs root:$dst), (ins),
+  !foreach(op, [int_amdgcn_cvt_pk_fp8_f32, int_amdgcn_cvt_pk_bf8_f32,
+                int_amdgcn_cvt_pk_fp8_f32_e5m3],
+           (pattern (op $dst, $src0, $src1, $vdst_in, $sel)))>;
+
+def intrinsic_demanded_bits : GICombineRule<
+  (defs root:$dst, build_fn_matchinfo:$matchinfo),
+  (match (intrinsic_demanded_bits_frags $dst):$root,
+         [{ return matchIntrinsicDemandedBits(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
+
 def cvt_f32_ubyteN_matchdata : GIDefMatchData<"CvtF32UByteMatchInfo">;
 
 def cvt_f32_ubyteN_frags : GICombinePatFrag<
@@ -389,7 +404,8 @@ def AMDGPUPostLegalizerCombiner: GICombiner<
    fold_fabs_fptrunc, rcp_sqrt_to_rsq, fdiv_by_sqrt_to_rsq_f16,
    sign_extension_in_reg, smulu64, trunc_lshr16_to_unmerge,
    binop_s64_with_s32_mask_combines, combine_or_s64_s32,
-   fold_carry_into_addsub_combines, simplify_demanded_bits]> {
+   fold_carry_into_addsub_combines, simplify_demanded_bits,
+   intrinsic_demanded_bits]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 

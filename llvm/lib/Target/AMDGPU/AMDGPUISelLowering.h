@@ -305,6 +305,12 @@ public:
                                          TargetLoweringOpt &TLO,
                                          unsigned Depth) const override;
 
+  bool simplifyDemandedBitsForTargetInstr(const CombinerHelper &Helper,
+                                          MachineInstr &MI,
+                                          const APInt &DemandedBits,
+                                          KnownBits &Known, unsigned Depth,
+                                          bool DoRewrite) const override;
+
   void ReplaceNodeResults(SDNode * N,
                           SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;

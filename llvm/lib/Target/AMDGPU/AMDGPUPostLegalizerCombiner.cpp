@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
@@ -82,6 +83,8 @@ public:
 
   bool matchFDivSqrtToRsqF16(MachineInstr &MI) const;
   void applyFDivSqrtToRsqF16(MachineInstr &MI, const Register &X) const;
+
+  bool matchIntrinsicDemandedBits(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
   // FIXME: Should be able to have 2 separate matchdatas rather than custom
   // struct boilerplate.
@@ -271,6 +274,26 @@ void AMDGPUPostLegalizerCombinerImpl::applyFDivSqrtToRsqF16(
                      .getReg(0);
   B.buildFMul(Dst, RSQ, Y, Flags);
   MI.eraseFromParent();
+}
+
+// Start with all result bits demanded and let the target hook determine the
+// operand demands. The TableGen pattern selects the supported intrinsics.
+bool AMDGPUPostLegalizerCombinerImpl::matchIntrinsicDemandedBits(
+    MachineInstr &MI, BuildFnTy &MatchInfo) const {
+  unsigned BitWidth =
+      MRI.getType(MI.getOperand(0).getReg()).getScalarSizeInBits();
+  APInt Demanded = APInt::getAllOnes(BitWidth);
+  KnownBits Known(BitWidth);
+  if (!Helper.getTargetLowering().simplifyDemandedBitsForTargetInstr(
+          Helper, MI, Demanded, Known, /*Depth=*/0, /*DoRewrite=*/false))
+    return false;
+
+  MatchInfo = [this, &MI, Demanded](MachineIRBuilder &) {
+    KnownBits K(Demanded.getBitWidth());
+    Helper.getTargetLowering().simplifyDemandedBitsForTargetInstr(
+        Helper, MI, Demanded, K, /*Depth=*/0, /*DoRewrite=*/true);
+  };
+  return true;
 }
 
 bool AMDGPUPostLegalizerCombinerImpl::matchCvtF32UByteN(

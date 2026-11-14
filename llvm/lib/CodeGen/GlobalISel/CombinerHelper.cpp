@@ -8944,17 +8944,27 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
     }
     return Changed;
   }
-  default:
-    return GiveUp();
+  default: {
+    // Let the target describe the operands its own instructions demand.
+    if (!getTargetLowering().simplifyDemandedBitsForTargetInstr(
+            *this, *DefMI, Demanded, Known, Depth, DoRewrite))
+      return GiveUp();
+    // The hook only guarantees facts about the demanded bits.
+    Known.Zero &= Demanded;
+    Known.One &= Demanded;
+    DropPoisonFlags();
+    InvalidateDebugUses(Demanded);
+    return true;
+  }
   }
 }
 
 bool CombinerHelper::simplifyDemandedBits(MachineInstr &MI, unsigned OpNo,
                                           const APInt &DemandedBits,
-                                          KnownBits &Known,
-                                          unsigned Depth) const {
+                                          KnownBits &Known, unsigned Depth,
+                                          bool DoRewrite) const {
   return simplifyDemandedBitsImpl(MI, OpNo, DemandedBits, Known, Depth,
-                                  /*DoRewrite=*/true);
+                                  DoRewrite);
 }
 
 bool CombinerHelper::matchSimplifyDemandedBits(MachineInstr &MI,
