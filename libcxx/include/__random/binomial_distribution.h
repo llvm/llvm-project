@@ -102,7 +102,8 @@ public:
 template <class _IntType>
 binomial_distribution<_IntType>::param_type::param_type(result_type __t, double __p) : __t_(__t), __p_(__p) {
   if (0 < __p_ && __p_ < 1) {
-    __r0_ = static_cast<result_type>((__t_ + 1) * __p_);
+    // Use floating-point arithmetic, __t_ + 1 overflows when __t_ is the largest value of result_type.
+    __r0_ = static_cast<result_type>((__t_ + 1.) * __p_);
     __pr_ = __math::exp(
         __math::__lgamma_r(__t_ + 1.) - __math::__lgamma_r(__r0_ + 1.) - __math::__lgamma_r(__t_ - __r0_ + 1.) +
         __r0_ * __math::log(__p_) + (__t_ - __r0_) * __math::log(1 - __p_));
@@ -139,8 +140,9 @@ _IntType binomial_distribution<_IntType>::operator()(_URNG& __g, const param_typ
     }
     if (__rd != 0)
       --__rd;
-    ++__ru;
-    if (__ru <= __pr.__t_) {
+    // Don't increment __ru past __t_, it overflows when __t_ is the largest value of result_type.
+    if (__ru < __pr.__t_) {
+      ++__ru;
       __pu *= (__pr.__t_ - __ru + 1) * __pr.__odds_ratio_ / __ru;
       __u -= __pu;
       __break = false;

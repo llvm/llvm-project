@@ -21,6 +21,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <numeric>
 #include <random>
 #include <type_traits>
@@ -506,6 +507,35 @@ void test11() {
     (void)kurtosis; (void)x_kurtosis;
 }
 
+// Test t == numeric_limits<T>::max(), computing t + 1 or incrementing a
+// value past t used to overflow. Larger types are not tested, the run time of
+// the algorithm grows with the standard deviation of the distribution.
+template <class T>
+void test12() {
+  if (sizeof(T) > sizeof(int))
+    return;
+  const int N = 10000;
+  std::mt19937 g;
+  const T t      = std::numeric_limits<T>::max();
+  const double p = 0.9999;
+  std::binomial_distribution<T> d(t, p);
+  std::vector<double> u;
+  for (int i = 0; i < N; ++i) {
+    T v = d(g);
+    assert(0 <= v && v <= t);
+    u.push_back(static_cast<double>(v));
+  }
+  double mean = std::accumulate(u.begin(), u.end(), 0.0) / u.size();
+  double var  = 0;
+  for (std::size_t i = 0; i < u.size(); ++i)
+    var += sqr(u[i] - mean);
+  var /= u.size();
+  double x_mean = d.t() * d.p();
+  double x_var  = x_mean * (1 - d.p());
+  assert(std::abs((mean - x_mean) / x_mean) < 0.01);
+  assert(std::abs((var - x_var) / x_var) < 0.1);
+}
+
 template <class T>
 void tests() {
     test1<T>();
@@ -519,6 +549,7 @@ void tests() {
     test9<T>();
     test10<T>();
     test11<T>();
+    test12<T>();
 }
 
 int main(int, char**) {
