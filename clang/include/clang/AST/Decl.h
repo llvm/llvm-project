@@ -3760,7 +3760,7 @@ protected:
   TypedefNameDecl(Kind DK, ASTContext &C, DeclContext *DC,
                   SourceLocation StartLoc, SourceLocation IdLoc,
                   const IdentifierInfo *Id, TypeSourceInfo *TInfo)
-      : TypeDecl(DK, DC, IdLoc, Id, StartLoc), redeclarable_base(C),
+      : TypeDecl(DK, DC, IdLoc, Id, StartLoc), redeclarable_base(C, this),
         MaybeModedTInfo(TInfo, 0) {}
 
   using redeclarable_base = Redeclarable<TypedefNameDecl>;

@@ -3268,8 +3268,8 @@ class NamespaceAliasDecl : public NamespaceBaseDecl,
                      IdentifierInfo *Alias, NestedNameSpecifierLoc QualifierLoc,
                      SourceLocation IdentLoc, NamespaceBaseDecl *Namespace)
       : NamespaceBaseDecl(NamespaceAlias, DC, AliasLoc, Alias),
-        redeclarable_base(C), NamespaceLoc(NamespaceLoc), IdentLoc(IdentLoc),
-        QualifierLoc(QualifierLoc), Namespace(Namespace) {}
+        redeclarable_base(C, this), NamespaceLoc(NamespaceLoc),
+        IdentLoc(IdentLoc), QualifierLoc(QualifierLoc), Namespace(Namespace) {}
 
   void anchor() override;
 

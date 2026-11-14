@@ -1584,7 +1584,7 @@ ObjCInterfaceDecl::ObjCInterfaceDecl(
     const IdentifierInfo *Id, ObjCTypeParamList *typeParamList,
     SourceLocation CLoc, ObjCInterfaceDecl *PrevDecl, bool IsInternal)
     : ObjCContainerDecl(ObjCInterface, DC, Id, CLoc, AtLoc),
-      redeclarable_base(C) {
+      redeclarable_base(C, this) {
   setPreviousDecl(PrevDecl);
 
   // Copy the 'data' pointer over.
@@ -1951,7 +1951,7 @@ ObjCProtocolDecl::ObjCProtocolDecl(ASTContext &C, DeclContext *DC,
                                    SourceLocation atStartLoc,
                                    ObjCProtocolDecl *PrevDecl)
     : ObjCContainerDecl(ObjCProtocol, DC, Id, nameLoc, atStartLoc),
-      redeclarable_base(C) {
+      redeclarable_base(C, this) {
   setPreviousDecl(PrevDecl);
   if (PrevDecl)
     Data = PrevDecl->Data;

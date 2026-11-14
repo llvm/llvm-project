@@ -104,7 +104,7 @@ bool Decl::isOutOfLine() const {
 
 TranslationUnitDecl::TranslationUnitDecl(ASTContext &ctx)
     : Decl(TranslationUnit, nullptr, SourceLocation()),
-      DeclContext(TranslationUnit), redeclarable_base(ctx), Ctx(ctx) {}
+      DeclContext(TranslationUnit), redeclarable_base(ctx, this), Ctx(ctx) {}
 
 //===----------------------------------------------------------------------===//
 // NamedDecl Implementation
@@ -2117,7 +2117,7 @@ VarDecl::VarDecl(Kind DK, ASTContext &C, DeclContext *DC,
                  const IdentifierInfo *Id, QualType T, TypeSourceInfo *TInfo,
                  StorageClass SC)
     : DeclaratorDecl(DK, DC, IdLoc, Id, T, TInfo, StartLoc),
-      redeclarable_base(C) {
+      redeclarable_base(C, this) {
   static_assert(sizeof(VarDeclBitfields) <= sizeof(unsigned),
                 "VarDeclBitfields too large!");
   static_assert(sizeof(ParmVarDeclBitfields) <= sizeof(unsigned),
@@ -3091,7 +3091,7 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
                            const AssociatedConstraint &TrailingRequiresClause)
     : DeclaratorDecl(DK, DC, NameInfo.getLoc(), NameInfo.getName(), T, TInfo,
                      StartLoc),
-      DeclContext(DK), redeclarable_base(C), Body(), ODRHash(0),
+      DeclContext(DK), redeclarable_base(C, this), Body(), ODRHash(0),
       EndRangeLoc(NameInfo.getEndLoc()), DNLoc(NameInfo.getInfo()) {
   assert(T.isNull() || T->isFunctionType());
   FunctionDeclBits.SClass = S;
@@ -5008,7 +5008,8 @@ bool FieldDecl::isUnusedPrivateField() const {
 TagDecl::TagDecl(Kind DK, TagKind TK, const ASTContext &C, DeclContext *DC,
                  SourceLocation L, IdentifierInfo *Id, TagDecl *PrevDecl,
                  SourceLocation StartL)
-    : TypeDecl(DK, DC, L, Id, StartL), DeclContext(DK), redeclarable_base(C),
+    : TypeDecl(DK, DC, L, Id, StartL), DeclContext(DK),
+      redeclarable_base(C, this),
       TypedefNameDeclOrQualifier((TypedefNameDecl *)nullptr) {
   assert((DK != Enum || TK == TagTypeKind::Enum) &&
          "EnumDecl not matched with TagTypeKind::Enum");

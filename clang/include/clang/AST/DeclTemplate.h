@@ -819,7 +819,8 @@ protected:
   RedeclarableTemplateDecl(Kind DK, ASTContext &C, DeclContext *DC,
                            SourceLocation L, DeclarationName Name,
                            TemplateParameterList *Params, NamedDecl *Decl)
-      : TemplateDecl(DK, DC, L, Name, Params, Decl), redeclarable_base(C) {}
+      : TemplateDecl(DK, DC, L, Name, Params, Decl),
+        redeclarable_base(C, this) {}
 
 public:
   friend class ASTDeclReader;
