@@ -1762,6 +1762,10 @@ void StmtPrinter::VisitUnaryExprOrTypeTraitExpr(
     OS << '(';
     Node->getArgumentType().print(OS, Policy);
     OS << ')';
+  } else if (Node->getKind() == UETT_AddrSpaceOf) {
+    OS << '(';
+    PrintExpr(Node->getArgumentExpr());
+    OS << ')';
   } else {
     OS << " ";
     PrintExpr(Node->getArgumentExpr());
