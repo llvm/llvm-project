@@ -1923,31 +1923,47 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
 static Value foldExtractFromShuffle(ExtractOp extractOp) {
   // Dynamic positions are not folded as the resulting code would be more
   // complex than the input code.
-  if (extractOp.hasDynamicPosition())
+  if (extractOp.hasDynamicPosition() || extractOp.getStaticPosition().empty())
     return Value();
 
   auto shuffleOp = extractOp.getSource().getDefiningOp<ShuffleOp>();
   if (!shuffleOp)
     return Value();
 
-  // TODO: 0-D or multi-dimensional vectors not supported yet.
-  if (shuffleOp.getResultVectorType().getRank() != 1)
-    return Value();
-
-  int64_t inputVecSize = shuffleOp.getV1().getType().getShape()[0];
   auto shuffleMask = shuffleOp.getMask();
   int64_t extractIdx = extractOp.getStaticPosition()[0];
-  int64_t shuffleIdx = shuffleMask[extractIdx];
+  if (extractIdx < 0 || extractIdx >= static_cast<int64_t>(shuffleMask.size()))
+    return Value();
 
-  // Find the shuffled vector to extract from based on the shuffle index.
-  if (shuffleIdx < inputVecSize) {
-    extractOp.setOperand(0, shuffleOp.getV1());
-    extractOp.setStaticPosition({shuffleIdx});
-  } else {
-    extractOp.setOperand(0, shuffleOp.getV2());
-    extractOp.setStaticPosition({shuffleIdx - inputVecSize});
+  int64_t shuffleIdx = shuffleMask[extractIdx];
+  if (shuffleIdx == ShuffleOp::kPoisonIndex)
+    return Value();
+
+  if (shuffleOp.getV1VectorType().getRank() == 0) {
+    if (shuffleIdx == 0) {
+      extractOp.setOperand(0, shuffleOp.getV1());
+      extractOp.setStaticPosition({});
+      return extractOp.getResult();
+    }
+    if (shuffleIdx == 1) {
+      extractOp.setOperand(0, shuffleOp.getV2());
+      extractOp.setStaticPosition({});
+      return extractOp.getResult();
+    }
+    return Value();
   }
 
+  int64_t inputVecSize = shuffleOp.getV1VectorType().getDimSize(0);
+  SmallVector<int64_t> newPositions =
+      llvm::to_vector(extractOp.getStaticPosition());
+  if (shuffleIdx < inputVecSize) {
+    extractOp.setOperand(0, shuffleOp.getV1());
+    newPositions[0] = shuffleIdx;
+  } else {
+    extractOp.setOperand(0, shuffleOp.getV2());
+    newPositions[0] = shuffleIdx - inputVecSize;
+  }
+  extractOp.setStaticPosition(newPositions);
   return extractOp.getResult();
 }
 
