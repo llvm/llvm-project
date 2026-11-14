@@ -1499,6 +1499,23 @@ flushDenormalConstantFP(ConstantFP *CFP, const Function *CtxF, bool IsOutput) {
                                IsOutput ? Mode.Output : Mode.Input);
 }
 
+/// Treat a denormal input \p V to the floating-point intrinsic \p Call as zero
+/// if the input denormal mode of the calling function flushes it. Returns
+/// false if the mode is dynamic or unknown, in which case the call should not
+/// be folded.
+static bool flushDenormalInput(APFloat &V, Type *Ty, const CallBase *Call) {
+  if (!V.isDenormal())
+    return true;
+  const Function *CtxF =
+      Call && Call->getParent() ? Call->getFunction() : nullptr;
+  ConstantFP *Flushed =
+      flushDenormalConstant(Ty, V, getInstrDenormalMode(CtxF, Ty).Input);
+  if (!Flushed)
+    return false;
+  V = Flushed->getValueAPF();
+  return true;
+}
+
 Constant *llvm::FlushFPConstant(Constant *Operand, const Function *CtxF,
                                 bool IsOutput) {
   if (ConstantFP *CFP = dyn_cast<ConstantFP>(Operand))
@@ -2752,6 +2769,21 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         !Ty->isIntegerTy() && !Ty->isBFloatTy())
       return nullptr;
 
+    switch (IntrinsicID) {
+    case Intrinsic::nearbyint:
+    case Intrinsic::rint:
+    case Intrinsic::roundeven:
+    case Intrinsic::round:
+    case Intrinsic::ceil:
+    case Intrinsic::floor:
+    case Intrinsic::trunc:
+      if (!flushDenormalInput(U, Ty, Call))
+        return nullptr;
+      break;
+    default:
+      break;
+    }
+
     // Use internal versions of these intrinsics.
 
     if (IntrinsicID == Intrinsic::nearbyint || IntrinsicID == Intrinsic::rint ||
@@ -3650,17 +3682,31 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
       case Intrinsic::copysign:
         return ConstantFP::get(Ty, APFloat::copySign(Op1V, Op2V));
       case Intrinsic::minnum:
-        return ConstantFP::get(Ty, minnum(Op1V, Op2V));
       case Intrinsic::maxnum:
-        return ConstantFP::get(Ty, maxnum(Op1V, Op2V));
       case Intrinsic::minimum:
-        return ConstantFP::get(Ty, minimum(Op1V, Op2V));
       case Intrinsic::maximum:
-        return ConstantFP::get(Ty, maximum(Op1V, Op2V));
       case Intrinsic::minimumnum:
-        return ConstantFP::get(Ty, minimumnum(Op1V, Op2V));
-      case Intrinsic::maximumnum:
-        return ConstantFP::get(Ty, maximumnum(Op1V, Op2V));
+      case Intrinsic::maximumnum: {
+        APFloat A = Op1V, B = Op2V;
+        if (!flushDenormalInput(A, Ty, Call) ||
+            !flushDenormalInput(B, Ty, Call))
+          return nullptr;
+
+        switch (IntrinsicID) {
+        case Intrinsic::minnum:
+          return ConstantFP::get(Ty, minnum(A, B));
+        case Intrinsic::maxnum:
+          return ConstantFP::get(Ty, maxnum(A, B));
+        case Intrinsic::minimum:
+          return ConstantFP::get(Ty, minimum(A, B));
+        case Intrinsic::maximum:
+          return ConstantFP::get(Ty, maximum(A, B));
+        case Intrinsic::minimumnum:
+          return ConstantFP::get(Ty, minimumnum(A, B));
+        default:
+          return ConstantFP::get(Ty, maximumnum(A, B));
+        }
+      }
 
       case Intrinsic::nvvm_fmax_d:
       case Intrinsic::nvvm_fmax_f:
@@ -4249,8 +4295,13 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
         }
         case Intrinsic::fma:
         case Intrinsic::fmuladd: {
-          APFloat V = C1;
-          V.fusedMultiplyAdd(C2, C3, APFloat::rmNearestTiesToEven);
+          APFloat V = C1, B = C2, C = C3;
+          if (IntrinsicID != Intrinsic::amdgcn_fma_legacy &&
+              (!flushDenormalInput(V, Ty, Call) ||
+               !flushDenormalInput(B, Ty, Call) ||
+               !flushDenormalInput(C, Ty, Call)))
+            return nullptr;
+          V.fusedMultiplyAdd(B, C, APFloat::rmNearestTiesToEven);
           return ConstantFP::get(Ty, V);
         }
 

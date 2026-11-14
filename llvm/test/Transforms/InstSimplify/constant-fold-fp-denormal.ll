@@ -1274,6 +1274,429 @@ define i1 @fcmp_double_dynamic_dynamic_normals() #11 {
   ret i1 %cmp
 }
 
+; Rounding intrinsics treat a denormal input as zero when the input mode
+; flushes it, and are not folded when the input mode is dynamic.
+
+define float @test_float_ceil_ieee() #0 {
+; CHECK-LABEL: @test_float_ceil_ieee(
+; CHECK-NEXT:    ret float 1.000000e+00
+;
+  %result = call float @llvm.ceil.f32(float 0x36A0000000000000)
+  ret float %result
+}
+
+define float @test_float_ceil_psign_in() #4 {
+; CHECK-LABEL: @test_float_ceil_psign_in(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.ceil.f32(float 0x36A0000000000000)
+  ret float %result
+}
+
+define float @test_float_ceil_pzero_in() #3 {
+; CHECK-LABEL: @test_float_ceil_pzero_in(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.ceil.f32(float 0x36A0000000000000)
+  ret float %result
+}
+
+define float @test_float_ceil_dynamic_in() #10 {
+; CHECK-LABEL: @test_float_ceil_dynamic_in(
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.ceil.f32(float 1.401300e-45)
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.ceil.f32(float 0x36A0000000000000)
+  ret float %result
+}
+
+define float @test_float_ceil_dynamic_out() #9 {
+; CHECK-LABEL: @test_float_ceil_dynamic_out(
+; CHECK-NEXT:    ret float 1.000000e+00
+;
+  %result = call float @llvm.ceil.f32(float 0x36A0000000000000)
+  ret float %result
+}
+
+define float @test_float_floor_ieee() #0 {
+; CHECK-LABEL: @test_float_floor_ieee(
+; CHECK-NEXT:    ret float -1.000000e+00
+;
+  %result = call float @llvm.floor.f32(float 0xB6A0000000000000)
+  ret float %result
+}
+
+define float @test_float_floor_psign_in() #4 {
+; CHECK-LABEL: @test_float_floor_psign_in(
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %result = call float @llvm.floor.f32(float 0xB6A0000000000000)
+  ret float %result
+}
+
+define float @test_float_floor_pzero_in() #3 {
+; CHECK-LABEL: @test_float_floor_pzero_in(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.floor.f32(float 0xB6A0000000000000)
+  ret float %result
+}
+
+define float @test_float_floor_dynamic_in() #10 {
+; CHECK-LABEL: @test_float_floor_dynamic_in(
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.floor.f32(float -1.401300e-45)
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.floor.f32(float 0xB6A0000000000000)
+  ret float %result
+}
+
+define float @test_float_floor_dynamic_out() #9 {
+; CHECK-LABEL: @test_float_floor_dynamic_out(
+; CHECK-NEXT:    ret float -1.000000e+00
+;
+  %result = call float @llvm.floor.f32(float 0xB6A0000000000000)
+  ret float %result
+}
+
+define float @test_float_trunc_ieee() #0 {
+; CHECK-LABEL: @test_float_trunc_ieee(
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %result = call float @llvm.trunc.f32(float 0xB6A0000000000000)
+  ret float %result
+}
+
+define float @test_float_trunc_psign_in() #4 {
+; CHECK-LABEL: @test_float_trunc_psign_in(
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %result = call float @llvm.trunc.f32(float 0xB6A0000000000000)
+  ret float %result
+}
+
+define float @test_float_trunc_pzero_in() #3 {
+; CHECK-LABEL: @test_float_trunc_pzero_in(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.trunc.f32(float 0xB6A0000000000000)
+  ret float %result
+}
+
+define float @test_float_trunc_dynamic_in() #10 {
+; CHECK-LABEL: @test_float_trunc_dynamic_in(
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.trunc.f32(float -1.401300e-45)
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.trunc.f32(float 0xB6A0000000000000)
+  ret float %result
+}
+
+define float @test_float_trunc_dynamic_out() #9 {
+; CHECK-LABEL: @test_float_trunc_dynamic_out(
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %result = call float @llvm.trunc.f32(float 0xB6A0000000000000)
+  ret float %result
+}
+
+define float @test_float_round_pzero_in() #3 {
+; CHECK-LABEL: @test_float_round_pzero_in(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.round.f32(float 0xB6A0000000000000)
+  ret float %result
+}
+
+define float @test_float_roundeven_pzero_in() #3 {
+; CHECK-LABEL: @test_float_roundeven_pzero_in(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.roundeven.f32(float 0xB6A0000000000000)
+  ret float %result
+}
+
+define float @test_float_rint_pzero_in() #3 {
+; CHECK-LABEL: @test_float_rint_pzero_in(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.rint.f32(float 0xB6A0000000000000)
+  ret float %result
+}
+
+define float @test_float_nearbyint_pzero_in() #3 {
+; CHECK-LABEL: @test_float_nearbyint_pzero_in(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.nearbyint.f32(float 0xB6A0000000000000)
+  ret float %result
+}
+
+define float @test_float_ceil_pzero_f32_in() #8 {
+; CHECK-LABEL: @test_float_ceil_pzero_f32_in(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.ceil.f32(float 0x36A0000000000000)
+  ret float %result
+}
+
+define double @test_double_ceil_pzero_f32_in() #8 {
+; CHECK-LABEL: @test_double_ceil_pzero_f32_in(
+; CHECK-NEXT:    ret double 1.000000e+00
+;
+  %result = call double @llvm.ceil.f64(double 0x0000000000000001)
+  ret double %result
+}
+
+define <2 x float> @test_float_ceil_psign_in_vector() #4 {
+; CHECK-LABEL: @test_float_ceil_psign_in_vector(
+; CHECK-NEXT:    ret <2 x float> <float 0.000000e+00, float 2.000000e+00>
+;
+  %result = call <2 x float> @llvm.ceil.v2f32(<2 x float> <float 0x36A0000000000000, float 0x3FF8000000000000>)
+  ret <2 x float> %result
+}
+
+; Min/max intrinsics treat a denormal input as zero when the input mode
+; flushes it, and are not folded when the input mode is dynamic.
+
+define float @test_float_minnum_ieee() #0 {
+; CHECK-LABEL: @test_float_minnum_ieee(
+; CHECK-NEXT:    ret float -1.401300e-45
+;
+  %result = call float @llvm.minnum.f32(float 0xB6A0000000000000, float 0.0)
+  ret float %result
+}
+
+define float @test_float_minnum_psign_in() #4 {
+; CHECK-LABEL: @test_float_minnum_psign_in(
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %result = call float @llvm.minnum.f32(float 0xB6A0000000000000, float 0.0)
+  ret float %result
+}
+
+define float @test_float_minnum_pzero_in() #3 {
+; CHECK-LABEL: @test_float_minnum_pzero_in(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.minnum.f32(float 0xB6A0000000000000, float 0.0)
+  ret float %result
+}
+
+define float @test_float_minnum_dynamic_in() #10 {
+; CHECK-LABEL: @test_float_minnum_dynamic_in(
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.minnum.f32(float -1.401300e-45, float 0.000000e+00)
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.minnum.f32(float 0xB6A0000000000000, float 0.0)
+  ret float %result
+}
+
+define float @test_float_minnum_dynamic_out() #9 {
+; CHECK-LABEL: @test_float_minnum_dynamic_out(
+; CHECK-NEXT:    ret float -1.401300e-45
+;
+  %result = call float @llvm.minnum.f32(float 0xB6A0000000000000, float 0.0)
+  ret float %result
+}
+
+define float @test_float_maxnum_ieee() #0 {
+; CHECK-LABEL: @test_float_maxnum_ieee(
+; CHECK-NEXT:    ret float 1.401300e-45
+;
+  %result = call float @llvm.maxnum.f32(float 0x36A0000000000000, float 0.0)
+  ret float %result
+}
+
+define float @test_float_maxnum_psign_in() #4 {
+; CHECK-LABEL: @test_float_maxnum_psign_in(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.maxnum.f32(float 0x36A0000000000000, float 0.0)
+  ret float %result
+}
+
+define float @test_float_minimum_ieee() #0 {
+; CHECK-LABEL: @test_float_minimum_ieee(
+; CHECK-NEXT:    ret float -1.401300e-45
+;
+  %result = call float @llvm.minimum.f32(float 0xB6A0000000000000, float 0.0)
+  ret float %result
+}
+
+define float @test_float_minimum_psign_in() #4 {
+; CHECK-LABEL: @test_float_minimum_psign_in(
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %result = call float @llvm.minimum.f32(float 0xB6A0000000000000, float 0.0)
+  ret float %result
+}
+
+define float @test_float_maximum_ieee() #0 {
+; CHECK-LABEL: @test_float_maximum_ieee(
+; CHECK-NEXT:    ret float 1.401300e-45
+;
+  %result = call float @llvm.maximum.f32(float 0x36A0000000000000, float -0.0)
+  ret float %result
+}
+
+define float @test_float_maximum_psign_in() #4 {
+; CHECK-LABEL: @test_float_maximum_psign_in(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.maximum.f32(float 0x36A0000000000000, float -0.0)
+  ret float %result
+}
+
+define float @test_float_minimumnum_ieee() #0 {
+; CHECK-LABEL: @test_float_minimumnum_ieee(
+; CHECK-NEXT:    ret float -1.401300e-45
+;
+  %result = call float @llvm.minimumnum.f32(float 0xB6A0000000000000, float 0.0)
+  ret float %result
+}
+
+define float @test_float_minimumnum_psign_in() #4 {
+; CHECK-LABEL: @test_float_minimumnum_psign_in(
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %result = call float @llvm.minimumnum.f32(float 0xB6A0000000000000, float 0.0)
+  ret float %result
+}
+
+define float @test_float_maximumnum_ieee() #0 {
+; CHECK-LABEL: @test_float_maximumnum_ieee(
+; CHECK-NEXT:    ret float 1.401300e-45
+;
+  %result = call float @llvm.maximumnum.f32(float 0x36A0000000000000, float -0.0)
+  ret float %result
+}
+
+define float @test_float_maximumnum_psign_in() #4 {
+; CHECK-LABEL: @test_float_maximumnum_psign_in(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.maximumnum.f32(float 0x36A0000000000000, float -0.0)
+  ret float %result
+}
+
+define float @test_float_maxnum_pzero_f32_in() #8 {
+; CHECK-LABEL: @test_float_maxnum_pzero_f32_in(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.maxnum.f32(float 0x36A0000000000000, float 0.0)
+  ret float %result
+}
+
+define double @test_double_maxnum_pzero_f32_in() #8 {
+; CHECK-LABEL: @test_double_maxnum_pzero_f32_in(
+; CHECK-NEXT:    ret double 4.940660e-324
+;
+  %result = call double @llvm.maxnum.f64(double 0x0000000000000001, double 0.0)
+  ret double %result
+}
+
+define <2 x float> @test_float_maxnum_psign_in_vector() #4 {
+; CHECK-LABEL: @test_float_maxnum_psign_in_vector(
+; CHECK-NEXT:    ret <2 x float> <float 0.000000e+00, float 1.000000e+00>
+;
+  %result = call <2 x float> @llvm.maxnum.v2f32(<2 x float> <float 0x36A0000000000000, float 1.0>, <2 x float> zeroinitializer)
+  ret <2 x float> %result
+}
+
+define <2 x float> @test_float_maxnum_dynamic_in_vector() #10 {
+; CHECK-LABEL: @test_float_maxnum_dynamic_in_vector(
+; CHECK-NEXT:    [[RESULT:%.*]] = call <2 x float> @llvm.maxnum.v2f32(<2 x float> <float 1.401300e-45, float 1.000000e+00>, <2 x float> zeroinitializer)
+; CHECK-NEXT:    ret <2 x float> [[RESULT]]
+;
+  %result = call <2 x float> @llvm.maxnum.v2f32(<2 x float> <float 0x36A0000000000000, float 1.0>, <2 x float> zeroinitializer)
+  ret <2 x float> %result
+}
+
+; fma and fmuladd treat a denormal input as zero when the input mode
+; flushes it, and are not folded when the input mode is dynamic.
+
+define float @test_float_fma_ieee() #0 {
+; CHECK-LABEL: @test_float_fma_ieee(
+; CHECK-NEXT:    ret float -1.401300e-45
+;
+  %result = call float @llvm.fma.f32(float 0xB6A0000000000000, float 1.0, float 0.0)
+  ret float %result
+}
+
+define float @test_float_fma_psign_in() #4 {
+; CHECK-LABEL: @test_float_fma_psign_in(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.fma.f32(float 0xB6A0000000000000, float 1.0, float 0.0)
+  ret float %result
+}
+
+define float @test_float_fma_pzero_in() #3 {
+; CHECK-LABEL: @test_float_fma_pzero_in(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.fma.f32(float 0xB6A0000000000000, float 1.0, float 0.0)
+  ret float %result
+}
+
+define float @test_float_fma_dynamic_in() #10 {
+; CHECK-LABEL: @test_float_fma_dynamic_in(
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.fma.f32(float -1.401300e-45, float 1.000000e+00, float 0.000000e+00)
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.fma.f32(float 0xB6A0000000000000, float 1.0, float 0.0)
+  ret float %result
+}
+
+define float @test_float_fma_dynamic_out() #9 {
+; CHECK-LABEL: @test_float_fma_dynamic_out(
+; CHECK-NEXT:    ret float -1.401300e-45
+;
+  %result = call float @llvm.fma.f32(float 0xB6A0000000000000, float 1.0, float 0.0)
+  ret float %result
+}
+
+define float @test_float_fma_psign_in_addend() #4 {
+; CHECK-LABEL: @test_float_fma_psign_in_addend(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.fma.f32(float 0.0, float 0.0, float 0x36A0000000000000)
+  ret float %result
+}
+
+define float @test_float_fmuladd_ieee() #0 {
+; CHECK-LABEL: @test_float_fmuladd_ieee(
+; CHECK-NEXT:    ret float 2.802600e-45
+;
+  %result = call float @llvm.fmuladd.f32(float 0x36A0000000000000, float 2.0, float 0.0)
+  ret float %result
+}
+
+define float @test_float_fmuladd_psign_in() #4 {
+; CHECK-LABEL: @test_float_fmuladd_psign_in(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.fmuladd.f32(float 0x36A0000000000000, float 2.0, float 0.0)
+  ret float %result
+}
+
+define double @test_double_fma_pzero_f32_in() #8 {
+; CHECK-LABEL: @test_double_fma_pzero_f32_in(
+; CHECK-NEXT:    ret double 4.940660e-324
+;
+  %result = call double @llvm.fma.f64(double 0x0000000000000001, double 1.0, double 0.0)
+  ret double %result
+}
+
+define <2 x float> @test_float_fma_psign_in_vector() #4 {
+; CHECK-LABEL: @test_float_fma_psign_in_vector(
+; CHECK-NEXT:    ret <2 x float> <float 0.000000e+00, float 1.000000e+00>
+;
+  %result = call <2 x float> @llvm.fma.v2f32(<2 x float> <float 0x36A0000000000000, float 1.0>, <2 x float> splat (float 1.0), <2 x float> zeroinitializer)
+  ret <2 x float> %result
+}
+
 attributes #0 = { nounwind denormal_fpenv(ieee) }
 attributes #1 = { nounwind denormal_fpenv(positivezero|ieee) }
 attributes #2 = { nounwind denormal_fpenv(preservesign|ieee) }
