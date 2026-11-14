@@ -1682,6 +1682,162 @@ define i32 @test_fabs_nsz_used_by_fptoui_sat(float %x) {
   ret i32 %op
 }
 
+define half @test_fabs_nsz_used_by_fptrunc_round(float %x) {
+; CHECK-LABEL: @test_fabs_nsz_used_by_fptrunc_round(
+; CHECK-NEXT:    [[SEL:%.*]] = call nsz float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[OP:%.*]] = call half @llvm.fptrunc.round.f16.f32(float [[SEL]], metadata !"round.downward")
+; CHECK-NEXT:    ret half [[OP]]
+;
+  %cmp = fcmp oge float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select nsz i1 %cmp, float %x, float %neg
+  %op = call half @llvm.fptrunc.round.f16.f32(float %sel, metadata !"round.downward")
+  ret half %op
+}
+
+define float @test_fabs_nsz_used_by_ldexp(float %x, i32 %y) {
+; CHECK-LABEL: @test_fabs_nsz_used_by_ldexp(
+; CHECK-NEXT:    [[SEL:%.*]] = call nsz float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.ldexp.f32.i32(float [[SEL]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret float [[OP]]
+;
+  %cmp = fcmp oge float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select nsz i1 %cmp, float %x, float %neg
+  %op = call float @llvm.ldexp.f32.i32(float %sel, i32 %y)
+  ret float %op
+}
+
+define { float, i32 } @test_fabs_nsz_used_by_frexp(float %x) {
+; CHECK-LABEL: @test_fabs_nsz_used_by_frexp(
+; CHECK-NEXT:    [[SEL:%.*]] = call nsz float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[OP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[SEL]])
+; CHECK-NEXT:    ret { float, i32 } [[OP]]
+;
+  %cmp = fcmp oge float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select nsz i1 %cmp, float %x, float %neg
+  %op = call { float, i32 } @llvm.frexp.f32.i32(float %sel)
+  ret { float, i32 } %op
+}
+
+define { float, float } @test_fabs_nsz_used_by_modf(float %x) {
+; CHECK-LABEL: @test_fabs_nsz_used_by_modf(
+; CHECK-NEXT:    [[SEL:%.*]] = call nsz float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[OP:%.*]] = call { float, float } @llvm.modf.f32(float [[SEL]])
+; CHECK-NEXT:    ret { float, float } [[OP]]
+;
+  %cmp = fcmp oge float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select nsz i1 %cmp, float %x, float %neg
+  %op = call { float, float } @llvm.modf.f32(float %sel)
+  ret { float, float } %op
+}
+
+define float @test_fabs_nsz_used_by_sin(float %x) {
+; CHECK-LABEL: @test_fabs_nsz_used_by_sin(
+; CHECK-NEXT:    [[SEL:%.*]] = call nsz float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.sin.f32(float [[SEL]])
+; CHECK-NEXT:    ret float [[OP]]
+;
+  %cmp = fcmp oge float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select nsz i1 %cmp, float %x, float %neg
+  %op = call float @llvm.sin.f32(float %sel)
+  ret float %op
+}
+
+define { float, float } @test_fabs_nsz_used_by_sincos(float %x) {
+; CHECK-LABEL: @test_fabs_nsz_used_by_sincos(
+; CHECK-NEXT:    [[SEL:%.*]] = call nsz float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[OP:%.*]] = call { float, float } @llvm.sincos.f32(float [[SEL]])
+; CHECK-NEXT:    ret { float, float } [[OP]]
+;
+  %cmp = fcmp oge float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select nsz i1 %cmp, float %x, float %neg
+  %op = call { float, float } @llvm.sincos.f32(float %sel)
+  ret { float, float } %op
+}
+
+define { float, float } @test_fabs_nsz_used_by_sincospi(float %x) {
+; CHECK-LABEL: @test_fabs_nsz_used_by_sincospi(
+; CHECK-NEXT:    [[SEL:%.*]] = call nsz float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[OP:%.*]] = call { float, float } @llvm.sincospi.f32(float [[SEL]])
+; CHECK-NEXT:    ret { float, float } [[OP]]
+;
+  %cmp = fcmp oge float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select nsz i1 %cmp, float %x, float %neg
+  %op = call { float, float } @llvm.sincospi.f32(float %sel)
+  ret { float, float } %op
+}
+
+define float @test_fabs_nsz_used_by_atan2_lhs(float %x, float %y) {
+; CHECK-LABEL: @test_fabs_nsz_used_by_atan2_lhs(
+; CHECK-NEXT:    [[SEL:%.*]] = call nsz float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.atan2.f32(float [[SEL]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[OP]]
+;
+  %cmp = fcmp oge float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select nsz i1 %cmp, float %x, float %neg
+  %op = call float @llvm.atan2.f32(float %sel, float %y)
+  ret float %op
+}
+
+define float @test_fabs_nsz_used_by_atan2_rhs(float %x, float %y) {
+; CHECK-LABEL: @test_fabs_nsz_used_by_atan2_rhs(
+; CHECK-NEXT:    [[SEL:%.*]] = call nsz float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.atan2.f32(float [[Y:%.*]], float [[SEL]])
+; CHECK-NEXT:    ret float [[OP]]
+;
+  %cmp = fcmp oge float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select nsz i1 %cmp, float %x, float %neg
+  %op = call float @llvm.atan2.f32(float %y, float %sel)
+  ret float %op
+}
+
+define float @test_fabs_nsz_used_by_trunc(float %x) {
+; CHECK-LABEL: @test_fabs_nsz_used_by_trunc(
+; CHECK-NEXT:    [[SEL:%.*]] = call nsz float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.trunc.f32(float [[SEL]])
+; CHECK-NEXT:    ret float [[OP]]
+;
+  %cmp = fcmp oge float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select nsz i1 %cmp, float %x, float %neg
+  %op = call float @llvm.trunc.f32(float %sel)
+  ret float %op
+}
+
+define i32 @test_fabs_nsz_used_by_lround(float %x) {
+; CHECK-LABEL: @test_fabs_nsz_used_by_lround(
+; CHECK-NEXT:    [[SEL:%.*]] = call nsz float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[OP:%.*]] = call i32 @llvm.lround.i32.f32(float [[SEL]])
+; CHECK-NEXT:    ret i32 [[OP]]
+;
+  %cmp = fcmp oge float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select nsz i1 %cmp, float %x, float %neg
+  %op = call i32 @llvm.lround.i32.f32(float %sel)
+  ret i32 %op
+}
+
+define i64 @test_fabs_nsz_used_by_llrint(float %x) {
+; CHECK-LABEL: @test_fabs_nsz_used_by_llrint(
+; CHECK-NEXT:    [[SEL:%.*]] = call nsz float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[OP:%.*]] = call i64 @llvm.llrint.i64.f32(float [[SEL]])
+; CHECK-NEXT:    ret i64 [[OP]]
+;
+  %cmp = fcmp oge float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select nsz i1 %cmp, float %x, float %neg
+  %op = call i64 @llvm.llrint.i64.f32(float %sel)
+  ret i64 %op
+}
+
 define <2 x i1> @test_fabs_used_vp_is_fpclass_zero_or_pinf(<2 x float> %x, <2 x i1> %mask, i32 %evl) {
 ; CHECK-LABEL: @test_fabs_used_vp_is_fpclass_zero_or_pinf(
 ; CHECK-NEXT:    [[IS_FPCLASS:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[X:%.*]], /* (inf zero) */ i32 612)
