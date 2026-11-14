@@ -71,10 +71,6 @@ static cl::opt<bool> EnableLoopFusion("enable-loopfusion", cl::init(false),
                                       cl::Hidden,
                                       cl::desc("Enable the LoopFuse Pass"));
 
-static cl::opt<bool>
-    EnableLoopInterchange("enable-loopinterchange", cl::init(true), cl::Hidden,
-                          cl::desc("Enable the LoopInterchange Pass"));
-
 enum class DebugLogging { None, Normal, Verbose, Quiet };
 
 static cl::opt<DebugLogging> DebugPM(
@@ -482,7 +478,6 @@ bool llvm::runPassPipeline(
   PTO.LoopUnrolling = !DisableLoopUnrolling;
   PTO.UnifiedLTO = UnifiedLTO;
   PTO.LoopFusion = EnableLoopFusion;
-  PTO.LoopInterchange = EnableLoopInterchange;
   PassBuilder PB(M.getContext(), TM, PTO, P, &PIC);
   registerEPCallbacks(PB);
 
