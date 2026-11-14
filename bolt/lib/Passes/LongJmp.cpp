@@ -534,23 +534,23 @@ Error LongJmpPass::relaxStub(BinaryBasicBlock &StubBB, bool &Modified) {
 
   const static int RangeShortJmp = BC.MIB->getShortJmpEncodingSize();
   const static int RangeSingleInstr = BC.MIB->getUncondBranchEncodingSize();
-  const static uint64_t ShortJmpMask = ~((1ULL << RangeShortJmp) - 1);
-  const static uint64_t SingleInstrMask =
-      ~((1ULL << (RangeSingleInstr - 1)) - 1);
 
   const MCSymbol *RealTargetSym = BC.MIB->getTargetSymbol(*StubBB.begin());
   const BinaryBasicBlock *TgtBB = Func.getBasicBlockForLabel(RealTargetSym);
   uint64_t TgtAddress = getSymbolAddress(BC, RealTargetSym, TgtBB);
   uint64_t DotAddress = BBAddresses[&StubBB];
+  const int64_t Offset = static_cast<int64_t>(TgtAddress - DotAddress);
   uint64_t PCRelTgtAddress = DotAddress > TgtAddress ? DotAddress - TgtAddress
                                                      : TgtAddress - DotAddress;
 
   // If it fits in one instruction, do not relax
-  if (!(PCRelTgtAddress & SingleInstrMask))
+  if (isIntN(RangeSingleInstr, Offset))
     return Error::success();
 
   // Fits short jmp
-  if (!(PCRelTgtAddress & ShortJmpMask)) {
+  const int64_t PageOffset = static_cast<int64_t>(alignDown(TgtAddress, 4096) -
+                                                  alignDown(DotAddress, 4096));
+  if (isIntN(RangeShortJmp, PageOffset)) {
     if (Bits >= RangeShortJmp)
       return Error::success();
 
