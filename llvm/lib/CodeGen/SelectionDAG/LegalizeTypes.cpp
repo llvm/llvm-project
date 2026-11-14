@@ -564,7 +564,10 @@ void DAGTypeLegalizer::AnalyzeNewValue(SDValue &Val) {
 /// replace it by that value.
 void DAGTypeLegalizer::RemapValue(SDValue &V) {
   auto Id = getTableId(V);
-  V = getSDValue(Id);
+  SDValue Mapped = getSDValue(Id);
+  if (V && Mapped && V.getNode() != Mapped.getNode())
+    Mapped->intersectFlagsWith(V->getFlags());
+  V = Mapped;
 }
 
 void DAGTypeLegalizer::RemapId(TableId &Id) {
