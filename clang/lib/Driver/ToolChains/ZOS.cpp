@@ -331,7 +331,7 @@ void ZOS::TryAddIncludeFromPath(llvm::SmallString<128> Path,
                                 llvm::opt::ArgStringList &CC1Args) const {
   if (!getVFS().exists(Path)) {
     if (DriverArgs.hasArg(options::OPT_v))
-      WithColor::warning(errs(), "Clang")
+      WithColor::warning(getDriver().getVerboseOutputStream(), "Clang")
           << "ignoring nonexistent directory \"" << Path << "\"\n";
     if (!DriverArgs.hasArg(options::OPT__HASH_HASH_HASH))
       return;

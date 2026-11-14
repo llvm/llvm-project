@@ -79,8 +79,16 @@ getCC1Arguments(DiagnosticsEngine *Diagnostics,
 /// If your tool is based on FrontendAction, you should be deriving from
 /// FrontendActionFactory instead.
 class ToolAction {
+  llvm::raw_ostream *VerboseOutputStream = nullptr;
+
 public:
   virtual ~ToolAction();
+
+  /// Set the stream used for informational verbose output. The caller retains
+  /// ownership and must keep the stream alive while this action runs.
+  void setVerboseOutputStream(llvm::raw_ostream &OS) {
+    VerboseOutputStream = &OS;
+  }
 
   /// Perform an action for an invocation.
   virtual bool
@@ -88,6 +96,11 @@ public:
                 FileManager *Files,
                 std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                 DiagnosticConsumer *DiagConsumer) = 0;
+
+protected:
+  llvm::raw_ostream *getVerboseOutputStream() const {
+    return VerboseOutputStream;
+  }
 };
 
 /// Interface to generate clang::FrontendActions.
@@ -289,6 +302,12 @@ public:
     this->DiagOpts = DiagOpts;
   }
 
+  /// Set the stream used for informational verbose output. The caller retains
+  /// ownership and must keep the stream alive while this invocation runs.
+  void setVerboseOutputStream(llvm::raw_ostream &OS) {
+    VerboseOutputStream = &OS;
+  }
+
   /// Run the clang invocation.
   ///
   /// \returns True if there were no errors during execution.
@@ -307,6 +326,7 @@ public:
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
   DiagnosticConsumer *DiagConsumer = nullptr;
   DiagnosticOptions *DiagOpts = nullptr;
+  llvm::raw_ostream *VerboseOutputStream = nullptr;
 };
 
 /// Utility to run a FrontendAction over a set of files.
@@ -343,6 +363,12 @@ public:
   /// Set a \c DiagnosticConsumer to use during parsing.
   void setDiagnosticConsumer(DiagnosticConsumer *DiagConsumer) {
     this->DiagConsumer = DiagConsumer;
+  }
+
+  /// Set the stream used for informational verbose output. The caller retains
+  /// ownership and must keep the stream alive while this tool runs.
+  void setVerboseOutputStream(llvm::raw_ostream &OS) {
+    VerboseOutputStream = &OS;
   }
 
   /// Map a virtual file to be used while running the tool.
@@ -400,6 +426,7 @@ private:
   ArgumentsAdjuster ArgsAdjuster;
 
   DiagnosticConsumer *DiagConsumer = nullptr;
+  llvm::raw_ostream *VerboseOutputStream = nullptr;
 
   bool PrintErrorMessage = true;
 };
