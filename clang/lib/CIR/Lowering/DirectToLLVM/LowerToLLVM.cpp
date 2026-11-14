@@ -5255,16 +5255,14 @@ void ConvertCIRToLLVMPass::runOnOperation() {
     return;
   }
 
-  // Drop CIR-native data-layout entries. They drove pointer-width and
-  // _BitInt alignment queries up to this point, but the LLVM IR exporter
-  // rejects CIR types.
+  // Drop CIR-native data-layout entries.
   if (auto dlSpec = mlir::dyn_cast_or_null<mlir::DataLayoutSpecAttr>(
           module->getAttr(mlir::DLTIDialect::kDataLayoutAttrName))) {
     llvm::SmallVector<mlir::DataLayoutEntryInterface> kept;
     for (mlir::DataLayoutEntryInterface entry : dlSpec.getEntries()) {
       if (entry.isTypeEntry()) {
         mlir::Type key = mlir::cast<mlir::Type>(entry.getKey());
-        if (mlir::isa<cir::PointerType, cir::IntType>(key))
+        if (mlir::isa<cir::PointerType, cir::IntType, cir::VectorType>(key))
           continue;
       }
       kept.push_back(entry);

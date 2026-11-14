@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares a helper that attaches the DLTI data-layout spec,
-// including the CIR-native pointer and _BitInt entries, to a CIR module.
+// This file declares a helper that attaches the DLTI data-layout spec to a CIR
+// module.
 //
 //===----------------------------------------------------------------------===//
 #ifndef CLANG_CIR_CIRDATALAYOUTSPEC_H
@@ -32,8 +32,13 @@ namespace cir {
 /// - a #cir.bitint_spec entry keyed on !cir.int<u, 1, bitint>.
 ///   \p bitIntMaxAlign is TargetInfo::getBitIntMaxAlign(), in bits. _BitInt
 ///   ABI alignment clamps to that cap.
+/// - a #cir.vector_spec entry keyed on !cir.vector<1 x !cir.int<u, 8>>,
+///   present when \p maxVectorAlign is non-zero. That value is
+///   TargetInfo::getMaxVectorAlign(), in bits. Vector ABI alignment clamps
+///   to that cap. Zero means the target imposes no cap, and the entry is
+///   omitted.
 void setMLIRDataLayout(mlir::ModuleOp mod, const llvm::DataLayout &dl,
-                       unsigned bitIntMaxAlign);
+                       unsigned bitIntMaxAlign, unsigned maxVectorAlign);
 
 } // namespace cir
 
