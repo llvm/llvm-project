@@ -8556,7 +8556,8 @@ static bool isGuaranteedNotToBeUndefOrPoison(
   return AC &&
          AC->assumeBundlesOfKind(BundleAttr::NoUndef, V,
                                  [&](OperandBundleUse OBU, AssumeInst *AI) {
-                                   return isValidAssumeForContext(AI, CtxI, DT);
+                                   return getAssumeNoUndefInfo(OBU).Val && V &&
+                                          isValidAssumeForContext(AI, CtxI, DT);
                                  });
 }
 

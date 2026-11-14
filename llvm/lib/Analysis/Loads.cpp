@@ -49,18 +49,21 @@ static bool isDereferenceableAndAlignedPointerViaAssumption(
     switch (BA) {
     case BundleAttr::Align: {
       if (!IsAligned && isValidAssumeForContext(AI, SQ.CtxI, SQ.DT)) {
-        auto [_1, _2, _3, Align, Offset] = getAssumeAlignInfo(OBU);
-
+        auto [P, _1, _2, Align, Offset] = getAssumeAlignInfo(OBU);
+        if (P != Ptr)
+          break;
         IsAligned =
             Align && Offset && MinAlign(*Align, *Offset) >= Alignment.value();
       }
     } break;
 
     case BundleAttr::Dereferenceable: {
-      if (!IsDerefable && isValidAssumeForContext(AI, SQ.CtxI, SQ.DT)) {
+      auto ADI = getAssumeDereferenceableInfo(OBU);
+      if (ADI.Ptr == Ptr && !IsDerefable &&
+          isValidAssumeForContext(AI, SQ.CtxI, SQ.DT)) {
         IsDerefable =
             (!PtrCanBeFreed || willNotFreeBetween(AI, SQ.CtxI, SQ.DT)) &&
-            CheckSize(getAssumeDereferenceableInfo(OBU));
+            CheckSize(ADI);
       }
     } break;
     default:

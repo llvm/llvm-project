@@ -211,10 +211,10 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   AC->assumeBundlesOfKind(
       BundleAttr::Dereferenceable, StartPtrV,
       [&](OperandBundleUse OBU, AssumeInst *AI) {
-        if (!isValidAssumeForContext(AI, CtxI, DT))
+        auto [Ptr, Count, _] = getAssumeDereferenceableInfo(OBU);
+        if (Ptr != StartPtrV || !isValidAssumeForContext(AI, CtxI, DT))
           return false;
-        const SCEV *DerefRKSCEV =
-            SE.getSCEV(getAssumeDereferenceableInfo(OBU).Count);
+        const SCEV *DerefRKSCEV = SE.getSCEV(Count);
         Type *CommonTy =
             SE.getWiderType(DerefBytesSCEV->getType(), DerefRKSCEV->getType());
         DerefBytesSCEV = SE.getNoopOrZeroExtend(DerefBytesSCEV, CommonTy);

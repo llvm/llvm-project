@@ -179,11 +179,13 @@ public:
     return AVI->second;
   }
 
+  /// Access the list of assume bundles which affect V.
   bool assumeBundlesFor(
       const Value *V,
       function_ref<bool(BundleAttr, OperandBundleUse, AssumeInst *)>);
 
-  bool assumeBundlesOfKind(BundleAttr, const Value *V,
+  /// Access all assume bundles of type Bundle which affect V.
+  bool assumeBundlesOfKind(BundleAttr Bundle, const Value *V,
                            function_ref<bool(OperandBundleUse, AssumeInst *)>);
 
   /// Determine which values are affected by this assume operand bundle.
