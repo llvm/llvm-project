@@ -449,7 +449,7 @@ public:
 
   template <typename FactType, typename... Args>
   FactType *createFact(Args &&...args) {
-    void *Mem = FactAllocator.Allocate<FactType>();
+    void *Mem = FactAllocator.Allocate(sizeof(FactType), alignof(FactType));
     FactType *Res = new (Mem) FactType(std::forward<Args>(args)...);
     Res->setID(NextFactID++);
     return Res;
