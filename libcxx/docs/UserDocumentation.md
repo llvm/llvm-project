@@ -251,6 +251,9 @@ in your toolchain can lead to unexpected behavior.
 : This macro is used to re-enable the `wstring_convert` and `wbuffer_convert`
   in `<locale>`.
 
+**\_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS**\:
+  This macro is used to re-enable all `shared_ptr` atomic access APIs in `<memory>`.
+
 ## Libc++ Extensions
 
 This section documents various extensions provided by libc++
