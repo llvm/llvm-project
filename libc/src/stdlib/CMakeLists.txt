@@ -511,7 +511,8 @@ add_entrypoint_object(
     libc.src.__support.libc_errno
 )
 
-if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
+if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU AND
+    NOT LIBC_TARGET_OS_IS_UEFI)
   if(LLVM_LIBC_INCLUDE_SCUDO)
     set(SCUDO_DEPS "")
 
@@ -777,7 +778,7 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.clearenv
 )
 
-if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU)
+if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU OR LIBC_TARGET_OS_IS_UEFI)
   add_entrypoint_object(
     malloc
     ALIAS

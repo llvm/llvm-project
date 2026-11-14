@@ -1,6 +1,20 @@
 set(TARGET_LIBC_ENTRYPOINTS
-    # errno.h entrypoints
-    libc.src.errno.errno
+  # errno.h entrypoints
+  libc.src.errno.errno
+
+  # stdlib.h entrypoints
+  libc.src.stdlib._Exit
+  libc.src.stdlib.abort
+  libc.src.stdlib.aligned_alloc
+  libc.src.stdlib.at_quick_exit
+  libc.src.stdlib.atexit
+  libc.src.stdlib.calloc
+  libc.src.stdlib.exit
+  libc.src.stdlib.free
+  libc.src.stdlib.malloc
+  libc.src.stdlib.malloc_usable_size
+  libc.src.stdlib.quick_exit
+  libc.src.stdlib.realloc
 )
 
 set(TARGET_LIBM_ENTRYPOINTS)
