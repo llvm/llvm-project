@@ -15,6 +15,8 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 
+#include <cassert>
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -57,6 +59,25 @@ private:
     return hasConstantEntry(R) ? R.front().Coefficient : 0;
   }
 
+  /// Decide \p R without running FM if possible. Otherwise, replace \p R by its
+  /// negation and return std::nullopt: \p R is implied iff the system plus the
+  /// negated row has no solution.
+  std::optional<bool> tryTrivialImplication(RowTy &R) const;
+
+#ifndef NDEBUG
+  bool Consumed = false;
+#endif
+
+  void assertNotConsumed() const {
+    assert(!Consumed && "system was consumed by an in-place solve");
+  }
+
+  void markConsumed() {
+#ifndef NDEBUG
+    Consumed = true;
+#endif
+  }
+
   /// Number of variables in the system, not counting the constant part. The
   /// variables use the indices 1 to NumVariables.
   size_t NumVariables = 0;
@@ -91,6 +112,7 @@ public:
       : NumVariables(Value2Index.size()), Value2Index(Value2Index) {}
 
   bool addRow(ArrayRef<Entry> R, size_t NumVars) {
+    assertNotConsumed();
     // If all variable coefficients are 0, the constraint does not provide any
     // usable information.
     if (isConstantOnly(R))
@@ -163,25 +185,37 @@ public:
   /// Returns true if a single row of the system implies \p R.
   LLVM_ABI bool isImpliedBySingleRow(ArrayRef<Entry> R) const;
 
-  LLVM_ABI bool isConditionImplied(RowTy R) const;
+  LLVM_ABI bool isConditionImplied(RowTy R) const &;
+  LLVM_ABI bool isConditionImplied(RowTy R) &&;
   LLVM_ABI bool isConditionImpliedInSubSystem(ArrayRef<Entry> R) const;
 
   const RowTy &getLastConstraint() const {
+    assertNotConsumed();
     assert(!Constraints.empty() && "Constraint system is empty");
     return Constraints.back();
   }
 
-  void popLastConstraint() { Constraints.pop_back(); }
+  void popLastConstraint() {
+    assertNotConsumed();
+    Constraints.pop_back();
+  }
   void popLastNVariables(unsigned N) {
+    assertNotConsumed();
     assert(NumVariables >= N);
     NumVariables -= N;
   }
 
   /// Returns the number of rows in the constraint system.
-  unsigned size() const { return Constraints.size(); }
+  unsigned size() const {
+    assertNotConsumed();
+    return Constraints.size();
+  }
 
   /// Returns the rows currently in the system.
-  ArrayRef<RowTy> getConstraints() const { return Constraints; }
+  ArrayRef<RowTy> getConstraints() const {
+    assertNotConsumed();
+    return Constraints;
+  }
 
   /// Print the constraints in the system.
   LLVM_ABI void dump() const;
