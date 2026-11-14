@@ -2412,12 +2412,19 @@ define <2 x i64> @sv2i64_7(<2 x i64> %d, <2 x i64> %e) {
 ;
 ; CHECK-GI-LABEL: sv2i64_7:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov x9, d0
-; CHECK-GI-NEXT:    mov w8, #7 // =0x7
-; CHECK-GI-NEXT:    mov x10, v0.d[1]
-; CHECK-GI-NEXT:    sdiv x9, x9, x8
-; CHECK-GI-NEXT:    sdiv x8, x10, x8
+; CHECK-GI-NEXT:    mov x8, #18725 // =0x4925
+; CHECK-GI-NEXT:    fmov x10, d0
+; CHECK-GI-NEXT:    mov x9, v0.d[1]
+; CHECK-GI-NEXT:    movk x8, #9362, lsl #16
+; CHECK-GI-NEXT:    movk x8, #37449, lsl #32
+; CHECK-GI-NEXT:    movk x8, #18724, lsl #48
+; CHECK-GI-NEXT:    smulh x10, x10, x8
+; CHECK-GI-NEXT:    smulh x8, x9, x8
+; CHECK-GI-NEXT:    asr x9, x10, #1
+; CHECK-GI-NEXT:    add x9, x9, x9, lsr #63
+; CHECK-GI-NEXT:    asr x8, x8, #1
 ; CHECK-GI-NEXT:    fmov d1, x9
+; CHECK-GI-NEXT:    add x8, x8, x8, lsr #63
 ; CHECK-GI-NEXT:    mov v1.d[1], x8
 ; CHECK-GI-NEXT:    adrp x8, .LCPI68_0
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI68_0]
@@ -2462,12 +2469,22 @@ define <2 x i64> @sv2i64_100(<2 x i64> %d, <2 x i64> %e) {
 ;
 ; CHECK-GI-LABEL: sv2i64_100:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov x8, #55051 // =0xd70b
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    fmov x9, d0
-; CHECK-GI-NEXT:    mov w8, #100 // =0x64
-; CHECK-GI-NEXT:    mov x10, v0.d[1]
-; CHECK-GI-NEXT:    sdiv x9, x9, x8
-; CHECK-GI-NEXT:    sdiv x8, x10, x8
+; CHECK-GI-NEXT:    movk x8, #28835, lsl #16
+; CHECK-GI-NEXT:    movk x8, #2621, lsl #32
+; CHECK-GI-NEXT:    movk x8, #41943, lsl #48
+; CHECK-GI-NEXT:    smulh x10, x9, x8
+; CHECK-GI-NEXT:    fmov x11, d1
+; CHECK-GI-NEXT:    smulh x8, x11, x8
+; CHECK-GI-NEXT:    add x9, x10, x9
+; CHECK-GI-NEXT:    asr x9, x9, #6
+; CHECK-GI-NEXT:    add x8, x8, x11
+; CHECK-GI-NEXT:    add x9, x9, x9, lsr #63
+; CHECK-GI-NEXT:    asr x8, x8, #6
 ; CHECK-GI-NEXT:    fmov d1, x9
+; CHECK-GI-NEXT:    add x8, x8, x8, lsr #63
 ; CHECK-GI-NEXT:    mov v1.d[1], x8
 ; CHECK-GI-NEXT:    adrp x8, .LCPI69_0
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI69_0]

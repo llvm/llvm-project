@@ -1883,12 +1883,19 @@ define <2 x i64> @combine_vec_sdiv_nonuniform_v2i64(<2 x i64> %x) {
 ;
 ; CHECK-GI-LABEL: combine_vec_sdiv_nonuniform_v2i64:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov x9, d0
-; CHECK-GI-NEXT:    mov w8, #7 // =0x7
-; CHECK-GI-NEXT:    mov w10, #6 // =0x6
-; CHECK-GI-NEXT:    sdiv x8, x9, x8
+; CHECK-GI-NEXT:    mov x8, #18725 // =0x4925
+; CHECK-GI-NEXT:    fmov x10, d0
 ; CHECK-GI-NEXT:    mov x9, v0.d[1]
-; CHECK-GI-NEXT:    sdiv x9, x9, x10
+; CHECK-GI-NEXT:    movk x8, #9362, lsl #16
+; CHECK-GI-NEXT:    movk x8, #37449, lsl #32
+; CHECK-GI-NEXT:    movk x8, #18724, lsl #48
+; CHECK-GI-NEXT:    smulh x8, x10, x8
+; CHECK-GI-NEXT:    mov x10, #-6148914691236517206 // =0xaaaaaaaaaaaaaaaa
+; CHECK-GI-NEXT:    eor x10, x10, #0x8000000000000001
+; CHECK-GI-NEXT:    smulh x9, x9, x10
+; CHECK-GI-NEXT:    asr x8, x8, #1
+; CHECK-GI-NEXT:    add x8, x8, x8, lsr #63
+; CHECK-GI-NEXT:    add x9, x9, x9, lsr #63
 ; CHECK-GI-NEXT:    fmov d0, x8
 ; CHECK-GI-NEXT:    mov v0.d[1], x9
 ; CHECK-GI-NEXT:    ret
