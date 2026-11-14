@@ -682,6 +682,7 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
       case AMDGPU::STRICT_WQM:
       case AMDGPU::SOFT_WQM:
       case AMDGPU::STRICT_WWM:
+      case AMDGPU::FREEZE:
       case AMDGPU::INSERT_SUBREG:
       case AMDGPU::PHI:
       case AMDGPU::REG_SEQUENCE: {
