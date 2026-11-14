@@ -45,6 +45,7 @@ add_lldb_library(lldbCore NO_PLUGIN_DEPENDENCIES
   Highlighter.cpp
   IOHandler.cpp
   IOHandlerCursesGUI.cpp
+  IOHandlerPicker.cpp
   Mangled.cpp
   Module.cpp
   ModuleChild.cpp
