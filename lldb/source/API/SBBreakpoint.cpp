@@ -920,6 +920,19 @@ SBBreakpointList::SBBreakpointList(SBTarget &target)
   LLDB_INSTRUMENT_VA(this, target);
 }
 
+SBBreakpointList::SBBreakpointList(const SBBreakpointList &rhs)
+    : m_opaque_sp(rhs.m_opaque_sp) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+}
+
+SBBreakpointList &SBBreakpointList::operator=(const SBBreakpointList &rhs) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+
+  if (this != &rhs)
+    m_opaque_sp = rhs.m_opaque_sp;
+  return *this;
+}
+
 SBBreakpointList::~SBBreakpointList() = default;
 
 size_t SBBreakpointList::GetSize() const {

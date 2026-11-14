@@ -28,8 +28,8 @@ namespace lldb {
 #ifndef SWIG
 class LLDB_API SBInputReader {
 public:
-  SBInputReader() = default;
-  ~SBInputReader() = default;
+  SBInputReader();
+  ~SBInputReader();
 
   SBError Initialize(lldb::SBDebugger &sb_debugger,
                      unsigned long (*callback)(void *, lldb::SBInputReader *,

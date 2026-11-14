@@ -17,6 +17,21 @@ using namespace lldb_private;
 
 SBTraceCursor::SBTraceCursor() { LLDB_INSTRUMENT_VA(this); }
 
+SBTraceCursor::SBTraceCursor(const SBTraceCursor &rhs)
+    : m_opaque_sp(rhs.m_opaque_sp) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+}
+
+SBTraceCursor &SBTraceCursor::operator=(const SBTraceCursor &rhs) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+
+  if (this != &rhs)
+    m_opaque_sp = rhs.m_opaque_sp;
+  return *this;
+}
+
+SBTraceCursor::~SBTraceCursor() = default;
+
 SBTraceCursor::SBTraceCursor(TraceCursorSP trace_cursor_sp)
     : m_opaque_sp{std::move(trace_cursor_sp)} {
   LLDB_INSTRUMENT_VA(this, trace_cursor_sp);

@@ -24,6 +24,23 @@ using namespace llvm;
 
 SBTrace::SBTrace() { LLDB_INSTRUMENT_VA(this); }
 
+SBTrace::SBTrace(const SBTrace &rhs)
+    : m_opaque_sp(rhs.m_opaque_sp), m_opaque_wp(rhs.m_opaque_wp) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+}
+
+SBTrace &SBTrace::operator=(const SBTrace &rhs) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+
+  if (this != &rhs) {
+    m_opaque_sp = rhs.m_opaque_sp;
+    m_opaque_wp = rhs.m_opaque_wp;
+  }
+  return *this;
+}
+
+SBTrace::~SBTrace() = default;
+
 SBTrace::SBTrace(const lldb::TraceSP &trace_sp) : m_opaque_sp(trace_sp) {
   LLDB_INSTRUMENT_VA(this, trace_sp);
 }

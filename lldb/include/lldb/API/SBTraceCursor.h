@@ -20,6 +20,12 @@ public:
   /// Default constructor for an invalid \a SBTraceCursor object.
   SBTraceCursor();
 
+  SBTraceCursor(const lldb::SBTraceCursor &rhs);
+
+  lldb::SBTraceCursor &operator=(const lldb::SBTraceCursor &rhs);
+
+  ~SBTraceCursor();
+
   /// Set the direction to use in the \a SBTraceCursor::Next() method.
   ///
   /// \param[in] forwards
