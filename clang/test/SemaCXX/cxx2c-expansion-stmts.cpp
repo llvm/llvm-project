@@ -1698,6 +1698,7 @@ void local_class() {
   }
 }
 
+#ifndef __MVS__
 void thread_local_var() {
   template for (int x : {0}) {
     thread_local int v1;
@@ -1705,6 +1706,9 @@ void thread_local_var() {
     static __thread int v3;
   }
 }
+#else
+_Static_assert(!__has_feature(tls), "z/OS has tls now.  Re-enable the thread_local tests.");
+#endif
 
 task coro() {
   template for (int x : {0}) {

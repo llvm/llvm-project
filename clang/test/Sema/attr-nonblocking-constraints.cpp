@@ -60,12 +60,16 @@ void nb6() [[clang::nonblocking]]
 	nb6_transitively_unsafe(); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function}}
 }
 
+#ifndef __MVS__
 thread_local int tl_var{ 42 };
 
 bool tl_test() [[clang::nonblocking]]
 {
 	return tl_var > 0; // expected-warning {{function with 'nonblocking' attribute must not use thread-local variables}}
 }
+#else
+_Static_assert(!__has_feature(tls), "z/OS has tls now.  Re-enable the thread_local tests.");
+#endif
 
 void nb7()
 {
