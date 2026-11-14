@@ -128,6 +128,15 @@ public:
     return 27;
   }
 
+  bool
+  shouldSpillInsteadOfFirstCSRUse(const MachineFunction &MF,
+                                  const LiveInterval &VirtReg) const override {
+    // An SGPR spill goes to a VGPR lane, like a CSR SGPR save, but at each use,
+    // and it needs one more WWM VGPR. getCSRFirstUseCost also models occupancy,
+    // so it is not comparable with the spill cost.
+    return false;
+  }
+
   bool shouldCompactSlotIndexes(const MachineFunction &MF) const override {
     return true;
   }

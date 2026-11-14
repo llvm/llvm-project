@@ -19,9 +19,8 @@ define i16 @SQLDriversW(ptr %henv, i16 zeroext  %fDir, ptr %szDrvDesc, i16 signe
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je LBB0_1
 ; CHECK-NEXT:  ## %bb.3: ## %bb28
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ebp
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ebp
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ebx
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %edi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -36,16 +35,18 @@ define i16 @SQLDriversW(ptr %henv, i16 zeroext  %fDir, ptr %szDrvDesc, i16 signe
 ; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    movzwl %di, %eax
 ; CHECK-NEXT:    movswl %bp, %ebp
-; CHECK-NEXT:    movswl %bx, %edi
+; CHECK-NEXT:    movswl %bx, %ebx
 ; CHECK-NEXT:    pushl $87
-; CHECK-NEXT:    pushl %edx
+; CHECK-NEXT:    movl %esi, %edi
+; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    pushl $0
-; CHECK-NEXT:    movl %esi, %ebx
-; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    pushl %edi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    pushl %edx
+; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    pushl $0
 ; CHECK-NEXT:    pushl %eax
+; CHECK-NEXT:    movl %ecx, %ebx
 ; CHECK-NEXT:    pushl %ecx
 ; CHECK-NEXT:    calll _SQLDrivers_Internal
 ; CHECK-NEXT:    addl $48, %esp
@@ -53,38 +54,38 @@ define i16 @SQLDriversW(ptr %henv, i16 zeroext  %fDir, ptr %szDrvDesc, i16 signe
 ; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    je LBB0_1
 ; CHECK-NEXT:  ## %bb.5:
-; CHECK-NEXT:    movl %ebx, %esi
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movl %ebx, %ecx
+; CHECK-NEXT:    movl %edi, %esi
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ebp
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %edi
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ebx
 ; CHECK-NEXT:  LBB0_6: ## %done
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testb %cl, %cl
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    testb %dl, %dl
 ; CHECK-NEXT:    je LBB0_7
 ; CHECK-NEXT:  ## %bb.8: ## %bb167
 ; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    movl L_iodbcdm_global_lock$non_lazy_ptr, %ecx
 ; CHECK-NEXT:    pushl %ecx
-; CHECK-NEXT:    movl %eax, %esi
+; CHECK-NEXT:    movw %ax, {{[-0-9]+}}(%e{{[sb]}}p) ## 2-byte Spill
 ; CHECK-NEXT:    calll _pthread_mutex_unlock
 ; CHECK-NEXT:    addl $16, %esp
-; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %eax ## 2-byte Folded Reload
 ; CHECK-NEXT:    jmp LBB0_2
 ; CHECK-NEXT:  LBB0_7: ## %bb150
 ; CHECK-NEXT:    cwtl
 ; CHECK-NEXT:    subl $8, %esp
-; CHECK-NEXT:    movswl %bp, %ecx
+; CHECK-NEXT:    movswl %bp, %edx
 ; CHECK-NEXT:    movswl %bx, %ebx
 ; CHECK-NEXT:    movzwl %di, %edi
-; CHECK-NEXT:    pushl %edx
-; CHECK-NEXT:    pushl %ecx
-; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:    pushl %edx
+; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl %edi
-; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    pushl %ecx
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    pushl $1
 ; CHECK-NEXT:    calll _trace_SQLDriversW

@@ -4,57 +4,52 @@
 define fastcc i64 @foo(ptr %p0, ptr %p1, i64 %p2, i64 %p3, ptr %p4, ptr %p5, ptr %p6, ptr %p7, ptr %p8, i64 %p9, i1 %cond, i32 %n) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    subq $56, %rsp
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    testb $1, %al
-; CHECK-NEXT:    jne .LBB0_7
+; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %bb1
-; CHECK-NEXT:    jne .LBB0_7
+; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.4: # %bb2
 ; CHECK-NEXT:    movb $1, %r10b
 ; CHECK-NEXT:    testb %r10b, %r10b
-; CHECK-NEXT:    jne .LBB0_7
+; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.5: # %bb2
 ; CHECK-NEXT:    xorl %r10d, %r10d
 ; CHECK-NEXT:    testb %r10b, %r10b
-; CHECK-NEXT:    jne .LBB0_9
+; CHECK-NEXT:    jne .LBB0_8
 ; CHECK-NEXT:  # %bb.6: # %bb2
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:  .LBB0_7: # %bb3
+; CHECK-NEXT:  .LBB0_1:
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:  .LBB0_8: # %cleanup
 ; CHECK-NEXT:    addq $56, %rsp
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_9: # %bb5
+; CHECK-NEXT:  .LBB0_8: # %bb5
 ; CHECK-NEXT:    testb $1, %al
-; CHECK-NEXT:    jne .LBB0_7
-; CHECK-NEXT:  # %bb.10: # %bb7
-; CHECK-NEXT:    jne .LBB0_7
-; CHECK-NEXT:  # %bb.12: # %bb9
-; CHECK-NEXT:    jne .LBB0_7
-; CHECK-NEXT:  # %bb.14: # %bb10
-; CHECK-NEXT:    jne .LBB0_7
-; CHECK-NEXT:  # %bb.16: # %bb11
-; CHECK-NEXT:    jne .LBB0_7
-; CHECK-NEXT:  # %bb.18: # %bb12
-; CHECK-NEXT:    je .LBB0_7
-; CHECK-NEXT:  # %bb.19: # %bb13
+; CHECK-NEXT:    jne .LBB0_1
+; CHECK-NEXT:  # %bb.9: # %bb7
+; CHECK-NEXT:    jne .LBB0_1
+; CHECK-NEXT:  # %bb.11: # %bb9
+; CHECK-NEXT:    jne .LBB0_1
+; CHECK-NEXT:  # %bb.13: # %bb10
+; CHECK-NEXT:    jne .LBB0_1
+; CHECK-NEXT:  # %bb.15: # %bb11
+; CHECK-NEXT:    jne .LBB0_1
+; CHECK-NEXT:  # %bb.17: # %bb12
+; CHECK-NEXT:    je .LBB0_1
+; CHECK-NEXT:  # %bb.18: # %bb13
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB0_7
-; CHECK-NEXT:  # %bb.20: # %bb15
+; CHECK-NEXT:    je .LBB0_1
+; CHECK-NEXT:  # %bb.19: # %bb15
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    je .LBB0_7
-; CHECK-NEXT:  # %bb.21: # %bb15
+; CHECK-NEXT:    je .LBB0_1
+; CHECK-NEXT:  # %bb.20: # %bb15
 ; CHECK-NEXT:    cmpl $2, %eax
-; CHECK-NEXT:    je .LBB0_7
-; CHECK-NEXT:  # %bb.22: # %bb18
+; CHECK-NEXT:    je .LBB0_1
+; CHECK-NEXT:  # %bb.21: # %bb18
 ; CHECK-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -65,27 +60,27 @@ define fastcc i64 @foo(ptr %p0, ptr %p1, i64 %p2, i64 %p3, ptr %p4, ptr %p5, ptr
 ; CHECK-NEXT:    movq %rax, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB0_27
-; CHECK-NEXT:  # %bb.23:
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r14
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:  .LBB0_24: # %loop
+; CHECK-NEXT:    jne .LBB0_25
+; CHECK-NEXT:  .LBB0_22: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
 ; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    callq *%rbx
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    callq *%rax
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    xorl %r8d, %r8d
-; CHECK-NEXT:    movq %r14, %r9
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r9
 ; CHECK-NEXT:    pushq $0
 ; CHECK-NEXT:    pushq $0
 ; CHECK-NEXT:    pushq $0
 ; CHECK-NEXT:    pushq $0
-; CHECK-NEXT:    callq *%rbx
+; CHECK-NEXT:    callq *%rax
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addq $32, %rsp
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
@@ -97,22 +92,23 @@ define fastcc i64 @foo(ptr %p0, ptr %p1, i64 %p2, i64 %p3, ptr %p4, ptr %p5, ptr
 ; CHECK-NEXT:    pushq $0
 ; CHECK-NEXT:    pushq $0
 ; CHECK-NEXT:    pushq $0
-; CHECK-NEXT:    callq *%rbx
+; CHECK-NEXT:    callq *%rax
 ; CHECK-NEXT:    addq $32, %rsp
 ; CHECK-NEXT:    testb $1, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    je .LBB0_24
-; CHECK-NEXT:  # %bb.25: # %cleanup2
-; CHECK-NEXT:    jne .LBB0_27
-; CHECK-NEXT:  # %bb.26: # %bb21
+; CHECK-NEXT:    je .LBB0_22
+; CHECK-NEXT:  # %bb.23: # %cleanup2
+; CHECK-NEXT:    jne .LBB0_25
+; CHECK-NEXT:  # %bb.24: # %bb21
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
-; CHECK-NEXT:    movq %rbx, %rdx
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
 ; CHECK-NEXT:    callq memcpy@PLT
-; CHECK-NEXT:    movq %rbx, (%rsp) # 8-byte Spill
-; CHECK-NEXT:  .LBB0_27: # %exit
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; CHECK-NEXT:    movq %rax, (%rsp) # 8-byte Spill
+; CHECK-NEXT:  .LBB0_25: # %exit
 ; CHECK-NEXT:    movq (%rsp), %rax # 8-byte Reload
-; CHECK-NEXT:    jmp .LBB0_8
+; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    retq
 entry:
   br i1 %cond, label %cleanup, label %bb1
 

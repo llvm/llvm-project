@@ -365,6 +365,12 @@ private:
   /// rematerialization is not possible.
   BlockFrequency calcRematCost(const LiveInterval &VirtReg,
                                AllocationOrder &Order) const;
+  BlockFrequency calcEvictRematCost(const LiveInterval &VirtReg,
+                                    MCRegister PhysReg, unsigned Cascade) const;
+  MCRegister tryEvictRematForCSR(const LiveInterval &VirtReg,
+                                 AllocationOrder &Order,
+                                 SmallVectorImpl<Register> &NewVRegs,
+                                 BlockFrequency MaxCost);
   BlockFrequency calcSpillCost(const LiveInterval &LI);
   void initializeCSRCost();
   MCRegister tryBlockSplit(const LiveInterval &, AllocationOrder &,
