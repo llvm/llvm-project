@@ -6,8 +6,8 @@ flh ft1, -2049(a0) # expected-error:10 {{operand must be a symbol with %lo/%pcre
 fsh ft2, 2048(a1) # expected-error:10 {{operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]}}
 
 # Memory operand not formatted correctly
-flh ft1, a0, -200 # expected-error:14 {{register must be a GPR}}
-fsw ft2, a1, 100 # expected-error:14 {{register must be a GPR}}
+flh ft1, a0, -200 # expected-error:14 {{register must be a GPR excluding zero (x0)}}
+fsw ft2, a1, 100 # expected-error:14 {{register must be a GPR excluding zero (x0)}}
 
 # Invalid register names
 flh ft15, 100(a0) # expected-error:5 {{register must be a FPR}}
