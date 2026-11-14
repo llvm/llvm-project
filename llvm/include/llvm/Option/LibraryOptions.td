@@ -17,11 +17,9 @@
 include "llvm/Option/OptParser.td"
 
 // A row whose spelling starts with prefix names its member without it.
-// perContext makes Global private; read through cl::LibraryOptionsContext::get.
-class OptionsStruct<string namespace = "llvm", string prefix = "", bit perContext = true> {
+class OptionsStruct<string namespace = "llvm", string prefix = ""> {
   string Namespace = namespace;
   string MemberPrefix = prefix;
-  bit PerContext = perContext;
 }
 
 // The builds an option exists in, as a preprocessor expression.
