@@ -4283,7 +4283,7 @@ struct AAAlign
   AAAlign(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+    if (!IRP.getAssociatedType()->isPointerTy())
       return false;
     return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
