@@ -623,7 +623,7 @@ public:
     case Storage::Fn:
       return Pointer(Fn.Func, Idx);
     case Storage::String:
-      return Pointer(Str, Idx);
+      return Pointer(Str.decay(), Idx);
     default:
       llvm_unreachable("Unexpected pointer type in atIndex()");
     }

@@ -410,6 +410,7 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const CallExpr *Call, unsigned ID) {
+  const ASTContext &ASTCtx = S.getASTContext();
   const Pointer &StrPtr = S.Stk.pop<Pointer>().expand();
 
   if (ID == Builtin::BIstrlen || ID == Builtin::BIwcslen)
@@ -424,12 +425,24 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   if (!CheckLive(S, OpPC, StrPtr, AK_Read))
     return false;
 
+  // Reject unexpected character sizes for this builtin.
+  unsigned ElemSize = ASTCtx.getTypeSizeInChars(StrPtr.getType()).getQuantity();
+  if (ID == Builtin::BI__builtin_wcslen || ID == Builtin::BIwcslen) {
+    unsigned WCharSize =
+        ASTCtx.getTypeSizeInChars(ASTCtx.getWCharType()).getQuantity();
+    if (ElemSize != WCharSize)
+      return false;
+  } else {
+    if (ElemSize != 1)
+      return false;
+  }
+
   // For string literal pointers, this is pretty simple.
   if (StrPtr.isStringPointer()) {
     if (StrPtr.isOnePastEnd())
       return CheckRange(S, OpPC, StrPtr, AK_Read);
 
-    const auto *Lit = StrPtr.asStringPointer().getLiteral();
+    const StringLiteral *Lit = StrPtr.asStringPointer().getLiteral();
     int64_t Off = StrPtr.getByteOffset();
     if (Off < 0)
       return false;
@@ -454,17 +467,6 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   PrimType ElemT = StrPtr.getFieldDesc()->getPrimType();
   if (!isFixedSizeIntegralType(ElemT))
     return false;
-
-  unsigned ElemSize = StrPtr.getFieldDesc()->getElemDataSize();
-  if (ElemSize != 1 && ElemSize != 2 && ElemSize != 4)
-    return Invalid(S, OpPC);
-
-  if (ID == Builtin::BI__builtin_wcslen || ID == Builtin::BIwcslen) {
-    const ASTContext &AC = S.getASTContext();
-    unsigned WCharSize = AC.getTypeSizeInChars(AC.getWCharType()).getQuantity();
-    if (ElemSize != WCharSize)
-      return false;
-  }
 
   size_t Len = 0;
   for (size_t I = StrPtr.getIndex();; ++I, ++Len) {

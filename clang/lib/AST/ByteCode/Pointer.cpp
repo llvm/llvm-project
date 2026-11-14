@@ -500,7 +500,8 @@ void Pointer::print(llvm::raw_ostream &OS) const {
   case Storage::String:
     OS << "(String) { " << (const void *)Str.getLiteral() << ' ';
     Str.getLiteral()->outputString(OS);
-    OS << ". ID: " << Str.ID << " + " << Offset << "}";
+    OS << ". ID: " << Str.ID << ". Decayed: " << Str.Decayed << " + " << Offset
+       << "}";
     break;
   case Storage::Opaque:
     OS << "(Opaque) { Base: " << Opaque.Base << ", "
